@@ -17,11 +17,28 @@ score-aware attacks ENABLED:
     freed for d_seg + rate. The stored pose is range-coded into an ADDITIVE
     archive section (~1 KB charged); the vendored codec stays pristine.
 
-Lever 1 (the differentiable brotli-rate surrogate, ``tac/losses/rate_surrogate.py``)
-is DESIGN-ONLY — that module was NOT built (it does not exist on disk), so it is
-SKIPPED here per the task brief (do NOT build it from scratch in this arm). This
-arm is seg+pose, the two wired-in attacks. See the design memo
-``.omx/research/incurriculum_levers_design_floor_chasing_20260612.md`` §"Lever 1".
+ALL FIVE Layer-2 levers are now WIRED + default-OFF + composable. Pass
+``--levers all`` to enable EVERY lever (seg surrogate + the per-epoch T-anneal +
+pose-FiLM + rate surrogate + score-aware QAT + margin-weight) in one arm; the
+default (no ``--levers all``) keeps the original seg+pose-FiLM pair so existing
+invocations are unchanged. The five:
+
+  * **Lever 1** — differentiable brotli-rate surrogate
+    (``StageSpec.rate_lambda_w`` / ``rate_lambda_lat`` →
+    ``tac.losses.rate_surrogate``: order-1 conditional weight entropy + latent
+    temporal-delta entropy; the dominant rate-term attack).
+  * **Lever 2** — score-domain argmax-flip seg surrogate + the per-epoch
+    TEMPERATURE-ANNEAL (``seg_surrogate`` / ``seg_temperature`` /
+    ``seg_temperature_end`` → cosine T anneal toward hard argmax).
+  * **Lever 3** — pose-FiLM STORE (``cfg.pose_film_enabled``; Wyner-Ziv
+    side-info; additive ~1 KB pose codec section).
+  * **Lever 4** — score-aware QAT (``score_aware_qat`` → per-tensor
+    sensitivity-weighted INT8 grid; the water-filling bit-allocator).
+  * **Lever 5** — margin-weighted seg promotion (``margin_weight_tau`` →
+    ``exp(−margin/τ)`` boundary weight; capacity concentrates where d_seg flips).
+
+See the design memo
+``.omx/research/incurriculum_levers_design_floor_chasing_20260612.md``.
 
 THE EXPERIMENT (the operator's question "should we resume with the seg and pose
 attacks wired in? all the layer 2 perhaps?" — YES, this is that arm):
@@ -88,15 +105,46 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                    help="NEW combined-arm out-dir (default: "
                         "experiments/results/l2_combined_seg_pose_ab_<stamp>). MUST "
                         "NOT be the live control run dir.")
-    # -- Lever 2 (seg surrogate) --
+    # -- ALL-LEVERS switch (the one command that enables every Layer-2 lever) --
+    p.add_argument("--levers", choices=["seg_pose", "all"], default="seg_pose",
+                   help="seg_pose (default) = the original Lever 2 (seg surrogate) + "
+                        "Lever 3 (pose-FiLM) pair. all = ALSO enable Lever 1 (rate "
+                        "surrogate), the Lever-2 T-anneal, Lever 4 (score-aware QAT), "
+                        "and Lever 5 (margin-weighted seg) — the full Layer-2 stack. "
+                        "The per-lever flags below override the --levers all defaults.")
+    # -- Lever 2 (seg surrogate + anneal) --
     p.add_argument("--seg-surrogate", default="soft_cosine", choices=list(_VALID_SURROGATES),
                    help="score-domain argmax-flip d_seg surrogate on the active stage.")
     p.add_argument("--seg-temperature", type=float, default=1.0,
                    help="prediction softmax temperature for the surrogate (1.0=unit; "
-                        "the design memo's anneal toward hard (T->0.05) needs a "
-                        "per-epoch driver hook that does NOT exist yet, so this is a "
-                        "STATIC per-stage T — start at 1.0, the lowest-risk option-(b) "
-                        "value per the memo's anneal-instability note).")
+                        "the START temperature when --seg-temperature-end is set).")
+    p.add_argument("--seg-temperature-end", type=float, default=None,
+                   help="Lever-2 ANNEAL endpoint: cosine-anneal the prediction softmax "
+                        "temperature from --seg-temperature toward this value over each "
+                        "stage (the memo's 'T: 1.0 -> 0.05 toward hard argmax'). None "
+                        "(default) = STATIC temperature. --levers all sets 0.05.")
+    # -- Lever 1 (differentiable brotli-rate surrogate) --
+    p.add_argument("--rate-lambda-w", type=float, default=0.0,
+                   help="Lever-1 weight-entropy rate coefficient (order-1 conditional "
+                        "weight entropy; the dominant rate-term attack). 0=off. "
+                        "--levers all sets a small late-stage value.")
+    p.add_argument("--rate-lambda-lat", type=float, default=0.0,
+                   help="Lever-1 latent temporal-delta rate coefficient (currently "
+                        "unexploited latent byte lever). 0=off. --levers all sets a "
+                        "small value.")
+    # -- Lever 4 (score-aware QAT) --
+    p.add_argument("--score-aware-qat", action=argparse.BooleanOptionalAction, default=None,
+                   help="Lever-4 sensitivity-weighted INT8 grid (engages only in "
+                        "use_qat stages). None (default) follows --levers (off for "
+                        "seg_pose, on for all). Explicit --score-aware-qat / "
+                        "--no-score-aware-qat overrides.")
+    p.add_argument("--qat-sensitivity-decay", type=float, default=0.99,
+                   help="EMA decay for the per-tensor score-sensitivity (Lever 4).")
+    # -- Lever 5 (margin-weighted seg) --
+    p.add_argument("--margin-weight-tau", type=float, default=None,
+                   help="Lever-5 exp(-margin/tau) boundary weight on the seg surrogate "
+                        "(capacity concentrates where d_seg flips). None (default) "
+                        "follows --levers (off for seg_pose, ~2.0 for all).")
     # -- Lever 3 (pose-FiLM) --
     p.add_argument("--pose-film-hidden", type=int, default=8,
                    help="FiLM MLP bottleneck width.")
@@ -149,6 +197,42 @@ def _default_out_dir() -> Path:
 
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     return Path(f"experiments/results/l2_combined_seg_pose_ab_{stamp}")
+
+
+def _resolve_lever_overrides(args) -> dict:
+    """Resolve the active-stage ``StageSpec`` lever overrides from ``--levers`` +
+    per-flag overrides. ``--levers all`` turns on EVERY Layer-2 lever with sensible
+    late-stage defaults; explicit per-flag args override. Returns the dict of
+    ``StageSpec`` field overrides to apply on the active (+later) stages.
+
+    Lever 3 (pose-FiLM) is a CONFIG (cfg.pose_film_enabled), enabled separately in
+    main(); it is NOT a StageSpec field, so it is not in this dict."""
+    all_on = args.levers == "all"
+    # Lever 2 (always on in both modes — it is the seg attack).
+    overrides = {
+        "seg_surrogate": args.seg_surrogate,
+        "seg_temperature": args.seg_temperature,
+    }
+    # Lever 2 anneal: --levers all defaults the endpoint to 0.05 (the memo's target);
+    # an explicit --seg-temperature-end overrides.
+    if args.seg_temperature_end is not None:
+        overrides["seg_temperature_end"] = args.seg_temperature_end
+    elif all_on:
+        overrides["seg_temperature_end"] = 0.05
+    # Lever 1 (rate surrogate): --levers all defaults to small late-stage coefficients
+    # (decoder-dominated, so the weight term first); explicit flags override.
+    rate_w = args.rate_lambda_w if args.rate_lambda_w > 0 else (1e-3 if all_on else 0.0)
+    rate_lat = args.rate_lambda_lat if args.rate_lambda_lat > 0 else (1e-3 if all_on else 0.0)
+    overrides["rate_lambda_w"] = rate_w
+    overrides["rate_lambda_lat"] = rate_lat
+    # Lever 4 (score-aware QAT): None follows --levers; explicit bool overrides.
+    saq = args.score_aware_qat if args.score_aware_qat is not None else all_on
+    overrides["score_aware_qat"] = bool(saq)
+    overrides["qat_sensitivity_decay"] = args.qat_sensitivity_decay
+    # Lever 5 (margin weight): None follows --levers (~2.0 for all); explicit overrides.
+    mtau = args.margin_weight_tau if args.margin_weight_tau is not None else (2.0 if all_on else None)
+    overrides["margin_weight_tau"] = mtau
+    return overrides
 
 
 # ---------------------------------------------------------------------------
@@ -275,18 +359,20 @@ def _build_combined_curriculum(
     total_epoch_budget: int | None,
     ema_decay: float,
     eval_every: int,
-    seg_surrogate: str,
-    seg_temperature: float,
+    lever_overrides: dict,
 ):
-    """Build the faithful PR95 curriculum, enable the seg surrogate on the active
-    stage, and (when ``total_epoch_budget`` is None) CAP the active stage at
-    fork+extra-epochs + truncate so the arm exits cleanly with a DONE.
+    """Build the faithful PR95 curriculum, enable the StageSpec-level levers (seg
+    surrogate + anneal + rate surrogate + score-aware QAT + margin weight per
+    ``lever_overrides``) on the active stage, and (when ``total_epoch_budget`` is
+    None) CAP the active stage at fork+extra-epochs + truncate so the arm exits
+    cleanly with a DONE.
 
     When ``total_epoch_budget`` is given (e.g. the basin's faithful 29650), the
     FULL 8-stage curriculum is kept (stage boundaries line up with the baseline
-    for matched-epoch diffing across stages) and the seg surrogate is enabled on
-    the active stage AND every later stage (so the attack stays on as the
-    curriculum advances)."""
+    for matched-epoch diffing across stages) and the levers are enabled on the
+    active stage AND every later stage (so the attack stays on as the curriculum
+    advances). ``score_aware_qat`` only ENGAGES in ``use_qat`` stages (the override
+    is a no-op on non-QAT stages — byte-identical there)."""
     from tac.torch_vehicle.curriculum import build_curriculum
 
     curriculum = build_curriculum(
@@ -296,7 +382,7 @@ def _build_combined_curriculum(
     )
 
     def _enable_seg(spec):
-        return replace(spec, seg_surrogate=seg_surrogate, seg_temperature=seg_temperature)
+        return replace(spec, **lever_overrides)
 
     if total_epoch_budget is None:
         # Cap the ACTIVE stage at fork+extra; truncate the curriculum there so the
@@ -317,10 +403,12 @@ def _build_combined_curriculum(
 
 
 def _run_self_test(args, out_dir: Path) -> int:
-    """Tiny SYNTHETIC-scorer end-to-end: 3-epoch BOTH-ATTACKS train → byte-close
+    """Tiny SYNTHETIC-scorer end-to-end: 3-epoch ALL-ACTIVE-LEVERS train → byte-close
     WITH the pose section → archive parses → pose-section round-trips. Proves the
-    combined seg+pose driver/train/export path runs end-to-end WITHOUT loading the
-    heavy real scorer (no basin contention). Starts from a fresh 6-pair init (fast,
+    composed lever driver/train/export path runs end-to-end WITHOUT loading the heavy
+    real scorer (no basin contention). With ``--levers all`` EVERY Layer-2 lever is
+    on (rate surrogate + seg surrogate + T-anneal + score-aware QAT + margin weight +
+    pose-FiLM) — the compose-all-five smoke. Starts from a fresh 6-pair init (fast,
     self-contained); the full arm exercises the real-forkpoint resume."""
     import torch.nn.functional as F  # noqa: N812
 
@@ -339,14 +427,19 @@ def _run_self_test(args, out_dir: Path) -> int:
     def _ce(s, t):
         return F.cross_entropy(s, t)
 
-    # BOTH attacks active: seg_surrogate set + pose_film_enabled in the cfg.
+    lever_overrides = _resolve_lever_overrides(args)
+    all_on = args.levers == "all"
+    # Score-aware QAT only engages in use_qat stages; with --levers all, exercise it
+    # by turning on use_qat for the smoke (so the QAT block actually runs).
+    use_qat = bool(lever_overrides.get("score_aware_qat")) and all_on
+    # ALL levers active (StageSpec-level + cfg-level pose-FiLM).
     spec = StageSpec(
         name="self_test", epochs=3, seg_loss_fn=_ce, eval_every=1, batch_size=4,
         ema_decay=0.999, use_muon=False, adamw_lr=1e-3, muon_lr=2e-4,
         muon_weight_decay=0.0, latent_lr_mult=10.0, grad_clip=1.0, grad_clip_muon=1.0,
-        lr_floor_ratio=5e-6, seg_weight=100.0, pose_weight=1.0, cat_lambda=0.0,
-        cat_sigma=0.2, use_qat=False, init_latents_random=True,
-        seg_surrogate=args.seg_surrogate, seg_temperature=args.seg_temperature,
+        lr_floor_ratio=5e-6, seg_weight=100.0, pose_weight=1.0,
+        cat_lambda=(0.01 if all_on else 0.0), cat_sigma=0.2,
+        use_qat=use_qat, init_latents_random=True, **lever_overrides,
     )
     cfg = TorchVehicleConfig(
         base_channels=args.base_channels, latent_dim=args.latent_dim, out_dir=out_dir,
@@ -363,16 +456,28 @@ def _run_self_test(args, out_dir: Path) -> int:
     pose_ok = False
     seg_attack_active = spec.seg_surrogate in _VALID_SURROGATES
     pose_attack_active = bool(cfg.pose_film_enabled)
+    rate_active = spec.rate_lambda_w > 0 or spec.rate_lambda_lat > 0
+    anneal_active = spec.seg_temperature_end is not None
+    qat_active = bool(spec.score_aware_qat) and spec.use_qat
+    margin_active = spec.margin_weight_tau is not None
     if archive_ok:
         pose = parse_pose_section(arch_path.read_bytes(), driver.v.parse_archive)
         pose_ok = pose is not None and tuple(pose.shape) == (n_pairs, 6)
+    # PASS requires the end-to-end + pose-section round-trip + the seg & pose attacks;
+    # with --levers all it ALSO requires every other lever to be active (compose-five).
     passed = archive_ok and pose_ok and seg_attack_active and pose_attack_active
+    if all_on:
+        passed = passed and rate_active and anneal_active and qat_active and margin_active
     result = {
         "self_test": "PASS" if passed else "FAIL",
-        "both_attacks_active": {
-            "seg_surrogate": spec.seg_surrogate,
-            "seg_attack_active": seg_attack_active,
-            "pose_film_enabled": pose_attack_active,
+        "levers_mode": args.levers,
+        "active_levers": {
+            "lever1_rate_surrogate": rate_active,
+            "lever2_seg_surrogate": spec.seg_surrogate,
+            "lever2_temperature_anneal": anneal_active,
+            "lever3_pose_film": pose_attack_active,
+            "lever4_score_aware_qat": qat_active,
+            "lever5_margin_weight": margin_active,
         },
         "best_score": summary.get("best_score"),
         "best_archive_exists": archive_ok,
@@ -444,8 +549,9 @@ def main(argv: list[str] | None = None) -> int:
     fork_stage = int(seeded["stage_index"])
     fork_epoch_in_stage = int(seeded["epoch_in_stage"])
 
-    # Build the curriculum with the seg surrogate enabled (Lever 2) — pose-FiLM
-    # (Lever 3) is enabled via the cfg below.
+    # Build the curriculum with the StageSpec-level levers enabled — pose-FiLM
+    # (Lever 3) is enabled via the cfg below (it is a cfg, not a StageSpec field).
+    lever_overrides = _resolve_lever_overrides(args)
     curriculum, capped_to = _build_combined_curriculum(
         fork_stage=fork_stage,
         fork_epoch_in_stage=fork_epoch_in_stage,
@@ -453,15 +559,19 @@ def main(argv: list[str] | None = None) -> int:
         total_epoch_budget=args.total_epoch_budget,
         ema_decay=args.ema_decay,
         eval_every=args.eval_every,
-        seg_surrogate=args.seg_surrogate,
-        seg_temperature=args.seg_temperature,
+        lever_overrides=lever_overrides,
     )
     print(json.dumps({
-        "combined_attacks": {
-            "lever2_seg_surrogate": args.seg_surrogate,
-            "lever2_seg_temperature": args.seg_temperature,
+        "levers_mode": args.levers,
+        "active_levers": {
+            "lever1_rate_lambda_w": lever_overrides.get("rate_lambda_w", 0.0),
+            "lever1_rate_lambda_lat": lever_overrides.get("rate_lambda_lat", 0.0),
+            "lever2_seg_surrogate": lever_overrides.get("seg_surrogate"),
+            "lever2_seg_temperature": lever_overrides.get("seg_temperature"),
+            "lever2_seg_temperature_end": lever_overrides.get("seg_temperature_end"),
             "lever3_pose_film_enabled": True,
-            "lever1_rate_surrogate": "SKIPPED (tac/losses/rate_surrogate.py not built)",
+            "lever4_score_aware_qat": lever_overrides.get("score_aware_qat"),
+            "lever5_margin_weight_tau": lever_overrides.get("margin_weight_tau"),
         },
         "fork_stage": fork_stage,
         "fork_epoch_in_stage": fork_epoch_in_stage,
