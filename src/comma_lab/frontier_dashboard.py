@@ -313,6 +313,9 @@ def load_run(path: Path, total_epochs: int) -> dict[str, Any]:
         "total_epochs": total,
         "progress": progress,
         "eta_s": eta_s,
+        # projected ETA at the TRAINING cadence (median, ex-eval) — what async
+        # (non-blocking) CPU eval delivers, since the eval no longer stalls training.
+        "eta_median_s": (median_s_per_epoch * max(total - cur_epoch, 0)) if median_s_per_epoch else None,
         "train": train,                # realtime per-epoch
         "latest_eval": latest_eval_s,  # periodic authority eval
         "best": best_s,
@@ -553,7 +556,7 @@ async function tick(){
   else{dot.classList.remove('on');word.textContent='running · last row '+ago(r.mtime,now)+' (slow eval?)';word.className='stale';}
   // store live-clock state for the 1s ticker (elapsed/ETA tick locally between polls)
   G={started:r.started_unix,serverNow:st.now_unix,pollLocal:Date.now()/1000,
-     eta:r.eta_s,avg:r.summary.avg_s_per_epoch,total:r.total_epochs,
+     eta:r.eta_s,etaMedian:r.eta_median_s,avg:r.summary.avg_s_per_epoch,total:r.total_epochs,
      epoch:r.current_epoch,progress:r.progress,running:!r.is_done};
   $('run-epochs').textContent='epoch '+r.current_epoch+' / '+r.total_epochs;
   // train (live per-epoch) + latest_eval (periodic authority)
@@ -599,7 +602,7 @@ function liveClock(){
   $('s-elapsed').textContent=dur(elapsed);
   if(G.eta!=null&&G.running){
     const eta=Math.max(0,G.eta-dLocal);
-    $('run-eta').textContent='ETA '+dur(eta)+'  ·  '+(G.avg?dur(G.avg)+'/epoch':'');
+    $('run-eta').textContent='ETA '+dur(eta)+(G.etaMedian!=null&&G.etaMedian<G.eta?'  ·  ~'+dur(G.etaMedian)+' at train cadence (async eval)':'')+'  ·  '+(G.avg?dur(G.avg)+'/ep':'');
     // nudge the progress bar forward fractionally within the current epoch
     if(G.avg&&G.total){const frac=Math.min(1,dLocal/G.avg);
       const pct=Math.min(100,100*((G.epoch+frac)/G.total));
