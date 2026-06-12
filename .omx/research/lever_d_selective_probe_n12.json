@@ -1,0 +1,71 @@
+{
+  "evidence_grade": "[contest-CPU advisory] NON-PROMOTABLE",
+  "which_decoder": "ema",
+  "n_pairs_measured": 12,
+  "tau": 0.5,
+  "waterline_bytes_per_flip": 1.2731082153320312,
+  "mean_cond_bytes_per_flip": 0.9901308516554602,
+  "sigma_break_even": 0.7777271717606743,
+  "total_flips_measured": 5521,
+  "mean_flips_per_pair": 460.0833333333333,
+  "mean_d_seg": 0.0023401048448350695,
+  "n_flips_survival_measured": 5521,
+  "population_mean_survival": 0.31461691722514035,
+  "survival_by_margin_orig_decile": [
+    0.5099457504520796,
+    0.463768115942029,
+    0.42391304347826086,
+    0.358695652173913,
+    0.32608695652173914,
+    0.302536231884058,
+    0.27717391304347827,
+    0.21739130434782608,
+    0.15579710144927536,
+    0.1105072463768116
+  ],
+  "survival_by_margin_gain_decile": [
+    0.32730560578661844,
+    0.3423913043478261,
+    0.34782608695652173,
+    0.3351449275362319,
+    0.30978260869565216,
+    0.33695652173913043,
+    0.3007246376811594,
+    0.2753623188405797,
+    0.2898550724637681,
+    0.2807971014492754
+  ],
+  "survival_by_local_agree_decile": [
+    0.2007233273056058,
+    0.266304347826087,
+    0.36231884057971014,
+    0.286231884057971,
+    0.27355072463768115,
+    0.2826086956521739,
+    0.3496376811594203,
+    0.3061594202898551,
+    0.41304347826086957,
+    0.4057971014492754
+  ],
+  "predictor_weights": [
+    -0.3646945562869681,
+    -1.8213814179262302,
+    -0.6208608075690103,
+    0.2661504420261271
+  ],
+  "crude_all_flips_net_delta_s_heldout": 0.0010839228420449231,
+  "oracle_survivors_selected": 857,
+  "oracle_effective_sigma": 1.0,
+  "oracle_net_delta_s_heldout": -0.00016147852054265537,
+  "oracle_go": true,
+  "predictor_go": false,
+  "predictor_note": "no threshold admitted any net-negative flips",
+  "VERDICT": "GO_ONLY_WITH_ORACLE_NO_DEPLOYABLE_PREDICTOR",
+  "reactivation_criterion": {
+    "sigma_star_at_measured_b": 0.7777271717606743,
+    "oracle_effective_sigma": 1.0,
+    "predictor_effective_sigma": 0.0,
+    "note": "GO requires the coded-subset effective \u03c3 > \u03c3* = b/WATERLINE. On a MORE-converged arm the flip count drops (fewer, more-confident boundary flips) and the survivor fraction may rise; the sidecar auto-fires when the predictor-selected \u03c3_eff exceeds \u03c3* at the measured per-flip cost."
+  },
+  "wall_seconds": 70.8
+}
