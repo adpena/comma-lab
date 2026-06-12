@@ -169,6 +169,62 @@ def test_load_rejects_mismatched_basis(tmp_path):
         load_checkpoint(other, out)
 
 
+def test_resume_bit_identical_on_adamw_schedule(tmp_path):
+    """The faithful ``pr95_adamw_then_muon`` schedule populates AdamW m/v state
+    (not Muon buffers) on the early stages; the checkpoint must round-trip THAT
+    too. A stub that only saved Muon buffers would diverge here."""
+    from tac.mlx_pr95_port.curriculum import (
+        OPTIMIZER_SCHEDULE_PR95,
+        build_pr95_8stage_curriculum,
+    )
+
+    stages = build_pr95_8stage_curriculum(total_epochs=80)  # stage 0 is AdamW
+    spec0 = stages[0]
+
+    def _run_adamw(trainer, n_steps, seed=0):
+        trainer.configure_stage(spec0, optimizer_schedule=OPTIMIZER_SCHEDULE_PR95)
+        rng = np.random.RandomState(seed)
+        for _ in range(n_steps):
+            trainer.step(rng.permutation(trainer.n_pairs), lr_scale=1.0)
+
+    _, _, ref = _build_capstone_setup(n_pairs=6, seed=0)
+    _run_adamw(ref, 5)
+    # Prove AdamW state is actually populated (not Muon) on stage 0.
+    assert len(ref.opt_state.adamw_m) > 0, "stage 0 should use AdamW"
+
+    _, _, a = _build_capstone_setup(n_pairs=6, seed=0)
+    a.configure_stage(spec0, optimizer_schedule=OPTIMIZER_SCHEDULE_PR95)
+    rng = np.random.RandomState(0)
+    for _ in range(3):
+        a.step(rng.permutation(a.n_pairs), lr_scale=1.0)
+    out = save_checkpoint(a, tmp_path / "ckpt", CheckpointPosition(0, 3))
+    man = read_manifest(out)
+    assert len(man["adamw_m_keys"]) > 0  # AdamW state was captured
+
+    _, _, b = _build_capstone_setup(n_pairs=6, seed=0)
+    b.configure_stage(spec0, optimizer_schedule=OPTIMIZER_SCHEDULE_PR95)
+    load_checkpoint(b, out)
+    # Continue the remaining 2 steps with the SAME RNG tail the ref used.
+    for _ in range(2):
+        b.step(rng.permutation(b.n_pairs), lr_scale=1.0)
+    # Reference: re-run with the identical 5-step RNG sequence.
+    _, _, ref2 = _build_capstone_setup(n_pairs=6, seed=0)
+    ref2.configure_stage(spec0, optimizer_schedule=OPTIMIZER_SCHEDULE_PR95)
+    rng2 = np.random.RandomState(0)
+    for _ in range(5):
+        ref2.step(rng2.permutation(ref2.n_pairs), lr_scale=1.0)
+
+    np.testing.assert_allclose(
+        ref2.exact_d_seg(use_ema=False), b.exact_d_seg(use_ema=False), atol=1e-6
+    )
+    # AdamW m/v restored bit-exactly.
+    for k in ref2.opt_state.adamw_m:
+        np.testing.assert_allclose(
+            np.array(b.opt_state.adamw_m[k]), np.array(ref2.opt_state.adamw_m[k]),
+            atol=0.0, err_msg=f"adamw_m {k}",
+        )
+
+
 def test_done_marker_roundtrip(tmp_path):
     assert not is_done(tmp_path / "run")
     write_done_marker(tmp_path / "run", {"final_d_seg": 0.012, "stages": 8})
