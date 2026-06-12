@@ -1,0 +1,90 @@
+{
+  "schema": "capstone_n600_dispatch_config.v1",
+  "axis_tag": "[macOS-CPU advisory] config-prep; NOT a score row",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "gate_status": "CONFIG_PREPARED_NOT_FIRE_READY",
+  "gate_blockers": [
+    "VEHICLE_PLATFORM_UNRESOLVED: MLX capstone is Apple-only (cannot run Modal NVIDIA); $100-Modal implies the vendored PR95 torch trainer (P2). Symposium must pick P1 (local MLX) vs P2 (Modal torch).",
+    "EPOCH_BUDGET_VS_BASIN: $100 buys ~12k-16k compressed epochs, not PR95's 29,650; basin-reach at a smaller basis in compressed budget is the open risk. Run a 10-min smoke to MEASURE step-time before committing.",
+    "EMA_DECAY_FLAG (P1): run_capstone_campaign.py hardcodes 0.997; faithful needs 0.999 (add --ema-decay, trivial, not yet landed).",
+    "BASE_CH_OVERRIDE (P2): vendored trainer hardcodes base_channels=36 in 3 lines; smaller basis needs a clone-COPY edit (no in-place per CLAUDE.md).",
+    "GT_TARGETS_N600 missing from cache (only <=192); first launch streams+caches 600 GT (one-time)."
+  ],
+  "frontier_pointer": {
+    "S": 0.19109982,
+    "bytes": 177169,
+    "d_seg": 0.00055988,
+    "d_pose": 2.942e-05,
+    "seg_term": 0.055988,
+    "pose_term": 0.01715226,
+    "rate_term": 0.1179695,
+    "note": "RATE-DOMINATED (rate is 62% of S). Pointer-mover = smaller basis at the basin."
+  },
+  "recipe_verdict": {
+    "choice": "pr95_adamw_then_muon (FAITHFUL)",
+    "rationale": "Only recipe with a basin existence-proof (5.6e-4 at base_ch=36). muon_throughout-fixed only proved DESCENT (n8 A/B), not a head-to-head win over faithful. Per CLAUDE.md 'OPTIMAL FORM before paid dispatch', an unjustified divergence on a $100 spend is forbidden.",
+    "ab_head_to_head": "experiments/results/diag_faithful_vs_muon_ab/verdict.json (bounded n8 base_ch=20; refines the default)",
+    "flips_to_muon_throughout_only_if": "the A/B shows a DECISIVE muon_throughout win (ratio faithful/muon >> 1)"
+  },
+  "bug_sweep": {
+    "BUG_A_muon_lr_throttle": "FIXED_VERIFIED (commit a9888191c; parity-tested)",
+    "BUG_B_cosine_eta_min_denominator": "CLEAN_FAITHFUL (1:1 port of PR95 common.py:152-156; do NOT fix for faithful path)",
+    "BUG_C_smooth_raises_dseg": "CLEAN (consequence of A, refuted under fixed recipe)",
+    "BUG_D_adamw_grad_clip_1.0": "CLEAN_FAITHFUL (PR95 clips adamw+latents joint to 1.0)",
+    "ema_decay_value": "PIN_0.999_for_faithful (PR95 common.py:53; runner default 0.997 needs override)",
+    "ema_shadow_export": "CLEAN_FAITHFUL",
+    "eval_roundtrip": "CLEAN_FAITHFUL (bicubic up + bilinear down + uint8 STE in loss AND measure)",
+    "stage_transitions": "CLEAN_FAITHFUL (fresh opt+cosine per stage; weights/EMA/codebook carry)",
+    "stage_spec_8stage": "CLEAN_BYTE_FAITHFUL (29650 epochs; seg/sigma/c1a/qat/lr schedule matches PR95)",
+    "c1a_sigma_qat": "CLEAN_FAITHFUL",
+    "muon_adamw_partition": "CLEAN_FAITHFUL",
+    "decoder_arch": "CLEAN_BIT_EXACT (228959 params at base_ch=36 = PR95 229K)",
+    "inflate_numpy_portable": "CLEAN (torch-free)",
+    "export_inflate_parity": "CLEAN (reloaded-int8 advisory = honest contest predictor)",
+    "tests": "45/46 pass; 1 fail = @pytest.mark.slow real-scorer test hitting 60s pytest-timeout on slow_conv2d_forward (throughput, not logic)",
+    "ruff": "clean"
+  },
+  "arch_byte_budget_at_basin": {
+    "note": "stored_latent carrier, int8 decoder, n600. S@basin assumes d_seg=5.6e-4 (seg_term 0.056) + d_pose=2.94e-5 (pose_term 0.0172).",
+    "candidates": [
+      {"base_ch": 16, "tie_depth": 2, "decoder_B": 49424, "latent_B": 16744, "total_B": 66668, "rate_term": 0.04439, "S_at_basin": 0.11754, "vs_frontier_B": -110501, "verdict": "sub-0.12 reach; HIGHEST capacity risk"},
+      {"base_ch": 20, "tie_depth": 2, "decoder_B": 69416, "latent_B": 16744, "total_B": 86660, "rate_term": 0.05770, "S_at_basin": 0.13085, "vs_frontier_B": -90509, "verdict": "PRIMARY: sub-0.15 if basin holds (de-risked A/B basis)"},
+      {"base_ch": 24, "tie_depth": 2, "decoder_B": 92538, "latent_B": 16744, "total_B": 109782, "rate_term": 0.07310, "S_at_basin": 0.14625, "vs_frontier_B": -67387, "verdict": "FALLBACK: sub-0.15, lower basin risk"},
+      {"base_ch": 28, "tie_depth": 2, "decoder_B": 120090, "latent_B": 16744, "total_B": 137334, "rate_term": 0.09145, "S_at_basin": 0.16459, "vs_frontier_B": -39835, "verdict": "sub-0.19 only"},
+      {"base_ch": 32, "tie_depth": 2, "decoder_B": 149680, "latent_B": 16744, "total_B": 166924, "rate_term": 0.11115, "S_at_basin": 0.18429, "vs_frontier_B": -10245, "verdict": "marginal; do NOT run"},
+      {"base_ch": 36, "tie_depth": 0, "decoder_B": 229001, "latent_B": 16744, "total_B": 246245, "rate_term": 0.16396, "S_at_basin": 0.23711, "vs_frontier_B": 69076, "verdict": "PR95 PROVEN basis but BIGGER than frontier = NO rate win"}
+    ],
+    "pointer_mover_thesis": "base_ch=20 tie=2 stored_latent int8 = 86,660 B (HALF the frontier). IF the basin (5.6e-4/2.94e-5) holds at this 69K-decoder-param basis, S~0.131 SUB-0.15 (rate term collapses 0.118->0.058). The arch tension: PR95's basin proof is at base_ch=36=246KB (no rate win); the bet is the SAME basin at 30% of the decoder params. The run TESTS this."
+  },
+  "dispatch_config_P2_recommended_modal_torch": {
+    "vehicle": "vendored PR95 torch trainer (experiments/results/.../hnerv_muon/src/train.py) — clone-COPY with base_ch override",
+    "platform": "Modal CUDA (A100 or T4)",
+    "target_modes": ["contest_exact_eval"],
+    "arch": {"base_channels_primary": 20, "base_channels_fallback": 24, "latent_dim": 28, "eval_size": [384, 512]},
+    "recipe": {
+      "schedule": "8-stage faithful (AdamW 1-7, Muon stage 8)",
+      "ema_decay": 0.999,
+      "grad_clip": 1.0, "grad_clip_muon": 1.0,
+      "sigma_schedule": "0.2 (st5,6) -> 0.1 (st7,8)",
+      "c1a_lambda": "0.01 (st5) -> 0.02 (st6,7,8)",
+      "qat": "stage 4+",
+      "muon_lr": 2e-4, "latent_lr_mult": 10.0,
+      "seg_weight": 100.0, "pose_weight": 1.0
+    },
+    "epoch_budget": "compress 29650 -> ~12000-16000 total (proportional) to fit $100 (~27 A100-hr); CONFIRM step-time via 10-min Modal smoke FIRST",
+    "carrier": "PR95 28-d temporal-delta + raw-LZMA (its native carrier)",
+    "exact_eval": "paired contest-CPU (Linux x86_64) + contest-CUDA on the byte-closed archive"
+  },
+  "dispatch_config_P1_local_mlx_capstone": {
+    "vehicle": "experiments/run_capstone_campaign.py (MLX capstone, FiLM-pose)",
+    "platform": "local M5 Max ONLY (MLX is Apple-only); NOT a Modal spend",
+    "cli": "--max-pairs 600 --base-channels 20 --tie-depth 2 --carrier stored_latent --decoder-dtype int8 --curriculum pr95_8stage --optimizer-schedule pr95_adamw_then_muon --curriculum-total-epochs <budget> --scorer-backend mlx_gpu",
+    "ema_decay_override_needed": "0.999 (runner hardcodes 0.997; add --ema-decay flag)",
+    "prereq": "precompute gt_targets_n600.pt (cache only <=192)",
+    "throughput_reality": "~14 min/epoch n600 MLX-GPU bs=8 -> only ~hundreds of epochs feasible; full 29650 = ~6900 hr infeasible",
+    "exact_eval": "byte-close int8 archive -> paired contest-CPU + contest-CUDA"
+  },
+  "honest_verdict": "Trainer BUG-FREE (BUG-A fixed+tested; BUG-B/C/D clean-faithful; no new bugs). Recipe (faithful PR95) + arch (base_ch=20/24 tie=2 stored_latent) + byte-budget NON-ARBITRARY (every knob -> PR95 source or measured byte/score math). Pointer-mover thesis QUANTIFIED (base_ch=20 -> 86.7KB -> S~0.131 at basin). NOT fire-ready: 5 residual knobs dominated by the vehicle/platform choice (P1 local-MLX vs P2 Modal-torch) and the epoch-budget-vs-basin risk. Config WON'T be wasted on a recipe bug; basin-reach-in-budget is the bet the symposium must price."
+}
