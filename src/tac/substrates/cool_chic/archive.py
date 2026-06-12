@@ -50,12 +50,44 @@ from dataclasses import dataclass
 import brotli  # type: ignore[import-not-found]
 import torch
 
-
 CCV1_MAGIC: bytes = b"CCV1"
 """cool_chic variant 1 archive magic."""
 
 CCV1_SCHEMA_VERSION: int = 1
 """Schema version byte. Bump when grammar changes."""
+
+CCV2_MAGIC: bytes = b"CCV2"
+"""cool_chic variant 2 archive magic — AR-Gaussian ENTROPY-CODED latents.
+
+CCV2 replaces CCV1's RAW int16 LATENT_*_BLOB sections with entropy-coded blobs
+produced by ``tac.substrates.cool_chic.entropy_coder`` (range coding the latent
+integer grid against the AR prior's per-element Gaussian density). The synthesis
++ AR-prior + meta sections are byte-identical to CCV1. This is the section that
+makes Cool-Chic a REAL rate carrier: the latents (99.9 % of the archive) are no
+longer stored at fixed 16-bit width but at their AR-conditional entropy.
+
+::
+
+    MAGIC(4)              b"CCV2"
+    VERSION(1)            u8         schema version (== CCV2_SCHEMA_VERSION)
+    LATENT_C_COARSE(2)    u16
+    LATENT_C_FINE(2)      u16
+    NUM_PAIRS(2)          u16
+    H_COARSE(2)/W_COARSE(2)/H_FINE(2)/W_FINE(2)  u16 each (decode shape check)
+    SYNTHESIS_BLOB_LEN(4) u32
+    AR_PRIOR_BLOB_LEN(4)  u32
+    LATENT_COARSE_LEN(4)  u32        entropy-coded coarse blob len (ECC1 section)
+    LATENT_FINE_LEN(4)    u32        entropy-coded fine blob len (ECC1 section)
+    META_BLOB_LEN(4)      u32
+    SYNTHESIS_BLOB / AR_PRIOR_BLOB / LATENT_COARSE_BLOB(ECC1) /
+        LATENT_FINE_BLOB(ECC1) / META_BLOB
+
+The header layout is byte-for-byte the CCV1 layout (same 39-byte struct) so the
+parser dispatches purely on MAGIC; only the LATENT_*_BLOB CONTENTS differ.
+"""
+
+CCV2_SCHEMA_VERSION: int = 2
+"""Schema version byte for the entropy-coded grammar."""
 
 # Header layout: MAGIC(4) + VERSION(1) + 7 u16 + 5 u32 = 4+1+14+20 = 39 bytes
 # But per design (cool_chic operator memo) we use a 30-byte explicit subset
@@ -206,8 +238,117 @@ def pack_archive(
     return header + synth_blob + ar_blob + coarse_bytes + fine_bytes + meta_bytes
 
 
+def _rebuild_ar_prior_net(ar_state_dict: dict[str, torch.Tensor], prefix: str, in_ch: int, hidden: int):
+    """Rebuild a single ``_ARPriorNet`` (coarse/fine) from the combined AR blob.
+
+    Local import of architecture to avoid a module-level cycle (architecture does
+    not import archive, so this is safe; kept local for clarity).
+    """
+    from .architecture import _ARPriorNet  # local: avoid import cycle
+
+    net = _ARPriorNet(in_ch=in_ch, hidden=hidden)
+    sub_sd = {
+        k.replace(f"{prefix}.", ""): v
+        for k, v in ar_state_dict.items()
+        if k.startswith(f"{prefix}.")
+    }
+    net.load_state_dict({k: v.to(torch.float32) for k, v in sub_sd.items()}, strict=False)
+    return net.eval()
+
+
+def pack_archive_ccv2(
+    synthesis_state_dict: dict[str, torch.Tensor],
+    ar_prior_state_dict: dict[str, torch.Tensor],
+    latents_coarse: torch.Tensor,
+    latents_fine: torch.Tensor,
+    meta: dict[str, object],
+    *,
+    bits_per_std: float = 5.0,
+    grid_step_coarse: float | None = None,
+    grid_step_fine: float | None = None,
+) -> bytes:
+    """Serialize substrate state with ENTROPY-CODED latents (CCV2 grammar).
+
+    The latents are range-coded against the AR prior's per-element Gaussian
+    density (see ``entropy_coder``). The AR prior net MUST be reconstructible
+    from ``ar_prior_state_dict`` + ``meta['ar_prior_hidden']`` so decode replays
+    the identical causal chain. ``grid_step_*`` override the auto-chosen step
+    (Layer-2 / a sweep may pin them); otherwise ``choose_grid_step(bits_per_std)``.
+    """
+    from .entropy_coder import LatentGrid, choose_grid_step, encode_latent_chain
+
+    if latents_coarse.dim() != 4 or latents_fine.dim() != 4:
+        raise ValueError("latents must be 4-D (num_pairs, C, H, W)")
+    if latents_coarse.shape[0] != latents_fine.shape[0]:
+        raise ValueError("num_pairs mismatch between coarse and fine latents")
+
+    num_pairs = int(latents_coarse.shape[0])
+    c_coarse = int(latents_coarse.shape[1])
+    c_fine = int(latents_fine.shape[1])
+    h_coarse = int(latents_coarse.shape[2])
+    w_coarse = int(latents_coarse.shape[3])
+    h_fine = int(latents_fine.shape[2])
+    w_fine = int(latents_fine.shape[3])
+
+    ar_hidden = int(meta["ar_prior_hidden"])
+
+    # CRITICAL (AR causal-chain determinism): the AR prior that ENCODES must be
+    # bit-identical to the one that DECODES. The archive stores the AR net as a
+    # fp16-roundtripped brotli blob, so the decoder reconstructs the fp16 net. We
+    # must therefore ENCODE with the SAME fp16-roundtripped net — otherwise the
+    # causal chain (pair t conditioned on z_{t-1} through the AR net) drifts and
+    # decode diverges (the values grow pair-over-pair). Serialize FIRST, then
+    # deserialize, and build the encoding prior from the deserialized blob.
+    ar_blob = _serialize_state_dict(ar_prior_state_dict)
+    ar_sd_roundtripped = _deserialize_state_dict(ar_blob)
+    prior_coarse = _rebuild_ar_prior_net(ar_sd_roundtripped, "coarse", c_coarse, ar_hidden)
+    prior_fine = _rebuild_ar_prior_net(ar_sd_roundtripped, "fine", c_fine, ar_hidden)
+
+    step_c = float(grid_step_coarse) if grid_step_coarse is not None else choose_grid_step(
+        latents_coarse, bits_per_std=bits_per_std
+    )
+    step_f = float(grid_step_fine) if grid_step_fine is not None else choose_grid_step(
+        latents_fine, bits_per_std=bits_per_std
+    )
+    grid_c = LatentGrid(step=step_c)
+    grid_f = LatentGrid(step=step_f)
+
+    coarse_blob = encode_latent_chain(latents_coarse.to(torch.float32), prior_coarse, grid_c)
+    fine_blob = encode_latent_chain(latents_fine.to(torch.float32), prior_fine, grid_f)
+
+    synth_blob = _serialize_state_dict(synthesis_state_dict)
+
+    meta_full = dict(meta)
+    meta_full["_entropy_grid_step_coarse"] = step_c
+    meta_full["_entropy_grid_step_fine"] = step_f
+    meta_bytes = json.dumps(meta_full, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+    header = struct.pack(
+        CCV1_HEADER_FMT,
+        CCV2_MAGIC,
+        CCV2_SCHEMA_VERSION,
+        c_coarse,
+        c_fine,
+        num_pairs,
+        h_coarse,
+        w_coarse,
+        h_fine,
+        w_fine,
+        len(synth_blob),
+        len(ar_blob),
+        len(coarse_blob),
+        len(fine_blob),
+        len(meta_bytes),
+    )
+    return header + synth_blob + ar_blob + coarse_blob + fine_blob + meta_bytes
+
+
 def parse_archive(blob: bytes) -> CoolChicArchive:
-    """Parse 0.bin bytes back into the typed CoolChicArchive."""
+    """Parse 0.bin bytes back into the typed CoolChicArchive.
+
+    Dispatches on MAGIC: ``CCV1`` = raw int16 latents (fallback), ``CCV2`` =
+    AR-Gaussian entropy-coded latents (the real rate carrier).
+    """
     if len(blob) < CCV1_HEADER_SIZE:
         raise ValueError(f"archive too short ({len(blob)} bytes; need >= {CCV1_HEADER_SIZE})")
     (
@@ -226,21 +367,22 @@ def parse_archive(blob: bytes) -> CoolChicArchive:
         fine_len,
         meta_len,
     ) = struct.unpack(CCV1_HEADER_FMT, blob[:CCV1_HEADER_SIZE])
-    if magic != CCV1_MAGIC:
-        raise ValueError(f"bad magic: {magic!r} (expected {CCV1_MAGIC!r})")
-    if version != CCV1_SCHEMA_VERSION:
+    if magic not in (CCV1_MAGIC, CCV2_MAGIC):
+        raise ValueError(f"bad magic: {magic!r} (expected {CCV1_MAGIC!r} or {CCV2_MAGIC!r})")
+    is_ccv2 = magic == CCV2_MAGIC
+    if is_ccv2:
+        if version != CCV2_SCHEMA_VERSION:
+            raise ValueError(f"unsupported CCV2 schema version: {version}")
+    elif version != CCV1_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {version}")
 
-    expected_coarse_bytes = num_pairs * c_coarse * h_coarse * w_coarse * 2
-    expected_fine_bytes = num_pairs * c_fine * h_fine * w_fine * 2
-    if coarse_len != expected_coarse_bytes:
-        raise ValueError(
-            f"coarse_len {coarse_len} != expected {expected_coarse_bytes}"
-        )
-    if fine_len != expected_fine_bytes:
-        raise ValueError(
-            f"fine_len {fine_len} != expected {expected_fine_bytes}"
-        )
+    if not is_ccv2:
+        expected_coarse_bytes = num_pairs * c_coarse * h_coarse * w_coarse * 2
+        expected_fine_bytes = num_pairs * c_fine * h_fine * w_fine * 2
+        if coarse_len != expected_coarse_bytes:
+            raise ValueError(f"coarse_len {coarse_len} != expected {expected_coarse_bytes}")
+        if fine_len != expected_fine_bytes:
+            raise ValueError(f"fine_len {fine_len} != expected {expected_fine_bytes}")
 
     pos = CCV1_HEADER_SIZE
     synth_blob = blob[pos : pos + synth_len]
@@ -261,6 +403,29 @@ def parse_archive(blob: bytes) -> CoolChicArchive:
     meta = json.loads(meta_blob.decode("utf-8"))
 
     import numpy as np  # local
+
+    if is_ccv2:
+        from .entropy_coder import decode_latent_chain
+
+        ar_hidden = int(meta["ar_prior_hidden"])
+        prior_coarse = _rebuild_ar_prior_net(ar_sd, "coarse", c_coarse, ar_hidden)
+        prior_fine = _rebuild_ar_prior_net(ar_sd, "fine", c_fine, ar_hidden)
+        latents_coarse = decode_latent_chain(coarse_blob, prior_coarse)
+        latents_fine = decode_latent_chain(fine_blob, prior_fine)
+        if tuple(latents_coarse.shape) != (num_pairs, c_coarse, h_coarse, w_coarse):
+            raise ValueError("CCV2 decoded coarse latent shape mismatch")
+        if tuple(latents_fine.shape) != (num_pairs, c_fine, h_fine, w_fine):
+            raise ValueError("CCV2 decoded fine latent shape mismatch")
+        meta.pop("_entropy_grid_step_coarse", None)
+        meta.pop("_entropy_grid_step_fine", None)
+        return CoolChicArchive(
+            synthesis_state_dict=synth_sd,
+            ar_prior_state_dict=ar_sd,
+            latents_coarse=latents_coarse,
+            latents_fine=latents_fine,
+            meta=meta,
+            schema_version=int(version),
+        )
 
     q_coarse = torch.from_numpy(
         np.frombuffer(coarse_blob, dtype=np.int16).copy()
