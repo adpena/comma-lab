@@ -118,6 +118,35 @@ the simpler thread is correct here. (Had inflation been ≥50% / eval starved, t
 plan was a multiprocessing worker serializing the snapshot to a temp file; the
 measurement makes that unnecessary.)
 
+## LIVE confirmation on the real basin (the decisive proof)
+
+Relaunched at epoch 39 (resumed from checkpoint). The real-workload behavior,
+observed live:
+
+- **The eval epoch no longer blocks.** Sync ep10/ep20 each took **672–699 s**;
+  the async ep50 / ep60 / ... each took **~14 s** (a normal MPS epoch). Training
+  flowed continuously across every eval epoch.
+- **The ep40 async eval landed: `score=1.20036 d_seg=0.00911 d_pose=0.00522
+  bytes=92171 *BEST*`** — written to the trajectory tagged `snapshot_ep=40`,
+  BEST-tracked correctly.
+- **It took 860 s under contention** (vs the ~673 s solo eval) — the bg eval
+  yields CPU to the MPS training loop's CPU-side work (PyAV GT decode + scorer
+  forward), so it runs ~28% slower in wall-clock. This matches the micro-bench
+  prediction (~28% per-forward slowdown).
+- **During those 860 s, training advanced from epoch 40 to epoch 102 (62 epochs)
+  at full ~14 s/epoch** — the eval did NOT block. CPU sat at ~186% (≈2 cores:
+  MPS training + bg eval thread, concurrent).
+- **The one-in-flight throttle fired 5 times** (`SKIP @ ep50/60/70/80/90: prior
+  eval snapshot_ep=40 still running`) — exactly as designed, no pile-up.
+
+HONEST nuance (not hidden): because the real eval is this slow under contention
+(~860 s vs the ~150 s nominal eval interval), the eval rows are SPARSER than the
+nominal "every 10 epochs" — one authority row lands roughly every ~60 epochs
+instead of every 10. This is the correct tradeoff: BEST-tracking still gets
+periodic authority checkpoints, and training is never frozen. If denser authority
+sampling is wanted, the fix is to widen `--eval-every` to match the real eval
+cadence (so fewer skips are logged) — the throttle already prevents any harm.
+
 ## New s/epoch + ETA
 
 - **Before (sync):** non-eval epochs ~13.5 s; eval epochs ~673–699 s (blocking).
