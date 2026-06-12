@@ -192,13 +192,17 @@ the bug controls, measuring exact d_seg on the real `modules.py` SegNet (live AN
 |---|---|---:|---:|---|---|---|
 | **BUGGY** | stage 1 (CE, 15 ep) | 2e-4 | 1.0 | **0.50727** | 0.50727 | **0% — FROZEN at init** |
 | **FIXED** | stage 1 (CE, 15 ep) | 0.03 | 50 | **0.06647** | 0.07236 | **7.6× descent** |
-| **FIXED** | stage 2 (tau_softplus, 25 ep) | 0.03 | 50 | **0.01646** | 0.01731 | **30× descent, still going** |
+| **FIXED** | stage 2 (tau_softplus, 25 ep) | 0.03 | 50 | **0.01646** | 0.01731 | **30× descent** |
+| **FIXED** | stage 3 (smooth_disagree, 12 ep) | 0.03 | 50 | **0.01197** | 0.01309 | **42× descent** |
 
-The FIXED arm keeps descending stage-over-stage (0.507 → 0.066 → 0.0165), exactly the basin-reaching
-trajectory the mechanism predicts (CE bulk-descends, tau_softplus refines). The BUGGY arm stayed at the init
-0.507 — it never even started. (n=8 absolute d_seg sits higher than the n=48 c1prime numbers because fewer
-pairs = less spatial averaging; the DESCENT, not the absolute, is the apples-to-apples comparison here, and
-it is unambiguous: 30× and falling vs 0%.)
+The FIXED arm descends stage-over-stage ALL THE WAY THROUGH (0.507 → 0.066 → 0.0165 → **0.0120**), exactly
+the basin-reaching trajectory the mechanism predicts (CE bulk-descends, tau_softplus + smooth refine). The
+BUGGY arm stayed at the init 0.507 — it never even started. **Crucially, stage 3 (smooth_disagreement) did
+NOT raise d_seg under the corrected recipe (0.0165 → 0.0120) — directly REFUTING the BUG-C "smooth raises
+d_seg" symptom as a consequence of the throttling**: in the buggy c1prime run that same stage RAISED d_seg
+(0.00968 → 0.0102); with the correct muon_lr it refines further. (n=8 absolute d_seg sits higher than the
+n=48 c1prime numbers because fewer pairs = less spatial averaging; the DESCENT, not the absolute, is the
+apples-to-apples comparison, and it is unambiguous: 42× and falling vs 0%.)
 
 **This is the smoking gun.** SAME architecture, SAME loss (CE), SAME 15 epochs, SAME init (0.50727) — the
 ONLY difference is the muon_lr the BUG-A fix routes around. The buggy recipe (muon_lr=2e-4, clip=1.0) left
