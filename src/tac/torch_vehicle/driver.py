@@ -691,18 +691,29 @@ class TorchVehicleDriver:
             )
             terms.append(spec.cat_lambda * ent)
         if spec.rate_lambda_w > 0 or spec.rate_lambda_lat > 0:
-            from tac.losses.rate_surrogate import brotli_rate_surrogate
+            from tac.losses.rate_surrogate import (
+                RateSurrogateConfig,
+                brotli_rate_surrogate,
+            )
 
             # The latent rate term is GLOBAL (the codec delta-codes the full latent
             # sequence), so pass the ENTIRE latent tensor — not the batch slice. The
-            # weight term reads the decoder weights (also global). The FiLM-wrapped
-            # decoder exposes the vendored Conv2d/Linear via named_modules, so the
-            # surrogate iterates the SAME tensor set the codec compresses (the
-            # ``pose_film.*`` Linear layers are tiny and also entropy-coded — they
-            # SHOULD be regularized too, so iterating all of them is correct).
+            # weight term reads the decoder weights (also global).
+            #
+            # MED-1 FIX (probe ``experiments/probe_lever1_entropy_vs_real_brotli.py``):
+            # use ``codec_scan_order=True`` so the conditional entropy is computed over
+            # the FULL ``state_dict()`` (weights AND biases, in state-dict order) as ONE
+            # concatenated stream — the EXACT density the vendored codec
+            # ``encode_decoder(quantize_state_dict(sd))`` brotli-compresses. The probe
+            # measured Spearman 0.90 / Pearson 0.999 between this and real brotli decoder
+            # bytes, vs Spearman -0.14 for the legacy per-tensor-weights-only mode, so
+            # TRAIN-TIME rate now tracks DEPLOY-TIME bytes (the full-stack-synergy
+            # requirement). The FiLM ``pose_film.*`` params ship in the decoder blob too,
+            # so the full-state_dict walk regularizes them as well.
+            rate_cfg = RateSurrogateConfig(codec_scan_order=True)
             lat_arg = latents if spec.rate_lambda_lat > 0 else None
             h_cond, r_lat = brotli_rate_surrogate(
-                decoder, lat_arg, device=self.train_device
+                decoder, lat_arg, rate_cfg, device=self.train_device
             )
             if spec.rate_lambda_w > 0:
                 terms.append(spec.rate_lambda_w * h_cond)

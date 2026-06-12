@@ -180,3 +180,113 @@ def test_min_abs_levels_floor_protects_near_zero_sensitivity():
     cfg = ScoreAwareQATConfig(min_abs_levels=16)
     levels = per_tensor_levels_from_sensitivity(sens, names, cfg)
     assert levels["a"] >= 16
+
+
+# ===========================================================================
+# MED-2 codec mechanism (2026-06-12): score-aware grid → SMALLER real brotli blob.
+# The R1 audit flagged Lever-4's byte-win as an UNPROVEN indirect effect (the codec
+# always quantizes at 127). The MED-2 probe
+# (``experiments/probe_lever4_qat_brotli_blob_delta.py``) measured a -3263 B real
+# decoder-blob delta (70264 vs 73527) at equal advisory d_seg from a REAL frozen-scorer
+# sensitivity. This test pins the CODEC-side mechanism the probe proved: applying the
+# score-aware per-tensor grid (low-sensitivity tensors coarsened) produces a strictly
+# SMALLER vendored-codec brotli decoder blob than uniform-127, AND the coarse snap
+# SURVIVES the codec's own 127-level requant (fewer distinct symbols). A fake that left
+# the grid uniform (or that the codec's 127-requant erased) would FAIL.
+# ===========================================================================
+def test_score_aware_grid_yields_smaller_real_brotli_blob_than_uniform():
+    pytest = __import__("pytest")
+    try:
+        import sys
+        from pathlib import Path
+
+        repo = Path(__file__).resolve().parents[4]
+        if str(repo / "src") not in sys.path:
+            sys.path.insert(0, str(repo / "src"))
+        from tac.torch_vehicle.vendored_imports import import_vendored
+
+        codec = import_vendored("codec")
+        model = import_vendored("model")
+    except Exception as exc:  # pragma: no cover - vendored clone may be absent in CI
+        pytest.skip(f"vendored codec/model unavailable: {exc}")
+
+    # A real basin-sized decoder with random (high-entropy) weights — the regime where
+    # the codec uses most of the 127-symbol alphabet (so coarsening has room to help).
+    torch.manual_seed(0)
+    dec = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+    base_sd = {k: v.detach().float() for k, v in dec.state_dict().items()}
+
+    names = [
+        n
+        for n, m in dec.named_modules()
+        if isinstance(m, (nn.Conv2d, nn.Linear)) and getattr(m, "weight", None) is not None
+    ]
+    # Deterministic NON-uniform sensitivity: first half low, second half high → the low
+    # tensors get a coarser grid (the score-aware allocation).
+    sens = {n: (0.01 if i < len(names) // 2 else 100.0) for i, n in enumerate(names)}
+
+    def _blob(state_dict):
+        return len(codec.encode_decoder(codec.quantize_state_dict(state_dict)))
+
+    # Uniform-127 arm (default-preserving): sensitivity=None.
+    dec_u = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+    dec_u.load_state_dict(base_sd)
+    o_u = apply_score_aware_qat(dec_u, sensitivity=None)
+    uniform_blob = _blob(dec_u.state_dict())
+    restore_score_aware_qat(dec_u, o_u)
+
+    # Score-aware arm: low-sensitivity tensors coarsened.
+    dec_s = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+    dec_s.load_state_dict(base_sd)
+    apply_score_aware_qat(dec_s, sensitivity=sens)
+    score_blob = _blob(dec_s.state_dict())
+
+    assert score_blob < uniform_blob, (
+        f"score-aware blob {score_blob} must be < uniform-127 blob {uniform_blob} "
+        "(coarsening low-sensitivity tensors must shrink the REAL brotli decoder blob — "
+        "the MED-2 indirect-win mechanism); equal bytes would mean the grid never "
+        "actually changed the deployed encoding (FAKE)"
+    )
+
+
+def test_uniform_score_aware_blob_equals_vendored_uniform_blob():
+    """The default-preserving guard at the CODEC byte level: sensitivity=None produces
+    a brotli decoder blob BIT-IDENTICAL to the vendored uniform-127 codec path (so an
+    unconditioned score-aware-QAT run ships the exact same bytes as today)."""
+    pytest = __import__("pytest")
+    try:
+        import sys
+        from pathlib import Path
+
+        repo = Path(__file__).resolve().parents[4]
+        if str(repo / "src") not in sys.path:
+            sys.path.insert(0, str(repo / "src"))
+        from tac.torch_vehicle.vendored_imports import import_vendored
+
+        codec = import_vendored("codec")
+        model = import_vendored("model")
+        losses = import_vendored("losses")
+    except Exception as exc:  # pragma: no cover
+        pytest.skip(f"vendored codec/model/losses unavailable: {exc}")
+
+    torch.manual_seed(1)
+    dec = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+    base_sd = {k: v.detach().float() for k, v in dec.state_dict().items()}
+
+    # score-aware (sensitivity=None) snap.
+    dec_a = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+    dec_a.load_state_dict(base_sd)
+    apply_score_aware_qat(dec_a, sensitivity=None)
+    blob_a = codec.encode_decoder(codec.quantize_state_dict(dec_a.state_dict()))
+
+    # vendored uniform QAT snap (apply_qat / restore_qat).
+    dec_b = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+    dec_b.load_state_dict(base_sd)
+    o_b = losses.apply_qat(dec_b)
+    blob_b = codec.encode_decoder(codec.quantize_state_dict(dec_b.state_dict()))
+    losses.restore_qat(dec_b, o_b)
+
+    assert blob_a == blob_b, (
+        "sensitivity=None score-aware QAT must produce a brotli blob BIT-IDENTICAL to "
+        "the vendored uniform-127 QAT (default-preserving guard at the codec layer)"
+    )

@@ -219,3 +219,38 @@ bit-spend proof (per Catalog #304), and both modules carry `SCORE_CLAIM=False`.
 declared in the landing memo). Mission contribution: `rigor_overhead` (independent verification that the
 MEANS are real + daemon-safe; the END remains a lower exact score, frontier UNMOVED). Authority: all numbers
 `[macOS-CPU advisory]` NON-PROMOTABLE. No GPU launched, no daemon touched, no source edited.
+
+---
+
+## APPEND-ONLY (2026-06-12) — fix-list closure (consolidated R3-prep pass)
+
+Per HISTORICAL_PROVENANCE the body above is UNCHANGED. The §F prioritized fix list is now
+RESOLVED (settled lever code at HEAD; no collision). Per-gap verdict + MEASURED numbers:
+
+- **MED-1 (Lever-1 scan-order) → FIXED.** Built `experiments/probe_lever1_entropy_vs_real_brotli.py`:
+  correlated the conditional entropy vs REAL `len(encode_decoder(quantize_state_dict(sd)))`
+  over 8 real weight configs. As-wired (legacy per-tensor weights-only, 2000-trunc) =
+  Spearman **-0.14**; deploy-faithful codec-scan-order (full state_dict, weights+biases,
+  one stream) = Spearman **0.90** / Pearson **0.999**. FIX: `RateSurrogateConfig.codec_scan_order`
+  + driver uses it. The "true lower bound regardless of scan order ⇒ conservative" defense
+  was mathematically correct but IRRELEVANT to the real defect — the per-tensor MODE
+  measured the wrong subset/order so its VALUE did not rank-track real bytes. The fix is
+  the deploy-faithful scan order. 3 new tests. Byte-identity-of-default preserved.
+
+- **MED-2 (Lever-4 indirect effect) → SUPPORTED (codec axis validated).** Built
+  `experiments/probe_lever4_qat_brotli_blob_delta.py`: REAL `||∂S/∂w||` sensitivity (one
+  frozen-scorer backward, 8 0.mkv pairs) → score-aware grid → **-3263 B smaller** real
+  brotli decoder blob (70264 vs 73527) at EQUAL advisory d_seg (0.0034 → 0.0034). Snap
+  survives the codec 127-requant (214 → 113 distinct symbols on blocks.0.weight). HONEST
+  caveat landed in the Lever-4 docstring: the byte DIRECTION is validated; the net-SCORE
+  win still needs the training A/B (uniform-QAT-trained vs score-aware-QAT-trained) + dual
+  exact eval. 2 new codec-mechanism tests. NOT shipped as a confirmed SCORE lever.
+
+- **LOW-1 (per-batch not per-epoch) → CORRECTED** in the landing memo (append-only note).
+
+- **LOW-2 (zero-init FiLM fc2 in the rate soft-hist) → already CLOSED by R2** (the
+  `max_abs_floor` skip; 80-epoch compose-all-five run finite). No new action.
+
+VERDICT: no gap left ambiguous (MED-1 FIXED, MED-2 SUPPORTED-with-honest-scope, LOW-1
+CORRECTED, LOW-2 CLOSED-by-R2). Authority: all `[macOS-CPU advisory]` NON-PROMOTABLE;
+frontier UNMOVED.

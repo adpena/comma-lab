@@ -177,3 +177,61 @@ archive is run through `upstream/evaluate.py` on BOTH contest-CPU (Linux x86_64)
 - Tests: `src/tac/torch_vehicle/tests/test_all_layer2_levers.py` (18), `src/tac/tests/test_rate_surrogate.py`
   (9), `src/tac/torch_vehicle/tests/test_score_aware_qat.py` (11); `test_driver_resume.py` monkeypatch
   signature fix.
+
+---
+
+## APPEND-ONLY (2026-06-12) — recursive-review gap closure (R1 MED-1 / MED-2 / LOW-1)
+
+Per HISTORICAL_PROVENANCE (Catalog #110/#113) the original body above is UNCHANGED; this
+section supersedes the noted lines. The R1 audit (`4cbd9676a`) + R2 (`253f8ab9a`) flagged
+two MEDIUM proxy gaps + one LOW doc nit; all three are closed here (consolidated fix pass).
+
+**LOW-1 correction (supersedes line 112 "the rate term is computed once per epoch").**
+The Lever-1 rate term is computed PER-BATCH, not once per epoch — it runs inside
+`_weight_regularizers`, called from the per-batch loop (`driver.py:611/626`). This MATCHES
+the vendored C1a `cat_entropy_v2` cadence (also per-batch) and is default-OFF, so it is
+harmless to correctness; the "once per epoch" wording was inaccurate. The 9-dim EXTREME
+OPTIMIZATION claim still holds (the term is a cheap global quantity), but its cadence is
+per-batch.
+
+**MED-1 — CLOSED via FIX (probe `experiments/probe_lever1_entropy_vs_real_brotli.py`).**
+The probe correlated Lever-1's conditional entropy against the REAL vendored-codec brotli
+decoder bytes (`encode_decoder(quantize_state_dict(sd))`) across 8 real weight configs
+(basin EMA, sorted/smoothed, shuffled, 4 noise levels, random-init). FINDING: the LEGACY
+per-tensor mode (named_modules WEIGHTS only, first-2000-truncated) is **Spearman -0.14** vs
+real brotli bytes — NOT a reliable rank proxy in the basin's realistic high-entropy regime
+(trained INT8 weights use 195-228 of 255 symbols, ~1.5% zeros). The deploy-faithful
+CODEC-SCAN-ORDER conditional entropy (FULL `state_dict()` — weights AND biases — in
+state-dict order, one concatenated stream = the exact density brotli compresses) is
+**Spearman 0.90 / Pearson 0.999**. FIX: added `RateSurrogateConfig.codec_scan_order`
+(`src/tac/losses/rate_surrogate.py`) + the driver now uses `codec_scan_order=True`
+(`driver.py` Lever-1 callsite) so TRAIN-TIME rate tracks DEPLOY-TIME bytes (full-stack
+synergy). Gradient flows to weights+biases+latents. Tests:
+`test_codec_scan_order_mode_differs_from_per_tensor_on_multi_tensor_decoder`,
+`test_codec_scan_order_stream_includes_biases`,
+`test_codec_scan_order_entropy_ranks_with_real_brotli_bytes`. Byte-identity-of-default
+preserved (Lever-1 default-OFF; the 34-test byte-identity/default/resume/compose subset
+still passes). VERDICT: FIXED.
+
+**MED-2 — CLOSED via VALIDATION (probe `experiments/probe_lever4_qat_brotli_blob_delta.py`).**
+The probe took the basin EMA decoder + a REAL `||∂S/∂w||` sensitivity (one frozen-scorer
+forward+backward on 8 0.mkv GT pairs) and byte-closed BOTH uniform-127 and score-aware-grid
+arms through the REAL codec. RESULT: score-aware grid (13/14 tensors coarsened into the
+[64,127] band) → **-3263 B (-4.4%) SMALLER brotli decoder blob** (70264 vs 73527) at
+**equal advisory d_seg** (0.0034 → 0.0034); d_pose advisory ticks 0.001663 → 0.001777
+(a one-shot-snap artifact). Mechanism CONFIRMED: a 64-level snap collapses `blocks.0.weight`
+from 214 → 113 distinct codec-127 symbols (it survives the codec's own 127-requant) →
+fewer brotli symbols → smaller blob. The indirect-win hypothesis is SUPPORTED on the
+CODEC axis (Catalog #304 bit-spend proof POSITIVE). HONEST SCOPE (landed in the Lever-4
+docstring): the probe validates the codec half (the byte DIRECTION); the FULL net-score
+win still needs the paired TRAINING A/B (uniform-QAT-trained vs score-aware-QAT-trained,
+archive_bytes at equal d_seg/d_pose) + dual CPU/CUDA exact eval before any SCORE claim —
+the byte direction is validated, the net-score win remains a prediction. Test:
+`test_score_aware_grid_yields_smaller_real_brotli_blob_than_uniform` +
+`test_uniform_score_aware_blob_equals_vendored_uniform_blob`. VERDICT: SUPPORTED (codec
+axis validated; training A/B still gates the score claim).
+
+**Authority:** every number above is `[macOS-CPU advisory]` NON-PROMOTABLE; the frontier is
+UNMOVED (`.omx/state/canonical_frontier_pointer.json`). These close the recursive-review
+gaps (MEANS hardening); the END remains a lower exact score, pending the paired A/B + dual
+exact eval. No GPU launched, no daemon touched, no Cool-Chic touched.

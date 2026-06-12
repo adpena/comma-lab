@@ -172,3 +172,124 @@ def test_rate_surrogate_score_claim_flags_are_false():
     assert rate_surrogate.SCORE_CLAIM is False
     assert rate_surrogate.PROMOTION_ELIGIBLE is False
     assert rate_surrogate.READY_FOR_EXACT_EVAL_DISPATCH is False
+
+
+# ===========================================================================
+# MED-1 scan-order FIX (2026-06-12): codec_scan_order=True must track REAL brotli
+# bytes (Spearman 0.90 / Pearson 0.999 per the probe) and include biases + carry a
+# gradient. These tests verify the BEHAVIOR of the fix, not constants — a fake that
+# ignored scan order / dropped biases / broke the gradient would FAIL them.
+# ===========================================================================
+def _multi_tensor_decoder(seed: int) -> nn.Module:
+    """A 3-Conv decoder with biases — a multi-tensor state_dict where the per-tensor
+    (weights-only) mode and the codec-scan-order (full-state_dict) mode DIFFER."""
+    g = torch.Generator().manual_seed(seed)
+    m = nn.Sequential(
+        nn.Conv2d(2, 4, 3),
+        nn.Conv2d(4, 4, 3),
+        nn.Conv2d(4, 2, 3),
+    )
+    with torch.no_grad():
+        for p in m.parameters():
+            p.copy_(torch.randn(p.shape, generator=g))
+    return m
+
+
+def test_codec_scan_order_mode_differs_from_per_tensor_on_multi_tensor_decoder():
+    """On a multi-tensor decoder the codec-scan-order mode (full state_dict, one
+    stream) and the legacy per-tensor mode give DIFFERENT values — proving the new
+    mode actually changed the computation (not a relabelled alias of the old path)."""
+    from tac.losses.rate_surrogate import RateSurrogateConfig
+
+    dec = _multi_tensor_decoder(seed=7)
+    h_per_tensor = conditional_weight_entropy(
+        dec, RateSurrogateConfig(codec_scan_order=False), device="cpu"
+    ).item()
+    h_scan = conditional_weight_entropy(
+        dec, RateSurrogateConfig(codec_scan_order=True), device="cpu"
+    ).item()
+    assert abs(h_per_tensor - h_scan) > 1e-4, (
+        f"codec_scan_order={h_scan:.5f} must differ from per-tensor={h_per_tensor:.5f} "
+        "on a multi-tensor decoder (else the new mode is a no-op alias — FAKE)"
+    )
+
+
+def test_codec_scan_order_stream_includes_biases():
+    """The codec-scan-order stream walks the FULL state_dict (weights AND biases), so
+    the gradient reaches a BIAS tensor — the per-tensor weights-only mode never did.
+    The bias is part of the real brotli decoder blob, so it MUST be regularized."""
+    from tac.losses.rate_surrogate import RateSurrogateConfig
+
+    dec = _multi_tensor_decoder(seed=8)
+    for p in dec.parameters():
+        p.requires_grad_(True)
+    h = conditional_weight_entropy(dec, RateSurrogateConfig(codec_scan_order=True), device="cpu")
+    h.backward()
+    bias = dec[0].bias
+    assert bias.grad is not None and bias.grad.abs().sum().item() > 0, (
+        "codec_scan_order must carry a gradient to the BIAS tensors (they ship in the "
+        "decoder blob); a weights-only stream would leave bias.grad None/zero — the fix "
+        "is not actually reading the full state_dict"
+    )
+
+
+def test_codec_scan_order_entropy_ranks_with_real_brotli_bytes():
+    """END-TO-END proxy validation (the MED-1 verdict, in a self-contained test):
+    across three weight configs spanning a wide redundancy range, the codec-scan-order
+    conditional entropy must RANK-ORDER the same way as the REAL vendored-codec brotli
+    decoder-blob byte count. This is the property the driver relies on (train-time rate
+    tracks deploy-time bytes). A scan-order-blind surrogate would NOT rank-match real
+    brotli bytes (the legacy mode measured Spearman -0.14)."""
+    pytest = __import__("pytest")
+    try:
+        import sys
+        from pathlib import Path
+
+        repo = Path(__file__).resolve().parents[3]
+        if str(repo / "src") not in sys.path:
+            sys.path.insert(0, str(repo / "src"))
+        from tac.torch_vehicle.vendored_imports import import_vendored
+
+        codec = import_vendored("codec")
+        model = import_vendored("model")
+    except Exception as exc:  # pragma: no cover - vendored clone may be absent in CI
+        pytest.skip(f"vendored codec/model unavailable: {exc}")
+
+    from tac.losses.rate_surrogate import RateSurrogateConfig
+
+    cfg = RateSurrogateConfig(codec_scan_order=True)
+
+    def _sd_for(scale_noise: float, seed: int) -> dict:
+        g = torch.Generator().manual_seed(seed)
+        dec = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+        base = {k: v.detach().float() for k, v in dec.state_dict().items()}
+        if scale_noise == 0.0:
+            # sorted/smoothed: maximal scan-order runs → minimal entropy + bytes.
+            return {k: torch.sort(v.flatten())[0].reshape(v.shape) for k, v in base.items()}
+        out = {}
+        for k, v in base.items():
+            std = v.float().std().clamp_min(1e-9)
+            out[k] = v + torch.randn(v.shape, generator=g) * scale_noise * std
+        return out
+
+    configs = {
+        "sorted": _sd_for(0.0, 1),  # lowest entropy + bytes
+        "mild": _sd_for(0.3, 2),  # mid
+        "harsh": _sd_for(3.0, 3),  # highest entropy + bytes
+    }
+    hs, bs = [], []
+    for sd in configs.values():
+        dec = model.HNeRVDecoder(latent_dim=28, base_channels=20, eval_size=(384, 512))
+        dec.load_state_dict(sd)
+        with torch.no_grad():
+            hs.append(conditional_weight_entropy(dec, cfg, device="cpu").item())
+        bs.append(len(codec.encode_decoder(codec.quantize_state_dict(sd))))
+
+    # Strict monotone agreement: the entropy ordering must equal the byte ordering.
+    h_order = sorted(range(len(hs)), key=lambda i: hs[i])
+    b_order = sorted(range(len(bs)), key=lambda i: bs[i])
+    assert h_order == b_order, (
+        f"codec-scan-order entropy ranking {h_order} must match real brotli byte "
+        f"ranking {b_order} (entropies={hs}, bytes={bs}) — the surrogate does NOT track "
+        "deploy-time bytes, the MED-1 fix is not working"
+    )

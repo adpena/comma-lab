@@ -18,9 +18,27 @@ cat_entropy_v2 soft-histogram machinery (so the INT8 grid matches the codec):
   Order-1 conditional entropy is a TIGHTER brotli proxy than the marginal `H(W)`
   because brotli's order-N context modeling is bounded below by it and approaches
   it on scan-order-smooth INT8 streams. Penalizing it biases the decoder toward
-  long zigzag runs (long brotli LZ matches). It is a TRUE lower bound regardless
-  of the exact scan order (conditioning never increases entropy), so it is
-  CONSERVATIVE — it never claims more savings than achievable.
+  long zigzag runs (long brotli LZ matches).
+
+  **MED-1 scan-order validation (2026-06-12,
+  ``experiments/probe_lever1_entropy_vs_real_brotli.py``).** The order-1 conditional
+  entropy is only a PREDICTIVE proxy for real brotli bytes when computed over the
+  CODEC's ACTUAL scan order — the FULL ``state_dict()`` (every tensor, weights AND
+  biases, in state-dict order) as ONE concatenated stream, exactly what
+  ``codec.encode_decoder(quantize_state_dict(sd))`` brotli-compresses. With
+  ``RateSurrogateConfig.codec_scan_order=True`` the probe measured **Spearman 0.90 /
+  Pearson 0.999** vs real brotli decoder bytes across 8 real weight configs (basin
+  EMA, sorted/smoothed, shuffled, 4 noise levels, random-init). The LEGACY per-tensor
+  mode (``codec_scan_order=False``: named_modules Conv2d/Linear *weights only*,
+  first-2000-symbols-per-tensor) measured **Spearman -0.14** — it is NOT a reliable
+  rank proxy in the realistic high-entropy regime (the basin's trained INT8 weights
+  use 195-228 of 255 symbols, ~1.5% zeros, so the truncated weights-only subset does
+  not track the deployed stream's order-1 redundancy). The driver therefore uses
+  ``codec_scan_order=True``. (Note: the marginal-vs-conditional inequality
+  ``H(W|W_prev) <= H(W)`` still holds in BOTH modes — that mathematical lower-bound
+  property was never the issue; the issue was that the per-tensor MODE measured the
+  wrong subset/order, so its VALUE did not track real bytes. The fix is the
+  deploy-faithful scan order, not the inequality.)
 
 * **(1b) Latent temporal-delta entropy** ``H(quantize(z[p] − z[p−1]))`` per latent
   dim — the quantity the codec actually delta-codes. The latents path has NO
@@ -84,6 +102,24 @@ class RateSurrogateConfig:
     lat_bins: int = 256
     #: Soft-assignment bandwidth (in uint8-grid units) for the latent-delta hist.
     lat_sigma: float = 1.0
+    #: When True, ``conditional_weight_entropy`` iterates the decoder's FULL
+    #: ``state_dict()`` (every tensor — weights AND biases — in state-dict order)
+    #: as ONE concatenated symbol stream, matching the EXACT density the vendored
+    #: codec brotli-compresses (``codec.encode_decoder(quantize_state_dict(sd))``
+    #: concatenates every tensor in ``sd.items()`` order into a single brotli
+    #: stream). This is the DEPLOY-FAITHFUL proxy: the MED-1 probe
+    #: (``experiments/probe_lever1_entropy_vs_real_brotli.py``) measured Spearman
+    #: 0.90 / Pearson 0.999 between this and real brotli decoder bytes, vs Spearman
+    #: -0.14 for the per-tensor (named_modules-weights-only, first-2000-truncated)
+    #: mode. When False (the module-standalone default), the legacy per-tensor
+    #: size-weighted average is used (single-tensor decoders are identical either
+    #: way; the difference only appears on multi-tensor state dicts).
+    codec_scan_order: bool = False
+    #: Cap on the number of contiguous symbols used for the single-stream
+    #: codec-scan-order conditional entropy (preserves adjacency across the WHOLE
+    #: stream order; the basin's ~83K-weight decoder fits comfortably). Only used
+    #: when ``codec_scan_order=True``.
+    stream_sample_size: int = 60000
 
 
 def _iter_quantizable_weights(decoder: nn.Module):
@@ -98,6 +134,63 @@ def _iter_quantizable_weights(decoder: nn.Module):
             if w is None:
                 continue
             yield name, w
+
+
+def _codec_stream_normalized(decoder: nn.Module, cfg: RateSurrogateConfig):
+    """Yield each ``state_dict()`` tensor (weights AND biases, in state-dict order),
+    normalized to the INT8 grid (``t / (|t|.max()/127)``), as the codec sees them.
+
+    The vendored ``codec.quantize_state_dict`` iterates ``sd.items()`` and quantizes
+    EVERY tensor per-tensor-symmetric INT8 with its OWN ``|t|.max()/127`` scale, then
+    ``encode_decoder`` concatenates the zigzag-INT8 of each (in the same order) into a
+    SINGLE brotli stream. To track that exact density we (a) walk the gradient-carrying
+    parameters in the SAME order ``state_dict()`` yields them, (b) per-tensor INT8-grid-
+    normalize with the SAME ``|t|.max()/127`` scale (grad broken through the scale, like
+    C1a). Tensors below the abs floor (e.g. a zero-init FiLM fc2) are skipped — they
+    quantize to all-zero and contribute no order-1 structure.
+
+    Critically this walks ``state_dict()`` (the deploy contract) — which includes biases
+    the per-tensor named_modules-weights-only path omitted — so the surrogate's symbol
+    stream is the one the codec compresses, not an abstract subset.
+    """
+    n_levels = float(max(cfg.bin_max, -cfg.bin_min))  # 127.0
+    # Map state-dict NAME -> the live, gradient-carrying parameter. ``state_dict()``
+    # returns DETACHED tensors (no grad_fn), so to keep the gradient we look the
+    # parameter up by name (``named_parameters()`` shares the exact state_dict key for
+    # every parameter). Buffers (e.g. a stored-pose buffer) are not in
+    # ``named_parameters`` → they fall through as the detached state_dict tensor (no
+    # grad, but the codec still quantizes them, so they belong in the stream). We iterate
+    # ``state_dict()`` to get the EXACT codec write order.
+    name_to_param = dict(decoder.named_parameters())
+    for name, t in decoder.state_dict().items():
+        live = name_to_param.get(name)
+        w = live if live is not None else t  # buffers fall through (no grad)
+        if w.numel() < 1:
+            continue
+        ma = w.abs().max().detach()
+        if ma.item() < cfg.max_abs_floor:
+            continue
+        yield (w / (ma / n_levels)).flatten()
+
+
+def _stream_conditional_entropy(
+    stream: torch.Tensor, bins: torch.Tensor, cfg: RateSurrogateConfig
+) -> torch.Tensor:
+    """Order-1 conditional entropy ``H(cur|prev)`` of a single 1-D symbol stream
+    (differentiable, soft-INT8-binned). Shared by the codec-scan-order path."""
+    if stream.numel() < 2:
+        return torch.zeros((), device=stream.device, dtype=torch.float32)
+    if stream.numel() > cfg.stream_sample_size:
+        stream = stream[: cfg.stream_sample_size]
+    sa = _soft_bin_assignment(stream, bins, cfg.sigma, cfg.eps)  # (M, K)
+    prev = sa[:-1]
+    cur = sa[1:]
+    joint = (prev.unsqueeze(2) * cur.unsqueeze(1)).mean(dim=0)  # (K, K)
+    joint = joint / (joint.sum() + cfg.eps)
+    marg_prev = joint.sum(dim=1)
+    cond = joint / (marg_prev.unsqueeze(1) + cfg.eps)
+    h_cond_per_a = -(cond * torch.log2(cond + cfg.eps)).sum(dim=1)
+    return (marg_prev * h_cond_per_a).sum()
 
 
 def _soft_bin_assignment(
@@ -130,6 +223,20 @@ def conditional_weight_entropy(
 
     Returns a SCALAR ``torch.Tensor`` (grad-enabled when weights ``requires_grad``);
     ``0.0`` if no eligible tensor has ``>= 2`` elements above the abs floor.
+
+    Two modes (``RateSurrogateConfig.codec_scan_order``):
+
+    * ``codec_scan_order=True`` (the DEPLOY-FAITHFUL proxy, used by the driver):
+      iterate the FULL ``state_dict()`` (every tensor — weights AND biases — in
+      state-dict order) as ONE concatenated symbol stream, matching the exact density
+      the vendored codec brotli-compresses. The MED-1 probe measured Spearman 0.90 /
+      Pearson 0.999 vs real brotli decoder bytes across 8 real weight configs.
+    * ``codec_scan_order=False`` (the module-standalone default): the legacy per-tensor
+      size-weighted average over named_modules Conv2d/Linear weights only, truncated to
+      the first ``pair_sample_size`` symbols per tensor. The MED-1 probe measured
+      Spearman -0.14 vs real brotli bytes (NOT a reliable rank proxy in the realistic
+      high-entropy regime) — kept only for backward compatibility / single-tensor
+      callers (where the two modes coincide).
     """
     cfg = config or RateSurrogateConfig()
     if device is None:
@@ -142,6 +249,15 @@ def conditional_weight_entropy(
 
     bins = torch.arange(cfg.bin_min, cfg.bin_max + 1, device=device_, dtype=torch.float32)
     n_levels = float(max(cfg.bin_max, -cfg.bin_min))  # 127.0
+
+    if cfg.codec_scan_order:
+        # DEPLOY-FAITHFUL: one concatenated stream over the FULL state_dict, in the
+        # exact order the codec writes it (the density brotli actually consumes).
+        chunks = list(_codec_stream_normalized(decoder, cfg))
+        if not chunks:
+            return torch.zeros((), device=device_, dtype=torch.float32)
+        stream = torch.cat([c.to(device_) for c in chunks])
+        return _stream_conditional_entropy(stream, bins, cfg)
 
     weighted_entropy = torch.zeros((), device=device_, dtype=torch.float32)
     total_numel = 0

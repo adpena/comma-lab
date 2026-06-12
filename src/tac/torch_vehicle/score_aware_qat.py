@@ -36,6 +36,26 @@ archive still uses the codec's INT8 (127-level) per-tensor scale; the score-awar
 shapes the decoder so that, post-codec-quant, the score-relevant weights survive and
 the score-irrelevant ones collapse to repeated symbols brotli loves.
 
+**MED-2 codec-side validation (2026-06-12,
+``experiments/probe_lever4_qat_brotli_blob_delta.py``).** The R1 audit flagged the
+byte-win as an UNPROVEN indirect effect because the codec always re-quantizes at 127.
+The probe MEASURED the effect on the basin EMA decoder with a REAL frozen-scorer
+``||∂S/∂w||`` sensitivity: the score-aware grid (13/14 tensors coarsened into the
+[64,127] band) produced a **-3263 B (-4.4%) smaller vendored-codec brotli decoder blob**
+(70264 vs 73527) at **equal advisory d_seg** (0.0034 → 0.0034). The coarse snap SURVIVES
+the codec's own 127-requant — a 64-level snap collapses e.g. ``blocks.0.weight`` from 214
+to 113 distinct codec-127 symbols → fewer brotli symbols → smaller blob — so the win is
+the REAL deployed bytes, not a pre-codec artifact (Catalog #304 bit-spend proof:
+POSITIVE on the codec axis). CAVEAT (honest scope): the probe applies the grid as a
+one-shot SNAP to already-trained weights — it validates the CODEC half of the
+hypothesis (coarse-grid-robust → fewer brotli symbols → smaller blob). The full Lever-4
+mechanism additionally TRAINS the decoder to be robust at the coarse grid, which can
+recover the small d_pose uptick the snap incurs (0.001663 → 0.001777 advisory); that
+training half still requires the paired TRAINING A/B (uniform-QAT-trained vs
+score-aware-QAT-trained, archive_bytes at equal d_seg/d_pose) + the dual CPU/CUDA exact
+eval before any SCORE claim. The byte direction is validated; the net-score win is still
+a prediction pending the training A/B.
+
 NO-FAKE discipline (this module ACTUALLY varies the quantization grid per tensor by
 the supplied sensitivity, on the real weights — verified in
 ``tests/test_score_aware_qat.py``):
