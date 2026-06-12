@@ -430,6 +430,109 @@ def test_lever2_anneal_at_t_min_over_long_stage_is_clamped_and_surrogate_finite(
     )
 
 
+# --- R9: numerical stability under the anneal tail (the live arm's T=1.0->0.05) ---
+def _adversarial_seg_logits(kind: str, *, B: int = 2, H: int = 8, W: int = 12, seed: int = 3):
+    """Adversarial SegNet-logit families that probe the annealed-tail (T->0.05)
+    softmax/margin arithmetic where a benign random tensor would NOT (R9 lens).
+    All stay well inside fp32 (|logit| <= 1e8 = ~10^7x beyond any real SegNet
+    logit, which is O(10) per R8's measured margins 2-6) so a NON-finite result
+    here is a genuine lever defect, not input overflow."""
+    g = torch.Generator().manual_seed(seed)
+    if kind == "tied":  # all classes equal -> margin 0 -> exp(-0/tau)=1 everywhere
+        x = torch.zeros(B, _SEG_NUM_CLASSES, H, W)
+    elif kind == "saturated":  # one class +1e4, rest -1e4 -> softmax fully one-hot
+        x = torch.full((B, _SEG_NUM_CLASSES, H, W), -1e4)
+        x[:, 0] = 1e4
+    elif kind == "huge":  # magnitude 1e3 -> pred/0.05 = 2e4 (large but finite)
+        x = torch.randn(B, _SEG_NUM_CLASSES, H, W, generator=g) * 1e3
+    elif kind == "extreme":  # magnitude 1e8 -> pred/0.05 = 2e9, still << fp32 max 3.4e38
+        x = torch.randn(B, _SEG_NUM_CLASSES, H, W, generator=g) * 1e8
+    elif kind == "near_tie":  # two classes within 1e-7 -> margin ~0 at the boundary
+        x = torch.randn(B, _SEG_NUM_CLASSES, H, W, generator=g)
+        x[:, 1] = x[:, 0] + 1e-7
+    else:  # "normal"
+        x = torch.randn(B, _SEG_NUM_CLASSES, H, W, generator=g)
+    x = x.clone().requires_grad_(True)
+    t = torch.randint(0, _SEG_NUM_CLASSES, (B, H, W), generator=g, dtype=torch.int64)
+    return x, t
+
+
+@pytest.mark.parametrize("surrogate", ["soft_cosine", "fisher_rao", "sinkhorn"])
+@pytest.mark.parametrize(
+    "kind", ["tied", "saturated", "huge", "extreme", "near_tie", "normal"]
+)
+@pytest.mark.parametrize("margin_tau", [None, 2.0, 1e-6])
+def test_lever2_lever5_anneal_tail_finite_loss_and_grad_adversarial(
+    surrogate, kind, margin_tau
+):
+    """R9 numerical-stability lens — the live distortion arm anneals seg-temperature
+    1.0 -> 0.05 (PROVENANCE.json) with the soft_cosine surrogate + margin_weight_tau=2.0.
+    At the coldest tail T=0.05 the surrogate computes ``softmax(pred/0.05) = softmax(pred*20)``
+    and the margin lever computes ``exp(-margin/tau)``. Adversarial logit families
+    (tied/saturated/huge/extreme/near-tie) that a benign random tensor would NOT
+    exercise must produce a FINITE loss AND FINITE gradients — not just a finite
+    VALUE (the prior anneal-tail test checked only the value, and only on clean
+    random logits). A NaN/Inf gradient at the tail would silently poison the live
+    arm's optimizer step; this pins finiteness across ALL 3 selectable surrogates ×
+    6 adversarial families × {no-margin, tau=2 (live), tau=1e-6 (clamp floor)}.
+
+    Class-2-fake-proof: this is NOT a constant-return test. If the surrogate or the
+    margin map returned a constant, the gradient would be 0 (still finite) — so we
+    ALSO assert the loss actually DEPENDS on the input (non-zero grad on at least
+    one non-degenerate family) below, and the parametrization spans values
+    (saturated->0.0, normal->~0.57) proving the value is input-dependent."""
+    spec = _stage(
+        epochs=2,
+        seg_surrogate=surrogate,
+        seg_temperature=1.0,
+        seg_temperature_end=0.05,
+        margin_weight_tau=margin_tau,
+    )
+    # The annealed FINAL-epoch temperature for the live schedule == the floor 0.05.
+    t_tail = seg_temperature_for_epoch(spec, spec.epochs - 1)
+    assert abs(t_tail - 0.05) < 1e-9, f"tail T should be the 0.05 floor, got {t_tail}"
+
+    x, targets = _adversarial_seg_logits(kind)
+    val = _seg_loss_for_spec(spec, x, targets, temperature=t_tail)
+    assert torch.isfinite(val).all(), (
+        f"{surrogate}/{kind}/tau={margin_tau}: NON-finite loss {val} at anneal tail T=0.05"
+    )
+    val_f = float(val.detach())
+    assert 0.0 - 1e-5 <= val_f <= 1.0 + 1e-5, (
+        f"{surrogate}/{kind}/tau={margin_tau}: surrogate {val_f} escaped [0,1] at tail"
+    )
+    val.backward()
+    assert x.grad is not None and torch.isfinite(x.grad).all(), (
+        f"{surrogate}/{kind}/tau={margin_tau}: NON-finite GRADIENT at anneal tail T=0.05 "
+        f"(grad has {(~torch.isfinite(x.grad)).sum().item()} non-finite elements)"
+    )
+
+
+def test_lever2_anneal_tail_surrogate_is_input_dependent_not_constant():
+    """R9 Class-2-fake guard for the finiteness test above: prove the tail surrogate
+    is a REAL function of the input (a constant-return impl would pass every
+    finiteness assertion). At T=0.05 a 'normal' logit family gives a non-zero,
+    distinct loss from the 'saturated' family, and the gradient w.r.t. the input is
+    NON-ZERO (the surrogate genuinely backprops through softmax(pred/0.05))."""
+    spec = _stage(
+        epochs=2, seg_surrogate="soft_cosine", seg_temperature=1.0,
+        seg_temperature_end=0.05, margin_weight_tau=2.0,
+    )
+    x_norm, t_norm = _adversarial_seg_logits("normal")
+    x_sat, t_sat = _adversarial_seg_logits("saturated")
+    v_norm = _seg_loss_for_spec(spec, x_norm, t_norm, temperature=0.05)
+    v_sat = _seg_loss_for_spec(spec, x_sat, t_sat, temperature=0.05)
+    # The two families give DISTINCT losses (input-dependent, not constant).
+    assert not torch.allclose(v_norm, v_sat, atol=1e-3), (
+        "tail surrogate is input-INVARIANT — a constant return (FAKE)"
+    )
+    # The gradient flows: at least one input element has non-zero grad.
+    v_norm.backward()
+    assert x_norm.grad.abs().sum() > 0.0, (
+        "tail surrogate has ZERO gradient everywhere — not differentiable backprop (FAKE)"
+    )
+
+
 # --- Lever 4: score-aware QAT ---
 def test_lever4_uniform_sensitivity_matches_vendored_uniform_qat():
     """Score-aware QAT with sensitivity=None (or uniform) reproduces the vendored
