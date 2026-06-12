@@ -84,10 +84,23 @@ advisory number exists · `UNBUILT` not started.
 - **Cumulative est −0.0003 to −0.0015 (PR98 + T10 + S12 + Lever-D), stacked.**
 
 ## ITEM D — L3 rate recodes
-- **D1 — T1 cross-pair latent dedup:** **UNBUILT.** Biggest single rate lever (**−0.003 to
-  −0.006**). `[CORE]` operates on the `(n_pairs × latent_dim)` latent tensor (dedup / delta /
-  shared-codebook across temporally-redundant pairs). `[ADAPTER]` latent-section grammar. GATE:
-  build CORE → review (3 clean) → adapter → MEASURE deployed.
+- **D1 — T1 cross-pair latent dedup:** **BUILT + SEALED — MEASURED HONEST NEGATIVE on the
+  current base_ch20 latents** (commit `434d65d35`; memo
+  `.omx/research/track_a_d1_cross_pair_latent_dedup_landed_20260612T214737Z.md`). CORE
+  `src/tac/losses/cross_pair_latent_codec.py` (carrier-agnostic measure-and-select over dedup /
+  codebook-VQ / framed-delta; AST-verified no base_ch20 import) + ADAPTER
+  `build_latent_blob_dedup_or_vendored` (default-preserving: byte-identical vendored bytes unless
+  a STRUCTURAL candidate strictly wins) + 27 NO-FAKE tests. **MEASURED on the 3 real latent
+  tensors: 0 B deployed delta, byte-identical, ΔS=+0.0000000** `[macOS-CPU advisory]
+  NON-PROMOTABLE`. The estimated −0.003..−0.006 did NOT materialize: 0 exact dups (600→600
+  unique); VQ +1584 B; 2nd-order +1747 B; static range coder +113 B — the vendored 1st-order
+  delta+lo/hi+brotli is already ~1.3% above the symbol-entropy floor and beats every alternative.
+  The apparatus IS real (control: −616 B on structured latents, survives parse-back), so it fires
+  automatically if Track B / future latents gain temporal structure. Recursive review: 1 finding
+  (Lens-2 framed-delta brotli-alignment artifact) fixed + regression-tested → counter reset → 3
+  fresh clean lenses → **SEALED**. NOT driver-wired (ITEM E gate). Honest next-mechanism rec: only
+  ~205 B headroom remains (gap to entropy floor via an adaptive context coder) — small/uncertain;
+  the binding base_ch20 term is d_seg distortion, not latent rate.
 - **D2 — variable-level-codec driver wire-in:** overlaps ITEM B gate (1)-(2). Track here so it
   isn't double-counted-then-dropped.
 - **D3 — WRQ (score-aware weight re-quant, task #69):** analysis DONE; needs driver wiring +
