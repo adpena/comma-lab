@@ -304,6 +304,11 @@ def load_run(path: Path, total_epochs: int) -> dict[str, Any]:
             for i in range(1, len(_wc))
             if _wc[i][0] > _wc[i - 1][0] and _wc[i][1] >= _wc[i - 1][1]]
     median_s_per_epoch = sorted(_dts)[len(_dts) // 2] if _dts else None
+    # Prefer the MEDIAN cadence for the ETA: it is robust to RESTARTS (on resume the
+    # wall-clock resets while the epoch counter continues, corrupting the mean) AND to
+    # eval spikes — so it's the honest steady-state time-to-finish. Fall back to mean.
+    if median_s_per_epoch:
+        eta_s = median_s_per_epoch * max(total - cur_epoch, 0)
     summary = {
         "n_records": len(rows),
         "n_eval_epochs": len(evals),
