@@ -930,3 +930,323 @@ def test_default_qat_path_carries_empty_ema_across_boundary(tmp_path):
         f"stage2 START = {rec.get('second_start')} (expected 0) — daemon-safety "
         "violated"
     )
+
+
+# ===========================================================================
+# CLAIM F (R7) — the LEVER-STATE-PERSISTENCE boundary matrix. R6 confirmed a bug
+# CLASS ("lever state that should carry across a boundary but resets") with two
+# QAT-EMA instances (R2 resume + R6 stage-boundary). These tests pin the NEW
+# boundary types the prior rounds ran only in isolation: the non-QAT->QAT
+# activation boundary (the use_qat gate must hold — empty EMA before the first
+# QAT stage, then accumulate), the lever-ACTIVATION-CHANGE boundary (L4 on->OFF:
+# the OFF stage must NOT mutate the carried EMA — the accumulate gate
+# ``use_qat AND score_aware_qat`` must hold), and resume landing mid the SECOND
+# QAT stage (the path the R6 carry fix introduced; R2 only tested resume into the
+# FIRST QAT stage). Each is a Class-2-fake guard: neutering the gate/carry fails it.
+# ===========================================================================
+def _r7_activation_boundary_curriculum() -> list[StageSpec]:
+    """The realistic ``--levers all`` shape: score_aware_qat is set on EVERY stage
+    from fork onward, INCLUDING the non-QAT pre-stage (where the QAT block never
+    runs, so it is a harmless no-op). The pre-QAT stage therefore has
+    ``score_aware_qat=True`` but ``use_qat=False`` — the exact B1 activation
+    boundary the prior rounds did not exercise (their pre-QAT stage had
+    score_aware_qat=False)."""
+    common = {
+        "use_muon": False, "adamw_lr": 1e-3, "cat_lambda": 0.01,
+        "rate_lambda_w": 1e-3, "rate_lambda_lat": 1e-3,
+        "seg_surrogate": "soft_cosine", "seg_temperature": 1.0,
+        "seg_temperature_end": 0.05,
+        "margin_weight_tau": 2.0, "qat_sensitivity_decay": 0.99,
+    }
+    return [
+        # pre-QAT: score_aware_qat=True but use_qat=False (the no-op activation case).
+        _stage(name="pre_qat", epochs=3, use_qat=False, init_latents_random=True,
+               score_aware_qat=True, **common),
+        _stage(name="qat_a", epochs=4, use_qat=True, init_latents_random=False,
+               score_aware_qat=True, **common),
+    ]
+
+
+def _measure_activation_boundary_ema(tmp_path) -> dict:
+    """Hook the driver to record the EMA size at the END of the non-QAT pre-stage
+    and at the START + END of the first QAT stage (the B1 activation boundary)."""
+    curriculum = _r7_activation_boundary_curriculum()
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=tmp_path / "run",
+        checkpoint_every_epochs=1, device="cpu", seed=29,
+        pose_film_enabled=True, pose_film_hidden=8,
+    )
+    sc = SyntheticScorerContext(n_pairs=8, device="cpu", seed=29)
+    drv = TorchVehicleDriver(
+        cfg, scorer=sc, vendored=import_vendored_bundle(), curriculum=curriculum
+    )
+    rec: dict[str, int] = {}
+    orig_train = drv._train_one_epoch
+    last_rt = {"pre": None}
+
+    def hooked_train(rt, spec, *, epoch_in_stage=0):
+        if spec.name == "pre_qat":
+            last_rt["pre"] = rt  # track to read its END EMA after the stage
+        if spec.name == "qat_a" and epoch_in_stage == 0 and "qat_start" not in rec:
+            if last_rt["pre"] is not None:
+                rec["pre_end"] = len(last_rt["pre"].tensor_sensitivity_ema)
+            rec["qat_start"] = len(rt.tensor_sensitivity_ema)
+            last_rt["qat"] = rt
+        return orig_train(rt, spec, epoch_in_stage=epoch_in_stage)
+
+    drv._train_one_epoch = hooked_train  # type: ignore[method-assign]
+    out = drv.run()
+    assert out["status"] == "complete"
+    rec["qat_end"] = len(last_rt["qat"].tensor_sensitivity_ema)  # type: ignore
+    return rec
+
+
+@pytest.mark.timeout(300)
+def test_r7_non_qat_to_qat_activation_boundary_starts_empty_then_accumulates(tmp_path):
+    """B1: with score_aware_qat=True set on a NON-QAT pre-stage (the realistic
+    --levers all shape), the QAT block never runs there (use_qat gate), so the
+    sensitivity EMA stays EMPTY through the pre-stage; the first QAT stage therefore
+    STARTS empty (the carry from an empty prior stage is empty) and then ACCUMULATES.
+    Guards the ``use_qat`` accumulate gate: if it leaked (accumulated on the non-QAT
+    stage), pre_end would be > 0 and this FAILS."""
+    rec = _measure_activation_boundary_ema(tmp_path)
+    assert rec.get("pre_end", -1) == 0, (
+        f"the non-QAT pre-stage accumulated a sensitivity EMA ({rec.get('pre_end')}) "
+        "despite use_qat=False — the accumulate gate (use_qat AND score_aware_qat) "
+        "leaked on the non-QAT stage."
+    )
+    assert rec.get("qat_start", -1) == 0, (
+        f"the first QAT stage START EMA = {rec.get('qat_start')} (expected 0 — "
+        "nothing seeds the EMA before the first use_qat stage)."
+    )
+    assert rec.get("qat_end", -1) > 0, (
+        f"the first QAT stage END EMA = {rec.get('qat_end')} (expected > 0 — the "
+        "score-aware QAT must accumulate the sensitivity EMA once use_qat engages)."
+    )
+
+
+def _r7_l4_off_after_on_curriculum() -> list[StageSpec]:
+    """qat_a (use_qat, L4 ON) -> qat_b (use_qat, L4 OFF). The lever-ACTIVATION-CHANGE
+    boundary: the EMA is carried INTO the L4-OFF stage (the carry block is
+    unconditional, mirroring the weight-EMA carry) but the OFF stage's QAT block uses
+    the vendored UNIFORM path and must NOT accumulate/mutate the EMA further."""
+    common = {
+        "use_muon": False, "adamw_lr": 1e-3, "cat_lambda": 0.01,
+        "rate_lambda_w": 1e-3, "rate_lambda_lat": 1e-3,
+        "seg_surrogate": "soft_cosine", "seg_temperature": 1.0,
+        "seg_temperature_end": 0.05,
+        "margin_weight_tau": 2.0, "qat_sensitivity_decay": 0.99,
+    }
+    return [
+        _stage(name="qat_a", epochs=4, use_qat=True, init_latents_random=True,
+               score_aware_qat=True, **common),
+        _stage(name="qat_b_l4off", epochs=4, use_qat=True, init_latents_random=False,
+               score_aware_qat=False, **common),
+    ]
+
+
+@pytest.mark.timeout(300)
+def test_r7_l4_deactivation_boundary_does_not_mutate_carried_ema(tmp_path):
+    """B3: when Lever-4 turns OFF at a stage boundary (score_aware_qat True -> False)
+    while use_qat stays True, the L4-OFF stage runs the vendored UNIFORM QAT and must
+    NOT accumulate into the sensitivity EMA. The EMA is carried in (harmlessly) and
+    must be UNCHANGED at the end of the OFF stage. Guards the accumulate gate's
+    score_aware_qat half: if it leaked (accumulated despite score_aware_qat=False),
+    the OFF stage's END EMA would differ from its (carried) START EMA and this FAILS.
+    This is the carry-when-should-NOT-mutate direction of the R6 bug class."""
+    curriculum = _r7_l4_off_after_on_curriculum()
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=tmp_path / "run",
+        checkpoint_every_epochs=1, device="cpu", seed=29,
+        pose_film_enabled=True, pose_film_hidden=8,
+    )
+    sc = SyntheticScorerContext(n_pairs=8, device="cpu", seed=29)
+    drv = TorchVehicleDriver(
+        cfg, scorer=sc, vendored=import_vendored_bundle(), curriculum=curriculum
+    )
+    rec: dict[str, dict[str, float]] = {}
+    orig_train = drv._train_one_epoch
+    off_rt = {"rt": None}
+
+    def hooked_train(rt, spec, *, epoch_in_stage=0):
+        if spec.name == "qat_b_l4off":
+            off_rt["rt"] = rt
+            if epoch_in_stage == 0 and "off_start" not in rec:
+                rec["off_start"] = dict(rt.tensor_sensitivity_ema)
+        return orig_train(rt, spec, epoch_in_stage=epoch_in_stage)
+
+    drv._train_one_epoch = hooked_train  # type: ignore[method-assign]
+    out = drv.run()
+    assert out["status"] == "complete"
+    off_end = dict(off_rt["rt"].tensor_sensitivity_ema)  # type: ignore
+    off_start = rec.get("off_start", {})
+    assert len(off_start) > 0, (
+        "precondition failed: the L4-OFF stage did not receive a non-empty carried "
+        "EMA from the prior L4-ON stage (the carry should seed it)."
+    )
+    assert off_start == off_end, (
+        f"the L4-OFF stage MUTATED the carried sensitivity EMA (start {len(off_start)} "
+        f"tensors -> end {len(off_end)} tensors, values differ={off_start != off_end}) "
+        "despite score_aware_qat=False — the accumulate gate's score_aware_qat half "
+        "leaked: a deactivated lever must leave its accumulated state frozen, not "
+        "keep updating it."
+    )
+
+
+@pytest.mark.timeout(400)
+def test_r7_resume_mid_second_qat_stage_is_bit_identical(tmp_path):
+    """B4: kill MID the SECOND QAT stage (qat_b), resume, and require the final
+    archive to be BIT-IDENTICAL to the uninterrupted run. R2 only tested resume INTO
+    the FIRST QAT stage; the R6 carry fix introduced a NEW interaction at the second
+    QAT stage (the run() carry-seed runs, THEN _restore_into overrides it with the
+    checkpointed EMA). This proves the resume-restored EMA wins AND the descent is
+    bit-identical across the carry+restore path. Class-2 guard: a lost/empty
+    checkpoint EMA would diverge the post-resume QAT grid -> different archive."""
+    from tac.torch_vehicle.checkpoint import load_checkpoint
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    curriculum = _multi_qat_curriculum(score_aware=True)  # pre -> qat_a -> qat_b
+    second_qat = [i for i, s in enumerate(curriculum) if s.use_qat][1]
+    base_ep = sum(curriculum[i].epochs for i in range(second_qat))
+    kill_ep = base_ep + max(1, curriculum[second_qat].epochs // 2)
+
+    def _cfg(out):
+        return TorchVehicleConfig(
+            base_channels=8, latent_dim=28, out_dir=out, checkpoint_every_epochs=1,
+            device="cpu", seed=29, pose_film_enabled=True, pose_film_hidden=8,
+        )
+
+    v = import_vendored_bundle()
+    # Reference: uninterrupted.
+    ref_dir = tmp_path / "ref"
+    dref = TorchVehicleDriver(
+        _cfg(ref_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=29),
+        vendored=v, curriculum=curriculum,
+    )
+    dref.run()
+    ref_bytes = (ref_dir / "best" / "best_archive.bin").read_bytes()
+
+    # Killed run: stop AFTER the checkpoint at kill_ep lands (mid the SECOND QAT stage).
+    res_dir = tmp_path / "res"
+    dkill = TorchVehicleDriver(
+        _cfg(res_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=29),
+        vendored=v, curriculum=curriculum,
+    )
+    dkill._stop_after_global_epoch = kill_ep
+    try:
+        dkill.run()
+    except _SimulatedDeath:
+        pass
+    merged = load_checkpoint(res_dir, map_location="cpu")
+    ckpt_ema = merged.get("tensor_sensitivity_ema") or {}
+    assert len(ckpt_ema) > 0, (
+        "the mid-second-QAT-stage checkpoint had an EMPTY sensitivity EMA — the "
+        "carry+accumulate did not populate it before the checkpoint (the resume "
+        "would fall back to uniform-127)."
+    )
+
+    # Resume: capture the restored EMA size, then require bit-identity.
+    dres = TorchVehicleDriver(
+        _cfg(res_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=29),
+        vendored=v, curriculum=curriculum,
+    )
+    restored = {"n": -1}
+    orig_restore = dres._restore_into
+
+    def hooked_restore(rt, m):
+        orig_restore(rt, m)
+        restored["n"] = len(rt.tensor_sensitivity_ema)
+
+    dres._restore_into = hooked_restore  # type: ignore[method-assign]
+    dres.run()
+    resumed_bytes = (res_dir / "best" / "best_archive.bin").read_bytes()
+
+    assert restored["n"] == len(ckpt_ema), (
+        f"resume did NOT restore the checkpointed sensitivity EMA (restored "
+        f"{restored['n']} != checkpoint {len(ckpt_ema)}) — the carry-seed clobbered "
+        "the resume-restored EMA at the second QAT stage."
+    )
+    assert resumed_bytes == ref_bytes, (
+        f"resume MID the second QAT stage is NOT bit-identical to the uninterrupted "
+        f"run ({len(resumed_bytes)} B != {len(ref_bytes)} B) — the carry+restore path "
+        "the R6 fix introduced diverged the descent."
+    )
+
+
+def _r7_adamw_to_muon_qat_curriculum() -> list[StageSpec]:
+    """qat_a (AdamW QAT, L4 ON) -> qat_b_muon (Muon QAT, L4 ON). This is the REAL
+    PR95 stage-7->stage-8 boundary shape: stages 3-7 are AdamW-only QAT, stage 8
+    (muon_finetune) is the FIRST Muon stage AND a QAT stage. So that boundary is
+    BOTH a QAT->QAT sensitivity-EMA carry (the R6 fix) AND an AdamW->Muon
+    optimizer-PARTITION change (``partition_params_for_muon`` rebuilds the param
+    groups on the CARRIED decoder). No prior test combined these: R5 ran all-5-on
+    + Muon in a SINGLE stage; the R6/B4 matrix used ``use_muon=False`` throughout.
+    The B5 gap is the real schedule's HARDEST boundary."""
+    common = {
+        "cat_lambda": 0.01, "rate_lambda_w": 1e-3, "rate_lambda_lat": 1e-3,
+        "seg_surrogate": "soft_cosine", "seg_temperature": 1.0,
+        "seg_temperature_end": 0.05, "margin_weight_tau": 2.0,
+        "qat_sensitivity_decay": 0.99, "score_aware_qat": True,
+    }
+    return [
+        _stage(name="qat_a_adamw", epochs=4, use_qat=True, use_muon=False,
+               adamw_lr=1e-3, init_latents_random=True, **common),
+        _stage(name="qat_b_muon", epochs=4, use_qat=True, use_muon=True,
+               adamw_lr=1e-5, init_latents_random=False, **common),
+    ]
+
+
+@pytest.mark.timeout(300)
+def test_r7_sensitivity_ema_carries_across_adamw_to_muon_qat_boundary(tmp_path):
+    """B5 (the real stage-7->stage-8 shape): the Lever-4 sensitivity EMA built in an
+    AdamW QAT stage MUST carry into the next QAT stage even when that stage flips to
+    Muon (so the optimizer is re-partitioned on the CARRIED decoder). The EMA is keyed
+    by tensor NAME (optimizer-agnostic), so the carry is orthogonal to the AdamW->Muon
+    change — but no prior test pinned the COMBINATION. This is the matrix-completeness
+    test for the real schedule's hardest boundary. Class-2 guard: with the carry
+    neutered, muon_start would be 0 (RESET) and this FAILS; it also asserts the Muon
+    optimizer actually built a non-empty param partition on the carried decoder (so the
+    boundary is genuinely the AdamW->Muon transition, not a silent AdamW-only run)."""
+    curriculum = _r7_adamw_to_muon_qat_curriculum()
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=tmp_path / "run",
+        checkpoint_every_epochs=1, device="cpu", seed=29,
+        pose_film_enabled=True, pose_film_hidden=8,
+    )
+    sc = SyntheticScorerContext(n_pairs=8, device="cpu", seed=29)
+    drv = TorchVehicleDriver(
+        cfg, scorer=sc, vendored=import_vendored_bundle(), curriculum=curriculum
+    )
+    rec: dict[str, int] = {}
+    orig_train = drv._train_one_epoch
+    prev = {"rt": None}
+
+    def hooked_train(rt, spec, *, epoch_in_stage=0):
+        if spec.name == "qat_a_adamw":
+            prev["rt"] = rt
+        if spec.name == "qat_b_muon" and epoch_in_stage == 0 and "muon_start" not in rec:
+            rec["adamw_end"] = len(prev["rt"].tensor_sensitivity_ema)  # type: ignore
+            rec["muon_start"] = len(rt.tensor_sensitivity_ema)
+            rec["muon_opt_built"] = int(rt.muon_opt is not None)
+            rec["n_muon_params"] = len(rt.muon_params)
+        return orig_train(rt, spec, epoch_in_stage=epoch_in_stage)
+
+    drv._train_one_epoch = hooked_train  # type: ignore[method-assign]
+    out = drv.run()
+    assert out["status"] == "complete"
+    assert rec.get("adamw_end", 0) > 0, (
+        "the AdamW QAT stage never seeded the sensitivity EMA — test precondition failed"
+    )
+    assert rec.get("muon_opt_built", 0) == 1 and rec.get("n_muon_params", 0) > 0, (
+        f"the Muon QAT stage did NOT build a non-empty Muon param partition on the "
+        f"carried decoder (muon_opt_built={rec.get('muon_opt_built')}, "
+        f"n_muon_params={rec.get('n_muon_params')}) — the boundary is not genuinely "
+        "the AdamW->Muon transition the test means to exercise."
+    )
+    assert rec.get("muon_start", 0) == rec["adamw_end"], (
+        f"Lever-4 sensitivity EMA did NOT carry across the AdamW->Muon QAT boundary: "
+        f"AdamW stage END = {rec.get('adamw_end')} tensors, Muon stage START = "
+        f"{rec.get('muon_start')} tensors (expected equal). The optimizer-partition "
+        "change at the real stage-7->stage-8 boundary lost the carried EMA -> the Muon "
+        "QAT stage falls back to uniform-127 for its first steps."
+    )
