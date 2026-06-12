@@ -1,5 +1,23 @@
 # Track-A DISTORTION finishing-kit — built, re-fit, wired, integrated, tested (2026-06-12)
 
+> ## ⚠️ SUPERSEDING CORRECTION (2026-06-12, sibling under-power audit `acd38e0695aeaacbe`) — NO FAKE
+> **The −0.058 headline below is a MID-BASIN UNDER-TRAINING ARTIFACT — it SHRINKS 19× on the CONVERGED
+> decoder. DO NOT BANK IT.** The sibling re-validated the kit on the converged **ep2120** decoder (this memo
+> measured on the **mid-basin ep340** fork-point). On the converged decoder the baseline d_pose is **15× lower**
+> (0.001478 → 0.0000954), so the pose-axis correction the kit performs is **mostly already done by the trained
+> decoder**. The full-kit fresh-refit gain collapses **−0.058 → −0.003063 (only 5.3% retained)**. Three
+> independent n=24 converged-decoder probes AGREE (cross-validated baseline dscore 0.27772 to 5 decimals): fresh
+> re-fit −0.0031, production-path eval −0.0028, and the mid-basin/canonical FIXED biases REGRESS the converged
+> decoder (+0.028 / +0.003 — they over-correct an already-balanced decoder). This is the SAME operating-point
+> trap that flipped LeverD (GO→NO-GO) — the kit's value is operating-point-dependent and the mid-basin number is
+> 19× overstated. **DISPOSITION: keep the kit WIRED (the engineering is sound + tested), but RE-FIT on the FINAL
+> n=600 CONVERGED decoder and bank ONLY a gain that survives there.** A LOW ≤1-LSB eval gap was also found (the
+> camera-float fit is +0.00027 optimistic vs the production raw-frame path — it makes the gain SMALLER, reinforcing
+> SHRINKS). The S12 certification + the LeverD NO-GO + the "PR101 constants don't transfer" findings are
+> UNAFFECTED (structural). Re-validation commits: sibling `665dbbef1`; audit memo
+> `.omx/research/all_findings_underpower_audit_20260612T222400Z.md`. The n=24-mid-basin numbers below are
+> PRESERVED as historical per the append-only discipline; this banner is the operative verdict.
+
 **Subagent:** `track-a-distortion-finishing-kit-20260612`. **Type:** build + measure (the inflate-side,
 zero/near-zero-byte distortion bolt-ons for the base_ch=20 HNeRV pipeline).
 **Evidence grade:** `[contest-CPU advisory] NON-PROMOTABLE` — every number is a frozen-CPU advisory
