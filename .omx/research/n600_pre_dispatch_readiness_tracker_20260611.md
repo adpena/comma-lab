@@ -32,7 +32,7 @@ Decision pending acf1665a's MLX feasibility verdict; operator leans P1.
 | 3 | Corpus-wide negative-results resurrection | ac792687 | ✅ DONE — surfaced R1 (cheaper lever-C path) + R2 (unfixed torch-EMA). |
 | 4 | R1 (cheaper lever-C un-falsify?) + R2 (fix torch-EMA warmup #86) | aec9b73b | ⏳ RUNNING — **could obviate the spend.** |
 | 5 | #15 advisory↔exact custody (float-render vs int8-bicubic d_seg gap) | aab68dbe | ⏳ RUNNING — binding: does the optimized number transfer to the archive? |
-| 6 | Local-MLX feasibility + throughput + resumable checkpointing | acf1665a | ⏳ RUNNING — informs P1 vs P2. |
+| 6 | Local-MLX feasibility + throughput + resumable checkpointing | acf1665a | ✅ DONE — **FEASIBLE as a multi-week resumable run; durable $0 daemon LAUNCHED + measuring the n600 basin depth.** Fast-approx-gradient descent-equivalent (safe) but scorer-backward is >97% of step on both backends (no throughput unblock). torch-CPU 19.4 vs MLX-GPU 26.6 s/step (MLX slower locally — FP32-exact override). |
 | 7 | **Adversarial review of BOTH vehicles** (MLX capstone + vendored PR95 torch) | symposium + a queued torch-review agent | ⏳ QUEUED (operator binding ii). |
 | 8 | **Resumability + best-checkpoint + FULL telemetry + tooling**, verified by a kill+restart test, for the chosen vehicle | acf1665a (MLX core) + a queued agent (comprehensive + torch side) | ⏳ PARTIAL/QUEUED (operator binding iii). |
 | 9 | 10-min step-time SMOKE → measured GPU-hour / wall-clock at n600 (epoch-budget-vs-basin risk) | queued (pre-commit) | ⏳ QUEUED — $100 buys ~12-16k compressed epochs vs PR95's 29,650. |
