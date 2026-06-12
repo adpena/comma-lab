@@ -1,0 +1,29 @@
+{
+  "stamp": "20260612T151207Z",
+  "evidence_grade": "macOS-MLX advisory; torch-CPU is the only authority",
+  "score_claim": false,
+  "promotable": false,
+  "batch": 8,
+  "conv_routing": {
+    "segnet": {
+      "strided_grouped": 4,
+      "total_conv2d": 125
+    },
+    "posenet": {
+      "strided_grouped": 8,
+      "total_conv2d": 78
+    }
+  },
+  "default": {
+    "segnet_fwd": 503.33,
+    "segnet_fwd_bwd": 9631.93,
+    "posenet_fwd": 396.61,
+    "posenet_fwd_bwd": 1760.45
+  },
+  "custom_backward": {
+    "segnet_fwd": 205.15,
+    "segnet_fwd_bwd": 568.51,
+    "posenet_fwd": 35.66,
+    "posenet_fwd_bwd": 90.94
+  }
+}

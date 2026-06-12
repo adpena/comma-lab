@@ -1,0 +1,71 @@
+{
+  "stamp": "20260612T151012Z",
+  "evidence_grade": "macOS-MLX/MPS advisory; torch-CPU is the only authority",
+  "score_claim": false,
+  "promotable": false,
+  "batch": 8,
+  "iters": 5,
+  "warmup": 2,
+  "cache_dir": "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+  "concurrent_load": {
+    "heavy_concurrent_python": [
+      {
+        "pid": "33911",
+        "pcpu": 212.1,
+        "args": ".venv/bin/python -u experiments/launch_split_by_head_basin.py --no-split-by-head --train-device mps --device cpu --base-channels 20 --n-pair"
+      }
+    ],
+    "count": 1
+  },
+  "results": [
+    {
+      "backend": "torch-cpu",
+      "ms_per_step": 6583.77,
+      "ms_min": 6490.49,
+      "iters": 5
+    },
+    {
+      "backend": "torch-mps",
+      "ms_per_step": 208.68,
+      "ms_min": 203.43,
+      "iters": 5
+    },
+    {
+      "backend": "mlx-gpu",
+      "ms_per_step": 14427.53,
+      "ms_min": 14117.11,
+      "iters": 5
+    },
+    {
+      "backend": "mlx-gpu-custom",
+      "ms_per_step": 764.77,
+      "ms_min": 761.96,
+      "iters": 5
+    },
+    {
+      "backend": "mlx-gpu-fwd",
+      "ms_per_step": 967.3,
+      "ms_min": 930.52,
+      "iters": 5
+    }
+  ],
+  "speedup_vs_cpu": {
+    "torch-cpu": 1.0,
+    "torch-mps": 31.55,
+    "mlx-gpu": 0.456,
+    "mlx-gpu-custom": 8.609,
+    "mlx-gpu-fwd": 6.806
+  },
+  "speedup_vs_mps": {
+    "torch-cpu": 0.032,
+    "torch-mps": 1.0,
+    "mlx-gpu": 0.014,
+    "mlx-gpu-custom": 0.273,
+    "mlx-gpu-fwd": 0.216
+  },
+  "seg_input_grad_cosine_vs_cpu": {
+    "torch-mps": 0.9999998807907104,
+    "mlx-gpu": 0.0006675633485428989,
+    "mlx-gpu-custom": 0.0006704037077724934
+  }
+}

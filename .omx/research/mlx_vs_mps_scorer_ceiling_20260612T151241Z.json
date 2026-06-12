@@ -1,0 +1,43 @@
+{
+  "stamp": "20260612T151241Z",
+  "evidence_grade": "macOS-MLX/MPS advisory; torch-CPU is the only authority",
+  "score_claim": false,
+  "promotable": false,
+  "batch": 8,
+  "iters": 8,
+  "warmup": 3,
+  "cache_dir": "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+  "concurrent_load": {
+    "heavy_concurrent_python": [
+      {
+        "pid": "33911",
+        "pcpu": 136.0,
+        "args": ".venv/bin/python -u experiments/launch_split_by_head_basin.py --no-split-by-head --train-device mps --device cpu --base-channels 20 --n-pair"
+      }
+    ],
+    "count": 1
+  },
+  "results": [
+    {
+      "backend": "torch-mps",
+      "ms_per_step": 255.28,
+      "ms_min": 234.59,
+      "iters": 8
+    },
+    {
+      "backend": "mlx-gpu-custom",
+      "ms_per_step": 821.62,
+      "ms_min": 732.26,
+      "iters": 8
+    }
+  ],
+  "speedup_vs_cpu": {
+    "torch-mps": null,
+    "mlx-gpu-custom": null
+  },
+  "speedup_vs_mps": {
+    "torch-mps": 1.0,
+    "mlx-gpu-custom": 0.311
+  },
+  "seg_input_grad_cosine_vs_cpu": {}
+}
