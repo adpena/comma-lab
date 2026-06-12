@@ -16,6 +16,7 @@ from typing import Any
 import numpy as np
 
 __all__ = [
+    "MLXCustomKernelStridedGroupedConvAdapter",
     "load_mlx_distortion_scorer_adapter_from_upstream",
     "mlx_reference_conv2d_nhwc",
     "nchw_to_nhwc",
@@ -1061,6 +1062,87 @@ class MLXPoseNetAdapter:
         return self.hydra(summary)
 
 
+class MLXCustomKernelStridedGroupedConvAdapter:
+    """Strided grouped/depthwise Conv2d (NHWC) with a fast custom Metal backward.
+
+    Forward = native ``mx.conv2d`` (bit-exact + fast on Metal). Backward = the
+    ``make_grouped_conv2d_nhwc`` config-bound ``@mx.custom_function`` whose vjp
+    runs two correct Metal kernels for grad_input + grad_weight. This replaces
+    the ~13-35x-slower Python-loop ``MLXReferenceConv2dAdapter`` backward on the
+    narrow strided-grouped downsample class while keeping the SAME descent
+    direction (full-SegNet pixel-gradient cosine 0.99999775 vs the reference on
+    real weights; per-layer grad_input/grad_weight cosine 1.000000).
+
+    THROUGHPUT TOOL ONLY. The gradient is fp32 and ~exact (cosine ~1.0 vs the
+    trusted Python-loop reference) but is NEVER a d_seg/d_pose score authority —
+    the FP32-exact torch-CPU scorer remains the only authority (CLAUDE.md
+    "MPS NEVER authority" / "NO FAKE"). Used only on the MLX GPU; falls back to
+    the reference path on CPU where the native backward is already correct.
+    """
+
+    def __init__(self, torch_conv: Any):
+        import mlx.core as mx
+
+        from tac.local_acceleration.metal_grouped_conv_backward import (
+            make_grouped_conv2d_nhwc,
+        )
+
+        self.stride = _pair(torch_conv.stride)
+        self.padding = _pair(torch_conv.padding)
+        self.dilation = _pair(torch_conv.dilation)
+        self.groups = int(torch_conv.groups)
+        weight = _torch_tensor_to_numpy(torch_conv.weight)  # OIHW
+        if weight.ndim != 4:
+            raise ValueError(f"Conv2d weight must be rank-4 OIHW, got {weight.shape}")
+        self.weight = mx.array(
+            np.ascontiguousarray(weight.transpose(0, 2, 3, 1)), dtype=mx.float32
+        )
+        self.bias = (
+            None
+            if torch_conv.bias is None
+            else mx.array(
+                np.ascontiguousarray(
+                    _torch_tensor_to_numpy(torch_conv.bias).reshape(1, 1, 1, -1)
+                ),
+                dtype=mx.float32,
+            )
+        )
+        self._conv = make_grouped_conv2d_nhwc(
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+        )
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = self._conv(x_nhwc, self.weight)
+        if self.bias is not None:
+            out = out + self.bias
+        return out
+
+
+def _custom_metal_backward_enabled() -> bool:
+    """True when the fast custom Metal backward should replace the loop fallback.
+
+    Gated by ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`` AND an MLX GPU default device.
+    Default OFF so the bit-faithful Python-loop reference remains the validated
+    baseline; opt-in for the ~18x faster full-scorer backward when training.
+    """
+
+    import os
+
+    if os.environ.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD", "0") not in {"1", "true", "True"}:
+        return False
+    try:
+        from tac.local_acceleration.metal_grouped_conv_backward import (
+            metal_grouped_conv2d_backend_available,
+        )
+
+        return metal_grouped_conv2d_backend_available()
+    except Exception:  # pragma: no cover - import/device guard
+        return False
+
+
 def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
     """Convert a PyTorch ``nn.Conv2d`` layer to MLX ``nn.Conv2d``."""
 
@@ -1069,10 +1151,16 @@ def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
 
     if int(torch_conv.groups) > 1 and _pair(torch_conv.stride) != (1, 1):
         # MLX Metal reverse-mode currently produces extreme gradients for
-        # grouped/depthwise strided Conv2d on the real scorer activations. The
-        # fixed-order reference path preserves forward parity and CPU/GPU
-        # gradient parity for this narrow downsample class while leaving dense
-        # and non-strided grouped Conv2d on the native fast path.
+        # grouped/depthwise strided Conv2d on the real scorer activations
+        # (native VJP cosine ~0.025, magnitude 5-25x too large — see
+        # metal_grouped_conv_backward.py + the native_blowup_diagnosis).
+        if _custom_metal_backward_enabled():
+            # Fast path: native forward + custom Metal backward kernels (same
+            # descent direction, ~18x faster full-scorer backward). Opt-in.
+            return MLXCustomKernelStridedGroupedConvAdapter(torch_conv)
+        # Default: the fixed-order reference path preserves forward parity and
+        # CPU/GPU gradient parity for this narrow downsample class while leaving
+        # dense and non-strided grouped Conv2d on the native fast path.
         return MLXReferenceConv2dAdapter(torch_conv, accumulation_mode="fixed_fp32")
 
     conv = nn.Conv2d(
