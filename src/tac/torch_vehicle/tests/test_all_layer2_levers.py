@@ -811,3 +811,122 @@ def test_all_five_muon_partition_covers_film_and_routes_grads():
         "the rate surrogate (Lever 1) did not reach a 2D FiLM weight in the Muon "
         "group — a lever gradient is mis-routed/dropped for the Muon partition"
     )
+
+
+# ===========================================================================
+# CLAIM E (R6) — Lever-4 sensitivity EMA CARRIES across the QAT->QAT stage
+# boundary (the integration seam).
+# ===========================================================================
+# The REAL PR95 schedule has use_qat=True on FIVE consecutive stages (3-7); with
+# ``--levers all`` ``score_aware_qat=True`` is set on the active + all later
+# stages, so the score-aware QAT runs across MULTIPLE consecutive QAT stages. The
+# per-tensor sensitivity EMA ``s_t = ||dS/dw_t||`` is a property of the CARRIED
+# decoder, so it belongs to the "weights/EMA carry" side of the boundary, NOT the
+# "optimizer resets per stage" side. R6 MEASURED (probe_r6_*) that BEFORE the fix
+# the EMA was reset-to-empty at each QAT->QAT boundary -> the new stage's QAT fell
+# back to uniform-127 for its first hundreds of steps (the SAME defect R2 fixed
+# for resume, manifesting at the normal stage boundary; a behavioral -7 B / 1e-3
+# loss delta). These tests guard the carry fix AND its daemon-safety (the carry is
+# empty -> no-op on any non-score-aware-QAT path).
+def _multi_qat_curriculum(*, score_aware: bool) -> list[StageSpec]:
+    """A 2-QAT-stage curriculum (pre-QAT all-5-on -> qat_a -> qat_b), carrying the
+    decoder/latents/EMA across both boundaries — the realistic multi-QAT-stage
+    shape of the real PR95 schedule (stages 3-7)."""
+    common = {
+        "use_muon": False, "adamw_lr": 1e-3, "cat_lambda": 0.01,
+        "rate_lambda_w": 1e-3, "rate_lambda_lat": 1e-3,
+        "seg_surrogate": "soft_cosine", "seg_temperature": 1.0,
+        "seg_temperature_end": 0.05,
+        "margin_weight_tau": 2.0, "qat_sensitivity_decay": 0.99,
+    }
+    return [
+        _stage(name="pre_qat", epochs=3, use_qat=False, init_latents_random=True,
+               score_aware_qat=False, **common),
+        _stage(name="qat_a", epochs=4, use_qat=True, init_latents_random=False,
+               score_aware_qat=score_aware, **common),
+        _stage(name="qat_b", epochs=4, use_qat=True, init_latents_random=False,
+               score_aware_qat=score_aware, **common),
+    ]
+
+
+def _measure_second_qat_start_ema(curriculum: list[StageSpec], tmp_path) -> dict:
+    """Run the multi-QAT curriculum and capture the sensitivity-EMA SIZE at the
+    CONSUMPTION point: (a) at the END of the first QAT stage, and (b) at the START
+    of the second QAT stage's first training epoch (AFTER the run() carry-seed has
+    executed — the state the QAT block actually reads)."""
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=tmp_path / "run",
+        checkpoint_every_epochs=1, device="cpu", seed=29,
+        pose_film_enabled=True, pose_film_hidden=8,
+    )
+    sc = SyntheticScorerContext(n_pairs=8, device="cpu", seed=29)
+    drv = TorchVehicleDriver(
+        cfg, scorer=sc, vendored=import_vendored_bundle(), curriculum=curriculum
+    )
+    qat_names = [s.name for s in curriculum if s.use_qat]
+    first_qat_name, second_qat_name = qat_names[0], qat_names[1]
+    rec: dict[str, int] = {}
+    orig_train = drv._train_one_epoch
+    prev_rt = {"rt": None}
+
+    def hooked_train(rt, spec, *, epoch_in_stage=0):
+        # On the FIRST epoch of the second QAT stage, snapshot the EMA size the QAT
+        # block will consume (post carry-seed). Also snapshot the first QAT stage's
+        # END EMA the last time we see it.
+        if spec.name == first_qat_name:
+            prev_rt["rt"] = rt
+        if (spec.name == second_qat_name and epoch_in_stage == 0
+                and "second_start" not in rec):
+            if prev_rt["rt"] is not None:
+                rec["first_end"] = len(prev_rt["rt"].tensor_sensitivity_ema)
+            rec["second_start"] = len(rt.tensor_sensitivity_ema)
+        return orig_train(rt, spec, epoch_in_stage=epoch_in_stage)
+
+    drv._train_one_epoch = hooked_train  # type: ignore[method-assign]
+    out = drv.run()
+    assert out["status"] == "complete"
+    return rec
+
+
+@pytest.mark.timeout(300)
+def test_score_aware_qat_sensitivity_ema_carries_across_qat_stage_boundary(tmp_path):
+    """With score-aware QAT ON across TWO consecutive QAT stages, the sensitivity
+    EMA built in stage 1 (qat_a) MUST still be present at the START of stage 2
+    (qat_b) — i.e. it carries across the boundary (like the weight EMA), so stage 2
+    starts score-aware instead of falling back to uniform-127. GUARDS the R6 fix:
+    with the carry neutered, stage2_start would be 0 (RESET) and this FAILS."""
+    rec = _measure_second_qat_start_ema(
+        _multi_qat_curriculum(score_aware=True), tmp_path
+    )
+    assert rec.get("first_end", 0) > 0, (
+        "stage 1 (qat_a) never seeded the sensitivity EMA — test precondition failed"
+    )
+    assert rec.get("second_start", 0) == rec["first_end"], (
+        f"Lever-4 sensitivity EMA did NOT carry across the QAT->QAT boundary: "
+        f"stage1 END = {rec.get('first_end')} tensors, stage2 START = "
+        f"{rec.get('second_start')} tensors (expected equal). The carry was lost "
+        "-> stage 2 QAT falls back to uniform-127 for its first steps (the R2 "
+        "resume defect, manifesting at the normal stage boundary)."
+    )
+
+
+@pytest.mark.timeout(300)
+def test_default_qat_path_carries_empty_ema_across_boundary(tmp_path):
+    """DAEMON-SAFETY: when score-aware QAT is OFF (the default / basin-daemon path),
+    the sensitivity EMA is NEVER accumulated, so the cross-stage carry is EMPTY at
+    every boundary — the new stage starts with an empty EMA exactly as before the
+    fix. Proves the carry is a no-op on the non-score-aware-QAT path."""
+    rec = _measure_second_qat_start_ema(
+        _multi_qat_curriculum(score_aware=False), tmp_path
+    )
+    # score_aware_qat OFF => accumulate_tensor_sensitivity never runs => empty EMA
+    # at the first QAT stage's end => empty carry => empty at stage 2's start.
+    assert rec.get("first_end", -1) == 0, (
+        f"non-score-aware QAT unexpectedly accumulated a sensitivity EMA: "
+        f"{rec.get('first_end')} (expected 0)"
+    )
+    assert rec.get("second_start", -1) == 0, (
+        f"the cross-stage carry leaked a non-empty EMA onto the default QAT path: "
+        f"stage2 START = {rec.get('second_start')} (expected 0) — daemon-safety "
+        "violated"
+    )

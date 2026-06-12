@@ -1184,6 +1184,17 @@ class TorchVehicleDriver:
         carry_latents: nn.Parameter | None = None
         carry_ema_decoder: nn.Module | None = None
         carry_ema_latents: torch.Tensor | None = None
+        # Lever-4 (score-aware QAT) per-tensor sensitivity EMA carry across stages.
+        # The PR95 schedule has FIVE consecutive QAT stages (3-7); with score-aware
+        # QAT on, the sensitivity ``s_t = ||dS/dw_t||`` is a property of the CARRIED
+        # decoder, so it belongs to the "weights/EMA carry" side of the boundary
+        # (line 460), NOT the "optimizer resets per stage" side. Without this carry,
+        # each QAT->QAT boundary resets the EMA to empty -> the new stage's QAT falls
+        # back to uniform-127 for its first hundreds of steps (the SAME defect R2
+        # fixed for resume, manifesting at the normal stage boundary). DEFAULT-SAFE:
+        # on any non-score-aware-QAT path the prior stage's EMA is always empty, so
+        # the carry is empty and the new stage is byte-identical to today.
+        carry_sensitivity_ema: dict[str, float] = {}
 
         # Recompute the global-epoch base for stages already completed.
         self._global_epoch = sum(
@@ -1238,6 +1249,13 @@ class TorchVehicleDriver:
                 ema_decoder=carry_ema_decoder,
                 ema_latents=carry_ema_latents,
             )
+            # Seed the Lever-4 sensitivity EMA from the PRIOR stage (carried, like the
+            # weight EMA). Empty on the default path -> no-op (byte-identical). A
+            # resume INTO this stage overwrites it via ``_restore_into`` below (which
+            # clears+updates when its checkpointed EMA is non-empty), so the carry
+            # never clobbers a more-specific resume-restored EMA.
+            if carry_sensitivity_ema:
+                rt.tensor_sensitivity_ema.update(carry_sensitivity_ema)
 
             # If resuming INTO this stage, restore the mid-stage state now.
             if merged is not None and stage_index == resume_pos.stage_index:
@@ -1324,6 +1342,8 @@ class TorchVehicleDriver:
             carry_latents = rt.latents
             carry_ema_decoder = rt.ema_decoder
             carry_ema_latents = rt.ema_latents
+            # Carry the Lever-4 sensitivity EMA forward (empty on the default path).
+            carry_sensitivity_ema = dict(rt.tensor_sensitivity_ema)
             resume_pos = TorchCheckpointPosition(stage_index + 1, 0)
 
         # JOIN any in-flight async eval so the final BEST + last eval row land
