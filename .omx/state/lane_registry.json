@@ -72973,6 +72973,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_custom_grouped_backward_20260612",
+      "name": "MLX custom Metal grouped/depthwise backward kernel (throughput tool)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/local_acceleration/metal_grouped_conv_backward.py + mlx_scorer_adapters.py wiring (commit c5e8ddda5)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "16 NO-FAKE tests + 18 scorer-parity tests pass; descent-equivalence CONFIRMED (final gap 0.07% of descent)"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/mlx_custom_grouped_backward_kernel_makes_mlx_gpu_fast_20260612.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true (throughput enabler, NO score authority; torch-CPU exact stays d_seg authority; [macOS-MLX research-signal]; NO MPS). Custom mx.fast.metal_kernel grad_input+grad_weight for strided-grouped conv; native MLX strided-grouped VJP is numerically wrong (cosine ~0.025). Wired behind TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 (default OFF). Measured: full-scorer backward 17.96x faster (11149ms->621ms B=4), SegNet backward 12.86x (B4)/35.45x (B8); grad cosine ~1.0 vs Python-loop reference. reactivation: relaunch n600 resumable daemon on mlx_gpu+flag; upstream the stride>1 grouped VJP bug to MLX. memo .omx/research/mlx_custom_grouped_backward_kernel_makes_mlx_gpu_fast_20260612.md"
     }
   ],
   "level_rules": {
@@ -72982,5 +73023,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T02:51:34Z"
+  "updated_at": "2026-06-12T03:53:00Z"
 }
