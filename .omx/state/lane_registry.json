@@ -73265,6 +73265,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_cool_chic_ar_entropy_coder_20260612",
+      "name": "Cool-Chic AR-Gaussian entropy coder (real lossless latent range coding)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/cool_chic/entropy_coder.py + CCV2 grammar in archive.py; reuses tac.lossless.range_coder; inflate.py transparent (parse_archive dispatch); commit c238240ac"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-CPU advisory] MEASURED 600-pair: 18432000->7827734 latent bytes (57.5% reduction, 24.5% pure AR-entropy), lossless_roundtrip_verified=true, advisory rate 12.28->5.22 NON-PROMOTABLE; experiments/results/cool_chic_mps_smoke_20260612T121501Z/ar_entropy_measure_bps5.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "12 NO-FAKE behavioral tests pass (lossless roundtrip on real trained latents, byte-reduction, density-matches-AR-prior, escape-path, CCV2 grammar, Layer1<->2 bit unification) + 2nd review-gate pass on new fns; src/tac/tests/test_cool_chic_entropy_coder.py"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/cool_chic_fullstack_synergy_20260612T153802Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "TRACK B step 1; reuses tac.lossless.range_coder; full-stack synergy with Layer2 rate surrogate + Layer3 T1/T8; research_only=true advisory"
     }
   ],
   "level_rules": {
@@ -73274,5 +73315,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T15:03:20Z"
+  "updated_at": "2026-06-12T15:56:42Z"
 }
