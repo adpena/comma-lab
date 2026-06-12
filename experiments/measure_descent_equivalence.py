@@ -87,8 +87,8 @@ def _run_arm(trainer, epochs, eval_every, max_pairs, batch_size, seed, label):
         perm = rng.permutation(max_pairs)
         for start in range(0, max_pairs, batch_size):
             idx = perm[start : start + batch_size]
+            # step() updates VQ-EMA + weight-EMA internally; do NOT double-update.
             trainer.step(idx, lr_scale=1.0)
-            trainer._ema.update(trainer.bundle)
         if epoch % eval_every == 0 or epoch == epochs:
             d = trainer.exact_d_seg(use_ema=False)
             p = trainer.mean_d_pose(use_ema=False)

@@ -47,8 +47,10 @@ def _run_steps(trainer, n_steps, *, seed=0):
     rng = np.random.RandomState(seed)
     for _ in range(n_steps):
         perm = rng.permutation(trainer.n_pairs)
+        # trainer.step() updates the VQ-EMA + weight-EMA shadow internally
+        # (capstone_trainer.py:485-487); the resumable driver relies on this, so
+        # the test exercises the SAME single-update path the real run uses.
         trainer.step(perm, lr_scale=1.0)
-        trainer._ema.update(trainer.bundle)
 
 
 def _flat_params(trainer):

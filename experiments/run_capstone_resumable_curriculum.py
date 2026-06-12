@@ -177,14 +177,10 @@ def main() -> None:
             perm = rng.permutation(trainer.n_pairs)
             for s in range(0, trainer.n_pairs, args.batch_size):
                 idx = perm[s : s + args.batch_size]
+                # trainer.step() ALREADY updates the VQ codebook EMA
+                # (ema_update_from_last) AND the weight-EMA shadow (_ema.update)
+                # internally (capstone_trainer.py:485-487) — do NOT double-update.
                 trainer.step(idx, lr_scale=lr_scale)
-                trainer._ema.update(trainer.bundle)
-            # VQ codebook EMA update (the bundle's van-den-Oord codebook).
-            if hasattr(trainer.bundle, "ema_update_from_last"):
-                try:
-                    trainer.bundle.ema_update_from_last()
-                except Exception:
-                    pass
 
             global_epoch = sum(s.epochs for s in stages[:si]) + epoch + 1
             if (epoch + 1) % args.eval_every == 0 or epoch == spec.epochs - 1:
