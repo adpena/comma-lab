@@ -464,9 +464,17 @@ def load_run(path: Path, total_epochs: int) -> dict[str, Any]:
     # eval spikes — so it's the honest steady-state time-to-finish. Fall back to mean.
     if median_s_per_epoch:
         eta_s = median_s_per_epoch * max(total - cur_epoch, 0)
+    # First recorded epoch: a FORKED/RESUMED run's trajectory file starts at the
+    # fork epoch (a new out-dir), so its eval/row counts are SEGMENT-local — they
+    # do NOT include the parent's eval history. Surface first_epoch so "N evals"
+    # reads honestly as "N since the ep<first> fork", not "only N evals ever"
+    # (sister of the resume-robust median sec/epoch fix — same reset-on-resume class).
+    first_epoch = next((r["epoch"] for r in rows if r.get("epoch") is not None), None)
     summary = {
         "n_records": len(rows),
         "n_eval_epochs": len(evals),
+        "first_epoch": first_epoch,
+        "resumed": bool(first_epoch and first_epoch > 1),
         "init_d_seg": init_d_seg,
         "d_seg_descent": descent,
         "d_seg_min": min(d_segs) if d_segs else None,
@@ -761,7 +769,7 @@ async function tick(){
   sparkline(r.spark);
   // summary
   const s=r.summary;
-  $('s-neval').textContent=s.n_eval_epochs+(s.n_records?' / '+s.n_records+' rows':'');
+  $('s-neval').textContent=s.n_eval_epochs+(s.n_records?' / '+s.n_records+' rows':'')+(s.resumed?' · since ep'+s.first_epoch+' (fork/resume)':'');
   $('s-descent').textContent=s.d_seg_descent==null?'—':s.d_seg_descent.toFixed(4);
   $('s-rate').textContent=s.recent_dseg_per_epoch==null?'—':s.recent_dseg_per_epoch.toExponential(2);
   $('s-spe').textContent=s.median_s_per_epoch==null?'—':(+s.median_s_per_epoch).toFixed(1);
