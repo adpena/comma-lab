@@ -38,6 +38,8 @@ byte-closed archive is run through ``upstream/evaluate.py``.
 from __future__ import annotations
 
 import math
+import threading
+import time
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -139,6 +141,17 @@ class TorchVehicleConfig:
     # the descent-equivalence gate on the POSE axis (d_seg PASS / d_pose REJECT, gap
     # 0.06->7.02). Requires a split device. Defaults False (full train_device forward).
     split_by_head: bool = False
+    # ``async_eval`` (the throughput salvage): run the CPU AUTHORITY exact eval
+    # (byte-close + 600-pair d_seg/d_pose/rate/score) in a BACKGROUND THREAD off a
+    # POINT-IN-TIME CPU snapshot of the EMA shadow, so the GPU/MPS training loop is
+    # NOT blocked by the ~13-min CPU eval. The eval is the IDENTICAL eval on the
+    # IDENTICAL snapshot — only non-blocking — so the authority numbers are
+    # bit-for-bit the same as the sync path (proved by the no-regression test).
+    # At most ONE eval is in-flight: a new eval epoch arriving while the prior eval
+    # is still running is SKIPPED (logged) — the cadence self-throttles. On run
+    # completion the in-flight thread is JOINED so the final BEST + last eval row
+    # land before exit. Defaults False (the sync path is byte-identical unchanged).
+    async_eval: bool = False
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -159,6 +172,20 @@ class TorchVehicleConfig:
                 "device='cpu' and train_device='mps'."
             )
         self.out_dir = Path(self.out_dir)
+
+
+@dataclass
+class _EvalSnapshot:
+    """An immutable POINT-IN-TIME CPU copy of the EMA shadow the eval scores.
+
+    Captured in the MAIN thread (cheap), then either evaluated inline (sync) or
+    handed to a background worker (async). Because it is a deep CPU copy, the
+    training loop may keep mutating the live (MPS) EMA shadow without racing the
+    eval — guaranteeing the async numbers equal the sync numbers on the SAME
+    snapshot (the no-regression contract)."""
+
+    ema_sd: dict[str, torch.Tensor]
+    ema_latents: torch.Tensor
 
 
 @dataclass
@@ -237,6 +264,19 @@ class TorchVehicleDriver:
         # Test-only hook: simulate a death after this many global epochs (the
         # checkpoint has already landed when the death fires). None in production.
         self._stop_after_global_epoch: int | None = None
+        # -- async-eval state (CLAUDE.md "async authority eval" throughput salvage) --
+        # The async eval runs in a BACKGROUND THREAD; ``_eval_lock`` serializes the
+        # two shared surfaces it touches with the main loop: the BEST-tracker fields
+        # (best_score/best_ep/best_stage + the best/ dir write) AND the single
+        # TelemetryWriter (which is NOT thread-safe — the main loop also records
+        # non-eval rows). ``_eval_thread`` holds the at-most-one in-flight worker so
+        # the cadence self-throttles (a new eval epoch arriving while the prior eval
+        # is alive is SKIPPED). ``_skipped_evals`` counts the skips for the report.
+        self._async_eval = bool(cfg.async_eval)
+        self._eval_lock = threading.Lock()
+        self._eval_thread: threading.Thread | None = None
+        self._skipped_evals = 0
+        self._inflight_snapshot_epoch: int | None = None
 
     # -- architecture construction (base_ch threaded — the FINDING-1 fix) -----
     def _new_decoder(self, device: torch.device | None = None) -> nn.Module:
@@ -527,9 +567,29 @@ class TorchVehicleDriver:
         restore_rng(merged)
 
     # -- eval + BEST tracking (EMA shadow is the export bytes) ---------------
-    def _eval_and_track_best(self, rt: _StageRuntime, spec: StageSpec, stage_index: int) -> dict[str, Any]:
-        """Build the archive from the EMA shadow, exact-eval the PARSE-BACK
-        (int8-dequantized) decoder + latents, track BEST.
+    def _snapshot_ema(self, rt: _StageRuntime) -> _EvalSnapshot:
+        """Capture a POINT-IN-TIME CPU copy of the EMA shadow the eval will score.
+
+        This is the ONLY part of the eval that touches the live training runtime,
+        and it runs in the MAIN thread (cheap — a state_dict + latents deep-copy to
+        CPU). After it returns, training may keep mutating the live (MPS) EMA shadow
+        without racing the eval: the eval operates exclusively on this immutable
+        snapshot. The async path snapshots HERE (main thread), then hands the
+        snapshot to a background worker; the sync path snapshots + evals inline. The
+        eval math (:meth:`_eval_snapshot`) is IDENTICAL for both — so the authority
+        numbers are bit-for-bit the same (the no-regression guarantee)."""
+        ema_sd = {
+            k: v.detach().cpu().clone() for k, v in rt.ema_decoder.state_dict().items()
+        }
+        ema_latents = rt.ema_latents.detach().cpu().clone()
+        return _EvalSnapshot(ema_sd=ema_sd, ema_latents=ema_latents)
+
+    def _eval_snapshot(
+        self, snap: _EvalSnapshot, spec: StageSpec, stage_index: int, snapshot_epoch: int
+    ) -> dict[str, Any]:
+        """Build the archive from the SNAPSHOT EMA shadow, exact-eval the PARSE-BACK
+        (int8-dequantized) decoder + latents, track BEST, and RECORD the telemetry
+        row — all keyed to ``snapshot_epoch`` (the epoch the snapshot was taken at).
 
         FIDELITY (1:1 with vendored ``common.py:228-238``): the score that picks
         the BEST checkpoint is the score of the **archive the contest sees**, i.e.
@@ -538,15 +598,20 @@ class TorchVehicleDriver:
         the wrong checkpoint). We reconstruct the eval decoder from the parse-back
         ``state_dict`` and eval THAT.
 
+        THREAD-SAFETY: this method may run in a BACKGROUND thread (async path) or
+        inline (sync path). The pure-eval part (build_archive / parse_archive /
+        exact_eval) touches NO shared state — it reads only the immutable snapshot.
+        The shared surfaces (best-tracker fields, the ``best/`` dir write, and the
+        single non-thread-safe :class:`TelemetryWriter`) are mutated ONLY under
+        ``self._eval_lock`` so they never race the main loop's non-eval records.
+
         Returns the eval dict (d_seg / d_pose / rate / score / archive_bytes /
         is_best). The BEST EMA shadow + archive are written to ``out_dir/best/``.
         """
-        # Move the EMA shadow to CPU for the archive build (int8 quant is a
-        # numpy/CPU path; an MPS-resident state_dict would otherwise break it).
-        ema_sd = {k: v.detach().cpu().clone() for k, v in rt.ema_decoder.state_dict().items()}
+        ema_sd = snap.ema_sd
         archive = self.v.build_archive(
             ema_sd,
-            rt.ema_latents.cpu(),
+            snap.ema_latents,
             meta_dict={
                 "n_pairs": self.n_pairs,
                 "latent_dim": self.cfg.latent_dim,
@@ -567,40 +632,144 @@ class TorchVehicleDriver:
         eval_dec.eval()
         ev = self.scorer.exact_eval(eval_dec, eval_latents.to(self.device), archive_bytes)
         score = float(ev["score"])
-        is_best = score < self.best_score
-        if is_best:
-            self.best_score = score
-            self.best_ep = self._global_epoch
-            self.best_stage = stage_index
-            best_dir = self.cfg.out_dir / "best"
-            best_dir.mkdir(parents=True, exist_ok=True)
-            (best_dir / "best_archive.bin").write_bytes(archive)
-            torch.save(ema_sd, best_dir / "best_ema_decoder.pt")
-            torch.save(rt.ema_latents.cpu(), best_dir / "best_ema_latents.pt")
-            (best_dir / "best_meta.json").write_text(
-                _json_dumps(
-                    {
-                        "stage_index": stage_index,
-                        "stage_name": spec.name,
-                        "global_epoch": self._global_epoch,
-                        "score": score,
-                        "d_seg": ev.get("seg_distortion", ev.get("d_seg")),
-                        "d_pose": ev.get("pose_distortion", ev.get("d_pose")),
-                        "rate": ev.get("rate"),
-                        "archive_bytes": archive_bytes,
-                        "base_channels": self.cfg.base_channels,
-                        "authority": "[contest-CPU advisory] NON-PROMOTABLE",
-                    }
+        d_seg = ev.get("seg_distortion", ev.get("d_seg"))
+        d_pose = ev.get("pose_distortion", ev.get("d_pose"))
+        rate = ev.get("rate")
+        # --- shared-state mutation under the lock (BEST tracker + telemetry) ------
+        with self._eval_lock:
+            is_best = score < self.best_score
+            if is_best:
+                self.best_score = score
+                self.best_ep = snapshot_epoch
+                self.best_stage = stage_index
+                best_dir = self.cfg.out_dir / "best"
+                best_dir.mkdir(parents=True, exist_ok=True)
+                (best_dir / "best_archive.bin").write_bytes(archive)
+                torch.save(ema_sd, best_dir / "best_ema_decoder.pt")
+                torch.save(snap.ema_latents, best_dir / "best_ema_latents.pt")
+                (best_dir / "best_meta.json").write_text(
+                    _json_dumps(
+                        {
+                            "stage_index": stage_index,
+                            "stage_name": spec.name,
+                            "global_epoch": snapshot_epoch,
+                            "score": score,
+                            "d_seg": d_seg,
+                            "d_pose": d_pose,
+                            "rate": rate,
+                            "archive_bytes": archive_bytes,
+                            "base_channels": self.cfg.base_channels,
+                            "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+                        }
+                    )
                 )
-            )
         return {
-            "d_seg": ev.get("seg_distortion", ev.get("d_seg")),
-            "d_pose": ev.get("pose_distortion", ev.get("d_pose")),
-            "rate": ev.get("rate"),
+            "d_seg": d_seg,
+            "d_pose": d_pose,
+            "rate": rate,
             "score": score,
             "archive_bytes": archive_bytes,
             "is_best": is_best,
         }
+
+    def _record_eval_row(
+        self,
+        ev: dict[str, Any],
+        spec: StageSpec,
+        stage_index: int,
+        snapshot_epoch: int,
+    ) -> None:
+        """Append the EVAL telemetry row, tagged with ``snapshot_epoch`` (the epoch
+        the eval's snapshot came from — which may be a few epochs behind the current
+        training epoch on the async path). Written under ``_eval_lock`` because the
+        single :class:`TelemetryWriter` is not thread-safe and the main loop also
+        records non-eval rows."""
+        with self._eval_lock:
+            self.telemetry.record(
+                EpochRecord(
+                    stage_index=stage_index,
+                    stage_name=spec.name,
+                    epoch_in_stage=snapshot_epoch
+                    - sum(self.curriculum[i].epochs for i in range(stage_index)),
+                    global_epoch=snapshot_epoch,
+                    loss=float("nan"),
+                    pose_mse=float("nan"),
+                    adamw_lr=float("nan"),
+                    muon_lr=None,
+                    evaluated=True,
+                    d_seg=ev.get("d_seg"),
+                    d_pose=ev.get("d_pose"),
+                    rate=ev.get("rate"),
+                    score=ev.get("score"),
+                    archive_bytes=ev.get("archive_bytes"),
+                    is_best=ev.get("is_best", False),
+                    extra={"async_eval_row": True, "snapshot_epoch": snapshot_epoch},
+                )
+            )
+
+    # -- async eval scheduling (the throughput salvage) ----------------------
+    def _async_eval_in_flight(self) -> bool:
+        """True iff a background eval worker is currently running."""
+        return self._eval_thread is not None and self._eval_thread.is_alive()
+
+    def _schedule_async_eval(
+        self, rt: _StageRuntime, spec: StageSpec, stage_index: int, snapshot_epoch: int
+    ) -> bool:
+        """Snapshot the EMA shadow NOW (main thread) and spawn ONE background worker
+        to run the IDENTICAL exact eval off that snapshot, then return immediately so
+        training continues. At most ONE eval is in-flight: if a prior worker is still
+        running, SKIP (log + count) — the cadence self-throttles (a 13-min eval over-
+        runs the 150s eval interval early; once training-only epochs are cheap the
+        eval naturally lands within an interval). Returns True if scheduled, False if
+        skipped."""
+        if self._async_eval_in_flight():
+            self._skipped_evals += 1
+            print(
+                f"[async-eval] SKIP @ global_ep={snapshot_epoch}: prior eval "
+                f"(snapshot_ep={self._inflight_snapshot_epoch}) still running "
+                f"(total skipped={self._skipped_evals})",
+                flush=True,
+            )
+            return False
+        snap = self._snapshot_ema(rt)  # cheap, main-thread, point-in-time
+        self._inflight_snapshot_epoch = snapshot_epoch
+
+        def _worker() -> None:
+            t0 = time.time()
+            try:
+                ev = self._eval_snapshot(snap, spec, stage_index, snapshot_epoch)
+                self._record_eval_row(ev, spec, stage_index, snapshot_epoch)
+                print(
+                    f"[async-eval] DONE snapshot_ep={snapshot_epoch} "
+                    f"score={ev['score']:.5f} d_seg={ev['d_seg']} d_pose={ev['d_pose']} "
+                    f"({time.time() - t0:.0f}s){' *BEST*' if ev['is_best'] else ''}",
+                    flush=True,
+                )
+            except Exception as exc:  # pragma: no cover - defensive logging
+                # An eval failure must NOT take down the training loop (it runs in a
+                # daemon thread off the main loop). Log loudly; do NOT write a
+                # telemetry row (a failed eval has no authority numbers — a row would
+                # be misleading). Training continues; the next eval epoch re-schedules
+                # off a fresh snapshot.
+                print(
+                    f"[async-eval] FAILED snapshot_ep={snapshot_epoch}: "
+                    f"{type(exc).__name__}: {exc}",
+                    flush=True,
+                )
+
+        self._eval_thread = threading.Thread(
+            target=_worker, name=f"async-eval-ep{snapshot_epoch}", daemon=True
+        )
+        self._eval_thread.start()
+        return True
+
+    def _join_async_eval(self, timeout: float | None = None) -> None:
+        """JOIN any in-flight eval worker so the final BEST + last eval row land
+        before the run exits (the DONE-marker contract). Called at run completion."""
+        if self._eval_thread is not None and self._eval_thread.is_alive():
+            print("[async-eval] JOIN: waiting for in-flight eval to finish...", flush=True)
+            self._eval_thread.join(timeout=timeout)
+        self._eval_thread = None
 
     # -- the resumable run ----------------------------------------------------
     def run(self) -> dict[str, Any]:
@@ -713,8 +882,18 @@ class TorchVehicleDriver:
                 # Eval cadence (faithful: eval_every).
                 evaluated = (epoch_in_stage % spec.eval_every) == 0
                 ev: dict[str, Any] = {}
-                if evaluated:
-                    ev = self._eval_and_track_best(rt, spec, stage_index)
+                # SYNC path (default; byte-identical to the legacy run): eval inline
+                # off a snapshot and emit ONE combined train+eval row. The snapshot
+                # round-trip is a no-op vs reading rt directly — same archive, same
+                # exact numbers — so the sync output is unchanged.
+                # ASYNC path (--async-eval): record the TRAIN-ONLY row now and SPAWN
+                # the (identical) eval off a point-in-time snapshot in a background
+                # thread; the eval row lands LATER, tagged with this snapshot epoch.
+                # Training continues immediately — the ~13-min CPU eval no longer
+                # blocks the MPS loop.
+                if evaluated and not self._async_eval:
+                    snap = self._snapshot_ema(rt)
+                    ev = self._eval_snapshot(snap, spec, stage_index, self._global_epoch)
 
                 self.telemetry.record(
                     EpochRecord(
@@ -732,7 +911,10 @@ class TorchVehicleDriver:
                         ),
                         grad_norm_adamw=gn_adamw,
                         grad_norm_muon=gn_muon,
-                        evaluated=evaluated,
+                        # In ASYNC mode this row is train-only (the eval row is
+                        # emitted separately by the worker, tagged with the snapshot
+                        # epoch); ``evaluated`` here reflects the SYNC inline eval.
+                        evaluated=evaluated and not self._async_eval,
                         d_seg=ev.get("d_seg"),
                         d_pose=ev.get("d_pose"),
                         rate=ev.get("rate"),
@@ -741,6 +923,12 @@ class TorchVehicleDriver:
                         is_best=ev.get("is_best", False),
                     )
                 )
+
+                # ASYNC eval: schedule AFTER the train row is recorded so the
+                # snapshot is taken at this epoch's completed EMA shadow. At most one
+                # in-flight; over-cadence evals self-throttle (skip + log).
+                if evaluated and self._async_eval:
+                    self._schedule_async_eval(rt, spec, stage_index, self._global_epoch)
 
                 # Checkpoint cadence (a death costs <= this many epochs).
                 if (epoch_in_stage % self.cfg.checkpoint_every_epochs) == 0:
@@ -764,6 +952,10 @@ class TorchVehicleDriver:
             carry_ema_latents = rt.ema_latents
             resume_pos = TorchCheckpointPosition(stage_index + 1, 0)
 
+        # JOIN any in-flight async eval so the final BEST + last eval row land
+        # before the DONE marker (the marker-on-exit contract). No-op in sync mode.
+        self._join_async_eval()
+
         summary = {
             "status": "complete",
             "best_score": self.best_score,
@@ -771,6 +963,8 @@ class TorchVehicleDriver:
             "best_stage": self.best_stage,
             "n_stages": len(self.curriculum),
             "base_channels": self.cfg.base_channels,
+            "async_eval": self._async_eval,
+            "skipped_async_evals": self._skipped_evals,
             "authority": "[contest-CPU advisory] NON-PROMOTABLE — exact via upstream/evaluate.py",
         }
         write_done_marker(self.cfg.out_dir, summary)

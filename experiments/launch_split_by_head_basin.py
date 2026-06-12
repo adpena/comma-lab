@@ -66,6 +66,20 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "mps_pose_drift_patchable_verdict_20260612.md; still CPU-authority "
              "BEST-tracked so a real late divergence is caught LIVE).",
     )
+    p.add_argument(
+        "--async-eval",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="run the CPU AUTHORITY exact eval (byte-close + 600-pair "
+             "d_seg/d_pose/rate/score, ~13 min) in a BACKGROUND THREAD off a "
+             "point-in-time CPU snapshot of the EMA shadow, so the GPU/MPS training "
+             "loop is NOT blocked. The eval is the IDENTICAL eval on the IDENTICAL "
+             "snapshot — only non-blocking — so the authority numbers are bit-for-bit "
+             "the same as the sync path (the no-regression test proves it). At most "
+             "ONE eval is in-flight (over-cadence evals self-throttle: skip + log); "
+             "the in-flight thread is JOINED on completion. DEFAULT off (the sync "
+             "path is byte-identical unchanged).",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -104,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         device=args.device,
         train_device=args.train_device,
         split_by_head=args.split_by_head,  # True=pose-axis salvage; False=full-MPS
+        async_eval=args.async_eval,  # True=non-blocking background CPU authority eval
         seed=args.seed,
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).
