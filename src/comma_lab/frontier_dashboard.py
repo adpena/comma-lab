@@ -281,6 +281,14 @@ def load_run(path: Path, total_epochs: int) -> dict[str, Any]:
     init_d_seg = next((r["d_seg"] for r in rows if r.get("d_seg") is not None), None)
     descent = ((init_d_seg - latest_eval["d_seg"])
                if (init_d_seg is not None and latest_eval) else None)
+    # Per-epoch wall-clock deltas -> ROBUST MEDIAN training cadence (excludes the
+    # multi-minute eval spikes that inflate the mean). avg_s_per_epoch above is the
+    # mean (incl. blocking evals); this median is the true per-training-epoch time.
+    _wc = [(r["epoch"], r["elapsed_s"]) for r in rows if r.get("elapsed_s") is not None]
+    _dts = [(_wc[i][1] - _wc[i - 1][1]) / (_wc[i][0] - _wc[i - 1][0])
+            for i in range(1, len(_wc))
+            if _wc[i][0] > _wc[i - 1][0] and _wc[i][1] >= _wc[i - 1][1]]
+    median_s_per_epoch = sorted(_dts)[len(_dts) // 2] if _dts else None
     summary = {
         "n_records": len(rows),
         "n_eval_epochs": len(evals),
@@ -288,6 +296,7 @@ def load_run(path: Path, total_epochs: int) -> dict[str, Any]:
         "d_seg_descent": descent,
         "d_seg_min": min(d_segs) if d_segs else None,
         "avg_s_per_epoch": avg_s_per_epoch,
+        "median_s_per_epoch": median_s_per_epoch,
         "elapsed_s": elapsed_s,
         "recent_dseg_per_epoch": _recent_rate(evals),
         "latest_loss": (latest_train.get("loss") if latest_train else None),
@@ -487,7 +496,8 @@ svg{display:block}
     <div class="card metric"><div class="l">d_seg descent</div><div class="v gx" id="s-descent">—</div>
        <div class="tag">init → latest</div></div>
     <div class="card metric"><div class="l">recent Δd_seg/epoch</div><div class="v" id="s-rate">—</div></div>
-    <div class="card metric"><div class="l">avg sec/epoch</div><div class="v" id="s-spe">—</div></div>
+    <div class="card metric"><div class="l">sec/epoch (incl. eval)</div><div class="v" id="s-spe">—</div>
+       <div class="tag" id="s-spe-med"></div></div>
     <div class="card metric"><div class="l">elapsed</div><div class="v" id="s-elapsed">—</div></div>
   </div>
 
@@ -567,6 +577,7 @@ async function tick(){
   $('s-descent').textContent=s.d_seg_descent==null?'—':s.d_seg_descent.toFixed(4);
   $('s-rate').textContent=s.recent_dseg_per_epoch==null?'—':s.recent_dseg_per_epoch.toExponential(2);
   $('s-spe').textContent=s.avg_s_per_epoch==null?'—':s.avg_s_per_epoch.toFixed(1);
+  $('s-spe-med').textContent=s.median_s_per_epoch!=null?'train ~'+(+s.median_s_per_epoch).toFixed(0)+'s/ep (median, ex-eval)':'';
   liveClock();  // immediate elapsed/ETA paint; the 1s ticker continues it
   // table
   const tb=$('tbody');tb.innerHTML='';
