@@ -681,7 +681,7 @@ svg{display:block}
     <div class="card metric"><div class="l">d_seg descent</div><div class="v gx" id="s-descent">—</div>
        <div class="tag">init → latest</div></div>
     <div class="card metric"><div class="l">recent Δd_seg/epoch</div><div class="v" id="s-rate">—</div></div>
-    <div class="card metric"><div class="l">sec/epoch (incl. eval)</div><div class="v" id="s-spe">—</div>
+    <div class="card metric"><div class="l">sec/epoch (median)</div><div class="v" id="s-spe">—</div>
        <div class="tag" id="s-spe-med"></div></div>
     <div class="card metric"><div class="l">elapsed</div><div class="v" id="s-elapsed">—</div></div>
   </div>
@@ -764,8 +764,8 @@ async function tick(){
   $('s-neval').textContent=s.n_eval_epochs+(s.n_records?' / '+s.n_records+' rows':'');
   $('s-descent').textContent=s.d_seg_descent==null?'—':s.d_seg_descent.toFixed(4);
   $('s-rate').textContent=s.recent_dseg_per_epoch==null?'—':s.recent_dseg_per_epoch.toExponential(2);
-  $('s-spe').textContent=s.avg_s_per_epoch==null?'—':s.avg_s_per_epoch.toFixed(1);
-  $('s-spe-med').textContent=s.median_s_per_epoch!=null?'train ~'+(+s.median_s_per_epoch).toFixed(0)+'s/ep (median, ex-eval)':'';
+  $('s-spe').textContent=s.median_s_per_epoch==null?'—':(+s.median_s_per_epoch).toFixed(1);
+  $('s-spe-med').textContent='resume-robust median'+(s.avg_s_per_epoch!=null?' · mean '+(+s.avg_s_per_epoch).toFixed(1)+' (distorts on resume)':'');
   liveClock();  // immediate elapsed/ETA paint; the 1s ticker continues it
   // table
   const tb=$('tbody');tb.innerHTML='';
