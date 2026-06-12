@@ -73,16 +73,28 @@ unless a bounded $0 A/B at matched small scale justifies the divergence.
   epochs, base_ch=20). It did **NOT** compare faithful-vs-divergence — it only proved the BUG-A fix unfreezes.
 - The **basin existence-proof (5.6e-4) is FAITHFUL-only** — PR95 reached it with AdamW-stages-1-7 + Muon-stage-8
   at base_ch=36 (the frontier rests on this). No proof muon_throughout reaches the basin.
-- A bounded head-to-head A/B (faithful `pr95_adamw_then_muon` vs `muon_throughout` at base_ch=20, stages 1-2)
-  was run this session (`experiments/diag_faithful_vs_muon_throughout_ab.py`); see `verdict.json` for the
-  result. **VERDICT-PLACEHOLDER:** [the A/B result is appended on harvest below].
+- A bounded head-to-head A/B (faithful `pr95_adamw_then_muon` vs `muon_throughout` at base_ch=20, stages 1-2,
+  12+12 epochs, n8, matched budget) WAS run this session
+  (`experiments/diag_faithful_vs_muon_throughout_ab.py`; `experiments/results/diag_faithful_vs_muon_ab/`).
+  **MEASURED RESULT (`[macOS-CPU advisory]`, real `modules.py` SegNet):**
 
-**VERDICT (principled, pre-A/B-harvest): FAITHFUL `pr95_adamw_then_muon` is the default for the $100 spend.**
-Rationale: (a) it is the ONLY recipe with a basin existence-proof; (b) the muon_throughout divergence has NO
-head-to-head win over faithful (the A/B only proved it descends, not that it beats faithful); (c) per the
-discipline, an unjustified divergence on a $100 spend is forbidden — "it descended at n8 on a buggy-recipe
-baseline" is not a justification to diverge from the proven recipe. The bounded A/B refines this: only a
-DECISIVE muon_throughout win (ratio ≫ 1) would flip it; a comparable-descent result confirms faithful.
+  | arm | stage 1 (CE, 12ep) d_seg(live) | stage 2 (tau_softplus, 12ep) d_seg(live) |
+  |---|---|---|
+  | **FAITHFUL** (AdamW, adamw_lr=1e-3) | 0.24409 | **0.05950** |
+  | **MUON_THROUGHOUT** (muon_lr=0.03) | 0.12673 | **0.04309** |
+
+  Both descended strongly from init 0.50727. **muon_throughout beats faithful by ratio 1.38× (0.0431 vs
+  0.0595) — a MODEST win, NOT decisive (well within the pre-registered ~2× "comparable" band).**
+
+**VERDICT (A/B-confirmed): FAITHFUL `pr95_adamw_then_muon` is the default for the $100 spend.**
+Rationale: (a) it is the ONLY recipe with a basin existence-proof (PR95 reached 5.6e-4 with it at base_ch=36);
+(b) the bounded A/B showed muon_throughout's edge is only **1.38×** at n8 — NOT the DECISIVE win (ratio ≫ 1)
+the pre-registered threshold required to justify diverging; (c) per CLAUDE.md "OPTIMAL FORM before paid
+dispatch", a 1.38× n8 edge does NOT outweigh the proven-recipe + basin-proof advantage for a $100 spend —
+the faithful recipe is both the safer default AND descends comparably (within 38%). **If the symposium wants
+the muon_throughout 1.38× edge, it is a defensible BUT divergent choice that forfeits the basin existence-
+proof; the recommended default is faithful.** (Caveat: the A/B is n8/24-epoch — it measures early-descent
+slope, not basin-reaching, which is the n600 question for BOTH recipes.)
 
 ### Per-knob justification (non-arbitrary; every value → PR95 source or first principles)
 

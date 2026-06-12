@@ -24,9 +24,18 @@
   },
   "recipe_verdict": {
     "choice": "pr95_adamw_then_muon (FAITHFUL)",
-    "rationale": "Only recipe with a basin existence-proof (5.6e-4 at base_ch=36). muon_throughout-fixed only proved DESCENT (n8 A/B), not a head-to-head win over faithful. Per CLAUDE.md 'OPTIMAL FORM before paid dispatch', an unjustified divergence on a $100 spend is forbidden.",
-    "ab_head_to_head": "experiments/results/diag_faithful_vs_muon_ab/verdict.json (bounded n8 base_ch=20; refines the default)",
-    "flips_to_muon_throughout_only_if": "the A/B shows a DECISIVE muon_throughout win (ratio faithful/muon >> 1)"
+    "rationale": "Only recipe with a basin existence-proof (5.6e-4 at base_ch=36). The bounded n8 head-to-head A/B showed muon_throughout beats faithful by only 1.38x (0.0431 vs 0.0595, stages 1-2, matched budget) - a MODEST win, NOT the DECISIVE (ratio>>1) win the pre-registered threshold required to justify diverging. Per CLAUDE.md 'OPTIMAL FORM before paid dispatch', a 1.38x n8 edge does not outweigh the proven-recipe + basin-proof advantage on a $100 spend.",
+    "ab_head_to_head": {
+      "artifact": "experiments/results/diag_faithful_vs_muon_ab/verdict.json",
+      "setup": "base_ch=20 tie=2 stored_latent n8, stages 1-2 (12+12 ep), matched budget, real modules.py SegNet [macOS-CPU advisory]",
+      "faithful_final_d_seg_live": 0.05950,
+      "muon_throughout_final_d_seg_live": 0.04309,
+      "ratio_faithful_over_muon": 1.38,
+      "both_descended": true,
+      "decisive_muon_win": false,
+      "caveat": "n8/24-epoch measures early-descent slope, not basin-reaching (the n600 question for BOTH recipes)"
+    },
+    "flips_to_muon_throughout_only_if": "the symposium accepts the divergence; muon_throughout's 1.38x edge is defensible BUT forfeits the basin existence-proof"
   },
   "bug_sweep": {
     "BUG_A_muon_lr_throttle": "FIXED_VERIFIED (commit a9888191c; parity-tested)",
