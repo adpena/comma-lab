@@ -227,3 +227,17 @@ wiring.
 **Artifacts:** `experiments/results/diag_recipe_fix_fixed_only/` (fixed arm) + the buggy-arm stage-1 row in
 the A/B log. `[macOS-CPU advisory]`, NON-PROMOTABLE, $0. Frontier pointer UNMOVED at 0.191 — this is a
 recipe-correctness verdict that UNBLOCKS the retrain, not a pointer move.
+
+**In-flight (durable, marker-on-exit):** the fixed arm continues through stages 2 (tau_softplus) and 3
+(smooth_disagreement) — the trajectory streams to `experiments/results/diag_recipe_fix_fixed_only/
+fixed_trajectory.json` (written on exit). The stage-1 datapoint above is already decisive; the stage-2/3 rows
+will show how much further the corrected recipe descends below 0.066 (expected: toward the muon-only 0.0037,
+since stage 2 tau_softplus refines below CE). The torch-CPU n=8 throughput is ~25 s/step (eval-roundtrip
+scorer fwd+bwd), so each stage is ~6-10 min; the full fixed trajectory completes ~25 min after launch.
+
+### THE NEXT STEP (for the retrain campaign, now unblocked)
+The recipe is fixed; the capacity question is cleanly separable. The decisive remaining measurement is the
+CORRECTED full 8-stage curriculum at n600 (the real pointer target) on a PAID GPU (the local torch-CPU/mlx
+throughput makes n600 infeasible locally) — does it reach the 5.6e-4 basin, and at what bytes? That is the
+exact-row campaign the operator's sub-0.15 goal points at. The $0 local verdict here removes the recipe-bug
+confound that would have wasted that paid run.
