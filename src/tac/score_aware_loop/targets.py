@@ -41,6 +41,13 @@ def load_frozen_distortion_net(
     from tac.differentiable_eval_roundtrip import patch_upstream_yuv6_globally
 
     patch_upstream_yuv6_globally()
+    # On the Apple GPU, also apply the device-compat patches (BatchNorm-contiguous)
+    # so the upstream scorer's forward+backward run on MPS (CLAUDE.md
+    # "do whatever upstream did but for macOS"; numerics-preserving, MPS only).
+    if str(device).startswith("mps"):
+        from tac.torch_mps_compat import patch_scorer_for_mps
+
+        patch_scorer_for_mps()
     from modules import DistortionNet, posenet_sd_path, segnet_sd_path
 
     net = DistortionNet().eval().to(device)
