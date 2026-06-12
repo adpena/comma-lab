@@ -41,9 +41,10 @@ import math
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, Response, render_template_string, request
+from pydantic import BaseModel, BeforeValidator, ConfigDict, ValidationError
 
 RATE_DENOM = 37_545_489  # contest archive-size normalizer
 TARGET_FLOOR = 0.19      # T_1 — floor of acceptable
@@ -157,11 +158,165 @@ def pick_live_run(root: Path, want: str | None) -> Path | None:
 
 
 def _f(row: dict, *keys: str) -> float | None:
+    """First finite numeric value among ``keys`` (NaN/Inf -> None). Non-finite
+    floats must NEVER enter the payload: Python emits literal ``NaN``/``Infinity``
+    (invalid JSON) which the browser's strict ``JSON.parse`` rejects."""
     for k in keys:
         v = row.get(k)
-        if isinstance(v, (int, float)):
+        if isinstance(v, bool):
+            continue
+        if isinstance(v, (int, float)) and math.isfinite(v):
             return float(v)
     return None
+
+
+def _sanitize_count(obj: Any) -> tuple[Any, int]:
+    """Recursively replace non-finite floats (NaN/Inf/-Inf) with None and COUNT
+    how many were replaced — so the conversion is surfaced (``data_warnings``),
+    never silent. The browser's strict JSON.parse rejects NaN/Infinity, which is
+    what silently broke the dashboard before."""
+    if isinstance(obj, float):
+        return (obj, 0) if math.isfinite(obj) else (None, 1)
+    if isinstance(obj, dict):
+        out, n = {}, 0
+        for k, v in obj.items():
+            out[k], c = _sanitize_count(v)
+            n += c
+        return out, n
+    if isinstance(obj, (list, tuple)):
+        out_l, n = [], 0
+        for v in obj:
+            sv, c = _sanitize_count(v)
+            out_l.append(sv)
+            n += c
+        return out_l, n
+    return obj, 0
+
+
+# ---- Pydantic response schema ------------------------------------------------
+# Guarantees an RFC-valid JSON payload (non-finite floats -> null EXPLICITLY via
+# FiniteFloat) and FAILS LOUDLY on a structurally-wrong payload (returns a visible
+# error, not a silent break). Combined with json.dumps(allow_nan=False) at the
+# route, invalid JSON can NEVER ship silently.
+def _finite_or_none(v: Any) -> Any:
+    return None if isinstance(v, float) and not math.isfinite(v) else v
+
+
+FiniteFloat = Annotated[float | None, BeforeValidator(_finite_or_none)]
+
+
+class _Model(BaseModel):
+    model_config = ConfigDict(extra="allow")  # tolerate evolving/extra fields
+
+
+class FrontierAxisModel(_Model):
+    score: FiniteFloat = None
+    evidence_tag: str | None = None
+    technique: str | None = None
+    archive_bytes: int | None = None
+    archive_sha256: str | None = None
+    hardware: str | None = None
+    measured_at_utc: str | None = None
+
+
+class FrontierModel(_Model):
+    cpu: FrontierAxisModel | None = None
+    cuda: FrontierAxisModel | None = None
+    last_refreshed_utc: str | None = None
+    error: str | None = None
+
+
+class EpochRowModel(_Model):
+    epoch: int | None = None
+    stage: str | None = None
+    d_seg: FiniteFloat = None
+    d_pose: FiniteFloat = None
+    rate: FiniteFloat = None
+    archive_bytes: int | None = None
+    best_d_seg: FiniteFloat = None
+    elapsed_s: FiniteFloat = None
+    lr: FiniteFloat = None
+    loss: FiniteFloat = None
+    pose_mse: FiniteFloat = None
+    grad_norm: FiniteFloat = None
+    score: FiniteFloat = None
+    score_is_full: bool | None = None
+
+
+class TrainTelModel(_Model):
+    epoch: int | None = None
+    stage: str | None = None
+    loss: FiniteFloat = None
+    pose_mse: FiniteFloat = None
+    grad_norm: FiniteFloat = None
+    lr: FiniteFloat = None
+    elapsed_s: FiniteFloat = None
+
+
+class SummaryModel(_Model):
+    n_records: int | None = None
+    n_eval_epochs: int | None = None
+    init_d_seg: FiniteFloat = None
+    d_seg_descent: FiniteFloat = None
+    d_seg_min: FiniteFloat = None
+    avg_s_per_epoch: FiniteFloat = None
+    median_s_per_epoch: FiniteFloat = None
+    elapsed_s: FiniteFloat = None
+    recent_dseg_per_epoch: FiniteFloat = None
+    latest_loss: FiniteFloat = None
+
+
+class RunModel(_Model):
+    run_dir: str
+    trajectory_file: str | None = None
+    mtime: FiniteFloat = None
+    is_live: bool | None = None
+    is_done: bool | None = None
+    started_unix: FiniteFloat = None
+    current_epoch: int | None = None
+    total_epochs: int | None = None
+    progress: FiniteFloat = None
+    eta_s: FiniteFloat = None
+    eta_median_s: FiniteFloat = None
+    train: TrainTelModel | None = None
+    latest_eval: EpochRowModel | None = None
+    best: EpochRowModel | None = None
+    summary: SummaryModel | None = None
+    rows: list[EpochRowModel] = []
+    spark: list[FiniteFloat] = []
+    spark_kind: str | None = None
+    error: str | None = None
+
+
+class ApiStateModel(_Model):
+    frontier: FrontierModel
+    targets: dict
+    now_unix: FiniteFloat = None
+    run: RunModel | None = None
+    available_runs: list[str] = []
+    data_warnings: list[str] = []
+    error: str | None = None
+
+
+def serialize_state(state: dict) -> tuple[str, int]:
+    """Validate + serialize the API state to GUARANTEED-valid JSON. Returns
+    (json_body, http_status). Non-finite floats become null (counted into
+    ``data_warnings``); a structurally-invalid payload returns a LOUD error body
+    (status 200 so the UI renders the message) instead of a silent break."""
+    try:
+        model = ApiStateModel.model_validate(state)
+    except ValidationError as e:
+        body = json.dumps({"error": f"payload validation failed: {e}",
+                           "frontier": {"cpu": None, "cuda": None},
+                           "run": None, "available_runs": []})
+        return body, 200
+    payload = model.model_dump()
+    payload, n_nonfinite = _sanitize_count(payload)   # belt-and-suspenders for any extra field
+    if n_nonfinite:
+        payload.setdefault("data_warnings", []).append(
+            f"{n_nonfinite} non-finite value(s) nulled for JSON validity")
+    # allow_nan=False => raises if ANYTHING non-finite slipped through (no silent invalid JSON)
+    return json.dumps(payload, allow_nan=False), 200
 
 
 def _normalize_row(row: dict) -> dict | None:
@@ -373,16 +528,23 @@ def create_app(*, total_epochs: int = DEFAULT_TOTAL_EPOCHS,
 
     @app.route("/api/state")
     def api_state():  # noqa: ANN202
-        total = int(request.args.get("total", total_epochs))
-        run_path = _pick_run()
-        state = {
-            "frontier": load_frontier(root),
-            "targets": {"floor": TARGET_FLOOR, "goal": TARGET_GOAL},
-            "now_unix": time.time(),
-            "run": load_run(run_path, total) if run_path else None,
-            "available_runs": [str(p.parent.relative_to(root)) for p in discover_runs(root)[:12]],
-        }
-        return jsonify(state)
+        try:
+            total = int(request.args.get("total", total_epochs))
+            run_path = _pick_run()
+            state = {
+                "frontier": load_frontier(root),
+                "targets": {"floor": TARGET_FLOOR, "goal": TARGET_GOAL},
+                "now_unix": time.time(),
+                "run": load_run(run_path, total) if run_path else None,
+                "available_runs": [str(p.parent.relative_to(root)) for p in discover_runs(root)[:12]],
+            }
+            body, status = serialize_state(state)
+        except Exception as e:  # noqa: BLE001 — surface the failure LOUDLY, never a blank/silent 500
+            body = json.dumps({"error": f"{type(e).__name__}: {e}",
+                               "frontier": {"cpu": None, "cuda": None},
+                               "run": None, "available_runs": []})
+            status = 200
+        return Response(body, status=status, mimetype="application/json")
 
     @app.route("/")
     def index():  # noqa: ANN202
