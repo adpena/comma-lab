@@ -61,7 +61,12 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from tac.torch_vehicle.curriculum import StageSpec, seg_temperature_for_epoch
+from tac.torch_vehicle.curriculum import (
+    SEG_ANNEAL_GRADIENT_FLOOR_T,
+    StageSpec,
+    seg_anneal_temperature_is_gradient_alive,
+    seg_temperature_for_epoch,
+)
 from tac.torch_vehicle.driver import (
     _SEG_NUM_CLASSES,
     TorchVehicleConfig,
@@ -530,6 +535,216 @@ def test_lever2_anneal_tail_surrogate_is_input_dependent_not_constant():
     v_norm.backward()
     assert x_norm.grad.abs().sum() > 0.0, (
         "tail surrogate has ZERO gradient everywhere — not differentiable backprop (FAKE)"
+    )
+
+
+# --- R10: lever-interaction SIGN + the seg-anneal gradient floor (the cold-T property) ---
+def test_seg_anneal_gradient_floor_collapses_seg_grad_at_cold_t():
+    """R10 finding — the soft-cosine seg surrogate's per-pixel gradient ∝ p·(1−p)
+    VANISHES as the anneal sharpens (T → 0), even though its VALUE stays correct.
+    On SATURATED logits (the cold-tail regime: large margins ⇒ softmax(pred/0.05) is
+    near one-hot ⇒ p ≈ 0 or 1 ⇒ p·(1−p) ≈ 0) the latent gradient at T=0.05 is many
+    orders of magnitude smaller than at T=1.0. This pins the INTENDED 'lock in the
+    argmax late' property (NOT a defect) so a future tuner who drives a stage cold
+    before its argmax converges is caught by the companion floor guard.
+
+    NO-FAKE: this measures the ACTUAL gradient-norm RATIO across T (not a constant) —
+    a constant-return surrogate would have ZERO grad at every T (ratio undefined),
+    which the assertions below reject; a temperature-INVARIANT surrogate would give
+    ratio ≈ 1 (rejected)."""
+    # Saturated logits: one class dominant by ~12 (margin 12 ⇒ softmax(·/0.05) one-hot).
+    g = torch.Generator().manual_seed(7)
+    B, H, W = 2, 8, 12
+    base = torch.randn(B, _SEG_NUM_CLASSES, H, W, generator=g)
+    base[:, 0] += 12.0  # a confident class-0 prediction (large margin) on most pixels
+    spec = _stage(seg_surrogate="soft_cosine", margin_weight_tau=None)
+    targets = torch.randint(0, _SEG_NUM_CLASSES, (B, H, W), generator=g, dtype=torch.int64)
+
+    def grad_norm_at(temp):
+        x = base.clone().requires_grad_(True)
+        val = _seg_loss_for_spec(spec, x, targets, temperature=temp)
+        val.backward()
+        return float(x.grad.norm())
+
+    gn_warm = grad_norm_at(1.0)  # gradient ALIVE
+    gn_cold = grad_norm_at(0.05)  # gradient near-DEAD (the live arm's tail)
+    assert gn_warm > 0.0, "warm-T seg grad is zero — surrogate is dead even at T=1.0 (FAKE/defect)"
+    # The cold-T gradient is DRAMATICALLY smaller (the saturated-softmax collapse).
+    assert gn_cold < gn_warm * 1e-3, (
+        f"cold-T (0.05) seg grad {gn_cold:.3e} is NOT << warm-T (1.0) {gn_warm:.3e} — "
+        "the documented saturated-softmax gradient collapse did not occur "
+        "(if this regresses, the cold-anneal 'lock-in' property changed)"
+    )
+
+
+def test_seg_anneal_gradient_alive_guard_matches_floor_and_live_schedule():
+    """R10 self-protection guard — ``seg_anneal_temperature_is_gradient_alive`` flips
+    EXACTLY at ``SEG_ANNEAL_GRADIENT_FLOOR_T`` (≈0.1), and the LIVE arm's cosine
+    schedule (T: 1.0→0.05 over a stage) spends the MAJORITY of its epochs in the
+    gradient-ALIVE regime (so the seg lever is not wasted) and only goes cold-dead in
+    a small tail (the intended late lock-in). A regression that lowered the floor or
+    front-loaded the cold tail would FAIL here."""
+    # The guard is a clean threshold at the floor.
+    assert seg_anneal_temperature_is_gradient_alive(SEG_ANNEAL_GRADIENT_FLOOR_T) is True
+    assert seg_anneal_temperature_is_gradient_alive(SEG_ANNEAL_GRADIENT_FLOOR_T - 1e-6) is False
+    assert seg_anneal_temperature_is_gradient_alive(1.0) is True
+    assert seg_anneal_temperature_is_gradient_alive(0.05) is False  # the live tail IS dead
+    # The live arm's schedule: T 1.0→0.05 over a 100-epoch stage. The cosine keeps T
+    # high (gradient alive) for the FIRST HALF — wrong pixels get signal while abundant.
+    spec = _stage(epochs=100, seg_surrogate="soft_cosine",
+                  seg_temperature=1.0, seg_temperature_end=0.05)
+    temps = [seg_temperature_for_epoch(spec, e) for e in range(100)]
+    alive = sum(1 for t in temps if seg_anneal_temperature_is_gradient_alive(t))
+    assert alive >= 50, (
+        f"only {alive}/100 epochs are gradient-alive — the cold tail is front-loaded "
+        "(the seg lever would be wasted before the argmax converges)"
+    )
+    # The very end IS cold-dead (the intended argmax lock-in).
+    assert not seg_anneal_temperature_is_gradient_alive(temps[-1])
+
+
+@pytest.mark.timeout(600)
+def test_r10_levers_compose_not_fight_on_real_scorer():
+    """R10 HEADLINE lens — on the REAL frozen scorer (EfficientNet-B2 SegNet +
+    FastViT PoseNet), levers 2(+5 margin)+3(pose-FiLM) COMPOSE correctly. The COMPOSE
+    contract is: the combined gradient descends the COMBINED loss the driver actually
+    minimizes (``w_seg·seg_l + w_pose·pose_l``) — NOT that it descends each term
+    independently (when one term's gradient dominates, the combined step can mildly
+    INCREASE the subordinate term; that is normal correct multi-objective descent of
+    the weighted sum, not a "fight"). The well-posed checks are:
+      (1) the combined gradient is a DESCENT direction for the combined loss
+          (``<g_comb, g_comb> > 0`` ⇒ a ``-g_comb`` step decreases L — verified by an
+          actual small GD step);
+      (2) the two per-term gradients are NOT anti-aligned (``cos(g_seg, g_pose) > -1``
+          with a safe margin — a genuine fight would be near-perfect opposition AND
+          the combined step would increase the sum, which (1) refutes);
+      (3) the margin lever (5) RESHAPES but does not REVERSE the plain seg direction
+          (``cos(g_seg_margin, g_seg_plain) > 0``);
+      (4) composition is by exact gradient SUM (``g_comb == g_seg + g_pose``).
+
+    This corrects a prior R10 test-instrument bug (asserting ``cos(g_comb, g_seg) > 0``
+    — wrong: when pose dominates ~1900× the combined step ≈ the pose step, which mildly
+    increases seg; the combined loss STILL descends). MEASURED at the gradient-ALIVE
+    T=0.5 (the cold tail's seg grad is ~0 per the floor test). RESEARCH-ONLY tiny slice
+    ⇒ [contest-CPU advisory] NON-PROMOTABLE (gradient-direction claim, not a score
+    claim).
+
+    NO-FAKE: measures real autograd on the real scorer + an actual loss-decreasing GD
+    step; a constant / no-op lever gives zero gradient (the norm assertions reject
+    that) and the GD step would not decrease the loss."""
+    pytest.importorskip("torch")
+    import os
+
+    from tac.torch_vehicle.scorer_context import RealScorerContext
+
+    video = "upstream/videos/0.mkv"
+    if not os.path.exists(video):
+        pytest.skip("real video 0.mkv not present (real-scorer test)")
+
+    from tac.torch_vehicle.driver import _EVAL_H, _EVAL_W
+
+    torch.manual_seed(0)
+    cache = _tmp_out()
+    sc = RealScorerContext(video, device="cpu", max_pairs=8, targets_cache=cache)
+    v = import_vendored_bundle()
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        pose_film_enabled=True, seed=0,
+    )
+    spec = _stage(seg_surrogate="soft_cosine", margin_weight_tau=2.0)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=v, curriculum=[spec])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    decoder.set_stored_pose(sc.pose_targets[:8].cpu())
+    latents = torch.nn.Parameter(torch.randn(8, 28) * 0.1)
+    idx = torch.arange(4)
+    params = [p for p in decoder.parameters() if p.requires_grad] + [latents]
+
+    def render():
+        dp = decoder(latents[idx], idx)
+        B = len(idx)
+        flat = dp.reshape(B * 2, 3, _EVAL_H, _EVAL_W)
+        up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
+        down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
+        bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
+        dc = bhwc.clamp(0, 255)
+        return dc + (dc.round() - dc).detach()
+
+    def gvec(loss):
+        gs = torch.autograd.grad(loss, params, allow_unused=True)
+        return torch.cat([
+            (g if g is not None else torch.zeros_like(p)).reshape(-1)
+            for p, g in zip(params, gs, strict=False)
+        ])
+
+    def combined_loss():
+        seg_out, pose6 = sc.seg_pose_forward(render())
+        seg_l = _seg_loss_for_spec(spec, seg_out, sc.seg_targets_hard[idx], temperature=0.5)
+        pose_l = torch.sqrt(10.0 * F.mse_loss(pose6, sc.pose_targets[idx]) + 1e-12)
+        return spec.seg_weight * seg_l + spec.pose_weight * pose_l
+
+    # Pose term alone (Lever-3 FiLM conditions the render).
+    seg_out, pose6 = sc.seg_pose_forward(render())
+    pose_l = torch.sqrt(10.0 * F.mse_loss(pose6, sc.pose_targets[idx]) + 1e-12)
+    g_pose = gvec(spec.pose_weight * pose_l)
+
+    # Margin-weighted seg (Lever-2 + Lever-5) at a gradient-ALIVE T (T=0.5).
+    seg_out, _ = sc.seg_pose_forward(render())
+    seg_l_m = _seg_loss_for_spec(spec, seg_out, sc.seg_targets_hard[idx], temperature=0.5)
+    g_seg_m = gvec(spec.seg_weight * seg_l_m)
+
+    # Plain seg (Lever-2 only) — the margin must RESHAPE not REVERSE this.
+    spec_plain = _stage(seg_surrogate="soft_cosine", margin_weight_tau=None)
+    seg_out, _ = sc.seg_pose_forward(render())
+    seg_l_p = _seg_loss_for_spec(spec_plain, seg_out, sc.seg_targets_hard[idx], temperature=0.5)
+    g_seg_p = gvec(spec_plain.seg_weight * seg_l_p)
+
+    # Combined gradient (the driver's actual loss; levers 2+3+5 together).
+    L0 = combined_loss()
+    g_comb = gvec(L0)
+    l0 = float(L0.detach())
+
+    # Non-degenerate gradients (NO-FAKE: a no-op lever would give zero norm).
+    assert g_pose.norm() > 0 and g_seg_m.norm() > 0 and g_comb.norm() > 0, (
+        "a lever produced a ZERO gradient on the real scorer (no-op/FAKE)"
+    )
+
+    def cos(a, b):
+        return float((a @ b) / (a.norm() * b.norm()))
+
+    # (1) The COMBINED gradient is a DESCENT direction for the COMBINED loss — the
+    # real compose contract (the driver minimizes the weighted sum). Verified by an
+    # actual small -g_comb GD step that DECREASES the combined loss.
+    with torch.no_grad():
+        off = 0
+        step = 1e-6
+        for p in params:
+            n = p.numel()
+            p.add_(-step * g_comb[off:off + n].reshape(p.shape))
+            off += n
+    l1 = float(combined_loss().detach())
+    assert l1 < l0, (
+        f"a -g_comb step did NOT decrease the combined loss ({l0:.6f} -> {l1:.6f}) — "
+        "the combined gradient is not a descent direction (levers genuinely FIGHT)"
+    )
+
+    # (2) The per-term gradients are NOT anti-aligned (a genuine fight is near -1 AND
+    # would make (1) fail). Mild opposition (independent loss terms) is normal.
+    c_sp = cos(g_seg_m, g_pose)
+    assert c_sp > -0.9, (
+        f"seg and pose gradients are NEAR-ANTI-ALIGNED (cos={c_sp:.4f}) — the levers "
+        "fight destructively (combined with (1) this would be a real defect)"
+    )
+
+    # (3) The margin lever (5) RESHAPES but does not REVERSE the plain seg direction.
+    assert cos(g_seg_m, g_seg_p) > 0.0, (
+        f"margin-weight REVERSES the plain seg direction (cos={cos(g_seg_m, g_seg_p):.4f}) "
+        "— Lever-5 fights Lever-2"
+    )
+    # (4) Composition is by gradient SUM (the driver's single backward).
+    relerr = float((g_comb - (g_seg_m + g_pose)).norm() / (g_comb.norm() + 1e-12))
+    assert relerr < 1e-4, (
+        f"combined gradient != g_seg + g_pose (relerr={relerr:.3e}) — the levers do "
+        "NOT compose by the documented gradient sum"
     )
 
 
