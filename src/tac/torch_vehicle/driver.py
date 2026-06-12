@@ -1,0 +1,702 @@
+# SPDX-License-Identifier: MIT
+"""Resumable curriculum driver for the P2 torch-vehicle (vendored PR95 HNeRV-Muon).
+
+This is the ADAPTER's heart. The vendored ``stages/common.py:train_stage`` is a
+monolithic loop with NO resume, NO telemetry, and a HARDCODED ``base_channels=36``
+(in 3 call sites) — it cannot run the base_ch=20 rate-win config and a death
+loses the whole in-flight stage. We do NOT edit the pristine vendored source
+(CLAUDE.md "Forbidden in-place edits to public PR intake clones"); instead we
+RE-DRIVE the vendored PRIMITIVES (``HNeRVDecoder`` / ``Muon`` /
+``partition_params_for_muon`` / the seg-loss fns / ``ema_update`` / ``apply_qat``
+/ ``cat_entropy_v2`` / ``build_archive`` / ``parse_archive``) unchanged, with:
+
+* ``base_channels`` threaded into ``HNeRVDecoder(...)`` (the FINDING-1 fix —
+  parametrization lives in the driver, NOT in the pristine source);
+* COMPLETE checkpoint/resume (decoder + latents + EMA shadow + AdamW state +
+  Muon momentum + LR-scheduler state + RNG + curriculum position), so a death
+  costs ≤1 checkpoint interval — verified bit-identical by the kill+restart
+  test (``tests/test_driver_resume.py``);
+* per-epoch telemetry to durable JSONL (the "Max observability" non-negotiable);
+* BEST-checkpoint-by-canonical-score tracking from the EMA shadow (the EMA
+  non-negotiable — inference/export bytes are the shadow).
+
+The per-step math is a 1:1 port of ``common.py`` (eval_roundtrip bicubic↑→
+bilinear↓→uint8-STE, joint clip, ``ema_update`` after each step, sigma weight
+noise via QAT, C1a entropy) — verified faithful in ``tests/test_driver_faithful.py``.
+
+The driver is SCORER-INJECTABLE: production wires the real frozen SegNet/PoseNet
+via :class:`RealScorerContext` (``precompute_targets`` + ``evaluate_decoder``);
+tests inject a tiny synthetic frozen scorer so the resume round-trip (which is
+architecture-AGNOSTIC) is fast + deterministic, exactly as the MLX
+``test_checkpoint`` does.
+
+Authority: torch-CPU TRUSTED (CLAUDE.md "local CPU + MLX GPU good"); NO MPS. The
+in-loop d_seg/d_pose are ``[contest-CPU advisory]`` NON-PROMOTABLE until the
+byte-closed archive is run through ``upstream/evaluate.py``.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Callable
+from copy import deepcopy
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from tac.torch_vehicle.checkpoint import (
+    TorchCheckpointPosition,
+    checkpoint_exists,
+    load_checkpoint,
+    read_manifest,
+    save_checkpoint,
+    write_done_marker,
+)
+from tac.torch_vehicle.telemetry import EpochRecord, TelemetryWriter
+
+if TYPE_CHECKING:  # StageSpec used only in annotations at module level
+    from tac.torch_vehicle.curriculum import StageSpec
+
+_EVAL_H, _EVAL_W = 384, 512
+
+
+class _SimulatedDeath(Exception):
+    """Raised by the test-only ``_stop_after_global_epoch`` hook AFTER a checkpoint
+    lands, to simulate a SIGKILL/OOM mid-run for the in-process resume test."""
+
+
+# ---------------------------------------------------------------------------
+# Scorer context protocol: production = real frozen SegNet/PoseNet; test = synthetic
+# ---------------------------------------------------------------------------
+class ScorerContext(Protocol):
+    """The per-run frozen-scorer + GT-targets surface the driver trains against.
+
+    Production binds the REAL contest scorer (``precompute_targets`` →
+    ``distortion_net``, ``seg_targets_hard``, ``pose_targets``; GT via
+    ``frame_utils.yuv420_to_rgb``). Tests bind a synthetic frozen scorer with the
+    same interface so the resume round-trip is fast.
+    """
+
+    n_pairs: int
+    seg_targets_hard: torch.Tensor  # (n_pairs, 384, 512) int64
+    pose_targets: torch.Tensor  # (n_pairs, 6) float32
+
+    def seg_pose_forward(
+        self, decoded_bhwc: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Run the frozen scorer on roundtripped decoder output.
+
+        ``decoded_bhwc`` is (B, 2, 384, 512, 3) float in [0,255] (post eval-
+        roundtrip). Returns ``(seg_logits, pose_pred6)`` where ``seg_logits`` is
+        (B*?, 5, 384, 512) matching ``seg_targets_hard`` indexing and
+        ``pose_pred6`` is (B, 6) — so the driver's loss matches ``common.py``.
+        """
+        ...
+
+    def exact_eval(
+        self, ema_decoder: nn.Module, ema_latents: torch.Tensor, archive_bytes: int
+    ) -> dict[str, float]:
+        """Canonical d_seg / d_pose / rate / score on the EMA shadow (the score
+        the BEST checkpoint tracks). Production routes through the real
+        ``evaluate_decoder`` + ``compute_score`` on the parse-back archive."""
+        ...
+
+
+@dataclass
+class TorchVehicleConfig:
+    """Run-level config (architecture + budget + IO); the per-stage schedule
+    comes from :func:`tac.torch_vehicle.curriculum.build_curriculum`."""
+
+    base_channels: int = 20
+    latent_dim: int = 28
+    out_dir: Path = Path("experiments/results/torch_vehicle_run")
+    checkpoint_every_epochs: int = 1  # a death costs <= this many epochs
+    total_epoch_budget: int | None = None
+    ema_decay: float = 0.999
+    eval_every: int | None = None
+    device: str = "cpu"  # CPU TRUSTED; NO MPS (raises on mps below)
+    seed: int = 0
+    extra: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if str(self.device).lower().startswith("mps"):
+            raise ValueError(
+                "MPS is NEVER trusted (CLAUDE.md): corrupts SegNet/PoseNet argmax. "
+                "Use device='cpu' (TRUSTED) or 'cuda'."
+            )
+        self.out_dir = Path(self.out_dir)
+
+
+@dataclass
+class _StageRuntime:
+    """Mutable per-stage training objects (decoder/optimizers/sched/EMA)."""
+
+    decoder: nn.Module
+    latents: nn.Parameter
+    ema_decoder: nn.Module
+    ema_latents: torch.Tensor
+    adamw_opt: torch.optim.Optimizer
+    muon_opt: Any  # vendored Muon or None
+    adamw_sched: Any
+    muon_sched: Any
+    muon_params: list
+    adamw_params: list
+
+
+class TorchVehicleDriver:
+    """Drives the faithful PR95 8-stage curriculum with resume + telemetry.
+
+    Usage (production)::
+
+        ctx = RealScorerContext(video_path, device)
+        driver = TorchVehicleDriver(cfg, scorer=ctx, vendored=import_vendored_bundle())
+        driver.run()  # resumes from cfg.out_dir if a checkpoint is present
+    """
+
+    def __init__(
+        self,
+        cfg: TorchVehicleConfig,
+        *,
+        scorer: ScorerContext,
+        vendored: VendoredBundle,
+        curriculum: list[StageSpec] | None = None,
+    ):
+        self.cfg = cfg
+        self.scorer = scorer
+        self.v = vendored
+        self.device = torch.device(cfg.device)
+        self.n_pairs = int(scorer.n_pairs)
+        if curriculum is None:
+            from tac.torch_vehicle.curriculum import build_curriculum
+
+            curriculum = build_curriculum(
+                total_epoch_budget=cfg.total_epoch_budget,
+                ema_decay=cfg.ema_decay,
+                eval_every=cfg.eval_every,
+            )
+        self.curriculum = curriculum
+        self.telemetry = TelemetryWriter(
+            cfg.out_dir,
+            run_meta={
+                "base_channels": cfg.base_channels,
+                "latent_dim": cfg.latent_dim,
+                "n_pairs": self.n_pairs,
+                "total_epoch_budget": cfg.total_epoch_budget,
+                "ema_decay": cfg.ema_decay,
+                "device": cfg.device,
+            },
+        )
+        self.best_score = self.telemetry.best_score
+        self.best_ep = self.telemetry.best_ep
+        self.best_stage = self.telemetry.best_stage
+        self._global_epoch = 0
+        # Test-only hook: simulate a death after this many global epochs (the
+        # checkpoint has already landed when the death fires). None in production.
+        self._stop_after_global_epoch: int | None = None
+
+    # -- architecture construction (base_ch threaded — the FINDING-1 fix) -----
+    def _new_decoder(self) -> nn.Module:
+        return self.v.HNeRVDecoder(
+            latent_dim=self.cfg.latent_dim,
+            base_channels=self.cfg.base_channels,
+            eval_size=(_EVAL_H, _EVAL_W),
+        ).to(self.device)
+
+    def _build_stage_runtime(
+        self,
+        spec: StageSpec,
+        *,
+        decoder: nn.Module,
+        latents: nn.Parameter,
+        ema_decoder: nn.Module | None,
+        ema_latents: torch.Tensor | None,
+    ) -> _StageRuntime:
+        """Build fresh optimizers + cosine schedulers for a stage (faithful: PR95
+        resets the optimizer per stage; weights/EMA carry)."""
+        if ema_decoder is None:
+            ema_decoder = deepcopy(decoder)
+        if ema_latents is None:
+            ema_latents = latents.data.clone()
+
+        if spec.use_muon:
+            muon_params, adamw_params = self.v.partition_params_for_muon(decoder)
+            muon_opt = self.v.Muon(
+                muon_params,
+                lr=spec.muon_lr,
+                momentum=0.95,
+                nesterov=True,
+                ns_steps=5,
+                weight_decay=spec.muon_weight_decay,
+            )
+            adamw_opt = torch.optim.AdamW(
+                [
+                    {"params": adamw_params, "lr": spec.adamw_lr},
+                    {"params": [latents], "lr": spec.adamw_lr * spec.latent_lr_mult},
+                ],
+                weight_decay=0.0,
+            )
+        else:
+            muon_opt = None
+            muon_params = []
+            adamw_params = list(decoder.parameters())
+            adamw_opt = torch.optim.AdamW(
+                [
+                    {"params": decoder.parameters(), "lr": spec.adamw_lr},
+                    {"params": [latents], "lr": spec.adamw_lr * spec.latent_lr_mult},
+                ],
+                weight_decay=0.0,
+            )
+
+        eta_min_ratio = max(spec.lr_floor_ratio / spec.adamw_lr, 1e-3)
+
+        def lr_lambda(epoch: int) -> float:
+            return max(0.5 * (1 + math.cos(math.pi * epoch / spec.epochs)), eta_min_ratio)
+
+        adamw_sched = torch.optim.lr_scheduler.LambdaLR(adamw_opt, lr_lambda)
+        muon_sched = (
+            torch.optim.lr_scheduler.LambdaLR(muon_opt, lr_lambda)
+            if muon_opt is not None
+            else None
+        )
+        return _StageRuntime(
+            decoder=decoder,
+            latents=latents,
+            ema_decoder=ema_decoder,
+            ema_latents=ema_latents,
+            adamw_opt=adamw_opt,
+            muon_opt=muon_opt,
+            adamw_sched=adamw_sched,
+            muon_sched=muon_sched,
+            muon_params=muon_params,
+            adamw_params=adamw_params,
+        )
+
+    # -- one faithful training epoch (1:1 with common.py) --------------------
+    def _train_one_epoch(self, rt: _StageRuntime, spec: StageSpec) -> tuple[float, float, float, float]:
+        """Run one epoch; returns (mean_loss, mean_pose_mse, last_grad_adamw, last_grad_muon)."""
+        decoder, latents = rt.decoder, rt.latents
+        n_pairs = self.n_pairs
+        bs = spec.batch_size
+        # torch.randperm honors the global torch RNG (captured/restored on resume).
+        pair_indices = torch.randperm(n_pairs, device=self.device)
+        epoch_loss = 0.0
+        epoch_pose = 0.0
+        nb = 0
+        last_gn_adamw = None
+        last_gn_muon = None
+
+        for batch_start in range(0, n_pairs, bs):
+            idx = pair_indices[batch_start : batch_start + bs]
+            B = len(idx)
+
+            if spec.use_qat:
+                originals = self.v.apply_qat(decoder)
+            decoded_pair = decoder(latents[idx])
+            if spec.use_qat:
+                self.v.restore_qat(decoder, originals)
+
+            flat = decoded_pair.reshape(B * 2, 3, _EVAL_H, _EVAL_W)
+            up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
+            down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
+            decoded_bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
+
+            decoded_clamped = decoded_bhwc.clamp(0, 255)
+            decoded_rounded = decoded_clamped.round()
+            decoded_bhwc = decoded_clamped + (decoded_rounded - decoded_clamped).detach()
+
+            seg_out, pose_pred6 = self.scorer.seg_pose_forward(decoded_bhwc)
+
+            seg_l = spec.seg_loss_fn(seg_out, self.scorer.seg_targets_hard[idx])
+            pose_mse = F.mse_loss(pose_pred6, self.scorer.pose_targets[idx])
+            pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
+
+            loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
+            if spec.cat_lambda > 0:
+                ent = self.v.cat_entropy_v2(
+                    decoder, sigma=spec.cat_sigma, sample_size=2000, device=self.device
+                )
+                loss = loss + spec.cat_lambda * ent
+
+            rt.adamw_opt.zero_grad()
+            if rt.muon_opt is not None:
+                rt.muon_opt.zero_grad()
+            loss.backward()
+            gn_adamw = torch.nn.utils.clip_grad_norm_(
+                [*rt.adamw_params, latents], spec.grad_clip
+            )
+            last_gn_adamw = float(gn_adamw)
+            if rt.muon_opt is not None and spec.grad_clip_muon is not None:
+                gn_muon = torch.nn.utils.clip_grad_norm_(rt.muon_params, spec.grad_clip_muon)
+                last_gn_muon = float(gn_muon)
+            rt.adamw_opt.step()
+            if rt.muon_opt is not None:
+                rt.muon_opt.step()
+
+            # EMA update after each step (the EMA non-negotiable; faithful position).
+            self.v.ema_update(
+                rt.ema_decoder, decoder, rt.ema_latents, latents, decay=spec.ema_decay
+            )
+
+            epoch_loss += float(loss.item())
+            epoch_pose += float(pose_mse.item())
+            nb += 1
+
+        rt.adamw_sched.step()
+        if rt.muon_sched is not None:
+            rt.muon_sched.step()
+        return epoch_loss / max(nb, 1), epoch_pose / max(nb, 1), last_gn_adamw, last_gn_muon
+
+    # -- checkpoint state capture / restore ----------------------------------
+    def _capture_state(self, rt: _StageRuntime, spec: StageSpec) -> dict[str, Any]:
+        return {
+            "decoder": {k: v.detach().cpu().clone() for k, v in rt.decoder.state_dict().items()},
+            "latents": rt.latents.detach().cpu().clone(),
+            "ema_decoder": {k: v.detach().cpu().clone() for k, v in rt.ema_decoder.state_dict().items()},
+            "ema_latents": rt.ema_latents.detach().cpu().clone(),
+            "adamw": rt.adamw_opt.state_dict(),
+            "muon": rt.muon_opt.state_dict() if rt.muon_opt is not None else None,
+            "adamw_sched": rt.adamw_sched.state_dict(),
+            "muon_sched": rt.muon_sched.state_dict() if rt.muon_sched is not None else None,
+            "torch_rng": torch.get_rng_state(),
+            "numpy_rng": np.random.get_state(),
+            "base_channels": self.cfg.base_channels,
+            "latent_dim": self.cfg.latent_dim,
+            "n_pairs": self.n_pairs,
+            "stage_name": spec.name,
+            "ema_decay": spec.ema_decay,
+            "best_score": self.best_score,
+            "best_ep": self.best_ep,
+            "best_stage": self.best_stage,
+        }
+
+    def _restore_into(self, rt: _StageRuntime, merged: dict[str, Any]) -> None:
+        rt.decoder.load_state_dict({k: v.to(self.device) for k, v in merged["decoder"].items()})
+        rt.latents.data = merged["latents"].to(self.device)
+        rt.ema_decoder.load_state_dict(
+            {k: v.to(self.device) for k, v in merged["ema_decoder"].items()}
+        )
+        rt.ema_latents = merged["ema_latents"].to(self.device)
+        rt.adamw_opt.load_state_dict(merged["adamw"])
+        if rt.muon_opt is not None and merged.get("muon") is not None:
+            rt.muon_opt.load_state_dict(merged["muon"])
+        rt.adamw_sched.load_state_dict(merged["adamw_sched"])
+        if rt.muon_sched is not None and merged.get("muon_sched") is not None:
+            rt.muon_sched.load_state_dict(merged["muon_sched"])
+        # RNG restore (so the next epoch's randperm matches the uninterrupted run).
+        from tac.torch_vehicle.checkpoint import restore_rng
+
+        restore_rng(merged)
+
+    # -- eval + BEST tracking (EMA shadow is the export bytes) ---------------
+    def _eval_and_track_best(self, rt: _StageRuntime, spec: StageSpec, stage_index: int) -> dict[str, Any]:
+        """Build the archive from the EMA shadow, exact-eval the PARSE-BACK
+        (int8-dequantized) decoder + latents, track BEST.
+
+        FIDELITY (1:1 with vendored ``common.py:228-238``): the score that picks
+        the BEST checkpoint is the score of the **archive the contest sees**, i.e.
+        the int8-quantized decoder + delta-coded latents AFTER ``parse_archive``,
+        NOT the raw float EMA shadow (which over-estimates quality and would pick
+        the wrong checkpoint). We reconstruct the eval decoder from the parse-back
+        ``state_dict`` and eval THAT.
+
+        Returns the eval dict (d_seg / d_pose / rate / score / archive_bytes /
+        is_best). The BEST EMA shadow + archive are written to ``out_dir/best/``.
+        """
+        ema_sd = rt.ema_decoder.state_dict()
+        archive = self.v.build_archive(
+            ema_sd,
+            rt.ema_latents.cpu(),
+            meta_dict={
+                "n_pairs": self.n_pairs,
+                "latent_dim": self.cfg.latent_dim,
+                "base_channels": self.cfg.base_channels,  # FINDING: base_ch in meta (was 36)
+                "eval_size": [_EVAL_H, _EVAL_W],
+            },
+        )
+        archive_bytes = len(archive)
+        # Parse-back: the int8-dequantized decoder + delta-decoded latents — the
+        # contest-visible artifact (faithful to common.py).
+        eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
+        eval_dec = self._new_decoder()
+        eval_dec.load_state_dict({k: v.to(self.device) for k, v in eval_decoder_sd.items()})
+        eval_dec.eval()
+        ev = self.scorer.exact_eval(eval_dec, eval_latents.to(self.device), archive_bytes)
+        score = float(ev["score"])
+        is_best = score < self.best_score
+        if is_best:
+            self.best_score = score
+            self.best_ep = self._global_epoch
+            self.best_stage = stage_index
+            best_dir = self.cfg.out_dir / "best"
+            best_dir.mkdir(parents=True, exist_ok=True)
+            (best_dir / "best_archive.bin").write_bytes(archive)
+            torch.save(ema_sd, best_dir / "best_ema_decoder.pt")
+            torch.save(rt.ema_latents.cpu(), best_dir / "best_ema_latents.pt")
+            (best_dir / "best_meta.json").write_text(
+                _json_dumps(
+                    {
+                        "stage_index": stage_index,
+                        "stage_name": spec.name,
+                        "global_epoch": self._global_epoch,
+                        "score": score,
+                        "d_seg": ev.get("seg_distortion", ev.get("d_seg")),
+                        "d_pose": ev.get("pose_distortion", ev.get("d_pose")),
+                        "rate": ev.get("rate"),
+                        "archive_bytes": archive_bytes,
+                        "base_channels": self.cfg.base_channels,
+                        "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+                    }
+                )
+            )
+        return {
+            "d_seg": ev.get("seg_distortion", ev.get("d_seg")),
+            "d_pose": ev.get("pose_distortion", ev.get("d_pose")),
+            "rate": ev.get("rate"),
+            "score": score,
+            "archive_bytes": archive_bytes,
+            "is_best": is_best,
+        }
+
+    # -- the resumable run ----------------------------------------------------
+    def run(self) -> dict[str, Any]:
+        """Run (or resume) the full curriculum. Idempotent on a DONE marker.
+
+        Resume contract: if ``out_dir`` holds a checkpoint, the run restores the
+        complete state and continues from ``(stage_index, epoch_in_stage)``; a
+        death costs at most ``checkpoint_every_epochs`` epochs. On completion a
+        DONE marker is written (marker-on-exit).
+        """
+        from tac.torch_vehicle.checkpoint import is_done
+
+        if is_done(self.cfg.out_dir):
+            return {"status": "already_done", "best_score": self.best_score}
+
+        torch.manual_seed(self.cfg.seed)
+        np.random.seed(self.cfg.seed)
+
+        # Resume position (default: start of stage 0).
+        resume_pos = TorchCheckpointPosition(0, 0)
+        merged: dict[str, Any] | None = None
+        if checkpoint_exists(self.cfg.out_dir):
+            man = read_manifest(self.cfg.out_dir)
+            if int(man["n_pairs"]) != self.n_pairs:
+                raise ValueError(
+                    f"checkpoint n_pairs={man['n_pairs']} != trainer n_pairs={self.n_pairs}; "
+                    "cannot resume a different basis"
+                )
+            if int(man["base_channels"]) != self.cfg.base_channels:
+                raise ValueError(
+                    f"checkpoint base_channels={man['base_channels']} != "
+                    f"cfg.base_channels={self.cfg.base_channels}; cannot resume a different basis"
+                )
+            merged = load_checkpoint(self.cfg.out_dir, map_location=self.cfg.device)
+            resume_pos = merged["position"]
+            self.best_score = float(man["best_score"])
+            self.best_ep = int(man["best_ep"])
+            self.best_stage = int(man["best_stage"])
+
+        # Carry decoder/latents/EMA across stages.
+        carry_decoder: nn.Module | None = None
+        carry_latents: nn.Parameter | None = None
+        carry_ema_decoder: nn.Module | None = None
+        carry_ema_latents: torch.Tensor | None = None
+
+        # Recompute the global-epoch base for stages already completed.
+        self._global_epoch = sum(
+            self.curriculum[i].epochs for i in range(resume_pos.stage_index)
+        ) + resume_pos.epoch_in_stage
+
+        for stage_index in range(resume_pos.stage_index, len(self.curriculum)):
+            spec = self.curriculum[stage_index]
+            start_epoch = resume_pos.epoch_in_stage if stage_index == resume_pos.stage_index else 0
+
+            # Build decoder/latents for this stage (carry from prior stage, or init).
+            resuming_into_this_stage = (
+                merged is not None and stage_index == resume_pos.stage_index
+            )
+            if carry_decoder is None:
+                decoder = self._new_decoder()
+                if spec.init_latents_random:
+                    latents = nn.Parameter(
+                        torch.randn(self.n_pairs, self.cfg.latent_dim, device=self.device) * 0.1
+                    )
+                elif resuming_into_this_stage:
+                    # The latents will be overwritten by ``_restore_into`` below; a
+                    # placeholder of the right shape is sufficient (faithful: the
+                    # vendored loop loads ``final_latents.pt`` here — we load from
+                    # the checkpoint).
+                    latents = nn.Parameter(
+                        torch.zeros(self.n_pairs, self.cfg.latent_dim, device=self.device)
+                    )
+                else:
+                    # Fail closed (faithful to vendored common.py:122): a non-stage-1
+                    # stage with neither an in-memory carry NOR a resume checkpoint
+                    # has no latents to start from — this is a misconfigured run, not
+                    # a silent zeros-init.
+                    raise ValueError(
+                        f"stage {spec.name} (index {stage_index}) has init_latents_random="
+                        "False but no prior-stage carry and no resume checkpoint to load "
+                        "latents from — cannot start a non-stage-1 stage from scratch."
+                    )
+            else:
+                decoder = carry_decoder
+                latents = carry_latents  # type: ignore[assignment]
+
+            rt = self._build_stage_runtime(
+                spec,
+                decoder=decoder,
+                latents=latents,
+                ema_decoder=carry_ema_decoder,
+                ema_latents=carry_ema_latents,
+            )
+
+            # If resuming INTO this stage, restore the mid-stage state now.
+            if merged is not None and stage_index == resume_pos.stage_index:
+                self._restore_into(rt, merged)
+                merged = None  # consumed
+
+            for epoch in range(start_epoch, spec.epochs):
+                mean_loss, mean_pose_mse, gn_adamw, gn_muon = self._train_one_epoch(rt, spec)
+                self._global_epoch += 1
+                epoch_in_stage = epoch + 1  # 1-based completed
+
+                # Eval cadence (faithful: eval_every).
+                evaluated = (epoch_in_stage % spec.eval_every) == 0
+                ev: dict[str, Any] = {}
+                if evaluated:
+                    ev = self._eval_and_track_best(rt, spec, stage_index)
+
+                self.telemetry.record(
+                    EpochRecord(
+                        stage_index=stage_index,
+                        stage_name=spec.name,
+                        epoch_in_stage=epoch_in_stage,
+                        global_epoch=self._global_epoch,
+                        loss=mean_loss,
+                        pose_mse=mean_pose_mse,
+                        adamw_lr=float(rt.adamw_opt.param_groups[0]["lr"]),
+                        muon_lr=(
+                            float(rt.muon_opt.param_groups[0]["lr"])
+                            if rt.muon_opt is not None
+                            else None
+                        ),
+                        grad_norm_adamw=gn_adamw,
+                        grad_norm_muon=gn_muon,
+                        evaluated=evaluated,
+                        d_seg=ev.get("d_seg"),
+                        d_pose=ev.get("d_pose"),
+                        rate=ev.get("rate"),
+                        score=ev.get("score"),
+                        archive_bytes=ev.get("archive_bytes"),
+                        is_best=ev.get("is_best", False),
+                    )
+                )
+
+                # Checkpoint cadence (a death costs <= this many epochs).
+                if (epoch_in_stage % self.cfg.checkpoint_every_epochs) == 0:
+                    self._checkpoint(rt, spec, stage_index, epoch_in_stage)
+
+                # Test-only simulated death: raise AFTER the checkpoint has landed
+                # so a resumed run continues from this exact point. Production
+                # never sets this; a real death (SIGKILL/OOM/preempt) is the
+                # equivalent and is covered by the subprocess kill+restart test.
+                if (
+                    self._stop_after_global_epoch is not None
+                    and self._global_epoch >= self._stop_after_global_epoch
+                ):
+                    raise _SimulatedDeath(self._global_epoch)
+
+            # End of stage: ensure a checkpoint at the boundary + carry forward.
+            self._checkpoint(rt, spec, stage_index, spec.epochs)
+            carry_decoder = rt.decoder
+            carry_latents = rt.latents
+            carry_ema_decoder = rt.ema_decoder
+            carry_ema_latents = rt.ema_latents
+            resume_pos = TorchCheckpointPosition(stage_index + 1, 0)
+
+        summary = {
+            "status": "complete",
+            "best_score": self.best_score,
+            "best_ep": self.best_ep,
+            "best_stage": self.best_stage,
+            "n_stages": len(self.curriculum),
+            "base_channels": self.cfg.base_channels,
+            "authority": "[contest-CPU advisory] NON-PROMOTABLE — exact via upstream/evaluate.py",
+        }
+        write_done_marker(self.cfg.out_dir, summary)
+        return summary
+
+    def _checkpoint(self, rt: _StageRuntime, spec: StageSpec, stage_index: int, epoch_in_stage: int) -> None:
+        state = self._capture_state(rt, spec)
+        save_checkpoint(
+            state,
+            self.cfg.out_dir,
+            TorchCheckpointPosition(stage_index, epoch_in_stage),
+        )
+
+
+@dataclass
+class VendoredBundle:
+    """The vendored PR95 primitives the driver re-drives (NO source edits).
+
+    Built via :func:`import_vendored_bundle`; kept as an explicit handle so the
+    driver's vendored-dependency surface is auditable in one place.
+    """
+
+    HNeRVDecoder: type
+    Muon: type
+    partition_params_for_muon: Callable
+    ema_update: Callable
+    apply_qat: Callable
+    restore_qat: Callable
+    cat_entropy_v2: Callable
+    build_archive: Callable
+    parse_archive: Callable
+
+
+def import_vendored_bundle() -> VendoredBundle:
+    """Import the vendored PR95 primitives WITHOUT the challenge-scorer dependency.
+
+    ``model`` / ``optim`` / ``losses`` / ``codec`` import cleanly (no challenge
+    repo needed); only ``data`` / ``score`` pull in the frozen scorer (those are
+    used by :class:`RealScorerContext`, not here). So this bundle is importable on
+    a host without the challenge weights — the resume/checkpoint machinery is
+    architecture-agnostic.
+    """
+    from tac.torch_vehicle.vendored_imports import import_vendored
+
+    model = import_vendored("model")
+    optim = import_vendored("optim")
+    losses = import_vendored("losses")
+    codec = import_vendored("codec")
+    return VendoredBundle(
+        HNeRVDecoder=model.HNeRVDecoder,
+        Muon=optim.Muon,
+        partition_params_for_muon=optim.partition_params_for_muon,
+        ema_update=losses.ema_update,
+        apply_qat=losses.apply_qat,
+        restore_qat=losses.restore_qat,
+        cat_entropy_v2=losses.cat_entropy_v2,
+        build_archive=codec.build_archive,
+        parse_archive=codec.parse_archive,
+    )
+
+
+def _json_dumps(obj: Any) -> str:
+    import json
+
+    return json.dumps(obj, indent=2, sort_keys=True)
+
+
+__all__ = [
+    "ScorerContext",
+    "TorchVehicleConfig",
+    "TorchVehicleDriver",
+    "VendoredBundle",
+    "import_vendored_bundle",
+]
