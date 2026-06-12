@@ -67,3 +67,35 @@ param-space/inflate-runtime axis — searched with unlimited compress-time compu
 30-min inflate budget — is a genuinely live, un-exhausted rate door that does NOT require a retrain. The
 frontier already rides its single-element version; the multi-element extension is the immediate next exact-row
 target. Frontier UNMOVED 0.19110; this corrects the map and aims the next units at the live door.
+
+## ⚠️⚠️ THIS CORRECTION IS ITSELF CORRECTED (2026-06-11, agent ac3751b8 — NO-FAKE catch) ⚠️⚠️
+
+The "param-space −5.46e-5 win" this memo rests on was a **HARNESS ARTIFACT, not a win.** On the CALIBRATED
+contest chain (local `upstream/evaluate.py --device cpu` on 0.mkv, 600 pairs, reproducing the frontier at
+**0.19110976, Δ +9.9e-6**), the param-space candidate (idx247 `rgb_1.weight` delta, +41 B) is **+6.02e-5
+WORSE, not −5.46e-5 better** — both d_seg AND rate move the wrong way. Root cause: the sister harness
+**mis-decoded the SegNet GT** (384×512 bicubic + bilinear no-op) vs the contest chain (camera-res 874×1164 →
+bilinear-resize to 384×512), inflating d_seg by **1.296×**; the 72-pair selection was optimized against that
+wrong inflated-GT argmax pattern and does not transfer. The sister's entire gradient field
+(`.omx/tmp/param_grad_full600_rows.jsonl`) is computed on the inflated GT and is **INVALID for selection**.
+The frontier already embodies the single-element DQS1 optimum (its own element helps 8/8 scanned pairs;
+idx247 broadly HURTS on the true GT).
+
+**What this memo got WRONG and the corrected position:**
+- **WITHDRAWN:** "param-space/inflate-runtime is a LIVE $0 door that does NOT require a retrain." It rested on
+  a fake win. The frozen-frontier $0 byte-transform toolbox (rate [agent B], DQS1 single+multi [agent A],
+  pixel-repair [multi-scale agent]) IS exhausted — the original "post-hoc exhausted, the door is a retrain"
+  verdict (`post_hoc_levers_exhausted_..._20260611.md`) is RE-VINDICATED, not overturned.
+- **STILL VALID (but reclassified):** the "compress-time trains the inflate-time decoder / unlimited-compress /
+  30-min budget" framing is a real DESIGN AXIS — but it is a **RETRAIN-CLASS lever** (training a decoder/program),
+  consistent with "the door is a retrain." It refines WHAT to train (correctly-recipe'd, possibly compute-heavy),
+  not WHETHER to train. It is NOT a $0 byte-transform.
+- **NEW system-intelligence (the durable win):** the canonical $0 advisory gate is **local `evaluate.py
+  --device cpu`**, which reproduces the frontier within ~1e-5 (agent A's `experiments/results/dqs1_multielement_20260611/canonical_chain_scan.py`
+  reuses the contest `DistortionNet` directly). Advisory harnesses that decode GT at 192×256 or pre-resize to
+  384×512 are NON-CANONICAL and inflate/deflate absolute d_seg — so **some prior "walls" (0.014, 0.0025) may be
+  partly harness-resolution artifacts**, which reinforces (does not replace) the live seg-convergence recipe
+  + vendored-vs-port investigations: they MUST measure on the canonical chain.
+
+Frontier UNMOVED 0.19110. Net: no $0 frozen-frontier door remains; the live door is a correctly-recipe'd
+(seg-convergent) retrain, measured on the canonical chain — exactly what agents a28f8a9c / a173958b test.
