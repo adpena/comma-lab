@@ -1,0 +1,23 @@
+{
+  "n_pairs": 64,
+  "film_epochs": 30,
+  "film_hidden": 32,
+  "film_lr": 0.01,
+  "quant_step": 0.001,
+  "d_pose_baseline": 0.0016225368599407375,
+  "d_seg_baseline": 0.003456751466728747,
+  "pose_term_baseline": 0.127378838903514,
+  "d_pose_film": 0.00020870324806310236,
+  "d_seg_film": 0.007809082861058414,
+  "pose_term_film": 0.045684050626351246,
+  "d_pose_film_at_init": 0.0016225368599407375,
+  "identity_at_init_abs_err": 0.0,
+  "stored_pose_bytes_at_n": 587,
+  "stored_pose_bytes_at_600_proj": 5503,
+  "film_param_bytes_fp16": 1768,
+  "rate_delta_at_600_proj": 0.004841460448151308,
+  "delta_pose_term": -0.08169478827716276,
+  "net_delta_S_at_600_proj": -0.07685332782901144,
+  "verdict": "GO",
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE \u2014 score_claim=false, promotable=false. Frozen-decoder LOWER BOUND on the full lever; small-n magnitude advisory. Exact verdict requires paired CPU/CUDA upstream/evaluate.py."
+}

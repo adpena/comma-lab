@@ -116,6 +116,44 @@ class _ARM(nn.Module):
         return (-torch.log2(prob)).sum()
 
 
+class _PoseFiLM(nn.Module):
+    """Torch port of the capstone stored-pose FiLM (Quantizr store-pose lesson).
+
+    Adapted (NOT cargo-culted) from
+    :class:`tac.capstone_vq_nerv.vq_nerv_bundle._PoseFiLM` (the MLX bundle that
+    already holds ``d_pose <= 3e-4`` via stored-pose FiLM). Mechanism identical;
+    backend differs (torch-CPU here per the GPU-busy constraint):
+
+      pose (B, 6) -> sin(fc1) -> fc2 -> [gamma_pre, beta] (each (B, channels)).
+      gamma = 1 + tanh(gamma_pre)  (in (0, 2), =1 at init), beta (=0 at init).
+
+    The second layer is zero-init so FiLM is IDENTITY at init (gamma=1, beta=0):
+    the untrained carrier renders EXACTLY the no-FiLM Cool-Chic carrier, so the
+    proven #82 d_seg descent is intact and FiLM only *adds* pose grammar as it
+    trains. Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE" — this is an
+    OPERATIONAL mechanism (it modulates the rendered frame1 from a STORED pose).
+    """
+
+    def __init__(self, *, pose_dim: int, channels: int, hidden: int) -> None:
+        super().__init__()
+        self.channels = int(channels)
+        self.fc1 = nn.Linear(int(pose_dim), int(hidden))
+        self.fc2 = nn.Linear(int(hidden), 2 * int(channels))
+        nn.init.zeros_(self.fc2.weight)
+        nn.init.zeros_(self.fc2.bias)
+
+    def forward(self, pose: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        h = torch.sin(self.fc1(pose))  # NeRF-style activation (matches capstone)
+        gb = self.fc2(h)
+        gamma_pre = gb[:, : self.channels]
+        beta = gb[:, self.channels :]
+        gamma = 1.0 + torch.tanh(gamma_pre)  # (0, 2), =1 at init
+        return gamma, beta
+
+    def param_count(self) -> int:
+        return sum(p.numel() for p in self.parameters())
+
+
 class CoolChicPairCarrier(nn.Module):
     """Cool-Chic carrier rendering ``(B, 3, H, W)`` pairs for the score loop.
 
@@ -125,12 +163,25 @@ class CoolChicPairCarrier(nn.Module):
     grid — the part the score-aware loop tunes to lower d_seg on the LAST frame
     (the SegNet term uses ``x[:, -1, ...]`` = frame1).
 
+    Pose-fold (operator 2026-06-11, the Quantizr STORE-pose lesson): when
+    ``pose_film_enabled`` the carrier holds a STORED 6-dim pose per pair (a
+    non-trainable buffer set from the GT PoseNet pose via :meth:`set_stored_pose`)
+    and a tiny :class:`_PoseFiLM` that maps it to per-channel ``(gamma, beta)``
+    modulating the synthesis HIDDEN features of frame1 BEFORE the second conv.
+    This injects the pose grammar from STORED scalars (~1 KB charged) rather than
+    asking the coarse latent grid to *reconstruct* PoseNet ego-motion — the
+    failure mode B1-CLOSE measured (d_pose 0.06-2.49). The FiLM is identity at
+    init so the proven d_seg descent is unchanged when it begins training.
+
     Args:
         n_pairs: number of pairs (per-pair frame1-delta latent rows).
         spec: multiresolution grid spec.
         synth_hidden: synthesis hidden channels (param count driver; default 12).
         out_hw: rendered ``(H, W)`` (the trainer resizes to scorer res).
         bytes_per_param: charged bytes/param for weights (fp16 default = 2).
+        pose_film_enabled: if True, fold the stored-pose FiLM into frame1.
+        pose_dim: stored pose dimensionality (contest PoseNet = 6).
+        film_hidden: FiLM MLP bottleneck width.
 
     The module's parameter names use ``latent`` for the grids so the trainer's
     optimizer gives them the 10x latent LR (per ``ScoreAwareTrainer``).
@@ -145,6 +196,9 @@ class CoolChicPairCarrier(nn.Module):
         out_hw: tuple[int, int] = (96, 128),
         bytes_per_param: float = 2.0,
         quant_step: float = 1.0,
+        pose_film_enabled: bool = False,
+        pose_dim: int = 6,
+        film_hidden: int = 32,
     ) -> None:
         super().__init__()
         self.n_pairs = int(n_pairs)
@@ -152,6 +206,8 @@ class CoolChicPairCarrier(nn.Module):
         self.out_hw = (int(out_hw[0]), int(out_hw[1]))
         self.bytes_per_param = float(bytes_per_param)
         self.quant_step = float(quant_step)
+        self.pose_film_enabled = bool(pose_film_enabled)
+        self.pose_dim = int(pose_dim)
 
         shapes = spec.grid_shapes()
         # Shared frame0 grids (the global state); per CLAUDE.md "EMA"/"latent"
@@ -180,6 +236,35 @@ class CoolChicPairCarrier(nn.Module):
 
         self.arm = _ARM(hidden=8)
 
+        # Stored-pose FiLM: a non-trainable per-pair pose buffer (charged ~1 KB)
+        # + the tiny identity-at-init FiLM MLP over the synthesis HIDDEN channels.
+        # The buffer is always allocated so the trainer / byte-close paths are
+        # uniform; it is only CONSUMED when pose_film_enabled.
+        self.register_buffer(
+            "stored_pose", torch.zeros(self.n_pairs, self.pose_dim), persistent=True
+        )
+        if self.pose_film_enabled:
+            self.pose_film = _PoseFiLM(
+                pose_dim=self.pose_dim, channels=self.synth_hidden, hidden=int(film_hidden)
+            )
+        else:
+            self.pose_film = None
+
+    def set_stored_pose(self, pose: torch.Tensor) -> None:
+        """Set the STORED per-pair 6-dim pose buffer (from the GT PoseNet pose).
+
+        This is the Quantizr STORE-pose payload: the contest pose is *stored*
+        (and later range-coded into the archive ~1 KB), not reconstructed from
+        pixels. ``pose`` is ``(n_pairs, pose_dim)``.
+        """
+        with torch.no_grad():
+            p = pose.detach().to(self.stored_pose.dtype)
+            if p.shape != self.stored_pose.shape:
+                raise ValueError(
+                    f"stored_pose expects {tuple(self.stored_pose.shape)}, got {tuple(p.shape)}"
+                )
+            self.stored_pose.copy_(p)
+
     # -- synthesis (matches numpy reference) ---------------------------------
 
     def _upsample_concat(self, extra_coarse: torch.Tensor | None) -> torch.Tensor:
@@ -199,11 +284,24 @@ class CoolChicPairCarrier(nn.Module):
             feat = feat + extra_coarse
         return feat
 
-    def _synth(self, feat: torch.Tensor) -> torch.Tensor:
-        """1x1 conv -> GELU -> 1x1 conv -> sigmoid; returns (3, H, W) in [0,1]."""
+    def _synth(
+        self,
+        feat: torch.Tensor,
+        film: tuple[torch.Tensor, torch.Tensor] | None = None,
+    ) -> torch.Tensor:
+        """1x1 conv -> [FiLM] -> GELU -> 1x1 conv -> sigmoid; (3, H, W) in [0,1].
+
+        When ``film`` is ``(gamma, beta)`` (each ``(hidden,)``), the hidden
+        feature is modulated ``h -> gamma * h + beta`` BEFORE the GELU — the
+        canonical FiLM injection point (matches the capstone bundle). gamma=1 /
+        beta=0 reproduces the no-FiLM render exactly.
+        """
         c_in, h, w = feat.shape
         flat = feat.reshape(c_in, h * w)
         hidden = self.w1 @ flat + self.b1[:, None]
+        if film is not None:
+            gamma, beta = film
+            hidden = gamma[:, None] * hidden + beta[:, None]
         hidden = F.gelu(hidden)
         out = self.w2 @ hidden + self.b2[:, None]
         return torch.sigmoid(out).reshape(3, h, w)
@@ -224,10 +322,18 @@ class CoolChicPairCarrier(nn.Module):
         proj = torch.einsum("ec,bcn->ben", self.delta_proj, dflat)  # (B, c_in, h0*w0)
         proj = proj.reshape(b, self.spec.c_in, h0, w0)
         proj_up = F.interpolate(proj, size=(h, w), mode="bilinear", align_corners=False)
+        # Stored-pose FiLM (per-pair gamma/beta over synthesis hidden channels).
+        film_gamma = film_beta = None
+        if self.pose_film_enabled and self.pose_film is not None:
+            pose_b = self.stored_pose[idx]  # (B, pose_dim) STORED scalars
+            film_gamma, film_beta = self.pose_film(pose_b)  # each (B, hidden)
         rgb1_list = []
         for bi in range(b):
             feat1 = feat0 + proj_up[bi]
-            rgb1_list.append(self._synth(feat1) * 255.0)
+            film_bi = (
+                (film_gamma[bi], film_beta[bi]) if film_gamma is not None else None
+            )
+            rgb1_list.append(self._synth(feat1, film_bi) * 255.0)
         rgb1 = torch.stack(rgb1_list, dim=0)
         return rgb0, rgb1
 
@@ -267,28 +373,44 @@ class CoolChicPairCarrier(nn.Module):
         return bits
 
     def weight_param_count(self) -> int:
-        """Synthesis + ARM + delta_proj param count (the fixed weight payload)."""
+        """Synthesis + ARM + delta_proj (+ FiLM) param count (fixed payload)."""
         n = (
             self.w1.numel() + self.b1.numel() + self.w2.numel() + self.b2.numel()
             + self.delta_proj.numel() + self.arm.param_count()
         )
+        if self.pose_film is not None:
+            n += self.pose_film.param_count()
         return int(n)
 
     def weight_bytes(self) -> float:
         return self.weight_param_count() * self.bytes_per_param
 
+    def stored_pose_bytes(self) -> float:
+        """Charged bytes for the STORED per-pair pose (the Quantizr payload).
+
+        Estimate at ``bytes_per_param`` (fp16=2) per scalar; the REAL byte cost
+        is the range-coded count measured at byte-close time. With 6 dims x
+        ``n_pairs`` this is the ~1 KB the pose-fold pays for d_pose collapse.
+        """
+        if not self.pose_film_enabled:
+            return 0.0
+        return float(self.n_pairs * self.pose_dim) * self.bytes_per_param
+
     def charged_bytes(self) -> dict[str, float]:
         """Honest charged-byte breakdown for the param-at-basin curve.
 
-        ``total = latent_bytes + weight_bytes``. The latent bytes are the only
-        term that scales with grid resolution (the conv-HNeRV comparison axis).
+        ``total = latent_bytes + weight_bytes + stored_pose_bytes``. The latent
+        bytes are the only term that scales with grid resolution (the conv-HNeRV
+        comparison axis); ``stored_pose_bytes`` is the pose-fold payload.
         """
         latent = self.latent_rate_bytes()
         weight = self.weight_bytes()
+        pose = self.stored_pose_bytes()
         return {
             "latent_bytes": latent,
             "weight_bytes": weight,
-            "total_bytes": latent + weight,
+            "stored_pose_bytes": pose,
+            "total_bytes": latent + weight + pose,
             "latent_count": float(self.spec.total_latent_count()),
             "weight_param_count": float(self.weight_param_count()),
         }

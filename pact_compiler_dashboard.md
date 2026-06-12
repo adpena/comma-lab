@@ -1,13 +1,13 @@
 # PACT compiler dashboard (Vehicle-OS)
 
-Generated 2026-06-10T00:27:24.200675+00:00 from `/Users/adpena/Projects/pact`. Per `docs/vehicle_operating_system.md` Dashboard discipline: work is dashboard-driven; no stale-memory decisions.
+Generated 2026-06-10T05:46:34.485237+00:00 from `/Users/adpena/Projects/pact`. Per `docs/vehicle_operating_system.md` Dashboard discipline: work is dashboard-driven; no stale-memory decisions.
 
 ## Frontier (pointer-only — never hardcoded)
 
-- contest-CPU: **0.19198533626623068** (`b7106c9bdbb8`)
+- contest-CPU: **0.19198275316393976** (`1ccae18d8632`)
 - contest-CUDA: **0.20533002902019143** (`9cb989cef519`)
 - submitted PR for current frontier: `None`
-- pointer last refreshed: 2026-06-09T07:07:25.354047+00:00
+- pointer last refreshed: 2026-06-10T05:10:46.234741+00:00
 
 ## Per-vehicle maturity (L0-L7)
 
@@ -35,10 +35,8 @@ Generated 2026-06-10T00:27:24.200675+00:00 from `/Users/adpena/Projects/pact`. P
 
 | subagent_id | status | step | next_action | written_at_utc |
 |---|---|---|---|---|
-| snerv_branch_b_rate_attack_20260609 | in_progress | 7 | Full ladder N=48 in progress pid 32009: R0 reproduces G1b EXACTLY (d_seg=0.002468 pose=0.1426 total 387.642). Awaiting R1-R7 + 4 lf-floor rows. Then report+ingest+commit. | 2026-06-10T00:21:32.728812+00:00 |
-| pr110pp_r1_paired_eval_20260609 | in_progress | 3 | Re-dispatch 3 Modal CPU evals with fixed wrapper (distinct per-job lane_ids); validate frontier baseline scores; then strict + r1plus; harvest; ingest exact rows | 2026-06-10T00:19:55.465189+00:00 |
-| pact_dashboard_maturity_20260609 | in_progress | 2 | evidence gathered; write generator module + tests | 2026-06-10T00:19:37.513181+00:00 |
-| atlas_engine_mlx_jacobian_20260609 | in_progress | 4 | Await 600-pair sweep completion (pid 62686, pair 75/600), fill memo headline, commit via serializer | 2026-06-10T00:18:58.657092+00:00 |
+| afsr1_campaign_20260610 | in_progress | 6 | Cleaned up 3 competing smoke daemons (race contamination); confirmed trainer re-inits from frontier each run (no checkpoint-resume); launched ONE clean canonical 300ep smoke lr=1.5e-4; Monitor armed on d_seg trajectory; awaiting descent verdict | 2026-06-10T05:45:25.059368+00:00 |
+| snerv_branch_b_rate_attack_20260609 | in_progress | 8 | Ladder N=48: R0=387.64 exact-reproduce; R1 fp32 bit-identical noop (native fp32); R2 fp16 181.64 fidelity-free; R3 uint8/frame 73.43 (d_seg+1.7e-5 pose+0.015); R4 dominated by R3. Awaiting R5-R7 + 4 lf-floor rows, then report+ingest+commit. | 2026-06-10T00:50:12.667190+00:00 |
 | snerv_g1b_export_binding_20260609 | in_progress | 10 | AWAIT advisory daemon (pid 94482) monitor event, then: .venv/bin/python /Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z/g1b_consolidate_verdict.py (one command). All decisive work committed (acbe76a7a). If session dies: successor runs the consolidation script + reads memo for full context. | 2026-06-09T22:40:58.610738+00:00 |
 | b1_campaign_v2 | in_progress | 8 | write campaign ledger + register lane + review-gate + commit; record prereq-evidence blocker chain | 2026-06-09T04:51:56.793210+00:00 |
 | b1_campaign | in_progress | 5 | PRIORITY 3 wired+validated (curriculum engages, blocker drops). Add wiring tests + run existing runner tests for regression + ruff; commit; then LAUNCH full curriculum. | 2026-06-09T04:10:12.292136+00:00 |
@@ -47,6 +45,8 @@ Generated 2026-06-10T00:27:24.200675+00:00 from `/Users/adpena/Projects/pact`. P
 | inverse_steganalysis_phase1_carrier_wirein_20260601 | in_progress | 1 | read L-inf gate + score_exact_saliency + hprc_synthesis_adjoint + pr101 packer/codec + locate decoder state_dict; design G3 adjoint into HNeRV latent domain | 2026-06-01T20:19:23.177141+00:00 |
 | z8_p18_p19_freeze_vs_implicit_kkt_comparison_20260531 | in_progress | 4 | Write >=10 NO-FAKE tests | 2026-05-31T17:59:16.652365+00:00 |
 | z8_joint_p18_p19_deadzone_rate_attack_20260531 | in_progress | 12 | Committed ad73c2863 (impl+tests+lane); memo+MEMORY.md landed; 600-pair (pid 18962) building baseline; poll for completion to refine memo with full-scale numbers | 2026-05-31T17:48:37.445700+00:00 |
+| wave2a-harvest-z5 | in_progress | 3 | AWAITING terminal: poll loop pid 10265 alive polling CUDA fc-01KSZ7438Z9T0WXB22AN6D5H0T + CPU fc-01KSZ74F7PDTC0T7N9B7AV30PR; ~14min elapsed. ON TERMINAL: result persisted to .omx/tmp/z5_harvest/result_{cuda,cpu}.json; OR run 'tools/harvest_modal_calls.py --execute --from-ledger --call-id <id>' to write contest_auth_eval.json to experiments/results/modal_auth_eval{,_cpu}/z5_rao_ballard_ratification_wave2a_paired_modal_auth_20260531T143101Z_{cuda,cpu}/. EXTRACT: final_score/canonical_score, avg_segnet_dist(d_seg), avg_posenet_dist(d_pose), rate_unscaled, score_{pose,seg,rate}_contribution, evidence_grade, n_samples. RENDER-COLLAPSE TEST: d_seg approx 0.5 = chance = collapsed (C-prime got 85.43 seg-dominated); faithful render d_seg ~0.005-0.10. RECORD via posterior_update_locked_from_auth_eval_json + update_equation_with_empirical_anchor('z5_rao_ballard_hierarchical_predictive_coding_pose_axis_savings_v1', anchor). FRONTIER: CPU 0.19198 CUDA 0.20533 (only update reports/latest.md if z5 BEATS). NO PR. checkpoint discipline honored | 2026-05-31T14:46:53.498816+00:00 |
+| z5_rao_ballard_paired_cuda_ratification_wave2a_20260531 | in_progress | 10 | AWAIT harvest poller bddl0fi4q; on terminal: read .omx/tmp/z5_harvest_result.json, extract real [contest-CUDA T4]+[contest-CPU] scores, record paired anchor in continual_learning_posterior, advance canonical eq z5_rao_ballard_*_v1 (#54 family), mark lane contest_cuda+contest_cpu gates, finalize landing memo feedback_z5_rao_ballard_paired_cuda_ratification_landed_20260531.md, commit. CUDA=fc-01KSZ7438Z9T0WXB22AN6D5H0T CPU=fc-01KSZ74F7PDTC0T7N9B7AV30PR archive_sha=8ea36c7ec47f4a062f9cd51a04ee4d3a852769f83afe8a3033067ca8ac493095. Infra fix committed 826cc63ab (mount_ignore .git+socket exclusion). Lane at L1. | 2026-05-31T14:35:28.853047+00:00 |
 
 ## Schema gaps
 

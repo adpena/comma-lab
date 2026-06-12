@@ -73083,12 +73083,12 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "split-by-head: bit-identical combined-gradient unit test + cosine pre-check PASS + n48 both-terms gate REJECT (pose chaos, diverged=False) reconciled w/ sister CHAOS verdict; commits 0ba73f5c4 / e3fe3b327 / 0fb8836e7"
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/mps_upstream_macos_basin_run_20260612.md (REJECT pose verdict; basin NOT launched)"
+          "evidence": ".omx/research/split_by_head_mps_cpu_basin_20260612.md (split-by-head pose-axis salvage: SegNet grad MPS + PoseNet grad CPU-authority; bit-identical combined-gradient proof + cosine pre-check both PASS; n48 trajectory gate in flight)"
         },
         "deploy_runbook": {
           "status": false,
@@ -73142,6 +73142,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_cool_chic_mps_local_training_20260612",
+      "name": "Cool-Chic local MPS training enablement (gradient on Apple GPU, CPU authority)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 7e103ad76: --train-device mps wired into _full_main + 7 NO-FAKE tests pass (src/tac/tests/test_cool_chic_mps_split_device.py); MPS-split training ran 6 epochs end-to-end + byte-closed 18.4MB archive + inflate 1200 frames OK [macOS-MPS research-signal / contest-CPU advisory] NON-PROMOTABLE"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "MPS smoke COMPLETE [contest-CPU advisory] NON-PROMOTABLE: advisory S=76.84 (d_seg=0.498->seg 49.77 DOMINANT, d_pose=23.52->pose 15.34, archive 17.6MB->rate 11.73). MPS 28.8x faster/epoch than CPU (0.372 vs 10.73 s/step). 6ep fresh-init smoke under-trained (not a frontier claim). archive sha a64f86a0. summary: experiments/results/cool_chic_mps_smoke_20260612T121501Z/mps_smoke_summary.json"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Infrastructure/enabler: --train-device mps split mirrors launch_split_by_head_basin.py. MPS 28.8x faster/epoch than CPU on the Cool-Chic gradient. MPS is NEVER score authority (CPU authority for BEST-selection + auth-eval). research_only=true; NON-PROMOTABLE; no score claim (latents un-entropy-coded => 18.4MB archive dominates rate). Reactivation: AR-prior arithmetic-coding of latents (the deferred #1 optimization). Commit 7e103ad76."
     }
   ],
   "level_rules": {
@@ -73151,5 +73192,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T09:47:24Z"
+  "updated_at": "2026-06-12T12:30:51Z"
 }

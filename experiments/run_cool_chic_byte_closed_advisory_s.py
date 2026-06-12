@@ -97,11 +97,19 @@ def score_byte_closed(
 def run_config(
     net, seg, pose, *, base_h, base_w, n_grids, cpg, synth_hidden, out_hw,
     scorer_hw, epochs, decoder_lr, grid_step, delta_step, seed=0,
+    pose_film=False, pose_step=0.002,
 ):
     torch.manual_seed(seed)
     n_pairs = int(seg.shape[0])
     spec = CoolChicGridSpec(base_h=base_h, base_w=base_w, n_grids=n_grids, channels_per_grid=cpg)
-    carrier = CoolChicPairCarrier(n_pairs=n_pairs, spec=spec, synth_hidden=synth_hidden, out_hw=out_hw)
+    carrier = CoolChicPairCarrier(
+        n_pairs=n_pairs, spec=spec, synth_hidden=synth_hidden, out_hw=out_hw,
+        pose_film_enabled=pose_film,
+    )
+    if pose_film:
+        # STORE the GT 6-dim pose per pair (the Quantizr store-pose payload) so
+        # the FiLM conditions frame1 on the stored scalars, not the pixels.
+        carrier.set_stored_pose(pose.float())
     cfg = ScoreAwareLoopConfig(
         epochs=epochs, batch_size=n_pairs, scorer_hw=scorer_hw, pose_enabled=pose is not None,
         eval_every=max(epochs // 4, 1), seg_loss_form="ce_seg_loss", decoder_lr=decoder_lr,
@@ -120,7 +128,7 @@ def run_config(
     # restore live weights (defensive; we are done with the carrier anyway).
     carrier.load_state_dict(ema_orig)
 
-    blob = byte_close(state, grid_step=grid_step, delta_step=delta_step)
+    blob = byte_close(state, grid_step=grid_step, delta_step=delta_step, pose_step=pose_step)
     real_bytes = len(blob)
     state2 = inflate_numpy(blob)
 
@@ -147,6 +155,7 @@ def run_config(
             "synth_hidden": synth_hidden, "out_hw": list(out_hw), "scorer_hw": list(scorer_hw),
             "epochs": epochs, "decoder_lr": decoder_lr,
             "grid_step": grid_step, "delta_step": delta_step,
+            "pose_film": pose_film, "pose_step": pose_step,
         },
         "arm_estimate_bytes": arm_estimate,
         "real_bytes": real_bytes,
@@ -179,6 +188,9 @@ def main():
     ap.add_argument("--threads", type=int, default=6)
     ap.add_argument("--grid-step", type=float, default=0.05)
     ap.add_argument("--delta-step", type=float, default=0.05)
+    ap.add_argument("--pose-step", type=float, default=0.002)
+    ap.add_argument("--pose-film", action="store_true",
+                    help="fold the stored-pose FiLM into the carrier (pose-fold).")
     ap.add_argument("--only-config", type=int, default=-1,
                     help="if >=0, run only configs[i] and APPEND to the out JSON")
     ap.add_argument("--epochs-override", type=int, default=-1)
@@ -220,6 +232,7 @@ def main():
             net, seg, pose, base_h=bh, base_w=bw, n_grids=ng, cpg=cpg,
             synth_hidden=sh, out_hw=(oh, ow), scorer_hw=(args.scorer_h, args.scorer_w),
             epochs=ep, decoder_lr=3e-3, grid_step=args.grid_step, delta_step=args.delta_step,
+            pose_film=args.pose_film, pose_step=args.pose_step,
         )
         rows.append(row)
         c = row["config"]
