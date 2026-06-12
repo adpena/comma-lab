@@ -54,6 +54,18 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         "compute; reused to skip the ~2.5h precompute).")
     p.add_argument("--video-path", type=Path, default=None)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument(
+        "--split-by-head",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="SPLIT-BY-HEAD gradient backend (SegNet bwd on train_device / "
+             "PoseNet bwd on the CPU authority — the 7-11x pose-axis salvage, "
+             "DEFAULT for safety). Pass --no-split-by-head for the FULL-MPS "
+             "basin (BOTH scorer heads on train_device — the 104x lever, "
+             "admissible per the optimizer-chaos verdict "
+             "mps_pose_drift_patchable_verdict_20260612.md; still CPU-authority "
+             "BEST-tracked so a real late divergence is caught LIVE).",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -91,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         eval_every=args.eval_every,
         device=args.device,
         train_device=args.train_device,
-        split_by_head=True,  # the pose-axis salvage
+        split_by_head=args.split_by_head,  # True=pose-axis salvage; False=full-MPS
         seed=args.seed,
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).
@@ -99,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         video_path,
         device=args.device,
         train_device=args.train_device,
-        split_by_head=True,
+        split_by_head=args.split_by_head,
         max_pairs=args.n_pairs,
         targets_cache=args.targets_cache,
     )
