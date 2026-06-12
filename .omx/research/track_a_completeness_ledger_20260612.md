@@ -214,3 +214,25 @@ A→unblock ITEM E lever portion; B→wire-in OR fire #111; under-power→confir
 Lever-D→fire #114. Queued #110/#111 dispatch on the next free CPU slot (4 partners + arm is the
 current ceiling — adding more thrashes the arm, the priority compute). Every under-powered finding has
 a re-validation task; none is closed on a janky-prototype verdict (Catalog #307 / ANTI-SIGNAL-LOSS).
+
+### APPLES-TO-APPLES ACCEPTANCE GATE (binding — no verdict banked until it passes)
+Per CLAUDE.md "Apples-to-apples evidence discipline" — the orchestrator VERIFIES each partner's
+comparison before banking its verdict (I cannot message running partners; I check at land time and
+re-measure if violated). A convergence / net / GO verdict is banked ONLY if:
+1. **Same slice** — both arms of any comparison scored on the IDENTICAL pair indices (NOT independently
+   sampled). The variable-codec +0.001-vs-+0.006 inversion was small-slice d_pose noise — a different
+   slice at ep2236 vs ep340 could fake a "shrinks at convergence."
+2. **Constants re-fit per decoder** — PR98/T10/LeverD constants are decoder-specific (PROVEN: PR101's
+   don't transfer); re-fit on the target decoder, never transfer.
+3. **Same eval geometry** — `frame_utils.yuv420_to_rgb` GT (NOT PyAV rgb24 = phantom pose), same uint8
+   round-trip, same H/W, real frozen scorer on CPU (never MPS).
+4. **Distortion-fixed for RATE experiments** — the quant reconstruction held EXACTLY fixed
+   (`torch.equal`, D1's standard) so ONLY bytes vary; a coarser-grid "byte win" with worse distortion
+   is NOT a rate win.
+5. **Same byte-accounting** — deployed bytes surviving inflate parse-back, not pre-compression counts.
+6. **Adequate n vs d_pose noise** — the `√(10·d_pose)` term is steep near the operating point; a
+   verdict on n=24 is confirmed on ≥2 slices OR a larger n, with the SAME n for both arms.
+7. **Matched-epoch for the arm A/B** — arm(levers-on) vs basin(levers-off) at the SAME global epoch
+   from the SAME ep426 fork. COLD-TAIL CAVEAT: once the seg surrogate goes gradient-dead at T<0.1
+   (R10), arm-vs-basin stops being apples-to-apples on the SEG signal (arm has no seg gradient, basin's
+   CE does) — a reason to keep `seg_temperature_end ≥ 0.1`.
