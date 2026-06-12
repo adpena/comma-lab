@@ -98,7 +98,7 @@ def _run_arm(trainer, epochs, eval_every, max_pairs, batch_size, seed, label):
     return traj
 
 
-def main() -> None:
+def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--max-pairs", type=int, default=8)
     ap.add_argument("--base-channels", type=int, default=20)
@@ -127,33 +127,53 @@ def main() -> None:
     traj_b = _run_arm(b, args.epochs, args.eval_every, args.max_pairs,
                       args.batch_size, args.seed, "mlx_gpu")
 
-    # Compare aligned epochs.
+    # Adjudicate through the CANONICAL BOTH-TERMS acceptance gate. This is the
+    # structural fix for the n600 lesson: the old comparison block scored d_seg
+    # ONLY and never gated d_pose (the axis that diverged). The gate forces BOTH
+    # terms and REFUSES a d_seg-only pass. Arm A (torch-CPU authority gradient) is
+    # the baseline; arm B (the fast/candidate gradient) is the candidate.
+    from tac.mlx_pr95_port.speedup_acceptance_gate import evaluate_descent_equivalence
+
+    verdict = evaluate_descent_equivalence(
+        traj_a, traj_b, n_pairs=args.max_pairs
+    )
+    print("\n=== BOTH-TERMS ACCEPTANCE GATE (exact torch-CPU d_seg AND d_pose) ===")
+    print(f"{'epoch':>6} {'base_seg':>10} {'cand_seg':>10} {'base_pose':>11} {'cand_pose':>11}")
     by_ep_a = {r["epoch"]: r for r in traj_a}
     by_ep_b = {r["epoch"]: r for r in traj_b}
-    print("\n=== DESCENT-EQUIVALENCE (exact torch-CPU d_seg on both arms) ===")
-    print(f"{'epoch':>6} {'torch_d_seg':>12} {'mlx_d_seg':>12} {'abs_gap':>10} {'rel_gap':>9}")
-    rows = []
     for ep in sorted(set(by_ep_a) & set(by_ep_b)):
-        da, db = by_ep_a[ep]["exact_d_seg"], by_ep_b[ep]["exact_d_seg"]
-        gap = abs(da - db)
-        rel = gap / max(da, 1e-9)
-        rows.append({"epoch": ep, "torch_d_seg": da, "mlx_d_seg": db,
-                     "abs_gap": gap, "rel_gap": rel})
-        print(f"{ep:>6} {da:>12.6f} {db:>12.6f} {gap:>10.6f} {rel:>9.4f}")
-
-    final = rows[-1]
-    print(f"\nFINAL: torch d_seg={final['torch_d_seg']:.6f}  mlx d_seg={final['mlx_d_seg']:.6f}  "
-          f"abs_gap={final['abs_gap']:.6f}  rel_gap={final['rel_gap']:.4f}")
-    descent_a = traj_a[0]["exact_d_seg"] - final["torch_d_seg"]
-    print(f"torch descent = {descent_a:.6f}; final gap is {final['abs_gap']/max(descent_a,1e-9)*100:.2f}% of descent")
+        a, b = by_ep_a[ep], by_ep_b[ep]
+        print(f"{ep:>6} {a['exact_d_seg']:>10.6f} {b['exact_d_seg']:>10.6f} "
+              f"{a['mean_d_pose']:>11.6f} {b['mean_d_pose']:>11.6f}")
+    print(f"\nseg:  {verdict.seg.reason}")
+    print(f"pose: {verdict.pose.reason}")
+    print(f"\nVERDICT: {'PASS' if verdict.passed else 'REJECT'} "
+          f"(n={verdict.n_pairs}, epochs_compared={verdict.epochs_compared})")
+    for r in verdict.reasons:
+        print(f"  - {r}")
 
     out = {"config": vars(args), "arm_torch_cpu": traj_a, "arm_mlx_gpu": traj_b,
-           "comparison": rows, "final": final,
-           "torch_descent": descent_a}
+           "gate_passed": verdict.passed,
+           "gate_generalization_warning": verdict.generalization_warning,
+           "gate_reasons": list(verdict.reasons),
+           "seg_verdict": {
+               "tracks": verdict.seg.tracks_within_tol,
+               "diverged": verdict.seg.diverged,
+               "final_abs_gap": verdict.seg.final_abs_gap,
+               "reason": verdict.seg.reason,
+           },
+           "pose_verdict": {
+               "tracks": verdict.pose.tracks_within_tol,
+               "diverged": verdict.pose.diverged,
+               "diverged_at_epoch": verdict.pose.diverged_at_epoch,
+               "final_abs_gap": verdict.pose.final_abs_gap,
+               "reason": verdict.pose.reason,
+           }}
     Path(args.out_json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out_json).write_text(json.dumps(out, indent=2))
     print(f"\nwrote {args.out_json}")
+    return 0 if verdict.passed else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
