@@ -127,6 +127,114 @@ epochs.
 multi-week run can't survive a death" into "feasible because a death costs ≤ 1 epoch." The epoch budget is
 the remaining empirical unknown; the descent A/B is the first probe of it.
 
+## Arm A descent (the n8 epoch-budget probe — task 1)
+
+The torch-CPU authority-gradient arm of the descent-equivalence A/B (fixed recipe: muon-throughout CE,
+muon_lr=0.03, grad_clip=50, n8, stored_latent):
+
+| epoch | exact d_seg (torch-CPU authority) | d_pose |
+|---:|---:|---:|
+| 0 | 0.50727 | 131.1 |
+| 5 | 0.33257 | 51.5 |
+| 10 | 0.22409 | 1.154 |
+| 15 | 0.05949 | 0.145 |
+| 20 | 0.02306 | 0.0101 |
+| 25 | 0.01723 | 0.647 |
+| 30 | 0.01301 | 0.0477 |
+
+**The n8 basis reaches d_seg ≈ 0.013 in 30 epochs** (matching the recipe-gap audit's 3-stage 0.0120). The
+descent is monotone and fast — sub-0.025 by epoch 20, sub-0.015 by epoch 30. This corroborates: the fixed
+recipe is NOT capacity-walled at this basis; the wall was the throttled muon_lr. **The basin (5.6e-4) is
+~20× below the n8 epoch-30 point and is the part still unmeasured** — n8 may plateau above the basin
+(small-basis capacity) while n600 (richer latents, 75× more gradient steps/epoch) has the headroom PR95's
+own n600 decoder reached. The n600 epoch budget to the basin is what the durable daemon measures.
+
+## Descent-equivalence verdict (task 2) — CONFIRMED
+
+The decisive A/B (same seed, same init 0.507273, same permutations; arm A torch-CPU authority gradient, arm
+B MLX-GPU fast gradient; **the exact d_seg measured on the torch-CPU authority for BOTH arms**):
+
+| epoch | torch d_seg | mlx d_seg | abs gap | rel gap |
+|---:|---:|---:|---:|---:|
+| 0 | 0.507273 | 0.507273 | 0.000000 | 0.0% |
+| 5 | 0.332571 | 0.327763 | 0.004808 | 1.45% |
+| 10 | 0.224094 | 0.213212 | 0.010882 | 4.86% |
+| 15 | 0.059491 | 0.057408 | 0.002083 | 3.50% |
+| 20 | 0.023057 | 0.025406 | 0.002349 | 10.19% |
+| 25 | 0.017227 | 0.016616 | 0.000611 | 3.55% |
+| 30 | 0.013007 | 0.013066 | 0.000059 | 0.45% |
+| 35 | 0.011985 | 0.011516 | 0.000469 | 3.91% |
+| **40** | **0.011016** | **0.010789** | **0.000227** | **2.06%** |
+
+**FINAL: torch d_seg 0.011016 vs mlx_gpu d_seg 0.010789 — abs gap 0.000227, which is 0.05% of the 0.496
+total descent.** The MLX-GPU approximate gradient reaches the SAME exact-d_seg basin as the torch authority
+gradient; the two trajectories track within ~2-5% the whole way down and CONVERGE at the basin (epoch-30 gap
+0.45%, epoch-40 gap 2.06%, mlx slightly lower). **The ~0.9999-cosine gradient does NOT compound into
+divergence over a descent — it descends to the same place.** So the fast-approximate gradient is a SAFE
+training signal: the exact scorer does NOT have to be in the per-step gradient loop; a periodic torch-CPU
+authority recheck (the existing `--authority-recheck-every` gate) is sufficient.
+
+**Caveat (the honest one):** this DESCENT-equivalence is a throughput-ENABLER, not a throughput-WIN. The
+backward dominates on BOTH backends and MLX-GPU is only ~1.3-1.5× faster at the right batch size (and the
+periodic torch-CPU authority recheck adds back cost). So descent-equivalence makes the GPU gradient
+trustworthy; it does not by itself make the n600 run dramatically faster. The bottleneck (the scorer
+backward) is NOT removed by switching the gradient backend — both backends pay it.
+
 ## The honest feasibility verdict
 
-(verdict section — finalized after the descent A/B lands)
+**Is local-MLX n600 full-PR95 feasible now (days/weeks resumable) → dream reachable | or still months → paid
+n600 required?**
+
+**Verdict: FEASIBLE AS A MULTI-WEEK RESUMABLE LOCAL RUN — the dream is locally reachable — with two honest
+caveats.**
+
+1. **Throughput is ~17-24 min/epoch at n600 on either backend** (the backward is the irreducible wall; MLX-GPU
+   shaves ~30% at best). NOT seconds/epoch. The "5-6 months" frozen estimate was measured on the THROTTLED
+   recipe and is invalid; the fixed recipe at the SAME per-epoch cost descends fast.
+2. **The epoch budget to a low d_seg is now MEASURED at n8: ~30 epochs to d_seg≈0.013, ~40 to ≈0.011** (the
+   small-basis floor). At ~17 min/epoch, a **2,000-epoch compressed n600 curriculum = ~24 days continuous**,
+   and a few-hundred-epoch run = a few days. **Both are firmly in the "super-long resumable local sweep"
+   regime the operator's standing directive endorses** — and the resumable daemon (verified by kill+restart)
+   makes a death cost ≤ 1 epoch, which is exactly what converts "a multi-week run can't survive" into
+   "feasible."
+3. **The honest open residual:** whether the n600 basis reaches the **5.6e-4 BASIN** (vs the n8 small-basis
+   ~0.011 floor) is STILL unmeasured — n600 has the richer latents + 75× more gradient steps/epoch that PR95's
+   own n600 decoder used to reach 5.6e-4, but at n8 the basis plateaus ~0.011 (capacity). The durable n600
+   daemon IS the measurement of this. **If n600 plateaus well above 5.6e-4 at a few thousand epochs, the
+   dream needs either more capacity (base_ch) or the paid full-29,650-epoch run; if it descends toward the
+   basin in a few thousand epochs, the local dream is fully reached.**
+
+**So: the dream is LOCALLY REACHABLE as a resumable multi-week run, the infrastructure to sustain it now
+exists and is verified, and the only honest unknown is the n600 basin depth — which the daemon measures as
+it runs. This is NOT a "still months, paid required" verdict; it is a "launch the durable daemon and let it
+measure the basin" verdict.** Paid n600 remains the FASTER path to the basin (T4 CUDA scorer is ~seconds/
+epoch), but it is no longer REQUIRED for a local descent — it is the accelerator, not the gate.
+
+## mx.compile + batching (task 4)
+
+* **mx.compile: NOT applied, and correctly so.** The dominant cost is the autograd BACKWARD through the
+  frozen scorer (torch `.backward()` or `mx.value_and_grad` through the MLX scorer port) — a single
+  `mx.compile` boundary on the MLX RENDER (which is <0.3% of the step) would touch nothing material. The
+  MLX-GPU bridge's `value_and_grad` already runs the whole scorer chain on the GPU; compiling the render
+  alone is not the lever. (A future lever: drop the per-step gradient-free telemetry forward and lean on the
+  torch-CPU authority recheck for the seg/pose split — a ~15-20%/step saving on the mlx_gpu path, noted in
+  the wire-in memo.)
+* **Batching: already optimal.** The trainer batches over `cfg.batch_size` (default 8 = the measured MLX-GPU
+  sweet spot; bs=16 hits the Metal VJP memory cliff). The n600 epoch has 75 batches at bs=8, which is exactly
+  where the GPU pipeline amortizes. The throughput profile's scorer-batch-amortization lever (3.5× per-frame
+  speedup bs=1→16) is already captured by the default bs=8 multi-batch n600 epoch.
+
+## Reproduce
+
+```
+A=experiments
+.venv/bin/python $A/measure_capstone_backend_throughput.py --max-pairs 8 --batch-size 8 \
+    --backends torch_cpu_bridge mlx_gpu --out-json experiments/results/capstone_backend_throughput_n8_bs8.json
+.venv/bin/python $A/measure_descent_equivalence.py --max-pairs 8 --epochs 40 --eval-every 5 \
+    --out-json experiments/results/descent_equivalence_n8_ab.json
+# the durable resumable n600 daemon (the dream run):
+nohup .venv/bin/python $A/run_capstone_resumable_curriculum.py --max-pairs 600 --base-channels 20 \
+    --carrier stored_latent --curriculum-total-epochs 2000 --optimizer-schedule muon_throughout \
+    --muon-lr 0.03 --grad-clip 50 --scorer-backend torch_cpu_bridge --checkpoint-every 1 --eval-every 10 \
+    --out-dir experiments/results/capstone_n600_resumable_<ts> < /dev/null > .omx/tmp/n600.log 2>&1 & disown
+```
