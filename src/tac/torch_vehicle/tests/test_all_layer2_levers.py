@@ -1568,3 +1568,168 @@ def test_r7_sensitivity_ema_carries_across_adamw_to_muon_qat_boundary(tmp_path):
         "change at the real stage-7->stage-8 boundary lost the carried EMA -> the Muon "
         "QAT stage falls back to uniform-127 for its first steps."
     )
+
+
+# --- R11: resume × anneal-schedule restore (the daemon-crash-mid-anneal case) ---
+def _r11_all5_anneal_stage(*, epochs: int, t_end: float) -> StageSpec:
+    """A single all-5-levers-ON stage with the seg-temperature anneal ACTIVE (the
+    live distortion arm's shape: soft_cosine + temperature 1.0 -> t_end + margin +
+    rate + QAT + pose-FiLM). The kill epoch is chosen so the annealed temperature at
+    the resume point is a NON-trivial INTERMEDIATE value (not the start 1.0, not the
+    floor t_end) — the exact case the prior B4 resume test did NOT exercise (qat_b's
+    mid-stage anneal lands near the floor)."""
+    return _stage(
+        name="r11_all5_anneal", epochs=epochs, use_muon=False, use_qat=True,
+        init_latents_random=True, cat_lambda=0.01, rate_lambda_w=0.05,
+        rate_lambda_lat=0.02, seg_surrogate="soft_cosine", seg_temperature=1.0,
+        seg_temperature_end=t_end, score_aware_qat=True, qat_sensitivity_decay=0.9,
+        margin_weight_tau=2.0, adamw_lr=1e-3,
+    )
+
+
+@pytest.mark.timeout(300)
+def test_r11_resume_mid_anneal_all5_is_bit_identical(tmp_path):
+    """R11 — a daemon crash MID an all-5-on anneal stage, resumed, reproduces a
+    BIT-IDENTICAL archive. The resume point is chosen where the annealed temperature
+    is a NON-trivial intermediate value (NOT the start, NOT the floor), so the
+    resumed epoch MUST restore the EXACT annealed temperature for the loss to match.
+
+    ``seg_temperature_for_epoch`` is a PURE function of ``(spec, epoch_in_stage)`` —
+    no hidden state — so the annealed temperature is reconstructed from the restored
+    ``epoch_in_stage``, never persisted. This test MEASURES (does not assume — the
+    R7 lesson) that the reconstruction is exact: a regression that mis-restored the
+    epoch index, or that made the temperature depend on accumulated state, would give
+    a DIFFERENT temperature at the resumed epoch -> a different seg loss -> a
+    different archive. Class-2-fake-proof: the kill epoch's annealed T is asserted to
+    be strictly between the floor and the start (so the test genuinely exercises the
+    intermediate-anneal restore, not a trivial floor/start case)."""
+    from tac.torch_vehicle.checkpoint import load_checkpoint
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    epochs, t_end = 6, 0.2
+    spec = _r11_all5_anneal_stage(epochs=epochs, t_end=t_end)
+    kill_ep = 3  # mid-stage
+    # The annealed T at the resume point must be a NON-trivial intermediate value.
+    t_at_kill = seg_temperature_for_epoch(spec, kill_ep)
+    assert t_end + 1e-6 < t_at_kill < 1.0 - 1e-6, (
+        f"the kill-epoch annealed T {t_at_kill} is not strictly intermediate "
+        f"(floor {t_end}, start 1.0) — the test would not exercise the intermediate "
+        "anneal restore"
+    )
+
+    def _cfg(out):
+        return TorchVehicleConfig(
+            base_channels=8, latent_dim=28, out_dir=out, checkpoint_every_epochs=1,
+            device="cpu", seed=31, pose_film_enabled=True, pose_film_hidden=8,
+        )
+
+    v = import_vendored_bundle()
+    ref_dir = tmp_path / "ref"
+    TorchVehicleDriver(
+        _cfg(ref_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=31),
+        vendored=v, curriculum=[spec],
+    ).run()
+    ref_bytes = (ref_dir / "best" / "best_archive.bin").read_bytes()
+
+    res_dir = tmp_path / "res"
+    dkill = TorchVehicleDriver(
+        _cfg(res_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=31),
+        vendored=v, curriculum=[spec],
+    )
+    dkill._stop_after_global_epoch = kill_ep
+    try:
+        dkill.run()
+    except _SimulatedDeath:
+        pass
+    merged = load_checkpoint(res_dir, map_location="cpu")
+    assert merged["position"].epoch_in_stage == kill_ep, (
+        f"checkpoint restored the wrong epoch_in_stage ({merged['position'].epoch_in_stage} "
+        f"!= {kill_ep}) — the resumed anneal temperature would be wrong"
+    )
+
+    TorchVehicleDriver(
+        _cfg(res_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=31),
+        vendored=v, curriculum=[spec],
+    ).run()
+    resumed_bytes = (res_dir / "best" / "best_archive.bin").read_bytes()
+    assert resumed_bytes == ref_bytes, (
+        f"resume MID the all-5-on anneal stage is NOT bit-identical "
+        f"({len(resumed_bytes)} B != {len(ref_bytes)} B) — the annealed temperature "
+        f"(intermediate {t_at_kill:.4f} at the resume epoch) did not restore exactly, "
+        "OR the pose-FiLM / L4-EMA / QAT state diverged across the resume."
+    )
+
+
+@pytest.mark.timeout(300)
+def test_r11_resume_into_muon_stage_with_anneal_is_bit_identical(tmp_path):
+    """R11 — a daemon crash MID the Muon-QAT stage (the real stage-7->8 AdamW->Muon
+    shape) with the anneal ACTIVE at a NON-floor temperature, resumed, reproduces a
+    BIT-IDENTICAL archive. This is the JOINT of: (a) the B4 resume-mid-QAT case,
+    (b) the B5 AdamW->Muon partition rebuild, and (c) the R11 intermediate-anneal
+    restore — no prior test combined all three. The resumed Muon stage must rebuild
+    its partition on the carried decoder, restore the L4 EMA + pose-FiLM state, AND
+    reconstruct the exact annealed temperature for the resumed epoch."""
+    from tac.torch_vehicle.checkpoint import load_checkpoint
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    def stg(name, epochs, use_muon, t_end):
+        return _stage(
+            name=name, epochs=epochs, use_muon=use_muon, use_qat=True,
+            init_latents_random=(name == "s0"), cat_lambda=0.01, rate_lambda_w=0.05,
+            rate_lambda_lat=0.02, seg_surrogate="soft_cosine", seg_temperature=1.0,
+            seg_temperature_end=t_end, score_aware_qat=True, qat_sensitivity_decay=0.9,
+            margin_weight_tau=2.0, adamw_lr=(1e-5 if use_muon else 1e-3),
+        )
+
+    curriculum = [
+        stg("s0", 4, False, 0.2),
+        stg("s1", 4, False, 0.1),
+        stg("s2", 4, True, 0.05),  # the Muon stage (AdamW->Muon at s1->s2)
+    ]
+    base = sum(curriculum[i].epochs for i in range(2))
+    kill_ep = base + 2  # mid the Muon stage s2
+    t_at_kill = seg_temperature_for_epoch(curriculum[2], 2)
+    assert 0.05 + 1e-6 < t_at_kill < 1.0 - 1e-6, (
+        f"the Muon-stage kill-epoch annealed T {t_at_kill} is not intermediate"
+    )
+
+    def _cfg(out):
+        return TorchVehicleConfig(
+            base_channels=8, latent_dim=28, out_dir=out, checkpoint_every_epochs=1,
+            device="cpu", seed=33, pose_film_enabled=True, pose_film_hidden=8,
+        )
+
+    v = import_vendored_bundle()
+    ref_dir = tmp_path / "ref"
+    TorchVehicleDriver(
+        _cfg(ref_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=33),
+        vendored=v, curriculum=curriculum,
+    ).run()
+    ref_bytes = (ref_dir / "best" / "best_archive.bin").read_bytes()
+
+    res_dir = tmp_path / "res"
+    dkill = TorchVehicleDriver(
+        _cfg(res_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=33),
+        vendored=v, curriculum=curriculum,
+    )
+    dkill._stop_after_global_epoch = kill_ep
+    try:
+        dkill.run()
+    except _SimulatedDeath:
+        pass
+    merged = load_checkpoint(res_dir, map_location="cpu")
+    assert merged["position"].stage_index == 2, "did not checkpoint INSIDE the Muon stage"
+    ckpt_ema = merged.get("tensor_sensitivity_ema") or {}
+    assert len(ckpt_ema) > 0, "the mid-Muon-QAT checkpoint lost the L4 sensitivity EMA"
+
+    TorchVehicleDriver(
+        _cfg(res_dir), scorer=SyntheticScorerContext(n_pairs=8, device="cpu", seed=33),
+        vendored=v, curriculum=curriculum,
+    ).run()
+    resumed_bytes = (res_dir / "best" / "best_archive.bin").read_bytes()
+    assert resumed_bytes == ref_bytes, (
+        f"resume MID the Muon-QAT anneal stage is NOT bit-identical "
+        f"({len(resumed_bytes)} B != {len(ref_bytes)} B) — the JOINT of "
+        "AdamW->Muon partition rebuild + L4-EMA restore + intermediate-anneal restore "
+        f"(T={t_at_kill:.4f}) + pose-FiLM restore diverged across the resume."
+    )
