@@ -290,3 +290,62 @@ def test_uniform_score_aware_blob_equals_vendored_uniform_blob():
         "sensitivity=None score-aware QAT must produce a brotli blob BIT-IDENTICAL to "
         "the vendored uniform-127 QAT (default-preserving guard at the codec layer)"
     )
+
+
+# ===========================================================================
+# R5 (2026-06-12) — determinism of the QAT grid on TIED sensitivities (lens A)
+# + long-run sensitivity-EMA numerical stability over many steps (lens C).
+# ===========================================================================
+def test_rank_normalize_all_tied_collapses_to_uniform_every_call():
+    """``_rank_normalize`` on an EXACTLY-tied vector returns all-0.5 (the uniform
+    fallback) DETERMINISTICALLY — the one ``argsort``-on-ties path in the lever
+    code must not produce a run-to-run-varying ordering."""
+    from tac.torch_vehicle.score_aware_qat import _rank_normalize
+
+    tied = torch.tensor([3.0, 3.0, 3.0, 3.0], dtype=torch.float64)
+    r1 = _rank_normalize(tied)
+    r2 = _rank_normalize(tied)
+    assert torch.equal(r1, r2), "rank-normalize is non-deterministic on a tied vector"
+    assert bool((r1 == 0.5).all().item()), "tied vector must collapse to uniform 0.5"
+
+
+def test_per_tensor_levels_deterministic_under_partial_ties():
+    """A sensitivity dict with TWO tied tensors produces an IDENTICAL per-tensor
+    level map across repeated calls — the ``argsort`` tie-break must not silently
+    change the QAT grid (hence the archive) run-to-run. A nondeterministic
+    tie-break would make the deployed bytes differ on a tie."""
+    names = ["blocks.0", "blocks.1", "blocks.2", "blocks.3"]
+    sens = {"blocks.0": 1.0, "blocks.1": 2.0, "blocks.2": 2.0, "blocks.3": 9.0}
+    maps = [per_tensor_levels_from_sensitivity(dict(sens), names) for _ in range(8)]
+    assert all(m == maps[0] for m in maps), (
+        f"QAT level map is non-deterministic under a partial tie: {maps}"
+    )
+
+
+def test_sensitivity_ema_bounded_and_finite_over_long_run():
+    """The sensitivity EMA ``s_t = decay*prior + (1-decay)*||grad||`` stays FINITE
+    and BOUNDED by max(grad-norm) over a LONG sequence of steps (including
+    occasional gradient spikes) — the multi-thousand-step stability the 80-epoch
+    R2 run could not reach. The EMA is a convex combination of bounded terms, so
+    it cannot drift/overflow; this pins that property over 12000 updates."""
+    torch.manual_seed(5)
+    dec = nn.Sequential(nn.Conv2d(2, 3, 3), nn.Flatten(), nn.Linear(3 * 6 * 6, 4))
+    name = next(n for n, m in dec.named_modules() if isinstance(m, nn.Conv2d))
+    ema: dict[str, float] = {}
+    max_seen = 0.0
+    for step in range(12000):
+        dec.zero_grad()
+        x = torch.randn(1, 2, 8, 8)
+        # inject a large spike every 500 steps to stress the EMA's boundedness.
+        scale = 1e6 if (step % 500 == 0) else 1.0
+        (dec(x).pow(2).mean() * scale).backward()
+        accumulate_tensor_sensitivity(dec, ema, decay=0.99)
+        cur = float(dict(dec.named_modules())[name].weight.grad.norm())
+        max_seen = max(max_seen, cur)
+        assert all(
+            torch.isfinite(torch.tensor(v)) for v in ema.values()
+        ), f"sensitivity EMA went non-finite at step {step}: {ema}"
+    # An EMA of a non-negative bounded sequence stays within [0, max_seen] (+slack).
+    assert all(0.0 <= v <= max_seen * (1 + 1e-6) for v in ema.values()), (
+        f"sensitivity EMA exceeded the max grad norm {max_seen}: {ema}"
+    )

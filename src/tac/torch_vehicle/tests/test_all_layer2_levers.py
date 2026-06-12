@@ -396,6 +396,40 @@ def test_lever2_annealed_temperature_flows_into_surrogate_value():
     assert t_early >= t_late  # sanity: the schedule moves in the right direction
 
 
+def test_lever2_anneal_at_t_min_over_long_stage_is_clamped_and_surrogate_finite():
+    """R5 lens-C (long-run numerical stability of the anneal at T->min). Over a
+    LONG stage (the PR95 stages run thousands of epochs) the cosine reaches its
+    floor at the FINAL epoch. Two properties must hold to the very end:
+    (i) the temperature is CLAMPED at ``seg_temperature_end`` and never undershoots
+        to 0 (a T=0 would divide-by-zero in ``softmax(pred/T)``); and
+    (ii) the soft-cosine surrogate at that coldest T is FINITE and in [0,1]
+         (``F.softmax`` is internally max-stable, so even T=0.02 -> pred*50 does
+         not overflow). A regression that let the anneal undershoot or the
+         surrogate blow up would surface here, not at 80 epochs."""
+    epochs = 9000
+    t_end = 0.02
+    spec = _stage(epochs=epochs, seg_surrogate="soft_cosine",
+                  seg_temperature=1.0, seg_temperature_end=t_end)
+    # (i) clamp: every epoch's temperature stays within [t_end, 1.0]; the LAST is
+    # exactly the floor (never < t_end → never a div-by-zero).
+    t_last = seg_temperature_for_epoch(spec, epochs - 1)
+    assert abs(t_last - t_end) < 1e-9, f"final-epoch T {t_last} != floor {t_end}"
+    for e in (0, epochs // 2, epochs - 2, epochs - 1):
+        t = seg_temperature_for_epoch(spec, e)
+        assert t_end - 1e-12 <= t <= 1.0 + 1e-12, f"epoch {e} T {t} escaped [end, start]"
+    # an OUT-OF-RANGE epoch (a long-run off-by-one) is clamped, not extrapolated.
+    assert abs(seg_temperature_for_epoch(spec, epochs + 100) - t_end) < 1e-9
+    # (ii) surrogate finite + in [0,1] at the coldest T (the boundary-sharpening end).
+    seg_out, targets = _make_seg_inputs(seed=11, B=2, H=8, W=12)
+    val = _seg_loss_for_spec(spec, seg_out, targets, temperature=t_last,
+                             )  # margin_weight_tau None on this spec
+    assert torch.isfinite(val), f"surrogate non-finite at T={t_last}: {val}"
+    val_f = float(val.detach())
+    assert 0.0 - 1e-6 <= val_f <= 1.0 + 1e-6, (
+        f"soft-cosine surrogate {val_f} escaped [0,1] at the coldest anneal T"
+    )
+
+
 # --- Lever 4: score-aware QAT ---
 def test_lever4_uniform_sensitivity_matches_vendored_uniform_qat():
     """Score-aware QAT with sensitivity=None (or uniform) reproduces the vendored
@@ -635,4 +669,145 @@ def test_compose_all_five_loss_differs_from_all_default():
     assert abs(default_loss - allfive_loss) > 1e-3, (
         f"all-five loss {allfive_loss:.4f} == all-default loss {default_loss:.4f} — "
         "the composed levers are silently inactive (FAKE)"
+    )
+
+
+# ===========================================================================
+# CLAIM D (R5) — LEVERS-ON DETERMINISM + Muon×lever interaction.
+# ===========================================================================
+# The existing ``test_all_default_driver_run_is_deterministic_and_byte_identical``
+# proves the ALL-DEFAULT path is reproducible; it does NOT cover the LEVERS-ON
+# path, and uses ``use_muon=False``. R5 closes both gaps: two fresh
+# all-5-levers-ON runs (same seed) must produce a bit-identical archive, INCLUDING
+# under Muon (whose Newton-Schulz orthogonalization is the new nondeterminism
+# surface the lever gradients flow through). A lever that introduced
+# nondeterminism (unsorted set/dict iteration, a nondeterministic kernel in the
+# score-aware backward, ``.item()``-driven nondeterministic control flow) would
+# make these DIVERGE — corrupting a multi-day from-scratch run's reproducibility.
+def _all_five_stage(*, use_muon: bool, epochs: int = 3) -> StageSpec:
+    """ALL FIVE levers ON (mirrors the compose-all-five config) with the
+    ``use_muon`` toggle the existing lever tests never exercise with levers on."""
+    return _stage(
+        name="r5_all_five",
+        epochs=epochs,
+        use_muon=use_muon,
+        adamw_lr=(1e-5 if use_muon else 1e-3),
+        use_qat=True,
+        cat_lambda=0.01,
+        rate_lambda_w=0.05,
+        rate_lambda_lat=0.02,
+        seg_surrogate="soft_cosine",
+        seg_temperature=1.0,
+        seg_temperature_end=0.2,
+        score_aware_qat=True,
+        qat_sensitivity_decay=0.9,
+        margin_weight_tau=2.0,
+    )
+
+
+def _run_all_five(out, *, use_muon: bool, n_pairs: int = 6, seed: int = 0) -> bytes:
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=out,
+        checkpoint_every_epochs=1, device="cpu", seed=seed,
+        pose_film_enabled=True, pose_film_hidden=8,
+    )
+    _, summary = _run_driver(
+        cfg, _all_five_stage(use_muon=use_muon), n_pairs=n_pairs, seed=seed
+    )
+    assert summary["status"] == "complete"
+    return (out / "best" / "best_archive.bin").read_bytes()
+
+
+@pytest.mark.timeout(300)
+def test_all_five_levers_adamw_run_is_deterministic_and_byte_identical(tmp_path):
+    """Two fresh all-5-levers-ON (AdamW) runs at the same seed produce a
+    BIT-IDENTICAL best archive — the levers-on reproducibility floor a multi-day
+    from-scratch run rests on. A nondeterministic lever path would diverge here."""
+    a = _run_all_five(tmp_path / "a", use_muon=False)
+    b = _run_all_five(tmp_path / "b", use_muon=False)
+    assert a == b, "all-5-levers-ON (AdamW) is NON-DETERMINISTIC: archive bytes differ"
+
+
+@pytest.mark.timeout(300)
+def test_all_five_levers_muon_run_is_deterministic_and_byte_identical(tmp_path):
+    """Two fresh all-5-levers-ON + MUON runs at the same seed produce a
+    BIT-IDENTICAL best archive. Muon's Newton-Schulz orthogonalization is the new
+    surface the rate gradient (Lever 1) + the QAT-shaped weights (Lever 4) flow
+    through; if a lever perturbed it nondeterministically, the archive would
+    diverge."""
+    a = _run_all_five(tmp_path / "a", use_muon=True)
+    b = _run_all_five(tmp_path / "b", use_muon=True)
+    assert a == b, "all-5-levers-ON + Muon is NON-DETERMINISTIC: archive bytes differ"
+
+
+def test_all_five_muon_partition_covers_film_and_routes_grads():
+    """Under all-5-on + Muon, the Muon/AdamW partition covers EVERY trainable
+    decoder param (0 dropped, 0 overlap), INCLUDING every FiLM param; and after a
+    real all-5-on backward the rate-surrogate gradient reaches the FiLM fc1 (2D →
+    Muon group) — proving no lever gradient is silently dropped for the Muon
+    group. (R4 noted the Muon partition was '0-dropped' on a no-lever decoder;
+    this asserts it under the levers-on backward with the rate term active.)"""
+    from tac.torch_vehicle.score_aware_qat import (
+        apply_score_aware_qat,
+        restore_score_aware_qat,
+    )
+
+    v = import_vendored_bundle()
+    sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(),
+        device="cpu", seed=0, pose_film_enabled=True, pose_film_hidden=8,
+    )
+    spec = _all_five_stage(use_muon=True)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=v, curriculum=[spec])
+    torch.manual_seed(31)
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    decoder.set_stored_pose(sc.pose_targets[:6])
+
+    muon_params, adamw_params = v.partition_params_for_muon(decoder)
+    muon_ids = {id(p) for p in muon_params}
+    adamw_ids = {id(p) for p in adamw_params}
+    trainable = [p for p in decoder.parameters() if p.requires_grad]
+    assert sum(1 for p in trainable if id(p) in muon_ids or id(p) in adamw_ids) == len(
+        trainable
+    ), "Muon/AdamW partition drops a trainable param under all-5-on + FiLM"
+    assert len(muon_ids & adamw_ids) == 0, "a param is in BOTH Muon and AdamW groups"
+    film_params = [
+        (n, p) for n, p in decoder.named_parameters() if n.startswith("pose_film.")
+    ]
+    assert film_params, "no FiLM params found (FiLM not wired)"
+    assert all(
+        id(p) in muon_ids or id(p) in adamw_ids for _, p in film_params
+    ), "a FiLM param is uncovered by the Muon/AdamW partition"
+
+    # real all-5-on backward — the rate term MUST reach the FiLM fc1 (2D → Muon).
+    latents = torch.nn.Parameter(torch.randn(6, 28) * 0.1)
+    idx = torch.arange(6)
+    originals = apply_score_aware_qat(decoder, None)
+    decoded_pair = decoder(latents[idx], idx)
+    restore_score_aware_qat(decoder, originals)
+    flat = decoded_pair.reshape(12, 3, 384, 512)
+    up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
+    down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
+    decoded_bhwc = down.reshape(6, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
+    dc = decoded_bhwc.clamp(0, 255)
+    decoded_bhwc = dc + (dc.round() - dc).detach()
+    seg_out, pose_pred6 = sc.seg_pose_forward(decoded_bhwc)
+    seg_l = _seg_loss_for_spec(spec, seg_out, sc.seg_targets_hard[idx], temperature=1.0)
+    pose_l = torch.sqrt(10.0 * F.mse_loss(pose_pred6, sc.pose_targets[idx]) + 1e-12)
+    loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
+    reg = driver._weight_regularizers(decoder, latents, spec)
+    if reg is not None:
+        loss = loss + reg
+    loss.backward()
+    assert all(p.grad is not None for p in muon_params), "a Muon param got no gradient"
+    assert all(p.grad is not None for p in adamw_params), "an AdamW param got no gradient"
+    film_fc1_muon_grad = any(
+        p.ndim == 2 and id(p) in muon_ids and p.grad is not None
+        and p.grad.abs().sum().item() > 0.0
+        for _, p in film_params
+    )
+    assert film_fc1_muon_grad, (
+        "the rate surrogate (Lever 1) did not reach a 2D FiLM weight in the Muon "
+        "group — a lever gradient is mis-routed/dropped for the Muon partition"
     )
