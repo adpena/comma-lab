@@ -314,7 +314,20 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # ---- Device / mode ----
     p.add_argument("--device", choices=["cuda", "cpu"], default="cuda",
-                   help="Compute device. 'cpu' permitted only with --smoke.")
+                   help="AUTHORITY/eval device. 'cpu' permitted only with --smoke. "
+                        "MPS is FORBIDDEN here (CLAUDE.md 'MPS auth eval is NOISE').")
+    p.add_argument(
+        "--train-device",
+        choices=["cuda", "cpu", "mps"],
+        default=None,
+        help=(
+            "GRADIENT/training backend ONLY (may be 'mps' = Apple GPU). When set, "
+            "the per-step decoder+scorer forward/backward runs here while the EXACT "
+            "d_seg/d_pose authority eval that picks BEST stays on --device (CPU/CUDA). "
+            "Used by experiments/launch_cool_chic_mps_smoke.py; MPS is NEVER score "
+            "authority. Defaults to --device (single-device legacy)."
+        ),
+    )
     p.add_argument("--smoke", action="store_true",
                    help="Tiny CPU smoke (no scorer load, tiny config).")
     p.add_argument("--max-pairs", type=int, default=None,
@@ -500,6 +513,71 @@ def _device_or_die(name: str, *, smoke: bool):
     return _canonical_device_or_die(name, smoke=smoke, substrate_tag=_SUBSTRATE_TAG)
 
 
+def _device_or_die_cpu_advisory_for_mps_split():
+    """Resolve the CPU AUTHORITY device for an MPS-trained advisory split run.
+
+    The MPS-split path (``--device cpu --train-device mps``) trains the gradient
+    on the Apple GPU and uses the CPU as the (NON-PROMOTABLE, advisory) authority
+    for BEST-selection + archive auth-eval — exactly the validated basin design in
+    ``experiments/launch_split_by_head_basin.py``. The canonical ``device_or_die``
+    refuses bare ``cpu`` outside ``--smoke``; here we route through its
+    ``allow_full_cpu`` advisory exception (the run is advisory by construction —
+    the archive must still go through ``upstream/evaluate.py`` for any score).
+    """
+    return _canonical_device_or_die(
+        "cpu", smoke=False, substrate_tag=_SUBSTRATE_TAG, allow_full_cpu=True
+    )
+
+
+def _resolve_train_device(name: str | None, authority_device):
+    """Resolve the TRAIN/GRADIENT device (may be ``mps``) given the AUTHORITY device.
+
+    The split mirrors ``src/tac/torch_vehicle/driver.py``: the gradient graph may
+    run on the Apple GPU (``mps``) for the ~100x fwd+bwd speedup, while the EXACT
+    d_seg/d_pose that pick BEST + the archive auth-eval ALWAYS run on the CPU/CUDA
+    authority. MPS is NEVER score authority (CLAUDE.md "MPS auth eval is NOISE").
+
+    When ``name`` is ``mps`` we apply ``patch_scorer_for_mps()`` (the upstream
+    BatchNorm-backward stride fix) BEFORE the scorers are loaded onto MPS and
+    return its report so the trainer can surface which device-compat patches fired.
+
+    Args:
+        name: the requested train device, one of {None, "cpu", "cuda", "mps"}.
+            None means "single-device legacy" — train on the authority device.
+        authority_device: the resolved ``torch.device`` from ``_device_or_die``.
+
+    Returns:
+        ``(train_device, mps_patch_report)`` where ``train_device`` is a
+        ``torch.device`` and ``mps_patch_report`` is a dict (empty unless mps).
+    """
+    import torch
+
+    if name is None:
+        return authority_device, {}
+    if name == "mps":
+        if not (
+            getattr(torch.backends, "mps", None) is not None
+            and torch.backends.mps.is_available()
+        ):
+            raise SystemExit(
+                f"[{_SUBSTRATE_TAG}] --train-device mps requested but torch MPS is "
+                "not available on this host"
+            )
+        from tac.torch_mps_compat import patch_scorer_for_mps
+
+        report = patch_scorer_for_mps()  # BatchNorm-backward MPS stride fix
+        return torch.device("mps"), report
+    if name == "cuda":
+        if not torch.cuda.is_available():
+            raise SystemExit(
+                f"[{_SUBSTRATE_TAG}] --train-device cuda requested but cuda not available"
+            )
+        return torch.device("cuda"), {}
+    if name == "cpu":
+        return torch.device("cpu"), {}
+    raise SystemExit(f"[{_SUBSTRATE_TAG}] unknown --train-device {name!r}")
+
+
 # ---------------------------------------------------------------------------
 # Smoke main (CPU; no scorer load)
 # ---------------------------------------------------------------------------
@@ -578,7 +656,33 @@ def _full_main(args: argparse.Namespace) -> int:
 
     # 1. Pin seeds
     _pin_seeds(args.seed)
-    device = _device_or_die(args.device, smoke=False)
+    # AUTHORITY device (CPU-TRUSTED or CUDA) — the exact d_seg/d_pose that pick
+    # the BEST EMA checkpoint AND the archive build + auth-eval run HERE. MPS is
+    # FORBIDDEN as the authority (CLAUDE.md "MPS auth eval is NOISE": 23x pose
+    # drift corrupts argmax). _device_or_die refuses mps + refuses bare cpu
+    # outside --smoke (we keep the canonical production gate intact) — EXCEPT the
+    # MPS-split advisory path: when --train-device mps is requested, the Apple GPU
+    # carries the gradient and the CPU authority is the (NON-PROMOTABLE, advisory)
+    # BEST-selection axis, exactly the validated launch_split_by_head_basin.py
+    # design. That advisory CPU authority is admitted via allow_full_cpu.
+    _mps_split_requested = args.train_device == "mps"
+    if args.device == "cpu" and _mps_split_requested:
+        # MPS-trained / CPU-authority advisory split (basin pattern). CPU is the
+        # advisory authority, not a promotion claim.
+        authority_device = _device_or_die_cpu_advisory_for_mps_split()
+    else:
+        authority_device = _device_or_die(args.device, smoke=False)
+    # TRAIN/GRADIENT device — the per-step decoder+scorer forward/backward MAY run
+    # on mps (the Apple GPU; the whole point of the local-MPS path). It is NEVER
+    # score authority. Defaults to the authority device (single-device legacy).
+    train_device, mps_patch_report = _resolve_train_device(
+        args.train_device, authority_device
+    )
+    split_device = train_device != authority_device
+    # ``device`` keeps the existing name used by the body for the AUTHORITY device
+    # (archive build / auth-eval / continual-learning), so the downstream code is
+    # unchanged; the new ``train_device`` only governs the gradient graph.
+    device = authority_device
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stage_log: list[dict[str, Any]] = []
@@ -587,19 +691,47 @@ def _full_main(args: argparse.Namespace) -> int:
         stage_log.append({"stage": name, "at": _utc_now_iso()})
 
     _stage("seed_pinned")
+    if split_device:
+        print(
+            f"[full] SPLIT-DEVICE: train/gradient={train_device} (research-signal) "
+            f"| authority/eval={authority_device} (CPU-TRUSTED). MPS is NEVER score "
+            f"authority (CLAUDE.md 'MPS auth eval is NOISE'). mps_patches="
+            f"{mps_patch_report}",
+            flush=True,
+        )
+        _stage(f"split_device_train_{train_device}_authority_{authority_device}")
 
     # 2. Patch upstream rgb_to_yuv6 BEFORE scorer construction
     yuv6_token = patch_upstream_yuv6_globally()
     _stage("upstream_yuv6_patched")
 
     try:
-        # 3. Load differentiable scorers
-        posenet, segnet = load_differentiable_scorers(args.upstream_dir, device=device)
+        # 3. Load differentiable scorers.
+        # TRAINING scorers live on ``train_device`` (the gradient backend, may be
+        # MPS). When split, a SECOND authority scorer set lives on the CPU/CUDA
+        # authority — the BEST-selection val eval routes through THAT set so the
+        # score that picks the inference checkpoint is NEVER an MPS forward pass
+        # (CLAUDE.md "MPS auth eval is NOISE"). When not split, the two handles are
+        # the same object (single-device legacy, byte-identical to the prior path).
+        posenet, segnet = load_differentiable_scorers(
+            args.upstream_dir, device=train_device
+        )
         for p in list(posenet.parameters()) + list(segnet.parameters()):
             p.requires_grad_(False)
         posenet.eval()
         segnet.eval()
-        _stage("scorers_loaded")
+        if split_device:
+            posenet_auth, segnet_auth = load_differentiable_scorers(
+                args.upstream_dir, device=authority_device
+            )
+            for p in list(posenet_auth.parameters()) + list(segnet_auth.parameters()):
+                p.requires_grad_(False)
+            posenet_auth.eval()
+            segnet_auth.eval()
+            _stage("scorers_loaded_split_train_and_authority")
+        else:
+            posenet_auth, segnet_auth = posenet, segnet
+            _stage("scorers_loaded")
 
         # 4. Decode real frame pairs
         print(f"[full] decoding pairs from {args.video_path} ...")
@@ -608,14 +740,17 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         n_pairs = int(pair_tensor.shape[0])
         print(f"[full] decoded {n_pairs} pairs at {EVAL_HW}")
-        pair_tensor = pair_tensor.to(device)
+        # The GT pairs live on the TRAIN device (the per-step loss consumes them);
+        # the authority val eval moves its slice to the authority device explicitly.
+        pair_tensor = pair_tensor.to(train_device)
         _stage(f"pairs_decoded_{n_pairs}")
 
-        # Held-out validation indices
+        # Held-out validation indices (on the train device; the authority val eval
+        # moves its slice to the authority device).
         val_count = max(1, min(args.val_pair_count, max(1, n_pairs // 8)))
         val_idx_start = n_pairs - val_count
-        train_indices = torch.arange(0, val_idx_start, device=device, dtype=torch.long)
-        val_indices = torch.arange(val_idx_start, n_pairs, device=device, dtype=torch.long)
+        train_indices = torch.arange(0, val_idx_start, device=train_device, dtype=torch.long)
+        val_indices = torch.arange(val_idx_start, n_pairs, device=train_device, dtype=torch.long)
 
         # 5. Build model
         cfg = CoolChicConfig(
@@ -630,15 +765,18 @@ def _full_main(args: argparse.Namespace) -> int:
             output_height=EVAL_HW[0],
             output_width=EVAL_HW[1],
         )
-        model = CoolChicSubstrate(cfg).to(device)
+        # The model trains on the gradient backend (train_device, may be MPS).
+        model = CoolChicSubstrate(cfg).to(train_device)
         print(f"[full] cool_chic params: {model.num_parameters():,}")
         _stage("model_built")
 
-        # 6. EMA shadow (CLAUDE.md non-negotiable)
+        # 6. EMA shadow (CLAUDE.md non-negotiable). The shadow tracks the live
+        # (train_device) weights; the authority val eval moves a CPU copy of the
+        # shadow onto the authority device before scoring.
         ema = EMA(model, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
 
-        # 7. Score-aware Lagrangian
+        # 7. Score-aware Lagrangian.
         weights = ScoreAwareLossWeights(
             alpha_rate=args.alpha_rate,
             beta_seg=args.beta_seg,
@@ -647,18 +785,39 @@ def _full_main(args: argparse.Namespace) -> int:
             contest_normalizer=CONTEST_NORMALIZER,
             ar_rate_weight=args.ar_rate_weight,
         )
+        # Training loss runs on the gradient backend (train_device scorers).
         loss_fn = CoolChicScoreAwareLoss(
             seg_scorer=segnet, pose_scorer=posenet, weights=weights,
         )
+        # AUTHORITY loss for BEST-selection val eval runs on the CPU/CUDA authority
+        # scorers (NEVER MPS). When not split, this is the same loss object.
+        if split_device:
+            loss_fn_auth = CoolChicScoreAwareLoss(
+                seg_scorer=segnet_auth, pose_scorer=posenet_auth, weights=weights,
+            )
+        else:
+            loss_fn_auth = loss_fn
         _stage("lagrangian_built")
 
-        # F3 GTScorerCache wire-in (F3-BACKPORT-WAVE-V2 2026-05-14).
+        # F3 GTScorerCache wire-in (F3-BACKPORT-WAVE-V2 2026-05-14). The canonical
+        # context builds an AutocastConfig that REFUSES device_type='mps' (CLAUDE.md
+        # "MPS auth eval is NOISE"), so on the MPS-split path we pass the AUTHORITY
+        # device here (autocast is CPU/CUDA-only). The GT-scorer cache is reserved
+        # (--enable-gt-scorer-cache defaults False); when enabled it caches GT-scorer
+        # outputs and would need a train_device-aware extension — gated for now.
+        opt_ctx_device = authority_device if split_device else train_device
+        if split_device and getattr(args, "enable_gt_scorer_cache", False):
+            raise SystemExit(
+                f"[{_SUBSTRATE_TAG}] --enable-gt-scorer-cache is not yet supported on "
+                "the MPS-split path (the GT-scorer cache must be built on the train "
+                "device; deferred). Run without it for the MPS smoke."
+            )
         opt_ctx = _canon_build_optimized_training_context(
             args,
             scorers=(posenet, segnet),
             gt_pairs=pair_tensor,
             substrate_model=model,
-            device=device,
+            device=opt_ctx_device,
         )
         gt_cache = opt_ctx.gt_cache
         if gt_cache is not None:
@@ -690,7 +849,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
         for epoch in range(args.epochs):
             model.train()
-            perm = train_indices[torch.randperm(n_train, device=device)]
+            perm = train_indices[torch.randperm(n_train, device=train_device)]
             epoch_loss_sum = 0.0
             epoch_batches = 0
             for start in range(0, n_train, batch_size):
@@ -712,7 +871,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 gt_seg_already_probs = None
                 if gt_cache is not None:
                     gt_pose_batch, gt_seg_batch = gt_cache.lookup(
-                        idx, device=device
+                        idx, device=train_device
                     )
                     gt_seg_already_probs = gt_cache.seg_already_probs
                 loss, parts = loss_fn(
@@ -753,40 +912,75 @@ def _full_main(args: argparse.Namespace) -> int:
             scheduler.step()
             avg_loss = epoch_loss_sum / max(1, epoch_batches)
 
-            # 10. Validation + best-ckpt selection
+            # 10. Validation + best-ckpt selection. The BEST-selection score is the
+            # AUTHORITY score (CPU/CUDA scorers, NEVER MPS). On the SPLIT path we
+            # snapshot the EMA shadow to CPU, load it into a fresh AUTHORITY model
+            # on the authority device, and score with the authority scorers there —
+            # so the number that picks the inference checkpoint carries ZERO MPS
+            # drift (CLAUDE.md "MPS auth eval is NOISE"). On the single-device path
+            # the original in-place apply-shadow path is preserved byte-for-byte.
             if (epoch + 1) % args.val_every_epochs == 0 or epoch == args.epochs - 1:
-                orig_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
-                ema.apply(model)
-                model.eval()
-                with torch.no_grad():
-                    rgb_0_v, rgb_1_v = model(val_indices)
-                    ar_log_p_v = model.compute_ar_log_prob()
-                    # F3 cache lookup for val pairs.
-                    val_pose_batch = val_seg_batch = None
-                    val_seg_already_probs = None
-                    if gt_cache is not None:
-                        val_pose_batch, val_seg_batch = gt_cache.lookup(
-                            val_indices, device=device
-                        )
-                        val_seg_already_probs = gt_cache.seg_already_probs
-                    val_loss, _val_parts = loss_fn(
-                        rgb_0_v * 255.0, rgb_1_v * 255.0,
-                        pair_tensor[val_indices, 0],
-                        pair_tensor[val_indices, 1],
-                        archive_bytes_proxy, ar_log_p_v,
-                        apply_eval_roundtrip=True,
-                        noise_std=args.noise_std,
-                        gt_pose_batch=val_pose_batch,
-                        gt_seg_batch=val_seg_batch,
-                        gt_seg_already_probs=val_seg_already_probs,
+                if split_device:
+                    ema_snapshot_cpu = {
+                        k: v.detach().cpu().clone() for k, v in ema.state_dict().items()
+                    }
+                    auth_model = CoolChicSubstrate(cfg).to(authority_device)
+                    auth_model.load_state_dict(
+                        {k: v.to(authority_device) for k, v in ema_snapshot_cpu.items()}
                     )
-                val_lag = float(val_loss.detach().item())
-                model.load_state_dict(orig_state)
-                model.train()
+                    auth_model.eval()
+                    auth_bytes_proxy = _archive_bytes_proxy_closed_form(auth_model)
+                    val_idx_auth = val_indices.to(authority_device)
+                    gt_val_0 = pair_tensor[val_indices, 0].to(authority_device)
+                    gt_val_1 = pair_tensor[val_indices, 1].to(authority_device)
+                    with torch.no_grad():
+                        rgb_0_v, rgb_1_v = auth_model(val_idx_auth)
+                        ar_log_p_v = auth_model.compute_ar_log_prob()
+                        val_loss, _val_parts = loss_fn_auth(
+                            rgb_0_v * 255.0, rgb_1_v * 255.0,
+                            gt_val_0, gt_val_1,
+                            auth_bytes_proxy, ar_log_p_v,
+                            apply_eval_roundtrip=True,
+                            noise_std=args.noise_std,
+                        )
+                    val_lag = float(val_loss.detach().item())
+                    del auth_model
+                else:
+                    orig_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                    ema.apply(model)
+                    model.eval()
+                    with torch.no_grad():
+                        rgb_0_v, rgb_1_v = model(val_indices)
+                        ar_log_p_v = model.compute_ar_log_prob()
+                        # F3 cache lookup for val pairs.
+                        val_pose_batch = val_seg_batch = None
+                        val_seg_already_probs = None
+                        if gt_cache is not None:
+                            val_pose_batch, val_seg_batch = gt_cache.lookup(
+                                val_indices, device=device
+                            )
+                            val_seg_already_probs = gt_cache.seg_already_probs
+                        val_loss, _val_parts = loss_fn(
+                            rgb_0_v * 255.0, rgb_1_v * 255.0,
+                            pair_tensor[val_indices, 0],
+                            pair_tensor[val_indices, 1],
+                            archive_bytes_proxy, ar_log_p_v,
+                            apply_eval_roundtrip=True,
+                            noise_std=args.noise_std,
+                            gt_pose_batch=val_pose_batch,
+                            gt_seg_batch=val_seg_batch,
+                            gt_seg_already_probs=val_seg_already_probs,
+                        )
+                    val_lag = float(val_loss.detach().item())
+                    model.load_state_dict(orig_state)
+                    model.train()
+                axis_tag = (
+                    "[contest-CPU advisory]" if split_device else "[authority-device]"
+                )
                 print(
                     f"[full] epoch {epoch + 1}/{args.epochs} "
                     f"train_avg_loss={avg_loss:.6f} val_lagrangian={val_lag:.6f} "
-                    f"(best_so_far={best_val_lag:.6f} @ ep{best_epoch + 1})"
+                    f"{axis_tag} (best_so_far={best_val_lag:.6f} @ ep{best_epoch + 1})"
                 )
                 if val_lag < best_val_lag and math.isfinite(val_lag):
                     best_val_lag = val_lag
@@ -800,7 +994,14 @@ def _full_main(args: argparse.Namespace) -> int:
                             "best_val_lagrangian": val_lag,
                             "best_epoch": int(epoch),
                             "saved_at_utc": _utc_now_iso(),
-                            "training_axis_note": "[contest-CUDA] for promotion; auth eval still required",
+                            "train_device": str(train_device),
+                            "authority_device": str(authority_device),
+                            "best_selection_axis": (
+                                "[contest-CPU advisory] (MPS-trained, CPU-authority "
+                                "BEST-selected); NON-PROMOTABLE until upstream/evaluate.py"
+                                if split_device
+                                else "[contest-CUDA] for promotion; auth eval still required"
+                            ),
                         },
                         ckpt_best_path,
                     )
