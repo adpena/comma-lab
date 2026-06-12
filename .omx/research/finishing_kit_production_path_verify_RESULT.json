@@ -1,0 +1,20 @@
+{
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "camera_float_full_delta_slice1": -0.0030633169486410927,
+  "converged_archive": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/best/best_archive.bin",
+  "elapsed_seconds": 147.8,
+  "fitted_constants_from": ".omx/research/finishing_kit_convergence_revalidation_RESULT.json",
+  "full_d_pose": 8.170309714235675e-05,
+  "full_d_seg": 0.0024634466972202063,
+  "full_delta_vs_off_production": -0.002793366581402834,
+  "full_distortion_score": 0.2749284233492748,
+  "n_pairs": 24,
+  "note": "production_vs_camera_float_gap is the \u22641-LSB post-round penalty/bonus on the fitted gain (LENS-2b). If the production gain is materially weaker than the camera-float gain, the \u00b11-bias fit is partly a pre-round artifact.",
+  "off_d_pose": 9.541719434006761e-05,
+  "off_d_seg": 0.002468321161965529,
+  "off_distortion_score": 0.27772178993067764,
+  "pr98_delta_vs_off_production": -0.0024958423980278033,
+  "pr98_distortion_score": 0.27522594753264984,
+  "production_path": "driver.kit_aware_exact_eval (post-round uint8, apply_distortion_kit_to_raw_frames)",
+  "production_vs_camera_float_gap": 0.0002699503672382586
+}

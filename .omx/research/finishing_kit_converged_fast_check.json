@@ -1,0 +1,14 @@
+{
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "baseline_d_pose": 9.541719434006761e-05,
+  "baseline_d_seg": 0.002468321161965529,
+  "baseline_dscore": 0.27772178993067764,
+  "canonical_pr98_delta": 0.0029090787188588707,
+  "decoder": "ep2120 converged",
+  "elapsed_s": 196.3,
+  "mid_basin_n24_pr98_delta": -0.047981,
+  "mid_basin_n24_reference_full_kit_delta": -0.058,
+  "midbasin_pr98_bias_delta": 0.028430529685253392,
+  "midbasin_pr98_d_pose": 0.00034513282783639926,
+  "n": 24
+}
