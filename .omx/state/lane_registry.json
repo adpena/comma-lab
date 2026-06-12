@@ -72896,11 +72896,11 @@
       "id": "lane_torch_vehicle_pr95_readiness_20260611",
       "name": "P2 torch-vehicle (vendored PR95) Modal-readiness: base_ch thread + resume + telemetry + export-verify",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "torch_vehicle adapter package: base_ch threaded, complete resume (decoder+latents+EMA+AdamW+Muon+sched+RNG+curriculum), telemetry JSONL, parse-back BEST tracking, CLI run.py; vendored clone PRISTINE (re-drive via wrapper). 17 NO-FAKE tests pass; ruff clean"
         },
         "real_archive_empirical": {
           "status": false,
@@ -72919,16 +72919,16 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "3-clean-pass adversarial review: P1 found+fixed parse-back-eval fidelity bug + test-premise bug; P2 confirmed line-identical contest objective + real-scorer wires (5s probe); P3 cargo-cult audit hardened zeros-init dead branch to fail-closed; final pass clean 17/17"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "torch_vehicle_pr95_readiness_review_and_resume_landed memo under omx research dir \u2014 adversarial 3-clean-pass verdict + MLX-parity resume + export-verify + readiness gates"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "remote_lane_torch_vehicle_pr95 driver script under scripts dir \u2014 re-launch-safe resumable Modal driver with NVML hygiene, NO-MPS guard, DONE-marker idempotency, COMMA_CHALLENGE_ROOT wiring; bash -n clean"
         }
       },
       "notes": ""
@@ -72982,5 +72982,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T02:17:24Z"
+  "updated_at": "2026-06-12T02:51:34Z"
 }
