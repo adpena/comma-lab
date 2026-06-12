@@ -91,7 +91,7 @@ def _muon_basin_curriculum(epochs: int, eval_every: int, batch_size: int) -> lis
 
 
 def _run_arm(out_dir, *, train_device, video_path, n_pairs, base_channels,
-             curriculum, seed, label, targets_cache):
+             curriculum, seed, label, targets_cache, split_by_head=False):
     from tac.torch_vehicle.driver import (
         TorchVehicleConfig,
         TorchVehicleDriver,
@@ -106,12 +106,14 @@ def _run_arm(out_dir, *, train_device, video_path, n_pairs, base_channels,
         checkpoint_every_epochs=10_000,  # the A/B is short; skip mid-run checkpoints
         device="cpu",                    # AUTHORITY = CPU (the exact metric)
         train_device=train_device,       # GRADIENT backend (cpu or mps)
+        split_by_head=split_by_head,     # SegNet on train_device, PoseNet on CPU auth
         seed=seed,
     )
     # Capped + cached CPU-authority targets (the per-step target precompute is
     # bounded to n_pairs; the cache is reused across both arms + re-runs).
     scorer = RealScorerContext(
         video_path, device="cpu", train_device=train_device,
+        split_by_head=split_by_head,
         max_pairs=int(n_pairs), targets_cache=targets_cache,
     )
     driver = TorchVehicleDriver(
@@ -152,6 +154,11 @@ def main() -> int:
                     default="experiments/results/torch_vehicle_mps_descent_ab")
     ap.add_argument("--out-json",
                     default="experiments/results/torch_vehicle_mps_descent_ab/verdict.json")
+    ap.add_argument("--candidate-mode", default="full_mps",
+                    choices=["full_mps", "split_by_head"],
+                    help="full_mps: candidate runs the WHOLE forward on MPS (the prior "
+                         "REJECT). split_by_head: SegNet on MPS, PoseNet on the CPU "
+                         "authority, cotangents summed (the pose-axis salvage).")
     args = ap.parse_args()
     torch.set_num_threads(min(8, torch.get_num_threads()))
 
@@ -177,12 +184,17 @@ def main() -> int:
         curriculum=curriculum, seed=args.seed, label="cpu_grad",
         targets_cache=targets_cache)
 
-    print("\n=== ARM B: train_device=mps (FAST gradient, candidate) ===", flush=True)
+    split_by_head = args.candidate_mode == "split_by_head"
+    arm_b_label = "split_by_head_grad" if split_by_head else "mps_grad"
+    arm_b_dir = "arm_split_by_head" if split_by_head else "arm_mps"
+    print(f"\n=== ARM B: train_device=mps candidate_mode={args.candidate_mode} "
+          f"({'SegNet=MPS / PoseNet=CPU-authority' if split_by_head else 'WHOLE forward MPS'}) ===",
+          flush=True)
     traj_b, spe_b, sum_b = _run_arm(
-        out_root / "arm_mps", train_device="mps", video_path=video_path,
+        out_root / arm_b_dir, train_device="mps", video_path=video_path,
         n_pairs=args.n_pairs, base_channels=args.base_channels,
-        curriculum=curriculum, seed=args.seed, label="mps_grad",
-        targets_cache=targets_cache)
+        curriculum=curriculum, seed=args.seed, label=arm_b_label,
+        targets_cache=targets_cache, split_by_head=split_by_head)
 
     # Adjudicate through the CANONICAL both-terms acceptance gate.
     from tac.mlx_pr95_port.speedup_acceptance_gate import evaluate_descent_equivalence
@@ -208,8 +220,9 @@ def main() -> int:
 
     out = {
         "config": vars(args),
-        "arm_cpu_grad": traj_a, "arm_mps_grad": traj_b,
-        "cpu_grad_s_per_epoch": spe_a, "mps_grad_s_per_epoch": spe_b,
+        "candidate_mode": args.candidate_mode,
+        "arm_cpu_grad": traj_a, "arm_candidate": traj_b,
+        "cpu_grad_s_per_epoch": spe_a, "candidate_s_per_epoch": spe_b,
         "epoch_speedup": spe_a / max(spe_b, 1e-9),
         "gate_passed": verdict.passed,
         "gate_generalization_warning": verdict.generalization_warning,
