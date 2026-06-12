@@ -18,14 +18,32 @@ So "PR110" and "PR112" are not two separate idle bolt-ons; they are **one shippe
 FP11 packet grammar. The re-activation the operator wants is **applying that whole recode stack to the base_ch=20
 substrate's exported packet**, not re-discovering PR112.
 
-**The substrate-portability axis is the whole game.** A bolt-on is reusable on base_ch=20 iff it either (a) recodes
-the FP11/PR101 packet sections (decoder-weight blob, per-pair latent blob, selector) — which base_ch=20 inherits **as
-long as it exports into the FP11 grammar (HNeRV INT8 decoder weights + 28-d per-pair latents + sidecar)** — OR (b)
-operates on the scorer-visible/invisible pixel DOF (frame perturbations, null-space, channel bias) which are
-**grammar-independent and apply to ANY renderer output**. The base_ch=20 HNeRV decoder is structurally the SAME class
-as the PR101/PR110 decoder (just a smaller channel base), so the FP11-grammar bolt-ons port directly once the export
-contract is wired. **The single integration prerequisite for ~half the stack is: base_ch=20 must emit the FP11/PR101
-packet (split-brotli decoder blob + LZMA latent blob + sidecar).** That export contract is the gating dependency.
+**The substrate-portability axis is the whole game — AND base_ch=20 does NOT use the FP11 grammar.** The base_ch=20
+vehicle is the **capstone VQ-NeRV** (`tac.capstone_vq_nerv`): its archive (`build_capstone_archive_bytes`) is a
+DIFFERENT grammar — VQ-index codebook + stored per-pair latent + brotli-packed decoder weights — NOT the PR101/PR110
+FP11 packet (split-brotli decoder blob + LZMA1 latent blob + FECa selector + sidecar). This is load-bearing:
+
+- **The FP11-grammar recodes (R1/R2/R3/T1/T4/T8/T9) do NOT port for free.** PR#112's `ctx_range_coder` and
+  `pr110_payload_entropy_recode` are hard-wired to the FP11 section layout (`split_fp11_member`, FECa magic, the
+  PR#101 `LATENT_BLOB_LEN=15387` / split-brotli decoder constants). To reuse them on base_ch=20 you must EITHER
+  (a) **re-target the coder to the capstone grammar's analogous sections** (the per-tensor adaptive range coder is
+  grammar-agnostic in PRINCIPLE — it codes a weight tensor and a latent stream — but the materializer that splits/
+  joins the packet must be rewritten for the capstone container), OR (b) **transcode capstone → FP11** (only if the
+  capstone decoder maps cleanly onto the PR101 HNeRV decoder layout, which is NOT guaranteed for a VQ-index codebook).
+  Option (a) is the realistic path: lift the *coder primitive* (`ctx_range_coder`), drop the *FP11 materializer*, and
+  write a `capstone_payload_entropy_recode` that splits the capstone container, range-codes its weight + latent
+  sections, and byte-closes. ~half a day of materializer work — the coder math is done.
+- **The pixel/scorer-DOF bolt-ons (S12, PR98, T10, LeverD, frame0-pose-selector, residual-basis sidecars) DO port
+  for free.** They operate on the decoded RGB frames / the scorer's null space / the renderer's own margin field —
+  all grammar-independent. Any renderer output qualifies, capstone included.
+- **The HNeRV-decoder bolt-ons (WRQ, T11) port at the WEIGHT-TENSOR level.** `score_aware_weight_requant` re-quants
+  decoder TENSORS by scorer sensitivity and re-packs into the archive; it is written for "the frontier HNeRV decoder
+  weights" but the mechanism is per-tensor and applies to the capstone decoder tensors once the re-pack targets the
+  capstone container. T11 (channel prune + finetune) is fully substrate-agnostic at the arch level.
+
+**So the gating integration prerequisite is NOT "export to FP11" — it is "write the capstone-grammar materializer that
+the lifted `ctx_range_coder` + `score_aware_weight_requant` re-pack into."** That single materializer unlocks the
+lossless-rate + weight-requant half of the stack on the capstone container. The pixel/scorer-DOF half needs no port.
 
 ---
 
@@ -86,9 +104,12 @@ mutually-orthogonal LOSSLESS rate moves as ONE batch (proof-by-construction = id
 byte savings simply sum), then sequential-admit distortion moves with re-measure + ledger debit, measure commutators only
 for same-section/same-region/both-frame pairs.
 
-**Phase 0 — EXPORT CONTRACT (the gating prerequisite).** Wire base_ch=20 → FP11/PR101 packet (split-brotli decoder blob
-+ LZMA latent blob + sidecar). Without this, the FP11-grammar half of the stack (R1/R2/R3/T1/T4/T8/T9) cannot attach.
-This is the single highest-priority integration item; it unlocks the entire lossless rate stack.
+**Phase 0 — CAPSTONE-GRAMMAR MATERIALIZER (the gating prerequisite).** base_ch=20 ships the capstone VQ-NeRV container,
+NOT FP11. Write a `capstone_payload_entropy_recode` materializer that splits the capstone container, runs the LIFTED
+`ctx_range_coder` primitive (the PR#112 coder math, grammar-agnostic) on the capstone weight + latent sections, and
+re-packs `score_aware_weight_requant`'s re-quantized tensors into the capstone container, byte-closed + lossless-gated.
+The coder + requant math already exist; only the capstone split/join materializer is missing. This single tool unlocks
+R1/R2/T1/T8/T9 + WRQ on the capstone grammar. The pixel/scorer-DOF moves (S12/PR98/T10/LeverD/sidecars) need NO port.
 
 **Phase 1 — THE FREE LOSSLESS RATE BATCH (one paired eval to ratify).** All orthogonal (disjoint sections, zero distortion):
 
