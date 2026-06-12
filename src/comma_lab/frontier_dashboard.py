@@ -199,6 +199,18 @@ def _normalize_row(row: dict) -> dict | None:
     }
 
 
+def _read_run_total_epochs(run_dir: Path) -> int | None:
+    """Prefer the run's OWN configured curriculum length so the progress bar/ETA
+    track whatever the run is set to (e.g. the full 29,650-epoch PR95 curriculum,
+    or an open-ended indefinite run) rather than a fixed dashboard default."""
+    try:
+        summ = json.loads((run_dir / "torch_vehicle_summary.json").read_text())
+        v = (summ.get("run_meta") or {}).get("total_epoch_budget")
+        return int(v) if v else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _score(d_seg: float | None, d_pose: float | None,
            archive_bytes: int | None) -> tuple[float | None, bool]:
     """Return (S, is_full). Full contest S needs archive_bytes; otherwise a
@@ -253,7 +265,8 @@ def load_run(path: Path, total_epochs: int) -> dict[str, Any]:
     cur_epoch = latest_train["epoch"] if latest_train else 0
     elapsed_s = (latest_train.get("elapsed_s") if latest_train else None) or max(time.time() - started_unix, 0.0)
     avg_s_per_epoch = (elapsed_s / cur_epoch) if cur_epoch > 0 else None
-    total = max(total_epochs, cur_epoch)
+    run_total = _read_run_total_epochs(path.parent)
+    total = max(run_total or total_epochs, cur_epoch)
     eta_s = (avg_s_per_epoch * max(total - cur_epoch, 0)) if avg_s_per_epoch else None
     progress = (cur_epoch / total) if total else 0.0
 
