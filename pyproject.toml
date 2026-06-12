@@ -137,6 +137,12 @@ analysis = [
     "polars>=0.20",
 ]
 notebooks = ["marimo>=0.3"]
+dashboard = [
+    # comma_lab.frontier_dashboard — realtime browser view of the canonical
+    # frontier pointer + live training-run telemetry. Operator-facing; NOT a
+    # contest runtime dependency. Install with `uv pip install -e '.[dashboard]'`.
+    "flask>=3,<4",
+]
 # 2026-04-26 — canonical runtime extras for GPU training/eval deploys.
 # scripts/remote_*_bootstrap.sh installs `tac[runtime]` so adding a new
 # runtime dep means editing ONE file (this one), not every bootstrap.
