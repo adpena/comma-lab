@@ -73183,6 +73183,47 @@
         }
       },
       "notes": "Infrastructure/enabler: --train-device mps split mirrors launch_split_by_head_basin.py. MPS 28.8x faster/epoch than CPU on the Cool-Chic gradient. MPS is NEVER score authority (CPU authority for BEST-selection + auth-eval). research_only=true; NON-PROMOTABLE; no score claim (latents un-entropy-coded => 18.4MB archive dominates rate). Reactivation: AR-prior arithmetic-coding of latents (the deferred #1 optimization). Commit 7e103ad76."
+    },
+    {
+      "id": "lane_l2_combined_seg_pose_ab_20260612",
+      "name": "L2 combined seg-surrogate + pose-FiLM attacks A/B (base_ch=20 basin fork)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/launch_l2_combined_attacks.py self-test PASS: both attacks active (seg_surrogate=soft_cosine + pose_film_enabled), byte-close WITH pose section, archive parses+inflates (6,2,3,384,512); 22 wire-in tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -73192,5 +73233,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T12:30:51Z"
+  "updated_at": "2026-06-12T14:18:07Z"
 }
