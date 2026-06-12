@@ -56,21 +56,31 @@ advisory number exists · `UNBUILT` not started.
   its eval rows are the empirical SEAL evidence.
 
 ## ITEM B — L2 rate levers (1 rate-surrogate, 4 score-aware QAT) + variable-level codec
-- **State:** Lever 1 BUILT+WIRED (MED-1 `codec_scan_order` fix → Spearman 0.90/0.999 vs real
-  brotli). Lever 4 BUILT+WIRED but **net-score BYTE_DIRECTION_ONLY** (vendored 127-requant washes
-  the −3263 B snap to −7 B trained; advisory Δ +0.000237 WORSE — honestly logged). **The fix IS
-  the variable-level codec:** `src/tac/losses/variable_level_codec.py` BUILT (9 NO-FAKE tests,
-  MEASURED −789..−1721 B real deployed win surviving inflate; all-uniform builder byte-identical
-  73527==73527). REVIEWED 0/3 (codec not yet recursively reviewed; not yet driver-wired).
+- **State (CORRECTED 2026-06-12 post-engineering-audit — supersedes the earlier "−0.0005..−0.0011
+  ready win" framing, which was an OVERSTATEMENT):** Lever 1 BUILT+WIRED (MED-1 `codec_scan_order`
+  fix → Spearman 0.90/0.999 vs real brotli). Lever 4 BUILT+WIRED but **net-score BYTE_DIRECTION_ONLY**
+  (CERTIFIED real negative: vendored 127-requant ALWAYS re-quantizes, so a train-only grid is erased;
+  −3263 B snap → −7 B trained; mechanism structural). The variable-level codec
+  (`src/tac/losses/variable_level_codec.py`, 9 NO-FAKE tests) fixes the ERASURE — the per-tensor grid
+  IS the deployed grid, so the byte win SURVIVES inflate (unlike Lever-4). **BUT the MEASURED net is
+  NOT yet a win:** `probe_variable_level_codec_byte_distortion.py` on the real basin EMA + real scorer
+  returns **BYTE_WIN_DISTORTION_NEAR_BREAKEVEN** — byte −789..−1721 B but **net advisory S Δ
+  = +0.001053 / +0.006030 (WORSE)** because coarsening 27/28 tensors hurts distortion (the d_pose
+  sqrt-term near the low operating point). REVIEWED 0/3.
 - **`[CORE]`** the variable-level reverse-waterfill operates on weight tensors + a sensitivity
   vector — agnostic.
 - **`[ADAPTER]`** `build_decoder_blob_variable_or_vendored` IS the thin base_ch20 grammar adapter
   (1-byte format flag + per-tensor `u8 n_levels`); default-preserving (uniform ⇒ vendored bytes).
-- **GATE TO SEAL:** (1) wire `build_decoder_blob_variable_or_vendored` into the driver's archive
-  build behind a default-OFF flag (byte-identical when off); (2) supply the score-aware sensitivity
-  allocation; (3) recursive review (3 clean) of the codec + wire-in; (4) MEASURE the deployed net
-  on a real base_ch20 archive.
-- **−0.0005 to −0.0011 score (a medal-gap fraction — substantial at contest scale).**
+- **GATE TO NET-SCORE WIN (the codec is a real BYTE lever; the SCORE win is TRAINING-GATED):** two
+  untried reactivation paths, neither yet attempted — (a) **tighten the allocation**: coarsen ONLY
+  the truly-lowest-sensitivity tensors and keep the pose-sensitive ones at 127, search for a
+  net-non-worse operating point on the real scorer (no retrain); (b) **train the decoder at the
+  variable grid** (QAT with the variable grid as the deployed grid, eval_roundtrip-style, so the
+  decoder learns coarse-grid robustness and RECOVERS the distortion). Path (b) folds into a
+  distortion-arm QAT stage — it is NOT a standalone bolt-on. Then: recursive review (3 clean) +
+  MEASURE deployed net on a real base_ch20 archive.
+- **HONEST VALUE: byte lever −789..−1721 B is real and survives inflate, but NET score is currently
+  +worse. Expected net win is 0 until path (a) or (b) lands — do NOT count it in the stack yet.**
 
 ## ITEM C — L3 distortion finishing-kit (PR98 color-bias / T10 boundary / S12 null-preimage / Lever-D margin-residual)
 - **State:** BUILDING (background agent `ae43ac8d`). `distortion_finishing_kit.py` + probe
