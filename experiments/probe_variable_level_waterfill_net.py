@@ -241,6 +241,17 @@ def main(argv: list[str] | None = None) -> int:
         verbose=not args.json,
     )
 
+    # Persist the (expensive) measured RD table so a re-solve (e.g. after an allocator fix)
+    # is FREE — the RD measurement is the cost; re-solving + re-verifying KKT is instant.
+    rd_dump = _REPO_ROOT / ".omx/research" / f"track_a_itemB_waterfill_rd_table_rd{rd_n}_20260612.json"
+    try:
+        rd_dump.write_text(json.dumps(
+            {t: {str(k): list(v) for k, v in curve.items()} for t, curve in rd_table.items()},
+            indent=2,
+        ))
+    except OSError:
+        pass
+
     # --- solve the net-maximizing waterfill ---
     alloc = solve_waterfill_allocation(rd_table, net_stop=True)
     kkt_holds, kkt_msg = verify_kkt_marginal_equalization(alloc)

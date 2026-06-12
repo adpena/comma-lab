@@ -26,6 +26,7 @@ import math
 from tac.losses.variable_level_waterfill_allocator import (
     DEFAULT_LEVEL_GRID,
     byte_saving_score_value,
+    lower_convex_hull_levels,
     net_score_delta_from_components,
     solve_waterfill_allocation,
     sqrt_pose_term,
@@ -373,6 +374,62 @@ def test_verifier_rejects_accepted_step_above_byte_value():
     holds, msg = verify_kkt_marginal_equalization(fake)
     assert not holds, f"verifier wrongly ACCEPTED an above-byte-value step: {msg}"
     assert "exceeds byte value" in msg
+
+
+def test_lower_convex_hull_drops_dominated_levels():
+    """``lower_convex_hull_levels`` drops a DOMINATED (above-the-hull) intermediate level and
+    keeps the convex vertices — the R8 non-convexity fix."""
+    bv = byte_saving_score_value(1.0)
+    # 127:(0,0), 96:(1000, 5*bv), 64:(1100, 50*bv) DOMINATED, 16:(2000, 100*bv).
+    # 96 lies ABOVE the line from 127 to 16? slope 127->16 = 100bv/2000 = 0.05bv/B;
+    # at byte 1000 the hull line is 50bv; 96's dist 5bv is BELOW -> 96 is a hull vertex.
+    # Make 64 dominated: put it ABOVE the 96->16 segment.
+    curve = {127: (0.0, 0.0), 96: (1000.0, bv * 5), 64: (1100.0, bv * 90),
+             16: (2000.0, bv * 50)}
+    hull = lower_convex_hull_levels(curve)
+    # 64 (1100, 90bv) is above the 96(1000,5bv)->16(2000,50bv) segment -> dropped.
+    assert 64 not in hull, f"dominated level 64 not dropped from hull: {hull}"
+    assert 127 in hull and 96 in hull and 16 in hull
+
+
+def test_hull_restores_monotone_on_nonconvex_curve():
+    """R8 REGRESSION: a NON-CONVEX RD curve (the run2 failure mode) is convexified by the
+    hull so the greedy's accepted marginals ARE monotone and the KKT verifier PASSES — the
+    bug that made run2 report kkt_holds=false is fixed."""
+    bv = byte_saving_score_value(1.0)
+    # two tensors with non-convex raw curves (a coarser hop cheaper-per-byte than a finer):
+    # tensor a: 96 expensive-per-byte, 64 cheap-per-byte (non-convex) -> hull skips 96.
+    a = {127: (0.0, 0.0), 96: (200.0, bv * 80), 64: (1200.0, bv * 120),
+         48: (1600.0, bv * 300), 32: (1900.0, bv * 900), 16: (2100.0, bv * 3000)}
+    b = {127: (0.0, 0.0), 96: (300.0, bv * 30), 64: (1000.0, bv * 100),
+         48: (1400.0, bv * 250), 32: (1700.0, bv * 800), 16: (1900.0, bv * 2500)}
+    rd_table = {"a": a, "b": b}
+    alloc = solve_waterfill_allocation(rd_table, net_stop=True)
+    holds, msg = verify_kkt_marginal_equalization(alloc)
+    assert holds, f"hull did NOT restore the KKT certificate on a non-convex curve: {msg}"
+    accepted = [s for s in alloc.trace if s.accepted]
+    ratios = [s.marginal_ratio for s in accepted]
+    assert all(ratios[i] <= ratios[i + 1] + 1e-12 for i in range(len(ratios) - 1)), (
+        f"hull did not restore monotone marginals: {ratios}"
+    )
+
+
+def test_hull_allocation_dominates_raw_on_nonconvex_net():
+    """The hull-based allocation achieves a net AT LEAST AS GOOD as any raw single-hop
+    allocation on a non-convex curve (it can SKIP a dominated level to reach a cheaper one)."""
+    bv = byte_saving_score_value(1.0)
+    # raw greedy would stop at 96 (expensive first hop); hull skips to 64 (cheaper overall).
+    curve = {127: (0.0, 0.0), 96: (100.0, bv * 90), 64: (1500.0, bv * 200),
+             48: (1700.0, bv * 600), 32: (1800.0, bv * 1500), 16: (1850.0, bv * 4000)}
+    rd_table = {"t": curve}
+    alloc = solve_waterfill_allocation(rd_table, net_stop=True)
+    # the hull lets the greedy reach 64 (net-negative) even though the 127->96 hop alone
+    # is net-positive (90bv/100B > bv). Confirm it coarsened past 96.
+    assert alloc.levels["t"] <= 64, (
+        f"hull allocation stopped at {alloc.levels['t']} — did not skip the dominated 96 "
+        "level to reach the net-improving 64 level"
+    )
+    assert alloc.net_score_delta < 0
 
 
 def test_default_level_grid_is_descending_unique():

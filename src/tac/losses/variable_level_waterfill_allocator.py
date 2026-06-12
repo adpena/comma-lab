@@ -135,34 +135,73 @@ class WaterfillAllocation:
     n_coarsened: int = field(default=0)
 
 
+def lower_convex_hull_levels(curve: dict[int, tuple[float, float]]) -> list[int]:
+    """Per-tensor LOWER CONVEX HULL of the RD points (R8 review fix for non-convex curves).
+
+    Real brotli/scorer RD curves are convex-ISH but NOT guaranteed: a coarser grid can
+    have a LOWER marginal distortion-per-byte than a finer one (brotli alignment + the
+    discrete grid). A greedy single-hop walk over the RAW points can then (a) stop at a
+    DOMINATED level (never optimal) and (b) produce a non-monotone marginal sequence that
+    spuriously trips the KKT check. The fix is to restrict each tensor to its LOWER CONVEX
+    HULL in ``(byte_saving, dist_cost)`` space: the hull vertices are exactly the levels
+    that can be optimal at SOME Lagrange multiplier (byte value). Coarsening ALONG the hull
+    gives strictly-increasing marginal ``dDist/dByte`` PER TENSOR (the correct convex
+    structure), so the Lagrangian marginal-allocation greedy over hull segments is globally
+    optimal for the separable problem (Everett 1963; Cover & Thomas Ch.10 reverse
+    waterfilling on the convexified RD curve).
+
+    Returns the SORTED-BY-BYTE-SAVING list of hull level counts (always includes the 127
+    baseline at (0,0); a dominated intermediate level is dropped). Points are ordered by
+    increasing byte_saving; the hull keeps only vertices where the incremental slope
+    strictly increases (a lower convex boundary).
+    """
+    # points: (byte_saving, dist_cost, level), sorted by byte_saving ascending.
+    pts = sorted(((b, d, lv) for lv, (b, d) in curve.items()), key=lambda x: (x[0], x[1]))
+    if len(pts) <= 2:
+        return [lv for _b, _d, lv in pts]
+    hull: list[tuple[float, float, int]] = []
+    for b, d, lv in pts:
+        # maintain a LOWER convex hull: pop while the last turn is not a left (convex) turn.
+        while len(hull) >= 2:
+            (b0, d0, _l0), (b1, d1, _l1) = hull[-2], hull[-1]
+            # cross product of (p1-p0) x (p_new-p0); <= 0 means p1 is above/on the lower hull
+            cross = (b1 - b0) * (d - d0) - (d1 - d0) * (b - b0)
+            if cross <= 1e-18:
+                hull.pop()
+            else:
+                break
+        hull.append((b, d, lv))
+    return [lv for _b, _d, lv in hull]
+
+
 def _candidate_steps(
     rd_table: dict[str, dict[int, tuple[float, float]]],
     current: dict[str, int],
     level_grid: tuple[int, ...],
+    hulls: dict[str, list[int]] | None = None,
 ) -> list[tuple[str, int, int, float, float]]:
-    """Enumerate the next-coarser MARGINAL step for every tensor not yet at the floor.
+    """Enumerate the next-coarser HULL MARGINAL step for every tensor not yet at the floor.
 
-    For tensor ``t`` currently at level ``L``, the candidate is the NEXT coarser level
-    ``L'`` in ``level_grid`` (the smallest level < L present in the grid). The marginal
-    byte saving / dist cost is the DIFFERENCE between the RD values at ``L'`` and ``L``
-    (so a multi-step path is the sum of its single-step marginals — the greedy walks the
-    convex hull one step at a time). Returns ``[(tensor, L, L', d_byte, d_dist), ...]``
-    with ``d_byte`` POSITIVE for a saving and ``d_dist`` the marginal distortion ΔS_dist.
+    For tensor ``t`` currently at level ``L``, the candidate is the next coarser level on
+    ``t``'s LOWER CONVEX HULL (``hulls[t]``) — NOT merely the next grid level. The marginal
+    byte saving / dist cost is the DIFFERENCE between the hull RD values at the next hull
+    level and ``L`` (so a hop can SKIP a dominated grid level — the convex-hull fix). Hull
+    marginals are strictly increasing per tensor, so the greedy walks the convex hull
+    correctly. Returns ``[(tensor, L, L', d_byte, d_dist), ...]`` with ``d_byte`` POSITIVE
+    for a saving and ``d_dist`` the marginal distortion ΔS_dist.
     """
-    grid_sorted = sorted(set(level_grid), reverse=True)  # 127, 96, 64, ... 16
     steps: list[tuple[str, int, int, float, float]] = []
     for tensor, cur in current.items():
         curve = rd_table.get(tensor)
         if curve is None:
             continue
-        # the next coarser grid level strictly below the current level
-        coarser = [lv for lv in grid_sorted if lv < cur and lv in curve]
-        if not coarser:
+        hull = hulls[tensor] if hulls is not None else lower_convex_hull_levels(curve)
+        # hull is sorted by byte_saving ascending == level descending (127 first). Find the
+        # next hull level strictly coarser (smaller) than the current level.
+        coarser = [lv for lv in hull if lv < cur]
+        if not coarser or cur not in curve:
             continue
-        nxt = coarser[0]
-        if cur not in curve:
-            # current level must be measured to form a marginal (127 is always measured)
-            continue
+        nxt = max(coarser)  # the immediately-next hull vertex below the current level
         byte_cur, dist_cur = curve[cur]
         byte_nxt, dist_nxt = curve[nxt]
         d_byte = byte_nxt - byte_cur  # cumulative saving is larger at coarser -> positive
@@ -197,9 +236,20 @@ def solve_waterfill_allocation(
     Steps with ``d_byte <= 0`` (a coarser grid that does NOT save bytes — possible if
     brotli is non-monotone on a tiny tensor) are SKIPPED (infinite marginal ratio). The
     result records the KKT-equalization bounds + the full trace for the verifier.
+
+    CONVEX-HULL FIX (R8 review). Each tensor is restricted to its LOWER CONVEX HULL
+    (``lower_convex_hull_levels``) so the greedy walks the convexified RD curve: hull
+    marginals are strictly increasing PER TENSOR, dominated grid levels are skipped, and
+    the Lagrangian marginal-allocation greedy over hull segments is globally optimal for the
+    separable problem (Everett 1963). Without the hull, real non-convex brotli curves made
+    the greedy stop at dominated levels AND spuriously trip the KKT monotone check.
     """
     current: dict[str, int] = {t: max(level_grid) for t in rd_table}
     base_level = max(level_grid)
+    # precompute each tensor's lower convex hull ONCE (the convex-hull fix).
+    hulls: dict[str, list[int]] = {
+        t: lower_convex_hull_levels(curve) for t, curve in rd_table.items()
+    }
     # running cumulative (vs 127 baseline)
     cum_byte = 0.0
     cum_dist = 0.0
@@ -209,7 +259,7 @@ def solve_waterfill_allocation(
     byte_value = byte_saving_score_value(1.0)  # score value per single byte = 25/N
 
     while True:
-        cands = _candidate_steps(rd_table, current, level_grid)
+        cands = _candidate_steps(rd_table, current, level_grid, hulls)
         # marginal ratio dist/byte; skip non-saving steps (d_byte<=0 -> never beneficial)
         scored: list[tuple[float, str, int, int, float, float]] = []
         for tensor, cur, nxt, d_byte, d_dist in cands:
@@ -289,19 +339,31 @@ def verify_kkt_marginal_equalization(alloc: WaterfillAllocation) -> tuple[bool, 
     constant ratio. A FAKE allocator that returned a fixed level for every tensor would
     have a DEGENERATE trace (one ratio, no frontier) and fail the "distinct marginals
     walking up to the boundary" structure.
+
+    R8 REVIEW NOTE (the monotone certificate is now VALID). The global greedy sequence is
+    monotone non-decreasing BECAUSE each tensor is restricted to its lower convex hull
+    (``solve_waterfill_allocation`` precomputes ``lower_convex_hull_levels``): per-tensor
+    hull marginals strictly increase, and the global-cheapest-next rule then yields a
+    monotone GLOBAL sequence (after taking tensor t's hull hop, t's next hull marginal ≥ the
+    one just taken AND every other tensor's available marginal was ≥ the global min just
+    taken). A monotone VIOLATION therefore now signals a HULL-CONSTRUCTION bug (raw
+    non-convex points leaked into the greedy), NOT merely a non-convex input — which is why
+    it is a hard FAIL.
     """
     accepted = [s for s in alloc.trace if s.accepted]
     bv = alloc.byte_value_per_byte
     if not accepted:
         return True, "no coarsening accepted (allocation is all-127); KKT trivially holds"
-    # 1. accepted marginals are sorted non-decreasing (greedy cheapest-first => the
-    #    Lagrange-dual ordering).
+    # 1. accepted marginals are sorted non-decreasing. With the per-tensor lower-convex-hull
+    #    restriction this is GUARANTEED for the global greedy sequence (R8 fix); a violation
+    #    means raw non-convex points leaked into the greedy (a hull-construction bug).
     ratios = [s.marginal_ratio for s in accepted]
     monotone = all(ratios[i] <= ratios[i + 1] + 1e-12 for i in range(len(ratios) - 1))
     if not monotone:
         return False, (
-            "accepted marginal ratios are NOT monotone non-decreasing — the greedy did "
-            f"not walk the convex hull cheapest-first: {ratios[:6]}..."
+            "accepted marginal ratios are NOT monotone non-decreasing — the convex-hull "
+            "restriction failed to convexify the per-tensor curves (a hull-construction "
+            f"bug, since hull marginals must increase monotonically): {ratios[:6]}..."
         )
     # 2. every accepted marginal <= byte value (net_stop boundary)
     if alloc.kkt_min_rejected_ratio is not None:
