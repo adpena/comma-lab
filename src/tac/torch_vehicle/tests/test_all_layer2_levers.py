@@ -578,29 +578,230 @@ def test_seg_anneal_gradient_floor_collapses_seg_grad_at_cold_t():
 
 
 def test_seg_anneal_gradient_alive_guard_matches_floor_and_live_schedule():
-    """R10 self-protection guard — ``seg_anneal_temperature_is_gradient_alive`` flips
-    EXACTLY at ``SEG_ANNEAL_GRADIENT_FLOOR_T`` (≈0.1), and the LIVE arm's cosine
-    schedule (T: 1.0→0.05 over a stage) spends the MAJORITY of its epochs in the
-    gradient-ALIVE regime (so the seg lever is not wasted) and only goes cold-dead in
-    a small tail (the intended late lock-in). A regression that lowered the floor or
-    front-loaded the cold tail would FAIL here."""
-    # The guard is a clean threshold at the floor.
+    """R10 self-protection guard, R12-CORRECTED — ``seg_anneal_temperature_is_gradient_
+    alive`` flips EXACTLY at ``SEG_ANNEAL_GRADIENT_FLOOR_T`` (= 0.3, the R12-corrected
+    USABLE knee), and the LIVE arm's cosine schedule (T: 1.0→0.05 over a stage) spends
+    the MAJORITY of its epochs in the gradient-ALIVE regime (so the seg lever is not
+    wasted) and goes cold-dead in the tail (the intended late lock-in). A regression
+    that lowered the floor back toward the mislabeling 0.1 OR front-loaded the cold tail
+    would FAIL here.
+
+    R12 FINDING (the floor was MISCALIBRATED): R10 set the floor to 0.1, but the
+    measured combined gradient at T=0.1 is ~10 orders below the warm-T norm (R12 sweep:
+    1.9e-10) — R10 ITSELF labeled T=0.1 "≈ dead" (|grad|≈5e-12), yet the guard called
+    0.1 "alive". The floor is corrected to 0.3 (ratio 1.7e-3, the last temp within ~2
+    orders of warm). The deep-dead points the OLD floor mislabeled (0.2, 0.15, 0.12,
+    0.1) must now read DEAD."""
+    # The guard is a clean threshold at the CORRECTED floor (0.3, not 0.1).
+    assert SEG_ANNEAL_GRADIENT_FLOOR_T == 0.3, (
+        "R12 corrected the seg-anneal gradient floor to 0.3 (the measured usable knee); "
+        f"got {SEG_ANNEAL_GRADIENT_FLOOR_T} — a regression toward the mislabeling 0.1?"
+    )
     assert seg_anneal_temperature_is_gradient_alive(SEG_ANNEAL_GRADIENT_FLOOR_T) is True
     assert seg_anneal_temperature_is_gradient_alive(SEG_ANNEAL_GRADIENT_FLOOR_T - 1e-6) is False
     assert seg_anneal_temperature_is_gradient_alive(1.0) is True
-    assert seg_anneal_temperature_is_gradient_alive(0.05) is False  # the live tail IS dead
-    # The live arm's schedule: T 1.0→0.05 over a 100-epoch stage. The cosine keeps T
-    # high (gradient alive) for the FIRST HALF — wrong pixels get signal while abundant.
+    assert seg_anneal_temperature_is_gradient_alive(0.5) is True   # within ~1.2 orders of warm
+    # The deep-dead temperatures the OLD 0.1 floor MISLABELED as alive — now DEAD:
+    for t_dead in (0.2, 0.15, 0.12, 0.1, 0.08, 0.05):
+        assert seg_anneal_temperature_is_gradient_alive(t_dead) is False, (
+            f"T={t_dead} should be classified DEAD at the R12 floor 0.3 (the OLD 0.1 floor "
+            "mislabeled it alive while its gradient was 5–20 orders below warm)"
+        )
+    # The live arm's schedule: T 1.0→0.05 over a 100-epoch stage. At the corrected floor
+    # 0.3 the cosine keeps 66/100 epochs alive (was 85/100 at the mislabeling 0.1 floor)
+    # and goes dead for the last 34 — a larger, MORE HONEST cold tail.
     spec = _stage(epochs=100, seg_surrogate="soft_cosine",
                   seg_temperature=1.0, seg_temperature_end=0.05)
     temps = [seg_temperature_for_epoch(spec, e) for e in range(100)]
     alive = sum(1 for t in temps if seg_anneal_temperature_is_gradient_alive(t))
+    assert alive == 66, (
+        f"expected 66/100 alive epochs at the R12 floor 0.3 for the live 1.0→0.05 "
+        f"schedule, got {alive} (a floor or anneal regression)"
+    )
+    # The majority is still alive (the seg lever is not wasted for most of the stage).
     assert alive >= 50, (
         f"only {alive}/100 epochs are gradient-alive — the cold tail is front-loaded "
         "(the seg lever would be wasted before the argmax converges)"
     )
     # The very end IS cold-dead (the intended argmax lock-in).
     assert not seg_anneal_temperature_is_gradient_alive(temps[-1])
+
+
+# --- R12: the COMBINED (Lever-5 margin × Lever-2 surrogate) gradient floor + the ---
+# --- multiply-a-dead-gradient property (Lever-5 cannot rescue the cold surrogate). ---
+def test_r12_floor_is_at_usable_knee_not_dead_zone_edge():
+    """R12 finding guard — the corrected floor (0.3) marks where the combined seg
+    gradient is still USABLE (within ~3 orders of the warm-T norm), NOT a dead-zone
+    edge where it is already 10 orders down (the mislabeling R12 found). On the SAME
+    saturated logits used by the R10 floor test, the gradient ratio AT the floor (0.3)
+    must be DRAMATICALLY larger than at the OLD floor (0.1) — proving the corrected
+    boundary actually separates usable from dead.
+
+    NO-FAKE: measures the ACTUAL gradient-norm ratio at three temperatures (0.3 / 0.2 /
+    0.1) on real soft-cosine backprop. A constant surrogate gives 0 grad everywhere
+    (rejected by the >0 assertions); a T-invariant one gives ratio 1 (rejected by the
+    monotone-collapse assertion)."""
+    g = torch.Generator().manual_seed(7)
+    B, H, W = 2, 8, 12
+    base = torch.randn(B, _SEG_NUM_CLASSES, H, W, generator=g)
+    base[:, 0] += 12.0  # confident class-0 (large margin) — the saturated cold regime
+    spec = _stage(seg_surrogate="soft_cosine", margin_weight_tau=2.0)  # Lever-5 ON (live)
+    targets = torch.randint(0, _SEG_NUM_CLASSES, (B, H, W), generator=g, dtype=torch.int64)
+
+    def grad_norm_at(temp):
+        x = base.clone().requires_grad_(True)
+        _seg_loss_for_spec(spec, x, targets, temperature=temp).backward()
+        return float(x.grad.norm())
+
+    gn_warm = grad_norm_at(1.0)
+    gn_floor = grad_norm_at(SEG_ANNEAL_GRADIENT_FLOOR_T)  # 0.3
+    gn_old = grad_norm_at(0.1)  # the OLD mislabeling floor
+    assert gn_warm > 0.0, "warm-T grad is zero — surrogate dead even at T=1.0 (FAKE/defect)"
+    assert gn_floor > 0.0, "grad at the floor is exactly zero — floor is too cold"
+    # The gradient is MONOTONE-collapsing: floor(0.3) >> old(0.1). The old 0.1 point is
+    # MANY orders smaller than the corrected 0.3 floor (the dead-zone the old guard
+    # wrongly called alive).
+    assert gn_old < gn_floor * 1e-3, (
+        f"grad at old floor 0.1 ({gn_old:.3e}) is NOT << grad at corrected floor 0.3 "
+        f"({gn_floor:.3e}) — the floor correction did not separate usable from dead"
+    )
+    # The floor gradient is within a sane band of warm (NOT itself a rounding error):
+    # on the live margin-weighted saturated logits the floor ratio is >= ~1e-4 of warm,
+    # whereas the old 0.1 floor was < 1e-7 of warm.
+    assert gn_floor / gn_warm > gn_old / gn_warm * 100.0
+
+
+def test_r12_margin_lever5_cannot_rescue_cold_dead_seg_gradient():
+    """R12 'multiply-a-dead-gradient' guard — Lever-5 (``margin_weight_tau``) multiplies
+    the per-pixel seg surrogate by a DETACHED weight ``exp(−margin/τ) ∈ (0,1]``, so it
+    can only SCALE DOWN the already-dead cold-T gradient, never REVIVE it. At a cold T
+    (below the floor) the margin-ON combined gradient must be <= the margin-OFF (plain)
+    gradient — Lever-5 does not rescue the dead surrogate. (And ``exp(−margin/τ)`` is
+    SMALLEST on the confidently-WRONG large-margin flip pixels, so it down-weights
+    exactly the pixels the cold surrogate already cannot fix.) MEASURED on the real
+    scorer in R12 (margin-ON 6.3e-20 ≤ margin-OFF 1.8e-19 at T=0.05); this fast
+    structural test pins the same inequality on saturated logits.
+
+    NO-FAKE: the margin weight is a real ``exp(−margin/τ)`` of the actual logit margin,
+    not a constant — the test ALSO asserts margin-ON differs from margin-OFF at WARM T
+    (the weight genuinely reshapes), so a no-op weight (returning 1) would FAIL the
+    warm-T inequality."""
+    g = torch.Generator().manual_seed(7)
+    B, H, W = 2, 8, 12
+    base = torch.randn(B, _SEG_NUM_CLASSES, H, W, generator=g)
+    base[:, 0] += 12.0
+    targets = torch.randint(0, _SEG_NUM_CLASSES, (B, H, W), generator=g, dtype=torch.int64)
+    spec_m = _stage(seg_surrogate="soft_cosine", margin_weight_tau=2.0)
+    spec_p = _stage(seg_surrogate="soft_cosine", margin_weight_tau=None)
+
+    def grad_norm(spec, temp):
+        x = base.clone().requires_grad_(True)
+        _seg_loss_for_spec(spec, x, targets, temperature=temp).backward()
+        return float(x.grad.norm())
+
+    # At a COLD T (below the floor): margin-ON cannot exceed margin-OFF (no rescue).
+    gm_cold = grad_norm(spec_m, 0.05)
+    gp_cold = grad_norm(spec_p, 0.05)
+    assert gm_cold <= gp_cold + 1e-12, (
+        f"margin-ON cold grad {gm_cold:.3e} > margin-OFF {gp_cold:.3e} — Lever-5 must "
+        "NOT be able to rescue (revive) the cold-dead surrogate gradient"
+    )
+    # Sanity: the margin weight is NOT a no-op — at WARM T it genuinely reshapes the
+    # gradient (margin-ON ≠ margin-OFF), so the cold-T inequality above is meaningful.
+    gm_warm = grad_norm(spec_m, 1.0)
+    gp_warm = grad_norm(spec_p, 1.0)
+    assert abs(gm_warm - gp_warm) > 1e-9, (
+        "margin-ON warm grad == margin-OFF — Lever-5 is a no-op (the weight is not "
+        "reshaping; a constant-1 weight would pass the cold test vacuously)"
+    )
+    # And the margin weight scales DOWN (it is in (0,1]): margin-ON warm <= margin-OFF warm.
+    assert gm_warm <= gp_warm + 1e-9
+
+
+@pytest.mark.timeout(600)
+def test_r12_combined_seg_gradient_floor_on_real_scorer():
+    """R12 HEADLINE lens (real scorer) — the COMBINED (Lever-5 margin × Lever-2
+    surrogate) gradient floor holds on the REAL frozen scorer, and Lever-5 cannot
+    rescue the cold-dead gradient. Builds a FiLM (Lever-3) decoder on real 0.mkv pairs,
+    measures the param/latent gradient norm of the margin-weighted seg loss at warm
+    (1.0), the corrected floor (0.3), and the live-arm cold tail (0.05):
+      (1) the combined gradient COLLAPSES from warm to cold (ratio at 0.05 < 1e-3 of
+          warm — the floor is real, not a surrogate-only artifact);
+      (2) the floor T=0.3 gradient is DRAMATICALLY larger than the 0.05 tail (the
+          corrected floor sits above the dead zone);
+      (3) margin-ON combined grad <= margin-OFF at the cold tail (Lever-5 no-rescue).
+
+    RESEARCH-ONLY tiny slice ⇒ [contest-CPU advisory] NON-PROMOTABLE (gradient-magnitude
+    claim, not a score claim). NO-FAKE: real autograd on the real scorer; a constant/
+    no-op lever gives zero gradient (the >0 assertions reject that)."""
+    pytest.importorskip("torch")
+    import os
+
+    from tac.torch_vehicle.scorer_context import RealScorerContext
+
+    video = "upstream/videos/0.mkv"
+    if not os.path.exists(video):
+        pytest.skip("real video 0.mkv not present (real-scorer test)")
+
+    from tac.torch_vehicle.driver import _EVAL_H, _EVAL_W
+
+    torch.manual_seed(0)
+    cache = _tmp_out()
+    sc = RealScorerContext(video, device="cpu", max_pairs=8, targets_cache=cache)
+    v = import_vendored_bundle()
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        pose_film_enabled=True, seed=0,
+    )
+    spec_m = _stage(seg_surrogate="soft_cosine", margin_weight_tau=2.0)
+    spec_p = _stage(seg_surrogate="soft_cosine", margin_weight_tau=None)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=v, curriculum=[spec_m])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    decoder.set_stored_pose(sc.pose_targets[:8].cpu())
+    latents = torch.nn.Parameter(torch.randn(8, 28) * 0.1)
+    idx = torch.arange(4)
+    params = [p for p in decoder.parameters() if p.requires_grad] + [latents]
+    tgt = sc.seg_targets_hard[idx]
+
+    def render():
+        dp = decoder(latents[idx], idx)
+        B = len(idx)
+        flat = dp.reshape(B * 2, 3, _EVAL_H, _EVAL_W)
+        up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
+        down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
+        bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
+        dc = bhwc.clamp(0, 255)
+        return dc + (dc.round() - dc).detach()
+
+    def grad_norm(spec, temp):
+        seg_out, _ = sc.seg_pose_forward(render())
+        seg_l = _seg_loss_for_spec(spec, seg_out, tgt, temperature=temp)
+        gs = torch.autograd.grad(spec.seg_weight * seg_l, params, allow_unused=True)
+        return float(torch.cat([
+            (g if g is not None else torch.zeros_like(p)).reshape(-1)
+            for p, g in zip(params, gs, strict=False)
+        ]).norm())
+
+    gn_warm = grad_norm(spec_m, 1.0)
+    gn_floor = grad_norm(spec_m, SEG_ANNEAL_GRADIENT_FLOOR_T)  # 0.3
+    gn_cold_m = grad_norm(spec_m, 0.05)
+    gn_cold_p = grad_norm(spec_p, 0.05)
+    assert gn_warm > 0.0, "warm-T combined grad is zero on the real scorer (FAKE/defect)"
+    # (1) the floor is real — the cold tail collapses << warm.
+    assert gn_cold_m < gn_warm * 1e-3, (
+        f"cold-tail (0.05) combined grad {gn_cold_m:.3e} is NOT << warm (1.0) "
+        f"{gn_warm:.3e} — the seg-gradient floor did not occur on the real scorer"
+    )
+    # (2) the corrected floor T=0.3 sits ABOVE the dead zone (>> the 0.05 tail).
+    assert gn_floor > gn_cold_m * 1e3, (
+        f"floor (0.3) grad {gn_floor:.3e} is NOT >> cold tail (0.05) {gn_cold_m:.3e} — "
+        "the corrected floor is not above the dead zone"
+    )
+    # (3) Lever-5 cannot rescue the cold-dead gradient (margin-ON <= margin-OFF).
+    assert gn_cold_m <= gn_cold_p + 1e-12, (
+        f"margin-ON cold grad {gn_cold_m:.3e} > margin-OFF {gn_cold_p:.3e} on the real "
+        "scorer — Lever-5 must not revive the dead surrogate"
+    )
 
 
 @pytest.mark.timeout(600)

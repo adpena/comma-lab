@@ -237,22 +237,41 @@ def seg_temperature_for_epoch(spec: StageSpec, epoch_in_stage: int) -> float:
     return the start temperature (no anneal room). Clamped to ``[end, start]`` (or
     ``[start, end]`` if the anneal goes UP) so the value never overshoots either end.
 
-    SEG-GRADIENT FLOOR (R10, MEASURED on the REAL frozen scorer): the soft-cosine
+    SEG-GRADIENT FLOOR (R10+R12, MEASURED on the REAL frozen scorer): the soft-cosine
     surrogate ``1 − softmax(pred/T)[gt]`` is a TEMPERATURE-SHARPENED distillation
     loss, so as ``T → 0`` its per-pixel GRADIENT ``∝ p·(1−p)`` VANISHES even though
     its VALUE stays correct (≈1 on a wrong pixel, ≈0 on a right one). On the real
-    SegNet (logit margins ~2–6, R8) the latent-gradient norm collapses ≈19 orders of
-    magnitude from T=1.0 (≈2.6e-2) through T=0.1 (≈5e-12) to T=0.05 (≈1e-21) — at the
-    cold tail the seg lever produces NO usable training signal. This is INTENDED ("lock
-    in the argmax late"), NOT a defect: the cosine keeps T≥0.5 for ~52% of the stage
-    (gradient ALIVE while wrong pixels are abundant) and only goes cold-dead for the
-    last ~15%, by which point the argmax should be converged. The boundary is
-    ``T ≈ SEG_ANNEAL_GRADIENT_FLOOR_T`` (≈0.1) below which the seg gradient is
-    effectively dead — see :func:`seg_anneal_temperature_is_gradient_alive`. A tuner
-    that sets ``seg_temperature_end`` below the floor OR makes a stage so short the
-    schedule reaches cold T before the argmax converges will silently waste the seg
-    lever for the cold portion (use :func:`seg_anneal_temperature_is_gradient_alive`
-    to detect it).
+    SegNet (logit margins ~2–6, R8) the param/latent-gradient norm decays CONTINUOUSLY
+    and is already EFFECTIVELY DEAD well above 0.1. R12's fine real-scorer sweep of the
+    COMBINED (Lever-5 margin × Lever-2 surrogate) gradient, normalized to the warm
+    T=1.0 norm, is:
+
+        T=1.00 ratio 1.00      T=0.30 ratio 1.7e-3
+        T=0.50 ratio 6.5e-2    T=0.25 ratio 2.9e-4
+        T=0.40 ratio 1.7e-2    T=0.20 ratio 2.2e-5
+        T=0.15 ratio 4.9e-7    T=0.12 ratio 1.0e-8
+        T=0.10 ratio 1.9e-10   T=0.05 ratio 4.1e-20
+
+    The gradient is within ~2 orders of warm only down to ``T ≈ 0.3`` (ratio 1.7e-3);
+    below 0.3 it falls off a cliff (T=0.2 is already 2.2e-5 ≈ 5 orders down, T=0.1 is
+    1.9e-10 ≈ 10 orders down — effectively dead). So the USABLE-gradient floor is
+    ``T ≈ SEG_ANNEAL_GRADIENT_FLOOR_T = 0.3``, NOT 0.1. (R10 ORIGINALLY set the
+    constant to 0.1, but R10's OWN measured table labeled T=0.1 as "≈ dead"
+    (|grad|≈5e-12) — the constant mislabeled a 10-orders-below-warm dead-zone edge as
+    "alive". R12 caught + corrected this; see the R12 memo.) This cold-dead behavior is
+    INTENDED ("lock in the argmax late"), NOT a surrogate defect — but the GUARD's
+    threshold must mark where the gradient is still USABLE, not where it is already a
+    rounding error. At the corrected floor 0.3, the live arm's 1.0→0.05 cosine keeps
+    ~66% of the stage gradient-ALIVE and goes dead for the last ~34%. CRUCIALLY,
+    Lever-5 (``margin_weight_tau``) CANNOT rescue the cold-dead gradient: it multiplies
+    the per-pixel surrogate by a DETACHED weight ``exp(−margin/τ) ∈ (0,1]``, so it can
+    only SCALE DOWN the already-dead gradient (and ``exp(−margin/τ)`` is SMALLEST on the
+    confidently-WRONG large-margin flip pixels — exactly the pixels the cold surrogate
+    already cannot fix). R12 MEASURED the combined floor: margin-ON grad ≤ margin-OFF
+    grad at every T (6.3e-20 vs 1.8e-19 at T=0.05). A tuner that sets
+    ``seg_temperature_end`` below the floor OR makes a stage so short the schedule
+    reaches cold T before the argmax converges will silently waste the seg lever for
+    the cold portion (use :func:`seg_anneal_temperature_is_gradient_alive` to detect it).
     """
     if spec.seg_temperature_end is None:
         return float(spec.seg_temperature)
@@ -269,28 +288,43 @@ def seg_temperature_for_epoch(spec: StageSpec, epoch_in_stage: int) -> float:
 
 
 # The soft-cosine seg surrogate's per-pixel gradient ∝ p·(1−p) with
-# p = softmax(pred/T)[gt]. On the real SegNet (logit margins ~2–6, R8) the latent
-# gradient norm is ≈5e-12 at T=0.1 (essentially dead) and ≈2e-3 at T=0.5 (alive).
-# This floor is the T below which the seg lever produces no usable training signal —
-# an INTENDED property of cold-temperature distillation ("lock in the argmax"), NOT
-# a defect, but a tuner must not drive a stage cold before its argmax converges.
-# MEASURED, REAL frozen scorer, R10 (experiments/probe_r10_lever_interaction_sign.py).
-SEG_ANNEAL_GRADIENT_FLOOR_T = 0.1
+# p = softmax(pred/T)[gt]. On the real SegNet (logit margins ~2–6, R8) the COMBINED
+# (Lever-5 margin × Lever-2 surrogate) param/latent gradient norm, normalized to the
+# warm T=1.0 norm, is: T=0.5 → 6.5e-2, T=0.4 → 1.7e-2, T=0.3 → 1.7e-3, T=0.2 → 2.2e-5,
+# T=0.1 → 1.9e-10 (10 orders down — effectively dead), T=0.05 → 4.1e-20. The gradient
+# is still USABLE (within ~2 orders of warm) only down to T ≈ 0.3; below 0.3 it falls
+# off a cliff. This floor is the T below which the seg lever produces no usable
+# training signal — an INTENDED property of cold-temperature distillation ("lock in
+# the argmax"), NOT a defect, but a tuner must not drive a stage cold before its argmax
+# converges. R10 originally set this to 0.1, but BOTH R10's own measured table (T=0.1
+# labeled "≈ dead", |grad|≈5e-12) AND R12's fine real-scorer sweep show 0.1 is already
+# 10 orders below warm — the constant mislabeled a dead-zone edge as "alive". R12
+# corrected the floor to 0.3 (the measured usable knee). MEASURED, REAL frozen scorer,
+# R10 (experiments/probe_r10_lever_interaction_sign.py) + R12
+# (experiments/probe_r12_combined_seg_gradient_floor.py).
+SEG_ANNEAL_GRADIENT_FLOOR_T = 0.3
 
 
 def seg_anneal_temperature_is_gradient_alive(temperature: float) -> bool:
     """True iff the soft-cosine seg surrogate still has a USABLE gradient at this
     prediction-softmax ``temperature`` — i.e. ``temperature >= SEG_ANNEAL_GRADIENT_
-    FLOOR_T`` (≈0.1). Below the floor the temperature-sharpened surrogate's
-    ``p·(1−p)`` gradient vanishes (≈19 orders of magnitude collapse from T=1.0 to
-    T=0.05 on the real SegNet, R10), so the seg lever produces no training signal.
+    FLOOR_T`` (= 0.3, the measured usable knee). Below the floor the temperature-
+    sharpened surrogate's ``p·(1−p)`` gradient is already 5+ orders of magnitude below
+    the warm-T norm on the real SegNet (R12 sweep: ratio 2.2e-5 at T=0.2, 1.9e-10 at
+    T=0.1, 4.1e-20 at T=0.05), so the seg lever produces no usable training signal.
+    The floor is 0.3 NOT 0.1 because R12's fine real-scorer sweep showed the gradient
+    is within ~2 orders of warm only down to T≈0.3 (ratio 1.7e-3) and craters below;
+    R10's original 0.1 mislabeled a 10-orders-below-warm dead-zone edge as "alive".
+    The guard holds for the COMBINED (Lever-5 margin × Lever-2 surrogate) gradient too:
+    Lever-5's detached ``exp(−margin/τ) ∈ (0,1]`` weight can only SCALE DOWN the dead
+    gradient, never revive it (R12 MEASURED margin-ON ≤ margin-OFF at every T).
 
     This is the guard a tuner consults when choosing ``seg_temperature_end`` / a
     stage's epoch budget: the cosine anneal SHOULD reach the cold floor only AFTER
     the seg argmax has converged (the intended "lock-in"), never before (which would
     silently waste the seg lever). The driver itself does NOT gate on this (the
     intended late-cold behavior is correct); this is an OBSERVABILITY helper for
-    schedule design + the R10 regression guard."""
+    schedule design + the R10/R12 regression guard."""
     return float(temperature) >= SEG_ANNEAL_GRADIENT_FLOOR_T
 
 
