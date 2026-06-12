@@ -1,0 +1,455 @@
+{
+  "A_pr98_refit": {
+    "base_d_pose": 0.0014783972486232717,
+    "base_d_seg": 0.0035319858385870853,
+    "base_distortion_score": 0.4747879439451598,
+    "best_bias_frame_channel": [
+      [
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        -1.0,
+        -1.0,
+        -1.0
+      ]
+    ],
+    "best_seed_candidate": "zero",
+    "candidates_measured": {
+      "analytic_mean_align": {
+        "bias_frame_channel": [
+          [
+            103.73777770996094,
+            79.96747589111328,
+            101.17149353027344
+          ],
+          [
+            77.4961166381836,
+            118.66830444335938,
+            131.82354736328125
+          ]
+        ],
+        "d_pose": 15.008244196573893,
+        "d_seg": 0.012548658375938734,
+        "distortion_score": 13.505679768339004
+      },
+      "analytic_rounded": {
+        "bias_frame_channel": [
+          [
+            104.0,
+            80.0,
+            101.0
+          ],
+          [
+            77.0,
+            119.0,
+            132.0
+          ]
+        ],
+        "d_pose": 15.330235799153646,
+        "d_seg": 0.012672211664418379,
+        "distortion_score": 13.648754108349172
+      },
+      "canonical_pr98": {
+        "bias_frame_channel": [
+          [
+            1.0,
+            0.0,
+            1.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "d_pose": 0.0015272230375558138,
+        "d_seg": 0.0035298666140685477,
+        "distortion_score": 0.47656752714082723
+      },
+      "zero": {
+        "bias_frame_channel": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "d_pose": 0.0014783972486232717,
+        "d_seg": 0.0035319858385870853,
+        "distortion_score": 0.4747879439451598
+      }
+    },
+    "channel_stats": {
+      "affine_bias": [
+        [
+          123.23307037353516,
+          87.53020477294922,
+          117.00884246826172
+        ],
+        [
+          93.0250244140625,
+          132.09381103515625,
+          144.70997619628906
+        ]
+      ],
+      "gt_mean": [
+        [
+          30.876249313354492,
+          23.096982955932617,
+          21.18553352355957
+        ],
+        [
+          30.744850158691406,
+          23.07651138305664,
+          21.159263610839844
+        ]
+      ],
+      "gt_std": [
+        [
+          19.321666717529297,
+          21.753442764282227,
+          16.648290634155273
+        ],
+        [
+          19.224241256713867,
+          21.722904205322266,
+          16.62946128845215
+        ]
+      ],
+      "mean_align_bias": [
+        [
+          103.73777770996094,
+          79.96747589111328,
+          101.17149353027344
+        ],
+        [
+          77.4961166381836,
+          118.66830444335938,
+          131.82354736328125
+        ]
+      ],
+      "render_mean": [
+        [
+          134.61402893066406,
+          103.06446075439453,
+          122.35702514648438
+        ],
+        [
+          108.240966796875,
+          141.74481201171875,
+          152.98281860351562
+        ]
+      ],
+      "render_std": [
+        [
+          52.419193267822266,
+          32.34392547607422,
+          65.9481430053711
+        ],
+        [
+          38.84388732910156,
+          51.94166564941406,
+          42.53279495239258
+        ]
+      ],
+      "std_align_scale": [
+        [
+          0.3685990869998932,
+          0.6725665330886841,
+          0.25244519114494324
+        ],
+        [
+          0.494910329580307,
+          0.41821733117103577,
+          0.39097973704338074
+        ]
+      ]
+    },
+    "fit_d_pose": 0.0005303368622359509,
+    "fit_d_seg": 0.003539827031393846,
+    "fit_distortion_score": 0.4268069341504946,
+    "joint_delta_vs_base": -0.047981009794665186,
+    "joint_fit_distortion_score": 0.4268069341504946,
+    "refine_trace": [
+      {
+        "bias": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "channel": 0,
+        "frame": 0,
+        "score": 0.469287309983886
+      },
+      {
+        "bias": [
+          [
+            1.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "channel": 1,
+        "frame": 0,
+        "score": 0.45592618417084685
+      },
+      {
+        "bias": [
+          [
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "channel": 2,
+        "frame": 0,
+        "score": 0.45131179068616467
+      },
+      {
+        "bias": [
+          [
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "channel": 0,
+        "frame": 1,
+        "score": 0.44665152637340283
+      },
+      {
+        "bias": [
+          [
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            0.0
+          ]
+        ],
+        "channel": 1,
+        "frame": 1,
+        "score": 0.43048457319116873
+      },
+      {
+        "bias": [
+          [
+            1.0,
+            1.0,
+            1.0
+          ],
+          [
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        ],
+        "channel": 2,
+        "frame": 1,
+        "score": 0.4268069341504946
+      }
+    ]
+  },
+  "B_t10_affine": {
+    "affine_d_pose": 0.00040123156698731083,
+    "affine_d_seg": 0.003534316938991348,
+    "affine_delta_vs_pr98": -0.01003239795743438,
+    "affine_distortion_score": 0.4167745361930602,
+    "analytic_affine_over_corrects": true,
+    "analytic_affine_score": 92.74106804488238,
+    "best_bias_frame_channel": [
+      [
+        2.346140289306642,
+        -1.0612892150878923,
+        2.223570251464845
+      ],
+      [
+        0.08240966796875093,
+        0.4174481201171887,
+        -1.0
+      ]
+    ],
+    "best_scale_frame_channel": [
+      [
+        1.01,
+        0.98,
+        1.01
+      ],
+      [
+        1.01,
+        1.01,
+        1.0
+      ]
+    ],
+    "channel_stats": {
+      "affine_bias": [
+        [
+          123.23307037353516,
+          87.53020477294922,
+          117.00884246826172
+        ],
+        [
+          93.0250244140625,
+          132.09381103515625,
+          144.70997619628906
+        ]
+      ],
+      "gt_mean": [
+        [
+          30.876249313354492,
+          23.096982955932617,
+          21.18553352355957
+        ],
+        [
+          30.744850158691406,
+          23.07651138305664,
+          21.159263610839844
+        ]
+      ],
+      "gt_std": [
+        [
+          19.321666717529297,
+          21.753442764282227,
+          16.648290634155273
+        ],
+        [
+          19.224241256713867,
+          21.722904205322266,
+          16.62946128845215
+        ]
+      ],
+      "mean_align_bias": [
+        [
+          103.73777770996094,
+          79.96747589111328,
+          101.17149353027344
+        ],
+        [
+          77.4961166381836,
+          118.66830444335938,
+          131.82354736328125
+        ]
+      ],
+      "render_mean": [
+        [
+          134.61402893066406,
+          103.06446075439453,
+          122.35702514648438
+        ],
+        [
+          108.240966796875,
+          141.74481201171875,
+          152.98281860351562
+        ]
+      ],
+      "render_std": [
+        [
+          52.419193267822266,
+          32.34392547607422,
+          65.9481430053711
+        ],
+        [
+          38.84388732910156,
+          51.94166564941406,
+          42.53279495239258
+        ]
+      ],
+      "std_align_scale": [
+        [
+          0.3685990869998932,
+          0.6725665330886841,
+          0.25244519114494324
+        ],
+        [
+          0.494910329580307,
+          0.41821733117103577,
+          0.39097973704338074
+        ]
+      ]
+    },
+    "pr98_only_distortion_score": 0.4268069341504946
+  },
+  "C_s12": {
+    "certified_zero_distortion_proof": true,
+    "honest_note": "HNeRV substrate stores decoder+latents, NOT frames. The per-frame byte reduction is the WOULD-BE gain on a stored-frame residual section; the zero-distortion certification is universal and means the fill is safe on any frame-carrying section.",
+    "invisible_fraction_of_camera_frame": 0.22696926089315625,
+    "max_abs_projection_residual": 0.0,
+    "n_frames_proofed": 8,
+    "per_frame_brotli_byte_reduction": 4307841,
+    "per_frame_brotli_bytes_after": 18225538,
+    "per_frame_brotli_bytes_before": 22533379,
+    "per_frame_brotli_pct_reduction": 19.11759882971835,
+    "real_scorer_d_pose_after_fill": 0.002204082440584898,
+    "real_scorer_d_pose_before": 0.002204082440584898,
+    "real_scorer_d_pose_unchanged": true,
+    "real_scorer_d_seg_after_fill": 0.0036799111403524876,
+    "real_scorer_d_seg_before": 0.0036799111403524876,
+    "real_scorer_d_seg_unchanged": true
+  },
+  "D_lever_d": {
+    "conditional_below_unconditional_frac": 1.0,
+    "conditional_bytes_per_flip": 0.9852071227310786,
+    "conditional_clears_break_even": true,
+    "d_seg": 0.003531773885091146,
+    "flips_per_pair": 694.375,
+    "frontier_archive_bytes": 177169,
+    "mean_boundary_fraction": 0.005381266276041667,
+    "net_delta_s_full_sidecar_vs_frontier": -0.07986764582082811,
+    "rate_cost_of_residual_section": 0.2733097426882865,
+    "rationale": "GO requires conditional B/flip < break-even AND the residual section priced against the FRONTIER archive is net-negative \u0394S. On a basin base the half-million flips make the ADDED section dominate the seg win (the witness-probe flip-count crux); the in-training margin-weighted seg loss banks the d_seg at ZERO added bytes (the \u00a7E.2 hybrid).",
+    "scaled_residual_bytes_600pairs": 410461.9175078356,
+    "scaled_total_flips_600pairs": 416625.0,
+    "seg_drop_isolated_if_all_fixed": 0.3531773885091146,
+    "tau": 0.5,
+    "verdict": "GO",
+    "waterline_bytes_per_flip": 1.2731082153320312
+  },
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "baseline_d_pose": 0.0014783972486232717,
+  "baseline_d_seg": 0.0035319858385870853,
+  "baseline_distortion_score": 0.4747879439451598,
+  "basin_fork_point": "experiments/results/forkpoints/basin_bc20_20260612T121523Z",
+  "basin_meta": {
+    "base_channels": 20,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 600
+  },
+  "elapsed_seconds": 1921.9,
+  "n_pairs": 24
+}
