@@ -281,6 +281,14 @@ class TorchVehicleConfig:
     pose_film_enabled: bool = False
     # FiLM MLP bottleneck width (only consulted when ``pose_film_enabled``).
     pose_film_hidden: int = 8
+    # Track-A DISTORTION finishing-kit (PR98 bias / T10 affine / S12 mask) — an
+    # inflate-side, zero/near-zero-byte postproc on the rendered frames + a ~54-byte
+    # distortion archive section. DEFAULT None → NO kit, NO section, BYTE-IDENTICAL
+    # (the live basin/distortion arm resuming onto this code is unaffected — proved
+    # by the kit no-op test). It is a POST-CONVERGENCE finishing pass: set on the
+    # FINAL export of a converged checkpoint, never during the descending basin. The
+    # value is a ``tac.torch_vehicle.distortion_finishing_kit.DistortionKitConfig``.
+    distortion_kit: Any = None
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -1426,10 +1434,176 @@ def _json_dumps(obj: Any) -> str:
     return json.dumps(obj, indent=2, sort_keys=True)
 
 
+# ---------------------------------------------------------------------------
+# Track-A DISTORTION finishing-kit — the inflate-side post-convergence pass.
+#
+# These are the production wiring of the kit (PR98 bias / T10 affine / S12
+# certification) onto a CONVERGED checkpoint's exported archive. They are kept as
+# standalone functions (operate on any ``best/`` archive + an injected scorer) so
+# the live basin loop is untouched (the kit is a FINAL export pass, never an
+# in-loop perturbation — ``cfg.distortion_kit`` defaults None → byte-identical).
+# ---------------------------------------------------------------------------
+@torch.inference_mode()
+def kit_aware_exact_eval(
+    eval_decoder: "nn.Module",
+    eval_latents: "torch.Tensor",
+    distortion_net: Any,
+    video_path: Any,
+    *,
+    distortion_kit: Any = None,
+    archive_bytes: int,
+    total_video_bytes: int,
+    batch_pairs: int = 8,
+    device: str = "cpu",
+) -> dict[str, float]:
+    """Faithful kit-aware exact eval — MIRRORS the vendored ``score.evaluate_decoder``
+    (render → bicubic↑ camera → clamp/round/uint8 → ``compute_distortion``) but
+    INSERTS the distortion-kit postproc on the camera frames BEFORE the round/cast,
+    so the BEST-tracked score reflects the FINISHED frames. NO vendored edit.
+
+    A ``distortion_kit=None`` (or disabled/identity) is the byte-identical no-op:
+    the camera frames pass through unchanged so the score equals the vendored eval.
+    """
+    import av
+
+    from frame_utils import yuv420_to_rgb
+
+    from tac.torch_vehicle.distortion_finishing_kit import (
+        DistortionKitConfig,
+        apply_distortion_kit_to_camera_float,
+    )
+
+    _EVAL_H, _EVAL_W = 384, 512
+    _CAM_H, _CAM_W = 874, 1164
+    if distortion_kit is None:
+        distortion_kit = DistortionKitConfig(enabled=False)
+
+    eval_decoder.eval()
+    n_pairs = int(eval_latents.shape[0])
+    dev = torch.device(device)
+    container = av.open(str(video_path))
+    frames_iter = container.decode(container.streams.video[0])
+    seg_total = 0.0
+    pose_total = 0.0
+    count = 0
+
+    def _next_pair() -> "torch.Tensor | None":
+        f0 = None
+        for frame in frames_iter:
+            rgb = yuv420_to_rgb(frame)
+            if f0 is None:
+                f0 = rgb
+                continue
+            return torch.stack([f0, rgb])
+        return None
+
+    pair_idx = 0
+    while pair_idx < n_pairs:
+        batch_gt = []
+        for _ in range(min(batch_pairs, n_pairs - pair_idx)):
+            pair = _next_pair()
+            if pair is None:
+                break
+            batch_gt.append(pair)
+        if not batch_gt:
+            break
+        gt = torch.stack(batch_gt).to(dev)  # (B,2,H,W,3) uint8
+        b = gt.shape[0]
+        idx = torch.arange(pair_idx, pair_idx + b, device=dev)
+        z = eval_latents[idx].to(dev)
+        decoded = eval_decoder(z)  # (B,2,3,384,512) float
+        flat = decoded.reshape(b * 2, 3, _EVAL_H, _EVAL_W)
+        up = torch.nn.functional.interpolate(
+            flat, size=(_CAM_H, _CAM_W), mode="bicubic", align_corners=False
+        )
+        cam_float = up.reshape(b, 2, 3, _CAM_H, _CAM_W).permute(0, 1, 3, 4, 2)
+        # --- THE KIT HOOK: postproc the camera frames BEFORE the round/cast. ---
+        cam_float = apply_distortion_kit_to_camera_float(cam_float, distortion_kit)
+        cand = cam_float.clamp(0, 255).round().to(torch.uint8)
+        pose_d, seg_d = distortion_net.compute_distortion(gt, cand)
+        seg_total += float(seg_d.sum().item())
+        pose_total += float(pose_d.sum().item())
+        count += b
+        pair_idx += b
+    container.close()
+
+    d_seg = seg_total / max(count, 1)
+    d_pose = pose_total / max(count, 1)
+    rate = archive_bytes / float(total_video_bytes)
+    score = 100.0 * d_seg + (10.0 * d_pose) ** 0.5 + 25.0 * rate
+    return {"seg_distortion": d_seg, "pose_distortion": d_pose, "rate": rate, "score": score}
+
+
+def finish_checkpoint_with_distortion_kit(
+    best_archive_bytes: bytes,
+    distortion_kit: Any,
+    vendored: "VendoredBundle | None" = None,
+) -> dict[str, Any]:
+    """Append the distortion-kit section to a converged ``best/best_archive.bin``.
+
+    The finished packet = the vendored archive (UNCHANGED bytes) + the ~54-byte
+    distortion section appended. A DISABLED/identity kit appends NOTHING → the
+    finished bytes are BYTE-IDENTICAL to the input (the default-OFF contract).
+
+    Returns ``{finished_archive, base_archive_bytes, section_bytes, added_bytes,
+    is_byte_identical}``. The substrate's ``inflate.sh`` reads the trailing section
+    (if present) and runs ``apply_distortion_kit_to_raw_frames`` after the vendored
+    ``inflate.py`` — the vendored runtime is NOT edited."""
+    from tac.torch_vehicle.distortion_finishing_kit import (
+        DISTORTION_SECTION_MAGIC,
+        DistortionKitConfig,
+        serialize_distortion_section,
+    )
+
+    if distortion_kit is None:
+        distortion_kit = DistortionKitConfig(enabled=False)
+    # Refuse double-appends (idempotent fail-closed): the base must not already
+    # carry a trailing distortion section.
+    if best_archive_bytes[-54:][:4] == DISTORTION_SECTION_MAGIC:
+        raise ValueError(
+            "base archive already carries a distortion section (double-finish "
+            "forbidden — finish the PRISTINE converged archive)"
+        )
+    section = serialize_distortion_section(distortion_kit)
+    finished = best_archive_bytes + section
+    return {
+        "finished_archive": finished,
+        "base_archive_bytes": len(best_archive_bytes),
+        "section_bytes": len(section),
+        "added_bytes": len(finished) - len(best_archive_bytes),
+        "is_byte_identical": finished == best_archive_bytes,
+    }
+
+
+def split_finished_archive(finished_archive: bytes) -> tuple[bytes, Any]:
+    """Inverse of :func:`finish_checkpoint_with_distortion_kit`: split a finished
+    packet into ``(base_archive_bytes, DistortionKitConfig)``.
+
+    A packet WITHOUT a trailing section → ``(finished_archive, disabled config)``.
+    The substrate's numpy inflate uses this to recover the base ``0.bin`` (handed to
+    the vendored ``inflate.py``) + the kit (applied to the raw frames after)."""
+    from tac.torch_vehicle.distortion_finishing_kit import (
+        DISTORTION_SECTION_MAGIC,
+        DistortionKitConfig,
+        parse_distortion_section,
+        _SECTION_STRUCT,
+    )
+
+    seclen = _SECTION_STRUCT.size
+    if len(finished_archive) >= seclen and finished_archive[-seclen:][:4] == DISTORTION_SECTION_MAGIC:
+        base = finished_archive[:-seclen]
+        cfg = parse_distortion_section(finished_archive[-seclen:])
+        return base, cfg
+    return finished_archive, DistortionKitConfig(enabled=False)
+
+
 __all__ = [
     "ScorerContext",
     "TorchVehicleConfig",
     "TorchVehicleDriver",
     "VendoredBundle",
     "import_vendored_bundle",
+    "kit_aware_exact_eval",
+    "finish_checkpoint_with_distortion_kit",
+    "split_finished_archive",
 ]
