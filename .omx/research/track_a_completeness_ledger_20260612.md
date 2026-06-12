@@ -174,3 +174,43 @@ until SEALED here.
 **Authority discipline:** every number on this page is `[contest-CPU advisory] / [macOS-CPU
 advisory]` NON-PROMOTABLE until `upstream/evaluate.py` on the byte-closed archive (ITEM E). MPS is
 the train-gradient device only, never authority.
+
+---
+
+## AUTHORITATIVE TRACKING BOARD (no signal loss — every recommendation owned + fired)
+**Operator 2026-06-12:** *"must implement and follow up on and fully exploit and track all you have
+suggested… including the underpowered… but prioritize Track-A — all layers and levers. No signal
+loss."* This board maps EVERY recommendation of the past several turns. Nothing is parked without an
+owner + a firing condition. Track-A is HIGH; Track-B is tracked-but-deprioritized (NOT dropped).
+
+### Track-A — HIGH priority (the base_ch20 vehicle, all layers + levers)
+| # | Item | Layer | Owner | Status | Firing condition / next |
+|---|---|---|---|---|---|
+| #100 | L2 lever SEAL (R9/R10/R11) | L2 levers 1–5 | Partner A (a744a06f8) | RUNNING | 3 clean → SEAL |
+| #104 | Variable codec — math-optimal waterfill (is it net-positive at $0?) | L2 rate | Partner B (a1e690f6) | RUNNING | NET_POSITIVE → wire-in; else → #111 |
+| #111 | Variable-grid QAT (train decoder at deployed grid) | L2/L3 rate | — | QUEUED (blocked-by #104) | fires if #104 ≠ net-positive |
+| #105 | Finishing-kit (PR98/T10/S12/LeverD) LANDED | L3 distortion | Partner C (done) | LANDED, under re-validation | gated on #109 ep2236 verdict |
+| #109 | Under-power audit ALL findings + ep2236 finishing-kit re-validation | meta | Partner under-power (acd38e069) | RUNNING | verdict → fires #113, confirms #105 |
+| #112 | Lever-D nuanced (survival-robust selective + full-stack economics) | L3 distortion | Partner Lever-D (aacd61e6) | RUNNING | emits flip set → fires #114 |
+| #113 | Color-offset training penalty (PR98/T10 fold-in) | L3 distortion | — | QUEUED (blocked-by #109) | fires if PR98/T10 SHRINKS at convergence |
+| #114 | Boundary-flip → Lever-5 feed (fix flips in training, 0 bytes) | L2 lever-5 | — | QUEUED (blocked-by #112) | fires on #112 survival-robust flip set |
+| #110 | NOVEL latent-structure-inducing regularizer (unlocks D1 + Cool-Chic-AR) | L1/L2 latents | — | QUEUED (next slot) | $0 design now; ablation wants arm converged |
+| #106 | D1 latent dedup SEALED (honest 0-B negative, auto-fires on structure) | L3 rate | done | SEALED | reactivates via #110 (induced structure) |
+| #106 | D2 codec wire-in / D3 WRQ unify / D4 lossless materializer | L3 rate | — | QUEUED | D2/D3 fold into #104; D4 into #107 |
+| #107 | ITEM E — one-command byte-close→bolt-on-stack→exact-eval | pipeline | — | BLOCKED (by #100,#104,#105,#106) | fires when bolt-ons SEAL |
+| #108 | ITEM F — agnostic-core seam audit (no base_ch20 import in CORE) | cross-cut | — | BLOCKED (by all) | final pass |
+| — | Distortion arm d_seg/d_pose trajectory | live | arm + watcher (pid 62234) | RUNNING | d_pose −24% ✓; d_seg verdict @ep≥1200 |
+
+### Track-B — TRACKED but DEPRIORITIZED (no signal loss; fires after Track-A or if Track-A walls)
+| # | Item | Status |
+|---|---|---|
+| #115 | Cool-Chic d_seg/pose re-validation (more epochs/capacity — under-powered) | TRACKED, deprioritized |
+| #27 | HiNeRV full-stack | TRACKED, deprioritized |
+| #94 | futuristic smaller-basis paths | TRACKED, deprioritized |
+
+### The orchestrator's follow-up protocol (the "fully exploit" guarantee)
+As each RUNNING partner lands, the orchestrator INTEGRATES its result and FIRES the next dependent:
+A→unblock ITEM E lever portion; B→wire-in OR fire #111; under-power→confirm #105 + fire #113;
+Lever-D→fire #114. Queued #110/#111 dispatch on the next free CPU slot (4 partners + arm is the
+current ceiling — adding more thrashes the arm, the priority compute). Every under-powered finding has
+a re-validation task; none is closed on a janky-prototype verdict (Catalog #307 / ANTI-SIGNAL-LOSS).
