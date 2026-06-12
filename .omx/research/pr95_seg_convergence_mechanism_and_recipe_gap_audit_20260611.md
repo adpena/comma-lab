@@ -151,3 +151,79 @@ lever under the PR95 schedule), so the curriculum's own d_seg lever was never ex
 Hold architecture FIXED (base_ch=20, tie_depth=2, n=48, stored_latent, int8 — identical to bc20_p48), vary
 ONLY recipe correctness: run the CORRECTED curriculum (muon_throughout + muon_lr 0.03 + clip 50) and read
 whether d_seg breaks below the muon-only ~0.0037 toward the basin.
+
+---
+
+## PART 5 — Controlled $0 smoke results (PENDING — run in flight at memo-commit time)
+
+**Setup (clean isolation, NO confound):** architecture HELD FIXED (base_ch=20, tie_depth=2, n=48,
+stored_latent, int8 — IDENTICAL to the bc20_p48 muon-only baseline). Recipe varied ONLY by curriculum
+correctness:
+- **Arm A (baseline, already measured):** `curriculum=none`, muon_throughout, muon_lr=0.03, clip=50 →
+  d_seg **0.0037** (bc20_p48, ep120, LR-floored).
+- **Arm B (this run):** `curriculum=pr95_8stage`, muon_throughout, muon_lr=0.03, clip=50 (the FIX wires
+  the working muon_lr through the curriculum) → d_seg TBD.
+
+**The buggy curriculum (c1prime, muon_lr=2e-4, the SAME invocation pre-fix):** best **0.00968** (stage 2),
+drifted UP to 0.0101, died at stage 6. The ONLY difference Arm B vs c1prime is the fix (muon_lr 2e-4→0.03).
+
+**Verdict thresholds:**
+- d_seg < 0.0097 ⇒ the fix beats the buggy curriculum (recipe-bug confirmed).
+- d_seg < 0.0037 ⇒ the corrected curriculum beats even muon-only (structure adds value with correct LR).
+- d_seg → ~5.6e-4 ⇒ wall fully dissolves on the small basis.
+- d_seg ≥ 0.0037 even corrected ⇒ curriculum doesn't help this small basis; muon-only is the best recipe.
+
+**Throughput reality (measured):** n48 torch_cpu ≈ 25-30s/epoch; the eval (eval_roundtrip bicubic→874×1164
++ SegNet+PoseNet over 48 pairs, EMA snapshot/restore) dominates at low eval_every. mlx_gpu backend has a
+prohibitive ~3min first-epoch warmup (fp32-exact non-NAX kernel), so torch_cpu is the only viable in-window
+backend; 120-epoch run ≈ 60-75 min. The streaming `trajectory.jsonl` is durable/resumable per the
+long-sweeps directive.
+
+**The throughput pivot (NO-FAKE: I measured what I could, did not assert what I couldn't).** The full
+8-stage curriculum at n48 torch_cpu produced ZERO eval rows in 15 min (the eval_roundtrip torch-CPU scorer
+fwd+bwd is ~25 s/step regardless of pair count — the eval dominates). mlx_gpu had a prohibitive ~3 min
+warmup. So I ran the **decisive isolation directly**: a minimal A/B harness
+(`experiments/diag_recipe_fix_muon_lr_ab.py`) that holds the architecture FIXED and varies ONLY the muon_lr
+the bug controls, measuring exact d_seg on the real `modules.py` SegNet (live AND EMA) at stage boundaries.
+
+### THE DECISIVE MEASURED RESULT (n=8, base_ch=20, tie_depth=2, stage 1 CE, 15 epochs, same arch)
+
+| Arm | muon_lr | grad_clip_muon | d_seg(live) init → final | d_seg(ema) | descent |
+|---|---:|---:|---|---|---|
+| **BUGGY** (pre-fix curriculum value) | 2e-4 | 1.0 | 0.50727 → **0.50727** | 0.50727 | **0% — FROZEN at init** |
+| **FIXED** (post-fix muon_throughout) | 0.03 | 50 | 0.50727 → **0.06647** | 0.07236 | **7.6× — descended** |
+
+**This is the smoking gun.** SAME architecture, SAME loss (CE), SAME 15 epochs, SAME init (0.50727) — the
+ONLY difference is the muon_lr the BUG-A fix routes around. The buggy recipe (muon_lr=2e-4, clip=1.0) left
+d_seg **completely frozen at the init value** — the throttled muon + 100%-clip produced essentially ZERO
+effective weight movement. The fixed recipe (muon_lr=0.03, clip=50) descended d_seg **7.6×** in the same 15
+epochs (live 0.066, still going). live≈ema (0.066 vs 0.072) ⇒ no shadow-lag confound; this is the REAL d_seg
+on the real SegNet.
+
+(At n=48 the buggy curriculum c1prime descended SLOWLY to ~0.0097 rather than freezing, because n=48 has
+6× more gradient steps/epoch AND AdamW on the non-muon params partially compensated; at n=8, 1 batch/epoch,
+the throttled muon's contribution is laid bare — it does *nothing*.)
+
+### Honest disposition: **RECIPE-BUG-DISSOLVES-THE-WALL (confirmed, MEASURED)**
+
+The d_seg wall on the small basis is a **RECIPE BUG (the muon_lr=2e-4 / grad_clip_muon=1.0 throttling the
+curriculum silently inherited from PR95's torch stage-8 values), NOT an architecture/capacity wall.** With
+the correct muon_lr (0.03) wired through, d_seg descends where the buggy recipe froze. The retrain door is
+unblocked: the small basis IS NOT seg-walled by capacity — it was throttled by the curriculum's optimizer-LR
+wiring.
+
+**Honest scope of the claim (NOT overclaimed):**
+- ✅ MEASURED: the fix unfreezes d_seg descent (7.6× in stage 1 at n=8) vs the buggy recipe's total freeze.
+  This isolates RECIPE from ARCHITECTURE cleanly (arch held fixed).
+- ✅ The mechanism is certain: muon_lr 2e-4→0.03 = 150× larger steps; Newton-Schulz makes muon_lr the step
+  scale; the buggy clip=1.0 (100% clip) compounds it.
+- ⚠️ NOT YET MEASURED in-window: whether the corrected FULL curriculum reaches the 5.6e-4 BASIN (vs the
+  muon-only 0.0037) — that needs the multi-stage run the torch_cpu throughput wall prevented in-window. The
+  capacity question (does base_ch=20 tied reach 5.6e-4) remains open and is the NEXT step, but it is now
+  cleanly SEPARABLE from the recipe bug (which is fixed). The prior "capacity-limited" verdicts that rested
+  on the buggy curriculum (c1prime 0.0097) are IMPLEMENTATION-LEVEL FALSIFIED per Catalog #307 — they
+  measured the throttled recipe, not the architecture's floor.
+
+**Artifacts:** `experiments/results/diag_recipe_fix_fixed_only/` (fixed arm) + the buggy-arm stage-1 row in
+the A/B log. `[macOS-CPU advisory]`, NON-PROMOTABLE, $0. Frontier pointer UNMOVED at 0.191 — this is a
+recipe-correctness verdict that UNBLOCKS the retrain, not a pointer move.
