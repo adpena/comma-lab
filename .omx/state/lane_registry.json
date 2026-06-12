@@ -72850,6 +72850,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_capstone_advisory_exact_custody_gate_15_20260611",
+      "name": "Capstone advisory-vs-exact int8/bicubic custody gate (#15, n600 pre-dispatch)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_torch_vehicle_pr95_readiness_20260611",
+      "name": "P2 torch-vehicle (vendored PR95) Modal-readiness: base_ch thread + resume + telemetry + export-verify",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_r1r2_ema_warmup_resurrection_20260611",
+      "name": "R1+R2 EMA-shadow-lag resurrection (torch warmup fix + lever-C LIVE re-measure)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "R2: tac.training.EMA warmup + Catalog #388 gate (commit 703958599); R1: lever-C LIVE d_seg re-run [local CPU-torch advisory] /Volumes/VertigoDataTier/pact/lever_c_r1_rerun_20260611/configA_118k_v2/train_result.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #388 check_torch_ema_uses_warmup strict-flipped, live count 0"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "3 council greenup passes yousfi/fridrich/contrarian on training.py critical-file policy; .omx/research/r2_ema_warmup_greenup_review_20260611.md"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/r1_lever_c_live_dseg_rerun_20260611.md + r2_ema_warmup_greenup_review_20260611.md (research_only=true, NON-PROMOTABLE)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72859,5 +72982,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T00:36:24Z"
+  "updated_at": "2026-06-12T02:17:24Z"
 }
