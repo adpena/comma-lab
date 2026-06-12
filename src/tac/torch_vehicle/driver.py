@@ -68,12 +68,30 @@ _EVAL_H, _EVAL_W = 384, 512
 _SEG_NUM_CLASSES = 5  # contest SegNet head (upstream/modules.py: smp.Unet classes=5)
 
 
+def _segnet_logit_margin_map(seg_out: torch.Tensor) -> torch.Tensor:
+    """Per-pixel SegNet ``top1 − top2`` logit margin of the PREDICTION logits — the
+    Lever-5 boundary sensitivity map (detached: it is a per-pixel WEIGHT, a Catalog
+    #341 Tier A proxy, NOT a score claim).
+
+    ``seg_out`` is ``(B, 5, H, W)`` SegNet logits of the DECODED frame (already
+    forwarded for the seg loss — no extra scorer pass). Small margin = decision
+    frontier (argmax-prone-to-flip); large margin = confident interior. Mirrors
+    ``tac.substrates.d1_segnet_margin_polytope.margin_map.compute_logit_margin_map``
+    (top2 = the two largest logits per pixel) but reads the already-computed
+    prediction logits in-place (the canonical helper re-runs the scorer; we reuse)."""
+    top2, _ = torch.topk(seg_out.detach(), k=2, dim=1, largest=True, sorted=True)
+    return (top2[:, 0] - top2[:, 1]).clamp_min(0.0)  # (B, H, W) >= 0
+
+
 def _seg_loss_for_spec(
     spec: StageSpec,
     seg_out: torch.Tensor,
     seg_targets_hard: torch.Tensor,
+    *,
+    temperature: float | None = None,
 ) -> torch.Tensor:
-    """Score-domain seg loss router (Lever 2) — DEFAULT-PRESERVING.
+    """Score-domain seg loss router (Lever 2 + the L2 anneal hook + Lever 5 margin
+    weight) — DEFAULT-PRESERVING.
 
     ``spec.seg_surrogate is None`` (the default for every vendored-projected
     ``StageSpec``) returns ``spec.seg_loss_fn(seg_out, seg_targets_hard)`` EXACTLY
@@ -81,7 +99,9 @@ def _seg_loss_for_spec(
     resumes onto this code is unchanged (verified by
     ``test_default_seg_surrogate_is_byte_identical_to_vendored_call`` +
     ``test_default_seg_surrogate_gradient_is_byte_identical`` in
-    ``tests/test_seg_surrogate_lever.py``).
+    ``tests/test_seg_surrogate_lever.py``). The ``temperature`` / margin-weight
+    extensions are NO-OPS on this default path (the vendored CE path returns a
+    scalar, not a per-pixel tensor — there is no temperature or per-pixel handle).
 
     When ``spec.seg_surrogate`` is a surrogate name (``"soft_cosine"`` /
     ``"fisher_rao"`` / ``"sinkhorn"``) the seg term is routed through the
@@ -90,6 +110,18 @@ def _seg_loss_for_spec(
     per-pixel SegNet ARGMAX-DISAGREEMENT rate; the surrogate concentrates the
     gradient where the argmax actually flips (HNeRV parity L6), unlike CE which
     spends capacity on confident-interior pixels the argmax already gets right.
+
+    Lever-2 anneal (``temperature``): when the driver passes a per-epoch
+    ``temperature`` (the cosine anneal from ``spec.seg_temperature`` toward
+    ``spec.seg_temperature_end``) it OVERRIDES the static ``spec.seg_temperature``
+    for the PREDICTION softmax. ``temperature is None`` (the default) uses the static
+    ``spec.seg_temperature`` — so a caller that does not pass it is unchanged.
+
+    Lever-5 margin weight (``spec.margin_weight_tau``): when set, the per-pixel
+    surrogate is weighted by ``exp(−margin/τ)`` (the prediction's SegNet logit
+    margin) BEFORE the mean — boundary-prone pixels (small margin) get more gradient,
+    confident-interior pixels ~0. ``None`` (the default) leaves the surrogate
+    unweighted (Lever-2 baseline).
 
     GT side-information: the curriculum caches the HARD per-pixel target argmax
     (``seg_targets_hard``, ``(B, 384, 512)`` int64), not GT logits. The score-domain
@@ -102,24 +134,27 @@ def _seg_loss_for_spec(
     specifies, cache-free (argmax is all the surrogate's per-pixel target needs).
     """
     if spec.seg_surrogate is None:
-        # Legacy vendored path — UNCHANGED. Do not touch (basin-resume safety).
+        # Legacy vendored path — UNCHANGED. Do not touch (basin-resume safety). The
+        # anneal/margin extensions never touch this branch (the default path takes
+        # temperature=None and margin_weight_tau=None and returns the raw CE scalar).
         return spec.seg_loss_fn(seg_out, seg_targets_hard)
 
     from tac.losses.core import segnet_surrogate_per_pixel
 
+    temp = float(temperature) if temperature is not None else float(spec.seg_temperature)
     # seg_out: (B, 5, H, W) logits. seg_targets_hard: (B, H, W) int64 class indices.
     # Build SHARP one-hot GT LOGITS (B, 5, H, W): the GT-argmax class gets a large
     # positive logit, all others ~0. ``softmax(gt_logits / T)`` is then ~one-hot for
     # ANY reasonable T (at the memo's coldest T=0.05, 30/0.05=600 → exactly one-hot),
     # so the GT is NOT temperature-softened (it is hard, as the contest d_seg is a
-    # hard argmax) while ``spec.seg_temperature`` softens ONLY the PREDICTION. With
-    # one-hot GT, soft_cosine reduces to ``1 - softmax(pred/T)[gt]`` EXACTLY — the
-    # differentiable argmax-flip surrogate the memo specifies (verified
-    # bit-equal to a hand-computed reference at T∈{1.0, 0.5, 0.1} in the lever test).
-    # Passing GT as LOGITS (``gt_already_probs=False``) — NOT cached probs — is what
-    # lets the surrogate honor non-unit ``temperature`` (the helper refuses cached
-    # probs at T≠1 because cached probs are softmax@T=1; a one-hot logit has no such
-    # constraint). This generalizes to fisher_rao / sinkhorn (same one-hot GT logits).
+    # hard argmax) while ``temp`` softens ONLY the PREDICTION. With one-hot GT,
+    # soft_cosine reduces to ``1 - softmax(pred/T)[gt]`` EXACTLY — the differentiable
+    # argmax-flip surrogate the memo specifies (verified bit-equal to a hand-computed
+    # reference at T∈{1.0, 0.5, 0.1} in the lever test). Passing GT as LOGITS
+    # (``gt_already_probs=False``) — NOT cached probs — is what lets the surrogate
+    # honor non-unit ``temperature`` (the helper refuses cached probs at T≠1 because
+    # cached probs are softmax@T=1; a one-hot logit has no such constraint). This
+    # generalizes to fisher_rao / sinkhorn (same one-hot GT logits).
     _ONEHOT_GT_LOGIT = 30.0  # softmax(30·onehot/T) ≈ one-hot for all T ≥ ~0.02
     gt_onehot = F.one_hot(
         seg_targets_hard.long(), num_classes=_SEG_NUM_CLASSES
@@ -131,10 +166,21 @@ def _seg_loss_for_spec(
         seg_out,
         gt_logits,
         surrogate=spec.seg_surrogate,
-        temperature=spec.seg_temperature,
+        temperature=temp,
         gt_already_probs=False,
         num_classes=_SEG_NUM_CLASSES,
     )  # (B, H, W)
+    if spec.margin_weight_tau is not None:
+        # Lever 5: weight per-pixel by exp(-margin/tau) (boundary-prone pixels get
+        # more gradient). The margin is a DETACHED per-pixel weight (Tier A proxy);
+        # it shapes WHERE the surrogate's gradient lands, it is not itself optimized.
+        margin = _segnet_logit_margin_map(seg_out)  # (B, H, W) detached
+        tau = max(float(spec.margin_weight_tau), 1e-6)
+        weight = torch.exp(-margin / tau)  # (B, H, W) in (0, 1], 1 at the boundary
+        # Mean of (per_pixel · weight): a weighted average that concentrates the loss
+        # mass on small-margin pixels. (Not re-normalized by Σweight — the absolute
+        # magnitude scaling is folded into the seg_weight Lagrangian coefficient.)
+        return (per_pixel * weight).mean()
     return per_pixel.mean()
 
 
@@ -285,6 +331,12 @@ class _StageRuntime:
     muon_sched: Any
     muon_params: list
     adamw_params: list
+    # Lever 4 (score-aware QAT) per-tensor sensitivity EMA ``s_t = ||∂S/∂w_t||``,
+    # accumulated from the score-domain loss backward (the EMA smooths early-train
+    # noise). Empty until the first backward seeds it — while empty the score-aware
+    # QAT falls back to the vendored uniform 127-level grid (bit-identical), so the
+    # first steps of a score-aware-QAT stage are unchanged from uniform QAT.
+    tensor_sensitivity_ema: dict[str, float] = field(default_factory=dict)
 
 
 class TorchVehicleDriver:
@@ -465,8 +517,24 @@ class TorchVehicleDriver:
         )
 
     # -- one faithful training epoch (1:1 with common.py) --------------------
-    def _train_one_epoch(self, rt: _StageRuntime, spec: StageSpec) -> tuple[float, float, float, float]:
-        """Run one epoch; returns (mean_loss, mean_pose_mse, last_grad_adamw, last_grad_muon)."""
+    def _train_one_epoch(
+        self, rt: _StageRuntime, spec: StageSpec, *, epoch_in_stage: int = 0
+    ) -> tuple[float, float, float, float]:
+        """Run one epoch; returns (mean_loss, mean_pose_mse, last_grad_adamw, last_grad_muon).
+
+        ``epoch_in_stage`` (0-based) drives the Lever-2 per-epoch seg-temperature
+        ANNEAL hook (the OPTIMIZE part). DEFAULT-PRESERVING: when
+        ``spec.seg_temperature_end is None`` (the default) the annealed temperature is
+        the static ``spec.seg_temperature`` for EVERY epoch, so the call is unchanged;
+        the default ``epoch_in_stage=0`` keeps legacy callers (tests) bit-identical.
+        """
+        from tac.torch_vehicle.curriculum import seg_temperature_for_epoch
+
+        # Lever 2 anneal: the PREDICTION softmax temperature for THIS epoch. NO-OP on
+        # the default path (seg_temperature_end is None → returns the static T; and
+        # the vendored CE path ignores temperature entirely).
+        epoch_temperature = seg_temperature_for_epoch(spec, epoch_in_stage)
+
         decoder, latents = rt.decoder, rt.latents
         n_pairs = self.n_pairs
         bs = spec.batch_size
@@ -486,7 +554,22 @@ class TorchVehicleDriver:
             B = len(idx)
 
             if spec.use_qat:
-                originals = self.v.apply_qat(decoder)
+                # Lever 4 (score-aware QAT): DEFAULT-PRESERVING. ``score_aware_qat is
+                # False`` (the default) uses the vendored UNIFORM 127-level fake-quant
+                # — byte-identical to today. When True, the per-tensor INT8 grid is a
+                # function of the score-sensitivity EMA (high-sensitivity tensors get a
+                # finer grid → argmax boundary protected; low-sensitivity ones a coarser
+                # grid → fewer brotli bytes). While the EMA is still empty (early in the
+                # stage, before the first backward seeds it) the sensitivity is None →
+                # the score-aware path quantizes EVERY tensor at the base 127 levels,
+                # bit-identical to the vendored uniform QAT.
+                if spec.score_aware_qat:
+                    from tac.torch_vehicle.score_aware_qat import apply_score_aware_qat
+
+                    sens = rt.tensor_sensitivity_ema or None
+                    originals = apply_score_aware_qat(decoder, sens)
+                else:
+                    originals = self.v.apply_qat(decoder)
             # Lever 3: when pose-FiLM is on the decoder is a PoseFiLMHNeRVWrapper
             # whose forward needs the per-pair index to look up the stored pose.
             # When off, the vendored decoder forward takes only the latents.
@@ -496,7 +579,12 @@ class TorchVehicleDriver:
                 else decoder(latents[idx])
             )
             if spec.use_qat:
-                self.v.restore_qat(decoder, originals)
+                if spec.score_aware_qat:
+                    from tac.torch_vehicle.score_aware_qat import restore_score_aware_qat
+
+                    restore_score_aware_qat(decoder, originals)
+                else:
+                    self.v.restore_qat(decoder, originals)
 
             flat = decoded_pair.reshape(B * 2, 3, _EVAL_H, _EVAL_W)
             up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
@@ -513,38 +601,45 @@ class TorchVehicleDriver:
 
             if self.split_by_head:
                 loss_val, pose_mse_val = self._split_by_head_backward(
-                    decoded_bhwc, idx, spec
+                    decoded_bhwc, idx, spec, temperature=epoch_temperature
                 )
-                # The categorical-entropy regularizer does NOT depend on the frames
-                # (it reads the decoder weights), so it backprops straight to the
-                # decoder — add it as a separate scalar backward (accumulates into
-                # the same .grad buffers the frame-cotangent backward populated).
-                if spec.cat_lambda > 0:
-                    ent = self.v.cat_entropy_v2(
-                        decoder, sigma=spec.cat_sigma, sample_size=2000,
-                        device=self.train_device,
-                    )
-                    (spec.cat_lambda * ent).backward()
-                    loss_val += float(spec.cat_lambda * ent.item())
+                # The categorical-entropy regularizer + Lever-1 rate surrogate do NOT
+                # depend on the frames (they read the decoder weights / the full latent
+                # tensor), so they backprop straight to the decoder/latents — add them
+                # as a separate scalar backward (accumulates into the same .grad buffers
+                # the frame-cotangent backward populated).
+                reg = self._weight_regularizers(decoder, latents, spec)
+                if reg is not None:
+                    reg.backward()
+                    loss_val += float(reg.item())
             else:
                 seg_out, pose_pred6 = self.scorer.seg_pose_forward(decoded_bhwc)
 
                 seg_l = _seg_loss_for_spec(
-                    spec, seg_out, self.scorer.seg_targets_hard[idx]
+                    spec, seg_out, self.scorer.seg_targets_hard[idx],
+                    temperature=epoch_temperature,
                 )
                 pose_mse = F.mse_loss(pose_pred6, self.scorer.pose_targets[idx])
                 pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
 
                 loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
-                if spec.cat_lambda > 0:
-                    ent = self.v.cat_entropy_v2(
-                        decoder, sigma=spec.cat_sigma, sample_size=2000,
-                        device=self.train_device,
-                    )
-                    loss = loss + spec.cat_lambda * ent
+                reg = self._weight_regularizers(decoder, latents, spec)
+                if reg is not None:
+                    loss = loss + reg
                 loss.backward()
                 loss_val = float(loss.item())
                 pose_mse_val = float(pose_mse.item())
+
+            # Lever 4: accumulate the per-tensor sensitivity EMA from the just-computed
+            # score-domain ``w.grad`` (BEFORE the optimizer.step() zeroes nothing — grads
+            # persist until the next zero_grad). NO-OP unless score_aware_qat is on (we
+            # only pay the norm cost when the lever consumes it).
+            if spec.use_qat and spec.score_aware_qat:
+                from tac.torch_vehicle.score_aware_qat import accumulate_tensor_sensitivity
+
+                accumulate_tensor_sensitivity(
+                    decoder, rt.tensor_sensitivity_ema, decay=spec.qat_sensitivity_decay
+                )
             gn_adamw = torch.nn.utils.clip_grad_norm_(
                 [*rt.adamw_params, latents], spec.grad_clip
             )
@@ -570,9 +665,64 @@ class TorchVehicleDriver:
             rt.muon_sched.step()
         return epoch_loss / max(nb, 1), epoch_pose / max(nb, 1), last_gn_adamw, last_gn_muon
 
+    def _weight_regularizers(
+        self, decoder: nn.Module, latents: torch.Tensor, spec: StageSpec
+    ) -> torch.Tensor | None:
+        """The weight-domain regularizers added to the loss: the vendored C1a
+        categorical entropy (``cat_lambda``) + the Lever-1 differentiable brotli-rate
+        surrogate (``rate_lambda_w · H(W_i|W_{i-1}) + rate_lambda_lat · H(Δlatent)``).
+
+        Returns ``None`` when NO regularizer is active (``cat_lambda == 0`` AND both
+        ``rate_lambda_*`` == 0) — the DEFAULT for every vendored stage except the C1a
+        stages, so the loss is byte-identical to the pre-lever path. Returning ``None``
+        (vs a 0.0 tensor) preserves the EXACT legacy control flow: when only C1a is
+        active this returns ``spec.cat_lambda * cat_entropy_v2(...)`` — the SAME tensor
+        the legacy code added — so a basin that resumes onto this code is unchanged.
+
+        Lever 1 is DEFAULT-OFF: both ``rate_lambda_w`` and ``rate_lambda_lat`` default
+        to 0.0, so the rate surrogate is never even computed on the default path (no
+        extra cost, no gradient change). When enabled, the rate term is a true brotli
+        lower bound (order-1 conditional weight entropy + latent temporal-delta
+        entropy) — see ``tac.losses.rate_surrogate``."""
+        terms: list[torch.Tensor] = []
+        if spec.cat_lambda > 0:
+            ent = self.v.cat_entropy_v2(
+                decoder, sigma=spec.cat_sigma, sample_size=2000, device=self.train_device
+            )
+            terms.append(spec.cat_lambda * ent)
+        if spec.rate_lambda_w > 0 or spec.rate_lambda_lat > 0:
+            from tac.losses.rate_surrogate import brotli_rate_surrogate
+
+            # The latent rate term is GLOBAL (the codec delta-codes the full latent
+            # sequence), so pass the ENTIRE latent tensor — not the batch slice. The
+            # weight term reads the decoder weights (also global). The FiLM-wrapped
+            # decoder exposes the vendored Conv2d/Linear via named_modules, so the
+            # surrogate iterates the SAME tensor set the codec compresses (the
+            # ``pose_film.*`` Linear layers are tiny and also entropy-coded — they
+            # SHOULD be regularized too, so iterating all of them is correct).
+            lat_arg = latents if spec.rate_lambda_lat > 0 else None
+            h_cond, r_lat = brotli_rate_surrogate(
+                decoder, lat_arg, device=self.train_device
+            )
+            if spec.rate_lambda_w > 0:
+                terms.append(spec.rate_lambda_w * h_cond)
+            if spec.rate_lambda_lat > 0:
+                terms.append(spec.rate_lambda_lat * r_lat)
+        if not terms:
+            return None
+        reg = terms[0]
+        for t in terms[1:]:
+            reg = reg + t
+        return reg
+
     # -- split-by-head combined-gradient backward (the pose-axis salvage) -----
     def _split_by_head_backward(
-        self, decoded_bhwc: torch.Tensor, idx: torch.Tensor, spec: StageSpec
+        self,
+        decoded_bhwc: torch.Tensor,
+        idx: torch.Tensor,
+        spec: StageSpec,
+        *,
+        temperature: float | None = None,
     ) -> tuple[float, float]:
         """Compute the COMBINED frame-gradient (SegNet path on the fast train device,
         PoseNet path on the CPU authority) and inject it into the decoder graph via a
@@ -603,7 +753,7 @@ class TorchVehicleDriver:
         frames_seg = decoded_bhwc.detach().requires_grad_(True)  # train_device leaf
         seg_out = self.scorer.seg_forward_train(frames_seg)
         seg_targets = self.scorer.seg_targets_hard[idx]
-        seg_l = _seg_loss_for_spec(spec, seg_out, seg_targets)
+        seg_l = _seg_loss_for_spec(spec, seg_out, seg_targets, temperature=temperature)
         (spec.seg_weight * seg_l).backward()
         cot_seg = frames_seg.grad  # d(w_seg*seg_l)/dF on train_device
 
@@ -1068,7 +1218,11 @@ class TorchVehicleDriver:
                 merged = None  # consumed
 
             for epoch in range(start_epoch, spec.epochs):
-                mean_loss, mean_pose_mse, gn_adamw, gn_muon = self._train_one_epoch(rt, spec)
+                # ``epoch`` is the 0-based epoch within this stage — drives the Lever-2
+                # seg-temperature anneal (NO-OP unless seg_temperature_end is set).
+                mean_loss, mean_pose_mse, gn_adamw, gn_muon = self._train_one_epoch(
+                    rt, spec, epoch_in_stage=epoch
+                )
                 self._global_epoch += 1
                 epoch_in_stage = epoch + 1  # 1-based completed
 

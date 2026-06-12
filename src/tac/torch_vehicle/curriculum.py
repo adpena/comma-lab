@@ -20,6 +20,7 @@ config is purely the TRAINING schedule; the driver owns the architecture.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,6 +76,50 @@ class StageSpec:
     # construction (tests, the vendored projection) is unchanged.
     seg_surrogate: str | None = None
     seg_temperature: float = 1.0
+    # -- Lever 2 OPTIMIZE: per-epoch seg-temperature ANNEAL hook (the GAP the --
+    # combined arm flagged). ``seg_temperature_end is None`` (the default) keeps the
+    # STATIC ``seg_temperature`` for every epoch — byte-identical to today. When set,
+    # the driver anneals the PREDICTION softmax temperature COSINE from
+    # ``seg_temperature`` (start) toward ``seg_temperature_end`` over the stage's
+    # epochs (the memo's "T: 1.0 → 0.05 toward hard argmax" — sharper boundary
+    # gradient as training converges). The GT stays HARD (one-hot logits, the contest
+    # d_seg is a hard argmax); only the prediction softens/sharpens. Annealing is a
+    # NO-OP unless ``seg_surrogate`` is also set (the anneal modulates the surrogate's
+    # temperature; with the vendored CE path there is no temperature to anneal).
+    seg_temperature_end: float | None = None
+    # -- Lever 1 (differentiable brotli-rate surrogate) — DEFAULT-PRESERVING ----
+    # ``rate_lambda_w == 0.0`` AND ``rate_lambda_lat == 0.0`` (the defaults) add NO
+    # rate term — byte-identical to today (the loss is unchanged). When > 0 the driver
+    # adds ``rate_lambda_w · H(W_i|W_{i-1}) + rate_lambda_lat · H(Δlatent)`` from
+    # ``tac.losses.rate_surrogate.brotli_rate_surrogate`` — the order-1 conditional
+    # weight entropy (a tighter brotli proxy than the memoryless C1a ``cat_entropy_v2``)
+    # plus the currently-UNPENALIZED latent temporal-delta entropy. Schedule them up
+    # only in late stages (5-8) like C1a's ``cat_lambda`` 0.01→0.02 (the rate lever is
+    # the decoder-dominated, so the weight term first).
+    rate_lambda_w: float = 0.0
+    rate_lambda_lat: float = 0.0
+    # -- Lever 4 (score-aware QAT) — DEFAULT-PRESERVING -----------------------
+    # ``score_aware_qat is False`` (the default) uses the vendored UNIFORM 127-level
+    # fake-quant when ``use_qat`` — byte-identical to today. When True (and
+    # ``use_qat``) the QAT block routes through
+    # ``tac.torch_vehicle.score_aware_qat.apply_score_aware_qat`` with the per-tensor
+    # sensitivity EMA the driver accumulates from ``||∂S/∂w_t||``: high-sensitivity
+    # tensors get a FINER INT8 grid (argmax boundary protected), low-sensitivity ones
+    # a COARSER grid (fewer brotli bytes — the water-filling bit-allocator). Until the
+    # sensitivity EMA has been seeded (early in a stage) the map is uniform → the
+    # quant falls back to the vendored 127-level grid (so the first steps are
+    # bit-identical to uniform QAT).
+    score_aware_qat: bool = False
+    qat_sensitivity_decay: float = 0.99
+    # -- Lever 5 (margin-weighted seg promotion) — DEFAULT-PRESERVING ----------
+    # ``margin_weight_tau is None`` (the default) leaves the seg surrogate UNWEIGHTED —
+    # byte-identical to the Lever-2 baseline. When set, the per-pixel seg surrogate is
+    # weighted by ``exp(−margin/τ)`` (the SegNet top1−top2 logit margin of the decoded
+    # frame): boundary-prone pixels (small margin) get MORE gradient, confident-interior
+    # pixels (large margin) ~0 — capacity concentrates where d_seg actually flips. A
+    # NO-OP unless ``seg_surrogate`` is set (it multiplies the surrogate's per-pixel
+    # tensor; the vendored CE path returns a scalar with no per-pixel handle).
+    margin_weight_tau: float | None = None
 
 
 def _spec_from_stage_config(cfg: Any, epochs_override: int | None, ema_decay: float) -> StageSpec:
@@ -175,4 +220,41 @@ def build_curriculum(
     return specs
 
 
-__all__ = ["PR95_DEFAULT_EPOCHS", "PR95_TOTAL_EPOCHS", "StageSpec", "build_curriculum"]
+def seg_temperature_for_epoch(spec: StageSpec, epoch_in_stage: int) -> float:
+    """The PREDICTION softmax temperature for ``epoch_in_stage`` (0-based) — the
+    Lever-2 anneal hook (the OPTIMIZE part the combined arm flagged as missing).
+
+    DEFAULT-PRESERVING: ``spec.seg_temperature_end is None`` returns the STATIC
+    ``spec.seg_temperature`` for EVERY epoch — byte-identical to the pre-anneal driver
+    (proved by ``test_anneal_disabled_returns_static_temperature``).
+
+    When ``seg_temperature_end`` is set, the temperature COSINE-anneals from
+    ``seg_temperature`` (epoch 0) toward ``seg_temperature_end`` (the final epoch),
+    the memo's "T: 1.0 → 0.05 toward hard argmax". Cosine (not linear) spends most of
+    the schedule near the start temperature and sharpens late — matching the
+    convergence cadence (the boundary gradient sharpens once the coarse structure is
+    learned), and mirroring the driver's cosine LR schedule. Single-epoch stages
+    return the start temperature (no anneal room). Clamped to ``[end, start]`` (or
+    ``[start, end]`` if the anneal goes UP) so the value never overshoots either end.
+    """
+    if spec.seg_temperature_end is None:
+        return float(spec.seg_temperature)
+    t0 = float(spec.seg_temperature)
+    t1 = float(spec.seg_temperature_end)
+    if spec.epochs <= 1:
+        return t0
+    # Cosine progress in [0, 1] over the stage (0 at epoch 0, 1 at the final epoch).
+    e = max(0, min(int(epoch_in_stage), spec.epochs - 1))
+    cos = 0.5 * (1.0 - math.cos(math.pi * e / (spec.epochs - 1)))  # 0 → 1
+    t = t0 + (t1 - t0) * cos
+    lo, hi = (t1, t0) if t1 <= t0 else (t0, t1)
+    return float(min(max(t, lo), hi))
+
+
+__all__ = [
+    "PR95_DEFAULT_EPOCHS",
+    "PR95_TOTAL_EPOCHS",
+    "StageSpec",
+    "build_curriculum",
+    "seg_temperature_for_epoch",
+]

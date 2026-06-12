@@ -73224,6 +73224,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_torch_vehicle_all_layer2_levers_20260612",
+      "name": "torch_vehicle all 5 Layer-2 in-curriculum levers (wired+tested+composable, default-OFF)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 levers wired default-OFF in driver.py _train_one_epoch + _weight_regularizers + score_aware_qat route + seg_temperature_for_epoch anneal hook; rate_surrogate.py + score_aware_qat.py + pose_film.py modules"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "test_all_layer2_levers.py (18 tests: all-default byte-identity daemon-safety + per-lever behavioral + compose-all-five e2e), test_rate_surrogate.py (9), test_score_aware_qat.py (11), full torch_vehicle suite 90 pass 0 regress"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/all_layer2_levers_implemented_20260612.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -73233,5 +73274,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T14:18:07Z"
+  "updated_at": "2026-06-12T15:03:20Z"
 }

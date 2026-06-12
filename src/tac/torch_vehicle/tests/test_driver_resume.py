@@ -374,8 +374,8 @@ if mode == "slow":
     # Patch the per-epoch hook to sleep so the parent can kill mid-run AFTER a
     # checkpoint has landed.
     orig = drv._train_one_epoch
-    def slow_epoch(rt, spec):
-        r = orig(rt, spec)
+    def slow_epoch(rt, spec, *args, **kwargs):
+        r = orig(rt, spec, *args, **kwargs)
         (Path(out_dir)/"_epoch_done").write_text("1")
         time.sleep(2.0)
         return r
