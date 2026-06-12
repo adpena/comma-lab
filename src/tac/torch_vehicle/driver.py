@@ -223,6 +223,18 @@ class TorchVehicleConfig:
     # completion the in-flight thread is JOINED so the final BEST + last eval row
     # land before exit. Defaults False (the sync path is byte-identical unchanged).
     async_eval: bool = False
+    # ``pose_film_enabled`` (Lever 3 — the Quantizr STORE-pose lesson): wrap the
+    # vendored ``HNeRVDecoder`` with a stored-pose FiLM at the stem (channels[0])
+    # and store the 6 GT pose scalars per pair as side information (Wyner-Ziv), so
+    # d_pose collapses toward the stored-pose quant floor and the decoder capacity
+    # is freed for d_seg + rate. The stored pose is range-coded into an ADDITIVE
+    # archive section (~1 KB charged; the vendored codec stays pristine). DEFAULT
+    # FALSE → the driver builds the vendored decoder unchanged and adds NO pose
+    # section, so the archive is BYTE-IDENTICAL to today (the live basin is
+    # unaffected if it resumes onto this code — proved by the byte-identity test).
+    pose_film_enabled: bool = False
+    # FiLM MLP bottleneck width (only consulted when ``pose_film_enabled``).
+    pose_film_hidden: int = 8
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -350,15 +362,38 @@ class TorchVehicleDriver:
         self._inflight_snapshot_epoch: int | None = None
 
     # -- architecture construction (base_ch threaded — the FINDING-1 fix) -----
-    def _new_decoder(self, device: torch.device | None = None) -> nn.Module:
-        """Build a fresh base_ch-threaded decoder on ``device`` (default: the
-        TRAIN device — the gradient backend). The parse-back EVAL decoder is built
-        on the AUTHORITY device explicitly (``device=self.device``)."""
+    def _new_vendored_decoder(self, device: torch.device | None = None) -> nn.Module:
+        """Build a fresh base_ch-threaded VENDORED decoder (no FiLM)."""
         return self.v.HNeRVDecoder(
             latent_dim=self.cfg.latent_dim,
             base_channels=self.cfg.base_channels,
             eval_size=(_EVAL_H, _EVAL_W),
         ).to(device if device is not None else self.train_device)
+
+    def _new_decoder(self, device: torch.device | None = None) -> nn.Module:
+        """Build a fresh base_ch-threaded decoder on ``device`` (default: the
+        TRAIN device — the gradient backend). The parse-back EVAL decoder is built
+        on the AUTHORITY device explicitly (``device=self.device``).
+
+        Lever 3 (``cfg.pose_film_enabled``): wrap the vendored decoder in a
+        :class:`~tac.torch_vehicle.pose_film.PoseFiLMHNeRVWrapper` (stem-injection
+        FiLM, identity at init) and SEED its ``stored_pose`` buffer from the GT
+        PoseNet pose (``scorer.pose_targets``). DEFAULT-OFF returns the vendored
+        decoder unchanged (byte-identical)."""
+        dev = device if device is not None else self.train_device
+        if not self.cfg.pose_film_enabled:
+            return self._new_vendored_decoder(dev)
+        from tac.torch_vehicle.pose_film import PoseFiLMHNeRVWrapper
+
+        vendored = self._new_vendored_decoder(dev)
+        wrapper = PoseFiLMHNeRVWrapper(
+            vendored,
+            n_pairs=self.n_pairs,
+            film_hidden=self.cfg.pose_film_hidden,
+        ).to(dev)
+        # Seed the STORED pose from the GT PoseNet pose (side-info, not learned).
+        wrapper.set_stored_pose(self.scorer.pose_targets[: self.n_pairs].to(dev))
+        return wrapper
 
     def _build_stage_runtime(
         self,
@@ -452,7 +487,14 @@ class TorchVehicleDriver:
 
             if spec.use_qat:
                 originals = self.v.apply_qat(decoder)
-            decoded_pair = decoder(latents[idx])
+            # Lever 3: when pose-FiLM is on the decoder is a PoseFiLMHNeRVWrapper
+            # whose forward needs the per-pair index to look up the stored pose.
+            # When off, the vendored decoder forward takes only the latents.
+            decoded_pair = (
+                decoder(latents[idx], idx)
+                if self.cfg.pose_film_enabled
+                else decoder(latents[idx])
+            )
             if spec.use_qat:
                 self.v.restore_qat(decoder, originals)
 
@@ -628,12 +670,20 @@ class TorchVehicleDriver:
             {k: v.to(td) for k, v in merged["ema_decoder"].items()}
         )
         rt.ema_latents = merged["ema_latents"].to(td)
-        rt.adamw_opt.load_state_dict(merged["adamw"])
-        if rt.muon_opt is not None and merged.get("muon") is not None:
-            rt.muon_opt.load_state_dict(merged["muon"])
-        rt.adamw_sched.load_state_dict(merged["adamw_sched"])
-        if rt.muon_sched is not None and merged.get("muon_sched") is not None:
-            rt.muon_sched.load_state_dict(merged["muon_sched"])
+        # Optimizer/scheduler restore is SKIPPED for a FORK-SEED checkpoint (the
+        # Lever-3 A/B seeds the WEIGHTS + EMA from the immutable basin forkpoint but
+        # cannot transfer the AdamW/Muon momentum across an architecture change —
+        # FiLM adds new params, so the param groups differ). A fork-seed checkpoint
+        # sets ``adamw=None`` to signal "fresh optimizers from these weights at this
+        # curriculum position". Production checkpoints ALWAYS carry optimizer state,
+        # so the default (full) resume is unchanged.
+        if merged.get("adamw") is not None:
+            rt.adamw_opt.load_state_dict(merged["adamw"])
+            if rt.muon_opt is not None and merged.get("muon") is not None:
+                rt.muon_opt.load_state_dict(merged["muon"])
+            rt.adamw_sched.load_state_dict(merged["adamw_sched"])
+            if rt.muon_sched is not None and merged.get("muon_sched") is not None:
+                rt.muon_sched.load_state_dict(merged["muon_sched"])
         # RNG restore (so the next epoch's randperm matches the uninterrupted run).
         from tac.torch_vehicle.checkpoint import restore_rng
 
@@ -656,6 +706,81 @@ class TorchVehicleDriver:
         }
         ema_latents = rt.ema_latents.detach().cpu().clone()
         return _EvalSnapshot(ema_sd=ema_sd, ema_latents=ema_latents)
+
+    def _build_archive_and_eval_decoder(
+        self,
+        ema_sd: dict[str, torch.Tensor],
+        ema_latents: torch.Tensor,
+        meta_dict: dict[str, Any],
+    ) -> tuple[bytes, nn.Module, torch.Tensor]:
+        """Build the byte-closed archive from the EMA shadow + return the PARSE-BACK
+        eval decoder + parsed latents (on the AUTHORITY device).
+
+        DEFAULT (no FiLM): the vendored 3-section archive + a vendored decoder
+        rebuilt from the int8-dequantized parse-back — UNCHANGED from the legacy
+        path (byte-identical).
+
+        Lever 3 (``pose_film_enabled``): the EMA shadow is the WRAPPER state dict
+        (``decoder.*`` + ``pose_film.*`` + ``stored_pose``). We (1) split the FiLM
+        weights into the codec-compatible decoder blob (bare vendored keys + the
+        ``pose_film.*`` keys) and the ``stored_pose`` buffer into the ADDITIVE pose
+        section, (2) build ``vendored_archive + encode_pose_section`` (pristine
+        codec untouched), (3) parse BOTH back and rebuild the FiLM wrapper + a
+        cursor-based eval adapter so the exact eval renders the SAME FiLM-conditioned
+        frames the inflate path produces (byte-closed faithful)."""
+        if not self.cfg.pose_film_enabled:
+            archive = self.v.build_archive(ema_sd, ema_latents, meta_dict=meta_dict)
+            eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
+            eval_dec = self._new_vendored_decoder(device=self.device)
+            eval_dec.load_state_dict(
+                {k: v.to(self.device) for k, v in eval_decoder_sd.items()}
+            )
+            eval_dec.eval()
+            return archive, eval_dec, eval_latents
+
+        from tac.torch_vehicle.pose_film import (
+            PoseFiLMHNeRVWrapper,
+            _FiLMEvalDecoder,
+            build_archive_with_pose,
+            parse_pose_section,
+            wrapper_sd_to_archive_decoder_sd,
+        )
+
+        # (1) Split the wrapper state dict: codec decoder blob (vendored + FiLM
+        # weights) and the stored-pose buffer (additive pose section).
+        archive_decoder_sd = wrapper_sd_to_archive_decoder_sd(ema_sd)
+        stored_pose = ema_sd["stored_pose"]
+        # (2) Build the additive archive (pristine vendored build_archive + pose).
+        archive = build_archive_with_pose(
+            self.v.build_archive, archive_decoder_sd, ema_latents, meta_dict, stored_pose
+        )
+        # (3) Parse BOTH sections back and rebuild the FiLM wrapper for eval.
+        eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
+        parsed_pose = parse_pose_section(archive, self.v.parse_archive)
+        film_sd = {
+            k[len("pose_film.") :]: v
+            for k, v in eval_decoder_sd.items()
+            if k.startswith("pose_film.")
+        }
+        dec_sd = {
+            k: v for k, v in eval_decoder_sd.items() if not k.startswith("pose_film.")
+        }
+        vendored = self._new_vendored_decoder(device=self.device)
+        vendored.load_state_dict({k: v.to(self.device) for k, v in dec_sd.items()})
+        wrapper = PoseFiLMHNeRVWrapper(
+            vendored,
+            n_pairs=self.n_pairs,
+            film_hidden=self.cfg.pose_film_hidden,
+        ).to(self.device)
+        wrapper.pose_film.load_state_dict(
+            {k: v.to(self.device) for k, v in film_sd.items()}
+        )
+        if parsed_pose is not None:
+            wrapper.set_stored_pose(parsed_pose.to(self.device))
+        wrapper.eval()
+        eval_dec = _FiLMEvalDecoder(wrapper)
+        eval_dec.eval()  # resets the cursor to pair 0
+        return archive, eval_dec, eval_latents
 
     def _eval_snapshot(
         self, snap: _EvalSnapshot, spec: StageSpec, stage_index: int, snapshot_epoch: int
@@ -682,15 +807,14 @@ class TorchVehicleDriver:
         is_best). The BEST EMA shadow + archive are written to ``out_dir/best/``.
         """
         ema_sd = snap.ema_sd
-        archive = self.v.build_archive(
-            ema_sd,
-            snap.ema_latents,
-            meta_dict={
-                "n_pairs": self.n_pairs,
-                "latent_dim": self.cfg.latent_dim,
-                "base_channels": self.cfg.base_channels,  # FINDING: base_ch in meta (was 36)
-                "eval_size": [_EVAL_H, _EVAL_W],
-            },
+        meta_dict = {
+            "n_pairs": self.n_pairs,
+            "latent_dim": self.cfg.latent_dim,
+            "base_channels": self.cfg.base_channels,  # FINDING: base_ch in meta (was 36)
+            "eval_size": [_EVAL_H, _EVAL_W],
+        }
+        archive, eval_dec, eval_latents = self._build_archive_and_eval_decoder(
+            ema_sd, snap.ema_latents, meta_dict
         )
         archive_bytes = len(archive)
         # Parse-back: the int8-dequantized decoder + delta-decoded latents — the
@@ -699,10 +823,6 @@ class TorchVehicleDriver:
         # when training on MPS the score that picks BEST is the CPU authority
         # (CLAUDE.md "MPS auth eval is NOISE"). So the eval decoder is built on
         # self.device and the scorer's exact_eval routes through its authority net.
-        eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
-        eval_dec = self._new_decoder(device=self.device)
-        eval_dec.load_state_dict({k: v.to(self.device) for k, v in eval_decoder_sd.items()})
-        eval_dec.eval()
         ev = self.scorer.exact_eval(eval_dec, eval_latents.to(self.device), archive_bytes)
         score = float(ev["score"])
         d_seg = ev.get("seg_distortion", ev.get("d_seg"))
