@@ -273,6 +273,75 @@ def test_resume_bit_identical_through_qat_c1a_stage(tmp_path):
     _assert_state_equal(ref_state, b_state, atol=0.0)
 
 
+def _score_aware_qat_curriculum(total_epochs: int) -> list[StageSpec]:
+    """A 1-stage score-aware-QAT (Lever 4) curriculum. The per-tensor INT8 grid is a
+    function of the score-sensitivity EMA (``s_t = ||dS/dw_t||``) the driver accumulates
+    each step. The EMA is mutable per-stage runtime state — if it does NOT round-trip
+    through the checkpoint, a resumed run resets it to empty (uniform-127 fallback) and
+    the post-resume quant grid (hence the descent trajectory) DIVERGES from the
+    uninterrupted run. This is the R2 resume-fidelity regression guard for Lever 4."""
+    return [
+        StageSpec(
+            name="test_stage_score_aware_qat", epochs=total_epochs, seg_loss_fn=_ce_seg_loss,
+            eval_every=1000, batch_size=4, ema_decay=0.999, use_muon=False, adamw_lr=1e-3,
+            muon_lr=2e-4, muon_weight_decay=0.0, latent_lr_mult=10.0, grad_clip=1.0,
+            grad_clip_muon=1.0, lr_floor_ratio=5e-6, seg_weight=100.0, pose_weight=1.0,
+            cat_lambda=0.0, cat_sigma=0.2, use_qat=True, init_latents_random=True,
+            score_aware_qat=True, qat_sensitivity_decay=0.99,
+        )
+    ]
+
+
+def test_resume_bit_identical_through_score_aware_qat_stage(tmp_path):
+    """R2 Lever-4 regression: a death + resume THROUGH a score-aware-QAT stage must be
+    bit-identical to an uninterrupted run. This REQUIRES the per-tensor sensitivity EMA
+    to survive the checkpoint — without it the resumed run rebuilds an EMPTY EMA, the
+    post-resume quant grid falls back to uniform-127, and the final decoder/optimizer
+    state DIVERGES (the resume-fidelity drift this guards). Pre-fix this test FAILS;
+    post-fix (EMA threaded through capture/save/restore) it passes at atol=0."""
+    ref = _build_driver(tmp_path / "ref", _score_aware_qat_curriculum(6), seed=0)
+    ref.run()
+    ref_state = _final_state(ref)
+
+    _run_with_simulated_death(tmp_path / "run", _score_aware_qat_curriculum(6), die_at=3, seed=0)
+    b = _build_driver(tmp_path / "run", _score_aware_qat_curriculum(6), seed=0)
+    b.run()
+    b_state = _final_state(b)
+    _assert_state_equal(ref_state, b_state, atol=0.0)
+
+
+def test_score_aware_qat_sensitivity_ema_round_trips_through_checkpoint(tmp_path):
+    """R2 Lever-4: the score-sensitivity EMA is non-empty after a few score-aware-QAT
+    epochs AND is restored (not reset to empty) on resume. A direct assertion on the
+    lever STATE (complements the bit-identity end-to-end test above)."""
+    from tac.torch_vehicle.checkpoint import load_checkpoint
+
+    _run_with_simulated_death(
+        tmp_path / "run", _score_aware_qat_curriculum(6), die_at=3, seed=0
+    )
+    merged = load_checkpoint(tmp_path / "run")
+    persisted = merged.get("tensor_sensitivity_ema")
+    assert persisted, "checkpoint must persist a NON-EMPTY score-sensitivity EMA"
+    assert all(
+        isinstance(v, float) and v == v and abs(v) != float("inf")
+        for v in persisted.values()
+    ), "EMA values must be finite floats"
+
+    # A fresh resume runtime must receive the persisted EMA (not an empty dict).
+    b = _build_driver(tmp_path / "run", _score_aware_qat_curriculum(6), seed=0)
+    spec = b.curriculum[merged["position"].stage_index]
+    rt = b._build_stage_runtime(
+        spec, decoder=b._new_decoder(),
+        latents=torch.nn.Parameter(torch.zeros(b.n_pairs, b.cfg.latent_dim)),
+        ema_decoder=None, ema_latents=None,
+    )
+    assert not rt.tensor_sensitivity_ema, "fresh runtime starts empty"
+    b._restore_into(rt, merged)
+    assert rt.tensor_sensitivity_ema == {
+        str(k): float(v) for k, v in persisted.items()
+    }, "resume must restore the persisted sensitivity EMA verbatim"
+
+
 def test_resume_bit_identical_across_stage_transition(tmp_path):
     """A death MID-stage-2 must resume + cross into the Muon stage with the EXACT
     same trajectory as an uninterrupted run — the real-world multi-stage case.

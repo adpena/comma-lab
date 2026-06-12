@@ -800,6 +800,12 @@ class TorchVehicleDriver:
             "muon_sched": rt.muon_sched.state_dict() if rt.muon_sched is not None else None,
             "torch_rng": torch.get_rng_state(),
             "numpy_rng": np.random.get_state(),
+            # Lever 4: persist the per-tensor score-sensitivity EMA so a
+            # score-aware-QAT resume continues the SAME quant-grid trajectory
+            # (else it resets to empty → uniform-127 fallback for the post-resume
+            # steps). A plain dict copy (JSON/torch-safe). Empty/default on the
+            # vendored path → round-trips as an empty dict (no behavior change).
+            "tensor_sensitivity_ema": dict(rt.tensor_sensitivity_ema),
             "base_channels": self.cfg.base_channels,
             "latent_dim": self.cfg.latent_dim,
             "n_pairs": self.n_pairs,
@@ -834,6 +840,16 @@ class TorchVehicleDriver:
             rt.adamw_sched.load_state_dict(merged["adamw_sched"])
             if rt.muon_sched is not None and merged.get("muon_sched") is not None:
                 rt.muon_sched.load_state_dict(merged["muon_sched"])
+        # Lever 4: restore the per-tensor score-sensitivity EMA (so a
+        # score-aware-QAT resume continues the SAME quant grid, not a uniform-127
+        # reset). Backward-compatible: a legacy/fork-seed checkpoint with no key
+        # (or ``None``) leaves the freshly-built empty EMA — exactly today's
+        # behavior on the default path (the EMA re-seeds from the first backward).
+        sens = merged.get("tensor_sensitivity_ema")
+        if sens:
+            rt.tensor_sensitivity_ema.clear()
+            rt.tensor_sensitivity_ema.update({str(k): float(v) for k, v in sens.items()})
+
         # RNG restore (so the next epoch's randperm matches the uninterrupted run).
         from tac.torch_vehicle.checkpoint import restore_rng
 

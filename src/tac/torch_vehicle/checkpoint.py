@@ -105,6 +105,15 @@ def save_checkpoint(
         "muon_sched": state.get("muon_sched"),
         "torch_rng": state.get("torch_rng"),
         "numpy_rng": state.get("numpy_rng"),
+        # Lever 4 (score-aware QAT) per-tensor sensitivity EMA. A plain
+        # ``dict[str, float]`` (or ``None``/absent for a default / pre-Lever-4
+        # checkpoint). MUST survive a death so a Lever-4-ON resume continues the
+        # SAME quant-grid trajectory instead of resetting the EMA to empty (which
+        # would fall back to uniform-127 for the post-resume steps — a resume-
+        # fidelity drift, the sec/epoch/eval-row reset class). Absent on legacy
+        # checkpoints → the loader yields no key → the driver rebuilds an empty
+        # EMA, exactly today's behavior (backward-compatible).
+        "tensor_sensitivity_ema": state.get("tensor_sensitivity_ema"),
     }
 
     manifest: dict[str, Any] = {
