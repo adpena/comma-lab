@@ -57,7 +57,7 @@ def _build(max_pairs, base_channels, backend, carrier, targets_cache, seed,
         blob = torch.load(cache, map_location="cpu", weights_only=False)
         seg_t, pose_t = blob["seg"][:max_pairs], blob["pose"][:max_pairs]
     else:
-        seg_t, pose_t, _ = build_gt_targets(max_pairs, device="cpu")
+        seg_t, pose_t, _ = build_gt_targets(net, max_pairs=max_pairs, device="cpu")
         seg_t, pose_t = seg_t[:max_pairs], pose_t[:max_pairs]
     bundle = CapstoneVqNervBundle(
         CapstoneVqNervConfig(num_pairs=max_pairs, base_channels=base_channels,

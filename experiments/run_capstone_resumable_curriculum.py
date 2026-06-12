@@ -115,10 +115,12 @@ def main() -> None:
         seg_t, pose_t = blob["seg"][: args.max_pairs], blob["pose"][: args.max_pairs]
         print(f"[targets] loaded cache {cache}", flush=True)
     else:
-        seg_t, pose_t, _ = build_gt_targets(args.max_pairs, device=args.device)
+        # build_gt_targets(distortion_net, *, max_pairs, device) — net is the
+        # FIRST positional arg (mirrors run_capstone_campaign._load_or_build_targets).
+        seg_t, pose_t, n_built = build_gt_targets(net, max_pairs=args.max_pairs, device=args.device)
         seg_t, pose_t = seg_t[: args.max_pairs], pose_t[: args.max_pairs]
         cache.parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"seg": seg_t, "pose": pose_t, "n": args.max_pairs}, cache)
+        torch.save({"seg": seg_t, "pose": pose_t, "n": n_built}, cache)
         print(f"[targets] built + cached {cache}", flush=True)
 
     bundle = CapstoneVqNervBundle(

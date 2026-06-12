@@ -54,7 +54,7 @@ def _build_trainer(max_pairs: int, base_channels: int, batch_size: int, backend:
         blob = torch.load(cache, map_location="cpu", weights_only=False)
         seg_t, pose_t, n = blob["seg"], blob["pose"], int(blob["n"])
     else:
-        seg_t, pose_t, n = build_gt_targets(max_pairs, device="cpu")
+        seg_t, pose_t, n = build_gt_targets(net, max_pairs=max_pairs, device="cpu")
     assert n >= max_pairs, f"cache has n={n} < max_pairs={max_pairs}"
     seg_t, pose_t, n = seg_t[:max_pairs], pose_t[:max_pairs], max_pairs
 
