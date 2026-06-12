@@ -73060,11 +73060,11 @@
       "id": "lane_torch_vehicle_mps_gradient_basin_20260612",
       "name": "Torch-vehicle MPS-gradient split-device basin (104x local, CPU-authority eval)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "split-device wire-in committed 872d36381 (train=mps, eval=cpu authority); descent-equivalence A/B harness committed; 26/26 torch_vehicle tests + 9 split-device tests green"
         },
         "real_archive_empirical": {
           "status": false,
@@ -73087,15 +73087,20 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/mps_upstream_macos_basin_run_20260612.md (REJECT pose verdict; basin NOT launched)"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "REJECT(pose) advisory NON-PROMOTABLE; basin NOT launched. memo .omx/research/mps_upstream_macos_basin_run_20260612.md; verdict experiments/results/torch_vehicle_mps_descent_ab/verdict.json",
+      "research_only": true,
+      "reactivation_criteria": [
+        "DEFER-pending-MPS-PoseNet-fix: n48 gate PASSED d_seg (bit-identical) REJECTED d_pose (gap 7.02>tol 1.12). Reactivation: (a) patch MPS-PoseNet drift op in tac.torch_mps_compat + re-run gate; OR (b) split-by-head (SegNet fwd/bwd on MPS",
+        "PoseNet on CPU) + re-gate. NOT a kill; 90-104x seg-path lever real. Fallback: torch-CPU basin pid 42035 / Modal CUDA."
+      ]
     }
   ],
   "level_rules": {
@@ -73105,5 +73110,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T08:35:25Z"
+  "updated_at": "2026-06-12T09:12:23Z"
 }
