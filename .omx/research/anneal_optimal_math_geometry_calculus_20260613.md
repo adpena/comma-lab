@@ -87,8 +87,70 @@ holds (and confirm Δ_median ≈ 0.3 collapse). Run on the **Lever-3 v2 clean-`r
 v2 lands) so the seg signal is FiLM-decoupled. Default-preserving: the schedule fn extension keeps the
 static/cosine paths byte-identical.
 
+## 6′. The CRUX — slice-0 falsified the MEDIAN; the optimal statistic is the WEIGHTED MEAN
+**The slice-0 calibration (4 arms, v2 clean-`rgb_1`) ranked: fast-cool→0.3 (d_seg red 0.001496) >
+margin-adaptive[median] (0.001400) > static-0.3 (0.001378) > cosine-1.0→0.05 (0.001328); `margin_adaptive_
+wins: false`.** The theoretically-"optimal" margin-adaptive arm LOST to a committed-low fixed schedule.
+This is not noise — it falsifies the §6 **median** heuristic, and the calculus says exactly why.
+
+§2 derived `T*=Δ` for ONE flip. But the schedule must pick ONE global `T` for a whole *distribution* of
+flip margins `{Δ_i}`, and the optimal aggregating statistic is **not** the median. The aggregate useful
+gradient is
+```
+G(T) = Σ_i (1/T)·e^{−Δ_i/T} = (1/T)·Σ_i e^{−Δ_i/T}.
+```
+**Calculus (the crux).** `G'(T)=0`:
+```
+G'(T) = −(1/T²)·S(T) + (1/T³)·Σ_i Δ_i e^{−Δ_i/T} = 0,  S(T)=Σ_i e^{−Δ_i/T}
+⟹  T* = [Σ_i Δ_i·e^{−Δ_i/T*}] / [Σ_i e^{−Δ_i/T*}]
+```
+**`T*` is the `e^{−Δ/T}`-WEIGHTED MEAN of the live flip margins — a self-consistent fixed point, NOT the
+median.**
+
+**The nexus (the self-reference).** The weight `w_i = e^{−Δ_i/T}` is the **reachability** factor — it
+exponentially discounts deep (large-Δ) flips the surrogate cannot move. So `T*` is a *softmin-temperature
+mean*: **the unique temperature equal to the reachability-weighted mean of the margins it itself induces.**
+That fixed-point self-reference (`T = mean weighted by e^{−Δ/T}`) is the nexus binding the per-flip
+resonance (§2) to the distribution-level optimum. Verified empirically (test
+`test_weighted_mean_is_self_consistent_fixed_point`): the returned `T*` reproduces its own weighted mean.
+
+**Geometry (why the median is biased HIGH).** For fixed `T`, `g(Δ,T)=(1/T)e^{−Δ/T}` is a ridge in `Δ`:
+**gentle on the left** (small Δ<T, gradient still large), **steep on the right** (large Δ>T, `e^{−Δ/T}→0`).
+The flip-margin distribution is **right-skewed** (a mass of small boundary flips + a long deep tail). The
+median sits inside the tail's pull; but the steep right side means the deep flips contribute ~zero
+gradient, so the aggregate optimum **shades LEFT** toward the reachable small-Δ mass. The median ignores
+reachability; the weighted mean encodes it. That asymmetry breaks the symmetry that would make the median
+optimal. **Empirical (the crux confirmed):** on a slice-0-like broad distribution (median 0.600) the
+weighted-mean fixed point is **T\*=0.485 — below the median**; the median-adaptive arm clamps to 0.6 (too
+warm), the weighted mean commits to 0.485 (near fast-cool's winning 0.3–0.4 hold). As the margins collapse
+toward the floor, both converge — exactly the slice-0 dynamics.
+
+**Algebra (median = rank statistic; weighted mean = reachability moment).** For a SYMMETRIC margin
+distribution the two nearly coincide; the flip-margin distribution is right-skewed (deep errors form a
+tail), so `median > T*`. `T*` is the maximum-aggregate-gradient "effective margin" of the *reachable*
+subpopulation. Existence/uniqueness: `φ(T)=Σ Δ_i e^{−Δ_i/T}/Σ e^{−Δ_i/T}` maps `[minΔ, meanΔ]→[minΔ,
+meanΔ]`, is continuous + monotone-increasing (`φ'=Var_w(Δ)/T² > 0`), `φ(minΔ)≥minΔ`, `φ(meanΔ)≤meanΔ`
+⟹ a fixed point exists (IVT) and is a contraction near it ⟹ 3–5 iterations from the median converge.
+
+⟹ **The CORRECTED max-signal schedule** (`curriculum.seg_temperature_weighted_mean_resonant`):
+```
+T(t) = clamp( fixed-point of  T = Σ Δ_i e^{−Δ_i/T} / Σ e^{−Δ_i/T}  over the live flip set,  0.3,  0.6 )
+```
+with Lever-5 `τ(t)=T(t)` slaved. This is the principled "more nuanced curve" — it is **measured** (the
+fixed point on the live margin histogram each step) and **assignable** (the from-0 launcher selects it).
+#119 v3 measures it as the 5th arm against static / fast-cool / cosine / median-adaptive on slices 0+1.
+
+**Level-3 endpoint (documented, deferred):** the maximally-nuanced schedule removes the global `T` entirely
+— a **per-pixel resonant temperature** `T_i = clamp(Δ_i, 0.3, T_max)` so every flip pixel trains at its OWN
+resonance simultaneously (gradient ∝ `1/Δ_i`: small-margin = largest push). This needs a per-pixel-
+temperature `soft_cosine` loss form (a driver change to validate apples-to-apples), so it is the next
+frontier, not in the v3 run; the global weighted-mean fixed point is the immediate corrected assignment.
+
 ## Bottom line
 The anneal was never calibrated — and the calculus says the *whole shape* was wrong: the surrogate is a
-**margin-resonant** loss (`grad ∝ (1/T)e^{−Δ/T}`, peak at T=Δ), so the optimal schedule **tracks the live
-flip-margin distribution down to a ~0.3 floor**, with Lever-5's τ slaved to T. That's the max-signal
-anneal — and #119 will measure it against the simple schedules on the v2 decoder.
+**margin-resonant** loss (`grad ∝ (1/T)e^{−Δ/T}`, peak at T=Δ). The §6 median-adaptive schedule was the
+right *idea* (track the live distribution) with the wrong *statistic* — slice-0 falsified it. The **crux**
+is that the distribution-level optimum is the `e^{−Δ/T}`-**weighted mean** (a reachability-discounted
+softmin), not the median; the **nexus** is its self-consistency (`T*` equals its own reachability-weighted
+mean). That weighted-mean fixed point — clamped to `[0.3, 0.6]`, τ slaved — is the max-signal anneal, and
+#119 v3 measures it against the four prior arms on the v2 clean-`rgb_1` decoder across slices 0+1.

@@ -87,6 +87,20 @@ class StageSpec:
     # NO-OP unless ``seg_surrogate`` is also set (the anneal modulates the surrogate's
     # temperature; with the vendored CE path there is no temperature to anneal).
     seg_temperature_end: float | None = None
+    # -- Lever 2 CALIBRATION: fast-cool-then-HOLD anneal shape (the seg-schedule the --
+    # ANNEAL-SCHEDULE-CALIBRATION probe found best for the from-0 run). ``seg_temperature_
+    # hold_frac is None`` (the default) keeps the PLAIN cosine over the WHOLE stage (the
+    # old 1.0→end shape — byte-identical to pre-calibration). When set to a fraction
+    # ``f ∈ (0, 1]`` (and ``seg_temperature_end`` is also set), the temperature cosine-
+    # anneals from ``seg_temperature`` (start) toward ``seg_temperature_end`` over only
+    # the FIRST ``f`` of the stage's epochs, then HOLDS at ``seg_temperature_end`` for the
+    # remaining ``1−f``. This is the calibrated "brief warm phase for early stability,
+    # then PARK at the gradient-alive sweet spot (T=0.3)" schedule: it spends NO epochs in
+    # the gradient-DEAD zone (T < SEG_ANNEAL_GRADIENT_FLOOR_T=0.3) IFF ``seg_temperature_
+    # end >= 0.3``, unlike the plain 1.0→0.05 cosine which spends ~52% at T≥0.5 (where the
+    # soft-cosine surrogate is ≤ CE) + ~15% in the dead zone. A NO-OP unless BOTH
+    # ``seg_surrogate`` and ``seg_temperature_end`` are set.
+    seg_temperature_hold_frac: float | None = None
     # -- Lever 1 (differentiable brotli-rate surrogate) — DEFAULT-PRESERVING ----
     # ``rate_lambda_w == 0.0`` AND ``rate_lambda_lat == 0.0`` (the defaults) add NO
     # rate term — byte-identical to today (the loss is unchanged). When > 0 the driver
@@ -279,8 +293,23 @@ def seg_temperature_for_epoch(spec: StageSpec, epoch_in_stage: int) -> float:
     t1 = float(spec.seg_temperature_end)
     if spec.epochs <= 1:
         return t0
-    # Cosine progress in [0, 1] over the stage (0 at epoch 0, 1 at the final epoch).
     e = max(0, min(int(epoch_in_stage), spec.epochs - 1))
+    # FAST-COOL-THEN-HOLD shape (the calibrated schedule): cosine from t0 → t1 over the
+    # first ``hold_frac`` of the stage, then HOLD at t1. The denominator is the LAST
+    # epoch of the cool phase (so the cool phase reaches t1 exactly, then parks). When
+    # ``hold_frac is None`` the cool phase is the WHOLE stage (the plain cosine below).
+    if spec.seg_temperature_hold_frac is not None:
+        frac = float(spec.seg_temperature_hold_frac)
+        # Number of epochs in the cool phase (>=2 so there is anneal room; clamped to the
+        # stage). cool_epochs-1 is the last cool epoch index where T==t1; after it, HOLD.
+        cool_epochs = max(2, min(spec.epochs, round(frac * spec.epochs)))
+        if e >= cool_epochs - 1:
+            return float(t1)  # HOLD at the end temperature for the rest of the stage
+        cos = 0.5 * (1.0 - math.cos(math.pi * e / (cool_epochs - 1)))  # 0 → 1 over cool
+        t = t0 + (t1 - t0) * cos
+        lo, hi = (t1, t0) if t1 <= t0 else (t0, t1)
+        return float(min(max(t, lo), hi))
+    # Plain cosine progress in [0, 1] over the WHOLE stage (0 at epoch 0, 1 at the final).
     cos = 0.5 * (1.0 - math.cos(math.pi * e / (spec.epochs - 1)))  # 0 → 1
     t = t0 + (t1 - t0) * cos
     lo, hi = (t1, t0) if t1 <= t0 else (t0, t1)
@@ -328,12 +357,156 @@ def seg_anneal_temperature_is_gradient_alive(temperature: float) -> bool:
     return float(temperature) >= SEG_ANNEAL_GRADIENT_FLOOR_T
 
 
+# The MARGIN-ADAPTIVE seg-temperature schedule's clamp window (the #119 ANNEAL-SCHEDULE
+# CALIBRATION result). The optimal-anneal calculus
+# (.omx/research/anneal_optimal_math_geometry_calculus_20260613.md) shows the soft-cosine
+# surrogate's per-flip gradient ``|grad_g(Δ, T)| ≈ (1/T)·e^{−Δ/T}`` is MAXIMIZED exactly
+# at ``T* = Δ`` (the flip's own logit margin): below T=Δ it dies super-exponentially
+# (the R12 dead zone), above it fades ~1/T (untargeted). So the MAX-SIGNAL temperature
+# TRACKS the live flip-margin distribution, floored at the gradient-alive knee
+# ``T_floor = SEG_ANNEAL_GRADIENT_FLOOR_T = 0.3`` and capped at ``T_max = 0.6`` (above
+# which the surrogate spreads gradient too thin across classes — the gate's T=1.0 row was
+# worse than CE). The cap also bounds the early-large-Δ reach so the schedule never warms
+# back into the untargeted regime. These are the schedule's two structural knobs.
+SEG_ANNEAL_MARGIN_ADAPTIVE_T_FLOOR = 0.3
+SEG_ANNEAL_MARGIN_ADAPTIVE_T_MAX = 0.6
+
+
+def seg_temperature_margin_adaptive(
+    median_flip_margin: float,
+    *,
+    t_floor: float = SEG_ANNEAL_MARGIN_ADAPTIVE_T_FLOOR,
+    t_max: float = SEG_ANNEAL_MARGIN_ADAPTIVE_T_MAX,
+) -> float:
+    """The MAX-SIGNAL (theoretically-optimal) seg-surrogate PREDICTION temperature for a
+    training STEP, given the LIVE flip-margin distribution — the #119 margin-adaptive
+    schedule (.omx/research/anneal_optimal_math_geometry_calculus_20260613.md §6).
+
+    The surrogate ``1 − softmax(pred/T)[gt]`` is MARGIN-RESONANT: on a confidently-wrong
+    flip of logit margin ``Δ = pred_argmax − pred_gt > 0`` the GT-logit gradient magnitude
+    is ``(1/T)·e^{−Δ/T}``, which the calculus maximizes at ``T* = Δ``. The bulk of the
+    remaining flips at any step sit near the RUNNING MEDIAN of the flip margins, so the
+    per-step max-signal temperature is::
+
+        T(t) = clamp( running_median({Δ_i : pixel i is a current flip}),  t_floor,  t_max )
+
+    floored at the gradient-alive knee (``t_floor = 0.3``; below it ``e^{−Δ/T} → 0``, the
+    R12 dead zone) and capped (``t_max = 0.6``; above it the gradient spreads thin across
+    classes — untargeted, the gate's T=1.0 < CE row). Lever-5's margin weight ``τ`` is
+    SLAVED to this T (``τ(t) = T(t)``; §7) so the up-weighted small-margin pixels are
+    exactly the ones whose surrogate gradient survives at this T.
+
+    This is a PURE function of the measured median margin — the live flip-Δ median is
+    supplied by the trainer/probe each step (it cannot be a function of (spec, epoch)
+    because it depends on the decoder's CURRENT logits). ``seg_temperature_for_epoch``
+    (the static / cosine / fast-cool-hold schedules) is UNCHANGED and remains the
+    default; this is the OPT-IN max-signal alternative the from-0 launcher (#116) selects
+    when ``spec.seg_temperature_margin_adaptive`` is set.
+
+    Degenerate inputs (no flips this step → median is NaN/None) are the caller's
+    responsibility to handle (hold the prior T); a non-finite ``median_flip_margin`` here
+    returns ``t_floor`` (the safe gradient-alive default)."""
+    m = float(median_flip_margin)
+    lo = float(t_floor)
+    hi = float(t_max)
+    if hi < lo:
+        raise ValueError(f"t_max ({hi}) must be >= t_floor ({lo})")
+    if not math.isfinite(m):
+        return lo
+    return float(min(max(m, lo), hi))
+
+
+# Fixed-point iteration count for the WEIGHTED-MEAN-RESONANT schedule. The map
+# ``φ(T) = Σ Δ_i e^{−Δ_i/T} / Σ e^{−Δ_i/T}`` is a contraction near its fixed point
+# (``φ'(T) = Var_w(Δ)/T² < 1`` for realistic flip-margin spreads), so 3–5 iterations from
+# the median warm-start converge to machine-useful precision. 5 is a safe default.
+SEG_ANNEAL_WEIGHTED_MEAN_FIXED_POINT_ITERS = 5
+
+
+def seg_temperature_weighted_mean_resonant(
+    flip_margins,
+    *,
+    t_floor: float = SEG_ANNEAL_MARGIN_ADAPTIVE_T_FLOOR,
+    t_max: float = SEG_ANNEAL_MARGIN_ADAPTIVE_T_MAX,
+    n_iter: int = SEG_ANNEAL_WEIGHTED_MEAN_FIXED_POINT_ITERS,
+) -> float:
+    """The CORRECTED max-signal seg-surrogate PREDICTION temperature for a training STEP —
+    the ``e^{−Δ/T}``-WEIGHTED-MEAN fixed point of the live flip margins (the #119 crux fix;
+    .omx/research/anneal_optimal_math_geometry_calculus_20260613.md §6′).
+
+    :func:`seg_temperature_margin_adaptive` set ``T(t) = clamp(MEDIAN(Δ), floor, max)``,
+    but the median is the WRONG aggregating statistic. The per-flip surrogate gradient is
+    ``g(Δ,T) ≈ (1/T)·e^{−Δ/T}`` (resonance ``T*=Δ`` per flip); over the live flip set
+    ``{Δ_i}`` a SINGLE global ``T`` drives the AGGREGATE ``G(T) = (1/T)·Σ_i e^{−Δ_i/T}``,
+    whose argmax (``G'(T)=0``) is the self-consistent::
+
+        T* = [ Σ_i Δ_i·e^{−Δ_i/T*} ] / [ Σ_i e^{−Δ_i/T*} ]
+
+    — the e^{−Δ/T}-weighted (reachability-weighted) mean of the margins, NOT the median.
+    The weight ``e^{−Δ_i/T}`` exponentially discounts deep/unreachable large-Δ flips, so
+    ``T*`` shades toward the reachable small-Δ mass (``minΔ ≤ T* ≤ meanΔ``). On a
+    right-skewed flip-margin distribution this sits BELOW the median — which is exactly why
+    the slice-0 calibration found a committed-low schedule (fast-cool → 0.3) beat the
+    median-adaptive arm (parked at the head-median ≈0.56, too warm for the bulk of the
+    reachable flips). This function computes ``T*`` by the contraction fixed-point iteration
+    ``φ(T) = Σ Δ_i e^{−Δ_i/T} / Σ e^{−Δ_i/T}`` warm-started at the median, then clamps the
+    result to the gradient-alive band ``[t_floor, t_max]`` (floor 0.3 = the R12 dead-zone
+    knee; cap 0.6 = above which the surrogate spreads gradient too thin across classes).
+    Lever-5's ``τ`` is SLAVED to this T (``τ(t)=T(t)``; §7).
+
+    ``flip_margins`` is the RAW per-flip-pixel margin vector ``Δ_i = pred_argmax − pred_gt``
+    (any sequence or a 1-D ``torch.Tensor``); non-finite entries are dropped. An EMPTY flip
+    set (no flips this step) returns ``t_floor`` (the safe gradient-alive default; the caller
+    may instead hold the prior T). A torch import is LAZY (module import stays light) and the
+    fixed point is vectorized when a tensor is supplied.
+
+    This is the OPT-IN principled alternative to ``seg_temperature_margin_adaptive``;
+    ``seg_temperature_for_epoch`` (static / cosine / fast-cool-hold) is UNCHANGED and remains
+    the default, so existing schedules stay byte-identical."""
+    lo = float(t_floor)
+    hi = float(t_max)
+    if hi < lo:
+        raise ValueError(f"t_max ({hi}) must be >= t_floor ({lo})")
+
+    import torch  # lazy: keep module import light; torch is a hard project dep
+
+    if torch.is_tensor(flip_margins):
+        m = flip_margins.detach().reshape(-1).to(torch.float64)
+    else:
+        m = torch.as_tensor(list(flip_margins), dtype=torch.float64)
+    m = m[torch.isfinite(m)]
+    if m.numel() == 0:
+        return lo
+
+    # Warm-start at the (unclamped) median; iterate the UNclamped fixed point so we find the
+    # true weighted mean, then clamp the assigned value to the alive band. Guard tiny-T
+    # underflow (all weights → 0 ⟹ keep the current iterate).
+    T = float(m.median().item())
+    if not math.isfinite(T) or T <= 0.0:
+        T = max(float(m.min().item()), 1e-6)
+    for _ in range(max(1, int(n_iter))):
+        w = torch.exp(-m / T)
+        denom = float(w.sum().item())
+        if denom <= 0.0 or not math.isfinite(denom):
+            break
+        T_new = float((m * w).sum().item() / denom)
+        if not math.isfinite(T_new) or T_new <= 0.0:
+            break
+        T = T_new
+    return float(min(max(T, lo), hi))
+
+
 __all__ = [
     "PR95_DEFAULT_EPOCHS",
     "PR95_TOTAL_EPOCHS",
     "SEG_ANNEAL_GRADIENT_FLOOR_T",
+    "SEG_ANNEAL_MARGIN_ADAPTIVE_T_FLOOR",
+    "SEG_ANNEAL_MARGIN_ADAPTIVE_T_MAX",
+    "SEG_ANNEAL_WEIGHTED_MEAN_FIXED_POINT_ITERS",
     "StageSpec",
     "build_curriculum",
     "seg_anneal_temperature_is_gradient_alive",
     "seg_temperature_for_epoch",
+    "seg_temperature_margin_adaptive",
+    "seg_temperature_weighted_mean_resonant",
 ]
