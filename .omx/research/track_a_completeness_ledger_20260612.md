@@ -79,8 +79,14 @@ advisory number exists · `UNBUILT` not started.
   decoder learns coarse-grid robustness and RECOVERS the distortion). Path (b) folds into a
   distortion-arm QAT stage — it is NOT a standalone bolt-on. Then: recursive review (3 clean) +
   MEASURE deployed net on a real base_ch20 archive.
-- **HONEST VALUE: byte lever −789..−1721 B is real and survives inflate, but NET score is currently
-  +worse. Expected net win is 0 until path (a) or (b) lands — do NOT count it in the stack yet.**
+- **HONEST VALUE (UPGRADED — Partner B math-optimal waterfill, commit 57be37a2c): the path-(a)
+  math-optimal KKT/convex-hull allocation MEASURED `NET_POSITIVE_AT_$0` = −0.0052 to −0.0104 score
+  improvement on BOTH 24-pair slices, real frozen scorer, byte Δ ~−845 B surviving inflate, KKT
+  certified (convex-hull restriction, 200/200). The operator's "math-optimal may be net positive"
+  was RIGHT. CAVEAT (apples-to-apples gate): the −0.0104/−0.0052 are small-slice (d_pose noise) —
+  Partner B is re-confirming at ≥96 pairs before banking. If it holds at scale, ITEM B is a REAL
+  rate WIN (a substantial fraction of a medal-gap) — NO retrain needed (path b unnecessary). Then:
+  driver wire-in (D2) + SEAL.**
 
 ## ITEM C — L3 distortion finishing-kit (PR98 color-bias / T10 boundary / S12 null-preimage / Lever-D margin-residual)
 - **State (LANDED 2026-06-12 by partner ae43ac8d; commits de6cf6597 / c1a331376 / 38f748bf7;
@@ -108,9 +114,12 @@ advisory number exists · `UNBUILT` not started.
   a converged decoder). DECISIVE $0 TEST: apply the kit to the basin ep2236 best (d_pose 0.00034, far
   more converged) and see if the PR98/T10 gain shrinks-with-convergence or persists. Until resolved,
   the kit is a CONVERGENCE-GATED candidate, NOT a banked win.
-- **HONEST VALUE: 0 banked today — the −0.058 is a mid-basin advisory that must be re-validated on
-  the converged decoder via `kit_aware_exact_eval` before any score claim. READY to apply via the
-  single `enabled=True` switch the moment the distortion arm converges.**
+- **HONEST VALUE (RESOLVED — under-power audit, commit 665dbbef1): the −0.058 COLLAPSES 19× to
+  −0.003 on the converged ep2120 decoder (5.3% retained, 3 agreeing probes) — it was a pose-axis
+  correction of the UNDER-TRAINED decoder; the converged decoder already learned the color balance.
+  PR98/T10 = under-training artifact (NOT a persistent win); the existing pose loss already handles
+  it (so #113 color-offset penalty is NOT needed). Bank ONLY the ~−0.003 residual, RE-FIT on the
+  FINAL n=600 converged decoder. Kit stays WIRED (engineering sound, default byte-identical).**
 
 ## ITEM D — L3 rate recodes
 - **D1 — T1 cross-pair latent dedup:** **BUILT + SEALED — MEASURED HONEST NEGATIVE on the
