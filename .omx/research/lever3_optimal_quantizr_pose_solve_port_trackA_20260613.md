@@ -91,3 +91,62 @@ the rgb_0-head port above gets ~all the decoupling benefit at zero new architect
 The optimal port is **not** "FiLM at a later cascade stage" — it's **the residual pose-FiLM on the
 `rgb_0` (seg-invisible) head, leaving `rgb_1` FiLM-clean.** Our HNeRV's two-head split makes this a
 near-free adoption of Quantizr's decoupled-dual-head pose-solve, at our 89 KB rate instead of his 300 KB.
+
+## Landing record — Lever-3 v2 BUILT + MEASURED (2026-06-13, partner leverD3-v2-rgb0)
+
+**Module:** `src/tac/torch_vehicle/pose_film_v2.py` — `PoseFiLMHNeRVWrapperV2` (residual
+pose-FiLM on the `rgb_0` head ONLY; `rgb_1` FiLM-clean) + `_PoseCondMLP`
+(`Linear(6→C)→SiLU→Linear(C→C)`) + `_RGB0ResidualFiLM` (`proj(x)·(1+γ)+β`, zero-init
+proj+beta → `film_resid≡0` at init) + `inflate_film_decoder_v2` (numpy-portable). Reuses the
+v1 additive pose-section grammar + `_FiLMEvalDecoder` cursor adapter verbatim.
+
+**Tests:** `src/tac/torch_vehicle/tests/test_pose_film_v2_rgb0.py` — 19 NO-FAKE tests, all green;
+v1 regression (13) green; ruff clean. Covers: identity-at-init bit-equality (off + on-at-init +
+idx=None + film_resid≡0); f1 BIT-invariant to pose6 (init AND trained — the decoupling); f0 DOES
+change with pose6 (NO-FAKE); f1==vendored rgb_1 exactly; f1-only loss → ZERO grad on FiLM (gradient
+decoupling); residual containment bound; pose_mlp/film_resid shapes; eval-cursor misroute control;
+byte-closed inflate v2 round-trip.
+
+**MEASUREMENT 1 — d_seg DECOUPLING (real frozen SegNet, base_ch20 forkpoint, contest-CPU advisory):**
+contest d_seg = per-pixel argmax-flip rate of f1's SegNet mask (verified `upstream/modules.py:108`
+`x = x[:, -1, ...]` → f1 IS the SegNet frame; `:112` = argmax-flip). Vary stored pose (GT vs +3σ scramble):
+- **v1 (stem FiLM): d_seg 0.198 → 0.299, delta = 0.100** (pose COUPLES into d_seg — the bug).
+- **v2 (rgb_0 head): d_seg 0.003459930419921875 → 0.003459930419921875, delta = 0.0 EXACTLY** (decoupled).
+Verified again directly on the real base_ch20 EMA decoder: f1 bit-invariant to pose with a TRAINED FiLM;
+f0 DOES change (max|Δf0|=230.5). The decoupling is STRUCTURAL, not an init artifact.
+
+**MEASUREMENT 2 — d_pose VARIANCE (v2 vs v1, identity-init, 2 slices, contest-CPU advisory):**
+At **lr=1e-3** (the well-conditioned operating point), v2 wins on mean, std, final, AND convergence speed:
+| slice | arm | mean | std | final | min |
+|---|---|---|---|---|---|
+| 0 (off 0) | v1 stem | 8.09e-4 | 5.54e-4 | 1.69e-4 | 1.69e-4 |
+| 0 (off 0) | **v2 rgb0** | **5.92e-4** | **4.80e-4** | **1.60e-4** | **1.60e-4** |
+| 1 (off 6) | v1 stem | 6.93e-4 | 4.53e-4 | 1.35e-4 | 1.35e-4 |
+| 1 (off 6) | **v2 rgb0** | **3.66e-4** | **4.45e-4** | **1.00e-4** | **1.00e-4** |
+v2 = 27%/47% lower mean, lower std, lower final on both slices; converges by step ~3 vs v1 still
+descending at step 9.
+
+**HONEST caveat (LR sensitivity — NOT in the original prediction):** at the aggressive **lr=1e-2**,
+v2's full-resolution (384×512) `proj` 1×1 conv OVERSHOOTS transiently (step1 d_pose spikes to 2.4e-2
+from zero-init's large first Adam step) before converging — WORSE early variance than v1's smaller
+6×8 stem FiLM at that LR. So the stability win is real but LR-conditioned: v2 needs a moderate LR
+(≤1e-3) to realize the residual-containment benefit; at high LR its head-local high-res leverage
+hurts the transient. Recommendation for #116: use lr≤1e-3 for the v2 FiLM params (or a warmup/lower
+LR group), where v2 dominates v1 on every metric.
+
+**3-clean adversarial review (SEALED):** R1/R2/R3 all clean across the 3 lenses —
+Lens1 identity-at-init bit-equal verified on REAL base_ch20 (not just test base_ch8);
+Lens2 decoupling REAL + NO-FAKE (f1 bit-invariant + f0 varies + upstream source confirms f1 IS the
+SegNet frame + GT targets verified real, 100% nonzero pose, all 5 seg classes);
+Lens3 variance reduction real on 2 slices at lr=1e-3 (+ honest lr=1e-2 caveat).
+
+**#116 handoff (driver wire-in for the from-0 run):** the driver currently imports v1
+`PoseFiLMHNeRVWrapper` + hard-codes the `pose_film.` key prefix in the EMA split (`driver.py:1068-1082`).
+To run v2: (1) import `PoseFiLMHNeRVWrapperV2`; (2) split on the `pose_mlp.`/`film_resid.` prefixes;
+(3) use `inflate_film_decoder_v2`; (4) set the FiLM param LR group ≤1e-3. Default-OFF byte-identity is
+preserved (v2 is identity-at-init + the driver flag gates the wrapper).
+
+Authority: torch-CPU TRUSTED, NO MPS. `[contest-CPU advisory]` NON-PROMOTABLE until byte-closed exact eval.
+Artifacts: `.omx/research/lever3_v2_variance_slice0_lr1e3_20260613.json` +
+`.omx/research/lever3_v2_variance_slice1_lr1e3_20260613.json` +
+`.omx/research/lever3_v2_variance_slice0_20260613.json` (lr=1e-2 spike evidence).
