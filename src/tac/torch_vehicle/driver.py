@@ -69,6 +69,19 @@ if TYPE_CHECKING:  # StageSpec used only in annotations at module level
 _EVAL_H, _EVAL_W = 384, 512
 _SEG_NUM_CLASSES = 5  # contest SegNet head (upstream/modules.py: smp.Unet classes=5)
 _TRACK_A_D2_CONSERVATIVE_BYTE_TARGET = 2731.0
+# Lever-3 v2 FiLM learning-rate CAP (the #118-SEALED stability fix). The residual
+# pose-FiLM (``pose_mlp`` + ``film_resid``) is given a DEDICATED AdamW param group at
+# ``min(stage.adamw_lr, _FILM_LR_CAP)`` and is EXCLUDED from the Muon partition — so the
+# FiLM never trains at the full ``adamw_lr`` (the lr=1e-2 transient-overshoot v2's #118
+# review caught) NOR under Muon's orthogonalized SGD (which would bypass the cap entirely,
+# the §A finding of from0_deployment_fullstack_adversarial_review_20260613). Only applied
+# when ``pose_film_enabled`` → the levers-OFF basin is byte-identical.
+_FILM_LR_CAP = 1e-3
+# The wrapper-level FiLM param-name prefixes per pose-FiLM version (v1 stem-injection vs
+# v2 residual-rgb0). Used to (a) route FiLM params to the capped AdamW group and (b) split
+# the EMA shadow at export. v1 = the single ``_PoseFiLM`` module; v2 = the cond MLP + the
+# rgb_0 residual FiLM.
+_FILM_PARAM_PREFIXES = {1: ("pose_film.",), 2: ("pose_mlp.", "film_resid.")}
 
 
 def _segnet_logit_margin_map(seg_out: torch.Tensor) -> torch.Tensor:
@@ -341,6 +354,17 @@ class TorchVehicleConfig:
     pose_film_enabled: bool = False
     # FiLM MLP bottleneck width (only consulted when ``pose_film_enabled``).
     pose_film_hidden: int = 8
+    # Lever-3 pose-FiLM VERSION (only consulted when ``pose_film_enabled``):
+    #   1 = v1 stem-injection (``pose_film.PoseFiLMHNeRVWrapper``) — feeds BOTH heads,
+    #       so pose couples into d_seg (the v1 instability; legacy/default).
+    #   2 = v2 OPTIMAL Quantizr port (``pose_film_v2.PoseFiLMHNeRVWrapperV2``) —
+    #       residual FiLM on the ``rgb_0`` head ONLY, leaving ``rgb_1`` (the SegNet
+    #       frame) FiLM-clean → EXACT d_seg/d_pose decoupling (#118 SEALED). v2 routes
+    #       the FiLM params (``pose_mlp`` + ``film_resid``) to a DEDICATED capped-LR
+    #       AdamW group (``_FILM_LR_CAP``), excluded from Muon (the §A review fix).
+    # DEFAULT 1 (legacy); the from-0 decisive run sets 2. Byte-identity is unaffected
+    # by the version when ``pose_film_enabled=False`` (no FiLM either way).
+    pose_film_version: int = 1
     # Track-A DISTORTION finishing-kit (PR98 bias / T10 affine / S12 mask) — an
     # inflate-side, zero/near-zero-byte postproc on the rendered frames + a ~54-byte
     # distortion archive section. DEFAULT None → NO kit, NO section, BYTE-IDENTICAL
@@ -410,6 +434,11 @@ class TorchVehicleConfig:
                 )
             if float(self.variable_level_waterfill_byte_target) <= 0:
                 raise ValueError("variable_level_waterfill_byte_target must be positive")
+        if int(self.pose_film_version) not in (1, 2):
+            raise ValueError(
+                f"pose_film_version must be 1 (v1 stem) or 2 (v2 residual-rgb0); "
+                f"got {self.pose_film_version}"
+            )
         if self.lever4_variable_level_export_enabled and self.variable_level_waterfill_enabled:
             raise ValueError(
                 "lever4_variable_level_export_enabled and variable_level_waterfill_enabled "
@@ -452,7 +481,10 @@ class _StageRuntime:
     adamw_sched: Any
     muon_sched: Any
     muon_params: list
-    adamw_params: list
+    # The grad-CLIP set for the AdamW side: the decoder AdamW-group params PLUS the
+    # FiLM params (which live in a SEPARATE capped-LR AdamW group but must be clipped
+    # together). NOT "the AdamW-only group" — it is the union clipped at each step.
+    adamw_clip_params: list
     # Lever 4 (score-aware QAT) per-tensor sensitivity EMA ``s_t = ||∂S/∂w_t||``,
     # accumulated from the score-domain loss backward (the EMA smooths early-train
     # noise). Empty until the first backward seeds it — while empty the score-aware
@@ -557,7 +589,14 @@ class TorchVehicleDriver:
         dev = device if device is not None else self.train_device
         if not self.cfg.pose_film_enabled:
             return self._new_vendored_decoder(dev)
-        from tac.torch_vehicle.pose_film import PoseFiLMHNeRVWrapper
+        if int(self.cfg.pose_film_version) == 2:
+            from tac.torch_vehicle.pose_film_v2 import (
+                PoseFiLMHNeRVWrapperV2 as _PoseFiLMWrapper,
+            )
+        else:
+            from tac.torch_vehicle.pose_film import (
+                PoseFiLMHNeRVWrapper as _PoseFiLMWrapper,
+            )
 
         vendored = self._new_vendored_decoder(dev)
         # RNG-NEUTRAL FiLM construction (the from-scratch A/B fix): the
@@ -581,7 +620,7 @@ class TorchVehicleDriver:
         # complete fix for the reproducible-init contract.
         _rng_state = torch.get_rng_state()
         try:
-            wrapper = PoseFiLMHNeRVWrapper(
+            wrapper = _PoseFiLMWrapper(
                 vendored,
                 n_pairs=self.n_pairs,
                 film_hidden=self.cfg.pose_film_hidden,
@@ -591,6 +630,21 @@ class TorchVehicleDriver:
         # Seed the STORED pose from the GT PoseNet pose (side-info, not learned).
         wrapper.set_stored_pose(self.scorer.pose_targets[: self.n_pairs].to(dev))
         return wrapper
+
+    def _film_param_ids(self, decoder: nn.Module) -> set[int]:
+        """The ``id()`` set of the pose-FiLM params on ``decoder`` (the wrapper), by
+        version-keyed name prefix. EMPTY when ``pose_film_enabled`` is False (no FiLM
+        params exist → the optimizer/clip paths are byte-identical to the vendored
+        baseline). Used by :meth:`_build_stage_runtime` to route the FiLM to a capped
+        AdamW group + exclude it from Muon (the §A review fix)."""
+        if not self.cfg.pose_film_enabled:
+            return set()
+        prefixes = _FILM_PARAM_PREFIXES[int(self.cfg.pose_film_version)]
+        return {
+            id(p)
+            for n, p in decoder.named_parameters()
+            if any(n.startswith(pre) for pre in prefixes)
+        }
 
     def _build_stage_runtime(
         self,
@@ -608,8 +662,25 @@ class TorchVehicleDriver:
         if ema_latents is None:
             ema_latents = latents.data.clone()
 
+        # Lever-3 FiLM param routing (the §A review fix; #118 SEALED). When the
+        # pose-FiLM is on, its params (``pose_mlp`` + ``film_resid`` for v2 / ``pose_film``
+        # for v1) get a DEDICATED AdamW group at the capped LR and are EXCLUDED from
+        # Muon (whose orthogonalized SGD would bypass the cap). They STAY in the
+        # clip set (``adamw_clip_params``) so grad-clip still covers them. Empty when
+        # FiLM is off → the basin/control optimizer is byte-identical to the legacy path.
+        film_ids = self._film_param_ids(decoder)
+        film_params = (
+            [p for _n, p in decoder.named_parameters() if id(p) in film_ids and p.requires_grad]
+            if film_ids
+            else []
+        )
+        film_lr = min(spec.adamw_lr, _FILM_LR_CAP)
+
         if spec.use_muon:
             muon_params, adamw_params = self.v.partition_params_for_muon(decoder)
+            if film_ids:
+                muon_params = [p for p in muon_params if id(p) not in film_ids]
+                adamw_params = [p for p in adamw_params if id(p) not in film_ids]
             muon_opt = self.v.Muon(
                 muon_params,
                 lr=spec.muon_lr,
@@ -618,24 +689,31 @@ class TorchVehicleDriver:
                 ns_steps=5,
                 weight_decay=spec.muon_weight_decay,
             )
-            adamw_opt = torch.optim.AdamW(
-                [
-                    {"params": adamw_params, "lr": spec.adamw_lr},
-                    {"params": [latents], "lr": spec.adamw_lr * spec.latent_lr_mult},
-                ],
-                weight_decay=0.0,
-            )
+            adamw_groups = [
+                {"params": adamw_params, "lr": spec.adamw_lr},
+                {"params": [latents], "lr": spec.adamw_lr * spec.latent_lr_mult},
+            ]
+            if film_params:
+                adamw_groups.append({"params": film_params, "lr": film_lr})
+            adamw_opt = torch.optim.AdamW(adamw_groups, weight_decay=0.0)
         else:
             muon_opt = None
             muon_params = []
-            adamw_params = list(decoder.parameters())
-            adamw_opt = torch.optim.AdamW(
-                [
-                    {"params": decoder.parameters(), "lr": spec.adamw_lr},
-                    {"params": [latents], "lr": spec.adamw_lr * spec.latent_lr_mult},
-                ],
-                weight_decay=0.0,
+            all_params = list(decoder.parameters())
+            adamw_params = (
+                [p for p in all_params if id(p) not in film_ids] if film_ids else all_params
             )
+            adamw_groups = [
+                {"params": adamw_params, "lr": spec.adamw_lr},
+                {"params": [latents], "lr": spec.adamw_lr * spec.latent_lr_mult},
+            ]
+            if film_params:
+                adamw_groups.append({"params": film_params, "lr": film_lr})
+            adamw_opt = torch.optim.AdamW(adamw_groups, weight_decay=0.0)
+        # The clip set = the decoder AdamW params PLUS the FiLM params (so grad-clip at
+        # ``_train_one_epoch`` covers the capped FiLM group too). == adamw_params when
+        # FiLM is off (byte-identical clip).
+        adamw_clip_params = adamw_params + film_params
 
         eta_min_ratio = max(spec.lr_floor_ratio / spec.adamw_lr, 1e-3)
 
@@ -658,7 +736,7 @@ class TorchVehicleDriver:
             adamw_sched=adamw_sched,
             muon_sched=muon_sched,
             muon_params=muon_params,
-            adamw_params=adamw_params,
+            adamw_clip_params=adamw_clip_params,
         )
 
     # -- one faithful training epoch (1:1 with common.py) --------------------
@@ -786,7 +864,7 @@ class TorchVehicleDriver:
                     decoder, rt.tensor_sensitivity_ema, decay=spec.qat_sensitivity_decay
                 )
             gn_adamw = torch.nn.utils.clip_grad_norm_(
-                [*rt.adamw_params, latents], spec.grad_clip
+                [*rt.adamw_clip_params, latents], spec.grad_clip
             )
             last_gn_adamw = float(gn_adamw)
             if rt.muon_opt is not None and spec.grad_clip_muon is not None:
@@ -1266,13 +1344,31 @@ class TorchVehicleDriver:
             eval_dec.eval()
             return archive, eval_dec, eval_latents
 
-        from tac.torch_vehicle.pose_film import (
-            PoseFiLMHNeRVWrapper,
-            _FiLMEvalDecoder,
-            build_archive_with_pose,
-            parse_pose_section,
-            wrapper_sd_to_archive_decoder_sd,
-        )
+        # Version-aware FiLM export: the additive pose-section grammar
+        # (``build_archive_with_pose`` / ``parse_pose_section`` / ``wrapper_sd_to_archive_
+        # decoder_sd``) + the cursor eval adapter (``_FiLMEvalDecoder``) are SHARED (v2
+        # re-exports them verbatim); only the wrapper class + the FiLM-key prefixes differ.
+        if int(self.cfg.pose_film_version) == 2:
+            from tac.torch_vehicle.pose_film_v2 import (
+                PoseFiLMHNeRVWrapperV2 as _PoseFiLMWrapper,
+            )
+            from tac.torch_vehicle.pose_film_v2 import (
+                _FiLMEvalDecoder,
+                build_archive_with_pose,
+                parse_pose_section,
+                wrapper_sd_to_archive_decoder_sd,
+            )
+        else:
+            from tac.torch_vehicle.pose_film import (
+                PoseFiLMHNeRVWrapper as _PoseFiLMWrapper,
+            )
+            from tac.torch_vehicle.pose_film import (
+                _FiLMEvalDecoder,
+                build_archive_with_pose,
+                parse_pose_section,
+                wrapper_sd_to_archive_decoder_sd,
+            )
+        _film_prefixes = _FILM_PARAM_PREFIXES[int(self.cfg.pose_film_version)]
 
         # (1) Split the wrapper state dict: codec decoder blob (vendored + FiLM
         # weights) and the stored-pose buffer (additive pose section).
@@ -1298,25 +1394,36 @@ class TorchVehicleDriver:
                     archive_decoder_sd, meta_dict, _base_archive_builder
                 )
             )
-        # (3) Parse BOTH sections back and rebuild the FiLM wrapper for eval.
+        # (3) Parse BOTH sections back and rebuild the FiLM wrapper for eval. The FiLM
+        # keys keep their wrapper-level prefixes (``pose_film.*`` v1 / ``pose_mlp.*`` +
+        # ``film_resid.*`` v2); the rest are the bare vendored decoder keys.
         parsed_pose = parse_pose_section(archive, self.v.parse_archive)
         film_sd = {
-            k[len("pose_film.") :]: v
+            k: v
             for k, v in eval_decoder_sd.items()
-            if k.startswith("pose_film.")
+            if any(k.startswith(p) for p in _film_prefixes)
         }
         dec_sd = {
-            k: v for k, v in eval_decoder_sd.items() if not k.startswith("pose_film.")
+            k: v
+            for k, v in eval_decoder_sd.items()
+            if not any(k.startswith(p) for p in _film_prefixes)
         }
         vendored = self._new_vendored_decoder(device=self.device)
         vendored.load_state_dict({k: v.to(self.device) for k, v in dec_sd.items()})
-        wrapper = PoseFiLMHNeRVWrapper(
+        wrapper = _PoseFiLMWrapper(
             vendored,
             n_pairs=self.n_pairs,
             film_hidden=self.cfg.pose_film_hidden,
         ).to(self.device)
-        wrapper.pose_film.load_state_dict(
-            {k: v.to(self.device) for k, v in film_sd.items()}
+        # Load the FiLM submodule weights over the freshly-built (identity-init) FiLM,
+        # keeping the vendored ``decoder.*`` keys already loaded. strict=False because the
+        # merged dict is the FULL wrapper state (no missing/unexpected keys in practice).
+        wrapper.load_state_dict(
+            {
+                **wrapper.state_dict(),
+                **{k: v.to(self.device) for k, v in film_sd.items()},
+            },
+            strict=False,
         )
         if parsed_pose is not None:
             wrapper.set_stored_pose(parsed_pose.to(self.device))

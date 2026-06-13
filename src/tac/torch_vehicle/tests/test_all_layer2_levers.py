@@ -199,6 +199,13 @@ def test_default_train_epoch_matches_vendored_only_reference():
     # --- run ONE epoch through the driver (default path) ---
     cfg = TorchVehicleConfig(base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu")
     driver = TorchVehicleDriver(cfg, scorer=sc, vendored=v, curriculum=[spec])
+    # Snapshot the RNG state IMMEDIATELY before the decoder draw so the reference path's
+    # decoder2 inits from the IDENTICAL state — provably bit-identical regardless of how much
+    # global RNG SyntheticScorerContext.__init__ consumes (the Finding-3 robustness fix:
+    # without this the daemon-safety proof rested on an untested assumption about the
+    # scorer's RNG use). Latents use an explicit Generator already, so only the decoder
+    # init depends on the global stream.
+    _rng_before_decoder = torch.get_rng_state()
     decoder = driver._new_decoder(device=torch.device("cpu"))
     latents = torch.nn.Parameter(
         torch.randn(6, 28, generator=torch.Generator().manual_seed(7)) * 0.1
@@ -215,6 +222,9 @@ def test_default_train_epoch_matches_vendored_only_reference():
     # --- hand-rolled reference epoch (vendored ops only) ---
     torch.manual_seed(0)
     sc2 = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    # Restore the EXACT RNG state side 1 used for its decoder draw, so decoder2's init is
+    # bit-identical to decoder's no matter what sc2 consumed (the Finding-3 robustness fix).
+    torch.set_rng_state(_rng_before_decoder)
     decoder2 = driver._new_decoder(device=torch.device("cpu"))
     latents2 = torch.nn.Parameter(
         torch.randn(6, 28, generator=torch.Generator().manual_seed(7)) * 0.1
@@ -243,7 +253,7 @@ def test_default_train_epoch_matches_vendored_only_reference():
         pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
         loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
         loss.backward()
-        torch.nn.utils.clip_grad_norm_([*rt2.adamw_params, latents2], spec.grad_clip)
+        torch.nn.utils.clip_grad_norm_([*rt2.adamw_clip_params, latents2], spec.grad_clip)
         rt2.adamw_opt.step()
         v.ema_update(rt2.ema_decoder, decoder2, rt2.ema_latents, latents2, decay=spec.ema_decay)
 
@@ -861,7 +871,7 @@ def test_r13_all5_multi_step_descent_at_faithful_lr_synthetic():
     latents = torch.nn.Parameter(torch.randn(n, 28) * 0.1)
     idx = torch.arange(2)
     dec_params = [p for p in decoder.parameters() if p.requires_grad]
-    opt = torch.optim.Adam(dec_params + [latents], lr=spec.adamw_lr)
+    opt = torch.optim.Adam([*dec_params, latents], lr=spec.adamw_lr)
 
     def render():
         dp = decoder(latents[idx], idx)
@@ -984,7 +994,7 @@ def test_r13redo_all5_does_not_reverse_seg_from_a_TRAINED_operating_point():
     trained_dec.set_stored_pose(sc.pose_targets[:n].cpu())
     warm_latents = torch.nn.Parameter(torch.randn(n, 28) * 0.1)
     warm_params = [p for p in trained_dec.parameters() if p.requires_grad]
-    warm_opt = torch.optim.Adam(warm_params + [warm_latents], lr=3e-3)
+    warm_opt = torch.optim.Adam([*warm_params, warm_latents], lr=3e-3)
     for _ in range(40):  # converge: CE seg + pose to a SMALL-distortion operating point
         warm_opt.zero_grad()
         seg_out, pose6 = sc.seg_pose_forward(_render(trained_dec, warm_latents))
@@ -1003,7 +1013,7 @@ def test_r13redo_all5_does_not_reverse_seg_from_a_TRAINED_operating_point():
         dec.load_state_dict(conv_dec_state)
         lat = torch.nn.Parameter(conv_lat.clone())
         params = [p for p in dec.parameters() if p.requires_grad]
-        opt = torch.optim.Adam(params + [lat], lr=spec.adamw_lr)
+        opt = torch.optim.Adam([*params, lat], lr=spec.adamw_lr)
         d_segs, step0_loss = [], None
         for step in range(n_steps):
             opt.zero_grad()
@@ -1119,7 +1129,7 @@ def test_r13_all5_descent_byteclose_parseback_on_real_scorer():
     latents = torch.nn.Parameter(torch.randn(n, 28) * 0.1)
     idx = torch.arange(4)
     dec_params = [p for p in decoder.parameters() if p.requires_grad]
-    opt = torch.optim.Adam(dec_params + [latents], lr=spec.adamw_lr)
+    opt = torch.optim.Adam([*dec_params, latents], lr=spec.adamw_lr)
 
     def render():
         dp = decoder(latents[idx], idx)
@@ -1168,7 +1178,8 @@ def test_r13_all5_descent_byteclose_parseback_on_real_scorer():
     assert summary.get("status") == "complete", "all-5-on real-scorer run() did not finish"
     arch_path = os.path.join(run_cfg.out_dir, "best", "best_archive.bin")
     assert os.path.exists(arch_path), "no best archive emitted by the all-5-on real run"
-    archive = open(arch_path, "rb").read()
+    with open(arch_path, "rb") as _af:
+        archive = _af.read()
     assert len(archive) > 0
     pose = parse_pose_section(archive, drv2.v.parse_archive)
     assert pose is not None and tuple(pose.shape) == (n, 6), (
@@ -1244,7 +1255,6 @@ def test_r14_lever4_variable_level_export_unification_default_off_and_byte_savin
     measurements; a no-op unification (flag ignored) fails (3); a default-path
     regression fails (1)."""
     pytest.importorskip("torch")
-    from tac.torch_vehicle.driver import _EvalSnapshot
 
     sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
     v = import_vendored_bundle()

@@ -261,14 +261,20 @@ def wrapper_sd_to_archive_decoder_sd(wrapper_sd: dict) -> dict:
     """Transform a :class:`PoseFiLMHNeRVWrapper` ``state_dict()`` into the codec's
     decoder state dict.
 
-    The wrapper keys are ``decoder.<vendored-key>`` (the vendored submodule),
-    ``pose_film.<key>`` (the FiLM MLP), and ``stored_pose`` (the buffer). The
-    vendored codec + ``HNeRVDecoder.load_state_dict`` expect the BARE vendored
-    keys (``stem.weight`` etc.), so we strip the ``decoder.`` prefix; the
-    ``pose_film.*`` keys are KEPT (they ship in the decoder blob so the wrapper
-    rebuilds at inflate) — :func:`inflate_film_decoder` splits them back out. The
-    ``stored_pose`` buffer is DROPPED here (it is range-coded into the additive
-    pose section, NOT the int8 decoder blob)."""
+    The wrapper keys are ``decoder.<vendored-key>`` (the vendored submodule), the
+    FiLM submodule keys, and ``stored_pose`` (the buffer). The vendored codec +
+    ``HNeRVDecoder.load_state_dict`` expect the BARE vendored keys (``stem.weight``
+    etc.), so we strip the ``decoder.`` prefix; the FiLM keys are KEPT (they ship in
+    the decoder blob so the wrapper rebuilds at inflate) and the inflate path splits
+    them back out. The ``stored_pose`` buffer is DROPPED here (it is range-coded into
+    the additive pose section, NOT the int8 decoder blob).
+
+    The ``else`` branch is key-name-AGNOSTIC: it passes through ANY non-``decoder.*``,
+    non-``stored_pose`` key unchanged. This function is re-exported VERBATIM by
+    ``pose_film_v2`` (so it serves BOTH versions): the kept FiLM keys are ``pose_film.*``
+    for v1 and ``pose_mlp.*`` + ``film_resid.*`` for v2. Do NOT pre-filter the FiLM keys
+    before calling this — the version-specific split happens at inflate
+    (:func:`inflate_film_decoder` v1 / :func:`pose_film_v2.inflate_film_decoder_v2` v2)."""
     out: dict = {}
     for k, v in wrapper_sd.items():
         if k == "stored_pose":
@@ -398,6 +404,38 @@ def parse_pose_section(archive_bytes: bytes, vendored_parse_archive) -> torch.Te
     return decode_pose_section(trailing)
 
 
+def _parse_archive_variable_or_vendored(archive_bytes: bytes, vendored_parse_archive):
+    """Parse a vendored archive or a D2 variable-level decoder archive.
+
+    The vendored parser cannot decode a variable-level decoder blob, so the D2
+    receiver dispatches from metadata and reuses the vendored latent decoder. This
+    keeps FiLM+D2 parse-back faithful without editing the public PR95 source.
+    """
+    import json
+
+    buf = io.BytesIO(archive_bytes)
+    meta_len = struct.unpack("<I", buf.read(4))[0]
+    meta_brotli = buf.read(meta_len)
+    meta = json.loads(brotli.decompress(meta_brotli))
+    dec_len = struct.unpack("<I", buf.read(4))[0]
+    decoder_blob = buf.read(dec_len)
+    lat_len = struct.unpack("<I", buf.read(4))[0]
+    latents_brotli = buf.read(lat_len)
+
+    var_meta = meta.get("variable_level_waterfill") or {}
+    is_variable = bool(var_meta.get("decoder_blob_is_variable_format"))
+    if not is_variable:
+        return vendored_parse_archive(archive_bytes)
+
+    from tac.losses.variable_level_codec import decode_decoder_variable
+    from tac.torch_vehicle.vendored_imports import import_vendored
+
+    codec = import_vendored("codec")
+    decoder_sd = decode_decoder_variable(decoder_blob)
+    latents = codec.decode_latents(brotli.decompress(latents_brotli))
+    return decoder_sd, latents, meta
+
+
 @torch.inference_mode()
 def inflate_film_decoder(
     archive_bytes: bytes,
@@ -416,7 +454,9 @@ def inflate_film_decoder(
     every pair conditioned on its stored pose. Returns ``(n_pairs, 2, 3, 384, 512)``
     float in [0, 255]. Pure-torch/numpy, no challenge deps (numpy-portable inflate).
     """
-    decoder_sd, latents, meta = vendored_parse_archive(archive_bytes)
+    decoder_sd, latents, meta = _parse_archive_variable_or_vendored(
+        archive_bytes, vendored_parse_archive
+    )
     pose = parse_pose_section(archive_bytes, vendored_parse_archive)
     n_pairs = int(meta["n_pairs"])
     # Split the parsed state dict into vendored-decoder keys and FiLM keys.
