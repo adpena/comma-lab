@@ -804,6 +804,391 @@ def test_r12_combined_seg_gradient_floor_on_real_scorer():
     )
 
 
+@pytest.mark.timeout(420)
+def test_r13_all5_multi_step_descent_at_faithful_lr_synthetic():
+    """R13 lens (FAST synthetic) — with ALL FIVE levers ON, a multi-step Adam
+    trajectory at the FAITHFUL LR genuinely DESCENDS the COMBINED loss (the
+    integrated multi-lever effect is a working training signal, not just a per-lever
+    step-0 sign). No prior round measured multi-STEP descent of the composed loss:
+    R10 measured the single-step gradient SIGN, R5 measured determinism, R11 measured
+    resume bit-identity, and ``test_compose_all_five_levers_end_to_end`` only byte-
+    closes (it never checks the loss goes DOWN). A set of levers can each point
+    downhill at step 0 yet fail to descend over a trajectory (oscillation, the seg
+    term going cold-dead, the rate/QAT terms cumulatively fighting the score terms).
+
+    Distinct from the REAL-scorer R13 test below (which confirms it on the contest
+    scorer): this fast synthetic version is the always-run mechanism guard.
+
+    THE FAITHFUL-LR DISCIPLINE (the R10 test-instrument lesson): the live distortion
+    arm trains at ``adamw_lr≈1e-3`` and descends loss 0.68→0.52 monotonically. A
+    probe LR 50× larger (5e-2) OSCILLATES from step 1 — that is an INSTRUMENT artifact,
+    NOT a lever defect. The descent MUST be measured at the LR the levers actually
+    train at. We use the ROBUST windowed metric (mean of the last quartile of steps
+    vs the first step) because SGD on a real scorer has per-step noise; a single-step
+    ``loss_end < loss_start`` would be noise-fragile.
+
+    NO-FAKE: a real Adam trajectory through the driver's OWN composed loss assembly
+    (``_seg_loss_for_spec`` + pose + ``_weight_regularizers``) at the annealed
+    temperature; a no-op lever set (all-default) would still descend, so the test ALSO
+    asserts the all-5-on loss is DISTINCT from the all-default loss at step 0 (the
+    levers are genuinely active, not silently bypassed)."""
+    torch.manual_seed(0)
+    sc = SyntheticScorerContext(n_pairs=4, device="cpu", seed=0)
+    v = import_vendored_bundle()
+    # Small decoder (base_channels=8, like the R11 resume tests) + 2 pairs/step keeps
+    # the per-step rate surrogate (Lever 1, the cost bottleneck) + the 384×512 forward
+    # cheap so the always-run mechanism guard stays fast.
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        pose_film_enabled=True, pose_film_hidden=8, seed=0,
+    )
+    # ALL FIVE levers ON; the seg anneal lands AT the corrected gradient-alive floor
+    # (0.3) so the seg gradient stays USABLE for the whole trajectory (per R12).
+    n_steps = 8  # enough for a windowed trend; the rate surrogate per step is costly
+    spec = _stage(
+        name="r13_all5", epochs=n_steps, use_qat=True, cat_lambda=0.01,
+        rate_lambda_w=0.05, rate_lambda_lat=0.02,
+        seg_surrogate="soft_cosine", seg_temperature=1.0,
+        seg_temperature_end=SEG_ANNEAL_GRADIENT_FLOOR_T,
+        score_aware_qat=True, qat_sensitivity_decay=0.9, margin_weight_tau=2.0,
+        adamw_lr=1e-3,  # the FAITHFUL daemon LR (NOT a 50× overshoot)
+    )
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=v, curriculum=[spec])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    n = 4
+    decoder.set_stored_pose(sc.pose_targets[:n].cpu())
+    latents = torch.nn.Parameter(torch.randn(n, 28) * 0.1)
+    idx = torch.arange(2)
+    dec_params = [p for p in decoder.parameters() if p.requires_grad]
+    opt = torch.optim.Adam(dec_params + [latents], lr=spec.adamw_lr)
+
+    def render():
+        dp = decoder(latents[idx], idx)
+        B = len(idx)
+        flat = dp.reshape(B * 2, 3, 384, 512)
+        up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
+        down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
+        bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
+        dc = bhwc.clamp(0, 255)
+        return dc + (dc.round() - dc).detach()
+
+    def combined_loss(epoch_in_stage):
+        t = seg_temperature_for_epoch(spec, epoch_in_stage)
+        seg_out, pose6 = sc.seg_pose_forward(render())
+        seg_l = _seg_loss_for_spec(spec, seg_out, sc.seg_targets_hard[idx], temperature=t)
+        pose_l = torch.sqrt(10.0 * F.mse_loss(pose6, sc.pose_targets[idx]) + 1e-12)
+        loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
+        reg = driver._weight_regularizers(decoder, latents, spec)
+        if reg is not None:
+            loss = loss + reg
+        return loss
+
+    # All-default reference loss at step 0 (the levers must DIFFER from this, else
+    # they are silently inactive and the descent test is vacuous).
+    default_spec = _stage(name="r13_default", epochs=n_steps, adamw_lr=1e-3)
+    with torch.no_grad():
+        seg_out0, pose0 = sc.seg_pose_forward(render())
+        seg_d0 = _seg_loss_for_spec(default_spec, seg_out0, sc.seg_targets_hard[idx])
+        pose_d0 = torch.sqrt(10.0 * F.mse_loss(pose0, sc.pose_targets[idx]) + 1e-12)
+        default_loss0 = float(default_spec.seg_weight * seg_d0 + default_spec.pose_weight * pose_d0)
+
+    losses = []
+    for step in range(spec.epochs):
+        opt.zero_grad()
+        loss = combined_loss(step)
+        loss.backward()
+        opt.step()
+        losses.append(float(loss.detach()))
+
+    assert all(torch.isfinite(torch.tensor(x)).item() for x in losses), (
+        "an all-5-on combined loss step is non-finite (a lever produced NaN/Inf)"
+    )
+    # The levers are genuinely active (step-0 composed loss != all-default loss).
+    assert abs(losses[0] - default_loss0) > 1e-3, (
+        f"all-5-on step-0 loss {losses[0]:.4f} == all-default {default_loss0:.4f} — "
+        "the composed levers are silently inactive (the descent test would be vacuous)"
+    )
+    # ROBUST windowed descent: the mean of the last quartile is below the first step.
+    tail = losses[(3 * len(losses)) // 4:]
+    tail_mean = sum(tail) / len(tail)
+    assert tail_mean < losses[0], (
+        f"all-5-on combined loss did NOT descend at the faithful LR: tail-mean "
+        f"{tail_mean:.4f} >= start {losses[0]:.4f} — the integrated multi-lever effect "
+        "is not a working training signal (or a lever fights the descent cumulatively)"
+    )
+
+
+@pytest.mark.timeout(420)
+def test_r13redo_all5_does_not_reverse_seg_from_a_TRAINED_operating_point():
+    """R13-REDO lens (the operator's correction) — FAST synthetic operating-point
+    guard. The FIRST R13 probe started from a FRESH RANDOM decoder (pose term ~38,
+    d_pose ~100s = UNTRAINED), so its "descent" was a from-scratch decoder learning,
+    NOT a test of the levers AT THE TRAINED OPERATING POINT. The honest invariant:
+    starting from a CONVERGED decoder (small d_seg/d_pose), turning ALL FIVE levers
+    ON must NOT REVERSE the seg score-improving direction relative to the no-lever
+    default control — i.e. the seg surrogate (Lever-2) at the operating point still
+    reduces (or holds, within a slice-noise band) the d_seg, and no lever pushes
+    d_seg systematically UP.
+
+    Why this is distinct from the from-scratch synthetic descent test above: that
+    test starts at random init where ANY working signal descends; THIS test first
+    TRAINS the decoder to a converged operating point (the regime the live basin is
+    actually in: d_seg ~0.0038, d_pose ~0.0006 on the REAL scorer per the R13-REDO
+    real-scorer probe ``probe_r13_redo_all5_trained_basin_descent.py``), then asks
+    whether the levers REVERSE the seg direction there. A lever that helps at random
+    init can still FIGHT at the converged operating point — that is the regime the
+    SEAL must clear and no prior round tested.
+
+    THE INSTRUMENT DISCIPLINE (the decisive R10/R13 lesson): a FRESH Adam optimizer
+    on a converged decoder perturbs it on STEP 0 regardless of levers (moment-buffer
+    reset). That step-0 spike is IDENTICAL in the no-lever control, so the d_pose
+    term on a tiny slice is noise-dominated and is NOT the arbiter. The arbiter is
+    d_seg (the 100x-weighted dominant term, far less per-step noisy): the all-5-on
+    tail d_seg must be within a slice-noise band of the no-lever default tail d_seg.
+
+    NO-FAKE: a REAL converge-then-perturb trajectory through the driver's OWN loss
+    assembly; the levers are proven ACTIVE (the all-5-on step-0 loss differs from the
+    default), and the seg-reversal assertion would FAIL if a lever drove d_seg up.
+    RESEARCH-ONLY synthetic ⇒ no score claim (the real-scorer confirmation is the
+    companion probe; this is the always-run fast regression guard)."""
+    torch.manual_seed(0)
+    sc = SyntheticScorerContext(n_pairs=4, device="cpu", seed=0)
+    v = import_vendored_bundle()
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        pose_film_enabled=True, pose_film_hidden=8, seed=0,
+    )
+    n = 4
+    idx = torch.arange(2)
+
+    def _render(decoder, latents):
+        dp = decoder(latents[idx], idx)
+        B = len(idx)
+        flat = dp.reshape(B * 2, 3, 384, 512)
+        up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
+        down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
+        bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
+        dc = bhwc.clamp(0, 255)
+        return dc + (dc.round() - dc).detach()
+
+    def _d_seg(decoder, latents):
+        with torch.no_grad():
+            seg_out, _pose = sc.seg_pose_forward(_render(decoder, latents))
+            return (seg_out.argmax(dim=1) != sc.seg_targets_hard[idx]).float().mean().item()
+
+    # ---- (1) TRAIN a decoder to a converged operating point (CE, no levers) ----
+    base = _stage(name="r13redo_warmup", epochs=1, adamw_lr=3e-3)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=v, curriculum=[base])
+    trained_dec = driver._new_decoder(device=torch.device("cpu"))
+    trained_dec.set_stored_pose(sc.pose_targets[:n].cpu())
+    warm_latents = torch.nn.Parameter(torch.randn(n, 28) * 0.1)
+    warm_params = [p for p in trained_dec.parameters() if p.requires_grad]
+    warm_opt = torch.optim.Adam(warm_params + [warm_latents], lr=3e-3)
+    for _ in range(40):  # converge: CE seg + pose to a SMALL-distortion operating point
+        warm_opt.zero_grad()
+        seg_out, pose6 = sc.seg_pose_forward(_render(trained_dec, warm_latents))
+        loss = 100.0 * F.cross_entropy(
+            seg_out, sc.seg_targets_hard[idx]
+        ) + torch.sqrt(10.0 * F.mse_loss(pose6, sc.pose_targets[idx]) + 1e-12)
+        loss.backward()
+        warm_opt.step()
+    d_seg_converged = _d_seg(trained_dec, warm_latents)
+    # snapshot the converged state so BOTH arms fork from the IDENTICAL operating point
+    conv_dec_state = {k: x.detach().clone() for k, x in trained_dec.state_dict().items()}
+    conv_lat = warm_latents.detach().clone()
+
+    def _run_arm(spec, n_steps):
+        dec = driver._new_decoder(device=torch.device("cpu"))
+        dec.load_state_dict(conv_dec_state)
+        lat = torch.nn.Parameter(conv_lat.clone())
+        params = [p for p in dec.parameters() if p.requires_grad]
+        opt = torch.optim.Adam(params + [lat], lr=spec.adamw_lr)
+        d_segs, step0_loss = [], None
+        for step in range(n_steps):
+            opt.zero_grad()
+            t = seg_temperature_for_epoch(spec, step)
+            seg_out, pose6 = sc.seg_pose_forward(_render(dec, lat))
+            seg_l = _seg_loss_for_spec(spec, seg_out, sc.seg_targets_hard[idx], temperature=t)
+            pose_l = torch.sqrt(10.0 * F.mse_loss(pose6, sc.pose_targets[idx]) + 1e-12)
+            loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
+            reg = driver._weight_regularizers(dec, lat, spec)
+            if reg is not None:
+                loss = loss + reg
+            if step0_loss is None:
+                step0_loss = float(loss.detach())
+            loss.backward()
+            opt.step()
+            d_segs.append(_d_seg(dec, lat))
+        return d_segs, step0_loss
+
+    n_steps = 8
+    all5 = _stage(
+        name="r13redo_all5", epochs=n_steps, use_qat=True, cat_lambda=0.01,
+        rate_lambda_w=0.05, rate_lambda_lat=0.02,
+        seg_surrogate="soft_cosine", seg_temperature=1.0,
+        seg_temperature_end=SEG_ANNEAL_GRADIENT_FLOOR_T,
+        score_aware_qat=True, qat_sensitivity_decay=0.9, margin_weight_tau=2.0,
+        adamw_lr=1e-3,
+    )
+    default = _stage(name="r13redo_default", epochs=n_steps, adamw_lr=1e-3)
+    all5_dseg, all5_step0 = _run_arm(all5, n_steps)
+    def_dseg, def_step0 = _run_arm(default, n_steps)
+
+    # the levers are genuinely ACTIVE (step-0 composed loss differs from default) —
+    # else the no-reversal assertion would be vacuous.
+    assert abs(all5_step0 - def_step0) > 1e-3, (
+        f"all-5-on step-0 loss {all5_step0:.4f} == default {def_step0:.4f}: the levers "
+        "are silently inactive (the operating-point reversal guard would be vacuous)"
+    )
+    assert all(torch.isfinite(torch.tensor(x)).item() for x in all5_dseg + def_dseg), (
+        "a d_seg measurement is non-finite (a lever produced NaN/Inf at the "
+        "operating point)"
+    )
+    all5_tail = sum(all5_dseg[-4:]) / 4.0
+    def_tail = sum(def_dseg[-4:]) / 4.0
+    # NO SEG-DIRECTION REVERSAL: at the converged operating point, all-5-on d_seg is
+    # within a slice-noise band of the no-lever default d_seg (it does NOT climb).
+    # The band (~30% of the converged d_seg + a small floor) is the tiny-4-pair noise.
+    band = 0.30 * max(d_seg_converged, 1e-4) + 0.01
+    assert all5_tail <= def_tail + band, (
+        f"all-5-on REVERSED the seg direction at the trained operating point: "
+        f"all5 tail d_seg {all5_tail:.5f} > default {def_tail:.5f} + band {band:.5f} "
+        f"(converged start d_seg {d_seg_converged:.5f}). A lever is fighting the seg "
+        "score-improving direction at the operating point."
+    )
+    # and all-5-on d_seg does not BLOW UP from the converged start (no divergence).
+    assert all5_tail <= d_seg_converged + band, (
+        f"all-5-on d_seg DIVERGED from the converged start: tail {all5_tail:.5f} "
+        f">> start {d_seg_converged:.5f} + band {band:.5f}"
+    )
+
+
+@pytest.mark.timeout(900)
+def test_r13_all5_descent_byteclose_parseback_on_real_scorer():
+    """R13 HEADLINE lens (REAL scorer) — with ALL FIVE levers ON, the COMBINED loss
+    DESCENDS over a multi-step Adam trajectory on the REAL frozen scorer (EfficientNet-
+    B2 SegNet + FastViT PoseNet), AND a full all-5-on ``run()`` byte-closes an archive
+    whose decoder + Lever-3 pose section parse back, AND the BEST checkpoint's exact
+    real-score components are FINITE + in-range. This is the integrated end-to-end
+    proof that the five composed levers form a real training signal that exports a
+    well-formed archive on the contest scorer — no prior round measured multi-step
+    descent of the composed loss on the real scorer.
+
+    Run at the FAITHFUL daemon LR (1e-3) — the live distortion arm descends 0.68→0.52
+    at this LR; a 50× overshoot oscillates (instrument artifact, not a lever defect).
+
+    RESEARCH-ONLY tiny slice ⇒ [contest-CPU advisory] NON-PROMOTABLE (descent-direction
+    + finiteness claim, NOT a score claim). NO-FAKE: real autograd + real export on the
+    real scorer; an inactive lever set would still byte-close but the descent assertion
+    + the distinctness-from-default assertion (in the fast sister test) reject a no-op."""
+    pytest.importorskip("torch")
+    import os
+
+    from tac.torch_vehicle.scorer_context import RealScorerContext
+
+    video = "upstream/videos/0.mkv"
+    if not os.path.exists(video):
+        pytest.skip("real video 0.mkv not present (real-scorer test)")
+
+    from tac.torch_vehicle.driver import _EVAL_H, _EVAL_W
+    from tac.torch_vehicle.pose_film import parse_pose_section
+
+    torch.manual_seed(0)
+    cache = _tmp_out()
+    sc = RealScorerContext(video, device="cpu", max_pairs=8, targets_cache=cache)
+    v = import_vendored_bundle()
+    out = _tmp_out()
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=out, device="cpu",
+        pose_film_enabled=True, pose_film_hidden=8, seed=0,
+    )
+    n = 8
+    steps = 16
+    spec = _stage(
+        name="r13_all5_real", epochs=steps, use_qat=True, cat_lambda=0.01,
+        rate_lambda_w=0.05, rate_lambda_lat=0.02,
+        seg_surrogate="soft_cosine", seg_temperature=1.0,
+        seg_temperature_end=SEG_ANNEAL_GRADIENT_FLOOR_T,
+        score_aware_qat=True, qat_sensitivity_decay=0.9, margin_weight_tau=2.0,
+        adamw_lr=1e-3,
+    )
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=v, curriculum=[spec])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    decoder.set_stored_pose(sc.pose_targets[:n].cpu())
+    latents = torch.nn.Parameter(torch.randn(n, 28) * 0.1)
+    idx = torch.arange(4)
+    dec_params = [p for p in decoder.parameters() if p.requires_grad]
+    opt = torch.optim.Adam(dec_params + [latents], lr=spec.adamw_lr)
+
+    def render():
+        dp = decoder(latents[idx], idx)
+        B = len(idx)
+        flat = dp.reshape(B * 2, 3, _EVAL_H, _EVAL_W)
+        up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
+        down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
+        bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
+        dc = bhwc.clamp(0, 255)
+        return dc + (dc.round() - dc).detach()
+
+    losses = []
+    for step in range(steps):
+        opt.zero_grad()
+        t = seg_temperature_for_epoch(spec, step)
+        seg_out, pose6 = sc.seg_pose_forward(render())
+        seg_l = _seg_loss_for_spec(spec, seg_out, sc.seg_targets_hard[idx], temperature=t)
+        pose_l = torch.sqrt(10.0 * F.mse_loss(pose6, sc.pose_targets[idx]) + 1e-12)
+        loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
+        reg = driver._weight_regularizers(decoder, latents, spec)
+        if reg is not None:
+            loss = loss + reg
+        loss.backward()
+        opt.step()
+        losses.append(float(loss.detach()))
+
+    assert all(torch.isfinite(torch.tensor(x)).item() for x in losses), (
+        "an all-5-on combined-loss step is non-finite on the real scorer"
+    )
+    # (1) ROBUST windowed descent on the real scorer.
+    tail = losses[(3 * len(losses)) // 4:]
+    tail_mean = sum(tail) / len(tail)
+    assert tail_mean < losses[0], (
+        f"all-5-on combined loss did NOT descend on the REAL scorer at the faithful LR: "
+        f"tail-mean {tail_mean:.4f} >= start {losses[0]:.4f} (traj {losses})"
+    )
+
+    # (2) a full all-5-on run() byte-closes + parses back (decoder + Lever-3 pose).
+    run_cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(),
+        checkpoint_every_epochs=1, device="cpu",
+        pose_film_enabled=True, pose_film_hidden=8, seed=0,
+    )
+    drv2 = TorchVehicleDriver(run_cfg, scorer=sc, vendored=v, curriculum=[spec])
+    summary = drv2.run()
+    assert summary.get("status") == "complete", "all-5-on real-scorer run() did not finish"
+    arch_path = os.path.join(run_cfg.out_dir, "best", "best_archive.bin")
+    assert os.path.exists(arch_path), "no best archive emitted by the all-5-on real run"
+    archive = open(arch_path, "rb").read()
+    assert len(archive) > 0
+    pose = parse_pose_section(archive, drv2.v.parse_archive)
+    assert pose is not None and tuple(pose.shape) == (n, 6), (
+        "Lever-3 pose section did not round-trip in the all-5-on real archive"
+    )
+    dec_sd, lat, _meta = drv2.v.parse_archive(archive)
+    assert dec_sd and lat.shape[0] == n, "decoder/latent section did not parse back"
+
+    # (3) the BEST/LAST exact real-score components are FINITE + in-range.
+    ev = summary.get("last_eval") or {}
+    comps = {k: float(ev[k]) for k in ("d_seg", "d_pose", "rate", "score") if k in ev}
+    if "best_score" in summary:
+        comps.setdefault("score", float(summary["best_score"]))
+    assert comps, "run() exposed no real-score components to check finiteness"
+    for k, val in comps.items():
+        assert torch.isfinite(torch.tensor(val)).item(), (
+            f"real-score component {k}={val} is non-finite after all-5-on training"
+        )
+        assert val >= 0.0, f"real-score component {k}={val} is negative (impossible)"
+
+
 @pytest.mark.timeout(600)
 def test_r10_levers_compose_not_fight_on_real_scorer():
     """R10 HEADLINE lens — on the REAL frozen scorer (EfficientNet-B2 SegNet +
