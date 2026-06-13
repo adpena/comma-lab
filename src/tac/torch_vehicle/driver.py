@@ -37,7 +37,9 @@ byte-closed archive is run through ``upstream/evaluate.py``.
 
 from __future__ import annotations
 
+import io
 import math
+import struct
 import threading
 import time
 from collections.abc import Callable
@@ -66,6 +68,7 @@ if TYPE_CHECKING:  # StageSpec used only in annotations at module level
 
 _EVAL_H, _EVAL_W = 384, 512
 _SEG_NUM_CLASSES = 5  # contest SegNet head (upstream/modules.py: smp.Unet classes=5)
+_TRACK_A_D2_CONSERVATIVE_BYTE_TARGET = 2731.0
 
 
 def _segnet_logit_margin_map(seg_out: torch.Tensor) -> torch.Tensor:
@@ -184,6 +187,63 @@ def _seg_loss_for_spec(
     return per_pixel.mean()
 
 
+def _split_three_section_archive(archive: bytes) -> tuple[bytes, bytes, bytes, bytes]:
+    """Return ``(meta_brotli, decoder_blob, latents_brotli, trailing)``.
+
+    The vendored archive grammar is exactly three length-prefixed sections. D2 uses
+    this to keep the meta and latent sections byte-for-byte while replacing only the
+    decoder blob with the variable-level codec output.
+    """
+    buf = io.BytesIO(archive)
+    sections: list[bytes] = []
+    for _ in range(3):
+        raw_len = buf.read(4)
+        if len(raw_len) != 4:
+            raise ValueError("truncated vendored archive while reading section length")
+        sec_len = struct.unpack("<I", raw_len)[0]
+        section = buf.read(sec_len)
+        if len(section) != sec_len:
+            raise ValueError("truncated vendored archive while reading section payload")
+        sections.append(section)
+    trailing = buf.read()
+    return sections[0], sections[1], sections[2], trailing
+
+
+def _join_three_section_archive(
+    meta_brotli: bytes, decoder_blob: bytes, latents_brotli: bytes, trailing: bytes = b""
+) -> bytes:
+    out = io.BytesIO()
+    for section in (meta_brotli, decoder_blob, latents_brotli):
+        out.write(struct.pack("<I", len(section)))
+        out.write(section)
+    out.write(trailing)
+    return out.getvalue()
+
+
+def _normalize_variable_level_rd_table(
+    rd_table: dict[str, Any],
+) -> dict[str, dict[int, tuple[float, float]]]:
+    """Normalize persisted JSON RD tables to the allocator's typed shape."""
+    out: dict[str, dict[int, tuple[float, float]]] = {}
+    for tensor, raw_curve in rd_table.items():
+        if not isinstance(raw_curve, dict):
+            raise ValueError(f"RD curve for {tensor!r} must be an object")
+        curve: dict[int, tuple[float, float]] = {}
+        for raw_level, raw_pair in raw_curve.items():
+            level = int(raw_level)
+            if not isinstance(raw_pair, (list, tuple)) or len(raw_pair) != 2:
+                raise ValueError(f"RD point {tensor!r}/{raw_level!r} must be [bytes, dist]")
+            curve[level] = (float(raw_pair[0]), float(raw_pair[1]))
+        if 127 not in curve:
+            raise ValueError(f"RD curve for {tensor!r} is missing the 127 baseline")
+        if curve[127] != (0.0, 0.0):
+            raise ValueError(f"RD curve for {tensor!r} has nonzero 127 baseline: {curve[127]}")
+        out[str(tensor)] = curve
+    if not out:
+        raise ValueError("variable-level waterfill RD table is empty")
+    return out
+
+
 class _SimulatedDeath(Exception):
     """Raised by the test-only ``_stop_after_global_epoch`` hook AFTER a checkpoint
     lands, to simulate a SIGKILL/OOM mid-run for the in-process resume test."""
@@ -289,6 +349,17 @@ class TorchVehicleConfig:
     # FINAL export of a converged checkpoint, never during the descending basin. The
     # value is a ``tac.torch_vehicle.distortion_finishing_kit.DistortionKitConfig``.
     distortion_kit: Any = None
+    # Track-A Item B / D2 rate path: math-optimal variable-level decoder codec.
+    # DEFAULT FALSE -> the no-FiLM branch is exactly ``self.v.build_archive(...)`` and
+    # remains byte-identical to the vendored/base_ch20 basin. When enabled, this is
+    # intentionally conservative and base_ch20-only: it consumes the MEASURED RD table
+    # from ``experiments/probe_variable_level_waterfill_net.py`` and solves
+    # ``byte_target=2731, net_stop=False``. It composes with the FiLM archive branch by
+    # replacing only the decoder blob and preserving the additive pose section. The
+    # falsified aggressive ``net_stop`` path is not exposed as a driver knob.
+    variable_level_waterfill_enabled: bool = False
+    variable_level_waterfill_rd_table: dict[str, Any] | None = None
+    variable_level_waterfill_byte_target: float = _TRACK_A_D2_CONSERVATIVE_BYTE_TARGET
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -308,6 +379,21 @@ class TorchVehicleConfig:
                 "on train_device, the PoseNet path on the CPU authority device). Set "
                 "device='cpu' and train_device='mps'."
             )
+        if self.variable_level_waterfill_enabled:
+            if self.base_channels != 20:
+                raise ValueError(
+                    "Track-A D2 variable-level waterfill is only certified for the "
+                    "base_ch20 production adapter. Set base_channels=20 or leave "
+                    "variable_level_waterfill_enabled=False."
+                )
+            if not self.variable_level_waterfill_rd_table:
+                raise ValueError(
+                    "variable_level_waterfill_enabled requires a measured RD table "
+                    "from probe_variable_level_waterfill_net.py; closed-form or "
+                    "missing RD data is forbidden."
+                )
+            if float(self.variable_level_waterfill_byte_target) <= 0:
+                raise ValueError("variable_level_waterfill_byte_target must be positive")
         self.out_dir = Path(self.out_dir)
 
 
@@ -446,11 +532,34 @@ class TorchVehicleDriver:
         from tac.torch_vehicle.pose_film import PoseFiLMHNeRVWrapper
 
         vendored = self._new_vendored_decoder(dev)
-        wrapper = PoseFiLMHNeRVWrapper(
-            vendored,
-            n_pairs=self.n_pairs,
-            film_hidden=self.cfg.pose_film_hidden,
-        ).to(dev)
+        # RNG-NEUTRAL FiLM construction (the from-scratch A/B fix): the
+        # ``_PoseFiLM`` module init draws from the global torch RNG. In a FRESH
+        # (non-resume) run the very next RNG consumer is the stage-1 RANDOM LATENT
+        # draw (``run()``: ``torch.randn(n_pairs, latent_dim)``). If the FiLM
+        # construction were allowed to advance the global stream, the FiLM-on arm's
+        # initial latents would DIVERGE from the no-FiLM basin's (same distribution,
+        # different realization) — breaking the bit-shared-init contract the
+        # from-scratch decisive A/B depends on. We SNAPSHOT the CPU RNG state before
+        # the FiLM build and RESTORE it after, so building FiLM consumes NET-ZERO
+        # global RNG: the subsequent latent draw lands at the SAME stream position the
+        # no-FiLM basin draws from → bit-identical initial latents. (The FiLM params
+        # are still randomly initialized — from the snapshotted state — and are
+        # immediately overwritten to IDENTITY by ``_PoseFiLM``'s zero-init ``fc2``, so
+        # gamma=1/beta=0 at init regardless; only the global-stream POSITION is
+        # preserved.) BASIN-SAFE: the basin never enters this branch
+        # (``pose_film_enabled=False``) so its trajectory is byte-identical. The
+        # device RNG (e.g. MPS) is NOT touched here because the latent draw is on CPU
+        # (``run()`` draws on CPU then moves), so the CPU snapshot/restore is the
+        # complete fix for the reproducible-init contract.
+        _rng_state = torch.get_rng_state()
+        try:
+            wrapper = PoseFiLMHNeRVWrapper(
+                vendored,
+                n_pairs=self.n_pairs,
+                film_hidden=self.cfg.pose_film_hidden,
+            ).to(dev)
+        finally:
+            torch.set_rng_state(_rng_state)
         # Seed the STORED pose from the GT PoseNet pose (side-info, not learned).
         wrapper.set_stored_pose(self.scorer.pose_targets[: self.n_pairs].to(dev))
         return wrapper
@@ -892,6 +1001,93 @@ class TorchVehicleDriver:
         ema_latents = rt.ema_latents.detach().cpu().clone()
         return _EvalSnapshot(ema_sd=ema_sd, ema_latents=ema_latents)
 
+    def _build_archive_with_optional_variable_waterfill(
+        self,
+        archive_decoder_sd: dict[str, torch.Tensor],
+        meta_dict: dict[str, Any],
+        build_base_archive: Callable[[dict[str, Any]], bytes],
+    ) -> tuple[bytes, dict[str, torch.Tensor], torch.Tensor]:
+        """Build a vendored archive, optionally replacing only the decoder section.
+
+        D2 is intentionally default-off and conservative: when disabled this returns
+        exactly ``build_base_archive(meta_dict)`` and the vendored parse-back state. When
+        enabled it solves the measured RD table with ``byte_target`` and
+        ``net_stop=False`` (the bankable operating point), then swaps the decoder blob
+        while leaving meta/latents and any additive trailing section intact.
+
+        """
+        if not self.cfg.variable_level_waterfill_enabled:
+            archive = build_base_archive(meta_dict)
+            eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
+            return archive, eval_decoder_sd, eval_latents
+
+        from tac.losses.variable_level_codec import (
+            build_decoder_blob_variable_or_vendored,
+            decode_decoder_variable,
+        )
+        from tac.losses.variable_level_waterfill_allocator import (
+            solve_waterfill_allocation,
+            verify_kkt_marginal_equalization,
+        )
+
+        rd_table = _normalize_variable_level_rd_table(
+            self.cfg.variable_level_waterfill_rd_table or {}
+        )
+        missing = sorted(set(rd_table).difference(archive_decoder_sd))
+        if missing:
+            preview = ", ".join(missing[:5])
+            suffix = "..." if len(missing) > 5 else ""
+            raise ValueError(
+                "variable_level_waterfill_rd_table contains tensors absent from the "
+                f"archive decoder state dict: {preview}{suffix}"
+            )
+        byte_target = float(self.cfg.variable_level_waterfill_byte_target)
+        alloc = solve_waterfill_allocation(
+            rd_table, byte_target=byte_target, net_stop=False
+        )
+        kkt_holds, kkt_msg = verify_kkt_marginal_equalization(alloc)
+        levels = {k: int(v) for k, v in alloc.levels.items()}
+        decoder_blob, is_variable_format = build_decoder_blob_variable_or_vendored(
+            archive_decoder_sd, levels
+        )
+        active_levels = {k: v for k, v in sorted(levels.items()) if v < 127}
+        meta_dict["decoder_codec"] = "variable_level_waterfill.v1"
+        meta_dict["variable_level_waterfill"] = {
+            "schema": "track_a_item_b_d2_variable_level_waterfill.v1",
+            "enabled": True,
+            "byte_target": byte_target,
+            "net_stop": False,
+            "falsified_path": "net_stop",
+            "source": "Track-A Item B conservative byte-target operating point",
+            "rd_table_tensors": len(rd_table),
+            "n_coarsened": int(alloc.n_coarsened),
+            "total_byte_saving_predicted": float(alloc.total_byte_saving),
+            "total_dist_cost_predicted": float(alloc.total_dist_cost),
+            "net_score_delta_predicted_from_rd_table": float(alloc.net_score_delta),
+            "kkt_marginal_equalization_holds": bool(kkt_holds),
+            "kkt_explanation": kkt_msg,
+            "levels": active_levels,
+            "decoder_blob_is_variable_format": bool(is_variable_format),
+            "decoder_blob_bytes": len(decoder_blob),
+            "score_claim": False,
+            "authority": "[macOS-CPU advisory] NON-PROMOTABLE until dual CPU/CUDA exact eval",
+        }
+        base_archive = build_base_archive(meta_dict)
+        eval_decoder_sd_vendored, eval_latents, _meta = self.v.parse_archive(base_archive)
+        meta_brotli, _vendored_decoder_blob, latents_brotli, trailing = (
+            _split_three_section_archive(base_archive)
+        )
+        archive = _join_three_section_archive(
+            meta_brotli, decoder_blob, latents_brotli, trailing
+        )
+        meta_dict["variable_level_waterfill"]["archive_bytes"] = len(archive)
+        eval_decoder_sd = (
+            decode_decoder_variable(decoder_blob)
+            if is_variable_format
+            else eval_decoder_sd_vendored
+        )
+        return archive, eval_decoder_sd, eval_latents
+
     def _build_archive_and_eval_decoder(
         self,
         ema_sd: dict[str, torch.Tensor],
@@ -914,8 +1110,15 @@ class TorchVehicleDriver:
         cursor-based eval adapter so the exact eval renders the SAME FiLM-conditioned
         frames the inflate path produces (byte-closed faithful)."""
         if not self.cfg.pose_film_enabled:
-            archive = self.v.build_archive(ema_sd, ema_latents, meta_dict=meta_dict)
-            eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
+            archive, eval_decoder_sd, eval_latents = (
+                self._build_archive_with_optional_variable_waterfill(
+                    ema_sd,
+                    meta_dict,
+                    lambda md: self.v.build_archive(
+                        ema_sd, ema_latents, meta_dict=md
+                    ),
+                )
+            )
             eval_dec = self._new_vendored_decoder(device=self.device)
             eval_dec.load_state_dict(
                 {k: v.to(self.device) for k, v in eval_decoder_sd.items()}
@@ -935,12 +1138,18 @@ class TorchVehicleDriver:
         # weights) and the stored-pose buffer (additive pose section).
         archive_decoder_sd = wrapper_sd_to_archive_decoder_sd(ema_sd)
         stored_pose = ema_sd["stored_pose"]
-        # (2) Build the additive archive (pristine vendored build_archive + pose).
-        archive = build_archive_with_pose(
-            self.v.build_archive, archive_decoder_sd, ema_latents, meta_dict, stored_pose
+        # (2) Build the additive archive (pristine vendored build_archive + pose),
+        # with optional D2 replacement of only the decoder section.
+        archive, eval_decoder_sd, eval_latents = (
+            self._build_archive_with_optional_variable_waterfill(
+                archive_decoder_sd,
+                meta_dict,
+                lambda md: build_archive_with_pose(
+                    self.v.build_archive, archive_decoder_sd, ema_latents, md, stored_pose
+                ),
+            )
         )
         # (3) Parse BOTH sections back and rebuild the FiLM wrapper for eval.
-        eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
         parsed_pose = parse_pose_section(archive, self.v.parse_archive)
         film_sd = {
             k[len("pose_film.") :]: v
@@ -1025,6 +1234,7 @@ class TorchVehicleDriver:
                 (best_dir / "best_archive.bin").write_bytes(archive)
                 torch.save(ema_sd, best_dir / "best_ema_decoder.pt")
                 torch.save(snap.ema_latents, best_dir / "best_ema_latents.pt")
+                variable_level_meta = meta_dict.get("variable_level_waterfill")
                 (best_dir / "best_meta.json").write_text(
                     _json_dumps(
                         {
@@ -1037,11 +1247,13 @@ class TorchVehicleDriver:
                             "rate": rate,
                             "archive_bytes": archive_bytes,
                             "base_channels": self.cfg.base_channels,
+                            "decoder_codec": meta_dict.get("decoder_codec", "vendored"),
+                            "variable_level_waterfill": variable_level_meta,
                             "authority": "[contest-CPU advisory] NON-PROMOTABLE",
                         }
                     )
                 )
-        return {
+        out = {
             "d_seg": d_seg,
             "d_pose": d_pose,
             "rate": rate,
@@ -1049,6 +1261,10 @@ class TorchVehicleDriver:
             "archive_bytes": archive_bytes,
             "is_best": is_best,
         }
+        if "variable_level_waterfill" in meta_dict:
+            out["decoder_codec"] = meta_dict.get("decoder_codec", "vendored")
+            out["variable_level_waterfill"] = meta_dict["variable_level_waterfill"]
+        return out
 
     def _record_eval_row(
         self,
@@ -1445,8 +1661,8 @@ def _json_dumps(obj: Any) -> str:
 # ---------------------------------------------------------------------------
 @torch.inference_mode()
 def kit_aware_exact_eval(
-    eval_decoder: "nn.Module",
-    eval_latents: "torch.Tensor",
+    eval_decoder: nn.Module,
+    eval_latents: torch.Tensor,
     distortion_net: Any,
     video_path: Any,
     *,
@@ -1468,7 +1684,6 @@ def kit_aware_exact_eval(
     the frames pass through unchanged so the score equals the vendored eval.
     """
     import av
-
     from frame_utils import yuv420_to_rgb
 
     from tac.torch_vehicle.distortion_finishing_kit import (
@@ -1490,7 +1705,7 @@ def kit_aware_exact_eval(
     pose_total = 0.0
     count = 0
 
-    def _next_pair() -> "torch.Tensor | None":
+    def _next_pair() -> torch.Tensor | None:
         f0 = None
         for frame in frames_iter:
             rgb = yuv420_to_rgb(frame)
@@ -1550,7 +1765,7 @@ def kit_aware_exact_eval(
 def finish_checkpoint_with_distortion_kit(
     best_archive_bytes: bytes,
     distortion_kit: Any,
-    vendored: "VendoredBundle | None" = None,
+    vendored: VendoredBundle | None = None,
 ) -> dict[str, Any]:
     """Append the distortion-kit section to a converged ``best/best_archive.bin``.
 
@@ -1596,10 +1811,10 @@ def split_finished_archive(finished_archive: bytes) -> tuple[bytes, Any]:
     The substrate's numpy inflate uses this to recover the base ``0.bin`` (handed to
     the vendored ``inflate.py``) + the kit (applied to the raw frames after)."""
     from tac.torch_vehicle.distortion_finishing_kit import (
+        _SECTION_STRUCT,
         DISTORTION_SECTION_MAGIC,
         DistortionKitConfig,
         parse_distortion_section,
-        _SECTION_STRUCT,
     )
 
     seclen = _SECTION_STRUCT.size
