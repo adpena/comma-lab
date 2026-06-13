@@ -55,6 +55,7 @@ C. **COMPOSE ALL FIVE** end-to-end: a synthetic driver run with Levers 1+2(+anne
 
 from __future__ import annotations
 
+import json
 import tempfile
 
 import pytest
@@ -1189,41 +1190,18 @@ def test_r13_all5_descent_byteclose_parseback_on_real_scorer():
         assert val >= 0.0, f"real-score component {k}={val} is negative (impossible)"
 
 
-def test_r14_lever4_export_is_uniform_127_not_variable_level_documented_scope():
-    """R14 lens — Lever-4 (score-aware QAT) EXPORT-surface scope guard. Lever-4 is a
-    TRAINING-TIME proxy: it shapes the decoder weights so that, after the codec's
-    UNIFORM 127-level quant, score-irrelevant weights collapse to repeated symbols
-    brotli compresses well (score_aware_qat.py docstring lines 34-37). It EXPLICITLY
-    does NOT inject a variable-level export grid — the actual archive always uses the
-    vendored uniform-127 ``quantize_state_dict`` + ``encode_decoder``.
-
-    This guards the DOCUMENTED scope at TWO surfaces (distinct from the existing
-    ``test_score_aware_grid_yields_smaller_real_brotli_blob_than_uniform`` which proves
-    the byte-savings are REAL):
-      (1) the variable-level codec ``build_decoder_blob_variable_or_vendored`` DOES
-          deliver byte-savings when fed a coarse level map keyed by STATE-DICT keys
-          (the mechanism is real + sd-key-correct), AND emits the vendored byte-
-          identical blob when the map is uniform/None (default-preserving);
-      (2) the driver's DEFAULT export path (``_build_archive_and_eval_decoder``) takes
-          NO sensitivity argument — it never routes Lever-4's ``tensor_sensitivity_ema``
-          into a variable-level export. This is the CORRECT documented behavior, not a
-          gap: a regression that silently wired a variable-level export off the EMA
-          (changing the archive grammar / byte-layout out from under the daemon) would
-          be caught here.
-
-    Why this matters (the R14 adversarial question it answers): a reviewer might
-    suspect Lever-4's "fewer brotli bytes" claim is an unfulfilled export no-op
-    (Catalog #220). The answer is CLEAN: the savings are delivered via the uniform
-    codec's brotli compressibility (proven by the sister brotli-blob test), and the
-    export-surface scope (uniform-127, no variable-level wiring) is exactly as
-    documented. NO-FAKE: a real coarse-map blob measurement + an AST/signature check
-    that the default export takes no sensitivity param."""
+def test_r14_lever4_variable_level_export_codec_mechanism_real():
+    """R14 lens (codec half) — the variable-level codec mechanism Lever-4's export
+    UNIFICATION rides on is REAL + sd-key-correct + default-preserving. The savings are
+    NOT a no-op (Catalog #220): a sd-key-correct coarse map shrinks the decoder blob,
+    while a uniform/None map emits the vendored byte-identical blob. Sister of
+    ``test_score_aware_grid_yields_smaller_real_brotli_blob_than_uniform`` (the uniform-
+    codec brotli-compressibility half) — this guards the variable-codec byte half that
+    the R14 unification (``lever4_variable_level_export_enabled``) wires the online EMA
+    into."""
     pytest.importorskip("torch")
-    import inspect
-
     from tac.losses.variable_level_codec import build_decoder_blob_variable_or_vendored
 
-    # A real-shaped vendored decoder state dict.
     sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
     v = import_vendored_bundle()
     cfg = TorchVehicleConfig(base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu")
@@ -1231,9 +1209,6 @@ def test_r14_lever4_export_is_uniform_127_not_variable_level_documented_scope():
     dec = driver._new_vendored_decoder(device=torch.device("cpu"))
     sd = {k: t.detach().clone() for k, t in dec.state_dict().items()}
     sd_keys = list(sd.keys())
-
-    # (1) the variable-level codec mechanism is REAL (sd-key-correct coarse map shrinks
-    # the blob) AND default-preserving (None/uniform -> vendored byte-identical).
     uniform_blob, uniform_is_var = build_decoder_blob_variable_or_vendored(sd, None)
     coarse_levels = {k: (16 if i < len(sd_keys) // 2 else 127) for i, k in enumerate(sd_keys)}
     coarse_blob, coarse_is_var = build_decoder_blob_variable_or_vendored(sd, coarse_levels)
@@ -1244,21 +1219,135 @@ def test_r14_lever4_export_is_uniform_127_not_variable_level_documented_scope():
         f"({len(coarse_blob)} !< {len(uniform_blob)}) — the byte-savings mechanism is fake"
     )
 
-    # (2) the DEFAULT driver export takes NO sensitivity argument (documented scope:
-    # Lever-4 does not wire a variable-level export off the EMA). A regression that
-    # added a sensitivity-driven variable-level export to the DEFAULT path would change
-    # this signature / source and trip the assertion.
-    sig = inspect.signature(TorchVehicleDriver._build_archive_and_eval_decoder)
-    param_names = set(sig.parameters)
-    assert not any("sensitiv" in p.lower() for p in param_names), (
-        f"the DEFAULT export path gained a sensitivity parameter {param_names} — "
-        "Lever-4's documented scope is uniform-127 export (savings via brotli "
-        "compressibility), NOT a variable-level export off the sensitivity EMA"
+
+def test_r14_lever4_variable_level_export_unification_default_off_and_byte_saving():
+    """R14 UNIFICATION (the operator-directed "completely engineer + implement +
+    adversarially review + harden" of the contest-optimality gap): Lever-4's ONLINE
+    score-sensitivity EMA now drives a VARIABLE per-tensor INT8 EXPORT grid (the
+    reverse-waterfill byte-half), gated by ``cfg.lever4_variable_level_export_enabled``.
+
+    Guards the NEW contract at FOUR surfaces (NO-FAKE):
+      (1) DEFAULT-OFF byte-identity (the daemon-safety guard): with the flag OFF, the
+          export is byte-for-byte the vendored ``build_archive`` regardless of the
+          sensitivity passed — the unification cannot change the default daemon's bytes.
+      (2) UNIFORM-sensitivity default-preserving: flag ON but a uniform sensitivity map
+          → byte-identical to vendored (no coarsening when nothing is less sensitive).
+      (3) NON-UNIFORM byte SAVING: flag ON + a non-uniform sensitivity EMA →
+          STRICTLY FEWER archive bytes than the vendored export (the reverse-waterfill
+          saving the R14 finding measured — captured at export, not left on the table).
+      (4) PARSE-BACK FAITHFUL: the variable archive parses back to a decoder state dict
+          with the SAME keys (byte-closed faithful — the inflate side can rebuild it).
+
+    This REPLACES the prior R14 scope-guard (which asserted Lever-4 had NO variable-
+    level export) — that scope changed when the operator directed the optimal
+    implementation be built. NO-FAKE: real driver export-path calls + real byte
+    measurements; a no-op unification (flag ignored) fails (3); a default-path
+    regression fails (1)."""
+    pytest.importorskip("torch")
+    from tac.torch_vehicle.driver import _EvalSnapshot
+
+    sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    v = import_vendored_bundle()
+    dec_cfg = TorchVehicleConfig(base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu")
+    driver = TorchVehicleDriver(dec_cfg, scorer=sc, vendored=v, curriculum=[_stage()])
+    dec = driver._new_vendored_decoder(device=torch.device("cpu"))
+    sd = {k: t.detach().clone() for k, t in dec.state_dict().items()}
+    latents = torch.randn(6, 28) * 0.1
+    meta = {"n_pairs": 6, "latent_dim": 28, "base_channels": 20, "eval_size": [384, 512]}
+    weight_keys = [k for k in sd if k.endswith(".weight")]
+    # A non-uniform sensitivity EMA: the FIRST half of the weights are score-irrelevant
+    # (tiny ||dS/dw|| -> coarse grid), the rest highly sensitive (kept at 127).
+    nonuniform_sens = {k: (1e-6 if i < len(weight_keys) // 2 else 100.0)
+                       for i, k in enumerate(weight_keys)}
+    uniform_sens = dict.fromkeys(weight_keys, 5.0)
+
+    # ---- (1) DEFAULT-OFF: bytes identical to vendored regardless of sensitivity ----
+    cfg_off = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        lever4_variable_level_export_enabled=False,
     )
-    src = inspect.getsource(TorchVehicleDriver._build_archive_and_eval_decoder)
-    assert "tensor_sensitivity_ema" not in src, (
-        "the DEFAULT export path now references tensor_sensitivity_ema — Lever-4 must "
-        "not silently route a variable-level export off the EMA (documented scope)"
+    drv_off = TorchVehicleDriver(cfg_off, scorer=sc, vendored=v, curriculum=[_stage()])
+    vendored_archive = v.build_archive(sd, latents, meta_dict=dict(meta))
+    arc_off, _sd_off, _lat_off = drv_off._build_archive_and_eval_decoder(
+        sd, latents, dict(meta), sensitivity=nonuniform_sens
+    )
+    assert arc_off == vendored_archive, (
+        "flag-OFF export is NOT byte-identical to vendored (the daemon-safety guard "
+        "broke: the unification must be a strict no-op when disabled)"
+    )
+
+    # ---- flag ON ----
+    cfg_on = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        lever4_variable_level_export_enabled=True,
+    )
+    drv_on = TorchVehicleDriver(cfg_on, scorer=sc, vendored=v, curriculum=[_stage()])
+
+    # ---- (2) flag ON + UNIFORM sensitivity -> vendored byte-identical (no coarsening) -
+    arc_uniform, _sdu, _latu = drv_on._build_archive_and_eval_decoder(
+        sd, latents, dict(meta), sensitivity=uniform_sens
+    )
+    assert arc_uniform == vendored_archive, (
+        "flag-ON + UNIFORM sensitivity is NOT byte-identical to vendored — the export "
+        "must not coarsen when no tensor is less sensitive than another"
+    )
+
+    # ---- (3) flag ON + NON-UNIFORM sensitivity -> STRICTLY FEWER bytes -------------
+    # _build_archive_and_eval_decoder returns (archive, eval_DECODER_MODULE, latents):
+    # the no-FiLM branch already rebuilds + loads the parse-back decoder for us.
+    arc_var, eval_dec_var, lat_var = drv_on._build_archive_and_eval_decoder(
+        sd, latents, dict(meta), sensitivity=nonuniform_sens
+    )
+    assert len(arc_var) < len(vendored_archive), (
+        f"the Lever-4 variable-level export did NOT shrink the archive "
+        f"({len(arc_var)} !< {len(vendored_archive)}) — the reverse-waterfill byte "
+        "saving the R14 finding measured was left on the table (no-op unification)"
+    )
+
+    # ---- (4) PARSE-BACK FAITHFUL: the returned eval decoder is a usable module with
+    # the SAME parameter keys as the vendored decoder (byte-closed faithful — the
+    # inflate side rebuilds the identical decoder), and renders without error.
+    var_keys = set(eval_dec_var.state_dict().keys())
+    assert var_keys == set(sd.keys()), (
+        "the variable-level parse-back decoder lost/renamed keys (not byte-closed faithful)"
+    )
+    with torch.no_grad():
+        out = eval_dec_var(latents[:2].to(torch.device("cpu")))
+    assert torch.isfinite(out).all(), "the variable-level parse-back decoder rendered non-finite"
+    assert lat_var.shape[0] == 6, "the latent section did not survive the variable splice"
+
+    # ---- (5) META-FLAG ORDERING GUARD (adversarial-review fix): the emitted archive's
+    # META section MUST carry the ``decoder_codec`` flag so the inflate side knows to
+    # dispatch ``decode_decoder_variable`` (the vendored ``parse_archive`` CANNOT read a
+    # variable-format blob — that IS why the meta flag is required). A regression to
+    # building base_archive BEFORE writing the flag (the bug self-review caught) would
+    # leave the flag out of the emitted bytes. We decode ONLY the meta section directly
+    # (the codec's own 3-section grammar), not the variable decoder blob.
+    import brotli
+
+    from tac.torch_vehicle.driver import _split_three_section_archive
+
+    meta_brotli, _dblob, _lblob, _trail = _split_three_section_archive(arc_var)
+    emitted_meta = json.loads(brotli.decompress(meta_brotli).decode("utf-8"))
+    assert emitted_meta.get("decoder_codec") == "lever4_sensitivity_variable_level.v1", (
+        "the emitted variable archive's META does not carry decoder_codec="
+        "'lever4_sensitivity_variable_level.v1' — the inflate side cannot select "
+        "decode_decoder_variable (the meta-flag ordering bug: base_archive built before "
+        "the flag was written into meta_dict)"
+    )
+    assert "lever4_variable_level_export" in emitted_meta, (
+        "the emitted meta lost the lever4_variable_level_export provenance block"
+    )
+
+    # ---- (6) DETERMINISM (resume-safety): the SAME sensitivity EMA produces a
+    # BIT-IDENTICAL archive (the rank-norm level map + the codec are deterministic), so
+    # a daemon that crash-resumes (the EMA is persisted/restored) re-exports identically.
+    arc_var2, _ed2, _lat2 = drv_on._build_archive_and_eval_decoder(
+        sd, latents, dict(meta), sensitivity=nonuniform_sens
+    )
+    assert arc_var == arc_var2, (
+        "the Lever-4 variable-level export is NON-DETERMINISTIC on the same sensitivity "
+        "EMA — a crash-resume would re-export different bytes (reproducibility floor)"
     )
 
 

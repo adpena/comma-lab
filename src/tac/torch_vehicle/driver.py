@@ -360,6 +360,22 @@ class TorchVehicleConfig:
     variable_level_waterfill_enabled: bool = False
     variable_level_waterfill_rd_table: dict[str, Any] | None = None
     variable_level_waterfill_byte_target: float = _TRACK_A_D2_CONSERVATIVE_BYTE_TARGET
+    # Lever-4↔variable-level-export UNIFICATION (R14 contest-optimality finding,
+    # operator directive "completely engineer + implement + adversarially review +
+    # harden"). DEFAULT FALSE -> the export is byte-identical to today (the no-FiLM
+    # branch is exactly ``self.v.build_archive(...)``; the FiLM branch the additive
+    # pose archive). When TRUE, the EXPORT decoder blob is built at a VARIABLE per-
+    # tensor INT8 grid derived from Lever-4's ONLINE score-sensitivity EMA
+    # (``||∂S/∂w_t||``) via ``levels_from_sensitivity_for_codec`` (the SAME rank-norm
+    # band the score-aware QAT trained the decoder to be robust at) — capturing the
+    # full reverse-waterfill byte saving (R14: ~36% decoder-blob on a coarse map)
+    # WITHOUT a separate offline RD-table measurement (the unification of Lever-4's
+    # online EMA with the variable-level codec). This is the contest-OPTIMAL byte-half
+    # of Lever-4. Mutually exclusive with ``variable_level_waterfill_enabled`` (two
+    # distinct level sources for the SAME export blob); ``__post_init__`` refuses both.
+    # The byte saving is REAL + measurable; the NET-score win is advisory until a
+    # 600-pair byte-closed dual CPU/CUDA eval (no score claim from the flag alone).
+    lever4_variable_level_export_enabled: bool = False
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -394,6 +410,13 @@ class TorchVehicleConfig:
                 )
             if float(self.variable_level_waterfill_byte_target) <= 0:
                 raise ValueError("variable_level_waterfill_byte_target must be positive")
+        if self.lever4_variable_level_export_enabled and self.variable_level_waterfill_enabled:
+            raise ValueError(
+                "lever4_variable_level_export_enabled and variable_level_waterfill_enabled "
+                "are mutually exclusive: both replace the SAME export decoder blob with a "
+                "variable-level grid, but from DIFFERENT level sources (Lever-4's online "
+                "score-sensitivity EMA vs the offline measured RD table). Enable exactly one."
+            )
         self.out_dir = Path(self.out_dir)
 
 
@@ -409,6 +432,11 @@ class _EvalSnapshot:
 
     ema_sd: dict[str, torch.Tensor]
     ema_latents: torch.Tensor
+    # Lever-4 online score-sensitivity EMA (``||∂S/∂w_t||``), snapshotted alongside
+    # the weights so the EXPORT can build a variable-level decoder blob from it when
+    # ``cfg.lever4_variable_level_export_enabled`` (the R14 unification). ``None`` when
+    # the lever/flag is off — the export then stays byte-identical to the vendored path.
+    tensor_sensitivity_ema: dict[str, float] | None = None
 
 
 @dataclass
@@ -999,7 +1027,16 @@ class TorchVehicleDriver:
             k: v.detach().cpu().clone() for k, v in rt.ema_decoder.state_dict().items()
         }
         ema_latents = rt.ema_latents.detach().cpu().clone()
-        return _EvalSnapshot(ema_sd=ema_sd, ema_latents=ema_latents)
+        # Snapshot Lever-4's online sensitivity EMA ONLY when the unification export is
+        # enabled (else None → byte-identical vendored export; no behavior change).
+        sens = (
+            dict(rt.tensor_sensitivity_ema)
+            if self.cfg.lever4_variable_level_export_enabled and rt.tensor_sensitivity_ema
+            else None
+        )
+        return _EvalSnapshot(
+            ema_sd=ema_sd, ema_latents=ema_latents, tensor_sensitivity_ema=sens
+        )
 
     def _build_archive_with_optional_variable_waterfill(
         self,
@@ -1088,11 +1125,104 @@ class TorchVehicleDriver:
         )
         return archive, eval_decoder_sd, eval_latents
 
+    def _build_archive_with_optional_sensitivity_variable_levels(
+        self,
+        archive_decoder_sd: dict[str, torch.Tensor],
+        meta_dict: dict[str, Any],
+        build_base_archive: Callable[[dict[str, Any]], bytes],
+        sensitivity: dict[str, float] | None,
+    ) -> tuple[bytes, dict[str, torch.Tensor], torch.Tensor]:
+        """The Lever-4↔variable-level-export UNIFICATION (R14 contest-optimality finding).
+
+        Build a vendored archive, optionally replacing ONLY the decoder section with a
+        VARIABLE per-tensor INT8 grid derived from Lever-4's ONLINE score-sensitivity
+        EMA (``sensitivity[name] = ||∂S/∂w_t||``). This is the contest-OPTIMAL byte-half
+        of Lever-4: the SAME per-tensor sensitivity it computes online to shape the
+        training-time QAT grid now also drives the EXPORT grid (the reverse-waterfill
+        allocation — high-sensitivity tensors keep 127 levels, low-sensitivity ones
+        coarsen toward ``min_abs_levels``), capturing the full byte saving WITHOUT a
+        separate offline RD-table sweep (the gap R14 measured: Lever-4 alone delivered
+        only the ~-4.4% brotli-compressibility saving on the uniform export, leaving the
+        ~-36% variable-level saving on the table).
+
+        DEFAULT-PRESERVING (the daemon-safety guard): disabled (flag off) OR
+        ``sensitivity is None`` / uniform → returns EXACTLY ``build_base_archive(meta_
+        dict)`` + the vendored parse-back state (byte-identical to today). The level map
+        is built by ``levels_from_sensitivity_for_codec`` — the SAME rank-norm band the
+        score-aware QAT (Lever 4) trained the decoder to be robust at, so the export grid
+        matches the trained grid (mathematically/algebraically/geometrically consistent
+        per the reverse-waterfill KKT — Cover & Thomas Ch.10). When non-uniform, the
+        variable decoder blob is spliced into the 3-section archive (meta/latents/
+        trailing preserved) and ``decode_decoder_variable`` reads it back.
+
+        Score-claim discipline: the BYTE saving is real + measurable; the NET-score win
+        is advisory until a 600-pair byte-closed dual CPU/CUDA exact eval. NO score is
+        claimed from enabling the flag alone (sister of the D2 waterfill discipline).
+        """
+        if not self.cfg.lever4_variable_level_export_enabled:
+            archive = build_base_archive(meta_dict)
+            eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
+            return archive, eval_decoder_sd, eval_latents
+
+        from tac.losses.variable_level_codec import (
+            build_decoder_blob_variable_or_vendored,
+            decode_decoder_variable,
+            levels_from_sensitivity_for_codec,
+        )
+
+        # Build the per-tensor level map from the online sensitivity EMA, keyed by the
+        # WEIGHT state-dict keys the codec checks (``<module>.weight``). Tensors absent
+        # from the sensitivity map (biases, FiLM params, etc.) get the base 127 levels.
+        weight_keys = [k for k in archive_decoder_sd if k.endswith(".weight")]
+        levels_by_weight = levels_from_sensitivity_for_codec(sensitivity, weight_keys)
+        # The codec maps over ALL sd keys; non-weight keys default to base (127).
+        levels = {k: int(levels_by_weight.get(k, 127)) for k in archive_decoder_sd}
+        decoder_blob, is_variable_format = build_decoder_blob_variable_or_vendored(
+            archive_decoder_sd, levels
+        )
+        if not is_variable_format:
+            # Uniform/near-uniform sensitivity → vendored byte-identical (no coarsening).
+            # meta_dict is NOT mutated → the base archive is bit-identical to vendored.
+            archive = build_base_archive(meta_dict)
+            eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
+            return archive, eval_decoder_sd, eval_latents
+        # ADVERSARIAL-REVIEW FIX (R14, ordering): the ``decoder_codec`` flag + metadata
+        # MUST be written into ``meta_dict`` BEFORE ``build_base_archive`` so the meta
+        # section embedded in ``meta_brotli`` carries the flag — otherwise the inflate
+        # side cannot know to use ``decode_decoder_variable`` (mirrors the D2 method's
+        # order; the prior order built the base archive with UNmutated meta = the flag
+        # never reached the emitted bytes).
+        active_levels = {k: v for k, v in sorted(levels.items()) if v < 127}
+        meta_dict["decoder_codec"] = "lever4_sensitivity_variable_level.v1"
+        meta_dict["lever4_variable_level_export"] = {
+            "schema": "lever4_online_sensitivity_variable_level_export.v1",
+            "enabled": True,
+            "source": "Lever-4 online score-sensitivity EMA (||dS/dw||) -> reverse-waterfill",
+            "n_coarsened": len(active_levels),
+            "levels": active_levels,
+            "decoder_blob_is_variable_format": True,
+            "decoder_blob_bytes": len(decoder_blob),
+            "score_claim": False,
+            "authority": "[contest-CPU advisory] NON-PROMOTABLE until dual CPU/CUDA exact eval",
+        }
+        base_archive = build_base_archive(meta_dict)
+        eval_decoder_sd_vendored, eval_latents, _meta = self.v.parse_archive(base_archive)
+        meta_brotli, _vendored_decoder_blob, latents_brotli, trailing = (
+            _split_three_section_archive(base_archive)
+        )
+        archive = _join_three_section_archive(
+            meta_brotli, decoder_blob, latents_brotli, trailing
+        )
+        meta_dict["lever4_variable_level_export"]["archive_bytes"] = len(archive)
+        eval_decoder_sd = decode_decoder_variable(decoder_blob)
+        return archive, eval_decoder_sd, eval_latents
+
     def _build_archive_and_eval_decoder(
         self,
         ema_sd: dict[str, torch.Tensor],
         ema_latents: torch.Tensor,
         meta_dict: dict[str, Any],
+        sensitivity: dict[str, float] | None = None,
     ) -> tuple[bytes, nn.Module, torch.Tensor]:
         """Build the byte-closed archive from the EMA shadow + return the PARSE-BACK
         eval decoder + parsed latents (on the AUTHORITY device).
@@ -1110,15 +1240,25 @@ class TorchVehicleDriver:
         cursor-based eval adapter so the exact eval renders the SAME FiLM-conditioned
         frames the inflate path produces (byte-closed faithful)."""
         if not self.cfg.pose_film_enabled:
-            archive, eval_decoder_sd, eval_latents = (
-                self._build_archive_with_optional_variable_waterfill(
-                    ema_sd,
-                    meta_dict,
-                    lambda md: self.v.build_archive(
-                        ema_sd, ema_latents, meta_dict=md
-                    ),
+            if self.cfg.lever4_variable_level_export_enabled:
+                archive, eval_decoder_sd, eval_latents = (
+                    self._build_archive_with_optional_sensitivity_variable_levels(
+                        ema_sd,
+                        meta_dict,
+                        lambda md: self.v.build_archive(ema_sd, ema_latents, meta_dict=md),
+                        sensitivity,
+                    )
                 )
-            )
+            else:
+                archive, eval_decoder_sd, eval_latents = (
+                    self._build_archive_with_optional_variable_waterfill(
+                        ema_sd,
+                        meta_dict,
+                        lambda md: self.v.build_archive(
+                            ema_sd, ema_latents, meta_dict=md
+                        ),
+                    )
+                )
             eval_dec = self._new_vendored_decoder(device=self.device)
             eval_dec.load_state_dict(
                 {k: v.to(self.device) for k, v in eval_decoder_sd.items()}
@@ -1139,16 +1279,25 @@ class TorchVehicleDriver:
         archive_decoder_sd = wrapper_sd_to_archive_decoder_sd(ema_sd)
         stored_pose = ema_sd["stored_pose"]
         # (2) Build the additive archive (pristine vendored build_archive + pose),
-        # with optional D2 replacement of only the decoder section.
-        archive, eval_decoder_sd, eval_latents = (
-            self._build_archive_with_optional_variable_waterfill(
-                archive_decoder_sd,
-                meta_dict,
-                lambda md: build_archive_with_pose(
-                    self.v.build_archive, archive_decoder_sd, ema_latents, md, stored_pose
-                ),
-            )
+        # with optional D2 (RD-table) OR Lever-4 (online-EMA) variable-level
+        # replacement of ONLY the decoder section (the additive pose section + meta +
+        # latents are preserved either way; the two level sources are mutually
+        # exclusive per __post_init__).
+        _base_archive_builder = lambda md: build_archive_with_pose(  # noqa: E731
+            self.v.build_archive, archive_decoder_sd, ema_latents, md, stored_pose
         )
+        if self.cfg.lever4_variable_level_export_enabled:
+            archive, eval_decoder_sd, eval_latents = (
+                self._build_archive_with_optional_sensitivity_variable_levels(
+                    archive_decoder_sd, meta_dict, _base_archive_builder, sensitivity
+                )
+            )
+        else:
+            archive, eval_decoder_sd, eval_latents = (
+                self._build_archive_with_optional_variable_waterfill(
+                    archive_decoder_sd, meta_dict, _base_archive_builder
+                )
+            )
         # (3) Parse BOTH sections back and rebuild the FiLM wrapper for eval.
         parsed_pose = parse_pose_section(archive, self.v.parse_archive)
         film_sd = {
@@ -1208,7 +1357,8 @@ class TorchVehicleDriver:
             "eval_size": [_EVAL_H, _EVAL_W],
         }
         archive, eval_dec, eval_latents = self._build_archive_and_eval_decoder(
-            ema_sd, snap.ema_latents, meta_dict
+            ema_sd, snap.ema_latents, meta_dict,
+            sensitivity=snap.tensor_sensitivity_ema,
         )
         archive_bytes = len(archive)
         # Parse-back: the int8-dequantized decoder + delta-decoded latents — the
