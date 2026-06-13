@@ -1,0 +1,82 @@
+{
+  "probe": "variable_level_waterfill_net",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE \u2014 RD curves + net on real frozen scorer, NOT a 600-pair contest eval",
+  "basin_checkpoint": "experiments/results/forkpoints/basin_bc20_20260612T121523Z/torch_vehicle_checkpoint_state.pt",
+  "rd_pairs": 24,
+  "level_grid": [
+    127,
+    96,
+    64,
+    48,
+    32,
+    16
+  ],
+  "baseline_score": 0.519685,
+  "baseline_d_seg": 0.00339,
+  "baseline_d_pose": 0.0014672,
+  "baseline_archive_bytes": 89413,
+  "waterfill_levels_coarsened": 6,
+  "waterfill_levels": {
+    "blocks.0.weight": 96,
+    "blocks.2.weight": 48,
+    "skips.2.weight": 96,
+    "skips.3.weight": 96,
+    "refine.0.weight": 96,
+    "rgb_1.weight": 96
+  },
+  "waterfill_total_byte_saving_predicted": 2697.0,
+  "waterfill_net_predicted_from_rd_table": -0.013355,
+  "kkt_marginal_equalization_holds": false,
+  "kkt_explanation": "accepted marginal ratios are NOT monotone non-decreasing \u2014 the greedy did not walk the convex hull cheapest-first: [-0.00019540297074925188, -0.00011228570938405097, -2.931844895255873e-05, -1.7712700460171225e-05, -3.5308330479163603e-06, -4.611055743721392e-06]...",
+  "kkt_byte_value_per_byte": 6.658589531221714e-07,
+  "kkt_max_accepted_ratio": -8.499864314044072e-07,
+  "kkt_min_rejected_ratio": 8.013547882358527e-07,
+  "primary_net_score_delta_MEASURED": -0.010393,
+  "primary_byte_delta_MEASURED": -2731,
+  "primary_d_seg": 0.003388,
+  "primary_d_pose": 0.00127257,
+  "confirm_slice": {
+    "confirm_slice": "[60:84]",
+    "baseline_score": 0.621196,
+    "waterfill_score": 0.615983,
+    "net_score_delta": -0.005213,
+    "byte_delta": -2731,
+    "baseline_d_seg": 0.004393,
+    "waterfill_d_seg": 0.004408,
+    "baseline_d_pose": 0.00149707,
+    "waterfill_d_pose": 0.00137908
+  },
+  "rd_frontier": [
+    {
+      "byte_target": 500.0,
+      "achieved_byte_delta": -631,
+      "net_score_delta": -0.005057,
+      "n_coarsened": 5
+    },
+    {
+      "byte_target": 1000.0,
+      "achieved_byte_delta": -1372,
+      "net_score_delta": -0.008697,
+      "n_coarsened": 5
+    },
+    {
+      "byte_target": 1500.0,
+      "achieved_byte_delta": -2141,
+      "net_score_delta": -0.010419,
+      "n_coarsened": 6
+    },
+    {
+      "byte_target": 2500.0,
+      "achieved_byte_delta": -2731,
+      "net_score_delta": -0.010393,
+      "n_coarsened": 6
+    }
+  ],
+  "slice_robust_best_net": -0.010393,
+  "slice_robust_worst_net": -0.005213,
+  "crude_probe_net_ratio050": 0.001053,
+  "crude_probe_net_ratio075": 0.00603,
+  "improvement_vs_crude_best": 0.011446,
+  "verdict": "NET_POSITIVE_AT_$0",
+  "recommendation": "ready $0 rate win \u2014 recommend driver wire-in (DEFERRED, next gate)"
+}

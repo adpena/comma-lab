@@ -264,23 +264,45 @@ def main(argv: list[str] | None = None) -> int:
     primary_net = wf_primary["score"] - baseline["score"]
     primary_byte = wf_primary["archive_bytes"] - baseline["archive_bytes"]
 
-    # --- RD frontier sweep over byte targets (if requested) ---
+    # --- SECOND slice index (d_pose-noise robustness) — built FIRST so the frontier sweep
+    #     can re-measure EACH byte target on BOTH slices (the operating-point honesty fix:
+    #     a target that is net-negative on the RD/primary slice can REGRESS on an unseen
+    #     slice because the RD table is fit on the primary slice; the robust operating point
+    #     is the target whose WORST slice is most negative, NOT the RD-table prediction). ---
+    have_confirm = confirm_n > 0 and args.confirm_offset + confirm_n <= n
+    c_idx = (
+        torch.arange(args.confirm_offset, args.confirm_offset + confirm_n)
+        if have_confirm else None
+    )
+
+    # --- RD frontier sweep over byte targets (if requested) — measured on BOTH slices ---
     frontier = []
     targets = [float(x) for x in args.byte_targets.split(",") if x.strip()] if args.byte_targets else []
     for tgt in targets:
         a_t = solve_waterfill_allocation(rd_table, byte_target=tgt, net_stop=False)
         m_t = _net_at_allocation(sd, latents, ctx, n, model, codec, a_t.levels, rd_idx, blob_consts)
-        frontier.append({
+        row = {
             "byte_target": tgt,
             "achieved_byte_delta": m_t["archive_bytes"] - baseline["archive_bytes"],
-            "net_score_delta": round(m_t["score"] - baseline["score"], 6),
+            "primary_net_score_delta": round(m_t["score"] - baseline["score"], 6),
             "n_coarsened": a_t.n_coarsened,
-        })
+        }
+        if have_confirm:
+            cb_t = _net_at_allocation(
+                sd, latents, ctx, n, model, codec, dict.fromkeys(sd, 127), c_idx, blob_consts,
+            )
+            cw_t = _net_at_allocation(
+                sd, latents, ctx, n, model, codec, a_t.levels, c_idx, blob_consts,
+            )
+            row["confirm_net_score_delta"] = round(cw_t["score"] - cb_t["score"], 6)
+            row["worst_slice_net"] = round(
+                max(row["primary_net_score_delta"], row["confirm_net_score_delta"]), 6,
+            )
+        frontier.append(row)
 
-    # --- SECOND slice (d_pose-noise robustness): re-measure the SAME allocation ---
+    # --- SECOND slice (d_pose-noise robustness): re-measure the net-stop allocation ---
     confirm = None
-    if confirm_n > 0 and args.confirm_offset + confirm_n <= n:
-        c_idx = torch.arange(args.confirm_offset, args.confirm_offset + confirm_n)
+    if have_confirm:
         # baseline on the confirm slice (all-127 dict routes through the byte-identical
         # vendored path inside _net_at_allocation — no separate decode needed).
         c_base = _net_at_allocation(
@@ -302,21 +324,51 @@ def main(argv: list[str] | None = None) -> int:
         }
 
     # --- verdict (slice-robust: worse of the two nets, conservatively) ---
+    # The net_stop allocation's slice-robust net (the worse of the two slices).
     nets = [primary_net]
     if confirm is not None:
         nets.append(confirm["net_score_delta"])
-    worst_net = max(nets)  # most-positive (worst) net across slices
+    worst_net = max(nets)  # most-positive (worst) net across slices for net_stop
     best_net = min(nets)
-    robust_negative = all(x < 0 for x in nets)
+    net_stop_robust_negative = all(x < 0 for x in nets)
+
+    # The ROBUST OPERATING POINT from the byte-target frontier: the target whose WORST
+    # slice net is most negative. This is the honest wire-in operating point — net_stop
+    # over-spends on the RD-table prediction (fit on the primary slice), so its WORST slice
+    # can REGRESS even when the predicted net is deeply negative. The frontier-with-confirm
+    # picks the operating point that GENERALIZES (worst slice still net-negative).
+    robust_op = None
+    if frontier and all("worst_slice_net" in r for r in frontier):
+        # candidate rows whose worst slice is net-negative (a real robust win)
+        neg_rows = [r for r in frontier if r["worst_slice_net"] < 0.0]
+        if neg_rows:
+            robust_op = min(neg_rows, key=lambda r: r["worst_slice_net"])
+        else:
+            # no robust-negative target: report the least-bad (most-negative worst) anyway
+            robust_op = min(frontier, key=lambda r: r["worst_slice_net"])
+
+    # The verdict is robust-positive ONLY IF a frontier operating point exists whose WORST
+    # slice is net-negative (when a confirm slice is present). Fall back to the net_stop
+    # both-slices check when no frontier was swept.
+    if frontier and confirm is not None:
+        robust_negative = robust_op is not None and robust_op["worst_slice_net"] < 0.0
+    else:
+        robust_negative = net_stop_robust_negative
 
     if robust_negative:
         verdict = "NET_POSITIVE_AT_$0"
-        recommendation = "ready $0 rate win — recommend driver wire-in (DEFERRED, next gate)"
+        recommendation = (
+            "ready $0 rate win at the ROBUST OPERATING POINT (the byte target whose WORST "
+            "slice is net-negative) — recommend driver wire-in at that conservative target "
+            "(DEFERRED, next gate). NOTE: net_stop OVER-SPENDS (RD table fit on primary "
+            "slice) — wire the conservative byte target, not net_stop."
+        )
     else:
         verdict = "STILL_NEAR_BREAKEVEN"
         recommendation = (
             "fold the variable grid into the curriculum QAT stages (train coarse-grid-robust) — "
-            "path (b); the byte lever is real but the no-retrain net is not robustly negative"
+            "path (b); the byte lever is real but the no-retrain net is not robustly negative "
+            "at any byte target (the confirm slice regresses)"
         )
 
     crude_net_05, crude_net_075 = 0.001053, 0.006030  # the crude probe's measured nets
@@ -345,8 +397,10 @@ def main(argv: list[str] | None = None) -> int:
         "primary_d_pose": round(wf_primary["d_pose"], 8),
         "confirm_slice": confirm,
         "rd_frontier": frontier,
-        "slice_robust_best_net": round(best_net, 6),
-        "slice_robust_worst_net": round(worst_net, 6),
+        "net_stop_slice_robust_best_net": round(best_net, 6),
+        "net_stop_slice_robust_worst_net": round(worst_net, 6),
+        "net_stop_robust_negative": bool(net_stop_robust_negative),
+        "robust_operating_point": robust_op,
         "crude_probe_net_ratio050": crude_net_05,
         "crude_probe_net_ratio075": crude_net_075,
         "improvement_vs_crude_best": round(crude_net_05 - best_net, 6),
@@ -373,10 +427,17 @@ def main(argv: list[str] | None = None) -> int:
                   f"byte Δ {confirm['byte_delta']:+d} B "
                   f"(d_seg {confirm['waterfill_d_seg']:.5f}, d_pose {confirm['waterfill_d_pose']:.6f})")
         if frontier:
-            print("  RD frontier (byte target -> net):")
+            print("  RD frontier (byte target -> primary / confirm net) [robust = worst slice]:")
             for f in frontier:
+                conf = f.get("confirm_net_score_delta")
+                worst = f.get("worst_slice_net")
+                conf_s = f" confirm {conf:+.6f} worst {worst:+.6f}" if conf is not None else ""
                 print(f"    target {f['byte_target']:>7.0f} B -> achieved {f['achieved_byte_delta']:+d} B, "
-                      f"net {f['net_score_delta']:+.6f}, {f['n_coarsened']} coarsened")
+                      f"primary {f['primary_net_score_delta']:+.6f}{conf_s}, {f['n_coarsened']} coarsened")
+            if robust_op is not None:
+                print(f"  ROBUST OPERATING POINT: target {robust_op['byte_target']:.0f} B -> "
+                      f"achieved {robust_op['achieved_byte_delta']:+d} B, worst-slice net "
+                      f"{robust_op['worst_slice_net']:+.6f} ({robust_op['n_coarsened']} coarsened)")
         print()
         print(f"  vs CRUDE probe: best slice net {best_net:+.6f} vs crude +0.001053 "
               f"(improvement {crude_net_05 - best_net:+.6f})")
