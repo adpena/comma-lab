@@ -1,0 +1,26 @@
+{
+  "rows": {
+    "fp32": {
+      "d_seg": 0.0035776562290266156,
+      "d_pose": 0.00023963781131897122
+    },
+    "int8": {
+      "d_seg": 0.0035906367896435163,
+      "d_pose": 0.0002046413067849547
+    },
+    "fp4_mixed_maxabs": {
+      "d_seg": 0.005610254127532244,
+      "d_pose": 0.0014105267291597556
+    },
+    "fp4_mixed_pctl": {
+      "d_seg": 0.005620691498431067,
+      "d_pose": 0.0015568557476702456
+    },
+    "fp4_sensguided": {
+      "d_seg": 0.005355888085129361,
+      "d_pose": 0.0014021884368654962
+    }
+  },
+  "verdict": "NO-GO ROBUST: best post-hoc FP4 (fp4_sensguided) still spills d_seg \u0394+49.2% \u2192 QAT required",
+  "authority": "contest-CPU advisory NON-PROMOTABLE"
+}

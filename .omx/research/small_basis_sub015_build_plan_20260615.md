@@ -70,6 +70,21 @@ correct post-hoc ship. **The ENTIRE rate lever is QAT-gated.** Concrete WS-B suc
 must pull d_seg from 0.00561 → ≤ 0.00381** (recover ~0.0018 so 100·Δd_seg < the −0.0224 rate save). If QAT
 lands d_seg ≤ 0.0038 at FP4 bytes → the −0.022 win banks; else FP4 is out, int8 stays. (`reports/fp4_dseg_hold_smoke.json`)
 
+**ADVERSARIAL RE-TEST (2026-06-15, `probe_fp4_pctl_retest.py`, `reports/fp4_pctl_retest.json`): NO-GO ROBUST.**
+PERCENTILE-clip (99.9pct) fp4_mixed = 0.005621 (Δ+56.5%) ≈ max-abs 0.005610 (Δ+56.2%) → scaling is NOT the
+cause (weights densely distributed, pctl≈max-abs; 8-level coarseness is fundamental). Gate-2 sensitivity-
+guided partition (keep rgb_1+skips+blocks.4 int8) = 0.005356 (Δ+49.2%) — shaves only 7pts, **validating
+gate-2's map + confirming the FP4-QAT int8-keep partition.** Audit correction: fp4_mixed ΔS+0.253 = seg
++0.202 AND **pose +0.073** (interior FP4 spills d_pose too), not seg-only.
+
+## AUDIT CAVEATS on the other gates (2026-06-15 adversarial pass)
+- **Gate 2:** band verdict (Φ3) robust; the top-3 tensor ranking is **single-noise-draw** → average ≥3 seeds
+  before fixing exact taper widths. Perturbation-sensitivity⇒under-provisioned is a HYPOTHESIS the taper smoke confirms.
+- **Gate 3:** CONFOUNDED — control is FiLM-OFF + throttle-history-A; stack_ce_early is FiLM-v2 + history-B →
+  measures the **full STACK vs bare control, NOT the lever in isolation** (FiLM-v2/throttle are designed
+  d_seg-neutral so ≈ the lever, but attribution needs seg_only/film_only OR a FiLM-matched control). Read as
+  GO/NO-GO on the stack; if final within ~0.0003 of control, a clean re-run is mandatory.
+
 ## WS-B — FP4 mixed-precision decoder codec (the rate MAKER, Δrate −0.022)  🔬 [now QAT-gated, not free]
 - **DESIGN:** mixed partition (FP4 interior convs ~80K / int8 output-proximal heads ~3.4K); FP4 format
   (E2M1 nonuniform vs int4 uniform — measured E2M1 38.3KB / mixed 40KB); the **packed 4-bit container**
