@@ -134,6 +134,13 @@ class StageSpec:
     # NO-OP unless ``seg_surrogate`` is set (it multiplies the surrogate's per-pixel
     # tensor; the vendored CE path returns a scalar with no per-pixel handle).
     margin_weight_tau: float | None = None
+    # WS-A/M7 margin-weight RENORMALIZATION (DEFAULT-PRESERVING, off=False). When the
+    # margin weight is active, the legacy path takes ``(per_pixel·w).mean()`` — so as
+    # margins grow during training Σw shrinks and the ABSOLUTE seg-gradient magnitude
+    # decays (compounding with the T-anneal + LR-decay → premature seg-plateau risk). When
+    # True, the loss is ``(per_pixel·w).sum()/Σw`` — a true weighted MEAN that REDISTRIBUTES
+    # the gradient to the boundary WITHOUT shrinking total magnitude. Off → byte-identical.
+    margin_weight_renorm: bool = False
 
 
 def _spec_from_stage_config(cfg: Any, epochs_override: int | None, ema_decay: float) -> StageSpec:

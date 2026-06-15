@@ -23,6 +23,19 @@ review (3-clean-pass) on every code change to the training/codec path before it 
 
 ---
 
+## ⚑ WS-A LANDING (2026-06-15) — 2 code fixes BUILT (default-off), 2 config-only, 1 deferred
+- **margin-renorm (M7/S10):** ✅ BUILT — `StageSpec.margin_weight_renorm` (default False → `.mean()`
+  byte-identical; True → `(per_pixel·w).sum()/Σw`). `driver._seg_loss_for_spec` + `curriculum.StageSpec`.
+- **Muon LR-floor (M3/S18):** ✅ BUILT — `TorchVehicleConfig.muon_lr_floor_fix` (default False → Muon
+  shares AdamW lambda; True → own cosine floor keyed to muon_lr). `driver._build_stage_runtime`.
+- Both default-OFF (live A/B apples-to-apples preserved); 6 NO-FAKE tests + 22 regression byte-identical.
+- **EMA window (①/S17):** CONFIG-ONLY — scaled run passes `--ema-decay 0.99` (window ~100 ≪ 800;
+  captures ~90% of the warmup benefit, zero code). The warmup-decay code refinement (#86) is deferred.
+- **eval_every scaling (M2/S19):** CONFIG-ONLY — scaled run passes `--eval-every 2` (the launcher already
+  threads it into `build_curriculum`); evaluates stage-4 QAT onset. Zero code.
+- **eval-roundtrip op-order (μ3/S20):** DEFERRED — most delicate (core render path + the eval_roundtrip
+  non-negotiable); build as a careful, separately-reviewed follow-up.
+
 ## WS-A — meso/micro correctness fixes (the new baseline; cheap, certain)
 The "PR95-faithful-scaled-without-re-deriving-constants" cluster. Batch ALL into the scaled-run baseline.
 - **EMA window** (①/M1): **DESIGN** = warmup-decay `min(decay,(1+t)/(10+t))` (task #86) or constant 0.99.

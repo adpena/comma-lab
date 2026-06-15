@@ -214,6 +214,11 @@ def _seg_loss_for_spec(
         margin = _segnet_logit_margin_map(seg_out)  # (B, H, W) detached
         tau = max(float(spec.margin_weight_tau), 1e-6)
         weight = torch.exp(-margin / tau)  # (B, H, W) in (0, 1], 1 at the boundary
+        if getattr(spec, "margin_weight_renorm", False):
+            # WS-A/M7 fix (opt-in): renormalize by Σweight → a TRUE weighted mean that
+            # REDISTRIBUTES gradient to the boundary WITHOUT shrinking total magnitude as
+            # margins grow (stops the compounding decay vs T-anneal + LR-decay). Off below.
+            return (per_pixel * weight).sum() / weight.sum().clamp_min(1e-6)
         # Mean of (per_pixel · weight): a weighted average that concentrates the loss
         # mass on small-margin pixels. (Not re-normalized by Σweight — the absolute
         # magnitude scaling is folded into the seg_weight Lagrangian coefficient.)
@@ -438,6 +443,10 @@ class TorchVehicleConfig:
     # exact d_seg/d_pose that pick BEST still run the full scorer on the CPU authority.
     pose_grad_every_k: int = 1
     pose_grad_resume_threshold: float = 0.0
+    # WS-A/M3 Muon LR-floor fix (DEFAULT-OFF → byte-identical). False = Muon shares the
+    # AdamW lr_lambda (its floor mis-keyed to adamw_lr → never anneals below 0.5× at stage
+    # 8). True = Muon gets its own cosine floor keyed to muon_lr. Opt-in for the scaled run.
+    muon_lr_floor_fix: bool = False
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -773,11 +782,22 @@ class TorchVehicleDriver:
             return max(0.5 * (1 + math.cos(math.pi * epoch / spec.epochs)), eta_min_ratio)
 
         adamw_sched = torch.optim.lr_scheduler.LambdaLR(adamw_opt, lr_lambda)
-        muon_sched = (
-            torch.optim.lr_scheduler.LambdaLR(muon_opt, lr_lambda)
-            if muon_opt is not None
-            else None
-        )
+        # WS-A/M3 Muon LR-floor fix (opt-in, default-off → byte-identical). The shared
+        # lr_lambda floors at eta_min_ratio = lr_floor_ratio/ADAMW_lr (=0.5 at stage 8 →
+        # Muon LR never anneals below 50% of peak). When muon_lr_floor_fix is on, Muon gets
+        # its OWN floor keyed to muon_lr (the intended absolute floor). Off → Muon shares
+        # the AdamW lambda exactly as before.
+        if muon_opt is None:
+            muon_sched = None
+        elif getattr(self.cfg, "muon_lr_floor_fix", False) and spec.muon_lr:
+            muon_eta_min = max(spec.lr_floor_ratio / spec.muon_lr, 1e-3)
+
+            def muon_lr_lambda(epoch: int) -> float:
+                return max(0.5 * (1 + math.cos(math.pi * epoch / spec.epochs)), muon_eta_min)
+
+            muon_sched = torch.optim.lr_scheduler.LambdaLR(muon_opt, muon_lr_lambda)
+        else:
+            muon_sched = torch.optim.lr_scheduler.LambdaLR(muon_opt, lr_lambda)
         return _StageRuntime(
             decoder=decoder,
             latents=latents,
