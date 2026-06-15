@@ -77,7 +77,21 @@ lands d_seg ≤ 0.0038 at FP4 bytes → the −0.022 win banks; else FP4 is out,
 - **OPTIMIZE:** range/Categorical coding on the FP4 stream (L30), split-brotli (L23), variable-level allocation
   via Lever-4 online sensitivity EMA (the WRQ unification).
 
-## WS-C — d_seg-aware taper reallocation (the d_seg ACCELERATOR; NOVEL)  🔬
+## ⚑ WS-C SMOKE RESULT (2026-06-15, MEASURED — research gate 2 ANSWERED: Φ3 CONFIRMED)
+`experiments/probe_dseg_sensitivity_map.py` (`reports/dseg_sensitivity_map.json`), 20% relative-RMS
+per-tensor perturbation → real Δd_seg:
+- **LOW** (stem+blocks.0-1) **68% params / 25% sensitivity → 0.36× density (OVER-provisioned → SHRINK)**
+- **MID** (blocks.2-3, skips) 21% / 42% → 1.97× (under) · **HIGH** (blocks.4-5, refine, rgb) **11% / 34% → 3.07× (UNDER → WIDEN)**
+- **rgb_1 (last-frame head) is THE d_seg bottleneck** (Δ+0.0037, 270 params) · **rgb_0 Δ=0.000000** (contest reads only the last frame!) · refine Δ~0 (d_seg-irrelevant) · skips.3/4 high-density.
+**VERDICT: Φ3 CONFIRMED — HIGH-res band 3× under-provisioned per d_seg sensitivity.**
+**TAPER DESIGN (WS-C):** shrink stem/blocks.0-1 → widen rgb_1 + skips.3/4 + blocks.4; keep rgb_0/refine lean.
+**BRIDGE → gate 1 (WS-B):** the unified sensitivity map = the FP4-QAT partition. Keep **rgb_1 + skips + blocks.4 int8**
+(d_seg-critical); FP4-QAT the insensitive bulk (stem/blocks.0-3/rgb_0/refine). It also EXPLAINS gate-1's NO-GO:
+the rate win needs FP4 on the big low-res tensors (stem/blocks, ~0.0013 Δ each) → post-hoc spills → QAT.
+**CAVEAT:** perturbation-sensitivity ⇒ under-provisioned is a HYPOTHESIS; the WS-C short-budget taper smoke
+must confirm that *adding capacity* there actually lowers d_seg (vs saturated-critical).
+
+## WS-C — d_seg-aware taper reallocation (the d_seg ACCELERATOR; NOVEL)  🔬 [gate 2 DONE → design ready]
 - **DESIGN:** new taper moving capacity from the 33% stem-Linear (27.8K params, low-freq) → a wider/deeper
   192×256→384×512 refine head, **at FIXED total param count** (rate-neutral). Thin decoder subclass (do NOT
   edit the pristine vendored clone; `base_channels` already threaded; the taper list is the knob). Preserve

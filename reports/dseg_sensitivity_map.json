@@ -1,0 +1,133 @@
+{
+  "baseline": 0.0035776562290266156,
+  "rows": [
+    {
+      "tensor": "stem.weight",
+      "res": "6x8",
+      "band": "LOW",
+      "params": 26880,
+      "d_seg": 0.005147351146054764,
+      "delta": 0.0015696949170281487,
+      "delta_per_kparam": 5.83963882822972e-05
+    },
+    {
+      "tensor": "blocks.0.weight",
+      "res": "12x16",
+      "band": "LOW",
+      "params": 14400,
+      "d_seg": 0.004833115419993798,
+      "delta": 0.0012554591909671826,
+      "delta_per_kparam": 8.718466603938768e-05
+    },
+    {
+      "tensor": "blocks.1.weight",
+      "res": "24x32",
+      "band": "LOW",
+      "params": 14400,
+      "d_seg": 0.004813671112060547,
+      "delta": 0.0012360148830339313,
+      "delta_per_kparam": 8.583436687735634e-05
+    },
+    {
+      "tensor": "blocks.2.weight",
+      "res": "48x64",
+      "band": "MID",
+      "params": 10800,
+      "d_seg": 0.00514814587465177,
+      "delta": 0.0015704896456251545,
+      "delta_per_kparam": 0.00014541570792825506
+    },
+    {
+      "tensor": "blocks.3.weight",
+      "res": "96x128",
+      "band": "MID",
+      "params": 5940,
+      "d_seg": 0.004792478401213884,
+      "delta": 0.0012148221721872687,
+      "delta_per_kparam": 0.00020451551720324389
+    },
+    {
+      "tensor": "blocks.4.weight",
+      "res": "192x256",
+      "band": "HIGH",
+      "params": 3960,
+      "d_seg": 0.004854785084413986,
+      "delta": 0.00127712885538737,
+      "delta_per_kparam": 0.00032250728671398234
+    },
+    {
+      "tensor": "blocks.5.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "params": 3600,
+      "d_seg": 0.004109594544085364,
+      "delta": 0.0005319383150587482,
+      "delta_per_kparam": 0.00014776064307187451
+    },
+    {
+      "tensor": "skips.2.weight",
+      "res": "24x32",
+      "band": "MID",
+      "params": 300,
+      "d_seg": 0.0042736265847149,
+      "delta": 0.0006959703556882841,
+      "delta_per_kparam": 0.0023199011856276136
+    },
+    {
+      "tensor": "skips.3.weight",
+      "res": "48x64",
+      "band": "MID",
+      "params": 165,
+      "d_seg": 0.0046480496336395545,
+      "delta": 0.0010703934046129389,
+      "delta_per_kparam": 0.006487232755229932
+    },
+    {
+      "tensor": "skips.4.weight",
+      "res": "96x128",
+      "band": "MID",
+      "params": 110,
+      "d_seg": 0.005841520071650545,
+      "delta": 0.0022638638426239295,
+      "delta_per_kparam": 0.020580580387490267
+    },
+    {
+      "tensor": "refine.0.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "params": 450,
+      "d_seg": 0.0035967297347572944,
+      "delta": 1.9073505730678782e-05,
+      "delta_per_kparam": 4.238556829039729e-05
+    },
+    {
+      "tensor": "refine.1.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "params": 450,
+      "d_seg": 0.003585603495594114,
+      "delta": 7.947266567498446e-06,
+      "delta_per_kparam": 1.766059237221877e-05
+    },
+    {
+      "tensor": "rgb_0.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "params": 270,
+      "d_seg": 0.0035776562290266156,
+      "delta": 0.0,
+      "delta_per_kparam": 0.0
+    },
+    {
+      "tensor": "rgb_1.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "params": 270,
+      "d_seg": 0.007260693392405908,
+      "delta": 0.003683037163379292,
+      "delta_per_kparam": 0.013640878382886266
+    }
+  ],
+  "verdict": "\u03a63 CONFIRMED: HIGH-res band carries disproportionate d_seg sensitivity (sens 34% on param 11%) \u2192 taper should widen it",
+  "authority": "contest-CPU advisory NON-PROMOTABLE"
+}
