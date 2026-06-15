@@ -421,6 +421,23 @@ class TorchVehicleConfig:
     # The byte saving is REAL + measurable; the NET-score win is advisory until a
     # 600-pair byte-closed dual CPU/CUDA eval (no score claim from the flag alone).
     lever4_variable_level_export_enabled: bool = False
+    # Pose-gradient THROTTLE (the "pose is solved → stop paying for it" speed lever).
+    # The split-by-head PoseNet path costs ~51% of the epoch (CPU FastViT fwd+bwd, measured
+    # 10.2s of a 20s epoch @96 pairs) yet d_pose converges to ~0.0015 early — computing a
+    # near-noise √(10·d_pose) gradient every epoch is the waste. ``pose_grad_every_k``
+    # computes the pose cotangent only every k-th global epoch (k=1 = EVERY epoch =
+    # byte-identical DEFAULT; k>1 = skip the pose path on off-epochs, flowing the
+    # SegNet-only cotangent into the decoder). ``pose_grad_resume_threshold``>0 is BOTH
+    # the warm-up AND the self-protect guard: while the last-computed training pose_mse
+    # exceeds it (pose still converging, or drifted), pose is force-computed EVERY epoch;
+    # once it drops below (solved) the every-k cadence takes over — so pose can never be
+    # silently starved while it matters. Scoped to split_by_head; the non-split path is
+    # unchanged. DEFAULT k=1 / threshold=0.0 → the gradient is BYTE-IDENTICAL to today
+    # (live A/B unaffected; apples-to-apples preserved until ALL arms restart with the
+    # same k). NOT an authority/score knob — it only changes train-time wall-clock; the
+    # exact d_seg/d_pose that pick BEST still run the full scorer on the CPU authority.
+    pose_grad_every_k: int = 1
+    pose_grad_resume_threshold: float = 0.0
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -459,6 +476,16 @@ class TorchVehicleConfig:
             raise ValueError(
                 f"pose_film_version must be 1 (v1 stem) or 2 (v2 residual-rgb0); "
                 f"got {self.pose_film_version}"
+            )
+        if int(self.pose_grad_every_k) < 1:
+            raise ValueError(
+                f"pose_grad_every_k must be >= 1 (1 = compute pose every epoch = "
+                f"byte-identical); got {self.pose_grad_every_k}"
+            )
+        if float(self.pose_grad_resume_threshold) < 0.0:
+            raise ValueError(
+                f"pose_grad_resume_threshold must be >= 0.0; got "
+                f"{self.pose_grad_resume_threshold}"
             )
         if self.lever4_variable_level_export_enabled and self.variable_level_waterfill_enabled:
             raise ValueError(
@@ -571,6 +598,10 @@ class TorchVehicleDriver:
         self.best_ep = self.telemetry.best_ep
         self.best_stage = self.telemetry.best_stage
         self._global_epoch = 0
+        # Pose-throttle state: the last-computed training pose_mse (None until the first
+        # epoch that computes the pose head). Drives both the resume-threshold guard and
+        # the telemetry carry on skipped epochs. See ``pose_grad_every_k``.
+        self._last_pose_mse: float | None = None
         # Test-only hook: simulate a death after this many global epochs (the
         # checkpoint has already landed when the death fires). None in production.
         self._stop_after_global_epoch: int | None = None
@@ -844,8 +875,21 @@ class TorchVehicleDriver:
                 rt.muon_opt.zero_grad()
 
             if self.split_by_head:
+                # Pose-throttle (the "pose is solved → stop paying for it" speed lever):
+                # compute the pose cotangent EVERY epoch (k<=1, byte-identical default),
+                # while pose is still converging/drifted (last pose_mse > resume_threshold),
+                # the FIRST time (never computed), or on the every-k cadence epoch.
+                _k = int(self.cfg.pose_grad_every_k)
+                _thr = float(self.cfg.pose_grad_resume_threshold)
+                do_pose = (
+                    _k <= 1
+                    or self._last_pose_mse is None
+                    or (_thr > 0.0 and self._last_pose_mse > _thr)
+                    or (self._global_epoch % _k == 0)
+                )
                 loss_val, pose_mse_val = self._split_by_head_backward(
-                    decoded_bhwc, idx, spec, temperature=epoch_temperature
+                    decoded_bhwc, idx, spec, temperature=epoch_temperature,
+                    compute_pose=do_pose,
                 )
                 # The categorical-entropy regularizer + Lever-1 rate surrogate do NOT
                 # depend on the frames (they read the decoder weights / the full latent
@@ -978,6 +1022,7 @@ class TorchVehicleDriver:
         spec: StageSpec,
         *,
         temperature: float | None = None,
+        compute_pose: bool = True,
     ) -> tuple[float, float]:
         """Compute the COMBINED frame-gradient (SegNet path on the fast train device,
         PoseNet path on the CPU authority) and inject it into the decoder graph via a
@@ -1013,24 +1058,39 @@ class TorchVehicleDriver:
         cot_seg = frames_seg.grad  # d(w_seg*seg_l)/dF on train_device
 
         # --- PoseNet path on the CPU AUTHORITY (zero pose drift) ---
-        frames_pose = (
-            decoded_bhwc.detach().to(self.device).requires_grad_(True)
-        )  # authority-device leaf, same values
-        pose_pred6 = self.scorer.pose_forward_authority(frames_pose)
-        pose_targets = self._pose_targets_authority()[idx.to(self.device)]
-        pose_mse = F.mse_loss(pose_pred6, pose_targets)
-        pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
-        (spec.pose_weight * pose_l).backward()
-        cot_pose = frames_pose.grad  # d(w_pose*pose_l)/dF on the CPU authority
+        # Pose-throttle: when ``compute_pose`` is False (pose is solved + this is an
+        # off-cadence epoch), SKIP the expensive CPU FastViT fwd+bwd entirely and flow
+        # ONLY the SegNet cotangent into the decoder. ``compute_pose`` defaults True so
+        # every existing caller (k=1, tests) is byte-identical. The pose term re-engages
+        # on the cadence epoch or if it drifts above the resume threshold (caller logic).
+        if compute_pose:
+            frames_pose = (
+                decoded_bhwc.detach().to(self.device).requires_grad_(True)
+            )  # authority-device leaf, same values
+            pose_pred6 = self.scorer.pose_forward_authority(frames_pose)
+            pose_targets = self._pose_targets_authority()[idx.to(self.device)]
+            pose_mse = F.mse_loss(pose_pred6, pose_targets)
+            pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
+            (spec.pose_weight * pose_l).backward()
+            cot_pose = frames_pose.grad  # d(w_pose*pose_l)/dF on the CPU authority
+            combined = cot_seg + cot_pose.to(cot_seg.device)
+            pose_mse_val = float(pose_mse.item())
+            self._last_pose_mse = pose_mse_val
+            loss_val = float((spec.seg_weight * seg_l).item()) + float(
+                (spec.pose_weight * pose_l).item()
+            )
+        else:
+            # SegNet-only cotangent (pose throttled this epoch). loss_val is the seg term
+            # only; pose_mse_val carries the last-computed value for telemetry continuity.
+            combined = cot_seg
+            pose_mse_val = (
+                float("nan") if self._last_pose_mse is None else self._last_pose_mse
+            )
+            loss_val = float((spec.seg_weight * seg_l).item())
 
-        # --- sum the two cotangents at the frame tensor + inject into the decoder ---
-        combined = cot_seg + cot_pose.to(cot_seg.device)
+        # --- inject the combined frame cotangent into the decoder ---
         decoded_bhwc.backward(gradient=combined)
-
-        loss_val = float((spec.seg_weight * seg_l).item()) + float(
-            (spec.pose_weight * pose_l).item()
-        )
-        return loss_val, float(pose_mse.item())
+        return loss_val, pose_mse_val
 
     def _pose_targets_authority(self) -> torch.Tensor:
         """The pose targets on the AUTHORITY device (cached). For split-by-head the

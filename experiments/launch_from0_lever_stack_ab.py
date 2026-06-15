@@ -115,6 +115,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--async-eval", action="store_true")
     p.add_argument("--n-pairs", type=int, default=600)
     p.add_argument("--pose-film-hidden", type=int, default=8)
+    p.add_argument("--pose-grad-every-k", type=int, default=1,
+                   help="POSE-THROTTLE speed lever: compute the split-by-head PoseNet "
+                        "gradient only every k-th epoch (1=every epoch=byte-identical). "
+                        "Pose costs ~51%% of the epoch but is solved early — k=4 reclaims "
+                        "~40%% on the solved tail. d_seg (the A/B verdict) is unaffected.")
+    p.add_argument("--pose-grad-resume-threshold", type=float, default=0.0,
+                   help="Warm/self-protect guard: force pose every epoch while the running "
+                        "pose_mse exceeds this (still converging / drifted); else cadence. "
+                        "0.0=disabled (pure cadence). Recommended 0.005 with k>1.")
     p.add_argument("--seed", type=int, default=0,
                    help="SHARED across arms → bit-identical epoch-0 init (apples-to-apples).")
     p.add_argument("--targets-cache", type=Path,
@@ -249,6 +258,8 @@ def main(argv: list[str] | None = None) -> int:
         split_by_head=args.split_by_head, async_eval=args.async_eval,
         pose_film_enabled=film_on, pose_film_hidden=args.pose_film_hidden,
         pose_film_version=2 if film_on else 1, seed=args.seed,
+        pose_grad_every_k=args.pose_grad_every_k,
+        pose_grad_resume_threshold=args.pose_grad_resume_threshold,
     )
     print(json.dumps({
         "arm": args.arm, "film_on": film_on, "pose_film_version": cfg.pose_film_version,
