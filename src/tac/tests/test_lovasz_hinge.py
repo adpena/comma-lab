@@ -192,20 +192,23 @@ def test_multiclass_hinge_positive_at_disagreement() -> None:
 
 
 def test_multiclass_hinge_uses_lovasz_softmax_probability_errors() -> None:
-    # GT class 1 everywhere, prediction class 0 everywhere. With 5 one-vs-rest
-    # classes, only classes 0 and 1 have nonzero Lovasz-Softmax errors:
-    # class0 false-positive loss=1, class1 false-negative loss=1, others=0.
-    # Mean over 5 classes is therefore 0.4. The old re-centered hinge path
-    # doubled probability errors and returned 0.8.
+    # GT class 1 everywhere, prediction class 0 everywhere. Per-class one-vs-rest
+    # Lovász-Softmax: class1 (PRESENT, false-negative) loss=1; class0 (absent,
+    # false-positive) loss=1; classes 2-4 (absent, no error) loss=0.
+    #   classes='present' (the corrected Berman §3.2 DEFAULT): mean over the single
+    #     present class {1} = 1.0 — absent classes are excluded (their Jaccard is
+    #     degenerate). The absent-class flip is captured indirectly via class1's FN.
+    #   classes='all' (legacy): mean over all 5 = (1 + 1 + 0 + 0 + 0)/5 = 0.4.
     B, C, H, W = 1, DEFAULT_SEGNET_NUM_CLASSES, 2, 2
     gt_argmax = torch.ones(B, H, W, dtype=torch.long)
     pred_argmax = torch.zeros(B, H, W, dtype=torch.long)
     gt = torch.nn.functional.one_hot(gt_argmax, num_classes=C).permute(0, 3, 1, 2).float()
     pred = torch.nn.functional.one_hot(pred_argmax, num_classes=C).permute(0, 3, 1, 2).float()
 
-    loss = lovasz_hinge_mask_distortion(pred, gt)
-
-    assert loss.item() == pytest.approx(2.0 / C, abs=1e-6)
+    loss_present = lovasz_hinge_mask_distortion(pred, gt)  # default classes='present'
+    assert loss_present.item() == pytest.approx(1.0, abs=1e-6)
+    loss_all = lovasz_hinge_mask_distortion(pred, gt, classes="all")
+    assert loss_all.item() == pytest.approx(2.0 / C, abs=1e-6)
 
 
 def test_multiclass_hinge_differentiable() -> None:

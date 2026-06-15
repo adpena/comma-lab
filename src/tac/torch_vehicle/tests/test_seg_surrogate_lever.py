@@ -35,7 +35,7 @@ def _ce_seg_loss(seg_logits, targets_hard):
     return F.cross_entropy(seg_logits, targets_hard)
 
 
-def _stage(*, seg_surrogate=None, seg_temperature=1.0) -> StageSpec:
+def _stage(*, seg_surrogate=None, seg_temperature=1.0, margin_weight_tau=None) -> StageSpec:
     return StageSpec(
         name="seg_surrogate_test",
         epochs=1,
@@ -59,6 +59,7 @@ def _stage(*, seg_surrogate=None, seg_temperature=1.0) -> StageSpec:
         init_latents_random=True,
         seg_surrogate=seg_surrogate,
         seg_temperature=seg_temperature,
+        margin_weight_tau=margin_weight_tau,
     )
 
 
@@ -182,6 +183,48 @@ def test_fisher_rao_surrogate_also_routes():
     assert not torch.allclose(loss, ce, atol=1e-4)
     loss.backward()
     assert seg_out.grad is not None and seg_out.grad.abs().sum() > 0
+
+
+def test_lovasz_surrogate_routes_finite_and_differentiable():
+    """The ``lovasz`` surrogate routes through the dedicated branch (NOT
+    segnet_surrogate_per_pixel), returns a finite SCALAR, and flows gradient."""
+    seg_out, targets = _make_seg_inputs()
+    spec = _stage(seg_surrogate="lovasz")
+    loss = _seg_loss_for_spec(spec, seg_out, targets)
+    assert torch.isfinite(loss) and loss.ndim == 0
+    ce = _seg_loss_for_spec(_stage(seg_surrogate=None), seg_out, targets)
+    assert not torch.allclose(loss, ce, atol=1e-4)
+    loss.backward()
+    assert seg_out.grad is not None and seg_out.grad.abs().sum() > 0
+
+
+def test_lovasz_rewards_correct_argmax_monotone():
+    """Lovász is the convex envelope of argmax-disagreement: a perfect-on-GT
+    prediction gives ~0, a uniform prediction costs more."""
+    B, H, W = 2, 8, 8
+    targets = torch.randint(0, _SEG_NUM_CLASSES, (B, H, W), dtype=torch.int64)
+    spec = _stage(seg_surrogate="lovasz")
+    perfect = torch.full((B, _SEG_NUM_CLASSES, H, W), -20.0)
+    perfect.scatter_(1, targets.unsqueeze(1), 20.0)
+    uniform = torch.zeros(B, _SEG_NUM_CLASSES, H, W)
+    l_perfect = _seg_loss_for_spec(spec, perfect, targets)
+    l_uniform = _seg_loss_for_spec(spec, uniform, targets)
+    assert l_perfect.item() < 1e-2, f"perfect pred should be ~0; got {l_perfect.item():.4f}"
+    assert l_uniform.item() > l_perfect.item(), "uniform must cost more than perfect"
+
+
+def test_lovasz_ignores_per_pixel_margin_weight():
+    """Lovász is a SCALAR loss → the Lever-5 per-pixel margin weight does NOT apply
+    (the branch returns before the margin path). Setting margin_weight_tau must NOT
+    change the lovász value (whereas it WOULD for soft_cosine)."""
+    seg_out, targets = _make_seg_inputs()
+    l_no_margin = _seg_loss_for_spec(_stage(seg_surrogate="lovasz"), seg_out, targets)
+    l_with_margin = _seg_loss_for_spec(
+        _stage(seg_surrogate="lovasz", margin_weight_tau=0.3), seg_out, targets
+    )
+    assert torch.allclose(l_no_margin, l_with_margin), (
+        "lovász is scalar; the per-pixel margin weight must be a no-op for it"
+    )
 
 
 def test_onehot_gt_uses_the_cached_hard_argmax_class():

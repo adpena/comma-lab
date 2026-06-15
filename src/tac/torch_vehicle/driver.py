@@ -155,6 +155,27 @@ def _seg_loss_for_spec(
         # temperature=None and margin_weight_tau=None and returns the raw CE scalar).
         return spec.seg_loss_fn(seg_out, seg_targets_hard)
 
+    if spec.seg_surrogate == "lovasz":
+        # Lovász-softmax (Berman 2018): the TIGHTEST CONVEX UPPER BOUND on the contest's
+        # argmax-disagreement (IoU) metric — a more direct d_seg surrogate than soft_cosine
+        # (which is margin-resonant frame fidelity). Returns a SCALAR multi-class hinge
+        # (mean one-vs-rest), so it is NOT per-pixel: the Lever-5 margin weight does not
+        # apply (Lovász already concentrates on the argmax-boundary by construction). T=1
+        # standard softmax (the convex-envelope geometry is defined on the plain simplex;
+        # temperature-sharpening would distort it). Pose/FiLM are unchanged — this swaps
+        # ONLY the seg term.
+        from tac.lovasz_hinge import lovasz_hinge_mask_distortion
+
+        pred_probs = torch.softmax(seg_out, dim=1)  # (B, 5, H, W) standard simplex
+        gt_probs = (
+            F.one_hot(seg_targets_hard.long(), num_classes=_SEG_NUM_CLASSES)
+            .permute(0, 3, 1, 2)
+            .to(seg_out.dtype)
+        )  # (B, 5, H, W) one-hot
+        return lovasz_hinge_mask_distortion(
+            pred_probs, gt_probs, num_classes=_SEG_NUM_CLASSES
+        )
+
     from tac.losses.core import segnet_surrogate_per_pixel
 
     temp = float(temperature) if temperature is not None else float(spec.seg_temperature)

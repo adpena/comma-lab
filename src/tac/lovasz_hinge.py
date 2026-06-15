@@ -238,6 +238,7 @@ def lovasz_hinge_mask_distortion(
     *,
     eps: float = 1e-6,
     num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+    classes: str = "present",
 ) -> torch.Tensor:
     """Multi-class Lovász hinge (one-vs-rest mean) on the SegNet probability simplex.
 
@@ -283,12 +284,27 @@ def lovasz_hinge_mask_distortion(
     # Per-class one-vs-rest Lovász-Softmax. The binary hinge helper is for
     # real logits. Here the inputs are already probabilities, so the canonical
     # Berman 2018 multiclass error is |1{y=c} - p_c|, not a re-centered hinge.
+    if classes not in ("present", "all"):
+        raise ValueError(f"classes must be 'present' or 'all'; got {classes!r}")
     gt_argmax = gt_probs.argmax(dim=1)  # (B, H, W)
     per_class_losses = []
     for c in range(num_classes):
         label_c = (gt_argmax == c).float()
+        # Berman 2018 §3.2 default ``classes='present'``: skip classes ABSENT from GT.
+        # The Lovász/Jaccard extension is degenerate for a class with no positives
+        # (grad = [1, 0, ...] → gradient on the single max-prob pixel only). Absent-class
+        # OVER-prediction (a real d_seg flip) is still penalized INDIRECTLY: putting
+        # softmax mass on an absent class steals it from the present GT class, raising
+        # that present class's under-prediction error |1 − p_gt|. ``classes='all'`` keeps
+        # the legacy behavior for callers that want it.
+        if classes == "present" and float(label_c.sum().item()) == 0.0:
+            continue
         errors_c = (label_c - pred_probs[:, c, ...]).abs()
         per_class_losses.append(_lovasz_loss_from_errors(errors_c, label_c, eps=eps_value))
+    if not per_class_losses:
+        # Degenerate fail-safe: no present classes (empty GT). Return a 0 that keeps the
+        # autograd graph (so .backward() is a clean no-op rather than erroring).
+        return pred_probs.sum() * 0.0
     return torch.stack(per_class_losses).mean()
 
 
