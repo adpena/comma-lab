@@ -60,7 +60,13 @@ _SEG_SURROGATE = "soft_cosine"
 _SEG_T_START = 1.0
 _SEG_T_END = 0.3
 _SEG_T_HOLD_FRAC = 0.3
-_MARGIN_WEIGHT_TAU = 0.3
+# Lever-5 margin-weight bandwidth (coherence fix 2026-06-15): τ=1.0, NOT 0.3. The
+# soft_cosine gradient ALREADY self-concentrates on the boundary via its q_g(1-q_g)/T
+# factor; an aggressive explicit τ=0.3 double-concentrates AND mis-scales (SegNet boundary
+# margins are ~0.5-2 logits, but exp(-m/0.3)≈0.04 already at m=1 → weights only the
+# un-fixable m<0.3 noise). τ≈1.0 matches the flip-prone margin band and lets the low-T
+# self-concentration lead with a gentle explicit nudge (the co-tuned, coherent setting).
+_MARGIN_WEIGHT_TAU = 1.0
 
 # The 5 arms (shared epoch-0 init via the same --seed). Two orthogonal lever axes:
 #   SEG axis (Lever-2 soft-cosine fast-cool + Lever-5 margin) and FiLM axis (Lever-3 v2):
