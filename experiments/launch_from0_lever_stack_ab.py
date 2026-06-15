@@ -71,10 +71,17 @@ _MARGIN_WEIGHT_TAU = 0.3
 #     film_only      : SEG off,  FiLM on    (control + FiLM ⇒ isolates Lever-3 alone)
 # Lever-3's contribution is thus measured TWO ways (stack−seg_only and film_only−control);
 # the seg-side is stack−film? no: seg-side = seg_only−control. Full attribution, one launch.
-_ARMS = ("control", "stack", "stack_ce_early", "seg_only", "film_only")
-_SEG_OVERLAY_ALL = {"stack", "seg_only"}  # seg lever stack on EVERY stage
+_ARMS = ("control", "stack", "stack_lovasz", "stack_ce_early", "seg_only", "film_only")
+_SEG_OVERLAY_ALL = {"stack", "seg_only"}  # soft_cosine fast-cool seg lever stack on EVERY stage
 _SEG_OVERLAY_LATE = {"stack_ce_early"}  # seg lever stack on the refinement stages only
-_FILM_ON_ARMS = {"stack", "stack_ce_early", "film_only"}  # Lever-3 v2 pose-FiLM enabled
+# lovász-softmax (Berman 2018) is the convex envelope of the Jaccard/IoU loss — the
+# SUBMODULAR/overlap complement to the MODULAR soft_cosine (whose Lovász degenerates to a
+# per-pixel mean). It attacks d_seg through a different gradient geometry, so it is the
+# highest-value NEW arm against the soft_cosine plateau. T=1 fixed (the envelope lives on
+# the plain simplex → no anneal) and NO Lever-5 margin (lovász is a scalar loss → the
+# per-pixel margin weight is a no-op for it; see test_lovasz_ignores_per_pixel_margin_weight).
+_LOVASZ_ARMS = {"stack_lovasz"}  # lovász on EVERY stage; FiLM on; no anneal, no margin
+_FILM_ON_ARMS = {"stack", "stack_lovasz", "stack_ce_early", "film_only"}  # Lever-3 v2 pose-FiLM
 _LIVE_BASIN_DIRS = {
     Path("experiments/results/forkpoints").resolve(),
 }
@@ -129,6 +136,14 @@ def _overlay_levers(specs: list, arm: str) -> list:
     ``stack_ce_early`` → only stages >= _REFINEMENT_FIRST_STAGE get the seg lever stack;
        the coarse stages stay vendored CE (seg_surrogate=None, no margin-weight).
     """
+    if arm in _LOVASZ_ARMS:
+        # lovász-softmax overlay: the submodular/IoU convex envelope on EVERY stage. T=1
+        # fixed (no fast-cool — the envelope is on the plain simplex), no margin-weight
+        # (scalar loss). FiLM is set at the cfg level (this arm is in _FILM_ON_ARMS).
+        return [
+            dataclasses.replace(s, seg_surrogate="lovasz", seg_temperature=1.0)
+            for s in specs
+        ]
     if arm not in _SEG_OVERLAY_ALL and arm not in _SEG_OVERLAY_LATE:
         return list(specs)  # control / film_only: no seg overlay
     out = []
