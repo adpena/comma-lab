@@ -621,6 +621,34 @@ class TorchVehicleConfig:
     # (slope) term inspects. ``rising`` = hist[-1] > hist[0] over this window ⇒ arrest even
     # inside the deadband (the trend caught drift before it breached the band).
     pose_grad_trend_window: int = 3
+    # -- Lever A (EQUIMARGINAL pose-weight controller) — DEFAULT-PRESERVING ----
+    # ``pose_equimarginal_enabled is False`` (the default) leaves ``spec.pose_weight`` UNMODIFIED every
+    # epoch — byte-identical gradient. When True (split-by-head only), an EMA-smoothed deadbanded controller
+    # (``tac.torch_vehicle.equimarginal_pose_weight``) scales ``pose_weight`` per epoch so the measured
+    # per-axis frame-cotangent-norm ratio ``‖cot_pose‖/‖cot_seg‖`` tracks ``pose_equimarginal_rho`` — the
+    # WEIGHT analogue of the APGC cadence. Because ``pose_l = sqrt(10·pose_mse)`` is ALREADY the contest
+    # pose-term in score units, balancing the cotangent norms balances the per-step SCORE pull (the
+    # equimarginal point). It TRACKS ``5/sqrt(10·d_pose)`` (auto-lowers w_pose as d_pose falls) and RESTORES
+    # the balance the oomph w_seg×1.5 overlay breaks. Scoped to split_by_head (needs the separable per-axis
+    # cotangent norms the split backward computes); ``__post_init__`` refuses it on the non-split path.
+    # NOT an authority/score knob — it changes only the train-time weight; the exact d_seg/d_pose that pick
+    # BEST still run the full scorer on the CPU authority. Checkpointed (the controller state continues a
+    # resume).
+    pose_equimarginal_enabled: bool = False
+    pose_equimarginal_rho: float = 1.0  # target pose:seg score-marginal ratio (1.0 = true equimarginal)
+    pose_equimarginal_decay: float = 0.9  # EMA decay for the measured ratio
+    pose_equimarginal_tol: float = 0.15  # deadband half-width as a fraction of rho
+    pose_equimarginal_bound_lo: float = 0.25  # accumulated w_pose floor as a fraction of w_pose0
+    pose_equimarginal_bound_hi: float = 4.0  # accumulated w_pose ceiling as a fraction of w_pose0
+    # -- Lever C (per-dim pose Mahalanobis / AIL weighting) — DEFAULT-PRESERVING
+    # ``pose_dim_weights is None`` (the default) leaves the pose loss as the UNIFORM
+    # ``MSE(pose_pred6, target6)`` — byte-identical (no multiply, no renorm). A length-6 tuple routes the
+    # squared error through ``tac.torch_vehicle.pose_dim_weights.weighted_pose_mse`` (renormalised to mean 1.0
+    # so the overall pose-loss scale — and thus ``pose_weight``'s calibration — is preserved; only the per-dim
+    # balance tilts). The weights are MEASURED on the basin (per-dim target variance, inverse-variance
+    # Mahalanobis) by ``measure_pose_dim_weights_from_targets``, NOT hand-set. Applies to BOTH the split and
+    # fused pose paths. SegNet reads only rgb_1 so this costs ZERO d_seg + ZERO bytes.
+    pose_dim_weights: tuple[float, ...] | None = None
     # WS-A/M3 Muon LR-floor fix (DEFAULT-OFF → byte-identical). False = Muon shares the
     # AdamW lr_lambda (its floor mis-keyed to adamw_lr → never anneals below 0.5× at stage
     # 8). True = Muon gets its own cosine floor keyed to muon_lr. Opt-in for the scaled run.
@@ -812,6 +840,44 @@ class TorchVehicleConfig:
                     f"pose_grad_trend_window must be >= 2 (the slope needs >=2 samples); "
                     f"got {self.pose_grad_trend_window}"
                 )
+        if self.pose_equimarginal_enabled:
+            # Lever A needs the SEPARABLE per-axis frame-cotangent norms; only the split-by-head backward
+            # computes ``cot_seg`` + ``cot_pose`` as distinct tensors. Refuse on the non-split path so the
+            # flag can never silently no-op (a silent no-op would let the operator believe the equimarginal
+            # controller is active when it is not). The constructor (build_curriculum runtime) instantiates
+            # the controller from these validated params.
+            if not self.split_by_head:
+                raise ValueError(
+                    "pose_equimarginal_enabled requires split_by_head=True: the controller balances the "
+                    "per-axis frame-cotangent norms (‖cot_seg‖, ‖cot_pose‖) the split-by-head backward "
+                    "computes separately; the non-split fused path has no separable per-axis cotangent."
+                )
+            if not (float(self.pose_equimarginal_rho) > 0.0):
+                raise ValueError(
+                    f"pose_equimarginal_rho must be > 0 (got {self.pose_equimarginal_rho})"
+                )
+            if not (0.0 <= float(self.pose_equimarginal_decay) < 1.0):
+                raise ValueError(
+                    f"pose_equimarginal_decay must be in [0,1) (got {self.pose_equimarginal_decay})"
+                )
+            if not (float(self.pose_equimarginal_tol) > 0.0):
+                raise ValueError(
+                    f"pose_equimarginal_tol must be > 0 (got {self.pose_equimarginal_tol})"
+                )
+            if not (
+                0.0 < float(self.pose_equimarginal_bound_lo) <= 1.0 <= float(self.pose_equimarginal_bound_hi)
+            ):
+                raise ValueError(
+                    "require 0 < pose_equimarginal_bound_lo <= 1 <= pose_equimarginal_bound_hi (got "
+                    f"{self.pose_equimarginal_bound_lo}, {self.pose_equimarginal_bound_hi})"
+                )
+        if self.pose_dim_weights is not None:
+            # Lever C: validate + renormalise the length-6 weights at construction so a mis-shaped/negative
+            # weight fails CLOSED here, not silently inside the loss. The normalised tuple (mean 1.0) is
+            # stored so uniform-after-norm is byte-identical and the loss path can use it directly.
+            from tac.torch_vehicle.pose_dim_weights import normalise_pose_dim_weights
+
+            self.pose_dim_weights = normalise_pose_dim_weights(self.pose_dim_weights)
         if self.lever4_variable_level_export_enabled and self.variable_level_waterfill_enabled:
             raise ValueError(
                 "lever4_variable_level_export_enabled and variable_level_waterfill_enabled "
@@ -1014,6 +1080,24 @@ class TorchVehicleDriver:
         self._pose_floor: float | None = None
         self._pose_mse_hist: list[float] = []
         self._last_pose_epoch: int = -1
+        # -- Lever A: the EQUIMARGINAL pose-weight controller (only consulted when
+        # ``cfg.pose_equimarginal_enabled``; persisted across resume so the w_pose trajectory continues).
+        # None on the default path → the pose path uses ``spec.pose_weight`` unmodified (byte-identical).
+        self._equimarginal_ctrl = None
+        if bool(cfg.pose_equimarginal_enabled):
+            from tac.torch_vehicle.equimarginal_pose_weight import (
+                EquimarginalPoseWeightController,
+            )
+
+            self._equimarginal_ctrl = EquimarginalPoseWeightController(
+                rho=float(cfg.pose_equimarginal_rho),
+                decay=float(cfg.pose_equimarginal_decay),
+                tol=float(cfg.pose_equimarginal_tol),
+                bound_lo=float(cfg.pose_equimarginal_bound_lo),
+                bound_hi=float(cfg.pose_equimarginal_bound_hi),
+            )
+        # The most-recent equimarginal telemetry row (observability #305); None until the controller runs.
+        self._last_equimarginal_telemetry: dict | None = None
         # Test-only hook: simulate a death after this many global epochs (the
         # checkpoint has already landed when the death fires). None in production.
         self._stop_after_global_epoch: int | None = None
@@ -1583,7 +1667,18 @@ class TorchVehicleDriver:
                     spec, seg_out, self.scorer.seg_targets_hard[idx],
                     temperature=epoch_temperature,
                 )
-                pose_mse = F.mse_loss(pose_pred6, self.scorer.pose_targets[idx])
+                # Lever C: per-dim weighting on the FUSED (non-split) pose path too (default None → plain MSE,
+                # byte-identical). The equimarginal controller (Lever A) is split-only (refused on the fused
+                # path by __post_init__), so the fused path keeps ``spec.pose_weight`` unchanged.
+                pdw = self.cfg.pose_dim_weights
+                if pdw is None:
+                    pose_mse = F.mse_loss(pose_pred6, self.scorer.pose_targets[idx])
+                else:
+                    from tac.torch_vehicle.pose_dim_weights import weighted_pose_mse
+
+                    pose_mse = weighted_pose_mse(
+                        pose_pred6, self.scorer.pose_targets[idx], pdw
+                    )
                 pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
 
                 loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
@@ -1778,14 +1873,41 @@ class TorchVehicleDriver:
             )  # authority-device leaf, same values
             pose_pred6 = self.scorer.pose_forward_authority(frames_pose)
             pose_targets = self._pose_targets_authority()[idx.to(self.device)]
-            pose_mse = F.mse_loss(pose_pred6, pose_targets)
+            # Lever C: per-dim Mahalanobis/AIL weighting of the 6 scored dims (renormalised to mean 1.0 so
+            # ``cfg.pose_dim_weights is None`` AND uniform-after-norm are byte-identical to the plain MSE).
+            pdw = self.cfg.pose_dim_weights
+            if pdw is None:
+                pose_mse = F.mse_loss(pose_pred6, pose_targets)
+            else:
+                from tac.torch_vehicle.pose_dim_weights import weighted_pose_mse
+
+                pose_mse = weighted_pose_mse(pose_pred6, pose_targets, pdw)
             pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
             (spec.pose_weight * pose_l).backward()
             cot_pose = frames_pose.grad.to(cot_seg.device)  # d(w_pose*pose_l)/dF, authority
             pose_mse_val = float(pose_mse.item())
             self._last_pose_mse = pose_mse_val
+            # Lever A: the EQUIMARGINAL pose-weight controller (default OFF → no-op). The cotangents above
+            # were computed with ``spec.pose_weight`` folded in; ``cot_pose`` is LINEAR in the pose weight, so
+            # rescaling it by ``w_pose_eff / spec.pose_weight`` is EXACTLY the cotangent at the controller's
+            # effective weight (no extra backward). The controller measures the per-axis frame-cotangent norms
+            # at the base weighting and drives ``‖cot_pose‖/‖cot_seg‖`` toward ``rho`` (the equimarginal point;
+            # see ``tac.torch_vehicle.equimarginal_pose_weight``). Telemetry is logged for observability (#305).
+            pose_weight_eff = float(spec.pose_weight)
+            if self._equimarginal_ctrl is not None and float(spec.pose_weight) > 0.0:
+                cot_seg_norm = float(cot_seg.detach().norm().item())
+                cot_pose_norm = float(cot_pose.detach().norm().item())
+                pose_weight_eff = self._equimarginal_ctrl.update(
+                    cot_seg_norm, cot_pose_norm, w_pose_base=float(spec.pose_weight)
+                )
+                scale = pose_weight_eff / float(spec.pose_weight)
+                if scale != 1.0:
+                    cot_pose = cot_pose * scale  # exact: cot_pose is linear in the pose weight
+                self._last_equimarginal_telemetry = self._equimarginal_ctrl.telemetry(
+                    cot_seg_norm=cot_seg_norm, cot_pose_norm=cot_pose_norm, w_pose_eff=pose_weight_eff
+                )
             loss_val = float((spec.seg_weight * seg_l).item()) + float(
-                (spec.pose_weight * pose_l).item()
+                (pose_weight_eff * pose_l).item()
             )
         else:
             # SegNet-only cotangent (pose throttled this epoch). loss_val is the seg term
@@ -1873,6 +1995,13 @@ class TorchVehicleDriver:
             "pose_floor": self._pose_floor,
             "pose_mse_hist": list(self._pose_mse_hist),
             "last_pose_epoch": int(self._last_pose_epoch),
+            # Lever A: persist the equimarginal controller state (ratio EMA + accumulated w_pose fraction +
+            # step count) so a resume CONTINUES the same w_pose trajectory (else it snaps back to w_pose0 and
+            # the pose/seg balance jolts). None on the default path (controller off) → round-trips as None →
+            # byte-identical for the faithful basin.
+            "equimarginal_ctrl": (
+                None if self._equimarginal_ctrl is None else self._equimarginal_ctrl.state_dict()
+            ),
             "base_channels": self.cfg.base_channels,
             "latent_dim": self.cfg.latent_dim,
             "n_pairs": self.n_pairs,
@@ -1906,6 +2035,11 @@ class TorchVehicleDriver:
         self._pose_floor = None if _pf is None else float(_pf)
         self._pose_mse_hist = [float(x) for x in merged.get("pose_mse_hist", [])]
         self._last_pose_epoch = int(merged.get("last_pose_epoch", -1))
+        # Lever A: restore the equimarginal controller trajectory (backward-compatible — a checkpoint without
+        # the key, or a run with the controller off, leaves the controller at its fresh defaults → no change).
+        _eq = merged.get("equimarginal_ctrl")
+        if self._equimarginal_ctrl is not None and _eq is not None:
+            self._equimarginal_ctrl.load_state_dict(_eq)
         # Optimizer/scheduler restore is SKIPPED for a FORK-SEED checkpoint (the
         # Lever-3 A/B seeds the WEIGHTS + EMA from the immutable basin forkpoint but
         # cannot transfer the AdamW/Muon momentum across an architecture change —

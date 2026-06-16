@@ -131,6 +131,12 @@ def save_checkpoint(
         "pose_floor": state.get("pose_floor"),
         "pose_mse_hist": list(state.get("pose_mse_hist", [])),
         "last_pose_epoch": int(state.get("last_pose_epoch", -1)),
+        # Lever A (equimarginal pose-weight controller) state: the ratio EMA + accumulated w_pose fraction +
+        # step count. MUST survive a death so a resumed run CONTINUES the same w_pose trajectory rather than
+        # snapping back to w_pose0 (a pose/seg balance jolt). None on the default path (controller off) → the
+        # loader yields None and the restore is a no-op (backward-compatible; old checkpoints lack the key →
+        # merged.get('equimarginal_ctrl') == None == today's behavior).
+        "equimarginal_ctrl": state.get("equimarginal_ctrl"),
     }
 
     manifest: dict[str, Any] = {

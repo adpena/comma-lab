@@ -197,6 +197,26 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--pose-grad-floor-tol", type=float, default=0.08)
     p.add_argument("--pose-grad-k-max", type=int, default=8)
     p.add_argument("--pose-grad-trend-window", type=int, default=3)
+    # --- SOPHISTICATED POSE TREATMENT (Levers A + C; default-OFF byte-identical) ---
+    p.add_argument("--pose-equimarginal", action="store_true",
+                   help="Lever A: the EQUIMARGINAL pose-weight controller — scale pose_weight per epoch so "
+                        "the measured per-axis cotangent-norm ratio ‖cot_pose‖/‖cot_seg‖ tracks rho (the "
+                        "score-optimal balance; the WEIGHT analogue of APGC). Tracks 5/sqrt(10·d_pose) + "
+                        "RESTORES the balance the oomph w_seg×1.5 overlay breaks. Requires --split-by-head. "
+                        "Sets cfg.pose_equimarginal_enabled.")
+    p.add_argument("--pose-equimarginal-rho", type=float, default=1.0,
+                   help="target pose:seg score-marginal ratio (1.0 = true equimarginal; <1 biases toward "
+                        "seg). Sets cfg.pose_equimarginal_rho.")
+    p.add_argument("--pose-equimarginal-decay", type=float, default=0.9,
+                   help="EMA decay for the measured cotangent-norm ratio. Sets cfg.pose_equimarginal_decay.")
+    p.add_argument("--pose-equimarginal-tol", type=float, default=0.15,
+                   help="deadband half-width as a fraction of rho (no correction inside). Sets "
+                        "cfg.pose_equimarginal_tol.")
+    p.add_argument("--pose-dim-weights-auto", action="store_true",
+                   help="Lever C: per-dim Mahalanobis (inverse-variance) weighting of the 6 scored pose "
+                        "dims, MEASURED on the basin pose targets (renormalised to mean 1.0 → overall pose "
+                        "scale preserved; SegNet reads only rgb_1 so ZERO d_seg / ZERO bytes). Sets "
+                        "cfg.pose_dim_weights from the measured target variance.")
     # --- REFINEMENT detail levers -------------------------------------------------
     p.add_argument("--ema-warmup", dest="ema_warmup", action="store_true", default=True,
                    help="EMA-shadow warmup (DEFAULT — the shadow tracks the short post-KD "
@@ -299,6 +319,12 @@ def _resolve_config_dict(args) -> dict:
         "pose_film_version": 2 if args.pose_film_v2 else 1,
         "pose_film_trunk_stopgrad": bool(args.pose_film_trunk_stopgrad),
         "pose_film_rgb0_pose_trainable": bool(args.pose_film_rgb0_pose_trainable),
+        # sophisticated pose treatment (Levers A + C)
+        "pose_equimarginal": bool(args.pose_equimarginal),
+        "pose_equimarginal_rho": args.pose_equimarginal_rho,
+        "pose_equimarginal_decay": args.pose_equimarginal_decay,
+        "pose_equimarginal_tol": args.pose_equimarginal_tol,
+        "pose_dim_weights_auto": bool(args.pose_dim_weights_auto),
         # pose cadence
         "pose_grad_every_k": args.pose_grad_every_k,
         "pose_grad_resume_threshold": args.pose_grad_resume_threshold,
@@ -317,9 +343,12 @@ def _resolve_config_dict(args) -> dict:
     }
 
 
-def _build_torch_vehicle_config(args, out_dir: Path):
+def _build_torch_vehicle_config(args, out_dir: Path, *, pose_dim_weights=None):
     """Build the live ``TorchVehicleConfig`` for an arm. Every field maps to a parsed arg
-    (no invented flags). Imported lazily so --print-plan stays $0/import-light."""
+    (no invented flags). Imported lazily so --print-plan stays $0/import-light.
+
+    ``pose_dim_weights`` (Lever C): the length-6 weight tuple MEASURED on the basin pose targets by the
+    caller (``--pose-dim-weights-auto``), or None (uniform, byte-identical)."""
     from tac.torch_vehicle.driver import TorchVehicleConfig
 
     return TorchVehicleConfig(
@@ -340,6 +369,12 @@ def _build_torch_vehicle_config(args, out_dir: Path):
         pose_film_version=2 if args.pose_film_v2 else 1,
         pose_film_trunk_stopgrad=bool(args.pose_film_trunk_stopgrad),
         pose_film_rgb0_pose_trainable=bool(args.pose_film_rgb0_pose_trainable),
+        # SOPHISTICATED POSE TREATMENT: Lever A (equimarginal weight controller) + Lever C (per-dim weights).
+        pose_equimarginal_enabled=bool(args.pose_equimarginal),
+        pose_equimarginal_rho=args.pose_equimarginal_rho,
+        pose_equimarginal_decay=args.pose_equimarginal_decay,
+        pose_equimarginal_tol=args.pose_equimarginal_tol,
+        pose_dim_weights=pose_dim_weights,
         # POSE CADENCE: k=1 production default + APGC safety.
         pose_grad_every_k=args.pose_grad_every_k,
         pose_grad_resume_threshold=args.pose_grad_resume_threshold,
@@ -408,7 +443,20 @@ def main(argv: list[str] | None = None) -> int:
         split_by_head=args.split_by_head, max_pairs=args.n_pairs,
         targets_cache=args.targets_cache,
     )
-    cfg = _build_torch_vehicle_config(args, out_dir)
+    # Lever C: measure the per-dim pose weights from the REAL basin pose targets (inverse-variance
+    # Mahalanobis). None when --pose-dim-weights-auto is off → uniform → byte-identical.
+    pose_dim_weights = None
+    if bool(args.pose_dim_weights_auto):
+        from tac.torch_vehicle.pose_dim_weights import (
+            measure_pose_dim_weights_from_targets,
+        )
+
+        pose_dim_weights = measure_pose_dim_weights_from_targets(
+            scorer.pose_targets, mode="inv_var"
+        )
+        print(json.dumps({"lever_c_pose_dim_weights_measured": list(pose_dim_weights),
+                          "authority": "[contest-CPU advisory] NON-PROMOTABLE"}), flush=True)
+    cfg = _build_torch_vehicle_config(args, out_dir, pose_dim_weights=pose_dim_weights)
     print(json.dumps({
         **resolved, "out_dir": str(out_dir),
         "stages": _plan_stages(specs, args.oomph_seg_weight_mult),
