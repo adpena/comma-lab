@@ -1905,6 +1905,15 @@ class TorchVehicleDriver:
                     f"checkpoint base_channels={man['base_channels']} != "
                     f"cfg.base_channels={self.cfg.base_channels}; cannot resume a different basis"
                 )
+            # latent_dim resume guard (sister of base_channels/n_pairs): a latent_dim change
+            # alters the stem Linear(latent_dim, ...) shape → fail closed HERE with a clear
+            # message rather than a cryptic load_state_dict size-mismatch in _restore_into.
+            # Backward-compatible: pre-key checkpoints default to cfg.latent_dim (pass).
+            if int(man.get("latent_dim", self.cfg.latent_dim)) != self.cfg.latent_dim:
+                raise ValueError(
+                    f"checkpoint latent_dim={man.get('latent_dim')} != "
+                    f"cfg.latent_dim={self.cfg.latent_dim}; cannot resume a different basis"
+                )
             # EXPLICIT taper-resume guard (do not rely on an accidental state_dict shape
             # mismatch): a checkpoint trained with a different taper schedule is a different
             # architecture. Normalize None (vendored) so old checkpoints (no key) match a

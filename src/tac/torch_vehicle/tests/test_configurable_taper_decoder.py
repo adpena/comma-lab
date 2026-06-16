@@ -307,3 +307,27 @@ def test_resume_with_same_taper_succeeds(tmp_path):
     b = _taper_driver(tmp_path / "y", ch)
     summ = b.run()  # must NOT raise; completes the 3-epoch stage
     assert (tmp_path / "y" / "torch_vehicle_run.DONE").exists()
+
+
+def test_resume_with_different_latent_dim_fails_closed(tmp_path):
+    """Resuming an out_dir trained with latent_dim A using latent_dim B raises EXPLICITLY
+    (the round-8 guard) — not a cryptic stem-Linear size-mismatch in _restore_into."""
+    from tac.torch_vehicle.driver import (
+        TorchVehicleConfig, TorchVehicleDriver, _SimulatedDeath, import_vendored_bundle,
+    )
+    from tac.torch_vehicle.scorer_context import SyntheticScorerContext
+
+    def drv(ld):
+        cfg = TorchVehicleConfig(base_channels=20, latent_dim=ld, out_dir=tmp_path / "ld",
+                                 device="cpu", seed=0, checkpoint_every_epochs=1)
+        return TorchVehicleDriver(
+            cfg, scorer=SyntheticScorerContext(n_pairs=4, device="cpu", seed=0),
+            vendored=import_vendored_bundle(), curriculum=_short_taper_curriculum(3))
+
+    a = drv(28)
+    a._stop_after_global_epoch = 1
+    with pytest.raises(_SimulatedDeath):
+        a.run()
+    b = drv(16)  # DIFFERENT latent_dim, same out_dir
+    with pytest.raises(ValueError, match="cannot resume a different basis"):
+        b.run()
