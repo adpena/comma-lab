@@ -90,3 +90,42 @@ oomph-vs-CE transfer probe (G0)** — it directly falsifies the load-bearing "le
 "loss-movable" assumptions for a fraction of the 16h. In parallel, scope **G2 (C8 byte-close)**
 and **G4 (frontier adapter)** — the two paths to an EXACT row soonest. The frontier is 0.191 and
 UNMOVED; the fastest honest path is a measured exact gap, not a more-precise 96-pair advisory min.
+
+---
+
+## APPEND-ONLY CORRECTION 2026-06-16T16:xx (G2 + G4 returned; one pillar FALSIFIED, operator override VINDICATED)
+Per Catalog #110/#113 the verdict above is preserved verbatim; this section supersedes the
+parts G2/G4 measured wrong. Operator overrode the "defer long-train" verdict 2026-06-16
+("proceed with all, don't demote the long training"); the reorder kept the long train but
+ran it AFTER G0. Both worktree probes have now returned:
+
+- **G2 (`b4e42061c`, 7 NO-FAKE proofs PASS on main): the "C8 bilinear-skip byte-close =
+  NotImplementedError (ledger #81)" pillar is FALSE.** The bilinear-skip is a `forward()` op,
+  NOT an archive section; the vendored codec serializes weights name/shape/scale and is
+  schedule-/architecture-agnostic. The byte-close was already wired (`driver.py:1561-1608`).
+  Proofs: round-trip max uint8 diff=1 (quant only), parse-back BIT-EXACT, two parse-backs →
+  BIT-IDENTICAL float frames (bilinear runs deterministically on byte-closed weights), numpy
+  bilinear matches torch ≤3.6e-7. **The symposium conflated the real FP4 NO-GO with a phantom
+  bilinear blocker.** Remaining = standard `archive.zip` packaging + a `--taper-channels` CLI
+  flag — NOT byte-close blockers. ⇒ **G3 (first byte-closed dual exact row for this vehicle)
+  is UNBLOCKED; the long-train → taper → byte-close → exact-row path is OPEN END-TO-END.**
+  This removes the strongest "defer long-train" argument and VINDICATES the operator override.
+
+- **G4 (`37e8e33ce`, advisory measured + Shannon-bounded): additive frontier d_seg-adapter is
+  NO-GO by ~80×, FUNDAMENTALLY.** Break-even 1.27 B/flip; best correction 60–100 B/flip; and
+  the **Shannon position-only floor (just NAMING which ~110 px/frame flip) = 0.0673 rate =
+  1.20× the entire seg term (0.05598)** — so even an information-theoretically PERFECT additive
+  adapter RAISES S. The frontier's seg term is rate-floored for per-flip correction (it already
+  spends a 600-entry FECa selector + DQS1 on 31 pairs). ⇒ **The "241-LOC frontier-adapter"
+  fast path is dead. Per-pixel sidecars don't pay; only SUB-LINEAR-IN-FLIPS mechanisms do
+  (shared decoder structure: TAPER / capacity realloc to the 192×256/384×512 band; or push the
+  frontier's own selector/DQS1 levers).**
+
+**Net reframe (the two results together):** the frontier (great d_seg 0.00056, but rate-floored
+for cheaper d_seg) and the small basis (tiny bytes, but d_seg 0.0026) are two ends; neither alone
+is sub-0.15. G4 proves you cannot cheaply ADD d_seg to the frontier — you must produce the right
+argmax from SHARED structure (sub-linear), which is exactly the taper/capacity line on the
+byte-closeable small basis G2 unblocked. **The operator's long-train → taper → capacity roadmap is
+now reinforced by BOTH probes**, not deferred. d_seg-infeasibility-under-epochs-alone (the OTHER
+pillar) still stands → capacity (G1) remains necessary; the long train's job is the converged
+sensitivity map the taper consumes, not sub-0.15 by itself.
