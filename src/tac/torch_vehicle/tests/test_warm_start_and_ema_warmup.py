@@ -261,6 +261,33 @@ def test_ema_step_checkpoint_round_trips(tmp_path):
     assert d2._ema_step == 0, "missing ema_step key must restore as 0 (backward-compat)"
 
 
+def test_ema_step_survives_real_save_load_checkpoint(tmp_path):
+    """The DECISIVE round-trip: ema_step must survive the REAL save_checkpoint→load_checkpoint
+    serialization (the round-7 finding — _capture_state emits it but save_checkpoint's blob is
+    an ALLOW-LIST; the in-memory _restore_into test bypassed this layer). Without the blob key,
+    a resumed warmup run snaps decay back to 0.1."""
+    from tac.torch_vehicle.checkpoint import (
+        TorchCheckpointPosition, load_checkpoint, save_checkpoint,
+    )
+
+    d = _driver(tmp_path, ema_warmup=True)
+    spec = _spec(epochs=1)
+    decoder = d._new_decoder()
+    latents = nn.Parameter(torch.zeros(d.n_pairs, d.cfg.latent_dim))
+    rt = d._build_stage_runtime(spec, decoder=decoder, latents=latents,
+                                ema_decoder=None, ema_latents=None)
+    d._train_one_epoch(rt, spec, epoch_in_stage=0)
+    captured_step = d._ema_step
+    assert captured_step > 0
+    state = d._capture_state(rt, spec)
+    save_checkpoint(state, tmp_path / "ck", TorchCheckpointPosition(0, 1))
+    merged = load_checkpoint(tmp_path / "ck", map_location="cpu")
+    assert merged.get("ema_step") == captured_step, (
+        f"ema_step lost in save/load round-trip: got {merged.get('ema_step')} != {captured_step} "
+        "(blob allow-list dropped it)"
+    )
+
+
 def test_ema_warmup_off_byte_identical_decay(tmp_path):
     """OFF path: the EMA shadow equals an independent constant-0.999 reference update
     (the legacy path is mathematically unchanged)."""

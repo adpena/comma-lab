@@ -114,6 +114,12 @@ def save_checkpoint(
         # checkpoints → the loader yields no key → the driver rebuilds an empty
         # EMA, exactly today's behavior (backward-compatible).
         "tensor_sensitivity_ema": state.get("tensor_sensitivity_ema"),
+        # EMA-warmup step counter (Lever: ema_warmup). MUST survive a death so a resumed
+        # warmup run CONTINUES its decay schedule rather than snapping back to decay=0.1
+        # at t=0 (a one-step shadow jolt). 0 on the default (ema_warmup off) path → the
+        # loader yields 0 and the restore is a no-op (backward-compatible; old checkpoints
+        # lack the key → merged.get('ema_step', 0) == 0 == today's behavior).
+        "ema_step": int(state.get("ema_step", 0)),
     }
 
     manifest: dict[str, Any] = {
