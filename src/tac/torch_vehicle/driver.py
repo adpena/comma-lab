@@ -545,13 +545,10 @@ class TorchVehicleConfig:
             )
         if self.warm_start_dir is not None:
             self.warm_start_dir = Path(self.warm_start_dir)
-            if self.pose_film_enabled:
-                raise ValueError(
-                    "warm_start_dir requires pose_film_enabled=False: the saved "
-                    "best_ema_decoder.pt is a vendored (no-FiLM) state_dict and a strict "
-                    "load into a FiLM-wrapped decoder would fail. Warm-start the vendored "
-                    "decoder, then add FiLM as a separate (untested-here) step if needed."
-                )
+            # FiLM warm-start IS supported (the decoupled-oomph path): _load_warm_start_into
+            # detects the pose-FiLM wrapper and loads the vendored ckpt into its inner
+            # ``.decoder`` submodule, leaving the FiLM at identity-init (f0 == vendored rgb_0).
+            # So a converged no-FiLM ckpt warm-starts a FiLM decoder cleanly.
         if self.taper_channels is not None:
             self.taper_channels = [int(c) for c in self.taper_channels]
             if len(self.taper_channels) != 7:
@@ -813,7 +810,17 @@ class TorchVehicleDriver:
                 raise ValueError(f"warm-start latents dict at {lat_path} is empty")
             lat = lat.get("latents", next(iter(lat.values())))
         # STRICT load — a mismatch is a misconfigured warm-start, not a silent partial load.
-        decoder.load_state_dict({k: v.to(self.train_device) for k, v in sd.items()})
+        # FiLM-WARM-START (the decoupled-oomph path): when the decoder is a pose-FiLM wrapper
+        # (children = decoder/pose_mlp/film_resid), the saved vendored ckpt has the INNER
+        # decoder's keys (e.g. "rgb_1.weight"), not the wrapper's prefixed keys. Load into the
+        # inner ``.decoder`` submodule (strict) and LEAVE the FiLM at its identity-init
+        # (proj/beta zero → film_resid==0 → f0 renders bit-equal to the vendored rgb_0). So the
+        # converged 0.00359 trunk/heads carry over AND the d_seg⊥pose decoupling is active —
+        # the math-optimal start for cranking the seg (oomph) loss without a pose cost.
+        target = decoder
+        if hasattr(decoder, "pose_mlp") and isinstance(getattr(decoder, "decoder", None), nn.Module):
+            target = decoder.decoder
+        target.load_state_dict({k: v.to(self.train_device) for k, v in sd.items()})
         if int(lat.shape[0]) != self.n_pairs or int(lat.shape[1]) != self.cfg.latent_dim:
             raise ValueError(
                 f"warm-start latents shape {tuple(lat.shape)} != (n_pairs={self.n_pairs}, "

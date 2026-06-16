@@ -143,6 +143,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--seg-weight-base", type=float, default=100.0,
                    help="the stage seg_weight the arms scale (oomph ×--oomph-seg-weight-mult); "
                         "matches the vendored muon-finetune default.")
+    p.add_argument("--pose-film-v2", action="store_true",
+                   help="enable pose-FiLM v2 (rgb_0-only residual; rgb_1/d_seg FiLM-CLEAN) so "
+                        "the SHARP-oomph seg crank has NO pose cost — pose is carried by the 6 "
+                        "stored scalars (Wyner-Ziv, ~1KB) decoupled from d_seg. Warm-start loads "
+                        "the converged ckpt into the FiLM wrapper's inner decoder (identity FiLM). "
+                        "The math-optimal decoupled-oomph run.")
     p.add_argument("--oomph-seg-weight-mult", type=float, default=1.5,
                    help="oomph's seg_weight multiplier (default 1.5 = 'everything cranked'). "
                         "Set 1.0 for a CLEAN isolation run that varies ONLY T-sharpness + "
@@ -337,7 +343,11 @@ def main(argv: list[str] | None = None) -> int:
         total_epoch_budget=args.epochs, ema_decay=args.ema_decay,
         eval_every=args.eval_every, device=args.device, train_device=args.train_device,
         split_by_head=args.split_by_head, async_eval=args.async_eval,
-        pose_film_enabled=False,  # warm-start loads a vendored (no-FiLM) state_dict
+        # pose-FiLM v2 (opt-in): rgb_1/d_seg FiLM-CLEAN → the oomph seg crank has no pose cost
+        # (pose carried by the 6 stored scalars, decoupled). Warm-start loads the converged
+        # ckpt into the wrapper's inner decoder (identity FiLM). Default off = byte-identical.
+        pose_film_enabled=bool(args.pose_film_v2),
+        pose_film_version=2 if args.pose_film_v2 else 1,
         seed=args.seed,
         pose_grad_every_k=args.pose_grad_every_k,
         pose_grad_resume_threshold=args.pose_grad_resume_threshold,
