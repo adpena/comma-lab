@@ -101,6 +101,11 @@ def measure_pose_dim_weights_from_targets(pose_targets, *, mode: str = "inv_var"
     per-dim variance of the real targets; no fabricated numbers."""
     import torch
 
+    # The basin targets may live on a non-CPU gradient backend (e.g. MPS when the scorer runs
+    # with --train-device mps); MPS does not support float64, so detach to CPU BEFORE the
+    # double-precision variance measurement (a one-time host-side stat — device-independent).
+    if torch.is_tensor(pose_targets):
+        pose_targets = pose_targets.detach().to("cpu")
     t = torch.as_tensor(pose_targets, dtype=torch.float64)
     if t.ndim != 2 or t.shape[1] < N_SCORED_POSE_DIMS:
         raise ValueError(f"pose_targets must be (n_pairs, >=6), got {tuple(t.shape)}")

@@ -130,6 +130,36 @@ def test_zero_low_sensitivity_survivors_zero_weight_falls_back_uniform() -> None
     assert out[0] == pytest.approx(1.0)  # fell back to uniform over the single survivor
 
 
+@pytest.mark.skipif(
+    not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()),
+    reason="MPS backend not available on this host",
+)
+def test_measure_weights_from_mps_targets_does_not_raise_float64() -> None:
+    # P3 regression: the basin pose targets live on the MPS gradient backend when the
+    # scorer runs --train-device mps. MPS cannot convert to float64, so measuring the
+    # per-dim weights MUST detach to CPU first (else: "Cannot convert a MPS Tensor to
+    # float64"). The bind-all arm_b smoke (--split-by-head --train-device mps
+    # --pose-dim-weights-auto) hit this; the fix detaches to CPU before the f64 variance.
+    torch.manual_seed(7)
+    t = torch.zeros(64, 6, device="mps")
+    t[:, 0] = torch.randn(64, device="mps") * 5.0  # high var
+    t[:, 1] = torch.randn(64, device="mps") * 1.0
+    w = measure_pose_dim_weights_from_targets(t, mode="inv_var", floor=0.0)
+    assert len(w) == N_SCORED_POSE_DIMS
+    assert sum(w) / 6 == pytest.approx(1.0)
+    assert w[0] < w[1]  # inverse-variance: high-var dim 0 gets the smallest weight
+
+
+def test_measure_weights_detaches_grad_tracking_input() -> None:
+    # The input may carry grad history (it comes off the live scorer); measuring the weights
+    # is a host-side stat that must not require/keep grad. A requires_grad input must not raise.
+    torch.manual_seed(8)
+    t = torch.randn(40, 6, requires_grad=True)
+    w = measure_pose_dim_weights_from_targets(t, mode="inv_var")
+    assert len(w) == N_SCORED_POSE_DIMS
+    assert sum(w) / 6 == pytest.approx(1.0)
+
+
 def test_grad_flows_through_weighted_mse() -> None:
     pred = torch.zeros(4, 6, requires_grad=True)
     tgt = torch.ones(4, 6)
