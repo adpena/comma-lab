@@ -93,7 +93,10 @@ def _resolve_taper(args):
     if args.arm == "baseline":
         return None, vendored_taper(C)  # None → the byte-identical vendored decoder
     if args.arm == "dseg_aware":
-        ch = dseg_aware_taper(C)
+        # thread latent_dim so the byte-match target matches the ACTUAL latent_dim (the stem
+        # param count scales with it) — else byte_delta_pct + the trained taper are wrong at
+        # any non-28 latent_dim (round-5 fix; same class as the round-4 module-internal fix).
+        ch = dseg_aware_taper(C, latent_dim=args.latent_dim)
         return ch, ch
     # custom
     if not args.taper_channels:

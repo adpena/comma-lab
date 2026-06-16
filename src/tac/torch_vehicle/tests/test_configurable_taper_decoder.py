@@ -10,6 +10,8 @@ never constants.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 import torch
 
@@ -58,6 +60,30 @@ def test_dseg_aware_taper_is_byte_matched_and_late_weighted():
     # late mid-stages (3,4) raised vs baseline; early stages (0,1) lowered.
     assert aware[3] > base[3] and aware[4] > base[4], f"mid-late not raised: {aware} vs {base}"
     assert aware[0] < base[0] and aware[1] < base[1], f"early not lowered: {aware} vs {base}"
+
+
+def test_launcher_resolve_taper_threads_latent_dim():
+    """launch_taper_ab._resolve_taper must thread args.latent_dim into dseg_aware_taper so the
+    resolved taper byte-matches at the ACTUAL latent_dim (round-5 fix; the same class swept)."""
+    import argparse
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_taper_launcher",
+        Path(__file__).resolve().parents[4] / "experiments" / "launch_taper_ab.py",
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for ld in (16, 28, 64):
+        args = argparse.Namespace(arm="dseg_aware", base_channels=20, latent_dim=ld,
+                                  taper_channels=None)
+        _active, resolved = mod._resolve_taper(args)
+        # the resolved taper byte-matches the vendored baseline AT this latent_dim.
+        pb = decoder_param_count(vendored_taper(20), latent_dim=ld)
+        pa = decoder_param_count(resolved, latent_dim=ld)
+        assert abs(pa - pb) / pb < 0.05, f"ld={ld}: launcher taper not byte-matched ({pb} vs {pa})"
+        # and it EQUALS the directly-threaded dseg_aware_taper (proves the thread is wired).
+        assert resolved == dseg_aware_taper(20, latent_dim=ld), f"ld={ld}: launcher != threaded"
 
 
 def test_dseg_aware_taper_byte_matches_at_nondefault_latent_dim():
