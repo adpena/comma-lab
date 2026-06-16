@@ -56,6 +56,43 @@ final; (4) boundary-conditioned low-rank head residual (spend capacity only at t
 argmax pixels; ties to Lever-D + boundary-math seg core #52). `--final-cap 11` is a cheap EMPIRICAL
 check, NOT the expected win (output-layer sensitivity ≠ under-capacity).
 
+## WIRED + INTEGRATED + OPTIMAL + SYNERGISTIC (operator 2026-06-16) — the system, not the parts
+The ingredients are not independent bolt-ons; built right they REINFORCE. The architecture:
+
+**The shared spine — ONE sensitivity map drives the whole stack.** The gate-2 d_seg-sensitivity
+map (per-tensor Δd_seg/param, measured on the converged tapered model) is the SAME signal that
+should drive, computed ONCE and fanned out (no triple-recompute):
+- **taper** (allocate CHANNELS by sensitivity — done: [22,16,15,14,15,14,10]),
+- **QAT / Lever-4** (allocate BITS by sensitivity — `levels_from_sensitivity_for_codec`, the SAME rank-norm band),
+- **variable-level codec / rate-attack** (allocate quant LEVELS by sensitivity),
+- **boundary head loss + L3 PR98/Lever-D** (allocate PIXEL weights by boundary saliency).
+⇒ wire `tac.sensitivity_map` (or the gate-2 probe output) as the single shared input to taper +
+QAT + codec + head. This is the synergistic core: capacity, bits, levels, and pixel-weights all
+follow one coherent d_seg-geometry, instead of four separately-tuned heuristics.
+
+**Synergy table (where pieces reinforce):**
+| pair | synergy | integration requirement |
+|---|---|---|
+| taper ↔ QAT/Lever-4 ↔ rate-codec | all allocate by the SAME sensitivity | re-measure sensitivity on the TAPERED model; feed all three |
+| oomph(seg) ↔ FiLM-v2(pose) | FiLM carries pose orthogonally → oomph cranks seg with NO pose cost | **complete the FiLM-v2 TRUNK decoupling** (head-only today → the synergy LEAKS → the measured pose drift) |
+| pose-every-epoch ↔ FiLM-v2 | tight pose hold AND cheap (orthogonal) | k=1 + complete decoupling |
+| eval_roundtrip ↔ QAT ↔ L3-PR98 | jointly close the train→deploy gap (resize / weight-quant / channel-bias) | PR98 offset applied POST-round (driver L2428 ✓) |
+| KD-warm ↔ basin | basin knowledge → re-tapered student (recovers head-start) | KD loss composes with the score-aware loss (inherit fidelity AND score-awareness) |
+
+**Optimal-as-a-whole (joint, not greedy):** the whole stack minimizes ONE objective
+S = 100·d_seg + √(10·d_pose) + 25·B/N. The taper (d_seg, byte-neutral), oomph (d_seg via loss),
+FiLM+pose-every-epoch (hold d_pose), QAT (preserve d_seg/d_pose under quant), rate-attack+L3
+(min B + recover quant distortion) are coupled through S. The Lagrangian λ's + the shared
+sensitivity spine are the coordination mechanism — solve jointly, not lever-by-lever. **The
+byte budget is JOINT:** taper (channels) + rate-attack (levels) together set the final archive
+bytes → verify byte-neutrality at the POST-int8-brotli archive (review R4), not param-count.
+
+**The integration that unlocks the biggest synergy: complete the FiLM-v2 trunk decoupling.** The
+measured pose drift IS the symptom of the incomplete oomph↔FiLM synergy (FiLM decouples the rgb_0
+head but the shared trunk still couples pose↔seg). Completing it (carry pose fully via the FiLM
+path + stored scalars so the trunk is FiLM-clean for d_seg) makes oomph and pose REINFORCE instead
+of compete — the single highest-leverage integration for the score-optimal pose stack.
+
 ## Gaps to close before production (turn into tasks)
 - Build the KD-warm-start (basin teacher → re-tapered student) + composed refinement actuator.
 - Enable + verify the variable-level codec rate attack (post-int8-brotli byte-neutral check).
