@@ -93,8 +93,21 @@ head but the shared trunk still couples pose↔seg). Completing it (carry pose f
 path + stored scalars so the trunk is FiLM-clean for d_seg) makes oomph and pose REINFORCE instead
 of compete — the single highest-leverage integration for the score-optimal pose stack.
 
+## P1b MEASURED findings (460c59efc) — the rate side, with real byte deltas
+- **Rate-attack = decoder-blob lever, MEASURED −7,935 B** (−10.8% decoder / −8.9% archive: 89,248→81,313 B)
+  → floor **0.1178 → ~0.1125 aggressive / 0.1154 conservative** (RELAXES the d_seg target from ~7× to ~6×).
+  **It's a rate↔distortion trade** (+63% weight-RMSE aggressive) → MUST co-train with QAT on the gate-2
+  d_seg map (the spine); applied blind it pays bytes but may cost d_seg. Endpoints banked (0.5–1.0 / 0.75–1.0).
+- **D1 latent dedup = VERIFIED DEAD-END** — latents full-rank 28/28, +2.17% over entropy floor, 0 dups; all
+  candidates lose (AR(1) "win" = brotli-alignment noise, reverted per NO-FAKE). DROP D1; latents are near-floor.
+- **L3 kit byte costs confirmed:** PR98 54B / T10 54B / S12 0B, all default-preserving, post-round.
+- **3 export hooks ready (default-preserving):** `build_decoder_blob_variable_or_vendored(sd, levels_from_sensitivity_for_codec(gate2_map, names))`,
+  `apply_distortion_kit_to_raw_frames` + `serialize_distortion_section`, `build_latent_blob_dedup_or_vendored`.
+
 ## Gaps to close before production (turn into tasks)
-- Build the KD-warm-start (basin teacher → re-tapered student) + composed refinement actuator.
-- Enable + verify the variable-level codec rate attack (post-int8-brotli byte-neutral check).
-- Enable/apply the L3 finishing-kit + build D1 latent dedup.
-- (optional) boundary-conditioned head arm if the A/B shows the head is the binding lever.
+- ✅ P1b: rate-attack/L3 verified; D1 dead-end. ⏳ P1a: KD-warm + FiLM rgb_0 refine + spine (building).
+- **P2:** composed launcher + wire the 3 export hooks into the driver export + the SPINE (gate-2 d_seg map →
+  variable-level codec levels AND QAT bits, co-trained — the synergy that banks −7,935 B without the d_seg cost).
+- **P3:** end-to-end smoke (train → byte-close → eval path) on the integrated config.
+- **P4:** recursive adversarial review (3 clean) + config-optimality re-pass → THEN the local-MPS run.
+- (optional) boundary-conditioned head arm if the A/B shows the head is the binding lever (not D1 — that's dead).
