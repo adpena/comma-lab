@@ -219,12 +219,18 @@ it is a refinement, not a safety prerequisite (trunk-stopgrad + APGC self-protec
 - **PRE-EXISTING (out-of-stack, non-blocking):** `score_aware_qat.py` 4 style-only ruff debts.
 
 ## SEAL verdict
-**SEAL = YES, conditional on the integration suite all-pass** (227 dedicated tests already green;
-`test_all_layer2_levers.py` at 75% all-dots at memo time; result appended below). The stack is
-mathematically sound, NO-FAKE-clean, default-OFF byte-identical, config-optimal, and the cross-lever
-interactions compose correctly. The throttle is SAFE as-is (trunk-stopgrad + APGC self-protect) with
-the d_pose-monitoring recommendation. **arm_b is CLEARED to run** once the integration suite confirms
-all-pass.
+**SEAL = YES — UNCONDITIONAL.** 3 consecutive clean passes achieved (Pass-1 finding fixed +
+committed 3976b93f6; Pass 2 clean; Pass 3 clean — the 18.6-min integration suite all-pass is the
+3rd). The stack is mathematically sound, NO-FAKE-clean, default-OFF byte-identical, config-optimal,
+and the cross-lever interactions compose correctly. The throttle is SAFE as-is (trunk-stopgrad +
+APGC self-protect) with the d_pose-monitoring recommendation. **arm_b is CLEARED to run.**
 
 ### Integration-suite result (appended on completion)
-_pending — see `.omx/tmp/p4_review/all_layer2.log`._
+**`test_all_layer2_levers.py`: 96 passed in 1116.32s (18:36), EXITCODE=0 — ZERO failures.**
+(The 43 test functions parametrize to 96 cases; all green, incl. the real-driver
+`test_compose_all_five_levers_end_to_end`, the loss-differs-from-default anti-fake guard, and the
+determinism/byte-identity + Muon-partition tests.) The integration NO-FAKE proof PASSES → 3rd clean
+pass → SEAL UNCONDITIONAL. **arm_b is CLEARED to run** with the full timing-memo-§5 + spec-§3 flag
+set, k_max=8, async-eval, and d_pose telemetry monitoring (tighten k_max→4 if the first eval-row
+shows pose creep). Commit the 3 working-tree hygiene changes for provenance before the run (they do
+not affect the arm_b path).
