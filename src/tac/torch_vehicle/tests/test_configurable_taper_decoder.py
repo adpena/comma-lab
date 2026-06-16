@@ -60,6 +60,17 @@ def test_dseg_aware_taper_is_byte_matched_and_late_weighted():
     assert aware[0] < base[0] and aware[1] < base[1], f"early not lowered: {aware} vs {base}"
 
 
+def test_dseg_aware_taper_byte_matches_at_nondefault_latent_dim():
+    """The byte-match is EXACT-target at any latent_dim (the stem param count scales with
+    latent_dim) — the round-4 LOW fix. Match the target computed at the SAME latent_dim."""
+    for ld in (16, 28, 64):
+        base = vendored_taper(20)
+        aware = dseg_aware_taper(20, latent_dim=ld)
+        pb = decoder_param_count(base, latent_dim=ld)
+        pa = decoder_param_count(aware, latent_dim=ld)
+        assert abs(pa - pb) / pb < 0.05, f"ld={ld}: base {pb} vs aware {pa} not byte-matched"
+
+
 # ---- the PARITY GATE (faithful generalization) -----------------------------
 def test_default_taper_is_shape_identical_to_vendored():
     """Default taper → identical state_dict keys + shapes as the vendored decoder."""

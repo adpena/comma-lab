@@ -74,17 +74,19 @@ def decoder_param_count(channels: list[int], latent_dim: int = 28) -> int:
     return n
 
 
-def dseg_aware_taper(base_channels: int) -> list[int]:
+def dseg_aware_taper(base_channels: int, latent_dim: int = 28) -> list[int]:
     """A d_seg-AWARE taper for ``base_channels``: reallocate capacity from the insensitive
     low-res early stages (0-2) to the d_seg-critical mid-late stages (3-5) where the gate-2
     sensitivity map found d_seg lives (``skips.2-4`` / ``blocks.4``). The FINAL channel is
     kept near the baseline final (raising it inflates ``refine`` quadratically). Tuned to be
     byte-MATCHED to ``vendored_taper`` within ~3% so the A/B isolates ALLOCATION from total
-    capacity. For base_ch=20 baseline [20,20,20,15,11,10,10] (≈82,668 params incl. latents-
-    excluded) this yields a flatter, late-weighted schedule of equal-ish param count."""
+    capacity. ``latent_dim`` is threaded into the byte-match target so the match is EXACT at
+    any latent_dim (the stem param count = latent_dim·channels[0]·48 depends on it). For
+    base_ch=20 baseline [20,20,20,15,11,10,10] this yields a flatter, late-weighted schedule
+    of equal-ish param count."""
     C = int(base_channels)
     base = vendored_taper(C)
-    target = decoder_param_count(base)
+    target = decoder_param_count(base, latent_dim=latent_dim)
     # Reallocation shape: pull the early stages DOWN, push the mid-late stages UP, hold the
     # final near baseline. Expressed as ratios of C; tuned then byte-matched by a 1-D scan
     # on the early-stage shrink so the total lands within ~3% of the baseline param count.
@@ -99,12 +101,13 @@ def dseg_aware_taper(base_channels: int) -> list[int]:
             max(1, int(C * 0.70)),            # stage5 (feeds final)
             max(1, int(C * 0.50)),            # stage6 final (held ~baseline to bound refine)
         ]
-    # 1-D byte-match scan over the early-stage shrink ratio.
+    # 1-D byte-match scan over the early-stage shrink ratio (param count at the SAME
+    # latent_dim as the target, so the match is exact regardless of latent_dim).
     best, best_gap = None, None
     s = 0.40
     while s <= 0.95 + 1e-9:
         cand = schedule(s)
-        gap = abs(decoder_param_count(cand) - target)
+        gap = abs(decoder_param_count(cand, latent_dim=latent_dim) - target)
         if best_gap is None or gap < best_gap:
             best, best_gap = cand, gap
         s += 0.01
