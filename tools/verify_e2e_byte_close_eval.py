@@ -30,6 +30,16 @@ WHAT IT REUSES (search-first, named):
     advisory d_seg / d_pose / rate / score (vendored ``evaluate_decoder`` + ``compute_score``).
   * The G2 byte-close parity contract (``test_bilinear_skip_byte_close_g2.py``):
     parse-back is a fixed point (weights + latents bit-exact on re-parse).
+  * FiLM-v2 (the arm_b production run): when the checkpoint is a pose-FiLM WRAPPER
+    state dict (``decoder.*`` inner decoder + ``pose_mlp`` + ``film_resid`` + ``stored_pose``),
+    the harness AUTO-DETECTS the version and routes the byte-close + eval through the
+    DRIVER's PROVEN FiLM path (``pose_film_v2.build_archive_with_pose`` /
+    ``parse_pose_section`` / ``wrapper_sd_to_archive_decoder_sd`` / ``_FiLMEvalDecoder``) —
+    the SAME helpers ``driver._build_archive_and_eval_decoder`` uses for the in-loop
+    byte-close. NO codec is reimplemented: the additive ~1 KB pose section is appended to
+    the pristine vendored 3-section archive, and the parse-back parity additionally proves
+    the ``stored_pose`` section round-trips bit-exact. A PLAIN decoder keeps the legacy
+    (byte-identical) route — backward-compatible.
   * The byte-close path is the PRISTINE vendored 3-section archive (meta + decoder + latents),
     byte-identical to the basin's ``best_archive.bin``. The P1b export hooks (commit 460c59efc:
     ``losses.variable_level_codec.build_decoder_blob_variable_or_vendored`` /
@@ -118,6 +128,51 @@ def _load_checkpoint(ckpt_dir: Path) -> tuple[dict[str, torch.Tensor], torch.Ten
     return dec_sd, latents, meta
 
 
+# ---------------------------------------------------------------------------
+# FiLM-v2 wrapper detection (the arm_b production checkpoint is FiLM-v2)
+# ---------------------------------------------------------------------------
+# A driver ``best/`` dir written by a pose-FiLM run saves the WRAPPER state dict
+# (``best_ema_decoder.pt`` = the EMA shadow of the wrapper), NOT a bare vendored
+# decoder. The wrapper holds the vendored decoder under the ``decoder.`` submodule
+# prefix + the FiLM submodule weights + the non-trainable ``stored_pose`` buffer.
+# Detection mirrors ``driver._load_warm_start_into`` / ``_FILM_PARAM_PREFIXES``
+# EXACTLY so the harness routes identically to the production byte-close:
+#   * v1 (``pose_film.PoseFiLMHNeRVWrapper``): stem-injection FiLM -> ``pose_film.*``
+#   * v2 (``pose_film_v2.PoseFiLMHNeRVWrapperV2``): residual-rgb0 FiLM -> ``pose_mlp.*`` +
+#     ``film_resid.*`` (the arm_b production wrapper).
+# A PLAIN vendored / ConfigurableTaper decoder has NO ``decoder.`` prefix and no
+# ``stored_pose`` buffer, so ``stored_pose`` presence uniquely flags a FiLM wrapper.
+_FILM_PARAM_PREFIXES: dict[int, tuple[str, ...]] = {
+    1: ("pose_film.",),
+    2: ("pose_mlp.", "film_resid."),
+}
+
+
+def _detect_film_version(dec_sd: dict[str, torch.Tensor]) -> int | None:
+    """Return the pose-FiLM wrapper version (1 or 2) for a wrapper state dict, or
+    ``None`` for a plain vendored / ConfigurableTaper decoder (backward-compatible).
+
+    The ``stored_pose`` buffer is the unambiguous FiLM marker (a plain decoder never
+    has it); the FiLM-key prefixes then disambiguate v1 (``pose_film.``) from v2
+    (``pose_mlp.`` + ``film_resid.``). Keying on ``stored_pose`` + the prefix set is
+    the SAME signature ``driver._FILM_PARAM_PREFIXES`` / ``_load_warm_start_into`` use.
+    """
+    keys = set(dec_sd.keys())
+    if "stored_pose" not in keys:
+        return None  # plain decoder — the legacy path is unchanged
+    has_v2 = any(k.startswith("pose_mlp.") or k.startswith("film_resid.") for k in keys)
+    has_v1 = any(k.startswith("pose_film.") for k in keys)
+    if has_v2:
+        return 2
+    if has_v1:
+        return 1
+    raise ValueError(
+        "checkpoint has a stored_pose buffer but no recognized FiLM keys "
+        "(pose_mlp.* / film_resid.* for v2, pose_film.* for v1); refusing to "
+        "guess the wrapper version (NO-FAKE)."
+    )
+
+
 def _infer_dims(
     dec_sd: dict[str, torch.Tensor], latents: torch.Tensor, meta: dict[str, Any]
 ) -> tuple[int, int, int]:
@@ -125,6 +180,8 @@ def _infer_dims(
 
     ``base_channels`` is inferred from ``stem.weight`` = (C0*48, latent_dim) -> C0 = rows/48
     (the vendored decoder's channels[0] == base_channels), with meta override honored.
+    Handles BOTH a plain decoder (bare ``stem.weight``) and a FiLM wrapper (the vendored
+    stem lives under the ``decoder.stem.weight`` prefix).
     """
     latent_dim = int(meta.get("latent_dim") or latents.shape[1])
     n_pairs = int(latents.shape[0])
@@ -132,9 +189,30 @@ def _infer_dims(
     if base_channels is None:
         stem_w = dec_sd.get("stem.weight")
         if stem_w is None:
+            stem_w = dec_sd.get("decoder.stem.weight")  # FiLM-wrapper inner decoder
+        if stem_w is None:
             raise ValueError("cannot infer base_channels: meta lacks it and stem.weight absent")
         base_channels = int(stem_w.shape[0] // (6 * 8))  # C0 * base_h(6) * base_w(8)
     return latent_dim, int(base_channels), n_pairs
+
+
+def _infer_film_hidden(dec_sd: dict[str, torch.Tensor], film_version: int) -> int:
+    """Infer the FiLM ``film_hidden`` (cond_dim) from the wrapper state dict so the
+    rebuilt eval wrapper is bit-identical to the production one.
+
+    v2: ``pose_mlp.fc1.weight`` is ``(cond_dim, pose_dim=6)`` -> rows = cond_dim.
+    v1: ``pose_film`` MLP first layer ``(hidden, pose_dim)`` -> rows = hidden.
+    Defaults to the driver default (8) only when the tensor is somehow absent.
+    """
+    if film_version == 2:
+        w = dec_sd.get("pose_mlp.fc1.weight")
+        if w is not None and w.dim() == 2:
+            return int(w.shape[0])
+    else:
+        for k, v in dec_sd.items():
+            if k.startswith("pose_film.") and torch.is_tensor(v) and v.dim() == 2 and v.shape[1] == 6:
+                return int(v.shape[0])
+    return 8  # driver default (pose_film_hidden: int = 8)
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +324,182 @@ def _byte_close_and_verify_parity(
             "The codec round-trip is not a fixed point; refusing to report a score."
         )
     return archive, dec_sd_back, lat_back, status
+
+
+# ---------------------------------------------------------------------------
+# FiLM-v2 byte-close: REUSE the driver's PROVEN additive-pose-section path
+# ---------------------------------------------------------------------------
+def _film_helpers(film_version: int):
+    """Import the canonical version-aware FiLM helpers the DRIVER reuses (no codec
+    is reimplemented here — these are the exact modules ``driver._build_archive_and_
+    eval_decoder`` imports for the in-loop byte-close).
+
+    Returns (PoseFiLMWrapper, _FiLMEvalDecoder, build_archive_with_pose,
+    parse_pose_section, wrapper_sd_to_archive_decoder_sd).
+    """
+    if film_version == 2:
+        from tac.torch_vehicle.pose_film_v2 import (
+            PoseFiLMHNeRVWrapperV2 as _PoseFiLMWrapper,
+        )
+        from tac.torch_vehicle.pose_film_v2 import (
+            _FiLMEvalDecoder,
+            build_archive_with_pose,
+            parse_pose_section,
+            wrapper_sd_to_archive_decoder_sd,
+        )
+    else:
+        from tac.torch_vehicle.pose_film import (
+            PoseFiLMHNeRVWrapper as _PoseFiLMWrapper,
+        )
+        from tac.torch_vehicle.pose_film import (
+            _FiLMEvalDecoder,
+            build_archive_with_pose,
+            parse_pose_section,
+            wrapper_sd_to_archive_decoder_sd,
+        )
+    return (
+        _PoseFiLMWrapper,
+        _FiLMEvalDecoder,
+        build_archive_with_pose,
+        parse_pose_section,
+        wrapper_sd_to_archive_decoder_sd,
+    )
+
+
+def _byte_close_and_verify_parity_film(
+    vendored_bundle: Any,
+    wrapper_sd: dict[str, torch.Tensor],
+    latents: torch.Tensor,
+    meta_dict: dict[str, Any],
+    film_version: int,
+) -> tuple[bytes, dict[str, torch.Tensor], torch.Tensor, dict[str, Any]]:
+    """Byte-close a FiLM-wrapped checkpoint via the DRIVER's additive-pose-section
+    grammar (``build_archive_with_pose``), then VERIFY parse-back is a fixed point —
+    INCLUDING the additive ``stored_pose`` section round-trip.
+
+    Mirrors ``driver._build_archive_and_eval_decoder`` step (1)-(2): split the wrapper
+    state dict into the codec decoder blob (bare vendored keys + FiLM weights, via
+    ``wrapper_sd_to_archive_decoder_sd``) + the ``stored_pose`` buffer (additive pose
+    section), build ``vendored_archive + encode_pose_section``, and re-parse all 4
+    sections. The vendored codec stays PRISTINE (the pose section is strictly appended).
+
+    Returns (archive_bytes, archive_decoder_sd_back, parseback_latents, parity_status).
+    ``archive_decoder_sd_back`` carries the bare vendored keys + the FiLM keys (NOT the
+    ``decoder.`` prefix), exactly what the FiLM wrapper's eval rebuild consumes.
+    """
+    (_, _, build_archive_with_pose, parse_pose_section, wrapper_sd_to_archive_decoder_sd) = (
+        _film_helpers(film_version)
+    )
+
+    archive_decoder_sd = wrapper_sd_to_archive_decoder_sd(wrapper_sd)
+    if "stored_pose" not in wrapper_sd:
+        raise ValueError("FiLM byte-close requires a stored_pose buffer (NO-FAKE)")
+    stored_pose = wrapper_sd["stored_pose"]
+
+    def _build(md: dict[str, Any]) -> bytes:
+        return build_archive_with_pose(
+            vendored_bundle.build_archive, archive_decoder_sd, latents, md, stored_pose
+        )
+
+    archive = _build(meta_dict)
+    # The vendored parse reads only the 3 base sections (it ignores the trailing pose
+    # bytes); the additive pose section is parsed separately (the additive grammar).
+    dec_sd_back, lat_back, meta_back = vendored_bundle.parse_archive(archive)
+    pose_back = parse_pose_section(archive, vendored_bundle.parse_archive)
+
+    # Determinism (G2 Proof C): identical inputs -> byte-identical archive.
+    deterministic = archive == _build(meta_dict)
+
+    # Fixed-point (G2 Proof B): re-encode the parse-back state -> bit-exact re-parse,
+    # AND the additive pose section round-trips bit-exact.
+    arc_fp = build_archive_with_pose(
+        vendored_bundle.build_archive, dec_sd_back, lat_back, meta_dict, pose_back
+    )
+    sd_fp, lat_fp, _ = vendored_bundle.parse_archive(arc_fp)
+    pose_fp = parse_pose_section(arc_fp, vendored_bundle.parse_archive)
+    weights_fixed_point = all(
+        torch.equal(dec_sd_back[k], sd_fp[k]) for k in dec_sd_back if torch.is_tensor(dec_sd_back[k])
+    )
+    latents_fixed_point = bool(torch.equal(lat_back, lat_fp))
+    pose_present = pose_back is not None and pose_fp is not None
+    pose_fixed_point = bool(pose_present and torch.equal(pose_back, pose_fp))
+
+    # Key parity: the parse-back decoder blob carries EXACTLY the archive decoder keys
+    # (the bare vendored keys + the FiLM keys; the stored_pose buffer is in the pose
+    # section, NOT the blob, so it is excluded here by construction).
+    keys_match = set(dec_sd_back.keys()) == {
+        k for k in archive_decoder_sd if torch.is_tensor(archive_decoder_sd[k])
+    }
+
+    status = {
+        "film_version": int(film_version),
+        "build_deterministic": bool(deterministic),
+        "weights_fixed_point": bool(weights_fixed_point),
+        "latents_fixed_point": bool(latents_fixed_point),
+        "pose_section_present": bool(pose_present),
+        "pose_section_fixed_point": bool(pose_fixed_point),
+        "keys_match": bool(keys_match),
+        "meta_roundtrip_base_channels": int(meta_back.get("base_channels", -1)),
+        "parity_ok": bool(
+            deterministic
+            and weights_fixed_point
+            and latents_fixed_point
+            and pose_fixed_point
+            and keys_match
+        ),
+    }
+    if not status["parity_ok"]:
+        raise RuntimeError(
+            f"FiLM byte-close parse-back parity FAILED (NO-FAKE): {status}. "
+            "The additive-pose codec round-trip is not a fixed point; refusing to report a score."
+        )
+    return archive, dec_sd_back, lat_back, status
+
+
+def _build_film_eval_decoder(
+    archive_decoder_sd: dict[str, torch.Tensor],
+    parsed_pose: torch.Tensor,
+    latent_dim: int,
+    base_channels: int,
+    n_pairs: int,
+    film_version: int,
+    film_hidden: int,
+    taper_channels: list[int] | None,
+    device: torch.device,
+) -> nn.Module:
+    """Rebuild the FiLM wrapper + cursor eval adapter from the PARSE-BACK blob, EXACTLY
+    as ``driver._build_archive_and_eval_decoder`` step (3) does, so the harness eval
+    renders the SAME FiLM-conditioned frames the inflate path produces (byte-closed
+    faithful). The FiLM keys keep their wrapper prefixes; the rest are the bare vendored
+    decoder keys.
+    """
+    (PoseFiLMWrapper, _FiLMEvalDecoder, _, _, _) = _film_helpers(film_version)
+    prefixes = _FILM_PARAM_PREFIXES[film_version]
+    film_sd = {
+        k: v for k, v in archive_decoder_sd.items() if any(k.startswith(p) for p in prefixes)
+    }
+    dec_sd = {
+        k: v for k, v in archive_decoder_sd.items() if not any(k.startswith(p) for p in prefixes)
+    }
+    # The inner vendored decoder — vendored (DEFAULT) or the configurable taper (the
+    # v2 wrapper wraps a ConfigurableTaperHNeRVDecoder when --taper-channels is given).
+    vendored = _build_decoder(latent_dim, base_channels, taper_channels, device)
+    vendored.load_state_dict({k: v.to(device) for k, v in dec_sd.items()})
+    # v1 + v2 share the (decoder, *, n_pairs, film_hidden) constructor signature.
+    wrapper = PoseFiLMWrapper(vendored, n_pairs=n_pairs, film_hidden=film_hidden).to(device)
+    # Load the FiLM submodule weights over the freshly-built (identity-init) FiLM,
+    # keeping the vendored decoder keys already loaded (strict=False: the merged dict
+    # is the FULL wrapper state, no missing/unexpected in practice).
+    wrapper.load_state_dict(
+        {**wrapper.state_dict(), **{k: v.to(device) for k, v in film_sd.items()}},
+        strict=False,
+    )
+    if parsed_pose is not None:
+        wrapper.set_stored_pose(parsed_pose.to(device))
+    wrapper.eval()
+    eval_dec = _FiLMEvalDecoder(wrapper)
+    eval_dec.eval()  # resets the cursor to pair 0
+    return eval_dec
 
 
 # ---------------------------------------------------------------------------
@@ -384,6 +638,13 @@ def run(
     latent_dim, base_channels, n_pairs = _infer_dims(dec_sd, latents, meta)
     decoder_params = int(sum(v.numel() for v in dec_sd.values() if torch.is_tensor(v)))
 
+    # FiLM-wrapper detection: a pose-FiLM run (the arm_b production run is FiLM-v2)
+    # saves the WRAPPER state dict (decoder.* + FiLM weights + stored_pose). When
+    # detected, route the byte-close + eval through the DRIVER's proven additive-pose
+    # path; a plain decoder keeps the legacy (byte-identical) route.
+    film_version = _detect_film_version(dec_sd)
+    film_hidden = _infer_film_hidden(dec_sd, film_version) if film_version else None
+
     meta_dict = {
         "n_pairs": n_pairs,
         "latent_dim": latent_dim,
@@ -391,13 +652,21 @@ def run(
         "eval_size": [_EVAL_H, _EVAL_W],
     }
 
+    film_tag = f"v{film_version}(hidden={film_hidden})" if film_version else "off"
     print(f"[ckpt] {ckpt_dir}  latents={tuple(latents.shape)}  base_ch={base_channels}  "
-          f"params={decoder_params}  {_AUTHORITY}", flush=True)
+          f"params={decoder_params}  film={film_tag}  {_AUTHORITY}", flush=True)
 
-    # 1+2. Byte-close (ALL latents) + parse-back parity (G2 contract).
-    archive, dec_sd_back, lat_back, parity = _byte_close_and_verify_parity(
-        vb, dec_sd, latents, meta_dict
-    )
+    # 1+2. Byte-close (ALL latents) + parse-back parity (G2 contract). The FiLM route
+    # uses the additive-pose-section grammar (build_archive_with_pose) and additionally
+    # verifies the stored_pose section round-trips bit-exact.
+    if film_version:
+        archive, dec_sd_back, lat_back, parity = _byte_close_and_verify_parity_film(
+            vb, dec_sd, latents, meta_dict, film_version
+        )
+    else:
+        archive, dec_sd_back, lat_back, parity = _byte_close_and_verify_parity(
+            vb, dec_sd, latents, meta_dict
+        )
     bin_bytes = len(archive)
     section_bytes = _section_byte_breakdown(archive)
     print(f"[byte-close] 0.bin={bin_bytes} B  parity_ok={parity['parity_ok']}  "
@@ -414,12 +683,24 @@ def run(
           f"runtime={runtime_files}  dir={packet_dir}", flush=True)
 
     # 4. Authority-advisory eval on the PARSE-BACK decoder (the contest-visible artifact).
-    eval_dec = _build_decoder(latent_dim, base_channels, taper_channels, torch.device("cpu"))
-    missing, unexpected = eval_dec.load_state_dict(dict(dec_sd_back), strict=False)
-    if missing or unexpected:
-        raise RuntimeError(
-            f"parse-back decoder load mismatch (NO-FAKE): missing={missing} unexpected={unexpected}"
+    if film_version:
+        # FiLM route: rebuild the wrapper + cursor eval adapter from the parse-back blob
+        # + the parsed stored-pose section (the SAME FiLM-conditioned render inflate.py
+        # produces). REUSES the driver's step-(3) logic via _build_film_eval_decoder.
+        (_, _, _, parse_pose_section, _) = _film_helpers(film_version)
+        parsed_pose = parse_pose_section(archive, vb.parse_archive)
+        eval_dec = _build_film_eval_decoder(
+            dec_sd_back, parsed_pose, latent_dim, base_channels, n_pairs,
+            film_version, int(film_hidden), taper_channels, torch.device("cpu"),
         )
+    else:
+        eval_dec = _build_decoder(latent_dim, base_channels, taper_channels, torch.device("cpu"))
+        missing, unexpected = eval_dec.load_state_dict(dict(dec_sd_back), strict=False)
+        if missing or unexpected:
+            raise RuntimeError(
+                f"parse-back decoder load mismatch (NO-FAKE): missing={missing} "
+                f"unexpected={unexpected}"
+            )
 
     eval_max = n_pairs if max_pairs is None else min(int(max_pairs), n_pairs)
     eval_latents = lat_back[:eval_max]
@@ -453,6 +734,8 @@ def run(
         "latent_dim": latent_dim,
         "base_channels": base_channels,
         "taper_channels": list(taper_channels) if taper_channels else None,
+        "pose_film_version": film_version,  # None (plain) | 1 (stem) | 2 (residual-rgb0)
+        "pose_film_hidden": film_hidden,
         "decoder_params": decoder_params,
         # byte accounting (the rate term)
         "archive_bin_bytes": bin_bytes,

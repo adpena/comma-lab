@@ -239,3 +239,208 @@ def test_cli_main_writes_report_json(tmp_path):
     assert blob["archive_bin_bytes"] == 89_136
     assert blob["parseback_parity"]["parity_ok"] is True
     assert "score_S" in blob and blob["promotion_claim"] is False
+    # plain basin -> NO FiLM (backward-compat: the legacy route).
+    assert blob["pose_film_version"] is None
+    assert blob["pose_film_hidden"] is None
+
+
+# ===========================================================================
+# FiLM-v2 wrapper support (the arm_b production run is FiLM-v2) — the P3 fix
+# ===========================================================================
+# The arm_b run saves the WRAPPER state dict (decoder.* inner decoder + pose_mlp +
+# film_resid + stored_pose), NOT a bare vendored decoder. The harness must AUTO-DETECT
+# this and route the byte-close + eval through the driver's PROVEN FiLM path. A real
+# arm_b best/ may not exist yet (the run just started), so we construct a MINIMAL FiLM-v2
+# wrapper checkpoint fixture from REAL modules with identity/zero-init FiLM (the renders
+# are bit-equal to the plain vendored decoder) to prove the FiLM-v2 LOAD + byte-close
+# path works. Plain-decoder regression is preserved by the tests above.
+
+
+def _build_filmv2_fixture(ckpt_dir: Path, *, n_pairs: int = 8, base_channels: int = 20,
+                          latent_dim: int = 28, film_hidden: int = 8, identity: bool = True):
+    """Write a minimal-but-REAL FiLM-v2 wrapper checkpoint dir (best_ema_decoder.pt =
+    the WRAPPER state dict, best_ema_latents.pt = a (n_pairs, latent_dim) tensor,
+    best_meta.json). Uses the REAL vendored HNeRVDecoder + PoseFiLMHNeRVWrapperV2.
+
+    ``identity=True`` zero-inits the pose_mlp so cond=0 and the residual FiLM is exactly
+    zero -> the wrapper's renders are bit-equal to the plain vendored decoder (the NO-FAKE
+    byte-equal-render contract). Returns the wrapper for render-parity assertions.
+    """
+    from tac.torch_vehicle.pose_film_v2 import PoseFiLMHNeRVWrapperV2
+    from tac.torch_vehicle.vendored_imports import import_vendored
+
+    model_mod = import_vendored("model")
+    torch.manual_seed(0)
+    vendored = model_mod.HNeRVDecoder(
+        latent_dim=latent_dim, base_channels=base_channels, eval_size=(384, 512)
+    )
+    wrapper = PoseFiLMHNeRVWrapperV2(vendored, n_pairs=n_pairs, film_hidden=film_hidden)
+    if identity:
+        # zero the pose_mlp too -> cond == 0; film_resid is already zero-init -> exact identity.
+        for p in wrapper.pose_mlp.parameters():
+            torch.nn.init.zeros_(p)
+    wrapper.set_stored_pose(torch.randn(n_pairs, 6))  # arbitrary stored pose (range-coded ~bytes)
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(wrapper.state_dict(), ckpt_dir / "best_ema_decoder.pt")
+    torch.save(torch.randn(n_pairs, latent_dim), ckpt_dir / "best_ema_latents.pt")
+    (ckpt_dir / "best_meta.json").write_text(json.dumps({
+        "base_channels": base_channels, "latent_dim": latent_dim,
+        "d_seg": 0.0, "d_pose": 0.0, "score": 0.0, "archive_bytes": 0,
+        "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+    }))
+    return wrapper
+
+
+def test_detect_film_version_plain_vs_v2_vs_v1():
+    """Detection: plain -> None; v2 -> 2 (pose_mlp+film_resid); v1 -> 1 (pose_film)."""
+    plain = {"stem.weight": torch.zeros(960, 28), "rgb_1.weight": torch.zeros(3, 10, 1, 1)}
+    assert _h._detect_film_version(plain) is None
+    v2 = {
+        "decoder.stem.weight": torch.zeros(960, 28),
+        "pose_mlp.fc1.weight": torch.zeros(8, 6),
+        "film_resid.proj.weight": torch.zeros(10, 10, 1, 1),
+        "stored_pose": torch.zeros(600, 6),
+    }
+    assert _h._detect_film_version(v2) == 2
+    assert _h._infer_film_hidden(v2, 2) == 8
+    v1 = {
+        "decoder.stem.weight": torch.zeros(720, 28),
+        "pose_film.0.weight": torch.zeros(16, 6),
+        "stored_pose": torch.zeros(600, 6),
+    }
+    assert _h._detect_film_version(v1) == 1
+    assert _h._infer_film_hidden(v1, 1) == 16
+    # a stored_pose buffer with NO recognized FiLM keys is a refusal (NO-FAKE).
+    with pytest.raises(ValueError):
+        _h._detect_film_version({"decoder.stem.weight": torch.zeros(960, 28),
+                                 "stored_pose": torch.zeros(4, 6)})
+
+
+@requires_vendored
+def test_infer_dims_handles_filmv2_wrapper_prefix(tmp_path):
+    """base_channels infers from decoder.stem.weight (the FiLM-wrapper inner-decoder prefix)."""
+    _build_filmv2_fixture(tmp_path / "ck", n_pairs=8, base_channels=20, latent_dim=28)
+    dec_sd, latents, meta = _h._load_checkpoint(tmp_path / "ck")
+    assert _h._detect_film_version(dec_sd) == 2
+    # even with meta SILENT on base_channels, infer from decoder.stem.weight.
+    ld, bc, n = _h._infer_dims(dec_sd, latents, meta={})
+    assert (ld, bc, n) == (28, 20, 8)
+
+
+@requires_vendored
+def test_filmv2_byte_close_parity_ok_including_pose_section(tmp_path):
+    """A FiLM-v2 wrapped checkpoint BYTE-CLOSES with parity_ok=True — the decoder/latents
+    fixed-point AND the additive stored_pose section round-trips bit-exact (the P3 fix)."""
+    from tac.torch_vehicle.driver import import_vendored_bundle
+
+    _build_filmv2_fixture(tmp_path / "ck", n_pairs=8, base_channels=20, latent_dim=28)
+    vb = import_vendored_bundle()
+    dec_sd, latents, meta = _h._load_checkpoint(tmp_path / "ck")
+    fv = _h._detect_film_version(dec_sd)
+    assert fv == 2
+    ld, bc, n = _h._infer_dims(dec_sd, latents, meta)
+    meta_dict = {"n_pairs": n, "latent_dim": ld, "base_channels": bc, "eval_size": [384, 512]}
+    archive, dec_back, lat_back, parity = _h._byte_close_and_verify_parity_film(
+        vb, dict(dec_sd), latents, meta_dict, fv
+    )
+    assert parity["parity_ok"] is True
+    assert parity["film_version"] == 2
+    assert parity["pose_section_present"] is True
+    assert parity["pose_section_fixed_point"] is True
+    assert parity["weights_fixed_point"] and parity["latents_fixed_point"] and parity["keys_match"]
+    # the archive carries an APPENDED pose section beyond the 3 vendored sections.
+    bd = _h._section_byte_breakdown(archive)
+    assert bd["trailing"] > 0, bd  # the additive PFLM pose section
+    # the parse-back blob carries the bare vendored keys + the FiLM keys (NOT decoder.*).
+    assert any(k.startswith("pose_mlp.") for k in dec_back)
+    assert any(k.startswith("film_resid.") for k in dec_back)
+    assert "stored_pose" not in dec_back  # the buffer lives in the pose section, not the blob
+    assert not any(k.startswith("decoder.") for k in dec_back)
+
+
+@requires_vendored
+def test_filmv2_eval_decoder_rebuilds_and_renders(tmp_path):
+    """The FiLM-v2 eval decoder rebuilds from the parse-back blob + parsed pose and
+    renders (B, 2, 3, 384, 512) — the cursor adapter the driver's exact_eval consumes."""
+    from tac.torch_vehicle.driver import import_vendored_bundle
+
+    _build_filmv2_fixture(tmp_path / "ck", n_pairs=8, base_channels=20, latent_dim=28)
+    vb = import_vendored_bundle()
+    dec_sd, latents, meta = _h._load_checkpoint(tmp_path / "ck")
+    fv = _h._detect_film_version(dec_sd)
+    ld, bc, n = _h._infer_dims(dec_sd, latents, meta)
+    fh = _h._infer_film_hidden(dec_sd, fv)
+    meta_dict = {"n_pairs": n, "latent_dim": ld, "base_channels": bc, "eval_size": [384, 512]}
+    archive, dec_back, lat_back, _ = _h._byte_close_and_verify_parity_film(
+        vb, dict(dec_sd), latents, meta_dict, fv
+    )
+    (_, _, _, parse_pose_section, _) = _h._film_helpers(fv)
+    parsed_pose = parse_pose_section(archive, vb.parse_archive)
+    assert parsed_pose is not None and parsed_pose.shape == (n, 6)
+    eval_dec = _h._build_film_eval_decoder(
+        dec_back, parsed_pose, ld, bc, n, fv, fh, None, torch.device("cpu")
+    )
+    eval_dec.eval()  # resets cursor to pair 0
+    out = eval_dec(lat_back[:2])
+    assert tuple(out.shape) == (2, 2, 3, 384, 512), out.shape
+
+
+@requires_vendored
+def test_filmv2_identity_init_render_is_bit_equal_to_plain(tmp_path):
+    """NO-FAKE fidelity: an identity/zero-init FiLM-v2 wrapper renders BIT-EQUAL to the
+    plain vendored decoder (f1 always seg-clean; f0 bit-equal at zero-residual init)."""
+    from tac.torch_vehicle.vendored_imports import import_vendored
+
+    wrapper = _build_filmv2_fixture(tmp_path / "ck", n_pairs=4, base_channels=20,
+                                    latent_dim=28, identity=True)
+    model_mod = import_vendored("model")
+    # The wrapper holds the SAME vendored decoder; compare its forward to the inner one.
+    inner = wrapper.decoder.eval()
+    latents = torch.randn(4, 28)
+    with torch.no_grad():
+        plain_out = inner(latents)
+        film_none = wrapper.eval()(latents, None)
+        film_idx = wrapper(latents, torch.arange(4))
+    assert torch.equal(film_none, plain_out)  # idx=None -> exact vendored path
+    assert torch.equal(film_idx[:, 1], plain_out[:, 1])  # f1 seg-clean, pose-invariant
+    assert torch.equal(film_idx[:, 0], plain_out[:, 0])  # f0 bit-equal at identity init
+    _ = model_mod  # keep the import meaningful
+
+
+@requires_vendored
+def test_filmv2_full_run_end_to_end_no_scorer(tmp_path, monkeypatch):
+    """The FULL harness ``run()`` on a FiLM-v2 fixture byte-closes + parity_ok + assembles
+    the contest packet + reports film metadata, WITHOUT needing the frozen scorer.
+
+    We stub the authority eval (the scorer/GT video may be absent in CI) so the test
+    exercises the FiLM-v2 LOAD + byte-close + packet-assembly + report path deterministically.
+    The byte-close + parity (the P3 fix surface) is REAL; only the d_seg/d_pose numbers
+    are stubbed (a separate scorer-gated test covers the real eval on the plain basin).
+    """
+    _build_filmv2_fixture(tmp_path / "ck", n_pairs=8, base_channels=20, latent_dim=28)
+
+    def _stub_eval(eval_decoder, eval_latents, archive_bytes, video_path, rate_denom):
+        # render once to prove the FiLM eval decoder is callable (NO-FAKE: real forward).
+        eval_decoder.eval()
+        out = eval_decoder(eval_latents[:2])
+        assert tuple(out.shape) == (2, 2, 3, 384, 512)
+        return {"seg_distortion": 0.001, "pose_distortion": 0.0005,
+                "rate": archive_bytes / rate_denom, "score": 0.0}
+
+    monkeypatch.setattr(_h, "_authority_exact_eval", _stub_eval)
+    report = _h.run(
+        tmp_path / "ck", max_pairs=2, taper_channels=None, rate_denom=None,
+        keep_packet=True, packet_dir=tmp_path / "pkt",
+    )
+    assert report["pose_film_version"] == 2
+    assert report["pose_film_hidden"] == 8
+    assert report["parseback_parity"]["parity_ok"] is True
+    assert report["parseback_parity"]["pose_section_fixed_point"] is True
+    assert report["archive_zip_bytes"] > report["archive_bin_bytes"]  # zip overhead
+    assert report["authority"].startswith("[contest-CPU advisory]")
+    assert report["promotion_claim"] is False
+    # the assembled packet is a runnable contest submission_dir.
+    pkt = Path(report["packet_dir"])
+    assert (pkt / "archive.zip").exists() and (pkt / "inflate.sh").exists()
+    with zipfile.ZipFile(pkt / "archive.zip") as zf:
+        assert zf.namelist() == ["0.bin"]
