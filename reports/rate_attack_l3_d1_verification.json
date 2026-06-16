@@ -1,0 +1,115 @@
+{
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "basin": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/best",
+  "decoder_n_tensors": 28,
+  "latents_shape": [
+    600,
+    28
+  ],
+  "part_D_rate_attack_variable_level_codec": {
+    "vendored_decoder_bytes": 73469,
+    "variable_decoder_bytes": 65534,
+    "delta_bytes": -7935,
+    "delta_pct": -10.800473669166587,
+    "variable_format_emitted": true,
+    "default_preserving_uniform_byte_identical": true,
+    "roundtrip_exact_variable_decoder": true,
+    "roundtrip_max_abs_err": 0.0,
+    "n_tensors": 28,
+    "levels_histogram": {
+      "64": 1,
+      "66": 1,
+      "68": 1,
+      "71": 1,
+      "73": 1,
+      "75": 1,
+      "78": 1,
+      "80": 1,
+      "82": 1,
+      "85": 1,
+      "87": 1,
+      "89": 1,
+      "92": 1,
+      "94": 1,
+      "96": 1,
+      "99": 1,
+      "101": 1,
+      "103": 1,
+      "106": 1,
+      "108": 1,
+      "111": 1,
+      "113": 1,
+      "115": 1,
+      "118": 1,
+      "120": 1,
+      "122": 1,
+      "125": 1,
+      "127": 1
+    },
+    "vendored_blob_sha16": "eff0d374daddb82c",
+    "variable_blob_sha16": "dec95459a98b4899",
+    "sensitivity_allocation_note": "ALLOCATION driven by a code-only RMS-energy PROXY (not the scorer-measured gate-2 d_seg spine); the BYTE deltas are real, production wires the real sensitivity map."
+  },
+  "part_E_l3_finishing_kit": {
+    "disabled": {
+      "section_bytes": 0,
+      "is_zero_byte": true,
+      "parses_to_disabled": true
+    },
+    "pr98_residual": {
+      "section_bytes": 54,
+      "deterministic_roundtrip_byte_identical": true,
+      "is_pure_bias": true,
+      "note": "fixed 54-byte section regardless of values (PR98 = scale==1 bias-only)"
+    },
+    "t10_affine": {
+      "section_bytes": 54,
+      "deterministic_roundtrip_byte_identical": true,
+      "scale_roundtrips": true,
+      "bias_roundtrips": true,
+      "note": "same fixed 54-byte section as PR98 (scale!=1 affine)"
+    },
+    "s12_certification": {
+      "section_bytes_vs_pr98": 0,
+      "adds_zero_bytes_over_pr98": true,
+      "certification_flag_roundtrips": true,
+      "note": "S12 rides as a 1-bit flag in the existing section header (0 extra bytes)"
+    },
+    "post_round_application": {
+      "disabled_is_noop_same_object": true,
+      "pr98_changes_frames": true,
+      "pr98_output_is_uint8": true,
+      "pr98_output_in_range": true,
+      "t10_changes_frames": true,
+      "t10_output_is_uint8": true,
+      "t10_output_in_range": true,
+      "applied_per_frame_parity": "frame_0 (even idx) and frame_1 (odd idx) indexed separately"
+    }
+  },
+  "part_F_d1_cross_pair_latent_dedup": {
+    "vendored_latents_bytes": 15574,
+    "best_framed_candidate_bytes": 15587,
+    "best_framed_format": "FRAMED_DELTA",
+    "adapter_emitted_bytes": 15574,
+    "adapter_emitted_framed_format": false,
+    "delta_bytes_adapter_vs_vendored": 0,
+    "delta_pct_adapter_vs_vendored": 0.0,
+    "default_preserving_no_win_byte_identical": true,
+    "n_pairs": 600,
+    "latent_dim": 28,
+    "n_unique_quantized_rows": 600,
+    "exact_dedup_collapse_ratio": 1.0,
+    "delta_symbol_entropy_bits": 7.258653920816597,
+    "delta_symbol_entropy_floor_bytes": 15243,
+    "vendored_pct_above_entropy_floor": 2.1714885521222858,
+    "svd_ranks_for_99_9pct_energy": 28,
+    "svd_is_low_rank": false,
+    "structural_headroom_verdict": "EXHAUSTED: near entropy floor + full-rank + no exact dups => no lossless cross-pair candidate (dedup/codebook/low-rank/AR) beats vendored on these latents",
+    "roundtrip_exact_deployed_latents": true,
+    "roundtrip_max_abs_err_deployed": 0.0,
+    "roundtrip_max_abs_err_framed_core": 0.0,
+    "vendored_blob_sha16": "4d9c983969a79011",
+    "adapter_blob_sha16": "4d9c983969a79011"
+  }
+}
