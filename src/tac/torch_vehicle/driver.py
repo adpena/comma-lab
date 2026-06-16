@@ -468,6 +468,26 @@ class TorchVehicleConfig:
     # current-v2), NOT a forced default. NOT an authority/score knob; the exact d_seg/d_pose
     # that pick BEST still run the full scorer on the CPU authority.
     pose_film_trunk_stopgrad: bool = False
+    # FiLM-v2 rgb_0 DECOUPLING REFINEMENT (the "pose can train the frame-0 head too" fix).
+    # ``pose_film_trunk_stopgrad`` (above) restores ALL non-FiLM params — INCLUDING the
+    # ``rgb_0`` head — to their seg-only grad, which FREEZES ``rgb_0`` w.r.t. the pose
+    # objective. But the contest SegNet reads ONLY frame-1 (``rgb_1``), so d_seg is
+    # INDEPENDENT of ``rgb_0`` (``∂d_seg/∂(rgb_0 params) = 0`` exactly — rgb_0 only writes
+    # f0, which SegNet never sees). Therefore the POSE loss CAN train ``rgb_0`` (the
+    # frame-0 head, which IS pose-conditioned via the FiLM residual on its input) WITHOUT
+    # any d_seg cost — giving the pose objective strictly MORE capacity (the rgb_0 head +
+    # the FiLM path) to hold d_pose, while keeping the EXACT ∂d_seg/∂(pose-objective)=0
+    # decoupling (trunk + skips + blocks + refine + rgb_1 + latents stay seg-only). DEFAULT
+    # FALSE → ``rgb_0`` is restored to seg-only exactly as the base trunk-stopgrad does
+    # (byte-identical to the trunk-stopgrad A/B today). When TRUE (requires
+    # ``pose_film_trunk_stopgrad=True``), ``rgb_0``'s params are EXCLUDED from the seg-only-
+    # restore set, so the pose backward's contribution to them is KEPT → pose trains
+    # {FiLM path + rgb_0}, seg trains {trunk + skips + blocks + refine + rgb_1 + latents}.
+    # PROOF (test): ∂d_seg/∂(pose-objective) STILL = 0 (trunk+latents+rgb_1 grad bit-
+    # identical to seg-only) AND rgb_0 now carries the pose gradient (was zero under the
+    # base trunk-stopgrad). NOT an authority/score knob; the exact d_seg/d_pose that pick
+    # BEST still run the full scorer on the CPU authority.
+    pose_film_rgb0_pose_trainable: bool = False
     # Track-A DISTORTION finishing-kit (PR98 bias / T10 affine / S12 mask) — an
     # inflate-side, zero/near-zero-byte postproc on the rendered frames + a ~54-byte
     # distortion archive section. DEFAULT None → NO kit, NO section, BYTE-IDENTICAL
@@ -581,6 +601,42 @@ class TorchVehicleConfig:
     # (the run is resuming its OWN trajectory, not re-priming). NOT consulted on any non-stage-0
     # carry path. Byte-identical when None.
     warm_start_dir: Path | None = None
+    # KD-WARM-START (the wall-clock resolution — the bind-all linchpin). DEFAULT None →
+    # byte-identical (no KD; the stage-0 init is the random/warm_start path above). The full
+    # PR95 29k-epoch from-scratch curriculum is ~weeks on MPS — INFEASIBLE. The basin
+    # (stage-1 CE) captures most of that VALUE, but the solved-taper's DIFFERENT channel
+    # shapes BLOCK a strict-decoder warm-start of the vendored basin. KD-warm-start resolves
+    # it: when set to a ``best/`` dir holding the converged VENDORED-taper basin's
+    # ``best_ema_decoder.pt`` + ``best_ema_latents.pt`` AND ``taper_channels`` is set (the
+    # student is the solved taper), a FRESH run (no resume checkpoint):
+    #   * LATENTS: loads the basin latents (n_pairs, latent_dim) DIRECTLY as the stage-0 init
+    #     (taper-INDEPENDENT — only the decoder channels change), and
+    #   * DECODER: builds a FROZEN teacher = the basin's vendored-taper decoder, then runs a
+    #     KD WARM-UP phase (the first ``kd_warm_epochs`` of stage 0) whose loss is the
+    #     frame-MSE between the student (solved-taper) frames and the teacher frames rendered
+    #     on the SAME latents — distilling the basin's rendered pairs into the re-tapered
+    #     student. After the warm-up the normal score-aware curriculum continues from the
+    #     distilled student.
+    # REQUIRES ``taper_channels`` set (the student is the re-taper; a same-taper warm-start
+    # should use ``warm_start_dir`` directly, no KD needed) and a matching ``base_channels``
+    # / ``latent_dim`` (the teacher load is strict). Mutually exclusive with
+    # ``warm_start_dir`` (two distinct stage-0 init sources). Resume always wins (a run that
+    # owns a checkpoint continues its own trajectory). Byte-identical when None.
+    kd_warm_start_dir: Path | None = None
+    # KD warm-up phase length: the number of stage-0 epochs that run the frame-MSE
+    # distillation (the basin teacher → solved-taper student) BEFORE the normal score-aware
+    # curriculum continues. Only consulted when ``kd_warm_start_dir`` is set. Must be >= 1
+    # (the phase is a PREFIX of stage 0; 0 would be a no-op KD that should just be a plain
+    # warm-start) and <= stage-0 epochs (else the whole of stage 0 is KD with no score-aware
+    # continuation — refused so the bind-all contract holds).
+    kd_warm_epochs: int = 300
+    # KD warm-up learning rate (the distillation AdamW lr). Only consulted when
+    # ``kd_warm_start_dir`` is set. Defaults to a moderate fine-tune lr.
+    kd_warm_lr: float = 1e-3
+    # KD warm-up: co-train the (shared) latents during distillation. DEFAULT True (the
+    # student adapts the code to its own taper while chasing the teacher frames, recomputed
+    # each step from the current latents). Only consulted when ``kd_warm_start_dir`` is set.
+    kd_warm_train_latents: bool = True
     # EMA WARMUP (the EMA-shadow-lag fix for SHORT runs; sister of the capstone curriculum fix).
     # DEFAULT False → the EMA decay is the constant ``spec.ema_decay`` every step (byte-identical
     # legacy path). The constant 0.999 has a ~1000-step window; on a short fine-tune (≤ a few
@@ -670,6 +726,18 @@ class TorchVehicleConfig:
                     "with a separable pose cotangent); the non-split path computes both "
                     "heads in one fused graph (no separable pose gradient to mask)."
                 )
+        if self.pose_film_rgb0_pose_trainable and not self.pose_film_trunk_stopgrad:
+            # The rgb_0-decoupling refinement only EXISTS as a modification of the
+            # trunk-stopgrad seg-only-restore set (it EXCLUDES rgb_0 from that set). With
+            # the fused backward (trunk-stopgrad OFF) there is no separate seg-only-restore
+            # to refine — the pose grad already flows into rgb_0 (and everything else).
+            # Refuse a mis-config so the flag can never silently no-op.
+            raise ValueError(
+                "pose_film_rgb0_pose_trainable requires pose_film_trunk_stopgrad=True: it "
+                "refines the trunk-stopgrad seg-only-restore set by EXCLUDING rgb_0 (so the "
+                "pose loss trains the frame-0 head, which SegNet never reads). With the "
+                "fused backward there is no seg-only-restore set to refine."
+            )
         if int(self.pose_grad_every_k) < 1:
             raise ValueError(
                 f"pose_grad_every_k must be >= 1 (1 = compute pose every epoch = "
@@ -732,11 +800,50 @@ class TorchVehicleConfig:
                     "taper_channels final stage must be >= 2 (the refine block uses "
                     f"final//2 as its width); got {self.taper_channels[-1]}"
                 )
-            if self.pose_film_enabled:
+            # taper + FiLM COMPOSITION (the bind-all production combo: solved taper +
+            # FiLM-v2 pose decouple). The FiLM-v2 wrapper (``PoseFiLMHNeRVWrapperV2``) wraps
+            # the INNER decoder via ``.decoder`` and reads only its public surface
+            # (``channels[-1]`` / ``stem`` / ``blocks`` / ``skips`` / ``ps`` / ``refine`` /
+            # ``rgb_0`` / ``rgb_1`` / ``base_h`` / ``base_w``) — ALL of which the
+            # ``ConfigurableTaperHNeRVDecoder`` exposes identically to the vendored decoder —
+            # so v2 composes with the taper carrier cleanly (``_new_decoder`` already wraps
+            # whatever ``_new_vendored_decoder`` builds, taper or not). v1 stem-injection is
+            # NOT supported on a taper (it injects on the shared stem channel ``channels[0]``
+            # and feeds both heads — untested on a re-taper AND it couples d_pose into d_seg,
+            # the v1 instability v2 fixes), so taper + FiLM is restricted to v2.
+            if self.pose_film_enabled and int(self.pose_film_version) != 2:
                 raise ValueError(
-                    "taper_channels requires pose_film_enabled=False: the configurable-taper "
-                    "carrier has no FiLM wrapper here (combine them as a separate step)."
+                    "taper_channels + pose_film requires pose_film_version=2: the v2 "
+                    "residual-rgb0 wrapper composes with the configurable-taper carrier "
+                    "(it reads only the decoder's public surface); v1 stem-injection is not "
+                    "supported on a re-taper (set pose_film_version=2 or disable FiLM)."
                 )
+        if self.kd_warm_start_dir is not None:
+            self.kd_warm_start_dir = Path(self.kd_warm_start_dir)
+            # KD-warm-start is the RE-TAPER warm-start path: it REQUIRES taper_channels (the
+            # student is the solved taper; a same-taper warm-start uses warm_start_dir
+            # directly with no KD). Mutually exclusive with warm_start_dir (two distinct
+            # stage-0 init sources for the SAME stage-0 decoder/latents).
+            if self.taper_channels is None:
+                raise ValueError(
+                    "kd_warm_start_dir requires taper_channels (the student is the solved "
+                    "re-taper that the basin teacher is distilled into; a same-taper "
+                    "warm-start should use warm_start_dir directly — no KD needed)."
+                )
+            if self.warm_start_dir is not None:
+                raise ValueError(
+                    "kd_warm_start_dir and warm_start_dir are mutually exclusive: both set "
+                    "the stage-0 init, by DIFFERENT mechanisms (KD distillation of the "
+                    "basin into a re-taper vs a strict same-taper decoder load). Use exactly "
+                    "one."
+                )
+            if int(self.kd_warm_epochs) < 1:
+                raise ValueError(
+                    f"kd_warm_epochs must be >= 1 (the KD warm-up is a non-empty PREFIX of "
+                    f"stage 0); got {self.kd_warm_epochs}"
+                )
+            if float(self.kd_warm_lr) <= 0.0:
+                raise ValueError(f"kd_warm_lr must be > 0.0; got {self.kd_warm_lr}")
         self.out_dir = Path(self.out_dir)
 
 
@@ -1020,6 +1127,81 @@ class TorchVehicleDriver:
             )
         return nn.Parameter(lat.detach().clone().to(self.train_device))
 
+    # -- KD warm-start (the wall-clock resolution: distill the basin into the re-taper) --
+    def _run_kd_warm_up(self, rt: _StageRuntime, spec: StageSpec) -> None:
+        """Run the KD WARM-UP phase: distill the FROZEN basin teacher (the converged
+        VENDORED-taper decoder from ``cfg.kd_warm_start_dir``) into the re-tapered student
+        (``rt.decoder``) on the (directly warm-started) latents (``rt.latents``), for
+        ``cfg.kd_warm_epochs`` epochs of frame-MSE distillation. After the distillation the
+        student's EMA shadow is RE-SYNCED to the distilled state (so the shadow tracks the
+        distilled student, not the random init it deep-copied at ``_build_stage_runtime``).
+
+        The teacher is the basin's OWN architecture (the vendored taper — the basin had no
+        ``taper_channels``), so it is the plain vendored ``HNeRVDecoder`` at the basin's
+        ``base_channels``/``latent_dim`` (NOT the configurable-taper student). It is FROZEN
+        (eval + requires_grad False + rendered under no_grad) — the KD step can never train
+        it (the NO-FAKE contract).
+
+        ``kd_warm_epochs`` MUST be <= the stage-0 epoch budget (else the whole of stage 0 is
+        KD with no score-aware continuation — refused so the bind-all contract holds).
+        Records a KD-warm-up telemetry row (the first/last frame-MSE — ``last < first`` is
+        the proof the distillation ran). Only called when ``do_kd_warm_up`` (stage-0 fresh
+        KD init); a no-op for any other path."""
+        from tac.torch_vehicle.kd_warm_start import build_frozen_teacher, kd_warm_up_decoder
+
+        kd_epochs = int(self.cfg.kd_warm_epochs)
+        if kd_epochs > spec.epochs:
+            raise ValueError(
+                f"kd_warm_epochs={kd_epochs} must be <= the stage-0 epoch budget "
+                f"({spec.epochs}); the KD warm-up is a PREFIX of stage 0 and must leave "
+                f"room for the score-aware curriculum to continue after it."
+            )
+        # The teacher is the basin's vendored-taper decoder (NO FiLM, NO configurable taper).
+        teacher = build_frozen_teacher(
+            self.cfg.kd_warm_start_dir,
+            vendored_decoder_cls=self.v.HNeRVDecoder,
+            latent_dim=self.cfg.latent_dim,
+            base_channels=self.cfg.base_channels,
+            device=self.train_device,
+            eval_size=(_EVAL_H, _EVAL_W),
+        )
+        stats = kd_warm_up_decoder(
+            student=rt.decoder,
+            teacher=teacher,
+            latents=rt.latents,
+            n_pairs=self.n_pairs,
+            epochs=kd_epochs,
+            batch_size=spec.batch_size,
+            lr=float(self.cfg.kd_warm_lr),
+            train_latents=bool(self.cfg.kd_warm_train_latents),
+            latent_lr_mult=spec.latent_lr_mult,
+            seed=self.cfg.seed,
+            device=self.train_device,
+            pose_film_enabled=self.cfg.pose_film_enabled,
+        )
+        # RE-SYNC the EMA shadow to the distilled student (the shadow deep-copied the random
+        # init at _build_stage_runtime; after KD it must reflect the distilled state so the
+        # subsequent EMA tracking + the BEST-from-shadow eval start from the distilled basin).
+        rt.ema_decoder.load_state_dict(rt.decoder.state_dict())
+        rt.ema_latents = rt.latents.detach().clone()
+        # Telemetry: a KD-warm-up row (NOT an eval row — TRAIN-time priming). first/last
+        # frame-MSE prove the distillation actually lowered the student-vs-teacher distortion.
+        self.telemetry.record(
+            EpochRecord(
+                stage_index=0,
+                stage_name=f"{spec.name}__kd_warm_up",
+                epoch_in_stage=kd_epochs,
+                global_epoch=self._global_epoch,
+                loss=stats["last_loss"],
+                pose_mse=float("nan"),
+                adamw_lr=float(self.cfg.kd_warm_lr),
+                muon_lr=None,
+                grad_norm_adamw=None,
+                grad_norm_muon=None,
+                evaluated=False,
+            )
+        )
+
     def _film_param_ids(self, decoder: nn.Module) -> set[int]:
         """The ``id()`` set of the pose-FiLM params on ``decoder`` (the wrapper), by
         version-keyed name prefix. EMPTY when ``pose_film_enabled`` is False (no FiLM
@@ -1035,24 +1217,58 @@ class TorchVehicleDriver:
             if any(n.startswith(pre) for pre in prefixes)
         }
 
+    def _rgb0_param_ids(self, decoder: nn.Module) -> set[int]:
+        """The ``id()`` set of the ``rgb_0`` head params on ``decoder``. Used ONLY by the
+        ``pose_film_rgb0_pose_trainable`` refinement to EXCLUDE rgb_0 from the seg-only-
+        restore set (so the pose loss may train the frame-0 head, which SegNet never reads).
+
+        rgb_0 lives on the INNER vendored/taper decoder (``decoder.rgb_0`` on the FiLM
+        wrapper, or ``decoder.rgb_0`` directly on a bare decoder). We resolve the actual
+        ``rgb_0`` Module — robust to the wrapper vs bare layout AND any future rename of the
+        wrapper's submodule attribute — and key on its parameter ``id()``s (not name
+        strings, so it is decoupled from the named-parameter prefix). EMPTY when the
+        decoder exposes no ``rgb_0`` (defensive: never silently masks the wrong tensor)."""
+        inner = decoder
+        # The FiLM wrapper holds the vendored/taper decoder in ``.decoder``; the head lives
+        # there. A bare vendored/taper decoder has ``rgb_0`` directly. Resolve whichever.
+        if not hasattr(inner, "rgb_0") and isinstance(
+            getattr(inner, "decoder", None), nn.Module
+        ):
+            inner = inner.decoder
+        rgb0 = getattr(inner, "rgb_0", None)
+        if not isinstance(rgb0, nn.Module):
+            return set()
+        return {id(p) for p in rgb0.parameters() if p.requires_grad}
+
     def _non_film_grad_params(
         self, decoder: nn.Module, latents: torch.Tensor
     ) -> list[torch.Tensor]:
-        """The SHARED-decoder params (trunk + rgb_0/rgb_1 heads) PLUS the latents — i.e.
-        every trainable tensor the POSE objective must NOT update under
-        ``pose_film_trunk_stopgrad``. The FiLM pose path (``pose_mlp`` + ``film_resid``)
+        """The SHARED-decoder params (trunk + skips + blocks + refine + rgb_0/rgb_1 heads)
+        PLUS the latents — i.e. every trainable tensor the POSE objective must NOT update
+        under ``pose_film_trunk_stopgrad``. The FiLM pose path (``pose_mlp`` + ``film_resid``)
         is EXCLUDED (it is the one place the pose gradient is allowed to land).
+
+        rgb_0 REFINEMENT (``cfg.pose_film_rgb0_pose_trainable``): when ON, the ``rgb_0``
+        head params are ALSO excluded from this set, so the pose backward's contribution to
+        them is KEPT (not restored to seg-only). This is EXACT-decoupling-preserving: SegNet
+        reads ONLY frame-1 (``rgb_1``), so ``∂d_seg/∂(rgb_0 params) = 0`` — training rgb_0
+        with the pose loss costs NO d_seg, while giving the pose objective strictly more
+        capacity (rgb_0 IS the pose-conditioned frame-0 head). DEFAULT (flag OFF) keeps
+        rgb_0 in the seg-only-restore set, byte-identical to the base trunk-stopgrad.
 
         Used by :meth:`_split_by_head_backward` to snapshot+restore the non-FiLM ``.grad``
         across the (separated) pose backward, so the pose contribution is removed from the
-        shared graph and ∂(trunk,latents,heads)/∂(pose-objective)=0 EXACTLY. The latents
-        are an ``nn.Parameter`` so they are masked too (the pose loss must not move the
-        shared latent code that produces the seg frame f1)."""
+        shared graph and ∂(trunk,latents,rgb_1[,rgb_0])/∂(pose-objective)=0 EXACTLY. The
+        latents are an ``nn.Parameter`` so they are masked too (the pose loss must not move
+        the shared latent code that produces the seg frame f1)."""
         film_ids = self._film_param_ids(decoder)
+        excluded_ids = set(film_ids)
+        if self.cfg.pose_film_rgb0_pose_trainable:
+            excluded_ids |= self._rgb0_param_ids(decoder)
         params = [
             p
             for p in decoder.parameters()
-            if p.requires_grad and id(p) not in film_ids
+            if p.requires_grad and id(p) not in excluded_ids
         ]
         if isinstance(latents, torch.Tensor) and latents.requires_grad:
             params.append(latents)
@@ -2302,9 +2518,37 @@ class TorchVehicleDriver:
             resuming_into_this_stage = (
                 merged is not None and stage_index == resume_pos.stage_index
             )
+            # KD-warm-start applies ONLY at the stage-0 init of a FRESH run (no resume,
+            # no carry). When it applies, the KD warm-up phase distills the basin teacher
+            # into the (just-built, still-random) re-tapered student AFTER the runtime is
+            # built — recorded here as ``do_kd_warm_up`` so the post-runtime block fires it.
+            do_kd_warm_up = False
             if carry_decoder is None:
                 decoder = self._new_decoder()  # train-device (gradient backend)
                 if (
+                    self.cfg.kd_warm_start_dir is not None
+                    and spec.init_latents_random
+                    and not resuming_into_this_stage
+                ):
+                    # KD-WARM-START: load the basin's latents DIRECTLY as the stage-0 init
+                    # (taper-INDEPENDENT (n_pairs, latent_dim) — only the decoder channels
+                    # change), and FLAG the KD warm-up phase (it runs after the runtime is
+                    # built, distilling the frozen basin teacher into this re-tapered
+                    # student). The decoder stays at its FRESH random init here; the KD
+                    # warm-up is what loads the basin's knowledge into it. Resume/carry win
+                    # (the `carry_decoder is None and not resuming_into_this_stage` guards):
+                    # a run that owns a checkpoint continues its own trajectory.
+                    from tac.torch_vehicle.kd_warm_start import load_kd_warm_start_latents
+
+                    latents = nn.Parameter(
+                        load_kd_warm_start_latents(
+                            self.cfg.kd_warm_start_dir,
+                            n_pairs=self.n_pairs,
+                            latent_dim=self.cfg.latent_dim,
+                        ).to(self.train_device)
+                    )
+                    do_kd_warm_up = True
+                elif (
                     self.cfg.warm_start_dir is not None
                     and spec.init_latents_random
                     and not resuming_into_this_stage
@@ -2367,6 +2611,17 @@ class TorchVehicleDriver:
             if merged is not None and stage_index == resume_pos.stage_index:
                 self._restore_into(rt, merged)
                 merged = None  # consumed
+
+            # KD WARM-UP phase (the bind-all wall-clock resolution): a non-empty PREFIX of
+            # stage 0 that distills the FROZEN basin teacher into the re-tapered student on
+            # the (directly-warm-started) latents, BEFORE the normal score-aware curriculum
+            # continues. Fires only when ``do_kd_warm_up`` (stage-0 fresh-run KD init). The
+            # student's EMA shadow is RE-SYNCED to the distilled state afterward so the
+            # shadow tracks the distilled student (not the random init it deep-copied at
+            # ``_build_stage_runtime``). No-op (and byte-identical) when kd_warm_start_dir
+            # is None.
+            if do_kd_warm_up:
+                self._run_kd_warm_up(rt, spec)
 
             for epoch in range(start_epoch, spec.epochs):
                 # ``epoch`` is the 0-based epoch within this stage — drives the Lever-2

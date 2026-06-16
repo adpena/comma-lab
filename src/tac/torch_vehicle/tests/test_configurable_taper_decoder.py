@@ -210,8 +210,13 @@ def test_cfg_taper_validation():
         _cfg(taper_channels=[20, 20, 20])
     with pytest.raises(ValueError, match="positive"):
         _cfg(taper_channels=[20, 20, 20, 15, 11, 0, 10])
-    with pytest.raises(ValueError, match="pose_film_enabled=False"):
+    # taper + FiLM v1 (the default version) is refused (v1 stem-injection couples d_pose
+    # into d_seg and is untested on a re-taper); taper + FiLM v2 is now ALLOWED (the
+    # bind-all production combo — the v2 residual wrapper composes with the taper carrier).
+    with pytest.raises(ValueError, match="requires pose_film_version=2"):
         _cfg(taper_channels=vendored_taper(20), pose_film_enabled=True)
+    cfg_v2 = _cfg(taper_channels=vendored_taper(20), pose_film_enabled=True, pose_film_version=2)
+    assert cfg_v2.pose_film_enabled and cfg_v2.pose_film_version == 2
 
 
 def test_driver_builds_taper_decoder_when_set(tmp_path):
