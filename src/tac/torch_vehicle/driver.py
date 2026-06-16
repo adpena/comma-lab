@@ -226,6 +226,56 @@ def _seg_loss_for_spec(
     return per_pixel.mean()
 
 
+def _adaptive_do_pose(
+    epoch: int,
+    pose_floor: float | None,
+    last_pose_mse: float | None,
+    hist: list[float],
+    *,
+    tol: float,
+    k_max: int,
+    last_pose_epoch: int,
+) -> bool:
+    """Pure APGC decision: should the (expensive) pose path be COMPUTED this epoch?
+
+    A closed-loop controller that holds d_pose at its (moving) floor with minimum
+    gradient spend, grounded in the equimarginal/constraint principle: pay the pose
+    path only when the marginal score harm of leaving pose un-corrected exceeds the
+    wall-clock saved by skipping. The decision (NO side effects — testable in isolation):
+
+      * No floor yet / first epoch  → COMPUTE (establish the floor).
+      * ``dev = last_pose_mse / pose_floor`` (relative deviation from the running floor).
+      * ``rising`` = the trend over ``hist`` is positive (hist[-1] > hist[0]) — the
+        derivative term that catches drift BEFORE it breaches the band.
+      * dev > 1+tol (out of the deadband) OR rising  → DRIFT-ARREST: compute every epoch.
+      * else (solidly at floor): widen the cadence proportionally toward ``k_max`` —
+        ``slack`` is 1 at the exact floor and 0 at the band edge, so ``k`` ramps
+        1 → k_max as pose sits deeper inside the band; compute only on the cadence epoch.
+      * MEASUREMENT-FLOOR: if ``epoch - last_pose_epoch >= k_max`` force a compute
+        regardless — a skipped epoch does NOT measure pose (the pose forward is fused
+        with the backward), so this bounds how long the controller may run blind.
+
+    Returns True (compute pose) / False (skip, flow the SegNet-only cotangent)."""
+    if pose_floor is None or last_pose_mse is None:
+        do_pose = True
+    else:
+        # Running floor is the MIN of all computed pose_mse, so dev >= 1 by construction
+        # for the current sample; a fresh new minimum gives dev == 1.0 (deepest in band).
+        dev = last_pose_mse / pose_floor if pose_floor > 0.0 else float("inf")
+        rising = len(hist) >= 2 and hist[-1] > hist[0]
+        if dev > 1.0 + tol or rising:
+            do_pose = True  # drift-arrest — correct every epoch until back at floor
+        else:
+            slack = (1.0 + tol - dev) / tol  # 1.0 at floor → 0.0 at the band edge
+            slack = max(0.0, min(1.0, slack))
+            k = max(1, min(k_max, round(1 + slack * (k_max - 1))))
+            do_pose = (epoch % k) == 0
+    # Measurement-floor: never run blind longer than k_max epochs between pose computes.
+    if (epoch - last_pose_epoch) >= k_max:
+        do_pose = True
+    return do_pose
+
+
 def _split_three_section_archive(archive: bytes) -> tuple[bytes, bytes, bytes, bytes]:
     """Return ``(meta_brotli, decoder_blob, latents_brotli, trailing)``.
 
@@ -443,6 +493,48 @@ class TorchVehicleConfig:
     # exact d_seg/d_pose that pick BEST still run the full scorer on the CPU authority.
     pose_grad_every_k: int = 1
     pose_grad_resume_threshold: float = 0.0
+    # Adaptive Pose-Gradient Controller (APGC) — the closed-loop replacement for the
+    # static k/threshold THROTTLE above. The static throttle is OPEN-loop: it fixes a
+    # cadence k and a fixed resume threshold, so when d_pose DRIFTS (measured monotonic
+    # 0.000335→0.000408 over ep10-40 under the oomph seg crank, as the shared decoder
+    # trunk re-tunes toward seg) the fixed threshold (0.001, ~2.5-3× the actual ~0.0004
+    # pose_mse) NEVER fires and pose is corrected only 1-in-k epochs WHILE drifting. The
+    # calculus is why that matters: ∂S/∂d_pose = 5/√(10·d_pose) = 85.5 at d_pose≈0.0004
+    # ≈ 86% of ∂S/∂d_seg = 100 — so an un-arrested pose drift is nearly as score-costly
+    # as the d_seg we optimize (the measured ep10-40 drift already cost +0.006 S).
+    #
+    # APGC holds d_pose at its (moving) FLOOR with minimum gradient spend, via the
+    # equimarginal / constraint principle: spend the expensive pose path ONLY when the
+    # marginal score harm of NOT correcting (pose above the deadband, or rising) exceeds
+    # the wall-clock saved by skipping. It tracks a RUNNING-MIN ``_pose_floor`` (the
+    # adaptive floor, not a guessed constant), holds pose within ``floor·(1+tol)`` (a
+    # ``floor_tol``=0.08 deadband ≈ a 0.0023 S slack at the frontier operating point),
+    # arrests drift the moment the deviation breaches the band OR the recent trend rises,
+    # otherwise widens the cadence proportionally toward ``k_max`` as pose sits solidly at
+    # floor, and NEVER goes blind longer than ``k_max`` epochs (the measurement-floor — a
+    # skipped epoch does not MEASURE pose since the pose forward is fused with the backward
+    # here, so the measurement-floor bounds drift-blindness; a future refinement is a
+    # cheap forward-only pose probe decoupled from the backward).
+    #
+    # DEFAULT False → the EXISTING static k/threshold branch above runs UNCHANGED
+    # (byte-identical to today; the live A/B is unaffected). When True, the static k/
+    # threshold are IGNORED and the controller governs ``do_pose``. Scoped to
+    # split_by_head (the throttle is split-only); ``__post_init__`` refuses adaptive on
+    # the non-split path. NOT an authority/score knob — it only changes train-time
+    # wall-clock cadence; the exact d_seg/d_pose that pick BEST still run the full scorer
+    # on the CPU authority.
+    pose_grad_adaptive: bool = False
+    # APGC deadband: hold pose ≤ floor·(1+tol). 0.08 ⇒ tolerate an 8% deviation above the
+    # running floor before drift-arrest fires (≈ 0.0023 S slack at the frontier d_pose).
+    pose_grad_floor_tol: float = 0.08
+    # APGC sparsest cadence (when pose is solidly at floor) AND the measurement-floor: the
+    # max number of epochs the controller may go without a pose MEASUREMENT before forcing
+    # a compute. Caps drift-blindness on skipped epochs.
+    pose_grad_k_max: int = 8
+    # APGC trend window: the number of most-recent COMPUTED pose_mse values the derivative
+    # (slope) term inspects. ``rising`` = hist[-1] > hist[0] over this window ⇒ arrest even
+    # inside the deadband (the trend caught drift before it breached the band).
+    pose_grad_trend_window: int = 3
     # WS-A/M3 Muon LR-floor fix (DEFAULT-OFF → byte-identical). False = Muon shares the
     # AdamW lr_lambda (its floor mis-keyed to adamw_lr → never anneals below 0.5× at stage
     # 8). True = Muon gets its own cosine floor keyed to muon_lr. Opt-in for the scaled run.
@@ -536,6 +628,31 @@ class TorchVehicleConfig:
                 f"pose_grad_resume_threshold must be >= 0.0; got "
                 f"{self.pose_grad_resume_threshold}"
             )
+        if self.pose_grad_adaptive:
+            # The APGC is a split-only THROTTLE replacement (the pose path it cadences
+            # only exists on the split-by-head backward); refuse it on the non-split path
+            # so a mis-config can never silently no-op.
+            if not self.split_by_head:
+                raise ValueError(
+                    "pose_grad_adaptive (APGC) requires split_by_head=True: the adaptive "
+                    "controller cadences the split-by-head PoseNet path; the non-split "
+                    "path computes both heads in one graph (nothing to throttle)."
+                )
+            if float(self.pose_grad_floor_tol) <= 0.0:
+                raise ValueError(
+                    f"pose_grad_floor_tol must be > 0.0 (the deadband half-width); got "
+                    f"{self.pose_grad_floor_tol}"
+                )
+            if int(self.pose_grad_k_max) < 1:
+                raise ValueError(
+                    f"pose_grad_k_max must be >= 1 (the sparsest cadence / measurement "
+                    f"floor); got {self.pose_grad_k_max}"
+                )
+            if int(self.pose_grad_trend_window) < 2:
+                raise ValueError(
+                    f"pose_grad_trend_window must be >= 2 (the slope needs >=2 samples); "
+                    f"got {self.pose_grad_trend_window}"
+                )
         if self.lever4_variable_level_export_enabled and self.variable_level_waterfill_enabled:
             raise ValueError(
                 "lever4_variable_level_export_enabled and variable_level_waterfill_enabled "
@@ -681,6 +798,24 @@ class TorchVehicleDriver:
         # epoch that computes the pose head). Drives both the resume-threshold guard and
         # the telemetry carry on skipped epochs. See ``pose_grad_every_k``.
         self._last_pose_mse: float | None = None
+        # APGC (Adaptive Pose-Gradient Controller) state — only consulted when
+        # ``cfg.pose_grad_adaptive``; persisted across resume for trajectory correctness.
+        #   _pose_floor       — running MIN of the computed training pose_mse (the
+        #                       adaptive floor the deadband is anchored to). None until
+        #                       the first pose compute.
+        #   _pose_mse_hist    — the last ``trend_window`` computed pose_mse values (the
+        #                       derivative/slope term). Trimmed to the window.
+        #   _last_pose_epoch  — the global epoch of the last pose COMPUTE (the
+        #                       measurement-floor reference: never go blind > k_max).
+        #                       Init -1 (a SENTINEL meaning "no compute yet") so the
+        #                       once-per-epoch bookkeeping gate fires at the very first
+        #                       epoch (global_epoch 0); a real compute stamps the actual
+        #                       epoch >= 0.
+        # All three left at their default on the static/non-adaptive path → byte-identical
+        # (round-trip as the same defaults; the controller branch never reads them there).
+        self._pose_floor: float | None = None
+        self._pose_mse_hist: list[float] = []
+        self._last_pose_epoch: int = -1
         # Test-only hook: simulate a death after this many global epochs (the
         # checkpoint has already landed when the death fires). None in production.
         self._stop_after_global_epoch: int | None = None
@@ -984,6 +1119,23 @@ class TorchVehicleDriver:
         nb = 0
         last_gn_adamw = None
         last_gn_muon = None
+        # APGC decides the pose cadence ONCE per epoch (the controller reads the
+        # PRE-epoch state — floor/last_pose_mse/trend — so the decision is stable across
+        # all batches of this epoch; without this the per-batch state mutation below would
+        # make batch 2's decision differ from batch 1's). Mirrors the static throttle,
+        # whose ``_global_epoch % _k`` term is also epoch-constant. None on the static
+        # path; the controller is consulted only inside the split-by-head branch.
+        apgc_do_pose: bool | None = None
+        if self.split_by_head and self.cfg.pose_grad_adaptive:
+            apgc_do_pose = _adaptive_do_pose(
+                self._global_epoch,
+                self._pose_floor,
+                self._last_pose_mse,
+                self._pose_mse_hist,
+                tol=float(self.cfg.pose_grad_floor_tol),
+                k_max=int(self.cfg.pose_grad_k_max),
+                last_pose_epoch=self._last_pose_epoch,
+            )
 
         for batch_start in range(0, n_pairs, bs):
             idx = pair_indices[batch_start : batch_start + bs]
@@ -1036,22 +1188,55 @@ class TorchVehicleDriver:
                 rt.muon_opt.zero_grad()
 
             if self.split_by_head:
-                # Pose-throttle (the "pose is solved → stop paying for it" speed lever):
-                # compute the pose cotangent EVERY epoch (k<=1, byte-identical default),
-                # while pose is still converging/drifted (last pose_mse > resume_threshold),
-                # the FIRST time (never computed), or on the every-k cadence epoch.
-                _k = int(self.cfg.pose_grad_every_k)
-                _thr = float(self.cfg.pose_grad_resume_threshold)
-                do_pose = (
-                    _k <= 1
-                    or self._last_pose_mse is None
-                    or (_thr > 0.0 and self._last_pose_mse > _thr)
-                    or (self._global_epoch % _k == 0)
-                )
+                if apgc_do_pose is not None:
+                    # APGC (closed-loop): the static k/threshold are IGNORED; the
+                    # controller decided ONCE per epoch above (stable across batches) —
+                    # holds d_pose at its moving floor with minimum spend (drift-arrest on
+                    # band breach / rising trend, proportional cadence at floor,
+                    # measurement-floor every k_max). See ``_adaptive_do_pose``.
+                    do_pose = apgc_do_pose
+                else:
+                    # Static pose-throttle (the "pose is solved → stop paying for it"
+                    # OPEN-loop speed lever): compute the pose cotangent EVERY epoch
+                    # (k<=1, byte-identical default), while pose is still converging/
+                    # drifted (last pose_mse > resume_threshold), the FIRST time (never
+                    # computed), or on the every-k cadence epoch.
+                    _k = int(self.cfg.pose_grad_every_k)
+                    _thr = float(self.cfg.pose_grad_resume_threshold)
+                    do_pose = (
+                        _k <= 1
+                        or self._last_pose_mse is None
+                        or (_thr > 0.0 and self._last_pose_mse > _thr)
+                        or (self._global_epoch % _k == 0)
+                    )
                 loss_val, pose_mse_val = self._split_by_head_backward(
                     decoded_bhwc, idx, spec, temperature=epoch_temperature,
                     compute_pose=do_pose,
                 )
+                # APGC bookkeeping: when pose was COMPUTED this epoch, advance the
+                # controller state off the just-measured pose_mse — update the running
+                # floor, append to the trend window (trimmed), and stamp the measurement
+                # epoch (the measurement-floor reference). Gated to ONCE per epoch
+                # (``_last_pose_epoch != _global_epoch``) so a multi-batch epoch advances
+                # the floor/trend exactly once (off the first batch's measure), keeping the
+                # cadence semantics at EPOCH granularity. Skipped epochs leave the state
+                # stale BY DESIGN (the measurement-floor bounds the staleness). Guarded by
+                # the adaptive flag so the static/non-split paths are byte-identical.
+                if (
+                    apgc_do_pose
+                    and self._last_pose_epoch != self._global_epoch
+                ):
+                    _pm = self._last_pose_mse  # updated inside the backward on compute
+                    if _pm is not None:
+                        self._pose_floor = (
+                            _pm if self._pose_floor is None
+                            else min(self._pose_floor, _pm)
+                        )
+                        self._pose_mse_hist.append(float(_pm))
+                        _win = max(2, int(self.cfg.pose_grad_trend_window))
+                        if len(self._pose_mse_hist) > _win:
+                            del self._pose_mse_hist[:-_win]
+                        self._last_pose_epoch = self._global_epoch
                 # The categorical-entropy regularizer + Lever-1 rate surrogate do NOT
                 # depend on the frames (they read the decoder weights / the full latent
                 # tensor), so they backprop straight to the decoder/latents — add them
@@ -1297,6 +1482,15 @@ class TorchVehicleDriver:
             # shadow takes a spurious jolt). Always 0 on the default (ema_warmup off) path,
             # so it round-trips as 0 → byte-identical for the faithful basin.
             "ema_step": int(self._ema_step),
+            # APGC controller state — persisted so a resume CONTINUES the same adaptive
+            # cadence (else the floor/trend/measurement-epoch reset → pose is recomputed
+            # every epoch for the first k_max epochs post-resume, a spurious cost spike,
+            # and the floor re-establishes from a possibly-drifted sample). All default on
+            # the non-adaptive path (floor None, empty hist, epoch 0) → round-trips as the
+            # same defaults → byte-identical for the static/faithful basin.
+            "pose_floor": self._pose_floor,
+            "pose_mse_hist": list(self._pose_mse_hist),
+            "last_pose_epoch": int(self._last_pose_epoch),
             "base_channels": self.cfg.base_channels,
             "latent_dim": self.cfg.latent_dim,
             "n_pairs": self.n_pairs,
@@ -1323,6 +1517,13 @@ class TorchVehicleDriver:
         # Restore the EMA-warmup step counter (backward-compatible: old checkpoints lack
         # the key → 0, which is also the value on any ema_warmup-off run → no change).
         self._ema_step = int(merged.get("ema_step", 0))
+        # Restore the APGC controller state (backward-compatible: a legacy/pre-APGC
+        # checkpoint lacks these keys → the defaults, which are also the values on any
+        # non-adaptive run → no change). ``pose_floor`` may be None (no compute yet).
+        _pf = merged.get("pose_floor")
+        self._pose_floor = None if _pf is None else float(_pf)
+        self._pose_mse_hist = [float(x) for x in merged.get("pose_mse_hist", [])]
+        self._last_pose_epoch = int(merged.get("last_pose_epoch", -1))
         # Optimizer/scheduler restore is SKIPPED for a FORK-SEED checkpoint (the
         # Lever-3 A/B seeds the WEIGHTS + EMA from the immutable basin forkpoint but
         # cannot transfer the AdamW/Muon momentum across an architecture change —

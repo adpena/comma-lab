@@ -69,6 +69,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--n-pairs", type=int, default=96)
     p.add_argument("--pose-grad-every-k", type=int, default=4)
     p.add_argument("--pose-grad-resume-threshold", type=float, default=0.001)
+    # APGC (Adaptive Pose-Gradient Controller) — closed-loop pose throttle. DEFAULT OFF
+    # (the static k/threshold above run unchanged = byte-identical). --pose-grad-adaptive
+    # IGNORES the static k/threshold and holds d_pose at its moving floor with minimum
+    # spend. Recommended: --pose-grad-adaptive --pose-grad-floor-tol 0.08 --pose-grad-k-max 8.
+    p.add_argument("--pose-grad-adaptive", action="store_true")
+    p.add_argument("--pose-grad-floor-tol", type=float, default=0.08)
+    p.add_argument("--pose-grad-k-max", type=int, default=8)
+    p.add_argument("--pose-grad-trend-window", type=int, default=3)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--targets-cache", type=Path,
                    default=Path("experiments/results/capstone_gt_targets_cache"))
@@ -171,6 +179,10 @@ def main(argv: list[str] | None = None) -> int:
         pose_film_enabled=False, seed=args.seed,
         pose_grad_every_k=args.pose_grad_every_k,
         pose_grad_resume_threshold=args.pose_grad_resume_threshold,
+        pose_grad_adaptive=args.pose_grad_adaptive,
+        pose_grad_floor_tol=args.pose_grad_floor_tol,
+        pose_grad_k_max=args.pose_grad_k_max,
+        pose_grad_trend_window=args.pose_grad_trend_window,
         taper_channels=taper_channels,  # None for baseline → vendored decoder
     )
     print(json.dumps({

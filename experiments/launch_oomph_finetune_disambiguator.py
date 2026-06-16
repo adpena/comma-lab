@@ -140,6 +140,23 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                    help="pose-throttle (pose is solved on the converged basin → cadence it).")
     p.add_argument("--pose-grad-resume-threshold", type=float, default=0.001,
                    help="force pose every epoch while pose_mse exceeds this (self-protect).")
+    # APGC (Adaptive Pose-Gradient Controller) — the closed-loop replacement for the
+    # static k/threshold throttle. DEFAULT OFF (the static path above runs unchanged =
+    # byte-identical). When --pose-grad-adaptive is set the static k/threshold are
+    # IGNORED and the controller holds d_pose at its moving floor with minimum spend
+    # (drift-arrest on band breach / rising trend, proportional cadence at floor,
+    # measurement-floor every k_max). Recommended production: --pose-grad-adaptive
+    # --pose-grad-floor-tol 0.08 --pose-grad-k-max 8.
+    p.add_argument("--pose-grad-adaptive", action="store_true",
+                   help="APGC closed-loop pose throttle (IGNORES static k/threshold; holds "
+                        "d_pose at its moving floor). Default off = byte-identical.")
+    p.add_argument("--pose-grad-floor-tol", type=float, default=0.08,
+                   help="APGC deadband: hold pose <= floor*(1+tol) before drift-arrest.")
+    p.add_argument("--pose-grad-k-max", type=int, default=8,
+                   help="APGC sparsest cadence at floor AND measurement-floor (force pose "
+                        "after this many blind epochs).")
+    p.add_argument("--pose-grad-trend-window", type=int, default=3,
+                   help="APGC trend window: # recent computed pose_mse for the slope term.")
     p.add_argument("--seg-weight-base", type=float, default=100.0,
                    help="the stage seg_weight the arms scale (oomph ×--oomph-seg-weight-mult); "
                         "matches the vendored muon-finetune default.")
@@ -351,6 +368,10 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed,
         pose_grad_every_k=args.pose_grad_every_k,
         pose_grad_resume_threshold=args.pose_grad_resume_threshold,
+        pose_grad_adaptive=args.pose_grad_adaptive,
+        pose_grad_floor_tol=args.pose_grad_floor_tol,
+        pose_grad_k_max=args.pose_grad_k_max,
+        pose_grad_trend_window=args.pose_grad_trend_window,
         warm_start_dir=warm,   # the disambiguator's defining hook
         ema_warmup=True,       # short fine-tune → shadow must track (EMA-shadow-lag fix)
     )

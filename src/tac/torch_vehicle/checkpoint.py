@@ -120,6 +120,17 @@ def save_checkpoint(
         # loader yields 0 and the restore is a no-op (backward-compatible; old checkpoints
         # lack the key → merged.get('ema_step', 0) == 0 == today's behavior).
         "ema_step": int(state.get("ema_step", 0)),
+        # APGC (Adaptive Pose-Gradient Controller) state. MUST survive a death so a
+        # resumed adaptive run CONTINUES the same cadence rather than re-establishing
+        # the floor + recomputing pose every epoch for the first k_max post-resume epochs
+        # (a spurious cost spike + a floor re-seed off a possibly-drifted sample). All
+        # default on the non-adaptive path (``pose_floor`` None, empty hist, epoch 0) →
+        # the loader yields the defaults and the restore is a no-op (backward-compatible;
+        # old checkpoints lack these keys → the driver's merged.get(...) yields the same
+        # defaults == today's behavior).
+        "pose_floor": state.get("pose_floor"),
+        "pose_mse_hist": list(state.get("pose_mse_hist", [])),
+        "last_pose_epoch": int(state.get("last_pose_epoch", -1)),
     }
 
     manifest: dict[str, Any] = {
