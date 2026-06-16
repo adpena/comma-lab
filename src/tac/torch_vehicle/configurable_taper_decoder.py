@@ -175,7 +175,10 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
         B = z.shape[0]
         x = self.stem(z).view(B, self.channels[0], self.base_h, self.base_w)
         x = torch.sin(x)
-        for block, skip in zip(self.blocks, self.skips):
+        # blocks + skips are both built with exactly 6 entries (the range(6) loop in
+        # __init__), so strict=True can never raise; it adds a guard against any future
+        # divergence and matches the BoundaryHeadTaperDecoder enabled-path forward.
+        for block, skip in zip(self.blocks, self.skips, strict=True):
             identity = F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=False)
             identity = skip(identity)
             x = self.ps(block(x))
