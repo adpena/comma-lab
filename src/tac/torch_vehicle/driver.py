@@ -474,6 +474,19 @@ class TorchVehicleConfig:
     # Scoped to the EMA update only; the optimizer/loss/RNG paths are untouched. The faithful
     # long-run basin is byte-identical when this is off; opt-in for warm-start fine-tunes.
     ema_warmup: bool = False
+    # CONFIGURABLE TAPER (the #1 structural lever — d_seg-aware capacity reallocation).
+    # DEFAULT None → the decoder is the vendored ``HNeRVDecoder`` with the hardcoded HNeRV
+    # taper (byte-identical). When set to an explicit 7-stage channel schedule, the decoder is
+    # the ``ConfigurableTaperHNeRVDecoder`` (a faithful generalization of the vendored decoder
+    # whose ONLY difference is the channel schedule) — reallocating capacity from the
+    # insensitive low-res early stages to the d_seg-critical mid-late stages (gate-2
+    # sensitivity map) at a ~byte-matched param count. The vendored codec is schedule-agnostic
+    # so build_archive/parse_archive/partition_params_for_muon/apply_qat all round-trip the
+    # different shapes unchanged. Requires pose_film_enabled=False (the taper carrier has no
+    # FiLM wrapper here). A resume into an out_dir trained with a DIFFERENT taper fails closed
+    # (strict load shape mismatch) — never a silent cross-architecture resume. Byte-identical
+    # when None (the live basin / from-0 A/B are unaffected).
+    taper_channels: list[int] | None = None
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -538,6 +551,20 @@ class TorchVehicleConfig:
                     "best_ema_decoder.pt is a vendored (no-FiLM) state_dict and a strict "
                     "load into a FiLM-wrapped decoder would fail. Warm-start the vendored "
                     "decoder, then add FiLM as a separate (untested-here) step if needed."
+                )
+        if self.taper_channels is not None:
+            self.taper_channels = [int(c) for c in self.taper_channels]
+            if len(self.taper_channels) != 7:
+                raise ValueError(
+                    f"taper_channels must have 7 stages (the HNeRV 6x8→384x512 ladder); "
+                    f"got {len(self.taper_channels)}: {self.taper_channels}"
+                )
+            if any(c <= 0 for c in self.taper_channels):
+                raise ValueError(f"taper_channels must all be positive; got {self.taper_channels}")
+            if self.pose_film_enabled:
+                raise ValueError(
+                    "taper_channels requires pose_film_enabled=False: the configurable-taper "
+                    "carrier has no FiLM wrapper here (combine them as a separate step)."
                 )
         self.out_dir = Path(self.out_dir)
 
@@ -671,12 +698,29 @@ class TorchVehicleDriver:
 
     # -- architecture construction (base_ch threaded — the FINDING-1 fix) -----
     def _new_vendored_decoder(self, device: torch.device | None = None) -> nn.Module:
-        """Build a fresh base_ch-threaded VENDORED decoder (no FiLM)."""
+        """Build a fresh base_ch-threaded VENDORED decoder (no FiLM).
+
+        When ``cfg.taper_channels`` is set, build the ``ConfigurableTaperHNeRVDecoder``
+        (a faithful generalization of the vendored decoder whose ONLY difference is the
+        channel schedule) instead — the #1 structural lever. DEFAULT (None) returns the
+        vendored decoder unchanged (byte-identical)."""
+        dev = device if device is not None else self.train_device
+        if self.cfg.taper_channels is not None:
+            from tac.torch_vehicle.configurable_taper_decoder import (
+                ConfigurableTaperHNeRVDecoder,
+            )
+
+            return ConfigurableTaperHNeRVDecoder(
+                latent_dim=self.cfg.latent_dim,
+                base_channels=self.cfg.base_channels,
+                eval_size=(_EVAL_H, _EVAL_W),
+                channels=self.cfg.taper_channels,
+            ).to(dev)
         return self.v.HNeRVDecoder(
             latent_dim=self.cfg.latent_dim,
             base_channels=self.cfg.base_channels,
             eval_size=(_EVAL_H, _EVAL_W),
-        ).to(device if device is not None else self.train_device)
+        ).to(dev)
 
     def _new_decoder(self, device: torch.device | None = None) -> nn.Module:
         """Build a fresh base_ch-threaded decoder on ``device`` (default: the
