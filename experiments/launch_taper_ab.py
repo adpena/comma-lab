@@ -202,7 +202,10 @@ def main(argv: list[str] | None = None) -> int:
         bmeta = bdir / "best_meta.json"
         if bmeta.exists():
             try:
-                base_dseg = float(json.loads(bmeta.read_text()).get("d_seg"))
+                _braw = json.loads(bmeta.read_text()).get("d_seg")
+                if _braw is None:
+                    raise ValueError(f"{bmeta} has no 'd_seg' key")
+                base_dseg = float(_braw)
                 rel = (best_dseg - base_dseg) / max(base_dseg, 1e-9)
                 byte_delta = round(100 * (arm_params - base_params) / base_params, 2)
                 verdict = (

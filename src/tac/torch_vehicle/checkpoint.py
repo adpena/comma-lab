@@ -123,6 +123,11 @@ def save_checkpoint(
         "base_channels": int(state["base_channels"]),
         "latent_dim": int(state["latent_dim"]),
         "n_pairs": int(state["n_pairs"]),
+        # Configurable-taper schedule (None on the vendored-decoder path). Persisted so a
+        # resume into an out_dir trained with a DIFFERENT taper fails closed EXPLICITLY
+        # (not only via an accidental state_dict shape mismatch). Backward-compatible:
+        # old checkpoints lack the key → read as None == the vendored taper.
+        "taper_channels": state.get("taper_channels"),
         "stage_name": str(state.get("stage_name", "")),
         "ema_decay": float(state.get("ema_decay", 0.999)),
         "best_score": float(state.get("best_score", float("inf"))),

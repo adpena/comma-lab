@@ -366,20 +366,31 @@ def main(argv: list[str] | None = None) -> int:
     verdict = "INDETERMINATE (no best d_seg)"
     rel = None
     if best_dseg is not None:
-        # Compare against the run's OWN warm baseline (eval-config-matched), and require
-        # the drop to clear the noise margin — a best-of-noise minimum cannot trip GO.
+        # Compare against the run's OWN warm baseline (eval-config-matched). TWO guards
+        # against false GO: (1) the BEST drop must clear the noise margin; (2) the drop must
+        # be SUSTAINED — the LAST eval is also below warm. Guard (2) defeats the min-of-N
+        # extreme-value bias: the minimum over ~15 noisy evals is biased low, so a lucky-noise
+        # `best` 3% under warm with a `last` back at warm is NOT a real win.
         rel = (best_dseg - warm_dseg) / max(warm_dseg, 1e-9)
-        if rel < -thr:
+        best_clears = rel < -thr
+        sustained = (last_dseg is not None) and (last_dseg < warm_dseg)
+        if best_clears and sustained:
             verdict = (
-                f"GO: arm {args.arm} best d_seg {best_dseg:.6f} beats warm baseline "
-                f"{warm_dseg:.6f} by {-rel*100:.1f}% (> {thr*100:.0f}% noise margin) → d_seg "
-                f"is LOSS-MOVABLE from the converged basin → reinstate the seg lever"
+                f"GO: arm {args.arm} best d_seg {best_dseg:.6f} beats warm {warm_dseg:.6f} by "
+                f"{-rel*100:.1f}% (> {thr*100:.0f}% margin) AND last {last_dseg:.6f} < warm "
+                f"(SUSTAINED) → d_seg is LOSS-MOVABLE from the converged basin → reinstate the lever"
+            )
+        elif best_clears and not sustained:
+            verdict = (
+                f"GO-WEAK (likely min-of-N noise): arm {args.arm} best d_seg {best_dseg:.6f} beats "
+                f"warm {warm_dseg:.6f} by {-rel*100:.1f}% but last {last_dseg} NOT < warm (not "
+                f"sustained) → treat as NO-GO pending a longer run / multi-eval mean"
             )
         else:
             verdict = (
-                f"NO-GO: arm {args.arm} best d_seg {best_dseg:.6f} vs warm baseline "
-                f"{warm_dseg:.6f} (Δ{rel*100:+.1f}%, within ±{thr*100:.0f}% noise) → no "
-                f"loss-driven d_seg improvement → consistent with the CAPACITY wall"
+                f"NO-GO: arm {args.arm} best d_seg {best_dseg:.6f} vs warm {warm_dseg:.6f} "
+                f"(Δ{rel*100:+.1f}%, within ±{thr*100:.0f}% noise) → no loss-driven d_seg "
+                f"improvement → consistent with the CAPACITY wall"
             )
     print(json.dumps({
         **summary, "arm": args.arm,

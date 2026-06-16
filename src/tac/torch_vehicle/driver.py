@@ -1283,6 +1283,9 @@ class TorchVehicleDriver:
             "base_channels": self.cfg.base_channels,
             "latent_dim": self.cfg.latent_dim,
             "n_pairs": self.n_pairs,
+            # Persist the taper schedule so resume fails closed on a taper change (the
+            # codec stays schedule-agnostic; this makes the resume-safety EXPLICIT).
+            "taper_channels": self.cfg.taper_channels,
             "stage_name": spec.name,
             "ema_decay": spec.ema_decay,
             "best_score": self.best_score,
@@ -1896,6 +1899,18 @@ class TorchVehicleDriver:
                 raise ValueError(
                     f"checkpoint base_channels={man['base_channels']} != "
                     f"cfg.base_channels={self.cfg.base_channels}; cannot resume a different basis"
+                )
+            # EXPLICIT taper-resume guard (do not rely on an accidental state_dict shape
+            # mismatch): a checkpoint trained with a different taper schedule is a different
+            # architecture. Normalize None (vendored) so old checkpoints (no key) match a
+            # vendored-cfg resume. A list-vs-list / list-vs-None mismatch fails closed here.
+            _man_taper = man.get("taper_channels")
+            _man_taper = list(_man_taper) if _man_taper is not None else None
+            _cfg_taper = list(self.cfg.taper_channels) if self.cfg.taper_channels is not None else None
+            if _man_taper != _cfg_taper:
+                raise ValueError(
+                    f"checkpoint taper_channels={_man_taper} != cfg.taper_channels={_cfg_taper}; "
+                    "cannot resume a different taper (different architecture)"
                 )
             merged = load_checkpoint(self.cfg.out_dir, map_location=self.cfg.device)
             resume_pos = merged["position"]

@@ -188,3 +188,72 @@ def test_driver_builds_vendored_when_taper_none(tmp_path):
     # the vendored decoder is NOT our class (byte-identical default path).
     assert not isinstance(dec, ConfigurableTaperHNeRVDecoder)
     assert list(dec.channels) == vendored_taper(20)
+
+
+# ---- resume-safety: taper persisted in manifest + fail-closed on mismatch (F fix) ----
+def _short_taper_curriculum(epochs=3):
+    import torch.nn.functional as F
+
+    from tac.torch_vehicle.curriculum import StageSpec
+
+    def ce(s, t):
+        return F.cross_entropy(s, t)
+
+    return [StageSpec(
+        name="t", epochs=epochs, seg_loss_fn=ce, eval_every=epochs, batch_size=4, ema_decay=0.999,
+        use_muon=False, adamw_lr=1e-3, muon_lr=2e-4, muon_weight_decay=0.0, latent_lr_mult=10.0,
+        grad_clip=1e9, grad_clip_muon=1e9, lr_floor_ratio=5e-6, seg_weight=100.0, pose_weight=1.0,
+        cat_lambda=0.0, cat_sigma=0.2, use_qat=False, init_latents_random=True,
+    )]
+
+
+def _taper_driver(out_dir, channels):
+    from tac.torch_vehicle.driver import TorchVehicleDriver, import_vendored_bundle
+    from tac.torch_vehicle.scorer_context import SyntheticScorerContext
+
+    cfg = _cfg(out_dir=out_dir, taper_channels=channels, seed=0, checkpoint_every_epochs=1)
+    return TorchVehicleDriver(cfg, scorer=SyntheticScorerContext(n_pairs=4, device="cpu", seed=0),
+                              vendored=import_vendored_bundle(), curriculum=_short_taper_curriculum(3))
+
+
+def test_manifest_persists_taper_channels(tmp_path):
+    """The checkpoint manifest records taper_channels (so resume can verify it)."""
+    from tac.torch_vehicle.checkpoint import read_manifest
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    ch = dseg_aware_taper(20)
+    d = _taper_driver(tmp_path / "r", ch)
+    d._stop_after_global_epoch = 1  # land a checkpoint, then die before DONE
+    with pytest.raises(_SimulatedDeath):
+        d.run()
+    man = read_manifest(tmp_path / "r")
+    assert man.get("taper_channels") == ch, f"manifest missing/wrong taper: {man.get('taper_channels')}"
+
+
+def test_resume_with_different_taper_fails_closed(tmp_path):
+    """Resuming an out_dir trained with taper A using a DIFFERENT taper B raises EXPLICITLY
+    (not via an accidental shape mismatch) — the resume-safety contract."""
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    a = _taper_driver(tmp_path / "x", dseg_aware_taper(20))
+    a._stop_after_global_epoch = 1
+    with pytest.raises(_SimulatedDeath):
+        a.run()
+    # fresh driver, DIFFERENT taper, same out_dir → run() must refuse on the taper guard.
+    b = _taper_driver(tmp_path / "x", [18, 18, 18, 16, 12, 10, 10])
+    with pytest.raises(ValueError, match="cannot resume a different taper"):
+        b.run()
+
+
+def test_resume_with_same_taper_succeeds(tmp_path):
+    """Resuming the SAME taper continues cleanly (the guard does not false-positive)."""
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    ch = dseg_aware_taper(20)
+    a = _taper_driver(tmp_path / "y", ch)
+    a._stop_after_global_epoch = 1
+    with pytest.raises(_SimulatedDeath):
+        a.run()
+    b = _taper_driver(tmp_path / "y", ch)
+    summ = b.run()  # must NOT raise; completes the 3-epoch stage
+    assert (tmp_path / "y" / "torch_vehicle_run.DONE").exists()
