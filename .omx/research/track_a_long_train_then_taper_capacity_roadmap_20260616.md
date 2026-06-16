@@ -34,18 +34,23 @@ The base_ch=20 small learned basis (HNeRV decoder, 83,356 params), trained with:
 
 ## ⚠️ RATE-HEADROOM CORRECTION 2026-06-16T17:3x (operator "0.111 is lower than 0.15")
 This SUPERSEDES the "→ THEN capacity" framing below for the sub-0.15 target. The decisive
-arithmetic: the small basis's **rate+pose floor is ~0.111 (< 0.15)** — rate 25·89KB/N = 0.059
-+ pose √(10·d_pose) = 0.055. So **base_ch20 is the ONLY capacity whose floor is comfortably
-sub-0.15, and sub-0.15 needs only d_seg < 0.00039.**
+arithmetic (CORRECTED 2026-06-16 adversarial review — earlier draft mis-stated 0.111/0.114): the
+small basis's **rate+pose floor = 0.11781 (< 0.15)** — rate 25·89136/N = **0.05935** + pose
+√(10·0.00034169) = **0.05845** (≈ CLAUDE.md S_floor 0.11797). So **base_ch20's floor is comfortably
+sub-0.15, and sub-0.15 needs d_seg < 0.000322** (~7× from long-ep30 0.00225; 8× from basin 0.00260).
+CALCULUS: ∂S/∂d_pose=85.5=86% of ∂S/∂d_seg=100 (pose ≈ as marginal as d_seg; the 0.000342→0.000389
+drift already cost +0.0039 → FiLM-v2 hold protects the budget); byte-neutral taper (ΔB=0) ⇒ any d_seg
+drop is pure win (dominates byte-spend levers).
 
-**Capacity scaling is rate-infeasible, not a free d_seg lever.** Decoder params scale ~bc²
-(conv in·out ∝ C²); archive ≈ 1 B/param after int8+brotli; latents (600×28) are bc-independent.
-So the rate term grows QUADRATICALLY in base_ch:
-| base_ch | ~archive | rate term | rate+pose floor |
-|---|---|---|---|
-| 20 | 89 KB | 0.059 | **0.114** (sub-0.15 ✓) |
-| 28 | ~150–170 KB | ~0.10–0.11 | ~0.16 (**> 0.15 before any d_seg**) |
-| 36 | ~250 KB+ | ~0.17 | ~0.23 (hopeless) |
+**Capacity scaling is rate-infeasible, not a free d_seg lever.** From the REAL `decoder_param_count`
+(params ≈ 136·C²+1489·C−696; archive ≈ 0.89 B/dec-param + ~15 KB const latents):
+| base_ch | dec params | est archive | rate | rate+pose floor |
+|---|---|---|---|---|
+| 20 | 83,356  | 89,136  | 0.0594 | **0.1178** ✓ comfortable |
+| 24 | 112,901 | 115,430 | 0.0769 | **0.1353** ✓ marginal (d_seg<0.000147, ~18× cut) |
+| 28 | 148,038 | 146,701 | 0.0977 | **0.1561** ✗ |
+| 36 | 228,958 | 218,718 | 0.1456 | 0.2041 ✗ |
+Capacity cliff is bc24→bc28; bc22–24 is the only marginal contingency, bc28+ rate-infeasible.
 
 ⇒ **The optimal sub-0.15 path is a BYTE-NEUTRAL d_seg attack on base_ch20**: (1) oomph long-train
 (the sharp soft_cosine lever already beat the CE power-law — 0.00213 vs ~0.00260 at 600-pair),
