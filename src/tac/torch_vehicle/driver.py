@@ -447,6 +447,33 @@ class TorchVehicleConfig:
     # AdamW lr_lambda (its floor mis-keyed to adamw_lr → never anneals below 0.5× at stage
     # 8). True = Muon gets its own cosine floor keyed to muon_lr. Opt-in for the scaled run.
     muon_lr_floor_fix: bool = False
+    # WARM-START fine-tune (the capacity-vs-loss-wall disambiguator + general fine-tuning
+    # entry point). DEFAULT None → stage-0 latents are the random init (byte-identical from-0
+    # path). When set to a ``best/`` dir holding ``best_ema_decoder.pt`` + ``best_ema_latents.pt``
+    # (the canonical converged-checkpoint layout this driver writes), a FRESH run (no resume
+    # checkpoint in out_dir) builds the stage-0 decoder, LOADS those weights into it, and uses
+    # the stored latents as the stage-0 init INSTEAD of the random draw — so training CONTINUES
+    # from a converged basin rather than from scratch. This is an apples-to-apples fine-tune
+    # primitive: two runs with the SAME ``warm_start_dir`` + SAME ``seed`` share their init
+    # bit-for-bit and differ only by their curriculum (e.g. an oomph-soft_cosine arm vs a
+    # CE-continue arm). REQUIRES ``pose_film_enabled=False`` (the saved vendored state_dict has
+    # no FiLM params) and a matching ``base_channels`` / ``latent_dim`` (the load is strict).
+    # Resume always wins: if a checkpoint already exists in out_dir, the warm-start is ignored
+    # (the run is resuming its OWN trajectory, not re-priming). NOT consulted on any non-stage-0
+    # carry path. Byte-identical when None.
+    warm_start_dir: Path | None = None
+    # EMA WARMUP (the EMA-shadow-lag fix for SHORT runs; sister of the capstone curriculum fix).
+    # DEFAULT False → the EMA decay is the constant ``spec.ema_decay`` every step (byte-identical
+    # legacy path). The constant 0.999 has a ~1000-step window; on a short fine-tune (≤ a few
+    # hundred epochs) the shadow stays frozen near its init and HIDES the trajectory — so the
+    # exact d_seg/d_pose read off the shadow never reflect the fine-tuning. When True, the
+    # effective per-step decay is ``min(spec.ema_decay, (t+1)/(t+10))`` where ``t`` is the
+    # driver's global EMA step counter (0 at the first step of the run) — the standard
+    # bias-corrected warmup: decay ramps 0.10 → 0.99 → ``spec.ema_decay`` so the shadow TRACKS
+    # the live weights early and converges to the faithful decay once enough steps accumulate.
+    # Scoped to the EMA update only; the optimizer/loss/RNG paths are untouched. The faithful
+    # long-run basin is byte-identical when this is off; opt-in for warm-start fine-tunes.
+    ema_warmup: bool = False
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -503,6 +530,15 @@ class TorchVehicleConfig:
                 "variable-level grid, but from DIFFERENT level sources (Lever-4's online "
                 "score-sensitivity EMA vs the offline measured RD table). Enable exactly one."
             )
+        if self.warm_start_dir is not None:
+            self.warm_start_dir = Path(self.warm_start_dir)
+            if self.pose_film_enabled:
+                raise ValueError(
+                    "warm_start_dir requires pose_film_enabled=False: the saved "
+                    "best_ema_decoder.pt is a vendored (no-FiLM) state_dict and a strict "
+                    "load into a FiLM-wrapped decoder would fail. Warm-start the vendored "
+                    "decoder, then add FiLM as a separate (untested-here) step if needed."
+                )
         self.out_dir = Path(self.out_dir)
 
 
@@ -607,6 +643,11 @@ class TorchVehicleDriver:
         self.best_ep = self.telemetry.best_ep
         self.best_stage = self.telemetry.best_stage
         self._global_epoch = 0
+        # EMA warmup step counter (only consulted when ``cfg.ema_warmup``): the number of
+        # EMA updates applied so far this run (0 at the first optimizer step). Drives the
+        # bias-corrected warmup decay ``min(spec.ema_decay, (t+1)/(t+10))``. Left at 0 and
+        # never read on the default (constant-decay) path — byte-identical.
+        self._ema_step = 0
         # Pose-throttle state: the last-computed training pose_mse (None until the first
         # epoch that computes the pose head). Drives both the resume-threshold guard and
         # the telemetry carry on skipped epochs. See ``pose_grad_every_k``.
@@ -691,6 +732,45 @@ class TorchVehicleDriver:
         # Seed the STORED pose from the GT PoseNet pose (side-info, not learned).
         wrapper.set_stored_pose(self.scorer.pose_targets[: self.n_pairs].to(dev))
         return wrapper
+
+    # -- warm-start fine-tune (the disambiguator + general fine-tune entry point) --
+    def _load_warm_start_into(self, decoder: nn.Module) -> nn.Parameter:
+        """Load the converged decoder weights from ``cfg.warm_start_dir`` INTO
+        ``decoder`` (strict) and return the stored latents as a fresh stage-0
+        ``nn.Parameter`` on the TRAIN device. Replaces the random from-0 init so a
+        run CONTINUES from a converged basin. STRICT by construction: a shape/key
+        mismatch (wrong base_ch / latent_dim / FiLM wrapper) raises here rather than
+        silently mis-loading — the apples-to-apples fine-tune contract depends on the
+        two arms loading the SAME bytes into the SAME architecture."""
+        wd = Path(self.cfg.warm_start_dir)  # type: ignore[arg-type]
+        dec_path = wd / "best_ema_decoder.pt"
+        lat_path = wd / "best_ema_latents.pt"
+        if not dec_path.exists() or not lat_path.exists():
+            raise FileNotFoundError(
+                f"warm_start_dir={wd} must hold best_ema_decoder.pt + best_ema_latents.pt "
+                f"(the canonical converged-checkpoint layout this driver writes); missing "
+                f"{'best_ema_decoder.pt' if not dec_path.exists() else 'best_ema_latents.pt'}"
+            )
+        # The driver saves a BARE state_dict / BARE tensor (torch.save(ema_sd, ...) /
+        # torch.save(ema_latents, ...)); tolerate a dict-wrapped variant defensively.
+        sd = torch.load(dec_path, map_location="cpu", weights_only=False)
+        # A bare HNeRV state_dict has param-name keys (e.g. "rgb_1.weight") — never a
+        # literal "state_dict" key — so this unwrap only fires on a dict-wrapped save.
+        if isinstance(sd, dict) and "state_dict" in sd:
+            sd = sd["state_dict"]
+        lat = torch.load(lat_path, map_location="cpu", weights_only=False)
+        if isinstance(lat, dict):
+            if not lat:
+                raise ValueError(f"warm-start latents dict at {lat_path} is empty")
+            lat = lat.get("latents", next(iter(lat.values())))
+        # STRICT load — a mismatch is a misconfigured warm-start, not a silent partial load.
+        decoder.load_state_dict({k: v.to(self.train_device) for k, v in sd.items()})
+        if int(lat.shape[0]) != self.n_pairs or int(lat.shape[1]) != self.cfg.latent_dim:
+            raise ValueError(
+                f"warm-start latents shape {tuple(lat.shape)} != (n_pairs={self.n_pairs}, "
+                f"latent_dim={self.cfg.latent_dim}); cannot warm-start a different basis"
+            )
+        return nn.Parameter(lat.detach().clone().to(self.train_device))
 
     def _film_param_ids(self, decoder: nn.Module) -> set[int]:
         """The ``id()`` set of the pose-FiLM params on ``decoder`` (the wrapper), by
@@ -960,8 +1040,18 @@ class TorchVehicleDriver:
                 rt.muon_opt.step()
 
             # EMA update after each step (the EMA non-negotiable; faithful position).
+            # Default: the constant ``spec.ema_decay`` (byte-identical). WARMUP (opt-in,
+            # ``cfg.ema_warmup``): the effective decay ramps via the bias-corrected
+            # ``min(spec.ema_decay, (t+1)/(t+10))`` so the shadow TRACKS the live weights
+            # on a short fine-tune instead of staying frozen near init (the EMA-shadow-lag
+            # fix). ``t`` is the global EMA-step counter; it advances ONLY on the warmup
+            # path so the default counter stays 0 and unread.
+            ema_decay = spec.ema_decay
+            if self.cfg.ema_warmup:
+                ema_decay = min(spec.ema_decay, (self._ema_step + 1) / (self._ema_step + 10))
+                self._ema_step += 1
             self.v.ema_update(
-                rt.ema_decoder, decoder, rt.ema_latents, latents, decay=spec.ema_decay
+                rt.ema_decoder, decoder, rt.ema_latents, latents, decay=ema_decay
             )
 
             epoch_loss += loss_val
@@ -1141,6 +1231,11 @@ class TorchVehicleDriver:
             # steps). A plain dict copy (JSON/torch-safe). Empty/default on the
             # vendored path → round-trips as an empty dict (no behavior change).
             "tensor_sensitivity_ema": dict(rt.tensor_sensitivity_ema),
+            # EMA-warmup step counter — persisted so a resume CONTINUES the warmup decay
+            # schedule (else _ema_step resets to 0 → the decay snaps back to 0.1 and the
+            # shadow takes a spurious jolt). Always 0 on the default (ema_warmup off) path,
+            # so it round-trips as 0 → byte-identical for the faithful basin.
+            "ema_step": int(self._ema_step),
             "base_channels": self.cfg.base_channels,
             "latent_dim": self.cfg.latent_dim,
             "n_pairs": self.n_pairs,
@@ -1161,6 +1256,9 @@ class TorchVehicleDriver:
             {k: v.to(td) for k, v in merged["ema_decoder"].items()}
         )
         rt.ema_latents = merged["ema_latents"].to(td)
+        # Restore the EMA-warmup step counter (backward-compatible: old checkpoints lack
+        # the key → 0, which is also the value on any ema_warmup-off run → no change).
+        self._ema_step = int(merged.get("ema_step", 0))
         # Optimizer/scheduler restore is SKIPPED for a FORK-SEED checkpoint (the
         # Lever-3 A/B seeds the WEIGHTS + EMA from the immutable basin forkpoint but
         # cannot transfer the AdamW/Muon momentum across an architecture change —
@@ -1793,7 +1891,20 @@ class TorchVehicleDriver:
             )
             if carry_decoder is None:
                 decoder = self._new_decoder()  # train-device (gradient backend)
-                if spec.init_latents_random:
+                if (
+                    self.cfg.warm_start_dir is not None
+                    and spec.init_latents_random
+                    and not resuming_into_this_stage
+                ):
+                    # WARM-START fine-tune: load the converged decoder weights + stored
+                    # latents from a prior run's best/ dir, REPLACING the random from-0
+                    # init. The from-0 random draw is SKIPPED (its RNG is not consumed) —
+                    # this is its own init contract: two arms with the SAME warm_start_dir
+                    # + seed are bit-identical here and diverge only in their curriculum.
+                    # Resume wins (the `not resuming_into_this_stage` guard): a run that
+                    # already owns a checkpoint continues its own trajectory.
+                    latents = self._load_warm_start_into(decoder)
+                elif spec.init_latents_random:
                     # Draw on CPU (deterministic via the global seed) then move to the
                     # train device — MPS has its own RNG stream, so a CPU draw keeps
                     # the init reproducible vs a CPU-arm descent-equivalence A/B.
