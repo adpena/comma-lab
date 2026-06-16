@@ -166,6 +166,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         "stored scalars (Wyner-Ziv, ~1KB) decoupled from d_seg. Warm-start loads "
                         "the converged ckpt into the FiLM wrapper's inner decoder (identity FiLM). "
                         "The math-optimal decoupled-oomph run.")
+    p.add_argument("--pose-film-trunk-stopgrad", action="store_true",
+                   help="COMPLETE the FiLM-v2 decoupling: route the POSE loss gradient ONLY to "
+                        "the FiLM pose path (pose_mlp + film_resid), STOP-GRADIENT on the shared "
+                        "trunk + latents + rgb_0/rgb_1 heads → ∂d_seg/∂(pose-objective)=0 EXACTLY "
+                        "(trunk+latents trained by SEG only). Requires --pose-film-v2 + "
+                        "--split-by-head. MEASURED-QUESTION: the 6 stored scalars must carry ALL "
+                        "the pose signal — A/B this vs plain --pose-film-v2 (it MIGHT hold d_pose "
+                        "worse if scalars insufficient, or better with no seg/pose tug-of-war).")
     p.add_argument("--oomph-seg-weight-mult", type=float, default=1.5,
                    help="oomph's seg_weight multiplier (default 1.5 = 'everything cranked'). "
                         "Set 1.0 for a CLEAN isolation run that varies ONLY T-sharpness + "
@@ -365,6 +373,9 @@ def main(argv: list[str] | None = None) -> int:
         # ckpt into the wrapper's inner decoder (identity FiLM). Default off = byte-identical.
         pose_film_enabled=bool(args.pose_film_v2),
         pose_film_version=2 if args.pose_film_v2 else 1,
+        # FiLM-v2 trunk decoupling (the EXACT ∂d_seg/∂pose=0 completion). Default off =
+        # byte-identical; requires pose-film-v2 + split-by-head (the Config guards it).
+        pose_film_trunk_stopgrad=bool(args.pose_film_trunk_stopgrad),
         seed=args.seed,
         pose_grad_every_k=args.pose_grad_every_k,
         pose_grad_resume_threshold=args.pose_grad_resume_threshold,
@@ -379,6 +390,8 @@ def main(argv: list[str] | None = None) -> int:
         "arm": args.arm, "warm_start_dir": str(warm), "control_dseg": control_dseg,
         "device": args.device, "train_device": args.train_device,
         "split_by_head": args.split_by_head, "n_pairs": args.n_pairs,
+        "pose_film_v2": bool(args.pose_film_v2),
+        "pose_film_trunk_stopgrad": bool(args.pose_film_trunk_stopgrad),
         "epochs": args.epochs, "ema_warmup": True, "seed": args.seed,
         "out_dir": str(out_dir), "stage": _plan_row(spec),
         "authority": "[contest-CPU advisory] NON-PROMOTABLE",

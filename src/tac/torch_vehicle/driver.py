@@ -441,6 +441,33 @@ class TorchVehicleConfig:
     # DEFAULT 1 (legacy); the from-0 decisive run sets 2. Byte-identity is unaffected
     # by the version when ``pose_film_enabled=False`` (no FiLM either way).
     pose_film_version: int = 1
+    # FiLM-v2 TRUNK DECOUPLING (the EXACT ∂d_seg/∂pose=0 completion). v2 already makes
+    # the FiLM HEAD decoupled (rgb_1 is FiLM-clean → ∂d_seg/∂(FiLM-params)=0), but the
+    # POSE LOSS gradient still LEAKS into the SHARED decoder: pose reads BOTH frames
+    # (PoseNet is a 2-frame net), so pose grad flows pose_loss → f1 → rgb_1/trunk/latents
+    # AND pose_loss → f0 → rgb_0/trunk/latents → and the SAME trunk+latents produce f1,
+    # so training to reduce d_pose perturbs the shared trunk, which moves f1, which moves
+    # d_seg. Measured symptom (the leaked synergy): under the oomph seg loss d_pose drifts
+    # UP monotonically (0.000335→0.000417 over ep10-59); with ∂S/∂d_pose ≈ 86% of
+    # ∂S/∂d_seg this is score-costly. DEFAULT FALSE → the pose cotangent flows into the
+    # whole shared graph exactly as today (byte-identical gradient; the live A/B is
+    # unaffected). When TRUE (requires pose_film_enabled AND split_by_head), the POSE
+    # loss gradient updates ONLY the FiLM pose path (``pose_mlp`` + ``film_resid``) and is
+    # STOP-GRADIENT on the shared trunk + latents + rgb_0/rgb_1 heads → ∂d_seg/∂(pose-
+    # objective)=0 EXACTLY and the two objectives are orthogonal (trunk+latents trained by
+    # SEG only, the FiLM pose path by POSE only). Mechanism: in the split-by-head backward
+    # the seg + pose cotangents are NO LONGER fused — seg backprops first (trains the whole
+    # graph), the non-FiLM ``.grad`` is snapshotted, pose backprops (accumulates onto all
+    # params), then the snapshot is RESTORED onto every non-FiLM param + latents (removing
+    # the pose contribution there) — proved EXACT by the gradient-routing test (non-FiLM
+    # grad == seg-only; FiLM grad == pose). MEASURED-QUESTION CAVEAT: freezing the trunk
+    # w.r.t. pose means the FiLM head + ~6 stored scalars/pair must carry ALL the pose
+    # signal — this MIGHT hold d_pose WORSE (if the scalars are insufficient) OR better (no
+    # seg/pose tug-of-war). The Quantizr design (store-6-pose + FiLM) suggests it suffices,
+    # but it is EMPIRICAL — this is an OPT-IN mode for a GPU A/B (complete-decoupling vs
+    # current-v2), NOT a forced default. NOT an authority/score knob; the exact d_seg/d_pose
+    # that pick BEST still run the full scorer on the CPU authority.
+    pose_film_trunk_stopgrad: bool = False
     # Track-A DISTORTION finishing-kit (PR98 bias / T10 affine / S12 mask) — an
     # inflate-side, zero/near-zero-byte postproc on the rendered frames + a ~54-byte
     # distortion archive section. DEFAULT None → NO kit, NO section, BYTE-IDENTICAL
@@ -618,6 +645,31 @@ class TorchVehicleConfig:
                 f"pose_film_version must be 1 (v1 stem) or 2 (v2 residual-rgb0); "
                 f"got {self.pose_film_version}"
             )
+        if self.pose_film_trunk_stopgrad:
+            # The trunk-stopgrad routing only EXISTS when there is a FiLM pose path to
+            # route the pose gradient INTO, and is implemented in the split-by-head
+            # backward (which is the only path that holds a separable pose cotangent).
+            # Refuse a mis-config so the flag can never silently no-op (a silent no-op
+            # would let the operator believe the decoupling is active when it is not).
+            if not self.pose_film_enabled:
+                raise ValueError(
+                    "pose_film_trunk_stopgrad requires pose_film_enabled=True: the pose "
+                    "gradient is routed INTO the FiLM pose path (pose_mlp + film_resid); "
+                    "with no FiLM there is no pose path to route to."
+                )
+            if int(self.pose_film_version) != 2:
+                raise ValueError(
+                    "pose_film_trunk_stopgrad requires pose_film_version=2 (the v2 "
+                    "residual-rgb0 wrapper whose pose params are pose_mlp + film_resid). "
+                    "v1 stem-injection feeds both heads and has no decoupled pose path."
+                )
+            if not self.split_by_head:
+                raise ValueError(
+                    "pose_film_trunk_stopgrad requires split_by_head=True: the trunk-"
+                    "stopgrad routing lives in the split-by-head backward (the only path "
+                    "with a separable pose cotangent); the non-split path computes both "
+                    "heads in one fused graph (no separable pose gradient to mask)."
+                )
         if int(self.pose_grad_every_k) < 1:
             raise ValueError(
                 f"pose_grad_every_k must be >= 1 (1 = compute pose every epoch = "
@@ -983,6 +1035,29 @@ class TorchVehicleDriver:
             if any(n.startswith(pre) for pre in prefixes)
         }
 
+    def _non_film_grad_params(
+        self, decoder: nn.Module, latents: torch.Tensor
+    ) -> list[torch.Tensor]:
+        """The SHARED-decoder params (trunk + rgb_0/rgb_1 heads) PLUS the latents — i.e.
+        every trainable tensor the POSE objective must NOT update under
+        ``pose_film_trunk_stopgrad``. The FiLM pose path (``pose_mlp`` + ``film_resid``)
+        is EXCLUDED (it is the one place the pose gradient is allowed to land).
+
+        Used by :meth:`_split_by_head_backward` to snapshot+restore the non-FiLM ``.grad``
+        across the (separated) pose backward, so the pose contribution is removed from the
+        shared graph and ∂(trunk,latents,heads)/∂(pose-objective)=0 EXACTLY. The latents
+        are an ``nn.Parameter`` so they are masked too (the pose loss must not move the
+        shared latent code that produces the seg frame f1)."""
+        film_ids = self._film_param_ids(decoder)
+        params = [
+            p
+            for p in decoder.parameters()
+            if p.requires_grad and id(p) not in film_ids
+        ]
+        if isinstance(latents, torch.Tensor) and latents.requires_grad:
+            params.append(latents)
+        return params
+
     def _build_stage_runtime(
         self,
         spec: StageSpec,
@@ -1211,7 +1286,7 @@ class TorchVehicleDriver:
                     )
                 loss_val, pose_mse_val = self._split_by_head_backward(
                     decoded_bhwc, idx, spec, temperature=epoch_temperature,
-                    compute_pose=do_pose,
+                    compute_pose=do_pose, decoder=decoder, latents=latents,
                 )
                 # APGC bookkeeping: when pose was COMPUTED this epoch, advance the
                 # controller state off the just-measured pose_mse — update the running
@@ -1379,6 +1454,8 @@ class TorchVehicleDriver:
         *,
         temperature: float | None = None,
         compute_pose: bool = True,
+        decoder: nn.Module | None = None,
+        latents: torch.Tensor | None = None,
     ) -> tuple[float, float]:
         """Compute the COMBINED frame-gradient (SegNet path on the fast train device,
         PoseNet path on the CPU authority) and inject it into the decoder graph via a
@@ -1404,7 +1481,27 @@ class TorchVehicleDriver:
         The SegNet cotangent is the (validated bit-identical on d_seg) MPS gradient;
         the PoseNet cotangent is the CPU AUTHORITY gradient (zero drift). Returns
         ``(loss_value, pose_mse_value)`` for telemetry (recomputed from the detached
-        head losses; not authority — telemetry only)."""
+        head losses; not authority — telemetry only).
+
+        FiLM-v2 TRUNK DECOUPLING (``cfg.pose_film_trunk_stopgrad``): when ON, the seg +
+        pose cotangents are NO LONGER fused into one ``combined`` backward. Instead, the
+        pose contribution is removed from every SHARED-decoder param (trunk + latents +
+        rgb_0/rgb_1 heads) so ∂(shared)/∂(pose-objective)=0 EXACTLY, leaving the pose
+        gradient ONLY on the FiLM pose path (``pose_mlp`` + ``film_resid``):
+          a. ``decoded_bhwc.backward(gradient=cot_seg, retain_graph=True)`` — the SEG
+             cotangent trains the WHOLE graph (the FiLM pose params get ~0 here: SegNet
+             reads only the FiLM-clean f1, so the seg cotangent on f0 is ~0).
+          b. SNAPSHOT ``.grad`` of every non-FiLM param + the latents (the seg-only grad).
+          c. ``decoded_bhwc.backward(gradient=cot_pose)`` — the POSE cotangent ACCUMULATES
+             onto ALL params (trunk/latents/heads AND the FiLM pose params).
+          d. RESTORE the snapshot onto every non-FiLM param + the latents — removing the
+             pose contribution from the shared graph. The FiLM pose params are NOT
+             restored, so they keep the pose gradient (and seg's ~0 contribution).
+        Net: trunk+latents+heads are trained by SEG only; the FiLM pose path by POSE only.
+        Requires ``decoder`` + ``latents`` (the param handles to snapshot/restore); the
+        ``__post_init__`` guard ensures the flag is only on when both are passed (split +
+        FiLM v2). On the default (flag OFF) path the fused ``combined`` backward runs
+        EXACTLY as before — byte-identical gradient."""
         # --- SegNet path on the TRAIN device (MPS) ---
         frames_seg = decoded_bhwc.detach().requires_grad_(True)  # train_device leaf
         seg_out = self.scorer.seg_forward_train(frames_seg)
@@ -1419,6 +1516,7 @@ class TorchVehicleDriver:
         # ONLY the SegNet cotangent into the decoder. ``compute_pose`` defaults True so
         # every existing caller (k=1, tests) is byte-identical. The pose term re-engages
         # on the cadence epoch or if it drifts above the resume threshold (caller logic).
+        cot_pose = None
         if compute_pose:
             frames_pose = (
                 decoded_bhwc.detach().to(self.device).requires_grad_(True)
@@ -1428,8 +1526,7 @@ class TorchVehicleDriver:
             pose_mse = F.mse_loss(pose_pred6, pose_targets)
             pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
             (spec.pose_weight * pose_l).backward()
-            cot_pose = frames_pose.grad  # d(w_pose*pose_l)/dF on the CPU authority
-            combined = cot_seg + cot_pose.to(cot_seg.device)
+            cot_pose = frames_pose.grad.to(cot_seg.device)  # d(w_pose*pose_l)/dF, authority
             pose_mse_val = float(pose_mse.item())
             self._last_pose_mse = pose_mse_val
             loss_val = float((spec.seg_weight * seg_l).item()) + float(
@@ -1438,14 +1535,44 @@ class TorchVehicleDriver:
         else:
             # SegNet-only cotangent (pose throttled this epoch). loss_val is the seg term
             # only; pose_mse_val carries the last-computed value for telemetry continuity.
-            combined = cot_seg
             pose_mse_val = (
                 float("nan") if self._last_pose_mse is None else self._last_pose_mse
             )
             loss_val = float((spec.seg_weight * seg_l).item())
 
-        # --- inject the combined frame cotangent into the decoder ---
-        decoded_bhwc.backward(gradient=combined)
+        # --- inject the frame cotangent(s) into the decoder ---
+        # The trunk-stopgrad routing applies ONLY when the FiLM-v2 decoupling flag is on
+        # AND there is an actual pose cotangent this epoch (a throttled epoch flows the
+        # seg cotangent alone, identically in both modes). When it does NOT apply we keep
+        # the EXACT legacy fused backward (byte-identical gradient on the default path).
+        trunk_stopgrad = (
+            bool(self.cfg.pose_film_trunk_stopgrad)
+            and cot_pose is not None
+            and decoder is not None
+        )
+        if not trunk_stopgrad:
+            combined = cot_seg if cot_pose is None else cot_seg + cot_pose
+            decoded_bhwc.backward(gradient=combined)
+            return loss_val, pose_mse_val
+
+        # FiLM-v2 trunk decoupling: route the POSE gradient ONLY to the FiLM pose path.
+        # (a) SEG cotangent trains the whole graph (FiLM pose params get ~0 from seg).
+        decoded_bhwc.backward(gradient=cot_seg, retain_graph=True)
+        # (b) snapshot the seg-only grad of every SHARED (non-FiLM) param + latents.
+        shared = self._non_film_grad_params(decoder, latents)
+        snapshot = [
+            (None if p.grad is None else p.grad.detach().clone()) for p in shared
+        ]
+        # (c) POSE cotangent accumulates onto ALL params (shared + FiLM pose path).
+        decoded_bhwc.backward(gradient=cot_pose)
+        # (d) restore the seg-only grad on the SHARED params, removing the pose
+        #     contribution there → ∂(shared)/∂(pose-objective)=0 EXACTLY. The FiLM pose
+        #     path keeps the accumulated pose grad (seg's contribution to it is ~0).
+        for p, snap in zip(shared, snapshot, strict=True):
+            if snap is None:
+                p.grad = None
+            else:
+                p.grad.copy_(snap)
         return loss_val, pose_mse_val
 
     def _pose_targets_authority(self) -> torch.Tensor:

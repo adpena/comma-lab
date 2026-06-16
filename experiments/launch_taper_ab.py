@@ -77,6 +77,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--pose-grad-floor-tol", type=float, default=0.08)
     p.add_argument("--pose-grad-k-max", type=int, default=8)
     p.add_argument("--pose-grad-trend-window", type=int, default=3)
+    # FiLM-v2 trunk decoupling flag (the EXACT ∂d_seg/∂pose=0 routing). This launcher is
+    # the TAPER (channel-reallocation) A/B which is pose_film_enabled=False BY DESIGN
+    # (taper + FiLM are mutually exclusive in the Config), so this flag is INERT here and
+    # passing it ON will FAIL-CLOSED at TorchVehicleConfig (requires pose_film_enabled).
+    # It is surfaced for argparse-consistency with launch_oomph_finetune_disambiguator.py
+    # (where the decoupled-oomph A/B actually uses it). Default off = byte-identical.
+    p.add_argument("--pose-film-trunk-stopgrad", action="store_true",
+                   help="(inert here — taper is non-FiLM) route pose grad only to the FiLM "
+                        "pose path; use launch_oomph_finetune_disambiguator.py for the FiLM run.")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--targets-cache", type=Path,
                    default=Path("experiments/results/capstone_gt_targets_cache"))
@@ -177,6 +186,9 @@ def main(argv: list[str] | None = None) -> int:
         eval_every=args.eval_every, device=args.device, train_device=args.train_device,
         split_by_head=args.split_by_head, async_eval=args.async_eval,
         pose_film_enabled=False, seed=args.seed,
+        # Inert here (non-FiLM taper); passed through so the Config guard fail-closes if
+        # someone sets it ON (it requires pose_film_enabled=True). Default off = no-op.
+        pose_film_trunk_stopgrad=bool(args.pose_film_trunk_stopgrad),
         pose_grad_every_k=args.pose_grad_every_k,
         pose_grad_resume_threshold=args.pose_grad_resume_threshold,
         pose_grad_adaptive=args.pose_grad_adaptive,
