@@ -333,6 +333,45 @@ def _normalize_variable_level_rd_table(
     return out
 
 
+def _sensitivity_for_codec_weight_keys(
+    sensitivity: dict[str, float] | None,
+    weight_keys: list[str],
+) -> dict[str, float] | None:
+    """Re-key the online score-sensitivity EMA onto the codec's WEIGHT state-dict keys.
+
+    THE SPINE RECONCILIATION (the single-source contract). ``accumulate_tensor_
+    sensitivity`` keys the EMA by ``decoder.named_modules()`` MODULE names (e.g.
+    ``stem`` / ``blocks.0``, or ``decoder.stem`` / ``decoder.blocks.0`` when the
+    decoder is the FiLM wrapper). ``apply_score_aware_qat`` (the training-time QAT
+    bits) looks up by those SAME module names, so QAT consumes the EMA correctly. But
+    the variable-level EXPORT codec checks the WEIGHT state-dict keys
+    (``<module>.weight``) — a DIFFERENT namespace. Without this translation the codec
+    lookup ``sensitivity.get("blocks.0.weight")`` MISSES the EMA key ``"blocks.0"`` →
+    every tensor reads 0.0 → uniform → the rate-attack SILENTLY no-ops even when
+    enabled (the QAT trained a coarse grid the export never reproduced). This rebinds
+    so the SAME ``||∂S/∂w_t||`` tensor drives BOTH the QAT bits AND the codec levels —
+    the spine the bind-all spec calls for ("compute sensitivity ONCE and fan out").
+
+    For each codec weight key ``<module>.weight`` the EMA value is resolved by trying,
+    in order: the exact key (already codec-keyed — the test-API convention), the
+    module name ``<module>`` (the no-FiLM EMA convention), and the FiLM-wrapper-
+    prefixed module name ``decoder.<module>`` (the FiLM EMA convention). Returns
+    ``None`` when ``sensitivity`` is ``None`` OR no codec weight key resolves to any
+    EMA entry (so the codec's own ``None`` → uniform → byte-identical-to-vendored
+    default-preserving path is preserved exactly — NEVER a fabricated allocation).
+    """
+    if sensitivity is None:
+        return None
+    out: dict[str, float] = {}
+    for wkey in weight_keys:
+        module = wkey[: -len(".weight")] if wkey.endswith(".weight") else wkey
+        for candidate in (wkey, module, f"decoder.{module}"):
+            if candidate in sensitivity:
+                out[wkey] = float(sensitivity[candidate])
+                break
+    return out or None
+
+
 class _SimulatedDeath(Exception):
     """Raised by the test-only ``_stop_after_global_epoch`` hook AFTER a checkpoint
     lands, to simulate a SIGKILL/OOM mid-run for the in-process resume test."""
@@ -2055,11 +2094,20 @@ class TorchVehicleDriver:
             levels_from_sensitivity_for_codec,
         )
 
-        # Build the per-tensor level map from the online sensitivity EMA, keyed by the
-        # WEIGHT state-dict keys the codec checks (``<module>.weight``). Tensors absent
-        # from the sensitivity map (biases, FiLM params, etc.) get the base 127 levels.
+        # Build the per-tensor level map from the online sensitivity EMA. THE SPINE
+        # RECONCILIATION: the EMA is keyed by ``decoder.named_modules()`` MODULE names
+        # (``blocks.0`` no-FiLM / ``decoder.blocks.0`` FiLM-wrapper) — the SAME keys
+        # ``apply_score_aware_qat`` consumes for the training-time bits — but the codec
+        # checks the WEIGHT state-dict keys (``blocks.0.weight``). ``_sensitivity_for_
+        # codec_weight_keys`` rebinds the module-keyed EMA onto the codec weight keys so
+        # the SAME ``||∂S/∂w_t||`` tensor drives BOTH the QAT grid AND the export grid
+        # (the single-source spine). Without it the codec lookup would miss every EMA
+        # entry → uniform → the rate-attack would silently no-op (the QAT trained a
+        # coarse grid the export never reproduced). Tensors absent from the EMA (biases,
+        # FiLM params, etc.) get the base 127 levels.
         weight_keys = [k for k in archive_decoder_sd if k.endswith(".weight")]
-        levels_by_weight = levels_from_sensitivity_for_codec(sensitivity, weight_keys)
+        codec_sensitivity = _sensitivity_for_codec_weight_keys(sensitivity, weight_keys)
+        levels_by_weight = levels_from_sensitivity_for_codec(codec_sensitivity, weight_keys)
         # The codec maps over ALL sd keys; non-weight keys default to base (127).
         levels = {k: int(levels_by_weight.get(k, 127)) for k in archive_decoder_sd}
         decoder_blob, is_variable_format = build_decoder_blob_variable_or_vendored(
@@ -2732,6 +2780,115 @@ class TorchVehicleDriver:
             self.cfg.out_dir,
             TorchCheckpointPosition(stage_index, epoch_in_stage),
         )
+
+    def export_production_archive(
+        self,
+        ema_sd: dict[str, torch.Tensor],
+        ema_latents: torch.Tensor,
+        *,
+        sensitivity: dict[str, float] | None = None,
+        score_finished: bool = False,
+    ) -> dict[str, Any]:
+        """The FINAL production export — bind the rate-attack + L3 finishing-kit into
+        ONE byte-closed packet from a CONVERGED checkpoint (the P2 export entry point).
+
+        This is the POST-CONVERGENCE export pass (NEVER an in-loop perturbation — the
+        descending basin is untouched). It composes the two production levers that are
+        applied at export time:
+
+        * RATE-ATTACK (decoder-blob variable-level codec): ``_build_archive_and_eval_
+          decoder`` already builds the rate-attacked base archive when
+          ``cfg.lever4_variable_level_export_enabled`` is set, driven by the SAME online
+          score-sensitivity EMA (``sensitivity``, module-keyed) the QAT consumed — the
+          single-source SPINE (re-keyed onto the codec weight keys by ``_sensitivity_
+          for_codec_weight_keys``). Pass the converged ``rt.tensor_sensitivity_ema`` (or
+          the ``best_meta`` sensitivity snapshot) as ``sensitivity``.
+        * L3 DISTORTION FINISHING-KIT (PR98 bias / T10 affine / S12): ``cfg.distortion_
+          kit`` (a ``DistortionKitConfig``) is appended as a ≤54-byte trailing section
+          via :func:`finish_checkpoint_with_distortion_kit`. The substrate ``inflate.sh``
+          reads the section and runs ``apply_distortion_kit_to_raw_frames`` after the
+          vendored ``inflate.py``.
+
+        DEFAULT-PRESERVING (the byte-identical contract):
+        ``cfg.lever4_variable_level_export_enabled`` OFF (or uniform sensitivity) AND
+        ``cfg.distortion_kit`` None/disabled → the returned ``finished_archive`` is
+        BYTE-IDENTICAL to the pristine vendored ``build_archive`` (no rate-attack
+        splice, no distortion section). Each lever flips on only when its config is
+        non-trivially set.
+
+        ``score_finished=True`` re-scores the finished packet with the kit applied
+        POST-round on the AUTHORITY device via :func:`kit_aware_exact_eval` — the HONEST
+        L3 score (the +54 B rate cost AND the kit's d_seg/d_pose effect are both
+        measured; never a bytes-only-without-distortion fake). Requires the scorer to
+        expose ``distortion_net`` + ``video_path`` (the real scorer context). Off by
+        default ($0, no scorer streaming); the BYTE deltas are returned regardless.
+
+        Score-claim discipline: the BYTE saving (rate-attack + the ≤54-B section) is
+        real + measurable; any returned score is ``[contest-CPU advisory]`` NON-
+        PROMOTABLE until a 600-pair byte-closed dual CPU/CUDA exact eval (G3). NO score
+        is claimed from calling this method.
+        """
+        meta_dict: dict[str, Any] = {
+            "n_pairs": self.n_pairs,
+            "latent_dim": self.cfg.latent_dim,
+            "base_channels": self.cfg.base_channels,
+            "eval_size": [_EVAL_H, _EVAL_W],
+        }
+        # (1) rate-attack base archive (the SPINE: module-keyed EMA -> codec levels) +
+        # the parse-back eval decoder/latents (byte-closed faithful).
+        base_archive, eval_dec, eval_latents = self._build_archive_and_eval_decoder(
+            ema_sd, ema_latents, meta_dict, sensitivity=sensitivity
+        )
+        # (2) L3 finishing-kit section (default-OFF -> byte-identical no-op).
+        finish = finish_checkpoint_with_distortion_kit(
+            base_archive, self.cfg.distortion_kit, vendored=self.v
+        )
+        finished_archive: bytes = finish["finished_archive"]
+        result: dict[str, Any] = {
+            "finished_archive": finished_archive,
+            "base_archive_bytes": finish["base_archive_bytes"],
+            "section_bytes": finish["section_bytes"],
+            "added_bytes": finish["added_bytes"],
+            "finished_archive_bytes": len(finished_archive),
+            "rate_attack_enabled": bool(self.cfg.lever4_variable_level_export_enabled),
+            "decoder_codec": meta_dict.get("decoder_codec", "vendored"),
+            "distortion_section_present": finish["section_bytes"] > 0,
+            "is_byte_identical_to_vendored_base": finish["is_byte_identical"]
+            and meta_dict.get("decoder_codec", "vendored") == "vendored",
+            "authority": "[contest-CPU advisory] NON-PROMOTABLE until dual CPU/CUDA exact eval",
+            "score_claim": False,
+        }
+        if "lever4_variable_level_export" in meta_dict:
+            result["lever4_variable_level_export"] = meta_dict["lever4_variable_level_export"]
+        if "variable_level_waterfill" in meta_dict:
+            result["variable_level_waterfill"] = meta_dict["variable_level_waterfill"]
+        if not score_finished:
+            return result
+        # (3) HONEST kit-aware re-score (the L3 effect MEASURED, not faked). The rate
+        # term uses the FINISHED packet bytes (base + section); the distortion uses the
+        # kit applied POST-round on the AUTHORITY device.
+        distortion_net = getattr(self.scorer, "distortion_net", None)
+        video_path = getattr(self.scorer, "video_path", None)
+        score_helper = getattr(self.scorer, "_score", None)
+        if distortion_net is None or video_path is None or score_helper is None:
+            raise ValueError(
+                "score_finished=True requires the real scorer context (distortion_net "
+                "+ video_path + total_video_bytes); the synthetic scorer cannot kit-aware "
+                "re-score. Leave score_finished=False for byte-only export."
+            )
+        tvb = score_helper.total_video_bytes(video_path)
+        ev = kit_aware_exact_eval(
+            eval_dec,
+            eval_latents.to(self.device),
+            distortion_net,
+            video_path,
+            distortion_kit=self.cfg.distortion_kit,
+            archive_bytes=len(finished_archive),
+            total_video_bytes=tvb,
+            device=str(self.device),
+        )
+        result["finished_score"] = ev
+        return result
 
 
 @dataclass
