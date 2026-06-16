@@ -32,6 +32,30 @@ The base_ch=20 small learned basis (HNeRV decoder, 83,356 params), trained with:
   600-pair. No new code needed: the launcher already supports --pose-film-v2 / --oomph-seg-weight-mult
   1.0 / --epochs N / (600-pair from-0 uses launch_from0 + an oomph overlay — small add).
 
+## ⚠️ RATE-HEADROOM CORRECTION 2026-06-16T17:3x (operator "0.111 is lower than 0.15")
+This SUPERSEDES the "→ THEN capacity" framing below for the sub-0.15 target. The decisive
+arithmetic: the small basis's **rate+pose floor is ~0.111 (< 0.15)** — rate 25·89KB/N = 0.059
++ pose √(10·d_pose) = 0.055. So **base_ch20 is the ONLY capacity whose floor is comfortably
+sub-0.15, and sub-0.15 needs only d_seg < 0.00039.**
+
+**Capacity scaling is rate-infeasible, not a free d_seg lever.** Decoder params scale ~bc²
+(conv in·out ∝ C²); archive ≈ 1 B/param after int8+brotli; latents (600×28) are bc-independent.
+So the rate term grows QUADRATICALLY in base_ch:
+| base_ch | ~archive | rate term | rate+pose floor |
+|---|---|---|---|
+| 20 | 89 KB | 0.059 | **0.114** (sub-0.15 ✓) |
+| 28 | ~150–170 KB | ~0.10–0.11 | ~0.16 (**> 0.15 before any d_seg**) |
+| 36 | ~250 KB+ | ~0.17 | ~0.23 (hopeless) |
+
+⇒ **The optimal sub-0.15 path is a BYTE-NEUTRAL d_seg attack on base_ch20**: (1) oomph long-train
+(the sharp soft_cosine lever already beat the CE power-law — 0.00213 vs ~0.00260 at 600-pair),
+(2) the d_seg-aware TAPER (byte-neutral capacity REALLOCATION to the 192×256 d_seg-critical band).
+Both hold bytes constant, preserving the 0.111 floor. **Capacity-RD (G1) is DEMOTED to a
+rate-AWARE contingency** — only if the byte-neutral levers wall above d_seg ~0.0004, and even then
+bc28+ likely can't beat bc20's floor. (My intermediate "capacity is the binding lever, G1 first"
+move was WRONG — it spent the rate headroom that makes 0.111<0.15; the operator's floor point
+corrected it.) Sister: [[small-basis-rate-headroom-is-the-sub015-asset-capacity-scaling-forfeits-it]].
+
 ## Phased sequence (gated)
 1. **NOW (running):** coupled vs decoupled 600ep@96 A/B → confirms FiLM removes the residual pose
    drift (the decisive proof of the decoupling). ETA ~5.6h.
