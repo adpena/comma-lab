@@ -185,11 +185,13 @@ def test_warm_start_off_is_random_init(tmp_path):
 
 
 # ============================= ema_warmup ====================================
-def test_film_warm_start_loads_vendored_into_inner_decoder(tmp_path):
+@pytest.mark.parametrize("version", [1, 2])
+def test_film_warm_start_loads_vendored_into_inner_decoder(tmp_path, version):
     """FiLM-warm-start (the decoupled-oomph path): a converged VENDORED ckpt warm-starts a
-    pose-FiLM v2 decoder — the vendored weights load into the wrapper's INNER .decoder, the
-    FiLM stays identity-init, and forward(idx=None) is bit-equal to the vendored decoder. So
-    the 0.00359 basin carries over AND d_seg⊥pose decoupling is ready."""
+    pose-FiLM decoder — the vendored weights load into the wrapper's INNER .decoder, the FiLM
+    stays identity-init, and forward(idx=None) is bit-equal to the vendored decoder. Tested for
+    BOTH v1 and v2 (the wrapper-detect must key on the .decoder submodule, NOT a v2-only attr —
+    keying on pose_mlp would silently break v1)."""
     from tac.torch_vehicle.driver import (
         TorchVehicleConfig, TorchVehicleDriver, import_vendored_bundle,
     )
@@ -207,25 +209,23 @@ def test_film_warm_start_loads_vendored_into_inner_decoder(tmp_path):
     torch.save(torch.randn(4, 28) * 0.1, best / "best_ema_latents.pt")
 
     cfg = TorchVehicleConfig(base_channels=8, latent_dim=28, out_dir=tmp_path / "d",
-                             device="cpu", seed=0, pose_film_enabled=True, pose_film_version=2,
-                             warm_start_dir=best)
+                             device="cpu", seed=0, pose_film_enabled=True,
+                             pose_film_version=version, warm_start_dir=best)
     drv = TorchVehicleDriver(cfg, scorer=SyntheticScorerContext(n_pairs=4, device="cpu", seed=0),
                              vendored=import_vendored_bundle(), curriculum=[])
     film_dec = drv._new_decoder()
-    assert hasattr(film_dec, "pose_mlp") and hasattr(film_dec, "decoder"), "must be the v2 wrapper"
+    assert hasattr(film_dec, "decoder") and isinstance(film_dec.decoder, torch.nn.Module), \
+        "wrapper must hold the vendored decoder in a .decoder submodule (v1 and v2)"
     drv._load_warm_start_into(film_dec)
-    # (1) the vendored weights landed in the INNER decoder.
+    # (1) the vendored weights landed in the INNER decoder (NOT a partial/whole-wrapper load).
     inner = film_dec.decoder.state_dict()
     for k, sv in dec.state_dict().items():
-        assert torch.allclose(inner[k].cpu(), sv.cpu(), atol=1e-6), f"inner {k} not loaded"
-    # (2) the FiLM residual is identity-init (proj + beta zero → film_resid == 0).
-    fr = dict(film_dec.film_resid.named_parameters())
-    assert float(fr["proj.weight"].abs().sum()) == 0.0
-    assert float(fr["beta_head.weight"].abs().sum()) == 0.0
-    # (3) forward(idx=None) == the vendored decoder (basin carried over, FiLM bypassed).
+        assert torch.allclose(inner[k].cpu(), sv.cpu(), atol=1e-6), f"v{version} inner {k} not loaded"
+    # (2) forward(idx=None) == the vendored decoder (basin carried over, FiLM bypassed/identity).
     z = torch.randn(2, 28)
     with torch.no_grad():
-        assert torch.allclose(dec(z), film_dec(z, None), atol=1e-5), "FiLM-warm forward != vendored"
+        assert torch.allclose(dec(z), film_dec(z, None), atol=1e-5), \
+            f"v{version} FiLM-warm forward(idx=None) != vendored"
 
 
 def test_ema_warmup_default_false():

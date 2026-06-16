@@ -818,7 +818,12 @@ class TorchVehicleDriver:
         # converged 0.00359 trunk/heads carry over AND the d_seg⊥pose decoupling is active —
         # the math-optimal start for cranking the seg (oomph) loss without a pose cost.
         target = decoder
-        if hasattr(decoder, "pose_mlp") and isinstance(getattr(decoder, "decoder", None), nn.Module):
+        # FiLM-wrapper detect: BOTH v1 (children: decoder/pose_film) and v2 (decoder/pose_mlp/
+        # film_resid) hold the vendored decoder in a ``.decoder`` submodule. A plain vendored
+        # OR ConfigurableTaper decoder has NO ``.decoder`` child (its children are stem/blocks/
+        # …), so ``.decoder`` being a Module uniquely identifies a FiLM wrapper — robust for v1
+        # AND v2 (keying on pose_mlp would silently miss v1 → a broken v1 warm-start).
+        if isinstance(getattr(decoder, "decoder", None), nn.Module):
             target = decoder.decoder
         target.load_state_dict({k: v.to(self.train_device) for k, v in sd.items()})
         if int(lat.shape[0]) != self.n_pairs or int(lat.shape[1]) != self.cfg.latent_dim:
