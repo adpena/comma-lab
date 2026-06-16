@@ -192,6 +192,19 @@ def test_cfg_taper_default_none():
     assert _cfg().taper_channels is None
 
 
+def test_final_channel_lt_2_fails_closed():
+    """A taper whose FINAL channel < 2 makes refine's Conv2d(cf, cf//2,...) → cf//2==0
+    invalid. Guard fail-closed with a clear error at ALL three surfaces (round-6 MEDIUM):
+    the decoder ctor, the param-count formula, and the cfg validation."""
+    bad = [16, 16, 17, 19, 19, 14, 1]  # final == 1 → final//2 == 0
+    with pytest.raises(ValueError, match="final channel must be >= 2"):
+        ConfigurableTaperHNeRVDecoder(latent_dim=28, channels=bad)
+    with pytest.raises(ValueError, match="final channel must be >= 2"):
+        decoder_param_count(bad)
+    with pytest.raises(ValueError, match="final stage must be >= 2"):
+        _cfg(taper_channels=bad)
+
+
 def test_cfg_taper_validation():
     with pytest.raises(ValueError, match="7 stages"):
         _cfg(taper_channels=[20, 20, 20])

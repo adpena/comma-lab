@@ -561,6 +561,11 @@ class TorchVehicleConfig:
                 )
             if any(c <= 0 for c in self.taper_channels):
                 raise ValueError(f"taper_channels must all be positive; got {self.taper_channels}")
+            if self.taper_channels[-1] < 2:
+                raise ValueError(
+                    "taper_channels final stage must be >= 2 (the refine block uses "
+                    f"final//2 as its width); got {self.taper_channels[-1]}"
+                )
             if self.pose_film_enabled:
                 raise ValueError(
                     "taper_channels requires pose_film_enabled=False: the configurable-taper "

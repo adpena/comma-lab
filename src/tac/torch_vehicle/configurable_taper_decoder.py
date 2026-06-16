@@ -54,6 +54,11 @@ def decoder_param_count(channels: list[int], latent_dim: int = 28) -> int:
         raise ValueError(f"taper must have 7 stages; got {len(channels)}: {channels}")
     if any(int(c) <= 0 for c in channels):
         raise ValueError(f"all taper channels must be positive; got {channels}")
+    if int(channels[-1]) < 2:
+        raise ValueError(
+            f"taper final channel must be >= 2 (refine uses final_ch//2 as its intermediate "
+            f"width → final_ch//2==0 builds an invalid Conv2d); got channels[-1]={channels[-1]}"
+        )
     c = [int(x) for x in channels]
     base_h, base_w = 6, 8
     n = 0
@@ -140,6 +145,12 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
             raise ValueError(f"taper must have 7 stages; got {len(channels)}: {channels}")
         if any(int(c) <= 0 for c in channels):
             raise ValueError(f"all taper channels must be positive; got {channels}")
+        if int(channels[-1]) < 2:
+            raise ValueError(
+                f"taper final channel must be >= 2 (refine uses final_ch//2 as its "
+                f"intermediate width → final_ch//2==0 builds an invalid Conv2d); got "
+                f"channels[-1]={channels[-1]}"
+            )
         self.channels = [int(c) for c in channels]
 
         # --- verbatim vendored construction (only self.channels is the variable) -------
