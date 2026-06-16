@@ -68438,11 +68438,11 @@
       "id": "lane_snerv_tub_output2_runtime_binding_20260605",
       "name": "SNeRV TUB output2 runtime binding",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "native TUB LFHF output2 runtime binding proof plus compact runner route; focused SNeRV pytest and ruff green"
         },
         "real_archive_empirical": {
           "status": false,
@@ -73306,6 +73306,334 @@
         }
       },
       "notes": "TRACK B step 1; reuses tac.lossless.range_coder; full-stack synergy with Layer2 rate surrogate + Layer3 T1/T8; research_only=true advisory"
+    },
+    {
+      "id": "lane_variable_level_waterfill_allocator_20260612",
+      "name": "Math-optimal per-tensor reverse-waterfill (KKT) allocator for the variable-level codec",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/losses/variable_level_waterfill_allocator.py + 29 NO-FAKE tests (20 allocator + 9 codec) green; ruff clean; closed-form-CDF preflight gate PASS strict; probe operating-point fix (byte-target frontier on BOTH slices -> robust op point); commits 6e60d11c6 + 57be37a2c + respawn"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "Partner B respawn 3-clean: R1 finding (run3 hull net_stop REGRESSES on confirm +0.044, falsifying first landing 'verdict STANDS') -> R2/R3 clean (KKT cert + deployed-net-real + operating-point-honesty + acceptance-gate#4/#6 + no-regression 29 tests). Memo track_a_itemB_math_optimal_waterfill_20260612T222125Z.md"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/track_a_itemB_math_optimal_waterfill_20260612T222125Z.md (CORRECTED respawn memo: NET_POSITIVE_AT_CONSERVATIVE_OP, banked worst-slice -0.005213 @ -2731 B advisory, 29 NO-FAKE tests, wire-in rec + acceptance gate + honest run3-regression correction)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "[CORE] tac.losses.variable_level_waterfill_allocator (KKT reverse-waterfill over a MEASURED RD table; imports no base_ch20/codec). [ADAPTER] variable_level_codec.build_decoder_blob_variable_or_vendored. Probe experiments/probe_variable_level_waterfill_net.py MEASURES per-tensor RD curves on the real frozen scorer + the deployed net. SMOKE (4 pairs): KKT holds, net +0.000224 vs crude +0.001053 (4.7x closer to breakeven), 6 tensors coarsened vs 27, -845B real. research_only=true (advisory, NON-PROMOTABLE). slice-robust run + verdict pending."
+    },
+    {
+      "id": "lane_hinerv_wall_normal_archive_birth_support_20260613",
+      "name": "HiNeRV wall-normal archive-closed target-region birth support",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_hinerv_rle_support_parseback_inflate_20260613_codex",
+      "name": "HiNeRV RLE support parseback inflate survival",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "support_codec_router auto-generates selected built-in codec survival receipts; refreshed SSD artifacts support_codec_router_20260613T_rle_parseback_inflate_codex + evaluator_action_lowering_race_20260613T_rle_parseback_inflate_codex"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "focused tests passed: uv run pytest src/tac/tests/test_support_codec_router.py src/tac/tests/test_evaluator_action_lowering_race.py -q (35 passed); py_compile and ruff check passed on touched modules/tools/tests"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_track_a_finishing_kit_converged_residual_20260613",
+      "name": "Track-A converged residual finishing kit refit",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/torch_vehicle/distortion_finishing_kit.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/finishing_kit_convergence_revalidation_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Codex lane 2026-06-13: remove dead mid-basin assumptions; keep byte-identical default-off finishing-kit infrastructure wired only to residual gain that survives converged decoder audit; avoid partner active Layer-2/curriculum/pose_film_v2 files."
+    },
+    {
+      "id": "lane_track_a_d2_conservative_byte_target_driver_20260613",
+      "name": "Track-A D2 conservative byte-target waterfill driver wire-in",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Default-off base_ch20 driver wire-in for Item B; byte_target=2731; net_stop=false; guard/tests only, no CPU/CUDA score claim."
+    },
+    {
+      "id": "lane_rate_attack_l3_d1_verification_20260616",
+      "name": "Rate-attack + L3 + D1 verification on solved-taper basin",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_e2e_byte_close_eval_harness_20260616",
+      "name": "E2E byte-close -> eval verification harness (#107 readiness actuator)",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/verify_e2e_byte_close_eval.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[contest-CPU advisory] reports/e2e_byte_close_eval_n600_headline.json (89136 B 0.bin / 89274 B archive.zip; d_seg 0.0026009 d_pose 0.0003417; S 0.37799)"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/e2e_byte_close_eval_harness_20260616T212121Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_p2_export_spine_wiring_20260616",
+      "name": "P2 export wiring + spine reconciliation",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -73315,5 +73643,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-12T15:56:42Z"
+  "updated_at": "2026-06-16T21:22:28Z"
 }
