@@ -85,6 +85,30 @@ _OOMPH = dict(seg_surrogate="soft_cosine", seg_temperature=0.3, seg_temperature_
               margin_weight_renorm=True, seg_weight_mult=1.5)
 
 
+def _last_evaluated_dseg(out_dir: Path) -> float | None:
+    """The d_seg of the FINAL evaluated epoch from the trajectory JSONL (NOT the min).
+    Reads the last row with a non-null ``d_seg``. Robust to malformed/partial JSONL lines.
+    Returns None if no eval row exists. (driver.run()'s summary carries no last_eval, so the
+    durable telemetry is the source of truth for the sustained-win check.)"""
+    traj = Path(out_dir) / "torch_vehicle_trajectory.jsonl"
+    if not traj.exists():
+        return None
+    for line in reversed(traj.read_text().splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if row.get("d_seg") is not None:
+            try:
+                return float(row["d_seg"])
+            except (ValueError, TypeError):
+                return None
+    return None
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -352,15 +376,10 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"WARNING: no {bm} — the run produced no BEST checkpoint (no eval beat +inf?)",
               flush=True)
-    # last-eval d_seg (a transient best-of-noise minimum is distinguishable from a
-    # SUSTAINED drop by comparing best vs last). Informational → quiet on absence.
-    last_dseg = None
-    _le = summary.get("last_eval") or {}
-    if _le.get("d_seg") is not None:
-        try:
-            last_dseg = float(_le["d_seg"])
-        except (ValueError, TypeError):
-            pass
+    # last-eval d_seg = the d_seg of the FINAL evaluated epoch (NOT the min) — the SUSTAINED
+    # signal that defeats the min-of-N extreme-value bias in `best`. Read from the durable
+    # trajectory telemetry (driver.run()'s summary carries no last_eval).
+    last_dseg = _last_evaluated_dseg(out_dir)
 
     thr = float(args.go_rel_threshold)
     verdict = "INDETERMINATE (no best d_seg)"
