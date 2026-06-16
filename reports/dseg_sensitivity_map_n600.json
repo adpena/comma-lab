@@ -1,0 +1,222 @@
+{
+  "base_dir": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/best",
+  "n_pairs": 600,
+  "eval_max_pairs": 96,
+  "base_channels": 20,
+  "latent_dim": 28,
+  "noise_rel": 0.2,
+  "archive_bytes": 89136,
+  "baseline_d_seg": 0.0025478998431935906,
+  "rows": [
+    {
+      "tensor": "stem.weight",
+      "res": "6x8",
+      "band": "LOW",
+      "stage": 0,
+      "params": 26880,
+      "d_seg": 0.005282296100631356,
+      "delta": 0.0027343962574377656,
+      "delta_per_kparam": 0.0001017260512439645
+    },
+    {
+      "tensor": "blocks.0.weight",
+      "res": "12x16",
+      "band": "LOW",
+      "stage": 1,
+      "params": 14400,
+      "d_seg": 0.005414327024482191,
+      "delta": 0.0028664271812886,
+      "delta_per_kparam": 0.00019905744314504167
+    },
+    {
+      "tensor": "blocks.1.weight",
+      "res": "24x32",
+      "band": "LOW",
+      "stage": 2,
+      "params": 14400,
+      "d_seg": 0.005094899019847314,
+      "delta": 0.002546999176653723,
+      "delta_per_kparam": 0.00017687494282317523
+    },
+    {
+      "tensor": "blocks.2.weight",
+      "res": "48x64",
+      "band": "MID",
+      "stage": 3,
+      "params": 10800,
+      "d_seg": 0.00441031976758192,
+      "delta": 0.0018624199243883295,
+      "delta_per_kparam": 0.0001724462892952157
+    },
+    {
+      "tensor": "blocks.3.weight",
+      "res": "96x128",
+      "band": "MID",
+      "stage": 4,
+      "params": 5940,
+      "d_seg": 0.004107528269135703,
+      "delta": 0.0015596284259421127,
+      "delta_per_kparam": 0.0002625637080710627
+    },
+    {
+      "tensor": "blocks.4.weight",
+      "res": "192x256",
+      "band": "HIGH",
+      "stage": 5,
+      "params": 3960,
+      "d_seg": 0.003886063932441175,
+      "delta": 0.0013381640892475843,
+      "delta_per_kparam": 0.0003379202245574708
+    },
+    {
+      "tensor": "blocks.5.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "stage": 6,
+      "params": 3600,
+      "d_seg": 0.004217518668156117,
+      "delta": 0.0016696188249625266,
+      "delta_per_kparam": 0.00046378300693403516
+    },
+    {
+      "tensor": "skips.2.weight",
+      "res": "24x32",
+      "band": "MID",
+      "stage": 3,
+      "params": 300,
+      "d_seg": 0.0028466118965297937,
+      "delta": 0.0002987120533362031,
+      "delta_per_kparam": 0.0009957068444540103
+    },
+    {
+      "tensor": "skips.3.weight",
+      "res": "48x64",
+      "band": "MID",
+      "stage": 4,
+      "params": 165,
+      "d_seg": 0.0028330484637990594,
+      "delta": 0.00028514862060546875,
+      "delta_per_kparam": 0.001728173458214962
+    },
+    {
+      "tensor": "skips.4.weight",
+      "res": "96x128",
+      "band": "MID",
+      "stage": 5,
+      "params": 110,
+      "d_seg": 0.0029278861669202647,
+      "delta": 0.00037998632372667407,
+      "delta_per_kparam": 0.003454421124787946
+    },
+    {
+      "tensor": "refine.0.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "stage": 6,
+      "params": 450,
+      "d_seg": 0.0027722252804475525,
+      "delta": 0.00022432543725396182,
+      "delta_per_kparam": 0.0004985009716754707
+    },
+    {
+      "tensor": "refine.1.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "stage": 6,
+      "params": 450,
+      "d_seg": 0.002701494454716643,
+      "delta": 0.0001535946115230522,
+      "delta_per_kparam": 0.000341321358940116
+    },
+    {
+      "tensor": "rgb_0.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "stage": 6,
+      "params": 270,
+      "d_seg": 0.0025478998431935906,
+      "delta": 0.0,
+      "delta_per_kparam": 0.0
+    },
+    {
+      "tensor": "rgb_1.weight",
+      "res": "384x512",
+      "band": "HIGH",
+      "stage": 6,
+      "params": 270,
+      "d_seg": 0.004837512892360489,
+      "delta": 0.0022896130491668982,
+      "delta_per_kparam": 0.00848004833024777
+    }
+  ],
+  "band_summary": {
+    "LOW": {
+      "param_share": 0.6790657966949204,
+      "sensitivity_share": 0.4474604543177935,
+      "density_ratio": 0.6589353439617005
+    },
+    "MID": {
+      "param_share": 0.21117141289102995,
+      "sensitivity_share": 0.24086370281323133,
+      "density_ratio": 1.1406075259700204
+    },
+    "HIGH": {
+      "param_share": 0.10976279041404964,
+      "sensitivity_share": 0.3116758428689752,
+      "density_ratio": 2.839540081782402
+    }
+  },
+  "stage_summary": {
+    "0": {
+      "delta_share": 0.15016701386311415,
+      "param_share": 0.3278248673699616,
+      "density": 0.45807084455751657,
+      "delta_abs": 0.0027343962574377656,
+      "params": 26880
+    },
+    "1": {
+      "delta_share": 0.15741786110895056,
+      "param_share": 0.1756204646624794,
+      "density": 0.8963526056686391,
+      "delta_abs": 0.0028664271812886,
+      "params": 14400
+    },
+    "2": {
+      "delta_share": 0.13987557934572878,
+      "param_share": 0.1756204646624794,
+      "density": 0.7964651478092384,
+      "delta_abs": 0.002546999176653723,
+      "params": 14400
+    },
+    "3": {
+      "delta_share": 0.11868460351210287,
+      "param_share": 0.1353741081773279,
+      "density": 0.8767156815292679,
+      "delta_abs": 0.0021611319777245326,
+      "params": 11100
+    },
+    "4": {
+      "delta_share": 0.10131108816790446,
+      "param_share": 0.07445575949753033,
+      "density": 1.3606883987432148,
+      "delta_abs": 0.0018447770465475815,
+      "params": 6105
+    },
+    "5": {
+      "delta_share": 0.09435703262912801,
+      "param_share": 0.04963717299835356,
+      "density": 1.9009348625123712,
+      "delta_abs": 0.0017181504129742584,
+      "params": 4070
+    },
+    "6": {
+      "delta_share": 0.23818682137307115,
+      "param_share": 0.0614671626318678,
+      "density": 3.8750254798581287,
+      "delta_abs": 0.004337151922906439,
+      "params": 5040
+    }
+  },
+  "verdict": "\u03a63 CONFIRMED: HIGH-res band carries disproportionate d_seg sensitivity (sens 31% on param 11%) \u2192 taper should widen it",
+  "authority": "contest-CPU advisory NON-PROMOTABLE"
+}

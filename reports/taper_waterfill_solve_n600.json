@@ -1,0 +1,83 @@
+{
+  "solved_channels": [
+    22,
+    16,
+    15,
+    14,
+    15,
+    14,
+    10
+  ],
+  "vendored_channels": [
+    20,
+    20,
+    20,
+    15,
+    11,
+    10,
+    10
+  ],
+  "target_params": 83356,
+  "solved_params": 82899,
+  "byte_gap_pct": -0.5482508757617928,
+  "moves": 10,
+  "final_cap": 10,
+  "trust_region": 0.4,
+  "trust_lo": [
+    12,
+    12,
+    12,
+    9,
+    7,
+    6,
+    6
+  ],
+  "trust_hi": [
+    28,
+    28,
+    28,
+    21,
+    15,
+    14,
+    10
+  ],
+  "objective_kind": "per_tensor",
+  "stage_density": {
+    "0": 0.45807084455751657,
+    "1": 0.8963526056686391,
+    "2": 0.7964651478092384,
+    "3": 0.8767156815292679,
+    "4": 1.3606883987432148,
+    "5": 1.9009348625123712,
+    "6": 3.8750254798581287
+  },
+  "tensor_density": {
+    "stem.weight": 0.45807084455751657,
+    "blocks.0.weight": 0.8963526056686391,
+    "blocks.1.weight": 0.7964651478092384,
+    "blocks.2.weight": 0.7765229890701767,
+    "blocks.3.weight": 1.182320340124289,
+    "blocks.4.weight": 1.5216495751405688,
+    "blocks.5.weight": 2.088407748848923,
+    "skips.2.weight": 4.483652610056555,
+    "skips.3.weight": 7.781938509024547,
+    "skips.4.weight": 15.555205207897266,
+    "refine.0.weight": 2.2447422102376517,
+    "refine.1.weight": 1.5369648309679624,
+    "rgb_0.weight": 0.0,
+    "rgb_1.weight": 38.18552723735675
+  },
+  "heuristic_channels": [
+    16,
+    16,
+    17,
+    19,
+    19,
+    14,
+    10
+  ],
+  "heuristic_params": 83422,
+  "solved_vs_heuristic": "DIFFER",
+  "map_path": "reports/dseg_sensitivity_map_n600.json",
+  "authority": "contest-CPU advisory NON-PROMOTABLE"
+}
