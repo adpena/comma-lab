@@ -47,16 +47,18 @@ EMA time constant 1/(1-0.999)=1000 steps). The torch_vehicle runs are LONG: 600
 pairs / bs 8 ≈ 75 steps/epoch × 2120–3072 epochs ≈ 160k–230k steps >> 1000-step
 time constant. The shadow is fully warmed → NO freeze.
 
-Direct live-vs-shadow exact d_seg (same frames, CPU authority):
+Direct live-vs-shadow exact d_seg (same frames, CPU authority), **n=64**:
 
 | arm | d_seg LIVE | d_seg SHADOW | gap (live − shadow) |
 |-----|-----------|--------------|---------------------|
-| basin (n=2 smoke) | 0.002566 | 0.002505 | +6.1e-5 (~2.4%, shadow ≈ live) |
-| armb  (n=2 smoke) | 0.002881 | 0.002520 | +3.6e-4 (shadow ≈/slightly better) |
+| basin | 0.002515 | 0.002452 | +6.3e-5 (+2.6% of shadow) |
+| armb  | 0.002708 | 0.002506 | +2.0e-4 (+8.1% of shadow) |
 
-The shadow d_seg ≈ live d_seg (shadow marginally *better*, the healthy smoothed
-case) — the OPPOSITE of the capstone (shadow +0.466 ABOVE live). **No lag.**
-The full n=64 confirmation is in the JSON (`live_vs_shadow_d_seg_gap`).
+In BOTH arms the shadow d_seg is **≤ live** (shadow marginally *better* — the
+healthy smoothed-EMA case) — the OPPOSITE of the capstone bug (shadow +0.466
+ABOVE live). The +2.6–8.1% gap is small and the WRONG SIGN to be a lag-floor
+(a lag would make the shadow read HIGHER than live). **No EMA-shadow-lag freeze;
+d_seg is trusted.** (n=2 smoke agreed: basin +6.1e-5, armb +3.6e-4.)
 
 Corroboration from the trajectory itself: the basin's shadow-eval d_seg is a
 clean monotone descent 0.0717 → 0.0026 over 2120 epochs with NO frozen-near-init
@@ -78,12 +80,15 @@ Pose variance is ~6× higher in ARM B and lives entirely in d_pose. d_seg is
 stable in both. The basin (no FiLM) has BOTH a lower mean d_pose (0.00047 vs
 0.0168) AND far more stable d_pose (CV 0.17 vs 0.97).
 
-**FiLM-carrier isolation (ARM B, same state):**
-- FiLM-ON  d_pose = 0.00017
-- FiLM-OFF d_pose = 2.27 (rgb_0 = vendored clean path)
+**FiLM-carrier isolation (ARM B, same state, n=64):**
+- FiLM-ON  d_pose = 0.000283
+- FiLM-OFF d_pose = 1.448 (rgb_0 = vendored clean path)
 - d_seg is EXACTLY invariant to FiLM (Δ = 0.0) — the v2 rgb_1-clean decoupling works.
 
-The FiLM carrier does ~13,000× of the pose work; without it pose collapses. The
+The FiLM carrier does ~5,000× of the pose work; without it pose collapses.
+(basin, n=64: pose noise tracks the LATENTS — shadowDEC+liveLAT d_pose 0.000125
+vs liveDEC+shadowLAT 0.000245 — i.e. the EMA latents smooth pose; the basin path
+has no carrier and is the stable pose source.) The
 carrier is therefore the lever the whole d_pose axis hinges on — and it is the
 source of the eval variance. The noise is NOT:
 - (a) the EMA shadow — basin shares the identical shadow config and is pose-stable;

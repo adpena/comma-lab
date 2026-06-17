@@ -1,0 +1,116 @@
+{
+  "audit": "blindspot_probe_c_measurement_trust",
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "results": [
+    {
+      "label": "basin",
+      "result_dir": "/Users/adpena/Projects/pact/experiments/results/torch_vehicle_full_mps_basin_bc20_n600",
+      "arch": {
+        "taper_channels": null,
+        "pose_film_v2": false,
+        "film_hidden": 8
+      },
+      "best_ep": 2120,
+      "global_epoch_at_ckpt": null,
+      "archive_bytes": 89136,
+      "n_pairs_evaluated": 64,
+      "ema_decay": 0.999,
+      "LIVE": {
+        "d_seg": 0.0025153160968329757,
+        "d_pose": 0.00027610711549641564,
+        "rate": 0.0023740801458199145,
+        "score": 0.363429509038776
+      },
+      "EMA_SHADOW": {
+        "d_seg": 0.00245213505695574,
+        "d_pose": 0.00011944023026444484,
+        "rate": 0.0023740801458199145,
+        "score": 0.3391256352616244
+      },
+      "live_vs_shadow_d_seg_gap": 6.318103987723589e-05,
+      "live_vs_shadow_d_pose_gap": 0.0001566668852319708,
+      "live_vs_shadow_score_gap": 0.024303873777151597,
+      "summary_last_eval": {
+        "archive_bytes": 89136,
+        "d_pose": 0.00034168662969022987,
+        "d_seg": 0.002600919948890805,
+        "global_epoch": 2120,
+        "rate": 0.0023740801458199145,
+        "score": 0.377897965875575,
+        "stage_index": 0,
+        "stage_name": "stage1_v328_ce"
+      },
+      "summary_best_score": 0.377897965875575,
+      "CROSS_shadowdec_livelat": {
+        "d_seg": 0.002457062393659726,
+        "d_pose": 0.00012528487832241808,
+        "rate": 0.0023740801458199145,
+        "score": 0.34045384703547577
+      },
+      "CROSS_livedec_shadowlat": {
+        "d_seg": 0.0025037129526026547,
+        "d_pose": 0.0002448592795190052,
+        "rate": 0.0023740801458199145,
+        "score": 0.3592065566419922
+      }
+    },
+    {
+      "label": "armb",
+      "result_dir": "/Users/adpena/Projects/pact/experiments/results/bindall_arm_b_canonical50k_n600",
+      "arch": {
+        "taper_channels": [
+          22,
+          16,
+          15,
+          14,
+          15,
+          14,
+          10
+        ],
+        "pose_film_v2": true,
+        "film_hidden": 8
+      },
+      "best_ep": 2700,
+      "global_epoch_at_ckpt": null,
+      "archive_bytes": 91717,
+      "n_pairs_evaluated": 64,
+      "ema_decay": 0.999,
+      "LIVE": {
+        "d_seg": 0.002708037703996524,
+        "d_pose": 0.00028272837334952783,
+        "rate": 0.0024428234241402474,
+        "score": 0.3850465642937241
+      },
+      "EMA_SHADOW": {
+        "d_seg": 0.0025060971966013312,
+        "d_pose": 0.0002518702558518271,
+        "rate": 0.0024428234241402474,
+        "score": 0.36186698237538156
+      },
+      "live_vs_shadow_d_seg_gap": 0.00020194050739519298,
+      "live_vs_shadow_d_pose_gap": 3.085811749770073e-05,
+      "live_vs_shadow_score_gap": 0.023179581918342518,
+      "summary_last_eval": {
+        "archive_bytes": 91717,
+        "d_pose": 0.009838226288557052,
+        "d_seg": 0.0027027215001483758,
+        "global_epoch": 3000,
+        "rate": 0.0024428234241402474,
+        "score": 0.6450022052451518,
+        "stage_index": 0,
+        "stage_name": "stage1_v328_ce"
+      },
+      "summary_best_score": 0.4251943670084436,
+      "FILM_ISOLATION": {
+        "live_film_on_d_pose": 0.00028272837334952783,
+        "live_film_off_d_pose": 1.4480849355459213,
+        "live_carrier_d_pose_delta": -1.4478022071725718,
+        "shadow_film_on_d_pose": 0.0002518702558518271,
+        "shadow_film_off_d_pose": 1.446137696504593,
+        "live_film_on_d_seg": 0.002708037703996524,
+        "live_film_off_d_seg": 0.002708037703996524,
+        "d_seg_film_invariant": 0.0
+      }
+    }
+  ]
+}
