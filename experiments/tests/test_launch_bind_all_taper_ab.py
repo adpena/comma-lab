@@ -368,9 +368,14 @@ def test_margin_hinge_throughout_default_off_is_byte_identical_to_oomph() -> Non
 
 def test_margin_hinge_throughout_flag_recorded_in_resolved_config() -> None:
     """The flag is threaded into the resolved-config dict (observability / provenance)."""
+    # NOTE: --out-dir is a parse-only throwaway here (_resolve_config_dict writes nothing);
+    # use a non-/tmp placeholder per CLAUDE.md (no /tmp in any persisted/committed artifact).
     on = launcher._resolve_config_dict(
-        _parse(["--arm", "arm_b", "--out-dir", "/tmp/x", "--seg-margin-hinge-throughout"])
+        _parse(["--arm", "arm_b", "--out-dir", "unused_parse_only",
+                "--seg-margin-hinge-throughout"])
     )
-    off = launcher._resolve_config_dict(_parse(["--arm", "arm_b", "--out-dir", "/tmp/x"]))
+    off = launcher._resolve_config_dict(
+        _parse(["--arm", "arm_b", "--out-dir", "unused_parse_only"])
+    )
     assert on["seg_margin_hinge_throughout"] is True
     assert off["seg_margin_hinge_throughout"] is False
