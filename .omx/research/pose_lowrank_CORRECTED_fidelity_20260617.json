@@ -1,0 +1,98 @@
+{
+  "baseline_iid_bytes": 3088,
+  "baseline_iid_mse": 2.8861660331247107e-05,
+  "dpose_target": 0.00034168,
+  "candidates": [
+    {
+      "codec": "svd r1 q64",
+      "bytes": 454,
+      "mse": 0.000989905271404879,
+      "le_dpose": false,
+      "x_smaller_vs_base": 6.8017621145374445
+    },
+    {
+      "codec": "svd r1 q64+res",
+      "bytes": 2826,
+      "mse": 4.311286638185406e-07,
+      "le_dpose": true,
+      "x_smaller_vs_base": 1.0927105449398442
+    },
+    {
+      "codec": "svd r1 q254",
+      "bytes": 613,
+      "mse": 0.0005525158020193322,
+      "le_dpose": false,
+      "x_smaller_vs_base": 5.037520391517129
+    },
+    {
+      "codec": "svd r1 q254+res",
+      "bytes": 3002,
+      "mse": 3.1749787694840035e-07,
+      "le_dpose": true,
+      "x_smaller_vs_base": 1.0286475682878082
+    },
+    {
+      "codec": "svd r2 q64",
+      "bytes": 833,
+      "mse": 0.0007039344947465313,
+      "le_dpose": false,
+      "x_smaller_vs_base": 3.7070828331332533
+    },
+    {
+      "codec": "svd r2 q64+res",
+      "bytes": 3254,
+      "mse": 3.0015839802101914e-07,
+      "le_dpose": true,
+      "x_smaller_vs_base": 0.9489858635525507
+    },
+    {
+      "codec": "svd r2 q254",
+      "bytes": 1142,
+      "mse": 0.00026640253124047446,
+      "le_dpose": true,
+      "x_smaller_vs_base": 2.7040280210157617
+    },
+    {
+      "codec": "svd r2 q254+res",
+      "bytes": 3568,
+      "mse": 1.8634369425087715e-07,
+      "le_dpose": true,
+      "x_smaller_vs_base": 0.8654708520179372
+    },
+    {
+      "codec": "svd r3 q64",
+      "bytes": 1227,
+      "mse": 0.0005518101157199677,
+      "le_dpose": false,
+      "x_smaller_vs_base": 2.5167074164629177
+    },
+    {
+      "codec": "svd r3 q64+res",
+      "bytes": 3702,
+      "mse": 1.9468961345133923e-07,
+      "le_dpose": true,
+      "x_smaller_vs_base": 0.8341437061048083
+    },
+    {
+      "codec": "svd r3 q254",
+      "bytes": 1694,
+      "mse": 0.00011415938611751248,
+      "le_dpose": true,
+      "x_smaller_vs_base": 1.822904368358914
+    },
+    {
+      "codec": "svd r3 q254+res",
+      "bytes": 4111,
+      "mse": 8.021986040214044e-08,
+      "le_dpose": true,
+      "x_smaller_vs_base": 0.7511554366334225
+    }
+  ],
+  "best_le_dpose": {
+    "codec": "svd r2 q254",
+    "bytes": 1142,
+    "mse": 0.00026640253124047446,
+    "le_dpose": true,
+    "x_smaller_vs_base": 2.7040280210157617
+  }
+}

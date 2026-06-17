@@ -1,0 +1,35 @@
+{
+  "probe": "ego_hood_static_dseg",
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "basin_dir": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600",
+  "arch_bytes": 89136,
+  "n_pairs_measured": 96,
+  "frame_hw": [
+    384,
+    512
+  ],
+  "d_seg_basin_on_n_pairs": 0.002624882592095269,
+  "static_core_px": 49212,
+  "static_core_frac_of_frame": 0.25030517578125,
+  "static_core_row_span": [
+    284,
+    383
+  ],
+  "ever_hood_frac_of_frame": 0.2600301106770833,
+  "flips_total": 49543,
+  "flips_in_static_core": 19,
+  "flips_in_ever_hood": 3648,
+  "frac_of_dseg_flips_in_static_core": 0.00038350523787416993,
+  "frac_of_dseg_flips_in_ever_hood": 0.07363300567184063,
+  "flip_rate_inside_static_core": 4.0217155707280065e-06,
+  "flip_rate_outside_static_core": 0.003499925371109121,
+  "core_flip_row_span": [
+    284,
+    294
+  ],
+  "d_seg_after_static_core_clamp": 0.002623875935872396,
+  "d_seg_after_ever_hood_clamp": 0.0024316045973036024,
+  "SCORE_DROP_from_static_core_clamp": 0.00010066562228729266,
+  "SCORE_DROP_from_ever_hood_clamp": 0.01932779947916665,
+  "elapsed_sec": 354.78387665748596
+}
