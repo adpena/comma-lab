@@ -1,0 +1,182 @@
+{
+  "probe": "yousfi_detector_cost_blindspot_b",
+  "authority": "[contest-CPU advisory] / [macOS-CPU advisory] \u2014 NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "basin_dir": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600",
+  "basin_meta": {
+    "n_pairs": 600,
+    "latent_dim": 28,
+    "base_channels": 20,
+    "eval_size": [
+      384,
+      512
+    ]
+  },
+  "basin_archive_bytes": 89136,
+  "n_pairs_measured": 24,
+  "wall_clock_s": 954.88,
+  "m1_cost_map": {
+    "n_pixels": 4718592,
+    "margin_mean": 5.573150489456604,
+    "margin_median": 5.792354583740234,
+    "frac_boundary_margin_lt_0p5": 0.013393825954861112,
+    "frac_boundary_margin_lt_1p0": 0.02592235141330295,
+    "uniward_cost_mean": 2.8996156886155595,
+    "uniward_cost_median": 2.9074559211730957,
+    "frac_blind_high_texture": 0.5000002119276259,
+    "pearson_cost_vs_margin": -0.03451263129489663
+  },
+  "m2_error_vs_cost": {
+    "_finding": "basin renderer is a DETECTOR-MATCHER not a reconstructor (raw RGB err ~104/255 with d_seg 0.0026); flip-density is the d_seg-relevant allocation, not raw recon error",
+    "raw_recon_error_mean": 105.44380753204658,
+    "pearson_recon_error_vs_margin": 0.06210653868040118,
+    "pearson_recon_error_vs_uniward_cost": 0.05111355425041116,
+    "mean_recon_error_boundary_margin_lt_0p5": 91.38733521725558,
+    "mean_recon_error_interior_margin_ge_0p5": 105.63463336374771,
+    "recon_error_by_margin_quintile": [
+      {
+        "bin": 0,
+        "x_lo": 4.76837158203125e-07,
+        "x_hi": 5.040272903442383,
+        "y_mean": 99.45409191072908,
+        "n": 943719
+      },
+      {
+        "bin": 1,
+        "x_lo": 5.040272903442383,
+        "x_hi": 5.609087944030762,
+        "y_mean": 109.15214732887448,
+        "n": 943716
+      },
+      {
+        "bin": 2,
+        "x_lo": 5.609087944030762,
+        "x_hi": 5.974465942382813,
+        "y_mean": 108.73635450597384,
+        "n": 943720
+      },
+      {
+        "bin": 3,
+        "x_lo": 5.974465942382813,
+        "x_hi": 6.4462995529174805,
+        "y_mean": 107.92048132770198,
+        "n": 943716
+      },
+      {
+        "bin": 4,
+        "x_lo": 6.4462995529174805,
+        "x_hi": 13.182350158691406,
+        "y_mean": 101.95598615131595,
+        "n": 943721
+      }
+    ],
+    "flip_rate_boundary_margin_lt_0p5": 0.17011075949367088,
+    "flip_rate_interior_margin_ge_0p5": 0.00019289460479375312,
+    "flip_rate_boundary_over_interior_ratio": 881.8844864819148,
+    "flip_rate_blind_high_texture": 0.0026931751280148282,
+    "flip_rate_sharp_low_texture": 0.0022443145092071997,
+    "flip_density_by_margin_quintile": [
+      {
+        "bin": 0,
+        "x_lo": 4.76837158203125e-07,
+        "x_hi": 5.040272903442383,
+        "y_mean": 0.012343716720761158,
+        "n": 943719
+      },
+      {
+        "bin": 1,
+        "x_lo": 5.040272903442383,
+        "x_hi": 5.609087944030762,
+        "y_mean": 0.0,
+        "n": 943716
+      },
+      {
+        "bin": 2,
+        "x_lo": 5.609087944030762,
+        "x_hi": 5.974465942382813,
+        "y_mean": 0.0,
+        "n": 943720
+      },
+      {
+        "bin": 3,
+        "x_lo": 5.974465942382813,
+        "x_hi": 6.4462995529174805,
+        "y_mean": 0.0,
+        "n": 943716
+      },
+      {
+        "bin": 4,
+        "x_lo": 6.4462995529174805,
+        "x_hi": 13.182350158691406,
+        "y_mean": 0.0,
+        "n": 943721
+      }
+    ],
+    "flip_density_by_uniward_cost_quintile": [
+      {
+        "bin": 0,
+        "x_lo": 0.2257351279258728,
+        "x_hi": 2.422331666946411,
+        "y_mean": 0.0019995358787944294,
+        "n": 943719
+      },
+      {
+        "bin": 1,
+        "x_lo": 2.422331666946411,
+        "x_hi": 2.763196659088135,
+        "y_mean": 0.0024064392117136685,
+        "n": 943718
+      },
+      {
+        "bin": 2,
+        "x_lo": 2.763196659088135,
+        "x_hi": 3.0512783527374268,
+        "y_mean": 0.0024668412246467955,
+        "n": 943717
+      },
+      {
+        "bin": 3,
+        "x_lo": 3.0512783527374268,
+        "x_hi": 3.3903505802154545,
+        "y_mean": 0.0025759786546630937,
+        "n": 943719
+      },
+      {
+        "bin": 4,
+        "x_lo": 3.3903505802154545,
+        "x_hi": 8.268948554992676,
+        "y_mean": 0.0028949295288110124,
+        "n": 943719
+      }
+    ]
+  },
+  "m3_avoidable_d_seg": {
+    "total_flips": 11649,
+    "d_seg_pixelrate_advisory": 0.002468744913736979,
+    "interior_margin_threshold_median": 5.792354583740234,
+    "deep_interior_threshold_q75": 6.301726341247559,
+    "frac_flips_avoidable_interior": 0.0,
+    "frac_flips_deep_interior_avoidable": 0.0,
+    "frac_flips_hard_boundary_lt_0p5": 0.9229118379260022,
+    "flip_margin_mean": 0.19549587603054985,
+    "flip_margin_median": 0.13721084594726562,
+    "wasted_d_seg_fraction": 0.0
+  },
+  "m4_smoke": {
+    "n_smoke_pairs": 3,
+    "steps": 50,
+    "l_inf_budget": 6.0,
+    "lr": 2.0,
+    "d_seg_basin_baseline": 0.002571953667534722,
+    "d_seg_after_naive_recon_to_gt_A": 0.0031416151258680555,
+    "d_seg_after_interior_ce_uniform_B": 0.0017547607421875,
+    "d_seg_after_interior_ce_cost_weighted_C": 0.003044976128472222,
+    "delta_d_seg_A_minus_baseline": 0.0005696614583333335,
+    "delta_d_seg_B_minus_baseline": -0.000817192925347222,
+    "delta_d_seg_C_minus_baseline": 0.0004730224609375,
+    "delta_d_seg_C_minus_B": 0.001290215386284722,
+    "pct_d_seg_reduction_best_interior": 31.77323665128543,
+    "note": "All d_seg are EXACT SegNet argmax-flip rates on the real pipeline. A (recon-to-GT) HURTING d_seg confirms the detector-matcher finding. B/C < baseline => the in-cell (interior) lever reduces d_seg at ~0 byte cost; C < B => cost-map allocation adds value beyond uniform in-cell effort. NON-PROMOTABLE advisory (not byte-closed)."
+  }
+}
