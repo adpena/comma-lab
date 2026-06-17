@@ -1,0 +1,387 @@
+{
+  "authority": "contest-CPU-advisory",
+  "promotable": false,
+  "phase": 1,
+  "note": "PHASE 1 realization gate: paint the STORED partition (SegNet-argmax of GT) into a camera-res frame with per-class canonical RGB, run it through the EXACT eval chain (camera 874x1164 -> SegNet bilinear->384x512 -> argmax), and MEASURE the REAL realized d_seg (never assume d_seg=0).",
+  "n_frames": 24,
+  "decode_and_lstar_seconds": 16.4,
+  "camera_size_hw": [
+    874,
+    1164
+  ],
+  "seg_grid_hw": [
+    384,
+    512
+  ],
+  "canonical_mu_rgb_per_class": [
+    [
+      50.370374829779024,
+      50.29091875455216,
+      40.78991559695189
+    ],
+    [
+      73.548348942276,
+      79.3950646009863,
+      66.41848770997744
+    ],
+    [
+      28.505714880690174,
+      17.573903886496588,
+      16.13482282652219
+    ],
+    [
+      54.18810501003938,
+      40.02786631674043,
+      38.09826261088221
+    ],
+    [
+      15.093986073443835,
+      7.01505968466863,
+      11.217829137869254
+    ]
+  ],
+  "segnet_optimized_mu_rgb_per_class": [
+    [
+      50.370374829779024,
+      50.29091875455216,
+      40.78991559695189
+    ],
+    [
+      142.96768851918637,
+      151.1530904413808,
+      132.98588279396841
+    ],
+    [
+      68.50571488069018,
+      57.57390388649659,
+      56.13482282652219
+    ],
+    [
+      32.51286300602363,
+      24.016719790044256,
+      22.858957566529323
+    ],
+    [
+      18.1127832881326,
+      8.418071621602357,
+      13.461394965443104
+    ]
+  ],
+  "mu_optimization_seconds": 222.4,
+  "frontier": {
+    "total": 0.1911,
+    "sub015_target": 0.15,
+    "store_rate_lossless": 0.1824,
+    "pose_term_inherited": 0.017
+  },
+  "dseg_budget": {
+    "realized_d_seg_to_beat_frontier_at_lossless_rate": -8.300000000000016e-05,
+    "realized_d_seg_to_beat_sub015_at_lossless_rate": -0.0004940000000000001
+  },
+  "realization_variants": {
+    "flat_fill": {
+      "mean_d_seg_realized": 0.008107079399956597,
+      "mean_boundary_flip_rate": 0.25179729799885914,
+      "mean_interior_flip_rate": 0.002495255532654029,
+      "mean_boundary_px_frac": 0.022509045071072046,
+      "store_score_rate0182_plus_100dseg_plus_pose": 1.0101079399956596,
+      "beats_frontier": false,
+      "beats_sub015": false,
+      "per_pair_sample": [
+        {
+          "d_seg_realized": 0.012151082356770834,
+          "boundary_flip_rate": 0.2681429511072133,
+          "interior_flip_rate": 0.006071430431092389,
+          "boundary_px_frac": 0.023198445638020832
+        },
+        {
+          "d_seg_realized": 0.007298787434895833,
+          "boundary_flip_rate": 0.23885918003565063,
+          "interior_flip_rate": 0.0018894440974391005,
+          "boundary_px_frac": 0.0228271484375
+        },
+        {
+          "d_seg_realized": 0.006317138671875,
+          "boundary_flip_rate": 0.24687800192122958,
+          "interior_flip_rate": 0.0011120118060318847,
+          "boundary_px_frac": 0.02117919921875
+        },
+        {
+          "d_seg_realized": 0.007191975911458333,
+          "boundary_flip_rate": 0.24454249883882953,
+          "interior_flip_rate": 0.0018772555667647762,
+          "boundary_px_frac": 0.021901448567708332
+        },
+        {
+          "d_seg_realized": 0.006622314453125,
+          "boundary_flip_rate": 0.24404483886034564,
+          "interior_flip_rate": 0.0013362727868306938,
+          "boundary_px_frac": 0.021779378255208332
+        },
+        {
+          "d_seg_realized": 0.006261189778645833,
+          "boundary_flip_rate": 0.23497757847533632,
+          "interior_flip_rate": 0.000952390865374607,
+          "boundary_px_frac": 0.022684733072916668
+        },
+        {
+          "d_seg_realized": 0.006261189778645833,
+          "boundary_flip_rate": 0.24194348041646008,
+          "interior_flip_rate": 0.0013241662945153551,
+          "boundary_px_frac": 0.020517985026041668
+        },
+        {
+          "d_seg_realized": 0.009368896484375,
+          "boundary_flip_rate": 0.29704797047970477,
+          "interior_flip_rate": 0.002881334775734376,
+          "boundary_px_frac": 0.022054036458333332
+        }
+      ]
+    },
+    "mu_optimized": {
+      "mean_d_seg_realized": 0.00640763176812066,
+      "mean_boundary_flip_rate": 0.23593394970347334,
+      "mean_interior_flip_rate": 0.0011181160593873344,
+      "mean_boundary_px_frac": 0.022509045071072046,
+      "store_score_rate0182_plus_100dseg_plus_pose": 0.8401631768120661,
+      "beats_frontier": false,
+      "beats_sub015": false,
+      "per_pair_sample": [
+        {
+          "d_seg_realized": 0.006317138671875,
+          "boundary_flip_rate": 0.2396404297303223,
+          "interior_flip_rate": 0.0007758517446250137,
+          "boundary_px_frac": 0.023198445638020832
+        },
+        {
+          "d_seg_realized": 0.005391438802083333,
+          "boundary_flip_rate": 0.21836007130124777,
+          "interior_flip_rate": 0.00041640641265875496,
+          "boundary_px_frac": 0.0228271484375
+        },
+        {
+          "d_seg_realized": 0.00604248046875,
+          "boundary_flip_rate": 0.24543707973102785,
+          "interior_flip_rate": 0.000862588597202303,
+          "boundary_px_frac": 0.02117919921875
+        },
+        {
+          "d_seg_realized": 0.0052642822265625,
+          "boundary_flip_rate": 0.2206223873664654,
+          "interior_flip_rate": 0.0004420130835872742,
+          "boundary_px_frac": 0.021901448567708332
+        },
+        {
+          "d_seg_realized": 0.00543212890625,
+          "boundary_flip_rate": 0.21695469406819243,
+          "interior_flip_rate": 0.0007227311959901418,
+          "boundary_px_frac": 0.021779378255208332
+        },
+        {
+          "d_seg_realized": 0.005523681640625,
+          "boundary_flip_rate": 0.22466367713004484,
+          "interior_flip_rate": 0.00043716302017195077,
+          "boundary_px_frac": 0.022684733072916668
+        },
+        {
+          "d_seg_realized": 0.005152384440104167,
+          "boundary_flip_rate": 0.214427367377293,
+          "interior_flip_rate": 0.0007685357317187159,
+          "boundary_px_frac": 0.020517985026041668
+        },
+        {
+          "d_seg_realized": 0.007303873697916667,
+          "boundary_flip_rate": 0.26314575645756455,
+          "interior_flip_rate": 0.0015342847632520596,
+          "boundary_px_frac": 0.022054036458333332
+        }
+      ]
+    },
+    "dilate1": {
+      "mean_d_seg_realized": 0.00640763176812066,
+      "mean_boundary_flip_rate": 0.23593394970347334,
+      "mean_interior_flip_rate": 0.0011181160593873344,
+      "mean_boundary_px_frac": 0.022509045071072046,
+      "store_score_rate0182_plus_100dseg_plus_pose": 0.8401631768120661,
+      "beats_frontier": false,
+      "beats_sub015": false,
+      "per_pair_sample": [
+        {
+          "d_seg_realized": 0.006317138671875,
+          "boundary_flip_rate": 0.2396404297303223,
+          "interior_flip_rate": 0.0007758517446250137,
+          "boundary_px_frac": 0.023198445638020832
+        },
+        {
+          "d_seg_realized": 0.005391438802083333,
+          "boundary_flip_rate": 0.21836007130124777,
+          "interior_flip_rate": 0.00041640641265875496,
+          "boundary_px_frac": 0.0228271484375
+        },
+        {
+          "d_seg_realized": 0.00604248046875,
+          "boundary_flip_rate": 0.24543707973102785,
+          "interior_flip_rate": 0.000862588597202303,
+          "boundary_px_frac": 0.02117919921875
+        },
+        {
+          "d_seg_realized": 0.0052642822265625,
+          "boundary_flip_rate": 0.2206223873664654,
+          "interior_flip_rate": 0.0004420130835872742,
+          "boundary_px_frac": 0.021901448567708332
+        },
+        {
+          "d_seg_realized": 0.00543212890625,
+          "boundary_flip_rate": 0.21695469406819243,
+          "interior_flip_rate": 0.0007227311959901418,
+          "boundary_px_frac": 0.021779378255208332
+        },
+        {
+          "d_seg_realized": 0.005523681640625,
+          "boundary_flip_rate": 0.22466367713004484,
+          "interior_flip_rate": 0.00043716302017195077,
+          "boundary_px_frac": 0.022684733072916668
+        },
+        {
+          "d_seg_realized": 0.005152384440104167,
+          "boundary_flip_rate": 0.214427367377293,
+          "interior_flip_rate": 0.0007685357317187159,
+          "boundary_px_frac": 0.020517985026041668
+        },
+        {
+          "d_seg_realized": 0.007303873697916667,
+          "boundary_flip_rate": 0.26314575645756455,
+          "interior_flip_rate": 0.0015342847632520596,
+          "boundary_px_frac": 0.022054036458333332
+        }
+      ]
+    },
+    "dilate2": {
+      "mean_d_seg_realized": 0.00640763176812066,
+      "mean_boundary_flip_rate": 0.23593394970347334,
+      "mean_interior_flip_rate": 0.0011181160593873344,
+      "mean_boundary_px_frac": 0.022509045071072046,
+      "store_score_rate0182_plus_100dseg_plus_pose": 0.8401631768120661,
+      "beats_frontier": false,
+      "beats_sub015": false,
+      "per_pair_sample": [
+        {
+          "d_seg_realized": 0.006317138671875,
+          "boundary_flip_rate": 0.2396404297303223,
+          "interior_flip_rate": 0.0007758517446250137,
+          "boundary_px_frac": 0.023198445638020832
+        },
+        {
+          "d_seg_realized": 0.005391438802083333,
+          "boundary_flip_rate": 0.21836007130124777,
+          "interior_flip_rate": 0.00041640641265875496,
+          "boundary_px_frac": 0.0228271484375
+        },
+        {
+          "d_seg_realized": 0.00604248046875,
+          "boundary_flip_rate": 0.24543707973102785,
+          "interior_flip_rate": 0.000862588597202303,
+          "boundary_px_frac": 0.02117919921875
+        },
+        {
+          "d_seg_realized": 0.0052642822265625,
+          "boundary_flip_rate": 0.2206223873664654,
+          "interior_flip_rate": 0.0004420130835872742,
+          "boundary_px_frac": 0.021901448567708332
+        },
+        {
+          "d_seg_realized": 0.00543212890625,
+          "boundary_flip_rate": 0.21695469406819243,
+          "interior_flip_rate": 0.0007227311959901418,
+          "boundary_px_frac": 0.021779378255208332
+        },
+        {
+          "d_seg_realized": 0.005523681640625,
+          "boundary_flip_rate": 0.22466367713004484,
+          "interior_flip_rate": 0.00043716302017195077,
+          "boundary_px_frac": 0.022684733072916668
+        },
+        {
+          "d_seg_realized": 0.005152384440104167,
+          "boundary_flip_rate": 0.214427367377293,
+          "interior_flip_rate": 0.0007685357317187159,
+          "boundary_px_frac": 0.020517985026041668
+        },
+        {
+          "d_seg_realized": 0.007303873697916667,
+          "boundary_flip_rate": 0.26314575645756455,
+          "interior_flip_rate": 0.0015342847632520596,
+          "boundary_px_frac": 0.022054036458333332
+        }
+      ]
+    },
+    "gt_blend_0p5_diagnostic": {
+      "mean_d_seg_realized": 0.003894805908203125,
+      "mean_boundary_flip_rate": 0.1685391463215311,
+      "mean_interior_flip_rate": 0.00010342136902017875,
+      "mean_boundary_px_frac": 0.022509045071072046,
+      "store_score_rate0182_plus_100dseg_plus_pose": 0.5888805908203125,
+      "beats_frontier": false,
+      "beats_sub015": false,
+      "per_pair_sample": [
+        {
+          "d_seg_realized": 0.004465738932291667,
+          "boundary_flip_rate": 0.18723964042973032,
+          "interior_flip_rate": 0.00012496940853020354,
+          "boundary_px_frac": 0.023198445638020832
+        },
+        {
+          "d_seg_realized": 0.0038248697916666665,
+          "boundary_flip_rate": 0.1659982174688057,
+          "interior_flip_rate": 3.6435561107641056e-05,
+          "boundary_px_frac": 0.0228271484375
+        },
+        {
+          "d_seg_realized": 0.0038604736328125,
+          "boundary_flip_rate": 0.17675312199807877,
+          "interior_flip_rate": 0.00011951528756417451,
+          "boundary_px_frac": 0.02117919921875
+        },
+        {
+          "d_seg_realized": 0.0037638346354166665,
+          "boundary_flip_rate": 0.1704598235020901,
+          "interior_flip_rate": 3.1200923547337e-05,
+          "boundary_px_frac": 0.021901448567708332
+        },
+        {
+          "d_seg_realized": 0.0036417643229166665,
+          "boundary_flip_rate": 0.1651097617935544,
+          "interior_flip_rate": 4.67955450641099e-05,
+          "boundary_px_frac": 0.021779378255208332
+        },
+        {
+          "d_seg_realized": 0.0037027994791666665,
+          "boundary_flip_rate": 0.16143497757847533,
+          "interior_flip_rate": 4.1634573349709596e-05,
+          "boundary_px_frac": 0.022684733072916668
+        },
+        {
+          "d_seg_realized": 0.0035502115885416665,
+          "boundary_flip_rate": 0.1685671789786812,
+          "interior_flip_rate": 9.347056196578978e-05,
+          "boundary_px_frac": 0.020517985026041668
+        },
+        {
+          "d_seg_realized": 0.004608154296875,
+          "boundary_flip_rate": 0.20249077490774908,
+          "interior_flip_rate": 0.00014562702837646668,
+          "boundary_px_frac": 0.022054036458333332
+        }
+      ]
+    }
+  },
+  "gate": {
+    "code": "DEFER_REALIZATION_WALL_DSEG_BELONGS_IN_TRAINING",
+    "best_variant": "gt_blend_0p5_diagnostic",
+    "best_realized_d_seg": 0.003894805908203125,
+    "best_store_score": 0.5888805908203125,
+    "any_variant_beats_frontier": false,
+    "any_variant_beats_sub015": false,
+    "interpretation": "Best realization 'gt_blend_0p5_diagnostic' yields realized d_seg=0.00389 (store score 0.5889 vs frontier 0.1911). The store needs realized d_seg <= -0.00008 to beat the frontier and <= -0.00049 for sub-0.15 at the lossless rate. Realized d_seg exceeds the budget: the painted-partition store faces a survival wall through the resize/uint8/SegNet chain \u2014 interiors survive but the boundary band flips, exactly the witness-sidecar failure mode. d_seg belongs in training."
+  }
+}
