@@ -75,6 +75,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+import sys
 from pathlib import Path
 
 # The two arms differ ONLY in taper_channels. arm_a passes the vendored schedule
@@ -190,6 +191,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--pose-grad-resume-threshold", type=float, default=0.0,
                    help="force pose every epoch while pose_mse exceeds this (self-protect "
                         "guard for k>1). Sets cfg.pose_grad_resume_threshold.")
+    p.add_argument("--pose-grad-on-train-device", action="store_true",
+                   help="FULL-MPS unbundle: run the PoseNet head's forward+backward on "
+                        "--train-device (MPS) too — the speed lever that does NOT touch "
+                        "score (the MPS pose GRADIENT is per-step faithful; the full-MPS "
+                        "basin reached CPU-authority d_pose=0.00034). The AUTHORITY eval "
+                        "(d_seg/d_pose that pick BEST) STILL runs on --device (CPU). Keeps "
+                        "the per-axis cotangent SPLIT so equimarginal + Mahalanobis + FiLM-"
+                        "v2 trunk-stopgrad all keep firing. Requires --split-by-head + "
+                        "--train-device mps. Sets cfg.pose_grad_on_train_device.")
     p.add_argument("--pose-grad-adaptive", action="store_true",
                    help="APGC closed-loop pose throttle (the safety net; IGNORES static "
                         "k/threshold, holds d_pose at its moving floor). Requires "
@@ -328,6 +338,7 @@ def _resolve_config_dict(args) -> dict:
         # pose cadence
         "pose_grad_every_k": args.pose_grad_every_k,
         "pose_grad_resume_threshold": args.pose_grad_resume_threshold,
+        "pose_grad_on_train_device": bool(args.pose_grad_on_train_device),
         "pose_grad_adaptive": bool(args.pose_grad_adaptive),
         "pose_grad_floor_tol": args.pose_grad_floor_tol,
         "pose_grad_k_max": args.pose_grad_k_max,
@@ -378,6 +389,7 @@ def _build_torch_vehicle_config(args, out_dir: Path, *, pose_dim_weights=None):
         # POSE CADENCE: k=1 production default + APGC safety.
         pose_grad_every_k=args.pose_grad_every_k,
         pose_grad_resume_threshold=args.pose_grad_resume_threshold,
+        pose_grad_on_train_device=bool(args.pose_grad_on_train_device),
         pose_grad_adaptive=args.pose_grad_adaptive,
         pose_grad_floor_tol=args.pose_grad_floor_tol,
         pose_grad_k_max=args.pose_grad_k_max,
@@ -421,8 +433,55 @@ def main(argv: list[str] | None = None) -> int:
     if args.split_by_head and args.train_device != "mps":
         raise SystemExit("--split-by-head requires --train-device mps")
     if args.train_device == "mps" and not args.split_by_head:
-        raise SystemExit("--train-device mps must be used WITH --split-by-head (PoseNet "
-                         "stays on the CPU authority; MPS corrupts PoseNet 23x).")
+        # The guard enforces the per-axis SPLIT (the substrate the equimarginal /
+        # Mahalanobis / FiLM-v2 levers ride on), NOT "the pose gradient must be CPU".
+        # The pose gradient MAY run on MPS via --pose-grad-on-train-device — the MPS pose
+        # GRADIENT is faithful; only the SCORE may never come from MPS. The authority rule
+        # is enforced separately below (--device is CPU/CUDA; __post_init__ refuses
+        # device='mps'; exact_eval always runs on --device).
+        raise SystemExit("--train-device mps must be used WITH --split-by-head (the per-"
+                         "axis cotangent split). The pose GRADIENT may run on MPS via "
+                         "--pose-grad-on-train-device; the SCORE never does (--device is "
+                         "the CPU/CUDA authority).")
+    # AUTHORITY INVARIANT (the rule --pose-grad-on-train-device does NOT relax): the exact
+    # d_seg/d_pose that pick BEST run on --device, which MUST be CPU/CUDA, NEVER MPS. The
+    # driver's __post_init__ also refuses device='mps', but fail loudly at the launcher too.
+    if str(args.device).lower().startswith("mps"):
+        raise SystemExit("--device (the AUTHORITY/eval device) must be cpu or cuda, NEVER "
+                         "mps (CLAUDE.md 'MPS auth eval is NOISE': 23x pose drift). MPS is "
+                         "the GRADIENT backend only (--train-device / "
+                         "--pose-grad-on-train-device).")
+    if args.pose_grad_on_train_device and not args.split_by_head:
+        raise SystemExit("--pose-grad-on-train-device requires --split-by-head (it selects "
+                         "the train device for the separable PoseNet head of the split "
+                         "backward).")
+    if args.pose_grad_on_train_device and args.train_device != "mps":
+        raise SystemExit("--pose-grad-on-train-device requires --train-device mps (the "
+                         "whole point is the MPS pose gradient; with a CPU train device it "
+                         "is a no-op).")
+    # SELF-PROTECT (regression guard, 2026-06-17): the MPS-pose UNBUNDLE
+    # (cfg.pose_grad_on_train_device) already exists in the driver + this launcher. A run
+    # that uses --train-device mps --split-by-head but OMITS --pose-grad-on-train-device
+    # silently takes the PoseNet-backward-on-CPU path: ~133 s/ep vs ~18-40 full-MPS — a
+    # 7.3x wall-clock REGRESSION for ZERO score benefit (the full_mps basin proved the MPS
+    # pose GRADIENT faithful at d_pose 0.00034; the SCORE always stays on the CPU authority
+    # via --device). Warn loudly so the slow path is a DELIBERATE choice (suspected MPS-pose
+    # Muon chaos), never an accidental omission like the arm_b/corrected launches were.
+    if (
+        args.train_device == "mps"
+        and args.split_by_head
+        and not args.pose_grad_on_train_device
+    ):
+        print(
+            "[WARN] CPU-PoseNet path selected (--split-by-head + --train-device mps WITHOUT "
+            "--pose-grad-on-train-device): ~133 s/ep vs ~18-40 full-MPS = ~7.3x SLOWER for "
+            "ZERO score gain. The MPS-pose unbundle exists (basin proved the gradient "
+            "faithful; SCORE stays on the --device CPU authority). Add "
+            "--pose-grad-on-train-device unless you are deliberately avoiding suspected "
+            "MPS-pose Muon chaos.",
+            file=sys.stderr,
+            flush=True,
+        )
     if not args.go:
         raise SystemExit("REFUSED without --go. Use --print-plan for the $0 resolved-config "
                          "preview.")

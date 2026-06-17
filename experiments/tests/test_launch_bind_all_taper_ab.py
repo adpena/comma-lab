@@ -244,3 +244,70 @@ def test_split_by_head_requires_mps_train_device() -> None:
         launcher.main(["--arm", "arm_b", "--kd-warm-start-dir", _KD_DIR,
                        "--out-dir", "/tmp/does_not_run", "--split-by-head",
                        "--train-device", "cpu", "--go"])
+
+
+# --- 6. REGRESSION GUARD (2026-06-17): the MPS-pose UNBUNDLE + the self-protect warning ----------
+# Closes the gap that caused the 7.3x CPU-pose regression: the unbundle flag
+# (--pose-grad-on-train-device) was wired but launch commands OMITTED it. These tests verify the
+# flag binds the Config field, the FINAL canonical combo (split + unbundle + equimarginal +
+# Mahalanobis, NO trunk-stopgrad) builds, and main() WARNS when mps+split runs WITHOUT the unbundle.
+from contextlib import redirect_stderr
+
+# canonical FINAL combo (the reconciled optimal — NO trunk-stopgrad): split + unbundle + levers.
+_CANONICAL_TAIL = [
+    "--kd-warm-start-dir", _KD_DIR, "--out-dir", "/tmp/does_not_run",
+    "--pose-film-v2", "--pose-equimarginal", "--pose-dim-weights-auto",
+    "--split-by-head", "--pose-grad-on-train-device", "--train-device", "mps",
+    "--rate-attack", "--ema-warmup", "--async-eval",
+]
+
+
+def test_unbundle_flag_sets_pose_grad_on_train_device() -> None:
+    """--pose-grad-on-train-device binds cfg.pose_grad_on_train_device (the MPS-pose unbundle)."""
+    on = launcher._build_torch_vehicle_config(
+        _parse(["--arm", "arm_b", *_CANONICAL_TAIL]), Path("/tmp/does_not_run")
+    )
+    assert on.pose_grad_on_train_device is True
+    # default (omit the flag): CPU-pose path = False (the slow path that the warning guards).
+    off_args = _parse(["--arm", "arm_b", "--kd-warm-start-dir", _KD_DIR,
+                       "--out-dir", "/tmp/does_not_run", "--pose-film-v2",
+                       "--split-by-head", "--train-device", "mps"])
+    off = launcher._build_torch_vehicle_config(off_args, Path("/tmp/does_not_run"))
+    assert off.pose_grad_on_train_device is False
+
+
+def test_canonical_fullstack_combo_builds_valid_config() -> None:
+    """The FINAL reconciled config (split + unbundle + equimarginal + Mahalanobis, trunk-stopgrad
+    OFF, pose every epoch) passes every __post_init__ cross-validation + keeps MPS off the score."""
+    cfg = launcher._build_torch_vehicle_config(
+        _parse(["--arm", "arm_b", *_CANONICAL_TAIL]), Path("/tmp/does_not_run")
+    )
+    assert cfg.split_by_head and cfg.pose_grad_on_train_device
+    assert cfg.pose_film_trunk_stopgrad is False        # the pose FIX (no 0.19 cap)
+    assert cfg.pose_equimarginal_enabled                # the working synergy
+    assert cfg.pose_grad_every_k == 1                   # pose every epoch
+    assert str(cfg.device) == "cpu"                     # AUTHORITY stays CPU — MPS never scores
+    assert str(cfg.train_device) == "mps"               # gradient on MPS
+
+
+def _main_stderr(argv: list[str]) -> str:
+    """Run launcher.main(argv) (no --go ⇒ SystemExit REFUSED) and capture stderr (the warning)."""
+    buf = io.StringIO()
+    with redirect_stderr(buf), pytest.raises(SystemExit):
+        launcher.main(argv)
+    return buf.getvalue()
+
+
+def test_unbundle_omission_warns_on_mps_split() -> None:
+    """SELF-PROTECT: mps + split WITHOUT --pose-grad-on-train-device prints the CPU-PoseNet warning
+    (the regression that silently took the 7.3x slow path)."""
+    err = _main_stderr(["--arm", "arm_b", "--kd-warm-start-dir", _KD_DIR,
+                        "--out-dir", "/tmp/does_not_run", "--pose-film-v2",
+                        "--split-by-head", "--train-device", "mps"])
+    assert "CPU-PoseNet path" in err and "7.3x" in err
+
+
+def test_unbundle_present_suppresses_warn() -> None:
+    """No warning when the unbundle flag IS set (the canonical fast path)."""
+    err = _main_stderr(["--arm", "arm_b", *_CANONICAL_TAIL])
+    assert "CPU-PoseNet path" not in err
