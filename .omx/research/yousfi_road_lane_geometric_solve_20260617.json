@@ -1,0 +1,186 @@
+{
+  "schema": "yousfi_road_lane_geometric_solve_probe.v1",
+  "provenance": {
+    "evidence_grade": "macOS-CPU advisory",
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "promotable": false,
+    "hardware_substrate": "local_macos_cpu"
+  },
+  "n_pairs": 4,
+  "contour_rows": [
+    {
+      "pair_idx": 0,
+      "road_class": 0,
+      "lane_class": 1,
+      "road_pixels": 44132,
+      "lane_pixels": 1401,
+      "road_lane_edge_pixels": 2232,
+      "total_edge_pixels": 4561,
+      "road_lane_edge_fraction_of_boundary": 0.48936636702477526,
+      "low_margin_pixels": 2694,
+      "road_lane_edge_fraction_of_low_margin": 0.43207126948775054,
+      "partition_bytes_lzma": 914,
+      "n_classes_present": 5
+    },
+    {
+      "pair_idx": 1,
+      "road_class": 0,
+      "lane_class": 1,
+      "road_pixels": 44797,
+      "lane_pixels": 1460,
+      "road_lane_edge_pixels": 2209,
+      "total_edge_pixels": 4488,
+      "road_lane_edge_fraction_of_boundary": 0.4922014260249554,
+      "low_margin_pixels": 2523,
+      "road_lane_edge_fraction_of_low_margin": 0.4221165279429251,
+      "partition_bytes_lzma": 915,
+      "n_classes_present": 5
+    },
+    {
+      "pair_idx": 2,
+      "road_class": 0,
+      "lane_class": 1,
+      "road_pixels": 45444,
+      "lane_pixels": 946,
+      "road_lane_edge_pixels": 1870,
+      "total_edge_pixels": 4164,
+      "road_lane_edge_fraction_of_boundary": 0.44908741594620555,
+      "low_margin_pixels": 2592,
+      "road_lane_edge_fraction_of_low_margin": 0.41898148148148145,
+      "partition_bytes_lzma": 831,
+      "n_classes_present": 5
+    },
+    {
+      "pair_idx": 3,
+      "road_class": 0,
+      "lane_class": 1,
+      "road_pixels": 44587,
+      "lane_pixels": 1166,
+      "road_lane_edge_pixels": 2024,
+      "total_edge_pixels": 4306,
+      "road_lane_edge_fraction_of_boundary": 0.47004180213655367,
+      "low_margin_pixels": 2533,
+      "road_lane_edge_fraction_of_low_margin": 0.43545203316225817,
+      "partition_bytes_lzma": 894,
+      "n_classes_present": 5
+    }
+  ],
+  "pose_warp_rows": [
+    {
+      "pair_idx": 1,
+      "n_edge_pixels_t0": 2232,
+      "n_edge_pixels_t": 2209,
+      "median_residual_identity": 0.0,
+      "median_residual_pose_init": 0.47322363779032894,
+      "median_residual_homography_lsq": 1.2875732144843184,
+      "homography_dof": 8,
+      "pose_rel_translation": [
+        0.4391632080078125,
+        0.02065098285675049,
+        -0.021934710443019867
+      ],
+      "pose_rel_yaw": -0.0006110444664955139,
+      "coupling_verdict": "EUREKA_pose_explains_contour"
+    },
+    {
+      "pair_idx": 2,
+      "n_edge_pixels_t0": 2232,
+      "n_edge_pixels_t": 1870,
+      "median_residual_identity": 1.0,
+      "median_residual_pose_init": 0.9887934520290589,
+      "median_residual_homography_lsq": 0.7036091070774486,
+      "homography_dof": 8,
+      "pose_rel_translation": [
+        -2.1693267822265625,
+        0.008291900157928467,
+        -0.01846117526292801
+      ],
+      "pose_rel_yaw": -0.00038342177867889404,
+      "coupling_verdict": "EUREKA_pose_explains_contour"
+    },
+    {
+      "pair_idx": 3,
+      "n_edge_pixels_t0": 2232,
+      "n_edge_pixels_t": 2024,
+      "median_residual_identity": 0.0,
+      "median_residual_pose_init": 0.14053244860455766,
+      "median_residual_homography_lsq": 0.9943286391218624,
+      "homography_dof": 8,
+      "pose_rel_translation": [
+        -0.7610588073730469,
+        -0.0033077597618103027,
+        -0.021947048604488373
+      ],
+      "pose_rel_yaw": 0.0005902573466300964,
+      "coupling_verdict": "EUREKA_pose_explains_contour"
+    }
+  ],
+  "resize_survival_rows": [
+    {
+      "pair_idx": 0,
+      "n_marking_pixels_seg": 2232,
+      "d_seg_full_baseline": 0.0,
+      "d_seg_naive_paint": 0.0074106850661337376,
+      "d_seg_deconv_preimage": 0.0073445639573037624,
+      "naive_flip_rate_on_support": 0.3525985663082437,
+      "deconv_flip_rate_on_support": 0.36066308243727596,
+      "deconv_beats_naive": false
+    },
+    {
+      "pair_idx": 1,
+      "n_marking_pixels_seg": 2209,
+      "d_seg_full_baseline": 0.0,
+      "d_seg_naive_paint": 0.0073649086989462376,
+      "d_seg_deconv_preimage": 0.0074106850661337376,
+      "naive_flip_rate_on_support": 0.34449977365323675,
+      "deconv_flip_rate_on_support": 0.3544590312358533,
+      "deconv_beats_naive": false
+    }
+  ],
+  "kkt_rows": [
+    {
+      "pair_idx": 0,
+      "n_residual_flips": 787,
+      "boundary_size": 2694,
+      "position_bits": 4884.814919414315,
+      "class_bits": 39.4743071610097,
+      "bytes_per_flip": 0.7821298009173007,
+      "waterline_bytes_per_flip": 1.2731082153320312,
+      "beats_waterline": true,
+      "n_admitted": 787,
+      "net_score_delta": -0.00025728790757285983
+    },
+    {
+      "pair_idx": 1,
+      "n_residual_flips": 761,
+      "boundary_size": 2523,
+      "position_bits": 5010.541050006408,
+      "class_bits": 14.341188189979848,
+      "bytes_per_flip": 0.8253748748680007,
+      "waterline_bytes_per_flip": 1.2731082153320312,
+      "beats_waterline": true,
+      "n_admitted": 761,
+      "net_score_delta": -0.00022687483980640612
+    }
+  ],
+  "summary": {
+    "road_lane_edge_fraction_of_boundary_mean": 0.4751742527831224,
+    "road_lane_edge_fraction_of_boundary_max": 0.4922014260249554,
+    "road_lane_edge_fraction_of_low_margin_mean": 0.42715532801860384,
+    "road_lane_edge_fraction_of_low_margin_max": 0.43545203316225817,
+    "pose_init_residual_median_px_mean": 0.5341831794746484,
+    "homography_lsq_residual_median_px_mean": 0.9951703202278764,
+    "identity_residual_median_px_mean": 0.3333333333333333,
+    "eureka_pose_warp_verdict": "EUREKA_HOLDS_pure_pose_warps_contour",
+    "resize_deconv_beats_naive_any": false,
+    "naive_support_flip_rate_mean": 0.34854916998074026,
+    "deconv_support_flip_rate_mean": 0.35756105683656464,
+    "kkt_residual_beats_waterline_any": true,
+    "authority": "[macOS-CPU advisory] exact-frozen-scorer NOT 600-sample harness",
+    "frontier_pointer_moved": false
+  }
+}
