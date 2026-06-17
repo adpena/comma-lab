@@ -1,0 +1,297 @@
+{
+  "evidence_grade": "[contest-CPU advisory] NON-PROMOTABLE",
+  "frontier_unmoved": true,
+  "probe": "yousfi_filler_flip_structure_stc",
+  "tau": 0.5,
+  "constraint_height": 8,
+  "n_pairs_measured": 24,
+  "which_decoder": "ema",
+  "M1_total_flips_measured": 11330,
+  "M1_n_distinct_class_pairs": 13,
+  "M1_classpair_top12_all_flips": [
+    {
+      "pair": "road->lane",
+      "count": 5453,
+      "fraction": 0.48128861429832304
+    },
+    {
+      "pair": "lane->road",
+      "count": 1790,
+      "fraction": 0.15798764342453664
+    },
+    {
+      "pair": "undrivable->movable",
+      "count": 795,
+      "fraction": 0.07016769638128861
+    },
+    {
+      "pair": "undrivable->road",
+      "count": 604,
+      "fraction": 0.053309796999117386
+    },
+    {
+      "pair": "road->undrivable",
+      "count": 565,
+      "fraction": 0.0498676081200353
+    },
+    {
+      "pair": "road->movable",
+      "count": 533,
+      "fraction": 0.047043248014121804
+    },
+    {
+      "pair": "movable->road",
+      "count": 447,
+      "fraction": 0.03945278022947926
+    },
+    {
+      "pair": "myego->road",
+      "count": 414,
+      "fraction": 0.03654015887025596
+    },
+    {
+      "pair": "road->myego",
+      "count": 365,
+      "fraction": 0.032215357458075904
+    },
+    {
+      "pair": "movable->undrivable",
+      "count": 338,
+      "fraction": 0.029832303618711385
+    },
+    {
+      "pair": "myego->lane",
+      "count": 11,
+      "fraction": 0.000970873786407767
+    },
+    {
+      "pair": "lane->myego",
+      "count": 8,
+      "fraction": 0.000706090026478376
+    }
+  ],
+  "M1_top2_classpair_fraction_all": 0.6392762577228597,
+  "M1_spatial_in_low_margin_band_fraction": 0.5768755516328332,
+  "M1_classpair_top12_survivable": [
+    {
+      "pair": "road->lane",
+      "count": 805,
+      "fraction": 0.33880471380471383
+    },
+    {
+      "pair": "lane->road",
+      "count": 596,
+      "fraction": 0.25084175084175087
+    },
+    {
+      "pair": "undrivable->road",
+      "count": 188,
+      "fraction": 0.07912457912457913
+    },
+    {
+      "pair": "undrivable->movable",
+      "count": 163,
+      "fraction": 0.06860269360269361
+    },
+    {
+      "pair": "road->undrivable",
+      "count": 132,
+      "fraction": 0.05555555555555555
+    },
+    {
+      "pair": "movable->road",
+      "count": 127,
+      "fraction": 0.05345117845117845
+    },
+    {
+      "pair": "road->movable",
+      "count": 117,
+      "fraction": 0.04924242424242424
+    },
+    {
+      "pair": "movable->undrivable",
+      "count": 89,
+      "fraction": 0.03745791245791246
+    },
+    {
+      "pair": "road->myego",
+      "count": 79,
+      "fraction": 0.03324915824915825
+    },
+    {
+      "pair": "myego->road",
+      "count": 75,
+      "fraction": 0.03156565656565657
+    },
+    {
+      "pair": "myego->lane",
+      "count": 2,
+      "fraction": 0.0008417508417508417
+    },
+    {
+      "pair": "lane->myego",
+      "count": 2,
+      "fraction": 0.0008417508417508417
+    }
+  ],
+  "M1_top2_classpair_fraction_survivable": 0.5896464646464646,
+  "M1_concentration_is_targeted_lever": true,
+  "A_survival_fraction": 0.3635250917992656,
+  "A_total_candidates": 6536,
+  "A_total_survivable": 2376,
+  "A_survives_threshold_0p50": false,
+  "M2_waterline_bytes_per_flip": 1.2731082153320312,
+  "M2_witness_reopen_floor_bytes_per_flip": 0.7492133956847652,
+  "M2_witness_reopen_realized_bytes_per_flip": 4.8655727358788265,
+  "M2_perflip_floor_bytes_per_flip": 4.973484848484849,
+  "M2_stc_uniform_bytes_per_flip": 0.5227061074373484,
+  "M2_stc_cost_bytes_per_flip": 0.5429595253780567,
+  "M2_stc_cost_mean_realized_cost_per_flip": 1.2184648639787503,
+  "M2_stc_uniform_beats_witness_floor": true,
+  "M2_stc_cost_beats_witness_floor": true,
+  "M2_stc_cost_beats_uniform": false,
+  "M2_stc_cost_n_coded": 2133,
+  "M2_stc_cost_n_dropped_wet": 243,
+  "M3_best_coder": "stc_uniform",
+  "M3_best_bytes_per_flip": 0.5227061074373484,
+  "M3_best_n_coded_flips": 2376,
+  "M3_best_residual_bytes_600": 31048.742781778492,
+  "M3_base_mean_d_seg": 0.0024011400010850695,
+  "M3_coded_mean_d_seg": 0.001897599962022569,
+  "M3_seg_win_basin_relative": 0.05035400390625004,
+  "M3_rate_cost_600": 0.020674083364434603,
+  "M3_net_delta_S": -0.029679920541815438,
+  "M3_net_negative_S": true,
+  "M3_per_coder_net_delta_S": {
+    "perflip_floor": 0.14635737731986742,
+    "stc_uniform": -0.029679920541815438,
+    "stc_cost": -0.025925337456515575
+  },
+  "M3_witness_total_bytes": 121741.74278177849,
+  "M3_frontier_bytes": 177169,
+  "M3_witness_beats_frontier_bytes": true,
+  "VERDICT_PROBE_E": "STC_COST_BEATS_FLOOR_BUT_SURVIVAL_WALL_HOLDS",
+  "wall_seconds": 84.6,
+  "per_pair_sample": [
+    {
+      "pair_index": 0,
+      "n_flips_total": 531,
+      "n_candidates_boundary": 294,
+      "n_survivable": 92,
+      "survival_fraction": 0.3129251700680272,
+      "boundary_size": 808,
+      "perflip_floor_bytes": 343.0,
+      "perflip_floor_bytes_per_flip": 3.7282608695652173,
+      "stc_uniform_bytes": 51.09417806156393,
+      "stc_uniform_bytes_per_flip": 0.5553715006691732,
+      "stc_cost_bytes": 49.220321673270846,
+      "stc_cost_bytes_per_flip": 0.5657508238306994,
+      "stc_cost_mean_realized_cost": 1.4495719432830811
+    },
+    {
+      "pair_index": 1,
+      "n_flips_total": 442,
+      "n_candidates_boundary": 275,
+      "n_survivable": 100,
+      "survival_fraction": 0.36363636363636365,
+      "boundary_size": 836,
+      "perflip_floor_bytes": 491.0,
+      "perflip_floor_bytes_per_flip": 4.91,
+      "stc_uniform_bytes": 54.63350205392602,
+      "stc_uniform_bytes_per_flip": 0.5463350205392602,
+      "stc_cost_bytes": 50.93660671370747,
+      "stc_cost_bytes_per_flip": 0.5659622968189719,
+      "stc_cost_mean_realized_cost": 1.2242851853370667
+    },
+    {
+      "pair_index": 2,
+      "n_flips_total": 478,
+      "n_candidates_boundary": 265,
+      "n_survivable": 89,
+      "survival_fraction": 0.33584905660377357,
+      "boundary_size": 721,
+      "perflip_floor_bytes": 480.0,
+      "perflip_floor_bytes_per_flip": 5.393258426966292,
+      "stc_uniform_bytes": 48.033764869358336,
+      "stc_uniform_bytes_per_flip": 0.5397052232512173,
+      "stc_cost_bytes": 46.60457447481367,
+      "stc_cost_bytes_per_flip": 0.5482891114683961,
+      "stc_cost_mean_realized_cost": 1.528766671816508
+    },
+    {
+      "pair_index": 3,
+      "n_flips_total": 426,
+      "n_candidates_boundary": 257,
+      "n_survivable": 111,
+      "survival_fraction": 0.43190661478599224,
+      "boundary_size": 726,
+      "perflip_floor_bytes": 521.0,
+      "perflip_floor_bytes_per_flip": 4.693693693693693,
+      "stc_uniform_bytes": 55.42009350771115,
+      "stc_uniform_bytes_per_flip": 0.4992801216910914,
+      "stc_cost_bytes": 51.581200221899806,
+      "stc_cost_bytes_per_flip": 0.5210222244636344,
+      "stc_cost_mean_realized_cost": 1.6130425453186035
+    },
+    {
+      "pair_index": 4,
+      "n_flips_total": 430,
+      "n_candidates_boundary": 265,
+      "n_survivable": 104,
+      "survival_fraction": 0.39245283018867927,
+      "boundary_size": 698,
+      "perflip_floor_bytes": 507.0,
+      "perflip_floor_bytes_per_flip": 4.875,
+      "stc_uniform_bytes": 52.41900392775858,
+      "stc_uniform_bytes_per_flip": 0.5040288839207556,
+      "stc_cost_bytes": 47.13106870648385,
+      "stc_cost_bytes_per_flip": 0.5355803262100438,
+      "stc_cost_mean_realized_cost": 1.3346520066261292
+    },
+    {
+      "pair_index": 5,
+      "n_flips_total": 457,
+      "n_candidates_boundary": 280,
+      "n_survivable": 85,
+      "survival_fraction": 0.30357142857142855,
+      "boundary_size": 752,
+      "perflip_floor_bytes": 484.0,
+      "perflip_floor_bytes_per_flip": 5.694117647058824,
+      "stc_uniform_bytes": 47.289760386649085,
+      "stc_uniform_bytes_per_flip": 0.5563501221958715,
+      "stc_cost_bytes": 43.46053562774966,
+      "stc_cost_bytes_per_flip": 0.5794738083699954,
+      "stc_cost_mean_realized_cost": 1.1861007724489485
+    },
+    {
+      "pair_index": 6,
+      "n_flips_total": 469,
+      "n_candidates_boundary": 252,
+      "n_survivable": 93,
+      "survival_fraction": 0.36904761904761907,
+      "boundary_size": 678,
+      "perflip_floor_bytes": 486.0,
+      "perflip_floor_bytes_per_flip": 5.225806451612903,
+      "stc_uniform_bytes": 48.320327754977654,
+      "stc_uniform_bytes_per_flip": 0.5195734167201899,
+      "stc_cost_bytes": 44.18314327212836,
+      "stc_cost_bytes_per_flip": 0.5454709045941774,
+      "stc_cost_mean_realized_cost": 1.0501126050949097
+    },
+    {
+      "pair_index": 7,
+      "n_flips_total": 481,
+      "n_candidates_boundary": 280,
+      "n_survivable": 102,
+      "survival_fraction": 0.36428571428571427,
+      "boundary_size": 756,
+      "perflip_floor_bytes": 498.0,
+      "perflip_floor_bytes_per_flip": 4.882352941176471,
+      "stc_uniform_bytes": 53.368905943360225,
+      "stc_uniform_bytes_per_flip": 0.5232245680721591,
+      "stc_cost_bytes": 48.84390147742659,
+      "stc_cost_bytes_per_flip": 0.5488078817688381,
+      "stc_cost_mean_realized_cost": 1.0794209003448487
+    }
+  ]
+}
