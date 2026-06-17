@@ -140,6 +140,169 @@ def pose_trajectory_entropy(
     )
 
 
+# ---------------------------------------------------------------------------
+# REAL reversible pose carrier — decode(encode)==quant (NO FAKE coded bytes)
+# ---------------------------------------------------------------------------
+#
+# ``pose_trajectory_entropy`` reports a Shannon ESTIMATE (order-0 iid bits). For a
+# sufficient-statistic FLOOR claim we need REAL coded bytes whose decoder
+# reproduces the quantized trajectory exactly. This is the SOTA coder for a smooth
+# low-dim trajectory: per-dim uniform quantize -> first-order temporal delta ->
+# range-code the delta stream under a transmitted per-dim PMF (sister of the
+# partition codec's transmitted-model discipline; the model bytes are COUNTED).
+
+import struct as _struct  # noqa: E402
+
+import brotli as _brotli  # noqa: E402
+import constriction as _constriction  # noqa: E402
+
+_POSE_MAGIC = b"PTC1"  # pose-trajectory-codec v1
+
+
+def _delta_pmf(deltas_int: np.ndarray) -> tuple[np.ndarray, int, int]:
+    """Per-dim PMF over the integer delta alphabet ``[lo, hi]`` (uint16 counts)."""
+    lo = int(deltas_int.min())
+    hi = int(deltas_int.max())
+    counts = np.bincount((deltas_int - lo).astype(np.int64), minlength=hi - lo + 1)
+    counts = np.maximum(counts, (counts > 0)).astype(np.float64)
+    # Scale to uint16 keeping every observed symbol >= 1 (decoder never zeroes it).
+    rmax = counts.max()
+    if rmax > 65535:
+        counts = np.maximum(np.round(counts * (65535.0 / rmax)), counts > 0)
+    return np.clip(counts, 0, 65535).astype(np.uint16), lo, hi
+
+
+def encode_pose_trajectory(
+    trajectory: np.ndarray, *, deltas: np.ndarray | float
+) -> bytes:
+    """REAL reversible range-coded pose carrier. ``decode_pose_trajectory`` returns
+    the bit-exact quantized integer trajectory. Returns the full self-describing
+    payload (header + per-dim brotli'd PMF + range-coder words); ``len`` is the REAL
+    coded size, never an estimate."""
+    traj = np.asarray(trajectory, dtype=np.float64)
+    if traj.ndim != 2:
+        raise ValueError(f"trajectory must be (n_pairs, n_dims); got {traj.shape}")
+    n_pairs, n_dims = traj.shape
+    delta_vec = (
+        np.full(n_dims, float(deltas))
+        if np.isscalar(deltas)
+        else np.asarray(deltas, dtype=np.float64)
+    )
+    if delta_vec.shape != (n_dims,) or np.any(delta_vec <= 0):
+        raise ValueError(f"deltas must be scalar or ({n_dims},) > 0")
+    quant = np.round(traj / delta_vec).astype(np.int64)  # (n_pairs, n_dims)
+
+    enc = _constriction.stream.queue.RangeEncoder()
+    cat = _constriction.stream.model.Categorical(perfect=False)
+    seeds = np.empty(n_dims, dtype=np.int64)
+    model_blobs: list[bytes] = []
+    los = np.empty(n_dims, dtype=np.int64)
+    his = np.empty(n_dims, dtype=np.int64)
+    for k in range(n_dims):
+        col = quant[:, k]
+        seeds[k] = int(col[0]) if col.size else 0
+        deltas_col = np.diff(col) if col.size > 1 else np.zeros(0, dtype=np.int64)
+        pmf_u16, lo, hi = (
+            _delta_pmf(deltas_col)
+            if deltas_col.size
+            else (np.ones(1, dtype=np.uint16), 0, 0)
+        )
+        los[k], his[k] = lo, hi
+        model_blobs.append(_brotli.compress(pmf_u16.tobytes(), quality=11))
+        # Only range-code when the delta alphabet has >= 2 symbols. A size-1
+        # alphabet (all deltas equal -> hi == lo) carries ZERO information and
+        # constriction rejects a single-symbol Categorical; the decoder
+        # reconstructs it deterministically from ``lo``.
+        if deltas_col.size and hi > lo:
+            p = pmf_u16.astype(np.float64)
+            p = np.maximum(p / p.sum(), 1e-12)
+            syms = (deltas_col - lo).astype(np.int32)
+            probs = np.broadcast_to(p, (syms.size, p.size)).copy()
+            enc.encode(syms, cat, probs)
+    stream = enc.get_compressed().tobytes()
+
+    header = _POSE_MAGIC + _struct.pack("<HH", n_pairs, n_dims)
+    body = b""
+    for k in range(n_dims):
+        body += _struct.pack(
+            "<dqqqI",
+            float(delta_vec[k]),
+            int(seeds[k]),
+            int(los[k]),
+            int(his[k]),
+            len(model_blobs[k]),
+        )
+        body += model_blobs[k]
+    payload = header + body + _struct.pack("<I", len(stream)) + stream
+    return payload
+
+
+def decode_pose_trajectory(payload: bytes) -> np.ndarray:
+    """Decode :func:`encode_pose_trajectory` to the bit-exact quantized integer
+    trajectory (n_pairs, n_dims) int64. The float trajectory is ``out * deltas``."""
+    if payload[: len(_POSE_MAGIC)] != _POSE_MAGIC:
+        raise ValueError("bad magic; not a pose-trajectory-codec payload")
+    off = len(_POSE_MAGIC)
+    n_pairs, n_dims = _struct.unpack("<HH", payload[off : off + 4])
+    off += 4
+    deltas = np.empty(n_dims)
+    seeds = np.empty(n_dims, dtype=np.int64)
+    los = np.empty(n_dims, dtype=np.int64)
+    his = np.empty(n_dims, dtype=np.int64)
+    pmfs: list[np.ndarray] = []
+    fmt = "<dqqqI"
+    flen = _struct.calcsize(fmt)
+    for k in range(n_dims):
+        d, seed, lo, hi, mlen = _struct.unpack(fmt, payload[off : off + flen])
+        off += flen
+        pmf_u16 = np.frombuffer(_brotli.decompress(payload[off : off + mlen]), dtype=np.uint16)
+        off += mlen
+        deltas[k], seeds[k], los[k], his[k] = d, seed, lo, hi
+        pmfs.append(pmf_u16)
+    (stream_len,) = _struct.unpack("<I", payload[off : off + 4])
+    off += 4
+    stream = payload[off : off + stream_len]
+    off += stream_len
+    if off != len(payload):
+        raise ValueError(f"trailing bytes: parsed {off} of {len(payload)}")
+
+    dec = _constriction.stream.queue.RangeDecoder(np.frombuffer(stream, dtype=np.uint32))
+    cat = _constriction.stream.model.Categorical(perfect=False)
+    quant = np.empty((n_pairs, n_dims), dtype=np.int64)
+    for k in range(n_dims):
+        quant[0, k] = seeds[k]
+        if n_pairs > 1:
+            if his[k] > los[k]:
+                pmf = pmfs[k].astype(np.float64)
+                pmf = np.maximum(pmf / pmf.sum(), 1e-12)
+                probs = np.broadcast_to(pmf, (n_pairs - 1, pmf.size)).copy()
+                d_syms = np.asarray(dec.decode(cat, probs)).reshape(-1) + los[k]
+            else:
+                # Size-1 alphabet: every delta == lo (deterministic, uncoded).
+                d_syms = np.full(n_pairs - 1, los[k], dtype=np.int64)
+            quant[1:, k] = quant[0, k] + np.cumsum(d_syms)
+    return quant
+
+
+def pose_carrier_real_bytes(
+    trajectory: np.ndarray, *, deltas: np.ndarray | float
+) -> tuple[int, np.ndarray]:
+    """Encode -> assert decode-bit-exact -> return (real coded bytes, quantized int
+    trajectory). NO FAKE: raises if the roundtrip is not exact."""
+    payload = encode_pose_trajectory(trajectory, deltas=deltas)
+    quant = decode_pose_trajectory(payload)
+    traj = np.asarray(trajectory, dtype=np.float64)
+    delta_vec = (
+        np.full(traj.shape[1], float(deltas))
+        if np.isscalar(deltas)
+        else np.asarray(deltas, dtype=np.float64)
+    )
+    expect = np.round(traj / delta_vec).astype(np.int64)
+    if not np.array_equal(quant, expect):
+        raise RuntimeError("pose carrier roundtrip is NOT bit-exact — abort (NO FAKE)")
+    return len(payload), quant
+
+
 def per_dim_steps_for_target_pose_term(
     trajectory: np.ndarray, target_pose_term: float
 ) -> np.ndarray:

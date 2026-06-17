@@ -1,0 +1,76 @@
+{
+  "authority": "macOS-CPU-advisory",
+  "promotable": false,
+  "probe": "GENIUS BLIND-SPOT PROBE D \u2014 sufficient-statistic byte floor",
+  "note": "Measured floor of the MINIMAL contest compressor: real reversible joint code of (SegNet-argmax partition stack, PoseNet 6-dim trajectory). Everything else in a reconstructed RGB frame is bits the scorer never reads.",
+  "n_pairs_measured": 100,
+  "target_cache": "experiments/results/capstone_gt_targets_cache/gt_targets_n100.pt",
+  "elapsed_seconds": 1.6,
+  "no_fake": {
+    "partition_roundtrip_bit_exact": true,
+    "pose_carrier_roundtrip_bit_exact": true,
+    "all_bytes_are_real_coded_lengths": true
+  },
+  "partition_H": {
+    "coder": "context-adaptive arithmetic (constriction), causal (left,up,prev)",
+    "bytes_per_frame_spatial": 533.66,
+    "bytes_per_frame_temporal": 452.98,
+    "best_bytes_per_frame": 452.98,
+    "d_seg": 0.0,
+    "bytes_600pair": 271788.0,
+    "rate_term_600pair": 0.1809724731511687
+  },
+  "pose_H": {
+    "coder": "range-coded temporal-delta carrier (constriction), transmitted per-dim PMF",
+    "per_dim_quant_step": [
+      0.06397023018089382,
+      0.002447572981290289,
+      0.0010147029486580166,
+      0.0006660492363556134,
+      0.0003660456252279553,
+      0.0007012874201825499
+    ],
+    "induced_d_pose": 0.00034168999999999996,
+    "pose_term_sqrt10dpose": 0.058454255619244694,
+    "real_coded_bytes_measured_n": 868,
+    "bytes_600pair_linear_upper_bound": 5208.0,
+    "rate_term_600pair": 0.0034677934278602683,
+    "sanity_fine_carrier_bytes_measured_n": 1768,
+    "sanity_fine_induced_d_pose": 8.971479132615795e-08
+  },
+  "sufficient_statistic_floor": {
+    "bytes_measured_n": 46166,
+    "bytes_600pair": 276996.0,
+    "rate_term_600pair": 0.18444026657902898,
+    "d_seg": 0.0,
+    "pose_term": 0.058454255619244694,
+    "S_floor_600pair": 0.24289452219827368,
+    "partition_share_of_bytes": 0.981198284451761,
+    "pose_share_of_bytes": 0.018801715548238965
+  },
+  "comparison": {
+    "small_basis": {
+      "bytes": 89136,
+      "rate_term": 0.059352003645497864,
+      "pose_term": 0.058454255619244694,
+      "rate_plus_pose_floor": 0.11780625926474256
+    },
+    "frontier": {
+      "bytes": 177215,
+      "rate_term": 0.118,
+      "seg_term": 0.056,
+      "pose_term": 0.017,
+      "total": 0.1911
+    },
+    "ss_floor_bytes_vs_small_basis": 3.1075659666128166,
+    "ss_floor_bytes_vs_frontier": 1.5630505318398555,
+    "headroom_rate_vs_small_basis": -0.12508826293353112,
+    "headroom_rate_vs_frontier": -0.06644026657902899,
+    "ss_S_floor_minus_small_basis_floor": 0.12508826293353112,
+    "ss_S_floor_minus_frontier": 0.051794522198273685
+  },
+  "verdict": {
+    "code": "SS_FLOOR_ABOVE_SMALL_BASIS",
+    "interpretation": "The DIRECT sufficient-statistic store (276,996 B, 3.11x the small-basis 89,136 B; partition is 98% of the bytes) is ABOVE the learned-decoder vehicles. The learned decoder is a CHEAPER carrier of the SAME sufficient statistic than storing it directly \u2014 it amortizes the partition+pose into shared weights. This CONFIRMS the small basis is near the minimal explicit-SS frontier and that d_seg belongs IN training (a renderer carries the partition cheaper than any direct partition store). The pose half is tiny (5,208 B, 2%); the partition store is the binding term and remains ~2-3x above what a learned carrier achieves."
+  }
+}
