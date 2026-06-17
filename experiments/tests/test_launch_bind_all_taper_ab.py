@@ -311,3 +311,66 @@ def test_unbundle_present_suppresses_warn() -> None:
     """No warning when the unbundle flag IS set (the canonical fast path)."""
     err = _main_stderr(["--arm", "arm_b", *_CANONICAL_TAIL])
     assert "CPU-PoseNet path" not in err
+
+
+# --- ACCELERATOR #1: margin-hinge THROUGHOUT (validated 2026-06-17) -------------------
+
+
+def test_margin_hinge_throughout_replaces_surrogate_on_every_stage() -> None:
+    """--seg-margin-hinge-throughout makes margin_hinge the seg surrogate for EVERY stage
+    (coarse + refinement) with the validated PLAIN config (margin_target 1.0, road_lane 1.0
+    OFF, NO Lever-5 margin-weight) — the contest fix for the soft_cosine/CE gradient-vanish."""
+    from tac.torch_vehicle.curriculum import build_curriculum
+
+    specs = build_curriculum(total_epoch_budget=800)
+    plan = launcher._plan_stages(
+        specs, oomph_seg_weight_mult=1.0, seg_margin_hinge_throughout=True
+    )
+    assert plan, "empty plan"
+    for s in plan:
+        assert s["seg_surrogate"] == "margin_hinge", f"stage {s['stage']} not margin_hinge"
+        assert s["seg_margin_hinge_target"] == pytest.approx(1.0)
+        assert s["road_lane_emphasis"] == pytest.approx(1.0)   # OFF — the 2.0 arm HURT
+        assert s["margin_weight_tau"] is None                  # margin_hinge self-targets
+        assert s["margin_weight_renorm"] is False
+
+
+def test_margin_hinge_throughout_keeps_oomph_weight_crank_refinement_only() -> None:
+    """The d_seg-FOCUS crank (oomph seg_weight x mult) is orthogonal to the surrogate: with
+    mult=2.0 ONLY the refinement stages (>= 4) get the bumped seg_weight; coarse stays base."""
+    from tac.torch_vehicle.curriculum import build_curriculum
+
+    specs = build_curriculum(total_epoch_budget=800)
+    base = {s.name: float(s.seg_weight) for s in specs}
+    plan = launcher._plan_stages(
+        specs, oomph_seg_weight_mult=2.0, seg_margin_hinge_throughout=True
+    )
+    for s in plan:
+        expect = base[s["name"]] * (2.0 if s["stage"] >= launcher._REFINEMENT_FIRST_STAGE else 1.0)
+        assert s["seg_weight"] == pytest.approx(expect), f"stage {s['stage']} weight crank wrong"
+        assert s["seg_surrogate"] == "margin_hinge"
+
+
+def test_margin_hinge_throughout_default_off_is_byte_identical_to_oomph() -> None:
+    """The flag DEFAULTS off → the plan is the legacy soft_cosine-oomph overlay (coarse CE,
+    refinement soft_cosine) — the determinism-preserving default the operator relies on."""
+    from tac.torch_vehicle.curriculum import build_curriculum
+
+    specs = build_curriculum(total_epoch_budget=800)
+    default = launcher._plan_stages(specs, oomph_seg_weight_mult=1.0)
+    explicit_off = launcher._plan_stages(
+        specs, oomph_seg_weight_mult=1.0, seg_margin_hinge_throughout=False
+    )
+    assert default == explicit_off
+    # the default is NOT margin_hinge anywhere (legacy path preserved)
+    assert all(s["seg_surrogate"] in (None, "soft_cosine") for s in default)
+
+
+def test_margin_hinge_throughout_flag_recorded_in_resolved_config() -> None:
+    """The flag is threaded into the resolved-config dict (observability / provenance)."""
+    on = launcher._resolve_config_dict(
+        _parse(["--arm", "arm_b", "--out-dir", "/tmp/x", "--seg-margin-hinge-throughout"])
+    )
+    off = launcher._resolve_config_dict(_parse(["--arm", "arm_b", "--out-dir", "/tmp/x"]))
+    assert on["seg_margin_hinge_throughout"] is True
+    assert off["seg_margin_hinge_throughout"] is False

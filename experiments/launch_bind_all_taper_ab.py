@@ -241,6 +241,18 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--oomph-seg-weight-mult", type=float, default=1.5,
                    help="the oomph seg_weight multiplier over the stage base (1.5 = "
                         "'everything cranked'; 1.0 isolates sharpness/margin/renorm).")
+    p.add_argument("--seg-margin-hinge-throughout", action="store_true",
+                   help="ACCELERATOR #1 (validated 2026-06-17): make the flip-targeting "
+                        "MARGIN-HINGE the seg surrogate for EVERY stage (coarse + refinement), "
+                        "REPLACING both the early vendored CE and the refinement soft_cosine. "
+                        "margin_hinge bent the d_seg power-law exponent (+0.18 over CE) and beat "
+                        "soft_cosine (the WORST arm, ~3x more residual d_seg); the validated "
+                        "PLAIN config = margin_target 1.0 + road_lane 1.0 (OFF; 2.0 hurt) + NO "
+                        "Lever-5 margin-weight (margin-hinge is intrinsically flip-targeted) = "
+                        "the StageSpec DEFAULTS, so only seg_surrogate flips. The oomph "
+                        "seg_weight x mult still applies ONLY at the refinement stages (the "
+                        "d_seg-FOCUS crank is orthogonal to the surrogate choice). Off (default) "
+                        "= the legacy _overlay_oomph path (byte-identical).")
     # --- RATE ATTACK (Lever-4 variable-level export) ------------------------------
     p.add_argument("--rate-attack", action="store_true",
                    help="enable the Lever-4 variable-level EXPORT codec — the export decoder "
@@ -284,8 +296,49 @@ def _overlay_oomph(specs: list, oomph_seg_weight_mult: float) -> list:
     return out
 
 
-def _plan_stages(specs: list, oomph_seg_weight_mult: float) -> list[dict]:
-    over = _overlay_oomph(specs, oomph_seg_weight_mult)
+def _apply_margin_hinge_curriculum(specs: list, oomph_seg_weight_mult: float) -> list:
+    """ACCELERATOR #1 (validated 2026-06-17): make the flip-targeting MARGIN-HINGE the seg
+    surrogate for EVERY stage (coarse + refinement), REPLACING both the early vendored CE and
+    the refinement soft_cosine. The validated PLAIN config = margin_target 1.0 + road_lane 1.0
+    (OFF; the 2.0 emphasis arm HURT) + NO Lever-5 margin-weight (margin-hinge is intrinsically
+    flip-targeted: zero gradient on correct-with-margin pixels) — these are the StageSpec
+    DEFAULTS, so the ONLY field we flip is ``seg_surrogate``. The oomph seg_weight x mult still
+    applies ONLY to the refinement stages (the d_seg-FOCUS crank is orthogonal to the surrogate
+    choice; coarse stages keep their base seg_weight). margin_hinge beat soft_cosine (the WORST
+    arm, ~3x more residual d_seg) AND CE (residual 0.00120 vs 0.00142) and bent the d_seg
+    power-law exponent +0.18 over CE — see ``.omx/research/accel1_margin_hinge_flip_targeting_
+    dseg_exponent_20260617.md``."""
+    out = []
+    for i, s in enumerate(specs):
+        mult = float(oomph_seg_weight_mult) if i >= _REFINEMENT_FIRST_STAGE else 1.0
+        out.append(
+            dataclasses.replace(
+                s,
+                seg_surrogate="margin_hinge",
+                seg_weight=float(s.seg_weight) * mult,
+            )
+        )
+    return out
+
+
+def _apply_curriculum_overlay(
+    specs: list, oomph_seg_weight_mult: float, seg_margin_hinge_throughout: bool
+) -> list:
+    """Dispatch the seg-lever overlay: margin-hinge-THROUGHOUT (the validated #1 lever) when
+    requested, else the legacy soft_cosine oomph overlay (byte-identical default)."""
+    if seg_margin_hinge_throughout:
+        return _apply_margin_hinge_curriculum(specs, oomph_seg_weight_mult)
+    return _overlay_oomph(specs, oomph_seg_weight_mult)
+
+
+def _plan_stages(
+    specs: list,
+    oomph_seg_weight_mult: float,
+    seg_margin_hinge_throughout: bool = False,
+) -> list[dict]:
+    over = _apply_curriculum_overlay(
+        specs, oomph_seg_weight_mult, seg_margin_hinge_throughout
+    )
     return [
         {
             "stage": i, "name": s.name, "epochs": s.epochs,
@@ -295,6 +348,8 @@ def _plan_stages(specs: list, oomph_seg_weight_mult: float) -> list[dict]:
             "seg_temperature_hold_frac": s.seg_temperature_hold_frac,
             "margin_weight_tau": s.margin_weight_tau,
             "margin_weight_renorm": s.margin_weight_renorm,
+            "seg_margin_hinge_target": s.seg_margin_hinge_target,
+            "road_lane_emphasis": s.road_lane_emphasis,
             "seg_weight": s.seg_weight,
         }
         for i, s in enumerate(over)
@@ -348,6 +403,7 @@ def _resolve_config_dict(args) -> dict:
         "ema_warmup": bool(args.ema_warmup),
         "muon_lr_floor_fix": bool(args.muon_lr_floor_fix),
         "oomph_seg_weight_mult": args.oomph_seg_weight_mult,
+        "seg_margin_hinge_throughout": bool(args.seg_margin_hinge_throughout),
         # rate attack
         "lever4_variable_level_export_enabled": bool(args.rate_attack),
         "authority": "[contest-CPU advisory] NON-PROMOTABLE",
@@ -416,7 +472,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.print_plan:
         print(json.dumps({
             **resolved,
-            "stages": _plan_stages(specs, args.oomph_seg_weight_mult),
+            "stages": _plan_stages(
+                specs, args.oomph_seg_weight_mult,
+                args.seg_margin_hinge_throughout,
+            ),
         }, indent=2))
         return 0
 
@@ -496,7 +555,9 @@ def main(argv: list[str] | None = None) -> int:
 
         video_path = import_vendored("data").get_default_video_path()
 
-    overlaid = _overlay_oomph(specs, args.oomph_seg_weight_mult)
+    overlaid = _apply_curriculum_overlay(
+        specs, args.oomph_seg_weight_mult, args.seg_margin_hinge_throughout
+    )
     scorer = RealScorerContext(
         video_path, device=args.device, train_device=args.train_device,
         split_by_head=args.split_by_head, max_pairs=args.n_pairs,
@@ -518,7 +579,9 @@ def main(argv: list[str] | None = None) -> int:
     cfg = _build_torch_vehicle_config(args, out_dir, pose_dim_weights=pose_dim_weights)
     print(json.dumps({
         **resolved, "out_dir": str(out_dir),
-        "stages": _plan_stages(specs, args.oomph_seg_weight_mult),
+        "stages": _plan_stages(
+            specs, args.oomph_seg_weight_mult, args.seg_margin_hinge_throughout
+        ),
     }, indent=2), flush=True)
 
     driver = TorchVehicleDriver(
