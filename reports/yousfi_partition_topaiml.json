@@ -1,0 +1,133 @@
+{
+  "authority": "macOS-CPU-advisory",
+  "promotable": false,
+  "note": "Re-opened YOUSFI partition-store $0 probe with TOP-AIML context-adaptive arithmetic codec (constriction RangeEncoder, JBIG/LOCO-I causal context + temporal predictor) vs prototype per-frame LZMA-over-raw-labels.",
+  "n_frames": 24,
+  "decode_gt_seconds": 17.3,
+  "roundtrip_bit_exact": {
+    "spatial": true,
+    "temporal": true
+  },
+  "frontier": {
+    "total_score": 0.1911,
+    "sub015_target": 0.15,
+    "pose_term_inherited": 0.017
+  },
+  "prototype_baseline": {
+    "coder": "per-frame LZMA(FORMAT_RAW) over raw uint8 labels",
+    "bytes_per_frame": 902.2916666666666,
+    "rate_term": 0.3604793907465155
+  },
+  "topaiml_lossless": {
+    "spatial": {
+      "bytes_per_frame": 565.5416666666666,
+      "total_bytes": 13573,
+      "model_bytes": 123,
+      "stream_bytes": 13428,
+      "rate_term": 0.22594258926818078
+    },
+    "temporal": {
+      "bytes_per_frame": 456.5416666666667,
+      "total_bytes": 10957,
+      "model_bytes": 279,
+      "stream_bytes": 10656,
+      "rate_term": 0.1823954137339908
+    }
+  },
+  "topaiml_vs_prototype": {
+    "best_topaiml_bytes_per_frame": 456.5416666666667,
+    "best_topaiml_rate_term": 0.1823954137339908,
+    "improvement_frac_vs_prototype": 0.4940198568459939,
+    "best_template": "temporal"
+  },
+  "margin_simplify_pareto": [
+    {
+      "drop_frac": 0.0,
+      "mean_d_seg_vs_lstar": 0.0,
+      "bytes_per_frame": 456.5416666666667,
+      "rate_term": 0.1823954137339908,
+      "store_score_rate_plus_100dseg_plus_pose": 0.19939541373399078,
+      "beats_frontier": false,
+      "beats_sub015": false
+    },
+    {
+      "drop_frac": 0.1,
+      "mean_d_seg_vs_lstar": 0.0010689629448784722,
+      "bytes_per_frame": 446.2083333333333,
+      "rate_term": 0.17826708822463333,
+      "store_score_rate_plus_100dseg_plus_pose": 0.30216338271248055,
+      "beats_frontier": false,
+      "beats_sub015": false
+    },
+    {
+      "drop_frac": 0.25,
+      "mean_d_seg_vs_lstar": 0.0025776757134331595,
+      "bytes_per_frame": 432.875,
+      "rate_term": 0.17294021659965594,
+      "store_score_rate_plus_100dseg_plus_pose": 0.44770778794297195,
+      "beats_frontier": false,
+      "beats_sub015": false
+    },
+    {
+      "drop_frac": 0.4,
+      "mean_d_seg_vs_lstar": 0.0039975908067491316,
+      "bytes_per_frame": 416.6666666666667,
+      "rate_term": 0.16646473828054284,
+      "store_score_rate_plus_100dseg_plus_pose": 0.583223818955456,
+      "beats_frontier": false,
+      "beats_sub015": false
+    },
+    {
+      "drop_frac": 0.6,
+      "mean_d_seg_vs_lstar": 0.005877600775824652,
+      "bytes_per_frame": 390.25,
+      "rate_term": 0.15591087387355643,
+      "store_score_rate_plus_100dseg_plus_pose": 0.7606709514560216,
+      "beats_frontier": false,
+      "beats_sub015": false
+    },
+    {
+      "drop_frac": 0.8,
+      "mean_d_seg_vs_lstar": 0.007762061225043402,
+      "bytes_per_frame": 348.1666666666667,
+      "rate_term": 0.1390979353072216,
+      "store_score_rate_plus_100dseg_plus_pose": 0.9323040578115618,
+      "beats_frontier": false,
+      "beats_sub015": false
+    },
+    {
+      "drop_frac": 0.95,
+      "mean_d_seg_vs_lstar": 0.00901688469780816,
+      "bytes_per_frame": 315.7916666666667,
+      "rate_term": 0.12616362514282342,
+      "store_score_rate_plus_100dseg_plus_pose": 1.0448520949236393,
+      "beats_frontier": false,
+      "beats_sub015": false
+    }
+  ],
+  "apples_to_apples_vs_frontier": {
+    "frontier_decomposition": {
+      "rate": 0.118,
+      "seg": 0.056,
+      "pose": 0.017,
+      "total": 0.191
+    },
+    "lossless_store_total_at_dseg0": 0.19939541373399078,
+    "store_vs_frontier_gap": 0.008295413733990786,
+    "rate_penalty_store_pays": 0.0643954137339908,
+    "seg_credit_store_earns": 0.056,
+    "net_trade_rate_minus_seg": 0.008395413733990796,
+    "bpf_needed_to_beat_frontier_at_dseg0": 435.7779756599999,
+    "bpf_needed_to_beat_sub015_at_dseg0": 332.90333580000004,
+    "shrink_factor_needed_vs_frontier": 1.0476474080068399,
+    "shrink_factor_needed_vs_sub015": 1.3713940882254945
+  },
+  "verdict": {
+    "code": "NO_GO_PARTITION_STORE_DEAD_ON_RATE",
+    "best_lossless_rate_term": 0.1823954137339908,
+    "best_store_score_any_operating_point": 0.19939541373399078,
+    "any_operating_point_beats_frontier_0p191": false,
+    "any_operating_point_beats_sub015": false,
+    "interpretation": "Even the SOTA context+temporal+margin-simplify codec cannot get the non-neural partition store below the frontier. BUT the gap collapsed from the prototype's hopeless margin to only +0.0083 (the lossless store at d_seg=0 = 0.1994 vs frontier 0.1911). The store buys d_seg=0 (better than the frontier) but pays a higher rate; it would need only ~1.05x smaller to beat the frontier and ~1.37x for sub-0.15. The margin-simplify lever is DOMINATED (100*d_seg grows faster than rate falls). Net finding: d_seg belongs in training, but the partition is BORDERLINE \u2014 a tighter coder or a smarter store/training hybrid is a live lever, not a closed door."
+  }
+}
