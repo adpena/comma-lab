@@ -15,7 +15,17 @@ import torch.nn.functional as F
 SEGMENTATION_SURROGATE_SOFT_COSINE = "soft_cosine"
 SEGMENTATION_SURROGATE_FISHER_RAO = "fisher_rao"
 SEGMENTATION_SURROGATE_SINKHORN = "sinkhorn"
+SEGMENTATION_SURROGATE_MARGIN_HINGE = "margin_hinge"
 DEFAULT_SEGNET_NUM_CLASSES = 5
+
+# ACCELERATOR PROBE 1 (the flip-targeting loss): default target margin for the
+# per-pixel SegNet margin-hinge. The hinge is ~0 when the GT class wins by at
+# least this logit margin (correct-with-margin → NO gradient wasted) and linear
+# toward +∞ across the decision boundary (ALL gradient on flips + near-flips).
+# 1.0 logit units is a conservative default; the boundary band the contest d_seg
+# argmax-flips live in is at margin ≈ 0, so any positive target spends gradient
+# exactly on the flip set. The probe sweeps it.
+DEFAULT_SEGNET_MARGIN_HINGE_TARGET = 1.0
 
 # T8 — entropic Sinkhorn transport surrogate constants. The default ground-cost
 # matrix is the symmetric "label-distance" matrix `(1 - I)` (off-diagonal=1,
@@ -113,14 +123,120 @@ def _validate_segmentation_surrogate(surrogate: str) -> str:
         SEGMENTATION_SURROGATE_SOFT_COSINE,
         SEGMENTATION_SURROGATE_FISHER_RAO,
         SEGMENTATION_SURROGATE_SINKHORN,
+        SEGMENTATION_SURROGATE_MARGIN_HINGE,
     }:
         raise ValueError(
             "segmentation surrogate must be one of "
             f"{SEGMENTATION_SURROGATE_SOFT_COSINE!r}, "
             f"{SEGMENTATION_SURROGATE_FISHER_RAO!r}, "
-            f"{SEGMENTATION_SURROGATE_SINKHORN!r}; got {surrogate!r}"
+            f"{SEGMENTATION_SURROGATE_SINKHORN!r}, "
+            f"{SEGMENTATION_SURROGATE_MARGIN_HINGE!r}; got {surrogate!r}"
         )
     return surrogate
+
+
+def segnet_margin_hinge_per_pixel(
+    pred_logits: torch.Tensor,
+    gt_hard: torch.Tensor,
+    *,
+    margin_target: float = DEFAULT_SEGNET_MARGIN_HINGE_TARGET,
+    num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+) -> torch.Tensor:
+    """Per-pixel SegNet margin-hinge loss — the ACCELERATOR-PROBE-1 flip-targeting loss.
+
+    ``L(pixel) = max(0, margin_target − (logit[GT] − max_{c≠GT} logit[c]))``.
+
+    This is the loss whose gradient is concentrated EXACTLY on the contest d_seg
+    flip set, designed to attack the root cause Probe C identified: the CE /
+    soft-cosine seg loss gradient VANISHES on the residual argmax-flips (soft-cosine
+    grad ∝ p_gt(1−p_gt) → 0 as p_gt → 0; CE never zeroes but also spends magnitude on
+    confident-interior pixels the argmax already gets right).
+
+    The hinge geometry:
+      * ``g = logit[GT] − max_{c≠GT} logit[c]`` is the per-pixel signed margin of the
+        GT class. ``g > 0``  ⇔ the pixel's argmax is CORRECT (GT wins). ``g < 0`` ⇔
+        the pixel is FLIPPED (some non-GT class wins) — the exact d_seg flip.
+      * ``L = relu(margin_target − g)``: ZERO when ``g ≥ margin_target`` (correct WITH
+        the requested margin → no gradient wasted on already-safe interior pixels);
+        LINEAR with slope −1 in ``g`` once below the target → the SAME, MAXIMAL pull
+        on every flipped / near-flip pixel regardless of how confidently wrong it is
+        (unlike soft-cosine, whose pull collapses on confident flips).
+      * The gradient is a constant-magnitude push that RAISES ``logit[GT]`` and LOWERS
+        the current runner-up ``argmax_{c≠GT}`` for exactly the boundary/flip pixels —
+        the canonical hard-margin SVM/Crammer-Singer multiclass hinge restricted to
+        the binary "GT vs its strongest competitor" margin (the contest d_seg only
+        cares whether GT beats the top competitor, i.e. whether the argmax flips).
+
+    NO temperature: the contest d_seg is a HARD argmax, and the hinge operates
+    directly on raw logits (the quantity the argmax is taken over), so there is no
+    softmax/temperature to tune — the loss is defined on the same surface d_seg is.
+
+    Args:
+        pred_logits: (B, C, H, W) SegNet logits of the DECODED frame.
+        gt_hard: (B, H, W) int64 GT class indices (= argmax of SegNet(GT) — the
+            contest d_seg reference). NOT logits/probs: the hinge needs only the
+            target class index.
+        margin_target: the requested correct-class margin (logit units). ``> 0``.
+        num_classes: expected channel count (defensive shape check).
+
+    Returns: (B, H, W) per-pixel hinge loss (>= 0). Compose with the Lever-5 margin
+        weight / class weighting exactly like the other per-pixel surrogates.
+    """
+    if pred_logits.ndim != 4 or pred_logits.shape[1] != num_classes:
+        raise ValueError(
+            f"SegNet margin-hinge expects BCHW with {num_classes} classes, "
+            f"got shape {tuple(pred_logits.shape)}"
+        )
+    if gt_hard.shape != (pred_logits.shape[0], pred_logits.shape[2], pred_logits.shape[3]):
+        raise ValueError(
+            f"gt_hard shape {tuple(gt_hard.shape)} must be (B, H, W) matching "
+            f"pred_logits {tuple(pred_logits.shape)}"
+        )
+    mt = float(margin_target)
+    if not math.isfinite(mt) or mt <= 0.0:
+        raise ValueError(f"margin_target must be a finite positive number; got {margin_target!r}")
+
+    gt = gt_hard.long().unsqueeze(1)  # (B, 1, H, W)
+    # logit[GT] per pixel (gradient flows to the GT-class channel).
+    gt_logit = torch.gather(pred_logits, dim=1, index=gt).squeeze(1)  # (B, H, W)
+    # max_{c != GT} logit[c]: mask the GT channel to −inf then take the channel max.
+    # The −inf is applied via a detached mask so the gather/argmax routing carries no
+    # spurious gradient; the gradient flows through the actual runner-up logit only.
+    neg_inf = torch.finfo(pred_logits.dtype).min
+    masked = pred_logits.scatter(
+        dim=1, index=gt, value=neg_inf
+    )  # (B, C, H, W); GT channel = −inf (out-of-place: pred_logits untouched)
+    runner_up = masked.max(dim=1).values  # (B, H, W) = max_{c != GT} logit[c]
+    signed_margin = gt_logit - runner_up  # (B, H, W); >0 correct, <0 flipped
+    return F.relu(mt - signed_margin)  # (B, H, W) hinge, 0 when correct-with-margin
+
+
+def road_lane_emphasis_class_weights(
+    *,
+    emphasis: float = 2.0,
+    road_index: int = 0,
+    lane_index: int = 1,
+    num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+    device: torch.device | str | None = None,
+    dtype: torch.dtype | None = None,
+) -> torch.Tensor:
+    """Per-class weight vector that emphasises the road (0) and lane (1) classes.
+
+    Probe E (flip-structure histogram) found ~64% of the contest d_seg argmax-flips
+    are road↔lane (lane-marking) flips. This helper returns a ``(num_classes,)``
+    weight vector with ``emphasis`` on the road/lane channels and 1.0 elsewhere, to
+    be applied to the per-pixel seg loss via :func:`_apply_class_weights` (which
+    L1-normalises to mean 1, so absolute magnitude is preserved). comma10k class
+    order: ``{0: road, 1: lane, 2: undrivable, 3: movable, 4: myego}``.
+    """
+    if not math.isfinite(float(emphasis)) or float(emphasis) <= 0.0:
+        raise ValueError(f"emphasis must be a finite positive number; got {emphasis!r}")
+    w = torch.ones(num_classes, device=device, dtype=dtype)
+    for ix in (road_index, lane_index):
+        if not (0 <= ix < num_classes):
+            raise ValueError(f"class index {ix} out of range for {num_classes} classes")
+        w[ix] = float(emphasis)
+    return w
 
 
 def _validate_sinkhorn_blur(blur: float) -> float:
@@ -435,6 +551,7 @@ def segnet_surrogate_per_pixel(
     sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
     gt_already_probs: bool = False,
     num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+    margin_hinge_target: float = DEFAULT_SEGNET_MARGIN_HINGE_TARGET,
 ) -> torch.Tensor:
     """Return the differentiable per-pixel SegNet surrogate.
 
@@ -443,9 +560,24 @@ def segnet_surrogate_per_pixel(
     fail-closed for non-unit temperatures, because cached GT stores only
     ``softmax(logits)`` at temperature 1. ``surrogate="sinkhorn"`` enables
     the entropic-regularized Wasserstein-2 (T8) surrogate; same cached-GT
-    rule applies.
+    rule applies. ``surrogate="margin_hinge"`` enables the ACCELERATOR-PROBE-1
+    flip-targeting hinge ``relu(margin_target − (logit[GT] − max_{c≠GT} logit[c]))``
+    on the RAW logits — it ignores ``temperature`` (the contest d_seg is a hard
+    argmax; the hinge is defined on the same logit surface) and derives the hard GT
+    class from ``argmax(gt_logits_or_probs)`` (argmax of one-hot GT logits / cached
+    GT probs == the hard target class).
     """
     mode = _validate_segmentation_surrogate(surrogate)
+    if mode == SEGMENTATION_SURROGATE_MARGIN_HINGE:
+        # Hard-argmax hinge on raw logits — no softmax / temperature. The GT hard
+        # class is argmax over the GT channel dim (one-hot logits OR cached probs).
+        gt_hard = gt_logits_or_probs.argmax(dim=1)  # (B, H, W)
+        return segnet_margin_hinge_per_pixel(
+            pred_logits,
+            gt_hard,
+            margin_target=margin_hinge_target,
+            num_classes=num_classes,
+        )
     temp = _validate_kl_temperature(temperature, field="segmentation_temperature")
     if gt_already_probs and temp != 1.0:
         raise ValueError("cached SegNet probabilities only support segmentation_temperature=1.0")

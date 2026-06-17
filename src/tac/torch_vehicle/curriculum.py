@@ -141,6 +141,21 @@ class StageSpec:
     # True, the loss is ``(per_pixel·w).sum()/Σw`` — a true weighted MEAN that REDISTRIBUTES
     # the gradient to the boundary WITHOUT shrinking total magnitude. Off → byte-identical.
     margin_weight_renorm: bool = False
+    # -- ACCELERATOR PROBE 1 (flip-targeting MARGIN-HINGE seg loss) — DEFAULT-PRESERVING --
+    # Active only when ``seg_surrogate == "margin_hinge"`` (the flip-targeting loss
+    # ``relu(margin_target − (logit[GT] − max_{c≠GT} logit[c]))`` on raw logits). The
+    # hinge puts ALL gradient on the d_seg argmax-flip set + near-flips and ZERO on
+    # correct-with-margin interior pixels (attacking the soft-cosine/CE gradient-vanish
+    # root cause Probe C found). ``seg_margin_hinge_target`` is the requested correct-class
+    # margin in logit units (> 0). NO-OP unless ``seg_surrogate == "margin_hinge"``.
+    seg_margin_hinge_target: float = 1.0
+    # Probe E found ~64% of d_seg flips are road↔lane (classes 0↔1). When
+    # ``road_lane_emphasis`` > 1.0 AND a per-pixel ``seg_surrogate`` is active, the
+    # per-pixel seg loss is multiplied by a (mean-1-normalised) per-class weight that
+    # emphasises road (0) + lane (1) by this factor (concentrates the flip-targeting
+    # gradient on the dominant flip class-pair). ``1.0`` (default) = unweighted /
+    # byte-identical. NO-OP unless ``seg_surrogate`` is set.
+    road_lane_emphasis: float = 1.0
 
 
 def _spec_from_stage_config(cfg: Any, epochs_override: int | None, ema_decay: float) -> StageSpec:

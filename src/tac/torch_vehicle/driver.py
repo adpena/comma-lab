@@ -178,6 +178,23 @@ def _seg_loss_for_spec(
 
     from tac.losses.core import segnet_surrogate_per_pixel
 
+    # ACCELERATOR PROBE 1 — the flip-targeting margin-hinge. It is defined on RAW
+    # logits (the contest d_seg is a hard argmax; there is no softmax/temperature to
+    # tune), so it skips the one-hot-GT-logit + temperature plumbing the soft-cosine /
+    # fisher-rao / sinkhorn surrogates need. It needs only the HARD GT class index,
+    # which the curriculum already caches (``seg_targets_hard``).
+    if spec.seg_surrogate == "margin_hinge":
+        from tac.losses.core import segnet_margin_hinge_per_pixel
+
+        per_pixel = segnet_margin_hinge_per_pixel(
+            seg_out,
+            seg_targets_hard,
+            margin_target=float(spec.seg_margin_hinge_target),
+            num_classes=_SEG_NUM_CLASSES,
+        )  # (B, H, W)
+        per_pixel = _apply_seg_levers(spec, per_pixel, seg_out, seg_targets_hard)
+        return per_pixel
+
     temp = float(temperature) if temperature is not None else float(spec.seg_temperature)
     # seg_out: (B, 5, H, W) logits. seg_targets_hard: (B, H, W) int64 class indices.
     # Build SHARP one-hot GT LOGITS (B, 5, H, W): the GT-argmax class gets a large
@@ -207,6 +224,44 @@ def _seg_loss_for_spec(
         gt_already_probs=False,
         num_classes=_SEG_NUM_CLASSES,
     )  # (B, H, W)
+    return _apply_seg_levers(spec, per_pixel, seg_out, seg_targets_hard)
+
+
+def _apply_seg_levers(
+    spec: StageSpec,
+    per_pixel: torch.Tensor,
+    seg_out: torch.Tensor,
+    seg_targets_hard: torch.Tensor,
+) -> torch.Tensor:
+    """Apply the per-pixel seg levers (road↔lane class emphasis + Lever-5 margin
+    weight) and reduce to a scalar. Shared by every per-pixel surrogate path
+    (soft_cosine / fisher_rao / sinkhorn / margin_hinge).
+
+    Road↔lane emphasis (ACCELERATOR PROBE 1): Probe E found ~64% of d_seg flips are
+    road↔lane; ``spec.road_lane_emphasis > 1`` multiplies the per-pixel loss by a
+    (mean-1-normalised) per-class weight emphasising road (0) + lane (1), concentrating
+    the flip-targeting gradient on the dominant flip class-pair. ``1.0`` (default) is
+    a no-op.
+
+    Lever-5 margin weight: ``exp(−margin/τ)`` over the DECODED-frame top1−top2 logit
+    margin — boundary-prone pixels get MORE gradient, confident interior ~0.
+    """
+    if getattr(spec, "road_lane_emphasis", 1.0) and float(spec.road_lane_emphasis) != 1.0:
+        from tac.losses.core import _apply_class_weights, road_lane_emphasis_class_weights
+
+        cw = road_lane_emphasis_class_weights(
+            emphasis=float(spec.road_lane_emphasis),
+            num_classes=_SEG_NUM_CLASSES,
+            device=per_pixel.device,
+            dtype=per_pixel.dtype,
+        )
+        # GT-argmax binned per-pixel weight (L1-normalised to mean 1 internally, so
+        # absolute magnitude is preserved). seg_targets_hard is (B, H, W) int64; build
+        # the (B, C, H, W) one-hot the helper's argmax expects.
+        gt_onehot = F.one_hot(
+            seg_targets_hard.long(), num_classes=_SEG_NUM_CLASSES
+        ).permute(0, 3, 1, 2)
+        per_pixel = _apply_class_weights(per_pixel, gt_onehot, cw, gt_already_probs=False)
     if spec.margin_weight_tau is not None:
         # Lever 5: weight per-pixel by exp(-margin/tau) (boundary-prone pixels get
         # more gradient). The margin is a DETACHED per-pixel weight (Tier A proxy);
@@ -579,6 +634,30 @@ class TorchVehicleConfig:
     # exact d_seg/d_pose that pick BEST still run the full scorer on the CPU authority.
     pose_grad_every_k: int = 1
     pose_grad_resume_threshold: float = 0.0
+    # ``pose_grad_on_train_device`` (the FULL-MPS-ALL-LEVERS unbundle — the speed lever
+    # that does NOT touch score). The base split-by-head SALVAGE runs the SegNet path on
+    # ``train_device`` (MPS) but HARDCODES the PoseNet forward+backward onto the CPU
+    # AUTHORITY ``device`` — conflating the AUTHORITY rule (MPS never SCORES — correct,
+    # forever) with the GRADIENT (the MPS pose gradient is per-step faithful: the full-MPS
+    # base_ch20 basin trained on MPS reached CPU-authority d_pose=0.00034 — the gradient
+    # IS good). That CPU-side pose backward is ~51% of the epoch (CPU FastViT fwd+bwd),
+    # making split-by-head ~7x slower than full-MPS. When TRUE, the PoseNet head's
+    # forward+backward run on ``train_device`` (MPS) via the SAME train_distortion_net the
+    # SegNet head uses (patch_scorer_for_mps + differentiable-yuv6 already applied when that
+    # net is built on MPS) with the train-device pose targets — recovering the full-MPS
+    # speed while KEEPING the per-axis cotangent SPLIT (the seg cotangent and the pose
+    # cotangent stay distinct tensors, so the equimarginal controller (Lever A) + per-dim
+    # Mahalanobis (Lever C) + FiLM-v2 trunk-stopgrad ALL keep firing on their separable
+    # per-axis norms). The AUTHORITY is UNCHANGED: ``exact_eval`` (the d_seg/d_pose/score
+    # that pick BEST) ALWAYS runs on ``device`` (CPU/CUDA) — this flag moves ONLY the
+    # training GRADIENT to MPS, never the score (CLAUDE.md "MPS IS a valid TRAINING-GRADIENT
+    # device" + "MPS auth eval is NOISE"). The documented risk is OPTIMIZER CHAOS (Muon +
+    # a weakly-driven pose term at high LR) — the descent-equivalence is verified by the
+    # chaos-check smoke (monotone d_pose), NOT assumed. Requires ``split_by_head=True`` (the
+    # per-axis split is the substrate this rides on). DEFAULT FALSE → the PoseNet path runs
+    # on the CPU authority EXACTLY as today (byte-identical gradient; the live split-by-head
+    # A/B is unaffected — proved by the device-routing test). NOT an authority/score knob.
+    pose_grad_on_train_device: bool = False
     # Adaptive Pose-Gradient Controller (APGC) — the closed-loop replacement for the
     # static k/threshold THROTTLE above. The static throttle is OPEN-loop: it fixes a
     # cadence k and a fixed resume threshold, so when d_pose DRIFTS (measured monotonic
@@ -809,6 +888,16 @@ class TorchVehicleConfig:
             raise ValueError(
                 f"pose_grad_every_k must be >= 1 (1 = compute pose every epoch = "
                 f"byte-identical); got {self.pose_grad_every_k}"
+            )
+        if self.pose_grad_on_train_device and not self.split_by_head:
+            # The on-train-device pose path is a MODIFICATION of the split-by-head
+            # backward (it only chooses WHICH device the separable PoseNet head runs on);
+            # the non-split fused path computes both heads in one graph on the train
+            # device already. Refuse a mis-config so the flag can never silently no-op.
+            raise ValueError(
+                "pose_grad_on_train_device requires split_by_head=True: it selects the "
+                "train device for the SEPARABLE PoseNet head of the split-by-head backward; "
+                "the non-split fused path already runs both heads on train_device."
             )
         if float(self.pose_grad_resume_threshold) < 0.0:
             raise ValueError(
@@ -1860,19 +1949,33 @@ class TorchVehicleDriver:
         (spec.seg_weight * seg_l).backward()
         cot_seg = frames_seg.grad  # d(w_seg*seg_l)/dF on train_device
 
-        # --- PoseNet path on the CPU AUTHORITY (zero pose drift) ---
+        # --- PoseNet path: CPU AUTHORITY (default) OR the TRAIN device (the full-MPS
+        #     unbundle, cfg.pose_grad_on_train_device). The AUTHORITY rule is UNCHANGED
+        #     either way — the exact d_pose that picks BEST runs through exact_eval on the
+        #     CPU authority. This switch is GRADIENT-only: it chooses which device computes
+        #     the (always-summed-at-the-frame) pose COTANGENT. On the default (flag OFF)
+        #     path this is byte-identical to before (CPU authority pose grad, zero drift).
         # Pose-throttle: when ``compute_pose`` is False (pose is solved + this is an
-        # off-cadence epoch), SKIP the expensive CPU FastViT fwd+bwd entirely and flow
+        # off-cadence epoch), SKIP the expensive FastViT fwd+bwd entirely and flow
         # ONLY the SegNet cotangent into the decoder. ``compute_pose`` defaults True so
         # every existing caller (k=1, tests) is byte-identical. The pose term re-engages
         # on the cadence epoch or if it drifts above the resume threshold (caller logic).
         cot_pose = None
         if compute_pose:
+            on_train = bool(self.cfg.pose_grad_on_train_device)
+            pose_dev = self.train_device if on_train else self.device
             frames_pose = (
-                decoded_bhwc.detach().to(self.device).requires_grad_(True)
-            )  # authority-device leaf, same values
-            pose_pred6 = self.scorer.pose_forward_authority(frames_pose)
-            pose_targets = self._pose_targets_authority()[idx.to(self.device)]
+                decoded_bhwc.detach().to(pose_dev).requires_grad_(True)
+            )  # pose-device leaf, same values
+            if on_train:
+                # MPS (or train-device) pose head — the SAME frozen train net the SegNet
+                # head uses; gradient-only, never an authority score. Targets already live
+                # on train_device (the scorer holds them there for the per-step loss).
+                pose_pred6 = self.scorer.pose_forward_train(frames_pose)
+                pose_targets = self.scorer.pose_targets[idx.to(pose_dev)]
+            else:
+                pose_pred6 = self.scorer.pose_forward_authority(frames_pose)
+                pose_targets = self._pose_targets_authority()[idx.to(pose_dev)]
             # Lever C: per-dim Mahalanobis/AIL weighting of the 6 scored dims (renormalised to mean 1.0 so
             # ``cfg.pose_dim_weights is None`` AND uniform-after-norm are byte-identical to the plain MSE).
             pdw = self.cfg.pose_dim_weights
@@ -1884,7 +1987,27 @@ class TorchVehicleDriver:
                 pose_mse = weighted_pose_mse(pose_pred6, pose_targets, pdw)
             pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
             (spec.pose_weight * pose_l).backward()
-            cot_pose = frames_pose.grad.to(cot_seg.device)  # d(w_pose*pose_l)/dF, authority
+            cot_pose = frames_pose.grad  # d(w_pose*pose_l)/dF, on pose_dev
+            # Fail-closed: a pose forward that severs the pose Jacobian (e.g. an
+            # un-patched, no_grad/in-place yuv6 on the train device) yields an all-zero
+            # pose cotangent → the pose objective would silently train nothing. Refuse it
+            # so the operator never believes the pose head is active when it is not. Only
+            # checked when a positive pose weight is requested (a zero weight legitimately
+            # zeroes the cotangent).
+            if (
+                on_train
+                and float(spec.pose_weight) > 0.0
+                and not bool(cot_pose.detach().abs().any().item())
+            ):
+                raise RuntimeError(
+                    "pose_grad_on_train_device: the train-device pose cotangent is "
+                    "IDENTICALLY ZERO — the pose Jacobian was severed (likely an "
+                    "un-patched/no_grad rgb_to_yuv6 on the train device). The pose "
+                    "objective would train nothing. Ensure load_frozen_distortion_net "
+                    "applied patch_upstream_yuv6_globally + patch_scorer_for_mps for "
+                    "the train device, or disable pose_grad_on_train_device."
+                )
+            cot_pose = cot_pose.to(cot_seg.device)  # value transfer to the train device
             pose_mse_val = float(pose_mse.item())
             self._last_pose_mse = pose_mse_val
             # Lever A: the EQUIMARGINAL pose-weight controller (default OFF → no-op). The cotangents above
