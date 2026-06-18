@@ -84,7 +84,7 @@
         -0.021934710443019867
       ],
       "pose_rel_yaw": -0.0006110444664955139,
-      "coupling_verdict": "EUREKA_pose_explains_contour"
+      "coupling_verdict": "FALSIFIED_identity_residual_beats_pose_warp"
     },
     {
       "pair_idx": 2,
@@ -100,7 +100,7 @@
         -0.01846117526292801
       ],
       "pose_rel_yaw": -0.00038342177867889404,
-      "coupling_verdict": "EUREKA_pose_explains_contour"
+      "coupling_verdict": "FALSIFIED_identity_residual_beats_pose_warp"
     },
     {
       "pair_idx": 3,
@@ -116,7 +116,7 @@
         -0.021947048604488373
       ],
       "pose_rel_yaw": 0.0005902573466300964,
-      "coupling_verdict": "EUREKA_pose_explains_contour"
+      "coupling_verdict": "FALSIFIED_identity_residual_beats_pose_warp"
     }
   ],
   "resize_survival_rows": [
@@ -175,12 +175,22 @@
     "pose_init_residual_median_px_mean": 0.5341831794746484,
     "homography_lsq_residual_median_px_mean": 0.9951703202278764,
     "identity_residual_median_px_mean": 0.3333333333333333,
-    "eureka_pose_warp_verdict": "EUREKA_HOLDS_pure_pose_warps_contour",
+    "eureka_pose_warp_verdict": "FALSIFIED_quasi_stationary_identity_beats_pose_warp",
     "resize_deconv_beats_naive_any": false,
     "naive_support_flip_rate_mean": 0.34854916998074026,
     "deconv_support_flip_rate_mean": 0.35756105683656464,
     "kkt_residual_beats_waterline_any": true,
     "authority": "[macOS-CPU advisory] exact-frozen-scorer NOT 600-sample harness",
     "frontier_pointer_moved": false
+  },
+  "_label_correction_note": {
+    "corrected_utc": "2026-06-18",
+    "reason": "RA-1 adversarial re-audit NO-FAKE data-integrity fix: the eureka_pose_warp_verdict + coupling_verdict labels CONTRADICTED the JSON's own residual rows AND the memo. Data: identity_resid 0.333 < pose_init 0.534 < homography 0.995 => no-warp (identity) is BEST => pose-warp does NOT explain the contour => quasi-stationarity. The original labels falsely asserted EUREKA_HOLDS (the opposite). Rows/memo were always correct; only the auto-labels were inverted.",
+    "original_summary_label": "EUREKA_HOLDS_pure_pose_warps_contour",
+    "original_row_labels": [
+      "EUREKA_pose_explains_contour",
+      "EUREKA_pose_explains_contour",
+      "EUREKA_pose_explains_contour"
+    ]
   }
 }
