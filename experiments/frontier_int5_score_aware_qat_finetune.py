@@ -45,9 +45,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import threading
 import time
-from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
