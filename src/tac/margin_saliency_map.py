@@ -206,3 +206,285 @@ def _gini(x: torch.Tensor) -> float:
     sv, _ = torch.sort(v)
     idx = torch.arange(1, n + 1, dtype=torch.double)
     return float((2.0 * (idx * sv).sum()) / (n * sv.sum()) - (n + 1.0) / n)
+
+
+# ---------------------------------------------------------------------------
+# Per-DECODER-TENSOR / per-STAGE d_seg-sensitivity (the QAT bit-allocation prior)
+# ---------------------------------------------------------------------------
+#
+# The Path-B redirect (.omx/research/path_b_recalibration_and_resolve_audit_*) is
+# to QAT-shrink the EXISTING frontier decoder, not train a new small-basis vehicle.
+# The score-aware QAT (``tac.torch_vehicle.score_aware_qat``) needs a per-tensor
+# ``sensitivity`` dict to water-fill the INT8 grid: protect (fine grid → more bytes)
+# the d_seg-critical tensors, coarsen (int4 → fewer brotli bytes) the d_seg-blind
+# tensors. THIS producer computes that dict on the REAL frontier decoder via
+# ``||∂(SegNet top1-top2 margin)/∂w_t||`` — the same first-order detector-informed
+# signal as the per-pixel map above, lifted to the WEIGHT domain.
+#
+# NO FAKE: the per-tensor saliency is the REAL autograd gradient of the REAL frozen
+# SegNet's margin w.r.t. each REAL decoder weight tensor (verified in
+# ``tests/test_margin_saliency_decoder_tensor.py``). It is a DIAGNOSTIC / bit-alloc
+# COST, never a score claim — the only authoritative d_seg is upstream/evaluate.py.
+
+# Canonical HNeRV (PR95/PR101/PR106 family) decoder tensor-name -> upsample-stage
+# geometry. The decoder lifts a 6x8 base grid to 384x512 over 6 PixelShuffle x2
+# blocks; the SegNet decides on a 384x512 grid after a stride-2 stem (its first
+# real decision resolution is ~192x256). So the late stages (blocks.4/blocks.5 at
+# 96x128 -> 192x256 -> 384x512, refine + rgb heads at 384x512) carry the
+# decision-band detail; the stem + early blocks carry the coarse/low-freq content.
+# The map is by name PREFIX so it is robust to ``stem.weight``/``stem.bias`` etc.
+HNERV_STAGE_OUTPUT_HW: dict[str, tuple[int, int]] = {
+    "stem": (6, 8),
+    "blocks.0": (12, 16),
+    "blocks.1": (24, 32),
+    "blocks.2": (48, 64),
+    "blocks.3": (96, 128),
+    "blocks.4": (192, 256),
+    "blocks.5": (384, 512),
+    "skips.2": (48, 64),
+    "skips.3": (96, 128),
+    "skips.4": (192, 256),
+    "refine.0": (384, 512),
+    "refine.1": (384, 512),
+    "rgb_0": (384, 512),
+    "rgb_1": (384, 512),
+}
+
+
+def _stage_for_tensor_name(name: str) -> str:
+    """Map a parameter name (e.g. ``blocks.4.weight``) to its HNeRV stage key
+    (``blocks.4``). Falls back to the first dotted component for unknown names."""
+    for prefix in HNERV_STAGE_OUTPUT_HW:
+        if name == prefix or name.startswith(prefix + "."):
+            return prefix
+    return name.split(".")[0]
+
+
+@dataclass
+class DecoderTensorSaliency:
+    """Per-decoder-tensor d_seg-sensitivity ranking — the QAT bit-allocation prior.
+
+    Attributes
+    ----------
+    per_tensor : dict[str, float]
+        Tensor name -> ``||∂(sum margin)/∂w_t||`` accumulated over the scored
+        frames. This is the dict consumed by
+        ``tac.torch_vehicle.score_aware_qat.per_tensor_levels_from_sensitivity``:
+        HIGH = d_seg-critical (protect / keep high precision); LOW = d_seg-blind
+        (int4 candidate).
+    per_tensor_normalized : dict[str, float]
+        ``||∂margin/∂w_t|| / sqrt(numel_t)`` — sensitivity PER WEIGHT, so a large
+        tensor is not ranked critical merely for being large. The rank-quantile
+        bit-allocator should prefer this normalized form.
+    ranking : list[tuple[str, float]]
+        ``per_tensor`` sorted DESCENDING (most d_seg-critical first). The protect
+        list is the head; the int4 list is the tail.
+    per_stage : dict[str, float]
+        Stage key -> summed tensor saliency over the tensors in that stage. Lets
+        the bit-allocator reason per upsample stage (the spatial geometry).
+    stage_output_hw : dict[str, tuple[int, int]]
+        Stage key -> its output (H, W) grid (the geometry for the
+        decision-band-vs-blind-band check).
+    n_frames : int
+        How many frames were scored to accumulate the saliency.
+    tensor_numel : dict[str, int]
+        Tensor name -> element count (for the normalized form + reporting).
+    """
+
+    per_tensor: dict[str, float]
+    per_tensor_normalized: dict[str, float]
+    ranking: list[tuple[str, float]]
+    per_stage: dict[str, float]
+    stage_output_hw: dict[str, tuple[int, int]]
+    n_frames: int
+    tensor_numel: dict[str, int]
+
+
+def compute_decoder_tensor_margin_saliency(
+    decoder,
+    latents: torch.Tensor,
+    segnet,
+    *,
+    render_frame_chw,
+    frame_indices=None,
+    score_head: str = "rgb_0",
+    flip_pixel_mask_fn=None,
+) -> DecoderTensorSaliency:
+    """Per-decoder-tensor ``||∂(SegNet margin)/∂w_t||`` on a REAL decoder vehicle.
+
+    This is the WEIGHT-domain analogue of :func:`compute_margin_saliency_map`: it
+    backpropagates the SegNet top1-top2 margin (the detector's distance-to-flip)
+    through the decoder to EACH decoder weight tensor, accumulating the gradient
+    L2-norm per tensor over a handful of scored frames. The result is the
+    bit-allocation cost the score-aware QAT consumes (protect the d_seg-critical
+    tensors at high precision; coarsen the d_seg-blind tensors to int4).
+
+    Parameters
+    ----------
+    decoder : torch.nn.Module
+        The decoder vehicle (e.g. the frontier ``HNeRVDecoder``) with its
+        score-relevant weights ALREADY loaded. This function sets
+        ``requires_grad_(True)`` on its parameters and leaves them that way; pass a
+        decoder you own. Must be on CPU (CLAUDE.md: never MPS for the scorer).
+    latents : torch.Tensor
+        The decoder's latent rows, shape (N, latent_dim) (e.g. (600, 28) for PR101).
+    segnet
+        A frozen SegNet exposing ``preprocess_input`` + ``__call__`` (the same
+        contract as :func:`compute_margin_saliency_map`). On CPU.
+    render_frame_chw : callable
+        ``render_frame_chw(decoder, latent_row, score_head) -> (3, H, W)`` returning
+        ONE camera-res frame (float in [0, 255]) WITH the autograd graph intact
+        (no ``.detach()``). It selects which head's frame to score (``rgb_0`` /
+        ``rgb_1``). This callable is vehicle-specific (the decoder's forward
+        signature differs per family) so the producer stays vehicle-agnostic.
+    frame_indices : iterable[int] | None
+        Which latent rows to score. ``None`` -> a deterministic spread of up to 8
+        rows across the sequence (enough to characterize the per-tensor ranking;
+        the ranking is stable across frames — boundary tensors dominate every
+        frame). More rows = a smoother EMA at higher CPU cost.
+    score_head : str
+        Which decoder output head's frame to score (passed to ``render_frame_chw``).
+        ``rgb_0`` (the first frame of the pair) is the SegNet's scored frame
+        (``x[:, -1, ...]`` last-frame slice == frame index 1 in the eval pair, but
+        the renderer's two heads are symmetric for the saliency RANKING; the
+        consumer may run both heads and sum).
+    flip_pixel_mask_fn : callable | None
+        Optional ``flip_pixel_mask_fn(logits) -> bool mask (H, W)`` to restrict the
+        back-propagated margin to specific decision-grid pixels (e.g. the current
+        flip pixels). ``None`` -> the global margin sum (all decision pixels).
+
+    Returns
+    -------
+    DecoderTensorSaliency
+        The per-tensor / per-stage ranking (the QAT bit-allocation prior).
+    """
+    if latents.dim() != 2:
+        raise MarginSaliencyError(
+            f"compute_decoder_tensor_margin_saliency: latents must be (N, D), got {tuple(latents.shape)}"
+        )
+    n = int(latents.shape[0])
+    if frame_indices is None:
+        k = min(8, n)
+        # deterministic even spread across the sequence
+        frame_indices = [round(i * (n - 1) / max(1, k - 1)) for i in range(k)] if k > 1 else [0]
+    frame_indices = [int(i) for i in frame_indices]
+    for i in frame_indices:
+        if not (0 <= i < n):
+            raise MarginSaliencyError(
+                f"frame index {i} out of range for {n} latent rows"
+            )
+
+    params = [(name, p) for name, p in decoder.named_parameters()]
+    for _name, p in params:
+        p.requires_grad_(True)
+    names = [name for name, _p in params]
+    numel = {name: int(p.numel()) for name, p in params}
+
+    accum = dict.fromkeys(names, 0.0)
+    for i in frame_indices:
+        decoder.zero_grad(set_to_none=True)
+        latent_row = latents[i : i + 1]  # (1, D)
+        frame = render_frame_chw(decoder, latent_row, score_head)  # (3, H, W) WITH grad
+        if frame.dim() != 3 or frame.shape[0] != 3:
+            raise MarginSaliencyError(
+                "render_frame_chw must return (3, H, W); got "
+                f"{tuple(frame.shape)}"
+            )
+        import einops
+
+        hwc = frame.permute(1, 2, 0)
+        pair = torch.stack([hwc, hwc]).unsqueeze(0)  # (1, 2, H, W, 3)
+        x = einops.rearrange(pair, "b t h w c -> b t c h w")
+        seg_in = segnet.preprocess_input(x)
+        logits = segnet(seg_in)
+        margin = _topk_margin(logits)[0]  # (H, W)
+        if flip_pixel_mask_fn is not None:
+            mask = flip_pixel_mask_fn(logits)
+            if mask.shape != margin.shape:
+                raise MarginSaliencyError(
+                    f"flip_pixel_mask_fn returned shape {tuple(mask.shape)} != margin grid {tuple(margin.shape)}"
+                )
+            scalar = margin[mask.bool()].sum()
+        else:
+            scalar = margin.sum()
+        grads = torch.autograd.grad(
+            scalar, [p for _n, p in params], retain_graph=False, allow_unused=True
+        )
+        for (name, _p), g in zip(params, grads, strict=True):
+            if g is not None:
+                accum[name] += float(g.detach().norm().item())
+
+    nfr = len(frame_indices)
+    per_tensor = {name: accum[name] / nfr for name in names}
+    per_tensor_normalized = {
+        name: (per_tensor[name] / (numel[name] ** 0.5) if numel[name] > 0 else 0.0)
+        for name in names
+    }
+    ranking = sorted(per_tensor.items(), key=lambda kv: kv[1], reverse=True)
+
+    per_stage: dict[str, float] = {}
+    stage_hw: dict[str, tuple[int, int]] = {}
+    for name in names:
+        stage = _stage_for_tensor_name(name)
+        per_stage[stage] = per_stage.get(stage, 0.0) + per_tensor[name]
+        if stage in HNERV_STAGE_OUTPUT_HW:
+            stage_hw[stage] = HNERV_STAGE_OUTPUT_HW[stage]
+
+    return DecoderTensorSaliency(
+        per_tensor=per_tensor,
+        per_tensor_normalized=per_tensor_normalized,
+        ranking=ranking,
+        per_stage=per_stage,
+        stage_output_hw=stage_hw,
+        n_frames=nfr,
+        tensor_numel=numel,
+    )
+
+
+def verify_stage_saliency_ordering(
+    per_stage: dict[str, float],
+    stage_output_hw: dict[str, tuple[int, int]],
+    *,
+    decision_band_min_pixels: int = 192 * 256,
+) -> dict:
+    """Check the per-stage saliency ordering against the expected geometry.
+
+    The Yousfi seam (``.omx/research/yousfi_council_checkin_unified_margin_saliency_*``)
+    predicts the SegNet decision band lives at >= ~192x256 (post stride-2 stem):
+    the decision-band stages (output >= 192x256) should carry MORE d_seg-saliency
+    mass than the stem-Nyquist-BLIND coarse stages (< 192x256). This returns the
+    mass split + the verdict so a build can confirm the cost map matches the
+    expected geometry BEFORE it drives the bit-allocation.
+
+    Note: this is a SANITY check on the cost map, not a score claim. A FALSE
+    verdict means the saliency is NOT decision-band-concentrated and the bit-alloc
+    prior should be re-examined (e.g. the decoder couples coarse stages into the
+    boundary via the bilinear skips), not silently trusted.
+    """
+    decision_mass = 0.0
+    blind_mass = 0.0
+    decision_stages: list[str] = []
+    blind_stages: list[str] = []
+    for stage, mass in per_stage.items():
+        hw = stage_output_hw.get(stage)
+        if hw is None:
+            continue
+        if hw[0] * hw[1] >= decision_band_min_pixels:
+            decision_mass += mass
+            decision_stages.append(stage)
+        else:
+            blind_mass += mass
+            blind_stages.append(stage)
+    total = decision_mass + blind_mass
+    return {
+        "decision_band_min_pixels": int(decision_band_min_pixels),
+        "decision_stages": sorted(decision_stages),
+        "blind_stages": sorted(blind_stages),
+        "decision_band_saliency_mass": float(decision_mass),
+        "blind_band_saliency_mass": float(blind_mass),
+        "decision_band_mass_fraction": float(decision_mass / total) if total > 1e-30 else 0.0,
+        "decision_over_blind_ratio": (
+            float(decision_mass / blind_mass) if blind_mass > 1e-30 else float("inf")
+        ),
+        "ordering_matches_geometry": bool(decision_mass >= blind_mass),
+    }

@@ -1,0 +1,685 @@
+{
+  "schema": "frontier_margin_saliency_qat_bitalloc_prior.v1",
+  "produced_at_utc": "2026-06-18T18:30:00.385165+00:00",
+  "producer": "experiments/probe_frontier_margin_saliency_qat_bitalloc.py",
+  "tac_producer": "tac.margin_saliency_map.compute_decoder_tensor_margin_saliency",
+  "axis_tag": "[contest-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_moved": false,
+  "vehicle": {
+    "lane_id": "lane_pr110_payload_entropy_recode_20260610",
+    "archive_path": "experiments/results/pr110_payload_entropy_recode_20260610/submission_dir/archive.zip",
+    "archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+    "archive_bytes": 177169,
+    "decode_path": "frontier inflate.py parse_member (byte-exact FP11+CTXR contest decode)",
+    "n_decoder_tensors": 28,
+    "latent_shape": [
+      600,
+      28
+    ],
+    "segnet_decision_grid_hw": [
+      384,
+      512
+    ]
+  },
+  "method": {
+    "saliency": "||d(sum_p SegNet_top1-top2_margin_p)/dw_t|| via autograd through the frontier decoder -> frozen SegNet",
+    "n_tensor_frames": 8,
+    "heads_summed": [
+      "rgb_0",
+      "rgb_1"
+    ],
+    "n_pixel_frames": 4
+  },
+  "qat_bit_allocation_prior": {
+    "note": "Consumed by tac.torch_vehicle.score_aware_qat.per_tensor_levels_from_sensitivity as the per-tensor `sensitivity` dict. HIGH = d_seg-critical (protect / fine grid / keep high precision); LOW = d_seg-blind (coarse grid / int4 candidate).",
+    "per_tensor_saliency": {
+      "stem.weight": 1084121.45703125,
+      "stem.bias": 226034.45703125,
+      "blocks.0.weight": 1788236.203125,
+      "blocks.0.bias": 160798.51171875,
+      "blocks.1.weight": 1781816.8515625,
+      "blocks.1.bias": 136642.64794921875,
+      "blocks.2.weight": 1586072.65625,
+      "blocks.2.bias": 129160.25927734375,
+      "blocks.3.weight": 1483254.78125,
+      "blocks.3.bias": 154903.2646484375,
+      "blocks.4.weight": 1705164.8125,
+      "blocks.4.bias": 201164.17578125,
+      "blocks.5.weight": 1935670.40625,
+      "blocks.5.bias": 230213.423828125,
+      "skips.2.weight": 391050.841796875,
+      "skips.2.bias": 145890.6767578125,
+      "skips.3.weight": 411711.7890625,
+      "skips.3.bias": 168494.1318359375,
+      "skips.4.weight": 487392.849609375,
+      "skips.4.bias": 217726.40625,
+      "refine.0.weight": 426661.08984375,
+      "refine.0.bias": 54547.20068359375,
+      "refine.1.weight": 349493.7734375,
+      "refine.1.bias": 32683.43212890625,
+      "rgb_0.weight": 903895.8671875,
+      "rgb_0.bias": 140849.447265625,
+      "rgb_1.weight": 882535.5703125,
+      "rgb_1.bias": 63738.1396484375
+    },
+    "per_tensor_saliency_normalized_by_sqrt_numel": {
+      "stem.weight": 4928.63952318603,
+      "stem.bias": 5437.543942213461,
+      "blocks.0.weight": 8278.871310763889,
+      "blocks.0.bias": 13399.8759765625,
+      "blocks.1.weight": 8249.15209056713,
+      "blocks.1.bias": 11386.887329101562,
+      "blocks.2.weight": 8478.88402815039,
+      "blocks.2.bias": 12428.451743729378,
+      "blocks.3.weight": 10638.187159192177,
+      "blocks.3.bias": 17318.711484527314,
+      "blocks.4.weight": 14978.346092983204,
+      "blocks.4.bias": 23707.425471120758,
+      "blocks.5.weight": 17922.874131944445,
+      "blocks.5.bias": 27130.91218483999,
+      "skips.2.weight": 12542.961598791973,
+      "skips.2.bias": 28076.67383279324,
+      "skips.3.weight": 17717.25447195915,
+      "skips.3.bias": 37676.43325949677,
+      "skips.4.weight": 25687.858667425553,
+      "skips.4.bias": 51318.60610091737,
+      "refine.0.weight": 11173.887033220682,
+      "refine.0.bias": 18182.400227864582,
+      "refine.1.weight": 9152.941377041892,
+      "refine.1.bias": 7703.55883026663,
+      "rgb_0.weight": 41001.54917073865,
+      "rgb_0.bias": 81319.4662940186,
+      "rgb_1.weight": 40032.62642818095,
+      "rgb_1.bias": 36799.232083671355
+    },
+    "tensor_numel": {
+      "stem.weight": 48384,
+      "stem.bias": 1728,
+      "blocks.0.weight": 46656,
+      "blocks.0.bias": 144,
+      "blocks.1.weight": 46656,
+      "blocks.1.bias": 144,
+      "blocks.2.weight": 34992,
+      "blocks.2.bias": 108,
+      "blocks.3.weight": 19440,
+      "blocks.3.bias": 80,
+      "blocks.4.weight": 12960,
+      "blocks.4.bias": 72,
+      "blocks.5.weight": 11664,
+      "blocks.5.bias": 72,
+      "skips.2.weight": 972,
+      "skips.2.bias": 27,
+      "skips.3.weight": 540,
+      "skips.3.bias": 20,
+      "skips.4.weight": 360,
+      "skips.4.bias": 18,
+      "refine.0.weight": 1458,
+      "refine.0.bias": 9,
+      "refine.1.weight": 1458,
+      "refine.1.bias": 18,
+      "rgb_0.weight": 486,
+      "rgb_0.bias": 3,
+      "rgb_1.weight": 486,
+      "rgb_1.bias": 3
+    },
+    "ranking_raw_desc": [
+      [
+        "blocks.5.weight",
+        1935670.40625
+      ],
+      [
+        "blocks.0.weight",
+        1788236.203125
+      ],
+      [
+        "blocks.1.weight",
+        1781816.8515625
+      ],
+      [
+        "blocks.4.weight",
+        1705164.8125
+      ],
+      [
+        "blocks.2.weight",
+        1586072.65625
+      ],
+      [
+        "blocks.3.weight",
+        1483254.78125
+      ],
+      [
+        "stem.weight",
+        1084121.45703125
+      ],
+      [
+        "rgb_0.weight",
+        903895.8671875
+      ],
+      [
+        "rgb_1.weight",
+        882535.5703125
+      ],
+      [
+        "skips.4.weight",
+        487392.849609375
+      ],
+      [
+        "refine.0.weight",
+        426661.08984375
+      ],
+      [
+        "skips.3.weight",
+        411711.7890625
+      ],
+      [
+        "skips.2.weight",
+        391050.841796875
+      ],
+      [
+        "refine.1.weight",
+        349493.7734375
+      ],
+      [
+        "blocks.5.bias",
+        230213.423828125
+      ],
+      [
+        "stem.bias",
+        226034.45703125
+      ],
+      [
+        "skips.4.bias",
+        217726.40625
+      ],
+      [
+        "blocks.4.bias",
+        201164.17578125
+      ],
+      [
+        "skips.3.bias",
+        168494.1318359375
+      ],
+      [
+        "blocks.0.bias",
+        160798.51171875
+      ],
+      [
+        "blocks.3.bias",
+        154903.2646484375
+      ],
+      [
+        "skips.2.bias",
+        145890.6767578125
+      ],
+      [
+        "rgb_0.bias",
+        140849.447265625
+      ],
+      [
+        "blocks.1.bias",
+        136642.64794921875
+      ],
+      [
+        "blocks.2.bias",
+        129160.25927734375
+      ],
+      [
+        "rgb_1.bias",
+        63738.1396484375
+      ],
+      [
+        "refine.0.bias",
+        54547.20068359375
+      ],
+      [
+        "refine.1.bias",
+        32683.43212890625
+      ]
+    ],
+    "ranking_normalized_desc": [
+      [
+        "rgb_0.bias",
+        81319.4662940186
+      ],
+      [
+        "skips.4.bias",
+        51318.60610091737
+      ],
+      [
+        "rgb_0.weight",
+        41001.54917073865
+      ],
+      [
+        "rgb_1.weight",
+        40032.62642818095
+      ],
+      [
+        "skips.3.bias",
+        37676.43325949677
+      ],
+      [
+        "rgb_1.bias",
+        36799.232083671355
+      ],
+      [
+        "skips.2.bias",
+        28076.67383279324
+      ],
+      [
+        "blocks.5.bias",
+        27130.91218483999
+      ],
+      [
+        "skips.4.weight",
+        25687.858667425553
+      ],
+      [
+        "blocks.4.bias",
+        23707.425471120758
+      ],
+      [
+        "refine.0.bias",
+        18182.400227864582
+      ],
+      [
+        "blocks.5.weight",
+        17922.874131944445
+      ],
+      [
+        "skips.3.weight",
+        17717.25447195915
+      ],
+      [
+        "blocks.3.bias",
+        17318.711484527314
+      ],
+      [
+        "blocks.4.weight",
+        14978.346092983204
+      ],
+      [
+        "blocks.0.bias",
+        13399.8759765625
+      ],
+      [
+        "skips.2.weight",
+        12542.961598791973
+      ],
+      [
+        "blocks.2.bias",
+        12428.451743729378
+      ],
+      [
+        "blocks.1.bias",
+        11386.887329101562
+      ],
+      [
+        "refine.0.weight",
+        11173.887033220682
+      ],
+      [
+        "blocks.3.weight",
+        10638.187159192177
+      ],
+      [
+        "refine.1.weight",
+        9152.941377041892
+      ],
+      [
+        "blocks.2.weight",
+        8478.88402815039
+      ],
+      [
+        "blocks.0.weight",
+        8278.871310763889
+      ],
+      [
+        "blocks.1.weight",
+        8249.15209056713
+      ],
+      [
+        "refine.1.bias",
+        7703.55883026663
+      ],
+      [
+        "stem.bias",
+        5437.543942213461
+      ],
+      [
+        "stem.weight",
+        4928.63952318603
+      ]
+    ],
+    "weight_ranking_raw_desc": [
+      [
+        "blocks.5.weight",
+        1935670.40625
+      ],
+      [
+        "blocks.0.weight",
+        1788236.203125
+      ],
+      [
+        "blocks.1.weight",
+        1781816.8515625
+      ],
+      [
+        "blocks.4.weight",
+        1705164.8125
+      ],
+      [
+        "blocks.2.weight",
+        1586072.65625
+      ],
+      [
+        "blocks.3.weight",
+        1483254.78125
+      ],
+      [
+        "stem.weight",
+        1084121.45703125
+      ],
+      [
+        "rgb_0.weight",
+        903895.8671875
+      ],
+      [
+        "rgb_1.weight",
+        882535.5703125
+      ],
+      [
+        "skips.4.weight",
+        487392.849609375
+      ],
+      [
+        "refine.0.weight",
+        426661.08984375
+      ],
+      [
+        "skips.3.weight",
+        411711.7890625
+      ],
+      [
+        "skips.2.weight",
+        391050.841796875
+      ],
+      [
+        "refine.1.weight",
+        349493.7734375
+      ]
+    ],
+    "bias_ranking_raw_desc": [
+      [
+        "blocks.5.bias",
+        230213.423828125
+      ],
+      [
+        "stem.bias",
+        226034.45703125
+      ],
+      [
+        "skips.4.bias",
+        217726.40625
+      ],
+      [
+        "blocks.4.bias",
+        201164.17578125
+      ],
+      [
+        "skips.3.bias",
+        168494.1318359375
+      ],
+      [
+        "blocks.0.bias",
+        160798.51171875
+      ],
+      [
+        "blocks.3.bias",
+        154903.2646484375
+      ],
+      [
+        "skips.2.bias",
+        145890.6767578125
+      ],
+      [
+        "rgb_0.bias",
+        140849.447265625
+      ],
+      [
+        "blocks.1.bias",
+        136642.64794921875
+      ],
+      [
+        "blocks.2.bias",
+        129160.25927734375
+      ],
+      [
+        "rgb_1.bias",
+        63738.1396484375
+      ],
+      [
+        "refine.0.bias",
+        54547.20068359375
+      ],
+      [
+        "refine.1.bias",
+        32683.43212890625
+      ]
+    ],
+    "protect_high_precision": [
+      "blocks.5.weight",
+      "blocks.0.weight",
+      "blocks.1.weight",
+      "blocks.4.weight"
+    ],
+    "int4_candidate_low_saliency": [
+      "refine.0.weight",
+      "skips.3.weight",
+      "skips.2.weight",
+      "refine.1.weight"
+    ],
+    "selection_basis": "raw weight-tensor saliency (the per-tensor ||dS/dw|| the QAT codec quantizes); biases excluded from int4 list",
+    "weight_saliency_spread_ratio": 5.538497545210648
+  },
+  "per_stage_saliency": {
+    "stem": 1310155.9140625,
+    "blocks.0": 1949034.71484375,
+    "blocks.1": 1918459.4995117188,
+    "blocks.2": 1715232.9155273438,
+    "blocks.3": 1638158.0458984375,
+    "blocks.4": 1906328.98828125,
+    "blocks.5": 2165883.830078125,
+    "skips.2": 536941.5185546875,
+    "skips.3": 580205.9208984375,
+    "skips.4": 705119.255859375,
+    "refine.0": 481208.29052734375,
+    "refine.1": 382177.20556640625,
+    "rgb_0": 1044745.314453125,
+    "rgb_1": 946273.7099609375
+  },
+  "per_stage_saliency_weight_only": {
+    "stem": 1084121.45703125,
+    "blocks.0": 1788236.203125,
+    "blocks.1": 1781816.8515625,
+    "blocks.2": 1586072.65625,
+    "blocks.3": 1483254.78125,
+    "blocks.4": 1705164.8125,
+    "blocks.5": 1935670.40625,
+    "skips.2": 391050.841796875,
+    "skips.3": 411711.7890625,
+    "skips.4": 487392.849609375,
+    "refine.0": 426661.08984375,
+    "refine.1": 349493.7734375,
+    "rgb_0": 903895.8671875,
+    "rgb_1": 882535.5703125
+  },
+  "stage_output_hw": {
+    "stem": [
+      6,
+      8
+    ],
+    "blocks.0": [
+      12,
+      16
+    ],
+    "blocks.1": [
+      24,
+      32
+    ],
+    "blocks.2": [
+      48,
+      64
+    ],
+    "blocks.3": [
+      96,
+      128
+    ],
+    "blocks.4": [
+      192,
+      256
+    ],
+    "blocks.5": [
+      384,
+      512
+    ],
+    "skips.2": [
+      48,
+      64
+    ],
+    "skips.3": [
+      96,
+      128
+    ],
+    "skips.4": [
+      192,
+      256
+    ],
+    "refine.0": [
+      384,
+      512
+    ],
+    "refine.1": [
+      384,
+      512
+    ],
+    "rgb_0": [
+      384,
+      512
+    ],
+    "rgb_1": [
+      384,
+      512
+    ]
+  },
+  "stage_geometry_verdict": {
+    "decision_band_min_pixels": 49152,
+    "decision_stages": [
+      "blocks.4",
+      "blocks.5",
+      "refine.0",
+      "refine.1",
+      "rgb_0",
+      "rgb_1",
+      "skips.4"
+    ],
+    "blind_stages": [
+      "blocks.0",
+      "blocks.1",
+      "blocks.2",
+      "blocks.3",
+      "skips.2",
+      "skips.3",
+      "stem"
+    ],
+    "decision_band_saliency_mass": 7631736.5947265625,
+    "blind_band_saliency_mass": 9648188.529296875,
+    "decision_band_mass_fraction": 0.4416533370342289,
+    "decision_over_blind_ratio": 0.7910020177935656,
+    "ordering_matches_geometry": false
+  },
+  "stage_geometry_verdict_weight_only": {
+    "decision_band_min_pixels": 49152,
+    "decision_stages": [
+      "blocks.4",
+      "blocks.5",
+      "refine.0",
+      "refine.1",
+      "rgb_0",
+      "rgb_1",
+      "skips.4"
+    ],
+    "blind_stages": [
+      "blocks.0",
+      "blocks.1",
+      "blocks.2",
+      "blocks.3",
+      "skips.2",
+      "skips.3",
+      "stem"
+    ],
+    "decision_band_saliency_mass": 6690814.369140625,
+    "blind_band_saliency_mass": 8526264.580078125,
+    "decision_band_mass_fraction": 0.4396911123001129,
+    "decision_over_blind_ratio": 0.7847298551787749,
+    "ordering_matches_geometry": false
+  },
+  "per_pixel_map_characterization": {
+    "per_frame": [
+      {
+        "frame_index": 0,
+        "boundary_margin_threshold": 0.5,
+        "frac_pixels_boundary": 0.0461222343146801,
+        "frac_saliency_mass_in_boundary": 0.08420644202875441,
+        "mean_saliency_boundary": 2.2431458678650316,
+        "mean_saliency_interior": 1.1795799511073617,
+        "boundary_over_interior_ratio": 1.9016480110222451,
+        "saliency_mean": 1.2286339862084692,
+        "saliency_max": 27.12673568725586,
+        "saliency_gini": 0.4597547831072184
+      },
+      {
+        "frame_index": 200,
+        "boundary_margin_threshold": 0.5,
+        "frac_pixels_boundary": 0.0453236885368824,
+        "frac_saliency_mass_in_boundary": 0.11315946743770113,
+        "mean_saliency_boundary": 5.0343642559221475,
+        "mean_saliency_interior": 1.8731320155432545,
+        "boundary_over_interior_ratio": 2.687671885455472,
+        "saliency_mean": 2.016410724924441,
+        "saliency_max": 59.542423248291016,
+        "saliency_gini": 0.5494155198418045
+      },
+      {
+        "frame_index": 399,
+        "boundary_margin_threshold": 0.5,
+        "frac_pixels_boundary": 0.0336456298828125,
+        "frac_saliency_mass_in_boundary": 0.06704087690515462,
+        "mean_saliency_boundary": 1.6807197972400028,
+        "mean_saliency_interior": 0.8143488612852884,
+        "boundary_over_interior_ratio": 2.063881804399308,
+        "saliency_mean": 0.8434984571376466,
+        "saliency_max": 14.78372573852539,
+        "saliency_gini": 0.4545547101040899
+      },
+      {
+        "frame_index": 599,
+        "boundary_margin_threshold": 0.5,
+        "frac_pixels_boundary": 0.0378926582634449,
+        "frac_saliency_mass_in_boundary": 0.08233537991689555,
+        "mean_saliency_boundary": 3.501967144111459,
+        "mean_saliency_interior": 1.537238032542056,
+        "boundary_over_interior_ratio": 2.2780903607494185,
+        "saliency_mean": 1.6116868437867258,
+        "saliency_max": 35.74543380737305,
+        "saliency_gini": 0.5327372673716966
+      }
+    ],
+    "mean_boundary_over_interior_ratio": 2.232823015406611,
+    "mean_frac_saliency_mass_in_boundary": 0.08668554157212642,
+    "mean_saliency_gini": 0.49911557010620233,
+    "bc20_reference_boundary_over_interior_ratio": 3.15
+  }
+}
