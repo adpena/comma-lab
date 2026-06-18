@@ -524,6 +524,32 @@ class TorchVehicleConfig:
     pose_film_enabled: bool = False
     # FiLM MLP bottleneck width (only consulted when ``pose_film_enabled``).
     pose_film_hidden: int = 8
+    # Pose-section CODEC (only consulted when ``pose_film_enabled``; the REOPENED
+    # #1 finding — the ego trajectory is ~1-DOF). DEFAULT ``"iid"`` = byte-identical
+    # to today (the legacy per-pair codec). ``"lowrank"`` selects the low-rank SVD
+    # codec (``pose_film.encode_pose_section_lowrank``).
+    #
+    # HONEST FINDING (Pass-1 adversarial review): a NAIVE max-byte-cut (rank-2/254 →
+    # ~1.14 KB) is NET-NEGATIVE on the full score, because the legacy iid codec
+    # already stores the pose nearly losslessly (MSE ≈ 2.9e-5) and the pose term
+    # ``sqrt(10·d_pose)`` is nonlinear, so the fidelity loss costs more than the bytes
+    # save. The DEFAULT low-rank operating point is therefore the Pareto-DOMINANT
+    # rank-4/511 (~2.56 KB vs ~3.09 KB = smaller, AND MSE 2.7e-5 ≤ iid's 2.9e-5 =
+    # lower), a modest unambiguous byte win (~-0.0004 rate) where the pose term cannot
+    # worsen. The net win is ``[contest-CPU advisory]`` NON-PROMOTABLE — the rate
+    # saving is exact but the exact net magnitude needs a byte-closed
+    # ``upstream/evaluate.py`` on the real archive. The codec choice is INVISIBLE to
+    # inflate (parse_pose_section auto-dispatches on the section magic), so a low-rank
+    # archive round-trips through the SAME inflate.
+    pose_section_codec: str = "iid"
+    # Low-rank codec rank/levels (only consulted when ``pose_section_codec ==
+    # "lowrank"``). The DEFAULT rank=4/levels=511 is the Pareto-DOMINANT operating
+    # point on the real GT pose (smaller than iid AND lower-MSE → improves rate, pose
+    # term cannot worsen); a more aggressive cut (rank-2/254) is net-negative on the
+    # full score (the encode + round-trip MEASURE both bytes and MSE; the net win is
+    # advisory until byte-closed exact eval).
+    pose_section_lowrank_rank: int = 4
+    pose_section_lowrank_levels: int = 511
     # Lever-3 pose-FiLM VERSION (only consulted when ``pose_film_enabled``):
     #   1 = v1 stem-injection (``pose_film.PoseFiLMHNeRVWrapper``) — feeds BOTH heads,
     #       so pose couples into d_seg (the v1 instability; legacy/default).
@@ -847,6 +873,22 @@ class TorchVehicleConfig:
                 f"pose_film_version must be 1 (v1 stem) or 2 (v2 residual-rgb0); "
                 f"got {self.pose_film_version}"
             )
+        if self.pose_section_codec not in ("iid", "lowrank"):
+            raise ValueError(
+                f"pose_section_codec must be 'iid' (legacy, byte-identical) or "
+                f"'lowrank' (low-rank SVD pose codec); got {self.pose_section_codec!r}"
+            )
+        if self.pose_section_codec == "lowrank":
+            if not (1 <= int(self.pose_section_lowrank_rank) <= 6):
+                raise ValueError(
+                    "pose_section_lowrank_rank must be in [1, 6] (pose_dim=6); got "
+                    f"{self.pose_section_lowrank_rank}"
+                )
+            if int(self.pose_section_lowrank_levels) < 1:
+                raise ValueError(
+                    "pose_section_lowrank_levels must be >= 1; got "
+                    f"{self.pose_section_lowrank_levels}"
+                )
         if self.pose_film_trunk_stopgrad:
             # The trunk-stopgrad routing only EXISTS when there is a FiLM pose path to
             # route the pose gradient INTO, and is implemented in the split-by-head
@@ -2492,7 +2534,14 @@ class TorchVehicleDriver:
         # latents are preserved either way; the two level sources are mutually
         # exclusive per __post_init__).
         _base_archive_builder = lambda md: build_archive_with_pose(  # noqa: E731
-            self.v.build_archive, archive_decoder_sd, ema_latents, md, stored_pose
+            self.v.build_archive,
+            archive_decoder_sd,
+            ema_latents,
+            md,
+            stored_pose,
+            pose_codec=self.cfg.pose_section_codec,
+            lowrank_rank=self.cfg.pose_section_lowrank_rank,
+            lowrank_levels=self.cfg.pose_section_lowrank_levels,
         )
         if self.cfg.lever4_variable_level_export_enabled:
             archive, eval_decoder_sd, eval_latents = (
