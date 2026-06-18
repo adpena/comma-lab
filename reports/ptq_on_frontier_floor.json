@@ -1,0 +1,133 @@
+{
+  "probe": "ptq_on_frontier_floor",
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "frontier_pointer_moved": false,
+  "frontier_archive": "experiments/results/pr110_payload_entropy_recode_20260610/submission_dir/archive.zip",
+  "frontier_archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+  "decoder_params": 228958,
+  "decoder_section_bytes": 161104,
+  "n_pairs": 600,
+  "rate_denom": 37545489,
+  "rows": {
+    "int8": {
+      "d_seg": 0.0005937618618675818,
+      "d_pose": 3.6554108725492066e-05,
+      "archive_bytes": 177169,
+      "rate_term": 0.11796956486570198,
+      "score": 0.19646487990957395,
+      "wall_s": 555.0
+    },
+    "int7": {
+      "d_seg": 0.0013559383666142822,
+      "d_pose": 0.00015198674038401804,
+      "archive_bytes": 174061,
+      "rate_term": 0.11590007523939827,
+      "score": 0.290479388745931,
+      "wall_s": 512.2
+    },
+    "int6": {
+      "d_seg": 0.0022935825012003383,
+      "d_pose": 0.0002755503763910383,
+      "archive_bytes": 147513,
+      "rate_term": 0.09822285175191087,
+      "score": 0.38007399438998357,
+      "wall_s": 503.5
+    },
+    "int5": {
+      "d_seg": 0.0047439659635225935,
+      "d_pose": 0.001549806100083515,
+      "archive_bytes": 118589,
+      "rate_term": 0.07896354739180518,
+      "score": 0.6778513522763748,
+      "wall_s": 512.6
+    },
+    "int4": {
+      "d_seg": 0.011880654282867909,
+      "d_pose": 0.04085188860694567,
+      "archive_bytes": 87925,
+      "rate_term": 0.058545648453266916,
+      "score": 1.8857658984151013,
+      "wall_s": 554.4
+    },
+    "sa_int4lo_int8hi": {
+      "d_seg": 0.010640284239004056,
+      "d_pose": 0.013310092170722782,
+      "archive_bytes": 100005,
+      "rate_term": 0.06658922460698274,
+      "score": 1.495447638651055,
+      "wall_s": 520.0
+    },
+    "sa_int4lo_int6hi": {
+      "d_seg": 0.010675862686087688,
+      "d_pose": 0.013990249604297181,
+      "archive_bytes": 96021,
+      "rate_term": 0.06393644253774401,
+      "score": 1.5055581319878708,
+      "wall_s": 520.3
+    },
+    "sa_int5lo_int8hi": {
+      "d_seg": 0.004485982299471895,
+      "d_pose": 0.0010006640752544627,
+      "archive_bytes": 126485,
+      "rate_term": 0.08422116968565785,
+      "score": 0.6328525978899491,
+      "wall_s": 518.6
+    }
+  },
+  "verdict": {
+    "frontier_baseline_S_pointer": 0.19109982419209975,
+    "int8_identity_baseline_S_local_cpu": 0.19646487990957395,
+    "local_vs_pointer_offset_S": 0.00537,
+    "desk_int4_perfect_hold_S": 0.1399,
+    "sub_015_target": 0.15,
+    "best_ptq_mode": "int8",
+    "best_ptq_S": 0.19646487990957395,
+    "best_ptq_dS_vs_pointer": 0.00537,
+    "best_ptq_dS_vs_int8_baseline": 0.0,
+    "ptq_beats_pointer_frontier": [],
+    "ptq_beats_int8_baseline": [],
+    "ptq_floor_gap_to_perfect_hold": 0.05656,
+    "qat_distortion_recovery_needed_S": 0.05656,
+    "score_aware_vs_uniform_matched_bytes": {
+      "sa_int4lo_int8hi": {
+        "nearest_uniform": "int4",
+        "sa_bytes": 100005,
+        "uniform_bytes": 87925,
+        "sa_S": 1.495447638651055,
+        "uniform_S": 1.8857658984151013,
+        "sa_beats_uniform_dS": -0.39032,
+        "sa_d_seg": 0.010640284239004056,
+        "uniform_d_seg": 0.011880654282867909
+      },
+      "sa_int4lo_int6hi": {
+        "nearest_uniform": "int4",
+        "sa_bytes": 96021,
+        "uniform_bytes": 87925,
+        "sa_S": 1.5055581319878708,
+        "uniform_S": 1.8857658984151013,
+        "sa_beats_uniform_dS": -0.38021,
+        "sa_d_seg": 0.010675862686087688,
+        "uniform_d_seg": 0.011880654282867909
+      },
+      "sa_int5lo_int8hi": {
+        "nearest_uniform": "int5",
+        "sa_bytes": 126485,
+        "uniform_bytes": 118589,
+        "sa_S": 0.6328525978899491,
+        "uniform_S": 0.6778513522763748,
+        "sa_beats_uniform_dS": -0.045,
+        "sa_d_seg": 0.004485982299471895,
+        "uniform_d_seg": 0.0047439659635225935
+      }
+    },
+    "score_aware_wins": [
+      "sa_int4lo_int8hi",
+      "sa_int4lo_int6hi",
+      "sa_int5lo_int8hi"
+    ]
+  },
+  "built_at_utc": "2026-06-18T19:17:03Z",
+  "note": "Bytes MEASURED via the real frontier codec (PR101 split-brotli + CTXR recode, STORED zip); identity (int8) round-trip is byte-identical to the on-disk frontier (177169 B), validating the pipeline. d_seg/d_pose full-600-pair exact via RealScorerContext.exact_eval (CPU AUTHORITY). Local CPU int8 S=0.1965 vs pointer 0.19110 (offset 0.00537); compare PTQ deltas to the local int8 baseline. NON-PROMOTABLE."
+}
