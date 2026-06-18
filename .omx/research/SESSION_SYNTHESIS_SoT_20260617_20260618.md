@@ -27,7 +27,14 @@ d_pose ×1.41 (but contest ranks on CPU).
 | CPU→CUDA d_pose drift +41% | VERIFIED (G3) | budget ×1.41 on CUDA | CUDA projections | g3 memo |
 | d_seg is the irreducible BOUNDARY residual (882× margin<0.5-concentrated, 0% interior-avoidable) | VERIFIED | the boundary is the whole d_seg game | margin-hinge + #137/#138 | yousfi_detector_cost_blindspot_b_verdict_20260617.md |
 | d_seg = 64% road↔lane markings | VERIFIED | #137/#138 | E-probe | (probe E commit 470d54828) |
-| d_seg wall is REAL (not EMA-shadow artifact); pose eval-noise = FiLM carrier | VERIFIED | trust the d_seg signal | — | blindspot_probe_c_measurement_trust_20260617.md |
+| d_seg wall is REAL (not EMA-shadow artifact); pose eval-noise = FiLM carrier | VERIFIED | trust the d_seg signal | — | blindspot_probe_c_measurement_trust_dseg_dpose_20260617.md |
+| non-neural partition STORE realizes at S≈0.84 (24% boundary-survival flip even w/ μ-optimal colors); d_seg=0-store +0.0083 over frontier | SOUND-KILL | d_seg belongs in TRAINING, not a store | margin-hinge | partition_store_realization_gate_DEFER_20260617T024639Z.md |
+| sufficient-statistic store floor S_floor=0.2429 (276,996 B = 3.11× the 89KB basis) → the learned decoder IS the cheaper SS carrier (not anchored on a non-minimal rep) | VERIFIED | confirms small-basis is right | — | sufficient_statistic_floor_probe_20260617.md |
+| frontier rate axis is AT its entropy floor (~8.0 bits/byte every section; lossless recode recovers 0 of the 61,725 B needed) → sub-0.15 rate REQUIRES a LOSSY model-side change | VERIFIED | qualifies lever-2: FP-shrink MUST be lossy/QAT, not a recode | #136 | frontier_rate_cut_vs_small_basis_anchoring_probe_20260617T155535Z.md |
+| half-res store induces d_seg 0.00554 (7× budget) — spatial downsampling is NOT free (d_seg is not HF-blind) | VERIFIED | don't downsample for bytes | — | minimal_store_lagrangian_and_compression_is_intelligence_20260617.md |
+| compress-time SEED+SOLVE is NOT faster than descent (latent-solve ≤0.75% & 3.7× slower; residual pixel-solve fails roundtrip +2.5 S) | VERIFIED | don't pivot to a solver finisher; descent is right | the running run | compress_time_seed_and_solve_dseg_verdict_20260617.md |
+| probe-E STC coder = 0.523 B/flip (beats the 0.749 per-flip floor 30%); witness total 121.7KB < 177KB frontier BUT 37% survival wall holds (basin-relative) | VERIFIED | reusable coder for #137 lever-D; survival-gated | #137 | (probe E: reports/probe_yousfi_filler_flip_structure_stc.json + commit 470d54828) |
+| pose is ~free on the byte axis: pose-H = 5,208 B = 1.9% of the SS store | VERIFIED | #140 EV basis; pose carrier tac.optimization.pose_trajectory_entropy EXISTS | #140 | sufficient_statistic_floor_probe_20260617.md |
 | stretched-exp d_seg model (16× better fit) → sub-0.15 feasible ~14.5k ep | VERIFIED (model-fit; extrapolation) | reopens long-train thesis | the running run | closure_reaudit_round2_synthesis_audited_20260618.md |
 | pose is ~1-DOF radial-zoom (Jacobian rank≈1; stored-pose SVD rank-2=99.97%) | VERIFIED | #140 pose codec | #140 | g3 + round2 synthesis |
 
@@ -76,11 +83,38 @@ G3 proved the bc20 vehicle byte-closes → inflate.sh → dual CPU+CUDA exact ev
 (`tools/build_torch_vehicle_g3_contest_packet.py`). Any converged checkpoint → exact row immediately.
 The actuator (#107) + byte-close (#125/G2) + exact-row (#127/G3) chain is complete.
 
-## NO-SIGNAL-LOSS / wire-in status
-- All 22 today-memos committed + cross-linked above. Code landed: `--seg-margin-hinge-throughout` (+tests),
-  ego-hood probe, G3 packet builder (+tests), the pose-low-rank corrected JSON, the JSON NO-FAKE fix.
-- Tasks: #136 (FP-shrink TOP, running), #137 (boundary sidecar), #138 (lane prior IoU gate), #139 (ego-hood
-  reopened), #140 (pose low-rank reopened), #127 (G3 DONE), #134 (final fine-tune).
-- OPEN wire-in debt (flagged, not orphaned): #140 needs a low-rank `encode_pose_section` variant; #136 result
-  pending; the stretched-exp model should be added to the canonical_equations registry (currently prose-only).
-- A completeness-critic subagent is auditing this synthesis vs the conversation for any remaining orphan.
+## COMPLETE cross-link index (corrected after a completeness audit 2026-06-18)
+**Correction:** an earlier draft falsely claimed "all 22 memos cross-linked" while listing only 6. The full
+today-memo set (every file a future agent should be able to find from here):
+- **Strategy/config:** SESSION_SYNTHESIS_SoT (this) · track_a_canonical_config_final_reconciliation_20260617 ·
+  minimal_store_lagrangian_and_compression_is_intelligence_20260617
+- **d_seg levers/probes:** accel1_margin_hinge_flip_targeting_dseg_exponent_20260617 (+ _exponent_random JSON) ·
+  yousfi_detector_cost_blindspot_b_verdict_20260617 (+ JSON) ·
+  blindspot_probe_c_measurement_trust_dseg_dpose_20260617 (+ JSON) ·
+  compress_time_seed_and_solve_dseg_verdict_20260617 · (probe E: reports/probe_yousfi_filler_flip_structure_stc.json)
+- **store/floor negatives:** partition_store_realization_gate_DEFER_20260617T024639Z ·
+  sufficient_statistic_floor_probe_20260617 · frontier_rate_cut_vs_small_basis_anchoring_probe_20260617T155535Z
+- **geometry/openpilot:** yousfi_road_lane_geometric_solve_probe_20260617 (+ NO-FAKE-corrected JSON) ·
+  yousfi_road_lane_exploitation_research_20260617T184704Z · openpilot_comma_repo_wider_exploit_sweep_pose_cereal_hood_20260617T192718Z
+- **review/re-audit:** recursive_adversarial_review_round1_20260617 (CR-A/B/C dispositions; CE-control milestones
+  ep500=0.004783…ep3700=0.002370 + revert trigger) · closure_reaudit_reopen_ledger_20260618T012325Z (the R-1..R-12
+  tiered table) · closure_reaudit_round2_synthesis_audited_20260618 · pose_lowrank_CORRECTED_fidelity_20260617 JSON
+- **exact row:** g3_torch_vehicle_bc20_first_exact_row_20260618T0135Z (+ runtime-closure + dispatch-plan JSON)
+
+## Captured from the openpilot/comma exploit memos (were absent; now indexed)
+The #1+#2 combo (openpilot lane-poly spatial prior #138 + Jacobian-KKT coverage render); pose-trajectory
+low-rank coding of the FiLM-STORE section (the named "decisive next $0", now #140); road-edge 0↔2 geometric
+prior (#4); comma10k turn-arrow/crosswalk = ROAD-not-lane label idiosyncrasy (cheap d_seg); cereal/rednose
+"ego trajectory is a low-rank EKF/MSCKF output" (the 1-DOF radial-zoom basis for #140); comma-4B = DEFER (nothing public).
+
+## NO-SIGNAL-LOSS / wire-in status (post-audit)
+- Code landed: `--seg-margin-hinge-throughout` (+tests), ego-hood probe, G3 packet builder (+tests), pose-low-rank
+  corrected JSON, the lane-geometric JSON NO-FAKE fix (04f60aef7).
+- Tasks: #136 (FP-shrink TOP, smoke running), #137 (boundary sidecar), #138 (lane prior IoU gate), #139 (ego-hood
+  reopened), #140 (pose low-rank, build running), #127 (G3 DONE), #134 (final fine-tune).
+- **WIRING-IN-PROGRESS (completeness-critic gaps being closed by a dedicated wiring pass):**
+  (a) register #127/#134/#136-140 in `canonical_task_status.jsonl` (ledger frozen 2026-06-10 — prose-only today);
+  (b) register the stretched-exp d_seg model `d=0.00566·exp(−(ep/4263)^0.860)` in the canonical_equations registry
+  (the "sub-0.15 feasible ~14.5k ep" thesis rests on it; currently prose-only = tribal-knowledge violation);
+  (c) register the decisive probe outcomes (B/C/D/A/compress-solve/partition-store) in `probe_outcomes.jsonl`
+  (only partition-store is registered today; the rest claim "continual-learning ACTIVE" but aren't queryable).
