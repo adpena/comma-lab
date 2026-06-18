@@ -1,0 +1,125 @@
+{
+  "probe": "label_noise_floor_and_margin_saliency",
+  "task": "#141 (Yousfi council check-in decisive $0 measurement)",
+  "authority": "[contest-CPU advisory] / [macOS-CPU advisory] -- NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "pointer_unmoved": true,
+  "basin_dir": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600",
+  "basin_meta": {
+    "n_pairs": 600,
+    "latent_dim": 28,
+    "base_channels": 20,
+    "eval_size": [
+      384,
+      512
+    ]
+  },
+  "basin_archive_bytes": 89136,
+  "n_pairs_measured": 96,
+  "decision_grid_hw": [
+    384,
+    512
+  ],
+  "wall_clock_s": 285.2,
+  "current_d_seg_pixelrate_advisory": 0.002624882592095269,
+  "current_d_seg_S_contribution": 0.2624882592095269,
+  "total_flip_pixels": 49543,
+  "sub015_dseg_target": 0.000322,
+  "s_floor_rate_plus_pose": 0.1178,
+  "gt_margin_stats": {
+    "gt_margin_mean_all_pixels": 5.593817723509328,
+    "gt_margin_median_all_pixels": 5.821363925933838,
+    "flip_gt_margin_mean": 0.22232079769156313,
+    "flip_gt_margin_median": 0.15010929107666016,
+    "flip_gt_margin_q25": 0.061241865158081055,
+    "flip_gt_margin_q75": 0.30840587615966797
+  },
+  "label_noise_floor_curve": [
+    {
+      "tau": 0.05,
+      "ambiguous_flip_fraction": 0.21022142381365683,
+      "winnable_d_seg": 0.0020730760362413195,
+      "winnable_d_seg_S_contribution": 0.20730760362413195,
+      "winnable_d_seg_vs_sub015_target_ratio": 6.438124336153166,
+      "sub015_reachable_by_decoder": false,
+      "implied_floor_S_rate_pose_plus_winnable_dseg": 0.32510760362413194
+    },
+    {
+      "tau": 0.1,
+      "ambiguous_flip_fraction": 0.37208081868276044,
+      "winnable_d_seg": 0.001648214128282335,
+      "winnable_d_seg_S_contribution": 0.16482141282823348,
+      "winnable_d_seg_vs_sub015_target_ratio": 5.118677417025885,
+      "sub015_reachable_by_decoder": false,
+      "implied_floor_S_rate_pose_plus_winnable_dseg": 0.2826214128282335
+    },
+    {
+      "tau": 0.137,
+      "ambiguous_flip_fraction": 0.4695920715338191,
+      "winnable_d_seg": 0.0013922585381401908,
+      "winnable_d_seg_S_contribution": 0.13922585381401908,
+      "winnable_d_seg_vs_sub015_target_ratio": 4.32378427993848,
+      "sub015_reachable_by_decoder": false,
+      "implied_floor_S_rate_pose_plus_winnable_dseg": 0.2570258538140191
+    },
+    {
+      "tau": 0.2,
+      "ambiguous_flip_fraction": 0.600589386997154,
+      "winnable_d_seg": 0.0010484059651692705,
+      "winnable_d_seg_S_contribution": 0.10484059651692705,
+      "winnable_d_seg_vs_sub015_target_ratio": 3.255919146488418,
+      "sub015_reachable_by_decoder": false,
+      "implied_floor_S_rate_pose_plus_winnable_dseg": 0.22264059651692705
+    },
+    {
+      "tau": 0.3,
+      "ambiguous_flip_fraction": 0.7410734109763236,
+      "winnable_d_seg": 0.000679651896158854,
+      "winnable_d_seg_S_contribution": 0.06796518961588541,
+      "winnable_d_seg_vs_sub015_target_ratio": 2.110720174406379,
+      "sub015_reachable_by_decoder": false,
+      "implied_floor_S_rate_pose_plus_winnable_dseg": 0.1857651896158854
+    }
+  ],
+  "headline_tau_0p137": {
+    "tau": 0.137,
+    "ambiguous_flip_fraction": 0.4695920715338191,
+    "winnable_d_seg": 0.0013922585381401908,
+    "winnable_d_seg_S_contribution": 0.13922585381401908,
+    "winnable_d_seg_vs_sub015_target_ratio": 4.32378427993848,
+    "sub015_reachable_by_decoder": false,
+    "implied_floor_S_rate_pose_plus_winnable_dseg": 0.2570258538140191
+  },
+  "margin_saliency": {
+    "n_saliency_pairs": 6,
+    "global_map": {
+      "mean_saliency": 0.9260323637175775,
+      "max_saliency": 30.806448300679524,
+      "gini_concentration": 0.49082833609489285,
+      "frac_saliency_mass_in_boundary_lt_0p5": 0.006558914253301986,
+      "frac_pixels_boundary_lt_0p5": 0.0038782755533854165,
+      "boundary_over_interior_saliency_ratio": 1.698178366749764,
+      "saliency_percentiles": {
+        "p50": 0.6025732755661011,
+        "p90": 2.0336297512054444,
+        "p99": 5.051349220275881
+      }
+    },
+    "flip_targeted_map": {
+      "n_pairs_with_flips": 6,
+      "frac_saliency_mass_in_boundary_lt_0p5": 0.0120840514271364,
+      "boundary_over_interior_saliency_ratio": 3.1476582098158157
+    },
+    "interpretation": "boundary_over_interior_ratio >> 1 confirms the detector's own gradient concentrates at low-margin (boundary) pixels -> the saliency map aligns with where the flips live -> it is a valid detector-informed cost for the weighted margin-hinge + FP-shrink allocation. The COMPLEMENT (low saliency) is the certified rate-shed band (must also be d_pose-checked before shedding, per Yousfi audit)."
+  },
+  "verdict": {
+    "headline": "MODERATE label-noise floor: 47.0% of flips are detector-own-ambiguous at tau=0.137. The WINNABLE d_seg (0.001392) is 4.3x ABOVE the sub-0.15 target (0.000322). Sub-0.15 d_seg requires winning nearly ALL winnable flips (aggressive); the FP-shrink RATE lever de-risks the path and should run in parallel.",
+    "label_noise_floor_class": "MODERATE",
+    "ambiguous_flip_fraction_at_tau_0p137": 0.4695920715338191,
+    "winnable_d_seg_at_tau_0p137": 0.0013922585381401908,
+    "winnable_d_seg_vs_target_ratio": 4.32378427993848,
+    "sub015_dseg_reachable_by_decoder": false,
+    "campaign_routing": "dseg_path_hard_but_open_run_rate_lever_in_parallel"
+  }
+}
