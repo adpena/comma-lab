@@ -7,7 +7,33 @@ noted; **exact pointer UNMOVED at 0.19110** (G3 confirmed; this session did NOT 
 the GOAL firewall). The win this session is structural: a measured contest-grade pipeline + a concrete,
 grounded three-lever path to sub-0.15 on the ranking axis, + recovery of two wrongly-buried levers.
 
-## HEADLINE: the concrete sub-0.15(CPU) path (S ≈ 0.127 projected, three composable levers)
+## ⚠️ INFLECTION CORRECTION (2026-06-18, late — SUPERSEDES the S≈0.127 headline below)
+The "three composable levers → S≈0.127" headline below was written mid-campaign on EXTRAPOLATIONS. The
+QAT-pivot cycle then MEASURED each near-term sub-0.15 path and they are now all capped. Read this first;
+the headline below is the historical reasoning trail (preserved per HISTORICAL_PROVENANCE), not the current
+verdict. Pointer still UNMOVED 0.19110. All `[contest-CPU advisory]`.
+
+**Sub-0.15 mechanism status — every byte-cheap-d_seg family measured:**
+| # | mechanism (family) | status | evidence |
+|---|---|---|---|
+| 1 | bc20 d_seg long-train (epochs) | CAPPED — capacity-floored ~0.0022 (50k run, best S 0.401 > basin 0.378) | the 50k margin-hinge run, stopped |
+| 2 | Path A — fresh higher-capacity decoder | DOMINATED — desk-calc best S_QAT 0.241 (bc36) > 0.191 frontier | `capacity_rd_score_aware_qat_pivot_*` |
+| 3 | Path B — QAT-shrink the frontier | CAPPED S=0.483 — d_pose recovers, **d_seg walls ~0.0035** under int5 | `frontier_int5_score_aware_qat_finetune_*` |
+| 4 | concentrated-saliency regularizer | NO-GO — can't redistribute criticality off a dense shared path | `probe_concentrated_saliency_feasibility` |
+| 5 | factored cheap LF core (capacity-axis) | RED — **d_seg ∼ 29.3·params^−0.71**; frontier-grade needs ~10.7M params | `factored_lf_core_capacity_gate_*` |
+| 6 | byte-neutral taper realloc #121 (allocation-axis) | **WEAK (downgraded from "optimal")** — frontier per-tensor saliency only **5.54× flat**, decision-band mass 44%, geometry-ordering FALSE, d_seg-blind final stage already starved (~1.75% params) → little to water-fill | `frontier_margin_saliency_qat_bitalloc_prior_*` |
+| 7 | **differentiable curve-core (geometry-axis)** | **RUNNING — the LAST untested escape** (curve fit THROUGH the scorer, so it survives the eval roundtrip by construction, unlike the static partition-store that capped S≈0.84) | gate `a8310a9ceb39fcb43` |
+
+**The unifying physics:** d_seg = a perimeter integral over the frozen SegNet's *learned, high-dimensional*
+decision boundary. Cheap representation requires that boundary to be genuinely low-dimensional. Families 1-6
+prove it is NOT (learned-pixel-decoder + allocation + regularizer + static-geometry all cap). Family 7 (the
+gate) is the decisive test of whether a *differentiable* geometry escapes. **The strategic fork:** GREEN ⇒
+spec the curve-core build (a real sub-0.15 path). RED ⇒ the airtight terminal finding — sub-0.15 is
+byte-cheaply unreachable across ALL known families, the frontier ~0.19 is near the real floor, and
+CLAUDE.md S_floor=0.11797 over-counts by ignoring the d_seg↔capacity coupling → a goal/floor re-frame the
+operator should weigh in on. Inflection memo: `campaign_inflection_three_paths_capped_concentrated_saliency_20260618.md`.
+
+## HEADLINE (HISTORICAL — superseded by the inflection correction above): the concrete sub-0.15(CPU) path (S ≈ 0.127 projected, three composable levers)
 `S_CPU = 100·d_seg + sqrt(10·d_pose) + 25·bytes/37.5M`. G3 proved local-CPU advisory ≈ exact contest-CPU to
 ~0.001%, so these advisory levers project onto the ranking axis faithfully:
 1. **d_seg → 0.000322** (from 0.00260) — running margin-hinge 50k long-train. Feasible at ~14.5k ep per the
