@@ -1,0 +1,86 @@
+# SESSION SYNTHESIS — canonical source-of-truth (2026-06-17 → 2026-06-18)
+
+**Operator: "review all design/research memos + conversation from today; ensure optimal + no signal loss."**
+This is the SINGLE entry point for the next session. It resolves every supersession/correction so the
+record is coherent (several of today's memos corrected each other). All `[contest-CPU advisory]` unless
+noted; **exact pointer UNMOVED at 0.19110** (G3 confirmed; this session did NOT move it — stated plainly per
+the GOAL firewall). The win this session is structural: a measured contest-grade pipeline + a concrete,
+grounded three-lever path to sub-0.15 on the ranking axis, + recovery of two wrongly-buried levers.
+
+## HEADLINE: the concrete sub-0.15(CPU) path (S ≈ 0.127 projected, three composable levers)
+`S_CPU = 100·d_seg + sqrt(10·d_pose) + 25·bytes/37.5M`. G3 proved local-CPU advisory ≈ exact contest-CPU to
+~0.001%, so these advisory levers project onto the ranking axis faithfully:
+1. **d_seg → 0.000322** (from 0.00260) — running margin-hinge 50k long-train. Feasible at ~14.5k ep per the
+   stretched-exp model (NOT the power-law's "999k/infeasible" — wrong model class). RUNNING.
+2. **rate → ~0.037** (from 0.0594, ~55KB) — FP-shrink QAT (the top reopen). $0 PTQ smoke RUNNING.
+3. **d_pose held** at 0.000342 — basin value; FiLM carrier + the 1-DOF radial-zoom codec (#140).
+Composed: 0.0322 + 0.0585 + 0.0366 ≈ **0.127**. Each lever is running / being tested / proven-faithful.
+CAVEATS: each is unverified-at-target (extrapolation; PTQ-hold unproven; pose-variance risk); CUDA axis adds
+d_pose ×1.41 (but contest ranks on CPU).
+
+## VERIFIED insights (current status — corrections resolved)
+| insight | status | score-EV | consumer | source memo |
+|---|---|---|---|---|
+| margin-hinge BENDS d_seg exponent (0.787 vs CE 0.608 vs soft_cosine 0.646-WORST); gradient non-vanishing on flips | VERIFIED (small-slice; rel. bend trustworthy) | the d_seg lever | running run + #136-sister | accel1_margin_hinge_flip_targeting_dseg_exponent_20260617.md |
+| **margin-hinge THROUGHOUT** is the canonical seg lever (replaces CE+soft_cosine all stages) | LANDED + RUNNING | — | launch_bind_all `--seg-margin-hinge-throughout` | track_a_canonical_config_final_reconciliation_20260617.md |
+| local-CPU advisory ≈ exact contest-CPU (~0.001%) | VERIFIED (G3) | de-risks whole campaign | all advisory work | g3_torch_vehicle_bc20_first_exact_row_20260618T0135Z.md |
+| CPU→CUDA d_pose drift +41% | VERIFIED (G3) | budget ×1.41 on CUDA | CUDA projections | g3 memo |
+| d_seg is the irreducible BOUNDARY residual (882× margin<0.5-concentrated, 0% interior-avoidable) | VERIFIED | the boundary is the whole d_seg game | margin-hinge + #137/#138 | yousfi_detector_cost_blindspot_b_verdict_20260617.md |
+| d_seg = 64% road↔lane markings | VERIFIED | #137/#138 | E-probe | (probe E commit 470d54828) |
+| d_seg wall is REAL (not EMA-shadow artifact); pose eval-noise = FiLM carrier | VERIFIED | trust the d_seg signal | — | blindspot_probe_c_measurement_trust_20260617.md |
+| stretched-exp d_seg model (16× better fit) → sub-0.15 feasible ~14.5k ep | VERIFIED (model-fit; extrapolation) | reopens long-train thesis | the running run | closure_reaudit_round2_synthesis_audited_20260618.md |
+| pose is ~1-DOF radial-zoom (Jacobian rank≈1; stored-pose SVD rank-2=99.97%) | VERIFIED | #140 pose codec | #140 | g3 + round2 synthesis |
+
+## SUPERSESSION LEDGER (what CHANGED today — do NOT cite the old verdicts)
+1. **#1 pose-low-rank: "FALSIFIED" → REOPENED.** My inline falsification measured at the WRONG fidelity
+   (over-provisioned MSE 2.9e-5); at MSE≤d_pose, rank-2 SVD = 2.7× smaller (1142 vs 3088 B). RETRACTED.
+   → `pose_lowrank_CORRECTED_fidelity_20260617.json` + task #140. Deepened to 1-DOF radial-zoom.
+2. **Ego-hood: "FALSIFIED as free lever" → REGION-CORRECTED, REOPENED for re-measurement.** I measured the
+   all-frame static-core (0.038%) when the mechanism's region is the per-frame class-4 mask (7.4% of flips).
+   NET win still survival-gated (likely folds into #137). → task #139 reopened.
+3. **d_seg projection: power-law point estimates → stretched-exp / window-range.** The power law was the wrong
+   MODEL CLASS (slope steepening 0.24→0.64). My earlier S(50k)=0.177-0.226 point estimates SUPERSEDED.
+4. **Floor 0.1178 → 0.1179** (rate must use archive.zip 89,274 B, not 0.bin 89,136).
+5. **lane-geometric-solve JSON labels: "EUREKA_HOLDS" (LIED) → corrected to FALSIFIED/quasi-stationary**
+   (NO-FAKE fix, commit 04f60aef7; the data/memo were always right, only the auto-label was inverted).
+6. **RA-2 R-3 "lossless recode beats frontier −0.00092": REJECTED** (stale baseline; S=0.191117 > 0.19110;
+   already banked in #64). RA-2 R-5 "store partition = d_seg=0 by construction": REJECTED (survival wall).
+
+## RANKED REOPEN LEDGER (audited; the recovered signal)
+1. **FP-shrink QAT (#136)** — TOP, −0.022 to −0.029 S; killed on naive-PTQ (wrong op point), QAT never tried. $0 smoke RUNNING.
+2. **long-train d_seg feasibility (stretched-exp)** — reopens the sub-0.15-via-epochs thesis; the running run IS the test.
+3. **pose 1-DOF radial-zoom (#140)** — ~0.0013 byte + d_pose-floor; $0 test.
+4. **native-grid in-cell repair / boundary sidecar (#137)** — roundtrip-real (unlike camera-res), <1.27 B/flip; needs 600-verify.
+5. **ego-hood per-frame re-measurement (#139)** — survival-gated; folds into #137.
+6. lane-poly geometric prior (#138, IoU-gated); STC mask-delta w/ detector cost map; Cool-Chic (28.8× faster now); AC/rANS configs; HiNeRV bilinear-skip.
+SOUND-KILL (do NOT reopen): rel_err² objective, pixel-blur preprocessing, per-pixel RGB seg-correction SIDECAR (36.9% survival wall — d_seg must move via the DECODER), pure-symbol AV1 mask coding.
+
+## META-PATTERN (the durable lesson — RA-1, audited-sound)
+**Closures grounded in operating-point-INVARIANT quantities held (entropy floor, geometric smear-wall).
+Closures grounded in a CHOICE (region / model-class / fidelity / config) are where errors concentrate.**
+The remaining ledger fallibility is un-EXECUTED reactivations, not mislabeled kills. Apply this lens to every
+future closure: is the verdict invariant, or does it depend on a chosen operating point?
+
+## CANONICAL CONFIG + registered control (drift-prevention)
+The running 50k run: `experiments/launch_bind_all_taper_ab.py --arm arm_b --seg-margin-hinge-throughout
+--pose-film-v2 --pose-equimarginal --pose-dim-weights-auto --split-by-head --pose-grad-on-train-device
+--train-device mps --async-eval --rate-attack --ema-warmup --oomph-seg-weight-mult 1.0 --kd-warm-epochs 300
+--total-epoch-budget 50000` (supervisor `.omx/tmp/arm_b_canonical/supervise.sh`, fresh out-dir
+`bindall_arm_b_canonical50k_mh_n600`). REGISTERED CONTROL: the CE baseline log `run_CE_baseline_ep3700.log`
+(milestones ep1000=0.004355, ep2000=0.003251, ep3700=0.002370). REVERT TRIGGER: if margin-hinge d_seg ≥ CE
+at matched ep~2000, revert + run the proper hinge-vs-soft_cosine A/B. best-checkpoint selects on full S
+(pose-spike-safe, verified driver.py:2596).
+
+## PIPELINE READINESS (proven this session)
+G3 proved the bc20 vehicle byte-closes → inflate.sh → dual CPU+CUDA exact eval at contest grade
+(`tools/build_torch_vehicle_g3_contest_packet.py`). Any converged checkpoint → exact row immediately.
+The actuator (#107) + byte-close (#125/G2) + exact-row (#127/G3) chain is complete.
+
+## NO-SIGNAL-LOSS / wire-in status
+- All 22 today-memos committed + cross-linked above. Code landed: `--seg-margin-hinge-throughout` (+tests),
+  ego-hood probe, G3 packet builder (+tests), the pose-low-rank corrected JSON, the JSON NO-FAKE fix.
+- Tasks: #136 (FP-shrink TOP, running), #137 (boundary sidecar), #138 (lane prior IoU gate), #139 (ego-hood
+  reopened), #140 (pose low-rank reopened), #127 (G3 DONE), #134 (final fine-tune).
+- OPEN wire-in debt (flagged, not orphaned): #140 needs a low-rank `encode_pose_section` variant; #136 result
+  pending; the stretched-exp model should be added to the canonical_equations registry (currently prose-only).
+- A completeness-critic subagent is auditing this synthesis vs the conversation for any remaining orphan.
