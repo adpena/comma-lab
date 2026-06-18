@@ -17,6 +17,12 @@ grounded three-lever path to sub-0.15 on the ranking axis, + recovery of two wro
 Composed: 0.0322 + 0.0585 + 0.0366 ≈ **0.127**. Each lever is running / being tested / proven-faithful.
 CAVEATS: each is unverified-at-target (extrapolation; PTQ-hold unproven; pose-variance risk); CUDA axis adds
 d_pose ×1.41 (but contest ranks on CPU).
+**BC20-CAPACITY-CONDITIONAL (label-noise floor resolution, `label_noise_floor_RESOLUTION_frontier_existence_proof_20260618.md`):**
+the d_seg→0.000322 lever is reachable IN PRINCIPLE (the 0.19110 frontier vehicle already has d_seg ~0.0002-0.0006,
+proving the proxy "label-noise floor" too pessimistic + S_floor=0.118 stands) but bc20's small basis may be
+CAPACITY-walled above frontier-grade d_seg — the running margin-hinge long-train IS that capacity test (does bc20
+get below ~0.001?). If bc20 walls high, the sub-0.15 vehicle needs more capacity OR the rate hedge (FP-shrink)
+carries more. The path is alive, not a fundamental wall; the open question is bc20-capacity vs vehicle-choice.
 
 ## VERIFIED insights (current status — corrections resolved)
 | insight | status | score-EV | consumer | source memo |
@@ -39,9 +45,16 @@ d_pose ×1.41 (but contest ranks on CPU).
 | pose is ~1-DOF radial-zoom (Jacobian rank≈1; stored-pose SVD rank-2=99.97%) | VERIFIED | #140 pose codec | #140 | g3 + round2 synthesis |
 
 ## SUPERSESSION LEDGER (what CHANGED today — do NOT cite the old verdicts)
-1. **#1 pose-low-rank: "FALSIFIED" → REOPENED.** My inline falsification measured at the WRONG fidelity
-   (over-provisioned MSE 2.9e-5); at MSE≤d_pose, rank-2 SVD = 2.7× smaller (1142 vs 3088 B). RETRACTED.
-   → `pose_lowrank_CORRECTED_fidelity_20260617.json` + task #140. Deepened to 1-DOF radial-zoom.
+1. **#1 pose-low-rank: "FALSIFIED" → REOPENED → SEALED with a CORRECTED (smaller) win (3 corrections).**
+   (a) my inline falsification used the wrong fidelity (over-provisioned MSE 2.9e-5); (b) R1 "corrected" it to
+   "rank-2/254 wins 2.7× at MSE≤d_pose" — but that was ALSO wrong (the "free headroom" fallacy: it ignored
+   the nonlinear pose term √(10·d_pose), ∂/∂d_pose≈85.8, so rank-2/254 is NET-NEGATIVE, +0.020 pose cost vs
+   −0.0013 bytes); (c) the #140 build's full-score math found the honest answer: the ONLY win is the
+   Pareto-dominant **rank-4/511** (better bytes AND better MSE → strictly dominant, **~−0.0004**), now the
+   codec default, opt-in DEFAULT-OFF. SEALED (89c692692). The pose section is a SMALL lever (~0.5 KB). Anchor
+   lesson: even the "audited correction" (R1) was fallible — the invariant (the actual nonlinear score fn) is
+   the truth. Memos: `lowrank_pose_section_codec_landed_20260617.md` (final) supersedes
+   `pose_lowrank_CORRECTED_fidelity_20260617.json` (R1's flawed-headroom intermediate).
 2. **Ego-hood: "FALSIFIED as free lever" → REGION-CORRECTED, REOPENED for re-measurement.** I measured the
    all-frame static-core (0.038%) when the mechanism's region is the per-frame class-4 mask (7.4% of flips).
    NET win still survival-gated (likely folds into #137). → task #139 reopened.
