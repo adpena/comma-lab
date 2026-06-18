@@ -1,0 +1,179 @@
+{
+  "probe": "fp_shrink_ptq_bc20_n600",
+  "task_id": 136,
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "frontier_pointer_moved": false,
+  "basin": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/best",
+  "archive0_bytes_on_disk": 89136,
+  "parse_back_rebuild_bytes": 89136,
+  "n_pairs": 600,
+  "rate_denom": 37545489,
+  "rows": {
+    "fp32": {
+      "d_seg": 0.002600919948890805,
+      "d_pose": 0.00034168662969022987,
+      "archive_bytes": 89136,
+      "rate_term": 0.059352003645497864,
+      "score": 0.377897965875575,
+      "wall_s": 852.8
+    },
+    "int8": {
+      "d_seg": 0.002600919948890805,
+      "d_pose": 0.00034168662969022987,
+      "archive_bytes": 89136,
+      "rate_term": 0.059352003645497864,
+      "score": 0.377897965875575,
+      "wall_s": 842.2
+    },
+    "int7": {
+      "d_seg": 0.0028082190609226626,
+      "d_pose": 0.00037341987849989284,
+      "archive_bytes": 78750,
+      "rate_term": 0.052436392558370994,
+      "score": 0.39436638965337545,
+      "wall_s": 755.7
+    },
+    "int6": {
+      "d_seg": 0.0033064439582328,
+      "d_pose": 0.0005077565952281778,
+      "archive_bytes": 68400,
+      "rate_term": 0.04554475239355652,
+      "score": 0.44744618964631055,
+      "wall_s": 764.2
+    },
+    "int5": {
+      "d_seg": 0.0050741238426417114,
+      "d_pose": 0.002682652169993768,
+      "archive_bytes": 57475,
+      "rate_term": 0.0382702433306968,
+      "score": 0.7094706665383076,
+      "wall_s": 679.8
+    },
+    "int4": {
+      "d_seg": 0.01288324998691678,
+      "d_pose": 0.1100849646826585,
+      "archive_bytes": 46590,
+      "rate_term": 0.031022368625961964,
+      "score": 2.368561190533663,
+      "wall_s": 641.8
+    },
+    "fp4_mixed": {
+      "d_seg": 0.006082043070346117,
+      "d_pose": 0.003393589883344248,
+      "archive_bytes": 64168,
+      "rate_term": 0.04272683730394349,
+      "score": 0.835148132790876,
+      "wall_s": 635.3
+    },
+    "fp4_all": {
+      "d_seg": 0.0068535869320233665,
+      "d_pose": 0.006597732099083563,
+      "archive_bytes": 64133,
+      "rate_term": 0.042703532240584215,
+      "score": 0.9849227342640232,
+      "wall_s": 655.8
+    }
+  },
+  "built_at_utc": "2026-06-18T03:37:40Z",
+  "note": "Bytes are MEASURED (vendored build_archive re-encode + real brotli), not nbits/8 estimated. d_seg/d_pose are full-600-pair exact SegNet argmax-flip / PoseNet MSE via RealScorerContext.exact_eval. Local CPU \u2248 contest-CPU per G3.",
+  "verdict": {
+    "int8_baseline": {
+      "d_seg": 0.002600919948890805,
+      "d_pose": 0.00034168662969022987,
+      "score": 0.377897965875575,
+      "bytes": 89136
+    },
+    "S_min_mode": "fp32",
+    "S_min": 0.377897965875575,
+    "S_min_delta_vs_int8": 0.0,
+    "holds_vs_int8": {
+      "int8": {
+        "seg_rel_vs_int8_pct": 0.0,
+        "pose_rel_vs_int8_pct": 0.0,
+        "delta_S_vs_int8": 0.0,
+        "holds_dseg_within_10pct": true,
+        "holds_dpose_within_10pct": true
+      },
+      "int7": {
+        "seg_rel_vs_int8_pct": 8.0,
+        "pose_rel_vs_int8_pct": 9.3,
+        "delta_S_vs_int8": 0.01647,
+        "holds_dseg_within_10pct": true,
+        "holds_dpose_within_10pct": true
+      },
+      "int6": {
+        "seg_rel_vs_int8_pct": 27.1,
+        "pose_rel_vs_int8_pct": 48.6,
+        "delta_S_vs_int8": 0.06955,
+        "holds_dseg_within_10pct": false,
+        "holds_dpose_within_10pct": false
+      },
+      "int5": {
+        "seg_rel_vs_int8_pct": 95.1,
+        "pose_rel_vs_int8_pct": 685.1,
+        "delta_S_vs_int8": 0.33157,
+        "holds_dseg_within_10pct": false,
+        "holds_dpose_within_10pct": false
+      },
+      "int4": {
+        "seg_rel_vs_int8_pct": 395.3,
+        "pose_rel_vs_int8_pct": 32118.1,
+        "delta_S_vs_int8": 1.99066,
+        "holds_dseg_within_10pct": false,
+        "holds_dpose_within_10pct": false
+      },
+      "fp4_mixed": {
+        "seg_rel_vs_int8_pct": 133.8,
+        "pose_rel_vs_int8_pct": 893.2,
+        "delta_S_vs_int8": 0.45725,
+        "holds_dseg_within_10pct": false,
+        "holds_dpose_within_10pct": false
+      },
+      "fp4_all": {
+        "seg_rel_vs_int8_pct": 163.5,
+        "pose_rel_vs_int8_pct": 1830.9,
+        "delta_S_vs_int8": 0.60702,
+        "holds_dseg_within_10pct": false,
+        "holds_dpose_within_10pct": false
+      }
+    },
+    "net_S_winner_vs_int8": null,
+    "best_intn_near_int8_dS_le_0p02": "int7",
+    "byte_axis": {
+      "int4": {
+        "archive_bytes": 46590,
+        "delta_bytes_vs_int8": -42546,
+        "delta_rate_vs_int8": -0.02833
+      },
+      "int5": {
+        "archive_bytes": 57475,
+        "delta_bytes_vs_int8": -31661,
+        "delta_rate_vs_int8": -0.02108
+      },
+      "int6": {
+        "archive_bytes": 68400,
+        "delta_bytes_vs_int8": -20736,
+        "delta_rate_vs_int8": -0.01381
+      },
+      "int7": {
+        "archive_bytes": 78750,
+        "delta_bytes_vs_int8": -10386,
+        "delta_rate_vs_int8": -0.00692
+      },
+      "fp4_mixed": {
+        "archive_bytes": 64168,
+        "delta_bytes_vs_int8": -24968,
+        "delta_rate_vs_int8": -0.01663
+      },
+      "fp4_all": {
+        "archive_bytes": 64133,
+        "delta_bytes_vs_int8": -25003,
+        "delta_rate_vs_int8": -0.01665
+      }
+    },
+    "headline": "PTQ-COLLAPSES: NO naive sub-8-bit grid lowers net S \u2014 every bit-width raises S (int7 \u0394S +0.01647, int6 +0.06955, int5 +0.33157, int4 +1.99066) because the 100\u00d7 d_seg weight outweighs the rate saving. The RATE win is REAL on bytes (int4 46590 vs 89136 = \u0394rate -0.0283, matching the \u22120.022/\u22120.029 estimate) but the un-QAT d_seg/d_pose spill buries it. QAT/LSQ is the unblock."
+  },
+  "verdict_logic_corrected": "2026-06-18: original auto-headline used a +/-10pct relative-hold gate which is NOT a score-win criterion (100x d_seg weight); corrected to net-S (dS<0) criterion. No bit-width lowers S."
+}

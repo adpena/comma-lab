@@ -73803,11 +73803,11 @@
       "id": "lane_accel1_margin_hinge_flip_targeting_20260617",
       "name": "Accelerator Probe 1: margin-hinge flip-targeting seg loss",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "margin-hinge loss tac.losses.core.segnet_margin_hinge_per_pixel + wired into driver _seg_loss_for_spec via seg_surrogate=margin_hinge; default path byte-identical"
         },
         "real_archive_empirical": {
           "status": false,
@@ -73826,12 +73826,53 @@
           "evidence": ""
         },
         "three_clean_review": {
+          "status": true,
+          "evidence": "research probe: 32 unit tests green (loss math + power-law fit); ruff clean; default seg path byte-identical (test_seg_surrogate_lever 12/12)"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/accel1_margin_hinge_flip_targeting_dseg_exponent_20260617.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; [contest-CPU advisory] NON-PROMOTABLE; verdict=exponent-bend-PROCEED-to-600pair-AB; reactivation=600-pair from-basin hinge-vs-softcosine late-exponent A/B"
+    },
+    {
+      "id": "lane_fp_shrink_ptq_bc20_n600_20260618",
+      "name": "FP-shrink PTQ smoke bc20 n600 (task 136)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/probe_fp_shrink_ptq_bc20_n600.py + tac.post_hoc_weight_shrink (21 tests)"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[contest-CPU advisory] reports/fp_shrink_ptq_bc20_n600.json \u2014 full 600-pair PTQ sweep, MEASURED bytes; PTQ-COLLAPSES"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/fp_shrink_ptq_smoke_bc20_20260618T033800Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -73848,5 +73889,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-17T16:38:47Z"
+  "updated_at": "2026-06-18T03:41:47Z"
 }
