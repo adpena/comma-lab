@@ -1,0 +1,215 @@
+{
+  "tool": "capacity_rd_qat_desk_calc",
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "frontier_pointer_moved": false,
+  "params": {
+    "base_chs": [
+      20,
+      24,
+      28,
+      32,
+      36
+    ],
+    "qat_nbits": 4,
+    "frac_low": 0.7,
+    "hold_delta": 0.0003,
+    "proceed_threshold": 0.3,
+    "json": "reports/capacity_rd_qat_desk_calc.json"
+  },
+  "anchors": {
+    "bc20": {
+      "label": "base_ch20_small_basis",
+      "base_ch": 20,
+      "decoder_params": 83356,
+      "d_seg": 0.002600919948890805,
+      "d_pose": 0.00034168662969022987,
+      "archive_bytes": 89136,
+      "provenance": "reports/fp_shrink_ptq_bc20_n600.json fp32 row (600-pair exact, [contest-CPU advisory])"
+    },
+    "frontier": {
+      "label": "frontier_pr110_entropy_recode",
+      "base_ch": null,
+      "decoder_params": null,
+      "d_seg": 0.00056,
+      "d_pose": 2.934457845896381e-05,
+      "archive_bytes": 177169,
+      "provenance": "canonical_frontier_pointer.json (S=0.19110, 177169 B, [contest-CPU]); d_seg=0.00056 from 2026-06-16 grand symposium component analysis; d_pose backed out from S for internal consistency"
+    }
+  },
+  "rows": [
+    {
+      "base_ch": 20,
+      "decoder_params": 83356,
+      "d_seg": 0.002600919948890805,
+      "d_seg_evidence": "MEASURED(bc20 basin)",
+      "d_pose": 0.00034168662969022987,
+      "native_bytes": 89136,
+      "native_S": 0.3778979658670213,
+      "qat_nbits": 4,
+      "qat_frac_low_precision": 0.7,
+      "qat_bytes": 59354,
+      "qat_S": 0.3880673545251367,
+      "qat_d_seg_hold_delta": 0.0003
+    },
+    {
+      "base_ch": 24,
+      "decoder_params": 112901,
+      "d_seg": 0.0016400993529011696,
+      "d_seg_evidence": "MODELLED(power-law A=7.838e+04 gamma=1.520 on bc20+frontier endpoints)",
+      "d_pose": 0.00034168662969022987,
+      "native_bytes": 115431,
+      "native_S": 0.2993246674404052,
+      "qat_nbits": 4,
+      "qat_frac_low_precision": 0.7,
+      "qat_bytes": 76863,
+      "qat_S": 0.3036438193363893,
+      "qat_d_seg_hold_delta": 0.0003
+    },
+    {
+      "base_ch": 28,
+      "decoder_params": 148038,
+      "d_seg": 0.0010864786040477806,
+      "d_seg_evidence": "MODELLED(power-law A=7.838e+04 gamma=1.520 on bc20+frontier endpoints)",
+      "d_pose": 0.00034168662969022987,
+      "native_bytes": 146703,
+      "native_S": 0.26478533373710283,
+      "qat_nbits": 4,
+      "qat_frac_low_precision": 0.7,
+      "qat_bytes": 97686,
+      "qat_S": 0.26214692543191337,
+      "qat_d_seg_hold_delta": 0.0003
+    },
+    {
+      "base_ch": 32,
+      "decoder_params": 186352,
+      "d_seg": 0.0007657653115416847,
+      "d_seg_evidence": "MODELLED(power-law A=7.838e+04 gamma=1.520 on bc20+frontier endpoints)",
+      "d_pose": 0.00034168662969022987,
+      "native_bytes": 180802,
+      "native_S": 0.25541912892900615,
+      "qat_nbits": 4,
+      "qat_frac_low_precision": 0.7,
+      "qat_bytes": 120392,
+      "qat_S": 0.2451945895708958,
+      "qat_d_seg_hold_delta": 0.0003
+    },
+    {
+      "base_ch": 36,
+      "decoder_params": 228958,
+      "d_seg": 0.00056,
+      "d_seg_evidence": "MODELLED(power-law A=7.838e+04 gamma=1.520 on bc20+frontier endpoints)",
+      "d_pose": 0.00034168662969022987,
+      "native_bytes": 218722,
+      "native_S": 0.26009196927723044,
+      "qat_nbits": 4,
+      "qat_frac_low_precision": 0.7,
+      "qat_bytes": 145642,
+      "qat_S": 0.24143099698306214,
+      "qat_d_seg_hold_delta": 0.0003
+    }
+  ],
+  "argmin_native_base_ch": 32,
+  "argmin_native_S": 0.25541912892900615,
+  "argmin_qat_base_ch": 36,
+  "argmin_qat_S": 0.24143099698306214,
+  "bc20_native_S": 0.3778979658670213,
+  "frontier_S": 0.19109982419209975,
+  "proceed_threshold": 0.3,
+  "proceed": true,
+  "chosen_base_ch": 36,
+  "notes": [
+    "ALL numbers [advisory] NON-PROMOTABLE; exact pointer stays pointer-only (0.19110).",
+    "d_seg(p) is MEASURED at bc20 (0.002601) and MODELLED elsewhere via a two-point power law on the bc20+frontier endpoints \u2014 the single honest extrapolation.",
+    "QAT byte fractions are MEASURED (bc20 post-int8-brotli, fp_shrink_ptq_bc20_n600.json); the score-aware mixed fraction LINEAR-BLENDS the measured int8/int4 endpoints (approx).",
+    "QAT distortion-hold is an ASSUMPTION (the break-even contract): real QAT must be MEASURED. If QAT cannot hold d_seg within +delta of the float floor at the chosen grid, this table is void.",
+    "Pose held constant on the trunk (basin d_pose) across capacities per the design (pose decoupled)."
+  ],
+  "frontier_qat_path": {
+    "frontier_archive_bytes": 177169,
+    "frontier_decoder_section_bytes": 161104,
+    "rows": [
+      {
+        "qat_nbits": 4,
+        "frac_low_precision": 0.7,
+        "decoder_section_bytes": 107276,
+        "qat_archive_bytes": 123341,
+        "d_seg_hold_delta": 0.0003,
+        "qat_S_perfect_hold": 0.1552579684634395,
+        "qat_S_with_spill": 0.1852579684634395,
+        "decoder_shrink_fraction": 0.6658791060850835
+      },
+      {
+        "qat_nbits": 4,
+        "frac_low_precision": 1.0,
+        "decoder_section_bytes": 84207,
+        "qat_archive_bytes": 100272,
+        "d_seg_hold_delta": 0.0003,
+        "qat_S_perfect_hold": 0.13989726827386414,
+        "qat_S_with_spill": 0.16989726827386414,
+        "decoder_shrink_fraction": 0.5226844372644049
+      },
+      {
+        "qat_nbits": 5,
+        "frac_low_precision": 0.7,
+        "decoder_section_bytes": 121047,
+        "qat_archive_bytes": 137112,
+        "d_seg_hold_delta": 0.0003,
+        "qat_S_perfect_hold": 0.16442751210688494,
+        "qat_S_with_spill": 0.19442751210688491,
+        "decoder_shrink_fraction": 0.7513608418596303
+      },
+      {
+        "qat_nbits": 5,
+        "frac_low_precision": 1.0,
+        "decoder_section_bytes": 103880,
+        "qat_archive_bytes": 119945,
+        "d_seg_hold_delta": 0.0003,
+        "qat_S_perfect_hold": 0.1529967114586366,
+        "qat_S_with_spill": 0.1829967114586366,
+        "decoder_shrink_fraction": 0.6448012026566146
+      },
+      {
+        "qat_nbits": 6,
+        "frac_low_precision": 0.7,
+        "decoder_section_bytes": 134869,
+        "qat_archive_bytes": 150934,
+        "d_seg_hold_delta": 0.0003,
+        "qat_S_perfect_hold": 0.17363101455693958,
+        "qat_S_with_spill": 0.20363101455693958,
+        "decoder_shrink_fraction": 0.8371567043618741
+      },
+      {
+        "qat_nbits": 6,
+        "frac_low_precision": 1.0,
+        "decoder_section_bytes": 123626,
+        "qat_archive_bytes": 139691,
+        "d_seg_hold_delta": 0.0003,
+        "qat_S_perfect_hold": 0.166144762346987,
+        "qat_S_with_spill": 0.19614476234698702,
+        "decoder_shrink_fraction": 0.7673667205169629
+      }
+    ],
+    "best_perfect_hold": {
+      "qat_nbits": 4,
+      "frac_low_precision": 1.0,
+      "decoder_section_bytes": 84207,
+      "qat_archive_bytes": 100272,
+      "d_seg_hold_delta": 0.0003,
+      "qat_S_perfect_hold": 0.13989726827386414,
+      "qat_S_with_spill": 0.16989726827386414,
+      "decoder_shrink_fraction": 0.5226844372644049
+    },
+    "best_with_spill": {
+      "qat_nbits": 4,
+      "frac_low_precision": 1.0,
+      "decoder_section_bytes": 84207,
+      "qat_archive_bytes": 100272,
+      "d_seg_hold_delta": 0.0003,
+      "qat_S_perfect_hold": 0.13989726827386414,
+      "qat_S_with_spill": 0.16989726827386414,
+      "decoder_shrink_fraction": 0.5226844372644049
+    }
+  }
+}
