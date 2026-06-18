@@ -1,0 +1,145 @@
+{
+  "probe": "frontier_int5_score_aware_qat_finetune",
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "frontier_pointer_moved": false,
+  "frontier_archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+  "frontier_pointer_S": 0.19109982419209975,
+  "int8_local_baseline_S": 0.1965,
+  "int5_ptq_no_finetune": {
+    "d_seg": 0.004744,
+    "d_pose": 0.00155,
+    "bytes": 118589,
+    "S": 0.6779
+  },
+  "desk_int5_perfect_hold_S": 0.153,
+  "sub_015_target": 0.15,
+  "d_seg_floor_needed_to_beat_int8_baseline": 0.0007,
+  "d_seg_floor_needed_to_beat_pointer": 0.0006,
+  "arms": {
+    "margin_hinge_uniform_int5": {
+      "config": {
+        "mode": "uniform",
+        "low_nbits": 5,
+        "seg_loss": "margin_hinge",
+        "margin_hinge_target": 6.0,
+        "seg_weight": 1.0,
+        "pose_weight": 1.0,
+        "lr": 0.0003,
+        "epochs_run": 300
+      },
+      "recovery_curve": [
+        {
+          "epoch": 100,
+          "d_seg": 0.005521477609872818,
+          "d_pose": 0.00034629908962718523,
+          "archive_bytes": 118381,
+          "rate_term": 0.07882504872955577,
+          "score": 0.6898199922940167,
+          "wall_s": 522.0,
+          "train_seg_l": 0.11378,
+          "train_pose_mse": 0.001007
+        },
+        {
+          "epoch": 200,
+          "d_seg": 0.005661900875469049,
+          "d_pose": 0.00030750370327344473,
+          "archive_bytes": 118161,
+          "rate_term": 0.07867855975986889,
+          "score": 0.7003216637597536,
+          "wall_s": 521.6,
+          "train_seg_l": 0.1112,
+          "train_pose_mse": 0.000628
+        },
+        {
+          "epoch": 300,
+          "d_seg": 0.0057119496663411455,
+          "d_pose": 0.0003606464696349576,
+          "archive_bytes": 117925,
+          "rate_term": 0.07852141704693205,
+          "score": 0.7097702319952851,
+          "wall_s": 522.4,
+          "train_seg_l": 0.10868,
+          "train_pose_mse": 0.00064
+        }
+      ],
+      "finding": "d_seg RISES monotonically (0.00474->0.00571) while training surrogate descends (0.114->0.109) -> margin-hinge ACTIVELY HARMFUL at the int5 grid (surrogate/exact divergence). d_pose recovers 5x. STOPPED ep300."
+    },
+    "ce_uniform_int5": {
+      "config": {
+        "mode": "uniform",
+        "low_nbits": 5,
+        "seg_loss": "ce",
+        "seg_weight": 3.0,
+        "pose_weight": 1.0,
+        "lr": 0.0002,
+        "epochs_run": 300
+      },
+      "recovery_curve": [
+        {
+          "epoch": 100,
+          "d_seg": 0.0035475073692699272,
+          "d_pose": 0.00023769893702895692,
+          "archive_bytes": 119053,
+          "rate_term": 0.07927250594605387,
+          "score": 0.48277762084353826,
+          "wall_s": 519.4,
+          "train_seg_l": 0.01038,
+          "train_pose_mse": 0.000632
+        },
+        {
+          "epoch": 200,
+          "d_seg": 0.0035852644375214972,
+          "d_pose": 0.00026794674199967023,
+          "archive_bytes": 118741,
+          "rate_term": 0.07906475795267975,
+          "score": 0.48935477404094924,
+          "wall_s": 521.1,
+          "train_seg_l": 0.0106,
+          "train_pose_mse": 0.000738
+        },
+        {
+          "epoch": 300,
+          "d_seg": 0.003640950517728925,
+          "d_pose": 0.0002141825365833938,
+          "archive_bytes": 118845,
+          "rate_term": 0.07913400728380446,
+          "score": 0.4895089182487249,
+          "wall_s": 519.0,
+          "train_seg_l": 0.01068,
+          "train_pose_mse": 0.000627
+        }
+      ],
+      "finding": "CE RECOVERS d_seg from PTQ 0.00474 -> ~0.0035 (-25%) then PLATEAUS across 3 pts (0.003548/0.003585/0.003641); d_pose recovers 6.5x to ~0.00021. S plateaus ~0.483-0.490. STOPPED ep300 (plateau confirmed).",
+      "best": {
+        "epoch": 100,
+        "d_seg": 0.0035475073692699272,
+        "d_pose": 0.00023769893702895692,
+        "archive_bytes": 119053,
+        "rate_term": 0.07927250594605387,
+        "score": 0.48277762084353826,
+        "wall_s": 519.4,
+        "train_seg_l": 0.01038,
+        "train_pose_mse": 0.000632
+      }
+    }
+  },
+  "verdict": {
+    "headline": "Path B (int5 QAT-shrink the frontier) CAPS at S ~0.49 byte-closed, FAR above the pointer 0.191 and the int8 baseline 0.1965. int5 QAT recovers d_pose FULLY but d_seg only PARTIALLY (~0.0035 plateau, ~5-6x above the 0.0006 floor sub-0.16 needs). NOT a pointer-mover; NOT sub-0.15.",
+    "does_qat_recover_collapse": "PARTIAL \u2014 d_pose fully (6.5x), d_seg only ~25% then plateaus at ~0.0035",
+    "best_byte_closed_S": 0.48277762084353826,
+    "best_d_seg": 0.0035475073692699272,
+    "crosses_int8_baseline": false,
+    "crosses_pointer": false,
+    "reaches_sub_015": false,
+    "loss_config_vs_structural": "BOTH: margin-hinge was additionally HARMFUL (loss-config bug, d_seg rose); CE removes that harm (d_seg falls 25%) but the residual d_seg cap ~0.0035 is STRUCTURAL to the int5 grid on the dense FP11 frontier decoder.",
+    "int4_attempted": false,
+    "int4_rationale": "int5 already caps ~5-6x above the floor; int4 (strictly coarser, PTQ d_seg 20x worse) can only cap higher.",
+    "routes_to": "concentrated-saliency OWN vehicle (per operator contingency) \u2014 a decoder trained to put d_seg-critical capacity in a small high-precision byte-cheap band, NOT a coarse grid retrofit on a dense borrowed decoder.",
+    "reusable_lever_fact": "For QAT-grid d_seg recovery use CE (or temperature-soft surrogate), NOT a large-target margin-hinge (which over-sharpens boundaries the coarse grid cannot represent, creating MORE flips)."
+  },
+  "submission_gate": "frontier is PR101/106-derived -> any contest PR needs borrowed_substrate_accounting (NO-FAKE class 7). OUR original = the score-aware QAT-finetune technique; borrowed = the frontier decoder + codec. (Moot: Path B caps far above the pointer.)",
+  "built_at_utc": "2026-06-18T22:37:15Z",
+  "note": "MPS fp32 GRADIENT (train only); CPU AUTHORITY byte-closed FULL-600-pair exact eval (RealScorerContext.exact_eval, NEVER MPS). Bytes MEASURED via the real frontier codec (PR101 split-brotli + CTXR recode, STORED zip). Local CPU ~ contest-CPU per G3 (+0.0054 offset). Pointer UNMOVED 0.19110. NON-PROMOTABLE feasibility verdict."
+}
