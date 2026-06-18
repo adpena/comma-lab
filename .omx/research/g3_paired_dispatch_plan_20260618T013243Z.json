@@ -1,0 +1,128 @@
+{
+  "archive": {
+    "bytes": 89244,
+    "expected_sha256": "856e3bf076a5acf7260213468a650f51110218da4bb02674b7bff40b922ee931",
+    "expected_sha256_match": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/g3_torch_vehicle_bc20_packet_20260618T012713Z/submission_dir/archive.zip",
+    "sha256": "856e3bf076a5acf7260213468a650f51110218da4bb02674b7bff40b922ee931"
+  },
+  "axes_skipped_due_to_existing_anchor": {
+    "contest_cpu": false,
+    "contest_cuda": false
+  },
+  "commands": {
+    "contest_cpu": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval_cpu.py",
+      "--archive",
+      "/Users/adpena/Projects/pact/experiments/results/g3_torch_vehicle_bc20_packet_20260618T012713Z/submission_dir/archive.zip",
+      "--expected-archive-sha256",
+      "856e3bf076a5acf7260213468a650f51110218da4bb02674b7bff40b922ee931",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "experiments/results/modal_auth_eval_cpu/g3_torch_vehicle_bc20_paired_modal_auth_20260618T013243Z_cpu",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "g3_torch_vehicle_bc20_20260618T013243Z",
+      "--lane-id",
+      "lane_g3_torch_vehicle_bc20_exact_eval_20260617_contest_cpu",
+      "--instance-job-id",
+      "g3_torch_vehicle_bc20_paired_modal_auth_20260618T013243Z_cpu",
+      "--claim-agent",
+      "claude:g3_torch_vehicle_bc20",
+      "--claim-notes",
+      "G3 first byte-closed dual CPU+CUDA exact-eval row for torch_vehicle bc20 (89244 B; advisory S~0.38; operator AUTHORIZED Modal <$5); $0 runtime-closure proven local; pair_group_id=g3_torch_vehicle_bc20_20260618T013243Z; axis=contest_cpu; archive_sha=856e3bf076a5acf7260213468a650f51110218da4bb02674b7bff40b922ee931; bytes=89244",
+      "--submission-dir",
+      "experiments/results/g3_torch_vehicle_bc20_packet_20260618T012713Z/submission_dir",
+      "--expected-runtime-tree-sha256",
+      "00efd183d85e9ac8616457f4acdac8c5cd729d98fa969b3b8b2ecb780affc199"
+    ],
+    "contest_cuda": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval.py",
+      "--archive",
+      "/Users/adpena/Projects/pact/experiments/results/g3_torch_vehicle_bc20_packet_20260618T012713Z/submission_dir/archive.zip",
+      "--expected-archive-sha256",
+      "856e3bf076a5acf7260213468a650f51110218da4bb02674b7bff40b922ee931",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "experiments/results/modal_auth_eval/g3_torch_vehicle_bc20_paired_modal_auth_20260618T013243Z_cuda",
+      "--gpu",
+      "T4",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "g3_torch_vehicle_bc20_20260618T013243Z",
+      "--lane-id",
+      "lane_g3_torch_vehicle_bc20_exact_eval_20260617_contest_cuda",
+      "--instance-job-id",
+      "g3_torch_vehicle_bc20_paired_modal_auth_20260618T013243Z_cuda",
+      "--claim-agent",
+      "claude:g3_torch_vehicle_bc20",
+      "--claim-notes",
+      "G3 first byte-closed dual CPU+CUDA exact-eval row for torch_vehicle bc20 (89244 B; advisory S~0.38; operator AUTHORIZED Modal <$5); $0 runtime-closure proven local; pair_group_id=g3_torch_vehicle_bc20_20260618T013243Z; axis=contest_cuda; archive_sha=856e3bf076a5acf7260213468a650f51110218da4bb02674b7bff40b922ee931; bytes=89244",
+      "--submission-dir",
+      "experiments/results/g3_torch_vehicle_bc20_packet_20260618T012713Z/submission_dir",
+      "--expected-runtime-tree-sha256",
+      "d9c8451acf2512ac0a5293bdd8832d59d721427cbe95694b57b52105305b3e9a"
+    ]
+  },
+  "created_at_utc": "2026-06-18T01:32:43Z",
+  "existing_anchors_reused": {
+    "contest_cpu": null,
+    "contest_cuda": null
+  },
+  "lanes": {
+    "contest_cpu": "lane_g3_torch_vehicle_bc20_exact_eval_20260617_contest_cpu",
+    "contest_cuda": "lane_g3_torch_vehicle_bc20_exact_eval_20260617_contest_cuda"
+  },
+  "notes": [
+    "This tool is the default Modal auth-eval entry point for score-bearing archives.",
+    "Both commands carry the same pair_group_id and exact archive SHA.",
+    "Single-axis Modal wrapper use requires an explicit waiver reason."
+  ],
+  "outputs": {
+    "contest_cpu": "experiments/results/modal_auth_eval_cpu/g3_torch_vehicle_bc20_paired_modal_auth_20260618T013243Z_cpu",
+    "contest_cuda": "experiments/results/modal_auth_eval/g3_torch_vehicle_bc20_paired_modal_auth_20260618T013243Z_cuda"
+  },
+  "pair_group_id": "g3_torch_vehicle_bc20_20260618T013243Z",
+  "promotion_eligible": false,
+  "required_axes": [
+    "contest_cuda",
+    "contest_cpu"
+  ],
+  "runtime": {
+    "expected_runtime_content_tree_sha256_by_axis": {
+      "contest_cpu": "706b73c7c4005afd93dffaa015973d7c35ea9f3d6dd76a0b06c94d4b2836ff5a",
+      "contest_cuda": "706b73c7c4005afd93dffaa015973d7c35ea9f3d6dd76a0b06c94d4b2836ff5a"
+    },
+    "expected_runtime_tree_sha256": null,
+    "expected_runtime_tree_sha256_by_axis": {
+      "contest_cpu": "00efd183d85e9ac8616457f4acdac8c5cd729d98fa969b3b8b2ecb780affc199",
+      "contest_cuda": "d9c8451acf2512ac0a5293bdd8832d59d721427cbe95694b57b52105305b3e9a"
+    },
+    "inflate_sh": "inflate.sh",
+    "inflate_sh_original": null,
+    "modal_uploaded_runtime_manifest_by_axis": {
+      "contest_cpu": {
+        "runtime_content_tree_sha256": "706b73c7c4005afd93dffaa015973d7c35ea9f3d6dd76a0b06c94d4b2836ff5a",
+        "runtime_tree_sha256": "00efd183d85e9ac8616457f4acdac8c5cd729d98fa969b3b8b2ecb780affc199"
+      },
+      "contest_cuda": {
+        "runtime_content_tree_sha256": "706b73c7c4005afd93dffaa015973d7c35ea9f3d6dd76a0b06c94d4b2836ff5a",
+        "runtime_tree_sha256": "d9c8451acf2512ac0a5293bdd8832d59d721427cbe95694b57b52105305b3e9a"
+      }
+    },
+    "submission_dir": "experiments/results/g3_torch_vehicle_bc20_packet_20260618T012713Z/submission_dir"
+  },
+  "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+  "score_claim": false,
+  "skip_axis_if_promotable_anchor_exists": false
+}
