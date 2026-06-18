@@ -1,0 +1,168 @@
+{
+  "schema": "concentrated_saliency_feasibility.v1",
+  "produced_at_utc": "2026-06-18T22:57:47.880459+00:00",
+  "producer": "experiments/probe_concentrated_saliency_feasibility.py",
+  "axis_tag": "[contest-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_moved": false,
+  "vehicle": {
+    "basin_ckpt": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/torch_vehicle_checkpoint_state.pt",
+    "base_channels": 20,
+    "n_params": 83356,
+    "reported_basin_dseg_full600": 0.002600919948890805
+  },
+  "method": {
+    "saliency": "||d(sum SegNet top1-top2 margin)/dw_t|| autograd through bc20 decoder -> frozen SegNet (CPU)",
+    "dseg_metric": "mean argmax-flip-rate vs GT hard labels over a frame subset (exact metric def, subset of pairs = faithful-definition proxy)",
+    "concentration_reg": "penalize ||d(margin)/d(periphery weights)||^2 + CE seg-fidelity, short MPS fp32 gradient train",
+    "n_saliency_frames": 8,
+    "n_dseg_frames": 24,
+    "core_size": 3
+  },
+  "phases": {
+    "phase1_baseline": {
+      "per_weight_saliency": {
+        "stem.weight": 9855144.40625,
+        "blocks.0.weight": 10414249.6875,
+        "blocks.1.weight": 9374940.90625,
+        "blocks.2.weight": 9296827.21875,
+        "blocks.3.weight": 9035103.21875,
+        "blocks.4.weight": 9021111.09375,
+        "blocks.5.weight": 10886375.4375,
+        "skips.2.weight": 2638702.6875,
+        "skips.3.weight": 2731137.1796875,
+        "skips.4.weight": 2914307.078125,
+        "refine.0.weight": 1888146.8984375,
+        "refine.1.weight": 1515035.9375,
+        "rgb_0.weight": 6721642.03125,
+        "rgb_1.weight": 8591126.5
+      },
+      "weight_numel": {
+        "stem.weight": 26880,
+        "blocks.0.weight": 14400,
+        "blocks.1.weight": 14400,
+        "blocks.2.weight": 10800,
+        "blocks.3.weight": 5940,
+        "blocks.4.weight": 3960,
+        "blocks.5.weight": 3600,
+        "skips.2.weight": 300,
+        "skips.3.weight": 165,
+        "skips.4.weight": 110,
+        "refine.0.weight": 450,
+        "refine.1.weight": 450,
+        "rgb_0.weight": 270,
+        "rgb_1.weight": 270
+      },
+      "weight_saliency_gini": 0.2757899063718636,
+      "weight_saliency_spread_max_over_min": 7.185555911936907,
+      "core_tensors": [
+        "blocks.5.weight",
+        "blocks.0.weight",
+        "stem.weight"
+      ],
+      "periphery_tensors": [
+        "blocks.1.weight",
+        "blocks.2.weight",
+        "blocks.3.weight",
+        "blocks.4.weight",
+        "rgb_1.weight",
+        "rgb_0.weight",
+        "skips.4.weight",
+        "skips.3.weight",
+        "skips.2.weight",
+        "refine.0.weight",
+        "refine.1.weight"
+      ],
+      "core_param_frac": 0.5473504481980609,
+      "periphery_param_frac": 0.45264955180193917,
+      "periphery_saliency_mass_frac": 0.6716430726735939,
+      "baseline_dseg_subset": 0.002564112355078881,
+      "n_dseg_frames": 24,
+      "elapsed_s": 38.1
+    },
+    "phase2_concentration_train": {
+      "reg_epochs": 150,
+      "lr": 0.0002,
+      "reg_weight": 1.0,
+      "ce_weight": 3.0,
+      "train_device": "mps",
+      "curve": [
+        {
+          "ep": 0,
+          "ce": 0.008059513755142689,
+          "periph_sal_penalty": 1.5324490070343018,
+          "loss": 1.5566275119781494
+        },
+        {
+          "ep": 25,
+          "ce": 0.01068147923797369,
+          "periph_sal_penalty": 0.5683788657188416,
+          "loss": 0.600423276424408
+        },
+        {
+          "ep": 50,
+          "ce": 0.010947898030281067,
+          "periph_sal_penalty": 0.4507027864456177,
+          "loss": 0.48354649543762207
+        },
+        {
+          "ep": 75,
+          "ce": 0.012774452567100525,
+          "periph_sal_penalty": 0.21423234045505524,
+          "loss": 0.2525556981563568
+        },
+        {
+          "ep": 100,
+          "ce": 0.013300097547471523,
+          "periph_sal_penalty": 0.21011890470981598,
+          "loss": 0.2500191926956177
+        },
+        {
+          "ep": 125,
+          "ce": 0.013522951863706112,
+          "periph_sal_penalty": 0.16272231936454773,
+          "loss": 0.2032911777496338
+        },
+        {
+          "ep": 149,
+          "ce": 0.01050490140914917,
+          "periph_sal_penalty": 0.15385174751281738,
+          "loss": 0.1853664517402649
+        }
+      ],
+      "elapsed_s": 300.9
+    },
+    "phase3_remeasure": {
+      "new_per_weight_saliency": {
+        "stem.weight": 9047515.0625,
+        "blocks.0.weight": 9537117.78125,
+        "blocks.1.weight": 8578095.25,
+        "blocks.2.weight": 8400658.875,
+        "blocks.3.weight": 8106395.59375,
+        "blocks.4.weight": 8389749.234375,
+        "blocks.5.weight": 11887397.96875,
+        "skips.2.weight": 2288449.74609375,
+        "skips.3.weight": 2475868.5078125,
+        "skips.4.weight": 2767684.140625,
+        "refine.0.weight": 1705457.3828125,
+        "refine.1.weight": 1447053.796875,
+        "rgb_0.weight": 9989689.6875,
+        "rgb_1.weight": 6977057.5
+      },
+      "new_weight_saliency_gini": 0.28985037723510954,
+      "gini_delta_vs_baseline": 0.01406047086324591,
+      "new_periphery_saliency_mass_frac": 0.6673293365614735,
+      "periphery_saliency_mass_drop": 0.004313736112120381,
+      "new_dseg_subset": 0.004722807148937136,
+      "dseg_delta_vs_baseline": 0.002158694793858255,
+      "implied_byte_shed_frac_if_periphery_int4": 0.2880497147830522,
+      "concentration_achieved": false,
+      "dseg_held": false,
+      "verdict": "NOGO_NO_CONCENTRATION_AND_DSEG_REGRESSED",
+      "elapsed_s": 40.3
+    }
+  },
+  "verdict": "NOGO_NO_CONCENTRATION_AND_DSEG_REGRESSED"
+}
