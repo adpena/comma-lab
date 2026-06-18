@@ -1,0 +1,15 @@
+{
+  "schema": "g3_runtime_closure_proof.v1",
+  "authority": "[local-CPU runtime-closure proof] NON-PROMOTABLE (proves inflate.sh chain runs; NOT a score)",
+  "packet_submission_dir": "experiments/results/g3_torch_vehicle_bc20_packet_20260618T012713Z/submission_dir",
+  "archive_zip_sha256": "856e3bf076a5acf7260213468a650f51110218da4bb02674b7bff40b922ee931",
+  "inflate_chain": "inflate.sh -> python inflate.py archive/0.bin inflated/0.raw",
+  "frames_saved": 1200,
+  "raw_bytes": 3662409600,
+  "raw_bytes_expected": 3662409600,
+  "raw_shape": "(1200, 874, 1164, 3) uint8",
+  "raw_sha256": "ace6e7b98e65a7b35b6fcbd7ef29e839cd3c5f0c664101120dcdb497b3821f89",
+  "runtime_closure": "PASS",
+  "proved_at_utc": "2026-06-18T01:30:22Z",
+  "scratch_dir_deleted": "/Volumes/VertigoDataTier/pact/.omx_tmp/g3_inflate_closure_20260618T012738Z (rebuildable: re-run inflate.sh on the packet)"
+}
