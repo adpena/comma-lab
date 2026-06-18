@@ -12,7 +12,11 @@ grounded three-lever path to sub-0.15 on the ranking axis, + recovery of two wro
 ~0.001%, so these advisory levers project onto the ranking axis faithfully:
 1. **d_seg → 0.000322** (from 0.00260) — running margin-hinge 50k long-train. Feasible at ~14.5k ep per the
    stretched-exp model (NOT the power-law's "999k/infeasible" — wrong model class). RUNNING.
-2. **rate → ~0.037** (from 0.0594, ~55KB) — FP-shrink QAT (the top reopen). $0 PTQ smoke RUNNING.
+2. **rate → ~0.037** (from 0.0594) — FP-shrink. **VERDICT (smoke #136, 2b227d27a): naive PTQ COLLAPSES**
+   (int4 cuts 47.7% bytes = Δrate −0.0283, the −0.022/−0.029 confirmed, BUT S rises monotone — int4 d_pose
+   explodes 322×; int8 is the post-hoc S-optimal corner). The rate win is REAL but needs **score-aware QAT**
+   (train the decoder quantization-robust; allocate quant-error via the #141 margin-saliency map; break-even:
+   hold d_seg within ~+0.0003). NOT a free recode — a real training effort. NEXT GATED BUILD.
 3. **d_pose held** at 0.000342 — basin value; FiLM carrier + the 1-DOF radial-zoom codec (#140).
 Composed: 0.0322 + 0.0585 + 0.0366 ≈ **0.127**. Each lever is running / being tested / proven-faithful.
 CAVEATS: each is unverified-at-target (extrapolation; PTQ-hold unproven; pose-variance risk); CUDA axis adds
@@ -23,6 +27,13 @@ proving the proxy "label-noise floor" too pessimistic + S_floor=0.118 stands) bu
 CAPACITY-walled above frontier-grade d_seg — the running margin-hinge long-train IS that capacity test (does bc20
 get below ~0.001?). If bc20 walls high, the sub-0.15 vehicle needs more capacity OR the rate hedge (FP-shrink)
 carries more. The path is alive, not a fundamental wall; the open question is bc20-capacity vs vehicle-choice.
+**THE CRUX (after both decisive reads): capacity↔rate tension.** Frontier = d_seg ~0.0003 @ 177KB (rate 0.118);
+bc20 = d_seg 0.0026 @ 89KB (rate 0.0594). Sub-0.15 needs frontier-grade d_seg AT well-below-frontier bytes =
+a HIGHER-capacity decoder + aggressive score-aware FP-shrink QAT (the bridge; PTQ-collapse proved the shrink
+must be trained, not post-hoc). The honest path = TWO real training efforts (d_seg long-train [capacity-gated]
++ score-aware FP-shrink QAT [rate]) + the small pose primitive — NOT "free levers compose to 0.127." Early
+signal: margin-hinge ep1800 d_seg 0.003228 is already below the CE control's ep2000 (0.003251) — the lever is
+winning the A/B; the ep2000 trigger confirms (not fires).
 
 ## VERIFIED insights (current status — corrections resolved)
 | insight | status | score-EV | consumer | source memo |
