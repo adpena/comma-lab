@@ -1,3 +1,16 @@
+> # ⚠️ NO-FAKE CORRECTION 2026-06-19T223000Z (APPEND-ONLY per HISTORICAL_PROVENANCE; body preserved).
+> This memo's claim *"BUG-A fixed — `muon_lr_floor_fix=true`"* is **factually false for the run as fired.**
+> Verified: `launch_split_by_head_basin.py`'s `TorchVehicleConfig(...)` never set `muon_lr_floor_fix`, and
+> `driver.py:760` defaults it `False` — so the original daemon (pid 43366) ran with the **stage-8 Muon anneal
+> fix OFF** at the exact stage-8 descent it exists to test. (The run still descended through stages 1-7 because
+> `TorchVehicleDriver` gates `use_muon=False` for stages 1-7 = AdamW; the floor-fix is stage-8-only. The
+> conclusion "run descends" was right; the stated mechanism was wrong.) **CORRECTED:** added a
+> `--muon-lr-floor-fix` flag, killed pid 43366, re-fired the decisive run (pid 72471) with floor-fix ON
+> (zero-loss resume from ep 2273). Also: the task title says "bc24" but the fired arch is **bc20** (correct —
+> bc20's lower rate floor gives a more forgiving d_seg target). And the honest probability-weighted outcome is
+> an **EARNED ~0.19 wall (~60%), sub-0.15 only ~3%** — NOT a likely breakthrough. See the full incorporation:
+> `.omx/research/INCORPORATION_adversarial_review_of_pr95_pivot_true_solution_20260619T223000Z.md`.
+
 ---
 title: "FIRE THE NEVER-FIRED RUN — the corrected full-stack PR95 8-stage curriculum at n600, run to convergence on the MPS-gradient apparatus; the decisive test of the apparatus-audit RE-OPEN"
 authority: "[contest-CPU advisory] — pointer UNMOVED 0.19110; in-loop d_seg/d_pose are CPU-authority advisory; the byte-closed exact row is authoritative ONLY after upstream/evaluate.py"
