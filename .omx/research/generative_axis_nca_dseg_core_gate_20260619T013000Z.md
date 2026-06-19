@@ -6,7 +6,8 @@ promotable: false
 frontier_pointer_moved: false
 mission_contribution: frontier_breaking_enabler
 date: 2026-06-19
-verdict: RED_GENERATIVE_AXIS_CAPS_BYTE_CHEAP_BUT_DSEG_FLOORS_FAR_ABOVE_SUB015
+verdict: RED_GENERATIVE_FLAT_PARTITION_NCA_CAPS_BUT_CONTINUOUS_TEXTURE_NCA_NOT_YET_TESTED
+scope_correction: "2026-06-18 sister SoT correction 330c238b3 — this gate tested the NCA growing a FLAT-COLOUR PARTITION (5-class -> fixed colour lookup), a generative version of the curve core, NOT the NCA growing CONTINUOUS RGB TEXTURE (the operator's actual reframe: the generator IS the renderer, replacing the 161KB decoder). The flat-partition NCA RED is a REAL datapoint (it confirms generative-geometry+flat-fill is dominated by the curve core); the 'all 4 families capped' framing is WITHDRAWN. The continuous-texture corner is OPEN — see the sister gate."
 supersedes: none
 cross_refs:
   - .omx/research/generative_axis_dseg_core_design_20260619T004600Z.md
@@ -56,10 +57,18 @@ SAME few-KB rule, so it might break the `d_seg ~ params^−0.71` capacity wall t
   d_seg 0.00673 (geometric 0.00106), the NCA's best is 0.0162. The iteration's "free detail" does NOT
   translate into a crisper SegNet-decision boundary.
 
-**VERDICT: RED — `RED_GENERATIVE_AXIS_CAPS_BYTE_CHEAP_BUT_DSEG_FLOORS_FAR_ABOVE_SUB015`.** The generative
-axis does NOT escape the walls. **Do NOT spec a generative-axis build.** Add it to the campaign's terminal-
-finding family list: sub-0.15-grade d_seg is byte-cheaply unreachable across ALL FOUR tested families
-(learned-pixel-decoder, static-stored-geometry/curve, AND now generative/NCA).
+**VERDICT: RED for the FLAT-PARTITION NCA sub-variant — but SCOPE-CORRECTED.** Per the sister SoT
+correction (`330c238b3`, 2026-06-18): **this gate tested the NCA growing a flat-colour PARTITION** (NCA →
+5-class logits → fixed per-class colour lookup), which is structurally a *generative version of the curve
+core* — and it scored WORSE than the curve core (geo_seg 0.019 vs 0.0067) precisely because the grown
+partition is fuzzier than decimated polygons. **This is a real, useful datapoint** (generative-geometry +
+flat-fill is dominated by the static curve core), but it is NOT the operator's actual reframe. **The
+operator's reframe = the NCA growing CONTINUOUS RGB TEXTURE directly** (the generator IS the renderer,
+replacing the 161KB feedforward decoder → rate ~0.013 → S≈0.086 IF it matches frontier d_seg). That
+corner is **OPEN** and is being tested by the faithful continuous-texture gate (sister of this one). The
+earlier "all 4 families capped / terminal finding" framing is **WITHDRAWN** as over-stated — the
+generative axis is only partially tested (the flat-partition sub-variant capped; the continuous-texture
+prize is the real test).
 
 ## 1. Why this is the RIGHT, FAITHFUL test (NO-FAKE, measurement-first)
 
@@ -148,13 +157,20 @@ realized d_seg saturates at ~0.02 = 16× GREEN, 3× the curve-core survival floo
 
 ## 5. The honest fork (what this re-routes)
 
-- **The generative axis does NOT escape the walls.** It is added to the terminal-finding family list. Across
-  all four families now measured — learned-pixel-decoder (factored-LF, capacity wall), static-stored-geometry
-  (curve core, survival wall), AND generative/NCA (both walls compounded) — **sub-0.15-grade d_seg is
-  byte-cheaply unreachable for any per-frame d_seg-core that renders an RGB frame through the exact eval
-  roundtrip + frozen SegNet.** The survival wall (the 1px boundary-band mixing under the camera-res→384
-  bilinear downsample, flipping 16-40% of boundary pixels) is the common, representation-independent
-  terminal wall; the curve gate proved geometry can match L* to 0.001 and STILL realize at 0.0067.
+- **The FLAT-PARTITION generative axis does NOT escape the walls** (a real datapoint). But the
+  "terminal-finding across all four families" framing is **WITHDRAWN** (scope correction §0): this gate
+  tested generative-geometry + flat-fill, the wrong representation for the operator's reframe. What IS
+  established across the measured sub-variants — learned-pixel-decoder (capacity wall), static-curve
+  (survival wall), and generative-FLAT-PARTITION-NCA (both compounded) — is that **flat-partition d_seg-cores
+  (store/grow a class partition, paint flat colours) are byte-cheaply walled.** The survival wall (1px
+  boundary-band mixing under the camera-res→384 downsample) is the common wall for *flat-partition* cores.
+- **The OPEN corner (the real prize):** the **continuous-texture generative NCA** — a few-KB shared iterated
+  rule + a small per-frame latent → CONTINUOUS RGB (each pixel a full learned colour, like Mordvintsev's
+  Growing-NCA), REPLACING the 161KB feedforward decoder. This is the operator's actual "store the generator"
+  reframe. It is fundamentally different from the flat-partition variant: it outputs texture, not a
+  class→colour lookup, so its realized d_seg is bounded by how well the iterated rule reproduces the
+  *frontier decoder's RGB* (whose realized d_seg is already 0.00257, past the survival regime), NOT by a
+  flat-fill boundary. If it matches frontier d_seg at rate ~0.013, S ≈ 0.086. This gate does NOT close it.
 - **The one structural escape NOT closed by these gates:** anything that lowers d_seg without rendering an
   RGB frame through the survival-lossy roundtrip — i.e. the concentrated-saliency OWN-VEHICLE direction
   (the capstone #78): keep the d_seg-critical capacity in a small high-precision CORE that participates in
