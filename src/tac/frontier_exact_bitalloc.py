@@ -230,16 +230,40 @@ def combine_sensitivities(
     w_seg: float = DEFAULT_W_SEG,
     w_pose: float = DEFAULT_W_POSE,
     weight_min_dim: int = 2,
+    normalize: bool = True,
 ) -> CombinedTensorSensitivity:
     """Combine the d_seg + d_pose per-tensor sensitivities by the master gradient.
 
     Only weight tensors with ``dim >= weight_min_dim`` are included (biases / 1-D params
-    stay fp32 in the codec, so they carry no allocation). The combined sensitivity
-    ``s = w_seg·g_seg + w_pose·g_pose`` is the score-distortion gradient w.r.t. the tensor's
+    stay fp32 in the codec, so they carry no allocation).
+
+    ``normalize`` (default True — the PRINCIPLED combine): the raw ``g_seg`` and ``g_pose``
+    are gradients of DIFFERENT-SCALED scalars (a sum over ~196k pixel margins vs a single
+    pose MSE), so their raw norms differ by ~9 orders of magnitude — adding them lets d_seg
+    swamp d_pose and STARVES the pose-critical tensors (measured: the raw combine gives
+    ``rgb_1`` — frame-1 head, pose-critical but d_seg-blind — int2 → d_pose explodes). To
+    put the two axes on a comparable footing, each gradient field is L1-normalized to a
+    relative-importance distribution summing to 1, THEN weighted by the master gradient:
+    ``s(t) = w_seg·ĝ_seg(t) + w_pose·ĝ_pose(t)`` with ``ĝ = g/Σg``. Now ``w_seg/w_pose``
+    (the master gradient ∂S/∂d_metric) directly controls the seg-vs-pose balance, and a
+    tensor the POSE path needs (rgb_1) gets protected even though SegNet is blind to it.
+
+    ``normalize=False`` is the raw-magnitude combine (kept for the diagnostic that surfaced
+    the starvation; NOT recommended for the allocation).
+
+    The combined sensitivity ``s`` is the score-distortion gradient w.r.t. the tensor's
     weights — the input to the water-fill.
     """
     seg_pt = dict(seg_saliency.per_tensor)
     pose_pt = dict(pose_saliency.per_tensor)
+    # L1 normalizers per axis (over the weight tensors only; biases excluded below).
+    wnames = [
+        name for name, p in decoder.named_parameters() if p.dim() >= weight_min_dim
+    ]
+    seg_sum = sum(float(seg_pt.get(n, 0.0)) for n in wnames)
+    pose_sum = sum(float(pose_pt.get(n, 0.0)) for n in wnames)
+    seg_norm = seg_sum if (normalize and seg_sum > 0) else 1.0
+    pose_norm = pose_sum if (normalize and pose_sum > 0) else 1.0
     per_tensor: dict[str, float] = {}
     g_seg: dict[str, float] = {}
     g_pose: dict[str, float] = {}
@@ -252,7 +276,7 @@ def combine_sensitivities(
         gp = float(pose_pt.get(name, 0.0))
         g_seg[name] = gs
         g_pose[name] = gp
-        per_tensor[name] = w_seg * gs + w_pose * gp
+        per_tensor[name] = w_seg * (gs / seg_norm) + w_pose * (gp / pose_norm)
         absmax[name] = float(p.detach().abs().max().item())
         numel[name] = int(p.numel())
     return CombinedTensorSensitivity(

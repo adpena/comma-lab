@@ -167,21 +167,50 @@ def _fake_seg_saliency(per_tensor):
     return s
 
 
-def test_combine_mixes_seg_and_pose_by_master_gradient():
+def test_combine_raw_mixes_seg_and_pose_by_master_gradient():
     dec = _StubDecoder()
-    # craft seg + pose so the combined value is exactly checkable
+    # craft seg + pose so the combined value is exactly checkable (raw mode)
     seg = _fake_seg_saliency({"rgb_0.weight": 2.0, "blocks.0.weight": 0.0})
     pose = DecoderPoseSaliency(
         per_tensor={"rgb_0.weight": 0.0, "blocks.0.weight": 3.0},
         n_frames=1,
         tensor_numel={"rgb_0.weight": 1, "blocks.0.weight": 1},
     )
-    comb = combine_sensitivities(dec, seg, pose, w_seg=10.0, w_pose=100.0)
+    comb = combine_sensitivities(
+        dec, seg, pose, w_seg=10.0, w_pose=100.0, normalize=False
+    )
     assert comb.per_tensor["rgb_0.weight"] == pytest.approx(10.0 * 2.0 + 100.0 * 0.0)
     assert comb.per_tensor["blocks.0.weight"] == pytest.approx(10.0 * 0.0 + 100.0 * 3.0)
     # absmax + numel actually read off the real decoder weights
     assert comb.absmax["rgb_0.weight"] > 0.0
     assert comb.numel["rgb_0.weight"] == dec.rgb_0.weight.numel()
+
+
+def test_combine_normalize_protects_pose_critical_seg_blind_tensor():
+    """The starvation FIX: with raw-magnitude combine a tensor the POSE path needs but
+    SegNet is blind to (g_seg=0, tiny g_pose) is swamped; the normalized combine puts the
+    two axes on a comparable footing so it gets real sensitivity. This is the rgb_1
+    starvation that blew d_pose at mean-4.0 in the raw diagnostic sweep."""
+    dec = _StubDecoder()
+    # rgb_1: g_seg=0 (seg-blind) but the ONLY pose signal; rgb_0: huge g_seg, no pose.
+    seg = _fake_seg_saliency({"rgb_0.weight": 1e6, "rgb_1.weight": 0.0})
+    pose = DecoderPoseSaliency(
+        per_tensor={"rgb_0.weight": 1e-3, "rgb_1.weight": 1e-3},
+        n_frames=1,
+        tensor_numel={"rgb_0.weight": 1, "rgb_1.weight": 1},
+    )
+    raw = combine_sensitivities(
+        dec, seg, pose, w_seg=100.0, w_pose=271.0, normalize=False
+    )
+    norm = combine_sensitivities(
+        dec, seg, pose, w_seg=100.0, w_pose=271.0, normalize=True
+    )
+    # raw: rgb_1 is ~9 orders below rgb_0 (starved)
+    raw_ratio = raw.per_tensor["rgb_1.weight"] / raw.per_tensor["rgb_0.weight"]
+    # normalized: rgb_1 carries a meaningful fraction of rgb_0's sensitivity (protected)
+    norm_ratio = norm.per_tensor["rgb_1.weight"] / norm.per_tensor["rgb_0.weight"]
+    assert norm_ratio > raw_ratio * 1e3  # normalization lifts the pose-critical tensor
+    assert norm.per_tensor["rgb_1.weight"] > 0.0
 
 
 def test_combine_excludes_biases_and_1d():
