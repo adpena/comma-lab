@@ -52,7 +52,17 @@ no label inversion, NO-FAKE clean). GREEN rows (rate<0.05 ∧ realized<0.0012 �
   survival wall (0.00641).** The differentiable curve-core lands at essentially the SAME place as the
   non-differentiable static store. **VERDICT: RED_CURVE_CORE_HITS_SURVIVAL_WALL_LIKE_STATIC_STORE.**
 
-## The deep finding — the SURVIVAL WALL is representation-agnostic for flat-region painting
+## ⚠️ MECHANISM CORRECTION (2026-06-19, appended) — the wall is TEXTURE-dependence, not the resize
+The §below attributes the wall to "bilinear boundary-band color mixing" (the resize). The curve agent's
+MEASURED 3-way decomposition refutes that: at mp128 the **resize contributes +0.00005** (negligible) and the
+**flat-colour→SegNet step contributes +0.00562** (the entire wall). The true mechanism: a flat-per-class-colour
+frame lands OUTSIDE the GT's per-pixel argmax polytope at boundary pixels because EfficientNet-B2's features key
+on TEXTURE, not region identity — independent of the resize. The §below's "resize mixing" framing is SUPERSEDED;
+keep the RED verdict + the pincer (both hold), but read the mechanism as texture-dependence. Canonical:
+`eval_roundtrip_deep_math_pr95_handling_and_exploits_20260619.md` §3 + the curve agent's
+`curve_core_dseg_feasibility_gate_20260619T005432Z.md` (the measured decomposition).
+
+## The deep finding — (SUPERSEDED MECHANISM; see correction above) the SURVIVAL WALL for flat-region painting
 Painting a region partition with flat per-class colors, then the eval roundtrip (camera-res bicubic-874
 → bilinear-384 → round) → SegNet, **linearly blends the two regions' colors in the 1px boundary band**,
 creating intermediate colors SegNet argmaxes to the wrong side → realized d_seg floors ~**0.0067**.
