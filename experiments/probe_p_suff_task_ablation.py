@@ -446,11 +446,22 @@ def main(argv=None):
 
         per_tensor_bytes, total_section_bytes = measure_per_tensor_coded_bytes(decoder)
         state["decoder_section_bytes"] = total_section_bytes
-        # map storage-index bytes -> tensor name bytes
+        # map storage-INDEX bytes -> tensor NAME bytes. The storage index is a MODEL-order
+        # index (into a fresh HNeRVDecoder().state_dict()), NOT an index into base_sd (whose
+        # key order is the codec's STORAGE order). Build a model-order items list so the
+        # index->name mapping is correct.
+        from model import HNeRVDecoder as _HD
+
+        _model_items = list(
+            _HD(
+                latent_dim=int(meta["latent_dim"]),
+                base_channels=int(meta["base_channels"]),
+                eval_size=tuple(meta["eval_size"]),
+            ).state_dict().items()
+        )
         name_bytes = {}
-        items = list(base_sd.items())
         for sidx, by in per_tensor_bytes.items():
-            name_bytes[items[int(sidx)][0]] = by
+            name_bytes[_model_items[int(sidx)][0]] = by
         state["per_tensor_coded_bytes"] = name_bytes
         save()
         print(
