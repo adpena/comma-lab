@@ -7,7 +7,7 @@ frontier_pointer_moved: false
 mission_contribution: frontier_breaking
 date: 2026-06-19
 verdict: AMBER_CONTINUOUS_TEXTURE_NCA_NEAR_FRONTIER_WHEN_IT_CONVERGES_BUT_TRAINING_IS_FRAGILE
-convergence_caveat: "CRITICAL (added post-daemon): the AMBER d_seg (0.0034-0.0051 near-frontier) is REAL and reproduced when training CONVERGES, but convergence is FRAGILE on MPS — only ~2 of 7 runs converged (validation frame0 + h64 frame2); 5 of 6 daemon frames COLLAPSED to realized ~0.5 (recon_rmse>130, the rule never grew a coherent frame). Same deterministic init (seed 1234), same config, same GT frame -> validation-frame0 converged (0.00337) while daemon-frame0 collapsed (0.507): MPS forward/backward non-determinism drops most runs into a bad basin (the Muon/MPS-chaos class CLAUDE.md flags). The AMBER candidate is REAL but the build MUST solve convergence-robustness (better init / pool-sample-replay / multi-restart-keep-best / CPU-deterministic training) BEFORE it is a sub-0.15 path. Do NOT treat the best-frame number as the typical result."
+convergence_caveat: "CRITICAL (added post-daemon, STRENGTHENED post-repro): the AMBER d_seg (0.0034-0.0051 near-frontier) is REAL — it was measured on 2 runs that genuinely converged (validation frame0 0.00337 + h64 frame2 0.00505, interior 0.0, boundary halved) — but it is NOT reproducible-on-demand. Convergence rate ~2 of 8 runs. DECISIVE PROOF: re-running the EXACT headline config (h128, frame0, seed 1234, 1500it, identical to the run that gave 0.00337) COLLAPSED to realized 0.549 / recon_rmse 137 / bnd 0.881. Same deterministic init + same GT + same config -> different outcome = MPS forward/backward non-determinism drops ~75% of runs into a bad basin where the iterated rule never grows a coherent frame (the Muon/MPS-chaos class CLAUDE.md flags; the per-step gradient is correct but the deep N-step unroll's optimizer diverges). The continuity THESIS holds (continuous CAN reach near-frontier d_seg, twice-measured), but the AMBER is a fragile spark: the build's FIRST hard blocker is convergence-robustness (the canonical Mordvintsev POOL + sample-replay — which I did NOT use — plus multi-restart-keep-best and/or deterministic CPU training), NOT d_seg-vs-GREEN. The TYPICAL result is the COLLAPSE (~0.5), not the best frame. Do NOT quote 0.00337 as a reproducible number."
 supersedes: none
 cross_refs:
   - .omx/research/generative_axis_nca_dseg_core_gate_20260619T013000Z.md
@@ -137,13 +137,17 @@ run — but convergence is FRAGILE.** The robust daemon sweep exposed this:
 | daemon h128 frame0 | h128, 1500it | 0.507 | 186 | NO |
 | daemon h128 frame1 | h128, 1500it | 0.550 | 137 | NO |
 | daemon h128 frame2 | h128, 1500it | 0.509 | 33 | NO |
+| **REPRO of validation frame0** | **h128, 1500it (IDENTICAL config)** | **0.549** | **137** | **NO (collapsed!)** |
 
-**Only ~2 of 7 runs converged.** The init is DETERMINISTIC (seed 1234, identical across frames), the
-config is identical, and validation-frame0 and daemon-frame0 use the SAME GT frame — yet one converged
-(0.00337) and the other collapsed (0.507). The cause is **MPS forward/backward non-determinism** dropping
-most runs into a bad basin where the iterated rule never grows a coherent frame (recon_rmse stays ~130+,
-the Muon/MPS-chaos class CLAUDE.md flags for MPS training: the per-step gradient is correct but the deep
-N-step unroll's optimizer diverges).
+**Only ~2 of 8 runs converged — AND the headline is not reproducible-on-demand.** The DECISIVE proof is
+the last row: I re-ran the EXACT config that produced the 0.00337 headline (h128, frame0, seed 1234,
+1500it, same GT) — it COLLAPSED to 0.549 / recon 137. The init is DETERMINISTIC (seed 1234, identical
+across all runs), so identical init + identical GT + identical config → 0.00337 once, 0.549 the next time.
+The cause is **MPS forward/backward non-determinism** dropping ~75% of runs into a bad basin where the
+iterated rule never grows a coherent frame (recon_rmse stays ~130+, the Muon/MPS-chaos class CLAUDE.md
+flags: the per-step gradient is correct but the deep N-step unroll's optimizer diverges). The 0.00337 and
+0.00505 measurements are REAL (they happened, on genuinely-converged runs — the continuity thesis holds),
+but they are the lucky ~25% tail, not the typical or reproducible result.
 
 **What this does and does NOT change:**
 - It does NOT falsify the AMBER. When training converges, the continuous-texture NCA genuinely reaches
