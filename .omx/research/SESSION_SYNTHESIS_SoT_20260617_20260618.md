@@ -69,6 +69,14 @@ must be trained, not post-hoc). The honest path = TWO real training efforts (d_s
 signal: margin-hinge ep1800 d_seg 0.003228 is already below the CE control's ep2000 (0.003251) — the lever is
 winning the A/B; the ep2000 trigger confirms (not fires).
 
+## RECURSIVE ADVERSARIAL REVIEW outcome (2026-06-19, `recursive_adversarial_review_recent_negatives_*`, commit 401a2abaa)
+Adversarial review (FALSIFY mandate, bare-math vs upstream, no-fake, best-shot) of the recent negatives:
+- **4 structural REDs SURVIVE on their d_seg-axis conclusions** (curve-core, flat-partition-NCA, capacity-wall qualitative, eval-roundtrip math — every roundtrip operator re-derived against `upstream/` ✓). No fakes (classes 1-8); 2 auto-label bugs were CAUGHT+corrected (discipline working).
+- **1 genuinely UNDER-POWERED negative → RE-TEST (highest-EV):** int5 Path-B cap used per-tensor abs-max quant — NO per-channel / NO LSQ / NO outlier-handling (the exact canonical low-bit fixes). "STRUCTURAL to int5" is over-claimed (it's structural to per-tensor-abs-max). **Path-B attacks the frontier RATE (binding 62%); a best-shot int5 (per-channel+LSQ) that recovers d_seg → rate ~0.07 → S~0.14 sub-0.15.** RE-TESTING (#147).
+- **Over-claims corrected:** AMBER title ("strongest sub-0.15 candidate" → fragile non-reproducible RED-on-re-run; bnd_flip 0.079 is the lucky converged frame, polynomial's 0.15 is robust); curve docstring ("curves+colours through roundtrip" → only colours; geometry is frozen DP-decimation); factored-LF "10.7M params" is a 2-point extrapolation ±a decade.
+- **Generalization caveat:** all d_seg gates measure on 3 CONSECUTIVE frames of ONE segment (n=3≈n=1) → REDs MORE trustworthy (walls worsen on diverse scenes), AMBER optimism triply suspect.
+- **2 UNTESTED pincer corners (the pincer is NOT airtight):** (1) cross-frame keyframe+tiny-warp (pay the boundary ONCE; consecutive last-frames drift ~0.33px; the frontier already exploits temporal) → #148; (2) camera-res sub-pixel boundary placement (the entire remaining d_seg localizes to the 1px band at 384; placing it sub-pixel at 874×1164 BEFORE the downsample D averages is closed-form, $0) → #149. Both stay inside "render an RGB frame" (no legal non-frame path — `TensorVideoDataset` requires raw uint8 camera-res).
+
 ## VERIFIED insights (current status — corrections resolved)
 | insight | status | score-EV | consumer | source memo |
 |---|---|---|---|---|
