@@ -45,30 +45,40 @@ The AMBER's three caveats were FIXED and the answer is measured:
    AMBER flagged ("the 32-d latent may be too small to carry frame-to-frame variation"). The amortized
    rate is byte-cheap (0.009).
 
-3. **CAPACITY-BREAK (caveat 3) — the NCA BEATS the one-shot wall, but it does not matter.** At 10k params
-   the amortized d_seg 0.013 is **0.31× the power-law wall** (0.041) — iteration genuinely gives
-   effective-depth detail the one-shot decoder lacks (it beats the wall by ~3.2×). BUT this is a
-   PYRRHIC win: even granting the NCA beats the wall by 3.2× at EVERY scale, the rule big enough to
-   reach the sub-0.15 d_seg budget (~0.0007) needs **~628k params → ~337 KB amortized → rate term 0.230
-   — which ALONE EXCEEDS the entire frontier S of 0.191.** The rate/d_seg tension is unbreakable: if the
-   NCA is small it pays d_seg (0.013 → S 1.37); if it is big enough to cut d_seg it pays rate (0.230 >
-   frontier). There is no operating point where the amortized continuous-texture NCA reaches sub-0.15.
+3. **CAPACITY-BREAK (caveat 3) — DECISIVELY FALSIFIED, and worse than "no break": the curve goes the
+   WRONG way.** Two measured rule-sizes:
+   - c8h32 (**10,299 params**): amortized d_seg **0.01298** = **0.31× the power-law wall** (0.041) — at the
+     SMALLEST rule, iteration genuinely beats the one-shot wall (~3.2×). S = 1.365.
+   - c12h64 (**16,999 params**): amortized d_seg **0.13929** = **4.79× the power-law wall** — the LARGER rule
+     is **10× WORSE** and does NOT beat the wall at all. S = 13.998.
 
-**Measured anchor (c8h32, the first rule-size; the full sweep continues filling points for the durable record):**
+   Growing the rule made d_seg **rise 10×**, not fall. The per-restart detail shows why: the bigger NCA
+   rule's restarts scatter wildly (0.139 / 0.235 / 0.516 / 0.201) vs c8h32's tight reproducible 0.013 —
+   the **deep-N-step unroll of a larger rule is far harder to optimize**, and that optimization difficulty
+   overwhelms any capacity gain. So there is **no large-rule regime that reaches sub-0.15 d_seg at all** —
+   the capacity-escape hypothesis (effective-depth-N from weight-sharing breaks `params^−0.71`) is
+   falsified in the strongest way: the d_seg(params) curve does not just track the wall, it INVERTS
+   (bigger = worse). Even the optimistic "beats the wall everywhere → pays rate 0.230" argument was
+   charitable; the reality is the d_seg ceiling re-asserts (and grows) as you scale, before the rate
+   ceiling is even reached.
 
-| quantity | value | vs frontier |
-|---|---:|---|
-| rule params | 10,299 | — |
-| convergence | **3/4 restarts, 4/4 frames** | (AMBER was ~2/8) |
-| **amortized avg d_seg** | **0.01298** | **23.2× frontier (0.00056)** |
-| vs one-shot power-law wall | **0.31×** (beats it) | iteration helps |
-| amortized rate | 0.00905 | byte-cheap |
-| **projected S** | **1.365** | **7.1× frontier S (0.191)** |
+**Measured anchors (the capacity sweep; the durable daemon continues filling c16h96/c24h160/c32h256):**
 
-**VERDICT: RED — `RED_AMORTIZED_NCA_CONVERGES_AND_BEATS_THE_ONE_SHOT_WALL_BUT_THE_RATE_DSEG_TENSION_CAPS_IT_FAR_ABOVE_THE_FRONTIER`.**
+| config | rule params | convergence | amortized d_seg | × frontier | vs wall | rate | S |
+|---|---:|---|---:|---:|---:|---:|---:|
+| c8h32 | 10,299 | 3/4 restarts, 4/4 frames | **0.01298** | 23.2× | 0.31× (beats) | 0.00905 | **1.365** |
+| c12h64 | 16,999 | 3/4 restarts | **0.13929** | 248.7× | 4.79× (loses) | 0.01150 | **13.998** |
+
+The smallest rule is the best, and it is still 23× the frontier d_seg / 7× the frontier S. Growing the
+rule makes it monotonically worse (optimization-difficulty-dominated). No sub-0.15 operating point exists.
+
+**VERDICT: RED — `RED_AMORTIZED_NCA_CONVERGES_BUT_DSEG_CURVE_INVERTS_WITH_SCALE_NO_SUB015_REGIME`.**
 The generative-continuous-texture axis — the AMBER, the strongest sub-0.15 d_seg-core candidate, "the
-frontier's own move" — is now closed. Convergence and the capacity wall were both real and both
-addressable; the binding wall is the **rate/d_seg tension**, the same one every dense family hits, just
+frontier's own move" — is now closed. Convergence was real and SOLVED (the state-bound fix); the
+capacity-escape was real only at the smallest rule (0.31× the wall) and then INVERTED (the larger rule is
+10× worse, optimization-difficulty-dominated). The binding wall is the **d_seg/scale + rate/d_seg
+tension** — the smallest rule is best yet still 23× the frontier d_seg, and growing the rule helps neither
+axis. Same family of wall every dense representation hits, just
 relocated to the shared-rule size. **This is the FINAL representation family.**
 
 ## 1. Why this is the RIGHT, FAITHFUL, decisive test (NO-FAKE)
@@ -107,22 +117,29 @@ sequence (all advisory):
    seeds) — it ALSO fixes the AMBER's MPS-non-determinism collapse, because the divergence was the
    unbounded unroll, not pure kernel noise.
 
-## 3. The binding wall — the rate/d_seg tension (the airtight RED, byte-accounting-light)
+## 3. The binding wall — the d_seg(params) curve INVERTS, then the rate/d_seg tension (the airtight RED)
 
 The capacity-escape hypothesis was: weight-shared iteration (effective depth N at fixed params) could
-reach the d_seg a many-KB static decoder needs, at few-KB rule cost. **The iteration DOES help** (beats
-the one-shot wall 3.2×). But the decisive arithmetic:
+reach the d_seg a many-KB static decoder needs, at few-KB rule cost. **The empirical 2-point sweep refutes
+it twice over:**
 
-- sub-0.15 needs realized d_seg < ~0.0007 (∂S/∂d_seg=100; budget after rate 0.118 + pose 0.058).
-- NCA d_seg(params) model (beating the wall 3.2×): `d_seg ≈ 9.2·params^−0.71`.
-- d_seg=0.0007 ⇒ **~628k params** ⇒ amortized rule bytes ~337 KB ⇒ **rate term 0.230**.
-- **0.230 > the entire frontier S of 0.191** — the rule that's big enough to hit sub-0.15 d_seg costs more
-  rate, alone, than the whole frontier score.
+1. **The d_seg(params) curve INVERTS (the primary, measured kill).** c8h32 (10,299 params) → d_seg 0.013
+   (0.31× wall, beats it). c12h64 (16,999 params) → d_seg **0.139** (4.79× wall, loses). Growing the rule
+   made d_seg **10× WORSE**. The per-restart scatter (c8h32: 0.013/0.013 tight; c12h64: 0.139/0.235/0.516/
+   0.201 wild) shows the mechanism: the deep-N-step unroll of a LARGER rule is far harder to optimize, and
+   that optimization difficulty overwhelms the capacity gain. So there is **no large-rule regime that even
+   reaches lower d_seg** — the smallest rule is the best, at 23× the frontier. The hypothesis that
+   iteration breaks `params^−0.71` is falsified: the curve does not track the wall downward, it turns UP.
 
-So the operating curve has no sub-0.15 point: small rule → d_seg dominates (0.013 → S 1.37); big rule →
-rate dominates (>0.23). The minimum-S operating point of the amortized NCA is far above the frontier. This
-argument is independent of the exact fitted exponent (a steeper NCA exponent only moves the crossing a
-little; the rate at the required size still dwarfs the frontier).
+2. **Even the charitable "beats-the-wall-everywhere" case fails on rate (the secondary bound).** Had the
+   0.31× win held at scale (it does not), sub-0.15 needs d_seg < ~0.0007 ⇒ a ~628k-param rule ⇒ ~337 KB
+   amortized ⇒ **rate term 0.230 > the entire frontier S of 0.191**. The rate ceiling blocks it even in
+   the optimistic world; the measured d_seg inversion blocks it in the real one.
+
+So the operating curve has no sub-0.15 point and no point even near the frontier: the minimum-S of the
+amortized NCA is the SMALLEST rule (S 1.37), and scaling helps neither d_seg (it inverts) nor S. This is
+robust to the fitted exponent — the 2 measured points go the WRONG direction, so any extrapolation toward
+lower d_seg at larger size is unsupported by the data.
 
 ## 4. The comprehensive campaign conclusion (the operator's RED branch, reached)
 
