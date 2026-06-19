@@ -80,6 +80,19 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "the in-flight thread is JOINED on completion. DEFAULT off (the sync "
              "path is byte-identical unchanged).",
     )
+    p.add_argument(
+        "--muon-lr-floor-fix",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="STAGE-8 apparatus fix (BUG-B): give the stage-8 Muon optimizer its "
+             "OWN cosine annealing floor keyed to muon_lr, instead of sharing the "
+             "AdamW eta_min (which floors against adamw_lr and prematurely caps the "
+             "Muon-finetune d_seg polish). Default OFF preserves byte-identical "
+             "behavior for stages 1-7 (AdamW, use_muon=False) and all existing "
+             "callers; pass --muon-lr-floor-fix for the decisive full-curriculum run "
+             "so the stage-8 d_seg-finishing polish is PR95-faithful. See "
+             "apparatus_audit_pr95_breakthrough_blocker_20260619T214001Z.md.",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -119,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
         train_device=args.train_device,
         split_by_head=args.split_by_head,  # True=pose-axis salvage; False=full-MPS
         async_eval=args.async_eval,  # True=non-blocking background CPU authority eval
+        muon_lr_floor_fix=args.muon_lr_floor_fix,  # stage-8 Muon own-floor (BUG-B fix)
         seed=args.seed,
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).
