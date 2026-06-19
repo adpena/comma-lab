@@ -138,7 +138,8 @@ class AmortizedNCA:
       - the PERSISTENT POOL of per-frame states is held in the trainer (sample-replay), not here
     """
 
-    def __init__(self, n_channels, hidden, latent_dim, n_frames, shape, device, init_seed=1234):
+    def __init__(self, n_channels, hidden, latent_dim, n_frames, shape, device, init_seed=1234,
+                 state_bound=32.0):
         import math as _m
 
         import torch
@@ -149,6 +150,7 @@ class AmortizedNCA:
         self.n_frames = n_frames
         self.shape = shape
         self.device = device
+        self.state_bound = state_bound  # soft tanh bound on hidden state (alive-masking surrogate); None=off
         H, W = shape
 
         ident = torch.zeros(3, 3)
@@ -207,7 +209,13 @@ class AmortizedNCA:
         if fire_rate is not None and fire_rate < 1.0:
             mask = (torch.rand(1, 1, x.shape[2], x.shape[3], device=x.device) < fire_rate).float()
             dx = dx * mask
-        return x + dx
+        x = x + dx
+        if self.state_bound is not None:
+            # STATE STABILITY (the alive-masking surrogate Mordvintsev uses to bound growth): soft-bound the
+            # hidden state magnitude so the deep N-step unroll cannot diverge to inf/NaN. Without this the
+            # pool feedback + trained residual rule grows the state unboundedly (the measured NaN at 2400it).
+            x = self.state_bound * torch.tanh(x / self.state_bound)
+        return x
 
     def grow_rgb(self, frame_idx, n_steps, fire_rate=None, init_state=None):
         """Iterate the SHARED rule n_steps from frame i's latent-seed (or init_state) -> CONTINUOUS RGB.
@@ -236,7 +244,8 @@ def _train_one_restart(seg_targets, gt_frames, segnet_cpu, segnet_train, hidden,
     H, W = seg_targets[0].shape
     tdev = torch.device(args.train_device)
 
-    nca = AmortizedNCA(n_channels, hidden, latent_dim, n_frames, (H, W), tdev, init_seed=restart_seed)
+    nca = AmortizedNCA(n_channels, hidden, latent_dim, n_frames, (H, W), tdev, init_seed=restart_seed,
+                       state_bound=(args.state_bound if args.state_bound > 0 else None))
     Lts = [torch.tensor(seg_targets[i], dtype=torch.long, device=tdev) for i in range(n_frames)]
     gt_ts = [
         torch.tensor(gt_frames[i], dtype=torch.float32, device=tdev).permute(2, 0, 1)
@@ -432,6 +441,7 @@ def main() -> int:
     ap.add_argument("--n-steps-hi", type=int, default=72, help="max CA steps per batch (also the eval step count)")
     ap.add_argument("--fire-rate", type=float, default=0.5, help="stochastic per-cell update mask prob (Mordvintsev 0.5)")
     ap.add_argument("--pool-prob", type=float, default=0.5, help="prob a batch frame starts from the pooled state")
+    ap.add_argument("--state-bound", type=float, default=32.0, help="soft tanh bound on NCA hidden state (alive-masking surrogate; prevents the unbounded-growth NaN; 0=off)")
     ap.add_argument("--iters", type=int, default=2000)
     ap.add_argument("--lr", type=float, default=2e-3, help="Mordvintsev Adam lr (with warmup + step-decay)")
     ap.add_argument("--recon-w", type=float, default=1.0)

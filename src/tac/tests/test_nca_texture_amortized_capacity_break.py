@@ -13,6 +13,7 @@ All numbers `[contest-CPU advisory]` NON-PROMOTABLE; the gate never claims a sco
 from __future__ import annotations
 
 import importlib.util
+import math
 import sys
 from pathlib import Path
 
@@ -257,3 +258,34 @@ def test_verdict_thresholds_are_the_campaign_anchors(probe):
     assert probe.FRONTIER_DSEG == pytest.approx(0.00056)
     assert probe.GREEN_DSEG_THRESHOLD == pytest.approx(0.0012)
     assert probe.GT_RGB_ROUNDTRIP_DSEG == pytest.approx(0.00022)
+
+
+def test_state_bound_prevents_unbounded_growth(probe):
+    """The state-bound (alive-masking surrogate) must keep the NCA hidden state finite even with a strong
+    residual rule over many steps — the measured-NaN fix. Without it, an unstable rule diverges to inf."""
+    torch.manual_seed(0)
+    # bounded NCA: a STRONG positive residual rule that would blow up unbounded
+    nca = probe.AmortizedNCA(n_channels=8, hidden=32, latent_dim=12, n_frames=1,
+                             shape=(48, 64), device=torch.device("cpu"), state_bound=32.0)
+    with torch.no_grad():
+        nca.w2.add_(2.0)  # large positive update each step -> would explode without the bound
+        nca.b1.add_(1.0)
+    rgb, state = nca.grow_rgb(0, n_steps=200, fire_rate=None)
+    assert torch.isfinite(state).all()  # bounded: no inf/NaN over 200 steps
+    assert float(state.abs().max()) <= 32.0 + 1e-3  # respects the tanh bound
+    assert torch.isfinite(rgb).all()
+
+
+def test_state_bound_off_can_diverge(probe):
+    """Sanity: with the bound OFF and a strong rule, the state grows large (proving the bound is load-bearing,
+    not a no-op). This is the false-fix guard: the bound must actually matter."""
+    nca = probe.AmortizedNCA(n_channels=8, hidden=32, latent_dim=12, n_frames=1,
+                             shape=(48, 64), device=torch.device("cpu"), state_bound=None)
+    with torch.no_grad():
+        nca.w2.add_(2.0)
+        nca.b1.add_(1.0)
+    _, state = nca.grow_rgb(0, n_steps=20, fire_rate=None)
+    # unbounded: state magnitude explodes FAR past the 32 bound (measured ~9e22 by step 20) — the
+    # divergence the bound prevents. (By step 60 it is full NaN; we check step 20 where it's huge-but-finite.)
+    mx = float(state.abs().max())
+    assert (not math.isfinite(mx)) or mx > 1e6
