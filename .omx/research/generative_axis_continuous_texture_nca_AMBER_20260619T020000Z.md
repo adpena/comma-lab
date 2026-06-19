@@ -158,6 +158,28 @@ N-step unroll's optimizer diverges).
 - **Do NOT quote 0.00337 as "the continuous-texture NCA d_seg."** Quote it as "the best converged run; ~2/7
   runs converge; convergence-robustness is the build's first blocker." That is the honest AMBER.
 
+## 6. SECOND caveat — rate amortization is UNTESTED (the shared-rule generalization gap; sister 2ca84fa73)
+
+This gate fits a FRESH rule per frame (each frame's 33K rule + 32-d latent trained independently). But the
+reported rate **0.0191 assumes ONE 33K rule is SHARED across all 600 frames** (amortized: rule once +
+per-frame 32-d latent ×600). **That sharing is UNTESTED — the gate is effectively n=1 per rule.** A single
+rule that must reproduce ALL 600 frames via small per-frame latents is a strictly HARDER task than fitting
+each frame with its own rule: the 32-d latent may be too small to carry frame-to-frame variation, which
+would either (a) raise per-frame d_seg above 0.0034, or (b) require a larger latent → raise the rate above
+0.019. **So the rate 0.019 AND the d_seg 0.0034 cannot both be assumed to hold simultaneously under true
+sharing.** sub-0.15 (S~0.10-0.12) is therefore a PROJECTION resting on TWO untested assumptions (boundary
+cut 5× AND shared-rule amortization), not a measured result; the gate's own measured S is **0.415** with
+**zero sub-0.15 rows.**
+
+**The continuity thesis IS validated** (trained-through-scorer continuous 0.00337 < polynomial-LS 0.00609 <
+flat 0.0067 — continuity + training-through-the-roundtrip is a real d_seg lever). The open question is now
+**AMORTIZATION**, not whether continuous beats flat. **The decisive next $0 gate (gates the multi-day build):
+shared-rule generalization — fit ONE rule across 16-48 frames with per-frame latents, measure the TRUE
+amortized rate AND the per-frame d_seg jointly.** If one rule holds d_seg ~0.003 across many frames at rate
+~0.02, the AMBER is a real sub-0.15 path; if d_seg degrades or the latent must grow, the rate/d_seg tension
+re-appears (the same tension the dense families hit, just relocated to the latent). Convergence-robustness
+(§5) must be solved first so the generalization gate's runs converge.
+
 ## Observability surface
 
 Every row records realized d_seg, geometric d_seg, recon_rmse, the boundary vs interior flip split (the
