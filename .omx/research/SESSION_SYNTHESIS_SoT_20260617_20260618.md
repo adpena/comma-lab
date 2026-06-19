@@ -22,16 +22,22 @@ verdict. Pointer still UNMOVED 0.19110. All `[contest-CPU advisory]`.
 | 4 | concentrated-saliency regularizer | NO-GO — can't redistribute criticality off a dense shared path | `probe_concentrated_saliency_feasibility` |
 | 5 | factored cheap LF core (capacity-axis) | RED — **d_seg ∼ 29.3·params^−0.71**; frontier-grade needs ~10.7M params | `factored_lf_core_capacity_gate_*` |
 | 6 | byte-neutral taper realloc #121 (allocation-axis) | **WEAK (downgraded from "optimal")** — frontier per-tensor saliency only **5.54× flat**, decision-band mass 44%, geometry-ordering FALSE, d_seg-blind final stage already starved (~1.75% params) → little to water-fill | `frontier_margin_saliency_qat_bitalloc_prior_*` |
-| 7 | **differentiable curve-core (geometry-axis)** | **RUNNING — the LAST untested escape** (curve fit THROUGH the scorer, so it survives the eval roundtrip by construction, unlike the static partition-store that capped S≈0.84) | gate `a8310a9ceb39fcb43` |
+| 7 | differentiable curve-core (geometry-axis) | **RED — SURVIVAL WALL** (geometry fits: geo_recon→0.00106, but realized d_seg floors ~0.0067 = 2.62× frontier = 1.05× the static-store wall; differentiable color/offset pre-comp did NOT beat the roundtrip's boundary-band mixing) | `curve_core_gate_RED_survival_wall_and_the_pincer_20260618.md` |
+| 8 | **generative/iterated (NCA, operator reframe)** | **RUNNING — the LAST unwalled corner** (must grow CONTINUOUS texture, not a flat partition; tests whether weight-shared iteration breaks d_seg∼params^−0.71) | subagent `ae92160cf8c9c5b28` |
 
-**The unifying physics:** d_seg = a perimeter integral over the frozen SegNet's *learned, high-dimensional*
-decision boundary. Cheap representation requires that boundary to be genuinely low-dimensional. Families 1-6
-prove it is NOT (learned-pixel-decoder + allocation + regularizer + static-geometry all cap). Family 7 (the
-gate) is the decisive test of whether a *differentiable* geometry escapes. **The strategic fork:** GREEN ⇒
-spec the curve-core build (a real sub-0.15 path). RED ⇒ the airtight terminal finding — sub-0.15 is
-byte-cheaply unreachable across ALL known families, the frontier ~0.19 is near the real floor, and
-CLAUDE.md S_floor=0.11797 over-counts by ignoring the d_seg↔capacity coupling → a goal/floor re-frame the
-operator should weigh in on. Inflection memo: `campaign_inflection_three_paths_capped_concentrated_saliency_20260618.md`.
+**The unifying physics → the PINCER (now measured on both corners):** d_seg = a perimeter integral over the
+frozen SegNet's *learned, high-dimensional* decision boundary. Two measured REDs close a pincer:
+(a) **flat-region representations** (partition-store, curve-core) are **survival-walled at realized d_seg
+~0.0067** (the eval roundtrip's boundary-band color mixing — representation-agnostic for flat painting);
+(b) **continuous-texture representations** (learned pixel decoders) are **capacity-walled at d_seg∼params^−0.71**
+(factored-LF; frontier-grade needs ~4–10M params = bytes). The only unwalled corner: a representation that
+paints continuous texture AND is byte-cheap = breaks params^−0.71. The generative/iterated axis (family 8,
+running) is the sole remaining candidate. **The strategic fork:** GREEN (NCA) ⇒ the one escape ⇒ spec the
+build. RED (NCA) ⇒ the airtight terminal finding — sub-0.15 d_seg byte-cheaply unreachable across static AND
+generative families; frontier ~0.19 near the real floor; CLAUDE.md S_floor=0.11797 over-counts (it assumed
+d_seg→0 byte-cheaply, which the pincer falsifies) → a goal/floor re-frame the operator should weigh in on.
+Inflection memo: `campaign_inflection_three_paths_capped_concentrated_saliency_20260618.md`; curve verdict:
+`curve_core_gate_RED_survival_wall_and_the_pincer_20260618.md`.
 
 ## HEADLINE (HISTORICAL — superseded by the inflection correction above): the concrete sub-0.15(CPU) path (S ≈ 0.127 projected, three composable levers)
 `S_CPU = 100·d_seg + sqrt(10·d_pose) + 25·bytes/37.5M`. G3 proved local-CPU advisory ≈ exact contest-CPU to
