@@ -1,5 +1,8 @@
+> # ❌ RETRACTED 2026-06-19 — FALSE-FOUNDATIONED (apparatus audit `4f6147542` confirmed the operator's "apparatus is preventing the breakthrough" hypothesis BY MEASUREMENT).
+> This memo's "walls" were measured on a BROKEN/BORROWED stack: (1) our OWN full-stack PR95 8-stage curriculum was NEVER fired to convergence (the only n600 run stalled at stage 2/8, epoch 5,793/50,000 on CPU — never reached the C1a/sigma/Muon d_seg-finishing stages; BUG-A muon-throttle fixed 06-11, corrected paid run armed-not-fired); (2) the capacity power law `d_seg∼params^−0.71` was fit on the WRONG tiny architectures (factored RANK-1 / 10K NCA), the real 229K HNeRV decoder refutes it (bc24 0.00285 < bc20 0.00376 — more capacity LOWERS d_seg); (3) the 0.19110 frontier is 100% BORROWED (byte-identical entropy recode of competitor PR101; never ours-trained; best-ours 0.1987); (4) the apparatus over-banned MPS for TRAINING throughput, pinning the d_seg gradient loop to CPU (~5 days/curriculum) so it never finishes. **THE FIX (the likeliest frontier shift) IS FIRING:** own-trained PR95 corrected 8-stage curriculum on the MPS gradient → byte-close → exact eval (task #160, `a99f79d181def1994`). DO NOT cite the "exhausted" conclusion below — the representation axis was never properly trained. The body is preserved per HISTORICAL_PROVENANCE; read the apparatus-audit memo `apparatus_audit_pr95_breakthrough_blocker_20260619T214001Z.md` instead.
+
 ---
-title: TERMINAL FINDING — the representation-axis sub-0.15 search is comprehensively exhausted; the frontier ~0.19110 is near the real achievable floor
+title: "[RETRACTED — see banner] TERMINAL FINDING — the representation-axis sub-0.15 search is comprehensively exhausted; the frontier ~0.19110 is near the real achievable floor"
 authority: "[contest-CPU advisory / comprehensive measured synthesis] — pointer UNMOVED 0.19110"
 score_claim: false
 date: 2026-06-19
