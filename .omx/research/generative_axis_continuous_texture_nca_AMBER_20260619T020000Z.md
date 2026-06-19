@@ -6,7 +6,8 @@ promotable: false
 frontier_pointer_moved: false
 mission_contribution: frontier_breaking
 date: 2026-06-19
-verdict: AMBER_CONTINUOUS_TEXTURE_NCA_NEAR_FRONTIER_DSEG_AND_PARTIALLY_BEATS_SURVIVAL_WALL
+verdict: AMBER_CONTINUOUS_TEXTURE_NCA_NEAR_FRONTIER_WHEN_IT_CONVERGES_BUT_TRAINING_IS_FRAGILE
+convergence_caveat: "CRITICAL (added post-daemon): the AMBER d_seg (0.0034-0.0051 near-frontier) is REAL and reproduced when training CONVERGES, but convergence is FRAGILE on MPS — only ~2 of 7 runs converged (validation frame0 + h64 frame2); 5 of 6 daemon frames COLLAPSED to realized ~0.5 (recon_rmse>130, the rule never grew a coherent frame). Same deterministic init (seed 1234), same config, same GT frame -> validation-frame0 converged (0.00337) while daemon-frame0 collapsed (0.507): MPS forward/backward non-determinism drops most runs into a bad basin (the Muon/MPS-chaos class CLAUDE.md flags). The AMBER candidate is REAL but the build MUST solve convergence-robustness (better init / pool-sample-replay / multi-restart-keep-best / CPU-deterministic training) BEFORE it is a sub-0.15 path. Do NOT treat the best-frame number as the typical result."
 supersedes: none
 cross_refs:
   - .omx/research/generative_axis_nca_dseg_core_gate_20260619T013000Z.md
@@ -121,6 +122,41 @@ quantitative stretch, not a structural impossibility.
 - **This is a multi-day R&D build, NOT a near-term pointer-mover** — but it is the first d_seg-core family
   with a quantitatively open path to sub-0.15, so it earns the build. (The robust daemon rows + a
   boundary-band-focused follow-up gate are the immediate $0 next steps.)
+
+## 5. CONVERGENCE FRAGILITY — the critical caveat the daemon revealed (NO-FAKE honesty)
+
+**The single-frame validation that produced the AMBER (realized 0.00337, recon_rmse 14.4) was a CONVERGED
+run — but convergence is FRAGILE.** The robust daemon sweep exposed this:
+
+| run | config | realized d_seg | recon_rmse | converged? |
+|---|---|---:|---:|---|
+| validation frame0 | h128, 1500it | **0.00337** | 14.4 | YES |
+| daemon h64 frame0 | h64, 1500it | 0.549 | 137 | NO (collapsed) |
+| daemon h64 frame1 | h64, 1500it | 0.550 | 137 | NO |
+| daemon h64 frame2 | h64, 1500it | **0.00505** | 12.2 | YES |
+| daemon h128 frame0 | h128, 1500it | 0.507 | 186 | NO |
+| daemon h128 frame1 | h128, 1500it | 0.550 | 137 | NO |
+| daemon h128 frame2 | h128, 1500it | 0.509 | 33 | NO |
+
+**Only ~2 of 7 runs converged.** The init is DETERMINISTIC (seed 1234, identical across frames), the
+config is identical, and validation-frame0 and daemon-frame0 use the SAME GT frame — yet one converged
+(0.00337) and the other collapsed (0.507). The cause is **MPS forward/backward non-determinism** dropping
+most runs into a bad basin where the iterated rule never grows a coherent frame (recon_rmse stays ~130+,
+the Muon/MPS-chaos class CLAUDE.md flags for MPS training: the per-step gradient is correct but the deep
+N-step unroll's optimizer diverges).
+
+**What this does and does NOT change:**
+- It does NOT falsify the AMBER. When training converges, the continuous-texture NCA genuinely reaches
+  near-frontier d_seg (0.0034-0.0051, reproduced twice independently) with interior solved (0.0) and the
+  boundary band halved (0.079-0.128). The representation CAN do it.
+- It DOES mean the build's FIRST hard blocker is convergence-robustness, NOT d_seg-vs-GREEN. The build
+  must: (a) deterministic CPU training OR a robust MPS recipe; (b) the canonical Growing-NCA POOL +
+  sample-replay (Mordvintsev's actual stability mechanism — I used grad-norm + warmup but NOT the pool,
+  which is the piece that makes NCA training reliable); (c) multi-restart keep-best; (d) a smaller/smoother
+  N or residual-rule scaling to tame the unroll. Until convergence is reliable, the "typical" result is the
+  COLLAPSE (~0.5), not the best frame.
+- **Do NOT quote 0.00337 as "the continuous-texture NCA d_seg."** Quote it as "the best converged run; ~2/7
+  runs converge; convergence-robustness is the build's first blocker." That is the honest AMBER.
 
 ## Observability surface
 
