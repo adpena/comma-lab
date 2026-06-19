@@ -41,7 +41,7 @@ SAME few-KB rule, so it might break the `d_seg ~ params^−0.71` capacity wall t
 | h32 | 2,165 | 0.0072 | 0.18013 (unstable) | **0.02180** | 18.2× | 3.24× | 2.25 |
 | h64 | 4,245 | 0.0080 | 0.10945 (1/3 collapsed) | **0.02305** | 19.2× | 3.42× | 2.37 |
 | h128 | 8,405 | 0.0095 | **0.02033 (stable)** | **0.01623** | 13.5× | 2.41× | 1.69 |
-| *(h256 — still computing; cannot change RED, see §4)* | *16,725* | *0.0126* | *—* | *—* | — | — | — |
+| h256 (completed, see §4) | 16,725 | 0.0126 | 0.18851 (1/3 collapsed) | 0.01970 | 16.4× | 2.93× | 2.04 |
 | *frontier d_seg (the bar)* | — | — | *0.00257* | — | 2.1× | 0.38× | — |
 | *curve-core survival floor (sister gate)* | — | — | *0.00673* | — | 5.6× | 1.0× | *0.74* |
 
@@ -122,18 +122,29 @@ for 100·d_seg is ~0.08 → realized d_seg must be < ~0.0008. The NCA floors at 
 byte win can rescue a d_seg term that is 20× over budget. The cheap-generator advantage is real and
 irrelevant, exactly as the factored-LF and curve gates found for their families.
 
-## 4. Why h256 cannot change the verdict (the row still computing)
+## 4. h256 completed — it CONFIRMS the RED (post-write update)
 
-h256 (16,725 rule params, rate 0.0126) was still computing at memo-write time (the largest rule thrashes
-MPS — ~11 min/frame under sustained load). It cannot change RED: (a) the realized-d_seg trend across the
-three completed sizes is monotone-but-far (0.180 → 0.109 → 0.020 avg; best-frame 0.022 → 0.023 → 0.016),
-asymptoting around the curve-core regime, not toward GREEN; (b) to flip GREEN, h256 would need realized
-d_seg < 0.0012 — a >13× drop from h128's best — which the fuzzy-boundary survival mechanism (§2) structurally
-prevents; (c) h256's higher rate (0.0126) makes its S strictly worse at equal d_seg. The daemon continues
-in the background and self-checkpoints; the h256 row, when it lands, is a confirming datapoint only. The
-final verdict JSON (`experiments/results/nca_dseg_feasibility_gate/gate_state.json` + the
-`.omx/research/nca_dseg_feasibility_gate_*.json` payload) records all completed sizes + the probe's
-auto-diagnosis.
+h256 (16,725 rule params, rate 0.0126) finished after memo-write and confirmed the verdict exactly as
+predicted. h256 frame0 = realized **0.0197** (geo_recon 0.035, geo_seg 0.021, bnd 0.374) — the SAME ~0.02
+floor as h128, at HIGHER rate. **The capacity escape saturates: doubling the rule (8.4K→16.7K params) does
+NOT lower realized d_seg below ~0.02; it only raises the rate.** (h256's frame2 also collapsed to 0.51 like
+h32/h64's frame1, inflating its average to 0.189 — the small-rule instability persists at the large rule on
+some GT frames; the stable-frame floor is the honest number, ~0.0197, still 16× GREEN.) The daemon's
+auto-verdict is **`RED_NCA_CORE_HITS_SURVIVAL_WALL_LIKE_CURVE_CORE`**; best_realized across all 4 sizes =
+0.0203 (h128), best_S = 2.10, byte_escape_real = True. The complete 4-size table:
+
+| size | rule params | rate | avg realized | best-frame | per-frame realized |
+|---|---:|---:|---:|---:|---|
+| h32 | 2,165 | 0.0072 | 0.180 | 0.0218 | [0.022, **0.484**, 0.034] |
+| h64 | 4,245 | 0.0080 | 0.109 | 0.0231 | [0.026, **0.279**, 0.023] |
+| h128 | 8,405 | 0.0095 | **0.0203** | **0.0162** | [0.020, 0.025, 0.016] (stable) |
+| h256 | 16,725 | 0.0126 | 0.189 | 0.0197 | [0.020, 0.039, **0.507**] |
+
+The probe's auto wall-label is CAPACITY (driven by h256's collapse-inflated avg geo_recon); the per-frame
+truth is **BOTH walls compounded** (§2): the stable frames floor at realized ~0.02 with geo_seg 0.019 (fuzzy
+boundary, already 3× the curve core) + boundary_flip 0.35 (survival). Either label, the verdict is RED:
+realized d_seg saturates at ~0.02 = 16× GREEN, 3× the curve-core survival floor. Final JSON:
+`experiments/results/nca_dseg_feasibility_gate/gate_state.json` + `.omx/research/nca_dseg_feasibility_gate_20260619T010606Z.json`.
 
 ## 5. The honest fork (what this re-routes)
 
