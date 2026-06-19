@@ -7,6 +7,17 @@ noted; **exact pointer UNMOVED at 0.19110** (G3 confirmed; this session did NOT 
 the GOAL firewall). The win this session is structural: a measured contest-grade pipeline + a concrete,
 grounded three-lever path to sub-0.15 on the ranking axis, + recovery of two wrongly-buried levers.
 
+## 🧭 NEW DIRECTION (2026-06-19) — the contest IS indirect-RD / coding-for-machines; pivot to TASK-SPACE coding on the BINDING rate term
+The VCM research program (theory #151 + methods #150, both committed; coding-primitive #152 + domain-tricks #145/#156 + the P-SUFF probe #153 running) converged on a reframe that supersedes the d_seg-vehicle framing below:
+- **Our contest = an INDIRECT (remote) rate-distortion problem** (CEO problem / coding-for-machines): distortion is on `f(X)=(SegNet-argmax, PoseNet-6dim)`, NOT pixels. The rate hierarchy `R_Y ≤ R_X ≤ R_Ỹ` puts **EVERY vehicle we've built (PR95/HNeRV/bc20/0.19110 frontier) on the DOMINATED rung** — they pay bits to reconstruct RGB the frozen scorer IGNORES. The unbuilt **task-space / quotient code** (code only the scorer-sufficient statistic) is the prize.
+- **RATE is the binding term (62%)** — 6 of the survey's top-8 levers attack rate; the campaign over-indexed on d_seg.
+- **Floor:** S_floor 0.118 is a loose rate-only bound; true task-RD S* is strictly in **(0.118, 0.191)**, reachable ONLY by the task-space rep.
+- **The FROZEN-INSTANCE exploit:** the field optimizes task-RD in expectation; ours is ONE frozen known instance → compute the EXACT per-instance optimum (exact histograms, exact sufficient statistic, exact polytopes/null-spaces) — provably ≤ any learned-general codec → catch up to, then SURPASS, the field.
+- **Theory-grounded campaign facts:** convex-IB explains why margin-hinge works; deterministic-IB explains lossless-recode exhaustion; RDC-not-RDP means pixel/perceptual fidelity is a tax we don't owe.
+- **The probe queue (no signal loss):** #153 P-SUFF/task-ablation (the decisive dominated-rung measurement — RUNNING) · #154 rate-axis $0 queue (weight-entropy/latent-AR/sensitivity-bit-alloc/entropy-penalized) · #155 level-set/fiber QUOTIENT codec (the paradigm prize) · #147 int5 best-shot (NeuroQuant-grounded, RUNNING) · #144 polynomial (RUNNING) · #156 domain-tricks (RUNNING).
+- Canonical docs: `frozen_instance_exploit_catch_up_then_surpass_vcm_20260619.md` (the lens), `vcm_theory_primitive_layer_*` (#151 math+floor), `vcm_taskaware_compression_sota_survey_*` (#150 ranked OSS), memory `project_contest_is_indirect_rate_distortion_task_space_coding_20260619`.
+- HONEST CAVEAT: the task-sufficient code still must be REALIZED as a frame the frozen SegNet reproduces through the roundtrip (the survival/texture wall, measured). "Store the argmax map" = the RED partition-store. P-SUFF (#153) measures whether the dominated-rung gap is actually large for THIS vehicle before any build.
+
 ## ⚠️ INFLECTION CORRECTION (2026-06-18, late — SUPERSEDES the S≈0.127 headline below)
 The "three composable levers → S≈0.127" headline below was written mid-campaign on EXTRAPOLATIONS. The
 QAT-pivot cycle then MEASURED each near-term sub-0.15 path and they are now all capped. Read this first;
