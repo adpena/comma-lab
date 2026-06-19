@@ -75,6 +75,35 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mode", choices=("uniform", "score_aware"), default="score_aware")
     ap.add_argument("--low-nbits", type=int, default=5, help="coarse grid (5=int5, 4=int4)")
     ap.add_argument("--high-nbits", type=int, default=8, help="protect grid (8=int8)")
+    ap.add_argument(
+        "--quantizer",
+        choices=("absmax", "lsq"),
+        default="lsq",
+        help=(
+            "absmax = the original per-tensor abs-max (the cap's quantizer); "
+            "lsq = the BEST-SHOT per-tensor LSQ learned step + outlier-clip calibration "
+            "(the canonical low-bit fix the cap omitted)"
+        ),
+    )
+    ap.add_argument(
+        "--lsq-step-lr-mult",
+        type=float,
+        default=1.0,
+        help="LR multiplier for the LSQ step parameters relative to the weight LR",
+    )
+    ap.add_argument(
+        "--eval-redecode",
+        dest="eval_redecode",
+        action="store_true",
+        default=True,
+        help="NO-FAKE: eval the RE-DECODED byte-closed archive (eval-on-shipped-bytes)",
+    )
+    ap.add_argument(
+        "--no-eval-redecode",
+        dest="eval_redecode",
+        action="store_false",
+        help="eval the in-memory shrunk weights (~5.6e-3 off the shipped codec-int8)",
+    )
     ap.add_argument("--epochs", type=int, default=2000)
     ap.add_argument("--batch-size", type=int, default=8)
     ap.add_argument("--lr", type=float, default=3e-4, help="AdamW lr (warm-cosine)")
@@ -92,6 +121,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-ema-warmup", action="store_true")
     ap.add_argument("--train-device", default="mps", help="MPS fp32 gradient backend")
     ap.add_argument("--grad-clip", type=float, default=1.0)
+    ap.add_argument(
+        "--freeze-latents",
+        dest="freeze_latents",
+        action="store_true",
+        default=True,
+        help=(
+            "NO-FAKE: freeze the latents (default ON) so the trained == shipped latents "
+            "(reencode ships member.latent_raw verbatim; training them over-states the eval)"
+        ),
+    )
+    ap.add_argument(
+        "--no-freeze-latents",
+        dest="freeze_latents",
+        action="store_false",
+        help="train the latents (eval over-states the deployed score unless latents re-encode)",
+    )
     ap.add_argument("--train-pairs", type=int, default=600, help="pairs to finetune on")
     ap.add_argument(
         "--eval-every", type=int, default=50, help="byte-closed CPU authority eval cadence"
@@ -137,8 +182,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     from tac.frontier_int5_qat import (
         EMAState,
+        FrontierLSQQuantizer,
         FrontierQATConfig,
         apply_frontier_qat,
+        hard_quantize_state_dict_lsq,
         hard_quantize_state_dict_to_nbits,
         per_tensor_nbits_for_decoder,
         restore_frontier_qat,
@@ -173,15 +220,64 @@ def main(argv: list[str] | None = None) -> int:
     n_prot = sum(1 for v in per_tensor_nbits.values() if v == qcfg.high_nbits)
     print(
         f"[qat] mode={args.mode} low=int{args.low_nbits} high=int{args.high_nbits} "
-        f"coarse_tensors={n_coarse} protected_tensors={n_prot} "
+        f"quantizer={args.quantizer} coarse_tensors={n_coarse} protected_tensors={n_prot} "
         f"alloc={ {k: per_tensor_nbits[k] for k in sorted(per_tensor_nbits)} }",
         flush=True,
     )
 
-    latents = member.latents[:train_pairs].clone().to(train_device).requires_grad_(True)
+    # ── BEST-SHOT quantizer: per-tensor LSQ learned step + outlier-clip calibration ──
+    use_lsq = args.quantizer == "lsq"
+    lsq: FrontierLSQQuantizer | None = None
+    if use_lsq:
+        lsq = FrontierLSQQuantizer.from_decoder(decoder, per_tensor_nbits).to_device(
+            train_device
+        )
+        steps0 = lsq.steps_dict()
+        # the calibrated step / abs-max-step ratio per tensor (the outlier-clip signal).
+        ratios = {}
+        for name, mod in decoder.named_modules():
+            if name in per_tensor_nbits:
+                from tac.frontier_int5_qat import _qmax_for_nbits
 
-    params = [p for p in decoder.parameters() if p.requires_grad] + [latents]
-    opt = torch.optim.AdamW(params, lr=float(args.lr), weight_decay=1e-4)
+                am_step = float(
+                    mod.weight.detach().abs().max() / _qmax_for_nbits(per_tensor_nbits[name])
+                )
+                ratios[name] = round(steps0[name] / am_step, 3) if am_step > 0 else 1.0
+        print(
+            f"[lsq] calibrated step/absmax ratios (outlier clip; <1 = clips outliers): "
+            f"{ {k: ratios[k] for k in sorted(ratios)} }",
+            flush=True,
+        )
+
+    # NO-FAKE eval-on-shipped-bytes: ``reencode_frontier_archive`` ships the ORIGINAL
+    # ``member.latent_raw`` verbatim (decoder-only re-encode). If we TRAIN the latents, the
+    # trained (EMA-shadow) latents are what we EVAL against but NOT what SHIPS → the eval
+    # over-states the deployed score. ``--freeze-latents`` (default ON) freezes the latents
+    # so the trained == shipped latents and the eval is honest. ``--no-freeze-latents``
+    # trains them (the eval then over-states unless a latent re-encode lands).
+    latents = member.latents[:train_pairs].clone().to(train_device)
+    if not args.freeze_latents:
+        latents = latents.requires_grad_(True)
+
+    weight_params = [p for p in decoder.parameters() if p.requires_grad]
+    if not args.freeze_latents:
+        weight_params = [*weight_params, latents]
+    if use_lsq and lsq is not None:
+        # separate param group for the LSQ steps (their own LR multiplier).
+        opt = torch.optim.AdamW(
+            [
+                {"params": weight_params, "lr": float(args.lr)},
+                {
+                    "params": list(lsq.parameters()),
+                    "lr": float(args.lr) * float(args.lsq_step_lr_mult),
+                },
+            ],
+            lr=float(args.lr),
+            weight_decay=1e-4,
+        )
+    else:
+        opt = torch.optim.AdamW(weight_params, lr=float(args.lr), weight_decay=1e-4)
+    params = weight_params  # grad-clip target (weights + latents; steps clip themselves)
 
     ema = EMAState(decay=float(args.ema_decay), warmup=not args.no_ema_warmup)
     ema.init_from(decoder, latents)
@@ -214,6 +310,12 @@ def main(argv: list[str] | None = None) -> int:
         blob = torch.load(ckpt_path, map_location="cpu", weights_only=False)
         decoder.load_state_dict({k: v.to(train_device) for k, v in blob["decoder"].items()})
         latents.data = blob["latents"].to(train_device)
+        if use_lsq and lsq is not None and blob.get("lsq_steps"):
+            for name, val in blob["lsq_steps"].items():
+                if name in lsq.per_tensor_nbits:
+                    lsq._steps[lsq._key_for[name]].data = torch.tensor(
+                        float(val), device=train_device
+                    )
         opt.load_state_dict(blob["opt"])
         ema.shadow = {k: v.clone() for k, v in blob["ema_shadow"].items()}
         ema.latent_shadow = blob["ema_latents"].clone()
@@ -244,32 +346,57 @@ def main(argv: list[str] | None = None) -> int:
                 "rng": torch.get_rng_state(),
                 "args": vars(args),
                 "per_tensor_nbits": per_tensor_nbits,
+                "lsq_steps": (lsq.steps_dict() if (use_lsq and lsq is not None) else None),
             },
             tmp,
         )
         tmp.replace(ckpt_path)
 
     # ── the byte-closed CPU AUTHORITY eval (the BEST tracker) ────────────────────
+    def _hard_quantize(shadow_dec) -> dict:
+        """Export hard-quantize via the BEST-SHOT LSQ learned step (lsq mode) or the
+        original per-tensor abs-max (absmax mode) — the grid that was TRAINED."""
+        if use_lsq and lsq is not None:
+            return hard_quantize_state_dict_lsq(shadow_dec, lsq)
+        return hard_quantize_state_dict_to_nbits(shadow_dec, per_tensor_nbits)
+
     def _authority_eval(epoch: int) -> dict:
         """Hard-quantize the EMA shadow to the trained grid, byte-close through the
         real frontier codec, exact-eval the byte-closed archive on the CPU authority."""
         shadow_dec = ema.shadow_decoder(decoder)  # CPU eval clone
-        shrunk_sd = hard_quantize_state_dict_to_nbits(shadow_dec, per_tensor_nbits)
+        shrunk_sd = _hard_quantize(shadow_dec)
         # byte-close: re-encode the shrunk decoder through the REAL frontier codec.
         scratch = out_dir / f"_cand_ep{epoch}.zip"
         bytes_meas = reencode_frontier_archive(member, shrunk_sd, scratch)
-        # build a CPU decoder from the byte-closed (hard-quantized) weights for eval.
-        eval_dec = build_frontier_decoder(shrunk_sd).to("cpu").eval()
         ema_lat = ema.shadow_latents_cpu()
-        # eval on the full eval_pairs (the latents the archive ships are member.latents;
-        # the finetune trains its own latents — use the EMA shadow latents for the
-        # trained pairs, member.latents for any beyond train_pairs).
-        if eval_pairs <= train_pairs:
-            eval_latents = ema_lat[:eval_pairs]
-        else:
-            eval_latents = torch.cat(
-                [ema_lat, member.latents[train_pairs:eval_pairs]], dim=0
+        if args.eval_redecode:
+            # NO-FAKE eval-on-shipped-bytes: RE-DECODE the byte-closed archive (the
+            # codec-int8-of-int5 weights that SHIP — NOT the in-memory int5, which is
+            # ~5.6e-3 off). The score is measured on exactly the bytes a contest eval
+            # would decode.
+            shipped = decode_frontier_member(scratch)
+            eval_dec = build_frontier_decoder(shipped.state_dict).to("cpu").eval()
+            shipped_lat = shipped.latents
+            eval_latents = (
+                shipped_lat[:eval_pairs]
+                if eval_pairs <= shipped_lat.shape[0]
+                else shipped_lat
             )
+            # the finetune trains its OWN latents → override the trained-pair latents with
+            # the EMA shadow latents (the archive's latent payload is member.latents,
+            # unchanged by the decoder-only re-encode; the trained latents live in the EMA
+            # shadow and are what the decoder was trained against).
+            n_use = min(train_pairs, eval_latents.shape[0])
+            eval_latents = eval_latents.clone()
+            eval_latents[:n_use] = ema_lat[:n_use]
+        else:
+            eval_dec = build_frontier_decoder(shrunk_sd).to("cpu").eval()
+            if eval_pairs <= train_pairs:
+                eval_latents = ema_lat[:eval_pairs]
+            else:
+                eval_latents = torch.cat(
+                    [ema_lat, member.latents[train_pairs:eval_pairs]], dim=0
+                )
         res = ctx.exact_eval(eval_dec, eval_latents, bytes_meas)
         d_seg = float(res["seg_distortion"])
         d_pose = float(res["pose_distortion"])
@@ -313,8 +440,10 @@ def main(argv: list[str] | None = None) -> int:
     last_epoch = start_epoch - 1
     for epoch in range(start_epoch, int(args.epochs)):
         lr = _lr_at(epoch)
-        for g in opt.param_groups:
-            g["lr"] = lr
+        # group 0 = weights+latents at lr; group 1 (lsq) = lr * step_lr_mult.
+        opt.param_groups[0]["lr"] = lr
+        if use_lsq and len(opt.param_groups) > 1:
+            opt.param_groups[1]["lr"] = lr * float(args.lsq_step_lr_mult)
         perm = torch.randperm(n_train, device=train_device)
         ep_loss = ep_seg = ep_pose = 0.0
         nb = 0
@@ -322,10 +451,16 @@ def main(argv: list[str] | None = None) -> int:
         for bs in range(0, n_train, int(args.batch_size)):
             idx = perm[bs : bs + int(args.batch_size)]
             B = int(idx.numel())
-            # QAT fake-quant the weights, forward, restore (STE flows the grad).
-            originals = apply_frontier_qat(decoder, per_tensor_nbits)
-            decoded_pair = decoder(latents[idx])  # (B,2,3,384,512)
-            restore_frontier_qat(decoder, originals)
+            # QAT fake-quant the weights, forward, restore (STE flows the grad to both
+            # the weights and — in lsq mode — the learnable per-tensor steps).
+            if use_lsq and lsq is not None:
+                originals = lsq.apply(decoder)
+                decoded_pair = decoder(latents[idx])  # (B,2,3,384,512)
+                lsq.restore(decoder, originals)
+            else:
+                originals = apply_frontier_qat(decoder, per_tensor_nbits)
+                decoded_pair = decoder(latents[idx])  # (B,2,3,384,512)
+                restore_frontier_qat(decoder, originals)
             flat = decoded_pair.reshape(B * 2, 3, _EVAL_H, _EVAL_W)
             up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
             down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
@@ -342,9 +477,9 @@ def main(argv: list[str] | None = None) -> int:
             torch.nn.utils.clip_grad_norm_(params, float(args.grad_clip))
             opt.step()
             ema.update(decoder, latents)
-            ep_loss += float(loss)
-            ep_seg += float(seg_l)
-            ep_pose += float(pose_mse)
+            ep_loss += float(loss.detach())
+            ep_seg += float(seg_l.detach())
+            ep_pose += float(pose_mse.detach())
             nb += 1
         last_epoch = epoch
 
@@ -381,7 +516,7 @@ def main(argv: list[str] | None = None) -> int:
                 best_meta = dict(row)
                 # persist the BEST byte-closed archive + EMA shadow.
                 shadow_dec = ema.shadow_decoder(decoder)
-                shrunk_sd = hard_quantize_state_dict_to_nbits(shadow_dec, per_tensor_nbits)
+                shrunk_sd = _hard_quantize(shadow_dec)
                 reencode_frontier_archive(member, shrunk_sd, best_path / "best_archive.zip")
                 torch.save(shrunk_sd, best_path / "best_decoder_hardq.pt")
                 torch.save(ema.shadow_latents_cpu(), best_path / "best_ema_latents.pt")
