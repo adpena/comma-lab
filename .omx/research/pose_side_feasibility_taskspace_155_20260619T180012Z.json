@@ -1,0 +1,755 @@
+{
+  "schema": "pose_side_feasibility_taskspace_155.v1",
+  "produced_at_utc": "2026-06-19T18:00:12.964610+00:00",
+  "producer": "experiments/probe_pose_side_feasibility_taskspace_155.py",
+  "axis_tag": "[contest-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_moved": false,
+  "segment": "b0c9d2329ad1606b|2018-07-27--06-03-57/10",
+  "gt_pose_source": "comma2k19 demo parquet global_pose__frame_* (verified exact segment)",
+  "the_question": "Can the d_pose-critical content of a from-scratch task-space rep (#155) be coded in ~hundreds of bytes while holding d_pose <= the frontier's pose contribution? L1=vector information floor; L2=realized through frames via the REAL frozen PoseNet.",
+  "thresholds": {
+    "frontier_dpose_tight": 3e-05,
+    "frontier_dpose_loose": 0.00034,
+    "hundreds_of_bytes_ceiling": 400,
+    "noise_floor_per_dim": [
+      0.5,
+      0.5,
+      0.5,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "B0": 37545489
+  },
+  "layer1_information_floor": {
+    "n_pairs": 600,
+    "dpose_0dof_constant_mean": 0.2635878911463774,
+    "pose_term_0dof": 1.6235390082975443,
+    "comma2k19_prior": {
+      "comma2k19_speed_mean_mps": 31.74532075112591,
+      "comma2k19_speed_std_mps": 0.870841136203454,
+      "comma2k19_n_frames": 1200,
+      "note": "smooth highway segment; corroborates ~1-2 DOF poly prior"
+    },
+    "per_dim_coding": [
+      {
+        "dim": 0,
+        "name": "v_fwd",
+        "std": 1.2563402124692542,
+        "noise_floor": 0.5,
+        "min_degree_below_floor": null,
+        "coeff_bytes_at_min_degree": null
+      },
+      {
+        "dim": 1,
+        "name": "v_lat",
+        "std": 0.03574809710545068,
+        "noise_floor": 0.5,
+        "min_degree_below_floor": 0,
+        "coeff_bytes_at_min_degree": 2.0
+      },
+      {
+        "dim": 2,
+        "name": "v_vert",
+        "std": 0.029887240138937118,
+        "noise_floor": 0.5,
+        "min_degree_below_floor": 0,
+        "coeff_bytes_at_min_degree": 2.0
+      },
+      {
+        "dim": 3,
+        "name": "w_roll",
+        "std": 0.009566327471522022,
+        "noise_floor": 0.05,
+        "min_degree_below_floor": 0,
+        "coeff_bytes_at_min_degree": 2.0
+      },
+      {
+        "dim": 4,
+        "name": "w_pitch",
+        "std": 0.007394510217235729,
+        "noise_floor": 0.05,
+        "min_degree_below_floor": 0,
+        "coeff_bytes_at_min_degree": 2.0
+      },
+      {
+        "dim": 5,
+        "name": "w_yaw",
+        "std": 0.028622551223555864,
+        "noise_floor": 0.05,
+        "min_degree_below_floor": 0,
+        "coeff_bytes_at_min_degree": 2.0
+      }
+    ],
+    "rows": [
+      {
+        "degree": 1,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.0,
+        "n_coef": 12,
+        "n_resid": 0,
+        "coeff_bytes": 24.0,
+        "resid_bytes": 0.0,
+        "total_bytes": 24.0,
+        "dpose_code": 0.2153231005314197,
+        "pose_term": 1.4673891799090646,
+        "rate_contribution": 1.598061487493211e-05,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": true
+      },
+      {
+        "degree": 1,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.05,
+        "n_coef": 12,
+        "n_resid": 180,
+        "coeff_bytes": 24.0,
+        "resid_bytes": 405.0,
+        "total_bytes": 429.0,
+        "dpose_code": 0.14826443857896274,
+        "pose_term": 1.2176388568822971,
+        "rate_contribution": 0.0002856534908894115,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 1,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.2,
+        "n_coef": 12,
+        "n_resid": 720,
+        "coeff_bytes": 24.0,
+        "resid_bytes": 1620.0,
+        "total_bytes": 1644.0,
+        "dpose_code": 0.07233199530747352,
+        "pose_term": 0.8504821885699518,
+        "rate_contribution": 0.0010946721189328498,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 2,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.0,
+        "n_coef": 18,
+        "n_resid": 0,
+        "coeff_bytes": 36.0,
+        "resid_bytes": 0.0,
+        "total_bytes": 36.0,
+        "dpose_code": 0.17810127127182043,
+        "pose_term": 1.3345458825826126,
+        "rate_contribution": 2.397092231239817e-05,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": true
+      },
+      {
+        "degree": 2,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.05,
+        "n_coef": 18,
+        "n_resid": 180,
+        "coeff_bytes": 36.0,
+        "resid_bytes": 405.0,
+        "total_bytes": 441.0,
+        "dpose_code": 0.11582579116395095,
+        "pose_term": 1.0762239133375124,
+        "rate_contribution": 0.00029364379832687754,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 2,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.2,
+        "n_coef": 18,
+        "n_resid": 720,
+        "coeff_bytes": 36.0,
+        "resid_bytes": 1620.0,
+        "total_bytes": 1656.0,
+        "dpose_code": 0.054883227006961376,
+        "pose_term": 0.7408321470276609,
+        "rate_contribution": 0.0011026624263703157,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 3,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.0,
+        "n_coef": 24,
+        "n_resid": 0,
+        "coeff_bytes": 48.0,
+        "resid_bytes": 0.0,
+        "total_bytes": 48.0,
+        "dpose_code": 0.1602744108429213,
+        "pose_term": 1.2659953034783396,
+        "rate_contribution": 3.196122974986422e-05,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": true
+      },
+      {
+        "degree": 3,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.05,
+        "n_coef": 24,
+        "n_resid": 180,
+        "coeff_bytes": 48.0,
+        "resid_bytes": 405.0,
+        "total_bytes": 453.0,
+        "dpose_code": 0.10204457424476078,
+        "pose_term": 1.0101711451272046,
+        "rate_contribution": 0.00030163410576434363,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 3,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.2,
+        "n_coef": 24,
+        "n_resid": 720,
+        "coeff_bytes": 48.0,
+        "resid_bytes": 1620.0,
+        "total_bytes": 1668.0,
+        "dpose_code": 0.04764517636460801,
+        "pose_term": 0.6902548541271406,
+        "rate_contribution": 0.0011106527338077818,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 4,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.0,
+        "n_coef": 30,
+        "n_resid": 0,
+        "coeff_bytes": 60.0,
+        "resid_bytes": 0.0,
+        "total_bytes": 60.0,
+        "dpose_code": 0.14831015263216826,
+        "pose_term": 1.2178265583906778,
+        "rate_contribution": 3.995153718733028e-05,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": true
+      },
+      {
+        "degree": 4,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.05,
+        "n_coef": 30,
+        "n_resid": 180,
+        "coeff_bytes": 60.0,
+        "resid_bytes": 405.0,
+        "total_bytes": 465.0,
+        "dpose_code": 0.09457133775030262,
+        "pose_term": 0.9724779573352942,
+        "rate_contribution": 0.00030962441320180967,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 4,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.2,
+        "n_coef": 30,
+        "n_resid": 720,
+        "coeff_bytes": 60.0,
+        "resid_bytes": 1620.0,
+        "total_bytes": 1680.0,
+        "dpose_code": 0.04650719883524547,
+        "pose_term": 0.6819618672275266,
+        "rate_contribution": 0.0011186430412452478,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 6,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.0,
+        "n_coef": 42,
+        "n_resid": 0,
+        "coeff_bytes": 84.0,
+        "resid_bytes": 0.0,
+        "total_bytes": 84.0,
+        "dpose_code": 0.13063006460097598,
+        "pose_term": 1.14293510139892,
+        "rate_contribution": 5.593215206226239e-05,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": true
+      },
+      {
+        "degree": 6,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.05,
+        "n_coef": 42,
+        "n_resid": 180,
+        "coeff_bytes": 84.0,
+        "resid_bytes": 405.0,
+        "total_bytes": 489.0,
+        "dpose_code": 0.08084948990944162,
+        "pose_term": 0.8991634440380771,
+        "rate_contribution": 0.0003256050280767418,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 6,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.2,
+        "n_coef": 42,
+        "n_resid": 720,
+        "coeff_bytes": 84.0,
+        "resid_bytes": 1620.0,
+        "total_bytes": 1704.0,
+        "dpose_code": 0.04051334608606786,
+        "pose_term": 0.6365009511859967,
+        "rate_contribution": 0.00113462365612018,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 8,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.0,
+        "n_coef": 54,
+        "n_resid": 0,
+        "coeff_bytes": 108.0,
+        "resid_bytes": 0.0,
+        "total_bytes": 108.0,
+        "dpose_code": 0.12537016893013633,
+        "pose_term": 1.1196882107539416,
+        "rate_contribution": 7.191276693719451e-05,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": true
+      },
+      {
+        "degree": 8,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.05,
+        "n_coef": 54,
+        "n_resid": 180,
+        "coeff_bytes": 108.0,
+        "resid_bytes": 405.0,
+        "total_bytes": 513.0,
+        "dpose_code": 0.07650574898356324,
+        "pose_term": 0.8746756483609409,
+        "rate_contribution": 0.0003415856429516739,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      },
+      {
+        "degree": 8,
+        "coef_bits": 16,
+        "resid_keep_frac": 0.2,
+        "n_coef": 54,
+        "n_resid": 720,
+        "coeff_bytes": 108.0,
+        "resid_bytes": 1620.0,
+        "total_bytes": 1728.0,
+        "dpose_code": 0.03880778486026695,
+        "pose_term": 0.6229589461615184,
+        "rate_contribution": 0.0011506042709951122,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap": false
+      }
+    ],
+    "n_byte_cheap_AND_holds_tight": 0,
+    "n_byte_cheap_AND_holds_loose": 0,
+    "min_bytes_row_holding_tight": null,
+    "min_bytes_row_holding_loose": null
+  },
+  "layer2_realizability": {
+    "n_frames_measured": 16,
+    "carrier_grid": [
+      [
+        16,
+        8,
+        "bicubic"
+      ],
+      [
+        16,
+        6,
+        "bicubic"
+      ],
+      [
+        8,
+        8,
+        "bicubic"
+      ],
+      [
+        8,
+        6,
+        "bicubic"
+      ],
+      [
+        4,
+        8,
+        "bicubic"
+      ],
+      [
+        4,
+        6,
+        "bicubic"
+      ],
+      [
+        2,
+        8,
+        "bicubic"
+      ],
+      [
+        1,
+        8,
+        "bicubic"
+      ],
+      [
+        16,
+        8,
+        "block"
+      ],
+      [
+        16,
+        6,
+        "block"
+      ],
+      [
+        8,
+        8,
+        "block"
+      ],
+      [
+        8,
+        6,
+        "block"
+      ],
+      [
+        4,
+        8,
+        "block"
+      ],
+      [
+        4,
+        6,
+        "block"
+      ],
+      [
+        2,
+        8,
+        "block"
+      ],
+      [
+        1,
+        8,
+        "block"
+      ]
+    ],
+    "rows": [
+      {
+        "spatial_div": 16,
+        "luma_bits": 8,
+        "mode": "bicubic",
+        "coarse_grid": [
+          54,
+          72
+        ],
+        "realized_dpose": 63.999010264873505,
+        "realized_dpose_std": 35.78331928472841,
+        "pose_term": 25.298025667010755,
+        "carrier_bytes_amort": 765065.088,
+        "rate_amort": 0.5094254385660019,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 16,
+        "luma_bits": 6,
+        "mode": "bicubic",
+        "coarse_grid": [
+          54,
+          72
+        ],
+        "realized_dpose": 70.94757276773453,
+        "realized_dpose_std": 36.145564527806044,
+        "pose_term": 26.635985577360287,
+        "carrier_bytes_amort": 573798.816,
+        "rate_amort": 0.3820690789245014,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 8,
+        "luma_bits": 8,
+        "mode": "bicubic",
+        "coarse_grid": [
+          109,
+          145
+        ],
+        "realized_dpose": 0.2222524996905122,
+        "realized_dpose_std": 0.19451510641870687,
+        "pose_term": 1.4908135352568819,
+        "carrier_bytes_amort": 3110044.6799999997,
+        "rate_amort": 2.0708510947879786,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 8,
+        "luma_bits": 6,
+        "mode": "bicubic",
+        "coarse_grid": [
+          109,
+          145
+        ],
+        "realized_dpose": 0.22344834334217012,
+        "realized_dpose_std": 0.1857323559648271,
+        "pose_term": 1.4948188630806414,
+        "carrier_bytes_amort": 2332533.51,
+        "rate_amort": 1.5531383210909835,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 4,
+        "luma_bits": 8,
+        "mode": "bicubic",
+        "coarse_grid": [
+          218,
+          291
+        ],
+        "realized_dpose": 0.03546056096365646,
+        "realized_dpose_std": 0.046090324313504176,
+        "pose_term": 0.5954877073765374,
+        "carrier_bytes_amort": 12483075.888,
+        "rate_amort": 8.311967842528299,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 4,
+        "luma_bits": 6,
+        "mode": "bicubic",
+        "coarse_grid": [
+          218,
+          291
+        ],
+        "realized_dpose": 0.03649574842449965,
+        "realized_dpose_std": 0.06049320182355203,
+        "pose_term": 0.6041171113658316,
+        "carrier_bytes_amort": 9362306.916,
+        "rate_amort": 6.233975881896224,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 2,
+        "luma_bits": 8,
+        "mode": "bicubic",
+        "coarse_grid": [
+          437,
+          582
+        ],
+        "realized_dpose": 0.0009345053804281633,
+        "realized_dpose_std": 0.0007089388932158302,
+        "pose_term": 0.09666981847651124,
+        "carrier_bytes_amort": 50046827.184,
+        "rate_amort": 33.324127955824466,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 1,
+        "luma_bits": 8,
+        "mode": "bicubic",
+        "coarse_grid": [
+          874,
+          1164
+        ],
+        "realized_dpose": 0.0,
+        "realized_dpose_std": 0.0,
+        "pose_term": 0.0,
+        "carrier_bytes_amort": 200187308.736,
+        "rate_amort": 133.29651182329786,
+        "holds_tight": true,
+        "holds_loose": true,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 16,
+        "luma_bits": 8,
+        "mode": "block",
+        "coarse_grid": [
+          54,
+          72
+        ],
+        "realized_dpose": 8.615705877542496,
+        "realized_dpose_std": 6.378892897984962,
+        "pose_term": 9.282082674455392,
+        "carrier_bytes_amort": 765065.088,
+        "rate_amort": 0.5094254385660019,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 16,
+        "luma_bits": 6,
+        "mode": "block",
+        "coarse_grid": [
+          54,
+          72
+        ],
+        "realized_dpose": 17.211748987436295,
+        "realized_dpose_std": 12.426599469620452,
+        "pose_term": 13.119355543408485,
+        "carrier_bytes_amort": 573798.816,
+        "rate_amort": 0.3820690789245014,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 8,
+        "luma_bits": 8,
+        "mode": "block",
+        "coarse_grid": [
+          109,
+          145
+        ],
+        "realized_dpose": 0.09654020464222413,
+        "realized_dpose_std": 0.07615049812474295,
+        "pose_term": 0.9825487501504652,
+        "carrier_bytes_amort": 3110044.6799999997,
+        "rate_amort": 2.0708510947879786,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 8,
+        "luma_bits": 6,
+        "mode": "block",
+        "coarse_grid": [
+          109,
+          145
+        ],
+        "realized_dpose": 0.06633963266358478,
+        "realized_dpose_std": 0.07065321281603601,
+        "pose_term": 0.814491452770284,
+        "carrier_bytes_amort": 2332533.51,
+        "rate_amort": 1.5531383210909835,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 4,
+        "luma_bits": 8,
+        "mode": "block",
+        "coarse_grid": [
+          218,
+          291
+        ],
+        "realized_dpose": 0.026892859470279973,
+        "realized_dpose_std": 0.02132185624013361,
+        "pose_term": 0.5185832572526804,
+        "carrier_bytes_amort": 12483075.888,
+        "rate_amort": 8.311967842528299,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 4,
+        "luma_bits": 6,
+        "mode": "block",
+        "coarse_grid": [
+          218,
+          291
+        ],
+        "realized_dpose": 0.03136673017615976,
+        "realized_dpose_std": 0.02602464366143571,
+        "pose_term": 0.5600600876348872,
+        "carrier_bytes_amort": 9362306.916,
+        "rate_amort": 6.233975881896224,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 2,
+        "luma_bits": 8,
+        "mode": "block",
+        "coarse_grid": [
+          437,
+          582
+        ],
+        "realized_dpose": 0.014955366907997814,
+        "realized_dpose_std": 0.014995871576380358,
+        "pose_term": 0.38672169460734696,
+        "carrier_bytes_amort": 50046827.184,
+        "rate_amort": 33.324127955824466,
+        "holds_tight": false,
+        "holds_loose": false,
+        "byte_cheap_amort": false
+      },
+      {
+        "spatial_div": 1,
+        "luma_bits": 8,
+        "mode": "block",
+        "coarse_grid": [
+          874,
+          1164
+        ],
+        "realized_dpose": 0.0,
+        "realized_dpose_std": 0.0,
+        "pose_term": 0.0,
+        "carrier_bytes_amort": 200187308.736,
+        "rate_amort": 133.29651182329786,
+        "holds_tight": true,
+        "holds_loose": true,
+        "byte_cheap_amort": false
+      }
+    ],
+    "min_bytes_carrier_holding_loose": null,
+    "min_bytes_carrier_holding_tight": null
+  },
+  "layer3_frontier_anchor": {
+    "available": true,
+    "source": "experiments/results/forkpoints/basin_bc20_20260612T121523Z/best/best_meta.json",
+    "from_scratch_rep": "bc20 HNeRV basin (full-resolution frame reconstruction)",
+    "measured_d_pose": 0.0008310293920415765,
+    "measured_pose_term": 0.09116081351334994,
+    "measured_d_seg": 0.003781992613027493,
+    "interpretation": "a from-scratch full-frame rep already realizes d_pose ~8.3e-4 (pose term ~0.091) WITH the frames it reconstructs for d_seg -- pose is bundled, not a separable cheap slot. This matches the bicubic-div2 L2 carrier (the HNeRV decoder is ~half-res-effective for pose). To reach the frontier's tight pose anchor (3e-5) the rep must improve the FULL-FRAME luma fidelity, not add a pose code."
+  },
+  "verdict": "RED_EVEN_VECTOR_FLOOR_NEEDS_MANY_BYTES",
+  "verdict_basis": "MEASUREMENT-FIRST + NO-FAKE: the comma2k19 GT is a PRIOR (verified shape), not a drop-in (cannot store a vector -> d_pose=0). L1 is the vector-level byte/d_pose floor; L2 is the contest quantity (REAL PoseNet on degraded GT frames). GREEN requires BOTH a cheap vector code (L1) AND a cheap realizing carrier (L2).",
+  "honest_note": "pose is a SMALL term (~0.017 at the frontier); this measures whether a FROM-SCRATCH rep can include pose cheaply, NOT a frontier nudge. Pointer UNMOVED 0.19110."
+}
