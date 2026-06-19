@@ -25,10 +25,11 @@ Raw `g_seg` (~1e6, sum over ~196k pixel margins) and `g_pose` (~2e-3, a single p
 | 4.0 (3.91) | 0.012953 | 0.052005 | 0.0566 (84,941) | 2.0730 | rgb_0=7 rgb_1=6 stem=4 blocks0-3=3-4 |
 | 4.5 (4.35) | 0.007972 | 0.007483 | 0.0655 (98,377) | 1.1363 | rgb_0=8 rgb_1=7 stem=5 blocks=4 |
 | 5.0 (4.91) | 0.005167 | 0.001890 | 0.0770 (115,613) | 0.7312 | rgb_0=8 rgb_1=7 stem=5 blocks=4-5 |
-| 5.5 (5.34) | 0.003575 | 0.000969 | 0.0851 (127,833) | **0.5411** | rgb_0=8 rgb_1=8 stem=6 blocks=5 blocks5=7 |
-| 6.0/6.5/7.0 | (run continues in background; durable+resumable; monotone toward int8 baseline) |
+| 5.5 (5.34) | 0.003575 | 0.000969 | 0.0851 (127,833) | 0.5411 | rgb_0=8 rgb_1=8 stem=6 blocks=5 blocks5=7 |
+| 6.0 (5.91) | 0.002589 | 0.000372 | 0.0961 (144,265) | **0.4159** | rgb_0=8 rgb_1=8 stem=6-7 blocks=6 |
+| 6.5/7.0 | (run continues in background; durable+resumable; monotone toward int8 baseline 0.1965) |
 
-**BEST byte-closed S so far: 0.5411 @ mean-5.5 bits (127,833 B).** Run still grinding the 6.0/6.5/7.0 tail under heavy 3-process CPU contention (each eval ~30-40 min); the curve is monotone and the tail caps toward the int8 baseline (0.1965).
+**BEST byte-closed S so far: 0.4159 @ mean-6.0 bits (144,265 B).** Run still grinding the 6.5/7.0 tail under heavy 3-process CPU contention (sibling lab agents at 300%+253% CPU; each eval ~30-40 min); the curve is strictly monotone decreasing and the tail caps toward the int8 baseline (0.1965). The mb-6.0 point confirms the trend: d_seg=0.00259 (4.6× the frontier's 0.00056) at near-int8 bytes (144,265 of 177,169) — the d_seg term ALONE (100·0.00259 = 0.259) already exceeds the pointer 0.191, so no allocation point in the family can cross it.
 
 ## VERDICT — the exact allocation DOMINATES the generic uniform int5, but the frontier RATE cap STANDS above the pointer
 1. **The exact non-uniform allocation BEATS the generic uniform int5.** At mean-5.5, S=0.5411 < generic int5 0.5593 — and at FEWER bytes (127,833 vs 142,853). The exact per-tensor allocation (rgb_0/rgb_1 protected at int8, stem/early-blocks coarsened to int5-6) is strictly better than coarsening everything uniformly. The solve did what it claimed: provably-≤ uniform bits at equal score-distortion, MEASURED.
