@@ -2173,6 +2173,11 @@ class TorchVehicleDriver:
             # Persist the taper schedule so resume fails closed on a taper change (the
             # codec stays schedule-agnostic; this makes the resume-safety EXPLICIT).
             "taper_channels": self.cfg.taper_channels,
+            # Persist the stage-8 Muon own-floor flag so a resume that TOGGLES it fails
+            # closed (sister of the taper guard). A checkpoint trained with floor-fix=X
+            # carries a Muon LambdaLR step-count tuned to X's eta_min; resuming under !X
+            # would silently apply that step-count to a different lambda at stage 8.
+            "muon_lr_floor_fix": bool(self.cfg.muon_lr_floor_fix),
             "stage_name": spec.name,
             "ema_decay": spec.ema_decay,
             "best_score": self.best_score,
@@ -2835,6 +2840,24 @@ class TorchVehicleDriver:
                 raise ValueError(
                     f"checkpoint taper_channels={_man_taper} != cfg.taper_channels={_cfg_taper}; "
                     "cannot resume a different taper (different architecture)"
+                )
+            # muon_lr_floor_fix resume guard (sister of the taper guard; Lens-D 2026-06-19
+            # finding). The flag only changes the STAGE-8 Muon LambdaLR floor. Toggling it is
+            # SAFE before stage 8 (Muon scheduler does not exist yet — built fresh at stage 8),
+            # so a stages-1-7 checkpoint (has_muon=False) may resume under either flag value.
+            # It is UNSAFE only once a Muon scheduler step-count is checkpointed (has_muon=True =
+            # at/into stage 8): resuming under a toggled flag would apply that step-count to a
+            # different lambda → fail closed EXPLICITLY. Backward-compatible: old checkpoints
+            # lack the key → read as False; pre-stage-8 they pass regardless of cfg.
+            if (
+                bool(man.get("has_muon", False))
+                and bool(man.get("muon_lr_floor_fix", False)) != bool(self.cfg.muon_lr_floor_fix)
+            ):
+                raise ValueError(
+                    f"checkpoint muon_lr_floor_fix={man.get('muon_lr_floor_fix', False)} != "
+                    f"cfg.muon_lr_floor_fix={self.cfg.muon_lr_floor_fix} at a Muon-stage "
+                    "checkpoint (has_muon=True); cannot resume with a toggled stage-8 Muon "
+                    "floor (would mis-schedule the Muon LR)"
                 )
             merged = load_checkpoint(self.cfg.out_dir, map_location=self.cfg.device)
             resume_pos = merged["position"]
