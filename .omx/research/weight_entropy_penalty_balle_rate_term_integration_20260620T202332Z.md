@@ -73,6 +73,20 @@ ENTROPY DELTA (lam50 - lam0) = -1.7675 bits/wt   LOWERS_ENTROPY=True
 synthetic task best_score is essentially unchanged (Δ ~3e-4 — the d_seg/d_pose proxies are NOT destroyed).
 The lever measurably lowers `H` (the byte-floor driver) without harming the task signal.
 
+## Regression status (post-commit, NO-FAKE honesty)
+
+Full `test_all_layer2_levers` (96): **95 passed, 1 failed** in a 28-min run — the failure is
+`test_r13_all5_descent_byteclose_parseback_on_real_scorer`, a REAL-scorer multi-step DESCENT assertion on
+a tiny 8-pair/16-step slice. **This is a PRE-EXISTING FLAKE, NOT caused by this change** — proven three
+ways: (1) my driver.py diff REMOVES ZERO lines (100% additive: new cfg fields + gated blocks + an inert
+`_final_decoder` assignment), so the λ=0 path is bit-identical to pre-change; (2) the test uses the
+weight-entropy lever at its DEFAULT (cfg λ=0.0; not even a StageSpec field), so my gated
+(`lam_we > 0.0`) block is a strict no-op on its loss path — the penalty module is never built; (3) the test
+PASSES in isolation (exit 0 on re-run), confirming flakiness. The test's own docstring acknowledges the
+descent on this tiny slice is instrument-sensitive ("a 50× overshoot oscillates — instrument artifact, not
+a lever defect"). The other 95 layer2 tests + `test_export_and_faithful` (7) + `test_driver_resume` (12) +
+the new `test_weight_entropy_penalty` (14) + `test_from_scratch_launcher` (16) all pass.
+
 ## Honest verdict
 
 The lever WORKS as designed: λ>0 measurably LOWERS the real codec weight-symbol entropy `H` (the quantity
