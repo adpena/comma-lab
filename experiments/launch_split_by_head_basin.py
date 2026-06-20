@@ -93,6 +93,18 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "so the stage-8 d_seg-finishing polish is PR95-faithful. See "
              "apparatus_audit_pr95_breakthrough_blocker_20260619T214001Z.md.",
     )
+    p.add_argument(
+        "--seg-margin-hinge",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Replace every stage's seg surrogate with the flip-targeting MARGIN-HINGE "
+             "(lens A: 0.643x CE residual d_seg; the #1 detector-informed loss lever). "
+             "Validated at n600 (d_seg 0.00221 < basin CE 0.00251) while keeping THIS "
+             "launcher's full-MPS pose path that actually trains pose (d_pose 0.00034) — "
+             "unlike the bind-all split-by-head+equimarginal path which broke pose "
+             "(d_pose 0.8 from a 0.00034 KD-warm start). Default OFF = byte-identical "
+             "vendored curriculum.",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -144,7 +156,27 @@ def main(argv: list[str] | None = None) -> int:
         max_pairs=args.n_pairs,
         targets_cache=args.targets_cache,
     )
-    driver = TorchVehicleDriver(cfg, scorer=scorer, vendored=import_vendored_bundle())
+    # Optional seg-surrogate lever: build the curriculum + replace every stage's seg
+    # surrogate with margin_hinge (the validated detector-informed d_seg lever), passed
+    # to the driver via its ``curriculum=`` hook. None → driver builds the vendored
+    # curriculum internally (byte-identical default). This rides on THIS launcher's
+    # full-MPS pose path (the one that trains pose), NOT the bind-all split-by-head path.
+    curriculum = None
+    if args.seg_margin_hinge:
+        import dataclasses
+
+        from tac.torch_vehicle.curriculum import build_curriculum
+
+        specs = build_curriculum(
+            total_epoch_budget=args.total_epoch_budget,
+            ema_decay=args.ema_decay,
+            eval_every=args.eval_every,
+        )
+        curriculum = [dataclasses.replace(s, seg_surrogate="margin_hinge") for s in specs]
+
+    driver = TorchVehicleDriver(
+        cfg, scorer=scorer, vendored=import_vendored_bundle(), curriculum=curriculum
+    )
     summary = driver.run()
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
