@@ -834,6 +834,42 @@ class TorchVehicleConfig:
     # (strict load shape mismatch) — never a silent cross-architecture resume. Byte-identical
     # when None (the live basin / from-0 A/B are unaffected).
     taper_channels: list[int] | None = None
+    # WEIGHT-ENTROPY PENALTY (the Ballé end-to-end rate-distortion lever — the
+    # un-integrated VCM term). DEFAULT 0.0 → BYTE-IDENTICAL (the term is never
+    # computed, the penalty module is never built, its params never enter the
+    # optimizer; the live basin resuming onto this code is unaffected — proved by
+    # the byte-identity test). When > 0, the driver builds ONE
+    # ``tac.torch_vehicle.weight_entropy_penalty.WeightEntropyPenalty`` per run
+    # (a per-output-channel Ballé factorized logistic-CDF prior on each decoder
+    # Conv2d/Linear weight tensor's CODEC-GRID symbols), adds its LEARNABLE prior
+    # params to the AdamW group (so the prior trains), and adds
+    # ``λ · rate_term`` (the expected codelength on the contest rate scale) to the
+    # training loss in the SAME stages C1a applies (mirroring ``cat_lambda``'s
+    # 0.01→0.02 late-stage schedule via ``weight_entropy_penalty_stage_min``). The
+    # contest rate term is ``25·archive_bytes/N`` and ``archive_bytes ≈ Σ H(symbol)
+    # ·numel/8``; the post-hoc coder is already at the lossless floor, so the ONLY
+    # rate lever is lowering ``H`` itself — which is set by TRAINING. The Ballé term
+    # pulls the weight-symbol distribution toward low entropy → lower ``H`` → lower
+    # byte floor. STRONGER than the memoryless C1a shadow (a learned per-channel
+    # prior, not a fixed soft histogram). NOT an authority/score knob — it changes
+    # train-time dynamics; the exact d_seg/d_pose that pick BEST + the REAL archive
+    # bytes still come from the byte-closed codec on the CPU authority. The net-score
+    # win is ``[contest-CPU advisory]`` until a byte-closed paired CPU/CUDA eval (no
+    # score claim from the flag alone; the empirical bit-spend proof is the λ-on/off
+    # A/B measuring real ``archive_bytes`` at equal d_seg/d_pose per Catalog #304).
+    weight_entropy_penalty_lambda: float = 0.0
+    # The FIRST curriculum stage index (0-based) at which the weight-entropy penalty
+    # is ACTIVE. Mirrors C1a's "late-stage only" schedule (C1a ramps in at stage 5);
+    # the decoder-rate lever is most useful once the coarse structure is learned. A
+    # stage at index < this contributes NO penalty term (byte-identical there) even
+    # when ``weight_entropy_penalty_lambda`` > 0. Default 0 = active from stage 0
+    # (the smoke/A-B convention so a tiny 1-stage run exercises it). Only consulted
+    # when ``weight_entropy_penalty_lambda`` > 0.
+    weight_entropy_penalty_stage_min: int = 0
+    # Initial logistic scale for each per-channel Ballé prior (only consulted when
+    # the penalty is active). The default 10.0 starts broad (the codec-grid symbols
+    # span ~±127 early) and tightens as the prior learns.
+    weight_entropy_penalty_init_scale: float = 10.0
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -1015,6 +1051,21 @@ class TorchVehicleConfig:
                 "are mutually exclusive: both replace the SAME export decoder blob with a "
                 "variable-level grid, but from DIFFERENT level sources (Lever-4's online "
                 "score-sensitivity EMA vs the offline measured RD table). Enable exactly one."
+            )
+        if float(self.weight_entropy_penalty_lambda) < 0.0:
+            raise ValueError(
+                "weight_entropy_penalty_lambda must be >= 0.0 (0.0 = OFF / byte-identical); "
+                f"got {self.weight_entropy_penalty_lambda}"
+            )
+        if int(self.weight_entropy_penalty_stage_min) < 0:
+            raise ValueError(
+                "weight_entropy_penalty_stage_min must be >= 0 (the first stage index the "
+                f"penalty is active); got {self.weight_entropy_penalty_stage_min}"
+            )
+        if float(self.weight_entropy_penalty_init_scale) <= 0.0:
+            raise ValueError(
+                "weight_entropy_penalty_init_scale must be > 0 (the per-channel prior's "
+                f"initial logistic scale); got {self.weight_entropy_penalty_init_scale}"
             )
         if self.warm_start_dir is not None:
             self.warm_start_dir = Path(self.warm_start_dir)
@@ -1245,6 +1296,20 @@ class TorchVehicleDriver:
         self._eval_thread: threading.Thread | None = None
         self._skipped_evals = 0
         self._inflight_snapshot_epoch: int | None = None
+        # WEIGHT-ENTROPY PENALTY (Ballé rate lever) state. Built LAZILY on the first
+        # ``_build_stage_runtime`` when ``cfg.weight_entropy_penalty_lambda > 0`` (the
+        # decoder it sizes against is created in ``run()``), then PERSISTED across
+        # stages (the learned per-channel prior carries, like the weight EMA). Its
+        # params are re-added to each stage's AdamW group (PR95 rebuilds the optimizer
+        # per stage). ``None`` on the default path → byte-identical (never built,
+        # never read). ``_cur_stage_index`` lets ``_weight_regularizers`` honor the
+        # ``weight_entropy_penalty_stage_min`` schedule (mirrors C1a's late-stage ramp).
+        self._weight_entropy_penalty: nn.Module | None = None
+        self._cur_stage_index: int = 0
+        # The final LIVE (non-EMA) decoder, set at each stage boundary in ``run()`` (None
+        # before the first stage completes). Post-run inspection surface for the
+        # weight-entropy λ-on/off A/B; NOT a score surface (BEST/export use the EMA shadow).
+        self._final_decoder: nn.Module | None = None
 
     # -- architecture construction (base_ch threaded — the FINDING-1 fix) -----
     def _new_vendored_decoder(self, device: torch.device | None = None) -> nn.Module:
@@ -1558,6 +1623,28 @@ class TorchVehicleDriver:
         )
         film_lr = min(spec.adamw_lr, _FILM_LR_CAP)
 
+        # WEIGHT-ENTROPY PENALTY (Ballé rate lever) param routing — DEFAULT-PRESERVING.
+        # When ``cfg.weight_entropy_penalty_lambda > 0``, build the penalty ONCE (sized to
+        # THIS decoder; persisted across stages so the learned per-channel prior carries)
+        # and add its LEARNABLE prior params (loc / raw_scale / raw_shape per coded weight
+        # tensor) to a DEDICATED AdamW group at ``spec.adamw_lr`` so the prior trains. Empty
+        # list when the lever is off → ``adamw_groups`` is byte-identical to the legacy path
+        # (no extra group, no optimizer-state change). The penalty's params are NOT in the
+        # clip set or the Muon partition (they are prior params, not decoder weights — they
+        # carry no frame gradient and must not be orthogonalized by Muon).
+        penalty_params: list[torch.Tensor] = []
+        if float(self.cfg.weight_entropy_penalty_lambda) > 0.0:
+            if self._weight_entropy_penalty is None:
+                from tac.torch_vehicle.weight_entropy_penalty import WeightEntropyPenalty
+
+                self._weight_entropy_penalty = WeightEntropyPenalty(
+                    decoder,
+                    init_scale=float(self.cfg.weight_entropy_penalty_init_scale),
+                ).to(self.train_device)
+            penalty_params = [
+                p for p in self._weight_entropy_penalty.parameters() if p.requires_grad
+            ]
+
         if spec.use_muon:
             muon_params, adamw_params = self.v.partition_params_for_muon(decoder)
             if film_ids:
@@ -1577,6 +1664,8 @@ class TorchVehicleDriver:
             ]
             if film_params:
                 adamw_groups.append({"params": film_params, "lr": film_lr})
+            if penalty_params:
+                adamw_groups.append({"params": penalty_params, "lr": spec.adamw_lr})
             adamw_opt = torch.optim.AdamW(adamw_groups, weight_decay=0.0)
         else:
             muon_opt = None
@@ -1591,6 +1680,8 @@ class TorchVehicleDriver:
             ]
             if film_params:
                 adamw_groups.append({"params": film_params, "lr": film_lr})
+            if penalty_params:
+                adamw_groups.append({"params": penalty_params, "lr": spec.adamw_lr})
             adamw_opt = torch.optim.AdamW(adamw_groups, weight_decay=0.0)
         # The clip set = the decoder AdamW params PLUS the FiLM params (so grad-clip at
         # ``_train_one_epoch`` covers the capped FiLM group too). == adamw_params when
@@ -1919,6 +2010,25 @@ class TorchVehicleDriver:
                 terms.append(spec.rate_lambda_w * h_cond)
             if spec.rate_lambda_lat > 0:
                 terms.append(spec.rate_lambda_lat * r_lat)
+        # WEIGHT-ENTROPY PENALTY (the Ballé end-to-end rate-distortion lever) —
+        # DEFAULT-PRESERVING. ``cfg.weight_entropy_penalty_lambda == 0.0`` (the default)
+        # adds NO term (and the penalty module was never built — see _build_stage_runtime),
+        # so the loss is byte-identical. When > 0 AND the current stage is at/after
+        # ``weight_entropy_penalty_stage_min`` (the C1a-style late-stage schedule), add
+        # ``λ · rate_term`` where ``rate_term`` is the expected codelength of the decoder's
+        # CURRENT codec-grid weight symbols under the LEARNED per-channel Ballé prior,
+        # mapped onto the contest rate scale (25·bits/8/N). The term carries gradient to
+        # BOTH the decoder weights (pulling the symbol distribution toward low entropy →
+        # lower deployed bytes) AND the prior params (which adapt). The penalty module is
+        # built when the lever is enabled; if it is still None here the lever is off.
+        lam_we = float(self.cfg.weight_entropy_penalty_lambda)
+        if (
+            lam_we > 0.0
+            and self._weight_entropy_penalty is not None
+            and self._cur_stage_index >= int(self.cfg.weight_entropy_penalty_stage_min)
+        ):
+            _total_bits, rate_term = self._weight_entropy_penalty.rate_bits(decoder)
+            terms.append(lam_we * rate_term)
         if not terms:
             return None
         reg = terms[0]
@@ -2890,6 +3000,10 @@ class TorchVehicleDriver:
         for stage_index in range(resume_pos.stage_index, len(self.curriculum)):
             spec = self.curriculum[stage_index]
             start_epoch = resume_pos.epoch_in_stage if stage_index == resume_pos.stage_index else 0
+            # The weight-entropy penalty (Ballé lever) honors a late-stage schedule
+            # (``weight_entropy_penalty_stage_min``) like C1a; ``_weight_regularizers``
+            # reads this to gate the term per stage. No-op on the default path (λ=0).
+            self._cur_stage_index = stage_index
 
             # Build decoder/latents for this stage (carry from prior stage, or init).
             resuming_into_this_stage = (
@@ -3077,6 +3191,11 @@ class TorchVehicleDriver:
             # End of stage: ensure a checkpoint at the boundary + carry forward.
             self._checkpoint(rt, spec, stage_index, spec.epochs)
             carry_decoder = rt.decoder
+            # Expose the final LIVE (non-EMA) decoder for post-run inspection (the
+            # weight-entropy A/B reads the trained weights the rate lever shaped). NOT a
+            # score surface — BEST/export use the EMA shadow as always. Set every stage so
+            # it holds the last stage's live decoder at run end.
+            self._final_decoder = rt.decoder
             carry_latents = rt.latents
             carry_ema_decoder = rt.ema_decoder
             carry_ema_latents = rt.ema_latents

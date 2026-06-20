@@ -105,6 +105,26 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "(d_pose 0.8 from a 0.00034 KD-warm start). Default OFF = byte-identical "
              "vendored curriculum.",
     )
+    p.add_argument(
+        "--weight-entropy-penalty-lambda",
+        type=float,
+        default=0.0,
+        help="Ballé end-to-end rate-distortion lever: λ for the learned-prior decoder "
+             "WEIGHT-ENTROPY penalty (λ·rate_term added to the loss; pulls the codec "
+             "INT8 weight-symbol distribution toward LOW entropy → lower deployed bytes "
+             "— the only rate lever left now the post-hoc coder is at the lossless "
+             "floor). DEFAULT 0.0 = OFF / byte-identical (the live basin is unaffected). "
+             "[contest-CPU advisory] NON-PROMOTABLE; the real bytes come from the "
+             "byte-closed codec (λ-on/off A/B at equal d_seg/d_pose).",
+    )
+    p.add_argument(
+        "--weight-entropy-penalty-stage-min",
+        type=int,
+        default=0,
+        help="first curriculum stage index (0-based) the weight-entropy penalty is "
+             "active (mirrors C1a's late-stage ramp; default 0 = active from stage 0). "
+             "Only consulted when --weight-entropy-penalty-lambda > 0.",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -145,6 +165,9 @@ def main(argv: list[str] | None = None) -> int:
         split_by_head=args.split_by_head,  # True=pose-axis salvage; False=full-MPS
         async_eval=args.async_eval,  # True=non-blocking background CPU authority eval
         muon_lr_floor_fix=args.muon_lr_floor_fix,  # stage-8 Muon own-floor (BUG-B fix)
+        # Ballé rate lever (default 0.0 = OFF / byte-identical; the live basin uses 0.0).
+        weight_entropy_penalty_lambda=args.weight_entropy_penalty_lambda,
+        weight_entropy_penalty_stage_min=args.weight_entropy_penalty_stage_min,
         seed=args.seed,
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).
