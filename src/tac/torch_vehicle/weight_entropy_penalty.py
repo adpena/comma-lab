@@ -153,7 +153,12 @@ class WeightEntropyPenalty(nn.Module):
         scale = (ma / _CODEC_N_QUANT).detach()
         return weight / scale
 
-    def rate_bits(self, decoder: nn.Module) -> tuple[Tensor, Tensor]:
+    def rate_bits(
+        self,
+        decoder: nn.Module,
+        *,
+        per_tensor_weights: dict[str, float] | None = None,
+    ) -> tuple[Tensor, Tensor]:
         """Return ``(total_bits, rate_term)`` for the decoder's CURRENT weights under
         the learned per-channel priors.
 
@@ -168,10 +173,24 @@ class WeightEntropyPenalty(nn.Module):
         EntropyBottleneck's ``(N, C, *)`` contract; the OUTPUT-CHANNEL axis is the
         channel dim) and fed its codec-grid representation. In ``training`` the
         bottleneck adds ``U(-0.5, 0.5)`` noise (Ballé STE); in ``eval`` it rounds.
+
+        ``per_tensor_weights`` (the WATERFILL / KKT reverse-water-fill option): a
+        ``{tensor_name: multiplier}`` map. When provided, the per-tensor contribution
+        is ``multiplier · bits_per_element · n_elem`` so the rate budget is spent where
+        the multiplier is high (large byte-share, low task-sensitivity) and protected
+        where it is low (high d_seg/d_pose sensitivity). The DERIVED rate_term reported
+        on the contest scale is still the UN-weighted Σ bits (so the score-scale number
+        is comparable across uniform/waterfill A/Bs); ONLY ``total_bits`` (the
+        gradient-carrying loss term) carries the weighting. ``None`` (the default) =
+        uniform multiplier 1.0 for every tensor (the legacy uniform-λ path,
+        byte-identical loss term). Use :meth:`compute_waterfill_weights` to derive the
+        map from a sensitivity dict; a missing tensor defaults to multiplier 1.0.
         """
         coded = dict(_coded_weight_modules(decoder))
-        total_bits = torch.zeros((), device=next(decoder.parameters()).device)
-        total_bits = total_bits.to(torch.float32)
+        dev = next(decoder.parameters()).device
+        total_bits = torch.zeros((), device=dev).to(torch.float32)
+        # The UN-weighted total for the contest-scale rate_term (comparable across A/Bs).
+        unweighted_bits = torch.zeros((), device=dev).to(torch.float32)
         n_seen = 0
         for name, mod in coded.items():
             key = self._key_for_name.get(name)
@@ -189,13 +208,76 @@ class WeightEntropyPenalty(nn.Module):
             grid = self._codec_grid_representation(w)
             y = grid.reshape(1, out_ch, -1)  # (N=1, C=out_ch, *)
             _y_hat, bits_per_element = bottleneck(y)
-            total_bits = total_bits + bits_per_element * float(w.numel())
+            tensor_bits = bits_per_element * float(w.numel())
+            mult = 1.0 if per_tensor_weights is None else float(per_tensor_weights.get(name, 1.0))
+            total_bits = total_bits + mult * tensor_bits
+            unweighted_bits = unweighted_bits + tensor_bits
             n_seen += 1
         if n_seen == 0:  # pragma: no cover - guarded at construction
             raise ValueError("WeightEntropyPenalty.rate_bits found no coded weight tensors")
         self._last_total_bits = total_bits
-        rate_term = total_bits / 8.0 / float(_TOTAL_VIDEO_BYTES) * _RATE_COEFF
+        # rate_term reports the UN-weighted bits on the contest scale (so the reported
+        # score-scale magnitude is comparable whether or not waterfill weighting is on);
+        # the WEIGHTED total_bits is the loss term that actually steers the allocation.
+        rate_term = unweighted_bits / 8.0 / float(_TOTAL_VIDEO_BYTES) * _RATE_COEFF
         return total_bits, rate_term
+
+    @torch.no_grad()
+    def compute_waterfill_weights(
+        self,
+        decoder: nn.Module,
+        sensitivity: dict[str, float] | None = None,
+        *,
+        eps: float = 1e-6,
+    ) -> dict[str, float]:
+        """Derive the per-tensor WATERFILL multipliers ``{name: w_t}`` for
+        :meth:`rate_bits`.
+
+        KKT reverse-water-fill intuition: spend the rate budget where each tensor's
+        coded-byte reduction per unit task-harm is largest. We approximate that as
+
+            w_t ∝ byte_share_t / (sensitivity_t + eps)
+
+        where ``byte_share_t`` is the tensor's fraction of the decoder's coded weight
+        bytes (proxied by ``H_t · numel_t`` — the actual order-0 byte contribution) and
+        ``sensitivity_t`` is the tensor's d_seg/d_pose score-sensitivity (e.g. the
+        Lever-4 ``||∂S/∂w||`` EMA). Large-byte / low-sensitivity tensors get a HIGH
+        multiplier (push the rate there); high-sensitivity tensors get a LOW multiplier
+        (protect them). The weights are NORMALIZED so their numel-weighted MEAN is 1.0,
+        so a waterfill run spends the SAME total λ-budget as the uniform run (a fair
+        A/B: only the ALLOCATION differs, not the aggregate pressure).
+
+        ``sensitivity=None`` → every tensor's sensitivity is treated equal (1.0), so the
+        weights reduce to byte-share-proportional (still a non-uniform allocation that
+        concentrates pressure on the big-byte tensors); pass the Lever-4 EMA for the
+        full sensitivity-aware allocation.
+        """
+        coded = _coded_weight_modules(decoder)
+        raw: dict[str, float] = {}
+        numels: dict[str, float] = {}
+        for name, mod in coded:
+            w = mod.weight.detach()
+            numel = float(w.numel())
+            numels[name] = numel
+            ma = w.abs().max()
+            if ma.item() < 1e-12:
+                raw[name] = 0.0
+                continue
+            scale = ma / _CODEC_N_QUANT
+            q = (w / scale).round().clamp(-_CODEC_N_QUANT, _CODEC_N_QUANT).to(torch.int64).flatten()
+            counts = torch.bincount(q + _CODEC_N_QUANT, minlength=2 * _CODEC_N_QUANT + 1).to(torch.float64)
+            probs = counts / counts.sum()
+            nz = probs[probs > 0]
+            h_t = float(-(nz * torch.log2(nz)).sum().item())
+            byte_share = h_t * numel  # order-0 bytes contribution (un-normalized)
+            sens = 1.0 if sensitivity is None else float(sensitivity.get(name, 1.0))
+            raw[name] = byte_share / (sens + eps)
+        # Normalize so the numel-weighted mean multiplier is 1.0 (same aggregate budget).
+        tot_numel = sum(numels.values()) or 1.0
+        wsum = sum(raw[n] * numels[n] for n in raw) / tot_numel
+        if wsum <= 0.0:
+            return dict.fromkeys(raw, 1.0)
+        return {n: raw[n] / wsum for n in raw}
 
     def last_total_bits(self) -> Tensor:
         """The ``total_bits`` from the most recent :meth:`rate_bits` (0 before any)."""

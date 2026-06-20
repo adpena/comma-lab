@@ -125,6 +125,24 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "active (mirrors C1a's late-stage ramp; default 0 = active from stage 0). "
              "Only consulted when --weight-entropy-penalty-lambda > 0.",
     )
+    p.add_argument(
+        "--weight-entropy-penalty-waterfill",
+        action="store_true",
+        help="WATERFILL the weight-entropy penalty across tensors (KKT reverse-water-fill: "
+             "byte_share_t/(sensitivity_t+eps), normalized to the same aggregate budget) "
+             "instead of a UNIFORM λ. Concentrates rate pressure on big-byte / "
+             "low-d_seg-d_pose-sensitivity tensors. Default OFF = uniform = byte-identical "
+             "loss term. Only consulted when --weight-entropy-penalty-lambda > 0.",
+    )
+    p.add_argument(
+        "--weight-entropy-penalty-stack-c1a",
+        action="store_true",
+        help="STACK the penalty ON TOP of C1a (cat_entropy_v2) instead of SUPERSEDING it. "
+             "NOT recommended: the two penalize the SAME codec-grid symbol entropy and a "
+             "$0 probe shows stacking reaches WORSE entropy than either alone. Default "
+             "(absent) = the penalty SUPERSEDES C1a when active (the empirically-correct "
+             "behavior). Only consulted when --weight-entropy-penalty-lambda > 0.",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -168,6 +186,9 @@ def main(argv: list[str] | None = None) -> int:
         # Ballé rate lever (default 0.0 = OFF / byte-identical; the live basin uses 0.0).
         weight_entropy_penalty_lambda=args.weight_entropy_penalty_lambda,
         weight_entropy_penalty_stage_min=args.weight_entropy_penalty_stage_min,
+        weight_entropy_penalty_waterfill=args.weight_entropy_penalty_waterfill,
+        # supersede C1a when the penalty is active (default True; --stack-c1a flips it off).
+        weight_entropy_penalty_supersedes_c1a=not args.weight_entropy_penalty_stack_c1a,
         seed=args.seed,
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).

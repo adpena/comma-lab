@@ -870,6 +870,30 @@ class TorchVehicleConfig:
     # the penalty is active). The default 10.0 starts broad (the codec-grid symbols
     # span ~±127 early) and tightens as the prior learns.
     weight_entropy_penalty_init_scale: float = 10.0
+    # WATERFILL the weight-entropy penalty across tensors (the KKT reverse-water-fill
+    # ALLOCATION option). DEFAULT FALSE = UNIFORM λ on every tensor (the legacy
+    # byte-identical loss term). When TRUE (and λ>0), the per-tensor penalty weight is
+    # ``byte_share_t / (sensitivity_t + eps)`` (normalized to the same aggregate budget),
+    # so the rate pressure concentrates on big-byte / low-d_seg-d_pose-sensitivity
+    # tensors and protects high-sensitivity ones. The sensitivity source is the Lever-4
+    # ``tensor_sensitivity_ema`` when it is populated (score-aware-QAT runs), else
+    # byte-share-only (still a non-uniform allocation). Re-derived each epoch from the
+    # CURRENT weights + sensitivity EMA. NOT consulted when λ=0 (penalty never built).
+    weight_entropy_penalty_waterfill: bool = False
+    # SUPERSEDE C1a when the penalty is active (the DOUBLE-COUNT fix). PR95's C1a
+    # (``cat_entropy_v2`` via ``spec.cat_lambda``) and this penalty BOTH penalize the
+    # SAME quantity — the size-weighted codec-grid symbol entropy of ``w/(max|w|/127)``,
+    # bits/weight. C1a is a fixed-bandwidth Gaussian soft-histogram; this is a LEARNED
+    # per-channel logistic-prior expected codelength. MEASURED (probe
+    # ``experiments/probe_balle_c1a_qat_interaction.py``): stacking BOTH reaches a HIGHER
+    # (worse) entropy than EITHER alone (−1.38 vs penalty −1.72 / C1a −1.57) — the two
+    # same-quantity estimators interfere, so stacking is NET-NEGATIVE. DEFAULT TRUE: when
+    # ``weight_entropy_penalty_lambda > 0`` AND this stage's penalty is active, the C1a
+    # term is ZEROED (the learned-prior penalty SUPERSEDES the memoryless shadow). Set
+    # FALSE to stack both (NOT recommended; the probe shows it is worse). BYTE-IDENTICAL
+    # on the default λ=0 path (the penalty is off → C1a is untouched → the live basin is
+    # unaffected). Only consulted when ``weight_entropy_penalty_lambda > 0``.
+    weight_entropy_penalty_supersedes_c1a: bool = True
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -1306,6 +1330,10 @@ class TorchVehicleDriver:
         # ``weight_entropy_penalty_stage_min`` schedule (mirrors C1a's late-stage ramp).
         self._weight_entropy_penalty: nn.Module | None = None
         self._cur_stage_index: int = 0
+        # The current-stage Lever-4 sensitivity EMA (set in _train_one_epoch); read by
+        # the weight-entropy WATERFILL allocation. Empty default = byte-share-only
+        # waterfill (or, with waterfill off, ignored entirely).
+        self._cur_tensor_sensitivity_ema: dict[str, float] = {}
         # The final LIVE (non-EMA) decoder, set at each stage boundary in ``run()`` (None
         # before the first stage completes). Post-run inspection surface for the
         # weight-entropy λ-on/off A/B; NOT a score surface (BEST/export use the EMA shadow).
@@ -1743,6 +1771,10 @@ class TorchVehicleDriver:
         epoch_temperature = seg_temperature_for_epoch(spec, epoch_in_stage)
 
         decoder, latents = rt.decoder, rt.latents
+        # Expose the CURRENT-stage Lever-4 sensitivity EMA to ``_weight_regularizers`` so
+        # the weight-entropy WATERFILL allocation (when enabled) can read it. Default path
+        # (waterfill off OR empty EMA) ignores it → byte-identical loss term.
+        self._cur_tensor_sensitivity_ema = rt.tensor_sensitivity_ema
         n_pairs = self.n_pairs
         bs = spec.batch_size
         # torch.randperm honors the global torch RNG (captured/restored on resume).
@@ -1976,7 +2008,19 @@ class TorchVehicleDriver:
         lower bound (order-1 conditional weight entropy + latent temporal-delta
         entropy) — see ``tac.losses.rate_surrogate``."""
         terms: list[torch.Tensor] = []
-        if spec.cat_lambda > 0:
+        # C1a DOUBLE-COUNT GUARD: when the learned-prior weight-entropy penalty is ACTIVE
+        # for this stage AND ``weight_entropy_penalty_supersedes_c1a`` (default True),
+        # ZERO the C1a term (the two penalize the same H; stacking is MEASURED net-negative).
+        # Byte-identical on the default λ=0 path (penalty inactive → C1a unchanged).
+        _penalty_active = (
+            float(self.cfg.weight_entropy_penalty_lambda) > 0.0
+            and self._weight_entropy_penalty is not None
+            and self._cur_stage_index >= int(self.cfg.weight_entropy_penalty_stage_min)
+        )
+        _c1a_superseded = _penalty_active and bool(
+            self.cfg.weight_entropy_penalty_supersedes_c1a
+        )
+        if spec.cat_lambda > 0 and not _c1a_superseded:
             ent = self.v.cat_entropy_v2(
                 decoder, sigma=spec.cat_sigma, sample_size=2000, device=self.train_device
             )
@@ -2027,8 +2071,25 @@ class TorchVehicleDriver:
             and self._weight_entropy_penalty is not None
             and self._cur_stage_index >= int(self.cfg.weight_entropy_penalty_stage_min)
         ):
-            _total_bits, rate_term = self._weight_entropy_penalty.rate_bits(decoder)
-            terms.append(lam_we * rate_term)
+            # WATERFILL allocation (default OFF → uniform per-tensor weight → byte-identical
+            # loss term). When ON, derive ``byte_share_t / (sensitivity_t+eps)`` multipliers
+            # from the CURRENT weights + the Lever-4 sensitivity EMA (byte-share-only when the
+            # EMA is empty). The reported rate_term stays UN-weighted (comparable across A/Bs);
+            # only the WEIGHTED total_bits steers the per-tensor allocation. We minimize the
+            # WEIGHTED bits, so use total_bits (mapped to the contest scale) as the loss term
+            # under waterfill, and the un-weighted rate_term under uniform.
+            if bool(self.cfg.weight_entropy_penalty_waterfill):
+                ww = self._weight_entropy_penalty.compute_waterfill_weights(
+                    decoder, self._cur_tensor_sensitivity_ema or None
+                )
+                total_bits, _rate_term = self._weight_entropy_penalty.rate_bits(
+                    decoder, per_tensor_weights=ww
+                )
+                weighted_rate = total_bits / 8.0 / 37_545_489.0 * 25.0
+                terms.append(lam_we * weighted_rate)
+            else:
+                _total_bits, rate_term = self._weight_entropy_penalty.rate_bits(decoder)
+                terms.append(lam_we * rate_term)
         if not terms:
             return None
         reg = terms[0]
@@ -2256,6 +2317,18 @@ class TorchVehicleDriver:
             # steps). A plain dict copy (JSON/torch-safe). Empty/default on the
             # vendored path → round-trips as an empty dict (no behavior change).
             "tensor_sensitivity_ema": dict(rt.tensor_sensitivity_ema),
+            # Ballé weight-entropy lever: persist the LEARNED per-channel prior
+            # params (loc / raw_scale / raw_shape per coded weight tensor) so a
+            # λ>0 RESUME continues the SAME adapted prior instead of rebuilding a
+            # fresh one (which would jolt the rate term for the post-resume steps —
+            # the prior re-learns the symbol distribution from init_scale). ``None``
+            # on the default λ=0 path (the penalty module is never built) →
+            # round-trips as None → byte-identical resume for the live basin.
+            "weight_entropy_penalty": (
+                {k: v.detach().cpu().clone() for k, v in self._weight_entropy_penalty.state_dict().items()}
+                if self._weight_entropy_penalty is not None
+                else None
+            ),
             # EMA-warmup step counter — persisted so a resume CONTINUES the warmup decay
             # schedule (else _ema_step resets to 0 → the decay snaps back to 0.1 and the
             # shadow takes a spurious jolt). Always 0 on the default (ema_warmup off) path,
@@ -2343,6 +2416,20 @@ class TorchVehicleDriver:
         if sens:
             rt.tensor_sensitivity_ema.clear()
             rt.tensor_sensitivity_ema.update({str(k): float(v) for k, v in sens.items()})
+
+        # Ballé weight-entropy lever: restore the LEARNED per-channel prior params so a
+        # λ>0 resume continues the adapted prior (the penalty module is built lazily in
+        # _build_stage_runtime BEFORE this restore when λ>0). Backward-compatible: a
+        # legacy/λ=0 checkpoint has the key absent or ``None`` and/or the penalty is
+        # ``None`` → no restore → byte-identical (the default path never built one). The
+        # decoder it sizes against is the SAME architecture (channel counts), so the
+        # state_dict shapes match by construction; a mismatch (architecture drift across
+        # resume) surfaces as a torch load_state_dict error rather than silent skew.
+        we_state = merged.get("weight_entropy_penalty")
+        if we_state and self._weight_entropy_penalty is not None:
+            self._weight_entropy_penalty.load_state_dict(
+                {k: v.to(self.train_device) for k, v in we_state.items()}
+            )
 
         # RNG restore (so the next epoch's randperm matches the uninterrupted run).
         from tac.torch_vehicle.checkpoint import restore_rng

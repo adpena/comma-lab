@@ -386,3 +386,250 @@ def test_empty_decoder_raises():
 
     with pytest.raises(ValueError):
         WeightEntropyPenalty(_NoCoded())
+
+
+# ===========================================================================
+# OPTIMIZE #4 — per-tensor WATERFILL allocation (KKT reverse-water-fill).
+# ===========================================================================
+def test_waterfill_weights_normalize_to_unit_numel_weighted_mean():
+    """``compute_waterfill_weights`` returns multipliers whose numel-weighted MEAN is
+    1.0 — so a waterfill run spends the SAME aggregate λ-budget as the uniform run
+    (a fair A/B; only the ALLOCATION differs)."""
+    torch.manual_seed(0)
+    d = _Tiny(8, 16, 12)
+    pen = WeightEntropyPenalty(d, init_scale=10.0)
+    ww = pen.compute_waterfill_weights(d, sensitivity=None)
+    from tac.torch_vehicle.weight_entropy_penalty import _coded_weight_modules as _cwm
+    numels = {n: float(m.weight.numel()) for n, m in _cwm(d)}
+    tot = sum(numels.values())
+    mean = sum(ww[n] * numels[n] for n in ww) / tot
+    assert abs(mean - 1.0) < 1e-5, f"numel-weighted mean multiplier is {mean}, not 1.0"
+
+
+def test_waterfill_concentrates_on_low_sensitivity_tensors():
+    """A tensor flagged HIGH-sensitivity gets a LOWER multiplier than the same tensor
+    flagged LOW-sensitivity (the protection mechanism)."""
+    torch.manual_seed(0)
+    d = _Tiny(8, 16, 12)
+    pen = WeightEntropyPenalty(d, init_scale=10.0)
+    from tac.torch_vehicle.weight_entropy_penalty import _coded_weight_modules as _cwm
+    names = [n for n, _m in _cwm(d)]
+    # Make the FIRST tensor very sensitive, the rest neutral.
+    sens_hi = {names[0]: 100.0}
+    sens_lo = {names[0]: 0.01}
+    w_hi = pen.compute_waterfill_weights(d, sensitivity=sens_hi)
+    w_lo = pen.compute_waterfill_weights(d, sensitivity=sens_lo)
+    assert w_hi[names[0]] < w_lo[names[0]], (
+        "high-sensitivity tensor was NOT protected (its multiplier did not drop)"
+    )
+
+
+def test_rate_bits_per_tensor_weights_changes_loss_but_not_reported_rate_term():
+    """``per_tensor_weights`` re-weights ``total_bits`` (the loss term) but leaves
+    ``rate_term`` (the reported contest-scale magnitude) UN-weighted (so the score-scale
+    number is comparable across uniform/waterfill A/Bs)."""
+    torch.manual_seed(0)
+    d = _Tiny(8, 16, 12)
+    pen = WeightEntropyPenalty(d, init_scale=10.0).eval()
+    from tac.torch_vehicle.weight_entropy_penalty import _coded_weight_modules as _cwm
+    names = [n for n, _m in _cwm(d)]
+    bits_u, rate_u = pen.rate_bits(d)
+    skew = {names[0]: 5.0}  # heavily up-weight the first tensor
+    bits_w, rate_w = pen.rate_bits(d, per_tensor_weights=skew)
+    assert float(bits_w.item()) != float(bits_u.item()), "weighting did not change total_bits"
+    assert abs(float(rate_w.item()) - float(rate_u.item())) < 1e-9, (
+        "rate_term changed under weighting — it must report the UN-weighted bits"
+    )
+
+
+def test_uniform_weights_dict_is_identical_to_none():
+    """An all-1.0 ``per_tensor_weights`` map is bit-identical to ``None`` (the uniform
+    default) — the waterfill path with neutral weights is the legacy path."""
+    torch.manual_seed(0)
+    d = _Tiny(8, 16, 12)
+    pen = WeightEntropyPenalty(d, init_scale=10.0).eval()
+    from tac.torch_vehicle.weight_entropy_penalty import _coded_weight_modules as _cwm
+    ones = {n: 1.0 for n, _m in _cwm(d)}
+    bits_none, _ = pen.rate_bits(d)
+    bits_ones, _ = pen.rate_bits(d, per_tensor_weights=ones)
+    assert abs(float(bits_none.item()) - float(bits_ones.item())) < 1e-9
+
+
+def test_driver_waterfill_default_off_is_byte_identical(tmp_path):
+    """``weight_entropy_penalty_waterfill=False`` (the default) with λ>0 uses the uniform
+    path — two such runs are bit-identical (the waterfill flag does not perturb the
+    uniform allocation)."""
+    spec = _stage(epochs=3, adamw_lr=3e-3)
+    cfg_a = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=tmp_path / "a", device="cpu", seed=0,
+        weight_entropy_penalty_lambda=10.0, weight_entropy_penalty_waterfill=False,
+    )
+    cfg_b = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=tmp_path / "b", device="cpu", seed=0,
+        weight_entropy_penalty_lambda=10.0, weight_entropy_penalty_waterfill=False,
+    )
+    _, sum_a = _run_driver(cfg_a, spec, seed=0)
+    _, sum_b = _run_driver(cfg_b, spec, seed=0)
+    assert sum_a["best_score"] == sum_b["best_score"]
+
+
+def test_driver_waterfill_on_runs_and_differs_from_uniform(tmp_path):
+    """``weight_entropy_penalty_waterfill=True`` runs end-to-end AND produces a DIFFERENT
+    trained decoder than the uniform allocation (the allocation actually changed the
+    descent). Bit-shared init; the only difference is the waterfill flag."""
+    spec = _stage(epochs=10, adamw_lr=3e-3)
+    cfg_u = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=tmp_path / "u", device="cpu", seed=0,
+        weight_entropy_penalty_lambda=50.0, weight_entropy_penalty_waterfill=False,
+    )
+    cfg_w = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=tmp_path / "w", device="cpu", seed=0,
+        weight_entropy_penalty_lambda=50.0, weight_entropy_penalty_waterfill=True,
+    )
+    drv_u, _ = _run_driver(cfg_u, spec, seed=0)
+    drv_w, _ = _run_driver(cfg_w, spec, seed=0)
+    # The two final decoders differ (the allocation steered the weights differently).
+    any_diff = any(
+        not torch.equal(pu.detach().cpu(), pw.detach().cpu())
+        for pu, pw in zip(
+            drv_u._final_decoder.parameters(),
+            drv_w._final_decoder.parameters(),
+            strict=True,
+        )
+    )
+    assert any_diff, "waterfill produced a bit-identical decoder to uniform (no effect)"
+
+
+# ===========================================================================
+# OPTIMIZE #5 — the learned prior persists across capture/restore (resume).
+# ===========================================================================
+def test_prior_params_round_trip_through_capture_restore():
+    """The learned Ballé prior params survive ``_capture_state`` → ``_restore_into``
+    (the resume-correctness fix). Without it, a λ>0 resume rebuilds a FRESH prior."""
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu", seed=0,
+        weight_entropy_penalty_lambda=10.0,
+    )
+    sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    spec = _stage(epochs=1, adamw_lr=1e-2)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=import_vendored_bundle(),
+                                curriculum=[spec])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    latents = torch.nn.Parameter(torch.randn(6, 28) * 0.1)
+    rt = driver._build_stage_runtime(
+        spec, decoder=decoder, latents=latents, ema_decoder=None, ema_latents=None
+    )
+    # Train a step so the prior ADAPTS away from init.
+    torch.manual_seed(7)
+    driver._train_one_epoch(rt, spec, epoch_in_stage=0)
+    snap = {k: v.detach().clone() for k, v in driver._weight_entropy_penalty.state_dict().items()}
+
+    # Capture, then CORRUPT the live prior, then restore — must recover the snapshot.
+    cap = driver._capture_state(rt, spec)
+    assert cap["weight_entropy_penalty"] is not None
+    with torch.no_grad():
+        for p in driver._weight_entropy_penalty.parameters():
+            p.add_(99.0)
+    driver._restore_into(rt, cap)
+    after = driver._weight_entropy_penalty.state_dict()
+    for k in snap:
+        assert torch.allclose(after[k], snap[k]), f"prior param {k} did not round-trip"
+
+
+def test_lambda_zero_capture_has_no_penalty_key_value():
+    """On the default λ=0 path the captured state carries ``weight_entropy_penalty:
+    None`` (the penalty is never built) — the resume is byte-identical."""
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu", seed=0,
+        weight_entropy_penalty_lambda=0.0,
+    )
+    sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    spec = _stage(epochs=1)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=import_vendored_bundle(),
+                                curriculum=[spec])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    latents = torch.nn.Parameter(torch.randn(6, 28) * 0.1)
+    rt = driver._build_stage_runtime(
+        spec, decoder=decoder, latents=latents, ema_decoder=None, ema_latents=None
+    )
+    cap = driver._capture_state(rt, spec)
+    assert cap["weight_entropy_penalty"] is None
+
+
+# ===========================================================================
+# OPTIMIZE #3a — C1a DOUBLE-COUNT guard (penalty supersedes the same-quantity C1a).
+# ===========================================================================
+def test_penalty_supersedes_c1a_zeroes_the_c1a_term():
+    """With λ>0 + the penalty active + ``supersedes_c1a=True`` (default), a stage with
+    ``cat_lambda>0`` does NOT add the C1a term twice — the reg term equals the
+    penalty-only term (the C1a soft-histogram entropy is superseded). The two penalize
+    the SAME codec-grid symbol entropy; stacking is measured net-negative."""
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        weight_entropy_penalty_lambda=10.0, weight_entropy_penalty_supersedes_c1a=True,
+    )
+    sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=import_vendored_bundle(),
+                                curriculum=[_stage(epochs=1)])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    latents = torch.nn.Parameter(torch.randn(6, 28) * 0.1)
+    driver._build_stage_runtime(
+        _stage(epochs=1), decoder=decoder, latents=latents, ema_decoder=None, ema_latents=None,
+    )
+    driver._cur_stage_index = 0
+    # eval() the penalty so rate_bits is DETERMINISTIC (rounds instead of adding the
+    # U(-0.5,0.5) Ballé STE noise) — so the only possible difference between the two
+    # calls is whether the C1a term was added.
+    driver._weight_entropy_penalty.eval()
+    # penalty-only term (cat_lambda=0)
+    reg_pen = driver._weight_regularizers(decoder, latents, _stage(cat_lambda=0.0))
+    # with cat_lambda>0 but superseded → should equal the penalty-only term (C1a zeroed)
+    reg_super = driver._weight_regularizers(decoder, latents, _stage(cat_lambda=0.02))
+    assert reg_pen is not None and reg_super is not None
+    assert abs(float(reg_pen.item()) - float(reg_super.item())) < 1e-6, (
+        "C1a was NOT superseded — the term differs from penalty-only (double-count active)"
+    )
+
+
+def test_penalty_stacks_c1a_when_supersede_disabled():
+    """``supersedes_c1a=False`` stacks BOTH terms (the C1a entropy is ADDED on top of the
+    penalty) — so the reg term is strictly larger than penalty-only. (Not recommended —
+    the probe shows stacking is net-negative — but the flag must honor the choice.)"""
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        weight_entropy_penalty_lambda=10.0, weight_entropy_penalty_supersedes_c1a=False,
+    )
+    sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=import_vendored_bundle(),
+                                curriculum=[_stage(epochs=1)])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    latents = torch.nn.Parameter(torch.randn(6, 28) * 0.1)
+    driver._build_stage_runtime(
+        _stage(epochs=1), decoder=decoder, latents=latents, ema_decoder=None, ema_latents=None,
+    )
+    driver._cur_stage_index = 0
+    driver._weight_entropy_penalty.eval()  # deterministic rate_bits (no STE noise)
+    reg_pen = driver._weight_regularizers(decoder, latents, _stage(cat_lambda=0.0))
+    reg_stack = driver._weight_regularizers(decoder, latents, _stage(cat_lambda=0.02))
+    assert reg_pen is not None and reg_stack is not None
+    assert float(reg_stack.item()) > float(reg_pen.item()) + 1e-9, (
+        "supersede=False did NOT stack C1a on top of the penalty"
+    )
+
+
+def test_c1a_unaffected_when_penalty_off():
+    """λ=0 (penalty off) → the C1a term is UNCHANGED regardless of supersede flag (the
+    byte-identical guarantee for the live basin: the supersede logic only fires when the
+    penalty is active)."""
+    cfg = TorchVehicleConfig(
+        base_channels=20, latent_dim=28, out_dir=_tmp_out(), device="cpu",
+        weight_entropy_penalty_lambda=0.0,  # penalty OFF
+    )
+    sc = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    driver = TorchVehicleDriver(cfg, scorer=sc, vendored=import_vendored_bundle(),
+                                curriculum=[_stage(epochs=1)])
+    decoder = driver._new_decoder(device=torch.device("cpu"))
+    latents = torch.nn.Parameter(torch.randn(6, 28) * 0.1)
+    # cat_lambda>0 with penalty off → the C1a term is present (legacy behavior).
+    reg = driver._weight_regularizers(decoder, latents, _stage(cat_lambda=0.02))
+    assert reg is not None and float(reg.item()) > 0.0
