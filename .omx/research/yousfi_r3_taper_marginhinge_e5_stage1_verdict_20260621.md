@@ -75,13 +75,45 @@ stage-2 boundary (0.00021 best → 0.00062 at ep4525, stage2_softplus). The tape
 `--stage-lr-warmup-frac 0.03`, so the boundary is the decisive E#5 validation: does the per-stage LR warmup-after-
 restart damp the trunk-slam pose-kick? Concrete pass/fail at the next read.
 
+## ADDENDUM — the E#5 stage-2 transition test MEASURED (ep3000 boundary): warmup is a PALLIATIVE, not a fix
+The run crossed the stage1→stage2 (CE→softplus-τ) boundary at ep3000. The E#5 warmup (`--stage-lr-warmup-frac
+0.03`) IS active — LR ramps `2.32e-4 (ep3025) → ~1.0e-3 peak (ep3175)` over ~150 ep instead of stepping. Clean
+A/B against GREEN (no warmup) at the SAME boundary:
+
+| | GREEN (no warmup) | TAPER (E#5 warmup) |
+|---|---|---|
+| stage-2 first-epoch LR | jumps straight to 1.0e-3 | **2.32e-4** (4.3× softer first step) |
+| pose_mse @ ep3025 (first) | 0.002554 | **0.001078** (2.4× gentler) |
+| peak pose_mse | 0.00493 (**28.8×** pre) @ ep3002 | 0.00535 (**27.3×** pre) @ ep3172 |
+| when peak hits | immediately (ep3002) | delayed ~170 ep (ep3172, at LR peak) |
+
+**Corrected verdict: E#5 does NOT reduce the peak pose-kick.** The kick magnitude is set by the stage's PEAK LR
+(200× the stage-1 floor 5e-6), which BOTH runs reach → both kick ~27–29×. Pearson r(LR, pose_mse)=0.764 (n=151)
+on the taper ramp confirms the kick TRACKS the LR magnitude, not the discontinuity. What E#5 actually buys: a
+4.3× softer first step + a ~170-ep delay of the peak (spreads the transient, avoids the single catastrophic
+step). It is a mild palliative, not the pose-kick eliminator the recursive review framed it as.
+
+**The real lever (queued for the NEXT iteration, not this run):** a LOWER stage-2 peak-LR target, or a
+pose-LR-group decoupling (FiLM-v2 pose head on its own smaller LR), since the kick is peak-LR-magnitude-driven.
+
+**Strategic context (why this is secondary, not alarming):** (a) the high stage-2 LR is BY DESIGN — PR95's
+softplus-τ stage re-explores at the new sharper loss then cosine-decays to re-settle; the kick is an intended
+transient. (b) It's recovering: CPU-authority d_pose 0.00099 peak → 0.00086 and falling as LR decays. (c) Pose
+accumulates mild residual looseness across transitions (GREEN stage1-best 0.00021 → stage2 0.00062, ~3×), but
+d_pose is NOT the binding axis (d_seg holds 78% of removable S), so a 3× looser pose costs only ~+0.033 S vs the
+0.201 S available on d_seg. The d_seg axis is where the run must win.
+
+**Still pending (the decisive question):** at ep3925 (19% into the 5650-ep stage 2), d_seg=0.00268 — still WORSE
+than stage-1-best 0.00234, in the high-LR exploration phase. The d_seg-finishing payoff is expected in the
+back-half as LR cosine-decays + τ sharpens the surrogate toward true argmax-flip. Too early to call stage 2.
+
 ## NO-FAKE ledger
 - MEASURED: full d_seg/d_pose/S trajectory (CPU-authority); taper −2.9% d_seg vs GREEN at matched epoch; byte-
-  neutral +66 params; power-law b=−0.217.
+  neutral +66 params; power-law b=−0.217; E#5 warmup LR ramp + peak-kick A/B vs GREEN (28.8× vs 27.3×, r=0.764).
 - INFERRED (not yet measured): that stages 2–8 break the stage-1 d_seg plateau (the whole sub-0.15 bet);
-  that the E#5 warmup damps the stage-2 pose-kick (decided at the next read).
-- NOT claimed: no score moved; pointer UNMOVED 0.19110; S≈0.348 advisory is far above frontier 0.191 because
-  the run is still in stage 1 — the d_seg-finishing stages have not run.
+  whether the lower-peak-LR / pose-LR-decoupling lever beats E#5 (queued for the next iteration).
+- NOT claimed: no score moved; pointer UNMOVED 0.19110; S≈0.34–0.42 advisory is far above frontier 0.191 because
+  the run is still in early stage 2 — the d_seg-finishing stages have not converged; E#5 is NOT a pose-kick fix.
 
 ## Observability surface
 `yousfi_r3_taper_marginhinge_e5_20260620/torch_vehicle_trajectory.jsonl` (evaluated=true rows carry CPU-authority
