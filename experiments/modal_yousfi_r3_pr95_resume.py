@@ -604,3 +604,10 @@ def t4_timing_micro_entry():
     import json
 
     print(json.dumps(t4_timing_micro.remote(), indent=2, sort_keys=True))
+
+
+@app.local_entrypoint()
+def a10g_timing_micro_entry():
+    import json
+
+    print(json.dumps(a10g_timing_micro.remote(), indent=2, sort_keys=True))
