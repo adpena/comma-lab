@@ -164,6 +164,31 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "each stage's first epoch (default 0.1 = 10% of peak). Only consulted when "
              "--stage-lr-warmup-frac > 0. Must be in (0.0, 1.0].",
     )
+    p.add_argument(
+        "--taper-channels",
+        type=str,
+        default=None,
+        help="Yousfi STEP-2 CAPACITY+RATE lever: comma-separated per-block channel taper "
+             "(e.g. '16,16,17,19,19,14,10' = lens-C dseg_aware_taper(20), reallocating the "
+             "~69%% of capacity wasted in SegNet-invisible low-res stages INTO the high-res "
+             "boundary band where the d_seg flips live, at byte-neutral cost). DEFAULT None = "
+             "the vendored taper [20,20,20,15,11,10,10] (byte-identical). This is the d_seg-"
+             "NEUTRAL rate lever (the entropy-penalty rate lever was net-negative: weight "
+             "distortion costs ~374x more on d_seg than it saves on rate).",
+    )
+    p.add_argument(
+        "--kd-warm-start-dir",
+        type=Path,
+        default=None,
+        help="KD-warm-start dir (a teacher run's out-dir, e.g. the margin_hinge basin). The "
+             "driver builds a FROZEN teacher decoder + distills its rendered pairs into the "
+             "re-tapered student over the first --kd-warm-epochs of stage 0 (so a taper "
+             "change inherits the teacher's progress instead of a weeks-from-scratch run). "
+             "DEFAULT None = no KD (fresh/seed init). Teacher must match base_channels/"
+             "latent_dim (strict); the taper MAY differ (that's the point).",
+    )
+    p.add_argument("--kd-warm-epochs", type=int, default=300,
+                   help="KD warm-up epochs (only consulted when --kd-warm-start-dir is set).")
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -213,6 +238,14 @@ def main(argv: list[str] | None = None) -> int:
         # E#5 per-stage LR warmup (default 0.0 = OFF / byte-identical).
         stage_lr_warmup_frac=args.stage_lr_warmup_frac,
         stage_lr_warmup_start_ratio=args.stage_lr_warmup_start_ratio,
+        # Yousfi step-2: d_seg-aware taper (None = vendored, byte-identical) + KD-warm.
+        taper_channels=(
+            [int(c) for c in args.taper_channels.split(",")]
+            if args.taper_channels
+            else None
+        ),
+        kd_warm_start_dir=args.kd_warm_start_dir,
+        kd_warm_epochs=args.kd_warm_epochs,
         seed=args.seed,
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).
