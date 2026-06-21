@@ -206,7 +206,15 @@ def _assert_cuda_or_die() -> str:
     return name
 
 
-def _build_driver(device: str, out_dir: str, cache_dir: str, eval_every: int = 25):
+def _build_driver(
+    device: str,
+    out_dir: str,
+    cache_dir: str,
+    eval_every: int = 25,
+    *,
+    compile_scorers: bool = False,
+    compile_mode: str = "default",
+):
     """Build the TorchVehicleDriver EXACTLY as launch_split_by_head_basin.main()
     does (same cfg + RealScorerContext + margin_hinge curriculum), but with
     ``total_epoch_budget=None`` (the UNSCALED faithful curriculum — identical to
@@ -249,6 +257,8 @@ def _build_driver(device: str, out_dir: str, cache_dir: str, eval_every: int = 2
         stage_lr_warmup_frac=0.03,
         stage_lr_warmup_start_ratio=0.1,
         taper_channels=[16, 16, 17, 19, 19, 14, 10],
+        compile_scorers=compile_scorers,  # SCORE-NEUTRAL launch-overhead lever (timing only)
+        compile_mode=compile_mode,
         seed=0,
     )
     scorer = RealScorerContext(
@@ -405,12 +415,23 @@ def _gpu_smoke_body(device: str = "cuda") -> dict:
     return result
 
 
-def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 5050) -> dict:
+def _timing_micro_body(
+    device: str = "cuda",
+    stop_after_global_epoch: int = 5050,
+    *,
+    compile_scorers: bool = False,
+    compile_mode: str = "default",
+) -> dict:
     """FAST pure-training timing. TRUE resume global epoch is 4950 (stage_index=1,
     epoch_in_stage=1950, stage0=3000). Builds with evals DISABLED (eval_every huge)
     so NO slow 600-pair eval fires, runs to ``stop_after_global_epoch`` (default
     5050 => 100 pure-training epochs), and reports clean training s/ep from the
-    trajectory ``wall_clock_s`` deltas. Returns in low minutes."""
+    trajectory ``wall_clock_s`` deltas. Returns in low minutes.
+
+    ``compile_scorers`` is a SCORE-NEUTRAL launch-overhead lever (torch.compile on the
+    frozen SegNet+PoseNet forwards). It changes ONLY runtime placement, not the math
+    — but a paired d_seg/d_pose neutrality check (``neutrality_check`` function) MUST
+    clear it at ~1e-4 rel before any real run trusts it. Here it is timing-only."""
     import json
     import time
     from pathlib import Path
@@ -420,7 +441,14 @@ def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 5050
     gpu_name = _assert_cuda_or_die()
     _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
     # eval_every huge => evals never fire => pure training timing.
-    driver, out_path = _build_driver(device, out_dir, cache_dir, eval_every=10_000_000)
+    driver, out_path = _build_driver(
+        device,
+        out_dir,
+        cache_dir,
+        eval_every=10_000_000,
+        compile_scorers=compile_scorers,
+        compile_mode=compile_mode,
+    )
     driver._stop_after_global_epoch = int(stop_after_global_epoch)
     print(
         f"[yousfi-r3-resume] TIMING-MICRO (no eval) -> stop_after_global_epoch="
@@ -488,6 +516,8 @@ def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 5050
     return {
         "device": device,
         "gpu_name": gpu_name,
+        "compile_scorers": compile_scorers,
+        "compile_mode": compile_mode if compile_scorers else None,
         "elapsed_seconds": round(elapsed, 2),
         "span_train_s_per_ep": span_s_per_ep,
         "epochs_run": epochs_run,
@@ -500,6 +530,115 @@ def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 5050
         "per_epoch_deltas_tail": per_epoch_deltas[-20:],
         "n_epoch_deltas": len(per_epoch_deltas),
     }
+
+
+def _neutrality_check_body(device: str = "cuda") -> dict:
+    """SCORE-NEUTRALITY GATE for torch.compile on the frozen scorers.
+
+    Builds the TRAIN distortion net, runs a small fixed batch of decoded frames
+    through the EAGER SegNet+PoseNet, then through the COMPILED ones, and reports the
+    max relative deviation of the seg logits + pose6 outputs. torch.compile is
+    SCORE-NEUTRAL iff the deviation is within ~1e-4 rel. The decoded input is a fixed
+    deterministic tensor (seeded) in the valid [0,255] frame range so the comparison
+    exercises the real forward path WITHOUT needing a training step."""
+    import torch
+
+    gpu_name = _assert_cuda_or_die()
+    _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
+
+    from tac.score_aware_loop.targets import load_frozen_distortion_net
+
+    net = load_frozen_distortion_net(device=device)
+    seg_mod = net.segnet
+    pose_mod = net.posenet
+
+    # Deterministic decoded-frame batch in the valid range, shaped (B,2,H,W,C) -> the
+    # net.preprocess_input contract (B pairs, 2 frames, 384x512x3, 0..255).
+    g = torch.Generator(device="cpu").manual_seed(0)
+    B = 4
+    decoded = (torch.rand(B, 2, 384, 512, 3, generator=g) * 255.0).to(device)
+
+    def _fwd(seg_callable, pose_callable):
+        posenet_in, segnet_in = net.preprocess_input(decoded)
+        with torch.no_grad():
+            s = seg_callable(segnet_in)
+            p = pose_callable(posenet_in)["pose"][:, :6]
+        return s.float().cpu(), p.float().cpu()
+
+    # EAGER baseline.
+    seg_eager, pose_eager = _fwd(seg_mod, pose_mod)
+
+    # COMPILED.
+    results: dict[str, dict] = {}
+    for mode in ("default", "reduce-overhead"):
+        try:
+            seg_c = torch.compile(seg_mod, mode=mode)
+            pose_c = torch.compile(pose_mod, mode=mode)
+            seg_comp, pose_comp = _fwd(seg_c, pose_c)
+            seg_abs = (seg_comp - seg_eager).abs()
+            pose_abs = (pose_comp - pose_eager).abs()
+            seg_rel = (seg_abs / (seg_eager.abs() + 1e-8)).max().item()
+            pose_rel = (pose_abs / (pose_eager.abs() + 1e-8)).max().item()
+            # Argmax flip rate is the d_seg-relevant quantity (d_seg = argmax disagreement).
+            seg_argmax_flip = (
+                (seg_comp.argmax(1) != seg_eager.argmax(1)).float().mean().item()
+            )
+            results[mode] = {
+                "seg_max_abs": round(seg_abs.max().item(), 8),
+                "seg_max_rel": round(seg_rel, 8),
+                "seg_argmax_flip_rate": round(seg_argmax_flip, 8),
+                "pose_max_abs": round(pose_abs.max().item(), 8),
+                "pose_max_rel": round(pose_rel, 8),
+                "PASS_1e-4": bool(seg_rel < 1e-4 and pose_rel < 1e-4
+                                  and seg_argmax_flip == 0.0),
+            }
+        except Exception as exc:
+            results[mode] = {"error": repr(exc), "PASS_1e-4": False}
+
+    resume_vol.commit()
+    return {"device": device, "gpu_name": gpu_name, "neutrality": results}
+
+
+@app.function(
+    image=training_image,
+    gpu="A10G",
+    timeout=20 * 60,
+    volumes={"/vol": resume_vol},
+)
+def a10g_neutrality_check() -> dict:
+    """A10G torch.compile numerical-neutrality gate (compiled vs eager scorers)."""
+    return _neutrality_check_body("cuda")
+
+
+@app.function(
+    image=training_image,
+    gpu="A10G",
+    timeout=20 * 60,
+    volumes={"/vol": resume_vol},
+)
+def a10g_timing_compile(
+    stop_after_global_epoch: int = 5050, compile_mode: str = "default"
+) -> dict:
+    """A10G pure-training timing WITH torch.compile on the frozen scorers."""
+    return _timing_micro_body(
+        "cuda",
+        stop_after_global_epoch,
+        compile_scorers=True,
+        compile_mode=compile_mode,
+    )
+
+
+@app.function(
+    image=training_image,
+    gpu="A10G",
+    cpu=16.0,
+    timeout=20 * 60,
+    volumes={"/vol": resume_vol},
+)
+def a10g_timing_cpu16(stop_after_global_epoch: int = 5050) -> dict:
+    """A10G pure-training timing with cpu=16 (more vCPUs for the per-batch Python/sync
+    overhead). Pure infra lever — SCORE-NEUTRAL by construction."""
+    return _timing_micro_body("cuda", stop_after_global_epoch)
 
 
 @app.function(
@@ -652,3 +791,39 @@ def a10g_timing_micro_entry():
     import json
 
     print(json.dumps(a10g_timing_micro.remote(), indent=2, sort_keys=True))
+
+
+@app.local_entrypoint()
+def a10g_neutrality_entry():
+    import json
+
+    print(json.dumps(a10g_neutrality_check.remote(), indent=2, sort_keys=True))
+
+
+@app.local_entrypoint()
+def a10g_timing_compile_default_entry(stop_after_global_epoch: int = 4990):
+    import json
+
+    print(json.dumps(
+        a10g_timing_compile.remote(stop_after_global_epoch, "default"),
+        indent=2, sort_keys=True,
+    ))
+
+
+@app.local_entrypoint()
+def a10g_timing_compile_reduce_overhead_entry(stop_after_global_epoch: int = 4990):
+    import json
+
+    print(json.dumps(
+        a10g_timing_compile.remote(stop_after_global_epoch, "reduce-overhead"),
+        indent=2, sort_keys=True,
+    ))
+
+
+@app.local_entrypoint()
+def a10g_timing_cpu16_entry(stop_after_global_epoch: int = 4990):
+    import json
+
+    print(json.dumps(
+        a10g_timing_cpu16.remote(stop_after_global_epoch), indent=2, sort_keys=True
+    ))

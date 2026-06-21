@@ -152,6 +152,42 @@ class RealScorerContext:
             torch.save({"seg": seg_t.cpu(), "pose": pose_t.cpu()}, cache_file)
         return seg_t, pose_t
 
+    def maybe_compile_scorers(self, *, mode: str = "default") -> None:
+        """SCORE-NEUTRAL launch-overhead lever: ``torch.compile`` the FROZEN train-side
+        SegNet + PoseNet forwards in place. The scorers are frozen (requires_grad=False,
+        eval-mode) so compiling their forward is purely a runtime placement of the SAME
+        ops — it does NOT change the gradient/score MATH (modulo inductor numerics, which
+        the caller MUST clear with a paired d_seg/d_pose neutrality check at ~1e-4 rel
+        before a real run trusts it). Wraps ONLY the two frozen scorer submodules of the
+        TRAIN distortion net (the gradient backend); the AUTHORITY eval net is untouched
+        so the exact d_seg/d_pose that pick BEST stay eager + CPU-trusted."""
+        net = self.train_distortion_net
+        seg = getattr(net, "segnet", None)
+        pose = getattr(net, "posenet", None)
+        if seg is None or pose is None:
+            print(
+                "[scorer-context] maybe_compile_scorers: net has no segnet/posenet "
+                "submodule; skipping compile.",
+                flush=True,
+            )
+            return
+        try:
+            net.segnet = torch.compile(seg, mode=mode)
+            net.posenet = torch.compile(pose, mode=mode)
+            print(
+                f"[scorer-context] compiled train-side SegNet+PoseNet forwards "
+                f"(mode={mode}) on {self.train_device}.",
+                flush=True,
+            )
+        except Exception as exc:  # pragma: no cover - defensive (compile env varies)
+            print(
+                f"[scorer-context] torch.compile(mode={mode}) FAILED ({exc!r}); "
+                "falling back to eager scorers.",
+                flush=True,
+            )
+            net.segnet = seg
+            net.posenet = pose
+
     def seg_pose_forward(self, decoded_bhwc: torch.Tensor):
         """Run the real frozen scorer on roundtripped decoder output, 1:1 with
         ``common.py:187-189`` — on the TRAIN device (the gradient backend, possibly

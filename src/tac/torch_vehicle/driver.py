@@ -959,6 +959,20 @@ class TorchVehicleConfig:
     # start at 10% of peak then linearly ramp to the cosine value at warmup-end (a gentle
     # ease-in). Must be in (0.0, 1.0].
     stage_lr_warmup_start_ratio: float = 0.1
+    # ``compile_scorers`` (the launch-overhead salvage; SCORE-NEUTRAL by construction):
+    # wrap the FROZEN train-side SegNet + PoseNet forwards with ``torch.compile`` so the
+    # 75 serial tiny-batch (bs=8) per-epoch forward+backward cycles fuse kernels / cut
+    # per-launch + CPU<->GPU sync overhead instead of dispatching one eager kernel at a
+    # time. The scorers are frozen (requires_grad=False, eval-mode) so compiling their
+    # forward changes NOTHING about the gradient/score MATH — it is purely a runtime
+    # placement of the SAME ops (modulo compiler numerics, which a paired d_seg/d_pose
+    # neutrality check MUST clear at ~1e-4 rel before any real run trusts it). Default
+    # False (byte-identical eager). ``compile_mode`` selects the inductor mode
+    # ("default" | "reduce-overhead" (CUDA graphs) | "max-autotune"). The decoder is
+    # NEVER compiled here (it is the trainable graph with a custom per-stage loop that
+    # graph-breaks); only the two frozen scorer submodules are compiled.
+    compile_scorers: bool = False
+    compile_mode: str = "default"
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -1298,6 +1312,13 @@ class TorchVehicleDriver:
     ):
         self.cfg = cfg
         self.scorer = scorer
+        # SCORE-NEUTRAL launch-overhead lever: compile the frozen train-side SegNet +
+        # PoseNet forwards (no-op unless ``cfg.compile_scorers`` is set; the scorer
+        # context decides whether it can honor it — synthetic/test contexts no-op).
+        if getattr(cfg, "compile_scorers", False):
+            _maybe = getattr(scorer, "maybe_compile_scorers", None)
+            if callable(_maybe):
+                _maybe(mode=getattr(cfg, "compile_mode", "default"))
         self.v = vendored
         # AUTHORITY/eval device (CPU-TRUSTED or CUDA) — the exact d_seg/d_pose live
         # here. ``train_device`` is the GRADIENT backend (may be MPS for the 104x).
