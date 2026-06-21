@@ -224,8 +224,14 @@ def _build_driver(device: str, out_dir: str, cache_dir: str, eval_every: int = 2
     from tac.torch_vehicle.scorer_context import RealScorerContext
 
     out_path = Path(out_dir)
-    workspace_root = out_path.parent
-    video_path = workspace_root / "upstream/videos/0.mkv"
+    # The video is always staged at the writable workspace copy by
+    # _prepare_workspace_and_inputs (NOT relative to out_dir — out_dir may be the
+    # persistent /vol/out for the full run, whose parent /vol has no upstream/).
+    # The GT cache is present so the video is path-only (never decoded), but it
+    # must resolve. Prefer the workspace copy; fall back to the image mount.
+    _ws_video = Path("/tmp/pact/upstream/videos/0.mkv")
+    _mount_video = Path("/workspace/pact/upstream/videos/0.mkv")
+    video_path = _ws_video if _ws_video.is_file() else _mount_video
 
     cfg = TorchVehicleConfig(
         base_channels=20,
@@ -532,21 +538,56 @@ def a10g_timing_micro(stop_after_global_epoch: int = 5050) -> dict:
 def _full_body(device: str = "cuda", stop_after_global_epoch: int = 0) -> dict:
     """Resume the UNSCALED curriculum. stop_after_global_epoch <= 0 => run to the
     full curriculum end (global ep 29,650). Set it to 19650 to stop at the
-    decisive end-of-stage-5 (C1a-L7) verdict point."""
+    decisive end-of-stage-5 (C1a-L7) verdict point.
+
+    CRITICAL for the multi-hour run: the driver's out_dir is pointed DIRECTLY at
+    the PERSISTENT volume (``/vol/out``) so every 25-epoch checkpoint lands on
+    the volume and SURVIVES Modal's 14h function timeout. A background thread
+    commits the volume periodically. On a timeout/restart, re-invoking this
+    function RESUMES from the volume checkpoint (the driver reads /vol/out)."""
+    import threading
+    import time as _time
+
     gpu_name = _assert_cuda_or_die()
-    _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
-    if stop_after_global_epoch and stop_after_global_epoch > 0:
-        result = _smoke_run_and_collect(
-            device=device,
-            out_dir=out_dir,
-            cache_dir=cache_dir,
-            stop_after_global_epoch=stop_after_global_epoch,
-        )
-    else:
-        result = _full_run_and_collect(
-            device=device, out_dir=out_dir, cache_dir=cache_dir
-        )
+    # Prepare workspace (staging copies source + cache + checkpoint), but for the
+    # FULL run we OVERRIDE out_dir to the persistent volume so checkpoints persist.
+    _workspace, _ephemeral_out, cache_dir = _prepare_workspace_and_inputs(device)
+    out_dir = "/vol/out"  # PERSISTENT — survives the 14h timeout; resume reads this.
+
+    # Periodic volume commit so checkpoints are durable across a timeout/preempt.
+    stop_commit = threading.Event()
+
+    def _commit_loop() -> None:
+        while not stop_commit.is_set():
+            stop_commit.wait(timeout=300)  # every 5 min
+            try:
+                resume_vol.commit()
+            except Exception as exc:  # pragma: no cover - defensive
+                print(f"[yousfi-r3-resume] periodic volume commit failed: {exc!r}", flush=True)
+
+    committer = threading.Thread(target=_commit_loop, name="vol-committer", daemon=True)
+    committer.start()
+    try:
+        if stop_after_global_epoch and stop_after_global_epoch > 0:
+            result = _smoke_run_and_collect(
+                device=device,
+                out_dir=out_dir,
+                cache_dir=cache_dir,
+                stop_after_global_epoch=stop_after_global_epoch,
+            )
+        else:
+            result = _full_run_and_collect(
+                device=device, out_dir=out_dir, cache_dir=cache_dir
+            )
+    finally:
+        stop_commit.set()
+        committer.join(timeout=30)
+        try:
+            resume_vol.commit()
+        except Exception:
+            pass
     result["gpu_name"] = gpu_name
+    result["out_dir"] = out_dir
     return result
 
 
