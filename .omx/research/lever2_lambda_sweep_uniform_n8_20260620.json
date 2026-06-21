@@ -1,0 +1,50 @@
+{
+  "lam0": {
+    "best_score": 78.68708948634354,
+    "best_archive_total_bytes": 79761,
+    "best_archive_decoder_bytes": 79252,
+    "ema_order0_H": 7.481420227199129,
+    "live_order0_H": 7.475502666395442,
+    "live_archive_total_bytes": 79635,
+    "live_archive_decoder_bytes": 79202,
+    "d_seg": 0.7689297795295715,
+    "d_pose": 0.3031087815761566,
+    "score": 78.68708948634354
+  },
+  "lam5": {
+    "best_score": 81.5733010776552,
+    "best_archive_total_bytes": 69357,
+    "best_archive_decoder_bytes": 68843,
+    "ema_order0_H": 6.480358721321865,
+    "live_order0_H": 5.9213519349034085,
+    "live_archive_total_bytes": 63567,
+    "live_archive_decoder_bytes": 63129,
+    "d_seg": 0.7978636622428894,
+    "d_pose": 0.3030220568180084,
+    "score": 81.5733010776552
+  },
+  "lam15": {
+    "best_score": 81.73161434810179,
+    "best_archive_total_bytes": 79518,
+    "best_archive_decoder_bytes": 79002,
+    "ema_order0_H": 7.440129763579889,
+    "live_order0_H": 5.351463596517775,
+    "live_archive_total_bytes": 58229,
+    "live_archive_decoder_bytes": 57789,
+    "d_seg": 0.7993513941764832,
+    "d_pose": 0.3039886951446533,
+    "score": 81.73161434810179
+  },
+  "lam30": {
+    "best_score": 81.73668004199226,
+    "best_archive_total_bytes": 79704,
+    "best_archive_decoder_bytes": 79191,
+    "ema_order0_H": 7.464486742581136,
+    "live_order0_H": 5.389009306376625,
+    "live_archive_total_bytes": 58609,
+    "live_archive_decoder_bytes": 58172,
+    "d_seg": 0.7993825078010559,
+    "d_pose": 0.30462732911109924,
+    "score": 81.73668004199226
+  }
+}

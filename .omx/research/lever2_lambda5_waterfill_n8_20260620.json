@@ -1,0 +1,26 @@
+{
+  "lam0": {
+    "best_score": 78.68708948634354,
+    "best_archive_total_bytes": 79761,
+    "best_archive_decoder_bytes": 79252,
+    "ema_order0_H": 7.481420227199129,
+    "live_order0_H": 7.475502666395442,
+    "live_archive_total_bytes": 79635,
+    "live_archive_decoder_bytes": 79202,
+    "d_seg": 0.7689297795295715,
+    "d_pose": 0.3031087815761566,
+    "score": 78.68708948634354
+  },
+  "lam5": {
+    "best_score": 81.45946248023161,
+    "best_archive_total_bytes": 71317,
+    "best_archive_decoder_bytes": 70806,
+    "ema_order0_H": 6.657248539659001,
+    "live_order0_H": 6.192074689285998,
+    "live_archive_total_bytes": 66484,
+    "live_archive_decoder_bytes": 66049,
+    "d_seg": 0.7967154383659363,
+    "d_pose": 0.3029102087020874,
+    "score": 81.45946248023161
+  }
+}
