@@ -206,11 +206,12 @@ def _assert_cuda_or_die() -> str:
     return name
 
 
-def _build_driver(device: str, out_dir: str, cache_dir: str):
+def _build_driver(device: str, out_dir: str, cache_dir: str, eval_every: int = 25):
     """Build the TorchVehicleDriver EXACTLY as launch_split_by_head_basin.main()
     does (same cfg + RealScorerContext + margin_hinge curriculum), but with
     ``total_epoch_budget=None`` (the UNSCALED faithful curriculum — identical to
-    the live MPS run). Returns (driver, out_path)."""
+    the live MPS run). ``eval_every`` overrides the eval cadence; pass a huge
+    value to DISABLE evals for pure-training timing. Returns (driver, out_path)."""
     import dataclasses
     from pathlib import Path
 
@@ -233,7 +234,7 @@ def _build_driver(device: str, out_dir: str, cache_dir: str):
         checkpoint_every_epochs=25,
         total_epoch_budget=None,  # UNSCALED faithful curriculum (matches live run)
         ema_decay=0.999,
-        eval_every=25,
+        eval_every=eval_every,
         device=device,
         train_device=device,
         split_by_head=False,       # --no-split-by-head
@@ -254,7 +255,7 @@ def _build_driver(device: str, out_dir: str, cache_dir: str):
     )
     # --seg-margin-hinge: replace every stage's seg surrogate with margin_hinge.
     specs = build_curriculum(
-        total_epoch_budget=None, ema_decay=0.999, eval_every=25
+        total_epoch_budget=None, ema_decay=0.999, eval_every=eval_every
     )
     curriculum = [dataclasses.replace(s, seg_surrogate="margin_hinge") for s in specs]
     driver = TorchVehicleDriver(
@@ -398,11 +399,12 @@ def _gpu_smoke_body(device: str = "cuda") -> dict:
     return result
 
 
-def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 4899) -> dict:
-    """FAST pure-training timing: resume at ep 4875, run a handful of epochs and
-    STOP BEFORE the first eval epoch (4900) so NO slow 600-pair eval fires. Reads
-    the trajectory's per-epoch ``wall_clock_s`` to report clean training s/ep.
-    Returns quickly (seconds-to-low-minutes), so it is the reliable ep/h signal."""
+def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 5050) -> dict:
+    """FAST pure-training timing. TRUE resume global epoch is 4950 (stage_index=1,
+    epoch_in_stage=1950, stage0=3000). Builds with evals DISABLED (eval_every huge)
+    so NO slow 600-pair eval fires, runs to ``stop_after_global_epoch`` (default
+    5050 => 100 pure-training epochs), and reports clean training s/ep from the
+    trajectory ``wall_clock_s`` deltas. Returns in low minutes."""
     import json
     import time
     from pathlib import Path
@@ -411,7 +413,8 @@ def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 4899
 
     gpu_name = _assert_cuda_or_die()
     _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
-    driver, out_path = _build_driver(device, out_dir, cache_dir)
+    # eval_every huge => evals never fire => pure training timing.
+    driver, out_path = _build_driver(device, out_dir, cache_dir, eval_every=10_000_000)
     driver._stop_after_global_epoch = int(stop_after_global_epoch)
     print(
         f"[yousfi-r3-resume] TIMING-MICRO (no eval) -> stop_after_global_epoch="
@@ -459,11 +462,32 @@ def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 4899
         d["delta_s"] for d in per_epoch_deltas
     ]
     s_per_ep = round(sorted(clean)[len(clean) // 2], 3) if clean else None
+
+    # Bulletproof fallback: pure-training s/ep from the trajectory wall-clock span
+    # divided by the epoch count run (excludes resume/load which happen before the
+    # first trajectory row's wall_clock_s baseline). resume global = 4950.
+    span_s_per_ep = None
+    epochs_run = None
+    if len(rows) >= 2:
+        first_ep, first_w = rows[0]
+        last_ep, last_w = rows[-1]
+        try:
+            epochs_run = int(last_ep) - int(first_ep)
+            if epochs_run > 0:
+                span_s_per_ep = round((last_w - first_w) / epochs_run, 3)
+        except (TypeError, ValueError):
+            pass
+    best_s_per_ep = s_per_ep if s_per_ep is not None else span_s_per_ep
     resume_vol.commit()
     return {
         "device": device,
         "gpu_name": gpu_name,
         "elapsed_seconds": round(elapsed, 2),
+        "span_train_s_per_ep": span_s_per_ep,
+        "epochs_run": epochs_run,
+        "n_trajectory_rows": len(rows),
+        "best_train_s_per_ep": best_s_per_ep,
+        "best_train_ep_per_h": round(3600.0 / best_s_per_ep, 1) if best_s_per_ep else None,
         "stop_after_global_epoch": stop_after_global_epoch,
         "median_train_s_per_ep": s_per_ep,
         "train_ep_per_h": round(3600.0 / s_per_ep, 1) if s_per_ep else None,
