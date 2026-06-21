@@ -131,17 +131,16 @@ def _prepare_workspace_and_inputs(device: str) -> tuple[str, str, str]:
         shutil.copy2(src, out_dir / name)
     print(f"[yousfi-r3-resume] staged resume checkpoint -> {out_dir}", flush=True)
 
-    # Stage the vendored PR95 (hnerv_muon) src into the expected workspace path.
-    # It lives under experiments/results/** locally (Modal-IGNORED subtree), so
-    # it does NOT ride in the image mount — ship it via the volume. The driver's
-    # import_vendored_bundle() + the launcher's import_vendored() resolve it at
-    # ``experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/
-    # source/submissions/hnerv_muon/src`` (see tac.torch_vehicle.vendored_imports).
-    vendored_dst = (
-        workspace
-        / "experiments/results/public_pr_intake_full"
-        / "public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src"
-    )
+    # Stage the vendored PR95 (hnerv_muon) src into the EXACT path
+    # tac.torch_vehicle.vendored_imports resolves at runtime. That module pins
+    # ``VENDORED_SRC = _REPO_ROOT / experiments/results/.../hnerv_muon/src`` where
+    # ``_REPO_ROOT`` is fixed at import time to wherever ``tac`` actually loaded
+    # from (the read-only /workspace/pact image mount, NOT this /tmp/pact copy,
+    # because ``tac`` is imported at module top via the modal_train_lane import).
+    # Local results/** is Modal-IGNORED so the clone does not ride in the mount —
+    # ship it via the volume + copy it to the resolved path. If that path is
+    # read-only (image mount), fall back to forcing tac onto the writable copy
+    # and re-resolving.
     vendored_src = Path("/vol/vendored_hnerv_muon_src")
     if not vendored_src.is_dir():
         raise RuntimeError(
@@ -149,9 +148,27 @@ def _prepare_workspace_and_inputs(device: str) -> tuple[str, str, str]:
             "(upload via `modal volume put yousfi-r3-pr95-resume <staged_src> "
             "vendored_hnerv_muon_src`)"
         )
-    vendored_dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(vendored_src, vendored_dst, dirs_exist_ok=True)
+    import tac.torch_vehicle.vendored_imports as _vi
+
+    vendored_dst = _vi.VENDORED_SRC
+    try:
+        vendored_dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(vendored_src, vendored_dst, dirs_exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(
+            f"could not stage vendored PR95 src to resolved path {vendored_dst} "
+            f"(_REPO_ROOT={_vi._REPO_ROOT}); the image-mount root may be "
+            f"read-only. Original error: {exc}"
+        ) from exc
     print(f"[yousfi-r3-resume] staged vendored PR95 src -> {vendored_dst}", flush=True)
+
+    # The vendored data.py needs the challenge root (frame_utils.py + modules.py).
+    # ``upstream/`` IS that root and rides in the image mount; set it explicitly
+    # so resolve_challenge_root() does not depend on _REPO_ROOT placement.
+    challenge_root = _vi._REPO_ROOT / "upstream"
+    if (challenge_root / "frame_utils.py").exists():
+        os.environ["COMMA_CHALLENGE_ROOT"] = str(challenge_root)
+        print(f"[yousfi-r3-resume] COMMA_CHALLENGE_ROOT={challenge_root}", flush=True)
 
     # Point --targets-cache at the volume cache dir directly (read-only is fine;
     # the launcher only reads gt_targets_n600.pt with map_location='cpu').
