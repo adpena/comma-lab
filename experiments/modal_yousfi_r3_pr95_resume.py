@@ -513,7 +513,7 @@ def t4_smoke() -> dict:
     timeout=20 * 60,
     volumes={"/vol": resume_vol},
 )
-def t4_timing_micro(stop_after_global_epoch: int = 4899) -> dict:
+def t4_timing_micro(stop_after_global_epoch: int = 5050) -> dict:
     """FAST T4 pure-training timing (no eval): clean median training s/ep."""
     return _timing_micro_body("cuda", stop_after_global_epoch)
 
@@ -524,7 +524,7 @@ def t4_timing_micro(stop_after_global_epoch: int = 4899) -> dict:
     timeout=20 * 60,
     volumes={"/vol": resume_vol},
 )
-def a10g_timing_micro(stop_after_global_epoch: int = 4899) -> dict:
+def a10g_timing_micro(stop_after_global_epoch: int = 5050) -> dict:
     """FAST A10G pure-training timing (no eval): clean median training s/ep."""
     return _timing_micro_body("cuda", stop_after_global_epoch)
 
