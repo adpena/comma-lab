@@ -266,6 +266,57 @@ def test_warmup_lr_schedule_state_roundtrips(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
+# 5b. resume guard — a CHANGED warmup shape fails closed MID-STAGE (sister of the
+#     muon_lr_floor_fix guard: a mid-stage LambdaLR step-count is tuned to the old
+#     shape; resuming under a new shape would mis-schedule the stage LR).
+# --------------------------------------------------------------------------- #
+def _warmup_driver_with_death(tmp_path, *, warmup_frac, die_at, sub):
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=tmp_path / sub, device="cpu", seed=0,
+        eval_every=999, checkpoint_every_epochs=1, stage_lr_warmup_frac=warmup_frac,
+    )
+    scorer = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    d = TorchVehicleDriver(cfg, scorer=scorer, vendored=import_vendored_bundle(),
+                           curriculum=[_spec("s", 12, 1e-3)])
+    d._stop_after_global_epoch = die_at
+    with pytest.raises(_SimulatedDeath):
+        d.run()
+    return tmp_path / sub
+
+
+def test_resume_rejects_changed_warmup_frac_mid_stage(tmp_path):
+    """Die mid-stage (epoch 4 of 12) under warmup=0.3, then attempt resume under
+    warmup=0.0 → fail closed (the LambdaLR step-count is tuned to the 0.3 shape)."""
+    out = _warmup_driver_with_death(tmp_path, warmup_frac=0.3, die_at=4, sub="r")
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=out, device="cpu", seed=0,
+        eval_every=999, checkpoint_every_epochs=1, stage_lr_warmup_frac=0.0,  # CHANGED
+    )
+    scorer = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    d2 = TorchVehicleDriver(cfg, scorer=scorer, vendored=import_vendored_bundle(),
+                            curriculum=[_spec("s", 12, 1e-3)])
+    with pytest.raises(ValueError, match="changed warmup shape"):
+        d2.run()
+
+
+def test_resume_allows_same_warmup_frac_mid_stage(tmp_path):
+    """Die mid-stage under warmup=0.3, resume under the SAME warmup=0.3 → resumes
+    cleanly to completion (the guard does NOT block a faithful resume)."""
+    out = _warmup_driver_with_death(tmp_path, warmup_frac=0.3, die_at=4, sub="r2")
+    cfg = TorchVehicleConfig(
+        base_channels=8, latent_dim=28, out_dir=out, device="cpu", seed=0,
+        eval_every=999, checkpoint_every_epochs=1, stage_lr_warmup_frac=0.3,  # SAME
+    )
+    scorer = SyntheticScorerContext(n_pairs=6, device="cpu", seed=0)
+    d2 = TorchVehicleDriver(cfg, scorer=scorer, vendored=import_vendored_bundle(),
+                            curriculum=[_spec("s", 12, 1e-3)])
+    summary = d2.run()  # no raise
+    assert summary is not None
+
+
+# --------------------------------------------------------------------------- #
 # 6. end-to-end run with warmup completes + emits telemetry (no crash; the flag is wired)
 # --------------------------------------------------------------------------- #
 def test_two_stage_run_with_warmup_completes(tmp_path):

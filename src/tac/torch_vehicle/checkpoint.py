@@ -155,6 +155,18 @@ def save_checkpoint(
         # (the saved Muon LambdaLR step-count is tuned to this flag's eta_min). Backward-
         # compatible: old checkpoints lack the key → read as False == the vendored shared-floor.
         "muon_lr_floor_fix": bool(state.get("muon_lr_floor_fix", False)),
+        # E#5 per-stage LR warmup shape. Persisted so a resume that CHANGES it fails closed
+        # mid-stage (the saved LambdaLR step-count is tuned to this warmup shape). Backward-
+        # compatible: old checkpoints lack the keys → the driver guard reads them as the cfg
+        # value (pass), so a legacy resume is never spuriously blocked.
+        "stage_lr_warmup_frac": (
+            None if state.get("stage_lr_warmup_frac") is None
+            else float(state["stage_lr_warmup_frac"])
+        ),
+        "stage_lr_warmup_start_ratio": (
+            None if state.get("stage_lr_warmup_start_ratio") is None
+            else float(state["stage_lr_warmup_start_ratio"])
+        ),
         "stage_name": str(state.get("stage_name", "")),
         "ema_decay": float(state.get("ema_decay", 0.999)),
         "best_score": float(state.get("best_score", float("inf"))),

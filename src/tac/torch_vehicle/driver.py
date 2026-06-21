@@ -2456,6 +2456,12 @@ class TorchVehicleDriver:
             # carries a Muon LambdaLR step-count tuned to X's eta_min; resuming under !X
             # would silently apply that step-count to a different lambda at stage 8.
             "muon_lr_floor_fix": bool(self.cfg.muon_lr_floor_fix),
+            # Persist the E#5 per-stage LR warmup fraction + start-ratio so a resume that
+            # CHANGES them fails closed (sister of the floor-fix guard). A mid-stage
+            # checkpoint carries a LambdaLR step-count tuned to THIS warmup shape; resuming
+            # under a different shape would silently mis-schedule the LR within the stage.
+            "stage_lr_warmup_frac": float(self.cfg.stage_lr_warmup_frac),
+            "stage_lr_warmup_start_ratio": float(self.cfg.stage_lr_warmup_start_ratio),
             "stage_name": spec.name,
             "ema_decay": spec.ema_decay,
             "best_score": self.best_score,
@@ -3150,6 +3156,30 @@ class TorchVehicleDriver:
                     f"cfg.muon_lr_floor_fix={self.cfg.muon_lr_floor_fix} at a Muon-stage "
                     "checkpoint (has_muon=True); cannot resume with a toggled stage-8 Muon "
                     "floor (would mis-schedule the Muon LR)"
+                )
+            # E#5 stage-LR-warmup resume guard (sister of the floor-fix guard). The warmup
+            # SHAPES every stage's LambdaLR. Changing warmup_frac/start_ratio is SAFE only at
+            # a clean stage boundary (epoch_in_stage == 0 → the scheduler is rebuilt fresh for
+            # the next stage). It is UNSAFE mid-stage (epoch_in_stage > 0 → a LambdaLR
+            # step-count is checkpointed tuned to the OLD warmup shape; resuming under a NEW
+            # shape would apply that step-count to a differently-shaped lambda → mis-schedule
+            # the LR within the stage). Backward-compatible: old checkpoints lack the keys →
+            # read as the cfg value (pass). float compare with a tight tolerance.
+            _man_wf = float(man.get("stage_lr_warmup_frac", self.cfg.stage_lr_warmup_frac))
+            _man_sr = float(
+                man.get("stage_lr_warmup_start_ratio", self.cfg.stage_lr_warmup_start_ratio)
+            )
+            _mid_stage = int(man.get("epoch_in_stage", 0)) > 0
+            if _mid_stage and (
+                abs(_man_wf - float(self.cfg.stage_lr_warmup_frac)) > 1e-12
+                or abs(_man_sr - float(self.cfg.stage_lr_warmup_start_ratio)) > 1e-12
+            ):
+                raise ValueError(
+                    f"checkpoint stage_lr_warmup_frac={_man_wf}/start_ratio={_man_sr} != "
+                    f"cfg {self.cfg.stage_lr_warmup_frac}/{self.cfg.stage_lr_warmup_start_ratio} "
+                    f"at a MID-STAGE checkpoint (epoch_in_stage={man.get('epoch_in_stage')}); "
+                    "cannot resume with a changed warmup shape (would mis-schedule the stage LR). "
+                    "Change the warmup only at a clean stage boundary (epoch_in_stage=0)."
                 )
             merged = load_checkpoint(self.cfg.out_dir, map_location=self.cfg.device)
             resume_pos = merged["position"]
