@@ -398,6 +398,80 @@ def _gpu_smoke_body(device: str = "cuda") -> dict:
     return result
 
 
+def _timing_micro_body(device: str = "cuda", stop_after_global_epoch: int = 4899) -> dict:
+    """FAST pure-training timing: resume at ep 4875, run a handful of epochs and
+    STOP BEFORE the first eval epoch (4900) so NO slow 600-pair eval fires. Reads
+    the trajectory's per-epoch ``wall_clock_s`` to report clean training s/ep.
+    Returns quickly (seconds-to-low-minutes), so it is the reliable ep/h signal."""
+    import json
+    import time
+    from pathlib import Path
+
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    gpu_name = _assert_cuda_or_die()
+    _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
+    driver, out_path = _build_driver(device, out_dir, cache_dir)
+    driver._stop_after_global_epoch = int(stop_after_global_epoch)
+    print(
+        f"[yousfi-r3-resume] TIMING-MICRO (no eval) -> stop_after_global_epoch="
+        f"{stop_after_global_epoch}",
+        flush=True,
+    )
+    t0 = time.monotonic()
+    try:
+        driver.run()
+    except _SimulatedDeath as sd:
+        print(f"[yousfi-r3-resume] timing-micro stop at global_epoch={sd}", flush=True)
+    elapsed = time.monotonic() - t0
+
+    # Per-epoch wall deltas from the trajectory (wall_clock_s is cumulative from
+    # the writer's _t0). The first delta includes resume overhead; later deltas
+    # are clean per-epoch training time.
+    rows = []
+    traj_path = out_path / "torch_vehicle_trajectory.jsonl"
+    if traj_path.is_file():
+        for line in traj_path.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+            except Exception:
+                continue
+            if isinstance(r, dict) and r.get("wall_clock_s") is not None:
+                rows.append((r.get("global_epoch"), float(r["wall_clock_s"])))
+    rows.sort(key=lambda x: (x[1]))
+    # Keep only rows AT/after this process's resume (wall_clock_s increases from 0
+    # for THIS process — older rows from prior processes are not present because
+    # the writer's _t0 is per-process and the file is append-only; filter to the
+    # contiguous increasing tail belonging to this run).
+    per_epoch_deltas = []
+    for i in range(1, len(rows)):
+        ep, w = rows[i]
+        ep_prev, w_prev = rows[i - 1]
+        d = w - w_prev
+        if 0 < d < 3600:  # sane per-epoch bound
+            per_epoch_deltas.append({"global_epoch": ep, "delta_s": round(d, 3)})
+    # Robust central estimate: median of the last N clean deltas (skip the first
+    # which carries resume/warmup overhead).
+    clean = [d["delta_s"] for d in per_epoch_deltas[1:]] or [
+        d["delta_s"] for d in per_epoch_deltas
+    ]
+    s_per_ep = round(sorted(clean)[len(clean) // 2], 3) if clean else None
+    resume_vol.commit()
+    return {
+        "device": device,
+        "gpu_name": gpu_name,
+        "elapsed_seconds": round(elapsed, 2),
+        "stop_after_global_epoch": stop_after_global_epoch,
+        "median_train_s_per_ep": s_per_ep,
+        "train_ep_per_h": round(3600.0 / s_per_ep, 1) if s_per_ep else None,
+        "per_epoch_deltas_tail": per_epoch_deltas[-20:],
+        "n_epoch_deltas": len(per_epoch_deltas),
+    }
+
+
 @app.function(
     image=training_image,
     gpu="T4",
@@ -407,6 +481,28 @@ def _gpu_smoke_body(device: str = "cuda") -> dict:
 def t4_smoke() -> dict:
     """GPU TIMING smoke on T4: resume + ~150 epochs, measure ep/h + continuity."""
     return _gpu_smoke_body("cuda")
+
+
+@app.function(
+    image=training_image,
+    gpu="T4",
+    timeout=20 * 60,
+    volumes={"/vol": resume_vol},
+)
+def t4_timing_micro(stop_after_global_epoch: int = 4899) -> dict:
+    """FAST T4 pure-training timing (no eval): clean median training s/ep."""
+    return _timing_micro_body("cuda", stop_after_global_epoch)
+
+
+@app.function(
+    image=training_image,
+    gpu="A10G",
+    timeout=20 * 60,
+    volumes={"/vol": resume_vol},
+)
+def a10g_timing_micro(stop_after_global_epoch: int = 4899) -> dict:
+    """FAST A10G pure-training timing (no eval): clean median training s/ep."""
+    return _timing_micro_body("cuda", stop_after_global_epoch)
 
 
 def _full_body(device: str = "cuda", stop_after_global_epoch: int = 0) -> dict:
@@ -477,3 +573,10 @@ def t4_smoke_entry():
     import json
 
     print(json.dumps(t4_smoke.remote(), indent=2, sort_keys=True))
+
+
+@app.local_entrypoint()
+def t4_timing_micro_entry():
+    import json
+
+    print(json.dumps(t4_timing_micro.remote(), indent=2, sort_keys=True))
