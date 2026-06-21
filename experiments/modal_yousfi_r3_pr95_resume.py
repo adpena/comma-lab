@@ -787,10 +787,12 @@ def t4_timing_micro_entry():
 
 
 @app.local_entrypoint()
-def a10g_timing_micro_entry():
+def a10g_timing_micro_entry(stop_after_global_epoch: int = 5050):
     import json
 
-    print(json.dumps(a10g_timing_micro.remote(), indent=2, sort_keys=True))
+    print(json.dumps(
+        a10g_timing_micro.remote(stop_after_global_epoch), indent=2, sort_keys=True
+    ))
 
 
 @app.local_entrypoint()
