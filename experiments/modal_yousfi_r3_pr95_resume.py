@@ -131,6 +131,28 @@ def _prepare_workspace_and_inputs(device: str) -> tuple[str, str, str]:
         shutil.copy2(src, out_dir / name)
     print(f"[yousfi-r3-resume] staged resume checkpoint -> {out_dir}", flush=True)
 
+    # Stage the vendored PR95 (hnerv_muon) src into the expected workspace path.
+    # It lives under experiments/results/** locally (Modal-IGNORED subtree), so
+    # it does NOT ride in the image mount — ship it via the volume. The driver's
+    # import_vendored_bundle() + the launcher's import_vendored() resolve it at
+    # ``experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/
+    # source/submissions/hnerv_muon/src`` (see tac.torch_vehicle.vendored_imports).
+    vendored_dst = (
+        workspace
+        / "experiments/results/public_pr_intake_full"
+        / "public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src"
+    )
+    vendored_src = Path("/vol/vendored_hnerv_muon_src")
+    if not vendored_src.is_dir():
+        raise RuntimeError(
+            f"vendored PR95 src missing on volume: {vendored_src} "
+            "(upload via `modal volume put yousfi-r3-pr95-resume <staged_src> "
+            "vendored_hnerv_muon_src`)"
+        )
+    vendored_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(vendored_src, vendored_dst, dirs_exist_ok=True)
+    print(f"[yousfi-r3-resume] staged vendored PR95 src -> {vendored_dst}", flush=True)
+
     # Point --targets-cache at the volume cache dir directly (read-only is fine;
     # the launcher only reads gt_targets_n600.pt with map_location='cpu').
     cache_dir = Path("/vol/cache")
@@ -186,6 +208,13 @@ def _run_launcher_and_collect(
     argv = list(BASE_LAUNCHER_ARGS)
     argv += ["--device", device, "--train-device", device]
     argv += ["--targets-cache", cache_dir, "--out-dir", out_dir]
+    # Point at the staged contest video explicitly so the launcher skips the
+    # vendored get_default_video_path() (which needs a comma_video_compression_
+    # challenge/ tree we do not ship). The GT cache is present so the video is
+    # never actually decoded — only held as a path by RealScorerContext.
+    # out_dir is ``<workspace>/out`` → workspace == out_dir.parent.
+    workspace_root = Path(out_dir).parent
+    argv += ["--video-path", str(workspace_root / "upstream/videos/0.mkv")]
     if total_epoch_budget is not None:
         argv += ["--total-epoch-budget", str(total_epoch_budget)]
     if extra_args:
