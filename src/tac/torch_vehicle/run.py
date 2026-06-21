@@ -51,6 +51,16 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         "cotangents. Requires --train-device != --device. The full-MPS "
                         "gradient REJECTED the descent gate on the POSE axis; this salvage "
                         "is descent-equivalent on BOTH terms by construction.")
+    p.add_argument("--variable-level-waterfill-enabled", action="store_true",
+                   help="Track-A Item B / D2 opt-in: replace only the decoder section with "
+                        "the conservative variable-level waterfill allocation. Requires a "
+                        "measured RD table; solves byte_target with net_stop=false.")
+    p.add_argument("--variable-level-waterfill-rd-table", type=Path, default=None,
+                   help="Persisted measured RD table JSON from "
+                        "experiments/probe_variable_level_waterfill_net.py.")
+    p.add_argument("--variable-level-waterfill-byte-target", type=float, default=2731.0,
+                   help="Conservative deployed-byte saving target for D2. Default 2731; "
+                        "the falsified net_stop path is not exposed.")
     p.add_argument("--video-path", type=Path, default=None,
                    help="contest video (default: vendored data.get_default_video_path())")
     p.add_argument("--seed", type=int, default=0)
@@ -84,6 +94,17 @@ def main(argv: list[str] | None = None) -> int:
         data = import_vendored("data")
         video_path = data.get_default_video_path()
 
+    variable_level_rd_table = None
+    if args.variable_level_waterfill_enabled:
+        if args.variable_level_waterfill_rd_table is None:
+            raise SystemExit(
+                "--variable-level-waterfill-enabled requires "
+                "--variable-level-waterfill-rd-table"
+            )
+        variable_level_rd_table = json.loads(
+            args.variable_level_waterfill_rd_table.read_text(encoding="utf-8")
+        )
+
     cfg = TorchVehicleConfig(
         base_channels=args.base_channels,
         latent_dim=args.latent_dim,
@@ -95,6 +116,9 @@ def main(argv: list[str] | None = None) -> int:
         device=args.device,
         train_device=args.train_device,
         split_by_head=args.split_by_head,
+        variable_level_waterfill_enabled=args.variable_level_waterfill_enabled,
+        variable_level_waterfill_rd_table=variable_level_rd_table,
+        variable_level_waterfill_byte_target=args.variable_level_waterfill_byte_target,
         seed=args.seed,
     )
     scorer = RealScorerContext(

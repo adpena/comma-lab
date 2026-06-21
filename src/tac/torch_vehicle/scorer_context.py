@@ -181,6 +181,22 @@ class RealScorerContext:
         pose_out = net.posenet(posenet_in)
         return pose_out["pose"][:, :6]
 
+    def pose_forward_train(self, decoded_bhwc_train: torch.Tensor) -> torch.Tensor:
+        """PoseNet-path forward on the TRAIN device net (the FULL-MPS unbundle — MPS as
+        the GRADIENT backend for the pose head too). ``decoded_bhwc_train`` is on
+        ``train_device``; returns pose6 on ``train_device``. Uses ``train_distortion_net``
+        (the SAME frozen net the SegNet head uses; patch_scorer_for_mps + differentiable
+        rgb_to_yuv6 are already applied when that net is built on MPS via
+        ``load_frozen_distortion_net``). This is a GRADIENT path ONLY — the exact d_pose
+        that picks BEST ALWAYS runs through ``exact_eval`` on the CPU authority net. The
+        MPS pose gradient is per-step faithful (the full-MPS basin reached CPU-authority
+        d_pose=0.00034); it must still pass the descent-equivalence chaos-check before a
+        real run trusts it."""
+        net = self.train_distortion_net
+        posenet_in, _segnet_in_unused = net.preprocess_input(decoded_bhwc_train)
+        pose_out = net.posenet(posenet_in)
+        return pose_out["pose"][:, :6]
+
     def exact_eval(self, ema_decoder: nn.Module, ema_latents: torch.Tensor, archive_bytes: int):
         """Canonical d_seg/d_pose/rate/score on the EMA shadow (BEST tracker).
 
@@ -288,6 +304,14 @@ class SyntheticScorerContext:
         """PoseNet-path forward on the AUTHORITY scorer (mirrors RealScorerContext)."""
         pooled = decoded_bhwc_cpu.mean(dim=(1, 2, 3)) / 255.0
         return self._scorer.pose(pooled)
+
+    def pose_forward_train(self, decoded_bhwc_train: torch.Tensor) -> torch.Tensor:
+        """PoseNet-path forward on the TRAIN scorer (the FULL-MPS unbundle; mirrors
+        RealScorerContext). Same frozen weights as the authority pose head; only the
+        device differs (so on a same-device synthetic control the gradient is identical
+        to the authority path — exactly what the device-routing test asserts)."""
+        pooled = decoded_bhwc_train.mean(dim=(1, 2, 3)) / 255.0
+        return self._train_scorer.pose(pooled)
 
     def exact_eval(self, ema_decoder: nn.Module, ema_latents: torch.Tensor, archive_bytes: int):
         """A deterministic synthetic 'score' from the EMA shadow argmax-flip vs
