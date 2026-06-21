@@ -143,6 +143,27 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "(absent) = the penalty SUPERSEDES C1a when active (the empirically-correct "
              "behavior). Only consulted when --weight-entropy-penalty-lambda > 0.",
     )
+    p.add_argument(
+        "--stage-lr-warmup-frac",
+        type=float,
+        default=0.0,
+        help="E#5 STAGE-TRANSITION POSE-KICK FIX: per-stage LR WARMUP fraction. DEFAULT "
+             "0.0 = OFF / byte-identical (every stage starts at the cosine peak, the "
+             "legacy faithful path). When > 0, the first frac·stage_epochs of EACH stage "
+             "linearly ramp LR floor→cosine (warmup-after-restart) so the shared trunk is "
+             "eased in at the stage boundary instead of slammed to peak (MEASURED d_pose "
+             "spike 0.00021→0.00142, 6.8×, at the stage-1→2 boundary; 6 more transitions "
+             "remain). Applies to BOTH AdamW + Muon groups. Must be in [0.0, 0.5]. "
+             "[contest-CPU advisory] NON-PROMOTABLE; the win is the boundary-kick reduction.",
+    )
+    p.add_argument(
+        "--stage-lr-warmup-start-ratio",
+        type=float,
+        default=0.1,
+        help="the LR floor (fraction of stage peak) the E#5 warmup ramp starts from at "
+             "each stage's first epoch (default 0.1 = 10% of peak). Only consulted when "
+             "--stage-lr-warmup-frac > 0. Must be in (0.0, 1.0].",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -189,6 +210,9 @@ def main(argv: list[str] | None = None) -> int:
         weight_entropy_penalty_waterfill=args.weight_entropy_penalty_waterfill,
         # supersede C1a when the penalty is active (default True; --stack-c1a flips it off).
         weight_entropy_penalty_supersedes_c1a=not args.weight_entropy_penalty_stack_c1a,
+        # E#5 per-stage LR warmup (default 0.0 = OFF / byte-identical).
+        stage_lr_warmup_frac=args.stage_lr_warmup_frac,
+        stage_lr_warmup_start_ratio=args.stage_lr_warmup_start_ratio,
         seed=args.seed,
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).

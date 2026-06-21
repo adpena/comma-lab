@@ -99,6 +99,46 @@ def _segnet_logit_margin_map(seg_out: torch.Tensor) -> torch.Tensor:
     return (top2[:, 0] - top2[:, 1]).clamp_min(0.0)  # (B, H, W) >= 0
 
 
+def _warmup_wrap(
+    cosine_lambda: Callable[[int], float],
+    *,
+    warmup_frac: float,
+    stage_epochs: int,
+    start_ratio: float,
+) -> Callable[[int], float]:
+    """Wrap a per-stage cosine ``lr_lambda`` with a leading LINEAR warmup (the E#5
+    stage-transition pose-kick fix — warmup-after-restart).
+
+    DEFAULT-PRESERVING: ``warmup_frac <= 0`` returns ``cosine_lambda`` UNCHANGED (the
+    same object) so the LambdaLR sees the byte-identical legacy schedule — every stage
+    starts at the cosine peak exactly as before.
+
+    When ``warmup_frac > 0``: the first ``w = ceil(warmup_frac · stage_epochs)`` epochs
+    (>= 1) ramp the LR multiplier LINEARLY from ``start_ratio`` (× peak) at epoch 0 up to
+    ``cosine_lambda(w)`` (the cosine value at the warmup-end epoch) at epoch ``w``. From
+    epoch ``w`` onward the wrapped lambda IS ``cosine_lambda`` — so the warmup ends
+    exactly where the cosine would be at that epoch (C0-continuous; no jump). The ramp is
+    a multiplier on the SAME ``peak_lr`` the LambdaLR base captured, so it eases the
+    shared trunk in at the boundary instead of slamming it to peak. ``w`` is clamped to
+    ``stage_epochs - 1`` so at least one cosine epoch remains (warmup_frac <= 0.5 already
+    guarantees this for stage_epochs >= 2; the clamp covers a 1-epoch stage).
+    """
+    if warmup_frac <= 0.0:
+        return cosine_lambda
+    w = max(1, math.ceil(warmup_frac * stage_epochs))
+    w = min(w, max(1, stage_epochs - 1))
+    target_at_w = cosine_lambda(w)  # the cosine value the warmup ramps UP to (no jump)
+
+    def wrapped(epoch: int) -> float:
+        if epoch >= w:
+            return cosine_lambda(epoch)
+        # linear ramp start_ratio → target_at_w over [0, w]
+        frac = epoch / w
+        return start_ratio + (target_at_w - start_ratio) * frac
+
+    return wrapped
+
+
 def _seg_loss_for_spec(
     spec: StageSpec,
     seg_out: torch.Tensor,
@@ -894,6 +934,31 @@ class TorchVehicleConfig:
     # on the default λ=0 path (the penalty is off → C1a is untouched → the live basin is
     # unaffected). Only consulted when ``weight_entropy_penalty_lambda > 0``.
     weight_entropy_penalty_supersedes_c1a: bool = True
+    # PER-STAGE LR WARMUP (the E#5 stage-transition pose-kick fix). DEFAULT 0.0 →
+    # BYTE-IDENTICAL: every stage's LambdaLR starts at the cosine PEAK (epoch 0 →
+    # 0.5·(1+cos(0)) = 1.0 × peak_lr) exactly as the legacy faithful path, so the live
+    # basin resuming onto this code is unaffected (proved by
+    # ``test_stage_lr_warmup_frac_zero_is_byte_identical``). PROBLEM (MEASURED, E#5): at
+    # each stage→stage boundary PR95 resets the optimizer + the cosine restarts to PEAK
+    # (1e-3) and SLAMS the shared trunk → d_pose spiked 0.00021→0.00142 (6.8×) before
+    # recovering, and d_seg 0.00224→0.00287, at the stage-1→2 boundary; 6 more transitions
+    # remain in the full curriculum. FIX (standard warmup-after-restart): when > 0, the
+    # FIRST ``ceil(stage_lr_warmup_frac · spec.epochs)`` epochs of EACH stage LINEARLY
+    # ramp the LR from a small floor (``stage_lr_warmup_start_ratio`` × peak) up to the
+    # cosine value at the warmup-end epoch, then the normal cosine continues — so the
+    # trunk is eased in at the boundary instead of slammed. Applied to BOTH the AdamW and
+    # Muon lr_lambdas (the two trunk-touching groups). Must be in [0.0, 0.5]; > 0.5 would
+    # leave < half the stage for the cosine descent (refused in __post_init__). The
+    # latent + FiLM + penalty groups ride the same AdamW lambda (one schedule). Resume:
+    # the LambdaLR ``last_epoch`` is checkpointed, so a death mid-warmup resumes the same
+    # ramp position bit-for-bit. ``[contest-CPU advisory]`` — the win is the MEASURED
+    # boundary-kick reduction (the headline test), not a score claim from the flag alone.
+    stage_lr_warmup_frac: float = 0.0
+    # The LR floor (as a fraction of the stage peak) the warmup ramp STARTS from at the
+    # first epoch of each stage. Only consulted when ``stage_lr_warmup_frac`` > 0. 0.1 =
+    # start at 10% of peak then linearly ramp to the cosine value at warmup-end (a gentle
+    # ease-in). Must be in (0.0, 1.0].
+    stage_lr_warmup_start_ratio: float = 0.1
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -932,6 +997,17 @@ class TorchVehicleConfig:
             raise ValueError(
                 f"pose_film_version must be 1 (v1 stem) or 2 (v2 residual-rgb0); "
                 f"got {self.pose_film_version}"
+            )
+        if not (0.0 <= float(self.stage_lr_warmup_frac) <= 0.5):
+            raise ValueError(
+                "stage_lr_warmup_frac must be in [0.0, 0.5] (0.0 = byte-identical no "
+                "warmup; > 0.5 would leave < half the stage for the cosine descent); got "
+                f"{self.stage_lr_warmup_frac}"
+            )
+        if not (0.0 < float(self.stage_lr_warmup_start_ratio) <= 1.0):
+            raise ValueError(
+                "stage_lr_warmup_start_ratio must be in (0.0, 1.0]; got "
+                f"{self.stage_lr_warmup_start_ratio}"
             )
         if self.pose_section_codec not in ("iid", "lowrank"):
             raise ValueError(
@@ -1721,6 +1797,17 @@ class TorchVehicleDriver:
         def lr_lambda(epoch: int) -> float:
             return max(0.5 * (1 + math.cos(math.pi * epoch / spec.epochs)), eta_min_ratio)
 
+        # E#5 per-stage LR warmup (DEFAULT-OFF → returns lr_lambda unchanged =
+        # byte-identical). When on, the first warmup_frac·epochs ramp LR floor→cosine.
+        warmup_frac = float(getattr(self.cfg, "stage_lr_warmup_frac", 0.0))
+        warmup_start_ratio = float(getattr(self.cfg, "stage_lr_warmup_start_ratio", 0.1))
+        lr_lambda = _warmup_wrap(
+            lr_lambda,
+            warmup_frac=warmup_frac,
+            stage_epochs=spec.epochs,
+            start_ratio=warmup_start_ratio,
+        )
+
         adamw_sched = torch.optim.lr_scheduler.LambdaLR(adamw_opt, lr_lambda)
         # WS-A/M3 Muon LR-floor fix (opt-in, default-off → byte-identical). The shared
         # lr_lambda floors at eta_min_ratio = lr_floor_ratio/ADAMW_lr (=0.5 at stage 8 →
@@ -1735,8 +1822,16 @@ class TorchVehicleDriver:
             def muon_lr_lambda(epoch: int) -> float:
                 return max(0.5 * (1 + math.cos(math.pi * epoch / spec.epochs)), muon_eta_min)
 
+            # E#5 warmup wraps the Muon floor-fix lambda too (DEFAULT-OFF → unchanged).
+            muon_lr_lambda = _warmup_wrap(
+                muon_lr_lambda,
+                warmup_frac=warmup_frac,
+                stage_epochs=spec.epochs,
+                start_ratio=warmup_start_ratio,
+            )
             muon_sched = torch.optim.lr_scheduler.LambdaLR(muon_opt, muon_lr_lambda)
         else:
+            # Shares the (already warmup-wrapped) adamw lr_lambda → Muon also warms up.
             muon_sched = torch.optim.lr_scheduler.LambdaLR(muon_opt, lr_lambda)
         return _StageRuntime(
             decoder=decoder,
