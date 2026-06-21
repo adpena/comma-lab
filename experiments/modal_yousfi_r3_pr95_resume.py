@@ -206,52 +206,74 @@ def _assert_cuda_or_die() -> str:
     return name
 
 
-def _run_launcher_and_collect(
-    *,
-    device: str,
-    out_dir: str,
-    cache_dir: str,
-    total_epoch_budget: int | None,
-    extra_args: list[str] | None = None,
-) -> dict:
-    """Invoke the launcher main() in-process, time it, and harvest the eval
-    rows from the run's summary/trajectory."""
-    import json
-    import time
+def _build_driver(device: str, out_dir: str, cache_dir: str):
+    """Build the TorchVehicleDriver EXACTLY as launch_split_by_head_basin.main()
+    does (same cfg + RealScorerContext + margin_hinge curriculum), but with
+    ``total_epoch_budget=None`` (the UNSCALED faithful curriculum — identical to
+    the live MPS run). Returns (driver, out_path)."""
+    import dataclasses
     from pathlib import Path
 
-    from experiments.launch_split_by_head_basin import main as launcher_main
+    from tac.torch_vehicle.curriculum import build_curriculum
+    from tac.torch_vehicle.driver import (
+        TorchVehicleConfig,
+        TorchVehicleDriver,
+        import_vendored_bundle,
+    )
+    from tac.torch_vehicle.scorer_context import RealScorerContext
 
-    argv = list(BASE_LAUNCHER_ARGS)
-    argv += ["--device", device, "--train-device", device]
-    argv += ["--targets-cache", cache_dir, "--out-dir", out_dir]
-    # Point at the staged contest video explicitly so the launcher skips the
-    # vendored get_default_video_path() (which needs a comma_video_compression_
-    # challenge/ tree we do not ship). The GT cache is present so the video is
-    # never actually decoded — only held as a path by RealScorerContext.
-    # out_dir is ``<workspace>/out`` → workspace == out_dir.parent.
-    workspace_root = Path(out_dir).parent
-    argv += ["--video-path", str(workspace_root / "upstream/videos/0.mkv")]
-    if total_epoch_budget is not None:
-        argv += ["--total-epoch-budget", str(total_epoch_budget)]
-    if extra_args:
-        argv += extra_args
+    out_path = Path(out_dir)
+    workspace_root = out_path.parent
+    video_path = workspace_root / "upstream/videos/0.mkv"
 
-    print(f"[yousfi-r3-resume] launcher argv: {argv}", flush=True)
-    t0 = time.monotonic()
-    rc = launcher_main(argv)
-    elapsed = time.monotonic() - t0
+    cfg = TorchVehicleConfig(
+        base_channels=20,
+        latent_dim=28,
+        out_dir=out_path,
+        checkpoint_every_epochs=25,
+        total_epoch_budget=None,  # UNSCALED faithful curriculum (matches live run)
+        ema_decay=0.999,
+        eval_every=25,
+        device=device,
+        train_device=device,
+        split_by_head=False,       # --no-split-by-head
+        async_eval=True,           # --async-eval
+        muon_lr_floor_fix=False,   # --no-muon-lr-floor-fix
+        stage_lr_warmup_frac=0.03,
+        stage_lr_warmup_start_ratio=0.1,
+        taper_channels=[16, 16, 17, 19, 19, 14, 10],
+        seed=0,
+    )
+    scorer = RealScorerContext(
+        video_path,
+        device=device,
+        train_device=device,
+        split_by_head=False,
+        max_pairs=600,
+        targets_cache=cache_dir,
+    )
+    # --seg-margin-hinge: replace every stage's seg surrogate with margin_hinge.
+    specs = build_curriculum(
+        total_epoch_budget=None, ema_decay=0.999, eval_every=25
+    )
+    curriculum = [dataclasses.replace(s, seg_surrogate="margin_hinge") for s in specs]
+    driver = TorchVehicleDriver(
+        cfg, scorer=scorer, vendored=import_vendored_bundle(), curriculum=curriculum
+    )
+    return driver, out_path
 
-    out = Path(out_dir)
+
+def _harvest(out_path, *, device: str, elapsed: float, rc: int) -> dict:
+    """Read the run's summary + trajectory eval rows for the report."""
+    import json
+
     summary = {}
-    summary_path = out / "torch_vehicle_summary.json"
+    summary_path = out_path / "torch_vehicle_summary.json"
     if summary_path.is_file():
         summary = json.loads(summary_path.read_text())
 
-    # Harvest the eval rows from the trajectory jsonl (each eval is a row with
-    # d_seg/d_pose/rate/score + global_epoch).
     eval_rows: list[dict] = []
-    traj_path = out / "torch_vehicle_trajectory.jsonl"
+    traj_path = out_path / "torch_vehicle_trajectory.jsonl"
     if traj_path.is_file():
         for line in traj_path.read_text().splitlines():
             line = line.strip()
@@ -261,7 +283,6 @@ def _run_launcher_and_collect(
                 row = json.loads(line)
             except Exception:
                 continue
-            # Only actual eval rows (evaluated=True => non-null d_seg/score).
             if (
                 isinstance(row, dict)
                 and row.get("evaluated") is True
@@ -279,7 +300,7 @@ def _run_launcher_and_collect(
                 })
 
     manifest = {}
-    man_path = out / "torch_vehicle_checkpoint_manifest.json"
+    man_path = out_path / "torch_vehicle_checkpoint_manifest.json"
     if man_path.is_file():
         manifest = json.loads(man_path.read_text())
 
@@ -290,9 +311,56 @@ def _run_launcher_and_collect(
         "device": device,
         "summary_last_eval": summary.get("last_eval"),
         "final_manifest": manifest,
-        "eval_rows_tail": eval_rows[-12:],
+        "eval_rows_tail": eval_rows[-14:],
         "n_eval_rows": len(eval_rows),
     }
+
+
+def _smoke_run_and_collect(
+    *, device: str, out_dir: str, cache_dir: str, stop_after_global_epoch: int
+) -> dict:
+    """Resume the UNSCALED curriculum, run until ``stop_after_global_epoch``
+    (raises _SimulatedDeath AFTER a checkpoint lands — the clean smoke stop),
+    JOIN the in-flight async eval so the eval rows land, then harvest. This does
+    NOT rescale the curriculum, so the cross-device resume mapping is faithful."""
+    import time
+
+    from tac.torch_vehicle.driver import _SimulatedDeath
+
+    driver, out_path = _build_driver(device, out_dir, cache_dir)
+    driver._stop_after_global_epoch = int(stop_after_global_epoch)
+
+    print(
+        f"[yousfi-r3-resume] SMOKE resume (unscaled) -> stop_after_global_epoch="
+        f"{stop_after_global_epoch}",
+        flush=True,
+    )
+    t0 = time.monotonic()
+    rc = 0
+    try:
+        driver.run()
+    except _SimulatedDeath as sd:
+        print(f"[yousfi-r3-resume] smoke stop at global_epoch={sd}", flush=True)
+        # run() raises BEFORE its own _join_async_eval; join here so the final
+        # async eval row(s) land in the trajectory before we harvest.
+        driver._join_async_eval()
+    elapsed = time.monotonic() - t0
+    return _harvest(out_path, device=device, elapsed=elapsed, rc=rc)
+
+
+def _full_run_and_collect(*, device: str, out_dir: str, cache_dir: str) -> dict:
+    """Resume + run the FULL unscaled curriculum to completion (held by the
+    main agent). No stop hook → run() does its own async-eval join + DONE marker."""
+    import time
+
+    driver, out_path = _build_driver(device, out_dir, cache_dir)
+    print("[yousfi-r3-resume] FULL resume (unscaled) -> run to curriculum end", flush=True)
+    t0 = time.monotonic()
+    summary = driver.run()
+    elapsed = time.monotonic() - t0
+    result = _harvest(out_path, device=device, elapsed=elapsed, rc=0)
+    result["final_summary"] = summary
+    return result
 
 
 @app.function(
@@ -302,29 +370,29 @@ def _run_launcher_and_collect(
 )
 def cpu_smoke() -> dict:
     """FREE wiring + cross-device checkpoint-load proof: load scorers + the
-    MPS-saved checkpoint (map_location cpu) + the n600 cache, run ~1 eval-worth
-    of epochs on CPU. Validates the resume + eval path WITHOUT a GPU meter."""
-    workspace, out_dir, cache_dir = _prepare_workspace_and_inputs("cpu")
-    # total_epoch_budget=4901 -> resume at global ep 4875, run ~26 epochs so the
-    # eval-every-25 fires at least one CPU-authority eval. Proves wiring cheaply.
-    return _run_launcher_and_collect(
+    MPS-saved checkpoint (map_location cpu) + the n600 cache, resume the UNSCALED
+    curriculum, run ~26 epochs so eval-every-25 fires >=1 CPU-authority eval, then
+    stop cleanly. Validates the resume + eval path WITHOUT a GPU meter."""
+    _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs("cpu")
+    # Resume is at global ep 4875; stop at 4900 => ~25 epochs + the ep-4900 eval.
+    return _smoke_run_and_collect(
         device="cpu",
         out_dir=out_dir,
         cache_dir=cache_dir,
-        total_epoch_budget=4901,
+        stop_after_global_epoch=4900,
     )
 
 
 def _gpu_smoke_body(device: str = "cuda") -> dict:
     gpu_name = _assert_cuda_or_die()
-    workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
-    # total_epoch_budget=5025 -> resume at global ep 4875, run ~150 epochs with
-    # eval-every-25 => ~6 CUDA-authority evals. Measures ep/h + continuity.
-    result = _run_launcher_and_collect(
+    _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
+    # Resume at global ep 4875; stop at 5025 => ~150 epochs with eval-every-25
+    # => ~6 CUDA-authority evals (ep 4900/4925/.../5025). Measures ep/h + continuity.
+    result = _smoke_run_and_collect(
         device=device,
         out_dir=out_dir,
         cache_dir=cache_dir,
-        total_epoch_budget=5025,
+        stop_after_global_epoch=5025,
     )
     result["gpu_name"] = gpu_name
     return result
@@ -341,18 +409,25 @@ def t4_smoke() -> dict:
     return _gpu_smoke_body("cuda")
 
 
-def _full_body(total_epoch_budget: int, device: str = "cuda") -> dict:
+def _full_body(device: str = "cuda", stop_after_global_epoch: int = 0) -> dict:
+    """Resume the UNSCALED curriculum. stop_after_global_epoch <= 0 => run to the
+    full curriculum end (global ep 29,650). Set it to 19650 to stop at the
+    decisive end-of-stage-5 (C1a-L7) verdict point."""
     gpu_name = _assert_cuda_or_die()
-    workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
-    return {
-        **_run_launcher_and_collect(
+    _workspace, out_dir, cache_dir = _prepare_workspace_and_inputs(device)
+    if stop_after_global_epoch and stop_after_global_epoch > 0:
+        result = _smoke_run_and_collect(
             device=device,
             out_dir=out_dir,
             cache_dir=cache_dir,
-            total_epoch_budget=total_epoch_budget,
-        ),
-        "gpu_name": gpu_name,
-    }
+            stop_after_global_epoch=stop_after_global_epoch,
+        )
+    else:
+        result = _full_run_and_collect(
+            device=device, out_dir=out_dir, cache_dir=cache_dir
+        )
+    result["gpu_name"] = gpu_name
+    return result
 
 
 @app.function(
@@ -361,10 +436,11 @@ def _full_body(total_epoch_budget: int, device: str = "cuda") -> dict:
     timeout=14 * 3600,
     volumes={"/vol": resume_vol},
 )
-def run_full_t4(total_epoch_budget: int = 29650) -> dict:
-    """FULL run on T4 (held by the main agent). Resumes from the volume
-    checkpoint and trains to ``total_epoch_budget`` global epochs."""
-    return _full_body(total_epoch_budget, "cuda")
+def run_full_t4(stop_after_global_epoch: int = 0) -> dict:
+    """FULL run on T4 (held by the main agent). Resumes from the volume checkpoint
+    and trains the UNSCALED curriculum to the end (29,650) — or to
+    stop_after_global_epoch (e.g. 19650 = end of stage 5, the decisive point)."""
+    return _full_body("cuda", stop_after_global_epoch)
 
 
 @app.function(
@@ -373,9 +449,9 @@ def run_full_t4(total_epoch_budget: int = 29650) -> dict:
     timeout=14 * 3600,
     volumes={"/vol": resume_vol},
 )
-def run_full_a10g(total_epoch_budget: int = 29650) -> dict:
+def run_full_a10g(stop_after_global_epoch: int = 0) -> dict:
     """FULL run on A10G (held by the main agent)."""
-    return _full_body(total_epoch_budget, "cuda")
+    return _full_body("cuda", stop_after_global_epoch)
 
 
 @app.function(
@@ -384,9 +460,9 @@ def run_full_a10g(total_epoch_budget: int = 29650) -> dict:
     timeout=14 * 3600,
     volumes={"/vol": resume_vol},
 )
-def run_full_a100(total_epoch_budget: int = 29650) -> dict:
+def run_full_a100(stop_after_global_epoch: int = 0) -> dict:
     """FULL run on A100 (held by the main agent)."""
-    return _full_body(total_epoch_budget, "cuda")
+    return _full_body("cuda", stop_after_global_epoch)
 
 
 @app.local_entrypoint()
