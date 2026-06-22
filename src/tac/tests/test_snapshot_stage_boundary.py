@@ -60,19 +60,57 @@ def test_missing_fields_default_to_noop():
 
 def test_not_stale_within_threshold():
     # A run actively checkpointing (mtime recent) is NOT stale → watcher keeps going.
-    assert mod.is_stale(mtime=1000.0, now=1000.0 + 60, threshold_s=600) is False
+    assert mod.is_stale(reference_time=1000.0, now=1000.0 + 60, threshold_s=600) is False
 
 
 def test_stale_after_threshold():
     # No checkpoint for > threshold → run genuinely stopped → exit.
-    assert mod.is_stale(mtime=1000.0, now=1000.0 + 700, threshold_s=600) is True
+    assert mod.is_stale(reference_time=1000.0, now=1000.0 + 700, threshold_s=600) is True
 
 
 def test_restart_gap_under_threshold_is_not_stale():
     # THE F2 FIX: a restart gap (~2 min) is far under the 600s threshold → watcher survives the restart.
-    assert mod.is_stale(mtime=1000.0, now=1000.0 + 120, threshold_s=600) is False
+    assert mod.is_stale(reference_time=1000.0, now=1000.0 + 120, threshold_s=600) is False
 
 
 def test_missing_mtime_is_never_stale():
     # No manifest yet (run warming up) must not trigger exit.
-    assert mod.is_stale(mtime=None, now=999999.0, threshold_s=600) is False
+    assert mod.is_stale(reference_time=None, now=999999.0, threshold_s=600) is False
+
+
+# ---- next_change_reference: observe-relative tracking (the R2-1 fix) ------------------------------
+
+
+def test_change_reference_resets_on_advance():
+    # Manifest advanced (mtime changed) → reference clock resets to now.
+    new_mtime, new_ref = mod.next_change_reference(prev_mtime=100.0, cur_mtime=200.0, prev_reference=50.0, now=1000.0)
+    assert new_mtime == 200.0 and new_ref == 1000.0
+
+
+def test_change_reference_holds_when_no_advance():
+    # Same mtime → reference unchanged (staleness keeps accumulating toward exit).
+    new_mtime, new_ref = mod.next_change_reference(prev_mtime=200.0, cur_mtime=200.0, prev_reference=50.0, now=1000.0)
+    assert new_mtime == 200.0 and new_ref == 50.0
+
+
+def test_change_reference_ignores_none_mtime():
+    # Transient missing manifest read → keep the prior reference (do not reset, do not crash).
+    new_mtime, new_ref = mod.next_change_reference(prev_mtime=200.0, cur_mtime=None, prev_reference=50.0, now=1000.0)
+    assert new_mtime == 200.0 and new_ref == 50.0
+
+
+def test_r2_1_stale_at_startup_does_not_false_exit_until_threshold():
+    # THE R2-1 GUARD: a pre-existing OLD mtime at watcher start must NOT immediately exit. The reference is
+    # seeded at start; only THRESHOLD seconds with no observed advance triggers exit.
+    start = 10_000.0
+    old_mtime = 0.0  # manifest is ~10000s old at startup (e.g. watcher relaunched in a quiet window)
+    ref = start  # seeded at watcher start
+    # First poll, no advance yet, only 5s elapsed → NOT stale (old absolute mtime would have wrongly fired).
+    m, ref = mod.next_change_reference(old_mtime, old_mtime, ref, start + 5)
+    assert mod.is_stale(ref, start + 5, 600) is False
+    # The run then advances the manifest → reference resets, stays alive.
+    m, ref = mod.next_change_reference(old_mtime, 12_345.0, ref, start + 50)
+    assert mod.is_stale(ref, start + 100, 600) is False
+    # Now it genuinely stops: no advance for > threshold → stale.
+    m, ref = mod.next_change_reference(12_345.0, 12_345.0, ref, start + 700)
+    assert mod.is_stale(ref, start + 700, 600) is True

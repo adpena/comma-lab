@@ -12,9 +12,18 @@ THE MECHANISM. Poll the run's checkpoint manifest. While the ending stage is act
 --start-stage-index`` AND ``has_muon`` is False), keep a ROLLING copy of the latest checkpoint into
 ``--snapshot-dir`` (pure file-copy — CPU-light next to a live MPS run; only copies when the epoch advances).
 The instant ``has_muon`` flips True (stage 8's first checkpoint), FREEZE: stop refreshing, extract the EMA
-decoder + latents into the ``best_ema_decoder.pt`` / ``best_ema_latents.pt`` warm-start pair (the format
-``--warm-start-dir`` / ``--kd-warm-start-dir`` consume — verified against driver.py:3030-3031), and write a
-``FROZEN.marker``. The frozen copy is the true end-of-stage-7 basin.
+decoder + latents into the ``best_ema_decoder.pt`` / ``best_ema_latents.pt`` warm-start pair (format per
+driver.py:3030-3031), and write a ``FROZEN.marker``. The frozen copy is the true end-of-stage-7 basin.
+
+HOW TO LAUNCH FROM A SNAPSHOT (verified end-to-end on a real checkpoint, 2026-06-22):
+* PRIMARY — alternative stage-8 finisher: drop ``torch_vehicle_checkpoint_state.pt`` + manifest into a fresh
+  ``--out-dir`` and relaunch; the driver EXACT-RESUMES at end-of-stage-7 and runs stage 8 (a modified stage-8
+  config / muon_lr_floor_fix toggle is resume-safe because has_muon is still False at the frozen state).
+* SECONDARY — re-prime from the basin: ``--warm-start-dir <snapshot>`` with the SAME ``--taper-channels`` /
+  ``--base-channels`` / ``--latent-dim`` strict-loads the EMA decoder (verified missing=[]/unexpected=[]).
+* NOT ``--kd-warm-start-dir`` for the DECODER: kd builds a VENDORED (no-taper) teacher and strict-loads it, so
+  a tapered EMA shape-mismatches. The LATENTS alone are kd-compatible (taper-independent), but the tapered
+  decoder is not a valid kd teacher.
 
 ADVERSARIAL-REVIEW HARDENING (2026-06-22):
 * The driver writes both files via ``os.replace`` (checkpoint.py:179-186) → a copy NEVER sees a partial .pt
@@ -73,11 +82,33 @@ def decide_action(manifest: dict, last_copied: tuple[int, int] | None, start_sta
     return NOOP
 
 
-def is_stale(mtime: float | None, now: float, threshold_s: float) -> bool:
-    """True if ``mtime`` exists and is older than ``threshold_s`` (the run-stopped signal). PURE."""
-    if mtime is None:
+def next_change_reference(
+    prev_mtime: float | None, cur_mtime: float | None, prev_reference: float, now: float
+) -> tuple[float | None, float]:
+    """Advance the observe-relative staleness reference. PURE.
+
+    If the manifest mtime CHANGED since last poll, reset the reference clock to ``now`` (the run is alive
+    and advancing). Otherwise keep the prior reference. This is what makes ``is_stale`` immune to a stale-
+    at-startup mtime: the reference is seeded at watcher start and only the *observed* lack of advance for
+    ``threshold_s`` triggers exit. Returns ``(new_last_mtime, new_reference)``.
+    """
+    if cur_mtime is not None and cur_mtime != prev_mtime:
+        return cur_mtime, now
+    return prev_mtime, prev_reference
+
+
+def is_stale(reference_time: float | None, now: float, threshold_s: float) -> bool:
+    """True if ``now`` is more than ``threshold_s`` past ``reference_time``. PURE.
+
+    ``reference_time`` is the wall-clock time the watcher LAST OBSERVED the manifest advance — NOT the
+    absolute manifest mtime. Measuring elapsed-since-observed-change (rather than absolute mtime age) is
+    what makes the exit robust to (a) a watcher (re)launched when the manifest is already old, and (b) a
+    slow cold resume whose first new checkpoint lags — neither false-triggers, because the reference is
+    re-seeded at watcher start and on every observed advance. ``None`` reference → never stale.
+    """
+    if reference_time is None:
         return False
-    return (now - mtime) > threshold_s
+    return (now - reference_time) > threshold_s
 
 
 # ---------------------------------------------------------------------------
@@ -267,6 +298,10 @@ def main(argv: list[str] | None = None) -> int:
     frozen = False
     last_copied: tuple[int, int] | None = None  # (stage_index, epoch_in_stage)
     pid_death_logged = False
+    # OBSERVE-RELATIVE staleness (R2-1): track when the watcher last SAW the manifest advance, seeded at
+    # start, so a pre-existing old mtime / slow cold resume never false-triggers the exit.
+    last_manifest_mtime: float | None = _manifest_mtime(manifest_path)
+    last_change_time = time.time()
 
     while True:
         try:
@@ -294,9 +329,14 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 pid_death_logged = True
 
-            # RESTART-ROBUST EXIT: the run genuinely stopped (manifest not advancing).
+            # RESTART-ROBUST EXIT: the run genuinely stopped (manifest not ADVANCING). Observe-relative:
+            # update the reference only when the mtime actually changes, so a stale-at-startup mtime or a
+            # slow resume gets a fresh threshold window instead of false-exiting (R2-1).
             mtime = _manifest_mtime(manifest_path)
-            if is_stale(mtime, time.time(), args.stale_exit_seconds):
+            last_manifest_mtime, last_change_time = next_change_reference(
+                last_manifest_mtime, mtime, last_change_time, time.time()
+            )
+            if is_stale(last_change_time, time.time(), args.stale_exit_seconds):
                 _log(
                     f"manifest stale > {args.stale_exit_seconds}s → run stopped (frozen={frozen})",
                     log_path,
