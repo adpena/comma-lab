@@ -151,8 +151,35 @@ memo's contribution over them: the ROUND-TRIP-as-the-cause framing + the d_seg-w
 the measured L13 anchor placed against them.
 
 **The decisive OPEN gaps (the capstone's actual next work, ranked):**
-1. **Generator d_seg power-law to frontier-level** — L13 is d_seg=0.0068 (12× too high); does the amortized
-   score-native generator reach 5.6e-4 with more capacity/training? This is THE binding distortion campaign.
+1. **Generator d_seg power-law — RUN 2026-06-21 → CAPACITY-WALL + a REFRAME that converges on the live run**
+   (`generator_dseg_powerlaw_to_frontier_20260621.md`, commit `d3bda6446`). The capacity law splits into two
+   families (honoring the retraction): Family A (tiny/factored/NCA, the bad params^−0.71) does NOT govern
+   Family B (real HNeRV decoders, 2.5× better/param, REAL monotone law R²=0.91: bc24 0.00285 < bc20 0.00376).
+   **CAPACITY-WALL:** reaching frontier d_seg 5.6e-4 via capacity needs ~189 K params ≈ 172 KB int8 ≈ rate 0.117
+   — it EXACTLY ERASES the −59% witness win (a generator big enough to floor d_seg IS the dense decoder).
+   **REFRAME (the hopeful part):** the witness does NOT need 5.6e-4 — with the 65 KB seg-carrier + pose carried
+   separately it **BEATS the frontier at generator d_seg < 9.2e-4** and **hits sub-0.15 at < 3.2e-4**. The live
+   bc20/600-pair run is already at **d_seg 0.00222 at ep6025 (fixed ~83 K rate-winning params, epochs alone)** —
+   only **2.4× above the 9.2e-4 win line.** The training law is glassy (c≈0.22) so epochs alone wall above it;
+   closing the 2.4× needs the FREE κ-buster Muon (stage 8) + d_seg-aware-taper (0 bytes) — plausible, UNMEASURED.
+   **→ The witness seg wall reduces to a SINGLE measured question the LIVE RUN is already answering: does Muon
+   stage-8 + taper push d_seg below 9.2e-4 at fixed params?** Gated campaign P1/P2/P3 specced (MPS-free).
+
+---
+
+## 9. THE CONVERGENT SYNTHESIS (all three gaps + the sweep land on one live measurement)
+- **#2 half-res → REFUTED:** witness renders full-grid; the d_seg attack is full-grid TRAINING, not coarser render.
+- **#3 pose → BLOCKED→re-routed:** pose-FiLM is HNeRV-bound; the palette witness's pose mechanism is the
+  AmortizedLumaCarrier (#57). Pose is OFF the critical path once the vehicle-matched mechanism is byte-closed.
+- **#1 seg → capacity-WALL but training-REACHABLE:** the witness wins at d_seg < 9.2e-4 (not 5.6e-4); the live
+  run is 2.4× away at fixed rate-winning params; the free Muon κ-buster + taper is the lever.
+**→ The witness class-shift's reachability, the capstone's seg wall, AND the live RGB-HNeRV run's prospects are
+the SAME question: does the free training (Muon stage-8 + d_seg-aware-taper) cross the generator's d_seg below
+~9.2e-4 at fixed ~65–83 KB rate-winning params?** The live run (now d_seg 0.00222, stage 2, heading to the
+Muon stage-8 κ-buster the conditioning analysis identified) is the de-risked path AND the decisive measurement
+for the witness. The witness adds a proven −59% RATE win on top IF the AmortizedLumaCarrier pose mechanism
+byte-closes — but the BINDING wall is the shared training question, not the codec. Everything converges on the
+live run's stage-5→8 d_seg verdict.
 2. **Half-res 192×256 witness re-measurement — RUN 2026-06-21 → REFUTED** (`halfres_witness_seg_floor_reprobe_n24_20260621.json`,
    commit `32d838d36`). Stem-blind hypothesis FAILS: 192-render costs d_seg +0.0092 (0.0020→0.0112, 5.6× RISE);
    ∂ band GROWS ~4× at 192 (0.0043→0.0170) — OPPOSITE of the predicted shrink. Curve: 384→0.0020, 336→0.0063,
