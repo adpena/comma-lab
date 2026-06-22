@@ -798,6 +798,17 @@ class TorchVehicleConfig:
     # AdamW lr_lambda (its floor mis-keyed to adamw_lr → never anneals below 0.5× at stage
     # 8). True = Muon gets its own cosine floor keyed to muon_lr. Opt-in for the scaled run.
     muon_lr_floor_fix: bool = False
+    # THROUGHPUT lever (DEFAULT-OFF → byte-identical; opt-in, measured). When True, the
+    # NON-SPLIT per-batch training step accumulates the loss/pose scalars + grad-norm
+    # ON-DEVICE and reads them with a SINGLE ``.item()`` at epoch end, instead of ~3
+    # forced device→host syncs per batch (75 batches/epoch → ~225 pipeline stalls/epoch).
+    # This is a pure READ-DEFERRAL: gradients/weights/EMA/checkpoint are BIT-IDENTICAL to
+    # the False path (proven by ``test_batch_sync_deferral_bit_identical``); only WHEN the
+    # logging scalar is read changes (the epoch-mean differs only by float-accumulation
+    # order, ~1e-7 — not a signal change). On MPS each ``.item()`` flushes the command
+    # buffer and blocks the CPU, so deferral removes the per-batch stalls. Scoped to the
+    # non-split path (the split path's pose sync feeds the APGC controller and must stay).
+    defer_batch_sync: bool = False
     # WARM-START fine-tune (the capacity-vs-loss-wall disambiguator + general fine-tuning
     # entry point). DEFAULT None → stage-0 latents are the random init (byte-identical from-0
     # path). When set to a ``best/`` dir holding ``best_ema_decoder.pt`` + ``best_ema_latents.pt``
@@ -1903,6 +1914,13 @@ class TorchVehicleDriver:
         nb = 0
         last_gn_adamw = None
         last_gn_muon = None
+        # defer_batch_sync on-device accumulators (read once at epoch end → ~225 fewer
+        # device→host syncs/epoch on the non-split path). None when the lever is off.
+        _defer = bool(self.cfg.defer_batch_sync) and not self.split_by_head
+        epoch_loss_t = None
+        epoch_pose_t = None
+        last_gn_adamw_t = None
+        last_gn_muon_t = None
         # APGC decides the pose cadence ONCE per epoch (the controller reads the
         # PRE-epoch state — floor/last_pose_mse/trend — so the decision is stable across
         # all batches of this epoch; without this the per-batch state mutation below would
@@ -2056,8 +2074,19 @@ class TorchVehicleDriver:
                 if reg is not None:
                     loss = loss + reg
                 loss.backward()
-                loss_val = float(loss.item())
-                pose_mse_val = float(pose_mse.item())
+                if _defer:
+                    # On-device accumulation (no per-batch sync); read once at epoch end.
+                    # loss_val/pose_mse_val stay None so the shared per-batch accumulation
+                    # below is skipped — the epoch sum is taken from the device tensor.
+                    _l = loss.detach()
+                    _p = pose_mse.detach()
+                    epoch_loss_t = _l if epoch_loss_t is None else epoch_loss_t + _l
+                    epoch_pose_t = _p if epoch_pose_t is None else epoch_pose_t + _p
+                    loss_val = None
+                    pose_mse_val = None
+                else:
+                    loss_val = float(loss.item())
+                    pose_mse_val = float(pose_mse.item())
 
             # Lever 4: accumulate the per-tensor sensitivity EMA from the just-computed
             # score-domain ``w.grad`` (BEFORE the optimizer.step() zeroes nothing — grads
@@ -2072,10 +2101,19 @@ class TorchVehicleDriver:
             gn_adamw = torch.nn.utils.clip_grad_norm_(
                 [*rt.adamw_clip_params, latents], spec.grad_clip
             )
-            last_gn_adamw = float(gn_adamw)
+            # The clip itself uses the norm ON-DEVICE; ``float(gn_adamw)`` is purely for
+            # logging the LAST batch's grad-norm. When deferring, keep the tensor and
+            # read it once after the loop (1 sync/epoch instead of 75).
+            if _defer:
+                last_gn_adamw_t = gn_adamw
+            else:
+                last_gn_adamw = float(gn_adamw)
             if rt.muon_opt is not None and spec.grad_clip_muon is not None:
                 gn_muon = torch.nn.utils.clip_grad_norm_(rt.muon_params, spec.grad_clip_muon)
-                last_gn_muon = float(gn_muon)
+                if _defer:
+                    last_gn_muon_t = gn_muon
+                else:
+                    last_gn_muon = float(gn_muon)
             rt.adamw_opt.step()
             if rt.muon_opt is not None:
                 rt.muon_opt.step()
@@ -2095,13 +2133,28 @@ class TorchVehicleDriver:
                 rt.ema_decoder, decoder, rt.ema_latents, latents, decay=ema_decay
             )
 
-            epoch_loss += loss_val
-            epoch_pose += pose_mse_val
+            # When deferring (non-split), loss_val/pose_mse_val are None and the epoch sum
+            # comes from the on-device accumulators read after the loop; otherwise add the
+            # per-batch floats (split path + the defer-off non-split path).
+            if loss_val is not None:
+                epoch_loss += loss_val
+                epoch_pose += pose_mse_val
             nb += 1
 
         rt.adamw_sched.step()
         if rt.muon_sched is not None:
             rt.muon_sched.step()
+        # defer_batch_sync: read the on-device epoch sums + last grad-norms ONCE here
+        # (the single device→host sync of the epoch on the non-split path). epoch_loss/
+        # epoch_pose started at 0.0; the deferred sum replaces them (the per-batch adds
+        # were skipped above). last_gn_* read from the retained last-batch tensors.
+        if epoch_loss_t is not None:
+            epoch_loss = float(epoch_loss_t.item())
+            epoch_pose = float(epoch_pose_t.item())
+        if last_gn_adamw_t is not None:
+            last_gn_adamw = float(last_gn_adamw_t)
+        if last_gn_muon_t is not None:
+            last_gn_muon = float(last_gn_muon_t)
         return epoch_loss / max(nb, 1), epoch_pose / max(nb, 1), last_gn_adamw, last_gn_muon
 
     def _weight_regularizers(

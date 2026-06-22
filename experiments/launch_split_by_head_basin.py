@@ -94,6 +94,19 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "apparatus_audit_pr95_breakthrough_blocker_20260619T214001Z.md.",
     )
     p.add_argument(
+        "--defer-batch-sync",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="THROUGHPUT lever (non-split): accumulate the per-batch loss/pose/grad-norm "
+             "logging scalars ON-DEVICE and read them with ONE .item() at epoch end, "
+             "instead of ~3 device->host syncs per batch (75 batches/epoch -> ~225 "
+             "pipeline stalls/epoch; each .item() flushes the MPS command buffer + "
+             "blocks). PROVEN bit-identical (gradients/weights/EMA byte-for-byte) by "
+             "src/tac/torch_vehicle/tests/test_batch_sync_deferral_bit_identical.py — "
+             "the only change is WHEN logging scalars are read. Default OFF (byte-"
+             "identical); pass --defer-batch-sync for the faster MPS basin run.",
+    )
+    p.add_argument(
         "--seg-margin-hinge",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -229,6 +242,8 @@ def main(argv: list[str] | None = None) -> int:
         split_by_head=args.split_by_head,  # True=pose-axis salvage; False=full-MPS
         async_eval=args.async_eval,  # True=non-blocking background CPU authority eval
         muon_lr_floor_fix=args.muon_lr_floor_fix,  # stage-8 Muon own-floor (BUG-B fix)
+        defer_batch_sync=args.defer_batch_sync,  # throughput: 1 device→host sync/epoch
+        #   (non-split), proven BIT-IDENTICAL by test_batch_sync_deferral_bit_identical
         # Ballé rate lever (default 0.0 = OFF / byte-identical; the live basin uses 0.0).
         weight_entropy_penalty_lambda=args.weight_entropy_penalty_lambda,
         weight_entropy_penalty_stage_min=args.weight_entropy_penalty_stage_min,
