@@ -108,14 +108,47 @@ So the residual is **conditioning-WIDE but SHALLOW.** The honest verdict:
 1. **The B=64 AdamW-stage fewer-updates risk is REAL and quantified:** κ≈19 is substantial, and the AdamW
    stages are O(κ·ln 1/ε) → 8× fewer AdamW updates genuinely slows the κ-limited grind. **Extend stage 5
    (C1a, the big d_seg AdamW stage) at B=64; stage 8 (Muon, κ-busted) is fine as-is.** Confirms §5's refinement.
-2. **A boundary-targeted SIDECAR is structurally well-suited (a SCORE lever).** The residual is shallow +
-   sparse + near-boundary: 66.5% of flips lost by <0.5 logit, concentrated in a 0.43%-of-pixels band. A tiny
-   per-flip correction (store the sign/small-Δ for the near-zero-margin pixels) recovers d_seg at very low byte
-   cost — exactly the concentrated-saliency / Lever-D-flip-coder / sub-pixel-boundary profile. **This measurement
-   is the empirical green-light those queued levers needed: the d_seg residual is cheaply correctable by
-   structure.** Re-rank those up.
-3. **The plateau is NOT a wall — it's a κ-limited grind with a known buster (Muon) AND a cheap sidecar option.**
-   Both the training lever (Muon stage 8) and the codec lever (boundary sidecar) are now empirically motivated.
+2. **A boundary-targeted SIDECAR is a CONDITIONAL win at the break-even knife-edge (CORRECTED — see §6.3).**
+   The residual is shallow + sparse + near-boundary (66.5% of flips <0.5 logit, 0.43%-of-pixels band). But the
+   $0 byte-cost arithmetic (§6.3) shows the sidecar is net-positive ONLY if the per-flip cost beats the
+   break-even **1.273 B/flip** — and iid LOCATION alone is already **1.125 B/flip**, with Lever-D's MEASURED
+   all-in cost ~1.27 = break-even (survival overhead eats the headroom). The shallow margins make the
+   *correction* nearly free but do NOT cheapen the *location*; the win hinges on survival-aware **contour +
+   temporal-delta** location coding (exploiting the band clustering + smooth boundary motion). So the PRIMARY
+   lever for this residual is **TRAINING (Muon stage 8, 0 bytes, §4)**; the sidecar is a conditional fallback
+   whose viability needs a survival-aware location-coding measurement (task #137). [This corrects the earlier
+   over-enthusiastic "green-light" — the arithmetic says knife-edge, not free win.]
+3. **The plateau is NOT a wall — it's a κ-limited grind with a FREE training buster (Muon) and a knife-edge
+   sidecar fallback.** The training lever (Muon stage 8, 0 bytes) is primary; the codec lever (boundary
+   sidecar) is conditional (§6.3).
+
+### 6.3 Boundary-sidecar byte economics — the break-even knife-edge ($0 arithmetic)
+Total scored pixels N_px = 600·512·384 = **117,964,800**. The marginals:
+- ∂S per flip removed = 100/N_px = **8.477e-7**;  ∂S per byte = 25/37,545,489 = **6.659e-7**.
+- **Break-even = 8.477e-7 / 6.659e-7 = 1.273 B/flip** — the sidecar helps iff each fixed flip costs < 1.273 B.
+  (Matches Lever-D's independently-MEASURED "below 1.27 B/flip" anchor — the all-in cost there was ~1.27 =
+  break-even, because survival overhead — corrections erased by the uint8 round-trip + SegNet forward — eats the
+  headroom.)
+
+To reach the sub-0.15 d_seg target (0.000322) from 0.002278: fix **230,739 flips (86%)**. iid LOCATION-only
+entropy = 230,739·log₂(N_px/230,739) = **259.5 KB = 1.125 B/flip** — already within 0.148 B/flip of break-even,
+leaving almost nothing for the correction. Net ΔS at various per-flip costs:
+
+| per-flip cost | bytes | seg_save | rate_add | net ΔS | source of headroom |
+|---|---|---|---|---|---|
+| 1.273 (Lever-D measured) | 294 KB | −0.196 | +0.196 | **0.000** | none (break-even) |
+| 1.125 (iid location, ~free corr) | 260 KB | −0.196 | +0.173 | **−0.023** | sparse-mask entropy floor |
+| 1.0 | 231 KB | −0.196 | +0.154 | −0.042 | contour beats iid |
+| 0.8 | 185 KB | −0.196 | +0.123 | −0.073 | + 0.43%-band clustering |
+| 0.5 | 115 KB | −0.196 | +0.077 | **−0.119** | + temporal-delta (boundaries move smoothly) |
+
+**The deep structural fact:** even the *location* of a flip (1.125 B) nearly costs more than the flip is worth
+(break-even 1.273 B) — the rate-axis-must-be-d_seg-neutral law at its sharpest. The ONLY headroom is the flips'
+spatial+temporal STRUCTURE (contour + cross-frame coherence), NOT their shallowness (shallowness only frees the
+~0.15 B/flip correction budget + helps survival). **Verdict: conditional win — net-positive ONLY if
+survival-aware contour+temporal location coding beats ~1.1 B/flip; the measured anchor is break-even. Primary
+lever = Muon training (free); sidecar = fallback pending the task-#137 survival-aware location measurement.**
+Arithmetic reproducible inline; no artifact written (pure closed-form).
 
 ## 7. Consequences (results→intelligence, regardless of the §6 number)
 1. **The d_seg problem IS a conditioning problem** — the Hessian is boundary-dominated, κ set by the margin
