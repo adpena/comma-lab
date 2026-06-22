@@ -65,7 +65,24 @@ Honest expectation unchanged: S not a winner (L13 seg-term 0.68 dominates); the 
   parity does not reproduce clean (action-2 probe before kill).
 - NOT claimed: no score moved; pointer UNMOVED 0.19110; the optimal carrier is a SPEC to build+measure, not a result.
 
+## APPEND-ONLY CORRECTION (2026-06-21, post-build, task #163 RESULT) — §3 overflow claim REFUTED + §2 ceiling/§4 win nuanced
+Per the build+measure result (`witness_L13_optimal_pose_carrier_result_20260621.md`, commit `0f5e44e84`):
+- **§3 overflow/parity claim is FALSIFIED at the current module state.** `amortized_luma_carrier.numpy_reference_forward`
+  is ALREADY float64-guarded (lines 126-141, `np.errstate(over='ignore')`) and the parity gate
+  (`ptnc_train_pose_carrier._verify_parity`) is ALREADY the CORRECT clean invariant: clean float64 numpy
+  `carrier_frame` vs the torch training oracle, NOT parse-back-vs-same-overflow. Measured `rgb_within_1lsb_frac_min
+  = 1.0` on EVERY run (N=4/N=6/N=12, both modes) — no overflow, no NaN/inf, clean parity. The §4(a)/§4(b) fixes
+  the memo prescribed are already present in the module; the action-2-probe overflow (if real) was a pre-guard
+  fp32 path no longer in the code.
+- **§2/§4 "saliency confines cheaper" is CONFIRMED but MODEST + budget-dependent, not the dramatic class-shift the
+  spec implied.** PTNC (saliency) beats DENSE (free-INR) at equal bytes AT CONVERGENCE (2.44× @ N=6 e45, 1.16× @
+  N=12 e72) but converges SLOWER (loses 2.13× at the underconverged N=12 e36) and the edge SHRINKS with N. The
+  dramatic result is shared by both modes: the amortized-INR carrier closes the palette pose wall ~900–2200×
+  (d_pose 12.658 → ~0.006). The #57-doc's "d_pose 0.0036 dense-anchor ceiling" was a longer-trained number; the
+  controlled equal-budget comparison (not an absolute ceiling) is the honest metric.
+
 ## Cross-references
+- `witness_L13_optimal_pose_carrier_result_20260621.md` (THE build+measure result memo this grounds).
 - `CAPSTONE_witness_taskspace_roundtrip_byte_floor_formulation_20260621.md` (§3/§6/§8/§9 — the witness; this is its pose mechanism done right).
 - `src/tac/boundary_math/posenet_jacobian_saliency.py` (#61 PTNC, the saliency anchor) + `amortized_luma_carrier.py` (#57, the INR to confine + de-overflow).
 - `witness_L13_pose_film_integration_20260621.md` (gap #3 re-route: pose-FiLM HNeRV-bound, amortized-luma is the palette-witness mechanism).
