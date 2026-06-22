@@ -103,10 +103,60 @@ full-RGB-fidelity renderer.
 - **Format (YUV6)**: PoseNet sees 4 luma + 2 chroma-SUBSAMPLED → pose is luma-dominated, chroma low-res → the
   pose-carrier lives in the YUV6-luma subspace (don't spend bytes on chroma the scorer subsamples away).
 
-## 8. NO-SIGNAL-LOSS prior-evidence integration — PENDING HARVEST (subagent a85790…)
-`[to append: exact 50KB-floor + B-WITNESS residual f + boundary-SEG-CORE mask bytes + T_floor decomposition +
-comma static-prior bytes + pose-codec bytes + any prior RGB-vs-witness comparison + contradictions]`. Until then
-the §5 estimate is bracketed; the mask-grammar floor is the one number the win hinges on.
+## 8. NO-SIGNAL-LOSS prior-evidence integration (harvest a85790… — every number sourced)
+
+**The §5 bracket is now MEASURED, and it's bigger than I derived** — because a byte-closed witness already exists:
+
+| Component | bytes | rate `25·B/N` | source | caveat |
+|---|---|---|---|---|
+| RGB-HNeRV frontier (to beat) | 177,169 | 0.11797 | `information_theoretic_floor_T_floor_20260610.md` | lossless-EXHAUSTED (decoder 98.6% iid Shannon) |
+| **L13 score-native witness (BYTE-CLOSED, −59%)** | **72,217** | **0.0481** | `score_native_first_candidate_20260610T112433Z.md` | lossless-parity TRUE; **but d_pose=12.66 (palette pose-blind) → advisory S 13.58** |
+| scorer-conditional MDL band (DERIVED floor) | 24,600–64,600 | 0.0164–0.0430 | `frozen_contest_space_council_lenses…`, `smaller_learned_basis_deep_math…` | Kolmogorov-uncomputable; license not guarantee |
+| pose side-info (Wyner-Ziv FiLM) | ~1,500 | ~0.001 | `pose_film_cpu_disambiguator_20260612.md` (GO) | side-info the decoder FiLM-injects, NOT a code the eval reads |
+| seg residual STORED (every realization LOSES) | 253K–543K | 0.17–0.36 | `boundary_math_seg_core…`, `witness_seg_boundary_decisive_probe…` | lossless 525K / optimal-coder 253K / per-flip 543K |
+| comma homography static-priors | ~0 | ~0 | `memory/project_contest_source_is_known…` | static-class WHERE only; doesn't touch the binding WHAT |
+| T_floor | S=0.11797 | rate 0.118 / seg 0.056 / pose 0.017 | `information_theoretic_floor_T_floor…` | rate-dominated (61.7%) |
+
+**The single decisive measured fact:** the witness rate class-shift is REAL and PARTIALLY REALIZED — **L13 =
+72,217 B byte-closed, −59% vs 177,169 B, lossless-parity-proven.** So "RGB is inefficient" is not a bracket; it's
+**~105 KB measured at the rate level** (the witness spends ZERO on the scorer-null space: 22.7% certified-invisible
+per channel, 80.67% resize-null, frame0 100% SegNet-invisible — it recovers HNeRV's null-space SLACK, not the
+invariant floor).
+
+**The harvest RESOLVES my two open framings (no signal loss):**
+1. **Pose (§3 refined, not refuted):** the jitter-entanglement IS real (#155: standalone pose codes floor at
+   d_pose 0.094–0.0040, 12–280× the frontier) — BUT the resolution is **Wyner-Ziv FiLM side-info (~1.5 KB,
+   disambiguator GO)**: store pose as side-info the decoder FiLM-injects while it renders the bundled near-full-res
+   luma. So pose is cheap-CARRIABLE (~1.5 KB) but NOT cheap-STORABLE — the decoder must still produce the luma
+   frame. My §3 "pose-carrier ≈ RGB-like" → tightened: **the luma carrier is the cost, the pose scalars are ~free
+   side-info on top.**
+2. **The binding wall is DISTORTION-realization, not rate (the sharpening):** the rate is won (72 KB measured).
+   The two MEASURED walls are: **(a)** L13's pose was solved at the WRONG fidelity (palette → d_pose 12.66 →
+   fixable via the Wyner-Ziv FiLM above); **(b)** the seg residual must be AMORTIZED in the GENERATOR, not STORED
+   (every storage realization loses: 253K–543K) — and L13's amortized generator sits at **d_seg=0.0068, 12× the
+   frontier's 5.6e-4.** Closing that gap is the open generator-d_seg power-law campaign.
+
+**Contradictions, reconciled (named):**
+- "pose ~1.5 KB" vs "no cheap pose code" → both true: 1.5 KB is FiLM SIDE-INFO, not a standalone code (eval has
+  no pose input). 
+- "rate floor carrier-invariant" vs "witness below 177 KB" → the FLOOR is invariant; the witness lowers the
+  SLACK (recovers null-space waste). The −59% L13 row proves slack is recoverable.
+- residual-sidecar "rate clears 0.856 B/flip" vs "sidecar dies" → rate wins, DISTORTION dies on receptive-field
+  collateral (2,823 new bad flips vs 467 fixed). The d_seg win belongs IN TRAINING (Lever-2/5 margin-weight), 0 bytes.
+
+**Prior RGB-vs-witness formulations to EXTEND (not redo):** `layer1_carrier_first_principles_20260612T171912Z.md`
+(the canonical 4-section witness budget B_base+B_seg-boundary+B_pose-sideinfo+B_null-fill) +
+`frozen_contest_space_council_lenses_synthesis_20260612T173627Z.md` (the 17-lens 25–65 KB conditional MDL). This
+memo's contribution over them: the ROUND-TRIP-as-the-cause framing + the d_seg-win/d_pose-wash decomposition +
+the measured L13 anchor placed against them.
+
+**The decisive OPEN gaps (the capstone's actual next work, ranked):**
+1. **Generator d_seg power-law to frontier-level** — L13 is d_seg=0.0068 (12× too high); does the amortized
+   score-native generator reach 5.6e-4 with more capacity/training? This is THE binding distortion campaign.
+2. **Half-res 192×256 witness re-measurement** ($0, NOT run) — the stride-2 SegNet stem makes the boundary set ∂
+   ~4× smaller (543K→~135K raw); recount flips + survival at 192×256. Highest-EV unrun probe.
+3. **Integrated L13 + Wyner-Ziv pose-FiLM advisory S** — never composed end-to-end; predicted ~0.14 at 73 KB IF
+   seg lands frontier-level. The number that would prove/kill the class-shift.
 
 ## NO-FAKE ledger
 - DERIVED: the per-term witness floor; the round-trip RGB-inefficiency proof; the d_seg-win / d_pose-blocker
