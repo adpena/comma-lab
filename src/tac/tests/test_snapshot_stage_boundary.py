@@ -114,3 +114,75 @@ def test_r2_1_stale_at_startup_does_not_false_exit_until_threshold():
     # Now it genuinely stops: no advance for > threshold → stale.
     m, ref = mod.next_change_reference(12_345.0, 12_345.0, ref, start + 700)
     assert mod.is_stale(ref, start + 700, 600) is True
+
+
+# ---- IO integration: the real _refresh_snapshot -> _freeze sequence (R3-5 self-protect) -----------
+
+
+def _write_fake_ckpt(out_dir: Path, *, stage_index: int, has_muon: bool, epoch: int, tag: bytes) -> None:
+    """Write a minimal fake checkpoint_state.pt + manifest into ``out_dir`` (the live-run layout)."""
+    import json
+
+    import torch
+
+    torch.save(
+        {"ema_decoder": {"w": torch.arange(4.0)}, "ema_latents": torch.zeros(3, 2), "_tag": tag.decode()},
+        out_dir / "torch_vehicle_checkpoint_state.pt",
+    )
+    (out_dir / "torch_vehicle_checkpoint_manifest.json").write_text(
+        json.dumps({"stage_index": stage_index, "has_muon": has_muon, "epoch_in_stage": epoch})
+    )
+
+
+def test_refresh_then_freeze_integration(tmp_path):
+    """Drive the REAL copy/freeze IO over stage6 -> stage7 -> stage8: the frozen snapshot must be the
+    last stage-7 copy, with the warm-start pair extracted and a non-skewed FROZEN.marker."""
+    import json
+
+    out_dir = tmp_path / "run"
+    snap_dir = tmp_path / "snap"
+    out_dir.mkdir()
+    log = snap_dir / "watcher.log"
+    snap_dir.mkdir()
+    src_pt = out_dir / "torch_vehicle_checkpoint_state.pt"
+    src_man = out_dir / "torch_vehicle_checkpoint_manifest.json"
+
+    # stage6 rolling copy.
+    _write_fake_ckpt(out_dir, stage_index=5, has_muon=False, epoch=50, tag=b"STAGE6")
+    mod._refresh_snapshot(src_pt, src_man, snap_dir)
+    assert (snap_dir / "torch_vehicle_checkpoint_state.pt").exists()
+    # stage7 rolling copy (overwrites — the snapshot tracks the latest pre-stage-8 state).
+    _write_fake_ckpt(out_dir, stage_index=6, has_muon=False, epoch=100, tag=b"STAGE7-END")
+    mod._refresh_snapshot(src_pt, src_man, snap_dir)
+    snap_man = json.loads((snap_dir / "torch_vehicle_checkpoint_manifest.json").read_text())
+    assert snap_man["stage_index"] == 6 and snap_man["has_muon"] is False
+
+    # stage8 starts in the SOURCE — but the watcher freezes the EXISTING (stage-7) snap_dir copy.
+    _write_fake_ckpt(out_dir, stage_index=7, has_muon=True, epoch=0, tag=b"STAGE8-FIRST")
+    mod._freeze(snap_dir, (6, 100), out_dir, log)
+    assert (snap_dir / "best_ema_decoder.pt").exists() and (snap_dir / "best_ema_latents.pt").exists()
+    marker = json.loads((snap_dir / "FROZEN.marker").read_text())
+    assert marker["warm_start_pair_emitted"] is True
+    assert marker["snapshot_manifest_has_muon"] is False  # the frozen copy is genuinely pre-stage-8
+    assert marker["last_copied_stage_epoch"] == [6, 100]
+
+
+def test_freeze_skew_detected(tmp_path):
+    """If the frozen snap_dir manifest is has_muon=True (the ~1e-4 blob-then-manifest skew), the marker
+    must record it (detectable, not silent)."""
+    import json
+
+    out_dir = tmp_path / "run"
+    snap_dir = tmp_path / "snap"
+    out_dir.mkdir()
+    snap_dir.mkdir()
+    # Simulate the skew: the snapshot copy itself caught a has_muon=True state.
+    _write_fake_ckpt(snap_dir, stage_index=7, has_muon=True, epoch=0, tag=b"SKEW")
+    mod._freeze(snap_dir, (7, 0), out_dir, snap_dir / "watcher.log")
+    marker = json.loads((snap_dir / "FROZEN.marker").read_text())
+    assert marker["snapshot_manifest_has_muon"] is True  # skew surfaced
+
+
+def test_emit_warm_start_pair_missing_pt_is_graceful(tmp_path):
+    """No .pt in snap_dir → extraction returns False (caught), never crashes the daemon."""
+    assert mod._emit_warm_start_pair(tmp_path, tmp_path / "watcher.log") is False
