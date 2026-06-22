@@ -384,7 +384,9 @@ serial 8-pair optimizer-per-batch steps, not arithmetic. Modal is therefore NO-G
 ONLY real un-CPU-bound lever is a **larger training batch**, which is score-LOCKED for the faithful PR95 run
 (per-batch optimizer step → batch_size defines #steps/epoch + the gradient trajectory) but is a legitimate
 **capstone re-solve** lever. The concrete first-order **B=64 rescaled schedule** (held epochs; AdamW η×√8,
-EMA (1−ρ)×8 — note the DIFFERENT exponent, σ×√8, λ×√8, Muon η √8→×8 sweep) + the full coupling derivation +
+EMA (1−ρ)×8 — note the DIFFERENT exponent, σ×√8, λ×√8, **Muon η ×1 / B-INVARIANT** — derived: its
+orthogonalized update normalizes away the noise magnitude, so the noise-floor d_seg-polish step is η regardless
+of B; compensate fewer steps with more stage-8 epochs, not higher η) + the full coupling derivation +
 the ~2–4× speedup estimate + the empirical-re-solve caveats are in the dedicated spec:
 **`capstone_batch_size_fixed_point_B64_launch_spec_20260621.md`**. Also keep: `defer_batch_sync` ON (proven
 bit-identical +2%); pose stays fp32-exact (compile drifts PoseNet 22%, REJECTED); validate LOCAL first (B=64

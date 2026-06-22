@@ -27,7 +27,7 @@ Four scalars are explicitly B-coupled, each via a DIFFERENT power law (the non-o
 | Scalar | B-invariant it encodes | Derivation | Scaling law |
 |---|---|---|---|
 | LR η (AdamW) | temperature, Adam-preconditioned | Malladi 2022 SDE for adaptive optimizers | **η ∝ √B** |
-| LR η (Muon, stage 8) | temperature, orthogonalized-momentum | Muon batch-scaling UNESTABLISHED (2024 optimizer) | √B start, sweep → B |
+| LR η (Muon, stage 8) | noise-floor random-walk step size | orthogonalization normalizes away the noise magnitude (§2.1) | **≈ B⁰ (B-INVARIANT); ×B^{1/4} upper probe** |
 | EMA decay ρ | shadow-averaging window **in epochs** | τ_epochs = B / [N(1−ρ)] held constant | **(1−ρ) ∝ B** |
 | σ noise | regularizer dose/epoch | injected variance/epoch = σ²·N/B held | **σ ∝ √B** |
 | C1a λ | regularizer effect/epoch (η-coupled) | (N/B)·η·λ held, with η∝√B | **λ ∝ √B** |
@@ -59,7 +59,7 @@ SOURCE (exact, from vendored PR95 `src/stages/*.py`, bs=8, 29,650 epochs) → B=
 | 5 C1a-L7 | 9000 | 3e-5 → **8.49e-5** | — | 0.992 | 0.01→**0.028** | 0.2→0.57 |
 | 6 λ-sweep | 2000 | 3e-5 → **8.49e-5** | — | 0.992 | 0.02→**0.057** | 0.2→0.57 |
 | 7 σ-sweep | 3000 | 3e-5 → **8.49e-5** | — | 0.992 | 0.02→**0.057** | 0.1→0.28 |
-| 8 Muon | 5000 | 1e-5 → **2.83e-5** | 2e-4 → **5.66e-4** (√8 start; sweep→1.6e-3=×8) | 0.992 | 0.02→**0.057** | 0.1→0.28 |
+| 8 Muon | 5000 (extend if under-polished) | 1e-5 → **2.83e-5** (AdamW part, √8) | 2e-4 → **2e-4 (×1, B-invariant; ≤3.4e-4 probe)** | 0.992 | 0.02→**0.057** | 0.1→0.28 |
 
 \* σ flagged: σ has a DUAL role (pure regularizer dose ∝√B AND a uint8-quant-noise simulation that is
 B-INVARIANT). The loop's explicit eval_roundtrip `round()` already does the physical quant sim, so σ here is
@@ -70,6 +70,35 @@ mostly a pure regularizer → √B is defensible; but if it over-regularizes, sw
 division prefer **B=60** (10 even batches, k=7.5) or **B=75** (8 even batches, k=9.375); B=64 keeps the k=8
 scaling arithmetic exact at the cost of the ragged step. Recommend **B=60** for production cleanliness, B=64 if
 power-of-2 GPU kernels matter more than the ragged batch.
+
+### 2.1 Why Muon's LR is ≈ batch-INVARIANT (the derivation; replaces the earlier √8→×8 sweep)
+
+Muon's step is `θ ← θ − η·polar(M)`, `M = β·M_prev + ĝ_B`, where `polar(M)=UVᵀ` (Newton-Schulz sets every
+singular value of `M=UΣVᵀ` to 1). The decisive property: **`polar(c·M) = polar(M)`** for any scalar `c>0` — the
+update magnitude is `η × unit-spectral-norm`, **decoupled from the gradient (and thus the minibatch-noise)
+magnitude**. SGD/Adam carry `‖ĝ_B‖` — and its `1/√B` noise — into the step linearly; Muon does not. So the
+SGD `∝B` and Adam `∝√B` rules (both derived from the noise magnitude propagating into the step) **do not
+apply**.
+
+Where B enters: write `M = G + N` (G = EMA of the true gradient, N = residual minibatch noise,
+`‖N‖ ∝ 1/√(B·τ_eff)`, `τ_eff=(1+β)/(1−β)`). The direction noise is `δ(polar) ∝ ‖N‖/σ(G)`. Two regimes:
+- **Signal-dominated** (early/descent, σ(G) large): `δ(polar) ∝ 1/√B` — larger B → cleaner directions, but the
+  step MAGNITUDE is η regardless.
+- **Noise-floor** (late polish, near the min, σ(G)→0): `polar(G+N) ≈ polar(N)` = a RANDOM unit matrix. Here
+  `‖N‖∝1/√B` is **normalized away** — `polar(N)` is unit no matter how small N is. The noise-floor random-walk
+  step = **η, INDEPENDENT of B**.
+
+Stage 8 (Muon-finetune) IS the d_seg-finishing polish — it lives in the noise-floor regime, where the step that
+sets the final d_seg resolution is η, B-invariant. **Therefore `muon_lr = 2e-4` is HELD at B=64** (×1).
+Inflating it (√8→5.66e-4, or ×8→1.6e-3) would enlarge the noise-floor random walk √8–8× and *worsen* the very
+d_seg resolution the stage exists to sharpen. A mild `×B^{1/4}≈1.68` (→3.4e-4) is the only defensible upward
+probe (for the early signal-dominated fraction).
+
+The competing concern — at held epochs, B=64 does **8× fewer Muon steps/epoch** → 8× less total
+polish-displacement — is NOT fixed by raising η (that trades away resolution). Fix it, *if a stage-5/8
+checkpoint shows under-polished d_seg*, by **extending stage-8 epochs** (the cleaner large-batch momentum makes
+each step more productive — the same fewer-updates bet as the AdamW stages, resolved on the LR-preserving
+side). This is the principled replacement for "sweep η toward ×8": **hold the fine step, give it more steps.**
 
 ## 3. Why this is a STARTING point requiring empirical RE-SOLVE (not a validated schedule)
 
