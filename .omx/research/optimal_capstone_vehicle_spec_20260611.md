@@ -373,3 +373,20 @@ per-pixel argmax-flip; 30-min CPU budget; D=37,545,489).
 - The exact frontier pointer is UNMOVED (0.19109982 [contest-CPU]). This memo is a DESIGN spec + a gated next-run
   command; it does NOT claim the pointer moved. The means (this spec) is not the end (a lower exact S) — the §7
   run, gated on the §6 ablation, is the unit aimed DIRECTLY at the exact CPU-axis row that crosses T_1.
+
+---
+
+## APPEND 2026-06-21 (additive, HISTORICAL_PROVENANCE — body above unchanged): the BATCH-SIZE axis
+
+This canonical spec trains at **bs≤8** (§0). The 2026-06-21 throughput investigation MEASURED that bs=8 is a
+hard **latency floor**: A10G ≈ T4 ≈ M5 Max MPS all ~11–13 s/ep (GPU-invariant) because the per-epoch is 75
+serial 8-pair optimizer-per-batch steps, not arithmetic. Modal is therefore NO-GO at bs=8 (~0% faster). The
+ONLY real un-CPU-bound lever is a **larger training batch**, which is score-LOCKED for the faithful PR95 run
+(per-batch optimizer step → batch_size defines #steps/epoch + the gradient trajectory) but is a legitimate
+**capstone re-solve** lever. The concrete first-order **B=64 rescaled schedule** (held epochs; AdamW η×√8,
+EMA (1−ρ)×8 — note the DIFFERENT exponent, σ×√8, λ×√8, Muon η √8→×8 sweep) + the full coupling derivation +
+the ~2–4× speedup estimate + the empirical-re-solve caveats are in the dedicated spec:
+**`capstone_batch_size_fixed_point_B64_launch_spec_20260621.md`**. Also keep: `defer_batch_sync` ON (proven
+bit-identical +2%); pose stays fp32-exact (compile drifts PoseNet 22%, REJECTED); validate LOCAL first (B=64
+may finally be GPU-bound, unlike bs=8 → then a paid GPU is worth re-pricing). The B=64 vehicle is a NEW-vehicle
+fixed-point solve, gated behind the current faithful bs=8 decisive run's stage-5 verdict.
