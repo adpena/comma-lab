@@ -1,0 +1,74 @@
+{
+  "authority": "[contest-CPU advisory] \u2014 margin diagnostic, NOT a score claim; NON-PROMOTABLE",
+  "n_pairs_measured": 24,
+  "render_path": "decoder->bicubic_up(874,1164)->clamp/round/uint8->DistortionNet.preprocess(last-frame bilinear-down 384x512)->SegNet->argmax",
+  "checkpoint": {
+    "ema_source": "torch_vehicle_checkpoint_state.pt::ema_decoder/ema_latents (CURRENT shadow)",
+    "global_epoch_last_eval": 5675,
+    "run_reported_d_seg_last_eval": 0.002277950717446705,
+    "taper_channels": [
+      16,
+      16,
+      17,
+      19,
+      19,
+      14,
+      10
+    ],
+    "base_channels": 20,
+    "latent_dim": 28
+  },
+  "deliverable_1_flip_rate_n24": 0.002048704359266493,
+  "deliverable_1_sanity_target": 0.002277950717446705,
+  "deliverable_1_n_flipped_pixels": 9667,
+  "deliverable_1_n_total_pixels": 4718592,
+  "deliverable_2_flipped_abs_margin": {
+    "count": 9667,
+    "median": 0.3195505142211914,
+    "mean": 0.43246951465265354,
+    "p10": 0.05012969970703125,
+    "p50": 0.3195505142211914,
+    "p90": 0.9517119407653808,
+    "max": 5.095068454742432,
+    "histogram": {
+      "edges": [
+        0.0,
+        0.50951,
+        1.01901,
+        1.52852,
+        2.03803,
+        2.54753,
+        3.05704,
+        3.56655,
+        4.07605,
+        4.58556,
+        5.09507
+      ],
+      "counts": [
+        6488,
+        2407,
+        598,
+        135,
+        21,
+        10,
+        2,
+        2,
+        2,
+        2
+      ]
+    }
+  },
+  "deliverable_3_easy_vs_hard": {
+    "frac_abs_margin_lt_0.5_near_boundary_fixable": 0.665149450302124,
+    "frac_abs_margin_lt_1.0": 0.915485680103302,
+    "frac_abs_margin_0.5_to_2.0_mid": 0.3304024040699005,
+    "frac_abs_margin_gt_2.0_deep_capacity_limited": 0.0044481223449110985
+  },
+  "deliverable_4_kappa_proxy_p90_over_p10": 18.98499185766901,
+  "deliverable_5_full_pixel_boundary_density": {
+    "frac_top1_minus_top2_lt_0.5_thin_band": 0.004338158294558525,
+    "frac_top1_minus_top2_lt_1.0": 0.009355545043945312,
+    "n_pixels": 4718592
+  },
+  "wall_clock_s": 13.8
+}
