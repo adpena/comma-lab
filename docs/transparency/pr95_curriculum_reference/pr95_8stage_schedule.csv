@@ -1,0 +1,9 @@
+stage,epochs,loss,adamw_lr,muon,qat,c1a_lambda,sigma
+stage1_v328_ce,3000,ce,0.001,False,False,0.0,0.2
+stage2_v331_softplus,5650,tau_softplus,0.001,False,False,0.0,0.2
+stage3_v332_smooth,1500,smooth_disagreement,0.0001,False,False,0.0,0.2
+stage4_v332_qat,500,smooth_disagreement,0.0001,False,True,0.0,0.2
+stage5_c1a_l7,9000,l7_softplus,3e-05,False,True,0.01,0.2
+stage6_lambda_sweep,2000,l7_softplus,3e-05,False,True,0.02,0.2
+stage7_sigma_sweep,3000,l7_softplus,3e-05,False,True,0.02,0.1
+stage8_muon_finetune,5000,l7_softplus,1e-05,True,True,0.02,0.1
