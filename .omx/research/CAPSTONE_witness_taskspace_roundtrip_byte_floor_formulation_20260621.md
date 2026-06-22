@@ -153,8 +153,12 @@ the measured L13 anchor placed against them.
 **The decisive OPEN gaps (the capstone's actual next work, ranked):**
 1. **Generator d_seg power-law to frontier-level** — L13 is d_seg=0.0068 (12× too high); does the amortized
    score-native generator reach 5.6e-4 with more capacity/training? This is THE binding distortion campaign.
-2. **Half-res 192×256 witness re-measurement** ($0, NOT run) — the stride-2 SegNet stem makes the boundary set ∂
-   ~4× smaller (543K→~135K raw); recount flips + survival at 192×256. Highest-EV unrun probe.
+2. **Half-res 192×256 witness re-measurement — RUN 2026-06-21 → REFUTED** (`halfres_witness_seg_floor_reprobe_n24_20260621.json`,
+   commit `32d838d36`). Stem-blind hypothesis FAILS: 192-render costs d_seg +0.0092 (0.0020→0.0112, 5.6× RISE);
+   ∂ band GROWS ~4× at 192 (0.0043→0.0170) — OPPOSITE of the predicted shrink. Curve: 384→0.0020, 336→0.0063,
+   288→0.0153, 192→0.0112 → SegNet effective decision res > 336 → **witness MUST render full 384×512.** The
+   543K→135K reduction does NOT materialize; the seg-side rate cannot be cut by coarser rendering → d_seg attack
+   is full-grid TRAINING (taper/shared-structure/Muon), NOT half-res. (Reinforces the sweep: train+structure.)
 3. **Integrated L13 + Wyner-Ziv pose-FiLM advisory S** — never composed end-to-end; predicted ~0.14 at 73 KB IF
    seg lands frontier-level. The number that would prove/kill the class-shift.
 
