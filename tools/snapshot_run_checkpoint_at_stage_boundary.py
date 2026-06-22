@@ -1,50 +1,45 @@
 #!/usr/bin/env python
-"""Durable watcher that preserves a training run's checkpoint at a stage boundary.
+"""Durable watcher that preserves a training run's checkpoint at EVERY stage boundary.
 
 THE PROBLEM. ``tac.torch_vehicle.driver`` writes only a ROLLING ``torch_vehicle_checkpoint_state.pt``
 (overwritten every ``--checkpoint-every-epochs``) plus a best-SCORE ``best/`` dir (also overwritten as the
-score improves). Neither preserves the END-OF-STAGE-7 state — the pre-stage-8 (pre-Muon) basin — which is the
-ideal launching point for ALTERNATIVE stage-8 finishers (different optimizer / longer polish / CE-vs-margin-
-hinge) WITHOUT re-burning the ~24,650 epochs of stages 1-7. Once stage 8 starts, the rolling checkpoint is
-clobbered within ~45s.
+score improves). Neither preserves the END-OF-STAGE state at each curriculum boundary — the ideal fork points
+for ALTERNATIVE downstream experiments (different optimizer / longer polish / loss swap) WITHOUT re-burning the
+epochs behind them, and the safety net if a long stage (e.g. stage 5 C1a-L7, 9000 ep) crashes near its end.
+Once the next stage starts, the rolling checkpoint is clobbered within ~45s.
 
-THE MECHANISM. Poll the run's checkpoint manifest. While the ending stage is active (``stage_index >=
---start-stage-index`` AND ``has_muon`` is False), keep a ROLLING copy of the latest checkpoint into
-``--snapshot-dir`` (pure file-copy — CPU-light next to a live MPS run; only copies when the epoch advances).
-The instant ``has_muon`` flips True (stage 8's first checkpoint), FREEZE: stop refreshing, extract the EMA
-decoder + latents into the ``best_ema_decoder.pt`` / ``best_ema_latents.pt`` warm-start pair (format per
-driver.py:3030-3031), and write a ``FROZEN.marker``. The frozen copy is the true end-of-stage-7 basin.
+THE MECHANISM (per-stage). Poll the run's checkpoint manifest. Keep a ROLLING working copy of the latest
+checkpoint (``<out>/.rolling_snapshot/``) refreshed whenever the epoch advances. The instant the manifest's
+``stage_name`` CHANGES, the rolling copy still holds the PRIOR stage's last checkpoint — preserve it into
+``<out>/stage_snapshots/<prior_stage>_end/`` (full .pt + manifest + the ``best_ema_decoder.pt`` /
+``best_ema_latents.pt`` warm-start pair, format per driver.py:3030-3031) + a ``STAGE_END.marker``. The
+stage7->8 boundary (``has_muon`` flips True) ALSO writes the named ``<out>/pre_stage8_snapshot/`` alias.
+The run's FINAL state is captured into ``<out>/final_snapshot/`` when the run stops (manifest goes stale).
 
-HOW TO LAUNCH FROM A SNAPSHOT (verified end-to-end on a real checkpoint, 2026-06-22):
-* PRIMARY — alternative stage-8 finisher: drop ``torch_vehicle_checkpoint_state.pt`` + manifest into a fresh
-  ``--out-dir`` and relaunch; the driver EXACT-RESUMES at end-of-stage-7 and runs stage 8 (a modified stage-8
-  config / muon_lr_floor_fix toggle is resume-safe because has_muon is still False at the frozen state).
-* SECONDARY — re-prime from the basin: ``--warm-start-dir <snapshot>`` with the SAME ``--taper-channels`` /
-  ``--base-channels`` / ``--latent-dim`` strict-loads the EMA decoder (verified missing=[]/unexpected=[]).
-* NOT ``--kd-warm-start-dir`` for the DECODER: kd builds a VENDORED (no-taper) teacher and strict-loads it, so
-  a tapered EMA shape-mismatches. The LATENTS alone are kd-compatible (taper-independent), but the tapered
-  decoder is not a valid kd teacher.
+This SUBSUMES the prior pre-stage-8-only watcher: pre_stage8 == stage7_sigma_sweep_end.
 
-ADVERSARIAL-REVIEW HARDENING (2026-06-22):
+CORRECTNESS / HARDENING (adversarial rounds 1-3):
 * The driver writes both files via ``os.replace`` (checkpoint.py:179-186) → a copy NEVER sees a partial .pt
-  (always complete old-or-new). The ``_mtime_stable`` guard is belt-and-suspenders.
-* EXIT GATES ON MANIFEST STALENESS, NOT BARE PID DEATH. A run RESTART (e.g. to apply a fix) changes the PID but
-  the manifest keeps advancing within ~minutes; a bare-pid-death exit would orphan the watcher and silently
-  miss the stage-8 freeze. So the watcher exits (and does the final copy) only when the manifest has not
-  advanced for ``--stale-exit-seconds`` (the run genuinely stopped). ``--watch-pid`` is ADVISORY (logged).
-* FREEZE SKEW DETECTION. Because the driver replaces blob-then-manifest, a snapshot could (probability ~1e-4)
-  pair a just-started-stage-8 blob with a stage-7 manifest. At freeze the watcher reads the SNAPSHOT's copied
-  manifest and WARNS loudly if its ``has_muon`` is True (the rare skew) so the condition is detectable, not silent.
+  (always complete old-or-new; verified by POSIX open-fd semantics). ``_mtime_stable`` is belt-and-suspenders.
+* EXIT GATES ON MANIFEST STALENESS (observe-relative), NOT bare PID death — a run RESTART changes the PID but
+  the manifest keeps advancing within minutes, so the watcher is restart-robust. ``--watch-pid`` is advisory.
+* Per-stage preserve reads the SNAPSHOT's own manifest and records ``has_muon`` in the marker so a rare
+  blob-then-manifest skew is detectable, not silent.
+* End-to-end load round-trip verified on a real checkpoint (warm-start pair strict-loads + forwards; full .pt
+  exact-resumes). Pure decision/tracking helpers are unit-tested (test_snapshot_stage_boundary.py).
 
-Optionally (``--also-final-on-exit``) copy the FINAL checkpoint into ``<out-dir>/final_snapshot/`` when the run
-stops, so the post-stage-8 state is also preserved for additional polish.
+HOW TO LAUNCH FROM A SNAPSHOT:
+* PRIMARY — continue from a boundary with a modified downstream: drop a ``<stage>_end/`` (or pre_stage8)
+  ``torch_vehicle_checkpoint_state.pt`` + manifest into a fresh ``--out-dir`` → the driver EXACT-RESUMES there.
+* SECONDARY — re-prime: ``--warm-start-dir <snapshot>`` with the SAME ``--taper-channels`` strict-loads the EMA.
+* NOT ``--kd-warm-start-dir`` for a tapered DECODER (kd builds a vendored teacher → shape mismatch); the
+  latents alone are kd-compatible (taper-independent).
 
-NO score claim; this only COPIES bytes. Authority is unchanged.
+NO score claim; this only COPIES bytes.
 
-Usage (durable detached daemon — survives the launching shell):
+Usage (durable detached daemon):
     nohup .venv/bin/python tools/snapshot_run_checkpoint_at_stage_boundary.py \
-        --out-dir experiments/results/<run> --watch-pid <python_pid> \
-        < /dev/null > <log> 2>&1 & disown
+        --out-dir experiments/results/<run> --watch-pid <python_pid> < /dev/null > <log> 2>&1 & disown
 """
 
 from __future__ import annotations
@@ -60,26 +55,19 @@ from pathlib import Path
 # Pure decision helpers (unit-tested in tests/test_snapshot_stage_boundary.py)
 # ---------------------------------------------------------------------------
 
-FREEZE = "freeze"
-COPY = "copy"
-NOOP = "noop"
+
+def stage_changed(prev_stage: str | None, cur_stage: str | None) -> bool:
+    """True iff the curriculum stage_name transitioned (and we knew a prior stage). PURE."""
+    return prev_stage is not None and cur_stage is not None and cur_stage != prev_stage
 
 
-def decide_action(manifest: dict, last_copied: tuple[int, int] | None, start_stage_index: int) -> str:
-    """Decide the per-poll action from a checkpoint manifest. PURE (no IO).
-
-    * ``FREEZE`` when ``has_muon`` is True (stage 8 started) — the prior rolling copy is the end-of-stage-7 state.
-    * ``COPY`` when the ending stage is active (``stage_index >= start_stage_index``, ``has_muon`` False) AND the
-      (stage_index, epoch_in_stage) advanced since the last copy.
-    * ``NOOP`` otherwise.
-    """
-    if bool(manifest.get("has_muon", False)):
-        return FREEZE
+def should_roll_copy(manifest: dict, last_copied: tuple[int, int] | None, start_stage_index: int) -> bool:
+    """True iff the rolling working-copy should refresh: in/after the start stage AND the epoch advanced. PURE."""
     stage_index = int(manifest.get("stage_index", -1))
-    epoch_in_stage = int(manifest.get("epoch_in_stage", -1))
-    if stage_index >= start_stage_index and (stage_index, epoch_in_stage) != last_copied:
-        return COPY
-    return NOOP
+    if stage_index < start_stage_index:
+        return False
+    key = (stage_index, int(manifest.get("epoch_in_stage", -1)))
+    return key != last_copied
 
 
 def next_change_reference(
@@ -87,10 +75,9 @@ def next_change_reference(
 ) -> tuple[float | None, float]:
     """Advance the observe-relative staleness reference. PURE.
 
-    If the manifest mtime CHANGED since last poll, reset the reference clock to ``now`` (the run is alive
-    and advancing). Otherwise keep the prior reference. This is what makes ``is_stale`` immune to a stale-
-    at-startup mtime: the reference is seeded at watcher start and only the *observed* lack of advance for
-    ``threshold_s`` triggers exit. Returns ``(new_last_mtime, new_reference)``.
+    If the manifest mtime CHANGED since last poll, reset the reference clock to ``now`` (the run is alive).
+    Otherwise keep the prior reference. Immune to a stale-at-startup mtime: only the *observed* lack of
+    advance for ``threshold_s`` triggers exit. Returns ``(new_last_mtime, new_reference)``.
     """
     if cur_mtime is not None and cur_mtime != prev_mtime:
         return cur_mtime, now
@@ -98,13 +85,9 @@ def next_change_reference(
 
 
 def is_stale(reference_time: float | None, now: float, threshold_s: float) -> bool:
-    """True if ``now`` is more than ``threshold_s`` past ``reference_time``. PURE.
-
-    ``reference_time`` is the wall-clock time the watcher LAST OBSERVED the manifest advance — NOT the
-    absolute manifest mtime. Measuring elapsed-since-observed-change (rather than absolute mtime age) is
-    what makes the exit robust to (a) a watcher (re)launched when the manifest is already old, and (b) a
-    slow cold resume whose first new checkpoint lags — neither false-triggers, because the reference is
-    re-seeded at watcher start and on every observed advance. ``None`` reference → never stale.
+    """True if ``now`` is more than ``threshold_s`` past ``reference_time`` (the last OBSERVED manifest
+    advance — not the absolute mtime, so a stale-at-startup mtime / slow resume never false-triggers). PURE.
+    ``None`` reference → never stale.
     """
     if reference_time is None:
         return False
@@ -120,6 +103,7 @@ def _log(msg: str, log_path: Path) -> None:
     line = f"[{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}] {msg}"
     print(line, flush=True)
     try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("a") as fh:
             fh.write(line + "\n")
     except OSError:
@@ -166,11 +150,8 @@ def _refresh_snapshot(ckpt: Path, manifest: Path, snap_dir: Path) -> None:
 
 
 def _emit_warm_start_pair(snap_dir: Path, log_path: Path) -> bool:
-    """Extract ema_decoder/ema_latents from the snapshotted .pt into the warm-start pair.
-
-    Format matches driver.py:3030-3031 (torch.save(ema_state_dict) + torch.save(ema_latents_tensor)),
-    so the result is directly loadable by --warm-start-dir / --kd-warm-start-dir. One torch.load total.
-    """
+    """Extract ema_decoder/ema_latents from the snapshotted .pt into the warm-start pair (format per
+    driver.py:3030-3031, loadable by --warm-start-dir). One torch.load. Graceful on missing/bad .pt."""
     import torch  # local import — keep the rolling/file-copy path torch-free
 
     pt = snap_dir / "torch_vehicle_checkpoint_state.pt"
@@ -187,50 +168,39 @@ def _emit_warm_start_pair(snap_dir: Path, log_path: Path) -> bool:
     return True
 
 
-def _freeze(snap_dir: Path, last_copied: tuple[int, int] | None, out_dir: Path, log_path: Path) -> None:
-    """Freeze the rolling snapshot as the pre-stage-8 basin + emit the warm-start pair + marker."""
-    ok = _emit_warm_start_pair(snap_dir, log_path)
-    # F1b skew detection: the frozen snapshot's OWN manifest must be has_muon=False (a stage-7 state).
-    snap_man = _read_manifest(snap_dir / "torch_vehicle_checkpoint_manifest.json")
-    snap_has_muon = bool(snap_man.get("has_muon", False)) if snap_man else None
-    if snap_has_muon:
-        _log(
-            "WARN FREEZE SKEW: the frozen snapshot's manifest has_muon=True — the last rolling copy caught a "
-            "stage-8 blob (the ~1e-4 blob-then-manifest race). Snapshot is the FIRST stage-8 step, not strict "
-            "end-of-stage-7 (still ~pre-finish basin). Detectable, not silent.",
-            log_path,
-        )
-    (snap_dir / "FROZEN.marker").write_text(
+def _preserve(rolling_dir: Path, dest_dir: Path, *, reason: str, log_path: Path) -> bool:
+    """Preserve the current rolling copy into ``dest_dir`` (full .pt + manifest + warm-start pair + marker).
+
+    Returns True if a rolling .pt existed to preserve. Records the snapshot manifest's ``has_muon`` in the
+    marker (skew detection). The rolling copy is itself produced by ``os.replace`` so it is never partial.
+    """
+    src_pt = rolling_dir / "torch_vehicle_checkpoint_state.pt"
+    src_man = rolling_dir / "torch_vehicle_checkpoint_manifest.json"
+    if not src_pt.exists():
+        _log(f"WARN _preserve({reason}): no rolling .pt to preserve into {dest_dir}", log_path)
+        return False
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    _atomic_copy(src_pt, dest_dir / "torch_vehicle_checkpoint_state.pt")
+    if src_man.exists():
+        _atomic_copy(src_man, dest_dir / "torch_vehicle_checkpoint_manifest.json")
+    ok = _emit_warm_start_pair(dest_dir, log_path)
+    snap_man = _read_manifest(dest_dir / "torch_vehicle_checkpoint_manifest.json")
+    has_muon = bool(snap_man.get("has_muon", False)) if snap_man else None
+    (dest_dir / "STAGE_END.marker").write_text(
         json.dumps(
             {
-                "frozen_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "reason": "has_muon flipped True (stage 8 started)",
-                "last_copied_stage_epoch": last_copied,
+                "preserved_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "reason": reason,
                 "warm_start_pair_emitted": ok,
-                "snapshot_manifest_has_muon": snap_has_muon,
-                "source_out_dir": str(out_dir),
+                "snapshot_manifest_stage": (snap_man or {}).get("stage_name"),
+                "snapshot_manifest_epoch_in_stage": (snap_man or {}).get("epoch_in_stage"),
+                "snapshot_manifest_has_muon": has_muon,
             },
             indent=2,
         )
     )
-    _log(
-        f"FROZEN pre-stage-8 snapshot (last_copied={last_copied}, warm_start_pair={ok}, "
-        f"snap_has_muon={snap_has_muon}). snap_dir={snap_dir}",
-        log_path,
-    )
-
-
-def _copy_final(out_dir: Path, ckpt_path: Path, manifest_path: Path, log_path: Path) -> None:
-    final_dir = out_dir / "final_snapshot"
-    final_dir.mkdir(parents=True, exist_ok=True)
-    if not ckpt_path.exists():
-        _log("WARN no checkpoint_state.pt to copy for final snapshot", log_path)
-        return
-    _atomic_copy(ckpt_path, final_dir / "torch_vehicle_checkpoint_state.pt")
-    if manifest_path.exists():
-        _atomic_copy(manifest_path, final_dir / "torch_vehicle_checkpoint_manifest.json")
-    ok = _emit_warm_start_pair(final_dir, log_path)
-    _log(f"FINAL snapshot copied to {final_dir} (warm_start_pair={ok})", log_path)
+    _log(f"PRESERVED [{reason}] -> {dest_dir} (warm_start_pair={ok}, has_muon={has_muon})", log_path)
+    return True
 
 
 def _pid_alive(pid: int) -> bool:
@@ -247,17 +217,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out-dir", type=Path, required=True, help="the run dir being watched")
     ap.add_argument(
-        "--snapshot-dir",
-        type=Path,
-        default=None,
-        help="where to freeze the pre-stage-8 snapshot (default <out-dir>/pre_stage8_snapshot)",
-    )
-    ap.add_argument(
         "--start-stage-index",
         type=int,
-        default=5,
-        help="begin rolling-copying once stage_index reaches this (0-based; default 5 = stage6, "
-        "so stages 6+7 are covered before the stage-8 freeze)",
+        default=0,
+        help="begin rolling-copying once stage_index reaches this (0-based; default 0 = every stage, so "
+        "every boundary from the current stage onward is preserved)",
     )
     ap.add_argument(
         "--watch-pid",
@@ -271,8 +235,8 @@ def main(argv: list[str] | None = None) -> int:
         "--stale-exit-seconds",
         type=float,
         default=600.0,
-        help="exit (and do the final copy) when the manifest has not advanced for this long (the run genuinely "
-        "stopped). Must exceed a normal restart gap so a restart does not trip it. Default 600s (10 min).",
+        help="exit (and do the final copy) when the manifest has not advanced for this long (run stopped). "
+        "Must exceed a normal restart gap. Default 600s.",
     )
     ap.add_argument(
         "--also-final-on-exit",
@@ -283,72 +247,67 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     out_dir: Path = args.out_dir
-    snap_dir: Path = args.snapshot_dir or (out_dir / "pre_stage8_snapshot")
+    rolling_dir = out_dir / ".rolling_snapshot"
+    stage_root = out_dir / "stage_snapshots"
+    pre_stage8_dir = out_dir / "pre_stage8_snapshot"
+    final_dir = out_dir / "final_snapshot"
     manifest_path = out_dir / "torch_vehicle_checkpoint_manifest.json"
     ckpt_path = out_dir / "torch_vehicle_checkpoint_state.pt"
-    log_path = snap_dir / "watcher.log"
-    snap_dir.mkdir(parents=True, exist_ok=True)
+    log_path = stage_root / "watcher.log"
+    stage_root.mkdir(parents=True, exist_ok=True)
 
     _log(
-        f"watcher START out_dir={out_dir} snap_dir={snap_dir} start_stage_index={args.start_stage_index} "
+        f"watcher START (per-stage) out_dir={out_dir} start_stage_index={args.start_stage_index} "
         f"watch_pid={args.watch_pid} poll={args.poll_seconds}s stale_exit={args.stale_exit_seconds}s",
         log_path,
     )
 
-    frozen = False
-    last_copied: tuple[int, int] | None = None  # (stage_index, epoch_in_stage)
+    # Seed last_stage from the persisted rolling copy (if any) so a watcher RESTART across a stage
+    # transition still preserves the prior stage's end from the rolling dir (R4-11).
+    last_stage: str | None = (
+        _read_manifest(rolling_dir / "torch_vehicle_checkpoint_manifest.json") or {}
+    ).get("stage_name")
+    last_copied: tuple[int, int] | None = None
     pid_death_logged = False
-    # OBSERVE-RELATIVE staleness (R2-1): track when the watcher last SAW the manifest advance, seeded at
-    # start, so a pre-existing old mtime / slow cold resume never false-triggers the exit.
     last_manifest_mtime: float | None = _manifest_mtime(manifest_path)
     last_change_time = time.time()
 
     while True:
         try:
             man = _read_manifest(manifest_path)
-            if man is not None and not frozen:
-                action = decide_action(man, last_copied, args.start_stage_index)
-                if action == FREEZE:
-                    _freeze(snap_dir, last_copied, out_dir, log_path)
-                    frozen = True
-                elif action == COPY and ckpt_path.exists() and _mtime_stable(ckpt_path):
-                    _refresh_snapshot(ckpt_path, manifest_path, snap_dir)
+            if man is not None:
+                cur_stage = man.get("stage_name")  # None on a partial/fieldless read → no spurious transition (R4-6)
+                # 1) STAGE TRANSITION → preserve the ENDING stage from the rolling copy.
+                if stage_changed(last_stage, cur_stage):
+                    _preserve(rolling_dir, stage_root / f"{last_stage}_end", reason=f"{last_stage}->{cur_stage}", log_path=log_path)
+                    if bool(man.get("has_muon", False)):  # the stage7->8 boundary
+                        _preserve(rolling_dir, pre_stage8_dir, reason="pre_stage8 (has_muon)", log_path=log_path)
+                if cur_stage is not None:
+                    last_stage = cur_stage
+                # 2) ROLL-COPY the current checkpoint (latest of the current stage).
+                if should_roll_copy(man, last_copied, args.start_stage_index) and ckpt_path.exists() and _mtime_stable(ckpt_path):
+                    _refresh_snapshot(ckpt_path, manifest_path, rolling_dir)
                     last_copied = (int(man.get("stage_index", -1)), int(man.get("epoch_in_stage", -1)))
-                    _log(
-                        f"rolling-copied {man.get('stage_name', '?')} stage_index={last_copied[0]} "
-                        f"ep_in_stage={last_copied[1]}",
-                        log_path,
-                    )
+                    _log(f"rolling-copied {cur_stage or '?'} stage_index={last_copied[0]} ep_in_stage={last_copied[1]}", log_path)
 
             # ADVISORY pid log (does NOT cause exit — restart-robust).
             if args.watch_pid > 0 and not pid_death_logged and not _pid_alive(args.watch_pid):
-                _log(
-                    f"watched pid {args.watch_pid} no longer alive (advisory; exit gates on manifest staleness "
-                    f">{args.stale_exit_seconds}s — a restart will refresh the manifest)",
-                    log_path,
-                )
+                _log(f"watched pid {args.watch_pid} no longer alive (advisory; exit gates on manifest staleness)", log_path)
                 pid_death_logged = True
 
-            # RESTART-ROBUST EXIT: the run genuinely stopped (manifest not ADVANCING). Observe-relative:
-            # update the reference only when the mtime actually changes, so a stale-at-startup mtime or a
-            # slow resume gets a fresh threshold window instead of false-exiting (R2-1).
+            # RESTART-ROBUST EXIT: the run genuinely stopped (manifest not ADVANCING).
             mtime = _manifest_mtime(manifest_path)
             last_manifest_mtime, last_change_time = next_change_reference(
                 last_manifest_mtime, mtime, last_change_time, time.time()
             )
             if is_stale(last_change_time, time.time(), args.stale_exit_seconds):
-                _log(
-                    f"manifest stale > {args.stale_exit_seconds}s → run stopped (frozen={frozen})",
-                    log_path,
-                )
-                if not frozen:
-                    _log(
-                        f"WARN run stopped before stage 8 was detected; pre_stage8_snapshot holds the last "
-                        f"rolling copy ({last_copied}) if any",
-                        log_path,
-                    )
-                if args.also_final_on_exit:
-                    _copy_final(out_dir, ckpt_path, manifest_path, log_path)
+                _log(f"manifest stale > {args.stale_exit_seconds}s → run stopped (last_stage={last_stage})", log_path)
+                if args.also_final_on_exit and ckpt_path.exists():
+                    # Snapshot the genuine FINAL state straight from the live file (not the rolling copy).
+                    final_dir.mkdir(parents=True, exist_ok=True)
+                    _refresh_snapshot(ckpt_path, manifest_path, final_dir)
+                    ok = _emit_warm_start_pair(final_dir, log_path)
+                    _log(f"FINAL snapshot -> {final_dir} (warm_start_pair={ok})", log_path)
                 _log("watcher EXIT", log_path)
                 return 0
         except Exception as exc:
