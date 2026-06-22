@@ -1,0 +1,115 @@
+{
+  "authority": "[contest-CPU advisory] \u2014 half-res witness seg-floor DIAGNOSTIC, NOT a score claim; NON-PROMOTABLE",
+  "n_pairs_measured": 24,
+  "device": "cpu",
+  "render_path": "decoder->[coarsen to R: bilinear down->up 384x512]->bicubic_up(874,1164)->clamp/round/uint8->SegNet.preprocess(last-frame bilinear-down 384x512)->SegNet->argmax",
+  "coarsen_point": "decoder 384x512 float output (the witness spatial-detail budget), BEFORE camera bicubic upsample",
+  "checkpoint": {
+    "path": "experiments/results/yousfi_r3_taper_marginhinge_e5_20260620/torch_vehicle_checkpoint_state.pt",
+    "ema_source": "torch_vehicle_checkpoint_state.pt::ema_decoder/ema_latents (CURRENT shadow, READ-ONLY)",
+    "base_channels": 20,
+    "latent_dim": 28,
+    "taper_channels": [
+      16,
+      16,
+      17,
+      19,
+      19,
+      14,
+      10
+    ]
+  },
+  "deliverable_1_sanity": {
+    "d_seg_M384_vs_GT": 0.0019965701633029515,
+    "run_reported_d_seg": 0.002277950717446705,
+    "sanity_match": true
+  },
+  "deliverable_1_dseg_cost_of_halfres": {
+    "M384_vs_GT": 0.0019965701633029515,
+    "M192up_vs_GT": 0.011250601874457465,
+    "M192up_vs_M384": 0.010686238606770834,
+    "extra_d_seg_at_192_over_full_res": 0.009254031711154513,
+    "relative_increase_at_192": 4.634964441142128
+  },
+  "deliverable_2_boundary_set": {
+    "band_thresh_logit_margin": 0.5,
+    "frac_margin_lt_0.5_at_384render": 0.004291958175599575,
+    "frac_margin_lt_0.5_at_192render": 0.016879823058843613,
+    "boundary_ratio_384_over_192_at_0.5": 0.25426559038194113,
+    "frac_margin_lt_1.0_at_384render": 0.0092620849609375,
+    "frac_margin_lt_1.0_at_192render": 0.03389252722263336,
+    "note": "bands measured at SegNet OUTPUT grid (384x512); render-res differs at INPUT. predicted ~4x smaller if stem-blind"
+  },
+  "deliverable_3_flip_counts_and_contiguity": {
+    "at_384_vs_GT": {
+      "n_flipped": 9421,
+      "n_total": 4718592
+    },
+    "at_192_vs_M384": {
+      "n_flipped": 50424,
+      "contiguous_fraction": 0.9597810566396954
+    },
+    "at_192_vs_GT": {
+      "n_flipped": 53087,
+      "contiguous_fraction": 0.9590671915911617
+    }
+  },
+  "deliverable_4_dseg_vs_render_resolution_curve": {
+    "192x256": {
+      "render_res": [
+        192,
+        256
+      ],
+      "d_seg_vs_M384": 0.010686238606770834,
+      "d_seg_vs_GT": 0.011250601874457465,
+      "extra_d_seg_over_full_res": 0.009254031711154513,
+      "flip_vs_M384_n": 50424,
+      "flip_vs_M384_contiguous_fraction": 0.9597810566396954,
+      "flip_vs_GT_n": 53087,
+      "flip_vs_GT_contiguous_fraction": 0.9590671915911617
+    },
+    "240x320": {
+      "render_res": [
+        240,
+        320
+      ],
+      "d_seg_vs_M384": 0.5061009724934896,
+      "d_seg_vs_GT": 0.5061554378933377,
+      "extra_d_seg_over_full_res": 0.5041588677300348,
+      "flip_vs_M384_n": 2388084,
+      "flip_vs_M384_contiguous_fraction": 1.0,
+      "flip_vs_GT_n": 2388341,
+      "flip_vs_GT_contiguous_fraction": 0.9999995812993203
+    },
+    "288x384": {
+      "render_res": [
+        288,
+        384
+      ],
+      "d_seg_vs_M384": 0.014604780409071181,
+      "d_seg_vs_GT": 0.015255610148111979,
+      "extra_d_seg_over_full_res": 0.013259039984809026,
+      "flip_vs_M384_n": 68914,
+      "flip_vs_M384_contiguous_fraction": 0.9715732652291261,
+      "flip_vs_GT_n": 71985,
+      "flip_vs_GT_contiguous_fraction": 0.9717441133569493
+    },
+    "336x448": {
+      "render_res": [
+        336,
+        448
+      ],
+      "d_seg_vs_M384": 0.005567338731553819,
+      "d_seg_vs_GT": 0.0063432057698567705,
+      "extra_d_seg_over_full_res": 0.004346635606553819,
+      "flip_vs_M384_n": 26270,
+      "flip_vs_M384_contiguous_fraction": 0.8681004948610582,
+      "flip_vs_GT_n": 29931,
+      "flip_vs_GT_contiguous_fraction": 0.8837659951221142
+    }
+  },
+  "deliverable_4_segnet_effective_decision_resolution": "between 336x448 and 384x512(baseline) (d_seg rises >20% at 336x448)",
+  "curve_artifact_note": "240x320 d_seg=0.506 (contig=1.000) is a DEGENERATE probe artifact, NOT the SegNet decision resolution: ~50% wholesale argmax collapse with near-perfect contiguity indicates a luma/round-band interaction at that specific bilinear down/up ratio (the round-tripped frame lands in a different uint8 luma band), not a real per-pixel scorer response. The non-degenerate clean points (192/288/336) are the valid curve and are all monotone-rising vs full-res.",
+  "deliverable_5_verdict": "FAILS: d_seg rises 3-8x at every non-degenerate sub-384 render resolution (192:+0.0093/5.6x, 288:+0.0133/7.6x, 336:+0.0043/3.2x). The stem-blind hypothesis is REFUTED -- SegNet's effective decision resolution exceeds 336 (d_seg already rises >20% at 336x448, i.e. just below 384). The witness CANNOT render at 192 for free; the seg-side floor is NOT ~4x smaller at half-res. Render must stay at the full 384x512 SegNet-input grid.",
+  "wall_clock_s": 93.2
+}
