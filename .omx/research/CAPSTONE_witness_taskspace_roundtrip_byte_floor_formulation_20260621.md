@@ -159,8 +159,19 @@ the measured L13 anchor placed against them.
    288→0.0153, 192→0.0112 → SegNet effective decision res > 336 → **witness MUST render full 384×512.** The
    543K→135K reduction does NOT materialize; the seg-side rate cannot be cut by coarser rendering → d_seg attack
    is full-grid TRAINING (taper/shared-structure/Muon), NOT half-res. (Reinforces the sweep: train+structure.)
-3. **Integrated L13 + Wyner-Ziv pose-FiLM advisory S** — never composed end-to-end; predicted ~0.14 at 73 KB IF
-   seg lands frontier-level. The number that would prove/kill the class-shift.
+3. **Integrated L13 + pose-carrier advisory S — RUN 2026-06-21 → BLOCKED (mechanism mismatch; re-routed)**
+   (`witness_L13_pose_film_integration_20260621.md`, commit `b13f418d5`). pose-FiLM is VEHICLE-BOUND: it
+   modulates a NEURAL HNeRV feature map (needs z/stem/feature-map/head), but the L13 witness frame1 is a
+   piecewise-constant PALETTE lookup (`pal[am_cam]`) — no feature map for FiLM to modulate, and a flat-color
+   region carries ZERO luma-gradient texture for PoseNet. So `L13 + pose-FiLM` cannot compose (Catalog #307
+   implementation-level: the UNIT is falsified, NEITHER artifact killed — pose-FiLM intact for HNeRV, L13 intact).
+   **CORRECTED pose mechanism for the palette witness: `AmortizedLumaCarrier` (#57, the scorer-free coordinate-INR
+   luma carrier, already coded + NO-FAKE-tested at `src/tac/boundary_math/amortized_luma_carrier.py`, NOT yet
+   byte-closed into L13).** Pose mechanisms are vehicle-bound: pose-FiLM ↔ HNeRV; amortized-luma-INR ↔ palette
+   witness. This sharpens §3/§6: the witness "YUV6-luma pose-carrier" IS the amortized coordinate-INR, not FiLM.
+   Re-routed unit: byte-close AmortizedLumaCarrier into L13 → measure d_pose (the real gap-#3, a bounded build).
+   L13 as-is (8-pair): seg_term 2.281 / pose_term 11.252 (palette pose-blind) / rate 0.0481 / S 13.58 — pose
+   dominates; closing it (amortized-luma) leaves seg (gap #1) as the sole wall.
 
 ## NO-FAKE ledger
 - DERIVED: the per-term witness floor; the round-trip RGB-inefficiency proof; the d_seg-win / d_pose-blocker
