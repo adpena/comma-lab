@@ -74,10 +74,48 @@ The B=64 risk is "8× fewer updates." But the bound says the risk is **NOT unifo
 - Intermediate → mixed; the fraction of flips with |margin|<0.5 (near-boundary, fixable) vs >2.0 (deep) is the
   actionable split.
 
-## 6. MEASUREMENT (live EMA-shadow, N=24) — IN FLIGHT
-`[subagent a688… running; results to be appended]` Expected fields: d_seg flip-rate sanity (~0.0023);
-flipped-pixel |margin| median/p10/p50/p90/max + histogram; easy(<0.5)-vs-hard(>2.0) split; κ-proxy p90/p10;
-full-pixel boundary-band density (|top1−top2|<0.5). These plug into §5's thresholds → the plateau verdict.
+## 6. MEASUREMENT (live EMA-shadow, N=24, CPU OMP=2, 13.8s, read-only — run untouched)
+Probe `a688…`; render path verified (subset d_seg 0.002049 ≈ run's 0.002278). JSON:
+`.omx/research/dseg_margin_distribution_capstone_ema_shadow_n24_20260621.json` (commit `97605526c`).
+
+Flipped-pixel |GT-class margin| (n=9,667): **median 0.320, p10 0.050, p50 0.320, p90 0.952, max 5.095**.
+Histogram (width 0.51): `[6488, 2407, 598, 135, 21, 10, 2, 2, 2, 2]` — front-loaded at the boundary.
+- **|margin| < 0.5 (near-boundary, fixable): 66.5%** · 0.5–2.0: 33.0% · **> 2.0 (deep): 0.44%** · <1.0: 91.5%
+- **κ-proxy (p90/p10): 18.98**
+- Full-pixel boundary band |top1−top2|<0.5: **0.43%** of all pixels (the SegNet field is confident almost
+  everywhere; flips concentrate in that sparse band, flip-rate 0.20% ≈ half the band).
+
+### 6.1 Verdict (read HONESTLY against §5's pre-registered thresholds — it's the intermediate case)
+The thresholds SPLIT, exactly as §5 anticipated for the mixed case:
+- **median |margin| 0.320 < 0.5 → meets the EASY median criterion.** ✓
+- **κ-proxy 18.98 → fails EASY (<5), just under HARD (>20).** ✗ for clean-easy.
+- **deep-tail (>2.0) = 0.44% → the HARD deep-tail condition is NOT met.** ✗ for hard.
+
+Decompose the high κ to resolve the split: κ=p90/p10=0.952/0.050. The wide spread is driven by the **LOW end**
+(p10=0.05 — a huge mass of flips lost by ≈nothing), NOT a deep high end (p90 still < 1.0; only 0.44% > 2.0).
+So the residual is **conditioning-WIDE but SHALLOW.** The honest verdict:
+- **NOT capacity-limited.** 99.6% of flips are < 2.0 logit, 91.5% < 1.0, the deep tail is negligible. The
+  base_ch decoder represents the frame well enough to put almost every pixel within ~1 logit of correct →
+  **capacity is NOT the binding lever; more base_ch won't unlock the plateau.**
+- **IS optimizer-conditioning-limited.** κ≈19 (wide, from the near-zero-margin mass) → plain AdamW grinds
+  through it at O(κ·ln 1/ε) → THIS is the "plateau" feel: many thin-margin flips, each a small nudge, but
+  spread enough that κ-limited AdamW resolves them slowly.
+- **Muon-ADDRESSABLE.** The κ-buster (§4) converges O(ln 1/ε) regardless of κ=19 → **stage-8 Muon is exactly
+  the lever to break this plateau.** The live run reaching stage 8 with Muon working is the expected breaker.
+  GOOD news for the decisive stage-5→8 verdict.
+
+### 6.2 Consequences (sharpened by the measurement)
+1. **The B=64 AdamW-stage fewer-updates risk is REAL and quantified:** κ≈19 is substantial, and the AdamW
+   stages are O(κ·ln 1/ε) → 8× fewer AdamW updates genuinely slows the κ-limited grind. **Extend stage 5
+   (C1a, the big d_seg AdamW stage) at B=64; stage 8 (Muon, κ-busted) is fine as-is.** Confirms §5's refinement.
+2. **A boundary-targeted SIDECAR is structurally well-suited (a SCORE lever).** The residual is shallow +
+   sparse + near-boundary: 66.5% of flips lost by <0.5 logit, concentrated in a 0.43%-of-pixels band. A tiny
+   per-flip correction (store the sign/small-Δ for the near-zero-margin pixels) recovers d_seg at very low byte
+   cost — exactly the concentrated-saliency / Lever-D-flip-coder / sub-pixel-boundary profile. **This measurement
+   is the empirical green-light those queued levers needed: the d_seg residual is cheaply correctable by
+   structure.** Re-rank those up.
+3. **The plateau is NOT a wall — it's a κ-limited grind with a known buster (Muon) AND a cheap sidecar option.**
+   Both the training lever (Muon stage 8) and the codec lever (boundary sidecar) are now empirically motivated.
 
 ## 7. Consequences (results→intelligence, regardless of the §6 number)
 1. **The d_seg problem IS a conditioning problem** — the Hessian is boundary-dominated, κ set by the margin
