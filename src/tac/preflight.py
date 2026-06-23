@@ -2888,6 +2888,25 @@ def preflight_all(
         check_substrate_driver_consumes_trainer_mode_env_var(
             strict=False, verbose=verbose,
         )
+        # 2026-06-23 Catalog #389 - ORPHAN-PRONE-DAEMON-LAUNCH-STRUCTURAL-
+        # EXTINCTION. Per CLAUDE.md "Durable detached daemons, not session-
+        # watchers" + "Bugs must be permanently fixed AND self-protected
+        # against" non-negotiable. Refuses `nohup bash -c '... | tee L > ...'
+        # & disown` daemon launches whose bash-wrapper PID != the python worker
+        # PID, so killing the wrapper orphans the piped worker. Anchor: the
+        # 2026-06-23 dashboard renderer orphan (wrapper 84946 killed, python
+        # child 84948 survived; two renderers then both rewrote the dashboard
+        # index.html and the operator saw a STALE stopped run). Steer to
+        # `tools/spawn_durable_daemon.py` (worker = its own process-group leader
+        # + `--stop` whole-group killpg). Same-line waiver
+        # `# ORPHAN_PRONE_DAEMON_LAUNCH_OK:<rationale>` (placeholder rejected).
+        # STRICT-from-byte-one per "Strict-flip atomicity rule" — live count: 0
+        # at landing. Sister of Catalog #339/#360 (Modal silent-no-spawn) at the
+        # LOCAL daemon surface. Memory:
+        # feedback_orphan_prone_daemon_launch_structural_extinction_landed_20260623.md.
+        check_no_orphan_prone_daemon_launch(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-19 Catalog #339 - SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION.
         # Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable +
         # "Bugs must be permanently fixed AND self-protected against".
@@ -78920,6 +78939,165 @@ def check_substrate_driver_consumes_trainer_mode_env_var(
             "check_substrate_driver_consumes_trainer_mode_env_var found "
             f"{len(violations)} violation(s) per Catalog #326.\n  "
             + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #389 — ORPHAN-PRONE-DAEMON-LAUNCH-STRUCTURAL-EXTINCTION (2026-06-23)
+# ============================================================================
+# Bug class anchor: a detached daemon launched as
+#   `nohup bash -c '<worker> ... | tee LOG > /dev/null' & disown`
+# has a process tree `bash-wrapper -> {python worker, tee}`. The wrapper PID
+# != the worker PID. Killing the obvious/wrapper PID ORPHANS the python worker
+# (it is in the pipe; gets reparented to init and keeps running) => zombie
+# daemons that race/conflict. EMPIRICAL ANCHOR 2026-06-23: killing the dashboard
+# bash-wrapper (84946) left its python child (84948) alive; two renderer
+# pythons (old + new run dirs) then both wrote the same dashboard index.html
+# every 20s and the operator saw a STALE stopped run.
+#
+# Per CLAUDE.md "Durable detached daemons, not session-watchers" + "Bugs must
+# be permanently fixed AND self-protected against" non-negotiable.
+#
+# THE STEER: use `tools/spawn_durable_daemon.py` which launches the worker as
+# its OWN session+process-group leader (no bash wrapper) and provides
+# `--stop <label>` that sends `os.killpg(pgid, SIGTERM)` — a WHOLE-GROUP kill
+# so the worker AND its children die together = NO ORPHAN.
+#
+# Gate semantics (LOW FALSE-POSITIVE — targets the SPECIFIC orphan signature):
+# scan committed tools/ + scripts/ + experiments/ shell/python files for a
+# launch line that has ALL of:
+#   (a) `nohup` AND a `bash -c '...'` / `bash -c "..."` wrapper, AND
+#   (b) a long-running/poll worker piped to `tee` (`| tee` in the body), AND
+#   (c) backgrounding (`& disown` / trailing `&`).
+# A short one-shot backgrounded command or a `run_in_background` Bash-tool
+# invocation does NOT match (no `nohup`+`bash -c`+`tee`+`&`+disown combo).
+#
+# Same-line waiver on the launch line: `# ORPHAN_PRONE_DAEMON_LAUNCH_OK:<rationale>`
+# (placeholder `<rationale>` / `<reason>` literals rejected per Catalog #287).
+#
+# Sister of Catalog #339 / #360 (Modal silent-no-spawn) at the LOCAL daemon
+# surface. WARN-ONLY at landing per "Strict-flip atomicity rule" until the live
+# count is confirmed 0 against the current repo (strict-flipped in the same
+# batch when count==0).
+
+_CHECK_389_SCAN_DIRS = ("tools", "scripts", "experiments")
+_CHECK_389_SCAN_SUFFIXES = (".sh", ".py", ".bash", ".zsh")
+_CHECK_389_VENDORED_MARKERS = (
+    "/pr_heads/",
+    "/leaderboard_intel_",
+    "/reverse_engineering_",
+    "/public_runtime_adapters_",
+    "/vendored/",
+    "_intake_",
+    "/av1_crf31_bicubic/",
+)
+# The orphan-prone launch signature: nohup + bash -c '...' + | tee + & disown.
+# We require nohup AND bash -c AND tee on the same logical line, plus a trailing
+# backgrounding (& / disown). This is deliberately narrow to keep FP low.
+_CHECK_389_NOHUP_BASH_C = re.compile(r"\bnohup\b.*\bbash\s+-c\b")
+_CHECK_389_TEE = re.compile(r"\|\s*tee\b")
+_CHECK_389_BG = re.compile(r"(?:&\s*$|&\s*disown|\bdisown\b)")
+_CHECK_389_WAIVER = re.compile(
+    r"# ORPHAN_PRONE_DAEMON_LAUNCH_OK:(.+?)(?:$|#)", re.MULTILINE
+)
+
+
+def _check_389_rationale_is_placeholder(rationale: str) -> bool:
+    low = rationale.strip().rstrip(":").strip().lower()
+    return low in ("", "<rationale>", "<reason>")
+
+
+def _check_389_line_has_waiver(line: str) -> bool:
+    m = _CHECK_389_WAIVER.search(line)
+    return bool(m) and not _check_389_rationale_is_placeholder(m.group(1))
+
+
+def _check_389_line_is_orphan_prone(line: str) -> bool:
+    """True iff a single logical line carries the nohup+bash-c+tee+bg signature."""
+    return bool(
+        _CHECK_389_NOHUP_BASH_C.search(line)
+        and _CHECK_389_TEE.search(line)
+        and _CHECK_389_BG.search(line)
+    )
+
+
+def check_no_orphan_prone_daemon_launch(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #389 — refuse orphan-prone detached-daemon launches.
+
+    Steers ``nohup bash -c '... | tee LOG > /dev/null' & disown`` launches
+    (whose bash wrapper PID != the python worker PID, so a wrapper-PID kill
+    ORPHANS the worker) to ``tools/spawn_durable_daemon.py`` which launches the
+    worker as its own session/process-group leader and provides a whole-group
+    ``--stop`` (``os.killpg``) that leaves no orphan.
+
+    Same-line waiver on the launch line:
+    ``# ORPHAN_PRONE_DAEMON_LAUNCH_OK:<rationale>`` (placeholder rejected).
+
+    Per CLAUDE.md "Durable detached daemons, not session-watchers" + "Bugs must
+    be permanently fixed AND self-protected against" non-negotiable.
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+
+    for scan_dir in _CHECK_389_SCAN_DIRS:
+        base = root / scan_dir
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file() or path.suffix not in _CHECK_389_SCAN_SUFFIXES:
+                continue
+            rel = path.relative_to(root).as_posix()
+            rel_lc = "/" + rel.lower()
+            if any(m in rel_lc for m in _CHECK_389_VENDORED_MARKERS):
+                continue
+            # The canonical launcher itself documents the orphan signature in
+            # its module docstring — never flag it.
+            if rel == "tools/spawn_durable_daemon.py":
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "nohup" not in text or "tee" not in text:
+                continue  # cheap pre-filter
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                if not _check_389_line_is_orphan_prone(line):
+                    continue
+                if _check_389_line_has_waiver(line):
+                    continue
+                violations.append(
+                    f"[Catalog #389] {rel}:{lineno}: orphan-prone daemon launch "
+                    "(nohup + bash -c + | tee + background) — killing the bash "
+                    "wrapper PID orphans the piped worker. Use "
+                    "`tools/spawn_durable_daemon.py --log L --label NAME -- cmd` "
+                    "(worker is its own process-group leader) + "
+                    "`spawn_durable_daemon.py --stop NAME` (whole-group killpg, "
+                    "no orphan). OR carry a same-line "
+                    "`# ORPHAN_PRONE_DAEMON_LAUNCH_OK:<rationale>` waiver "
+                    "(placeholder rejected). Anchor: 2026-06-23 dashboard "
+                    "renderer orphan (wrapper 84946 killed, python child 84948 "
+                    "survived). Per CLAUDE.md 'Durable detached daemons, not "
+                    "session-watchers'."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_no_orphan_prone_daemon_launch] {len(violations)} violation(s)"
+            )
+        else:
+            print("  [check_no_orphan_prone_daemon_launch] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_no_orphan_prone_daemon_launch found "
+            f"{len(violations)} violation(s) per Catalog #389.\n  "
+            + "\n  ".join(v[:600] for v in violations[:8])
         )
     return violations
 
