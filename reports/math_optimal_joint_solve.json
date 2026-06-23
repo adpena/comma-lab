@@ -1,0 +1,194 @@
+{
+  "tool": "math_optimal_joint_solve",
+  "authority": "[contest-CPU advisory] / [macOS-CPU advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "frontier_pointer_moved": false,
+  "params": {
+    "base_chs": [
+      16,
+      20,
+      24,
+      28,
+      32,
+      36,
+      40
+    ],
+    "qat_nbits": [
+      4,
+      5,
+      6,
+      8
+    ],
+    "frac_low": [
+      0.0,
+      0.7,
+      1.0
+    ],
+    "epochs": [
+      2325.0,
+      10000.0,
+      30000.0,
+      1000000.0
+    ],
+    "taper_mults": [
+      1.0
+    ],
+    "hold_delta": 0.0003
+  },
+  "optimum": {
+    "base_ch": 36,
+    "taper_dseg_multiplier": 1.0,
+    "qat_nbits": 4,
+    "qat_frac_low_precision": 1.0,
+    "epochs": 1000000.0,
+    "decoder_params": 228958,
+    "d_seg": 0.0008599999999999999,
+    "d_seg_inf": 0.00056,
+    "d_seg_evidence": "MODELLED(power-law A=7.838e+04 gamma=1.520 on bc20+frontier endpoints)",
+    "d_pose": 2.934457845896381e-05,
+    "archive_bytes": 114323,
+    "S": 0.17925325242418377
+  },
+  "achievable_S_lower_bound": 0.17925325242418377,
+  "achievable_S_lower_bound_config": {
+    "base_ch": 36,
+    "taper_dseg_multiplier": 1.0,
+    "qat_nbits": 4,
+    "qat_frac_low_precision": 1.0,
+    "epochs": 1000000.0,
+    "decoder_params": 228958,
+    "d_seg": 0.0008599999999999999,
+    "d_seg_inf": 0.00056,
+    "d_seg_evidence": "MODELLED(power-law A=7.838e+04 gamma=1.520 on bc20+frontier endpoints)",
+    "d_pose": 2.934457845896381e-05,
+    "archive_bytes": 114323,
+    "S": 0.17925325242418377
+  },
+  "achievable_S_existence_proof": {
+    "claimed_floor_S": 0.17925325242418377,
+    "best_known_artifact": "perfect-384 d_seg @ bc20 bytes",
+    "best_known_S": 0.09522938075618384,
+    "is_valid_floor": false,
+    "verdict": "INVALID floor \u2014 perfect-384 d_seg @ bc20 bytes ALREADY achieves S=0.09523 < claimed 0.17925. The claim is a capacity/recipe artifact (MP2), NOT a physics floor. Downgrade to 'our-current-config-limited' and find the gap."
+  },
+  "physical_floor_S": 0.05907790061432179,
+  "physical_floor_config": {
+    "base_ch": 16,
+    "taper_dseg_multiplier": 1.0,
+    "qat_nbits": 4,
+    "qat_frac_low_precision": 1.0,
+    "epochs": Infinity,
+    "decoder_params": 58103,
+    "d_seg": 0.00018747117784288195,
+    "d_seg_inf": 0.00018747117784288195,
+    "d_seg_evidence": "PHYSICAL FLOOR: 384 achievability floor (MEASURED N=600), not power-law",
+    "d_pose": 2.934457845896381e-05,
+    "archive_bytes": 34843,
+    "S": 0.05907790061432179
+  },
+  "frontier_S": 0.19109982419209975,
+  "training_pareto": [
+    {
+      "epochs": 500.0,
+      "d_seg": 0.004234561347615391,
+      "S": 0.5558564001944477
+    },
+    {
+      "epochs": 1000.0,
+      "d_seg": 0.0008824737311061944,
+      "S": 0.21856782156758983
+    },
+    {
+      "epochs": 2325.0,
+      "d_seg": 0.0008600000383564574,
+      "S": 0.21125010311501183
+    },
+    {
+      "epochs": 5000.0,
+      "d_seg": 0.0008599999999999999,
+      "S": 0.2027540002678646
+    },
+    {
+      "epochs": 10000.0,
+      "d_seg": 0.0008599999999999999,
+      "S": 0.19184476486139218
+    },
+    {
+      "epochs": 20000.0,
+      "d_seg": 0.0008599999999999999,
+      "S": 0.1822443913386278
+    },
+    {
+      "epochs": 30000.0,
+      "d_seg": 0.0008599999999999999,
+      "S": 0.17985689358407092
+    },
+    {
+      "epochs": 50000.0,
+      "d_seg": 0.0008599999999999999,
+      "S": 0.1792751521322289
+    },
+    {
+      "epochs": 1000000.0,
+      "d_seg": 0.0008599999999999999,
+      "S": 0.17925325242418377
+    }
+  ],
+  "gating": {
+    "qat_d_seg_hold_delta": "ASSUMPTION (current 0.0003). This is the QAT distortion-hold spill \u2014 UNMEASURED. The int4/int5 byte win is real; whether d_seg holds within this spill is the gating measurement. Flips the optimum away from low-bit Q if the measured spill exceeds the byte saving in S-units (byte saving int4 vs int8 at optimum ~0.0695 S).",
+    "capacity_alpha": "MODELLED alpha in [0.9, 1.5] (deepmath C.1, 2-point clean fit, under-converged -> lower bound). The capacity-RD optimum p* shifts with alpha (deepmath C.2: alpha 0.91 -> bc27, 1.12 -> bc29, 1.50 -> bc32). The clean bc36 anchor + its prune-path will pin alpha and SHARPEN the optimal C. Until then C* is 36 (current surfaces).",
+    "taper_dseg_multiplier": "DEFAULT 1.0 (no measured taper A/B). A boundary-band-reallocated taper is byte-NEUTRAL; if a measured arm_b/control d_seg ratio < 1.0 lands, it lowers d_seg at zero byte cost -> directly lowers S and can flip the optimum toward LOWER capacity (less capacity needed for the same d_seg).",
+    "dseg_384_floor": "HARD lower bound 0.0001875 (S 0.0187). A >=camera-res decoder could dip toward the float floor (1.596e-4) but only buys ~0.003 S on d_seg \u2014 not worth a resolution rebuild. Capacity-within-384 is the larger d_seg lever.",
+    "convergence_epochs": "The optimum needs ~920 effective epochs to come within 0.005 S of its asymptote (conservative CE-only fit; the curriculum's d_seg finisher stages converge faster). This is the never-fired run's budget."
+  },
+  "surfaces": {
+    "dseg_384_floor": 0.00018747117784288195,
+    "dseg_384_floor_provenance": ".omx/research/dseg_384_achievability_floor_n600_20260623.json floors.floor_384.d_seg (N=600)",
+    "qaxis_byte_shrink": {
+      "8": 1.0,
+      "7": 0.8834814216478191,
+      "6": 0.7673667205169629,
+      "5": 0.6448012026566146,
+      "4": 0.5226844372644049
+    },
+    "qaxis_provenance": "capacity_rd_qat.MEASURED_BYTE_SHRINK_BC20 (reports/fp_shrink_ptq_bc20_n600.json)",
+    "eaxis_anchors": [
+      [
+        120.0,
+        0.0037602
+      ],
+      [
+        2325.0,
+        0.0025607
+      ]
+    ],
+    "eaxis_provenance": "deepmath B.1 measured bc20 (epochs,d_seg): (120,0.00376),(2325,0.00256)",
+    "capacity_anchors": [
+      [
+        20,
+        0.002600919948890805
+      ],
+      [
+        36,
+        0.00056
+      ]
+    ],
+    "capacity_provenance": "capacity_rd_qat anchors: bc20 basin 0.0026 + frontier d_seg 0.00056 (bc36-class). Clean matched-recipe pair bc20_p48 0.00376 / bc24_p48 0.00285 (deepmath B.1) confirms the power-law direction.",
+    "frontier_S": 0.19109982419209975,
+    "pose_hold": 0.00034168662969022987,
+    "notes": [
+      "Q-axis sister surface not yet published; using capacity_rd_qat measured int8->int-N byte ratios (bc20 post-int8-brotli).",
+      "E-axis sister surface not yet published; using deepmath measured bc20 (epochs,d_seg) anchors. Convergence curve is a conservative (high) d_seg."
+    ]
+  },
+  "notes": [
+    "ALL numbers [advisory] / [macOS-CPU advisory] NON-PROMOTABLE; exact pointer stays pointer-only (0.19110). The output is a CONFIG RECOMMENDATION for the next training run, not a score claim.",
+    "C-axis d_seg(C) is the bc20+frontier power law, CLAMPED at the 384 floor (1.875e-4). T-axis multiplier default 1.0 (no measured taper A/B yet). Q-axis byte fractions MEASURED (int8->int-N bc20); the d_seg-hold spill is the QAT distortion-hold ASSUMPTION (must be measured). E-axis convergence is a conservative 2-point exponential fit on stage-1 CE-only anchors.",
+    "The achievable-S lower bound is the FULLY-CONVERGED best config; its validity is gated by the existence-proof cross-check.",
+    "Q-axis sister surface not yet published; using capacity_rd_qat measured int8->int-N byte ratios (bc20 post-int8-brotli).",
+    "E-axis sister surface not yet published; using deepmath measured bc20 (epochs,d_seg) anchors. Convergence curve is a conservative (high) d_seg.",
+    "TWO-LAYER FLOOR: surface-model lower bound S=0.1793 (power-law d_seg, pessimistic) vs PHYSICAL floor S=0.0591 (perfect-384 d_seg + converged pose + bc16 int4 bytes). The gap is the capacity-realization question: the power law is a recipe+convergence-confounded extrapolation (deepmath B), NOT a physics floor \u2014 the 384 measurement proves d_seg 1.875e-4 is achievable.",
+    "EXISTENCE-PROOF (on the MODEL LB, EXPECTED): INVALID floor \u2014 perfect-384 d_seg @ bc20 bytes ALREADY achieves S=0.09523 < claimed 0.17925. The claim is a capacity/recipe artifact (MP2), NOT a physics floor. Downgrade to 'our-current-config-limited' and find the gap."
+  ]
+}
