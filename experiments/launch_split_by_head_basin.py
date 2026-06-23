@@ -107,6 +107,29 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "Non-use_muon stages ignore muon_lr (no-op there).",
     )
     p.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="GPU-SATURATION / training-time lever (the s/ep half). Override every stage's "
+             "batch_size (vendored default 8 = PR95's T4-era value). On 128GB M5-Max unified "
+             "memory (>> T4's 16GB) bs=8 runs 600 pairs as 75 serial tiny steps/epoch — "
+             "massively under-saturated. Larger batch = fewer steps/epoch = higher GPU "
+             "utilization = lower s/ep. For single-video memorization, larger/full batch is a "
+             "more EXACT gradient (less stochastic noise), generally good. Default None = "
+             "vendored 8 (byte-identical). COUPLED to LR via --batch-lr-scale.",
+    )
+    p.add_argument(
+        "--batch-lr-scale",
+        choices=("none", "sqrt", "linear"),
+        default="sqrt",
+        help="LR↔batch coupling (joint-design rule) when --batch-size is set: scale every "
+             "stage's adamw_lr + muon_lr by factor f relative to the vendored bs=8. "
+             "none: f=1 (keep LR; may under-drive a large batch). sqrt: f=sqrt(bs/8) "
+             "(gentle, default — robust for AdamW/Muon). linear: f=bs/8 (the linear-scaling "
+             "rule; aggressive, risks instability at large batch). An explicit --muon-lr "
+             "OVERRIDES the scaled muon_lr (explicit wins). Default sqrt.",
+    )
+    p.add_argument(
         "--defer-batch-sync",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -291,8 +314,9 @@ def main(argv: list[str] | None = None) -> int:
     # curriculum internally (byte-identical default). This rides on THIS launcher's
     # full-MPS pose path (the one that trains pose), NOT the bind-all split-by-head path.
     curriculum = None
-    if args.seg_margin_hinge or args.muon_lr is not None:
+    if args.seg_margin_hinge or args.muon_lr is not None or args.batch_size is not None:
         import dataclasses
+        import math as _math
 
         from tac.torch_vehicle.curriculum import build_curriculum
 
@@ -303,6 +327,29 @@ def main(argv: list[str] | None = None) -> int:
         )
         if args.seg_margin_hinge:
             specs = [dataclasses.replace(s, seg_surrogate="margin_hinge") for s in specs]
+        if args.batch_size is not None:
+            # GPU-saturation lever + COUPLED LR scale (joint batch↔LR rule). Vendored bs=8.
+            _ratio = max(args.batch_size, 1) / 8.0
+            if args.batch_lr_scale == "linear":
+                _f = _ratio
+            elif args.batch_lr_scale == "none":
+                _f = 1.0
+            else:  # sqrt (default)
+                _f = _math.sqrt(_ratio)
+            specs = [
+                dataclasses.replace(
+                    s,
+                    batch_size=args.batch_size,
+                    adamw_lr=s.adamw_lr * _f,
+                    muon_lr=(s.muon_lr * _f if s.muon_lr is not None else None),
+                )
+                for s in specs
+            ]
+            print(
+                f"[batch-saturation] bs 8 -> {args.batch_size} "
+                f"(LR scale={args.batch_lr_scale}, f={_f:.3f})",
+                flush=True,
+            )
         if args.muon_lr is not None:
             # Override the Muon LR on the use_muon stage(s) only (stage 8). The driver reads
             # spec.muon_lr for BOTH the optimizer LR and the cosine floor, so this single
