@@ -1,0 +1,7014 @@
+{
+  "schema_version": 1,
+  "authority": "[advisory] NON-PROMOTABLE; convergence fits over MINED curves. All 'model' epoch-to-target are EXTRAPOLATIONS (extrapolated:true). No fitted floor above PR95 5.6e-4 is a physical floor.",
+  "existence_proof_dseg_floor": 0.00056,
+  "generated_by": "tools/fit_convergence_models.py",
+  "n_runs_fit": 60,
+  "config_groups": {
+    "bc20_n600_noflag": [
+      {
+        "run_id": "yousfi_r3_taper_marginhinge_e5_20260620",
+        "min_d_seg": 0.0020605384030689794,
+        "epoch_span": [
+          25,
+          15650
+        ],
+        "epochs_to_halve_dseg": 62.43680836448077,
+        "n_points": 218
+      },
+      {
+        "run_id": "yousfi_r2_arm_a_marginhinge_20260619T234500Z",
+        "min_d_seg": 0.0022015889377022782,
+        "epoch_span": [
+          25,
+          4300
+        ],
+        "epochs_to_halve_dseg": 122.77366557628642,
+        "n_points": 84
+      },
+      {
+        "run_id": "bindall_arm_b_canonical50k_mh_n600",
+        "min_d_seg": 0.0022607083013281228,
+        "epoch_span": [
+          50,
+          5709
+        ],
+        "epochs_to_halve_dseg": 788.9756720039869,
+        "n_points": 62
+      },
+      {
+        "run_id": "bindall_arm_b_canonical50k_n600",
+        "min_d_seg": 0.0023702155286446213,
+        "epoch_span": [
+          50,
+          3700
+        ],
+        "epochs_to_halve_dseg": 1588.7459596870906,
+        "n_points": 53
+      },
+      {
+        "run_id": "torch_vehicle_full_mps_basin_bc20_n600",
+        "min_d_seg": 0.0025607554148882627,
+        "epoch_span": [
+          10,
+          2325
+        ],
+        "epochs_to_halve_dseg": 6.832177142578253,
+        "n_points": 32
+      },
+      {
+        "run_id": "yousfi_r2_marginhinge_fullmps_20260620",
+        "min_d_seg": 0.0022386084652195374,
+        "epoch_span": [
+          2400,
+          4525
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 28
+      },
+      {
+        "run_id": "from0_ab_v2/control",
+        "min_d_seg": 0.0037303415623803934,
+        "epoch_span": [
+          25,
+          689
+        ],
+        "epochs_to_halve_dseg": 92.36530597516877,
+        "n_points": 25
+      },
+      {
+        "run_id": "yousfi_r3_MUONJUMP_stage8_lr1e3_20260623T180100Z",
+        "min_d_seg": 0.0020778740818301836,
+        "epoch_span": [
+          24675,
+          25700
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 18
+      },
+      {
+        "run_id": "longtrack_a_600_n600/oomph_film_long",
+        "min_d_seg": 0.002091818928408126,
+        "epoch_span": [
+          10,
+          120
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 12
+      },
+      {
+        "run_id": "yousfi_r3_MUONJUMP_stage8_20260623T145220Z",
+        "min_d_seg": 0.0020780181838199498,
+        "epoch_span": [
+          24675,
+          25225
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 9
+      },
+      {
+        "run_id": "g0_600_transfer_n600/oomph_600",
+        "min_d_seg": 0.0021313391625881195,
+        "epoch_span": [
+          10,
+          50
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 5
+      },
+      {
+        "run_id": "bindall_arm_b_n600",
+        "min_d_seg": 0.005596839052935441,
+        "epoch_span": [
+          10,
+          40
+        ],
+        "epochs_to_halve_dseg": 28.179268642291717,
+        "n_points": 4
+      },
+      {
+        "run_id": "lever_ab_argmaxflip_20260612T123136Z",
+        "min_d_seg": 0.003750635798399647,
+        "epoch_span": [
+          450,
+          700
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 4
+      },
+      {
+        "run_id": "capstone_n600_resumable_20260611T2049",
+        "min_d_seg": 0.028014729917049407,
+        "epoch_span": [
+          10,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 3
+      },
+      {
+        "run_id": "bindall_arm_b_corrected_n600",
+        "min_d_seg": 0.009116405912985404,
+        "epoch_span": [
+          10,
+          20
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 2
+      },
+      {
+        "run_id": "bindall_arm_b_canonical_n600",
+        "min_d_seg": 0.012715352276961009,
+        "epoch_span": [
+          10,
+          10
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 1
+      },
+      {
+        "run_id": "capstone_n600_correct_faithful_20260612T010134",
+        "min_d_seg": 0.012166222482919693,
+        "epoch_span": [
+          10,
+          10
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 1
+      },
+      {
+        "run_id": "l2_combined_seg_pose_ab_20260612T141904Z",
+        "min_d_seg": 0.004232991561293602,
+        "epoch_span": [
+          450,
+          450
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 1
+      }
+    ],
+    "bc20_n600_L2+L2+L3+L5": [
+      {
+        "run_id": "distortion_arm_l235_20260612T205102Z",
+        "min_d_seg": 0.0024664476203421753,
+        "epoch_span": [
+          450,
+          5525
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 203
+      }
+    ],
+    "bc20_n?_noflag": [
+      {
+        "run_id": "capstone_c1prime_honest_b20_n48",
+        "min_d_seg": 0.009348763463397821,
+        "epoch_span": [
+          5,
+          121
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 83
+      },
+      {
+        "run_id": "capstone_curriculum_b20_n48",
+        "min_d_seg": 0.4984813282887141,
+        "epoch_span": [
+          5,
+          65
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 21
+      },
+      {
+        "run_id": "capstone_capacity_ablation_2x2_20260611/bc20_p192",
+        "min_d_seg": 0.0164420073851943,
+        "epoch_span": [
+          10,
+          120
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 12
+      },
+      {
+        "run_id": "capstone_capacity_ablation_2x2_20260611/bc20_p48",
+        "min_d_seg": 0.0037343766695509353,
+        "epoch_span": [
+          10,
+          120
+        ],
+        "epochs_to_halve_dseg": 56.37134075991273,
+        "n_points": 12
+      },
+      {
+        "run_id": "capstone_daemon_b20_n48_stream",
+        "min_d_seg": 0.01058038075764974,
+        "epoch_span": [
+          2,
+          14
+        ],
+        "epochs_to_halve_dseg": 1.0991162593075066,
+        "n_points": 7
+      },
+      {
+        "run_id": "capstone_smoke_stored_latent_b20_n8",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "capstone_smoke_vq_index_b20_n8",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "capstone_stored_latent_smoke_b20_n8",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "capstone_vq_index_smoke_b20_n8",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "capstone_daemon_b20_n48_LONG",
+        "min_d_seg": 0.008012135901177922,
+        "epoch_span": [
+          10,
+          50
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 5
+      }
+    ],
+    "bc20_n8_noflag": [
+      {
+        "run_id": "capstone_gate15_descended_n8",
+        "min_d_seg": 0.04172833636403084,
+        "epoch_span": [
+          3,
+          78
+        ],
+        "epochs_to_halve_dseg": 4.507196569090038,
+        "n_points": 29
+      },
+      {
+        "run_id": "capstone_resume_test",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          1,
+          1
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 1
+      }
+    ],
+    "bc20_n96_noflag": [
+      {
+        "run_id": "from0_ab_v2_n96/control",
+        "min_d_seg": 0.003590689778017501,
+        "epoch_span": [
+          25,
+          789
+        ],
+        "epochs_to_halve_dseg": 27.30482368752395,
+        "n_points": 29
+      },
+      {
+        "run_id": "from0_ab_v2_n96/stack_ce_early",
+        "min_d_seg": 0.004060904146172106,
+        "epoch_span": [
+          25,
+          789
+        ],
+        "epochs_to_halve_dseg": 30.659154197575823,
+        "n_points": 29
+      },
+      {
+        "run_id": "from0_ab_v2_n96/stack_lovasz",
+        "min_d_seg": 0.004391882025326292,
+        "epoch_span": [
+          25,
+          789
+        ],
+        "epochs_to_halve_dseg": 56.680268421214805,
+        "n_points": 29
+      },
+      {
+        "run_id": "oomph_scaled_n96/scaled_sw1.5_ep600",
+        "min_d_seg": 0.0027055210666731,
+        "epoch_span": [
+          10,
+          210
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 21
+      },
+      {
+        "run_id": "oomph_ft_n96/ce_continue",
+        "min_d_seg": 0.0033819941648592553,
+        "epoch_span": [
+          10,
+          150
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 15
+      },
+      {
+        "run_id": "oomph_ft_n96/gentle",
+        "min_d_seg": 0.0037003622855991125,
+        "epoch_span": [
+          10,
+          150
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 15
+      },
+      {
+        "run_id": "oomph_ft_n96/oomph",
+        "min_d_seg": 0.0027857356471940875,
+        "epoch_span": [
+          10,
+          150
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 15
+      },
+      {
+        "run_id": "oomph_scaled_n96/iso_sw1.0",
+        "min_d_seg": 0.0027898153445372977,
+        "epoch_span": [
+          10,
+          150
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 15
+      },
+      {
+        "run_id": "from0_ab_v2_n96/stack",
+        "min_d_seg": 0.022606372988472383,
+        "epoch_span": [
+          25,
+          361
+        ],
+        "epochs_to_halve_dseg": 148.50508329101342,
+        "n_points": 13
+      }
+    ],
+    "bc20_n24_noflag": [
+      {
+        "run_id": "capstone_gate15_descended_n24",
+        "min_d_seg": 0.011758380569517612,
+        "epoch_span": [
+          5,
+          78
+        ],
+        "epochs_to_halve_dseg": 2.189553994174359,
+        "n_points": 18
+      }
+    ],
+    "bc24_n?_noflag": [
+      {
+        "run_id": "capstone_capacity_ablation_2x2_20260611/bc24_p48",
+        "min_d_seg": 0.0028293397820865116,
+        "epoch_span": [
+          10,
+          120
+        ],
+        "epochs_to_halve_dseg": 37.68459885797284,
+        "n_points": 12
+      },
+      {
+        "run_id": "capstone_capacity_ablation_2x2_20260611/bc24_p192",
+        "min_d_seg": 0.01664919324684888,
+        "epoch_span": [
+          10,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 3
+      }
+    ],
+    "bc?_n?_noflag": [
+      {
+        "run_id": "capstone_validation_micro",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "capstone_smoke_mlxgpu_dream",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          1,
+          3
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 3
+      },
+      {
+        "run_id": "capstone_smoke_torchcpu_dream",
+        "min_d_seg": 0.5072727203369141,
+        "epoch_span": [
+          1,
+          3
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 3
+      }
+    ],
+    "bc20_n48_noflag": [
+      {
+        "run_id": "torch_vehicle_chaos_control_ab/arm_clean",
+        "min_d_seg": 0.5053805212179819,
+        "epoch_span": [
+          5,
+          20
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "torch_vehicle_chaos_control_ab_v2/arm_clean",
+        "min_d_seg": 0.5053805212179819,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "torch_vehicle_mps_descent_ab/arm_cpu",
+        "min_d_seg": 0.5053805212179819,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "torch_vehicle_mps_descent_ab/arm_mps",
+        "min_d_seg": 0.5053805212179819,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "torch_vehicle_split_head_gate_n48/arm_cpu",
+        "min_d_seg": 0.5053805212179819,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "torch_vehicle_split_head_gate_n48/arm_split_by_head",
+        "min_d_seg": 0.5053805212179819,
+        "epoch_span": [
+          5,
+          30
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 6
+      },
+      {
+        "run_id": "torch_vehicle_chaos_control_ab_v2/arm_noise",
+        "min_d_seg": 0.5053805212179819,
+        "epoch_span": [
+          5,
+          10
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 2
+      }
+    ],
+    "bc20_n16_noflag": [
+      {
+        "run_id": "from0_parity/cpu",
+        "min_d_seg": 0.5067234039306641,
+        "epoch_span": [
+          41,
+          158
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 3
+      },
+      {
+        "run_id": "from0_parity/mps",
+        "min_d_seg": 0.5067234039306641,
+        "epoch_span": [
+          41,
+          158
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 3
+      }
+    ],
+    "bc20_n6_noflag": [
+      {
+        "run_id": "l2_combined_seg_pose_ab_20260612T204752Z",
+        "min_d_seg": 0.799495279788971,
+        "epoch_span": [
+          1,
+          3
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 3
+      }
+    ],
+    "bc20_n2_noflag": [
+      {
+        "run_id": "torch_vehicle_chaos_control_smoke/arm_clean",
+        "min_d_seg": 0.5075149536132812,
+        "epoch_span": [
+          1,
+          2
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 2
+      },
+      {
+        "run_id": "torch_vehicle_chaos_control_smoke/arm_noise",
+        "min_d_seg": 0.5075149536132812,
+        "epoch_span": [
+          1,
+          2
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 2
+      }
+    ],
+    "bc20_n4_noflag": [
+      {
+        "run_id": "torch_vehicle_split_head_smoke/arm_cpu",
+        "min_d_seg": 0.5078303217887878,
+        "epoch_span": [
+          2,
+          2
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 1
+      },
+      {
+        "run_id": "torch_vehicle_split_head_smoke/arm_split_by_head",
+        "min_d_seg": 0.5078303217887878,
+        "epoch_span": [
+          2,
+          2
+        ],
+        "epochs_to_halve_dseg": null,
+        "n_points": 1
+      }
+    ]
+  },
+  "fits": [
+    {
+      "run_id": "yousfi_r3_taper_marginhinge_e5_20260620",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": null,
+        "summary_best_score": 0.30522108701598094,
+        "summary_best_ep": 14850
+      },
+      "schema": "torch_vehicle",
+      "n_points": 218,
+      "epoch_span": [
+        25,
+        15650
+      ],
+      "final_d_seg": 0.002075356370769441,
+      "min_d_seg": 0.0020605384030689794,
+      "wall_clock_s": 91049.79633188248,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0022628343655213363,
+        "amp": 0.019672676478455397,
+        "tau": 76.50003838200665,
+        "r2": 0.9304114220333715
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.002061707834150469,
+        "c": 0.21183778081398952,
+        "p": 0.8322407891079268,
+        "r2": 0.9808413581096789
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.002061707834150469,
+        "c": 0.21183778081398952,
+        "p": 0.8322407891079268,
+        "r2": 0.9808413581096789
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 62.43680836448077,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 25.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 5.962132521570262,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 75.04311446759755,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 51.73428623654161,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 157.45648789513876,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 170.77211071434195,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 703.12396026538,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 673.1412281858243,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 1583.6547756493858,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 1680.026812344366,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.002061707834150469
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.016687528875966865
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 3025,
+          "d_seg": 0.00232795717039456
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 8700,
+          "d_seg": 0.0021277194594343505
+        },
+        {
+          "stage": "stage4_v332_qat",
+          "epoch": 10175,
+          "d_seg": 0.002084952451599141
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 10700,
+          "d_seg": 0.002075169876528283
+        }
+      ]
+    },
+    {
+      "run_id": "distortion_arm_l235_20260612T205102Z",
+      "config_key": "bc20_n600_L2+L2+L3+L5",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 29650,
+        "summary_best_score": 0.35119901365943296,
+        "summary_best_ep": 2400,
+        "levers": {
+          "lever1_rate_surrogate": false,
+          "lever2_seg_surrogate": "soft_cosine",
+          "lever2_temperature_anneal": "1.0->0.05",
+          "lever3_pose_film": true,
+          "lever4_score_aware_qat": false,
+          "lever5_margin_weight_tau": 2.0
+        },
+        "train_device": "mps",
+        "authority_device": "cpu",
+        "async_eval": true,
+        "eval_every": 25,
+        "seed": 0,
+        "command": "experiments/launch_l2_combined_attacks.py --go --levers seg_pose --seg-surrogate soft_cosine --seg-temperature 1.0 --seg-temperature-end 0.05 --margin-weight-tau 2.0 --no-score-aware-qat --rate-lambda-w 0.0 --rate-lambda-lat 0.0 --total-epoch-budget 29650 --eval-every 25 --train-device mps --device cpu --async-eval --n-pairs 600 --base-channels 20 --seed 0",
+        "experiment": "distortion_arm_l235 (Track-A HNeRV base_ch=20 + distortion levers 2,3,5)"
+      },
+      "schema": "torch_vehicle",
+      "n_points": 203,
+      "epoch_span": [
+        450,
+        5525
+      ],
+      "final_d_seg": 0.0036834038669864336,
+      "min_d_seg": 0.0024664476203421753,
+      "wall_clock_s": 244886.2434592247,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.003452852414511654,
+        "amp": 0.00248140566834855,
+        "tau": 305.69591080814456,
+        "r2": 0.07010922957328658
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0034573498189516723,
+        "c": 29556.123477497877,
+        "p": 2.891456656197599,
+        "r2": 0.05652735798974584
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.003452852414511654,
+        "amp": 0.00248140566834855,
+        "tau": 305.69591080814456,
+        "r2": 0.07010922957328658
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 144.4144879132356,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 1699.8048454732282,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.003452852414511654
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 2364.4536665367923,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.003452852414511654
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.003452852414511654
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 450,
+          "d_seg": 0.0038891432154923677
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 3025,
+          "d_seg": 0.003361409492790699
+        }
+      ]
+    },
+    {
+      "run_id": "yousfi_r2_arm_a_marginhinge_20260619T234500Z",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": null,
+        "summary_best_score": 2.3958683469660893,
+        "summary_best_ep": 3425
+      },
+      "schema": "torch_vehicle",
+      "n_points": 84,
+      "epoch_span": [
+        25,
+        4300
+      ],
+      "final_d_seg": 0.002403776383337875,
+      "min_d_seg": 0.0022015889377022782,
+      "wall_clock_s": 69160.79902505875,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0024435319614361417,
+        "amp": 0.006636561265739927,
+        "tau": 133.75038464786036,
+        "r2": 0.9227701922671186
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0020951067065605,
+        "c": 0.055488741364900104,
+        "p": 0.6709265695804321,
+        "r2": 0.9477606264418607
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0020951067065605,
+        "c": 0.055488741364900104,
+        "p": 0.6709265695804321,
+        "r2": 0.9477606264418607
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 122.77366557628642,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 25.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 1.2448861371900077,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 25.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 18.255894233005403,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 99.38435181609286,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 81.1729212640903,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 486.64399922439645,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 461.728005380992,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 1132.8635422510984,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 1530.8939284745813,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0020951067065605
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.008363562729209661
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 3025,
+          "d_seg": 0.0025836944735298556
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_c1prime_honest_b20_n48",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 83,
+      "epoch_span": [
+        5,
+        121
+      ],
+      "final_d_seg": 0.0101165771484375,
+      "min_d_seg": 0.009348763463397821,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.009767287469219147,
+        "amp": 0.00045246097352733846,
+        "tau": 4.760024629011334,
+        "r2": 0.016136056771491103
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.00977046623009253,
+        "c": 0.005369788371064372,
+        "p": 2.292119246982575,
+        "r2": 0.009421360514855648
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.009767287469219147,
+        "amp": 0.00045246097352733846,
+        "tau": 4.760024629011334,
+        "r2": 0.016136056771491103
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 5.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 5.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 3.1649289265626157,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.009767287469219147
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.009767287469219147
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.009767287469219147
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.009767287469219147
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 5,
+          "d_seg": 0.5054077605406443
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 5,
+          "d_seg": 0.016544024149576824
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 5,
+          "d_seg": 0.010028627390662829
+        },
+        {
+          "stage": "stage4_v332_qat",
+          "epoch": 5,
+          "d_seg": 0.010130882418404022
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 5,
+          "d_seg": 0.010054164566099644
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 5,
+          "d_seg": 0.01011414003248016
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 5,
+          "d_seg": 0.010035938893755278
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 5,
+          "d_seg": 0.009806526980052391
+        },
+        {
+          "stage": "stage4_v332_qat",
+          "epoch": 7,
+          "d_seg": 0.010114457923918962
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.19121848295132318
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 10,
+          "d_seg": 0.01459259462232391
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 10,
+          "d_seg": 0.01019128163655599
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 10,
+          "d_seg": 0.010032441622267166
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 10,
+          "d_seg": 0.010104497118542591
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 10,
+          "d_seg": 0.010023646832754215
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.009749518552174171
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 15,
+          "d_seg": 0.0460851447035869
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 15,
+          "d_seg": 0.013503710428873697
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 15,
+          "d_seg": 0.010174645421405634
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 15,
+          "d_seg": 0.010030110677083334
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 15,
+          "d_seg": 0.010070164998372396
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 15,
+          "d_seg": 0.010001288416484991
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 15,
+          "d_seg": 0.00970702695970734
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 20,
+          "d_seg": 0.03668763923148314
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 20,
+          "d_seg": 0.012368519945691029
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 20,
+          "d_seg": 0.010162459375957647
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 20,
+          "d_seg": 0.01002343495686849
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 20,
+          "d_seg": 0.010056495666503906
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 20,
+          "d_seg": 0.009953392979999384
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 20,
+          "d_seg": 0.009672800699869791
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.0249786376953125
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 25,
+          "d_seg": 0.011646164736400047
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 25,
+          "d_seg": 0.010025130274395147
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 25,
+          "d_seg": 0.010052999171117941
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 25,
+          "d_seg": 0.009911537015189728
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 25,
+          "d_seg": 0.009622891899198294
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 27,
+          "d_seg": 0.010043991884837547
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 30,
+          "d_seg": 0.021789126719037693
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 30,
+          "d_seg": 0.011145485720286766
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 30,
+          "d_seg": 0.010040389063457647
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 30,
+          "d_seg": 0.009880913576732079
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 30,
+          "d_seg": 0.009594069638599953
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 35,
+          "d_seg": 0.020389556884765625
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 35,
+          "d_seg": 0.010829607645670572
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 35,
+          "d_seg": 0.010055436131854853
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 35,
+          "d_seg": 0.009857495625813803
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 35,
+          "d_seg": 0.009553697115431229
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 40,
+          "d_seg": 0.019770092330873013
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 40,
+          "d_seg": 0.010540220576028029
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 40,
+          "d_seg": 0.010038481870045265
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 40,
+          "d_seg": 0.009835772992422184
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 40,
+          "d_seg": 0.009497218610097965
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 45,
+          "d_seg": 0.010296609563132128
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 45,
+          "d_seg": 0.01001379219815135
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 45,
+          "d_seg": 0.009446038088450829
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 50,
+          "d_seg": 0.01012621990715464
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 50,
+          "d_seg": 0.010010719144095978
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 50,
+          "d_seg": 0.009431309066712856
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 55,
+          "d_seg": 0.010007222648710012
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 55,
+          "d_seg": 0.01003021669263641
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 55,
+          "d_seg": 0.009407891115794579
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 60,
+          "d_seg": 0.009889072738587856
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 60,
+          "d_seg": 0.010030322708189487
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 60,
+          "d_seg": 0.009383413475006819
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 65,
+          "d_seg": 0.009795506795247396
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 65,
+          "d_seg": 0.010025448476274809
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 65,
+          "d_seg": 0.009367094840854406
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 70,
+          "d_seg": 0.009725570678710938
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 70,
+          "d_seg": 0.010024706522623697
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 75,
+          "d_seg": 0.00968816534926494
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 75,
+          "d_seg": 0.010028627390662829
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 76,
+          "d_seg": 0.009681701504935821
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 80,
+          "d_seg": 0.010038587885598341
+        }
+      ]
+    },
+    {
+      "run_id": "bindall_arm_b_canonical50k_mh_n600",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 50000,
+        "summary_best_score": 0.4010927988790982,
+        "summary_best_ep": 2800
+      },
+      "schema": "torch_vehicle",
+      "n_points": 62,
+      "epoch_span": [
+        50,
+        5709
+      ],
+      "final_d_seg": 0.003530459953472018,
+      "min_d_seg": 0.0022607083013281228,
+      "wall_clock_s": 81506.01022005081,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0026763287767184495,
+        "amp": 0.004177670026077342,
+        "tau": 715.8312449721191,
+        "r2": 0.8211525546493504
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0012072250383759445,
+        "c": 0.025474991981178044,
+        "p": 0.3423162529521663,
+        "r2": 0.8369798148106016
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0012072250383759445,
+        "c": 0.025474991981178044,
+        "p": 0.3423162529521663,
+        "r2": 0.8369798148106016
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 788.9756720039869,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 50.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.14979420066065913,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 50.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 22.36631306097539,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 246.1678790245275,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 260.8274057426247,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 2087.4167809205524,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 2328.2393137414933,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 3042.704581058037,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 6051.416132566201,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": 25249.74688917295,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 50,
+          "d_seg": 0.007987340297549963
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 5109,
+          "d_seg": 0.0034420182804266613
+        }
+      ]
+    },
+    {
+      "run_id": "bindall_arm_b_canonical50k_n600",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 50000,
+        "summary_best_score": 0.4251943670084436,
+        "summary_best_ep": 2700
+      },
+      "schema": "torch_vehicle",
+      "n_points": 53,
+      "epoch_span": [
+        50,
+        3700
+      ],
+      "final_d_seg": 0.0023702155286446213,
+      "min_d_seg": 0.0023702155286446213,
+      "wall_clock_s": 51141.261707782745,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0022144460247189497,
+        "amp": 0.004161335711989425,
+        "tau": 1390.2879528862054,
+        "r2": 0.9727794595017504
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 1.976575884260921e-18,
+        "c": 0.01982604479250796,
+        "p": 0.2339831119150324,
+        "r2": 0.9183871523745261
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0022144460247189497,
+        "amp": 0.004161335711989425,
+        "tau": 1390.2879528862054,
+        "r2": 0.9727794595017504
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 1588.7459596870906,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 50.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 50.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 469.24830369444993,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 558.0467635769137,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 2499.966121051876,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 2317.891156547275,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 3368.402157975107,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 3724.804316509036,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0022144460247189497
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 50,
+          "d_seg": 0.0072202046898504095
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_full_mps_basin_bc20_n600",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": null,
+        "summary_best_score": 0.3705082156709133,
+        "summary_best_ep": 2325
+      },
+      "schema": "torch_vehicle",
+      "n_points": 32,
+      "epoch_span": [
+        10,
+        2325
+      ],
+      "final_d_seg": 0.0025607554148882627,
+      "min_d_seg": 0.0025607554148882627,
+      "wall_clock_s": 1073.3192620277405,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0033515786210139417,
+        "amp": 0.2531868573031666,
+        "tau": 7.606970575212975,
+        "r2": 0.990471082026971
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0031503371221241402,
+        "c": 6.649769056600757,
+        "p": 1.987726217963671,
+        "r2": 0.9974171365252187
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0031503371221241402,
+        "c": 6.649769056600757,
+        "p": 1.987726217963671,
+        "r2": 0.9974171365252187
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 6.832177142578253,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 14.137806582579946,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 12.097466384040661,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 35.03266054874987,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 31.82666612749483,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 165.5357990777931,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 61.494301920770084,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 982.2041959896882,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0031503371221241402
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0031503371221241402
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0031503371221241402
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.07171724066138267
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_gate15_descended_n8",
+      "config_key": "bc20_n8_noflag",
+      "config": {
+        "base_channels": 20,
+        "n_pairs": 8
+      },
+      "schema": "capstone",
+      "n_points": 29,
+      "epoch_span": [
+        3,
+        78
+      ],
+      "final_d_seg": 0.04227447509765625,
+      "min_d_seg": 0.04172833636403084,
+      "wall_clock_s": 2284.2521719932556,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.07518741029117815,
+        "amp": 0.587627990523992,
+        "tau": 7.953172993262322,
+        "r2": 0.8654620043804296
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.005604940526860907,
+        "c": 1.0788214606676134,
+        "p": 0.696666841212563,
+        "r2": 0.8698049833625499
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.005604940526860907,
+        "c": 1.0788214606676134,
+        "p": 0.696666841212563,
+        "r2": 0.8698049833625499
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 4.507196569090038,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 65.40990625179732,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 97.48110894330897,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": 2695.2519063462214,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.005604940526860907
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.005604940526860907
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.005604940526860907
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.005604940526860907
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 3,
+          "d_seg": 0.5074195861816406
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 11,
+          "d_seg": 0.33905091881752014
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 26,
+          "d_seg": 0.09261003881692886
+        },
+        {
+          "stage": "stage4_v332_qat",
+          "epoch": 28,
+          "d_seg": 0.08384831994771957
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 31,
+          "d_seg": 0.08696237951517105
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 55,
+          "d_seg": 0.10907363891601562
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 60,
+          "d_seg": 0.0736134871840477
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 68,
+          "d_seg": 0.046365100890398026
+        }
+      ]
+    },
+    {
+      "run_id": "from0_ab_v2_n96/control",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 800,
+        "summary_best_score": 0.45535824256713875,
+        "summary_best_ep": 789
+      },
+      "schema": "torch_vehicle",
+      "n_points": 29,
+      "epoch_span": [
+        25,
+        789
+      ],
+      "final_d_seg": 0.003590689778017501,
+      "min_d_seg": 0.003590689778017501,
+      "wall_clock_s": 4127.962558031082,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0034204446812804044,
+        "amp": 1.129386043924389,
+        "tau": 31.615407535387746,
+        "r2": 0.9920439180675507
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 2.1117916308833657e-19,
+        "c": 67.64208550464762,
+        "p": 1.5100710543205578,
+        "r2": 0.9627944337097625
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0034204446812804044,
+        "amp": 1.129386043924389,
+        "tau": 31.615407535387746,
+        "r2": 0.9920439180675507
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 27.30482368752395,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 92.65175227336488,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 100.79838337228206,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 172.8080849543854,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 162.67588686997536,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 327.5379461582821,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 207.78550274814324,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0034204446812804044
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0034204446812804044
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0034204446812804044
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.5067344804604849
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 106,
+          "d_seg": 0.02644109756996234
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 258,
+          "d_seg": 0.006100760617603858
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 311,
+          "d_seg": 0.005196306466435392
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 554,
+          "d_seg": 0.003928873280528933
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 608,
+          "d_seg": 0.003841559092203776
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 689,
+          "d_seg": 0.0037531322450377047
+        }
+      ]
+    },
+    {
+      "run_id": "from0_ab_v2_n96/stack_ce_early",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 800,
+        "summary_best_score": 0.5181091802284721,
+        "summary_best_ep": 789
+      },
+      "schema": "torch_vehicle",
+      "n_points": 29,
+      "epoch_span": [
+        25,
+        789
+      ],
+      "final_d_seg": 0.004060904146172106,
+      "min_d_seg": 0.004060904146172106,
+      "wall_clock_s": 11709.955055952072,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002869132539230728,
+        "amp": 1.00401334073586,
+        "tau": 37.171681396035794,
+        "r2": 0.9953470544320664
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 3.887546496753717e-19,
+        "c": 47.52406844092314,
+        "p": 1.3972188406732566,
+        "r2": 0.9567053761067741
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002869132539230728,
+        "amp": 1.00401334073586,
+        "tau": 37.171681396035794,
+        "r2": 0.9953470544320664
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 30.659154197575823,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 102.36900598436023,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 113.7019449511161,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 167.23271656509536,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 183.90048892288655,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 321.64272298407064,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 228.8003017224663,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": 332.5129866859429,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.002869132539230728
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.002869132539230728
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.5067344804604849
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 106,
+          "d_seg": 0.03788391733542085
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 258,
+          "d_seg": 0.005823506197581689
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 311,
+          "d_seg": 0.005104541856174667
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 554,
+          "d_seg": 0.004133913161543508
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 608,
+          "d_seg": 0.004149171989411116
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 689,
+          "d_seg": 0.004155794818264742
+        }
+      ]
+    },
+    {
+      "run_id": "from0_ab_v2_n96/stack_lovasz",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 800,
+        "summary_best_score": 0.5741302129110637,
+        "summary_best_ep": 789
+      },
+      "schema": "torch_vehicle",
+      "n_points": 29,
+      "epoch_span": [
+        25,
+        789
+      ],
+      "final_d_seg": 0.004391882025326292,
+      "min_d_seg": 0.004391882025326292,
+      "wall_clock_s": 10173.270900249481,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 4.075617743704002e-17,
+        "amp": 0.8989370050933344,
+        "tau": 52.554211206091104,
+        "r2": 0.9301778303005712
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 2.5013923620181784e-22,
+        "c": 24.85854772869665,
+        "p": 1.1715314145320241,
+        "r2": 0.8272607322900773
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 4.075617743704002e-17,
+        "amp": 0.8989370050933344,
+        "tau": 52.554211206091104,
+        "r2": 0.9301778303005712
+      },
+      "best_fit_floor_is_physical": true,
+      "epochs_to_halve_dseg": 56.680268421214805,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 103.43852890651982,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 151.83909907750595,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 164.93125268989417,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 236.4218390506582,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 371.04130736894916,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 272.84964237471235,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": 299.69568009559373,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": 309.2774456987667,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": 321.0045790238111,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.5067344804604849
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 106,
+          "d_seg": 0.026058779718975227
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 258,
+          "d_seg": 0.006273057622214158
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 311,
+          "d_seg": 0.005456235725432634
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 554,
+          "d_seg": 0.00458902782217289
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 608,
+          "d_seg": 0.004552205481256048
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 689,
+          "d_seg": 0.004505793292385836
+        }
+      ]
+    },
+    {
+      "run_id": "yousfi_r2_marginhinge_fullmps_20260620",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": null,
+        "summary_best_score": 0.3287197814318741,
+        "summary_best_ep": 2950
+      },
+      "schema": "torch_vehicle",
+      "n_points": 28,
+      "epoch_span": [
+        2400,
+        4525
+      ],
+      "final_d_seg": 0.0023120880064864953,
+      "min_d_seg": 0.0022386084652195374,
+      "wall_clock_s": 30580.954803943634,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0024244588398122263,
+        "amp": 7.352430486895022e-09,
+        "tau": 177.05476178021252,
+        "r2": -5.993494589517923e-11
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.002424546852980724,
+        "c": 0.00014509635613002043,
+        "p": 1.3453782636653264,
+        "r2": -2.108230743980144e-06
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0024244588398122263,
+        "amp": 7.352430486895022e-09,
+        "tau": 177.05476178021252,
+        "r2": -5.993494589517923e-11
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 2400.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 2400.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 2400.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 2400.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 2400.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0024244588398122263
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 2400,
+          "d_seg": 0.002401377366234859
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 3025,
+          "d_seg": 0.002872814607496063
+        }
+      ]
+    },
+    {
+      "run_id": "from0_ab_v2/control",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 800,
+        "summary_best_score": 0.48183522973919063,
+        "summary_best_ep": 689
+      },
+      "schema": "torch_vehicle",
+      "n_points": 25,
+      "epoch_span": [
+        25,
+        689
+      ],
+      "final_d_seg": 0.0037303415623803934,
+      "min_d_seg": 0.0037303415623803934,
+      "wall_clock_s": 148139.2047317028,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0038157316240805365,
+        "amp": 0.012083218402887608,
+        "tau": 59.219329367182,
+        "r2": 0.9638147527620378
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0029976283653180315,
+        "c": 0.1466009229132341,
+        "p": 0.8540382958604905,
+        "r2": 0.9810198128040708
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0029976283653180315,
+        "c": 0.1466009229132341,
+        "p": 0.8540382958604905,
+        "r2": 0.9810198128040708
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 92.36530597516877,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 25.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 3.788333638785977,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 38.17058427720081,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 35.20805700761055,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 152.38714172331623,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 152.4983402425854,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": 407307.87252021517,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0029976283653180315
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0029976283653180315
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.012413084208965301
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 106,
+          "d_seg": 0.006707839990655581
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 258,
+          "d_seg": 0.004246495608240366
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 311,
+          "d_seg": 0.00397650821134448
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 554,
+          "d_seg": 0.0037433370016515255
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 608,
+          "d_seg": 0.0037394120947768293
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 689,
+          "d_seg": 0.0037303415623803934
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_curriculum_b20_n48",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 21,
+      "epoch_span": [
+        5,
+        65
+      ],
+      "final_d_seg": 0.4984813282887141,
+      "min_d_seg": 0.4984813282887141,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.29489933784827005,
+        "amp": 0.21204477534517596,
+        "tau": 2999.9382423594666,
+        "r2": 0.4334963934679411
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.3753360945258664,
+        "c": 0.13354118632685977,
+        "p": 0.010000146009735842,
+        "r2": 0.2305629652724862
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.29489933784827005,
+        "amp": 0.21204477534517596,
+        "tau": 2999.9382423594666,
+        "r2": 0.4334963934679411
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.29489933784827005
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.29489933784827005
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.29489933784827005
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.29489933784827005
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.29489933784827005
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.29489933784827005
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 5,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 5,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 10,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 15,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 15,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 20,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 20,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 25,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 30,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 30,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 35,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 35,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 40,
+          "d_seg": 0.5053805311520895
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 40,
+          "d_seg": 0.5053805311520895
+        }
+      ]
+    },
+    {
+      "run_id": "oomph_scaled_n96/scaled_sw1.5_ep600",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 600,
+        "summary_best_score": 0.39482267898148404,
+        "summary_best_ep": 210
+      },
+      "schema": "torch_vehicle",
+      "n_points": 21,
+      "epoch_span": [
+        10,
+        210
+      ],
+      "final_d_seg": 0.0027055210666731,
+      "min_d_seg": 0.0027055210666731,
+      "wall_clock_s": 4090.0087678432465,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002120149427551851,
+        "amp": 0.0015518195331224603,
+        "tau": 217.41069138204153,
+        "r2": 0.9994333414990147
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 2.334637161160249e-05,
+        "c": 0.004747508511113089,
+        "p": 0.09843499061490069,
+        "r2": 0.903946942362205
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002120149427551851,
+        "amp": 0.0015518195331224603,
+        "tau": 217.41069138204153,
+        "r2": 0.9994333414990147
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 124.84401980748439,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 123.36563662785073,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": 305.9849960249396,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.002120149427551851
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.0036074321057337024
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_gate15_descended_n24",
+      "config_key": "bc20_n24_noflag",
+      "config": {
+        "base_channels": 20,
+        "n_pairs": 24
+      },
+      "schema": "capstone",
+      "n_points": 18,
+      "epoch_span": [
+        5,
+        78
+      ],
+      "final_d_seg": 0.020001305267214775,
+      "min_d_seg": 0.011758380569517612,
+      "wall_clock_s": 5908.690660953522,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.077180727732832,
+        "amp": 5.639528996119209,
+        "tau": 1.0000000000000038,
+        "r2": 0.008559060217386394
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.07723014578949809,
+        "c": 110.18423425643705,
+        "p": 4.999999999997243,
+        "r2": 0.007368759414328241
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.077180727732832,
+        "amp": 5.639528996119209,
+        "tau": 1.0000000000000038,
+        "r2": 0.008559060217386394
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 2.189553994174359,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 7.512423729757252,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.077180727732832
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.077180727732832
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.077180727732832
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.077180727732832
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.077180727732832
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.077180727732832
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 5,
+          "d_seg": 0.1172964299718539
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 13,
+          "d_seg": 0.02038892110188802
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 27,
+          "d_seg": 0.012093438146015009
+        },
+        {
+          "stage": "stage4_v332_qat",
+          "epoch": 28,
+          "d_seg": 0.011758380569517612
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 33,
+          "d_seg": 0.012304941813151041
+        },
+        {
+          "stage": "stage6_lambda_sweep",
+          "epoch": 57,
+          "d_seg": 0.2859001159667969
+        },
+        {
+          "stage": "stage7_sigma_sweep",
+          "epoch": 62,
+          "d_seg": 0.09342596431573232
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 70,
+          "d_seg": 0.021623823170860607
+        }
+      ]
+    },
+    {
+      "run_id": "yousfi_r3_MUONJUMP_stage8_lr1e3_20260623T180100Z",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": null,
+        "summary_best_score": 0.3065714166565974,
+        "summary_best_ep": 24725
+      },
+      "schema": "torch_vehicle",
+      "n_points": 18,
+      "epoch_span": [
+        24675,
+        25700
+      ],
+      "final_d_seg": 0.0021106380969285964,
+      "min_d_seg": 0.0020778740818301836,
+      "wall_clock_s": 15726.78323507309,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0021091150322495355,
+        "amp": 0.0010421159521987041,
+        "tau": 341.6666666666667,
+        "r2": -9.992007221626409e-15
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.002034413787766699,
+        "c": 0.2682960474546517,
+        "p": 0.8076387298966815,
+        "r2": -0.0426064280036047
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0021091150322495355,
+        "amp": 0.0010421159521987041,
+        "tau": 341.6666666666667,
+        "r2": -9.992007221626409e-15
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 53.571003216220404,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 335.0366858339636,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0021091150322495355
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 24675,
+          "d_seg": 0.0020842319043974083
+        }
+      ]
+    },
+    {
+      "run_id": "oomph_ft_n96/ce_continue",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 150,
+        "summary_best_score": 0.4343837601541057,
+        "summary_best_ep": 150
+      },
+      "schema": "torch_vehicle",
+      "n_points": 15,
+      "epoch_span": [
+        10,
+        150
+      ],
+      "final_d_seg": 0.0033819941648592553,
+      "min_d_seg": 0.0033819941648592553,
+      "wall_clock_s": 2080.1105148792267,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0033641989462179643,
+        "amp": 0.0002165902849961748,
+        "tau": 67.70157168324224,
+        "r2": 0.9956472037251881
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0025250654783519058,
+        "c": 0.0012228296838843649,
+        "p": 0.06869252970781564,
+        "r2": 0.9815752595717775
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0033641989462179643,
+        "amp": 0.0002165902849961748,
+        "tau": 67.70157168324224,
+        "r2": 0.9956472037251881
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0033641989462179643
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0033641989462179643
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0033641989462179643
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.0035540262858072915
+        }
+      ]
+    },
+    {
+      "run_id": "oomph_ft_n96/gentle",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 150,
+        "summary_best_score": 0.4635222806715431,
+        "summary_best_ep": 150
+      },
+      "schema": "torch_vehicle",
+      "n_points": 15,
+      "epoch_span": [
+        10,
+        150
+      ],
+      "final_d_seg": 0.0037003622855991125,
+      "min_d_seg": 0.0037003622855991125,
+      "wall_clock_s": 2877.5095479488373,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0036983724217434706,
+        "amp": 0.0001214106551630292,
+        "tau": 53.90349909807151,
+        "r2": 0.9735737559967851
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.003452965000866513,
+        "c": 0.00047098381730004455,
+        "p": 0.12364732976199802,
+        "r2": 0.9531734354394846
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0036983724217434706,
+        "amp": 0.0001214106551630292,
+        "tau": 53.90349909807151,
+        "r2": 0.9735737559967851
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0036983724217434706
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0036983724217434706
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0036983724217434706
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.0037947760817284384
+        }
+      ]
+    },
+    {
+      "run_id": "oomph_ft_n96/oomph",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 150,
+        "summary_best_score": 0.38787665361724644,
+        "summary_best_ep": 150
+      },
+      "schema": "torch_vehicle",
+      "n_points": 15,
+      "epoch_span": [
+        10,
+        150
+      ],
+      "final_d_seg": 0.0027857356471940875,
+      "min_d_seg": 0.0027857356471940875,
+      "wall_clock_s": 2890.507499694824,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0026425050586643614,
+        "amp": 0.0011335702474624943,
+        "tau": 69.55881361036246,
+        "r2": 0.9969581070159599
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 1.8551108692704616e-11,
+        "c": 0.0047306293095779875,
+        "p": 0.10426211682551798,
+        "r2": 0.9613945454830968
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0026425050586643614,
+        "amp": 0.0011335702474624943,
+        "tau": 69.55881361036246,
+        "r2": 0.9969581070159599
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 76.85819130720246,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 80.27130426088041,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0026425050586643614
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0026425050586643614
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.0035989550136340163
+        }
+      ]
+    },
+    {
+      "run_id": "oomph_scaled_n96/iso_sw1.0",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 150,
+        "summary_best_score": 0.3865200817380472,
+        "summary_best_ep": 150
+      },
+      "schema": "torch_vehicle",
+      "n_points": 15,
+      "epoch_span": [
+        10,
+        150
+      ],
+      "final_d_seg": 0.0027898153445372977,
+      "min_d_seg": 0.0027898153445372977,
+      "wall_clock_s": 2871.0184812545776,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002655721551975244,
+        "amp": 0.0011340222492626166,
+        "tau": 67.59572808140638,
+        "r2": 0.9952222468309367
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 2.172248442409412e-11,
+        "c": 0.004741759169461118,
+        "p": 0.10454720247788223,
+        "r2": 0.959452843863471
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002655721551975244,
+        "amp": 0.0011340222492626166,
+        "tau": 67.59572808140638,
+        "r2": 0.9952222468309367
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 75.8833648001674,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 80.57920001956175,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.002655721551975244
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.002655721551975244
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.0036033524471955993
+        }
+      ]
+    },
+    {
+      "run_id": "from0_ab_v2_n96/stack",
+      "config_key": "bc20_n96_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 96,
+        "total_epoch_budget": 800,
+        "summary_best_score": 2.4308800217782243,
+        "summary_best_ep": 361
+      },
+      "schema": "torch_vehicle",
+      "n_points": 13,
+      "epoch_span": [
+        25,
+        361
+      ],
+      "final_d_seg": 0.022606372988472383,
+      "min_d_seg": 0.022606372988472383,
+      "wall_clock_s": 5847.807841062546,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 1.326663459482618e-17,
+        "amp": 0.759023356549113,
+        "tau": 147.1572993229279,
+        "r2": 0.708133010431973
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 6.78158199483694e-18,
+        "c": 4.068804675772192,
+        "p": 0.5641807845302054,
+        "r2": 0.48484922066649616
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 1.326663459482618e-17,
+        "amp": 0.759023356549113,
+        "tau": 147.1572993229279,
+        "r2": 0.708133010431973
+      },
+      "best_fit_floor_is_physical": true,
+      "epochs_to_halve_dseg": 148.50508329101342,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 201.30864839888804,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 400.2692586697144,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": 637.1097952914477,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": 739.1114624159515,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": 814.2831816343049,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": 841.1131295404552,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": 873.9503319131817,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 25,
+          "d_seg": 0.5067344804604849
+        },
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 106,
+          "d_seg": 0.5067344804604849
+        },
+        {
+          "stage": "stage3_v332_smooth",
+          "epoch": 258,
+          "d_seg": 0.02480962546542287
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 311,
+          "d_seg": 0.02330864779651165
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_capacity_ablation_2x2_20260611/bc20_p192",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 12,
+      "epoch_span": [
+        10,
+        120
+      ],
+      "final_d_seg": 0.01914978023463239,
+      "min_d_seg": 0.0164420073851943,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0226053197727977,
+        "amp": 7.425719821863558e-18,
+        "tau": 403.13313468568094,
+        "r2": 2.220446049250313e-16
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.022605319793819297,
+        "c": 6.308596975858737e-07,
+        "p": 4.53629667495544,
+        "r2": -1.5666452579665702e-09
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0226053197727977,
+        "amp": 7.425719821863558e-18,
+        "tau": 403.13313468568094,
+        "r2": 2.220446049250313e-16
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0226053197727977
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0226053197727977
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0226053197727977
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0226053197727977
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0226053197727977
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_capacity_ablation_2x2_20260611/bc20_p48",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 12,
+      "epoch_span": [
+        10,
+        120
+      ],
+      "final_d_seg": 0.0037343766695509353,
+      "min_d_seg": 0.0037343766695509353,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0019858423608872587,
+        "amp": 0.01104731161803411,
+        "tau": 63.41060401408829,
+        "r2": 0.9802675306432002
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 1.7224157176291998e-12,
+        "c": 0.032653211904445555,
+        "p": 0.41580348752488994,
+        "r2": 0.9283694840618045
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0019858423608872587,
+        "amp": 0.01104731161803411,
+        "tau": 63.41060401408829,
+        "r2": 0.9802675306432002
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 56.37134075991273,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 17.702243864769077,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 20.35337229213911,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 79.93556211070386,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 82.3619222818346,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": 151.43268651080012,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": 194.50647783459044,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": 422.2948411504722,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_capacity_ablation_2x2_20260611/bc24_p48",
+      "config_key": "bc24_n?_noflag",
+      "config": {
+        "base_channels": 24
+      },
+      "schema": "capstone",
+      "n_points": 12,
+      "epoch_span": [
+        10,
+        120
+      ],
+      "final_d_seg": 0.0028293397820865116,
+      "min_d_seg": 0.0028293397820865116,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0024809683007763735,
+        "amp": 0.011858110653161861,
+        "tau": 36.17047258864425,
+        "r2": 0.9884959972643708
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 2.5979040299229787e-17,
+        "c": 0.04238029023853275,
+        "p": 0.5356967339640077,
+        "r2": 0.9745796798639946
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.0024809683007763735,
+        "amp": 0.011858110653161861,
+        "tau": 36.17047258864425,
+        "r2": 0.9884959972643708
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 37.68459885797284,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 15.903611845164942,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 16.478352577913327,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 61.1232289720806,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 56.033035314111444,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 107.69802208250925,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 113.17026133382716,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": 232.74474330073312,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.0024809683007763735
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "longtrack_a_600_n600/oomph_film_long",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 600,
+        "summary_best_score": 0.34164911475456367,
+        "summary_best_ep": 120
+      },
+      "schema": "torch_vehicle",
+      "n_points": 12,
+      "epoch_span": [
+        10,
+        120
+      ],
+      "final_d_seg": 0.002091818928408126,
+      "min_d_seg": 0.002091818928408126,
+      "wall_clock_s": 16596.750447034836,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002076875890701748,
+        "amp": 0.00028160708442289084,
+        "tau": 47.419974271632576,
+        "r2": 0.9945522662256383
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.001133664567412825,
+        "c": 0.0014333579963928954,
+        "p": 0.08245907979442423,
+        "r2": 0.9953406639098336
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.001133664567412825,
+        "c": 0.0014333579963928954,
+        "p": 0.08245907979442423,
+        "r2": 0.9953406639098336
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 2.5890671777134734e-19,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 2.5272015534384606e-10,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 5.940647692770119e-06,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.04071879975125853,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 1.7873685087042939,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": 448.5839834224791,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.0023121219143892326
+        }
+      ]
+    },
+    {
+      "run_id": "yousfi_r3_MUONJUMP_stage8_20260623T145220Z",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": null,
+        "summary_best_score": 0.3046153809351681,
+        "summary_best_ep": 25225
+      },
+      "schema": "torch_vehicle",
+      "n_points": 9,
+      "epoch_span": [
+        24675,
+        25225
+      ],
+      "final_d_seg": 0.002079357587111493,
+      "min_d_seg": 0.0020780181838199498,
+      "wall_clock_s": 8981.597573041916,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002081341215598101,
+        "amp": 0.0010448710115936895,
+        "tau": 183.33333333333334,
+        "r2": -9.43689570931383e-14
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.0002165186755041018,
+        "c": 0.29445280711887245,
+        "p": 0.4999991553038911,
+        "r2": -0.278807555596039
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.002081341215598101,
+        "amp": 0.0010448710115936895,
+        "tau": 183.33333333333334,
+        "r2": -9.43689570931383e-14
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 0.0,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 23.60122592375149,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 24675.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": {
+            "epochs": 167.67529015992537,
+            "extrapolated": true,
+            "method": "exp_solve"
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.002081341215598101
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 24675,
+          "d_seg": 0.002089742023187379
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_daemon_b20_n48_stream",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 7,
+      "epoch_span": [
+        2,
+        14
+      ],
+      "final_d_seg": 0.01058038075764974,
+      "min_d_seg": 0.01058038075764974,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.008004937531424613,
+        "amp": 1.9568572804350959,
+        "tau": 1.0000000000000002,
+        "r2": 0.9927193087827196
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.01165671934682195,
+        "c": 5.147663045391519,
+        "p": 4.286978521222608,
+        "r2": 0.9999469215770925
+      },
+      "best_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.01165671934682195,
+        "c": 5.147663045391519,
+        "p": 4.286978521222608,
+        "r2": 0.9999469215770925
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 1.0991162593075066,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 3.7990730309196987,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": {
+            "epochs": 3.1359450236498736,
+            "extrapolated": true,
+            "method": "pow_solve"
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.01165671934682195
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.01165671934682195
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.01165671934682195
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.01165671934682195
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.01165671934682195
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_smoke_stored_latent_b20_n8",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5072727203369124,
+        "c": 3.058972939447053e-15,
+        "p": 0.2725831516145147,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_smoke_vq_index_b20_n8",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5072727203369124,
+        "c": 3.058972939447053e-15,
+        "p": 0.2725831516145147,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_stored_latent_smoke_b20_n8",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5072727203369124,
+        "c": 3.058972939447053e-15,
+        "p": 0.2725831516145147,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_validation_micro",
+      "config_key": "bc?_n?_noflag",
+      "config": {},
+      "schema": "capstone",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5072727203369124,
+        "c": 3.058972939447053e-15,
+        "p": 0.2725831516145147,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_vq_index_smoke_b20_n8",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": null,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5072727203369124,
+        "c": 3.058972939447053e-15,
+        "p": 0.2725831516145147,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5072727186977587,
+        "amp": 1.6857752069929192e-09,
+        "tau": 302.1238198828438,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5072727186977587
+          }
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "torch_vehicle_chaos_control_ab/arm_clean",
+      "config_key": "bc20_n48_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 48,
+        "total_epoch_budget": null,
+        "summary_best_score": 91.55016806436846,
+        "summary_best_ep": 10
+      },
+      "schema": "torch_vehicle",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        20
+      ],
+      "final_d_seg": 0.5053805212179819,
+      "min_d_seg": 0.5053805212179819,
+      "wall_clock_s": 1506.8079450130463,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5053805196195689,
+        "amp": 1.6464426179467744e-09,
+        "tau": 245.0254539511842,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5053805212179819,
+        "c": 1.3494832714550273e-16,
+        "p": 0.2469988231649872,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.5053805196195689,
+        "amp": 1.6464426179467744e-09,
+        "tau": 245.0254539511842,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5053805196195689
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5053805196195689
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5053805196195689
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5053805196195689
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5053805196195689
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.5053805196195689
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "chaos_ctrl_muon_basin",
+          "epoch": 5,
+          "d_seg": 0.5053805212179819
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_chaos_control_ab_v2/arm_clean",
+      "config_key": "bc20_n48_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 48,
+        "total_epoch_budget": null,
+        "summary_best_score": 91.55016806436846,
+        "summary_best_ep": 10
+      },
+      "schema": "torch_vehicle",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5053805212179819,
+      "min_d_seg": 0.5053805212179819,
+      "wall_clock_s": 2227.276537179947,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5053805212179813,
+        "c": 1.317371886810786e-15,
+        "p": 0.27375091982170974,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "chaos_ctrl_muon_basin",
+          "epoch": 5,
+          "d_seg": 0.5053805212179819
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_mps_descent_ab/arm_cpu",
+      "config_key": "bc20_n48_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 48,
+        "total_epoch_budget": null,
+        "summary_best_score": 91.55016806436846,
+        "summary_best_ep": 10
+      },
+      "schema": "torch_vehicle",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5053805212179819,
+      "min_d_seg": 0.5053805212179819,
+      "wall_clock_s": 1796.9902758598328,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5053805212179813,
+        "c": 1.317371886810786e-15,
+        "p": 0.27375091982170974,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "ab_muon_basin",
+          "epoch": 5,
+          "d_seg": 0.5053805212179819
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_mps_descent_ab/arm_mps",
+      "config_key": "bc20_n48_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 48,
+        "total_epoch_budget": null,
+        "summary_best_score": 91.40823671247523,
+        "summary_best_ep": 30
+      },
+      "schema": "torch_vehicle",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5053805212179819,
+      "min_d_seg": 0.5053805212179819,
+      "wall_clock_s": 384.8346998691559,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5053805212179813,
+        "c": 1.317371886810786e-15,
+        "p": 0.27375091982170974,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "ab_muon_basin",
+          "epoch": 5,
+          "d_seg": 0.5053805212179819
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_split_head_gate_n48/arm_cpu",
+      "config_key": "bc20_n48_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 48,
+        "total_epoch_budget": null,
+        "summary_best_score": 91.55016806436846,
+        "summary_best_ep": 10
+      },
+      "schema": "torch_vehicle",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5053805212179819,
+      "min_d_seg": 0.5053805212179819,
+      "wall_clock_s": 2051.0358710289,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5053805212179813,
+        "c": 1.317371886810786e-15,
+        "p": 0.27375091982170974,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "ab_muon_basin",
+          "epoch": 5,
+          "d_seg": 0.5053805212179819
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_split_head_gate_n48/arm_split_by_head",
+      "config_key": "bc20_n48_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 48,
+        "total_epoch_budget": null,
+        "summary_best_score": 90.04681851241708,
+        "summary_best_ep": 30
+      },
+      "schema": "torch_vehicle",
+      "n_points": 6,
+      "epoch_span": [
+        5,
+        30
+      ],
+      "final_d_seg": 0.5053805212179819,
+      "min_d_seg": 0.5053805212179819,
+      "wall_clock_s": 854.8153150081635,
+      "exp_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "pow_fit": {
+        "model": "pow_to_floor",
+        "floor": 0.5053805212179813,
+        "c": 1.317371886810786e-15,
+        "p": 0.27375091982170974,
+        "r2": 0.0
+      },
+      "best_fit": {
+        "model": "exp_to_floor",
+        "floor": 0.505380520142554,
+        "amp": 1.1061414239184093e-09,
+        "tau": 298.0815794631504,
+        "r2": 0.0
+      },
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.01": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.005": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.003": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.0025": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        },
+        "0.002": {
+          "measured": null,
+          "model": {
+            "epochs": null,
+            "extrapolated": true,
+            "method": "unreachable_target_below_model_floor",
+            "model_floor": 0.505380520142554
+          }
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "ab_muon_basin",
+          "epoch": 5,
+          "d_seg": 0.5053805212179819
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_daemon_b20_n48_LONG",
+      "config_key": "bc20_n?_noflag",
+      "config": {
+        "base_channels": 20
+      },
+      "schema": "capstone",
+      "n_points": 5,
+      "epoch_span": [
+        10,
+        50
+      ],
+      "final_d_seg": 0.008012135901177922,
+      "min_d_seg": 0.008012135901177922,
+      "wall_clock_s": null,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 18.496190616061376,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "g0_600_transfer_n600/oomph_600",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 100,
+        "summary_best_score": 0.33792131134557674,
+        "summary_best_ep": 50
+      },
+      "schema": "torch_vehicle",
+      "n_points": 5,
+      "epoch_span": [
+        10,
+        50
+      ],
+      "final_d_seg": 0.0021313391625881195,
+      "min_d_seg": 0.0021313391625881195,
+      "wall_clock_s": 6103.984181880951,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.003": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.0025": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 10,
+          "d_seg": 0.002305560638196766
+        }
+      ]
+    },
+    {
+      "run_id": "bindall_arm_b_n600",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 800,
+        "summary_best_score": 2.032318492836793,
+        "summary_best_ep": 40
+      },
+      "schema": "torch_vehicle",
+      "n_points": 4,
+      "epoch_span": [
+        10,
+        40
+      ],
+      "final_d_seg": 0.005596839052935441,
+      "min_d_seg": 0.005596839052935441,
+      "wall_clock_s": 5932.790613889694,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": 28.179268642291717,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 13.874808875890189,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.011455086581408978
+        }
+      ]
+    },
+    {
+      "run_id": "lever_ab_argmaxflip_20260612T123136Z",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": null,
+        "summary_best_score": 0.4841397714435803,
+        "summary_best_ep": 700
+      },
+      "schema": "torch_vehicle",
+      "n_points": 4,
+      "epoch_span": [
+        450,
+        700
+      ],
+      "final_d_seg": 0.003750635798399647,
+      "min_d_seg": 0.003750635798399647,
+      "wall_clock_s": 7034.645952939987,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 450,
+          "d_seg": 0.003973863404244184
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_capacity_ablation_2x2_20260611/bc24_p192",
+      "config_key": "bc24_n?_noflag",
+      "config": {
+        "base_channels": 24
+      },
+      "schema": "capstone",
+      "n_points": 3,
+      "epoch_span": [
+        10,
+        30
+      ],
+      "final_d_seg": 0.022345172008499503,
+      "min_d_seg": 0.01664919324684888,
+      "wall_clock_s": null,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_n600_resumable_20260611T2049",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "n_pairs": 600
+      },
+      "schema": "capstone",
+      "n_points": 3,
+      "epoch_span": [
+        10,
+        30
+      ],
+      "final_d_seg": 0.49458302577336627,
+      "min_d_seg": 0.028014729917049407,
+      "wall_clock_s": 5590.8692278862,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.028014729917049407
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_smoke_mlxgpu_dream",
+      "config_key": "bc?_n?_noflag",
+      "config": {},
+      "schema": "capstone",
+      "n_points": 3,
+      "epoch_span": [
+        1,
+        3
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": null,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "capstone_smoke_torchcpu_dream",
+      "config_key": "bc?_n?_noflag",
+      "config": {},
+      "schema": "capstone",
+      "n_points": 3,
+      "epoch_span": [
+        1,
+        3
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": null,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": []
+    },
+    {
+      "run_id": "from0_parity/cpu",
+      "config_key": "bc20_n16_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 16,
+        "total_epoch_budget": 160,
+        "summary_best_score": 91.51883483790976,
+        "summary_best_ep": 82
+      },
+      "schema": "torch_vehicle",
+      "n_points": 3,
+      "epoch_span": [
+        41,
+        158
+      ],
+      "final_d_seg": 0.5067234039306641,
+      "min_d_seg": 0.5067234039306641,
+      "wall_clock_s": 2332.277931213379,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 41,
+          "d_seg": 0.5067234039306641
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 82,
+          "d_seg": 0.5067234039306641
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 158,
+          "d_seg": 0.5067234039306641
+        }
+      ]
+    },
+    {
+      "run_id": "from0_parity/mps",
+      "config_key": "bc20_n16_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 16,
+        "total_epoch_budget": 160,
+        "summary_best_score": 89.96774244751225,
+        "summary_best_ep": 158
+      },
+      "schema": "torch_vehicle",
+      "n_points": 3,
+      "epoch_span": [
+        41,
+        158
+      ],
+      "final_d_seg": 0.5067234039306641,
+      "min_d_seg": 0.5067234039306641,
+      "wall_clock_s": 797.5733859539032,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage2_v331_softplus",
+          "epoch": 41,
+          "d_seg": 0.5067234039306641
+        },
+        {
+          "stage": "stage5_c1a_l7",
+          "epoch": 82,
+          "d_seg": 0.5067234039306641
+        },
+        {
+          "stage": "stage8_muon_finetune",
+          "epoch": 158,
+          "d_seg": 0.5067234039306641
+        }
+      ]
+    },
+    {
+      "run_id": "l2_combined_seg_pose_ab_20260612T204752Z",
+      "config_key": "bc20_n6_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 6,
+        "total_epoch_budget": null,
+        "summary_best_score": 81.8282530880009,
+        "summary_best_ep": 3
+      },
+      "schema": "torch_vehicle",
+      "n_points": 3,
+      "epoch_span": [
+        1,
+        3
+      ],
+      "final_d_seg": 0.799495279788971,
+      "min_d_seg": 0.799495279788971,
+      "wall_clock_s": 5.4450812339782715,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "self_test",
+          "epoch": 1,
+          "d_seg": 0.799495279788971
+        }
+      ]
+    },
+    {
+      "run_id": "bindall_arm_b_corrected_n600",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 2400,
+        "summary_best_score": 1.1129100847948237,
+        "summary_best_ep": 20
+      },
+      "schema": "torch_vehicle",
+      "n_points": 2,
+      "epoch_span": [
+        10,
+        20
+      ],
+      "final_d_seg": 0.009116405912985404,
+      "min_d_seg": 0.009116405912985404,
+      "wall_clock_s": 3458.848653793335,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 16.572489304592754,
+            "extrapolated": false,
+            "method": "interp"
+          },
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.011694352899988492
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_chaos_control_ab_v2/arm_noise",
+      "config_key": "bc20_n48_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 48,
+        "total_epoch_budget": null,
+        "summary_best_score": 91.62349729292575,
+        "summary_best_ep": 10
+      },
+      "schema": "torch_vehicle",
+      "n_points": 2,
+      "epoch_span": [
+        5,
+        10
+      ],
+      "final_d_seg": 0.5053805212179819,
+      "min_d_seg": 0.5053805212179819,
+      "wall_clock_s": 962.3711812496185,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "chaos_ctrl_muon_basin",
+          "epoch": 5,
+          "d_seg": 0.5053805212179819
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_chaos_control_smoke/arm_clean",
+      "config_key": "bc20_n2_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 2,
+        "total_epoch_budget": null,
+        "summary_best_score": 93.1307816129229,
+        "summary_best_ep": 2
+      },
+      "schema": "torch_vehicle",
+      "n_points": 2,
+      "epoch_span": [
+        1,
+        2
+      ],
+      "final_d_seg": 0.5075149536132812,
+      "min_d_seg": 0.5075149536132812,
+      "wall_clock_s": 23.709643125534058,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "chaos_ctrl_muon_basin",
+          "epoch": 1,
+          "d_seg": 0.5075149536132812
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_chaos_control_smoke/arm_noise",
+      "config_key": "bc20_n2_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 2,
+        "total_epoch_budget": null,
+        "summary_best_score": 93.1317766615772,
+        "summary_best_ep": 2
+      },
+      "schema": "torch_vehicle",
+      "n_points": 2,
+      "epoch_span": [
+        1,
+        2
+      ],
+      "final_d_seg": 0.5075149536132812,
+      "min_d_seg": 0.5075149536132812,
+      "wall_clock_s": 23.06303882598877,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "chaos_ctrl_muon_basin",
+          "epoch": 1,
+          "d_seg": 0.5075149536132812
+        }
+      ]
+    },
+    {
+      "run_id": "bindall_arm_b_canonical_n600",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 3200,
+        "summary_best_score": 1.6386039199307831,
+        "summary_best_ep": 10
+      },
+      "schema": "torch_vehicle",
+      "n_points": 1,
+      "epoch_span": [
+        10,
+        10
+      ],
+      "final_d_seg": 0.012715352276961009,
+      "min_d_seg": 0.012715352276961009,
+      "wall_clock_s": 1567.2096507549286,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.012715352276961009
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_n600_correct_faithful_20260612T010134",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "n_pairs": 600
+      },
+      "schema": "capstone",
+      "n_points": 1,
+      "epoch_span": [
+        10,
+        10
+      ],
+      "final_d_seg": 0.012166222482919693,
+      "min_d_seg": 0.012166222482919693,
+      "wall_clock_s": 11580.361390829086,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 10.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 10,
+          "d_seg": 0.012166222482919693
+        }
+      ]
+    },
+    {
+      "run_id": "capstone_resume_test",
+      "config_key": "bc20_n8_noflag",
+      "config": {
+        "base_channels": 20,
+        "n_pairs": 8
+      },
+      "schema": "capstone",
+      "n_points": 1,
+      "epoch_span": [
+        1,
+        1
+      ],
+      "final_d_seg": 0.5072727203369141,
+      "min_d_seg": 0.5072727203369141,
+      "wall_clock_s": 49.54237627983093,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 1,
+          "d_seg": 0.5072727203369141
+        }
+      ]
+    },
+    {
+      "run_id": "l2_combined_seg_pose_ab_20260612T141904Z",
+      "config_key": "bc20_n600_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 600,
+        "total_epoch_budget": 29650,
+        "summary_best_score": 0.5908481385590224,
+        "summary_best_ep": 450
+      },
+      "schema": "torch_vehicle",
+      "n_points": 1,
+      "epoch_span": [
+        450,
+        450
+      ],
+      "final_d_seg": 0.004232991561293602,
+      "min_d_seg": 0.004232991561293602,
+      "wall_clock_s": 2152.1126101017,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.01": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.005": {
+          "measured": {
+            "epochs": 450.0,
+            "extrapolated": false,
+            "method": "first_point_already_below"
+          },
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "stage1_v328_ce",
+          "epoch": 450,
+          "d_seg": 0.004232991561293602
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_split_head_smoke/arm_cpu",
+      "config_key": "bc20_n4_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 4,
+        "total_epoch_budget": null,
+        "summary_best_score": 92.146507201384,
+        "summary_best_ep": 2
+      },
+      "schema": "torch_vehicle",
+      "n_points": 1,
+      "epoch_span": [
+        2,
+        2
+      ],
+      "final_d_seg": 0.5078303217887878,
+      "min_d_seg": 0.5078303217887878,
+      "wall_clock_s": 18.7642822265625,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "ab_muon_basin",
+          "epoch": 2,
+          "d_seg": 0.5078303217887878
+        }
+      ]
+    },
+    {
+      "run_id": "torch_vehicle_split_head_smoke/arm_split_by_head",
+      "config_key": "bc20_n4_noflag",
+      "config": {
+        "base_channels": 20,
+        "device": "cpu",
+        "ema_decay": 0.999,
+        "latent_dim": 28,
+        "n_pairs": 4,
+        "total_epoch_budget": null,
+        "summary_best_score": 92.14603252523733,
+        "summary_best_ep": 2
+      },
+      "schema": "torch_vehicle",
+      "n_points": 1,
+      "epoch_span": [
+        2,
+        2
+      ],
+      "final_d_seg": 0.5078303217887878,
+      "min_d_seg": 0.5078303217887878,
+      "wall_clock_s": 10.32505989074707,
+      "exp_fit": null,
+      "pow_fit": null,
+      "best_fit": null,
+      "best_fit_floor_is_physical": false,
+      "epochs_to_halve_dseg": null,
+      "epochs_to_target": {
+        "0.05": {
+          "measured": null,
+          "model": null
+        },
+        "0.01": {
+          "measured": null,
+          "model": null
+        },
+        "0.005": {
+          "measured": null,
+          "model": null
+        },
+        "0.003": {
+          "measured": null,
+          "model": null
+        },
+        "0.0025": {
+          "measured": null,
+          "model": null
+        },
+        "0.002": {
+          "measured": null,
+          "model": null
+        }
+      },
+      "stage_transitions": [
+        {
+          "stage": "ab_muon_basin",
+          "epoch": 2,
+          "d_seg": 0.5078303217887878
+        }
+      ]
+    }
+  ]
+}
