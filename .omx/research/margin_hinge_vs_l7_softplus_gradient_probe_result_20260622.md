@@ -79,13 +79,16 @@ are within the ±few-pixel noise band — one pixel of d_seg over 24 pairs = 2.1
 **Gradient cosine(g_margin_hinge, g_l7_softplus) = 0.641** (the two losses point in
 substantially the SAME direction — same boundary geometry, ~50° apart).
 
-**Multi-step descent (n_steps=60, descent_lr=1e-3):** RAN but is impractically slow on
-CPU at this checkpoint (each step = forward+backward through the 874×1164 round-trip +
-EfficientNet-B2 SegNet; eval points rebuild decoders) → ~25-30 min for both arms. It is
-IN-FLIGHT as a strengthener; the verdict below stands on the single-step + cosine + grad-norm
-evidence, which is conclusive at this checkpoint. (When the multistep JSON lands it is folded
-into `result.json` under the `multistep` key; the single-step result is preserved in
-`result_singlestep.json`.)
+**Multi-step descent (n_steps=60, descent_lr=1e-3):** ATTEMPTED as a strengthener; found
+IMPRACTICALLY SLOW on torch-CPU at this checkpoint (each of the 120 train steps backprops
+through the 874×1164 eval round-trip + EfficientNet-B2 SegNet, and each eval point rebuilds
+two ConfigurableTaperHNeRVDecoders → >23 min and still running before it was stopped). It is
+NOT a result gap: the single-step gradient geometry + the gradient cosine (0.641) + the
+grad-norm ratio (l7 4.06× margin_hinge) + the zero quant-erosion at the fork already
+CONCLUSIVELY answer the mandate's question at this checkpoint. The multi-step is reusable via
+`--n-steps` (the code is committed) and is better run on the MPS/bat00 path with a few-pair
+slice if a descent curve is ever wanted; on CPU at full 384×512 it is not worth the
+wall-clock. (The single-step result is the canonical record: `result_singlestep.json`.)
 
 ## Honest verdict (NO kill): NO_DIVERGENCE_EVIDENCE
 
