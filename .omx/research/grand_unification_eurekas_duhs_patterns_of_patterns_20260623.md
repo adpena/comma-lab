@@ -151,6 +151,40 @@ horizon trajectory — is *known*, so it is an inductive bias we hand the decode
    converged vehicle that is *ours*, and it is the apples-to-apples baseline every task-aware variant is
    measured against.
 
+## 8. VERDICT UPDATE 2026-06-23 — the reducibility test returned (E2 REVERSED)
+
+`[MEASURED: dseg_reducibility_gt_margin_verdict_20260623.md, N=48, sanity 4.5% off live → trustworthy]`
+The decisive $0 test came back **IRREDUCIBLE** and **reverses E2's hypothesis** (measurement is
+authority): our decoder's flips concentrate at **LOW** frozen-GT-margin pixels (median **0.119** vs
+**5.81** non-flip — 49× less confident; 93.9% of flips at margin<0.5, a 71× over-concentration at the
+near-coin-flip label-noise frontier), NOT at the stark high-margin edge E2 predicted. The stark sky/road
+boundary is confident and our decoder gets it; the residual flips are the *fuzzy* class transitions.
+
+**Consequence — the d_seg axis is measured-capped:**
+- Trainer-side horizon-decoder reducible headroom = **ΔS 0.012 (margin≥0.5) to 0.024 (margin≥0.3)** — far
+  short of the ~0.14 ΔS needed to bring d_seg to the T_1 budget. → **#169 DOWNGRADED to a zero-byte
+  margin-term at most; NO from-scratch horizon-decoder campaign.**
+- Capacity context: the 177KB frontier reaches d_seg ~0.0007 (seg+pose budget 0.073), 2× above the T_3
+  budget (0.00032); our 82KB basis is at 0.0021. So d_seg is *partly* capacity-reducible but the
+  label-noise floor caps it ABOVE T_3 even for big decoders.
+
+**The edge MOVES (E1's "generate not store" still holds; the target changes):**
+1. **RATE — the concrete near-term exact-row mover (#154 queue).** Beat the borrowed frontier's 177KB by
+   entropy-recoding its bytes (weight-entropy NVRC/NeuroQuant, latent-AR constriction, sensitivity
+   bit-alloc) at fixed d_seg/d_pose → a lower exact row toward/below T_1. Caps near T_1, but it is REAL.
+2. **PARADIGM PIVOT for sub-0.15 — leave the RGB rung (R1).** The label-noise floor says sub-0.15 is NOT
+   reachable by RGB-decoder d_seg reduction. T_3 requires either a ≥camera-res decoder (capacity cliff) or
+   the **score-quotient / task-sufficient-statistic codec** (#155) — code the orbit, not the pixels.
+3. **GATING measurement (running):** the **384-bottleneck achievability floor** — is the d_seg cap
+   ABSOLUTE (the eval pipeline floors d_seg ≥ ~0.0007 for any 384-decoder → sub-0.15 needs higher res or
+   the pivot) or CAPACITY-limited (floor ≈ 0 → a bigger/higher-res decoder still has room)? Settles
+   whether to chase d_seg again at all.
+
+**Honest mission statement:** sub-0.19 (T_1) looks reachable by a rate win on the frontier; **sub-0.15
+(T_3) is, on current measurement, NOT reachable by RGB-decoder d_seg reduction — it needs the paradigm
+pivot or higher-resolution capacity.** This is a redirection, not a kill (no-premature-kill); the
+384-floor probe is the reactivation gate.
+
 ## 7. Cross-references
 - `frozen_contest_space_council_lenses_synthesis_20260612T173627Z.md` (the 17-lens parent)
 - `independent_dseg_bets_frontier_20260623.md` (a127), `horizon_band_dseg_lever_20260623.md` (aa98),
