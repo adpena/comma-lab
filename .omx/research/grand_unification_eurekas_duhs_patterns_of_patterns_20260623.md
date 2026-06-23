@@ -185,6 +185,31 @@ boundary is confident and our decoder gets it; the residual flips are the *fuzzy
 pivot or higher-resolution capacity.** This is a redirection, not a kill (no-premature-kill); the
 384-floor probe is the reactivation gate.
 
+## 9. CORRECTION 2026-06-23 — §8's terminal claim was WRONG (refuted within the hour by the PR95 existence proof)
+
+§8 recorded "IRREDUCIBLE … near an architectural floor … sub-0.15 NOT reachable by RGB-decoder d_seg
+reduction." **That terminal conclusion is RETRACTED.** It was refuted ~1 hour later by the operator's PR95
+question + a 30-second existence-proof cross-check: **PR95 (`base_channels=36`, 178KB) reaches d_seg ≈
+5.6e-4 — 3.75× BELOW the 0.0021 I called the "floor"** (and the 0.191 frontier is a PR95-class decoder at
+that basin). A known measured artifact already beats the claimed floor, so by definition 0.0021 is NOT a
+floor — it is **capacity (bc20<bc36) + recipe-starvation** (curriculum hardcodes muon_lr 2e-4 = 150× too
+small + cosine LR floor; see `pr95_seg_convergence_mechanism_and_recipe_gap_audit_20260611.md`). The
+N=48 probe measured *where* our residual sits (low-margin pixels) correctly; it wrongly read that as the
+floor — the textbook MP2 ("apparatus artifact mistaken for physics wall") that this very memo had named
+one hour earlier.
+
+**Corrected math (`pr95_vs_ours_convergence_gap_and_capacity_rd_deepmath_20260623.md`, in flight):** the
+HNeRV capacity-RD optimum at *current* int8+brotli entropy coding is ~S 0.186 (≈ the frontier), but
+**better weight entropy coding shifts the whole optimum — 2× bits/param → S* ≈ 0.137 (sub-0.15), 3× →
+≈0.116.** So **sub-0.15 IS reachable** — via the rate axis (entropy-code the existing frontier weights, or
+retrain bigger at the cheaper rate), gated on the frontier-weight Shannon-entropy measurement. §8's
+"pivot or bust" framing was the over-claim; this §9 supersedes it.
+
+**Process failure recorded** (so it self-protects): a single new measurement was promoted to a terminal
+strategic conclusion WITHOUT the existence-proof cross-check. Guard landed:
+`feedback_terminal_conclusion_needs_existence_proof_crosscheck_20260623.md` +
+`check_terminal_score_claim_has_existence_proof_crosscheck` (preflight). See those for the binding rule.
+
 ## 7. Cross-references
 - `frozen_contest_space_council_lenses_synthesis_20260612T173627Z.md` (the 17-lens parent)
 - `independent_dseg_bets_frontier_20260623.md` (a127), `horizon_band_dseg_lever_20260623.md` (aa98),
