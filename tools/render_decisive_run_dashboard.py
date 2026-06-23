@@ -148,7 +148,7 @@ def render(run_dir: Path, schedule_csv: Path, out: Path) -> None:
     total_epochs = bounds[-1][2] if bounds else None
 
     evals = [r for r in traj if r.get("d_seg") is not None]
-    le = summ.get("last_eval", {})
+    le = summ.get("last_eval") or {}  # summary may carry last_eval=null pre-first-eval (async eval lag); None.get crashes
     cur_dseg = le.get("d_seg")
     cur_dpose = le.get("d_pose")
     cur_S = le.get("score")
