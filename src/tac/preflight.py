@@ -5700,6 +5700,30 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #391: no hand-rolled contest-score arithmetic outside the
+        # canonical tac.contest_score helper (the HAND-ROLLED-SCORE bug class)
+        # 2026-06-23 per operator NON-NEGOTIABLE. The contest score formula
+        # (upstream/evaluate.py:92: 100*d_seg + sqrt(10*d_pose) +
+        # 25*bytes/37545489) was reconstructed across ~20+ files with the
+        # 37_545_489 rate denominator scattered everywhere and NO single
+        # upstream-verified helper. A subagent dropped the x25 on the rate
+        # term (claimed break-even d_seg 1.89e-3; correct ~8.07e-4). The fix
+        # is the canonical tac.contest_score module (compute_contest_score /
+        # seg_term / pose_term / rate_term / break_even_d_seg), cross-checked
+        # against the G3 dual exact row in
+        # src/tac/tests/test_contest_score_upstream_parity.py. Steers NEW
+        # hand-rolled score arithmetic toward the helper; same-line
+        # # HAND_ROLLED_SCORE_OK:<rationale> waiver (placeholder rejected per
+        # Catalog #287). WARN-ONLY at landing per CLAUDE.md "Strict-flip
+        # atomicity rule": ~20 legacy instances exist; a one-shot
+        # mass-migration would risk the compliance bedrock it protects. The
+        # live offender list is emitted for staged migration; strict-flip
+        # planned after the active decision surfaces are migrated.
+        # Memory: feedback_canonical_contest_score_helper_landed_20260623.md
+        check_no_hand_rolled_contest_score(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -84745,6 +84769,173 @@ def check_audit_provenance_claim_has_surface_and_reproduce_command(
     if strict and violations:
         raise PreflightError(
             "check_audit_provenance_claim_has_surface_and_reproduce_command "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+# === Catalog #391: no hand-rolled contest-score arithmetic ===
+# The contest score formula (upstream/evaluate.py:92) had been hand-rolled
+# across ~20+ files with the 37_545_489 constant scattered and NO single
+# canonical helper. A subagent dropped the x25 on the rate term (reported
+# break-even d_seg 1.89e-3 vs correct ~8.07e-4). The fix is the canonical
+# tac.contest_score helper; this gate steers NEW hand-rolled score
+# arithmetic toward it.
+_CHECK_391_RATE_DENOM_RE = re.compile(r"\b37_?545_?489\b")
+# rate-term pattern: `25 * <something> / <denom>` or `* 25` near the denom.
+_CHECK_391_RATE_TERM_RE = re.compile(r"25\s*\*\s*[^\n]{0,60}/\s*(?:37_?545_?489|[A-Za-z_][A-Za-z0-9_]*)")
+# seg-term pattern: `100 * d_seg` / `100 * segnet_dist`.
+_CHECK_391_SEG_TERM_RE = re.compile(r"100\s*\*\s*(?:d_seg|segnet_dist)\b")
+# pose-term pattern: `sqrt(10 * d_pose)` / `sqrt(posenet_dist * 10)` /
+# `(10 * d_pose) ** 0.5`.
+_CHECK_391_POSE_TERM_RE = re.compile(
+    r"sqrt\(\s*(?:10\s*\*\s*(?:d_pose|posenet_dist)|(?:d_pose|posenet_dist)\s*\*\s*10)"
+    r"|\(\s*10\s*\*\s*(?:d_pose|posenet_dist)\s*\)\s*\*\*\s*0\.5"
+)
+_CHECK_391_WAIVER_RE = re.compile(
+    r"#\s*HAND_ROLLED_SCORE_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+# The canonical module + its tests are the ONLY allowed home for the
+# raw formula/constant. Path-substring allowlist.
+_CHECK_391_CANONICAL_ALLOW = (
+    "src/tac/contest_score.py",
+    "test_contest_score_upstream_parity.py",
+    # The pre-existing sister constant homes (rate-term-only / training
+    # lambda / delta-composition) predate this gate and are the cited
+    # canonical sources in tac.contest_score's docstring. They are
+    # documented allowlist entries, NOT hand-rolls.
+    "src/tac/archive_byte_profile.py",
+    "src/tac/joint_scorer_aware_training.py",
+    "src/tac/score_composition/__init__.py",
+)
+
+
+def _check_391_waiver_ok(line: str) -> bool:
+    """True if a non-placeholder ``# HAND_ROLLED_SCORE_OK:`` is on the line."""
+    m = _CHECK_391_WAIVER_RE.search(line)
+    if not m:
+        return False
+    rationale = m.group("rationale").strip()
+    if not rationale or _PLACEHOLDER_RATIONALE_RE.match(rationale):
+        return False
+    return True
+
+
+def check_no_hand_rolled_contest_score(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse NEW hand-rolled contest-score arithmetic outside tac.contest_score.
+
+    Catalog #391 — the HAND-ROLLED-SCORE bug class 2026-06-23 per operator
+    NON-NEGOTIABLE. The contest score formula
+    (``upstream/evaluate.py:92``: ``100*d_seg + sqrt(10*d_pose) +
+    25*bytes/37545489``) had been reconstructed across ~20+ files with the
+    ``37_545_489`` rate denominator scattered everywhere and NO single
+    canonical helper verified against upstream. A subagent dropped the
+    ``x25`` on the rate term (claimed break-even ``d_seg`` 1.89e-3; correct
+    ``~8.07e-4``). The fix is the canonical :mod:`tac.contest_score` helper;
+    this gate steers consumers toward it.
+
+    Detection (line-level text scan over ``src/tac/`` + ``tools/`` +
+    ``experiments/``, excluding vendored/intake mirrors): a line VIOLATES
+    when it contains ANY of —
+      * the rate denominator literal ``37_545_489`` / ``37545489``;
+      * the rate-term pattern ``25 * ... / <denom>``;
+      * the seg-term pattern ``100 * d_seg`` / ``100 * segnet_dist``;
+      * the pose-term pattern ``sqrt(10 * d_pose)`` / ``(10*d_pose)**0.5``;
+    AND the file is NOT the canonical helper / its tests / a documented
+    sister-constant home (allowlist) AND the line carries NO same-line
+    ``# HAND_ROLLED_SCORE_OK:<rationale>`` waiver (placeholder rationale
+    rejected per Catalog #287).
+
+    WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule": there
+    are ~20 legacy hand-rolled instances; a one-shot mass-migration would
+    risk the compliance bedrock it protects. The live offender list is
+    emitted for staged migration. Strict-flip planned once the active
+    decision surfaces route through the canonical helper and the remaining
+    offenders are migrated OR waived.
+
+    **6-hook wire-in declaration** per Catalog #125:
+      * #1 sensitivity-map = N/A (defensive scanner gate).
+      * #2 Pareto constraint = N/A.
+      * #3 bit-allocator = N/A.
+      * #4 cathedral autopilot dispatch = ACTIVE (steers every score /
+        break-even decision surface through the single upstream-verified
+        formula; tac.contest_score is the durable consumed surface).
+      * #5 continual-learning posterior = N/A (the dropped-x25 incident is
+        the empirical anchor; no new canonical equation).
+      * #6 probe-disambiguator = N/A (single canonical formula, no
+        competing interpretations).
+    """
+    repo = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    files = _iter_python_files(repo, ["src/tac", "tools", "experiments"])
+    _vendored = (
+        "/pr_heads/",
+        "/leaderboard_intel_",
+        "/reverse_engineering_",
+        "/public_runtime_adapters_",
+        "/raw/kaggle_ingest/",
+        "/vendored/",
+        "_intake_",
+        "/av1_crf31_bicubic/",
+    )
+    for path in files:
+        rel = path.relative_to(repo) if path.is_absolute() else path
+        rel_s = str(rel)
+        if any(rel_s.endswith(a) or a in rel_s for a in _CHECK_391_CANONICAL_ALLOW):
+            continue
+        if any(marker in rel_s for marker in _vendored):
+            continue
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Cheap pre-filter: skip files with no candidate token at all.
+        if not (
+            _CHECK_391_RATE_DENOM_RE.search(text)
+            or "25 *" in text
+            or "25*" in text
+            or "100 *" in text
+            or "100*" in text
+            or "sqrt(" in text
+            or "** 0.5" in text
+            or "**0.5" in text
+        ):
+            continue
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if _check_391_waiver_ok(line):
+                continue
+            hit = None
+            if _CHECK_391_RATE_DENOM_RE.search(line):
+                hit = "rate-denominator literal 37_545_489"
+            elif _CHECK_391_RATE_TERM_RE.search(line):
+                hit = "rate-term 25*.../<denom>"
+            elif _CHECK_391_SEG_TERM_RE.search(line):
+                hit = "seg-term 100*d_seg"
+            elif _CHECK_391_POSE_TERM_RE.search(line):
+                hit = "pose-term sqrt(10*d_pose)"
+            if hit is not None:
+                violations.append(
+                    f"{rel_s}:{lineno} hand-rolled contest-score arithmetic "
+                    f"({hit}); import from tac.contest_score "
+                    "(compute_contest_score / seg_term / pose_term / "
+                    "rate_term / break_even_d_seg) OR add same-line "
+                    "# HAND_ROLLED_SCORE_OK:<rationale>"
+                )
+
+    if verbose and violations:
+        print(f"  [catalog-391] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_no_hand_rolled_contest_score "
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )

@@ -24,11 +24,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from tac.contest_score import break_even_d_seg
 
 _FRONTIER_S = 0.19110
 _TARGET_S = 0.15
-_RATE_DENOM = 37_545_489
 # Muon (stage 8) is the spectral d_seg finisher; AdamW stages 1-7 are expected power-law-slow on d_seg.
 _ADAMW_STAGE_INDICES = set(range(0, 7))  # 0..6 (stages 1-7); stage_index 7 = stage8 muon
 
@@ -83,11 +86,15 @@ def analyze(run_dir: Path) -> dict:
     cur_ep = cur["global_epoch"]
     cur_stage_index = int(cur.get("stage_index", -1))
 
-    # live break-even d_seg targets given the current pose+rate.
-    pose_term = (10 * cur_dpose) ** 0.5 if cur_dpose else 0.0
-    rate_term = 25 * (cur.get("archive_bytes", 0) or 0) / _RATE_DENOM
-    dseg_beat = (_FRONTIER_S - pose_term - rate_term) / 100 if cur_dpose else None
-    dseg_sub015 = (_TARGET_S - pose_term - rate_term) / 100 if cur_dpose else None
+    # live break-even d_seg targets given the current pose+rate, via the
+    # canonical tac.contest_score helper (carries the x25 on the rate term).
+    cur_bytes = cur.get("archive_bytes", 0) or 0
+    dseg_beat = (
+        break_even_d_seg(_FRONTIER_S, cur_dpose, cur_bytes) if cur_dpose else None
+    )
+    dseg_sub015 = (
+        break_even_d_seg(_TARGET_S, cur_dpose, cur_bytes) if cur_dpose else None
+    )
 
     # per-stage d_seg endpoints + log-log slope.
     by_stage: dict[str, list[dict]] = {}

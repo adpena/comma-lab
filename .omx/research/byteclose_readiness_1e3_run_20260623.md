@@ -49,17 +49,24 @@ PRISTINE VENDORED tree from `data/working/upstream/submissions/hnerv_muon/`, whi
 ---
 
 ## Fire condition (read off the live summary; do NOT touch the run)
-Binding term is d_seg. Current (last_eval, ep 25075): d_seg 0.00212, d_pose 3.3e-4, rate 0.00223,
-**advisory S 0.3248** (best so far 0.3066 @ep24725). pose+rate ≈ 0.0024, so the live break-even:
-* **beat 0.19110 → advisory d_seg < ~1.89e-3** (≈1.1× below the current 0.00212 — CLOSE; watch closely)
-* **sub-0.15 → advisory d_seg < ~1.48e-3**
+Binding term is d_seg. Current (last_eval, ep 25075): d_seg 0.00212, d_pose 3.3e-4, archive ≈ 79,592 B.
+The **pose TERM** = √(10·d_pose) ≈ 0.05745 and the **rate TERM** = 25·79592/37545489 ≈ 0.05300, so
+pose+rate **TERM** ≈ **0.1104** (NOT 0.0024 — that earlier figure was the bare rate *fraction* bytes/N
+with the ×25 dropped). The live break-even (via the canonical `tac.contest_score.break_even_d_seg`):
+* **beat 0.19110 → advisory d_seg < ~8.07e-4** (current 0.00212 is **~2.63× ABOVE** this — NOT close yet)
+* **sub-0.15 → advisory d_seg < ~3.96e-4**
 Fire when `torch_vehicle_summary.json:last_eval.score` (or `best_score`) **< 0.19110**.
 (G3 proved advisory↔contest-CPU ≈ 0.001%, so the advisory cross IS the trustworthy trigger.)
 
-> NOTE: these break-evens are LOOSER than the 06-22 runbook's (8.1e-4) because THIS run's pose+rate are
-> ~0.0024 vs the older run's ~0.108 — the smaller pose/rate budget leaves MORE room in d_seg. Re-derive
-> at fire time from the THEN-current `last_eval` pose+rate: `d_seg_breakeven = (0.19110 - sqrt(10·d_pose)
-> - 25·bytes/37545489) / 100`.
+> CORRECTION 2026-06-23 (canonical-score-helper hardening): the prior version of this block read
+> "beat → d_seg < ~1.89e-3 (≈1.1× below 0.00212)" and "sub-0.15 → ~1.48e-3". Those were WRONG — they
+> computed pose+rate as the bare rate FRACTION (bytes/N ≈ 0.0024) instead of the rate TERM (25·bytes/N ≈
+> 0.053) plus the pose TERM (√(10·d_pose) ≈ 0.057). The ×25 on the rate term was dropped. The corrected
+> break-even to beat is **8.07e-4** (the run is ~2.63× away, not 1.1×). The 06-22 runbook's 8.1e-4 was
+> CORRECT all along (its pose+rate budget was similar once the terms are computed right). Always re-derive
+> at fire time via the canonical helper: `from tac.contest_score import break_even_d_seg;
+> break_even_d_seg(0.19110, d_pose, archive_bytes)` (it carries the ×25 — a hand-rolled inline formula is
+> how the ×25 got dropped in the first place).
 
 ---
 
@@ -202,7 +209,7 @@ close: record the calibration row, keep descending (the d_seg loop continues), r
 | Inflate runtime tree taper-aware? | **VERIFIED NO** (copies fixed-taper vendored src) → Step 2 fix |
 | inflate.sh contract / member name | **VERIFIED** (`inflate.py SRC DST`, member `0.bin`, ZIP_STORED) |
 | CPU + CUDA eval files exist | **VERIFIED** (`modal_auth_eval_cpu.py` + `modal_auth_eval.py --gpu T4`) |
-| Fire-time break-even d_seg | **RE-DERIVE at fire** from then-current `last_eval` pose+rate (formula above) |
+| Fire-time break-even d_seg | **RE-DERIVE at fire** via `tac.contest_score.break_even_d_seg(0.19110, d_pose, archive_bytes)` (carries the ×25; current ≈ 8.07e-4, run ~2.63× away — see corrected Fire-condition block) |
 | `best/best_archive.bin` current at fire | **FILLS** (rebuild via Step 1 from EMA `.pt` if stale) |
 | Archive sha / size | **FILLS** (`shasum`/`stat` at fire) |
 | modal_auth_eval.py (CUDA) exact arg names | **FILLS** (grep before firing) |

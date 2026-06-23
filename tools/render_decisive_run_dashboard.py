@@ -28,16 +28,19 @@ import base64
 import csv
 import io
 import json
+import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import matplotlib
+
+from tac.contest_score import break_even_d_seg
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-_RATE_DENOM = 37_545_489
 _FRONTIER_S = 0.19110  # the borrowed exact frontier (contest-CPU) we must beat
 _TARGET_S = 0.15
 
@@ -174,11 +177,16 @@ def render(
     best = summ.get("best_score")
     best_ep = summ.get("best_ep")
 
-    # target d_seg lines using the run's CURRENT pose+rate terms (so they're the live break-even).
-    pose_term = (10 * cur_dpose) ** 0.5 if cur_dpose else 0.0
-    rate_term = 25 * (le.get("archive_bytes", 0) or 0) / _RATE_DENOM
-    dseg_beat = (_FRONTIER_S - pose_term - rate_term) / 100 if cur_dpose else None
-    dseg_sub015 = (_TARGET_S - pose_term - rate_term) / 100 if cur_dpose else None
+    # target d_seg lines using the run's CURRENT pose+rate terms (so they're the live
+    # break-even). Via the canonical tac.contest_score helper (carries the x25 on rate);
+    # numerically identical to the prior inline formula (output-equivalent migration).
+    cur_bytes = le.get("archive_bytes", 0) or 0
+    dseg_beat = (
+        break_even_d_seg(_FRONTIER_S, cur_dpose, cur_bytes) if cur_dpose else None
+    )
+    dseg_sub015 = (
+        break_even_d_seg(_TARGET_S, cur_dpose, cur_bytes) if cur_dpose else None
+    )
 
     plt.style.use("dark_background")
     fig, axes = plt.subplots(4, 1, figsize=(13, 16), sharex=True)
