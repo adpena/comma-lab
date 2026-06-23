@@ -392,3 +392,40 @@ the ~2–4× speedup estimate + the empirical-re-solve caveats are in the dedica
 bit-identical +2%); pose stays fp32-exact (compile drifts PoseNet 22%, REJECTED); validate LOCAL first (B=64
 may finally be GPU-bound, unlike bs=8 → then a paid GPU is worth re-pricing). The B=64 vehicle is a NEW-vehicle
 fixed-point solve, gated behind the current faithful bs=8 decisive run's stage-5 verdict.
+
+## APPEND 2026-06-23 (additive, HISTORICAL_PROVENANCE — body above unchanged): horizon d_seg is TRAINER-SIDE-ONLY + Muon conditioning under test
+
+Two measured session results that bind the capstone d_seg design:
+
+**(A) The residual d_seg is TRAINER-SIDE-ONLY — every $0 frontier-side path is CLOSED by exact-scorer
+measurement.** On the 0.19110 frontier the residual d_seg is 97.8% at the calibrated geometric horizon
+(seg-row 192 = cy·sy, cam rows ~421–444; a90 deep-math `horizon_deepmath_multilens_20260623.md`),
+shallow-margin (SegNet top1−top2 ≈ 0.102), but **diffuse + content-dependent + near-full-rank** (a3061:
+flip-set effective rank 547/600). Measured NO-GO at every cheap route: static per-pixel clamp/prior
+(a127 `independent_dseg_bets_frontier_20260623.md`: max 5.8% per-pixel flip-freq, no static always-wrong
+pixel; hood 0 flips; road-prior +0.100), horizon-band flip-residual sidecar (aa98
+`horizon_band_dseg_lever_20260623.md`: even the ORACLE is −4.65e-9 Δd_seg/byte < the −6.659e-9 rate
+break-even → storing the residual RAISES S), and frozen-instance ego-parameterization (a3061
+`frozen_instance_horizon_crossframe_result_20260623.md`: v_h(t)-alignment compresses the flip set 0.08%;
+a90's 16–262 B byte-floor was FALSIFIED by measurement 189–561×). **CAPSTONE IMPLICATION:** the capstone
+d_seg comes from BASE-RECONSTRUCTION FIDELITY at the horizon — bake a **horizon-band-weighted recon loss**
+at seg-rows ~188–196 (task #169; the calibrated horizon is a near-zero-byte KNOWN location). Do NOT design
+for a cheap horizon sidecar / geometric prior / task-space flip code — all measured-dominated.
+
+**(B) Muon-as-spectral-d_seg-finisher is UNDER TEST — do NOT assume it alone closes 600-pair d_seg.** The
+N=16 "MUON_BITES_FROM_STAGE4" probe DID NOT generalize: Muon 2e-4 on the real 600 pairs was FLAT over 375
+peak-LR epochs; the 1e-3 jump (the `--muon-lr` override, new launcher capability) is flat-to-slightly-up at
+~600 peak-LR epochs (anneal-driven descent predicted late by a99
+`muonjump_reroute_and_conditioning_deepmath_20260623.md`; verdict pending via monitor at ep ~28k). Mechanism
+(a99): Δd_seg ∝ η·a·σ̄ with cross-pair flip-ALIGNMENT a; N=16 has a≈1 (coherent → big bite), 600 pairs has
+small a (diverse flips → destructive averaging) → the bite is alignment-suppressed. Consistent with the
+B-INVARIANT Muon-η point above. **CAPSTONE IMPLICATION:** if 1e-3 is also flat-through-anneal, the capstone
+needs an ADDITIONAL d_seg mechanism (horizon-weighted loss + possibly capacity / a different boundary-
+localized optimizer), not the spectral optimizer alone. Reusable techniques landed: jump-to-Muon-from-
+checkpoint (`tools/build_stage8_muonjump_checkpoint.py`, surgical stage-8 reposition + genuine driver path)
+for fast optimizer-axis disambiguation; `--muon-lr` override.
+
+**(C) Compliance (capstone MUST honor):** ALL score/break-even math goes through `tac.contest_score`
+(Catalog #391, mirrors `upstream/evaluate.py:92`) — never hand-roll the formula (the ×25 rate-term lesson).
+Cross-refs: the four horizon memos + `frozen_instance_horizon_crossframe_structure_directive_20260623.md`
++ the byte-close readiness `byteclose_readiness_1e3_run_20260623.md`.
