@@ -70,6 +70,31 @@ Even simpler: a pure 2× recode of the *existing* frontier weights at fixed d_se
 5. **Lane hygiene:** collapse the 48 hnerv/capstone/pr95 registry lanes to this one program + its
    calibration points (CLAUDE.md retirement discipline); archive the rest with reactivation criteria.
 
+## 4b. GATE-1 RESULT (a2782, MEASURED on the real frontier archive) — recode is EXHAUSTED
+The frontier decoder is **already at the order-0 Shannon entropy floor: 5.629 bits/param vs 5.586 floor
+(ratio 1.0077, 1,226 bytes / ΔS −0.0008 headroom).** **A pure rate recode CANNOT reach sub-0.15** — this
+RETRACTS §2's "pure 2× recode → 0.132." The 2×-bits/param RD target is real but needs **lower-bit weights
+(INT4/INT3 score-aware QAT) or learned higher-order weight entropy** — a RETRAIN/REQUANT, not a recode. The
+author's own ablations pre-confirm this: DeepCABAC/order-2 coders were "neutral/marginal," and a 2× bigger
+ch=72 teacher "did not pay" (rate-dominated). Capacity scaling is also at the HNeRV RD optimum (bc36 ≈ p*).
+NVRC/related survive ONLY as **co-trained entropy + INT4 QAT during training**, not as a standalone recode.
+
+**The gap split (a2782, measured):** our 0.0021 plateau is (a) RECIPE throttle — the curriculum substituted
+muon_lr 2e-4 for the working 0.03 (controlled A/B: 0% vs 7.6× descent in 15 CE epochs); (b) under-
+convergence — our cleanest n600 is **stage-1-CE-only, paused mid-curriculum**, never reaching the
+d_seg-finishing stages; (c) capacity (smallest). **We have NEVER run our own decoder through the full
+corrected 8-stage curriculum to convergence at n600.**
+
+## 4c. THE decisive move (recode dead → sub-0.15 is a TRAINING problem)
+Fire the **full corrected 8-stage PR95 curriculum at n600 to convergence with the WORKING recipe (muon_lr
+0.03, NO cosine LR floor), bc20 then bc24, byte-close, exact-eval.** It is the ONLY measurement that says
+whether an OWN-trained small-byte decoder bends d_seg far enough to cross sub-0.15. It has been
+armed-but-never-cleanly-fired (the apparatus-gate-volume lesson). Author rationale (recovered verbatim):
+bc36 chosen for the RATE budget (INT8 brotli-fits), rate is binding (59.8% of his 0.1988 vs seg 30.8%); he
+names NO floor and NO future-work. sub-0.15 levers now: own-trained d_seg + co-trained INT4 QAT (lower bits
+without blowing d_seg — note int5 QAT previously capped ~0.49, so this is uncertain) + byte-neutral
+boundary-band taper. Full math: `pr95_vs_ours_convergence_gap_and_capacity_rd_deepmath_20260623.md`.
+
 ## 5. Honest state
 Frontier UNMOVED at 0.191 (borrowed). sub-0.19 reachable (RD optimum / rate recode); **sub-0.15 reachable
 via the rate axis (NVRC), quantified, gated on the entropy measurement now running.** No pointer has moved
