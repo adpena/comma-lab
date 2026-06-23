@@ -94,6 +94,19 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "apparatus_audit_pr95_breakthrough_blocker_20260619T214001Z.md.",
     )
     p.add_argument(
+        "--muon-lr",
+        type=float,
+        default=None,
+        help="Override the Muon LR on the use_muon stage(s) (stage 8 in the PR95 "
+             "curriculum). Default None = vendored curriculum muon_lr (2e-4). The driver "
+             "reads spec.muon_lr for BOTH the Muon optimizer LR (driver ~1791) and the "
+             "stage-8 cosine floor (driver ~1852: lr_floor_ratio/muon_lr, with "
+             "--muon-lr-floor-fix), so this single override keeps both consistent. "
+             "Used to disambiguate the 2e-4-flat-on-600-pairs finding (2026-06-23): is "
+             "2e-4 too timid on 600 pairs, or was the N=16 probe a memorization artifact? "
+             "Non-use_muon stages ignore muon_lr (no-op there).",
+    )
+    p.add_argument(
         "--defer-batch-sync",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -278,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
     # curriculum internally (byte-identical default). This rides on THIS launcher's
     # full-MPS pose path (the one that trains pose), NOT the bind-all split-by-head path.
     curriculum = None
-    if args.seg_margin_hinge:
+    if args.seg_margin_hinge or args.muon_lr is not None:
         import dataclasses
 
         from tac.torch_vehicle.curriculum import build_curriculum
@@ -288,7 +301,17 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.ema_decay,
             eval_every=args.eval_every,
         )
-        curriculum = [dataclasses.replace(s, seg_surrogate="margin_hinge") for s in specs]
+        if args.seg_margin_hinge:
+            specs = [dataclasses.replace(s, seg_surrogate="margin_hinge") for s in specs]
+        if args.muon_lr is not None:
+            # Override the Muon LR on the use_muon stage(s) only (stage 8). The driver reads
+            # spec.muon_lr for BOTH the optimizer LR and the cosine floor, so this single
+            # replace keeps them consistent; non-Muon stages ignore muon_lr (no-op).
+            specs = [
+                dataclasses.replace(s, muon_lr=args.muon_lr) if s.use_muon else s
+                for s in specs
+            ]
+        curriculum = specs
 
     driver = TorchVehicleDriver(
         cfg, scorer=scorer, vendored=import_vendored_bundle(), curriculum=curriculum
