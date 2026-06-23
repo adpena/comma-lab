@@ -109,6 +109,37 @@ def _fmt(x, nd=5):
     return "n/a" if x is None else f"{x:.{nd}f}"
 
 
+def _measure_spe(traj: list[dict], window_ep: int = 1500) -> float | None:
+    """Measured seconds/epoch from cumulative wall_clock_s over the most-recent window.
+
+    CRITICAL (encodes a real prior error): use the CURRENT-STAGE recent-window rate, NEVER
+    the whole-trace average and NEVER a hardcoded constant. Stages 1-4 (CE, no C1a/QAT) run
+    ~2-4x faster than stages 5-8 (C1a sample_size=2000 + QAT + Muon), so the whole-trace mean
+    (~5.7 s/ep) badly UNDER-estimates the remaining all-slow-stage time. A stale hardcoded
+    1.78 s/ep previously produced a ~7h ETA when the truth was ~2.3 days. The recent window is
+    the honest rate for the epochs that remain.
+    """
+    wc = sorted(
+        (r["global_epoch"], r["wall_clock_s"])
+        for r in traj
+        if r.get("wall_clock_s") is not None and r.get("global_epoch") is not None
+    )
+    if len(wc) < 2:
+        return None
+    cur_ep = wc[-1][0]
+    cand = [(e, t) for e, t in wc if e >= cur_ep - window_ep]
+    if len(cand) < 2:
+        cand = wc
+    (e0, t0), (e1, t1) = cand[0], cand[-1]
+    return (t1 - t0) / (e1 - e0) if e1 > e0 else None
+
+
+def _fmt_dur(hours: float | None) -> str:
+    if hours is None:
+        return "n/a"
+    return f"{hours:.1f} h" if hours < 48 else f"{hours / 24:.1f} d"
+
+
 def render(run_dir: Path, schedule_csv: Path, out: Path) -> None:
     traj = _read_trajectory(run_dir)
     summ = _read_summary(run_dir)
@@ -205,7 +236,21 @@ def render(run_dir: Path, schedule_csv: Path, out: Path) -> None:
     png_b64 = base64.b64encode(buf.getvalue()).decode()
 
     pct = (100.0 * cur_ep / total_epochs) if (cur_ep and total_epochs) else 0.0
-    eta_h = ((total_epochs - cur_ep) * 1.78 / 3600) if (cur_ep and total_epochs) else None
+    # MEASURED current-stage rate (NOT a hardcoded constant; see _measure_spe docstring).
+    spe = _measure_spe(traj)
+    stage8_start = bounds[-1][1] if bounds else None  # Muon (last scheduled stage) = the decisive d_seg read
+
+    def _eta_h(target_ep):
+        if not (spe and cur_ep and target_ep and target_ep > cur_ep):
+            return None
+        return (target_ep - cur_ep) * spe / 3600.0
+
+    next_bound = next(((nm, a) for nm, a, _ in bounds if a > (cur_ep or 0)), None)
+    eta_next = _eta_h(next_bound[1]) if next_bound else None
+    eta_stage8 = _eta_h(stage8_start)
+    eta_done = _eta_h(total_epochs)
+    spe_txt = f"{spe:.1f} s/ep" if spe else "n/a"
+    next_txt = (f"{next_bound[0].split('_')[0]} {_fmt_dur(eta_next)}" if next_bound and eta_next else "—")
     html = f"""<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="refresh" content="20">
 <title>Decisive run — {run_dir.name}</title>
@@ -227,11 +272,16 @@ def render(run_dir: Path, schedule_csv: Path, out: Path) -> None:
  <div class="card"><div class="k">d_pose</div><div class="v">{_fmt(cur_dpose)}</div></div>
  <div class="card"><div class="k">S (advisory)</div><div class="v">{_fmt(cur_S,5)}</div></div>
  <div class="card"><div class="k">best S</div><div class="v">{_fmt(best,5)} <span class="k">@ep {best_ep}</span></div></div>
- <div class="card"><div class="k">ETA→done</div><div class="v">{(f'{eta_h:.1f} h') if eta_h else 'n/a'}</div></div>
+ <div class="card"><div class="k">rate (measured)</div><div class="v">{spe_txt}</div></div>
+ <div class="card"><div class="k">ETA→next stage</div><div class="v">{next_txt}</div></div>
+ <div class="card"><div class="k">ETA→stage8 Muon</div><div class="v">{_fmt_dur(eta_stage8)}</div></div>
+ <div class="card"><div class="k">ETA→done</div><div class="v">{_fmt_dur(eta_done)}</div></div>
 </div>
 <div class="warn">⚠ All values [contest-CPU advisory] (macOS) — NON-PROMOTABLE. Authoritative score only from
  upstream/evaluate.py on the byte-closed archive. Frontier pointer (separate, byte-closed): {_FRONTIER_S}.
  To beat it: d_seg &lt; {_fmt(dseg_beat,6) if dseg_beat else 'n/a'} · sub-0.15: d_seg &lt; {_fmt(dseg_sub015,6) if dseg_sub015 else 'n/a'}.
+ ETAs use the MEASURED current-stage rate ({spe_txt}), not a constant — stages 5-8 run ~2-4× slower than 1-4, so the
+ whole-trace mean would lie. stage-8 (Muon) adds Newton-Schulz per step, so ETA→done is a LOWER bound until stage 8 starts.
  Updated {summ.get('updated_at_utc','?')} · dashboard {time.strftime('%H:%M:%SZ', time.gmtime())} · auto-refresh 20s.</div>
 <img src="data:image/png;base64,{png_b64}">
 </body></html>"""
