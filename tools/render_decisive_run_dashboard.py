@@ -140,8 +140,25 @@ def _fmt_dur(hours: float | None) -> str:
     return f"{hours:.1f} h" if hours < 48 else f"{hours / 24:.1f} d"
 
 
-def render(run_dir: Path, schedule_csv: Path, out: Path) -> None:
+def render(
+    run_dir: Path, schedule_csv: Path, out: Path, prepend_run_dirs: list[Path] | None = None
+) -> None:
+    # Stitch the FULL lineage trajectory so the plotted curves show the whole curriculum
+    # (e.g. the faithful stages 1-5 that produced the jumped-from weights, which live in a
+    # DIFFERENT run dir), not just this run's tail since the checkpoint resume/jump. Only the
+    # plotted curves use the merged history; the header + ETA still reflect the CURRENT run
+    # (summ/le below). A global_epoch gap (e.g. skipped stages 5-7 in a jump) renders honestly.
     traj = _read_trajectory(run_dir)
+    if prepend_run_dirs:
+        seen = {r.get("global_epoch") for r in traj if r.get("global_epoch") is not None}
+        lineage: list[dict] = []
+        for d in prepend_run_dirs:
+            try:
+                lineage.extend(_read_trajectory(d))
+            except (OSError, ValueError):
+                pass  # a missing/unreadable lineage dir must not break the live dashboard
+        merged = [r for r in lineage if r.get("global_epoch") not in seen] + traj
+        traj = sorted(merged, key=lambda r: (r.get("global_epoch") or 0))
     summ = _read_summary(run_dir)
     sched = _read_schedule(schedule_csv)
     bounds = _stage_bounds(sched)
@@ -298,15 +315,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--watch", action="store_true")
     ap.add_argument("--refresh-seconds", type=float, default=20.0)
+    ap.add_argument(
+        "--prepend-run-dir",
+        type=Path,
+        action="append",
+        default=None,
+        help="Lineage run dir(s) whose trajectory precedes --run-dir (repeatable). The "
+             "plotted curves stitch these + --run-dir into the FULL trajectory (e.g. the "
+             "faithful stages 1-5 before a stage-8 jump). Header/ETA still use --run-dir.",
+    )
     args = ap.parse_args(argv)
 
     if not args.watch:
-        render(args.run_dir, args.schedule_csv, args.out)
+        render(args.run_dir, args.schedule_csv, args.out, args.prepend_run_dir)
         print(f"[dashboard] rendered {args.run_dir.name} -> {args.out}")
         return 0
     while True:
         try:
-            render(args.run_dir, args.schedule_csv, args.out)
+            render(args.run_dir, args.schedule_csv, args.out, args.prepend_run_dir)
             print(f"[dashboard] rendered {args.run_dir.name} at {time.strftime('%H:%M:%SZ', time.gmtime())}", flush=True)
         except Exception as exc:  # a watch loop must not die on a transient read
             print(f"[dashboard] WARN {exc!r}", flush=True)
