@@ -28,6 +28,7 @@ import base64
 import csv
 import io
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -338,13 +339,49 @@ def main(argv: list[str] | None = None) -> int:
         render(args.run_dir, args.schedule_csv, args.out, args.prepend_run_dir)
         print(f"[dashboard] rendered {args.run_dir.name} -> {args.out}")
         return 0
+    # --watch: data-driven re-render + code HOT-RELOAD, dependency-free (Watchman would need a
+    # daemon to watch 2 files; stdlib mtime polling is the lean equivalent). Each short poll:
+    #  * if THIS source file changed AND still compiles -> os.execv re-exec (hot-reload the new
+    #    renderer code in-place, same PID/session so the daemon registry + orphan-guard hold);
+    #  * else if any watched data file (trajectory/summary of run-dir + prepend dirs) changed
+    #    -> re-render immediately (fresh the instant a new epoch/eval lands);
+    #  * else re-render at most every --refresh-seconds (keeps the live clock/ETA moving).
+    src = Path(__file__).resolve()
+    src_mtime = src.stat().st_mtime
+    watched = [args.run_dir, *(args.prepend_run_dir or [])]
+
+    def _data_sig() -> tuple:
+        sig = []
+        for d in watched:
+            for name in ("torch_vehicle_trajectory.jsonl", "torch_vehicle_summary.json"):
+                try:
+                    sig.append((d / name).stat().st_mtime)
+                except OSError:
+                    sig.append(0.0)
+        return tuple(sig)
+
+    last_render, last_sig = 0.0, ()
+    poll = max(0.5, min(2.0, args.refresh_seconds))
     while True:
-        try:
-            render(args.run_dir, args.schedule_csv, args.out, args.prepend_run_dir)
-            print(f"[dashboard] rendered {args.run_dir.name} at {time.strftime('%H:%M:%SZ', time.gmtime())}", flush=True)
-        except Exception as exc:  # a watch loop must not die on a transient read
-            print(f"[dashboard] WARN {exc!r}", flush=True)
-        time.sleep(args.refresh_seconds)
+        try:  # hot-reload our own code (no manual restart after a renderer edit)
+            if src.stat().st_mtime != src_mtime:
+                compile(src.read_text(), str(src), "exec")  # never reload into a SyntaxError
+                print("[dashboard] source changed -> hot-reload (os.execv)", flush=True)
+                os.execv(sys.executable, [sys.executable, str(src), *sys.argv[1:]])
+        except SyntaxError as exc:
+            print(f"[dashboard] source changed but has SyntaxError; keeping old code: {exc}", flush=True)
+            src_mtime = src.stat().st_mtime  # don't re-warn every poll
+        except OSError:
+            pass
+        sig, now = _data_sig(), time.time()
+        if sig != last_sig or (now - last_render) >= args.refresh_seconds:
+            try:
+                render(args.run_dir, args.schedule_csv, args.out, args.prepend_run_dir)
+                print(f"[dashboard] rendered {args.run_dir.name} at {time.strftime('%H:%M:%SZ', time.gmtime())}", flush=True)
+            except Exception as exc:  # a watch loop must not die on a transient read
+                print(f"[dashboard] WARN {exc!r}", flush=True)
+            last_render, last_sig = now, sig
+        time.sleep(poll)
 
 
 if __name__ == "__main__":
