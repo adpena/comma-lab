@@ -374,6 +374,19 @@ contest regime is an **MDL problem** (fewest bits to represent the argmax-edge m
 as the 8-dim island manifold + a topology-matched (step) basis. Falsification: if n600 converges FINER ≤0.90×
 SIREN, H1 wins + capacity framing wrong. Verdict ~ep1500 (~11h). Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24h (operator: + info-theory/signal-proc/set-theory/entropy/VCM/INR/optimal → 12-lens over-determination + NEW survival prediction)
+Regime memo §7b (commit 8bea1c7bb): 7 more lenses on the argmax-edge problem, ALL converging on
+step-native/partition-matched at the capacity regime (12 lenses total, over-determined): info-theory (MDL
+two-part, capacity ⟺ P·b<H_boundary); **signal-proc (NEW): round-trip = LOW-PASS; sine Gibbs RINGING aliases
+→ flips; steps no-ring → survive ⇒ step-native lowers the #149 survival-wall flip-fraction (~16%), not just
+the d_seg floor**; set-theory (d_seg = symmetric-diff of set partitions; indicator basis natively
+parametrizes membership); entropy (step lowers bits/edge → pushes capacity wall out); VCM (CEO/indirect-RD
+optimal = task-boundary-matched code); INR (weights-as-code → pick most-compressible-for-step architecture);
+optimal (both S terms → step basis = joint RD-optimum at capacity regime). **SCREEN ADDITION: the n600
+activation screen MUST measure round-trip SURVIVAL per activation (the #149 metric), not only d_seg** — tests
+the step-native-lowers-the-survival-wall prediction (first bridge between activation choice and the survival
+wall). Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
