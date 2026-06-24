@@ -357,6 +357,23 @@ FINER's spectral win is capacity-fragile, the step-shape axis (different from ba
 bandwidth doesn't. Existence-proof discipline: flagging my own prior as under-challenge, not defending it.
 Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24g (DEEP-MATH grounding of the n600 caution: activation choice is REGIME-dependent → predicts H2 + inverts the winner)
+Memo `activation_capacity_vs_bandwidth_regime_deepmath_20260624` (commit 9fa2aeaf0). Derived from NTK +
+MDL + topology + free-energy: per-frame budget = **P·b/n** → two regimes. **Bandwidth-limited (n100):**
+floor set by representable frequency band → FINER's broader band wins (✓ −18.7%). **Capacity-limited
+(n600/contest):** floor set by params-per-edge efficiency → FINER (sine) ties SIREN (same family); spectral
+band unusable under-budget. **PREDICTION (falsifiable @ ~ep1500): n600 FINER ≈ SIREN ±5%** (= H2, predicted
+NOT just observed; within-run 0.95→1.03 supports the mechanism). **THE INVERSION:** d_seg is a pointwise
+argmax-at-edge = **L∞-at-edge** criterion; a step encodes an edge in **O(1) params, zero Gibbs**, a sine
+needs **O(1/ε) harmonics + persistent 9% Gibbs overshoot** (which flips shallow-margin pixels = the #149
+texture-survival wall). So under capacity pressure the **step-native activations (hosc/step_basis) win MORE,
+not less** — opposite of FINER. PLAN CHANGES: (1) the activation screen MUST run at **n600** (capacity-limited
+contest regime; n100 ranking is bandwidth-regime, does NOT transfer — n100 = cheap pre-filter only); (2)
+predicted n600 ranking: hosc/step_basis > fkan > FINER≈SIREN≈finer_gauss > gauss/sinc; (3) sub-0.15 at the
+contest regime is an **MDL problem** (fewest bits to represent the argmax-edge manifold) = the same principle
+as the 8-dim island manifold + a topology-matched (step) basis. Falsification: if n600 converges FINER ≤0.90×
+SIREN, H1 wins + capacity framing wrong. Verdict ~ep1500 (~11h). Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
