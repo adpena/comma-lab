@@ -276,6 +276,22 @@ base-dependent). NET: every upstream seg approach either renders-RGB (architectu
 base-dependent sidecar our good base obviates → ALL routes converge on the trained generator + in-training
 saliency routing. Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24b (FINER/WIRE spectral screen DONE → FINER is a REAL d_seg architecture win; picks the chart)
+The spectral screen (a0e28b5, 3 arms × 3000ep × n100, byte-closed CPU-authority d_seg) FINISHED. **SIREN(ctrl)
+best d_seg 0.001692 (~ge300 0.004754 ✓ reproduces taper-screen 0.004756 → wire-in byte-identical clean);
+FINER best 0.001376 = 0.813× (−18.7%) CLEARS the 0.85× falsification bar; WIRE10 best 0.001659 = 0.98× NULL.**
+VERDICT: SPECTRAL-LIMITED (partially) — FINER's variable-local-frequency sin((|x|+1)·x) is a REAL d_seg lever
+at EQUAL bytes (the FIRST architecture-only positive d_seg lever this arc = the D(H) curve-shift the
+convergence required); WIRE's Gabor space-localization did NOT help (frequency-adaptivity > space-localization
+for the high-freq codim-1 boundary). 5-lens: spectral-bias fix (Tancik/Rahaman) — FINER extends the
+coordinate-net spectrum to the lane/island high-freq edges SIREN smooths; win at convergence (ep2895),
+marginal @ge300 (needs full budget). CAVEATS: n=100 proxy → advisory until n600 confirm; relative win (FINER
+vs SIREN equal-everything = the valid architecture answer). **PICKS the generator chart = FINER.** Generator
+spec now COMPLETE: FINER chart + geometry-PRIOR capacity routing (lane/horizon) + round-trip-in-loop +
+SegNet-saliency d_seg loss (v4-adopt) + custom witness format (rate). NEXT: n600 FINER confirm → from-scratch
+generator fire (local MPS free/slow vs Modal CUDA ≤$20 fast, #162-sanctioned) → byte-close → exact eval = the
+END. Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
