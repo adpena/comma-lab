@@ -237,6 +237,23 @@ criterion (nonlinear high-freq chart — FINER/WIRE tests it). NEXT: FINER/WIRE 
 with geometry-prior capacity routing + round-trip-in-loop + camera-res polytope on the lane band → byte-close
 in the custom format → exact eval. Pointer UNMOVED 0.19110; the END is that exact row.
 
+### DAG FEED 2026-06-23h (adversarial review of the sharpened design: camera-res polytope on HARD-PAINT is RED → texture-dependence wall → REINFORCES GO-GENERATOR, 7th angle)
+Existence-proof check on my own sharpened-design piece (#148/#149 pincer, `curve_core_gate_RED_survival_wall_
+and_the_pincer_20260618` + 2026-06-19 mechanism correction): camera-res sub-pixel boundary placement is
+**RED**. geo_recon fits (→0.00106 @ mp128, below GREEN) but **realized plateaus at 0.0067** (survival_gap
+0.0057, 6.3×); ~16% of boundary-band pixels flip through the roundtrip REGARDLESS of geometry fidelity OR
+differentiable color/boundary-offset pre-compensation. **MECHANISM (corrected): the wall is TEXTURE-DEPENDENCE,
+not the resize** — SegNet's argmax at the boundary is a function of the local TEXTURE in its receptive field,
+not the boundary-pixel position; a hard-painted (flat) neighborhood → wrong margin → flips. **CORRECTION to
+DAG-FEED-f/g sharpened design:** DROP "camera-res sub-pixel polytope placement on the lane band" as a
+standalone hard-paint lever (RED). The polytope feasibility must be solved over the RGB NEIGHBORHOOD (texture),
+not the boundary coordinate → that IS the trained generator producing the right texture. **REINFORCES
+GO-GENERATOR (7th converging line):** hard-paint / geometric / sidecar all fail the texture wall; only a
+trained generator that reproduces the local texture survives. The 8-dim island manifold IS the texture
+manifold the generator must learn. Revised generator spec: trained RGB-output generator (produces survival-
+texture) + geometry-PRIOR capacity routing (lane/horizon bands) + round-trip-in-loop + custom format (rate).
+No camera-res hard-paint step. Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
