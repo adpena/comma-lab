@@ -158,3 +158,24 @@ Pointer UNMOVED 0.191. Running: bc20_p192 (GPU, C1-scaling), c1prime (CPU, C-cur
 launch the next pursuit batch (top-AIML, recursive-greenup): the highest-EV cheap nodes first
 (A1/A2 exact-scorer smoke, B1 Cool-Chic param-at-basin, B-SHARED-MATH design), GPU-bound nodes serialized
 behind the capacity verdict. This memo is the canonical DAG every future tick + subagent consumes.
+
+---
+
+## DAG FEED 2026-06-23 (deep-math-grounded; frozen-instance-optimal; post adversarial-review-all)
+
+**Frontier UNMOVED 0.19110 (borrowed). Adversarial review (`adversarial_review_all_results_20260623.md`, a19c109): SOLID 3 / SUSPECT 2 / OVER-CLAIMED 3 / CONTAMINATED 1.**
+
+### SOLID (trust): recode@order-0-Shannon-floor; 384-floor 0.019 S (n600, sub-0.15 not pipeline-blocked); residency-no-op + scorer=97%/epoch (batch INERT); PR95 inflate→d_seg 6.02e-4; BUG-A muon_lr A/B.
+### SUSPECT / OVER-CLAIMED / CONTAMINATED (do NOT trust as settled):
+- **"0.191 = RGB ceiling" — UNDER-POWERED, NOT established.** The decisive link ("a small OWN-trained decoder can't reach sub-0.15 d_seg at the rate budget") was NEVER measured. Existence-proof cuts the OTHER way: bc20 break-even is d_seg<7.35e-4; **PR95 measures 5.6e-4 → a CONVERGED PR95-class small decoder is, on our own arithmetic, a sub-0.15 candidate.** DO NOT pivot off the RGB rung until measured.
+- **reverse-engineer-prune = CONTAMINATED as a capacity claim** (pruning a co-adapted net ≠ from-scratch; 60ep KD ≈500× less than PR95's 29,650). Capacity cliff is a pruning artifact, not a capacity verdict.
+- **taper "NO-GO" = SUSPECT/RETRACTED-DIRECTION:** the +18% was ge300 of a 3000 budget (stage-1/2, under-converged); **converged disk anchors FLIP the sign to −8% (taper may HELP).** Re-validate at convergence — NOT closed.
+- bit-depth "dead" = OVER-CLAIM (QAT-finetune int4/5/6 never run; only PTQ + int5). closed-form 0.111/0.179 = contaminated-α + chained hypotheses (directional only). non-RGB GO = conditional (2 unmeasured factors).
+
+### THE DECISIVE RE-VALIDATION (#1, load-bearing for 5/8 results + the whole strategy):
+**CLEAN from-scratch d_seg(capacity) sweep — bc20/24/28/32 trained FROM SCRATCH (NOT pruned) via the BUG-A-corrected 8-stage curriculum to CONVERGENCE → byte-close → exact-eval.** GREEN if converged bc20/24 byte-closes <0.19 (or <0.15); RED (ceiling earned on SOLID ground) only if a fully-converged from-scratch run caps d_seg ≥ break-even with a clean ≥3-pt α fit. The never-fired run (armed since 06-11; hardened launcher + command BUILT). **Per §6b anti-deferral gate: FIRE IT; stop characterizing the wall.**
+
+### NEW NODE — TOPOLOGY (deep-math, frozen-instance): d_seg is a PARTITION-topology problem = (near-constant region adjacency/components) + (codimension-1 boundary moving low-dim with EGO-MOTION). RGB decoder wastes capacity on trivial interiors, starves the boundary (= the cliff + spectral bias). Frozen-optimal code: constant template + ego-driven boundary DEFORMATION + RENDERED sub-pixel boundary (not flat-store). UNIFICATION: one ego-trajectory drives BOTH d_seg boundary AND d_pose. $0 gate: af64e924 (topology-constant? boundary low-dim/ego-explained vs a3061 flip-residual rank). Architecture match: contour/wavelet (Daubechies).
+
+### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
+### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
