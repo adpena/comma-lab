@@ -899,6 +899,16 @@ class TorchVehicleConfig:
     # swept). siren ignores wire_scale. [contest-CPU advisory] NON-PROMOTABLE; pointer-only.
     activation: str = "siren"
     wire_scale: float = 1.0
+    # NEXT-GEN INR ACTIVATION HYPERPARAMETERS (k1-for-d_seg screen, 2026-06-24 expansion).
+    # Only consulted for the matching --activation family (others ignore them, so defaults
+    # leave siren/finer/wire BYTE-IDENTICAL). ``hosc_beta`` = HOSC tanh(beta*sin(x))
+    # saturation/sharpness (beta->inf => step train); ``step_basis_k`` = K soft-steps in the
+    # learnable tanh step-basis (custom #2; 3K extra params); ``fkan_k`` = K harmonics in the
+    # learnable Fourier-series activation (custom #3; 2K extra params). The two learnable
+    # families add a small REPORTED byte delta (not byte-neutral). [contest-CPU advisory].
+    hosc_beta: float = 4.0
+    step_basis_k: int = 4
+    fkan_k: int = 5
     # WEIGHT-ENTROPY PENALTY (the Ballé end-to-end rate-distortion lever — the
     # un-integrated VCM term). DEFAULT 0.0 → BYTE-IDENTICAL (the term is never
     # computed, the penalty module is never built, its params never enter the
@@ -1525,6 +1535,9 @@ class TorchVehicleDriver:
                 channels=channels,
                 activation_family=_activation,
                 wire_scale=float(getattr(self.cfg, "wire_scale", 1.0)),
+                hosc_beta=float(getattr(self.cfg, "hosc_beta", 4.0)),
+                step_basis_k=int(getattr(self.cfg, "step_basis_k", 4)),
+                fkan_k=int(getattr(self.cfg, "fkan_k", 5)),
             ).to(dev)
         return self.v.HNeRVDecoder(
             latent_dim=self.cfg.latent_dim,

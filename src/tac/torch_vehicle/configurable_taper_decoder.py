@@ -137,6 +137,9 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
         channels: list[int] | None = None,
         activation_family: str = "siren",
         wire_scale: float = 1.0,
+        hosc_beta: float = 4.0,
+        step_basis_k: int = 4,
+        fkan_k: int = 5,
     ):
         super().__init__()
         self.eval_size = eval_size
@@ -144,17 +147,40 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
         # HIGH-FREQUENCY ACTIVATION FAMILY (the k1-for-d_seg architecture screen).
         # DEFAULT "siren" → ``apply_activation_family(..., omega=1.0)`` returns
         # ``torch.sin(1.0 * x) == torch.sin(x)`` → the forward is BIT-IDENTICAL to the
-        # vendored decoder (the parity contract is preserved). "finer"/"wire" swap ONLY
-        # the nonlinearity (same module shapes, same param count, same archive bytes) to
-        # test whether a variable-frequency (FINER) or Gabor-windowed (WIRE) activation
+        # vendored decoder (the parity contract is preserved). Non-siren FIXED-FORM
+        # families (finer/wire/gauss/hosc/sinc/rcgauss/finer_gauss) swap ONLY the
+        # nonlinearity (same module shapes, same param count, same archive bytes) to
+        # test whether a variable-frequency / step-matched / band-localized activation
         # lowers d_seg at the SAME byte budget — disambiguating SPECTRAL-BIAS vs
         # RAW-CAPACITY as the root of the small-budget d_seg deficit. ``omega`` is fixed
-        # at 1.0 (the vendored sine's effective ω) so siren is exactly the legacy path;
-        # ``wire_scale`` is the Gabor window scale (only consulted for "wire").
-        from tac.substrates.siren.activation_family import normalize_activation_family
+        # at 1.0 (the vendored sine's effective ω) so siren is exactly the legacy path.
+        # ``wire_scale`` is the Gabor/Gaussian window scale (wire/gauss/rcgauss/finer_gauss);
+        # ``hosc_beta`` is HOSC's saturation/sharpness control.
+        # LEARNABLE families (step_basis/fkan) carry their OWN small parameter set (a
+        # reported byte delta) via a single SHARED sub-activation module applied at all
+        # 3 _act sites — the "learn our own nonlinearity" path.
+        from tac.substrates.siren.activation_family import (
+            is_learnable_activation,
+            make_learnable_activation,
+            normalize_activation_family,
+        )
 
         self.activation_family = normalize_activation_family(activation_family)
         self.wire_scale = float(wire_scale)
+        self.hosc_beta = float(hosc_beta)
+        self.step_basis_k = int(step_basis_k)
+        self.fkan_k = int(fkan_k)
+        # One shared learnable sub-activation (None for fixed-form families). It is a
+        # real nn.Module parameter set — its params ARE in the state_dict (byte delta).
+        if is_learnable_activation(self.activation_family):
+            self._learnable_act: nn.Module | None = make_learnable_activation(
+                self.activation_family,
+                omega=1.0,
+                step_basis_k=self.step_basis_k,
+                fkan_k=self.fkan_k,
+            )
+        else:
+            self._learnable_act = None
         if channels is None:
             channels = vendored_taper(base_channels)
         if len(channels) != 7:
@@ -190,7 +216,11 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
     def _act(self, x):
         """The decoder nonlinearity. For activation_family="siren" this is exactly
         ``torch.sin(x)`` (apply_activation_family with omega=1.0) so the forward is
-        BIT-IDENTICAL to the vendored decoder; "finer"/"wire" swap only the function."""
+        BIT-IDENTICAL to the vendored decoder. Non-siren FIXED-FORM families swap only
+        the function; LEARNABLE families (step_basis/fkan) route through the shared
+        learnable sub-activation module (its real parameters)."""
+        if self._learnable_act is not None:
+            return self._learnable_act(x)
         from tac.substrates.siren.activation_family import apply_activation_family
 
         return apply_activation_family(
@@ -198,6 +228,7 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
             activation_family=self.activation_family,
             omega=1.0,
             wire_scale=self.wire_scale,
+            hosc_beta=self.hosc_beta,
         )
 
     def forward(self, z):

@@ -6,6 +6,8 @@ import torch
 
 from tac.substrates.siren.activation_family import (
     ACTIVATION_FAMILY_IDS,
+    FIXED_FORM_ACTIVATION_IDS,
+    LEARNABLE_ACTIVATION_IDS,
     SIREN_ACTIVATION_FAMILIES,
     activation_family_manifest,
     normalize_activation_family,
@@ -40,11 +42,25 @@ def _meta(cfg: SirenConfig) -> dict[str, object]:
 
 
 def test_activation_family_registry_names_all_comparison_modes() -> None:
-    assert set(ACTIVATION_FAMILY_IDS) == {"siren", "finer", "wire", "bacon"}
+    # The legacy 4 plus the 2026-06-24 next-gen INR expansion (fixed-form + learnable).
+    assert {"siren", "finer", "wire", "bacon"}.issubset(set(ACTIVATION_FAMILY_IDS))
+    assert {"gauss", "hosc", "sinc", "rcgauss", "finer_gauss"}.issubset(
+        set(FIXED_FORM_ACTIVATION_IDS)
+    )
+    assert set(LEARNABLE_ACTIVATION_IDS) == {"step_basis", "fkan"}
+    # fixed-form + learnable partition the full id set with no overlap.
+    assert set(FIXED_FORM_ACTIVATION_IDS).isdisjoint(set(LEARNABLE_ACTIVATION_IDS))
+    assert set(FIXED_FORM_ACTIVATION_IDS) | set(LEARNABLE_ACTIVATION_IDS) == set(
+        ACTIVATION_FAMILY_IDS
+    )
     assert set(SIREN_ACTIVATION_FAMILIES) == set(ACTIVATION_FAMILY_IDS)
     manifest = activation_family_manifest()
     assert manifest["siren"]["full_paper_architecture"] is True
     assert manifest["wire"]["full_paper_architecture"] is False
+    # learnable families carry the learnable flag; fixed-form do not.
+    assert manifest["step_basis"]["learnable"] is True
+    assert manifest["fkan"]["learnable"] is True
+    assert manifest["siren"]["learnable"] is False
 
 
 @pytest.mark.parametrize(
@@ -66,7 +82,11 @@ def test_unknown_activation_family_fails_closed() -> None:
         SirenConfig(activation_family="made_up")  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("activation_family", ACTIVATION_FAMILY_IDS)
+# The SIREN coordinate-MLP substrate consumes FIXED-FORM families via
+# apply_activation_family. The LEARNABLE families (step_basis/fkan) are parametric
+# nn.Module sub-activations designed for the torch_vehicle HNeRV decoder screen and are
+# covered by the torch_vehicle parity tests, not this coordinate-MLP archive round-trip.
+@pytest.mark.parametrize("activation_family", FIXED_FORM_ACTIVATION_IDS)
 def test_activation_family_forward_shape_and_archive_roundtrip(
     activation_family: str,
 ) -> None:
@@ -114,7 +134,10 @@ def test_activation_family_forward_shape_and_archive_roundtrip(
     assert torch.allclose(rgb_1_a, rgb_1_b, atol=5e-2)
 
 
-@pytest.mark.parametrize("activation_family", ("finer", "wire", "bacon"))
+@pytest.mark.parametrize(
+    "activation_family",
+    ("finer", "wire", "bacon", "gauss", "hosc", "sinc", "rcgauss", "finer_gauss"),
+)
 def test_non_default_activation_family_changes_forward_function(
     activation_family: str,
 ) -> None:

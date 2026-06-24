@@ -183,7 +183,7 @@ def test_muon_partition_works_on_taper_decoder():
 def _cfg(**kw):
     from tac.torch_vehicle.driver import TorchVehicleConfig
 
-    base = dict(base_channels=20, latent_dim=28, device="cpu")
+    base = {"base_channels": 20, "latent_dim": 28, "device": "cpu"}
     base.update(kw)
     return TorchVehicleConfig(**base)
 
@@ -310,7 +310,7 @@ def test_resume_with_same_taper_succeeds(tmp_path):
     with pytest.raises(_SimulatedDeath):
         a.run()
     b = _taper_driver(tmp_path / "y", ch)
-    summ = b.run()  # must NOT raise; completes the 3-epoch stage
+    b.run()  # must NOT raise; completes the 3-epoch stage
     assert (tmp_path / "y" / "torch_vehicle_run.DONE").exists()
 
 
@@ -318,7 +318,10 @@ def test_resume_with_different_latent_dim_fails_closed(tmp_path):
     """Resuming an out_dir trained with latent_dim A using latent_dim B raises EXPLICITLY
     (the round-8 guard) — not a cryptic stem-Linear size-mismatch in _restore_into."""
     from tac.torch_vehicle.driver import (
-        TorchVehicleConfig, TorchVehicleDriver, _SimulatedDeath, import_vendored_bundle,
+        TorchVehicleConfig,
+        TorchVehicleDriver,
+        _SimulatedDeath,
+        import_vendored_bundle,
     )
     from tac.torch_vehicle.scorer_context import SyntheticScorerContext
 
@@ -482,3 +485,137 @@ def test_cfg_activation_threads_to_decoder_via_driver():
         wire_scale=cfg_finer.wire_scale,
     )
     assert isinstance(d, _CT) and d.activation_family == "finer"
+
+
+# ---- NEXT-GEN INR ACTIVATION EXPANSION (2026-06-24) -------------------------
+# NO-FAKE decoder-level coverage for the new fixed-form families
+# (gauss/hosc/sinc/rcgauss/finer_gauss) and the learnable families
+# (step_basis/fkan). siren stays bit-identical; each non-siren GENUINELY differs.
+
+@pytest.mark.parametrize(
+    "act", ("gauss", "hosc", "sinc", "rcgauss", "finer_gauss")
+)
+def test_nextgen_fixed_form_activation_changes_decoder_output(act):
+    """NO-FAKE: each new FIXED-FORM family changes the decoder forward vs siren at the
+    SAME weights, is byte-neutral (same keys/param count), and stays in [0,255]."""
+    torch.manual_seed(5)
+    base = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    var = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family=act
+    ).eval()
+    var.load_state_dict(base.state_dict())  # SAME weights — only activation differs
+    z = torch.randn(3, 28)
+    with torch.no_grad():
+        ob, ov = base(z), var(z)
+    assert ov.shape == ob.shape == (3, 2, 3, 384, 512)
+    assert not torch.equal(ob, ov), f"{act} produced identical output to siren (no-op!)"
+    assert torch.isfinite(ov).all()
+    assert ov.min() >= 0.0 and ov.max() <= 255.0
+    # byte-neutral: same state_dict keys + param count as siren.
+    assert set(base.state_dict()) == set(var.state_dict()), f"{act} changed keys"
+    assert sum(p.numel() for p in base.parameters()) == sum(
+        p.numel() for p in var.parameters()
+    ), f"{act} changed param count (should be byte-neutral)"
+
+
+def test_nextgen_hosc_beta_modulates_decoder_output():
+    """NO-FAKE: hosc_beta actually sharpens the decoder activation (different output)."""
+    torch.manual_seed(6)
+    base = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    b1 = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="hosc", hosc_beta=1.0
+    ).eval()
+    b8 = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="hosc", hosc_beta=8.0
+    ).eval()
+    b1.load_state_dict(base.state_dict())
+    b8.load_state_dict(base.state_dict())
+    z = torch.randn(2, 28)
+    with torch.no_grad():
+        o1, o8 = b1(z), b8(z)
+    assert not torch.equal(o1, o8), "hosc_beta ignored by the decoder (no-op hyperparam!)"
+
+
+@pytest.mark.parametrize(
+    ("act", "k", "params_per_k"),
+    (("step_basis", 4, 3), ("fkan", 5, 2)),
+)
+def test_nextgen_learnable_activation_adds_params_and_changes_output(act, k, params_per_k):
+    """NO-FAKE: the learnable families build a real sub-activation module that (a) adds
+    EXACTLY params_per_k*K parameters over siren, (b) changes the decoder forward, (c)
+    keeps the output in [0,255] and finite. They are NOT byte-neutral (reported delta)."""
+    torch.manual_seed(7)
+    siren = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    kw = {"step_basis_k": k} if act == "step_basis" else {"fkan_k": k}
+    learn = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family=act, **kw
+    ).eval()
+    # the shared conv/stem weights load from siren; only the sub-activation is extra.
+    learn.load_state_dict(siren.state_dict(), strict=False)
+    sp = sum(p.numel() for p in siren.parameters())
+    lp = sum(p.numel() for p in learn.parameters())
+    assert lp - sp == params_per_k * k, (
+        f"{act} added {lp - sp} params, expected {params_per_k * k}"
+    )
+    # the learnable module's params ARE in the decoder state_dict (real, archived).
+    extra_keys = set(learn.state_dict()) - set(siren.state_dict())
+    assert any("_learnable_act" in kk for kk in extra_keys), f"{act} params not in state_dict"
+    z = torch.randn(2, 28)
+    with torch.no_grad():
+        out = learn(z)
+    assert out.shape == (2, 2, 3, 384, 512)
+    assert torch.isfinite(out).all()
+    assert out.min() >= 0.0 and out.max() <= 255.0
+
+
+def test_nextgen_fkan_decoder_init_matches_siren_basis():
+    """FKAN inits to the SIREN basis (a_1=1, rest 0 => sin(x)); with vendored conv weights
+    loaded the decoder forward should be VERY close to siren at init (the shared spectral
+    prior). It is NOT required to be bit-identical (it routes through the module), but the
+    init parity proves FKAN starts from siren, not a random nonlinearity."""
+    torch.manual_seed(8)
+    siren = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    fkan = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="fkan", fkan_k=5
+    ).eval()
+    fkan.load_state_dict(siren.state_dict(), strict=False)
+    z = torch.randn(2, 28)
+    with torch.no_grad():
+        os_, of = siren(z), fkan(z)
+    # at FKAN init the per-element activation == sin(x), so the forward closely tracks siren.
+    assert torch.allclose(os_, of, atol=1e-2), (
+        f"FKAN init drifts from siren basis (max|Δ|={(os_-of).abs().max():.3e})"
+    )
+
+
+def test_nextgen_activation_default_hyperparams():
+    """The decoder defaults match the cfg defaults (hosc_beta=4, step_basis_k=4, fkan_k=5)."""
+    d = ConfigurableTaperHNeRVDecoder(latent_dim=28, base_channels=20, channels=None)
+    assert d.hosc_beta == 4.0 and d.step_basis_k == 4 and d.fkan_k == 5
+    assert d._learnable_act is None  # siren default is fixed-form
+    assert _cfg().hosc_beta == 4.0 and _cfg().step_basis_k == 4 and _cfg().fkan_k == 5
+
+
+def test_nextgen_driver_builds_learnable_activation_decoder():
+    """The driver routes a learnable --activation through ConfigurableTaper with a real
+    sub-activation module (the screen needs only --activation step_basis/fkan)."""
+    from tac.torch_vehicle.driver import TorchVehicleDriver, import_vendored_bundle
+    from tac.torch_vehicle.scorer_context import SyntheticScorerContext
+
+    for act in ("step_basis", "fkan"):
+        cfg = _cfg(activation=act)
+        drv = TorchVehicleDriver(
+            cfg, scorer=SyntheticScorerContext(n_pairs=4, device="cpu", seed=0),
+            vendored=import_vendored_bundle(), curriculum=[])
+        dec = drv._new_vendored_decoder()
+        assert isinstance(dec, ConfigurableTaperHNeRVDecoder)
+        assert dec.activation_family == act
+        assert dec._learnable_act is not None, f"{act} did not build a learnable module"

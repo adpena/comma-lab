@@ -239,25 +239,51 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--activation",
-        choices=("siren", "finer", "wire"),
+        choices=(
+            "siren", "finer", "wire", "bacon",
+            "gauss", "hosc", "sinc", "rcgauss",
+            "finer_gauss", "step_basis", "fkan",
+        ),
         default="siren",
-        help="HIGH-FREQUENCY ACTIVATION FAMILY (the k1-for-d_seg ARCHITECTURE screen). "
-             "DEFAULT 'siren' = the vendored torch.sin decoder (BYTE-IDENTICAL). 'finer' = "
-             "FINER variable-frequency sine sin((|x|+1)x) — high local frequency near edges "
-             "at ZERO byte cost (drop-in). 'wire' = WIRE Gabor sin(x)·exp(-½(s·x)²) — optimal "
-             "space+frequency localization for a sharp boundary (sweep --wire-scale). A "
-             "non-siren activation routes through ConfigurableTaperHNeRVDecoder (same shapes/"
-             "params/bytes; only the nonlinearity swaps). Disambiguates SPECTRAL-BIAS "
-             "(architecture lowers d_seg → sub-0.15 path) vs RAW-CAPACITY (deficit is "
-             "fundamental → 0.191 borrowed ceiling). [contest-CPU advisory] NON-PROMOTABLE.",
+        help="ACTIVATION FAMILY (the k1-for-d_seg ARCHITECTURE screen). DEFAULT 'siren' = "
+             "the vendored torch.sin decoder (BYTE-IDENTICAL). Confirmed: 'finer' "
+             "sin((|x|+1)x) = -18.7%% d_seg win; 'wire' Gabor = NULL. FIXED-FORM "
+             "(byte-neutral): 'gauss' exp(-(s·x)²), 'hosc' tanh(β·sin(x)) [step train as "
+             "β→∞], 'sinc' sin(x)/x, 'rcgauss' FLAIR band-localized sinc·RC·Gaussian, "
+             "'finer_gauss' CUSTOM#1 FINER×Gaussian-envelope. LEARNABLE (small reported "
+             "byte delta): 'step_basis' CUSTOM#2 Σ aₖ·tanh(gₖ(x-cₖ)) [native argmax "
+             "step-partition, no Gibbs], 'fkan' CUSTOM#3 learnable Fourier-series. All "
+             "non-siren route through ConfigurableTaperHNeRVDecoder. Disambiguates "
+             "SPECTRAL/EDGE-FIT vs RAW-CAPACITY. [contest-CPU advisory] NON-PROMOTABLE.",
     )
     p.add_argument(
         "--wire-scale",
         type=float,
         default=1.0,
-        help="WIRE Gabor window scale s in sin(x)·exp(-½(s·x)²). Sensitive: too large "
-             "suppresses signal, too small loses localization. Sweep {0.5,1.0,2.0}. Only "
-             "consulted when --activation wire (siren/finer ignore it). Default 1.0.",
+        help="Gabor/Gaussian window scale s used by wire/gauss/rcgauss/finer_gauss. "
+             "Sensitive: too large suppresses signal, too small loses localization. Sweep "
+             "{0.5,1.0,2.0}. siren/finer/hosc/sinc/learnable families ignore it. Default 1.0.",
+    )
+    p.add_argument(
+        "--hosc-beta",
+        type=float,
+        default=4.0,
+        help="HOSC saturation/sharpness β in tanh(β·sin(x)). Larger β → sharper square-wave "
+             "(step) carrier. Only consulted for --activation hosc. Sweep {2,4,8}. Default 4.0.",
+    )
+    p.add_argument(
+        "--step-basis-k",
+        type=int,
+        default=4,
+        help="K soft-steps in the learnable tanh step-basis (custom #2). Adds 3K params per "
+             "decoder. Only for --activation step_basis. Default 4.",
+    )
+    p.add_argument(
+        "--fkan-k",
+        type=int,
+        default=5,
+        help="K harmonics in the learnable Fourier-series activation (custom #3). Adds 2K "
+             "params per decoder. Only for --activation fkan. Default 5.",
     )
     p.add_argument(
         "--kd-warm-start-dir",
@@ -360,6 +386,9 @@ def main(argv: list[str] | None = None) -> int:
         # k1-for-d_seg architecture screen: activation family (siren=byte-identical).
         activation=args.activation,
         wire_scale=args.wire_scale,
+        hosc_beta=args.hosc_beta,
+        step_basis_k=args.step_basis_k,
+        fkan_k=args.fkan_k,
         seed=args.seed,
         # CHECKPOINT PRESERVATION + disk-hygiene record (default OFF / byte-identical).
         preserve_stage_snapshots=args.preserve_stage_snapshots,
