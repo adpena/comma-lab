@@ -59,7 +59,9 @@ from tac.torch_vehicle.checkpoint import (
     load_checkpoint,
     read_manifest,
     save_checkpoint,
+    save_stage_snapshot,
     write_done_marker,
+    write_preservation_manifest,
 )
 from tac.torch_vehicle.telemetry import EpochRecord, TelemetryWriter
 
@@ -985,6 +987,34 @@ class TorchVehicleConfig:
     compile_scorers: bool = False
     compile_mode: str = "default"
     seed: int = 0
+    # PER-STAGE SNAPSHOT PRESERVATION (the prune/fork-from-any-stage artifact — the
+    # operator's explicit checkpoint-preservation ask + the MUONJUMP precedent).
+    # DEFAULT False → ONLY the rolling resume checkpoint + the global ``best/`` dir are
+    # written (today's behavior, byte-identical — the live basin is unaffected). When
+    # True, at EACH curriculum stage boundary the driver ALSO writes a PRESERVED
+    # snapshot of the complete state (decoder + latents + EMA shadow + optimizer +
+    # scheduler + RNG + controllers) into ``out_dir/stage_snapshots/stageNN_<name>/``,
+    # which is NEVER overwritten by the rolling checkpoint and NEVER auto-deleted — so
+    # the capacity-RD prune-path (or any fork) can restore the EXACT state at the
+    # boundary of any completed stage. The snapshot count is bounded by the stage count
+    # (8 for the full PR95 curriculum), not the run/resume count (a re-completed stage
+    # rewrites the same dir idempotently). NOT an authority/score knob — it only adds
+    # preserved IO; the training trajectory is byte-identical.
+    preserve_stage_snapshots: bool = False
+    # PRESERVATION MANIFEST (the certify-or-block disk-hygiene record — the "Local Disk /
+    # SSD spill / auto-cleanup / provenance" non-negotiable). DEFAULT False → no manifest
+    # (byte-identical default). When True, the driver writes/refreshes
+    # ``out_dir/preservation_manifest.json`` (per-file bytes + SHA-256 + rebuild command +
+    # config) at each stage boundary + on DONE, so a future cold-store/move of the
+    # multi-GB checkpoints is LOSSLESS (the bytes can be rebuilt from the seeded
+    # curriculum or safely externalized — never silently lost). It only RECORDS; it never
+    # deletes/moves. SHA hashing of multi-GB checkpoints adds a few seconds per stage
+    # boundary (amortized over thousands of epochs/stage → negligible).
+    preservation_manifest: bool = False
+    # The exact rebuild command recorded in the preservation manifest (the operator-facing
+    # reproduction string). None → the manifest records ``null`` (still a valid record;
+    # the launcher passes the actual command). Only consulted when preservation_manifest.
+    rebuild_command: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -3476,6 +3506,16 @@ class TorchVehicleDriver:
 
             # End of stage: ensure a checkpoint at the boundary + carry forward.
             self._checkpoint(rt, spec, stage_index, spec.epochs)
+            # PRESERVED per-stage snapshot (prune/fork-from-any-stage). Default OFF →
+            # no-op (byte-identical). The snapshot is written from the SAME captured
+            # state the rolling checkpoint used, into a stage-specific subdir that the
+            # rolling checkpoint never overwrites and nothing auto-deletes. Then refresh
+            # the certify-or-block preservation manifest so the (now larger) artifact set
+            # is recorded for a lossless future cold-store/move.
+            if self.cfg.preserve_stage_snapshots:
+                self._stage_snapshot(rt, spec, stage_index)
+            if self.cfg.preservation_manifest:
+                self._write_preservation_manifest()
             carry_decoder = rt.decoder
             # Expose the final LIVE (non-EMA) decoder for post-run inspection (the
             # weight-entropy A/B reads the trained weights the rate lever shaped). NOT a
@@ -3504,6 +3544,10 @@ class TorchVehicleDriver:
             "skipped_async_evals": self._skipped_evals,
             "authority": "[contest-CPU advisory] NON-PROMOTABLE — exact via upstream/evaluate.py",
         }
+        # Final preservation manifest (records the complete artifact set — rolling
+        # checkpoint + best/ + all stage snapshots — for a lossless cold-store/move).
+        if self.cfg.preservation_manifest:
+            self._write_preservation_manifest()
         write_done_marker(self.cfg.out_dir, summary)
         return summary
 
@@ -3513,6 +3557,41 @@ class TorchVehicleDriver:
             state,
             self.cfg.out_dir,
             TorchCheckpointPosition(stage_index, epoch_in_stage),
+        )
+
+    def _stage_snapshot(self, rt: _StageRuntime, spec: StageSpec, stage_index: int) -> None:
+        """Write the PRESERVED end-of-stage snapshot (the prune/fork-from-any-stage
+        artifact). Uses the SAME ``_capture_state`` the rolling checkpoint uses (so the
+        snapshot and the resume point are bit-identical state), at the stage-COMPLETE
+        position ``(stage_index, spec.epochs)`` so a fork resumes the NEXT stage exactly
+        as a normal stage-boundary resume would. Only called when
+        ``cfg.preserve_stage_snapshots`` (default OFF → byte-identical)."""
+        state = self._capture_state(rt, spec)
+        save_stage_snapshot(
+            state,
+            self.cfg.out_dir,
+            TorchCheckpointPosition(stage_index, spec.epochs),
+            stage_index=stage_index,
+            stage_name=spec.name,
+        )
+
+    def _write_preservation_manifest(self) -> None:
+        """Refresh the certify-or-block preservation manifest. Only called when
+        ``cfg.preservation_manifest`` (default OFF → never written)."""
+        write_preservation_manifest(
+            self.cfg.out_dir,
+            config={
+                "base_channels": self.cfg.base_channels,
+                "latent_dim": self.cfg.latent_dim,
+                "n_pairs": self.n_pairs,
+                "total_epoch_budget": self.cfg.total_epoch_budget,
+                "seed": self.cfg.seed,
+                "train_device": str(self.cfg.train_device),
+                "device": str(self.cfg.device),
+                "split_by_head": bool(self.cfg.split_by_head),
+                "muon_lr_floor_fix": bool(self.cfg.muon_lr_floor_fix),
+            },
+            rebuild_command=self.cfg.rebuild_command,
         )
 
     def export_production_archive(

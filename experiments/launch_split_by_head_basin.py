@@ -26,7 +26,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
+import sys
 from pathlib import Path
+
+
+def _rebuild_command(argv: list[str] | None) -> str:
+    """The deterministic reproduction string recorded in the preservation manifest.
+
+    ``argv`` is the parsed-from arg list (``None`` → ``sys.argv[1:]``). The command is
+    the SAME launcher invocation; combined with the pinned seed + the byte-identical
+    target cache it reproduces the run (the certify-or-block 'rebuildable' proof)."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    return "experiments/launch_split_by_head_basin.py " + " ".join(shlex.quote(a) for a in args)
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -210,7 +222,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.1,
         help="the LR floor (fraction of stage peak) the E#5 warmup ramp starts from at "
-             "each stage's first epoch (default 0.1 = 10% of peak). Only consulted when "
+             "each stage's first epoch (default 0.1 = 10%% of peak). Only consulted when "
              "--stage-lr-warmup-frac > 0. Must be in (0.0, 1.0].",
     )
     p.add_argument(
@@ -238,6 +250,32 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--kd-warm-epochs", type=int, default=300,
                    help="KD warm-up epochs (only consulted when --kd-warm-start-dir is set).")
+    p.add_argument(
+        "--preserve-stage-snapshots",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="CHECKPOINT PRESERVATION (the prune/fork-from-any-stage artifact): at EACH "
+             "curriculum stage boundary, ALSO write a PRESERVED snapshot of the complete "
+             "state (decoder + latents + EMA shadow + optimizer + scheduler + RNG + "
+             "controllers) into out_dir/stage_snapshots/stageNN_<name>/ — never overwritten "
+             "by the rolling checkpoint, never auto-deleted. The capacity-RD prune-path (or "
+             "any fork) can then restore the EXACT state at the boundary of ANY completed "
+             "stage. Snapshot count is bounded by the stage count (8 for full PR95), not the "
+             "resume count. DEFAULT OFF (only the rolling checkpoint + best/ are written; "
+             "byte-identical). RECOMMENDED ON for the decisive prune-SOURCE run.",
+    )
+    p.add_argument(
+        "--preservation-manifest",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="DISK-HYGIENE certify-or-block record (the 'Local Disk / SSD spill / "
+             "auto-cleanup / provenance' non-negotiable): write/refresh "
+             "out_dir/preservation_manifest.json (per-file bytes + SHA-256 + rebuild "
+             "command + config) at each stage boundary + on DONE, so a future cold-store/"
+             "move of the multi-GB checkpoints is LOSSLESS (rebuildable from the seeded "
+             "curriculum or safely externalized — never silently lost). It only RECORDS; it "
+             "never deletes/moves. DEFAULT OFF. RECOMMENDED ON for a multi-day SSD run.",
+    )
     p.add_argument("--dashboard", action="store_true",
                    help="print the dashboard for an existing run and exit")
     return p
@@ -298,6 +336,10 @@ def main(argv: list[str] | None = None) -> int:
         kd_warm_start_dir=args.kd_warm_start_dir,
         kd_warm_epochs=args.kd_warm_epochs,
         seed=args.seed,
+        # CHECKPOINT PRESERVATION + disk-hygiene record (default OFF / byte-identical).
+        preserve_stage_snapshots=args.preserve_stage_snapshots,
+        preservation_manifest=args.preservation_manifest,
+        rebuild_command=_rebuild_command(argv),
     )
     # Reuse the byte-identical full-600 target cache (skips the ~2.5h precompute).
     scorer = RealScorerContext(
