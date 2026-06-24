@@ -307,6 +307,22 @@ generator geometry-prior toward class-1. CAVEAT: n100 floor-win; the **n600×150
 FIRED** (durable no-orphan daemons act_screen_finer_n600 pid62958 + act_screen_siren_n600 pid62962, MPS, ~15h/
 arm) to test floor-gap persistence at 6× data (prior: spectral advantage persists/grows). Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24d (operator: research next-gen / outside-the-box / OWN nonlinearities beyond FINER)
+FINER (2024) beat SIREN but is NOT the field frontier; and our target is a sharp argmax STEP/EDGE (scored on
+flips through uint8 round-trip), NOT a generic PSNR image → literature PSNR-rankings DO NOT transfer (WIRE is
+PSNR-respected but was NULL for us). DEEP-MATH: sinusoids (SIREN/FINER) ring on steps (Gibbs); an
+edge/step-MATCHED nonlinearity may beat FINER. Research subagent ab12614a FIRED ($0 research+build, NO
+training — n600 confirm owns MPS). Candidate space (2024-26): Gauss (Ramasinghe-Lucey), HOSC (hyperbolic
+osc), Sinc, FLAIR (freq+locality, 2025), Fourier-Chebyshev (2026), WINNER, + **KAN/Fourier-KAN (FKAN)** =
+LEARNED activation (B-spline/Fourier per edge = literal "define our own, learned"). **3 OWN designs to
+implement+parity-test+stage:** (a) FINER×Gauss hybrid (FINER's winning var-freq × Gaussian envelope = WIRE
+localization WITH FINER adaptivity); (b) learnable step-basis (Σ learnable shifted/scaled tanh = native
+piecewise-constant for the argmax partition — most on-problem); (c) FKAN-style learnable nonlinearity.
+RANK by d_seg-fit (sharp-edge @ low capacity + round-trip survival + composes-with-FINER), NOT PSNR.
+Falsification bar to ADOPT over FINER: d_seg ≤ 0.813× SIREN (beat FINER). Screen STAGED (not run) to fire
+when MPS frees post-n600-confirm. Wire-in: extends `activation_family.py` (siren/finer/wire infra built).
+Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
