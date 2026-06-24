@@ -887,6 +887,18 @@ class TorchVehicleConfig:
     # (strict load shape mismatch) — never a silent cross-architecture resume. Byte-identical
     # when None (the live basin / from-0 A/B are unaffected).
     taper_channels: list[int] | None = None
+    # HIGH-FREQUENCY ACTIVATION FAMILY (the k1-for-d_seg ARCHITECTURE screen).
+    # DEFAULT "siren" → the decoder nonlinearity is exactly ``torch.sin(x)`` (the vendored
+    # path; BYTE-IDENTICAL). "finer"/"wire" route the build through the
+    # ``ConfigurableTaperHNeRVDecoder`` (which I own) and swap ONLY the activation function —
+    # same module shapes, same param count, same archive bytes — to test whether a
+    # variable-frequency (FINER) or Gabor-windowed (WIRE) activation lowers d_seg at the
+    # SAME byte budget. This disambiguates SPECTRAL-BIAS (architecture unlocks → sub-0.15
+    # path) vs RAW-CAPACITY (the small-budget d_seg deficit is fundamental → 0.191 is the
+    # borrowed HNeRV-class ceiling). ``wire_scale`` is the WIRE Gabor window scale (sensitive;
+    # swept). siren ignores wire_scale. [contest-CPU advisory] NON-PROMOTABLE; pointer-only.
+    activation: str = "siren"
+    wire_scale: float = 1.0
     # WEIGHT-ENTROPY PENALTY (the Ballé end-to-end rate-distortion lever — the
     # un-integrated VCM term). DEFAULT 0.0 → BYTE-IDENTICAL (the term is never
     # computed, the penalty module is never built, its params never enter the
@@ -1486,16 +1498,33 @@ class TorchVehicleDriver:
         channel schedule) instead — the #1 structural lever. DEFAULT (None) returns the
         vendored decoder unchanged (byte-identical)."""
         dev = device if device is not None else self.train_device
-        if self.cfg.taper_channels is not None:
+        # HIGH-FREQ ACTIVATION SCREEN: a non-"siren" activation REQUIRES the
+        # ConfigurableTaperHNeRVDecoder (the vendored decoder hardcodes torch.sin and lives
+        # in a pristine intake clone we must not edit). When the activation is non-siren we
+        # route through ConfigurableTaper using the explicit taper if set, else the EXACT
+        # vendored default taper so the ONLY change vs the vendored path is the nonlinearity
+        # (byte/param/shape-identical). When activation=="siren" AND no taper, the vendored
+        # decoder is returned unchanged (BYTE-IDENTICAL legacy path).
+        _activation = str(getattr(self.cfg, "activation", "siren"))
+        _use_configurable = (self.cfg.taper_channels is not None) or (_activation != "siren")
+        if _use_configurable:
             from tac.torch_vehicle.configurable_taper_decoder import (
                 ConfigurableTaperHNeRVDecoder,
+                vendored_taper,
             )
 
+            channels = (
+                self.cfg.taper_channels
+                if self.cfg.taper_channels is not None
+                else vendored_taper(self.cfg.base_channels)
+            )
             return ConfigurableTaperHNeRVDecoder(
                 latent_dim=self.cfg.latent_dim,
                 base_channels=self.cfg.base_channels,
                 eval_size=(_EVAL_H, _EVAL_W),
-                channels=self.cfg.taper_channels,
+                channels=channels,
+                activation_family=_activation,
+                wire_scale=float(getattr(self.cfg, "wire_scale", 1.0)),
             ).to(dev)
         return self.v.HNeRVDecoder(
             latent_dim=self.cfg.latent_dim,

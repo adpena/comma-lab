@@ -135,10 +135,26 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
         base_channels: int = 36,
         eval_size: tuple[int, int] = (384, 512),
         channels: list[int] | None = None,
+        activation_family: str = "siren",
+        wire_scale: float = 1.0,
     ):
         super().__init__()
         self.eval_size = eval_size
         self.base_h, self.base_w = 6, 8
+        # HIGH-FREQUENCY ACTIVATION FAMILY (the k1-for-d_seg architecture screen).
+        # DEFAULT "siren" → ``apply_activation_family(..., omega=1.0)`` returns
+        # ``torch.sin(1.0 * x) == torch.sin(x)`` → the forward is BIT-IDENTICAL to the
+        # vendored decoder (the parity contract is preserved). "finer"/"wire" swap ONLY
+        # the nonlinearity (same module shapes, same param count, same archive bytes) to
+        # test whether a variable-frequency (FINER) or Gabor-windowed (WIRE) activation
+        # lowers d_seg at the SAME byte budget — disambiguating SPECTRAL-BIAS vs
+        # RAW-CAPACITY as the root of the small-budget d_seg deficit. ``omega`` is fixed
+        # at 1.0 (the vendored sine's effective ω) so siren is exactly the legacy path;
+        # ``wire_scale`` is the Gabor window scale (only consulted for "wire").
+        from tac.substrates.siren.activation_family import normalize_activation_family
+
+        self.activation_family = normalize_activation_family(activation_family)
+        self.wire_scale = float(wire_scale)
         if channels is None:
             channels = vendored_taper(base_channels)
         if len(channels) != 7:
@@ -171,10 +187,23 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
         self.rgb_0 = nn.Conv2d(final_ch, 3, 3, padding=1)
         self.rgb_1 = nn.Conv2d(final_ch, 3, 3, padding=1)
 
+    def _act(self, x):
+        """The decoder nonlinearity. For activation_family="siren" this is exactly
+        ``torch.sin(x)`` (apply_activation_family with omega=1.0) so the forward is
+        BIT-IDENTICAL to the vendored decoder; "finer"/"wire" swap only the function."""
+        from tac.substrates.siren.activation_family import apply_activation_family
+
+        return apply_activation_family(
+            x,
+            activation_family=self.activation_family,
+            omega=1.0,
+            wire_scale=self.wire_scale,
+        )
+
     def forward(self, z):
         B = z.shape[0]
         x = self.stem(z).view(B, self.channels[0], self.base_h, self.base_w)
-        x = torch.sin(x)
+        x = self._act(x)
         # blocks + skips are both built with exactly 6 entries (the range(6) loop in
         # __init__), so strict=True can never raise; it adds a guard against any future
         # divergence and matches the BoundaryHeadTaperDecoder enabled-path forward.
@@ -182,8 +211,8 @@ class ConfigurableTaperHNeRVDecoder(nn.Module):
             identity = F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=False)
             identity = skip(identity)
             x = self.ps(block(x))
-            x = torch.sin(x + identity)
-        x = x + 0.1 * torch.sin(self.refine(x))
+            x = self._act(x + identity)
+        x = x + 0.1 * self._act(self.refine(x))
         f0 = torch.sigmoid(self.rgb_0(x)) * 255.0
         f1 = torch.sigmoid(self.rgb_1(x)) * 255.0
         return torch.stack([f0, f1], dim=1)

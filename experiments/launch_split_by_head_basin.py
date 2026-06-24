@@ -238,6 +238,28 @@ def _build_arg_parser() -> argparse.ArgumentParser:
              "distortion costs ~374x more on d_seg than it saves on rate).",
     )
     p.add_argument(
+        "--activation",
+        choices=("siren", "finer", "wire"),
+        default="siren",
+        help="HIGH-FREQUENCY ACTIVATION FAMILY (the k1-for-d_seg ARCHITECTURE screen). "
+             "DEFAULT 'siren' = the vendored torch.sin decoder (BYTE-IDENTICAL). 'finer' = "
+             "FINER variable-frequency sine sin((|x|+1)x) — high local frequency near edges "
+             "at ZERO byte cost (drop-in). 'wire' = WIRE Gabor sin(x)·exp(-½(s·x)²) — optimal "
+             "space+frequency localization for a sharp boundary (sweep --wire-scale). A "
+             "non-siren activation routes through ConfigurableTaperHNeRVDecoder (same shapes/"
+             "params/bytes; only the nonlinearity swaps). Disambiguates SPECTRAL-BIAS "
+             "(architecture lowers d_seg → sub-0.15 path) vs RAW-CAPACITY (deficit is "
+             "fundamental → 0.191 borrowed ceiling). [contest-CPU advisory] NON-PROMOTABLE.",
+    )
+    p.add_argument(
+        "--wire-scale",
+        type=float,
+        default=1.0,
+        help="WIRE Gabor window scale s in sin(x)·exp(-½(s·x)²). Sensitive: too large "
+             "suppresses signal, too small loses localization. Sweep {0.5,1.0,2.0}. Only "
+             "consulted when --activation wire (siren/finer ignore it). Default 1.0.",
+    )
+    p.add_argument(
         "--kd-warm-start-dir",
         type=Path,
         default=None,
@@ -335,6 +357,9 @@ def main(argv: list[str] | None = None) -> int:
         ),
         kd_warm_start_dir=args.kd_warm_start_dir,
         kd_warm_epochs=args.kd_warm_epochs,
+        # k1-for-d_seg architecture screen: activation family (siren=byte-identical).
+        activation=args.activation,
+        wire_scale=args.wire_scale,
         seed=args.seed,
         # CHECKPOINT PRESERVATION + disk-hygiene record (default OFF / byte-identical).
         preserve_stage_snapshots=args.preserve_stage_snapshots,

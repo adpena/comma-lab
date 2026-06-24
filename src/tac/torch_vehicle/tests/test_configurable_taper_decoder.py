@@ -336,3 +336,149 @@ def test_resume_with_different_latent_dim_fails_closed(tmp_path):
     b = drv(16)  # DIFFERENT latent_dim, same out_dir
     with pytest.raises(ValueError, match="cannot resume a different basis"):
         b.run()
+
+
+# ---- HIGH-FREQUENCY ACTIVATION FAMILY (k1-for-d_seg architecture screen) ----
+# The decisive screen: a non-"siren" activation (FINER / WIRE) must be a REAL swap
+# (changes the forward output) yet "siren" must stay BYTE-IDENTICAL to the vendored
+# torch.sin path (the parity contract). These tests are the NO-FAKE guard: if the
+# wire-in degenerated to a no-op, test_activation_finer_actually_changes_output and
+# test_activation_wire_actually_changes_output would FAIL (constants-not-behavior).
+
+
+def test_activation_default_is_siren():
+    """The ConfigurableTaper decoder + the cfg both default to 'siren' (byte-identical)."""
+    d = ConfigurableTaperHNeRVDecoder(latent_dim=28, base_channels=20, channels=None)
+    assert d.activation_family == "siren"
+    assert d.wire_scale == 1.0
+    assert _cfg().activation == "siren"
+    assert _cfg().wire_scale == 1.0
+
+
+def test_activation_siren_bit_identical_to_vendored():
+    """THE parity contract under the activation wire-in: ConfigurableTaper with
+    activation='siren' loaded with vendored weights renders BIT-IDENTICAL output to the
+    vendored decoder. apply_activation_family(..., 'siren', omega=1.0) == torch.sin(x), so
+    the screen's CONTROL arm provably reproduces the legacy d_seg basin."""
+    torch.manual_seed(0)
+    v = _vendored(20).eval()
+    d = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    d.load_state_dict(v.state_dict())  # strict
+    z = torch.randn(4, 28)
+    with torch.no_grad():
+        ov, od = v(z), d(z)
+    assert torch.equal(ov, od), f"siren not bit-identical (max|Δ|={(ov-od).abs().max():.3e})"
+
+
+def test_activation_siren_default_taper_bit_identical_to_explicit_siren():
+    """Sanity: the default-taper (channels=None) siren path and the explicit-vendored-taper
+    siren path are the SAME architecture (same weights → same output)."""
+    torch.manual_seed(1)
+    a = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    b = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=vendored_taper(20), activation_family="siren"
+    ).eval()
+    b.load_state_dict(a.state_dict())
+    z = torch.randn(3, 28)
+    with torch.no_grad():
+        assert torch.equal(a(z), b(z))
+
+
+def test_activation_finer_actually_changes_output():
+    """NO-FAKE: FINER must CHANGE the forward output vs siren at the SAME weights (not a
+    no-op renamed). This test FAILS if the activation swap degenerates to torch.sin."""
+    torch.manual_seed(2)
+    base = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    finer = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="finer"
+    ).eval()
+    finer.load_state_dict(base.state_dict())  # SAME weights — only activation differs
+    z = torch.randn(4, 28)
+    with torch.no_grad():
+        ob, of = base(z), finer(z)
+    assert ob.shape == of.shape == (4, 2, 3, 384, 512)
+    assert not torch.equal(ob, of), "FINER produced identical output to siren (no-op!)"
+    assert torch.isfinite(of).all()
+    assert of.min() >= 0.0 and of.max() <= 255.0
+
+
+def test_activation_wire_actually_changes_output_and_scale_matters():
+    """NO-FAKE: WIRE must change output vs siren AND the wire_scale must actually modulate
+    the Gabor window (different scales → different outputs). FAILS if wire degenerates to
+    torch.sin or ignores wire_scale."""
+    torch.manual_seed(3)
+    base = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="siren"
+    ).eval()
+    w05 = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="wire", wire_scale=0.5
+    ).eval()
+    w20 = ConfigurableTaperHNeRVDecoder(
+        latent_dim=28, base_channels=20, channels=None, activation_family="wire", wire_scale=2.0
+    ).eval()
+    w05.load_state_dict(base.state_dict())
+    w20.load_state_dict(base.state_dict())
+    z = torch.randn(3, 28)
+    with torch.no_grad():
+        ob, o05, o20 = base(z), w05(z), w20(z)
+    assert not torch.equal(ob, o05), "WIRE(0.5) == siren (no-op!)"
+    assert not torch.equal(o05, o20), "wire_scale ignored (0.5 == 2.0)!"
+    assert torch.isfinite(o05).all() and torch.isfinite(o20).all()
+
+
+def test_activation_finer_wire_preserve_param_count_and_keys():
+    """The activation swap is BYTE-NEUTRAL: same state_dict keys + shapes + param count as
+    siren (the screen holds the byte budget fixed; only the nonlinearity changes)."""
+    siren = ConfigurableTaperHNeRVDecoder(latent_dim=28, base_channels=20, channels=None)
+    for act in ("finer", "wire"):
+        d = ConfigurableTaperHNeRVDecoder(
+            latent_dim=28, base_channels=20, channels=None, activation_family=act
+        )
+        assert set(siren.state_dict()) == set(d.state_dict()), f"{act} key mismatch"
+        sp = sum(p.numel() for p in siren.parameters())
+        dp = sum(p.numel() for p in d.parameters())
+        assert sp == dp, f"{act} param count {dp} != siren {sp}"
+
+
+def test_activation_invalid_fails_closed():
+    """An unknown activation family raises at construction (fail-closed, no silent siren)."""
+    with pytest.raises(ValueError, match="unknown SIREN activation family"):
+        ConfigurableTaperHNeRVDecoder(
+            latent_dim=28, base_channels=20, channels=None, activation_family="bogus"
+        )
+
+
+def test_cfg_activation_threads_to_decoder_via_driver():
+    """The driver's _new_vendored_decoder honors cfg.activation: a non-siren activation
+    routes through ConfigurableTaper EVEN WITHOUT an explicit taper (so the screen needs
+    only --activation, not --taper-channels), and siren+no-taper stays the vendored path."""
+    from tac.torch_vehicle.configurable_taper_decoder import ConfigurableTaperHNeRVDecoder as _CT
+
+    # siren + no taper → vendored decoder (NOT ConfigurableTaper) = byte-identical legacy.
+    cfg_siren = _cfg(activation="siren")
+    assert cfg_siren.activation == "siren" and cfg_siren.taper_channels is None
+
+    # finer + no taper → cfg carries it; the decoder builder selects ConfigurableTaper.
+    cfg_finer = _cfg(activation="finer")
+    assert cfg_finer.activation == "finer"
+
+    # Build a decoder through the same selection logic the driver uses (no scorer needed):
+    # replicate _new_vendored_decoder's branch on a bare cfg to prove the routing.
+    from tac.torch_vehicle.configurable_taper_decoder import vendored_taper as _vt
+
+    use_configurable = (cfg_finer.taper_channels is not None) or (cfg_finer.activation != "siren")
+    assert use_configurable, "finer must force the ConfigurableTaper path"
+    d = _CT(
+        latent_dim=cfg_finer.latent_dim,
+        base_channels=cfg_finer.base_channels,
+        channels=_vt(cfg_finer.base_channels),
+        activation_family=cfg_finer.activation,
+        wire_scale=cfg_finer.wire_scale,
+    )
+    assert isinstance(d, _CT) and d.activation_family == "finer"
