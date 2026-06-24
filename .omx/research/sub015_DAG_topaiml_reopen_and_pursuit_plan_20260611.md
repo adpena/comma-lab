@@ -179,3 +179,49 @@ behind the capacity verdict. This memo is the canonical DAG every future tick + 
 
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
+
+## DAG FEED 2026-06-23c (OPERATOR REFRAME: "int8 brotli / compression SIZE, not channels/params")
+
+**Operator hypothesis (2026-06-23):** the binding determinant is the int8+brotli compressed SIZE, not the
+raw channel/param count. **Verdict: the TARGET is right (rate = 0.106 = 55% of the frontier, the binding
+term; the author DID pick bc36 under an int8+brotli byte budget), but every COMPRESSION sub-lever is
+MEASURED-CLOSED on the borrowed frontier.** The operator's instinct correctly redirects away from "just
+sweep channels at int8" (the structural-param RD walk, bottoms ~0.186) toward "bytes is the thing" — and
+the measured answer says: on the RGB carrier the bytes CANNOT shrink without breaking d_seg.
+
+### The complete compression-lever ledger (ALL measured, $0, byte-closed exact-eval — existence-proof grade)
+| compression lever | result | source |
+|---|---|---|
+| better general coder (DeepCABAC/order-2 arithmetic) | EXHAUSTED — brotli-q11 6.891 vs marginal H(W) 6.884 b/param (gap 0.007, ≤0.07KB) | `decoder_weight_rate_axis_…_synthesis_20260621` |
+| uniform sub-8-bit PTQ (int7/6/5/4/3) | RED — int8 is S-min over the WHOLE axis; int8→int7 saves 1.4KB for +0.044 S; d_seg+d_pose super-linear collapse swamps rate at every step | `qaxis_bitdepth_response_surface_20260623` (n48 full + n600) |
+| int5 QAT-finetune (LSQ + outlier-clip) | RED — recovers d_pose −89% but d_seg only −9.5% (stays ~0.0042, 7.6× floor); CE seg-loss FLAT ep10→100 | `frontier_int5_lsq_best_shot_retest` |
+| score-aware mixed/reverse-waterfill (WRQ) | MODEST + CONSTRAINED — sensitivity ~5.5× flat (2.5 bits dyn range) AND must spend MORE bits on boundary weights | synthesis §2.3 |
+| latent dedup / low-rank | near-exhaustion (small / near-full-rank) | synthesis §3 |
+
+### THE DEEP-MATH UNIFICATION (5-lens; why "bits vs channels" is the WRONG axis)
+Both score-controlled terms are monotone functions of the **information content H (bits)** the decoder carries:
+- **rate(H) = 25·(H/8 + overhead)/N** — Shannon: cannot store H bits in < H/8 bytes; brotli PROVES we're at the floor.
+- **d_seg(H) = the rate-distortion function** — measured ~6e-4 @ H≈1.3Mbit (frontier), rising super-linearly as H drops.
+So **S(H) = 100·d_seg(H) + 25·(H/8+c)/N + √(10·d_pose)** is a 1-D RD optimization. **CROSS-CHECK (the killer):
+reducing H via fewer bits (int5 → d_seg 0.0026) and reducing H via fewer params (bc20 → d_seg ~0.002–0.0035)
+land on the SAME D(H) curve** — H-allocation is INVARIANT; "bits vs channels" is a distinction without a
+difference at the optimum, and BOTH are dominated by the d_seg(H) coupling. **Physics:** int8 weights at the
+order-0 entropy floor = the 2nd law for codes (can't pack the same info into fewer bytes). **Geometry:** the
+d_seg-critical capacity is the 77%-of-params early/low-res stages at the codim-1 boundary; 66.5% of flips are
+<0.5 logit (shallow) → quant noise ∝2^−b flips them → bit-dropping hits exactly the fragile boundary.
+
+### THE ESCAPE (where the operator's "bytes" instinct actually pays): SHIFT the D(H) curve, don't re-allocate H
+Lower d_seg at the SAME bytes — TWO ways, both NOT post-hoc compression:
+1. **Different CARRIER (task-space / L13 witness, #171, operator's own capstone):** spend H on the
+   scorer-relevant manifold (argmax boundary + 6-dim pose) NOT the discarded RGB → the task-space D(H) curve is
+   fundamentally lower (you stop paying to reconstruct RGB the scorer throws away). THE genuine curve-shift.
+2. **Spectral ARCHITECTURE (FINER/WIRE, in flight a0e28b5):** if a high-freq activation represents the
+   codim-1 boundary at lower H → curve shifts down. Measuring now.
+3. **Structural weight-tie/low-rank (synthesis §2.4):** cuts rate by fewer PARAMS but only tying the
+   d_seg-IRRELEVANT weights (boundary is perturbation-fragile) — the RD-walk lever, bounded ~0.186.
+
+### ONE untested compression door (folds into the from-scratch sweep): **from-scratch co-adapted INT4 QAT.**
+All bit measurements were PTQ or finetune-OF-int8; NONE trained the curriculum WITH int4 fake-quant from the
+start. Capacity-cliff principle (QAT-from-scratch >> PTQ+finetune) makes it the one open variant. → when the
+from-scratch sweep fires, **add an INT4-co-adapted arm** so one run settles the operator's bits-vs-channels
+question with the untested variant. Does NOT change the ranked NEXT; sharpens the #1 sweep's design.
