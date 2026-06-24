@@ -1,0 +1,148 @@
+{
+  "authority": "contest-CPU advisory (exact frozen-SegNet argmax cache)",
+  "n_frames_measured": 600,
+  "subsample": 1,
+  "argmaps_source": "experiments/results/indep_dseg_bets_20260623_inflated/seg_argmaps.npz",
+  "stage1_topology": {
+    "n_frames": 600,
+    "num_distinct_adjacency_graphs": 11,
+    "modal_adjacency_frac": 0.34833333333333333,
+    "modal_adjacency_graph": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "num_distinct_component_count_vectors": 288,
+    "modal_component_count_frac": 0.02,
+    "modal_component_counts_per_class": [
+      1,
+      25,
+      1,
+      3,
+      1
+    ],
+    "component_count_mean_per_class": [
+      2.11,
+      27.635,
+      1.083,
+      3.678,
+      1.0
+    ],
+    "component_count_std_per_class": [
+      1.715,
+      4.332,
+      0.383,
+      1.493,
+      0.0
+    ],
+    "total_components_mean": 35.50666666666667,
+    "total_components_std": 4.942666846506605,
+    "euler_mean": 13.996666666666666,
+    "euler_std": 3.4732293650466306,
+    "num_distinct_full_signatures": 573,
+    "modal_full_signature_frac": 0.006666666666666667
+  },
+  "stage2_boundary_dim": {
+    "n_frames": 600,
+    "curve_dim": 1024,
+    "boundary_effective_rank_participation_ratio": 4.074549423688244,
+    "boundary_singular_values_top10": [
+      2879.46,
+      1450.06,
+      1301.46,
+      1119.37,
+      988.77,
+      749.11,
+      696.81,
+      545.26,
+      496.03,
+      442.71
+    ],
+    "boundary_top1_var_share": 0.46091155803978023,
+    "boundary_top3_var_share": 0.6719574359266935,
+    "boundary_top6_var_share": 0.8271539598111948,
+    "k_for_50pct": 2,
+    "k_for_80pct": 6,
+    "k_for_90pct": 11,
+    "k_for_95pct": 21,
+    "k_for_99pct": 74,
+    "vh_traj_mean": 286.3808333333333,
+    "vh_traj_std": 0.7008680134106723,
+    "road_class_modal": 4
+  },
+  "stage3_ego": {
+    "explained_by_horizon_proxy": {
+      "r2_overall": 0.03447928021063562,
+      "n": 600,
+      "k_regressors": 2
+    },
+    "posenet_available": true,
+    "posenet_pose_std_per_dim": [
+      1.25634,
+      0.03575,
+      0.02989,
+      0.00957,
+      0.00739,
+      0.02862
+    ],
+    "explained_by_posenet6": {
+      "r2_overall": 0.23086626969367596,
+      "n": 600,
+      "k_regressors": 6
+    },
+    "explained_by_posenet6_cumulative": {
+      "r2_overall": 0.37875836063113344,
+      "n": 600,
+      "k_regressors": 6
+    },
+    "corr_vh_vs_posenet_dims": [
+      -0.288,
+      -0.039,
+      -0.006,
+      -0.086,
+      0.054,
+      -0.104
+    ],
+    "max_abs_corr_vh_posenet": 0.28759061694932936
+  },
+  "stage4_byte_projection": {
+    "template_bytes_once": 896,
+    "low_rank_k95": 21,
+    "low_rank_coeff_bytes_600": 11801,
+    "low_rank_residual_rms_rows": 1.2038142051464662,
+    "topological_lowrank_total_bytes": 12697,
+    "lossless_template_per_frame_extrapolation_600": 537600,
+    "ref_52_lossless_524KB": 524800,
+    "ref_L13_witness_bytes": 72217,
+    "ref_frontier_bytes": 177169,
+    "break_even_dseg_per_byte": 6.658589531221714e-09,
+    "topo_lowrank_vs_L13_ratio": 0.17581732832989463,
+    "topo_lowrank_vs_frontier_ratio": 0.0716660363833402
+  },
+  "elapsed_sec": 58.41283297538757
+}
