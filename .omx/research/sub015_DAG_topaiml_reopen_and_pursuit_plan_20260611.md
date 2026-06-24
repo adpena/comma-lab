@@ -216,6 +216,27 @@ not content-noise. Wavelet/curvelet (Daubechies/Candès-Donoho, "large but spars
 basis IF camera-res polytope reopens the flips. The lane/horizon/hood math FEEDS the generator+format build;
 it does not replace it. Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-23g (DECISIVE: islands are an ~8-dim NONLINEAR manifold → GO-GENERATOR; the convergence CLOSES)
+Measurement add84f1 (`island_representation_level_intrinsic_dim_20260624`, commit d3c8174c3, $0/CPU, 19
+NO-FAKE tests): the class-1 island intrinsic dim across 5 levels. **LINEAR bases ALL lose** (pixel PCA k95=412,
+DCT 61, Fourier-contour 29, affine-motion-comp 94 — all ≫ the Whitney m≤13 budget). **NONLINEAR m ≈ 8–13**
+(AE 90%-knee=8, MLE 13.1). **NO-FAKE phase-shuffle control:** real islands 81% AE-recon @ dim-8 vs
+structure-destroyed shuffle 18% (needs 32) → the low knee is REAL structure, NOT a sparsity artifact (the line
+between GO-GENERATOR and WALL). **VERDICT GO-GENERATOR:** the islands are a curved ~8-dim nonlinear manifold;
+a trained generator (learns the chart) captures them at ~8 latents; NO fixed basis (incl. wavelet/curvelet/
+contour — all linear) can (curved manifold → secant span ≫ manifold dim). 2·8+1=17 ≤ the HNeRV 28-dim latent
+→ FITS WITH ROOM. **Implication: the d_seg island wall is NOT capacity (8 dims is tiny) — it is
+architecture/training (learn the curved chart + survive the round-trip).**
+
+**THE CONVERGENCE NOW CLOSES (6 independent measured lines → sub-0.15 = a TRAINED GENERATOR):** (1) compression
+bit/coder closed; (2) adversarial 0.191-ceiling under-powered; (3) topology islands full-rank LINEAR; (4)
+weight-entropy at Shannon floor; (5) lane/horizon/hood geometry=WHERE, flips=content-noise; (6) **islands =
+8-dim nonlinear manifold, GO-GENERATOR (shuffle-controlled).** The format = the RATE half (L13 proven −59%);
+the generator = the d_seg half, now with a MEASURED target (8-dim island chart) + a concrete architecture
+criterion (nonlinear high-freq chart — FINER/WIRE tests it). NEXT: FINER/WIRE verdict → from-scratch generator
+with geometry-prior capacity routing + round-trip-in-loop + camera-res polytope on the lane band → byte-close
+in the custom format → exact eval. Pointer UNMOVED 0.19110; the END is that exact row.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
