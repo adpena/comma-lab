@@ -121,6 +121,14 @@ the structured-pruned subspace (148K params, channels sliced from a CO-ADAPTED 2
 expressivity to reach the teacher's d_seg, regardless of objective. Prune-then-finetune ≠ train-at-that-
 capacity (the lottery-ticket subspace from a co-adapted net is impoverished).
 
+**Confidence + refutation condition (per the existence-proof discipline):** the score-aware row is an
+n=16 / 20ep MPS smoke (overfit-favoring) — yet it lands at the SAME exact d_seg ~0.016 as the 600-pair
+/ 60ep frame-MSE rung, which is strong (not certain) evidence the cap is structural. It would be
+REFUTED by a 600-pair, long (≥200ep), seg-aware-weighted KD that drives exact d_seg below ~0.009 (the
+sub-019 line). That is the single most-informative follow-up if prune+KD is to be re-opened; the
+present evidence says it is a dead end, MEDIUM-HIGH confidence. The CONFIRMING measurements already run
+(frame-MSE 600-pair + score-aware smoke) agree; this is not a one-probe conclusion.
+
 ## Optimal-size verdict
 
 **Optimal param size = bc36 (228,958 params) — the converged teacher itself.** There is NO smaller
