@@ -341,6 +341,22 @@ n100 activation screen (hosc/step_basis/finer_gauss/fkan vs FINER; adopt-bar = b
 n600-confirm overall winner → generator fire with winning chart. The operator's "define our own" produced 2
 of the top-4 + validated the step-not-sinusoid reframe. Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24f (n600 confirm IN-PROGRESS CAUTION: FINER advantage weaker + REVERSING at n600 — challenges the "persists/grows" prior)
+n600 FINER-vs-SIREN confirm at ep352/1500 (~3.5h, LIVE pid62958/62962): **FINER 0.003527 / SIREN 0.003423 =
+1.030× (FINER BEHIND).** Ratio TREND: n600 ep50/100/150 = 0.968/0.959/0.951× (FINER ahead but WEAKER than
+n100's 0.85×) → ep352 1.030× (REVERSED). Contrast n100: FINER held a STABLE 0.833-0.894× lead through ep100-300
+→ final 0.813×. **My DAG-FEED-24c "spectral advantage persists/grows at n600" prior is CHALLENGED by the data.**
+Two hypotheses, too early to call (ep352/1500, both d_seg still descending ~0.0034, NOT converged; the FLOOR
+difference where n100's win lived isn't set until ~ep1500): **H1** win generalizes but emerges LATE (n100 win
+was ep2895; n600 "late" ≈ ep1500) + single-seed noise; **H2** capacity-dependent artifact — at n600 (6× data,
+same params) both activations are capacity-bound and can't exploit FINER's extra bandwidth → the win was an
+n100 memorization-regime artifact. The early reversal leans H2 but is NOT conclusive. ACTION: let it run to
+convergence (killing it discards the load-bearing floor measurement); NO over-claim either way; verdict at
+~ep1500 (~11h). **CONSEQUENCE: the staged step-native activation screen (hosc/step_basis) rose in value** — if
+FINER's spectral win is capacity-fragile, the step-shape axis (different from bandwidth) may generalize where
+bandwidth doesn't. Existence-proof discipline: flagging my own prior as under-challenge, not defending it.
+Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
