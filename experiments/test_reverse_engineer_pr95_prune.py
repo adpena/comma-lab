@@ -102,6 +102,47 @@ def test_score_math_matches_upstream():
     assert abs(got - expected) < 1e-9, (got, expected)
 
 
+def test_seg_aware_ce_term_is_differentiable_and_decreases():
+    """The score-aware seg KD term must REALLY flow gradients: SegNet-CE between the
+    student's last-frame seg-logits and the teacher's seg-argmax must decrease over a
+    few steps (a real distillation of the argmax signal, not a constant)."""
+    from modules import SegNet, segnet_sd_path
+    from safetensors.torch import load_file
+
+    decoder_sd, latents_full, meta = _inflate()
+    n_pairs = 4
+    latents = latents_full[:n_pairs].clone().detach()
+    teacher = X.build_decoder(meta).eval()
+    teacher.load_state_dict(decoder_sd)
+    for p in teacher.parameters():
+        p.requires_grad_(False)
+    pruned_sd, _ = X.prune_decoder_state(decoder_sd, meta, 28)
+    student = X.build_decoder(meta, base_channels=28)
+    student.load_state_dict(pruned_sd)
+    student.train()
+    seg = SegNet().eval()
+    seg.load_state_dict(load_file(segnet_sd_path, device="cpu"))
+    for p in seg.parameters():
+        p.requires_grad_(False)
+    opt = torch.optim.AdamW(student.parameters(), lr=2e-3)
+
+    ces = []
+    for _ in range(6):
+        with torch.no_grad():
+            tf = teacher(latents)
+            t_seg = X._seg_logits_from_frames(seg, tf).argmax(dim=1)
+        sf = student(latents)
+        s_logits = X._seg_logits_from_frames(seg, sf)
+        ce = torch.nn.functional.cross_entropy(s_logits, t_seg)
+        # grad must reach the student through SegNet + render
+        assert ce.requires_grad
+        opt.zero_grad()
+        ce.backward()
+        opt.step()
+        ces.append(float(ce.item()))
+    assert ces[-1] < ces[0], ces  # seg-CE distillation actually ran
+
+
 def test_render_uint8_roundtrip_shape():
     decoder_sd, latents_full, meta = _inflate()
     dec = X.build_decoder(meta).eval()

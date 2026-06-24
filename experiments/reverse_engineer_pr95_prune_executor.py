@@ -457,6 +457,24 @@ def kd_frame_mse(student_frames, teacher_frames):
     return F.mse_loss(student_frames, teacher_frames.detach())
 
 
+def _seg_logits_from_frames(segnet, pair_frames_chw):
+    """Differentiable SegNet logits on the LAST frame of (B,2,3,H,W) float frames in [0,255].
+
+    Mirrors SegNet.preprocess_input: take last frame, bilinear-resize to seg input size,
+    run the (frozen-weight but grad-flowing) efficientnet. Returns (B,5,Hs,Ws) logits.
+    """
+    import torch.nn.functional as _F
+    from frame_utils import segnet_model_input_size
+
+    last = pair_frames_chw[:, -1, ...]  # (B,3,H,W)
+    seg_in = _F.interpolate(
+        last,
+        size=(segnet_model_input_size[1], segnet_model_input_size[0]),
+        mode="bilinear",
+    )
+    return segnet(seg_in)
+
+
 def run_kd(
     n_pairs,
     device,
@@ -468,6 +486,8 @@ def run_kd(
     gt_cache,
     out_json,
     train_device=None,
+    seg_aware=False,
+    seg_weight=1.0,
 ):
     """KD-finetune a pruned rung from the FROZEN converged bc36 teacher (warm-start).
 
@@ -508,27 +528,55 @@ def run_kd(
         params.append({"params": [lat_param], "lr": lr * 10.0})
     opt = torch.optim.AdamW(params, weight_decay=0.0)
 
+    # Optional SCORE-AWARE seg KD term: a (frozen-weight, grad-flowing) SegNet computes the
+    # student's last-frame seg-logits; CE against the TEACHER's seg-argmax target distills the
+    # actual contest d_seg signal (argmax-flip), which plain frame-MSE does NOT optimize.
+    seg_net = None
+    if seg_aware:
+        from modules import SegNet, segnet_sd_path
+        from safetensors.torch import load_file
+
+        seg_net = SegNet().eval().to(td)
+        seg_net.load_state_dict(load_file(segnet_sd_path, device=str(td)))
+        for p in seg_net.parameters():
+            p.requires_grad_(False)
+
     g = torch.Generator(device="cpu").manual_seed(0)
     first_loss = last_loss = float("nan")
+    first_seg = last_seg = float("nan")
     for ep in range(int(epochs)):
         perm = torch.randperm(n_pairs, generator=g).to(td)
-        ep_loss, nb = 0.0, 0
+        ep_loss, ep_seg, nb = 0.0, 0.0, 0
         for bs in range(0, n_pairs, int(batch_size)):
             idx = perm[bs : bs + int(batch_size)]
             with torch.no_grad():
                 teacher_frames = teacher(lat_param[idx])
             student_frames = student(lat_param[idx])
             loss = kd_frame_mse(student_frames, teacher_frames)
+            seg_loss_val = 0.0
+            if seg_net is not None:
+                with torch.no_grad():
+                    teacher_seg = _seg_logits_from_frames(seg_net, teacher_frames).argmax(dim=1)
+                student_seg_logits = _seg_logits_from_frames(seg_net, student_frames)
+                seg_ce = F.cross_entropy(student_seg_logits, teacher_seg)
+                loss = loss + seg_weight * seg_ce
+                seg_loss_val = float(seg_ce.item())
             opt.zero_grad()
             loss.backward()
             opt.step()
             ep_loss += float(loss.item())
+            ep_seg += seg_loss_val
             nb += 1
         mean = ep_loss / max(nb, 1)
+        mean_seg = ep_seg / max(nb, 1)
         if ep == 0:
-            first_loss = mean
-        last_loss = mean
-        print(f"[kd bc{target_bc} ep{ep} train={td}] frame_mse={mean:.4f}", flush=True)
+            first_loss, first_seg = mean, mean_seg
+        last_loss, last_seg = mean, mean_seg
+        print(
+            f"[kd bc{target_bc} ep{ep} train={td} seg_aware={seg_aware}] "
+            f"loss={mean:.4f} seg_ce={mean_seg:.4f}",
+            flush=True,
+        )
 
     # exact eval after KD on the AUTHORITY device (CPU); render on CPU too.
     student.eval()
@@ -548,9 +596,15 @@ def run_kd(
         "device": str(device),
         "n_pairs": int(n_pairs),
         "base_channels": int(target_bc),
-        "kind": "prune_then_kd",
+        "kind": "prune_then_kd_seg_aware" if seg_aware else "prune_then_kd",
         "train_device": str(td),
+        "seg_aware": bool(seg_aware),
+        "seg_weight": float(seg_weight) if seg_aware else None,
         "kd_epochs": int(epochs),
+        "kd_first_loss": float(first_loss),
+        "kd_last_loss": float(last_loss),
+        "kd_first_seg_ce": float(first_seg) if seg_aware else None,
+        "kd_last_seg_ce": float(last_seg) if seg_aware else None,
         "kd_first_frame_mse": float(first_loss),
         "kd_last_frame_mse": float(last_loss),
         "kd_distillation_ran": bool(last_loss < first_loss),
@@ -590,6 +644,12 @@ def main():
         default=None,
         help="KD-gradient device (e.g. mps); exact eval stays on --device (CPU authority).",
     )
+    ap.add_argument(
+        "--seg-aware",
+        action="store_true",
+        help="add SegNet-CE-to-teacher term to KD (distills the argmax-flip d_seg signal).",
+    )
+    ap.add_argument("--seg-weight", type=float, default=1.0)
     ap.add_argument("--gt-cache", default=str(REPO / ".omx/tmp/pr95_gt_pairs_600.npy"))
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
@@ -615,6 +675,8 @@ def main():
             gt_cache,
             out,
             train_device=args.train_device,
+            seg_aware=args.seg_aware,
+            seg_weight=args.seg_weight,
         )
     else:
         rungs = [int(x) for x in args.rungs.split(",") if x.strip()]
