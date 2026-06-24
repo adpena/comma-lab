@@ -323,6 +323,24 @@ Falsification bar to ADOPT over FINER: d_seg ≤ 0.813× SIREN (beat FINER). Scr
 when MPS frees post-n600-confirm. Wire-in: extends `activation_family.py` (siren/finer/wire infra built).
 Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24e (next-gen activation research DONE → step-native axis (hosc/step_basis) beats FINER's sinusoid on theory; 8 impl+parity-tested, staged)
+Subagent ab12614a DONE (commit 97f41ed94, 8 activations, 92 NO-FAKE tests, $0, NO training). Memo
+`nextgen_inr_activations_survey_and_custom_designs_20260624`. **KEY: the argmax target IS a step function;
+FINER is still SINUSOIDAL (Gibbs overshoot at discontinuities → flips shallow-margin pixels). hosc=`tanh(β·sin x)`
+→ square-wave step-train = native argmax shape, NO Gibbs; step_basis=`Σ aₖ·tanh(gₖ(x−cₖ))` = soft-Heaviside
+sum = exact partition shape.** Ranked d_seg-fit: (1) hosc (2) step_basis [ours, +12B] (3) finer_gauss [ours,
+FINER×Gauss, byte-neutral] (4) fkan [ours, learnable, +10B] (5-7) gauss/rcgauss-FLAIR/sinc (low-pass).
+TOPOLOGY: step functions are the natural basis for a piecewise-constant partition → representation basis
+matches target topology (deepest activation↔problem fit yet). EXISTENCE-PROOF (subagent humility, correct):
+"FINER is the activation floor" is PREMATURE — WIRE was null b/c it localized the WRONG (fixed-freq) carrier;
+hosc/step_basis test the UNTESTED step-shape axis. ADVERSARIAL RISK: hosc saturation (no-Gibbs) ⇒ vanishing
+gradients at large β → trainability risk (finite hosc_beta knob; screen reveals). CAVEAT: learnable families
+(step_basis/fkan) add ~10-12 state_dict keys → byte-closed archive of a learnable winner needs a trivial
+codec sidecar (flagged, non-blocking for the screen). SEQUENCING (free/local): n600 FINER-confirm (running) →
+n100 activation screen (hosc/step_basis/finer_gauss/fkan vs FINER; adopt-bar = beat FINER 0.813× SIREN) →
+n600-confirm overall winner → generator fire with winning chart. The operator's "define our own" produced 2
+of the top-4 + validated the step-not-sinusoid reframe. Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
