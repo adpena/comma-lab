@@ -254,6 +254,28 @@ manifold the generator must learn. Revised generator spec: trained RGB-output ge
 texture) + geometry-PRIOR capacity routing (lane/horizon bands) + round-trip-in-loop + custom format (rate).
 No camera-res hard-paint step. Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24a (upstream seg-sidecar survey + adversarial correction → 8th/9th GO-GENERATOR lines)
+Operator: "did any PR have useful SegNet sidecars / self-contained seg like our pose solution? search all upstream."
+Survey `upstream_segnet_sidecar_selfcontained_survey_20260624` (a10d1adc, commit 99dd9a4ac) read every
+inflate.py. **Asymmetry VERIFIED:** all submissions emit RGB; the scorer re-derives masks → you can't inject a
+stored mask; a FLAT self-contained seg carrier (the literal pose analog) is DOMINATED (pose=6-dim-flat → 22.5KB
+carrier works; seg=full-rank-linear/8-dim-nonlinear → no flat carrier). **8th GO-GENERATOR line: the HNeRV
+winners (0.19–0.23) carry NO seg sidecar — seg quality is ARCHITECTURAL** (mask-conditioned renderers are
+dominated: quantizr 0.33, fp4_mask_gen 0.37, qzs3_range_mask ~0.33–4.39). **ADVERSARIAL CORRECTION (existence-
+proof vs our own #112):** the survey's headline "ADOPT #1 = qpose14 236-B seg-action boundary-flip sidecar" is
+**the SAME lever as our Lever-D survival-selective flip coder, ALREADY MEASURED NO-GO on a converged base**
+(`lever_d_nuanced_fullstack_20260612`: net-ΔS<0 needs coded-subset survival σ>σ*=b/WATERLINE=0.99/1.273=0.778;
+measured best-decile σ=0.51<0.778 → realistic predictor admits NOTHING net-negative; only a cheating oracle is
+GO). qpose14's 236-B win is BASE-DEPENDENT (weak 0.32 mask-renderer base → many cheap high-survival flips); on
+the HNeRV frontier (d_seg 6e-4) the residual flips are the shallow/texture-wall ones (σ≈0.51) → NO-GO. Same
+texture-survival wall (#149). **9th GO-GENERATOR line: "the d_seg win belongs IN TRAINING" (#112 verdict,
+re-confirmed).** REAL adopt from the survey = v4_qp_aq2_roi's SegNet-guided routing → a SegNet-boundary saliency
+weight on the GENERATOR's d_seg loss (in-training, the right place) + the ROI/corridor geometry-prior for
+capacity routing (= the lane/horizon-band routing). qzs3 mask-coder + qpose14 sidecar = LEARN-only (dominated/
+base-dependent). NET: every upstream seg approach either renders-RGB (architectural, the winners) or is a
+base-dependent sidecar our good base obviates → ALL routes converge on the trained generator + in-training
+saliency routing. Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
