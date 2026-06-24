@@ -200,6 +200,22 @@ $0 measurement spawned (add84f1): island intrinsic-dim across {pixel/DCT/contour
 basis collapses m (≤13=format-compressible vs ≈53=generator-only). The format is the RATE half of sub-0.15;
 the trained generator is the d_seg half — same convergence, now with the rate half quantified + half-proven.
 
+### DAG FEED 2026-06-23f (the d_seg islands = LANE markings; 3-structure decomposition; geometry=PRIOR not sidecar)
+Operator: islands are lane markings + horizon + hood, all modeled in openpilot/comma OSS. Memo
+`long_thin_tail_lane_marking_codec_math_20260623`. **MEASURED (existence-proof, 3 priors):** class-1 = lane
+markings (27.6 comp/frame = dashes). The "full-rank content-noise" was the wrong MODEL (pixel-linear); the
+right model is thin curves on a road plane. BUT the geometric SIDECAR is NO-GO (3×): HOOD interior already
+FREE (#139: 19 flips in 25% of frame, clamp saves ~0); HORIZON line cheap (213B) but band flip-matrix rank
+547/600, NO-GO FINAL; LANE homography FALSIFIED (identity beats pose-warp, 1.29px). **PATTERN: geometry =
+WHERE (cheap, openpilot-known); round-trip × fast-motion = WHICH-FLIP (full-rank content-noise — the
+operator's "move fast + interact through round-trip expensively").** REVISED verdict: geometry is a
+CAPACITY-ROUTING PRIOR (spend generator bits on lane/horizon bands; hood free) NOT a sidecar; flips need a
+ROUND-TRIP-AWARE RENDERED witness + CAMERA-RES sub-pixel POLYTOPE placement (#149 set facet at 874 before
+downsample; #73 Dykstra argmax-cell ∩; #55 closed-spec solver) — the one regime where flips are deterministic
+not content-noise. Wavelet/curvelet (Daubechies/Candès-Donoho, "large but sparse, rate to spare") = the band
+basis IF camera-res polytope reopens the flips. The lane/horizon/hood math FEEDS the generator+format build;
+it does not replace it. Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
