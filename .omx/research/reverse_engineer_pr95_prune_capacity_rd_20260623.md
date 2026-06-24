@@ -138,6 +138,17 @@ d_seg jumps from 5.6e-4 (bc36) to ~0.017 (bc28, 148K) to ~0.024 (bc20, 83K). The
 training at that capacity. This REFUTES treating prune+KD as a cheap way to slide down the capacity-RD
 curve; it CONFIRMS (the operator's hypothesis) a hard capacity cliff just below the converged basin.
 
+**Independent sister-screen corroboration (cross-check, 2026-06-23):** the disjoint
+`concentrated_saliency_taper_screen_20260623.md` lane reached the SAME conclusion from a DIFFERENT angle
+— at the ~80KB bc20 budget, d_seg is **capacity-bound (power-law slow), NOT channel-allocatable**:
+reshuffling decoder channels into a concentrated/high-res taper RAISES d_seg ~18% at matched budget (a
+3–4% byte micro-lever only, never a d_seg lever). Two independent screens (my structured-prune-from-bc36
++ their channel-taper-reallocation) converge: sub-0.19 d_seg needs bc36-class capacity (~230KB, the
+borrowed-ceiling rate cost) OR a different representation. Their open $0 hypothesis (spend BYTES on a
+sparse structured boundary sidecar where SegNet argmax-flips live, rather than reshuffling uniform
+channels) is the un-screened lever both screens point to — and is consistent with my Next-step option of
+attacking RATE/structure on the converged weights rather than shrinking the generator.
+
 ### Existence-proof cross-check (binding per `feedback_terminal_conclusion_needs_existence_proof_crosscheck`)
 The converged bc36 teacher achieves d_seg ≈ 5.6e-4 (an EXISTING measured artifact). Therefore any
 rung whose d_seg exceeds 5.6e-4 is a **capacity/recipe artifact of that rung**, NOT a physical floor.
