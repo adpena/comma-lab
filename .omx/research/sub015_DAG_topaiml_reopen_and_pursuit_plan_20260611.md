@@ -292,6 +292,21 @@ SegNet-saliency d_seg loss (v4-adopt) + custom witness format (rate). NEXT: n600
 generator fire (local MPS free/slow vs Modal CUDA ≤$20 fast, #162-sanctioned) → byte-close → exact eval = the
 END. Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24c (ADVERSARIAL review of the FINER win: LOWER-FLOOR not faster-converger → genuine curve-shift; n600 confirm FIRED)
+Sharpest adversarial challenge to FINER's −18.7%: is it a convergence-SPEED artifact (SIREN catches up with more
+epochs) or a lower-FLOOR win (true D(H) curve-shift)? **MEASURED from the n100 trajectories: BOTH arms are
+PLATEAUED at distinct asymptotes** — SIREN tail-slope −7.0e-8/ep (last-decile Δ −0.000023), FINER −5.7e-8/ep (Δ
+−0.000010); SIREN ~0.00169 vs FINER ~0.00138. SIREN needs **~4,500 more epochs** to close the 0.00032 gap on an
+already-flattening curve (won't happen). **VERDICT: FINER is a genuine LOWER-FLOOR win = D(H) curve-shift at
+equal bytes, NOT merely faster** — the strongest form of the result; FINER is the sub-0.15 architecture lever,
+not a training-time-only lever. 5-lens: physics — SIREN's floor is set by its fixed-ω bandwidth ceiling; FINER
+raises the representable-frequency ceiling → places the high-freq boundary SIREN structurally can't; the floor
+GAP = the spectral capacity SIREN lacks. TOPOLOGY PREDICTION (testable on checkpoints): FINER's floor gain
+concentrates in the high-freq class-1 LANE islands, not the low-freq coarse classes → if true, weight the
+generator geometry-prior toward class-1. CAVEAT: n100 floor-win; the **n600×1500 FINER-vs-SIREN confirm is now
+FIRED** (durable no-orphan daemons act_screen_finer_n600 pid62958 + act_screen_siren_n600 pid62962, MPS, ~15h/
+arm) to test floor-gap persistence at 6× data (prior: spectral advantage persists/grows). Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
