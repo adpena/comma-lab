@@ -387,6 +387,18 @@ activation screen MUST measure round-trip SURVIVAL per activation (the #149 metr
 the step-native-lowers-the-survival-wall prediction (first bridge between activation choice and the survival
 wall). Pointer UNMOVED 0.19110.
 
+### DAG FEED 2026-06-24i (n600 confirm CHECKPOINT ep589 — prediction TRACKING: FINER advantage decaying −18.7%→−1.6%, ep352 reversal was transient)
+n600 confirm @ ep589/1500 (LIVE): FINER d_seg 0.003106 / SIREN 0.003157 = **0.984× (FINER ahead by 1.6%)**.
+Ratio trajectory: 0.95×(ep150) → 1.03×(ep352, the flagged dip) → **0.984×(ep589)** → the ep352 reversal was
+training-dynamics NOISE around a small mean, NOT a sustained flip (cautious flagging vindicated). **HEADLINE:
+FINER's lead COLLAPSED from −18.7% (n100) to −1.6% (n600) — ~10× decay**, exactly the capacity-regime
+prediction (DAG-FEED-24g: bandwidth advantage decays as per-frame budget P·b/n tightens). H2 holding so far
+(0.984× within the predicted ±5% FINER≈SIREN band). Not converged (both ~0.0031 descending); FLOOR verdict at
+~ep1500 (~9h). **CONSEQUENCE: FINER is a MARGINAL lever at contest scale (−1.6%), not strong → elevates the
+step-native screen** (12-lens theory: step-native wins MORE under capacity pressure, opposite of FINER's
+decay). The n600 confirm caught a potential over-investment in an n100 result that doesn't transfer; the
+theory already names the alternative (hosc/step_basis). Pointer UNMOVED 0.19110.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
