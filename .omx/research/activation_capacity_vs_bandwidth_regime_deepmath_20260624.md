@@ -88,6 +88,40 @@ efficiency.
    is the same statement as "the 8-dim nonlinear island manifold + a basis matched to it (steps)" — the
    convergence and this regime analysis are the same MDL principle from two directions.
 
+## 7b. EXPANDED-LENS grounding (operator 2026-06-24: + information theory / signal processing / set theory / entropy / VCM / INR / optimal)
+Seven additional lenses on the SAME argmax-edge problem — all converge on step-native/task-matched at the
+capacity-limited regime (the conclusion is now OVER-DETERMINED, 12 lenses total):
+- **Information theory:** indirect-RD; two-part MDL `L(model)+L(data|model)`; capacity-limited ⟺ `P·b <
+  H_boundary_required`. Minimize bits/edge → step basis. The decoder is a channel of capacity ~P·b carrying
+  the n-frame boundary entropy.
+- **Signal processing (the NEW testable one):** the uint8 round-trip (bicubic↑ 874 → bilinear↓ 384) is a
+  LOW-PASS filter; a sharp edge is infinite-band (Nyquist). A sine's **Gibbs ringing = high-freq content that
+  ALIASES unpredictably under the low-pass → flips**; a step has **no ringing → survives the low-pass
+  cleanly**. ⇒ PREDICTION: step-native activations lower the **#149 texture-survival-wall flip fraction
+  (~16%)**, not just the d_seg floor. The survival wall was only ever measured with sine-family rendering.
+- **Set theory:** d_seg = symmetric-difference measure of two SET PARTITIONS {C₀..C₄} of the pixel domain Ω;
+  islands = connected components of C₁ (lane). An indicator/step basis natively parametrizes set membership
+  (𝟙_{Cₖ}); a sine field needs an extra threshold layer between representation and the set → the step basis
+  is the natural representation of a partition's σ-algebra.
+- **Entropy:** the step basis lowers description-length per edge → lowers `H_boundary_required` → **pushes the
+  capacity wall outward** → more effective capacity at fixed `P·b`. (Sister of the weight-entropy order-0
+  floor finding, now at the boundary-configuration level.)
+- **VCM (the contest's exact paradigm):** code for the frozen task (SegNet/PoseNet), not pixels; the
+  CEO/indirect-RD-optimal code transmits the task-sufficient statistic = matched to the **argmax decision
+  boundary** = the partition. Grounds step-native + the task-space witness as the VCM-optimal code.
+- **INR:** the decoder IS an INR; its weights ARE the compressed code (COIN/COIN++ weights-as-code); rate =
+  weight bytes. ⇒ choose the architecture whose **weights are most compressible for a step target** =
+  step-native. Closes the loop with the MDL/entropy lens.
+- **Optimal:** jointly minimize `S = 100·d_seg + √(10·d_pose) + 25·bytes/N`. **Both** controllable terms point
+  to the step basis — d_seg via no-ring round-trip survival (signal proc), bytes via fewest-params/edge (MDL)
+  → the step-native/partition-matched representation is the **joint RD-optimum** at the capacity-limited
+  contest operating point. (FINER/sine is optimal only in the bandwidth-limited low-n regime.)
+
+**Screen addition (signal-processing-derived):** the n600 activation screen MUST measure **round-trip
+survival per activation** (the #149 flip-fraction metric), not only byte-closed d_seg — to test the
+step-native-lowers-the-survival-wall prediction. This bridges the activation choice to the survival wall for
+the first time.
+
 ## 8. NO-FAKE ledger
 - DERIVED: the regime split (P·b/n budget), NTK bandwidth (FINER wins bandwidth-limited only), MDL
   params-per-edge (steps O(1) vs sine O(1/ε), L∞-at-edge), topology basis-match, free-energy framing.
