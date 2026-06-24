@@ -181,6 +181,25 @@ Hypothesis was: d_seg = (near-constant region adjacency) + (codim-1 boundary mov
 ### CONVERGENCE 2026-06-23 — THE $0/FROZEN-INSTANCE PHASE IS EXHAUSTED; sub-0.15 IS A TRAINING PROBLEM.
 FOUR independent lines now agree: (1) operator compression reframe → bit/coder/mixed lever measured-closed → carrier/training; (2) adversarial-review-all → "0.191 ceiling under-powered" → fire the from-scratch sweep; (3) topology → LIMITED → trained generator not sidecar; (4) weight-entropy/qaxis → rate at Shannon floor, sub-8-bit breaks d_seg → shift D(H) via carrier/architecture. **Every post-hoc sidecar/recode/bit-trick is closed.** The only lever that touches the full-rank d_seg content-noise is a TRAINED generator = (a) FINER/WIRE spectral screen [in flight — does architecture lower d_seg(H)?] (b) the never-fired from-scratch capacity sweep [+INT4 arm]. The search has moved from frozen-instance to TRAINING.
 
+### DAG FEED 2026-06-23e (OPERATOR VISION: our own representation/format + inflate.py interpreter/inverse-solver)
+Operator: *"create our own representation or file format … bitmask but combined with magnitudes and
+behaviors/ops … extremely compressible, as much packed into inflate.py as possible … inflate.py as an
+interpreter to do clever/outrageous/inverse things on cpu/gpu."* = the Evaluator-Equivalent Witness Compiler
+made concrete. Design: `.omx/research/custom_witness_format_inflate_interpreter_design_20260623.md`.
+**ORTHOGONAL FACTORIZATION (the key):** S factors into (d_seg/d_pose = TRAINED GENERATOR) × (bytes = CUSTOM
+FORMAT). The format does NOT lower d_seg; it lowers the RATE a given distortion is carried at. **EXISTENCE
+PROOF (corrects my prior over-claim):** L13 already built the FORMAT's pose half — rendered pose-carrier
+22.5KB, d_pose 12.66→0.006, real byte-close, round-trip-SURVIVES, **−59% vs frontier RGB rate** — but L13
+d_seg=0.0068 (NOT lossless-parity, NOT sub-0.15; S≈0.79). So the format is PROVEN on smooth/low-rank parts
+(pose, coarse boundary), and hits the SAME island wall on d_seg. Format = 4 layers: bitmask/contour (WHERE,
+coarse rank-4 cheap) + magnitudes (HOW-MUCH, Fisher-√ band) + ops (HOW-TO-EVOLVE, warp+delta temporal-MC) +
+inflate.py inverse-solver (HOW-TO-SOLVE, level-set/feasibility/NCA #55/#73/#143, CPU/GPU, render-survives) +
+#99 firmware bit-pack (2.85× constant). Beats the flat-sidecar NO-GO (543KB/46%-survival) by ops+render.
+**Composed projection (directional): generator d_seg~6e-4 + pose 0.006 + format rate 50-72KB → S≈0.12-0.14.**
+$0 measurement spawned (add84f1): island intrinsic-dim across {pixel/DCT/contour/motion-comp/AE} → which
+basis collapses m (≤13=format-compressible vs ≈53=generator-only). The format is the RATE half of sub-0.15;
+the trained generator is the d_seg half — same convergence, now with the rate half quantified + half-proven.
+
 ### LIVE: FINER/WIRE/SIREN architecture screen (a0e28b5, MPS, spectral k1); topology measurement (af64e924, $0).
 ### NEXT (ranked): (1) FIRE the from-scratch capacity sweep [THE decisive measurement] (2) FINER/WIRE verdict (3) topology af64e924 (4) k1-champion × C* × L13 witness → closed-form stack.
 
