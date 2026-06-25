@@ -295,5 +295,95 @@ def test_load_teacher_logits_rejects_hw_mismatch(tmp_path: Path) -> None:
         wc.load_teacher_logits(d, n_pairs=2, H=10, W=10)  # wrong hw -> fail closed
 
 
+# --------------------------------------------------------------------------------------------
+# Boundary-affinity KD (the structurally-NEW pair-wise lever; Liu CVPR-2019 structured-KD adapted)
+# --------------------------------------------------------------------------------------------
+def test_boundary_affinity_zero_when_student_matches_teacher() -> None:
+    # If student logits == teacher logits at BOTH pixels, the soft affinities match exactly -> 0.
+    import mlx.core as mx
+
+    rng = np.random.default_rng(11)
+    a = mx.array(rng.standard_normal((20, 5)).astype(np.float32) * 2.0)
+    b = mx.array(rng.standard_normal((20, 5)).astype(np.float32) * 2.0)
+    loss = np.array(wc.boundary_affinity_kd(a, b, a, b, temperature=2.0))
+    assert np.allclose(loss, 0.0, atol=1e-6)
+
+
+def test_boundary_affinity_positive_when_edge_field_differs() -> None:
+    # Student says "same class" across the pair (high affinity) while teacher says "edge"
+    # (low affinity) -> the affinity-match loss must be strictly positive (the term is alive).
+    import mlx.core as mx
+
+    M = 16
+    same = mx.array(np.tile(np.array([8.0, 0, 0, 0, 0], np.float32), (M, 1)))  # both -> class 0
+    other = mx.array(np.tile(np.array([0, 8.0, 0, 0, 0], np.float32), (M, 1)))  # -> class 1
+    # student: A and B both class 0 (no edge); teacher: A class 0, B class 1 (an edge).
+    loss = np.array(wc.boundary_affinity_kd(same, same, same, other, temperature=2.0))
+    assert (loss > 1e-3).all()
+
+
+def test_boundary_affinity_captures_edge_vs_interior_structure() -> None:
+    # The soft affinity must be HIGHER for an interior pair (same class both) than for an edge pair
+    # (different class) under a matched teacher==student — proving it reads edge geometry, not a
+    # constant. We compare the teacher affinity directly via the (student==teacher) identity.
+    import mlx.core as mx
+
+    interior_a = mx.array(np.array([[6.0, 0, 0, 0, 0]], np.float32))
+    interior_b = mx.array(np.array([[6.0, 0, 0, 0, 0]], np.float32))  # same class -> high agreement
+    edge_a = mx.array(np.array([[6.0, 0, 0, 0, 0]], np.float32))
+    edge_b = mx.array(np.array([[0, 6.0, 0, 0, 0]], np.float32))  # different -> low agreement
+    # student deliberately FLAT (uniform) so affinity differs from the teacher in both cases;
+    # the EDGE pair (lower teacher affinity) should yield a LARGER mismatch than the interior pair
+    # (teacher affinity ~1, student ~0.2). i.e. the loss is sensitive to the teacher edge field.
+    flat = mx.array(np.zeros((1, 5), np.float32))
+    l_interior = float(np.array(wc.boundary_affinity_kd(flat, flat, interior_a, interior_b, 2.0))[0])
+    l_edge = float(np.array(wc.boundary_affinity_kd(flat, flat, edge_a, edge_b, 2.0))[0])
+    # teacher interior affinity ~1 (mismatch vs flat 0.2 -> large); teacher edge affinity ~0.5
+    # (mismatch vs flat 0.2 -> smaller). So interior mismatch > edge mismatch here.
+    assert l_interior > l_edge
+    assert l_interior != l_edge  # the term is NOT constant in the teacher field
+
+
+def test_boundary_affinity_matches_closed_form_numpy() -> None:
+    # Closed-form numpy parity: aff = <softmax(a/T), softmax(b/T)>; loss = (aff_s - aff_t)^2.
+    import mlx.core as mx
+
+    rng = np.random.default_rng(12)
+    T = 2.0
+    sa = rng.standard_normal((10, 5)).astype(np.float32) * 1.5
+    sb = rng.standard_normal((10, 5)).astype(np.float32) * 1.5
+    ta = rng.standard_normal((10, 5)).astype(np.float32) * 1.5
+    tb = rng.standard_normal((10, 5)).astype(np.float32) * 1.5
+
+    def _sm(x):
+        z = x / T
+        z = z - z.max(axis=-1, keepdims=True)
+        e = np.exp(z)
+        return e / e.sum(axis=-1, keepdims=True)
+
+    aff_s = (_sm(sa) * _sm(sb)).sum(-1)
+    aff_t = (_sm(ta) * _sm(tb)).sum(-1)
+    want = (aff_s - aff_t) ** 2
+    got = np.array(wc.boundary_affinity_kd(mx.array(sa), mx.array(sb), mx.array(ta), mx.array(tb), T))
+    assert np.allclose(got, want, atol=1e-5)
+
+
+def test_boundary_affinity_gradient_flows_to_student() -> None:
+    import mlx.core as mx
+
+    rng = np.random.default_rng(13)
+    ta = mx.array(rng.standard_normal((12, 5)).astype(np.float32))
+    tb = mx.array(rng.standard_normal((12, 5)).astype(np.float32))
+    sa = mx.array(rng.standard_normal((12, 5)).astype(np.float32))
+    sb = mx.array(rng.standard_normal((12, 5)).astype(np.float32))
+
+    def f(s_pair):
+        return wc.boundary_affinity_kd(s_pair[0], s_pair[1], ta, tb, 2.0).mean()
+
+    g = mx.grad(f)([sa, sb])
+    assert not np.allclose(np.array(g[0]), 0.0)  # gradient reaches pixel A
+    assert not np.allclose(np.array(g[1]), 0.0)  # and pixel B
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

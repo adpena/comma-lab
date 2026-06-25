@@ -353,6 +353,52 @@ def kd_kl_logits(
     return (t * t) * kl
 
 
+def boundary_affinity_kd(
+    stud_a: mx.array,  # (M, n_classes) student logits at pixel A
+    stud_b: mx.array,  # (M, n_classes) student logits at adjacent pixel B
+    teach_a: mx.array,  # (M, n_classes) teacher logits at pixel A
+    teach_b: mx.array,  # (M, n_classes) teacher logits at adjacent pixel B
+    temperature: float,
+) -> mx.array:
+    """Pair-wise boundary-AFFINITY KD: match the student's edge field to the teacher's.
+
+    THE STRUCTURALLY-NEW LEVER (vs per-pixel CE/KD which SATURATE ~0.0024). The measured residual
+    map (experiments/probe_witness_residual_localization.py) proved the witness's remaining flips
+    are NOT a deep-interior representation failure: 87% hug the GT boundary within 1.5 px, 90% are
+    at margin < 2, and 71% land where the FROZEN SegNet teacher is ITSELF near-tie (top2 gap < 1).
+    The residual is the EDGE-PLACEMENT band (road<->lane = 47% of the tie-band). Per-pixel signals
+    cannot supervise where the EDGE sits — that is a RELATIONAL (pair-wise) property of adjacent
+    pixels. This term supplies exactly that.
+
+    Mechanism (Liu et al. CVPR 2019 "Structured Knowledge Distillation", pair-wise scheme, ADAPTED
+    to soft affinity): for each adjacent pixel pair (A, B), the affinity = the probability that A
+    and B share a class = <softmax(A/T), softmax(B/T)> (the expected agreement; ~1 inside a region,
+    drops at an edge). The loss pulls the student affinity toward the teacher affinity. Because the
+    teacher's affinity encodes its EXACT (soft) edge geometry, the student learns to put its edge
+    where SegNet puts its edge — the thing per-pixel KD is blind to.
+
+    Returns (M,) per-pair affinity-match loss (squared error on the soft affinity). 0 archive
+    bytes (train-time only; the teacher logits are the cached frozen authority).
+
+    BORROWED-SUBSTRATE ACCOUNTING (CLAUDE.md NO-FAKE): the pair-wise affinity / inter-pixel
+    relation KD is BORROWED from Liu-Chen-Liu-Qin-Luo-Wang CVPR 2019 (Structured Knowledge
+    Distillation for Semantic Segmentation; pair-wise + holistic schemes) + the BPKD WACV-2024
+    edge-decoupling insight (Liu et al.; edge regions need higher spatial sensitivity than body).
+    OURS = (a) applying soft pair-wise affinity to a NON-RGB coordinate-INR argmax witness (it has
+    no feature maps to mimic; we mimic the OUTPUT edge field instead), (b) keying it on the FROZEN
+    contest SegNet as the self-affinity teacher, (c) the spatially-adjacent-coordinate-pair sampling
+    that makes the relational term computable in the witness's random-pixel SGD loop.
+    """
+    t = float(temperature)
+    ps_a = mx.softmax(stud_a / t, axis=-1)
+    ps_b = mx.softmax(stud_b / t, axis=-1)
+    pt_a = mx.softmax(teach_a / t, axis=-1)
+    pt_b = mx.softmax(teach_b / t, axis=-1)
+    aff_s = mx.sum(ps_a * ps_b, axis=-1)  # (M,) student soft agreement in [0,1]
+    aff_t = mx.sum(pt_a * pt_b, axis=-1)  # (M,) teacher soft agreement in [0,1]
+    return (aff_s - aff_t) ** 2
+
+
 def load_teacher_logits(teacher_dir: Path, n_pairs: int, H: int, W: int) -> np.memmap:
     """Memmap the (P, 5, H, W) fp16 teacher logits, returned reshaped to (P, HW, 5) on access."""
     meta = json.loads((teacher_dir / "teacher_logits_meta.json").read_text())
@@ -475,6 +521,11 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
     kd_temp = float(args.kd_temp)
     kd_ce_blend = float(args.kd_ce_blend)  # weight on the hard-argmax weighted-CE alongside KD
 
+    bnd_aff_w = float(args.bnd_affinity_weight)
+    bnd_aff_active = bnd_aff_w > 0.0
+    if bnd_aff_active and not kd_active:
+        raise ValueError("--bnd-affinity-weight > 0 requires --kd-weight > 0 (needs teacher logits)")
+
     def loss_fn(model, pair_idx, fbatch, labels, wpx, teacher):
         """Composable loss: kd_ce_blend * margin-weighted-CE + kd_weight * margin-weighted-KD.
 
@@ -491,6 +542,28 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         return kd_ce_blend * ce_term + kd_weight * kd_term
 
     loss_and_grad = nn.value_and_grad(model, loss_fn)
+
+    def loss_fn_aff(model, pair_idx, fb_a, fb_b, lab_a, wpx_a, teach_a, teach_b):
+        """Per-pixel CE/KD on A + pair-wise boundary-affinity KD on (A, B-neighbor).
+
+        Used ONLY when --bnd-affinity-weight > 0. The per-pixel branch is the SAME margin-weighted
+        CE+KD as loss_fn (so the affinity term is purely ADDITIVE on top of the optimal-form c1
+        recipe), plus bnd_aff_w * mean( weight_pair * boundary_affinity_kd(A,B) ).
+        """
+        logits_a = model(fb_a, pair_idx)
+        ce = nn.losses.cross_entropy(logits_a, lab_a, reduction="none")
+        ce_term = (ce * wpx_a).mean()
+        kd = kd_kl_logits(logits_a, teach_a, kd_temp)
+        kd_term = (kd * wpx_a).mean()
+        per_pixel = kd_ce_blend * ce_term + kd_weight * kd_term
+        logits_b = model(fb_b, pair_idx)
+        aff = boundary_affinity_kd(logits_a, logits_b, teach_a, teach_b, kd_temp)  # (M,)
+        # weight the affinity pairs by the SAME shallow-margin hinge (A's weight) — the edge band
+        # is exactly where the residual lives, so concentrate the relational signal there too.
+        aff_term = (aff * wpx_a).mean()
+        return per_pixel + bnd_aff_w * aff_term
+
+    loss_and_grad_aff = nn.value_and_grad(model, loss_fn_aff)
 
     def eval_d_seg() -> float:
         disagree = 0
@@ -526,11 +599,23 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
                 wnp = wnp * hard_pixel_boost(cur_pred, lab_np, args.error_boost)
             wpx = mx.array(wnp.astype(np.float32))
             teacher_b = None
+            tlog = None
             if teacher_mm is not None:
                 # sample the SAME pixel indices from the (5,H,W) teacher -> (px_per_step, 5)
                 tlog = np.asarray(teacher_mm[pi]).reshape(5, n_px).astype(np.float32)
                 teacher_b = mx.array(tlog[:, idx].T)  # (px_per_step, 5)
-            loss, grads = loss_and_grad(model, int(pi), fb, lab, wpx, teacher_b)
+            if bnd_aff_active:
+                # B = the right-neighbor of A within the SAME row (clamp last col to left-neighbor);
+                # this makes (A, B) a horizontally-adjacent pixel pair across which an edge may sit.
+                col = idx % W
+                bidx = np.where(col < W - 1, idx + 1, idx - 1)
+                fb_b = feats_mx[pi][mx.array(bidx)]
+                teach_b_b = mx.array(tlog[:, bidx].T)  # (px_per_step, 5)
+                loss, grads = loss_and_grad_aff(
+                    model, int(pi), fb, fb_b, lab, wpx, teacher_b, teach_b_b
+                )
+            else:
+                loss, grads = loss_and_grad(model, int(pi), fb, lab, wpx, teacher_b)
             opt.update(model, grads)
             mx.eval(model.parameters(), opt.state)
             ep_loss += float(loss)
@@ -560,6 +645,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             "error_boost": args.error_boost,
             "kd_weight": kd_weight, "kd_temp": kd_temp, "kd_ce_blend": kd_ce_blend,
             "kd_active": kd_active,
+            "bnd_affinity_weight": bnd_aff_w, "bnd_affinity_active": bnd_aff_active,
             "teacher_logits_dir": str(args.teacher_logits_dir) if args.teacher_logits_dir else None,
             "px_per_step": args.px_per_step, "seed": args.seed, "in_feat": in_feat,
         },
@@ -648,6 +734,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--teacher-logits-dir", type=Path, default=None,
                     help="dir with gt_segnet_logits.f16 + teacher_logits_meta.json "
                          "(from tools/build_segnet_teacher_logits.py).")
+    ap.add_argument("--bnd-affinity-weight", type=float, default=0.0,
+                    help="weight on the pair-wise BOUNDARY-AFFINITY KD term (Liu CVPR-2019 "
+                         "structured-KD, adapted): match student adjacent-pixel agreement to the "
+                         "teacher's soft edge field. 0.0=off=exact backward-compat. Requires "
+                         "--kd-weight>0 (uses teacher logits). 0 archive bytes (train-time). The "
+                         "STRUCTURALLY-NEW lever targeting the edge-PLACEMENT residual that "
+                         "per-pixel CE/KD saturate.")
     ap.add_argument("--px-per-step", type=int, default=8192)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)
