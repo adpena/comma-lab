@@ -325,6 +325,47 @@ def _np_softplus_act(x: np.ndarray, activation: str) -> np.ndarray:
     raise ValueError(activation)
 
 
+def kd_kl_logits(
+    student_logits: mx.array,  # (P, n_classes) raw witness logits
+    teacher_logits: mx.array,  # (P, n_classes) raw FROZEN-SegNet teacher logits
+    temperature: float,
+) -> mx.array:
+    """Soft-logit KD loss = T^2 * KL(softmax(teacher/T) || softmax(student/T)), per-pixel.
+
+    Hinton-Vinyals-Dean 2015 ("Distilling the Knowledge in a Neural Network") /
+    Quantizr PR62 ``kl_on_logits`` form: the teacher's FULL 5-class probability field is a DENSE
+    target (the margin geometry the d_seg flips live on), strictly richer than the hard argmax.
+    The T^2 factor restores the gradient magnitude (soft targets have 1/T^2 smaller gradients).
+
+    Direction: KL(teacher || student) — the canonical distillation direction (the student is pulled
+    toward the teacher's soft distribution; matches Hinton-2015 + nn KLDivLoss(student_logT, teacher_p)).
+    Returns a (P,) per-pixel KL so the caller can apply the same margin/error weighting if desired.
+
+    BORROWED (KD/kl_on_logits/T) accounting + 0-archive-byte (train-time only) are documented in the
+    module docstring + tools/build_segnet_teacher_logits.py manifest.
+    """
+    t = float(temperature)
+    log_p_student = student_logits / t - mx.logsumexp(student_logits / t, axis=-1, keepdims=True)
+    log_p_teacher = teacher_logits / t - mx.logsumexp(teacher_logits / t, axis=-1, keepdims=True)
+    p_teacher = mx.exp(log_p_teacher)
+    # KL(teacher || student) = sum_c p_teacher * (log_p_teacher - log_p_student)
+    kl = mx.sum(p_teacher * (log_p_teacher - log_p_student), axis=-1)
+    return (t * t) * kl
+
+
+def load_teacher_logits(teacher_dir: Path, n_pairs: int, H: int, W: int) -> np.memmap:
+    """Memmap the (P, 5, H, W) fp16 teacher logits, returned reshaped to (P, HW, 5) on access."""
+    meta = json.loads((teacher_dir / "teacher_logits_meta.json").read_text())
+    n_built = int(meta["num_pairs_built"])
+    n_cls = int(meta["n_classes"])
+    th, tw = meta["seg_input_hw"]
+    if (th, tw) != (H, W):
+        raise ValueError(f"teacher hw {(th, tw)} != targets hw {(H, W)}")
+    n = min(n_pairs, n_built)
+    return np.memmap(teacher_dir / "gt_segnet_logits.f16", dtype=np.float16, mode="r",
+                     shape=(n_built, n_cls, th, tw))[:n]
+
+
 # ---------------------------------------------------------------------------
 # Targets + feature cache
 # ---------------------------------------------------------------------------
@@ -412,6 +453,16 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
     labels_flat = argmax.reshape(P, n_px).astype(np.int32)
     margin_flat = margin.reshape(P, n_px).astype(np.float32)
 
+    # --- KD teacher soft-logits (optional; kd_weight=0.0 = exact backward-compat) ---
+    teacher_mm = None  # (P, 5, H, W) fp16 memmap; reshaped per-pair to (HW, 5) on sample
+    kd_active = float(args.kd_weight) > 0.0
+    if kd_active:
+        if not args.teacher_logits_dir:
+            raise ValueError("--kd-weight > 0 requires --teacher-logits-dir")
+        teacher_mm = load_teacher_logits(Path(args.teacher_logits_dir), args.num_pairs, H, W)
+        if teacher_mm.shape[0] < P:
+            raise ValueError(f"teacher has {teacher_mm.shape[0]} pairs < {P} requested")
+
     model = ImprovedSegGenerator(
         num_pairs=P, n_fourier=args.n_fourier, hidden_dim=args.hidden_dim,
         n_hidden=args.n_hidden, mod_dim=args.mod_dim, fourier_sigma=args.fourier_sigma,
@@ -420,11 +471,24 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
     )
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
     tau = 1.0
+    kd_weight = float(args.kd_weight)
+    kd_temp = float(args.kd_temp)
+    kd_ce_blend = float(args.kd_ce_blend)  # weight on the hard-argmax weighted-CE alongside KD
 
-    def loss_fn(model, pair_idx, fbatch, labels, wpx):
+    def loss_fn(model, pair_idx, fbatch, labels, wpx, teacher):
+        """Composable loss: kd_ce_blend * margin-weighted-CE + kd_weight * margin-weighted-KD.
+
+        When kd_weight == 0 the KD branch is skipped entirely (teacher is None) and the loss is
+        exactly the original (ce * wpx).mean() — bit-for-bit backward-compatible.
+        """
         logits = model(fbatch, pair_idx)
         ce = nn.losses.cross_entropy(logits, labels, reduction="none")
-        return (ce * wpx).mean()
+        ce_term = (ce * wpx).mean()
+        if teacher is None:
+            return ce_term
+        kd = kd_kl_logits(logits, teacher, kd_temp)  # (P,) per-pixel KL
+        kd_term = (kd * wpx).mean()
+        return kd_ce_blend * ce_term + kd_weight * kd_term
 
     loss_and_grad = nn.value_and_grad(model, loss_fn)
 
@@ -461,7 +525,12 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
                 cur_pred = np.array(mx.argmax(model(fb, int(pi)), axis=-1)).astype(np.int32)
                 wnp = wnp * hard_pixel_boost(cur_pred, lab_np, args.error_boost)
             wpx = mx.array(wnp.astype(np.float32))
-            loss, grads = loss_and_grad(model, int(pi), fb, lab, wpx)
+            teacher_b = None
+            if teacher_mm is not None:
+                # sample the SAME pixel indices from the (5,H,W) teacher -> (px_per_step, 5)
+                tlog = np.asarray(teacher_mm[pi]).reshape(5, n_px).astype(np.float32)
+                teacher_b = mx.array(tlog[:, idx].T)  # (px_per_step, 5)
+            loss, grads = loss_and_grad(model, int(pi), fb, lab, wpx, teacher_b)
             opt.update(model, grads)
             mx.eval(model.parameters(), opt.state)
             ep_loss += float(loss)
@@ -489,8 +558,15 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             "all_class": args.all_class,
             "lr": args.lr, "weight_decay": args.weight_decay, "hinge_weight": args.hinge_weight,
             "error_boost": args.error_boost,
+            "kd_weight": kd_weight, "kd_temp": kd_temp, "kd_ce_blend": kd_ce_blend,
+            "kd_active": kd_active,
+            "teacher_logits_dir": str(args.teacher_logits_dir) if args.teacher_logits_dir else None,
             "px_per_step": args.px_per_step, "seed": args.seed, "in_feat": in_feat,
         },
+        "kd_borrowed_substrate": (
+            "KD/kl_on_logits/T from Quantizr-PR62 + Hinton-Vinyals-Dean 2015; "
+            "OURS=frozen-contest-SegNet self-distillation into a non-RGB coord-INR argmax witness"
+        ) if kd_active else None,
         "px_per_map": n_px, "px_pairs_total": n_px * P, "device": "mlx (Apple GPU)",
         "feat_precompute_secs": round(feat_secs, 1),
         "history": history, "final_d_seg": history[-1]["d_seg"], "best_d_seg": best_d_seg,
@@ -560,6 +636,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--error-boost", type=float, default=0.0,
                     help="PR74/PR62 hard-pixel error boost: extra weight on px the current model "
                          "misclassifies (0.0=off; PR62 used 9, PR74 used 49). 0-byte, train-time.")
+    # KD (soft-logit knowledge distillation; Quantizr kl_on_logits / Hinton-2015)
+    ap.add_argument("--kd-weight", type=float, default=0.0,
+                    help="weight on the T^2*KL(teacher||student) soft-logit KD term (0.0=off=exact "
+                         "backward-compat). Requires --teacher-logits-dir. 0 archive bytes (train-time).")
+    ap.add_argument("--kd-temp", type=float, default=2.0,
+                    help="KD softmax temperature T (Quantizr/Hinton default 2.0).")
+    ap.add_argument("--kd-ce-blend", type=float, default=0.0,
+                    help="weight on the hard-argmax margin-weighted-CE alongside KD (0.0=KD-only "
+                         "when kd-weight>0; e.g. 1.0 for an even KD+CE blend).")
+    ap.add_argument("--teacher-logits-dir", type=Path, default=None,
+                    help="dir with gt_segnet_logits.f16 + teacher_logits_meta.json "
+                         "(from tools/build_segnet_teacher_logits.py).")
     ap.add_argument("--px-per-step", type=int, default=8192)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)

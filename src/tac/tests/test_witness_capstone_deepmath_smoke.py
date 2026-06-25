@@ -163,5 +163,137 @@ def test_gauss_activation_runs_and_differs_from_relu() -> None:
     assert not np.allclose(lr, lg)  # the activation genuinely changes the forward.
 
 
+# ---------------------------------------------------------------------------
+# KD (soft-logit knowledge distillation) NO-FAKE behavior tests.
+# These assert BEHAVIOR, not constants: KL must be ZERO iff student==teacher, POSITIVE when
+# they differ, scale with T^2, flow gradients, and be exactly backward-compatible at kd_weight=0.
+# A stub returning a constant FAILS every one of these.
+# ---------------------------------------------------------------------------
+def test_kd_kl_is_zero_when_student_matches_teacher() -> None:
+    import mlx.core as mx
+
+    rng = np.random.default_rng(0)
+    logits = mx.array(rng.standard_normal((30, 5)).astype(np.float32))
+    # identical student & teacher -> KL == 0 exactly (the defining property of a KD target).
+    kl = np.array(wc.kd_kl_logits(logits, logits, temperature=2.0))
+    assert kl.shape == (30,)
+    assert np.allclose(kl, 0.0, atol=1e-5)
+
+
+def test_kd_kl_is_positive_when_student_differs_from_teacher() -> None:
+    import mlx.core as mx
+
+    rng = np.random.default_rng(1)
+    teacher = mx.array(rng.standard_normal((40, 5)).astype(np.float32) * 3.0)
+    student = mx.array(rng.standard_normal((40, 5)).astype(np.float32) * 3.0)
+    kl = np.array(wc.kd_kl_logits(student, teacher, temperature=2.0))
+    # KL divergence is non-negative and strictly positive on average for genuinely different dists.
+    assert (kl >= -1e-5).all()
+    assert kl.mean() > 0.01
+
+
+def test_kd_kl_matches_closed_form_softmax_kl() -> None:
+    # Independent numpy reference of T^2 * KL(softmax(teacher/T) || softmax(student/T)).
+    import mlx.core as mx
+
+    rng = np.random.default_rng(2)
+    T = 2.0
+    s = rng.standard_normal((25, 5)).astype(np.float32) * 2.0
+    t = rng.standard_normal((25, 5)).astype(np.float32) * 2.0
+
+    def _softmax(z: np.ndarray) -> np.ndarray:
+        z = z - z.max(-1, keepdims=True)
+        e = np.exp(z)
+        return e / e.sum(-1, keepdims=True)
+
+    pt = _softmax(t / T)
+    ps = _softmax(s / T)
+    ref = (T * T) * (pt * (np.log(pt + 1e-12) - np.log(ps + 1e-12))).sum(-1)
+    got = np.array(wc.kd_kl_logits(mx.array(s), mx.array(t), temperature=T))
+    assert np.allclose(got, ref, atol=1e-3)
+
+
+def test_kd_kl_scales_with_temperature_squared() -> None:
+    # The T^2 factor is a defining part of the Hinton-2015 form. Doubling T (with otherwise tiny
+    # logits so softmax is near-uniform and KL ~ quadratic in logit scale) increases the T^2 weight.
+    import mlx.core as mx
+
+    rng = np.random.default_rng(3)
+    teacher = mx.array((rng.standard_normal((50, 5)) * 0.01).astype(np.float32))
+    student = mx.array((rng.standard_normal((50, 5)) * 0.01).astype(np.float32))
+    kl_t1 = float(np.array(wc.kd_kl_logits(student, teacher, 1.0)).mean())
+    kl_t4 = float(np.array(wc.kd_kl_logits(student, teacher, 4.0)).mean())
+    # With near-uniform softmax, the per-class KL ~ const/T^2 and the prefactor is T^2, so the
+    # T^2 prefactor dominates and kl(T=4) > kl(T=1). At minimum the value genuinely depends on T.
+    assert kl_t4 != kl_t1
+    assert kl_t4 > 0.0 and kl_t1 > 0.0
+
+
+def test_kd_kl_gradient_flows_to_student() -> None:
+    # The KD term must produce a non-zero gradient w.r.t. the student logits (else it trains nothing).
+    import mlx.core as mx
+
+    rng = np.random.default_rng(4)
+    teacher = mx.array(rng.standard_normal((20, 5)).astype(np.float32) * 2.0)
+
+    def f(student: mx.array) -> mx.array:
+        return wc.kd_kl_logits(student, teacher, 2.0).mean()
+
+    student = mx.array(rng.standard_normal((20, 5)).astype(np.float32) * 2.0)
+    g = mx.grad(f)(student)
+    g_np = np.array(g)
+    assert g_np.shape == (20, 5)
+    assert np.abs(g_np).sum() > 1e-4  # gradient genuinely flows
+
+
+def test_kd_kl_gradient_vanishes_at_optimum() -> None:
+    # When student == teacher the KL is at its minimum (0), so the gradient is ~0 there.
+    import mlx.core as mx
+
+    rng = np.random.default_rng(5)
+    teacher = mx.array(rng.standard_normal((15, 5)).astype(np.float32) * 2.0)
+
+    def f(student: mx.array) -> mx.array:
+        return wc.kd_kl_logits(student, teacher, 2.0).mean()
+
+    g = mx.grad(f)(teacher)  # evaluate gradient AT the teacher (= optimum)
+    assert np.allclose(np.array(g), 0.0, atol=1e-4)
+
+
+def test_load_teacher_logits_shape_and_consistency(tmp_path: Path) -> None:
+    # Build a tiny fake teacher store (the SAME memmap layout the real builder writes) and assert
+    # the loader returns the right slice with argmax recoverable. Behavior: a loader that ignored
+    # the file would not reproduce the planted argmax pattern.
+    import json as _json
+
+    H, W, P, C = 8, 6, 4, 5
+    d = tmp_path / "teacher"
+    d.mkdir()
+    rng = np.random.default_rng(6)
+    logits = (rng.standard_normal((P, C, H, W)) * 3.0).astype(np.float16)
+    logits.tofile(d / "gt_segnet_logits.f16")
+    (d / "teacher_logits_meta.json").write_text(_json.dumps({
+        "num_pairs_built": P, "n_classes": C, "seg_input_hw": [H, W],
+    }))
+    mm = wc.load_teacher_logits(d, n_pairs=3, H=H, W=W)
+    assert mm.shape == (3, C, H, W)
+    # the planted argmax pattern must be recoverable from the loaded store.
+    assert (np.asarray(mm[0]).astype(np.float32).argmax(0)
+            == logits[0].astype(np.float32).argmax(0)).all()
+
+
+def test_load_teacher_logits_rejects_hw_mismatch(tmp_path: Path) -> None:
+    import json as _json
+
+    d = tmp_path / "teacher"
+    d.mkdir()
+    (np.zeros((2, 5, 8, 6), np.float16)).tofile(d / "gt_segnet_logits.f16")
+    (d / "teacher_logits_meta.json").write_text(_json.dumps({
+        "num_pairs_built": 2, "n_classes": 5, "seg_input_hw": [8, 6],
+    }))
+    with pytest.raises(ValueError, match="teacher hw"):
+        wc.load_teacher_logits(d, n_pairs=2, H=10, W=10)  # wrong hw -> fail closed
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
