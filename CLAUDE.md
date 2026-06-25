@@ -107,6 +107,92 @@ You are operating inside a dual-track lab for the comma video compression challe
 
 Read `PROGRAM.md` before making changes.
 
+## THE CURRENT FRONTIER + FOCUS + PRIORITY — THE NON-RGB TASK-SPACE WITNESS CAPSTONE — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator binding directive 2026-06-25 verbatim *"the small basis we selected was likely too
+small and we needed to pivot off hnerv to witness and nonlinear and new representation and carrier more
+optimal than 50k epoch straight out the paper seg power law w pose and seg trained in fully full rgb and
+that at bc20 that was not enough capacity"* + *"you're basically just running pr95 again and doing fake
+implementation of what was supposed to be our capstone"* + *"Build the witness capstone"* + *"Chroma too"*
++ *"implementations are not optimal yet"* + *"establish as new frontier and focus and priority."* This
+section is subordinate ONLY to the NO-FAKE supreme rule and THE GOAL (sub-0.15). Pointer UNMOVED at
+contest-CPU **0.19110** (a borrowed PR101/PR110 recode) — that is the honest state until a measured
+witness row moves it. Cross-refs (durable, compaction-survivable): memory
+`[[muonjump-segplateau-pivot-to-step-nonlinear-CURRENT-STATE]]` +
+`[[dont-rerun-pr95-reskinned-as-capstone-beware-looping-same-wrong-vehicle]]` +
+`[[dag-survives-compaction-deterministic-repro-crux-convergence-standing]]` + the canonical work-graph DAG
+`.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md`.
+
+### What the frontier IS (the vehicle)
+
+The capstone is a **non-RGB TASK-SPACE WITNESS** — OUR OWN carrier, designed from the measured deep-math
+crux, NOT a PR95/HNeRV reskin. It is a **nonlinear coordinate-INR that amortizes the SegNet argmax
+partition directly** (scorer-only-trained, no full-RGB reconstruction), spending its byte budget on the
+**scorer-relevant manifold** instead of on full RGB. Reallocating the SAME bytes off full-RGB onto the
+task-space manifold yields more EFFECTIVE capacity at equal/lower bytes — this is how we get capacity
+WITHOUT scaling (which is the resolution of the capacity-vs-rate-headroom trilemma below). Canonical
+substrate already in-tree: `src/tac/boundary_math/lever_b_generator.py` (`ScoreNativeSegGenerator`: MLX
+coord-INR + deterministic Fourier features + FiLM-per-pair-mod + 5-class-logit head; numpy-portable
+reference + npz save/load), the pose half `src/tac/boundary_math/amortized_luma_carrier.py` (byte-closed),
+and `src/tac/torch_vehicle/boundary_routing.py` (KKT capacity-routing primitives).
+
+### The trilemma this resolves (measured)
+
+- **bc20 small basis:** rate cheap (~0.059) but d_seg UNDER-CAPACITY (floor ~0.0021–0.0037 vs need
+  ~0.00087) → S~0.31. Measured, settled, do NOT re-open as "bigger bc20."
+- **bc36 (PR95-size):** d_seg adequate (~6e-4) but rate at frontier (~0.118) → S~0.19 = **just PR95**.
+- **The witness:** gets BOTH — adequate d_seg at low rate → the sub-0.15 path. This is the ONLY arm that
+  is not dominated.
+
+### Chroma is a first-class lever (operator 2026-06-25 "Chroma too")
+
+The two frozen scorers read DIFFERENT color spaces: **SegNet reads RGB** (its argmax depends on chroma),
+**PoseNet reads YUV6** (4 luma + 2 chroma planes). Therefore the witness MUST exploit chroma on BOTH
+halves: (a) the seg-frame has RGB-slack — chroma channels carry argmax-relevant signal the witness should
+route capacity into where it flips the partition; (b) the pose carrier must be **luma+chroma**, not
+luma-only (a luma-only carrier discards the 2 chroma YUV6 planes PoseNet actually consumes — the pose
+collapse measured in the first composed candidate). Any witness verdict that ignored chroma is
+provisional and must be re-measured with chroma active.
+
+### Optimal-form discipline (operator 2026-06-25 "implementations are not optimal yet")
+
+No witness verdict (adopt / kill / "this lever doesn't move d_seg") is load-bearing until the
+implementation is at OPTIMAL FORM: per-lever hyperparameters tuned to each lever's OWN optimum (not a
+shared default), curriculum/round-trip bugs fixed, chroma active, capacity-routing engaged. Provisional
+sub-optimal-form results are LABELLED provisional (per the deterministic-reproducibility spine). Compare
+each lever at its own optimum, then the verdict is admissible. This is the parity discipline applied to
+our own carrier.
+
+### The 4 measured d_seg levers (the binding residual = class-1 LANE-marking islands, ~8-dim nonlinear manifold)
+
+1. **Capacity-ROUTING [dominant]** — KKT waterfill on margin-saliency; route bytes to the lane/horizon
+   bands where flips live (`boundary_routing.py`). The residual is concentrated, not uniform.
+2. **Round-trip-survival [R_surv]** — train with the R operator in-loop (bicubic↑384→874 → uint8-STE →
+   bilinear↓→512×384); flips are texture-dependent and a low-pass kills naive sine (Gibbs aliasing).
+3. **Curriculum-fix** — only the smooth-stage RAISES d_seg (measured); CE+softplus LOWER, c1a→neutral,
+   lambda+sigma neutral, Muon is THE drop. Drop the d_seg-harmful stage from the witness curriculum.
+4. **Activation/representation** — step-native / partition-indicator basis (no Gibbs, O(1) params/edge,
+   L∞-at-edge optimal) is the topology-matched chart for a piecewise-constant argmax target under the
+   capacity-limit regime.
+
+### The anti-pattern this frontier extincts (binding, NO-FAKE #7)
+
+A run is a FAKE of the capstone if it is PR95's curriculum (CE→softplus→smooth→QAT→c1a→lambda→sigma→Muon)
+on PR95's HNeRV decoder (PixelShuffle+bilinear-skip+sin), full-RGB-trained, with only an activation/lever
+bolt-on. That is borrowed-substrate-passed-as-original-work + means-as-ends. Before calling anything "the
+capstone path," do the borrowed-substrate accounting (ours-original vs PR95) and check it against the
+task-space witness, NOT against "which activation/curriculum tweak on PR95." Beware the loop trap:
+babysitting one wrong-vehicle run for many ticks IS running the same over and over — if N ticks pass with
+no decisive new EXACT-relevant signal, STOP and pivot.
+
+### The END (deterministic, byte-closed)
+
+Witness d_seg → ~0.001 at low rate → compose with the luma+chroma pose carrier → byte-close in the L13
+task-space format → exact eval (`tac.contest_score` / `upstream/evaluate.py`, contest-CPU/CUDA, NEVER MPS
+as authority) = a real row below 0.19110, then toward 0.15. Every unit MEASURES a byte-closed row that
+sharpens d_seg(H)/bytes(H) OR tightens the crux with a deep-math lens + existence-proof cross-check, then
+appends to the DAG — never a chat-only insight.
+
 ## Vehicle Operating System — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator binding directive 2026-06-09 (the fleet-wide-meta-bug crux). The repeating failure was
