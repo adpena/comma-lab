@@ -78,6 +78,29 @@ code, not yet swept), and longer training (arms were still descending). The byte
 capacity bump (50KB->113KB) trades against the d_seg gain — the cheap all-class-dir (50KB, -48%) is
 the better S point unless n600 shows the capacity gain holds.
 
+## n600 DECISIVE confirmation (full plateau regime, MEASURED, frozen-scorer authority)
+The levers TRANSFER to the real 600-pair plateau regime where the lever-B baseline plateaued at
+0.008257. Daemons `witcap_n600_*` (durable, survive the session); readout while still descending:
+
+| n600 arm | levers | d_seg (ep) | params | bytes | vs lever-B 0.008257 |
+|---|---|---:|---:|---:|---:|
+| control | iso only | 0.007828 (ep350, plateaued) | 86K | ~64KB | -5% |
+| dirallcls | ALL-class dir | 0.005697 (ep100, descending) | ~90K | ~50KB | **-31%** |
+| dirallcls_cap | ALL-class dir + h128/nh5 | 0.004445 (ep100, descending) | ~178K | ~113KB | **-46%** |
+
+dir+cap trajectory: ep50=0.0052 -> ep100=0.0044 (still dropping; daemons run to ep450). At ep100 it
+already beats the lever-B baseline by 46% and the iso control by 43%. CONFIRMS the n96 finding at
+full scale. NOTE: still `[macOS-MLX research-signal]`, NO byte-closed exact eval yet.
+
+## Honest gap to ~0.001 (UPDATED with n600)
+Best n600 MEASURED so far = 0.004445 (ep100, dir+cap, still descending). The sub-0.15 d_seg need is
+~0.001 (100*d_seg ~ 0.1). We are ~4.4x above it and the curve is still moving — final n600 (ep450)
+will be lower but likely lands ~0.003-0.004 absent a further lever. The all-class directional lever
+is large and real but does NOT close the gap alone; the byte side is healthy (50-113KB << HNeRV
+177KB). Remaining headroom: larger per-pair mod, multi-scale all-class basis, true step/curvelet
+activation (code has `gauss`, unswept), longer training, and a residual sidecar on the witness
+argmax (the orphaned closed_spec_boundary_solver, now that the residual is more contiguous).
+
 ## Borrowed-substrate accounting
 - BORROWED: scipy EDT (Felzenszwalb-Huttenlocher/Maurer); isotropic random Fourier features
   (Tancik 2020); anisotropic/oriented generalization (AFPE Kuckelhaus 2025; steerable filters
