@@ -176,17 +176,30 @@ sub-optimal-form results are LABELLED provisional (per the deterministic-reprodu
 each lever at its own optimum, then the verdict is admissible. This is the parity discipline applied to
 our own carrier.
 
-### The 4 measured d_seg levers (the binding residual = class-1 LANE-marking islands, ~8-dim nonlinear manifold)
+### The measured d_seg levers (binding residual = union of ALL inter-class edges; measured 2026-06-25)
 
-1. **Capacity-ROUTING [dominant]** — KKT waterfill on margin-saliency; route bytes to the lane/horizon
-   bands where flips live (`boundary_routing.py`). The residual is concentrated, not uniform.
-2. **Round-trip-survival [R_surv]** — train with the R operator in-loop (bicubic↑384→874 → uint8-STE →
+**Crux refined (MEASURED, witness build a922483dfc636ccc3):** the flip-prone (small-margin) pixels are
+distributed across ALL classes — 50% class-0, 19% class-1, 13% class-2 — so the binding residual is the
+**union of all inter-class edges**, NOT just class-1 lane islands (the prior lane-only framing was too
+narrow; class-1 lanes are ONE component of the all-class edge set, and the ~8-dim lane-orbit manifold
+remains the hard long-tail). Lever ranking, measured on the frozen CPU-torch SegNet argmax (n600,
+`[macOS-MLX research-signal]`, baseline d_seg 0.008257):
+
+1. **ALL-CLASS DIRECTIONAL (anisotropic/curvelet) Fourier basis [THE decisive lever, ~0 byte]** —
+   orient the Fourier features to the all-class boundary tangent field: **−48%** d_seg (lane-only is only
+   −8%). A 0-byte DETERMINISTIC train-time prior → compiles into inflate.py for FREE (converges with the
+   inflate.py rate lever above: same object). This is the #1 lever; basis-match is PRIOR to capacity.
+2. **Capacity-routing [pays ONLY after basis-match]** — KKT waterfill on margin-saliency
+   (`boundary_routing.py`). Capacity ALONE on an isotropic basis does nothing / HURTS (+6%); once the
+   basis is all-class-directional, modest capacity then pays (n96 −64% combined). Dominated until #1.
+3. **Round-trip-survival [R_surv]** — train with the R operator in-loop (bicubic↑384→874 → uint8-STE →
    bilinear↓→512×384); flips are texture-dependent and a low-pass kills naive sine (Gibbs aliasing).
-3. **Curriculum-fix** — only the smooth-stage RAISES d_seg (measured); CE+softplus LOWER, c1a→neutral,
+4. **Curriculum-fix** — only the smooth-stage RAISES d_seg (measured); CE+softplus LOWER, c1a→neutral,
    lambda+sigma neutral, Muon is THE drop. Drop the d_seg-harmful stage from the witness curriculum.
-4. **Activation/representation** — step-native / partition-indicator basis (no Gibbs, O(1) params/edge,
+5. **Activation/representation** — step-native / partition-indicator basis (no Gibbs, O(1) params/edge,
    L∞-at-edge optimal) is the topology-matched chart for a piecewise-constant argmax target under the
-   capacity-limit regime.
+   capacity-limit regime. (The `gauss`/step activation is in-code but UNSWEPT — the deep-math-predicted
+   step-native lever, a named headroom item toward the ~0.001 need; best measured so far 0.004445 ≈4.4×.)
 
 ### inflate.py is a FREE interpreter — COMPILE the generator, count only the video-derived payload (operator 2026-06-25)
 
