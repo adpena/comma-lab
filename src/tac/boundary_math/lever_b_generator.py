@@ -63,6 +63,110 @@ def deterministic_fourier_B(n_fourier: int, fourier_sigma: float) -> np.ndarray:
     return (rng.standard_normal((2, n_fourier)) * fourier_sigma).astype(np.float32)
 
 
+# ---------------------------------------------------------------------------
+# Deep-math directional / all-class-boundary feature helpers (2026-06-25 capstone).
+#
+# MEASURED on targets_n600: the witness's argmax flips concentrate at ALL inter-class
+# boundaries (a codim-1 curve = union of every class edge), NOT just the class-1 lane
+# (only ~19% of small-margin px are class-1; ~50% are class-0). The decisive d_seg lever
+# is an oriented/anisotropic ("curvelet") Fourier basis oriented to that ALL-CLASS boundary
+# tangent: high frequency ACROSS the edge, low frequency ALONG it. MEASURED win:
+# -48% d_seg (dir-only) to -64% (dir + modest capacity) over the isotropic-only control
+# at the n96 regime (see .omx/research/witness_capstone_deepmath_levers_20260625.md).
+# These helpers are the reusable, portable (numpy/scipy, 0-byte train-time prior) home for
+# that lever; the prototype is tools/witness_capstone_deepmath_smoke.py.
+# ---------------------------------------------------------------------------
+def all_class_boundary_mask(argmax_hw: np.ndarray) -> np.ndarray:
+    """Pixels on ANY inter-class boundary (argmax differs from a 4-neighbor). Pure numpy."""
+
+    a = np.asarray(argmax_hw)
+    b = np.zeros(a.shape, dtype=bool)
+    b[:-1, :] |= a[:-1, :] != a[1:, :]
+    b[1:, :] |= a[:-1, :] != a[1:, :]
+    b[:, :-1] |= a[:, :-1] != a[:, 1:]
+    b[:, 1:] |= a[:, :-1] != a[:, 1:]
+    return b
+
+
+def all_class_boundary_proximity_and_tangent(
+    argmax_hw: np.ndarray, tau: float = 4.0
+) -> tuple[np.ndarray, np.ndarray]:
+    """Per-pixel boundary-proximity key ``exp(-d/tau)`` + unit tangent of the ALL-CLASS boundary.
+
+    The distance ``d`` is the (borrowed) scipy EDT to the nearest inter-class edge; the tangent is
+    the 90-degree rotation of grad(d) (the boundary normal). Returns
+    ``(prox (H,W) in [0,1], tangent (H,W,2))``. Pure CPU/numpy/scipy, 0 archive bytes (a fixed
+    function of the GT argmax the witness reproduces). Borrowed: scipy EDT.
+    """
+
+    from scipy import ndimage
+
+    a = np.asarray(argmax_hw)
+    h, w = a.shape
+    bnd = all_class_boundary_mask(a)
+    if not bnd.any():
+        diag = float(np.hypot(h, w))
+        prox = np.exp(-np.full((h, w), diag, np.float32) / tau).astype(np.float32)
+        tang = np.zeros((h, w, 2), np.float32)
+        tang[..., 0] = 1.0
+        return prox, tang
+    dist = ndimage.distance_transform_edt(~bnd).astype(np.float32)
+    prox = np.exp(-dist / tau).astype(np.float32)
+    gy = np.zeros_like(dist)
+    gx = np.zeros_like(dist)
+    gy[1:-1, :] = (dist[2:, :] - dist[:-2, :]) * 0.5
+    gx[:, 1:-1] = (dist[:, 2:] - dist[:, :-2]) * 0.5
+    tx = -gy
+    ty = gx
+    nrm = np.sqrt(tx * tx + ty * ty)
+    flat = nrm < 1e-6
+    nrm = np.maximum(nrm, 1e-8)
+    tx = tx / nrm
+    ty = ty / nrm
+    tx[flat] = 1.0
+    ty[flat] = 0.0
+    return prox, np.stack([tx, ty], axis=-1).astype(np.float32)
+
+
+def directional_fourier_feats(
+    coords: np.ndarray,
+    tangent: np.ndarray,
+    n_freqs: int = 6,
+    freq_across: float = 32.0,
+    freq_along: float = 4.0,
+) -> np.ndarray:
+    """Oriented/anisotropic ("curvelet") Fourier features ``(P, 4*n_freqs)``.
+
+    For each pixel, build the local frame ``(tangent t, normal n)`` and encode the coordinate's
+    projection onto each with DIFFERENT frequency scales: HIGH across the edge (``freq_across``,
+    normal) and LOW along it (``freq_along``, tangent). Deterministic (no random projection) so it
+    is identical at train and inflate and adds ZERO archive bytes. ``coords``/``tangent`` are
+    ``(P, 2)``. Borrowed mechanism: AFPE (Kuckelhaus 2025) / Tancik 2020 / steerable filters /
+    curvelets; OURS: orienting to the all-class GT boundary tangent for the argmax witness.
+    """
+
+    coords = np.asarray(coords)
+    tangent = np.asarray(tangent)
+    tx = tangent[:, 0]
+    ty = tangent[:, 1]
+    nx = ty
+    ny = -tx
+    cx = coords[:, 0]
+    cy = coords[:, 1]
+    u_t = cx * tx + cy * ty
+    u_n = cx * nx + cy * ny
+    two_pi = 2.0 * np.pi
+    feats: list[np.ndarray] = []
+    for k in range(n_freqs):
+        fa = float(freq_along) * (2.0**k)
+        fc = float(freq_across) * (2.0**k)
+        feats.append(np.sin(two_pi * fa * u_t))
+        feats.append(np.cos(two_pi * fa * u_t))
+        feats.append(np.sin(two_pi * fc * u_n))
+        feats.append(np.cos(two_pi * fc * u_n))
+    return np.stack(feats, axis=-1).astype(np.float32)
+
+
 @dataclass(frozen=True)
 class GeneratorConfig:
     """The architecture hyperparameters that fully determine the generator shape."""
@@ -303,8 +407,11 @@ __all__ = [
     "GeneratorConfig",
     "ResidualComponentStats",
     "aggregate_residual_stats",
+    "all_class_boundary_mask",
+    "all_class_boundary_proximity_and_tangent",
     "build_coords",
     "deterministic_fourier_B",
+    "directional_fourier_feats",
     "generator_argmax",
     "load_generator_npz",
     "numpy_reference_forward",

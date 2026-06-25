@@ -21,14 +21,50 @@ import pytest
 from tac.boundary_math.lever_b_generator import (
     GeneratorConfig,
     aggregate_residual_stats,
+    all_class_boundary_mask,
+    all_class_boundary_proximity_and_tangent,
     build_coords,
     deterministic_fourier_B,
+    directional_fourier_feats,
     generator_argmax,
     load_generator_npz,
     numpy_reference_forward,
     residual_component_stats,
     save_generator_npz,
 )
+
+
+def test_all_class_boundary_mask_marks_inter_class_edges():
+    a = np.zeros((6, 6), dtype=np.uint8)
+    a[3:, :] = 2
+    bnd = all_class_boundary_mask(a)
+    assert bnd[2].all() and bnd[3].all()
+    assert not bnd[0].any() and not bnd[5].any()
+
+
+def test_all_class_boundary_mask_empty_when_uniform():
+    assert not all_class_boundary_mask(np.full((5, 5), 3, np.uint8)).any()
+
+
+def test_all_class_boundary_proximity_peaks_on_boundary():
+    a = np.zeros((10, 10), dtype=np.uint8)
+    a[5:, :] = 4
+    prox, tang = all_class_boundary_proximity_and_tangent(a, tau=2.0)
+    assert prox.shape == (10, 10)
+    assert prox[4, 5] > prox[0, 0]  # near-boundary > interior
+    assert prox.min() >= 0.0 and prox.max() <= 1.0 + 1e-5
+    norms = np.sqrt((tang**2).sum(-1))
+    assert np.allclose(norms, 1.0, atol=1e-4)  # unit tangent everywhere
+
+
+def test_directional_fourier_feats_depends_on_tangent():
+    coords = np.array([[0.3, -0.2], [0.5, 0.1]], np.float32)
+    t1 = np.array([[1.0, 0.0], [1.0, 0.0]], np.float32)
+    t2 = np.array([[0.0, 1.0], [0.0, 1.0]], np.float32)
+    f1 = directional_fourier_feats(coords, t1, n_freqs=4, freq_across=16.0, freq_along=2.0)
+    f2 = directional_fourier_feats(coords, t2, n_freqs=4, freq_across=16.0, freq_along=2.0)
+    assert f1.shape == (2, 16)
+    assert not np.allclose(f1, f2)  # genuinely oriented, not a no-op
 
 
 def _random_params(cfg: GeneratorConfig, seed: int = 1) -> dict[str, np.ndarray]:
