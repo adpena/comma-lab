@@ -144,15 +144,28 @@ and `src/tac/torch_vehicle/boundary_routing.py` (KKT capacity-routing primitives
 - **The witness:** gets BOTH — adequate d_seg at low rate → the sub-0.15 path. This is the ONLY arm that
   is not dominated.
 
-### Chroma is a first-class lever (operator 2026-06-25 "Chroma too")
+### Pose is SOLVED — the Quantizr-style stored-target sidecar (operator 2026-06-25)
 
-The two frozen scorers read DIFFERENT color spaces: **SegNet reads RGB** (its argmax depends on chroma),
-**PoseNet reads YUV6** (4 luma + 2 chroma planes). Therefore the witness MUST exploit chroma on BOTH
-halves: (a) the seg-frame has RGB-slack — chroma channels carry argmax-relevant signal the witness should
-route capacity into where it flips the partition; (b) the pose carrier must be **luma+chroma**, not
-luma-only (a luma-only carrier discards the 2 chroma YUV6 planes PoseNet actually consumes — the pose
-collapse measured in the first composed candidate). Any witness verdict that ignored chroma is
-provisional and must be re-measured with chroma active.
+**Pose is pretty much solved with the Quantizr-style sidecar we already have built — do NOT re-treat it as
+an open problem.** The scorer computes `d_pose = MSE(PoseNet(generated_pair)[:6], PoseNet(original_pair)[:6])`,
+so the GT target is just the 6 PoseNet scalars per pair. We STORE them (`src/tac/scorer_targets.py`:
+600×6×fp16 = 7.2KB raw / <5KB zlib; further compressible to ~1–2KB via `src/tac/pose_from_embedding.py`'s
+MLP, or 2.7× via the low-rank pose codec, task #140) and supervised-condition the render to hit them →
+d_pose ~3.4e-5, contribution `√(10·d_pose)` ~0.018, near-free bytes. **The "pose collapse" (d_pose
+2.67–12.66) was the amortized-luma-CARRIER composition — a different, suboptimal approach that tried to
+RECONSTRUCT pose from a luma INR — NOT the stored-target sidecar.** Do not cite the collapse as a reason
+to build a chroma pose carrier. The witness composes with the already-built stored-pose sidecar; the
+witness's sole binding controllable job is **d_seg**.
+
+### Chroma is a d_seg lever (operator 2026-06-25 "Chroma too")
+
+**SegNet reads RGB** — its argmax depends on chroma, so chroma is a genuine d_seg actuator. The seg-frame
+has RGB-slack: chroma channels carry argmax-relevant signal the witness should route capacity into where
+it flips the partition (the codim-1 boundary annulus). This is chroma's PRIMARY value — a d_seg lever, not
+a pose rescue (pose is solved above). Secondary: PoseNet reads YUV6 (4 luma + 2 chroma), so if a witness
+frame is also pose-scored, its chroma planes feed PoseNet — but since pose rides the stored-target sidecar,
+chroma is optimized for d_seg first. Any witness d_seg verdict that ignored chroma is provisional and must
+be re-measured with chroma active.
 
 ### Optimal-form discipline (operator 2026-06-25 "implementations are not optimal yet")
 
@@ -187,11 +200,11 @@ no decisive new EXACT-relevant signal, STOP and pivot.
 
 ### The END (deterministic, byte-closed)
 
-Witness d_seg → ~0.001 at low rate → compose with the luma+chroma pose carrier → byte-close in the L13
-task-space format → exact eval (`tac.contest_score` / `upstream/evaluate.py`, contest-CPU/CUDA, NEVER MPS
-as authority) = a real row below 0.19110, then toward 0.15. Every unit MEASURES a byte-closed row that
-sharpens d_seg(H)/bytes(H) OR tightens the crux with a deep-math lens + existence-proof cross-check, then
-appends to the DAG — never a chat-only insight.
+Witness d_seg → ~0.001 at low rate → compose with the already-built Quantizr-style stored-pose sidecar
+(pose solved, ~1–5KB) → byte-close in the L13 task-space format → exact eval (`tac.contest_score` /
+`upstream/evaluate.py`, contest-CPU/CUDA, NEVER MPS as authority) = a real row below 0.19110, then toward
+0.15. Every unit MEASURES a byte-closed row that sharpens d_seg(H)/bytes(H) OR tightens the crux with a
+deep-math lens + existence-proof cross-check, then appends to the DAG — never a chat-only insight.
 
 ## Vehicle Operating System — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
