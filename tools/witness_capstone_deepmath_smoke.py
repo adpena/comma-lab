@@ -280,6 +280,41 @@ class ImprovedSegGenerator(nn.Module):
         return self.out(h)
 
 
+def hard_pixel_boost(
+    pred_argmax: np.ndarray, gt_labels: np.ndarray, error_boost: float
+) -> np.ndarray:
+    """Per-pixel hard-pixel error boost = 1 + error_boost * (pred != gt).
+
+    ADAPTED FROM PR74 (ph4ntom_drv, error_boost=49) + PR62 (fp4_mask_gen, error_boost=9):
+    ``boost = 1.0 + (logits.argmax(1) != gt_mask).float() * error_boost`` applied to a
+    per-pixel cross-entropy. The boost is a DYNAMIC, model-aware signal (it weights the
+    pixels the CURRENT model gets WRONG), distinct from this witness's existing STATIC
+    margin-weight (a GT-fixed proxy for where flips live). The two compose multiplicatively
+    here: a pixel that is BOTH shallow-margin AND currently-misclassified gets the most weight,
+    which is exactly the binding d_seg residual (the union of all inter-class edges that the
+    generator still flips).
+
+    BORROWED-SUBSTRATE ACCOUNTING: the error-driven hard-pixel reweighting is BORROWED from
+    PR74/PR62 (their RGB-decoder seg loss). OURS = applying it to a NON-RGB coordinate-INR
+    argmax witness, composed with the static margin-weight, on the argmax target only (no
+    GT logits needed — works on the argmax/margin targets we already have; KL-on-logits, the
+    sister PR62 term, is NOT adaptable without rebuilding 5-class GT logit targets).
+
+    0 archive bytes: train-time only (the boost is computed from the model's own predictions
+    and the GT argmax; nothing is stored).
+
+    Args:
+        pred_argmax: (N,) int per-pixel predicted class (model argmax at the current step).
+        gt_labels: (N,) int per-pixel GT class.
+        error_boost: multiplier on misclassified pixels (0.0 = disabled = no behavior change).
+
+    Returns:
+        (N,) float32 boost factor; 1.0 where correct, 1.0+error_boost where wrong.
+    """
+    wrong = (pred_argmax != gt_labels).astype(np.float32)
+    return (1.0 + float(error_boost) * wrong).astype(np.float32)
+
+
 def _np_softplus_act(x: np.ndarray, activation: str) -> np.ndarray:
     if activation == "relu":
         return np.maximum(x, 0.0)
@@ -415,9 +450,17 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             pi = int(pi_np)
             idx = rng.integers(0, n_px, size=args.px_per_step)
             fb = feats_mx[pi][mx.array(idx)]
-            lab = mx.array(labels_flat[pi][idx])
+            lab_np = labels_flat[pi][idx]
+            lab = mx.array(lab_np)
             mg = margin_flat[pi][idx]
-            wpx = mx.array(1.0 + args.hinge_weight * np.exp(-np.maximum(mg, 0.0) / tau))
+            wnp = 1.0 + args.hinge_weight * np.exp(-np.maximum(mg, 0.0) / tau)
+            if args.error_boost > 0.0:
+                # PR74/PR62 hard-pixel error boost: weight the pixels the CURRENT model gets
+                # wrong (a no-grad forward; argmax target only, 0 archive bytes). Composes
+                # multiplicatively with the static margin-weight above.
+                cur_pred = np.array(mx.argmax(model(fb, int(pi)), axis=-1)).astype(np.int32)
+                wnp = wnp * hard_pixel_boost(cur_pred, lab_np, args.error_boost)
+            wpx = mx.array(wnp.astype(np.float32))
             loss, grads = loss_and_grad(model, int(pi), fb, lab, wpx)
             opt.update(model, grads)
             mx.eval(model.parameters(), opt.state)
@@ -445,6 +488,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             "freq_along": args.freq_along, "prox_tau": args.prox_tau, "activation": args.activation,
             "all_class": args.all_class,
             "lr": args.lr, "weight_decay": args.weight_decay, "hinge_weight": args.hinge_weight,
+            "error_boost": args.error_boost,
             "px_per_step": args.px_per_step, "seed": args.seed, "in_feat": in_feat,
         },
         "px_per_map": n_px, "px_pairs_total": n_px * P, "device": "mlx (Apple GPU)",
@@ -513,6 +557,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lr", type=float, default=3e-3)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
     ap.add_argument("--hinge-weight", type=float, default=4.0)
+    ap.add_argument("--error-boost", type=float, default=0.0,
+                    help="PR74/PR62 hard-pixel error boost: extra weight on px the current model "
+                         "misclassifies (0.0=off; PR62 used 9, PR74 used 49). 0-byte, train-time.")
     ap.add_argument("--px-per-step", type=int, default=8192)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)

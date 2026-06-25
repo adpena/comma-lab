@@ -112,6 +112,40 @@ def test_numpy_argmax_parity_with_mlx_forward() -> None:
     assert (mlx_logits.argmax(-1) == np_logits.argmax(-1)).mean() == 1.0
 
 
+def test_hard_pixel_boost_weights_only_misclassified() -> None:
+    # PR74/PR62 hard-pixel boost: correct px -> 1.0, wrong px -> 1.0 + error_boost. Behavior,
+    # not a constant: the boost must DEPEND on (pred != gt).
+    pred = np.array([0, 1, 2, 3, 4], dtype=np.int32)
+    gt = np.array([0, 1, 0, 3, 1], dtype=np.int32)  # px 2 and 4 are wrong
+    boost = wc.hard_pixel_boost(pred, gt, error_boost=9.0)
+    assert boost.tolist() == [1.0, 1.0, 10.0, 1.0, 10.0]
+
+
+def test_hard_pixel_boost_disabled_is_identity() -> None:
+    pred = np.array([0, 1, 2], dtype=np.int32)
+    gt = np.array([4, 4, 4], dtype=np.int32)  # all wrong
+    boost = wc.hard_pixel_boost(pred, gt, error_boost=0.0)
+    # error_boost=0 -> all 1.0 regardless of correctness (preserves baseline behavior).
+    assert np.allclose(boost, 1.0)
+
+
+def test_hard_pixel_boost_all_correct_is_identity() -> None:
+    pred = np.array([2, 2, 2, 2], dtype=np.int32)
+    gt = np.array([2, 2, 2, 2], dtype=np.int32)
+    boost = wc.hard_pixel_boost(pred, gt, error_boost=49.0)
+    assert np.allclose(boost, 1.0)  # no wrong px -> no boost even at high error_boost.
+
+
+def test_hard_pixel_boost_scales_with_error_boost() -> None:
+    pred = np.array([0, 1], dtype=np.int32)
+    gt = np.array([0, 0], dtype=np.int32)  # px 1 wrong
+    b9 = wc.hard_pixel_boost(pred, gt, 9.0)
+    b49 = wc.hard_pixel_boost(pred, gt, 49.0)
+    # the wrong px boost must track error_boost (genuinely the adapted mechanism, not a fixed factor).
+    assert b9[1] == 10.0 and b49[1] == 50.0
+    assert b9[0] == 1.0 and b49[0] == 1.0
+
+
 def test_gauss_activation_runs_and_differs_from_relu() -> None:
     import mlx.core as mx
 
