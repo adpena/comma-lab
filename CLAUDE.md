@@ -188,6 +188,20 @@ our own carrier.
    L∞-at-edge optimal) is the topology-matched chart for a piecewise-constant argmax target under the
    capacity-limit regime.
 
+### inflate.py is a FREE interpreter — COMPILE the generator, count only the video-derived payload (operator 2026-06-25)
+
+**The rate term scores ONLY `archive.zip` bytes (`upstream/evaluate.py:63` — `compressed_size = (submission_dir/'archive.zip').stat().st_size`); inflate.py / inflate.sh are NOT sized, and the score has NO time term (`evaluate.py:92`) — the only constraint is the 30-min full-eval budget (`README.md:114`, T4 16GB-VRAM or CPU 4×/16GB).** Contest rule (`README.md:118`): external CODE/tools are FREE and don't count; **large video-derived artifacts (neural-net weights, meshes, point clouds) MUST be in archive.zip and ARE counted.** The crisp boundary that IS the rate game:
+
+| FREE in inflate.py (untimed except the 30-min budget) | COUNTED in archive.zip (rate term) |
+|---|---|
+| the generator ALGORITHM / forward-pass code | LEARNED neural-net weights (rule 118) |
+| deterministically-GENERATED tables (Fourier `B` from a seed, fixed bases, parametric rasterizers) | the VIDEO-DERIVED payload (per-frame lane coords, learned residuals) |
+| arbitrarily complex deterministic compute (iterative solvers, runtime-generated codebooks) | anything that is a "large artifact" |
+
+**"Compile nonlinear d_seg" = move the maximal DETERMINISTIC GENERIC structure of the witness generator into inflate.py (zero rate) and store ONLY the irreducible video-derived statistic in archive.zip.** inflate.py is a Turing-complete interpreter run at decode time — it may run an arbitrarily sophisticated deterministic program (the coordinate transform, Fourier features, FiLM graph, a parametric lane-curve rasterizer via openpilot polynomial + homography, a big runtime-generated codebook) for FREE, finishing within 30 min. archive.zip then carries only the ~8-dim lane-trajectory coords per frame (AR-coded → hundreds of bytes) + whatever minimal LEARNED residual the texture-survival wall genuinely requires. This is the rate half of the sub-0.15 path: the indirect-RD sufficient statistic (8-dim) is counted; the deterministic generator that expands it to the argmax partition is free.
+
+**NO-FAKE / compliance boundary (binding):** GENERIC ALGORITHM = free in inflate.py; VIDEO-DERIVED LEARNED content = counted in archive.zip. You may NOT smuggle a video-derived per-frame table/weights into inflate.py disguised as "code" to dodge the rate term — rule 118 forbids it and it is the hide-data-in-code fake (sister of NO-FAKE #6/#7). Synthesizes with the "Deterministic packet compiler" + "Native eval-time runtime discipline" non-negotiables (native code that EXPANDS the legal witness-program class is allowed; learned artifacts are counted). Every rate claim from this lever is MEASURED byte-closed (the archive.zip stat), never asserted.
+
 ### The anti-pattern this frontier extincts (binding, NO-FAKE #7)
 
 A run is a FAKE of the capstone if it is PR95's curriculum (CE→softplus→smooth→QAT→c1a→lambda→sigma→Muon)
