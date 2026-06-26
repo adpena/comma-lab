@@ -257,11 +257,66 @@ def _synth_label(cmd: list[str], pid: int) -> str:
 # --------------------------------------------------------------------------
 # Modes
 # --------------------------------------------------------------------------
+def _mem_preflight(a: argparse.Namespace) -> int | None:
+    """OOM launch-preflight (CLAUDE.md fail-closed-if-no-space, RAM analogue).
+
+    Refuse to START a job if launching it would breach the 30 GB free-memory
+    floor: ``available - projected < min_free`` → REFUSE. Returns an exit code
+    to abort with, or None to proceed. Skipped with --skip-mem-preflight (for
+    the watchdog / control-plane infra that MUST launch even under pressure).
+
+    Imports the canonical guard lazily from the sibling tools/memory_guard.py so
+    this launcher has no hard import dependency if the guard is absent.
+    """
+    if getattr(a, "skip_mem_preflight", False):
+        return None
+    guard_path = Path(__file__).resolve().parent / "memory_guard.py"
+    if not guard_path.exists():
+        print("[durable-daemon] WARNING: memory_guard.py missing; skipping OOM preflight", file=sys.stderr)
+        return None
+    try:
+        import importlib.util as _ilu
+
+        spec = _ilu.spec_from_file_location("_durable_daemon_memory_guard", guard_path)
+        mg = _ilu.module_from_spec(spec)
+        sys.modules.setdefault("_durable_daemon_memory_guard", mg)
+        spec.loader.exec_module(mg)  # type: ignore[union-attr]
+        decision = mg.check_launch_ok(
+            min_free_gb=float(a.min_free_gb), projected_gb=float(a.projected_gb)
+        )
+    except Exception as exc:  # never let a guard hiccup BLOCK a launch silently
+        print(f"[durable-daemon] WARNING: OOM preflight errored ({exc!r}); proceeding", file=sys.stderr)
+        return None
+    if not decision.ok:
+        print(
+            "[durable-daemon] REFUSED: launching this job would breach the "
+            f"{decision.min_free_gb:.0f}GB free-memory floor "
+            f"(available={decision.available_gb:.1f}GB, projected={decision.projected_gb:.1f}GB, "
+            f"headroom_after={decision.headroom_after_gb:.1f}GB). "
+            "Free memory / reduce concurrency / lower --projected-gb, or pass "
+            "--skip-mem-preflight ONLY for control-plane/watchdog infra.",
+            file=sys.stderr,
+        )
+        return 3
+    print(
+        f"[durable-daemon] OOM preflight OK: available={decision.available_gb:.1f}GB "
+        f"projected={decision.projected_gb:.1f}GB headroom_after={decision.headroom_after_gb:.1f}GB "
+        f"floor={decision.min_free_gb:.0f}GB"
+    )
+    return None
+
+
 def _do_start(a: argparse.Namespace) -> int:
     cmd = a.cmd[1:] if a.cmd and a.cmd[0] == "--" else a.cmd
     if not cmd:
         print("error: no command (use: --log L --label NAME -- cmd args)", file=sys.stderr)
         return 2
+
+    # OOM launch-preflight: refuse to breach the 30 GB free floor (never OOM the
+    # machine again). Runs BEFORE any Popen so a refused launch starts nothing.
+    refusal = _mem_preflight(a)
+    if refusal is not None:
+        return refusal
 
     log = open(a.log, "ab", buffering=0)  # noqa: SIM115 — kept open for the child
     devnull = open(os.devnull, "rb")  # noqa: SIM115
@@ -375,6 +430,46 @@ def _do_stop(label: str, *, term_grace_s: float = 3.0) -> int:
     return rc
 
 
+def _do_reconcile() -> int:
+    """Mark every recorded=running daemon whose process is DEAD as stopped.
+
+    Recovery primitive for the OOM incident (2026-06-25): a machine crash /
+    blind fleet-launch leaves the registry asserting daemons are ``running``
+    when their processes are gone (recorded=running / actual=DEAD). The OOM
+    memory guard's custody gate reads this registry; stale running rows would
+    waste custody checks and mislead status. This reconciles the registry to
+    kernel truth WITHOUT signalling anything (the processes are already dead).
+    """
+    rows = _load_registry()
+    stale = [
+        r for r in rows
+        if r.get("status") == "running"
+        and not (_pid_alive(int(r.get("pid", 0))) and _pgid_alive(int(r.get("pgid", 0)) or int(r.get("pid", 0))))
+    ]
+    if not stale:
+        print("[durable-daemon] reconcile: no stale running rows; registry already accurate.")
+        return 0
+
+    stale_labels = {r.get("label") for r in stale}
+
+    def _mark_dead(rows_in: list[dict]) -> list[dict]:
+        for r in rows_in:
+            if r.get("label") in stale_labels and r.get("status") == "running":
+                pid = int(r.get("pid", 0))
+                pgid = int(r.get("pgid", 0)) or pid
+                if not (_pid_alive(pid) and _pgid_alive(pgid)):
+                    r["status"] = "stopped"
+                    r["stopped_utc"] = _utc_now_iso()
+                    r["stopped_reason"] = "reconcile_dead_process"
+        return rows_in
+
+    _update_registry_locked(_mark_dead)
+    print(f"[durable-daemon] reconcile: marked {len(stale)} dead daemon(s) as stopped:")
+    for r in stale:
+        print(f"  - {r.get('label')} pid={r.get('pid')} (was running, process DEAD)")
+    return 0
+
+
 def _do_status() -> int:
     rows = _load_registry()
     if not rows:
@@ -402,12 +497,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--label", help="addressable label for the daemon (start mode; required-recommended)")
     ap.add_argument("--stop", metavar="LABEL", help="stop the daemon with this label (process-GROUP kill, no orphan)")
     ap.add_argument("--status", action="store_true", help="list registered daemons + live-check")
+    ap.add_argument("--reconcile", action="store_true",
+                    help="mark recorded=running daemons whose process is DEAD as stopped (OOM recovery)")
+    # OOM launch-preflight (start mode). Defaults conservative: an MLX through-R
+    # training arm is projected at 25 GB; the 30 GB free floor is the operator's
+    # binding minimum. --skip-mem-preflight is the escape hatch for control-plane
+    # / watchdog infra that MUST launch even under memory pressure.
+    ap.add_argument("--projected-gb", type=float, default=25.0,
+                    help="GB the launched job is projected to need (default 25; MLX through-R arm)")
+    ap.add_argument("--min-free-gb", type=float, default=30.0,
+                    help="minimum free GB to protect after launch (default 30; operator floor)")
+    ap.add_argument("--skip-mem-preflight", action="store_true",
+                    help="skip the OOM launch-preflight (ONLY for control-plane/watchdog infra)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- <command> [args...] (start mode)")
     a = ap.parse_args(argv)
 
     # Exactly one mode.
     if a.status:
         return _do_status()
+    if a.reconcile:
+        return _do_reconcile()
     if a.stop:
         return _do_stop(a.stop)
     # Default = start.
