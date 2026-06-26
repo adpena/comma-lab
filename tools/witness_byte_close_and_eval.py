@@ -109,6 +109,7 @@ def _load_witness_ckpt(ckpt_dir: Path) -> tuple[dict[str, np.ndarray], dict[str,
     cfg.setdefault("render_h", 256)
     cfg.setdefault("render_w", 384)
     cfg.setdefault("activation", "relu")
+    cfg.setdefault("chroma", True)  # achromatic ablation control arm (chroma=False) MUST round-trip
     cfg.setdefault("hosc_beta", 4.0)
     cfg.setdefault("hosc_omega", 1.0)
     cfg.setdefault("basis", "isotropic")
@@ -158,6 +159,7 @@ def build_witness_blob(
         "fourier_sigma": float(cfg["fourier_sigma"]),
         "fourier_seed": int(cfg.get("fourier_seed", twr._FOURIER_SEED)),
         "activation": str(cfg["activation"]),
+        "chroma": bool(cfg.get("chroma", True)),
         "hosc_beta": float(cfg["hosc_beta"]),
         "hosc_omega": float(cfg["hosc_omega"]),
         "render_h": int(cfg["render_h"]),
@@ -296,9 +298,13 @@ def main():
     ch, cw = int(man["camera_h"]), int(man["camera_w"])
     nh, hd = int(man["n_hidden"]), int(man["hidden_dim"])
     kind, beta, omega = man["activation"], float(man["hosc_beta"]), float(man["hosc_omega"])
+    chroma = bool(man.get("chroma", True))  # achromatic control arm: replicate BT.601 luma to R=G=B
     with open(dst, "wb") as f:  # stream frame-by-frame: peak RAM = one camera frame
         for fi in range(n_frames):
             rgb = _witness_forward(params, feats, code[fi], nh, hd, kind, beta, omega)
+            if not chroma:  # mirror RGBWitnessMLX._apply_chroma (chroma=False) -- MUST match train-time forward
+                luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
+                rgb = np.concatenate([luma, luma, luma], axis=-1)
             frame = _R_to_camera_uint8(rgb, rh, rw, ch, cw)
             f.write(frame.tobytes())
     print(f"inflated {n_frames} frames ({n_pairs} pairs) -> {dst} "
