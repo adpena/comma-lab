@@ -253,6 +253,45 @@ def precompute_gt(n_pairs: int) -> tuple[GTData, Any, Any]:
     return gt, seg_cpu, posenet_cpu
 
 
+def load_gt_from_cache(cache_path: Path, n_pairs: int) -> tuple[GTData, Any, Any]:
+    """Load GT from a shared npz cache (built by tools/build_shared_gt_cache_for_mlx_fleet.py).
+
+    Skips the ~480s/arm decode+frozen-scorer GT precompute so a parallel fleet
+    shares ONE cache instead of thrashing the CPU. The cached arrays are the EXACT
+    outputs of ``precompute_gt`` (same frozen CPU-torch authority) -- NO surrogate.
+    The frozen CPU scorers are still loaded here (fast, ~seconds) because the
+    per-epoch VERDICT recomputes argmax/pose on the CPU-torch authority.
+    """
+    import torch
+
+    from tac.boundary_math.seg_core import load_real_segnet
+
+    z = np.load(cache_path, allow_pickle=False)
+    cached_P = int(z["n_pairs"])
+    P = min(n_pairs, cached_P)
+    if cached_P < n_pairs:
+        raise ValueError(
+            f"--gt-cache {cache_path} has only {cached_P} pairs < requested --num-pairs {n_pairs}; "
+            "rebuild the cache at >= the requested size."
+        )
+    gt_f0 = [np.asarray(z["gt_f0"][i], dtype=np.uint8) for i in range(P)]
+    gt_f1 = [np.asarray(z["gt_f1"][i], dtype=np.uint8) for i in range(P)]
+    lstars = [np.asarray(z["lstars"][i], dtype=np.int64) for i in range(P)]
+    margins = [np.asarray(z["margins"][i], dtype=np.float32) for i in range(P)]
+    gt_poses = [np.asarray(z["gt_poses"][i], dtype=np.float64) for i in range(P)]
+    gt = GTData(n_pairs=P, gt_f0=gt_f0, gt_f1=gt_f1, lstars=lstars, margins=margins, gt_poses=gt_poses)
+
+    seg_cpu = load_real_segnet("cpu")
+    from modules import DistortionNet, posenet_sd_path, segnet_sd_path  # upstream
+
+    dn = DistortionNet().eval()
+    dn.load_state_dicts(posenet_sd_path, segnet_sd_path, torch.device("cpu"))
+    posenet_cpu = dn.posenet
+    for p in posenet_cpu.parameters():
+        p.requires_grad = False
+    return gt, seg_cpu, posenet_cpu
+
+
 def _cpu_pose_raw(posenet_cpu, f0_uint8: np.ndarray, f1_uint8: np.ndarray) -> np.ndarray:
     import einops
     import torch
@@ -471,12 +510,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     device = args.mlx_device  # "gpu" or "cpu"
 
-    # --- 1. GT precompute on frozen CPU scorers (authority) ---
+    # --- 1. GT precompute on frozen CPU scorers (authority), OR shared-cache load ---
     t0 = time.time()
-    gt, seg_cpu, posenet_cpu = precompute_gt(args.num_pairs)
+    gt_cache = getattr(args, "gt_cache", None)
+    if gt_cache:
+        gt, seg_cpu, posenet_cpu = load_gt_from_cache(Path(gt_cache), args.num_pairs)
+        gt_stage = "gt_cache_load"
+    else:
+        gt, seg_cpu, posenet_cpu = precompute_gt(args.num_pairs)
+        gt_stage = "gt_precompute"
     P = gt.n_pairs
     gt_secs = time.time() - t0
-    print(json.dumps({"stage": "gt_precompute", "n_pairs": P, "secs": round(gt_secs, 1)}), flush=True)
+    print(json.dumps({"stage": gt_stage, "n_pairs": P, "secs": round(gt_secs, 1)}), flush=True)
 
     render_h, render_w = args.render_h, args.render_w
     coords_np = _build_render_coords(render_h, render_w)
@@ -528,7 +573,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     f1 = _render_uint8_for_verdict(model, coord_feats, 2 * pi + 1, render_h, render_w)
                     d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
                     d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
+                    # Return the per-render 874x1164 transient buffers to the OS
+                    # periodically. Without this the Metal allocator caches every
+                    # freed render across ALL P pairs -> the 499000 active-buffer
+                    # cap / RSS balloon AT STARTUP (the periodic train-loop fix at
+                    # the mx.clear_cache below did NOT cover this verdict path):
+                    # n96 -> 30 GB in 4s, n600 -> 40 GB in 9s before any epoch
+                    # (observed 2026-06-26). clear_cache() returns ONLY reclaimable
+                    # freed buffers; live arrays (coord_feats, params, GT targets)
+                    # are untouched, so the verdict MATH is unchanged -- all P pairs
+                    # still scored on the frozen CPU-torch authority (no subsample).
+                    if (pi + 1) % 16 == 0:
+                        mx.clear_cache()
             finally:
+                mx.clear_cache()
                 if saved is not None:
                     model.update(tree_unflatten(list(saved.items())))
                     mx.eval(model.parameters())
@@ -557,7 +615,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 opt.update(model, grads)
                 mx.eval(model.parameters(), opt.state)
                 ema.update(model)
+                # Materialize the EMA shadow each step so its lazy graph does NOT
+                # accumulate across the 600-step epoch -> [metal::malloc] Resource
+                # limit (499000) buffer-count exhaustion at n600 (observed 2026-06-26).
+                mx.eval(list(ema.shadow.values()))
                 ep_loss += float(loss)
+            # Release reclaimable Metal buffer cache between epochs (defensive vs
+            # the 499000 active-buffer cap when many arms share the GPU).
+            mx.clear_cache()
             ep_walls.append(time.time() - ep_t0)
             if ep % args.eval_every == 0 or ep == 1 or ep == args.epochs:
                 v_live = eval_verdict(use_ema=False)
@@ -647,6 +712,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--w-pose", type=float, default=1.0)
     ap.add_argument("--witness-bytes", type=int, default=80000)
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
+    ap.add_argument(
+        "--gt-cache",
+        type=str,
+        default=None,
+        help="optional shared GT npz (tools/build_shared_gt_cache_for_mlx_fleet.py) -- "
+        "skips the ~480s/arm GT precompute so a parallel fleet shares ONE cache.",
+    )
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)
 
