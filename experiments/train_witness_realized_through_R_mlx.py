@@ -148,6 +148,29 @@ def build_witness_module(
             rgb = mx.sigmoid(self.out(h)) * 255.0
             return rgb
 
+        def call_batch(self, coord_feats: Any, code_indices: Any) -> Any:
+            """Batched render: K codes -> (K, P_px, 3) RGB in one MLP forward.
+
+            ``coord_feats`` is the shared (P_px, in_feat) fixed coord grid;
+            ``code_indices`` is an mx int array (K,) of code rows. The coord
+            base is shared across the K pairs (broadcast), the per-(pair,frame)
+            FiLM modulation is the only per-K signal -- so the dominant in_proj
+            on coord_feats is computed ONCE, and the K-axis only multiplies the
+            per-layer FiLM affine. This saturates unified memory: one (K,P,H)
+            tensor through the hidden stack + one batched scorer forward.
+            """
+            # Shared coord base (P_px, hidden_dim) -- computed once.
+            h0 = nn.relu(self.in_proj(coord_feats))  # (P, hidden)
+            codes = self.code[code_indices]  # (K, mod_dim)
+            film = mx.reshape(self.film(codes), (-1, self.n_hidden, 2, self.hidden_dim))  # (K,nh,2,hid)
+            h = mx.broadcast_to(h0[None], (film.shape[0], h0.shape[0], h0.shape[1]))  # (K,P,hid)
+            for li, layer in enumerate(self.hidden):
+                scale = 1.0 + film[:, li, 0][:, None, :]  # (K,1,hid)
+                shift = film[:, li, 1][:, None, :]
+                h = nn.relu(layer(h) * scale + shift)
+            rgb = mx.sigmoid(self.out(h)) * 255.0  # (K, P, 3)
+            return rgb
+
     return RGBWitnessMLX()
 
 
@@ -166,6 +189,23 @@ def render_through_R_mlx(witness, coord_feats, code_idx: int, render_h: int, ren
     # R: render-grid -> camera (bicubic) -> scorer-res (bilinear) -> uint8 STE.
     r = apply_eval_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
     return r  # (1, SEG_H, SEG_W, 3)
+
+
+def render_batch_through_R_mlx(witness, coord_feats, code_indices, render_h: int, render_w: int):
+    """Batched render-through-R: code_indices (M,) -> (M, SEG_H, SEG_W, 3).
+
+    M is the number of frames in the batch (= 2*K for K pairs, f0+f1 interleaved).
+    One MLP forward over the M codes, one batched R roundtrip. Same R math as the
+    per-frame path (leading dims preserved by apply_eval_roundtrip_nhwc).
+    """
+    import mlx.core as mx
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_eval_roundtrip_nhwc
+
+    rgb_flat = witness.call_batch(coord_feats, code_indices)  # (M, P_px, 3)
+    rgb = mx.reshape(rgb_flat, (-1, render_h, render_w, 3))  # (M, h, w, 3) NHWC
+    r = apply_eval_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
+    return r  # (M, SEG_H, SEG_W, 3)
 
 
 # ---------------------------------------------------------------------------
@@ -357,6 +397,47 @@ def make_loss_fn(adapter, render_h: int, render_w: int):
         yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
         pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]
         pose_l = mx.mean(mx.square(pose[0] - pose_tgt))
+        return w_seg * seg_l + w_pose * pose_l
+
+    return loss_fn
+
+
+def make_loss_fn_batch(adapter, render_h: int, render_w: int):
+    """Batched (K-pair) realized loss. SAME math as make_loss_fn per pair, but
+    renders + scores K pairs in one batched scorer forward -> one mx.eval.
+
+    Inputs (batched over K pairs):
+      code_idx_f0/f1 : (K,) int -- code rows for f0/f1 of each pair
+      lstar_oh       : (K,H,W,5) one-hot GT argmax per pair (frame1)
+      margin         : (K,H,W) seg margin per pair
+      pose_tgt       : (K, half) GT pose per pair
+    The K-axis is the scorer batch dimension (saturates unified memory).
+    """
+    import mlx.core as mx
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    def loss_fn(model, coord_feats, code_idx_f0, code_idx_f1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge):
+        K = int(lstar_oh.shape[0])
+        # Interleave [f0_0,f1_0,f0_1,f1_1,...] so the pair structure is contiguous.
+        codes = mx.reshape(mx.stack([code_idx_f0, code_idx_f1], axis=1), (2 * K,))  # (2K,)
+        frames = render_batch_through_R_mlx(model, coord_feats, codes, render_h, render_w)  # (2K,H,W,3)
+        f0 = frames[0::2]  # (K,H,W,3)
+        f1 = frames[1::2]  # (K,H,W,3)
+        # Realized seg CE (margin-weighted) on frame1, batched over K.
+        seg_logits = adapter.segnet(f1)  # (K,H,W,5)
+        logsum = mx.logsumexp(seg_logits, axis=-1)  # (K,H,W)
+        tgt = mx.sum(seg_logits * lstar_oh, axis=-1)  # (K,H,W)
+        ce = logsum - tgt
+        w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))  # (K,H,W)
+        seg_l = mx.mean(ce * w)
+        # Realized pose MSE on the K pairs. Build (K,2,H,W,3) -> yuv6 (K,2,h2,w2,6) -> (K,h2,w2,12).
+        pair = mx.stack([f0, f1], axis=1)  # (K,2,H,W,3)
+        yuv = rgb_to_yuv6_mlx(pair)  # (K,2,h2,w2,6)
+        k, t, h2, w2, c6 = yuv.shape
+        yuv_nhwc = mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (k, h2, w2, t * c6))  # (K,h2,w2,12)
+        pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]  # (K, half)
+        pose_l = mx.mean(mx.square(pose - pose_tgt))
         return w_seg * seg_l + w_pose * pose_l
 
     return loss_fn
