@@ -70,6 +70,22 @@ if TYPE_CHECKING:  # StageSpec used only in annotations at module level
 
 _EVAL_H, _EVAL_W = 384, 512
 _SEG_NUM_CLASSES = 5  # contest SegNet head (upstream/modules.py: smp.Unet classes=5)
+
+
+def _advisory_axis_label(suffix: str = "") -> str:
+    """Device-truthful advisory authority tag (DAG FEED-br sister — the base_ch axis
+    mislabel). On macOS (Apple Silicon) the frozen CPU-torch verdict is NOT 1:1 with the
+    contest GitHub-Actions Linux x86_64 CPU runner, so per CLAUDE.md "Submission auth eval"
+    it is ``[macOS-CPU advisory]`` NOT ``[contest-CPU]``; only a real Linux x86_64 host
+    earns ``[contest-CPU advisory]``. Always NON-PROMOTABLE until a byte-closed paired
+    CPU/CUDA exact-eval row lands. ``suffix`` appends the per-site qualifier."""
+    import platform
+
+    if platform.system() == "Linux" and platform.machine().lower() in ("x86_64", "amd64"):
+        base = "[contest-CPU advisory] NON-PROMOTABLE"
+    else:
+        base = "[macOS-CPU advisory] NON-PROMOTABLE"
+    return f"{base}{suffix}"
 _TRACK_A_D2_CONSERVATIVE_BYTE_TARGET = 2731.0
 # Lever-3 v2 FiLM learning-rate CAP (the #118-SEALED stability fix). The residual
 # pose-FiLM (``pose_mlp`` + ``film_resid``) is given a DEDICATED AdamW param group at
@@ -2884,7 +2900,7 @@ class TorchVehicleDriver:
             "decoder_blob_is_variable_format": True,
             "decoder_blob_bytes": len(decoder_blob),
             "score_claim": False,
-            "authority": "[contest-CPU advisory] NON-PROMOTABLE until dual CPU/CUDA exact eval",
+            "authority": _advisory_axis_label(" until dual CPU/CUDA exact eval"),
         }
         base_archive = build_base_archive(meta_dict)
         eval_decoder_sd_vendored, eval_latents, _meta = self.v.parse_archive(base_archive)
@@ -3116,7 +3132,7 @@ class TorchVehicleDriver:
                             "base_channels": self.cfg.base_channels,
                             "decoder_codec": meta_dict.get("decoder_codec", "vendored"),
                             "variable_level_waterfill": variable_level_meta,
-                            "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+                            "authority": _advisory_axis_label(),
                         }
                     )
                 )
@@ -3584,7 +3600,7 @@ class TorchVehicleDriver:
             "base_channels": self.cfg.base_channels,
             "async_eval": self._async_eval,
             "skipped_async_evals": self._skipped_evals,
-            "authority": "[contest-CPU advisory] NON-PROMOTABLE — exact via upstream/evaluate.py",
+            "authority": _advisory_axis_label(" — exact via upstream/evaluate.py"),
         }
         # Final preservation manifest (records the complete artifact set — rolling
         # checkpoint + best/ + all stage snapshots — for a lossless cold-store/move).
@@ -3710,7 +3726,7 @@ class TorchVehicleDriver:
             "distortion_section_present": finish["section_bytes"] > 0,
             "is_byte_identical_to_vendored_base": finish["is_byte_identical"]
             and meta_dict.get("decoder_codec", "vendored") == "vendored",
-            "authority": "[contest-CPU advisory] NON-PROMOTABLE until dual CPU/CUDA exact eval",
+            "authority": _advisory_axis_label(" until dual CPU/CUDA exact eval"),
             "score_claim": False,
         }
         if "lever4_variable_level_export" in meta_dict:

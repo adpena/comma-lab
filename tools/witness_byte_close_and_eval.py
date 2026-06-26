@@ -72,7 +72,20 @@ import train_witness_realized_through_R_mlx as twr  # noqa: E402  (light top-lev
 CAMERA_H, CAMERA_W = 874, 1164
 RATE_DENOM = 37_545_489.0
 _MAGIC = b"WTNS1\x00"  # witness coord-INR carrier v1
-_AUTHORITY = "[macOS-CPU advisory] NON-PROMOTABLE"
+
+
+def _advisory_axis_label() -> str:
+    """Device-truthful advisory authority (DAG FEED-br sister — the axis mislabel). macOS
+    CPU-torch is NOT 1:1 with the contest Linux x86_64 CPU runner -> [macOS-CPU advisory];
+    only a real Linux x86_64 host earns [contest-CPU advisory]. Always NON-PROMOTABLE here."""
+    import platform
+
+    if platform.system() == "Linux" and platform.machine().lower() in ("x86_64", "amd64"):
+        return "[contest-CPU advisory] NON-PROMOTABLE"
+    return "[macOS-CPU advisory] NON-PROMOTABLE"
+
+
+_AUTHORITY = _advisory_axis_label()
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
 
@@ -84,12 +97,38 @@ def _refuse_tmp(path: Path, field: str) -> None:
 # ---------------------------------------------------------------------------
 # checkpoint loading
 # ---------------------------------------------------------------------------
-def _load_witness_ckpt(ckpt_dir: Path) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
-    """Load (params, config) from a witness run dir. NO-FAKE: missing files raise."""
-    npz = ckpt_dir / "witness_ema_mlx.npz"
+def _load_witness_ckpt(ckpt_dir: Path, use_live: bool = False) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    """Load (params, config) from a witness run dir. NO-FAKE: missing files raise.
+
+    ``use_live`` (DAG FEED-br sister fix) byte-closes the LIVE-weights checkpoint
+    (``witness_live_mlx.npz``) instead of the EMA shadow (``witness_ema_mlx.npz``). The
+    EMA shadow can lag the live weights HARD (the 78x ema-lag trap); the trainer saves
+    both. We also surface an EMA-LAG warning from the train_result best_verdict.
+    """
+    npz_name = "witness_live_mlx.npz" if use_live else "witness_ema_mlx.npz"
+    npz = ckpt_dir / npz_name
     res = ckpt_dir / "train_result.json"
     if not npz.exists():
+        if use_live:
+            raise FileNotFoundError(
+                f"--use-live requested but {npz} missing (rerun the trainer to save the "
+                "LIVE-weights checkpoint, or drop --use-live to byte-close the EMA shadow)."
+            )
         raise FileNotFoundError(f"witness checkpoint missing: {npz} (refusing to fabricate; NO-FAKE)")
+    # EMA-LAG warning (DAG FEED-br sister): if the train_result records EMA d_seg >> live,
+    # the EMA shadow is lagging -> --use-live byte-closes the better arm.
+    if res.exists():
+        try:
+            bv = json.loads(res.read_text()).get("best_verdict", {})
+            ema_ds, live_ds = bv.get("d_seg"), bv.get("d_seg_live")
+            if isinstance(ema_ds, (int, float)) and isinstance(live_ds, (int, float)) and live_ds > 1e-9:
+                ratio = ema_ds / live_ds
+                if ratio >= 2.0 and not use_live:
+                    print(f"[WARN ema-lag] best EMA d_seg={ema_ds:.6f} >> LIVE d_seg={live_ds:.6f} "
+                          f"(lag {ratio:.1f}x) -- byte-closing the LAGGING EMA shadow. Consider "
+                          f"--use-live (needs witness_live_mlx.npz).", flush=True)
+        except Exception:
+            pass
     z = np.load(npz, allow_pickle=False)
     params = {k: np.asarray(z[k], dtype=np.float32) for k in z.files}
     cfg: dict[str, Any] = {}
@@ -260,6 +299,11 @@ def _act(u, kind, beta, omega):
 
 
 def _witness_forward(p, feats, code_row, n_hidden, hidden_dim, kind, beta, omega):
+    # NUMPY fp32 forward = the DEPLOY ground truth. The MLX **GPU** train forward
+    # accumulates matmuls in reduced precision (~0.19/255 RGB, ~500-1670 argmax px/pair vs
+    # fp32); numpy/torch fp32 agree to ~1 ULP (0-3 px). The trainer VERDICT mirrors THIS
+    # forward (train_witness_realized_through_R_mlx._witness_forward_numpy) so the scored
+    # d_seg == the byte-closed d_seg (DAG FEED-br). Keep op-for-op identical.
     def lin(name, x):
         return x @ p[name + ".weight"].T + p[name + ".bias"]
     h = _act(lin("in_proj", feats), kind, beta, omega)
@@ -462,8 +506,9 @@ def run(
     keep_packet: bool,
     packet_dir: Path | None,
     skip_parity: bool,
+    use_live: bool = False,
 ) -> dict[str, Any]:
-    params, cfg = _load_witness_ckpt(ckpt_dir)
+    params, cfg = _load_witness_ckpt(ckpt_dir, use_live=use_live)
     n_pairs = int(cfg["n_pairs"])
 
     pose_bytes: bytes | None = None
@@ -527,6 +572,7 @@ def run(
         "promotion_claim": False,
         "utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "ckpt_dir": str(ckpt_dir),
+        "weights_arm": ("live" if use_live else "ema"),
         "n_pairs_total": n_pairs,
         "config": {k: cfg.get(k) for k in (
             "n_pairs", "n_fourier", "hidden_dim", "n_hidden", "mod_dim", "fourier_sigma",
@@ -576,6 +622,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="prebuilt posenet_targets.bin (tac.scorer_targets.extract_and_save)")
     ap.add_argument("--gt-cache", type=str, default=None, help="optional shared GT npz for parity")
     ap.add_argument("--skip-parity", action="store_true", help="byte-close + inflate only (no GT decode)")
+    ap.add_argument("--use-live", action="store_true",
+                    help="(DAG FEED-br sister) byte-close the LIVE-weights checkpoint "
+                         "(witness_live_mlx.npz) instead of the EMA shadow (witness_ema_mlx.npz); "
+                         "use when the trainer flags an EMA-lag (the 78x trap).")
     ap.add_argument("--keep-packet", action="store_true", help="retain the packet dir for the exact-eval row")
     ap.add_argument("--out", type=Path, default=None, help="JSON report path (default reports/witness_byte_close_<ts>.json)")
     args = ap.parse_args(argv)
@@ -589,6 +639,7 @@ def main(argv: list[str] | None = None) -> int:
         keep_packet=args.keep_packet,
         packet_dir=None,
         skip_parity=args.skip_parity,
+        use_live=args.use_live,
     )
     out = args.out or (_REPO / "reports" / f"witness_byte_close_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.json")
     out.parent.mkdir(parents=True, exist_ok=True)

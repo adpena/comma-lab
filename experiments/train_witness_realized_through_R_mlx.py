@@ -686,6 +686,90 @@ def _torch_R_to_camera_uint8(rgb_render_np: np.ndarray) -> np.ndarray:
     return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)  # (CAMERA_H, CAMERA_W, 3)
 
 
+# ---------------------------------------------------------------------------
+# DEPLOY-FAITHFUL NUMPY fp32 forward (DAG FEED-br — the byte-close PORT-FIDELITY fix).
+#
+# ROOT CAUSE (measured 2026-06-26 on arm_iso_v2, both fp32 and int8 weights): the
+# witness MLP forward on MLX **GPU (Metal)** accumulates matmuls in REDUCED precision.
+# The MLX-GPU render diverges from any fp32 deploy by ~0.19/255 max RGB (~0.06 mean) ->
+# ~495-1672 SegNet-argmax px/pair, FAR LARGER than the entire sub-0.15 d_seg budget
+# (7.3e-4 ~= 143 px/pair). By contrast: numpy-vs-torch fp32 agree to ~1 ULP (1.5e-5,
+# 0-3 px); MLX-CPU-vs-numpy 3-18 px; MLX-GPU-vs-MLX-CPU ~1665 px (== the GPU outlier).
+# So the *deploy* numpy forward is CORRECT; the *trainer verdict* (which used the MLX
+# render) was the lone reduced-precision outlier. The fix: render the SCORED VERDICT in
+# NUMPY fp32 — byte-identical to inflate.py's _witness_forward — so the reported d_seg ==
+# the byte-closed d_seg. The training GRADIENT stays on MLX-GPU (reduced precision is
+# fine for the gradient per the CHAOS verdict); only the verdict must be fp32.
+#
+# This function MUST stay op-for-op identical to the inflate.py _witness_forward template
+# in tools/witness_byte_close_and_eval.py (lin = x@W.T+b; relu/hosc; FiLM reshape
+# (n_hidden,2,hidden); sigmoid*255; chroma=BT.601 luma replicate). A drift here = a
+# silent verdict/deploy gap, so the byte-close parity_on_inflated (which reads the ACTUAL
+# inflated .raw) is the regression guard.
+# ---------------------------------------------------------------------------
+def _build_feats_numpy(coords_np: np.ndarray, B_np: np.ndarray) -> np.ndarray:
+    """Deterministic isotropic Fourier feats in NUMPY (byte-identical to inflate.py)."""
+    proj = coords_np @ B_np
+    return np.concatenate([np.sin(proj), np.cos(proj)], axis=-1).astype(np.float32)
+
+
+def _witness_forward_numpy(
+    params: dict[str, np.ndarray],
+    feats: np.ndarray,
+    code_row: np.ndarray,
+    n_hidden: int,
+    hidden_dim: int,
+    kind: str,
+    beta: float,
+    omega: float,
+    chroma: bool,
+) -> np.ndarray:
+    """Witness MLP forward in NUMPY fp32 -> (P_px, 3) float RGB in [0,255].
+
+    Mirror of inflate.py's _witness_forward (+ its main-loop chroma branch) EXACTLY so
+    the trainer verdict renders what actually ships. ``params`` are float32 (the int8-
+    dequant deploy weights when int8_verdict, else fp32 EMA/live).
+    """
+    def lin(name: str, x: np.ndarray) -> np.ndarray:
+        return x @ params[name + ".weight"].T + params[name + ".bias"]
+
+    def act(u: np.ndarray) -> np.ndarray:
+        if kind == "hosc":
+            return np.tanh(beta * np.sin(omega * u))
+        return np.maximum(u, 0.0)
+
+    h = act(lin("in_proj", feats))
+    film = (code_row @ params["film.weight"].T + params["film.bias"]).reshape(n_hidden, 2, hidden_dim)
+    for li in range(n_hidden):
+        scale = 1.0 + film[li, 0]
+        shift = film[li, 1]
+        h = act(lin(f"hidden.{li}", h) * scale + shift)
+    z = h @ params["out.weight"].T + params["out.bias"]
+    rgb = (1.0 / (1.0 + np.exp(-z))) * 255.0  # (P,3) float RGB
+    if not chroma:  # mirror RGBWitnessMLX._apply_chroma (chroma=False) / inflate main-loop
+        luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
+        rgb = np.concatenate([luma, luma, luma], axis=-1)
+    return rgb.astype(np.float32)
+
+
+def _advisory_axis_label(non_promotable: bool = True) -> str:
+    """Device-truthful advisory axis tag (DAG FEED-br sister fix — the B4/base_ch axis
+    mislabel). On macOS (Apple Silicon) the frozen CPU-torch verdict is NOT 1:1 with the
+    contest GitHub-Actions Linux x86_64 CPU runner, so per CLAUDE.md "Submission auth eval"
+    it is ``[macOS-CPU advisory]`` NOT ``[contest-CPU]``. Only a genuine Linux x86_64 host
+    earns ``[contest-CPU advisory]``. Either way the row is NON-PROMOTABLE until a real
+    byte-closed paired CPU/CUDA exact-eval row lands."""
+    import platform
+
+    sysname = platform.system()
+    machine = platform.machine().lower()
+    if sysname == "Linux" and machine in ("x86_64", "amd64"):
+        base = "[contest-CPU advisory]"
+    else:
+        base = "[macOS-CPU advisory]"
+    return f"{base} NON-PROMOTABLE" if non_promotable else base
+
+
 def run_train(args: argparse.Namespace) -> dict[str, Any]:
     import mlx.core as mx
     import mlx.nn as nn
@@ -827,6 +911,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 return mx.array(_dir_feats_np[pi])
             return shared_feats
 
+        # DEPLOY-FAITHFUL numpy coord feats for the VERDICT (DAG FEED-br). The MLX
+        # shared_feats above run sin/cos on the GPU (reduced precision); the verdict must
+        # use the SAME numpy feats inflate.py builds (deterministic seeded B). Built ONCE.
+        _B_np = deterministic_fourier_B(args.n_fourier, args.fourier_sigma)
+        _feats_np_iso = None if directional else _build_feats_numpy(coords_np, _B_np)
+
+        def feats_for_pair_np(pi: int) -> np.ndarray:
+            """Per-pair coord features in NUMPY (deploy-faithful verdict path)."""
+            return _dir_feats_np[pi] if directional else _feats_np_iso
+
         # GT targets as mx (one-hot L*, margin, pose).
         lstar_oh = []
         margins_mx = []
@@ -861,52 +955,44 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         int8_verdict = bool(getattr(args, "int8_verdict", True))
 
         def eval_verdict(use_ema: bool) -> dict[str, float]:
-            """FROZEN CPU-torch authority verdict on the DEPLOY weights via the TORCH R.
+            """FROZEN CPU-torch authority verdict on the DEPLOY weights via the NUMPY fp32
+            forward + TORCH R — DEPLOY-FAITHFUL (DAG FEED-br PORT-FIDELITY fix).
 
             (bug #4) The deploy archive is int8+brotli, so when ``int8_verdict`` is True the
             verdict renders the int8-DEQUANTIZED weights (eval_roundtrip-for-WEIGHTS) — the
-            small-margin pixels that ARE d_seg flip under int8, so an fp32-EMA verdict overstates
-            the witness. (bug #1/#3) The witness MLP forward is MLX (it must be), but the R
-            (resize+uint8) + scorer preprocess + scorer are ALL torch (authority).
+            small-margin pixels that ARE d_seg flip under int8, so an fp32 verdict overstates
+            the witness.
+
+            PORT FIDELITY: the witness MLP forward is rendered in NUMPY fp32 here (NOT MLX),
+            byte-identical to inflate.py's _witness_forward, so the SCORED d_seg == the
+            byte-closed d_seg. The MLX **GPU** forward accumulates in reduced precision and
+            diverges ~495-1672 argmax px/pair from the fp32 deploy (>> the 143-px sub-0.15
+            budget); numpy/torch fp32 agree to ~0-3 px. The MLX-GPU path trains the GRADIENT
+            (fine per the CHAOS verdict); only the verdict must be fp32. The R (resize+uint8)
+            + scorer preprocess + scorer remain ALL torch (authority). No MLX model mutation
+            here -> no Metal verdict-cache balloon.
             """
             model = holder["model"]
             ema = holder["ema"]
-            # Always snapshot live params (we mutate the model to load the deploy weights).
-            saved = {k: mx.array(v) for k, v in tree_flatten(model.parameters())}
-            src_items = list(ema.shadow.items()) if use_ema else list(saved.items())
+            src_items = list(ema.shadow.items()) if use_ema else list(tree_flatten(model.parameters()))
             if int8_verdict:
                 deploy = dequantize_witness_flat(src_items)  # {name: np.float32} int8 round-trip
             else:
                 deploy = {k: np.asarray(v, dtype=np.float32) for k, v in src_items}
-            model.update(tree_unflatten([(k, mx.array(v)) for k, v in deploy.items()]))
-            mx.eval(model.parameters())
+            kind = str(model.activation)
+            beta = float(model.hosc_beta)  # current annealed beta (deploy uses the final value)
+            omega = float(model.hosc_omega)
+            chroma_v = bool(model.chroma)
+            code = deploy["code"]
             d_segs, d_poses = [], []
-            try:
-                for pi in range(P):
-                    fp = feats_for_pair(pi)
-                    f0 = _torch_R_to_camera_uint8(_render_rgb_render_res(model, fp, 2 * pi, render_h, render_w))
-                    f1 = _torch_R_to_camera_uint8(_render_rgb_render_res(model, fp, 2 * pi + 1, render_h, render_w))
-                    d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
-                    d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
-                    # Return the per-render 874x1164 transient buffers to the OS
-                    # AFTER EVERY PAIR. Without this the Metal allocator caches every
-                    # freed render across the P pairs -> the 499000 active-buffer
-                    # cap / RSS balloon AT STARTUP (the periodic train-loop fix at
-                    # the mx.clear_cache below did NOT cover this verdict path). A
-                    # single render is <100 MB; the balloon is PURE cache accumulation
-                    # (~650 MB cached/render -> 32 renders ~= 20 GB), so an every-16-
-                    # pairs clear OOM'd before the first clear even fired (peak_rss
-                    # 20616 MiB in 3.09s, observed 2026-06-26). Clearing per pair
-                    # bounds peak to ~1-2 renders. clear_cache() returns ONLY
-                    # reclaimable freed buffers; live arrays (coord_feats, params, GT
-                    # targets) are untouched -> verdict MATH unchanged (all P pairs
-                    # still scored on the frozen CPU-torch authority, no subsample).
-                    mx.clear_cache()
-            finally:
-                mx.clear_cache()
-                # Always restore the live (pre-deploy-swap) params.
-                model.update(tree_unflatten(list(saved.items())))
-                mx.eval(model.parameters())
+            for pi in range(P):
+                fp = feats_for_pair_np(pi)
+                rgb0 = _witness_forward_numpy(deploy, fp, code[2 * pi], args.n_hidden, args.hidden_dim, kind, beta, omega, chroma_v)
+                rgb1 = _witness_forward_numpy(deploy, fp, code[2 * pi + 1], args.n_hidden, args.hidden_dim, kind, beta, omega, chroma_v)
+                f0 = _torch_R_to_camera_uint8(rgb0.reshape(render_h, render_w, 3))
+                f1 = _torch_R_to_camera_uint8(rgb1.reshape(render_h, render_w, 3))
+                d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
+                d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
             return {"d_seg": float(np.mean(d_segs)), "d_pose": float(np.mean(d_poses))}
 
         # --- stabilization config (DAG FEED-bd/be: clean descent -> ep30-40 spike
@@ -949,6 +1035,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         recent: deque[float] = deque(maxlen=recent_maxlen)
         base_verdict: dict[str, float] | None = None
         best_saved: dict[str, Any] = {"d_seg": 1e9, "params": None, "restart": -1, "epoch": -1}
+        # (DAG FEED-br sister fix) ALSO keep the best-implied-S LIVE-weights checkpoint.
+        # The EMA shadow can lag the live weights HARD (arm_iso_v2: EMA d_seg 0.171 vs LIVE
+        # d_seg 0.0022 = 78x) — byte-closing only the lagging EMA understates a real witness.
+        # We save BOTH so the byte-close can pick the better arm (--use-live).
+        best_live_saved: dict[str, Any] = {"implied_S": 1e9, "d_seg": 1e9, "params": None, "restart": -1, "epoch": -1}
+        ema_lag_warn_ratio = float(getattr(args, "ema_lag_warn_ratio", 2.0))
         t_train = time.time()
         ep_walls: list[float] = []
         gstep = 0
@@ -1143,6 +1235,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             "d_seg": v["d_seg"], "restart": restart_i, "epoch": ep,
                             "params": {k: np.asarray(val, dtype=np.float32) for k, val in ema.shadow.items()},
                         }
+                    # (DAG FEED-br sister) keep the best-implied-S LIVE-weights checkpoint too.
+                    if implied_S_live < best_live_saved["implied_S"]:
+                        best_live_saved = {
+                            "implied_S": implied_S_live, "d_seg": v_live["d_seg"],
+                            "restart": restart_i, "epoch": ep,
+                            "params": {k: np.asarray(val, dtype=np.float32) for k, val in tree_flatten(model.parameters())},
+                        }
+                    # (DAG FEED-br sister) EMA-LAG warning: when the EMA d_seg trails the LIVE
+                    # d_seg by >= ema_lag_warn_ratio the EMA shadow is lagging (the 78x trap) —
+                    # byte-close the LIVE weights (--use-live) instead.
+                    if v_live["d_seg"] > 1e-9 and v["d_seg"] >= ema_lag_warn_ratio * v_live["d_seg"]:
+                        print(json.dumps({
+                            "stage": "WARNING_ema_lag", "restart": restart_i, "ep": ep,
+                            "ema_d_seg": round(v["d_seg"], 6), "live_d_seg": round(v_live["d_seg"], 6),
+                            "lag_ratio": round(v["d_seg"] / max(v_live["d_seg"], 1e-9), 1),
+                            "advice": "EMA shadow lags live; byte-close witness_live_mlx.npz via "
+                                      "tools/witness_byte_close_and_eval.py --use-live",
+                        }), flush=True)
                     result_history.append(row)
                     print(json.dumps(row), flush=True)
                     # restart divergence guard: at the first eval epoch past midpoint, if
@@ -1177,6 +1287,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "d_seg": (round(float(best_saved["d_seg"]), 6) if best_saved["params"] is not None else None),
             "n_skips_total": n_skips_total,
         }), flush=True)
+        # (DAG FEED-br sister) ALSO save the best-implied-S LIVE-weights witness so the
+        # byte-close can pick it (--use-live) when the EMA shadow lags (the 78x trap).
+        ema_lag_at_best = None
+        if best_live_saved["params"] is not None:
+            np.savez(out_dir / "witness_live_mlx.npz", **best_live_saved["params"])
+            if best_saved["params"] is not None and best_live_saved["d_seg"] > 1e-9:
+                ema_lag_at_best = round(float(best_saved["d_seg"]) / max(float(best_live_saved["d_seg"]), 1e-9), 1)
+            print(json.dumps({
+                "stage": "saved_best_live", "restart": best_live_saved["restart"], "epoch": best_live_saved["epoch"],
+                "live_d_seg": round(float(best_live_saved["d_seg"]), 6),
+                "best_ema_d_seg": (round(float(best_saved["d_seg"]), 6) if best_saved["params"] is not None else None),
+                "ema_lag_ratio_at_best": ema_lag_at_best,
+                "advice": ("EMA lags live; prefer --use-live byte-close" if (ema_lag_at_best or 0) >= ema_lag_warn_ratio else "EMA ~= live"),
+            }), flush=True)
 
     mean_ep = float(np.mean(ep_walls)) if ep_walls else 0.0
     median_ep = float(np.median(ep_walls)) if ep_walls else 0.0
@@ -1185,9 +1309,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "subagent": "train_witness_realized_through_R_mlx_lever2_20260625",
         "utc": _utc(),
         "evidence_grade_train": "[macOS-MLX training-gradient]",
-        "evidence_grade_verdict": "[contest-CPU advisory]",
+        # Device-truthful: on macOS the frozen CPU-torch verdict is [macOS-CPU advisory]
+        # (NOT 1:1 with the contest Linux x86_64 CPU runner); only a Linux x86_64 host
+        # earns [contest-CPU advisory] (DAG FEED-br sister fix — the axis mislabel).
+        "evidence_grade_verdict": _advisory_axis_label(non_promotable=False),
         "promotion_eligible": False, "score_claim": False, "ready_for_exact_eval_dispatch": False,
         "axis": "REALIZED (post-R, post-frozen-scorer) -- the actually-scored axis",
+        "port_fidelity_DAG_FEED_br": {
+            # The byte-close blocker REVIEWER 1 found: MLX-GPU forward is reduced-precision
+            # -> the verdict now renders in NUMPY fp32 (byte-identical to inflate.py), so
+            # the reported d_seg == the byte-closed d_seg.
+            "verdict_forward_numpy_fp32_deploy_faithful": True,
+            "mlx_gpu_only_trains_gradient": True,
+            "saved_best_live_weights_for_byte_close": bool(best_live_saved["params"] is not None),
+            "ema_lag_ratio_at_best": ema_lag_at_best,
+        },
         "fidelity_fixes_DAG_FEED_bf": {
             "R_contest_faithful_uint8_at_camera": True,   # bug #1
             "spike_guard_resets_per_restart": True,       # bug #2
@@ -1302,6 +1438,12 @@ def main(argv: list[str] | None = None) -> int:
         help="(bug #4) compute the authority verdict on the int8-DEQUANTIZED deploy weights "
         "(eval_roundtrip-for-WEIGHTS) — the deploy archive is int8+brotli and small-margin pixels "
         "flip under int8. --no-int8-verdict renders the fp32 EMA weights (overstates the witness).",
+    )
+    ap.add_argument(
+        "--ema-lag-warn-ratio", type=float, default=2.0,
+        help="(DAG FEED-br sister) warn when the EMA-shadow d_seg trails the LIVE d_seg by "
+        ">= this ratio (the 78x ema-lag trap); the best LIVE weights are saved to "
+        "witness_live_mlx.npz for --use-live byte-close regardless.",
     )
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
     # --- OPTIMIZER (default adamw = existing path UNCHANGED) ---
