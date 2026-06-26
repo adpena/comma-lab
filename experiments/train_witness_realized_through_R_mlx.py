@@ -626,7 +626,15 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True):
+        # ``mw_active`` (curriculum gate, ISSUE 2): the LIVE-margin re-allocation is applied
+        # ONLY when True. The trainer passes ``margin_weighted and (ep >= start_epoch)`` so
+        # epochs < start_epoch use UNIFORM seg weight (learn the base partition) and epochs
+        # >= start_epoch concentrate on the boundary annulus. _live_margin_weight uses the
+        # PREDICTION margin: from RANDOM INIT the wrong pixels are confidently-wrong (large
+        # margin) -> ~0 weight -> the bulk never learns the base -> d_seg stuck at chance.
+        # The curriculum learns the base FIRST, then re-allocates onto the annulus.
+        apply_mw = bool(margin_weighted) and bool(mw_active)
         f0 = render_through_R_mlx(model, coord_feats, code0, render_h, render_w)
         f1 = render_through_R_mlx(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
@@ -642,8 +650,8 @@ def make_loss_fn(
             signed = gt_logit - runner_up
             hinge_map = mx.maximum(margin_target - signed, 0.0)  # (1,H,W)
             # LIVE-MARGIN re-allocation (FEED-bp): concentrate the SAME loss budget on the
-            # small-margin annulus where ~89% of d_seg lives. OFF (default) = byte-identical.
-            if margin_weighted:
+            # small-margin annulus where ~89% of d_seg lives. Gated by the ISSUE-2 curriculum.
+            if apply_mw:
                 hinge_map = hinge_map * _live_margin_weight(seg_logits, margin_weight_fn, margin_weight_temp)
             seg_l = mx.mean(hinge_map)
         else:
@@ -655,8 +663,8 @@ def make_loss_fn(
             pw = ce * w[None]  # (1,H,W)
             # LIVE-MARGIN re-allocation (FEED-bp): multiply by the stop-grad, mean-1 live-margin
             # allocator so the SAME budget concentrates on the ~2.2% boundary annulus (~20x
-            # effective-capacity multiplier). OFF (default) = byte-identical to the running base.
-            if margin_weighted:
+            # effective-capacity multiplier). Gated by the ISSUE-2 curriculum (uniform first).
+            if apply_mw:
                 pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, margin_weight_temp)
             seg_l = mx.mean(pw)
         # Realized pose MSE on the pair (== realized d_pose).
@@ -825,6 +833,50 @@ def _witness_forward_numpy(
         luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
         rgb = np.concatenate([luma, luma, luma], axis=-1)
     return rgb.astype(np.float32)
+
+
+def _witness_forward_mlx(
+    deploy_mx: dict,
+    feats_mx,
+    code_row_mx,
+    n_hidden: int,
+    hidden_dim: int,
+    kind: str,
+    beta: float,
+    omega: float,
+    chroma: bool,
+):
+    """Functional MLX witness forward (NO module mutation) -> (P_px, 3) mx RGB in [0,255].
+
+    Op-for-op identical to ``_witness_forward_numpy`` / inflate.py, but in mx so the IN-LOOP
+    verdict can run on the FAST mlx-cpu (3-18 px/pair vs numpy fp32 << the 143-px sub-0.15
+    budget -> accurate ENOUGH for descent monitoring) or the FASTEST-but-coarse mlx-gpu
+    (~495-1672 px, reduced precision -> ONLY for the coarse 0.5->0.01 descent). The FINAL
+    byte-close row stays numpy fp32 (0 px, authoritative). ``deploy_mx`` holds the int8-
+    dequant deploy weights as mx arrays on the active device; ``feats_mx`` is the coord grid.
+    """
+    import mlx.core as mx
+
+    def lin(name, x):
+        return x @ deploy_mx[name + ".weight"].T + deploy_mx[name + ".bias"]
+
+    def act(u):
+        if kind == "hosc":
+            return mx.tanh(beta * mx.sin(omega * u))
+        return mx.maximum(u, 0.0)
+
+    h = act(lin("in_proj", feats_mx))
+    film = mx.reshape(code_row_mx @ deploy_mx["film.weight"].T + deploy_mx["film.bias"], (n_hidden, 2, hidden_dim))
+    for li in range(n_hidden):
+        scale = 1.0 + film[li, 0]
+        shift = film[li, 1]
+        h = act(lin(f"hidden.{li}", h) * scale + shift)
+    z = h @ deploy_mx["out.weight"].T + deploy_mx["out.bias"]
+    rgb = mx.sigmoid(z) * 255.0
+    if not chroma:
+        luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
+        rgb = mx.concatenate([luma, luma, luma], axis=-1)
+    return rgb
 
 
 def _advisory_axis_label(non_promotable: bool = True) -> str:
@@ -1014,6 +1066,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         margin_weighted = bool(getattr(args, "margin_weighted_loss", False))
         margin_weight_fn = str(getattr(args, "margin_weight_fn", "inverse"))
         margin_weight_temp = float(getattr(args, "margin_weight_temp", 1.0))
+        # ISSUE 2 curriculum: engage the LIVE-margin re-allocation only at ep >= this epoch
+        # (UNIFORM seg weight before -> learn the base partition -> then refine the annulus).
+        # From RANDOM INIT the live-margin allocator starves the base (wrong px confidently-
+        # wrong = large margin = ~0 weight), so it is a FINETUNE lever, not from-scratch.
+        margin_weight_start_epoch = int(getattr(args, "margin_weight_start_epoch", 80))
         loss_fn = make_loss_fn(
             adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss,
             margin_weighted=margin_weighted, margin_weight_fn=margin_weight_fn, margin_weight_temp=margin_weight_temp,
@@ -1031,6 +1088,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "margin_weighted_loss": margin_weighted,
                 "margin_weight_fn": (margin_weight_fn if margin_weighted else None),
                 "margin_weight_temp": (margin_weight_temp if margin_weighted else None),
+                "margin_weight_start_epoch": (margin_weight_start_epoch if margin_weighted else None),
+                "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
                 "form": ("w_seg*seg_l + w_pose*sqrt(10*pose_l+eps)" if score_domain else "w_seg*seg_l + w_pose*pose_l"),
             }),
             flush=True,
@@ -1040,25 +1099,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         holder: dict[str, Any] = {"model": None, "ema": None}
 
         int8_verdict = bool(getattr(args, "int8_verdict", True))
+        verdict_device = str(getattr(args, "verdict_device", "mlx-cpu"))
 
-        def eval_verdict(use_ema: bool) -> dict[str, float]:
-            """FROZEN CPU-torch authority verdict on the DEPLOY weights via the NUMPY fp32
-            forward + TORCH R — DEPLOY-FAITHFUL (DAG FEED-br PORT-FIDELITY fix).
+        def eval_verdict(use_ema: bool, device: str | None = None) -> dict[str, float]:
+            """FROZEN CPU-torch authority verdict on the DEPLOY weights + TORCH R, rendering
+            the witness MLP forward on a SELECTABLE device (ISSUE 1 throughput fix).
 
-            (bug #4) The deploy archive is int8+brotli, so when ``int8_verdict`` is True the
-            verdict renders the int8-DEQUANTIZED weights (eval_roundtrip-for-WEIGHTS) — the
-            small-margin pixels that ARE d_seg flip under int8, so an fp32 verdict overstates
-            the witness.
+            (bug #4) When ``int8_verdict`` the verdict renders the int8-DEQUANTIZED deploy
+            weights (eval_roundtrip-for-WEIGHTS); the R (resize+uint8) + scorer preprocess +
+            scorer are ALWAYS torch (authority).
 
-            PORT FIDELITY: the witness MLP forward is rendered in NUMPY fp32 here (NOT MLX),
-            byte-identical to inflate.py's _witness_forward, so the SCORED d_seg == the
-            byte-closed d_seg. The MLX **GPU** forward accumulates in reduced precision and
-            diverges ~495-1672 argmax px/pair from the fp32 deploy (>> the 143-px sub-0.15
-            budget); numpy/torch fp32 agree to ~0-3 px. The MLX-GPU path trains the GRADIENT
-            (fine per the CHAOS verdict); only the verdict must be fp32. The R (resize+uint8)
-            + scorer preprocess + scorer remain ALL torch (authority). No MLX model mutation
-            here -> no Metal verdict-cache balloon.
+            VERDICT DEVICE (``device`` overrides the --verdict-device default):
+              * ``numpy``  : fp32, byte-identical to inflate.py -> 0 px/pair gap vs the
+                             byte-close. AUTHORITATIVE for the FINAL row; slow on 600 pairs.
+              * ``mlx-cpu``: fp32-accurate (3-18 px/pair << 143-px sub-0.15 budget), FAST.
+                             The in-loop descent default -- accurate ENOUGH for monitoring.
+              * ``mlx-gpu``: FASTEST but reduced-precision (~495-1672 px) -> ONLY trustworthy
+                             for the COARSE 0.5->0.01 descent; NOT for a frontier verdict.
+            The FINAL byte-close (tools/witness_byte_close_and_eval.py) is numpy fp32 (0 px).
             """
+            dev = device or verdict_device
             model = holder["model"]
             ema = holder["ema"]
             src_items = list(ema.shadow.items()) if use_ema else list(tree_flatten(model.parameters()))
@@ -1070,16 +1130,35 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             beta = float(model.hosc_beta)  # current annealed beta (deploy uses the final value)
             omega = float(model.hosc_omega)
             chroma_v = bool(model.chroma)
-            code = deploy["code"]
+            nh, hd = args.n_hidden, args.hidden_dim
             d_segs, d_poses = [], []
-            for pi in range(P):
-                fp = feats_for_pair_np(pi)
-                rgb0 = _witness_forward_numpy(deploy, fp, code[2 * pi], args.n_hidden, args.hidden_dim, kind, beta, omega, chroma_v)
-                rgb1 = _witness_forward_numpy(deploy, fp, code[2 * pi + 1], args.n_hidden, args.hidden_dim, kind, beta, omega, chroma_v)
-                f0 = _torch_R_to_camera_uint8(rgb0.reshape(render_h, render_w, 3))
-                f1 = _torch_R_to_camera_uint8(rgb1.reshape(render_h, render_w, 3))
-                d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
-                d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
+
+            if dev == "numpy":
+                code = deploy["code"]
+                for pi in range(P):
+                    fp = feats_for_pair_np(pi)
+                    rgb0 = _witness_forward_numpy(deploy, fp, code[2 * pi], nh, hd, kind, beta, omega, chroma_v)
+                    rgb1 = _witness_forward_numpy(deploy, fp, code[2 * pi + 1], nh, hd, kind, beta, omega, chroma_v)
+                    f0 = _torch_R_to_camera_uint8(rgb0.reshape(render_h, render_w, 3))
+                    f1 = _torch_R_to_camera_uint8(rgb1.reshape(render_h, render_w, 3))
+                    d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
+                    d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
+            else:
+                mlx_dev = "cpu" if dev == "mlx-cpu" else "gpu"
+                with temporary_mlx_device(mlx_dev):
+                    deploy_mx = {k: mx.array(v) for k, v in deploy.items()}
+                    feats_iso_mx = None if directional else mx.array(_feats_np_iso)
+                    code_mx = deploy_mx["code"]
+                    for pi in range(P):
+                        fp_mx = mx.array(_dir_feats_np[pi]) if directional else feats_iso_mx
+                        rgb0_mx = _witness_forward_mlx(deploy_mx, fp_mx, code_mx[2 * pi], nh, hd, kind, beta, omega, chroma_v)
+                        rgb1_mx = _witness_forward_mlx(deploy_mx, fp_mx, code_mx[2 * pi + 1], nh, hd, kind, beta, omega, chroma_v)
+                        mx.eval(rgb0_mx, rgb1_mx)
+                        f0 = _torch_R_to_camera_uint8(np.asarray(rgb0_mx, dtype=np.float32).reshape(render_h, render_w, 3))
+                        f1 = _torch_R_to_camera_uint8(np.asarray(rgb1_mx, dtype=np.float32).reshape(render_h, render_w, 3))
+                        d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
+                        d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
+                        mx.clear_cache()  # bound the Metal render-cache (per-pair) on mlx-gpu
             return {"d_seg": float(np.mean(d_segs)), "d_pose": float(np.mean(d_poses))}
 
         # --- stabilization config (DAG FEED-bd/be: clean descent -> ep30-40 spike
@@ -1203,6 +1282,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # wide, tight late when they collapse). Unused by the CE seg-loss branch.
                 m_t = m_start if args.epochs <= 1 else m_start + (m_end - m_start) * (ep - 1) / (args.epochs - 1)
                 margin_target = mx.array(float(m_t))
+                # ISSUE-2 curriculum gate: UNIFORM seg weight until margin_weight_start_epoch,
+                # then engage the LIVE-margin annulus re-allocation. A no-op when margin_weighted
+                # is OFF (default). Log the transition once.
+                mw_active = bool(margin_weighted) and (ep >= margin_weight_start_epoch)
+                if margin_weighted and ep == margin_weight_start_epoch:
+                    print(json.dumps({
+                        "stage": "margin_weight_curriculum_engage", "restart": restart_i, "ep": ep,
+                        "fn": margin_weight_fn, "temp": margin_weight_temp,
+                        "note": "uniform seg weight -> live-margin annulus re-allocation from here",
+                    }), flush=True)
                 order = rng.permutation(P)
                 accum_grads = None
                 accum_loss_sum = 0.0
@@ -1213,7 +1302,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     pi = int(pi_np)
                     loss, grads = value_and_grad(
                         model, feats_for_pair(pi), 2 * pi, 2 * pi + 1,
-                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target,
+                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target, mw_active,
                     )
                     # Materialize per pair so the lazy fwd+bwd graph does NOT accumulate
                     # across the epoch (the 499000 buffer-count cap fix, preserved).
@@ -1457,6 +1546,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "margin_weighted_loss": bool(getattr(args, "margin_weighted_loss", False)),
             "margin_weight_fn": str(getattr(args, "margin_weight_fn", "inverse")),
             "margin_weight_temp": float(getattr(args, "margin_weight_temp", 1.0)),
+            "margin_weight_start_epoch": int(getattr(args, "margin_weight_start_epoch", 80)),
+            "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
             "seed": args.seed,
         },
         "throughput": {
@@ -1536,6 +1627,14 @@ def main(argv: list[str] | None = None) -> int:
         "witness_live_mlx.npz for --use-live byte-close regardless.",
     )
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
+    ap.add_argument(
+        "--verdict-device", choices=["numpy", "mlx-cpu", "mlx-gpu"], default="mlx-cpu",
+        help="(ISSUE 1 throughput) device for the IN-LOOP verdict MLP forward: mlx-cpu "
+        "(default; fp32-accurate 3-18 px/pair << 143-px budget, FAST), numpy (fp32, 0 px/pair "
+        "vs the byte-close, AUTHORITATIVE but slow on 600 pairs), or mlx-gpu (fastest but "
+        "reduced-precision ~495-1672 px -> coarse 0.5->0.01 descent ONLY). The FINAL byte-close "
+        "row is always numpy fp32 (tools/witness_byte_close_and_eval.py).",
+    )
     # --- OPTIMIZER (default adamw = existing path UNCHANGED) ---
     ap.add_argument(
         "--optimizer", choices=["adamw", "md"], default="adamw",
@@ -1664,6 +1763,15 @@ def main(argv: list[str] | None = None) -> int:
         help="LIVE-margin allocator temperature: a logit scale for inverse/exp (smaller=sharper "
         "annulus focus), or the bottom-FRACTION for bottom-k (e.g. 0.05 = bottom 5%% margin). "
         "Only active with --margin-weighted-loss.",
+    )
+    ap.add_argument(
+        "--margin-weight-start-epoch", type=int, default=80,
+        help="(ISSUE 2 curriculum) engage the LIVE-margin annulus re-allocation only at "
+        "ep >= N; epochs < N use UNIFORM seg weight so the base partition learns first. The "
+        "live-margin allocator uses the PREDICTION margin, so from RANDOM INIT it starves the "
+        "base (wrong px confidently-wrong = large margin = ~0 weight -> d_seg stuck at chance). "
+        "Margin-weight is a FINETUNE lever (re-allocate a CONVERGED base), not from-scratch. "
+        "Only active with --margin-weighted-loss; tune N to ~when the base is roughly learned.",
     )
     args = ap.parse_args(argv)
 

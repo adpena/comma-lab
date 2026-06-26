@@ -1257,3 +1257,17 @@ The decisive capstone launch surfaced THREE config issues (each a MEASURED findi
 **FIX DISPATCHED (acf4c2f2):** --verdict-device + --margin-weight-start-epoch curriculum. On landing -> RELAUNCH proper convergence run: relu + chroma + --verdict-device mlx-cpu + --margin-weight-start-epoch N + 600 pairs + render 384 + 80GB cap -> converge -> byte-close (numpy-fp32 + stored-pose sidecar) -> contest-CPU exact = pointer-mover.
 
 OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=generous caps not 2nd-arm; watchdog pid 21038). Pointer UNMOVED contest-CPU 0.19110 (no byte-closed exact row yet; all realized-through-R advisory).
+
+---
+
+## FEED-bs (2026-06-26) WITNESS VERDICT-DEVICE FLAG + MARGIN-WEIGHT CURRICULUM -- verdict is SegNet-BOUND not MLP-bound (throughput correction)
+
+**Two trainer fixes for the next decisive convergence run.** `[macOS-CPU advisory]` NON-PROMOTABLE; $0 CPU; pointer UNMOVED 0.19109982.
+
+**ISSUE 1 (throughput) -- verdict-device flag + a CORRECTION:** added `--verdict-device {numpy,mlx-cpu,mlx-gpu}` (default mlx-cpu). MEASURED per-frame at render 384x512 (arm_iso_v2): MLP-only mlx-gpu 14.9ms / mlx-cpu 79.7ms / numpy 103.6ms; FULL (render+R+SegNet) mlx-gpu 587.7ms / mlx-cpu 601.5ms / numpy 628.6ms -> per 600-pair verdict (1200 frames) mlx-gpu 705s / mlx-cpu 722s / numpy 754s. **KEY FINDING: the verdict is SegNet-BOUND, not MLP-bound -- R+SegNet (frozen CPU-torch authority) = ~575ms/frame = 97% of cost; the MLP-device delta is only ~50s of ~750s (7%).** So the device flag is a MINOR lever; the 44min "ep1 eval" was baseline+2 verdicts (~12.6min each) + a train epoch, NOT a numpy-MLP pathology. Per-device px-gap (frame1, vs numpy fp32 deploy): mlx-cpu 3-18px (<< 143px budget; the in-loop default), mlx-gpu ~495-1672px (coarse 0.5->0.01 descent ONLY), numpy 0px (final byte-close, authoritative). **The real throughput lever for a many-epoch run is verdict FREQUENCY (eval-every) or verdict PAIR-COUNT, not the MLP device** -- flagged for the coordinator.
+
+**ISSUE 2 (from-scratch starvation) -- margin-weight CURRICULUM:** added `--margin-weight-start-epoch N` (default 80). The LIVE-margin allocator (`_live_margin_weight`) uses the PREDICTION margin, so from RANDOM INIT the wrong pixels are confidently-wrong (large margin -> ~0 weight) -> the base partition never learns -> d_seg stuck at chance (ep1 d_seg_live == baseline 0.50482). FIX: UNIFORM seg weight for ep<N (learn base) -> engage live-margin annulus re-allocation for ep>=N (refine). $0 PROOF on realized seg_logits: weight-mass in bottom-5%-margin pixels = uniform 5.0% (ep<N, flat) -> exp/temp=0.1 **76.2%** (ep>=N) -- a 15x concentration jump. The `margin_weight_curriculum_engage` log fires exactly at ep==N. DEFAULT (no `--margin-weighted-loss`) = uniform CE, UNCHANGED.
+
+**Files:** `experiments/train_witness_realized_through_R_mlx.py` -- `_witness_forward_mlx` (functional, no model mutation), `eval_verdict(device=)` branch, per-epoch `mw_active` curriculum gate threaded through `value_and_grad`, 2 new flags. 10 trainer tests pass.
+
+**RELAUNCH (coordinator):** `relu + chroma + --verdict-device mlx-cpu + --margin-weighted-loss --margin-weight-fn exp --margin-weight-temp 0.1 --margin-weight-start-epoch 80 --num-pairs 600 --render-h 384 --render-w 512` to convergence. (Note: at ~722s/verdict x2/eval, set --eval-every high enough that verdicts do not dominate wall-clock; OR subsample the in-loop verdict -- the SegNet-bound finding above.)
