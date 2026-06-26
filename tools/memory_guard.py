@@ -222,9 +222,16 @@ HOST_CONTROL_PLANE_LINEAGE_PROTECTED_EXECUTABLE_NAMES: frozenset[str] = (
 # Used ONLY as an extra direct-kill refusal (layer b); does NOT propagate to
 # descendants (would re-introduce the universal-launchd protection bug). Never
 # contains "python" — training arms are python.
+# NOTE: ``safe_run.py`` is deliberately NOT in this denylist. A training arm
+# wrapped in safe_run (the layer-3 per-arm cap) records the safe_run WRAPPER as
+# its custody pgid; the watchdog sheds the arm by killpg(wrapper), which cascades
+# to the inner trainer (safe_run's SIGTERM handler). Protecting "safe_run.py"
+# here would make every wrapped training arm UN-SHEDDABLE (HIGH-1 corollary). A
+# safe_run wrapping a NON-training command is still safe — it would not match the
+# training allowlist (gate 7) nor be in custody (gate 0).
 EXTRA_PROTECTED_TOKENS: tuple[str, ...] = (
     "/usr/bin/ssh", " ssh ", "sshd", "tmux", "/sbin/launchd", "WindowServer",
-    "loginwindow", "memory_guard.py", "safe_run.py", "spawn_durable_daemon.py",
+    "loginwindow", "memory_guard.py", "spawn_durable_daemon.py",
 )
 EXTRA_PROTECTED_EXECUTABLE_NAMES: frozenset[str] = frozenset(
     {"ssh", "sshd", "tmux", "launchd", "login", "-bash", "-zsh", "-sh",
@@ -233,16 +240,23 @@ EXTRA_PROTECTED_EXECUTABLE_NAMES: frozenset[str] = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# vm_stat available-memory floor (OURS). TWO metrics, deliberately:
-#   * CONSERVATIVE (free + inactive) — used by the REFUSE launch-preflight.
-#     Undercounts real availability (ignores purgeable + clean file cache), so
-#     refusing is FAIL-CLOSED = SAFE (we never over-commit a launch).
-#   * GENEROUS / reclaimable-aware (free + inactive + purgeable + file-backed)
-#     — used ONLY by the SHED watchdog. Under macOS memory compression the
-#     conservative metric can undercount, which would false-positive-shed a
-#     custody training arm when memory is actually fine (M3 review finding: an
-#     availability bug, never a control-plane kill, but wastes training). The
-#     generous metric + debounce (see watch_loop) prevents that.
+# vm_stat available-memory floor (OURS).
+#
+# A SINGLE, CONSERVATIVE metric drives BOTH the REFUSE launch-preflight AND the
+# SHED watchdog: ``available_gb`` = (free + inactive) * page_size.
+#
+# HIGH-2 review fix (the OOM-dangerous overcount): the earlier "generous" metric
+# (free + inactive + purgeable + FILE-BACKED) OVERCOUNTS true reclaimable memory.
+# On macOS, ``File-backed pages`` includes ACTIVE in-use file pages (the identity
+# ``file_backed + anonymous == active + inactive + speculative`` holds), so under
+# real pressure file_backed stays large while free collapses → the generous
+# metric reads ~40GB when true available is ~10GB → the watchdog returns "ok" and
+# NEVER sheds → OOM. We therefore DROP file_backed entirely and drive SHED off
+# the conservative metric: it is provably ``<= true_available`` (it omits some
+# genuinely-reclaimable purgeable/clean cache), so it FAILS TOWARD shedding =
+# OOM-SAFE. Over-eager shedding is bounded by the debounce + margin in watch_loop
+# and only ever sheds a recoverable, resumable CUSTODY training arm (never the
+# control plane). REFUSE stays conservative too (fail-closed = never over-commit).
 # ---------------------------------------------------------------------------
 def _parse_vm_stat(out: str) -> dict[str, int]:
     """Parse vm_stat output into a {field: pages} dict (+ 'page_size')."""
@@ -261,6 +275,7 @@ def _parse_vm_stat(out: str) -> dict[str, int]:
 
     fields["free"] = _grab("Pages free")
     fields["inactive"] = _grab("Pages inactive")
+    fields["speculative"] = _grab("Pages speculative")
     fields["purgeable"] = _grab("Pages purgeable")
     fields["file_backed"] = _grab("File-backed pages")
     return fields
@@ -269,6 +284,26 @@ def _parse_vm_stat(out: str) -> dict[str, int]:
 def _vm_stat_fields() -> dict[str, int]:
     out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10).stdout
     return _parse_vm_stat(out)
+
+
+def _available_gb_from_fields(fields: dict[str, int]) -> float:
+    """CONSERVATIVE available GB from parsed fields (free + inactive). Pure +
+    testable. Deliberately EXCLUDES file_backed (HIGH-2: it overcounts)."""
+    ps = fields["page_size"]
+    return (fields.get("free", 0) + fields.get("inactive", 0)) * ps / 1e9
+
+
+def _broadest_available_estimate_gb_from_fields(fields: dict[str, int]) -> float:
+    """The most-generous conceivable available estimate (free + inactive +
+    speculative + purgeable + file_backed). USED ONLY by the no-overcount test:
+    the shed metric must be <= this for all inputs (it never claims more memory
+    than could possibly be reclaimable → never falsely 'ok' → never skips a
+    needed shed). NOT used to drive any decision (it overcounts)."""
+    ps = fields["page_size"]
+    return (
+        fields.get("free", 0) + fields.get("inactive", 0) + fields.get("speculative", 0)
+        + fields.get("purgeable", 0) + fields.get("file_backed", 0)
+    ) * ps / 1e9
 
 
 def _vm_stat_bytes() -> tuple[float, float]:
@@ -280,18 +315,14 @@ def _vm_stat_bytes() -> tuple[float, float]:
 
 
 def available_gb() -> float:
-    """CONSERVATIVE available GB (free + reclaimable inactive). Used by REFUSE."""
-    avail, _ = _vm_stat_bytes()
-    return avail / 1e9
+    """CONSERVATIVE available GB (free + inactive). Drives BOTH REFUSE and SHED
+    (HIGH-2 fix: fail toward shedding = OOM-safe; never overcounts)."""
+    return _available_gb_from_fields(_vm_stat_fields())
 
 
-def available_generous_gb() -> float:
-    """GENEROUS / reclaimable-aware available GB (free + inactive + purgeable +
-    clean file-backed cache). Used by the SHED watchdog ONLY (M3 fix) so memory
-    compression cannot false-positive-shed a healthy training arm."""
-    f = _vm_stat_fields()
-    ps = f["page_size"]
-    return (f["free"] + f["inactive"] + f["purgeable"] + f["file_backed"]) * ps / 1e9
+def _broadest_available_estimate_gb() -> float:
+    """Live broadest estimate — for the no-overcount invariant test only."""
+    return _broadest_available_estimate_gb_from_fields(_vm_stat_fields())
 
 
 def strict_free_gb() -> float:
@@ -526,6 +557,21 @@ def descendant_pids(samples: Mapping[int, ProcessSample], root_pid: int | None) 
                 descendants.add(sample.pid)
                 changed = True
     return descendants
+
+
+def group_rss_gb(samples: Mapping[int, ProcessSample], root_pid: int) -> float:
+    """REAL footprint of a custody arm: RSS summed over ``root_pid`` AND all its
+    descendants (HIGH-1 corollary fix). Under safe_run wrapping the custody pid is
+    the ~10MB wrapper; the inner trainer is a descendant (child by ppid even
+    though it is its own session leader), so summing descendants attributes the
+    true memory — making 'shed the LARGEST arm' selection + the CRITICAL log
+    correct. Works for bare (unwrapped) arms too (sums the arm + its children)."""
+    total_kb = 0
+    for pid in descendant_pids(samples, root_pid):
+        s = samples.get(pid)
+        if s is not None:
+            total_kb += s.rss_kb
+    return total_kb / 1e6
 
 
 def _host_control_plane_ancestor_pids(
@@ -776,7 +822,9 @@ def select_kill_victim(
         # (7) positive training allowlist
         if not matches_training_allowlist(cmd, kill_pattern):
             continue
-        rss_gb = sample.rss_kb / 1e6
+        # REAL footprint = the arm's whole process group/descendants (HIGH-1
+        # corollary: under safe_run wrapping sample.rss_kb is the ~10MB wrapper).
+        rss_gb = group_rss_gb(samples, sample.pid)
         if best is None or rss_gb > best.rss_gb:
             best = KillVictim(
                 pid=sample.pid, pgid=pgid, rss_gb=rss_gb, command=cmd, label=record.label
@@ -859,15 +907,21 @@ DEFAULT_SHED_MARGIN_GB = 2.0
 def shed_decision(
     *,
     consecutive_subfloor: int,
-    avail_generous: float,
+    avail: float,
     min_free_gb: float,
     shed_margin_gb: float = DEFAULT_SHED_MARGIN_GB,
     shed_consecutive: int = DEFAULT_SHED_CONSECUTIVE,
 ) -> str:
-    """Pure SHED policy (M3 fix): debounced + near-boundary-ALERT.
+    """Pure SHED policy: debounced + near-boundary-ALERT.
+
+    ``avail`` is the CONSERVATIVE metric (free + inactive) — HIGH-2 fix: it never
+    overcounts (provably <= true available), so the watchdog can never falsely
+    read 'ok' and skip a needed shed → OOM-safe. Over-eager shedding from the
+    conservative undercount is bounded by the debounce + margin below, and only
+    ever sheds a recoverable CUSTODY training arm (never the control plane).
 
     Returns one of:
-      * "ok"    — generous (reclaimable-aware) available is at/above the floor;
+      * "ok"    — conservative available is at/above the floor;
       * "alert" — below the floor but NOT yet a shed (debounce not satisfied, OR
                   the reading is only within ``shed_margin_gb`` of the floor —
                   near-boundary noise gets an ALERT, never a kill);
@@ -876,16 +930,35 @@ def shed_decision(
                   custody training arm.
 
     ``consecutive_subfloor`` is the count of consecutive polls (including this
-    one) where the generous metric was below the floor. The REFUSE launch-
-    preflight is intentionally NOT routed through this (it stays conservative +
-    fail-closed); only the watchdog SHED path uses this debounced policy so
-    macOS memory compression cannot false-positive-shed a healthy arm.
+    one) where ``avail`` was below the floor. The REFUSE launch-preflight uses
+    the same conservative metric (fail-closed = never over-commit).
     """
-    if avail_generous >= min_free_gb:
+    if avail >= min_free_gb:
         return "ok"
-    if consecutive_subfloor >= shed_consecutive and avail_generous < (min_free_gb - shed_margin_gb):
+    if consecutive_subfloor >= shed_consecutive and avail < (min_free_gb - shed_margin_gb):
         return "shed"
     return "alert"
+
+
+def _warn_custody_arms_classified_control_plane(kill_pattern: str) -> list[str]:
+    """LOW-4: warn if any RUNNING custody arm that matches the training allowlist
+    ALSO classifies as control-plane (its argv coincidentally contains /.claude/
+    /.codex/ etc.) — such an arm would be PROTECTED → un-sheddable (OOM-adjacent).
+    Returns the list of offending labels (also logged). Observability only."""
+    offending: list[str] = []
+    samples = sample_processes()
+    for rec in load_custody_records():
+        s = samples.get(rec.pid)
+        cmd = s.command if s is not None else rec.cmd
+        if matches_training_allowlist(cmd, kill_pattern) and is_protected_command(cmd):
+            offending.append(rec.label)
+            _log(
+                f"WARN custody training arm label={rec.label!r} CLASSIFIES "
+                "control-plane (argv contains a control-plane token) → it would be "
+                "PROTECTED and UN-SHEDDABLE. Keep training-arm paths free of "
+                "claude/codex/anthropic tokens."
+            )
+    return offending
 
 
 # ---------------------------------------------------------------------------
@@ -903,10 +976,11 @@ def watch_loop(
 ) -> int:
     """Whole-machine watchdog. Loops forever (or ``max_iterations`` for tests).
 
-    SHED decisions use the GENEROUS / reclaimable-aware metric + a debounce
-    (M3 fix): a custody arm is shed only after ``shed_consecutive`` consecutive
-    sub-floor polls AND when clearly below the floor (> ``shed_margin_gb``).
-    Near-boundary / transient sub-floor readings get a (non-killing) ALERT.
+    SHED decisions use the CONSERVATIVE metric (free + inactive; HIGH-2 fix —
+    never overcounts → never skips a needed shed → OOM-safe) + a debounce: a
+    custody arm is shed only after ``shed_consecutive`` consecutive sub-floor
+    polls AND when clearly below the floor (> ``shed_margin_gb``). Near-boundary /
+    transient sub-floor readings get a (non-killing) ALERT.
     """
     self_pid = os.getpid()
     self_pgid = _safe_getpgrp()
@@ -916,20 +990,25 @@ def watch_loop(
         f"shed_margin={shed_margin_gb}GB pattern={kill_pattern!r} "
         f"self_pid={self_pid} self_pgid={self_pgid}"
     )
+    # LOW-4 startup WARN: surface any custody training arm that would (mis)classify
+    # as control-plane — it would be protected/un-sheddable (OOM-adjacent).
+    try:
+        _warn_custody_arms_classified_control_plane(kill_pattern)
+    except Exception:  # observability only — never block the watchdog
+        pass
     it = 0
     consecutive_subfloor = 0
     while max_iterations is None or it < max_iterations:
         it += 1
         try:
-            avail_generous = available_generous_gb()
-            avail_conservative = available_gb()
-            if avail_generous < min_free_gb:
+            avail = available_gb()  # CONSERVATIVE — drives shed (HIGH-2 fix)
+            if avail < min_free_gb:
                 consecutive_subfloor += 1
             else:
                 consecutive_subfloor = 0
             decision = shed_decision(
                 consecutive_subfloor=consecutive_subfloor,
-                avail_generous=avail_generous,
+                avail=avail,
                 min_free_gb=min_free_gb,
                 shed_margin_gb=shed_margin_gb,
                 shed_consecutive=shed_consecutive,
@@ -946,35 +1025,30 @@ def watch_loop(
                 )
                 if victim is not None:
                     _log(
-                        f"CRITICAL avail_generous={avail_generous:.1f}GB "
-                        f"(conservative={avail_conservative:.1f}GB) < {min_free_gb}GB "
-                        f"sustained {consecutive_subfloor} polls → KILL custody-arm "
+                        f"CRITICAL available={avail:.1f}GB < {min_free_gb}GB sustained "
+                        f"{consecutive_subfloor} polls → KILL custody-arm "
                         f"label={victim.label!r} pid={victim.pid} pgid={victim.pgid} "
-                        f"rss={victim.rss_gb:.1f}GB cmd={victim.command[:140]}"
+                        f"group_rss={victim.rss_gb:.1f}GB cmd={victim.command[:140]}"
                     )
                     _kill_pgrp(victim.pgid, victim.pid)
                     consecutive_subfloor = 0  # reset after acting; re-evaluate next poll
                 else:
                     _log(
-                        f"ALERT avail_generous={avail_generous:.1f}GB < {min_free_gb}GB "
-                        f"sustained {consecutive_subfloor} polls but NO killable training "
-                        f"arm UNDER CUSTODY (custody_count={len(custody)}) — killing "
-                        "NOTHING (control plane + non-custody protected); manual "
-                        "intervention may be needed."
+                        f"ALERT available={avail:.1f}GB < {min_free_gb}GB sustained "
+                        f"{consecutive_subfloor} polls but NO killable training arm "
+                        f"UNDER CUSTODY (custody_count={len(custody)}) — killing NOTHING "
+                        "(control plane + non-custody protected); manual intervention "
+                        "may be needed."
                     )
             elif decision == "alert":
                 _log(
-                    f"ALERT avail_generous={avail_generous:.1f}GB "
-                    f"(conservative={avail_conservative:.1f}GB) < floor {min_free_gb}GB "
-                    f"but NOT shedding yet (consecutive={consecutive_subfloor}/"
-                    f"{shed_consecutive}, margin={shed_margin_gb}GB — debounce/near-"
-                    "boundary; prefer ALERT over kill). Free memory if sustained."
+                    f"ALERT available={avail:.1f}GB < floor {min_free_gb}GB but NOT "
+                    f"shedding yet (consecutive={consecutive_subfloor}/{shed_consecutive}, "
+                    f"margin={shed_margin_gb}GB — debounce/near-boundary; prefer ALERT "
+                    "over kill). Free memory if sustained."
                 )
-            elif avail_generous < min_free_gb + warn_margin:
-                _log(
-                    f"WARN avail_generous={avail_generous:.1f}GB approaching floor "
-                    f"{min_free_gb}GB"
-                )
+            elif avail < min_free_gb + warn_margin:
+                _log(f"WARN available={avail:.1f}GB approaching floor {min_free_gb}GB")
         except Exception as e:  # never let the guard die silently
             _log(f"ERROR guard loop: {e!r}")
         if max_iterations is not None and it >= max_iterations:
@@ -1007,14 +1081,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--shed-consecutive", type=int, default=DEFAULT_SHED_CONSECUTIVE,
                     help="consecutive sub-floor polls required before the watchdog sheds (debounce)")
     ap.add_argument("--shed-margin-gb", type=float, default=DEFAULT_SHED_MARGIN_GB,
-                    help="only shed when generous-available < (min_free - this); else ALERT (near-boundary)")
+                    help="only shed when conservative-available < (min_free - this); else ALERT (near-boundary)")
     args = ap.parse_args(argv)
 
     if args.free:
         avail, sf = _vm_stat_bytes()
         print(json.dumps({
-            "available_gb": round(avail / 1e9, 2),
-            "available_generous_gb": round(available_generous_gb(), 2),
+            "available_gb": round(avail / 1e9, 2),  # conservative; drives REFUSE + SHED
+            "broadest_estimate_gb": round(_broadest_available_estimate_gb(), 2),  # observability only (overcounts)
             "strict_free_gb": round(sf / 1e9, 2),
         }))
         return 0

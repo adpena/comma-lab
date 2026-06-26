@@ -350,42 +350,99 @@ def test_MAKE_OR_BREAK_real_codex_cask_custody_poisoned_with_training_token_refu
 
 
 # ---------------------------------------------------------------------------
-# 13. M3 review finding — SHED debounce + reclaimable-aware + near-boundary ALERT.
+# 13. M3/HIGH-2 — SHED debounce + near-boundary ALERT, on the CONSERVATIVE metric.
 # ---------------------------------------------------------------------------
 def test_shed_decision_ok_above_floor():
-    assert mg.shed_decision(consecutive_subfloor=9, avail_generous=40.0, min_free_gb=30.0) == "ok"
+    assert mg.shed_decision(consecutive_subfloor=9, avail=40.0, min_free_gb=30.0) == "ok"
 
 
 def test_shed_decision_alert_when_debounce_not_met():
-    assert mg.shed_decision(consecutive_subfloor=1, avail_generous=25.0, min_free_gb=30.0,
+    assert mg.shed_decision(consecutive_subfloor=1, avail=25.0, min_free_gb=30.0,
                             shed_consecutive=3, shed_margin_gb=2.0) == "alert"
 
 
 def test_shed_decision_alert_near_boundary_even_if_sustained():
     # sustained sub-floor but only WITHIN the margin → ALERT, never kill.
-    assert mg.shed_decision(consecutive_subfloor=5, avail_generous=29.0, min_free_gb=30.0,
+    assert mg.shed_decision(consecutive_subfloor=5, avail=29.0, min_free_gb=30.0,
                             shed_consecutive=3, shed_margin_gb=2.0) == "alert"
 
 
 def test_shed_decision_sheds_when_sustained_and_clearly_below():
-    assert mg.shed_decision(consecutive_subfloor=3, avail_generous=25.0, min_free_gb=30.0,
+    assert mg.shed_decision(consecutive_subfloor=3, avail=25.0, min_free_gb=30.0,
                             shed_consecutive=3, shed_margin_gb=2.0) == "shed"
 
 
-def test_available_generous_geq_conservative_and_parses_reclaimable():
-    # generous (free+inactive+purgeable+file_backed) must be >= conservative.
-    assert mg.available_generous_gb() >= mg.available_gb() - 0.01
+# ---------------------------------------------------------------------------
+# 13b. HIGH-2 — the shed metric must NEVER overcount (was: generous overcount
+#      that could read 'ok' under pressure and skip a needed shed → OOM).
+# ---------------------------------------------------------------------------
+def test_shed_metric_never_overcounts_live():
+    # conservative shed metric must be <= the broadest conceivable estimate.
+    assert mg.available_gb() <= mg._broadest_available_estimate_gb() + 1e-6
 
 
-def test_parse_vm_stat_reads_purgeable_and_file_backed():
+def test_available_excludes_file_backed_overcount():
+    # PROOF the OOM-dangerous overcount is gone: huge ACTIVE file-backed cache +
+    # tiny free → the shed metric stays tiny (would shed), NOT inflated by
+    # file_backed. (file_backed=100000 pages would have read ~1.6GB+ on the old
+    # generous metric; the conservative metric ignores it entirely.)
+    fields = {"page_size": 16384, "free": 100, "inactive": 100,
+              "speculative": 0, "purgeable": 10, "file_backed": 100_000}
+    shed_metric = mg._available_gb_from_fields(fields)
+    assert shed_metric == pytest.approx((100 + 100) * 16384 / 1e9)  # ONLY free+inactive
+    assert shed_metric < 0.01  # well below any sane floor → would correctly shed
+    # invariant: shed metric never exceeds the broadest estimate.
+    assert shed_metric <= mg._broadest_available_estimate_gb_from_fields(fields)
+
+
+def test_parse_vm_stat_reads_speculative_purgeable_file_backed():
     sample_out = (
         "Mach Virtual Memory Statistics: (page size of 16384 bytes)\n"
         "Pages free:                   100.\n"
         "Pages inactive:               200.\n"
+        "Pages speculative:            40.\n"
         "Pages purgeable:              50.\n"
         "File-backed pages:            300.\n"
     )
     f = mg._parse_vm_stat(sample_out)
     assert f["page_size"] == 16384
     assert f["free"] == 100 and f["inactive"] == 200
-    assert f["purgeable"] == 50 and f["file_backed"] == 300
+    assert f["speculative"] == 40 and f["purgeable"] == 50 and f["file_backed"] == 300
+
+
+# ---------------------------------------------------------------------------
+# 13c. HIGH-1 corollary — RSS attribution = the whole process group/descendants
+#      (was: the ~10MB safe_run wrapper).
+# ---------------------------------------------------------------------------
+def test_group_rss_sums_descendants():
+    samples = _table(
+        _sample(500, 1, 10_000, "python safe_run.py -- python train.py", pgid=500),  # ~10MB wrapper
+        _sample(501, 500, 2_000_000, "python train.py", pgid=501),                    # ~2GB inner child
+        _sample(502, 501, 500_000, "python train.py worker", pgid=501),               # 0.5GB grandchild
+    )
+    assert mg.group_rss_gb(samples, 500) == pytest.approx((10_000 + 2_000_000 + 500_000) / 1e6, rel=1e-6)
+
+
+def test_selector_attributes_group_rss_for_wrapped_arm():
+    # A safe_run wrapper (custody) whose inner trainer is the real footprint:
+    # victim.rss_gb must be the GROUP rss (~2.5GB), not the ~10MB wrapper.
+    wrapper_cmd = "python tools/safe_run.py --rss-mb 30000 --timeout 60 -- python experiments/train_witness_realized_through_R_mlx.py"
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 10_000, wrapper_cmd, pgid=700),                                 # wrapper (custody)
+        _sample(701, 700, 2_500_000, "python experiments/train_witness_realized_through_R_mlx.py", pgid=701),  # inner (own session)
+    )
+    custody = _custody(("witness_n600", 700, 700, wrapper_cmd))
+    victim = mg.select_kill_victim(samples, custody_records=custody, self_pid=400, self_pgid=400)
+    assert victim is not None, "wrapped training arm MUST be sheddable (safe_run not denylisted)"
+    assert victim.pid == 700 and victim.pgid == 700  # kills the wrapper pgid → cascades to inner
+    assert victim.rss_gb == pytest.approx((10_000 + 2_500_000) / 1e6, rel=1e-6)  # GROUP rss, not wrapper
+
+
+def test_safe_run_no_longer_in_extra_protected_denylist():
+    # removing safe_run.py from the denylist is what makes wrapped arms sheddable.
+    assert mg._matches_extra_protected("python tools/safe_run.py -- python train_witness.py") is False
+    # but memory_guard.py + spawn_durable_daemon.py stay protected.
+    assert mg._matches_extra_protected("python tools/memory_guard.py --watch") is True
+    assert mg._matches_extra_protected("python tools/spawn_durable_daemon.py --status") is True

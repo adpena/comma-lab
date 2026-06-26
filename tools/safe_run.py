@@ -157,6 +157,24 @@ def main(argv: list[str]) -> int:
     status = "ok"
     rc = 0
 
+    # HIGH-1 fix (cascade): the inner child is its OWN session/group leader, so an
+    # EXTERNAL killpg(THIS wrapper's group) reaches ONLY the wrapper, not the
+    # child — and spawn_durable_daemon records THIS wrapper as the daemon's
+    # custody pgid, so the OOM watchdog sheds the arm by killpg(wrapper). Without
+    # cascading, the wrapper would die and the inner trainer would reparent to
+    # launchd and keep running UNCAPPED (layer-2 kill would destroy layer-3 cap).
+    # Install SIGTERM/SIGINT handlers that kill the child's group, then exit, so
+    # an external shed CASCADES to the arm.
+    def _cascade_kill(signum, _frame):  # noqa: ANN001
+        _kill_group(pgid)
+        os._exit(128 + signum)
+
+    try:
+        signal.signal(signal.SIGTERM, _cascade_kill)
+        signal.signal(signal.SIGINT, _cascade_kill)
+    except (ValueError, OSError):
+        pass  # not main thread / unsupported — fall back to default behavior
+
     try:
         while True:
             rc = proc.poll()
