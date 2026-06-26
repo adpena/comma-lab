@@ -1,0 +1,61 @@
+{
+  "tool": "witness_byte_close_and_eval",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "promotion_claim": false,
+  "utc": "2026-06-26T18:33:54Z",
+  "ckpt_dir": "experiments/results/dir_iso_axis_check_20260626T164308Z/arm_iso_v2",
+  "n_pairs_total": 1,
+  "config": {
+    "n_pairs": 1,
+    "n_fourier": 24,
+    "hidden_dim": 128,
+    "n_hidden": 4,
+    "mod_dim": 48,
+    "fourier_sigma": 8.0,
+    "render_h": 256,
+    "render_w": 384,
+    "activation": "relu",
+    "basis": "isotropic",
+    "w_pose": 0.0
+  },
+  "byte_close": {
+    "n_params": 122979,
+    "manifest_bytes": 1491,
+    "base_int8_brotli_bytes": 108935,
+    "code_int8_brotli_bytes": 92,
+    "pose_sidecar_bytes": 0,
+    "magic_and_prefixes_bytes": 22,
+    "total_0bin_bytes": 110540,
+    "archive_zip_bytes": 110010,
+    "zip_container_overhead_bytes": -530,
+    "rate": 0.002930045737318803,
+    "rate_term": 0.07325114343297007,
+    "rate_denom_bytes": 37545489,
+    "archive_zip_sha256": "f6328a7ff1f10f3a4c08d3dbca6940a823d692729185970384ea97959fa9bcd5",
+    "pose_sidecar": "off (RGB witness carries pose in per-(pair,frame) codes; train --w-pose>0)"
+  },
+  "inflate": {
+    "inflate_stdout": "inflated 2 frames (1 pairs) -> /Users/adpena/Projects/pact/experiments/results/witness_packet_20260626T183349Z/inflated/0.raw [2x874x1164x3 uint8]",
+    "eval_pairs": 1,
+    "n_frames_emitted": 2,
+    "raw_path": "/Users/adpena/Projects/pact/experiments/results/witness_packet_20260626T183349Z/inflated/0.raw",
+    "raw_bytes": 6104016,
+    "expected_bytes": 6104016,
+    "full_output_shape_ok": true,
+    "frame_layout": "(2, 874, 1164, 3) uint8 [f0,f1 per pair]"
+  },
+  "parity_on_inflated_frames": {
+    "pairs_scored": 1,
+    "d_seg_realized_on_inflated": 0.16938273111979166,
+    "d_pose_realized_on_inflated": 163.60741828722968,
+    "seg_term": 16.938273111979164,
+    "pose_term": 40.448413848657864,
+    "rate_term": 0.07325114343297007,
+    "implied_S_advisory": 57.45993810407
+  },
+  "contest_cpu_eval_cmd": ".venv/bin/python experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/witness_packet_20260626T183349Z/archive.zip --inflate-sh /Users/adpena/Projects/pact/experiments/results/witness_packet_20260626T183349Z/inflate.sh --device cpu  # [contest-CPU] authoritative ONLY on Linux x86_64 (Modal CPU); macOS-local = advisory",
+  "packet_dir": "(deleted; pass --keep-packet to retain for the exact-eval row)",
+  "mlx_free_inflate": true,
+  "contest_ready_full_600": false,
+  "contest_ready_note": "n_pairs=1 != 600 -> inflate emits 2 frames; a 600-pair witness is required for the 1200-frame contest .raw (this checkpoint is test-only)"
+}
