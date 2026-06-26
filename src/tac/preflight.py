@@ -5739,14 +5739,15 @@ def preflight_all(
         # tagged WITNESS_DSEG_FEASIBILITY_ONLY). Same-line
         # # WITNESS_DSEG_FEASIBILITY_ONLY_OK:<rationale> waiver (placeholder
         # rejected per Catalog #287). Companion: tac.measurement_integrity.
-        # WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule"
-        # (preflight_all takes no `strict` param; siblings hardcode it). Live
-        # count = 0 across tools/ + experiments/ + src/tac/ after the 3 proxy
-        # harnesses were tagged WITNESS_DSEG_FEASIBILITY_ONLY -> STRICT-READY;
-        # flip this callsite to strict=True next batch (the gate + tests already
-        # enforce strict-raise; see test_check_no_witness_dseg_from_proxy_or_ema_only.py).
+        # STRICT per CLAUDE.md "Strict-flip atomicity rule": live-count = 0
+        # across tools/ + experiments/ + src/tac/ (the 3 proxy harnesses carry
+        # WITNESS_DSEG_FEASIBILITY_ONLY) so the flip lands WITH the foundation
+        # rather than deferring to warn-only purgatory. R3 review 2026-06-26
+        # re-verified strict passes against the live repo; the gate + tests
+        # already enforce strict-raise (see
+        # test_check_no_witness_dseg_from_proxy_or_ema_only.py).
         check_no_witness_dseg_from_proxy_or_ema_only_harness(
-            strict=False, verbose=verbose
+            strict=True, verbose=verbose
         )
 
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
