@@ -108,12 +108,26 @@ def build_witness_module(
     n_hidden: int,
     mod_dim: int,
     fourier_sigma: float,
+    in_feat_override: int | None = None,
+    activation: str = "relu",
+    hosc_beta: float = 4.0,
+    hosc_omega: float = 1.0,
 ):
     import mlx.core as mx
     import mlx.nn as nn
 
     class RGBWitnessMLX(nn.Module):
-        """g(coord_feats, code_idx) -> (P_px, 3) RGB in [0,255]."""
+        """g(coord_feats, code_idx) -> (P_px, 3) RGB in [0,255].
+
+        ``in_feat_override`` lets the caller feed a NON-isotropic coord feature
+        (e.g. the all-class DIRECTIONAL Fourier basis, computed per-pair outside
+        the module) of arbitrary width instead of the built-in 2*n_fourier iso
+        feats. ``activation`` selects the hidden-layer nonlinearity: "relu"
+        (control) or "hosc" = tanh(beta*sin(omega*u)) (Serrano 2024) — the
+        step-native R-SURVIVAL lever: as beta grows the sine square-waves into a
+        sharp step train (matches the piecewise-constant SegNet argmax partition,
+        NO Gibbs ringing through the bicubic^->uint8->bilinear_ round-trip R).
+        """
 
         def __init__(self) -> None:
             super().__init__()
@@ -122,8 +136,11 @@ def build_witness_module(
             self.hidden_dim = hidden_dim
             self.n_hidden = n_hidden
             self.mod_dim = mod_dim
-            in_feat = 2 * n_fourier
+            in_feat = (2 * n_fourier) if in_feat_override is None else int(in_feat_override)
             self.in_feat = in_feat
+            self.activation = str(activation)
+            self.hosc_beta = float(hosc_beta)
+            self.hosc_omega = float(hosc_omega)
             B = deterministic_fourier_B(n_fourier, fourier_sigma)
             # Fixed (non-trainable) Fourier projection, held as a plain constant.
             self._B = mx.array(B)
@@ -133,18 +150,23 @@ def build_witness_module(
             self.hidden = [nn.Linear(hidden_dim, hidden_dim) for _ in range(n_hidden)]
             self.out = nn.Linear(hidden_dim, 3)
 
+        def _act(self, u: Any) -> Any:
+            if self.activation == "hosc":
+                return mx.tanh(self.hosc_beta * mx.sin(self.hosc_omega * u))
+            return nn.relu(u)
+
         def build_feats(self, coords: Any) -> Any:
             proj = coords @ self._B  # (P, n_fourier)
             return mx.concatenate([mx.sin(proj), mx.cos(proj)], axis=-1)
 
         def __call__(self, coord_feats: Any, code_idx: int) -> Any:
-            h = nn.relu(self.in_proj(coord_feats))
+            h = self._act(self.in_proj(coord_feats))
             m = self.code[code_idx]
             film = mx.reshape(self.film(m), (self.n_hidden, 2, self.hidden_dim))
             for li, layer in enumerate(self.hidden):
                 scale = 1.0 + film[li, 0]
                 shift = film[li, 1]
-                h = nn.relu(layer(h) * scale + shift)
+                h = self._act(layer(h) * scale + shift)
             rgb = mx.sigmoid(self.out(h)) * 255.0
             return rgb
 
@@ -160,14 +182,14 @@ def build_witness_module(
             tensor through the hidden stack + one batched scorer forward.
             """
             # Shared coord base (P_px, hidden_dim) -- computed once.
-            h0 = nn.relu(self.in_proj(coord_feats))  # (P, hidden)
+            h0 = self._act(self.in_proj(coord_feats))  # (P, hidden)
             codes = self.code[code_indices]  # (K, mod_dim)
             film = mx.reshape(self.film(codes), (-1, self.n_hidden, 2, self.hidden_dim))  # (K,nh,2,hid)
             h = mx.broadcast_to(h0[None], (film.shape[0], h0.shape[0], h0.shape[1]))  # (K,P,hid)
             for li, layer in enumerate(self.hidden):
                 scale = 1.0 + film[:, li, 0][:, None, :]  # (K,1,hid)
                 shift = film[:, li, 1][:, None, :]
-                h = nn.relu(layer(h) * scale + shift)
+                h = self._act(layer(h) * scale + shift)
             rgb = mx.sigmoid(self.out(h)) * 255.0  # (K, P, 3)
             return rgb
 
@@ -394,6 +416,10 @@ def quantize_witness_blob(model) -> dict[str, Any]:
         a = np.asarray(arr, dtype=np.float32)
         if a.size == 0:
             continue
+        if name.endswith("_B"):
+            # The deterministic seeded Fourier table is FREE per rule 118 (inflate.py
+            # regenerates it from the seed); it is NOT a counted video-derived payload.
+            continue
         n_params += a.size
         s = float(np.abs(a).max()) + 1e-8
         q = np.clip(np.round(a / s * 127.0), -127, 127).astype(np.int8)
@@ -422,7 +448,7 @@ def _build_render_coords(h: int, w: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Realized loss (mx, through both frozen MLX scorers). The training signal.
 # ---------------------------------------------------------------------------
-def make_loss_fn(adapter, render_h: int, render_w: int, score_domain: bool = True, pose_eps: float = 1e-8):
+def make_loss_fn(adapter, render_h: int, render_w: int, score_domain: bool = True, pose_eps: float = 1e-8, seg_loss: str = "ce"):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
     w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
 
@@ -455,16 +481,28 @@ def make_loss_fn(adapter, render_h: int, render_w: int, score_domain: bool = Tru
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target):
         f0 = render_through_R_mlx(model, coord_feats, code0, render_h, render_w)
         f1 = render_through_R_mlx(model, coord_feats, code1, render_h, render_w)
-        # Realized seg CE (margin-weighted) on frame1.
+        # Realized seg loss on frame1 (post-R, frozen SegNet).
         seg_logits = adapter.segnet(f1)  # (1,H,W,5)
-        logsum = mx.logsumexp(seg_logits, axis=-1)
-        tgt = mx.sum(seg_logits * lstar_oh, axis=-1)
-        ce = logsum - tgt  # (1,H,W)
-        w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))
-        seg_l = mx.mean(ce * w[None])
+        if seg_loss == "margin_hinge":
+            # lensA d_seg-optimal surrogate: relu(m - (logit[GT] - max_{c!=GT} logit[c])).
+            # ZERO gradient on correct-with-margin pixels, CONSTANT non-vanishing pull on
+            # EVERY flip regardless of depth (CE wastes gradient on correct interior;
+            # soft_cosine dies on deep flips). margin_target anneals 1.0->0.5 across training.
+            gt_logit = mx.sum(seg_logits * lstar_oh, axis=-1)  # (1,H,W)
+            masked = seg_logits + lstar_oh * (-1e9)  # GT channel -> -inf
+            runner_up = mx.max(masked, axis=-1)  # (1,H,W)
+            signed = gt_logit - runner_up
+            seg_l = mx.mean(mx.maximum(margin_target - signed, 0.0))
+        else:
+            # Realized seg CE (margin-weighted) on frame1.
+            logsum = mx.logsumexp(seg_logits, axis=-1)
+            tgt = mx.sum(seg_logits * lstar_oh, axis=-1)
+            ce = logsum - tgt  # (1,H,W)
+            w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))
+            seg_l = mx.mean(ce * w[None])
         # Realized pose MSE on the pair (== realized d_pose).
         yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
         pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]
@@ -567,6 +605,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     render_h, render_w = args.render_h, args.render_w
     coords_np = _build_render_coords(render_h, render_w)
 
+    # --- lever config (each defaults to the CURRENT behavior; opt-in via CLI) ---
+    basis = str(getattr(args, "basis", "isotropic"))
+    directional = basis == "directional"
+    n_dir_freqs = int(getattr(args, "n_dir_freqs", 6))
+    in_feat_override = (4 * n_dir_freqs) if directional else None
+    seg_loss = str(getattr(args, "seg_loss", "ce"))
+    activation = str(getattr(args, "activation", "relu"))
+
     result_history: list[dict[str, Any]] = []
     best = {"d_seg": 1.0, "d_pose": 1e9, "implied_S": 1e9, "epoch": 0}
 
@@ -578,14 +624,52 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         model = build_witness_module(
             num_pairs=P, n_fourier=args.n_fourier, hidden_dim=args.hidden_dim,
             n_hidden=args.n_hidden, mod_dim=args.mod_dim, fourier_sigma=args.fourier_sigma,
+            in_feat_override=in_feat_override, activation=activation,
+            hosc_beta=float(getattr(args, "hosc_beta", 4.0)),
+            hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
         )
         mx.eval(model.parameters())
         ema = MlxEMA(model, decay=args.ema_decay)
         opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
 
         coords = mx.array(coords_np)
-        coord_feats = model.build_feats(coords)  # fixed (P_px, in_feat)
-        mx.eval(coord_feats)
+        if directional:
+            # ALL-CLASS DIRECTIONAL (anisotropic/curvelet) Fourier basis: orient the
+            # coord features to the per-pair all-class boundary tangent field (high freq
+            # ACROSS the edge, low ALONG it). A 0-byte deterministic train-time prior
+            # (a fixed function of the GT argmax the witness reproduces) -> compiles into
+            # inflate.py FREE. Measured -48% d_seg on the DIRECT generator; this wires it
+            # into the REALIZED through-R witness (transfer is the open question).
+            from tac.boundary_math.lever_b_generator import (
+                all_class_boundary_proximity_and_tangent,
+                directional_fourier_feats,
+            )
+
+            step_h = max(1, SEG_H // render_h)
+            step_w = max(1, SEG_W // render_w)
+            _dir_feats_np: list[np.ndarray] | None = []
+            for pi in range(P):
+                lr = gt.lstars[pi]
+                if step_h > 1 or step_w > 1:
+                    lr = lr[::step_h, ::step_w]
+                _, tang = all_class_boundary_proximity_and_tangent(lr)
+                feats = directional_fourier_feats(
+                    coords_np, tang.reshape(-1, 2), n_freqs=n_dir_freqs,
+                    freq_across=float(getattr(args, "freq_across", 32.0)),
+                    freq_along=float(getattr(args, "freq_along", 4.0)),
+                )
+                _dir_feats_np.append(np.ascontiguousarray(feats, dtype=np.float32))
+            shared_feats = None
+        else:
+            shared_feats = model.build_feats(coords)  # fixed (P_px, in_feat)
+            mx.eval(shared_feats)
+            _dir_feats_np = None
+
+        def feats_for_pair(pi: int):
+            """Per-pair coord features: shared iso (computed once) OR per-pair directional."""
+            if directional:
+                return mx.array(_dir_feats_np[pi])
+            return shared_feats
 
         # GT targets as mx (one-hot L*, margin, pose).
         lstar_oh = []
@@ -599,7 +683,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
         score_domain = bool(getattr(args, "score_domain_loss", True))
         pose_eps = float(getattr(args, "pose_eps", 1e-8))
-        loss_fn = make_loss_fn(adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps)
+        loss_fn = make_loss_fn(adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss)
         value_and_grad = nn.value_and_grad(model, loss_fn)
         print(
             json.dumps({
@@ -608,6 +692,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "pose_eps": pose_eps,
                 "w_seg": float(args.w_seg),
                 "w_pose": float(args.w_pose),
+                "seg_loss": seg_loss,
+                "basis": basis,
+                "activation": activation,
                 "form": ("w_seg*seg_l + w_pose*sqrt(10*pose_l+eps)" if score_domain else "w_seg*seg_l + w_pose*pose_l"),
             }),
             flush=True,
@@ -623,8 +710,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             d_segs, d_poses = [], []
             try:
                 for pi in range(P):
-                    f0 = _render_uint8_for_verdict(model, coord_feats, 2 * pi, render_h, render_w)
-                    f1 = _render_uint8_for_verdict(model, coord_feats, 2 * pi + 1, render_h, render_w)
+                    fp = feats_for_pair(pi)
+                    f0 = _render_uint8_for_verdict(model, fp, 2 * pi, render_h, render_w)
+                    f1 = _render_uint8_for_verdict(model, fp, 2 * pi + 1, render_h, render_w)
                     d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
                     d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
                     # Return the per-render 874x1164 transient buffers to the OS
@@ -656,17 +744,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         w_seg = mx.array(float(args.w_seg))
         w_pose = mx.array(float(args.w_pose))
         hinge = mx.array(float(args.hinge_weight))
+        m_start = float(getattr(args, "margin_target_start", 1.0))
+        m_end = float(getattr(args, "margin_target_end", 0.5))
         t_train = time.time()
         ep_walls: list[float] = []
         for ep in range(1, args.epochs + 1):
             ep_t0 = time.time()
             ep_loss = 0.0
+            # margin-hinge target anneal 1.0->0.5 (lensA: broad early when margins are
+            # wide, tight late when they collapse). Unused by the CE seg-loss branch.
+            m_t = m_start if args.epochs <= 1 else m_start + (m_end - m_start) * (ep - 1) / (args.epochs - 1)
+            margin_target = mx.array(float(m_t))
             order = rng.permutation(P)
             for pi_np in order:
                 pi = int(pi_np)
                 loss, grads = value_and_grad(
-                    model, coord_feats, 2 * pi, 2 * pi + 1,
-                    lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge,
+                    model, feats_for_pair(pi), 2 * pi, 2 * pi + 1,
+                    lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target,
                 )
                 opt.update(model, grads)
                 mx.eval(model.parameters(), opt.state)
@@ -730,6 +824,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "w_seg": args.w_seg, "w_pose": args.w_pose, "hinge_weight": args.hinge_weight,
             "score_domain_loss": bool(getattr(args, "score_domain_loss", True)),
             "pose_eps": float(getattr(args, "pose_eps", 1e-8)),
+            "basis": basis, "n_dir_freqs": n_dir_freqs,
+            "freq_across": float(getattr(args, "freq_across", 32.0)),
+            "freq_along": float(getattr(args, "freq_along", 4.0)),
+            "activation": activation, "hosc_beta": float(getattr(args, "hosc_beta", 4.0)),
+            "hosc_omega": float(getattr(args, "hosc_omega", 1.0)),
+            "seg_loss": seg_loss,
+            "margin_target_start": float(getattr(args, "margin_target_start", 1.0)),
+            "margin_target_end": float(getattr(args, "margin_target_end", 0.5)),
             "seed": args.seed,
         },
         "throughput": {
@@ -796,6 +898,30 @@ def main(argv: list[str] | None = None) -> int:
         "skips the ~480s/arm GT precompute so a parallel fleet shares ONE cache.",
     )
     ap.add_argument("--seed", type=int, default=0)
+    # --- CAPSTONE d_seg / R-survival levers (each opt-in; default = current behavior) ---
+    ap.add_argument(
+        "--basis", choices=["isotropic", "directional"], default="isotropic",
+        help="coord feature basis: isotropic Fourier (default/control) or ALL-CLASS "
+        "DIRECTIONAL (per-pair boundary-tangent oriented; -48% d_seg on the direct "
+        "generator, 0 archive byte -> compiles into inflate.py free).",
+    )
+    ap.add_argument("--n-dir-freqs", type=int, default=6, help="directional basis: #freq octaves (in_feat=4*n).")
+    ap.add_argument("--freq-across", type=float, default=32.0, help="directional basis: high freq ACROSS the edge (normal).")
+    ap.add_argument("--freq-along", type=float, default=4.0, help="directional basis: low freq ALONG the edge (tangent).")
+    ap.add_argument(
+        "--activation", choices=["relu", "hosc"], default="relu",
+        help="hidden nonlinearity: relu (control) or hosc=tanh(beta*sin(omega*u)) — the "
+        "STEP-NATIVE R-survival lever (no Gibbs through bicubic^->uint8->bilinear_ R).",
+    )
+    ap.add_argument("--hosc-beta", type=float, default=4.0, help="hosc saturation/sharpness (beta->inf => step train).")
+    ap.add_argument("--hosc-omega", type=float, default=1.0, help="hosc base frequency.")
+    ap.add_argument(
+        "--seg-loss", choices=["ce", "margin_hinge"], default="ce",
+        help="realized seg surrogate: margin-weighted CE (control) or margin_hinge "
+        "relu(m-(z_GT-max_other)) (lensA: 16-36% lower realized d_seg; soft_cosine worst).",
+    )
+    ap.add_argument("--margin-target-start", type=float, default=1.0, help="margin_hinge target at ep1 (anneals to end).")
+    ap.add_argument("--margin-target-end", type=float, default=0.5, help="margin_hinge target at final ep (lensA: 0.5 best at floor).")
     args = ap.parse_args(argv)
 
     result = run_train(args)

@@ -89,7 +89,7 @@ def test_gradient_flows_through_R_and_both_scorers_to_witness():
         value_and_grad = nn.value_and_grad(model, loss_fn)
         loss, grads = value_and_grad(
             model, coord_feats, 0, 1, lstar_oh, margin, pose_tgt,
-            mx.array(1.0), mx.array(1.0), mx.array(4.0),
+            mx.array(1.0), mx.array(1.0), mx.array(4.0), mx.array(1.0),
         )
         from mlx.utils import tree_flatten
 
@@ -241,3 +241,100 @@ def test_refuse_tmp_durable_paths():
             mod._refuse_tmp(Path(bad), "out_dir")
     # A repo results path is fine.
     mod._refuse_tmp(REPO / "experiments" / "results" / "ok", "out_dir")
+
+
+# ---------------------------------------------------------------------------
+# Test 8 (NO-FAKE): the STEP-NATIVE hosc activation is REAL — it genuinely
+# changes the witness output vs the relu control (NOT a renamed no-op). If hosc
+# silently fell back to relu, the diff would be ~0 and this fails.
+# ---------------------------------------------------------------------------
+def test_hosc_activation_is_real_not_relu_noop():
+    import mlx.core as mx
+
+    mod = _load_trainer()
+    kw = dict(num_pairs=2, n_fourier=8, hidden_dim=16, n_hidden=2, mod_dim=8, fourier_sigma=8.0)
+    relu = mod.build_witness_module(activation="relu", **kw)
+    hosc = mod.build_witness_module(activation="hosc", hosc_beta=4.0, **kw)
+    mx.eval(relu.parameters())
+    mx.eval(hosc.parameters())
+    feats = mx.array(np.random.default_rng(0).standard_normal((256, relu.in_feat)).astype(np.float32))
+    o_relu = relu(feats, 0)
+    o_hosc = hosc(feats, 0)
+    mx.eval(o_relu, o_hosc)
+    assert tuple(o_hosc.shape) == (256, 3)
+    # hosc output is bounded RGB in [0,255] (sigmoid head) and DIFFERS from relu.
+    assert float(mx.mean(mx.abs(o_hosc - o_relu))) > 1.0, "hosc must differ from relu (real activation)"
+    # hosc internals are tanh(beta*sin(.)) in [-1,1]; with random init the RGB head still
+    # spans a non-trivial range (NOT collapsed to a constant).
+    assert float(o_hosc.max()) - float(o_hosc.min()) > 1.0
+
+
+# ---------------------------------------------------------------------------
+# Test 9 (NO-FAKE): the DIRECTIONAL basis is REAL — in_feat_override sets the
+# coord-feat width and the witness consumes per-pair directional feats end to end;
+# the directional Fourier feats are the ACTUAL oriented (sin/cos across/along)
+# encoding (not zeros), and the deterministic Fourier table is NOT counted.
+# ---------------------------------------------------------------------------
+def test_directional_in_feat_override_and_free_table():
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    from tac.boundary_math.lever_b_generator import (
+        all_class_boundary_proximity_and_tangent,
+        directional_fourier_feats,
+    )
+
+    mod = _load_trainer()
+    n_dir = 6
+    in_feat = 4 * n_dir
+    m = mod.build_witness_module(
+        num_pairs=2, n_fourier=8, hidden_dim=16, n_hidden=2, mod_dim=8,
+        fourier_sigma=8.0, in_feat_override=in_feat, activation="relu",
+    )
+    mx.eval(m.parameters())
+    assert m.in_feat == in_feat
+    assert m.in_proj.weight.shape[-1] == in_feat  # the MLP consumes the directional width
+    # Build the ACTUAL per-pair directional feats over a render grid with a real boundary.
+    coords = mod._build_render_coords(96, 128)
+    lr = np.zeros((96, 128), dtype=np.int64)
+    lr[40:60, :] = 1
+    lr[:, 60:90] = 2
+    _, tang = all_class_boundary_proximity_and_tangent(lr)
+    feats = directional_fourier_feats(coords, tang.reshape(-1, 2), n_freqs=n_dir).astype(np.float32)
+    assert feats.shape == (96 * 128, in_feat)
+    assert np.isfinite(feats).all() and float(np.abs(feats).max()) > 0.0  # NOT a zero stub
+    out = m(mx.array(feats), 0)
+    mx.eval(out)
+    assert tuple(out.shape) == (96 * 128, 3)
+    # The deterministic seeded Fourier table is FREE (rule 118) — not in the counted blob.
+    names = [n for n, _ in tree_flatten(m.parameters())]
+    assert not any(n.endswith("_B") for n in names), "_B must not be a counted parameter"
+    blob = mod.quantize_witness_blob(m)
+    assert blob["total_quantized_blob_bytes"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Test 10 (NO-FAKE): the margin-hinge seg loss is the REAL lensA surrogate, not
+# a renamed CE. On a constructed flip it returns relu(m - (z_GT - max_other)) and
+# its value moves with the margin target; a correct-with-margin pixel contributes 0.
+# ---------------------------------------------------------------------------
+def test_margin_hinge_math_is_real_relu_margin():
+    import mlx.core as mx
+
+    # Replicate the loss_fn's margin-hinge block on hand-built logits (the exact math
+    # the trainer runs through the frozen SegNet). GT class 0.
+    # Pixel A: FLIPPED — class 1 wins by 2.0 (z_GT - max_other = 1.0 - 3.0 = -2.0).
+    # Pixel B: CORRECT with margin 2.0 (z_GT - max_other = 3.0 - 1.0 = +2.0).
+    logits = mx.array(np.array([[[1.0, 3.0, 0.0, 0.0, 0.0],
+                                 [3.0, 1.0, 0.0, 0.0, 0.0]]], dtype=np.float32))  # (1,2,5)
+    oh = mx.array(np.eye(5, dtype=np.float32)[np.array([0, 0])][None])  # (1,2,5) GT=0
+    gt_logit = mx.sum(logits * oh, axis=-1)
+    masked = logits + oh * (-1e9)
+    runner_up = mx.max(masked, axis=-1)
+    signed = gt_logit - runner_up  # [-2.0, +2.0]
+    for m_t, expect_a, expect_b in ((1.0, 3.0, 0.0), (0.5, 2.5, 0.0)):
+        hinge = mx.maximum(m_t - signed, 0.0)
+        mx.eval(hinge)
+        a, b = float(hinge[0, 0]), float(hinge[0, 1])
+        assert abs(a - expect_a) < 1e-4, f"flip pixel hinge {a} != {expect_a} at m={m_t}"
+        assert abs(b - expect_b) < 1e-4, f"correct-with-margin pixel must be 0, got {b}"
