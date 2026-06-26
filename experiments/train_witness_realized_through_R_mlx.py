@@ -132,6 +132,7 @@ def build_witness_module(
     activation: str = "relu",
     hosc_beta: float = 4.0,
     hosc_omega: float = 1.0,
+    chroma: bool = True,
 ):
     import mlx.core as mx
     import mlx.nn as nn
@@ -161,6 +162,7 @@ def build_witness_module(
             self.activation = str(activation)
             self.hosc_beta = float(hosc_beta)
             self.hosc_omega = float(hosc_omega)
+            self.chroma = bool(chroma)
             B = deterministic_fourier_B(n_fourier, fourier_sigma)
             # Fixed (non-trainable) Fourier projection, held as a plain constant.
             self._B = mx.array(B)
@@ -175,6 +177,20 @@ def build_witness_module(
                 return mx.tanh(self.hosc_beta * mx.sin(self.hosc_omega * u))
             return nn.relu(u)
 
+        def _apply_chroma(self, rgb: Any) -> Any:
+            """CHROMA d_seg lever (operator 2026-06-25 "Chroma too"). With ``chroma``
+            True (default) the witness emits 3 INDEPENDENT RGB planes -> the frozen
+            SegNet argmax (over RGB) AND PoseNet's 2 YUV6 chroma planes both read
+            genuine chroma signal (chroma is a REAL d_seg actuator: it can flip the
+            argmax partition at the codim-1 boundary annulus). With ``chroma`` False
+            the output is forced ACHROMATIC (BT.601 luma replicated to R=G=B) so chroma
+            is removed as a free actuator -- the ablation CONTROL arm that isolates
+            chroma's d_seg contribution. ``rgb`` is (..., 3) in [0,255]."""
+            if self.chroma:
+                return rgb
+            luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
+            return mx.concatenate([luma, luma, luma], axis=-1)
+
         def build_feats(self, coords: Any) -> Any:
             proj = coords @ self._B  # (P, n_fourier)
             return mx.concatenate([mx.sin(proj), mx.cos(proj)], axis=-1)
@@ -188,7 +204,7 @@ def build_witness_module(
                 shift = film[li, 1]
                 h = self._act(layer(h) * scale + shift)
             rgb = mx.sigmoid(self.out(h)) * 255.0
-            return rgb
+            return self._apply_chroma(rgb)
 
         def call_batch(self, coord_feats: Any, code_indices: Any) -> Any:
             """Batched render: K codes -> (K, P_px, 3) RGB in one MLP forward.
@@ -211,7 +227,7 @@ def build_witness_module(
                 shift = film[:, li, 1][:, None, :]
                 h = self._act(layer(h) * scale + shift)
             rgb = mx.sigmoid(self.out(h)) * 255.0  # (K, P, 3)
-            return rgb
+            return self._apply_chroma(rgb)
 
     return RGBWitnessMLX()
 
@@ -505,6 +521,24 @@ def _build_render_coords(h: int, w: int) -> np.ndarray:
     return np.stack([gx.ravel(), gy.ravel()], axis=-1).astype(np.float32)
 
 
+def _nn_resize_labels(labels: np.ndarray, out_h: int, out_w: int) -> np.ndarray:
+    """Nearest-neighbor resize an integer argmax-label map to (out_h, out_w).
+
+    Used by the DIRECTIONAL basis to build the all-class boundary tangent field at the
+    RENDER grid so the per-pixel tangent count is EXACTLY out_h*out_w -> it matches the
+    coord grid for ANY render/SEG ratio. The prior strided ``lr[::step]`` subsample only
+    matched when the render res EVENLY DIVIDED the SEG res (e.g. render 256x384 vs SEG
+    384x512 -> step=1 -> a 196608-row tangent broadcast against a 98304-row coord grid =
+    the directional crash). NN (no interpolation) preserves the integer class labels so
+    the boundary mask is intact. Pure numpy, no torch."""
+    a = np.asarray(labels)
+    if a.shape[0] == out_h and a.shape[1] == out_w:
+        return a
+    ys = np.linspace(0, a.shape[0] - 1, out_h).round().astype(np.int64)
+    xs = np.linspace(0, a.shape[1] - 1, out_w).round().astype(np.int64)
+    return a[np.ix_(ys, xs)]
+
+
 # ---------------------------------------------------------------------------
 # Realized loss (mx, through both frozen MLX scorers). The training signal.
 # ---------------------------------------------------------------------------
@@ -694,11 +728,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     in_feat_override = (4 * n_dir_freqs) if directional else None
     seg_loss = str(getattr(args, "seg_loss", "ce"))
     activation = str(getattr(args, "activation", "relu"))
-    # (bug #8) hosc beta-anneal endpoints: default both == --hosc-beta (no anneal). The init
-    # witness uses hosc_beta_start so early forward is non-saturated.
+    # CHROMA d_seg lever (operator "Chroma too"): default ON (3 free RGB planes,
+    # current behavior); --no-chroma forces achromatic luma-only for the ablation.
+    chroma = bool(getattr(args, "chroma", True))
+    # (bug #8 / BH2) hosc beta-anneal endpoints. A CONSTANT beta=4 tanh(4*sin(.))
+    # SATURATES (|arg|<=4 -> tanh ~ +/-0.999 at the sine peaks -> vanishing gradient,
+    # the BH2 dead-grad bug). So when the operator selects --activation hosc WITHOUT
+    # explicit beta endpoints, default to a NON-SATURATING anneal: start at 1.0
+    # (tanh(sin) unsaturated -> gradients flow early) -> --hosc-beta (step-native
+    # late). Explicit --hosc-beta-start/end always override. For relu the endpoints
+    # are inert (no anneal applied).
     hosc_beta_const = float(getattr(args, "hosc_beta", 4.0))
-    hosc_beta_start = float(getattr(args, "hosc_beta_start", None) or hosc_beta_const)
-    hosc_beta_end = float(getattr(args, "hosc_beta_end", None) or hosc_beta_const)
+    _hb_start = getattr(args, "hosc_beta_start", None)
+    _hb_end = getattr(args, "hosc_beta_end", None)
+    if activation == "hosc" and _hb_start is None and _hb_end is None:
+        hosc_beta_start = 1.0
+        hosc_beta_end = hosc_beta_const
+    else:
+        hosc_beta_start = float(_hb_start) if _hb_start is not None else hosc_beta_const
+        hosc_beta_end = float(_hb_end) if _hb_end is not None else hosc_beta_const
 
     # (bug #5) The DIRECTIONAL basis orients Fourier feats to the boundary tangent of the
     # GT SegNet argmax (gt.lstars). That argmax is NOT available at decode (inflate.py has
@@ -738,13 +786,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 directional_fourier_feats,
             )
 
-            step_h = max(1, SEG_H // render_h)
-            step_w = max(1, SEG_W // render_w)
+            # (BUILDER 5 shape-bug fix) Build the GT-argmax boundary tangent at the
+            # RENDER grid via NN-resize, so tang.reshape(-1,2) is EXACTLY
+            # (render_h*render_w, 2) -> it matches coords_np for ANY render/SEG ratio.
+            # The prior strided ``lr[::step]`` subsample only matched when the render
+            # res evenly divided the SEG res; at render 256x384 vs SEG 384x512 step
+            # floored to 1 -> a 196608-row tangent broadcast against a 98304-row coord
+            # grid = the directional crash. At render 384x512 (the target) NN-resize is
+            # an identity (already 384x512) so the tangent is unchanged.
             _dir_feats_np: list[np.ndarray] | None = []
             for pi in range(P):
-                lr = gt.lstars[pi]
-                if step_h > 1 or step_w > 1:
-                    lr = lr[::step_h, ::step_w]
+                lr = _nn_resize_labels(gt.lstars[pi], render_h, render_w)
                 _, tang = all_class_boundary_proximity_and_tangent(lr)
                 feats = directional_fourier_feats(
                     coords_np, tang.reshape(-1, 2), n_freqs=n_dir_freqs,
@@ -763,6 +815,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 in_feat_override=in_feat_override, activation=activation,
                 hosc_beta=float(getattr(args, "hosc_beta", 4.0)),
                 hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
+                chroma=chroma,
             )
             shared_feats = _feat_model.build_feats(coords)  # fixed (P_px, in_feat)
             mx.eval(shared_feats)
@@ -917,10 +970,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 in_feat_override=in_feat_override, activation=activation,
                 hosc_beta=hosc_beta_start,  # (bug #8) init at the low (non-saturated) beta
                 hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
+                chroma=chroma,
             )
             mx.eval(model.parameters())
             ema = MlxEMA(model, decay=args.ema_decay)
-            opt = optim.AdamW(learning_rate=build_lr_schedule(), weight_decay=args.weight_decay)
+            # Optimizer: default AdamW (existing path, UNCHANGED) or MD-Decoupling
+            # (arXiv:2606.25971) — the re-audit's optimizer-bug fix (anti-collapse,
+            # warmup-free, LR-transfers-across-width). MD is a drop-in: the model
+            # param tree stays = materialized W, so EMA/byte-close/verdict compose
+            # untouched. The direction LR tracks build_lr_schedule(); gains step at
+            # gain_lr_scale*eta_W. NO-FAKE: a candidate MEASURED win, ablation only.
+            optimizer_kind = str(getattr(args, "optimizer", "adamw")).lower()
+            if optimizer_kind == "md":
+                from tac.optimization.md_decoupling import MDDecoupledOptimizer
+
+                opt = MDDecoupledOptimizer(
+                    learning_rate=build_lr_schedule(),
+                    gain_lr_scale=float(getattr(args, "md_gain_lr_scale", 1.0 / 3.0)),
+                    base=str(getattr(args, "md_base", "adam")),
+                )
+                print(json.dumps({
+                    "stage": "optimizer", "kind": "md_decoupling",
+                    "md_base": str(getattr(args, "md_base", "adam")),
+                    "md_gain_lr_scale": float(getattr(args, "md_gain_lr_scale", 1.0 / 3.0)),
+                    "note": "arXiv:2606.25971 magnitude-direction decoupling; warmup/weight-decay "
+                            "are no-ops for the decoupled (direction-on-sphere) weights.",
+                }), flush=True)
+            else:
+                opt = optim.AdamW(learning_rate=build_lr_schedule(), weight_decay=args.weight_decay)
             value_and_grad = nn.value_and_grad(model, loss_fn)
             holder["model"] = model
             holder["ema"] = ema
@@ -1129,6 +1206,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "n_fourier": args.n_fourier, "hidden_dim": args.hidden_dim, "n_hidden": args.n_hidden,
             "mod_dim": args.mod_dim, "fourier_sigma": args.fourier_sigma,
             "lr": args.lr, "weight_decay": args.weight_decay, "ema_decay": args.ema_decay,
+            "optimizer": str(getattr(args, "optimizer", "adamw")),
+            "md_base": str(getattr(args, "md_base", "adam")),
+            "md_gain_lr_scale": float(getattr(args, "md_gain_lr_scale", 1.0 / 3.0)),
             "w_seg": args.w_seg, "w_pose": args.w_pose, "hinge_weight": args.hinge_weight,
             "score_domain_loss": bool(getattr(args, "score_domain_loss", True)),
             "pose_eps": float(getattr(args, "pose_eps", 1e-2)),
@@ -1146,6 +1226,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "activation": activation, "hosc_beta": float(getattr(args, "hosc_beta", 4.0)),
             "hosc_beta_start": hosc_beta_start, "hosc_beta_end": hosc_beta_end,
             "hosc_omega": float(getattr(args, "hosc_omega", 1.0)),
+            "chroma": chroma,
             "int8_verdict": bool(getattr(args, "int8_verdict", True)),
             "seg_loss": seg_loss,
             "margin_target_start": float(getattr(args, "margin_target_start", 1.0)),
@@ -1223,6 +1304,25 @@ def main(argv: list[str] | None = None) -> int:
         "flip under int8. --no-int8-verdict renders the fp32 EMA weights (overstates the witness).",
     )
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
+    # --- OPTIMIZER (default adamw = existing path UNCHANGED) ---
+    ap.add_argument(
+        "--optimizer", choices=["adamw", "md"], default="adamw",
+        help="optimizer: adamw (default/control, existing path) or md = MD-Decoupling "
+        "(arXiv:2606.25971) — factorize each 2D weight into a fixed-norm hypersphere "
+        "direction + per-row/per-col magnitude gains at a SEPARATE LR. The re-audit's "
+        "optimizer-bug fix: anti-collapse, warmup-free, transfers optimal LR across width. "
+        "Ablation for the witness; NO score claim until a byte-closed exact-eval row.",
+    )
+    ap.add_argument(
+        "--md-base", choices=["adam", "muon"], default="adam",
+        help="MD direction base optimizer (the paper composes with BOTH): adam (Adam on the "
+        "sphere direction) or muon (momentum + Newton-Schulz orthogonalization).",
+    )
+    ap.add_argument(
+        "--md-gain-lr-scale", type=float, default=1.0 / 3.0,
+        help="MD per-row/col gain LR = md_gain_lr_scale * direction_LR (paper eta_W 3e-3 / "
+        "eta_gamma 1e-3 ~= 1/3).",
+    )
     ap.add_argument(
         "--gt-cache",
         type=str,
@@ -1263,6 +1363,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--grad-log-every", type=int, default=25, help="(7) log a grad-norm line every N accum steps (always on clip/skip).")
     # --- CAPSTONE d_seg / R-survival levers (each opt-in; default = current behavior) ---
     ap.add_argument(
+        "--chroma", action=argparse.BooleanOptionalAction, default=True,
+        help="CHROMA d_seg lever (operator 'Chroma too'): --chroma (default) emits 3 "
+        "INDEPENDENT RGB planes so the frozen SegNet argmax (over RGB) + PoseNet's 2 YUV6 "
+        "chroma planes both read genuine chroma (a real argmax-flip actuator); --no-chroma "
+        "forces ACHROMATIC output (BT.601 luma replicated to R=G=B) -- the ablation CONTROL "
+        "arm that isolates chroma's d_seg contribution.",
+    )
+    ap.add_argument(
         "--basis", choices=["isotropic", "directional"], default="isotropic",
         help="coord feature basis: isotropic Fourier (default/control/GATE) or ALL-CLASS "
         "DIRECTIONAL (per-pair boundary-tangent oriented; -48%% d_seg on the direct generator "
@@ -1274,7 +1382,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--activation", choices=["relu", "hosc"], default="relu",
         help="hidden nonlinearity: relu (control) or hosc=tanh(beta*sin(omega*u)) — the "
-        "STEP-NATIVE R-survival lever (no Gibbs through bicubic^->uint8->bilinear_ R).",
+        "STEP-NATIVE R-survival lever (no Gibbs through bicubic^->uint8->bilinear_ R). hosc "
+        "defaults to a NON-SATURATING beta-anneal (1.0->--hosc-beta) when endpoints are unset, "
+        "avoiding the BH2 vanishing-grad saturation of a constant beta=4. The LEARNABLE "
+        "step_basis (sum-of-K tanh soft-steps, LearnableStepBasis in "
+        "tac.substrates.siren.activation_family) is a torch-side substrate NOT yet MLX-ported; "
+        "argparse fail-closes it here (no silent relu fallback) — port it if hosc transfers.",
     )
     ap.add_argument("--hosc-beta", type=float, default=4.0, help="hosc saturation/sharpness (beta->inf => step train).")
     ap.add_argument(
