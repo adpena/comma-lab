@@ -1205,3 +1205,19 @@ Operator "do it all be as productive as possible" -> 5 parallel CPU/build stage-
 **NEW BRIDGES:** NEW-A homography/ground-plane flow = the missing dense warp for B1 fusion (pose 6-dim sidecar + intrinsics + flat-ground -> per-pixel flow; $0-next: comma2k19 GT pose -> warp seg(f0) -> residual vs f1). NEW-B margin=RD-Lagrangian (above). NEW-C adaptive>>fixed basis. NEW-D smooth-seed delta-coding = the temporal rate collapse pixel-diff could not reach.
 
 **BIG-FINDING CANDIDATE (highest-EV, $0 part DONE):** the base_ch20->6e-4 gap is capacity-ALLOCATION not capacity-SHORTAGE. 89% of d_seg lives in 5% of pixels; re-routing the SAME 89KB onto the margin-weighted annulus = ~20x multiplier -> plausibly crosses the 3.6x gap at SAME bytes (rate 0.06) -> S~0.149 corridor-A banked. $0 confirmation done (this FEED); verdict = ONE decisive single-slot witness run with margin-weighted d_seg loss + capacity-routing (NOT a new fixed-Fourier lever). Binds geometry(annulus)+calculus(margin RD)+existence(base_ch20) into one measured allocation.
+
+---
+
+## FEED-bq (2026-06-26) SCALING-LAW d_seg CAPACITY FIT + RATE-OPTIMAL WITNESS SOLVE (#170) -- BASIS-CHANGE QUANTIFIED MANDATORY
+
+**Applied Lilian-Weng-2026 scaling framework to OUR realized data (NO-FAKE: clean realized-through-R CPU-torch only).** Memo: `scaling_law_dseg_capacity_fit_20260626.md`. `[contest-CPU advisory]` NON-PROMOTABLE; pointer UNMOVED 0.19109982.
+
+**FIT (2 clean CONVERGED realized points, HNeRV decoder family):** bc20 {N=83356, d_seg 0.0025607, 89211 B} + bc36-converged-teacher {N=228958, d_seg 5.6e-4, 178417 B}. -> `d_seg = E + A/N^alpha` with **alpha=1.504 (manifold dim d=1/alpha=0.665), A=6.48e4, E <= 5.6e-4** (E underdetermined from 2 pts; bounded by the bc36 existence proof). Under-trained points DISCARDED (NO-FAKE): bc24-n48 (0.00285, the 2x2 diverged arm), bc36-stage1 (0.0096), prune+KD bc20/28 (0.016-0.024). The bc36 SAME-N pair (5.6e-4 converged vs 0.0096 stage-1 = 17x by training state) = direct Michaud under-training proof (descent is TRAINING-limited not capacity-limited).
+
+**RATE MODEL (2-pt linear):** bytes(N)=38141+0.6127*N (marginal 0.6127 B/param; k=4.08e-7/param; fixed_rate 0.0254).
+
+**N_opt = 219,719 params (~= bc36). S(N_opt) = 0.1931 (solved-pose) -- THE FRONTIER. MIN S over ALL N in the HNeRV basis = 0.1931. Pure capacity scaling does NOT reach sub-0.15.**
+
+**DECISIVE VERDICT: E < 7.3e-4 = YES (existence proof bc36 5.6e-4), but NECESSARY-NOT-SUFFICIENT.** The 7.3e-4 target was at bc20's CHEAP rate 0.06; reaching d_seg<=7.3e-4 in the HNeRV basis needs N~192K -> 155.8KB -> rate 0.104 (NOT 0.06). Cheap-rate+low-d_seg does NOT coexist in HNeRV/RGB. => **BASIS-CHANGE MANDATORY (not optional).** Quantified sub-015 requirements (any one; combine for margin): (1) Hestness downshift 3.55x at FIXED 88KB budget (= the prior capacity-ALLOCATION big-finding, now quantified: 89%-of-d_seg-in-5%-of-pixels re-route); (2) lower manifold dim **alpha >= ~2.9 (d <= 0.34)** vs current 0.67 -- the step-native/partition-indicator basis is exactly this (alpha=3->S 0.143, 5->0.119); (3) task-space carrier 1.77x cheaper (8-dim stat not RGB weights) + seg=pose fusion. Carrier floor (perfect descent ON HNeRV carrier) = 0.044, so the BINDING lever is descent steepness (basis dim d), not the carrier.
+
+**CAPSTONE LAUNCH CONFIG (means->end):** do NOT scale N in HNeRV (dominated, min S 0.19). Launch the witness with (i) lower-d step-native/directional basis targeting alpha>=3 / 3.55x fixed-byte d_seg downshift, (ii) margin-weighted capacity-routing onto the 5%-pixel annulus, (iii) chroma active, (iv) stored-pose sidecar. Next $0-CPU: realize act_screen_stepbasis / directional-Fourier d_seg THROUGH R to MEASURE their alpha vs 0.67 (confirm the lower-d basis empirically before the decisive single-slot run). Fleet HARD-BLOCKED #173; single slot = the decisive witness run.
