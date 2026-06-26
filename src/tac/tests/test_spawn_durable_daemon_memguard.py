@@ -17,7 +17,8 @@ _spec.loader.exec_module(sd)
 
 
 def _args(**kw):
-    base = dict(skip_mem_preflight=False, min_free_gb=30.0, projected_gb=25.0)
+    base = dict(skip_mem_preflight=False, min_free_gb=30.0, projected_gb=25.0,
+                rss_cap_mb=None, walltime_cap_s=None, label=None)
     base.update(kw)
     return SimpleNamespace(**base)
 
@@ -55,6 +56,31 @@ def test_reconcile_marks_dead_running_rows_stopped(tmp_path, monkeypatch):
     assert by_label["dead_arm"]["status"] == "stopped"
     assert by_label["dead_arm"]["stopped_reason"] == "reconcile_dead_process"
     assert by_label["already_stopped"]["status"] == "stopped"
+
+
+# --- D3: per-arm safe_run cap wrapping (layer 3) -----------------------------
+TRAIN = [".venv/bin/python", "experiments/train_witness_realized_through_R_mlx.py", "--num-pairs", "600"]
+
+
+def test_maybe_wrap_safe_run_wraps_when_rss_cap_set():
+    wrapped = sd._maybe_wrap_safe_run(list(TRAIN), _args(rss_cap_mb=30000, label="n600"))
+    joined = " ".join(wrapped)
+    assert "safe_run.py" in joined
+    assert "--rss-mb" in wrapped and "30000" in wrapped
+    assert "--timeout" in wrapped  # walltime defaulted (~14d) so safe_run's 30s default never fires
+    assert "--" in wrapped
+    # the trainer script token MUST survive so the watchdog custody identity gate matches.
+    assert any("train_witness_realized_through_R_mlx.py" in p for p in wrapped)
+
+
+def test_maybe_wrap_safe_run_respects_explicit_walltime():
+    wrapped = sd._maybe_wrap_safe_run(list(TRAIN), _args(rss_cap_mb=20000, walltime_cap_s=3600.0, label="x"))
+    assert "3600.0" in wrapped
+
+
+def test_maybe_wrap_safe_run_noop_when_no_cap():
+    cmd = ["python", "x.py"]
+    assert sd._maybe_wrap_safe_run(list(cmd), _args(rss_cap_mb=None, walltime_cap_s=None)) == cmd
 
 
 def test_reconcile_noop_when_clean(tmp_path, monkeypatch, capsys):

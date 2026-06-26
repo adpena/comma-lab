@@ -297,3 +297,95 @@ def test_python_not_in_any_protected_set():
     # critical: a bare training python must NOT be protected by the denylists.
     assert mg._matches_extra_protected(TRAIN_CMD) is False
     assert mg.is_host_control_plane_process(_sample(1, 1, 1, TRAIN_CMD)) is False
+
+
+# ---------------------------------------------------------------------------
+# 12. HIGH review finding 1 — the REAL installed codex cask binary must be
+#     classified control-plane (basename codex-aarch64-apple-darwin + path
+#     /Caskroom/codex/ both previously escaped).
+# ---------------------------------------------------------------------------
+CODEX_CASK = "/opt/homebrew/Caskroom/codex/0.139.0/codex-aarch64-apple-darwin"
+
+
+def test_real_codex_cask_binary_classified_control_plane():
+    assert mg.is_host_control_plane_process(_sample(200, 1, 90_000_000, CODEX_CASK + " app-server")) is True
+
+
+def test_real_codex_cask_exec_name_matched():
+    # basename alone (no helpful path) must still classify.
+    assert mg._is_control_plane_exec_name("codex-aarch64-apple-darwin") is True
+    assert mg._is_control_plane_exec_name("codex-x86_64-apple-darwin") is True
+    assert mg._is_control_plane_exec_name("claude-code") is True
+    # and a training python basename must NOT.
+    assert mg._is_control_plane_exec_name("python3") is False
+    assert mg._is_control_plane_exec_name("python") is False
+
+
+def test_node_cli_js_under_codex_or_claude_path_is_control_plane():
+    # the real entry is cli.js (not claude.js/codex.js) — match the PATH.
+    assert mg.is_host_control_plane_process(
+        _sample(300, 1, 5_000_000, "node /opt/tools/claude-code/cli.js")
+    ) is True
+    assert mg.is_host_control_plane_process(
+        _sample(301, 1, 5_000_000, "node /opt/homebrew/Caskroom/codex/0.139.0/cli.js")
+    ) is True
+
+
+def test_MAKE_OR_BREAK_real_codex_cask_custody_poisoned_with_training_token_refused():
+    """THE make-or-break (HIGH review finding 1d): the EXACT resolved codex cask
+    binary, ADVERSARIALLY in custody, own group leader, largest RSS, AND a
+    training token (train_witness_realized_through_R_mlx.py) in its argv. The
+    selector MUST return victim=None — the operator's #1 rule ("NEVER kill
+    codex") holds even under custody poisoning + a coincidental training token."""
+    cmd = CODEX_CASK + " --foo experiments/train_witness_realized_through_R_mlx.py"
+    codex = _sample(200, 1, 99_000_000, cmd, pgid=200)
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        codex,
+        _sample(400, 1, 2000, ".venv/bin/python tools/memory_guard.py --watch", pgid=400),
+    )
+    custody = _custody(("rogue_codex", 200, 200, cmd))  # adversarial custody poison
+    victim = mg.select_kill_victim(samples, custody_records=custody, self_pid=400, self_pgid=400)
+    assert victim is None, f"MUST refuse the real codex cask binary; got {victim}"
+
+
+# ---------------------------------------------------------------------------
+# 13. M3 review finding — SHED debounce + reclaimable-aware + near-boundary ALERT.
+# ---------------------------------------------------------------------------
+def test_shed_decision_ok_above_floor():
+    assert mg.shed_decision(consecutive_subfloor=9, avail_generous=40.0, min_free_gb=30.0) == "ok"
+
+
+def test_shed_decision_alert_when_debounce_not_met():
+    assert mg.shed_decision(consecutive_subfloor=1, avail_generous=25.0, min_free_gb=30.0,
+                            shed_consecutive=3, shed_margin_gb=2.0) == "alert"
+
+
+def test_shed_decision_alert_near_boundary_even_if_sustained():
+    # sustained sub-floor but only WITHIN the margin → ALERT, never kill.
+    assert mg.shed_decision(consecutive_subfloor=5, avail_generous=29.0, min_free_gb=30.0,
+                            shed_consecutive=3, shed_margin_gb=2.0) == "alert"
+
+
+def test_shed_decision_sheds_when_sustained_and_clearly_below():
+    assert mg.shed_decision(consecutive_subfloor=3, avail_generous=25.0, min_free_gb=30.0,
+                            shed_consecutive=3, shed_margin_gb=2.0) == "shed"
+
+
+def test_available_generous_geq_conservative_and_parses_reclaimable():
+    # generous (free+inactive+purgeable+file_backed) must be >= conservative.
+    assert mg.available_generous_gb() >= mg.available_gb() - 0.01
+
+
+def test_parse_vm_stat_reads_purgeable_and_file_backed():
+    sample_out = (
+        "Mach Virtual Memory Statistics: (page size of 16384 bytes)\n"
+        "Pages free:                   100.\n"
+        "Pages inactive:               200.\n"
+        "Pages purgeable:              50.\n"
+        "File-backed pages:            300.\n"
+    )
+    f = mg._parse_vm_stat(sample_out)
+    assert f["page_size"] == 16384
+    assert f["free"] == 100 and f["inactive"] == 200
+    assert f["purgeable"] == 50 and f["file_backed"] == 300

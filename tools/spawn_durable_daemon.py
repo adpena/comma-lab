@@ -306,6 +306,45 @@ def _mem_preflight(a: argparse.Namespace) -> int | None:
     return None
 
 
+_SAFE_RUN = Path(__file__).resolve().parent / "safe_run.py"
+# When wrapping a training arm in safe_run for a per-arm RSS cap, default the
+# walltime cap to ~14 days so safe_run's 30s default never kills a long run; the
+# operator can pass an explicit --walltime-cap-s to bound it tighter.
+_SAFE_RUN_DEFAULT_WALLTIME_S = 14 * 24 * 3600
+
+
+def _maybe_wrap_safe_run(cmd: list[str], a: argparse.Namespace) -> list[str]:
+    """Wrap ``cmd`` in tools/safe_run.py when a per-arm RSS/walltime cap is set.
+
+    This is OOM-protection LAYER 3 (defense-in-depth, D3 review fix): every
+    TRAINING-ARM spawn should bound its OWN process-group RSS so it SIGKILLs
+    itself before it can balloon — bounding each arm, not just the whole machine
+    (the launch-preflight = layer 1, the watchdog = layer 2). safe_run is
+    control-plane-safe by construction (it only ever kills the group IT spawns).
+    The recorded daemon cmd keeps the trainer script token, so the watchdog's
+    custody IDENTITY gate still matches.
+    """
+    rss_cap = getattr(a, "rss_cap_mb", None)
+    wall_cap = getattr(a, "walltime_cap_s", None)
+    if not rss_cap and not wall_cap:
+        return cmd  # no cap requested → unwrapped (e.g. control-plane infra)
+    if not _SAFE_RUN.exists():
+        print(f"[durable-daemon] WARNING: safe_run.py missing at {_SAFE_RUN}; launching UNCAPPED", file=sys.stderr)
+        return cmd
+    timeout_s = wall_cap if wall_cap else _SAFE_RUN_DEFAULT_WALLTIME_S
+    rss_mb = rss_cap if rss_cap else 0
+    wrapped = [sys.executable, str(_SAFE_RUN)]
+    if rss_mb:
+        wrapped += ["--rss-mb", str(int(rss_mb))]
+    wrapped += ["--timeout", str(float(timeout_s)), "--label", a.label or "training_arm", "--", *cmd]
+    print(
+        f"[durable-daemon] per-arm cap ACTIVE (safe_run): rss-mb={rss_mb or 'none'} "
+        f"timeout-s={timeout_s}",
+        file=sys.stderr,
+    )
+    return wrapped
+
+
 def _do_start(a: argparse.Namespace) -> int:
     cmd = a.cmd[1:] if a.cmd and a.cmd[0] == "--" else a.cmd
     if not cmd:
@@ -317,6 +356,9 @@ def _do_start(a: argparse.Namespace) -> int:
     refusal = _mem_preflight(a)
     if refusal is not None:
         return refusal
+
+    # Layer 3: wrap a training arm in safe_run for a per-arm RSS/walltime cap.
+    cmd = _maybe_wrap_safe_run(cmd, a)
 
     log = open(a.log, "ab", buffering=0)  # noqa: SIM115 — kept open for the child
     devnull = open(os.devnull, "rb")  # noqa: SIM115
@@ -509,6 +551,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="minimum free GB to protect after launch (default 30; operator floor)")
     ap.add_argument("--skip-mem-preflight", action="store_true",
                     help="skip the OOM launch-preflight (ONLY for control-plane/watchdog infra)")
+    # Layer-3 per-arm cap: wrap the spawned training arm in tools/safe_run.py so
+    # it bounds its OWN process-group RSS (and optionally walltime). Training-arm
+    # launches (e.g. the n600 realized-axis witness) MUST set --rss-cap-mb.
+    ap.add_argument("--rss-cap-mb", type=int, default=None,
+                    help="per-arm process-group RSS cap in MiB (wraps cmd in safe_run; layer 3)")
+    ap.add_argument("--walltime-cap-s", type=float, default=None,
+                    help="per-arm walltime cap in seconds (with --rss-cap-mb; defaults ~14d if only RSS set)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- <command> [args...] (start mode)")
     a = ap.parse_args(argv)
 

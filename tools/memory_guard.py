@@ -233,29 +233,65 @@ EXTRA_PROTECTED_EXECUTABLE_NAMES: frozenset[str] = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# vm_stat available-memory floor (OURS)
+# vm_stat available-memory floor (OURS). TWO metrics, deliberately:
+#   * CONSERVATIVE (free + inactive) — used by the REFUSE launch-preflight.
+#     Undercounts real availability (ignores purgeable + clean file cache), so
+#     refusing is FAIL-CLOSED = SAFE (we never over-commit a launch).
+#   * GENEROUS / reclaimable-aware (free + inactive + purgeable + file-backed)
+#     — used ONLY by the SHED watchdog. Under macOS memory compression the
+#     conservative metric can undercount, which would false-positive-shed a
+#     custody training arm when memory is actually fine (M3 review finding: an
+#     availability bug, never a control-plane kill, but wastes training). The
+#     generous metric + debounce (see watch_loop) prevents that.
 # ---------------------------------------------------------------------------
-def _vm_stat_bytes() -> tuple[float, float]:
-    """Return (available_bytes, strict_free_bytes) from vm_stat (macOS)."""
-    out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10).stdout
+def _parse_vm_stat(out: str) -> dict[str, int]:
+    """Parse vm_stat output into a {field: pages} dict (+ 'page_size')."""
     ps = 16384
     m = re.search(r"page size of (\d+)", out)
     if m:
         ps = int(m.group(1))
-    free = inactive = 0
-    for line in out.splitlines():
-        if "Pages free" in line:
-            free = int(re.search(r"(\d+)", line.split(":")[1]).group(1))
-        elif "Pages inactive" in line:
-            inactive = int(re.search(r"(\d+)", line.split(":")[1]).group(1))
-    available = (free + inactive) * ps
-    return float(available), float(free * ps)
+    fields: dict[str, int] = {"page_size": ps}
+
+    def _grab(label: str) -> int:
+        for line in out.splitlines():
+            if line.startswith(label):
+                mm = re.search(r"(\d+)", line.split(":", 1)[1])
+                return int(mm.group(1)) if mm else 0
+        return 0
+
+    fields["free"] = _grab("Pages free")
+    fields["inactive"] = _grab("Pages inactive")
+    fields["purgeable"] = _grab("Pages purgeable")
+    fields["file_backed"] = _grab("File-backed pages")
+    return fields
+
+
+def _vm_stat_fields() -> dict[str, int]:
+    out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10).stdout
+    return _parse_vm_stat(out)
+
+
+def _vm_stat_bytes() -> tuple[float, float]:
+    """Return (conservative_available_bytes, strict_free_bytes) from vm_stat."""
+    f = _vm_stat_fields()
+    ps = f["page_size"]
+    available = (f["free"] + f["inactive"]) * ps
+    return float(available), float(f["free"] * ps)
 
 
 def available_gb() -> float:
-    """Available GB (free + reclaimable inactive)."""
+    """CONSERVATIVE available GB (free + reclaimable inactive). Used by REFUSE."""
     avail, _ = _vm_stat_bytes()
     return avail / 1e9
+
+
+def available_generous_gb() -> float:
+    """GENEROUS / reclaimable-aware available GB (free + inactive + purgeable +
+    clean file-backed cache). Used by the SHED watchdog ONLY (M3 fix) so memory
+    compression cannot false-positive-shed a healthy training arm."""
+    f = _vm_stat_fields()
+    ps = f["page_size"]
+    return (f["free"] + f["inactive"] + f["purgeable"] + f["file_backed"]) * ps / 1e9
 
 
 def strict_free_gb() -> float:
@@ -375,17 +411,61 @@ def _command_arg_executable_names(command: str) -> tuple[str, ...]:
     return tuple(names)
 
 
+# Real installed-binary path shapes for codex/claude that the token list alone
+# misses (HIGH review finding 1): the homebrew cask installs codex at
+# /opt/homebrew/Caskroom/codex/<ver>/codex-aarch64-apple-darwin — basename
+# `codex-aarch64-apple-darwin` (NOT a literal in the exec-name set) and path
+# token `/caskroom/codex/` (not `/.codex/` or `/codex.app/`). These regexes
+# (case-insensitive) close that escape: the cask dir AND the generic
+# /codex/<version>/codex(-arch) binary shape, for both codex and claude.
+_CONTROL_PLANE_PATH_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"/caskroom/(codex|claude)/", re.IGNORECASE),
+    re.compile(r"/(codex|claude)/[^/]+/(codex|claude)(-[^/\s]*)?(\s|$|\")", re.IGNORECASE),
+    re.compile(r"/(codex|claude)-[a-z0-9_]+-apple-darwin(\s|$|\")", re.IGNORECASE),
+)
+
+
+def _is_control_plane_exec_name(name: str) -> bool:
+    """True iff the executable basename is a control-plane binary — the literal
+    set OR a real cask/versioned form (``codex``, ``codex-aarch64-apple-darwin``,
+    ``codex-cli``, ``claude``, ``claude-code``, ...). HIGH review finding 1: the
+    real ``codex-aarch64-apple-darwin`` basename was not in the literal set."""
+    name = name.casefold()
+    if name in HOST_CONTROL_PLANE_EXECUTABLE_NAMES:
+        return True
+    for stem in ("codex", "claude"):
+        # exact, or stem followed by a -/_/. separator (codex-*, claude-code, ...)
+        if name == stem or name.startswith(stem + "-") or name.startswith(stem + "_") or name.startswith(stem + "."):
+            return True
+    return False
+
+
 def _host_control_plane_launcher_command(command: str) -> bool:
     """True iff command is a launcher (bash/node/npm/...) running a control-plane
-    arg, e.g. ``node .../@anthropic-ai/claude-code/cli.js``. Vendored from molt."""
+    arg, e.g. ``node .../@anthropic-ai/claude-code/cli.js`` or any launcher whose
+    argv references a codex/claude path (HIGH review finding 1(c): the real entry
+    is ``cli.js``, not ``claude.js``/``codex.js`` — match the path, not just the
+    arg basename). Extends molt's launcher-command check."""
     names = _command_arg_executable_names(command)
-    if len(names) < 2 or names[0] not in HOST_CONTROL_PLANE_LAUNCHER_NAMES:
+    if not names or names[0] not in HOST_CONTROL_PLANE_LAUNCHER_NAMES:
         return False
-    return any(name in HOST_CONTROL_PLANE_ARG_EXECUTABLE_NAMES for name in names[1:])
+    # (a) molt's original: a control-plane arg basename (claude.js/codex.js/...)
+    if any(name in HOST_CONTROL_PLANE_ARG_EXECUTABLE_NAMES for name in names[1:]):
+        return True
+    # (b) the launcher's argv references a codex/claude install path / token.
+    lowered = command.casefold()
+    if any(rx.search(command) for rx in _CONTROL_PLANE_PATH_RES):
+        return True
+    return any(
+        marker in lowered
+        for marker in ("@anthropic-ai/claude", "@openai/codex", "/.codex/", "/.claude/", "claude-code")
+    )
 
 
 def is_host_control_plane_process(sample: ProcessSample) -> bool:
-    """True iff the process IS a control-plane application (vendored from molt)."""
+    """True iff the process IS a control-plane application (vendored from molt,
+    hardened per HIGH review finding 1 for real cask/versioned codex/claude
+    binaries + node cli.js launchers)."""
     command = sample.command.casefold()
     normalized_command = command.replace("\\", "/")
     return (
@@ -394,7 +474,8 @@ def is_host_control_plane_process(sample: ProcessSample) -> bool:
             or token.casefold().replace("\\", "/") in normalized_command
             for token in HOST_CONTROL_PLANE_TOKENS
         )
-        or _command_executable_name(sample.command) in HOST_CONTROL_PLANE_EXECUTABLE_NAMES
+        or any(rx.search(sample.command) for rx in _CONTROL_PLANE_PATH_RES)
+        or _is_control_plane_exec_name(_command_executable_name(sample.command))
         or _host_control_plane_launcher_command(sample.command)
     )
 
@@ -771,6 +852,42 @@ def _kill_pgrp(pgid: int, pid: int) -> None:
             pass
 
 
+DEFAULT_SHED_CONSECUTIVE = 3
+DEFAULT_SHED_MARGIN_GB = 2.0
+
+
+def shed_decision(
+    *,
+    consecutive_subfloor: int,
+    avail_generous: float,
+    min_free_gb: float,
+    shed_margin_gb: float = DEFAULT_SHED_MARGIN_GB,
+    shed_consecutive: int = DEFAULT_SHED_CONSECUTIVE,
+) -> str:
+    """Pure SHED policy (M3 fix): debounced + near-boundary-ALERT.
+
+    Returns one of:
+      * "ok"    — generous (reclaimable-aware) available is at/above the floor;
+      * "alert" — below the floor but NOT yet a shed (debounce not satisfied, OR
+                  the reading is only within ``shed_margin_gb`` of the floor —
+                  near-boundary noise gets an ALERT, never a kill);
+      * "shed"  — sustained (>= ``shed_consecutive`` consecutive polls) AND
+                  clearly below (avail < floor - margin) → shed the largest
+                  custody training arm.
+
+    ``consecutive_subfloor`` is the count of consecutive polls (including this
+    one) where the generous metric was below the floor. The REFUSE launch-
+    preflight is intentionally NOT routed through this (it stays conservative +
+    fail-closed); only the watchdog SHED path uses this debounced policy so
+    macOS memory compression cannot false-positive-shed a healthy arm.
+    """
+    if avail_generous >= min_free_gb:
+        return "ok"
+    if consecutive_subfloor >= shed_consecutive and avail_generous < (min_free_gb - shed_margin_gb):
+        return "shed"
+    return "alert"
+
+
 # ---------------------------------------------------------------------------
 # Watchdog loop
 # ---------------------------------------------------------------------------
@@ -780,22 +897,44 @@ def watch_loop(
     kill_pattern: str,
     interval: float,
     warn_margin: float,
+    shed_consecutive: int = DEFAULT_SHED_CONSECUTIVE,
+    shed_margin_gb: float = DEFAULT_SHED_MARGIN_GB,
     max_iterations: int | None = None,
 ) -> int:
-    """Whole-machine watchdog. Loops forever (or ``max_iterations`` for tests)."""
+    """Whole-machine watchdog. Loops forever (or ``max_iterations`` for tests).
+
+    SHED decisions use the GENEROUS / reclaimable-aware metric + a debounce
+    (M3 fix): a custody arm is shed only after ``shed_consecutive`` consecutive
+    sub-floor polls AND when clearly below the floor (> ``shed_margin_gb``).
+    Near-boundary / transient sub-floor readings get a (non-killing) ALERT.
+    """
     self_pid = os.getpid()
     self_pgid = _safe_getpgrp()
     _log(
         f"WATCH start min_free={min_free_gb}GB warn_margin={warn_margin}GB "
-        f"interval={interval}s pattern={kill_pattern!r} self_pid={self_pid} "
-        f"self_pgid={self_pgid}"
+        f"interval={interval}s shed_consecutive={shed_consecutive} "
+        f"shed_margin={shed_margin_gb}GB pattern={kill_pattern!r} "
+        f"self_pid={self_pid} self_pgid={self_pgid}"
     )
     it = 0
+    consecutive_subfloor = 0
     while max_iterations is None or it < max_iterations:
         it += 1
         try:
-            avail = available_gb()
-            if avail < min_free_gb:
+            avail_generous = available_generous_gb()
+            avail_conservative = available_gb()
+            if avail_generous < min_free_gb:
+                consecutive_subfloor += 1
+            else:
+                consecutive_subfloor = 0
+            decision = shed_decision(
+                consecutive_subfloor=consecutive_subfloor,
+                avail_generous=avail_generous,
+                min_free_gb=min_free_gb,
+                shed_margin_gb=shed_margin_gb,
+                shed_consecutive=shed_consecutive,
+            )
+            if decision == "shed":
                 samples = sample_processes()
                 custody = load_custody_records()
                 victim = select_kill_victim(
@@ -807,22 +946,35 @@ def watch_loop(
                 )
                 if victim is not None:
                     _log(
-                        f"CRITICAL available={avail:.1f}GB < {min_free_gb}GB → KILL "
-                        f"custody-arm label={victim.label!r} pid={victim.pid} "
-                        f"pgid={victim.pgid} rss={victim.rss_gb:.1f}GB "
-                        f"cmd={victim.command[:140]}"
+                        f"CRITICAL avail_generous={avail_generous:.1f}GB "
+                        f"(conservative={avail_conservative:.1f}GB) < {min_free_gb}GB "
+                        f"sustained {consecutive_subfloor} polls → KILL custody-arm "
+                        f"label={victim.label!r} pid={victim.pid} pgid={victim.pgid} "
+                        f"rss={victim.rss_gb:.1f}GB cmd={victim.command[:140]}"
                     )
                     _kill_pgrp(victim.pgid, victim.pid)
+                    consecutive_subfloor = 0  # reset after acting; re-evaluate next poll
                 else:
                     _log(
-                        f"ALERT available={avail:.1f}GB < {min_free_gb}GB but NO "
-                        f"killable training arm UNDER CUSTODY (custody_count="
-                        f"{len(custody)}) — killing NOTHING (control plane + "
-                        "non-custody processes protected); manual intervention may "
-                        "be needed. Reduce concurrency / free memory."
+                        f"ALERT avail_generous={avail_generous:.1f}GB < {min_free_gb}GB "
+                        f"sustained {consecutive_subfloor} polls but NO killable training "
+                        f"arm UNDER CUSTODY (custody_count={len(custody)}) — killing "
+                        "NOTHING (control plane + non-custody protected); manual "
+                        "intervention may be needed."
                     )
-            elif avail < min_free_gb + warn_margin:
-                _log(f"WARN available={avail:.1f}GB approaching floor {min_free_gb}GB")
+            elif decision == "alert":
+                _log(
+                    f"ALERT avail_generous={avail_generous:.1f}GB "
+                    f"(conservative={avail_conservative:.1f}GB) < floor {min_free_gb}GB "
+                    f"but NOT shedding yet (consecutive={consecutive_subfloor}/"
+                    f"{shed_consecutive}, margin={shed_margin_gb}GB — debounce/near-"
+                    "boundary; prefer ALERT over kill). Free memory if sustained."
+                )
+            elif avail_generous < min_free_gb + warn_margin:
+                _log(
+                    f"WARN avail_generous={avail_generous:.1f}GB approaching floor "
+                    f"{min_free_gb}GB"
+                )
         except Exception as e:  # never let the guard die silently
             _log(f"ERROR guard loop: {e!r}")
         if max_iterations is not None and it >= max_iterations:
@@ -852,11 +1004,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                     help="regex of TRAINING-ARM commands eligible to be killed (allowlist)")
     ap.add_argument("--interval", type=float, default=DEFAULT_INTERVAL_SEC)
     ap.add_argument("--warn-margin", type=float, default=DEFAULT_WARN_MARGIN_GB)
+    ap.add_argument("--shed-consecutive", type=int, default=DEFAULT_SHED_CONSECUTIVE,
+                    help="consecutive sub-floor polls required before the watchdog sheds (debounce)")
+    ap.add_argument("--shed-margin-gb", type=float, default=DEFAULT_SHED_MARGIN_GB,
+                    help="only shed when generous-available < (min_free - this); else ALERT (near-boundary)")
     args = ap.parse_args(argv)
 
     if args.free:
         avail, sf = _vm_stat_bytes()
-        print(json.dumps({"available_gb": round(avail / 1e9, 2), "strict_free_gb": round(sf / 1e9, 2)}))
+        print(json.dumps({
+            "available_gb": round(avail / 1e9, 2),
+            "available_generous_gb": round(available_generous_gb(), 2),
+            "strict_free_gb": round(sf / 1e9, 2),
+        }))
         return 0
 
     if args.check:
@@ -890,6 +1050,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             kill_pattern=args.kill_pattern,
             interval=args.interval,
             warn_margin=args.warn_margin,
+            shed_consecutive=args.shed_consecutive,
+            shed_margin_gb=args.shed_margin_gb,
         )
 
     ap.print_help()

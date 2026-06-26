@@ -17,6 +17,13 @@ group leader, pgid == child pid). It can NEVER reach the control plane (claude /
 codex / shell) because those are not in the spawned group. No allowlist/denylist
 is needed here — the kill scope is structurally the spawned subtree only.
 
+NOTE on molt provenance: safe_run is cited from molt 353784a1a, but its
+group-only-kill design PREDATES / SIDESTEPS the control-plane-kill bug class
+that the *selector* side had at that HEAD (the selector picks arbitrary
+host processes; safe_run only ever kills the one group it created). The
+selector-side fix (custody-gating + control-plane lineage) is vendored
+separately in tools/memory_guard.py from molt's FIXED HEAD 3b1e49b18.
+
 Usage:
     python3 tools/safe_run.py [options] -- CMD [ARGS...]
     python3 tools/safe_run.py [options] CMD [ARGS...]     # `--` optional
