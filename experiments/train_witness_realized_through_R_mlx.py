@@ -274,11 +274,25 @@ def load_gt_from_cache(cache_path: Path, n_pairs: int) -> tuple[GTData, Any, Any
             f"--gt-cache {cache_path} has only {cached_P} pairs < requested --num-pairs {n_pairs}; "
             "rebuild the cache at >= the requested size."
         )
-    gt_f0 = [np.asarray(z["gt_f0"][i], dtype=np.uint8) for i in range(P)]
-    gt_f1 = [np.asarray(z["gt_f1"][i], dtype=np.uint8) for i in range(P)]
-    lstars = [np.asarray(z["lstars"][i], dtype=np.int64) for i in range(P)]
-    margins = [np.asarray(z["margins"][i], dtype=np.float32) for i in range(P)]
-    gt_poses = [np.asarray(z["gt_poses"][i], dtype=np.float64) for i in range(P)]
+    # Read each npz member EXACTLY ONCE. NpzFile does NOT cache members:
+    # ``z["gt_f0"][i]`` inside a ``range(P)`` comprehension re-reads (re-inflates)
+    # the WHOLE member from the zip on EVERY iteration -> P full copies of a
+    # ~1.8 GB (n600) member churned at startup = the 30-40 GB RSS balloon scaling
+    # with num_pairs, OOM (exit 137) in ~3 s BEFORE the first stage print
+    # (observed 2026-06-26: n96 peak 20.6 GB/3 s, n600 40 GB/9 s). Materializing
+    # each member once into a local bounds the load to the cache's real resident
+    # footprint (~0.8 GB n96 / ~4.8 GB n600); the per-frame ``asarray`` views below
+    # then share that one buffer (same dtype -> no extra copy). GT data unchanged.
+    gt_f0_all = z["gt_f0"]
+    gt_f1_all = z["gt_f1"]
+    lstars_all = z["lstars"]
+    margins_all = z["margins"]
+    gt_poses_all = z["gt_poses"]
+    gt_f0 = [np.asarray(gt_f0_all[i], dtype=np.uint8) for i in range(P)]
+    gt_f1 = [np.asarray(gt_f1_all[i], dtype=np.uint8) for i in range(P)]
+    lstars = [np.asarray(lstars_all[i], dtype=np.int64) for i in range(P)]
+    margins = [np.asarray(margins_all[i], dtype=np.float32) for i in range(P)]
+    gt_poses = [np.asarray(gt_poses_all[i], dtype=np.float64) for i in range(P)]
     gt = GTData(n_pairs=P, gt_f0=gt_f0, gt_f1=gt_f1, lstars=lstars, margins=margins, gt_poses=gt_poses)
 
     seg_cpu = load_real_segnet("cpu")
@@ -574,17 +588,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
                     d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
                     # Return the per-render 874x1164 transient buffers to the OS
-                    # periodically. Without this the Metal allocator caches every
-                    # freed render across ALL P pairs -> the 499000 active-buffer
+                    # AFTER EVERY PAIR. Without this the Metal allocator caches every
+                    # freed render across the P pairs -> the 499000 active-buffer
                     # cap / RSS balloon AT STARTUP (the periodic train-loop fix at
-                    # the mx.clear_cache below did NOT cover this verdict path):
-                    # n96 -> 30 GB in 4s, n600 -> 40 GB in 9s before any epoch
-                    # (observed 2026-06-26). clear_cache() returns ONLY reclaimable
-                    # freed buffers; live arrays (coord_feats, params, GT targets)
-                    # are untouched, so the verdict MATH is unchanged -- all P pairs
-                    # still scored on the frozen CPU-torch authority (no subsample).
-                    if (pi + 1) % 16 == 0:
-                        mx.clear_cache()
+                    # the mx.clear_cache below did NOT cover this verdict path). A
+                    # single render is <100 MB; the balloon is PURE cache accumulation
+                    # (~650 MB cached/render -> 32 renders ~= 20 GB), so an every-16-
+                    # pairs clear OOM'd before the first clear even fired (peak_rss
+                    # 20616 MiB in 3.09s, observed 2026-06-26). Clearing per pair
+                    # bounds peak to ~1-2 renders. clear_cache() returns ONLY
+                    # reclaimable freed buffers; live arrays (coord_feats, params, GT
+                    # targets) are untouched -> verdict MATH unchanged (all P pairs
+                    # still scored on the frozen CPU-torch authority, no subsample).
+                    mx.clear_cache()
             finally:
                 mx.clear_cache()
                 if saved is not None:
