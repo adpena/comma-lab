@@ -57,6 +57,7 @@ import json
 import math
 import sys
 import time
+from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -574,7 +575,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     import mlx.core as mx
     import mlx.nn as nn
     import mlx.optimizers as optim
-    from mlx.utils import tree_flatten, tree_unflatten
+    from mlx.utils import tree_flatten, tree_map, tree_unflatten
 
     from tac.local_acceleration.mlx_scorer_adapters import (
         load_mlx_distortion_scorer_adapter_from_upstream,
@@ -620,18 +621,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # --- 2. Frozen MLX scorers on the train device (gradient device) ---
         adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device="cpu")
 
-        # --- 3. Witness + EMA + AdamW ---
-        model = build_witness_module(
-            num_pairs=P, n_fourier=args.n_fourier, hidden_dim=args.hidden_dim,
-            n_hidden=args.n_hidden, mod_dim=args.mod_dim, fourier_sigma=args.fourier_sigma,
-            in_feat_override=in_feat_override, activation=activation,
-            hosc_beta=float(getattr(args, "hosc_beta", 4.0)),
-            hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
-        )
-        mx.eval(model.parameters())
-        ema = MlxEMA(model, decay=args.ema_decay)
-        opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
-
+        # --- 3. Shared (restart-invariant) setup: coords, feats, GT targets ---
         coords = mx.array(coords_np)
         if directional:
             # ALL-CLASS DIRECTIONAL (anisotropic/curvelet) Fourier basis: orient the
@@ -661,7 +651,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _dir_feats_np.append(np.ascontiguousarray(feats, dtype=np.float32))
             shared_feats = None
         else:
-            shared_feats = model.build_feats(coords)  # fixed (P_px, in_feat)
+            # build_feats uses the deterministic seeded _B (seed 0, restart-invariant)
+            # so the isotropic coord features are identical across restarts -> built once
+            # from a throwaway module (the per-restart models reuse this shared buffer).
+            _feat_model = build_witness_module(
+                num_pairs=P, n_fourier=args.n_fourier, hidden_dim=args.hidden_dim,
+                n_hidden=args.n_hidden, mod_dim=args.mod_dim, fourier_sigma=args.fourier_sigma,
+                in_feat_override=in_feat_override, activation=activation,
+                hosc_beta=float(getattr(args, "hosc_beta", 4.0)),
+                hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
+            )
+            shared_feats = _feat_model.build_feats(coords)  # fixed (P_px, in_feat)
             mx.eval(shared_feats)
             _dir_feats_np = None
 
@@ -682,9 +682,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             poses_mx.append(mx.array(gt.gt_poses[pi].astype(np.float32)))  # (half,)
 
         score_domain = bool(getattr(args, "score_domain_loss", True))
-        pose_eps = float(getattr(args, "pose_eps", 1e-8))
+        pose_eps = float(getattr(args, "pose_eps", 1e-2))
         loss_fn = make_loss_fn(adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss)
-        value_and_grad = nn.value_and_grad(model, loss_fn)
         print(
             json.dumps({
                 "stage": "loss_mode",
@@ -700,8 +699,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             flush=True,
         )
 
+        # holder lets eval_verdict see the CURRENT restart's model/ema by reference.
+        holder: dict[str, Any] = {"model": None, "ema": None}
+
         def eval_verdict(use_ema: bool) -> dict[str, float]:
             """FROZEN CPU-torch authority verdict on the MLX-rendered frames."""
+            model = holder["model"]
+            ema = holder["ema"]
             saved = None
             if use_ema:
                 saved = {k: mx.array(v) for k, v in tree_flatten(model.parameters())}
@@ -736,74 +740,220 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     mx.eval(model.parameters())
             return {"d_seg": float(np.mean(d_segs)), "d_pose": float(np.mean(d_poses))}
 
-        base_verdict = eval_verdict(use_ema=False)
-        print(json.dumps({"stage": "baseline_verdict", **{k: round(v, 6) for k, v in base_verdict.items()}}), flush=True)
+        # --- stabilization config (DAG FEED-bd/be: clean descent -> ep30-40 spike
+        # -> dead-saturation lock at d_seg 0.5447 was optimizer-divergence). Each item
+        # below is a named driver fix; defaults reproduce the prescribed stabilized run.
+        grad_clip = float(getattr(args, "grad_clip", 1.0))            # (1) THE primary fix
+        accum_pairs = max(1, int(getattr(args, "accum_pairs", 8)))    # (3) variance reduction
+        n_restarts = max(1, int(getattr(args, "n_restarts", 2)))      # (6) multi-restart-keep-best
+        spike_factor = float(getattr(args, "spike_factor", 5.0))      # (5) spike-guard threshold
+        grad_log_every = max(1, int(getattr(args, "grad_log_every", 25)))  # (7) grad-norm logging
+        lr_schedule_enabled = bool(getattr(args, "lr_schedule", True))     # (4) warmup+cosine
+        warmup_epochs = max(0, int(getattr(args, "warmup_epochs", 1)))
+        lr_end = float(getattr(args, "lr_end", 1e-4))
+        div_frac = 0.9  # restart divergence: EMA d_seg still >= 0.9*baseline at midpoint = stuck
+        opt_steps_per_epoch = max(1, math.ceil(P / accum_pairs))
 
-        # --- 4. Training loop (through-R, both MLX scorers in-loop) ---
-        rng = np.random.default_rng(args.seed)
+        def build_lr_schedule():
+            """1-epoch linear warmup 0->base, then cosine decay base->lr_end (item 4)."""
+            if not lr_schedule_enabled:
+                return float(args.lr)
+            base = float(args.lr)
+            warm = warmup_epochs * opt_steps_per_epoch
+            total = max(1, args.epochs * opt_steps_per_epoch)
+            cos_steps = max(1, total - warm)
+            cosine = optim.cosine_decay(base, cos_steps, lr_end)
+            if warm <= 0:
+                return cosine
+            warmup = optim.linear_schedule(0.0, base, warm)
+            return optim.join_schedules([warmup, cosine], [warm])
+
+        # --- 4. Restart loop (item 6): reseed + restart on midpoint divergence;
+        #         keep the best EMA-d_seg checkpoint across restarts. ---
         w_seg = mx.array(float(args.w_seg))
         w_pose = mx.array(float(args.w_pose))
         hinge = mx.array(float(args.hinge_weight))
         m_start = float(getattr(args, "margin_target_start", 1.0))
         m_end = float(getattr(args, "margin_target_end", 0.5))
+        mid_ep = max(1, args.epochs // 2)
+        recent: deque[float] = deque(maxlen=20)  # running window for the spike-guard median
+        base_verdict: dict[str, float] | None = None
+        best_saved: dict[str, Any] = {"d_seg": 1e9, "params": None, "restart": -1, "epoch": -1}
         t_train = time.time()
         ep_walls: list[float] = []
-        for ep in range(1, args.epochs + 1):
-            ep_t0 = time.time()
-            ep_loss = 0.0
-            # margin-hinge target anneal 1.0->0.5 (lensA: broad early when margins are
-            # wide, tight late when they collapse). Unused by the CE seg-loss branch.
-            m_t = m_start if args.epochs <= 1 else m_start + (m_end - m_start) * (ep - 1) / (args.epochs - 1)
-            margin_target = mx.array(float(m_t))
-            order = rng.permutation(P)
-            for pi_np in order:
-                pi = int(pi_np)
-                loss, grads = value_and_grad(
-                    model, feats_for_pair(pi), 2 * pi, 2 * pi + 1,
-                    lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target,
-                )
-                opt.update(model, grads)
-                mx.eval(model.parameters(), opt.state)
-                ema.update(model)
-                # Materialize the EMA shadow each step so its lazy graph does NOT
-                # accumulate across the 600-step epoch -> [metal::malloc] Resource
-                # limit (499000) buffer-count exhaustion at n600 (observed 2026-06-26).
-                mx.eval(list(ema.shadow.values()))
-                ep_loss += float(loss)
-            # Release reclaimable Metal buffer cache between epochs (defensive vs
-            # the 499000 active-buffer cap when many arms share the GPU).
-            mx.clear_cache()
-            ep_walls.append(time.time() - ep_t0)
-            if ep % args.eval_every == 0 or ep == 1 or ep == args.epochs:
-                v_live = eval_verdict(use_ema=False)
-                v = eval_verdict(use_ema=True)
-                implied_S = implied_score_from_verdict(v["d_seg"], v["d_pose"], args.witness_bytes)
-                implied_S_live = implied_score_from_verdict(v_live["d_seg"], v_live["d_pose"], args.witness_bytes)
-                row = {
-                    "epoch": ep, "train_loss": round(ep_loss / P, 4),
-                    "d_seg": round(v["d_seg"], 6), "d_pose": round(v["d_pose"], 6),
-                    "implied_S": round(implied_S, 4),
-                    "d_seg_live": round(v_live["d_seg"], 6), "d_pose_live": round(v_live["d_pose"], 6),
-                    "implied_S_live": round(implied_S_live, 4),
-                    "ep_wall_s": round(ep_walls[-1], 2),
-                    "wall_s": round(time.time() - t_train, 1),
-                }
-                if implied_S < best["implied_S"]:
-                    best = {"d_seg": v["d_seg"], "d_pose": v["d_pose"], "implied_S": implied_S, "epoch": ep}
-                if implied_S_live < best.get("implied_S_live", 1e9):
-                    best["implied_S_live"] = implied_S_live
-                    best["d_seg_live"] = v_live["d_seg"]
-                    best["d_pose_live"] = v_live["d_pose"]
-                    best["epoch_live"] = ep
-                result_history.append(row)
-                print(json.dumps(row), flush=True)
+        gstep = 0
+        n_skips_total = 0
 
-        blob = quantize_witness_blob(model)
-        # Save the EMA witness (inference weights).
-        model.update(ema.shadow_tree())
-        mx.eval(model.parameters())
-        ema_params = {k: np.asarray(v, dtype=np.float32) for k, v in tree_flatten(model.parameters())}
+        for restart_i in range(n_restarts):
+            seed_r = int(args.seed) + restart_i * 1000
+            mx.random.seed(seed_r)
+            np.random.seed(seed_r)
+            rng = np.random.default_rng(seed_r)
+            model = build_witness_module(
+                num_pairs=P, n_fourier=args.n_fourier, hidden_dim=args.hidden_dim,
+                n_hidden=args.n_hidden, mod_dim=args.mod_dim, fourier_sigma=args.fourier_sigma,
+                in_feat_override=in_feat_override, activation=activation,
+                hosc_beta=float(getattr(args, "hosc_beta", 4.0)),
+                hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
+            )
+            mx.eval(model.parameters())
+            ema = MlxEMA(model, decay=args.ema_decay)
+            opt = optim.AdamW(learning_rate=build_lr_schedule(), weight_decay=args.weight_decay)
+            value_and_grad = nn.value_and_grad(model, loss_fn)
+            holder["model"] = model
+            holder["ema"] = ema
+
+            if base_verdict is None:
+                base_verdict = eval_verdict(use_ema=False)
+                print(json.dumps({"stage": "baseline_verdict", **{k: round(v, 6) for k, v in base_verdict.items()}}), flush=True)
+
+            diverged = False
+            checked_div = False
+            for ep in range(1, args.epochs + 1):
+                ep_t0 = time.time()
+                ep_loss = 0.0
+                # margin-hinge target anneal 1.0->0.5 (lensA: broad early when margins are
+                # wide, tight late when they collapse). Unused by the CE seg-loss branch.
+                m_t = m_start if args.epochs <= 1 else m_start + (m_end - m_start) * (ep - 1) / (args.epochs - 1)
+                margin_target = mx.array(float(m_t))
+                order = rng.permutation(P)
+                accum_grads = None
+                accum_loss_sum = 0.0
+                count = 0
+                ep_gnorms: list[float] = []
+                n_skips_ep = 0
+                for bi, pi_np in enumerate(order):
+                    pi = int(pi_np)
+                    loss, grads = value_and_grad(
+                        model, feats_for_pair(pi), 2 * pi, 2 * pi + 1,
+                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target,
+                    )
+                    # Materialize per pair so the lazy fwd+bwd graph does NOT accumulate
+                    # across the epoch (the 499000 buffer-count cap fix, preserved).
+                    mx.eval(loss, grads)
+                    lval = float(loss)
+                    ep_loss += lval
+                    # (3) accumulate grads over up to accum_pairs before the opt+ema step.
+                    if accum_grads is None:
+                        accum_grads = grads
+                    else:
+                        accum_grads = tree_map(lambda a, b: a + b, accum_grads, grads)
+                    mx.eval(accum_grads)
+                    accum_loss_sum += lval
+                    count += 1
+                    is_last = bi == (P - 1)
+                    if count < accum_pairs and not is_last:
+                        continue
+                    # --- accum-batch boundary: mean -> clip -> spike-guard -> opt+ema ---
+                    mean_grads = tree_map(lambda g, c=float(count): g / c, accum_grads)
+                    # (1) grad-norm clip (THE primary fix); grad_clip<=0 disables (1e30
+                    # sentinel = no actual clip, but the norm is still measured + logged).
+                    clipped, total = optim.clip_grad_norm(mean_grads, grad_clip if grad_clip > 0 else 1e30)
+                    mx.eval(total)
+                    gnorm = float(total)
+                    batch_loss = accum_loss_sum / float(count)
+                    median = float(np.median(np.asarray(recent))) if len(recent) else None
+                    # (5) spike-guard: skip the opt+ema step on a non-finite OR runaway
+                    # (> spike_factor x running median) batch so the run can recover.
+                    skip = (not math.isfinite(batch_loss)) or (not math.isfinite(gnorm)) or (
+                        median is not None and batch_loss > spike_factor * median
+                    )
+                    if skip:
+                        n_skips_ep += 1
+                        print(json.dumps({
+                            "stage": "spike_skip", "restart": restart_i, "ep": ep, "gstep": gstep,
+                            "batch_loss": (round(batch_loss, 4) if math.isfinite(batch_loss) else "nonfinite"),
+                            "gnorm": (round(gnorm, 4) if math.isfinite(gnorm) else "nonfinite"),
+                            "median": (round(median, 4) if median is not None else None),
+                        }), flush=True)
+                    else:
+                        opt.update(model, clipped)
+                        mx.eval(model.parameters(), opt.state)
+                        ema.update(model)
+                        mx.eval(list(ema.shadow.values()))
+                        recent.append(batch_loss)
+                        ep_gnorms.append(gnorm)
+                    # (7) per-accum grad-norm logging (throttled), always on clip/skip.
+                    clipped_fired = grad_clip > 0 and gnorm > grad_clip
+                    if (gstep % grad_log_every == 0) or clipped_fired or skip:
+                        print(json.dumps({
+                            "stage": "grad", "restart": restart_i, "ep": ep, "gstep": gstep,
+                            "gnorm": round(gnorm, 4), "clip": grad_clip, "clipped": bool(clipped_fired),
+                            "skipped": bool(skip), "lr": round(float(opt.learning_rate), 6),
+                        }), flush=True)
+                    gstep += 1
+                    accum_grads = None
+                    accum_loss_sum = 0.0
+                    count = 0
+                n_skips_total += n_skips_ep
+                # Release reclaimable Metal buffer cache between epochs (defensive vs
+                # the 499000 active-buffer cap when many arms share the GPU).
+                mx.clear_cache()
+                ep_walls.append(time.time() - ep_t0)
+                if ep % args.eval_every == 0 or ep == 1 or ep == args.epochs:
+                    v_live = eval_verdict(use_ema=False)
+                    v = eval_verdict(use_ema=True)
+                    implied_S = implied_score_from_verdict(v["d_seg"], v["d_pose"], args.witness_bytes)
+                    implied_S_live = implied_score_from_verdict(v_live["d_seg"], v_live["d_pose"], args.witness_bytes)
+                    row = {
+                        "restart": restart_i, "epoch": ep, "train_loss": round(ep_loss / P, 4),
+                        "d_seg": round(v["d_seg"], 6), "d_pose": round(v["d_pose"], 6),
+                        "implied_S": round(implied_S, 4),
+                        "d_seg_live": round(v_live["d_seg"], 6), "d_pose_live": round(v_live["d_pose"], 6),
+                        "implied_S_live": round(implied_S_live, 4),
+                        "gnorm_max": (round(max(ep_gnorms), 4) if ep_gnorms else None),
+                        "gnorm_mean": (round(float(np.mean(ep_gnorms)), 4) if ep_gnorms else None),
+                        "n_skips": n_skips_ep, "lr": round(float(opt.learning_rate), 6),
+                        "ep_wall_s": round(ep_walls[-1], 2),
+                        "wall_s": round(time.time() - t_train, 1),
+                    }
+                    if implied_S < best["implied_S"]:
+                        best = {"d_seg": v["d_seg"], "d_pose": v["d_pose"], "implied_S": implied_S, "epoch": ep, "restart": restart_i}
+                    if implied_S_live < best.get("implied_S_live", 1e9):
+                        best["implied_S_live"] = implied_S_live
+                        best["d_seg_live"] = v_live["d_seg"]
+                        best["d_pose_live"] = v_live["d_pose"]
+                        best["epoch_live"] = ep
+                    # (6) keep the best EMA-d_seg checkpoint across restarts (saved witness).
+                    if v["d_seg"] < best_saved["d_seg"]:
+                        best_saved = {
+                            "d_seg": v["d_seg"], "restart": restart_i, "epoch": ep,
+                            "params": {k: np.asarray(val, dtype=np.float32) for k, val in ema.shadow.items()},
+                        }
+                    result_history.append(row)
+                    print(json.dumps(row), flush=True)
+                    # restart divergence guard: at the first eval epoch past midpoint, if
+                    # the EMA d_seg has NOT dropped below div_frac*baseline the run is stuck.
+                    if n_restarts > 1 and not checked_div and ep >= mid_ep:
+                        checked_div = True
+                        if base_verdict is not None and v["d_seg"] >= div_frac * base_verdict["d_seg"]:
+                            print(json.dumps({
+                                "stage": "restart_divergence", "restart": restart_i, "ep": ep,
+                                "ema_d_seg": round(v["d_seg"], 6),
+                                "baseline_d_seg": round(base_verdict["d_seg"], 6),
+                                "action": "reseed_and_restart",
+                            }), flush=True)
+                            diverged = True
+                            break
+            if not diverged:
+                break  # healthy completion -> keep best, stop spending restarts
+
+        # --- 5. Load the BEST EMA witness (across restarts), quantize + save it ---
+        if best_saved["params"] is not None:
+            holder["model"].update(tree_unflatten([(k, mx.array(v)) for k, v in best_saved["params"].items()]))
+            mx.eval(holder["model"].parameters())
+            ema_params = best_saved["params"]
+        else:
+            holder["model"].update(holder["ema"].shadow_tree())
+            mx.eval(holder["model"].parameters())
+            ema_params = {k: np.asarray(v, dtype=np.float32) for k, v in tree_flatten(holder["model"].parameters())}
+        blob = quantize_witness_blob(holder["model"])
         np.savez(out_dir / "witness_ema_mlx.npz", **ema_params)
+        print(json.dumps({
+            "stage": "saved_best_ema", "restart": best_saved["restart"], "epoch": best_saved["epoch"],
+            "d_seg": (round(float(best_saved["d_seg"]), 6) if best_saved["params"] is not None else None),
+            "n_skips_total": n_skips_total,
+        }), flush=True)
 
     mean_ep = float(np.mean(ep_walls)) if ep_walls else 0.0
     median_ep = float(np.median(ep_walls)) if ep_walls else 0.0
@@ -823,7 +973,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "lr": args.lr, "weight_decay": args.weight_decay, "ema_decay": args.ema_decay,
             "w_seg": args.w_seg, "w_pose": args.w_pose, "hinge_weight": args.hinge_weight,
             "score_domain_loss": bool(getattr(args, "score_domain_loss", True)),
-            "pose_eps": float(getattr(args, "pose_eps", 1e-8)),
+            "pose_eps": float(getattr(args, "pose_eps", 1e-2)),
+            "grad_clip": float(getattr(args, "grad_clip", 1.0)),
+            "accum_pairs": int(getattr(args, "accum_pairs", 8)),
+            "n_restarts": int(getattr(args, "n_restarts", 2)),
+            "spike_factor": float(getattr(args, "spike_factor", 5.0)),
+            "lr_schedule": bool(getattr(args, "lr_schedule", True)),
+            "warmup_epochs": int(getattr(args, "warmup_epochs", 1)),
+            "lr_end": float(getattr(args, "lr_end", 1e-4)),
+            "grad_log_every": int(getattr(args, "grad_log_every", 25)),
             "basis": basis, "n_dir_freqs": n_dir_freqs,
             "freq_across": float(getattr(args, "freq_across", 32.0)),
             "freq_along": float(getattr(args, "freq_along", 4.0)),
@@ -838,6 +996,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "mean_ep_wall_s": round(mean_ep, 3),
             "median_ep_wall_s": round(median_ep, 3),
             "n_pairs": P, "epochs": args.epochs,
+            "n_skips_total": n_skips_total,
         },
         "baseline_verdict": {k: round(v, 6) for k, v in base_verdict.items()},
         "final_verdict": {"d_seg": final.get("d_seg"), "d_pose": final.get("d_pose")},
@@ -864,7 +1023,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n-hidden", type=int, default=4)
     ap.add_argument("--mod-dim", type=int, default=48)
     ap.add_argument("--fourier-sigma", type=float, default=8.0)
-    ap.add_argument("--lr", type=float, default=2e-3)
+    ap.add_argument("--lr", type=float, default=1e-3,
+                    help="base LR (lowered 2e-3->1e-3 for stability; warmup ramps 0->lr then cosine to --lr-end).")
     ap.add_argument("--weight-decay", type=float, default=1e-4)
     ap.add_argument("--ema-decay", type=float, default=0.997)
     ap.add_argument("--hinge-weight", type=float, default=4.0)
@@ -885,8 +1045,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--pose-eps",
         type=float,
-        default=1e-8,
-        help="sqrt-stability eps for the score-domain pose term near d_pose=0.",
+        default=1e-2,
+        help="sqrt-stability eps for the score-domain pose term. Raised 1e-8->1e-2: caps the "
+        "pose grad coeff 5/sqrt(10*pose_l+eps) at <=50 (was up to ~5e4 for easy pairs at 1e-8, "
+        "the divergence trigger). Pose below ~1e-3 is the stored-sidecar's job, so linearizing "
+        "the witness pose term there is correct (DAG FEED-bd/be).",
     )
     ap.add_argument("--witness-bytes", type=int, default=80000)
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
@@ -898,6 +1061,36 @@ def main(argv: list[str] | None = None) -> int:
         "skips the ~480s/arm GT precompute so a parallel fleet shares ONE cache.",
     )
     ap.add_argument("--seed", type=int, default=0)
+    # --- STABILIZATION (DAG FEED-bd/be: collapse -> dead-saturation lock fix) ---
+    ap.add_argument(
+        "--grad-clip", type=float, default=1.0,
+        help="(1) global grad-norm clip applied to the (mean-over-accum) grads before opt.update "
+        "— THE primary divergence fix. <=0 disables clipping (norm still measured + logged).",
+    )
+    ap.add_argument(
+        "--accum-pairs", type=int, default=8,
+        help="(3) accumulate grads over K pairs before one opt.update+ema.update (variance "
+        "reduction that removes the per-pair spike trigger). 1 = per-pair update.",
+    )
+    ap.add_argument(
+        "--n-restarts", type=int, default=2,
+        help="(6) max restart attempts: if EMA d_seg has not dropped below 0.9*baseline by the "
+        "midpoint the run is reseeded+restarted; the best EMA-d_seg checkpoint is kept across "
+        "restarts. A healthy (non-diverged) restart stops the loop early. 1 = single run.",
+    )
+    ap.add_argument(
+        "--spike-factor", type=float, default=5.0,
+        help="(5) spike-guard: skip the opt+ema step when the accum batch loss is non-finite OR "
+        "> spike_factor x the running median of recent batch losses (recoverability).",
+    )
+    ap.add_argument(
+        "--lr-schedule", action=argparse.BooleanOptionalAction, default=True,
+        help="(4) enable 1-epoch linear warmup (0->lr) + cosine decay (lr->--lr-end). "
+        "--no-lr-schedule uses a constant --lr (ablation).",
+    )
+    ap.add_argument("--warmup-epochs", type=int, default=1, help="(4) #epochs of linear LR warmup before cosine decay.")
+    ap.add_argument("--lr-end", type=float, default=1e-4, help="(4) final cosine LR floor.")
+    ap.add_argument("--grad-log-every", type=int, default=25, help="(7) log a grad-norm line every N accum steps (always on clip/skip).")
     # --- CAPSTONE d_seg / R-survival levers (each opt-in; default = current behavior) ---
     ap.add_argument(
         "--basis", choices=["isotropic", "directional"], default="isotropic",
