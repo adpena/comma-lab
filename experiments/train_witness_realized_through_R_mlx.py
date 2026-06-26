@@ -540,9 +540,60 @@ def _nn_resize_labels(labels: np.ndarray, out_h: int, out_w: int) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
+# LIVE-MARGIN per-pixel weight (DAG FEED-bp NEW-B: margin = per-pixel RD bit-allocator).
+# ---------------------------------------------------------------------------
+def _live_margin_weight(seg_logits: Any, fn: str, temp: float) -> Any:
+    """LIVE realized-SegNet per-pixel margin weight -- the bridge (FEED-bp) bit-allocator.
+
+    ``seg_logits`` are the FROZEN SegNet logits of the witness frame1 RENDERED THROUGH R
+    (the realized axis -- the SAME tensor the seg loss already scores). The LIVE margin is
+    the top1-top2 logit gap (>=0; SMALL = near-flip = the codim-1 decision-boundary annulus).
+    MEASURED (FEED-bp): ~89% of d_seg lives in the bottom-5%-margin pixels (the 2.26% annulus);
+    witness-hard px median margin 0.42 vs global 5.79 (14x). Re-routing the SAME loss budget
+    onto that annulus is a ~20x effective-capacity multiplier at EQUAL bytes.
+
+    Returns a (...,H,W) weight map, **mean-1 normalized** (preserves the total loss budget --
+    capacity is RE-ALLOCATED, not added) and **STOP-GRADIENT** (NO-FAKE: the margin map is a
+    per-pixel allocation PRIOR, not a differentiable knob -- the witness must FIX the flip,
+    never game its own margin to shrink the weight). Three allocators:
+
+      inverse  : w = 1/(1 + m/temp)              (smooth; temp small => sharper annulus focus)
+      exp      : w = exp(-m/temp)                (smooth; exponential annulus focus)
+      bottom-k : w = 1[m <= quantile(m, temp)]   (hard mask; temp = bottom-fraction, e.g. 0.05)
+    """
+    import mlx.core as mx
+
+    srt = mx.sort(seg_logits, axis=-1)
+    m = srt[..., -1] - srt[..., -2]  # (...,H,W) top1-top2 logit gap, >=0
+    t = max(float(temp), 1e-6)
+    if fn == "exp":
+        w = mx.exp(-m / t)
+    elif fn == "bottom-k":
+        flat = mx.reshape(m, (-1,))
+        n = int(flat.shape[0])
+        k = min(max(int(round(t * n)), 1), n)
+        thr = mx.sort(flat)[k - 1]  # k-th smallest margin = bottom-fraction threshold
+        w = (m <= thr).astype(m.dtype)
+    else:  # "inverse" (default)
+        w = 1.0 / (1.0 + m / t)
+    w = w / (mx.mean(w) + 1e-8)  # mean-1 => SAME total loss budget, re-allocated to the annulus
+    return mx.stop_gradient(w)
+
+
+# ---------------------------------------------------------------------------
 # Realized loss (mx, through both frozen MLX scorers). The training signal.
 # ---------------------------------------------------------------------------
-def make_loss_fn(adapter, render_h: int, render_w: int, score_domain: bool = True, pose_eps: float = 1e-8, seg_loss: str = "ce"):
+def make_loss_fn(
+    adapter,
+    render_h: int,
+    render_w: int,
+    score_domain: bool = True,
+    pose_eps: float = 1e-8,
+    seg_loss: str = "ce",
+    margin_weighted: bool = False,
+    margin_weight_fn: str = "inverse",
+    margin_weight_temp: float = 1.0,
+):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
     w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
 
@@ -589,14 +640,25 @@ def make_loss_fn(adapter, render_h: int, render_w: int, score_domain: bool = Tru
             masked = seg_logits + lstar_oh * (-1e9)  # GT channel -> -inf
             runner_up = mx.max(masked, axis=-1)  # (1,H,W)
             signed = gt_logit - runner_up
-            seg_l = mx.mean(mx.maximum(margin_target - signed, 0.0))
+            hinge_map = mx.maximum(margin_target - signed, 0.0)  # (1,H,W)
+            # LIVE-MARGIN re-allocation (FEED-bp): concentrate the SAME loss budget on the
+            # small-margin annulus where ~89% of d_seg lives. OFF (default) = byte-identical.
+            if margin_weighted:
+                hinge_map = hinge_map * _live_margin_weight(seg_logits, margin_weight_fn, margin_weight_temp)
+            seg_l = mx.mean(hinge_map)
         else:
-            # Realized seg CE (margin-weighted) on frame1.
+            # Realized seg CE on frame1 (GT-margin structural weight via ``hinge``).
             logsum = mx.logsumexp(seg_logits, axis=-1)
             tgt = mx.sum(seg_logits * lstar_oh, axis=-1)
             ce = logsum - tgt  # (1,H,W)
             w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))
-            seg_l = mx.mean(ce * w[None])
+            pw = ce * w[None]  # (1,H,W)
+            # LIVE-MARGIN re-allocation (FEED-bp): multiply by the stop-grad, mean-1 live-margin
+            # allocator so the SAME budget concentrates on the ~2.2% boundary annulus (~20x
+            # effective-capacity multiplier). OFF (default) = byte-identical to the running base.
+            if margin_weighted:
+                pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, margin_weight_temp)
+            seg_l = mx.mean(pw)
         # Realized pose MSE on the pair (== realized d_pose).
         yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
         pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]
@@ -608,7 +670,16 @@ def make_loss_fn(adapter, render_h: int, render_w: int, score_domain: bool = Tru
     return loss_fn
 
 
-def make_loss_fn_batch(adapter, render_h: int, render_w: int, score_domain: bool = True, pose_eps: float = 1e-8):
+def make_loss_fn_batch(
+    adapter,
+    render_h: int,
+    render_w: int,
+    score_domain: bool = True,
+    pose_eps: float = 1e-8,
+    margin_weighted: bool = False,
+    margin_weight_fn: str = "inverse",
+    margin_weight_temp: float = 1.0,
+):
     """Batched (K-pair) realized loss. SAME math as make_loss_fn per pair, but
     renders + scores K pairs in one batched scorer forward -> one mx.eval.
 
@@ -640,7 +711,11 @@ def make_loss_fn_batch(adapter, render_h: int, render_w: int, score_domain: bool
         tgt = mx.sum(seg_logits * lstar_oh, axis=-1)  # (K,H,W)
         ce = logsum - tgt
         w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))  # (K,H,W)
-        seg_l = mx.mean(ce * w)
+        pw = ce * w
+        # LIVE-MARGIN re-allocation (FEED-bp); OFF (default) = byte-identical.
+        if margin_weighted:
+            pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, margin_weight_temp)
+        seg_l = mx.mean(pw)
         # Realized pose MSE on the K pairs. Build (K,2,H,W,3) -> yuv6 (K,2,h2,w2,6) -> (K,h2,w2,12).
         pair = mx.stack([f0, f1], axis=1)  # (K,2,H,W,3)
         yuv = rgb_to_yuv6_mlx(pair)  # (K,2,h2,w2,6)
@@ -933,7 +1008,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
         score_domain = bool(getattr(args, "score_domain_loss", True))
         pose_eps = float(getattr(args, "pose_eps", 1e-2))
-        loss_fn = make_loss_fn(adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss)
+        # LIVE-MARGIN re-allocation lever (DAG FEED-bp NEW-B). Default OFF -> the running
+        # baseline + default path are byte-identical (the gate is the unweighted realized
+        # CE the iso baseline trains on; the new allocator is opt-in).
+        margin_weighted = bool(getattr(args, "margin_weighted_loss", False))
+        margin_weight_fn = str(getattr(args, "margin_weight_fn", "inverse"))
+        margin_weight_temp = float(getattr(args, "margin_weight_temp", 1.0))
+        loss_fn = make_loss_fn(
+            adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss,
+            margin_weighted=margin_weighted, margin_weight_fn=margin_weight_fn, margin_weight_temp=margin_weight_temp,
+        )
         print(
             json.dumps({
                 "stage": "loss_mode",
@@ -944,6 +1028,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "seg_loss": seg_loss,
                 "basis": basis,
                 "activation": activation,
+                "margin_weighted_loss": margin_weighted,
+                "margin_weight_fn": (margin_weight_fn if margin_weighted else None),
+                "margin_weight_temp": (margin_weight_temp if margin_weighted else None),
                 "form": ("w_seg*seg_l + w_pose*sqrt(10*pose_l+eps)" if score_domain else "w_seg*seg_l + w_pose*pose_l"),
             }),
             flush=True,
@@ -1367,6 +1454,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "seg_loss": seg_loss,
             "margin_target_start": float(getattr(args, "margin_target_start", 1.0)),
             "margin_target_end": float(getattr(args, "margin_target_end", 0.5)),
+            "margin_weighted_loss": bool(getattr(args, "margin_weighted_loss", False)),
+            "margin_weight_fn": str(getattr(args, "margin_weight_fn", "inverse")),
+            "margin_weight_temp": float(getattr(args, "margin_weight_temp", 1.0)),
             "seed": args.seed,
         },
         "throughput": {
@@ -1550,6 +1640,31 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--margin-target-start", type=float, default=1.0, help="margin_hinge target at ep1 (anneals to end).")
     ap.add_argument("--margin-target-end", type=float, default=0.5, help="margin_hinge target at final ep (lensA: 0.5 best at floor).")
+    # --- LIVE-MARGIN re-allocation lever (DAG FEED-bp NEW-B; default OFF = byte-identical) ---
+    ap.add_argument(
+        "--margin-weighted-loss", action=argparse.BooleanOptionalAction, default=False,
+        help="DAG FEED-bp NEW-B: weight the realized seg loss per pixel by the LIVE SegNet "
+        "margin (top1-top2 logit gap of the witness frame RENDERED THROUGH R) so the SAME "
+        "loss budget concentrates on the ~2.2%% codim-1 decision-boundary annulus where ~89%% "
+        "of d_seg lives (~20x effective-capacity multiplier at EQUAL bytes). The weight is "
+        "mean-1 normalized (re-allocates, not adds) + STOP-GRADIENT (a per-pixel allocation "
+        "prior, NOT a differentiable knob -- NO-FAKE: the witness must FIX the flip, not game "
+        "its margin). DEFAULT OFF -> running baseline + default path byte-identical. The d_seg "
+        "VERDICT is ALWAYS the unweighted realized argmax-disagreement (this only re-weights "
+        "the TRAINING loss).",
+    )
+    ap.add_argument(
+        "--margin-weight-fn", choices=["inverse", "exp", "bottom-k"], default="inverse",
+        help="LIVE-margin allocator: inverse=1/(1+m/temp) (smooth), exp=exp(-m/temp) (smooth), "
+        "bottom-k=hard mask 1[m<=quantile(m,temp)] (temp=bottom-fraction, e.g. 0.05). Only "
+        "active with --margin-weighted-loss.",
+    )
+    ap.add_argument(
+        "--margin-weight-temp", type=float, default=1.0,
+        help="LIVE-margin allocator temperature: a logit scale for inverse/exp (smaller=sharper "
+        "annulus focus), or the bottom-FRACTION for bottom-k (e.g. 0.05 = bottom 5%% margin). "
+        "Only active with --margin-weighted-loss.",
+    )
     args = ap.parse_args(argv)
 
     result = run_train(args)
