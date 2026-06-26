@@ -1,0 +1,69 @@
+{
+  "schema": "realized_harness_vs_oracle_validation.v1",
+  "validated_at_utc": "2026-06-26T18:35:29Z",
+  "authority": "[contest-CPU advisory] harness-equivalence proof (NOT a score claim)",
+  "promotion_eligible": false,
+  "score_claim": false,
+  "claim": "trainer verdict path (cpu_verdict_d_seg/d_pose, git 8cceaa072) == upstream/evaluate.py DistortionNet.compute_distortion (modules.py:84,112) == experiments/contest_auth_eval.py oracle, on identical uint8 camera frames",
+  "n_pairs": 4,
+  "tolerance": 1e-06,
+  "real_input_source": "upstream/videos/0.mkv (contest source; NO synthetic fixture)",
+  "d_seg": {
+    "max_abs_diff": 3.880510734792508e-11,
+    "agreement_decimals": 11,
+    "mean_oracle": 0.0014623006281908602,
+    "mean_verdict": 0.0014623006184895833,
+    "pass": true
+  },
+  "d_pose": {
+    "max_abs_diff": 9.883615215318386e-11,
+    "agreement_decimals": 11,
+    "mean_oracle": 0.002046878753844794,
+    "mean_verdict": 0.002046878727077206,
+    "pass": true
+  },
+  "trainer_loader_faithful": {
+    "argmax_mismatch_px": 0,
+    "total_px": 786432,
+    "pass": true
+  },
+  "passed": true,
+  "per_pair": [
+    {
+      "pair_idx": 0,
+      "d_seg_oracle": 0.0014190673828125,
+      "d_seg_verdict": 0.0014190673828125,
+      "d_seg_abs_diff": 0.0,
+      "d_pose_oracle": 0.006212987471371889,
+      "d_pose_verdict": 0.006212987458467221,
+      "d_pose_abs_diff": 1.2904667785751389e-11
+    },
+    {
+      "pair_idx": 1,
+      "d_seg_oracle": 0.0013478597393259406,
+      "d_seg_verdict": 0.0013478597005208333,
+      "d_seg_abs_diff": 3.880510734792508e-11,
+      "d_pose_oracle": 6.455151742557064e-05,
+      "d_pose_verdict": 6.455152183175901e-05,
+      "d_pose_abs_diff": 4.4061883726050424e-12
+    },
+    {
+      "pair_idx": 2,
+      "d_seg_oracle": 0.0016123453387990594,
+      "d_seg_verdict": 0.0016123453776041667,
+      "d_seg_abs_diff": 3.880510734792508e-11,
+      "d_pose_oracle": 1.8422042558086105e-05,
+      "d_pose_verdict": 1.8422042822365443e-05,
+      "d_pose_abs_diff": 2.642793380241027e-13
+    },
+    {
+      "pair_idx": 3,
+      "d_seg_oracle": 0.0014699300518259406,
+      "d_seg_verdict": 0.0014699300130208333,
+      "d_seg_abs_diff": 3.880510734792508e-11,
+      "d_pose_oracle": 0.0018915539840236306,
+      "d_pose_verdict": 0.0018915538851874785,
+      "d_pose_abs_diff": 9.883615215318386e-11
+    }
+  ]
+}

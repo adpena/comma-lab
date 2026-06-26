@@ -5724,6 +5724,31 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #392: no witness d_seg SCORE from a proxy (generator-argmax,
+        # no-R, no-SegNet-re-seg) or EMA-only (no live) harness. Measurement-
+        # integrity foundation 2026-06-26 per operator paranoia (re-audit
+        # re-founding + R3 harness audit): 3 of 9 witness surfaces were quoted
+        # as "d_seg SCORE" while computing the generator's OWN argmax vs GT
+        # (~170-350x optimistic, no R, no re-seg) or the EMA shadow (78x lag).
+        # The ONLY witness d_seg SCORE authority is the realized harness
+        # (render -> _torch_R_to_camera_uint8 -> real CPU-torch SegNet argmax),
+        # validated to 11 decimals vs upstream/evaluate.py by
+        # experiments/validate_realized_harness_vs_oracle.py. Honors the global
+        # `strict` (strict-flip atomic: live-count = 0 at landing across
+        # tools/ + experiments/ + src/tac/ after the 3 proxy harnesses were
+        # tagged WITNESS_DSEG_FEASIBILITY_ONLY). Same-line
+        # # WITNESS_DSEG_FEASIBILITY_ONLY_OK:<rationale> waiver (placeholder
+        # rejected per Catalog #287). Companion: tac.measurement_integrity.
+        # WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule"
+        # (preflight_all takes no `strict` param; siblings hardcode it). Live
+        # count = 0 across tools/ + experiments/ + src/tac/ after the 3 proxy
+        # harnesses were tagged WITNESS_DSEG_FEASIBILITY_ONLY -> STRICT-READY;
+        # flip this callsite to strict=True next batch (the gate + tests already
+        # enforce strict-raise; see test_check_no_witness_dseg_from_proxy_or_ema_only.py).
+        check_no_witness_dseg_from_proxy_or_ema_only_harness(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -84936,6 +84961,206 @@ def check_no_hand_rolled_contest_score(
     if strict and violations:
         raise PreflightError(
             "check_no_hand_rolled_contest_score "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+# === Catalog #392: no witness d_seg SCORE from a proxy or EMA-only harness ===
+#
+# Measurement-integrity foundation (operator paranoia 2026-06-26; re-audit
+# re-founding .omx/research/reaudit_refounding_and_md_decoupling_20260626.md;
+# R3 harness audit). 3 of 9 witness measurement surfaces were NON-EXACT yet
+# quoted as "d_seg SCORE": the deepmath-smoke + lever-B + byte-closer-advisory
+# compute a PROXY d_seg = the generator's OWN per-pixel argmax vs the GT SegNet
+# argmax, SKIPPING the contest reconstruction operator R AND the SegNet
+# re-segmentation of the rendered RGB. R3 measured the proxy ~170-350x optimistic.
+# The EMA shadow (decay 0.997) lags fast single-frame descent up to 78x. Both
+# classes had been read as floors -> negative verdicts on a confounded harness.
+# The ONLY witness d_seg SCORE authority is the realized harness (render ->
+# _torch_R_to_camera_uint8 -> real CPU-torch SegNet argmax), validated to 11
+# decimals vs upstream/evaluate.py by experiments/validate_realized_harness_vs_oracle.py.
+_CHECK_392_WAIVER_TOKEN = "# WITNESS_DSEG_FEASIBILITY_ONLY_OK:"
+_CHECK_392_WAIVER_PLACEHOLDERS = frozenset(
+    {"<rationale>", "<reason>", "tbd", "todo", "fixme", "xxx", "placeholder", ""}
+)
+# The unambiguous FAKE phrasing: a PROXY/non-realized d_seg asserted to BE the
+# exact / realized contest score. (Case-insensitive substring match.)
+_CHECK_392_SCORE_CLAIM_PHRASES = (
+    "exact score-native quantity",
+    "the exact score-native",
+    "exact score native quantity",
+    "score-native quantity (",
+    "realized d_seg score",
+    "proxy d_seg is the score",
+    "proxy d_seg is a score",
+    "generator-argmax is the score",
+    "generator argmax is the score",
+)
+_CHECK_392_SCAN_DIRS = ("tools", "experiments", "src/tac")
+
+
+def _check_392_file_has_waiver(body: str) -> bool:
+    for line in body.splitlines():
+        if _CHECK_392_WAIVER_TOKEN in line:
+            idx = line.find(_CHECK_392_WAIVER_TOKEN) + len(_CHECK_392_WAIVER_TOKEN)
+            rationale = line[idx:].strip()
+            if len(rationale) >= 4 and rationale.lower() not in _CHECK_392_WAIVER_PLACEHOLDERS:
+                return True
+    return False
+
+
+def check_no_witness_dseg_from_proxy_or_ema_only_harness(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse any file claiming a witness d_seg SCORE from a proxy or EMA-only path.
+
+    Catalog #392 — measurement-integrity foundation self-protection per CLAUDE.md
+    "Bugs must be permanently fixed AND self-protected against" non-negotiable +
+    the canonical 2-landing pattern (companion to ``tac.measurement_integrity`` +
+    ``experiments/validate_realized_harness_vs_oracle.py``).
+
+    A file VIOLATES when it makes an explicit witness-d_seg SCORE CLAIM (one of
+    :data:`_CHECK_392_SCORE_CLAIM_PHRASES`, the unambiguous "proxy d_seg IS the
+    exact/realized score" phrasing) AND its d_seg is computed on a NON-REALIZED
+    path -- i.e. NONE of the realized-harness tokens
+    (``tac.measurement_integrity.REALIZED_HARNESS_TOKENS``) appear AND EITHER a
+    generator-argmax proxy signature (``generator_argmax`` / argmax-vs-GT) OR a
+    call to the deprecated SWAP roundtrip ``apply_eval_roundtrip_nhwc(`` (without
+    the contest-faithful ``apply_contest_faithful_roundtrip_nhwc``) OR an EMA-only
+    read (``ema_d_seg`` with no live companion) is present.
+
+    **Acceptance**: (a) the file carries the canonical marker
+    ``WITNESS_DSEG_FEASIBILITY_ONLY`` (which stamps the proxy/EMA number
+    feasibility-only and is what ``warn_feasibility_only_dseg`` documents); OR
+    (b) the d_seg is computed on the realized harness (any realized token
+    present); OR (c) same-line waiver
+    ``# WITNESS_DSEG_FEASIBILITY_ONLY_OK:<substantive-rationale>`` (placeholder
+    ``<rationale>`` / ``<reason>`` literals rejected per Catalog #287 sister
+    discipline so the gate's own docstring example cannot self-waive).
+
+    **6-hook wire-in declaration** per Catalog #125: hook #1 sensitivity-map =
+    N/A (defensive measurement-integrity validator); #2 Pareto constraint = N/A;
+    #3 bit-allocator = N/A; #4 cathedral autopilot dispatch = ACTIVE (prevents a
+    proxy/EMA d_seg from entering the ranker as a score, which would corrupt the
+    candidate ordering exactly as the EMA-lag + proxy-axis artifacts did); #5
+    continual-learning posterior = ACTIVE (the gate IS the structural protection
+    that "no negative verdict stands on a confounded harness"); #6
+    probe-disambiguator = ACTIVE (the marker / realized-token / waiver triad IS
+    the disambiguator between feasibility-only and realized-score d_seg).
+    """
+
+    try:  # canonical token vocabulary (single source of truth)
+        from tac.measurement_integrity import (
+            CONTEST_FAITHFUL_R_FN,
+            FEASIBILITY_ONLY_MARKER,
+            GT_ARGMAX_TOKENS,
+            REALIZED_HARNESS_TOKENS,
+            STALE_SWAP_R_FN,
+        )
+    except Exception:  # pragma: no cover - defensive fallback
+        FEASIBILITY_ONLY_MARKER = "WITNESS_DSEG_FEASIBILITY_ONLY"
+        REALIZED_HARNESS_TOKENS = frozenset(
+            {
+                "_torch_R_to_camera_uint8",
+                "apply_contest_faithful_roundtrip_nhwc",
+                "cpu_verdict_d_seg",
+                "cpu_verdict_d_pose",
+                "compute_distortion",
+                "DistortionNet",
+            }
+        )
+        GT_ARGMAX_TOKENS = frozenset({"gt_argmax", "gt_segnet_argmax", "lstar", "lstars"})
+        STALE_SWAP_R_FN = "apply_eval_roundtrip_nhwc"
+        CONTEST_FAITHFUL_R_FN = "apply_contest_faithful_roundtrip_nhwc"
+
+    # Files whose OWN vendored realized pipeline (real SegNet on rendered frames)
+    # counts as realized even without the canonical token names.
+    extra_realized = ("vendored SegNet", "preprocess_input")
+
+    repo = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    for scan_dir in _CHECK_392_SCAN_DIRS:
+        base = repo / scan_dir
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*.py"):
+            s = str(path)
+            if "/results/" in s or "/.claude/" in s or "__pycache__" in s:
+                continue
+            if "/tests/" in s or path.name.startswith("test_"):
+                continue
+            # The gate's own definition file + the canonical helper are exempt
+            # (they contain the tokens definitionally, not as a claim).
+            if path.name in ("preflight.py", "measurement_integrity.py"):
+                continue
+            try:
+                body = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+
+            body_low = body.lower()
+            score_claim = any(ph in body_low for ph in _CHECK_392_SCORE_CLAIM_PHRASES)
+            if not score_claim:
+                continue
+
+            realized = any(tok in body for tok in REALIZED_HARNESS_TOKENS) or any(
+                tok in body for tok in extra_realized
+            )
+            # The waiver token CONTAINS the marker as a substring; strip waiver-token
+            # occurrences before the marker test so a PLACEHOLDER waiver cannot
+            # accidentally satisfy the marker path (it is judged only by the
+            # placeholder-rejecting waiver check).
+            body_wo_waiver = body.replace(_CHECK_392_WAIVER_TOKEN, "")
+            has_marker = FEASIBILITY_ONLY_MARKER in body_wo_waiver
+            cleared = has_marker or _check_392_file_has_waiver(body)
+            proxy_sig = ("generator_argmax" in body) or (
+                "d_seg" in body
+                and "argmax" in body
+                and any(tok in body for tok in GT_ARGMAX_TOKENS)
+            )
+            swap_call = (STALE_SWAP_R_FN + "(") in body and CONTEST_FAITHFUL_R_FN not in body
+            ema_only = ("ema_d_seg" in body) and (
+                "d_seg_live" not in body and "live_d_seg" not in body
+            )
+            non_realized = (not realized) and (proxy_sig or swap_call or ema_only)
+
+            if non_realized and not cleared:
+                kind = (
+                    "generator-argmax proxy"
+                    if proxy_sig
+                    else "deprecated SWAP roundtrip"
+                    if swap_call
+                    else "EMA-only (no live companion)"
+                )
+                violations.append(
+                    f"{path.relative_to(repo)}: claims a witness d_seg SCORE "
+                    f"(matched FAKE phrasing) but d_seg is computed on a NON-REALIZED "
+                    f"path ({kind}; no realized-harness token) -- a proxy/EMA d_seg is "
+                    f"~170-350x optimistic / lags live up to 78x and is NOT a contest "
+                    f"score (R3 harness audit 2026-06-26). Operator-routable unwind: "
+                    f"(a) compute d_seg on the realized harness (render -> "
+                    f"_torch_R_to_camera_uint8 -> real CPU-torch SegNet argmax, validated "
+                    f"by experiments/validate_realized_harness_vs_oracle.py); OR (b) call "
+                    f"tac.measurement_integrity.warn_feasibility_only_dseg(...) + add the "
+                    f"{FEASIBILITY_ONLY_MARKER} marker + stamp the value "
+                    f"[feasibility-only — NOT realized, NOT a score]; OR (c) same-line "
+                    f"waiver # WITNESS_DSEG_FEASIBILITY_ONLY_OK:<substantive-rationale>"
+                )
+
+    if verbose and violations:
+        print(f"  [catalog-392] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_no_witness_dseg_from_proxy_or_ema_only_harness "
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )

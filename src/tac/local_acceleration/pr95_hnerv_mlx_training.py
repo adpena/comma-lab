@@ -83,7 +83,21 @@ def apply_eval_roundtrip_nhwc(
     simulate_uint8: bool = True,
     ste_round: bool = True,
 ) -> Any:
-    """Apply PR95's train-time eval roundtrip to ``(..., H, W, 3)`` MLX RGB.
+    """DEPRECATED (NON-contest-faithful SWAP twin). Use :func:`apply_contest_faithful_roundtrip_nhwc`.
+
+    .. deprecated:: 2026-06-26
+        Operator paranoia re-founding (R3 harness audit,
+        ``.omx/research/reaudit_refounding_and_md_decoupling_20260626.md``): this
+        function mirrors PR95's **training** recipe — bicubic up to camera, bilinear
+        down to SCORER res, THEN uint8 STE **at scorer res**. The contest stores the
+        reconstruction as a uint8 video frame **at CAMERA res**, so the uint8 knife-edge
+        is at the WRONG resolution here. Any d_seg / d_pose VERDICT computed through this
+        R is OPTIMISTIC and is NOT a score. Use
+        :func:`apply_contest_faithful_roundtrip_nhwc` (uint8 @ CAMERA, then bilinear
+        down to 384x512 float) for every verdict. This twin is retained ONLY for
+        PR95-training-recipe reproduction smokes; Catalog #392
+        (``check_no_witness_dseg_from_proxy_or_ema_only_harness``) refuses NEW callers
+        outside the allowlist.
 
     The sequence matches the PyTorch oracle in
     ``tac.differentiable_eval_roundtrip.apply_eval_roundtrip_during_training``:
@@ -91,6 +105,12 @@ def apply_eval_roundtrip_nhwc(
     uint8 clamp/round through an STE.  Leading dimensions are preserved.
     """
 
+    try:  # loud fail-closed deprecation (stdlib-only helper; no circular import)
+        from tac.measurement_integrity import warn_stale_swap_roundtrip
+
+        warn_stale_swap_roundtrip("pr95_hnerv_mlx_training.apply_eval_roundtrip_nhwc")
+    except Exception:  # pragma: no cover - never let a warning break the call
+        pass
     require_mlx()
     flat, original_shape = _flatten_rgb_nhwc(rgb_nhwc)
     target_hw = output_hw or (int(original_shape[-3]), int(original_shape[-2]))

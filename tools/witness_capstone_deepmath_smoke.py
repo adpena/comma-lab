@@ -34,17 +34,21 @@ BORROWED-SUBSTRATE ACCOUNTING (CLAUDE.md NO-FAKE):
     a SMALL non-RGB argmax witness INR specifically to descend the contest's binding d_seg lane-edge
     band; the boundary-proximity-as-input-feature codec-free design; the per-pair oriented PE.
 
-NO-FAKE: d_seg here is the EXACT score-native quantity — argmax-disagreement RATE between the
-generator's per-pixel argmax and the FROZEN SegNet's GT argmax over 196,608 px x num_pairs. The GT
-argmax/margin come from the precomputed CPU-torch SegNet targets (NEVER MPS as authority). A stub
-that returns a constant FAILS (the histogram of the descent must move). The boundary prior is a
-function of the GT argmax the witness reproduces by construction, so it carries NO archive bytes
-beyond the witness blob itself (the inflate-time decoder reconstructs argmax, then could recompute
-the same prior — but the prior is only used at TRAIN time here, so it is strictly 0-byte for the
-trained generator; we report bytes WITHOUT any prior section).
+WITNESS_DSEG_FEASIBILITY_ONLY (operator paranoia 2026-06-26, R3 harness audit):
+d_seg here is a PROXY — the argmax-disagreement RATE between the GENERATOR'S OWN per-pixel
+argmax and the FROZEN SegNet's GT argmax over 196,608 px x num_pairs. It is FEASIBILITY-ONLY,
+NOT a realized score: it SKIPS the contest reconstruction operator R (bicubic-up -> uint8 @
+camera -> bilinear-down) AND the SegNet RE-segmentation of the rendered RGB frame. R3 measured
+this proxy ~170-350x optimistic vs the realized quantity. The earlier docstring claim ("EXACT
+score-native quantity") was the exact FAKE this re-founding extincts. The ONLY witness d_seg
+SCORE authority is the realized harness (render -> _torch_R_to_camera_uint8 -> real CPU-torch
+SegNet argmax), validated to >=6 decimals vs upstream/evaluate.py by
+experiments/validate_realized_harness_vs_oracle.py (see tac.measurement_integrity). A stub that
+returns a constant still FAILS (the descent histogram must move) — but a moving proxy descent is
+a feasibility upper-bound, never a frontier/promote/kill signal.
 
 MLX-FIRST: forward + train are MLX (MPS gradient OK — bc20 arms are DEAD so MPS is free). The
-d_seg AUTHORITY is the frozen SegNet argmax (precomputed CPU-torch). EVIDENCE
+proxy d_seg references the frozen SegNet argmax (precomputed CPU-torch). EVIDENCE
 [macOS-MLX research-signal], promotion_eligible=false, NO score claim. Disk: SSD tier, NEVER /tmp.
 """
 from __future__ import annotations
@@ -745,8 +749,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)
 
+    # WITNESS_DSEG_FEASIBILITY_ONLY: loud fail-closed tag — this harness's d_seg is a
+    # generator-argmax proxy (no R, no SegNet re-seg), NOT a realized contest score.
+    from tac.measurement_integrity import warn_feasibility_only_dseg
+
+    feasibility_tag = warn_feasibility_only_dseg("witness_capstone_deepmath_smoke")
+
     result = run_smoke(args)
-    print("\n=== SMOKE RESULT ===")
+    if isinstance(result, dict):
+        result["d_seg_axis_tag"] = feasibility_tag
+        result["score_claim"] = False
+        result["promotion_eligible"] = False
+    print("\n=== SMOKE RESULT (d_seg %s) ===" % feasibility_tag)
     print(json.dumps({k: v for k, v in result.items() if k != "history"}, indent=2))
     return 0
 

@@ -22,9 +22,15 @@ PRE-REGISTERED KILLS (prove-or-pivot):
     carrier not cheaper than RGB carrier -> PIVOT to I (quotient/dictionary
     cell carrier) and stack G harder.
 
+WITNESS_DSEG_FEASIBILITY_ONLY (operator paranoia 2026-06-26, R3 harness audit):
 d_seg here = argmax-disagreement RATE between the generator's per-pixel argmax
-and the FROZEN SegNet's GT argmax over the 196,608 px x num_pairs (the EXACT
-score-native quantity; this is the seg term's mechanism, advisory exact).
+and the FROZEN SegNet's GT argmax over the 196,608 px x num_pairs. This is a
+PROXY (feasibility-only — NOT realized, NOT a score): it SKIPS the contest
+reconstruction operator R and the SegNet re-segmentation of the rendered RGB
+(R3 measured the proxy ~170-350x optimistic). The earlier "EXACT score-native
+quantity" claim was the FAKE this re-founding extincts. The ONLY witness d_seg
+SCORE authority is the realized harness (see tac.measurement_integrity +
+experiments/validate_realized_harness_vs_oracle.py).
 
 MLX-FIRST: the generator forward is MLX; a numpy reference forward verifies the
 portability contract (parity gate). NO MPS. EVIDENCE [macOS-MLX research-signal],
@@ -379,6 +385,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)
 
+    # WITNESS_DSEG_FEASIBILITY_ONLY: loud fail-closed tag — generator-argmax proxy d_seg.
+    from tac.measurement_integrity import warn_feasibility_only_dseg
+
+    feasibility_tag = warn_feasibility_only_dseg("lever_b_score_native_argmax_smoke")
+
     result = run_smoke(
         targets_dir=args.targets_dir,
         out_dir=args.out_dir,
@@ -390,7 +401,11 @@ def main(argv: list[str] | None = None) -> int:
         lr=args.lr,
         px_per_step=args.px_per_step,
     )
-    print("\n=== SMOKE RESULT ===")
+    if isinstance(result, dict):
+        result["d_seg_axis_tag"] = feasibility_tag
+        result["score_claim"] = False
+        result["promotion_eligible"] = False
+    print("\n=== SMOKE RESULT (d_seg %s) ===" % feasibility_tag)
     print(json.dumps({k: v for k, v in result.items() if k != "history"}, indent=2))
     return 0
 

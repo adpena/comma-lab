@@ -20,6 +20,14 @@ HONEST: this candidate's advisory S (palette frame1) does NOT beat the frontier 
 it is the mechanism-stage byte-closed proof that the seg+rate class shift is REAL and the carrier
 parses back losslessly. The pose-carrying appearance section is the next build (see verdict memo).
 
+WITNESS_DSEG_FEASIBILITY_ONLY (operator paranoia 2026-06-26, R3 harness audit): any advisory
+d_seg/S derived from this builder's ``generator_argmax`` palette frame is a PROXY — it does NOT
+run the contest reconstruction operator R + SegNet re-segmentation, so it is
+``[feasibility-only — NOT realized, NOT a score]``. The realized score for this byte-closed
+archive comes ONLY from the validated realized harness / contest_auth_eval on the inflated frames
+(see tac.measurement_integrity + experiments/validate_realized_harness_vs_oracle.py). The
+lossless-parity proof below is exact; the d_seg/S it implies is feasibility-only.
+
 Authority ``[local CPU-torch advisory]`` — non-promotable. $0, no GPU, no MPS, NO /tmp.
 """
 from __future__ import annotations
