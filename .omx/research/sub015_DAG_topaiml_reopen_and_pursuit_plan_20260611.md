@@ -1239,3 +1239,21 @@ Operator "do it all be as productive as possible" -> 5 parallel CPU/build stage-
 **SISTER FIXES (R1):** (1) LIVE-weights byte-close -- trainer now saves `witness_live_mlx.npz` (best implied-S live) alongside `witness_ema_mlx.npz`; byte-close `--use-live` selects it. (2) EMA-LAG warn -- trainer emits `WARNING_ema_lag` when EMA d_seg >= 2x LIVE d_seg (arm_iso_v2 best: EMA 0.171 vs LIVE 0.0022 = 78x trap); byte-close prints `[WARN ema-lag]` from train_result. (3) AXIS-LABEL -- device-truthful `_advisory_axis_label()` (macOS -> `[macOS-CPU advisory]`, Linux x86_64 -> `[contest-CPU advisory]`) applied to the witness trainer `evidence_grade_verdict`, the byte-close authority, AND the 4 base_ch* result-authority sites in `src/tac/torch_vehicle/driver.py` (were mislabeled `[contest-CPU advisory]` on macOS-local runs).
 
 **TESTS:** 20 pass (witness trainer + byte-close); the 3 `test_verify_e2e_byte_close_eval.py` failures are PRE-EXISTING (stale 89136-vs-89073 byte assertion on the bc20 basin; that module does not import driver; fails with driver.py reverted to HEAD).
+
+---
+
+## FEED-bt (2026-06-26) WITNESS-CONFIG SAGA: 3 measured config failures + corrections + the correct convergence recipe
+
+The decisive capstone launch surfaced THREE config issues (each a MEASURED finding caught early via close-watch; none a wasted run):
+
+1. **hosc-from-scratch UNTRAINABLE.** --activation hosc (tanh(beta*sin)) from random init -> oscillatory/rugged landscape -> huge persistent grads (gnorm ~460 >> median 29.5) -> spike-guard skips most batches -> d_seg_live 0.689 (WORSE than chance). Needs SIREN-init. PARKED as the basis-change (alpha>=2.9) follow-on.
+
+2. **margin-weight-from-scratch STARVES the seg.** relu + --margin-weighted-loss(exp temp 0.1) from random init: ep1 d_seg_live = EXACTLY 0.50482 (chance, ZERO seg movement) while d_pose_live descended 154->0.267 (pose learns, seg doesn't). MECHANISM: exp-temp-0.1 weights SMALL-margin px, but from-scratch the WRONG px are CONFIDENTLY-wrong (LARGE margin) -> ~0 weight -> never corrected -> bulk (95% px) never learns the base partition. **DEEP LESSON: margin-weight allocation is a FINETUNE lever NOT from-scratch** — the BRIDGE ~20x/3.55x was re-allocating the SAME bytes on the CONVERGED base_ch20. Correct order: relu base -> convergence THEN margin-weight (curriculum uniform-first via --margin-weight-start-epoch N).
+
+3. **numpy-fp32 verdict (bbbaa2fe0) CPU-SLOW.** faithful (0px) but ep1-only-in-44min vs OLD MLX-GPU iso at ep50 -> throughput-crippling. FIX: --verdict-device {mlx-cpu (3-18px<<143px budget, fast, in-loop monitor), numpy-fp32 (0px, faithful, final byte-close)}.
+
+**CORRECTION (measurement-first):** the iso (relu isotropic NO-mw) was NEVER dead — "RSS-cap death at ep30" was a TRUNCATED-LOG artifact. It descended healthy+STABLE (n_skips 0, gnorm 20-46): d_seg_live ep20 0.013 -> ep30 0.0119 -> ep40 0.0112 -> ep50 0.0106 (slow toward base_ch20 ~0.0022) = the relu-base CONTROL (MLX-GPU-confounded verdict). It was still ALIVE when the hosc capstone launched -> 2 GPU arms briefly contended (one GPU = no gain; cleaned to ONE arm).
+
+**FIX DISPATCHED (acf4c2f2):** --verdict-device + --margin-weight-start-epoch curriculum. On landing -> RELAUNCH proper convergence run: relu + chroma + --verdict-device mlx-cpu + --margin-weight-start-epoch N + 600 pairs + render 384 + 80GB cap -> converge -> byte-close (numpy-fp32 + stored-pose sidecar) -> contest-CPU exact = pointer-mover.
+
+OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=generous caps not 2nd-arm; watchdog pid 21038). Pointer UNMOVED contest-CPU 0.19110 (no byte-closed exact row yet; all realized-through-R advisory).
