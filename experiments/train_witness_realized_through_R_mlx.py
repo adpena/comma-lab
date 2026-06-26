@@ -422,9 +422,28 @@ def _build_render_coords(h: int, w: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Realized loss (mx, through both frozen MLX scorers). The training signal.
 # ---------------------------------------------------------------------------
-def make_loss_fn(adapter, render_h: int, render_w: int):
+def make_loss_fn(adapter, render_h: int, render_w: int, score_domain: bool = True, pose_eps: float = 1e-8):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
-    w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter."""
+    w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
+
+    SCORE-DOMAIN LOSS (CLAUDE.md "HNeRV/leaderboard parity" LESSON 6 -- score-domain
+    Lagrangian, NOT weight-domain proxies). The contest score is
+    ``S = 100*d_seg + sqrt(10*d_pose) + rate``. When ``score_domain`` is True
+    (default for the witness), the loss MIRRORS S's distortion marginals:
+
+        loss = w_seg*seg_l + w_pose*sqrt(10*pose_l + pose_eps)
+
+    where ``seg_l`` is the margin-weighted CE (a smooth d_seg surrogate) and
+    ``pose_l`` is the realized d_pose (MSE). The ``sqrt`` DAMPS the pose gradient
+    while d_pose is large (early training) and only SHARPENS near the floor --
+    exactly S's nonlinear pose term -- so the d_seg term (weighted 100x in S, via
+    the score-aligned default ``w_seg=100``) drives training and no longer
+    collapses. The OLD raw form ``w_seg*seg_l + w_pose*pose_l`` is ANTI-ALIGNED:
+    the raw pose MSE (~159 at init) dominates the gradient ~50x and drives the
+    optimizer to collapse d_seg back to the baseline at n600 scale (DAG FEED-at/au,
+    measured 2026-06-26). ``score_domain=False`` restores the raw form (ablation).
+    ``pose_eps`` keeps the sqrt gradient finite at d_pose=0.
+    """
     import mlx.core as mx
 
     from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
@@ -446,16 +465,18 @@ def make_loss_fn(adapter, render_h: int, render_w: int):
         ce = logsum - tgt  # (1,H,W)
         w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))
         seg_l = mx.mean(ce * w[None])
-        # Realized pose MSE on the pair.
+        # Realized pose MSE on the pair (== realized d_pose).
         yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
         pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]
         pose_l = mx.mean(mx.square(pose[0] - pose_tgt))
-        return w_seg * seg_l + w_pose * pose_l
+        # Score-domain: sqrt(10*d_pose) mirrors S's pose term (damp-then-sharpen).
+        pose_term = mx.sqrt(10.0 * pose_l + pose_eps) if score_domain else pose_l
+        return w_seg * seg_l + w_pose * pose_term
 
     return loss_fn
 
 
-def make_loss_fn_batch(adapter, render_h: int, render_w: int):
+def make_loss_fn_batch(adapter, render_h: int, render_w: int, score_domain: bool = True, pose_eps: float = 1e-8):
     """Batched (K-pair) realized loss. SAME math as make_loss_fn per pair, but
     renders + scores K pairs in one batched scorer forward -> one mx.eval.
 
@@ -465,6 +486,10 @@ def make_loss_fn_batch(adapter, render_h: int, render_w: int):
       margin         : (K,H,W) seg margin per pair
       pose_tgt       : (K, half) GT pose per pair
     The K-axis is the scorer batch dimension (saturates unified memory).
+
+    Score-domain loss is IDENTICAL to make_loss_fn (see its docstring): when
+    ``score_domain`` is True the pose term is ``sqrt(10*pose_l + pose_eps)`` so the
+    loss mirrors S = 100*d_seg + sqrt(10*d_pose) + rate (HNeRV parity LESSON 6).
     """
     import mlx.core as mx
 
@@ -491,7 +516,9 @@ def make_loss_fn_batch(adapter, render_h: int, render_w: int):
         yuv_nhwc = mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (k, h2, w2, t * c6))  # (K,h2,w2,12)
         pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]  # (K, half)
         pose_l = mx.mean(mx.square(pose - pose_tgt))
-        return w_seg * seg_l + w_pose * pose_l
+        # Score-domain: sqrt(10*d_pose) mirrors S's pose term (damp-then-sharpen).
+        pose_term = mx.sqrt(10.0 * pose_l + pose_eps) if score_domain else pose_l
+        return w_seg * seg_l + w_pose * pose_term
 
     return loss_fn
 
@@ -570,8 +597,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             margins_mx.append(mx.array(gt.margins[pi]))  # (H,W)
             poses_mx.append(mx.array(gt.gt_poses[pi].astype(np.float32)))  # (half,)
 
-        loss_fn = make_loss_fn(adapter, render_h, render_w)
+        score_domain = bool(getattr(args, "score_domain_loss", True))
+        pose_eps = float(getattr(args, "pose_eps", 1e-8))
+        loss_fn = make_loss_fn(adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps)
         value_and_grad = nn.value_and_grad(model, loss_fn)
+        print(
+            json.dumps({
+                "stage": "loss_mode",
+                "score_domain_loss": score_domain,
+                "pose_eps": pose_eps,
+                "w_seg": float(args.w_seg),
+                "w_pose": float(args.w_pose),
+                "form": ("w_seg*seg_l + w_pose*sqrt(10*pose_l+eps)" if score_domain else "w_seg*seg_l + w_pose*pose_l"),
+            }),
+            flush=True,
+        )
 
         def eval_verdict(use_ema: bool) -> dict[str, float]:
             """FROZEN CPU-torch authority verdict on the MLX-rendered frames."""
@@ -688,6 +728,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "mod_dim": args.mod_dim, "fourier_sigma": args.fourier_sigma,
             "lr": args.lr, "weight_decay": args.weight_decay, "ema_decay": args.ema_decay,
             "w_seg": args.w_seg, "w_pose": args.w_pose, "hinge_weight": args.hinge_weight,
+            "score_domain_loss": bool(getattr(args, "score_domain_loss", True)),
+            "pose_eps": float(getattr(args, "pose_eps", 1e-8)),
             "seed": args.seed,
         },
         "throughput": {
@@ -724,8 +766,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--weight-decay", type=float, default=1e-4)
     ap.add_argument("--ema-decay", type=float, default=0.997)
     ap.add_argument("--hinge-weight", type=float, default=4.0)
-    ap.add_argument("--w-seg", type=float, default=1.0)
+    # Score-aligned defaults: the contest score weights d_seg 100x and damps d_pose
+    # via sqrt; with --score-domain-loss the loss is w_seg*seg_l + w_pose*sqrt(10*pose_l)
+    # so these defaults mirror S = 100*d_seg + sqrt(10*d_pose). The witness's sole
+    # binding controllable job is d_seg (pose rides the stored-target sidecar).
+    ap.add_argument("--w-seg", type=float, default=100.0)
     ap.add_argument("--w-pose", type=float, default=1.0)
+    ap.add_argument(
+        "--score-domain-loss",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="score-domain loss = w_seg*seg_l + w_pose*sqrt(10*pose_l + eps), mirroring S's "
+        "distortion marginals (HNeRV parity LESSON 6, CLAUDE.md). Default TRUE for the witness; "
+        "--no-score-domain-loss restores the raw (anti-aligned) w_seg*seg_l + w_pose*pose_l ablation.",
+    )
+    ap.add_argument(
+        "--pose-eps",
+        type=float,
+        default=1e-8,
+        help="sqrt-stability eps for the score-domain pose term near d_pose=0.",
+    )
     ap.add_argument("--witness-bytes", type=int, default=80000)
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
     ap.add_argument(
