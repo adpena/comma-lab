@@ -1,0 +1,17 @@
+{
+  "arm": "MLX through-R witness trainer (experiments/train_witness_realized_through_R_mlx.py)",
+  "config": "n16 (num-pairs 16), epochs 60 (stopped early ~ep8 \u2014 memory profile only), render 192x256, h128/nh4, MLX GPU, reference (accurate) backward",
+  "wrapper": "tools/safe_run.py --rss-mb 40000 --timeout 900 (per-arm RSS cap; control-plane-safe by construction)",
+  "samples": 61,
+  "duration_s": 183,
+  "peak_rss_gb": 2.078,
+  "steady_state_rss_gb_mean": 2.071,
+  "steady_state_rss_gb_min": 2.057,
+  "steady_state_rss_gb_max": 2.078,
+  "ep1_wall_s": 22.62,
+  "balloon_observed": false,
+  "verdict": "FLAT \u2014 NO balloon. Per-step mx.eval (K=1) bounds memory. The lazy-eval/mx.eval-frequency balloon hypothesis is FALSIFIED for this through-R K=1 config.",
+  "implication_oom_root_cause": "single MLX through-R arm at n16 ~2.1GB flat -> the OOM was the BLIND FLEET (reconcile found 30 concurrent recorded-running daemons), NOT a single-arm balloon.",
+  "safe_projected_gb_per_arm_n16": 4.0,
+  "note_n600": "n600 holds ~37x more GT pair data in memory (decoded frames + CPU-torch verdict over 600 pairs at eval) -> single n600 arm projected higher; measure before scaling. FEED-ao K-sweep peak was 2.3GB(K=1)..11GB(K=8) at default cap."
+}
