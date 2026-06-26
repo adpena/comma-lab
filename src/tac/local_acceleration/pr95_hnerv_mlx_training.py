@@ -103,6 +103,40 @@ def apply_eval_roundtrip_nhwc(
     return _restore_rgb_nhwc(out, original_shape, target_hw)
 
 
+def apply_contest_faithful_roundtrip_nhwc(
+    rgb_nhwc: Any,
+    *,
+    camera_hw: tuple[int, int] = CAMERA_HW,
+    output_hw: tuple[int, int] = SCORER_HW,
+    ste_round: bool = True,
+) -> Any:
+    """Contest-EXACT eval roundtrip R for ``(..., H, W, 3)`` MLX RGB.
+
+    Distinct from :func:`apply_eval_roundtrip_nhwc` (which mirrors PR95's TRAINING
+    recipe: bicubic-up -> bilinear-down -> uint8 @ SCORER res). This function matches
+    ``upstream/evaluate.py`` + ``upstream/modules.py`` EXACTLY: the reconstruction is
+    stored as a uint8 video frame at CAMERA resolution (874x1164), THEN each scorer's
+    ``preprocess_input`` bilinear-downsamples to scorer res (384x512). So the faithful
+    order is::
+
+        render (sub-camera) -> bicubic up to CAMERA -> uint8 @ CAMERA -> bilinear down to 384x512
+
+    with NO trailing uint8 at scorer res (``SegNet.preprocess_input`` /
+    ``PoseNet.preprocess_input`` produce a FLOAT 384x512 tensor — modules.py:108-113).
+    The uint8 STE is at CAMERA res (where the contest video quantizes), which is the
+    knife-edge that flips the d_seg argmax. Leading dims are preserved.
+    """
+
+    require_mlx()
+    flat, original_shape = _flatten_rgb_nhwc(rgb_nhwc)
+    out = resize_nhwc_align_corners_false(flat, size=camera_hw, mode="bicubic")
+    # uint8 quantization happens at CAMERA res (the stored video frame), NOT at scorer res.
+    out = _uint8_ste_mlx(out) if ste_round else mx.clip(out, 0.0, 255.0)  # type: ignore[union-attr]
+    # scorer.preprocess_input bilinear-downsamples camera-res frame -> 384x512 (float).
+    out = resize_nhwc_align_corners_false(out, size=output_hw, mode="bilinear")
+    return _restore_rgb_nhwc(out, original_shape, output_hw)
+
+
 def rgb_to_yuv6_mlx(rgb_nhwc: Any) -> Any:
     """NHWC MLX training-time wrapper around the canonical rgb_to_yuv6.
 
@@ -628,6 +662,7 @@ __all__ = [
     "SCORER_HW",
     "SOURCE_FAITHFUL_PREPROCESS_SCHEMA",
     "SOURCE_VIDEO_PREPROCESS_SCHEMA",
+    "apply_contest_faithful_roundtrip_nhwc",
     "apply_eval_roundtrip_nhwc",
     "bicubic_resize_to_camera_nhwc",
     "bilinear_eval_roundtrip_downsample_nhwc",

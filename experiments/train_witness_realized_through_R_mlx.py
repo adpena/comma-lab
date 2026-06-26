@@ -74,8 +74,27 @@ for _p in (REPO, REPO / "src", REPO / "upstream"):
 CAMERA_H, CAMERA_W = 874, 1164
 SEG_H, SEG_W = 384, 512
 RATE_DENOM = 37_545_489.0
-FRONTIER = 0.19110
 N_CLASSES = 5
+
+
+def _load_frontier() -> float:
+    """Read the canonical contest-CPU frontier from the pointer (NEVER a hardcoded literal,
+    per CLAUDE.md "Frontier scores are pointer-only"). Falls back to the last-known 0.19110
+    ONLY if the pointer is unreadable. The pointer's ``score`` IS the recorded exact-eval row.
+    """
+    ptr = REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
+    try:
+        d = json.loads(ptr.read_text())
+        cpu = d.get("our_local_frontier_contest_cpu") or {}
+        s = cpu.get("score")
+        if isinstance(s, (int, float)) and s > 0:
+            return float(s)
+    except Exception:
+        pass
+    return 0.19110  # last-known pointer value; fail-soft only
+
+
+FRONTIER = _load_frontier()
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 _FOURIER_SEED = 0
@@ -205,12 +224,14 @@ def build_witness_module(
 def render_through_R_mlx(witness, coord_feats, code_idx: int, render_h: int, render_w: int):
     import mlx.core as mx
 
-    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_eval_roundtrip_nhwc
+    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_contest_faithful_roundtrip_nhwc
 
     rgb_flat = witness(coord_feats, code_idx)  # (h*w, 3)
     rgb = mx.reshape(rgb_flat, (1, render_h, render_w, 3))  # NHWC
-    # R: render-grid -> camera (bicubic) -> scorer-res (bilinear) -> uint8 STE.
-    r = apply_eval_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
+    # CONTEST-EXACT R (DAG FEED-bf bug #1): render-grid -> camera (bicubic) -> uint8 @ CAMERA
+    # -> bilinear down to scorer (NO trailing uint8). Matches upstream/evaluate.py +
+    # modules.py:108-113 (recon is uint8 at 874x1164, scorer.preprocess_input bilinears to 384).
+    r = apply_contest_faithful_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
     return r  # (1, SEG_H, SEG_W, 3)
 
 
@@ -223,11 +244,12 @@ def render_batch_through_R_mlx(witness, coord_feats, code_indices, render_h: int
     """
     import mlx.core as mx
 
-    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_eval_roundtrip_nhwc
+    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_contest_faithful_roundtrip_nhwc
 
     rgb_flat = witness.call_batch(coord_feats, code_indices)  # (M, P_px, 3)
     rgb = mx.reshape(rgb_flat, (-1, render_h, render_w, 3))  # (M, h, w, 3) NHWC
-    r = apply_eval_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
+    # CONTEST-EXACT R (bug #1): uint8 @ CAMERA res, then bilinear to scorer (no trailing uint8).
+    r = apply_contest_faithful_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
     return r  # (M, SEG_H, SEG_W, 3)
 
 
@@ -399,31 +421,40 @@ class MlxEMA:
 # Implied S (advisory; identical formula to the torch trainer + evaluate.py).
 # ---------------------------------------------------------------------------
 def implied_score_from_verdict(d_seg: float, d_pose: float, witness_bytes: int) -> float:
-    seg_term = 100.0 * d_seg
-    pose_term = math.sqrt(10.0 * max(d_pose, 0.0))
-    rate_term = 25.0 * witness_bytes / RATE_DENOM
-    return seg_term + pose_term + rate_term
+    """Route through the CANONICAL contest_score (bug #7: no hand-rolled formula).
+
+    ``tac.contest_score.compute_contest_score`` is byte-identical to upstream/evaluate.py:92
+    (100*d_seg + sqrt(10*d_pose) + 25*bytes/37_545_489). ``witness_bytes`` is the MEASURED
+    quantized blob (bug #6), not a fixed phantom.
+    """
+    from tac.contest_score import compute_contest_score
+
+    return compute_contest_score(float(d_seg), float(max(d_pose, 0.0)), int(witness_bytes))
 
 
-def quantize_witness_blob(model) -> dict[str, Any]:
-    """int8 + brotli the witness params (base) and per-frame codes (mod)."""
+def _int8_symmetric(a: np.ndarray) -> tuple[np.ndarray, float]:
+    """Per-tensor symmetric int8 quant. Returns (int8 codes, scale s/127). Single source
+    of truth for BOTH the byte-close (quantize_witness_blob) and the weight-QAT verdict
+    dequant (dequantize_witness_flat) so they CANNOT drift (bug #4)."""
+    s = float(np.abs(a).max()) + 1e-8
+    q = np.clip(np.round(a / s * 127.0), -127, 127).astype(np.int8)
+    return q, (s / 127.0)
+
+
+def _quantize_blob_from_flat(items) -> dict[str, Any]:
+    """int8 + brotli a flat (name, mx_array) iterable. ``_B`` (free deterministic Fourier
+    table, rule 118) is excluded from the counted blob."""
     import brotli
-    from mlx.utils import tree_flatten
 
     base_chunks: list[bytes] = []
     code_chunk = b""
     n_params = 0
-    for name, arr in tree_flatten(model.parameters()):
+    for name, arr in items:
         a = np.asarray(arr, dtype=np.float32)
-        if a.size == 0:
-            continue
-        if name.endswith("_B"):
-            # The deterministic seeded Fourier table is FREE per rule 118 (inflate.py
-            # regenerates it from the seed); it is NOT a counted video-derived payload.
+        if a.size == 0 or name.endswith("_B"):
             continue
         n_params += a.size
-        s = float(np.abs(a).max()) + 1e-8
-        q = np.clip(np.round(a / s * 127.0), -127, 127).astype(np.int8)
+        q, _ = _int8_symmetric(a)
         if name.endswith("code"):
             code_chunk = q.tobytes()
         else:
@@ -437,6 +468,34 @@ def quantize_witness_blob(model) -> dict[str, Any]:
         "code_int8_brotli_bytes": code_brotli,
         "total_quantized_blob_bytes": base_brotli + code_brotli,
     }
+
+
+def quantize_witness_blob(model) -> dict[str, Any]:
+    """int8 + brotli the witness params (base) and per-frame codes (mod)."""
+    from mlx.utils import tree_flatten
+
+    return _quantize_blob_from_flat(tree_flatten(model.parameters()))
+
+
+def measure_witness_blob_bytes(items) -> int:
+    """Measured deploy-archive bytes of a flat (name, mx_array) iterable (bug #6)."""
+    return int(_quantize_blob_from_flat(items)["total_quantized_blob_bytes"])
+
+
+def dequantize_witness_flat(items) -> dict[str, Any]:
+    """Return params after the SAME int8 symmetric round-trip the byte-close applies, so the
+    VERDICT renders the DEPLOY weights, not fp32 EMA (bug #4 — eval_roundtrip-for-WEIGHTS).
+    ``_B`` (free deterministic table) is passed through unquantized. Returns {name: np.float32}.
+    """
+    out: dict[str, np.ndarray] = {}
+    for name, arr in items:
+        a = np.asarray(arr, dtype=np.float32)
+        if a.size == 0 or name.endswith("_B"):
+            out[name] = a
+            continue
+        q, scale = _int8_symmetric(a)
+        out[name] = (q.astype(np.float32) * scale).astype(np.float32)
+    return out
 
 
 def _build_render_coords(h: int, w: int) -> np.ndarray:
@@ -562,13 +621,35 @@ def make_loss_fn_batch(adapter, render_h: int, render_w: int, score_domain: bool
     return loss_fn
 
 
-def _render_uint8_for_verdict(model, coord_feats, code_idx: int, render_h: int, render_w: int) -> np.ndarray:
+def _render_rgb_render_res(model, coord_feats, code_idx: int, render_h: int, render_w: int) -> np.ndarray:
+    """Witness MLP forward (MLX) -> numpy float RGB at RENDER res (NO R applied).
+
+    The witness is an MLX module so its forward is necessarily MLX; the R (resize+uint8 —
+    the knife-edge that flips d_seg) is then applied in TORCH for the authority verdict
+    (bug #3), so the verdict never trusts an MLX-GPU uint8 boundary.
+    """
     import mlx.core as mx
 
-    r = render_through_R_mlx(model, coord_feats, code_idx, render_h, render_w)  # (1,H,W,3)
-    mx.eval(r)
-    arr = np.asarray(r[0], dtype=np.float32)
-    return np.clip(np.round(arr), 0, 255).astype(np.uint8)
+    rgb_flat = model(coord_feats, code_idx)  # (h*w, 3)
+    rgb = mx.reshape(rgb_flat, (render_h, render_w, 3))
+    mx.eval(rgb)
+    return np.asarray(rgb, dtype=np.float32)
+
+
+def _torch_R_to_camera_uint8(rgb_render_np: np.ndarray) -> np.ndarray:
+    """TORCH-authority R (bug #1 + #3): render-res float RGB -> bicubic up to CAMERA ->
+    uint8 @ CAMERA. Matches upstream/evaluate.py: the recon is a uint8 camera-res video
+    frame; the scorer's preprocess_input then bilinear-downsamples to 384x512. We stop at
+    the uint8 CAMERA frame and hand it to cpu_verdict_*, which calls the REAL
+    scorer.preprocess_input (the contest bilinear) — so the entire R + preprocess is torch.
+    """
+    import torch
+
+    x = torch.from_numpy(np.ascontiguousarray(rgb_render_np)).permute(2, 0, 1)[None].float()  # (1,3,h,w)
+    with torch.inference_mode():
+        up = torch.nn.functional.interpolate(x, size=(CAMERA_H, CAMERA_W), mode="bicubic", align_corners=False)
+        up = torch.clamp(torch.round(up), 0.0, 255.0)
+    return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)  # (CAMERA_H, CAMERA_W, 3)
 
 
 def run_train(args: argparse.Namespace) -> dict[str, Any]:
@@ -613,6 +694,28 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     in_feat_override = (4 * n_dir_freqs) if directional else None
     seg_loss = str(getattr(args, "seg_loss", "ce"))
     activation = str(getattr(args, "activation", "relu"))
+    # (bug #8) hosc beta-anneal endpoints: default both == --hosc-beta (no anneal). The init
+    # witness uses hosc_beta_start so early forward is non-saturated.
+    hosc_beta_const = float(getattr(args, "hosc_beta", 4.0))
+    hosc_beta_start = float(getattr(args, "hosc_beta_start", None) or hosc_beta_const)
+    hosc_beta_end = float(getattr(args, "hosc_beta_end", None) or hosc_beta_const)
+
+    # (bug #5) The DIRECTIONAL basis orients Fourier feats to the boundary tangent of the
+    # GT SegNet argmax (gt.lstars). That argmax is NOT available at decode (inflate.py has
+    # NO SegNet per the strict-scorer rule, and this RGB witness emits no class map to derive
+    # the partition from) AND storing the per-pair tangent field is image-sized (dominated on
+    # rate). So the directional lever is NOT byte-closeable for this RGB witness -> it is a
+    # research/upper-bound probe ONLY; the GATE uses isotropic. Loud, fail-closed honesty:
+    directional_byte_closeable = False
+    directional_research_only = bool(directional)
+    if directional:
+        print(json.dumps({
+            "stage": "WARNING_directional_basis_not_byte_closeable",
+            "reason": "directional basis uses GT SegNet argmax (gt.lstars) for the tangent field; "
+                      "unavailable at decode (no inflate-time SegNet; RGB witness emits no class map) "
+                      "and storing the tangent field is image-sized. RESEARCH/upper-bound ONLY.",
+            "byte_closeable": False, "research_only": True, "promotion_eligible": False,
+        }), flush=True)
 
     result_history: list[dict[str, Any]] = []
     best = {"d_seg": 1.0, "d_pose": 1e9, "implied_S": 1e9, "epoch": 0}
@@ -702,21 +805,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # holder lets eval_verdict see the CURRENT restart's model/ema by reference.
         holder: dict[str, Any] = {"model": None, "ema": None}
 
+        int8_verdict = bool(getattr(args, "int8_verdict", True))
+
         def eval_verdict(use_ema: bool) -> dict[str, float]:
-            """FROZEN CPU-torch authority verdict on the MLX-rendered frames."""
+            """FROZEN CPU-torch authority verdict on the DEPLOY weights via the TORCH R.
+
+            (bug #4) The deploy archive is int8+brotli, so when ``int8_verdict`` is True the
+            verdict renders the int8-DEQUANTIZED weights (eval_roundtrip-for-WEIGHTS) — the
+            small-margin pixels that ARE d_seg flip under int8, so an fp32-EMA verdict overstates
+            the witness. (bug #1/#3) The witness MLP forward is MLX (it must be), but the R
+            (resize+uint8) + scorer preprocess + scorer are ALL torch (authority).
+            """
             model = holder["model"]
             ema = holder["ema"]
-            saved = None
-            if use_ema:
-                saved = {k: mx.array(v) for k, v in tree_flatten(model.parameters())}
-                model.update(ema.shadow_tree())
-                mx.eval(model.parameters())
+            # Always snapshot live params (we mutate the model to load the deploy weights).
+            saved = {k: mx.array(v) for k, v in tree_flatten(model.parameters())}
+            src_items = list(ema.shadow.items()) if use_ema else list(saved.items())
+            if int8_verdict:
+                deploy = dequantize_witness_flat(src_items)  # {name: np.float32} int8 round-trip
+            else:
+                deploy = {k: np.asarray(v, dtype=np.float32) for k, v in src_items}
+            model.update(tree_unflatten([(k, mx.array(v)) for k, v in deploy.items()]))
+            mx.eval(model.parameters())
             d_segs, d_poses = [], []
             try:
                 for pi in range(P):
                     fp = feats_for_pair(pi)
-                    f0 = _render_uint8_for_verdict(model, fp, 2 * pi, render_h, render_w)
-                    f1 = _render_uint8_for_verdict(model, fp, 2 * pi + 1, render_h, render_w)
+                    f0 = _torch_R_to_camera_uint8(_render_rgb_render_res(model, fp, 2 * pi, render_h, render_w))
+                    f1 = _torch_R_to_camera_uint8(_render_rgb_render_res(model, fp, 2 * pi + 1, render_h, render_w))
                     d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
                     d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
                     # Return the per-render 874x1164 transient buffers to the OS
@@ -735,9 +851,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     mx.clear_cache()
             finally:
                 mx.clear_cache()
-                if saved is not None:
-                    model.update(tree_unflatten(list(saved.items())))
-                    mx.eval(model.parameters())
+                # Always restore the live (pre-deploy-swap) params.
+                model.update(tree_unflatten(list(saved.items())))
+                mx.eval(model.parameters())
             return {"d_seg": float(np.mean(d_segs)), "d_pose": float(np.mean(d_poses))}
 
         # --- stabilization config (DAG FEED-bd/be: clean descent -> ep30-40 spike
@@ -776,7 +892,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         m_start = float(getattr(args, "margin_target_start", 1.0))
         m_end = float(getattr(args, "margin_target_end", 0.5))
         mid_ep = max(1, args.epochs // 2)
-        recent: deque[float] = deque(maxlen=20)  # running window for the spike-guard median
+        recent_maxlen = 20  # running window for the spike-guard median
+        recent: deque[float] = deque(maxlen=recent_maxlen)
         base_verdict: dict[str, float] | None = None
         best_saved: dict[str, Any] = {"d_seg": 1e9, "params": None, "restart": -1, "epoch": -1}
         t_train = time.time()
@@ -785,6 +902,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         n_skips_total = 0
 
         for restart_i in range(n_restarts):
+            # (bug #2) RESET the spike-guard running-median window at the TOP of EACH restart.
+            # Leaving it populated from restart 0 makes restart>=1 judge its (high, early) batch
+            # losses against restart 0's converged-low median -> the 5x guard trips EVERY batch
+            # -> ZERO opt/ema updates for the entire restart (the dead-restart bug, DAG FEED-bf).
+            recent = deque(maxlen=recent_maxlen)
             seed_r = int(args.seed) + restart_i * 1000
             mx.random.seed(seed_r)
             np.random.seed(seed_r)
@@ -793,7 +915,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 num_pairs=P, n_fourier=args.n_fourier, hidden_dim=args.hidden_dim,
                 n_hidden=args.n_hidden, mod_dim=args.mod_dim, fourier_sigma=args.fourier_sigma,
                 in_feat_override=in_feat_override, activation=activation,
-                hosc_beta=float(getattr(args, "hosc_beta", 4.0)),
+                hosc_beta=hosc_beta_start,  # (bug #8) init at the low (non-saturated) beta
                 hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
             )
             mx.eval(model.parameters())
@@ -812,6 +934,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             for ep in range(1, args.epochs + 1):
                 ep_t0 = time.time()
                 ep_loss = 0.0
+                # (bug #8) hosc beta-anneal low->high: tanh(beta*sin(.)) SATURATES at high beta
+                # (zero gradient = the vanishing-grad bug). Annealing beta_start (low, non-
+                # saturating => gradients flow early) -> beta_end (high => step-native late)
+                # keeps the gradient alive while still converging to the step train. No-op when
+                # start==end (default) or activation!=hosc. Mutating the python attr is read
+                # per-call by _act so each epoch's traced graph uses the new beta.
+                if activation == "hosc" and hosc_beta_end != hosc_beta_start:
+                    frac = 0.0 if args.epochs <= 1 else (ep - 1) / (args.epochs - 1)
+                    model.hosc_beta = float(hosc_beta_start + (hosc_beta_end - hosc_beta_start) * frac)
                 # margin-hinge target anneal 1.0->0.5 (lensA: broad early when margins are
                 # wide, tight late when they collapse). Unused by the CE seg-loss branch.
                 m_t = m_start if args.epochs <= 1 else m_start + (m_end - m_start) * (ep - 1) / (args.epochs - 1)
@@ -876,10 +1007,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # (7) per-accum grad-norm logging (throttled), always on clip/skip.
                     clipped_fired = grad_clip > 0 and gnorm > grad_clip
                     if (gstep % grad_log_every == 0) or clipped_fired or skip:
+                        # (bug #8) per-layer param-grad norms surface vanishing gradients (the
+                        # hosc saturation symptom: in_proj/hidden.* grads collapse toward 0 while
+                        # the output layer still moves). A faithful, available proxy for the
+                        # per-layer activation-grad norm (value_and_grad exposes param grads).
+                        per_layer = {}
+                        for gname, gval in tree_flatten(mean_grads):
+                            ga = np.asarray(gval, dtype=np.float64)
+                            if ga.size:
+                                per_layer[gname] = round(float(np.sqrt(np.sum(ga * ga))), 6)
                         print(json.dumps({
                             "stage": "grad", "restart": restart_i, "ep": ep, "gstep": gstep,
                             "gnorm": round(gnorm, 4), "clip": grad_clip, "clipped": bool(clipped_fired),
                             "skipped": bool(skip), "lr": round(float(opt.learning_rate), 6),
+                            "hosc_beta": (round(float(model.hosc_beta), 4) if activation == "hosc" else None),
+                            "per_layer_grad_norm": per_layer,
                         }), flush=True)
                     gstep += 1
                     accum_grads = None
@@ -893,12 +1035,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if ep % args.eval_every == 0 or ep == 1 or ep == args.epochs:
                     v_live = eval_verdict(use_ema=False)
                     v = eval_verdict(use_ema=True)
-                    implied_S = implied_score_from_verdict(v["d_seg"], v["d_pose"], args.witness_bytes)
-                    implied_S_live = implied_score_from_verdict(v_live["d_seg"], v_live["d_pose"], args.witness_bytes)
+                    # (bug #6) MEASURED deploy-archive bytes of the int8+brotli EMA blob (the
+                    # actual rate term), NOT the fixed phantom args.witness_bytes (80000 ->
+                    # phantom +0.044). Both implied_S use the SAME deploy archive (int8 EMA).
+                    measured_bytes = measure_witness_blob_bytes(list(ema.shadow.items()))
+                    implied_S = implied_score_from_verdict(v["d_seg"], v["d_pose"], measured_bytes)
+                    implied_S_live = implied_score_from_verdict(v_live["d_seg"], v_live["d_pose"], measured_bytes)
                     row = {
                         "restart": restart_i, "epoch": ep, "train_loss": round(ep_loss / P, 4),
                         "d_seg": round(v["d_seg"], 6), "d_pose": round(v["d_pose"], 6),
-                        "implied_S": round(implied_S, 4),
+                        "implied_S": round(implied_S, 4), "measured_bytes": int(measured_bytes),
                         "d_seg_live": round(v_live["d_seg"], 6), "d_pose_live": round(v_live["d_pose"], 6),
                         "implied_S_live": round(implied_S_live, 4),
                         "gnorm_max": (round(max(ep_gnorms), 4) if ep_gnorms else None),
@@ -965,6 +1111,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "evidence_grade_verdict": "[contest-CPU advisory]",
         "promotion_eligible": False, "score_claim": False, "ready_for_exact_eval_dispatch": False,
         "axis": "REALIZED (post-R, post-frozen-scorer) -- the actually-scored axis",
+        "fidelity_fixes_DAG_FEED_bf": {
+            "R_contest_faithful_uint8_at_camera": True,   # bug #1
+            "spike_guard_resets_per_restart": True,       # bug #2
+            "verdict_R_in_torch_authority": True,         # bug #3
+            "verdict_on_int8_dequant_weights": bool(getattr(args, "int8_verdict", True)),  # bug #4
+            "directional_basis_byte_closeable": directional_byte_closeable,  # bug #5 (False; research-only)
+            "directional_basis_research_only": directional_research_only,
+            "rate_term_measured_blob_bytes": True,        # bug #6
+            "score_via_canonical_contest_score": True,    # bug #7
+            "frontier_from_pointer": True,                # bug #7
+            "hosc_beta_anneal": (hosc_beta_start != hosc_beta_end),  # bug #8
+        },
         "mlx_device": device,
         "config": {
             "num_pairs": P, "epochs": args.epochs, "render_h": render_h, "render_w": render_w,
@@ -986,7 +1144,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "freq_across": float(getattr(args, "freq_across", 32.0)),
             "freq_along": float(getattr(args, "freq_along", 4.0)),
             "activation": activation, "hosc_beta": float(getattr(args, "hosc_beta", 4.0)),
+            "hosc_beta_start": hosc_beta_start, "hosc_beta_end": hosc_beta_end,
             "hosc_omega": float(getattr(args, "hosc_omega", 1.0)),
+            "int8_verdict": bool(getattr(args, "int8_verdict", True)),
             "seg_loss": seg_loss,
             "margin_target_start": float(getattr(args, "margin_target_start", 1.0)),
             "margin_target_end": float(getattr(args, "margin_target_end", 0.5)),
@@ -1051,7 +1211,17 @@ def main(argv: list[str] | None = None) -> int:
         "the divergence trigger). Pose below ~1e-3 is the stored-sidecar's job, so linearizing "
         "the witness pose term there is correct (DAG FEED-bd/be).",
     )
-    ap.add_argument("--witness-bytes", type=int, default=80000)
+    ap.add_argument(
+        "--witness-bytes", type=int, default=80000,
+        help="DEPRECATED fallback only — the implied-S rate term now uses the MEASURED int8+brotli "
+        "blob bytes per eval epoch (bug #6), NOT this fixed value.",
+    )
+    ap.add_argument(
+        "--int8-verdict", action=argparse.BooleanOptionalAction, default=True,
+        help="(bug #4) compute the authority verdict on the int8-DEQUANTIZED deploy weights "
+        "(eval_roundtrip-for-WEIGHTS) — the deploy archive is int8+brotli and small-margin pixels "
+        "flip under int8. --no-int8-verdict renders the fp32 EMA weights (overstates the witness).",
+    )
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
     ap.add_argument(
         "--gt-cache",
@@ -1094,9 +1264,9 @@ def main(argv: list[str] | None = None) -> int:
     # --- CAPSTONE d_seg / R-survival levers (each opt-in; default = current behavior) ---
     ap.add_argument(
         "--basis", choices=["isotropic", "directional"], default="isotropic",
-        help="coord feature basis: isotropic Fourier (default/control) or ALL-CLASS "
-        "DIRECTIONAL (per-pair boundary-tangent oriented; -48% d_seg on the direct "
-        "generator, 0 archive byte -> compiles into inflate.py free).",
+        help="coord feature basis: isotropic Fourier (default/control/GATE) or ALL-CLASS "
+        "DIRECTIONAL (per-pair boundary-tangent oriented; -48%% d_seg on the direct generator "
+        "BUT GT-derived => NOT byte-closeable for this RGB witness, RESEARCH/upper-bound ONLY).",
     )
     ap.add_argument("--n-dir-freqs", type=int, default=6, help="directional basis: #freq octaves (in_feat=4*n).")
     ap.add_argument("--freq-across", type=float, default=32.0, help="directional basis: high freq ACROSS the edge (normal).")
@@ -1107,11 +1277,21 @@ def main(argv: list[str] | None = None) -> int:
         "STEP-NATIVE R-survival lever (no Gibbs through bicubic^->uint8->bilinear_ R).",
     )
     ap.add_argument("--hosc-beta", type=float, default=4.0, help="hosc saturation/sharpness (beta->inf => step train).")
+    ap.add_argument(
+        "--hosc-beta-start", type=float, default=None,
+        help="(bug #8) hosc beta-anneal START (low => non-saturated tanh => gradients flow early). "
+        "Default None = constant --hosc-beta (no anneal).",
+    )
+    ap.add_argument(
+        "--hosc-beta-end", type=float, default=None,
+        help="(bug #8) hosc beta-anneal END (high => step-native late). Default None = --hosc-beta. "
+        "Set start<end (e.g. 1.0 -> 6.0) to keep early gradients alive while converging to a step train.",
+    )
     ap.add_argument("--hosc-omega", type=float, default=1.0, help="hosc base frequency.")
     ap.add_argument(
         "--seg-loss", choices=["ce", "margin_hinge"], default="ce",
         help="realized seg surrogate: margin-weighted CE (control) or margin_hinge "
-        "relu(m-(z_GT-max_other)) (lensA: 16-36% lower realized d_seg; soft_cosine worst).",
+        "relu(m-(z_GT-max_other)) (lensA: 16-36%% lower realized d_seg; soft_cosine worst).",
     )
     ap.add_argument("--margin-target-start", type=float, default=1.0, help="margin_hinge target at ep1 (anneals to end).")
     ap.add_argument("--margin-target-end", type=float, default=0.5, help="margin_hinge target at final ep (lensA: 0.5 best at floor).")
