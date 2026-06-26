@@ -1271,3 +1271,23 @@ OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=gener
 **Files:** `experiments/train_witness_realized_through_R_mlx.py` -- `_witness_forward_mlx` (functional, no model mutation), `eval_verdict(device=)` branch, per-epoch `mw_active` curriculum gate threaded through `value_and_grad`, 2 new flags. 10 trainer tests pass.
 
 **RELAUNCH (coordinator):** `relu + chroma + --verdict-device mlx-cpu + --margin-weighted-loss --margin-weight-fn exp --margin-weight-temp 0.1 --margin-weight-start-epoch 80 --num-pairs 600 --render-h 384 --render-w 512` to convergence. (Note: at ~722s/verdict x2/eval, set --eval-every high enough that verdicts do not dominate wall-clock; OR subsample the in-loop verdict -- the SegNet-bound finding above.)
+
+---
+
+## FEED-bt (2026-06-26) WITNESS VERDICT WALL-CLOCK: batched SegNet (BIT-EXACT) x single-verdict x subset = ~18x (37min -> 2min)
+
+**Three exact-preserving wall-clock wins for the in-loop monitoring verdict (the throughput bottleneck). Training gradient + final byte-close UNCHANGED.** `[macOS-CPU advisory]` NON-PROMOTABLE; $0 CPU; pointer UNMOVED 0.19109982.
+
+**WIN #1 -- BATCHED SCORER (the big one, 97% of cost):** the frozen SegNet/PoseNet are `.eval()` (BN RUNNING stats, no cross-frame interaction) so stacking N frames into ONE (N,...) forward is BIT-EXACT. Added `cpu_verdict_d_seg_batch` / `cpu_verdict_d_pose_batch`; `eval_verdict` renders a chunk then batch-scores. PROVEN on 8 real frames: **d_seg batched-vs-frame-by-frame max diff = 0.000e+00 (0 px/frame, EXACT)**; d_pose = 2.5e-5 (pure fp32 batch-GEMM noise on ~150-magnitude pose, ~1e-7 rel -- negligible for the monitoring TREND; the byte-close authority is per-pair exact). Scorer speedup: frame-by-frame 834 ms/frame -> batched bs8 321 ms (2.6x) / bs16 397 ms (2.1x). `--verdict-batch` (default 16; bs8 marginally faster on this CPU).
+
+**WIN #2 -- SINGLE VERDICT (2x):** `--verdict-which {live,ema,both}` (default live). In-loop monitoring needs only LIVE d_seg; the EMA verdict runs every `--ema-verdict-every` evals (default 4) + the last epoch (for the ema-lag check + best-EMA checkpoint). Smoke confirmed: ep1/ep3 live-only, ep2 both. The FINAL byte-close uses the EMA deploy weights fully.
+
+**WIN #3 -- SUBSET (5x):** `--verdict-pairs N` (default 120) scores a FIXED evenly-spaced subset (np.linspace, same pairs every eval -> comparable TREND). Rows tagged `monitor_estimate=true` (a trend, NOT a scored row). The FINAL byte-close (`tools/witness_byte_close_and_eval.py`) ALWAYS scores ALL 600 exactly -- UNCHANGED authority.
+
+**MEASURED per-eval (render 384x512, 600 pairs):** OLD (both verdicts, 600 pairs, frame-by-frame) ~37min; NEW (live, 120 pairs, batched bs16) **~2.0min = 18.6x**. = batched(2.1x) x single(2x) x subset(5x). Target 1-3min MET.
+
+**RESUMABILITY:** the trainer now persists `witness_live_mlx.npz` + `witness_ema_mlx.npz` AT EACH EVAL (overwrite, ~0.5MB) so a crash leaves a byte-closeable witness (smoke confirmed both present mid-run).
+
+**Files:** `experiments/train_witness_realized_through_R_mlx.py` (batched verdict fns, eval_verdict render-then-batch + subset, verdict-which cadence, per-eval save, 4 new flags). 10 trainer tests pass.
+
+**RELAUNCH (coordinator):** `--num-pairs 600 --render-h 384 --render-w 512 --activation relu --chroma --mlx-device gpu --verdict-device mlx-cpu --verdict-which live --verdict-pairs 120 --verdict-batch 16 --ema-verdict-every 4 --margin-weighted-loss --margin-weight-fn exp --margin-weight-temp 0.1 --margin-weight-start-epoch 80 --eval-every 5 --gt-cache <600pair.npz>`. Final row: `tools/witness_byte_close_and_eval.py --ckpt-dir <run> --keep-packet` (full-600, numpy fp32, EMA; `--use-live` if ema-lag warns).

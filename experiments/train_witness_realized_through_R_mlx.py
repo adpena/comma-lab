@@ -409,6 +409,54 @@ def cpu_verdict_d_pose(posenet_cpu, f0_uint8: np.ndarray, f1_uint8: np.ndarray, 
 
 
 # ---------------------------------------------------------------------------
+# BATCHED CPU-torch verdict (DAG FEED-bt — wall-clock win #1, the biggest).
+#
+# The frozen SegNet/PoseNet are loaded ``.eval()`` (upstream/modules.py:174,177; the trainer
+# builds ``DistortionNet().eval()``), so BatchNorm uses RUNNING stats -> NO cross-frame batch
+# interaction -> stacking N frames into ONE (N,...) forward is BIT-EXACT (identical argmax /
+# pose) and FAR faster on CPU (one BLAS-saturating forward vs N tiny ones). Both scorers'
+# preprocess+forward are batch-aware (``batch_size, seq_len, *_ = x.shape``). These mirror the
+# per-pair cpu_verdict_* EXACTLY; PROVEN 0-px / 0-MSE vs frame-by-frame on a sample (DAG FEED-bt).
+# ---------------------------------------------------------------------------
+def cpu_verdict_d_seg_batch(segnet_cpu, frames1_uint8: list, gt_argmax_list: list) -> list:
+    """Batched SegNet argmax verdict over N frame1's -> list of d_seg (one per frame).
+
+    ``frames1_uint8``: list of (H,W,3) uint8 camera frames; ``gt_argmax_list``: matching GT
+    argmax maps. SegNet uses only the last frame (preprocess ``x[:, -1]``), so a (N,1,H,W,3)
+    stack is sufficient (half the memory of the [r,r] pair) and bit-identical."""
+    import torch
+
+    arr = np.stack([np.asarray(f)[None] for f in frames1_uint8], axis=0)  # (N,1,H,W,3)
+    xp = torch.from_numpy(arr).permute(0, 1, 4, 2, 3).contiguous().float()  # (N,1,3,H,W)
+    with torch.inference_mode():
+        seg_in = segnet_cpu.preprocess_input(xp)
+        realized = segnet_cpu(seg_in).argmax(dim=1).cpu().numpy().astype(np.int64)  # (N,h,w)
+    return [float(np.count_nonzero(realized[i] != g)) / g.size for i, g in enumerate(gt_argmax_list)]
+
+
+def cpu_verdict_d_pose_batch(posenet_cpu, f0_uint8: list, f1_uint8: list, gt_pose_list: list) -> list:
+    """Batched PoseNet MSE verdict over N pairs -> list of d_pose. Mirrors ``_cpu_pose_raw``."""
+    import einops
+    import torch
+
+    arr = np.stack([np.stack([np.asarray(a), np.asarray(b)], axis=0) for a, b in zip(f0_uint8, f1_uint8)], axis=0)
+    pair = torch.from_numpy(arr).float()  # (N,2,H,W,3)
+    x = einops.rearrange(pair, "b t h w c -> b t c h w").float()
+    with torch.inference_mode():
+        out = posenet_cpu(posenet_cpu.preprocess_input(x))
+        pose = out["pose"] if isinstance(out, dict) else out
+        half = None
+        for hh in posenet_cpu.hydra.heads:
+            if hh.name == "pose":
+                half = hh.out // 2
+                break
+        if half is None:
+            half = pose.shape[-1] // 2
+        pose_np = pose[:, :half].cpu().numpy().astype(np.float64)  # (N, half)
+    return [float(np.mean((pose_np[i] - g) ** 2)) for i, g in enumerate(gt_pose_list)]
+
+
+# ---------------------------------------------------------------------------
 # MLX EMA (decay 0.997, Quantizr). Shadow over the flattened param tree.
 # ---------------------------------------------------------------------------
 class MlxEMA:
@@ -1090,6 +1138,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "margin_weight_temp": (margin_weight_temp if margin_weighted else None),
                 "margin_weight_start_epoch": (margin_weight_start_epoch if margin_weighted else None),
                 "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
+                "verdict_which": str(getattr(args, "verdict_which", "live")),
+                "ema_verdict_every": int(getattr(args, "ema_verdict_every", 4)),
+                "verdict_batch": int(getattr(args, "verdict_batch", 16)),
+                "verdict_pairs": int(getattr(args, "verdict_pairs", 120)),
                 "form": ("w_seg*seg_l + w_pose*sqrt(10*pose_l+eps)" if score_domain else "w_seg*seg_l + w_pose*pose_l"),
             }),
             flush=True,
@@ -1100,8 +1152,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
         int8_verdict = bool(getattr(args, "int8_verdict", True))
         verdict_device = str(getattr(args, "verdict_device", "mlx-cpu"))
+        verdict_which = str(getattr(args, "verdict_which", "live"))  # live | ema | both (Win #2)
+        ema_verdict_every = max(1, int(getattr(args, "ema_verdict_every", 4)))  # EMA cadence when which=live
+        verdict_batch = max(1, int(getattr(args, "verdict_batch", 16)))
+        # Fixed, evenly-spaced monitoring subset (DAG FEED-bt win #3): the SAME pairs every
+        # eval -> the d_seg TREND is comparable across epochs. 0 -> all P pairs (authority).
+        _vp = int(getattr(args, "verdict_pairs", 120))
+        if _vp <= 0 or _vp >= P:
+            _verdict_subset = list(range(P))
+        else:
+            _verdict_subset = sorted(set(np.linspace(0, P - 1, _vp).round().astype(int).tolist()))
 
-        def eval_verdict(use_ema: bool, device: str | None = None) -> dict[str, float]:
+        def eval_verdict(use_ema: bool, device: str | None = None, pair_idx: list | None = None,
+                         batch: int | None = None) -> dict[str, float]:
             """FROZEN CPU-torch authority verdict on the DEPLOY weights + TORCH R, rendering
             the witness MLP forward on a SELECTABLE device (ISSUE 1 throughput fix).
 
@@ -1119,6 +1182,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             The FINAL byte-close (tools/witness_byte_close_and_eval.py) is numpy fp32 (0 px).
             """
             dev = device or verdict_device
+            pidx = list(range(P)) if pair_idx is None else list(pair_idx)
+            vbatch = batch or verdict_batch
             model = holder["model"]
             ema = holder["ema"]
             src_items = list(ema.shadow.items()) if use_ema else list(tree_flatten(model.parameters()))
@@ -1131,35 +1196,44 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             omega = float(model.hosc_omega)
             chroma_v = bool(model.chroma)
             nh, hd = args.n_hidden, args.hidden_dim
-            d_segs, d_poses = [], []
 
+            def _render_frame_numpy(pi: int, fk: int) -> np.ndarray:
+                fp = feats_for_pair_np(pi)
+                rgb = _witness_forward_numpy(deploy, fp, deploy["code"][2 * pi + fk], nh, hd, kind, beta, omega, chroma_v)
+                return _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
+
+            d_segs, d_poses = [], []
+            # Win #1 (batched scorer) x Win #3 (subset): render a CHUNK of vbatch pairs
+            # (device-specific MLP forward + torch R), then run ONE batched SegNet + ONE
+            # batched PoseNet over the chunk. Bit-exact (eval-mode BN running stats).
             if dev == "numpy":
-                code = deploy["code"]
-                for pi in range(P):
-                    fp = feats_for_pair_np(pi)
-                    rgb0 = _witness_forward_numpy(deploy, fp, code[2 * pi], nh, hd, kind, beta, omega, chroma_v)
-                    rgb1 = _witness_forward_numpy(deploy, fp, code[2 * pi + 1], nh, hd, kind, beta, omega, chroma_v)
-                    f0 = _torch_R_to_camera_uint8(rgb0.reshape(render_h, render_w, 3))
-                    f1 = _torch_R_to_camera_uint8(rgb1.reshape(render_h, render_w, 3))
-                    d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
-                    d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
+                for s in range(0, len(pidx), vbatch):
+                    chunk = pidx[s:s + vbatch]
+                    f0s = [_render_frame_numpy(pi, 0) for pi in chunk]
+                    f1s = [_render_frame_numpy(pi, 1) for pi in chunk]
+                    d_segs += cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in chunk])
+                    d_poses += cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in chunk])
             else:
                 mlx_dev = "cpu" if dev == "mlx-cpu" else "gpu"
                 with temporary_mlx_device(mlx_dev):
                     deploy_mx = {k: mx.array(v) for k, v in deploy.items()}
                     feats_iso_mx = None if directional else mx.array(_feats_np_iso)
                     code_mx = deploy_mx["code"]
-                    for pi in range(P):
+
+                    def _render_frame_mlx(pi: int, fk: int) -> np.ndarray:
                         fp_mx = mx.array(_dir_feats_np[pi]) if directional else feats_iso_mx
-                        rgb0_mx = _witness_forward_mlx(deploy_mx, fp_mx, code_mx[2 * pi], nh, hd, kind, beta, omega, chroma_v)
-                        rgb1_mx = _witness_forward_mlx(deploy_mx, fp_mx, code_mx[2 * pi + 1], nh, hd, kind, beta, omega, chroma_v)
-                        mx.eval(rgb0_mx, rgb1_mx)
-                        f0 = _torch_R_to_camera_uint8(np.asarray(rgb0_mx, dtype=np.float32).reshape(render_h, render_w, 3))
-                        f1 = _torch_R_to_camera_uint8(np.asarray(rgb1_mx, dtype=np.float32).reshape(render_h, render_w, 3))
-                        d_segs.append(cpu_verdict_d_seg(seg_cpu, f1, gt.lstars[pi]))
-                        d_poses.append(cpu_verdict_d_pose(posenet_cpu, f0, f1, gt.gt_poses[pi]))
-                        mx.clear_cache()  # bound the Metal render-cache (per-pair) on mlx-gpu
-            return {"d_seg": float(np.mean(d_segs)), "d_pose": float(np.mean(d_poses))}
+                        rgb_mx = _witness_forward_mlx(deploy_mx, fp_mx, code_mx[2 * pi + fk], nh, hd, kind, beta, omega, chroma_v)
+                        mx.eval(rgb_mx)
+                        return _torch_R_to_camera_uint8(np.asarray(rgb_mx, dtype=np.float32).reshape(render_h, render_w, 3))
+
+                    for s in range(0, len(pidx), vbatch):
+                        chunk = pidx[s:s + vbatch]
+                        f0s = [_render_frame_mlx(pi, 0) for pi in chunk]
+                        f1s = [_render_frame_mlx(pi, 1) for pi in chunk]
+                        mx.clear_cache()  # bound the Metal render-cache per chunk
+                        d_segs += cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in chunk])
+                        d_poses += cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in chunk])
+            return {"d_seg": float(np.mean(d_segs)), "d_pose": float(np.mean(d_poses)), "n_pairs_scored": len(pidx)}
 
         # --- stabilization config (DAG FEED-bd/be: clean descent -> ep30-40 spike
         # -> dead-saturation lock at d_seg 0.5447 was optimizer-divergence). Each item
@@ -1207,6 +1281,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # We save BOTH so the byte-close can pick the better arm (--use-live).
         best_live_saved: dict[str, Any] = {"implied_S": 1e9, "d_seg": 1e9, "params": None, "restart": -1, "epoch": -1}
         ema_lag_warn_ratio = float(getattr(args, "ema_lag_warn_ratio", 2.0))
+        n_evals_total = 0  # global eval counter (drives the EMA-verdict cadence for which=live)
         t_train = time.time()
         ep_walls: list[float] = []
         gstep = 0
@@ -1261,8 +1336,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             holder["ema"] = ema
 
             if base_verdict is None:
-                base_verdict = eval_verdict(use_ema=False)
-                print(json.dumps({"stage": "baseline_verdict", **{k: round(v, 6) for k, v in base_verdict.items()}}), flush=True)
+                base_verdict = eval_verdict(use_ema=False, pair_idx=_verdict_subset)
+                print(json.dumps({"stage": "baseline_verdict", "monitor_pairs": len(_verdict_subset),
+                                  **{k: round(v, 6) for k, v in base_verdict.items() if isinstance(v, float)}}), flush=True)
 
             diverged = False
             checked_div = False
@@ -1378,50 +1454,55 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 mx.clear_cache()
                 ep_walls.append(time.time() - ep_t0)
                 if ep % args.eval_every == 0 or ep == 1 or ep == args.epochs:
-                    v_live = eval_verdict(use_ema=False)
-                    v = eval_verdict(use_ema=True)
-                    # (bug #6) MEASURED deploy-archive bytes of the int8+brotli EMA blob (the
-                    # actual rate term), NOT the fixed phantom args.witness_bytes (80000 ->
-                    # phantom +0.044). Both implied_S use the SAME deploy archive (int8 EMA).
+                    n_evals_total += 1
+                    is_last_ep = ep == args.epochs
+                    # Win #2 (single verdict for monitoring): compute the LIVE verdict for the
+                    # descent trend; compute the EMA verdict only when needed (verdict_which
+                    # selects, OR the ema-lag cadence, OR the last epoch -> best EMA checkpoint).
+                    do_live = verdict_which in ("live", "both")
+                    do_ema = verdict_which in ("ema", "both") or (
+                        verdict_which == "live" and (n_evals_total % ema_verdict_every == 0 or is_last_ep)
+                    )
+                    v_live = eval_verdict(use_ema=False, pair_idx=_verdict_subset) if do_live else None
+                    v = eval_verdict(use_ema=True, pair_idx=_verdict_subset) if do_ema else None
+                    # (bug #6) MEASURED deploy-archive bytes of the int8+brotli EMA blob.
                     measured_bytes = measure_witness_blob_bytes(list(ema.shadow.items()))
-                    implied_S = implied_score_from_verdict(v["d_seg"], v["d_pose"], measured_bytes)
-                    implied_S_live = implied_score_from_verdict(v_live["d_seg"], v_live["d_pose"], measured_bytes)
+                    subset_mon = len(_verdict_subset) < P
                     row = {
                         "restart": restart_i, "epoch": ep, "train_loss": round(ep_loss / P, 4),
-                        "d_seg": round(v["d_seg"], 6), "d_pose": round(v["d_pose"], 6),
-                        "implied_S": round(implied_S, 4), "measured_bytes": int(measured_bytes),
-                        "d_seg_live": round(v_live["d_seg"], 6), "d_pose_live": round(v_live["d_pose"], 6),
-                        "implied_S_live": round(implied_S_live, 4),
+                        "measured_bytes": int(measured_bytes),
+                        "monitor_pairs": len(_verdict_subset),
+                        # subset rows are a TREND ESTIMATE, NOT the scored row (full-600 byte-close
+                        # is the authority). Labeled so no row is mistaken for a frontier score.
+                        "monitor_estimate": bool(subset_mon),
                         "gnorm_max": (round(max(ep_gnorms), 4) if ep_gnorms else None),
                         "gnorm_mean": (round(float(np.mean(ep_gnorms)), 4) if ep_gnorms else None),
                         "n_skips": n_skips_ep, "lr": round(float(opt.learning_rate), 6),
                         "ep_wall_s": round(ep_walls[-1], 2),
                         "wall_s": round(time.time() - t_train, 1),
                     }
-                    if implied_S < best["implied_S"]:
-                        best = {"d_seg": v["d_seg"], "d_pose": v["d_pose"], "implied_S": implied_S, "epoch": ep, "restart": restart_i}
-                    if implied_S_live < best.get("implied_S_live", 1e9):
-                        best["implied_S_live"] = implied_S_live
-                        best["d_seg_live"] = v_live["d_seg"]
-                        best["d_pose_live"] = v_live["d_pose"]
-                        best["epoch_live"] = ep
-                    # (6) keep the best EMA-d_seg checkpoint across restarts (saved witness).
-                    if v["d_seg"] < best_saved["d_seg"]:
-                        best_saved = {
-                            "d_seg": v["d_seg"], "restart": restart_i, "epoch": ep,
-                            "params": {k: np.asarray(val, dtype=np.float32) for k, val in ema.shadow.items()},
-                        }
-                    # (DAG FEED-br sister) keep the best-implied-S LIVE-weights checkpoint too.
-                    if implied_S_live < best_live_saved["implied_S"]:
-                        best_live_saved = {
-                            "implied_S": implied_S_live, "d_seg": v_live["d_seg"],
-                            "restart": restart_i, "epoch": ep,
-                            "params": {k: np.asarray(val, dtype=np.float32) for k, val in tree_flatten(model.parameters())},
-                        }
-                    # (DAG FEED-br sister) EMA-LAG warning: when the EMA d_seg trails the LIVE
-                    # d_seg by >= ema_lag_warn_ratio the EMA shadow is lagging (the 78x trap) —
-                    # byte-close the LIVE weights (--use-live) instead.
-                    if v_live["d_seg"] > 1e-9 and v["d_seg"] >= ema_lag_warn_ratio * v_live["d_seg"]:
+                    if v_live is not None:
+                        implied_S_live = implied_score_from_verdict(v_live["d_seg"], v_live["d_pose"], measured_bytes)
+                        row.update({"d_seg_live": round(v_live["d_seg"], 6), "d_pose_live": round(v_live["d_pose"], 6),
+                                    "implied_S_live": round(implied_S_live, 4)})
+                        if implied_S_live < best.get("implied_S_live", 1e9):
+                            best["implied_S_live"] = implied_S_live
+                            best["d_seg_live"] = v_live["d_seg"]; best["d_pose_live"] = v_live["d_pose"]; best["epoch_live"] = ep
+                        if implied_S_live < best_live_saved["implied_S"]:
+                            best_live_saved = {"implied_S": implied_S_live, "d_seg": v_live["d_seg"],
+                                               "restart": restart_i, "epoch": ep,
+                                               "params": {k: np.asarray(val, dtype=np.float32) for k, val in tree_flatten(model.parameters())}}
+                    if v is not None:
+                        implied_S = implied_score_from_verdict(v["d_seg"], v["d_pose"], measured_bytes)
+                        row.update({"d_seg": round(v["d_seg"], 6), "d_pose": round(v["d_pose"], 6),
+                                    "implied_S": round(implied_S, 4)})
+                        if implied_S < best["implied_S"]:
+                            best = {**best, "d_seg": v["d_seg"], "d_pose": v["d_pose"], "implied_S": implied_S, "epoch": ep, "restart": restart_i}
+                        if v["d_seg"] < best_saved["d_seg"]:
+                            best_saved = {"d_seg": v["d_seg"], "restart": restart_i, "epoch": ep,
+                                          "params": {k: np.asarray(val, dtype=np.float32) for k, val in ema.shadow.items()}}
+                    # EMA-LAG warning (only when BOTH verdicts are present this eval).
+                    if v is not None and v_live is not None and v_live["d_seg"] > 1e-9 and v["d_seg"] >= ema_lag_warn_ratio * v_live["d_seg"]:
                         print(json.dumps({
                             "stage": "WARNING_ema_lag", "restart": restart_i, "ep": ep,
                             "ema_d_seg": round(v["d_seg"], 6), "live_d_seg": round(v_live["d_seg"], 6),
@@ -1431,14 +1512,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         }), flush=True)
                     result_history.append(row)
                     print(json.dumps(row), flush=True)
-                    # restart divergence guard: at the first eval epoch past midpoint, if
-                    # the EMA d_seg has NOT dropped below div_frac*baseline the run is stuck.
-                    if n_restarts > 1 and not checked_div and ep >= mid_ep:
+                    # (resumability) persist the best-so-far checkpoints AT EACH EVAL so a crash
+                    # leaves a byte-closeable witness on disk (overwrite; cheap ~0.5 MB each).
+                    try:
+                        if best_live_saved["params"] is not None:
+                            np.savez(out_dir / "witness_live_mlx.npz", **best_live_saved["params"])
+                        if best_saved["params"] is not None:
+                            np.savez(out_dir / "witness_ema_mlx.npz", **best_saved["params"])
+                    except Exception as _e:  # never let a checkpoint write kill the run
+                        print(json.dumps({"stage": "WARNING_checkpoint_save_failed", "ep": ep, "err": str(_e)}), flush=True)
+                    # restart divergence guard: use the EMA d_seg when available this eval, else
+                    # the LIVE d_seg (monitoring trend) vs the baseline.
+                    div_metric = (v or v_live)
+                    if n_restarts > 1 and not checked_div and ep >= mid_ep and div_metric is not None:
                         checked_div = True
-                        if base_verdict is not None and v["d_seg"] >= div_frac * base_verdict["d_seg"]:
+                        if base_verdict is not None and div_metric["d_seg"] >= div_frac * base_verdict["d_seg"]:
                             print(json.dumps({
                                 "stage": "restart_divergence", "restart": restart_i, "ep": ep,
-                                "ema_d_seg": round(v["d_seg"], 6),
+                                "d_seg": round(div_metric["d_seg"], 6),
                                 "baseline_d_seg": round(base_verdict["d_seg"], 6),
                                 "action": "reseed_and_restart",
                             }), flush=True)
@@ -1548,6 +1639,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "margin_weight_temp": float(getattr(args, "margin_weight_temp", 1.0)),
             "margin_weight_start_epoch": int(getattr(args, "margin_weight_start_epoch", 80)),
             "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
+            "verdict_which": str(getattr(args, "verdict_which", "live")),
+            "ema_verdict_every": int(getattr(args, "ema_verdict_every", 4)),
+            "verdict_batch": int(getattr(args, "verdict_batch", 16)),
+            "verdict_pairs": int(getattr(args, "verdict_pairs", 120)),
             "seed": args.seed,
         },
         "throughput": {
@@ -1634,6 +1729,31 @@ def main(argv: list[str] | None = None) -> int:
         "vs the byte-close, AUTHORITATIVE but slow on 600 pairs), or mlx-gpu (fastest but "
         "reduced-precision ~495-1672 px -> coarse 0.5->0.01 descent ONLY). The FINAL byte-close "
         "row is always numpy fp32 (tools/witness_byte_close_and_eval.py).",
+    )
+    ap.add_argument(
+        "--verdict-batch", type=int, default=16,
+        help="(WALL-CLOCK win #1) batch N frames into ONE frozen-SegNet/PoseNet forward. The "
+        "scorer is eval-mode (BN running stats) so batching is BIT-EXACT vs frame-by-frame and "
+        "far faster on CPU (the SegNet forward is ~97%% of verdict cost).",
+    )
+    ap.add_argument(
+        "--verdict-which", choices=["live", "ema", "both"], default="live",
+        help="(WALL-CLOCK win #2) which weights the IN-LOOP verdict scores: live (default; "
+        "the descent trend -- 2x fewer forwards), ema, or both. With live, the EMA verdict is "
+        "still computed every --ema-verdict-every evals (+ the last epoch) for the ema-lag check "
+        "and the best-EMA checkpoint. The FINAL byte-close always uses the EMA deploy weights.",
+    )
+    ap.add_argument(
+        "--ema-verdict-every", type=int, default=4,
+        help="(WALL-CLOCK win #2) when --verdict-which live, also compute the EMA verdict every "
+        "N evals (and the last epoch) for the ema-lag warning + best-EMA selection.",
+    )
+    ap.add_argument(
+        "--verdict-pairs", type=int, default=120,
+        help="(WALL-CLOCK win #3) IN-LOOP monitoring verdict scores a FIXED evenly-spaced subset "
+        "of N pairs (same pairs every eval -> comparable d_seg TREND). 0 = all P pairs. Subset "
+        "rows are labeled monitor_estimate=true (a TREND, NOT a scored row); the FINAL byte-close "
+        "(tools/witness_byte_close_and_eval.py) ALWAYS scores ALL 600 exactly.",
     )
     # --- OPTIMIZER (default adamw = existing path UNCHANGED) ---
     ap.add_argument(
