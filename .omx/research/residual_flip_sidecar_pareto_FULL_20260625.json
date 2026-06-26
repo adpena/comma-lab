@@ -1,0 +1,332 @@
+{
+  "subagent": "build_residual_flip_sidecar_pareto_20260625",
+  "utc": "2026-06-26T00:49:52Z",
+  "evidence_grade": "[macOS-MLX research-signal] (DIRECT partition d_seg; byte-closed render->RGB->SegNet is FEED-y, SEPARATE)",
+  "promotion_eligible": false,
+  "score_claim": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_unmoved": "0.19110 (this is advisory DIRECT-partition; no byte-closed exact-eval row)",
+  "config": {
+    "num_pairs": 600,
+    "epochs": 900,
+    "hidden_dim": 128,
+    "n_hidden": 5,
+    "mod_dim": 48,
+    "kd_weight": 0.3,
+    "dilate": 1,
+    "seed": 0,
+    "long900_reference_best_d_seg": 0.002017
+  },
+  "witness_base": {
+    "final_d_seg": 0.0020173,
+    "best_d_seg": 0.0020173,
+    "witness_weight_bytes": 114197,
+    "quantized_blob": {
+      "n_params": 182021,
+      "base_int8_raw_bytes": 153221,
+      "base_int8_brotli_bytes": 90121,
+      "mod_int8_raw_bytes": 28800,
+      "mod_int8_brotli_bytes": 24076,
+      "total_quantized_blob_bytes": 114197
+    },
+    "train_wall_s": 1659.9
+  },
+  "nofake_consistency": {
+    "final_d_seg_eval": 0.0020173,
+    "d_seg_from_flip_count": 0.0020173,
+    "abs_diff": 0.0,
+    "consistent": true
+  },
+  "residual_structure_measured": {
+    "total_flips": 237969,
+    "in_own_boundary_band_frac": 0.9381,
+    "road_lane_dominant_pair_frac": 0.5892,
+    "band_size_per_pair_mean": 8340,
+    "band_size_per_pair_frac_of_grid": 0.042421
+  },
+  "waterline_bytes_per_flip": 1.2731,
+  "seg_value_per_flip": 8.477105034722222e-07,
+  "pareto": {
+    "base_d_seg_from_flips": 0.0020173,
+    "total_flips": 237969,
+    "witness_weight_bytes": 114197,
+    "witness_alone_implied_S": 0.29621,
+    "d_pose_ref": 3.4e-05,
+    "pareto": [
+      {
+        "K_flips_coded": 0,
+        "frac_flips_coded": 0.0,
+        "d_seg": 0.0020173,
+        "sidecar_bytes": 0,
+        "bytes_per_flip": 0.0,
+        "implied_S": 0.29621,
+        "pos_bytes": 0,
+        "cls_bytes": 0,
+        "cnt_bytes": 0
+      },
+      {
+        "K_flips_coded": 14873,
+        "frac_flips_coded": 0.0625,
+        "d_seg": 0.0018912,
+        "sidecar_bytes": 10406,
+        "bytes_per_flip": 0.6997,
+        "implied_S": 0.29053,
+        "pos_bytes": 9818,
+        "cls_bytes": 363,
+        "cnt_bytes": 183
+      },
+      {
+        "K_flips_coded": 29746,
+        "frac_flips_coded": 0.125,
+        "d_seg": 0.0017651,
+        "sidecar_bytes": 24171,
+        "bytes_per_flip": 0.8126,
+        "implied_S": 0.28709,
+        "pos_bytes": 22883,
+        "cls_bytes": 946,
+        "cnt_bytes": 294
+      },
+      {
+        "K_flips_coded": 44619,
+        "frac_flips_coded": 0.1875,
+        "d_seg": 0.001639,
+        "sidecar_bytes": 38960,
+        "bytes_per_flip": 0.8732,
+        "implied_S": 0.28432,
+        "pos_bytes": 36866,
+        "cls_bytes": 1606,
+        "cnt_bytes": 420
+      },
+      {
+        "K_flips_coded": 59492,
+        "frac_flips_coded": 0.25,
+        "d_seg": 0.001513,
+        "sidecar_bytes": 54148,
+        "bytes_per_flip": 0.9102,
+        "implied_S": 0.28183,
+        "pos_bytes": 51204,
+        "cls_bytes": 2299,
+        "cnt_bytes": 567
+      },
+      {
+        "K_flips_coded": 74365,
+        "frac_flips_coded": 0.3125,
+        "d_seg": 0.0013869,
+        "sidecar_bytes": 69970,
+        "bytes_per_flip": 0.9409,
+        "implied_S": 0.27976,
+        "pos_bytes": 66168,
+        "cls_bytes": 3036,
+        "cnt_bytes": 680
+      },
+      {
+        "K_flips_coded": 89238,
+        "frac_flips_coded": 0.375,
+        "d_seg": 0.0012608,
+        "sidecar_bytes": 86306,
+        "bytes_per_flip": 0.9671,
+        "implied_S": 0.27803,
+        "pos_bytes": 81630,
+        "cls_bytes": 3829,
+        "cnt_bytes": 757
+      },
+      {
+        "K_flips_coded": 104111,
+        "frac_flips_coded": 0.4375,
+        "d_seg": 0.0011347,
+        "sidecar_bytes": 103298,
+        "bytes_per_flip": 0.9922,
+        "implied_S": 0.27673,
+        "pos_bytes": 97669,
+        "cls_bytes": 4708,
+        "cnt_bytes": 840
+      },
+      {
+        "K_flips_coded": 118984,
+        "frac_flips_coded": 0.5,
+        "d_seg": 0.0010086,
+        "sidecar_bytes": 120642,
+        "bytes_per_flip": 1.0139,
+        "implied_S": 0.27567,
+        "pos_bytes": 114082,
+        "cls_bytes": 5611,
+        "cnt_bytes": 885
+      },
+      {
+        "K_flips_coded": 133857,
+        "frac_flips_coded": 0.5625,
+        "d_seg": 0.0008826,
+        "sidecar_bytes": 138517,
+        "bytes_per_flip": 1.0348,
+        "implied_S": 0.27497,
+        "pos_bytes": 130976,
+        "cls_bytes": 6630,
+        "cnt_bytes": 874
+      },
+      {
+        "K_flips_coded": 148730,
+        "frac_flips_coded": 0.625,
+        "d_seg": 0.0007565,
+        "sidecar_bytes": 148324,
+        "bytes_per_flip": 0.9973,
+        "implied_S": 0.26889,
+        "pos_bytes": 137217,
+        "cls_bytes": 10167,
+        "cnt_bytes": 903
+      },
+      {
+        "K_flips_coded": 163603,
+        "frac_flips_coded": 0.6875,
+        "d_seg": 0.0006304,
+        "sidecar_bytes": 159001,
+        "bytes_per_flip": 0.9719,
+        "implied_S": 0.26339,
+        "pos_bytes": 144329,
+        "cls_bytes": 13729,
+        "cnt_bytes": 906
+      },
+      {
+        "K_flips_coded": 178476,
+        "frac_flips_coded": 0.75,
+        "d_seg": 0.0005043,
+        "sidecar_bytes": 170736,
+        "bytes_per_flip": 0.9566,
+        "implied_S": 0.2586,
+        "pos_bytes": 151989,
+        "cls_bytes": 17814,
+        "cnt_bytes": 898
+      },
+      {
+        "K_flips_coded": 193349,
+        "frac_flips_coded": 0.8125,
+        "d_seg": 0.0003782,
+        "sidecar_bytes": 183593,
+        "bytes_per_flip": 0.9495,
+        "implied_S": 0.25455,
+        "pos_bytes": 160066,
+        "cls_bytes": 22587,
+        "cnt_bytes": 905
+      },
+      {
+        "K_flips_coded": 208222,
+        "frac_flips_coded": 0.875,
+        "d_seg": 0.0002522,
+        "sidecar_bytes": 197503,
+        "bytes_per_flip": 0.9485,
+        "implied_S": 0.2512,
+        "pos_bytes": 168767,
+        "cls_bytes": 27808,
+        "cnt_bytes": 899
+      },
+      {
+        "K_flips_coded": 223095,
+        "frac_flips_coded": 0.9375,
+        "d_seg": 0.0001261,
+        "sidecar_bytes": 213763,
+        "bytes_per_flip": 0.9582,
+        "implied_S": 0.24942,
+        "pos_bytes": 178714,
+        "cls_bytes": 34139,
+        "cnt_bytes": 885
+      },
+      {
+        "K_flips_coded": 237969,
+        "frac_flips_coded": 1.0,
+        "d_seg": 0.0,
+        "sidecar_bytes": 215464,
+        "bytes_per_flip": 0.9054,
+        "implied_S": 0.23795,
+        "pos_bytes": 179784,
+        "cls_bytes": 34764,
+        "cnt_bytes": 895
+      }
+    ]
+  },
+  "operating_points": {
+    "pointer_tie_target_d_seg": 0.0011,
+    "pointer_tie_op": {
+      "K_flips_coded": 118984,
+      "frac_flips_coded": 0.5,
+      "d_seg": 0.0010086,
+      "sidecar_bytes": 120642,
+      "bytes_per_flip": 1.0139,
+      "implied_S": 0.27567,
+      "pos_bytes": 114082,
+      "cls_bytes": 5611,
+      "cnt_bytes": 885
+    },
+    "sub015_target_d_seg": 0.0007,
+    "sub015_op": {
+      "K_flips_coded": 163603,
+      "frac_flips_coded": 0.6875,
+      "d_seg": 0.0006304,
+      "sidecar_bytes": 159001,
+      "bytes_per_flip": 0.9719,
+      "implied_S": 0.26339,
+      "pos_bytes": 144329,
+      "cls_bytes": 13729,
+      "cnt_bytes": 906
+    },
+    "full_repair_op": {
+      "K_flips_coded": 237969,
+      "frac_flips_coded": 1.0,
+      "d_seg": 0.0,
+      "sidecar_bytes": 215464,
+      "bytes_per_flip": 0.9054,
+      "implied_S": 0.23795,
+      "pos_bytes": 179784,
+      "cls_bytes": 34764,
+      "cnt_bytes": 895
+    }
+  },
+  "ablations_all_flips_coded": {
+    "ours_adaptive+tdelta+cond": {
+      "total_sidecar_bytes": 215464,
+      "pos_bytes": 179784,
+      "cls_bytes": 34764,
+      "cnt_bytes": 895,
+      "bytes_per_flip": 0.9054
+    },
+    "band_rank(ours)+tdelta+cond": {
+      "total_sidecar_bytes": 268214,
+      "pos_bytes": 232555,
+      "cls_bytes": 34764,
+      "cnt_bytes": 895,
+      "bytes_per_flip": 1.1271
+    },
+    "absolute_delta(Lever-D)+tdelta+cond": {
+      "total_sidecar_bytes": 335564,
+      "pos_bytes": 299905,
+      "cls_bytes": 34764,
+      "cnt_bytes": 895,
+      "bytes_per_flip": 1.4101
+    },
+    "bitmap+tdelta+cond": {
+      "total_sidecar_bytes": 215466,
+      "pos_bytes": 179807,
+      "cls_bytes": 34764,
+      "cnt_bytes": 895,
+      "bytes_per_flip": 0.9054
+    },
+    "adaptive+NO_tdelta+cond": {
+      "total_sidecar_bytes": 215374,
+      "pos_bytes": 179784,
+      "cls_bytes": 34764,
+      "cnt_bytes": 805,
+      "bytes_per_flip": 0.9051
+    },
+    "adaptive+tdelta+NO_cond(raw_class)": {
+      "total_sidecar_bytes": 238044,
+      "pos_bytes": 179784,
+      "cls_bytes": 57344,
+      "cnt_bytes": 895,
+      "bytes_per_flip": 1.0003
+    }
+  },
+  "borrowed_substrate_accounting": {
+    "BORROWED": "Lever-D conditional position/class coder + waterfill (tac.boundary_math #72); colex/combinatorial-rank + canonical-Huffman discipline (Wang-Rudin / PR101 L26/L31); zlib/brotli",
+    "OURS_ORIGINAL": "witness-OWN-regenerated-boundary-relative coding (band_rank against the witness's free boundary, not GT's); temporal-delta across per-pair flip sets; src-conditional road<->lane target-class code; d_seg-vs-rate Pareto/extreme-prune driver"
+  },
+  "advisory_caveat": "d_seg is the DIRECT partition (witness/sidecar argmax vs cached CPU-torch frozen GT-SegNet argmax). The byte-closed S requires render->RGB->SegNet (FEED-y) which can shift d_seg via uint8/resize/argmax round-trip; this unit does NOT claim a byte-closed score. Pointer UNMOVED.",
+  "total_wall_s": 1715.1
+}
