@@ -1576,3 +1576,13 @@ The conceptual resolution of the whole campaign. The contest scores SegNet's PAR
 When the representation MATCHES the object's intrinsic structure, every byte + every gradient lands on something the scorer measures — nothing wasted because nothing extraneous. This is the deep reason the unified witness (level-set + curvelet directional + Morse-Smale rate + pose) predicts sub-0.15.
 
 GROUNDING (NO-FAKE): the thesis is beautiful AND the pointer is UNMOVED at contest-CPU 0.19110. Beauty -> ROW only via a TRAINED witness's REALIZED d_seg (through R + SegNet, not the field-proxy) byte-closed < 0.19110. The level-set trainer $0 smoke (a8c34178) + the Morse-Smale feasibility (ada28d2d) are the measurements that convert thesis -> truth. means!=ends stands.
+
+## FEED-cj (2026-06-26): COROLLARY to the unifying thesis (operator) — a faithful representation NATURALLY MAX-EXPLOITS all structure; it SUBSUMES the bolt-on levers
+
+A sufficient statistic is minimal-and-complete by definition, so every problem characteristic becomes a FREE coordinate, not a hand-built lever:
+- STATIC seg regions = zero-velocity cells in the temporal flow -> stored once, 0 temporal bytes (the 14-byte sky/hood clamp is the representation NOTICING stillness, not a hack).
+- FRAME vs PAIR = the partition is a per-FRAME object (SDF/skeleton), ego-motion is a per-PAIR object (sidecar) -> stored separately at natural cadence, no pair-redundancy paid for a frame metric.
+- NULL space = the scorer-quotient IS "everything mod the invariant directions" (RGB-slack, argmax-polytope interior, pose-null) -> never encoded, free by construction.
+- THE ANNULUS (the most beautiful): the Morse-Smale skeleton (junctions+arcs) LIVES EXACTLY on the 2.26% boundary band holding 89% of d_seg -> capacity-routing is automatic (no off-boundary pixels to waste bytes on). The 7.2x routing lever vanishes into the representation.
+
+**THE CObufferROLLARY / FORWARD-GUIDE:** the year of bolt-on lever tasks (#139 static-clamp, #138 road-lane prior, #47 null-space compiler, #140 low-rank pose, #72 residual-flip, #148 keyframe-warp, #149 sub-pixel-placement, ...) were each separately discovering a SUB-STRUCTURE that a faithful representation gives for FREE — shadows of the same object found one at a time through the pixel fog. Model the thing itself and they collapse into one piece of geometry. GUIDE: when tempted to bolt on a lever, ask instead "what is the representation failing to be faithful to?" and fix THAT. Grounding unchanged: beauty -> ROW only via realized byte-closed contest-CPU eval; pointer UNMOVED 0.19110.
