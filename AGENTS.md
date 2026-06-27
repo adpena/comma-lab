@@ -675,6 +675,29 @@ Every scored archive must record exact archive bytes, archive SHA-256,
 component distances, sample count, recomputed score, eval command, hardware,
 manifest, provenance, and logs.
 
+## SegNet Class Index Order — MEASURED Canonical (NON-NEGOTIABLE, do NOT luma-sort)
+
+The contest SegNet (`smp.Unet('tu-efficientnet_b2', classes=5)`, last frame only,
+distortion = argmax-disagreement rate) emits its 5 argmax channels in the
+**comma10k canonical order**, VERIFIED 2026-06-27 directly from the ACTUAL cached
+argmax (`experiments/results/mlx_fleet_gt_cache/gt_n96.npz['lstars']`, per-class
+area / vertical-centroid / temporal-IoU):
+
+- `0 = Road` (22.9% area, ground / mid-lower, temporal IoU 0.955)
+- `1 = Lane markings` (0.59%, thin, IoU 0.263 — the unstable d_seg gate orbit; ~19% of flips)
+- `2 = Undrivable` incl. sky (49.3%, TOP region rows ~9–182, IoU 0.995)
+- `3 = Movable` / cars (1.56%, mid-band rows ~174–215, IoU 0.903)
+- `4 = MyCar` / ego-hood (25.6%, BOTTOM rows ~290–379, STATIC IoU 0.994)
+
+**FORBIDDEN**: re-deriving this order by luma-sorting comma10k
+`class_values=[41,76,90,124,161]` — that yields `[Road0,Lane1,MyCar2,Undriv3,Movable4]`
+which is WRONG (it bit us 3× via the Yousfi-grounding + review luma-sort passes). The
+trained net's emitted channel order ≠ the luma sort. Structured-manifold / per-class
+components MUST **self-detect** their class by spatial/static signature, never hardcode
+the index. d_seg flip mass: ~50% Road / 19% Lane / 13% Undrivable. Verifier (1-liner):
+`np.load(".../gt_n96.npz")['lstars']` → per-class area/centroid/IoU. Anchors: sub015 DAG
+FEED-dv/dw + `src/tac/boundary_math/{lane_sdf_component,hood_static_component}.py`.
+
 ## Positive And Negative Signal Discipline
 
 What works and what does not work are equally important contest assets. Exact

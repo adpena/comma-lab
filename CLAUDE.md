@@ -3605,6 +3605,13 @@ Yousfi (challenge creator) was Fridrich's PhD student at Binghamton DDE Lab. Eff
 - Output: 5-class logits, distortion = argmax disagreement rate
 - **Blind spot**: stride-2 stem loses half resolution immediately → artifacts below (256,192) invisible
 - **Key**: only argmax matters — tiny logit perturbations at class boundaries are the ENTIRE signal
+- **CLASS INDEX ORDER — MEASURED 2026-06-27 (canonical comma10k order; NON-NEGOTIABLE — do NOT re-derive by luma-sort):** verified from the ACTUAL cached SegNet argmax (`gt_n96.npz['lstars']`, n96; per-class area / vertical-centroid / temporal-IoU):
+  - `0 = Road` (22.9% area, ground/mid-lower, IoU 0.955)
+  - `1 = Lane markings` (0.59%, thin, IoU 0.263 — the unstable d_seg gate orbit; ~19% of flips)
+  - `2 = Undrivable` (incl. sky; 49.3%, TOP region rows ~9–182, IoU 0.995)
+  - `3 = Movable`/cars (1.56%, mid-band rows ~174–215, IoU 0.903)
+  - `4 = MyCar`/ego-hood (25.6%, BOTTOM rows ~290–379, STATIC IoU 0.994 — the #139 static core)
+  - **FORBIDDEN**: re-deriving the order by luma-sorting comma10k `class_values=[41,76,90,124,161]` → that gives `[Road0,Lane1,MyCar2,Undriv3,Movable4]`, which is **WRONG** and bit us 3× (Yousfi-grounding + review luma-sort). The trained net emits the comma10k **canonical** order `[Road,Lane,Undrivable,Movable,MyCar]`, NOT the luma sort. Structured-manifold components must **SELF-DETECT** their class by spatial/static signature, never hardcode the index. d_seg flip mass: ~50% Road / 19% Lane / 13% Undrivable. Verifier: `np.load("experiments/results/mlx_fleet_gt_cache/gt_n96.npz")['lstars']`. Anchors: DAG FEED-dv/dw + `src/tac/boundary_math/{lane_sdf_component,hood_static_component}.py` (self-detecting).
 
 **PoseNet**: FastViT-T12 backbone (NOT EfficientNet)
 - 12-channel input: 2 frames × YUV6 (4 luma + 2 chroma subsampled)
