@@ -1862,3 +1862,21 @@ mod-32 baseline now d_seg ~0.0027 @ep400 (slow tau descent, not hard plateau). P
 
 NO-FAKE correction to FEED-dl: I cited the review's R1 (pre-self-correction) class order [Road0,Lane1,Undrivable2,Movable3,MyCar4]. The review's FINAL R3 self-correction (853de4f7a) reverted to the CODE-GROUNDED PIL-luma sort of class_values[~41,76,90,124,161] -> [Road0, Lane1, MyCar2, Undrivable3, Movable4] — which MATCHES the Yousfi-grounding FEED-da. So: Road=0, Lane=1 CONFIRMED by all sources (the lane-edge lever uses class 1 -> ALWAYS correct, not load-bearing on the dispute); the 13% "class-2" flips = MyCar-HOOD (not Undrivable). The 2/3/4 ordering was genuinely disputed across memos; resolved via the code-grounded luma sort. Not load-bearing for any current lever (lane-edge=class1; all-class directional basis=ALL edges).
 Review otherwise fully confirms FEED-dl (independent convergence): SEALED 3-clean-pass; lane-edge@300 + spike-guard re-treat + fail-closed validate (7bb37c18a/68d71f2f8); anti-alias=--n-dir-freqs 2 (aliasing MEASURED-confirmed); R4 falsification (KILL lane-edge if TOTAL d_seg rises); ROW-BLOCKER = no level-set exact-eval path (a5021f9c building it). Pointer UNMOVED 0.19110.
+
+## FEED-do (2026-06-27): PER-LEVER OPTIMAL-FORM GENERALIZATION (operator: "other levers likely deserve and need this same attention") — the partition DECOMPOSES into structured manifolds + small learned residual
+
+The lane optimal-form treatment (precise/contained/manifold-native level-set component, a7ab8d34) is a TEMPLATE. Applying the same lens, the SegNet argmax partition DECOMPOSES:
+- class-1 LANE (19%): ground-plane polynomial -> phi_1 = SDF-to-poly (DOING, a7ab8d34).
+- class-2 MYCAR-HOOD (13%): STATIC (fixed rel. camera) -> a CONSTANT mask, ~0 bytes/frame. Most precise/contained possible. Measured as #139 but NEVER wired into the level-set. PROMOTE -> level-set static component.
+- class-0 ROAD (50%): drivable ground-plane region (bounded by lanes+horizon) -> ground-homography manifold (like the lane). The BIGGEST d_seg mass.
+- Undrivable-3 / road-sky HORIZON: near-horizontal line, 1-2 params.
+- class-4 MOVABLE (cars): the ONLY genuinely dynamic/unstructured class -> the IRREDUCIBLE learned residual (route capacity HERE).
+=> partition ~= {lane poly + hood static + road ground-region + horizon line} (cheap/precise/contained structured manifolds) + {Movable + fine residual} (the small learned part). The "81% all-class edges" is MOSTLY structured geometry we can STORE; only Movable + fine residual is truly learned. Gate decomposition COMPLETED; "thing itself" at the partition level (store structure, learn the irreducible).
+
+PER-LEVER OPTIMAL-FORM QUEUE (each gets the lane template; prioritized by d_seg mass x effort):
+1. MyCar-hood static-mask level-set component (13%, ~0 bytes) = HIGHEST EV/effort -> NEXT when a CPU slot frees (promote #139).
+2. Road + horizon ground-homography prior (50%) = biggest mass.
+3. Movable = the irreducible residual -> route capacity/learning here.
+4. Chroma boundary-routed (annulus not interior); directional basis per-class oriented + anti-aliased (n-dir-freqs 2); palette margin-optimized (max argmax-separation not just mean RGB); eikonal/length per-class weighted (tight at thin lane, loose interior). = refinements.
+
+DISCIPLINE: QUEUED not spawned (strict_free low; holding at safe limit = byte-close builder a5021f9c + manifold lane-SDF a7ab8d34 + GPU arm). Launch MyCar-hood static-prior optimal-form when a slot frees, then Road/horizon. ANTI-SIGNAL-LOSS: queued w/ gate-tags, no drop. Pointer UNMOVED 0.19110.
