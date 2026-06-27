@@ -1947,3 +1947,21 @@ INTEGRATION SEAL (the highest-risk, the one that matters most — components com
 -> 3 consecutive clean passes -> SEAL -> ONLY THEN the row run (train -> byte-close -> contest-CPU exact).
 
 CONVERGENCE PATH (binding): each component deep-math+optimize+seal as it lands -> WIRE sealed components -> ONE integrated recursive adversarial review + deep-math + optimization -> SEAL -> train -> byte-close -> exact. Row run GATED on the integrated SEAL (like Yousfi levers gated on a3a6674228). The efficient form = ONE integrated review+seal over the wired codec (more rigorous than N separate reviews; integration is where the risk lives). QUEUED (safe limit: 2 CPU + GPU); launch when components built + slot frees. MEANS->ENDS: converge to the row, but THROUGH the seal gate, not around it. Pointer UNMOVED 0.19110.
+
+## FEED-du (2026-06-27): HOOD-STATIC component MEASURED — PRECISE + structurally CONTAINED at ~0 bytes (the HOOD-STATIC lever the FEED-dt seal gate named; reuses the lane-SDF template FEED-dm/ds)
+
+NEXT per-lever optimal-form treatment (operator: "other levers need the lane treatment", FEED-do). $0 CPU, n96, frozen CPU-torch L* (lstars in gt_n96.npz, bit-exact, GPU UNTOUCHED — descent 72600/72602 + pose a1116e516f ran concurrently). Module `src/tac/boundary_math/hood_static_component.py` REUSES `lane_sdf_component` (class-agnostic lane_signed_distance / inject_lane_sdf / decompose_argmax_disagreement); 17 tests; measure `experiments/measure_hood_static_containment.py`; JSON `experiments/results/hood_static_containment_FEED-du/n96.json`; memo `hood_static_component_20260627T071150Z.md`.
+
+NO-FAKE CLASS-INDEX CORRECTION (first finding): the FEED-dn order [Road0,Lane1,MyCar2,Undrivable3,Movable4] does NOT match the cached SegNet argmax. Detected from data (identify_static_hood_class): the static ego-hood is **class 4** (static IoU 0.963, 97.5% bottom-rows, maj span [282,383] = the #139 static core), NOT class 2 (class 2 = the large static TOP sky/undrivable region, 49% frame, rows [0,218] — NOT a hood). Module never hardcodes the index.
+
+STATIC ASSUMPTION (answers the FEED-dt seal-gate HOOD-STATIC invariant "hood IoU ~0.99 across ALL 600 or drift?"): majority-mask per-frame IoU mean **0.9944**, min **0.9833** over n96 — near-static, does NOT drift over n96. CAVEAT: n96 not n600; RAV4 mostly straight (turns/bumps under-sampled) -> n600 re-measure OWED to the seal.
+
+ISOLATION TEST (lane-SDF template; inject phi_4 = SDF-to-single-static-mask, other classes ideal, recompute argmax, decompose):
+- ideal baseline: total 0 / post-R 0.000010.
+- **majority static mask (recommended): total d_seg 0.000737 / hood SHAPE FN 0.000634 (< target 0.00087) / containment leak 0.000102 / other-class d_seg EXACTLY 0 / post-R 0.000677 (sub-target).**
+- intersection mask (max-contain): leak 0 but FN explodes to 0.003294 (over-gates = the dash-gate analog; majority wins).
+=> PRECISE: YES (FN 0.000634 < target). CONTAINED: YES, CLEANER than the lane (leak 0.000102 vs lane class-0 0.000193; other-class EXACTLY 0 — hood borders only road; deep ideal road SDF dominates locally-supported phi_hood by construction). R-SURVIVES (0.000677).
+
+BYTE COST: the WHOLE static mask = **56 bytes** (per-row hood-top span -> brotli; bitmap-brotli 90 B), ONE mask over 600 frames = **0.093 B/frame** -> rate-score 0.0000373 (negligible; could be a frozen camera-mount prior = 0 video-derived). EDT rasterizer FREE inflate (rule-118).
+
+VERDICT: ADOPT as the OPTIMAL FORM of the ego-hood lever (dominates any per-frame hood: precise + contained + ~0 bytes; simpler than the lane — no per-frame fit, no FiLM, no dash). Integration: --hood-static-component --hood-static-mode {bias,replace}; bias=prior (safer, keeps eikonal-deep phi_0), replace=~0-DOF reallocation; NO FiLM (frame-invariant). Composition: lane(phi_1 ~1-2KB) + hood(phi_4 ~56B) injected into ONE argmax -> witness models only road/top(class2 = next static-mask lever, IoU 0.907)/Movable + all-class boundary annulus residual. SEAL OWES: (a) n600 static re-measure, (b) JOINT containment of the wired multi-component codec (lane vs hood vs road in one argmax — FEED-dt's highest-risk item) BEFORE the byte-closed row. Pointer UNMOVED 0.19110.
