@@ -562,6 +562,34 @@ def _softmax_temp_for_epoch(ep: int, args) -> float:
     return float(args.softmax_temp_end + 0.5 * (args.softmax_temp_start - args.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
 
 
+def _stage_rewarmup_factor(
+    ep: int, last_boundary_epoch: "int | None", rewarmup_epochs: int, floor: float, shape: str,
+) -> float:
+    """(BUILD 1 / FEED-fw) LR re-warmup multiplier in (0, 1] at 1-based epoch ``ep`` after an
+    AdamW->AdamW stage boundary. DEFAULT-OFF: ``rewarmup_epochs <= 0`` (or no boundary yet) =>
+    returns EXACTLY 1.0 => the LR schedule is BIT-IDENTICAL to the pre-FEED-fw path (x*1.0 == x for
+    finite IEEE floats). After a registered stage TRANSITION at ``last_boundary_epoch``, ramp the
+    multiplier from ``floor`` (at the boundary epoch, offset 0) back to 1.0 over ``rewarmup_epochs``
+    epochs -- linear (default) or cosine.
+
+    Rationale (operator 2026-06-26 "different stages need different treatment ... transitions must
+    re-treat"; FEED-ft#3 tau-jump root cause): a loss-landscape change at a boundary, hit with FULL
+    LR + stale AdamW momentum, is the instability. Ramping the LR back up gives the (optionally
+    reset) optimizer state time to re-warm against the NEW stage's landscape, making the transition
+    stable by construction. Pure (no model/MLX); unit-tested. Mirrors the per-epoch schedule helpers
+    above."""
+    if rewarmup_epochs <= 0 or last_boundary_epoch is None:
+        return 1.0
+    d = ep - last_boundary_epoch
+    if d < 0 or d >= rewarmup_epochs:
+        return 1.0
+    floor = float(min(max(floor, 0.0), 1.0))
+    prog = d / float(rewarmup_epochs)  # 0 at the boundary epoch -> ->1 across the window
+    if shape == "cosine":
+        return float(floor + (1.0 - floor) * 0.5 * (1.0 - np.cos(np.pi * prog)))
+    return float(floor + (1.0 - floor) * prog)
+
+
 def _rng_state_arrays(hardness_rng: "np.random.Generator | None") -> dict[str, np.ndarray]:
     """(FEED-fm FIX-1) Snapshot EVERY RNG the TRAINING LOOP advances, so a ``--resume-from`` run
     reproduces the CONTINUOUS draw sequence bit-for-bit (the deterministic-reproducibility
@@ -747,6 +775,37 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             lst_stack_si, n_classes=5, include_lane=args.structured_init_include_lane,
             static_thresh=args.structured_init_thresh,
         )
+        # BUILD 2 (FEED-fw): inject the openpilot deg-3 centerline lane SDF into the phi1 channel of
+        # the structured target BEFORE the joint pretrain absorbs it. DEFAULT-OFF (--lane-prior-phi1
+        # off) => phi_tgt_hwk is UNTOUCHED => the structured-init pretrain is BIT-IDENTICAL. Reuses
+        # the standalone-geometry helpers (numpy/scipy, $0 CPU): build_structured_lane_sdf is the
+        # ground-plane homography (K @ scorer-res {fx=910*512/1164=400.3,...}) -> deg-3 lane curve ->
+        # per-pixel signed distance (FEED-fs separatrix, residual 1.9e-5); inject_lane_sdf writes it
+        # into the K-field stack. The fit is from the cached L* (frozen CPU-torch argmax) of the
+        # chosen pair. rule-118 FREE generic structure: train-time init only, ships 0 archive bytes.
+        if getattr(args, "lane_prior_phi1", False):
+            from tac.boundary_math.lane_sdf_component import (
+                build_structured_lane_sdf,
+                inject_lane_sdf,
+            )
+            _lp_pair = int(args.lane_prior_phi1_source_pair)
+            if not (0 <= _lp_pair < P):
+                raise ValueError(
+                    f"--lane-prior-phi1-source-pair ({_lp_pair}) out of range [0,{P - 1}].")
+            _lp_lstar = np.asarray(gt.lstars[_lp_pair], np.int64)
+            phi1_lane, lp_meta = build_structured_lane_sdf(
+                _lp_lstar, lane_cls=1, dash_gate=bool(args.lane_prior_phi1_dash_gate),
+                centerline_deg=3)
+            phi_tgt_hwk = inject_lane_sdf(
+                phi_tgt_hwk, phi1_lane, lane_cls=1, mode=args.lane_prior_phi1_mode,
+                bias_scale=float(args.lane_prior_phi1_bias_scale))
+            print(json.dumps({"stage": "lane_prior_phi1", "active": True, "source_pair": _lp_pair,
+                              "mode": args.lane_prior_phi1_mode,
+                              "dash_gate": bool(args.lane_prior_phi1_dash_gate),
+                              **{f"lane_{k}": v for k, v in lp_meta.items()},
+                              "note": "openpilot deg-3 centerline SDF injected into structured-init "
+                              "phi1 target (FEED-fs Road<->Lane separatrix; train-time init, 0 "
+                              "archive bytes)"}), flush=True)
         sc_part = phi_tgt_hwk.argmax(-1).reshape(-1)
         sc_feats_np = _feats_np_for_pair(0)  # pair-0 feats (curvelet[+zeros]); all codes 0 at init -> SHARED
         sc_clip = float(args.structured_init_sdf_clip)
@@ -1314,12 +1373,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # muon_switched stays False forever => the switch block + tag suffix never fire => BIT-IDENTICAL
     # to the pre-FEED-fi AdamW-throughout path. Effective LRs default to 0.1*lr (PR95 ~0.1x finetune).
     muon_switched = False
+    # BUILD 1 (FEED-fw): stage-transition treatment tracker. None until a registered AdamW->AdamW
+    # boundary fires (curriculum seg-form change / lane-edge engage / margin-saliency engage); the LR
+    # re-warmup + (optional) AdamW moment reset key off it. DEFAULT-OFF flags
+    # (--stage-transition-rewarmup-epochs 0 + no --stage-transition-reset-moments) => this is set but
+    # never consumed => BIT-IDENTICAL. NOT persisted across resume (re-derived; None at resume start
+    # => no spurious re-warmup until a real boundary).
+    last_boundary_epoch: "int | None" = None
     muon_lr_eff = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
     muon_adamw_lr_eff = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
     muon_wd_eff = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
     with temporary_mlx_device(args.mlx_device):
         for ep in range(start_epoch, args.epochs + 1):
             seg_form = _seg_form_for_epoch(ep, args)
+            # BUILD 1 (FEED-fw): detect an AdamW->AdamW stage boundary at THIS epoch BEFORE the
+            # existing transition blocks mutate prev_seg_form / lane_gate / msal_gate. Consumed below
+            # (after the Muon block, so muon_switched is current) to register the LR re-warmup anchor
+            # + optionally reset the AdamW moments. The Muon switch is intentionally EXCLUDED (it
+            # already re-treats with a fresh optimizer per FEED-fi, and the base LR schedule is frozen
+            # during the finisher). DEFAULT-OFF flags => these booleans are computed but never
+            # consumed => BIT-IDENTICAL (pure-python reads, no MLX/model touch).
+            _bnd_curriculum = (seg_form != prev_seg_form)
+            _bnd_lane = (lane_w > 0.0 and (ep >= lane_start) and not lane_gate["on"])
+            _bnd_msal = (msal_w > 0.0 and (ep >= msal_start) and not msal_gate["on"])
+            _stage_boundary_now = _bnd_curriculum or _bnd_lane or _bnd_msal
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -1383,6 +1460,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "margin_saliency_engage", "epoch": ep, "start": msal_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # BUILD 1 (FEED-fw): apply stage-transition TREATMENT for an AdamW->AdamW boundary
+            # detected above. Skipped during the Muon finisher (muon_switched True; it re-treats
+            # itself + freezes the base LR schedule). The spike-guard re-treat already happened in the
+            # blocks above (recent_losses cleared); this adds (1) the LR re-warmup anchor and (2) an
+            # OPTIONAL fresh-AdamW moment reset. DEFAULT-OFF: --stage-transition-reset-moments False
+            # AND --stage-transition-rewarmup-epochs 0 => only sets last_boundary_epoch (then unused
+            # by the gated factor) => BIT-IDENTICAL. The fresh AdamW preserves the current
+            # learning_rate; the LR-schedule block below resets it for the epoch anyway. (MLX
+            # Optimizer.init only fills MISSING state, so a TRUE moment reset requires a fresh
+            # optimizer object -- exactly how the Muon switch resets, FEED-fi.)
+            if _stage_boundary_now and not muon_switched:
+                last_boundary_epoch = ep
+                if args.stage_transition_reset_moments:
+                    opt = optim.AdamW(learning_rate=float(opt.learning_rate),
+                                      weight_decay=args.weight_decay)
+                    opt.init(model.trainable_parameters())
+                    mx.eval(opt.state)
+                    print(json.dumps({"stage": "stage_transition_reset_moments", "epoch": ep,
+                                      "from_curriculum": bool(_bnd_curriculum),
+                                      "from_lane_engage": bool(_bnd_lane),
+                                      "from_margin_saliency_engage": bool(_bnd_msal),
+                                      "note": "AdamW m/v zeroed (fresh optimizer); spike-guard already "
+                                      "re-treated; stale-momentum-through-landscape-change avoided"}),
+                          flush=True)
             # SELF-ORIENT reorient cadence (fixed-point): recompute per-pair directional feats from
             # the EMA deploy argmax every --reorient-every epochs (skip ep1: argmax is random).
             if use_self_orient and ep > 1 and (ep - 1) % max(args.reorient_every, 1) == 0:
@@ -1427,6 +1528,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 else:
                     prog = (ep - args.warmup_epochs) / max(args.epochs - args.warmup_epochs, 1)
                     lr = args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
+                # BUILD 1 (FEED-fw): stage-transition LR re-warmup. DEFAULT-OFF
+                # (--stage-transition-rewarmup-epochs 0) => _rw is EXACTLY 1.0 => lr*1.0 == lr =>
+                # BIT-IDENTICAL. After a registered AdamW->AdamW boundary, ramp the scheduled LR up
+                # from the floor over N epochs so the post-boundary landscape change is not hit at
+                # full LR with (possibly reset) momentum (the FEED-ft#3 tau-jump root cause).
+                _rw = _stage_rewarmup_factor(
+                    ep, last_boundary_epoch, args.stage_transition_rewarmup_epochs,
+                    args.stage_transition_rewarmup_floor, args.stage_transition_rewarmup_shape)
+                lr = lr * _rw
                 opt.learning_rate = float(lr)
             # LEVER-5: base permutation (every pair >=1 step, never starved) + hardness-allocated
             # extras. n_extra=0 (default) => order == permutation(P) => byte-identical to before.
@@ -1537,6 +1647,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "activation": args.activation, "in_feat": int(in_feat),
         "history": history, "checkpoint": str(ck), "stage_checkpoints": stage_ckpts,
         "resumable": True, "ckpt_every": int(args.ckpt_every),
+        # BUILD 1/2 (FEED-fw) provenance (deterministic-reproducibility: record config with the
+        # result). All default-OFF => these reflect the bit-identical path.
+        "stage_transition_rewarmup_epochs": int(getattr(args, "stage_transition_rewarmup_epochs", 0)),
+        "stage_transition_rewarmup_floor": float(getattr(args, "stage_transition_rewarmup_floor", 0.1)),
+        "stage_transition_rewarmup_shape": str(getattr(args, "stage_transition_rewarmup_shape", "linear")),
+        "stage_transition_reset_moments": bool(getattr(args, "stage_transition_reset_moments", False)),
+        "lane_prior_phi1": bool(getattr(args, "lane_prior_phi1", False)),
+        "lane_prior_phi1_mode": str(getattr(args, "lane_prior_phi1_mode", "replace")),
         "axis": "[macOS-MLX training-gradient]/[macOS-CPU advisory] verdict; promotion_eligible=false; pointer UNMOVED",
     }
     (out_dir / "levelset_train_result.json").write_text(json.dumps(result, indent=2))
@@ -1806,6 +1924,49 @@ def main(argv: list[str] | None = None) -> int:
                     help="MUON FINISHER: Muon-group decoupled weight decay (default None => --weight-decay).")
     ap.add_argument("--muon-ns-steps", type=int, default=5,
                     help="MUON FINISHER: Newton-Schulz iteration count (Keller Jordan default 5).")
+    # ---- BUILD 1 (FEED-fw): STAGE-TRANSITION TREATMENT (ADDITIVE, all default-OFF => BIT-IDENTICAL).
+    # "different stages need different treatment" applied to the TRANSITIONS so the AdamW->AdamW stage
+    # boundaries (ce->tau, tau->l7) + the lane-edge / margin-saliency re-engage epochs are stable by
+    # construction (the l7->Muon switch already re-treats via a fresh optimizer, FEED-fi). The
+    # spike-guard re-treat already exists at every boundary; these add (1) LR re-warmup + (2) optional
+    # AdamW moment reset. theta*-prereq; NOT a score row.
+    ap.add_argument("--stage-transition-rewarmup-epochs", type=int, default=0,
+                    help="BUILD 1: N>0 ramps LR from --stage-transition-rewarmup-floor back to the "
+                    "scheduled LR over N epochs after each AdamW->AdamW stage boundary (default 0=OFF "
+                    "=> bit-identical). Requires --lr-schedule; no effect during the Muon finisher.")
+    ap.add_argument("--stage-transition-rewarmup-floor", type=float, default=0.1,
+                    help="BUILD 1: LR fraction at the boundary epoch for re-warmup (used only when "
+                    "--stage-transition-rewarmup-epochs > 0; must be in [0,1]).")
+    ap.add_argument("--stage-transition-rewarmup-shape", choices=["linear", "cosine"], default="linear",
+                    help="BUILD 1: re-warmup ramp shape (used only when rewarmup-epochs > 0).")
+    ap.add_argument("--stage-transition-reset-moments", action="store_true",
+                    help="BUILD 1: at each AdamW->AdamW stage boundary, rebuild the AdamW optimizer so "
+                    "the m/v moments are zeroed (stale momentum through a loss-landscape change is the "
+                    "FEED-ft#3 tau-jump root cause). Default OFF => bit-identical. No-op during the "
+                    "Muon finisher (it already re-inits a fresh optimizer).")
+    # ---- BUILD 2 (FEED-fw): LANE-PRIOR phi1 (ADDITIVE, default-OFF => structured-init BIT-IDENTICAL).
+    # Initialize the structured-init target's phi1 (lane-class SDF) channel to the signed distance of
+    # the openpilot deg-3 centerline curve (FEED-fs: that centerline IS the Road<->Lane separatrix,
+    # residual 1.9e-5). REUSES tac.boundary_math.lane_sdf_component (build_structured_lane_sdf: the
+    # ground-plane homography K @ scorer-res {fx=910*512/1164=400.3, ...} -> image-space deg-3 lane
+    # curve -> per-pixel signed distance; + inject_lane_sdf). rule-118 FREE generic structure: a
+    # better TRAINING-TIME starting point that ships 0 archive bytes (only if the centerline coords
+    # were SHIPPED would they be COUNTED, ~8 floats/frame -- a SEPARATE archive-side option, NOT this
+    # build). Requires --structured-init (the pretrain mechanism that absorbs the target).
+    ap.add_argument("--lane-prior-phi1", action=argparse.BooleanOptionalAction, default=False,
+                    help="BUILD 2: init the structured-init target's lane (phi1) channel to the "
+                    "openpilot deg-3 centerline signed distance (default OFF => bit-identical). "
+                    "Requires --structured-init.")
+    ap.add_argument("--lane-prior-phi1-mode", choices=["replace", "bias"], default="replace",
+                    help="BUILD 2: inject the centerline SDF by REPLACE (lane channel becomes the "
+                    "openpilot fit) or BIAS (add to the static-core lane channel). Default replace.")
+    ap.add_argument("--lane-prior-phi1-bias-scale", type=float, default=1.0,
+                    help="BUILD 2: scale for --lane-prior-phi1-mode bias (unused for replace).")
+    ap.add_argument("--lane-prior-phi1-source-pair", type=int, default=0,
+                    help="BUILD 2: which cached pair's L* argmax the centerline is fit from (default "
+                    "0, matching the structured-init pretrain's pair-0 feats convention).")
+    ap.add_argument("--lane-prior-phi1-dash-gate", action=argparse.BooleanOptionalAction, default=True,
+                    help="BUILD 2: model the lane dash period (deg-3 centerline + dash). Default on.")
     args = ap.parse_args(argv)
 
     # (fix d) curriculum boundaries must be strictly ordered and fit inside the budget, else the
@@ -1874,6 +2035,31 @@ def main(argv: list[str] | None = None) -> int:
                               "FINAL stage; an orthogonalized finisher on a not-yet-formed partition is "
                               "likely weaker d_seg. ALLOWED (operator freedom); set >= --l7-start-epoch "
                               "for the PR95 placement."}), flush=True)
+
+    # BUILD 1 (FEED-fw) fail-closed config guards (same NO-FAKE silent-no-op class as the lane/muon
+    # validators). DEFAULT-OFF (rewarmup-epochs 0, lane-prior off) => none of these fire => unchanged.
+    if args.stage_transition_rewarmup_epochs < 0:
+        raise ValueError(
+            f"--stage-transition-rewarmup-epochs ({args.stage_transition_rewarmup_epochs}) must be "
+            ">= 0 (0 = OFF).")
+    if args.stage_transition_rewarmup_epochs > 0:
+        if not args.lr_schedule:
+            raise ValueError(
+                "--stage-transition-rewarmup-epochs > 0 requires --lr-schedule: the re-warmup "
+                "multiplies the SCHEDULED LR, so with --no-lr-schedule it would be a silent no-op = "
+                "a FALSE 're-warmup does nothing' verdict.")
+        if not (0.0 <= args.stage_transition_rewarmup_floor <= 1.0):
+            raise ValueError(
+                f"--stage-transition-rewarmup-floor ({args.stage_transition_rewarmup_floor}) must be "
+                "in [0, 1] (the LR fraction at the boundary epoch).")
+    # BUILD 2 (FEED-fw) fail-closed guard: the lane prior is injected into the structured-init
+    # pretrain target, so without --structured-init it would NEVER be applied = a silent no-op = a
+    # FALSE 'lane prior does nothing' verdict.
+    if getattr(args, "lane_prior_phi1", False) and not args.structured_init:
+        raise ValueError(
+            "--lane-prior-phi1 requires --structured-init: the openpilot centerline SDF is injected "
+            "into the structured-init pretrain target; without --structured-init the prior would "
+            "never be applied = a silent no-op = a FALSE 'lane prior does nothing' verdict.")
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")
