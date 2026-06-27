@@ -3577,3 +3577,20 @@ Repro: `.venv/bin/python tools/build_witness_showcase.py --frames 24 --out-dir e
 **⚠️ ONE CAVEAT — M1 has 8GB RAM.** `load_gt_from_cache` materializes the whole ~3.2GB cache regardless of `--num-pairs`, + scorers + MLX → the M1 swapped to **~9.4GB** during the smoke (no OOM; macOS grew swap on 31GB-free disk; the cache load dominated the 369s). ⇒ the gate's `--launch` (projected-gb 15) mem-preflight REFUSES on 8GB → fire via `--dry-run`→`spawn_durable_daemon --skip-mem-preflight --rss-cap-mb 7000`. The n400 fire IS feasible on the M1 but SLOWER than the M5; **recommended host for the full n400 fire = the M5 post-amort (128GB, no swap)**; M1 = viable PARALLEL/BACKUP arm.
 
 **FIRE = runbook `.omx/research/m1_gengap_fire_runbook_20260627T221344Z.md`** (exact rsync-l7-ckpt → `--dry-run` → daemon → harvest sequence; PASS if held-out d_seg ≤ 0.00186 = 0.00124×1.5). **NOT FIRED** (gated on the amort reaching l7 = `l7_start_epoch=900`). Provisioning gotchas banked: macOS has no `setsid` (use spawn_durable_daemon); M5 ships openrsync 2.6.9 (no `--info=progress2`/`--inplace`; use `-aP`); rss-cap is RESIDENT-RSS (set above working set or it OOM-kills — a 2000MB cap killed the 3.2GB transfer; 8000 worked, peak 3328MiB). Cross-refs: FEED-ep/eq (the gate), FEED-fz (the θ\* levers the l7 decoder will carry), `tools/spawn_durable_daemon.py` (durable detach), CLAUDE.md "Remote code parity" + "Tailscale fleet" + "MPS never a score authority" + RULE-6 (means≠ends).
+
+## FEED-gb (2026-06-27 ~17:26 CDT) — pact↔molt CROSS-PROJECT COLLAB CHANNEL LIVE (operator-directed; molt team now working it)
+
+Operator 2026-06-27: *"the team is working on it now ... come back in a couple hours and let's check."* The pact↔molt dogfooding channel is LIVE + pushed.
+
+**WHERE:** repo `github.com/adpena/molt`, branch **`pact-collab`** (commit `d3e6b62`, pushed to origin), dir `collab/pact/`. URL: https://github.com/adpena/molt/tree/pact-collab/collab/pact . The molt team runs on **bat00 (Windows)**; they `git fetch origin pact-collab && git checkout pact-collab` (or view on GitHub).
+
+**5 files:** `README.md` (channel), `STATUS.md` (positive-first dogfooding summary), `001_witness_forward_to_wasm_use_case.md`, `002_numpy_scipy_wasm_coverage.md`, `003_browser_single_function_embed_api.md`.
+
+**The 3 prioritized asks for the molt team:**
+1. **PREBUILT DIST (the #1 unblocker):** prebuilt `molt` wheel + prebuilt `molt_runtime.wasm` + a ~10-line "call one compiled fn from JS" sample. (From-source Rust/wasm-tools build was too heavy to run on the shared GPU-score machine; also the `.wasm` blobs weren't in the clone, only the `.wasm.sha256`.)
+2. **numpy/scipy WASM coverage (the gating compat):** `scipy.ndimage.distance_transform_edt` (the SDF core — load-bearing for level-set / Morse-Smale / foveation; almost certainly unsupported) + numpy `argmax` (likely partial) + matmul/sin/cos/reductions; extend the `compat_gap` audit.
+3. **Minimal single-function browser-embed API:** `load module → forward(Float32Array)→Float32Array`, WebGPU-worker-dispatched (`browser_host.js` is a full WASI host — too heavy for a viz embed).
+
+**Mutual elevation:** pact offers the **witness forward** (`lever_b_levelset_generator` numpy core + the SDF/EDT builder) as molt's integration-test kernel. Strategic prize beyond the viz: **molt as a DETERMINISTIC NATIVE contest-decode runtime** (rule-118 generic-algorithm-FREE; needs bit-identical cross-host determinism on the native target).
+
+**CHECK-BACK ~19:26 CDT (~2h):** fetch `pact-collab`, review molt-team progress on the 3 asks, respond/iterate in the channel. means≠ends — tooling collaboration; pointer UNMOVED 0.19110.
