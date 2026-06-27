@@ -256,7 +256,7 @@ def validate_lane_edge_config(
     if not (0 <= lane_edge_class <= n_classes - 1):
         raise ValueError(
             f"--lane-edge-class ({lane_edge_class}) out of range [0,{n_classes - 1}] for the "
-            f"{n_classes}-class comma10k partition [Road0,Lane1,Undrivable2,Movable3,MyCar4]; would "
+            f"{n_classes}-class comma10k partition [Road0,Lane1,MyCar2,Undrivable3,Movable4]; would "
             "IndexError mid-training. Use 1 for the lane orbit (the d_seg gate)."
         )
 
@@ -414,8 +414,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w)
         L = L + eik_w * eik + len_w * length
         # LEVER-3 (lane-edge fragility weighting, operator 2026-06-27 Yousfi-grounding): contest
-        # SegNet argmax order [Road0, Lane1, Undrivable2, Movable3, MyCar4] (canonical comma10k;
-        # VERIFIED frozen_source_0byte_dseg_priors_design_20260626 measured class mix); Lane==1 thin
+        # SegNet argmax order (PIL-luma sort of class_values [42,76,90,124,161]; FEED-da):
+        # [Road0, Lane1, MyCar2, Undrivable3, Movable4]. Class0=Road & Class1=Lane are CONFIRMED
+        # (all memos agree; this lever uses ONLY class 1; 2/3/4 labels disputed vs frozen_source but
+        # not load-bearing here). Lane (class 1) is thin
         # all-boundary double-edges (19% of d_seg flips) and UNDER-FIT because the CE baseline has NO
         # class weighting. This ADDITIVE term up-weights the REALIZED (through-R SegNet) margin hinge
         # at GT-lane pixels: it renders f1 -> R -> frozen SegNet logits, takes the live decision
@@ -739,13 +741,14 @@ def main(argv: list[str] | None = None) -> int:
     # LEVER-3 (lane-edge fragility weighting): up-weight class-1 (Lane) flips in the REALIZED margin
     # hinge. Lane is thin all-boundary double-edges (19% of d_seg flips) under-fit by the unweighted
     # CE baseline. Default 0.0 = OFF = current behavior (fully additive). When >0, costs a 2nd
-    # realized seg forward (acceptable per operator "score > training time"). Canonical comma10k
-    # class order (VERIFIED measured): [Road0, Lane1, Undrivable2, Movable3, MyCar4].
+    # realized seg forward (acceptable per operator "score > training time"). SegNet class order
+    # (PIL-luma sort, class_values [42,76,90,124,161]): [Road0, Lane1, MyCar2, Undrivable3, Movable4];
+    # class 0=Road & 1=Lane CONFIRMED (the lever uses only class 1; 2/3/4 disputed vs frozen_source).
     ap.add_argument("--lane-edge-weight", type=float, default=0.0,
                     help="LEVER-3: weight on the additive realized lane-class margin hinge (0=off).")
     ap.add_argument("--lane-edge-class", type=int, default=1,
-                    help="LEVER-3: GT class index to up-weight (1=Lane; canonical comma10k order "
-                    "[Road0,Lane1,Undrivable2,Movable3,MyCar4]).")
+                    help="LEVER-3: GT class index to up-weight (1=Lane, CONFIRMED; luma-sort order "
+                    "[Road0,Lane1,MyCar2,Undrivable3,Movable4] for 2/3/4).")
     ap.add_argument("--lane-margin-target", type=float, default=0.5,
                     help="LEVER-3: target decision margin for the lane hinge relu(target - margin).")
     ap.add_argument("--lane-edge-start-epoch", type=int, default=0,
