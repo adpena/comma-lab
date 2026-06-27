@@ -1,0 +1,80 @@
+{
+  "tool": "levelset_byte_close_and_eval",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "promotion_claim": false,
+  "utc": "2026-06-27T06:52:25Z",
+  "ckpt_dir": "experiments/results/levelset_gpu_smoke",
+  "npz_name": "levelset_witness_ema_mlx.npz",
+  "n_pairs_total": 6,
+  "self_orient": {
+    "self_orient": true,
+    "curvelet_feat_width": 80,
+    "dir_w": 24,
+    "n_dir_freqs": 6,
+    "freq_across": 32.0,
+    "freq_along": 4.0,
+    "tau": 4.0,
+    "iters": 4
+  },
+  "config": {
+    "n_classes": 5,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 32,
+    "activation": "hosc",
+    "softmax_temp": 0.05,
+    "chroma": true,
+    "render_h": 96,
+    "render_w": 128,
+    "in_feat": 104,
+    "max_bank_freq": null,
+    "lane_edge_weight": 0.0
+  },
+  "byte_close": {
+    "n_params": 73847,
+    "manifest_bytes": 1891,
+    "base_int8_brotli_bytes": 73468,
+    "code_int8_brotli_bytes": 203,
+    "pose_sidecar_bytes": 0,
+    "magic_and_prefixes_bytes": 22,
+    "total_0bin_bytes": 75584,
+    "canonical_quantize_blob_bytes": 73671,
+    "accounting_matches_canonical": true,
+    "archive_zip_bytes": 74839,
+    "zip_container_overhead_bytes": -745,
+    "rate": 0.001993288727708407,
+    "rate_term": 0.04983221819271018,
+    "rate_denom_bytes": 37545489,
+    "archive_zip_sha256": "5fbaea3b746e866c5b19481edc4407bb4395eb7d2c35a08767787b9176590cda",
+    "free_vs_counted": {
+      "FREE_rule118": "curvelet bank (5 scalars) + self-orient directional feats (decoder-own-argmax fixed point) -- generic algorithm, 0 bytes",
+      "COUNTED": "in_proj/film/hidden.*/out_sdf/out_tex/palette weights + per-frame code (int8+brotli, the learned video-derived payload)"
+    },
+    "pose_sidecar": "off (level-set witness carries pose in per-(pair,frame) codes/texture; train --w-pose>0. A stored sidecar adds COUNTED bytes the scorer never reads -> does NOT lower realized d_pose)."
+  },
+  "inflate": {
+    "inflate_stdout": "inflated 12 frames (6 pairs) -> /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260627T065217Z/inflated/0.raw [12x874x1164x3 uint8]",
+    "eval_pairs": 6,
+    "n_frames_emitted": 12,
+    "raw_path": "/Users/adpena/Projects/pact/experiments/results/levelset_packet_20260627T065217Z/inflated/0.raw",
+    "raw_bytes": 36624096,
+    "expected_bytes": 36624096,
+    "full_output_shape_ok": true,
+    "frame_layout": "(12, 874, 1164, 3) uint8 [f0,f1 per pair]"
+  },
+  "parity_on_inflated_frames": {
+    "pairs_scored": 6,
+    "d_seg_realized_on_inflated": 0.6048405965169271,
+    "d_pose_realized_on_inflated": 189.59420061004747,
+    "seg_term": 60.48405965169271,
+    "pose_term": 43.54241617205545,
+    "rate_term": 0.04983221819271018,
+    "implied_S_advisory": 104.07630804194086,
+    "pose_blind": true
+  },
+  "contest_cpu_eval_cmd": ".venv/bin/python experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260627T065217Z/archive.zip --inflate-sh /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260627T065217Z/inflate.sh --device cpu  # [contest-CPU] authoritative ONLY on Linux x86_64 (Modal CPU); macOS-local = advisory",
+  "packet_dir": "(deleted; pass --keep-packet to retain archive+inflate for the exact-eval row)",
+  "self_orient_parity_caveat": "self-orient deploy dir feats are a FIXED-POINT on the FINAL weights; the trainer's implied_S used dir feats accumulated along the training trajectory -> close but not bit-identical; realized d_seg on the inflated frames is the TRUTH.",
+  "contest_ready_full_600": false,
+  "contest_ready_note": "n_pairs=6 != 600 -> inflate emits 12 frames; a 600-pair witness is required for the 1200-frame contest .raw (this checkpoint is test-only)"
+}
