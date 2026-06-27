@@ -252,6 +252,12 @@ def main(argv: list[str] | None = None) -> int:
     Pm = gt_poses_all - gt_poses_all.mean(0, keepdims=True)
     psv = np.asarray(np.linalg.svd(Pm, compute_uv=False), np.float64)
     pp = (psv ** 2) / max((psv ** 2).sum(), 1e-12)
+    # NOTE (cross-tool consistency): this is the SINGULAR-VALUE participation ratio
+    # (Σσ)²/Σσ², an effective-rank measure. It is NOT the eigenvalue/variance PR
+    # (Σσ²)²/Σσ⁴ that render_pose_dimension_viz._svd_spectrum reports under the same
+    # word "participation"; the two are different (valid) effective-rank definitions, so
+    # do not numerically compare this field across the two tools. entropy_rank below IS
+    # eigenvalue-based (exp of the σ²-spectral entropy).
     pose_eff_rank = float((psv.sum() ** 2) / max((psv ** 2).sum(), 1e-12))
 
     # --- dimensionality: SVD of the per-pair code manifold (the COMPRESSION story) ---
@@ -259,8 +265,8 @@ def main(argv: list[str] | None = None) -> int:
     sv = np.linalg.svd(C, compute_uv=False)
     sv = np.asarray(sv, np.float64)
     p = (sv ** 2) / max((sv ** 2).sum(), 1e-12)
-    eff_rank = float((sv.sum() ** 2) / max((sv ** 2).sum(), 1e-12))   # participation ratio
-    entropy_rank = float(np.exp(-(p * np.log(p + 1e-12)).sum()))      # exp(spectral entropy)
+    eff_rank = float((sv.sum() ** 2) / max((sv ** 2).sum(), 1e-12))   # singular-value participation ratio (Σσ)²/Σσ² (see NOTE above; not the eigenvalue PR)
+    entropy_rank = float(np.exp(-(p * np.log(p + 1e-12)).sum()))      # exp(σ²-spectral entropy)
 
     # --- bytes / compression story (full-RGB dim vs code dim vs witness bytes) ---
     n_params = int(sum(int(np.prod(v.shape)) for v in params.values())) + int(np.prod(code.shape))
