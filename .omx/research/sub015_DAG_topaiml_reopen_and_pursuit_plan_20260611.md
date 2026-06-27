@@ -1307,3 +1307,23 @@ OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=gener
 **Concern carried (honest):** the RGBWitness relu base DECELERATES (0.013@ep20 -> 0.0106@ep50 -> 0.0093@ep80) and may asymptote ABOVE base_ch20's converged 0.0022 -> even a working margin-finetune (~3.55x) might land ~0.002-0.003 NOT 7.3e-4. The fix-and-resume is the DECISIVE test of whether the allocation lever works on the witness; FALLBACK = margin-finetune base_ch20 in its OWN converged HNeRV trainer (surface to operator; it is the moved-off vehicle but the BRIDGE's actual measured setup), OR hosc-SIREN basis-change.
 
 **Pointer UNMOVED contest-CPU 0.19110** (no exact row this session — stated plainly; means != ends). Memory: [[different-stages-need-different-treatment-regardless-carrier-substrate]].
+
+---
+
+## FEED-bv (2026-06-26): PR95 SegNet 30k digest -> the SHORT d_seg-only witness curriculum (CE -> tau_softplus -> l7 -> Muon); v3 SKIPPED tau_softplus
+
+**Digest:** `.omx/research/pr95_segnet_stage_evolution_for_witness_curriculum_20260626.md` (agent a692c13c, commit 06bd10d5b). Operator-corrected: learn the d_seg TREATMENT only, NOT HNeRV, NOT the rate steps.
+
+**The witness d_seg-only curriculum (short, NON-HNeRV, ~1100-2100 ep vs 29650 = 14-27x shorter):**
+1. **CE warm-up** (`ce_seg_loss` mlx_losses.py:70-83), high LR — coarse argmax over all pixels (~200-400ep).
+2. **tau_softplus(0.3) margin-sharpen** (`mean(tau*softplus(-margin/tau))` L86-98), mid LR, EMA 0.997 — the BIGGEST measured d_seg drop (~400-700ep).
+3. **l7_softplus hard-pixel refine = WHERE THE MARGIN-WEIGHT LEVER MAPS** (L110-129: 5x weight on margin<1.0 px, renorm mean-1, stop_gradient), low LR — slow refine to new min, attacks the binding all-class edge band; KEEP the loss, DROP the C1a co-passenger (~300-600ep).
+4. **Muon finisher** on INR weights, very low LR — the conditioning drop (~200-400ep).
+
+**THE v3 DESIGN ERROR (decisive):** v3 went uniform-CE-base -> l7-margin-weight DIRECTLY, **SKIPPING stage 2 (tau_softplus)**. Measured d_seg evolution (our MLX-port n600, DAG :532/:538/:637): CE 0.01045->0.00643 -> **tau_softplus ->0.00396 (the big drop, the min)** -> smooth ->0.00423 (RISES, drop it) -> l7 ->0.00369 (slow new min) -> Muon (finisher). So tau_softplus is the PRIMARY d_seg driver and l7/margin-weight is a SLOW REFINE ON TOP of an already-margin-sharpened state. v3's high base floor (~0.0093 @ep80, still CE regime) + the abrupt margin-engage destabilization are both explained by the missing tau_softplus stage.
+
+**DROP (operator "don't need the rate steps"):** QAT 500 + C1a 9000 (biggest block) + lambda 2000 + sigma-rate 3000 = **14500/29650 ~= 49% droppable** (entropy-codes HNeRV decoder WEIGHTS; the witness rate story is L13 non-RGB format + ~8-dim coords -> hundreds of bytes, not weight-histogram pressure). DROP smooth (raises d_seg +6.8%). Keep from sigma ONLY eval-roundtrip/R-survival robustness. NO HNeRV. NO kl_on_logits/T=2.0 (that is QUANTIZR not PR95).
+
+**Frozen-scorer exploitation:** margin = target_logit - max_competing_logit = the exact sign deciding argmax; SegNet scores ONLY last-frame hard argmax -> only sign(margin) matters -> all seg losses are argmax surrogates; l7 5x attacks the boundary band; no scorer bytes in archive.
+
+**SYNTHESIS (the next build):** wire the 4-stage CE -> tau_softplus -> l7 -> Muon d_seg curriculum into the witness trainer (loss forms already in mlx_losses.py), with per-stage TREATMENT at each transition (LR re-warmup + EMA + spike-guard recalibrate per FEED-bu/the stage-principle) + MD-Decoupling optimizer (stable transitions, when a015eb18 validates). The missing tau_softplus stage is the key ADD; the margin-weight lever moves to its correct place (l7, AFTER tau_softplus). Pointer UNMOVED contest-CPU 0.19110.
