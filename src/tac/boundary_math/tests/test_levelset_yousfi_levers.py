@@ -121,3 +121,50 @@ def test_chroma_blob_bytes_are_chroma_independent():
     blob = quantize_levelset_blob(p)
     assert blob["total_quantized_blob_bytes"] > 0
     assert blob["n_params"] > 0
+
+
+# ---------------------------------------------------------------------------
+# LEVER-3 (lane-edge) FAIL-CLOSED config guard (FEED-df R2): the trainer must REFUSE a lane lever
+# that would silently never engage (start>epochs = a false "lane-edge doesn't help" verdict) or an
+# out-of-range class (IndexError mid-training, after GPU spend), and MUST be a no-op when the lever
+# is OFF (additive default preserved). Tested via the PURE helper ``validate_lane_edge_config`` —
+# MLX-free, no training (the helper raises before run_train). Import is guarded so an env that
+# cannot import the trainer skips rather than errors.
+# ---------------------------------------------------------------------------
+import pytest  # noqa: E402
+
+
+def _guard():
+    try:
+        from experiments.train_levelset_witness_realized_through_R_mlx import validate_lane_edge_config
+    except Exception as exc:  # pragma: no cover - env-dependent import
+        pytest.skip(f"level-set trainer not importable in this env: {exc}")
+    return validate_lane_edge_config
+
+
+def test_lane_edge_start_epoch_beyond_budget_raises():
+    g = _guard()
+    with pytest.raises(ValueError, match="NEVER engage"):
+        g(lane_edge_weight=30.0, lane_edge_start_epoch=9999, epochs=1500, lane_edge_class=1)
+
+
+def test_lane_edge_class_out_of_range_raises():
+    g = _guard()
+    with pytest.raises(ValueError, match="out of range"):
+        g(lane_edge_weight=30.0, lane_edge_start_epoch=0, epochs=1500, lane_edge_class=7)
+    with pytest.raises(ValueError, match="out of range"):
+        g(lane_edge_weight=30.0, lane_edge_start_epoch=0, epochs=1500, lane_edge_class=-1)
+
+
+def test_lane_edge_guard_noop_when_off():
+    # default-off (weight 0): the guard MUST NOT fire even on otherwise-bad start/class -> the
+    # additive default path is never gated by a lever that is not in use.
+    g = _guard()
+    g(lane_edge_weight=0.0, lane_edge_start_epoch=9999, epochs=1500, lane_edge_class=7)  # no raise
+
+
+def test_lane_edge_guard_accepts_valid_configs():
+    g = _guard()
+    g(lane_edge_weight=30.0, lane_edge_start_epoch=0, epochs=1500, lane_edge_class=1)    # ep0 default
+    g(lane_edge_weight=30.0, lane_edge_start_epoch=300, epochs=1500, lane_edge_class=1)  # gated-to-stage
+    g(lane_edge_weight=30.0, lane_edge_start_epoch=1500, epochs=1500, lane_edge_class=1) # boundary OK

@@ -233,6 +233,34 @@ def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1
 # (fix i) Muon is NOT yet wired here — the optimizer is hardcoded AdamW (mlx.optimizers.AdamW
 # below). The l7 stage runs under AdamW; the PR95 Muon finisher is a follow-up (no false claim).
 # ---------------------------------------------------------------------------
+def validate_lane_edge_config(
+    *, lane_edge_weight: float, lane_edge_start_epoch: int, epochs: int,
+    lane_edge_class: int, n_classes: int = 5,
+) -> None:
+    """(FEED-df R2) LEVER-3 fail-closed config guard (pure; testable; fail LOUD not silent).
+
+    A lane lever that never engages (start_epoch > epochs) is a silent no-op = a FALSE 'lane-edge
+    does not help' verdict; an out-of-range class index would IndexError mid-training (after GPU
+    spend). When the lever is OFF (weight<=0) the guard is a NO-OP so the additive default path is
+    never gated by a lever that is not in use.
+    """
+    if lane_edge_weight <= 0.0:
+        return
+    if lane_edge_start_epoch > epochs:
+        raise ValueError(
+            f"--lane-edge-weight {lane_edge_weight} > 0 but --lane-edge-start-epoch "
+            f"({lane_edge_start_epoch}) > --epochs ({epochs}): the lane hinge would NEVER engage "
+            "-> a silent no-op = a FALSE 'lane-edge does not help' verdict. Set "
+            "--lane-edge-start-epoch <= --epochs (0 = engage from ep1)."
+        )
+    if not (0 <= lane_edge_class <= n_classes - 1):
+        raise ValueError(
+            f"--lane-edge-class ({lane_edge_class}) out of range [0,{n_classes - 1}] for the "
+            f"{n_classes}-class comma10k partition [Road0,Lane1,Undrivable2,Movable3,MyCar4]; would "
+            "IndexError mid-training. Use 1 for the lane orbit (the d_seg gate)."
+        )
+
+
 def _seg_form_for_epoch(ep: int, args) -> str:
     if not args.curriculum:
         return args.seg_loss
@@ -739,6 +767,12 @@ def main(argv: list[str] | None = None) -> int:
                 "sequence (ce->tau_softplus->l7) needs each stage to actually run; tau_softplus is "
                 "THE primary d_seg drop and must not be skipped."
             )
+
+    # (FEED-df R2) LEVER-3 fail-closed config guard (pure helper; fails LOUD before any GPU spend).
+    validate_lane_edge_config(
+        lane_edge_weight=args.lane_edge_weight, lane_edge_start_epoch=args.lane_edge_start_epoch,
+        epochs=args.epochs, lane_edge_class=args.lane_edge_class, n_classes=5,
+    )
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")
