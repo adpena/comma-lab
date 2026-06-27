@@ -296,9 +296,18 @@ def main() -> None:
     stop = {"v": False}
     signal.signal(signal.SIGTERM, lambda *_: stop.__setitem__("v", True))
     state: dict = {}
-    info = _render_once(args, state)
-    print(json.dumps({"stage": "dashboard", "rendered": True, "verdicts": info["verdicts"],
-                      "watched": info["watched"], "stale": info["stale"], "out": args.out}))
+    # The FIRST render must be as crash-proof as the watch-loop ones: a transient startup error
+    # (TOCTOU log race, matplotlib/IO hiccup, malformed verdict line) must NOT kill the
+    # "load-bearing" live daemon before it ever enters the watch loop. On failure we log and
+    # continue into the loop, which will retry every refresh (recovering once the source settles).
+    try:
+        info = _render_once(args, state)
+        print(json.dumps({"stage": "dashboard", "rendered": True, "verdicts": info["verdicts"],
+                          "watched": info["watched"], "stale": info["stale"], "out": args.out}))
+    except Exception as e:
+        print(json.dumps({"stage": "dashboard", "rendered": False, "error": str(e), "out": args.out}))
+        if not args.watch:
+            raise  # non-watch one-shot: surface the failure (rc!=0) instead of pretending success
     if not args.watch:
         return
     while not stop["v"]:
