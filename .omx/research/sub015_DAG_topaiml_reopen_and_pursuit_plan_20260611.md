@@ -2121,3 +2121,39 @@ required, but optional — perceptual-hash a sample of 0.mkv frames vs the 30 sa
 to quantify same-rig scene-distribution overlap (would refine, not change, the verdict). Evidence durable:
 membership re-derives bit-identically from the public comma10k git tree (sha `6c205fe4…`); no archive/
 training modified.
+
+## FEED-eb (2026-06-27): RESUMABLE + PER-STAGE-CHECKPOINTING n600 trainer WIRED — the w_pose=1.0 n600 row is now crash-safe + early-byte-closeable; realistic burn ~70.5h (full); amortization DESIGNED-not-gated
+
+Closes the row-blocker (memo `row_prep_resumable_n600_20260627T080000Z.md`): the level-set trainer
+(`experiments/train_levelset_witness_realized_through_R_mlx.py`) saved the EMA npz ONLY at loop-end -> a
+multi-day n600 run was non-resumable (crash=total loss) + no early byte-close. Per operator binding rule
+2026-06-27 ("never launch non-resumable; save+preserve a checkpoint at the END OF EACH STAGE; loop-end-only
+FORBIDDEN"), landed ADDITIVE/default-safe:
+- `--resume-from <dir|npz>` (default None=fresh=UNCHANGED): restores decoder + per-pair `code` (live) + EMA
+  shadow + optimizer (best-effort) + epoch -> `range(start_epoch,epochs+1)`. Self-orient dir-feats NOT stored
+  (O(GBs)) -> regenerated from the restored EMA argmax fixed-point (no bloat).
+- PER-STAGE PRESERVED ckpts (default ON): at every curriculum transition (CE->tau->l7) + final epoch, write
+  `levelset_ckpt_stage{CE,Tau,L7}_ep{N}.npz` (+ `levelset_resume_*`); NOT overwritten -> per-stage A/B + durability.
+- INTRA-STAGE rolling (`--ckpt-every N`, default 0): overwrite the byte-close default-name EMA npz + resume
+  sidecar every N epochs (crash window). EMA-SHADOW save (non-negotiable); ATOMIC (tmp+os.replace); refuses /tmp.
+- Closed the byte-close cfg-persist gap: deploy npz now also persists self_orient/n_dir_freqs/freq_across/along/
+  reorient_every/w_pose/in_feat/curriculum/tau/l7-start/epoch (additive scalars; byte-close reads selectively).
+
+VALIDATION ($0 CPU, GPU pid 72602 n96 baseline UNTOUCHED + healthy throughout, etime 5h+): py_compile OK;
+18/18 MLX-free unit tests (`experiments/tests/test_levelset_checkpoint_resume.py`) incl. INTEGRATION that the
+built EMA npz loads in `tools/levelset_byte_close_and_eval._load_levelset_ckpt`; $0 end-to-end smoke (n6,
+render-48, curriculum, ckpt-every 2, self-orient, w_pose 1.0): 3 PRESERVED stage ckpts (stageCE_ep1/stageTau_ep3/
+stageL7_ep6) + final + intra-stage(ep2,4,6) all `has_opt:true`; a REAL preserved stageL7 npz byte-closed
+(archive.zip 12987B, inflate full_output_ok=True, self_orient auto-detected); `--resume-from` continued
+(resumed_epoch 6 -> start_epoch 7, restored_opt true, self-orient regenerated). Smoke scratch cleaned.
+
+THROUGHPUT: n96 MEASURED 27.08 s/ep (running pid-72602 reached ep600 in 16,247s). n600 linear-in-pairs (6.25x)
+=> ~169 s/ep => 1500ep ~70.5h ~3 days (verdict-pairs 96 keeps verdict cost bounded). Early byte-close at the
+CE->tau ckpt (~ep300 ~14h) + tau->l7 ckpt (~ep900 ~42h) yields advisory rows before completion. AMORTIZATION
+(NeRV: shared decoder + per-pair codes -> train decoder on n96/n192 then freeze + fit 600 codes, ~hours):
+DESIGNED but do NOT gate the row on it — UNVALIDATED generalization + needs a new freeze-decoder mode (separate
+landing). FASTEST FEASIBLE for THIS row = full n600 with the new checkpointing (known-good, now crash-safe +
+N early-byte-closeable). READY launch command (wrapped in spawn_durable_daemon, --rss-cap-mb 90000 --min-free-gb
+10 --walltime-cap-s 288000, --w-pose 1.0 --ckpt-every 100) + monitor/abort plan (d_seg toward <0.00112,
+d_pose descend toward ~0.0009, NULL-CONTAINMENT: does pose hurt d_seg vs mod-32's 0.0018?) in the memo.
+DO NOT launch while pid 72602 holds the GPU. Pointer UNMOVED 0.19110; axis [macOS-CPU advisory] NON-PROMOTABLE.

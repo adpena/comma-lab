@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import UTC, datetime
@@ -95,6 +96,176 @@ def _utc() -> str:
 def _refuse_tmp(path: Path) -> None:
     if any(str(path).startswith(p) for p in _FORBIDDEN_TMP):
         raise ValueError(f"{path!r} is a /tmp-class path; use the SSD/repo tier per CLAUDE.md.")
+
+
+# ---------------------------------------------------------------------------
+# INTERMEDIATE CHECKPOINT + RESUME (FEED-dz, additive, default-off). The trainer historically saved
+# the EMA-shadow npz ONLY at loop-end -> a multi-day n600 run is non-resumable (crash = total loss)
+# + no early byte-close. These pure-numpy (MLX-free, unit-testable) helpers let the run loop write
+# a deploy EMA checkpoint (the byte-close ONE-CODEPATH consumes it) AND a separate resume-state
+# sidecar (live weights + EMA shadow + optimizer + epoch) every --ckpt-every epochs, atomically.
+#
+# DESIGN (NO-FAKE / EMA non-negotiable / byte-close clean):
+#   * ``levelset_witness_ema_mlx.npz`` = the EMA SHADOW (deploy weights, NOT live) + ``__cfg_*`` /
+#     ``__bank_*`` / ``__render_hw`` scalars. EXACTLY what tools/levelset_byte_close_and_eval.py
+#     reads (params = unprefixed keys; cfg = ``__``-prefixed, read selectively). Adding new ``__cfg_*``
+#     provenance keys is harmless (byte-close ``.get(...)``s the ones it knows + ignores the rest).
+#   * ``levelset_resume_state.npz`` = SEPARATE sidecar (so the EMA npz stays byte-close-clean). Live
+#     model params (``liveP__*``), EMA shadow (``emaP__*``), optimizer state (``optP__*``, best-effort),
+#     + ``__resume_epoch``. Self-orient dir-feats are NOT stored (they are O(GBs) at n600 and are
+#     deterministically regenerable from the EMA argmax fixed-point at resume -> recompute, no bloat).
+#   * Atomic write: tmp + os.replace (no partial/corrupt npz if the process dies mid-write).
+# ---------------------------------------------------------------------------
+_RESUME_LIVE_PREFIX = "liveP__"
+_RESUME_EMA_PREFIX = "emaP__"
+_RESUME_OPT_PREFIX = "optP__"
+
+
+def _atomic_savez(path: Path, arrays: dict[str, np.ndarray]) -> Path:
+    """Atomic ``np.savez`` (tmp + os.replace) per the durable-state discipline. Refuses /tmp.
+
+    np.savez given a *file object* writes the zip directly (no implicit ``.npz`` suffix append), so
+    the temp path is replaced onto the final path atomically on the same filesystem.
+    """
+    path = Path(path)
+    _refuse_tmp(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        with open(tmp, "wb") as fh:
+            np.savez(fh, **arrays)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+    return path
+
+
+def _build_ema_checkpoint_arrays(
+    shadow_np: dict[str, np.ndarray], *, args: Any, softmax_temp: float,
+    render_h: int, render_w: int, epoch: int, in_feat: int,
+) -> dict[str, np.ndarray]:
+    """The deploy (byte-close) npz contents: EMA SHADOW params + cfg scalars. MLX-free.
+
+    Reproduces EVERY key the loop-end save historically wrote (so the byte-close path is unchanged)
+    and ADDS provenance keys (``__epoch`` + the self-orient/curriculum/w_pose scalars the trainer
+    previously did NOT persist -- the gap flagged in tools/levelset_byte_close_and_eval.py)."""
+    flat: dict[str, np.ndarray] = {k: np.asarray(v, np.float32) for k, v in shadow_np.items()}
+    # ---- EXISTING keys (loop-end save parity; do NOT change names/encodings) ----
+    flat["__cfg_n_hidden"] = np.asarray(args.n_hidden)
+    flat["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
+    flat["__cfg_softmax_temp"] = np.asarray(float(softmax_temp))
+    flat["__cfg_activation"] = np.asarray(args.activation)
+    flat["__cfg_chroma"] = np.asarray(int(bool(args.chroma)))
+    flat["__cfg_wire_w0"] = np.asarray(args.wire_w0)
+    flat["__cfg_wire_s0"] = np.asarray(args.wire_s0)
+    flat["__cfg_hosc_beta"] = np.asarray(args.hosc_beta)
+    flat["__cfg_hosc_omega"] = np.asarray(args.hosc_omega)
+    flat["__bank_n_scales"] = np.asarray(args.bank_n_scales)
+    flat["__bank_n_orient0"] = np.asarray(args.bank_n_orient0)
+    flat["__bank_f0"] = np.asarray(args.bank_f0)
+    flat["__bank_base"] = np.asarray(args.bank_base)
+    flat["__bank_n_iso"] = np.asarray(args.bank_n_iso)
+    flat["__render_hw"] = np.asarray([render_h, render_w])
+    flat["__cfg_max_bank_freq"] = np.asarray(-1.0 if args.max_bank_freq is None else float(args.max_bank_freq))
+    flat["__cfg_lane_edge_weight"] = np.asarray(float(args.lane_edge_weight))
+    flat["__cfg_lane_edge_class"] = np.asarray(int(args.lane_edge_class))
+    # ---- NEW provenance (additive; closes the self-orient/curriculum trainer-persist gap) ----
+    flat["__epoch"] = np.asarray(int(epoch))
+    flat["__cfg_in_feat"] = np.asarray(int(in_feat))
+    flat["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
+    flat["__cfg_n_dir_freqs"] = np.asarray(int(args.n_dir_freqs))
+    flat["__cfg_freq_across"] = np.asarray(float(args.freq_across))
+    flat["__cfg_freq_along"] = np.asarray(float(args.freq_along))
+    flat["__cfg_reorient_every"] = np.asarray(int(args.reorient_every))
+    flat["__cfg_w_pose"] = np.asarray(float(args.w_pose))
+    flat["__cfg_curriculum"] = np.asarray(int(bool(args.curriculum)))
+    flat["__cfg_tau_softplus_start_epoch"] = np.asarray(int(args.tau_softplus_start_epoch))
+    flat["__cfg_l7_start_epoch"] = np.asarray(int(args.l7_start_epoch))
+    return flat
+
+
+def _build_resume_state_arrays(
+    live_np: dict[str, np.ndarray], ema_np: dict[str, np.ndarray],
+    opt_np: dict[str, np.ndarray] | None, *, args: Any, epoch: int, in_feat: int,
+) -> dict[str, np.ndarray]:
+    """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
+    tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
+    out: dict[str, np.ndarray] = {}
+    for k, v in live_np.items():
+        out[_RESUME_LIVE_PREFIX + k] = np.asarray(v, np.float32)
+    for k, v in ema_np.items():
+        out[_RESUME_EMA_PREFIX + k] = np.asarray(v, np.float32)
+    has_opt = bool(opt_np)
+    if has_opt:
+        for k, v in opt_np.items():
+            out[_RESUME_OPT_PREFIX + k] = np.asarray(v)
+    out["__resume_epoch"] = np.asarray(int(epoch))
+    out["__resume_has_opt"] = np.asarray(int(has_opt))
+    out["__cfg_n_hidden"] = np.asarray(args.n_hidden)
+    out["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
+    out["__cfg_mod_dim"] = np.asarray(args.mod_dim)
+    out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
+    out["__cfg_in_feat"] = np.asarray(int(in_feat))
+    out["__cfg_w_pose"] = np.asarray(float(args.w_pose))
+    return out
+
+
+def _load_resume_state(npz_path: Path) -> dict[str, Any]:
+    """Parse a resume sidecar OR (fallback) a plain EMA deploy npz. Returns live/ema/opt dicts +
+    epoch + has_opt + cfg. NO-FAKE: a missing/garbage file raises. MLX-free."""
+    z = np.load(Path(npz_path), allow_pickle=False)
+    live: dict[str, np.ndarray] = {}
+    ema: dict[str, np.ndarray] = {}
+    opt: dict[str, np.ndarray] = {}
+    cfg: dict[str, Any] = {}
+    for k in z.files:
+        if k.startswith(_RESUME_LIVE_PREFIX):
+            live[k[len(_RESUME_LIVE_PREFIX):]] = np.asarray(z[k], np.float32)
+        elif k.startswith(_RESUME_EMA_PREFIX):
+            ema[k[len(_RESUME_EMA_PREFIX):]] = np.asarray(z[k], np.float32)
+        elif k.startswith(_RESUME_OPT_PREFIX):
+            opt[k[len(_RESUME_OPT_PREFIX):]] = np.asarray(z[k])
+        elif k.startswith("__"):
+            a = z[k]
+            cfg[k] = a.item() if a.size == 1 else a.tolist()
+        else:
+            # plain EMA deploy npz: unprefixed keys are the EMA-shadow params. Use them as the
+            # live-weight fallback (resume from the deploy checkpoint when no sidecar exists).
+            live.setdefault(k, np.asarray(z[k], np.float32))
+    epoch = int(cfg.get("__resume_epoch", cfg.get("__epoch", 0)))
+    return {
+        "live": live, "ema": ema, "opt": opt,
+        "epoch": epoch, "has_opt": bool(int(cfg.get("__resume_has_opt", 0))), "cfg": cfg,
+    }
+
+
+def _resolve_resume_path(p: Path) -> Path:
+    """Accept a run dir (prefer the resume sidecar, fall back to the EMA deploy npz) OR an explicit
+    npz file. NO-FAKE: nonexistent -> FileNotFoundError (never fabricate a resume)."""
+    p = Path(p)
+    if p.is_dir():
+        for name in ("levelset_resume_state.npz", "levelset_witness_ema_mlx.npz"):
+            cand = p / name
+            if cand.exists():
+                return cand
+        raise FileNotFoundError(
+            f"--resume-from dir {p} has neither levelset_resume_state.npz nor "
+            "levelset_witness_ema_mlx.npz (nothing to resume from).")
+    if p.exists():
+        return p
+    raise FileNotFoundError(f"--resume-from path {p} does not exist (NO-FAKE: refusing to fabricate).")
+
+
+_STAGE_TAGS = {"ce": "stageCE", "tau_softplus": "stageTau", "l7_softplus": "stageL7", "margin_hinge": "stageHinge"}
+
+
+def _stage_tag(seg_form: str) -> str:
+    """Filename-safe stage tag for the PRESERVED per-stage checkpoint (PR95 curriculum stages)."""
+    return _STAGE_TAGS.get(str(seg_form), f"stage_{seg_form}")
 
 
 # ---------------------------------------------------------------------------
@@ -501,13 +672,6 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return {"d_seg": float(np.mean(ds)), "d_pose": float(np.mean(dp))}
 
     history: list[dict[str, Any]] = []
-    v0 = realized_verdict()
-    blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
-    s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
-    print(json.dumps({"stage": "verdict", "epoch": 0, **{k: round(v, 6) for k, v in v0.items()},
-                      "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s0, 4),
-                      "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
-    history.append({"epoch": 0, **v0, "implied_S": s0})
 
     # per-pair MLX coord-feats cache: shared curvelet tensor when no self-orient; rebuilt on each
     # reorient when self-orient is on (so the train forward uses the SAME per-pair feats the
@@ -524,6 +688,94 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     if use_self_orient:
         _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
 
+    # ---- CHECKPOINT closures (FEED-dz; mx->np snapshot + atomic save of the deploy EMA npz + the
+    # resume sidecar). The deploy npz keeps the canonical name so the byte-close tool consumes it
+    # as-is; the resume sidecar is separate so the deploy npz stays byte-close-clean. ----
+    def _snapshot_numpy_state() -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, np.ndarray]]:
+        shadow_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+        live_np = {k: np.asarray(v, np.float32) for k, v in tree_flatten(model.parameters())}
+        opt_np: dict[str, np.ndarray] = {}
+        try:  # best-effort: optimizer moments accelerate resume but a fresh AdamW re-warms in steps.
+            for k, v in tree_flatten(opt.state):
+                arr = np.asarray(v)
+                if arr.dtype.kind in "fiub":
+                    opt_np[k] = arr
+        except Exception:
+            opt_np = {}
+        return shadow_np, live_np, opt_np
+
+    def _do_checkpoint(epoch: int, *, stage_tag: str | None = None) -> dict[str, Any]:
+        shadow_np, live_np, opt_np = _snapshot_numpy_state()
+        ema_arrays = _build_ema_checkpoint_arrays(
+            shadow_np, args=args, softmax_temp=float(model.softmax_temp),
+            render_h=render_h, render_w=render_w, epoch=epoch, in_feat=in_feat)
+        resume_arrays = _build_resume_state_arrays(
+            live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat)
+        # rolling latest: the byte-close default name + the quick resume target (overwritten atomically).
+        _atomic_savez(out_dir / "levelset_witness_ema_mlx.npz", ema_arrays)
+        _atomic_savez(out_dir / "levelset_resume_state.npz", resume_arrays)
+        written: dict[str, Any] = {
+            "epoch": epoch, "ema_latest": "levelset_witness_ema_mlx.npz",
+            "resume_latest": "levelset_resume_state.npz", "has_opt": bool(opt_np)}
+        if stage_tag is not None:  # PRESERVED stage-encoded ckpt (NOT overwritten -> per-stage A/B).
+            ema_pres = f"levelset_ckpt_{stage_tag}_ep{epoch}.npz"
+            res_pres = f"levelset_resume_{stage_tag}_ep{epoch}.npz"
+            _atomic_savez(out_dir / ema_pres, ema_arrays)
+            _atomic_savez(out_dir / res_pres, resume_arrays)
+            written["ema_preserved"] = ema_pres
+            written["resume_preserved"] = res_pres
+        return written
+
+    # ---- RESUME restore (FEED-dz; --resume-from None => fresh start => behavior UNCHANGED). Loads
+    # decoder + per-pair codes (live) + EMA shadow + optimizer (best-effort) + the epoch position;
+    # self-orient dir feats are regenerated from the restored EMA argmax (not stored -> no GB bloat).
+    start_epoch = 1
+    if args.resume_from:
+        from mlx.utils import tree_unflatten
+        rp = _resolve_resume_path(Path(args.resume_from))
+        rs = _load_resume_state(rp)
+        if not rs["live"]:
+            raise ValueError(f"--resume-from {rp} has no live/param tensors (NO-FAKE: cannot resume).")
+        model.update(tree_unflatten([(k, mx.array(v)) for k, v in rs["live"].items()]))
+        mx.eval(model.parameters())
+        ema_src = rs["ema"] if rs["ema"] else rs["live"]
+        for k in list(ema.shadow.keys()):
+            if k in ema_src:
+                ema.shadow[k] = mx.array(ema_src[k])
+        mx.eval(list(ema.shadow.values()))
+        start_epoch = int(rs["epoch"]) + 1
+        restored_opt = False
+        if rs["has_opt"] and rs["opt"]:
+            try:
+                opt.init(model.trainable_parameters())
+                flat_state = dict(tree_flatten(opt.state))
+                for k in list(flat_state.keys()):
+                    if k in rs["opt"]:
+                        flat_state[k] = mx.array(rs["opt"][k])
+                opt.state = tree_unflatten(list(flat_state.items()))
+                mx.eval(opt.state)
+                restored_opt = True
+            except Exception as e:  # best-effort: a fresh AdamW re-warms its moments in a few steps.
+                print(json.dumps({"stage": "resume_opt_warn",
+                                  "note": f"optimizer-state restore failed ({type(e).__name__}: {e}); "
+                                  "continuing with fresh AdamW moments (best-effort)"}), flush=True)
+        if use_self_orient:
+            ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+            mag = recompute_self_orient(int8_dequant_params(ema_np))
+            _rebuild_cf_mx_cache()
+            print(json.dumps({"stage": "resume_reorient", "mean_abs_dir_feat": round(mag, 5)}), flush=True)
+        print(json.dumps({"stage": "resume", "from": str(rp), "resumed_epoch": int(rs["epoch"]),
+                          "start_epoch": start_epoch, "restored_opt": restored_opt}), flush=True)
+
+    # baseline verdict (epoch 0, or the resumed epoch) -- reflects any restored weights.
+    v0 = realized_verdict()
+    blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
+    s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
+    print(json.dumps({"stage": "verdict", "epoch": start_epoch - 1, **{k: round(v, 6) for k, v in v0.items()},
+                      "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s0, 4),
+                      "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
+    history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0})
+
     if lane_w > 0.0:
         print(json.dumps({"stage": "lane_edge", "active": True, "weight": lane_w, "lane_class": lane_cls,
                           "margin_target": lane_tgt, "start_epoch": lane_start,
@@ -536,8 +788,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "stem_nyquist_cycles_per_unit": nyq, "curvelet_cols_after_cap": int(B.shape[1])}), flush=True)
 
     recent_losses: list[float] = []
+    last_ep = start_epoch - 1
+    stage_ckpts: list[dict[str, Any]] = []
     with temporary_mlx_device(args.mlx_device):
-        for ep in range(1, args.epochs + 1):
+        for ep in range(start_epoch, args.epochs + 1):
             seg_form = _seg_form_for_epoch(ep, args)
             # lane-edge engagement gate + transition RE-TREAT (spike-guard reset at the engage epoch
             # so the added margin-hinge term's loss jump is not silently spike-skipped; no-op when
@@ -622,32 +876,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
                                   "ep_loss": round(ep_loss, 3)}), flush=True)
                 history.append({"epoch": ep, **v, "implied_S": s})
+            # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
+            # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
+            # stage-encoded, byte-close-loadable ckpt (per-stage A/B of which stage moves d_seg).
+            # INTRA-STAGE: every --ckpt-every epochs save the rolling latest (crash-resume window).
+            is_transition = (
+                args.stage_checkpoints and ep < args.epochs
+                and _seg_form_for_epoch(ep + 1, args) != seg_form)
+            do_periodic = args.ckpt_every > 0 and ep % args.ckpt_every == 0
+            if is_transition:
+                w = _do_checkpoint(ep, stage_tag=_stage_tag(seg_form))
+                stage_ckpts.append(w)
+                print(json.dumps({"stage": "checkpoint", "kind": "stage_transition", **w}), flush=True)
+            elif do_periodic:
+                w = _do_checkpoint(ep)
+                print(json.dumps({"stage": "checkpoint", "kind": "intra_stage", **w}), flush=True)
+            last_ep = ep
 
-    # (fix c) save the EMA SHADOW (the deploy weights), NOT live. Persist the bank cfg + render
-    # cfg so the ONE-CODEPATH byte-close/inflate reconstructs the exact deploy render.
+    # FINAL checkpoint (replaces the historical loop-end-only save, which is now FORBIDDEN). Always
+    # writes the rolling latest + a PRESERVED final stage-encoded ckpt -> the run is byte-closeable
+    # and resumable from disk at completion. Saves the EMA SHADOW (deploy), NOT live (EMA rule).
+    final_form = _seg_form_for_epoch(last_ep, args) if last_ep >= 1 else args.seg_loss
+    final = _do_checkpoint(last_ep, stage_tag=(_stage_tag(final_form) if args.stage_checkpoints else None))
+    stage_ckpts.append({**final, "kind": "final"})
     ck = out_dir / "levelset_witness_ema_mlx.npz"
-    flat = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
-    flat["__cfg_n_hidden"] = np.asarray(args.n_hidden)
-    flat["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
-    flat["__cfg_softmax_temp"] = np.asarray(float(model.softmax_temp))
-    flat["__cfg_activation"] = np.asarray(args.activation)
-    flat["__cfg_chroma"] = np.asarray(int(bool(args.chroma)))
-    flat["__cfg_wire_w0"] = np.asarray(args.wire_w0); flat["__cfg_wire_s0"] = np.asarray(args.wire_s0)
-    flat["__cfg_hosc_beta"] = np.asarray(args.hosc_beta); flat["__cfg_hosc_omega"] = np.asarray(args.hosc_omega)
-    flat["__bank_n_scales"] = np.asarray(args.bank_n_scales); flat["__bank_n_orient0"] = np.asarray(args.bank_n_orient0)
-    flat["__bank_f0"] = np.asarray(args.bank_f0); flat["__bank_base"] = np.asarray(args.bank_base)
-    flat["__bank_n_iso"] = np.asarray(args.bank_n_iso); flat["__render_hw"] = np.asarray([render_h, render_w])
-    # LEVER-2/3 cfg (additive; -1 sentinel = "no cap" so a future levelset inflate regenerates the
-    # SAME bank / knows the lane lever was active). Extra npz keys are read selectively downstream.
-    flat["__cfg_max_bank_freq"] = np.asarray(-1.0 if args.max_bank_freq is None else float(args.max_bank_freq))
-    flat["__cfg_lane_edge_weight"] = np.asarray(float(args.lane_edge_weight))
-    flat["__cfg_lane_edge_class"] = np.asarray(int(args.lane_edge_class))
-    np.savez(ck, **flat)
+    print(json.dumps({"stage": "checkpoint", "kind": "final", **final}), flush=True)
     result = {
-        "utc": _utc(), "n_pairs": P, "epochs": args.epochs, "render_hw": [render_h, render_w],
+        "utc": _utc(), "n_pairs": P, "epochs": args.epochs, "final_epoch": last_ep,
+        "render_hw": [render_h, render_w],
         "front_end": "curvelet" + ("+self_orient" if use_self_orient else ""),
         "activation": args.activation, "in_feat": int(in_feat),
-        "history": history, "checkpoint": str(ck),
+        "history": history, "checkpoint": str(ck), "stage_checkpoints": stage_ckpts,
+        "resumable": True, "ckpt_every": int(args.ckpt_every),
         "axis": "[macOS-MLX training-gradient]/[macOS-CPU advisory] verdict; promotion_eligible=false; pointer UNMOVED",
     }
     (out_dir / "levelset_train_result.json").write_text(json.dumps(result, indent=2))
@@ -661,6 +921,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--epochs", type=int, default=1500,
                     help="(fix d) >=1500 for the PR95 d_seg curriculum (ce->tau->l7). Fail-closed asserted vs curriculum boundaries.")
     ap.add_argument("--eval-every", type=int, default=25)
+    # RESUMABILITY + CHECKPOINTING (FEED-dz; additive). Per operator "never launch non-resumable /
+    # save+preserve a checkpoint at the end of each stage": per-stage PRESERVED ckpts default ON;
+    # --ckpt-every adds intra-stage rolling saves (crash window). --resume-from continues a run.
+    ap.add_argument("--ckpt-every", type=int, default=0,
+                    help="save the rolling EMA+resume checkpoint every N epochs (0=off; per-stage + final "
+                    "saves always happen). Set e.g. 100 to bound a crash/OOM to <=N epochs of loss "
+                    "and enable early byte-close during a multi-day run.")
+    ap.add_argument("--stage-checkpoints", action=argparse.BooleanOptionalAction, default=True,
+                    help="save a PRESERVED, stage-encoded, byte-close-loadable ckpt at every curriculum "
+                    "stage transition + at the final epoch (default ON; --no-stage-checkpoints only for "
+                    "throwaway smokes -- loop-end-only is forbidden for real rows).")
+    ap.add_argument("--resume-from", type=str, default=None,
+                    help="resume a run from a checkpoint: a run DIR (prefers levelset_resume_state.npz, "
+                    "falls back to levelset_witness_ema_mlx.npz) OR an explicit npz. Restores decoder + "
+                    "per-pair codes + EMA shadow + optimizer (best-effort) + the epoch position.")
     # (config-review #1) render-384 is the MEASURED R-survival floor (render-192 pre-caps at
     # 0.00085 d_seg = +0.085 S, mathematically blocking sub-0.15). camera-R + SegNet dominate
     # wall-clock, so 384 is ~free vs 192. The "SDF smooth -> low-res ok" assumption is FALSIFIED.
