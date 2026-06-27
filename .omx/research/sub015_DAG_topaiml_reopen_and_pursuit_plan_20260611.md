@@ -2959,3 +2959,32 @@ The frozen-decoder code-fit generalizes IFF the held-out frame's required φ-fie
 
 ### VERDICT (NO-FAKE, means≠ends)
 The SDF level-set is the **topologically correct chart** and the BEST measured witness d_seg chart (0.00124 < relu-cap 0.002447) — KEEP it. d_seg is **loss-movable** (margin surrogate over the realized-through-R margin); the n96→n600 gap is a **structural shared-trunk amortization-saturation** wall (cure = hidden-dim, CONVERGENT FEED-eu), NOT merely under-training, BUT the n600 converged floor is UNMEASURED (the #1 experiment). The RD law is **power-law-PLUS-FLOOR with α≈2 DERIVED** (curvelet C² edge, contingent on directional-on); the floor is LOW (≲1.6–3e-4, existence-proven by frontier 0.0003 / PR95 6.02e-4) ⇒ capacity has real headroom and sub-0.15 needs **PR95-class d_seg ~5.2–6.5e-4 at ≤120KB with pose solved** — existence-proven-reachable, witness-unconfirmed. Highest-leverage UNSWEPT levers the implementation is missing: **β-anneal step-native activation + stronger Eikonal (make 1-Lipschitz structural) + boundary-quiet texture**; the marginal-byte allocation should favor **FEED-et targeted geometric+appearance priors over generic hidden-dim past the knee**. Held-out gate predicted **marginal (~0.0017–0.0021)**; a narrow fail → reactivate with geometric-prior offload, never kill. **A topology/RD verdict is a MEANS — pointer UNMOVED 0.19110; only a byte-closed exact-eval row at the sized+directional+curriculum-finished converged-n600 decoder moves it.**
+
+---
+
+### DAG FEED-ey (2026-06-27): SYNTHESIS of the 4-review pass (et/eu/ew/ex) -> FINAL optimal-form decoder config + binding means/ends framing
+
+**4-review convergence (operator-requested recursive adversarial + deep-math + topology + config pass):**
+- VEHICLE CORRECT (FEED-ew): argmax-of-SDF is the right chart for a piecewise-constant target; level-set = best MEASURED basis (n96 0.00124 < relu-cap 0.00245). KEEP — no pivot.
+- d_seg CAPACITY-BOUND not floored (FEED-ew): alpha~2 derived; existence proofs (frontier 0.0003@177KB, PR95 bc36 6e-4, pipeline floor 1.6e-4) demolish any high floor -> sub-0.15 EXISTENCE-PROVEN reachable.
+- n96->n600 gap = FiLM rank-<=32 shared-trunk amortization SATURATION (FEED-ew) = independently "hidden-dim cheapest d_seg/byte" (FEED-eu) -> GROW hidden-dim (two derivations, one knob).
+- IRREDUCIBLE residual = multi-component MOVABLE silhouettes (FEED-et 39% learned = FEED-ew medial-axis ridge) -> phi_k geometric priors offload the 61% solvable boundary (lane 40% ~7KB + hood 14% 56B + horizon 4%) so the 32-dim code carries ONLY the Movable residual -> better amortization.
+- EMA/resume/per-stage-ckpt VERIFIED CLEAN (FEED-ex): shadow-not-live (past bug fixed), preserved stage ckpts, atomic, resumable — binding rules honored. Transition spike-guard re-treat FIX LANDED (52cf84bfc).
+
+**BINDING MEANS/ENDS FRAMING (FEED-ex — leads the next report):** the held-out gate (d_seg <= 0.00186) is a MEANS gate = amortization viability, NOT sub-0.15. gate 0.00186 -> S~0.255; joint ref 0.00124 -> S~0.193 (~frontier). SUB-0.15 NEEDS d_seg ~5.2-6.5e-4 at <=120KB (the witness d_seg must HALVE-to-third). The gate de-risks the factoring; the BINDING deliverable is a CONVERGED-n600 d_seg ~5-6.5e-4 at the sized+directional+curriculum-finished decoder. Only that byte-closed exact row moves the pointer (0.19110 UNMOVED).
+
+**GATE ROUTING (FEED-ew predicts toss-up ~0.0017-0.0021, leaning narrow-fail due to Movable):** PASS -> FEED-es staged sequence (full-600 code-fit +LEVER-5 -> byte-close -> a MEANS exact row ~frontier) + build the optimal-form decoder for the sub-0.15 attempt. NARROW-FAIL (EXPECTED, NOT a kill per RULE 6) -> fix is PRE-DESIGNED: phi_k priors (offload Movable burden) + grow hidden-dim -> build optimal-form decoder + re-test.
+
+**FINAL OPTIMAL-FORM DECODER CONFIG (validated by all 4 reviews; FEED-ex verdict PROCEED-WITH-REVISIONS):**
+- chart: argmax-of-SDF (KEEP). sizing: --hidden-dim 112 (toward B*~120KB; KEEP --mod-dim 32).
+- activation: --activation hosc --siren-init + BETA-ANNEAL hosc_beta 4->8 (step-native L-inf-optimal; named UNSWEPT lever; FLAG NOT YET BUILT -> building now; M1 pre-screening the activation question).
+- curriculum: --tau-softplus-start-epoch 300 --l7-start-epoch 700 (pull l7 EARLIER) + a margin_hinge FINISHER stage after l7.
+- transitions: re-treat LR/EMA/spike-guard at EVERY ce->tau->l7->finisher boundary (FIX LANDED 52cf84bfc).
+- d_seg levers: --margin-saliency-weight 0.5 --margin-saliency-tau 0.5 --margin-saliency-start-epoch 300 (LEVER-4 all-class, REPLACES lane-edge-class-1; re-measure -48% directional ON the SDF witness) + --hardness-oversample 0.5 --hardness-weighted --hardness-source realized (LEVER-5).
+- regularization: --eikonal-weight 0.05 (UP from 0.01 -> phi genuinely 1-Lipschitz/SDF) + boundary-quiet texture TV.
+- priors: inject phi_k geometric priors (FEED-et: lane + hood + horizon) — offload 61% of the flip band.
+- standard: --w-seg 100 --w-pose 1.0 --ema-decay 0.997 --accum-pairs 8 --grad-clip 1.0 --self-orient --reorient-every 50 --chroma --async-verdict --stage-checkpoints --ckpt-every 25.
+
+**OPEN REVISIONS before the optimal-form build (FEED-ex clean-pass 0/3):** (1) BUILD the beta-anneal flag [HIGH, building now]; (2) wire the margin_hinge finisher stage; (3) Eikonal 0.05; (4) phi_k prior injection; (5) minor hygiene (class-order comment luma-sort fix, matmul np.errstate, LEVER-3 doc). beta-anneal+finisher+Eikonal+priors = substantive; hygiene = cosmetic.
+
+**Running decoder: LET IT FINISH (FEED-ex), no restart** — no CRITICAL invalidates the gate; the l7@900 transition is now-unprotected in the LIVE process (fix can't hot-patch) but l7 is mean-1-renormalized (scale-preserving, no spike storm expected) + recoverable from the preserved tau->l7 ckpt + --resume-from with the patched trainer. Pointer UNMOVED 0.19110; advisory; means!=ends.
