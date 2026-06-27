@@ -1465,3 +1465,25 @@ Closes the pending "MD a015eb18" node. Full memo: `.omx/research/md_decoupling_w
 **hosc-beta-anneal basis probe (n96, pid 80417) — POSITIVE: beta-anneal FIXES the parked hosc-from-scratch untrainability.** Parked capstone-v1 hosc(beta=4 fixed) failed d_seg 0.689 chance / gnorm-460 all-skip. This probe (beta-anneal 1->8): ep1 d_seg_live 0.507 -> **ep10 0.245, DESCENDING**, n_skips low (13 not all-skip), gnorm 5924->~400 as beta rose to 1.67@ep20. So beta-anneal-from-1 IS the SIREN-init-equivalent trainability fix (deep-math review predicted). CAVEAT: descending SLOWER than relu early (hosc 0.245 vs relu 0.0159 @ep10 — expected, low-beta near-linear/weak early); must run through beta-rise + tau_softplus(ep40+) to see if it crosses BELOW relu/FINER (0.00138) toward the goal (0.00112). FLOOR UNKNOWN (~ep200, ~30min). The byte-closeable MLX basis verdict (can hosc beat FINER 0.00138 -> clear the goal?) is the LAST open measurement before the strategic surface.
 
 **REVIEW-GATE COMPLETE (4 reviews + MD):** deep-math REVISE + contest-info REVISE + arbitrariness PIVOT (3-converge: RGB capped ~1.2x above goal, task-space is the path) + bug-hunt PROCEED (measurement trustworthy). MD = parallel-ablation. Last basis test (hosc-beta-anneal floor + SIREN-init a7660df3) in flight -> then synthesize + surface the strategic decision (RGB-hosc-row vs task-space-build) to operator. Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-cc (2026-06-26): RATE-FOR-SEG curve MAPPED -> witness NOT capped; RD-optimum B*~122-148KB -> S 0.134-0.159 (sub-0.15 with optimal-form+directional). 89KB was the WRONG point.
+
+**adf963b6 rate-seg/capacity-RD analysis (operator "trade rate for seg" + "map the curves"; $0 fit):** S(B) = 100*d_seg(B) + 0.0184 + 25*B/N; optimal-B condition -d'_seg(B*) = 6.66e-9/byte; fitted d_seg(B)=d0*(B0/B)^alpha, alpha~2.34 (BORROWED from bc20 0.003@89KB -> bc36 6.02e-4@177KB; load-bearing uncertainty -> n96 surface MUST re-measure per basis).
+
+**S(B) CURVE (predicted):**
+| B(KB) | relu | FINER | OPTIMAL-FORM (FINER + directional -48%) |
+| 89  | 0.378 | 0.216 | 0.149 |
+| 110 | 0.275 | 0.176 | 0.135 |
+| 122 |   -   | 0.165 | **0.134 (B*, sub-0.15)** |
+| 148 | 0.207 | 0.159 (FINER min) | 0.140 |
+| 177 | 0.197 | 0.164 | 0.151 |
+
+VERDICT: the 89KB single point (S0.216 FINER) was NOT the optimum — deep in the steep cliff. **Sub-0.19 clears at B>=105KB (FINER), even at conservative alpha=1.5 (S0.181@150KB). Sub-0.15 clears on the OPTIMAL-FORM curve (FINER + directional-Fourier -48% + capacity-routing + chroma): B*~122KB -> S~0.134.** The ~0.025-0.08 swing the fixed-rate 4-review gate MISSED by measuring one point. CONFIRMS operator "you're being pessimistic."
+
+**THE DIRECTIONAL-BYTE-CLOSEABILITY CRUX (must resolve):** the -48% directional basis is free (0-byte, in-code, regenerated at decode) ONLY if the boundary tangent field comes from a GENERIC/PARAMETRIC source (ground-plane homography lane geometry — the TASK-SPACE bridge), NOT per-instance GT-argmax (which the contest-info review FEED-by flagged as a leak). So witness-sub-0.15 REQUIRES the parametric tangent = the task-space generator. **The witness RD-optimum and the task-space build are the SAME object** (the witness IS the task-space generator; the parametric tangent makes the directional lever byte-closeable). Both arms feed sub-0.15.
+
+**OTHER TECHNIQUES (ranked, composing):** (1) directional-Fourier -48% (0-byte, shifts d_seg(B) ~2x down — THE sub-0.15 lever, needs parametric tangent); (2) residual-flip coder Lever-D (<1 B/flip, shifts curve left); (3) entropy-FiLM/temporal-delta (PR95 L24/L25, ~10-20% byte savings -> more capacity); (4) pose-warp seg=pose fusion (marginal, pose solved).
+
+**PLAN:** GPU queue = hosc probe (running) -> n96 (basis x capacity) RESPONSE-SURFACE sweep {60,90,120,150,200}KB x {FINER, hosc, +directional} OPTIMAL-FORM-per-cell (re-measure alpha + the directional lever + find B*) -> decisive n600 run at the RD-optimum (B*, best basis, directional, all principled fixes) -> byte-close -> contest-CPU exact. Task-space build (ab498f3b) parallel = the robust capstone + the directional-tangent source. Pointer UNMOVED 0.19110.
