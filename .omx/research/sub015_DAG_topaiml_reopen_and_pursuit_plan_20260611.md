@@ -2850,3 +2850,65 @@ Anchored at the witness's OWN converged measured point (n96 h96/mod32 hosc: d_se
 - The capacity-sweep the GPU run should do: {h96/mod32=100KB, h112/mod32=116KB, h128/mod32=135KB} × {directional OFF/ON} at CONVERGED n600 — this MEASURES α, the real d_ref-at-contest-scale, and B* per basis (replaces the borrowed α). A 3-point hidden-dim sweep at contest scale resolves the entire curve.
 
 **NO-FAKE:** all implied_S `[macOS-CPU advisory]` NON-PROMOTABLE; d_ref=0.00124 is n96-converged (optimistic for n600); byte model MEASURED (1.2% fit error); α BORROWED (must be re-measured by the sweep). Pointer UNMOVED 0.19110. The exact row at B* (byte-close + contest-CPU eval) is the gate; this maps WHERE to spend bytes, it is not itself a score.
+
+---
+
+## DAG FEED-et (2026-06-27): ALL-CLASS flip-band DECOMPOSITION — extend the lane(FEED-er)+hood(#139) parametric SOLVE to every class → measured static/geometric/learned split
+
+**Axis:** `[macOS-CPU advisory]` realized-vs-frozen-CPU-torch-L* research-signal; `score_claim=false`, `promotable=false`, NOT byte-closed; **pointer UNMOVED 0.19110**. $0 CPU/numpy+scipy, n96 (`gt_n96.npz` lstars/margins/gt_poses), GPU UNTOUCHED (pid 8806 owns the GPU). Measure script `experiments/measure_allclass_decomposition_FEED-et.py` (part-flagged A–F); JSON `experiments/results/allclass_decomp_FEED-et/decomposition.json`. REUSES `src/tac/boundary_math/{lane_sdf_component,hood_static_component}.py`.
+
+**Operator direction ("the right math and dimensions"):** decompose the all-class flip-prone boundary annulus (GT margin < 0.5; 1.32% of frame, 249,299 px / n96) into (a) STATIC 0-byte clamp, (b) GEOMETRIC per-frame coeffs (rule-118 FREE rasterizer), (c) LEARNED texture the witness must carry — MEASURED per boundary, building on the already-solved lane (FEED-er) + hood (#139).
+
+### MEASURED boundary-pair structure (each band pixel = own-L* class + dominant ≠-neighbor)
+| boundary | band % | model | coverage (MEASURED) | category |
+|---|---:|---|---:|---|
+| Road↔Lane | **43.0%** | openpilot poly × homography K (FEED-er) | **93.1%** (lane_attr 0.000390; FN 0.000146) | GEOMETRIC |
+| Road↔MyCar | **21.1%** | single static hood mask (#139) | **65.7%** (mask IoU 0.9944; **56 bytes/n600**, rate 3.7e-5) | STATIC |
+| Road↔Undrivable | **18.6%** | horizon line v=a+b·u | **23.6%** ±6px (resid 11.6px) — WEAK | GEOMETRIC (line) + road-edge |
+| Undrivable↔Movable | 8.9% | — | 17.1% static only | LEARNED (silhouette) |
+| Road↔Movable | 8.0% | — | 8.8% static only | LEARNED (silhouette) |
+| Lane↔{MyCar,Movable,Undriv} | 0.3% | (lane/hood) | — | folded |
+
+(Per-class flip share confirms FEED-eq: Road 47% / Lane 19% / Undrivable 14% / MyCar 11% / Movable 9%.)
+
+### The decomposition (BAND TOTAL: 60.8% solvable / 39.2% learned)
+- **SOLVABLE NOW (measured) 60.8%** = lane **40.3%** (geometric, ~7KB/n600, FEED-er) + hood **13.9%** (STATIC, **56 bytes**, ~0) + horizon **4.4%** (line only).
+- **LEARNED 39.2%** = Movable vehicle-silhouettes **14.7%** (irreducibly appearance-dependent) + Road↔Undrivable off-horizon road-EDGE **14.2%** (a GEOMETRIC *opportunity* — a road-edge polynomial in the ground frame, SAME machinery as the lane, currently UNMEASURED) + hood top-edge wobble **7.3%** (cheap per-frame horizontal line, ~1-2 B/frame).
+- **Honest horizon finding:** the Road↔Undrivable boundary is NOT a single horizontal line — only 23.6% (±6px) sits near the fitted horizon (v≈196.5); the rest is LATERAL road-edge. So the horizon *line* is a weak prior; the road-EDGE polynomial is the right (unmeasured) model and would lift another ~14% into solvable.
+
+### Implied OPTIMAL witness design (φ_k SDF channels of the K=5 level set)
+Inject as cheap per-frame priors (rule-118 FREE IPM+EDT rasterizers; only video-derived coeffs COUNTED, NO scorer weights / GT-argmax table):
+- **φ_1 = lane-SDF** (FEED-dm `inject_lane_sdf`, ~28.5 floats/frame, ~7 KB/n600) — solves 40% of band.
+- **φ_4 = hood-static-SDF** (#139 majority mask, **56 bytes total**, 0 per-frame) — solves 14% of band ~free.
+- **φ_2/φ_0 = horizon + road-edge SDF** (per-frame line a+b·u ≈0.5KB; road-edge poly ~7KB to capture the +14% opportunity).
+- **Total counted geometric coeffs ≈ 7.5–15 KB** (rate ≈ 0.005–0.010), FREE rasterizers. Witness weights remain the dominant byte cost (FEED-y rate lever).
+- **Reallocate witness capacity** to the irreducibly-LEARNED ~15-17% (Movable silhouettes + lane/road FP-annuli) — exactly the "more EFFECTIVE capacity at equal/lower bytes" mechanism in the CLAUDE.md frontier section.
+
+**ESTIMATED composed d_seg** (proportional, witness d_seg 0.008257 baseline distributed by band-share): idealized (priors pin solvable PERFECTLY) → learned d_seg ≈ **0.0032** (39% of baseline); realistic (priors carry MEASURED residuals: lane 0.000390 + hood 0.001431) → ≈ **0.0044–0.0051**. Both ≪ baseline 0.00826 but ≫ the ~0.00087 need → the priors roughly HALVE the witness's d_seg job; the witness must still close the learned residual from ~0.004 to ~0.001. (Strong assumption: d_seg ∝ band-share; the binding number is a byte-closed trained-witness A/B, NOT claimed.)
+
+### VERDICT (honest)
+Geometric decomposition **MEANINGFULLY shrinks** the witness's learned d_seg job — ~61% of the flip band is cheaply solvable by static+geometric priors (MEASURED), **dominated by the LANE (40%, ~7KB) + the 0-byte HOOD (14%)**. The priors are **MAJOR, not minor**. BUT the residual is genuinely LEARNED: the **Movable vehicle-silhouette boundary (~15-17%)** is irreducibly appearance-dependent → **the trained witness IS the right vehicle for that core**. The horizon-line prior is weak (the road edge needs a polynomial, not a line — a measured +14% opportunity). Net: a sub-0.15 path = BOTH the cheap φ_k geometric priors (free the byte budget, halve the d_seg job) AND the trained witness on the ~15-39% learned residual. This is the 4th independent vindication of the task-space witness + structured-prior capstone (with FEED-er lane, #139 hood, FEED-ad sidecar). NO-FAKE: every coverage MEASURED vs the frozen CPU-torch L*; rule-118 FREE rasterizers / COUNTED coeffs; pointer UNMOVED 0.19110; a decomposition is a MEANS — only a byte-closed exact row moves the pointer.
+
+---
+
+### DAG FEED-ev (2026-06-27): guidance relaunch = SEQUENCED not orphaned (no-signal-loss ledger) + FEED-eu integration (witness UNDER-sized CONFIRMED)
+
+**Operator Q: "relaunch guidance now or later? no signal loss / orphaned / keep DAG updated."** Answer + the explicit no-orphan ledger:
+
+**Guidance convergent A/B — NOT orphaned; LATER (GPU-bound); tracked in FEED-eq §6.** Passes the ANTI-SIGNAL-LOSS gate (named+measured blocker + reactivation trigger): blocker = (a) heavy convergent arms SIGURG-torn-down ~3min in the subagent exec env, (b) sustained GPU contends the critical-path amort decoder (pid 8806). Trigger + re-run command preserved at FEED-eq §6 ("Clean single-arm-sequential re-run, LATER GPU free").
+
+**Two relaunch paths (zero signal lost either way):**
+1. PRIMARY (mission value, NOT deferred): LEVER-4 (all-class margin-saliency) + LEVER-5 (realized-hardness) are ADOPTED into the NEXT training run — the optimal-form decoder (gate PASS) OR the n600 resume (gate FAIL). LEVER-4 runs at FULL budget there; the current lane-only amort decoder is the natural control → the convergent measurement happens AS PART OF the next run. The lever is USED, not parked.
+2. SECONDARY (attribution nicety, deferred): the dedicated isolated A/B (LEVER-4-alone vs lane-only, FEED-eq §6 cmd) for clean single-lever attribution — fired in the next genuine GPU-idle window (after the gate's code-fit/resume). NOT a blocker to using the lever.
+
+∴ relaunch = LATER + FOLDED into the next training run (primary) + a deferred isolated A/B (secondary). Both tracked; zero orphan.
+
+**FEED-eu integration (landed 6abd84906) — operator's "under-sized" hypothesis CONFIRMED:** current witness h96/mod32 byte-closes to ~100KB (MEASURED, not the assumed 122KB); B*≈120-155KB ⇒ the witness IS under-sized. hidden-dim = cheapest d_seg/byte knob. KEY: "d_seg-descent-at-n600 is the binding gate, NOT sizing" — getting d_seg to descend (training/levers) binds; sizing is secondary headroom.
+
+**OPTIMAL-FORM DECODER LEDGER (the post-gate BUILD; composes all verdicts; MVP-first = gated on the tau@300 held-out gate de-risking amortization FIRST):**
+- LEVER-4 all-class margin-saliency (FEED-eq) — defends 100% of the flip band vs current 19% (Road 47% currently undefended).
+- LEVER-5 realized-hardness code-fit (FEED-eq).
+- B* sizing ~120-155KB via hidden-dim (FEED-eu) — size UP from ~100KB.
+- Geometric priors φ_k (FEED-et, PENDING subagent a1fe656f) — inject the static/geometric-solvable boundary fraction (lane FEED-er + hood #139 + Road/Undriv extension).
+
+**No-orphan confirmation:** every deferred node carries a named trigger — convergent A/B (→ GPU-free window OR folded into next run), geometric-prior injection (→ FEED-et verdict + post-gate build), isolated attribution A/B (→ GPU-free). n600 PAUSED+resumable (123627Z ep25). Pointer UNMOVED 0.19110; [advisory] research-signal; NO-FAKE (LEVER-4 convergent benefit UNMEASURED until the full-budget next run; FEED-eu sizing MEASURED via byte-close).
