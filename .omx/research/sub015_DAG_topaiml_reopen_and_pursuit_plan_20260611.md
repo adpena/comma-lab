@@ -2401,3 +2401,91 @@ STRUCTURED-DECOMP DEFER (a56e3816, FEED-el 231e6d145): the OPTIMAL-FORM re-open 
 ## FEED-en ADDENDUM (operator calibration 2026-06-27): let the parallel work finish — it's important; don't over-throttle
 
 OPERATOR: "We can let those others finish. Their work is important." -> CORRECTS my FEED-en over-correction. The "<=1 CPU subagent during a GPU row" was too conservative. CALIBRATED stance: the row is NOT stalled (Rs, computing; ep25 verdict ~70min is the real rate datapoint); the CPU contention is TRANSIENT (dasd settles; subagents finish) and an ACCEPTABLE price for valuable parallel optimization. The async-verdict (ad4a7d13) especially MATTERS — it reduces the row's OWN CPU-side stall (the root of the contention sensitivity), serving this + every future row. SO: keep doing valuable parallel work; just be AWARE of contention (it explains a mild slowdown, not a stall) and prefer to land the async-verdict so the row's CPU-side stops competing. Don't kill/deprioritize important in-flight work to shave a transient slowdown. (Memory-based 2-CPU limit still holds for OOM safety; the CPU-contention point is awareness, not a hard throttle.)
+
+## FEED-em (2026-06-27): async-CPU verdict + reorient wall-clock fix (measured + built)
+
+OPERATOR wall-clock audit: the level-set trainer's per-epoch GPU loop STALLS on two
+SYNCHRONOUS numpy-CPU computations — the realized verdict (`realized_verdict`, eval-every 25)
+and the self-orient reorient (`recompute_self_orient`, reorient-every 50). The base_ch20
+async-CPU-authority pattern (train on GPU, run the CPU authority verdict in a BACKGROUND
+THREAD) lives in `src/tac/torch_vehicle/driver.py` but was NOT ported to the level-set
+trainer. Built the bit-identical async verdict + measured + assessed the reorient.
+
+### 1. MEASURED sync-CPU GPU-idle cost (n600 config; `[macOS-CPU advisory]`, standalone profiler)
+Per-unit numpy fp32 deploy-forward at the live n600 shapes (in_feat 88 / hidden 96 / n_hidden 4 /
+render 384x512 / chroma) on this box:
+- **numpy fp32 forward (1 pair, 196608 px): ~822 ms** (the DOMINANT cost — float64 accum, the ONE
+  CODEPATH the byte-close/inflate share; cannot move to MLX-GPU bit-identically, see #4)
+- R->camera uint8 (874x1164): ~4 ms ; self_orient_directional_feats (1 pair): ~10.5 ms
+- SegNet batch verdict: ~217 ms/frame ; PoseNet batch verdict: ~130 ms/pair (real CPU scorers)
+
+Aggregated at the live cadence:
+- **VERDICT (eval-every 25): ~192 s/event** = render 158.6s (96 pairs x 2 frames x ~826ms) +
+  SegNet 20.8s (96) + PoseNet 12.5s (96). The GPU sits IDLE the whole ~192 s.
+- **REORIENT (reorient-every 50): ~499 s/event** = 600 pairs x (forward 822ms + dir 10.5ms).
+  99% is the numpy forward. (The subsequent `_rebuild_cf_mx_cache` is MLX-GPU, not CPU-idle.)
+
+Amortized GPU-idle per epoch:
+- verdict  7.67 s/ep  -> **4.7%** of wall-clock @ 162 s/ep (5.3% @ the live ~144 s/ep pre-reorient)
+- reorient 9.99 s/ep  -> **6.2%** of wall-clock @ 162 s/ep
+- **TOTAL reclaimable ~17.7 s/ep = ~10.9% @ 162 s/ep (up to ~14.7% @ the OOM-log ~120 s/ep avg).**
+The render forward dominates BOTH (83% of the verdict, 99% of the reorient) -> the offload target.
+
+### 2. Custom-backward observability (LANDED, bit-identical, log-only) — `mlx_scorer_adapters.py`
+Added a ONE-TIME runtime confirmation at the gate decision (`torch_conv2d_to_mlx` grouped-strided
+branch, == scorer construction): `{"stage":"custom_grouped_backward","active":true/false,"reason":
+...,"path":...}`. Confirmed env-gated: env unset -> `active:false reason:env_..._not_set
+path:MLXReferenceConv2dAdapter(fixed_fp32 loop)`; env=1 -> `active:true
+reason:env_set_and_metal_backend_available path:MLXCustomKernelStridedGroupedConvAdapter`. Deduped
+(one line/run). So every future launch now CONFIRMS the ~17x custom grouped backward is engaged
+(the live row sets TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 -> would log active:true). Compute is
+BIT-IDENTICAL (log-only). `_custom_metal_backward_enabled()` kept as a thin bool wrapper (callers
+unchanged); 2 adapter tests pass.
+
+### 3. BUILT async verdict (ADDITIVE, DEFAULT-OFF `--async-verdict`) — `train_levelset_..._mlx.py`
+The realized verdict is PURELY OBSERVATIONAL (the training loop NEVER reads it back), so running it
+in a daemon thread off a MAIN-THREAD point-in-time snapshot does NOT change the training trajectory
+AT ALL -> BIT-IDENTICAL weights/checkpoints; only the verdict CADENCE may self-throttle
+(at-most-one in-flight; skip+log if a prior verdict still runs). Mirrors driver.py. Snapshot copies
+EVERYTHING the worker reads (EMA shadow -> numpy + int8 dequant, softmax_temp float, per-vpair dir
+feats copy); the worker touches NO MLX op and NONE of {ema.shadow, model, dir_feats_per_pair,
+cf_mx_cache} -> RACE-FREE. Final-epoch joins-then-schedules + post-loop join so the last row + DONE
+marker land before result.json.
+
+**BIT-IDENTICAL VERIFIED (yes):** (a) offline proof — render the verdict off a live state, snapshot
+it, MUTATE the live state (anneal softmax_temp + reorient dir + perturb EMA), then render off the
+snapshot: async frames == sync frames BYTE-FOR-BYTE, d_seg sync==async, d_pose sync==async (mutated
+state differs -> non-vacuous). (b) in-situ — async-ON vs async-OFF n6 runs at seed 0 produced a
+BYTE-IDENTICAL EMA checkpoint (sha ed9eb03b == ed9eb03b; 47/47 arrays array_equal -> training
+trajectory unchanged) AND the async verdict d_seg/d_pose rows match the sync rows EXACTLY (ep1
+0.510778/187.840836, ep2 0.534922/187.826542, ep3 0.515586/188.464182; rows tagged `"async":true`
++ `verdict_async_done` + a final `verdict_async_join`).
+
+### 4. ASSESS the reorient (the bigger ~6.2% leak) — recommendation: PARITY-GATED next-row
+NOT bit-identical on MLX-GPU: the reorient forward IS the numpy fp32 ONE-CODEPATH, and the MLX-GPU
+forward is reduced-precision (the measured ~1665 px/pair divergence root-cause documented at the
+`_render_numpy_deploy` header) -> the argmax (input to the directional feats) would diverge -> the
+dir feats (-> training input) change -> trajectory change. Async reorient is ALSO trajectory-changing
+(the feats would swap in a few epochs late = a lag). So NEITHER is bit-identical; both are
+PARITY-GATED. RECOMMEND **MLX-GPU reorient** as the next-row (it ELIMINATES ~all 6.2% — the forward
+moves to the GPU; only the ~6 s/event scipy-EDT dir-feats stays CPU) gated by: cos(numpy-dir-feats,
+gpu-dir-feats) on the boundary band > 0.999 AND a short d_seg A/B shows no harm. The dir feats are
+already a coarse ~0.89-cos prior, so a 0.85%-of-pixels argmax perturbation is plausibly negligible.
+Async reorient is the fallback if MLX-GPU parity fails (hides the cost but keeps it + adds lag). Did
+NOT land either (numerics-changing -> parity-gated, per the deterministic-repro spine).
+
+### 5. VERDICT + next-row flags
+- Reclaimable: **~4.7% NOW (async verdict, BIT-IDENTICAL)** + **~6.2% NEXT-ROW (reorient, PARITY-GATED)**
+  = ~10.9% total @ 162 s/ep. The async verdict turns a ~192 s GPU FREEZE (every 25 ep) into a ~0.5 s
+  main-thread snapshot copy (~0.6 GB for 96 vpair dir feats).
+- Bit-identical-safe: async verdict (#3) + custom-backward log (#2). Parity-gated: reorient (#4).
+- 3-clean-pass race review: worker reads only its snapshot + constants (curv_feats_np, gt, frozen
+  scorers) + writes history/prints under a lock; no MLX in the worker; final + post-loop joins.
+- **Next-row launch (adds the bit-identical reclaim to the live config):** append `--async-verdict`
+  to the n600 launch (everything else unchanged). The reorient MLX-GPU parity probe is a separate
+  next-row (measure cos + d_seg A/B before adopting).
+
+pointer UNMOVED 0.19110 ([macOS-CPU advisory], non-promotable). means!=ends: this is a wall-clock
+infra fix that lets the SAME training reach exact-relevant epochs faster; NO row moved. Files:
+`experiments/train_levelset_witness_realized_through_R_mlx.py` (+`--async-verdict`),
+`src/tac/local_acceleration/mlx_scorer_adapters.py` (custom-backward confirmation log).

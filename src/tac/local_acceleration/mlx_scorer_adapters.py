@@ -1121,26 +1121,66 @@ class MLXCustomKernelStridedGroupedConvAdapter:
         return out
 
 
-def _custom_metal_backward_enabled() -> bool:
-    """True when the fast custom Metal backward should replace the loop fallback.
+def _custom_metal_backward_status() -> tuple[bool, str]:
+    """``(active, reason)`` for the fast custom Metal grouped backward path.
 
-    Gated by ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`` AND an MLX GPU default device.
-    Default OFF so the bit-faithful Python-loop reference remains the validated
-    baseline; opt-in for the ~18x faster full-scorer backward when training.
+    Gated by ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`` AND a working Metal grouped
+    backward backend. Default OFF so the bit-faithful Python-loop reference
+    remains the validated baseline; opt-in for the ~17x faster full-scorer
+    backward when training. The ``reason`` string is for the one-time runtime
+    confirmation log (max-observability) so a launched run CONFIRMS the fast
+    path is engaged rather than silently falling back to the loop reference.
     """
 
     import os
 
     if os.environ.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD", "0") not in {"1", "true", "True"}:
-        return False
+        return False, "env_TAC_MLX_CUSTOM_GROUPED_BACKWARD_not_set"
     try:
         from tac.local_acceleration.metal_grouped_conv_backward import (
             metal_grouped_conv2d_backend_available,
         )
 
-        return metal_grouped_conv2d_backend_available()
-    except Exception:  # pragma: no cover - import/device guard
-        return False
+        if metal_grouped_conv2d_backend_available():
+            return True, "env_set_and_metal_backend_available"
+        return False, "env_set_but_metal_backend_unavailable"
+    except Exception as exc:  # pragma: no cover - import/device guard
+        return False, f"env_set_but_backend_import_failed:{type(exc).__name__}"
+
+
+def _custom_metal_backward_enabled() -> bool:
+    """True when the fast custom Metal backward should replace the loop fallback.
+
+    Thin bool wrapper over :func:`_custom_metal_backward_status` (the reason
+    string is consumed by the one-time confirmation log)."""
+
+    return _custom_metal_backward_status()[0]
+
+
+# One-time runtime confirmation guard (max-observability): emitted the FIRST time
+# a strided grouped Conv2d is adapted (== scorer construction), so every launched
+# run logs whether the custom Metal grouped backward (the ~17x throughput lever)
+# is ACTIVE or silently falling back to the loop reference. Log-only -> the compute
+# (forward + backward numerics) is BIT-IDENTICAL whether or not this fires.
+_CUSTOM_BACKWARD_LOG_EMITTED = False
+
+
+def _log_custom_backward_decision_once() -> None:
+    global _CUSTOM_BACKWARD_LOG_EMITTED
+    if _CUSTOM_BACKWARD_LOG_EMITTED:
+        return
+    _CUSTOM_BACKWARD_LOG_EMITTED = True
+    import json as _json
+
+    active, reason = _custom_metal_backward_status()
+    print(_json.dumps({
+        "stage": "custom_grouped_backward",
+        "active": bool(active),
+        "reason": reason,
+        "path": ("MLXCustomKernelStridedGroupedConvAdapter"
+                 if active else "MLXReferenceConv2dAdapter(fixed_fp32 loop)"),
+        "note": "log-only; compute is bit-identical regardless. ~17x backward when active.",
+    }), flush=True)
 
 
 def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
@@ -1154,6 +1194,7 @@ def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
         # grouped/depthwise strided Conv2d on the real scorer activations
         # (native VJP cosine ~0.025, magnitude 5-25x too large — see
         # metal_grouped_conv_backward.py + the native_blowup_diagnosis).
+        _log_custom_backward_decision_once()  # one-time runtime confirmation (log-only; bit-identical)
         if _custom_metal_backward_enabled():
             # Fast path: native forward + custom Metal backward kernels (same
             # descent direction, ~18x faster full-scorer backward). Opt-in.

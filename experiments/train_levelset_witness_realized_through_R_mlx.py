@@ -43,6 +43,7 @@ import argparse
 import json
 import os
 import sys
+import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -732,7 +733,111 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
         return {"d_seg": float(np.mean(ds)), "d_pose": float(np.mean(dp))}
 
+    # ---- ASYNC verdict (FEED-em; ADDITIVE, DEFAULT-OFF via --async-verdict). The realized
+    # CPU-torch verdict (render fp32 numpy + SegNet/PoseNet) is PURELY OBSERVATIONAL — the
+    # training loop NEVER reads its result — so running it in a BACKGROUND THREAD off a
+    # POINT-IN-TIME snapshot does NOT change the training trajectory at all (BIT-IDENTICAL
+    # weights/checkpoints; only the verdict CADENCE may self-throttle under load). Mirrors the
+    # base_ch20 async-CPU-authority pattern in src/tac/torch_vehicle/driver.py. The snapshot is
+    # captured on the MAIN thread (cheap) so the worker reads ONLY its own copies + constants
+    # (curv_feats_np, gt, frozen scorers) -> RACE-FREE (it never touches ema.shadow / model /
+    # dir_feats_per_pair / cf_mx_cache, all of which the main loop keeps mutating). The worker
+    # uses NO MLX op (pure numpy+torch) so it cannot race the GPU stream.
+    def _capture_verdict_snapshot() -> dict[str, Any]:
+        return {
+            "ema_np": {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()},
+            "softmax_temp": float(model.softmax_temp),
+            "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs} if use_self_orient else None),
+        }
+
+    def _feats_for_snapshot(pi: int, dir_snap) -> np.ndarray:
+        if not use_self_orient:
+            return curv_feats_np
+        return np.concatenate([curv_feats_np, dir_snap[pi]], axis=-1).astype(np.float32)
+
+    def _verdict_from_snapshot(snap: dict[str, Any]) -> dict[str, float]:
+        # BIT-IDENTICAL to realized_verdict() on the captured state: same int8 dequant, same
+        # fp32 ONE-CODEPATH forward, same softmax_temp, same per-pair feats, same CPU scorers.
+        deploy = int8_dequant_params(snap["ema_np"])
+        st = snap["softmax_temp"]
+        f0s, f1s = [], []
+        for pi in vpairs:
+            fnp = _feats_for_snapshot(pi, snap["dir"])
+            rgb0, _ = levelset_rgb_forward_numpy(
+                deploy, fnp, deploy["code"][2 * pi + 0], n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
+                n_classes=5, activation=args.activation, softmax_temp=st, wire_w0=args.wire_w0,
+                wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega, chroma=args.chroma)
+            rgb1, _ = levelset_rgb_forward_numpy(
+                deploy, fnp, deploy["code"][2 * pi + 1], n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
+                n_classes=5, activation=args.activation, softmax_temp=st, wire_w0=args.wire_w0,
+                wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega, chroma=args.chroma)
+            f0s.append(_torch_R_to_camera_uint8(rgb0.reshape(render_h, render_w, 3)))
+            f1s.append(_torch_R_to_camera_uint8(rgb1.reshape(render_h, render_w, 3)))
+        ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
+        dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
+        return {"d_seg": float(np.mean(ds)), "d_pose": float(np.mean(dp))}
+
     history: list[dict[str, Any]] = []
+    _verdict_lock = threading.Lock()
+    _verdict_thread: dict[str, Any] = {"t": None, "ep": None}
+    _verdict_skipped = [0]
+
+    def _verdict_inflight() -> bool:
+        t = _verdict_thread["t"]
+        return t is not None and t.is_alive()
+
+    def _emit_verdict_row(v: dict[str, float], ema_np: dict[str, np.ndarray], ep: int,
+                          seg_form: str, ep_loss: float, *, async_tag: bool) -> None:
+        blob = quantize_levelset_blob(ema_np)
+        s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
+        with _verdict_lock:
+            row = {"stage": "verdict", "epoch": ep, "seg_form": seg_form,
+                   **{k: round(vv, 6) for k, vv in v.items()},
+                   "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
+                   "ep_loss": round(ep_loss, 3)}
+            if async_tag:
+                row["async"] = True
+            print(json.dumps(row), flush=True)
+            history.append({"epoch": ep, **v, "implied_S": s})
+
+    def _schedule_async_verdict(ep: int, seg_form: str, ep_loss: float) -> bool:
+        if _verdict_inflight():
+            _verdict_skipped[0] += 1
+            with _verdict_lock:
+                print(json.dumps({"stage": "verdict_skip", "epoch": ep,
+                                  "inflight_epoch": _verdict_thread["ep"],
+                                  "total_skipped": _verdict_skipped[0],
+                                  "note": "prior async verdict still running; cadence self-throttles "
+                                  "(GPU never blocks)"}), flush=True)
+            return False
+        snap = _capture_verdict_snapshot()  # MAIN thread, cheap, point-in-time
+        _verdict_thread["ep"] = ep
+
+        def _worker() -> None:
+            t0 = time.time()
+            try:
+                v = _verdict_from_snapshot(snap)
+                _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True)
+                with _verdict_lock:
+                    print(json.dumps({"stage": "verdict_async_done", "epoch": ep,
+                                      "secs": round(time.time() - t0, 1)}), flush=True)
+            except Exception as exc:  # an eval failure must NOT kill training (daemon thread).
+                with _verdict_lock:
+                    print(json.dumps({"stage": "verdict_async_failed", "epoch": ep,
+                                      "err": f"{type(exc).__name__}: {exc}"}), flush=True)
+
+        t = threading.Thread(target=_worker, name=f"async-verdict-ep{ep}", daemon=True)
+        _verdict_thread["t"] = t
+        t.start()
+        return True
+
+    def _join_async_verdict() -> None:
+        t = _verdict_thread["t"]
+        if t is not None and t.is_alive():
+            print(json.dumps({"stage": "verdict_async_join",
+                              "note": "waiting for in-flight async verdict before continuing"}), flush=True)
+            t.join()
+        _verdict_thread["t"] = None
 
     # per-pair MLX coord-feats cache: shared curvelet tensor when no self-orient; rebuilt on each
     # reorient when self-orient is on (so the train forward uses the SAME per-pair feats the
@@ -933,14 +1038,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if args.mlx_device == "gpu":
                 mx.clear_cache()
             if ep % args.eval_every == 0 or ep == args.epochs:
-                v = realized_verdict()
-                blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
-                s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
-                print(json.dumps({"stage": "verdict", "epoch": ep, "seg_form": seg_form,
-                                  **{k: round(vv, 6) for k, vv in v.items()},
-                                  "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
-                                  "ep_loss": round(ep_loss, 3)}), flush=True)
-                history.append({"epoch": ep, **v, "implied_S": s})
+                if args.async_verdict:
+                    # FEED-em: offload the observational verdict to a background thread so the
+                    # GPU loop never idles. BIT-IDENTICAL training (verdict is never read back).
+                    # At the FINAL epoch, JOIN first so the last verdict row is not skip-throttled.
+                    if ep == args.epochs:
+                        _join_async_verdict()
+                    _schedule_async_verdict(ep, seg_form, ep_loss)
+                else:
+                    v = realized_verdict()
+                    blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
+                    s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
+                    print(json.dumps({"stage": "verdict", "epoch": ep, "seg_form": seg_form,
+                                      **{k: round(vv, 6) for k, vv in v.items()},
+                                      "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
+                                      "ep_loss": round(ep_loss, 3)}), flush=True)
+                    history.append({"epoch": ep, **v, "implied_S": s})
             # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
             # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
             # stage-encoded, byte-close-loadable ckpt (per-stage A/B of which stage moves d_seg).
@@ -957,6 +1070,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 w = _do_checkpoint(ep)
                 print(json.dumps({"stage": "checkpoint", "kind": "intra_stage", **w}), flush=True)
             last_ep = ep
+
+    # FEED-em: JOIN any in-flight async verdict so the final verdict row + history land BEFORE
+    # result.json is written (the DONE-marker contract). No-op when --async-verdict is off.
+    if args.async_verdict:
+        _join_async_verdict()
 
     # FINAL checkpoint (replaces the historical loop-end-only save, which is now FORBIDDEN). Always
     # writes the rolling latest + a PRESERVED final stage-encoded ckpt -> the run is byte-closeable
@@ -1033,6 +1151,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--spike-factor", type=float, default=5.0)
     ap.add_argument("--verdict-pairs", type=int, default=24,
                     help="realized fp32-numpy EMA-shadow verdict subset (0=all); ALWAYS fp32 one-codepath, never mlx-gpu.")
+    ap.add_argument("--async-verdict", action=argparse.BooleanOptionalAction, default=False,
+                    help="FEED-em: run the OBSERVATIONAL CPU-torch verdict in a BACKGROUND THREAD off a "
+                    "point-in-time snapshot so the MLX-GPU loop never idles (~4.7%% wall-clock reclaim @ "
+                    "n600). BIT-IDENTICAL training (the verdict is never read back); only the verdict "
+                    "CADENCE may self-throttle under load (at-most-one in-flight). DEFAULT OFF = the "
+                    "current synchronous bit-identical behavior.")
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--gt-cache", type=str, default=None)
