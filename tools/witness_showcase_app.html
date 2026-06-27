@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<!-- WITNESS SHOWCASE — interactive max-observability app for the non-RGB TASK-SPACE WITNESS.
+     Authored as real HTML; copied verbatim to <out-dir>/index.html by tools/build_witness_showcase.py.
+     Every rendered layer is synthesized LIVE from REAL measured fields under ./data/ (NO-FAKE):
+       phi_i8.bin   = the witness's 5 signed-distance logit fields (converged EMA ckpt, CPU-inflate)
+       lstar_i8.bin = the frozen CPU-torch SegNet argmax authority (canonical GT decode)
+       frames/*.jpg = GT source (yuv420_to_rgb) + witness render
+     A viz is a MEANS, not an end — the exact frontier pointer is UNMOVED at contest-CPU 0.19110. -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Task-Space Witness — interactive showcase</title>
+<style>
+  :root{
+    --bg:#0a0c12; --bg2:#10131c; --panel:#141826; --panel2:#1b2030; --edge:#262d40;
+    --ink:#e8ecf6; --dim:#8a93ad; --acc:#5ad1ff; --acc2:#c84bff; --good:#2dff88; --warn:#ff2d2d;
+    --lane:#ff2d2d; --road:#7a7f92; --mono:'SFMono-Regular',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:radial-gradient(1200px 700px at 70% -10%,#16203a 0%,var(--bg) 55%);color:var(--ink);font-family:var(--mono);}
+  a{color:var(--acc)}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2a3146;border-radius:6px}
+  header{padding:14px 20px 8px;border-bottom:1px solid var(--edge);background:linear-gradient(180deg,rgba(20,24,38,.85),rgba(10,12,18,.4));}
+  header h1{margin:0;font-size:19px;letter-spacing:.5px}
+  header h1 .g{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header .sub{color:var(--dim);font-size:12px;margin-top:3px;max-width:1100px;line-height:1.5}
+  header .pin{color:#ffcf5a;font-size:11px;margin-top:4px}
+  .wrap{display:grid;grid-template-columns:1fr 320px;gap:14px;padding:14px 16px;align-items:start}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}}
+  .stage{position:relative;background:var(--bg2);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
+  #view{display:block;width:100%;height:62vh;min-height:380px;cursor:grab;background:
+    repeating-conic-gradient(#0d101a 0% 25%, #0b0e16 0% 50%) 50%/22px 22px}
+  #view.drag{cursor:grabbing}
+  .stagebar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;align-items:center;
+    padding:9px 12px;background:linear-gradient(0deg,rgba(8,10,16,.92),rgba(8,10,16,0));font-size:12px}
+  .stagebar button,.btn{background:var(--panel2);color:var(--ink);border:1px solid var(--edge);
+    border-radius:8px;padding:5px 10px;cursor:pointer;font-family:var(--mono);font-size:12px}
+  .stagebar button:hover,.btn:hover{border-color:var(--acc)}
+  .stagebar input[type=range]{flex:1;accent-color:var(--acc)}
+  .hud{position:absolute;top:10px;left:12px;font-size:11px;color:var(--dim);background:rgba(8,10,16,.6);
+    padding:5px 9px;border-radius:8px;border:1px solid var(--edge);pointer-events:none;line-height:1.5}
+  .hud b{color:var(--ink)}
+  .side{display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px}
+  .card h3{margin:0 0 8px;font-size:12px;letter-spacing:.6px;color:var(--acc);text-transform:uppercase}
+  .layers{display:flex;flex-direction:column;gap:6px}
+  .lyr{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 6px;border-radius:7px;cursor:pointer;border:1px solid transparent}
+  .lyr:hover{background:var(--panel2)}
+  .lyr.on{border-color:var(--edge);background:var(--panel2)}
+  .lyr .sw{width:12px;height:12px;border-radius:3px;flex:none;box-shadow:0 0 0 1px #0006 inset}
+  .lyr .nm{flex:1}
+  .lyr input[type=range]{width:70px;accent-color:var(--acc)}
+  .slider{margin:8px 0 2px}
+  .slider label{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:3px}
+  .slider label b{color:var(--ink)}
+  .slider input{width:100%;accent-color:var(--acc2)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;font-size:11px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .tab{padding:6px 11px;border-radius:8px;border:1px solid var(--edge);background:var(--panel);
+    cursor:pointer;font-size:12px;color:var(--dim)}
+  .tab.on{color:var(--ink);border-color:var(--acc);background:var(--panel2)}
+  .pane{display:none}.pane.on{display:block}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:980px){.row{grid-template-columns:1fr}}
+  canvas.chart{width:100%;background:var(--bg2);border:1px solid var(--edge);border-radius:10px;display:block}
+  .kv{font-size:12px;color:var(--dim);line-height:1.7}.kv b{color:var(--ink)}
+  .disc{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .disc .d{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--edge);
+    border-radius:12px;padding:13px}
+  .disc .d h4{margin:0 0 6px;font-size:13px;color:var(--good)}
+  .disc .d p{margin:0;font-size:12px;color:var(--dim);line-height:1.55}
+  .narr{font-size:12.5px;line-height:1.6;color:var(--ink);min-height:34px}
+  .narr .tag{color:var(--acc2);font-weight:bold}
+  .footer{padding:10px 18px 26px;color:var(--dim);font-size:11px;border-top:1px solid var(--edge)}
+  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--edge);border-radius:20px;font-size:11px;color:var(--dim);margin:2px 4px 2px 0}
+  #ray3d{width:100%;height:340px;background:var(--bg2);border:1px solid var(--edge);border-radius:10px}
+  .hint{font-size:11px;color:var(--dim);margin-top:6px}
+  #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:50;flex-direction:column;gap:14px}
+  #loader .b{width:240px;height:6px;background:#1b2030;border-radius:4px;overflow:hidden}
+  #loader .b i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .2s}
+</style>
+</head>
+<body>
+<div id="loader"><div style="font-size:14px;letter-spacing:1px">loading the witness…</div>
+  <div class="b"><i id="lbar"></i></div><div id="lmsg" style="font-size:11px;color:var(--dim)"></div></div>
+
+<header>
+  <h1><span class="g">TASK-SPACE WITNESS</span> &nbsp;·&nbsp; representing · carrying · compressing · exploiting · protecting · solving</h1>
+  <div class="sub" id="subline">A nonlinear coordinate-INR that amortizes the SegNet argmax partition directly. Every layer below is a REAL measured field — drag, zoom, rewind, and re-solve the partition live.</div>
+  <div class="pin" id="pinline">●</div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: the interactive stage -->
+  <div class="stage">
+    <canvas id="view"></canvas>
+    <div class="hud" id="hud"></div>
+    <div class="stagebar">
+      <button id="play">▶</button>
+      <button id="stepb" title="step back">⏮</button>
+      <button id="stepf" title="step fwd">⏭</button>
+      <input id="frame" type="range" min="0" max="0" value="0"/>
+      <span id="fnum" style="min-width:96px;text-align:right;color:var(--dim)">frame 0</span>
+      <button id="reset" title="reset zoom">⟲ fit</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: controls -->
+  <div class="side">
+    <div class="card">
+      <h3>Layers <span style="float:right;color:var(--dim);font-weight:normal;text-transform:none">click to toggle · slide opacity</span></h3>
+      <div class="layers" id="layers"></div>
+    </div>
+    <div class="card">
+      <h3>Live re-solve</h3>
+      <div class="slider"><label>softmax confidence τ <b id="tauv">1.00</b></label>
+        <input id="tau" type="range" min="0.04" max="3.0" step="0.01" value="1.0"/></div>
+      <div class="slider"><label>precariousness threshold <b id="thrv">0.15</b></label>
+        <input id="thr" type="range" min="0.0" max="1.0" step="0.01" value="0.15"/></div>
+      <div class="slider"><label>focus class <b id="clsv">all</b></label>
+        <input id="cls" type="range" min="-1" max="4" step="1" value="-1"/></div>
+      <div class="hint">argmax is τ-invariant, so the partition is exact at every τ — τ sharpens the
+        soft <b>confidence / margin</b> field (the ring/precariousness signal). Focus-class drives the SDF view &amp; 3D surface.</div>
+    </div>
+    <div class="card">
+      <h3>Legend (comma10k order)</h3>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card">
+      <h3>Narrative</h3>
+      <div class="narr" id="narr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOWER: dimensional-ladder panels -->
+<div style="padding:0 16px 16px">
+  <div class="tabs" id="tabs">
+    <div class="tab on" data-p="ray">1D · ray cross-section</div>
+    <div class="tab" data-p="dim">↘ dimensionality</div>
+    <div class="tab" data-p="d3">3D · SDF surface</div>
+    <div class="tab" data-p="pose">⛬ pose dimension</div>
+    <div class="tab" data-p="disc">★ discoveries / journey</div>
+  </div>
+
+  <div class="pane on" id="pane-ray">
+    <div class="row">
+      <div class="card">
+        <h3>Drag a ray on the stage</h3>
+        <div class="hint">Shift-drag on the main view to lay a 1D ray. The plot shows each class's φ(t)
+          along it; crossings = boundaries, oscillation near a crossing = ring/precariousness.</div>
+        <canvas id="raychart" class="chart" height="240" style="margin-top:8px"></canvas>
+      </div>
+      <div class="card">
+        <h3>What you're seeing</h3>
+        <div class="kv" id="raykv">Lay a ray to read the level-set profile.</div>
+        <div class="hint" style="margin-top:8px">The <b>argmax</b> along the ray is the partition (1D);
+          the winning φ minus the runner-up is the <b>margin</b> — low margin = the boundary is precarious there.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-dim">
+    <div class="row">
+      <div class="card">
+        <h3>Code manifold spectrum (the compression)</h3>
+        <canvas id="svdchart" class="chart" height="240"></canvas>
+        <div class="hint">SVD of the per-pair code matrix. The energy collapses onto a low-rank manifold —
+          that low effective rank is WHY the witness is cheap.</div>
+      </div>
+      <div class="card">
+        <h3>From full-RGB to a few dims</h3>
+        <div class="kv" id="dimkv"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-d3">
+    <div class="card">
+      <h3>The thing itself — φ height surface (3D, drag to rotate)</h3>
+      <div id="ray3d"></div>
+      <div class="hint">Height = the focus class's signed-distance logit φ_k(x); the bright ridge is the
+        zero-crossing where this class wins/loses — the boundary, lifted into 3D. Use the <b>focus class</b> slider.</div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-pose">
+    <div class="row">
+      <div class="card">
+        <h3>Ego-motion trajectory — the drive, reconstructed from pose</h3>
+        <canvas id="trajchart" class="chart" height="300"></canvas>
+        <div class="hint">Bird's-eye path from integrating the GT PoseNet deltas. The orange dot is the
+          current frame. Pose is a dimension in its own right — the scene MOVES.</div>
+      </div>
+      <div class="card">
+        <h3>The 6 PoseNet scalars + manifold spectrum</h3>
+        <canvas id="posechart" class="chart" height="150"></canvas>
+        <canvas id="posesvd" class="chart" height="120" style="margin-top:8px"></canvas>
+        <div class="kv" id="posekv" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-disc">
+    <div class="card"><h3>Discoveries &amp; the journey (1D → 4D+)</h3><div class="disc" id="disc"></div></div>
+  </div>
+</div>
+
+<div class="footer" id="footer"></div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+"use strict";
+const D = "./data/";
+const $ = s => document.querySelector(s);
+let S=null, PHI=null, LST=null, AM=[], MARG=[];  // S=stats, PHI Int8Array, LST Int8Array
+let H=0,W=0,K=0,N=0, scaleArr=[], imgs={src:[],wit:[]};
+const ldr=$("#loader"), lbar=$("#lbar"), lmsg=$("#lmsg");
+function prog(p,m){lbar.style.width=(p*100|0)+"%"; if(m)lmsg.textContent=m;}
+
+async function boot(){
+  prog(.05,"stats…");
+  S = await (await fetch(D+"stats.json")).json();
+  H=S.render_h; W=S.render_w; K=S.n_classes; N=S.n_frames; scaleArr=S.phi_scale;
+  prog(.15,"φ fields…");
+  PHI = new Int8Array(await (await fetch(D+"phi_i8.bin")).arrayBuffer());
+  prog(.45,"GT partition…");
+  LST = new Int8Array(await (await fetch(D+"lstar_i8.bin")).arrayBuffer());
+  prog(.55,"frames…");
+  for(let f=0;f<N;f++){
+    imgs.src[f]=await loadImg(D+`frames/src_${String(f).padStart(3,"0")}.jpg`);
+    imgs.wit[f]=await loadImg(D+`frames/wit_${String(f).padStart(3,"0")}.jpg`);
+    prog(.55+.35*(f+1)/N);
+  }
+  prog(.92,"solving…");
+  precompute();
+  setup();
+  ldr.style.display="none";
+}
+function loadImg(u){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=u;});}
+
+// ---- field access + live solve ----
+const HW=()=>H*W;
+function phiAt(f,k,y,x){ return PHI[((f*K+k)*H+y)*W+x]*scaleArr[f]; }
+function precompute(){ // argmax + logit-margin are τ-invariant -> precompute once per frame
+  AM=[];MARG=[];
+  for(let f=0;f<N;f++){
+    const am=new Uint8Array(HW()), mg=new Float32Array(HW());
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+      let b0=-1e9,b1=-1e9,bi=0;
+      for(let k=0;k<K;k++){const v=phiAt(f,k,y,x); if(v>b0){b1=b0;b0=v;bi=k;} else if(v>b1){b1=v;}}
+      const i=y*W+x; am[i]=bi; mg[i]=b0-b1;
+    }
+    AM.push(am);MARG.push(mg);
+  }
+  // normalize margin to [0,1] per dataset for thresholding
+  let mx=1e-6; for(const m of MARG)for(const v of m) if(v>mx)mx=v;
+  for(const m of MARG)for(let i=0;i<m.length;i++) m[i]/=mx;
+  S._marg_max=mx;
+}
+
+// ---- viewer state ----
+const view=$("#view"), vctx=view.getContext("2d",{alpha:false});
+let cur=0, playing=false, tau=1.0, thr=0.15, focusCls=-1;
+let T={s:1,ox:0,oy:0}; // field-space -> screen transform (scale + offset)
+const PAL=()=>S.palette;
+const off=document.createElement("canvas"); // field-res offscreen for synthesized layers
+let offc=null;
+
+const LAYERS=[
+  {id:"src", nm:"Source RGB (GT)", kind:"img", on:true, a:1.0, col:"#9fb0d0"},
+  {id:"wit", nm:"Witness render (vehicle)", kind:"img", on:false, a:1.0, col:"#5ad1ff"},
+  {id:"part",nm:"SegNet partition", kind:"syn", on:true, a:0.55, col:"#c84bff"},
+  {id:"sdf", nm:"SDF field (focus class)", kind:"syn", on:false,a:0.9, col:"#7aa7ff"},
+  {id:"marg",nm:"Margin / precariousness", kind:"syn", on:false,a:0.85, col:"#ffcf5a"},
+  {id:"sep", nm:"Separatrix (boundary)", kind:"syn", on:true, a:0.95, col:"#ffffff"},
+  {id:"tri", nm:"Triple junctions", kind:"syn", on:false, a:1.0, col:"#5ad1ff"},
+];
+
+function setup(){
+  // sub/pin/legend/footer
+  $("#subline").textContent = S.narrative.represent.replace(/^REPRESENT — /,"") +
+    "  ·  witness "+S.hidden_dim+"×"+S.n_hidden+" hidden, "+S.mod_dim+"-dim code, "+S.activation+
+    " activation, epoch "+S.epoch+".";
+  $("#pinline").innerHTML = "▲ "+S.authority+"  "+S.pointer_note;
+  $("#footer").innerHTML = "<span class='pill'>ckpt "+S.ckpt+"</span><span class='pill'>GT "+S.gt_cache+
+    "</span><span class='pill'>"+N+" frames (pairs "+S.frame_pairs[0]+"–"+S.frame_pairs[S.frame_pairs.length-1]+
+    ")</span><span class='pill'>render "+H+"×"+W+"</span><span class='pill'>generated "+S.generated_utc+
+    "</span><br>Every field is REAL measured data (NO-FAKE). Synthesized layers are computed live in your "+
+    "browser from the witness φ + the frozen SegNet argmax. A viz is a MEANS — the exact frontier is pointer-only.";
+  // legend
+  $("#legend").innerHTML = S.class_names.map((n,k)=>{
+    const c=PAL()[k]; return `<span><i style="background:rgb(${c[0]},${c[1]},${c[2]})"></i>${k}·${n}</span>`;}).join("");
+  // layers ui
+  $("#layers").innerHTML="";
+  LAYERS.forEach((L,idx)=>{
+    const row=document.createElement("div"); row.className="lyr"+(L.on?" on":"");
+    row.innerHTML=`<span class="sw" style="background:${L.col}"></span><span class="nm">${L.nm}</span>`+
+      `<input type="range" min="0" max="1" step="0.05" value="${L.a}" title="opacity">`;
+    row.querySelector(".nm").onclick=()=>{L.on=!L.on;row.classList.toggle("on",L.on);draw();updateNarr();};
+    row.querySelector(".sw").onclick=()=>{L.on=!L.on;row.classList.toggle("on",L.on);draw();updateNarr();};
+    row.querySelector("input").oninput=e=>{L.a=+e.target.value;draw();};
+    $("#layers").appendChild(row);
+  });
+  // frame scrubber
+  const fr=$("#frame"); fr.max=N-1; fr.value=0;
+  fr.oninput=e=>{cur=+e.target.value;sync();};
+  $("#play").onclick=togglePlay;
+  $("#stepf").onclick=()=>{cur=(cur+1)%N;sync();};
+  $("#stepb").onclick=()=>{cur=(cur-1+N)%N;sync();};
+  $("#reset").onclick=fit;
+  $("#tau").oninput=e=>{tau=+e.target.value;$("#tauv").textContent=tau.toFixed(2);draw();};
+  $("#thr").oninput=e=>{thr=+e.target.value;$("#thrv").textContent=thr.toFixed(2);draw();};
+  $("#cls").oninput=e=>{focusCls=+e.target.value;$("#clsv").textContent=focusCls<0?"all":focusCls+"·"+S.class_names[focusCls];draw();draw3D();updateNarr();};
+  // tabs
+  document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+    document.querySelectorAll(".pane").forEach(x=>x.classList.remove("on"));
+    t.classList.add("on"); $("#pane-"+t.dataset.p).classList.add("on");
+    if(t.dataset.p==="d3") draw3D();
+    if(t.dataset.p==="dim") drawSVD();
+    if(t.dataset.p==="pose") drawPose();
+  });
+  // discoveries
+  $("#disc").innerHTML=S.discoveries.map(d=>`<div class="d"><h4>${d.title}</h4><p>${d.body}</p></div>`).join("");
+  drawDimKV(); drawSVD(); initInteract(); fit(); updateNarr();
+  window.addEventListener("resize",()=>{fit();});
+}
+
+function sync(){$("#frame").value=cur;draw();refreshAux();}
+function refreshAux(){
+  const on=document.querySelector(".tab.on"); if(!on)return; const p=on.dataset.p;
+  if(p==="pose")drawPose(); else if(p==="d3"&&three)buildSurface();
+}
+function togglePlay(){playing=!playing;$("#play").textContent=playing?"⏸":"▶";if(playing)loop();}
+let lastT=0;
+function loop(){ if(!playing)return; const now=performance.now();
+  if(now-lastT>110){cur=(cur+1)%N;sync();lastT=now;} requestAnimationFrame(loop); }
+
+// ---- transform / fit / zoom-pan ----
+function fitCanvas(){ const r=view.getBoundingClientRect(); view.width=r.width*devicePixelRatio; view.height=r.height*devicePixelRatio; }
+function fit(){ fitCanvas(); const cw=view.width,ch=view.height; const s=Math.min(cw/W,ch/H)*0.96;
+  T.s=s; T.ox=(cw-W*s)/2; T.oy=(ch-H*s)/2; draw(); }
+function toField(px,py){ return {x:(px*devicePixelRatio-T.ox)/T.s, y:(py*devicePixelRatio-T.oy)/T.s}; }
+
+function initInteract(){
+  let dragging=false,lx=0,ly=0,rayMode=false;
+  view.addEventListener("wheel",e=>{e.preventDefault();
+    const r=view.getBoundingClientRect(); const mx=(e.clientX-r.left)*devicePixelRatio, my=(e.clientY-r.top)*devicePixelRatio;
+    const k=Math.exp(-e.deltaY*0.0014); const ns=Math.max(0.25,Math.min(60,T.s*k));
+    T.ox=mx-(mx-T.ox)*(ns/T.s); T.oy=my-(my-T.oy)*(ns/T.s); T.s=ns; draw();},{passive:false});
+  view.addEventListener("mousedown",e=>{ rayMode=e.shiftKey; dragging=true; lx=e.clientX;ly=e.clientY;
+    view.classList.add("drag");
+    if(rayMode){const r=view.getBoundingClientRect();ray.a=toField(e.clientX-r.left,e.clientY-r.top);ray.b=ray.a;}});
+  window.addEventListener("mousemove",e=>{ if(!dragging)return;
+    if(rayMode){const r=view.getBoundingClientRect();ray.b=toField(e.clientX-r.left,e.clientY-r.top);draw();drawRay();}
+    else{T.ox+=(e.clientX-lx)*devicePixelRatio;T.oy+=(e.clientY-ly)*devicePixelRatio;lx=e.clientX;ly=e.clientY;draw();}});
+  window.addEventListener("mouseup",()=>{dragging=false;view.classList.remove("drag");});
+  // hover readout
+  view.addEventListener("mousemove",e=>{const r=view.getBoundingClientRect();const p=toField(e.clientX-r.left,e.clientY-r.top);
+    const x=p.x|0,y=p.y|0; if(x<0||y<0||x>=W||y>=H){return;} const i=y*W+x;
+    const c=AM[cur][i]; const mg=MARG[cur][i]; const fk=focusCls>=0?focusCls:c;
+    $("#hud").innerHTML=`frame <b>${cur}</b> · pair <b>${S.frame_pairs[cur]}</b><br>`+
+      `px (${x},${y}) · SegNet=<b>${S.class_names[c]}</b><br>`+
+      `φ[${S.class_names[fk]}]=<b>${phiAt(cur,fk,y,x).toFixed(1)}</b> · margin=<b>${mg.toFixed(3)}</b>`+
+      (mg<thr?` · <span style="color:#ff6">precarious</span>`:``);});
+}
+
+// ---- the ray (1D cross-section) ----
+const ray={a:null,b:null};
+function drawRay(){
+  if(!ray.a||!ray.b){return;}
+  const cv=$("#raychart"); const ctx=cv.getContext("2d");
+  const Wc=cv.width=cv.clientWidth, Hc=cv.height;
+  ctx.clearRect(0,0,Wc,Hc); ctx.fillStyle="#10131c";ctx.fillRect(0,0,Wc,Hc);
+  const M=samples(ray.a,ray.b,256);
+  // gather phi per class along ray
+  let lo=1e9,hi=-1e9; const series=[];
+  for(let k=0;k<K;k++){const s=M.map(p=>phiSample(cur,k,p.x,p.y));series.push(s);
+    for(const v of s){if(v<lo)lo=v;if(v>hi)hi=v;}}
+  const pad=18; const X=t=>pad+t*(Wc-2*pad)/(M.length-1); const Y=v=>Hc-pad-(v-lo)*(Hc-2*pad)/((hi-lo)||1);
+  // argmax band on top
+  for(let t=0;t<M.length;t++){let bi=0,bv=-1e9;for(let k=0;k<K;k++){const v=series[k][t];if(v>bv){bv=v;bi=k;}}
+    const c=PAL()[bi];ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;ctx.fillRect(X(t),2,Math.ceil((Wc-2*pad)/M.length)+1,8);}
+  // grid
+  ctx.strokeStyle="#222a3d";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,Y(0));ctx.lineTo(Wc-pad,Y(0));ctx.stroke();
+  for(let k=0;k<K;k++){const c=PAL()[k];ctx.strokeStyle=`rgb(${c[0]},${c[1]},${c[2]})`;ctx.lineWidth=2;ctx.beginPath();
+    series[k].forEach((v,t)=>{const px=X(t),py=Y(v);t?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();}
+  ctx.fillStyle="#8a93ad";ctx.font="10px monospace";ctx.fillText("φ along ray  (colored band = argmax = the partition)",pad,Hc-4);
+  // readout
+  let flips=0;for(let t=1;t<M.length;t++){let a=arg(series,t),b=arg(series,t-1);if(a!==b)flips++;}
+  $("#raykv").innerHTML=`ray length <b>${dist(ray.a,ray.b).toFixed(0)} px</b> · boundary crossings <b>${flips}</b>`+
+    `<br>each crossing is where the argmax (partition) changes class — a level-set transition.`+
+    `<br>min margin on ray <b>${minMargin(series).toFixed(3)}</b> (low = precarious / ring-prone).`;
+}
+function arg(series,t){let bi=0,bv=-1e9;for(let k=0;k<series.length;k++){if(series[k][t]>bv){bv=series[k][t];bi=k;}}return bi;}
+function minMargin(series){let mm=1e9;for(let t=0;t<series[0].length;t++){let b0=-1e9,b1=-1e9;
+  for(let k=0;k<series.length;k++){const v=series[k][t];if(v>b0){b1=b0;b0=v;}else if(v>b1)b1=v;}if(b0-b1<mm)mm=b0-b1;}return mm;}
+function samples(a,b,n){const o=[];for(let i=0;i<n;i++){const t=i/(n-1);o.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});}return o;}
+function phiSample(f,k,x,y){x=Math.max(0,Math.min(W-1,x|0));y=Math.max(0,Math.min(H-1,y|0));return phiAt(f,k,y,x);}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+
+// ---- main compositor ----
+function softmaxConf(f,i){ // max soft prob at temperature tau (τ-dependent precariousness)
+  let m=-1e9,s=0; const v=[];
+  for(let k=0;k<K;k++){const z=phiAt(f,k,(i/W)|0,i%W)/tau; v.push(z); if(z>m)m=z;}
+  for(let k=0;k<K;k++){s+=Math.exp(v[k]-m);}
+  return Math.exp(v[(()=>{let bi=0,bv=-1e9;for(let k=0;k<K;k++)if(v[k]>bv){bv=v[k];bi=k;}return bi;})()]-m)/s;
+}
+function synthLayer(id){
+  const im=offc.createImageData(W,H); const d=im.data; const am=AM[cur], mg=MARG[cur], P=PAL();
+  const smax=scaleArr[cur]*127||1;
+  for(let i=0;i<HW();i++){
+    let r=0,g=0,b=0,a=0; const x=i%W, y=(i/W)|0;
+    if(id==="part"){const c=P[am[i]];r=c[0];g=c[1];b=c[2];a=255;}
+    else if(id==="sdf"){ // per-class signed distance: warm inside, cool outside, white at zero-level-set
+      let v; if(focusCls>=0){v=phiAt(cur,focusCls,y,x);} else {v=mg[i]*smax;} // "all" -> winning margin
+      const t=Math.max(-1,Math.min(1,v/smax));
+      if(Math.abs(t)<0.025){r=255;g=255;b=255;}            // the zero-level-set = the boundary itself
+      else if(t>0){r=(255*t)|0;g=(120*t)|0;b=(60*t)|0;}    // inside -> ember
+      else{const u=-t;r=(40*u)|0;g=(150*u)|0;b=(255*u)|0;} // outside -> cyan
+      a=255;}
+    else if(id==="marg"){ // τ-dependent softmax confidence over the SDFs; low conf = warm = precarious
+      const conf=softmaxConf(cur,i); const t=Math.max(0,Math.min(1,(conf-1/K)/(1-1/K)));
+      r=255;g=(t*255)|0;b=(t*t*120)|0;a=((1-t)*255)|0;
+      if(mg[i]>thr){a=(a*0.12)|0;}}                        // threshold dims the confident interior
+    else if(id==="sep"){let edge=false;
+      if(x+1<W&&am[i]!==am[i+1])edge=true; if(y+1<H&&am[i]!==am[i+W])edge=true;
+      if(edge){const lane=(am[i]===S.lane_class||(x+1<W&&am[i+1]===S.lane_class));
+        if(lane){r=255;g=45;b=45;}else{r=255;g=255;b=255;} a=255;}}
+    else if(id==="tri"){const seen={};let nn=0;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;
+        if(xx<0||yy<0||xx>=W||yy>=H)continue;const cc=am[yy*W+xx];if(!seen[cc]){seen[cc]=1;nn++;}}
+      if(nn>=3){r=90;g=210;b=255;a=255;}}
+    d[i*4]=r;d[i*4+1]=g;d[i*4+2]=b;d[i*4+3]=a;
+  }
+  offc.putImageData(im,0,0);
+  return off;
+}
+function draw(){
+  const cw=view.width,ch=view.height; vctx.fillStyle="#0b0e16";vctx.fillRect(0,0,cw,ch);
+  vctx.imageSmoothingEnabled = T.s<3;
+  vctx.setTransform(T.s,0,0,T.s,T.ox,T.oy);
+  for(const L of LAYERS){ if(!L.on)continue; vctx.globalAlpha=L.a;
+    if(L.kind==="img"){const im=imgs[L.id][cur];if(im)vctx.drawImage(im,0,0,W,H);}
+    else{ if(!offc){off.width=W;off.height=H;offc=off.getContext("2d");} const c=synthLayer(L.id); vctx.drawImage(c,0,0); }
+  }
+  vctx.globalAlpha=1; vctx.setTransform(1,0,0,1,0,0);
+  // ray overlay
+  if(ray.a&&ray.b){vctx.strokeStyle="#5ad1ff";vctx.lineWidth=2;vctx.setLineDash([6,4]);
+    vctx.beginPath();vctx.moveTo(ray.a.x*T.s+T.ox,ray.a.y*T.s+T.oy);vctx.lineTo(ray.b.x*T.s+T.ox,ray.b.y*T.s+T.oy);vctx.stroke();vctx.setLineDash([]);}
+  $("#fnum").textContent=`frame ${cur} · pair ${S.frame_pairs[cur]}`;
+  $("#hud").innerHTML=$("#hud").innerHTML||`frame <b>${cur}</b>`;
+}
+
+// ---- narrative ----
+function updateNarr(){
+  const on=LAYERS.filter(L=>L.on).map(L=>L.id); let key="represent";
+  if(on.includes("marg"))key="protect";
+  else if(on.includes("tri"))key="solve";
+  else if(on.includes("sep"))key="exploit";
+  else if(on.includes("sdf"))key="represent";
+  else if(focusCls>=0)key="represent"; else if(on.includes("part"))key="represent";
+  const map={represent:"REPRESENT",carry:"CARRY",compress:"COMPRESS",exploit:"EXPLOIT",protect:"PROTECT",solve:"SOLVE"};
+  $("#narr").innerHTML = `<span class="tag">${map[key]}</span> · ` + S.narrative[key].replace(/^[A-Z]+ — /,"");
+}
+
+// ---- dimensionality ----
+function drawDimKV(){
+  const r=S.compression_ratio_dim;
+  $("#dimkv").innerHTML =
+    `full-RGB per frame: <b>${S.full_rgb_dim_per_frame.toLocaleString()}</b> dims<br>`+
+    `per-pair code: <b>${S.code_dim_per_pair}</b> dims<br>`+
+    `effective rank (participation): <b>${S.code_eff_rank_participation.toFixed(2)}</b><br>`+
+    `effective rank (entropy): <b>${S.code_eff_rank_entropy.toFixed(2)}</b><br>`+
+    `dimensional compression: <b>${r.toLocaleString(undefined,{maximumFractionDigits:0})}×</b><br>`+
+    `witness params (counted bytes ride here): <b>${S.n_params.toLocaleString()}</b><br>`+
+    `total pairs in clip: <b>${S.n_pairs_total}</b> · mean Lane-pixel fraction: <b>${(S.lane_frac_mean*100).toFixed(2)}%</b> (the thin hard orbit)<br>`+
+    `<span style="color:#ffcf5a">vehicle status:</span> witness internal-vs-GT <b>${(S.witness_internal_vs_gt_mean*100).toFixed(0)}%</b> — the SDF/level-set witness is an EARLY vehicle (d_seg in progress); these charts show the TARGET representation it amortizes.`;
+}
+function drawSVD(){
+  const cv=$("#svdchart"); const ctx=cv.getContext("2d"); const Wc=cv.width=cv.clientWidth,Hc=cv.height;
+  ctx.fillStyle="#10131c";ctx.fillRect(0,0,Wc,Hc); const sv=S.code_singular_values; const n=sv.length;
+  const mx=Math.max(...sv)||1; const pad=22; const bw=(Wc-2*pad)/n;
+  for(let i=0;i<n;i++){const h=(sv[i]/mx)*(Hc-2*pad); const x=pad+i*bw;
+    const t=i/n; ctx.fillStyle=`rgb(${(90+t*100)|0},${(209-t*120)|0},255)`;
+    ctx.fillRect(x,Hc-pad-h,Math.max(1,bw-1),h);}
+  // eff-rank marker
+  const er=S.code_eff_rank_participation; const ex=pad+er*bw;
+  ctx.strokeStyle="#ffcf5a";ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(ex,pad-6);ctx.lineTo(ex,Hc-pad);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="#ffcf5a";ctx.font="11px monospace";ctx.fillText(`eff-rank ≈ ${er.toFixed(1)}`,ex+4,pad+6);
+  ctx.fillStyle="#8a93ad";ctx.font="10px monospace";ctx.fillText("singular value index →",pad,Hc-6);
+}
+
+// ---- POSE dimension ----
+function drawPose(){
+  // trajectory (bird's-eye)
+  const tj=S.pose_trajectory; const cv=$("#trajchart"); const ctx=cv.getContext("2d");
+  const Wc=cv.width=cv.clientWidth,Hc=cv.height; ctx.fillStyle="#10131c";ctx.fillRect(0,0,Wc,Hc);
+  let xmin=1e9,xmax=-1e9,ymin=1e9,ymax=-1e9;
+  for(const p of tj){xmin=Math.min(xmin,p[0]);xmax=Math.max(xmax,p[0]);ymin=Math.min(ymin,p[1]);ymax=Math.max(ymax,p[1]);}
+  const pad=24; const sx=(Wc-2*pad)/((xmax-xmin)||1), sy=(Hc-2*pad)/((ymax-ymin)||1); const sc=Math.min(sx,sy);
+  const X=x=>pad+(x-xmin)*sc, Y=y=>Hc-pad-(y-ymin)*sc;
+  ctx.strokeStyle="#5ad1ff";ctx.lineWidth=2;ctx.beginPath();
+  tj.forEach((p,i)=>{i?ctx.lineTo(X(p[0]),Y(p[1])):ctx.moveTo(X(p[0]),Y(p[1]));});ctx.stroke();
+  // current frame marker (map pair index -> trajectory index)
+  const ti=Math.min(tj.length-1,S.frame_pairs[cur]+1);
+  ctx.fillStyle="#ffa53a";ctx.beginPath();ctx.arc(X(tj[ti][0]),Y(tj[ti][1]),5,0,7);ctx.fill();
+  ctx.fillStyle="#8a93ad";ctx.font="10px monospace";ctx.fillText("integrated ego path (GT pose) · bird's-eye",pad,Hc-6);
+  // 6 scalars across the window
+  const pc=$("#posechart"); const c2=pc.getContext("2d"); const W2=pc.width=pc.clientWidth,H2=pc.height;
+  c2.fillStyle="#10131c";c2.fillRect(0,0,W2,H2); const pg=S.pose_gt; const cols=["#ff6","#5ad1ff","#2dff88","#c84bff","#ff7a7a","#ffcf5a"];
+  let lo=1e9,hi=-1e9; for(const r of pg)for(const v of r){lo=Math.min(lo,v);hi=Math.max(hi,v);}
+  const PX=t=>pad+t*(W2-2*pad)/Math.max(1,pg.length-1), PY=v=>H2-12-(v-lo)*(H2-22)/((hi-lo)||1);
+  for(let k=0;k<6;k++){c2.strokeStyle=cols[k];c2.lineWidth=1.5;c2.beginPath();
+    pg.forEach((r,t)=>{const px=PX(t),py=PY(r[k]);t?c2.lineTo(px,py):c2.moveTo(px,py);});c2.stroke();}
+  const cx=PX(cur);c2.strokeStyle="#fff5";c2.beginPath();c2.moveTo(cx,2);c2.lineTo(cx,H2-2);c2.stroke();
+  c2.fillStyle="#8a93ad";c2.font="10px monospace";c2.fillText("6 PoseNet scalars per pair (the d_pose target)",pad,12);
+  // pose SVD
+  const ps=$("#posesvd"); const c3=ps.getContext("2d"); const W3=ps.width=ps.clientWidth,H3=ps.height;
+  c3.fillStyle="#10131c";c3.fillRect(0,0,W3,H3); const sv=S.pose_singular_values; const mx=Math.max(...sv)||1;
+  const bw=(W3-2*pad)/sv.length; sv.forEach((v,i)=>{const h=(v/mx)*(H3-24);c3.fillStyle="#c84bff";c3.fillRect(pad+i*bw,H3-12-h,Math.max(2,bw-2),h);});
+  c3.fillStyle="#8a93ad";c3.font="10px monospace";c3.fillText(`pose manifold spectrum · eff-rank ${S.pose_eff_rank.toFixed(2)} (dominant ego modes)`,pad,12);
+  $("#posekv").innerHTML=S.pose_note;
+}
+
+// ---- 3D SDF surface (three.js) ----
+let three=null;
+function draw3D(){
+  const host=$("#ray3d"); if(!host)return;
+  if(!three){
+    const w=host.clientWidth,h=host.clientHeight;
+    const rnd=new THREE.WebGLRenderer({antialias:true}); rnd.setSize(w,h); rnd.setPixelRatio(Math.min(2,devicePixelRatio));
+    host.innerHTML="";host.appendChild(rnd.domElement);
+    const scn=new THREE.Scene(); scn.background=new THREE.Color(0x10131c);
+    const cam=new THREE.PerspectiveCamera(45,w/h,0.1,100); cam.position.set(0,-2.0,2.4);cam.up.set(0,0,1);cam.lookAt(0,0,0);
+    scn.add(new THREE.AmbientLight(0xffffff,0.55)); const dl=new THREE.DirectionalLight(0xffffff,0.9);dl.position.set(2,-3,4);scn.add(dl);
+    three={rnd,scn,cam,mesh:null,rot:0,drag:false,lx:0,ly:0,az:0.6,el:0.9};
+    host.addEventListener("mousedown",e=>{three.drag=true;three.lx=e.clientX;three.ly=e.clientY;});
+    window.addEventListener("mouseup",()=>{if(three)three.drag=false;});
+    window.addEventListener("mousemove",e=>{if(!three||!three.drag)return;three.az+=(e.clientX-three.lx)*0.01;three.el+=(e.clientY-three.ly)*0.01;three.lx=e.clientX;three.ly=e.clientY;});
+    host.addEventListener("wheel",e=>{e.preventDefault();const c=three.cam;const d=Math.exp(e.deltaY*0.001);c.position.multiplyScalar(d);},{passive:false});
+    (function anim(){if(!three)return;requestAnimationFrame(anim);
+      const r=2.9;three.cam.position.set(r*Math.cos(three.el)*Math.cos(three.az),r*Math.cos(three.el)*Math.sin(three.az),r*Math.sin(three.el)+0.2);
+      three.cam.lookAt(0,0,0);three.rnd.render(three.scn,three.cam);})();
+  }
+  buildSurface();
+}
+function buildSurface(){
+  if(!three)return; const {scn}=three; if(three.mesh){scn.remove(three.mesh);three.mesh.geometry.dispose();three.mesh.material.dispose();}
+  const ds=4; const gw=Math.floor(W/ds), gh=Math.floor(H/ds);
+  const geo=new THREE.PlaneGeometry(2.0,2.0*gh/gw,gw-1,gh-1);
+  const pos=geo.attributes.position; const col=[]; const P=PAL();
+  const kf=focusCls; let zmin=1e9,zmax=-1e9;
+  const zg=new Float32Array(gw*gh);
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){const y=j*ds,x=i*ds;
+    let z; if(kf>=0){z=phiAt(cur,kf,y,x);}
+    else{ // "all": height = winning margin (top1-top2)
+      let b0=-1e9,b1=-1e9;for(let k=0;k<K;k++){const v=phiAt(cur,k,y,x);if(v>b0){b1=b0;b0=v;}else if(v>b1)b1=v;} z=b0-b1; }
+    zg[j*gw+i]=z; if(z<zmin)zmin=z;if(z>zmax)zmax=z;}
+  const rng=(zmax-zmin)||1;
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){const idx=j*gw+i; const z=(zg[idx]-zmin)/rng;
+    pos.setZ(idx, z*0.7);
+    const y=j*ds,x=i*ds; let cidx; if(kf>=0){cidx=(phiAt(cur,kf,y,x)>0)?kf:2;} else {cidx=AM[cur][y*W+x];}
+    const c=P[cidx]; const sh=0.45+0.55*z; col.push(c[0]/255*sh,c[1]/255*sh,c[2]/255*sh);}
+  geo.setAttribute("color",new THREE.Float32BufferAttribute(col,3)); geo.computeVertexNormals();
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:false,roughness:0.75,metalness:0.05,side:THREE.DoubleSide});
+  three.mesh=new THREE.Mesh(geo,mat); three.mesh.rotation.x=0; scn.add(three.mesh);
+}
+
+boot();
+</script>
+</body>
+</html>
