@@ -176,8 +176,12 @@ def curvelet_directional_B(cfg: CurveletBankConfig, max_freq: float | None = Non
 def curvelet_feats(coords: np.ndarray, B: np.ndarray) -> np.ndarray:
     """``[sin(2*pi X@B), cos(2*pi X@B)]`` -> (P, 2*n_feats). Identical at train + inflate."""
 
-    proj = (2.0 * np.pi) * (np.asarray(coords, np.float64) @ np.asarray(B, np.float64))
-    return np.concatenate([np.sin(proj), np.cos(proj)], axis=-1).astype(np.float32)
+    # (FEED-fb hygiene) errstate(all="ignore") around the fp64 matmul: bit-identical (errstate only
+    # gates WARNING emission, never the computed values) -- silences the spurious macOS-Accelerate
+    # FP-flag warning for clean deterministic logs. The values + dtype are unchanged.
+    with np.errstate(all="ignore"):
+        proj = (2.0 * np.pi) * (np.asarray(coords, np.float64) @ np.asarray(B, np.float64))
+        return np.concatenate([np.sin(proj), np.cos(proj)], axis=-1).astype(np.float32)
 
 
 def isotropic_fourier_B(n_fourier: int, sigma: float, seed: int = _LEVELSET_SEED) -> np.ndarray:

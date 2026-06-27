@@ -149,6 +149,7 @@ def _atomic_savez(path: Path, arrays: dict[str, np.ndarray]) -> Path:
 def _build_ema_checkpoint_arrays(
     shadow_np: dict[str, np.ndarray], *, args: Any, softmax_temp: float,
     render_h: int, render_w: int, epoch: int, in_feat: int,
+    hosc_beta: float | None = None,
 ) -> dict[str, np.ndarray]:
     """The deploy (byte-close) npz contents: EMA SHADOW params + cfg scalars. MLX-free.
 
@@ -164,7 +165,10 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_chroma"] = np.asarray(int(bool(args.chroma)))
     flat["__cfg_wire_w0"] = np.asarray(args.wire_w0)
     flat["__cfg_wire_s0"] = np.asarray(args.wire_s0)
-    flat["__cfg_hosc_beta"] = np.asarray(args.hosc_beta)
+    # (FEED-fb) persist the CURRENT (possibly annealed) beta so the byte-close/inflate deploy forward
+    # uses the SAME activation sharpness the EMA shadow was trained at (NO-FAKE). When the caller does
+    # not thread it (hosc_beta is None) OR anneal is off, this == args.hosc_beta => byte-identical cfg.
+    flat["__cfg_hosc_beta"] = np.asarray(args.hosc_beta if hosc_beta is None else float(hosc_beta))
     flat["__cfg_hosc_omega"] = np.asarray(args.hosc_omega)
     flat["__bank_n_scales"] = np.asarray(args.bank_n_scales)
     flat["__bank_n_orient0"] = np.asarray(args.bank_n_orient0)
@@ -503,7 +507,7 @@ def validate_lane_edge_config(
     if not (0 <= lane_edge_class <= n_classes - 1):
         raise ValueError(
             f"--lane-edge-class ({lane_edge_class}) out of range [0,{n_classes - 1}] for the "
-            f"{n_classes}-class comma10k partition [Road0,Lane1,MyCar2,Undrivable3,Movable4]; would "
+            f"{n_classes}-class comma10k CANONICAL partition [Road0,Lane1,Undrivable2,Movable3,MyCar4]; would "
             "IndexError mid-training. Use 1 for the lane orbit (the d_seg gate)."
         )
 
@@ -516,6 +520,26 @@ def _seg_form_for_epoch(ep: int, args) -> str:
     if ep < args.l7_start_epoch:
         return "tau_softplus"
     return "l7_softplus"
+
+
+def _hosc_beta_for_epoch(ep: int, args) -> float | None:
+    """(FEED-fb) Annealed hosc ``beta`` at 1-based epoch ``ep``, or ``None`` when NO anneal applies.
+
+    Returns ``None`` (caller leaves ``model.hosc_beta`` UNTOUCHED => BIT-IDENTICAL constant-beta path)
+    when: activation != ``hosc``, OR ``--hosc-beta-end`` is unset, OR end == start. Otherwise anneals
+    ``beta`` from ``--hosc-beta`` (at ep==1) to ``--hosc-beta-end`` (at ep==args.epochs) on a linear
+    (default) or cosine schedule. The step-native L-infinity-optimal lever: ``beta -> inf`` makes
+    ``tanh(beta*sin)`` approach a step (the topology-matched chart for the piecewise-constant argmax,
+    no Gibbs). Pure (no model/MLX); unit-tested. Mirrors ``_seg_form_for_epoch``.
+    """
+    if (getattr(args, "activation", None) != "hosc"
+            or getattr(args, "hosc_beta_end", None) is None
+            or args.hosc_beta_end == args.hosc_beta):
+        return None
+    prog = (ep - 1) / max(args.epochs - 1, 1)
+    if getattr(args, "hosc_beta_anneal", "linear") == "cosine":
+        return float(args.hosc_beta_end + 0.5 * (args.hosc_beta - args.hosc_beta_end) * (1 + np.cos(np.pi * prog)))
+    return float(args.hosc_beta + (args.hosc_beta_end - args.hosc_beta) * prog)
 
 
 def run_train(args: argparse.Namespace) -> dict[str, Any]:
@@ -772,10 +796,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w)
         L = L + eik_w * eik + len_w * length
         # LEVER-3 (lane-edge fragility weighting, operator 2026-06-27 Yousfi-grounding): contest
-        # SegNet argmax order (PIL-luma sort of class_values [42,76,90,124,161]; FEED-da):
-        # [Road0, Lane1, MyCar2, Undrivable3, Movable4]. Class0=Road & Class1=Lane are CONFIRMED
-        # (all memos agree; this lever uses ONLY class 1; 2/3/4 labels disputed vs frozen_source but
-        # not load-bearing here). Lane (class 1) is thin
+        # SegNet argmax order is the comma10k CANONICAL order (MEASURED 2026-06-27 from the cached
+        # argmax; CLAUDE.md NON-NEGOTIABLE): [Road0, Lane1, Undrivable2, Movable3, MyCar4]. The
+        # FORBIDDEN luma-sort of class_values [41,76,90,124,161] -> [Road0,Lane1,MyCar2,Undriv3,Movable4]
+        # is WRONG for 2/3/4 (bit us 3x); do NOT use it. Class0=Road & Class1=Lane are CONFIRMED in
+        # BOTH orders (so this lever, which uses ONLY class 1, is correct regardless). Lane (class 1) is thin
         # all-boundary double-edges (19% of d_seg flips) and UNDER-FIT because the CE baseline has NO
         # class weighting. This ADDITIVE term up-weights the REALIZED (through-R SegNet) margin hinge
         # at GT-lane pixels: it renders f1 -> R -> frozen SegNet logits, takes the live decision
@@ -843,7 +868,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return levelset_rgb_forward_numpy(
             deploy, feats_np, code_row, n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
             n_classes=5, activation=args.activation, softmax_temp=float(model.softmax_temp),
-            wire_w0=args.wire_w0, wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega,
+            # (FEED-fb) CURRENT (possibly annealed) beta -> the verdict/deploy render uses the SAME
+            # beta the model is at now (NO-FAKE). Bit-identical when anneal off: model.hosc_beta == args.hosc_beta.
+            wire_w0=args.wire_w0, wire_s0=args.wire_s0, hosc_beta=float(model.hosc_beta), hosc_omega=args.hosc_omega,
             chroma=args.chroma,
         )
 
@@ -878,7 +905,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 amx = levelset_sdf_argmax_mlx(
                     deploy_mx, feats_mx, code_row, n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
                     activation=args.activation, wire_w0=args.wire_w0, wire_s0=args.wire_s0,
-                    hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega)
+                    hosc_beta=float(model.hosc_beta), hosc_omega=args.hosc_omega)  # FEED-fb current beta
                 mx.eval(amx)
                 argmax = np.asarray(amx).reshape(render_h, render_w).astype(np.int64)
                 df = _dir_feats_from_argmax(argmax)
@@ -934,6 +961,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return {
             "ema_np": {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()},
             "softmax_temp": float(model.softmax_temp),
+            "hosc_beta": float(model.hosc_beta),  # FEED-fb: snapshot the live (possibly annealed) beta
             "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs} if use_self_orient else None),
         }
 
@@ -947,17 +975,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # fp32 ONE-CODEPATH forward, same softmax_temp, same per-pair feats, same CPU scorers.
         deploy = int8_dequant_params(snap["ema_np"])
         st = snap["softmax_temp"]
+        sb = snap["hosc_beta"]  # FEED-fb: the live beta captured at schedule time (anneal-correct, NO-FAKE)
         f0s, f1s = [], []
         for pi in vpairs:
             fnp = _feats_for_snapshot(pi, snap["dir"])
             rgb0, _ = levelset_rgb_forward_numpy(
                 deploy, fnp, deploy["code"][2 * pi + 0], n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
                 n_classes=5, activation=args.activation, softmax_temp=st, wire_w0=args.wire_w0,
-                wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega, chroma=args.chroma)
+                wire_s0=args.wire_s0, hosc_beta=sb, hosc_omega=args.hosc_omega, chroma=args.chroma)
             rgb1, _ = levelset_rgb_forward_numpy(
                 deploy, fnp, deploy["code"][2 * pi + 1], n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
                 n_classes=5, activation=args.activation, softmax_temp=st, wire_w0=args.wire_w0,
-                wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega, chroma=args.chroma)
+                wire_s0=args.wire_s0, hosc_beta=sb, hosc_omega=args.hosc_omega, chroma=args.chroma)
             f0s.append(_torch_R_to_camera_uint8(rgb0.reshape(render_h, render_w, 3)))
             f1s.append(_torch_R_to_camera_uint8(rgb1.reshape(render_h, render_w, 3)))
         ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
@@ -1065,7 +1094,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         shadow_np, live_np, opt_np = _snapshot_numpy_state()
         ema_arrays = _build_ema_checkpoint_arrays(
             shadow_np, args=args, softmax_temp=float(model.softmax_temp),
-            render_h=render_h, render_w=render_w, epoch=epoch, in_feat=in_feat)
+            render_h=render_h, render_w=render_w, epoch=epoch, in_feat=in_feat,
+            hosc_beta=float(model.hosc_beta))  # FEED-fb: persist CURRENT annealed beta in deploy cfg
         resume_arrays = _build_resume_state_arrays(
             live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat)
         # rolling latest: the byte-close default name + the quick resume target (overwritten atomically).
@@ -1237,6 +1267,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # Gibbs at the RGB level per deep-math; anneal like the hosc_beta schedule.
             prog_t = (ep - 1) / max(args.epochs - 1, 1)
             model.softmax_temp = float(args.softmax_temp_end + 0.5 * (args.softmax_temp_start - args.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
+            # (FEED-fb) ANNEAL hosc_beta start->end (the step-native L-infinity-optimal lever;
+            # beta->inf = step-native tanh(beta*sin)). The model's _act reads self.hosc_beta FRESH
+            # each forward, so mutating model.hosc_beta per epoch retunes the activation (exactly how
+            # softmax_temp is annealed above). DEFAULT-SAFE: _hosc_beta_for_epoch returns None when
+            # --hosc-beta-end is unset (or == --hosc-beta, or activation != hosc) -> model.hosc_beta
+            # is NEVER touched => stays at its construction value (== args.hosc_beta) every epoch =>
+            # BIT-IDENTICAL to the pre-FEED-fb path. The verdict/checkpoint/byte-close forwards read
+            # float(model.hosc_beta) so realized d_seg is measured (and deploy cfg saved) at the
+            # CURRENT beta (NO-FAKE). Helper is pure (unit-tested) mirroring _seg_form_for_epoch.
+            _beta = _hosc_beta_for_epoch(ep, args)
+            if _beta is not None:
+                model.hosc_beta = _beta
             # LR warmup->cosine
             if args.lr_schedule:
                 if ep <= args.warmup_epochs:
@@ -1460,6 +1502,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--wire-w0", type=float, default=20.0)
     ap.add_argument("--wire-s0", type=float, default=10.0)
     ap.add_argument("--hosc-beta", type=float, default=4.0)
+    # (FEED-fb) BETA-ANNEAL: the named UNSWEPT step-native L-infinity-optimal lever. hosc is
+    # tanh(beta*sin(omega*u)); beta->inf => STEP-native (the topology-matched chart for the
+    # piecewise-constant argmax target, no Gibbs). --hosc-beta-end is the anneal TARGET; when it is
+    # None (default) OR == --hosc-beta, NO anneal occurs and beta stays CONSTANT every epoch =>
+    # BIT-IDENTICAL to the pre-FEED-fb path. The optimal-form decoder build sharpens beta start->end
+    # (e.g. --hosc-beta 4 --hosc-beta-end 8) so the activation step-sharpens as the SDF partition
+    # pins (sister of the softmax-temp anneal at the top of the epoch loop).
+    ap.add_argument("--hosc-beta-end", type=float, default=None,
+                    help="hosc beta anneal TARGET (None => no anneal, beta constant at --hosc-beta => bit-identical).")
+    ap.add_argument("--hosc-beta-anneal", choices=["linear", "cosine"], default="linear",
+                    help="hosc beta anneal schedule start->end (only used when --hosc-beta-end is set).")
     ap.add_argument("--hosc-omega", type=float, default=1.0)
     ap.add_argument("--siren-init", action=argparse.BooleanOptionalAction, default=True,
                     help="SIREN init (Sitzmann 2020) for hosc/wire periodic layers (from-scratch trainability fix).")
@@ -1475,14 +1528,16 @@ def main(argv: list[str] | None = None) -> int:
     # LEVER-3 (lane-edge fragility weighting): up-weight class-1 (Lane) flips in the REALIZED margin
     # hinge. Lane is thin all-boundary double-edges (19% of d_seg flips) under-fit by the unweighted
     # CE baseline. Default 0.0 = OFF = current behavior (fully additive). When >0, costs a 2nd
-    # realized seg forward (acceptable per operator "score > training time"). SegNet class order
-    # (PIL-luma sort, class_values [42,76,90,124,161]): [Road0, Lane1, MyCar2, Undrivable3, Movable4];
-    # class 0=Road & 1=Lane CONFIRMED (the lever uses only class 1; 2/3/4 disputed vs frozen_source).
+    # realized seg forward (acceptable per operator "score > training time"). SegNet class order is the
+    # comma10k CANONICAL order (MEASURED 2026-06-27; CLAUDE.md NON-NEGOTIABLE): [Road0, Lane1,
+    # Undrivable2, Movable3, MyCar4]. The luma-sort [Road0,Lane1,MyCar2,Undriv3,Movable4] is FORBIDDEN/
+    # WRONG for 2/3/4. Class 0=Road & 1=Lane CONFIRMED in both (the lever uses only class 1). LEVER-4
+    # (class-agnostic margin-saliency) is PREFERRED as it sidesteps the class index entirely.
     ap.add_argument("--lane-edge-weight", type=float, default=0.0,
                     help="LEVER-3: weight on the additive realized lane-class margin hinge (0=off).")
     ap.add_argument("--lane-edge-class", type=int, default=1,
-                    help="LEVER-3: GT class index to up-weight (1=Lane, CONFIRMED; luma-sort order "
-                    "[Road0,Lane1,MyCar2,Undrivable3,Movable4] for 2/3/4).")
+                    help="LEVER-3: GT class index to up-weight (1=Lane, CONFIRMED; comma10k CANONICAL "
+                    "order [Road0,Lane1,Undrivable2,Movable3,MyCar4] for 2/3/4 -- NOT the forbidden luma-sort).")
     ap.add_argument("--lane-margin-target", type=float, default=0.5,
                     help="LEVER-3: target decision margin for the lane hinge relu(target - margin).")
     ap.add_argument("--lane-edge-start-epoch", type=int, default=0,
