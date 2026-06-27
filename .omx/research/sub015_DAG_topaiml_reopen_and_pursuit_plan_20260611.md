@@ -2347,3 +2347,45 @@ INTEGRATION PLAN (design, minimal land — does NOT touch a01f3416's generator o
 * Keep BOTH: numpy-fp64 = the bit-identical reference/AUTHORITY (verdict + parity gate); torch = the fast SHIPPABLE decode, admitted ONLY after the per-ckpt SegNet-argmax parity gate passes (the harness IS that gate). COMPLIANCE: torch inflate = generic FREE code (rule 118), zero archive bytes, NO weights/SegNet/PoseNet in the archive; the witness frames stay byte-determined by archive + generic code (argmax-identical to numpy).
 
 AUTHORITY: [macOS-CPU advisory] NON-PROMOTABLE; SYNTHETIC fixture (NO-FAKE #3 — arithmetic parity, not a score). git 38ffff9f3. pointer UNMOVED 0.19110.
+
+## FEED-el (2026-06-27): structured decomposition OPTIMAL-FORM re-open (static-core legibility + decomposition best-case vs full-witness) — DOMINATED, honest DEFER
+
+Catalog #307 re-open of FEED-ef/ek (the NAIVE structured-prior negative: phi init'd structured but `out_tex` RANDOM -> realized 0.586). $0 CPU-only (GPU row pid 77072 untouched; torch CPU, no MLX/MPS, 4 threads, mem stayed >15GB free). Built the OPTIMAL FORM as a DECOMPOSITION (not an init): static core {road,sky,hood(+static lane)} rendered DIRECTLY (deterministic, rule-118 FREE) COMPOSED-WITH the learned residual {lane,movable} -> ONE argmax -> REALIZED-through-R d_seg (paint@384x512 -> bicubic-up 874 -> uint8 -> frozen CPU-torch SegNet.preprocess bilinear-down -> argmax vs L*; the EXACT witness verdict path). Self-detected roles (NO hardcode) = {road:0, lane:1, sky:2, movable:3, hood:4} (canonical). Harness: `experiments/feed_el_structured_decomposition_optimal_form.py`; data: `.omx/research/feed_el_structured_decomposition_n48.json` (n=48, gt_n96 cache). Reuses build_static_core_partition / classify_segnet_regions / load_real_segnet (NO rebuild).
+
+### MEASURED (realized-through-R, n=48; the decisive table)
+| config | realized d_seg | note |
+|---|---|---|
+| M0 random-texture (FEED-ek baseline bug) | **0.5126** | the "init phi and pray" floor |
+| M0 GT-pixels @ render-res (perfect renderer) | **0.000160** | the R-survival FLOOR; witness is ~8x above it (room is TRAINING, not decomposition) |
+| **TRAINED full-witness (mod-32 n96 l7@950)** | **~0.00124** | the baseline to beat (realized-through-R, still descending) |
+| D full-L* flat-gtmean (PERFECT partition, best flat palette) | 0.00777 | the **flat-render legibility FLOOR** — even a perfect partition, flat, can't beat the witness |
+| D full-L* flat-generic / det-realistic (FREE palette) | 0.01020 / 0.00998 | |
+| B static-core ONLY, det-realistic / gtmean / generic | 0.0298 / 0.0256 / 0.0302 | legibility + missing-residual cost |
+| **C DECOMP-BEST flat-gtmean (cheapest legible)** | **0.00979** | static-core + PERFECT GT residual, best palette (gtmean = ~60B counted) |
+| C DECOMP-BEST flat-generic / det-realistic (FREE) | 0.01333 / 0.01356 | the rule-118-FREE decomposition best-case |
+| B' static-core REAL(GT)-texture + flat resid | 0.00357 | ideal-static-texture UPPER BOUND (shared-texture ceiling) |
+| static_approx_err (majority static mask vs per-frame L*, static regions) | **0.02284** | the FROZEN-partition cost (area) |
+
+### VERDICT: the FREE/deterministic structured decomposition is DOMINATED (honest DEFER; NO GPU A/B warranted)
+1. **Cheapest-legible decomposition best-case (0.0098 counted / 0.0133 FREE) vs trained witness (0.00124) -> DOMINATED ~8-11x.** The best-case is a CEILING (perfect residual + best palette + deterministic static); it is already ~8x ABOVE what the witness ACHIEVES. No point training it.
+2. **The flat-render legibility FLOOR is intrinsic and above the witness:** even the PERFECT per-frame partition painted FLAT = 0.0078 (best palette) > 0.00124. SegNet is trained on REAL TEXTURED images, so NO flat palette can make a flat render beat a learned-texture render. Flatness — the very thing that makes the static core "FREE" — is the legibility killer.
+3. **Even PERFECT static texture is dominated:** B' (real GT pixels in the static core) = 0.0036 > 0.00124 (~2.9x). The residue is the FROZEN-partition cost: static_approx_err 0.0228 area. The "static core" is static in AREA but its argmax BOUNDARY is per-frame dynamic — d_seg flip mass lives on the small-margin BOUNDARY pixels that MOVE per-frame even inside nominally-static regions. Freezing the static partition to a majority-vote mask DISCARDS exactly the per-frame boundary adaptation d_seg rewards. The full per-frame learned-texture witness captures it; the decomposition structurally cannot.
+
+### Deep-math (5-lens, joint): WHY the paradigm loses
+- **geometry/set:** d_seg = symmetric-difference AREA of two argmax partitions = a codim-1 BOUNDARY functional. Its mass concentrates on the small-margin annulus (FEED-dw: 4.67% thin lane band; the ~50/19/13 Road/Lane/Undriv flip split). Boundaries are per-frame-DYNAMIC even where the class AREA is static -> a static (majority) partition is the wrong invariant; the right invariant is the per-frame boundary.
+- **information/signal:** SegNet's argmax is a function of TEXTURE (it was trained on textured frames); a flat-color region is OUT-OF-DISTRIBUTION -> the argmax is unreliable (the 0.0078 flat floor). The witness's learned `out_tex` carries the partition INTO SegNet's distribution (that is the entire job; mod-32 random->0.00124). A free flat/deterministic render carries ZERO in-distribution texture -> capped at the flat floor.
+- **calculus/optimal:** the decomposition reallocates capacity off the static core, but the saved capacity buys nothing because (a) flat static = +0.0078 floor and (b) frozen boundary = +0.0228-area cost, BOTH already larger than the witness's total 0.00124. The "free capacity" is dominated by the legibility + frozen-boundary debt it incurs.
+
+### Antagonism (deliverable 3): NON-antagonistic (composition HELPS)
+Composing residual into the static core REDUCES flips, not increases: movable flips 0.0145 (B static-only) -> 0.00074 (C compose); road 0.0116 -> 0.0108. The full 5-class compose confirms the road_horizon ~0-antagonism finding; remaining road flips are the flat-legibility + frozen-mask cost, NOT cross-class antagonism.
+
+### Quick variants (deliverable 4)
+- (A) structured-flat ep0 head-start: a flat structured render at ep0 = ~0.008-0.010 vs random 0.51 (64x better ep0) — BUT the flat floor (0.0078) is already above the converged witness (0.00124), so a flat init can only help EARLY epochs, not the final d_seg. Marginal; needs GPU to test trajectory; NOT warranted given the ceiling.
+- (B) static-region phi-clamp (freeze phi in static regions): = the decomposition (static frozen) -> bounded by B'/C = 0.0036-0.0098 -> DOMINATED, same verdict.
+- shared LEARNED static texture (the only non-flat free-ish variant): ceiling = B' = 0.0036 > 0.00124 -> still DOMINATED by the frozen-boundary cost.
+
+### What optimal-form DID buy (Catalog #307 honesty)
+The optimal form genuinely BEAT the naive: FEED-ef's "0.125 ideal-flat-palette" was the deterministic structured partition + a muddy "anchor palette" (road-flood FP 0.109). Fixing the palette + composing the perfect residual: static-core 0.125 -> 0.026 (best palette) and decomposition best-case -> 0.0098 — a ~13x legibility improvement. The IMPLEMENTATION negative was real (palette + random-texture); but the PARADIGM is ALSO dominated, for the structural reason above (flat floor + frozen boundary), NOT an impl bug. This is the clean optimal-form re-attempt result: re-opened, built to optimal form, measured, paradigm DEFERRED.
+
+### DEFER (not KILL) — reactivation criteria
+DEFER-pending-research. Reactivate ONLY if a future result shows EITHER (a) a FREE/cheap render that makes the static core SegNet-legible BELOW ~0.0078 (a textured generic prior in-distribution at ~0 counted bytes — unlikely; SegNet legibility is texture-bound), OR (b) a per-frame-ADAPTIVE static boundary at ~0 cost (defeats the "static" premise). Until then the witness's full per-frame learned-texture render is the non-dominated vehicle; the structured components remain a cheap PRIOR/observability surface, NOT a d_seg lever for sub-0.001. pointer UNMOVED 0.19110 ([macOS-CPU advisory], non-promotable). means!=ends: NO row moved; this is a geometry/training-signal measurement that CLOSES a candidate lever so capacity routes to the witness training, not to a dominated decomposition.
