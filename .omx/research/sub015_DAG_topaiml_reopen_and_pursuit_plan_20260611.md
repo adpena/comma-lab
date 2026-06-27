@@ -3627,3 +3627,19 @@ Operator 2026-06-27: *"the team is working on it now ... come back in a couple h
 **Execution proof:** ran `render_witness_morse_smale_viz precompute+render` on the real ckpt+matching cache (CPU, gitignored, auto-cleaned 12MB) — ALIGN WARN fires, d_seg=0.0154 data-derived, foveal lifts (flip 3.5× / bnd 2.2× / curv 3.8×, bnd is non-circular ≥1.5), ffmpeg-binary fallback works; dashboard tests 22/22; live amort+dashboard untouched.
 
 **OPEN recommendations (non-blocking, not defects):** (a) durable fix for finding #8 = record `__gt_cache_sha`/frame-indices in the trainer ckpt so the viz can HARD-verify alignment (future ckpts only); (b) the Monitor viz-trigger poll loop lives only in the session (not a file) — recommend landing it as a small tested `tools/` script (its `glob *stage*_ep*.npz` misses stage ckpts lacking an `ep` token; SEEN dedup by rundir|stageName; no crash-durability). Means≠ends; pointer UNMOVED 0.19110.
+
+## FEED-ge (2026-06-27 ~18:54 CDT) — CPU-inflate PARITY RE-VERIFIED CLEAN on the converged ep650 de-confound EMA: **PARITY HOLDS** (0.0154 was a misaligned-cache artifact, NOT a parity break); record corrected
+
+**Why (NO-FAKE follow-through on FEED-gd):** FEED-gd found `render_witness_morse_smale_viz` printed the parity verdict as HARDCODED literals ("MLX ~0.0059 → FAITHFUL ✓ / 99.5% match"; now data-derived) and its honest re-exec reported d_seg **0.0154** — but the relayed "PARITY CONFIRMED → byte-close path SOUND" rode that fake label, so it had to be re-measured CLEAN. Subagent `parity_reverify_feedge` (CPU-only; never touched the GPU/amort 51462-51464 or its dashboard).
+
+**Method:** inflate the de-confound EMA (`levelset_amort_deconf_n200_taualone_20260627T194432Z/levelset_witness_ema_mlx.npz`, __epoch=650) ONCE via the byte-close `tools/levelset_byte_close_and_eval` CPU torch-R inflate path, then score the SAME inflated frames vs BOTH the ALIGNED cache (`gt_strided_n200`, the cache it was TRAINED on, same pair order) AND the MISALIGNED cache (`gt_n96`, 96 different physical frames; the two caches share only frame 0). P=12 (and P=4 confirms).
+
+**Measured (CPU advisory, NON-PROMOTABLE):**
+
+| cache | d_seg | d_pose |
+|---|---|---|
+| **ALIGNED gt_strided_n200** (TRUE parity) | **0.003570** (P12) / 0.003633 (P4) | **0.000691** / 0.000586 |
+| **MISALIGNED gt_n96** (artifact) | **0.012852** (3.6×) | **0.095295** (138× pose explosion = smoking gun) |
+| MLX trainer verdict @ ep650 (verdict-pairs 96) | 0.003817 | 0.000651 |
+
+**VERDICT — PARITY HOLDS.** Aligned CPU-inflate d_seg **0.003570 ≈ MLX 0.003817 (ratio 0.94)**; aligned d_pose **0.000691 ≈ MLX 0.000651 (1.06)**. The MLX-trained realized d_seg/d_pose SURVIVE the byte-close → CPU contest-inflate roundtrip → **byte-close → exact-eval pipeline is SOUND** (the sub-0.15 de-risk is intact; this is NOT an MLX-vs-CPU drift). The earlier FEED-fy aligned **0.0055 was correct for ep350** (descent continued ep350→ep650: MLX 0.0059→0.0038, aligned CPU-inflate 0.0055→0.0036 — current parity is BETTER). The **0.0154 was a MISALIGNMENT ARTIFACT** (finding #8 / morse-viz usage example points `--gt-cache gt_n96` while the witness trained on `gt_strided_n200` → each pair scored vs the WRONG frame). Memory `witness_cpu_inflate_parity_confirmed_and_rgb_painter_mechanism_20260627.md` got an APPEND-ONLY `## CORRECTION` (core claim STANDS, only the quoted figures corrected: label-was-fake; 0.0154-was-misaligned; true aligned ~0.0036). Evidence: `experiments/results/parity_reverify_FEED_ge_P12.json` (+ `_P4.json`); driver `.omx/tmp/parity_reverify_driver.py`. **Durable fix (reinforces FEED-gd rec a):** stamp `__gt_cache_sha`/frame-indices into the trainer ckpt so alignment is HARD-verifiable (today it is by-construction-knowledge only — no ckpt provenance). Means≠ends; pointer UNMOVED 0.19110.
