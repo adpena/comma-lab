@@ -489,6 +489,203 @@ def front_end_fit_disagreement(
 
 
 # ---------------------------------------------------------------------------
+# STRUCTURED-PRIOR phi INIT (FEED-ef) — the FREE static-core starting partition.
+#
+# Instead of a random/SIREN phi init, START the level-set witness from the VALIDATED
+# structured static-core partition (FEED-dm/du/dw/dx): hood (bottom static) + sky/Undrivable
+# (top static) + road (the deep COMPLEMENT) [+ optional shared static lane band], each as a
+# DEEP locally-supported signed-distance field. argmax of the stack == the structured
+# partition, so a future row STARTS at the ~0.006 structured floor (FEED-dx joint, antagonism
+# ~0) and LEARNS only the residual (the 4.67% genuine lane wall + Movable) on top -> lower
+# d_seg at lower epochs.
+#
+# rule-118 (FREE generic geometry vs COUNTED payload): the static-core is GENERIC same-rig
+# camera/scene geometry (FEED-ea: hood/MyCar bottom band, sky/Undrivable top region, road
+# trapezoid on the vanishing point) — membership-INDEPENDENT, derivable from the known camera
+# K + the comma10k canonical class order, re-expanded by a FREE inflate.py rasterizer; only the
+# tiny region descriptors (one hood mask ~56 B, sky mask ~98 B over 600 frames) are COUNTED.
+# As a TRAIN-TIME INIT it ships ZERO bytes (the archive ships the TRAINED int8 weights, which
+# absorb the init + the learned residual). It does NOT bake any per-frame L* table into the
+# network or inflate.py (that would be the hide-data-in-code fake): it composes generic region
+# masks (majority-vote over frames) -> a SHARED starting partition, and the witness moves off it.
+#
+# NO-FAKE: ``build_static_core_partition`` SELF-DETECTS each class role by spatial/static
+# signature (``classify_segnet_regions``; never hardcode by luma — the FEED-dn mislabel guard)
+# and ``build_static_core_phi_target`` asserts ``argmax(signed_distance_fields(part)) == part``
+# (the round-trip the real EDT must satisfy). ``fit_out_sdf_to_structured_target`` is the ACTUAL
+# ridge least-squares of the LINEAR readout onto the (random) trunk features — a stub returning
+# constants FAILS the ``structured_init_fit_disagree`` reproduction check.
+#
+# Borrowed-substrate (NO-FAKE #7):
+#   * BORROWED: scipy EDT (``signed_distance_fields``); the validated structured components
+#     (``lane_sdf_component`` FEED-dm, ``hood_static_component`` FEED-du, ``road_horizon_component``
+#     FEED-dw, reused class-agnostically); ridge least-squares.
+#   * OURS-ORIGINAL: composing the validated self-detected static-core SDF set as the
+#     DETERMINISTIC shared phi-init of the softmax-of-SDF level-set witness (a structured warm
+#     start at the ~0.006 floor) so the witness reallocates capacity to the boundary annulus +
+#     Movable residual instead of relearning the cartoon from random init.
+# ---------------------------------------------------------------------------
+def build_static_core_partition(
+    lstars: np.ndarray,
+    *,
+    n_classes: int = 5,
+    include_lane: bool = True,
+    static_thresh: float = 0.5,
+) -> tuple[np.ndarray, Any, dict[str, Any]]:
+    """Self-detect the comma10k roles + build the SHARED static-core partition ``part`` (H,W) uint8.
+
+    REUSES the validated structured components (NO rebuild):
+      * roles = ``road_horizon_component.classify_segnet_regions`` (self-detect; never hardcode);
+      * sky / hood / (optional) lane = ``hood_static_component.compute_static_hood_mask`` majority
+        masks (class-agnostic) at threshold ``static_thresh``;
+      * road = the COMPLEMENT (every pixel not sky/hood/lane). FEED-dw/dx measured a CONST road
+        antagonizes; here road is given a DEEP locally-supported SDF below (via
+        ``build_static_core_phi_target``), matching the FEED-dx ``road IDEAL`` antagonism~0 config.
+
+    ``lstars`` (N,H,W) or (H,W) int label maps (the frozen CPU-torch SegNet argmax cache). Movable
+    (class with no static structure, FEED-dx) is intentionally ABSENT from the shared init -> it is
+    the learned residual. Returns ``(part, roles, meta)``.
+    """
+
+    from tac.boundary_math.hood_static_component import compute_static_hood_mask
+    from tac.boundary_math.road_horizon_component import classify_segnet_regions
+
+    a = np.asarray(lstars)
+    if a.ndim == 2:
+        a = a[None]
+    if a.ndim != 3:
+        raise ValueError(f"lstars must be (N,H,W) or (H,W); got shape {a.shape}")
+    _n, h, w = a.shape
+    roles = classify_segnet_regions(a, n_classes=int(n_classes))
+
+    sky_sm = compute_static_hood_mask(a, hood_cls=roles.sky, agg="majority", thresh=static_thresh)
+    hood_sm = compute_static_hood_mask(a, hood_cls=roles.hood, agg="majority", thresh=static_thresh)
+
+    part = np.full((h, w), int(roles.road), np.uint8)
+    part[sky_sm.mask] = int(roles.sky)
+    part[hood_sm.mask] = int(roles.hood)  # sky(top)/hood(bottom) disjoint; hood wins any overlap
+    meta: dict[str, Any] = {
+        "roles": roles.as_dict(),
+        "sky_px": int(sky_sm.px), "sky_mean_iou": float(sky_sm.mean_frame_iou),
+        "hood_px": int(hood_sm.px), "hood_mean_iou": float(hood_sm.mean_frame_iou),
+        "include_lane": bool(include_lane),
+    }
+    if include_lane:
+        lane_sm = compute_static_hood_mask(a, hood_cls=roles.lane, agg="majority", thresh=static_thresh)
+        lane_only = lane_sm.mask & (part == int(roles.road))  # lane only on the road, never sky/hood
+        part[lane_only] = int(roles.lane)
+        meta["lane_px"] = int(lane_only.sum())
+        meta["lane_static_mask_px"] = int(lane_sm.px)
+        meta["lane_mean_iou"] = float(lane_sm.mean_frame_iou)
+    # per-class shared-partition area fractions (observability)
+    meta["part_frac"] = {int(k): float(np.mean(part == k)) for k in range(int(n_classes))}
+    return part, roles, meta
+
+
+def build_static_core_phi_target(
+    lstars: np.ndarray,
+    *,
+    n_classes: int = 5,
+    include_lane: bool = True,
+    static_thresh: float = 0.5,
+) -> tuple[np.ndarray, Any, dict[str, Any]]:
+    """Structured-core SDF target ``phi`` (H,W,K): per-class signed distance to the static-core
+    partition. argmax(phi) == the structured partition EXACTLY (the round-trip NO-FAKE assert).
+
+    Each present class (road/sky/hood[/lane]) gets a DEEP locally-supported SDF (+EDT inside, -EDT
+    outside, 1-Lipschitz); absent classes (Movable) get the all-outside ``-max(H,W)`` field. This
+    is the FEED-dx ``road IDEAL`` all-deep-SDF config (joint antagonism ~0). Returns
+    ``(phi, roles, meta)``.
+    """
+
+    part, roles, meta = build_static_core_partition(
+        lstars, n_classes=n_classes, include_lane=include_lane, static_thresh=static_thresh
+    )
+    phi = signed_distance_fields(part, int(n_classes))  # deep SDFs; absent classes all-negative
+    recovered = phi.argmax(axis=-1).astype(part.dtype)
+    if not np.array_equal(recovered, part):
+        raise AssertionError(
+            "NO-FAKE round-trip FAILED: argmax(signed_distance_fields(part)) != part "
+            f"({int(np.count_nonzero(recovered != part))} px differ) — the EDT did not run."
+        )
+    return phi, roles, meta
+
+
+def fit_out_sdf_to_structured_target(
+    trunk_h: np.ndarray, phi_target_pk: np.ndarray, *, ridge: float = 1e-2
+) -> tuple[np.ndarray, np.ndarray]:
+    """Ridge least-squares fit the LINEAR ``out_sdf`` readout so ``out_sdf(trunk_h) ~= phi_target``.
+
+    ``trunk_h`` (P, hidden) = the (random/SIREN-init) trunk features at code 0 (the SHARED init);
+    ``phi_target_pk`` (P, K) = the structured SDF target (flattened). Returns ``(W (K,hidden),
+    b (K,))`` for the mlx ``nn.Linear`` convention ``y = x @ W.T + b``. Deterministic: the same
+    ``trunk_h`` + target + ``ridge`` -> the same ``(W, b)`` (a closed-form solve, no RNG).
+    """
+
+    Hf = np.asarray(trunk_h, np.float64)
+    Y = np.asarray(phi_target_pk, np.float64)
+    if Hf.ndim != 2 or Y.ndim != 2 or Hf.shape[0] != Y.shape[0]:
+        raise ValueError(f"shape mismatch: trunk_h {Hf.shape} vs phi_target {Y.shape}")
+    p, hid = Hf.shape
+    haug = np.concatenate([Hf, np.ones((p, 1), np.float64)], axis=1)  # (P, hid+1)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):  # benign macOS matmul warns
+        gram = haug.T @ haug + float(ridge) * np.eye(hid + 1)
+        theta = np.linalg.solve(gram, haug.T @ Y)  # (hid+1, K)
+    w = theta[:hid].T.astype(np.float32)        # (K, hidden)
+    b = theta[hid].astype(np.float32)           # (K,)
+    return w, b
+
+
+def structured_init_fit_disagree(
+    trunk_h: np.ndarray, phi_target_pk: np.ndarray, w: np.ndarray, b: np.ndarray
+) -> float:
+    """Fraction of pixels where ``argmax(trunk_h @ W.T + b) != argmax(phi_target)`` — the
+    representation error of the structured init (how well the linear readout over the random trunk
+    reproduces the structured partition). The NO-FAKE reproduction check for the ridge fit."""
+
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):  # benign macOS matmul warns
+        fit = np.asarray(trunk_h, np.float64) @ np.asarray(w, np.float64).T + np.asarray(b, np.float64)
+    tgt = np.asarray(phi_target_pk)
+    return float(np.count_nonzero(fit.argmax(-1) != tgt.argmax(-1))) / float(fit.shape[0])
+
+
+# ---------------------------------------------------------------------------
+# MEMORY-BOUNDED self-orient reorient (FEED-eh) — the n600 reorient OOM fix.
+#
+# At the periodic self-orient reorient the per-pair MLX coord-feats cache is rebuilt. The naive
+# ``cache = [mx.array(feats_for_pair(pi)) for pi in range(P)]`` holds the OLD P-entry cache ALIVE
+# while building the NEW one (the list is reassigned only AFTER the comprehension finishes) -> the
+# cache exists TWICE at peak. At n600 each entry is ~(384*512, in_feat) fp32 (~69 MB at in_feat 88)
+# x 600 ~= 41 GB; doubled it pushes RSS past the 90 GB cap -> safe_run OOM (exit 137) at ep50 (mod-32
+# / n96 never hit it). This rebuilds IN PLACE: free each OLD entry BEFORE allocating its replacement
+# and ``mx.eval`` per entry to bound the lazy graph, so the cache exists ONCE (peak ~= base, NOT 2x).
+# Do NOT raise the RSS cap (the blind-confident scaling that killed the machine 2026-06-25); bound
+# the spike. BIT-IDENTICAL to the naive rebuild (same values; only the allocation order differs).
+# Shared by the trainer reorient AND the inflate self-orient path (one bounded helper, no duplication).
+# MLX-free: ``mx_array``/``mx_eval`` are passed in so this module stays numpy-only for the $0 CPU surface.
+# ---------------------------------------------------------------------------
+def rebuild_per_pair_feats_in_place(cache, n_pairs, feats_for_pair, *, mx_array, mx_eval):
+    """Memory-bounded IN-PLACE rebuild of a per-pair MLX feats cache (the reorient OOM fix).
+
+    ``cache``: existing list of length ``n_pairs`` to overwrite in place, or ``None`` to create one.
+    ``feats_for_pair(pi) -> np.ndarray``: the per-pair feats producer. ``mx_array``/``mx_eval``:
+    ``mlx.core.array`` / ``mlx.core.eval``. Returns the (possibly newly-created) cache list whose
+    entry pi == ``mx_array(feats_for_pair(pi))`` for all pi — BIT-IDENTICAL to the unbounded
+    ``[mx_array(feats_for_pair(pi)) for pi in range(n_pairs)]``, but with peak memory ~= ONE cache.
+    """
+
+    np_ = int(n_pairs)
+    if cache is None or len(cache) != np_:
+        cache = [None] * np_
+    for pi in range(np_):
+        cache[pi] = None                  # drop the OLD entry's ref BEFORE allocating the new one
+        arr = mx_array(feats_for_pair(pi))
+        mx_eval(arr)                      # materialize now -> bound the lazy graph (free intermediates)
+        cache[pi] = arr
+    return cache
+
+
+# ---------------------------------------------------------------------------
 # Byte-close — int8 + brotli the LEARNED weights only (bank B is free generic code).
 # ---------------------------------------------------------------------------
 def _int8_symmetric(a: np.ndarray) -> tuple[np.ndarray, float]:
@@ -683,12 +880,16 @@ __all__ = [
     "boundary_length_penalty",
     "build_coords",
     "build_levelset_witness_module",
+    "build_static_core_partition",
+    "build_static_core_phi_target",
     "curvelet_directional_B",
     "curvelet_feats",
     "eikonal_penalty",
+    "fit_out_sdf_to_structured_target",
     "front_end_fit_disagreement",
     "isotropic_fourier_B",
     "levelset_argmax",
+    "rebuild_per_pair_feats_in_place",
     "numpy_levelset_forward",
     "quantize_levelset_blob",
     "r_survival_flip_fraction",
@@ -696,6 +897,7 @@ __all__ = [
     "signed_distance_fields",
     "spectral_lowpass_fields",
     "stem_nyquist_max_freq_cycles_per_unit",
+    "structured_init_fit_disagree",
     "wire_activation",
     "hosc_activation",
 ]

@@ -83,6 +83,7 @@ from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     int8_dequant_params,
     levelset_rgb_forward_numpy,
     quantize_levelset_blob,
+    rebuild_per_pair_feats_in_place,
     save_levelset_npz,
 )
 
@@ -552,6 +553,66 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         omega_init = args.hosc_omega if args.activation == "hosc" else args.wire_w0
         apply_siren_init(model, omega=omega_init)
         mx.eval(model.parameters())
+    # STRUCTURED-PRIOR phi INIT (FEED-ef, ADDITIVE, default-off). PRETRAIN phi so argmax(phi) ~= the
+    # validated self-detected static-core partition (hood+sky+road[+lane] deep SDFs; FEED-dm/du/dw/dx).
+    # The one-shot linear-readout init is broken (the random INR trunk's linear span ~= majority class,
+    # disagree ~0.51 across hosc/relu/wire); the trunk must be ADAPTED, so this is a short subsampled
+    # Adam pretrain of model.sdf -> the clipped structured SDF target (the network has the capacity:
+    # trained mod-32 reaches d_seg 0.00124; pretrain reaches direct disagree ~0.025 in ~600 steps).
+    # The static-core is generic same-rig camera geometry (rule-118 FREE; train-time init ships 0 bytes
+    # -- the archive ships the TRAINED weights). Built on the cached L* (frozen CPU-torch argmax). EMA
+    # is created AFTER so the shadow starts at the structured init. Default OFF => skipped => byte-identical.
+    # MEASURED CAVEAT (n24 realized-through-R): NO epoch-0 realized win (the render is texture-dominated
+    # at init -> SegNet reads random out_tex, not the partition; structured realized 0.586 ~ random 0.506).
+    # Value is a training-trajectory A/B only (UNPROVEN). hosc/SIREN-init-fragile -> loud WARN if it stalls.
+    if args.structured_init:
+        from tac.boundary_math.lever_b_levelset_generator import build_static_core_phi_target
+        lstar_shape = tuple(np.asarray(gt.lstars[0]).shape)
+        if (render_h, render_w) != lstar_shape:
+            raise ValueError(
+                f"--structured-init requires --render-h/--render-w == the L* res {lstar_shape} "
+                f"(got {(render_h, render_w)}); the static-core masks are built on the cached L*."
+            )
+        lst_stack_si = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+        phi_tgt_hwk, sc_roles, sc_meta = build_static_core_phi_target(
+            lst_stack_si, n_classes=5, include_lane=args.structured_init_include_lane,
+            static_thresh=args.structured_init_thresh,
+        )
+        sc_part = phi_tgt_hwk.argmax(-1).reshape(-1)
+        sc_feats_np = _feats_np_for_pair(0)  # pair-0 feats (curvelet[+zeros]); all codes 0 at init -> SHARED
+        sc_clip = float(args.structured_init_sdf_clip)
+        sc_tgt_np = np.clip(phi_tgt_hwk.reshape(render_h * render_w, 5), -sc_clip, sc_clip).astype(np.float32)
+        sc_ns = min(int(args.structured_init_subsample), sc_feats_np.shape[0])
+        sc_rng = np.random.default_rng(args.seed)
+
+        def _structured_init_loss(m, fb, tb):
+            return mx.mean((m.sdf(fb, 0) - tb) ** 2)
+
+        sc_vg = nn.value_and_grad(model, _structured_init_loss)
+        sc_opt = optim.AdamW(learning_rate=float(args.structured_init_lr))
+        for _s in range(int(args.structured_init_steps)):
+            sc_idx = sc_rng.integers(0, sc_feats_np.shape[0], sc_ns)
+            _sL, _sg = sc_vg(model, mx.array(sc_feats_np[sc_idx]), mx.array(sc_tgt_np[sc_idx]))
+            # FREEZE the per-frame code embedding: pretrain the SHARED trunk (code=0) so EVERY frame
+            # (all codes 0 at init) starts at the structured partition, not just frame 0. Without this
+            # the loss on sdf(.,0) also adapts code[0] -> only frame 0 is structured (MEASURED: a
+            # code=0 frame disagrees 0.67 vs 0.011 frozen). Keeps the init a true SHARED prior.
+            if "code" in _sg:
+                _sg["code"] = mx.zeros_like(_sg["code"])
+            sc_opt.update(model, _sg)
+            mx.eval(model.parameters())
+        sc_phi = np.asarray(model.sdf(mx.array(sc_feats_np), 0))
+        sc_disagree = float(np.count_nonzero(sc_phi.argmax(-1) != sc_part)) / sc_part.size
+        mx.eval(model.parameters())
+        print(json.dumps({"stage": "structured_init", "roles": sc_roles.as_dict(),
+                          "pretrain_direct_argmax_disagree_vs_part": round(sc_disagree, 5),
+                          "steps": int(args.structured_init_steps), "lr": float(args.structured_init_lr),
+                          **{k: v for k, v in sc_meta.items() if k != "roles"}}), flush=True)
+        if sc_disagree > 0.30:
+            print(json.dumps({"stage": "structured_init_WARN",
+                              "msg": "pretrain did NOT structure the partition (disagree>0.30); init ~ random "
+                              "(hosc/SIREN trainability fragility). Try --structured-init-lr/-steps or another --seed.",
+                              "disagree": round(sc_disagree, 5)}), flush=True)
     ema = MlxEMA(model, decay=args.ema_decay)
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
 
@@ -679,8 +740,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     cf_mx_cache: list[Any] | None = None
 
     def _rebuild_cf_mx_cache() -> None:
+        # MEMORY-BOUNDED in-place rebuild (FEED-eh): free each OLD per-pair MLX feats entry BEFORE
+        # allocating the new one (the naive list-comprehension held old+new => 2x ~41GB at n600 =>
+        # OOM at the ep50 reorient). Peak now ~= ONE cache; BIT-IDENTICAL values.
         nonlocal cf_mx_cache
-        cf_mx_cache = [mx.array(_feats_np_for_pair(pi)) for pi in range(P)]
+        cf_mx_cache = rebuild_per_pair_feats_in_place(
+            cf_mx_cache, P, _feats_np_for_pair, mx_array=mx.array, mx_eval=mx.eval)
 
     def _cf_mx(pi: int):
         return coord_feats_mx if not use_self_orient else cf_mx_cache[pi]
@@ -1033,6 +1098,36 @@ def main(argv: list[str] | None = None) -> int:
     # LEVEL-SET REG
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
+    # STRUCTURED-PRIOR phi INIT (FEED-ef, ADDITIVE, DEFAULT-OFF). When ON, initialize out_sdf so
+    # argmax(phi) ~= the VALIDATED self-detected static-core partition (hood+sky+road[+lane] deep SDFs;
+    # FEED-dm/du/dw/dx) instead of random/SIREN -> the row STARTS at the ~0.006 structured floor and
+    # LEARNS only the residual (lane wall + Movable). DEFAULT OFF = random/SIREN init = byte-identical
+    # to the current row. The static-core is GENERIC same-rig camera geometry (rule-118 FREE); as a
+    # TRAIN-TIME init it ships 0 bytes (the archive ships TRAINED weights). Requires render res == the
+    # L* res (the static masks are built on the cached frozen CPU-torch L*).
+    # MEASURED CAVEAT (FEED-ef, n24 realized-through-R): structuring phi gives NO epoch-0 realized
+    # d_seg win — the render is texture-dominated at init (random out_tex), so SegNet reads texture
+    # NOT the partition (structured-init realized 0.586 ~ random-init 0.506; even IDEAL flat-palette
+    # is 0.125, never the 0.006 DIRECT/field-level floor). The structured prior is field-level only;
+    # this flag's sole value is a TRAINING-TRAJECTORY A/B (does a correct partition init converge
+    # faster?), UNPROVEN. The one-shot linear-readout init is broken (random trunk can't span the
+    # partition, disagree ~0.51); this flag uses a short pretrain (adapts the trunk -> direct
+    # disagree ~0.025) which is hosc/SIREN-init-FRAGILE (loud WARN if it stalls). Default OFF.
+    ap.add_argument("--structured-init", action=argparse.BooleanOptionalAction, default=False,
+                    help="FEED-ef: pretrain phi to the structured static-core partition (DEFAULT OFF=random/SIREN, byte-identical). "
+                    "MEASURED: no epoch-0 realized win (texture-gated) -> trajectory A/B only.")
+    ap.add_argument("--structured-init-include-lane", action=argparse.BooleanOptionalAction, default=True,
+                    help="FEED-ef: include a SHARED static lane band in the structured init (lane is also learned per-frame).")
+    ap.add_argument("--structured-init-thresh", type=float, default=0.5,
+                    help="FEED-ef: majority-vote threshold for the static-core region masks.")
+    ap.add_argument("--structured-init-steps", type=int, default=600,
+                    help="FEED-ef: subsampled Adam steps to pretrain phi -> structured target.")
+    ap.add_argument("--structured-init-lr", type=float, default=5e-3,
+                    help="FEED-ef: LR for the structured-init pretrain (5e-3 converges; 8e-3 stalls).")
+    ap.add_argument("--structured-init-subsample", type=int, default=8192,
+                    help="FEED-ef: pixels/step for the structured-init pretrain (full-grid is CPU-slow).")
+    ap.add_argument("--structured-init-sdf-clip", type=float, default=20.0,
+                    help="FEED-ef: clip the SDF target to +/-this (argmax-preserving, well-conditioned).")
     args = ap.parse_args(argv)
 
     # (fix d) curriculum boundaries must be strictly ordered and fit inside the budget, else the
