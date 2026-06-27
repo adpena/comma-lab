@@ -116,6 +116,7 @@ def build_levelset_rgb_witness(
     hosc_beta: float,
     hosc_omega: float,
     chroma: bool,
+    palette_init_logit: np.ndarray | None = None,
 ):
     import mlx.core as mx
     import mlx.nn as nn
@@ -143,12 +144,18 @@ def build_levelset_rgb_witness(
             self.hidden = [nn.Linear(hidden_dim, hidden_dim) for _ in range(n_hidden)]
             self.out_sdf = nn.Linear(hidden_dim, n_classes)     # K SDF fields (LINEAR)
             self.out_tex = nn.Linear(hidden_dim, 3)             # pose-carrying RGB texture
-            # learned per-class palette (K,3); init to a distinct luma/chroma spread so classes
-            # start separable (sigmoid(palette) spans the color cube).
-            pal = np.zeros((n_classes, 3), np.float32)
-            for k in range(n_classes):
-                t = (k / max(n_classes - 1, 1)) * 2.0 - 1.0
-                pal[k] = np.array([t, -t, 0.5 * t], np.float32) * 2.0
+            # (DIAGNOSED FIX) learned per-class palette (K,3), in LOGIT space (sigmoid(palette)*255
+            # = the class color). DEFAULT: anchor to the NATURAL per-class mean GT RGB (logit) —
+            # the transfer probe hit realized d_seg 0.0049 with this palette; a generic luma-ramp
+            # init left SegNet unable to separate classes (witness plateaued ~0.51). The palette
+            # stays LEARNABLE (it can move off the anchor) but STARTS in SegNet's distribution.
+            if palette_init_logit is not None:
+                pal = np.asarray(palette_init_logit, np.float32).reshape(n_classes, 3)
+            else:
+                pal = np.zeros((n_classes, 3), np.float32)
+                for k in range(n_classes):
+                    t = (k / max(n_classes - 1, 1)) * 2.0 - 1.0
+                    pal[k] = np.array([t, -t, 0.5 * t], np.float32) * 2.0
             self.palette = mx.array(pal)
 
         def _act(self, u):
@@ -298,13 +305,44 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device=args.mlx_device)
     coord_feats_mx = mx.array(curv_feats_np)
 
+    # (DIAGNOSED FIX) natural per-class palette = mean GT RGB per L* class (the transfer-probe's
+    # winning ingredient; logit space). Anchors the learned palette inside SegNet's distribution so
+    # the partition is READABLE from epoch 0 (a luma-ramp init plateaued ~0.51). NO GT leak at
+    # deploy: the palette is a LEARNED weight counted in the archive (it is a fixed (5,3) tensor,
+    # not the per-frame GT). --no-palette-anchor restores the generic ramp (ablation).
+    palette_init = None
+    if args.palette_anchor:
+        import torch
+        import torch.nn.functional as F
+        sums = np.zeros((5, 3), np.float64); cnts = np.zeros(5, np.float64)
+        for pi in range(min(P, 64)):
+            f1 = torch.from_numpy(np.asarray(gt.gt_f1[pi], np.float32)).permute(2, 0, 1)[None]
+            lr = np.asarray(gt.lstars[pi]); hh, ww = lr.shape
+            small = F.interpolate(f1, size=(hh, ww), mode="bilinear", align_corners=False)[0].permute(1, 2, 0).numpy()
+            for k in range(5):
+                msk = lr == k
+                if msk.any():
+                    sums[k] += small[msk].sum(0); cnts[k] += int(msk.sum())
+        mean = np.where(cnts[:, None] > 0, sums / np.maximum(cnts[:, None], 1), 127.0)
+        palette_init = np.log(np.clip(mean / 255.0, 1e-3, 1 - 1e-3) / (1 - np.clip(mean / 255.0, 1e-3, 1 - 1e-3))).astype(np.float32)
+        print(json.dumps({"stage": "palette_anchor", "mean_rgb": mean.round(1).tolist()}), flush=True)
+
     model = build_levelset_rgb_witness(
         num_pairs=P, in_feat=in_feat, hidden_dim=args.hidden_dim, n_hidden=args.n_hidden,
         mod_dim=args.mod_dim, n_classes=5, activation=args.activation, softmax_temp=args.softmax_temp_start,
         wire_w0=args.wire_w0, wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega,
-        chroma=args.chroma,
+        chroma=args.chroma, palette_init_logit=palette_init,
     )
     mx.eval(model.parameters())
+    # SIREN init (Sitzmann 2020) for the periodic family (hosc/wire) — the canonical from-scratch
+    # trainability fix (parent: hosc-without-SIREN-init was d_seg 0.689). Reuses the parent's
+    # apply_siren_init on in_proj (first) + hidden (subsequent); out_sdf/out_tex/palette/film keep
+    # default init (FiLM must stay nonzero or the code-gradient dies).
+    if args.activation in {"hosc", "wire"} and args.siren_init:
+        from train_witness_realized_through_R_mlx import apply_siren_init
+        omega_init = args.hosc_omega if args.activation == "hosc" else args.wire_w0
+        apply_siren_init(model, omega=omega_init)
+        mx.eval(model.parameters())
     ema = MlxEMA(model, decay=args.ema_decay)
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
 
@@ -512,6 +550,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--gt-cache", type=str, default=None)
     ap.add_argument("--chroma", action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument("--palette-anchor", action=argparse.BooleanOptionalAction, default=True,
+                    help="(DIAGNOSED FIX) init learnable palette to natural per-class mean GT RGB (transfer-probe ingredient; "
+                    "breaks the ~0.51 luma-ramp plateau). --no-palette-anchor = generic ramp ablation.")
     # FRONT-END
     ap.add_argument("--bank-n-scales", type=int, default=4)
     ap.add_argument("--bank-n-orient0", type=int, default=6)
@@ -530,6 +571,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--wire-s0", type=float, default=10.0)
     ap.add_argument("--hosc-beta", type=float, default=4.0)
     ap.add_argument("--hosc-omega", type=float, default=1.0)
+    ap.add_argument("--siren-init", action=argparse.BooleanOptionalAction, default=True,
+                    help="SIREN init (Sitzmann 2020) for hosc/wire periodic layers (from-scratch trainability fix).")
     # SEG LOSS / CURRICULUM
     ap.add_argument("--seg-loss", choices=["ce", "tau_softplus", "l7_softplus", "margin_hinge"], default="ce")
     ap.add_argument("--curriculum", action=argparse.BooleanOptionalAction, default=False)
