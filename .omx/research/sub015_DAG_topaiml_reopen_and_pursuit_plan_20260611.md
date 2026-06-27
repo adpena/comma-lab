@@ -2571,3 +2571,91 @@ is OPT-IN ONLY (parity-gated, ~1.1e-5 d_seg risk for 6.2%). Files: `experiments/
 (+`levelset_sdf_argmax_mlx`, `_load_decoder_params`, `--gpu-reorient`, `--freeze-decoder-fit-codes`),
 `experiments/probe_levelset_gpu_reorient_parity.py` (new). pointer UNMOVED 0.19110; NO-FAKE: reorient
 parity MEASURED (not assumed); amortization generalization MEASURED (not assumed), labeled upper-bound.
+
+---
+
+## DAG FEED-ep (2026-06-27): AMORTIZATION pursuit (operator pivot) — strided subset decoder LAUNCHED + held-out gate WIRED
+
+**Operator pivot:** pause the full n600 row (DONE — paused + resumable from
+`experiments/results/levelset_n600_wpose1_20260627T123627Z` ep25, all per-stage ckpts preserved) and
+PURSUE AMORTIZATION (the days->hours / ~2x-faster-to-competitive-row lever). FEED-eo BUILT the
+`--freeze-decoder-fit-codes` mode and estimated viability on n12 SEEN pairs (upper bound); FEED-ep
+delivers the TRUE held-out validation FEED-eo explicitly deferred ("decoder trained on subset A, codes
+fit on disjoint B"). The witness IS the SAME vehicle (SDF level-set task-sufficient-statistic); the
+subset decoder is that vehicle at fewer pairs, NOT a new/borrowed vehicle.
+
+### 1. STRIDED subset + held-out GT built (`tools/build_strided_subset_gt.py`, NEW)
+Slices the full frozen-CPU-torch GT cache (`gt_n600.npz`, exact `precompute_gt` outputs; NO surrogate)
+into two byte-faithful sub-caches with the identical 6-key schema/dtypes `load_gt_from_cache` expects.
+- **stride=3 -> SUBSET K=200** = pairs `[0,3,6,...,597]` (`gt_strided_n200.npz`, 1.69 GB). STRIDED, not
+  first-N, so it SPANS the entire continuous comma2k19 segment uniformly -> scene diversity (the
+  prerequisite for a frozen decoder to generalize; first-N would only cover the drive's start).
+- **HELDOUT M=400** = the complement (`gt_heldout_n400.npz`, 3.39 GB). VERIFIED partition:
+  overlap=0, union=600; subset[0]==n600[0], subset[1]==n600[3], heldout[0]==n600[1] (exact slices).
+- **K rationale (operator "pick + justify"):** stride 3 / K=200 = the diversity<->speed balance the
+  operator anchored ("every ~3rd"). 600/3=200 exact -> uniform full-drive coverage; ~3x faster/epoch
+  (200 vs 600 pairs); held-out complement is LARGE (400) so the gate is a fair test of amortization,
+  not confounded by under-coverage (smaller K e.g. stride-5/K=120 would be 5x faster but risk a
+  coverage-artifact failure indistinguishable from a true amortization failure). Provenance manifest:
+  `experiments/results/mlx_fleet_gt_cache/gt_strided_stride3_manifest.json` (src sha-head/bytes,
+  stride, exact subset+heldout index lists).
+
+### 2. Subset decoder LAUNCHED (durable, resumable, per-stage) — label `levelset_amort_decoder` pid 8804
+SEALED n600 config (the EXACT live config minus `--resume-from`), on the strided subset:
+hosc/SIREN + self-orient (`--freq-across 32 --n-dir-freqs 2 --freq-along 4 --max-bank-freq 64`) +
+palette + chroma + curriculum (`--tau 300 --l7 900`) + lane-edge (`--lane-edge-weight 30 --class 1
+--margin 0.5 --start-epoch 300`) + `--w-seg 100 --w-pose 1.0` + EMA 0.997 + `--accum-pairs 8 --grad-clip
+1.0` + `--eval-every 25 --ckpt-every 25 --async-verdict` + `TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`
+`--mlx-device gpu`, via `spawn_durable_daemon --rss-cap-mb 90000 --min-free-gb 10 --walltime-cap-s
+288000` (rule-compliant: resumable, per-STAGE preserved ckpts, memory-safeguarded; OOM preflight OK
+116.6 GB free). **Healthy startup CONFIRMED:** gt n200 loaded; front_end `in_feat=88` (curvelet 40 cols
+-> 80 + self-orient dir_w 8) == the n600 decoder in_feat (so the held-out probe + all-600 code-fit will
+width-match, fail-closed); custom_grouped_backward ACTIVE (~17x); ep0 verdict d_seg **0.5048** (the
+expected from-scratch baseline ~0.505), d_pose 163.85; lane_edge active; stem_nyquist 64; 0 NaN/error.
+Out: `experiments/results/levelset_amort_decoder_n200_20260627T143830Z`. Lane claimed
+(`levelset_amort_decoder_n200`, local_mlx_m5max).
+
+### 3. Live dashboard RE-POINTED (same URL)
+Stopped `levelset_dashboard` and relaunched `render_levelset_dashboard.py --watch` pointed at the amort
+decoder log (`--out .omx/tmp/dash_levelset/index.html --tau 300 --l7 900 --goal-dseg 0.00112`). The
+serving chain `dash_http` (pid 5887) + `dash_tunnel` (pid 5894) are UNCHANGED and LIVE -> same cloudflare
+URL; index.html regenerating from the amort log. `oom_memory_guard_watchdog_10gb` LIVE (floor 10).
+
+### 4. Held-out code-fit GATE wired + SMOKED (`tools/levelset_heldout_codefit_gate.py`, NEW)
+The decisive test: given a decoder ckpt, FREEZE it (`--freeze-decoder-fit-codes`) and fit ONLY the codes
+on the HELD-OUT (non-subset) 400 pairs, reporting their REALIZED-through-R d_seg (CPU-torch authority,
+EMA shadow, the ONE deploy codepath) vs the joint reference. Reproduces the SEALED front-end (in_feat
+guard: wrapper pre-check + trainer fail-close jointly prevent a width-mismatched NO-FAKE fit), fixed
+`--seg-loss l7_softplus --no-curriculum` (avoids the curriculum-boundary validator at small budgets).
+Modes: dry-run / `--smoke` (tiny foreground) / `--launch` (durable daemon for the real gate the loop
+runs at the decoder's stage ckpts). **SMOKE PASSED** (rc=0, SMOKE_OK=true): frozen n600-EMA(ep25) decoder
++ 2 held-out pairs + 3 code-fit epochs -> emitted realized d_seg 0.0403 (wiring proof; even 3 epochs
+pulled held-out 0.505->0.040, i.e. the code channel is doing real work — NOT a gate verdict).
+
+### GATE plan + threshold (the decisive amortization test, run by the loop)
+At the decoder's stage ckpts (tau@300, l7@900, final@1500), launch:
+```
+.venv/bin/python tools/levelset_heldout_codefit_gate.py \
+  --decoder-ckpt experiments/results/levelset_amort_decoder_n200_20260627T143830Z \
+  --heldout-gt experiments/results/mlx_fleet_gt_cache/gt_heldout_n400.npz \
+  --num-pairs 400 --epochs 600 --verdict-pairs 0 --launch
+```
+**Threshold:** PASS (amortization generalizes) iff held-out realized d_seg <= reference * 1.5 = **0.00186**
+(reference = joint mod-32/n600 converged ~0.00124). PASS -> fit ALL 600 codes off the SAME frozen decoder
+-> byte-close (`tools/levelset_byte_close_and_eval.py`) -> exact eval = the amortized n600 witness.
+FAIL (held-out d_seg stays high / >~2x reference) -> the frozen decoder does NOT generalize via the code
+channel -> honest DEFER amortization + resume the preserved n600 row.
+
+### Projected wall-clock + fallback
+- Subset decoder to l7 (ep900): ~3x faster than n600's ~34h-to-l7 -> **~11h**; full 1500 ep ~19h.
+- Held-out gate (frozen decoder, code-grad only, ~300-600 ep on 400 pairs) + the all-600 code-fit:
+  a few hours each (FEED-eo: code-only recovered joint d_seg by ep20-30). Net amortized path ~2-3x
+  faster to a competitive byte-closeable n600-equivalent witness IF the gate passes.
+- **Resume-n600 fallback trigger:** held-out gate FAILS the competitive band -> `--resume-from
+  experiments/results/levelset_n600_wpose1_20260627T123627Z` (preserved at ep25). The n600 row is not
+  lost; amortization is the faster path attempted first.
+
+pointer UNMOVED 0.19110; `[macOS-MLX training-gradient]/[macOS-CPU advisory]` NON-PROMOTABLE; NO-FAKE:
+the held-out d_seg is MEASURED (not assumed); the subset decoder is the SAME vehicle at fewer pairs
+(NOT borrowed/new). Files: `tools/build_strided_subset_gt.py` (NEW), `tools/levelset_heldout_codefit_gate.py`
+(NEW), `experiments/train_levelset_witness_realized_through_R_mlx.py` (`--freeze-decoder-fit-codes`, FEED-eo).
