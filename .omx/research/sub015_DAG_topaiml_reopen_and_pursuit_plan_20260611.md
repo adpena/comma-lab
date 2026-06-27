@@ -1999,3 +1999,47 @@ THE JOINT-CONTAINMENT MEASURE (FEED-dt highest-risk item):
 LOAD-BEARING CAVEAT: the structured floor 0.005993 is ABOVE the frontier d_seg 0.00056 — the EDT-rasterized structural decomposition is a PRIOR/INIT, NOT the final d_seg. Its value: regions given cheap+contained+ADDITIVE, freeing witness capacity for the boundary annulus + Movable; the witness must still LEARN deep SDFs (eikonal) to tighten boundaries toward ~0.001.
 
 VERDICT: structured set (lane phi_1 ~1-2KB + hood phi_4 56B + sky phi_2 98B) ADOPTED as priors; road phi_0 = LEARNED deep field (complement, 0 sidecar); Movable phi_3 = learned. The FEED-dt highest-risk integration concern (do they antagonize in one argmax?) ANSWERED POSITIVELY for the structured set; the lone risk (road-const) identified + fixed (deep road). NEXT: wire the multi-component codec (lane+hood+sky priors + deep learned road + movable) -> ONE integrated FEED-dt recursive-adversarial seal -> train -> byte-close -> exact. SEAL STILL OWES: n600 re-measure of sky/hood static drift (turns/bumps). Pointer UNMOVED 0.19110.
+
+
+## FEED-dx (2026-06-27): LEVEL-SET pose path VERIFIED = CORRECT realized store+supervise (NOT collapsed) + derive-from-seg premise (rank-1) — memo levelset_pose_supervised_path_20260627T072947Z.md
+
+VERIFY (coordinator binding prereq for a usable level-set ROW): `--w-pose>0` in
+`train_levelset_witness_realized_through_R_mlx.py` routes through the imported `make_loss_fn`
+(`train_witness_realized_through_R_mlx.py:841-847`) = the REALIZED store+supervise: render f0,f1 ->
+contest-exact R -> YUV6 of the RENDERED frames -> frozen MLX PoseNet -> MSE vs `pose_tgt =
+gt.gt_poses[pi]` (the frozen CPU-torch PoseNet first-6 = the Quantizr stored-pose GT, loaded
+trainer:452, passed trainer:582), score-domain `sqrt(10*d_pose)`. This is NOT the collapsed
+amortized-luma reconstruct (d_pose 2.67-12.66, a different module); the `(fix g)` "DROP
+pose-from-texture" comment only describes the DEFAULT w_pose=0 (texture serves seg). DEPLOY: no
+sidecar the scorer reads (scorer runs PoseNet on FRAMES); pose rides the trained per-pair code/FiLM.
+`tools/levelset_byte_close_and_eval.py` consumes a w_pose>0 checkpoint and gives real realized
+d_pose. => ROW pose path READY at the mechanism level, NO wiring needed; the reviewed n600
+d_seg-isolation config (`--w-pose 0`) must flip to `--w-pose 1.0`.
+
+DERIVE-FROM-SEG re-center (coordinator): pose=f(seg) via `pose_from_embedding` + FiLM. Rank-1
+CONFIRMED on n96 (dim-0 std 1.02; dims1-5 std <=0.038) => pose ~1 DOF/pair, near-free in EVERY
+framing (code-carried=free, rank-1 stored scalar=1.2KB, MLP~9.3KB). Premise test (canonical
+`pose_from_embedding` fit GT seg-pair->GT pose, embedding=0): derive-from-seg as a STATIC predictor
+barely beats predict-mean (6-DOF test MSE 0.190 vs 0.206; dim-0 RMSE 1.067 vs GT std 1.02) = WEAK
+(confounds: 96x128 downsample washes sub-pixel frame displacement; low speed-variance). BUT the
+binding fact: d_pose=MSE(PoseNet(FRAMES)) so the realized path does NOT need value-accuracy — it
+trains FRAMES to hit the target directly. FiLM site already exists (level-set per-(pair,frame)
+`code`/`film`); `nerv_pose_conditioning_bolton.FiLMModulator` is the adapter if explicit.
+
+$0 CPU SMOKE (n6, render-384, matched seed, frozen CPU-torch verdict; [macOS-CPU advisory]):
+w_pose in {0,1,10}. RESULT (HONEST, NO-FAKE): d_pose does NOT descend in <=16 ep at any w_pose
+(stays ~189.5) — score-domain sqrt damps the pose grad at d_pose~190 AND the render must LEARN
+pose-carrying frames over many-hundred ep (cold start). d_seg in the n6/<=16ep from-scratch regime
+is unstable (bounces 0.43->0.60->0.52, training noise not the pose term); treat-vs-ctrl d_seg deltas
+(+/-0.01-0.07) are WITHIN noise and sign-flip => NO catastrophic d_seg blow-up, but null-containment
+is NOT decisively provable in this budget. A short CPU smoke is the WRONG instrument for a slow
+realized-pose descent. Existence proof for the descent: parent RGB witness (a7660df3) same
+score-domain w_pose=1 descended d_pose 12.94->0.0009 over ~1500 ep.
+
+ACTIONABLE: the running GPU descent (72602) is `--w-pose 0` (d_seg isolation) => cannot byte-close
+to a usable row. A `--w-pose 1.0` GPU descent variant (MLX-GPU custom-Metal-backward) is the
+instrument for both the d_pose descent AND realized null-containment at the converged d_seg
+operating point. Optimal w_pose = 1.0 (parent default, score-domain). Pose composes orthogonally
+with lane-edge (LEVER-3)/chroma BY CONSTRUCTION (pose=PoseNet(f0 SegNet-invisible + f1 RGB-slack);
+lane-edge=SegNet(f1) margin) — MEASURE jointly in the row, do not assume. CPU-only $0, additive,
+GPU/lane-SDF subagent UNTOUCHED. Pointer UNMOVED 0.19110.
