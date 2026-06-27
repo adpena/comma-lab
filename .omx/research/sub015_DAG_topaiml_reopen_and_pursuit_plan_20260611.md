@@ -2059,3 +2059,65 @@ CONVERGENCE (gated): wire priors (lane-SDF+hood-static+sky-mask as phi init/bias
 
 POSE MECHANISM (verified by code): the level-set pose term routes through make_loss_fn -> render f0,f1 -> R -> frozen PoseNet -> MSE vs GT 6-targets (pose_tgt=gt.gt_poses, the Quantizr stored-pose GT, loaded + passed every step), score-domain sqrt(10*d_pose). This IS realized-d_pose-toward-targets, NOT the collapsed amortized-luma carrier (the (fix g) DROP only describes the w_pose=0 default). No deploy sidecar — pose rides the trained per-pair code/FiLM; byte-close reads the FRAMES. EXISTENCE PROOF: parent RGB witness (a7660df3) identical w_pose=1 loss descended d_pose 12.94->0.0009 over ~1500ep. derive-from-seg PREDICTOR (pose_from_embedding) measured WEAK (barely beats mean; rank-1 confirmed dim-0 std 1.02) BUT the realized path doesn't need value-accuracy (trains frames to hit targets directly). $0 CPU smoke could NOT show descent (<=16ep too short; score-domain sqrt damps grad at d_pose~190) -> the w_pose=1.0 GPU descent is the instrument (= the row + the null-containment test). OPTIMAL w_pose=1.0. READY, no wiring — flip reviewed config --w-pose 0 -> 1.0.
 ALL COMPONENTS ASSESSED: byte-close BUILT; d_seg Yousfi levers SEALED; lane-SDF/hood/sky/road structured priors validated (joint antagonism ~0, a PRIOR/INIT floor 0.006); pose w_pose=1.0 verified. => TWO row paths: PATH A (FAST, ready now) = sealed Yousfi levers (lane-edge@300+chroma+anti-alias, already wired) + w_pose=1.0 -> first REAL row (through its seal gate: levers sealed + pose verified). PATH B (optimal, next) = + structured priors as init (needs wire+integrated-seal) -> lower row. CONVERGENCE: launch PATH A NOW (means->ends, fastest pointer-relevant row + the pose-null-containment test); PATH B = next iteration. CAVEAT: trainer saves npz only at loop-end -> monitor verdict logs (d_seg tighten + d_pose descend + null-containment) during the run; byte-close at end. Pointer UNMOVED 0.19110.
+
+## FEED-ea (2026-06-27): comma10k membership + deterministic-generation exploit (within rules) — $0 CPU probe
+
+**MEMBERSHIP VERDICT: NO (exact contest frames are NOT in comma10k) — but SAME PHYSICAL RIG IS.**
+Method = name/manifest matching (cheapest route; no image bytes downloaded — fetched only the comma10k
+git-tree listing via GitHub API, 8.1MB JSON, 25,063 entries / 12,629 labeled PNGs). comma10k filename
+grammar = `<idx>_<dongleid>_<drive_ts>_<segment>_<frame>.png`. Contest source (`upstream/public_test_segments.txt`)
+= `b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc`.
+- EXACT drive `2018-07-27--06-03-57` (any segment): **0 frames** in comma10k. Substr `06-03-57`: 0.
+  (4 `2018-07-27--06` near-hits exist but are OTHER devices — `23fca19e…`, `836d09212…` — coincidental
+  same date/hour, NOT the contest car.) → the EXACT contest clip was never hand-labeled.
+- Same physical device/car (dongle `b0c9d2329ad1606b`): **30 frames across 26 distinct drives**
+  (2018-07 → 2019-04; e.g. seg 5/10/44/…; incl. 2 from 2018-07-28 & 2018-07-30, adjacent days). So the
+  comma10k training set DID include this exact RAV4 (same hood, same camera mount/intrinsics, same
+  dashboard) — just different trips, never the scored 60s segment-10 clip.
+- VERDICT = **same-rig / different-trip**, NOT exact-frame membership. (HONEST; deterministic, re-runnable
+  from the public git tree.)
+
+**OVERFIT IMPLICATION (corrects a latent assumption).** The "Yousfi SegNet memorized THESE exact frames"
+hypothesis is FALSIFIED for *exact-frame* memorization (0 contest frames in training). The measured clean
+margin profile (median 5.82, tight peak, 4.67% flip-prone) is therefore **"in-distribution, same-rig
+confident segmentation,"** NOT "memorized-this-video." Consequence: do NOT assume a degenerate/clean argmax
+from memorization — the flip-prone 4.67% (lane-edge orbit, class-1) is a GENUINE hard residual that
+memorization would NOT have erased; it stands as the real d_seg wall. What the same-rig grounding DOES
+unlock (as a PRIOR, not a payload): the STATIC-CORE geometry SegNet saw labeled ~30× on this very car is
+maximally reliable → MyCar/hood bottom band (class 4, static IoU 0.994), horizon row ~437, sky/Undrivable
+top region (class 2), road trapezoid on the vanishing point, and the EXACT homography from the public
+openpilot intrinsics K=[[910,0,582],[0,910,437],[0,0,1]]. These are GENERIC driving-scene + known-camera
+priors (membership-independent) that compile into the FREE inflate.py generator. The exploit below does
+NOT depend on membership=YES — it rests on (a) L* is computable offline from the provided frozen scorer,
+and (b) the public camera/scene priors — both true regardless.
+
+**DETERMINISTIC-GENERATION EXPLOIT — formalized within contest rules (the operator's LLM-reverse-eng
+analogy made rigorous).** Target = `L* = SegNet.argmax(GT_last_frame) ∈ {0..4}^(512×384)` per pair,
+computed OFFLINE at compress time from the PROVIDED frozen scorer (= our cached `lstars`; this is exactly
+what evaluate.py does → LEGAL). Build a deterministic GENERIC generator in inflate.py that expands a compact
+COUNTED video-derived sufficient statistic into a witness whose argmax == L* (d_seg→0), shipping ZERO
+scorer weights. Crux respected: **target is (B) SegNet.argmax on the GT frame, NOT (A) comma10k human
+labels — (A)≠(B); comma10k labels are irrelevant to the score AND would be an external payload if used.**
+
+| Tier | Contents | Rule |
+|---|---|---|
+| **FREE** (inflate.py; NOT sized — evaluate.py:63 sizes only archive.zip; no time term, only the 30-min budget) | the generic forward-pass ALGORITHM (coord-INR forward, Fourier-feature expand from a SEED, FiLM graph, lane-curve rasterizer via openpilot poly + the known homography, hood/sky/road region generators from the fixed public camera geometry, AR/prefix-sum decoders, runtime-generated codebooks); deterministically-GENERATED bases (Fourier `B` from seed, fixed partition bases); the GENERIC class-convention/scene priors (horizon, hood shape, road trapezoid) | rule 118: generic code/tables = free |
+| **COUNTED** (archive.zip; rate term) | the per-frame VIDEO-DERIVED sufficient statistic (~8-dim lane-trajectory coords per frame, AR-coded → hundreds of bytes); the minimal LEARNED residual the texture/round-trip-survival wall genuinely needs; any per-pair latent; any learned INR weights | rule 118: learned/video-derived = counted |
+| **FORBIDDEN** | SegNet/PoseNet (or any scorer-surrogate) weights in the archive (strict-scorer "no scorers at inflate time" + destroys rate); the per-frame GT-argmax table `L*` (or any video-derived per-frame table, or scorer weights) **smuggled into inflate.py "code"** to dodge the rate term = hide-data-in-code FAKE (NO-FAKE #6/#7 + rule 118); comma10k human labels; network/download at inflate (inflate.sh has no net) | NO-FAKE supreme |
+
+Composes with deterministic-reproducibility (seeded + bit-identical + host-portable; numpy-fp32 reference
+is the verdict authority; same archive → bit-identical inflate every host within 30-min budget). The
+seed-generated bases ARE the canonical legal score-mover: the witness is reproduced exactly from a tiny
+COUNTED statistic expanded by the FREE generator, shipping zero scorer weights. Pose stays bundled with
+the luma path (#155 — no separable cheap pose code; the witness must produce pose THROUGH PoseNet on
+reconstructed frames, never store a pose vector).
+
+**WHAT THIS DOES / DOESN'T DO.** Does: confirms the source-provenance memory, hardens the static-core +
+homography priors as same-rig-grounded (not just generic), and formalizes the legal FREE/COUNTED/FORBIDDEN
+boundary the witness capstone must honor. Doesn't: give exact-frame memorization, a pose answer-key
+drop-in, or any byte-closed row (pointer UNMOVED at contest-CPU 0.19110 — this is a PRIOR/compliance
+finding, a MEANS; only a byte-closed contest-CPU exact row moves it). NEW $0 follow-up warranted: none
+required, but optional — perceptual-hash a sample of 0.mkv frames vs the 30 same-device comma10k thumbnails
+to quantify same-rig scene-distribution overlap (would refine, not change, the verdict). Evidence durable:
+membership re-derives bit-identically from the public comma10k git tree (sha `6c205fe4…`); no archive/
+training modified.
