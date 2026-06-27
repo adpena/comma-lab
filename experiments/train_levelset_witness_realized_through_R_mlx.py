@@ -87,6 +87,10 @@ from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     rebuild_per_pair_feats_in_place,
     save_levelset_npz,
 )
+from tac.optimization.muon_finisher_mlx import (  # noqa: E402
+    build_muon_finisher_optimizer,
+    count_muon_adamw_split,
+)
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
@@ -481,8 +485,14 @@ def levelset_sdf_argmax_mlx(
 
 # ---------------------------------------------------------------------------
 # Curriculum seg_form by epoch (PR95 d_seg sequence): ce -> tau_softplus -> l7_softplus.
-# (fix i) Muon is NOT yet wired here — the optimizer is hardcoded AdamW (mlx.optimizers.AdamW
-# below). The l7 stage runs under AdamW; the PR95 Muon finisher is a follow-up (no false claim).
+# OPTIMIZER curriculum (DAG FEED-fi): AdamW for the CE/tau/l7 stages, then an OPTIONAL PR95
+# stage-8 MUON FINISHER (--muon-start-epoch, default None=AdamW-throughout=BIT-IDENTICAL). At
+# the switch epoch the optimizer becomes mlx.optimizers.MultiOptimizer([Muon(2D hidden weights),
+# AdamW(biases/code/out_sdf/out_tex)]) via tac.optimization.muon_finisher_mlx (Newton-Schulz
+# orthogonalized momentum = THE measured d_seg drop, CLAUDE.md frontier "Muon is THE drop"). The
+# switch is a per-stage TREATMENT boundary (re-treat: spike-guard cleared) and saves a PRESERVED
+# stage-encoded ckpt (independently byte-closeable + resumable). NO false claim: this is a build;
+# the d_seg verdict is the realized-through-R eval, the score is upstream/evaluate.py only.
 # ---------------------------------------------------------------------------
 def validate_lane_edge_config(
     *, lane_edge_weight: float, lane_edge_start_epoch: int, epochs: int,
@@ -1220,6 +1230,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
     # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0).
     prev_seg_form = _seg_form_for_epoch(start_epoch, args)
+    # MUON FINISHER (FEED-fi) per-stage optimizer switch state. muon_start_epoch None (default) =>
+    # muon_switched stays False forever => the switch block + tag suffix never fire => BIT-IDENTICAL
+    # to the pre-FEED-fi AdamW-throughout path. Effective LRs default to 0.1*lr (PR95 ~0.1x finetune).
+    muon_switched = False
+    muon_lr_eff = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
+    muon_adamw_lr_eff = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
+    muon_wd_eff = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
     with temporary_mlx_device(args.mlx_device):
         for ep in range(start_epoch, args.epochs + 1):
             seg_form = _seg_form_for_epoch(ep, args)
@@ -1237,6 +1254,37 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "from_seg_form": prev_seg_form, "to_seg_form": seg_form,
                                   "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
                 prev_seg_form = seg_form
+            # MUON FINISHER switch (FEED-fi; PR95 stage-8). Fires once at the first epoch >= the
+            # start (the >= handles RESUME into the finisher too). DEFAULT-OFF (start is None) =>
+            # never fires => byte-identical. The switch is a per-stage TREATMENT boundary (operator
+            # 2026-06-26 "transitions must re-treat"): rebuild opt AdamW->MultiOptimizer(Muon 2D
+            # weights + AdamW rest), re-init optimizer state, CLEAR the spike-guard (the orthogonalized
+            # lower-lr step has a different loss scale; do NOT judge it against the prior AdamW stage's
+            # median), and SAVE a PRESERVED stage-encoded ckpt so the Muon-finished decoder is
+            # independently byte-closeable + resumable. The Muon momentum re-warms from scratch here
+            # (best-effort, like the resume path); the DECODER weights are unchanged at the switch.
+            if (args.muon_start_epoch is not None) and (not muon_switched) and (ep >= args.muon_start_epoch):
+                n_muon, n_adamw = count_muon_adamw_split(model.trainable_parameters())
+                opt = build_muon_finisher_optimizer(
+                    muon_lr=muon_lr_eff, muon_adamw_lr=muon_adamw_lr_eff,
+                    muon_momentum=float(args.muon_momentum), muon_weight_decay=muon_wd_eff,
+                    muon_ns_steps=int(args.muon_ns_steps), adamw_weight_decay=float(args.weight_decay),
+                )
+                opt.init(model.trainable_parameters())
+                mx.eval(opt.state)
+                muon_switched = True
+                recent_losses.clear()
+                print(json.dumps({"stage": "muon_finisher_switch", "epoch": ep,
+                                  "muon_start_epoch": int(args.muon_start_epoch), "muon_lr": muon_lr_eff,
+                                  "muon_adamw_lr": muon_adamw_lr_eff, "muon_momentum": float(args.muon_momentum),
+                                  "muon_ns_steps": int(args.muon_ns_steps), "muon_weight_decay": muon_wd_eff,
+                                  "n_muon_params": n_muon, "n_adamw_params": n_adamw,
+                                  "note": "AdamW->Muon (2D hidden weights; biases/code/heads stay AdamW); "
+                                  "spike-guard re-treated; LR schedule frozen for the finisher"}), flush=True)
+                if args.stage_checkpoints:
+                    _wm = _do_checkpoint(ep, stage_tag="stageMuonStart")
+                    stage_ckpts.append(_wm)
+                    print(json.dumps({"stage": "checkpoint", "kind": "muon_finisher_start", **_wm}), flush=True)
             # lane-edge engagement gate + transition RE-TREAT (spike-guard reset at the engage epoch
             # so the added margin-hinge term's loss jump is not silently spike-skipped; no-op when
             # lane_start<=1 i.e. the default always-on-from-ep1 path -> zero behavior change).
@@ -1279,8 +1327,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _beta = _hosc_beta_for_epoch(ep, args)
             if _beta is not None:
                 model.hosc_beta = _beta
-            # LR warmup->cosine
-            if args.lr_schedule:
+            # LR warmup->cosine. Gated OFF once the Muon finisher is active (operator 2026-06-26
+            # "different stages need different treatment"): the finisher is a PR95 flat low-LR
+            # polish at its own muon_lr/muon_adamw_lr, NOT the base cosine, and the MultiOptimizer's
+            # children own their own LRs (setting opt.learning_rate would not reach them). Default
+            # (no --muon-start-epoch) => muon_switched False => identical to before (BIT-IDENTICAL).
+            if args.lr_schedule and not muon_switched:
                 if ep <= args.warmup_epochs:
                     lr = args.lr * ep / max(args.warmup_epochs, 1)
                 else:
@@ -1362,7 +1414,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 and _seg_form_for_epoch(ep + 1, args) != seg_form)
             do_periodic = args.ckpt_every > 0 and ep % args.ckpt_every == 0
             if is_transition:
-                w = _do_checkpoint(ep, stage_tag=_stage_tag(seg_form))
+                # FEED-fi: tag the preserved ckpt with the optimizer phase too, so a curriculum
+                # transition DURING the Muon finisher is distinctly byte-closeable (suffix "" when
+                # the finisher is off => identical filename to the pre-FEED-fi path).
+                w = _do_checkpoint(ep, stage_tag=_stage_tag(seg_form) + ("_muon" if muon_switched else ""))
                 stage_ckpts.append(w)
                 print(json.dumps({"stage": "checkpoint", "kind": "stage_transition", **w}), flush=True)
             elif do_periodic:
@@ -1379,7 +1434,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # writes the rolling latest + a PRESERVED final stage-encoded ckpt -> the run is byte-closeable
     # and resumable from disk at completion. Saves the EMA SHADOW (deploy), NOT live (EMA rule).
     final_form = _seg_form_for_epoch(last_ep, args) if last_ep >= 1 else args.seg_loss
-    final = _do_checkpoint(last_ep, stage_tag=(_stage_tag(final_form) if args.stage_checkpoints else None))
+    # FEED-fi: the FINAL ckpt is the Muon-finished decoder when the finisher ran -> tag it "_muon"
+    # so it is distinctly byte-closeable (suffix "" when off => identical to the pre-FEED-fi path).
+    _final_tag = (_stage_tag(final_form) + ("_muon" if muon_switched else "")) if args.stage_checkpoints else None
+    final = _do_checkpoint(last_ep, stage_tag=_final_tag)
     stage_ckpts.append({**final, "kind": "final"})
     ck = out_dir / "levelset_witness_ema_mlx.npz"
     print(json.dumps({"stage": "checkpoint", "kind": "final", **final}), flush=True)
@@ -1635,6 +1693,30 @@ def main(argv: list[str] | None = None) -> int:
                     help="FEED-ef: pixels/step for the structured-init pretrain (full-grid is CPU-slow).")
     ap.add_argument("--structured-init-sdf-clip", type=float, default=20.0,
                     help="FEED-ef: clip the SDF target to +/-this (argmax-preserving, well-conditioned).")
+    # MUON FINISHER (DAG FEED-fi, PR95 stage-8, ADDITIVE, DEFAULT-OFF). The most-potent measured
+    # d_seg stage (CLAUDE.md frontier "Muon is THE drop"); the prior 'Muon NOT yet wired' gap.
+    # --muon-start-epoch None (default) => AdamW throughout => BIT-IDENTICAL to the pre-FEED-fi path.
+    # When set, at that epoch the 2-D hidden weight matrices (in_proj/film/hidden.*) switch to
+    # mlx.optimizers.Muon (Newton-Schulz orthogonalized momentum); biases/1-D + the per-pair code
+    # latent + the out_sdf/out_tex final heads stay AdamW (MLX Muon docstring: final FC + embeddings
+    # are Muon-suboptimal). Routed via MultiOptimizer in tac.optimization.muon_finisher_mlx.
+    ap.add_argument("--muon-start-epoch", type=int, default=None,
+                    help="MUON FINISHER (PR95 stage-8): epoch to switch 2-D hidden weights AdamW->Muon "
+                    "(default None = AdamW throughout = bit-identical). Set AFTER the l7 stage "
+                    "(>= --l7-start-epoch) so the orthogonalized finisher polishes a formed partition.")
+    ap.add_argument("--muon-lr", type=float, default=None,
+                    help="MUON FINISHER: Muon-group LR (default None => 0.1*--lr, the PR95 ~0.1x-base "
+                    "finetune relationship). Muon normalizes its update to ~unit spectral norm, so this "
+                    "is a spectral-norm step size; TUNE to the lever's own optimum (OPTIMAL-FORM): a "
+                    "typical Muon finisher lr is ~1e-3 to 5e-3.")
+    ap.add_argument("--muon-adamw-lr", type=float, default=None,
+                    help="MUON FINISHER: AdamW-fallback-group LR for biases/code/heads during the "
+                    "finisher (default None => 0.1*--lr).")
+    ap.add_argument("--muon-momentum", type=float, default=0.95, help="MUON FINISHER: Muon momentum.")
+    ap.add_argument("--muon-weight-decay", type=float, default=None,
+                    help="MUON FINISHER: Muon-group decoupled weight decay (default None => --weight-decay).")
+    ap.add_argument("--muon-ns-steps", type=int, default=5,
+                    help="MUON FINISHER: Newton-Schulz iteration count (Keller Jordan default 5).")
     args = ap.parse_args(argv)
 
     # (fix d) curriculum boundaries must be strictly ordered and fit inside the budget, else the
@@ -1668,6 +1750,26 @@ def main(argv: list[str] | None = None) -> int:
         if args.margin_saliency_tau <= 0.0:
             raise ValueError(f"--margin-saliency-tau ({args.margin_saliency_tau}) must be > 0 "
                              "(sal=exp(-gt_margin/tau)).")
+
+    # (FEED-fi) MUON FINISHER fail-closed config guard (same NO-FAKE class as the lane/saliency
+    # validators): a finisher that never engages (start > epochs) is a silent no-op = a FALSE
+    # 'Muon does not help d_seg' verdict; a finisher with NO trainable 2-D weights (frozen decoder)
+    # routes everything to AdamW = the Muon group is empty = the same false verdict. Fail LOUD.
+    if args.muon_start_epoch is not None:
+        if not (1 <= args.muon_start_epoch <= args.epochs):
+            raise ValueError(
+                f"--muon-start-epoch ({args.muon_start_epoch}) must be in [1, --epochs ({args.epochs})]: "
+                "outside the budget the Muon finisher would NEVER engage -> a silent no-op = a FALSE "
+                "'Muon does not help' verdict. PR95 places it as the FINAL stage (set it >= "
+                f"--l7-start-epoch {args.l7_start_epoch} when --curriculum is on)."
+            )
+        if args.freeze_decoder_fit_codes:
+            raise ValueError(
+                "--muon-start-epoch is incompatible with --freeze-decoder-fit-codes: the only trainable "
+                "param then is the per-pair `code` latent, which is AdamW-routed (Muon-suboptimal for "
+                "embeddings) -> the Muon group would be EMPTY = a silent no-op = a FALSE 'Muon does not "
+                "help' verdict. Muon finishes the DECODER weight matrices; run it on a joint (unfrozen) run."
+            )
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")
