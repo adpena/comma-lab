@@ -215,3 +215,126 @@ def test_count_split_matches_witness_partition():
     assert n_muon == 4
     # AdamW: 6 biases + out_sdf.weight + out_tex.weight + code = 9
     assert n_adamw == 9
+
+
+# ---------------------------------------------------------------------------
+# NO-FAKE (LENS-A adversarial review, FEED-fj): the REALIZED MultiOptimizer step
+# on the ACTUAL production param tree, where `hidden` is a LIST (the real witness
+# is ``self.hidden = [nn.Linear(...) for _ in range(n_hidden)]`` => leaf paths
+# ``hidden.0.weight``, ``hidden.1.weight``). The realized-step test above
+# deliberately uses a NO-LIST dict ("a numeric list index ... makes
+# MultiOptimizer's split/merge ambiguous") -- so the PRODUCTION structure was
+# UNTESTED. These two tests close that gap: they prove tree_flatten ->
+# filter-split -> tree_unflatten -> tree_merge handles the numeric-list path
+# correctly (Muon really orthogonalizes the list-indexed hidden weights; the
+# merged tree keeps every leaf in the right list slot).
+# ---------------------------------------------------------------------------
+def _sv_ratio(a):
+    s = np.linalg.svd(np.asarray(a), compute_uv=False)
+    return float(s.max() / s.min())
+
+
+def test_realized_step_on_list_indexed_hidden_routes_and_orthogonalizes():
+    """apply_gradients on a tree with `hidden` AS A LIST (the real witness structure).
+
+    Proves the production path the existing realized-step test avoided: the
+    list-indexed ``hidden.0.weight`` / ``hidden.1.weight`` ARE routed to Muon and
+    orthogonalized (spread spectrum -> ~flat), the structure round-trips (hidden
+    stays a 2-list with every leaf), and biases/heads/code go to AdamW.
+    """
+    rng = np.random.default_rng(11)
+    H = 16
+    params = {
+        "in_proj": {"weight": mx.zeros((H, 8)), "bias": mx.zeros((H,))},
+        "hidden": [
+            {"weight": mx.zeros((H, H)), "bias": mx.zeros((H,))},
+            {"weight": mx.zeros((H, H)), "bias": mx.zeros((H,))},
+        ],
+        "out_sdf": {"weight": mx.zeros((5, H)), "bias": mx.zeros((5,))},
+        "code": mx.zeros((4, 8)),
+    }
+
+    def _grad_like(p):
+        if isinstance(p, dict):
+            return {k: _grad_like(v) for k, v in p.items()}
+        if isinstance(p, list):
+            return [_grad_like(v) for v in p]
+        if getattr(p, "ndim", 0) == 2:
+            m, n = p.shape
+            k = min(m, n)
+            return mx.array(_spread_matrix(rng, m, n, [4.0 / (1 + i) for i in range(k)]))
+        return mx.array(rng.normal(size=p.shape).astype(np.float32))
+
+    grads = _grad_like(params)
+    opt = build_muon_finisher_optimizer(
+        muon_lr=1.0, muon_adamw_lr=1e-2, muon_momentum=0.0,
+        muon_weight_decay=0.0, muon_ns_steps=5, adamw_weight_decay=0.0, nesterov=False,
+    )
+    opt.init(params)
+    new = opt.apply_gradients(grads, params)
+    mx.eval(new)
+
+    # structure round-trip: hidden is still a 2-list with both leaves present.
+    assert isinstance(new["hidden"], list) and len(new["hidden"]) == 2
+    for i in (0, 1):
+        assert "weight" in new["hidden"][i] and "bias" in new["hidden"][i]
+    assert "code" in new and "out_sdf" in new
+
+    # Muon group: list-indexed hidden weights orthogonalized (ratio < 2 from 4x-spread grad).
+    for i in (0, 1):
+        dw = np.asarray(new["hidden"][i]["weight"])
+        assert np.linalg.norm(dw) > 1e-6, f"hidden.{i}.weight did NOT update (Muon dropped the list entry!)"
+        assert _sv_ratio(dw) < 2.0, f"hidden.{i}.weight NOT orthogonalized (Muon skipped list path)"
+    # AdamW group: head/bias/code moved.
+    assert np.linalg.norm(np.asarray(new["out_sdf"]["weight"])) > 1e-6
+    assert np.linalg.norm(np.asarray(new["code"])) > 1e-6
+    for i in (0, 1):
+        assert np.linalg.norm(np.asarray(new["hidden"][i]["bias"])) > 1e-6
+
+
+def test_opt_update_on_nn_module_with_hidden_list_drives_muon_group():
+    """End-to-end ``opt.update(model, grads)`` (the EXACT trainer loop call) on an
+    nn.Module whose ``hidden`` is a Python list -> the production Muon path.
+
+    The trainer calls ``opt.update(model, clipped)`` (not ``apply_gradients``);
+    this proves that full path moves the list-indexed Muon-group weights.
+    """
+    nn = pytest.importorskip("mlx.nn")
+    from mlx.utils import tree_flatten
+
+    class _Tiny(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.code = mx.zeros((4, 8))
+            self.in_proj = nn.Linear(8, 16)
+            self.hidden = [nn.Linear(16, 16) for _ in range(2)]
+            self.out_sdf = nn.Linear(16, 5)
+
+        def __call__(self, x):
+            h = self.in_proj(x)
+            for layer in self.hidden:
+                h = layer(h)
+            return self.out_sdf(h)
+
+    model = _Tiny()
+    mx.eval(model.parameters())
+    before = {k: np.array(v) for k, v in tree_flatten(model.parameters())}
+    opt = build_muon_finisher_optimizer(
+        muon_lr=0.5, muon_adamw_lr=1e-2, muon_momentum=0.0,
+        muon_weight_decay=0.0, muon_ns_steps=5, adamw_weight_decay=0.0, nesterov=False,
+    )
+    opt.init(model.trainable_parameters())
+    rng = np.random.default_rng(3)
+    x = mx.array(rng.normal(size=(32, 8)).astype(np.float32))
+    y = mx.array(rng.normal(size=(32, 5)).astype(np.float32))
+
+    def _loss(m, x, y):
+        return ((m(x) - y) ** 2).mean()
+
+    _, grads = nn.value_and_grad(model, _loss)(model, x, y)
+    opt.update(model, grads)
+    mx.eval(model.parameters(), opt.state)
+    after = {k: np.array(v) for k, v in tree_flatten(model.parameters())}
+    # the two list-indexed hidden weights + in_proj.weight MUST have moved (Muon group).
+    for k in ("hidden.0.weight", "hidden.1.weight", "in_proj.weight"):
+        assert np.linalg.norm(after[k] - before[k]) > 1e-7, f"{k} did NOT move via opt.update (production Muon path broken)"
