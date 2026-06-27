@@ -283,26 +283,33 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # argmax, cos 0.89-0.91 vs GT). Recomputed every --reorient-every epochs from the live SDF
     # argmax; concatenated to the curvelet feats. OFF by default (the from-scratch smoke uses
     # curvelet only — self-orientation is a finetune lever needing a roughly-learned partition).
+    # SELF-ORIENT (#1 follow-up, WIRED): the byte-closeable -48% directional lever. The tangent is
+    # computed from the decoder's OWN cheap-forward argmax (self-orientation FIXED POINT: start with
+    # zero-directional = curvelet-only iso pass -> argmax -> tangent -> directional feats -> converge),
+    # so it is reconstructible at decode with NO GT leak (cos 0.89-0.91 vs GT). PER-PAIR feats are
+    # concatenated to the shared curvelet feats and threaded through train+verdict (ONE codepath).
     use_self_orient = bool(args.self_orient)
     n_dir_freqs = int(args.n_dir_freqs)
+    dir_w = 4 * n_dir_freqs
     if use_self_orient:
-        # (fix e) FAIL-CLOSED, NOT a silent crash-stub. Wiring self_orientation_directional_feats
-        # is PER-PAIR (tangent from each pair's live SDF argmax, recomputed every --reorient-every)
-        # -> per-pair coord_feats, which the imported shared-coord render/loss path does not thread.
-        # It is the byte-closeable -48% lever (cos 0.89-0.91 vs GT) and the #1 follow-up, but a
-        # half-wired version would diverge train/verdict/byte-close (NO-FAKE). The transfer-probe
-        # GATE passed with curvelet-only (generic, byte-closeable), so this is not soundness-blocking.
-        raise NotImplementedError(
-            "--self-orient is the #1 follow-up (per-pair tangent from the live SDF argmax must "
-            "thread per-pair coord_feats through train+verdict+byte-close as ONE codepath). Run "
-            "curvelet-only (generic, byte-closeable) until it is wired end-to-end; "
-            "self_orientation_directional_feats is imported and ready."
-        )
-    print(json.dumps({"stage": "front_end", "curvelet_cols": int(B.shape[1]),
-                      "in_feat": int(in_feat), "self_orient": use_self_orient,
-                      "front_end": "generic-curvelet only (self-orient = fail-closed follow-up)"}), flush=True)
+        in_feat += dir_w
+    # per-pair directional feats (zeros until the first reorient -> ep<reorient = pure curvelet).
+    dir_feats_per_pair = [np.zeros((curv_feats_np.shape[0], dir_w), np.float32) for _ in range(P)] if use_self_orient else None
 
-    adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device=args.mlx_device)
+    def _feats_np_for_pair(pi: int) -> np.ndarray:
+        if not use_self_orient:
+            return curv_feats_np
+        return np.concatenate([curv_feats_np, dir_feats_per_pair[pi]], axis=-1).astype(np.float32)
+
+    print(json.dumps({"stage": "front_end", "curvelet_cols": int(B.shape[1]), "dir_w": int(dir_w),
+                      "in_feat": int(in_feat), "self_orient": use_self_orient,
+                      "front_end": ("curvelet+self_orient" if use_self_orient else "generic-curvelet only")}), flush=True)
+
+    # (DEVICE BUG FIX) the adapter LOADS the upstream torch scorers then converts to MLX — the
+    # torch .device() must be "cpu" (torch has no "gpu"; args.mlx_device="gpu" crashed here in 3.4s).
+    # The MLX render runs on mx.gpu via temporary_mlx_device(args.mlx_device) below; the torch
+    # scorer/R/verdict are CPU authority. The device SPLIT: MLX "gpu" -> render; torch -> "cpu".
+    adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device="cpu")
     coord_feats_mx = mx.array(curv_feats_np)
 
     # (DIAGNOSED FIX) natural per-class palette = mean GT RGB per L* class (the transfer-probe's
@@ -375,16 +382,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     vpairs = list(range(0, P, max(1, P // max(args.verdict_pairs, 1)))) if args.verdict_pairs < P else list(range(P))
     vpairs = vpairs[: args.verdict_pairs] if args.verdict_pairs else list(range(P))
 
-    def _render_numpy_deploy(deploy: dict[str, np.ndarray], code_row: np.ndarray) -> np.ndarray:
-        """THE ONE CODEPATH (fp32 numpy, deploy-faithful) — same forward the byte-close/inflate use.
-        ``deploy`` = int8-dequantized EMA-shadow params; ``curv_feats_np`` = the free curvelet bank."""
-        rgb, _phi = levelset_rgb_forward_numpy(
-            deploy, curv_feats_np, code_row, n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
+    def _fwd_numpy(deploy: dict[str, np.ndarray], feats_np: np.ndarray, code_row: np.ndarray):
+        return levelset_rgb_forward_numpy(
+            deploy, feats_np, code_row, n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
             n_classes=5, activation=args.activation, softmax_temp=float(model.softmax_temp),
             wire_w0=args.wire_w0, wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega,
             chroma=args.chroma,
         )
+
+    def _render_numpy_deploy(deploy: dict[str, np.ndarray], pi: int, fk: int) -> np.ndarray:
+        """THE ONE CODEPATH (fp32 numpy, deploy-faithful) — same forward the byte-close/inflate use.
+        Uses the PER-PAIR feats (curvelet [+ self-orient]) so the verdict == the deploy render."""
+        rgb, _phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + fk])
         return _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
+
+    def recompute_self_orient(deploy: dict[str, np.ndarray]) -> float:
+        """Self-orientation FIXED-POINT step: from the EMA deploy frame1 argmax (current feats),
+        recompute each pair's directional feats. Returns the mean |dir feat| (non-triviality check)."""
+        if not use_self_orient:
+            return 0.0
+        mag = 0.0
+        for pi in range(P):
+            _rgb, phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + 1])
+            argmax = phi.argmax(-1).reshape(render_h, render_w).astype(np.int64)
+            df = self_orientation_directional_feats(
+                coords_np, argmax, n_freqs=n_dir_freqs, freq_across=args.freq_across, freq_along=args.freq_along)
+            dir_feats_per_pair[pi] = df.astype(np.float32)
+            mag += float(np.abs(df).mean())
+        return mag / max(P, 1)
 
     def realized_verdict() -> dict[str, float]:
         # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
@@ -393,8 +418,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         deploy = int8_dequant_params(ema_np)
         f0s, f1s = [], []
         for pi in vpairs:
-            f0s.append(_render_numpy_deploy(deploy, deploy["code"][2 * pi + 0]))
-            f1s.append(_render_numpy_deploy(deploy, deploy["code"][2 * pi + 1]))
+            f0s.append(_render_numpy_deploy(deploy, pi, 0))
+            f1s.append(_render_numpy_deploy(deploy, pi, 1))
         ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
         # pose VERDICT still measured (monitoring) but pose is NOT the witness's job (w_pose=0
         # default; deploy pose rides the SOLVED Quantizr stored-pose sidecar, d_pose 3.4e-5).
@@ -410,10 +435,32 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
     history.append({"epoch": 0, **v0, "implied_S": s0})
 
+    # per-pair MLX coord-feats cache: shared curvelet tensor when no self-orient; rebuilt on each
+    # reorient when self-orient is on (so the train forward uses the SAME per-pair feats the
+    # numpy verdict/deploy uses -> ONE codepath).
+    cf_mx_cache: list[Any] | None = None
+
+    def _rebuild_cf_mx_cache() -> None:
+        nonlocal cf_mx_cache
+        cf_mx_cache = [mx.array(_feats_np_for_pair(pi)) for pi in range(P)]
+
+    def _cf_mx(pi: int):
+        return coord_feats_mx if not use_self_orient else cf_mx_cache[pi]
+
+    if use_self_orient:
+        _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
+
     recent_losses: list[float] = []
     with temporary_mlx_device(args.mlx_device):
         for ep in range(1, args.epochs + 1):
             seg_form = _seg_form_for_epoch(ep, args)
+            # SELF-ORIENT reorient cadence (fixed-point): recompute per-pair directional feats from
+            # the EMA deploy argmax every --reorient-every epochs (skip ep1: argmax is random).
+            if use_self_orient and ep > 1 and (ep - 1) % max(args.reorient_every, 1) == 0:
+                ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+                mag = recompute_self_orient(int8_dequant_params(ema_np))
+                _rebuild_cf_mx_cache()
+                print(json.dumps({"stage": "reorient", "epoch": ep, "mean_abs_dir_feat": round(mag, 5)}), flush=True)
             # (config-review #4) ANNEAL softmax-temp hi->lo (cosine): start soft (gradients flow,
             # no RGB-level Gibbs) -> end sharp (the SDF partition pinned). Fixing T=0.1 reintroduces
             # Gibbs at the RGB level per deep-math; anneal like the hosc_beta schedule.
@@ -437,7 +484,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     pi = int(pi_np)
                     oh, mg = lstar_cache[pi]
                     loss, grads = value_and_grad(
-                        model, coord_feats_mx, 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                        model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
                         args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
                         args.eikonal_weight, args.length_weight,
                     )
@@ -563,6 +610,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="add byte-closeable self-orientation directional feats (finetune lever; needs a roughly-learned base).")
     ap.add_argument("--n-dir-freqs", type=int, default=6)
     ap.add_argument("--reorient-every", type=int, default=50)
+    ap.add_argument("--freq-across", type=float, default=32.0, help="self-orient: HIGH freq across the edge (normal).")
+    ap.add_argument("--freq-along", type=float, default=4.0, help="self-orient: LOW freq along the edge (tangent).")
     # ACTIVATION
     # (config-review #3) HOSC is the ONLY descent evidence (probe 0.0066; A/B 0.221 hosc vs 0.265
     # wire). WIRE was a paper-default guess; default HOSC, run wire as a sweep arm.
