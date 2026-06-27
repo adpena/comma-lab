@@ -3594,3 +3594,16 @@ Operator 2026-06-27: *"the team is working on it now ... come back in a couple h
 **Mutual elevation:** pact offers the **witness forward** (`lever_b_levelset_generator` numpy core + the SDF/EDT builder) as molt's integration-test kernel. Strategic prize beyond the viz: **molt as a DETERMINISTIC NATIVE contest-decode runtime** (rule-118 generic-algorithm-FREE; needs bit-identical cross-host determinism on the native target).
 
 **CHECK-BACK ~19:26 CDT (~2h):** fetch `pact-collab`, review molt-team progress on the 3 asks, respond/iterate in the channel. means≠ends — tooling collaboration; pointer UNMOVED 0.19110.
+
+## FEED-gc (2026-06-27 ~19:50 CDT) — level-set dashboard now SELF-FOLLOWING + STALENESS-HONEST (extincts "DEAD-run rendered as live")
+
+**Bug class extincted:** `tools/render_levelset_dashboard.py` watched a STOPPED run's log for hours — the daemon kept running + refreshing the HTML while its data source was dead, so a fresh-looking dashboard silently showed stale numbers. NO-FAKE: a "live" dashboard over dead data is a fake-live claim.
+
+**Fix (additive to the one tool; old `--log` behavior unchanged):**
+1. **Self-follow** — new `--log-glob PATTERN` (default `.omx/tmp/levelset_*.log`). Each refresh cycle RE-RESOLVES the watched log to the NEWEST-mtime file matching the glob **that actually contains verdict lines**. The verdict-filter is load-bearing: the glob also matches the dashboard's OWN daemon log (`levelset_dashboard_daemon.log`, 0 verdicts, newest-mtime because it's rewritten every cycle) — without the filter the dashboard would self-follow its own log and fake "live" forever. New run starts (new log) → auto-switch (an `▶ following <basename> (switched <utc>)` line in the HTML). `--log` stays as explicit back-compat override (returned verbatim).
+2. **Staleness banner keyed to the WATCHED LOG's real mtime** (verdict lines carry no timestamp — confirmed; mtime is the honest "still being written?" signal): `● live (updated Ns ago)` when fresh; a LOUD red `⚠ STALE — no new verdict in Nm — run may be STOPPED/crashed` when age > `--stale-min` (default 5). `⚠ no run log found` when the glob matches nothing. This is the honesty layer — fresh-HTML-over-dead-data is now impossible to miss.
+3. All existing panels (d_seg/d_pose/blob_bytes/implied_S vs epoch, tau/l7 stage lines, goal-d_seg hline) + the `[macOS-MLX training] NON-PROMOTABLE · pointer UNMOVED 0.19110` footer + meta-refresh preserved.
+
+**Tests:** `experiments/tests/test_render_levelset_dashboard_self_follow.py` — 22 pass (newest-verdict-log resolution, switch-on-new-log, non-verdict-log exclusion = the confounder, mtime tie-break, `--log` override verbatim, no-match, fresh-vs-stale via fabricated old mtime, switch-note states, banner LIVE/STALE/missing in HTML, back-compat `_write_html` signature).
+
+**Relaunched** via `spawn_durable_daemon` (label `levelset_dashboard`, rss-cap 4000MB, min-free 10GB) self-following; VERIFIED it resolves to the live de-confounded log `levelset_amort_deconf_taualone_20260627T194432Z.log` (13 verdicts, ep575 d_seg≈0.0041), shows current data + the `● live` indicator. The eventual theta* run-switch is now automatic (the dash follows whichever levelset run is newest). CPU-only tool; means≠ends; pointer UNMOVED 0.19110.
