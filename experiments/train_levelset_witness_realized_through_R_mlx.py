@@ -75,8 +75,13 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
 from tac.boundary_math.lever_b_generator import self_orientation_directional_feats  # noqa: E402
 from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     CurveletBankConfig,
+    LevelSetConfig,
     curvelet_directional_B,
     curvelet_feats,
+    int8_dequant_params,
+    levelset_rgb_forward_numpy,
+    quantize_levelset_blob,
+    save_levelset_npz,
 )
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
@@ -196,25 +201,29 @@ def build_levelset_rgb_witness(
 # the driver — the realized seg loss drives d_seg).
 # ---------------------------------------------------------------------------
 def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1.0):
+    """(fix h) Eikonal + Chan-Vese length on the DECISION MARGIN m = phi_top1 - phi_top2 (the
+    quantity the argmax boundary lives on), NOT each field's own zero-set. Eikonal drives
+    |grad m|->1 (the 1-Lipschitz margin = the R-survival quantity); the length term
+    delta_eps(m)*|grad m| penalizes the perimeter of the ACTUAL inter-class boundary {m=0}."""
     import mlx.core as mx
 
     phi = mx.reshape(phi_pk, (render_h, render_w, -1))
-    gy = phi[1:, :, :] - phi[:-1, :, :]
-    gx = phi[:, 1:, :] - phi[:, :-1, :]
-    gy2 = mx.mean(gy * gy)
-    gx2 = mx.mean(gx * gx)
-    gmag = mx.sqrt(gx[:-1, :, :] ** 2 + gy[:, :-1, :] ** 2 + 1e-8)
+    srt = mx.sort(phi, axis=-1)
+    m = srt[..., -1] - srt[..., -2]  # (H,W) >=0 decision margin (top1-top2)
+    gy = m[1:, :] - m[:-1, :]
+    gx = m[:, 1:] - m[:, :-1]
+    gmag = mx.sqrt(gx[:-1, :] ** 2 + gy[:, :-1] ** 2 + 1e-8)  # (H-1,W-1)
     eik = mx.mean((gmag - 1.0) ** 2)
-    # Chan-Vese length: delta_eps(phi) * |grad phi| (smoothed-Heaviside boundary measure).
-    phi_c = phi[:-1, :-1, :]
-    delta = (len_eps / np.pi) / (len_eps * len_eps + phi_c * phi_c)
+    mc = m[:-1, :-1]
+    delta = (len_eps / np.pi) / (len_eps * len_eps + mc * mc)  # delta_eps at the {m=0} boundary
     length = mx.mean(delta * gmag)
-    return eik, length, (gx2 + gy2)
+    return eik, length, mx.mean(gx * gx) + mx.mean(gy * gy)
 
 
 # ---------------------------------------------------------------------------
 # Curriculum seg_form by epoch (PR95 d_seg sequence): ce -> tau_softplus -> l7_softplus.
-# (Muon finisher is wired via --optimizer for the n96 GPU run; the smoke uses adamw.)
+# (fix i) Muon is NOT yet wired here — the optimizer is hardcoded AdamW (mlx.optimizers.AdamW
+# below). The l7 stage runs under AdamW; the PR95 Muon finisher is a follow-up (no false claim).
 # ---------------------------------------------------------------------------
 def _seg_form_for_epoch(ep: int, args) -> str:
     if not args.curriculum:
@@ -270,16 +279,28 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     use_self_orient = bool(args.self_orient)
     n_dir_freqs = int(args.n_dir_freqs)
     if use_self_orient:
-        in_feat += 4 * n_dir_freqs
+        # (fix e) FAIL-CLOSED, NOT a silent crash-stub. Wiring self_orientation_directional_feats
+        # is PER-PAIR (tangent from each pair's live SDF argmax, recomputed every --reorient-every)
+        # -> per-pair coord_feats, which the imported shared-coord render/loss path does not thread.
+        # It is the byte-closeable -48% lever (cos 0.89-0.91 vs GT) and the #1 follow-up, but a
+        # half-wired version would diverge train/verdict/byte-close (NO-FAKE). The transfer-probe
+        # GATE passed with curvelet-only (generic, byte-closeable), so this is not soundness-blocking.
+        raise NotImplementedError(
+            "--self-orient is the #1 follow-up (per-pair tangent from the live SDF argmax must "
+            "thread per-pair coord_feats through train+verdict+byte-close as ONE codepath). Run "
+            "curvelet-only (generic, byte-closeable) until it is wired end-to-end; "
+            "self_orientation_directional_feats is imported and ready."
+        )
     print(json.dumps({"stage": "front_end", "curvelet_cols": int(B.shape[1]),
-                      "in_feat": int(in_feat), "self_orient": use_self_orient}), flush=True)
+                      "in_feat": int(in_feat), "self_orient": use_self_orient,
+                      "front_end": "generic-curvelet only (self-orient = fail-closed follow-up)"}), flush=True)
 
     adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device=args.mlx_device)
     coord_feats_mx = mx.array(curv_feats_np)
 
     model = build_levelset_rgb_witness(
         num_pairs=P, in_feat=in_feat, hidden_dim=args.hidden_dim, n_hidden=args.n_hidden,
-        mod_dim=args.mod_dim, n_classes=5, activation=args.activation, softmax_temp=args.softmax_temp,
+        mod_dim=args.mod_dim, n_classes=5, activation=args.activation, softmax_temp=args.softmax_temp_start,
         wire_w0=args.wire_w0, wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega,
         chroma=args.chroma,
     )
@@ -316,20 +337,35 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     vpairs = list(range(0, P, max(1, P // max(args.verdict_pairs, 1)))) if args.verdict_pairs < P else list(range(P))
     vpairs = vpairs[: args.verdict_pairs] if args.verdict_pairs else list(range(P))
 
+    def _render_numpy_deploy(deploy: dict[str, np.ndarray], code_row: np.ndarray) -> np.ndarray:
+        """THE ONE CODEPATH (fp32 numpy, deploy-faithful) — same forward the byte-close/inflate use.
+        ``deploy`` = int8-dequantized EMA-shadow params; ``curv_feats_np`` = the free curvelet bank."""
+        rgb, _phi = levelset_rgb_forward_numpy(
+            deploy, curv_feats_np, code_row, n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
+            n_classes=5, activation=args.activation, softmax_temp=float(model.softmax_temp),
+            wire_w0=args.wire_w0, wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega,
+            chroma=args.chroma,
+        )
+        return _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
+
     def realized_verdict() -> dict[str, float]:
+        # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
+        # (NOT the MLX-GPU reduced-precision forward — the 4th artifact). This IS the deploy render.
+        ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+        deploy = int8_dequant_params(ema_np)
         f0s, f1s = [], []
         for pi in vpairs:
-            rgb0 = _render_rgb_render_res(model, coord_feats_mx, 2 * pi + 0, render_h, render_w)
-            rgb1 = _render_rgb_render_res(model, coord_feats_mx, 2 * pi + 1, render_h, render_w)
-            f0s.append(_torch_R_to_camera_uint8(rgb0))
-            f1s.append(_torch_R_to_camera_uint8(rgb1))
+            f0s.append(_render_numpy_deploy(deploy, deploy["code"][2 * pi + 0]))
+            f1s.append(_render_numpy_deploy(deploy, deploy["code"][2 * pi + 1]))
         ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
+        # pose VERDICT still measured (monitoring) but pose is NOT the witness's job (w_pose=0
+        # default; deploy pose rides the SOLVED Quantizr stored-pose sidecar, d_pose 3.4e-5).
         dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
         return {"d_seg": float(np.mean(ds)), "d_pose": float(np.mean(dp))}
 
     history: list[dict[str, Any]] = []
     v0 = realized_verdict()
-    blob = quantize_witness_blob(model)
+    blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
     s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
     print(json.dumps({"stage": "verdict", "epoch": 0, **{k: round(v, 6) for k, v in v0.items()},
                       "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s0, 4),
@@ -340,6 +376,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     with temporary_mlx_device(args.mlx_device):
         for ep in range(1, args.epochs + 1):
             seg_form = _seg_form_for_epoch(ep, args)
+            # (config-review #4) ANNEAL softmax-temp hi->lo (cosine): start soft (gradients flow,
+            # no RGB-level Gibbs) -> end sharp (the SDF partition pinned). Fixing T=0.1 reintroduces
+            # Gibbs at the RGB level per deep-math; anneal like the hosc_beta schedule.
+            prog_t = (ep - 1) / max(args.epochs - 1, 1)
+            model.softmax_temp = float(args.softmax_temp_end + 0.5 * (args.softmax_temp_start - args.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
             # LR warmup->cosine
             if args.lr_schedule:
                 if ep <= args.warmup_epochs:
@@ -394,7 +435,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 mx.clear_cache()
             if ep % args.eval_every == 0 or ep == args.epochs:
                 v = realized_verdict()
-                blob = quantize_witness_blob(model)
+                blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
                 s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
                 print(json.dumps({"stage": "verdict", "epoch": ep, "seg_form": seg_form,
                                   **{k: round(vv, 6) for k, vv in v.items()},
@@ -402,9 +443,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "ep_loss": round(ep_loss, 3)}), flush=True)
                 history.append({"epoch": ep, **v, "implied_S": s})
 
-    # save the live checkpoint (npz) for the byte-close path (tools/witness_byte_close_and_eval.py).
-    ck = out_dir / "levelset_witness_live_mlx.npz"
-    flat = {k: np.asarray(v, np.float32) for k, v in tree_flatten(model.parameters())}
+    # (fix c) save the EMA SHADOW (the deploy weights), NOT live. Persist the bank cfg + render
+    # cfg so the ONE-CODEPATH byte-close/inflate reconstructs the exact deploy render.
+    ck = out_dir / "levelset_witness_ema_mlx.npz"
+    flat = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+    flat["__cfg_n_hidden"] = np.asarray(args.n_hidden)
+    flat["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
+    flat["__cfg_softmax_temp"] = np.asarray(float(model.softmax_temp))
+    flat["__cfg_activation"] = np.asarray(args.activation)
+    flat["__cfg_chroma"] = np.asarray(int(bool(args.chroma)))
+    flat["__cfg_wire_w0"] = np.asarray(args.wire_w0); flat["__cfg_wire_s0"] = np.asarray(args.wire_s0)
+    flat["__cfg_hosc_beta"] = np.asarray(args.hosc_beta); flat["__cfg_hosc_omega"] = np.asarray(args.hosc_omega)
+    flat["__bank_n_scales"] = np.asarray(args.bank_n_scales); flat["__bank_n_orient0"] = np.asarray(args.bank_n_orient0)
+    flat["__bank_f0"] = np.asarray(args.bank_f0); flat["__bank_base"] = np.asarray(args.bank_base)
+    flat["__bank_n_iso"] = np.asarray(args.bank_n_iso); flat["__render_hw"] = np.asarray([render_h, render_w])
     np.savez(ck, **flat)
     result = {
         "utc": _utc(), "n_pairs": P, "epochs": args.epochs, "render_hw": [render_h, render_w],
@@ -421,14 +473,22 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="LEVEL-SET witness through R (MLX): softmax-of-SDF + curvelet, realized d_seg")
     ap.add_argument("--out-dir", type=Path, required=True)
     ap.add_argument("--num-pairs", type=int, default=24)
-    ap.add_argument("--epochs", type=int, default=300)
+    ap.add_argument("--epochs", type=int, default=1500,
+                    help="(fix d) >=1500 for the PR95 d_seg curriculum (ce->tau->l7). Fail-closed asserted vs curriculum boundaries.")
     ap.add_argument("--eval-every", type=int, default=25)
-    ap.add_argument("--render-h", type=int, default=96)
-    ap.add_argument("--render-w", type=int, default=128)
-    ap.add_argument("--hidden-dim", type=int, default=128)
+    # (config-review #1) render-384 is the MEASURED R-survival floor (render-192 pre-caps at
+    # 0.00085 d_seg = +0.085 S, mathematically blocking sub-0.15). camera-R + SegNet dominate
+    # wall-clock, so 384 is ~free vs 192. The "SDF smooth -> low-res ok" assumption is FALSIFIED.
+    ap.add_argument("--render-h", type=int, default=384)
+    ap.add_argument("--render-w", type=int, default=512)
+    ap.add_argument("--hidden-dim", type=int, default=96)
     ap.add_argument("--n-hidden", type=int, default=4)
-    ap.add_argument("--mod-dim", type=int, default=48)
-    ap.add_argument("--softmax-temp", type=float, default=0.1, help="palette softmax temperature (small=sharp SDF partition).")
+    # (config-review #2) mod-32 (with hidden-96) -> ~122-130KB at n600 = the RD-optimum B*~122KB
+    # (rate 0.081); mod-48/hidden-128 -> 161KB (0.107) overshoots by +0.026 S. n96 = capacity sweep.
+    ap.add_argument("--mod-dim", type=int, default=32)
+    # (config-review #4) softmax-temp ANNEAL hi->lo (not fixed 0.1, which reintroduces RGB Gibbs).
+    ap.add_argument("--softmax-temp-start", type=float, default=1.0, help="anneal START (soft; gradients flow).")
+    ap.add_argument("--softmax-temp-end", type=float, default=0.05, help="anneal END (sharp; SDF partition pinned).")
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--lr-end", type=float, default=1e-4)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
@@ -436,14 +496,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lr-schedule", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--warmup-epochs", type=int, default=1)
     ap.add_argument("--w-seg", type=float, default=100.0)
-    ap.add_argument("--w-pose", type=float, default=1.0)
+    # (fix g) DROP pose-from-texture (the COLLAPSED amortized carrier, d_pose 2.67-12.66). Pose is
+    # SOLVED by the Quantizr stored-pose sidecar (3.4e-5); the witness's ONLY binding job is d_seg.
+    # w_pose=0 by default -> the texture head serves SegNet realism (seg), not pose reconstruction.
+    ap.add_argument("--w-pose", type=float, default=0.0)
     ap.add_argument("--score-domain-loss", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--pose-eps", type=float, default=1e-2)
     ap.add_argument("--hinge-weight", type=float, default=4.0)
     ap.add_argument("--accum-pairs", type=int, default=8)
     ap.add_argument("--grad-clip", type=float, default=1.0)
     ap.add_argument("--spike-factor", type=float, default=5.0)
-    ap.add_argument("--verdict-pairs", type=int, default=24, help="realized CPU-torch verdict subset (0=all).")
+    ap.add_argument("--verdict-pairs", type=int, default=24,
+                    help="realized fp32-numpy EMA-shadow verdict subset (0=all); ALWAYS fp32 one-codepath, never mlx-gpu.")
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--gt-cache", type=str, default=None)
@@ -459,7 +523,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n-dir-freqs", type=int, default=6)
     ap.add_argument("--reorient-every", type=int, default=50)
     # ACTIVATION
-    ap.add_argument("--activation", choices=["wire", "hosc", "relu"], default="wire")
+    # (config-review #3) HOSC is the ONLY descent evidence (probe 0.0066; A/B 0.221 hosc vs 0.265
+    # wire). WIRE was a paper-default guess; default HOSC, run wire as a sweep arm.
+    ap.add_argument("--activation", choices=["wire", "hosc", "relu"], default="hosc")
     ap.add_argument("--wire-w0", type=float, default=20.0)
     ap.add_argument("--wire-s0", type=float, default=10.0)
     ap.add_argument("--hosc-beta", type=float, default=4.0)
@@ -477,6 +543,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
     args = ap.parse_args(argv)
+
+    # (fix d) curriculum boundaries must be strictly ordered and fit inside the budget, else the
+    # tau_softplus / l7 stages silently never run (or run for ~0 epochs) -> untrustworthy d_seg.
+    if args.curriculum:
+        if not (0 < args.tau_softplus_start_epoch < args.l7_start_epoch <= args.epochs):
+            raise ValueError(
+                f"--curriculum requires 0 < tau_softplus_start_epoch ({args.tau_softplus_start_epoch}) "
+                f"< l7_start_epoch ({args.l7_start_epoch}) <= epochs ({args.epochs}). The PR95 d_seg "
+                "sequence (ce->tau_softplus->l7) needs each stage to actually run; tau_softplus is "
+                "THE primary d_seg drop and must not be skipped."
+            )
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")

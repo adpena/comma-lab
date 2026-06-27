@@ -1,0 +1,48 @@
+{
+  "utc": "2026-06-27T02:38:22Z",
+  "axis": "[macOS-CPU advisory] transfer probe; promotion_eligible=false",
+  "n_pairs": 4,
+  "by_config": {
+    "T0.5_tex0": {
+      "realized_dseg_R": 0.012318929036458334,
+      "realized_dseg_noR": 0.012991587320963543,
+      "r_added_segnet": -0.0006726582845052085,
+      "field_postR": 1.9073486328125e-05
+    },
+    "T0.5_texB": {
+      "realized_dseg_R": 0.004964192708333333,
+      "realized_dseg_noR": 0.004868825276692708,
+      "r_added_segnet": 9.5367431640625e-05,
+      "field_postR": 1.9073486328125e-05
+    },
+    "T0.1_tex0": {
+      "realized_dseg_R": 0.012110392252604168,
+      "realized_dseg_noR": 0.012727101643880209,
+      "r_added_segnet": -0.0006167093912760415,
+      "field_postR": 1.9073486328125e-05
+    },
+    "T0.1_texB": {
+      "realized_dseg_R": 0.004887898763020834,
+      "realized_dseg_noR": 0.004817962646484375,
+      "r_added_segnet": 6.99361165364587e-05,
+      "field_postR": 1.9073486328125e-05
+    },
+    "T0.03_tex0": {
+      "realized_dseg_R": 0.012110392252604168,
+      "realized_dseg_noR": 0.012727101643880209,
+      "r_added_segnet": -0.0006167093912760415,
+      "field_postR": 1.9073486328125e-05
+    },
+    "T0.03_texB": {
+      "realized_dseg_R": 0.004887898763020834,
+      "realized_dseg_noR": 0.004817962646484375,
+      "r_added_segnet": 6.99361165364587e-05,
+      "field_postR": 1.9073486328125e-05
+    }
+  },
+  "best_config": "T0.1_texB",
+  "best_realized_dseg_R": 0.004887898763020834,
+  "field_level_postR_reference": 1.9073486328125e-05,
+  "transfer_ratio_best_over_field": 256.2666666666667,
+  "VERDICT": "TRANSFERS (vehicle sound; ideal-SDF+palette is read by SegNet R-stably)"
+}

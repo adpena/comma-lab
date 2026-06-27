@@ -450,6 +450,71 @@ def _int8_symmetric(a: np.ndarray) -> tuple[np.ndarray, float]:
     return q, (s / 127.0)
 
 
+def int8_dequant_params(params: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+    """Return params after the SAME int8 symmetric round-trip the byte-close applies (the
+    eval_roundtrip-for-WEIGHTS, so the verdict/inflate render the DEPLOY weights, not fp32 EMA).
+    ``_B``/``B`` (free deterministic bank) pass through unquantized."""
+
+    out: dict[str, np.ndarray] = {}
+    for name, arr in params.items():
+        a = np.asarray(arr, np.float32)
+        if a.size == 0 or name == "B" or name.endswith("_B"):
+            out[name] = a
+            continue
+        q, scale = _int8_symmetric(a)
+        out[name] = (q.astype(np.float32) * scale).astype(np.float32)
+    return out
+
+
+def levelset_rgb_forward_numpy(
+    params: dict[str, np.ndarray],
+    feats: np.ndarray,
+    code_row: np.ndarray,
+    *,
+    n_hidden: int,
+    hidden_dim: int,
+    n_classes: int,
+    activation: str,
+    softmax_temp: float,
+    wire_w0: float,
+    wire_s0: float,
+    hosc_beta: float,
+    hosc_omega: float,
+    chroma: bool,
+) -> tuple[np.ndarray, np.ndarray]:
+    """THE ONE CODEPATH (numpy fp32) — bit-mirror of the MLX ``LevelSetRGBWitness.__call__``.
+
+    Used by BOTH the trainer's fp32 deploy-faithful verdict AND the byte-close / inflate forward
+    (representation = carrier = archive: one forward that cannot diverge). Returns ``(rgb (P,3) in
+    [0,255], phi (P,K) SDF)``. ``params`` are the (optionally int8-dequantized) deploy weights;
+    ``feats`` is the curvelet coord feature grid (the free bank's output). mlx.nn.Linear is
+    ``x @ W.T + b`` (W is (out,in)) — mirrored exactly here in float64 accumulation (argmax-stable).
+    """
+
+    p = {k: np.asarray(v, np.float64) for k, v in params.items()}
+    feats = np.asarray(feats, np.float64)
+    code_row = np.asarray(code_row, np.float64)
+    akw = dict(w0=wire_w0, s0=wire_s0, beta=hosc_beta, omega=hosc_omega)
+    with np.errstate(over="ignore", invalid="ignore"):
+        h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], activation, **akw)
+        film = (code_row @ p["film.weight"].T + p["film.bias"]).reshape(n_hidden, 2, hidden_dim)
+        for li in range(n_hidden):
+            h = _act((h @ p[f"hidden.{li}.weight"].T + p[f"hidden.{li}.bias"]) * (1.0 + film[li, 0]) + film[li, 1],
+                     activation, **akw)
+        phi = h @ p["out_sdf.weight"].T + p["out_sdf.bias"]      # (P, K)
+        tex = h @ p["out_tex.weight"].T + p["out_tex.bias"]      # (P, 3)
+        z = phi / float(softmax_temp)
+        z = z - z.max(axis=-1, keepdims=True)
+        soft = np.exp(z)
+        soft = soft / soft.sum(axis=-1, keepdims=True)
+        base = soft @ p["palette"]                              # (P, 3)
+        rgb = (1.0 / (1.0 + np.exp(-(base + tex)))) * 255.0     # (P, 3) deploy-faithful render
+        if not chroma:
+            luma = 0.299 * rgb[:, 0:1] + 0.587 * rgb[:, 1:2] + 0.114 * rgb[:, 2:3]
+            rgb = np.concatenate([luma, luma, luma], axis=-1)
+    return rgb.astype(np.float32), phi.astype(np.float32)
+
+
 def quantize_levelset_blob(params: dict[str, np.ndarray]) -> dict[str, Any]:
     """int8 + brotli the learned params (weights + per-frame ``code``). The curvelet bank ``B``
     is EXCLUDED (rule 118: a deterministic free table regenerated at decode from the 5 cfg
