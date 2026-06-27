@@ -337,16 +337,33 @@ def _io_pack(manifest: bytes, base: bytes, code: bytes, pose: bytes | None) -> b
 # ---------------------------------------------------------------------------
 # the self-contained inflate.py (numpy fwd + torch R [+ scipy iff self-orient]).
 # ---------------------------------------------------------------------------
-# REVIEW-GATE: inflate.py exceeds the 100-LOC default budget (~190 LOC) under the explicit
+# REVIEW-GATE: inflate.py exceeds the 100-LOC default budget (~178 LOC) under the explicit
 # <=200-LOC waiver: it inlines the byte-closeable SELF-ORIENT fixed-point (curvelet bank regen +
 # decoder-own-argmax tangent + directional feats) which is the rule-118 FREE directional lever the
 # mod-32 target requires. The forward is an op-for-op mirror of levelset_rgb_forward_numpy.
+# FEED-eg (2026-06-27): n600 inflate is float64-activation-bound (~50-60 min on a 4-core CPU for
+# 600 pairs x 6 forwards x 5 tanh(sin) layers @ 384x512 -- OVER the 30-min budget). The forward is
+# split into _in_proj_h0 (feats-only) + _outputs_from_h0 (code-dependent, want_rgb flag) to enable
+# THREE BIT-IDENTICAL (sha256-proven) decode speedups, archive bytes UNCHANGED (inflate code = FREE,
+# rule 118): (1) self-orient EARLY-STOP at the argmax fixed point (the big lever on a CONVERGED
+# decoder -- up to ~2x); (2) self-orient forwards skip the rgb head (argmax(phi) needs no rgb);
+# (3) the in_proj h0 is shared by a pair's 2 final frames. Guaranteed ~3% (skip-rgb+share-h0);
+# early-stop is data-dependent (measure on the first real ckpt). Even so, contest-LEGALITY needs a
+# trainer-side config cut (so_iters/render-res/n_hidden), which CHANGES the witness -> re-measure.
 _INFLATE_PY = r'''#!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 # LEVEL-SET witness inflate -- numpy fwd + torch R, self-contained. Emits the FULL
 # (2*n_pairs, camera_h, camera_w, 3) uint8 .raw (frame0+frame1 per pair). The curvelet bank +
 # (when used) the self-orient directional feats are REGENERATED for FREE (rule 118); only the
 # learned int8+brotli payload comes from the archive.
+# FEED-eg bit-identical decode speedups (inflate.py code only -> FREE, archive bytes UNCHANGED):
+#   (1) self-orient EARLY-STOP at the argmax fixed point (consecutive-equal argmax => dirf frozen
+#       => remaining iters are no-ops; bit-identical, the big lever on a converged decoder);
+#   (2) self-orient forwards compute ONLY phi (argmax needs no rgb head -- out_tex/palette/softmax/
+#       sigmoid skipped, they do not feed phi);
+#   (3) the in_proj activation h0 is computed ONCE per pair and shared by the pair's 2 final frames
+#       (identical feats => identical h0). All three preserve the EXACT float64/float32 op order of
+#       levelset_rgb_forward_numpy -> bit-identical .raw (proven by sha256 parity).
 import sys, json, struct
 import numpy as np
 import brotli
@@ -408,17 +425,29 @@ def _act(u, kind, w0, s0, beta, omega):
     return np.maximum(u, 0.0).astype(np.float32)
 
 
-def _forward(p, feats, code_row, m):
-    # op-for-op mirror of lever_b_levelset_generator.levelset_rgb_forward_numpy. Returns (rgb,phi).
-    P = {k: np.asarray(v, np.float64) for k, v in p.items()}
-    f = np.asarray(feats, np.float64); cr = np.asarray(code_row, np.float64)
+def _in_proj_h0(P, feats, m):
+    # h0 = act(feats @ in_proj.weight.T + b) -- depends ONLY on feats (NOT code) -> shared by a
+    # pair's two final frames (identical feats). Returns float32 (== _act), exactly as the monolithic
+    # forward's first layer. P is the float64 param dict (converted once in main).
     kw = (m["activation"], m["wire_w0"], m["wire_s0"], m["hosc_beta"], m["hosc_omega"])
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-        h = _act(f @ P["in_proj.weight"].T + P["in_proj.bias"], *kw)
+        return _act(np.asarray(feats, np.float64) @ P["in_proj.weight"].T + P["in_proj.bias"], *kw)
+
+
+def _outputs_from_h0(P, h0, code_row, m, want_rgb):
+    # op-for-op mirror of levelset_rgb_forward_numpy AFTER in_proj. h0 = the float32 in_proj act.
+    # want_rgb=False -> return (phi, None) skipping the rgb head (out_tex/palette/softmax/sigmoid do
+    # NOT feed phi, so argmax(phi) is identical) -- used by the self-orient fixed point.
+    kw = (m["activation"], m["wire_w0"], m["wire_s0"], m["hosc_beta"], m["hosc_omega"])
+    cr = np.asarray(code_row, np.float64)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         film = (cr @ P["film.weight"].T + P["film.bias"]).reshape(m["n_hidden"], 2, m["hidden_dim"])
+        h = h0
         for li in range(m["n_hidden"]):
             h = _act((h @ P["hidden.%d.weight" % li].T + P["hidden.%d.bias" % li]) * (1.0 + film[li, 0]) + film[li, 1], *kw)
         phi = h @ P["out_sdf.weight"].T + P["out_sdf.bias"]
+        if not want_rgb:
+            return phi.astype(np.float32), None
         tex = h @ P["out_tex.weight"].T + P["out_tex.bias"]
         z = phi / float(m["softmax_temp"]); z = z - z.max(-1, keepdims=True)
         soft = np.exp(z); soft = soft / soft.sum(-1, keepdims=True)
@@ -426,7 +455,7 @@ def _forward(p, feats, code_row, m):
         if not m["chroma"]:
             luma = 0.299 * rgb[:, 0:1] + 0.587 * rgb[:, 1:2] + 0.114 * rgb[:, 2:3]
             rgb = np.concatenate([luma, luma, luma], axis=-1)
-    return rgb.astype(np.float32), phi.astype(np.float32)
+    return phi.astype(np.float32), rgb.astype(np.float32)
 
 
 def _dir_feats(coords, argmax_hw, n_freqs, fa, fc, tau):
@@ -472,21 +501,27 @@ def main():
     B = _curvelet_B(m["bank_n_scales"], m["bank_n_orient0"], m["bank_f0"], m["bank_base"], m["bank_n_iso"], m["max_bank_freq"])
     curv = _curvelet_feats(coords, B)
     n_pairs = int(m["n_pairs"])
+    P = {k: np.asarray(v, np.float64) for k, v in params.items()}  # convert once (bit-identical)
     with open(dst, "wb") as f:
         for pi in range(n_pairs):
             if m["self_orient"]:
                 # fixed-point: dir feats from the decoder's OWN frame1 argmax (GT-free, 0 bytes).
                 dirf = np.zeros((curv.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
+                prev_am = None
                 for _ in range(int(m["so_iters"])):
                     feats = np.concatenate([curv, dirf], axis=-1)
-                    _rgb, phi = _forward(params, feats, code[2 * pi + 1], m)
+                    phi, _ = _outputs_from_h0(P, _in_proj_h0(P, feats, m), code[2 * pi + 1], m, False)
                     am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+                    if prev_am is not None and np.array_equal(am, prev_am):
+                        break  # argmax fixed point: dirf would not change -> remaining iters are no-ops
                     dirf = _dir_feats(coords, am, m["n_dir_freqs"], m["so_freq_along"], m["so_freq_across"], m["so_tau"])
+                    prev_am = am
                 feats = np.concatenate([curv, dirf], axis=-1)
             else:
                 feats = curv
+            h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
             for fk in range(2):
-                rgb, _phi = _forward(params, feats, code[2 * pi + fk], m)
+                _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True)
                 f.write(_R(rgb, rh, rw, ch, cw).tobytes())
     print("inflated %d frames (%d pairs) -> %s [%dx%dx%dx3 uint8]" % (2 * n_pairs, n_pairs, dst, 2 * n_pairs, ch, cw), flush=True)
 

@@ -2219,3 +2219,59 @@ ROOT CAUSE (signature): ep0-50 ran fine at ~52GB; only the PERIODIC reorient spi
 FIX (measured + safeguarded, NOT blind cap-raise): BOUND the reorient memory — free the old dir-feats BEFORE recomputing (and/or chunk the 600-pair recompute in batches, freeing between) so peak RSS stays well under the 90GB cap. KEEP the 90GB cap (do NOT raise it — raising the ceiling on a 128GB box is the blind-confident scaling that killed the machine 2026-06-25; the fix is to bound the spike, not raise the limit). SYNERGY: the SAME n600 self-orient recompute is what a7613e19 profiles for the inflate budget -> one bounded/chunked self-orient helper fixes BOTH training OOM and inflate cost. OWNER: a01f3416 (already editing the generator lever_b_levelset_generator.py for the structured-prior -> folds the reorient fix in, non-colliding); a7613e19 coordinates (no duplicate).
 
 RELAUNCH PLAN (when fix lands): same sealed cmd + the bounded-reorient fix + --ckpt-every 25 (defense: protect early epochs; the OOM showed --ckpt-every 100 leaves ep0-100 unprotected). Keep --rss-cap-mb 90000 --min-free-gb 10. The row had been descending GREAT (d_seg 0.0112 + pose controlled @ ep50) -> the config is good; this is purely an n600 reorient-memory engineering fix. pointer UNMOVED 0.19110.
+
+---
+
+## FEED-eg: n600 inflate 30-min-budget profile (+ bit-identical vectorization landed)
+
+**UTC** 2026-06-27T12:30Z · **Axis** `[macOS-CPU advisory] NON-PROMOTABLE` · **Pointer** UNMOVED 0.19110 · **$0 CPU-only** (no GPU; ≥10GB free held; no /tmp artifacts; synthetic profiling packets auto-cleaned).
+
+**Question (FEED-ee gate):** does the REAL n600 level-set packet's `inflate.py` decode fit the contest 30-min FULL-eval budget on a 4-core CPU? The FEED-ee dry-run was tiny (n6 @ 96x128, instant); the row is **n600 @ render 384x512 x 1200 frames** with per-pair self-orient regeneration (rule-118 FREE compute in inflate).
+
+### Method (profiled the REAL row config, NOT a toy)
+Synthesized a level-set npz at EXACTLY the live-row dims (`n_hidden=4 hidden=96 mod=32 in_feat=88` = curvelet-80 + self-orient-8 → `n_dir_freqs=2`, 5 classes, hosc, `--self-orient` `so_iters=4`, chroma, bank 4/6/2/2/4 max_freq 64, render 384x512, camera 874x1164). Random content (only DIMS + codepath matter for timing). Byte-closed via the REAL `tools/levelset_byte_close_and_eval.py`, imported the EXACT generated `inflate.py`, timed each stage on n6 with threads capped to 4 (`OMP/OPENBLAS/MKL/VECLIB/NUMEXPR=4`, `torch.set_num_threads(4)`), extrapolated linearly to 600 pairs. Machine = M5 Max (18 cores) so 4-thread ≈ a fair clean "4-core" proxy; profile was contended with the live GPU run (conservative/pessimistic).
+
+### MEASURED (n6, 4 threads) → EXTRAPOLATED (n600)
+- **per_pair ≈ 5.3–6.1 s** (= 4 self-orient forwards + 2 final forwards + 2 R + 4 dir-feats); one_time (coords+bank+curvelet) ≈ 0.1 s.
+- **Projected n600 inflate ≈ 3180–3666 s = ~53–61 min.**
+- **VERDICT vs 1800 s budget: OVER by ~1400–1900 s (does NOT fit).** And the FULL eval is inflate **+** scoring 1200 frames through SegNet/PoseNet on the same CPU, so the real margin is worse.
+
+### Per-stage breakdown (per pair)
+| stage | % of per-pair | s/pair |
+|---|---|---|
+| self-orient fixed-point forwards (4×) | **65.9%** | 4.03 |
+| final render forwards (2×) | 33.1% | 2.02 |
+| self-orient dir-feats (scipy EDT) | 0.9% | 0.054 |
+| R (torch bicubic 384x512→874x1164) | 0.2% | 0.011 |
+
+**Dominant cost = the numpy float64 forward MLP**, called 6×/pair (~0.86–1.0 s/call). Within one forward: **activation `tanh(4·sin(u))` = 81%** (act_hidden 62.5% + act_inproj 18%), matmul 17%, rgb head 2.4%. The cost is **irreducible per-element float64 transcendentals** (5 activation layers × 196608 pts × 6 forwards/pair × 600 pairs ≈ 6.8e11 sin+tanh) — matmul-splitting / caching the curvelet-projection is BOTH risky for bit-identity AND low-value (matmul is only 17%). R and dir-feats are negligible; a CUDA T4 cannot help (the forward is numpy-CPU on both contest axes).
+
+### VECTORIZATION LANDED (bit-identical, sha256-proven; `tools/levelset_byte_close_and_eval.py` `_INFLATE_PY` template only → archive bytes UNCHANGED, FREE per rule 118)
+Split the monolithic `_forward` into `_in_proj_h0` (feats-only) + `_outputs_from_h0` (code-dependent, `want_rgb` flag), preserving the EXACT float64/float32 op order of `levelset_rgb_forward_numpy`, enabling three bit-identical decode speedups:
+1. **self-orient EARLY-STOP** — break when consecutive argmax is equal (the fixed point is reached → `dirf` frozen → remaining iters are no-ops). *The big lever on a CONVERGED decoder (up to ~2×); only-breaks-on-consecutive-equality so argmax oscillation is safe.*
+2. **skip the rgb head in self-orient forwards** — argmax(phi) does not depend on out_tex/palette/softmax/sigmoid.
+3. **share the in_proj `h0`** across a pair's 2 final frames (identical feats → identical h0).
+
+**Parity proof:** old-template vs landed-template `.raw` on the same synthetic 6-pair `0.bin` → **sha256 EQUAL** (`c3bf6963b7d5cd3a22a31dad…`, 36,624,096 B). **archive.zip UNCHANGED** (64,861 B, sha `28b7f1c4…`) → rate term identical → **score unaffected** (deliverable #4 ✓). Guaranteed speedup ~3% on random data (skip-rgb + share-h0; early-stop does not trigger on non-convergent random data). The **early-stop is the decisive real-data lever but is UNMEASURED** (no real ckpt on disk yet — see below).
+
+### CONTEST-LEGALITY VERDICT (binding)
+The packet is **ADVISORY-capable** (`--inflate-timeout 5400` measures it) but **NOT contest-LEGAL as-is** (~53–61 min ≫ 30-min hard limit). The bit-identical inflate opts alone do NOT cross the threshold. Crossing it requires **TRAINER-SIDE config cuts** — each CHANGES the witness and must be re-measured (NOT a free inflate edit):
+- `so_iters 4→2` (−~33%, IF the argmax does not need 4 iters), and/or rely on the landed early-stop;
+- `render-res 384x512 → 256x384 / 192x256` (quadratic: the dominant cost is ∝ render pixels);
+- `n_hidden 4→2/3` or `hidden_dim 96→64` (−~linear in the activation layers).
+
+### OPERATOR-RELEVANT (not acted on; CPU-only scope)
+- The **live n600 GPU row (pid 17099/17101, label `levelset_n600_wpose1`) OOM-DIED on its own** at ep50: `safe_run status=oom exit=137 peak_rss=90167MiB > 90000MiB cap`, elapsed 6063 s. Last verdict ep50: d_seg 0.011164 / d_pose 0.017519 / blob 98889 B / implied_S 1.6008 (CE stage). It is resumable (`--resume-from`) but needs the **RSS cap raised** (n600 peaks >90 GB; 128 GB machine has headroom) before relaunch. Flagged to operator/sister; NOT touched by this CPU task.
+- **Next measurement to close the legality question:** byte-close the FIRST real ckpt (`levelset_ckpt_stageCE_ep300.npz`, or the rolling EMA once ep≥100) with the landed inflate and time it — that reveals the REAL self-orient convergence rate (how many iters until the argmax fixed point), which sets how much the early-stop recovers. If the trained decoder converges in ≤2 iters (likely), inflate roughly halves to ~26–30 min (borderline-legal).
+
+**NO-FAKE / compliance:** all edits to `inflate.py` template only (rule-118 FREE, archive bytes proven UNCHANGED); bit-identity sha256-proven; no score/frontier/promotion claim; pointer UNMOVED 0.19110.
+
+**Coordination (FEED-eh / a01f3416, no duplication):** a01f3416 owns the TRAINING reorient OOM fix
+(bounded/chunked self-orient: free-old + chunk the 600-pair dir-feat recompute) in the GENERATOR.
+My change is ORTHOGONAL and does NOT duplicate it: the **inflate DECODE path is per-pair** (loops one
+pair at a time; dir-feats are `(196608, 8)` ≈ 12.6 MB per pair — there is **no 600-pair tensor at
+decode**, hence no reorient-OOM). My landed opts are SPEED-only (early-stop + skip-rgb + share-h0) in
+the inflate template, not a self-orient-memory fix, so the decode path does NOT need the chunked
+helper. One shared implementation is unnecessary because the two surfaces (train reorient = all-pairs
+memory; decode = per-pair speed) have different bottlenecks. Primary deliverable (inflate-vs-30min
+verdict) is independent and stands.
