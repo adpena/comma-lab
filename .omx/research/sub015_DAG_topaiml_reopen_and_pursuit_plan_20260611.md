@@ -1550,3 +1550,17 @@ The SDF level-set witness IS multivariable calculus made literal — recording t
 5. **4D+ = space-time field Phi: R^3 (x,y,t) -> R^K.** Boundaries = surfaces sweeping through space-time; ego-motion (seg=warp(base,pose)) = the FLOW along t. Code the field once + its flow (subset of the pose sidecar) -> per-frame bytes vanish.
 
 **GENERATIVE THREAD (orphan, to explore — Morse-Smale critical-structure codec):** if boundaries are level sets of a gradient field, then by Morse-Smale theory the partition = the SEPARATRIX SKELETON of grad Phi (cells=basins, boundaries=stable/unstable manifolds of saddles, triple-junctions=critical points). So the partition's MINIMAL description may be its CRITICAL STRUCTURE (a few critical points + curve geometry between them) — more compact than K fields, connects to the ~8-dim task-space manifold. TEMPORAL: as ego moves, critical points drift + occasionally BIFURCATE (lane appears/merges) -> coding the partition = coding a low-dim dynamical system's trajectory + bifurcations. A new compression angle grounded in the operator-named math. Cross: deep-math basis explorer (a739fc4d), task-space build (ab498f3b), the level-set module (lever_b_levelset_generator.py). NOT yet a probe; queue when a slot frees.
+
+## FEED-ch (2026-06-26): principled config/optimizer fixes LANDED (a58f3df5, 2acfe6d8a) + the v3 tau-skip was a DEFAULT-FLAG BUG (now assert-blocked)
+
+All 6 review-gate fixes wired + $0-toy-validated in train_witness_realized_through_R_mlx.py:
+- COLLAPSE-CE: short-CE-on-resume works (tau-start>=1); hint nudges ~25-50 on resume.
+- PLATEAU-BOUNDARIES: --plateau-trigger + --plateau-slope-eps(1e-5) + --plateau-window(4); _StageResolver advances on slope>-eps OR the fixed-start cap. Validated: tau/l7/muon fired BEFORE caps.
+- TAU/THR-ANNEAL: --tau-anneal-start/end (1.0->0.2) + --l7-thr-anneal-start/end (1.0->0.42); **--l7-threshold default 1.0->0.42** (measured witness-hard median, FEED-bp).
+- MUON-WARMUP: LR re-warmup at the Muon boundary (+ AdamW tau/l7 transitions) — the previously un-re-treated transition now re-treated.
+- MUON-ON-HIDDEN (M1): MultiOptimizer([Muon,Adam]); Muon ONLY on decoder-hidden weight matrices; code-latent + biases + out.* -> Adam (--muon-all-params back-compat).
+- ASSERTS (M3): fail-closed boundary-ordering (1<=tau<l7<muon<=epochs) + resume npz key/shape match.
+
+**CRITICAL CATCH:** the DEFAULT curriculum flags were MIS-ORDERED (tau=300 > l7=80) -> old code SILENTLY SKIPPED the tau_softplus stage = the EXACT v3 error (FEED-bv) we diagnosed empirically. The assert now FORCES correct ordering. The stage-treatment thread closes: principle (FEED-bu) -> empirical canary (FEED-bw) -> structural gate (here). Revised launch requires increasing boundaries (300/800/1200; resume variant 30/530/930). Muon-on-hidden default. NOT launched (GPU on hosc probe).
+
+STATUS: the witness trainer is now HARDENED (curriculum CE->tau_softplus->l7->Muon + all principled fixes + M1/M3 asserts). Builds remaining: a7660df3 (MLX SIREN/FINER/WIRE port — co-committed deadlock-broken w/ this), a8c34178 (level-set trainer). hosc probe on GPU. NEXT (GPU-gated): response-surface sweep -> decisive n600 at RD-optimum -> byte-close -> contest-CPU exact. Pointer UNMOVED 0.19110.
