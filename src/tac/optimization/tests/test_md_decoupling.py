@@ -215,6 +215,38 @@ def test_param_tree_keys_unchanged():
     assert keys_before == keys_after  # MD lives in opt state, model tree intact
 
 
+# --- 12b. chain-rule: _md_step descends the reconstructed W to a target -------
+def test_md_step_chain_rule_descends_to_target_weight():
+    """End-to-end regression guard on the ACTUAL ``_md_step`` chain-rule.
+
+    Minimizes ``L = 0.5*||W_recon - W*||^2`` whose W-space gradient is exactly
+    ``G = W_recon - W*``. We feed that G into the real ``_md_step`` each step and
+    assert the reconstructed ``W = gr (x) What (x) gc`` converges to ``W*``. If
+    ANY of the three hand-derived gradients (dL/dWhat, dL/dgr, dL/dgc) in
+    ``_md_step`` were wrong, this descent would stall or diverge — so this is a
+    behavioral lock on the load-bearing math, not a constant check.
+    """
+    rng = np.random.default_rng(123)
+    out, inn = 4, 5
+    W0 = mx.array(rng.standard_normal((out, inn)).astype(np.float32))
+    Wstar = mx.array(rng.standard_normal((out, inn)).astype(np.float32))
+    # gain_lr_scale=1.0 so magnitude moves at the same rate as direction.
+    opt = MDDecoupledOptimizer(learning_rate=5e-2, gain_lr_scale=1.0)
+    W = W0
+    L0 = float(0.5 * mx.sum((W - Wstar) ** 2))
+    for _ in range(400):
+        G = W - Wstar  # dL/dW for L = 0.5||W - W*||^2
+        W = opt._md_step("fc.weight", W, G, mx.array(5e-2), mx.array(5e-2))
+        mx.eval(W)
+    Lf = float(0.5 * mx.sum((W - Wstar) ** 2))
+    assert np.isfinite(Lf)
+    assert Lf < 1e-3 * L0, f"_md_step did not descend to target: L0={L0} Lf={Lf}"
+    # Sphere invariant still holds at the end (projection active every step).
+    st = opt._pstate["fc.weight"]
+    norm = float(mx.sqrt(mx.sum(st["What"] * st["What"])))
+    assert norm == pytest.approx(float(st["sphere"]), rel=1e-3)
+
+
 # --- 12. PARITY: MD (no warmup) trains a trivial regression as well as Adam ---
 def test_md_matches_adam_without_warmup_on_toy_regression():
     import mlx.optimizers as optim
