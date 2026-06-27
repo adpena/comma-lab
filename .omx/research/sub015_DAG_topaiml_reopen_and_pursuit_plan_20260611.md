@@ -2043,3 +2043,14 @@ operating point. Optimal w_pose = 1.0 (parent default, score-domain). Pose compo
 with lane-edge (LEVER-3)/chroma BY CONSTRUCTION (pose=PoseNet(f0 SegNet-invisible + f1 RGB-slack);
 lane-edge=SegNet(f1) margin) — MEASURE jointly in the row, do not assume. CPU-only $0, additive,
 GPU/lane-SDF subagent UNTOUCHED. Pointer UNMOVED 0.19110.
+
+## FEED-dx (2026-06-27): JOINT-CONTAINMENT measured (ad2cef4a, ff529206e) — integration-seal highest-risk PASSED (antagonism ~0); structured floor 0.006 is a PRIOR/INIT (witness still learns boundary+Movable)
+
+Self-detected classes (NO-FAKE, robust under permutation): road=0 lane=1 sky=2 movable=3 hood=4 (matches the saved canonical order).
+INTEGRATION-SEAL HIGHEST-RISK (FEED-dt) ANSWERED POSITIVELY:
+- ANTAGONISM ~= 0: joint(lane+hood+sky, road-deep) d_seg 0.005993 ~= sum of isolations 0.006003. Locally-supported SDF components do NOT fight in the shared argmax (the synergy/manifold thesis validated at INTEGRATION). Only antagonist = road-CONST (+0.008344, ratio 2.39) -> fixed by road=deep-learned phi_0.
+- PER-CLASS containment HOLDS jointly (road-ideal): each structured class's FN/FP ~= isolation (no A->B leak). road-const breaks it (road FN 0.0011->0.0075, lane FP 0.0003->0.0050) -> road MUST be deep.
+- COMPONENT VERDICTS: sky = static MASK (d_seg 0.004827, IoU 0.982/0.952, 98 bytes total; horizon-LINE 2.6x WORSE — undrivable not a clean half-plane; ADOPT mask). road = COMPLEMENT (free in isolation 0.0; 0 sidecar; but must be the witness DEEP eikonal phi_0, NOT const).
+- WITNESS LEARNED RESIDUAL = structured fine-boundary floor 0.005993 (sky-mask drift 0.0024 dominates) + MOVABLE class mass 0.015569 (no static structure -> fully learned; THE LARGER learned chunk). R-survival joint(road-deep,sky-mask) 0.003920 sub-floor.
+HONEST REFRAME (means->ends): the structured floor 0.005993 is ABOVE goal 0.00112 + frontier 0.00056 -> the EDT-rasterized decomposition is a cheap(~1-2KB)/contained/NON-antagonistic PRIOR/INIT, NOT the final d_seg. The witness must still LEARN to tighten the boundary annulus (the 4.67% thin band, FEED-dw) + Movable (0.0156) toward ~0.001. VALUE: shrinks the witness's job to boundary+Movable with a clean init + freed capacity. NOT "manifolds solve d_seg."
+CONVERGENCE (gated): wire priors (lane-SDF+hood-static+sky-mask as phi init/bias) + deep-learned road phi_0 + Movable + pose-derive (a1116e516f) -> ONE integrated FEED-dt recursive-adversarial seal -> TRAIN (witness tightens boundary + learns Movable) -> byte-close -> contest-CPU exact. SEAL OWES: n600 re-measure of sky/hood static-mask drift on turns/bumps. Pointer UNMOVED 0.19110.
