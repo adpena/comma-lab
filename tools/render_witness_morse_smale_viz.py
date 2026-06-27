@@ -428,6 +428,14 @@ def precompute(args):
     print(f"[precompute] frames={n} stride={stride} gt_pairs={n_gt} witness_pairs={n_pairs_w} "
           f"witness={'yes ep%d int8=%s' % (man['epoch'], int8_deploy) if man and fwd else 'NO (GT-only full-drive)'}",
           flush=True)
+    if fwd is not None:
+        # SILENT-WRONGNESS GUARD (honest caveat; no ckpt cache provenance exists to auto-check):
+        # the realized d_seg compares SegNet(witness pair i) vs GT L*[i]. That is only valid if
+        # --gt-cache is the EXACT cache this witness was TRAINED on. A strided-vs-contiguous (or
+        # different-n) cache silently scores each pair against the WRONG GT frame (e.g. gt_n96 and
+        # gt_strided_n200 share only frame 0) -> a FALSE 'authority' d_seg. Pass the matching cache.
+        print(f"[ALIGN WARN] realized d_seg validity REQUIRES --gt-cache ({args.gt_cache}) to be the "
+              f"witness's TRAINING cache — NOT auto-checked (ckpt stores no cache identity).", flush=True)
 
     src_disp, lstar_a, seg_margin_a = [], [], []
     sdf_margin_a, sdf_gap13_a, sdf_argmax_a, sdf_dist_a = [], [], [], []

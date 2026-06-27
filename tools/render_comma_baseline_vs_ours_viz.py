@@ -239,6 +239,12 @@ def phase_render(args, out_dir: Path) -> None:
     manifest, params, code_np = ctx
     if manifest["n_pairs"] < end:
         raise ValueError(f"witness has {manifest['n_pairs']} pairs < requested end {end}")
+    # SILENT-WRONGNESS GUARD (honest caveat; ckpt stores no cache identity to auto-check): OUR
+    # d_seg/d_pose compare SegNet/PoseNet(witness pair i) vs GT[i] — valid ONLY if --gt-cache is
+    # the witness's TRAINING cache. A strided/contiguous/different-n mismatch silently scores each
+    # pair against the WRONG GT frame -> a FALSE 'authority' number. Pass the matching cache.
+    print(f"[ALIGN WARN] OUR d_seg/d_pose validity REQUIRES --gt-cache ({args.gt_cache}) to be the "
+          f"witness's TRAINING cache — NOT auto-checked.", flush=True)
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
     seg, seg_argmax, posenet = _load_scorers(args.pose)

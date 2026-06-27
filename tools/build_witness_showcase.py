@@ -171,6 +171,12 @@ def main(argv: list[str] | None = None) -> int:
     frames_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"[showcase] ckpt={ckpt.name}  gt={gtp.name}  -> {out_dir}", flush=True)
+    # SILENT-WRONGNESS GUARD (honest caveat; ckpt stores no cache identity to auto-check): the
+    # witness render + witness_internal_vs_gt residual pair witness frame i with GT L*[i]. Valid
+    # ONLY if --gt-cache is the witness's TRAINING cache; a strided/contiguous/different-n mismatch
+    # silently aligns to the WRONG GT frame (gt_n96 vs gt_strided_n200 share only frame 0).
+    print(f"[ALIGN WARN] witness/GT alignment REQUIRES --gt-cache ({gtp.name}) to be the witness's "
+          f"TRAINING cache — NOT auto-checked (ckpt stores no cache identity).", flush=True)
     m, params, code = _load_witness(ckpt)
     rh, rw, K = m["render_h"], m["render_w"], m["n_classes"]
     print(f"[showcase] witness: render={rh}x{rw} K={K} hidden={m['hidden_dim']}x{m['n_hidden']} "

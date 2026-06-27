@@ -303,6 +303,13 @@ def phase_pose(args, out_dir: Path) -> None:
             print(f"[WARN] witness has {ctx[0]['n_pairs']} pairs < end {end}; witness curves -> N/A", flush=True)
     except Exception as e:
         print(f"[WARN] witness ckpt unavailable ({e}); witness curves -> N/A (not fabricated)", flush=True)
+    if witness_ok:
+        # SILENT-WRONGNESS GUARD (honest caveat; ckpt stores no cache identity to auto-check):
+        # witness d_pose compares PoseNet(witness pair i) vs GT pose[i] — valid ONLY if --gt-cache
+        # is the witness's TRAINING cache. A mismatched cache silently scores against the WRONG GT
+        # pair -> a FALSE d_pose. (GT-only charts: SVD/trajectory/FOE are cache-internal, unaffected.)
+        print(f"[ALIGN WARN] witness d_pose validity REQUIRES --gt-cache ({args.gt_cache}) to be the "
+              f"witness's TRAINING cache — NOT auto-checked.", flush=True)
 
     posenet = _load_posenet()
     for pi in range(start, end):
