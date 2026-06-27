@@ -368,6 +368,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     lane_w = float(args.lane_edge_weight)
     lane_cls = int(args.lane_edge_class)
     lane_tgt = float(args.lane_margin_target)
+    lane_start = int(args.lane_edge_start_epoch)
+    # OPTIMAL-FORM (recursive review, FEED-df): the lane margin hinge is a margin-SHARPENING loss;
+    # running it from ep0 during the COARSE ce stage risks the known margin-from-scratch-starves-
+    # interior failure (the partition isn't formed yet). ``lane_gate`` is a python bool RE-READ
+    # inside total_loss_fn each value_and_grad call (so the lane branch is included/excluded per
+    # epoch); the epoch loop sets it = (ep >= lane_start). Default lane_start=0 => engaged from ep1
+    # = IDENTICAL to before (fully additive). When lane_start>1 the engagement epoch RE-TREATS the
+    # spike-guard (clears recent_losses) so the loss jump from the added term is NOT silently
+    # spike-skipped (operator 2026-06-26 "different stages need different treatment ... transitions
+    # must re-treat"; margin-engage spike-skip is the named failure this prevents).
+    lane_gate = {"on": lane_start <= 1}
 
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
@@ -375,7 +386,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w)
         L = L + eik_w * eik + len_w * length
         # LEVER-3 (lane-edge fragility weighting, operator 2026-06-27 Yousfi-grounding): contest
-        # SegNet argmax order [Road0, Lane1, MyCar2, Undrivable3, Movable4]; Lane (class 1) is thin
+        # SegNet argmax order [Road0, Lane1, Undrivable2, Movable3, MyCar4] (canonical comma10k;
+        # VERIFIED frozen_source_0byte_dseg_priors_design_20260626 measured class mix); Lane==1 thin
         # all-boundary double-edges (19% of d_seg flips) and UNDER-FIT because the CE baseline has NO
         # class weighting. This ADDITIVE term up-weights the REALIZED (through-R SegNet) margin hinge
         # at GT-lane pixels: it renders f1 -> R -> frozen SegNet logits, takes the live decision
@@ -385,7 +397,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (lane_w=0). When ON it costs a SECOND realized seg forward (acceptable per operator
         # "score > training time"; the optimal-form fusion into the base seg loss needs a parent
         # edit, out of scope for this additive prep).
-        if lane_w > 0.0:
+        if lane_w > 0.0 and lane_gate["on"]:
             f1 = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
             seg_logits = adapter.segnet(f1)                              # (1, H, W, 5)
             gt_logit = mx.sum(seg_logits * lstar_oh, axis=-1)           # (1, H, W)
@@ -484,8 +496,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     if lane_w > 0.0:
         print(json.dumps({"stage": "lane_edge", "active": True, "weight": lane_w, "lane_class": lane_cls,
-                          "margin_target": lane_tgt, "note": "additive realized lane-class margin hinge "
-                          "(2nd seg forward when active; default-off)"}), flush=True)
+                          "margin_target": lane_tgt, "start_epoch": lane_start,
+                          "note": "additive realized lane-class margin hinge (2nd seg forward when "
+                          "active; default-off; engages at ep>=start_epoch with spike-guard re-treat)"}), flush=True)
     if args.max_bank_freq is not None:
         from tac.boundary_math.lever_b_levelset_generator import stem_nyquist_max_freq_cycles_per_unit
         nyq = stem_nyquist_max_freq_cycles_per_unit(scorer_w=SEG_W)
@@ -496,6 +509,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     with temporary_mlx_device(args.mlx_device):
         for ep in range(1, args.epochs + 1):
             seg_form = _seg_form_for_epoch(ep, args)
+            # lane-edge engagement gate + transition RE-TREAT (spike-guard reset at the engage epoch
+            # so the added margin-hinge term's loss jump is not silently spike-skipped; no-op when
+            # lane_start<=1 i.e. the default always-on-from-ep1 path -> zero behavior change).
+            if lane_w > 0.0:
+                _was_on = lane_gate["on"]
+                lane_gate["on"] = ep >= lane_start
+                if lane_gate["on"] and not _was_on:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "lane_edge_engage", "epoch": ep, "lane_start": lane_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # SELF-ORIENT reorient cadence (fixed-point): recompute per-pair directional feats from
             # the EMA deploy argmax every --reorient-every epochs (skip ep1: argmax is random).
             if use_self_orient and ep > 1 and (ep - 1) % max(args.reorient_every, 1) == 0:
@@ -688,14 +711,19 @@ def main(argv: list[str] | None = None) -> int:
     # LEVER-3 (lane-edge fragility weighting): up-weight class-1 (Lane) flips in the REALIZED margin
     # hinge. Lane is thin all-boundary double-edges (19% of d_seg flips) under-fit by the unweighted
     # CE baseline. Default 0.0 = OFF = current behavior (fully additive). When >0, costs a 2nd
-    # realized seg forward (acceptable per operator "score > training time"). Class order:
-    # [Road0, Lane1, MyCar2, Undrivable3, Movable4].
+    # realized seg forward (acceptable per operator "score > training time"). Canonical comma10k
+    # class order (VERIFIED measured): [Road0, Lane1, Undrivable2, Movable3, MyCar4].
     ap.add_argument("--lane-edge-weight", type=float, default=0.0,
                     help="LEVER-3: weight on the additive realized lane-class margin hinge (0=off).")
     ap.add_argument("--lane-edge-class", type=int, default=1,
-                    help="LEVER-3: GT class index to up-weight (1=Lane in the contest order).")
+                    help="LEVER-3: GT class index to up-weight (1=Lane; canonical comma10k order "
+                    "[Road0,Lane1,Undrivable2,Movable3,MyCar4]).")
     ap.add_argument("--lane-margin-target", type=float, default=0.5,
                     help="LEVER-3: target decision margin for the lane hinge relu(target - margin).")
+    ap.add_argument("--lane-edge-start-epoch", type=int, default=0,
+                    help="LEVER-3 OPTIMAL-FORM: engage the lane hinge only at ep>=this (0=from ep1=current "
+                    "behavior). Gate to the tau_softplus/l7 margin stage (e.g. 300) to avoid the "
+                    "margin-from-scratch-starves-interior failure; the engage epoch re-treats the spike-guard.")
     # LEVEL-SET REG
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
