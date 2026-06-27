@@ -552,6 +552,66 @@ def _hosc_beta_for_epoch(ep: int, args) -> float | None:
     return float(args.hosc_beta + (args.hosc_beta_end - args.hosc_beta) * prog)
 
 
+def _softmax_temp_for_epoch(ep: int, args) -> float:
+    """(config-review #4) Cosine-annealed softmax temperature at 1-based epoch ``ep`` (hi->lo: soft
+    start so gradients flow with no RGB-level Gibbs -> sharp end with the SDF partition pinned). Pure
+    (no model/MLX); unit-tested. Mirrors ``_seg_form_for_epoch`` / ``_hosc_beta_for_epoch``. Extracted
+    from the inline loop anneal so the MUON FINISHER can FREEZE it at the muon-start value (FEED-fm).
+    Returns the EXACT value the pre-extraction inline formula produced (BIT-IDENTICAL)."""
+    prog_t = (ep - 1) / max(args.epochs - 1, 1)
+    return float(args.softmax_temp_end + 0.5 * (args.softmax_temp_start - args.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
+
+
+def _rng_state_arrays(hardness_rng: "np.random.Generator | None") -> dict[str, np.ndarray]:
+    """(FEED-fm FIX-1) Snapshot EVERY RNG the TRAINING LOOP advances, so a ``--resume-from`` run
+    reproduces the CONTINUOUS draw sequence bit-for-bit (the deterministic-reproducibility
+    non-negotiable: resume == continuous). The loop advances exactly TWO streams:
+
+      * the GLOBAL ``np.random`` MT19937 -- the per-epoch ``np.random.permutation(P)`` pair order
+        (and the ``permutation(concat)`` when hardness-oversample extras are appended); and
+      * the LEVER-5 ``hardness_rng`` PCG64 ``Generator`` -- the ``hardness_rng.choice`` oversample.
+
+    NO OTHER ``np.random.*`` call exists in the loop (verified: verdict/quantize/reorient/hardness-
+    precompute touch neither global state), so snapshotting at checkpoint time + restoring at resume
+    is exact. Keys are ``__``-prefixed so ``_load_resume_state`` routes them to ``cfg`` (the 624-key
+    MT19937 array becomes a list there; the PCG64 dict is JSON-stringified). MLX-free; allow_pickle
+    is NOT required to reload (plain arrays + unicode str)."""
+    out: dict[str, np.ndarray] = {}
+    algo, keys, pos, has_gauss, cached_gauss = np.random.get_state(legacy=True)
+    out["__rng_np_algo"] = np.asarray(str(algo))
+    out["__rng_np_keys"] = np.asarray(keys, np.uint32)
+    out["__rng_np_pos"] = np.asarray(int(pos))
+    out["__rng_np_has_gauss"] = np.asarray(int(has_gauss))
+    out["__rng_np_cached_gauss"] = np.asarray(float(cached_gauss))
+    if hardness_rng is not None:
+        out["__rng_hardness_json"] = np.asarray(json.dumps(hardness_rng.bit_generator.state))
+    return out
+
+
+def _restore_rng_state(cfg: dict[str, Any], hardness_rng: "np.random.Generator | None") -> dict[str, bool]:
+    """(FEED-fm FIX-1) Restore the RNG snapshot from a resume sidecar's ``cfg`` (the dict
+    ``_load_resume_state`` returns). DEFAULT-SAFE / back-compat: a pre-FEED-fm checkpoint lacking the
+    ``__rng_*`` keys leaves the freshly-seeded RNGs UNTOUCHED (exactly the pre-fix behavior; no crash)
+    -- guarded by presence checks. Returns which streams were restored (observability). NO-FAKE: this
+    really sets the global MT19937 + the PCG64 generator state so the next draw matches a continuous
+    run; it is not a marker."""
+    restored = {"np_global": False, "hardness": False}
+    if "__rng_np_keys" in cfg and "__rng_np_pos" in cfg:
+        keys = np.asarray(cfg["__rng_np_keys"], dtype=np.uint32)
+        np.random.set_state((
+            str(cfg.get("__rng_np_algo", "MT19937")), keys, int(cfg["__rng_np_pos"]),
+            int(cfg.get("__rng_np_has_gauss", 0)), float(cfg.get("__rng_np_cached_gauss", 0.0)),
+        ))
+        restored["np_global"] = True
+    if hardness_rng is not None and "__rng_hardness_json" in cfg:
+        try:
+            hardness_rng.bit_generator.state = json.loads(str(cfg["__rng_hardness_json"]))
+            restored["hardness"] = True
+        except Exception:  # malformed/foreign state: keep the fresh PCG64 (best-effort, no crash).
+            pass
+    return restored
+
+
 def run_train(args: argparse.Namespace) -> dict[str, Any]:
     import mlx.core as mx
     import mlx.nn as nn
@@ -1108,6 +1168,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hosc_beta=float(model.hosc_beta))  # FEED-fb: persist CURRENT annealed beta in deploy cfg
         resume_arrays = _build_resume_state_arrays(
             live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat)
+        # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
+        # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
+        # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
+        resume_arrays.update(_rng_state_arrays(hardness_rng))
         # rolling latest: the byte-close default name + the quick resume target (overwritten atomically).
         _atomic_savez(out_dir / "levelset_witness_ema_mlx.npz", ema_arrays)
         _atomic_savez(out_dir / "levelset_resume_state.npz", resume_arrays)
@@ -1127,10 +1191,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # decoder + per-pair codes (live) + EMA shadow + optimizer (best-effort) + the epoch position;
     # self-orient dir feats are regenerated from the restored EMA argmax (not stored -> no GB bloat).
     start_epoch = 1
+    resume_cfg: dict[str, Any] | None = None  # FEED-fm FIX-1: holds the sidecar cfg for the RNG
+    # restore that must run AFTER hardness_rng is constructed (below); None => fresh start.
     if args.resume_from:
         from mlx.utils import tree_unflatten
         rp = _resolve_resume_path(Path(args.resume_from))
         rs = _load_resume_state(rp)
+        resume_cfg = rs["cfg"]
         if not rs["live"]:
             raise ValueError(f"--resume-from {rp} has no live/param tensors (NO-FAKE: cannot resume).")
         model.update(tree_unflatten([(k, mx.array(v)) for k, v in rs["live"].items()]))
@@ -1223,6 +1290,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "stem_nyquist", "max_bank_freq": float(args.max_bank_freq),
                           "stem_nyquist_cycles_per_unit": nyq, "curvelet_cols_after_cap": int(B.shape[1])}), flush=True)
 
+    # FEED-fm FIX-1: RESTORE the RNG streams NOW -- after hardness_rng is built and the (RNG-free)
+    # hardness precompute, before the FIRST epoch's permutation draw. Nothing between the resume
+    # load and here advances the global MT19937 or hardness_rng (verdict/precompute are RNG-free), so
+    # the next permutation/choice continues the CONTINUOUS stream bit-for-bit. DEFAULT-SAFE: no
+    # resume, or a pre-FEED-fm sidecar without __rng_* keys => fresh-seeded RNGs untouched.
+    if resume_cfg is not None:
+        _rng_restored = _restore_rng_state(resume_cfg, hardness_rng)
+        print(json.dumps({"stage": "resume_rng", "np_global_restored": _rng_restored["np_global"],
+                          "hardness_restored": _rng_restored["hardness"],
+                          "note": ("bit-faithful RNG resume" if _rng_restored["np_global"] else
+                                   "pre-FEED-fm sidecar (no RNG state); fresh-seeded RNGs (back-compat)")}),
+              flush=True)
+
     recent_losses: list[float] = []
     last_ep = start_epoch - 1
     stage_ckpts: list[dict[str, Any]] = []
@@ -1313,18 +1393,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (config-review #4) ANNEAL softmax-temp hi->lo (cosine): start soft (gradients flow,
             # no RGB-level Gibbs) -> end sharp (the SDF partition pinned). Fixing T=0.1 reintroduces
             # Gibbs at the RGB level per deep-math; anneal like the hosc_beta schedule.
-            prog_t = (ep - 1) / max(args.epochs - 1, 1)
-            model.softmax_temp = float(args.softmax_temp_end + 0.5 * (args.softmax_temp_start - args.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
+            # FEED-fm FIX-2: FREEZE softmax_temp AND hosc_beta DURING THE MUON FINISHER. At/after the
+            # switch (muon_switched True) hold BOTH at their muon-START value -- i.e. the value at
+            # epoch == muon_start_epoch (deterministic in muon_start_epoch, NOT the process-local fire
+            # epoch, so RESUME-into-finisher reproduces the same frozen target). This mirrors the LR
+            # freeze already gated on `not muon_switched` below: the orthogonalized finisher conditions
+            # boundary PLACEMENT against a STATIONARY target (clean Eikonal=slope / Muon=placement
+            # attribution per FEED-fk). DEFAULT-SAFE: --muon-start-epoch None => muon_switched is
+            # always False => _anneal_ep == ep => the _softmax_temp_for_epoch / _hosc_beta_for_epoch
+            # calls reproduce the pre-FEED-fm inline formulas exactly => BIT-IDENTICAL.
+            _anneal_ep = int(args.muon_start_epoch) if muon_switched else ep
+            model.softmax_temp = _softmax_temp_for_epoch(_anneal_ep, args)
             # (FEED-fb) ANNEAL hosc_beta start->end (the step-native L-infinity-optimal lever;
             # beta->inf = step-native tanh(beta*sin)). The model's _act reads self.hosc_beta FRESH
             # each forward, so mutating model.hosc_beta per epoch retunes the activation (exactly how
             # softmax_temp is annealed above). DEFAULT-SAFE: _hosc_beta_for_epoch returns None when
             # --hosc-beta-end is unset (or == --hosc-beta, or activation != hosc) -> model.hosc_beta
             # is NEVER touched => stays at its construction value (== args.hosc_beta) every epoch =>
-            # BIT-IDENTICAL to the pre-FEED-fb path. The verdict/checkpoint/byte-close forwards read
-            # float(model.hosc_beta) so realized d_seg is measured (and deploy cfg saved) at the
-            # CURRENT beta (NO-FAKE). Helper is pure (unit-tested) mirroring _seg_form_for_epoch.
-            _beta = _hosc_beta_for_epoch(ep, args)
+            # BIT-IDENTICAL to the pre-FEED-fb path (and the finisher freeze is then a no-op too). The
+            # verdict/checkpoint/byte-close forwards read float(model.hosc_beta) so realized d_seg is
+            # measured (and deploy cfg saved) at the CURRENT beta (NO-FAKE).
+            _beta = _hosc_beta_for_epoch(_anneal_ep, args)
             if _beta is not None:
                 model.hosc_beta = _beta
             # LR warmup->cosine. Gated OFF once the Muon finisher is active (operator 2026-06-26
@@ -1770,6 +1859,21 @@ def main(argv: list[str] | None = None) -> int:
                 "embeddings) -> the Muon group would be EMPTY = a silent no-op = a FALSE 'Muon does not "
                 "help' verdict. Muon finishes the DECODER weight matrices; run it on a joint (unfrozen) run."
             )
+        # FEED-fm FIX-3 (RULE-6 freedom): placing the finisher BEFORE the l7_softplus stage (under
+        # curriculum) is the PR95-suboptimal placement (Muon polishes a not-yet-formed partition), but
+        # it is the operator's CHOICE to make -> WARN loudly, do NOT fail closed. The range [1,epochs]
+        # + freeze-decoder guards above STAY hard raises (those are silent-no-op / empty-Muon-group
+        # NO-FAKE traps, not placement preferences). Gated on --curriculum: l7_start_epoch only governs
+        # a stage that exists under curriculum, so the warning is meaningful only there.
+        if args.curriculum and args.muon_start_epoch < args.l7_start_epoch:
+            print(json.dumps({"stage": "muon_finisher_WARN",
+                              "muon_start_epoch": int(args.muon_start_epoch),
+                              "l7_start_epoch": int(args.l7_start_epoch),
+                              "msg": "--muon-start-epoch < --l7-start-epoch: the Muon finisher engages "
+                              "BEFORE the l7_softplus stage forms the partition. PR95 places Muon as the "
+                              "FINAL stage; an orthogonalized finisher on a not-yet-formed partition is "
+                              "likely weaker d_seg. ALLOWED (operator freedom); set >= --l7-start-epoch "
+                              "for the PR95 placement."}), flush=True)
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")

@@ -238,3 +238,199 @@ def test_ema_checkpoint_is_loadable_by_levelset_byte_close(tmp_path):
     assert cfg["max_bank_freq"] is None  # -1 sentinel decoded back to None
     assert cfg["n_pairs"] == 3           # code rows // 2
     assert cfg["in_feat"] == 40
+
+
+# =========================================================================== FEED-fm fixes
+# FIX-1: RNG-state checkpointing => bit-faithful resume (the deterministic-reproducibility
+# non-negotiable). FIX-2: freeze softmax_temp + hosc_beta during the Muon finisher. FIX-3: place
+# the finisher before l7 = WARN not raise (RULE-6 freedom; other muon guards stay hard raises).
+
+
+def _anneal_args(**over):
+    """Args namespace with the anneal/finisher knobs the FEED-fm helpers read."""
+    base = dict(
+        epochs=1000, softmax_temp_start=1.0, softmax_temp_end=0.05,
+        activation="hosc", hosc_beta=4.0, hosc_beta_end=None, hosc_beta_anneal="linear",
+        muon_start_epoch=None,
+    )
+    base.update(over)
+    return SimpleNamespace(**base)
+
+
+def _epoch_draw(P, n_extra, hardness_prob, hardness_rng):
+    """ONE epoch's RNG consumption, EXACTLY mirroring the trainer loop: a global-np.random
+    permutation for the base pair order + (when oversample extras are active) a hardness_rng.choice
+    and a SECOND global permutation over the concatenation."""
+    order = np.random.permutation(P)
+    if n_extra > 0:
+        extra = hardness_rng.choice(P, size=n_extra, replace=True, p=hardness_prob)
+        order = np.random.permutation(np.concatenate([order, extra]))
+    return order
+
+
+# ------------------------------------------------------------------ FIX-1 RNG bit-faithful resume
+def test_rng_resume_is_bit_faithful_to_continuous(tmp_path):
+    """The binding determinism fix: advance the loop RNGs N epochs, CHECKPOINT (snapshot via the
+    real sidecar path + npz round-trip), RESTORE in a fresh-process simulation, advance N more --
+    the resumed draw sequence MUST match a CONTINUOUS run of 2N. Exercises BOTH loop streams (global
+    MT19937 permutation + hardness PCG64 choice) with oversample extras active (the hardest path)."""
+    S, P, n_extra, N = 1234, 8, 3, 5
+    hp = np.full(P, 1.0 / P)
+
+    # CONTINUOUS reference: 2N epoch draws from a single startup.
+    np.random.seed(S)
+    cont_rng = np.random.default_rng(S + 777)
+    cont = [_epoch_draw(P, n_extra, hp, cont_rng) for _ in range(2 * N)]
+
+    # FIRST HALF: startup, N epochs, then snapshot exactly as _do_checkpoint does.
+    np.random.seed(S)
+    h1 = np.random.default_rng(S + 777)
+    first = [_epoch_draw(P, n_extra, hp, h1) for _ in range(N)]
+    resume_arrays = T._build_resume_state_arrays(
+        {"code": np.ones((2, 2), np.float32)}, {"code": np.ones((2, 2), np.float32)}, None,
+        args=_fake_args(), epoch=N, in_feat=40)
+    resume_arrays.update(T._rng_state_arrays(h1))  # the FEED-fm merge in _do_checkpoint
+    cfg = T._load_resume_state(T._atomic_savez(tmp_path / "levelset_resume_state.npz", resume_arrays))["cfg"]
+
+    # the first-half draws matched the continuous prefix (sanity that the model is faithful).
+    for a, b in zip(first, cont[:N]):
+        assert np.array_equal(a, b)
+
+    # RESUMED RUN (fresh process): trainer startup reseeds global + builds a fresh hardness_rng, THEN
+    # restores the snapshot. Advancing N more must reproduce the continuous SECOND half exactly.
+    np.random.seed(S)
+    h2 = np.random.default_rng(S + 777)
+    info = T._restore_rng_state(cfg, h2)
+    assert info == {"np_global": True, "hardness": True}
+    resumed = [_epoch_draw(P, n_extra, hp, h2) for _ in range(N)]
+    for a, b in zip(resumed, cont[N:]):
+        assert np.array_equal(a, b), "resumed draws diverged from continuous (NOT bit-faithful)"
+
+
+def test_rng_state_arrays_keys_and_npz_roundtrip(tmp_path):
+    np.random.seed(7)
+    hr = np.random.default_rng(99)
+    arrays = T._rng_state_arrays(hr)
+    for k in ("__rng_np_algo", "__rng_np_keys", "__rng_np_pos", "__rng_np_has_gauss",
+              "__rng_np_cached_gauss", "__rng_hardness_json"):
+        assert k in arrays, f"missing RNG key {k}"
+    # the 624-key MT19937 array survives the npz + cfg parse (becomes a list there) and the PCG64
+    # state survives as a JSON string -- both reload WITHOUT pickle.
+    cfg = T._load_resume_state(T._atomic_savez(tmp_path / "r.npz", arrays))["cfg"]
+    assert len(cfg["__rng_np_keys"]) == 624
+    assert "PCG64" in str(cfg["__rng_hardness_json"])
+
+
+def test_rng_state_arrays_no_hardness_rng():
+    arrays = T._rng_state_arrays(None)  # global-only snapshot (hardness disabled)
+    assert "__rng_np_keys" in arrays and "__rng_hardness_json" not in arrays
+
+
+def test_restore_rng_backcompat_old_checkpoint_no_rng_keys():
+    """DEFAULT-SAFE: an old sidecar (no __rng_* keys) restores with the fresh-seeded RNGs untouched
+    -- no crash, returns all-False, and the subsequent draw equals a never-restored fresh run."""
+    np.random.seed(3)
+    fresh = np.random.permutation(10)
+    np.random.seed(3)
+    hr = np.random.default_rng(3 + 777)
+    info = T._restore_rng_state({"__epoch": 5}, hr)  # cfg WITHOUT any __rng_* key
+    assert info == {"np_global": False, "hardness": False}
+    assert np.array_equal(np.random.permutation(10), fresh)  # global RNG was left as fresh-seeded
+
+
+# ------------------------------------------------------------------ FIX-2 finisher freeze
+def test_softmax_temp_for_epoch_matches_inline_formula():
+    """The extracted helper reproduces the pre-FEED-fm inline cosine EXACTLY (BIT-IDENTICAL)."""
+    a = _anneal_args(epochs=1000, softmax_temp_start=1.0, softmax_temp_end=0.05)
+    for ep in (1, 2, 250, 500, 900, 1000):
+        prog_t = (ep - 1) / max(a.epochs - 1, 1)
+        expect = float(a.softmax_temp_end + 0.5 * (a.softmax_temp_start - a.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
+        assert T._softmax_temp_for_epoch(ep, a) == expect
+    assert T._softmax_temp_for_epoch(1, a) == 1.0          # start
+    assert abs(T._softmax_temp_for_epoch(1000, a) - 0.05) < 1e-12  # end
+
+
+def test_freeze_holds_muon_start_value_during_finisher():
+    """Models the loop's `_anneal_ep = muon_start if muon_switched else ep` selection: temp anneals
+    pre-switch, then is HELD at temp(muon_start) for EVERY finisher epoch."""
+    a = _anneal_args(epochs=1000, softmax_temp_start=1.0, softmax_temp_end=0.05, muon_start_epoch=900)
+
+    def temp(ep, muon_switched):
+        anneal_ep = int(a.muon_start_epoch) if muon_switched else ep
+        return T._softmax_temp_for_epoch(anneal_ep, a)
+
+    # pre-switch: annealing (epoch-varying)
+    assert temp(800, False) != temp(850, False)
+    # finisher: frozen at temp(900) regardless of the current epoch
+    frozen = T._softmax_temp_for_epoch(900, a)
+    assert temp(900, True) == frozen
+    assert temp(950, True) == frozen
+    assert temp(1000, True) == frozen
+
+
+def test_freeze_is_noop_when_finisher_off_bit_identical():
+    """--muon-start-epoch None => muon_switched always False => _anneal_ep == ep => identical to the
+    pre-FEED-fm path for both softmax_temp and hosc_beta."""
+    a = _anneal_args(epochs=1000, muon_start_epoch=None)
+    for ep in (1, 400, 900, 1000):
+        # what the loop would set with the freeze logic when the finisher is OFF:
+        anneal_ep = int(a.muon_start_epoch) if False else ep  # muon_switched is always False
+        assert T._softmax_temp_for_epoch(anneal_ep, a) == T._softmax_temp_for_epoch(ep, a)
+        assert T._hosc_beta_for_epoch(anneal_ep, a) == T._hosc_beta_for_epoch(ep, a)
+
+
+def test_hosc_beta_freeze_during_finisher_and_noop_when_anneal_off():
+    # anneal ON: beta held at beta(muon_start) during the finisher.
+    a_on = _anneal_args(epochs=1000, hosc_beta=4.0, hosc_beta_end=16.0, muon_start_epoch=900)
+    frozen_beta = T._hosc_beta_for_epoch(900, a_on)
+    assert frozen_beta is not None
+    assert T._hosc_beta_for_epoch(900, a_on) == frozen_beta  # _anneal_ep==900 each finisher epoch
+    assert T._hosc_beta_for_epoch(800, a_on) != frozen_beta  # pre-switch differs (annealing)
+    # anneal OFF (hosc_beta_end None): helper returns None => model.hosc_beta untouched both before
+    # and during the finisher => the freeze is a no-op (BIT-IDENTICAL constant-beta path).
+    a_off = _anneal_args(epochs=1000, hosc_beta=4.0, hosc_beta_end=None, muon_start_epoch=900)
+    assert T._hosc_beta_for_epoch(500, a_off) is None
+    assert T._hosc_beta_for_epoch(900, a_off) is None
+
+
+# ------------------------------------------------------------------ FIX-3 placement WARN not raise
+class _RunTrainReached(Exception):
+    """Sentinel: main() passed all validation guards and reached run_train (which we stub)."""
+
+
+def _muon_argv(tmp_path, **over):
+    a = dict(epochs="20", tau="5", l7="10", muon="7", extra=[])
+    a.update(over)
+    argv = ["--out-dir", str(tmp_path), "--epochs", a["epochs"], "--curriculum",
+            "--tau-softplus-start-epoch", a["tau"], "--l7-start-epoch", a["l7"],
+            "--muon-start-epoch", a["muon"], "--mlx-device", "cpu", *a["extra"]]
+    return argv
+
+
+def test_fix3_muon_before_l7_warns_not_raises(tmp_path, monkeypatch, capsys):
+    def _stub(args):
+        raise _RunTrainReached
+    monkeypatch.setattr(T, "run_train", _stub)
+    with pytest.raises(_RunTrainReached):  # reached run_train => no fail-closed raise on placement
+        T.main(_muon_argv(tmp_path, muon="7", l7="10"))  # 7 < 10
+    assert "muon_finisher_WARN" in capsys.readouterr().out
+
+
+def test_fix3_muon_after_l7_no_warn(tmp_path, monkeypatch, capsys):
+    def _stub(args):
+        raise _RunTrainReached
+    monkeypatch.setattr(T, "run_train", _stub)
+    with pytest.raises(_RunTrainReached):
+        T.main(_muon_argv(tmp_path, muon="12", l7="10"))  # 12 >= 10 => PR95 placement, no warn
+    assert "muon_finisher_WARN" not in capsys.readouterr().out
+
+
+def test_fix3_range_guard_still_hard_raises(tmp_path):
+    with pytest.raises(ValueError, match="must be in"):  # 25 > epochs 20
+        T.main(_muon_argv(tmp_path, muon="25"))
+
+
+def test_fix3_freeze_decoder_guard_still_hard_raises(tmp_path):
+    with pytest.raises(ValueError, match="incompatible with --freeze-decoder-fit-codes"):
+        T.main(_muon_argv(tmp_path, muon="7",
+                          extra=["--freeze-decoder-fit-codes", str(tmp_path / "dec.npz")]))
