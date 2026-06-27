@@ -1,0 +1,30 @@
+{
+  "utc": "2026-06-27T01:48:59Z",
+  "axis": "[macOS-CPU advisory] field-level R-survival proxy; promotion_eligible=false",
+  "n_pairs": 6,
+  "r_survival": {
+    "sdf_levelset": {
+      "pre_R_disagree": 0.0,
+      "post_R_disagree": 1.2715657552083334e-05,
+      "r_added_flips": 1.2715657552083334e-05,
+      "r_added_off_boundary_frac": 0.0
+    },
+    "spectral_sine": {
+      "pre_R_disagree": 0.007452223036024306,
+      "post_R_disagree": 0.007464090983072917,
+      "r_added_flips": 1.1867947048611015e-05,
+      "r_added_off_boundary_frac": 0.0
+    }
+  },
+  "front_end_fit_argmax_disagree": {
+    "curvelet": 0.5547493828667535,
+    "isotropic": 0.6919496324327258,
+    "curvelet_vs_isotropic_ratio": 0.801719311442352
+  },
+  "verdict": {
+    "sdf_postR_vs_spectral_postR_ratio": 0.0017035775127768314,
+    "sdf_r_added_vs_spectral_r_added_ratio": 1.0714285714285803,
+    "sdf_off_boundary_frac": 0.0,
+    "spectral_off_boundary_frac": 0.0
+  }
+}
