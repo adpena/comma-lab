@@ -1327,3 +1327,23 @@ OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=gener
 **Frozen-scorer exploitation:** margin = target_logit - max_competing_logit = the exact sign deciding argmax; SegNet scores ONLY last-frame hard argmax -> only sign(margin) matters -> all seg losses are argmax surrogates; l7 5x attacks the boundary band; no scorer bytes in archive.
 
 **SYNTHESIS (the next build):** wire the 4-stage CE -> tau_softplus -> l7 -> Muon d_seg curriculum into the witness trainer (loss forms already in mlx_losses.py), with per-stage TREATMENT at each transition (LR re-warmup + EMA + spike-guard recalibrate per FEED-bu/the stage-principle) + MD-Decoupling optimizer (stable transitions, when a015eb18 validates). The missing tau_softplus stage is the key ADD; the margin-weight lever moves to its correct place (l7, AFTER tau_softplus). Pointer UNMOVED contest-CPU 0.19110.
+
+---
+
+## FEED-bu (2026-06-26) MARGIN-ENGAGE STABILIZED as a STAGE TRANSITION (operator: "different stages need different treatment")
+
+**v3 (witness_capstone_v3_n600) DECISIVE FAILURE + FIX.** Base descended clean to ep80 d_seg 0.00934 (n_skips 0), then the margin-weight engaged (cold exp/temp=0.1) -> gnorm exploded -> spike-guard (loss-median, calibrated on the uniform phase) skipped EVERY batch (n_skips 75) -> d_seg STALLED. ROOT CAUSE = the margin STAGE inheriting the base stage's treatment. `[macOS-CPU advisory]` NON-PROMOTABLE; $0 CPU; pointer UNMOVED 0.19109982.
+
+**STAGE-TRANSITION TREATMENT (4 composing fixes, the PR95-8-stage lesson generalized):**
+1. **TEMP-ANNEAL** (`--margin-weight-temp-start` 1.0, `--margin-weight-anneal-epochs` 40; target `--margin-weight-temp` 0.3): ramp the live-margin temp gentle->moderate so the loss-weighting change is gradual. MEASURED gnorm on the real v3 ep80 base: uniform 20.7; cold temp0.1 **1267**; temp0.3 990; temp1.0 **538** (2.4x reduction). HONEST FINDING: the raw gnorm stays LARGE at any margin temp (the allocator concentrates loss on high-CE annulus pixels) -> it is NOT the skip trigger; grad-clip=1.0 bounds the UPDATE (clipped=True every step).
+2. **SPIKE-GUARD RECALIBRATE** (reset the running loss-median window at the engage): the skip is on `batch_loss > spike_factor*median`; the margin loss is systematically higher but LEGITIMATE. Resetting lets the median re-estimate the new regime -> only TRUE anomalies skip. THE binding fix for the all-skip.
+3. **LR RE-WARMUP** (`--margin-stage-lr-warmup-epochs` 8, floor 0.1x): ramp LR 0.1x->1x at the engage so the FIRST margin steps are small (absorb the regime change without a first-step spike). Step-space wrapper on the cosine schedule.
+4. **--resume-from <ckpt>**: load a converged base (v3 ep80 witness_live_mlx.npz) into restart 0 -> the margin-finetune CONTINUES (no 80-epoch redo). Fail-closed on missing path.
+
+**MOMENTUM RESET: SKIPPED** (coordinator "skip if intrusive"): zeroing MLX AdamW state is version-fragile (risks the step counter/schedule); the LR re-warmup already makes the misaligned-momentum first step small (0.1x) and it realigns within the warmup window.
+
+**VALIDATION ($0 CPU):** (a) gnorm-vs-temp on the REAL v3 ep80 base (above). (b) engage smoke (6-pair toy, engage ep3): temp 1.0->0.3 + spike_guard_recalibrated=True fired; **n_skips=0 at EVERY epoch incl post-engage** (the v3 n_skips-75 all-skip is GONE); LR dipped to **8.3e-5 (~0.1x)** at ep4 then ramped back (re-warmup confirmed); clipped=True throughout (grad-clip bounds the large gnorm); no crash. (c) resume LOAD proven (v3 witness_live loaded into the matching 600-pair model via model.update, no error); --resume-from bad-path fails closed. NOT shown in a $0 smoke: d_seg moving below 0.0093 (needs the real n600 resume = the relaunch below; the toy never learns a base).
+
+**Files:** `experiments/train_witness_realized_through_R_mlx.py` (loss_fn mw_temp anneal, spike-guard reset at engage, LR-rewarmup schedule wrapper, --resume-from restart-0 load, 4 new flags). 10 trainer tests pass.
+
+**RESUME RELAUNCH (coordinator):** `--resume-from experiments/results/witness_capstone_v3_n600/witness_live_mlx.npz --num-pairs 600 --n-fourier 24 --hidden-dim 112 --n-hidden 3 --mod-dim 32 --render-h 384 --render-w 512 --activation relu --chroma --mlx-device gpu --verdict-device mlx-cpu --verdict-which live --verdict-pairs 120 --verdict-batch 16 --margin-weighted-loss --margin-weight-fn exp --margin-weight-temp 0.3 --margin-weight-temp-start 1.0 --margin-weight-anneal-epochs 40 --margin-weight-start-epoch 1 --margin-stage-lr-warmup-epochs 8 --eval-every 5 --epochs 120 --gt-cache <600pair.npz>` (start-epoch 1 = engage immediately since the base is already converged; arch flags MUST match v3).

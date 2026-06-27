@@ -674,7 +674,7 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None):
         # ``mw_active`` (curriculum gate, ISSUE 2): the LIVE-margin re-allocation is applied
         # ONLY when True. The trainer passes ``margin_weighted and (ep >= start_epoch)`` so
         # epochs < start_epoch use UNIFORM seg weight (learn the base partition) and epochs
@@ -682,7 +682,11 @@ def make_loss_fn(
         # PREDICTION margin: from RANDOM INIT the wrong pixels are confidently-wrong (large
         # margin) -> ~0 weight -> the bulk never learns the base -> d_seg stuck at chance.
         # The curriculum learns the base FIRST, then re-allocates onto the annulus.
+        # ``mw_temp`` (FEED-bu fix 1): the ANNEALED temperature for this epoch (gentle ->
+        # moderate). exp/temp=0.1 from a cold start blows up the gnorm (~648) -> spike-guard
+        # all-skip; annealing temp 1.0 -> 0.3 ramps the gnorm gradually so the guard tracks.
         apply_mw = bool(margin_weighted) and bool(mw_active)
+        temp_use = margin_weight_temp if mw_temp is None else float(mw_temp)
         f0 = render_through_R_mlx(model, coord_feats, code0, render_h, render_w)
         f1 = render_through_R_mlx(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
@@ -700,7 +704,7 @@ def make_loss_fn(
             # LIVE-MARGIN re-allocation (FEED-bp): concentrate the SAME loss budget on the
             # small-margin annulus where ~89% of d_seg lives. Gated by the ISSUE-2 curriculum.
             if apply_mw:
-                hinge_map = hinge_map * _live_margin_weight(seg_logits, margin_weight_fn, margin_weight_temp)
+                hinge_map = hinge_map * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
             seg_l = mx.mean(hinge_map)
         else:
             # Realized seg CE on frame1 (GT-margin structural weight via ``hinge``).
@@ -713,7 +717,7 @@ def make_loss_fn(
             # allocator so the SAME budget concentrates on the ~2.2% boundary annulus (~20x
             # effective-capacity multiplier). Gated by the ISSUE-2 curriculum (uniform first).
             if apply_mw:
-                pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, margin_weight_temp)
+                pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
             seg_l = mx.mean(pw)
         # Realized pose MSE on the pair (== realized d_pose).
         yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
@@ -1119,6 +1123,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # From RANDOM INIT the live-margin allocator starves the base (wrong px confidently-
         # wrong = large margin = ~0 weight), so it is a FINETUNE lever, not from-scratch.
         margin_weight_start_epoch = int(getattr(args, "margin_weight_start_epoch", 80))
+        # FEED-bu fix 1: ANNEAL the margin-weight temp from a GENTLE start (near-uniform, small
+        # gnorm bump) DOWN to the MODERATE target (margin_weight_temp) over anneal_epochs, so the
+        # gnorm rises GRADUALLY (the spike-guard tracks it) instead of the cold exp/temp=0.1 cliff
+        # that exploded gnorm to ~648 -> all-skip. temp_start == target -> no anneal (back-compat).
+        margin_weight_temp_start = float(getattr(args, "margin_weight_temp_start", margin_weight_temp))
+        margin_weight_anneal_epochs = max(0, int(getattr(args, "margin_weight_anneal_epochs", 40)))
+
+        def _mw_temp_for_epoch(ep: int) -> float:
+            """Annealed margin-weight temperature at epoch ``ep`` (only meaningful when mw active)."""
+            if margin_weight_anneal_epochs <= 0 or margin_weight_temp_start == margin_weight_temp or ep <= margin_weight_start_epoch:
+                return margin_weight_temp if ep >= margin_weight_start_epoch + margin_weight_anneal_epochs else margin_weight_temp_start
+            frac = min(1.0, (ep - margin_weight_start_epoch) / float(margin_weight_anneal_epochs))
+            return float(margin_weight_temp_start + (margin_weight_temp - margin_weight_temp_start) * frac)
+
         loss_fn = make_loss_fn(
             adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss,
             margin_weighted=margin_weighted, margin_weight_fn=margin_weight_fn, margin_weight_temp=margin_weight_temp,
@@ -1137,6 +1155,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "margin_weight_fn": (margin_weight_fn if margin_weighted else None),
                 "margin_weight_temp": (margin_weight_temp if margin_weighted else None),
                 "margin_weight_start_epoch": (margin_weight_start_epoch if margin_weighted else None),
+                "margin_weight_temp_start": (margin_weight_temp_start if margin_weighted else None),
+                "margin_weight_anneal_epochs": (margin_weight_anneal_epochs if margin_weighted else None),
+                "margin_stage_lr_warmup_epochs": (int(getattr(args, "margin_stage_lr_warmup_epochs", 8)) if margin_weighted else None),
+                "resume_from": (str(getattr(args, "resume_from")) if getattr(args, "resume_from", None) else None),
                 "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
                 "verdict_which": str(getattr(args, "verdict_which", "live")),
                 "ema_verdict_every": int(getattr(args, "ema_verdict_every", 4)),
@@ -1250,18 +1272,42 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         opt_steps_per_epoch = max(1, math.ceil(P / accum_pairs))
 
         def build_lr_schedule():
-            """1-epoch linear warmup 0->base, then cosine decay base->lr_end (item 4)."""
+            """1-epoch linear warmup 0->base, then cosine decay base->lr_end (item 4), with an
+            OPTIONAL margin-stage LR RE-WARMUP (FEED-bu fix 4, the stage-transition treatment)."""
             if not lr_schedule_enabled:
-                return float(args.lr)
-            base = float(args.lr)
-            warm = warmup_epochs * opt_steps_per_epoch
-            total = max(1, args.epochs * opt_steps_per_epoch)
-            cos_steps = max(1, total - warm)
-            cosine = optim.cosine_decay(base, cos_steps, lr_end)
-            if warm <= 0:
-                return cosine
-            warmup = optim.linear_schedule(0.0, base, warm)
-            return optim.join_schedules([warmup, cosine], [warm])
+                base_sched: Any = float(args.lr)
+            else:
+                base = float(args.lr)
+                warm = warmup_epochs * opt_steps_per_epoch
+                total = max(1, args.epochs * opt_steps_per_epoch)
+                cos_steps = max(1, total - warm)
+                cosine = optim.cosine_decay(base, cos_steps, lr_end)
+                if warm <= 0:
+                    base_sched = cosine
+                else:
+                    warmup = optim.linear_schedule(0.0, base, warm)
+                    base_sched = optim.join_schedules([warmup, cosine], [warm])
+            # FEED-bu fix 4 (operator: "different stages need different treatment"): a STAGE
+            # TRANSITION re-treats the LR. At the margin-engage step, ramp the LR from a floor
+            # (0.1x) back to 1x over margin_stage_lr_warmup_epochs so the FIRST margin-stage
+            # steps are SMALL -> they absorb the loss-weighting change without the 648-norm
+            # first-step spike. Step-space window; composes with the temp-anneal + spike-guard
+            # recalibrate. No-op when margin_weighted is OFF or warmup_epochs<=0 (back-compat).
+            mw = bool(getattr(args, "margin_weighted_loss", False))
+            wu_eps = int(getattr(args, "margin_stage_lr_warmup_epochs", 8))
+            if not mw or wu_eps <= 0:
+                return base_sched
+            start_step = int(getattr(args, "margin_weight_start_epoch", 80)) * opt_steps_per_epoch
+            win = float(max(1, wu_eps * opt_steps_per_epoch))
+            lr_floor = float(getattr(args, "margin_stage_lr_floor", 0.1))
+
+            def margin_rewarmup_sched(step):
+                base_v = base_sched(step) if callable(base_sched) else base_sched
+                frac = mx.clip((step - start_step) / win, 0.0, 1.0)
+                scale = mx.where(step < start_step, 1.0, lr_floor + (1.0 - lr_floor) * frac)
+                return base_v * scale
+
+            return margin_rewarmup_sched
 
         # --- 4. Restart loop (item 6): reseed + restart on midpoint divergence;
         #         keep the best EMA-d_seg checkpoint across restarts. ---
@@ -1282,6 +1328,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         best_live_saved: dict[str, Any] = {"implied_S": 1e9, "d_seg": 1e9, "params": None, "restart": -1, "epoch": -1}
         ema_lag_warn_ratio = float(getattr(args, "ema_lag_warn_ratio", 2.0))
         n_evals_total = 0  # global eval counter (drives the EMA-verdict cadence for which=live)
+        _rf = getattr(args, "resume_from", None)  # FEED-bu fix 3: resume a prior witness base
+        resume_from = Path(_rf) if _rf else None
+        if resume_from is not None and not resume_from.exists():
+            raise FileNotFoundError(f"--resume-from {resume_from} does not exist (NO-FAKE: refusing to fabricate a base).")
         t_train = time.time()
         ep_walls: list[float] = []
         gstep = 0
@@ -1306,6 +1356,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 chroma=chroma,
             )
             mx.eval(model.parameters())
+            # FEED-bu fix 3: --resume-from loads a prior witness checkpoint (e.g. v3's ep80 base,
+            # d_seg 0.0093) into restart 0 so the margin-finetune CONTINUES rather than redoing the
+            # 80-epoch base. The architecture flags MUST match the checkpoint (load is strict; a
+            # shape mismatch raises -> fail-closed). The EMA shadow is re-seeded from the resumed
+            # weights. restart>=1 (divergence reseed) starts fresh (resume is a restart-0 base).
+            if resume_from is not None and restart_i == 0:
+                rz = np.load(resume_from, allow_pickle=False)
+                rparams = {k: mx.array(np.asarray(rz[k], dtype=np.float32)) for k in rz.files}
+                model.update(tree_unflatten(list(rparams.items())))
+                mx.eval(model.parameters())
+                print(json.dumps({
+                    "stage": "resumed_from", "path": str(resume_from), "n_tensors": len(rparams),
+                    "note": "margin-finetune continues from this base; EMA shadow re-seeded from it",
+                }), flush=True)
             ema = MlxEMA(model, decay=args.ema_decay)
             # Optimizer: default AdamW (existing path, UNCHANGED) or MD-Decoupling
             # (arXiv:2606.25971) — the re-audit's optimizer-bug fix (anti-collapse,
@@ -1360,13 +1424,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 margin_target = mx.array(float(m_t))
                 # ISSUE-2 curriculum gate: UNIFORM seg weight until margin_weight_start_epoch,
                 # then engage the LIVE-margin annulus re-allocation. A no-op when margin_weighted
-                # is OFF (default). Log the transition once.
+                # is OFF (default). FEED-bu fix 1: the per-epoch ANNEALED temp (gentle->moderate).
                 mw_active = bool(margin_weighted) and (ep >= margin_weight_start_epoch)
+                mw_temp_ep = _mw_temp_for_epoch(ep) if mw_active else margin_weight_temp
                 if margin_weighted and ep == margin_weight_start_epoch:
+                    # FEED-bu fix 2: RECALIBRATE the spike-guard at the margin-engage. The margin
+                    # grads are systematically LARGER but LEGITIMATE (grad-clip 1.0 bounds the
+                    # update); a stale uniform-era loss-median would skip EVERY margin batch as an
+                    # "anomaly" (v3: n_skips 75 at ep80). Resetting the running window lets it
+                    # re-estimate the NEW-regime scale -> only TRUE anomalies skip.
+                    recent = deque(maxlen=recent_maxlen)
                     print(json.dumps({
                         "stage": "margin_weight_curriculum_engage", "restart": restart_i, "ep": ep,
-                        "fn": margin_weight_fn, "temp": margin_weight_temp,
-                        "note": "uniform seg weight -> live-margin annulus re-allocation from here",
+                        "fn": margin_weight_fn, "temp_start": margin_weight_temp_start,
+                        "temp_target": margin_weight_temp, "anneal_epochs": margin_weight_anneal_epochs,
+                        "spike_guard_recalibrated": True,
+                        "note": "uniform seg weight -> annealed live-margin annulus re-allocation; "
+                                "spike-guard window reset for the new gnorm regime",
                     }), flush=True)
                 order = rng.permutation(P)
                 accum_grads = None
@@ -1378,7 +1452,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     pi = int(pi_np)
                     loss, grads = value_and_grad(
                         model, feats_for_pair(pi), 2 * pi, 2 * pi + 1,
-                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target, mw_active,
+                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target, mw_active, mw_temp_ep,
                     )
                     # Materialize per pair so the lazy fwd+bwd graph does NOT accumulate
                     # across the epoch (the 499000 buffer-count cap fix, preserved).
@@ -1638,6 +1712,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "margin_weight_fn": str(getattr(args, "margin_weight_fn", "inverse")),
             "margin_weight_temp": float(getattr(args, "margin_weight_temp", 1.0)),
             "margin_weight_start_epoch": int(getattr(args, "margin_weight_start_epoch", 80)),
+            "margin_weight_temp_start": float(getattr(args, "margin_weight_temp_start", 1.0)),
+            "margin_weight_anneal_epochs": int(getattr(args, "margin_weight_anneal_epochs", 40)),
+            "margin_stage_lr_warmup_epochs": int(getattr(args, "margin_stage_lr_warmup_epochs", 8)),
+            "margin_stage_lr_floor": float(getattr(args, "margin_stage_lr_floor", 0.1)),
+            "resume_from": (str(getattr(args, "resume_from")) if getattr(args, "resume_from", None) else None),
             "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
             "verdict_which": str(getattr(args, "verdict_which", "live")),
             "ema_verdict_every": int(getattr(args, "ema_verdict_every", 4)),
@@ -1892,6 +1971,38 @@ def main(argv: list[str] | None = None) -> int:
         "base (wrong px confidently-wrong = large margin = ~0 weight -> d_seg stuck at chance). "
         "Margin-weight is a FINETUNE lever (re-allocate a CONVERGED base), not from-scratch. "
         "Only active with --margin-weighted-loss; tune N to ~when the base is roughly learned.",
+    )
+    ap.add_argument(
+        "--margin-weight-temp-start", type=float, default=1.0,
+        help="(FEED-bu fix 1) GENTLE starting temp at the margin-engage; anneals to "
+        "--margin-weight-temp (the moderate TARGET, e.g. 0.3) over --margin-weight-anneal-epochs. "
+        "A cold exp/temp=0.1 from a converged base explodes the gnorm (~648) -> spike-guard "
+        "all-skip; a gentle 1.0->0.3 ramp raises the gnorm gradually so the guard tracks it. "
+        "Set == --margin-weight-temp to disable the anneal (back-compat).",
+    )
+    ap.add_argument(
+        "--margin-weight-anneal-epochs", type=int, default=40,
+        help="(FEED-bu fix 1) #epochs over which the margin-weight temp ramps "
+        "--margin-weight-temp-start -> --margin-weight-temp after the engage. 0 = no anneal.",
+    )
+    ap.add_argument(
+        "--resume-from", type=str, default=None,
+        help="(FEED-bu fix 3) load a prior witness checkpoint npz (e.g. "
+        "experiments/results/<run>/witness_live_mlx.npz) into restart 0 so a margin-finetune "
+        "CONTINUES from a converged base instead of redoing it. Architecture flags "
+        "(--num-pairs/--n-fourier/--hidden-dim/--n-hidden/--mod-dim) MUST match the checkpoint.",
+    )
+    ap.add_argument(
+        "--margin-stage-lr-warmup-epochs", type=int, default=8,
+        help="(FEED-bu fix 4, STAGE TRANSITION) re-warmup the LR from --margin-stage-lr-floor "
+        "(0.1x) back to 1x over N epochs AT the margin-engage, so the FIRST margin-stage steps "
+        "are small and absorb the loss-weighting change without the first-step gnorm spike. "
+        "Composes with the temp-anneal + spike-guard recalibrate. 0 = no re-warmup.",
+    )
+    ap.add_argument(
+        "--margin-stage-lr-floor", type=float, default=0.1,
+        help="(FEED-bu fix 4) LR multiplier floor at the margin-engage (ramps floor->1x over "
+        "--margin-stage-lr-warmup-epochs).",
     )
     args = ap.parse_args(argv)
 
