@@ -1520,3 +1520,19 @@ COMPOSITION: warp a level-set base (#1, on curvelet prior #2) by the pose homogr
 **GREEN LIGHT (GPU plan, scaffold landed):** wire self_orientation_directional_feats into train_witness_realized_through_R_mlx.py's directional path (replace GT tangent with own iso-pass argmax tangent; flip directional_byte_closeable=True), --basis directional + --activation hosc/level-set + --chroma + sky+hood clamp + RD-optimum capacity B*~122KB + curriculum -> byte-close -> contest-CPU exact. NOT started (live GPU owned by hosc probe; a half-built trainer edit would conflict). Build spec: .omx/research/taskspace_witness_capstone_build_20260626.md; feasibility probe: experiments/probe_taskspace_witness_feasibility.py.
 
 **SYNTHESIS UPDATE:** the unified witness now has its decisive lever LEGALIZED. Decisive witness = level-set/hosc + SELF-ORIENTATION directional (-48%, now byte-closeable) + chroma + sky+hood clamp (14B, frees 63%) + capacity-routing + RD-optimum B*~122KB + curriculum + stored-pose sidecar. Predicted S ~0.117-0.134 (sub-0.15). Pointer UNMOVED 0.19110 — the next exact row is the directional GPU witness once the slot frees + builds land.
+
+---
+
+## FEED-cf (2026-06-26): softmax-of-SDF level-set FEASIBILITY = 587x R-survival GO (proxy); trainer build dispatched
+
+**a8c34178 level-set build (commit 315d7c63d; $0 CPU field-level R-survival proxy, n6 real SegNet L* @384x512):**
+| rep | pre-R | post-R d_seg | off-bnd R-flips |
+| SDF level-set | 0.0 | **1.27e-5** | 0.0 |
+| sine/spectral | 7.46e-3 | 7.46e-3 | 0.0 |
+- SDF is EXACT pre-R (0.0; represents the sharp partition exactly) + sub-pixel-stable through R (1.27e-5) = **587x lower post-R than sine**. Sine can't even represent the partition (0.0075 Gibbs BEFORE R). Synthetic-cartoon control: spectral off-boundary R-flip-frac 0.02 vs SDF 0.0 (Gibbs is OFF-boundary; SDF shift is boundary-local = the deep-math confirmed). Curvelet front-end 0.80x isotropic at equal budget (GT-free). **VERDICT GO.**
+- HONEST (NO-FAKE): field-level R-survival PROXY, NOT the SegNet-authority realized d_seg (an untrained flat frame is uninformative to a natural-image SegNet). The realized verdict needs the TRAINING arm. pointer UNMOVED, promotion_eligible=false.
+- LANDED: src/tac/boundary_math/lever_b_levelset_generator.py (K-SDF head linear/1-Lipschitz + curvelet_directional_B generic polar bank + WIRE/HOSC + eikonal/length reg + quantize_levelset_blob byte-close, bank excluded=free) + feasibility smoke + ledger. NEW module (no collision).
+
+**TRAINER BUILD DISPATCHED (a8c34178):** experiments/train_levelset_witness_realized_through_R_mlx.py (NEW file) composing the level-set SDF head + curvelet + SELF-ORIENTATION directional (byte-closeable -48%) + POSE-LEGAL RGB render (NOT flat-palette = pose-blind S=11.65) + REALIZED d_seg through R + CPU-torch SegNet + curriculum + eikonal/length reg + byte-close. $0 smoke = the make-or-break (does REALIZED d_seg descend, not just the field-proxy?).
+
+**STATUS:** 3 legs of the sub-0.15 witness now measured-confirmed: R-survival (SDF 587x proxy), byte-closeable directional (self-orientation cos 0.89-0.91), RD-optimum capacity (B*~122KB -> S0.134). Builds in flight: MLX SIREN/FINER/WIRE port (a7660df3), config/optimizer fixes (a58f3df5), level-set trainer (a8c34178). GPU on hosc probe. NEXT (GPU-gated): response-surface sweep (basis x capacity, directional+clamp) -> decisive n600 -> byte-close -> contest-CPU exact. Pointer UNMOVED 0.19110.
