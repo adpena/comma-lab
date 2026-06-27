@@ -497,8 +497,13 @@ if __name__ == "__main__":
 
 _INFLATE_SH = """#!/usr/bin/env bash
 # Level-set inflate launcher. Produces <OUTPUT_DIR>/<base>.raw = flat uint8 (N,874,1164,3).
+# Interpreter resolution: honor ${PYTHON} (canonical contest_auth_eval._run_inflate sets it to the
+# deps-complete eval interpreter), else fall back to python3 (python3 is present on macOS + most
+# Linux x86_64 CPU hosts where bare `python` is NOT -- the runtime-closure bug class that left
+# inflate.sh dead with `python: command not found`). Generic launcher code, rule-118 clean.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYBIN="${PYTHON:-python3}"
 DATA_DIR="$1"; OUTPUT_DIR="$2"; FILE_LIST="$3"
 mkdir -p "$OUTPUT_DIR"
 while IFS= read -r line; do
@@ -508,7 +513,7 @@ while IFS= read -r line; do
   DST="${OUTPUT_DIR}/${BASE}.raw"
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
   printf "Inflating %s ... " "$line"
-  python "${HERE}/inflate.py" "$SRC" "$DST"
+  "$PYBIN" "${HERE}/inflate.py" "$SRC" "$DST"
 done < "$FILE_LIST"
 """
 
