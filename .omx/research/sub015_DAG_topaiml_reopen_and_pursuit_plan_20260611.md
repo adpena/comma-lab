@@ -1414,7 +1414,7 @@ OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=gener
 
 ---
 
-## FEED-bz (2026-06-27): MD-Decoupling WIRED + VALIDATED + $0 CPU smoke — STABLE (29x lower gnorm) but UNDER-STEPS at adamw-lr -> PARALLEL ABLATION ARM, not a blind drop-in for the decisive burn
+## FEED-ca (2026-06-27): MD-Decoupling WIRED + VALIDATED + $0 CPU smoke — STABLE (29x lower gnorm) but UNDER-STEPS at adamw-lr -> PARALLEL ABLATION ARM, not a blind drop-in for the decisive burn (label was FEED-bz; deconflicted vs concurrent operator FEED-bz d95e11474)
 
 Closes the pending "MD a015eb18" node. Full memo: `.omx/research/md_decoupling_wirein_validation_cpu_smoke_20260627.md`.
 - **CORRECTNESS:** `src/tac/optimization/md_decoupling.py` validated line-by-line vs arXiv:2606.25971 — reparam, chain-rule grads (g_what/g_gr/g_gc confirmed vs `mx.grad` + new end-to-end `_md_step` descent test), separate LRs, sphere projection, identity-at-init. Muon path is BYTE-FAITHFUL to the INSTALLED `mlx.optimizers.Muon` (verified by getsource — incl the `(1-momentum)` convention + ns5 coeffs). NO deviation, no fix. Tests 13/13 pass.
