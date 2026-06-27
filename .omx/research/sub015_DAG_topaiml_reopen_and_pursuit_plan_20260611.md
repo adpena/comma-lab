@@ -1369,3 +1369,17 @@ OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=gener
 **Files:** `experiments/train_witness_realized_through_R_mlx.py` (make_loss_fn tau_softplus/l7_softplus forms + per-call seg_form; stage resolver + per-boundary re-treat + Muon switch; multi-boundary LR re-warmup; 8 new flags).
 
 **FULL-CURRICULUM LAUNCH (n600, RESUME recommended):** `--resume-from experiments/results/witness_capstone_v3_n600/witness_live_mlx.npz --num-pairs 600 --n-fourier 24 --hidden-dim 112 --n-hidden 3 --mod-dim 32 --render-h 384 --render-w 512 --activation relu --chroma --mlx-device gpu --verdict-device mlx-cpu --verdict-which live --verdict-pairs 120 --verdict-batch 16 --curriculum --tau-softplus-start-epoch 300 --margin-weight-start-epoch 800 --muon-finisher-start-epoch 1200 --tau-softplus-tau 0.3 --l7-mult 4.0 --muon-lr 1e-4 --margin-stage-lr-warmup-epochs 8 --eval-every 25 --epochs 1500 --gt-cache <600pair.npz>`.
+
+---
+
+## FEED-bw (2026-06-26): l7-fix canary CONFIRMS the spike-guard fix on real n600 + l7-alone-weak validates tau_softplus-essential; 4-stage curriculum built; review-gate before the 25h burn
+
+**Canary (witness_v4_l7canary_n600, v3-resume + fixed-l7 engaged ep1, stopped after the read):** TWO confirmations.
+1. **THE FIX WORKS on real n600:** n_skips=0 at EVERY epoch (ep1/5/10), spike_skip count 0 — the v3 all-skip (75) is GONE despite gnorm_max 566-620 (grad-clip 1.0 bounds + spike-guard-recalibrate, exactly acf4c2f2's 54fc3d8aa design). The fix is de-risked beyond the toy.
+2. **l7-on-a-CE-base is WEAK** (validates the curriculum): d_seg_live ep1 0.0132 -> ep5 0.0090 -> ep10 0.0096 — oscillates around the 0.0093 base, does NOT descend. Direct measurement of the PR95 insight: l7 is a slow boundary refine, NOT the driver; it needs tau_softplus to sharpen margins FIRST. v3's error (skip tau_softplus) is real.
+
+**4-stage curriculum BUILT (acf4c2f2, commit 2c8cc1f81):** witness-specific scheduler --curriculum, stages ce[1,300) -> tau_softplus(0.3)[300,800) -> l7_softplus(1+mult4)[800,1200) -> Muon[1200,1500]; per-stage transition treatment (spike-guard recalibrate + LR re-warmup + EMA at EACH boundary); smooth + ALL rate machinery dropped; Muon finisher (mlx.optimizers.Muon, no crash on witness param tree); --resume-from v3 CE base. Toy-validated: 4 stages fire, n_skips=0 at all 3 transitions.
+
+**REVIEW GATE (operator 2026-06-26 "recursive adversarial review and bug hunting and optimizing and deep math and topology and bridging all dimensions and contest information space FIRST"):** the full curriculum was launched then STOPPED (only resumed, nothing lost) pending a 3-lens review before the 25h burn: (a) abbd0691 adversarial bug-hunt + correctness + measurement-integrity; (b) ac7e5b5c deep-math + topology (ordering optimality, isotropic-vs-directional-vs-step-native basis, 83K capacity-vs-7.3e-4 estimate, seg=pose bridge); (c) a8f05a22 contest-info-space + frozen-scorer exploitation + config optimization (chroma/directional-basis/frozen-source-priors/rate-story/wall-clock). + a015eb18 MD-Decoupling validate (composable optimizer). On harvest -> synthesize fixes/improvements -> relaunch the reviewed curriculum.
+
+**Pointer UNMOVED contest-CPU 0.19110.** Open question carried: the witness coord-INR floor at 83K params (the HNeRV-port d_seg numbers prove the ORDERING, not the witness floor).
