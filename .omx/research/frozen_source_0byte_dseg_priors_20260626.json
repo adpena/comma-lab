@@ -1,0 +1,194 @@
+{
+  "subagent": "frozen_source_0byte_dseg_priors_20260626",
+  "evidence_grade": "[macOS-CPU advisory]",
+  "promotion_eligible": false,
+  "score_claim": false,
+  "promotable": false,
+  "source_cache": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600",
+  "source_video": "upstream/videos/0.mkv",
+  "n_frames": 600,
+  "h": 384,
+  "w": 512,
+  "class_hist_check": {
+    "hist": [
+      0.232332,
+      0.005855,
+      0.495176,
+      0.012379,
+      0.254258
+    ],
+    "match_meta": true
+  },
+  "temporal_static": {
+    "static_frac": 0.7244669596354166,
+    "dynamic_frac": 0.2755330403645833,
+    "static_class_hist": [
+      0.0648,
+      0.0,
+      0.6001,
+      0.0,
+      0.3351
+    ],
+    "note": "static = GT argmax constant across ALL 600 frames (0-byte clampable IF byte-closeable)"
+  },
+  "spatial_bands": {
+    "top_sky_0_96": {
+      "rows": [
+        0,
+        96
+      ],
+      "static_frac": 1.0,
+      "mean_trans_rate": 0.0,
+      "dominant_class_midframe": 2,
+      "class_hist": [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    "upper_mid_96_192": {
+      "rows": [
+        96,
+        192
+      ],
+      "static_frac": 0.73956298828125,
+      "mean_trans_rate": 0.008474546335907067,
+      "dominant_class_midframe": 2,
+      "class_hist": [
+        0.0283,
+        0.0014,
+        0.9495,
+        0.0208,
+        0.0
+      ]
+    },
+    "lower_mid_192_288": {
+      "rows": [
+        192,
+        288
+      ],
+      "static_frac": 0.19219970703125,
+      "mean_trans_rate": 0.039349606386077485,
+      "dominant_class_midframe": 0,
+      "class_hist": [
+        0.8864,
+        0.0201,
+        0.0496,
+        0.0151,
+        0.0289
+      ]
+    },
+    "bottom_hood_288_384": {
+      "rows": [
+        288,
+        384
+      ],
+      "static_frac": 0.9661051432291666,
+      "mean_trans_rate": 0.0020014232705550914,
+      "dominant_class_midframe": 4,
+      "class_hist": [
+        0.0028,
+        0.0,
+        0.0,
+        0.0,
+        0.9972
+      ]
+    },
+    "bottom_strip_336_384": {
+      "rows": [
+        336,
+        384
+      ],
+      "static_frac": 1.0,
+      "mean_trans_rate": 0.0,
+      "dominant_class_midframe": 4,
+      "class_hist": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  },
+  "hood": {
+    "rows_bottom120_static_gt0.97": 87,
+    "row_static_frac_last8": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "boundary_annulus": {
+    "per_frame_boundary_frac_mean": 0.021889580620659717,
+    "union_annulus_capture": {
+      "width1": {
+        "annulus_px_frac": 0.13946024576822916,
+        "dyn_captured_frac": 0.49608653917152773,
+        "trans_mass_captured_frac": 0.8862503382830017
+      },
+      "width2": {
+        "annulus_px_frac": 0.17409261067708334,
+        "dyn_captured_frac": 0.6073617366905413,
+        "trans_mass_captured_frac": 0.9304326545859585
+      },
+      "width3": {
+        "annulus_px_frac": 0.1986541748046875,
+        "dyn_captured_frac": 0.6777855718821532,
+        "trans_mass_captured_frac": 0.9490649755584141
+      }
+    }
+  },
+  "margin_crosstab": {
+    "mean_margin_static": 5.96295690536499,
+    "mean_margin_dynamic": 4.687743186950684,
+    "low_margin_lt1.0_frac": 0.004638671875,
+    "trans_mass_in_lowest_margin_pct": {
+      "lowest_2pct_margin": 0.22625253328806982,
+      "lowest_5pct_margin": 0.5076610448633195,
+      "lowest_10pct_margin": 0.7936258961517282,
+      "lowest_22pct_margin": 0.9169326917374389
+    },
+    "trans_mass_in_top_unstable_pct": {
+      "top_2pct_unstable": 0.36603004702900604,
+      "top_5pct_unstable": 0.6407158443237038,
+      "top_10pct_unstable": 0.8603213296549681
+    }
+  },
+  "elapsed_sec": 10.3,
+  "byte_cost": {
+    "compressor": "brotli_q11",
+    "A_full_static_class_map": {
+      "static_px_frac": 0.7244669596354166,
+      "raw_bytes": 196608,
+      "compressed_bytes": 1948,
+      "note": "single 384x512 5-class map (sentinel 255 dynamic); VIDEO-DERIVED -> COUNTED"
+    },
+    "B_parametric_bands": {
+      "hood_rows": [
+        297,
+        384
+      ],
+      "hood_px_frac": 0.2265625,
+      "sky_rows": [
+        0,
+        155
+      ],
+      "sky_px_frac": 0.4036458333333333,
+      "approx_bytes_each_band": 4,
+      "note": "rows>=R0 -> class C; ~4 bytes/band; still source-specific (camera geom) -> COUNTED-trivial"
+    },
+    "C_residual_static_map_after_parametric": {
+      "residual_static_px_frac": 0.09429423014322917,
+      "compressed_bytes": 1920,
+      "note": "interior road static px NOT in clean bands; needs stored per-px map"
+    }
+  }
+}
