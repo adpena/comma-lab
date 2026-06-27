@@ -104,7 +104,36 @@ class CurveletBankConfig:
     n_iso: int = 4
 
 
-def curvelet_directional_B(cfg: CurveletBankConfig) -> np.ndarray:
+def stem_nyquist_max_freq_cycles_per_unit(scorer_w: int = 512, stem_stride: int = 2) -> float:
+    """LEVER-2 (stem-Nyquist) — max USEFUL curvelet frequency (cycles per coord unit).
+
+    The contest SegNet is EfficientNet-B2 whose stride-2 stem halves the input immediately, so
+    the finest spatial feature it can resolve lives on the post-stem feature map (``scorer_w /
+    stem_stride`` px wide ~ 256). Sampling theory: that feature map's Nyquist is ``W_f / 2``
+    cycles ACROSS the full width. Our coord grid is ``x in [-1,1]`` (span 2) and the curvelet
+    feature is ``sin(2*pi f x)`` which completes ``2 f`` cycles across the full width. Equating::
+
+        2 * f_max  =  W_f / 2  =  scorer_w / (2 * stem_stride)
+        ==>  f_max = scorer_w / (4 * stem_stride)
+
+    Default (scorer_w=512, stem_stride=2) -> ``f_max = 64`` cycles/unit. Any basis frequency
+    ABOVE this encodes detail SegNet structurally cannot see; under the round-trip R (uint8 @
+    camera) it instead ALIASES into off-boundary argmax flips (the d_seg killer). So this is the
+    free byte/aliasing budget cap: drop (or never generate) atoms with ``|f| > f_max``.
+
+    NOTE (measured 2026-06-27): the DEFAULT curvelet bank (f0=2, base=2, n_scales=4 -> max
+    f=16 cycles/unit) is already ~4x BELOW this Nyquist, so capping the curvelet bank itself is a
+    no-op at the default config. The over-Nyquist waste lives in the SELF-ORIENT directional
+    feats (``freq_across=32, n_dir_freqs=6`` -> across-edge freqs up to 32*2^5 = 1024 cycles/unit,
+    16x over Nyquist): the Nyquist-implied directional config is ``n_dir_freqs<=2`` at
+    freq_across=32, or ``freq_across=8, n_dir_freqs=4`` (4 octaves all <= f_max, finer angular
+    coverage, fewer params). This helper makes the cap executable + auditable for the next sweep.
+    """
+
+    return float(scorer_w) / (4.0 * float(max(stem_stride, 1)))
+
+
+def curvelet_directional_B(cfg: CurveletBankConfig, max_freq: float | None = None) -> np.ndarray:
     """The (2, n_feats) generic curvelet/shearlet frequency matrix (NOT trained, NOT GT).
 
     Columns are frequency vectors on a polar grid: J scales x L_j orientations (parabolic
@@ -112,6 +141,14 @@ def curvelet_directional_B(cfg: CurveletBankConfig) -> np.ndarray:
     give redundant sin/cos). The resulting ``sin(2*pi X@B), cos(2*pi X@B)`` features are a
     multi-scale, multi-ORIENTATION, anisotropic basis: a curved boundary at any local tangent
     is covered by SOME atom at SOME scale, so the net synthesizes oriented edges cheaply.
+
+    LEVER-2 (stem-Nyquist) ``max_freq`` (cycles per coord unit; default ``None`` = NO cap =
+    current behavior, fully ADDITIVE): when given, atoms whose frequency magnitude exceeds
+    ``max_freq`` are DROPPED (they encode detail above the SegNet stem Nyquist that only aliases
+    under R; see ``stem_nyquist_max_freq_cycles_per_unit``). At least one (lowest-freq) atom is
+    always kept so the bank never empties. Reduces ``in_feat`` -> a smaller ``in_proj`` weight
+    (a counted decoder param) AND removes aliasing-prone bands. The cap is a deterministic
+    function of the 5 cfg scalars + max_freq, so it regenerates identically at decode (free).
     """
 
     cols: list[np.ndarray] = []
@@ -126,7 +163,14 @@ def curvelet_directional_B(cfg: CurveletBankConfig) -> np.ndarray:
         theta = np.pi * i / max(int(cfg.n_iso), 1)
         f_low = float(cfg.f0) * 0.5
         cols.append(np.array([f_low * np.cos(theta), f_low * np.sin(theta)], dtype=np.float32))
-    return np.stack(cols, axis=1).astype(np.float32)  # (2, n_feats)
+    stacked = np.stack(cols, axis=1).astype(np.float32)  # (2, n_feats)
+    if max_freq is not None:
+        norms = np.sqrt((stacked.astype(np.float64) ** 2).sum(axis=0))  # (n_feats,) |f|
+        keep = norms <= float(max_freq) + 1e-6
+        if not keep.any():  # never empty the bank — keep the single lowest-freq atom
+            keep = norms <= float(norms.min()) + 1e-6
+        stacked = stacked[:, keep]
+    return stacked
 
 
 def curvelet_feats(coords: np.ndarray, B: np.ndarray) -> np.ndarray:
@@ -190,16 +234,19 @@ class LevelSetConfig:
     front_end: str = "curvelet"     # "curvelet" | "isotropic"
     iso_n_fourier: int = 48
     iso_sigma: float = 8.0
+    # LEVER-2 (stem-Nyquist): optional curvelet-bank frequency cap (cycles/unit); None = no cap
+    # = current behavior. See ``stem_nyquist_max_freq_cycles_per_unit``. Additive/default-off.
+    max_freq: float | None = None
 
     def in_feat(self) -> int:
         if self.front_end == "isotropic":
             return 2 * int(self.iso_n_fourier)
-        return 2 * curvelet_directional_B(self.bank).shape[1]
+        return 2 * curvelet_directional_B(self.bank, max_freq=self.max_freq).shape[1]
 
     def build_B(self) -> np.ndarray:
         if self.front_end == "isotropic":
             return isotropic_fourier_B(self.iso_n_fourier, self.iso_sigma)
-        return curvelet_directional_B(self.bank)
+        return curvelet_directional_B(self.bank, max_freq=self.max_freq)
 
 
 def numpy_levelset_forward(
@@ -219,7 +266,7 @@ def numpy_levelset_forward(
     feats = np.asarray(feats, np.float64)
     mod_vec = np.asarray(mod_vec, np.float64)
     akw = dict(w0=cfg.wire_w0, s0=cfg.wire_s0, beta=cfg.hosc_beta, omega=cfg.hosc_omega)
-    with np.errstate(over="ignore", invalid="ignore"):
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], cfg.activation, **akw)
         film = (mod_vec @ p["film.weight"].T + p["film.bias"]).reshape(cfg.n_hidden, 2, cfg.hidden_dim)
         for li in range(cfg.n_hidden):
@@ -495,7 +542,7 @@ def levelset_rgb_forward_numpy(
     feats = np.asarray(feats, np.float64)
     code_row = np.asarray(code_row, np.float64)
     akw = dict(w0=wire_w0, s0=wire_s0, beta=hosc_beta, omega=hosc_omega)
-    with np.errstate(over="ignore", invalid="ignore"):
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], activation, **akw)
         film = (code_row @ p["film.weight"].T + p["film.bias"]).reshape(n_hidden, 2, hidden_dim)
         for li in range(n_hidden):
@@ -648,6 +695,7 @@ __all__ = [
     "save_levelset_npz",
     "signed_distance_fields",
     "spectral_lowpass_fields",
+    "stem_nyquist_max_freq_cycles_per_unit",
     "wire_activation",
     "hosc_activation",
 ]

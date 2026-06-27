@@ -69,6 +69,7 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     make_loss_fn,
     precompute_gt,
     quantize_witness_blob,
+    render_through_R_mlx,
 )
 
 # ── imports from this campaign's level-set module + the byte-closeable directional basis ──
@@ -276,7 +277,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         n_scales=args.bank_n_scales, n_orient0=args.bank_n_orient0,
         f0=args.bank_f0, base=args.bank_base, n_iso=args.bank_n_iso,
     )
-    B = curvelet_directional_B(bank)
+    # LEVER-2 (stem-Nyquist) cap (default None = no cap = current behavior). Drops curvelet atoms
+    # above the SegNet-stem Nyquist (free byte/alias budget; see stem_nyquist_max_freq_*).
+    B = curvelet_directional_B(bank, max_freq=args.max_bank_freq)
     curv_feats_np = curvelet_feats(coords_np, B).astype(np.float32)  # (P, 2*cols)
     in_feat = curv_feats_np.shape[1]
     # SELF-ORIENTATION directional augmentation (byte-closeable; tangent from the witness's OWN
@@ -359,11 +362,40 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         l7_threshold=args.l7_threshold,
     )
 
+    # LEVER-3 (lane-edge fragility weighting) hyperparameters captured from args (static; closure
+    # constants, NOT value_and_grad args -> ZERO change to the call site). lane_edge_weight=0.0
+    # (default) => the branch below is skipped => behavior IDENTICAL to before (fully additive).
+    lane_w = float(args.lane_edge_weight)
+    lane_cls = int(args.lane_edge_class)
+    lane_tgt = float(args.lane_margin_target)
+
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
         phi0 = model.sdf(cf, c0)
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w)
-        return L + eik_w * eik + len_w * length
+        L = L + eik_w * eik + len_w * length
+        # LEVER-3 (lane-edge fragility weighting, operator 2026-06-27 Yousfi-grounding): contest
+        # SegNet argmax order [Road0, Lane1, MyCar2, Undrivable3, Movable4]; Lane (class 1) is thin
+        # all-boundary double-edges (19% of d_seg flips) and UNDER-FIT because the CE baseline has NO
+        # class weighting. This ADDITIVE term up-weights the REALIZED (through-R SegNet) margin hinge
+        # at GT-lane pixels: it renders f1 -> R -> frozen SegNet logits, takes the live decision
+        # margin (gt_logit - top_competitor) ONLY where GT==lane, and penalizes relu(target-margin)
+        # there. The hinge fires exactly on SMALL-MARGIN (fragile = boundary) lane pixels, so it
+        # adds gradient pressure to widen the lane margin at the lane double-edges. Default-off
+        # (lane_w=0). When ON it costs a SECOND realized seg forward (acceptable per operator
+        # "score > training time"; the optimal-form fusion into the base seg loss needs a parent
+        # edit, out of scope for this additive prep).
+        if lane_w > 0.0:
+            f1 = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
+            seg_logits = adapter.segnet(f1)                              # (1, H, W, 5)
+            gt_logit = mx.sum(seg_logits * lstar_oh, axis=-1)           # (1, H, W)
+            runner_up = mx.max(seg_logits + lstar_oh * (-1e9), axis=-1)  # (1, H, W) max competitor
+            signed = gt_logit - runner_up                              # (1, H, W) decision margin
+            lane_mask = lstar_oh[..., lane_cls]                         # (1, H, W) 1.0 where GT==lane
+            hinge_map = mx.maximum(lane_tgt - signed, 0.0) * lane_mask  # fragile lane pixels only
+            lane_term = mx.sum(hinge_map) / (mx.sum(lane_mask) + 1e-6)  # mean hinge over lane px
+            L = L + lane_w * lane_term
+        return L
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
 
@@ -449,6 +481,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     if use_self_orient:
         _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
+
+    if lane_w > 0.0:
+        print(json.dumps({"stage": "lane_edge", "active": True, "weight": lane_w, "lane_class": lane_cls,
+                          "margin_target": lane_tgt, "note": "additive realized lane-class margin hinge "
+                          "(2nd seg forward when active; default-off)"}), flush=True)
+    if args.max_bank_freq is not None:
+        from tac.boundary_math.lever_b_levelset_generator import stem_nyquist_max_freq_cycles_per_unit
+        nyq = stem_nyquist_max_freq_cycles_per_unit(scorer_w=SEG_W)
+        print(json.dumps({"stage": "stem_nyquist", "max_bank_freq": float(args.max_bank_freq),
+                          "stem_nyquist_cycles_per_unit": nyq, "curvelet_cols_after_cap": int(B.shape[1])}), flush=True)
 
     recent_losses: list[float] = []
     with temporary_mlx_device(args.mlx_device):
@@ -542,6 +584,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     flat["__bank_n_scales"] = np.asarray(args.bank_n_scales); flat["__bank_n_orient0"] = np.asarray(args.bank_n_orient0)
     flat["__bank_f0"] = np.asarray(args.bank_f0); flat["__bank_base"] = np.asarray(args.bank_base)
     flat["__bank_n_iso"] = np.asarray(args.bank_n_iso); flat["__render_hw"] = np.asarray([render_h, render_w])
+    # LEVER-2/3 cfg (additive; -1 sentinel = "no cap" so a future levelset inflate regenerates the
+    # SAME bank / knows the lane lever was active). Extra npz keys are read selectively downstream.
+    flat["__cfg_max_bank_freq"] = np.asarray(-1.0 if args.max_bank_freq is None else float(args.max_bank_freq))
+    flat["__cfg_lane_edge_weight"] = np.asarray(float(args.lane_edge_weight))
+    flat["__cfg_lane_edge_class"] = np.asarray(int(args.lane_edge_class))
     np.savez(ck, **flat)
     result = {
         "utc": _utc(), "n_pairs": P, "epochs": args.epochs, "render_hw": [render_h, render_w],
@@ -606,6 +653,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bank-f0", type=float, default=2.0)
     ap.add_argument("--bank-base", type=float, default=2.0)
     ap.add_argument("--bank-n-iso", type=int, default=4)
+    # LEVER-2 (stem-Nyquist rate/anti-alias): cap curvelet-bank freqs (cycles/unit) at the SegNet
+    # stem Nyquist (default 64 for SEG_W=512, stem-stride-2). None (default) = no cap = current
+    # behavior. The DEFAULT curvelet bank (max 16 cyc/unit) is already sub-Nyquist so this is a
+    # no-op there; the over-Nyquist waste is in --n-dir-freqs/--freq-across (see the memo). Additive.
+    ap.add_argument("--max-bank-freq", type=float, default=None,
+                    help="LEVER-2: drop curvelet atoms above this freq (cycles/unit); None=no cap. "
+                    "Stem Nyquist = SEG_W/(4*stem_stride) = 64 for the default 512/stride-2.")
     ap.add_argument("--self-orient", action=argparse.BooleanOptionalAction, default=False,
                     help="add byte-closeable self-orientation directional feats (finetune lever; needs a roughly-learned base).")
     ap.add_argument("--n-dir-freqs", type=int, default=6)
@@ -631,6 +685,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--l7-mult", type=float, default=4.0)
     ap.add_argument("--l7-threshold", type=float, default=1.0)
     ap.add_argument("--margin-target-end", type=float, default=0.5)
+    # LEVER-3 (lane-edge fragility weighting): up-weight class-1 (Lane) flips in the REALIZED margin
+    # hinge. Lane is thin all-boundary double-edges (19% of d_seg flips) under-fit by the unweighted
+    # CE baseline. Default 0.0 = OFF = current behavior (fully additive). When >0, costs a 2nd
+    # realized seg forward (acceptable per operator "score > training time"). Class order:
+    # [Road0, Lane1, MyCar2, Undrivable3, Movable4].
+    ap.add_argument("--lane-edge-weight", type=float, default=0.0,
+                    help="LEVER-3: weight on the additive realized lane-class margin hinge (0=off).")
+    ap.add_argument("--lane-edge-class", type=int, default=1,
+                    help="LEVER-3: GT class index to up-weight (1=Lane in the contest order).")
+    ap.add_argument("--lane-margin-target", type=float, default=0.5,
+                    help="LEVER-3: target decision margin for the lane hinge relu(target - margin).")
     # LEVEL-SET REG
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
