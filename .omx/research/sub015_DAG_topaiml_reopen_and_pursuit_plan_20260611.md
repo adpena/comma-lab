@@ -1503,3 +1503,20 @@ COMPOSITION: warp a level-set base (#1, on curvelet prior #2) by the pose homogr
 **THE UNIFIED OPTIMAL-WITNESS DESIGN (all arms converge):** softmax-of-SDF level-set head + WIRE/curvelet directional front-end (byte-closeable -48%) + sky+hood 14-byte clamp (frees 63% px) + capacity-routing to the 13.9% annulus + RD-optimal capacity B*~122KB (rate-seg curve) + curriculum CE->tau_softplus->l7->Muon with principled fixes (collapse-CE/plateau-boundaries/tau-anneal/Muon-warmup/Muon-on-hidden) + stored-pose sidecar. PREDICTED S ~0.134 (sub-0.15). The witness IS the task-space generator (the homography warp is the temporal-rate half). 
 
 **IN FLIGHT (building the pieces, parallel):** a7660df3 (MLX SIREN/FINER/WIRE port, optimal-form) + a8c34178 (softmax-of-SDF level-set + curvelet build, new module) + a58f3df5 (config/optimizer fixes) + ab498f3b (task-space lane/homography build) + hosc probe (GPU). NEXT: assemble -> n96 (basis x capacity) response-surface sweep on the GPU -> measure the real curve -> decisive n600 at the RD-optimum -> byte-close -> contest-CPU exact. Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-ce (2026-06-26): TASK-SPACE build = THE DIRECTIONAL BYTE-CLOSEABILITY UNLOCK (measured) — the -48% lever is now LEGAL. + 3 honest corrections.
+
+**ab498f3b task-space witness build (commit 0394353c9; $0 CPU feasibility, pointer UNMOVED):**
+
+**THE DECISIVE UNLOCK (measured-confirmed):** the -48% directional d_seg lever was research-only because it used the GT tangent (gt.lstars). NEW: SELF-ORIENTATION tangent — the decoder runs its OWN cheap forward -> own argmax -> boundary tangent -> curvelet features — agrees with the GT tangent at mean |cos| = **0.893 (own argmax) / 0.909 (coarse majority) / 0.908 (temporal mode)**, ALL above the 0.85 bar. So the directional benefit byte-closes with NO GT at decode (generic algorithm, FREE in inflate.py). **The -48% lever is now a LEGAL contest lever.** Landed + tested: src/tac/boundary_math/lever_b_generator.py::self_orientation_directional_feats (numpy-portable, train==inflate identical, 3 NO-FAKE tests, 19 pass). This is THE crux the deep-math + contest-info reviews flagged as the blocker -> RESOLVED.
+
+**3 honest corrections (NO-FAKE, measured):**
+1. The witness MUST inflate to LEGAL RGB — a flat class-logit frame is POSE-BLIND (measured S=11.65). "Non-RGB task-space" = the CARRIER is task-space, EXPANDED to real RGB realized-through-R (the existing witness already renders RGB; pose rides the sidecar + chroma).
+2. Whole-partition homography WARP-of-template FALSIFIED (d_seg 0.64 >> identity 0.012-0.040) — corrects the deep-math explorer's #3. The temporal-rate model is static-base + small per-frame code + temporal deltas, NOT warp.
+3. The ~8-dim coords is IMPOSED not emergent (PCA intrinsic dim 27/32). Realistic byte budget ~55KB (rate 0.037) -> goal d_seg -> S~0.167 (banks sub-0.19); ~40KB fusion (rate 0.027) -> capstone d_seg -> S~0.117 (sub-0.15). Static base alone = 0.0265 d_seg (insufficient; 83.4% px stable >=99% = free amortized base, 27.6% active).
+
+**GREEN LIGHT (GPU plan, scaffold landed):** wire self_orientation_directional_feats into train_witness_realized_through_R_mlx.py's directional path (replace GT tangent with own iso-pass argmax tangent; flip directional_byte_closeable=True), --basis directional + --activation hosc/level-set + --chroma + sky+hood clamp + RD-optimum capacity B*~122KB + curriculum -> byte-close -> contest-CPU exact. NOT started (live GPU owned by hosc probe; a half-built trainer edit would conflict). Build spec: .omx/research/taskspace_witness_capstone_build_20260626.md; feasibility probe: experiments/probe_taskspace_witness_feasibility.py.
+
+**SYNTHESIS UPDATE:** the unified witness now has its decisive lever LEGALIZED. Decisive witness = level-set/hosc + SELF-ORIENTATION directional (-48%, now byte-closeable) + chroma + sky+hood clamp (14B, frees 63%) + capacity-routing + RD-optimum B*~122KB + curriculum + stored-pose sidecar. Predicted S ~0.117-0.134 (sub-0.15). Pointer UNMOVED 0.19110 — the next exact row is the directional GPU witness once the slot frees + builds land.
