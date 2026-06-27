@@ -1291,3 +1291,19 @@ OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=gener
 **Files:** `experiments/train_witness_realized_through_R_mlx.py` (batched verdict fns, eval_verdict render-then-batch + subset, verdict-which cadence, per-eval save, 4 new flags). 10 trainer tests pass.
 
 **RELAUNCH (coordinator):** `--num-pairs 600 --render-h 384 --render-w 512 --activation relu --chroma --mlx-device gpu --verdict-device mlx-cpu --verdict-which live --verdict-pairs 120 --verdict-batch 16 --ema-verdict-every 4 --margin-weighted-loss --margin-weight-fn exp --margin-weight-temp 0.1 --margin-weight-start-epoch 80 --eval-every 5 --gt-cache <600pair.npz>`. Final row: `tools/witness_byte_close_and_eval.py --ckpt-dir <run> --keep-packet` (full-600, numpy fp32, EMA; `--use-live` if ema-lag warns).
+
+---
+
+## FEED-bu (2026-06-26): STANDING PRINCIPLE — different STAGES need different TREATMENT (regardless of carrier/substrate) + the witness margin-engage stage-transition incident
+
+**Operator (verbatim):** *"Different stages need different treatment like we have observed regardless of carrier and substrate."*
+
+**The incident that surfaced it (witness_capstone_v3_n600, relu+chroma+iso+margin-curriculum):** base descended cleanly on the iso path (n_skips 0 ep1-79; ep50 0.01060 == iso, ep80 0.00934), then the margin-weight curriculum ENGAGED at ep80 (exp temp 0.1) and **destabilized**: gnorm exploded 648-772 vs the spike-guard median 7.989 -> EVERY batch skipped (n_skips 75) -> d_seg STALLED at 0.0093, no learning. ROOT CAUSE (the principle): the margin STAGE inherited the BASE stage's treatment — a spike-guard median calibrated on the uniform phase, base-stage LR/momentum, and a temp cliff. The instant the loss changed, every one of those knobs was wrong for the new stage.
+
+**The principle (generalizes 5 separate findings):** training is multi-stage; each stage has a different optimal treatment across loss-form / LR / optimizer-momentum / EMA-decay / regularizer-schedule / spike-guard-calibration; a single global config is wrong; stage TRANSITIONS must RE-TREAT. Evidence we kept re-observing: PR95 8-stage curriculum (CLAUDE.md L14, per-stage tuples); our capstone curriculum (smooth RAISES d_seg, Muon is THE drop — opposite directions by stage); margin-weight (starves from-scratch, re-allocates as finetune — opposite sign by stage); EMA-shadow-lag (78x — decay stage-dependent); pose-vs-seg 77x->2.71x (marginal treatment by operating point).
+
+**The fix (stage-transition re-treatment, in flight acf4c2f2):** resume from the ep80 base ckpt (don't redo the base stage) + at the margin-engage boundary: (1) anneal the margin-weight temp in (~1.0->0.3 over ~40ep, no cliff), (2) RE-WARMUP the LR (~0.1x ramping up over ~8ep, small first steps), (3) recalibrate the spike-guard to the new gradient regime, (4) optional: reset optimizer momentum. Validate: post-engage gnorm <50 (not 648), n_skips low, d_seg moves below 0.0093. MD-Decoupling (arXiv 2606.25971) is the optimizer that makes stage transitions stable by construction (the next-iteration ablation).
+
+**Concern carried (honest):** the RGBWitness relu base DECELERATES (0.013@ep20 -> 0.0106@ep50 -> 0.0093@ep80) and may asymptote ABOVE base_ch20's converged 0.0022 -> even a working margin-finetune (~3.55x) might land ~0.002-0.003 NOT 7.3e-4. The fix-and-resume is the DECISIVE test of whether the allocation lever works on the witness; FALLBACK = margin-finetune base_ch20 in its OWN converged HNeRV trainer (surface to operator; it is the moved-off vehicle but the BRIDGE's actual measured setup), OR hosc-SIREN basis-change.
+
+**Pointer UNMOVED contest-CPU 0.19110** (no exact row this session — stated plainly; means != ends). Memory: [[different-stages-need-different-treatment-regardless-carrier-substrate]].
