@@ -2489,3 +2489,85 @@ pointer UNMOVED 0.19110 ([macOS-CPU advisory], non-promotable). means!=ends: thi
 infra fix that lets the SAME training reach exact-relevant epochs faster; NO row moved. Files:
 `experiments/train_levelset_witness_realized_through_R_mlx.py` (+`--async-verdict`),
 `src/tac/local_acceleration/mlx_scorer_adapters.py` (custom-backward confirmation log).
+
+---
+
+## FEED-eo: MLX-GPU reorient (6.2%, parity-gated) + amortization (days->hours) wall-clock builds
+
+**(2026-06-27, [macOS-CPU advisory] NON-PROMOTABLE; pointer UNMOVED 0.19110; means!=ends — wall-clock
+infra, NO row moved.) Sister of FEED-em (async verdict 4.7%, now LIVE on the n600 row via `--async-verdict`).**
+Both builds ADDITIVE + DEFAULT-OFF; the live row (pid 47915) loaded the OLD module so it is unaffected.
+
+### 1. MLX-GPU reorient (`--gpu-reorient`) — BUILT + PARITY-GATE MEASURED -> KEEP NUMPY (default-off)
+The numpy reorient runs 600 fp64-CPU forwards (~499s, GPU-idle) every `--reorient-every` ep. Built the
+MLX-GPU twin: module-level `levelset_sdf_argmax_mlx(deploy_mx, feats_mx, code_row_mx, ...)` mirrors the
+phi path of the numpy ONE-CODEPATH (`levelset_rgb_forward_numpy`) + `LevelSetRGBWitness._act` EXACTLY,
+but fp32-on-Metal (no fp64 on GPU) -> NOT bit-identical -> PARITY-GATED. Wired as `_recompute_self_orient_gpu`
+branch in `recompute_self_orient` (deploy dequant'd once to mx, per-pair feats built+freed one-at-a-time
+= memory-bounded; downstream tangent->fourier dir feats stay the SAME numpy/scipy path).
+
+**Parity probe** (`experiments/probe_levelset_gpu_reorient_parity.py`, $0/NO-train, n24 off the REAL
+n600 ep-25 ckpt, render 384, the iso-pass zeros-dir input):
+- `cos(numpy_dir_feats, gpu_dir_feats)`: min **0.9810** / mean 0.9821 -> **FAILS the >0.999 gate**.
+- argmax agreement: min **0.99414** / mean 0.99458 (~0.6% boundary px flip between fp32-GPU and fp64-numpy).
+- realized d_seg A/B (render f1 with each path's dir feats -> R -> frozen CPU-torch SegNet): numpy
+  **0.011879** vs gpu **0.011868**, |AB| = **1.12e-5** -> PASSES the <1e-4 gate.
+
+**VERDICT: KEEP numpy reorient (default `--no-gpu-reorient`).** The strict `cos>0.999 AND d_seg<1e-4`
+fails on cos (the dir-fourier feats AMPLIFY the 0.6% boundary-argmax disagreement — boundary tangent
+flips dominate the cos but barely move the realized argmax). The 6.2% is **not safely reclaimable at
+the cos>0.999 bar** per the deterministic-repro spine (train would use GPU-dir-feats; byte-close/inflate
+regenerates numpy-portable dir-feats -> the cos-0.98 train/deploy mismatch could COMPOUND over a full
+run, which the one-shot probe cannot bound). NUANCE (honest): the one-shot realized d_seg impact is
+NEGLIGIBLE (1.1e-5), so an operator who values 6.2% wall-clock over a ~1e-5 d_seg risk MAY opt in
+(`--gpu-reorient`) — the flag is BUILT + default-off precisely to leave that decision open.
+
+### 2. AMORTIZATION (`--freeze-decoder-fit-codes <decoder.npz>`) — BUILT + small-n estimate -> VIABLE
+The witness factors into a SHARED decoder (in_proj/film/hidden/out_sdf/out_tex/palette, ~96K params)
++ per-(pair,frame) latent codes (1200 x mod_dim). A full from-scratch n600 row co-fits BOTH (days).
+Built the freeze-decoder/code-only mode: loads the decoder from a subset-trained npz (`_load_decoder_params`,
+excludes `code`/`B`/cfg), in_feat-matches it (fail-closed), `model.freeze()` + `unfreeze(["code"])`
+(assert trainable==["code"] so the decoder cannot drift OR weight-decay), EMA shadow starts at the
+frozen decoder. Then ONLY the ~num_pairs*2*mod_dim codes are fit -> embarrassingly-parallel per-pair
+latent fit through the frozen render+R+scorer = HOURS not days.
+
+**Small-n generalization estimate** (the REAL `--freeze-decoder-fit-codes` codepath, NOT a proxy:
+n12, frozen n600 ep-25 decoder, code-fit from zeros, render 384, ema-decay 0.95, 50 ep,
+`experiments/results/levelset_amortization_estimate_20260627T141334Z`):
+- d_seg trajectory (code-only, decoder FROZEN): ep0 **0.0413** (zeros codes) -> ep10 0.0148 ->
+  ep20 **0.0119** -> ep30 0.0106 -> ep40 0.0102 -> ep50 **0.0101**.
+- joint-codes reference on the SAME pairs (ep-25 ckpt, from the parity probe): d_seg **~0.0119**.
+- **Code-only fit RECOVERS the joint d_seg by ep20 and EXCEEDS it by ep30** (0.0101 < 0.0119).
+
+**VERDICT: amortization VIABLE** (the core question — does a frozen shared decoder generalize so
+code-fit reaches comparable d_seg? — is YES). **HONEST caveat:** the estimate uses SEEN pairs (the
+decoder co-trained on pairs 0-11) -> this is an UPPER BOUND on true held-out generalization; the ep-25
+decoder is also early. The TRUE held-out validation (decoder trained on subset A, codes fit on disjoint
+B, vs a full joint witness on B) + the full 600-pair code-fit are DEFERRED to when the GPU frees.
+**Deferred full launch (held-out + full 600-pair fast path):**
+```
+# 1) (if needed) train a subset decoder, e.g. n192, normal joint run -> levelset_witness_ema_mlx.npz
+# 2) freeze it + fit ALL 600 pairs' codes (the days->hours fast path):
+TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 .venv/bin/python -u experiments/train_levelset_witness_realized_through_R_mlx.py \
+  --out-dir experiments/results/levelset_n600_amortized_<UTC> \
+  --freeze-decoder-fit-codes <subset_decoder.npz> \
+  --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz --num-pairs 600 \
+  --epochs 300 --eval-every 25 --ckpt-every 25 --render-h 384 --render-w 512 \
+  --hidden-dim 96 --mod-dim 32 --activation hosc --self-orient --n-dir-freqs 2 --max-bank-freq 64 \
+  --reorient-every 50 --softmax-temp-start 1.0 --softmax-temp-end 0.05 --w-seg 100 --w-pose 0 \
+  --curriculum --tau-softplus-start-epoch 60 --l7-start-epoch 200 --ema-decay 0.997 --mlx-device gpu
+```
+
+### 3. Total reclaimable wall-clock (beyond the 4.7% async already applied)
+- **6.2% reorient: NOT safely reclaimed** (parity gate fails cos>0.999; flag built, default-off, opt-in only).
+- **Amortization: the BIG lever — days->hours** for any FUTURE n600 row that reuses a frozen subset
+  decoder (orthogonal to the per-epoch %; it removes the decoder-fit phase entirely). VIABLE pending
+  the deferred held-out + full-fit confirmation.
+- Net: the safely-reclaimable per-epoch wall-clock beyond async stays ~0% (reorient gated out); the
+  STRUCTURAL win is amortization (skips the decoder co-fit) when a subset decoder exists.
+
+Next-relaunch flags for the live config: `--async-verdict` (LIVE, bit-identical, 4.7%); `--gpu-reorient`
+is OPT-IN ONLY (parity-gated, ~1.1e-5 d_seg risk for 6.2%). Files: `experiments/train_levelset_witness_realized_through_R_mlx.py`
+(+`levelset_sdf_argmax_mlx`, `_load_decoder_params`, `--gpu-reorient`, `--freeze-decoder-fit-codes`),
+`experiments/probe_levelset_gpu_reorient_parity.py` (new). pointer UNMOVED 0.19110; NO-FAKE: reorient
+parity MEASURED (not assumed); amortization generalization MEASURED (not assumed), labeled upper-bound.

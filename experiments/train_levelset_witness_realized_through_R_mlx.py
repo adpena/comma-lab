@@ -245,6 +245,30 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
     }
 
 
+def _load_decoder_params(npz_path: Path) -> dict[str, np.ndarray]:
+    """Load ONLY the SHARED-DECODER params from a level-set EMA/deploy npz (FEED-eo amortization).
+
+    Returns the decoder tensors (in_proj/film/hidden.*/out_sdf/out_tex {weight,bias} + palette) but
+    EXCLUDES ``code`` (the per-(pair,frame) latents, which the freeze-decoder-fit-codes mode RE-FITS
+    for a different pair count) and the free deterministic bank ``B``/``*_B`` (rule 118) and the
+    ``__``-prefixed cfg scalars. NO-FAKE: a missing/garbage file raises. MLX-free."""
+    z = np.load(Path(npz_path), allow_pickle=False)
+    dec: dict[str, np.ndarray] = {}
+    for k in z.files:
+        if k.startswith("__"):
+            continue
+        if k == "code" or k.endswith("code"):
+            continue
+        if k == "B" or k.endswith("_B"):
+            continue
+        dec[k] = np.asarray(z[k], np.float32)
+    if "in_proj.weight" not in dec:
+        raise ValueError(
+            f"--freeze-decoder-fit-codes {npz_path} has no 'in_proj.weight' (not a level-set witness "
+            "decoder npz?); NO-FAKE: refusing to fit codes against a non-decoder file.")
+    return dec
+
+
 def _resolve_resume_path(p: Path) -> Path:
     """Accept a run dir (prefer the resume sidecar, fall back to the EMA deploy npz) OR an explicit
     npz file. NO-FAKE: nonexistent -> FileNotFoundError (never fabricate a resume)."""
@@ -399,6 +423,56 @@ def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1
     delta = (len_eps / np.pi) / (len_eps * len_eps + mc * mc)  # delta_eps at the {m=0} boundary
     length = mx.mean(delta * gmag)
     return eik, length, mx.mean(gx * gx) + mx.mean(gy * gy)
+
+
+# ---------------------------------------------------------------------------
+# MLX-GPU SDF->argmax forward (FEED-eo, the --gpu-reorient core, additive). This is the MLX-GPU
+# TWIN of the phi path in ``levelset_rgb_forward_numpy`` (the numpy ONE CODEPATH). It runs the same
+# in_proj -> FiLM -> hidden -> out_sdf forward on the dequantized deploy weights, but in fp32 ON THE
+# GPU (vs the numpy fp64 accumulation), so it is NOT bit-identical (the GPU vs numpy reduction order
+# differs) -> the per-pair argmax it returns is PARITY-GATED, never an authority. Its sole consumer
+# is the self-orientation reorient (recompute per-pair directional feats from the EMA argmax), which
+# is itself a byte-closeable train-time PRIOR (cos 0.89-0.91 vs GT; the dir feats are a deterministic
+# function of the witness's own argmax). Eliminating the 600 GPU-idle numpy CPU forwards (~499s every
+# --reorient-every epochs at n600) is the ~6.2% wall-clock lever. NO mx ops touch ema.shadow/model.
+# ---------------------------------------------------------------------------
+def levelset_sdf_argmax_mlx(
+    deploy_mx: dict,
+    feats_mx,
+    code_row_mx,
+    *,
+    n_hidden: int,
+    hidden_dim: int,
+    activation: str,
+    wire_w0: float,
+    wire_s0: float,
+    hosc_beta: float,
+    hosc_omega: float,
+):
+    """Return ``argmax_k phi_k`` (P,) int via the MLX-GPU twin of the numpy deploy forward.
+
+    ``deploy_mx`` are the DEQUANTIZED deploy weights already as ``mx.array`` (in_proj/film/hidden.*/
+    out_sdf {weight,bias}); ``feats_mx`` is the (P, in_feat) per-pair coord feature grid (curvelet
+    [+ self-orient dir]); ``code_row_mx`` is the (mod_dim,) per-(pair,frame) FiLM code. Mirrors
+    ``mlx.nn.Linear`` (``x @ W.T + b``) + ``LevelSetRGBWitness._act`` EXACTLY (only the device +
+    fp32-vs-fp64 accumulation differ -> parity-gated, NOT the verdict authority). out_tex/palette/
+    softmax are NOT computed (argmax of phi is the only quantity the reorient needs)."""
+    import mlx.core as mx
+
+    def _act(u):
+        if activation == "wire":
+            return mx.cos(wire_w0 * u) * mx.exp(-((wire_s0 * u) ** 2))
+        if activation == "hosc":
+            return mx.tanh(hosc_beta * mx.sin(hosc_omega * u))
+        return mx.maximum(u, 0.0)
+
+    h = _act(feats_mx @ deploy_mx["in_proj.weight"].T + deploy_mx["in_proj.bias"])
+    film = (code_row_mx @ deploy_mx["film.weight"].T + deploy_mx["film.bias"]).reshape(n_hidden, 2, hidden_dim)
+    for li in range(n_hidden):
+        h = _act((h @ deploy_mx[f"hidden.{li}.weight"].T + deploy_mx[f"hidden.{li}.bias"])
+                 * (1.0 + film[li, 0]) + film[li, 1])
+    phi = h @ deploy_mx["out_sdf.weight"].T + deploy_mx["out_sdf.bias"]  # (P, K)
+    return mx.argmax(phi, axis=-1)
 
 
 # ---------------------------------------------------------------------------
@@ -614,6 +688,47 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "msg": "pretrain did NOT structure the partition (disagree>0.30); init ~ random "
                               "(hosc/SIREN trainability fragility). Try --structured-init-lr/-steps or another --seed.",
                               "disagree": round(sc_disagree, 5)}), flush=True)
+    # AMORTIZATION (FEED-eo, --freeze-decoder-fit-codes, ADDITIVE, default-off). The witness factors
+    # into a SHARED decoder (in_proj/film/hidden/out_sdf/out_tex/palette) + per-(pair,frame) latent
+    # codes (1200 x mod_dim). A full from-scratch n600 row co-fits BOTH (days). This mode LOADS a
+    # decoder trained on a SUBSET (n96/n192), FREEZES it, and fits ONLY the ~num_pairs*2*mod_dim
+    # codes for all pairs (a small per-pair optimization through the frozen render+R+scorer ->
+    # embarrassingly parallel per pair; hours not days) -> the future-row fast path IF the frozen
+    # shared decoder generalizes (the small-n estimate measures this). Loaded BEFORE EMA so the EMA
+    # shadow (the deploy weights) starts at the frozen decoder; freeze BEFORE value_and_grad so the
+    # grad/optimizer/weight-decay only ever touch ``code`` (the decoder cannot drift). Default
+    # None => skipped => byte-identical to a normal joint run.
+    freeze_decoder = bool(getattr(args, "freeze_decoder_fit_codes", None))
+    if freeze_decoder:
+        if args.resume_from:
+            raise ValueError("--freeze-decoder-fit-codes is incompatible with --resume-from (one "
+                             "loads a frozen decoder + FRESH codes; the other restores a full state).")
+        if args.structured_init:
+            raise ValueError("--freeze-decoder-fit-codes is incompatible with --structured-init "
+                             "(the decoder is frozen-from-file, not pretrained).")
+        from mlx.utils import tree_unflatten
+        dec = _load_decoder_params(Path(args.freeze_decoder_fit_codes))
+        got_in = int(dec["in_proj.weight"].shape[1])
+        if got_in != in_feat:
+            raise ValueError(
+                f"--freeze-decoder-fit-codes in_feat MISMATCH: the decoder's in_proj expects {got_in} "
+                f"but the current front-end config yields in_feat={in_feat}. Match the decoder's "
+                "training config (--bank-*/--max-bank-freq/--self-orient/--n-dir-freqs) so the curvelet"
+                "[+dir] feature width agrees; NO-FAKE: refusing to fit codes against a width-mismatched "
+                "decoder.")
+        model.update(tree_unflatten([(k, mx.array(v)) for k, v in dec.items()]))
+        mx.eval(model.parameters())
+        model.freeze(recurse=True)
+        model.unfreeze(keys=["code"])
+        tnames = sorted(k for k, _ in tree_flatten(model.trainable_parameters()))
+        if tnames != ["code"]:
+            raise RuntimeError(
+                f"--freeze-decoder-fit-codes: expected ONLY 'code' trainable after freeze, got {tnames} "
+                "(MLX freeze/unfreeze contract changed); fail-closed so the decoder cannot silently train.")
+        print(json.dumps({"stage": "freeze_decoder_fit_codes", "decoder_from": str(args.freeze_decoder_fit_codes),
+                          "in_feat": int(in_feat), "trainable": tnames, "n_code_params": int(model.code.size),
+                          "note": "shared decoder FROZEN (no weight-decay drift); fitting per-pair codes only "
+                          "(amortization fast path -- viability per the small-n generalization estimate)"}), flush=True)
     ema = MlxEMA(model, decay=args.ema_decay)
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
 
@@ -703,11 +818,48 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         rgb, _phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + fk])
         return _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
 
+    def _dir_feats_from_argmax(argmax: np.ndarray) -> np.ndarray:
+        """argmax (H,W) int -> self-orientation directional feats (P, dir_w). SAME numpy/scipy
+        tangent->fourier path for BOTH the numpy and GPU reorient (only the argmax SOURCE differs)."""
+        return self_orientation_directional_feats(
+            coords_np, argmax, n_freqs=n_dir_freqs,
+            freq_across=args.freq_across, freq_along=args.freq_along).astype(np.float32)
+
+    def _recompute_self_orient_gpu(deploy: dict[str, np.ndarray]) -> float:
+        """FEED-eo --gpu-reorient: the per-pair argmax (the GPU-idle 600-numpy-forward bottleneck,
+        ~499s every reorient at n600) is computed on MLX-GPU via the fp32 twin forward instead. The
+        downstream tangent->directional-fourier feats stay the SAME numpy/scipy path. PARITY-GATED
+        (fp32-GPU vs fp64-numpy argmax differs at boundary px) -> default-off; adopt only after the
+        probe shows cos>0.999 + negligible d_seg A/B. The deploy weights are dequantized ONCE to mx;
+        per-pair feats are built+freed one-at-a-time (memory-bounded, like the numpy path)."""
+        deploy_mx = {k: mx.array(np.asarray(v, np.float32)) for k, v in deploy.items()
+                     if k not in ("code",) and not (k == "B" or k.endswith("_B"))}
+        codes_np = np.asarray(deploy["code"], np.float32)
+        mag = 0.0
+        with temporary_mlx_device(args.mlx_device):
+            for pi in range(P):
+                feats_mx = mx.array(_feats_np_for_pair(pi))
+                code_row = mx.array(codes_np[2 * pi + 1])
+                amx = levelset_sdf_argmax_mlx(
+                    deploy_mx, feats_mx, code_row, n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
+                    activation=args.activation, wire_w0=args.wire_w0, wire_s0=args.wire_s0,
+                    hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega)
+                mx.eval(amx)
+                argmax = np.asarray(amx).reshape(render_h, render_w).astype(np.int64)
+                df = _dir_feats_from_argmax(argmax)
+                dir_feats_per_pair[pi] = df
+                mag += float(np.abs(df).mean())
+                del feats_mx, amx, code_row
+            mx.clear_cache()
+        return mag / max(P, 1)
+
     def recompute_self_orient(deploy: dict[str, np.ndarray]) -> float:
         """Self-orientation FIXED-POINT step: from the EMA deploy frame1 argmax (current feats),
         recompute each pair's directional feats. Returns the mean |dir feat| (non-triviality check)."""
         if not use_self_orient:
             return 0.0
+        if getattr(args, "gpu_reorient", False):
+            return _recompute_self_orient_gpu(deploy)
         mag = 0.0
         for pi in range(P):
             _rgb, phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + 1])
@@ -1119,6 +1271,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="resume a run from a checkpoint: a run DIR (prefers levelset_resume_state.npz, "
                     "falls back to levelset_witness_ema_mlx.npz) OR an explicit npz. Restores decoder + "
                     "per-pair codes + EMA shadow + optimizer (best-effort) + the epoch position.")
+    ap.add_argument("--freeze-decoder-fit-codes", type=str, default=None,
+                    help="FEED-eo AMORTIZATION (days->hours): load the SHARED decoder from this level-set "
+                    "EMA/deploy npz (trained on a SUBSET, e.g. n96/n192), FREEZE it, and fit ONLY the "
+                    "per-pair codes for all --num-pairs pairs (embarrassingly-parallel per-pair latent "
+                    "fit through the frozen render+R+scorer). The front-end config (--bank-*/--max-bank-"
+                    "freq/--self-orient/--n-dir-freqs) MUST match the decoder's in_feat. Incompatible "
+                    "with --resume-from/--structured-init. DEFAULT None = normal joint train.")
     # (config-review #1) render-384 is the MEASURED R-survival floor (render-192 pre-caps at
     # 0.00085 d_seg = +0.085 S, mathematically blocking sub-0.15). camera-R + SegNet dominate
     # wall-clock, so 384 is ~free vs 192. The "SDF smooth -> low-res ok" assumption is FALSIFIED.
@@ -1181,6 +1340,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="add byte-closeable self-orientation directional feats (finetune lever; needs a roughly-learned base).")
     ap.add_argument("--n-dir-freqs", type=int, default=6)
     ap.add_argument("--reorient-every", type=int, default=50)
+    ap.add_argument("--gpu-reorient", action=argparse.BooleanOptionalAction, default=False,
+                    help="FEED-eo: compute the per-pair reorient argmax on MLX-GPU (fp32 twin forward) "
+                    "instead of the 600 GPU-idle numpy CPU forwards (~6.2%% wall-clock reclaim @ n600). "
+                    "PARITY-GATED (fp32-GPU vs fp64-numpy argmax differs at boundary px): adopt only "
+                    "after experiments/probe_levelset_gpu_reorient_parity.py shows cos>0.999 + negligible "
+                    "d_seg A/B. DEFAULT OFF = the bit-faithful numpy reorient (current behavior).")
     ap.add_argument("--freq-across", type=float, default=32.0, help="self-orient: HIGH freq across the edge (normal).")
     ap.add_argument("--freq-along", type=float, default=4.0, help="self-orient: LOW freq along the edge (tangent).")
     # ACTIVATION
