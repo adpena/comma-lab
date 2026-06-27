@@ -151,7 +151,8 @@ def _load_witness_ckpt(ckpt_dir: Path, use_live: bool = False) -> tuple[dict[str
     cfg.setdefault("chroma", True)  # achromatic ablation control arm (chroma=False) MUST round-trip
     cfg.setdefault("hosc_beta", 4.0)
     cfg.setdefault("hosc_omega", 1.0)
-    cfg.setdefault("siren_omega", 30.0)  # periodic freq for siren/finer (FINER first-bias is baked into the saved weights)
+    cfg.setdefault("siren_omega", 30.0)  # periodic freq for siren/finer/wire (FINER first-bias is baked into the saved weights)
+    cfg.setdefault("wire_scale", 1.0)  # WIRE real-Gabor Gaussian window scale s
     cfg.setdefault("basis", "isotropic")
     cfg.setdefault("fourier_seed", twr._FOURIER_SEED)
     return params, cfg
@@ -203,6 +204,7 @@ def build_witness_blob(
         "hosc_beta": float(cfg["hosc_beta"]),
         "hosc_omega": float(cfg["hosc_omega"]),
         "siren_omega": float(cfg.get("siren_omega", 30.0)),
+        "wire_scale": float(cfg.get("wire_scale", 1.0)),
         "render_h": int(cfg["render_h"]),
         "render_w": int(cfg["render_w"]),
         "basis": str(cfg["basis"]),
@@ -294,17 +296,19 @@ def _dequant(blob, order, shapes, scales):
     return out
 
 
-def _act(u, kind, beta, omega):
+def _act(u, kind, beta, omega, wire_scale=1.0):
     if kind == "hosc":
         return np.tanh(beta * np.sin(omega * u))
     if kind == "siren":  # Sitzmann 2020
         return np.sin(omega * u)
     if kind == "finer":  # Liu CVPR2024 variable-periodic (first-layer bias baked into weights)
         return np.sin(omega * (np.abs(u) + 1.0) * u)
+    if kind == "wire":  # Saragadam CVPR2024 real-Gabor sin(omega*u)*exp(-0.5*(s*u)^2)
+        return np.sin(omega * u) * np.exp(-0.5 * np.square(wire_scale * u))
     return np.maximum(u, 0.0)
 
 
-def _witness_forward(p, feats, code_row, n_hidden, hidden_dim, kind, beta, omega):
+def _witness_forward(p, feats, code_row, n_hidden, hidden_dim, kind, beta, omega, wire_scale=1.0):
     # NUMPY fp32 forward = the DEPLOY ground truth. The MLX **GPU** train forward
     # accumulates matmuls in reduced precision (~0.19/255 RGB, ~500-1670 argmax px/pair vs
     # fp32); numpy/torch fp32 agree to ~1 ULP (0-3 px). The trainer VERDICT mirrors THIS
@@ -312,11 +316,11 @@ def _witness_forward(p, feats, code_row, n_hidden, hidden_dim, kind, beta, omega
     # d_seg == the byte-closed d_seg (DAG FEED-br). Keep op-for-op identical.
     def lin(name, x):
         return x @ p[name + ".weight"].T + p[name + ".bias"]
-    h = _act(lin("in_proj", feats), kind, beta, omega)
+    h = _act(lin("in_proj", feats), kind, beta, omega, wire_scale)
     film = (code_row @ p["film.weight"].T + p["film.bias"]).reshape(n_hidden, 2, hidden_dim)
     for li in range(n_hidden):
         scale = 1.0 + film[li, 0]; shift = film[li, 1]
-        h = _act(lin(f"hidden.{li}", h) * scale + shift, kind, beta, omega)
+        h = _act(lin(f"hidden.{li}", h) * scale + shift, kind, beta, omega, wire_scale)
     z = h @ p["out.weight"].T + p["out.bias"]
     return (1.0 / (1.0 + np.exp(-z))) * 255.0  # (P,3) float RGB in [0,255]
 
@@ -348,13 +352,14 @@ def main():
     ch, cw = int(man["camera_h"]), int(man["camera_w"])
     nh, hd = int(man["n_hidden"]), int(man["hidden_dim"])
     kind, beta = man["activation"], float(man["hosc_beta"])
-    # siren/finer use the periodic freq (siren_omega ~30); hosc uses its own omega. The verdict
+    # siren/finer/wire use the periodic freq (siren_omega ~30); hosc uses its own omega. The verdict
     # forward must use the SAME omega the trained _act used or the inflated render diverges.
-    omega = float(man.get("siren_omega", 30.0)) if kind in {"siren", "finer"} else float(man["hosc_omega"])
+    omega = float(man.get("siren_omega", 30.0)) if kind in {"siren", "finer", "wire"} else float(man["hosc_omega"])
+    wire_scale = float(man.get("wire_scale", 1.0))  # WIRE Gabor window scale (no-op for non-wire)
     chroma = bool(man.get("chroma", True))  # achromatic control arm: replicate BT.601 luma to R=G=B
     with open(dst, "wb") as f:  # stream frame-by-frame: peak RAM = one camera frame
         for fi in range(n_frames):
-            rgb = _witness_forward(params, feats, code[fi], nh, hd, kind, beta, omega)
+            rgb = _witness_forward(params, feats, code[fi], nh, hd, kind, beta, omega, wire_scale)
             if not chroma:  # mirror RGBWitnessMLX._apply_chroma (chroma=False) -- MUST match train-time forward
                 luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
                 rgb = np.concatenate([luma, luma, luma], axis=-1)
