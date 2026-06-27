@@ -225,3 +225,53 @@ def test_aggregate_residual_stats_sums():
 
 def test_aggregate_empty():
     assert aggregate_residual_stats([])["n_pairs"] == 0
+
+
+# ---------------------------------------------------------------------------
+# self_orientation_directional_feats — the BYTE-CLOSEABLE directional tangent (task-space witness)
+# ---------------------------------------------------------------------------
+def test_self_orientation_feats_byte_closeable_no_gt():
+    """Tangent comes from a DECODER-REPRODUCIBLE partition (no GT), matches the manual path."""
+    from tac.boundary_math.lever_b_generator import (
+        all_class_boundary_proximity_and_tangent,
+        build_coords,
+        directional_fourier_feats,
+        self_orientation_directional_feats,
+    )
+
+    H, W = 20, 28
+    part = np.zeros((H, W), np.int64)
+    part[:, W // 2:] = 1  # vertical boundary
+    coords = build_coords(H, W)
+    feats = self_orientation_directional_feats(coords, part, n_freqs=4)
+    assert feats.shape == (H * W, 16)
+    assert np.isfinite(feats).all()
+    # byte-closeability identity: equals directional feats built from the partition's own tangent
+    _, tang = all_class_boundary_proximity_and_tangent(part)
+    ref = directional_fourier_feats(coords, tang.reshape(-1, 2), n_freqs=4)
+    assert np.allclose(feats, ref)
+
+
+def test_self_orientation_feats_grid_mismatch_raises():
+    from tac.boundary_math.lever_b_generator import build_coords, self_orientation_directional_feats
+
+    coords = build_coords(10, 10)
+    wrong = np.zeros((8, 8), np.int64)  # 64 px != 100 coords
+    with pytest.raises(ValueError):
+        self_orientation_directional_feats(coords, wrong)
+
+
+def test_self_orientation_feats_distinct_partitions_distinct_tangent():
+    """A vertical-boundary partition and a horizontal-boundary partition give DIFFERENT feats
+    (a stub returning constant feats FAILS this — NO-FAKE class 2)."""
+    from tac.boundary_math.lever_b_generator import build_coords, self_orientation_directional_feats
+
+    H, W = 16, 16
+    coords = build_coords(H, W)
+    vert = np.zeros((H, W), np.int64)
+    vert[:, W // 2:] = 1
+    horiz = np.zeros((H, W), np.int64)
+    horiz[H // 2:, :] = 1
+    fv = self_orientation_directional_feats(coords, vert, n_freqs=4)
+    fh = self_orientation_directional_feats(coords, horiz, n_freqs=4)
+    assert not np.allclose(fv, fh)

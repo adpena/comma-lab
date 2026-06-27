@@ -1,0 +1,78 @@
+{
+  "schema": "taskspace_witness_feasibility_probe.v1",
+  "provenance": {
+    "evidence_grade": "macOS-CPU advisory",
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "promotable": false,
+    "hardware_substrate": "local_macos_cpu"
+  },
+  "static_base": {
+    "n_pairs": 600,
+    "n_classes": 5,
+    "d_seg_static_base": 0.02650109185112847,
+    "frac_pixels_always_stable": 0.7244669596354166,
+    "frac_pixels_stable_99": 0.8339945475260416,
+    "active_band_frac": 0.2755330403645833,
+    "active_band_carries_flip_frac": 1.0,
+    "mean_flips_per_pair_vs_static": 5210.326666666667,
+    "d_seg_prev_frame_predictor": 0.012456393998134913
+  },
+  "tangent": {
+    "n_pairs": 8,
+    "tau": 4.0,
+    "cos_own_generator_argmax": 0.8930483609437943,
+    "cos_coarse_majority_partition": 0.9089063256978989,
+    "cos_static_mode_partition": 0.9080835953354836,
+    "mean_boundary_px_per_pair": 4328.875,
+    "byte_closeable_verdict": "BYTE_CLOSEABLE_directional_lever_unlocked"
+  },
+  "parametric_coverage": [
+    {
+      "window": 1,
+      "d_seg_identity_mean": 0.011913299560546875,
+      "d_seg_homography_warp_mean": 0.6369684007432727,
+      "homography_beats_identity": false,
+      "n_evaluated": 12
+    },
+    {
+      "window": 4,
+      "d_seg_identity_mean": 0.015509711371527778,
+      "d_seg_homography_warp_mean": 0.6393708123101128,
+      "homography_beats_identity": false,
+      "n_evaluated": 12
+    },
+    {
+      "window": 16,
+      "d_seg_identity_mean": 0.028513590494791668,
+      "d_seg_homography_warp_mean": 0.7147343953450521,
+      "homography_beats_identity": false,
+      "n_evaluated": 12
+    },
+    {
+      "window": 64,
+      "d_seg_identity_mean": 0.03951379024621212,
+      "d_seg_homography_warp_mean": 0.7279098973129735,
+      "homography_beats_identity": false,
+      "n_evaluated": 11
+    }
+  ],
+  "summary": {
+    "static_base_d_seg": 0.02650109185112847,
+    "static_base_vs_goal_ratio": 23.66168915279328,
+    "static_base_vs_capstone_ratio": 36.80707201545621,
+    "active_band_frac": 0.2755330403645833,
+    "free_static_region_frac": 0.8339945475260416,
+    "directional_tangent_verdict": "BYTE_CLOSEABLE_directional_lever_unlocked",
+    "best_cheap_tangent_cosine": 0.9089063256978989,
+    "parametric_best_window_residual": 0.6369684007432727,
+    "goal_d_seg": 0.00112,
+    "capstone_d_seg": 0.00072,
+    "frontier_pointer_moved": false,
+    "authority": "[macOS-CPU advisory] partition-domain d_seg (frozen-SegNet GT argmax), NOT 600-sample render harness"
+  },
+  "seconds": 59.85
+}

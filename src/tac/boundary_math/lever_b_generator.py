@@ -167,6 +167,52 @@ def directional_fourier_feats(
     return np.stack(feats, axis=-1).astype(np.float32)
 
 
+def self_orientation_directional_feats(
+    coords: np.ndarray,
+    cheap_partition_hw: np.ndarray,
+    n_freqs: int = 6,
+    freq_across: float = 32.0,
+    freq_along: float = 4.0,
+    tau: float = 4.0,
+) -> np.ndarray:
+    """BYTE-CLOSEABLE directional features: tangent derived from a DECODER-REPRODUCIBLE partition.
+
+    The -48% d_seg directional lever needs the all-class boundary tangent field, but
+    ``directional_fourier_feats`` orients to the GT SegNet argmax tangent — UNAVAILABLE at
+    inflate.py (and storing it is image-sized) so it does NOT byte-close. This helper closes
+    that gap: it computes the tangent from ``cheap_partition_hw`` — any partition the DECODER
+    can itself reproduce (the witness's own iso-pass argmax = the self-orientation fixed point;
+    a coarse majority-filtered partition; or the per-pixel temporal-mode static base). The
+    decoder runs the cheap forward, computes the tangent, then runs the directional forward — NO
+    GT, ZERO extra archive bytes (the tangent is a deterministic function of the witness's own
+    output).
+
+    MEASURED contract (``experiments/probe_taskspace_witness_feasibility.py``, n600 GT argmax,
+    ``[macOS-CPU advisory]``): the tangent of these cheap partitions agrees with the GT-fine
+    tangent at mean |cos| = 0.893 (own generator argmax) / 0.909 (coarse majority) / 0.908
+    (temporal mode) on the boundary band — above the 0.85 byte-closeability bar. So the
+    directional lever transfers byte-closeably (NECESSARY-not-sufficient: directional alone is
+    ~0.0044 proxy d_seg; reaching the 7.2e-4 capstone needs step-native + capacity-routing +
+    convergence on top, per the realized-through-R GPU witness).
+
+    ``coords`` is (P, 2); ``cheap_partition_hw`` is (H, W) integer labels whose H*W == P. Returns
+    directional features (P, 4*n_freqs). Pure numpy/scipy (scipy borrowed via the tangent EDT) —
+    identical at train and inflate.
+    """
+
+    cheap = np.asarray(cheap_partition_hw)
+    _prox, tangent_hw = all_class_boundary_proximity_and_tangent(cheap, tau=tau)
+    tangent = tangent_hw.reshape(-1, 2)
+    if tangent.shape[0] != coords.shape[0]:
+        raise ValueError(
+            f"cheap_partition has {tangent.shape[0]} px but coords has {coords.shape[0]} rows; "
+            "they must share the render grid (NN-resize the partition to the render res first)."
+        )
+    return directional_fourier_feats(
+        coords, tangent, n_freqs=n_freqs, freq_across=freq_across, freq_along=freq_along
+    )
+
+
 @dataclass(frozen=True)
 class GeneratorConfig:
     """The architecture hyperparameters that fully determine the generator shape."""
@@ -417,4 +463,5 @@ __all__ = [
     "numpy_reference_forward",
     "residual_component_stats",
     "save_generator_npz",
+    "self_orientation_directional_feats",
 ]
