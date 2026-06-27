@@ -1928,3 +1928,22 @@ src/tac/boundary_math/lane_sdf_component.py built (IPM ground-frame + poly cente
 - DOF ~30 floats/frame COUNTED (~1-2KB); IPM+EDT rasterizer FREE inflate (rule-118).
 VERDICT: SUPERSEDES the crude lane-edge LOSS lever for the lane SHAPE (do NOT stack). Crude lever re-scopes to the 81% non-lane all-class boundary-band (separate lever). Integration: --lane-sdf-component --lane-sdf-mode {bias,replace}; bias=prior (safer, keeps eikonal-deep phi_0); FiLM on theta_lane(t). Containment depends on phi_0 staying deep -> eikonal reg gets a SECOND justification. Caveats: isolation test (other classes ideal) + n48 straight; plateau-drop 0.0032->0.002-0.0025 needs a byte-closed trained-witness row.
 => the per-lever optimal-form generalization (FEED-do) is VALIDATED on the lane. NEXT: MyCar-hood (class-2, 13%, STATIC -> single stored mask ~0 bytes, simplest component) launching (reuse lane_sdf_component machinery) -> then road/horizon (50%). The structured-manifold decomposition is the d_seg-gate path (store structure, learn only Movable+residual). Pointer UNMOVED 0.19110.
+
+## FEED-dt (2026-06-27): BINDING REVIEW+SEAL GATE for the structured-manifold codec (operator: "recursive adversarial review + deep math grounding + optimization + seal process will be very important")
+
+The convergence to the row is GATED on review+seal — TWO layers, both required BEFORE the (GPU/expensive) row run (per "Substrate MUST be at OPTIMAL FORM before paid dispatch" + "Recursive adversarial review protocol 3-clean-pass"):
+
+PER-COMPONENT (deep-math grounding + per-lever optimization + 3-clean-pass -> SEAL), each verifies its load-bearing INVARIANT (verify, NOT assume):
+- LANE-SDF (a7ab8d34): containment depends on phi_0 (road) staying EIKONAL-DEEP (SDF local-support argument); poly degree; IPM homography correctness; rule-118 free/counted. Has $0 isolation measure; OWES the full 3-clean-pass seal.
+- HOOD-STATIC (af7d1a3b building): the STATIC assumption itself (hood IoU ~0.99 across ALL 600 or does it DRIFT on turns/bumps? a drifting 'static' mask = silent d_seg leak); single-mask validity; frozen-instance compliance.
+- POSE-DERIVE (a1116e516f building): the RANK-1 hypothesis (dim-0 99.8% — does the residual matter at the 3.4e-5 d_pose target?); pose_from_embedding generalization; FiLM null-space containment (doesn't raise d_seg); strict rule (NO PoseNet at inflate).
+- ROAD/HORIZON (queued): ground-homography validity; horizon-line model.
+
+INTEGRATION SEAL (the highest-risk, the one that matters most — components compose in ONE argmax):
+- ANTAGONISM: lane vs hood vs road competing in the same argmax (JOINT containment, not just per-component).
+- JOINT containment: all SDFs compose without leak (containment is pairwise-measured; joint is the real test).
+- byte-close compatibility end-to-end (every component payload + the inflate).
+- assumption-challenge axis on the WHOLE codec.
+-> 3 consecutive clean passes -> SEAL -> ONLY THEN the row run (train -> byte-close -> contest-CPU exact).
+
+CONVERGENCE PATH (binding): each component deep-math+optimize+seal as it lands -> WIRE sealed components -> ONE integrated recursive adversarial review + deep-math + optimization -> SEAL -> train -> byte-close -> exact. Row run GATED on the integrated SEAL (like Yousfi levers gated on a3a6674228). The efficient form = ONE integrated review+seal over the wired codec (more rigorous than N separate reviews; integration is where the risk lives). QUEUED (safe limit: 2 CPU + GPU); launch when components built + slot frees. MEANS->ENDS: converge to the row, but THROUGH the seal gate, not around it. Pointer UNMOVED 0.19110.
