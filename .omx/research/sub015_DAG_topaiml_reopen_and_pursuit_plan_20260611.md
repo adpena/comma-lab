@@ -1650,3 +1650,24 @@ ad201f8d config/arbitrariness review (all 3 level-set reviews now CONVERGE on RE
 - VERDICT REVISE. render-192 + capacity-overshoot alone pre-cap the run; both one-line fixes decide whether the 5h burn can land sub-0.15 or is math-pre-capped.
 
 **ALL 3 LEVEL-SET REVIEWS CONVERGE (deep-math FEED-cn + bug-hunt FEED-co + config FEED-cp):** the level-set as-built would have been a MEASURED NEGATIVE (render-192 + capacity pre-caps) + UNTRUSTWORTHY (MLX-GPU verdict 4th artifact) + NO exact row (no byte-close path) + the -48% lever OFF. The gate saved a definitely-wasted 5h burn. Reviewed config that CAN reach sub-0.15: render-384 + RD-optimum capacity (mod-32/h96, capacity-sweep) + hosc + anneal-T + self_orient-ON + numpy-fp32-verdict + one-codepath-byte-close + EMA-shadow + epochs>=1500 + pose-sidecar + length-on-m + transfer-probe-gate. Folded into a8c34178's fix pass. GPU HELD. Pointer UNMOVED 0.19110.
+
+## FEED-cq (2026-06-26): BROAD WALL RE-AUDIT (operator) — ~8-9/11 walls ARTIFACT, EXACTLY ONE genuinely OPEN+decisive (the 587x realized transfer); campaign NOT walled
+
+a2f94a47 adversarial re-audit through the task-sufficient-statistic lens (ledger reaudit_walls_..._20260627.md, 0c40fbf03; converges with the re-founding "0 of 11 fundamental"). Pointer UNMOVED 0.19110.
+
+RE-AUDIT (each wall classified REAL vs ARTIFACT-of A=wrong-rep/B=measurement/C=sub-optimal-form/D=separate-layers):
+- 0.507/0.505 CE plateau = ARTIFACT (B EMA-lag + C CE-no-curriculum); >=5 runs descend THROUGH (muon 0.507->0.012, small_vq 49x, FIRE 0.011, hosc-probe 0.0066). 
+- rate "exhausted 0.118" = ARTIFACT (A+D, entropy of 94%-rendering-weight RGB-HNeRV); base_ch20 byte-closes 0.0597 (half). 
+- params^-0.71 = ARTIFACT (B+C, fit from collapsed 0.508); clean alpha=1.50; bc36 same-N spread 17x by training-state. 
+- pose collapse 2.67-12.66 = ARTIFACT (A, reconstructing a STORED quantity); sidecar solves 3.4e-5. 
+- int5/prune+KD cliff = ARTIFACT-of-METHOD (DECISIVE: from-scratch bc20 0.00256 vs prune+KD bc20 0.0239 = 9.3x better at same N -> subspace artifact not capacity). 
+- level-set self-orient/MLX-GPU-verdict/EMA/no-byte-close = FIXABLE bugs (B+C+D; parent does it right).
+- Morse-Smale standalone S~0.37 = REAL for the dominated standalone (witness amortizes 177KB vs MS 444KB).
+
+TRULY-REAL (few, around the DOMINATED RGB path): HNeRV/RGB rate-d_seg trilemma caps min S~0.193 (REAL but motivates the pivot off RGB); pose sqrt-flatness (REAL, solved ~0.018); decode-side floor (Lane A) + MS-temporal-incoherence (REAL for dominated scopes; weakens seg=warp(pose) at boundary).
+
+**THE ONE GENUINELY OPEN + DECISIVE CRUX:** does the level-set 587x R-survival TRANSFER from field-argmax(R(phi)) to the REALIZED SegNet(R(RGB)).argmax? (n6 CE-only still plateaus 0.507 = zero transfer evidence yet; 587x is FIELD-PROXY only). The $0 TRANSFER PROBE (a8c34178) answers it. THE RISK: if it FAILS, the best byte-closeable basis ever measured is FINER 0.00138 -> S~0.19-0.21 (1.23x above goal) -> a genuinely NEW basis required. SUB-0.15 is UNPROVEN until (a) transfer-probe transfers AND (b) a byte-closeable basis descends realized-through-R < ~1.1e-3.
+
+HIGHEST-EV RE-OPENS (ranked): 1. the $0 transfer probe + directional-(-48%)-realized confirm (THE gate, running). 2. from-scratch small-basis witness (level-set/directional/step-native) realized-through-R n96 basis x capacity sweep -> B* -> n600 -> byte-close -> contest-CPU exact (the pointer-mover, gated on #1). 3. MD-Decoupling arm (fixes the collapse/no-LR-transfer root cause; parallel ablation). 4. MS hard-tail rare-class arc residual ON the witness. 5. bc36/base_ch20 byte-close -> exact (defensive bank ~0.186-0.193 + harness test).
+
+VERDICT: the campaign is NOT walled (~8-9/11 artifact); sub-0.15 has clean paper-margin but is UNPROVEN until the ONE transfer probe + ONE realized byte-closeable basis descent. Bias the next GPU slot to the probe, then the n96 burn. Pointer UNMOVED 0.19110.
