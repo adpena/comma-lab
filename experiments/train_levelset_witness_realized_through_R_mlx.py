@@ -1186,9 +1186,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     recent_losses: list[float] = []
     last_ep = start_epoch - 1
     stage_ckpts: list[dict[str, Any]] = []
+    # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
+    # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
+    # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0).
+    prev_seg_form = _seg_form_for_epoch(start_epoch, args)
     with temporary_mlx_device(args.mlx_device):
         for ep in range(start_epoch, args.epochs + 1):
             seg_form = _seg_form_for_epoch(ep, args)
+            # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
+            # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
+            # is a per-stage treatment boundary; clear the spike-guard running median so the new
+            # stage's loss scale is NOT judged against the prior stage's median (the named "stage
+            # inheriting base-stage treatment" failure). The l7 weight is mean-1-renormalized so the
+            # scale jump is small in THIS loss design, but the discipline is binding regardless of
+            # carrier. Additive: non-curriculum runs have a constant seg_form => prev == current =>
+            # NEVER clears => byte-identical. Non-finite guards are unaffected (still always armed).
+            if seg_form != prev_seg_form:
+                recent_losses.clear()
+                print(json.dumps({"stage": "curriculum_transition", "epoch": ep,
+                                  "from_seg_form": prev_seg_form, "to_seg_form": seg_form,
+                                  "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                prev_seg_form = seg_form
             # lane-edge engagement gate + transition RE-TREAT (spike-guard reset at the engage epoch
             # so the added margin-hinge term's loss jump is not silently spike-skipped; no-op when
             # lane_start<=1 i.e. the default always-on-from-ep1 path -> zero behavior change).
