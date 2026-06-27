@@ -641,6 +641,9 @@ def make_loss_fn(
     margin_weighted: bool = False,
     margin_weight_fn: str = "inverse",
     margin_weight_temp: float = 1.0,
+    tau_softplus_tau: float = 0.3,
+    l7_mult: float = 4.0,
+    l7_threshold: float = 1.0,
 ):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
     w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
@@ -674,48 +677,57 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None):
-        # ``mw_active`` (curriculum gate, ISSUE 2): the LIVE-margin re-allocation is applied
-        # ONLY when True. The trainer passes ``margin_weighted and (ep >= start_epoch)`` so
-        # epochs < start_epoch use UNIFORM seg weight (learn the base partition) and epochs
-        # >= start_epoch concentrate on the boundary annulus. _live_margin_weight uses the
-        # PREDICTION margin: from RANDOM INIT the wrong pixels are confidently-wrong (large
-        # margin) -> ~0 weight -> the bulk never learns the base -> d_seg stuck at chance.
-        # The curriculum learns the base FIRST, then re-allocates onto the annulus.
-        # ``mw_temp`` (FEED-bu fix 1): the ANNEALED temperature for this epoch (gentle ->
-        # moderate). exp/temp=0.1 from a cold start blows up the gnorm (~648) -> spike-guard
-        # all-skip; annealing temp 1.0 -> 0.3 ramps the gnorm gradually so the guard tracks.
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None):
+        # ``seg_form`` (FEED-bv 4-stage curriculum): the seg LOSS FORM for THIS epoch's stage.
+        # None -> the closure default ``seg_loss`` (non-curriculum, back-compat). The PR95 d_seg
+        # SEQUENCE (digest pr95_segnet_stage_evolution...): ce (coarse argmax) -> tau_softplus
+        # (margin-sharpen, THE primary d_seg drop) -> l7_softplus (hard-pixel refine on the
+        # all-class edge band) -> [muon optimizer finisher, same l7 loss]. All NHWC, live-margin.
+        # ``mw_active`` (FEED-bf curriculum gate) + ``mw_temp`` (FEED-bu anneal): the SEPARATE
+        # exp/inverse live-margin allocation lever (non-curriculum path); l7_softplus carries its
+        # OWN hard-pixel weight so the curriculum l7 stage does NOT also use this lever.
+        form = seg_form if seg_form is not None else seg_loss
         apply_mw = bool(margin_weighted) and bool(mw_active)
         temp_use = margin_weight_temp if mw_temp is None else float(mw_temp)
         f0 = render_through_R_mlx(model, coord_feats, code0, render_h, render_w)
         f1 = render_through_R_mlx(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
         seg_logits = adapter.segnet(f1)  # (1,H,W,5)
-        if seg_loss == "margin_hinge":
-            # lensA d_seg-optimal surrogate: relu(m - (logit[GT] - max_{c!=GT} logit[c])).
-            # ZERO gradient on correct-with-margin pixels, CONSTANT non-vanishing pull on
-            # EVERY flip regardless of depth (CE wastes gradient on correct interior;
-            # soft_cosine dies on deep flips). margin_target anneals 1.0->0.5 across training.
+
+        def _live_signed():
+            # live per-pixel margin = target_logit - max_competing_logit (the sign-quantity
+            # argmax decides on). NHWC twin of mlx_pr95_port _target_margin_mlx.
             gt_logit = mx.sum(seg_logits * lstar_oh, axis=-1)  # (1,H,W)
-            masked = seg_logits + lstar_oh * (-1e9)  # GT channel -> -inf
-            runner_up = mx.max(masked, axis=-1)  # (1,H,W)
-            signed = gt_logit - runner_up
+            runner_up = mx.max(seg_logits + lstar_oh * (-1e9), axis=-1)  # (1,H,W)
+            return gt_logit - runner_up
+
+        if form == "tau_softplus":
+            # PR95 stage-2 (digest: THE primary d_seg drop, 0.00643->0.00396). mean(tau*softplus(-m/tau)).
+            signed = _live_signed()
+            z = -signed / tau_softplus_tau
+            seg_l = mx.mean(tau_softplus_tau * mx.logaddexp(mx.zeros_like(z), z))
+        elif form == "l7_softplus":
+            # PR95 stage-5 l7 (digest: hard-pixel refine; KEEP loss, DROP C1a). softplus * (1+mult
+            # on margin<thr), renorm mean-1, weight stop-grad. THE margin-weight refine stage.
+            signed = _live_signed()
+            z = -signed / tau_softplus_tau
+            per_pixel = tau_softplus_tau * mx.logaddexp(mx.zeros_like(z), z)
+            w = 1.0 + l7_mult * (signed < l7_threshold).astype(seg_logits.dtype)
+            w = mx.stop_gradient(w / (mx.mean(w) + 1e-8))
+            seg_l = mx.mean(per_pixel * w)
+        elif form == "margin_hinge":
+            # lensA d_seg-optimal surrogate: relu(m - (logit[GT] - max_{c!=GT} logit[c])).
+            signed = _live_signed()
             hinge_map = mx.maximum(margin_target - signed, 0.0)  # (1,H,W)
-            # LIVE-MARGIN re-allocation (FEED-bp): concentrate the SAME loss budget on the
-            # small-margin annulus where ~89% of d_seg lives. Gated by the ISSUE-2 curriculum.
             if apply_mw:
                 hinge_map = hinge_map * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
             seg_l = mx.mean(hinge_map)
-        else:
-            # Realized seg CE on frame1 (GT-margin structural weight via ``hinge``).
+        else:  # "ce"
             logsum = mx.logsumexp(seg_logits, axis=-1)
             tgt = mx.sum(seg_logits * lstar_oh, axis=-1)
             ce = logsum - tgt  # (1,H,W)
             w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))
             pw = ce * w[None]  # (1,H,W)
-            # LIVE-MARGIN re-allocation (FEED-bp): multiply by the stop-grad, mean-1 live-margin
-            # allocator so the SAME budget concentrates on the ~2.2% boundary annulus (~20x
-            # effective-capacity multiplier). Gated by the ISSUE-2 curriculum (uniform first).
             if apply_mw:
                 pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
             seg_l = mx.mean(pw)
@@ -1137,9 +1149,55 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             frac = min(1.0, (ep - margin_weight_start_epoch) / float(margin_weight_anneal_epochs))
             return float(margin_weight_temp_start + (margin_weight_temp - margin_weight_temp_start) * frac)
 
+        # --- FEED-bv: the 4-STAGE PR95 d_seg CONDITIONING CURRICULUM (NOT HNeRV, NOT rate steps) ---
+        # The witness learns the d_seg LOSS-FORM SEQUENCE from PR95's SegNet treatment (digest
+        # pr95_segnet_stage_evolution...): ce (coarse argmax) -> tau_softplus (THE primary drop)
+        # -> l7_softplus (hard-pixel refine) -> Muon finisher (the conditioning drop). The smooth
+        # stage + ALL rate machinery (QAT/C1a/lambda/sigma-rate) are DROPPED. Boundaries (epochs):
+        #   ce:        [1, tau_softplus_start_epoch)
+        #   tau_softplus: [tau_softplus_start_epoch, margin_weight_start_epoch)  (l7 boundary reused)
+        #   l7:        [margin_weight_start_epoch, muon_finisher_start_epoch)
+        #   muon:      [muon_finisher_start_epoch, epochs]   (l7 loss + Muon optimizer)
+        # EACH boundary RE-TREATS (spike-guard recalibrate + LR re-warmup + EMA continue) per the
+        # "different stages need different treatment" principle. Default OFF -> single seg_loss.
+        curriculum = bool(getattr(args, "curriculum", False))
+        tau_softplus_start_epoch = int(getattr(args, "tau_softplus_start_epoch", 300))
+        muon_finisher_start_epoch = int(getattr(args, "muon_finisher_start_epoch", 1200))
+        tau_softplus_tau = float(getattr(args, "tau_softplus_tau", 0.3))
+        l7_mult = float(getattr(args, "l7_mult", 4.0))
+        l7_threshold = float(getattr(args, "l7_threshold", 1.0))
+        # Ordered stage boundaries (epoch at which each NON-ce stage begins).
+        _stage_boundaries = [
+            ("tau_softplus", tau_softplus_start_epoch),
+            ("l7_softplus", margin_weight_start_epoch),
+            ("muon", muon_finisher_start_epoch),
+        ]
+
+        def _stage_for_epoch(ep: int) -> str:
+            if not curriculum:
+                return seg_loss  # non-curriculum: the fixed --seg-loss form
+            stage = "ce"
+            for name, b in _stage_boundaries:
+                if ep >= b:
+                    stage = name
+            return stage
+
+        def _seg_form_for_stage(stage: str) -> str:
+            # the muon stage keeps the l7 loss form (only the optimizer changes).
+            return "l7_softplus" if stage == "muon" else stage
+
+        def _is_stage_boundary(ep: int) -> tuple[bool, str]:
+            if not curriculum:
+                return (False, "")
+            for name, b in _stage_boundaries:
+                if ep == b:
+                    return (True, name)
+            return (False, "")
+
         loss_fn = make_loss_fn(
             adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss,
             margin_weighted=margin_weighted, margin_weight_fn=margin_weight_fn, margin_weight_temp=margin_weight_temp,
+            tau_softplus_tau=tau_softplus_tau, l7_mult=l7_mult, l7_threshold=l7_threshold,
         )
         print(
             json.dumps({
@@ -1164,6 +1222,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "ema_verdict_every": int(getattr(args, "ema_verdict_every", 4)),
                 "verdict_batch": int(getattr(args, "verdict_batch", 16)),
                 "verdict_pairs": int(getattr(args, "verdict_pairs", 120)),
+                "curriculum": curriculum,
+                "curriculum_stages": (
+                    f"ce[1,{tau_softplus_start_epoch}) -> tau_softplus[{tau_softplus_start_epoch},{margin_weight_start_epoch}) "
+                    f"-> l7_softplus[{margin_weight_start_epoch},{muon_finisher_start_epoch}) -> muon[{muon_finisher_start_epoch},{args.epochs}]"
+                    if curriculum else None
+                ),
+                "tau_softplus_tau": (tau_softplus_tau if curriculum else None),
                 "form": ("w_seg*seg_l + w_pose*sqrt(10*pose_l+eps)" if score_domain else "w_seg*seg_l + w_pose*pose_l"),
             }),
             flush=True,
@@ -1287,27 +1352,39 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 else:
                     warmup = optim.linear_schedule(0.0, base, warm)
                     base_sched = optim.join_schedules([warmup, cosine], [warm])
-            # FEED-bu fix 4 (operator: "different stages need different treatment"): a STAGE
-            # TRANSITION re-treats the LR. At the margin-engage step, ramp the LR from a floor
-            # (0.1x) back to 1x over margin_stage_lr_warmup_epochs so the FIRST margin-stage
-            # steps are SMALL -> they absorb the loss-weighting change without the 648-norm
-            # first-step spike. Step-space window; composes with the temp-anneal + spike-guard
-            # recalibrate. No-op when margin_weighted is OFF or warmup_epochs<=0 (back-compat).
+            # FEED-bu fix 4 + FEED-bv (operator: "different stages need different treatment"): a
+            # STAGE TRANSITION re-treats the LR. At EACH AdamW-stage boundary, ramp the LR from a
+            # floor (0.1x) back to 1x over margin_stage_lr_warmup_epochs so the FIRST steps of the
+            # new stage are SMALL -> absorb the loss-FORM change without a first-step gnorm spike.
+            # Step-space windows; composes with spike-guard recalibrate. Boundaries: the curriculum
+            # ce->tau and tau->l7 (the Muon stage uses its OWN low-LR opt, no schedule re-warmup);
+            # OR the single margin-engage for the non-curriculum margin path. No-op otherwise.
             mw = bool(getattr(args, "margin_weighted_loss", False))
+            curric = bool(getattr(args, "curriculum", False))
             wu_eps = int(getattr(args, "margin_stage_lr_warmup_epochs", 8))
-            if not mw or wu_eps <= 0:
+            if curric:
+                boundary_eps = [int(getattr(args, "tau_softplus_start_epoch", 300)),
+                                int(getattr(args, "margin_weight_start_epoch", 80))]
+            elif mw:
+                boundary_eps = [int(getattr(args, "margin_weight_start_epoch", 80))]
+            else:
+                boundary_eps = []
+            boundary_steps = [e * opt_steps_per_epoch for e in boundary_eps if e > 0]
+            if not boundary_steps or wu_eps <= 0:
                 return base_sched
-            start_step = int(getattr(args, "margin_weight_start_epoch", 80)) * opt_steps_per_epoch
             win = float(max(1, wu_eps * opt_steps_per_epoch))
             lr_floor = float(getattr(args, "margin_stage_lr_floor", 0.1))
 
-            def margin_rewarmup_sched(step):
+            def stage_rewarmup_sched(step):
                 base_v = base_sched(step) if callable(base_sched) else base_sched
-                frac = mx.clip((step - start_step) / win, 0.0, 1.0)
-                scale = mx.where(step < start_step, 1.0, lr_floor + (1.0 - lr_floor) * frac)
+                scale = 1.0
+                for b in boundary_steps:
+                    frac = mx.clip((step - b) / win, 0.0, 1.0)
+                    ramp = lr_floor + (1.0 - lr_floor) * frac  # lr_floor at b -> 1.0 at b+win (stays 1)
+                    scale = scale * mx.where(step < b, 1.0, ramp)
                 return base_v * scale
 
-            return margin_rewarmup_sched
+            return stage_rewarmup_sched
 
         # --- 4. Restart loop (item 6): reseed + restart on midpoint divergence;
         #         keep the best EMA-d_seg checkpoint across restarts. ---
@@ -1343,6 +1420,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # losses against restart 0's converged-low median -> the 5x guard trips EVERY batch
             # -> ZERO opt/ema updates for the entire restart (the dead-restart bug, DAG FEED-bf).
             recent = deque(maxlen=recent_maxlen)
+            _muon_switched = False  # FEED-bv: per-restart Muon-finisher switch flag
             seed_r = int(args.seed) + restart_i * 1000
             mx.random.seed(seed_r)
             np.random.seed(seed_r)
@@ -1422,25 +1500,59 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # wide, tight late when they collapse). Unused by the CE seg-loss branch.
                 m_t = m_start if args.epochs <= 1 else m_start + (m_end - m_start) * (ep - 1) / (args.epochs - 1)
                 margin_target = mx.array(float(m_t))
-                # ISSUE-2 curriculum gate: UNIFORM seg weight until margin_weight_start_epoch,
-                # then engage the LIVE-margin annulus re-allocation. A no-op when margin_weighted
-                # is OFF (default). FEED-bu fix 1: the per-epoch ANNEALED temp (gentle->moderate).
-                mw_active = bool(margin_weighted) and (ep >= margin_weight_start_epoch)
-                mw_temp_ep = _mw_temp_for_epoch(ep) if mw_active else margin_weight_temp
-                if margin_weighted and ep == margin_weight_start_epoch:
-                    # FEED-bu fix 2: RECALIBRATE the spike-guard at the margin-engage. The margin
-                    # grads are systematically LARGER but LEGITIMATE (grad-clip 1.0 bounds the
-                    # update); a stale uniform-era loss-median would skip EVERY margin batch as an
-                    # "anomaly" (v3: n_skips 75 at ep80). Resetting the running window lets it
-                    # re-estimate the NEW-regime scale -> only TRUE anomalies skip.
-                    recent = deque(maxlen=recent_maxlen)
+                # --- FEED-bv 4-STAGE CURRICULUM stage resolution + per-boundary RE-TREATMENT ---
+                cur_stage = _stage_for_epoch(ep)
+                seg_form_ep = _seg_form_for_stage(cur_stage) if curriculum else None
+                if curriculum:
+                    # the curriculum drives the seg loss FORM per stage; the separate exp/inverse
+                    # live-margin lever is OFF (l7_softplus carries its OWN hard-pixel weight).
+                    mw_active = False
+                    mw_temp_ep = margin_weight_temp
+                    is_b, b_name = _is_stage_boundary(ep)
+                    if is_b:
+                        # RE-TREAT every stage transition (operator: "different stages need different
+                        # treatment"): spike-guard recalibrate (reset the loss-median window for the
+                        # new loss-form regime) + LR re-warmup (handled in build_lr_schedule, step-
+                        # space) + EMA continues (NOT reset). The Muon switch happens below.
+                        recent = deque(maxlen=recent_maxlen)
+                        print(json.dumps({
+                            "stage": "curriculum_stage_transition", "restart": restart_i, "ep": ep,
+                            "into_stage": b_name, "seg_form": _seg_form_for_stage(b_name),
+                            "spike_guard_recalibrated": True,
+                            "lr_rewarmup": (b_name in ("tau_softplus", "l7_softplus")),
+                            "ema_continue": True,
+                            "note": "re-treat: spike-guard reset + (AdamW) LR re-warmup + EMA continue",
+                        }), flush=True)
+                else:
+                    # ISSUE-2 / FEED-bu non-curriculum margin path: UNIFORM seg weight until
+                    # margin_weight_start_epoch, then engage the annealed LIVE-margin allocation.
+                    mw_active = bool(margin_weighted) and (ep >= margin_weight_start_epoch)
+                    mw_temp_ep = _mw_temp_for_epoch(ep) if mw_active else margin_weight_temp
+                    if margin_weighted and ep == margin_weight_start_epoch:
+                        recent = deque(maxlen=recent_maxlen)  # FEED-bu spike-guard recalibrate
+                        print(json.dumps({
+                            "stage": "margin_weight_curriculum_engage", "restart": restart_i, "ep": ep,
+                            "fn": margin_weight_fn, "temp_start": margin_weight_temp_start,
+                            "temp_target": margin_weight_temp, "anneal_epochs": margin_weight_anneal_epochs,
+                            "spike_guard_recalibrated": True,
+                            "note": "uniform seg weight -> annealed live-margin annulus re-allocation; "
+                                    "spike-guard window reset for the new gnorm regime",
+                        }), flush=True)
+                # MUON FINISHER switch (FEED-bv stage D): at the muon boundary, swap the AdamW
+                # optimizer for mlx Muon (Newton-Schulz orthogonalized momentum) at a low LR --
+                # "Muon is THE drop" (the conditioning finisher). 1D params (biases) fall back
+                # internally. EMA + model params are untouched (only the optimizer changes).
+                if curriculum and ep == muon_finisher_start_epoch and not _muon_switched:
+                    opt = optim.Muon(learning_rate=float(getattr(args, "muon_lr", 1e-4)),
+                                     momentum=float(getattr(args, "muon_momentum", 0.95)),
+                                     weight_decay=float(args.weight_decay))
+                    _muon_switched = True
+                    recent = deque(maxlen=recent_maxlen)  # re-treat the Muon transition too
                     print(json.dumps({
-                        "stage": "margin_weight_curriculum_engage", "restart": restart_i, "ep": ep,
-                        "fn": margin_weight_fn, "temp_start": margin_weight_temp_start,
-                        "temp_target": margin_weight_temp, "anneal_epochs": margin_weight_anneal_epochs,
-                        "spike_guard_recalibrated": True,
-                        "note": "uniform seg weight -> annealed live-margin annulus re-allocation; "
-                                "spike-guard window reset for the new gnorm regime",
+                        "stage": "muon_finisher_switch", "restart": restart_i, "ep": ep,
+                        "muon_lr": float(getattr(args, "muon_lr", 1e-4)),
+                        "momentum": float(getattr(args, "muon_momentum", 0.95)),
+                        "note": "AdamW -> Muon finisher (the conditioning drop); EMA + params continue",
                     }), flush=True)
                 order = rng.permutation(P)
                 accum_grads = None
@@ -1452,7 +1564,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     pi = int(pi_np)
                     loss, grads = value_and_grad(
                         model, feats_for_pair(pi), 2 * pi, 2 * pi + 1,
-                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target, mw_active, mw_temp_ep,
+                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target, mw_active, mw_temp_ep, seg_form_ep,
                     )
                     # Materialize per pair so the lazy fwd+bwd graph does NOT accumulate
                     # across the epoch (the 499000 buffer-count cap fix, preserved).
@@ -1544,6 +1656,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     subset_mon = len(_verdict_subset) < P
                     row = {
                         "restart": restart_i, "epoch": ep, "train_loss": round(ep_loss / P, 4),
+                        "curriculum_stage": (cur_stage if curriculum else None),
                         "measured_bytes": int(measured_bytes),
                         "monitor_pairs": len(_verdict_subset),
                         # subset rows are a TREND ESTIMATE, NOT the scored row (full-600 byte-close
@@ -1716,6 +1829,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "margin_weight_anneal_epochs": int(getattr(args, "margin_weight_anneal_epochs", 40)),
             "margin_stage_lr_warmup_epochs": int(getattr(args, "margin_stage_lr_warmup_epochs", 8)),
             "margin_stage_lr_floor": float(getattr(args, "margin_stage_lr_floor", 0.1)),
+            "curriculum": bool(getattr(args, "curriculum", False)),
+            "tau_softplus_start_epoch": int(getattr(args, "tau_softplus_start_epoch", 300)),
+            "muon_finisher_start_epoch": int(getattr(args, "muon_finisher_start_epoch", 1200)),
+            "tau_softplus_tau": float(getattr(args, "tau_softplus_tau", 0.3)),
+            "l7_mult": float(getattr(args, "l7_mult", 4.0)),
+            "l7_threshold": float(getattr(args, "l7_threshold", 1.0)),
+            "muon_lr": float(getattr(args, "muon_lr", 1e-4)),
             "resume_from": (str(getattr(args, "resume_from")) if getattr(args, "resume_from", None) else None),
             "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
             "verdict_which": str(getattr(args, "verdict_which", "live")),
@@ -2004,6 +2124,33 @@ def main(argv: list[str] | None = None) -> int:
         help="(FEED-bu fix 4) LR multiplier floor at the margin-engage (ramps floor->1x over "
         "--margin-stage-lr-warmup-epochs).",
     )
+    # --- FEED-bv: the 4-STAGE PR95 d_seg CONDITIONING CURRICULUM (NOT HNeRV, NOT rate steps) ---
+    ap.add_argument(
+        "--curriculum", action=argparse.BooleanOptionalAction, default=False,
+        help="(FEED-bv) run the 4-stage PR95 d_seg curriculum: ce (coarse argmax) -> tau_softplus "
+        "(THE primary d_seg drop) -> l7_softplus (hard-pixel refine) -> Muon finisher. The seg "
+        "LOSS FORM changes per stage; EACH boundary re-treats (spike-guard recalibrate + LR "
+        "re-warmup + EMA continue). Drops smooth + ALL rate machinery. OFF -> single --seg-loss.",
+    )
+    ap.add_argument(
+        "--tau-softplus-start-epoch", type=int, default=300,
+        help="(FEED-bv) ce -> tau_softplus boundary (PR95 digest ~CE 300ep). The l7 boundary is "
+        "--margin-weight-start-epoch; the Muon boundary is --muon-finisher-start-epoch.",
+    )
+    ap.add_argument(
+        "--muon-finisher-start-epoch", type=int, default=1200,
+        help="(FEED-bv) l7 -> Muon-finisher boundary (PR95 digest ~CE300+tau500+l7400).",
+    )
+    ap.add_argument("--tau-softplus-tau", type=float, default=0.3,
+                    help="(FEED-bv) tau for tau_softplus/l7 (PR95 0.3): mean(tau*softplus(-margin/tau)).")
+    ap.add_argument("--l7-mult", type=float, default=4.0,
+                    help="(FEED-bv) l7_softplus hard-pixel weight: 1+l7_mult on margin<l7_threshold (PR95 4=5x).")
+    ap.add_argument("--l7-threshold", type=float, default=1.0,
+                    help="(FEED-bv) l7_softplus small-margin threshold (PR95 1.0).")
+    ap.add_argument("--muon-lr", type=float, default=1e-4,
+                    help="(FEED-bv) Muon finisher LR (low; the conditioning drop).")
+    ap.add_argument("--muon-momentum", type=float, default=0.95,
+                    help="(FEED-bv) Muon momentum (mlx default 0.95).")
     args = ap.parse_args(argv)
 
     result = run_train(args)
