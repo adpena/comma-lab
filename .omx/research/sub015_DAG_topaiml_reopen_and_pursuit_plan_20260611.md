@@ -2659,3 +2659,46 @@ pointer UNMOVED 0.19110; `[macOS-MLX training-gradient]/[macOS-CPU advisory]` NO
 the held-out d_seg is MEASURED (not assumed); the subset decoder is the SAME vehicle at fewer pairs
 (NOT borrowed/new). Files: `tools/build_strided_subset_gt.py` (NEW), `tools/levelset_heldout_codefit_gate.py`
 (NEW), `experiments/train_levelset_witness_realized_through_R_mlx.py` (`--freeze-decoder-fit-codes`, FEED-eo).
+
+## FEED-er (2026-06-27): per-frame PARAMETRIC lane-boundary SOLVE (openpilot polynomial × known homography) — solve-the-gate feasibility; reactivates the FEED-el per-frame-motion deferral POSITIVELY, but the lane is a PRIOR not a standalone d_seg win
+
+$0 CPU, n96, frozen CPU-torch L* (lstars in gt_n96.npz, bit-exact; GPU UNTOUCHED — concurrent with the
+amort decoder + CPU guidance subagent a97c0259; numpy+scipy only, ~150 MB lstars). REUSES the in-tree
+FEED-dm component `src/tac/boundary_math/lane_sdf_component.py`. **Deliverable #1 (homography inventory):**
+the openpilot ground-frame IPM is the KNOWN camera homography `K=[[910,0,582],[0,910,437],[0,0,1]]` scaled
+to scorer 512×384 — `_FX=400.3=910·512/1164`, `_CX=256.0=582·512/1164`, `_FY=399.5≈910·384/874` — ALREADY
+encoded as the component's IPM constants (v_horizon 174–188 is the vanishing-point row, separate from cy).
+New measure `experiments/measure_lane_perframe_solve_FEED-er.py`; JSON `experiments/results/lane_sdf_FEED-er/{n96_deg3,perframe_n96}.json`.
+
+THE TEST (reactivation of a56e3816/FEED-el): FEED-el DEFERRED the STATIC frozen-mask decomposition because
+d_seg flip-mass is on per-frame-MOVING boundaries. FEED-er asks whether a PER-FRAME PARAMETRIC lane solve
+CAPTURES that motion across the FULL n96 (curved + moving), not just the n48-straight FEED-dm/ds segment.
+
+MEASURED (continuous band = the optimum; dash-gate over-gates → 0.001958, re-confirms FEED-ds):
+- **lane SHAPE SOLVES**: lane_fn (false-negative shape) **0.000133** (< old target 0.00087; ≈ FEED-dj 0.00046) — robust across all 96 frames.
+- **MOTION CAPTURED (the decisive reactivation finding)**: band IoU frame-to-frame **0.450** (min 0.091) → the lane band genuinely MOVES ~55%/frame (this IS the per-frame motion FEED-el flagged). YET `corr(curvature, error) = −0.073 ≈ 0` and n96-full lane-attributable **0.000439** ≈ n48-straight 0.000415 → the per-frame deg-3 solve TRACKS the motion/curvature robustly; error is FLAT vs curvature (every frame curved, frac 1.00, max 0.109). FEED-el's "static is the wrong invariant" is ANSWERED for the lane: the per-frame parametric IS a per-frame-adaptive boundary at ~0 cost (the exact FEED-el reactivation criterion).
+- **road-plane (inverse-homography) is the RIGHT space**: road-plane lane-attributable 0.000439 vs image-coords (u=poly(v)) **0.000858** (~2x worse). Image-coords has LOWER FN (0.00008, tighter centerline) but MUCH higher FP (0.000778) → the road-plane SDF structure supplies the CONTAINMENT. Hypothesis confirmed: inverse-homography road-plane > image-coords.
+- **dimension/bytes**: ~4.8 lines/frame, ~28.7 floats/frame; AR-estimate ~7 KB / n600 (rate-term ~0.0048). IPM+EDT rasterizer = FREE inflate-time (rule-118 generic algorithm); only per-frame coeffs COUNTED; NO GT-argmax table, NO weights.
+
+VERDICT — lane SOLVABLE parametrically? **YES for the SHAPE + the MOTION (the FEED-el reactivation is POSITIVE)**,
+but the TOTAL lane-attributable 0.000439 is **1.87x ABOVE** the frontier witness's lane contribution
+(~0.000236 = 0.19·0.00124). The residual is FALSE-POSITIVE over-paint (road-leak 0.000306 — the band
+half-width, NOT shape). So the per-frame parametric lane does NOT beat the trained witness standalone; it is
+a cheap (~7 KB counted, rule-118 FREE rasterizer), STRUCTURALLY-CONTAINED, PER-FRAME-ADAPTIVE PRIOR/INIT.
+
+COMPOSITION (recommended use): inject the per-frame lane-SDF as phi_1 of the witness level-set (FEED-dm
+`inject_lane_sdf` mode={bias,replace}; precompute per-pair from gt.lstars, FiLM theta_lane(t), inflate-time
+rasterize from stored coeffs FREE). Gives the lane SHAPE (0.000133) for ~7 KB + frees witness capacity to the
+boundary annulus + Movable + the lane FP-annulus. Whether this LOWERS total d_seg needs a byte-closed
+trained-witness A/B (freed capacity must cut other-class d_seg by more than the 0.000306 FP residual + ~7 KB)
+— NOT claimed.
+
+HONEST what-dimension-WOULD-beat-the-witness: the shape is already solved at deg-3 (FN negligible); the gap to
+the witness is the 0.000306 FP over-paint annulus around the lane — which is itself part of the SAME all-class
+small-margin boundary annulus the witness must learn anyway (CLAUDE.md crux: binding residual = union of ALL
+inter-class edges). So the lane needs NO separate solver beyond the parametric centerline prior; the FP
+residual folds into the witness's boundary-annulus job. Higher-order/splines lower FN further but FN is already
+negligible; the binding term is FP-containment, already structural (SDF, FEED-ds 20x). pointer UNMOVED
+0.19110; [macOS-CPU advisory] research-signal (score_claim=false, promotable=false, NOT byte-closed); NO-FAKE
+(realized lane-attributable measured vs frozen CPU-torch L*; rule-118 FREE rasterizer / counted coeffs; same
+task-space level-set vehicle, not a new vehicle).
