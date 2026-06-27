@@ -1616,3 +1616,15 @@ Commits ed9914656 + 5d90762ba (byte-close template) + activation port in 2acfe6d
 - Per-basis launch cmds (lower lr than relu): siren --lr 1e-4 sweep w0{10,30,60}; finer --lr 1e-4 sweep bias-scale{1,5,10}; wire --lr 2e-4 sweep s. NO score claim (advisory training-gradient; CPU-authority verdict).
 
 INPUT TO the level-set review (ad201f8d config agent): wire is the well-founded level-set basis (descends + Gaussian-tamed + deep-math edge-optimal). Existing witness has 2 proven descenders (hosc, wire). Pointer UNMOVED 0.19110.
+
+## FEED-cn (2026-06-26): LEVEL-SET deep-math review = REVISE (the gate saved a 5h wasted burn) — 587x-transfer UNPROVEN + 3 real bugs
+
+a7fcedee deep-math review of the level-set witness BEFORE the burn. VERDICT REVISE (do NOT burn until realized d_seg breaks 0.507):
+1. **ARGMAX-PINNING UNPROVEN + T=0.1 SELF-DEFEATING:** the 587x R-survival is FIELD-LEVEL on argmax(R(phi)) — a DIFFERENT operator than the scored SegNet(R(RGB(phi))).argmax (SegNet re-segments RGB; its boundary != phi's zero-crossing -> SDF monotone-shift does NOT transfer for free). The realized smoke ALREADY plateaus 0.507 = same CE plateau as sine = zero transfer evidence. T=0.1 saturates softmax -> color base near-step -> sigmoid*255 near-binary -> bicubic-up OVERSHOOTS (Gibbs RETURNS at RGB level) -> defeats the SDF. The 1-Lipschitz quantity must be what SegNet sees (RGB margin), NOT latent phi.
+2. **SELF-ORIENT DIRECTIONAL UNWIRED (decisive bug):** --self-orient adds 4*n_dir_freqs to in_feat but coord_feats stays curvelet-only + NO reorient/concat in the loop -> shape-mismatch CRASH if enabled. The -48% byte-closeable directional lever (one of the 3 sub-0.15 legs) is INACTIVE -> the burn tests generic-curvelet ONLY.
+3. **POSE-VIA-TEXTURE = the COLLAPSED amortized carrier** (frontier doc d_pose 2.67-12.66), NOT the solved stored-pose sidecar (3.4e-5). Competes with d_seg for capacity + injects boundary texture that FLIPS SegNet argmax. Witness's binding job is d_seg ONLY.
+4. Length term penalizes each field's own zero-set, not the partition boundary m=phi_top1-phi_top2=0 (wrong curve). K-SDF gauge-null harmless. Eikonal field-level only (squash breaks 1-Lipschitz before SegNet).
+
+FIX PLAN (before any GPU burn): (a) $0 TRANSFER PROBE (THE gate): fit phi -> measure SegNet(R(RGB)).argmax flips vs argmax(R(phi)) -> confirm 587x survives the SegNet+softmax+sigmoid composition; (b) WIRE or honestly-disable self-orient (the actual byte-closeable -48% win); (c) DROP pose-from-texture, COMPOSE the stored-pose sidecar (pose SOLVED); (d) anneal T large->small OR regularize the RGB margin to 1-Lipschitz (regularize what SegNet sees); (e) fix length term to delta_eps(m)*|grad m|. DO NOT spend GPU until >=1 shows realized d_seg breaking 0.507.
+
+THE GATE WORKED: the 5h burn (curvelet-only + pose-from-texture + T=0.1) would most likely reproduce the 0.507 plateau (the smoke already does). 2 more reviews in flight (bug-hunt ab3bb5a0, config ad201f8d). Pointer UNMOVED 0.19110.
