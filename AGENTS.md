@@ -247,6 +247,84 @@ build, eval, guard, or dispatch decision.
 Avoid narrative-only loops. If blocked, record the blocker as an artifact or
 guardrail, choose the next highest-EV unblocked action, and continue.
 
+## Resumability + Per-Stage Checkpoints For Every Launch — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Operator binding 2026-06-27, verbatim:** *"Never launch anything that isn't
+resumable and that doesn't save all necessary and preserve checkpoints at the end
+of each stage."*
+
+NEVER launch anything — training run, long job, detached daemon, sweep, paid
+dispatch — that is NOT both:
+
+1. **RESUMABLE** — crash-resumable from disk (`--resume-from <ckpt>`): reloads
+   decoder + per-pair codes + (where available) optimizer state + the
+   stage/epoch position and continues. A crash / OOM / operator-cut must lose at
+   most one intra-stage checkpoint interval, never the whole run.
+2. **PER-STAGE CHECKPOINTED, ALL PRESERVED** — saves a COMPLETE,
+   byte-close-loadable checkpoint at the END OF EACH STAGE (every
+   curriculum/phase boundary, e.g. CE / tau_softplus / l7 / Muon), plus periodic
+   intra-stage saves for long stages. Each stage checkpoint has a distinct
+   stage-encoded filename and is PRESERVED (do NOT overwrite the prior stage).
+   Save the **EMA shadow** (not live weights) per the EMA non-negotiable; write
+   atomically (tmp + os.replace); include every cfg key the byte-close + resume
+   paths need.
+
+**Loop-end-only saving is FORBIDDEN.** A multi-day run on one GPU with
+loop-end-only saving loses ALL work on any failure and blocks early byte-close +
+per-stage A/B (which stage moved d_seg). The per-stage checkpoint is BOTH
+crash-insurance AND a measurement artifact — each stage's output is
+independently byte-closeable, so one run yields N early exact-eval rows. This
+binds every subagent that launches a run. Sister of the daemon-durability,
+scale-measured-safeguarded, deterministic-reproducibility, and
+per-stage-treatment non-negotiables. Memory:
+`feedback_never_launch_non_resumable_per_stage_checkpoints_20260627.md`.
+
+## Deterministic Reproducibility Principles — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Operator binding 2026-06-27:** deterministic reproducibility is ONE of our two
+hard limits (with contest compliance) — everything else is ours to turn. Every
+launch, measurement, and submission MUST be deterministically reproducible:
+
+1. **Seeded + deterministic everywhere.** All RNG (torch / numpy / random / MLX)
+   derives from a single recorded `seed`; use deterministic algorithms where the
+   backend supports them. Same seed + same config + same inputs → same result.
+2. **Resumable-from-disk** (the sister non-negotiable above): state lives on
+   disk, not in process memory; any run continues bit-faithfully from its last
+   checkpoint.
+3. **Bit-identical / numpy-fp32 reference is the verdict authority.** The
+   deterministic NumPy-fp32 reference is the byte-close + score-verdict
+   authority; MLX/torch must match it (measured parity ≥ 0.9997). **MPS is NEVER
+   an authority** (drift up to 23× on PoseNet). macOS-CPU/MLX are advisory, not
+   contest-CPU. Only `upstream/evaluate.py` on the EXACT archive bytes
+   (contest-CPU Linux x86_64 and/or contest-CUDA) is a score.
+4. **Realized-through-R authority.** d_seg/d_pose are measured through the actual
+   R operator (resize/uint8/round chain) + the frozen CPU-torch scorer on the
+   exact bytes that ship — never a proxy, never an un-roundtripped field value.
+5. **Deterministic decode (inflate.py).** Same `archive.zip` → bit-identical
+   inflate output, every run, every host, within the 30-minute budget. The
+   GENERIC generator/rasterizer/INR-forward is run at decode time and is FREE
+   (rule 118); only the LEARNED / video-derived payload is COUNTED in
+   `archive.zip`. **NO scorer weights, NO SegNet/PoseNet, NO GT-argmax table** in
+   the archive — and no smuggling video-derived data into inflate.py "code"
+   (the hide-data-in-code fake). A deterministic generator that EXPANDS a compact
+   counted sufficient statistic into the witness is exactly the legal exploit.
+6. **Provenance with every result.** Record git hash, seed, config dict, upstream
+   snapshot sha, hardware/axis, archive sha256 + size, and the realized-through-R
+   component deltas. A result without provenance is not reproducible and not
+   admissible.
+7. **Numpy-portable reference kept.** Build MLX-first but keep a deterministic
+   NumPy reference + (where relevant) Torch-parity surface so any host can
+   reproduce byte-for-byte; CPU and CUDA are separate evidence axes, never
+   inferred from each other.
+
+This is the substrate that makes deterministic GENERATION a legal score-mover:
+because the generator is seeded + bit-identical + host-portable, the witness it
+produces reproduces exactly under the contest runtime from a tiny counted
+payload, with zero scorer weights shipped. Sister of "Frontier scores are
+pointer-only", "MPS auth eval is NOISE", "Submission auth eval — BOTH CPU AND
+CUDA", the rule-118 compile-the-generator discipline, and the resumability
+non-negotiable above.
+
 ## Results Must Become System Intelligence — NON-NEGOTIABLE
 
 Operator standing directive 2026-05-22: "Instead of doing ad hoc analysis

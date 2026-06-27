@@ -67,6 +67,56 @@ and fail closed if no SSD/local tier has enough free space. Before finishing any
 such landing, add or reuse the auto-clean hook so future runs do not leave
 orphaned bulk files behind.
 
+**Resumability + per-stage checkpoints are MANDATORY for every launch (operator
+binding 2026-06-27, HIGHEST EMPHASIS).** NEVER launch anything — training run,
+long job, detached daemon, sweep, paid dispatch — that is NOT crash-resumable
+from disk (`--resume-from`) AND that does not SAVE ALL NECESSARY + PRESERVE a
+complete, byte-close-loadable checkpoint at the END OF EACH STAGE (every
+curriculum/phase boundary, e.g. CE / tau_softplus / l7 / Muon), plus periodic
+intra-stage saves for long stages. PRESERVE every stage checkpoint under a
+distinct stage-encoded filename (do NOT overwrite the prior stage); save the EMA
+shadow (not live weights) per the EMA non-negotiable; write atomically
+(tmp+rename); include every cfg key the byte-close + resume paths need.
+Loop-end-only saving is FORBIDDEN. Rationale: a multi-day run on one GPU with
+loop-end-only saving loses ALL work on any crash/OOM/operator-cut and blocks
+early byte-close + per-stage A/B (which stage moved d_seg). The per-stage
+checkpoint is both crash-insurance AND a measurement artifact (each stage's
+output is independently byte-closeable → N early rows from one run). Binds all
+subagents that launch runs. Memory:
+`feedback_never_launch_non_resumable_per_stage_checkpoints_20260627.md`. Sister
+of the daemon-durability + scale-measured-safeguarded + per-stage-treatment +
+deterministic-reproducibility non-negotiables.
+
+**Deterministic reproducibility principles (operator binding 2026-06-27, HIGHEST
+EMPHASIS).** Deterministic reproducibility is ONE of our two hard limits (with
+contest compliance); everything else is ours to turn. Every launch, measurement,
+and submission MUST be deterministically reproducible: (1) **seeded +
+deterministic** everywhere — all RNG (torch/numpy/random/MLX) from a single
+recorded `seed`, deterministic algorithms where supported, same
+seed+config+inputs → same result; (2) **resumable-from-disk** (the sister rule
+above) — state on disk, continue bit-faithfully from the last checkpoint;
+(3) **numpy-fp32 reference is the bit-identical verdict authority** — MLX/torch
+match it (parity ≥ 0.9997), **MPS is NEVER an authority** (per "MPS auth eval is
+NOISE"), macOS-CPU/MLX are advisory not contest-CPU, only `upstream/evaluate.py`
+on the EXACT archive bytes is a score (per "Frontier scores are pointer-only" +
+"Submission auth eval — BOTH CPU AND CUDA"); (4) **realized-through-R authority**
+— d_seg/d_pose measured through the actual R operator + frozen CPU-torch scorer
+on the exact shipped bytes, never a proxy/un-roundtripped field; (5)
+**deterministic decode** — same `archive.zip` → bit-identical inflate output
+every run/host within the 30-min budget; the GENERIC generator is FREE (rule
+118), only LEARNED/video-derived payload is COUNTED, and **NO scorer weights /
+SegNet / PoseNet / GT-argmax table** ship in the archive (nor smuggled into
+inflate.py "code" — the hide-data-in-code fake); (6) **provenance with every
+result** — git hash, seed, config, upstream snapshot sha, hardware/axis, archive
+sha256+size, realized-through-R deltas; (7) **numpy-portable reference kept** so
+any host reproduces byte-for-byte, CPU/CUDA separate axes never inferred from
+each other. This substrate is what makes deterministic GENERATION a legal
+score-mover: a seeded, bit-identical, host-portable generator reproduces the
+witness exactly under the contest runtime from a tiny counted sufficient
+statistic, shipping zero scorer weights. Memory:
+`feedback_never_launch_non_resumable_per_stage_checkpoints_20260627.md` (sister)
++ the rule-118 "compile the generator" discipline above.
+
 ## Evaluator-Equivalent Witness Compiler Paradigm — NON-NEGOTIABLE
 
 Current HiNeRV/SNeRV work is no longer ordinary video-codec fidelity work. The
