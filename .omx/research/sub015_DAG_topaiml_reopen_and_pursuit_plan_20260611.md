@@ -2746,3 +2746,63 @@ amort decoder's ep25 ckpt ALREADY wrote both `levelset_resume_state.npz` (resume
 (no byte-closed contest exact row yet). [macOS advisory]; NO-FAKE (byte-close format verified by the
 consumer contract, not assumed; FEED-er realized vs frozen CPU-torch L*; rule-118 FREE / coeffs counted).
 Next: amort decoder ep50 reorient (~52min) → guidance verdict (a97c0259) → held-out gate @tau300 (~5h).
+
+---
+
+## FEED-eq: sensitivity/waterfill/UNIWARD guidance layer for the witness + amortization code-fit (2026-06-27)
+
+**Axis:** `[macOS-MLX training-gradient]` / `[macOS-CPU advisory]` realized-through-R verdict; `promotion_eligible=false`; **pointer UNMOVED 0.19110**. $0 CPU analysis + tiny small-n GPU code-fit bursts. Additive/default-off. The running `levelset_amort_decoder` (pid 8804/8806; n200, ep100 d_seg 0.01115, lane-edge-weight 30) was NOT disturbed; the GPU was freed after each ~2-min arm.
+
+**Operator direction:** use our sensitivity / hard-pair / waterfilling / UNIWARD substrate to GUIDE the witness + amortization code-fit toward where d_seg lives. These GUIDE the SAME SDF-level-set vehicle (NOT a new vehicle). rule-118: saliency/hardness maps are computed offline from the PROVIDED frozen scorer = legal, shipped 0 bytes.
+
+### 1. Substrate inventory (built + reusable; file → state → role)
+- **Margin-saliency MAP ∂margin/∂input** (task #141, Yousfi unified lever) — `src/tac/margin_saliency_map.py` — BUILT producer (real autograd of frozen SegNet top1−top2 margin; gradient-reachable preprocess; CPU-only, NO MPS). The first-order fragility map; the sharper upgrade for LEVER-4's weight.
+- **Sensitivity-weighted logit-margin LOSS** — `src/tac/logit_margin_sensitivity_weighted.py` (+ `losses_logit_margin.py`) — BUILT consumer paradigm `L=mean[w_margin(margin)·w_sens(p)·CE]`. My LEVER-4 is its **realized-through-R instantiation for the level-set witness** (the torch consumer targets the CNN renderer; new vehicle instance, not a rebuild).
+- **Evaluator Response Atlas (#36)** — `tools/build_evaluator_response_atlas.py` — BUILT. Per-pair #35 JOINT SAFE CONE (SegNet margin field + PoseNet frame1 pixel-Jacobian + joint cone radius), 600 pairs, durable SSD + JSONL, crash-resume. The richest per-pair/per-pixel sensitivity source for a waterfiller.
+- **KKT/capacity-routing WHERE×BASIS×SHARPNESS (#54/#157)** — `src/tac/torch_vehicle/boundary_routing.py` — BUILT. `boundary_distance_map` (EDT WHERE), `boundary_proximity_feature` (`exp(-d/tau)` key), `BoundaryFiLM`. 0-byte train-time prior; generalizable class-1→all-class.
+- **UNIWARD texture cost** — `src/tac/uniward_texture.py` `compute_texture_probability` (+ `uniward_delta.py`, `tools/build_pr106_uniward_runtime_packet.py`) — BUILT. Realized as a self-contained stop-grad weight inside LEVER-4 (`--margin-saliency-uniward`).
+- **Per-pair hardness / hitlist** — `tools/build_hard_pair_hitlist_from_mlx_response.py`, `tools/xray_hardpair_hitlist.py`, `tac.adaptation.hard_pair_hitlist`, `tools/diagnose_per_pair_sensitivity.py` — BUILT. For the level-set code-fit the in-trainer realized per-pair d_seg (LEVER-5 `--hardness-source realized`) is the matched signal.
+- **dseg-reducibility GT-margin cross-tab** — `tools/measure_dseg_reducibility_gt_margin.py` — BUILT (flips live in the small-GT-margin band).
+- **Cached GT** — `experiments/results/mlx_fleet_gt_cache/gt_n{1,6,24,96,600}.npz`, `gt_heldout_n400.npz`, `gt_strided_n200.npz` — `lstars`(P,384,512 argmax) + `margins`(P,384,512 top1−top2 gap) + `gt_poses`. The $0 substrate: margin = the flip-prone band directly; both new levers read it with ZERO new compute.
+
+### 2. Per-pair hardness ranking + all-class margin-saliency summary ($0, gt_n96, frozen CPU-torch argmax)
+GT-margin (logit gap) dist: p1=0.38, p5=2.16, p10=3.99, median 5.82. Flip-prone band is THIN: frac(margin<0.5)=**1.32%**, <1.0=2.56%, <2.0=4.67% (matches realized d_seg 0.001–0.008 living in that band).
+**Flip-prone band (margin<0.5) per-class mass — confirms the all-class binding residual:** Road(0) **47.2%** · Lane(1) **19.2%** (but 42.97% of lane px are fragile — thin+fragile) · Undrivable(2) **14.3%** · Movable(3) 8.6% · MyCar(4) 10.7%. → the daemon's **lane-edge lever (class-1) defends only 19%** of the fragile band; 81% (mostly Road) is undefended → the empirical mandate for the **all-class** saliency generalization. LEVER-4 is **class-agnostic** (weights by fragility, not class index) → sidesteps the contested SegNet class order entirely.
+**Per-pair hardness (GT-margin source):** frac_small/pair 0.0114–0.0149 (mean 0.0132, std 6e-4) → **hard/easy spread only 1.31×** → margin-source waterfilling has bounded headroom; the realized per-pair d_seg (varies with the frozen decoder's per-pair reconstruction quality) is the sharper code-fit signal → LEVER-5 default `--hardness-source realized`.
+
+### 3. Guidance levers BUILT (additive, default-off; smoke-verified end-to-end)
+- **LEVER-4 — all-class margin-saliency-weighted realized hinge** in `experiments/train_levelset_witness_realized_through_R_mlx.py` (`--margin-saliency-weight/-tau/-target/-start-epoch/-uniward/-uniward-beta`). Generalizes LEVER-3 (lane class-1 mask) to a per-pixel `sal=exp(-gt_margin/tau)` over ALL GT pixels on the realized through-R decision margin `relu(target−(gt_logit−runner_up))`. UNIWARD: `sal/=(1+beta·tex)` with `tex`=stop-grad spatial-gradient energy of the realized frame (concentrate on the smooth boundary). Fail-closed never-engage validator. Also wired through `tools/levelset_heldout_codefit_gate.py`.
+- **LEVER-5 — per-pair hardness-weighted code-fit/training** (`--hardness-oversample/-weighted/-source{margin,realized}/-power/-band`). Each epoch keeps `permutation(P)` (no pair starved) + `round(P·F)` EXTRA steps drawn ∝ hardness^power. Survives Adam (more STEPS on hard pairs, not a loss-scale Adam normalizes to ~no-op). `realized` = one-time per-pair baseline realized d_seg over ALL pairs (CPU; no GPU contention). Also wired through the gate.
+
+### 4. MEASURED A/B (micro-budget; frozen n600 decoder, gt_n24/n12, 20–40 code-fit steps, seed 0, realized-through-R d_seg over 6 verdict pairs; EMA-shadow CPU-torch authority)
+| arm | code-fit steps | df (realized d_seg) | vs fair baseline |
+|---|---|---|---|
+| A_baseline | 20 | 0.039335 | — |
+| B_lane_edge_only (class-1) | 20 | 0.039333 | −2e-6 (neutral) |
+| C_margin_saliency (all-class) | 20 | 0.039337 | +2e-6 (neutral) |
+| E_oversample_uniform | 40 | 0.039406 | — (fair base for F) |
+| F_hardness_realized | 40 | 0.039385 | **−2.1e-5 (LOWER = better)** |
+(D_margin_saliency_uniward: BUILT + smoke-verified via the gate; convergent measurement deferred.)
+**CAVEAT (honest, NO-FAKE):** at 20 steps the code-fit moves d_seg only ~0.0016 total (0.0410→0.0393) — far too short for a margin-widening hinge to convert into argmax flips. So the lever deltas (1e-6…2e-5) sit at/below the noise floor: the A/B is CONCLUSIVE for **no-harm** (every lever ≤ baseline ± tiny) and shows the only directional signal = realized-hardness **F−E=−2.1e-5** (right direction, fair same-budget). It is NOT a convergent benefit verdict — the heavy convergent A/B arms (hundreds of steps) get torn down at ~3 min in this session's execution env AND would GPU-contend the critical-path n200 decoder, so the convergent measurement is DEFERRED to the durable code-fit (held-out gate) when the GPU is free.
+
+### 5. VERDICT + recommended config
+- **Load-bearing verdict = the $0 analysis (conclusive):** the binding residual IS the all-class flip-prone band; the daemon's current lane-edge-weight-30 (class-1) defends only 19% of it. **ADOPT LEVER-4 margin-saliency** (all-class, class-agnostic) for the next witness training — it is the optimal-form generalization of the lever already in production. Recommended: `--margin-saliency-weight ~0.5–30 --margin-saliency-tau 0.5 --margin-saliency-start-epoch 300` (gate to the tau_softplus/l7 margin stage; the spike-guard re-treats at engage), chroma ON. Either replace lane-edge-30 or compose (saliency all-class + a smaller lane-edge boost for the intrinsically-fragile lane).
+- **LEVER-5 hardness:** margin-source per-pair spread is only 1.31× (weak) → **use `--hardness-source realized`** (micro-budget F−E=−2.1e-5 confirms direction); EV bounded by the frozen-decoder per-pair reconstruction-quality spread (the real lever, larger than the GT-margin 1.31×). Recommended for the amortization code-fit: `--hardness-oversample 0.5 --hardness-weighted --hardness-source realized`.
+- **UNIWARD:** BUILT + smoke-verified; the core saliency already concentrates on the small-margin (smooth boundary) band, so UNIWARD is a refinement to A/B at convergence.
+- **Recommended amortization code-fit (held-out gate, GPU free):** baseline vs `--margin-saliency-weight 0.5 --margin-saliency-tau 0.5` AND `--hardness-oversample 0.5 --hardness-weighted --hardness-source realized` (both wired into `tools/levelset_heldout_codefit_gate.py`).
+
+### 6. Clean single-arm-sequential re-run for the CONVERGENT verdict (LATER, GPU free)
+Run each arm sequentially when the decoder/held-out gate is idle (each ~30 min at n96/400ep on a free GPU):
+```
+env TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 .venv/bin/python -u experiments/train_levelset_witness_realized_through_R_mlx.py \
+  --freeze-decoder-fit-codes <converged_subset_decoder.npz> --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n96.npz \
+  --num-pairs 96 --epochs 400 --seed 0 --render-h 384 --render-w 512 --hidden-dim 96 --mod-dim 32 \
+  --activation hosc --siren-init --softmax-temp-start 1.0 --softmax-temp-end 0.05 --palette-anchor \
+  --self-orient --reorient-every 50 --freq-across 32 --n-dir-freqs 2 --freq-along 4 --max-bank-freq 64 \
+  --chroma --seg-loss l7_softplus --no-curriculum --w-seg 100 --w-pose 1.0 --eikonal-weight 0.01 \
+  --length-weight 0.001 --ema-decay 0.997 --accum-pairs 8 --grad-clip 1.0 --verdict-pairs 96 \
+  --eval-every 100 --ckpt-every 100 --mlx-device gpu --out-dir <arm_dir> [ARM FLAGS]
+#  ARM FLAGS: A=(none); C=--margin-saliency-weight 0.5 --margin-saliency-tau 0.5; B=--lane-edge-weight 0.5 --lane-edge-class 1;
+#  E=--hardness-oversample 0.5 ; F=--hardness-oversample 0.5 --hardness-weighted --hardness-source realized
+```
+**Means/ends:** these levers GUIDE the SAME SDF-level-set witness toward d_seg; they are NOT a contest score and the exact pointer is UNMOVED (0.19110). The path to a lower EXACT score remains the amortized witness byte-closed + exact eval; this layer sharpens the d_seg the witness spends its budget on.

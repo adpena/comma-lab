@@ -98,6 +98,17 @@ def _build_cmd(args, ckpt: Path, out_dir: Path, num_pairs: int, epochs: int,
     cmd += (["--stage-checkpoints"] if stage_ckpts else ["--no-stage-checkpoints"])
     if args.async_verdict:
         cmd += ["--async-verdict"]
+    # FEED-eq guidance levers (additive; appended only when engaged so a plain code-fit stays identical).
+    if args.margin_saliency_weight > 0.0:
+        cmd += ["--margin-saliency-weight", str(args.margin_saliency_weight),
+                "--margin-saliency-tau", str(args.margin_saliency_tau)]
+        if args.margin_saliency_uniward:
+            cmd += ["--margin-saliency-uniward"]
+    if args.hardness_oversample > 0.0:
+        cmd += ["--hardness-oversample", str(args.hardness_oversample),
+                "--hardness-source", args.hardness_source, "--hardness-power", str(args.hardness_power)]
+        if args.hardness_weighted:
+            cmd += ["--hardness-weighted"]
     return cmd
 
 
@@ -142,6 +153,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lane-edge-weight", type=float, default=0.0,
                     help="optional realized lane hinge during code-fit (0=off; the frozen decoder "
                     "already encodes lane structure; the d_seg metric captures lane flips regardless).")
+    # FEED-eq guidance levers (additive; default-off => byte-identical to the plain code-fit).
+    ap.add_argument("--margin-saliency-weight", type=float, default=0.0,
+                    help="LEVER-4: all-class GT-margin-saliency-weighted realized margin hinge during "
+                    "the code-fit (0=off; generalizes --lane-edge to every inter-class edge).")
+    ap.add_argument("--margin-saliency-tau", type=float, default=0.5)
+    ap.add_argument("--margin-saliency-uniward", action="store_true")
+    ap.add_argument("--hardness-oversample", type=float, default=0.0,
+                    help="LEVER-5: per-pair waterfill: extra code-fit steps as a fraction of pairs "
+                    "(0=off). Allocate hard pairs more code-fit budget.")
+    ap.add_argument("--hardness-weighted", action="store_true",
+                    help="LEVER-5: draw the --hardness-oversample extras ~ per-pair hardness (on) vs "
+                    "uniform (off). The waterfilling A/B at fixed oversample.")
+    ap.add_argument("--hardness-source", choices=["margin", "realized"], default="realized",
+                    help="LEVER-5: hardness signal for the code-fit ('realized' per-pair baseline d_seg "
+                    "is the recommended sharper source; 'margin' is the $0 GT-margin proxy).")
+    ap.add_argument("--hardness-power", type=float, default=1.0)
     ap.add_argument("--w-pose", type=float, default=1.0)
     ap.add_argument("--accum-pairs", type=int, default=8)
     ap.add_argument("--eval-every", type=int, default=25)

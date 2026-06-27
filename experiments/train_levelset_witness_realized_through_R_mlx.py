@@ -756,6 +756,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # must re-treat"; margin-engage spike-skip is the named failure this prevents).
     lane_gate = {"on": lane_start <= 1}
 
+    # LEVER-4 (margin-saliency) closure constants (static; ZERO change to the value_and_grad call
+    # site). msal_w=0.0 (default) => the branch is skipped => behavior IDENTICAL (fully additive).
+    msal_w = float(args.margin_saliency_weight)
+    msal_tau = float(args.margin_saliency_tau)
+    msal_tgt = float(args.margin_saliency_target)
+    msal_start = int(args.margin_saliency_start_epoch)
+    msal_uni = bool(args.margin_saliency_uniward)
+    msal_uni_beta = float(args.margin_saliency_uniward_beta)
+    msal_gate = {"on": msal_start <= 1}
+
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
         phi0 = model.sdf(cf, c0)
@@ -785,6 +795,31 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hinge_map = mx.maximum(lane_tgt - signed, 0.0) * lane_mask  # fragile lane pixels only
             lane_term = mx.sum(hinge_map) / (mx.sum(lane_mask) + 1e-6)  # mean hinge over lane px
             L = L + lane_w * lane_term
+        # LEVER-4 (margin-saliency, all-class generalization of LEVER-3). Same realized through-R
+        # decision margin, but the hinge is weighted PER-PIXEL by the GT-margin fragility saliency
+        # sal=exp(-gt_margin/tau) over EVERY GT pixel (not a single class mask). The flip-prone band
+        # (small GT margin) lives across all classes (Road 47% / Lane 19% / Undriv 14% / ...), so this
+        # adds widen-the-margin pressure exactly where d_seg lives. CLASS-AGNOSTIC. Default-off.
+        if msal_w > 0.0 and msal_gate["on"]:
+            f1s = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
+            slog = adapter.segnet(f1s)                                    # (1, H, W, 5)
+            gt_l = mx.sum(slog * lstar_oh, axis=-1)                       # (1, H, W)
+            run2 = mx.max(slog + lstar_oh * (-1e9), axis=-1)             # (1, H, W) top competitor
+            sgn = gt_l - run2                                           # (1, H, W) decision margin
+            sal = mx.exp(-margin / msal_tau)                            # (1, H, W) fragility weight
+            if msal_uni:
+                # UNIWARD: down-weight textured regions (SegNet-undetectable) -> concentrate on the
+                # SMOOTH boundary. Texture energy from the realized frame's spatial gradients, used as
+                # a STOP-GRAD weight (a cost map, not a loss path).
+                lum = mx.mean(mx.stop_gradient(f1s), axis=-1)            # (1, H, W)
+                dy = mx.pad(mx.abs(lum[:, 1:, :] - lum[:, :-1, :]), [(0, 0), (0, 1), (0, 0)])
+                dx = mx.pad(mx.abs(lum[:, :, 1:] - lum[:, :, :-1]), [(0, 0), (0, 0), (0, 1)])
+                tex = dy + dx
+                tex = tex / (mx.max(tex) + 1e-6)                         # [0,1]
+                sal = sal / (1.0 + msal_uni_beta * tex)
+            hmap = mx.maximum(msal_tgt - sgn, 0.0) * sal                 # fragile pixels weighted
+            msal_term = mx.sum(hmap) / (mx.sum(sal) + 1e-6)             # saliency-weighted mean hinge
+            L = L + msal_w * msal_term
         return L
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
@@ -1103,6 +1138,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "margin_target": lane_tgt, "start_epoch": lane_start,
                           "note": "additive realized lane-class margin hinge (2nd seg forward when "
                           "active; default-off; engages at ep>=start_epoch with spike-guard re-treat)"}), flush=True)
+    if msal_w > 0.0:
+        print(json.dumps({"stage": "margin_saliency", "active": True, "weight": msal_w, "tau": msal_tau,
+                          "target": msal_tgt, "start_epoch": msal_start, "uniward": msal_uni,
+                          "uniward_beta": (msal_uni_beta if msal_uni else None),
+                          "note": "LEVER-4 ALL-CLASS GT-margin-saliency-weighted realized margin hinge "
+                          "(generalizes class-1 lane-edge to every inter-class edge; class-agnostic)"}), flush=True)
+
+    # LEVER-5 (per-pair hardness) precompute: per-pair sampling probability for the oversampled extras.
+    # Default --hardness-oversample 0.0 => n_extra 0 => order == permutation(P) => byte-identical.
+    n_extra = int(round(P * max(args.hardness_oversample, 0.0)))
+    hardness_prob = None
+    hardness_rng = np.random.default_rng(int(args.seed) + 777)
+    if n_extra > 0:
+        if args.hardness_weighted and args.hardness_source == "realized":
+            # one-time per-pair BASELINE realized d_seg over ALL pairs (frozen-decoder reconstruction
+            # quality with init codes). CPU-torch authority path (no GPU contention with the daemon).
+            ema_np0 = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+            deploy0 = int8_dequant_params(ema_np0)
+            f1_all = [_render_numpy_deploy(deploy0, pi, 1) for pi in range(P)]
+            ds_pp = np.asarray(cpu_verdict_d_seg_batch(seg_cpu, f1_all, [gt.lstars[pi] for pi in range(P)]),
+                               dtype=np.float64).reshape(-1)
+            h = ds_pp
+            hsrc = "realized_per_pair_dseg"
+        else:
+            # $0 cached-GT hardness: per-pair fraction of flip-prone (small-GT-margin) pixels.
+            band = float(args.hardness_band)
+            h = np.asarray([float(np.mean(np.asarray(gt.margins[pi], np.float32) < band)) for pi in range(P)],
+                           dtype=np.float64)
+            hsrc = "margin_small_frac"
+        h = np.clip(h, 1e-12, None) ** float(args.hardness_power)
+        if not args.hardness_weighted:
+            h = np.ones_like(h)  # uniform extras (the FAIR same-total-steps A/B baseline)
+            hsrc = "uniform_oversample"
+        hardness_prob = h / h.sum()
+        print(json.dumps({"stage": "hardness", "oversample": float(args.hardness_oversample),
+                          "n_extra_per_epoch": n_extra, "weighted": bool(args.hardness_weighted),
+                          "source": hsrc, "power": float(args.hardness_power),
+                          "hard_easy_spread": round(float(hardness_prob.max() / max(hardness_prob.min(), 1e-12)), 3),
+                          "top_pairs": [int(i) for i in np.argsort(-hardness_prob)[:6]]}), flush=True)
     if args.max_bank_freq is not None:
         from tac.boundary_math.lever_b_levelset_generator import stem_nyquist_max_freq_cycles_per_unit
         nyq = stem_nyquist_max_freq_cycles_per_unit(scorer_w=SEG_W)
@@ -1125,6 +1199,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_edge_engage", "epoch": ep, "lane_start": lane_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # LEVER-4 margin-saliency engagement gate + transition RE-TREAT (same discipline as lane).
+            if msal_w > 0.0:
+                _msal_was = msal_gate["on"]
+                msal_gate["on"] = ep >= msal_start
+                if msal_gate["on"] and not _msal_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "margin_saliency_engage", "epoch": ep, "start": msal_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # SELF-ORIENT reorient cadence (fixed-point): recompute per-pair directional feats from
             # the EMA deploy argmax every --reorient-every epochs (skip ep1: argmax is random).
             if use_self_orient and ep > 1 and (ep - 1) % max(args.reorient_every, 1) == 0:
@@ -1145,7 +1227,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     prog = (ep - args.warmup_epochs) / max(args.epochs - args.warmup_epochs, 1)
                     lr = args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
                 opt.learning_rate = float(lr)
+            # LEVER-5: base permutation (every pair >=1 step, never starved) + hardness-allocated
+            # extras. n_extra=0 (default) => order == permutation(P) => byte-identical to before.
             order = np.random.permutation(P)
+            if n_extra > 0 and hardness_prob is not None:
+                extra = hardness_rng.choice(P, size=n_extra, replace=True, p=hardness_prob)
+                order = np.random.permutation(np.concatenate([order, extra]))
             ep_loss = 0.0
             for s in range(0, P, args.accum_pairs):
                 chunk = order[s:s + args.accum_pairs]
@@ -1384,6 +1471,64 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-3 OPTIMAL-FORM: engage the lane hinge only at ep>=this (0=from ep1=current "
                     "behavior). Gate to the tau_softplus/l7 margin stage (e.g. 300) to avoid the "
                     "margin-from-scratch-starves-interior failure; the engage epoch re-treats the spike-guard.")
+    # LEVER-4 (MARGIN-SALIENCY weighting, DAG FEED-eq, ADDITIVE, DEFAULT-OFF). GENERALIZES LEVER-3
+    # from the class-1-only mask to the ALL-CLASS flip-prone band: the realized through-R decision
+    # margin hinge is weighted PER-PIXEL by the GT-margin fragility saliency sal=exp(-gt_margin/tau)
+    # (small GT margin = near a decision boundary = flip-prone; ~1 at the boundary annulus, ->0 in the
+    # confident interior). MEASURED (FEED-eq, gt_n96, band 0.5): the flip-prone band is Road 47% / Lane
+    # 19% / Undrivable 14% / Movable 9% / MyCar 11% -> LEVER-3 (class 1) defends only 19% of it; this
+    # all-class saliency defends 100%. CLASS-AGNOSTIC (weights by fragility, not class index) so it
+    # sidesteps the class-order dispute entirely. Default 0.0=OFF=byte-identical. When >0, costs ONE
+    # realized seg forward (a 2nd if LEVER-3 is also on; nobody runs both). Fridrich square-root-law:
+    # spread small corrections across the boundary, do not concentrate. NO scorer weights ship (the
+    # saliency is computed from the PROVIDED frozen scorer at train time; rule-118 FREE).
+    ap.add_argument("--margin-saliency-weight", type=float, default=0.0,
+                    help="LEVER-4: weight on the additive ALL-CLASS GT-margin-saliency-weighted realized "
+                    "margin hinge (0=off; generalizes --lane-edge-weight to every inter-class edge).")
+    ap.add_argument("--margin-saliency-tau", type=float, default=0.5,
+                    help="LEVER-4: GT-margin saliency softness sal=exp(-gt_margin/tau); smaller tau = "
+                    "tighter focus on the most fragile (smallest-margin) boundary pixels. ~p1 of the "
+                    "GT-margin dist (gt_n96 p1~0.38, p5~2.16) keeps the weight on the flip-prone band.")
+    ap.add_argument("--margin-saliency-target", type=float, default=0.5,
+                    help="LEVER-4: target decision margin for the saliency hinge relu(target - margin).")
+    ap.add_argument("--margin-saliency-start-epoch", type=int, default=0,
+                    help="LEVER-4 OPTIMAL-FORM: engage only at ep>=this (0=from ep1). Gate to the "
+                    "tau_softplus/l7 margin stage to avoid margin-from-scratch-starves-interior; the "
+                    "engage epoch re-treats the spike-guard (same discipline as --lane-edge-start-epoch).")
+    ap.add_argument("--margin-saliency-uniward", action="store_true",
+                    help="LEVER-4 UNIWARD (Fridrich inverse-steganalysis): additionally DOWN-weight the "
+                    "saliency in TEXTURED regions (SegNet-undetectable) so capacity concentrates on the "
+                    "SMOOTH flip-prone boundary. Texture energy from the realized frame's spatial "
+                    "gradients (stop-grad WEIGHT). Default off.")
+    ap.add_argument("--margin-saliency-uniward-beta", type=float, default=4.0,
+                    help="LEVER-4 UNIWARD: texture down-weight strength sal /= (1 + beta*tex_norm).")
+    # LEVER-5 (per-pair HARDNESS-weighted code-fit / training, DAG FEED-eq, ADDITIVE, DEFAULT-OFF).
+    # WATERFILL the per-epoch pair-iteration budget toward HARD pairs (high d_seg debt). The frozen-
+    # decoder code-fit fits independent per-pair codes, so giving a hard pair MORE update STEPS (not a
+    # bigger loss scale -- Adam normalizes per-pair loss-scale to ~no-op) converges its codes further.
+    # Mechanism: each epoch keeps the full permutation(P) (every pair >=1 step, never starved) PLUS
+    # round(P*oversample) EXTRA steps drawn ~ hardness^power. The FAIR A/B at fixed --hardness-oversample
+    # is --hardness-weighted on (extras ~ hardness) vs off (extras uniform): SAME total steps, different
+    # allocation. Default --hardness-oversample 0.0 => no extras => byte-identical. MEASURED CAVEAT
+    # (FEED-eq): per-pair GT-margin hardness spread on gt_n96 is only 1.31x (the fragile band is ~1.3%
+    # of pixels per pair, nearly constant) -> margin-source reallocation is modest; --hardness-source
+    # realized (per-pair baseline realized d_seg, which varies with the frozen decoder's per-pair
+    # reconstruction quality) is the SHARPER signal for the code-fit and is the recommended source.
+    ap.add_argument("--hardness-oversample", type=float, default=0.0,
+                    help="LEVER-5: extra per-epoch pair-iteration steps as a fraction of P (0=off="
+                    "byte-identical; e.g. 0.5 = +50%% steps, allocated by --hardness-weighted).")
+    ap.add_argument("--hardness-weighted", action="store_true",
+                    help="LEVER-5: draw the --hardness-oversample extra steps ~ per-pair hardness^power "
+                    "(on) vs uniformly (off). On = waterfill hard pairs more code-fit budget.")
+    ap.add_argument("--hardness-source", choices=["margin", "realized"], default="margin",
+                    help="LEVER-5 hardness signal: 'margin' = $0 cached GT small-margin pixel fraction "
+                    "(weak 1.31x spread); 'realized' = one-time per-pair baseline realized d_seg over ALL "
+                    "pairs (CPU, no GPU contention; sharper; the recommended code-fit source).")
+    ap.add_argument("--hardness-power", type=float, default=1.0,
+                    help="LEVER-5: sharpness exponent on the per-pair hardness sampling probability.")
+    ap.add_argument("--hardness-band", type=float, default=0.5,
+                    help="LEVER-5 (margin source): GT-margin threshold defining a flip-prone pixel for "
+                    "the per-pair hardness = mean(gt_margin < band).")
     # LEVEL-SET REG
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
@@ -1435,6 +1580,21 @@ def main(argv: list[str] | None = None) -> int:
         lane_edge_weight=args.lane_edge_weight, lane_edge_start_epoch=args.lane_edge_start_epoch,
         epochs=args.epochs, lane_edge_class=args.lane_edge_class, n_classes=5,
     )
+
+    # (FEED-eq) LEVER-4 fail-closed config guard: a saliency lever that never engages (start > epochs)
+    # is a silent no-op = a FALSE 'margin-saliency does not help' verdict (same NO-FAKE class the lane
+    # validator extincts). Also guard tau>0 so exp(-margin/tau) is well-defined.
+    if args.margin_saliency_weight > 0.0:
+        if args.margin_saliency_start_epoch > args.epochs:
+            raise ValueError(
+                f"--margin-saliency-weight {args.margin_saliency_weight} > 0 but "
+                f"--margin-saliency-start-epoch ({args.margin_saliency_start_epoch}) > --epochs "
+                f"({args.epochs}): the saliency hinge would NEVER engage -> a silent no-op = a FALSE "
+                "'margin-saliency does not help' verdict. Set --margin-saliency-start-epoch <= --epochs."
+            )
+        if args.margin_saliency_tau <= 0.0:
+            raise ValueError(f"--margin-saliency-tau ({args.margin_saliency_tau}) must be > 0 "
+                             "(sal=exp(-gt_margin/tau)).")
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")
