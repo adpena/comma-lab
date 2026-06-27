@@ -595,7 +595,8 @@ def render(args):
         ax = fig.add_subplot(gs[0, 2])
         if has_w:
             ax.imshow(z["wreal_argmax"][i], cmap=cmap, vmin=0, vmax=4, interpolation="nearest")
-            ax.set_title(f"witness REALIZED SegNet(R(·)) argmax\nd_seg vs L* = {float(wreal_dseg[i]):.5f}  (99.5% match)", fontsize=8.5)
+            _dseg_i = float(wreal_dseg[i])
+            ax.set_title(f"witness REALIZED SegNet(R(·)) argmax\nd_seg vs L* = {_dseg_i:.5f}  ({100.0 * (1.0 - _dseg_i):.2f}% match)", fontsize=8.5)
         else:
             im = ax.imshow(z["sdf_dist"][i], cmap="cividis")
             ax.set_title("GT distance-to-boundary field (level-set height)", fontsize=9)
@@ -659,8 +660,11 @@ def render(args):
         lines = []
         if has_w:
             lines.append(f"witness ep{meta.get('witness_epoch')}  int8-deploy={meta.get('int8_deploy')}")
-            lines.append(f"REALIZED d_seg (CPU inflate): {meta.get('witness_realized_dseg_mean'):.6f}")
-            lines.append(f"  PARITY: MLX trainer ~0.0059  → FAITHFUL ✓")
+            lines.append(f"REALIZED d_seg (CPU inflate, int8): {meta.get('witness_realized_dseg_mean'):.6f}")
+            # NO-FAKE: this is the MEASURED CPU-inflate realized d_seg. Parity to the MLX
+            # trainer's own verdict is checked against the trainer's verdict LOG (not a
+            # hardcoded number/✓ here — that would be a fabricated label per the supreme rule).
+            lines.append(f"  parity: cross-check vs trainer verdict log (CPU↔MLX)")
             lines.append(f"  (φ-argmax disagrees L* {meta.get('witness_phi_argmax_disagree_mean'):.2f};")
             lines.append(f"   d_seg is SegNet-on-RGB, soft τ≈1.0)")
             lines.append(f"code SVD eff-rank: {meta.get('code_eff_rank',0):.1f}/{meta.get('code_dim','?')}")

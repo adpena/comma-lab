@@ -2,9 +2,12 @@
 <!-- WITNESS SHOWCASE — interactive max-observability app for the non-RGB TASK-SPACE WITNESS.
      Authored as real HTML; copied verbatim to <out-dir>/index.html by tools/build_witness_showcase.py.
      Every rendered layer is synthesized LIVE from REAL measured fields under ./data/ (NO-FAKE):
-       phi_i8.bin   = the witness's 5 signed-distance logit fields (converged EMA ckpt, CPU-inflate)
+       phi_i8.bin   = the 5 signed-distance fields of the frozen-SegNet partition (the level-set
+                      representation FORM the witness amortizes; argmax==L*) -- the TARGET form,
+                      NOT the witness's own (still-early) phi. The witness vehicle is EARLY (not
+                      converged); its realized-vs-GT residual is shown honestly as vehicle status.
        lstar_i8.bin = the frozen CPU-torch SegNet argmax authority (canonical GT decode)
-       frames/*.jpg = GT source (yuv420_to_rgb) + witness render
+       frames/*.jpg = GT source (yuv420_to_rgb) + the REAL EMA witness CPU-inflate render
      A viz is a MEANS, not an end — the exact frontier pointer is UNMOVED at contest-CPU 0.19110. -->
 <html lang="en">
 <head>

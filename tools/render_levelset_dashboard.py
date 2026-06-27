@@ -159,7 +159,11 @@ def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float) -> bytes:
                 ax.annotate(f"{ys[0]:.4g}", (xs[0], ys[0]))
         ax.set_title(title, fontsize=11)
         ax.set_xlabel("epoch")
-        if logy and xy and min(v for v in ys if v > 0) > 0:
+        # log scale only when there is >=1 strictly-positive value (an empty `min(...)` on a
+        # generator with no positives raises ValueError; d_seg/d_pose CAN be exactly 0 in a
+        # degenerate/early verdict, and this render is also called once OUTSIDE the watch-loop
+        # try/except, so guard it so a 0-valued point can never crash the live daemon).
+        if logy and xy and any(v > 0 for v in ys):
             ax.set_yscale("log")
         for x, lab, col in ((tau, "tau", "#ff7f0e"), (l7, "l7", "#d62728")):
             ax.axvline(x, ls="--", lw=1, color=col, alpha=0.6)

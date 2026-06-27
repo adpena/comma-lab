@@ -13,8 +13,13 @@ Road<->Lane boundaries — with the precariousness (ring-artifact) signal made v
 EVERY rendered field is REAL measured data (NO-FAKE supreme rule):
   * source RGB                = canonical GT decode (tac frame_utils.yuv420_to_rgb, via the
                                 shared GT cache; NEVER PyAV rgb24 which fakes ~100x phantom pose)
-  * witness render + phi      = the REAL converged EMA witness checkpoint, inflated on CPU-torch
-                                (tac.local_acceleration.torch_levelset_inflate building blocks)
+  * witness RGB render        = the REAL EMA witness checkpoint, inflated on CPU-torch
+                                (tac.local_acceleration.torch_levelset_inflate building blocks).
+                                The vehicle is EARLY (NOT converged); its realized-vs-GT residual
+                                is reported honestly as vehicle status, never hidden or faked.
+  * phi (phi_i8.bin)          = the SIGNED-DISTANCE FIELDS of the frozen-SegNet partition (the
+                                level-set representation FORM the witness amortizes; argmax==L*) --
+                                the TARGET form, NOT the witness's own (still-early) phi.
   * GT SegNet partition lstar = the frozen CPU-torch SegNet argmax authority (from the GT cache)
 The browser synthesizes partition / margin / disagreement / separatrix / triple-junctions /
 3D SDF surface / 1D ray cross-section LIVE from these exported real fields (argmax is
@@ -74,6 +79,14 @@ def _load_witness(ckpt: Path) -> tuple[dict, dict, np.ndarray]:
     params = {k: np.asarray(d[k], np.float32) for k in fk if not k.startswith("__") and k != "code"}
     code = np.asarray(d["code"], np.float32)
     rh, rw = [int(x) for x in d["__render_hw"]]
+    # max_bank_freq: the trainer stores the None (no-cap) case as the SENTINEL -1.0
+    # (train_levelset_witness...:183). curvelet_B treats a NEGATIVE cap as "keep only the
+    # min-freq column" (a degenerate bank) -> a render that DOES NOT match the real witness.
+    # Convert <0 (or a missing key, for older ckpts) back to None, EXACTLY as the sister
+    # render_witness_morse_smale_viz._load_witness does. (NO-FAKE/parity: the showcase must
+    # inflate the REAL witness, not a degenerate-bank impostor.)
+    _mbf_raw = float(d["__cfg_max_bank_freq"]) if "__cfg_max_bank_freq" in fk else -1.0
+    _max_bank_freq = None if _mbf_raw < 0 else _mbf_raw
     m = dict(
         render_h=rh, render_w=rw, camera_h=874, camera_w=1164,
         n_pairs=code.shape[0] // 2, n_classes=int(params["out_sdf.bias"].shape[0]),
@@ -84,7 +97,7 @@ def _load_witness(ckpt: Path) -> tuple[dict, dict, np.ndarray]:
         hosc_beta=float(d["__cfg_hosc_beta"]), hosc_omega=float(d["__cfg_hosc_omega"]),
         bank_n_scales=int(d["__bank_n_scales"]), bank_n_orient0=int(d["__bank_n_orient0"]),
         bank_f0=float(d["__bank_f0"]), bank_base=float(d["__bank_base"]), bank_n_iso=int(d["__bank_n_iso"]),
-        max_bank_freq=float(d["__cfg_max_bank_freq"]),
+        max_bank_freq=_max_bank_freq,
         self_orient=bool(int(d["__cfg_self_orient"])), n_dir_freqs=int(d["__cfg_n_dir_freqs"]),
         so_freq_across=float(d["__cfg_freq_across"]), so_freq_along=float(d["__cfg_freq_along"]),
         so_tau=4.0, so_iters=4,  # so_tau vestigial (unused in dir_feats body); so_iters early-stops
@@ -302,7 +315,9 @@ def main(argv: list[str] | None = None) -> int:
                      "centerline to a residual of 0.000019. The math found the lane prior on its own."},
             {"id": "morse_smale", "title": "The witness argmax is a Morse-Smale complex",
              "body": "Its critical structure (maxima = class basins, saddles = triple junctions where "
-                     "3 classes meet) predicts the flip-prone pixels at AUC 0.9987."},
+                     "3 classes meet) is exposed by the margin field: the margin-zero set IS the "
+                     "separatrix, detected at AUC 0.9987 (FEED-fh) — and the flip-prone pixels "
+                     "(the binding d_seg residual) live on that separatrix band."},
             {"id": "dim_ladder", "title": "A dimensional ladder: 1D -> 2D -> 3D -> 4D+",
              "body": f"A ray (1D phi profile) -> the partition (2D) -> the SDF height surface (3D) -> "
                      f"the K-class field stack across time (4D+). Full-RGB ({full_rgb_dim:,} dims/frame) "
