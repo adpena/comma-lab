@@ -1,0 +1,71 @@
+{
+  "tool": "levelset_torch_inflate_parity",
+  "feed": "FEED-ej",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE (numpy-fp64=bit-identical reference; torch=fast decode, parity-gated)",
+  "promotion_claim": false,
+  "utc": "2026-06-27T12:45:38Z",
+  "synthetic_fixture": true,
+  "row_config": {
+    "n_hidden": 4,
+    "hidden": 96,
+    "mod": 32,
+    "in_feat": 88,
+    "n_classes": 5,
+    "activation": "hosc",
+    "self_orient": true,
+    "n_dir_freqs": 2,
+    "render": [
+      384,
+      512
+    ],
+    "chroma": true
+  },
+  "parity_pairs": 3,
+  "certify_numpy_inproc_eq_shipped": true,
+  "witness_argmax_class_frac": {
+    "0": 0.022396511501736112,
+    "1": 0.6283620198567709,
+    "2": 0.053629557291666664,
+    "3": 0.1963568793402778,
+    "4": 0.0992550320095486
+  },
+  "parity": {
+    "uint8_frame_pixel_match_torch_fp32_vs_numpy_fp64": 0.9996129324256905,
+    "uint8_frame_max_abs_diff_torch_fp32": 1,
+    "uint8_frame_pixel_match_torch_fp64_vs_numpy_fp64": 0.9999931738929474,
+    "uint8_frame_max_abs_diff_torch_fp64": 1,
+    "segnet_argmax_agreement_torch_fp32_vs_numpy_fp64": 1.0,
+    "segnet_argmax_flip_px": 0,
+    "segnet_argmax_total_px": 589824,
+    "d_pose_mse_delta_torch_fp32_vs_numpy_fp64": 5.250794595420179e-09,
+    "d_pose_max_abs_component_delta": 0.00021523237228393555,
+    "pose_ref_rms_magnitude": 0.2267006986009175
+  },
+  "timing": {
+    "threads": 4,
+    "time_pairs": 2,
+    "numpy_fp64_sec_per_pair": 7.5875351459981175,
+    "torch_fp32_cpu_sec_per_pair": 1.289456833495933,
+    "cpu_speedup_torch_vs_numpy": 5.8842878248409765,
+    "numpy_fp64_n600_minutes": 75.87535145998118,
+    "torch_fp32_cpu_n600_minutes": 12.894568334959331,
+    "feed_eg_numpy_baseline_minutes": "53-61 (measured FEED-eg, n600 4-core CPU)"
+  },
+  "t4_projection": {
+    "assumed_gpu_speedup_band_vs_cpu4thread": [
+      15,
+      50
+    ],
+    "t4_n600_minutes_band": [
+      0.2578913666991866,
+      0.8596378889972888
+    ],
+    "modal_t4_smoke_cmd": "modal run experiments/modal_levelset_torch_t4_smoke.py --archive /Users/adpena/Projects/pact/experiments/results/levelset_torch_parity_20260627T124400Z/packet/archive.zip --inflate-py <torch_inflate.py> --n-pairs 3 # INFLATE_DEVICE=cuda; measures per-pair T4 time + confirms CUDA decode runs; <$0.20"
+  },
+  "verdict": {
+    "legal_under_30min_cpu_numpy_fp64": false,
+    "legal_under_30min_cpu_torch_fp32": true,
+    "legal_under_30min_t4_torch_fp32": true
+  },
+  "packet_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_torch_parity_20260627T124400Z/packet"
+}

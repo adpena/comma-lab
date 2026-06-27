@@ -2316,3 +2316,34 @@ OPTIMAL FORM (the canonical structured-manifold DECOMPOSITION, already in CLAUDE
 DECISIVE METRIC (measure, don't assume): does the decomposition's realized-through-SegNet d_seg BEAT the full-witness baseline at equal bytes? = the capacity-freeing gain vs the flat-palette SegNet-legibility cost (the 0.125 floor — SegNet doesn't fully read flat-color partitions, only textured ones; the residual classes must carry texture into SegNet's distribution). Sub-questions: (a) can the static-core render be made SegNet-legible below 0.125 (textured static-core, not flat palette)? (b) does freeing static capacity let the witness drive lane+movable d_seg below the full-witness's lane+movable?
 
 ACTION: launch optimal-form structured-decomposition re-open (CPU design+measure realized d_seg vs full-witness baseline; additive/default-off; NOT another naive init). Row (pid 77072) continues independently. pointer UNMOVED 0.19110.
+
+## FEED-ej (2026-06-27): torch/CUDA inflate port — CPU speedup + T4 legality (FEED-ei action; COMPLEMENTARY to a7613e19)
+
+CONTEXT (operator FEED-ei): inflate.py runs on T4/GPU too, not just CPU. FEED-eg measured the numpy-fp64 level-set inflate at 53-61 min for n600 (4-core CPU) — OVER the 30-min budget, ~81% dominated by per-element `tanh(4*sin(u))` transcendentals. Two unexploited levers: (a) numpy-fp64 -> TORCH fp32 (CPU); (b) torch on T4 (the transcendentals are embarrassingly parallel). Decode = GENERIC code -> FREE (rule 118): zero archive bytes, zero witness change. a7613e19 already optimized the numpy-CPU path (early-stop + share-h0 + skip-rgb-head); this is COMPLEMENTARY — a torch port for the T4 axis + faster CPU, NOT a re-do.
+
+LANDED (build, $0 CPU, NO MPS, NO GPU touched):
+* `src/tac/local_acceleration/torch_levelset_inflate.py` — torch fp32, device-flexible (cpu/cuda) DECODE forward (in_proj + FiLM + 4 hidden + out_sdf/out_tex + palette softmax->sigmoid RGB + self-orient fixed-point [early-stop + share-h0 + skip-rgb-head] + the bicubic R), op-for-op mirror of the numpy-fp64 reference; curvelet bank + self-orient dir-feats regenerated FREE (rule 118). Includes `TORCH_INFLATE_PY` (a self-contained shippable torch inflate.py) + `render_torch_inflate_py()` emitter.
+* `tools/levelset_torch_inflate_parity.py` — FEED-ej harness (synthetic ckpt at the OOM'd row dims n_hidden4/hidden96/mod32/in_feat88=curvelet80+self-orient8[n_dir_freqs2]/5-class hosc/chroma/render384x512): byte-close via the canonical numpy tool -> SHIPPED numpy-fp64 inflate (authority) -> torch decode -> parity + per-pair timing (4 threads) + T4 projection. Evidence: `reports/levelset_torch_inflate_parity_20260627T124538Z.json`.
+
+PARITY (torch-fp32 vs numpy-fp64 authority; SYNTHETIC weights = conservative small-margin stress; certify_numpy_inproc_eq_shipped=TRUE):
+* uint8 frame pixel match 99.961% (max abs diff = 1 uint8 @ boundaries); torch-fp64 vs numpy-fp64 = 99.9993% (port op-order GATE passes — residual is the ref's fp32-act-truncation, ±1 uint8).
+* **SegNet argmax agreement = 100.000% (0 flip px / 589,824)** — THE d_seg-relevant metric: torch-fp32 frames are SegNet-argmax-IDENTICAL to numpy-fp64. ARGMAX-EXACT.
+* d_pose MSE delta = 5.25e-9 (max abs component delta 2.15e-4 vs pose rms 0.227) — ~4 orders below the witness d_pose scale (~3e-5). POSE-FAITHFUL.
+* VERDICT: torch-fp32 IS parity-faithful enough to be the shipped decode (argmax-exact; tiny ±1 uint8 ties are SegNet-invisible). Numpy-fp64 stays the bit-identical reference/authority; torch is the fast decode, parity-gated. (Re-measure on the FIRST real ckpt per NO-FAKE — synthetic proves the ARITHMETIC parity, not the witness score.)
+
+TIMING (4 threads = contest 4-core CPU; per-pair, x600):
+* numpy-fp64 7.59 s/pair -> n600 = 75.9 min (>= FEED-eg's 53-61; random weights never early-stop -> worst case). OVER budget.
+* **torch-fp32 CPU 1.29 s/pair -> n600 = 12.9 min. CPU speedup 5.88x. UNDER 30 min.** -> torch-CPU ALONE makes the witness contest-LEGAL on the CPU axis (even vs FEED-eg's 53-61 baseline: /5.88 ~= 9-10 min, still legal).
+* Emitted torch inflate.py end-to-end subprocess smoke: rc=0, no warnings, BYTE-IDENTICAL to the in-process torch decode (validates the shippable artifact on the CPU axis).
+
+T4 PROJECTION (analytic; per-pixel transcendental-bound forward is embarrassingly parallel; conservative GPU/CPU-4thread speedup band [15x,50x]):
+* n600 T4 band = [0.26, 0.86] min — massively legal (<1 min) even at the conservative 15x end.
+* Exact Modal T4 smoke (optional, <$0.20, NOT run — keep GPU free for the relaunching row): build `experiments/modal_levelset_torch_t4_smoke.py` mirroring the existing Modal CPU-eval infra with `gpu="T4"`, ship `archive.zip` + the emitted torch inflate.py, `INFLATE_DEVICE=cuda`, measure per-pair T4 time + confirm CUDA decode runs.
+
+LEGALITY VERDICT: CPU axis — numpy-fp64 ILLEGAL (75.9 min) / **torch-fp32 LEGAL (12.9 min)**. CUDA axis — **torch-fp32 LEGAL (<1 min projected)**. The torch port makes the level-set witness contest-legal on BOTH axes (CPU and T4); the numpy-fp64 inflate remains a viable decode only after a trainer-side config cut (so_iters/render-res/n_hidden), which CHANGES the witness.
+
+INTEGRATION PLAN (design, minimal land — does NOT touch a01f3416's generator or a7613e19's numpy template):
+* The torch decode lives entirely in the new helper; the byte-close tool would gain a `--torch-inflate` flag that writes `render_torch_inflate_py()` as inflate.py INSTEAD OF (or alongside, e.g. `inflate.py`=numpy ref + `inflate_torch.py`) the numpy template. archive.zip bytes UNCHANGED (same LVLS1 int8+brotli blob); inflate.sh already honors `${PYTHON}` and would honor `${INFLATE_DEVICE}` (default cuda-if-available else cpu, NEVER mps).
+* Keep BOTH: numpy-fp64 = the bit-identical reference/AUTHORITY (verdict + parity gate); torch = the fast SHIPPABLE decode, admitted ONLY after the per-ckpt SegNet-argmax parity gate passes (the harness IS that gate). COMPLIANCE: torch inflate = generic FREE code (rule 118), zero archive bytes, NO weights/SegNet/PoseNet in the archive; the witness frames stay byte-determined by archive + generic code (argmax-identical to numpy).
+
+AUTHORITY: [macOS-CPU advisory] NON-PROMOTABLE; SYNTHETIC fixture (NO-FAKE #3 — arithmetic parity, not a score). git 38ffff9f3. pointer UNMOVED 0.19110.
