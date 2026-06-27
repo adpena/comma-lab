@@ -118,6 +118,66 @@ def deterministic_fourier_B(n_fourier: int, fourier_sigma: float) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
+# SIREN init (Sitzmann et al. NeurIPS 2020, "Implicit Neural Representations with
+# Periodic Activation Functions") — the canonical fix for periodic/sine-activation
+# UNTRAINABILITY from scratch. Without it a sine MLP's pre-activations blow out of
+# the sin linear regime at init -> arcsine-saturated activations, dead/exploding
+# gradients (parked capstone-v1 hosc-from-scratch: d_seg 0.689, gnorm-460 spike-skips).
+#
+# The scheme (mirrors the canonical torch impl tac.substrates.wyner_ziv_cooperative_
+# receiver.architecture._siren_init_): for a sine layer with fan_in inputs,
+#   FIRST sine layer : W ~ U(-1/fan_in, +1/fan_in)               (keep W@x in [-1,1])
+#   HIDDEN sine layer: W ~ U(-sqrt(6/fan_in)/omega, +same)       (unit-variance pre-act
+#                                                                  AFTER the sin's omega
+#                                                                  frequency multiply)
+#   bias = 0 (canonical).
+# ``omega`` is the frequency INSIDE the periodic part: hosc=tanh(beta*sin(omega*u)),
+# siren=sin(omega*u), finer=sin(omega*(|u|+1)*u). The sin sees omega*u and the /omega
+# hidden scaling is the matching variance fix. ``first_bias_scale`` (FINER, Liu 2024) is
+# the wide first-layer bias range U(-k,+k) that selects activated frequency sub-bands;
+# for siren/hosc it is 0 (canonical SIREN zero bias). The init draws from the GLOBAL
+# mx.random stream (seeded per-restart by the caller, mx.random.seed(seed_r)) ->
+# deterministic reproducibility.
+# ---------------------------------------------------------------------------
+def _siren_init_linear_mlx(layer, *, is_first: bool, omega: float, bias_scale: float = 0.0) -> None:
+    """In-place SIREN init of one mlx.nn.Linear sine layer (weight (out, in); fan_in=in).
+
+    ``bias_scale``>0 -> bias ~ U(-bias_scale, +bias_scale) (the FINER first-layer bias);
+    ``bias_scale``==0 -> bias zeroed (canonical SIREN)."""
+    import mlx.core as mx
+
+    w = layer.weight  # (out_features, in_features)
+    fan_in = int(w.shape[1])
+    if is_first:
+        bound = 1.0 / float(fan_in)
+    else:
+        bound = math.sqrt(6.0 / float(fan_in)) / max(float(omega), 1e-8)
+    layer.weight = mx.random.uniform(low=-bound, high=bound, shape=w.shape)
+    if getattr(layer, "bias", None) is not None:
+        if bias_scale and bias_scale > 0.0:
+            layer.bias = mx.random.uniform(low=-float(bias_scale), high=float(bias_scale), shape=layer.bias.shape)
+        else:
+            layer.bias = mx.zeros_like(layer.bias)
+
+
+def apply_siren_init(model, *, omega: float, finer_first_bias_scale: float = 0.0) -> None:
+    """Apply SIREN init to the witness's periodic (sine) layers only.
+
+    Sine layers = those whose output feeds the ``_act`` periodic nonlinearity:
+      * ``in_proj`` (the FIRST sine layer; its input is the Fourier coord feats) -> is_first
+      * each ``hidden[li]`` (subsequent sine layers; pre-act FiLM-affine then sin) -> hidden
+    The ``out`` layer feeds ``sigmoid`` (NOT sin) and the ``film``/``code`` FiLM path are
+    left at their default MLX init (FiLM must stay nonzero or the code-gradient dies: with
+    code initialized to zero, a zeroed film weight -> film_out=0 and d(loss)/d(code)=0 forever).
+    ``finer_first_bias_scale``>0 applies FINER's wide first-layer bias (the spectral-bias knob);
+    pass 0 for plain SIREN/hosc.
+    """
+    _siren_init_linear_mlx(model.in_proj, is_first=True, omega=omega, bias_scale=float(finer_first_bias_scale))
+    for layer in model.hidden:
+        _siren_init_linear_mlx(layer, is_first=False, omega=omega)
+
+
+# ---------------------------------------------------------------------------
 # The witness: an mlx.nn.Module coord-INR (Fourier feats + per-(pair,frame) FiLM)
 # -> RGB at scorer res (NHWC). OUR coord-INR vehicle (anti-reskin), on MLX.
 # ---------------------------------------------------------------------------
@@ -133,6 +193,10 @@ def build_witness_module(
     hosc_beta: float = 4.0,
     hosc_omega: float = 1.0,
     chroma: bool = True,
+    siren_init: bool = True,
+    siren_omega: float = 30.0,
+    finer_first_bias_scale: float = 1.0,
+    wire_scale: float = 1.0,
 ):
     import mlx.core as mx
     import mlx.nn as nn
@@ -143,11 +207,23 @@ def build_witness_module(
         ``in_feat_override`` lets the caller feed a NON-isotropic coord feature
         (e.g. the all-class DIRECTIONAL Fourier basis, computed per-pair outside
         the module) of arbitrary width instead of the built-in 2*n_fourier iso
-        feats. ``activation`` selects the hidden-layer nonlinearity: "relu"
-        (control) or "hosc" = tanh(beta*sin(omega*u)) (Serrano 2024) — the
-        step-native R-SURVIVAL lever: as beta grows the sine square-waves into a
-        sharp step train (matches the piecewise-constant SegNet argmax partition,
-        NO Gibbs ringing through the bicubic^->uint8->bilinear_ round-trip R).
+        feats. ``activation`` selects the hidden-layer nonlinearity:
+          * "relu"  (control)
+          * "hosc"  = tanh(beta*sin(omega*u)) (Serrano 2024) — the step-native
+            R-SURVIVAL lever: as beta grows the sine square-waves into a sharp
+            step train (matches the piecewise-constant SegNet argmax partition,
+            NO Gibbs ringing through the bicubic^->uint8->bilinear_ round-trip R).
+          * "siren" = sin(omega*u) (Sitzmann NeurIPS 2020) — the canonical
+            periodic-activation INR (omega=siren_omega, default 30) with SIREN init.
+          * "finer" = sin(omega*(|u|+1)*u) (Liu et al. CVPR 2024, FINER) — the
+            VARIABLE-PERIODIC activation that BEAT SIREN on the in-tree d_seg arms
+            (torch-measured 0.00138). The |u|+1 scale makes the local frequency grow
+            with the pre-activation magnitude; the FINER spectral-bias knob is the
+            FIRST-LAYER bias init range U(-finer_first_bias_scale, +) (vs SIREN's
+            zero bias) which selects which frequency sub-bands are activated.
+        The periodic family (hosc/siren/finer) uses SIREN weight init; finer adds
+        the wide first-layer bias. ``siren_omega`` is the periodic frequency for
+        siren/finer (hosc keeps its own ``hosc_omega``).
         """
 
         def __init__(self) -> None:
@@ -162,6 +238,12 @@ def build_witness_module(
             self.activation = str(activation)
             self.hosc_beta = float(hosc_beta)
             self.hosc_omega = float(hosc_omega)
+            self.siren_omega = float(siren_omega)
+            self.finer_first_bias_scale = float(finer_first_bias_scale)
+            self.wire_scale = float(wire_scale)
+            # The periodic-frequency omega used by THIS activation (hosc keeps its own
+            # low default; siren/finer/wire use siren_omega ~ 30). Read by _act AND SIREN init.
+            self.periodic_omega = float(hosc_omega) if str(activation) == "hosc" else float(siren_omega)
             self.chroma = bool(chroma)
             B = deterministic_fourier_B(n_fourier, fourier_sigma)
             # Fixed (non-trainable) Fourier projection, held as a plain constant.
@@ -175,6 +257,16 @@ def build_witness_module(
         def _act(self, u: Any) -> Any:
             if self.activation == "hosc":
                 return mx.tanh(self.hosc_beta * mx.sin(self.hosc_omega * u))
+            if self.activation == "siren":
+                return mx.sin(self.siren_omega * u)
+            if self.activation == "finer":
+                # FINER variable-periodic (Liu et al. 2024): sin(omega*(|u|+1)*u).
+                return mx.sin(self.siren_omega * (mx.abs(u) + 1.0) * u)
+            if self.activation == "wire":
+                # WIRE real-Gabor (Saragadam CVPR2024): sin(omega*u)*exp(-0.5*(s*u)^2) —
+                # best space-frequency localization (compact EDGE error; SIREN rings globally,
+                # Gaussian errs at edges). s = wire_scale (matches tac.substrates.siren.activation_family).
+                return mx.sin(self.siren_omega * u) * mx.exp(-0.5 * mx.square(self.wire_scale * u))
             return nn.relu(u)
 
         def _apply_chroma(self, rgb: Any) -> Any:
@@ -229,7 +321,18 @@ def build_witness_module(
             rgb = mx.sigmoid(self.out(h)) * 255.0  # (K, P, 3)
             return self._apply_chroma(rgb)
 
-    return RGBWitnessMLX()
+    m = RGBWitnessMLX()
+    # SIREN init applies ONLY to the periodic family (hosc / siren / finer / wire) — relu keeps
+    # default MLX init (where-applicable per the operator directive). It is the canonical
+    # from-scratch trainability fix for sine MLPs (wire/finer carry a sin(omega*u) carrier too).
+    # The omega used is the activation's own periodic frequency (hosc_omega for hosc,
+    # siren_omega~30 for siren/finer/wire); FINER adds its wide first-layer bias (only finer).
+    if str(activation) in {"hosc", "siren", "finer", "wire"} and bool(siren_init):
+        omega_for_init = float(hosc_omega) if str(activation) == "hosc" else float(siren_omega)
+        bias_scale = float(finer_first_bias_scale) if str(activation) == "finer" else 0.0
+        apply_siren_init(m, omega=omega_for_init, finer_first_bias_scale=bias_scale)
+        mx.eval(m.parameters())
+    return m
 
 
 # ---------------------------------------------------------------------------
@@ -643,7 +746,7 @@ def make_loss_fn(
     margin_weight_temp: float = 1.0,
     tau_softplus_tau: float = 0.3,
     l7_mult: float = 4.0,
-    l7_threshold: float = 1.0,
+    l7_threshold: float = 0.42,
 ):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
     w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
@@ -677,7 +780,7 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None):
         # ``seg_form`` (FEED-bv 4-stage curriculum): the seg LOSS FORM for THIS epoch's stage.
         # None -> the closure default ``seg_loss`` (non-curriculum, back-compat). The PR95 d_seg
         # SEQUENCE (digest pr95_segnet_stage_evolution...): ce (coarse argmax) -> tau_softplus
@@ -689,6 +792,10 @@ def make_loss_fn(
         form = seg_form if seg_form is not None else seg_loss
         apply_mw = bool(margin_weighted) and bool(mw_active)
         temp_use = margin_weight_temp if mw_temp is None else float(mw_temp)
+        # (FEED-ca anneal) intra-stage tau / l7-threshold ANNEAL overrides (scale-level
+        # coarse->fine, PR95 signature). None -> the closed-over static value (back-compat).
+        tau_use = tau_softplus_tau if tau_override is None else float(tau_override)
+        l7_thr_use = l7_threshold if l7_thr_override is None else float(l7_thr_override)
         f0 = render_through_R_mlx(model, coord_feats, code0, render_h, render_w)
         f1 = render_through_R_mlx(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
@@ -704,15 +811,15 @@ def make_loss_fn(
         if form == "tau_softplus":
             # PR95 stage-2 (digest: THE primary d_seg drop, 0.00643->0.00396). mean(tau*softplus(-m/tau)).
             signed = _live_signed()
-            z = -signed / tau_softplus_tau
-            seg_l = mx.mean(tau_softplus_tau * mx.logaddexp(mx.zeros_like(z), z))
+            z = -signed / tau_use
+            seg_l = mx.mean(tau_use * mx.logaddexp(mx.zeros_like(z), z))
         elif form == "l7_softplus":
             # PR95 stage-5 l7 (digest: hard-pixel refine; KEEP loss, DROP C1a). softplus * (1+mult
             # on margin<thr), renorm mean-1, weight stop-grad. THE margin-weight refine stage.
             signed = _live_signed()
-            z = -signed / tau_softplus_tau
-            per_pixel = tau_softplus_tau * mx.logaddexp(mx.zeros_like(z), z)
-            w = 1.0 + l7_mult * (signed < l7_threshold).astype(seg_logits.dtype)
+            z = -signed / tau_use
+            per_pixel = tau_use * mx.logaddexp(mx.zeros_like(z), z)
+            w = 1.0 + l7_mult * (signed < l7_thr_use).astype(seg_logits.dtype)
             w = mx.stop_gradient(w / (mx.mean(w) + 1e-8))
             seg_l = mx.mean(per_pixel * w)
         elif form == "margin_hinge":
@@ -870,6 +977,7 @@ def _witness_forward_numpy(
     beta: float,
     omega: float,
     chroma: bool,
+    wire_scale: float = 1.0,
 ) -> np.ndarray:
     """Witness MLP forward in NUMPY fp32 -> (P_px, 3) float RGB in [0,255].
 
@@ -883,6 +991,12 @@ def _witness_forward_numpy(
     def act(u: np.ndarray) -> np.ndarray:
         if kind == "hosc":
             return np.tanh(beta * np.sin(omega * u))
+        if kind == "siren":
+            return np.sin(omega * u)
+        if kind == "finer":
+            return np.sin(omega * (np.abs(u) + 1.0) * u)
+        if kind == "wire":  # real-Gabor sin(omega*u)*exp(-0.5*(s*u)^2)
+            return np.sin(omega * u) * np.exp(-0.5 * np.square(wire_scale * u))
         return np.maximum(u, 0.0)
 
     h = act(lin("in_proj", feats))
@@ -909,6 +1023,7 @@ def _witness_forward_mlx(
     beta: float,
     omega: float,
     chroma: bool,
+    wire_scale: float = 1.0,
 ):
     """Functional MLX witness forward (NO module mutation) -> (P_px, 3) mx RGB in [0,255].
 
@@ -927,6 +1042,12 @@ def _witness_forward_mlx(
     def act(u):
         if kind == "hosc":
             return mx.tanh(beta * mx.sin(omega * u))
+        if kind == "siren":
+            return mx.sin(omega * u)
+        if kind == "finer":
+            return mx.sin(omega * (mx.abs(u) + 1.0) * u)
+        if kind == "wire":  # real-Gabor sin(omega*u)*exp(-0.5*(s*u)^2)
+            return mx.sin(omega * u) * mx.exp(-0.5 * mx.square(wire_scale * u))
         return mx.maximum(u, 0.0)
 
     h = act(lin("in_proj", feats_mx))
@@ -1006,6 +1127,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # CHROMA d_seg lever (operator "Chroma too"): default ON (3 free RGB planes,
     # current behavior); --no-chroma forces achromatic luma-only for the ablation.
     chroma = bool(getattr(args, "chroma", True))
+    # SIREN init (Sitzmann 2020): canonical periodic-activation from-scratch trainability
+    # fix. ON by default; takes effect for the periodic family (hosc/siren/finer); relu keeps
+    # default init. --no-siren-init disables it (the ablation that MEASURES the SIREN-init effect).
+    siren_init = bool(getattr(args, "siren_init", True))
+    siren_omega = float(getattr(args, "siren_omega", 30.0))
+    finer_first_bias_scale = float(getattr(args, "finer_first_bias_scale", 1.0))
+    wire_scale = float(getattr(args, "wire_scale", 1.0))
+    # The periodic frequency THIS activation uses (hosc keeps its own low omega; siren/finer/wire
+    # use siren_omega). Drives BOTH _act and the verdict forward's omega so they never drift.
+    periodic_omega = float(getattr(args, "hosc_omega", 1.0)) if activation == "hosc" else siren_omega
     # (bug #8 / BH2) hosc beta-anneal endpoints. A CONSTANT beta=4 tanh(4*sin(.))
     # SATURATES (|arg|<=4 -> tanh ~ +/-0.999 at the sine peaks -> vanishing gradient,
     # the BH2 dead-grad bug). So when the operator selects --activation hosc WITHOUT
@@ -1091,6 +1222,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 hosc_beta=float(getattr(args, "hosc_beta", 4.0)),
                 hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
                 chroma=chroma,
+                siren_init=False,  # throwaway: only build_feats (uses the deterministic _B) is read
             )
             shared_feats = _feat_model.build_feats(coords)  # fixed (P_px, in_feat)
             mx.eval(shared_feats)
@@ -1165,34 +1297,116 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         muon_finisher_start_epoch = int(getattr(args, "muon_finisher_start_epoch", 1200))
         tau_softplus_tau = float(getattr(args, "tau_softplus_tau", 0.3))
         l7_mult = float(getattr(args, "l7_mult", 4.0))
-        l7_threshold = float(getattr(args, "l7_threshold", 1.0))
-        # Ordered stage boundaries (epoch at which each NON-ce stage begins).
+        # (FEED-ca fix 3) static l7_threshold default tied to the MEASURED witness-hard median
+        # margin ~0.42 (FEED-bp), NOT the cargo-culted 1.0. The intra-stage anneal (below) can
+        # still ramp it 1.0->~0.42 over the l7 stage if --l7-thr-anneal-* are set.
+        l7_threshold = float(getattr(args, "l7_threshold", 0.42))
+        # (FEED-ca fix 3) intra-stage ANNEAL endpoints (None,None -> static; scale coarse->fine).
+        _tau_anneal_start = getattr(args, "tau_anneal_start", None)
+        _tau_anneal_end = getattr(args, "tau_anneal_end", None)
+        tau_anneal_start = float(_tau_anneal_start) if _tau_anneal_start is not None else None
+        tau_anneal_end = float(_tau_anneal_end) if _tau_anneal_end is not None else None
+        tau_anneal_on = tau_anneal_start is not None and tau_anneal_end is not None
+        _l7_thr_anneal_start = getattr(args, "l7_thr_anneal_start", None)
+        _l7_thr_anneal_end = getattr(args, "l7_thr_anneal_end", None)
+        l7_thr_anneal_start = float(_l7_thr_anneal_start) if _l7_thr_anneal_start is not None else None
+        l7_thr_anneal_end = float(_l7_thr_anneal_end) if _l7_thr_anneal_end is not None else None
+        l7_thr_anneal_on = l7_thr_anneal_start is not None and l7_thr_anneal_end is not None
+        # (FEED-ca fix 2) PLATEAU-TRIGGERED stage transitions: advance a stage on EITHER the
+        # measured d_seg descent plateauing OR the fixed --*-start-epoch cap (the fallback).
+        plateau_trigger = bool(getattr(args, "plateau_trigger", False))
+        plateau_slope_eps = float(getattr(args, "plateau_slope_eps", 1e-5))
+        plateau_window = max(2, int(getattr(args, "plateau_window", 4)))  # recent IN-STAGE eval points
+        # Ordered stage boundaries (the CAP epoch at which each NON-ce stage begins / fallback).
         _stage_boundaries = [
             ("tau_softplus", tau_softplus_start_epoch),
             ("l7_softplus", margin_weight_start_epoch),
             ("muon", muon_finisher_start_epoch),
         ]
-
-        def _stage_for_epoch(ep: int) -> str:
-            if not curriculum:
-                return seg_loss  # non-curriculum: the fixed --seg-loss form
-            stage = "ce"
-            for name, b in _stage_boundaries:
-                if ep >= b:
-                    stage = name
-            return stage
+        _STAGE_NAMES = ["ce", "tau_softplus", "l7_softplus", "muon"]
+        # (FEED-ca fix 6) ASSERT the curriculum boundaries strictly increase + lie in [1, epochs].
+        # Fail-closed (NO-FAKE): an l7-on-unconverged-base / mis-ordered curriculum is a silent
+        # score-killer. Only enforced when the curriculum is actually engaged.
+        if curriculum:
+            _caps = [tau_softplus_start_epoch, margin_weight_start_epoch, muon_finisher_start_epoch]
+            if not (1 <= _caps[0] < _caps[1] < _caps[2] <= int(args.epochs)):
+                raise ValueError(
+                    "curriculum boundaries must satisfy 1 <= tau-softplus-start-epoch < "
+                    "margin-weight-start-epoch (l7) < muon-finisher-start-epoch <= epochs; got "
+                    f"tau={_caps[0]}, l7={_caps[1]}, muon={_caps[2]}, epochs={int(args.epochs)}."
+                )
+            if plateau_trigger and plateau_slope_eps <= 0:
+                raise ValueError(f"--plateau-slope-eps must be > 0; got {plateau_slope_eps}.")
 
         def _seg_form_for_stage(stage: str) -> str:
             # the muon stage keeps the l7 loss form (only the optimizer changes).
             return "l7_softplus" if stage == "muon" else stage
 
-        def _is_stage_boundary(ep: int) -> tuple[bool, str]:
-            if not curriculum:
-                return (False, "")
-            for name, b in _stage_boundaries:
-                if ep == b:
-                    return (True, name)
-            return (False, "")
+        # (FEED-ca fix 5) Muon-on-HIDDEN-only filter (PR95 discipline: Muon degrades the
+        # code-latent EMBEDDING + the final/output layer). Routes ONLY the decoder-hidden weight
+        # MATRICES (in_proj.weight / film.weight / hidden.*.weight) to Muon; the code-latent
+        # (video-derived payload), all biases, and out.* (final layer) fall back to Adam.
+        def _is_muon_weight(path: str, w: Any) -> bool:
+            if getattr(w, "ndim", 0) < 2:
+                return False  # biases / 1D -> Adam
+            if path == "code":
+                return False  # code-latent embedding (video-derived payload) -> Adam
+            if path.startswith("out."):
+                return False  # final/output layer -> Adam (PR95: Muon degrades final layers)
+            return path.endswith(".weight")  # in_proj.weight / film.weight / hidden.*.weight
+
+        class _StageResolver:
+            """Per-restart stateful stage scheduler. Advances ce->tau->l7->muon on EITHER the
+            fixed cap OR (plateau mode) a measured d_seg plateau. Tracks each stage's START epoch
+            so the intra-stage tau / l7-threshold anneals know their progress in BOTH modes."""
+
+            def __init__(self) -> None:
+                self.idx = 0  # 0=ce 1=tau 2=l7 3=muon
+                self.start_ep = {0: 1}
+
+            def _plateau(self, ep: int, dseg_history: list[tuple[int, float]]) -> bool:
+                if not plateau_trigger:
+                    return False
+                cur_start = self.start_ep.get(self.idx, 1)
+                pts = [(e, d) for (e, d) in dseg_history if e >= cur_start][-plateau_window:]
+                if len(pts) < plateau_window:  # need a FULL in-stage window (also gates post-jump)
+                    return False
+                es = np.asarray([p[0] for p in pts], dtype=np.float64)
+                ds = np.asarray([p[1] for p in pts], dtype=np.float64)
+                slope = float(np.polyfit(es, ds, 1)[0])  # d(d_seg)/d(epoch)
+                return slope > -plateau_slope_eps  # not dropping faster than eps/epoch == plateau
+
+            def resolve(self, ep: int, dseg_history: list[tuple[int, float]]) -> tuple[str, bool, str]:
+                """Returns (stage_name, is_boundary_this_epoch, boundary_stage_name)."""
+                if not curriculum:
+                    return (seg_loss, False, "")
+                if self.idx < 3:
+                    cap_ep = _stage_boundaries[self.idx][1]  # cap to advance INTO idx+1
+                    if ep >= cap_ep or self._plateau(ep, dseg_history):
+                        self.idx += 1
+                        self.start_ep[self.idx] = ep
+                        return (_STAGE_NAMES[self.idx], True, _STAGE_NAMES[self.idx])
+                return (_STAGE_NAMES[self.idx], False, "")
+
+            def tau_for_ep(self, ep: int) -> float:
+                if not tau_anneal_on:
+                    return tau_softplus_tau
+                s0 = self.start_ep.get(1)  # tau stage start
+                if s0 is None:
+                    return tau_softplus_tau
+                nominal = max(1, margin_weight_start_epoch - tau_softplus_start_epoch)
+                frac = min(1.0, max(0.0, (ep - s0) / float(nominal)))
+                return float(tau_anneal_start + (tau_anneal_end - tau_anneal_start) * frac)
+
+            def l7_thr_for_ep(self, ep: int) -> float:
+                if not l7_thr_anneal_on:
+                    return l7_threshold
+                s0 = self.start_ep.get(2)  # l7 stage start
+                if s0 is None:
+                    return l7_threshold
+                nominal = max(1, muon_finisher_start_epoch - margin_weight_start_epoch)
+                frac = min(1.0, max(0.0, (ep - s0) / float(nominal)))
+                return float(l7_thr_anneal_start + (l7_thr_anneal_end - l7_thr_anneal_start) * frac)
 
         loss_fn = make_loss_fn(
             adapter, render_h, render_w, score_domain=score_domain, pose_eps=pose_eps, seg_loss=seg_loss,
@@ -1280,13 +1494,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 deploy = {k: np.asarray(v, dtype=np.float32) for k, v in src_items}
             kind = str(model.activation)
             beta = float(model.hosc_beta)  # current annealed beta (deploy uses the final value)
-            omega = float(model.hosc_omega)
+            # periodic_omega = hosc_omega for hosc, siren_omega(~30) for siren/finer; the verdict
+            # forward MUST use the SAME omega the trained _act used or the deploy render diverges.
+            omega = float(getattr(model, "periodic_omega", model.hosc_omega))
+            wire_scale_v = float(getattr(model, "wire_scale", 1.0))  # WIRE Gabor window scale (deploy verdict)
             chroma_v = bool(model.chroma)
             nh, hd = args.n_hidden, args.hidden_dim
 
             def _render_frame_numpy(pi: int, fk: int) -> np.ndarray:
                 fp = feats_for_pair_np(pi)
-                rgb = _witness_forward_numpy(deploy, fp, deploy["code"][2 * pi + fk], nh, hd, kind, beta, omega, chroma_v)
+                rgb = _witness_forward_numpy(deploy, fp, deploy["code"][2 * pi + fk], nh, hd, kind, beta, omega, chroma_v, wire_scale_v)
                 return _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
 
             d_segs, d_poses = [], []
@@ -1309,7 +1526,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
                     def _render_frame_mlx(pi: int, fk: int) -> np.ndarray:
                         fp_mx = mx.array(_dir_feats_np[pi]) if directional else feats_iso_mx
-                        rgb_mx = _witness_forward_mlx(deploy_mx, fp_mx, code_mx[2 * pi + fk], nh, hd, kind, beta, omega, chroma_v)
+                        rgb_mx = _witness_forward_mlx(deploy_mx, fp_mx, code_mx[2 * pi + fk], nh, hd, kind, beta, omega, chroma_v, wire_scale_v)
                         mx.eval(rgb_mx)
                         return _torch_R_to_camera_uint8(np.asarray(rgb_mx, dtype=np.float32).reshape(render_h, render_w, 3))
 
@@ -1335,6 +1552,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         lr_end = float(getattr(args, "lr_end", 1e-4))
         div_frac = 0.9  # restart divergence: EMA d_seg still >= 0.9*baseline at midpoint = stuck
         opt_steps_per_epoch = max(1, math.ceil(P / accum_pairs))
+        # (FEED-ca fix 2/4) MUTABLE stage-transition LR re-warmup anchors (OPTIMIZER-step space).
+        # FIXED boundaries: prefilled at restart-top from the cap epochs. PLATEAU boundaries:
+        # appended live at the ACTUAL (dynamic) AdamW transition via float(opt.step). The
+        # build_lr_schedule closure reads this SAME list object so both modes re-treat the LR.
+        _rewarmup_anchor_steps: list[float] = []
 
         def build_lr_schedule():
             """1-epoch linear warmup 0->base, then cosine decay base->lr_end (item 4), with an
@@ -1352,25 +1574,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 else:
                     warmup = optim.linear_schedule(0.0, base, warm)
                     base_sched = optim.join_schedules([warmup, cosine], [warm])
-            # FEED-bu fix 4 + FEED-bv (operator: "different stages need different treatment"): a
-            # STAGE TRANSITION re-treats the LR. At EACH AdamW-stage boundary, ramp the LR from a
-            # floor (0.1x) back to 1x over margin_stage_lr_warmup_epochs so the FIRST steps of the
-            # new stage are SMALL -> absorb the loss-FORM change without a first-step gnorm spike.
-            # Step-space windows; composes with spike-guard recalibrate. Boundaries: the curriculum
-            # ce->tau and tau->l7 (the Muon stage uses its OWN low-LR opt, no schedule re-warmup);
-            # OR the single margin-engage for the non-curriculum margin path. No-op otherwise.
-            mw = bool(getattr(args, "margin_weighted_loss", False))
-            curric = bool(getattr(args, "curriculum", False))
+            # FEED-bu fix 4 + FEED-bv + FEED-ca (operator: "different stages need different
+            # treatment"): a STAGE TRANSITION re-treats the LR. At EACH AdamW-stage boundary, ramp
+            # the LR from a floor (0.1x) back to 1x over margin_stage_lr_warmup_epochs so the FIRST
+            # steps of the new stage are SMALL -> absorb the loss-FORM change without a first-step
+            # gnorm spike. The boundaries live in ``_rewarmup_anchor_steps`` (OPTIMIZER-step space):
+            # FIXED curriculum/mw prefill the cap-derived steps at restart-top; PLATEAU mode appends
+            # the ACTUAL transition step live (so the re-warmup tracks dynamic plateau transitions).
+            # The Muon stage uses its OWN fresh low-LR opt with a step-0-anchored warmup (fix 4),
+            # so the muon boundary is NOT in this AdamW anchor list. wu_eps<=0 -> no re-warmup.
             wu_eps = int(getattr(args, "margin_stage_lr_warmup_epochs", 8))
-            if curric:
-                boundary_eps = [int(getattr(args, "tau_softplus_start_epoch", 300)),
-                                int(getattr(args, "margin_weight_start_epoch", 80))]
-            elif mw:
-                boundary_eps = [int(getattr(args, "margin_weight_start_epoch", 80))]
-            else:
-                boundary_eps = []
-            boundary_steps = [e * opt_steps_per_epoch for e in boundary_eps if e > 0]
-            if not boundary_steps or wu_eps <= 0:
+            # Only the curriculum / margin-weighted paths can carry re-warmup anchors. The DEFAULT
+            # (non-curriculum, non-mw) path returns base_sched verbatim -> byte-identical prior behavior.
+            if wu_eps <= 0 or not (bool(getattr(args, "curriculum", False)) or bool(getattr(args, "margin_weighted_loss", False))):
                 return base_sched
             win = float(max(1, wu_eps * opt_steps_per_epoch))
             lr_floor = float(getattr(args, "margin_stage_lr_floor", 0.1))
@@ -1378,7 +1594,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             def stage_rewarmup_sched(step):
                 base_v = base_sched(step) if callable(base_sched) else base_sched
                 scale = 1.0
-                for b in boundary_steps:
+                # Reads the shared MUTABLE anchor list (empty -> scale stays 1.0 == base_sched).
+                for b in list(_rewarmup_anchor_steps):
                     frac = mx.clip((step - b) / win, 0.0, 1.0)
                     ramp = lr_floor + (1.0 - lr_floor) * frac  # lr_floor at b -> 1.0 at b+win (stays 1)
                     scale = scale * mx.where(step < b, 1.0, ramp)
@@ -1421,6 +1638,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # -> ZERO opt/ema updates for the entire restart (the dead-restart bug, DAG FEED-bf).
             recent = deque(maxlen=recent_maxlen)
             _muon_switched = False  # FEED-bv: per-restart Muon-finisher switch flag
+            # (FEED-ca fix 2) per-restart stage scheduler + d_seg history (for plateau-trigger).
+            stage_resolver = _StageResolver()
+            dseg_history: list[tuple[int, float]] = []
+            # (FEED-ca fix 2/4) per-restart LR re-warmup anchors (OPTIMIZER-step space). FIXED
+            # mode prefills the cap-derived AdamW boundaries (tau, l7); PLATEAU mode starts empty
+            # and appends the ACTUAL transition step live. The muon boundary uses its own fresh
+            # opt warmup (NOT this list). Non-curriculum margin path keeps its single engage cap.
+            _rewarmup_anchor_steps.clear()
+            if curriculum and not plateau_trigger:
+                _rewarmup_anchor_steps.extend(
+                    float(e * opt_steps_per_epoch)
+                    for e in (tau_softplus_start_epoch, margin_weight_start_epoch) if e > 0
+                )
+            elif (not curriculum) and margin_weighted and margin_weight_start_epoch > 0:
+                _rewarmup_anchor_steps.append(float(margin_weight_start_epoch * opt_steps_per_epoch))
             seed_r = int(args.seed) + restart_i * 1000
             mx.random.seed(seed_r)
             np.random.seed(seed_r)
@@ -1432,6 +1664,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 hosc_beta=hosc_beta_start,  # (bug #8) init at the low (non-saturated) beta
                 hosc_omega=float(getattr(args, "hosc_omega", 1.0)),
                 chroma=chroma,
+                siren_init=siren_init,
+                siren_omega=siren_omega,
+                finer_first_bias_scale=finer_first_bias_scale,
+                wire_scale=wire_scale,
             )
             mx.eval(model.parameters())
             # FEED-bu fix 3: --resume-from loads a prior witness checkpoint (e.g. v3's ep80 base,
@@ -1442,12 +1678,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if resume_from is not None and restart_i == 0:
                 rz = np.load(resume_from, allow_pickle=False)
                 rparams = {k: mx.array(np.asarray(rz[k], dtype=np.float32)) for k in rz.files}
+                # (FEED-ca fix 6) VALIDATE resumed keys/shapes against the built model BEFORE update
+                # (mx model.update does NOT validate -> a stale/mismatched npz would silently corrupt
+                # the base). Fail-closed (NO-FAKE) with the exact mismatch.
+                _built = {k: tuple(v.shape) for k, v in tree_flatten(model.parameters())}
+                _resumed = {k: tuple(np.asarray(rz[k]).shape) for k in rz.files}
+                _missing = sorted(set(_built) - set(_resumed))
+                _extra = sorted(set(_resumed) - set(_built))
+                _shape_mismatch = {k: (_built[k], _resumed[k]) for k in (set(_built) & set(_resumed)) if _built[k] != _resumed[k]}
+                if _missing or _extra or _shape_mismatch:
+                    raise ValueError(
+                        "--resume-from npz does not match the built witness (check the architecture "
+                        f"flags --num-pairs/--n-fourier/--hidden-dim/--n-hidden/--mod-dim/--chroma). "
+                        f"missing_in_npz={_missing}; extra_in_npz={_extra}; shape_mismatch={_shape_mismatch}"
+                    )
                 model.update(tree_unflatten(list(rparams.items())))
                 mx.eval(model.parameters())
                 print(json.dumps({
                     "stage": "resumed_from", "path": str(resume_from), "n_tensors": len(rparams),
                     "note": "margin-finetune continues from this base; EMA shadow re-seeded from it",
                 }), flush=True)
+                # (FEED-ca fix 1) COLLAPSE-CE on resume: if the resumed base is already CE-converged,
+                # a long ce[1, tau-softplus-start-epoch) stage is redundant (~4h waste). Nudge toward
+                # a SHORT CE stage (e.g. --tau-softplus-start-epoch 25-50). The curriculum handles a
+                # short CE stage cleanly (boundaries are asserted strictly increasing above).
+                if curriculum and tau_softplus_start_epoch >= 100:
+                    print(json.dumps({
+                        "stage": "HINT_collapse_ce_on_resume", "tau_softplus_start_epoch": tau_softplus_start_epoch,
+                        "advice": "resume base is presumed CE-converged; the default long CE stage is "
+                                  "redundant -- set --tau-softplus-start-epoch ~25-50 to skip re-CE (~4h save).",
+                    }), flush=True)
             ema = MlxEMA(model, decay=args.ema_decay)
             # Optimizer: default AdamW (existing path, UNCHANGED) or MD-Decoupling
             # (arXiv:2606.25971) — the re-audit's optimizer-bug fix (anti-collapse,
@@ -1500,26 +1760,41 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # wide, tight late when they collapse). Unused by the CE seg-loss branch.
                 m_t = m_start if args.epochs <= 1 else m_start + (m_end - m_start) * (ep - 1) / (args.epochs - 1)
                 margin_target = mx.array(float(m_t))
-                # --- FEED-bv 4-STAGE CURRICULUM stage resolution + per-boundary RE-TREATMENT ---
-                cur_stage = _stage_for_epoch(ep)
+                # --- FEED-bv/ca 4-STAGE CURRICULUM stage resolution + per-boundary RE-TREATMENT ---
+                # The stage advances on EITHER the fixed cap OR (plateau_trigger) a measured d_seg
+                # plateau (FEED-ca fix 2). The resolver tracks each stage's START epoch so the
+                # intra-stage tau / l7-threshold anneals (fix 3) know their progress in BOTH modes.
+                cur_stage, is_b, b_name = stage_resolver.resolve(ep, dseg_history)
                 seg_form_ep = _seg_form_for_stage(cur_stage) if curriculum else None
+                # (FEED-ca fix 3) per-epoch annealed tau / l7-threshold overrides (None when off).
+                tau_ep = stage_resolver.tau_for_ep(ep) if (curriculum and tau_anneal_on) else None
+                l7_thr_ep = stage_resolver.l7_thr_for_ep(ep) if (curriculum and l7_thr_anneal_on) else None
                 if curriculum:
                     # the curriculum drives the seg loss FORM per stage; the separate exp/inverse
                     # live-margin lever is OFF (l7_softplus carries its OWN hard-pixel weight).
                     mw_active = False
                     mw_temp_ep = margin_weight_temp
-                    is_b, b_name = _is_stage_boundary(ep)
                     if is_b:
                         # RE-TREAT every stage transition (operator: "different stages need different
                         # treatment"): spike-guard recalibrate (reset the loss-median window for the
-                        # new loss-form regime) + LR re-warmup (handled in build_lr_schedule, step-
-                        # space) + EMA continues (NOT reset). The Muon switch happens below.
+                        # new loss-form regime) + LR re-warmup + EMA continues (NOT reset). The Muon
+                        # switch happens below. (FEED-ca fix 2) in PLATEAU mode the tau/l7 AdamW
+                        # transitions append the ACTUAL opt step to the re-warmup anchor list so the
+                        # LR re-treat tracks the dynamic boundary (fixed mode prefills at restart-top).
                         recent = deque(maxlen=recent_maxlen)
+                        if plateau_trigger and b_name in ("tau_softplus", "l7_softplus"):
+                            try:
+                                _rewarmup_anchor_steps.append(float(getattr(opt, "step", gstep)))
+                            except Exception:
+                                _rewarmup_anchor_steps.append(float(gstep))
                         print(json.dumps({
                             "stage": "curriculum_stage_transition", "restart": restart_i, "ep": ep,
                             "into_stage": b_name, "seg_form": _seg_form_for_stage(b_name),
+                            "trigger": ("plateau_or_cap" if plateau_trigger else "fixed_cap"),
                             "spike_guard_recalibrated": True,
                             "lr_rewarmup": (b_name in ("tau_softplus", "l7_softplus")),
+                            "tau_ep": (round(tau_ep, 4) if tau_ep is not None else None),
+                            "l7_thr_ep": (round(l7_thr_ep, 4) if l7_thr_ep is not None else None),
                             "ema_continue": True,
                             "note": "re-treat: spike-guard reset + (AdamW) LR re-warmup + EMA continue",
                         }), flush=True)
@@ -1538,21 +1813,48 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             "note": "uniform seg weight -> annealed live-margin annulus re-allocation; "
                                     "spike-guard window reset for the new gnorm regime",
                         }), flush=True)
-                # MUON FINISHER switch (FEED-bv stage D): at the muon boundary, swap the AdamW
-                # optimizer for mlx Muon (Newton-Schulz orthogonalized momentum) at a low LR --
-                # "Muon is THE drop" (the conditioning finisher). 1D params (biases) fall back
-                # internally. EMA + model params are untouched (only the optimizer changes).
-                if curriculum and ep == muon_finisher_start_epoch and not _muon_switched:
-                    opt = optim.Muon(learning_rate=float(getattr(args, "muon_lr", 1e-4)),
-                                     momentum=float(getattr(args, "muon_momentum", 0.95)),
-                                     weight_decay=float(args.weight_decay))
+                # MUON FINISHER switch (FEED-bv stage D + FEED-ca fix 4/5): at the muon boundary
+                # (fixed cap OR plateau), swap AdamW for mlx Muon (Newton-Schulz orthogonalized
+                # momentum) at a low LR -- "Muon is THE drop". (fix 5) Muon applies ONLY to the
+                # decoder-HIDDEN weight matrices; the code-latent EMBEDDING (video-derived payload)
+                # + all biases + the final/output layer route to Adam via MultiOptimizer (PR95:
+                # Muon degrades embedding/final layers). (fix 4) the FRESH Muon/Adam-tail get a
+                # step-0-anchored LR re-warmup (the previously un-re-treated transition). EMA +
+                # model params are untouched (only the optimizer changes). --muon-all-params =
+                # back-compat ablation (Muon on ALL params, no Adam tail).
+                if curriculum and is_b and b_name == "muon" and not _muon_switched:
+                    muon_lr = float(getattr(args, "muon_lr", 1e-4))
+                    muon_momentum = float(getattr(args, "muon_momentum", 0.95))
+                    _madam = getattr(args, "muon_adam_lr", None)
+                    muon_adam_lr = float(_madam) if _madam is not None else muon_lr
+                    wu_eps_m = int(getattr(args, "margin_stage_lr_warmup_epochs", 8))
+                    lr_floor_m = float(getattr(args, "margin_stage_lr_floor", 0.1))
+                    if wu_eps_m > 0:  # fix 4: re-warmup at the Muon boundary (fresh opt -> step 0)
+                        win_m = max(1, wu_eps_m * opt_steps_per_epoch)
+                        muon_sched: Any = optim.linear_schedule(muon_lr * lr_floor_m, muon_lr, win_m)
+                        adam_sched: Any = optim.linear_schedule(muon_adam_lr * lr_floor_m, muon_adam_lr, win_m)
+                    else:
+                        muon_sched = muon_lr
+                        adam_sched = muon_adam_lr
+                    muon_all = bool(getattr(args, "muon_all_params", False))
+                    if muon_all:
+                        opt = optim.Muon(learning_rate=muon_sched, momentum=muon_momentum,
+                                         weight_decay=float(args.weight_decay))
+                    else:
+                        _muon_opt = optim.Muon(learning_rate=muon_sched, momentum=muon_momentum,
+                                               weight_decay=float(args.weight_decay))
+                        _adam_tail = optim.Adam(learning_rate=adam_sched)
+                        opt = optim.MultiOptimizer([_muon_opt, _adam_tail], filters=[_is_muon_weight])
                     _muon_switched = True
                     recent = deque(maxlen=recent_maxlen)  # re-treat the Muon transition too
                     print(json.dumps({
                         "stage": "muon_finisher_switch", "restart": restart_i, "ep": ep,
-                        "muon_lr": float(getattr(args, "muon_lr", 1e-4)),
-                        "momentum": float(getattr(args, "muon_momentum", 0.95)),
-                        "note": "AdamW -> Muon finisher (the conditioning drop); EMA + params continue",
+                        "muon_lr": muon_lr, "momentum": muon_momentum,
+                        "muon_on_hidden_only": (not muon_all),
+                        "adam_tail_lr": (None if muon_all else muon_adam_lr),
+                        "muon_lr_rewarmup_epochs": (wu_eps_m if wu_eps_m > 0 else 0),
+                        "trigger": ("plateau_or_cap" if plateau_trigger else "fixed_cap"),
+                        "note": "AdamW -> Muon(hidden) + Adam(code-latent/biases/out) finisher; EMA + params continue",
                     }), flush=True)
                 order = rng.permutation(P)
                 accum_grads = None
@@ -1564,7 +1866,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     pi = int(pi_np)
                     loss, grads = value_and_grad(
                         model, feats_for_pair(pi), 2 * pi, 2 * pi + 1,
-                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target, mw_active, mw_temp_ep, seg_form_ep,
+                        lstar_oh[pi], margins_mx[pi], poses_mx[pi], w_seg, w_pose, hinge, margin_target, mw_active, mw_temp_ep, seg_form_ep, tau_ep, l7_thr_ep,
                     )
                     # Materialize per pair so the lazy fwd+bwd graph does NOT accumulate
                     # across the epoch (the 499000 buffer-count cap fix, preserved).
@@ -1699,6 +2001,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         }), flush=True)
                     result_history.append(row)
                     print(json.dumps(row), flush=True)
+                    # (FEED-ca fix 2) record the monitored d_seg for the plateau-trigger slope
+                    # fit. Prefer the EMA verdict (the deploy signal) when computed this eval,
+                    # else the LIVE verdict. Only needed when plateau_trigger drives transitions.
+                    if curriculum and plateau_trigger:
+                        _dseg_mon = (v or v_live)
+                        if _dseg_mon is not None:
+                            dseg_history.append((ep, float(_dseg_mon["d_seg"])))
                     # (resumability) persist the best-so-far checkpoints AT EACH EVAL so a crash
                     # leaves a byte-closeable witness on disk (overwrite; cheap ~0.5 MB each).
                     try:
@@ -1817,6 +2126,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "hosc_beta_start": hosc_beta_start, "hosc_beta_end": hosc_beta_end,
             "hosc_omega": float(getattr(args, "hosc_omega", 1.0)),
             "chroma": chroma,
+            "siren_init": siren_init,
+            "siren_omega": siren_omega,
+            "finer_first_bias_scale": finer_first_bias_scale,
+            "wire_scale": wire_scale,
             "int8_verdict": bool(getattr(args, "int8_verdict", True)),
             "seg_loss": seg_loss,
             "margin_target_start": float(getattr(args, "margin_target_start", 1.0)),
@@ -2030,8 +2343,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--freq-across", type=float, default=32.0, help="directional basis: high freq ACROSS the edge (normal).")
     ap.add_argument("--freq-along", type=float, default=4.0, help="directional basis: low freq ALONG the edge (tangent).")
     ap.add_argument(
-        "--activation", choices=["relu", "hosc"], default="relu",
-        help="hidden nonlinearity: relu (control) or hosc=tanh(beta*sin(omega*u)) — the "
+        "--activation", choices=["relu", "hosc", "siren", "finer", "wire"], default="relu",
+        help="hidden nonlinearity: relu (control); siren=sin(w0*u) (Sitzmann 2020, w0=--siren-omega); "
+        "finer=sin(w0*(|u|+1)*u) (Liu CVPR2024 FINER, the variable-periodic activation that BEAT SIREN "
+        "to torch-d_seg 0.00138; spectral-bias knob = --finer-first-bias-scale wide first-layer bias); "
+        "wire=sin(w0*u)*exp(-0.5*(s*u)^2) (Saragadam CVPR2024 WIRE real-Gabor, best space-frequency "
+        "localization = smallest+most-compact EDGE error for the codim-1 boundary; s=--wire-scale); or "
+        "hosc=tanh(beta*sin(omega*u)) — the "
         "STEP-NATIVE R-survival lever (no Gibbs through bicubic^->uint8->bilinear_ R). hosc "
         "defaults to a NON-SATURATING beta-anneal (1.0->--hosc-beta) when endpoints are unset, "
         "avoiding the BH2 vanishing-grad saturation of a constant beta=4. The LEARNABLE "
@@ -2051,6 +2369,34 @@ def main(argv: list[str] | None = None) -> int:
         "Set start<end (e.g. 1.0 -> 6.0) to keep early gradients alive while converging to a step train.",
     )
     ap.add_argument("--hosc-omega", type=float, default=1.0, help="hosc base frequency.")
+    ap.add_argument(
+        "--siren-omega", type=float, default=30.0,
+        help="SIREN/FINER periodic frequency w0 (Sitzmann/Liu canonical default 30; the "
+        "OPTIMAL-FORM sweep is {10,30,60} — SIREN init scales hidden weights by 1/w0 so the "
+        "pre-activation variance stays unit AFTER the w0 multiply). Per-basis-tuned, NOT shared.",
+    )
+    ap.add_argument(
+        "--finer-first-bias-scale", type=float, default=1.0,
+        help="FINER (Liu CVPR2024) FIRST-LAYER bias init range U(-k,+k) — the variable-periodic "
+        "spectral-bias knob that gives FINER its edge over SIREN (selects which frequency sub-bands "
+        "the |u|+1 scale activates). Only active with --activation finer. Sweep this for FINER's optimum.",
+    )
+    ap.add_argument(
+        "--wire-scale", type=float, default=1.0,
+        help="WIRE (Saragadam CVPR2024) real-Gabor Gaussian window scale s in sin(w0*u)*exp(-0.5*(s*u)^2) "
+        "— controls space-frequency localization (larger s = tighter spatial support = sharper edge "
+        "localization). Only active with --activation wire. Per-basis-tuned (sweep s with w0=--siren-omega).",
+    )
+    ap.add_argument(
+        "--siren-init", action=argparse.BooleanOptionalAction, default=True,
+        help="SIREN init (Sitzmann NeurIPS 2020) for the periodic-activation sine layers: "
+        "FIRST sine layer (in_proj) W~U(-1/fan_in,+1/fan_in); each HIDDEN sine layer W~"
+        "U(-sqrt(6/fan_in)/omega,+same) with omega=--hosc-omega; biases zeroed. The canonical "
+        "fix for periodic/sine-MLP UNTRAINABILITY from scratch (parked capstone-v1 hosc-from-"
+        "scratch was d_seg 0.689 with gnorm-460 spike-skips). Takes effect for the PERIODIC family "
+        "(--activation hosc/siren/finer); relu keeps default MLX init. Use --no-siren-init for the "
+        "ablation that measures the SIREN-init effect.",
+    )
     ap.add_argument(
         "--seg-loss", choices=["ce", "margin_hinge"], default="ce",
         help="realized seg surrogate: margin-weighted CE (control) or margin_hinge "
@@ -2145,12 +2491,47 @@ def main(argv: list[str] | None = None) -> int:
                     help="(FEED-bv) tau for tau_softplus/l7 (PR95 0.3): mean(tau*softplus(-margin/tau)).")
     ap.add_argument("--l7-mult", type=float, default=4.0,
                     help="(FEED-bv) l7_softplus hard-pixel weight: 1+l7_mult on margin<l7_threshold (PR95 4=5x).")
-    ap.add_argument("--l7-threshold", type=float, default=1.0,
-                    help="(FEED-bv) l7_softplus small-margin threshold (PR95 1.0).")
+    ap.add_argument("--l7-threshold", type=float, default=0.42,
+                    help="(FEED-bv/ca fix 3) l7_softplus small-margin threshold. Default 0.42 = the "
+                    "MEASURED witness-hard median margin (FEED-bp), NOT the cargo-culted PR95 1.0.")
     ap.add_argument("--muon-lr", type=float, default=1e-4,
                     help="(FEED-bv) Muon finisher LR (low; the conditioning drop).")
     ap.add_argument("--muon-momentum", type=float, default=0.95,
                     help="(FEED-bv) Muon momentum (mlx default 0.95).")
+    # --- FEED-ca: principled curriculum/optimizer fixes (4-review gate, operator 2026-06-26) ---
+    ap.add_argument(
+        "--plateau-trigger", action=argparse.BooleanOptionalAction, default=False,
+        help="(FEED-ca fix 2) advance a curriculum stage when the MEASURED d_seg descent plateaus "
+        "(slope > -plateau-slope-eps per epoch over the last --plateau-window in-stage eval points) "
+        "OR the fixed --*-start-epoch CAP is reached (whichever first). Default OFF = fixed caps "
+        "only (the witness descends slowly; a fixed cap risks l7-on-unconverged-base).",
+    )
+    ap.add_argument("--plateau-slope-eps", type=float, default=1e-5,
+                    help="(FEED-ca fix 2) plateau threshold: advance when the per-epoch d_seg slope "
+                    "> -eps (i.e. not dropping faster than eps/epoch). Only with --plateau-trigger.")
+    ap.add_argument("--plateau-window", type=int, default=4,
+                    help="(FEED-ca fix 2) #recent IN-STAGE eval points (each --eval-every epochs "
+                    "apart) used to fit the d_seg slope. A FULL window of in-stage points is "
+                    "required before a plateau can fire (gates the post-transition d_seg bump).")
+    ap.add_argument("--tau-anneal-start", type=float, default=None,
+                    help="(FEED-ca fix 3) tau-softplus tau ANNEAL start (coarse, e.g. 1.0) over the "
+                    "tau stage. Set BOTH --tau-anneal-start/end to enable (else static --tau-softplus-tau).")
+    ap.add_argument("--tau-anneal-end", type=float, default=None,
+                    help="(FEED-ca fix 3) tau-softplus tau anneal end (fine/sharp, e.g. 0.2).")
+    ap.add_argument("--l7-thr-anneal-start", type=float, default=None,
+                    help="(FEED-ca fix 3) l7-threshold ANNEAL start (coarse, e.g. 1.0) over the l7 "
+                    "stage. Set BOTH --l7-thr-anneal-start/end to enable (else static --l7-threshold).")
+    ap.add_argument("--l7-thr-anneal-end", type=float, default=None,
+                    help="(FEED-ca fix 3) l7-threshold anneal end (fine, e.g. 0.42 = measured median).")
+    ap.add_argument("--muon-adam-lr", type=float, default=None,
+                    help="(FEED-ca fix 5) Adam-tail LR for the code-latent embedding + biases + final "
+                    "layer in the Muon finisher stage. None -> == --muon-lr.")
+    ap.add_argument(
+        "--muon-all-params", action=argparse.BooleanOptionalAction, default=False,
+        help="(FEED-ca fix 5) ABLATION: apply Muon to ALL params in the finisher (back-compat). "
+        "Default OFF = Muon ONLY on decoder-hidden weight matrices; code-latent (video-derived "
+        "payload) + biases + final layer route to Adam (PR95: Muon degrades embedding/final).",
+    )
     args = ap.parse_args(argv)
 
     result = run_train(args)
