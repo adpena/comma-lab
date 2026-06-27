@@ -1535,6 +1535,79 @@ def mlx_runtime_determinism_contract(*, device_type: str | None = None) -> dict[
     }
 
 
+DEVICE_FIDELITY_PROFILE_SCHEMA_VERSION = "mlx_scorer_device_fidelity_speed_profile.v1"
+
+
+def mlx_scorer_device_fidelity_speed_profile() -> dict[str, Any]:
+    """Canonical MEASURED speed×fidelity profile + drift diagnosis + optimal device policy
+    for the MLX SegNet/PoseNet scorer port and the witness MLP render.
+
+    This is system-intelligence: it codifies the 2026-06-27 benchmark (tasks #88/#89) so the
+    verdict path, the level-set sibling trainer, and the autopilot consume the proven policy
+    instead of re-deriving it. Numbers are ``[macOS-MLX research-signal]`` /
+    ``[Apple-GPU-vs-torch-CPU parity, exact-measured]`` — NOT a contest-axis score. See
+    ``.omx/research/mlx_scorer_port_fidelity_speed_optimization_20260627.md`` for the probes.
+
+    PROVEN diagnosis: the MLX-GPU "drift" is fp32 REDUCTION-ORDER non-associativity (GPU
+    matmul matches fp64 to 1.8e-4 — better than numpy-fp32's 3.6e-4; GPU sin/exp match numpy
+    to ~1e-7), NOT reduced-precision accumulation and NOT Metal fast-math. It is amplified by
+    high-omega witness activations and by SegNet argmax hypersensitivity. It is INHERENT and
+    UNFIXABLE in MLX 0.31.1 (no public deterministic-reduction flag — see
+    ``mlx_runtime_determinism_contract`` — and Metal lacks fp64), so the GPU scorer CANNOT be
+    made bit-exact. The optimal policy is the device split below, not a GPU exactness fix.
+    """
+
+    return {
+        "schema_version": DEVICE_FIDELITY_PROFILE_SCHEMA_VERSION,
+        "measured_utc": "2026-06-27",
+        "runtime": {"mlx": "0.31.1", "torch": "2.11.0", "host": "M5 Max Apple GPU"},
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dseg_budget_argmax_px_per_pair": 143,  # sub-0.15 d_seg ~= 7.3e-4 of 196608 px
+        "scorer_port": {
+            # forward pairs/s at batch 4; argmax px vs torch-CPU oracle on cached 0.mkv frames.
+            "torch_cpu": {"fwd_pairs_per_s": 2.01, "seg_argmax_px_per_pair": 0.0, "grade": "verdict_authority"},
+            "mlx_cpu": {"fwd_pairs_per_s": 1.46, "speedup_vs_torch_cpu": 0.73,
+                         "seg_argmax_px_per_pair": 0.0, "seg_logit_linf": 4.7e-5, "pose_comp_linf": 2.2e-11,
+                         "grade": "fp32_exact_but_slower_than_torch_cpu_no_speed_win"},
+            "mlx_gpu": {"fwd_pairs_per_s": 7.45, "speedup_vs_torch_cpu": 3.71,
+                         "seg_argmax_px_per_pair_max": 13.0, "seg_argmax_px_per_pair_mean": 10.0,
+                         "seg_logit_linf": 0.096, "pose_comp_linf": 2.5e-4,
+                         "grade": "reduced_reduction_order_gradient_only"},
+        },
+        "witness_render": {
+            # realized SegNet argmax px/pair after R, by render device (scorer always torch-CPU).
+            "numpy_fp32": {"argmax_px_per_pair": 0, "grade": "byte_close_authority_equals_inflate_py"},
+            "mlx_cpu": {"argmax_px_per_pair_range": [3, 18], "grade": "monitoring_ok_below_budget"},
+            "mlx_gpu": {"argmax_px_per_pair_range": [495, 1672], "grade": "NOT_verdict_trustworthy"},
+        },
+        "diagnosis": {
+            "root_cause": "fp32_reduction_order_non_associativity",
+            "not_reduced_precision_accum": True,   # GPU matmul vs fp64 = 1.8e-4 (< numpy 3.6e-4)
+            "not_fast_math_transcendentals": True,  # GPU sin/exp vs numpy ~1e-7
+            "amplifiers": ["high_omega_siren_hosc_activations", "segnet_argmax_near_tie_hypersensitivity"],
+            "gpu_cliff_layers": ["conv_pw(1x1 matmul)", "bn2", "decoder.block_1", "segmentation_head.logits"],
+        },
+        "gpu_bit_exact_achievable": False,
+        "gpu_bit_exact_blockers": [
+            "mlx_0_31_1_no_public_deterministic_reduction_flag",
+            "metal_no_fp64",
+            "mx_matmul_no_precision_arg",
+        ],
+        "optimal_policy": {
+            "training_gradient": "mlx_gpu",          # 3.71x; reduction-order fine for gradient
+            "scored_verdict": "numpy_fp32_render__then__torch_cpu_scorer",  # 0 px byte-close authority
+            "in_loop_monitoring": "mlx_cpu_render__then__torch_cpu_scorer",  # 3-18 px << 143 budget
+            "verdict_scorer_device": "torch_cpu",    # authority AND faster than mlx-cpu
+            "forbidden_for_scored_verdict": "mlx_gpu_render",  # 495-1672 px = the 4th artifact
+        },
+    }
+
+
 def _pose_output_deltas(torch_outputs: dict[str, Any], mlx_outputs: dict[str, Any]) -> dict[str, float]:
     torch_pose = torch_outputs.get("posenet")
     mlx_pose = mlx_outputs.get("posenet")
@@ -1795,6 +1868,7 @@ def _jsonable(value: Any) -> Any:
 
 __all__ = [
     "CONV_ACCUMULATION_PROBE_SCHEMA_VERSION",
+    "DEVICE_FIDELITY_PROFILE_SCHEMA_VERSION",
     "FAIL_CONV_ACCUMULATION_PROBE_VERDICT",
     "FAIL_SWEEP_VERDICT",
     "FAIL_TORCH_BATCH_INVARIANCE_VERDICT",
@@ -1816,6 +1890,7 @@ __all__ = [
     "build_mlx_segnet_layer_trace_manifest",
     "build_torch_segnet_batch_invariance_manifest",
     "mlx_runtime_determinism_contract",
+    "mlx_scorer_device_fidelity_speed_profile",
     "run_mlx_segnet_layer_trace_nchw",
     "run_torch_distortion_scorer_nchw",
     "run_torch_segnet_batch_and_loop_nchw",
