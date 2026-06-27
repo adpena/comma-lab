@@ -2702,3 +2702,47 @@ negligible; the binding term is FP-containment, already structural (SDF, FEED-ds
 0.19110; [macOS-CPU advisory] research-signal (score_claim=false, promotable=false, NOT byte-closed); NO-FAKE
 (realized lane-attributable measured vs frozen CPU-torch L*; rule-118 FREE rasterizer / counted coeffs; same
 task-space level-set vehicle, not a new vehicle).
+
+---
+
+### DAG FEED-es (2026-06-27): byte-close LINCHPIN verified GREEN + gate-pass→exact-row STAGED + FEED-er integration (meantime prep while amort decoder trains)
+
+**Context:** operator "is there any work in the meantime?" while the amortization subset decoder
+trains (~5h to the held-out gate) + the guidance subagent (a97c0259) runs. At the productive
+parallel limit (GPU decoder + 2 CPU explorations) → the right meantime work is PREP+SYNTHESIS, not
+more sustained CPU (avoid the contention the operator flagged). Did the highest-EV low-contention pieces:
+
+**1. Byte-close LINCHPIN VERIFIED (the one unverified means→ends link).** The `--freeze-decoder-fit-codes`
+mode (a) loads ONLY the shared-decoder params via `_load_shared_decoder_params` (EXCLUDES `code`), (b)
+re-fits codes, (c) saves the STANDARD `levelset_witness_ema_mlx.npz` (EMA shadow + `__cfg_*`). The
+byte-close tool `_load_levelset_ckpt` requires exactly `{code, in_proj.weight, out_sdf.weight,
+out_tex.weight, palette}` — ALL present in that npz. ⇒ the amortized witness byte-closes IDENTICALLY
+to the n600 witness (FEED-ee verified that path end-to-end incl. the inflate.sh `python3` fix). The
+amort decoder's ep25 ckpt ALREADY wrote both `levelset_resume_state.npz` (resume sidecar) +
+`levelset_witness_ema_mlx.npz` (deploy npz) → the freeze-source exists NOW. NO format surprise at the gate.
+
+**2. STAGED gate-pass → exact-row sequence (so PASS → pointer-move is instant, not a scramble):**
+   - (a) FULL-600 code-fit: `train_levelset_witness_realized_through_R_mlx.py --freeze-decoder-fit-codes
+     <amort_decoder>/levelset_witness_ema_mlx.npz --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz`
+     (gt_n600 present ✓) → fits all 600 codes against the frozen converged decoder (GPU, fast — codes only).
+   - (b) byte-close: `tools/levelset_byte_close_and_eval.py` → archive.zip + realized d_seg/d_pose (numpy-fp32 authority).
+   - (c) exact eval: contest-CPU via the FEED-ee runbook (Modal CPU OR local `torch_levelset_inflate.py`,
+     contest-LEGAL both axes) on the byte-closed bytes → THE exact row vs pointer 0.19110.
+
+**3. FEED-er (parametric lane solve) INTEGRATION — honest nuance, folded as a POST-gate lever:**
+   - Lane band IS solvable per-frame (openpilot poly × known K, road-plane IPM, ~7KB/n600, rule-118 FREE
+     rasterizer): SHAPE solved (FN 0.000133 < old 0.00087) + MOTION tracked (corr(curvature,err)≈0,
+     n96-full≈n48-straight → answers FEED-el's "static is wrong invariant" POSITIVELY). BUT total
+     0.000439 = 1.87× ABOVE the witness's lane contribution (~0.000236) → NOT a standalone d_seg win;
+     IS a cheap per-frame-adaptive PRIOR/INIT. The binding residual (0.000306 FP over-paint annulus) is
+     PART of the same all-class boundary annulus the witness learns anyway → CONFIRMS the trained-witness
+     vehicle (3rd vindication, with structured-prior + static-decomp).
+   - LEVER (post-gate, NOT now — would confound the clean generalization gate): inject lane-SDF as φ₁ of
+     the witness level-set (FEED-dm `inject_lane_sdf` mode={bias,replace}, FiLM θ_lane(t)) → lane shape for
+     ~7KB + frees witness capacity to the boundary annulus/Movable. Net win requires a byte-closed
+     trained-witness A/B (freed capacity must beat 0.000306 FP + ~7KB) — staged, NOT claimed.
+
+**Verdict:** the amortized row's full means→ends path is now VERIFIED + STAGED. Pointer UNMOVED 0.19110
+(no byte-closed contest exact row yet). [macOS advisory]; NO-FAKE (byte-close format verified by the
+consumer contract, not assumed; FEED-er realized vs frozen CPU-torch L*; rule-118 FREE / coeffs counted).
+Next: amort decoder ep50 reorient (~52min) → guidance verdict (a97c0259) → held-out gate @tau300 (~5h).
