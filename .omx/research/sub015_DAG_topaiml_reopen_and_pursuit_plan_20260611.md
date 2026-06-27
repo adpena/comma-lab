@@ -2806,3 +2806,47 @@ env TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 .venv/bin/python -u experiments/train_leve
 #  E=--hardness-oversample 0.5 ; F=--hardness-oversample 0.5 --hardness-weighted --hardness-source realized
 ```
 **Means/ends:** these levers GUIDE the SAME SDF-level-set witness toward d_seg; they are NOT a contest score and the exact pointer is UNMOVED (0.19110). The path to a lower EXACT score remains the amortized witness byte-closed + exact eval; this layer sharpens the d_seg the witness spends its budget on.
+
+---
+
+## FEED-eu (2026-06-27): WITNESS RD CURVE RE-MAPPED on MEASURED byte-close — current h96/mod32 is UNDER-sized (~100KB, not the assumed 122KB); B*≈120-155KB; operator hypothesis CONFIRMED in DIRECTION. (CPU-only, $0, NO new training; pointer UNMOVED 0.19110)
+
+**Source:** operator "map the curves; RD-optimum is a CURVE not one point — the witness may be UNDER-sized." CPU-only mine of existing data: 6 levelset verdict logs + byte-close of 3 EMA checkpoints + FEED-cc/cp/cq/db. All implied_S are `[macOS-CPU advisory]` NON-PROMOTABLE; the exact row at B* is the eventual gate.
+
+### 1. The MEASURED byte model (the load-bearing correction)
+Byte-closed the actual EMA checkpoints (`quantize_levelset_blob`: int8+brotli, curvelet bank EXCLUDED=free per rule 118). The witness blob splits into **base_b (shared decoder, FIXED by h/mod) + code_b (per-frame, ×1200 at contest scale)**:
+| run | code shape | base_b | code_b | TOTAL (contest counted) |
+|---|---|---|---|---|
+| n600 h96/mod32 (CONTEST size) | (1200,32) | **65,816** | **33,974** | **99,790 B ≈ 99.8 KB** [MEASURED] |
+| n200 h96/mod32 | (400,32) | 65,151 | 11,376 | 76,527 B |
+| amort h96/mod32 | (24,32) | 65,816 | 761 | 66,577 B |
+Closed-form fit (verified within 1.2%): `B(h,m) = 0.915·(88h + 8hm + 4h² + 8h) + 0.885·m·1200`. **code_b is LINEAR in frames (28.3 B/frame at mod32) → CONFIRMED.**
+
+**THE CORRECTION to FEED-cp:** FEED-cp/cq ASSUMED "h96/mod32 → n600 ≈ 122-130KB = AT the RD-optimum." The byte-close MEASURES h96/mod32 → **99.8 KB** (+ pose sidecar ~2.3-6.8KB → ~102-107KB total). The DAG's 122-130KB prediction was **~25% too HIGH**. ⇒ the current witness is NOT at B*; it sits ~20-55 KB BELOW it, on the steep part of the cliff.
+
+### 2. The RD curve S(B) = 100·d_seg(B) + 0.0184(pose, solved) + 25·B/37,545,489
+Anchored at the witness's OWN converged measured point (n96 h96/mod32 hosc: d_seg=**0.00124** @ epoch 950, l7_softplus — the ONLY converged level-set run; LABELED OPTIMISTIC because it is n96-subset d_seg, a lower bound for the harder n600 generalization). Fit `d_seg(B)=d_ref·(B_ref/B)^α` with B_ref=99.8KB. α∈{1.5 (FEED-cq clean), 2.34 (FEED-cc bc20→bc36)}:
+
+| curve | α | B* | S(B*) | S@current 100KB | S@122KB |
+|---|---|---|---|---|---|
+| **bare witness, OPTIMISTIC d_ref=0.00124** | 1.5 | 151 KB | 0.186 | 0.209 | 0.191 |
+| bare witness, OPTIMISTIC | 2.34 | 155 KB | 0.166 | 0.209 | 0.177 |
+| bare witness, CONSERVATIVE d_ref=0.0025 (2× gen-gap) | 1.5 | 199 KB | 0.240 | 0.335 | 0.285 |
+| bare witness, CONSERVATIVE | 2.34 | 191 KB | 0.200 | 0.335 | 0.256 |
+| **+directional −48% lever ON (free), OPTIMISTIC** | 1.5 | 116 KB | **0.147** | — | 0.147 |
+| **+directional −48% lever ON, OPTIMISTIC** | 2.34 | 128 KB | **0.140** | — | 0.140 |
+| +directional ON, CONSERVATIVE | 1.5 | 154 KB | 0.189 | — | 0.196 |
+| +directional ON, CONSERVATIVE | 2.34 | 157 KB | 0.168 | — | 0.181 |
+
+### 3. VERDICTS (honest, measured)
+1. **The witness IS UNDER-sized — operator hypothesis CONFIRMED in DIRECTION.** In EVERY scenario B* (120-200KB) > current 99.8KB. The current config sits on the steep cliff; right-sizing UP is net-positive. BUT the DAG's specific "89→122KB, S0.216→0.134" was the directional-ON+optimistic corner; the bare-witness measured-anchored curve is higher (B*≈150KB, S(B*)≈0.17-0.19).
+2. **Sub-0.15 at B* is reachable ONLY in the optimistic + directional-ON corner** (B*≈116-128KB → S 0.140-0.147, matching FEED-cc's 0.134). Bare witness RD-optimum = S 0.166-0.186 (clears sub-0.19, NOT sub-0.15). Conservative (gen-gap real) = S 0.168-0.24.
+3. **The BINDING uncertainty is the d_seg DESCENT at contest scale, NOT the sizing.** The n96→n600 generalization gap (d_ref) swings S(B*) by ~0.05-0.08; α swings it ~0.02-0.04; sizing-to-B* only ~0.02-0.04. The only converged run is n96; the n600 run OOM'd at ep50 (d_seg still 0.011, descending). ⇒ #1 priority = a CONVERGED n600 d_seg measurement (re-confirms FEED-db/cq: "rate is NOT binding; d_seg descent is the gate"). 
+4. **Cheapest-d_seg-per-byte knob = HIDDEN-DIM (amortized), NOT mod-dim.** Marginal: **hidden +1 → +1,028 B** (shared across all 1200 frames) vs **mod +1 → +1,765 B** (×1200 codes + film). hidden-dim is 1.7× cheaper per unit AND grows the shared interior that carries the ~72%-static partition; mod-dim (×1200) is the expensive per-frame knob — keep it modest (32). Code-count is FIXED (contest 1200 frames).
+
+### 4. RECOMMENDED SIZING for the post-gate optimal-form decoder
+- **Target B* ≈ 120-135 KB** (the directional-ON sub-0.15 corridor) → from current 99.8KB, **add ~20-35 KB via HIDDEN-DIM**: `--hidden-dim 112` → 116KB (B* for α=1.5) or `--hidden-dim 128` → 135KB; **keep `--mod-dim 32`**.
+- **MUST run with the self-orient directional −48% lever ON** (`--self-orient`, byte-closeable per FEED-ce) — it is the difference between sub-0.15 (S≈0.14) and sub-0.19 (S≈0.18) at B*.
+- The capacity-sweep the GPU run should do: {h96/mod32=100KB, h112/mod32=116KB, h128/mod32=135KB} × {directional OFF/ON} at CONVERGED n600 — this MEASURES α, the real d_ref-at-contest-scale, and B* per basis (replaces the borrowed α). A 3-point hidden-dim sweep at contest scale resolves the entire curve.
+
+**NO-FAKE:** all implied_S `[macOS-CPU advisory]` NON-PROMOTABLE; d_ref=0.00124 is n96-converged (optimistic for n600); byte model MEASURED (1.2% fit error); α BORROWED (must be re-measured by the sweep). Pointer UNMOVED 0.19110. The exact row at B* (byte-close + contest-CPU eval) is the gate; this maps WHERE to spend bytes, it is not itself a score.
