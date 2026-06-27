@@ -1411,3 +1411,34 @@ OPERATOR memory floor relaxed to 10GB (2026-06-26; 128GB all-ours; one GPU=gener
 - **VERDICT: REVISE-BEFORE-BURN (cheap: render-res $0 probe + collapse-CE), then PROCEED as a MEASURED ROW.** Honest: this burn is the best the RGB-witness-89KB vehicle can do on d_seg ALONE; the 0.149 arithmetic only clears 0.15 if d_seg hits a target the available levers can't reach here. **Bet the sub-0.15 on the task-space build.**
 
 **SYNTHESIS (2/4, deep-math + contest-info CONVERGE):** RGB-relu = predicted NEGATIVE; RGB-hosc = edge-feasible but uncertain + untrainable-tension; directional-(-48%) = unavailable to RGB; rate-cut deferred -> d_seg-alone-at-89KB cannot reliably clear sub-0.15. The TASK-SPACE build (parametric lane/homography -> byte-closeable directional + rate collapse) is the reliable path. PENDING: bug-hunt abbd0691 + MD a015eb18 + the hosc-vs-relu basis probe -> then full synthesis + surface the strategic decision to operator. Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-bz (2026-06-27): MD-Decoupling WIRED + VALIDATED + $0 CPU smoke — STABLE (29x lower gnorm) but UNDER-STEPS at adamw-lr -> PARALLEL ABLATION ARM, not a blind drop-in for the decisive burn
+
+Closes the pending "MD a015eb18" node. Full memo: `.omx/research/md_decoupling_wirein_validation_cpu_smoke_20260627.md`.
+- **CORRECTNESS:** `src/tac/optimization/md_decoupling.py` validated line-by-line vs arXiv:2606.25971 — reparam, chain-rule grads (g_what/g_gr/g_gc confirmed vs `mx.grad` + new end-to-end `_md_step` descent test), separate LRs, sphere projection, identity-at-init. Muon path is BYTE-FAITHFUL to the INSTALLED `mlx.optimizers.Muon` (verified by getsource — incl the `(1-momentum)` convention + ns5 coeffs). NO deviation, no fix. Tests 13/13 pass.
+- **WIRE-IN:** `--optimizer md` routes ALL witness MLP weight matrices (in_proj/film/hidden.*/out `.weight`) through MD; biases + `code` latent -> plain Adam (correct, code = video-derived payload); `_B` excluded (MLX `_`-prefix). EMA/byte-close/verdict untouched. Engages correctly. No gaps.
+- **$0 CPU SMOKE (gt_n6, render 64x96, seed0, mlx-device cpu, realized d_seg/d_pose):** matched margin-engage(ep12) run, lr 1e-3, ONLY optimizer differs:
+  - adamw: **gnorm_max 10869**, 2 divergence-restarts, EMA-shadow d_seg 0.235 (non-EMA collapsed to baseline -> EMA-lag divergence).
+  - md: **gnorm_max 376** (29x more stable), 1 restart, d_seg PINNED 0.5075 (under-steps), pose 49 vs adamw 2.59.
+  - md@5e-3 (no-margin): gnorm back up to 4619, d_seg still pinned -> higher lr did NOT unlock descent.
+- **KEY (honest):** MD's anti-collapse/stability property is REAL+MEASURED (removes the gradient explosion that triggers the live-run stage-transition failure), BUT at the inherited lr MD under-steps d_seg (no pixel flips in budget) and still trips the divergence detector; the divergence-detector/spike-guard-recal/EMA-cadence are AdamW-tuned. Realized-d_seg-descent benefit is INCONCLUSIVE at $0 tiny scale (NOT a verdict MD trains d_seg better/worse).
+- **RECOMMENDATION:** MD = PARALLEL ABLATION ARM (own lr sweep + relaxed divergence detector + n96/n600 budget; promote only on a byte-closed exact-eval row beating the AdamW manual-fix arm). The manual temp-anneal+LR-re-warmup AdamW fix stays the PRIMARY decisive-run path; blind MD on the single-GPU burn = HIGH risk (under-steps). Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-bz (2026-06-26): THRESHOLD CLARIFICATION (operator: goal=sub-0.19, capstone=sub-0.15) + bug-hunt review 3/4 PROCEED + the basis decides the GOAL not just the capstone
+
+**Operator (verbatim):** *"The goal is sub 0.19 and the capstone goal is sub 0.15"* — sub-0.19 (beat the 0.19110 frontier) is THE GOAL (bank it); sub-0.15 is the capstone stretch.
+
+**Witness d_seg thresholds (recomputed at the witness operating point rate~0.0594 + pose~0.0184 = 0.0778 fixed; S = 100*d_seg + 0.0778):**
+- **GOAL sub-0.19: d_seg < 1.12e-3.**
+- **CAPSTONE sub-0.15: d_seg < 7.2e-4.**
+- relu/isotropic floors ~3-4e-3 -> S ~0.38-0.45 -> does NOT clear even the GOAL. => the topology-matched basis (hosc/SIREN/step-native) is REQUIRED for sub-0.19 at all, not just the capstone. The basis probe + SIREN-init are now the decisive GOAL test.
+
+**REVIEW-GATE finding 3/4 — BUG-HUNT (abbd0691): PROCEED (measurement TRUSTWORTHY).**
+- CRITICAL (launch): --epochs 1500 (default 300 collapses curriculum to CE-only) + --num-pairs 600 (default 24) — BOTH already set in the stopped v5 command. HIGH H1: divergence-restart landmine on resume+default-n-restarts-2 (mid_ep750 reseeds to RANDOM, nukes l7+Muon) -> FIX --n-restarts 1 — ALREADY set in v5. So launch-preconditions MET.
+- MEASUREMENT-INTEGRITY TRUSTWORTHY: verdict = realized-through-R (mlx/numpy MLP -> torch bicubic->uint8@camera -> frozen CPU-torch SegNet argmax); d_seg = UNWEIGHTED argmax-disagreement (margin/l7 weight enters ONLY the training loss, NO verdict leak); tau_softplus + l7_softplus EXACTLY match canonical pr95 stage-losses; int8_verdict == byte-close int8; stage-switch + spike-guard-recalibrate(x3) + LR-rewarmup + resume-EMA-reseed all correct. Caveat: trainer implied_S ADVISORY; decisive row from witness_byte_close_and_eval.py (numpy fp32, all 600). MED (non-blocking): M1 Muon applied to ALL params incl code-latent (PR95 = Muon on decoder-hidden only; may degrade pose finisher) -> address IF Muon underperforms; M3 no assert boundaries-increase/resume-shape-match.
+
+**IN FLIGHT (review-gate completion):** hosc-beta-anneal basis probe (n96, pid 80417) + SIREN-init build+test (a9169d38) + arbitrariness/config/solution/math review (a7660df3) + MD-Decoupling (a015eb18). On harvest -> synthesize the BASIS verdict vs the sub-0.19 GOAL (relu no; hosc-beta-anneal? hosc-SIREN-init? does it reach <1.12e-3?) -> decide witness-basis run vs task-space build -> surface to operator. Pointer UNMOVED 0.19110.
