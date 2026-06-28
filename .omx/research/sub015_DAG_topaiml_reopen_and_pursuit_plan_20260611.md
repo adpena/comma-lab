@@ -4039,3 +4039,28 @@ window→1600; SoftBoundary replaces the confounded ab_beta_steplim per review H
 held-out amortization gate (pid 38154) STILL FITTING: d_seg 0.030→0.019→0.017 descending (codes fitting
 vs frozen L7 decoder), not flat → keep waiting, do NOT relaunch. mem ~16.9GB free. NO autonomous heavy-GPU
 launch (containment) — Wave-0 $0 tests + Wave-1 FiLM-fix build await operator steer; gate continues.
+
+---
+
+## FEED-ha (2026-06-28T13:35Z) — WAVE-0 $0 CAMPAIGN-DECIDERS LAUNCHED (operator "proceed")
+
+Operator green-lit proceeding. Dispatched BOTH Wave-0 $0 measurements in ONE harness (subagent
+af466740133726d22, local CPU/MLX inference — NOT training, NOT paid GPU; containment-compliant). Tag
+`[macOS-CPU advisory]`.
+
+- **0a residual intrinsic-dimension (THE campaign-decider):** render witness argmax for the 200 strided
+  pairs through the REAL forward (render_batch_through_R_mlx → frozen CPU-torch SegNet) → flip masks vs
+  lstars → band-local-histogram (motion-invariant) + pixel-aligned descriptors → PR/TwoNN/MLE-ID +
+  held-out PCA knee → LOW-ID (0.001 reachable) / HIGH-ID (label noise, reset 0.0015) / INTERMEDIATE.
+- **0b multi-res re-render (signal-vs-OT adjudicator):** re-render the 200 at coarse→fine render
+  resolutions → realized-d_seg-vs-resolution curve → RESOLUTION_WALL (signal "render finer") vs
+  TEXTURE_WALL (OT "flat colors fall outside argmax"). Decides the weight of the scale-curriculum lever
+  BEFORE any GPU arm.
+- **NO-FAKE correctness gate (baked in):** mean flip fraction across 200 pairs MUST reproduce the known
+  realized d_seg ≈0.003204 (FEED-gx calibration) within ±20%, else STOP — broken render, not a measurement.
+  The known calibration number is the shield against a fake ID result.
+
+Reuses the EXISTING forward (no re-implementation); CPU torch SegNet = authority; does NOT touch the
+running held-out gate (pid 38154). Out: experiments/results/wave0_residual_id_20260628/wave0_results.json
++ flip-mask npz dump (future passes reuse). FEED on verdict. Held-out gate still fitting (d_seg
+0.030→0.019→0.017). Pointer UNMOVED 0.19110.
