@@ -4464,3 +4464,49 @@ the FiLM-fixed witness byte-closes competitively in one shot when d_seg breaks �
 ### STATE
 a77d (FiLM-fix) + ac6b (PCA-codes) running; gate descending d_seg→0.0141; mem free% 88%, swap reclaiming
 (7.9→5.0GB). L1 floor-curve still un-harvested (run when idle). Pointer 0.19110.
+
+---
+
+## FEED-hl (2026-06-28T15:45Z) — PLAN: FiLM-fix+lane-prior recursive adversarial review (3-clean-pass, BEFORE GPU arm)
+
+**Operator: "big landing → plan a big round of recursive adversarial review." YES — binding per CLAUDE.md
+"Recursive adversarial review protocol" for training-code before any GPU launch. Plan banked; executes on
+a77d's commit.**
+
+### Gate: 3 consecutive clean passes before the FiLM-fix TRAINING arm launches
+a77d self-review = pass-attempt 1 (counts only if zero-issue; any finding resets counter). Then independent
+adversarial rounds on the COMMITTED artifact (trainer experiments/train_levelset_witness_realized_through_R_mlx.py
++ src/tac/boundary_math/lever_b_levelset_generator.py + DSL curriculum_dsl.py + tests). NO-GPU → runs in
+PARALLEL with the gate; review clears while gate finishes / gate-vs-GPU decision ripens.
+
+### High-risk lenses for THIS landing (must-checks, rotate the rest):
+1. **Resume/EMA/per-stage-ckpt integrity (HIGHEST RISK):** new params (per-layer FiLM, concat-code proj)
+   MUST be in EMA shadow + resume state + per-stage ckpt + loaded back (_build_ema_checkpoint_arrays /
+   _build_resume_state_arrays / _load_resume_state). Silent param-drop on resume/byte-close = corrupted/
+   non-reproducible run, discovered only at exact-eval. Per EMA + resumability + deterministic-repro
+   non-negotiables.
+2. **Baseline-preservation (PRESERVATION binding):** all flags off ⇒ byte-identical forward+loss; identity-
+   residual init a TRUE no-op (captured-reference test).
+3. **Rank-floor penalty numerics+dynamics (trickiest):** −logdet cov(M) eps/clamp/no-NaN; gradient sign
+   penalizes LOW rank; doesn't fight seg loss or destabilize tau→l7.
+4. **Rate/param accounting (means-ends):** concat+per-layer-FiLM ADD params→bytes; panel DEMOTED capacity →
+   confirm FiLM-fix earns d_seg by RANK (re-route existing code dims) NOT BYTES (capacity in disguise).
+   Quantify added bytes.
+5. **Thin-lane loss balance:** must not over-weight 3px dashes + starve bulk (net-negative d_seg); clean vs
+   existing lane-edge-weight; weight map precomputed+deterministic+cached.
+6. **Call-site tracing + default-override antipattern + comments-match-code.**
+7. **MLX gradient-reachability + shapes (fp32, no severed grad).**
+8. **Assumption-challenge axis (mandatory):** is FiLM the right conditioning mechanism (vs cross-attn /
+   hypernet / per-pair-bias)? Is rank-collapse the cause or a symptom of something deeper?
+
+### Sequencing
+a77d commits → round 1 (self-review) → dispatch independent adversarial rounds (lenses above, parallel
+reviewers) → fix CRITICAL/Med → commit → re-review → 3 clean passes → THEN surface gate-vs-GPU launch
+decision to operator. The TRAINING arm (the d_seg-mover) launches ONLY after 3 clean passes + operator
+go (one GPU; gate holds it). Per CLAUDE.md "KILL is last resort" + "Design decisions need council" +
+"PER-SUBSTRATE OPTIMAL FORM before paid dispatch".
+
+### STATE
+a77d code in working tree (trainer+generator+DSL+tests, 40 tests green), NOT yet committed (self-review
+phase). ac6b PCA-codes running. Gate descending d_seg→0.0138 (partial-lean). mem free 95% (swap reclaimed).
+Pointer 0.19110.
