@@ -3900,3 +3900,37 @@ Operator approved #1-first (deepen DSL) then #2 (byte-close). #1 DONE — `src/t
 **ARCH CONFIRMED level-set, NOT HNeRV:** softmax-of-SDF (5 SDF fields → argmax partition); curvelet/shearlet directional front-end (Candès-Donoho/Labate-Kutyniok, N^-2-optimal for curved C² singularities, parametric/GT-free/byte-FREE rule118); HOSC step-native activation; FiLM per-pair codes. 0 conv/PixelShuffle markers. 84,757 params = shared MLP decoder (hidden 37K + film 25K + in_proj 8.5K = amortized) + codes 12.8K (per-pair) + tiny SDF heads (485). curvelet bank = 0 bytes.
 
 **HELD-OUT AMORTIZATION GATE LAUNCHED** (operator "fire that when it comes back"): pid 38154 durable daemon, fits 400 held-out codes vs the FROZEN stageL7 decoder (600ep, --no-curriculum l7, --freeze-decoder-fit-codes), reference=our-realized 0.003204 → pass_threshold 0.004806 (held-out within 1.5× of our own training d_seg = the GENERALIZATION-GAP / amortization test; reference set to OUR actual, not the hypothetical n600 0.00124). VERDICT semantics: held-out d_seg ≈0.0032 → decoder GENERALIZES (600-capable, n=200 amortizes) → byte-close on 600 = shared decoder + 600 cheap codes; held-out >> → overfit to the 200 → need bigger n or it's per-instance. First point on the n* curve. pointer UNMOVED 0.19110; means≠ends.
+
+## FEED-gy (2026-06-28 ~07:43 CDT) — RARE-ATTACK INTEGRATION ORDER (the d_seg plateau-breaker campaign)
+
+**Goal:** break the d_seg 0.0032 plateau → ~0.001 (the score-mover; rate 0.049 + pose 0.094 are secondary). The plateau happened WITH the easy levers active (curvelet bank, HOSC, l7, tau) → the easy levers are EXHAUSTED; the breaker is CAPACITY or REPRESENTATION, not a finisher. Every arm = a DSL program (one-line, validated, containment-enforced), per-arm protocol (review→deep-math-optimize→harden→MEASURED A/B warm-start→keep-if-Δ+), ONE GPU SEQUENTIAL, ASK operator before each GPU launch.
+
+**Plateau hypothesis (ranked):** (1) CAPACITY — 0.0032 sits in the bc20-class under-capacity band (bc36-class reached 6e-4); 84K params / mod-dim 32 may be too small → THE #1 suspect. (2) REPRESENTATION — the binding residual is the ~8-dim lane orbit at the apex/FOE; the chart may not be matched there. (3) ALLOCATION — capacity not routed to the lane orbit. Finishers (Muon, p-escalation) won't break a capacity wall.
+
+**RANKED rare-attack table (EV = plateau-breaking potential; cost; build status):**
+| # | attack | changes | breaker mechanism | build | cost | warm? | EV |
+|---|---|---|---|---|---|---|---|
+| 1 | CAPACITY-RD curve (mod-dim 32→48→64, hidden) | model size | adds the missing capacity | config-only (FRESH train, can't warm a dim change) | HIGH (cheap PROBE first: n96 mod48 vs mod32) | no | **HIGHEST — decisive** |
+| 2 | A10 perspective chart (IPM+foveal+curvelet@apex) | coordinate chart | re-dimensions the apex where lane residual lives | TIER-3 UNBUILT (big) | HIGH | partial | HIGH (if repr-wall) |
+| 3 | capacity-routing (KKT waterfill, boundary_routing.py) | allocation | routes capacity to lane orbit by margin-saliency | MEDIUM wire | MED | yes | HIGH (pays after basis) |
+| 4 | A9 scale-curriculum (Daubechies multi-res) | training homotopy | coarse→fine reaches finer boundary | TIER-3 UNBUILT | MED-HIGH | partial | MED-HIGH |
+| 5 | chroma-as-d_seg isolation | which channels | SegNet reads RGB → chroma is a free d_seg actuator (never isolated) | flag on/off | LOW | yes | MED (maybe free) |
+| 6 | lane-edge-weight sweep 0→30 | loss emphasis | the lane (binding residual) emphasis was OFF in the final run | flag | LOW | yes | MED |
+| 7 | A4 Muon finisher | optimizer | geometric finisher (operator's Q) | flag | LOW | yes | MED (sharpen not capacity) |
+| 8 | A14 p-escalation l7→L∞ / HOSC β→∞ | loss/activation | push worst-case toward the step limit | flag/anneal | LOW | yes | MED |
+| 9 | A6 nuclear-norm code penalty | code rank | low-rank codes → rate + effective capacity | TIER-2 built, branch 6b4c0b962 | LOW (merge) | yes | MED (rate) |
+| 10 | A3 finisher-EMA best-keep | ckpt | banks best EMA (also fixes the overwrite-trample) | TIER-2 built | LOW | yes | LOW-MED |
+| 11 | A7 junction-aware eikonal | 0-cells | sharpen triple junctions | TIER-2 built | LOW | yes | LOW-MED |
+| 12 | A1 adaptive-τ | anneal shape | damp late-τ volatility | TIER-2 built | LOW | yes | LOW |
+| 13 | A12-A15 cyclic stages | schedule | Muon-prime/cyclic/CE-re-anchor (DSL expand_cycles) | DSL built | LOW | yes | LOW-MED |
+| 14 | openpilot road↔lane prior + ego-hood static clamp | 0-byte priors | free d_seg from geometry/static regions (#138/#139) | LOW fold | LOW | yes | LOW-MED (bounded) |
+
+**SEQUENCED WAVES (cost-ascending within EV; decisive-early):**
+- **GATE A (running):** held-out generalization (600-capable? + n*).
+- **WAVE 1 — CHEAP-FLAG HARVEST** (warm-start stageL7, ~50-100ep each, DSL-emitted, ONE GPU sequential): #7 Muon, #5 chroma-iso, #6 lane-edge, #8 p-escalation, #6b A1b-isolation. Fast signal + free d_seg + fast learning while heavy builds are designed. (~hours.)
+- **WAVE 2 — TIER-2 MERGE + A/B:** merge branch 6b4c0b962 → #9 A6, #10 A3, #12 A1, #11 A7.
+- **WAVE 3 — CAPACITY PROBE (THE decisive plateau test):** cheap n96 mod-dim 48 vs 32 short-curriculum → does d_seg break 0.0032? If YES → capacity was the wall → full capacity run at winning size (rate stays cheap, amortized) → sub-0.15 path. If NO → wall is representational → WAVE 4.
+- **WAVE 4 — STRUCTURAL (gated on WAVE 3):** #3 capacity-routing (wire) → #2 A10 perspective-chart (build) → #4 A9 scale-curriculum (build). The biggest builds, fired only if capacity alone doesn't break it.
+- **WAVE 5 — COMPOSE θ*:** DSL compose_theta_star(measured winners) → warm-start → converge → byte-close → exact (pointer move). + fold #14 0-byte priors.
+
+**Honest EV note:** WAVE 1/2 are fast-harvest + learning, but likely SMALL each (the plateau resisted similar levers) — don't let them delay WAVE 3. The pointer-moving d_seg break most likely comes from WAVE 3 (capacity) or WAVE 4 (structural). pointer 0.19110; means≠ends.
