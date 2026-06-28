@@ -398,3 +398,52 @@ def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
                  overrides={"--hosc-beta": beta},
                  epochs_delta=window,
                  notes="soft anti-aliased edge (low beta) for sub-pixel R-survival")
+
+
+def FiLMFix(per_layer: bool = True, concat_code: bool = True,  # noqa: N802 — LEVER-A
+            rank_floor_weight: float = 0.0, rank_floor_target: float = 4.0,
+            window: int = 100) -> Lever:
+    """LEVER-A (FiLM-rank-fix): attack the MEASURED per-pair FiLM modulation participation-ratio
+    collapse (3.34@CE -> 1.27@tau -> 1.19@l7; 91.8% of per-pair variation in ONE axis) that caps
+    d_seg AND held-out amortization. Composes three default-OFF trainer routes:
+
+      * ``per_layer`` -> ``--film-per-layer``: SEPARATE per-layer RESIDUAL FiLM (identity at init) =
+        more INDEPENDENT multiplicative modulation routes.
+      * ``concat_code`` -> ``--film-concat-code``: an ADDITIVE per-pair code-injection (folded concat;
+        identity at init) = a NON-collapsing per-pair TRANSLATION route (what a moving lane needs).
+      * ``rank_floor_weight`` > 0 -> ``--film-rank-floor-weight``/``--film-rank-floor-target``: a soft
+        participation-ratio FLOOR penalty so the curriculum cannot funnel the modulation to rank-1.
+
+    Emits ONLY flags that are turned on (store_true flags are never emitted False, per DSL review C2).
+    Carries a warm-start ``window`` (else dead-arm when resumed at end-of-run, review C1)."""
+    ov: dict = {}
+    if per_layer:
+        ov["--film-per-layer"] = True
+    if concat_code:
+        ov["--film-concat-code"] = True
+    if rank_floor_weight > 0.0:
+        ov["--film-rank-floor-weight"] = rank_floor_weight
+        ov["--film-rank-floor-target"] = rank_floor_target
+    return Lever("A_film_rank_fix", overrides=ov, epochs_delta=window,
+                 notes="FiLM rank-fix: per-layer + concat-code + rank-floor (attacks PR collapse)")
+
+
+def LanePrior(weight: float = 1.0, start_epoch: int = 300,  # noqa: N802 — LEVER-B
+              lane_class: int = 1, radius: int = 4, target: float = 0.5,
+              window: int = 100) -> Lever:
+    """LEVER-B (thin-lane dropped-dash prior): up-weight the realized through-R seg margin hinge on
+    THIN GT-lane structures the unweighted mean loss drops (MEASURED: 57% Road<->Lane confusion, PC0
+    = Lane->Road DROP, 52.7% of GT-lane components wholesale-missed, miss-fraction monotone in dash
+    size). A precomputed thin-lane weight map (local lane density in a (2r+1)^2 window) concentrates
+    pressure on the thin dashes. Carries a warm-start ``window`` (else dead-arm, review C1).
+
+    NOTE: this is the ``--lane-thin-*`` realized-margin prior; it is DISTINCT from the
+    ``--lane-prior-phi1`` structured-init lane-SDF flag (a different mechanism)."""
+    return Lever("B_lane_thin_prior",
+                 overrides={"--lane-thin-weight": weight,
+                            "--lane-thin-start-epoch": start_epoch,
+                            "--lane-thin-class": lane_class,
+                            "--lane-thin-radius": radius,
+                            "--lane-thin-target": target},
+                 epochs_delta=window,
+                 notes="thin-lane dropped-dash prior (realized margin hinge weighted by thinness)")

@@ -442,9 +442,24 @@ def _outputs_from_h0(P, h0, code_row, m, want_rgb):
     cr = np.asarray(code_row, np.float64)
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         film = (cr @ P["film.weight"].T + P["film.bias"]).reshape(m["n_hidden"], 2, m["hidden_dim"])
+        # LEVER-A (FiLM-rank-fix) byte-close forward: AUTO-DETECT the OPTIONAL per-layer residual FiLM
+        # (film_pl.*) + additive code-concat (concat_pl.*) routes from the loaded param keys so the
+        # byte-close render reflects the ACTUAL trained witness (NO-FAKE). ABSENT keys (default-off
+        # witness) => both branches skipped => BYTE-IDENTICAL to the pre-LEVER-A byte-close forward.
+        _has_film_pl = any(str(k).startswith("film_pl.") for k in P)
+        _has_concat = any(str(k).startswith("concat_pl.") for k in P)
         h = h0
         for li in range(m["n_hidden"]):
-            h = _act((h @ P["hidden.%d.weight" % li].T + P["hidden.%d.bias" % li]) * (1.0 + film[li, 0]) + film[li, 1], *kw)
+            scale = 1.0 + film[li, 0]
+            shift = film[li, 1]
+            if _has_film_pl:
+                pl = (cr @ P["film_pl.%d.weight" % li].T + P["film_pl.%d.bias" % li]).reshape(2, m["hidden_dim"])
+                scale = scale + pl[0]
+                shift = shift + pl[1]
+            pre = (h @ P["hidden.%d.weight" % li].T + P["hidden.%d.bias" % li]) * scale + shift
+            if _has_concat:
+                pre = pre + (cr @ P["concat_pl.%d.weight" % li].T + P["concat_pl.%d.bias" % li])
+            h = _act(pre, *kw)
         phi = h @ P["out_sdf.weight"].T + P["out_sdf.bias"]
         if not want_rgb:
             return phi.astype(np.float32), None

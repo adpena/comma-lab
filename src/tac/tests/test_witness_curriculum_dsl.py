@@ -15,12 +15,15 @@ from tac.witness_dsl import (
     Preserve,
     WitnessProgram,
     real_trainer_flags,
+    real_store_true_flags,
     BASELINE,
     PoseDecouple,
     Muon,
     DirectionalBasis,
     TauFrozen,
     SoftBoundary,
+    FiLMFix,
+    LanePrior,
 )
 
 # the exact flags the completed CE->tau->l7 run was launched with (grounded from the log)
@@ -181,3 +184,70 @@ def test_soft_boundary_replaces_beta_steplim():
     arm = BASELINE.with_lever(SoftBoundary(2.0))
     assert arm.flag_dict()["--hosc-beta"] == 2.0 and arm.epochs > BASELINE.epochs
     assert arm.validate() == []
+
+
+# --- LEVER-A (FiLM-rank-fix) + LEVER-B (thin-lane prior) DSL levers (task: film-rank-fix + lane-prior) ---
+def test_film_fix_default_turns_on_per_layer_and_concat():
+    ov = FiLMFix().overrides
+    assert ov["--film-per-layer"] is True
+    assert ov["--film-concat-code"] is True
+    # default rank-floor weight is 0 => NOT emitted (off)
+    assert "--film-rank-floor-weight" not in ov
+
+
+def test_film_fix_lever_validates_clean_and_real_flags():
+    arm = BASELINE.with_lever(FiLMFix())
+    assert arm.validate() == []
+    real = real_trainer_flags()
+    for f in arm.levers[-1].overrides:
+        assert f in real, f"FiLMFix emitted a non-real flag: {f}"
+
+
+def test_film_fix_rank_floor_emits_weight_and_target():
+    ov = FiLMFix(rank_floor_weight=0.05, rank_floor_target=6.0).overrides
+    assert ov["--film-rank-floor-weight"] == 0.05
+    assert ov["--film-rank-floor-target"] == 6.0
+
+
+def test_film_fix_never_emits_false_on_store_true():
+    # review C2: store_true flags must never be emitted False (=> --no-X crash). With per_layer off
+    # the flag is simply ABSENT (trainer default off), never False.
+    ov = FiLMFix(per_layer=False, concat_code=False).overrides
+    assert "--film-per-layer" not in ov and "--film-concat-code" not in ov
+    st = real_store_true_flags()
+    assert "--film-per-layer" in st and "--film-concat-code" in st  # they ARE store_true
+    # and a composed program with film-fix off-routes still validates (no False store_true emitted)
+    assert BASELINE.with_lever(FiLMFix(per_layer=True, concat_code=False)).validate() == []
+
+
+def test_film_fix_extends_epochs_window():
+    arm = BASELINE.with_lever(FiLMFix(window=120))
+    assert arm.epochs == BASELINE.epochs + 120  # warm-start window (no dead-arm)
+
+
+def test_lane_prior_lever_validates_clean_and_real_flags():
+    arm = BASELINE.with_lever(LanePrior())
+    assert arm.validate() == []
+    real = real_trainer_flags()
+    for f in arm.levers[-1].overrides:
+        assert f in real, f"LanePrior emitted a non-real flag: {f}"
+
+
+def test_lane_prior_distinct_from_lane_prior_phi1():
+    ov = LanePrior().overrides
+    # LEVER-B is the --lane-thin-* realized-margin prior, NOT the --lane-prior-phi1 structured-init flag
+    assert "--lane-prior-phi1" not in ov
+    assert ov["--lane-thin-weight"] == 1.0
+    assert ov["--lane-thin-class"] == 1
+
+
+def test_film_fix_and_lane_prior_compose_clean():
+    combo = BASELINE.with_lever(FiLMFix(rank_floor_weight=0.1), LanePrior(weight=2.0))
+    fd = combo.flag_dict()
+    assert fd["--film-per-layer"] is True
+    assert fd["--film-rank-floor-weight"] == 0.1
+    assert fd["--lane-thin-weight"] == 2.0
+    assert combo.validate() == []
+    # baseline is unmutated (composition is pure)
+    assert "--film-per-layer" not in BASELINE.flag_dict()
+    assert "--lane-thin-weight" not in BASELINE.flag_dict()

@@ -746,9 +746,26 @@ def levelset_rgb_forward_numpy(
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], activation, **akw)
         film = (code_row @ p["film.weight"].T + p["film.bias"]).reshape(n_hidden, 2, hidden_dim)
+        # LEVER-A (FiLM-rank-fix) deploy forward: AUTO-DETECT the OPTIONAL per-layer residual FiLM
+        # (``film_pl.*``) and the additive per-pair code-concat route (``concat_pl.*``) from the param
+        # KEYS. ABSENT keys (the default-off witness) => both branches are skipped => the per-layer
+        # ``pre`` below is EXACTLY ``(h @ W.T + b) * (1.0 + film[li,0]) + film[li,1]`` => BYTE-IDENTICAL
+        # to the pre-LEVER-A forward. PRESENT keys => the ONE CODEPATH applies EXACTLY what the MLX
+        # witness trained, so the realized verdict + byte-close render the ACTUAL witness (NO-FAKE: the
+        # deploy/inflate forward never silently ignores trained params).
+        _has_film_pl = any(k.startswith("film_pl.") for k in p)
+        _has_concat = any(k.startswith("concat_pl.") for k in p)
         for li in range(n_hidden):
-            h = _act((h @ p[f"hidden.{li}.weight"].T + p[f"hidden.{li}.bias"]) * (1.0 + film[li, 0]) + film[li, 1],
-                     activation, **akw)
+            scale = 1.0 + film[li, 0]
+            shift = film[li, 1]
+            if _has_film_pl:
+                pl = (code_row @ p[f"film_pl.{li}.weight"].T + p[f"film_pl.{li}.bias"]).reshape(2, hidden_dim)
+                scale = scale + pl[0]
+                shift = shift + pl[1]
+            pre = (h @ p[f"hidden.{li}.weight"].T + p[f"hidden.{li}.bias"]) * scale + shift
+            if _has_concat:
+                pre = pre + (code_row @ p[f"concat_pl.{li}.weight"].T + p[f"concat_pl.{li}.bias"])
+            h = _act(pre, activation, **akw)
         phi = h @ p["out_sdf.weight"].T + p["out_sdf.bias"]      # (P, K)
         tex = h @ p["out_tex.weight"].T + p["out_tex.bias"]      # (P, 3)
         z = phi / float(softmax_temp)
@@ -761,6 +778,72 @@ def levelset_rgb_forward_numpy(
             luma = 0.299 * rgb[:, 0:1] + 0.587 * rgb[:, 1:2] + 0.114 * rgb[:, 2:3]
             rgb = np.concatenate([luma, luma, luma], axis=-1)
     return rgb.astype(np.float32), phi.astype(np.float32)
+
+
+# ---------------------------------------------------------------------------
+# LEVER-A / LEVER-B pure-numpy primitives (MLX-free reference + unit-testable). The MLX trainer
+# mirrors these EXACTLY; keeping the reference here keeps the numpy-portable contract intact.
+# ---------------------------------------------------------------------------
+def film_modulation_participation_ratio(modulation: np.ndarray) -> float:
+    """Participation ratio (effective rank) of the per-pair FiLM modulation ``M`` (S, D) across the
+    S sampled (pair,frame) codes -- the MEASURED collapse diagnostic (PR 3.34@CE -> 1.19@l7).
+
+    ``PR = (sum_i lambda_i)^2 / sum_i lambda_i^2`` where ``lambda_i`` are the eigenvalues of the
+    centered covariance. Computed WITHOUT an eigendecomposition via the Gram identities
+    ``trace(C) = ||Mc||_F^2`` and ``||C||_F^2 = ||Mc Mc^T||_F^2`` (an S x S Gram). PR in [1, rank]:
+    1 == full rank-1 collapse, higher == modulation spread across more independent axes."""
+    M = np.asarray(modulation, np.float64)
+    if M.ndim != 2 or M.shape[0] < 1:
+        raise ValueError(f"modulation must be (S, D) with S>=1; got shape {M.shape}")
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        Mc = M - M.mean(axis=0, keepdims=True)
+        tr = float(np.sum(Mc * Mc))            # = trace(Gram) = sum of eigenvalues
+        G = Mc @ Mc.T                          # (S, S) Gram
+        fro2 = float(np.sum(G * G))            # = ||Gram||_F^2 = sum of eigenvalues^2
+    return (tr * tr) / (fro2 + 1e-12)
+
+
+def film_rank_floor_penalty(modulation: np.ndarray, target: float) -> float:
+    """Soft participation-ratio FLOOR penalty ``relu(target - PR(M))``: 0 when PR>=target; positive
+    (penalizing) when the modulation has collapsed below ``target`` effective dimensions. Minimizing
+    it pushes PR UP (opposes the measured rank-1 collapse). numpy reference for the MLX twin used in
+    the trainer loss; the gradient w.r.t. M increases PR (verified by the MLX gradient-sign test)."""
+    pr = film_modulation_participation_ratio(modulation)
+    return max(float(target) - pr, 0.0)
+
+
+def lane_thin_weight_map(lstar: np.ndarray, *, lane_class: int = 1, radius: int = 4,
+                         power: float = 1.0) -> np.ndarray:
+    """Per-pixel up-weight map for THIN GT-lane structures (the dropped-dash residual: measured 52.7%
+    of GT-lane connected components wholesale-missed, miss-fraction monotone in dash size, <5px 93%).
+
+    ``weight = lane_mask * clip(1 - local_lane_fraction, 0, 1)^power`` where ``local_lane_fraction``
+    is the mean lane occupancy in a ``(2*radius+1)^2`` window (box filter via an INTEGRAL IMAGE --
+    O(HW), deterministic, scipy-FREE). THIN dashes have LOW local lane fraction -> HIGH weight; WIDE
+    lane regions have high fraction -> ~0 weight; non-lane pixels are 0. The unweighted mean seg loss
+    UNDER-fits the thin ~3px dashes; this map restores the pressure exactly where they are dropped.
+    Returns float32 (H, W), all entries >= 0, nonzero ONLY on (thin) lane pixels."""
+    lr = np.asarray(lstar)
+    if lr.ndim != 2:
+        raise ValueError(f"lstar must be a 2-D (H,W) argmax map; got shape {lr.shape}")
+    lane = (lr == int(lane_class)).astype(np.float64)
+    H, W = lane.shape
+    ii = np.zeros((H + 1, W + 1), np.float64)
+    ii[1:, 1:] = np.cumsum(np.cumsum(lane, axis=0), axis=1)  # integral image
+    r = max(int(radius), 0)
+    ys = np.arange(H)
+    xs = np.arange(W)
+    y0 = np.clip(ys - r, 0, H)
+    y1 = np.clip(ys + r + 1, 0, H)
+    x0 = np.clip(xs - r, 0, W)
+    x1 = np.clip(xs + r + 1, 0, W)
+    Y0, X0 = np.meshgrid(y0, x0, indexing="ij")
+    Y1, X1 = np.meshgrid(y1, x1, indexing="ij")
+    win_sum = ii[Y1, X1] - ii[Y0, X1] - ii[Y1, X0] + ii[Y0, X0]
+    win_cnt = np.maximum((Y1 - Y0) * (X1 - X0), 1)
+    frac = win_sum / win_cnt
+    w = np.clip(1.0 - frac, 0.0, 1.0) ** float(power)
+    return (lane * w).astype(np.float32)
 
 
 def quantize_levelset_blob(params: dict[str, np.ndarray]) -> dict[str, Any]:
@@ -889,8 +972,11 @@ __all__ = [
     "curvelet_directional_B",
     "curvelet_feats",
     "eikonal_penalty",
+    "film_modulation_participation_ratio",
+    "film_rank_floor_penalty",
     "fit_out_sdf_to_structured_target",
     "front_end_fit_disagreement",
+    "lane_thin_weight_map",
     "isotropic_fourier_B",
     "levelset_argmax",
     "rebuild_per_pair_feats_in_place",

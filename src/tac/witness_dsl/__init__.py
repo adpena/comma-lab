@@ -31,6 +31,8 @@ from tac.witness_dsl.curriculum_dsl import (
     DirectionalBasis,
     TauFrozen,
     SoftBoundary,
+    FiLMFix,
+    LanePrior,
 )
 from tac.witness_dsl.campaign import (
     Arm,
@@ -61,6 +63,8 @@ __all__ = [
     "DirectionalBasis",
     "TauFrozen",
     "SoftBoundary",
+    "FiLMFix",
+    "LanePrior",
     # campaign engine
     "Arm",
     "ArmResult",

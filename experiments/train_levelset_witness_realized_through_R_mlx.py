@@ -81,7 +81,10 @@ from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     LevelSetConfig,
     curvelet_directional_B,
     curvelet_feats,
+    film_modulation_participation_ratio,
+    film_rank_floor_penalty,
     int8_dequant_params,
+    lane_thin_weight_map,
     levelset_rgb_forward_numpy,
     quantize_levelset_blob,
     rebuild_per_pair_feats_in_place,
@@ -323,6 +326,8 @@ def build_levelset_rgb_witness(
     hosc_omega: float,
     chroma: bool,
     palette_init_logit: np.ndarray | None = None,
+    film_per_layer: bool = False,
+    film_concat_code: bool = False,
 ):
     import mlx.core as mx
     import mlx.nn as nn
@@ -334,6 +339,11 @@ def build_levelset_rgb_witness(
             self.n_hidden = n_hidden
             self.hidden_dim = hidden_dim
             self.n_classes = n_classes
+            # LEVER-A (FiLM-rank-fix) toggles (default OFF => the extra submodules are NOT created =>
+            # model.parameters() / EMA / checkpoints / byte-close are BYTE-IDENTICAL to the pre-LEVER-A
+            # witness, and the forward branches below are skipped).
+            self.film_per_layer = bool(film_per_layer)
+            self.film_concat_code = bool(film_concat_code)
             self.activation = str(activation)
             self.softmax_temp = float(softmax_temp)
             self.wire_w0 = float(wire_w0)
@@ -348,6 +358,28 @@ def build_levelset_rgb_witness(
             self.in_proj = nn.Linear(in_feat, hidden_dim)
             self.film = nn.Linear(mod_dim, 2 * hidden_dim * n_hidden)
             self.hidden = [nn.Linear(hidden_dim, hidden_dim) for _ in range(n_hidden)]
+            # LEVER-A1 (--film-per-layer): SEPARATE per-layer RESIDUAL FiLM projections, IDENTITY at
+            # init (zero weight+bias => the residual scale (+0) and shift (+0) are 0 => the modulation
+            # at init == the shared-FiLM-only forward; with the flag ON the per-layer route then learns
+            # INDEPENDENT per-pair (scale,shift) modulation, raising the per-pair modulation rank to
+            # attack the MEASURED participation-ratio collapse 3.34@CE -> 1.19@l7). siren_init touches
+            # ONLY in_proj+hidden, so these stay zero at init.
+            if self.film_per_layer:
+                self.film_pl = [nn.Linear(mod_dim, 2 * hidden_dim) for _ in range(n_hidden)]
+                for _lin in self.film_pl:
+                    _lin.weight = mx.zeros_like(_lin.weight)
+                    _lin.bias = mx.zeros_like(_lin.bias)
+            # LEVER-A2 (--film-concat-code): an ADDITIVE per-pair code-injection route added to each
+            # hidden pre-activation. This is the algebraically-FOLDED concat: concat([h, code]) @ W
+            # == h @ W_h + code @ W_c, folded into ONE zero-init projection mod_dim->hidden_dim
+            # (concat_pl[li]) -- a NON-collapsing per-pair TRANSLATION route alongside the
+            # multiplicative FiLM (what a moving lane needs). Zero init => no-op at init
+            # (identity-residual); shape-safe (no existing layer dims change).
+            if self.film_concat_code:
+                self.concat_pl = [nn.Linear(mod_dim, hidden_dim) for _ in range(n_hidden)]
+                for _lin in self.concat_pl:
+                    _lin.weight = mx.zeros_like(_lin.weight)
+                    _lin.bias = mx.zeros_like(_lin.bias)
             self.out_sdf = nn.Linear(hidden_dim, n_classes)     # K SDF fields (LINEAR)
             self.out_tex = nn.Linear(hidden_dim, 3)             # pose-carrying RGB texture
             # (DIAGNOSED FIX) learned per-class palette (K,3), in LOGIT space (sigmoid(palette)*255
@@ -373,9 +405,21 @@ def build_levelset_rgb_witness(
 
         def _trunk(self, coord_feats, code_idx):
             h = self._act(self.in_proj(coord_feats))
-            film = mx.reshape(self.film(self.code[code_idx]), (self.n_hidden, 2, self.hidden_dim))
+            code = self.code[code_idx]
+            film = mx.reshape(self.film(code), (self.n_hidden, 2, self.hidden_dim))
             for li, layer in enumerate(self.hidden):
-                h = self._act(layer(h) * (1.0 + film[li, 0]) + film[li, 1])
+                # DEFAULT-OFF => scale==(1.0+film[li,0]), shift==film[li,1], no concat =>
+                # pre == layer(h)*(1.0+film[li,0])+film[li,1] => BYTE-IDENTICAL to pre-LEVER-A.
+                scale = 1.0 + film[li, 0]
+                shift = film[li, 1]
+                if self.film_per_layer:
+                    pl = mx.reshape(self.film_pl[li](code), (2, self.hidden_dim))
+                    scale = scale + pl[0]
+                    shift = shift + pl[1]
+                pre = layer(h) * scale + shift
+                if self.film_concat_code:
+                    pre = pre + self.concat_pl[li](code)
+                h = self._act(pre)
             return h  # (P, hidden)
 
         def sdf(self, coord_feats, code_idx):
@@ -401,7 +445,17 @@ def build_levelset_rgb_witness(
             film = mx.reshape(self.film(codes), (-1, self.n_hidden, 2, self.hidden_dim))
             h = mx.broadcast_to(h0[None], (film.shape[0], h0.shape[0], h0.shape[1]))
             for li, layer in enumerate(self.hidden):
-                h = self._act(layer(h) * (1.0 + film[:, li, 0][:, None, :]) + film[:, li, 1][:, None, :])
+                # DEFAULT-OFF => BYTE-IDENTICAL to the pre-LEVER-A batched forward (same expression).
+                scale = 1.0 + film[:, li, 0][:, None, :]
+                shift = film[:, li, 1][:, None, :]
+                if self.film_per_layer:
+                    pl = mx.reshape(self.film_pl[li](codes), (-1, 2, self.hidden_dim))
+                    scale = scale + pl[:, 0][:, None, :]
+                    shift = shift + pl[:, 1][:, None, :]
+                pre = layer(h) * scale + shift
+                if self.film_concat_code:
+                    pre = pre + self.concat_pl[li](codes)[:, None, :]
+                h = self._act(pre)
             return self._compose_rgb(h)                            # (K, P, 3)
 
     return LevelSetRGBWitness()
@@ -476,9 +530,22 @@ def levelset_sdf_argmax_mlx(
 
     h = _act(feats_mx @ deploy_mx["in_proj.weight"].T + deploy_mx["in_proj.bias"])
     film = (code_row_mx @ deploy_mx["film.weight"].T + deploy_mx["film.bias"]).reshape(n_hidden, 2, hidden_dim)
+    # LEVER-A AUTO-DETECT (parity-gated reorient): apply the OPTIONAL per-layer FiLM / code-concat
+    # routes when their keys are present so the self-orient reorient argmax reflects the trained
+    # witness. ABSENT keys (default-off) => BYTE-IDENTICAL to the pre-LEVER-A twin.
+    _has_film_pl = any(str(k).startswith("film_pl.") for k in deploy_mx)
+    _has_concat = any(str(k).startswith("concat_pl.") for k in deploy_mx)
     for li in range(n_hidden):
-        h = _act((h @ deploy_mx[f"hidden.{li}.weight"].T + deploy_mx[f"hidden.{li}.bias"])
-                 * (1.0 + film[li, 0]) + film[li, 1])
+        scale = 1.0 + film[li, 0]
+        shift = film[li, 1]
+        if _has_film_pl:
+            pl = (code_row_mx @ deploy_mx[f"film_pl.{li}.weight"].T + deploy_mx[f"film_pl.{li}.bias"]).reshape(2, hidden_dim)
+            scale = scale + pl[0]
+            shift = shift + pl[1]
+        pre = (h @ deploy_mx[f"hidden.{li}.weight"].T + deploy_mx[f"hidden.{li}.bias"]) * scale + shift
+        if _has_concat:
+            pre = pre + (code_row_mx @ deploy_mx[f"concat_pl.{li}.weight"].T + deploy_mx[f"concat_pl.{li}.bias"])
+        h = _act(pre)
     phi = h @ deploy_mx["out_sdf.weight"].T + deploy_mx["out_sdf.bias"]  # (P, K)
     return mx.argmax(phi, axis=-1)
 
@@ -520,6 +587,35 @@ def validate_lane_edge_config(
             f"{n_classes}-class comma10k CANONICAL partition [Road0,Lane1,Undrivable2,Movable3,MyCar4]; would "
             "IndexError mid-training. Use 1 for the lane orbit (the d_seg gate)."
         )
+
+
+def validate_lane_thin_config(
+    *, lane_thin_weight: float, lane_thin_start_epoch: int, epochs: int,
+    lane_thin_class: int, lane_thin_radius: int, n_classes: int = 5,
+) -> None:
+    """(LEVER-B) thin-lane dropped-dash prior fail-closed config guard (pure; testable; fail LOUD).
+
+    Mirrors ``validate_lane_edge_config``: a thin-lane lever that never engages (start > epochs) is a
+    silent no-op = a FALSE 'thin-lane prior does not help' verdict; an out-of-range class would
+    IndexError mid-training; a negative radius is malformed. When OFF (weight<=0) the guard is a
+    NO-OP so the additive default path is never gated by a lever that is not in use."""
+    if lane_thin_weight <= 0.0:
+        return
+    if lane_thin_start_epoch > epochs:
+        raise ValueError(
+            f"--lane-thin-weight {lane_thin_weight} > 0 but --lane-thin-start-epoch "
+            f"({lane_thin_start_epoch}) > --epochs ({epochs}): the thin-lane hinge would NEVER engage "
+            "-> a silent no-op = a FALSE 'thin-lane prior does not help' verdict. Set "
+            "--lane-thin-start-epoch <= --epochs (0 = engage from ep1)."
+        )
+    if not (0 <= lane_thin_class <= n_classes - 1):
+        raise ValueError(
+            f"--lane-thin-class ({lane_thin_class}) out of range [0,{n_classes - 1}] for the "
+            f"{n_classes}-class comma10k CANONICAL partition [Road0,Lane1,Undrivable2,Movable3,MyCar4]; "
+            "would IndexError mid-training. Use 1 for the lane orbit (the d_seg gate)."
+        )
+    if lane_thin_radius < 0:
+        raise ValueError(f"--lane-thin-radius ({lane_thin_radius}) must be >= 0 (window half-width).")
 
 
 def _seg_form_for_epoch(ep: int, args) -> str:
@@ -739,6 +835,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         mod_dim=args.mod_dim, n_classes=5, activation=args.activation, softmax_temp=args.softmax_temp_start,
         wire_w0=args.wire_w0, wire_s0=args.wire_s0, hosc_beta=args.hosc_beta, hosc_omega=args.hosc_omega,
         chroma=args.chroma, palette_init_logit=palette_init,
+        film_per_layer=bool(getattr(args, "film_per_layer", False)),
+        film_concat_code=bool(getattr(args, "film_concat_code", False)),
     )
     mx.eval(model.parameters())
     # SIREN init (Sitzmann 2020) for the periodic family (hosc/wire) — the canonical from-scratch
@@ -919,6 +1017,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     msal_uni_beta = float(args.margin_saliency_uniward_beta)
     msal_gate = {"on": msal_start <= 1}
 
+    # LEVER-A (FiLM-rank-fix) loss term closure constants. A SOFT participation-ratio FLOOR on the
+    # realized per-pair FiLM modulation M = film(code) so the curriculum cannot funnel it to rank-1
+    # (MEASURED collapse PR 3.34@CE -> 1.19@l7). rankfloor_w=0.0 (default) => the branch is skipped =>
+    # behavior IDENTICAL (fully additive). Computed over a FIXED deterministic subsample of the
+    # per-(pair,frame) codes (<= cap, strided) so the S x S Gram is cheap; the penalty is
+    # pair-INDEPENDENT, so accumulating it per-pair then averaging counts it ONCE (correct magnitude;
+    # redundant compute bounded by the cap). It penalizes the SHARED film route (the measured-collapse
+    # determinant); film_pl residual routes are not directly penalized but the shared route dominates
+    # the per-pair modulation rank.
+    rankfloor_w = float(getattr(args, "film_rank_floor_weight", 0.0))
+    rankfloor_tgt = float(getattr(args, "film_rank_floor_target", 4.0))
+    rankfloor_idx = None
+    if rankfloor_w > 0.0:
+        _ncodes = 2 * P
+        _cap = 256
+        _stride = max(1, _ncodes // _cap)
+        rankfloor_idx = mx.array(np.arange(0, _ncodes, _stride)[:_cap].astype(np.int32))
+
+    # LEVER-B (thin-lane dropped-dash prior) closure constants. Up-weight the realized through-R seg
+    # margin hinge on THIN GT-lane structures the unweighted mean loss drops (MEASURED: 52.7% of
+    # GT-lane connected components wholesale-missed, miss-fraction monotone in dash size). lane_thin_w
+    # =0.0 (default) => the branch is skipped => behavior IDENTICAL (fully additive). The per-pair
+    # thin-lane weight map (local lane density in a (2r+1)^2 window) is PRECOMPUTED ONCE from the
+    # cached L* (deterministic; NOT recomputed per step) and looked up by pair index inside the loss.
+    # When lane_thin_start>1 the engagement epoch RE-TREATS the spike-guard (same as LEVER-3/4).
+    lane_thin_w = float(getattr(args, "lane_thin_weight", 0.0))
+    lane_thin_tgt = float(getattr(args, "lane_thin_target", 0.5))
+    lane_thin_cls = int(getattr(args, "lane_thin_class", 1))
+    lane_thin_rad = int(getattr(args, "lane_thin_radius", 4))
+    lane_thin_start = int(getattr(args, "lane_thin_start_epoch", 0))
+    lane_thin_gate = {"on": lane_thin_start <= 1}
+    thin_maps_mx = None
+    if lane_thin_w > 0.0:
+        thin_maps_mx = {
+            pi: mx.array(lane_thin_weight_map(
+                np.asarray(gt.lstars[pi]), lane_class=lane_thin_cls, radius=lane_thin_rad)[None])
+            for pi in range(P)
+        }
+
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
         phi0 = model.sdf(cf, c0)
@@ -974,6 +1111,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hmap = mx.maximum(msal_tgt - sgn, 0.0) * sal                 # fragile pixels weighted
             msal_term = mx.sum(hmap) / (mx.sum(sal) + 1e-6)             # saliency-weighted mean hinge
             L = L + msal_w * msal_term
+        # LEVER-A (FiLM-rank-fix) soft participation-ratio FLOOR. Pushes the per-pair modulation PR up
+        # toward rankfloor_tgt (opposing the measured rank-1 collapse). PR computed Gram-wise (NO
+        # eigendecomposition): trace(C)=||Mc||_F^2 (== mx.sum(Mc*Mc)), ||C||_F^2=||Mc Mc^T||_F^2. The
+        # numpy reference is tac...film_modulation_participation_ratio / film_rank_floor_penalty.
+        # Default-off (rankfloor_w=0). Mirrors the numpy reference EXACTLY (one math, two backends).
+        if rankfloor_w > 0.0 and rankfloor_idx is not None:
+            M = model.film(model.code[rankfloor_idx])                   # (S, D) modulation
+            Mc = M - mx.mean(M, axis=0, keepdims=True)
+            tr = mx.sum(Mc * Mc)                                        # trace(Gram) = sum eigenvalues
+            G = Mc @ Mc.T                                               # (S, S) Gram
+            fro2 = mx.sum(G * G)                                        # sum eigenvalues^2
+            pr = (tr * tr) / (fro2 + 1e-12)                            # participation ratio in [1, S]
+            L = L + rankfloor_w * mx.maximum(rankfloor_tgt - pr, 0.0)
+        # LEVER-B (thin-lane dropped-dash prior): realized through-R margin hinge weighted by the
+        # PRECOMPUTED thin-lane map (nonzero ONLY on thin GT-lane pixels). Same realized decision
+        # margin as LEVER-3 but concentrated on the DROPPED thin dashes (the PC0 residual). c0=2*pi
+        # so c0//2 == pi keys the per-pair thin map to THIS pair's lstar_oh. Default-off (lane_thin_w
+        # =0). Costs a SECOND realized seg forward when ON (acceptable per operator "score > training
+        # time"; an optimal-form fusion into the base seg loss is a parent edit, out of this scope).
+        if lane_thin_w > 0.0 and lane_thin_gate["on"] and thin_maps_mx is not None:
+            tw = thin_maps_mx[int(c0) // 2]                            # (1, H, W) thin-lane weight (>=0)
+            f1t = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
+            slog = adapter.segnet(f1t)                                 # (1, H, W, 5)
+            gt_l = mx.sum(slog * lstar_oh, axis=-1)                   # (1, H, W)
+            run2 = mx.max(slog + lstar_oh * (-1e9), axis=-1)          # (1, H, W) top competitor
+            sgn = gt_l - run2                                         # (1, H, W) decision margin
+            hmap_t = mx.maximum(lane_thin_tgt - sgn, 0.0) * tw        # fragile thin-lane pixels only
+            L = L + lane_thin_w * (mx.sum(hmap_t) / (mx.sum(tw) + 1e-6))
         return L
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
@@ -1662,6 +1827,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "stage_transition_reset_moments": bool(getattr(args, "stage_transition_reset_moments", False)),
         "lane_prior_phi1": bool(getattr(args, "lane_prior_phi1", False)),
         "lane_prior_phi1_mode": str(getattr(args, "lane_prior_phi1_mode", "replace")),
+        # LEVER-A / LEVER-B provenance (deterministic-reproducibility; all default-OFF => the
+        # bit-identical path is recorded as off).
+        "film_per_layer": bool(getattr(args, "film_per_layer", False)),
+        "film_concat_code": bool(getattr(args, "film_concat_code", False)),
+        "film_rank_floor_weight": float(getattr(args, "film_rank_floor_weight", 0.0)),
+        "film_rank_floor_target": float(getattr(args, "film_rank_floor_target", 4.0)),
+        "lane_thin_weight": float(getattr(args, "lane_thin_weight", 0.0)),
+        "lane_thin_class": int(getattr(args, "lane_thin_class", 1)),
+        "lane_thin_radius": int(getattr(args, "lane_thin_radius", 4)),
+        "lane_thin_target": float(getattr(args, "lane_thin_target", 0.5)),
+        "lane_thin_start_epoch": int(getattr(args, "lane_thin_start_epoch", 0)),
         "axis": "[macOS-MLX training-gradient]/[macOS-CPU advisory] verdict; promotion_eligible=false; pointer UNMOVED",
     }
     (out_dir / "levelset_train_result.json").write_text(json.dumps(result, indent=2))
@@ -1816,6 +1992,49 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-3 OPTIMAL-FORM: engage the lane hinge only at ep>=this (0=from ep1=current "
                     "behavior). Gate to the tau_softplus/l7 margin stage (e.g. 300) to avoid the "
                     "margin-from-scratch-starves-interior failure; the engage epoch re-treats the spike-guard.")
+    # LEVER-A (FiLM-RANK-FIX, ADDITIVE, ALL DEFAULT-OFF). Attacks the MEASURED per-pair FiLM modulation
+    # participation-ratio collapse (3.34@CE -> 1.27@tau -> 1.19@l7: 91.8% of per-pair variation in ONE
+    # axis -> the decoder receives ~1 effective per-pair direction -> caps d_seg AND held-out
+    # amortization). All-off => byte-identical to the pre-LEVER-A witness (the extra submodules / loss
+    # term are not created). See build_levelset_rgb_witness + the rank-floor branch in total_loss_fn.
+    ap.add_argument("--film-per-layer", action="store_true",
+                    help="LEVER-A1: add SEPARATE per-layer RESIDUAL FiLM projections (identity at init: "
+                    "zero weight+bias) => more INDEPENDENT per-pair multiplicative modulation routes "
+                    "(raises modulation rank). Default OFF = shared-FiLM-only = current witness.")
+    ap.add_argument("--film-concat-code", action="store_true",
+                    help="LEVER-A2: add an ADDITIVE per-pair code-injection route (folded concat: "
+                    "concat([h,code])@W == h@W_h + code@W_c, one zero-init proj/layer; identity at init) "
+                    "= a NON-collapsing per-pair TRANSLATION route (what a moving lane needs). Default OFF.")
+    ap.add_argument("--film-rank-floor-weight", type=float, default=0.0,
+                    help="LEVER-A3: weight of a SOFT participation-ratio FLOOR penalty relu(target-PR) on "
+                    "the realized per-pair modulation M=film(code), so the curriculum cannot funnel it to "
+                    "rank-1. 0.0 (default) = OFF. PR is Gram-computed (no eigendecomposition).")
+    ap.add_argument("--film-rank-floor-target", type=float, default=4.0,
+                    help="LEVER-A3: the participation-ratio FLOOR (effective-dim target) the penalty pushes "
+                    "M toward (must be > 1 when --film-rank-floor-weight > 0; PR >= 1 always). Default 4.0.")
+    # LEVER-B (THIN-LANE DROPPED-DASH PRIOR, ADDITIVE, DEFAULT-OFF). Attacks the MEASURED dominant
+    # residual: 57% Road<->Lane confusion, PC0 (34.5% of residual variance) = Lane->Road DROP, 52.7% of
+    # GT-lane connected components WHOLESALE-MISSED, miss-fraction monotone in dash size (<5px 93%
+    # missed). The unweighted mean seg loss UNDER-fits thin 3px dashes. This up-weights the realized
+    # through-R margin hinge on THIN GT-lane pixels (a precomputed local-lane-density weight map). NOTE:
+    # distinct from --lane-prior-phi1 (the structured-init lane SDF prior); this is the --lane-thin-*
+    # realized-margin prior. Default lane_thin_weight=0.0 = OFF = byte-identical.
+    ap.add_argument("--lane-thin-weight", type=float, default=0.0,
+                    help="LEVER-B: weight of the realized through-R thin-lane margin hinge (up-weights "
+                    "thin/dropped GT-lane dashes). 0.0 (default) = OFF.")
+    ap.add_argument("--lane-thin-class", type=int, default=1,
+                    help="LEVER-B: the lane class index in the comma10k CANONICAL order "
+                    "[Road0,Lane1,Undrivable2,Movable3,MyCar4]. Default 1 (Lane).")
+    ap.add_argument("--lane-thin-radius", type=int, default=4,
+                    help="LEVER-B: half-width of the (2r+1)^2 window for the local-lane-density thinness "
+                    "measure (thin dashes => low local density => high weight). Default 4.")
+    ap.add_argument("--lane-thin-target", type=float, default=0.5,
+                    help="LEVER-B: the decision-margin target for the thin-lane hinge relu(target-margin). "
+                    "Default 0.5 (matching --lane-margin-target).")
+    ap.add_argument("--lane-thin-start-epoch", type=int, default=0,
+                    help="LEVER-B: engage the thin-lane hinge only at ep>=this (0=from ep1). Gate to the "
+                    "tau/l7 margin stage (e.g. 300) to avoid margin-from-scratch starvation; the engage "
+                    "epoch re-treats the spike-guard.")
     # LEVER-4 (MARGIN-SALIENCY weighting, DAG FEED-eq, ADDITIVE, DEFAULT-OFF). GENERALIZES LEVER-3
     # from the class-1-only mask to the ALL-CLASS flip-prone band: the realized through-R decision
     # margin hinge is weighted PER-PIXEL by the GT-margin fragility saliency sal=exp(-gt_margin/tau)
@@ -1992,6 +2211,31 @@ def main(argv: list[str] | None = None) -> int:
         lane_edge_weight=args.lane_edge_weight, lane_edge_start_epoch=args.lane_edge_start_epoch,
         epochs=args.epochs, lane_edge_class=args.lane_edge_class, n_classes=5,
     )
+
+    # (LEVER-B) thin-lane dropped-dash prior fail-closed config guard (same NO-FAKE silent-no-op class).
+    validate_lane_thin_config(
+        lane_thin_weight=args.lane_thin_weight, lane_thin_start_epoch=args.lane_thin_start_epoch,
+        epochs=args.epochs, lane_thin_class=args.lane_thin_class, lane_thin_radius=args.lane_thin_radius,
+        n_classes=5,
+    )
+
+    # (LEVER-A) FiLM-rank-fix fail-closed config guards (same NO-FAKE silent-no-op class).
+    # A rank-floor with target <= 1 can NEVER penalize (PR >= 1 always) = a silent no-op = a FALSE
+    # 'rank-floor does nothing' verdict. The film-per-layer / film-concat-code architecture routes are
+    # loaded from a frozen-decoder npz that does NOT contain them, so --freeze-decoder-fit-codes would
+    # leave them zero-init AND frozen = never trained = a silent no-op = a FALSE 'film-fix does nothing'.
+    if args.film_rank_floor_weight > 0.0 and args.film_rank_floor_target <= 1.0:
+        raise ValueError(
+            f"--film-rank-floor-weight {args.film_rank_floor_weight} > 0 but "
+            f"--film-rank-floor-target ({args.film_rank_floor_target}) <= 1: the participation ratio is "
+            ">= 1 by construction, so relu(target - PR) would be 0 always -> a silent no-op = a FALSE "
+            "'rank-floor does nothing' verdict. Set --film-rank-floor-target > 1 (e.g. 4).")
+    if (args.film_per_layer or args.film_concat_code) and args.freeze_decoder_fit_codes:
+        raise ValueError(
+            "--film-per-layer / --film-concat-code are incompatible with --freeze-decoder-fit-codes: "
+            "the frozen decoder npz has no film_pl/concat_pl keys, so those routes would stay zero-init "
+            "AND frozen = never trained = a silent no-op = a FALSE 'film-fix does nothing' verdict. Run "
+            "the FiLM-rank-fix on a joint (unfrozen) run.")
 
     # (FEED-eq) LEVER-4 fail-closed config guard: a saliency lever that never engages (start > epochs)
     # is a silent no-op = a FALSE 'margin-saliency does not help' verdict (same NO-FAKE class the lane
