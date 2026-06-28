@@ -4433,3 +4433,34 @@ would refine the train-at-2×-later-multiplier upside, NOT the primary decision.
 FiLM-fix build running (a77d, not yet committed). Gate descending d_seg→0.0141 (heading PARTIAL/rank-limited
 = 2nd FiLM-collapse confirmation). swap reclaiming (7.9→5.0GB), free% 88%. Pointer 0.19110. GPU arms await
 steer; one GPU (gate holds it) → FiLM-fix arm launch decision (stop gate vs wait) surfaces when build clean.
+
+---
+
+## FEED-hk (2026-06-28T15:35Z) — PARALLEL no-GPU build plan (operator: "what else to build in the meantime") + Wave-3 launch
+
+Two builds now running in parallel (no trainer-collision, no-GPU contention managed): a77d (FiLM-fix+lane-prior,
+the trainer) + ac6bc0daeee5a6d1d (Wave-3 code-rate lever, standalone). Gate holds the GPU.
+
+### Prioritized parallel builds (DAG θ* order, contention-aware)
+- **#1 LAUNCHED — Wave-3 PCA codes 32→20 byte-close (ac6bc0daeee5a6d1d):** the codes are the COUNTED
+  per-pair payload (rule 118); measured eff-rank ~11 of 32 → PCA-compress + byte-close → rate-vs-d_seg
+  Pareto + K*. CPU/numpy + bounded 384-render verify (NO-FAKE gate: K=32 ≈ 0.0032). Standalone (new tool,
+  NOT the trainer) → no a77d collision. BANKED rate lever (witness S~0.46 not competitive → infra + banked
+  win, not a pointer-mover).
+- **#2 DEFERRED-slightly — pre-emphasis / channel-inversion (L3 byte-free d_seg exploit):** render the
+  pre-distorted RGB whose boundary lands right after the known R PSF (bicubic↑874→uint8→bilinear↓384). Build
+  standalone module + $0 measure on L7. Defer until gate frees / #1 render done (it renders through R →
+  GPU+memory contention; avoid 3 concurrent MLX render jobs + the 768/874 swap-spike class).
+- **#3 AFTER a77d commits — trainer-editing Wave-2 levers (IPM perspective chart [#185], feature-space-OT
+  loss, dash-gate):** all edit the SAME trainer as a77d → build sequentially after a77d lands (no concurrent
+  trainer edits → no serializer collisions). The next A/B wave.
+
+### Contention logic (why this order)
+ONE GPU (gate) + a77d editing the trainer. Parallel-safe = (a) doesn't edit the trainer, (b) CPU-light or
+bounded-384-render. PCA-codes (#1) qualifies; pre-emphasis (#2) renders-through-R so it queues; trainer
+levers (#3) wait for a77d's commit. Honest EV: all ADVANCE THE CAPSTONE (bank rate + d_seg compounders) so
+the FiLM-fixed witness byte-closes competitively in one shot when d_seg breaks — none move the pointer today.
+
+### STATE
+a77d (FiLM-fix) + ac6b (PCA-codes) running; gate descending d_seg→0.0141; mem free% 88%, swap reclaiming
+(7.9→5.0GB). L1 floor-curve still un-harvested (run when idle). Pointer 0.19110.
