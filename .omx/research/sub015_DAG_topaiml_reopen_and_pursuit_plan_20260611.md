@@ -3709,3 +3709,30 @@ Operator 2026-06-27: *"the team is working on it now ... come back in a couple h
 **Pose coupling (sister finding, from verdict log):** corr(d_seg,d_pose)=**+0.70** over ep500-825; both bumped ep700-825 then partly recovered. +correlation ⇒ shared-decoder shared-representation-quality transient (NOT a seg-vs-pose capacity tradeoff, which would be anti-correlated); the τ-anneal (w_seg 100 : w_pose 1) is a seg-side perturbation the shared render pays for in both readouts. In the SHIPPED witness pose rides the stored-target sidecar (d_pose ~3.4e-5, solved), so this is a coupled-training-run artifact, not a shipped-witness property.
 
 **Reusable for tau→l7 @ep900 (~1h):** same diff driver, point CKPTS at tau + l7 ep900. Predicted l7 signature: improved flips CONCENTRATE in the precarious small-margin band; precarious-frac drops further than tau's 0.150→0.140 (the L7 high-p worst-pixel attack made visible). Means≠ends — this characterizes the PATH; pointer UNMOVED 0.19110.
+
+## FEED-gj (2026-06-27) — θ* DESIGN NODE: approved level-set/calculus lever stack (operator "fold the top picks, all approved")
+
+Bird's-eye synthesis (manifolds × dimensional-variants × derivatives × integrals) → the θ* launch config. Tiered by readiness; evidence-tagged MEASURED vs DERIVATION. Launches AFTER l7 + gen-gap gate (gen-gap decides amortized-shared-subset vs full-per-pair codes = the code structure the rate levers operate on). Means≠ends: levers toward a lower byte-closed exact row; pointer 0.19110.
+
+**TIER-1 READY (flags/wired — flip ON for θ*):**
+- **Muon finisher** — CE→tau→l7→**Muon** (`--muon-start-epoch`). THIS run omits it; it is our MEASURED "the drop" (FEED-fk). Newton-Schulz orthogonalized hidden-weight updates (whitens the update Jacobian). #1 grounded gap.
+- **Stage re-treat** — `--stage-transition-rewarmup-epochs` + `--stage-transition-reset-moments` at tau→l7 and →Muon (FEED-fz prereqs, currently OFF). Flush stale AdamW 2nd-moments into the new loss landscape ("different stages need different treatment").
+- **Pose DECOUPLE → stored sidecar** — drop realized-pose-in-loss; compose Quantizr stored-target sidecar (d_pose→~3.4e-5). DOUBLE win: lower d_pose AND frees shared-decoder capacity for d_seg (deletes the MEASURED +0.70 seg-pose Hessian cross-term/coupling, FEED-gi). MEASURED support.
+- directional tangent-aligned basis (MEASURED −48% #1 lever) + foveation/IPM (MEASURED both axes) — already planned.
+
+**TIER-2 ADDITIVE BUILD (default-OFF, bit-identical-when-off; BUILDING NOW in isolated worktree, land after l7):**
+- **adaptive-tau anneal shape** (`--tau-anneal-shape {cosine|geometric|cosine_hold}`, default cosine=bit-identical) — slow the homotopy step near tau→0 (continuation/predictor-corrector). Attacks the MEASURED late-tau volatility (d_seg 0.0042↔0.0047 = homotopy crossing a fold). DERIVATION. $0.
+- **SWA / wider-finisher EMA** — average weights over the finisher oscillation → flat basin center. DERIVATION. $0.
+- **nuclear-norm low-rank code penalty** (`--code-nuclear-weight`, default 0) ‖C‖_* + **temporal-AR code path** — exploit MEASURED eff-rank 25.8→21.9 contraction → store U,V factors + AR-residuals along the ego-motion code-path → RATE. (task #110 made concrete; convex ℓ1-of-singular-values.)
+- **junction-aware eikonal relax** — down-weight |∇φ|=1 near triple junctions (codim-2 medial-axis singular set where SDF can't be smooth; likely feeds the Lane residual). DERIVATION.
+- **sub-pixel boundary placement audit** — the residual localizes to the 1px band at 384 AFTER R averages 874→512 (MEASURED #149); the INR is continuous → place the zero-level-set in ℝ² R-faithfully, not pixel-snapped. AUDIT (knob only if a real gap exists).
+
+**TIER-3 STRUCTURAL (sequenced, bigger build):**
+- **coarse-to-fine SCALE curriculum** (Daubechies multi-resolution) — orthogonal homotopy on the BASIS scale (coarse curvelet scales first, unlock fine progressively, each inits the next). Fine scales are what ring in late-tau → gate them behind a settled coarse partition → kill volatility at its source. DERIVATION.
+- **unified perspective-aware chart** — IPM/bird's-eye for ground-plane (road/lane, apex compression vanishes → uniform low-dim boundary) + foveal warp off-plane (sky/cars/lights) + tangent-directional basis + finest-curvelet-at-apex. Re-dimensions the hardest region (dimensional-variant-via-coordinate-change). All components individually CONFIRMED; composition NEW.
+
+**θ* ORDERING:** CE → (coarse scales) → tau [adaptive-slow] → (unlock fine) → l7 [+re-treat] → Muon [+re-treat] → SWA-average. Pose decoupled (stored sidecar) throughout; codes nuclear-norm+AR; solved in the perspective-aware chart; junction-eikonal + sub-pixel as the d_seg finishers. Target B*~104KB, S 0.125-0.134 OPT (hidden120/mod21/dir-ON/Muon + these).
+
+**CHEAPEST-FIRST ($0):** adaptive-tau + SWA — attack the volatility we're watching NOW + make every downstream stage converge cleaner. Then flip Muon + pose-decouple + stage-re-treat (highest-confidence, all wired).
+
+**Unifying through-line:** nearly every lever is one move in a different lens — TRACK the solution manifold more carefully (continuation, SWA, re-treat, Muon), OPERATE in its natural coordinates (IPM/foveal/directional/coarse-to-fine), RESPECT its singularities (junction-eikonal, sub-pixel level set, low-rank codes). Solve the witness gently and in the right chart.
