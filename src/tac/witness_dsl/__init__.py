@@ -30,6 +30,16 @@ from tac.witness_dsl.curriculum_dsl import (
     DirectionalBasis,
     TauFrozen,
 )
+from tac.witness_dsl.campaign import (
+    Arm,
+    ArmResult,
+    Cycle,
+    compose_theta_star,
+    expand_cycles,
+    harvest_arm,
+    plan_campaign,
+    select_winners,
+)
 
 __all__ = [
     "Anneal",
@@ -47,4 +57,13 @@ __all__ = [
     "Muon",
     "DirectionalBasis",
     "TauFrozen",
+    # campaign engine
+    "Arm",
+    "ArmResult",
+    "Cycle",
+    "compose_theta_star",
+    "expand_cycles",
+    "harvest_arm",
+    "plan_campaign",
+    "select_winners",
 ]
