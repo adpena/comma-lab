@@ -1139,7 +1139,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             row = {"stage": "verdict", "epoch": ep, "seg_form": seg_form,
                    **{k: round(vv, 6) for k, vv in v.items()},
                    "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
-                   "ep_loss": round(ep_loss, 3)}
+                   "ep_loss": round(ep_loss, 3),
+                   # ADDITIVE telemetry: UTC emit wall-time so dashboards read verdict
+                   # arrival times DIRECTLY (the no-timestamp root cause the self-calibrating
+                   # dashboard otherwise self-observes). Purely observational; never read back
+                   # into training/resume/parity, not appended to history/result.json.
+                   "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
             if async_tag:
                 row["async"] = True
             print(json.dumps(row), flush=True)
@@ -1296,6 +1301,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
     print(json.dumps({"stage": "verdict", "epoch": start_epoch - 1, **{k: round(v, 6) for k, v in v0.items()},
                       "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s0, 4),
+                      "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                       "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
     history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0})
 
@@ -1602,7 +1608,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "verdict", "epoch": ep, "seg_form": seg_form,
                                       **{k: round(vv, 6) for k, vv in v.items()},
                                       "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
-                                      "ep_loss": round(ep_loss, 3)}), flush=True)
+                                      "ep_loss": round(ep_loss, 3),
+                                      "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     history.append({"epoch": ep, **v, "implied_S": s})
             # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
             # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
