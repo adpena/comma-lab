@@ -3690,3 +3690,22 @@ Operator 2026-06-27: *"the team is working on it now ... come back in a couple h
 **Landed:** `collab/pact/004_molt_progress_ack_and_refined_asks.md` + STATUS.md cycle-2 update → committed (565a8d4) + pushed `origin/pact-collab` (d3e6b62..565a8d4). Net: the team's sprint moved us from "blocked on build" to "ready to copy the microgpt pattern"; the moment a prebuilt embed sample lands, the live in-browser witness moves onto molt-WASM. Mutual elevation, exactly as intended. molt is a MEANS (the runtime for the live viz); the witness d_seg / exact row is the END — pointer UNMOVED 0.19110. Memory: [[molt-all-in-owned-python-wasm-webgpu-compiler-collab-subdir]].
 
 **Live state at this wake (healthy):** de-confound amort pid 51462/51464 ALIVE (4h45m), watchdog pid 21038 ALIVE, ~20GB free (≥10GB floor OK). Witness descending with normal boundary-pixel volatility: ep675 d_seg **0.003755** (best) → ep700 0.003913 → ep725 0.003977 (lane-edge ringing on the thinnest boundaries, not a regression); still tau stage, pre-l7@900 (~l7 in ~2h). d_pose steady ~6.5e-4.
+
+## FEED-gi (2026-06-27) — stage-DIFF instrument + measured CE→tau seg-dimensionality correspondence (macOS-CPU advisory; pointer UNMOVED 0.19110)
+
+**Operator ask:** correspond curriculum-stage MATH purpose ↔ measured VISUAL seg-dimensionality, "like a data-viz diff." Built a reusable stage-diff instrument (subagent a1ab2ab9, CPU-only, GPU untouched) = morse-smale field-solve on two stage ckpts of one lineage → metrics table + flip-map/Δmargin/critical-birth-death/Δcurvature DIFF panels. Images: `.omx/tmp/stage_compare/{ce_to_tau_DIFF.png, ce_vs_tau_seg_dimensionality.png}`; metrics `.omx/tmp/stage_compare/stage_compare_metrics.json`; drivers (scratch, rebuildable) `stage_compare_driver.py`/`stage_compare_plot.py`.
+
+**Run accuracy correction:** the live de-confound run is CE→tau_softplus→**l7_softplus (ends on l7, NO Muon)** — no `--muon-start-epoch` in the command (verified). "Muon = THE drop" is the SEPARATE muon-jump experiments (#164/#165), not this run.
+
+**CE-end(ep299) → tau(ep825), same 12 pairs, gt_strided_n200 (alignment OK, d_seg~0.004 not 0.018):**
+- realized d_seg **0.00533→0.00418 (−21.6%)**, driven by **Lane per-class 0.410→0.259 (−0.151)** (the dominant ~8-dim lane-orbit residual) + Movable −0.017. CONFIRM "lower d_seg."
+- triple-junction **saddles 1200→1031 (−14%, birth/death net −2032)** — CONFIRM "prune spurious criticals." (maxima/minima CAPPED 40/120 in the tool → uninformative, flagged.)
+- **code SVD eff-rank 25.8→21.9 (−3.9)** — tau also lowered the per-pair code-manifold dimensionality (compression-relevant bonus). CONFIRM simplification.
+
+**TELEMETRY-ACCURACY catch (the load-bearing subtlety):** RAW φ-margin shrank ~2× (looks like erosion), BUT softmax_temp halved over the stage (0.91→0.45, ratio 2.018 ≈ the raw shrink) — the net co-adapts logit magnitude to τ. The honest sharpness measure is **EFFECTIVE margin (φ/τ)**, which WIDENED at all percentiles (p10/p25/p50 up; precarious-frac 0.150→0.140). So tau SHARPENED; raw-margin "erosion" is a temperature confound. Lesson: measure effective margin, not raw, across a τ-anneal stage. (Sister: telemetry-accuracy-vital memory.)
+
+**Two honest REFUTEs (instrument is not rubber-stamping):** (a) internal-φ component count ROSE +10.8% but realized-authority components flat (38→39) — R-operator + SegNet low-pass absorb internal speckle = the RGB-painter mechanism (internal φ-geometry ≠ scored argmax); (b) no apex curvature concentration (ratio ~1.0) — CORRECT, foveation is a queued θ* lever NOT active here.
+
+**Pose coupling (sister finding, from verdict log):** corr(d_seg,d_pose)=**+0.70** over ep500-825; both bumped ep700-825 then partly recovered. +correlation ⇒ shared-decoder shared-representation-quality transient (NOT a seg-vs-pose capacity tradeoff, which would be anti-correlated); the τ-anneal (w_seg 100 : w_pose 1) is a seg-side perturbation the shared render pays for in both readouts. In the SHIPPED witness pose rides the stored-target sidecar (d_pose ~3.4e-5, solved), so this is a coupled-training-run artifact, not a shipped-witness property.
+
+**Reusable for tau→l7 @ep900 (~1h):** same diff driver, point CKPTS at tau + l7 ep900. Predicted l7 signature: improved flips CONCENTRATE in the precarious small-margin band; precarious-frac drops further than tau's 0.150→0.140 (the L7 high-p worst-pixel attack made visible). Means≠ends — this characterizes the PATH; pointer UNMOVED 0.19110.
