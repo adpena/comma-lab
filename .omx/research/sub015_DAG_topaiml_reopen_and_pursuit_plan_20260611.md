@@ -3934,3 +3934,108 @@ Operator approved #1-first (deepen DSL) then #2 (byte-close). #1 DONE — `src/t
 - **WAVE 5 — COMPOSE θ*:** DSL compose_theta_star(measured winners) → warm-start → converge → byte-close → exact (pointer move). + fold #14 0-byte priors.
 
 **Honest EV note:** WAVE 1/2 are fast-harvest + learning, but likely SMALL each (the plateau resisted similar levers) — don't let them delay WAVE 3. The pointer-moving d_seg break most likely comes from WAVE 3 (capacity) or WAVE 4 (structural). pointer 0.19110; means≠ends.
+
+---
+
+## FEED-gz (2026-06-28T13:30Z) — 9-LENS DEEP-MATH PANEL SYNTHESIS + RE-RANKED θ* ORDER + DSL HARDENED
+
+**Tag:** `[macOS-numpy/MLX research-signal, advisory]`. 9 lenses convened (topology, algebra, geometry,
+calculus, level-set, dynamical, physics, signal/info/ringing, manifolds, dimensionality). 9/9 returned.
+Pointer UNMOVED 0.19110 (means≠ends). This is a DERIVATION+MEASUREMENT synthesis, not an exact row.
+
+### THE CONVERGENCE — one picture, 9 lenses: the plateau is NOT capacity. It is two things.
+
+**(1) A MEASURED conditioning collapse (the proximate cause, the smoking gun).** Dimensionality lens
+MEASURED the realized per-pair modulation `M = code @ film.weightᵀ` (400×768, centered): participation
+ratio **3.34 @CE → 1.27 @tau → 1.19 @L7** (91.8% of ALL per-pair variation in ONE axis). The code still
+carries ~11 dims of information; the FiLM funnels them to **~1 effective direction** before they reach the
+partition. The collapse is MONOTONE through the tau→l7 anneal. **Four lenses independently fingered the
+SAME pathway:**
+- manifolds (PROVEN, structural): diagonal-global FiLM cannot TRANSLATE atoms per-pair (connection deficiency)
+- algebra: equimarginal saddle (per-class gradients balance → no descent direction)
+- physics: glassy quench (the anneal froze conditioning into a metastable basin)
+- dimensionality (MEASURED): the realized conditioning rank IS ~1
+→ ALL the same phenomenon: **the curriculum annealing drove the conditioning pathway to rank-1, freezing
+the decoder into a near-static partition that can't move per-pair** (esp. the lane). This is the strongest
+cross-lens confirmation of the panel — a structural prediction (manifolds) + a direct measurement
+(dimensionality) on the identical bottleneck. Structured, optimization-induced, **HIGHLY FIXABLE** — NOT
+label noise. The shared coordinate basis is healthy by contrast (in_proj eff-rank PR=37.8/88); the
+bottleneck is SPECIFICALLY the per-pair code→FiLM channel.
+
+**(2) The lane (the binding residual) is a moving thin oriented ridge the representation can't PLACE**, for
+compounding reasons all five geometry/signal/topology lenses agree on:
+- chart (geometry): IPM perspective chart = the right coordinates (lanes are straight in the road-plane)
+- Nyquist (signal): the thin dashed ridge is under-sampled at 384 → render-finer / scale-curriculum
+- connection (manifolds): code-conditioned PHASE, not diagonal FiLM
+- topology: dash-gate (the dashes are a 1D periodic b0 structure)
+- **the LENGTH regularizer is ADVERSE** (geometry+topology+OT+level-set+calculus, 5 lenses): it
+  shortens/smooths the very thin dashed structure we need → boundary-GATE it (apply only off the lane band).
+
+### THE FLOOR — reconciled (two floors, both right, measured)
+- OT (measured): GT-through-R floor = **1.87e-4**. A PERFECT frame pins the fragile pixels → 0.001 reachable
+  IN PRINCIPLE.
+- dimensionality (measured, model-free from `margins`): teacher-fragility — **margin<0.05 = 0.00142**,
+  margin<0.10 = 0.00283, margin<0.25 = 0.00703. Plateau (~0.0028-0.0032) sits EXACTLY at margin<0.10. 71%
+  of flips are where the teacher's own top-2 gap <1 (median gap at flips 0.578 vs 5.84 at correct pixels).
+- **RECONCILIATION:** 0.001 is reachable ASYMPTOTICALLY (with enough texture capacity to paint near-GT at
+  the fragile pixels) but the realistic NEAR-TERM target is **~0.0015-0.002**. The binding mechanism wall is
+  TEXTURE-dependence (OT measured: flat colors fall outside SegNet argmax; +0.0056 from texture-removal vs
+  +0.00005 from resize) — NOT resolution. **Honest target reset: 0.0015-0.002 near-term; 0.001 is
+  marginal/partly-mirage; the residual-ID measurement (Wave 0a) settles it definitively.**
+
+### CONTRADICTIONS — resolved by measurement (no signal loss)
+- signal "render finer is the fix" vs OT "resize benign (+5e-5), texture is the wall (+5.6e-3)" → the
+  witness-specific **MULTI-RES RE-RENDER test ($0)** is the final adjudicator. (Wave 0b)
+- capacity (my earlier FEED-gy #1) vs everyone → **DEMOTED unanimously** (bc20 measured floor 0.00256 <
+  our 0.0032; code uses ~11 of 32 dims; growing mod_dim is DOMINATED — the pathway collapses 11→1 anyway).
+- orbit-AR code prior (manifolds/algebra HOPED codes lie on a pose orbit) vs dimensionality (MEASURED:
+  R²(code|6-pose)=0.049, kNN-pose R²=−0.097 NEGATIVE) → **codes are scene-content+gauge, NOT a pose orbit**;
+  orbit-AR is WEAKER than hoped; kills the "exploit ego-orbit to shrink n" framing.
+
+### THE n QUESTION (operator: "n arbitrary, not solved") — RESOLVED, n is JUSTIFIED
+- dimensionality: n=200 strided ≈ **28 INDEPENDENT partitions** (temporal decorrelation ~7 strided steps /
+  21 raw frames) covering a **~20-dim partition manifold** (TwoNN=19.65) → adequate coverage. n=200 is
+  dimensionally JUSTIFIED, not arbitrary.
+- the over-provisioning is in **CODE-DIM** (32, uses ~11-20), NOT n. → **code-dim* ≈ 20**; shrink 32→20 to
+  bank rate for free. n=600 = diminishing returns for DECODER training (same 20-dim manifold); reserve
+  n=600 for final per-pair code FITTING.
+
+### RE-RANKED θ* INTEGRATION ORDER (capacity → last; the measured smoking gun → #1)
+- **WAVE 0 ($0 NOW — campaign-deciders, no GPU training, reuse existing forwards):**
+  - 0a **residual intrinsic-dimension** — dump flip masks from the EXISTING localization probe → band-local
+    histogram (motion-invariant) + pixel-aligned descriptors → PR/TwoNN/MLE + held-out PCA knee. LOW-ID →
+    0.001 reachable, execute FiLM fix; HIGH-ID → label noise, reset target to 0.0015. **THE campaign-decider.**
+  - 0b **multi-res re-render** — adjudicate signal-vs-OT (texture wall vs resolution wall).
+- **WAVE 1 — the FiLM-rank fix (NEW #1 lever, the measured proximate cause; TRAINER change, build+review
+  first):** per-layer FiLM + identity-residual/orthogonal init + a **CONCATENATIVE conditioning path**
+  (append code to hidden — a non-collapsing route that ALSO supplies manifolds' missing translation) +
+  code-whitening + rank-floor penalty `−logdet cov(M)`. Target: restore realized-modulation PR 1.2→8-11 →
+  expected d_seg 0.0032→0.0015-0.002.
+- **WAVE 1b (compose, escape the saddle/glass):** Muon + τ-reheat. Composes with Wave 1 (gives the
+  optimizer a direction once conditioning is unblocked — Muon alone on a rank-1 channel can't help).
+- **WAVE 2 (the lane = binding residual):** IPM chart + render-finer/scale-curriculum + dash-gate +
+  boundary-GATE the length regularizer + feature-space-OT loss (attacks the texture wall + dead gradient).
+- **WAVE 3 (rate banking, PARALLEL, byte-closeable NOW):** PCA codes 32→20 + temporal-delta → banks rate →
+  RELAXES the d_seg target → a GUARANTEED exact-row mover that does NOT need the d_seg breakthrough.
+- **DROPPED:** capacity scaling (dominated, unanimous).
+
+### SCALE CURRICULUM (operator riff "scale curriculum may play a role") — it IS the lane lever
+The lane is a thin ridge under-sampled at 384 (signal/Nyquist). A coarse→fine scale curriculum (or
+multi-res render in the loss) gives the thin dashed ridge progressively finer sampling. The Wave-0b
+multi-res re-render test decides its weight: if finer render helps → scale curriculum is Wave 2's
+render-finer lever, formalized as a coarse→fine schedule; if texture is the wall (OT) → it is secondary.
+The $0 test adjudicates BEFORE we spend a GPU arm on it.
+
+### DSL HARDENED (this turn — the campaign DSL is now load-bearing, so its bugs were real)
+Adversarial review found 3 real bugs in the code the A/B campaign RUNS on: **C1 dead-arm** (a warm-start
+lever with no epoch window = ZERO gradient steps — would have SILENTLY burned a GPU arm: ab_A1b_taufroz
+ran epochs=1500 resuming from ep1500 = empty range), **C2 store_true-False** (False on a store_true flag →
+argparse crash), **M2 resume-clear** (couldn't pass resume_from=None for a fresh run). All fixed + 6
+regression guards incl a SELF-PROTECTING dead-arm validator that loads the resume npz and refuses
+zero-step arms by construction. 32 tests green. Committed 2aceb77e4. ready_to_fire regenerated (TauFrozen
+window→1600; SoftBoundary replaces the confounded ab_beta_steplim per review H2).
+
+### STATE
+held-out amortization gate (pid 38154) STILL FITTING: d_seg 0.030→0.019→0.017 descending (codes fitting
+vs frozen L7 decoder), not flat → keep waiting, do NOT relaunch. mem ~16.9GB free. NO autonomous heavy-GPU
+launch (containment) — Wave-0 $0 tests + Wave-1 FiLM-fix build await operator steer; gate continues.
