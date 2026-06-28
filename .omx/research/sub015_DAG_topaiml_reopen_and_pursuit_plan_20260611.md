@@ -4064,3 +4064,32 @@ Reuses the EXISTING forward (no re-implementation); CPU torch SegNet = authority
 running held-out gate (pid 38154). Out: experiments/results/wave0_residual_id_20260628/wave0_results.json
 + flip-mask npz dump (future passes reuse). FEED on verdict. Held-out gate still fitting (d_seg
 0.030→0.019→0.017). Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-hb (2026-06-28T14:00Z) — dimensionality floor CORROBORATED (2nd source) + TELEMETRY CORRECTION (mem false-alarm)
+
+**(1) Independent in-tree confirmation of the teacher-fragility floor.** Dimensionality lens re-notify:
+trainer `experiments/train_witness_realized_through_R_mlx.py` line 702 carries a MEASURED note (FEED-bp):
+*"~89% of d_seg lives in the bottom-5%-margin pixels (the 2.26% annulus)."* This independently matches the
+dimensionality lens's model-free result (flips concentrated at teacher margin<0.05 = fraction 0.00142).
+**Two independent sources now agree:** the d_seg residual sits on the teacher's own lowest-margin band →
+realistic near-term target ~0.0015–0.002; 0.001 is at/under the fragility floor (asymptotic-with-texture
+only). The Wave-0a residual-ID measurement pins the exact reducible fraction. Also confirmed: the Wave-0
+subagent is using the canonical NO-FAKE forward (`render_batch_through_R_mlx` L357 + `cpu_verdict_d_seg_batch`
+L524, which already builds the per-pair `realized!=L*` flip set) — the right tool, validated.
+
+**(2) TELEMETRY CORRECTION (binding: telemetry accuracy vital).** During this tick I misread memory:
+`vm_stat` "Pages free" showed 3.0GB and I nearly flagged a memory crisis (almost paused the wave0 render to
+protect the gate). WRONG METRIC. `memory_pressure` reports **91% free** + `vm.swapusage` **0.06M of 1024M
+used (≈zero swapping)** → machine HEALTHY, no OOM risk. macOS "Pages free" EXCLUDES reclaimable
+inactive/purgeable/file-cache pages, so it under-reports true availability by tens of GB. **Canonical
+memory-watch metric going forward: `memory_pressure` (% free incl. reclaimable) + `vm.swapusage` (actual
+swap), NOT `vm_stat` Pages-free.** Gate worker = 43GB MLX @145% CPU (actively training, NOT stalled — the
+epoch counter only logs at verdict cadence); wave0 render = 3GB. Both coexisting fine on the 128GB box.
+No kill, no pause. (Confident-wrong is the worst telemetry failure; caught + corrected by checking the
+authoritative metric.)
+
+**STATE:** gate ep~101, d_seg 0.030→0.019→0.017→0.016 descending (codes fitting). Wave-0 0b: 2/5 scales
+(0.5×=0.0152, 0.75×=0.0081); 1.0× full-200 + finer 1.5×/2.0× (the resolution-wall deciders) pending. 0a
+residual-ID pending after renders. Pointer UNMOVED 0.19110.
