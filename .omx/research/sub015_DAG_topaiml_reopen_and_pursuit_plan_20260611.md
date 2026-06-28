@@ -4266,3 +4266,49 @@ quantifies the sub-pixel headroom above the readout grid (L1 is running it). Nat
 
 4 lenses pending (L1 Nyquist-measurement, L2 residual-geometry, L4 engineering, L5 skeptic). Full synthesis
 + sequencing (2×-first vs FiLM-first; foveated; pre-emphasis) when they land. Gate descending. Pointer 0.19110.
+
+---
+
+## FEED-hg (2026-06-28T15:00Z) — Lens 1 (Nyquist, analytical) + Lens 2 (residual-geometry, MEASURED) → train-at-2× is MOSTLY THE WRONG LEVER
+
+**Tag `[macOS-CPU advisory]`. 3 of 5 lenses in. The panel REDIRECTS off train-at-2× toward the lane-representation fix — and that's a save, not a loss.**
+
+### Lens 2 (residual-geometry) — DECISIVE, fully measured on baseline_flips.npz (200 pairs, d_seg 0.003286)
+- **The lane is DROPPED, not displaced.** 52.7% of GT-lane connected components are wholesale-missed
+  (≥90% of pixels → Road); miss-fraction MONOTONE in dash size: <5px 93.4% missed, [5,15) 82.6%, [15,40)
+  55.5%, [40,100) 27.7%, ≥100px only 12.5%. Fully-missed components median size = 3px (tiny dashes). This is
+  a THIN-STRUCTURE CAPACITY/REPRESENTATION failure (averaged loss under-weights 3px structures), NOT a
+  render-Nyquist failure.
+- **Why finer render can't fix it (architecture-grounded):** R resamples render→bicubic↑874→bilinear↓512×384
+  AND SegNet's stride-2 stem halves it AGAIN — the extra witness resolution is DESTROYED upstream of the
+  frozen teacher. Train-at-2× renders a finer dash that gets averaged away before SegNet sees it.
+- **The "99% of flips within 2px of a boundary" is a GEOMETRIC TRAP:** the lane is 1-2px wide so every lane
+  pixel is boundary-adjacent BY CONSTRUCTION — it does NOT mean "localization = resolution-fixable." Charge-2
+  size-threshold analysis disambiguates: it's dropped dashes, not 1px jitter.
+- **The 6-10 modes (PCA, PROVEN):** PC0=34.5% = Lane→Road boundary DROP (THE dominant mode); PC1=17.6%
+  lane-overpaint vs mid-band; PC2-5 = Movable↔Undrivable↔Road mid-band boundary cluster; PC6=2.8% MyCar↔Road
+  hood edge. ALL boundary modes, ZERO interior, ZERO distance modes.
+- **Resolution-fixable fraction ≈ 0-15% (~0 in practice).** Road↔Lane 56.9% (≈0.00187) = representation;
+  thick-class boundaries 43.1% (≈0.00142) = genuine 1px jitter (the ONLY part finer render touches, capped by
+  SegNet 512×384+stride-2). **Verdict: train-at-2× is the WRONG lever for THIS residual.**
+- High-EV levers Lens 2 names: (1) **lane-prior / thin-structure-aware loss** (attacks PC0 = 34.5% variance,
+  56.9% of flips — reward a thin high-contrast SDF lobe for the 3px dash the averaged loss drops); (2)
+  **FiLM-fix** for the mid-band Movable/Undrivable/Road cluster. Both = capacity-allocation at the FIXED
+  SegNet grid, NOT resolution.
+
+### Lens 1 (Nyquist/R-path) — analytical (floor MEASUREMENT still running, the arbiter)
+- bicubic↑: 384→874 = 2.276× (edge becomes 2.28 camera-px wide); 768→874 = 1.138× (1.14 camera-px = HALF
+  the edge blur). But bandwidth is HARD-CAPPED at 192 cyc by the bilinear↓384 — so finer render helps via
+  edge-POSITION super-resolution (sub-pixel AA gray-levels move SegNet's threshold), NOT bandwidth.
+- Useful-res cap: gains saturate ~1.65× (≈0.73× camera) due to bilinear↓384 averaging; 768 (2.0×) sits just
+  past the knee = captures ~all localization headroom, near-zero beyond. (Matches 0b's measured 1.5×≈2.0×.)
+- **L1 ⊕ L2 reconcile (no conflict):** L1's super-resolution helps boundaries that EXIST and need sharper
+  sub-pixel placement = the 43% thick-class jitter ONLY. L2's dropped dashes are presence/absence of a 3px
+  structure = resolution can't recover. So train-at-2× addresses ≤43% of the residual, capped. The L1
+  GT-through-R floor curve (384 vs 768 vs 874, RUNNING) quantifies whether even that 43% has real headroom.
+
+### Emerging panel verdict (pending L1-floor + L4-engineering + L5-skeptic)
+train-at-2× = SECONDARY lever (thick-boundary sub-pixel only, ≤43%, capped) — NOT the lane. My/Lens-3's
+optimistic take is CORRECTED DOWN by Lens 2's measured residual. The PRIMARY lever is the **lane-prior /
+thin-structure-aware loss** (PC0, the dominant mode) composed with the **FiLM-fix**. The panel caught a
+wrong-lever 4×-compute GPU arm before we spent it. Gate descending (d_seg→0.0141). Pointer 0.19110.
