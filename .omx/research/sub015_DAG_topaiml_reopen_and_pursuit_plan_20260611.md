@@ -4355,3 +4355,36 @@ the ~43% thick-boundary fraction and <3% of the binding gap. The PRIMARY, measur
 cluster + the FiLM rank-1.2 collapse). The $0 floor-curve (L1, running) is the gate for ANY resolution play.
 Gate descending (d_seg→0.0141). Pointer 0.19110. NO GPU arm fires without operator steer; the FiLM-fix BUILD
 is no-GPU + the panel's #1.
+
+---
+
+## FEED-hi (2026-06-28T15:20Z) — OPERATOR APPROVED ("those bigger wins make sense" + "recs all approved") → FiLM-fix + lane-prior BUILD launched (no-GPU)
+
+Operator endorsed the convergent panel verdict (resolution = secondary; the WITNESS-side levers are the bigger
+wins) + "recs all approved". Executing the no-GPU primary lever.
+
+### BUILD launched (subagent a77d98659cb98a28d, no-GPU, default-OFF, PRESERVES the working witness)
+The panel's measured #1 lever, two composable parts, ALL default-OFF (baseline witness byte-identical when off):
+- **Lever A FiLM-rank-fix** (attacks the measured rank-1.2 collapse): `--film-per-layer` (per-layer FiLM,
+  identity-residual init) + `--film-concat-code` (non-collapsing concat conditioning route, also supplies the
+  per-pair lane translation) + `--film-rank-floor-weight` (−logdet cov(M) penalty preventing curriculum
+  rank-collapse).
+- **Lever B lane-prior** (attacks PC0 dropped 3px dashes = 34.5% of residual): `--lane-thin-weight`
+  (up-weight seg loss on thin GT-lane class-1 components via a precomputed thin-lane weight map).
+- DSL levers (FiLMFix/LanePrior) + tests + 1st self-review pass; commit via serializer. 2 more adversarial
+  review passes required before any GPU launch (CLAUDE.md 3-clean-pass for training code).
+
+### Sequencing (approved): FiLM-fix at FIXED 384 first; resolution as a LATER composed multiplier
+- The GPU TRAINING arm awaits the gate freeing (one GPU) + a launch confirm. Open GPU-allocation decision to
+  surface when the build is reviewed: stop the gate early (its verdict is already clear = PARTIAL/rank-limited,
+  marginal value low at ep~150) to free the GPU for the FiLM-fix arm, OR let it finish first.
+- Resolution (train-2× / foveated / operator's coarse-access-fine decouple) = secondary multiplier, gated on
+  L1's floor-curve showing real headroom for the ~43% thick-boundary slice.
+
+### Telemetry note (binding): swap spiked to 7.9GB then passed
+swap-used hit 7.9GB (was 0.06M) during L1's floor-curve measurement (768/874 GT renders); now PASSED —
+free% 88%, no big processes, gate healthy. swap-used stays counted after the spike; it's residual not active
+pressure. (The FiLM-fix build is no-GPU/light → won't stress memory.)
+
+### Pending: L4 (engineering tractability) + L1 floor-curve OUTPUT not yet harvested (scripts exist; will
+harvest on re-notify). Gate descending d_seg→0.0141. Pointer 0.19110.
