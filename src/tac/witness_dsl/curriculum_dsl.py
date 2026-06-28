@@ -1,0 +1,337 @@
+"""Witness curriculum/behavior DSL — compiles to the proven trainer CLI.
+
+See package docstring. This module is Layer-0 of the here->theta* bridge: a
+declarative front-end whose programs compile to validated launch commands for
+``experiments/train_levelset_witness_realized_through_R_mlx.py``.
+
+Design (recursion+math+enforced-behaviors, operator riff 2026-06-28):
+  * The contest energy S = 100*INT d_seg + sqrt(10*INT d_pose) + 25*bytes is the
+    ROOT; every lever is a term/relaxation of S, so composition is principled.
+  * The curriculum is a homotopy of relaxations (CE -> tau -> l7), expressed as
+    ``Stage`` tuples; the temperature anneal is a ``Schedule``.
+  * Desired behaviors (preserve / contain / authority) are ENFORCED clauses, not
+    advisory prose — ``validate()`` refuses a program that violates them, and
+    ``compile_*`` bakes them into the emitted commands.
+  * never-invent-flags is STRUCTURAL: ``validate()`` checks every emitted flag
+    against the trainer's real argparse flag set (``real_trainer_flags``).
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field, replace
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+TRAINER_REL = "experiments/train_levelset_witness_realized_through_R_mlx.py"
+TRAINER_PATH = _REPO_ROOT / TRAINER_REL
+
+
+def real_trainer_flags(trainer_path: Path | None = None) -> frozenset[str]:
+    """Parse the trainer's argparse and return the SET of real ``--flag`` names.
+
+    This is the structural never-invent-flags guard: a program that emits a flag
+    not in this set fails ``validate()`` before any launch.
+    """
+    path = Path(trainer_path) if trainer_path is not None else TRAINER_PATH
+    text = path.read_text()
+    return frozenset(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', text))
+
+
+# ---------------------------------------------------------------------------
+# Schedule primitives (the homotopy / anneal math)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Anneal:
+    """A cosine-annealed schedule start->end (e.g. softmax temperature tau)."""
+
+    start: float
+    end: float
+
+    def flags(self, start_flag: str, end_flag: str) -> dict:
+        return {start_flag: self.start, end_flag: self.end}
+
+
+def Freeze(value: float) -> Anneal:  # noqa: N802 (DSL keyword)
+    """Freeze a schedule at a constant value (Anneal with start==end)."""
+    return Anneal(value, value)
+
+
+# ---------------------------------------------------------------------------
+# Curriculum stage (a relaxation of S) + regularizers (live PDE constraints)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Stage:
+    """A curriculum relaxation. ``start_epoch`` maps to the trainer's stage gate."""
+
+    name: str
+    start_epoch_flag: str | None  # e.g. "--tau-softplus-start-epoch"; None for the CE base
+    start_epoch: int | None = None
+
+    def flags(self) -> dict:
+        if self.start_epoch_flag is None or self.start_epoch is None:
+            return {}
+        return {self.start_epoch_flag: self.start_epoch}
+
+
+@dataclass(frozen=True)
+class Regularizer:
+    """A live derivative/integral regularizer (eikonal |grad phi|=1, length INT ds)."""
+
+    flag: str
+    weight: float
+
+    def flags(self) -> dict:
+        return {self.flag: self.weight}
+
+
+# ---------------------------------------------------------------------------
+# Lever (an A/B toggle = a flag override set + optional epoch extension)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Lever:
+    """A named A/B lever: a set of flag overrides + optional extra epochs.
+
+    Levers COMPOSE by merging their override dicts (later levers win on conflict),
+    which is exactly theta* composition (binding the winning fragments).
+    """
+
+    name: str
+    overrides: dict = field(default_factory=dict)
+    epochs_delta: int = 0
+    notes: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Enforced-behavior clauses (preserve / contain / authority)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Preserve:
+    """PRESERVE: per-stage boundary ckpts + intra-stage cadence (<=25, binding)."""
+
+    stage_boundaries: bool = True
+    ckpt_every: int = 25
+
+    def flags(self) -> dict:
+        f = {"--ckpt-every": self.ckpt_every}
+        # --stage-checkpoints is BooleanOptionalAction default True; emit explicitly.
+        f["--stage-checkpoints"] = bool(self.stage_boundaries)
+        return f
+
+
+@dataclass(frozen=True)
+class Contain:
+    """CONTAIN: daemon-level blast-radius bounds (>=10GB floor, RSS cap)."""
+
+    min_free_gb: float = 10.0
+    projected_gb: float = 40.0
+    rss_cap_mb: int = 90000
+    walltime_cap_s: int = 288000
+
+
+@dataclass(frozen=True)
+class Authority:
+    """AUTHORITY: the verdict contract. macOS-MLX/CPU is ADVISORY; only a
+    byte-closed contest-CPU/CUDA exact row is a score. Recorded, asserted."""
+
+    realized_through_R: bool = True
+    numpy_fp32_reference: bool = True
+    advisory_until_byte_closed: bool = True
+
+
+# ---------------------------------------------------------------------------
+# The program
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class WitnessProgram:
+    out_dir: str
+    gt_cache: str
+    epochs: int
+    num_pairs: int
+    temp: Anneal
+    stages: tuple[Stage, ...]
+    regularizers: tuple[Regularizer, ...]
+    preserve: Preserve
+    contain: Contain
+    authority: Authority
+    base: dict = field(default_factory=dict)  # substrate flags (arch, basis, chroma, ...)
+    levers: tuple[Lever, ...] = ()
+    resume_from: str | None = None
+    mlx_device: str = "gpu"
+
+    # --- composition ---------------------------------------------------------
+    def with_lever(self, *levers: Lever, resume_from: str | None = None,
+                   out_dir: str | None = None) -> "WitnessProgram":
+        """Return a new program with levers appended (theta* composition step).
+
+        Epochs are extended by the sum of the levers' ``epochs_delta`` (e.g. a
+        Muon finisher adds its window on top of the warm-start epoch)."""
+        new_epochs = self.epochs + sum(lv.epochs_delta for lv in levers)
+        return replace(
+            self,
+            levers=self.levers + tuple(levers),
+            epochs=new_epochs,
+            resume_from=resume_from if resume_from is not None else self.resume_from,
+            out_dir=out_dir if out_dir is not None else self.out_dir,
+        )
+
+    # --- flag assembly -------------------------------------------------------
+    def flag_dict(self) -> dict:
+        f: dict = {}
+        f.update(self.base)
+        f["--num-pairs"] = self.num_pairs
+        f["--epochs"] = self.epochs
+        f["--gt-cache"] = self.gt_cache
+        f["--out-dir"] = self.out_dir
+        f["--mlx-device"] = self.mlx_device
+        f.update(self.temp.flags("--softmax-temp-start", "--softmax-temp-end"))
+        for st in self.stages:
+            f.update(st.flags())
+        for rg in self.regularizers:
+            f.update(rg.flags())
+        f.update(self.preserve.flags())
+        if self.resume_from is not None:
+            f["--resume-from"] = self.resume_from
+        # levers LAST so they override (the A/B toggle wins)
+        for lv in self.levers:
+            f.update(lv.overrides)
+        return f
+
+    # --- validation (structural never-invent-flags + behavior clauses) -------
+    def validate(self, trainer_path: Path | None = None) -> list[str]:
+        """Return a list of violations (empty == valid)."""
+        problems: list[str] = []
+        real = real_trainer_flags(trainer_path)
+        for flag in self.flag_dict():
+            if flag not in real:
+                problems.append(f"INVENTED FLAG (not in trainer argparse): {flag}")
+        # PRESERVE: ckpt cadence binding (<=25)
+        if self.preserve.ckpt_every <= 0 or self.preserve.ckpt_every > 25:
+            problems.append(
+                f"PRESERVE violation: --ckpt-every={self.preserve.ckpt_every} (must be 1..25)")
+        if not self.preserve.stage_boundaries:
+            problems.append("PRESERVE violation: stage-boundary ckpts disabled")
+        # CONTAIN: >=10GB floor binding
+        if self.contain.min_free_gb < 10.0:
+            problems.append(
+                f"CONTAIN violation: min_free_gb={self.contain.min_free_gb} (<10GB floor)")
+        # AUTHORITY: realized-through-R required for a trustworthy verdict
+        if not self.authority.realized_through_R:
+            problems.append("AUTHORITY violation: realized_through_R must be True")
+        return problems
+
+    # --- compilation ---------------------------------------------------------
+    def compile_trainer_argv(self, python: str = ".venv/bin/python") -> list[str]:
+        argv = [python, TRAINER_REL]
+        for flag, val in self.flag_dict().items():
+            if val is True:
+                argv.append(flag)
+            elif val is False:
+                # BooleanOptionalAction: emit --no-<name>
+                argv.append(flag.replace("--", "--no-", 1))
+            else:
+                argv.extend([flag, str(val)])
+        return argv
+
+    def compile_daemon_argv(self, label: str, log: str,
+                            python: str = ".venv/bin/python") -> list[str]:
+        """Wrap the trainer in the canonical durable daemon + containment caps."""
+        argv = [
+            python, "tools/spawn_durable_daemon.py",
+            "--label", label, "--log", log,
+            "--projected-gb", str(self.contain.projected_gb),
+            "--min-free-gb", str(self.contain.min_free_gb),
+            "--rss-cap-mb", str(self.contain.rss_cap_mb),
+            "--walltime-cap-s", str(self.contain.walltime_cap_s),
+            "--",
+        ]
+        argv.extend(self.compile_trainer_argv(python=python))
+        return argv
+
+
+# ---------------------------------------------------------------------------
+# BASELINE — the exact completed CE->tau->l7 run, expressed as a program.
+# (round-trip target: BASELINE.flag_dict() reproduces the launched config.)
+# ---------------------------------------------------------------------------
+_CE_CKPT = ("experiments/results/levelset_amort_decoder_n200_20260627T143830Z/"
+            "levelset_resume_stageCE_ep299.npz")
+_L7_CKPT = ("experiments/results/levelset_l7_preserved_snapshots/"
+            "levelset_resume_stageL7_ep1500.npz")
+
+BASELINE = WitnessProgram(
+    out_dir="experiments/results/levelset_amort_deconf_n200_taualone_20260627T194432Z",
+    gt_cache="experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz",
+    epochs=1500,
+    num_pairs=200,
+    temp=Anneal(1.0, 0.05),
+    stages=(
+        Stage("CE", None, None),
+        Stage("tau_softplus", "--tau-softplus-start-epoch", 300),
+        Stage("l7_softplus", "--l7-start-epoch", 900),
+    ),
+    regularizers=(
+        Regularizer("--eikonal-weight", 0.01),
+        Regularizer("--length-weight", 0.001),
+    ),
+    preserve=Preserve(stage_boundaries=True, ckpt_every=25),
+    contain=Contain(min_free_gb=10.0, projected_gb=40.0, rss_cap_mb=90000),
+    authority=Authority(),
+    resume_from=_CE_CKPT,
+    base={
+        "--render-h": 384, "--render-w": 512,
+        "--hidden-dim": 96, "--mod-dim": 32,
+        "--activation": "hosc", "--siren-init": True,
+        "--curriculum": True,
+        "--palette-anchor": True, "--self-orient": True, "--reorient-every": 50,
+        "--freq-across": 32, "--n-dir-freqs": 2, "--freq-along": 4, "--max-bank-freq": 64,
+        "--chroma": True,
+        "--lane-edge-weight": 0, "--lane-edge-class": 1, "--lane-margin-target": 0.5,
+        "--lane-edge-start-epoch": 300,
+        "--w-seg": 100, "--w-pose": 1.0,
+        "--ema-decay": 0.997, "--accum-pairs": 8, "--grad-clip": 1.0,
+        "--verdict-pairs": 96, "--eval-every": 25,
+        "--async-verdict": True,
+    },
+)
+
+
+# ---------------------------------------------------------------------------
+# Lever library (the A/B campaign, as composable DSL fragments)
+# ---------------------------------------------------------------------------
+def PoseDecouple() -> Lever:  # noqa: N802 (DSL keyword) — A5
+    """A5: move pose onto the stored sidecar (w-pose=0) so the decoder stops
+    co-rendering pose — frees capacity for d_seg, tests the +0.70 coupling."""
+    return Lever("A5_pose_decouple", overrides={"--w-pose": 0.0},
+                 notes="decouple pose; decisive +0.70-coupling test + d_seg accelerator")
+
+
+def Muon(start_epoch: int, window: int = 100) -> Lever:  # noqa: N802 — A4
+    """A4: Muon finisher from ``start_epoch`` for ``window`` epochs, with moments
+    reset at the optimizer-stage transition and tau FROZEN at 0.05 (the run's
+    final hard temperature) for apples-to-apples. muon-lr auto-derives 0.1*lr."""
+    return Lever(
+        "A4_muon",
+        overrides={
+            "--muon-start-epoch": start_epoch,
+            "--stage-transition-reset-moments": True,
+            "--softmax-temp-start": 0.05,  # freeze tau at the l7-end value
+            "--softmax-temp-end": 0.05,
+        },
+        epochs_delta=window,
+        notes="Muon finisher; is it the d_seg finisher (conditioning) or no?",
+    )
+
+
+def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300) -> Lever:  # noqa: N802
+    """Turn the lane-edge directional term ON (the completed run had weight 0).
+    The all-class directional/tangent basis measured -48% d_seg earlier."""
+    return Lever("directional_basis",
+                 overrides={"--lane-edge-weight": weight,
+                            "--lane-edge-start-epoch": start_epoch},
+                 notes="all-class directional tangent basis (was OFF: weight 0)")
+
+
+def TauFrozen(value: float = 0.05) -> Lever:  # noqa: N802 — A1b isolation
+    """A1b: freeze tau (start==end) to isolate an l7 effect from the tau anneal."""
+    return Lever("A1b_tau_frozen",
+                 overrides={"--softmax-temp-start": value, "--softmax-temp-end": value},
+                 notes="freeze tau to isolate l7-loss vs tau-anneal (diff refutation)")
