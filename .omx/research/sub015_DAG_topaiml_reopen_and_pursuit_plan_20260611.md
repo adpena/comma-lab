@@ -3819,3 +3819,13 @@ ANCHOR REPRODUCTION (the tool IS the oracle — matches the hand-measured): tau 
 NEW MEASURED FINDING — config-strength ranking (full merged curriculum, ep0-950, advisory): **CE 1.67e-3/ep ≫ l7 1.59e-5/ep > tau 5.75e-6/ep**. Honest read: CE's huge rate is the trivial from-random collapse (not a comparable "polish" strength); among the FINISHERS, **l7 (worst-pixel) is ~2.8× stronger per epoch than tau (broad sharpening)** — the measured config-strength the operator asked to learn. → l7-class levers get short A/B budgets (declare fast); the trajectory JSON now BUDGETS each campaign arm by its time-to-demonstrate (task #183/#188).
 
 Artifacts: `.omx/tmp/trajectory/witness_trajectory_dynamics.{png,json}` (HELD for morning — not sent overnight, operator resting). advisory `[macOS-MLX] NON-PROMOTABLE`; pointer 0.19110; means≠ends.
+
+## FEED-gq (2026-06-27, night) — l7 co-reduces d_seg AND bytes (rate) — the d_seg/rate ALIGNMENT finding (operator-spotted)
+
+MEASURED (live de-confound log, realized-through-R MLX advisory): blob_bytes MONOTONE down across ALL 5 l7 verdicts: 73536→73208→73174→73124→**73075** (−461B, −0.6%). l7 REVERSED tau's late-phase byte INFLATION (ep675 73077 → ep750 73553 — the volatile tau tail inflated the payload too). So tau's dead tail was DOUBLE-bad (worse d_seg AND more bytes, reinforcing FEED-gn tail-waste); l7 deflates BOTH.
+
+MECHANISM (MDL/Occam): the high-p worst-pixel l7 objective pushes the field toward the SIMPLEST piecewise-constant state that fixes the worst pixels → lower-entropy weights/codes → smaller entropy-coded blob. **l7 is implicitly an MDL regularizer.** Contrast: tau's aggressive small-τ sharpening added high-freq structure/magnitude (higher entropy → more bytes).
+
+ALIGNMENT FINDING (paper-relevant): for the task-space witness, **d_seg and rate are ALIGNED, not in tension** — a cleaner partition is simultaneously more task-correct (↓d_seg) AND more compressible (↓bytes). Core argument for the level-set vehicle vs HNeRV (where reconstruction-fidelity ⊥ rate). The witness geometry rewards simplicity on both axes.
+
+HONEST SCALE: byte drop is SMALL in S (~1e-4; S_rate 0.04896→0.04885); d_seg (100×, 0.44→0.34) is the score-mover. blob_bytes = live byte-close ESTIMATE (advisory, not the final archive.zip + overhead). Real + monotone + mechanistically interesting + alignment-evidence — NOT a big rate win. l7 at ep1000 d_seg 0.003362 (new low, decelerating → nearing floor → diff/gen-gap/pivot soon). means≠ends; pointer 0.19110.
