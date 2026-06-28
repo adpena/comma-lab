@@ -4312,3 +4312,46 @@ train-at-2× = SECONDARY lever (thick-boundary sub-pixel only, ≤43%, capped) �
 optimistic take is CORRECTED DOWN by Lens 2's measured residual. The PRIMARY lever is the **lane-prior /
 thin-structure-aware loss** (PC0, the dominant mode) composed with the **FiLM-fix**. The panel caught a
 wrong-lever 4×-compute GPU arm before we spent it. Gate descending (d_seg→0.0141). Pointer 0.19110.
+
+---
+
+## FEED-hh (2026-06-28T15:05Z) — Lens 5 (skeptic) IN + operator Q "train coarse, access high res" → resolution is the WRONG AXIS (17× arithmetic)
+
+**Tag `[macOS-CPU advisory]`. 4 of 5 lens-verdicts in (L4 engineering + L1 floor-MEASUREMENT pending). The panel CONVERGES: the witness, not the render grid, is the wall.**
+
+### Lens 5 (adversarial skeptic) — the decisive kill, source-verified end-to-end
+- **THE 17× arithmetic (the clean kill):** OT floor = 1.87e-4 at the CURRENT 384 render-res, witness sits at
+  0.0032 = ~17× above the floor it ALREADY has at 384. The entire 0.0030 gap is witness-limitation
+  (FiLM rank-1.2 + smooth-INR spectral bias + dropped dashes), NOT resolution. 768 lowers the floor maybe
+  1.87e-4→1e-4 = <3% of the binding gap → 2×-alone optimizes the WRONG constraint.
+- **Ranked failure modes (each $0-falsifiable):** #1 FiLM-rank-collapse is binding (finer renders the same
+  rank-deficient content → washes back to 0.0033; U-curve min-at-train-res = content-limited artifact); #2
+  confusion-vs-localization (the 57% Road↔Lane could be sub-384 thin lanes aliased away — the ONE pro-2×
+  mechanism — OR confusion → 2× wasted; Lens 2 MEASURED it = dropped dashes, mostly NOT resolution); #3 no
+  Nyquist headroom (smooth-INR already well-sampled at 384); #4 off-distribution warm-start basin (768 starts
+  at 0.0054, 384-baked boundaries an attractor); #5 uint8 cap (binds ~2e-4, irrelevant now); #6 decode-budget
+  (fine, tens of sec on T4, rate-neutral).
+- **P(train-at-2× warm-started lowers d_seg below 0.0025) ≈ 0.15** (0.12-0.20). Dominated ordering.
+- **Sequencing (unanimous w/ Lens 2):** (1) $0 floor-curve gate FIRST (flat past 384 = hard kill); (2)
+  FiLM-fix + lane-prior at FIXED 384 (the named binding constraint, 4× cheaper); (3) THEN 2× as a composed
+  MULTIPLIER only if floor-curve shows headroom AND residual is localization/thin-lane.
+
+### Operator Q: "Or trained at coarser maybe actually and accessed higher res"
+Clever inversion — but the 17× arithmetic applies to BOTH directions: resolution sharpens the FLOOR, and the
+floor isn't the wall. Specifics:
+- **Naive coarse-train/fine-render = the 0b U-curve right arm = HURTS** (384-train/768-render = 0.0054): a
+  coord-INR overfits its training R-path; not scale-robust by default.
+- **The real kernel (kept):** decoupling train-res from deploy-res via SCALE-ROBUST training = the wall-clock-
+  optimal way to ACCESS resolution headroom IF it exists = Lens 3's FOVEATED rendering (train cheap scale-
+  robust base; render fine ONLY at the ~2.2% annulus at deploy). Connects to the lane fix: a coarse base +
+  thin-structure-aware FINE refinement at the annulus is a candidate Wave-2 architecture for the dropped
+  dashes. BUT gated behind: (a) the floor-curve showing headroom, (b) the FiLM-fix first.
+- Net: a good (later) ARCHITECTURE instinct; not the primary lever. The 17× gap lives in witness content.
+
+### CONVERGENT PANEL VERDICT (4/5; L4 + L1-floor pending)
+The resolution axis (train-fine, train-coarse-access-fine, or foveated) is a SECONDARY multiplier capped at
+the ~43% thick-boundary fraction and <3% of the binding gap. The PRIMARY, measured, high-confidence lever is
+**FiLM-fix + lane-prior/thin-structure loss at FIXED 384** (attacks PC0 Lane→Road-drop 34.5% + the mid-band
+cluster + the FiLM rank-1.2 collapse). The $0 floor-curve (L1, running) is the gate for ANY resolution play.
+Gate descending (d_seg→0.0141). Pointer 0.19110. NO GPU arm fires without operator steer; the FiLM-fix BUILD
+is no-GPU + the panel's #1.
