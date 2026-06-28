@@ -39,18 +39,20 @@ if str(_REPO) not in sys.path:
 
 from tools.render_levelset_dashboard import (  # noqa: E402
     _arrival_times,
-    _banner_html,
     _cfg_from_args,
     _compute_liveness,
+    _detail_line,
     _detect_switch,
     _epoch_spacing,
     _fmt_age,
     _has_verdict,
     _load_cadence_state,
     _measure_cadence,
+    _pill_html,
     _resolve_watched_log,
     _save_cadence_state,
     _staleness,
+    _status_line,
     _verdict_ts_epoch,
     _write_html,
 )
@@ -284,14 +286,35 @@ def test_liveness_missing_when_no_log():
     assert live["verdict_age_s"] is None
 
 
-def test_liveness_warming_up_before_calibration():
-    # fresh self-observed run, all epochs baseline -> not yet calibrated -> warming
+def test_liveness_fresh_launch_reads_live_calibrating():
+    # fresh self-observed run (all epochs baseline) on a recently-written log reads
+    # LIVE (NOT a separate alarming state); cadence is the labeled prior.
     now = 1000.0
-    live = _compute_liveness(_seg_rows((475, 500, 525)), watched_mtime=now - 10,
+    live = _compute_liveness(_seg_rows((475, 500, 525)), watched_mtime=now - 60,
                              now=now, sub={}, cfg=_CFG)
-    assert live["kind"] == "warming_up"
+    assert live["kind"] == "live"
+    assert live["calibrating"] is True
     assert live["cadence_source"] == "prior"
     assert live["next_epoch"] == 550  # last + spacing(25)
+    # baseline epoch -> verdict_age falls back to log mtime (consistency invariant)
+    assert live["verdict_age_s"] >= live["log_age_s"]
+
+
+def test_liveness_healthy_4m_since_verdict_at_18m_cadence_is_live():
+    # THE coordinator regression: verdict 4m ago at a MEASURED ~18m cadence MUST be
+    # LIVE (threshold = max(10m, 2.5*18m) = 45m; 4m << 45m). The old logic tripped
+    # STALE far below its own displayed threshold — this guards that exact failure.
+    t0 = 1000.0
+    sub = {"first_observation_at": t0, "baseline_epochs": [0],
+           "first_seen": {"0": t0, "25": t0 + 1080, "50": t0 + 2160, "75": t0 + 3240}}
+    now = t0 + 3240 + 240  # 4 min after the last verdict (ep75)
+    live = _compute_liveness(_seg_rows((0, 25, 50, 75)), watched_mtime=now - 5,
+                             now=now, sub=sub, cfg=_CFG)
+    assert live["kind"] == "live"
+    assert live["cadence_source"] == "measured"
+    assert abs(live["cadence_s"] - 1080.0) < 1e-6
+    assert abs(live["verdict_age_s"] - 240.0) < 1e-6
+    assert live["verdict_age_s"] < live["threshold_s"]  # 240 < 2700
 
 
 def test_liveness_live_within_cadence_self_observed():
@@ -302,6 +325,7 @@ def test_liveness_live_within_cadence_self_observed():
                              now=now, sub=sub, cfg=_CFG)
     assert live["kind"] == "live"
     assert live["cadence_source"] == "measured"
+    assert live["calibrating"] is False
     assert abs(live["cadence_s"] - 600.0) < 1e-6
     assert abs(live["verdict_age_s"] - 100.0) < 1e-6
 
@@ -317,13 +341,27 @@ def test_liveness_stale_beyond_2p5x_cadence():
     assert live["verdict_age_s"] > live["threshold_s"]
 
 
-def test_liveness_warmup_dead_process_caught_by_log_floor():
-    # warming up (uncalibrated) BUT the log file mtime is old -> dead -> stale,
-    # so a process that died right after dashboard launch is not falsely 'live'.
+def test_liveness_calibrating_dead_process_caught_by_threshold():
+    # uncalibrated (prior) BUT log mtime older than max(floor, K*prior)=2700s ->
+    # dead -> stale (a process that died right after launch is not falsely live;
+    # baseline verdict_age falls back to log mtime so the threshold catches it).
     now = 5000.0
-    live = _compute_liveness(_seg_rows((475, 500)), watched_mtime=now - 1200,  # 20m
+    live = _compute_liveness(_seg_rows((475, 500)), watched_mtime=now - 3000,  # 50m
                              now=now, sub={}, cfg=_CFG)
-    assert live["kind"] == "stale"  # log_age 1200s > floor 600s
+    assert live["kind"] == "stale"
+    assert live["verdict_age_s"] > live["threshold_s"]
+
+
+def test_liveness_calibrating_healthy_quiet_stretch_not_stale():
+    # THE false-alarm regression guard (FEED-gf live bug): a HEALTHY ~14-min quiet
+    # stretch BETWEEN verdict clusters while still calibrating must NOT read STALE.
+    # The old bare-10-min floor false-alarmed here on a live run; the threshold is
+    # now max(floor, K*prior) ≈ 45m so a 14-min gap stays LIVE.
+    now = 5000.0
+    live = _compute_liveness(_seg_rows((475, 500)), watched_mtime=now - 14 * 60,
+                             now=now, sub={}, cfg=_CFG)
+    assert live["kind"] == "live"  # 840s < threshold 2700s
+    assert live["calibrating"] is True
 
 
 def test_liveness_embedded_ts_calibrates_instantly_live():
@@ -335,17 +373,22 @@ def test_liveness_embedded_ts_calibrates_instantly_live():
     live = _compute_liveness(rows, watched_mtime=now - 5, now=now, sub={}, cfg=_CFG)
     assert live["kind"] == "live"  # ts gives instant measured cadence, no warmup
     assert live["cadence_source"] == "measured"
+    assert live["calibrating"] is False
 
 
-def test_liveness_verdict_age_distinct_from_log_age():
-    # the two honest facts are NOT blurred: verdict recency != file mtime activity
+def test_liveness_verdict_age_consistent_with_log_age():
+    # the two honest facts: verdict recency >= log activity ALWAYS (a verdict IS a
+    # log write, so it can never be fresher than the file mtime). Post-launch
+    # observed epoch -> exact real recency; here the log was written more recently
+    # (a later checkpoint line), so verdict_age (300s) > log_age (5s) but consistent.
     sub = {"first_observation_at": 1000.0, "baseline_epochs": [0],
            "first_seen": {"0": 1000.0, "25": 1600.0, "50": 2200.0, "75": 2800.0}}
-    now = 3100.0  # log just written (mtime now-5), but last verdict was 300s ago
+    now = 3100.0  # log just written (mtime now-5), last verdict observed 300s ago
     live = _compute_liveness(_seg_rows((0, 25, 50, 75)), watched_mtime=now - 5,
                              now=now, sub=sub, cfg=_CFG)
-    assert abs(live["verdict_age_s"] - 300.0) < 1e-6  # verdict recency
+    assert abs(live["verdict_age_s"] - 300.0) < 1e-6  # verdict recency (real)
     assert abs(live["log_age_s"] - 5.0) < 1e-6        # file-mtime activity (distinct)
+    assert live["verdict_age_s"] >= live["log_age_s"]  # invariant: never inconsistent
 
 
 # ---------------------------------------------------------------------------
@@ -403,92 +446,95 @@ def test_cadence_state_missing_file_is_empty(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# _banner_html -- the four states + the two honest recency facts
+# _pill_html / _status_line / _detail_line -- clean minimal chrome
 # ---------------------------------------------------------------------------
-def test_banner_live_shows_both_facts_and_next():
-    live = {"kind": "live", "last_epoch": 675, "verdict_age_s": 120.0, "log_age_s": 15.0,
-            "cadence_s": 1080.0, "cadence_source": "measured", "n_samples": 5,
-            "next_epoch": 700, "next_eta_s": 960.0, "threshold_s": 2700.0}
-    b = _banner_html(live, Path("levelset_run.log"), None, ".omx/tmp/levelset_*.log")
-    assert "● live" in b and "STALE" not in b
-    assert "last verdict ep675" in b   # d_seg recency fact
-    assert "log active 15s ago" in b   # file-mtime activity fact (distinct)
-    assert "next ~ep700" in b
-    assert "cadence ~18m (measured)" in b
+def test_pill_live():
+    p = _pill_html({"kind": "live", "calibrating": False})
+    assert "● live" in p and "pill live" in p
 
 
-def test_banner_warming_up_labeled_prior():
-    live = {"kind": "warming_up", "last_epoch": 525, "verdict_age_s": 60.0, "log_age_s": 10.0,
-            "cadence_s": 1080.0, "cadence_source": "prior", "n_samples": 1,
-            "next_epoch": 550, "next_eta_s": 1020.0, "threshold_s": 2700.0}
-    b = _banner_html(live, Path("levelset_run.log"), None, ".omx/tmp/levelset_*.log")
-    assert "warming up" in b and "calibrating" in b
-    assert "prior" in b and "1/3 samples" in b
-    assert "STALE" not in b
+def test_pill_warming_up_when_calibrating():
+    p = _pill_html({"kind": "live", "calibrating": True})
+    assert "◐ warming up" in p and "pill warm" in p  # calm calibrating state, not red
 
 
-def test_banner_stale_cites_cadence_multiple():
-    live = {"kind": "stale", "last_epoch": 675, "verdict_age_s": 50 * 60.0, "log_age_s": 50 * 60.0,
-            "cadence_s": 1080.0, "cadence_source": "measured", "n_samples": 5,
-            "next_epoch": 700, "next_eta_s": 0.0, "threshold_s": 2700.0}
-    b = _banner_html(live, Path("levelset_dead.log"), None, ".omx/tmp/levelset_*.log")
-    assert "⚠ STALE" in b and "likely STOPPED" in b
-    assert "2.5x the ~18m measured cadence" in b
-    assert "● live" not in b
+def test_pill_stale():
+    p = _pill_html({"kind": "stale", "calibrating": False})
+    assert "⚠ stale" in p and "pill stale" in p
 
 
-def test_banner_missing():
-    live = {"kind": "missing", "last_epoch": None, "verdict_age_s": None, "log_age_s": None,
-            "cadence_s": None, "cadence_source": None, "n_samples": 0,
-            "next_epoch": None, "next_eta_s": None, "threshold_s": None}
-    b = _banner_html(live, None, None, ".omx/tmp/levelset_*.log")
-    assert "no run log found" in b
+def test_pill_missing():
+    p = _pill_html({"kind": "missing"})
+    assert "no log" in p
+
+
+def test_status_line_live_compact():
+    rows = _seg_rows((725,))
+    live = {"kind": "live", "calibrating": True, "last_epoch": 725,
+            "next_epoch": 750, "next_eta_s": 16 * 60.0, "verdict_age_s": 120.0}
+    s = _status_line(rows, live, tau=300, l7=900)
+    assert "tau stage" in s and "ep725" in s and "next verdict ~16" in s.replace(".0", "")
+    assert "—" not in s  # no stale text on a live run
+
+
+def test_status_line_stale_says_stopped():
+    rows = _seg_rows((725,))
+    live = {"kind": "stale", "last_epoch": 725, "verdict_age_s": 50 * 60.0}
+    s = _status_line(rows, live, tau=300, l7=900)
+    assert "no verdict in" in s and "likely stopped" in s
+
+
+def test_detail_line_both_facts_and_cadence():
+    live = {"kind": "live", "calibrating": True, "verdict_age_s": 108.0,
+            "log_age_s": 108.0, "cadence_s": 1080.0}
+    d = _detail_line(live)
+    assert "verdict" in d and "log" in d and "cadence ~18m (calibrating)" in d
 
 
 # ---------------------------------------------------------------------------
 # _write_html end-to-end (matplotlib PNG is tiny stub bytes here)
 # ---------------------------------------------------------------------------
-def test_write_html_live_banner(tmp_path):
+def test_write_html_live_pill_and_footer(tmp_path):
     out = tmp_path / "dash" / "index.html"
     rows = [{"epoch": 5, "d_seg": 0.004, "d_pose": 0.0009, "blob_bytes": 1,
              "implied_S": 0.21, "seg_form": "tau_softplus"}]
-    live = {"kind": "live", "last_epoch": 5, "verdict_age_s": 12.0, "log_age_s": 12.0,
-            "cadence_s": 1080.0, "cadence_source": "measured", "n_samples": 5,
+    live = {"kind": "live", "calibrating": False, "last_epoch": 5, "verdict_age_s": 12.0,
+            "log_age_s": 12.0, "cadence_s": 1080.0, "cadence_source": "measured",
             "next_epoch": 30, "next_eta_s": 900.0, "threshold_s": 2700.0}
-    _write_html(out, b"PNG", rows, 30, watched=Path("levelset_live.log"),
-                live=live, switched_note="▶ following levelset_live.log",
+    _write_html(out, b"PNG", rows, 30, watched=Path("levelset_live.log"), live=live,
                 log_glob=".omx/tmp/levelset_*.log")
     html = out.read_text()
-    assert "● live" in html
-    assert "STALE" not in html
-    assert "levelset_live.log" in html
-    assert "pointer UNMOVED 0.19110" in html  # footer preserved
-    assert "macOS-MLX training] NON-PROMOTABLE" in html  # advisory footer preserved
+    assert "● live" in html and "pill live" in html
+    assert "⚠ stale" not in html
+    assert "Level-Set Witness" in html              # clean title
+    assert "pointer 0.19110" in html                # minimal footer
+    assert "NON-PROMOTABLE" in html                  # advisory tag preserved
+    assert "levelset_live.log" in html              # watched name in footer
 
 
-def test_write_html_stale_banner(tmp_path):
+def test_write_html_stale_pill(tmp_path):
     out = tmp_path / "dash" / "index.html"
     rows = [{"epoch": 5, "d_seg": 0.004, "d_pose": 0.0009, "blob_bytes": 1, "implied_S": 0.21}]
-    live = {"kind": "stale", "last_epoch": 5, "verdict_age_s": 50 * 60.0, "log_age_s": 50 * 60.0,
-            "cadence_s": 1080.0, "cadence_source": "measured", "n_samples": 5,
+    live = {"kind": "stale", "calibrating": False, "last_epoch": 5, "verdict_age_s": 50 * 60.0,
+            "log_age_s": 50 * 60.0, "cadence_s": 1080.0, "cadence_source": "measured",
             "next_epoch": 30, "next_eta_s": 0.0, "threshold_s": 2700.0}
-    _write_html(out, b"PNG", rows, 30, watched=Path("levelset_dead.log"),
-                live=live, switched_note=None, log_glob=".omx/tmp/levelset_*.log")
-    html = out.read_text()
-    assert "⚠ STALE" in html
-    assert "likely STOPPED" in html
-    assert 'banner live' not in html  # the live BANNER must be absent (legend explainer aside)
-
-
-def test_write_html_missing_banner(tmp_path):
-    out = tmp_path / "dash" / "index.html"
-    live = {"kind": "missing", "last_epoch": None, "verdict_age_s": None, "log_age_s": None,
-            "cadence_s": None, "cadence_source": None, "n_samples": 0,
-            "next_epoch": None, "next_eta_s": None, "threshold_s": None}
-    _write_html(out, b"PNG", [], 30, watched=None, live=live, switched_note=None,
+    _write_html(out, b"PNG", rows, 30, watched=Path("levelset_dead.log"), live=live,
                 log_glob=".omx/tmp/levelset_*.log")
     html = out.read_text()
-    assert "no run log found" in html
+    assert "⚠ stale" in html and "pill stale" in html
+    assert "likely stopped" in html
+    assert "pill live" not in html
+
+
+def test_write_html_missing_pill(tmp_path):
+    out = tmp_path / "dash" / "index.html"
+    live = {"kind": "missing", "calibrating": True, "last_epoch": None, "verdict_age_s": None,
+            "log_age_s": None, "cadence_s": None, "cadence_source": None,
+            "next_epoch": None, "next_eta_s": None, "threshold_s": None}
+    _write_html(out, b"PNG", [], 30, watched=None, live=live,
+                log_glob=".omx/tmp/levelset_*.log")
+    html = out.read_text()
+    assert "no run log found" in html and "no log" in html
 
 
 def test_write_html_backcompat_no_staleness_args(tmp_path):
@@ -496,24 +542,25 @@ def test_write_html_backcompat_no_staleness_args(tmp_path):
     out = tmp_path / "dash" / "index.html"
     _write_html(out, b"PNG", [], 30)
     assert out.exists()
-    assert "auto-refresh 30s" in out.read_text()
+    assert "refresh 30s" in out.read_text()
 
 
-def test_write_html_headline_and_legend_present(tmp_path):
+def test_write_html_headline_clean(tmp_path):
     out = tmp_path / "dash" / "index.html"
     rows = [{"epoch": 500, "d_seg": 0.0045, "d_pose": 0.0008, "blob_bytes": 74000,
              "implied_S": 0.59, "seg_form": "tau_softplus"},
             {"epoch": 525, "d_seg": 0.0044, "d_pose": 0.0007, "blob_bytes": 73000,
              "implied_S": 0.57, "seg_form": "tau_softplus"}]
-    live = {"kind": "live", "last_epoch": 525, "verdict_age_s": 30.0, "log_age_s": 30.0,
-            "cadence_s": 1080.0, "cadence_source": "measured", "n_samples": 5,
+    live = {"kind": "live", "calibrating": False, "last_epoch": 525, "verdict_age_s": 30.0,
+            "log_age_s": 30.0, "cadence_s": 1080.0, "cadence_source": "measured",
             "next_epoch": 550, "next_eta_s": 900.0, "threshold_s": 2700.0}
     _write_html(out, b"PNG", rows, 30, watched=Path("levelset_run.log"), live=live,
                 tau=300, l7=900, goal_dseg=0.00112)
     html = out.read_text()
-    assert "d_seg" in html and "descending" in html  # headline + trend arrow
-    assert "stage shading" in html                    # self-explanatory legend
-    assert "ADVISORY" in html                          # implied_S explainer
+    assert "0.00440" in html               # big d_seg headline value
+    assert "goal &lt;0.00112" in html      # compact goal note
+    assert "tau stage" in html and "ep525" in html  # one-line status
+    assert "stage shading" not in html     # dense legend removed (clean)
 
 
 if __name__ == "__main__":  # pragma: no cover

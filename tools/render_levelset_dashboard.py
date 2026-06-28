@@ -287,7 +287,7 @@ def _compute_liveness(rows: list[dict], watched_mtime: float | None, now: float,
     rich dict the banner renders verbatim. NO IO here (pure + testable)."""
     log_age = (now - watched_mtime) if watched_mtime is not None else None
     base = {
-        "kind": "missing", "last_epoch": None, "verdict_age_s": None,
+        "kind": "missing", "calibrating": True, "last_epoch": None, "verdict_age_s": None,
         "log_age_s": log_age, "cadence_s": None, "cadence_source": None,
         "n_samples": 0, "next_epoch": None, "next_eta_s": None,
         "threshold_s": None, "epoch_spacing": cfg["default_spacing"],
@@ -296,28 +296,53 @@ def _compute_liveness(rows: list[dict], watched_mtime: float | None, now: float,
         return base
     arrivals, baseline = _arrival_times(rows, sub, now)
     cadence_s, cad_src, n = _measure_cadence(arrivals, baseline, cfg)
+    calibrating = cad_src != "measured"  # cadence is still the labeled prior
     spacing = _epoch_spacing(rows, cfg["default_spacing"])
     last_epoch = arrivals[-1][0] if arrivals else None
+    last_src = arrivals[-1][2] if arrivals else None
     last_arr = arrivals[-1][1] if arrivals else None
-    verdict_age = (now - last_arr) if last_arr is not None else None
+
+    # HONEST verdict recency. A verdict line IS a log write, so the true age of
+    # the last verdict can never be FRESHER than the log mtime — i.e. the
+    # invariant verdict_age >= log_age must always hold (the old latched-at-launch
+    # age violated it: it read "verdict 4m ago" while "log active 10m ago",
+    # internally inconsistent). Exact when we KNOW the wall-time (embedded ts, or
+    # an epoch we watched APPEAR after launch); for a pre-launch BASELINE epoch
+    # whose emit time we never observed, fall back to the LOG mtime (>= its real
+    # write time) rather than the launch time.
+    if last_epoch is None:
+        verdict_age = log_age
+    elif last_src == "observed" and last_epoch in baseline:
+        verdict_age = log_age
+    else:
+        verdict_age = now - last_arr
+    # enforce the invariant verdict_age >= log_age: a verdict line IS a log write,
+    # so the verdict can never be FRESHER than the file mtime. (Self-observed
+    # first_seen lags the real write by up to one poll interval, which could
+    # otherwise show "verdict 6.2m · log 6.3m" — the verdict looking fresher.)
+    if verdict_age is not None and log_age is not None:
+        verdict_age = max(verdict_age, log_age)
+
     threshold = max(cfg["floor_s"], cfg["k"] * cadence_s)
     next_epoch = (last_epoch + spacing) if last_epoch is not None else None
     next_eta = max(0.0, cadence_s - verdict_age) if verdict_age is not None else None
 
-    if last_epoch is None:
-        kind = "warming_up"
-    elif cad_src == "measured":
-        kind = "stale" if (verdict_age is not None and verdict_age > threshold) else "live"
-    else:  # cadence not yet calibrated → warming up, but still catch a dead process
-        dead = (verdict_age is not None and verdict_age > threshold) or \
-               (log_age is not None and log_age > cfg["floor_s"])
-        kind = "stale" if dead else "warming_up"
+    # ONE comparison, ONE threshold (the displayed cadence == the one used). STALE
+    # only when the last verdict is older than max(floor, K × cadence) — so a
+    # HEALTHY run mid-cadence (e.g. verdict 4-15 min ago at an ~18 min cadence →
+    # threshold ~45 min) always reads LIVE. While the cadence is the prior the
+    # banner annotates "(calibrating)"; it auto-tightens to "(measured)" once
+    # >= 3 genuine new-verdict-epoch arrivals are observed (instant with ts).
+    if verdict_age is not None and verdict_age > threshold:
+        kind = "stale"
+    else:
+        kind = "live"
 
     return {
-        "kind": kind, "last_epoch": last_epoch, "verdict_age_s": verdict_age,
-        "log_age_s": log_age, "cadence_s": cadence_s, "cadence_source": cad_src,
-        "n_samples": n, "next_epoch": next_epoch, "next_eta_s": next_eta,
-        "threshold_s": threshold, "epoch_spacing": spacing,
+        "kind": kind, "calibrating": calibrating, "last_epoch": last_epoch,
+        "verdict_age_s": verdict_age, "log_age_s": log_age, "cadence_s": cadence_s,
+        "cadence_source": cad_src, "n_samples": n, "next_epoch": next_epoch,
+        "next_eta_s": next_eta, "threshold_s": threshold, "epoch_spacing": spacing,
     }
 
 
@@ -371,14 +396,15 @@ def _save_cadence_state(path: str | None, all_state: dict, log_name: str, sub: d
 
 
 # ───────────────────────────── rendering ─────────────────────────────
-def _stage_label(last_epoch: int | None, seg_form: str | None, tau: int, l7: int) -> str:
+def _stage_short(last_epoch: int | None, tau: int, l7: int) -> str:
+    """Compact curriculum stage word for the one-line status."""
     if last_epoch is None:
         return "starting"
     if last_epoch < tau:
-        return f"CE warmup (→ tau@{tau})"
+        return "CE"
     if last_epoch < l7:
-        return f"tau stage ({seg_form or 'softplus'}) (→ l7@{l7})"
-    return f"l7 finisher / Muon (ep ≥ {l7})"
+        return "tau"
+    return "l7/Muon"
 
 
 def _trend(rows: list[dict], key: str = "d_seg", look: int = 4) -> tuple[str, str]:
@@ -402,13 +428,12 @@ def _style_ax(ax) -> None:
 
 
 def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float) -> bytes:
+    # NO figure suptitle — the HTML header already carries the title + epoch; a
+    # bold matplotlib suptitle on top of it reads as redundant clutter. Each panel
+    # is self-labelled (title + caption), which is where the per-metric meaning
+    # belongs (clean > complete).
     fig, axes = plt.subplots(2, 2, figsize=(12, 7.2))
     fig.patch.set_facecolor(_BG)
-    head = (
-        f"level-set witness — {len(rows)} verdicts"
-        + (f" — last ep{rows[-1]['epoch']}" if rows else " — (waiting for ep0)")
-    )
-    fig.suptitle(head, fontsize=13, color=_FG, fontweight="bold")
     ep = [r["epoch"] for r in rows]
     xlo, xhi = (min(ep), max(ep)) if ep else (0, l7)
     if xhi <= xlo:
@@ -462,7 +487,7 @@ def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float) -> bytes:
     _panel(axes[1, 1], "implied_S", "implied_S — ADVISORY mid-training estimate (NOT the contest score)",
            "epoch · frontier pointer = 0.19110 · the real row is byte-closed CPU/CUDA", _SVAL,
            logy=True, hline=0.19110, hlabel="pointer 0.19110")
-    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    fig.tight_layout()
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=92, facecolor=_BG)
     plt.close(fig)
@@ -472,10 +497,11 @@ def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float) -> bytes:
 def _banner_html(live: dict | None, watched: Path | None, switched_note: str | None,
                  log_glob: str | None) -> str:
     """Build the data-derived status banner + the two honest recency facts +
-    the next-verdict estimate + watched-log line + switch note. The judgment is
-    keyed to the OBSERVED verdict cadence (live/warming/stale), never a hand-set
-    minute band — so it stays accurate across CE/tau/l7/Muon cadences, or flags
-    when it is still calibrating."""
+    the next-verdict estimate + watched-log line + switch note. The live/stale
+    judgment is keyed to ONE threshold = max(floor, K × cadence) and the banner
+    cites that SAME cadence (displayed == used) — never a hand-set band. A
+    HEALTHY run mid-cadence reads ``● live`` (with a ``(calibrating)`` tag while
+    the cadence is still the prior, ``(measured)`` once observed)."""
     if live is None:
         return ""
     kind = live.get("kind")
@@ -483,13 +509,15 @@ def _banner_html(live: dict | None, watched: Path | None, switched_note: str | N
     log_age = live.get("log_age_s")
     last_ep = live.get("last_epoch")
     cadence_s = live.get("cadence_s")
-    cad_src = live.get("cadence_source")
+    threshold_s = live.get("threshold_s")
+    calibrating = live.get("calibrating", False)
     next_ep = live.get("next_epoch")
     next_eta = live.get("next_eta_s")
-    n_samples = live.get("n_samples", 0)
 
     cad_m = f"{cadence_s / 60.0:.0f}m" if cadence_s else "?"
-    # the two honest, distinct facts (never blurred)
+    cad_tag = "calibrating" if calibrating else "measured"
+    # the two honest facts. verdict_age >= log_age by construction (a verdict IS
+    # a log write), so they are always internally consistent.
     verdict_fact = (f"last verdict ep{last_ep} ({_fmt_age(verdict_age)} ago)"
                     if last_ep is not None else "no verdict yet")
     log_fact = f"log active {_fmt_age(log_age)} ago" if log_age is not None else ""
@@ -500,21 +528,20 @@ def _banner_html(live: dict | None, watched: Path | None, switched_note: str | N
         glob_hint = f" (glob: {log_glob})" if log_glob else ""
         banner = f'<div class="banner stale">⚠ no run log found{glob_hint}</div>'
     elif kind == "stale":
-        cad_note = f">{_CADENCE_K:g}x the ~{cad_m} {cad_src or ''} cadence".strip()
+        # cite the BINDING bound honestly: the cadence multiple when it dominates,
+        # else the sane-minimum floor (so displayed == the threshold actually used).
+        if cadence_s and threshold_s and threshold_s <= _CADENCE_K * cadence_s + 1.0:
+            note = f">{_CADENCE_K:g}x the ~{cad_m} {cad_tag} cadence"
+        else:
+            note = f"> the {(threshold_s or 0) / 60.0:.0f}m floor"
         banner = (
-            f'<div class="banner stale">⚠ STALE — no verdict in '
-            f'{_fmt_age(verdict_age)} ({cad_note}) — likely STOPPED · {log_fact}</div>'
+            f'<div class="banner stale">⚠ STALE — no verdict in {_fmt_age(verdict_age)} '
+            f'({note}) — likely STOPPED · {log_fact}</div>'
         )
-    elif kind == "warming_up":
-        prog = f"{n_samples}/{_MIN_CADENCE_SAMPLES}"
-        banner = (
-            f'<div class="banner warm">● warming up — calibrating cadence '
-            f'(prior ~{cad_m}, {prog} samples) · {verdict_fact} · {next_fact} · {log_fact}</div>'
-        )
-    else:  # live (cadence measured)
+    else:  # live (healthy; cadence prior=calibrating or measured)
         banner = (
             f'<div class="banner live">● live · {verdict_fact} · {next_fact} · '
-            f'cadence ~{cad_m} (measured) · {log_fact}</div>'
+            f'cadence ~{cad_m} ({cad_tag}) · {log_fact}</div>'
         )
 
     watched_line = ""
@@ -524,93 +551,122 @@ def _banner_html(live: dict | None, watched: Path | None, switched_note: str | N
     return banner + watched_line + switch_line
 
 
-def _headline_html(rows: list[dict], live: dict | None, tau: int, l7: int,
-                   goal_dseg: float) -> str:
-    """Big, self-explanatory headline: current d_seg + trend arrow + plain-language
-    'what stage / which direction' status line."""
-    if not rows:
-        return '<div class="hl">waiting for ep0 verdict…</div>'
-    last = rows[-1]
-    d_seg = last.get("d_seg")
-    arrow, direction = _trend(rows, "d_seg")
-    last_ep = live.get("last_epoch") if live else last.get("epoch")
-    stage = _stage_label(last_ep, last.get("seg_form"), tau, l7)
-    dseg_str = f"{d_seg:.5f}" if isinstance(d_seg, (int, float)) else "?"
-    ratio = (d_seg / goal_dseg) if isinstance(d_seg, (int, float)) and goal_dseg else None
-    ratio_str = f"{ratio:.1f}× the sub-0.19 goal" if ratio else ""
-    cls = "down" if direction == "descending" else ("up" if direction == "rising" else "flat")
-    return (
-        f'<div class="hl">d_seg <b>{dseg_str}</b> '
-        f'<span class="arr {cls}">{arrow} {direction}</span>'
-        f'<span class="goal">goal &lt;{goal_dseg:g} · {ratio_str}</span></div>'
-        f'<div class="status">de-confound witness · {stage} · '
-        f'l7 finisher at ep{l7}, Muon after</div>'
-    )
+def _pill_html(live: dict | None) -> str:
+    """ONE small color-coded status pill: ● live / ◐ warming up / ⚠ stale /
+    ⚠ no log. 'warming up' is a CALM (non-red) calibrating state, NOT an alarm —
+    the run is live; only the cadence is still the prior."""
+    if live is None:
+        return ""
+    kind = live.get("kind")
+    if kind == "missing":
+        cls, txt = "stale", "⚠ no log"
+    elif kind == "stale":
+        cls, txt = "stale", "⚠ stale"
+    elif live.get("calibrating"):
+        cls, txt = "warm", "◐ warming up"
+    else:
+        cls, txt = "live", "● live"
+    return f'<span class="pill {cls}">{txt}</span>'
 
 
-def _legend_html() -> str:
-    return (
-        '<div class="legend">'
-        'stage shading: <span class="lg ce">CE</span> '
-        '<span class="lg tau">tau</span> '
-        '<span class="lg l7">l7/Muon</span> &nbsp;|&nbsp; '
-        '<b>● live</b> cadence measured, fresh · '
-        '<b>● warming up</b> calibrating cadence (prior) · '
-        '<b>⚠ stale</b> no verdict in &gt;2.5× the cadence (likely stopped) &nbsp;|&nbsp; '
-        'panels: d_seg/d_pose LOWER=better · bytes=learned payload · '
-        'implied_S is ADVISORY (not the contest score)'
-        '</div>'
-    )
+def _status_line(rows: list[dict], live: dict | None, tau: int, l7: int) -> str:
+    """ONE compact line: stage · ep · next-verdict (or the stale/missing reason)."""
+    if live is not None and live.get("kind") == "missing":
+        return "no run log found"
+    if live is None or not rows:
+        return "waiting for ep0 verdict…"
+    kind = live.get("kind")
+    last_ep = live.get("last_epoch")
+    parts = [f"{_stage_short(last_ep, tau, l7)} stage"]
+    if last_ep is not None:
+        parts.append(f"ep{last_ep}")
+    if kind == "stale":
+        parts.append(f"no verdict in {_fmt_age(live.get('verdict_age_s'))} — likely stopped")
+    elif live.get("next_epoch") is not None and live.get("next_eta_s") is not None:
+        parts.append(f"next verdict ~{_fmt_age(live.get('next_eta_s'))}")
+    return " · ".join(parts)
+
+
+def _detail_line(live: dict | None) -> str:
+    """ONE tiny muted line carrying the two honest telemetry facts (verdict
+    recency vs log activity — never blurred) + the cadence + its calibrated/prior
+    source. verdict_age >= log_age by construction (a verdict IS a log write)."""
+    if live is None or live.get("kind") == "missing":
+        return ""
+    bits = []
+    va, la, cs = live.get("verdict_age_s"), live.get("log_age_s"), live.get("cadence_s")
+    if va is not None:
+        bits.append(f"verdict {_fmt_age(va)} ago")
+    if la is not None:
+        bits.append(f"log {_fmt_age(la)} ago")
+    if cs:
+        tag = "calibrating" if live.get("calibrating") else "measured"
+        bits.append(f"cadence ~{cs / 60.0:.0f}m ({tag})")
+    return " · ".join(bits)
 
 
 def _write_html(out: Path, png: bytes, rows: list[dict], refresh: int,
                 watched: Path | None = None, live: dict | None = None,
                 switched_note: str | None = None, log_glob: str | None = None,
                 tau: int = 300, l7: int = 900, goal_dseg: float = 0.00112) -> None:
+    """Clean, minimal single-page dashboard: title + status pill, one big d_seg
+    headline, one compact status line, one tiny telemetry detail line, the 4
+    panels (each self-explanatory in its own caption), a minimal footer. No JS."""
     b64 = base64.b64encode(png).decode("ascii")
     last = rows[-1] if rows else {}
-    summary = (
-        f"ep{last.get('epoch', '?')} | d_seg={last.get('d_seg', '?')} | "
-        f"d_pose={last.get('d_pose', '?')} | bytes={last.get('blob_bytes', '?')} | "
-        f"implied_S={last.get('implied_S', '?')}"
-        if rows else "waiting for ep0 verdict…"
+    d_seg = last.get("d_seg")
+    dseg_str = f"{d_seg:.5f}" if isinstance(d_seg, (int, float)) else "—"
+    arrow, _direction = _trend(rows, "d_seg")
+    pill = _pill_html(live)
+    status = _status_line(rows, live, tau, l7)
+    detail = _detail_line(live)
+    headline = (
+        f'<div class="hl">d_seg <b>{dseg_str}</b> '
+        f'<span class="arr">{arrow}</span>'
+        f'<span class="goal">goal &lt;{goal_dseg:g}</span></div>'
+        if rows else '<div class="hl">waiting for ep0 verdict…</div>'
     )
-    banner = _banner_html(live, watched, switched_note, log_glob)
-    headline = _headline_html(rows, live, tau, l7, goal_dseg)
-    legend = _legend_html()
+    detail_html = f'<div class="detail">{detail}</div>' if detail else ""
+    switch_html = (f'<div class="sw">{switched_note}</div>'
+                   if switched_note and "switched" in switched_note else "")
+    watched_name = Path(watched).name if watched is not None else ""
     html = (
         '<!doctype html><html><head><meta charset="utf-8">'
         f'<meta http-equiv="refresh" content="{refresh}">'
-        "<title>level-set row dashboard</title>"
+        "<title>Level-Set Witness</title>"
         "<style>"
-        f"body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',monospace;"
-        f"background:{_BG};color:{_FG};text-align:center;margin:0;padding:14px 12px}}"
-        "img{max-width:98%;border-radius:6px}"
-        f".s{{font-size:12px;color:{_MUTED};margin:6px;font-variant-numeric:tabular-nums}}"
-        f".hl{{font-size:24px;color:{_FG};margin:6px;font-weight:600;letter-spacing:.2px}}"
-        f".hl b{{color:{_ACC};font-size:30px}}"
-        ".arr{font-size:14px;margin-left:10px;padding:2px 8px;border-radius:10px}"
-        f".arr.down{{background:#14431f;color:#b6f5c4}}.arr.up{{background:#5a1f1f;color:#ffd0d0}}"
-        f".arr.flat{{background:#33384a;color:{_FG}}}"
-        f".goal{{font-size:12px;color:{_GOAL};margin-left:12px}}"
-        f".status{{font-size:13px;color:{_ACC};margin:4px 0 10px}}"
-        ".banner{padding:9px;font-size:14px;font-weight:bold;border-radius:6px;"
-        "margin:8px auto;max-width:94%}"
-        ".banner.stale{background:#7a1f1f;color:#ffdede}"
-        ".banner.live{background:#14431f;color:#b6f5c4}"
-        ".banner.warm{background:#5a4a14;color:#fff0c2}"
-        f".w{{font-size:11px;color:{_MUTED};margin:2px}}.sw{{font-size:11px;color:{_ACC};margin:2px}}"
-        f".legend{{font-size:11px;color:{_MUTED};margin:8px auto;max-width:94%;line-height:1.6}}"
-        ".lg{padding:1px 6px;border-radius:4px;color:#fff}"
-        f".lg.ce{{background:{_STAGE_CE}}}.lg.tau{{background:{_STAGE_TAU}}}.lg.l7{{background:{_STAGE_L7}}}"
-        f".a{{font-size:11px;color:{_MUTED};margin-top:8px}}"
+        f"body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;"
+        f"background:{_BG};color:{_FG};text-align:center;margin:0;padding:24px 16px;line-height:1.5}}"
+        f".title{{font-size:13px;color:{_MUTED};letter-spacing:1.5px;text-transform:uppercase;"
+        "margin-bottom:16px}"
+        ".pill{font-size:12px;font-weight:600;padding:3px 11px;border-radius:11px;"
+        "margin-left:10px;vertical-align:middle}"
+        ".pill.live{background:#173d22;color:#7fe0a0}"
+        ".pill.warm{background:#3a3413;color:#e6cf7a}"
+        ".pill.stale{background:#4a1717;color:#ff9b9b}"
+        f".hl{{font-size:20px;color:{_FG};font-weight:300;margin:4px 0}}"
+        f".hl b{{color:{_ACC};font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;"
+        "margin:0 4px}"
+        f".arr{{font-size:15px;color:{_MUTED};margin-left:2px}}"
+        f".goal{{font-size:12px;color:{_MUTED};margin-left:12px}}"
+        f".status{{font-size:14px;color:{_FG};margin:10px 0 2px}}"
+        f".detail{{font-size:11px;color:{_MUTED};margin-bottom:20px;font-variant-numeric:tabular-nums}}"
+        "img{max-width:100%;border-radius:8px}"
+        f".foot{{font-size:10.5px;color:{_MUTED};opacity:.75;margin-top:18px;line-height:1.7}}"
+        f".sw{{font-size:10.5px;color:{_ACC};opacity:.8;margin-top:4px}}"
         "</style></head>"
-        f"<body>{banner}{headline}"
-        f'<div class="s">{summary}</div>'
+        "<body>"
+        f'<div class="title">Level-Set Witness{pill}</div>'
+        f"{headline}"
+        f'<div class="status">{status}</div>'
+        f"{detail_html}"
         f'<img src="data:image/png;base64,{b64}">'
-        f"{legend}"
-        f'<div class="a">advisory [macOS-MLX training] NON-PROMOTABLE · '
-        f"pointer UNMOVED 0.19110 · auto-refresh {refresh}s</div></body></html>"
+        f'<div class="foot">[macOS-MLX advisory · NON-PROMOTABLE] · pointer 0.19110 · '
+        f"stages CE · tau · l7 · Muon · refresh {refresh}s"
+        + (f" · {watched_name}" if watched_name else "")
+        + "</div>"
+        f"{switch_html}"
+        "</body></html>"
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".tmp")
