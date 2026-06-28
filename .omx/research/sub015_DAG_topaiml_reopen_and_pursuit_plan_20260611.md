@@ -4222,3 +4222,47 @@ information space."*
 Frozen-info-space framing (operator's ask): the scorer is FIXED + downloadable = WHITE-BOX → derive the
 optimal render res against the known R-path+SegNet bottleneck, don't sweep. Gate (pid 38154) continues
 descending (d_seg→0.0146). Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-hf (2026-06-28T14:50Z) — Lens 3 (frozen-info-space) IN + VERIFIED render config CORRECTION
+
+**Tag `[macOS-CPU advisory]`. Lens 3 of 5 returned; 1 telemetry correction + valuable surviving mechanism.**
+
+### ⚠️ VERIFIED CONFIG CORRECTION (NO-FAKE/telemetry): render is 384×512, NOT 192×256
+Lens 3 claimed "current render = 192×256 = 0.5× the SegNet readout grid (throwing away precision NOW)"
+reading the trainer argparse DEFAULT (line 2184-85). The ACTUAL L7/gate/calibration runs render at
+**384×512**, verified 3 ways: DSL BASELINE `--render-h 384 --render-w 512`; the gate launch command
+(explicit `--render-h 384 --render-w 512`); the EMA snapshot stores `__render_hw=[384,512]`. The witness
+renders **1:1 with the SegNet readout grid (512×384)** — we are NOT below it. Lens 3's magnitude claim
+("3× jump from 192, first 1.5× recovers a deficit") is CORRECTED: there is NO readout deficit; train-at-2×
+(768) is PURELY a sub-pixel SUPERSAMPLING gain above the readout grid. Its mechanism survives; its
+magnitude was built on the wrong baseline. (Sister of the FEED-hb vm_stat telemetry catch — verify the run
+config, not the default.)
+
+### Lens 3's surviving + valuable derivation (corrected for the 384 baseline)
+- **Indirect-RD framing (SOUND):** witness = encoder for the FIXED decoder R∘Φ_seg with Hamming-on-argmax
+  distortion. R = bilinear↓384 ∘ uint8@874 ∘ bicubic↑874. The minimum sufficient statistic = the argmax
+  label within the **~2.2% small-margin annulus A** {z₁≈z₂}; the confident interior is ∂d_seg/∂x=0 =
+  mathematically DON'T-CARE. Spend everything on A (priority Road↔Lane = 57%).
+- **train-at-2× = sub-pixel supersampling above the 384 readout grid** (Lens 3's "sweet zone" 384≤render<874):
+  the bilinear↓ partial-coverage gray-ramp gives sub-SEG-pixel edge placement. Hard ceiling = camera-native
+  874×1164 (uint8 quantizes there → zero gain past it). 2×=768 captures most.
+- **Foveated rendering = the WALL-CLOCK-OPTIMAL form (KEY):** uniform 2×-everywhere wastes ~98% of extra
+  samples on don't-care interiors (~40× over-spend). Coord-INR queries arbitrary coords → dense 2×→874 ONLY
+  on the dilated annulus + coarse interior. Answers L4's 4×-compute worry: foveated makes 2× ~free in
+  wall-clock. MVP = uniform 2× (confirm gain); optimal = foveated-2×.
+- **Pre-emphasis / channel-inversion (headline byte-free exploit):** render the PRE-DISTORTED RGB whose
+  boundary, after R, lands the argmax flip exactly at the target SEG-px (deconvolution vs the known
+  bicubic+uint8 PSF; or solve the white-box pre-image per boundary px). train-at-2× SUPPLIES the sub-pixel
+  DOF; pre-emphasis AIMS them — complementary, both byte-free, both enabled by R+Φ_seg being fixed+known.
+- **uint8-dither** (error-diffusion across the 5.18 camera-px/SEG-px to dial sub-level) + **directional basis**
+  (proven −48%, ~0 byte, still #1; basis-match precedes capacity) compound.
+- **Allocation in one line:** resolution + chroma-sharpness + edge-capacity on the ~2.2% annulus (Road↔Lane
+  first); cheap flat interiors; basis = directional + step-native.
+
+### Decisive $0 test (Lens 3 + L1 converge): GT-through-R floor at render 384 vs 768 vs 874
+quantifies the sub-pixel headroom above the readout grid (L1 is running it). Native-874 ≈ OT floor 1.87e-4.
+
+4 lenses pending (L1 Nyquist-measurement, L2 residual-geometry, L4 engineering, L5 skeptic). Full synthesis
++ sequencing (2×-first vs FiLM-first; foveated; pre-emphasis) when they land. Gate descending. Pointer 0.19110.
