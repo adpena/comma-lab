@@ -4179,3 +4179,46 @@ moving lane needs). Both = GPU training arms → ASK operator before launch.
 ### STATE
 gate d_seg→0.0153 descending (alive). 0b 4/5 (2.0× rendering). 0a verdict = reducible/lane-dominated/GO
 (FEED-hc). mem 91% free. Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-he (2026-06-28T14:40Z) — OPERATOR Q: "train at 2× instead?" → focused deep-math panel on the RESIDUAL + frozen-info-space optimization
+
+**Operator:** *"What if we trained at 2X instead — is there any promise there? Convene deep math panel again
+on just the residual itself and all aspects including engineering and optimize against frozen contest
+information space."*
+
+### My first-principles answer: YES, real promise — mechanism + ceiling + catch
+- **Mechanism:** R forces render→bicubic↑874×1164→uint8→SegNet↓512×384. At 384×512 the witness paints then R
+  upsamples **2.27×** to 874 — that bicubic blow-up BLURS the boundary before SegNet sees it. Train at
+  768×1024 (≈ R's 874 target) → upsample shrinks to 1.14× → boundary stays crisp → sharper argmax → fewer
+  flips. 0b coarse side already proves resolution carries d_seg signal (0.5× = 4.6× worse).
+- **Ceiling:** SegNet sees only 512×384 (internal resize); R intermediate is 874. Useful render res bounded
+  by ~874 → **2× = 768×1024 is the sweet spot**; 3-4× wasted by the 874→384 downsample.
+- **Byte-neutral:** coord-INR params don't grow with resolution → zero rate cost, pure d_seg.
+- **Lane synergy:** the lane (57% of residual) is the thinnest, most sub-pixel/Nyquist-limited structure →
+  benefits MOST. train-at-2× ≈ a lane lever.
+- **Catch:** 0b U-curve only proves a 384-TRAINED model degrades off-res (necessary-but-not-sufficient). The
+  decisive $0 test: GT-through-R achievable FLOOR at 384 vs 768 (does the floor itself drop?). Plus 4× render
+  compute → tractability + 30-min decode budget must be checked.
+
+### Panel convened (5 lenses, parallel, $0 analysis + one bounded measurement; train-at-2× GPU arm awaits steer)
+- **L1 Nyquist/R-path (a97b641529d27fbb9):** derive optimal render res vs the R chain; the DECISIVE $0
+  measurement = GT-through-R floor at 192/384/576/768/874 (does the floor drop with finer render = the
+  Nyquist headroom a 2×-trained witness captures). Sanity: native-874 ≈ OT floor 1.87e-4.
+- **L2 residual-geometry (a4759369cd32856bf):** decompose the 67%-confident flips into boundary-LOCALIZATION
+  (resolution-fixable) vs class-CONFUSION (not); does finer res shrink the LANE component specifically; the
+  6-10 modes.
+- **L3 frozen-info-space (a733b1f080231099a):** white-box optimize against the FIXED scorer — where to spend
+  resolution/chroma/capacity (boundary annulus vs interiors); byte-free pre-emphasis against the known
+  bicubic+uint8 R-path; is 2×-everywhere wasteful vs 2×-at-the-annulus.
+- **L4 engineering (af73c98ee346dee9b):** train-at-2× tractability (4× render compute, memory, wall-clock,
+  30-min decode budget), warm-start-from-L7 feasibility (params res-independent), coarse→fine scale
+  curriculum to cut cost, the cheapest decisive smoke spec (real flags).
+- **L5 adversarial skeptic (ae086889391e26734):** ranked failure modes (uint8 cap / texture-not-resolution /
+  FiLM-is-the-real-bottleneck / SegNet-512×384 cap / off-distribution warm-start / decode-budget) + the
+  single most-likely killer + fastest falsifier + sequencing (2× first vs FiLM-fix first) + calibrated prob.
+
+Frozen-info-space framing (operator's ask): the scorer is FIXED + downloadable = WHITE-BOX → derive the
+optimal render res against the known R-path+SegNet bottleneck, don't sweep. Gate (pid 38154) continues
+descending (d_seg→0.0146). Pointer UNMOVED 0.19110.
