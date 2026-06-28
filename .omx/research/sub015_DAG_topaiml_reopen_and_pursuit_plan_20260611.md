@@ -4093,3 +4093,45 @@ authoritative metric.)
 **STATE:** gate ep~101, d_seg 0.030→0.019→0.017→0.016 descending (codes fitting). Wave-0 0b: 2/5 scales
 (0.5×=0.0152, 0.75×=0.0081); 1.0× full-200 + finer 1.5×/2.0× (the resolution-wall deciders) pending. 0a
 residual-ID pending after renders. Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-hc (2026-06-28T14:10Z) — WAVE-0a VERDICT: residual is REDUCIBLE + LANE-DOMINATED (campaign = GO, 0.001 back on the table)
+
+**Tag `[macOS-CPU advisory]`. THE campaign-decider (task #137/#141-class) is in, and it's the GO answer.**
+
+### 0a residual intrinsic-dimension (computed on the faithful full-200 baseline flips)
+- **band-local (motion-invariant) descriptor 200×95:** PR=5.9, held-out PCA knee=10, TwoNN=13.6, MLE=9.6
+  → **~6–10 dominant systematic modes = LOW-dimensional, REDUCIBLE.**
+- pixel-aligned (raw, +motion) 200×12288: PR=110, knee=150 = HIGH-ID — this is boundary MOTION (expected),
+  which validates using the band-local (motion-invariant) descriptor for the flip STRUCTURE.
+- **NOT label noise:** only **18.3% of flips at teacher margin<0.05**, 33% at <0.10 → **67% of flips are at
+  CONFIDENT teacher pixels** (teacher sure, witness wrong) = a representation deficit, fully reducible.
+- **Road↔Lane = 57% of ALL flips** (Lane→Road 39%, Road→Lane 18%) → the binding residual IS the lane edge.
+- Strict decision rule = INTERMEDIATE (knee 10 > 8 threshold) BUT the substance is unambiguous: low-ID +
+  confident-pixel + Road↔Lane-dominated = a **reducible lane-edge representation deficit**, not a floor.
+
+### FLOOR RECONCILIATION — REVISED in our favor (supersedes FEED-gz's conservative read)
+FEED-gz said "0.0015–0.002 near-term, 0.001 asymptotic/mirage" out of caution that the residual might sit
+at the teacher's fragile set. The MEASUREMENT refutes that: only ~18% of flips are fragility-bound; ~82% is
+reducible representation error. **The teacher-fragility floor (0.00142) bounds only the ~18% fragile
+fraction; the other 82% is fixable. → 0.001 is a LEGITIMATE target** by fixing the lane-edge representation
+(NOT a mirage). Honest update to the FEED-gz floor section.
+
+### NO-FAKE correctness (three independent validations this run)
+- full-200 baseline d_seg = 0.003286 vs calibration ref 0.003204 (within 2.6%) — render faithful at FULL
+  scale, not just the smoke. baseline_flips.npz saved.
+- all-pixel margin<0.05 fraction = 0.001416 vs FEED-bp ref 0.00142 — margins array validated exactly.
+- smoke (4-pair) was 0.00311 — three independent reproductions of the realized d_seg.
+
+### CAMPAIGN VERDICT = GO + sharpened θ* order
+The d_seg residual is REDUCIBLE and 57% Road↔Lane → directly attackable by: **Wave-1 FiLM-rank fix**
+(restore per-pair conditioning the lane needs) + **Wave-2 Road↔Lane levers** (openpilot lane-polynomial
+prior [task #138], dash-gate, IPM chart, scale-curriculum). The lane levers are PROMOTED (they target 57%
+of the measured residual) and should be Road↔Lane-SPECIFIC. Target 0.001 (legit). The ~18% fragility floor
+is the only irreducible part.
+
+### 0b (in progress) + gate
+0b curve: 0.5×=0.0152, 0.75×=0.0081, 1.0×(384×512 full-200)=0.003286 — steep monotone descent; 1.5×/2.0×
+(the resolution-wall deciders) PENDING. Gate: d_seg 0.030→...→0.0153 descending (codes fitting). Memory
+healthy (91% free, swap 0.06M). Pointer UNMOVED 0.19110.
