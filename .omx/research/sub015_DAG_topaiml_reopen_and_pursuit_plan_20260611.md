@@ -4510,3 +4510,34 @@ go (one GPU; gate holds it). Per CLAUDE.md "KILL is last resort" + "Design decis
 a77d code in working tree (trainer+generator+DSL+tests, 40 tests green), NOT yet committed (self-review
 phase). ac6b PCA-codes running. Gate descending d_seg→0.0138 (partial-lean). mem free 95% (swap reclaimed).
 Pointer 0.19110.
+
+---
+
+## FEED-hm (2026-06-28T16:00Z) — FiLM-fix+lane-prior LANDED (9d4629e19) + recursive review ROUND 2 launched (3 independent reviewers)
+
+### a77d build COMMITTED: 9d4629e19 (7 files, +833/-8), gate untouched, NO GPU launch
+- LEVER-A FiLM-rank-fix: `--film-per-layer` (residual, identity-init) + `--film-concat-code` (additive code
+  injection, identity-init) + `--film-rank-floor-weight/-target` (soft PR-floor penalty relu(target−PR(M)),
+  Gram-wise, no eigendecomp). All default-OFF.
+- LEVER-B thin-lane prior: `--lane-thin-weight/-class/-radius/-target/-start-epoch` (option-a: per-pixel
+  weight (1−local-lane-density), integral-image box filter, scipy-free, deterministic, precomputed once).
+- DSL: FiLMFix + LanePrior factories (real-flags-only) + exports. 81 tests pass (CPU). Default-off proven
+  byte-identical (numpy + MLX), zero-init no-op proven, rank-floor gradient-sign proven (PR 1.03→4.00).
+- **Self-review (pass 1) CAUGHT the #1 risk:** a 4TH forward (the byte-close inflate.py template) ignored
+  film_pl/concat_pl → would silently mis-render the ON-path witness (NO-FAKE risk); author fixed all 4
+  forwards (numpy ONE-CODEPATH + MLX reorient twin + inflate.py template + main) with auto-detect. Exactly
+  review-plan lens #1. Counter NOT clean (found+fixed issues) → 3 clean passes still required.
+
+### Round 2 = 3 INDEPENDENT adversarial reviewers (fresh eyes, NOT author; reviewer-vs-author separation)
+- R2a (a68d84185e70d2927): **ON-path checkpoint/EMA/resume/byte-close integrity** — the author verified
+  OFF-path zero-params; R2a verifies the ON-path film_pl/concat_pl params survive EMA shadow + resume state +
+  per-stage ckpt + byte-close + the EMA update + --freeze-decoder interaction (the silent-param-drop #1 risk).
+- R2b (ad6009b6cef1596a3): **loss dynamics + balance + rate/param accounting** — rank-floor destabilization/
+  curriculum interaction; thin-lane over-weight-dashes-starve-bulk net-negative risk; + QUANTIFY ON-path
+  added params/bytes → rank-not-bytes (means-ends: panel demoted capacity).
+- R2c (a74c323f5c40d27b7): **asserted-not-proven claims** (MLX call_batch off-path identity; inflate.py
+  ON-path runtime correctness not just parses) + call-site tracing + default-override + the mandatory
+  assumption-challenge axis (is FiLM the right mechanism; is rank-collapse cause or symptom).
+
+Findings → triage → fix CRITICAL/Med → re-review → 3 consecutive clean passes → THEN gate-vs-GPU launch
+decision to operator. NO-GPU (parallel with the gate). Pointer 0.19110.
