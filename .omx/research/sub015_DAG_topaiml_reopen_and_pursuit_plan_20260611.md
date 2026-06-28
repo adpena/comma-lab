@@ -4135,3 +4135,47 @@ is the only irreducible part.
 0b curve: 0.5×=0.0152, 0.75×=0.0081, 1.0×(384×512 full-200)=0.003286 — steep monotone descent; 1.5×/2.0×
 (the resolution-wall deciders) PENDING. Gate: d_seg 0.030→...→0.0153 descending (codes fitting). Memory
 healthy (91% free, swap 0.06M). Pointer UNMOVED 0.19110.
+
+---
+
+## FEED-hd (2026-06-28T14:25Z) — WAVE-0b VERDICT: U-curve (min at trained res) → scale-curriculum is a TRAINING lever, NOT a free inference knob (CORRECTS FEED-ha/hc)
+
+**Tag `[macOS-CPU advisory]`. 0b multi-res adjudication complete in substance (2.0× still rendering, won't change verdict).**
+
+### The curve is a U, minimum at the TRAINED resolution (384×512)
+0.5×(192×256)=0.0152 · 0.75×(288×384)=0.0081 · **1.0×(384×512, trained)=0.0033 ← MIN** · 1.5×(576×768)=0.0054
+(ROSE) · 2.0× pending (expected ≥1.5×).
+
+### ⚠️ NO-FAKE CORRECTION of my earlier claim
+FEED-ha/FEED-hc floated "if 2.0× drops below baseline → BYTE-FREE render-finer at decode." **The measurement
+FALSIFIES that** — render-finer-at-INFERENCE HURTS (1.5× = 0.0054 > baseline 0.0033). A witness trained at
+384×512 is resolution-SPECIFIC; querying the coord-INR at a different resolution at decode degrades d_seg.
+There is NO free decode-time finer knob. Correcting the eager claim before it propagated.
+
+### What the U DOES prove (the real, still-strong verdict)
+- **The boundary IS resolution-information-bearing (Nyquist-limited):** the coarse side degrades steeply
+  (0.5× = 0.0152, ~4.6× worse than baseline) → resolution genuinely carries d_seg signal. Signal lens
+  partly right.
+- **The witness is TRAINED-RESOLUTION-SPECIFIC (U-shape):** it learned to place the boundary for its
+  specific 384→874 R path; off-resolution rendering mismatches it. OT lens partly right (texture/path-specific).
+- **Synthesis → scale curriculum is a TRAINING lever, not an inference knob.** Train the witness AT finer
+  resolution (or coarse→fine) so it learns to place the boundary at finer Nyquist; then deploy at that res.
+
+### Why it's still a strong sub-0.15 lever: BYTE-NEUTRAL
+The witness is a coordinate-INR → params + FiLM + codes are FIXED-SIZE regardless of render resolution.
+Training+deploying at 768×1024 vs 384×512 = **SAME archive bytes** (rate term unchanged). Cost = training
+compute + decode-render compute (must fit the 30-min budget), NOT bytes. So scale curriculum is a
+byte-NEUTRAL d_seg lever — lower d_seg at zero rate cost. **It validates the operator's scale-curriculum
+instinct, reframed: a Wave-2 GPU TRAINING arm, not a free decode trick.**
+- HYPOTHESIS (the arm tests it): a 768-trained witness's minimum drops BELOW 0.0033 (Nyquist says finer
+  boundary placement → fewer flips). The U-curve proves resolution carries info + inference-transfer fails;
+  it does NOT yet prove 768-training lowers the min — that's what the scale-curriculum arm measures.
+
+### θ* order update
+Wave-2 scale curriculum: now EVIDENCE-BACKED (Nyquist coarse-degradation) + BYTE-NEUTRAL + measurement-
+justified-target (57% Road↔Lane from 0a). Composes with Wave-1 FiLM-rank fix (per-pair conditioning the
+moving lane needs). Both = GPU training arms → ASK operator before launch.
+
+### STATE
+gate d_seg→0.0153 descending (alive). 0b 4/5 (2.0× rendering). 0a verdict = reducible/lane-dominated/GO
+(FEED-hc). mem 91% free. Pointer UNMOVED 0.19110.
