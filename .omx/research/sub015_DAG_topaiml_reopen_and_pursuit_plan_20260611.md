@@ -3809,3 +3809,13 @@ FRAME: repeated stages = a CYCLIC HOMOTOPY — re-enter a relaxation to peel the
 - **A15 CE RE-ANCHOR interlude (low prior, cheap test):** a brief CE pass between finishers to snap a drifted partition back to the gross-correct basin before re-sharpening. Likely regressive (CE = bootstrap not polish) but cheap to falsify.
 
 UNIFYING: two repeat axes — TEMPERATURE (cyclic τ warm-restart, sister of A1), NORM-ORDER (p-escalation A14), OPTIMIZER-conditioning (cyclic Muon A13) — plus priming (A12) + the measured stop. The trajectory instrument is the meat-off-bone METER (per-pass marginal Δ). Connects: homotopy-of-relaxations frame (cyclic = re-descend after the landscape shifts), stage-re-treat (A2 = the priming mechanism), optimality compass (repeat only while Δ pays = wall-clock-optimal). Paper-relevant (cyclic-homotopy curriculum + p-escalation toward L∞ is a clean methods contribution). Built/tested in the post-TIER-2 trainer pass; A/B'd warm-started.
+
+## FEED-gp (2026-06-27, night) — TRAJECTORY-DYNAMICS INSTRUMENT built + validated (subagent a43da19f, commit 68811eb on main)
+
+`tools/render_witness_trajectory_dynamics.py` (read-only, CPU-only, no GPU/trainer touch) — the TEMPORAL sister of the spatial stage-diff. Parses verdict logs (`--log` repeatable = merges split curriculum, later-log-wins-per-epoch; `--log-glob` newest verdict-bearing), groups by stage, extracts per-stage {onset, best+epoch, time-to-best, DESCENT RATE = Δd_seg/ep = config-strength, plateau-onset (K=3), dead-tail epochs/Δ, volatility, net Δd_seg/Δd_pose, TIME-TO-DEMONSTRATE = epochs to ≥X% of eventual drop} + cross-stage strength ranking + JSON (A/B-consumable) + calm stacked plot. 20 tests pass; py_compile OK. Reuses dashboard log-resolution pattern + palette.
+
+ANCHOR REPRODUCTION (the tool IS the oracle — matches the hand-measured): tau time-to-best **375 @ep675**, dead-tail **200**; l7 descent **2.77× faster** (1.594e-5 vs 5.747e-6/ep); self-validating `anchor_check` block all true.
+
+NEW MEASURED FINDING — config-strength ranking (full merged curriculum, ep0-950, advisory): **CE 1.67e-3/ep ≫ l7 1.59e-5/ep > tau 5.75e-6/ep**. Honest read: CE's huge rate is the trivial from-random collapse (not a comparable "polish" strength); among the FINISHERS, **l7 (worst-pixel) is ~2.8× stronger per epoch than tau (broad sharpening)** — the measured config-strength the operator asked to learn. → l7-class levers get short A/B budgets (declare fast); the trajectory JSON now BUDGETS each campaign arm by its time-to-demonstrate (task #183/#188).
+
+Artifacts: `.omx/tmp/trajectory/witness_trajectory_dynamics.{png,json}` (HELD for morning — not sent overnight, operator resting). advisory `[macOS-MLX] NON-PROMOTABLE`; pointer 0.19110; means≠ends.
