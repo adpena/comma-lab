@@ -3760,3 +3760,20 @@ Operationalizes FEED-gj: pursue the FULL lever stack, but MEASURED — each leve
 **BUILD SEQUENCE (avoid two editors on the trainer file → linear):** TIER-2 additive (A1/A3/A6/A7/A8) building NOW in isolated worktree (subagent abc89d4fb, default-OFF + bit-identical-when-off + tests). After l7 → review + merge to main → dispatch TIER-3 build (A9 scale-curriculum + A10 perspective-chart, as their own modules + thin trainer hooks, default-OFF). A2/A4/A5 are TIER-1 (flags/compose, ready). Then run the A/B arms sequentially on the GPU; A5 (pose-decouple) + A4 (Muon) first (highest grounded EV).
 
 **Why A/B not blind-stack:** levers can interact (e.g. adaptive-τ may make SWA redundant; junction-eikonal may overlap sub-pixel). Isolated Δ tells us the marginal value + the interactions, so the composite θ* is the MEASURED-best subset, not a kitchen sink. Deterministic-reproducible (seeded, resumable, --ckpt-every).
+
+## FEED-gl (2026-06-27) — l7 IGNITED + operator: per-arm review/deep-math/harden ROUNDS + WARM-START acceleration
+
+**l7 LIVE:** Monitor bwk5pl836 fired ep900 seg_form=l7_softplus d_seg 0.004393, **d_pose bumped 0.000982→0.001209 at the tau→l7 transition** = live motivation for A2 (stage re-treat: the boundary disrupts the shared rep, exactly as the +0.70 coupling predicts). tau→l7 stage-DIFF deferred until l7 matures (~ep1000 representative ckpt); tau ref = de-confound stageTau_ep899.npz.
+
+**Operator directive (2026-06-27): (1) fit recursive adversarial review + deep-math optimization + iteration + hardening ROUNDS into the campaign; (2) use per-stage ckpts SOONER (warm-start) to power through to the θ* ultimate run accelerated.**
+
+**PER-ARM PROTOCOL (binding — each θ* lever Ai before it enters the composite):**
+1. DESIGN (the lever's math + the predicted Δ-signature).
+2. RECURSIVE ADVERSARIAL REVIEW — 3-clean-pass (NO-FAKE + correctness + deep-math 5-lens + assumption-challenge); resets on any finding.
+3. DEEP-MATH OPTIMIZATION — tune the lever to ITS OWN optimum (per-lever hyperparams, NOT a shared default) per the optimal-form-before-dispatch binding; e.g. adaptive-τ shape+hold-frac swept, nuclear-weight swept, Muon LR/Newton-Schulz iters tuned.
+4. ITERATE until PROCEED-unconditional (council-grade), then HARDEN (tests, bit-identical-when-off, resumable, --ckpt-every, deterministic/seeded).
+5. MEASURED A/B arm (warm-started, below) → keep-if-Δ-positive → composite. Losers: per-stage RE-TREAT or documented-kill-with-reactivation, NEVER blind-drop.
+
+**WARM-START ACCELERATION (the operator's "use checkpoints sooner"):** A/B arms + the θ* ultimate run RESUME from the existing per-stage ckpts (CE ep299 / stageTau_ep899 / l7-forthcoming) instead of from-scratch — each arm pays only ITS stage-window, not the full CE→tau→l7 cost → campaign wall-clock collapses. θ* ULTIMATE = compose the measured-winner subset + warm-start from the best stage ckpt (don't re-pay the curriculum). ONE GPU → SEQUENCE: let l7 characterize (~2-3h: does the worst-pixel norm deliver the drop? + yield a clean l7 ckpt) → **DECISION POINT: if l7 d_seg plateaus, STOP the de-confound run early to free the GPU** → pivot GPU to warm-started A/B arms (A5 pose-decouple + A4 Muon first, resuming from l7/tau ckpts) → review/harden each per the protocol → compose → θ* ultimate warm-started → byte-close → exact (pointer-mover). Measured+safeguarded; never destabilize the live run; ≥10GB; guard never kills control-plane. Deterministic-reproducible (seeded, resumable). pointer 0.19110; means≠ends.
+
+**Durable-capture (operator "no signal loss, resilient memory, not chat-only"):** memory `theta_star_witness_lever_stack_and_variational_levelset_frame_20260627.md` (the variational-PDE frame + 10-lever stack + A/B campaign) + telemetry-accuracy memory extended (effective-margin temp-confound) + tasks created. DAG FEEDs gh→gl are the canonical record.
