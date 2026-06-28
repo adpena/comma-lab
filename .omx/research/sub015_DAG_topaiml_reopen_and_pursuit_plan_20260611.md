@@ -4388,3 +4388,48 @@ pressure. (The FiLM-fix build is no-GPU/light → won't stress memory.)
 
 ### Pending: L4 (engineering tractability) + L1 floor-curve OUTPUT not yet harvested (scripts exist; will
 harvest on re-notify). Gate descending d_seg→0.0141. Pointer 0.19110.
+
+---
+
+## FEED-hj (2026-06-28T15:25Z) — PANEL COMPLETE (5/5): train-at-2× = CHEAP but LOW-EV SECONDARY multiplier; FiLM-fix+lane-prior = PRIMARY (building)
+
+**Tag `[macOS-CPU advisory]`. All 5 lenses + the operator's coarse-access-fine inversion resolved. The witness, not the render grid, is the wall.**
+
+### The 5-lens convergence on "train at 2× (or coarse-access-fine)?"
+- **L5 skeptic (the dominant frame):** 17× arithmetic — witness sits 17× above the floor it ALREADY has at
+  384; resolution buys <3% of the binding gap; P(2×-alone lowers d_seg<0.0025) = 0.15.
+- **L2 residual-geometry (MEASURED):** 57% Road↔Lane = DROPPED 3px dashes = representation, NOT resolution
+  (R + SegNet stride-2 destroy extra render res upstream); resolution-fixable ~0-15%.
+- **L1 Nyquist:** finer render = edge-POSITION super-resolution (bicubic 2.28→1.14× at 768, gentler R
+  round-trip), but bandwidth-capped at 192cyc by bilinear↓384 + saturates ~1.65× → helps ONLY the ~43%
+  thick-boundary jitter, capped. (Floor-curve MEASUREMENT not persisted — see below.)
+- **L3 frozen-info-space:** indirect-RD; the 2.2% small-margin annulus is the sufficient statistic; foveated
+  rendering = wall-clock-optimal access; pre-emphasis/channel-inversion against the known R = byte-free
+  compounder; directional basis (#1, proven −48%).
+- **L4 engineering (MEASURED — the reframe):** train-at-2× is TRACTABLE, NOT 4×-expensive. The 4× lands only
+  on the INR render (~40% of the epoch); the SegNet-surrogate + CPU-verdict cost is RESOLUTION-INVARIANT
+  (R always collapses to 874→512×384) → net ~1.87×/epoch. Per-pair K=2 loop peaks ~13.6GB at 768 (the
+  K=16 OOM is an artifact the real loop never hits) → memory-safe. **Warm-start L7→768, 300ep ≈ 5.8h.**
+  Decode fits T4 trivially (CPU-deploy ~8-23min = tight, neutralized by T4). MUST pass --w-pose 1.0
+  (L7 ckpt trained with it; flag default 0.0).
+
+### VERDICT (operator-approved direction)
+- **PRIMARY (building, subagent a77d, no-GPU):** FiLM-rank-fix + lane-prior at FIXED 384. Attacks the
+  rank-1.2 collapse + the 57% dropped-dash lane (PC0 34.5%) — where the 17× gap actually lives.
+- **train-at-2× = a CHEAP LATER COMPOSED MULTIPLIER, NOT killed.** L4 made it cheap (~5.8h warm-start) + L1
+  gave it a real (capped) mechanism for the ~43% thick-boundary slice. Sequence: AFTER the FiLM-fix lands
+  + IF the floor-curve shows thick-boundary headroom → warm-start the FiLM-FIXED witness L7→768 (~5.8h,
+  --w-pose 1.0, --accum-pairs 8, memory-safe, resumable). The operator's coarse-access-fine = the FOVEATED
+  form (dense 2.2% annulus only) = the wall-clock-optimal version of exactly this.
+- **Byte-free compounders to fold into Wave-2:** pre-emphasis vs known R + uint8-dither + directional basis.
+
+### One measured piece un-harvested (honest): L1's GT-through-R floor-curve (384 vs 768 vs 874)
+script exists (scratchpad/nyquist_floor_curve.py) but output not persisted; DEFERRED to run when idle (it
+caused the transient 7.9GB swap spike; not re-running during the FiLM-fix build to avoid memory pressure).
+Analytical consensus (small, capped, ~43%-thick-boundary-only) is the working estimate; the floor-curve
+would refine the train-at-2×-later-multiplier upside, NOT the primary decision.
+
+### STATE
+FiLM-fix build running (a77d, not yet committed). Gate descending d_seg→0.0141 (heading PARTIAL/rank-limited
+= 2nd FiLM-collapse confirmation). swap reclaiming (7.9→5.0GB), free% 88%. Pointer 0.19110. GPU arms await
+steer; one GPU (gate holds it) → FiLM-fix arm launch decision (stop gate vs wait) surfaces when build clean.
