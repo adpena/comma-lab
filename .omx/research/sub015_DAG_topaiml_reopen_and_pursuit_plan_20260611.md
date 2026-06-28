@@ -3736,3 +3736,27 @@ Bird's-eye synthesis (manifolds × dimensional-variants × derivatives × integr
 **CHEAPEST-FIRST ($0):** adaptive-tau + SWA — attack the volatility we're watching NOW + make every downstream stage converge cleaner. Then flip Muon + pose-decouple + stage-re-treat (highest-confidence, all wired).
 
 **Unifying through-line:** nearly every lever is one move in a different lens — TRACK the solution manifold more carefully (continuation, SWA, re-treat, Muon), OPERATE in its natural coordinates (IPM/foveal/directional/coarse-to-fine), RESPECT its singularities (junction-eikonal, sub-pixel level set, low-rank codes). Solve the witness gently and in the right chart.
+
+## FEED-gk (2026-06-27) — θ* PER-LEVER A/B CAMPAIGN (operator: "test and pursue ALL nine"; all approved)
+
+Operationalizes FEED-gj: pursue the FULL lever stack, but MEASURED — each lever isolated as an A/B arm from a shared per-stage ckpt (short stage-window, ONE toggle), realized-through-R d_seg authority, numpy-fp32, advisory-until-byte-closed-exact. ONE GPU → arms run SEQUENTIALLY (long-resumable-saturation-sweep). Per-stage preserved ckpts make each arm cheap (resume the stage, not a full 1500ep from scratch). Keep winners (Δ measured-positive), per-stage-RE-TREAT losers (operator "different stages need different treatment"), then STACK winners → composite θ* → byte-close → exact (the pointer-mover). pointer 0.19110; means≠ends.
+
+**Convergence arms (resume a tau ckpt, run tau→l7 window, measure Δvolatility + Δepochs-to-target):**
+- A1 adaptive-τ (geometric / cosine_hold) vs cosine — Δ late-tau d_seg volatility (the measured 0.0042↔0.0047 ring).
+- A2 stage-re-treat ON vs OFF at τ→l7, →Muon — Δ transition stability.
+- A3 SWA / wider-finisher-EMA vs base EMA(0.997) — Δ shipped-d_seg robustness (land flat basin center).
+
+**Score-term arms:**
+- A4 **Muon finisher** vs AdamW-throughout (resume l7-end, run Muon window) — Δd_seg; re-confirm "the drop" IN THIS witness.
+- A5 **pose-decouple** (stored sidecar) vs realized-pose-in-loss — Δd_pose (→~3.4e-5?) + Δd_seg-convergence (freed-capacity bonus) + the +0.70 coupling should VANISH (the decisive test of the coupling hypothesis).
+- A6 nuclear-norm code penalty (+ temporal-AR code path) vs none — Δrate at fixed d_seg (byte-closed), exploit measured eff-rank 25.8→21.9.
+- A7 junction-aware eikonal relax vs uniform |∇φ|=1 — Δd_seg at the triple junctions (the Lane residual concentrates there).
+- A8 sub-pixel boundary placement vs pixel-snap — Δd_seg in the 1px band at 384 (MEASURED #149 localization).
+
+**Structural arms (own builds; bigger):**
+- A9 **coarse-to-fine SCALE curriculum** (basis-scale homotopy) vs all-scales-from-start — Δvolatility + Δfinal d_seg (gate the fine scales that ring behind a settled coarse partition).
+- A10 **perspective-aware chart** (IPM ground-plane + foveal off-plane) vs identity coords — Δd_seg (apex) + Δrate (lower-dim apex). The dimensional-variant-via-coordinate-change.
+
+**BUILD SEQUENCE (avoid two editors on the trainer file → linear):** TIER-2 additive (A1/A3/A6/A7/A8) building NOW in isolated worktree (subagent abc89d4fb, default-OFF + bit-identical-when-off + tests). After l7 → review + merge to main → dispatch TIER-3 build (A9 scale-curriculum + A10 perspective-chart, as their own modules + thin trainer hooks, default-OFF). A2/A4/A5 are TIER-1 (flags/compose, ready). Then run the A/B arms sequentially on the GPU; A5 (pose-decouple) + A4 (Muon) first (highest grounded EV).
+
+**Why A/B not blind-stack:** levers can interact (e.g. adaptive-τ may make SWA redundant; junction-eikonal may overlap sub-pixel). Isolated Δ tells us the marginal value + the interactions, so the composite θ* is the MEASURED-best subset, not a kitchen sink. Deterministic-reproducible (seeded, resumable, --ckpt-every).
