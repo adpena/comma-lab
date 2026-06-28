@@ -37,6 +37,20 @@ def real_trainer_flags(trainer_path: Path | None = None) -> frozenset[str]:
     return frozenset(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', text))
 
 
+def real_store_true_flags(trainer_path: Path | None = None) -> frozenset[str]:
+    """Flags whose action is ``store_true`` — these have NO ``--no-<flag>`` form,
+    so emitting them as False (which ``compile`` renders as ``--no-X``) would crash
+    argparse at launch. (DSL adversarial-review C2, 2026-06-28.)"""
+    path = Path(trainer_path) if trainer_path is not None else TRAINER_PATH
+    text = path.read_text()
+    return frozenset(re.findall(
+        r'add_argument\(\s*"(--[a-z0-9-]+)"[^)]*action\s*=\s*["\']store_true["\']', text))
+
+
+# sentinel so with_lever() can explicitly CLEAR resume_from (fresh run) vs inherit it
+_INHERIT = object()
+
+
 # ---------------------------------------------------------------------------
 # Schedule primitives (the homotopy / anneal math)
 # ---------------------------------------------------------------------------
@@ -159,18 +173,22 @@ class WitnessProgram:
     mlx_device: str = "gpu"
 
     # --- composition ---------------------------------------------------------
-    def with_lever(self, *levers: Lever, resume_from: str | None = None,
+    def with_lever(self, *levers: Lever, resume_from=_INHERIT,
                    out_dir: str | None = None) -> "WitnessProgram":
         """Return a new program with levers appended (theta* composition step).
 
         Epochs are extended by the sum of the levers' ``epochs_delta`` (e.g. a
-        Muon finisher adds its window on top of the warm-start epoch)."""
+        Muon finisher adds its window on top of the warm-start epoch).
+
+        ``resume_from`` defaults to INHERIT (keep the base's); pass ``None`` to
+        explicitly CLEAR it for a fresh run, or a path to override (DSL review M2)."""
         new_epochs = self.epochs + sum(lv.epochs_delta for lv in levers)
+        new_resume = self.resume_from if resume_from is _INHERIT else resume_from
         return replace(
             self,
             levers=self.levers + tuple(levers),
             epochs=new_epochs,
-            resume_from=resume_from if resume_from is not None else self.resume_from,
+            resume_from=new_resume,
             out_dir=out_dir if out_dir is not None else self.out_dir,
         )
 
@@ -201,9 +219,35 @@ class WitnessProgram:
         """Return a list of violations (empty == valid)."""
         problems: list[str] = []
         real = real_trainer_flags(trainer_path)
-        for flag in self.flag_dict():
+        fd = self.flag_dict()
+        for flag in fd:
             if flag not in real:
                 problems.append(f"INVENTED FLAG (not in trainer argparse): {flag}")
+        # C2 (review): a False on a store_true flag compiles to --no-X → argparse crash
+        store_true = real_store_true_flags(trainer_path)
+        for flag, val in fd.items():
+            if val is False and flag in store_true:
+                problems.append(
+                    f"INVALID --no-{flag[2:]}: {flag} is store_true (no --no- form); "
+                    "False would crash argparse at launch")
+        # C1 (review): DEAD ARM — resuming from a ckpt at/after epochs == zero gradient steps
+        if self.resume_from is not None:
+            try:
+                import numpy as _np
+                _p = Path(self.resume_from)
+                if _p.exists():
+                    _z = _np.load(_p, allow_pickle=True)
+                    _ep = None
+                    for _k in ("epoch", "__epoch", "__resume_epoch"):
+                        if _k in _z.files:
+                            _ep = int(_z[_k]); break
+                    if _ep is not None and self.epochs <= _ep:
+                        problems.append(
+                            f"DEAD ARM: epochs={self.epochs} <= resume epoch {_ep} → "
+                            "range(start,epochs) empty → ZERO gradient steps (give the "
+                            "lever an epochs_delta window)")
+            except Exception:
+                pass  # validation must not hard-fail on a missing/odd ckpt
         # PRESERVE: ckpt cadence binding (<=25)
         if self.preserve.ckpt_every <= 0 or self.preserve.ckpt_every > 25:
             problems.append(
@@ -297,11 +341,12 @@ BASELINE = WitnessProgram(
 # ---------------------------------------------------------------------------
 # Lever library (the A/B campaign, as composable DSL fragments)
 # ---------------------------------------------------------------------------
-def PoseDecouple() -> Lever:  # noqa: N802 (DSL keyword) — A5
-    """A5: move pose onto the stored sidecar (w-pose=0) so the decoder stops
-    co-rendering pose — frees capacity for d_seg, tests the +0.70 coupling."""
-    return Lever("A5_pose_decouple", overrides={"--w-pose": 0.0},
-                 notes="decouple pose; decisive +0.70-coupling test + d_seg accelerator")
+def PoseDecouple(window: int = 100) -> Lever:  # noqa: N802 (DSL keyword) — A5
+    """A5: drop pose from the loss (w-pose=0) to free decoder capacity for d_seg —
+    a TRADE (d_pose worsens; pose is carried in-frame, NOT sidecar-able, per the
+    byte-close finding). Carries a warm-start window (else dead-arm, review C1)."""
+    return Lever("A5_pose_decouple", overrides={"--w-pose": 0.0}, epochs_delta=window,
+                 notes="drop pose-loss to free d_seg capacity (trades d_pose up)")
 
 
 def Muon(start_epoch: int, window: int = 100) -> Lever:  # noqa: N802 — A4
@@ -321,17 +366,35 @@ def Muon(start_epoch: int, window: int = 100) -> Lever:  # noqa: N802 — A4
     )
 
 
-def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300) -> Lever:  # noqa: N802
+def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,  # noqa: N802
+                     window: int = 100) -> Lever:
     """Turn the lane-edge directional term ON (the completed run had weight 0).
-    The all-class directional/tangent basis measured -48% d_seg earlier."""
+    The all-class directional/tangent basis measured -48% d_seg earlier.
+    Carries a warm-start window (else dead-arm, review C1)."""
     return Lever("directional_basis",
                  overrides={"--lane-edge-weight": weight,
                             "--lane-edge-start-epoch": start_epoch},
+                 epochs_delta=window,
                  notes="all-class directional tangent basis (was OFF: weight 0)")
 
 
-def TauFrozen(value: float = 0.05) -> Lever:  # noqa: N802 — A1b isolation
-    """A1b: freeze tau (start==end) to isolate an l7 effect from the tau anneal."""
+def TauFrozen(value: float = 0.05, window: int = 100) -> Lever:  # noqa: N802 — A1b isolation
+    """A1b: freeze tau (start==end) to isolate an l7 effect from the tau anneal.
+
+    MUST carry an ``epochs_delta`` (the warm-start window) or the arm runs ZERO
+    gradient steps when resumed from an end-of-run ckpt (DSL review C1, 2026-06-28:
+    epochs==resume_epoch → empty range → scientifically-dead arm)."""
     return Lever("A1b_tau_frozen",
                  overrides={"--softmax-temp-start": value, "--softmax-temp-end": value},
+                 epochs_delta=window,
                  notes="freeze tau to isolate l7-loss vs tau-anneal (diff refutation)")
+
+
+def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
+    """Anti-aliased SOFT boundary (lower HOSC beta) — tests Signal's hypothesis that
+    a soft edge carries sub-pixel boundary position through R better than a hard
+    step (β→∞). Replaces the confounded constant-β≈16 'beta_steplim' arm (review H2)."""
+    return Lever("soft_boundary",
+                 overrides={"--hosc-beta": beta},
+                 epochs_delta=window,
+                 notes="soft anti-aliased edge (low beta) for sub-pixel R-survival")

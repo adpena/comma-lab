@@ -24,11 +24,13 @@ from tac.witness_dsl.curriculum_dsl import (
     Stage,
     WitnessProgram,
     real_trainer_flags,
+    real_store_true_flags,
     BASELINE,
     PoseDecouple,
     Muon,
     DirectionalBasis,
     TauFrozen,
+    SoftBoundary,
 )
 from tac.witness_dsl.campaign import (
     Arm,
@@ -52,11 +54,13 @@ __all__ = [
     "Stage",
     "WitnessProgram",
     "real_trainer_flags",
+    "real_store_true_flags",
     "BASELINE",
     "PoseDecouple",
     "Muon",
     "DirectionalBasis",
     "TauFrozen",
+    "SoftBoundary",
     # campaign engine
     "Arm",
     "ArmResult",

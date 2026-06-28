@@ -20,6 +20,7 @@ from tac.witness_dsl import (
     Muon,
     DirectionalBasis,
     TauFrozen,
+    SoftBoundary,
 )
 
 # the exact flags the completed CE->tau->l7 run was launched with (grounded from the log)
@@ -143,3 +144,40 @@ def test_tau_frozen_lever_isolates():
     arm = BASELINE.with_lever(TauFrozen(0.05))
     fd = arm.flag_dict()
     assert fd["--softmax-temp-start"] == 0.05 and fd["--softmax-temp-end"] == 0.05
+
+
+# --- DSL adversarial-review regression guards (2026-06-28) ---
+def test_review_C1_tau_frozen_extends_epochs_not_dead_arm():
+    # C1: TauFrozen must carry a window or it runs zero steps when warm-started.
+    arm = BASELINE.with_lever(TauFrozen())
+    assert arm.epochs > BASELINE.epochs, "TauFrozen warm-start arm must run new steps"
+
+
+def test_review_C1_dead_arm_guard_catches_zero_window(tmp_path):
+    # C1 self-protection: a zero-window lever resumed from an end-of-run ckpt is flagged.
+    import numpy as np
+    ck = tmp_path / "resume_ep1500.npz"
+    np.savez(ck, epoch=np.asarray(1500))
+    from tac.witness_dsl import Lever
+    dead = BASELINE.with_lever(Lever("zerowin", {"--softmax-temp-start": 0.05}),
+                               resume_from=str(ck))
+    assert any("DEAD ARM" in p for p in dead.validate())
+
+
+def test_review_C2_validate_refuses_false_on_store_true():
+    from dataclasses import replace
+    bad = replace(BASELINE, base={**BASELINE.base, "--stage-transition-reset-moments": False})
+    assert any("store_true" in p for p in bad.validate())
+
+
+def test_review_M2_with_lever_can_clear_resume_from():
+    fresh = BASELINE.with_lever(SoftBoundary(), resume_from=None)
+    assert fresh.resume_from is None
+    inherited = BASELINE.with_lever(SoftBoundary())  # default = inherit
+    assert inherited.resume_from == BASELINE.resume_from
+
+
+def test_soft_boundary_replaces_beta_steplim():
+    arm = BASELINE.with_lever(SoftBoundary(2.0))
+    assert arm.flag_dict()["--hosc-beta"] == 2.0 and arm.epochs > BASELINE.epochs
+    assert arm.validate() == []
