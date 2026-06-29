@@ -28,6 +28,7 @@ from tac.boundary_math.lever_b_levelset_generator import (
 
 mx = pytest.importorskip("mlx.core")
 from tac.optimization.md_decoupling import (  # noqa: E402
+    newton_schulz5,
     stiefel_project_columns,
     stiefel_residual,
 )
@@ -62,6 +63,53 @@ def test_stiefel_projection_is_not_a_noop_vs_input():
 def test_stiefel_project_rejects_non_2d():
     with pytest.raises(ValueError):
         stiefel_project_columns(mx.zeros((5,)))
+
+
+# --- (review R1-L3/R3) tall-matrix guard: a WIDE matrix cannot have orthonormal columns ---
+def test_stiefel_project_rejects_wide_matrix():
+    # out < in => WᵀW (in x in) is rank-deficient => WᵀW=I_in unreachable; must fail closed (else a
+    # silent FAKE projection whose residual never reaches the floor).
+    wide = mx.array(np.random.default_rng(11).standard_normal((8, 32)).astype(np.float32))
+    with pytest.raises(ValueError):
+        stiefel_project_columns(wide)
+    # the BASELINE film.weight (tall: 768 x 32) must be accepted.
+    tall = mx.array(np.random.default_rng(12).standard_normal((_OUT, _MOD)).astype(np.float32))
+    _ = stiefel_project_columns(tall)  # no raise
+
+
+# --- (review R1-L4/R3-L3) the PR identity holds through the REAL cubic projection, not just QR ---
+def test_pr_identity_holds_through_cubic_projection_at_realistic_residual():
+    # test_stiefel_identity_pr_M_equals_pr_cov_code uses a PERFECT (QR) orthonormal W. The SHIPPED
+    # cure uses stiefel_project_columns (cubic Newton-Schulz, ~1e-2 residual). Compose the ACTUAL
+    # projection end-to-end and assert PR(M) ~ PR(cov(code)) at that realistic (loose) tolerance.
+    rng = np.random.default_rng(21)
+    S = 200
+    code_np = rng.standard_normal((S, _MOD)).astype(np.float32)
+    W_raw = mx.array((rng.standard_normal((_OUT, _MOD)) * 0.7).astype(np.float32))
+    W = stiefel_project_columns(W_raw)
+    res = stiefel_residual(W)
+    assert res < 0.05, f"projection did not reach the fp32 floor: {res}"
+    M = np.asarray(mx.array(code_np) @ W.T, np.float32)        # modulation through the SHIPPED W
+    pr_M = film_modulation_participation_ratio(M)
+    pr_c = code_spectrum_participation_ratio(code_np)
+    # the ~1e-2 residual perturbs the spectrum slightly => a LOOSE (not 1e-6) tolerance, but the
+    # identity must clearly hold (the cure is real, not vacuous).
+    assert pr_M == pytest.approx(pr_c, rel=0.05, abs=0.2), f"PR(M)={pr_M} vs PR(cov code)={pr_c}"
+
+
+# --- (review R3-L1) NS5 regression lock: the Muon newton_schulz5 is NOT a Stiefel projection ---
+def test_newton_schulz5_is_not_a_stiefel_projection():
+    # The cure deliberately uses the CUBIC polar iteration, NOT the Muon QUINTIC newton_schulz5 (which
+    # orthogonalizes a DIRECTION, leaving column residual ~1.3). Lock the distinction so a future
+    # "just reuse newton_schulz5" refactor cannot silently turn the cure into a FAKE projection.
+    rng = np.random.default_rng(31)
+    W = mx.array((rng.standard_normal((_OUT, _MOD)) * 0.3).astype(np.float32))
+    ns5 = newton_schulz5(W)
+    assert stiefel_residual(ns5) > 0.5, (
+        f"newton_schulz5 unexpectedly orthonormalized columns (residual {stiefel_residual(ns5)}); the "
+        "cubic-vs-quintic distinction has rotted -- the cure must use stiefel_project_columns")
+    # and the cubic projection on the SAME input DOES reach the floor (the contrast that matters).
+    assert stiefel_residual(stiefel_project_columns(W)) < 0.05
 
 
 # --- (2) the load-bearing identity PR(M) = PR(cov(code)) under WᵀW=I ---
@@ -173,6 +221,14 @@ def test_dm1_trainer_flags_default_off():
     # the loss term + projection are GATED on the off-defaults.
     assert "if code_spec_w > 0.0 and code_spec_idx is not None:" in text
     assert "if args.film_stiefel:" in text
+    # (review C1) --dm1-telemetry is store_true (default OFF) and the telemetry GATE is widened to
+    # include it (so the A0 baseline can log PR without a DM1 lever) WITHOUT changing the default path.
+    assert '"--dm1-telemetry", action="store_true"' in text
+    assert "args.film_stiefel or code_spec_w > 0.0 or args.dm1_telemetry" in text
+    # (review C2) --anneal-epochs defaults to None (=> use --epochs => bit-identical cosine denominator).
+    assert '"--anneal-epochs", type=int, default=None' in text
+    # the anneal denominator falls back to args.epochs when --anneal-epochs is unset (byte-identity).
+    assert 'getattr(args, "anneal_epochs", None) or args.epochs' in text
 
 
 # --- (5) WD neutralization: projection is invariant to a uniform column rescale ---

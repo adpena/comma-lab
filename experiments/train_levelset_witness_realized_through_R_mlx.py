@@ -646,7 +646,10 @@ def _hosc_beta_for_epoch(ep: int, args) -> float | None:
             or getattr(args, "hosc_beta_end", None) is None
             or args.hosc_beta_end == args.hosc_beta):
         return None
-    prog = (ep - 1) / max(args.epochs - 1, 1)
+    # (review C2) same anneal denominator as _softmax_temp_for_epoch: --anneal-epochs (schedule
+    # length) NOT --epochs (run length). Default None => args.epochs => BIT-IDENTICAL.
+    _ae = getattr(args, "anneal_epochs", None) or args.epochs
+    prog = (ep - 1) / max(_ae - 1, 1)
     if getattr(args, "hosc_beta_anneal", "linear") == "cosine":
         return float(args.hosc_beta_end + 0.5 * (args.hosc_beta - args.hosc_beta_end) * (1 + np.cos(np.pi * prog)))
     return float(args.hosc_beta + (args.hosc_beta_end - args.hosc_beta) * prog)
@@ -657,8 +660,17 @@ def _softmax_temp_for_epoch(ep: int, args) -> float:
     start so gradients flow with no RGB-level Gibbs -> sharp end with the SDF partition pinned). Pure
     (no model/MLX); unit-tested. Mirrors ``_seg_form_for_epoch`` / ``_hosc_beta_for_epoch``. Extracted
     from the inline loop anneal so the MUON FINISHER can FREEZE it at the muon-start value (FEED-fm).
-    Returns the EXACT value the pre-extraction inline formula produced (BIT-IDENTICAL)."""
-    prog_t = (ep - 1) / max(args.epochs - 1, 1)
+    Returns the EXACT value the pre-extraction inline formula produced (BIT-IDENTICAL) when
+    --anneal-epochs is unset.
+
+    (review C2) ANNEAL DENOMINATOR: the cosine progress uses ``--anneal-epochs`` (the SCHEDULE length)
+    NOT ``--epochs`` (the run length). Default None => falls back to ``args.epochs`` => BIT-IDENTICAL.
+    A WARM-START arm (resume the CE ckpt @ ep299, run 100 epochs => --epochs 399) must set
+    --anneal-epochs to the ORIGINAL schedule length (1500) so ep300->400 reproduces the DISEASE
+    regime temp (~0.91->0.84), not the schedule tail (~0.19->0.05). ``None or x == x`` and 0 is
+    treated as unset, so the default path is the pre-C2 formula bit-for-bit."""
+    _ae = getattr(args, "anneal_epochs", None) or args.epochs
+    prog_t = (ep - 1) / max(_ae - 1, 1)
     return float(args.softmax_temp_end + 0.5 * (args.softmax_temp_start - args.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
 
 
@@ -961,6 +973,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if args.structured_init:
             raise ValueError("--freeze-decoder-fit-codes is incompatible with --structured-init "
                              "(the decoder is frozen-from-file, not pretrained).")
+        if args.film_stiefel:
+            # (review Med2) the freeze invariant is "only `code` trains"; --film-stiefel projects
+            # model.film.weight (a FROZEN decoder param) every step, mutating a frozen weight OUTSIDE
+            # the optimizer/freeze mechanism = a freeze-invariant violation AND a silent no-op for the
+            # cure (the decoder is fixed, so there is nothing to orthonormalize the trajectory of).
+            raise ValueError("--film-stiefel is incompatible with --freeze-decoder-fit-codes: the "
+                             "Stiefel projection mutates the FROZEN decoder's film.weight every step "
+                             "(violates the 'only code trains' freeze invariant). Run the Stiefel cure "
+                             "on a joint (unfrozen) run.")
         from mlx.utils import tree_unflatten
         dec = _load_decoder_params(Path(args.freeze_decoder_fit_codes))
         got_in = int(dec["in_proj.weight"].shape[1])
@@ -1261,10 +1282,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             mag += float(np.abs(df).mean())
         return mag / max(P, 1)
 
+    def _project_shadow_film_np(params_np: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+        """(review Med1) Re-orthonormalize the EMA SHADOW's film.weight for the DEPLOYED artifact.
+
+        The EMA shadow is an arithmetic average of (per-step on-manifold) film.weight matrices, which
+        is itself NOT orthonormal -> the shipped/verdicted weight drifts OFF-Stiefel and PR(M)=PR(cov
+        code) no longer holds for what actually ships. Re-project film.weight onto orthonormal columns
+        so the DEPLOYED (verdict + byte-close) weight is on-manifold. Returns a SHALLOW copy with
+        film.weight replaced; the live ``ema.shadow`` is UNTOUCHED so --resume-from stays bit-faithful
+        to a continuous run (the resume sidecar keeps the un-projected shadow). No-op unless
+        --film-stiefel (default OFF => byte-identical)."""
+        if not args.film_stiefel or "film.weight" not in params_np:
+            return params_np
+        out = dict(params_np)
+        out["film.weight"] = np.asarray(
+            stiefel_project_columns(mx.array(params_np["film.weight"])), np.float32)
+        return out
+
     def realized_verdict() -> dict[str, float]:
         # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
         # (NOT the MLX-GPU reduced-precision forward — the 4th artifact). This IS the deploy render.
-        ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+        # (review Med1) project the shadow film.weight back onto Stiefel so the advisory d_seg reflects
+        # the ON-MANIFOLD deployed weight (no-op unless --film-stiefel => bit-identical).
+        ema_np = _project_shadow_film_np({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
         deploy = int8_dequant_params(ema_np)
         f0s, f1s = [], []
         for pi in vpairs:
@@ -1288,7 +1328,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # uses NO MLX op (pure numpy+torch) so it cannot race the GPU stream.
     def _capture_verdict_snapshot() -> dict[str, Any]:
         return {
-            "ema_np": {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()},
+            # (review Med1) project the shadow film.weight on-manifold so the ASYNC verdict matches the
+            # deployed (byte-closed) artifact (no-op unless --film-stiefel => bit-identical snapshot).
+            "ema_np": _project_shadow_film_np({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}),
             "softmax_temp": float(model.softmax_temp),
             "hosc_beta": float(model.hosc_beta),  # FEED-fb: snapshot the live (possibly annealed) beta
             "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs} if use_self_orient else None),
@@ -1426,8 +1468,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     def _do_checkpoint(epoch: int, *, stage_tag: str | None = None) -> dict[str, Any]:
         shadow_np, live_np, opt_np = _snapshot_numpy_state()
+        # (review Med1) the BYTE-CLOSE deploy npz ships the EMA shadow; re-project its film.weight onto
+        # Stiefel so the shipped artifact is ON-MANIFOLD (PR(M)=PR(cov code) holds for what ships). The
+        # RESUME sidecar keeps the UN-projected shadow (bit-faithful continuous resume). No-op unless
+        # --film-stiefel (default OFF => byte-identical deploy + resume npz).
+        deploy_shadow_np = _project_shadow_film_np(shadow_np)
         ema_arrays = _build_ema_checkpoint_arrays(
-            shadow_np, args=args, softmax_temp=float(model.softmax_temp),
+            deploy_shadow_np, args=args, softmax_temp=float(model.softmax_temp),
             render_h=render_h, render_w=render_w, epoch=epoch, in_feat=in_feat,
             hosc_beta=float(model.hosc_beta))  # FEED-fb: persist CURRENT annealed beta in deploy cfg
         resume_arrays = _build_resume_state_arrays(
@@ -1586,6 +1633,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # never consumed => BIT-IDENTICAL. NOT persisted across resume (re-derived; None at resume start
     # => no spurious re-warmup until a real boundary).
     last_boundary_epoch: "int | None" = None
+    # (review C2) anneal SCHEDULE length: --anneal-epochs decouples the cosine denominator (the
+    # schedule the temp/LR were designed against) from --epochs (this run's length). Default None =>
+    # args.epochs => the LR cosine below is BIT-IDENTICAL. A warm-start arm sets it to the ORIGINAL
+    # schedule (e.g. 1500) so resuming the CE ckpt @ ep299 reproduces the DISEASE regime, not the tail.
+    anneal_epochs = int(args.anneal_epochs) if getattr(args, "anneal_epochs", None) else int(args.epochs)
     muon_lr_eff = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
     muon_adamw_lr_eff = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
     muon_wd_eff = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
@@ -1602,7 +1654,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _bnd_curriculum = (seg_form != prev_seg_form)
             _bnd_lane = (lane_w > 0.0 and (ep >= lane_start) and not lane_gate["on"])
             _bnd_msal = (msal_w > 0.0 and (ep >= msal_start) and not msal_gate["on"])
-            _stage_boundary_now = _bnd_curriculum or _bnd_lane or _bnd_msal
+            # (review R3-M1) LEVER-B thin-lane engagement is ALSO an AdamW->AdamW treatment boundary
+            # (mirrors _bnd_lane/_bnd_msal). Default lane_thin_w=0.0 => never fires => bit-identical.
+            _bnd_lane_thin = (lane_thin_w > 0.0 and (ep >= lane_thin_start) and not lane_thin_gate["on"])
+            _stage_boundary_now = _bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -1666,6 +1721,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "margin_saliency_engage", "epoch": ep, "start": msal_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # LEVER-B thin-lane engagement gate + transition RE-TREAT (review R3-M1: the gate was
+            # initialized at :lane_thin_gate but NEVER flipped, so --lane-thin-start-epoch > 1 left the
+            # gate stuck OFF => the loss branch at `lane_thin_gate["on"]` never fired => a SILENT NO-OP
+            # = a FALSE 'thin-lane prior does nothing' verdict). Mirrors the lane/margin-saliency gates.
+            # No-op when lane_thin_start<=1 (default-on-from-ep1) => zero behavior change.
+            if lane_thin_w > 0.0:
+                _lt_was = lane_thin_gate["on"]
+                lane_thin_gate["on"] = ep >= lane_thin_start
+                if lane_thin_gate["on"] and not _lt_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "lane_thin_engage", "epoch": ep, "start": lane_thin_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # BUILD 1 (FEED-fw): apply stage-transition TREATMENT for an AdamW->AdamW boundary
             # detected above. Skipped during the Muon finisher (muon_switched True; it re-treats
             # itself + freezes the base LR schedule). The spike-guard re-treat already happened in the
@@ -1687,6 +1754,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "from_curriculum": bool(_bnd_curriculum),
                                       "from_lane_engage": bool(_bnd_lane),
                                       "from_margin_saliency_engage": bool(_bnd_msal),
+                                      "from_lane_thin_engage": bool(_bnd_lane_thin),
                                       "note": "AdamW m/v zeroed (fresh optimizer); spike-guard already "
                                       "re-treated; stale-momentum-through-landscape-change avoided"}),
                           flush=True)
@@ -1732,7 +1800,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if ep <= args.warmup_epochs:
                     lr = args.lr * ep / max(args.warmup_epochs, 1)
                 else:
-                    prog = (ep - args.warmup_epochs) / max(args.epochs - args.warmup_epochs, 1)
+                    # (review C2) cosine denominator = anneal_epochs (schedule length), NOT args.epochs
+                    # (run length). anneal_epochs defaults to args.epochs => BIT-IDENTICAL; a warm-start
+                    # arm sets --anneal-epochs to the ORIGINAL schedule so the post-resume LR matches the
+                    # disease regime (~0.9*peak at ep300/1500) instead of the run-length tail.
+                    prog = (ep - args.warmup_epochs) / max(anneal_epochs - args.warmup_epochs, 1)
                     lr = args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
                 # BUILD 1 (FEED-fw): stage-transition LR re-warmup. DEFAULT-OFF
                 # (--stage-transition-rewarmup-epochs 0) => _rw is EXACTLY 1.0 => lr*1.0 == lr =>
@@ -1785,12 +1857,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     continue
                 opt.update(model, clipped)
                 mx.eval(model.parameters(), opt.state)
-                # DM1a (Stiefel-W): project film.weight onto orthonormal columns AFTER the optimizer
-                # step (so PR(M)=PR(cov(code)) holds by construction) and BEFORE the EMA update (so the
-                # deploy shadow tracks the on-manifold weight). Default-off (--film-stiefel) => skipped
-                # => byte-identical. The cubic Newton-Schulz polar re-normalizes columns, which also
-                # neutralizes AdamW weight-decay on W (the design's WD=0-on-W intent). NOTE: composes
-                # with the Muon finisher (the projection runs whichever optimizer produced the step).
+                # DM1a (Stiefel-W): project the LIVE film.weight onto orthonormal columns AFTER the
+                # optimizer step, so PR(M)=PR(cov(code)) holds (to the projection's ~1e-2 residual) for
+                # the LIVE weight.
+                # Default-off (--film-stiefel) => skipped => byte-identical. The cubic Newton-Schulz
+                # polar re-normalizes columns, which also neutralizes the global-magnitude component of
+                # AdamW weight-decay on W (the design's WD=0-on-W intent). NOTE: composes with the Muon
+                # finisher (the projection runs whichever optimizer produced the step).
+                #   (review Med1) The EMA update below averages the (per-step on-manifold) LIVE weight
+                #   into the shadow; an arithmetic EMA of orthonormal matrices is NOT itself orthonormal,
+                #   so the DEPLOYED shadow drifts OFF-Stiefel. The shipped artifact is re-projected at
+                #   verdict + byte-close via _project_shadow_film_np (NOT here -- mutating the shadow
+                #   in place would break resume bit-faithfulness). This comment formerly claimed "the
+                #   deploy shadow tracks the on-manifold weight" -- FALSE; corrected.
                 if args.film_stiefel:
                     model.film.weight = stiefel_project_columns(model.film.weight)
                     mx.eval(model.film.weight)
@@ -1820,22 +1899,42 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "ep_loss": round(ep_loss, 3),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     history.append({"epoch": ep, **v, "implied_S": s})
-            # DM1 telemetry (decisive-smoke signals; design memo §6 firewall). At eval cadence, when a
-            # DM1 lever is active, log PR(M) (per-pair FiLM modulation participation ratio), PR(cov(code))
-            # and the Stiefel residual ‖WᵀW−I‖_F so the A/B can SEPARATE "means fixed" (PR held >~3.0)
-            # from "end moved" (advisory d_seg, in the verdict row above). Default-off (both flags off)
-            # => never fires => no behavior/observability change. Pure read (no model/grad touch).
-            if (args.film_stiefel or code_spec_w > 0.0) and (ep % args.eval_every == 0 or ep == args.epochs):
+            # DM1 telemetry (decisive-smoke signals; design memo §6 firewall). At eval cadence, log
+            # PR(M) (per-pair FiLM modulation participation ratio), PR(cov(code)) and the Stiefel
+            # residual ‖WᵀW−I‖_F so the A/B can SEPARATE "means fixed" (PR held >~3.0) from "end moved"
+            # (advisory d_seg, in the verdict row above).
+            #   (review C1) GATE WIDENED to include --dm1-telemetry so the A0 BASELINE (no DM1 lever)
+            #     also logs the row -- otherwise the "baseline collapses" half of the firewall is
+            #     UNMEASURABLE. Default-off (all three off) => never fires => bit-identical observability.
+            #   (review Med1) The DEPLOYED weight is the EMA SHADOW, not live. An arithmetic EMA of
+            #     orthonormal matrices is NOT orthonormal => the shadow drifts off-Stiefel. The firewall
+            #     must read what SHIPS, so report BOTH the LIVE and the SHADOW PR(M)+residual (shadow
+            #     modulation M_shadow = code @ W_shadowᵀ + b_shadow, ISOLATING the W drift on the same
+            #     codes). Pure read (no model/grad touch).
+            if (args.film_stiefel or code_spec_w > 0.0 or args.dm1_telemetry) and (ep % args.eval_every == 0 or ep == args.epochs):
                 _S = min(2 * P, 256)
                 _ssub = np.arange(0, 2 * P, max(1, (2 * P) // _S))[:_S].astype(np.int32)
                 _codes = model.code[mx.array(_ssub)]
-                _M = model.film(_codes)                                # (S, 2*H*L) modulation
+                _M = model.film(_codes)                                # (S, 2*H*L) LIVE modulation
                 _pr_m = float(film_modulation_participation_ratio(np.asarray(_M, np.float32)))
                 _pr_c = float(film_modulation_participation_ratio(np.asarray(_codes, np.float32)))
                 _sres = stiefel_residual(model.film.weight) if args.film_stiefel else None
+                # Med1: the SHADOW (deployed) film.weight modulation + its Stiefel residual.
+                _Ws = ema.shadow.get("film.weight")
+                _bs = ema.shadow.get("film.bias")
+                _pr_m_shadow = None
+                _sres_shadow = None
+                if _Ws is not None:
+                    _M_shadow = _codes @ _Ws.T
+                    if _bs is not None:
+                        _M_shadow = _M_shadow + _bs
+                    _pr_m_shadow = float(film_modulation_participation_ratio(np.asarray(_M_shadow, np.float32)))
+                    _sres_shadow = stiefel_residual(_Ws) if args.film_stiefel else None
                 print(json.dumps({"stage": "dm1_telemetry", "epoch": ep, "seg_form": seg_form,
                                   "pr_film_M": round(_pr_m, 4), "pr_cov_code": round(_pr_c, 4),
                                   "stiefel_residual": (round(_sres, 5) if _sres is not None else None),
+                                  "pr_film_M_shadow": (round(_pr_m_shadow, 4) if _pr_m_shadow is not None else None),
+                                  "stiefel_residual_shadow": (round(_sres_shadow, 5) if _sres_shadow is not None else None),
                                   "film_stiefel": bool(args.film_stiefel),
                                   "code_spec_w": code_spec_w}), flush=True)
             # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
@@ -1881,6 +1980,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "activation": args.activation, "in_feat": int(in_feat),
         "history": history, "checkpoint": str(ck), "stage_checkpoints": stage_ckpts,
         "resumable": True, "ckpt_every": int(args.ckpt_every),
+        # (review C2) anneal schedule length (deterministic-reproducibility provenance). None default =>
+        # records the resolved value (== epochs) so a reader knows the exact cosine denominator used.
+        "anneal_epochs": int(anneal_epochs),
+        # (review C1/Med1) DM1 telemetry + shadow-projection provenance (all default-OFF paths recorded).
+        "dm1_telemetry": bool(getattr(args, "dm1_telemetry", False)),
+        "film_stiefel": bool(getattr(args, "film_stiefel", False)),
+        "code_spectral_entropy_weight": float(getattr(args, "code_spectral_entropy_weight", 0.0)),
         # BUILD 1/2 (FEED-fw) provenance (deterministic-reproducibility: record config with the
         # result). All default-OFF => these reflect the bit-identical path.
         "stage_transition_rewarmup_epochs": int(getattr(args, "stage_transition_rewarmup_epochs", 0)),
@@ -1912,6 +2018,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--num-pairs", type=int, default=24)
     ap.add_argument("--epochs", type=int, default=1500,
                     help="(fix d) >=1500 for the PR95 d_seg curriculum (ce->tau->l7). Fail-closed asserted vs curriculum boundaries.")
+    ap.add_argument("--anneal-epochs", type=int, default=None,
+                    help="(review C2) SCHEDULE length for the softmax-temp + hosc-beta + LR cosine anneals "
+                    "(the cosine DENOMINATOR), decoupled from --epochs (the RUN length). None (default) "
+                    "=> use --epochs => BIT-IDENTICAL. A WARM-START arm (e.g. --resume-from a CE ckpt @ "
+                    "ep299, --epochs 399) MUST set this to the ORIGINAL schedule length (e.g. 1500) so "
+                    "ep300->400 reproduces the DISEASE regime (temp ~0.91->0.84, LR ~0.9*peak) the lever "
+                    "must be tested in -- NOT the schedule tail (temp ~0.19->0.05, LR ~0.15*peak).")
     ap.add_argument("--eval-every", type=int, default=25)
     # RESUMABILITY + CHECKPOINTING (FEED-dz; additive). Per operator "never launch non-resumable /
     # save+preserve a checkpoint at the end of each stage": per-stage PRESERVED ckpts default ON;
@@ -2075,20 +2188,28 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-A3: the participation-ratio FLOOR (effective-dim target) the penalty pushes "
                     "M toward (must be > 1 when --film-rank-floor-weight > 0; PR >= 1 always). Default 4.0.")
     # DM1 minimal cure (design memo per_stage_fractal_optimizer_priming_reheat_anneal_20260629 §0/§4).
-    # Two byte-free structural moves that make PR(M)=PR(cov(code)) hold BY CONSTRUCTION (Stiefel
-    # isometry) + keep the code spectrum spread. Both DEFAULT-OFF => no new params, the train step +
-    # loss branches are skipped => byte-identical to the pre-DM1 path.
+    # Two byte-free structural moves that make PR(M)=PR(cov(code)) hold to the projection's ~1e-2
+    # residual (Stiefel isometry) + keep the code spectrum spread. Both DEFAULT-OFF => no new params,
+    # the train step + loss branches are skipped => byte-identical to the pre-DM1 path.
     ap.add_argument("--film-stiefel", action="store_true",
                     help="DM1a: each optimizer step, project film.weight (W) onto the Stiefel manifold of "
                     "ORTHONORMAL COLUMNS (WᵀW=I) via the cubic Newton-Schulz polar W(WᵀW)^-1/2. Then W is "
-                    "an isometry => PR(M)=PR(cov(code)) EXACTLY (the resonance cannot concentrate through "
-                    "W). Re-normalizing columns each step also NEUTRALIZES AdamW weight-decay on W (the "
-                    "design's 'WD=0 on W' intent) WITHOUT touching the optimizer. Default OFF = byte-identical.")
+                    "an isometry => PR(M)=PR(cov(code)) to the projection's ~1e-2 residual (the resonance "
+                    "cannot concentrate through W). Re-normalizing columns each step also neutralizes the "
+                    "global-magnitude component of AdamW weight-decay on W (the design's 'WD=0 on W' "
+                    "intent) WITHOUT touching the optimizer. Default OFF = byte-identical.")
     ap.add_argument("--code-spectral-entropy-weight", type=float, default=0.0,
                     help="DM1b: weight beta of a CAPACITY spectral-entropy penalty -beta*log(PR(cov(code))) "
                     "on the per-pair code covariance, keeping all ~mod_dim code directions live (the other "
                     "half of the byte-free FiLM rank-collapse cure; via WᵀW=I this raises PR(M)). PR is "
                     "(D,D)-Gram-computed (no eigendecomposition). 0.0 (default) = OFF = byte-identical.")
+    ap.add_argument("--dm1-telemetry", action="store_true",
+                    help="(review C1) FORCE the dm1_telemetry row (PR(M) live+shadow, PR(cov code), "
+                    "Stiefel residual) at eval cadence EVEN when no DM1 lever is active -- so the A0 "
+                    "BASELINE logs the PR-collapse half of the firewall verdict (else 'baseline "
+                    "collapses' is unmeasurable). Pure READ (no model/grad touch); default OFF => "
+                    "the row only fires when --film-stiefel/--code-spectral-entropy-weight is on => "
+                    "BIT-IDENTICAL observability to the pre-C1 path.")
     # LEVER-B (THIN-LANE DROPPED-DASH PRIOR, ADDITIVE, DEFAULT-OFF). Attacks the MEASURED dominant
     # residual: 57% Road<->Lane confusion, PC0 (34.5% of residual variance) = Lane->Road DROP, 52.7% of
     # GT-lane connected components WHOLESALE-MISSED, miss-fraction monotone in dash size (<5px 93%
@@ -2271,6 +2392,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lane-prior-phi1-dash-gate", action=argparse.BooleanOptionalAction, default=True,
                     help="BUILD 2: model the lane dash period (deg-3 centerline + dash). Default on.")
     args = ap.parse_args(argv)
+
+    # (review C2) --anneal-epochs guard: must be >= 1 when set (it is a cosine DENOMINATOR). A value
+    # < --epochs means the anneal COMPLETES before the run ends (temp/LR clamp past their end values
+    # for the tail) -- legal for a warm-start window but usually a mistake otherwise, so WARN (do not
+    # fail). None (default) => no guard fires => bit-identical.
+    if getattr(args, "anneal_epochs", None) is not None:
+        if args.anneal_epochs < 1:
+            raise ValueError(f"--anneal-epochs ({args.anneal_epochs}) must be >= 1 (cosine denominator).")
+        if args.anneal_epochs < args.epochs:
+            print(json.dumps({"stage": "anneal_epochs_WARN", "anneal_epochs": int(args.anneal_epochs),
+                              "epochs": int(args.epochs),
+                              "msg": "--anneal-epochs < --epochs: the temp/LR anneal completes BEFORE the "
+                              "run ends; the tail epochs run at the clamped end values. Intended for a "
+                              "WARM-START window (resume mid-schedule); verify this is what you want."}),
+                  flush=True)
 
     # (fix d) curriculum boundaries must be strictly ordered and fit inside the budget, else the
     # tau_softplus / l7 stages silently never run (or run for ~0 epochs) -> untrustworthy d_seg.

@@ -117,9 +117,12 @@ def stiefel_project_columns(W: Any, iters: int = 8):
     ``per_stage_fractal_optimizer_priming_reheat_anneal_design_20260629.md`` §0):
     with the FiLM conditioning ``W`` (here ``film.weight``, shape (2·H·L, mod))
     on the Stiefel manifold, ``W`` is an ISOMETRY on its row space, so the
-    nonzero spectrum of ``E[M Mᵀ] = W·cov(code)·Wᵀ`` EQUALS the spectrum of
-    ``cov(code)`` and therefore ``PR(M) = PR(cov(code))`` EXACTLY — the
-    multiplicative-resonance rank-collapse cannot concentrate through ``W``.
+    nonzero spectrum of ``E[M Mᵀ] = W·cov(code)·Wᵀ`` equals the spectrum of
+    ``cov(code)`` and therefore ``PR(M) = PR(cov(code))`` — exactly in the
+    orthonormal-columns limit, and in practice to the projection's fp32 residual
+    (``‖WᵀW−I‖_F ≈ 1e-2`` after ~8 cubic steps) — so the multiplicative-resonance
+    rank-collapse cannot concentrate through ``W``. (review R1-L1: the identity is
+    ``WᵀW=I``-exact; the SHIPPED projection holds it to the ~1e-2 residual, not bit-exactly.)
 
     Method (NOT the Muon ``newton_schulz5``): the cubic Newton–Schulz polar
     iteration ``X ← X (3/2 I − 1/2 XᵀX)`` from a Frobenius-normalized start.
@@ -131,11 +134,13 @@ def stiefel_project_columns(W: Any, iters: int = 8):
     floor ``‖WᵀW−I‖_F ≈ 1e-2`` in ~8 steps, GPU-native (no CPU/eigh sync).
 
     Magnitude is intentionally DISCARDED (the projection re-normalizes every
-    column to unit norm): this is exactly why a per-step Stiefel projection
-    NEUTRALIZES decoupled weight-decay on ``W`` — AdamW's ``W ← W(1−lr·wd)``
-    scales all columns by the same scalar, which column-renormalization removes —
-    so the design's "WD=0 on W" intent is satisfied WITHOUT touching the
-    optimizer construction.
+    column to unit norm): this is why a per-step Stiefel projection NEUTRALIZES
+    the GLOBAL-MAGNITUDE COMPONENT of decoupled weight-decay on ``W`` — AdamW's
+    ``W ← W(1−lr·wd)`` scales all columns by the same scalar, which
+    column-renormalization removes — so the design's "WD=0 on W" intent is
+    satisfied WITHOUT touching the optimizer construction. (review R1-L2: this
+    neutralizes the uniform-shrink component; any non-uniform / per-column WD
+    interaction with the Adam preconditioner is NOT claimed to be removed.)
 
     Parameters
     ----------
@@ -153,6 +158,15 @@ def stiefel_project_columns(W: Any, iters: int = 8):
 
     if int(getattr(W, "ndim", 0)) != 2:
         raise ValueError(f"stiefel_project_columns expects 2D (out,in); got {getattr(W, 'shape', None)}")
+    # (review R1-L3/R3) ORTHONORMAL COLUMNS require a TALL matrix (out >= in): a WIDE matrix has more
+    # columns than rows, so WᵀW (in x in) is rank-deficient and CANNOT equal I_in -- the cubic
+    # iteration would silently converge to a non-orthonormal fixed point (a FAKE Stiefel projection).
+    # Fail closed rather than return a matrix whose stiefel_residual never reaches the floor.
+    if W.shape[-2] < W.shape[-1]:
+        raise ValueError(
+            f"stiefel_project_columns requires a TALL matrix (out >= in) for orthonormal COLUMNS; got "
+            f"shape {tuple(W.shape)} (out={W.shape[-2]} < in={W.shape[-1]}). WᵀW is rank-deficient for "
+            "a wide matrix so WᵀW=I_in is unreachable; transpose for orthonormal ROWS instead.")
     in_dim = W.shape[-1]
     eye = mx.eye(in_dim, dtype=W.dtype)
     # Frobenius normalization guarantees the start spectral norm < 1 < sqrt(3) so the

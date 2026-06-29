@@ -451,13 +451,15 @@ def LanePrior(weight: float = 1.0, start_epoch: int = 300,  # noqa: N802 — LEV
 
 def StiefelW(window: int = 100) -> Lever:  # noqa: N802 — DM1a
     """DM1a (Stiefel-W): per-step project film.weight onto orthonormal columns (WᵀW=I) so W is an
-    ISOMETRY => PR(M)=PR(cov(code)) BY CONSTRUCTION (the byte-free root half-1 of the FiLM rank-collapse
-    cure; design memo per_stage_fractal_optimizer §0/§4). store_true => emitted ONLY when on (never
-    False, review C2). Carries a warm-start ``window`` (else dead-arm when resumed at end-of-run, C1)."""
+    ISOMETRY => PR(M)=PR(cov(code)) to the projection's ~1e-2 residual (the byte-free root half-1 of the
+    FiLM rank-collapse cure; design memo per_stage_fractal_optimizer §0/§4). store_true => emitted ONLY
+    when on (never False, review C2). Carries a warm-start ``window`` (else dead-arm when resumed at
+    end-of-run, C1)."""
     return Lever("DM1a_stiefel_w",
                  overrides={"--film-stiefel": True},
                  epochs_delta=window,
-                 notes="Stiefel-orthonormal film.weight (WᵀW=I => PR(M)=PR(cov code); WD on W neutralized)")
+                 notes="Stiefel-orthonormal film.weight (WᵀW=I => PR(M)~PR(cov code) to ~1e-2 residual; "
+                       "global-magnitude WD on W neutralized)")
 
 
 def CodeSpectralEntropy(beta: float = 0.01, window: int = 100) -> Lever:  # noqa: N802 — DM1b
