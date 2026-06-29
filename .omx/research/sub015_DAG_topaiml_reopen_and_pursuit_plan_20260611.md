@@ -5945,3 +5945,35 @@ sufficient; means (v2 redirect), not the end (byte-closed exact row <0.19110). p
 eikonal-SDF rate-half + the Lane-survival residual (the binding learned part) + integer decode. The INR shrinks to
 JUST the residual. Launching the rest of the play-fleet (F2 task-geometry-map / F3 movables-rank / F4 free-
 generator+irreducible-info / F5 synthesis-design), grok-informed.
+
+## DAG FEED-iw 2026-06-29 — GAP 2 R-SURVIVAL PHYSICS: R is BENIGN; the wall is RENDER-RES + SegNet-reading
+Memo `.omx/research/r_survival_physics_20260629T182659Z.md` · tool `tools/r_survival_probe.py` · data
+`.omx/research/r_survival_probe_n96.json` (n=96) · `[macOS research-signal]`, SegNet-FREE, pointer 0.19110 UNMOVED.
+### THE REFRAME (measured, $0): the binding d_seg wall is NOT the contest R (render→bicubic↑874→uint8→bilinear↓384).
+`L*` lives at 384 = scorer res, so R is a near-identity band-limited round-trip; at render res ≥384 EVERY boundary
+rep — even naive single-channel PALETTE — survives R to d_seg<1e-4. The famous palette ×170-350 death is therefore
+sub-wall (C) the FROZEN SegNet reading an off-distribution flat-color image, NOT the resample. Decomposition:
+(A) resample/uint8 survival = BENIGN · (B) witness render-res / capacity = THE WALL · (C) SegNet RGB-reading = the
+other half (trainer's realized-through-R `cpu_verdict_d_seg`).
+### MEASURED capacity cliff (LANE class-1 flip% / total survival d_seg, n=96, identical R for all reps):
+| render | palette lane% | hard lane% | **SDF lane%** | hard total | **SDF total** |
+| 96  | 58.7 | 58.2 | 41.9 | 0.0160 | 0.0051 |
+| 192 | 26.3 | 25.9 | **3.19** | 0.0063 | **0.00059** |
+| 320 | 25.7 | 25.6 | **0.04** | 0.0062 | **0.00001** |
+| 384 | 0.0 | 0.0 | 0.0 | ~0 | 0 |
+### THE MINIMAL R-INVARIANT REP = a WIDE-ramp 1-Lipschitz multi-class SDF (`argmax_k φ_k`): smooth (no bicubic
+Gibbs), 1-Lipschitz margin (linear-through-zero → sub-pixel boundary), wide decision band (uint8 averages → sub-
+precision placement). R's bicubic/bilinear is then a RECONSTRUCTION FILTER — sdf@192 survival 0.00059 < its own
+nearest pre-R proxy 0.00555 (R actively HELPS the SDF). SDF buys ~2× render-res headroom: SDF@192 ≈ hard@384.
+### SLOPE: wider ramp strictly better — @192 lane flip 10.3%(0.66px)→3.19%(2.6px)→2.95%(≥5.3px, saturates); sharp
+SDF is 3.5× worse. Want margin-band half-width ≳5px (slope ≲24/px). LANE geom: median 2.0px, 76%≤2px, 0%≤1px, above
+384-Nyquist (so survives at 384) → sub-Nyquist only once witness render res ≲192 (= the measured cliff).
+### V2 SURVIVAL TERM: (1) SDF level-set carrier not hard/palette (substrate exists: lever_b_levelset_generator +
+lane_sdf_component); (2) WIDE margin ramp (≳5px, add margin-band regularizer); (3) render ≥192 knee (≥320 for lane);
+(4) LANE gets a dedicated MSDF-style multi-channel (dash CORNERS) — even SDF@192 leaves 3.19% lane (the ~8-dim
+long-tail, localized to sub-wall B); (5) keep R in-loop; (6) DON'T spend bytes fighting R — spend on SDF effective
+render-res (B) + SegNet-reading (C). OSS: Chlumský 2018 MSDF (SDF interp accurate only where |∇|~const; corners need
+multi-channel) + coverage/area-AA (wide ramp = sub-pixel coverage) confirm the physics.
+### NOT-PESSIMISTIC: STRONG POSITIVE — R-survival (GAP2-A) is SOLVED by SDF; the wall narrows to render-res capacity
+(B, cured ~2× by SDF) + SegNet-reading (C). Honesty: SegNet-free, advisory, means (v2 redirect) not the end (byte-
+closed exact row <0.19110). pointer 0.19110.
