@@ -5091,3 +5091,38 @@ Subagent running. Pointer 0.19110. NO exact score claimed (research/advisory).
 (2505.18069) noise = anti-collapse. → REHEAT in the custom optimizer = CONTROLLED re-injection of the
 stage-noise-shift = a SECOND free route to the DM1 fix (disentangle + anti-collapse). Routed to optimizer-
 design subagent.
+
+---
+
+## FEED-ib (2026-06-29T19:25Z) — latent-SDE review (2606.28228): BOTH literal transfers are FALSE FRIENDS; CORRECTS FEED-ia overclaim; surfaces spectral-entropy-vs-identifiability tension + $0 eigenspectrum test
+
+### Verdict (honest NO on the literal levers)
+- (a) FiLM disentanglement via diffusion-shift = FALSE FRIEND: assumptions violated (needs C² DIFFEOMORPHISM obs map / continuous-time latent SDE / FULL-RANK diagonal Σ — we have argmax non-injective, static code, RANK-COLLAPSE); AND perm+scale identifiability is GAUGE-REDUNDANT for FiLM (W absorbs ΠΛ: ĉ=ΠΛc → W'=WΛ⁻¹Π⁻¹ → identical M); AND cures the WRONG disease (identifiability ≠ conditioning; the theorem pins the rotational FRAME, does not prevent rank collapse).
+- (b) curriculum-stages = paper's "environments" = FALSE FRIEND: paper REQUIRES shared drift + stationary latent law, vary ONLY Σ. Our stages CHANGE the loss (=drift) — vary exactly the nuisance it holds fixed; non-stationary (learning); uint8-STE noise is CONSTANT across stages (R fixed → no shift); τ/Muon/EMA aren't additive diagonal latent diffusions; no identifying estimator runs. Reviewer REFUSED to manufacture the transfer.
+
+### CORRECTION to FEED-ia (telemetry accuracy / NO-FAKE)
+FEED-ia said stage-noise-shifts → IDENTIFIABILITY (disentanglement) = a 2nd free route to the DM1 fix. WRONG —
+that half is a false friend. ONLY the anti-collapse (Hebbian 2505.18069) half transfers. Reheat-as-stage-noise
+is valid via Hebbian ANTI-COLLAPSE ONLY, not latent-SDE identifiability. Operator's core instinct (the
+ringing/perturbations are doing real work) SURVIVES — as anti-collapse, not disentanglement.
+
+### The real value (silver lining) — spectral-entropy is a CAPACITY lever, not a disentanglement lever
+Paper's S4: coordinate identifiability NEEDS a DISTINCT eigenspectrum. Spectral-entropy penalty pushes toward
+UNIFORM spectrum = maximally NON-identifiable. For pure d_seg CAPACITY that is CORRECT (use all directions);
+it just means spectral-entropy targets capacity, NOT interpretability. If a SEMANTIC/Morse-Smale interpretable
+code is ever also a goal, uniform-spectrum CONFLICTS with it → want non-degenerate-but-full-rank target, not flat.
+
+### NEW $0 TEST (queued, HIGH-EV, sharpens DM1 mechanism, no GPU)
+Per curriculum stage, eigendecompose the FiLM code covariance Σ_code (or M=code@Wᵀ). Already known PR 3.34→1.19.
+Check: are surviving eigenvalues DEGENERATE/clustered (≈equal ratios = identifiability-flavored degeneracy →
+Stiefel/orthogonality IS the fix) or DISTINCT-but-low-rank (→ pure CAPACITY, fix is capacity not orthogonality)?
+Either branch sharpens DM1 + sets the spectral-entropy target. (Different cache than the co-location test — uses
+training-logged code stats; quick eigendecomp.)
+
+### GR nugget (EXACT, feeds the GR system-of-equations DM1 term)
+Covariance = rank-2 contravariant TENSOR; Dφ·Σ·Dφᵀ=Σ̃ is its transformation law; identifiability via TWO distinct
+metrics = GAUGE-FIXING. A clean gauge-fixing TEMPLATE for the DM1 vielbein-gauge term of the unified action —
+but ANALOGY for the witness (no latent SDE / no diffeomorphic decoder); supplies gauge-fixing, NOT field
+equations, NOT the Morse-Smale topology. Consistent with GR-research (DM1 = the metric/gauge).
+
+NO score-mover (clarifying negative). Pointer 0.19110.
