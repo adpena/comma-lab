@@ -4710,3 +4710,39 @@ domain/signal/info) — derive the OPTIMAL conditioning + lane operators, not ju
 M1 (rank-floor flow) + M2 (reframe/replace A1/A2 per DM1) + M3 (share seg-forward) + R2a-MEDIUM-1 (resume
 arch-flag). The deep-math v2 design (DM1-3) may REPLACE parts → fix bugs + redesign TOGETHER into FiLM-fix v2
 → re-review (3 clean) → launch. a516 PENDING. Pointer 0.19110.
+
+---
+
+## FEED-hr (2026-06-29T16:05Z) — REVIEW ROUND-2 COMPLETE (3/3, NOT clean) + DEEP REFRAME + DEFERRED/ORPHAN SWEEP + refreshed DAG
+
+### Round-2 review COMPLETE (R2a+R2b+R2c). NOT clean (C1 critical, confirmed by TWO reviewers). Counter→0.
+Consolidated fix list before FiLM-fix v2:
+- **C1 (CRITICAL, R2b+R2c independently):** `lane_thin_gate` never flips in the epoch loop → `--lane-thin-start-epoch>1` (the help-RECOMMENDED 300) = SILENT NO-OP → false "lane-prior doesn't help" verdict. Fix: add gate-flip + spike-guard re-treat + `_bnd_lane_thin` (mirror lane-edge :1620) + validator catch + integration test.
+- **R2a-MED-1:** resume arch-flag gap (film flags only in result.json, not ckpt npz) → crash-resume risk. Fix: persist `__cfg_film_*` + fail-closed assert.
+- **R2b-M1:** rank-floor 0-homogeneous grad blowup (1/‖M‖, clip-hijack, no start gate). **R2b-M2:** A1/A2 are CAPACITY not rank. **R2b-M3:** 3 redundant seg-forwards. **R2c-M1:** torch inflate path stale (film_pl/concat_pl ignored) → NO-FAKE if a lever-ON witness is ever shipped via torch → fix or fail-closed guard.
+- **CLEAN:** both asserted claims PROVEN-CORRECT (MLX off-path byte-identity ✓; inflate.py numpy-authority ON-path complete ✓) → the byte-close AUTHORITY path is sound.
+
+### ⭐ THE DEEP REFRAME (R2c assumption-challenge + the running DM panel converge) — the operator's deep-math ask
+The FiLM-rank-fix assumes per-pair RANK is the binding constraint. R2c challenges (SUSPECTED, architecture-grounded):
+1. **A1/A2 inject SPATIALLY-UNIFORM per-pair vectors** (`film[li,*]`, `concat_pl(code)` are (hidden,) broadcast over ALL pixels). A moving lane needs **SPATIALLY-VARYING** per-pair conditioning (relocate the boundary) — which FiLM/concat CANNOT provide at ANY rank. → rank-flooring uniform FiLM is the wrong axis for the lane.
+2. **Rank-1 collapse may be a SYMPTOM not the cause:** the per-pair lane residual is a tiny fraction of the shared static seg loss → the optimizer finds 1 shared direction sufficient. The 3.9× train/held-out gap is an OVERFITTING signature (per-pair codes memorizing trained pairs), which capacity-adding does NOT fix.
+3. **Higher-EV levers:** loss-geometry (up-weight the per-pair lane residual = LEVER-B's intent, the one silently broken by C1) + per-pair SPATIAL conditioning (per-pair coordinate/Fourier WARP = a per-pair homography on the lane manifold; hypernet emitting per-pair WEIGHT deltas; code↔position cross-attention).
+→ **FiLM-fix v2 (from DM1/DM2/DM3, running) should likely PIVOT: fix LEVER-B (loss-geometry) + add per-pair SPATIAL conditioning (coord-warp), NOT just rank-floor on uniform FiLM.** A1/A2 are demoted (capacity + spatially-uniform). This is the deep-math optimization the operator demanded; DM panel will derive the optimal form.
+
+### DEFERRED / ORPHAN SWEEP (operator ask; anti-signal-loss binding)
+150 of 1786 lanes are deferred/research_only/archived/orphan-noted — MOSTLY stale May-era janky-prototypes OFF
+the current witness/d_seg/rate path (lane_12_nerv, lane_psd_*, apogee_int7, owv3 arith-masks, etc.; keep
+parked per their reactivation criteria). The HIGH-EV re-opens ON the current critical path:
+1. **⭐ STORED-POSE SIDECAR composition** — `src/tac/scorer_targets.py` (600×6 fp16 PoseNet targets) EXISTS but
+   is NOT composed into the witness byte-close (the witness renders pose IN-FRAME → d_pose 0.094; the sidecar
+   gives ~0.018). This is the ORPHANED near-free **0.076 S drop** on the critical path (FEED-ho step 2). #1 re-open.
+2. **openpilot road↔lane prior (#138, completed $0 IoU gate)** — feeds DM2's lane operator (the domain lane-poly prior).
+3. **#110 latent-structure-inducing regularizer + #111 variable-grid-QAT** — training-signal items for the rate/d_seg.
+4. **#137 road↔lane sidecar closing measurement** — the $0 step converting cheap-carrier → closed d_seg-solve.
+
+### REFRESHED DAG understanding (the work-graph shape)
+3 threads: A (frozen-frontier adapter), B (smaller-basis retrain), C (capstone at right capacity) + the
+anti-deferral gate §6b. The 2026-06-23→25 deep-math convergence (FINER/WIRE→step-native chart; capacity-routing
+= adaptive-mesh; round-trip-in-loop = anti-aliasing; islands = ~8-dim lane manifold) = the SAME lenses now in
+the witness. CURRENT LIVE NODE: witness FiLM-fix → (reframed) v2 = fix-LEVER-B + per-pair-spatial-conditioning
+(post DM panel) → train → d_seg → +compose stored-pose sidecar → byte-close → exact eval → sub-0.19. Pointer 0.19110.
