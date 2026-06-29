@@ -4746,3 +4746,39 @@ anti-deferral gate §6b. The 2026-06-23→25 deep-math convergence (FINER/WIRE�
 = adaptive-mesh; round-trip-in-loop = anti-aliasing; islands = ~8-dim lane manifold) = the SAME lenses now in
 the witness. CURRENT LIVE NODE: witness FiLM-fix → (reframed) v2 = fix-LEVER-B + per-pair-spatial-conditioning
 (post DM panel) → train → d_seg → +compose stored-pose sidecar → byte-close → exact eval → sub-0.19. Pointer 0.19110.
+
+---
+
+## FEED-hs (2026-06-29T16:15Z) — ⚠️ NO-FAKE CORRECTION: the "near-free pose sidecar" (FEED-ho/hr) is WRONG; pose is an in-frame LEVER
+
+### The error I propagated (FEED-ho step 2 + FEED-hr orphan #1): CORRECTED
+Claimed: "compose the stored-pose sidecar → pose 0.094→0.018, near-free." WRONG. Verified from the witness
+byte-close tool's docstring (`tools/levelset_byte_close_and_eval.py:56-63`): `d_pose = MSE(PoseNet(generated
+_pair)[:6], PoseNet(original_pair)[:6])` reads the RENDERED FRAMES. A stored 6-scalar sidecar is bytes the
+scorer NEVER reads → does NOT lower realized d_pose (`--fold-pose-sidecar` is OFF by default and LOUDLY records
+it adds COUNTED bytes WITHOUT lowering d_pose). The witness's d_pose 0.000878 (contribution 0.094) is ALREADY
+the pose-TRAINED render (--w-pose>0 supervising the code/texture to hit the 6 targets). The
+`scorer_targets.py` sidecar = the SUPERVISION TARGETS used during training, NOT a decode-time bypass. (RGB
+carriers differ; the level-set witness must hit pose IN-FRAME.)
+
+### The CORRECTED pose opportunity (still real, but a LEVER not a freebie)
+The frontier doc says the stored targets ALLOW d_pose ~3.4e-5 (contribution 0.018) IF the render is
+conditioned to hit them tightly; the witness currently achieves only 0.000878 (0.094) — a ~26× gap. Closing
+it = a RENDER-CONDITIONING lever: stronger pose-FiLM / pose-supervision-weight / pose-texture conditioning so
+the rendered frame hits the PoseNet targets. **Task #84 "pose-FiLM + stabilized-training module" is COMPLETED
+(built) — RE-OPEN candidate: is it WIRED into the witness render? If not, wiring + strengthening it is the
+pose lever (0.094→~0.018, ~0.076 S) — but it's TRAINING work, not free composition.**
+
+### CORRECTED critical-path arithmetic to sub-0.19 (honest)
+S = d_seg + pose + rate. Current (advisory): 0.32 + 0.094 + 0.049 = 0.463. To sub-0.19 needs BOTH levers:
+- d_seg lever (FiLM-fix v2, reframed = loss-geometry + per-pair SPATIAL conditioning): 0.0032→~0.001 → 0.32→0.10.
+- pose lever (pose-FiLM conditioning #84, IN-FRAME): 0.000878→~3.4e-5 → 0.094→0.018.
+- rate ~0.049 (PCA-codes negative; needs a non-code rate lever for sub-0.15).
+→ d_seg-only (0.10+0.094+0.049=0.243) does NOT reach sub-0.19. **BOTH d_seg AND pose levers are required**
+(0.10+0.018+0.049 = 0.167 < 0.19). The pose lever is NOT optional/free — it's a parallel training lever.
+This corrects FEED-ho's implication that pose was a near-free standalone win.
+
+### Net for the DAG: the witness needs TWO in-frame training levers (d_seg-FiLM-v2 + pose-FiLM #84), both
+real work, composed in ONE pose-AND-seg-conditioned render. The DM panel (running) derives the d_seg-conditioning
+optimum; the pose-FiLM module (#84, built) is the pose half — verify its wiring into the witness as the parallel
+re-open. Pointer 0.19110.
