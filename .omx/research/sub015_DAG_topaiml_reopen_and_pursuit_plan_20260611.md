@@ -4927,3 +4927,23 @@ Both inform the v2 build's SCHEDULE (the component most likely to have missing o
 schedule/synergy learnings) → review (3 clean) → train. If a paper hangs >20min, proceed with DM-panel + DM3
 schedule + papers-as-followup (don't stall the top-priority build). Panel COMPLETE; papers = the schedule
 refinement. Pointer 0.19110.
+
+---
+
+## FEED-hw (2026-06-29T17:20Z) — PAPER-REVIEW FLEET (5) for schedule/synergy off-the-shelf; build fires after synthesis
+
+Operator rapid-fired a reading list ("deep math reveals extreme synergies" + "schedule optimizations we're missing"). 5 deep-math paper reviews running (each: fetch → what we LEARN/ADAPT/USE-OFF-THE-SHELF for the level-set witness + the DM1/DM2/DM3 design + the curriculum schedule; ranked adopt/adapt/inspire + synergies + frozen-contest fit; NO-FAKE: say-so if unretrievable):
+- 2502.06742 → aa9ee63693e767384
+- 2505.18069 → a573f54981505c06a
+- 2606.23595 (alphaxiv) → a5d6fa368f0ee927c
+- 2307.10644 (alphaxiv) → a32be4c1805f61bdf
+- 2606.24543 → ae918de2ef7cde5f6
+
+### Sequencing (top priority = level-set full stack)
+Deep-math panel COMPLETE (DM1 Stiefel+entropy / DM2 IPM-poly-annulus lane / DM3 per-group-clip+self-gate+
+schedule). The 5 papers refine the SCHEDULE + may add cross-lever SYNERGIES. PLAN: harvest each paper → a
+synthesis FEED ranking the adoptable schedule/synergy takeaways → FOLD into the comprehensive FiLM-fix v2
+build spec → fire the ONE full-stack v2 build (DM1+DM2+DM3 + paper takeaways + pose-FiLM + ALL review fixes
+[C1, resume-flag, torch-inflate, LOWs]) → 3-clean review → train. If a paper is unretrievable/hangs, proceed
+without it (don't stall the build); papers are the schedule refinement, not a blocker for the core design.
+Pointer 0.19110.
