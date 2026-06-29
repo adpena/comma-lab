@@ -4982,3 +4982,32 @@ SYNERGY: multi-normalization = Dykstra on gradient norms = the council's native 
 
 4 papers pending (a573f 2505.18069, a5d6f 2606.23595, a32be 2307.10644, ae918 2606.24543) → synthesis → fold
 #1/#3 into v2 build (per-group constant-norm + per-group LR), #2 as 2nd training A/B arm. Pointer 0.19110.
+
+---
+
+## FEED-hy (2026-06-29T18:00Z) — 5-PAPER SYNTHESIS: 4 converge on late-stage Stiefel/EMA/flatness → schedule LOCKED; v2 build FIRED
+
+### Per-paper verdicts (honest, regime-flagged)
+- 2502.06742 SinkGD/Gradient-Multi-Normalization [STRONG mechanics]: every optimizer = steepest-descent-under-a-norm; multi-norm = alternating-projection (=Dykstra). Fold: per-group normalize-to-CONSTANT-NORM (subsumes DM3 clip) + per-group LR α + SWAN whiten-tail (2nd arm). LLM speedup does NOT transfer; mechanics do.
+- 2505.18069 Emergent Hebbian Dynamics [STRONG theory, scale-agnostic]: decay→Hebbian low-rank collapse grows MONOTONE in WD + peaks NEAR STATIONARITY (= REFINE-late, where our τ-noise has annealed → collapse peaks). Fold: WD↓-early/rank↑-late inverse schedule; NEVER weight-decay the Stiefel film.weight; effR(shadow)-vs-effR(live) probe. THE missing schedule.
+- 2307.10644 Fisher-Rao/Hilbert [info-geometry, reinforces DM1]: Hilbert d_H=log(λmax/λmin) = cheap SVD-free conditioning monitor (power+inv-power iter), complementary to effR. BUG-RISK: arithmetic EMA of orthonormal W drifts OFF Stiefel → RE-ORTHONORMALIZE the EMA shadow (QR/NS retraction). 
+- 2606.24543 Attractor Dynamics [LLM-EBM; mechanism non-transfers]: deploy the FLAT basin. Fold: stop Muon-tail on realized-d_seg SHARPNESS under R-perturbation (not proxy-mean); stochastic-R training (jitter uint8 dither/sub-px offset per step) = FREE robustness vs the contest round-trip; SAM tie-in; EMA=SWA validated. Reinforces DM2 (continuity=flat) + DM3 (Muon-tail=settling).
+- 2606.23595 SPIRAL [LLM-RL, MISMATCH]: no actuator transfer; 1 inspire = coalition/marginal-set-advantage lever-SELECTION (compose for union flip-mass coverage, not per-lever-greedy). Honest negative.
+
+### THE CONVERGENCE (4/5 → one target): late-stage Stiefel-conditioning + EMA-shadow health + flatness.
+Hebbian (WD/rank schedule + no-WD-Stiefel) + Fisher-Rao (re-orthonormalize shadow + cond-monitor) + SinkGD
+(per-group-norm + whiten = anti-collapse) + Attractor (flat-basin stop + stochastic-R) ALL sharpen DM1's
+Stiefel program + DM3's Muon-EMA tail. Operator's "schedule optimizations we're missing" = CONFIRMED.
+
+### CONSOLIDATED v2 SCHEDULE FOLD-INS (ranked; cheap/high-confidence first)
+1. [FREE ~5LOC] NO weight-decay on Stiefel film.weight (Hebbian). 2. [~10LOC] re-orthonormalize EMA shadow
+each update (Fisher-Rao; protects deployed=shadow). 3. [~15LOC] WD↓-early/rank↑-late schedule (Hebbian).
+4. [~25LOC] per-group normalize-to-constant-norm + 70/30 (SinkGD, replaces DM3 global clip). 5. [~10LOC]
+per-group LR α (SinkGD). 6. [~20LOC] sharpness-based Muon-tail stop + stochastic-R jitter (Attractor; free
+robustness). 7. [monitor] effR(shadow)-vs-effR(live) + Hilbert cond (Hebbian/Fisher-Rao). 8. [2nd A/B arm]
+SWAN whiten-tail (SinkGD). 9. [campaign] coalition lever-selection (SPIRAL).
+
+### v2 BUILD FIRED (comprehensive full-stack, the operator's top priority) — subagent below.
+DM1 Stiefel+spectral-entropy + DM2 IPM-poly-annulus lane (dash_gate OFF) + DM3 per-group-flow + the 9 schedule
+fold-ins + pose-FiLM #84 + ALL code fixes (C1/resume-flag/torch-inflate/LOWs). GR-research (ad70677) runs
+parallel as the unifying action/field-equation theory. Pointer 0.19110.
