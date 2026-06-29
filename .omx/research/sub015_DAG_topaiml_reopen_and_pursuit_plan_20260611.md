@@ -5659,3 +5659,42 @@ flags, validate-passing); DM3′ levers spec'd as BUILD CONTRACT (need new flags
 ### NEXT: 3-clean recursive (online+OSS) review of the memo → minimal first GPU arm `OrientedBasisMax` + DM3′-A
 (--lowrank-code-dict-rank 16, from-scratch) on operator steer → realized-through-R measure → byte-close → EXACT row.
 Pointer 0.19110.
+
+---
+
+## FEED-is (2026-06-30T01:45Z) — v2 design CRYSTALLIZED + the two deep-math reviews RECONCILED by measurement (afc8cafc; subagent's FEED-ir)
+
+### The refinement (the $0 test falsified its own DM3 premise — the gift)
+$0 tool tools/measure_dm3_spatial_grid_vs_global_code.py on real frozen-SegNet argmax (gt_n96, scipy-EDT ideal
+SDF, argmax-roundtrip 0px): the cross-pair partition variation is GLOBALLY LOW-RANK — rank-8=95.6%, rank-16=98.6%
+of variance (= EGO-MOTION coherence: the whole annulus sweeps coherently, NOT spatially-independently). At ~60
+floats/pair: global code → annulus d_seg 0.026 vs spatial grid 0.21/0.20 (~8× WORSE); the optimal grid @960 floats
+(0.180) loses to the global code @16 floats (0.149); the grid only beats a rank-1-COLLAPSED FiLM, at ~100× the
+bytes. → the per-POSITION spatial latent grid is the WRONG byte allocation for coherent video.
+
+### RECONCILIATION of the two deep-math reviews (they don't contradict; measurement arbitrated)
+- aa05397bb (axis review): killed DM1 (FiLM RANK) + INFERRED "needs spatial DOF". CORRECT on DM1; the inference
+  was directionally incomplete.
+- afc8cafc ($0 test): MEASURES that the spatial DOF belongs in the SHARED oriented dictionary (DM2, free,
+  amortized across pairs), while the PER-PAIR conditioning is correctly LOW-RANK GLOBAL. The FiLM failure was a
+  conditioning-MECHANISM pathology (collapse to rank-1), NOT a representational-locality problem. Both agree
+  DM1-rank is the wrong lever; the $0 measurement refines WHERE the spatial DOF lives.
+
+### CRYSTALLIZED v2
+- DM2 (free, 0 bytes): oriented curvelet/WIRE bank — 16 orientations @ 9.56 anisotropy, 6 Nyquist-capped scales,
+  anisotropic WIRE envelope s⊥/s∥=9.56 (WIRE 2301.05187; curvelet m⁻² vs wavelet m⁻¹ Candès-Donoho). The shared
+  dictionary holding spatial localization.
+- DM3′ (binding fix, cheap): per-pair LOW-RANK ADDITIVE SDF-CORRECTION head φ_k(x,p)=out(trunk(x))+Σ_d
+  code_{p,d}·(A·feats(x))_{d,k}, rank D≈16 → bypasses FiLM collapse BY CONSTRUCTION; per-pair payload ~4-10KB/600,
+  rate ~0.003-0.007 (temporal-delta+brotli; Cool-Chic 2403.11651 integer-latent+range-coder for bit-exact ONLY —
+  its per-image pyramid REJECTED, our pairs are coherent video). Optional secondary: ONE SHARED coarse latent grid
+  (LIIF 2012.09161 bilinear + SPADE 1903.07291 re-injection), NOT per-pair.
+
+### HONESTY: the $0 test is NECESSARY-NOT-SUFFICIENT (linear, pre-R, ideal-EDT targets, global ceiling is an upper
+bound no FiLM realizes) → it REDIRECTS the build, does NOT replace the realized-through-R + exact-eval authority.
+The annulus d_seg numbers above are $0 advisory (relative comparison), not achievable realized d_seg.
+
+### NEXT: 3-clean recursive review (online+OSS) on the v2 design → minimal GPU arm OrientedBasisMax (from-scratch)
++ DM3′-A (--lowrank-code-dict-rank 16), AWAITING operator steer → realized-through-R measure → byte-close → exact
+row below 0.19110. Deliverables: memo witness_v2_dm2_dm3_spatial_conditioning_design_20260629T173250Z.md + the $0
+tool + FEED-ir. Pointer 0.19110.
