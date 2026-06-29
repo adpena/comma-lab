@@ -5916,3 +5916,32 @@ untested = follow-up). GAP 2 (R-survival): PRE-R ⇒ the Lane residual is a LOWE
 queued $0 follow-up. Byte implication: pose is free (dual-use d_pose+d_seg); pay only the residual + a cheap
 static class-mask. Means≠ends: the byte-closed exact row <0.19110 is the only end. Memory:
 grok_pose_warp_dseg_test_20260629T181000Z. Pointer 0.19110.
+
+---
+
+## FEED-ja (2026-06-30T05:40Z) — GROK-TEST CONFIRMED+REFINED (a9ef42df, 2f83e0b9e): pose = FREE d_seg modulation; the warp is STRATIFIED BY DEPTH (matches FEED-it); GAP3 settled (store+warp, no INR for bulk); binding wall = Lane-survival
+### Measured (advisory/pre-R, calibration-closed via EON intrinsics fx=fy=910 cx=582 cy=437 h=1.22m; n96≈n200):
+| class | persist→warp | meaning |
+| Road | 0.0231→0.0196 (+15%, LOWER bound) | ground plane → pose-homography COMPRESSES it; pose↔d_seg coupling REAL, calibration CLOSES |
+| Lane | 0.58→0.59 (−1%) | thin/dashed SURVIVAL residual — warp can't help (the binding wall) |
+| Undriv/sky | 0.0024→0.0026 | plane-at-∞ → needs rotation-only KRK⁻¹ not ground-warp |
+| Movable | ~0.05; residual ≈0.0008 area~1-2% | independent motion, tiny, not warp-reducible |
+| MyCar/hood | 0.0031→0.0195 (−525%) | STATIC in image → needs IDENTITY not ground-warp |
+### THE REFINEMENT = STRATIFIED PER-CLASS WARP (exactly the FEED-it depth×rigidity gradient, now MEASURED):
+Road=ground-homography(pose) · hood=IDENTITY (rigid-to-camera) · sky=rotation-only KRK⁻¹ (depth→∞) · Lane=learned
+survival residual · Movables=small learned residual (~0.0008). A SINGLE global homography is wrong for the full
+image; the depth-stratified warp is right.
+### GAPS: GAP3 SETTLED — the BULK geometry needs NO trained INR; v2 = deterministic STORE-CANONICAL + per-class
+pose-warp (from the stored pose, FREE) + integer decode; the trained part is ONLY the Lane-survival + small
+movables residual. GAP1 measured (movables ~0.0008, per-object-rank untested→follow-up). GAP2 (R-survival) =
+the binding wall, F1 (ae868999) investigating through R NOW (the Lane 0.58 is a PRE-R lower bound).
+### POSE IS DUAL-USE (d_pose directly + d_seg via stratified warp) = FREE. Byte: v2 pays only the residual + a
+cheap static per-class warp-type mask. Consistent with FEED-iv sub-0.15 arithmetic.
+### NOT-PESSIMISTIC (FEED-ix): this is a STRONG POSITIVE — core confirmed (pose=free d_seg modulation, calibration
+closes), refined to the more-correct stratified model. Adversarially audited (calibration can't overfit — 3 global
+scalars on 100%-pose-driven variation; n96≈n200). Honesty: advisory/PRE-R/frozen-instance = necessary-not-
+sufficient; means (v2 redirect), not the end (byte-closed exact row <0.19110). pointer 0.19110.
+### V2 NOW: deterministic stratified store-canonical+per-class-pose-warp codec + DM2 oriented basis (free) +
+eikonal-SDF rate-half + the Lane-survival residual (the binding learned part) + integer decode. The INR shrinks to
+JUST the residual. Launching the rest of the play-fleet (F2 task-geometry-map / F3 movables-rank / F4 free-
+generator+irreducible-info / F5 synthesis-design), grok-informed.
