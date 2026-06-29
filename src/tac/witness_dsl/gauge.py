@@ -245,11 +245,27 @@ def default_cost_table() -> GaugeCostTable:
         WarpGauge.SCREW_TWIST: GaugeCost(
             counted_bytes=0, d_seg_through_R=None, conditioning=None,
             compliant=True, deterministic=True, measured=True,
-            provenance="a513372a FEED-jj 0bbc147b8/0b3e4b1be: screw/twist warp MEASURED-WIN; "
-                       "PRE-R ADVISORY d_seg≈0.01074(n96)/0.01538(n200) lower bound vs frozen "
-                       "SegNet (NOT through-R — through-R probe spawned, pending); ~0 marginal "
-                       "bytes (reuses stored 6-DOF pose sidecar + O(10) static descriptor "
-                       "params); LHP/plane-homography rasterizer FREE in inflate.py (rule-118)"),
+            provenance="FEED-jk (screw-warp-through-R) tools/measure_screw_warp_through_R.py: "
+                       "REAL through-R d_seg MEASURED (frozen CPU-torch SegNet on warped GT RGB "
+                       "through the contest R; NO-FAKE self-check SegNet(gt_f1)==lstars exact). "
+                       "BULK-warp term (Road+sky+hood, what this WARP gauge owns) d_seg≈0.00477(n96)/"
+                       "0.00512(n200); full screw through-R TOTAL≈0.0076(n96)/0.0080(n200) of which "
+                       "LANE≈0.0023 (flip≈0.39, binding wall → CARRIER/RESIDUAL) + MOVABLE≈0.00055 "
+                       "(→ MOVABLES). Warp HELPS Road ~8% over naive-persist but is LANE-unexplainable; "
+                       "bulk does NOT fit the 1.23e-3 budget (warp-of-PREVIOUS-FRAME upper bound, "
+                       "Road-inter-frame-jitter-dominated; clean stored-canonical-warp follow-up "
+                       "untested). The numeric d_seg_through_R RANKING field stays None on PURPOSE: "
+                       "fix_gauge ranks SCREW vs PER_CLASS_HOMOGRAPHY on S=100*d_seg+25*bytes/N, but "
+                       "the two warps share the same GENERALIZABLE bulk d_seg (a513372a: the per-class "
+                       "oracle's in-clip edge is 85% non-physical clip-overfit that does NOT "
+                       "generalize), so the BYTE axis must decide (SCREW 0 vs 6600) — feeding only "
+                       "SCREW's measured d_seg would mis-rank it worse purely for being measured. "
+                       "Both warp charts stay d_seg=None until measured on a generalization-adjusted "
+                       "axis; the measured numbers live here + in the FEED-jk memo + results JSON "
+                       "(no signal loss). ~0 marginal bytes (reuses stored 6-DOF pose + O(10) static "
+                       "descriptor); LHP/plane-homography rasterizer FREE in inflate.py (rule-118). "
+                       "prior PRE-R label lower bound 0.01074(n96) was a513372a FEED-jj 0bbc147b8 "
+                       "(across-pair; the cleaner WITHIN-PAIR pre-R label total is 0.00744(n96))"),
         WarpGauge.PER_CLASS_HOMOGRAPHY: GaugeCost(
             counted_bytes=6600, d_seg_through_R=None, conditioning=None,
             compliant=True, deterministic=True, measured=True,

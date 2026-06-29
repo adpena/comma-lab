@@ -113,10 +113,15 @@ def test_default_table_seeded_measured_cells_match_cited_feeds():
     assert t.lookup(MovablesGauge.STORE).counted_bytes == 2700
     assert t.lookup(MovablesGauge.STORE).d_seg_through_R == 0.0
     assert t.lookup(MovablesGauge.WARP_PREDICT).d_seg_through_R == 0.00082
-    # warp (a513372a FEED-jj): screw/twist MEASURED-WIN ~0 marginal bytes; per-class homography
-    # ≈6600 params (overfit). Both d_seg are PRE-R advisory → d_seg_through_R stays None.
+    # warp (FEED-jk screw-warp-through-R): screw/twist MEASURED-WIN ~0 marginal bytes. The REAL
+    # through-R bulk-warp d_seg is now MEASURED (≈0.0048 n96; full screw total 0.0076, lane
+    # 0.39 flip→CARRIER/RESIDUAL, movable→MOVABLES) and recorded in provenance, BUT the numeric
+    # d_seg_through_R ranking field stays None ON PURPOSE: SCREW and PER_CLASS_HOMOGRAPHY share the
+    # same generalizable bulk d_seg (the oracle edge is non-physical overfit), so fix_gauge must
+    # rank them on the BYTE axis (SCREW 0 < 6600) — feeding only SCREW's measured d_seg mis-ranks it.
     assert t.lookup(WarpGauge.SCREW_TWIST).counted_bytes == 0
     assert t.lookup(WarpGauge.SCREW_TWIST).d_seg_through_R is None
+    assert "FEED-jk" in t.lookup(WarpGauge.SCREW_TWIST).provenance
     assert t.lookup(WarpGauge.SCREW_TWIST).measured is True
     assert t.lookup(WarpGauge.PER_CLASS_HOMOGRAPHY).counted_bytes == 6600
     assert t.lookup(WarpGauge.PER_CLASS_HOMOGRAPHY).d_seg_through_R is None
