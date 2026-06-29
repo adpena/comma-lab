@@ -6131,3 +6131,28 @@ Gated G0→G5 on F1/F3/F4 + 3-clean review + EXPLICIT operator GPU steer.
 + the ONE binding number (trained through-R lane d_seg). Byte axis huge slack. Next decisive = the lane-residual
 TRAINING run (GPU, AWAITS operator steer); F1 shows SDF@384+wide-ramp+MSDF makes it very reachable. F2/F3/F4 running.
 means≠ends: design+sub-walls are MEANS; byte-closed exact row <0.19110 is the END. Pointer 0.19110.
+
+---
+
+## FEED-jc (2026-06-30T06:55Z) — F2 north-star LANDED (3683cb606): the grok reproduced from PURE Fisher geometry (3rd independent confirm); honest self-overturn; the rank-K−1 ceiling gem
+### Honest verdict: the north-star principle is NOT a new theorem
+The chain (input-pullback-Fisher G=JᵀFJ → high-curvature manifold = task min-sufficient-statistic; ker G =
+invariances; indirect-RD = estimate-then-compress = sufficient statistic) is ASSEMBLED-FROM-KNOWN: Tron 2022
+(canonical Riemannian foliations, arXiv:2203.00922) + Wolf-Ziv 1970 + Courtade-Weissman 2014 + task-IB. The CAUSAL
+terminus (sufficient statistic = labeled causal factors) is PROVABLY BLOCKED in general — Locatello 2019 (no
+unsupervised identifiability) + the rank ceiling + Roeder 2021 (recover only the task-relevant SUBSPACE up to a
+linear scramble). The CONDITIONAL version holds + the contest realizes it (the ego-pose IS the recoverable
+task-relevant subspace). F2 adversarially OVERTURNED its own "novel" claims (the discipline applied to positives).
+### THE GEM — the RANK-K−1 CEILING: output Fisher F=diag(p)−ppᵀ has rank K−1 → a K-class task resolves ≤K−1
+directions; SegNet K=5 ⇒ ≤4. Measured pose eff-dim = 4.08, sitting right on K−1=4 (density lifts to ~6). A
+FUNDAMENTAL information ceiling set by the class count; the ego-pose lives right at it.
+### $0 MEASUREMENT (tools/north_star_fisher_manifold_dim.py, gt_n96, 3.2s, no GPU — the genuine contribution):
+manifold 14% area / 82% Fisher mass; nullspace 86% / 18%. Per-class Fisher mass RE-DERIVES the flip structure with
+NO flip labels (Road most absolute, Lane highest density = unstable orbit). Manifold eff-dim 5.96; its motion
+R²=0.51 linear → 0.70 quadratic explained by the 6-DOF ego-pose (IN-SAMPLE); Road 0.53 ≫ Lane 0.36 = the 3RD
+INDEPENDENT reproduction of the grok depth-stratification (after the warp-test 2f83e0b9e + the co-location
+b0bee924e). Off-pose residual ~21-dim = the only learned bytes → QUANTIFIES the SDS-TSC residual budget.
+### Codec implication: store the manifold's generative factors (pose, ~70% of the manifold motion, free/dual-use)
++ the ~21-dim off-pose residual; DISCARD the 86%-area nullspace. = the SDS-TSC arithmetic, residual now quantified.
+### Validate: held-out frames (the 0.70 is in-sample) + the through-R version (GAP2 = the binding wall, F1 done).
+Advisory [macOS-MLX]; pointer 0.19110 (a means — sharpens WHAT to store + WHY; not an exact row). F3/F4 running.
