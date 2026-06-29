@@ -4838,3 +4838,52 @@ already gives effR 10.89 > 8 → ①+② probably close the gap WITHOUT the expe
 
 DM2 (lane operator) + DM3 (penalty flow) still landing → synthesize all 3 → FiLM-fix v2 spec → build → review
 → train. Pointer 0.19110.
+
+---
+
+## FEED-hu (2026-06-29T16:45Z) — DM3 penalty-flow IN + POSE RE-CORRECTION (operator: Quantizr sidecar DOES work) + LANE-GAP (operator) + "fix ALL findings" v2 mandate
+
+### ⚠️ POSE RE-CORRECTION (operator pushback — they are RIGHT; FEED-hs over-corrected)
+FEED-hs said the stored sidecar "doesn't lower d_pose." Narrowly true (raw bytes aren't read by PoseNet) but
+I WRONGLY implied the sidecar APPROACH fails. The **Quantizr methodology = store 6 pose targets (cheap bytes)
++ CONDITION the render (pose-FiLM) to hit them** → DOES lower realized d_pose (changes the rendered frame to
+match the PoseNet target). Proven upstream; = our task #84 pose-FiLM module. So pose IS a real, cheap, working
+lever: d_pose 0.094→~0.018 via stored-targets + pose-FiLM conditioning. RE-OPEN: wire/strengthen pose-FiLM #84
+into the witness render (Quantizr-style). Corrects FEED-hs's pessimism.
+
+### LANE-GAP (operator: "gaps between lane markers not recognized — part of the lane-prior work")
+The dashed-lane CONTINUITY problem, with a MEASURED culprit (DM3): the **length (Chan-Vese perimeter) penalty
+ERASES high-perimeter thin structures → actively DELETES the dashed lanes** (genuine conflict with lane-thin).
+Lane-gap recognition = compose THREE: (1) DM2 openpilot lane-POLYNOMIAL-CONTINUITY prior (the full lane curve
+THROUGH the gaps → correct dash placement), (2) the FIXED LEVER-B thin-lane hinge (C1 — currently dead), (3)
+DM3 fix: length ≪ thin AND class-restricted OFF the lane class (stop erasing dashes). DM2 (running) derives the
+gap-completion operator.
+
+### DM3 (penalty flow + curriculum) — deep-math derivation [advisory]
+- **ROOT-CAUSE FIX (highest leverage): PER-GROUP gradient clipping** (seg/pose floored ≥70%, aux capped) —
+  extinguishes the clip-hijack CLASS (Lemma 4), not just the rank-floor term.
+- **Well-conditioned rank flow:** `P★ = sg(‖Mc‖_F)·β·softplus((t−PR)/β)` — detached-norm cancels the degree−1
+  1/‖M‖ blowup (bounded O(1) grad), softplus de-kinks the active set, SELF-GATES at init (∇=0 at code≡0) →
+  safe to run prophylactically. (NOTE: every normalized-spectrum measure — entropy, PR, stable-rank — is
+  degree-0 → same blowup; the fix is the FLOW (detached norm), not the measure. Pairs with DM1's spectral-
+  entropy choice.) KKT: t ≈ natural PR (~3.3-4) = complementary-slack floor, never trades seg in steady state.
+- **Schedule (PREVENT-early/REFINE-late):** rank-floor → CE (prophylactic, now safe); eikonal/lane-edge → tau;
+  msal/lane-thin/length → l7; warm-in linear ~50-100ep.
+- **Variational:** length ≪ thin + class-restricted (Chan-Vese erases dashes — the lane-gap culprit); **FUSE
+  the 3 margin hinges into ONE saliency-reweighted seg loss** (single realized forward — fixes M3 3× waste).
+  Ordering: seg(≥70%) ≫ {msal,lane} > {rank,eik} > thin > length ≫ pose.
+- **End-state:** flat-LR, anneal-FROZEN, R-in-loop Muon tail ≥3·τ_EMA (≈1000·accum/P steps) so the EMA shadow
+  equilibrates to the sharpened through-R fixed point (same class as the old 0.505 EMA-lag artifact); tune
+  margin_target ≳ uint8 per-LSB logit sensitivity for R-survival.
+
+### "FIX ALL FINDINGS REGARDLESS OF SEVERITY" (operator) → the comprehensive FiLM-fix v2 BUILD spec (fires on DM2)
+ONE v2 build assembling DM1+DM2+DM3 + ALL review findings + pose + lane-gap:
+- CONDITIONING (DM1): REMOVE A1/A2 (capacity); ADD Stiefel-orthonormal film.weight (byte-free, +6.5× effR
+  MEASURED) + code spectral-entropy penalty, margin-projected onto Road↔Lane (~8-dim lane orbit).
+- FLOW (DM3): per-group clip; P★ detached-norm+softplus; PREVENT/REFINE schedule; fuse 3 hinges→1; Muon EMA tail.
+- LANE (DM2-pending + operator): polynomial-continuity gap-completion + anisotropic-IPM + length-declash + C1 fix.
+- POSE: wire pose-FiLM #84 (Quantizr stored-targets + conditioning) → d_pose 0.094→0.018.
+- CODE BUGS (all): C1 lane-gate flip (R2b+R2c CRITICAL); R2a-MED-1 resume arch-flag persist+assert; R2c-M1
+  torch inflate port/guard; LOWs (forward-proliferation→route through 1 numpy ref, getattr defaults, ON-path
+  round-trip test).
+→ build → review (3 clean) → train. DM2 = the last piece. Pointer 0.19110.
