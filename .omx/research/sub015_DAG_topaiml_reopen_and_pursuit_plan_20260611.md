@@ -5011,3 +5011,34 @@ SWAN whiten-tail (SinkGD). 9. [campaign] coalition lever-selection (SPIRAL).
 DM1 Stiefel+spectral-entropy + DM2 IPM-poly-annulus lane (dash_gate OFF) + DM3 per-group-flow + the 9 schedule
 fold-ins + pose-FiLM #84 + ALL code fixes (C1/resume-flag/torch-inflate/LOWs). GR-research (ad70677) runs
 parallel as the unifying action/field-equation theory. Pointer 0.19110.
+
+---
+
+## FEED-hz (2026-06-29T18:20Z) — CORRECTIONS (operator-caught): SPIRAL paper-ID collision + optimizer A/B fork + "build FIRED" overstatement walked back
+
+### Correction 1 — SPIRAL identity (operator: "SPIRAL is about optimizers / not Adam-or-Muon / hand-tuned SGD")
+2606.23595 = "SPIRAL: Learning to SEARCH AND AGGREGATE" (Hamid/Sadigh/Finn/Goodman, Stanford) — a TEST-TIME
+search+aggregate RL framework. My reviewer (a5d6f) CONFLATED it with the IDENTICALLY-NAMED 2506.24119
+("SPIRAL: Self-Play on Zero-Sum Games") — real arXiv name collision (2506 vs 2606). My "self-play / coalition
+-select" takeaway described the WRONG paper. Net verdict UNCHANGED (test-time search+aggregate ALSO does not
+transfer to a single deterministic witness — no in-runtime ensembling), but the characterization was wrong.
+
+### Correction 2 — the optimizer substance the operator remembered = SinkGD (2502.06742), NOT SPIRAL
+"Don't use Adam/Muon, use a hand-tuned [normalized] SGD" IS the SinkGD/SWAN thesis: replace Adam's adaptive
+per-coordinate state with gradient normalization (Sinkhorn row/col norm; SWAN=whitening) — near-state-free,
+matches Adam. Already our #1 fold-in (per-group normalize-to-constant-norm + per-group LR). Operator instinct
+correct, mis-attributed to SPIRAL.
+
+### NEW v2 build item — OPTIMIZER A/B (deep-math grounded, cheap)
+Adam/Muon/SinkGD = steepest-descent under {diagonal / spectral / doubly-stochastic} norms. Our disease =
+FiLM conditioning RANK-COLLAPSE; SinkGD's row/col normalization acts on exactly that matrix structure each
+step → targets the failure mode. ADD to v2: a `--optimizer {adamw,sinkgd,muon}` option + DSL lever, A/B arms
+{AdamW(current) · SinkGD-normalized-SGD · Muon-tail · SinkGD+Muon}. Synergy: SinkGD normalization is a
+SECOND anti-collapse force alongside DM1 Stiefel + spectral-entropy (3 independent conditioners → A/B which
+combination is non-redundant, per the coalition/marginal-set framing = the one real SPIRAL-family inspire).
+
+### Correction 3 (telemetry accuracy, self-caught) — FEED-hy "v2 BUILD FIRED" was PREMATURE
+No build subagent was dispatched (paper notifications interrupted). The comprehensive v2 build is TEED, not
+fired. It fires AFTER: (a) round-2 recursive review clears (3 reviewers in-flight), (b) the 4 research
+subagents land (GR-action ad70677 + 3 lit-hunts), (c) optimizer A/B folded into the spec. No GPU training
+without operator steer regardless. Pointer 0.19110. NO-FAKE: "fired" claim retracted.
