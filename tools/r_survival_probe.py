@@ -379,6 +379,469 @@ def heat_vs_interp_lane_survival(lstars: np.ndarray, sigmas: list[float]) -> dic
     return out
 
 
+# --------------------------------------------------------------------------- #
+# MSDF (multi-channel signed distance field; Chlumsky 2018) — LANE corner carrier.
+#
+# A SINGLE SDF rounds sharp corners (dash-ends): the iso-line near a convex corner
+# follows the distance-to-the-corner-VERTEX cone, not the sharp edge-line
+# intersection.  MSDF stores 3 channels, each the signed PSEUDO-distance (distance to
+# the edge's infinite SUPPORTING LINE, not the clamped segment) of a 2-colored SUBSET
+# of the contour edges, arranged so the two edges meeting at a sharp corner land in
+# DIFFERENT channels; median(R,G,B) then selects the sharp intersection instead of the
+# rounded cone.  This is a faithful port of msdfgen's ``edgeColoringSimple`` +
+# ``LinearSegment::signedDistance`` + ``distanceToPseudoDistance`` (Chlumsky, CGF
+# 37(1) 2018; OSS github.com/Chlumsky/msdfgen).  Validated against a synthetic sharp
+# corner (``validate_msdf_synthetic``) before any lane number is trusted (NO FAKE).
+#
+# rule-118: the MSDF GENERATION (edge coloring + per-channel pseudo-distance + median)
+# is a FREE deterministic geometric algorithm legal to expand inside inflate.py; the
+# stored lane CONTOUR is COUNTED.  The SAME contour is what single-SDF stores, so the
+# 3-channel decomposition adds 0 COUNTED bytes IF the witness stores the vector contour
+# (channels generated at decode); it costs ~3x the lane channel only IF the witness
+# stores rendered fields (see memo byte-cost note).
+# --------------------------------------------------------------------------- #
+
+_RED, _GREEN, _BLUE, _WHITE, _BLACK = 1, 2, 4, 7, 0  # msdfgen EdgeColor bit flags
+
+
+def _switch_color(color: int, seed: int, banned: int = _BLACK) -> tuple[int, int]:
+    """Port of msdfgen ``switchColor`` (coloring/EdgeColoringSimple.cpp)."""
+
+    combined = color & banned
+    if combined in (_RED, _GREEN, _BLUE):
+        return combined ^ _WHITE, seed
+    if color in (_BLACK, _WHITE):
+        start = (6, 5, 3)  # CYAN(G,B), MAGENTA(R,B), YELLOW(R,G)
+        return start[seed % 3], seed // 3
+    shifted = color << (1 + (seed & 1))
+    return (shifted | (shifted >> 3)) & _WHITE, seed >> 1
+
+
+def _poly_edge_dirs(verts: np.ndarray) -> np.ndarray:
+    """Unit direction of edge i = verts[i]->verts[(i+1)%V]. ``verts`` (V,2)."""
+
+    V = len(verts)
+    d = verts[(np.arange(V) + 1) % V] - verts
+    n = np.hypot(d[:, 0], d[:, 1]) + 1e-12
+    return d / n[:, None]
+
+
+def _polygon_corner_indices(verts: np.ndarray, angle_threshold_deg: float) -> list[int]:
+    """Edge indices i whose preceding junction (edge i-1 -> edge i) is a sharp corner.
+
+    msdfgen ``isCorner``: dot(prevDir, dir) <= 0  OR  |cross(prevDir, dir)| > sin(theta).
+    """
+
+    V = len(verts)
+    if V < 2:
+        return []
+    dirs = _poly_edge_dirs(verts)
+    cross_thr = float(np.sin(np.deg2rad(angle_threshold_deg)))
+    corners = []
+    for i in range(V):
+        a = dirs[(i - 1) % V]
+        b = dirs[i]
+        dot = float(a @ b)
+        crs = float(a[0] * b[1] - a[1] * b[0])
+        if dot <= 0.0 or abs(crs) > cross_thr:
+            corners.append(i)
+    return corners
+
+
+def _edge_coloring_simple(verts: np.ndarray, angle_threshold_deg: float = 3.0, seed: int = 0) -> list[int]:
+    """2-color a closed polygon's edges so sharp-corner edges differ in one channel.
+
+    Faithful port of msdfgen ``edgeColoringSimple`` (multi-corner branch; teardrop and
+    smooth special cases handled).  Returns per-edge color (len V; edge i =
+    verts[i]->verts[(i+1)%V]).
+    """
+
+    V = len(verts)
+    if V < 2:
+        return [_WHITE] * V
+    corners = _polygon_corner_indices(verts, angle_threshold_deg)
+    colors = [_WHITE] * V
+    if not corners:
+        return colors  # fully smooth contour -> no corners to sharpen (single color set)
+    if len(corners) == 1:
+        c = corners[0]
+        cols3 = []
+        col = _WHITE
+        for _ in range(3):
+            col, seed = _switch_color(col, seed)
+            cols3.append(col)
+        for j in range(V):
+            colors[(c + j) % V] = cols3[min(2, (3 * j) // max(1, V))]
+        return colors
+    spline = 0
+    start = corners[0]
+    color, seed = _switch_color(_WHITE, seed)
+    initial = color
+    m = len(corners)
+    for i in range(V):
+        idx = (start + i) % V
+        if spline + 1 < m and corners[spline + 1] == idx:
+            spline += 1
+            banned = initial if spline == m - 1 else _BLACK
+            color, seed = _switch_color(color, seed, banned)
+        colors[idx] = color
+    return colors
+
+
+def _lane_contours(mask_bool: np.ndarray, approx_eps: float = 1.0) -> list[np.ndarray]:
+    """Lane connected-component polygons via cv2 (vertices in (x,y)=(col,row) float)."""
+
+    import cv2
+
+    m = (mask_bool.astype(np.uint8)) * 255
+    cnts, _ = cv2.findContours(m, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    polys = []
+    for c in cnts:
+        if len(c) < 3:
+            continue
+        ap = cv2.approxPolyDP(c, float(approx_eps), True).reshape(-1, 2).astype(np.float64)
+        if len(ap) >= 2:
+            polys.append(ap)
+    return polys
+
+
+def _segment_signed_distances(px: np.ndarray, py: np.ndarray, A: np.ndarray, B: np.ndarray):
+    """Vectorized msdfgen ``LinearSegment::signedDistance`` + ``distanceToPseudoDistance``.
+
+    Returns ``(true_signed (P,), value (P,))``:
+      * ``true_signed`` = the clamped signed distance (perpendicular within the segment,
+        else signed endpoint distance).  Selection of the NEAREST edge is by |true_signed|.
+      * ``value`` = the pseudo-distance-aware signed distance written to the texture for the
+        winner: identical to ``true_signed`` EXCEPT where the perpendicular foot falls
+        BEYOND the segment (near a corner) AND the line-extension distance is smaller in
+        magnitude, in which case it is the signed distance to the INFINITE supporting line
+        (this is the corner-extension that, via median-of-3, recovers sharp corners).
+    Single sign convention: ``cross(aq, ab)`` (interior + for one winding); a global flip
+    aligns inside=+ (polygon-winding ambiguity resolved empirically by the caller).
+    """
+
+    abx = B[0] - A[0]
+    aby = B[1] - A[1]
+    L2 = abx * abx + aby * aby + 1e-12
+    L = np.sqrt(L2)
+    aqx = px - A[0]
+    aqy = py - A[1]
+    param = (aqx * abx + aqy * aby) / L2
+    c = aqx * aby - aqy * abx          # cross(aq, ab)
+    ortho_line = c / L                  # signed orthogonal distance to the infinite line
+    sgn = np.sign(c)
+    sgn[sgn == 0] = 1.0
+    ex = np.where(param > 0.5, B[0], A[0])
+    ey = np.where(param > 0.5, B[1], A[1])
+    endp = np.hypot(px - ex, py - ey)
+    inside_seg = (param > 0.0) & (param < 1.0)
+    use_ortho = inside_seg & (np.abs(ortho_line) < endp)
+    true_signed = np.where(use_ortho, ortho_line, sgn * endp)
+    # msdfgen SignedDistance.dot tie-breaker: 0 within segment, else |dot(ab_norm, eq_norm)|
+    # (how ALIGNED the point->endpoint direction is with the edge; ties at a shared corner
+    # vertex are resolved toward the more-perpendicular edge -> the geometrically-correct
+    # sharp extension, killing the convex-corner false-inside cone).
+    dot = np.where(
+        use_ortho,
+        0.0,
+        np.abs(abx * (ex - px) + aby * (ey - py)) / (L * endp + 1e-12),
+    )
+    value = true_signed.copy()
+    # distanceToPseudoDistance near point0 (foot before A): replace with infinite-line dist.
+    ts0 = (aqx * abx + aqy * aby) / L
+    repl0 = (param < 0.0) & (ts0 < 0.0) & (np.abs(ortho_line) <= np.abs(true_signed))
+    value = np.where(repl0, ortho_line, value)
+    # near point1 (foot beyond B).
+    aq1x = px - B[0]
+    aq1y = py - B[1]
+    c1 = aq1x * aby - aq1y * abx       # cross(aq1, ab)
+    pseudo1 = c1 / L
+    ts1 = (aq1x * abx + aq1y * aby) / L
+    repl1 = (param > 1.0) & (ts1 > 0.0) & (np.abs(pseudo1) <= np.abs(true_signed))
+    value = np.where(repl1, pseudo1, value)
+    return true_signed, value, dot
+
+
+def _channel_pseudo_field(px: np.ndarray, py: np.ndarray, edges_AB: list, chunk: int = 4096) -> np.ndarray:
+    """Per-point pseudo-aware value of the nearest channel edge (msdfgen SignedDistance order).
+
+    Selection minimizes ``(|true_signed|, dot)`` lexicographically: smaller |distance| wins;
+    on a tie (e.g. two edges sharing a corner vertex) the smaller ``dot`` (more perpendicular)
+    wins -> the geometrically-correct sharp edge.
+    """
+
+    P = px.shape[0]
+    out = np.zeros(P, np.float64)
+    eps = 1e-6
+    for s in range(0, P, chunk):
+        e = s + chunk
+        bx, by = px[s:e], py[s:e]
+        best_abs = np.full(bx.shape[0], np.inf)
+        best_dot = np.full(bx.shape[0], np.inf)
+        best_val = np.zeros(bx.shape[0])
+        for (A, B) in edges_AB:
+            ts, val, dot = _segment_signed_distances(bx, by, A, B)
+            a = np.abs(ts)
+            better = (a < best_abs - eps) | ((a <= best_abs + eps) & (dot < best_dot))
+            best_abs = np.where(better, a, best_abs)
+            best_dot = np.where(better, dot, best_dot)
+            best_val = np.where(better, val, best_val)
+        out[s:e] = best_val
+    return out
+
+
+def msdf_lane_channels(lab_hw: np.ndarray, band_px: int, approx_eps: float = 1.0,
+                       angle_threshold_deg: float = 3.0, lane_cls: int = 1):
+    """3-channel lane MSDF pseudo-distance fields (3,H,W), deep-negative outside a band.
+
+    ``lab_hw`` is an integer label map at any resolution; the lane mask is ``==lane_cls``.
+    The 3 channels are sign-aligned so inside-lane is + (global flip resolved empirically).
+    Returns ``(chans (3,H,W) float, stats dict)``.
+    """
+
+    from scipy import ndimage
+
+    mask = lab_hw == lane_cls
+    H, W = mask.shape
+    chans = np.full((3, H, W), -1e4, np.float32)
+    stats = {"n_polys": 0, "n_edges": 0, "n_corners": 0, "band_px": 0}
+    if not mask.any():
+        return chans, stats
+    polys = _lane_contours(mask, approx_eps)
+    edges_by_ch = {1: [], 2: [], 4: []}
+    for verts in polys:
+        cols = _edge_coloring_simple(verts, angle_threshold_deg)
+        stats["n_polys"] += 1
+        stats["n_corners"] += len(_polygon_corner_indices(verts, angle_threshold_deg))
+        Vn = len(verts)
+        for i in range(Vn):
+            A = verts[i]
+            B = verts[(i + 1) % Vn]
+            col = cols[i]
+            stats["n_edges"] += 1
+            for ch in (1, 2, 4):
+                if col & ch:
+                    edges_by_ch[ch].append((A, B))
+    band = ndimage.binary_dilation(mask, iterations=int(band_px))
+    ys, xs = np.nonzero(band)
+    stats["band_px"] = int(ys.shape[0])
+    px = xs.astype(np.float64)
+    py = ys.astype(np.float64)
+    order = [1, 2, 4]
+    vals = []
+    for ch in order:
+        eAB = edges_by_ch[ch]
+        if eAB:
+            vals.append(_channel_pseudo_field(px, py, eAB))
+        else:
+            vals.append(None)
+    # Fill any empty channel with the elementwise mean of non-empty channels
+    # (graceful degradation -> median ~ single-SDF; biases AGAINST an MSDF win).
+    present = [v for v in vals if v is not None]
+    if not present:
+        return chans, stats
+    fallback = np.mean(np.stack(present), axis=0)
+    vals = [v if v is not None else fallback for v in vals]
+    band_stack = np.stack(vals)  # (3, P)
+    med = np.median(band_stack, axis=0)
+    inside = mask[ys, xs]
+    if float(np.mean((med > 0) == inside)) < 0.5:
+        band_stack = -band_stack
+    for j in range(3):
+        chans[j, ys, xs] = band_stack[j].astype(np.float32)
+    return chans, stats
+
+
+def _argmax_through_R_sdf(lstar_384: np.ndarray, render_hw, slope: float) -> np.ndarray:
+    """Single-SDF baseline: argmax_k R(carrier_sdf_k). Returns recovered (384,512)."""
+
+    C = carrier_sdf(lstar_384, render_hw, slope)
+    R = apply_R(C, render_hw)
+    return np.argmax(R, axis=0).astype(np.int64)
+
+
+def _argmax_through_R_msdf(lstar_384: np.ndarray, render_hw, slope: float, band_px: int,
+                           approx_eps: float, angle_threshold_deg: float) -> np.ndarray:
+    """MSDF lane carrier: non-lane single-SDF + 3 lane MSDF channels, median-of-3 AFTER R.
+
+    The 3 lane channels are built at 384 (the geometry res, matching carrier_sdf), bicubic
+    -resized to render res, ramped, pushed through R, then median-combined at decode -> the
+    literal 3-channel decode order.  argmax over [road, lane_msdf, undriv, movable, mycar].
+    """
+
+    rh, rw = render_hw
+    sdf5 = carrier_sdf(lstar_384, render_hw, slope)  # (5,rh,rw)
+    chans384, _ = msdf_lane_channels(lstar_384, band_px, approx_eps, angle_threshold_deg)
+    if (rh, rw) != (SEG_H, SEG_W):
+        chans_r = _resize(chans384, (rh, rw), "bicubic")
+    else:
+        chans_r = chans384
+    lane3 = np.clip(128.0 + slope * chans_r, 0.0, 255.0).astype(np.float32)  # (3,rh,rw)
+    carrier7 = np.concatenate([sdf5[0:1], lane3, sdf5[2:5]], axis=0)  # (7,rh,rw)
+    R7 = apply_R(carrier7, render_hw)  # (7,384,512)
+    lane_field = np.median(R7[1:4], axis=0)
+    fields5 = np.stack([R7[0], lane_field, R7[4], R7[5], R7[6]], axis=0)
+    return np.argmax(fields5, axis=0).astype(np.int64)
+
+
+def measure_msdf(lstars: np.ndarray, render_hs: list[int], slope: float, band_px: int,
+                 approx_eps: float = 1.0, angle_threshold_deg: float = 3.0) -> dict:
+    """A/B/C lane-survival: hard vs single-SDF vs MSDF through R, at each render res."""
+
+    from tac.boundary_math.bitmask_dseg import d_seg_reference
+
+    def _hw(h):
+        return (CAMERA_H, CAMERA_W) if h == CAMERA_H else (h, int(round(h * SEG_W / SEG_H)))
+
+    out = {}
+    N = lstars.shape[0]
+    for h in render_hs:
+        hw = _hw(h)
+        rows = {"hard": {"lane": [], "tot": []}, "sdf": {"lane": [], "tot": []},
+                "msdf": {"lane": [], "tot": []}}
+        for i in range(N):
+            lstar = lstars[i]
+            lane_gt = lstar == 1
+            n_lane = int(lane_gt.sum())
+            # hard
+            rh = np.argmax(apply_R(carrier_hard(lstar, hw), hw), axis=0).astype(np.int64)
+            # single-sdf
+            rs = _argmax_through_R_sdf(lstar, hw, slope)
+            # msdf
+            rm = _argmax_through_R_msdf(lstar, hw, slope, band_px, approx_eps, angle_threshold_deg)
+            for tag, rec in (("hard", rh), ("sdf", rs), ("msdf", rm)):
+                rows[tag]["tot"].append(d_seg_reference(rec, lstar))
+                if n_lane:
+                    rows[tag]["lane"].append(float(np.count_nonzero(rec[lane_gt] != 1)) / n_lane)
+        out[h] = {tag: {"lane_flip": float(np.mean(v["lane"])) if v["lane"] else float("nan"),
+                        "total_dseg": float(np.mean(v["tot"]))} for tag, v in rows.items()}
+    return out
+
+
+def decompose_single_sdf_residual(lstars: np.ndarray, render_h: int, slope: float,
+                                  corner_radius_px: float = 3.0, angle_threshold_deg: float = 30.0,
+                                  approx_eps: float = 1.0) -> dict:
+    """Classify single-SDF lane flips as corner-region (MSDF-addressable) vs thin (Nyquist).
+
+    corner-region: within ``corner_radius_px`` (at 384) of a sharp lane-contour corner.
+    thin: lane local width * (render_h/384) <= 2px (sub-Nyquist at the witness render res).
+    """
+
+    from scipy import ndimage
+
+    hw = (CAMERA_H, CAMERA_W) if render_h == CAMERA_H else (render_h, int(round(render_h * SEG_W / SEG_H)))
+    agg = {"n_flip": 0, "corner": 0, "thin": 0, "both": 0, "neither": 0, "n_lane_corners": 0}
+    scale = render_h / float(SEG_H)
+    for i in range(lstars.shape[0]):
+        lstar = lstars[i]
+        lane_gt = lstar == 1
+        if not lane_gt.any():
+            continue
+        rec = _argmax_through_R_sdf(lstar, hw, slope)
+        flip = lane_gt & (rec != 1)
+        if not flip.any():
+            continue
+        # corner map: distance to nearest sharp lane corner vertex
+        polys = _lane_contours(lane_gt, approx_eps)
+        corner_xy = []
+        for verts in polys:
+            for idx in _polygon_corner_indices(verts, angle_threshold_deg):
+                corner_xy.append(verts[idx])
+        agg["n_lane_corners"] += len(corner_xy)
+        near_corner = np.zeros(lane_gt.shape, bool)
+        if corner_xy:
+            cmask = np.zeros(lane_gt.shape, bool)
+            for (cx, cy) in corner_xy:
+                ix, iy = int(round(cx)), int(round(cy))
+                if 0 <= iy < lane_gt.shape[0] and 0 <= ix < lane_gt.shape[1]:
+                    cmask[iy, ix] = True
+            dist = ndimage.distance_transform_edt(~cmask)
+            near_corner = dist <= corner_radius_px
+        width = 2.0 * ndimage.distance_transform_edt(lane_gt)
+        thin = (width * scale) <= 2.0
+        fc = near_corner[flip]
+        ft = thin[flip]
+        agg["n_flip"] += int(flip.sum())
+        agg["corner"] += int(np.count_nonzero(fc & ~ft))
+        agg["thin"] += int(np.count_nonzero(ft & ~fc))
+        agg["both"] += int(np.count_nonzero(fc & ft))
+        agg["neither"] += int(np.count_nonzero(~fc & ~ft))
+    nf = max(1, agg["n_flip"])
+    agg["frac_corner_only"] = agg["corner"] / nf
+    agg["frac_thin_only"] = agg["thin"] / nf
+    agg["frac_both"] = agg["both"] / nf
+    agg["frac_neither"] = agg["neither"] / nf
+    agg["frac_corner_any"] = (agg["corner"] + agg["both"]) / nf
+    agg["frac_thin_any"] = (agg["thin"] + agg["both"]) / nf
+    return agg
+
+
+def validate_msdf_synthetic(canvas: int = 256, down: int = 24, corner_band: int = 4) -> dict:
+    """NO-FAKE proof the MSDF impl actually recovers a SHARP corner single-SDF rounds.
+
+    Draws sharp convex shapes (rotated square 90-deg corners + thin triangle ~25-deg),
+    coarsens geometry to ``down`` px then magnifies back to ``canvas`` (the corner-rounding
+    regime), thresholds, and compares corner-region error of single-SDF vs MSDF.  PASS iff
+    MSDF corner-region error < single-SDF for every shape.
+    """
+
+    import cv2
+    from scipy import ndimage
+
+    def _shape(name):
+        img = np.zeros((canvas, canvas), np.uint8)
+        c = canvas // 2
+        if name == "square":
+            r = canvas // 4
+            theta = np.deg2rad(30.0)
+            R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+            pts = (np.array([[-r, -r], [r, -r], [r, r], [-r, r]], np.float64) @ R.T + c).astype(np.int32)
+        else:  # sharp triangle
+            r = canvas // 3
+            pts = np.array([[c, c - r], [c - r // 3, c + r], [c + r // 3, c + r]], np.int32)
+        cv2.fillPoly(img, [pts], 1)
+        return img.astype(bool), pts.astype(np.float64)
+
+    res = {}
+    ok_all = True
+    for name in ("square", "triangle"):
+        mask, pts = _shape(name)
+        lab = mask.astype(np.int64)  # 0 outside, 1 inside (lane_cls=1)
+        # single-SDF (1-Lipschitz) signed field, + inside
+        phi = ndimage.distance_transform_edt(mask) - ndimage.distance_transform_edt(~mask)
+        phi = phi.astype(np.float32)[None]  # (1,H,W)
+        # MSDF channels (lane_cls=1) on full image (band covers all)
+        chans, st = msdf_lane_channels(lab, band_px=max(canvas, 8), approx_eps=0.8, angle_threshold_deg=3.0)
+
+        def _coarse_then_magnify(field_khw):
+            t = _resize(field_khw, (down, down), "bicubic")
+            t = _resize(t, (canvas, canvas), "bicubic")
+            return t
+
+        recon_single = _coarse_then_magnify(phi)[0] > 0.0
+        chans_cm = _coarse_then_magnify(chans)
+        recon_msdf = np.median(chans_cm, axis=0) > 0.0
+        # corner region = within corner_band px of any true polygon vertex
+        cm = np.zeros(mask.shape, bool)
+        for (cx, cy) in pts:
+            ix, iy = int(round(cx)), int(round(cy))
+            if 0 <= iy < canvas and 0 <= ix < canvas:
+                cm[iy, ix] = True
+        cregion = ndimage.distance_transform_edt(~cm) <= corner_band
+        err_single = float(np.mean(recon_single[cregion] != mask[cregion]))
+        err_msdf = float(np.mean(recon_msdf[cregion] != mask[cregion]))
+        iou_single = float((recon_single & mask).sum() / max(1, (recon_single | mask).sum()))
+        iou_msdf = float((recon_msdf & mask).sum() / max(1, (recon_msdf | mask).sum()))
+        passed = err_msdf < err_single
+        ok_all = ok_all and passed
+        res[name] = {"corner_err_single": err_single, "corner_err_msdf": err_msdf,
+                     "iou_single": iou_single, "iou_msdf": iou_msdf,
+                     "n_corners_detected": st["n_corners"], "n_edges": st["n_edges"],
+                     "PASS": passed}
+    res["ALL_PASS"] = bool(ok_all)
+    return res
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="R-survival physics probe (advisory [macOS research-signal]).")
     ap.add_argument("--gt-cache", default="experiments/results/mlx_fleet_gt_cache/gt_n96.npz")
@@ -391,6 +854,18 @@ def main(argv=None):
     ap.add_argument("--out", default=None, help="JSON output path.")
     ap.add_argument("--scale-space", action="store_true",
                     help="Also run scale-space diagnostics (R kernel sigma + heat-vs-interp).")
+    ap.add_argument("--msdf", action="store_true",
+                    help="Run the MSDF lane-carrier A/B/C (hard vs single-SDF vs MSDF) + "
+                         "corner-vs-thin residual decomposition + synthetic-corner validation.")
+    ap.add_argument("--msdf-render-res", default="192,320",
+                    help="Render heights for the MSDF A/B/C (F1 recipe: MSDF at render>=320).")
+    ap.add_argument("--msdf-slope", type=float, default=48.0,
+                    help="SDF/MSDF ramp slope (per px). 48 -> half-width ~2.6px (F1 best @192).")
+    ap.add_argument("--band-px", type=int, default=12,
+                    help="Lane MSDF band dilation (px); must exceed the ramp half-width.")
+    ap.add_argument("--approx-eps", type=float, default=1.0, help="cv2.approxPolyDP epsilon (px).")
+    ap.add_argument("--corner-radius-px", type=float, default=3.0,
+                    help="Corner-region radius for the residual decomposition (at 384).")
     args = ap.parse_args(argv)
 
     d = np.load(args.gt_cache)
@@ -456,9 +931,52 @@ def main(argv=None):
         for s, v in heat["heat"].items():
             print(f"  {s}: hard {v['hard_lane_flip']*100:.2f}%  sdf {v['sdf_lane_flip']*100:.2f}%", flush=True)
 
+    msdf_block = None
+    if args.msdf:
+        msdf_render_hs = [int(h) for h in args.msdf_render_res.split(",")]
+        print("\n[r_survival] === MSDF synthetic-corner VALIDATION (NO-FAKE impl proof) ===", flush=True)
+        val = validate_msdf_synthetic()
+        for shp in ("square", "triangle"):
+            v = val[shp]
+            print(f"  {shp:<9}: corner_err single {v['corner_err_single']*100:.2f}%  "
+                  f"msdf {v['corner_err_msdf']*100:.2f}%  (iou {v['iou_single']:.3f}->{v['iou_msdf']:.3f})  "
+                  f"corners={v['n_corners_detected']}  {'PASS' if v['PASS'] else 'FAIL'}", flush=True)
+        print(f"  ALL_PASS={val['ALL_PASS']}", flush=True)
+
+        print(f"\n[r_survival] === MSDF LANE A/B/C (n={lstars.shape[0]}, slope={args.msdf_slope:g}, "
+              f"band={args.band_px}px) ===", flush=True)
+        abc = measure_msdf(lstars, msdf_render_hs, args.msdf_slope, args.band_px, args.approx_eps)
+        print(f"{'render':>7}  {'hard lane%':>11}{'sdf lane%':>11}{'msdf lane%':>11}  "
+              f"{'hard tot':>10}{'sdf tot':>10}{'msdf tot':>10}", flush=True)
+        for h in msdf_render_hs:
+            r = abc[h]
+            print(f"{h:>7}  {r['hard']['lane_flip']*100:>10.2f}%{r['sdf']['lane_flip']*100:>10.2f}%"
+                  f"{r['msdf']['lane_flip']*100:>10.2f}%  {r['hard']['total_dseg']:>10.5f}"
+                  f"{r['sdf']['total_dseg']:>10.5f}{r['msdf']['total_dseg']:>10.5f}", flush=True)
+
+        print("\n[r_survival] === single-SDF lane residual DECOMPOSITION (corner vs thin) ===", flush=True)
+        decomp = {}
+        for h in msdf_render_hs:
+            dec = decompose_single_sdf_residual(lstars, h, args.msdf_slope,
+                                                corner_radius_px=args.corner_radius_px)
+            decomp[h] = dec
+            print(f"  render {h:>3}: flips={dec['n_flip']}  corner-any={dec['frac_corner_any']*100:.1f}%  "
+                  f"thin-any={dec['frac_thin_any']*100:.1f}%  (corner-only {dec['frac_corner_only']*100:.1f}%  "
+                  f"thin-only {dec['frac_thin_only']*100:.1f}%  both {dec['frac_both']*100:.1f}%  "
+                  f"neither {dec['frac_neither']*100:.1f}%)", flush=True)
+
+        msdf_block = {
+            "synthetic_validation": val,
+            "abc_lane_survival": {str(h): abc[h] for h in msdf_render_hs},
+            "single_sdf_residual_decomposition": {str(h): decomp[h] for h in msdf_render_hs},
+            "params": {"slope": args.msdf_slope, "band_px": args.band_px,
+                       "approx_eps": args.approx_eps, "corner_radius_px": args.corner_radius_px},
+        }
+
     payload = {
         "evidence_grade": "macOS research-signal",
         "scale_space": scale_space,
+        "msdf": msdf_block,
         "score_claim": False,
         "promotable": False,
         "n_frames": int(lstars.shape[0]),
