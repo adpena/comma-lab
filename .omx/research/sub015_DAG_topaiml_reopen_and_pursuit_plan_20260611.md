@@ -5214,3 +5214,39 @@ tools/colocation_fisher_stress_anisotropy_test.py.
 (1) loss GEOMETRY: annulus-anisotropic-natural-gradient (co-location CONFIRMED ×3, this FEED).
 (2) DM1 fix: byte-free BY CONSTRUCTION (Stiefel isometry, FEED-ic) — decisive $0 smoke pending the minimal build.
 NEXT: building minimal DM1-fix → decisive smoke (GPU launch AWAITS steer). Pointer 0.19110.
+
+---
+
+## FEED-ie (2026-06-29T20:35Z) — McMullen review: Doyle-McMullen "Solving the quintic by iteration" (Acta Math 1989); 5=5 REJECTED as numerology; paradigm VALIDATED, NOT a score-mover; 1 nugget = superattracting-reliability → contraction regularizer for deterministic decode
+
+### Paper (read fully via pdftotext): Doyle & McMullen, "Solving the quintic by iteration," Acta Math 163 (1989).
+Generally-convergent purely-iterative algorithm (Smale); rigidity (all maps conjugate to ONE model → Galois
+content in Aut(f) = finite Möbius group; only A5 non-solvable); critical-finiteness ⇒ reliable full-measure
+asymptotically-quadratic convergence; nearly-solvable⟺computable → degree-≤5 solvable by ITERATION (quintic IS,
+though NOT by radicals); icosahedral degree-11 map f₁₁ with 20 antipodal-vertex SUPERATTRACTING basins; basins
+= partition, JULIA SET = separatrices; data enters ONLY via a 3-param Möbius conjugacy.
+
+### Verdict on operator's separatrix hypothesis (honest, NO-FAKE)
+- 5=5 resonance (quintic roots / A5 / our 5 classes): NUMEROLOGICAL — REJECTED. McMullen's power = SYMMETRY (A5
+  acts transitively on 5 INTERCHANGEABLE roots → 60 group elements encoded free). Our classes are SEMANTICALLY
+  PINNED (road/lane/sky/car/hood; permute road↔sky = catastrophic) = orbit of the TRIVIAL group. The reviewer
+  refused to manufacture transfer from the coincidence.
+- Free-generator-from-symmetry as a RATE lever: BLOCKED (no symmetry to encode free; our descriptor must carry
+  the full asymmetric scene = our counted ~8-dim lane statistic).
+- Basin-boundary geometry: WRONG category — Julia sets are FRACTAL/measure-zero; our separatrix Σ is a SMOOTH
+  codim-1 curve (the co-location-confirmed Fisher-curvature annulus, Pearson 0.978).
+- Morse-Smale codec (#180): McMullen VALIDATES it (the real/smooth/asymmetric analogue), doesn't extend it.
+  130-yr Klein→McMullen lineage = the paradigm is deep + classically grounded (morale/validation, not mechanism).
+
+### means-vs-ends: BEAUTIFUL-BUT-NOT-A-MOVER. EV(rate)=LOW; EV(codec design)=LOW-MED (deterministic-decode
+robustness, not score). NOT narrating "beautiful connection" as goal progress. Pointer stays 0.19110.
+
+### The ONE transferable nugget (queued LOW-priority, $0, no GPU)
+Superattracting-reliability principle (Thm 3.3): design the iterated generator so the target partition is a
+SUPERATTRACTING fixed point (‖J‖→0) ⇒ guaranteed full-measure, asymptotically-quadratic convergence + robust
+BIT-IDENTICAL deterministic decode (our determinism non-negotiable). $0 test: measure contraction rate of our
+Neural-CA/level-set iterated d_seg-core at its fixed point on the n96 cache; if it already decays geometrically
++ bit-identical re-runs → CLOSE the transfer (no-op); if marginal → add a ‖J‖-at-fixed-point contraction
+regularizer + re-measure steps-to-converge + decode determinism. (Holomorphic special case of standard
+contraction/Lyapunov stability — McMullen is the existence proof, not a new tool.) Run if idle; NOT a priority
+vs the decisive DM1 smoke + the co-location-confirmed v2 loss.
