@@ -5977,3 +5977,46 @@ multi-channel) + coverage/area-AA (wide ramp = sub-pixel coverage) confirm the p
 ### NOT-PESSIMISTIC: STRONG POSITIVE — R-survival (GAP2-A) is SOLVED by SDF; the wall narrows to render-res capacity
 (B, cured ~2× by SDF) + SegNet-reading (C). Honesty: SegNet-free, advisory, means (v2 redirect) not the end (byte-
 closed exact row <0.19110). pointer 0.19110.
+
+---
+
+## FEED-jb (2026-06-29T18:26Z) — F5 SYNTHESIS: the STRATIFIED DYNAMIC-SfM TASK-SPACE CODEC (SDS-TSC) — the capstone vehicle the whole grok arc converges to. DESIGN ONLY (build-gated; do NOT launch).
+`[design / advisory]`; pointer 0.19110 UNMOVED. Memo
+`.omx/research/stratified_dynamic_sfm_taskspace_codec_design_20260629T182602Z.md`. Synthesizes F1 (R-survival,
+GAP2-A SDF-solved), F3 (movables ~0.0008), F4 (byte budget) + grok FEED-iv/iz/ja into ONE vehicle.
+### THE VEHICLE (6 typed sections + integer decode): S0 calibration header (FREE EON intrinsics + ~tens of B
+fitted globals) · S1 canonical static IPM scene C (ONE scene in DM2 curvelet/WIRE + eikonal-SDF L13 −59% format;
+~8–25 KB) · **S2 ego-pose stream (FREE DUAL-USE — d_pose directly + d_seg via stratified warp; ~6.4 KB counted
+ONCE, serves BOTH terms)** · S3 per-class warp-type mask (Road=ground-homography(pose), sky=rotation-only KRK⁻¹,
+hood=identity; pose-stable, ~0.2–1 KB) · **S4 Lane-survival residual through R (THE BINDING LEARNED TERM; the only
+real trained payload; ~6–20 KB on the existing `train_levelset_witness_realized_through_R_mlx`)** · S5 movables
+residual (~0.5–2 KB). Decode = deterministic ANS/Ballé, bit-identical CPU/CUDA, no scorer weights in archive.
+### THE COLLAPSE: the bulk geometry (Road/sky/hood = ~98% area, 3 of 5 classes) needs NO trained INR — it is the
+FREE pose-warp of a canonical (grok-measured Road +15–17%, hood identity-exact, sky KRK⁻¹). The 600-frame INR
+SHRINKS to a residual-only generator on the lane annulus. The whole sub-0.15 question reduces to ONE number: the
+through-R lane-survival d_seg.
+### BYTE BUDGET (F4-grounded): total ~21–55 KB (vs frontier 177 KB / capstone 97 KB — the 83.5 KB bulk decoder is
+removed by free pose-warp). Sub-0.15 needs 100·d_seg + 25·bytes/N < 0.1316 (pose √(10·3.4e-5)=0.0184 solved).
+Corner A: ~50 KB ⇒ need d_seg ≤ 9.8e-4. Corner B: d_seg 6e-4 ⇒ bytes ≤ 107 KB (trivial). **BINDING AXIS = d_seg
+(lane residual through R); byte axis has large slack.** Predicted band S ∈ [0.12, 0.17] (straddles sub-0.15),
+Dykstra-feasible, uncertainty concentrated in the through-R lane residual. `predicted_band_validation_status:
+pending_post_training`.
+### ORIGINAL (NO-FAKE #7, itemized borrowed-substrate table in memo): genuinely OURS = the task-geometry-derived
+stratified dynamic-SfM codec for a FROZEN scorer — (1) pose-as-free-dual-use-modulation, (2) per-class
+depth-stratified warp (DERIVED from the closed-form plane homography, not learned), (3) realized-through-R
+survival residual as the SOLE learned term. Novel vs Cool-Chic/SPADE/dynamic-NeRF/VCM (each cited + delta'd).
+### CLASS-SHIFT: 5 FORK_PRINCIPLED SAs (SA02 frame0-nullspace EXPLOITED / SA04 6-section manifold / SA08 one-scene
+×-pose-orbit = temporal coding / SA13 new base / decoder-not-INR) + 2 FORK_EMPIRICAL (SA17 chroma / SA18 WRQ) —
+a genuine break off the 0.1928 plateau, not a plateau-adjacent variation. NOT a PR95/HNeRV reskin (no
+8-stage-on-full-RGB-INR; decoder = canonical+warp+residual).
+### $0 VALIDATION CHAIN (Carmack MVP-first, BEFORE any GPU): (1) stratified-warp realizability (extend
+`measure_pose_warp_dseg.py`) · (2) same-warp THROUGH R (the GAP-2 $0 probe — the binding crux) · (3) byte-close
+S0–S5 (`levelset/witness_byte_close_and_eval.py`, confirm ≤55 KB) · (4) A/B faithful smoke (`dm1_smoke_verdict.py`
+GO = d_seg gain + PR hold). All advisory; exact CPU+CUDA byte-closed row is the only verdict.
+### BUILD SEQUENCE (GATED): G0 memo+3-clean review+FEED (this) → G1 (F1 + $0 gates 1–2) → G2 (F3 movables) → G3
+(F4 byte-close) → G4 (trainer extension: NEW additive flags `--canonical-pose-warp/--warp-class-mask/
+--stratified-warp/--movables-residual` + faithful-flag validation, RESUMABLE per-stage ckpts, ≥10 GB containment,
+default-OFF, control-plane-safe) ⟵ requires EXPLICIT operator GPU steer → G5 byte-close → dual exact eval.
+### MEANS≠ENDS: this is a DESIGN (means). `score_claim=false`, `promotable=false`. The END is a byte-closed exact
+row <0.19110. Do NOT launch training; await F1/F3/F4 closure + operator GPU steer. Memory:
+stratified_dynamic_sfm_taskspace_codec_design_20260629T182602Z. pointer 0.19110.
