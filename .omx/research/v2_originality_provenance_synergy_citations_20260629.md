@@ -22,6 +22,53 @@ Two mature fields flank our problem; neither occupies it:
   https://arxiv.org/abs/2112.11312) = our literal skeleton (an implicit net modulates coordinates for motion
   compensation + a small residual net for P-frames) **but** pixel-fidelity / learned warp / no task-space / no SDF.
 
+## Motivation — why this design exists (the "why," for the record)
+
+**1. HNeRV was both SLOW and a domain/info-space MISFIT (the push off the incumbent).**
+- *Training cost:* the PR95/HNeRV winning recipe is an 8-stage, **29,650-epoch** curriculum (canonical eq
+  `pr95_family_l14`) — a multi-DAY burn on one GPU, and loop-end-only saving loses everything on a crash (our
+  resumability + per-stage-checkpoint non-negotiable was born from exactly this pain). Our faithful reproduction
+  stuck at d_seg≈0.50 (the "PR95 elephant," task #75) with an inert score-aware loop (#76): long, fragile, and
+  never cleanly at 0.193 in our hands.
+- *Domain/info-space misfit* (cross-ref [[why-hnerv-blackbox-misfit-vs-levelset-taskspace-fit-20260627]]): a
+  smooth black-box INR fights the piecewise-constant argmax target (spectral bias → Gibbs); full-RGB
+  reconstruction spends capacity on channels SegNet ignores (channel arbitrariness); ~94% of bytes are decoder
+  weights, not task-saliency (allocation arbitrariness); and the objective is reconstruction-first when the
+  contest is **indirect-RD task-space**. bc20 was under-capacity; full-RGB is wasteful under `evaluate.py`
+  (#171). HNeRV is a *parity bank*, not the vehicle.
+- **→ the pivot:** stop reconstructing RGB; code the task-sufficient statistic directly (the witness). That seed
+  is the root of every "ours" element below.
+
+**2. The meta-innovation: the whole research program runs on a SINGLE MacBook Pro, at $0.**
+- Substrate: M5 Max, 128 GB unified memory; MLX-first; the **MPS-as-training-GRADIENT-device** unlock (the frozen
+  scorer runs ~**104× faster** on the Apple GPU at fp32 after one BatchNorm-backward stride fix,
+  `tac.torch_mps_compat.patch_scorer_for_mps`), with **numpy-fp32 as the bit-identical verdict authority** and
+  CPU/CUDA the only score axes (MPS never an authority).
+- Consequence: this entire session's discovery — the grok, the screw-warp, the SDF carrier, the gauge layer, the
+  openpilot head-start, the jitter wall, the literature sweep, this very ledger — was produced by a FLEET of $0
+  CPU/MLX probes on one laptop. A contest usually decided by GPU budget was **reframed as a deep-math +
+  $0-measurement problem**; the ONE heavy step (the lane-survival GPU run) is deliberately minimized and gated.
+  This is itself a methodological contribution: indirect-RD task-space codec design is tractable on commodity
+  hardware *because the expensive object — the witness's irreducible statistic — is tiny* (F4: ~KB, not MB).
+
+**3. The underlying math is genuinely beautiful — and the beauty is a DESIGN SIGNAL, not decoration.**
+- *One variational object:* the witness is the viscosity solution of a level-set PDE; `S_τ` is the indirect-RD
+  action; the SDF is φ, the screw-warp is the transport V, the residual is births/deaths (Osher-Sethian).
+  Geometry (SDF) + motion (Chasles screw) + topology (persistence) + the task (frozen-scorer argmax) are ONE
+  system.
+- *Deep classical math throughout:* Chasles' screw theorem (every rigid motion is one screw); Longuet-Higgins–
+  Prazdny depth-stratified flow; Fisher-information geometry (the annulus = a homography orbit; rank-K−1 ceiling;
+  curvature ↔ −margin Pearson 0.978); canonicalization / gauge-fixing for MDL; flow-matching on Lie groups.
+- *The cross-disciplinary convergence is the tell:* fluids (Helmholtz–Hodge), graphics anti-aliasing (Valve SDF),
+  astronomy difference-imaging (Alard–Lupton), Lie theory (flow-matching), even Buddhist phenomenology
+  (dependent-origination = code the relational statistic, not the inherent pixel) ALL land on the *same* vehicle.
+  When that many independent lenses converge, the design is probably "right" in the deep sense — the elegance is
+  *evidence*. And per the operator: the deep-math IS the joy; this has been genuinely fun, which is part of why it
+  went far.
+
+> Honest caveat (unchanged): motivation + beauty are MEANS. They are the *why*, not the *result* — they do not
+> move the pointer; only a byte-closed exact row below 0.19110 does. Recorded because the why is real signal.
+
 ## OUR five elements — what, citation, provenance (discovered/solved/adapted/fell-through), synergy role
 
 ### 1. Distortion = the exact frozen-oracle argmax **CELL** (indirect-RD), not a proxy/PSNR
