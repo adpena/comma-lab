@@ -6224,3 +6224,20 @@ dynamic-NeRF (D-NeRF/NSFF/dyn-3DGS) treats dynamics as the expensive residual �
 codec (NOT a warp predictor); the open $0 measurement is the store-d_seg-vs-keyframe-budget curve (extend the tool).
 means≠ends: ADVISORY structural bound on the 2nd residual term; pointer UNMOVED **0.19110**. Memo
 `.omx/research/movables_multibody_residual_20260629T184011Z.md`.
+
+---
+
+## FEED-jf (2026-06-29T07:40Z) — CONVERGENCE: ALL 5 FLEET ARMS HOME. The complete measured map of the sub-0.15 path; the budget is tight-but-feasible and reduces to the LANE-SURVIVAL residual.
+### Full fleet (all measured, $0, advisory [macOS], pointer 0.19110 UNMOVED):
+- F1 (0e44b4e8d): R is INTERPOLATION-exact (not diffusion) → SDF carrier survives R; recipe = wide-ramp SDF + MSDF + render≥192 (Nyquist cliff for 2px lane). Existence-proof: = Valve-2007 SDF-text (1-Lipschitz → bilinear exact).
+- F2 (3683cb606): residual ~21-dim, rank-K−1 ceiling (K=5 task resolves ≤4 dirs), 3rd independent grok confirm (manifold motion R²=0.70 = ego-pose).
+- F3 (930b6d348, FEED-je): MOVABLES — STORE not predict. Warp-floor 0.00082 d_seg = 67% of the 1.23e-3 budget if predicted; STORE (templates+low-rank traj) → ~0 at ~0.9-2.7KB, free on rate slack. Irreducibility: class-3 boundary margin 0.29 (coin-flip annulus) vs interior 5.99. DECISION: store movables.
+- F4 (095ed3e1a): rate term 0.0021 (K_machine~3.2KB, 131× < lossless); sub-0.15 ⟺ TOTAL d_seg ≤ 1.23e-3.
+- F5 (SDS-TSC design): ~98% free deterministic generator (canonical scene + pose stream + stratified warp) + ONE learned term.
+### THE COMPLETE MEASURED BUDGET (sub-0.15 ⟺ total d_seg ≤ 1.23e-3, allocated):
+  movables STORED → ~0 (~1-3KB, F3)  +  bulk pose-warp (Road ground-homog / sky rotation-only / hood identity; calibration-closing, F1+grok)  +  **LANE-SURVIVAL residual through R = THE BINDING TERM**.
+  Tight but feasible: with movables stored (~0) + bulk handled by the warp, the lane residual is the one term that must fit under 1.23e-3 → spend the entire GPU budget on the lane.
+### THE BINDING-TERM ATTACK (daydream-mine fleet, 2 agents RUNNING, both $0 online+OSS):
+- a1da84c — graphics-AA (SDF existence-proof + MSDF sharp-corner draw-from) + astronomy (Alard-Lupton/ZOGY difference-imaging residual coder) + 4D-fluid Hodge/Helmholtz warp parameterization + level-set transport/eikonal PDE (the continuous codec). [operator daydreams: fluids/AA/frame-gen/astronomy/4D/phenomenology/causation]
+- a99f41f0 — openpilot WORLD MODEL as the FREE generative prior: decisive $0 test = do openpilot's lane polynomials (projected through exact EON homography) collapse the lane-survival residual vs the frozen SegNet argmax to ≤1.23e-3? + pose/depth/intrinsics exploits + clean rule-118 compress-time-analyzer boundary. [operator: "exploit the openpilot world model"]
+### NEXT: harvest the 2 agents → fold winners into the SDS-TSC v2 design → 3-clean recursive review → SEAL → surface the lane-survival GPU run decision to operator (AWAITS per-launch steer; the through-R lane train ≤1.23e-3 is THE byte-closed exact-row mover). means≠ends: all measured-means; pointer 0.19110; the lane exact row is the end.
