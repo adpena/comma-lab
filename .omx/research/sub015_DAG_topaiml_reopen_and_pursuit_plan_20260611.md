@@ -5777,3 +5777,49 @@ for survival/movables. v2 review should A/B WARP-modulation vs ADDITIVE-modulati
 bytes; additive residual handles only movables. Ties: STN (Jaderberg 2015) + canonicalization/equivariance +
 #148 tiny-warp + #138 ground-plane-homography-prior + the free-lane-trajectory (FEED-it) + GR gauge (the
 homography is the ground-plane gauge; canonicalizing = working in the static gauge). Pointer 0.19110.
+
+---
+
+## FEED-iv (2026-06-30T03:50Z) — THE GROK: the whole contest collapses to ONE object (ego-pose trajectory × static world); d_seg & d_pose are two readouts of the SAME sufficient statistic → the stored pose sidecar = FREE d_seg modulation
+
+### The single-object gestalt (recursive bridge of all levels)
+The contest = describing ONE rigid trajectory through ONE static world to TWO frozen observers. Both observers
+are projections of the SAME ego-motion-through-static-world:
+- PoseNet's 6 outputs ARE the ego-motion → d_pose's sufficient statistic = the pose.
+- SegNet's per-frame partition change = homography(ego-motion) (rank-8 homography orbit; lane ~8-dim orbit;
+  staticness gradient = depth×rigidity) → d_seg's per-frame variation = homography(pose).
+=> d_seg and d_pose are NOT two problems; they are two readouts of ONE sufficient statistic: the EGO-POSE TRAJECTORY.
+
+### THE central NEW unification (closes the modulation thread into the pose thread)
+The pose sidecar already built for d_pose (store 6 scalars/pair, "pose solved", scorer_targets.py #84/#163) IS the
+d_seg modulation, for FREE: the per-frame seg-conditioning = homography(stored_pose) on a shared canonical scene.
+The modulation = the pose (FEED-iu coordinate-warp), and the pose is already stored → d_seg per-frame conditioning
+costs ~ZERO extra bytes. The two halves we treated separately are ONE.
+
+### Gauge/GR closure: in the IPM canonical frame the ego-motion is a GAUGE symmetry; the action S_τ FACTORS into a
+gauge-INVARIANT canonical scene (shared, DM2 oriented basis, free + tiny residual) × a gauge ORBIT (the pose
+trajectory). Stationarity: lay the canonical boundary on the annulus geodesic ONCE in the IPM frame; every frame =
+canonical scene transported by its pose.
+
+### Cash value — the witness the whole arc converges to:
+- Canonical static IPM scene: shared oriented (curvelet/WIRE) dictionary (free) + small learned residual for the
+  two things ego-motion CAN'T explain: lane SURVIVAL (thin/dashed argmax → DM2+R-survival) + MOVABLES (independent
+  motion → high-rank residual).
+- Per-frame POSE = the ONE counted sufficient statistic (~6 numbers/frame, AR-coded to ~hundreds of bytes) serving
+  d_pose directly AND d_seg via homography(pose).
+- Deterministic integer decode (Ballé) → homography bit-exact + free-generic.
+Sub-0.15 arithmetic (geometric): S ≈ 100·(survival+movables residual ~0.001) + √(10·~3e-5) + 25·(pose-traj +
+canonical-residual bytes)/N ≈ ~0.1 + ~0.018 + ~0.02. Binding wall = the survival+movables residual (the part NOT
+on the ego-pose orbit), NOT capacity/rate/pose.
+
+### THE DECISIVE $0 TEST (falsifies/confirms the grok): does homography(stored PoseNet-pose) warp a shared
+canonical partition onto each frame's SegNet argmax at low d_seg? + what is the calibration/scale fit between
+PoseNet pose-units and the ground-plane homography? On the cached n96/n200 + the comma2k19/PoseNet pose. If YES →
+pose-as-free-modulation real, v2 simplifies enormously (store ONLY the pose; d_seg modulation free). If calibration
+doesn't close / residual stays high → pose carries bulk only, survival+movables residual larger.
+
+### HONESTY: this is a SYNTHESIS/HYPOTHESIS unifying the MEASURED findings (rank-8, IoU/staticness, co-location,
+PoseNet=ego-motion), NOT a measured exact row. Means≠ends: pointer 0.19110; the byte-closed exact row is the only
+end. Fold the pose-as-modulation $0 probe into the v2 review (alongside per-class-rank + warp-vs-additive). The
+recursive self-reference (DSL/DAG/equations triality = the same low-DOF object describing us describing it) is the
+"Understand"-grok closure — noted, not load-bearing.
