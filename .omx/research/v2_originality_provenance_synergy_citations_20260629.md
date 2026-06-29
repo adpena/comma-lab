@@ -235,6 +235,33 @@ and the bulk-jitter cell is the one still being measured (a95b0ad6). Deciding ge
 minimum-description-length over a task-equivalence class is the same novelty as element #5 (gauge-canonicalization
 for MDL), applied at the codec-structure level.
 
+## Overfit the witness, generalize the implementation (operator design directive 2026-06-29)
+
+Operator: *"Overfitting to the contest video is fine and preferred if optimal for min score but also want
+generalizable implementations."* A TWO-LEVEL split the v2 already honors — and it sharpens what the contribution is:
+
+- **WITNESS = the COUNTED payload (archive.zip) → OVERFIT freely, it's PREFERRED.** The contest scores ONE video;
+  the optimal stored bytes are maximally clip-specific: the pose/twist stream, lane spline coeffs, bulk-jitter
+  dither, the trained residual-generator *weights*, movables templates+trajectories, the canonical scene
+  descriptor. No generalization penalty on the payload.
+- **IMPLEMENTATION = the FREE generic algorithm (inflate.py) + the codec/tools → GENERALIZES** (works on any
+  contest-shaped dashcam clip): the screw-warp (LHP homography from pose), the SDF carrier + rasterizer, the
+  flow-matching generator *architecture + recipe*, the gauge/canonicalization-for-MDL decision rule, the
+  level-set PDE, the curvelet basis *oriented-to-the-clip's-MEASURED-boundary* (orientation computed at
+  compress-time, NOT hardcoded to this clip), the openpilot/comma priors + EON intrinsics, the DSL/campaign/tools.
+  inflate.py is a generic decoder, not a clip-specific lookup.
+- **Compliance boundary (rule-118 + NO-FAKE #6/hide-data-in-code):** the generic ALGORITHM is FREE in inflate.py;
+  the overfit PAYLOAD is COUNTED in archive.zip. FORBIDDEN: smuggling the clip-specific payload into inflate.py
+  "code" disguised as a generic algorithm. = CLAUDE.md "Contest vs production target modes"
+  (`contest_one_video_replay` payload + `contest_generalized`/`production_generalized` algorithm).
+- **Why it strengthens the contribution:** the originality is a GENERALIZABLE task-space codec METHOD that
+  optimally overfits its payload per-instance (like any codec: general algorithm, specific compressed file) — more
+  valuable and more honestly novel than a one-clip stunt; it's what makes the five ours-elements a *reusable codec*.
+
+REVIEW CHECK (folded into the recursive review): every "generalizable" piece must be a REAL generic algorithm
+(computes from the clip at compress-time, no hardcoded this-clip constants in inflate.py); every "overfit" piece
+must live in the COUNTED payload. Confirms the generate-vs-store partition above from the algorithm-vs-payload side.
+
 ## Conditioning basis & training curriculum (curvelets + the scale curriculum)
 
 Two design elements that are ADAPTATIONS (borrowed primitive + our task-specific, byte-free application), and that
