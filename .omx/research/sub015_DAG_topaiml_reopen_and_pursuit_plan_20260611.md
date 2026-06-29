@@ -5529,3 +5529,17 @@ right conditioning structure for a spatially-localized lane-orbit (spatial-FiLM 
 (spatial basis / spatially-varying conditioning) and the smoke becomes a "rule-out-DM1" check, not the main lever.
 Runs in PARALLEL with the fix subagent. NEXT: fix → round-2 review + deep-math verdict together → v2 priority +
 smoke interpretation. Pointer 0.19110.
+
+---
+
+## FEED-io (2026-06-30T00:05Z) — STANDING RULE: deep-math reviews ALWAYS have full online research + OSS authority (operator 2026-06-29)
+
+Behavioral correction (I omitted it from the aa05397bb charge — the standing-authority memory covers it but I
+didn't wire it into the review prompt). FROM NOW: every deep-math review charge EXPLICITLY grants + instructs
+full WebSearch/WebFetch + OSS (GitHub/repo) authority — ground verdicts + redesigns in real literature/code, not
+first-principles+our-repo alone. Routed to the live DM1-axis review (aa05397bb) with targets: SPADE/spatially-
+adaptive-denorm (FiLM-but-spatial), spatial-FiLM, modulated-SIREN/functa, LIIF, SPATIAL LATENT GRIDS (Cool-Chic
+per-position latents = directly on-point for per-pair-uniform vs per-position conditioning), steerable/Gabor/
+oriented bases (DM2 lever lit), per-instance(global)-vs-per-position(spatial)-code + rate cost. (Our rate-half is
+byte-cheap per FEED-ik → a spatial latent grid is affordable IF it moves d_seg.) Sister: standing-authority
+memory feedback_full_online_oss_and_original_frontier_design_authority_standing_20260624. Pointer 0.19110.
