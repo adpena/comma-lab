@@ -5303,3 +5303,42 @@ integer-deterministic decode (Ballé). All under S_τ (E0). Every part literatur
 ### NEXT: DECISIVE $0 SMOKE (settles DM1-causes-d_seg, either way) → AWAITS operator steer (small MPS arm).
 Then comprehensive v2 build with validated parts. eikonal-SDF $0 test (a62d4d5) + formalization fork (a399290)
 running. means-ends: all MEANS; END = byte-closed exact row; smoke = next measurement. Pointer 0.19110.
+
+---
+
+## FEED-ii (2026-06-29T21:55Z) — CONSOLIDATION (operator: update DAG for long-term recall + no signal loss + coherent trajectory); recursive review FIRST then continue
+
+### THE COHERENT ARC (this session, no signal loss)
+Operator priority = the level-set witness full-stack v2. We developed + VALIDATED + are FORMALIZING a complete
+literature-grounded, measured system:
+- FRAME: contest=indirect-RD; witness=level-set partition; ONE action S_τ=100·d_seg+√(10·d_pose)+25·rate,
+  stationarity in the FIXED frozen-scorer Fisher metric G (matter on FIXED background, NOT full GR — no
+  back-reaction → well-posed+measurable). GR-research (ad70677): QFT-on-fixed-background correction.
+- FULL WITNESS ARCHITECTURE (grounded+measured): CONDITIONING = Stiefel+spectral-entropy (DM1, byte-free BY
+  CONSTRUCTION, PR(M)=PR(cov code) PROVEN, BUILT 07dd971d8 default-off 513 tests) · DISTORTION = Finsler-
+  anisotropic-boundary + Wasserstein-M-flip-cost + posterior-coding(KL-to-soft-logits) annulus-localized · RATE
+  = contour-code-lane-boundary → free-eikonal-SDF → posterior-residual(NVRC) → integer-deterministic-decode(Ballé).
+- MEASURED SPINE: co-location CONFIRMED ×3 (b0bee924e) — curvature↔−margin Pearson 0.978, anisotropy 9.56:1,
+  96.8% flip-mass in 2px band; margin=byte-faithful Fisher surrogate.
+- LIT-GROUNDED: 5-paper synth (SinkGD/Hebbian/Fisher-Rao/SPIRAL-mismatch/attractor) + 3 hunters (H1 iRDF/
+  posterior-coding/headroom-1-3-OoM-above-floor; H2 Finsler/Wasserstein/contour-coding; H3 eikonal-SDF/
+  modulation-split/integer-determinism) + McMullen (paradigm-validation, NOT a mover; 5=5 numerology rejected).
+- SYSTEM OF EQUATIONS being formalized into the canonical registry (E0 master S_τ + E1-E8 terms + θ*/calibration
+  folded as related signal; fork a399290).
+
+### WHERE WE ARE
+v2 fully designed; 2 pillars VALIDATED (loss-geometry via co-location ✓, DM1-byte-free via build ✓). DECISIVE $0
+smoke READY (settles DM1-causes-d_seg, or DM1=SYMPTOM firewall).
+
+### OPERATOR STEER (2026-06-29): recursive adversarial review FIRST (3-clean-pass non-negotiable before any
+training launch), THEN continue in best order. 3 reviewers launched round-1 on the DM1-fix build (07dd971d8):
+R1 Stiefel+load-bearing-identity, R2 spectral-entropy+smoke-faithfulness+falsification, R3 NO-FAKE+default-OFF-
+byte-identity+DSL+assumption-challenge. Findings→fix→reset; 3 consecutive clean → clear the smoke for launch.
+
+### RUNNING: formalization fork a399290, eikonal-SDF $0 test a62d4d5, 3 recursive reviewers.
+### NEXT (best-order, POST-review): 3-clean → launch decisive smoke → verdict (DM1 moves d_seg? or symptom?) →
+comprehensive v2 build (validated parts) → 3-clean → GPU-arm operator steer → train → byte-close → exact eval.
+
+### means-ends: ALL the above is MEANS (architecture, equations, validated pillars, reviews); the END is a
+byte-closed exact row < 0.19110. Pointer UNMOVED 0.19110 (honest). Trajectory coherent + no signal lost (DAG
+FEEDs gz→ii + formalization memo + memory pointer project_gr_unified_action_full_witness_architecture_20260629.md).
