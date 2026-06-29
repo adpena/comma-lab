@@ -5126,3 +5126,54 @@ but ANALOGY for the witness (no latent SDE / no diffeomorphic decoder); supplies
 equations, NOT the Morse-Smale topology. Consistent with GR-research (DM1 = the metric/gauge).
 
 NO score-mover (clarifying negative). Pointer 0.19110.
+
+---
+
+## FEED-ic (2026-06-29T19:50Z) — OPTIMIZER DESIGN LANDED: DM1 fix is BYTE-FREE BY CONSTRUCTION (Stiefel isometry); decisive $0 smoke (either-way); building minimal DM1-fix launch-ready
+
+### The load-bearing result (reframes the v2)
+Stiefel-W (WᵀW=I) → W is an ISOMETRY → PR(M=code@Wᵀ) = PR(cov(code)) EXACTLY. So Stiefel-W + code
+spectral-entropy penalty fixes the FiLM rank-collapse STRUCTURALLY, byte-free, BY CONSTRUCTION — the bespoke
+optimizer is only a maintenance/transient device. Means: raising PR is a MEANS; realized d_seg descent is the END.
+Memo (non-committed): .omx/research/per_stage_fractal_optimizer_priming_reheat_anneal_design_20260629.md
+
+### The MINIMAL version (80/20, near-zero cost)
+AdamW everywhere + Stiefel-W (NO-WD, cheap polar projection reusing the Muon Newton-Schulz kernel) + code
+spectral-entropy penalty −β·log[(tr C)²/‖C‖_F²] (O(22²), NO eigendecomp) + per-stage moment-reset + Muon-prime
++ existing Muon tail. Captures the root cure + the "re-treat at transitions" non-negotiable.
+
+### Per-stage norm (steepest-descent-under-a-norm): CE→Adam (explore) · tau→Muon-trunk+SinkGD-on-W (collapse
+onset) · l7→same+reheat (deep collapse) · muon_tail→Muon+EMA-re-orthonormalize. 6-group fractal table
+(trunk/heads/FiLM-W/code/palette/pose-FiLM); WD-control→trunk, noise-control→conditioning (compose w/o double-count).
+
+### THE DECISIVE $0 SMOKE (means/ends firewall built in) — MVP-FIRST, run BEFORE the full v2
+4 arms: A0 baseline / A1 Stiefel / A2 entropy / A3=minimal. n=24-48, into tau stage, MPS-as-training-gradient
+(NEVER authority; numpy/CPU d_seg = advisory verdict). Falsification: A3 must hold PR(M)≥~3.0 (baseline→~1.2)
+AND lower advisory d_seg ≥~10%. DECISIVE EITHER WAY: if PR restored but d_seg flat → DM1 is NOT the binding
+d_seg cause (we'd be treating a SYMPTOM) = major redirect. This gates the full v2.
+
+### v2 fold-in: --optimizer {adamw,sinkgd,muon,custom}; custom reads a per-group×per-stage DSL block; minimal
+= one YAML diff = the first A/B; every lever independently toggleable.
+
+### EV ranking: (1) Stiefel-W + code-entropy [root cure, ~0 cost] (2) moment-reset + Muon-prime at transitions
+(3) Fisher-Rao EMA re-orthonormalize [cheap correctness] (4) SinkGD-on-W (5) PR-triggered reheat (6) full fractal.
+Over-engineering mitigation: ship minimal first; every further lever gated behind its own A/B that must show a
+measured PR-or-d_seg win; firewall stops polishing conditioning-health if it doesn't move d_seg.
+
+### NO-FAKE citation corrections (subagent caught errors in MY grounding) — telemetry accuracy
+- "EMA of orthonormal W drifts off Stiefel → re-orthonormalize": claim TRUE (standard manifold geometry) but
+  the supporting cite is Cayley/Stiefel 2002.01113, NOT Fisher-Rao 2307.10644 (which only INSPIRED it via its
+  Fréchet-mean backdrop). FEED-hy/ia/ib cited 2307.10644 as support → corrected to 2002.01113.
+- "WD→low-rank collapse monotone, peaks near stationarity": attribution CONTESTED — the optimizer subagent
+  assigns it to 2402.03991/2410.23819; the a573f reviewer (who READ 2505.18069) found 2505.18069 proves
+  decay→Hebbian low-rank near stationarity. SUBSTANCE robust (no-WD-Stiefel + WD↓/rank↑ late); citation noted
+  as contested, not over-claimed.
+
+### Reheat refined: a CONTROLLED stage-noise-COVARIANCE shift calibrated to our MEASURED ringing + margin-engage
+spike (a measured controller, not a free knob); SINGLE-duty anti-collapse (Hebbian); latent-SDE identifiability
+justification DROPPED (false friend per FEED-ib). Spectral-entropy = CAPACITY lever ("keep all directions live
+late"), not interpretability.
+
+### NEXT: building minimal DM1-fix into the trainer (default-OFF byte-identical, like FiLM-fix v1) + tests +
+self-review + the 4-arm decisive smoke READY-TO-LAUNCH (NOT launched). GPU smoke launch AWAITS operator steer.
+Co-location test still running (informs DM2 lane). Pointer 0.19110.
