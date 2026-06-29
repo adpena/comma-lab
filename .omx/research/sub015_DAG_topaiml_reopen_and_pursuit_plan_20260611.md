@@ -5460,3 +5460,44 @@ well-conditioned start (consider iters=10 or convergence assert).
 ### Round-1 = FINDINGS (clean-pass counter stays 0). R2 (spectral-entropy+smoke) + R3 (NO-FAKE+byte-identity+
 assumption-challenge) STILL RUNNING. PLAN: collect R2+R3 → fix ALL round-1 findings in one batch (review-gate
 .py mark-file ×2) → round-2 FRESH rotation → 3 consecutive clean → smoke CLEARED → operator steer. Pointer 0.19110.
+
+---
+
+## FEED-im (2026-06-29T23:35Z) — RECURSIVE REVIEW round-1 COMPLETE (3 reviewers): LEVERS clean+validated, SMOKE harness NOT faithful (3 CRITICAL); the review WORKED (caught a false-verdict smoke pre-launch)
+
+### Round-1 = FINDINGS (clean-pass counter 0). The review CAUGHT that the smoke as-built would give a
+### confident-but-MEANINGLESS GO/SYMPTOM. Operator "review first" + 3-clean-pass binding = vindicated.
+
+### LEVERS CLEAN + VALIDATED (R1 afc0158 + R3 ad130ec)
+- DM1 cure REAL (R1 crux resolved: identity needs orthonormal COLUMNS WᵀW=I, projection produces them; 0 CRITICAL; R1 executed MLX assignment → not a no-op).
+- default-OFF TRULY byte-identical (R3 proven trace: penalty SKIPPED when 0.0 NOT computed-then-zeroed; no RNG perturbation; A0 path == pre-07dd971d8).
+- NO-FAKE clean (tests verify BEHAVIOR not constants; NS5≠Stiefel verified empirically res 1.38 vs 0.0098).
+- DSL clean (no invented flags, no False-store_true, window counted once, no dead-arm). spectral-entropy penalty correct+correctly-signed+nonzero-grad+MLX/numpy-parity.
+
+### SMOKE HARNESS NOT FAITHFUL — R2 (a0b5859): 3 CRITICAL, do NOT fire as-is
+- C1: A0 baseline emits ZERO PR telemetry (dm1_telemetry gated on a DM1 lever active) → "baseline collapses to ~1.2" half UNMEASURABLE. FIX: --dm1-telemetry store_true on ALL 4 arms.
+- C2: anneal/LR keyed to args.epochs=399 while resuming ep300 → window runs at schedule TAIL (temp ~0.19→0.05, LR ~0.15·peak) NOT the tau-onset regime the disease was measured in (orig epochs=1500: ep300→400 = temp ~0.91→0.84, LR ~0.9·peak) → a null = schedule ARTIFACT. FIX: --anneal-epochs 1500 (decouple denominator from run-length) reproducing the ep300 regime.
+- C3: lane confound — orig disease measured w/ --lane-edge-weight 30 (d_seg jump 0.0056→0.020→0.021 coincides w/ BOTH tau-onset AND the wt-30 hinge); smoke sets lane 0 → A0 may NOT reproduce the degradation. FIX: include --lane-edge-weight 30 (test DM1 in-situ) OR add VOID precondition.
+- M1: firewall is PROSE + no VOID branch → a VOID run (A0 not sick) would be MIS-READ as SYMPTOM, wrongly de-prioritizing the program. FIX: executable harvester GO/SYMPTOM/VOID + disease-present precondition (A0 PR drops AND A0 d_seg degrades vs ep300, else VOID).
+- M2: "1.2" is l7-era (full 1500ep curriculum), unreachable in the 100-ep tau window → re-derive the PR bar for the actual window (resolved by C1+C2: A0's measured ep400 PR in the faithful regime IS the bar, not hardcoded 1.2). M3: A3's --stage-transition-reset-moments is DEAD (no boundary crossed in window) → A3-as-launched == Stiefel+entropy; relabel.
+
+### R1 Med (shadow) — the DEPLOYED EMA shadow ships OFF-Stiefel; firewall telemetry on LIVE weight not the
+shipped shadow. FIX: compute stiefel_residual + PR on ema.shadow too (M_shadow=codes@shadow.T), report
+live+shadow in dm1_telemetry; re-orthonormalize the shadow at verdict/byte-close; fix the false "shadow tracks
+on-manifold" comment. R1 Med2: --film-stiefel+--freeze-decoder-fit-codes freeze-invariant violation → guard.
+### R3 M1: lane_thin_gate silent no-op (pre-existing 9d4629e1, OFF in all 4 arms, NOT blocking, separate fix +
+the C1 LOW from before). Lows (R1 L1-L5 + R3 L1-L7): tall-matrix guard (assert out≥in), composed
+stiefel(random_W)→PR-identity test at ~1e-2 residual, NS5-regression-lock test (res>0.5), "EXACTLY"→"~1e-2"
+claim-precision, WD-neutralization claim soften (global-magnitude only), iters 8→10/convergence-assert.
+
+### DEEP ASSUMPTION-CHALLENGE (R3 Level-3; carry into interpretation + v2 design): the per-pair FiLM code is
+SPATIALLY UNIFORM within each layer; a moving lane is spatially LOCALIZED → uniform per-pair modulation CANNOT
+represent spatially-varying structure NO MATTER its cross-pair rank → "PR of the per-pair modulation" may be the
+WRONG AXIS. Firewall backstops it, BUT interpret: a null = "the per-pair-rank axis isn't it" NOT "rank theory
+false"; the deeper wall could be spatial-uniformity → v2 may need SPATIALLY-VARYING conditioning, not just
+rank-fixed per-pair FiLM. (This is the v1 round-2 spatial-uniformity concern, re-surfaced + sharpened.)
+
+### ACTION: fix ALL round-1 findings (smoke-harness faithfulness C1/C2/C3 + executable firewall M1/VOID +
+self-calibrating PR bar M2 + A3 relabel M3 + R1-Med shadow-telemetry/re-ortho + R1-Med2 freeze-guard + R3-M1
+lane_thin_gate + Lows) → round-2 FRESH rotation → counter resets → 3 consecutive clean → smoke CLEARED → operator
+steer. Fix subagent spawned. Pointer 0.19110.
