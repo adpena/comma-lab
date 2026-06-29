@@ -6194,3 +6194,33 @@ IS ONE TRAINABLE NUMBER with a measured pass-line + a known recipe + huge rate s
 EXPLICIT operator steer. That run, on the ONE number (trained through-R lane d_seg ≤ 1.23e-3), is the byte-closed
 exact row that moves 0.19110. means≠ends: all measured-means; the exact row is the end; the threshold is the TARGET,
 the trained lane reaching it is the open question.
+
+---
+
+## FEED-je (2026-06-29T18:40Z) — F3 MOVABLES LANDED (GAP1): the 2nd residual term BOUNDED; multi-body = STORE-not-PREDICT; validates FEED-jd's "movables ~750 B"; pointer UNMOVED 0.19110
+### Measured ($0, frozen-CPU-torch SegNet argmax, ADVISORY; tool `tools/measure_movables_multibody_residual.py` review-gate×2; f1-recompute bit-exact vs cache; n96 first-10s + strided n200 full-drive AGREE):
+within-pair (TRUE contest cadence f0→f1) class-3 prediction residual ladder — V0 none(=area) 0.0156 → V1 copy 0.00111
+→ V2 per-obj translate 0.00091 → **V3 per-obj rigid floor 0.00082** (≈ FEED-ja current witness ~0.0008). Multi-body
+PRIZE over copy = V1−V3 = **0.00027 d_seg = 0.027 S MAX** (oracle motion; **identical 0.00027 on both subsets**).
+Births/deaths negligible (2e-5). Objs/frame ~3 (median 62 px tiny; area = 1-2 lead vehicles). **Margin proof of
+irreducibility:** class-3 BOUNDARY median margin 0.29 (73% flip-prone) vs INTERIOR 5.99 (1% ) — residual is a thin
+boundary annulus where SegNet itself is a coin-flip, not gross misplacement. Per-object LOW-RANK CONFIRMED: tracks
+persist (max 96 frames), centroid deg-2 RMS ~2.5 px → handful of coeffs/object.
+### THE TWO-ROLE VERDICT (opposite answers — this is the catch):
+- **WARP-PREDICTOR (ego-warp f0 movables + per-obj rigid): ACCEPT, do NOT build.** Floored at V3=0.00082 (pure
+  PLACEMENT error; per-obj SLAM cannot beat it); the only prize (0.027 S) is already captured by the witness and is
+  dwarfed by the all-class directional-basis lever. No d_seg to harvest.
+- **STORE codec (templates + low-rank trajectories, the F3 "~750 B" line): YES, validated.** Storing (not predicting)
+  drives movables d_seg BELOW the 0.00082 warp-floor toward the partition floor — one-template+pose already reproduces
+  the **median object at 0.00027**; periodic re-template + huge rate slack → lower. Cost K=50→0.9 KB / K=150→2.7 KB
+  (vs 40 KB break-even). Rate-free given FEED-jd's slack.
+### WHY IT MATTERS AT THE THRESHOLD (reconciles FEED-jd): sub-0.15 ⟺ total d_seg ≤ 1.23e-3 → the 0.00082 warp-floor
+alone is **67% of the entire budget**. So movables MUST be STORED via the multi-body decomposition (warp-prediction
+nearly busts the budget; store can't be beaten on rate). The residual is small *because* base-partition + temporal
+persistence collapse the 1.6% movable AREA → ~0.001 d_seg (94% handled). OSS grounds it: multibody-SfM's hard part
+(motion segmentation) is FREE (SegNet gives it); openpilot's own lead model is a compact 1×58 low-dim state;
+dynamic-NeRF (D-NeRF/NSFF/dyn-3DGS) treats dynamics as the expensive residual → low-dim rigid store is the right tool.
+### NEXT (when the directional lever lands + movables become binding): implement movables as the STORED multi-body
+codec (NOT a warp predictor); the open $0 measurement is the store-d_seg-vs-keyframe-budget curve (extend the tool).
+means≠ends: ADVISORY structural bound on the 2nd residual term; pointer UNMOVED **0.19110**. Memo
+`.omx/research/movables_multibody_residual_20260629T184011Z.md`.
