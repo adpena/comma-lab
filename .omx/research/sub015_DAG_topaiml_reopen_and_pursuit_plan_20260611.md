@@ -5370,3 +5370,24 @@ pareto). CALIBRATION: E3 live baseline + E8 pending-smoke anchor recalibrate via
 mechanism + tools/recalibrate_equation.py. Honest tiers: measured(advisory)/theoretical/FORMALIZATION_PENDING;
 no fabricated calibration; lit-hunt cross-refs (Finsler/posterior-coding/Wasserstein-Dice/contour-coding/VCM)
 tagged advisory-not-independently-read. H2 boundary hunter folded (FEED-ih). means≠ends.
+
+---
+
+## FEED-ij (2026-06-29T22:20Z) — DAG↔DSL↔EQUATIONS TRIALITY (operator insight) + DSL memory gap closed + FORMALIZATION fork DONE
+
+### Operator insight: "isn't the DAG a DSL now too and vice versa" — YES, a real triality
+- DSL (tac.witness_dsl, #189) = the witness PROGRAM (composable recursion+math; arms=BASELINE.with_lever, θ*=compose; campaign engine = cyclic-recursion warm-start CHAIN + harvest + compose = literally a DAG of arms).
+- DAG (sub015 work-graph + FEEDs) = the lab TRAJECTORY (append-only dependency graph of findings/experiments/decisions).
+- System of equations (E0-E12, tac.canonical_equations) = the MATH/grammar (each DSL lever = a TERM of action E0).
+- THREE VIEWS of ONE coherent object: math ↔ program ↔ trajectory. This IS the coherent-lab-trajectory + no-signal-loss the operator wants; ONE grammar across all three.
+
+### Signal-loss gap CLOSED: the DSL had no dedicated memory entry (lived only in FEEDs + #189 + θ* memory).
+NEW memory: project_witness_dsl_and_dag_dsl_duality_20260629.md (+ MEMORY.md pointer). Sister: the GR/architecture memory project_gr_unified_action_full_witness_architecture_20260629.md (FEED-ii).
+
+### FORMALIZATION fork (a399290) DONE — commit c1934da41 (registry+memo+builder) + FEED-if (475ce757f)
+13 equations registered (E0 master witness_unified_action_fixed_fisher_background + E1 Fisher-metric / E2 Stiefel-isometry-DM1-cure [MEASURED collapse 3.34→1.19 + PROVEN unit test 07dd971d8] / E3 co-location [MEASURED b0bee924e, 0.978, margin=Fisher surrogate] / E4 lane-IPM-geodesic / E5 norm-flow / E6 indirect-RD=IB / E7 rate=Λ / E8 decisive-smoke-gate PENDING / E9 pose-√-sidecar / E10 θ*-eikonal+length-boundary [the θ*/DSL OPERATIONAL instantiation of E0 — the triality bridge] / E11 decode-determinism [integer-arith, ≠McMullen] / E12 VCM-headroom-floor). Registry 165→178.
+- NO SIGNAL LOSS: coverage ledger maps EVERY FEED gz→ih → an equation, INCLUDING preserved rejections (latent-SDE false-friend, McMullen not-a-mover) — recorded, not dropped.
+- INTEGRATED: producers/consumers (no orphans) + cross-refs (blahut-arimoto, wyner-ziv, null-space-byte-fraction, per-byte-leverage, brotli-cascade, ema-decay, dykstra-pareto). CALIBRATION-wired: E3 live anchor + E8 pending anchor via EmpiricalAnchor residual + recalibrate_equation.py.
+- NO-FAKE: measured (advisory macOS, NOT contest scores) vs theoretical/EXACT-for-surrogate vs FORMALIZATION_PENDING (E8/E12); no fabricated calibration; "moved NO exact score — system-intelligence, NOT goal progress." Pointer 0.19110.
+
+### STATE: recursive adversarial review (3 reviewers) on the DM1-fix build STILL RUNNING (operator: review FIRST before smoke). eikonal-SDF $0 test running. NEXT: 3-clean → smoke (operator steer) → v2.
