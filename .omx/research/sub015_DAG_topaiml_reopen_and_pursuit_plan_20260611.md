@@ -4782,3 +4782,59 @@ This corrects FEED-ho's implication that pose was a near-free standalone win.
 real work, composed in ONE pose-AND-seg-conditioned render. The DM panel (running) derives the d_seg-conditioning
 optimum; the pose-FiLM module (#84, built) is the pose half — verify its wiring into the witness as the parallel
 re-open. Pointer 0.19110.
+
+---
+
+## FEED-ht (2026-06-29T16:30Z) — ⭐ DM1 DECISIVE: rank-collapse = MULTIPLICATIVE RESONANCE; the byte-FREE fix is Stiefel-orthonormal W (MEASURED +6.5× effR). The current build is OFF the optimal path.
+
+**The deep-math optimization the operator demanded. MEASURED on the L7 ckpt, $0 numpy. This reframes FiLM-fix → v2.**
+
+### REGIME (MEASURED, exact) — NEITHER codes NOR map: multiplicative resonance in M = C·Wᵀ
+PR(codes)≈4.6, PR(film W)≈7.4, but PR(M)=1.19. Mechanism: cov(M)=W·cov(C)·Wᵀ; cov(C) and WᵀW share an
+eigenbasis to **96.2%** (≈commute) → M-spectrum factorizes as PRODUCT λ_i≈a_i·g_i (code-var × W-gain), matched
+to 3 decimals. W PEAKS on the top code axis (g₁=1.0) + SUPPRESSES the rest (g₂=0.049) → product of co-peaked
+spectra → rank-1.19. Curriculum sharpened it (CE 3.34→L7 1.19): memorizing 400 partitions is satisfiable by a
+"1-D dial" (net weights carry partitions, code picks a scalar). The held-out 3.9× gap = the 1-D dial can't
+interpolate the ~8-20-dim partition manifold. = UNDER-PRESSURED OPTIMIZATION, not capacity.
+
+### GAUGE THEOREM (MEASURED) — whitening codes ALONE is a NO-OP
+M=C·Wᵀ spectrum invariant under (C,W)→(CR,WR⁻ᵀ). Measured: whiten+compensate → PR=baseline EXACTLY. ⇒ NO code
+basis change (whiten/PCA/decorrelate) changes the realized rank. Must constrain W geometry, penalize the
+M-spectrum directly, or change the FORM.
+
+### RANKED OPTIMAL OPERATOR (byte/rank)
+- **① Stiefel/column-orthonormal film.weight (WᵀW=I) — PRIMARY, BYTE-FREE. MEASURED: PR(M) 1.19→4.57,
+  effR 1.68→10.89 (6.5×).** W is an isometry → cov(M)=code spectrum exactly; removes resonance + proxy-gaming
+  (equal authority all dirs). Impl: QR/Cayley retraction or soft ‖WᵀW−I‖²_F.
+- **② code spectral-entropy (effective-rank) penalty — BYTE-FREE, pairs with ①.** With orthonormal W,
+  PR(M)=PR(codes) → a code-spread objective directly raises M-rank (no gaming). RATE BONUS: codes span ~11 dims
+  → store in ~12-dim basis (−60% counted code bytes) for SAME rank → RANK FIX + RATE HALF ALIGN.
+- ③ diagonal FiLM + rank-floor (current A3): REAL but INFERIOR (proxy-games low-gain dirs). Dominated.
+- ④ full non-diagonal modulation: DOMINATED (bilinear, same ceiling, +bytes). ⑤ attention (nonlinear → ceiling
+  = #modes not 32, highest buildable, modest bytes, only if ①+② insufficient). ⑥ connection/parallel-transport
+  (highest ceiling, research-grade).
+
+### OPTIMAL PENALTY: von-Neumann spectral entropy S(ρ)=−tr(ρ logρ) / PR, NOT −logdet
+cov(M) has 32 nonzero eigs of 768 (rank-deficient) → −logdet needs +εI over ~736 zeros, ε-floor-dominated
+gradient (fights numerics). Spectral entropy/PR = scale-invariant, bounded[1,rank], no singularity,
+gauge-aware, byte-free. (Nuclear-norm = magnitude not spread = wrong target.)
+
+### FROZEN-CHANNEL REFINEMENT — changes the target → ①+② likely SUFFICIENT
+d_seg sensitive only on the 2.2% annulus, 57% Road↔Lane → optimal objective = effective rank of the per-pair
+authority OVER THE MARGIN (∂(φ₁−φ₀)|annulus/∂code, channels weighted by the Road/Lane logit gap w_sdf[1]−w_sdf[0]).
+Rank target = lane-orbit ~8 (not full ~20); Stiefel is EVEN better (equal-gain = margin-optimal). Stiefel
+already gives effR 10.89 > 8 → ①+② probably close the gap WITHOUT the expensive ⑤/⑥.
+
+### VERDICT → FiLM-fix v2 (replaces A1/A2/A3)
+- A1 per-layer-FiLM (+25,344) + A2 concat (+12,672): REMOVE (bilinear in same code → no rank gain, +bytes +
+  memorization/held-out risk; panel demotion CORRECT).
+- A3 −logdet: KEEP INTENT, REPLACE IMPL (→ spectral-entropy/PR on the margin-projected M) + ADD the missing
+  true lever = Stiefel-orthonormal W.
+- **OPTIMAL PATH = ① Stiefel-orthonormal film.weight (byte-free, PROVEN +6.5× effR) + ② code spectral-entropy
+  penalty, margin-projected onto Road↔Lane. Both byte-free. The current build spent +38k params on capacity
+  that CAN'T raise rank while the byte-free winning move was ABSENT.**
+- NEXT (the conjecture→measurement gap): a small warm-start-from-L7 A/B measuring REALIZED d_seg (not just PR)
+  to confirm ①+② close the held-out gap to the lane-orbit. PR gain is MEASURED; d_seg gain is the conjecture.
+
+DM2 (lane operator) + DM3 (penalty flow) still landing → synthesize all 3 → FiLM-fix v2 spec → build → review
+→ train. Pointer 0.19110.
