@@ -5742,3 +5742,38 @@ Connects: eikonal-SDF rate-half (FEED-ik) + comma2k19 GT-prior (#158) + the FREE
 
 ### Pointer 0.19110. This is deep-math system-intelligence (sharpens v2 DM2/DM3′ split + the per-class-rank probe +
 a free-lane-trajectory rate direction); no exact row moved.
+
+---
+
+## FEED-iu (2026-06-30T03:05Z) — DEEP-MATH: the modulation is a COORDINATE WARP, not amplitude-FiLM; FiLM failed by GROUP-ACTION MISMATCH; canonicalization unifies modulation+staticness
+
+### The deepest reason FiLM failed: WRONG GROUP ACTION (not just rank-collapse)
+The per-pair variation is a HOMOGRAPHY (8-DOF ground-plane coordinate WARP from ego roll/pitch/yaw+trans). FiLM
+applies γ⊙feat+β = channel AMPLITUDE modulation. A homography MOVES pixels (warps coords); channel-scaling CANNOT
+translate/rotate/perspective-warp a partition. So forcing the homography orbit through a channel-amplitude
+bottleneck made it near-useless → the optimizer let it collapse to rank-1 ("voluntarily uses ~1.2/768 DOF" =
+the mechanism can't express the transform). rank-collapse was the SYMPTOM; modulating-amplitude-not-coordinates
+is the DISEASE. Right primitive = COORDINATE WARP φ_θ(H_p·x), H_p the per-pair homography (8 numbers) = the
+rank-8 orbit EXACTLY by construction. Literature: Spatial Transformer Networks (Jaderberg 2015) — low-DOF learned
+coordinate warp.
+
+### CANONICALIZATION unifies modulation + staticness + DM2 + free-lane-trajectory
+If the modulation IS the homography warp, warping each pair to the IPM/road-plane CANONICAL frame FACTORS OUT
+ego-motion → in that frame the lane is a FIXED deg-3 poly (DM2 1.28px) and the road-plane partition is near-STATIC.
+→ shared trunk learns the canonical STATIC partition; per-pair modulation = the 8-DOF warp (tiny; FREE-generic if
+from the downloadable ego-pose). Modulation = exactly the motion staticness measures the ABSENCE of. The
+modulation's natural parameterization IS roll/pitch/yaw+translation (6 ego-DOF spanning the 8-DOF homography) —
+the modulation is the POSE, not an abstract latent.
+
+### CLASS HIERARCHY OF MODULATION (staticness overlap, operational)
+- hood/sky (static): IDENTITY modulation (none). - Road/Lane-position (homography): the 8-DOF WARP, only that.
+- Lane-survival (thin/dashed annulus): NOT modulation — DM2 oriented basis + R-survival. - Movables (independent):
+a SEPARATE small per-object modulation (the warp can't carry it = the high-rank residual).
+
+### REFINES v2: DM3′ additive head = a LINEARIZATION of the warp (tangent atoms; works for small motion but spends
+rank to fake a warp). Cleaner = a COORDINATE-WARP head (STN homography on input coords) + tiny additive residual
+for survival/movables. v2 review should A/B WARP-modulation vs ADDITIVE-modulation PER CLASS. PREDICTION
+(deep-math, $0-testable not yet measured): warp wins on homography classes (Road/Lane-position) at far fewer
+bytes; additive residual handles only movables. Ties: STN (Jaderberg 2015) + canonicalization/equivariance +
+#148 tiny-warp + #138 ground-plane-homography-prior + the free-lane-trajectory (FEED-it) + GR gauge (the
+homography is the ground-plane gauge; canonicalizing = working in the static gauge). Pointer 0.19110.
