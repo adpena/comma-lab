@@ -5501,3 +5501,31 @@ rank-fixed per-pair FiLM. (This is the v1 round-2 spatial-uniformity concern, re
 self-calibrating PR bar M2 + A3 relabel M3 + R1-Med shadow-telemetry/re-ortho + R1-Med2 freeze-guard + R3-M1
 lane_thin_gate + Lows) → round-2 FRESH rotation → counter resets → 3 consecutive clean → smoke CLEARED → operator
 steer. Fix subagent spawned. Pointer 0.19110.
+
+---
+
+## FEED-in (2026-06-29T23:55Z) — operator: ambiguous/invalidating findings → ANOTHER deep-math review. Triaged + spawned.
+
+### Triage of round-1 findings vs the "ambiguous or invalidating" bar
+- FIXABLE (clear, not ambiguous → fix subagent a41e01fb): smoke C1/C2/C3 + VOID firewall + R1-Med shadow-telemetry + freeze-guard + lane_thin_gate + Lows. Measurement-faithfulness bugs, not axis ambiguity.
+- AMBIGUOUS/INVALIDATING (→ DEEP-MATH REVIEW, operator-directed): R3 Level-3 — the per-pair FiLM modulation is
+  spatially UNIFORM within a layer, but the d_seg long-tail is spatially LOCALIZED (annulus/lane-orbit) → "PR of
+  the per-pair FiLM" (the WHOLE DM1 axis) may be the WRONG lever. The smoke can't fully resolve it (it tests
+  "does DM1 move d_seg" empirically, but not "is DM1 even the right axis vs DM2"). + R2's attribution ambiguity
+  (the ep300 d_seg degradation COINCIDES with tau-onset AND the lane-edge-wt-30 hinge — is it FiLM collapse at all?).
+
+### The subtlety that makes it genuinely ambiguous (not a clean kill): FiLM modulates MANY channels; INR channels
+have DIFFERENT spatial supports (Fourier features at diff freq/orientation) → a per-pair channel re-weighting CAN
+produce localized output by re-mixing the spatial basis IF the basis is rich/oriented (= the DM2 anisotropic-basis
+lever). So the binding lever may be DM1(rank) / DM2(spatial basis) / their INTERACTION — a real deep-math question.
+
+### Deep-math review SPAWNED (aa05397bb48f484c0): 5-lens (algebra/geometry-manifold/calculus-Jacobian/signal-info/
+INR), grounded + NO-FAKE + means-ends. Resolves: (1) is per-pair FiLM RANK the binding d_seg lever / second-order
+/ wrong axis (dimensionality + ∂φ(x)/∂code locality + channel→spatial map); (2) DM1↔DM2 interaction + v2 priority;
+(3) attribution (FiLM-collapse vs lane-hinge vs tau-sharpening) + the $0 disentangling test; (4) if DM1 wrong: the
+right conditioning structure for a spatially-localized lane-orbit (spatial-FiLM / oriented basis / per-region code).
+
+### LOAD-BEARING: the deep-math verdict REDIRECTS the v2 — if DM1 is wrong/second-order, the v2 prioritizes DM2
+(spatial basis / spatially-varying conditioning) and the smoke becomes a "rule-out-DM1" check, not the main lever.
+Runs in PARALLEL with the fix subagent. NEXT: fix → round-2 review + deep-math verdict together → v2 priority +
+smoke interpretation. Pointer 0.19110.
