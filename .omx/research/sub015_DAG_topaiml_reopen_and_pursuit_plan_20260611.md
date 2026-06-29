@@ -5946,6 +5946,47 @@ eikonal-SDF rate-half + the Lane-survival residual (the binding learned part) + 
 JUST the residual. Launching the rest of the play-fleet (F2 task-geometry-map / F3 movables-rank / F4 free-
 generator+irreducible-info / F5 synthesis-design), grok-informed.
 
+---
+
+## FEED-jb (2026-06-29T18:30Z) — NORTH-STAR R1 / play-fleet F2 LANDED: the task-geometry→causal-factors map is REAL but the "ALWAYS" is NO; the Fisher-manifold→ego-pose half MEASURED (pose R² 0.51 lin/0.70 quad, Road≫Lane)
+`[macOS advisory / research-signal]`; pointer 0.19110 UNMOVED. Tool `tools/north_star_fisher_manifold_dim.py`;
+JSON `experiments/results/north_star_fisher_manifold_20260629T182433Z/results.json`; memo
+`.omx/research/north_star_task_geometry_causal_factors_20260629T183000Z.md`. Lit subagent (31 tool-uses, all
+keystone papers web-verified) + 2 independent verifications (Courtade–Weissman 1110.3069, Khemakhem iVAE 1907.04809).
+
+### The answer to the North-Star "ALWAYS": NO (provably, in the strong form)
+Three published barriers to "minimal description = causal generative factors for ANY fixed task": (B1) Locatello
+2019 impossibility; (B2) **rank ceiling** — F=diag(p)−ppᵀ has rank K−1 ⇒ a single K-class task's input-Fisher
+G=JᵀFJ resolves ≤K−1 directions (SegNet per-pixel K=5 ⇒ ≤4); (B3) observational≠causal (Chalupka 2017: causal
+partition = coarsening of observational, needs interventions). A single multi-class task recovers the task-relevant
+SUBSPACE up to a LINEAR indeterminacy (Roeder 2021), NOT labeled causal factors.
+
+### What IS true (and the contest realizes) — but is FULLY KNOWN, not ours
+input-Fisher nullspace = invariances · high-Fisher manifold = the task's minimal sufficient statistic = the
+indirect-RD-optimal code. The input-pullback-Fisher→manifold/invariance reading is PUBLISHED (Tron et al. 2022
+arXiv:2203.00922, "canonical Riemannian foliations"); the codec spine is PUBLISHED (Wolf–Ziv 1970 estimate-then-
+compress; Courtade–Weissman log-loss=IB; task-oriented indirect-RD). HONESTY: the lit subagent OVERTURNED my first-
+draft "operational-recipe novelty" — demoted to borrowed (the overturn-audit working as intended, FEED-ix).
+
+### Ours-original (narrowed, honest, advisory): the MEASUREMENT + contest factor-accounting
+$0 CPU/numpy (3.2s, n96), κ=2σ(m)(1−σ(m)) = top-2 block of F (FEED-id: margin=byte-faithful Fisher surrogate).
+NEW half nobody measured = the manifold's DIMENSION + GENERATIVE-FACTOR regression:
+- Fisher-mass concentration: 50% of Fisher mass in 3.3% of px (Gini 0.80); nullspace {κ<0.02} = 86% area / 18%
+  mass; manifold = 14% area / 82% mass (codim-1 sufficient-statistic, invariances=discard).
+- Per-class Fisher mass (PURE geometry, no flip labels): Road 0.47 (most absolute, ~matches known ~50% flip), Lane
+  mass/area 14.3 ≫ all (the unstable orbit), Undriv/MyCar 0.5 (stable cores #139). Independent re-derivation.
+- INTRINSIC DIM + POSE: manifold eff-dim 5.96 (pose eff-dim 4.08 ≈ K−1=4 ceiling — consistency, density lifts it);
+  **manifold motion explained by 6-DOF ego-pose: R²=0.51 linear, 0.70 quadratic** (in-sample df 28/96); **Road
+  κ-field pose-R² 0.53 ≫ Lane 0.36** = the pure-Fisher reproduction of the grok depth-stratification; off-pose
+  residual = 49% var, eff-dim ~21 = lane-survival+movables (the only learned bytes).
+
+### Codec / 10-yr implication (means, not end): the optimal task-space codec IS the min-suff-stat (Wolf–Ziv/IB).
+Recipe = surrogate task Fisher (margin, free) → high-curvature manifold = store → its generative factors = store
+THOSE (pose orbit, free/dual-use, ~70% of the manifold) → off-factor residual = only learned bytes (~21-dim) →
+nullspace = discard (86% area, free rate). EXACTLY the v2 store-canonical+pose-warp arithmetic; this quantifies the
+residual budget. VALIDATE: held-out frames for the 0.70 (in-sample); through-R version (GAP2, the binding wall).
+Means≠ends: the byte-closed exact row <0.19110 is the only end. Pointer 0.19110.
+
 ## DAG FEED-iw 2026-06-29 — GAP 2 R-SURVIVAL PHYSICS: R is BENIGN; the wall is RENDER-RES + SegNet-reading
 Memo `.omx/research/r_survival_physics_20260629T182659Z.md` · tool `tools/r_survival_probe.py` · data
 `.omx/research/r_survival_probe_n96.json` (n=96) · `[macOS research-signal]`, SegNet-FREE, pointer 0.19110 UNMOVED.
