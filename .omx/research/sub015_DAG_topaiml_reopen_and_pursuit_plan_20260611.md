@@ -5275,3 +5275,31 @@ vs the decisive DM1 smoke + the co-location-confirmed v2 loss.
 H1 (code the POSTERIOR/boundary, not argmax) + co-location E3 (margin/posterior concentrated on the ANNULUS = the boundary, Pearson 0.978) + H3 (GENERATE the partition from the boundary descriptor via free eikonal-SDF) UNIFY: witness rate-half = code the geodesic-lane boundary (DM2/E4) as a TINY counted descriptor → FREE eikonal-SDF generator → posterior-guided MINIMAL learned residual (NVRC entropy) → INTEGER-deterministic decode (Ballé). All one system under S_τ (E0): D_seg from the posterior (E6/H1), boundary geodesic (E4), rate Λ from the descriptor (E7/H3), determinism from integer arithmetic. BOTH halves $0-testable on gt_n96 BEFORE any GPU.
 
 ### means-ends: all MEANS; END = a byte-closed exact row. The 2 $0 tests SIZE the rate-half + the loss-objective before spend. Pointer 0.19110. (H2 boundary-codec hunter still running.)
+
+---
+
+## FEED-ih (2026-06-29T21:30Z) — DM1-fix BUILD landed CLEAN + decisive smoke READY; H2 boundary-hunt in; FULL witness architecture assembled (all 3 hunters + co-location + DM1)
+
+### DM1 minimal-fix BUILD (commit 07dd971d8, 7 files, +463, default-OFF byte-identical, 513 tests green)
+- Stiefel polar projection (`stiefel_project_columns`, cubic Newton-Schulz, GPU-native, ~8 steps to fp32 floor). NO-FAKE CATCH: Muon's newton_schulz5 does NOT orthonormalize COLUMNS (residual ~1.3, it's for gradient-direction orthogonalization) → reusing it would have been a FAKE Stiefel; built a proper polar projection instead.
+- Code spectral-entropy penalty `−β·log(PR(cov code))` (CAPACITY lever). DSL levers StiefelW/CodeSpectralEntropy/DM1Minimal.
+- LOAD-BEARING identity PROVEN by test: PR(M)=PR(cov code) HOLDS under Stiefel, BREAKS for non-orthonormal W (so the cure is load-bearing). WD-on-W neutralized FREE by per-step renorm (scale-invariance test). Per-stage moment-reset verified-exists (--stage-transition-reset-moments).
+- DECISIVE $0 SMOKE READY: experiments/results/dm1_decisive_smoke/ready_to_fire.sh — 4 arms A0/A1/A2/A3, 399ep from CE warm-start (PR≈3.34) through tau-onset (where collapse bites), n=200, MPS-gradient, advisory d_seg on 24-pair. FALSIFICATION: A3 HOLDS PR(M)≥~3.0 (A0→~1.2) AND lowers advisory d_seg ≥~10% vs A0. FIREWALL: PR holds but d_seg FLAT → DM1 is a SYMPTOM → de-prioritize optimizer program. (v1 round-2 review FEED-hr already suspected DM1=symptom via FiLM-spatially-uniform — the smoke SETTLES it.) Also flagged: v1 lane_thin_gate silent-no-op = separate C1 LOW fix.
+
+### H2 lit-hunt (aa54d81) — boundary/distortion half
+- Finsler tangent-anisotropic boundary energy (Zach-Shan-Niethammer DAGM'09 + Chen-Mirebeau-Cohen Finsler-elastica 1612.00343 + Mirebeau eikonal) = THE structural d_seg-loss lever (direction-dependent boundary cost on orientation-lifted space; matches 9.56:1 + −48% directional basis + DM2 IPM-eikonal lane). ADAPT.
+- Generalised Wasserstein-Dice (Fidon MICCAI'17 1707.00478) = inter-label cost-matrix M → flip-cost-asymmetric surrogate; closed-form vs one-hot; we have exact Road48/Lane19/Undriv15. ADAPT (value=flip-cost asymmetry, NOT semantic hierarchy).
+- Context-tree contour coding + geometric prior (Zheng-Cheung-Florencio 1604.08001) = the boundary RATE descriptor (VCT+arithmetic on direction symbols, "straighter=cheaper"; instantiates 8-dim→hundreds-of-bytes). ADOPT/ADAPT.
+- MDL texture+boundary compression (Mobahi-Rao-Yang-Sastry-Ma IJCV'11 1006.3679) = canonical "segmentation IS a codec" (region-texture + adaptive chain-code boundary); we REPLACE the texture half (task-space). INSPIRE+boundary-ADAPT.
+- Convex-Potts minimal-partition (Chambolle-Cremers-Pock SIAM'12) = differentiable relaxed-Potts target + a-posteriori gap lens. INSPIRE. Boundary-Attention 2401.00935 = subpixel-UDF boundary alt. INSPIRE.
+- Honesty: all segmenters/natural-coders → transfer as loss/target/rate-accounting NOT partition solver; NO verified neural-label-map-codec (honest gap); AITV axis-aligned ≠ tangent-anisotropy (Finsler dominates). $0 tests: Finsler-reweighting flip-mass concentration + chain-code context-entropy bits/frame (queued, no GPU).
+
+### THE FULL WITNESS ARCHITECTURE (assembled, grounded) — the comprehensive v2
+CONDITIONING: Stiefel+spectral-entropy (DM1, BUILT) · DISTORTION: Finsler-anisotropic-boundary + Wasserstein-M
+flip-cost + posterior-coding(KL-to-soft-logits) annulus-localized (co-location E3) · RATE: context-tree
+contour-code the geodesic-lane boundary → free eikonal-SDF generator → posterior-guided residual (NVRC) →
+integer-deterministic decode (Ballé). All under S_τ (E0). Every part literature-grounded + co-location-validated.
+
+### NEXT: DECISIVE $0 SMOKE (settles DM1-causes-d_seg, either way) → AWAITS operator steer (small MPS arm).
+Then comprehensive v2 build with validated parts. eikonal-SDF $0 test (a62d4d5) + formalization fork (a399290)
+running. means-ends: all MEANS; END = byte-closed exact row; smoke = next measurement. Pointer 0.19110.
