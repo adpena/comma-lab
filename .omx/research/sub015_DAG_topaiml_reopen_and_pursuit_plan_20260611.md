@@ -5859,3 +5859,13 @@ Slots: static scene = canonical IPM partition (DM2/stored SDF); ego trajectory =
 HOLDING new heavy spawns until the grok-test lands (operator: see results first). Deeper recursion is now EXPLICIT
 + queued so each returned number maps to a closed gap. Lit anchors for when grounded: dynamic SfM / multi-body
 SLAM / dynamic-scene NeRF / monocular depth+ego (online+OSS at follow-up). Pointer 0.19110.
+
+---
+
+## FEED-ix (2026-06-30T04:35Z) — STANDING DISCIPLINE: NEGATIVES get the hardest scrutiny (adversarial audit + deep-math/OSS/online OVERTURN pass) BEFORE accepting; not pessimistic; sandbox/fun (operator 2026-06-30)
+First results — esp. NEGATIVE — are SUSPECT until adversarially audited. On any negative/partial (grok-test
+a9ef42df, v2 review, $0 probes): FIRST adversarially audit the test (calibration/proxy/impl/regime/pre-R-vs-
+through-R/necessary-not-sufficient/noisy-small-n) + run a deep-math + OSS + online pass that tries to OVERTURN it;
+ONLY then does it stand, and even then implementation-level NOT paradigm (Forbidden-premature-KILL / janky-RE-OPEN).
+Frame forward from what it TEACHES, not disappointment. Memory:
+feedback_not_pessimistic_first_results_adversarial_deepmath_oss_against_negatives_20260630. Pointer 0.19110.
