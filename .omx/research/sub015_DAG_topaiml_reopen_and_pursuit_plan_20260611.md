@@ -5698,3 +5698,47 @@ The annulus d_seg numbers above are $0 advisory (relative comparison), not achie
 + DM3′-A (--lowrank-code-dict-rank 16), AWAITING operator steer → realized-through-R measure → byte-close → exact
 row below 0.19110. Deliverables: memo witness_v2_dm2_dm3_spatial_conditioning_design_20260629T173250Z.md + the $0
 tool + FEED-ir. Pointer 0.19110.
+
+---
+
+## FEED-it (2026-06-30T02:30Z) — DEEP-MATH: the annulus is a HOMOGRAPHY ORBIT; rank-8 = ground-plane homography 8-DOF; class×distance×staticness = the rank decomposition; lane long-tail SPLITS 3 ways
+
+### The annulus has a group skeleton (deep-math; rank-8 MEASURED)
+rank-8=95.6% ≠ coincidence: 8 = dim of the planar homography group. Road/lane/sky on/rel-to the ground plane →
+a moving camera viewing a plane induces an inter-frame HOMOGRAPHY driven by ego (R,t). The road-plane partition's
+frame-to-frame motion IS an 8-param homography → rank-8. The lane "~8-dim orbit" = the homography orbit (same object).
+
+### Roll/pitch/yaw × distance (projection law)
+ROTATION (roll/pitch/yaw) → DEPTH-INDEPENDENT global warp (yaw=h-pan, pitch=v-shift, roll=image-rot; hits all
+depths equally). TRANSLATION → DEPTH-DEPENDENT parallax ~|t|/depth (near big, far ~0). Image-motion ≈ rotation +
+t/depth; on the ground plane they compose into the 8-DOF homography.
+
+### Class × distance × STATICNESS = the rank decomposition (staticness & rank are the SAME structure, 2 lenses)
+- MyCar/hood (4, rigid-to-camera): IoU 0.994 static → moves WITH camera → ~0 variation → 0-byte clamp (#139).
+- Undrivable/sky (2, depth→∞): IoU 0.995 → parallax→0, only rotation → ~0 variation.
+- Road (0, near→far): IoU 0.955 → smooth 8-DOF homography → the RANK-8 BULK.
+- Lane (1, on ground plane): IoU 0.263 → POSITION rides the homography (rank-8) BUT thin+dashed → argmax BRITTLE
+  → the 0.263 is a SURVIVAL/annulus problem, NOT high-rank motion.
+- Movable/cars (3): IoU 0.903 → INDEPENDENT motion, NOT on the homography orbit → the HIGH-RANK RESIDUAL (the
+  rank-8→16 gap, ~4.4%).
+Staticness = per-class temporal-IoU (how much it moves); rank = dimensionality of that motion. Static classes
+(hood/sky) ≈0 variation; homography classes (road/lane-pos) = rank-8; movables = high-rank residual.
+
+### THE LANE LONG-TAIL SPLITS 3 WAYS (answers the open probe geometrically)
+1. Lane TRAJECTORY (where) = rank-8 homography orbit → CAPTURED by DM3′ (low-rank global code). ✓
+2. Lane SURVIVAL (thin dashed argmax holds through R + 2px annulus) = NOT rank — the annulus → DM2 oriented basis
+   + R-survival training. The 0.263 IoU is survival not motion-rank.
+3. Movables = genuine HIGH-RANK residual the low-rank code can't carry → small separate per-object term or accept.
+REFINED OPEN PROBE: measure PER-CLASS cross-pair rank (hypothesis: Road/Lane-pos/Undrivable ~rank-8 homography;
+Movables high-rank). Fold into the v2 review's $0 measurement.
+
+### PROMISING (compliance-gated): the lane TRAJECTORY may be FREE. comma2k19 ego-pose GT (roll/pitch/yaw+trans)
+is downloadable for the source segment (#158; contest clip = comma2k19 RAV4). Ground-plane homography = GENERIC
+compute from (R,t)+calib → generate the rank-8 lane trajectory FREE in inflate.py from a tiny counted statistic
+(6-DOF pose delta/frame, AR-coded to ~bytes), leaving only SURVIVAL(annulus)+MOVABLES as the learned residual.
+"Compile the generator" applied to the lane. NO-FAKE/compliance care: pose must be GENERICALLY derivable
+(SfM/localizer from frames) OR stored as the tiny pose-delta — NEVER a smuggled learned per-frame table (rule 118).
+Connects: eikonal-SDF rate-half (FEED-ik) + comma2k19 GT-prior (#158) + the FREE-generic/COUNTED boundary.
+
+### Pointer 0.19110. This is deep-math system-intelligence (sharpens v2 DM2/DM3′ split + the per-class-rank probe +
+a free-lane-trajectory rate direction); no exact row moved.
