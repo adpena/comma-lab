@@ -4670,3 +4670,43 @@ Round 2 NOT clean (C1). Other 2 reviewers PENDING: ae6ed6aa (ON-path ckpt/EMA in
 PR(codes)-vs-PR(M) measurement to set launch config) → re-review (counter to 0, need 3 clean) → THEN
 FiLM-fix arm. The review is the discipline working: caught the dead lane-prior + the capacity-in-disguise
 BEFORE GPU. Pointer 0.19110.
+
+---
+
+## FEED-hq (2026-06-29T15:45Z) — R2a in (CRITICAL lens CLEAN) + DEEP-MATH DESIGN-OPTIMIZATION panel launched (operator: review must be deep-math + frozen-info-optimized, not just code)
+
+### Operator correction (binding): R2b/R2a are CODE-correctness review (necessary, found real bugs) but NOT
+the deep-math OPTIMIZATION of the design against the frozen contest/domain info space. The review must be
+informed by + optimized through ALL lenses (topology/algebra/calculus/geometry/manifold/dimensionality/
+domain/signal/info) — derive the OPTIMAL conditioning + lane operators, not just check the current code.
+
+### DEEP-MATH DESIGN-OPTIMIZATION PANEL launched (each DERIVES the optimal vs the frozen channel; $0 analysis+measure)
+- DM1 (a178879d70d1cbb4d) — OPTIMAL CONDITIONING OPERATOR (algebra/manifold/dimensionality/info): the decisive
+  $0 PR(codes)-vs-PR(M) measurement (collapse in CODES vs FiLM-MAP?) → the byte-optimal operator (whitened
+  codes / higher-rank / Stiefel / attention / connection / rank-floor-on-codes) maximizing I(code;partition)
+  at min bytes; the optimal rank penalty (−logdet vs nuclear/Gram-Schmidt/natural-grad). Resolves M2.
+- DM2 (aa238f6f042f0d48f) — OPTIMAL LANE OPERATOR (geometry/topology/domain): IPM-rectified ANISOTROPIC
+  (tangent-oriented) + dash-topology-aware (1D-periodic b0, polynomial continuity) + openpilot/comma10k
+  near-zero-byte lane PRIOR + annulus-targeted, vs the current isotropic density hinge.
+- DM3 (a1642376897c6fabe) — OPTIMAL PENALTY FLOW + CURRICULUM (calculus/dynamical): well-conditioned rank flow
+  (fix M1's 1/‖M‖ blowup via detached-‖M‖ norm / mirror-descent / Stiefel) + per-term engage/warm-in/weight
+  schedule (rank-floor prophylactic@CE vs therapeutic@tau/l7) + variational balance (rank-vs-accuracy).
+→ Synthesize DM1+DM2+DM3 → FiLM-fix v2 deep-math-OPTIMAL design (may SUPERSEDE A1/A2 capacity sub-levers).
+
+### R2a (ckpt-integrity, code lens) — CRITICAL lens CLEAN + 1 MEDIUM
+- **CLEAN (PROVEN):** the #1 silent-param-drop risk does NOT occur — film_pl/concat_pl ride the SAME generic
+  iteration (tree_flatten/parameters) + auto-detection as self.hidden → survive EMA save + resume + per-stage
+  ckpt + byte-close + the shipped inflate.py template (auto-detects film_pl./concat_pl. keys). Happy path safe.
+- **MEDIUM-1 (must-fix before a long resumable GPU launch):** film_per_layer/film_concat_code persisted ONLY in
+  result.json (loop-end), NOT in the checkpoint npz (asymmetry: __cfg_n_hidden/hidden_dim/mod_dim ARE). A
+  crash-resume from the ckpt dir alone (the resume-from-disk discipline) has no record FiLM was ON → if the
+  resume cmd omits --film-per-layer, model rebuilds without film_pl → raises (loud, OK) OR silently drops the
+  trained params (SUSPECTED, MLX update semantics). FIX: persist __cfg_film_per_layer/__cfg_film_concat_code in
+  both ckpt builders + fail-closed assert on resume. Touches the resumability + deterministic-repro non-negotiables.
+- LOW-1: no ON-path round-trip test (correct-by-construction but unguarded — add the self-protect test). LOW-2:
+  2nd seg-forward cost (accepted per score>time).
+
+### CONSOLIDATED CODE-FIX LIST (after a516, the 3rd reviewer, lands): C1 (CRITICAL lane-prior silent-no-op) +
+M1 (rank-floor flow) + M2 (reframe/replace A1/A2 per DM1) + M3 (share seg-forward) + R2a-MEDIUM-1 (resume
+arch-flag). The deep-math v2 design (DM1-3) may REPLACE parts → fix bugs + redesign TOGETHER into FiLM-fix v2
+→ re-review (3 clean) → launch. a516 PENDING. Pointer 0.19110.
