@@ -4887,3 +4887,43 @@ ONE v2 build assembling DM1+DM2+DM3 + ALL review findings + pose + lane-gap:
   torch inflate port/guard; LOWs (forward-proliferation→route through 1 numpy ref, getattr defaults, ON-path
   round-trip test).
 → build → review (3 clean) → train. DM2 = the last piece. Pointer 0.19110.
+
+---
+
+## FEED-hv (2026-06-29T17:00Z) — DM2 IN → deep-math panel COMPLETE (3/3) + 2 papers under review + "deep math reveals extreme synergies" (operator)
+
+### DM2 (lane operator) — the lane-gap answer: CONTINUITY not GATE [advisory, measured GT geom]
+- Lane is ANISOTROPIC (along/cross-tangent 7.0× contrast; structure-tensor coherence 0.746; elongation 7.7)
+  → the current isotropic 9×9 box hinge blends to 0.30 + WASTES 70% of support. Orientation varies (median
+  131°) → must be LOCALLY oriented; in IPM-rectified road coords lanes are straight → oriented window is FREE.
+- Lane is a POLYNOMIAL: collinear to deg-3 IPM poly at 1.28px RMS → b0 28 dash-fragments collapse to ~5 smooth
+  lines; missing dashes FULLY predicted by visible ones (continuity FN→0.00021). **Dash GAPS recovered by
+  CONTINUITY, not a gate.**
+- Lane IS the annulus: 60% of lane px in the 2%-margin annulus (30× over-rep); small dashes margin 0.318 (90%
+  in annulus) = dropped BECAUSE borderline; 40% of the whole sensitive annulus is within 3px of a lane → the
+  road↔lane shell is the single largest structured d_seg chunk (annulus 48/17/15 ✓ matches flip-mass).
+- **OPTIMAL OPERATOR: annulus-targeted, CROSS-TANGENT (IPM-oriented) 1-Lipschitz margin sharpener riding the
+  IPM-POLYNOMIAL CONTINUITY band; dash on/off LEFT TO THE REALIZED LOSS (the periodic dash-GATE is DOMINATED —
+  drops 10× more real dashes; the annulus auto-rejects 75% of gap-FP as safe high-margin road).** Effective
+  lane d_seg 0.00228 = 60% below all-dropped (0.00589). Band = ~45 floats/frame (~1-2KB, the rate half).
+- CORRECTS live defaults: lane_sdf_component.py `dash_gate=True` → OFF (continuity); isotropic
+  lane_thin_weight_map → cross-tangent annulus-targeted.
+
+### EXTREME SYNERGIES (operator framing — the panel converges on multi-term moves)
+- DM1 Stiefel-W: fixes CONDITIONING (rank +6.5×) AND unlocks −60% code-byte RATE win (same spectral object).
+- DM2 IPM-polynomial lane: fixes GAP-recognition AND the d_seg lane residual AND is the rate-half band (~1-2KB).
+- DM3 per-group clip: fixes the whole grad-hijack CLASS (not one term); self-gating penalty safe-from-CE.
+- Lane∩annulus = the SAME ~2.2% sensitive set the margin-projected DM1 objective targets → conditioning,
+  lane, and saliency all aim at ONE region. The witness's d_seg + rate levers are the same spectral/geometric
+  objects → "one move, multiple score terms."
+
+### 2 PAPERS under deep-math review (operator: schedule optimizations + synergies + off-the-shelf)
+- 2502.06742 → subagent aa9ee63693e767384 (schedule/curriculum/optimizer optimizations vs our CE→tau→l7→Muon
+  + DM3 schedule; adopt/adapt/inspire).
+- 2505.18069 → dispatching now (same deep-math charge; synergies with the DM panel + the witness).
+Both inform the v2 build's SCHEDULE (the component most likely to have missing optimizations).
+
+### BUILD SEQUENCING: the comprehensive full-stack FiLM-fix v2 build fires AFTER both paper reviews (fold their
+schedule/synergy learnings) → review (3 clean) → train. If a paper hangs >20min, proceed with DM-panel + DM3
+schedule + papers-as-followup (don't stall the top-priority build). Panel COMPLETE; papers = the schedule
+refinement. Pointer 0.19110.
