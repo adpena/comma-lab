@@ -69,6 +69,48 @@ Two mature fields flank our problem; neither occupies it:
 > Honest caveat (unchanged): motivation + beauty are MEANS. They are the *why*, not the *result* — they do not
 > move the pointer; only a byte-closed exact row below 0.19110 does. Recorded because the why is real signal.
 
+## The level-set system EUREKA — the unifying mathematical object
+
+THE eureka (the "Crystal Cathedral" moment): the pieces — SDF carrier, screw warp, residual, gauge,
+indirect-RD objective — are **not a pile of tricks; they are terms of ONE variational object.** The witness is the
+**viscosity solution of a level-set PDE**, and *minimizing the indirect-RD action S_τ over level-set fields φ IS
+the codec.* This is *why* the pieces compose with zero friction (the synergy map) — they were always one object.
+The five facets the operator named:
+
+- **Manifolds.** Three nested manifolds: (a) the scorer-**equivalence quotient** (all witnesses with the same
+  argmax = one fiber; coding = pick the cheapest representative = the gauge/quotient codec #155); (b) the **task
+  manifold** — the small-margin boundary annulus is a **homography orbit** (~8-dim lane orbit; the ego-motion
+  group acting on the boundary); (c) the **Fisher manifold** — the fixed curved background metric G=E[JᵀFJ] the
+  witness is stationary in (matter on a fixed background).
+- **Dimensionality.** The witness is small because the *intrinsic* dimension is small and **measured**: the
+  **rank-K−1 ceiling** (K=5 classes resolve ≤4 directions; pose eff-dim 4.08 sits on it, F2); the ~21-dim off-pose
+  residual; **86% of the Fisher nullspace is discardable** (F2); the lane orbit ~8-dim. Store the intrinsic
+  dimensions, discard the nullspace — **dimensionality IS the rate.**
+- **Derivatives.** The system is differential: the **eikonal |∇φ|=1** (the SDF's unit-gradient — the live
+  derivative constraint that makes it interpolation-exact and R-surviving); the **Fisher metric** G (built from J,
+  the scorer's derivative); the **transport** ∂φ/∂t + V·∇φ = 0 (V = the ego-flow, a derivative of the stored
+  pose); natural-gradient / geodesic flow toward θ*.
+- **Integrals.** The system is variational: **S_τ is an integral functional** being minimized; the **length**
+  (∮ along the boundary) + eikonal terms are integral regularizers (the live integral constraints, θ* memory); the
+  **rate term is the integral of the description length** (MDL); the distortion energy is integrated over the
+  boundary annulus (where it concentrates — co-location 0.978).
+- **Topology.** The deepest facet: the partition's **topology** (births/deaths of components under a sublevel-set
+  filtration) **IS the irreducible information** (Morse-Smale codec #180; persistence ≡ astronomy deblending ≡ the
+  Kelvin invariant — the FEED-jg identity). The level-set method's signature strength is handling **topology
+  changes (merge/split) natively** — which is *exactly why* it fits a driving partition whose connectivity changes
+  as the car moves (new lanes appear, objects occlude). Topology is conserved except at bifurcations; **the
+  bifurcations (the events) are the COUNTED residual.**
+
+*Provenance:* emerged across the session — the θ* variational-levelset frame (2026-06-27,
+[[theta-star-witness-lever-stack-and-variational-levelset-frame-20260627]]); the GR-unified-action
+(2026-06-29, [[gr-unified-action-full-witness-architecture-20260629]]); the Osher-Sethian unification (FEED-jg,
+from the graphics/astronomy sweep). *Borrowed:* the level-set method (Osher–Sethian 1988); viscosity solutions
+(Crandall–Lions); persistent homology / Morse theory; Fisher-information geometry (Amari); variational
+segmentation (Mumford–Shah, Chan–Vese). **OURS:** assembling them so the level-set field *is the compressed
+witness* and the action *is the contest score* (indirect-RD task-space) — the unifying frame is the insight that
+makes the "novel composition" coherent. Honest: the eureka is the unifying FRAME (MEANS); it is validated when a
+byte-closed exact row beats 0.19110.
+
 ## OUR five elements — what, citation, provenance (discovered/solved/adapted/fell-through), synergy role
 
 ### 1. Distortion = the exact frozen-oracle argmax **CELL** (indirect-RD), not a proxy/PSNR
@@ -192,6 +234,47 @@ proved cheaper to STORE, bulk-warp/SDF-carrier cheaper to GENERATE, the lane res
 and the bulk-jitter cell is the one still being measured (a95b0ad6). Deciding generate-vs-store by measured
 minimum-description-length over a task-equivalence class is the same novelty as element #5 (gauge-canonicalization
 for MDL), applied at the codec-structure level.
+
+## Conditioning basis & training curriculum (curvelets + the scale curriculum)
+
+Two design elements that are ADAPTATIONS (borrowed primitive + our task-specific, byte-free application), and that
+materially shrink the witness:
+
+**Curvelets / oriented directional basis — the ~0-byte d_seg lever (DM2).**
+- *What:* orient the carrier/conditioning's basis to the MEASURED all-class boundary tangent field. Curvelets
+  (Candès–Donoho, 2004) are the optimal sparse representation for *curved edge singularities* — O(N⁻²)
+  approximation for a C² curve vs wavelets' O(N⁻¹) and isotropic Fourier's O(N⁻¹) — exactly matching the lane's
+  curved boundary. The boundary is a 1-D curve in a 2-D field; an anisotropic, oriented basis is information-
+  theoretically the right chart.
+- *Provenance — DISCOVERED + MEASURED as THE decisive lever:* orienting the Fourier/curvelet features to the
+  all-class boundary tangent field measured **−48% d_seg at ~0 byte** (vs lane-only −8%); basis-match is PRIOR to
+  capacity (CLAUDE.md frontier §; `[macOS-MLX research-signal]`). It is DM2 in the v2 conditioning axis
+  ([[gr-unified-action-full-witness-architecture-20260629]]).
+- *Borrowed:* curvelets (Candès–Donoho 2004); shearlets (Kutyniok–Labate); WIRE wavelet-INR (arXiv **2301.05187**
+  `[verify]`); BACON band-limited coordinate nets (arXiv **2112.04645** `[verify]`). **OURS:** orienting it to the
+  *measured task-boundary tangent field* as a deterministic ~0-byte TRAIN-TIME prior that compiles into inflate.py
+  for FREE (rule-118: a generic oriented basis generated from a seed = FREE; element of the generate-vs-store
+  table's GENERATE side).
+- *Synergy:* the FREE oriented basis the SDF carrier (#3) and the residual generator (#4) ride; "basis-match
+  before capacity" is a core reason the witness can be small.
+
+**Scale curriculum — coarse→fine, the spectral-bias / Nyquist climb.**
+- *What:* train the witness coarse-to-fine across scales / render resolutions — climb the spectral-bias wall
+  progressively, matched to the R Nyquist cliff (F1: a 2px lane needs render ≥192, ideally 320, to survive R).
+- *Provenance:* the level-set curriculum is already a homotopy of relaxations (CE→tau→l7→Muon, θ* memory); the
+  SCALE axis adds coarse→fine on top. Grounded in Daubechies multiresolution ("hierarchical coarse-gates-fine,"
+  the inner-council CO-LEAD discipline) + the scale-space lens (F1) + render-resolution as the lane's live lever
+  (FEED-jk). DreamSmooth-aligned: learn the smooth/coarse structure first, sharpen later.
+- *Borrowed:* multiresolution analysis (Daubechies); progressive growing; coarse-to-fine INR training (BACON,
+  band-limited nets). **OURS:** tying the scale curriculum to the *R-survival Nyquist cliff* + the level-set
+  homotopy for a task-space (indirect-RD) witness.
+- *Synergy:* the curriculum's stages ↔ the curvelet basis's scales (one multi-scale object); lets the
+  flow-matching generator (#4) learn smooth structure before the ragged detail; directly attacks the spectral
+  bias that sank the smooth black-box INR (the HNeRV misfit in §Motivation).
+
+> Honest: both are MEANS — the curvelet −48% is a measured *advisory* d_seg lever (not an exact row); the scale
+> curriculum is a training-design choice pending the GPU run. arXiv IDs `[verify]` recalled from memory, confirm
+> before external use (NO-FAKE).
 
 ## The corrections / fell-through journey (the honest lineage — no signal loss)
 
