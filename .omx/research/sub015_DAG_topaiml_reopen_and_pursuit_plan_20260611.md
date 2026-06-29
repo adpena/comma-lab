@@ -5622,3 +5622,40 @@ now attaches to the DM2+DM3 v2 (the thing that WILL run), not the moot DM1 smoke
 ### PIVOT: v2 = DM2 (oriented byte-free basis max) + DM3 (spatial latent grid, Cool-Chic/SPADE). Spawning the v2
 deep-math DESIGN (online+OSS) → concrete buildable spec + $0 validation → 3-clean review → operator steer on build+GPU.
 Pointer 0.19110.
+
+---
+
+## FEED-ir (2026-06-29T17:32Z) — v2 DESIGN DONE (online+OSS): the $0 test FALSIFIES the literal DM3 per-pair grid → variation is LOW-RANK GLOBAL (ego-motion) → v2 = DM2-max + low-rank-additive code over a SHARED oriented dictionary
+
+Memo: `.omx/research/witness_v2_dm2_dm3_spatial_conditioning_design_20260629T173250Z.md`.
+Tool (promoted, $0/CPU/numpy): `tools/measure_dm3_spatial_grid_vs_global_code.py`. `[macOS advisory/research-signal]` pointer UNMOVED 0.19110.
+
+### THE $0 FINDING (n96 gt_n96, decisive, pre-registered falsification fired): a per-position per-pair SPATIAL GRID is
+NOT the binding lever — the cross-pair SegNet-argmax variation is **globally LOW-RANK** (rank-8 = 95.6% / rank-16 =
+98.6% of variance = ego-motion coherence). At ~60 floats/pair the best GLOBAL per-pair code reaches annulus d_seg
+**0.026** while the grid (block OR LSQ-optimal steelman) sits at **0.21/0.20** (~8× worse); the optimal grid at 960
+floats (0.180) loses to the global code at 16 floats (0.149). The grid only beats a rank-1-COLLAPSED FiLM, by ~100×
+the bytes a working rank-8 global code uses → the witness FiLM PR-collapse is a CONDITIONING-MECHANISM failure, NOT a
+representational-locality problem. Consistent with FEED-ip (DM1 rank-penalty is the wrong lever) for a deeper reason.
+
+### v2 REDIRECT (honors operator axis; DM2 fully kept):
+- **DM2 (free, maximize):** oriented curvelet/WIRE bank to the stem-Nyquist budget (16 orientations matching the
+  measured 9.56 annulus anisotropy via 2^{j/2}=aspect-ratio; 6 Nyquist-capped scales; anisotropic WIRE envelope
+  s⊥/s∥=9.56, ω₀ across the normal). All via EXISTING flags + one anisotropic-envelope addition. Curvelet m⁻² vs
+  wavelet m⁻¹ optimality (Candès–Donoho); WIRE arXiv:2301.05187. 0 counted bytes (rule 118).
+- **DM3′ (the binding fix, NOT a per-pair grid):** per-pair LOW-RANK ADDITIVE SDF-correction head
+  `phi_k(x,p) = out_sdf(trunk(x)) + Σ_d code_{p,d}·(A·feats(x))_{d,k}` — the SVD `code @ shared-dict` structure
+  the $0 test shows is optimal (D≈16; bypasses FiLM PR collapse by construction). Optional secondary: ONE SHARED
+  (amortized, not per-pair) coarse latent grid w/ LIIF local-ensemble bilinear (arXiv:2012.09161), per-layer
+  re-inject (SPADE arXiv:1903.07291). Cool-Chic (arXiv:2403.11651) adopted for the integer-latent+range-coder
+  bit-exact half ONLY; its per-image latent pyramid REJECTED as the per-pair payload (our pairs are coherent video,
+  not independent images). Spatial-Functa (arXiv:2302.03130) global-vs-grid argument explains the FiLM cap.
+
+### BYTES: counted = per-pair `code` only (D=16 → ~18.75KB raw → ~4–10KB temporal-delta+brotli → rate ~0.003–0.007);
+DM2 free; shared grid ~6KB once. Witness stays d_seg-bound, not rate-bound (matches FEED-ik). Integer-decodable
+(int8 code + deterministic brotli/range-coder; decoder = numpy ONE-CODEPATH). DSL: `OrientedBasisMax` (real existing
+flags, validate-passing); DM3′ levers spec'd as BUILD CONTRACT (need new flags first; never-invent-flags).
+
+### NEXT: 3-clean recursive (online+OSS) review of the memo → minimal first GPU arm `OrientedBasisMax` + DM3′-A
+(--lowrank-code-dict-rank 16, from-scratch) on operator steer → realized-through-R measure → byte-close → EXACT row.
+Pointer 0.19110.
