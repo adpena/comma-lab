@@ -94,6 +94,10 @@ from tac.optimization.muon_finisher_mlx import (  # noqa: E402
     build_muon_finisher_optimizer,
     count_muon_adamw_split,
 )
+from tac.optimization.md_decoupling import (  # noqa: E402
+    stiefel_project_columns,
+    stiefel_residual,
+)
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
@@ -1035,6 +1039,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _stride = max(1, _ncodes // _cap)
         rankfloor_idx = mx.array(np.arange(0, _ncodes, _stride)[:_cap].astype(np.int32))
 
+    # DM1b (code spectral-entropy) loss-term closure. A CAPACITY log-barrier -beta*log(PR(cov(code)))
+    # on the per-pair code covariance (keeps all ~mod_dim code directions live). Pair-INDEPENDENT (a
+    # function of the whole code matrix), so -- exactly like the rank-floor -- accumulating it per-pair
+    # then averaging counts it ONCE. PR is computed via the (D,D) covariance Gram (cheap, no eigh),
+    # the EXACT MLX twin of tac...code_spectral_entropy_penalty. code_spec_w=0.0 (default) => the
+    # branch is skipped => behavior IDENTICAL (fully additive). Same fixed deterministic subsample as
+    # the rank-floor so the Gram is bounded.
+    code_spec_w = float(getattr(args, "code_spectral_entropy_weight", 0.0))
+    code_spec_idx = None
+    if code_spec_w > 0.0:
+        _ncodes2 = 2 * P
+        _cap2 = 256
+        _stride2 = max(1, _ncodes2 // _cap2)
+        code_spec_idx = mx.array(np.arange(0, _ncodes2, _stride2)[:_cap2].astype(np.int32))
+
     # LEVER-B (thin-lane dropped-dash prior) closure constants. Up-weight the realized through-R seg
     # margin hinge on THIN GT-lane structures the unweighted mean loss drops (MEASURED: 52.7% of
     # GT-lane connected components wholesale-missed, miss-fraction monotone in dash size). lane_thin_w
@@ -1124,6 +1143,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             fro2 = mx.sum(G * G)                                        # sum eigenvalues^2
             pr = (tr * tr) / (fro2 + 1e-12)                            # participation ratio in [1, S]
             L = L + rankfloor_w * mx.maximum(rankfloor_tgt - pr, 0.0)
+        # DM1b (code spectral-entropy CAPACITY penalty): -beta*log(PR(cov(code))) on the per-pair code
+        # covariance C = cov(code). Maximizes PR(cov(code)) => keeps all ~mod_dim code directions live;
+        # via the Stiefel identity (--film-stiefel) WᵀW=I => PR(M)=PR(cov(code)) this is the other half
+        # of the byte-free DM1 cure. PR via the (D,D) covariance Gram (no eigendecomposition): C=Cc^T Cc
+        # (the 1/(S-1) cancels in the ratio). Default-off (code_spec_w=0). EXACT MLX twin of the numpy
+        # tac...code_spectral_entropy_penalty (one math, two backends). The gradient flows to the
+        # `code` latent (spreading its spectrum); film.weight is handled by the Stiefel projection, so
+        # the two halves target DIFFERENT params (no double-count, design memo §3 routing).
+        if code_spec_w > 0.0 and code_spec_idx is not None:
+            Cm = model.code[code_spec_idx]                              # (S, D) per-pair codes
+            Cc = Cm - mx.mean(Cm, axis=0, keepdims=True)
+            Cov = Cc.T @ Cc                                            # (D, D) ~ cov(code)
+            ctr = mx.sum(Cc * Cc)                                      # trace(Cov) = sum eigenvalues
+            cfro2 = mx.sum(Cov * Cov)                                  # sum eigenvalues^2
+            cpr = (ctr * ctr) / (cfro2 + 1e-12)                        # PR(cov(code)) in [1, D]
+            L = L - code_spec_w * mx.log(cpr + 1e-12)                  # -beta*log(PR) => raises PR
         # LEVER-B (thin-lane dropped-dash prior): realized through-R margin hinge weighted by the
         # PRECOMPUTED thin-lane map (nonzero ONLY on thin GT-lane pixels). Same realized decision
         # margin as LEVER-3 but concentrated on the DROPPED thin dashes (the PC0 residual). c0=2*pi
@@ -1750,6 +1785,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     continue
                 opt.update(model, clipped)
                 mx.eval(model.parameters(), opt.state)
+                # DM1a (Stiefel-W): project film.weight onto orthonormal columns AFTER the optimizer
+                # step (so PR(M)=PR(cov(code)) holds by construction) and BEFORE the EMA update (so the
+                # deploy shadow tracks the on-manifold weight). Default-off (--film-stiefel) => skipped
+                # => byte-identical. The cubic Newton-Schulz polar re-normalizes columns, which also
+                # neutralizes AdamW weight-decay on W (the design's WD=0-on-W intent). NOTE: composes
+                # with the Muon finisher (the projection runs whichever optimizer produced the step).
+                if args.film_stiefel:
+                    model.film.weight = stiefel_project_columns(model.film.weight)
+                    mx.eval(model.film.weight)
                 ema.update(model)
                 mx.eval(list(ema.shadow.values()))
                 recent_losses.append(batch_loss)
@@ -1776,6 +1820,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "ep_loss": round(ep_loss, 3),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     history.append({"epoch": ep, **v, "implied_S": s})
+            # DM1 telemetry (decisive-smoke signals; design memo §6 firewall). At eval cadence, when a
+            # DM1 lever is active, log PR(M) (per-pair FiLM modulation participation ratio), PR(cov(code))
+            # and the Stiefel residual ‖WᵀW−I‖_F so the A/B can SEPARATE "means fixed" (PR held >~3.0)
+            # from "end moved" (advisory d_seg, in the verdict row above). Default-off (both flags off)
+            # => never fires => no behavior/observability change. Pure read (no model/grad touch).
+            if (args.film_stiefel or code_spec_w > 0.0) and (ep % args.eval_every == 0 or ep == args.epochs):
+                _S = min(2 * P, 256)
+                _ssub = np.arange(0, 2 * P, max(1, (2 * P) // _S))[:_S].astype(np.int32)
+                _codes = model.code[mx.array(_ssub)]
+                _M = model.film(_codes)                                # (S, 2*H*L) modulation
+                _pr_m = float(film_modulation_participation_ratio(np.asarray(_M, np.float32)))
+                _pr_c = float(film_modulation_participation_ratio(np.asarray(_codes, np.float32)))
+                _sres = stiefel_residual(model.film.weight) if args.film_stiefel else None
+                print(json.dumps({"stage": "dm1_telemetry", "epoch": ep, "seg_form": seg_form,
+                                  "pr_film_M": round(_pr_m, 4), "pr_cov_code": round(_pr_c, 4),
+                                  "stiefel_residual": (round(_sres, 5) if _sres is not None else None),
+                                  "film_stiefel": bool(args.film_stiefel),
+                                  "code_spec_w": code_spec_w}), flush=True)
             # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
             # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
             # stage-encoded, byte-close-loadable ckpt (per-stage A/B of which stage moves d_seg).
@@ -2012,6 +2074,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--film-rank-floor-target", type=float, default=4.0,
                     help="LEVER-A3: the participation-ratio FLOOR (effective-dim target) the penalty pushes "
                     "M toward (must be > 1 when --film-rank-floor-weight > 0; PR >= 1 always). Default 4.0.")
+    # DM1 minimal cure (design memo per_stage_fractal_optimizer_priming_reheat_anneal_20260629 §0/§4).
+    # Two byte-free structural moves that make PR(M)=PR(cov(code)) hold BY CONSTRUCTION (Stiefel
+    # isometry) + keep the code spectrum spread. Both DEFAULT-OFF => no new params, the train step +
+    # loss branches are skipped => byte-identical to the pre-DM1 path.
+    ap.add_argument("--film-stiefel", action="store_true",
+                    help="DM1a: each optimizer step, project film.weight (W) onto the Stiefel manifold of "
+                    "ORTHONORMAL COLUMNS (WᵀW=I) via the cubic Newton-Schulz polar W(WᵀW)^-1/2. Then W is "
+                    "an isometry => PR(M)=PR(cov(code)) EXACTLY (the resonance cannot concentrate through "
+                    "W). Re-normalizing columns each step also NEUTRALIZES AdamW weight-decay on W (the "
+                    "design's 'WD=0 on W' intent) WITHOUT touching the optimizer. Default OFF = byte-identical.")
+    ap.add_argument("--code-spectral-entropy-weight", type=float, default=0.0,
+                    help="DM1b: weight beta of a CAPACITY spectral-entropy penalty -beta*log(PR(cov(code))) "
+                    "on the per-pair code covariance, keeping all ~mod_dim code directions live (the other "
+                    "half of the byte-free FiLM rank-collapse cure; via WᵀW=I this raises PR(M)). PR is "
+                    "(D,D)-Gram-computed (no eigendecomposition). 0.0 (default) = OFF = byte-identical.")
     # LEVER-B (THIN-LANE DROPPED-DASH PRIOR, ADDITIVE, DEFAULT-OFF). Attacks the MEASURED dominant
     # residual: 57% Road<->Lane confusion, PC0 (34.5% of residual variance) = Lane->Road DROP, 52.7% of
     # GT-lane connected components WHOLESALE-MISSED, miss-fraction monotone in dash size (<5px 93%

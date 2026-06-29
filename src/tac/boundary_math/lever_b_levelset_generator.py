@@ -812,6 +812,40 @@ def film_rank_floor_penalty(modulation: np.ndarray, target: float) -> float:
     return max(float(target) - pr, 0.0)
 
 
+def code_spectrum_participation_ratio(code: np.ndarray) -> float:
+    """Participation ratio (effective rank) of the per-pair code covariance ``C = cov(code)``:
+    ``PR = (tr C)^2 / ||C||_F^2`` (Renyi-2). Computed via the (D, D) covariance Gram
+    ``C = Cc^T Cc`` (NO eigendecomposition; the 1/(S-1) cancels in the ratio). PR in [1, D]:
+    1 == rank-1 collapse (all code energy in one direction), D == perfectly uniform spectrum
+    (all directions equally live). This is the CAPACITY diagnostic the DM1 spectral-entropy
+    penalty maximizes; via the Stiefel identity ``WᵀW=I => PR(M)=PR(cov(code))`` it is the other
+    half of the byte-free FiLM rank-collapse cure (design memo §0)."""
+    M = np.asarray(code, np.float64)
+    if M.ndim != 2 or M.shape[0] < 2:
+        raise ValueError(f"code must be (S, D) with S>=2; got shape {M.shape}")
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        Mc = M - M.mean(axis=0, keepdims=True)
+        C = Mc.T @ Mc                          # (D, D) ~ cov(code) (scale cancels in the ratio)
+        tr = float(np.trace(C))                # = sum of eigenvalues
+        fro2 = float(np.sum(C * C))            # = sum of eigenvalues^2
+    return (tr * tr) / (fro2 + 1e-12)
+
+
+def code_spectral_entropy_penalty(code: np.ndarray, beta: float) -> float:
+    """Spectral-entropy (Renyi-2 / participation-ratio log-barrier) CAPACITY penalty on the per-pair
+    code covariance: ``L_spec = -beta * log[ (tr C)^2 / ||C||_F^2 ] = -beta * log(PR(cov(code)))``.
+
+    Minimizing it MAXIMIZES ``PR(cov(code))`` => keeps all ~D code directions live (a uniform code
+    spectrum). This is a CAPACITY lever (NOT identifiability/disentanglement — the latent-SDE
+    identifiability transfer was a FALSE FRIEND, design memo §7: FiLM's ``W`` absorbs the
+    permutation+scaling gauge ``ĉ=ΠΛc``). numpy reference for the MLX twin in the level-set witness
+    trainer (one math, two backends); ``beta <= 0`` returns 0.0 (off)."""
+    if float(beta) <= 0.0:
+        return 0.0
+    pr = code_spectrum_participation_ratio(code)
+    return -float(beta) * float(np.log(pr + 1e-12))
+
+
 def lane_thin_weight_map(lstar: np.ndarray, *, lane_class: int = 1, radius: int = 4,
                          power: float = 1.0) -> np.ndarray:
     """Per-pixel up-weight map for THIN GT-lane structures (the dropped-dash residual: measured 52.7%
@@ -974,6 +1008,8 @@ __all__ = [
     "eikonal_penalty",
     "film_modulation_participation_ratio",
     "film_rank_floor_penalty",
+    "code_spectrum_participation_ratio",
+    "code_spectral_entropy_penalty",
     "fit_out_sdf_to_structured_target",
     "front_end_fit_disagreement",
     "lane_thin_weight_map",

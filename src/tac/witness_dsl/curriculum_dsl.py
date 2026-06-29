@@ -447,3 +447,39 @@ def LanePrior(weight: float = 1.0, start_epoch: int = 300,  # noqa: N802 — LEV
                             "--lane-thin-target": target},
                  epochs_delta=window,
                  notes="thin-lane dropped-dash prior (realized margin hinge weighted by thinness)")
+
+
+def StiefelW(window: int = 100) -> Lever:  # noqa: N802 — DM1a
+    """DM1a (Stiefel-W): per-step project film.weight onto orthonormal columns (WᵀW=I) so W is an
+    ISOMETRY => PR(M)=PR(cov(code)) BY CONSTRUCTION (the byte-free root half-1 of the FiLM rank-collapse
+    cure; design memo per_stage_fractal_optimizer §0/§4). store_true => emitted ONLY when on (never
+    False, review C2). Carries a warm-start ``window`` (else dead-arm when resumed at end-of-run, C1)."""
+    return Lever("DM1a_stiefel_w",
+                 overrides={"--film-stiefel": True},
+                 epochs_delta=window,
+                 notes="Stiefel-orthonormal film.weight (WᵀW=I => PR(M)=PR(cov code); WD on W neutralized)")
+
+
+def CodeSpectralEntropy(beta: float = 0.01, window: int = 100) -> Lever:  # noqa: N802 — DM1b
+    """DM1b (code spectral-entropy): add the CAPACITY penalty -beta*log(PR(cov(code))) keeping all
+    code directions live (the byte-free root half-2; design memo §0/§4). A value flag (not store_true);
+    omitted when beta<=0 (off). Carries a warm-start ``window`` (else dead-arm when resumed, C1)."""
+    ov: dict = {}
+    if beta > 0.0:
+        ov["--code-spectral-entropy-weight"] = beta
+    return Lever("DM1b_code_spectral_entropy",
+                 overrides=ov,
+                 epochs_delta=window,
+                 notes="spectral-entropy CAPACITY penalty on cov(code) (raises PR(cov code) => PR(M))")
+
+
+def DM1Minimal(beta: float = 0.01, window: int = 100) -> tuple[Lever, Lever]:  # noqa: N802 — A3
+    """DM1 minimal cure = Stiefel-W + code-spectral-entropy (design memo §4 the 80/20). Returns the
+    two composable levers (use ``BASELINE.with_lever(*DM1Minimal())``); both halves target DIFFERENT
+    params (W via projection, code via penalty) so they compose without double-counting (§3 routing).
+    The per-stage moment-reset (the third minimal item) is the existing ``--stage-transition-reset-moments``
+    (already wired); add ``Muon(...)`` or ``StiefelW(window=...)`` arms to engage it at a boundary.
+
+    The warm-start ``window`` is carried ONCE (on the Stiefel lever); the entropy lever uses
+    ``window=0`` so composing both extends epochs by ``window`` (not ``2*window``)."""
+    return StiefelW(window=window), CodeSpectralEntropy(beta=beta, window=0)

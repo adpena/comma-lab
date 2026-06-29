@@ -66,6 +66,8 @@ __all__ = [
     "MDDecoupledOptimizer",
     "default_md_eligible",
     "newton_schulz5",
+    "stiefel_project_columns",
+    "stiefel_residual",
 ]
 
 
@@ -105,6 +107,71 @@ def newton_schulz5(X: Any, steps: int = 5):
     if transpose_needed:
         X = X.T
     return X
+
+
+def stiefel_project_columns(W: Any, iters: int = 8):
+    """Project a tall matrix ``W`` (out, in) onto the Stiefel manifold of
+    ORTHONORMAL COLUMNS (``WᵀW = I_in``) via the polar factor ``W (WᵀW)^{-1/2}``.
+
+    This is the DM1 byte-free structural cure (design memo
+    ``per_stage_fractal_optimizer_priming_reheat_anneal_design_20260629.md`` §0):
+    with the FiLM conditioning ``W`` (here ``film.weight``, shape (2·H·L, mod))
+    on the Stiefel manifold, ``W`` is an ISOMETRY on its row space, so the
+    nonzero spectrum of ``E[M Mᵀ] = W·cov(code)·Wᵀ`` EQUALS the spectrum of
+    ``cov(code)`` and therefore ``PR(M) = PR(cov(code))`` EXACTLY — the
+    multiplicative-resonance rank-collapse cannot concentrate through ``W``.
+
+    Method (NOT the Muon ``newton_schulz5``): the cubic Newton–Schulz polar
+    iteration ``X ← X (3/2 I − 1/2 XᵀX)`` from a Frobenius-normalized start.
+    This converges QUADRATICALLY to the orthogonal polar factor (column norms →
+    1); the Muon quintic ``newton_schulz5`` is tuned for *direction*
+    orthogonalization of a gradient/momentum and EMPIRICALLY does NOT
+    orthonormalize the columns here (it leaves ``‖WᵀW−I‖_F ≈ 1.3``), so reusing
+    it would be a FAKE Stiefel projection. The cubic iteration reaches the fp32
+    floor ``‖WᵀW−I‖_F ≈ 1e-2`` in ~8 steps, GPU-native (no CPU/eigh sync).
+
+    Magnitude is intentionally DISCARDED (the projection re-normalizes every
+    column to unit norm): this is exactly why a per-step Stiefel projection
+    NEUTRALIZES decoupled weight-decay on ``W`` — AdamW's ``W ← W(1−lr·wd)``
+    scales all columns by the same scalar, which column-renormalization removes —
+    so the design's "WD=0 on W" intent is satisfied WITHOUT touching the
+    optimizer construction.
+
+    Parameters
+    ----------
+    W : mx.array
+        2-D weight, shape (out, in) with ``out >= in`` (tall; orthonormal columns).
+    iters : int
+        Cubic Newton–Schulz steps (default 8; reaches the fp32 residual floor).
+
+    Returns
+    -------
+    mx.array
+        ``W`` projected to orthonormal columns (same shape, same dtype).
+    """
+    import mlx.core as mx
+
+    if int(getattr(W, "ndim", 0)) != 2:
+        raise ValueError(f"stiefel_project_columns expects 2D (out,in); got {getattr(W, 'shape', None)}")
+    in_dim = W.shape[-1]
+    eye = mx.eye(in_dim, dtype=W.dtype)
+    # Frobenius normalization guarantees the start spectral norm < 1 < sqrt(3) so the
+    # cubic iteration is in its quadratic-convergence basin for every column scale.
+    X = W / (mx.sqrt(mx.sum(W * W)) + 1e-12)
+    for _ in range(int(iters)):
+        X = X @ (1.5 * eye - 0.5 * (X.T @ X))
+    return X
+
+
+def stiefel_residual(W: Any) -> float:
+    """``‖WᵀW − I‖_F`` — the orthonormal-columns residual (observability/telemetry
+    + the post-projection assertion target). 0 == perfect Stiefel; the fp32 floor
+    of :func:`stiefel_project_columns` is ~1e-2."""
+    import mlx.core as mx
+
+    G = W.T @ W
+    eye = mx.eye(W.shape[-1], dtype=W.dtype)
+    return float(mx.sqrt(mx.sum((G - eye) * (G - eye))))
 
 
 def _frob(X: Any):

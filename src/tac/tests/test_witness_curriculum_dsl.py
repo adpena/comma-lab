@@ -24,6 +24,9 @@ from tac.witness_dsl import (
     SoftBoundary,
     FiLMFix,
     LanePrior,
+    StiefelW,
+    CodeSpectralEntropy,
+    DM1Minimal,
 )
 
 # the exact flags the completed CE->tau->l7 run was launched with (grounded from the log)
@@ -251,3 +254,54 @@ def test_film_fix_and_lane_prior_compose_clean():
     # baseline is unmutated (composition is pure)
     assert "--film-per-layer" not in BASELINE.flag_dict()
     assert "--lane-thin-weight" not in BASELINE.flag_dict()
+
+
+# --- DM1 minimal cure DSL levers (Stiefel-W + code spectral-entropy) ---
+def test_stiefel_w_lever_emits_real_store_true_flag():
+    ov = StiefelW().overrides
+    assert ov["--film-stiefel"] is True
+    real = real_trainer_flags()
+    assert "--film-stiefel" in real
+    st = real_store_true_flags()
+    assert "--film-stiefel" in st  # it IS store_true
+
+
+def test_stiefel_w_lever_validates_clean_and_extends_window():
+    arm = BASELINE.with_lever(StiefelW(window=80))
+    assert arm.validate() == []                  # never emits False on a store_true
+    assert arm.epochs == BASELINE.epochs + 80    # warm-start window (no dead-arm, review C1)
+    assert arm.flag_dict()["--film-stiefel"] is True
+
+
+def test_code_spectral_entropy_lever_emits_weight_and_off_is_absent():
+    ov = CodeSpectralEntropy(beta=0.02).overrides
+    assert ov["--code-spectral-entropy-weight"] == 0.02
+    assert "--code-spectral-entropy-weight" in real_trainer_flags()
+    # beta<=0 => OFF => flag absent (never emitted as a no-op)
+    assert CodeSpectralEntropy(beta=0.0).overrides == {}
+
+
+def test_code_spectral_entropy_validates_clean():
+    arm = BASELINE.with_lever(CodeSpectralEntropy(beta=0.01, window=60))
+    assert arm.validate() == []
+    assert arm.flag_dict()["--code-spectral-entropy-weight"] == 0.01
+    assert arm.epochs == BASELINE.epochs + 60
+
+
+def test_dm1_minimal_composes_both_with_single_window():
+    s, c = DM1Minimal(beta=0.01, window=80)
+    # the entropy half carries NO window (the Stiefel half carries the single warm-start window)
+    assert s.epochs_delta == 80 and c.epochs_delta == 0
+    arm = BASELINE.with_lever(*DM1Minimal(beta=0.01, window=80))
+    fd = arm.flag_dict()
+    assert fd["--film-stiefel"] is True
+    assert fd["--code-spectral-entropy-weight"] == 0.01
+    assert arm.epochs == BASELINE.epochs + 80   # window counted ONCE, not 2x
+    assert arm.validate() == []
+
+
+def test_dm1_levers_default_off_in_baseline_byte_identity_guard():
+    # the two DM1 flags must be ABSENT from the baseline flag set (default-off => byte-identical)
+    fd = BASELINE.flag_dict()
+    assert "--film-stiefel" not in fd
+    assert "--code-spectral-entropy-weight" not in fd

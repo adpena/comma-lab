@@ -33,6 +33,9 @@ from tac.witness_dsl.curriculum_dsl import (
     SoftBoundary,
     FiLMFix,
     LanePrior,
+    StiefelW,
+    CodeSpectralEntropy,
+    DM1Minimal,
 )
 from tac.witness_dsl.campaign import (
     Arm,
@@ -65,6 +68,9 @@ __all__ = [
     "SoftBoundary",
     "FiLMFix",
     "LanePrior",
+    "StiefelW",
+    "CodeSpectralEntropy",
+    "DM1Minimal",
     # campaign engine
     "Arm",
     "ArmResult",
