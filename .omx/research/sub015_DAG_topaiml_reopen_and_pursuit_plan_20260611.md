@@ -5177,3 +5177,40 @@ late"), not interpretability.
 ### NEXT: building minimal DM1-fix into the trainer (default-OFF byte-identical, like FiLM-fix v1) + tests +
 self-review + the 4-arm decisive smoke READY-TO-LAUNCH (NOT launched). GPU smoke launch AWAITS operator steer.
 Co-location test still running (informs DM2 lane). Pointer 0.19110.
+
+---
+
+## FEED-id (2026-06-29T20:10Z) — $0 CO-LOCATION TEST: CONFIRMED ×3 — GR fixed-Fisher-background framing VALIDATED on real scorer; margin = byte-faithful Fisher surrogate; v2 loss geometry PINNED
+
+### Result (byte-faithful, NO-FAKE): the GR framing is empirically validated on the EXACT contest scorer geometry
+Ran n96 GT frames, CPU/numpy, ~61s, no GPU. Firewall: recomputed 5-class logits via the SAME frozen CPU-torch
+SegNet on cached gt_f1; argmax-vs-cached-lstars mismatch = 0.0, margin |Δ|max = 4.8e-7 (fp32 ULP) → contest
+geometry, not a proxy. Commit b0bee924e.
+
+| Test | metric | value | verdict |
+|---|---|---|---|
+| 1 Co-location (Fisher curvature ↔ d_seg stress) | Pearson(curv,−margin) boundary band | 0.978±0.003 (all-px 0.814; Spearman 0.908) | CONFIRMED |
+| 2 Boundary anisotropy (7:1 analog) | grad across:along | 9.56:1 (in [4,10]) | CONFIRMED (≥pred) |
+| 3 Flip-mass concentration | frac 2%-margin px in 2px band | 0.968 | CONFIRMED |
+Cross-checks: Fisher trace vs spectral-norm 0.997; per-class flip Road48/Lane19/Undriv15 (matches); lane
+62.7%-in-2%-band ≈ known ~60%. Honest nuances: raw structure-tensor eigenratio ~38:1 OVERSHOOTS (boundary
+thinner than 7:1 → over-confirms, the JSON "REFUTED" auto-flag is a literal-band artifact); 1/(m+ε) stress
+variant outlier-dominated (not meaningful) → use −margin + Spearman (robust).
+
+### THE BYTE-FREE GIFT (the actionable)
+curvature ≈ MONOTONE fn of the cheap top1−top2 MARGIN (band r=0.978, Spearman 0.908); ‖F‖₂ tracks trace 0.997
+→ the MARGIN FIELD is a BYTE-FAITHFUL SURROGATE for the full Fisher metric. No metric computation needed.
+
+### v2 LOSS GEOMETRY PINNED (empirically, pre-GPU)
+Build the v2 d_seg loss as an ANNULUS-LOCALIZED, ANISOTROPIC (~7-10:1 cross-boundary-weighted), Fisher-natural-
+gradient energy, using the margin as the Fisher weight. The existing `_live_margin_weight` allocator already
+routes budget to the bottom-margin annulus; the v2 upgrade = ADD the boundary-tangent anisotropy term (= the
+CLAUDE.md "ALL-CLASS DIRECTIONAL Fourier basis = THE decisive lever, −48% d_seg, ~0 byte", now theory-grounded
++ GR-derived). Deliverables: JSON experiments/results/colocation_test_20260629T160343Z/; memo
+.omx/research/colocation_fisher_stress_anisotropy_test_20260629T160536Z.md; tool
+tools/colocation_fisher_stress_anisotropy_test.py.
+
+### v2 now rests on TWO empirically-validated pillars
+(1) loss GEOMETRY: annulus-anisotropic-natural-gradient (co-location CONFIRMED ×3, this FEED).
+(2) DM1 fix: byte-free BY CONSTRUCTION (Stiefel isometry, FEED-ic) — decisive $0 smoke pending the minimal build.
+NEXT: building minimal DM1-fix → decisive smoke (GPU launch AWAITS steer). Pointer 0.19110.
