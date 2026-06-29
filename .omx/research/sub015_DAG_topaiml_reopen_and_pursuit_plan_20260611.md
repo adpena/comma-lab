@@ -6061,3 +6061,73 @@ default-OFF, control-plane-safe) ⟵ requires EXPLICIT operator GPU steer → G5
 ### MEANS≠ENDS: this is a DESIGN (means). `score_claim=false`, `promotable=false`. The END is a byte-closed exact
 row <0.19110. Do NOT launch training; await F1/F3/F4 closure + operator GPU steer. Memory:
 stratified_dynamic_sfm_taskspace_codec_design_20260629T182602Z. pointer 0.19110.
+
+## FEED-jc (2026-06-29T18:25Z) — F4 FREE-GENERATOR IRREDUCIBLE-INFO BYTE BUDGET — MEASURED. K_machine(witness) ≈ 3.2 KB (131× < lossless); rate term ~0.0021; sub-0.15 ⟺ d_seg ≤ 1.23e-3.
+`[macOS advisory / research-signal]`; pointer 0.19110 UNMOVED. Memo
+`.omx/research/free_generator_irreducible_info_byte_budget_20260629T182515Z.md` · tool
+`tools/measure_free_generator_byte_budget.py` · data `experiments/results/free_generator_byte_budget_20260629T182658Z/results.json`.
+Grounds FEED-jb (F5 synthesis) byte budget; tests FEED-ja (free-generator framing) + FEED-iy (R2).
+### THE FRAMING: contest scores ONLY archive.zip bytes; inflate.py is a FREE deterministic interpreter (rule 118).
+So irreducible COUNTED info = **Kolmogorov complexity RELATIVE TO OUR FREE INTERPRETER** K_machine(witness) =
+smallest video-derived data the free generator (homography + eikonal/SDF + range decoder) needs. The fixed
+universal machine IS inflate.py (OSS-grounded: AIT shortest-program-on-fixed-machine; constriction range coder
+<0.1%-over-entropy for the smooth pose AR-stream).
+### (a) POSE TRAJECTORY = HUNDREDS OF BYTES (MEASURED, gt_n600 600×6, range/AR entropy of temporal deltas):
+| q | d_pose floor | pose_term | range-code B | LZMA B |
+| 0.125 | 6.8e-4 | 0.082 | **474** | 999 |
+| 0.0625 | 2.2e-4 | 0.047 | **648** | 1315 |
+| 0.03125 | 6.3e-5 | **0.025** | **875** | 1752 |
+col0 (forward speed, std 1.26) is the SOLE byte cost; cols1-5 near-static. Entropy-coding the trajectory BEATS the
+~5KB solved sidecar: ~875 B at solved-grade (pose_term 0.025), ~474 B at usable (pose_term 0.082). raw fp16=7200 B.
+### (b) CANONICAL SCENE (MEASURED): ONE static mode partition lossless = **480 B**, BUT static/pose-warp is LOSSY
+d_seg~0.021 (Road 0.018, lane 0.98, movable 0.40) → SCORE-DOMINATED (eikonal: lossy label-coding can't trade
+d_seg/byte; break-even 4e-6). VIABLE descriptor = STRUCTURED per-class SDF (CITED FEED-dm lane 4.2e-4/post-R 8e-4
+~1.5KB, FEED-du hood 7.4e-4 56B, R-surviving). FULL per-frame lossless store AVOIDED = 416 KB / rate 0.277.
+### (c) BUDGET (MEASURED+CITED): pose 875 + lane+hood SDF 1556 + warp-mask 0(class-derived) + movables ~750 =
+**K_machine ≈ 3180 B counted, rate 0.0021, 131× < lossless 416 KB.** The learned long-tail residual (annulus/dash)
+is the SOLE remaining trained payload (VARIABLE, the GPU unknown). Bulk (Road/sky/hood ~98% area) = FREE pose-warp.
+### SUB-0.15 ARITHMETIC (MEASURED rate): optimistic (d_seg 8e-4, pose 0.025, 3.2KB) S=**0.107** ✓; conservative
+(d_seg 1e-3, 7.2KB) S=**0.130** ✓. **Threshold: sub-0.15 ⟺ d_seg ≤ 1.23e-3; sub-0.19 ⟺ d_seg ≤ 1.63e-3.** Cited
+frontier need 6e-4–1e-3 is INSIDE the window. **RATE IS NOT THE CONSTRAINT — sub-0.15 reduces ENTIRELY to the
+d_seg residual (learned long-tail + R-survival).**
+### (d) COMPLIANCE-CLEAN: FREE in inflate.py = homography/eikonal/SDF/range-decoder/warp-dispatch (generic);
+COUNTED in archive = pose scalars + manifold coords + learned residual + movable streams (video-derived);
+FORBIDDEN = per-frame table smuggled as code. Pose COMPLIANT either way (tiny counted statistic OR generic
+PoseNet/SfM re-derive). MEANS (sizes the rate-half), not the END (byte-closed exact row <0.19110). pointer 0.19110.
+
+---
+
+## FEED-jb (2026-06-30T06:30Z) — F1 + F5 LANDED + FLUID-DYNAMICS LENS (operator daydream paid off immediately); the contest collapses to ONE binding number
+### F1 R-survival (36a84abac): R is NOT the wall — and the daydream's "R=diffusion" CONFIRMED
+- resample/uint8 survival BENIGN: L* at 384=scorer-res → R near-identity; render≥384 even PALETTE survives d_seg<1e-4.
+- the palette ×170-350 death = sub-wall (C) FROZEN SegNet reading an OFF-DISTRIBUTION flat-color image, NOT the resample.
+- THE WALL = witness RENDER-RES/capacity (sub-wall B): Lane flip explodes only below render 384 — hard@192=25.9%,
+  SDF@192=3.19% (7.6×; total 10× 0.00059 vs 0.0063). SDF buys ~2× render-res (SDF@192≈hard@384).
+- R is FRIENDLY to the SDF: sdf@192 through-R 0.00059 < its pre-R proxy 0.00555 (bicubic RECONSTRUCTS the
+  1-Lipschitz zero-crossing) = SCALE-SPACE STABILITY confirmed (the SDF is heat-stable; daydream lens correct).
+- minimal R-invariant rep = WIDE-RAMP 1-Lipschitz multi-class SDF (≥5px ramp strictly wins: lane@192
+  10.3%@0.66px→2.95%@≥5px); lane needs MSDF (Chlumský 2018) for dash-corners. v2 survival term: SDF carrier +
+  wide ramp + render≥320(lane) + MSDF + R-in-loop + DON'T spend bytes fighting R (spend on render-res + SegNet-reading).
+### F5 synthesis (8fe1cd3f4): SDS-TSC = Stratified Dynamic-SfM Task-Space Codec
+pose FREE+dual-use; bulk (Road/sky/hood ~98%, 3/5 classes) = FREE per-class pose-warp of ONE canonical scene (the
+83.5KB INR decoder DELETED); SOLE learned/counted term = the through-R Lane-survival residual + tiny movables (F3
+~0.0008). Total ~21-55KB (vs 177KB frontier/97KB capstone); predicted S∈[0.12,0.17] Dykstra-feasible STRADDLING
+sub-0.15; ALL uncertainty isolated to ONE number = the through-R lane-residual d_seg. Memo has all CLAUDE.md sections;
+18-assumption = 5 FORK_PRINCIPLED + 2 FORK_EMPIRICAL = genuine CLASS-SHIFT off the 0.1928 plateau, NOT a PR95 reskin.
+Gated G0→G5 on F1/F3/F4 + 3-clean review + EXPLICIT operator GPU steer.
+### FLUID-DYNAMICS LENS (operator daydream — thermo/fluids/vortices/NS):
+(1) the stratified warp = HELMHOLTZ DECOMPOSITION of the ego optical-flow: divergence(forward-zoom)→drives Road,
+    curl/VORTICITY(roll/pitch/yaw)→reaches sky, hood=0. grok-test "forward-zoom sole Road driver" = the divergence.
+    ACTIONABLE: parameterize conditioning by div+curl scalars (flow potentials), not raw 8-DOF homography.
+(2) optimizer = Hodge-projected momentum flow: momentum=advection, weight-decay=viscosity, Muon-NS-orthogonalize =
+    the PRESSURE/incompressibility projection (Stiefel=divergence-free). [structural analogy]
+(3) R = DIFFUSION → survival = SCALE-SPACE stability (CONFIRMED by F1). [real+actionable, done]
+(4) training = thermo Fokker-Planck: free-energy F=E−TS, τ=temperature, spectral-entropy=von-Neumann S, curriculum=
+    annealing, reheat=thermal reheat, optimal=minimal-dissipation (Jarzynski). [real]
+(5) partition TOPOLOGY = CONSERVED invariant of the ego-flow (Kelvin's circulation; homography=homeomorphism),
+    changing only at discrete BIFURCATION events (occlusion/birth/death = vortex reconnection) = the IRREDUCIBLE-INFO
+    (F4). → Morse-Smale stores the conserved topology + pose advects geometry + bifurcations = the new bytes. [real+beautiful]
+### THE PICTURE: clearest sub-0.15 path yet — SDS-TSC (free bulk+pose + SDF-lane-carrier wide-ramp+MSDF@render≥320)
++ the ONE binding number (trained through-R lane d_seg). Byte axis huge slack. Next decisive = the lane-residual
+TRAINING run (GPU, AWAITS operator steer); F1 shows SDF@384+wide-ramp+MSDF makes it very reachable. F2/F3/F4 running.
+means≠ends: design+sub-walls are MEANS; byte-closed exact row <0.19110 is the END. Pointer 0.19110.
