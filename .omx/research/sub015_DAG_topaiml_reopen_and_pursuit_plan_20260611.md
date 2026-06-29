@@ -5427,3 +5427,36 @@ the .py gate (discipline deviation), remediated by scan + mark-file ×2.
 
 ### STATE: recursive review (3 reviewers) on DM1-fix build STILL RUNNING (the gate before smoke). All other
 running subagents DONE (formalization, 3 lit-hunts, eikonal-SDF). NEXT: 3-clean → smoke (steer) → v2 (GPU on distortion).
+
+---
+
+## FEED-il (2026-06-29T23:05Z) — RECURSIVE REVIEW R1 (Stiefel+identity) DONE: CRUX RESOLVED, cure REAL (0 CRITICAL); 2 Med + 5 Low to fix; round-1=FINDINGS
+
+### THE CRUX RESOLVED (the de-risking): the DM1 cure is REAL, not fake
+film.weight=(768,32) TALL; M=code@Wᵀ. Identity PR(M)=PR(cov code) requires orthonormal COLUMNS (WᵀW=I₃₂);
+stiefel_project_columns = polar factor W(WᵀW)^{-1/2} = orthonormal COLUMNS. THEY MATCH → cure REAL. 0 CRITICAL.
+R1 EXECUTED the MLX assignment → projected weight IS seen by forward/EMA/optimizer (not a silent no-op); ordering
+correct (opt.update→project→ema.update); default opt = AdamW (no MD-decoupled desync); NO-FAKE tests genuine
+(none pass with a no-op). cubic NS (1.5s−0.5s³) ≠ NS5 quintic; converges from Frobenius-normalized start.
+
+### 2 Med (must fix before the firewall telemetry is load-bearing for the smoke verdict)
+- Med1 [= the Fisher-Rao concern, CONFIRMED]: the DEPLOYED EMA shadow ships OFF-Stiefel (arithmetic EMA of
+  orthonormal matrices isn't orthonormal; Stiefel non-convex). Deploy/byte-close/verdict use ema.shadow, but the
+  DM1 firewall telemetry (stiefel_residual, PR) is computed on the LIVE weight → the firewall describes the wrong
+  weight. Verdict d_seg is honest (runs through shadow) = NOT a fake score, BUT the "means-fixed(PR held) vs
+  end-moved(d_seg)" firewall is read on the live not the shipped weight. Trainer comment "shadow tracks the
+  on-manifold weight" is FALSE. FIX: compute stiefel_residual + PR on ema.shadow too (M_shadow=codes@shadow.T),
+  report live+shadow in dm1_telemetry; optionally re-orthonormalize the shadow at verdict/byte-close; fix the comment.
+- Med2: --film-stiefel + --freeze-decoder-fit-codes silently violates the freeze invariant — projection mutates
+  the FROZEN film.weight every step (outside the optimizer/freeze mechanism) → codes fit vs a different decoder
+  than loaded; freeze assertion passes (film.weight not trainable) but decoder DOES change. FIX: skip projection
+  when film.weight frozen, OR raise explicit incompatibility when both flags set.
+
+### 5 Low: L1 WD-neutralization claim overstated (only global-magnitude component, not the directional WD term);
+L2 "EXACTLY" → "to ~1e-2 residual"; L3 no tall-matrix guard (assert out≥in); L4 test-gap (no composed
+stiefel(random_W)→PR(M)≈PR(cov code) test at realistic ~1e-2 residual, only transitive); L5 8-iters assume
+well-conditioned start (consider iters=10 or convergence assert).
+
+### Round-1 = FINDINGS (clean-pass counter stays 0). R2 (spectral-entropy+smoke) + R3 (NO-FAKE+byte-identity+
+assumption-challenge) STILL RUNNING. PLAN: collect R2+R3 → fix ALL round-1 findings in one batch (review-gate
+.py mark-file ×2) → round-2 FRESH rotation → 3 consecutive clean → smoke CLEARED → operator steer. Pointer 0.19110.
