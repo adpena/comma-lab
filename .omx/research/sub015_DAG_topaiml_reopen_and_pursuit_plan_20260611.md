@@ -6567,3 +6567,24 @@ single-SDF CLEARS ≤1.23e-3 at BOTH render res; MSDF ABOVE at both (~3.6× wors
 - = two points on the prep-cost-vs-score CURVE (operator's "map the curves not one point", FEED-style sandbox).
 ### CALIBRATION: "deterministic scores a bit higher" = EXPECTED trade-off, NOT measured (both pre-byte-close). Whether the deterministic arm clears 0.19 depends on the running validation — if the store is the 0.118 full-store (FEED-kb) not the 0.062 targeted-waterfill (FEED-kd), the deterministic arm may NOT byte-close under 0.19; a86344a9b9 + the materializer will MEASURE it. Do NOT promise sub-0.19 for the deterministic arm yet.
 ### CONTRIBUTION (originality-ledger UPDATE TRIGGER, to firm up when the deterministic row MEASURES): v2 = a task-space codec METHOD with a deterministic fast-prep variant + a neural lower-score variant, trade-off characterized — comma-relevant + paper-relevant; strengthens the "novel composition + generalizable implementation" claim. means≠ends; pointer 0.19110.
+
+---
+
+## FEED-kk (2026-06-29T18:55Z) — HARVEST a173133d57 config/arbitrariness audit (bf0751a97, memo witness_config_arbitrariness_audit_20260629T224737Z.md) + OPERATOR: a HYBRID strat sits between deterministic & neural (a 3rd point on the prep-cost-vs-score CURVE). [macOS/$0 design advisory; pointer 0.19110 UNMOVED; MEANS.]
+### HARVEST — config/arbitrariness audit (optimal-form risks BEFORE the GPU run + the deterministic materializer):
+- Trainer on main = only the S4 lane-survival witness; the v2 6-section codec (store-canonical + per-class-pose-warp + integer-decode, FEED-jb) is build-gated DESIGN (flags don't exist yet) → the DETERMINISTIC arm needs the materializer/codec BUILT.
+- θ* TIER-2 levers (A1/A3/A6/A7) UNMERGED (worktree 6b4c0b962) → A/B campaign blocked until merged.
+- 2 MEASURED-decisive d_seg levers OFF by default: capacity-routing (--margin-saliency-weight 0.0, --hardness-oversample 0.0) + Muon (--muon-start-epoch None).
+- Defaults off the SOLVED RD-optimum: --mod-dim 32 (stale "122KB" comment) vs SVD floor 21; --hidden-dim 96 vs waterfilled ~120.
+- BINDING Lane R-survival knob UNCONTROLLED: SDF decision-band width has NO regularizer (emergent from softmax-temp-end 0.05 × eikonal-weight 0.01 × render-h 384; needs ≳5px per FEED-iw).
+- REAL BUGS/inconsistencies (FLAG — fix in the deliberate prep pass, NOT autonomously mid-loop): --l7-start-epoch 800 (trainer) ≠ 900 (DSL curriculum_dsl.py:345); --max-bank-freq None ~16× over stride-2 stem-Nyquist 64 (waste + R-aliasing); EON _V_HORIZON 174→188 + missing _CY.
+- DM1 levers (film-stiefel, code-spectral-entropy) deep-math-demoted (FEED-ip) → keep OFF.
+- TOP SYNERGY (MEASURED ordering constraint): basis-match PRIOR to capacity — capacity on isotropic basis HURTS +6%, on directional PAYS −64%; NEVER enable capacity-routing without --self-orient ON + capped bank-freq.
+- ALREADY-SOLVED (no arbitrariness): KKT byte-close waterline 1.27 B/flip (closed-form); gauge chart-per-component selector (min-S rank).
+- RANKED FIX LIST (highest exact-score leverage first): cap bank-freq→64 · enable basis+capacity TOGETHER · control ramp band (Lane R-survival) · h120/mod21 · Muon-ON + sweep muon-lr (~100-300× too small) + reset-moments · sweep hosc-β/ω · reconcile l7-start 800/900 + early-stop · merge TIER-2 · derive eikonal/length magnitudes · pose-stream bit-alloc · fix EON constants · unify seeds.
+### OPERATOR — the HYBRID (turns FEED-kj's 2 points into a CURVE): the spectrum knob = HOW MUCH of the residual (lane long-tail / bulk jitter / movables) is DETERMINISTICALLY-STORED vs TRAINED-GENERATED:
+- FULLY DETERMINISTIC: no trained residual (deterministic bulk waterfill + deterministic lane approx) — fastest prep, highest score (lane long-tail unaddressed).
+- HYBRID: deterministic backbone (store-canonical + per-class-pose-warp + deterministic bulk + integer decode) + a SMALL trained residual ONLY for the binding Lane-survival long-tail (+ small Movables) — middle prep, middle score. ← this IS the v2 architecture per REFINEMENT-2 ([[gr-unified-action-full-witness-architecture-20260629]]: "the trained INR SHRINKS to ONLY the Lane-survival residual"); the LIKELY sweet spot (most deterministic speed, most neural score) — HYPOTHESIS, unmeasured.
+- MORE-NEURAL: larger trained generator absorbing the bulk jitter too (fold C4 into C7, rate playbook FEED-ki) — slowest, lowest score.
+- = a Pareto curve of engineering trade-offs comma would value (the WHOLE curve, operator's "map the curves not one point"). BUILD MOVE: the materializer gets a RESIDUAL-BUDGET knob so ONE codec spans det→hybrid→neural → measure the curve cheaply (not 3 separate builds).
+### CALIBRATION: all 3 points' exact scores UNMEASURED (pre-byte-close); "hybrid = sweet spot" is the HYPOTHESIS the byte-close + GPU run test. means≠ends; pointer 0.19110.
