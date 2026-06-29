@@ -5250,3 +5250,28 @@ Neural-CA/level-set iterated d_seg-core at its fixed point on the n96 cache; if 
 regularizer + re-measure steps-to-converge + decode determinism. (Holomorphic special case of standard
 contraction/Lyapunov stability — McMullen is the existence proof, not a new tool.) Run if idle; NOT a priority
 vs the decisive DM1 smoke + the co-location-confirmed v2 loss.
+
+---
+
+## FEED-ig (2026-06-29T21:05Z) — LIT-HUNTERS H1+H3 LANDED + CONVERGE with co-location; the witness rate-half architecture emerges; 2 decisive $0 tests
+
+### H1 — whole-system solvers (a64bb33): our class is NOW explicitly theorized (instance still unsolved)
+- iRDF NEURAL ESTIMATOR: Yu/Sun/Zhang 2410.09018 (2024-25) — estimates the INDIRECT rate-distortion function (OUR object) via variational/Lagrangian; the optimal code targets the POSTERIOR/sufficient-statistic (MMSE), NOT the source/argmax. → estimate our iRD FLOOR + the posterior-coding reframe. ADAPT (MMSE step must be re-derived for argmax-through-R = the honest adaptation cost).
+- HEADROOM BOUND: Bajić 2505.14980 (MIPR 2025) — deployed VCM sits 1-3 ORDERS OF MAGNITUDE above the rate-accuracy floor → external validation of sub-0.15 + a floor-construction recipe.
+- CLOSED-FORM RDC: Wang et al. 2405.04144 (JSAC) — generalized-IB closed-form optimal rate for rate-distortion-CLASSIFICATION; NO classification-perception tradeoff (source noise governs) → "Chroma too" perception term need NOT cost d_seg. + Zhang 2405.03500 (RDC convex/monotone sanity, MNIST-toy: math not numbers).
+- SCALABLE H&M base-frozen + conditional-residual: Choi/Bajić 2107.08373 / 2305.02562 / 2307.02430 = our free-generator + counted-residual split 1:1 ("train base, freeze, code only the conditional residual").
+- SEC-VCM 2510.15347 — entropy-constraint-to-fixed-backbone (37-46% savings); adopt the PRINCIPLE (bytes only on argmax-relevant signal), not the feature-codec.
+- EXACT problem: class-level YES (now a named object), instance-level NO (fixed-R + 2 frozen nets + free/counted + witness-as-program is ours).
+- HIGHEST build-upon: CODE THE POSTERIOR not the argmax (KL-to-soft-logits; smoother→cheaper; reverse-water-fill on the annulus). $0 test: KL-vs-CE at matched bytes on gt_n96 (does posterior-coding reach lower d_seg/byte + does margin-map predict flip-mass).
+
+### H3 — rate/generator half (a3bf24f): the zero-learned-byte partition generator
+- EIKONAL / FAST-MARCHING SDF (Sethian): deterministic SDF-from-sparse-sources → threshold to K-class partition; counted payload = the lane control points (hundreds of bytes); generator = FREE generic compute (viscosity solution of static Hamilton-Jacobi); O(N log N), trivially in 30-min. THE cleanest "tiny statistic → partition, free generator." ADOPT (#1 build-upon).
+- MODULATION-SPLIT: COIN++/functa 2201.12904/2201.12204 + D'OH 2403.19163 (fixed RANDOM hypernet → INR weights, seed-derived = zero counted generator bytes; only the low-dim latent counted) = our free-base + tiny-counted-code math. ADAPT (swap RGB-recon → argmax objective).
+- DETERMINISM (the REAL answer): Ballé Integer Networks ICLR-2019 — range coding fails on ANY cross-platform float mismatch; integer/fixed-point inference → bit-identical decode. ADOPT (our determinism non-negotiable). CONFIRMS FEED-ie: McMullen superattraction is INSPIRE-only; the real bit-identicality = integer-arithmetic + Banach contraction, NOT complex-dynamics rigidity.
+- RESIDUAL entropy machinery: NVRC 2409.07414 (entropy-code the INR itself, per-group QAT + context model) — ADOPT for the minimal learned residual; INSPIRE-only on representation (PSNR-misfit). μNCA 2111.13545 (68 params!) = existence-proof tiny generator but TEXTURE not partition + stochastic-async (determinism risk) — INSPIRE w/ caveats.
+- $0 test: gt_n96['lstars'] → extract per-class boundary control pts / fit ~8-dim lane descriptor → deterministic eikonal-SDF reconstruct K=5 partition from ONLY the descriptor → measure d_seg(recon vs GT). "How much d_seg does a zero-learned-byte generator recover from 8-dim + what residual is irreducible?"
+
+### THE CONVERGENCE (H1 + H3 + co-location E3 → the witness rate-half architecture)
+H1 (code the POSTERIOR/boundary, not argmax) + co-location E3 (margin/posterior concentrated on the ANNULUS = the boundary, Pearson 0.978) + H3 (GENERATE the partition from the boundary descriptor via free eikonal-SDF) UNIFY: witness rate-half = code the geodesic-lane boundary (DM2/E4) as a TINY counted descriptor → FREE eikonal-SDF generator → posterior-guided MINIMAL learned residual (NVRC entropy) → INTEGER-deterministic decode (Ballé). All one system under S_τ (E0): D_seg from the posterior (E6/H1), boundary geodesic (E4), rate Λ from the descriptor (E7/H3), determinism from integer arithmetic. BOTH halves $0-testable on gt_n96 BEFORE any GPU.
+
+### means-ends: all MEANS; END = a byte-closed exact row. The 2 $0 tests SIZE the rate-half + the loss-objective before spend. Pointer 0.19110. (H2 boundary-codec hunter still running.)
