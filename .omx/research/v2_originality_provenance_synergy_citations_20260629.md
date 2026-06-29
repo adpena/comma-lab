@@ -168,6 +168,31 @@ Two mature fields flank our problem; neither occupies it:
   (LieFlow, deterministic+few-step) + conditioning = full metadata (FINO) + training signal = smooth-target +
   stored-jitter (DreamSmooth) + flicker-fix = sequence-level refinement (GNVC-VD) + annulus dither (PICM-Net).
 
+## The generate-vs-store partition (the FREE/COUNTED boundary, decided EMPIRICALLY per component)
+
+A core part of the method — and itself novel: most codecs fix the generate-vs-store split *by architecture*. We
+**decide it per component by a $0 measured analysis of its score-cost** (the gauge layer's `GenerationGauge` axis;
+`fix_gauge` = hard-gates → min-S → the cheaper side wins). This is the operationalization of CLAUDE.md's "compile
+the maximal deterministic GENERIC structure into inflate.py (FREE), store only the irreducible video-derived
+statistic (COUNTED)" — with the *decision rule* measured, not asserted (canonicalize-for-MDL).
+
+| Component | Decision | The measured analysis that decided it (DAG FEED) | rule-118 |
+|---|---|---|---|
+| Ego-pose / SE(3) twist | **STORE** (tiny, dual-use) | range-codes to 474–875 B (F4); rank-1 / forward-speed dominant (a99f41f0/FEED-jh) | COUNTED ~875 B |
+| Bulk warp (Road/sky/hood) | **GENERATE** (deterministic LHP from the stored pose) | screw reproduces Road exactly at ~0 marginal bytes; per-class-homography's edge 85% non-physical overfit (a513372a/FEED-jj) | FREE algorithm |
+| — bulk per-frame jitter | **OPEN** (generate-via-clean-canonical vs store-per-frame) | per-frame-warp through R = 4× budget, the SegNet jitter floor (a23062c4/FEED-jq); **the clean-canonical budget gate a95b0ad6 is resolving this exact cell** | TBD by a95b0ad6 |
+| Canonical scene + lane geometry | **STORE** descriptor (ground-frame) + **GENERATE** the rasterization | openpilot centerline = free positional prior, recovers 64% (a99f41f0/FEED-jh); ground-frame coding is the open rate gate, 0.5–5 KB target vs 65 KB image-space (FEED-jm) | descriptor COUNTED-tiny / rasterizer FREE |
+| Lane SDF carrier | **GENERATE** (FREE SDF rasterizer; survives R) | single-SDF lane d_seg 5.9e-4 @192 / 1e-5 @320 clears R; MSDF falsified (a1d5682964/FEED-jk) | FREE algorithm |
+| Lane ragged residual | **GENERATE** (trained flow-matching from the prior) + **STORE** the irreducible jitter as margin-keyed dither | polynomial can't collapse it → needs a trained generator (a99f41f0); flow-matching residual-correction + margin-keyed annulus dither (FEED-js: GNVC-VD/OT-NFM/PICM-Net) | trained weights COUNTED + dither COUNTED-tiny (annulus only) |
+| Movables (class-3) | **STORE** (templates + low-rank trajectories) | warp-predict floor 0.00082 = 67% of the budget; store → ~0 at ~0.9–2.7 KB (F3/FEED-je) | COUNTED ~1–3 KB |
+
+**The meta-point (why this is part of the contribution):** the FREE/COUNTED line is the rate term's whole game,
+and we set it by *measuring each component's score-cost on both sides and keeping the cheaper* — pose/movables
+proved cheaper to STORE, bulk-warp/SDF-carrier cheaper to GENERATE, the lane residual a generate+store hybrid,
+and the bulk-jitter cell is the one still being measured (a95b0ad6). Deciding generate-vs-store by measured
+minimum-description-length over a task-equivalence class is the same novelty as element #5 (gauge-canonicalization
+for MDL), applied at the codec-structure level.
+
 ## The corrections / fell-through journey (the honest lineage — no signal loss)
 
 1. **DM1 (per-pair FiLM rank) as the d_seg lever → DEMOTED** (FEED-ip): PR collapsed *while* d_seg improved; FiLM
