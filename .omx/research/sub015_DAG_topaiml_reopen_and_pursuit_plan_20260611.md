@@ -5342,3 +5342,31 @@ comprehensive v2 build (validated parts) → 3-clean → GPU-arm operator steer 
 ### means-ends: ALL the above is MEANS (architecture, equations, validated pillars, reviews); the END is a
 byte-closed exact row < 0.19110. Pointer UNMOVED 0.19110 (honest). Trajectory coherent + no signal lost (DAG
 FEEDs gz→ii + formalization memo + memory pointer project_gr_unified_action_full_witness_architecture_20260629.md).
+
+---
+
+## FEED-if (2026-06-29T21:10Z) — SYSTEM OF EQUATIONS FORMALIZED (E0-E12) into the canonical registry; no signal loss; integrated + calibration-wired
+
+Operator: "formalize our system of equations + all that math + no signal loss + integration with canonical
+equations + all related" (+θ* + calibration + lit-hunt fold-ins). Commit c1934da41. Registry 165->178.
+Memo: .omx/research/system_of_equations_formalization_20260629.md. Builder: tools/register_witness_action_system.py
+(reproducible). NO exact score moved — system-intelligence (means), not goal progress. Pointer 0.19110.
+
+THE SYSTEM (E0 master + E1-E12 terms): E0 witness_unified_action_fixed_fisher_background_v1 (S_τ on a FIXED
+frozen-scorer Fisher background — matter on fixed curved bg, NOT full GR) · E1 fisher_pullback_metric · E2
+dm1_stiefel_isometry_rank_preservation (MEASURED collapse 3.34->1.19 + PROVEN-by-test 07dd971d8) · E3
+fisher_curvature_margin_colocation (MEASURED b0bee924e Pearson 0.978, margin=byte-faithful Fisher surrogate) ·
+E4 dm2_lane_ipm_polynomial_geodesic · E5 dm3_natural_gradient_steepest_descent_under_norm · E6
+indirect_rd_logloss_equals_information_bottleneck (Courtade-Weissman) · E7 rate_mdl_cosmological_constant_
+reverse_waterfill · E8 dm1_decisive_smoke_falsification_gate (PENDING — the live calibration anchor) · E9
+pose_sqrt_concave_coupling_sidecar · E10 theta_star_eikonal_length_boundary_energy (θ*=operational
+instantiation of E0; #183/#184/#185 + DSL #189) · E11 decode_determinism_integer_arithmetic (Ballé; ≠McMullen)
+· E12 vcm_task_rd_headroom_above_floor.
+
+NO-SIGNAL-LOSS: coverage ledger in the memo maps every FEED gz->ih to an equation (incl. latent-SDE
+FALSE-FRIEND + McMullen not-a-mover PRESERVED as recorded rejections). Cross-refs wired to existing registry
+(blahut-arimoto, wyner-ziv, null-space-byte-fraction, per-byte-leverage, brotli-cascade, ema-decay, dykstra-
+pareto). CALIBRATION: E3 live baseline + E8 pending-smoke anchor recalibrate via the EmpiricalAnchor residual
+mechanism + tools/recalibrate_equation.py. Honest tiers: measured(advisory)/theoretical/FORMALIZATION_PENDING;
+no fabricated calibration; lit-hunt cross-refs (Finsler/posterior-coding/Wasserstein-Dice/contour-coding/VCM)
+tagged advisory-not-independently-read. H2 boundary hunter folded (FEED-ih). means≠ends.
