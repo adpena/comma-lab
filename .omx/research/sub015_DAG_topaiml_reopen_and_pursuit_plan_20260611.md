@@ -4617,3 +4617,56 @@ arm. GPU FREE (gate done). mem 96% free.
    per-stage ckpt, ASK operator before launch → MEASURE d_seg (the gating unknown). 3. IF d_seg drops →
    compose the stored-pose sidecar → byte-close → exact eval (contest-CPU/CUDA) = the real pointer attempt.
    4. (parallel, when idle) a NON-code rate lever for sub-0.15 (decoder compression; codes are out per PCA).
+
+---
+
+## FEED-hp (2026-06-29T15:30Z) — REVIEW ROUND 2 (R2b in): NOT CLEAN — real bugs caught pre-GPU. C1 critical + M2 rank-vs-capacity
+
+R2b (a1a7e7c8, loss-dynamics + rate/param lens) returned a thorough review of 9d4629e19. VERDICT: NOT a
+clean pass (C1 resets the 3-pass counter). The review is working — caught a silent-no-op + a means-ends
+rank-vs-capacity issue BEFORE the GPU spend. [macOS-CPU advisory; no code changed yet]
+
+### C1 (CRITICAL, PROVEN) — lane-prior is a SILENT PERMANENT NO-OP for --lane-thin-start-epoch>1
+`train_levelset_witness_realized_through_R_mlx.py:1050` sets `lane_thin_gate={"on": start<=1}` ONCE at
+closure-build, NEVER re-flips in the epoch loop (sibling levers DO: lane-edge :1619-1625, msal :1627-1633;
+no equivalent for lane_thin, absent from `_stage_boundary_now` :1568-1570). So `--lane-thin-start-epoch 300`
+(the help-text-RECOMMENDED value) → gate inits False, stays False forever → thin-lane hinge never fires →
+a FALSE "lane-prior doesn't help" verdict from dead code. Only `--lane-thin-start-epoch 0` works (always-on,
+which the help WARNS against). Aggravators: comment-only-contract violation (claims "engage re-treats
+spike-guard" — doesn't exist); validator only catches start>epochs (false confidence); untested (unit tests
+never run the epoch loop). = exactly the NO-FAKE silent-no-op class. **FIX: add gate-flip + spike-guard
+re-treat + _bnd_lane_thin (mirror :1619-1625) + integration test running >start epochs + FIX the validator
+to catch the silent-no-op (self-protect).**
+
+### M2 (MEDIUM, PROVEN) — A1/A2 are CAPACITY (counted bytes), only A3 is a true RANK lever [the launch-config crux]
+Param accounting (mod_dim=32, hidden=96, n_hidden=4): A1 film_per_layer = +25,344 params (DOUBLES the FiLM
+block); A2 film_concat_code = +12,672; both = **+38,016 params (~60% decoder increase) → +0.010-0.013 rate**
+(quantize_levelset_blob :859 counts film_pl/concat_pl in base_chunks). AND A1/A2 CANNOT raise the
+modulation-rank ceiling above mod_dim=32 (shared+pl+concat are all functions of the SAME 32-dim code →
+across-pair span ≤ rank(codes) ≤ 32). Only **A3 (rank-floor, 0 params, gradient into model.code) is a true
+rank lever** — it diversifies the codes themselves. → **LAUNCH-CONFIG INSIGHT: measure PR(raw codes) vs
+PR(M) FIRST ($0) — if the collapse is in the CODES, A3 helps + A1/A2 are wasted capacity; if in the FILM-MAP,
+A1/A2 help. Lean A3 (rank, 0 bytes) per the 17×-arithmetic panel. The "rank-fix" naming for A1/A2 is
+misleading.** This connects to the gate's partial-amortization (rank-limited): if rank-limit is in the codes,
+the FiLM-fix should be A3 + maybe bigger/decorrelated codes, NOT A1/A2 capacity.
+
+### M1 (MEDIUM, PROVEN math) — rank-floor penalty is 0-homogeneous → gradient ∝ 1/‖M_c‖ blows up at small codes
+codes init at exactly 0 → gradient 0 at init (no bootstrap), then huge as codes grow; grad_clip=1.0 prevents
+NaN but the huge rank-floor grad DOMINATES the clipped direction → starves seg/pose; no start-epoch gate
+(runs through CE warmup, most destabilizing + least necessary; collapse is at tau/l7). Only static sign
+tested, not magnitude dynamics. **FIX: --film-rank-floor-start-epoch gate (engage tau/l7 + spike-guard
+re-treat) + normalize by detached ‖M_c‖ + warm-in + document scale vs w_seg=100.**
+
+### M3 (MEDIUM, PROVEN) — 3 stacked margin levers (lane-edge + msal + lane_thin) triple-pressure the same
+thin-lane pixels + do 3 REDUNDANT identical realized seg forwards per pair (~4× the expensive op). FIX: share
+the (render→R→segnet→margin) forward once across stacked levers; guard/doc the overlap.
+
+### LOW: L1 numpy(f64)/MLX(f32) PR not bit-identical (soften claim); L2 thin_maps dense ~471MB@n600 (sparse it);
+L3 rank-floor f32 precision OK (eps-protected).
+
+### STATUS + PLAN
+Round 2 NOT clean (C1). Other 2 reviewers PENDING: ae6ed6aa (ON-path ckpt/EMA integrity), a5164dac
+(asserted-claims + assumption). PLAN: collect all 3 → BATCH-FIX (C1 + M1 + M3 code; M2 = reframe + the $0
+PR(codes)-vs-PR(M) measurement to set launch config) → re-review (counter to 0, need 3 clean) → THEN
+FiLM-fix arm. The review is the discipline working: caught the dead lane-prior + the capacity-in-disguise
+BEFORE GPU. Pointer 0.19110.
