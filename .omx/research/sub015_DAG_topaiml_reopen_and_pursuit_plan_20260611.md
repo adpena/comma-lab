@@ -6018,6 +6018,17 @@ multi-channel) + coverage/area-AA (wide ramp = sub-pixel coverage) confirm the p
 ### NOT-PESSIMISTIC: STRONG POSITIVE — R-survival (GAP2-A) is SOLVED by SDF; the wall narrows to render-res capacity
 (B, cured ~2× by SDF) + SegNet-reading (C). Honesty: SegNet-free, advisory, means (v2 redirect) not the end (byte-
 closed exact row <0.19110). pointer 0.19110.
+### SCALE-SPACE ADDENDUM (fluid-dynamics/heat-equation lens, TESTED + CORRECTED, `--scale-space`,
+`r_survival_probe_scalespace_n48.json`): R's OWN kernel is tiny/benign (edge-spread eff σ ≈0.38px@384, 0.52px@874,
+→1.2px@96; isolated thin bars survive R always). The "SDF survives because its level-set is heat-stable" claim is
+FALSIFIED for a thin minority class: under the EXACT heat kernel (gaussian blur→argmax) the SDF does NOT beat hard
+on the lane — it's WORSE (σ=1: hard 16.6% vs SDF 26.8%; blur averages the thin lane's small φ into neighbors).
+THE REAL MECHANISM: R is bicubic/bilinear INTERPOLATION (subsample→reconstruct), and bicubic is EXACT on the
+1-Lipschitz LINEAR ramp → the zero-crossing reconstructs sub-pixel. Decisive: HEAT(σ1) SDF lane 26.8% (loses) vs
+INTERP/R@192 SDF lane 3.19% (wins) — same rep, opposite ranking → R is INTERPOLATION-dominant, NOT diffusion-
+dominant. Scale-space still gives the right Nyquist cliff (r≳192 for w=2px lane), but rep-survival ranking =
+interpolation-exactness-on-linear-ramps, not heat-stability. v2 spec unchanged, now mechanistically grounded:
+SDF wins BECAUSE R interpolates.
 
 ---
 
@@ -6156,3 +6167,30 @@ b0bee924e). Off-pose residual ~21-dim = the only learned bytes → QUANTIFIES th
 + the ~21-dim off-pose residual; DISCARD the 86%-area nullspace. = the SDS-TSC arithmetic, residual now quantified.
 ### Validate: held-out frames (the 0.70 is in-sample) + the through-R version (GAP2 = the binding wall, F1 done).
 Advisory [macOS-MLX]; pointer 0.19110 (a means — sharpens WHAT to store + WHY; not an exact row). F3/F4 running.
+
+---
+
+## FEED-jd (2026-06-30T07:20Z) — F4 byte-budget LANDED (095ed3e1a): RATE HALF CLOSED (0.0021); the contest collapses to ONE number with a MEASURED pass-line: sub-0.15 ⟺ d_seg ≤ 1.23e-3
+### Measured rate half (real bytes/entropy, $0, advisory [macOS], pointer 0.19110 unmoved):
+- POSE trajectory (gt_n600 600×6, temporal-delta + order-0 range/AR via constriction within 0.1% of entropy):
+  range-code 474 B (usable, d_pose 6.8e-4) / 875 B (solved-grade, d_pose 6.3e-5) — BEATS the 7.2KB raw / ~5KB
+  sidecar. Col0 (forward speed, std 1.26) = the SOLE byte cost; cols 1-5 near-static.
+- CANONICAL scene: ONE static mode = 480B but lossy d_seg≈0.021 (score-dominated). VIABLE = structured per-class
+  SDF (R-surviving, cited): lane ~1.5KB (4.2e-4 / post-R 8e-4), hood 56B (7.4e-4). Avoids the 416KB lossless store.
+- K_machine(witness) ≈ 3,180 B counted (pose 875 + lane+hood SDF 1,556 + warp-mask 0 free + movables ~750) =
+  131× < 416KB lossless; RATE TERM = 0.0021.
+### THE THRESHOLD (the headline): S = 100·d_seg + √(10·d_pose) + 25·bytes/N with rate+pose tiny → sub-0.15 ⟺
+**d_seg ≤ 1.23e-3** (sub-0.19 ⟺ ≤ 1.63e-3). Cited frontier-grade lane need 6e-4–1e-3 sits INSIDE the window.
+optimistic (d_seg 8e-4, pose .025, 3.2KB) → S=0.107 ✓; conservative (d_seg 1e-3, 7.2KB) → S=0.130 ✓.
+RATE IS NOT THE CONSTRAINT — sub-0.15 reduces ENTIRELY to the d_seg residual.
+### Compliance (rule 118, structured): FREE in inflate.py = homography/eikonal/SDF rasterizer + range/ANS decoder
++ per-class warp dispatch (generic algo). COUNTED = pose scalars + manifold coords + learned residual + movable
+streams (video-derived). FORBIDDEN = per-frame table smuggled as "code." Pose compliant either way. OSS:
+K-complexity-relative-to-our-inflate.py-as-the-universal-machine (AIT 2304.05366/2509.22445) + constriction (2201.01741).
+### CONVERGENCE (4/5 arms in): F5 vehicle (SDS-TSC) + F4 rate=0.0021 + threshold d_seg≤1.23e-3 + F1 recipe
+(wide-ramp SDF + MSDF + render≥320, R friendly) + F2 3rd-confirm (residual ~21-dim, rank-K−1 ceiling). THE CONTEST
+IS ONE TRAINABLE NUMBER with a measured pass-line + a known recipe + huge rate slack. F3 (movables) last arm running.
+### NEXT (the pointer-mover): the lane-survival TRAINING run (GPU) — gated on F3 + the SDS-TSC 3-clean review +
+EXPLICIT operator steer. That run, on the ONE number (trained through-R lane d_seg ≤ 1.23e-3), is the byte-closed
+exact row that moves 0.19110. means≠ends: all measured-means; the exact row is the end; the threshold is the TARGET,
+the trained lane reaching it is the open question.
