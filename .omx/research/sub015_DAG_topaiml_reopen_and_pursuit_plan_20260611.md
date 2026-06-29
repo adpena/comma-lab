@@ -4575,3 +4575,45 @@ Held-out d_seg CONVERGED flat at ~**0.01258** (last 5 verdicts: 0.012618/0.01255
 - **GPU is now FREE (gate done)** → the gate-vs-GPU allocation decision is MOOT; the FiLM-fix TRAINING arm is
   launchable AFTER the review clears 3 passes (operator steer). Big unblock.
 - FiLM-fix 9d4629e19 + PCA 8409011b9 committed + safe; no CODE signal lost.
+
+---
+
+## FEED-ho (2026-06-29T15:15Z) — DAG BACK ON TRACK: consolidated state + the critical path to the pointer (honest arithmetic)
+
+Operator: "get the DAG back on track." Post-limit consolidation — the work-graph re-anchored on the END
+(lower exact score), cutting through the means. Pointer UNMOVED: contest-CPU 0.19110 / contest-CUDA 0.20533.
+
+### WHERE THE DAG IS (the witness capstone, measured)
+- **Cause of the d_seg plateau = MEASURED + 2× confirmed:** FiLM per-pair conditioning rank-collapse
+  (3.34→1.19) + dropped-dash lane (57% Road↔Lane, PC0). Confirmed by the dimensionality lens AND the held-out
+  gate (partial/rank-limited amortization, held-out 0.0126 = 3.9× trained).
+- **#1 lever BUILT + committed (9d4629e19):** FiLM-fix (per-layer FiLM + concat-code + rank-floor) +
+  lane-prior (thin-dash hinge), default-OFF, 81 tests, self-review caught the 4th-forward NO-FAKE risk.
+- **Supporting verdicts banked:** gate = partial-amortization (FiLM confirmation); PCA rate lever = NEGATIVE
+  (codes' task-rank > variance-rank, not cheaply compressible). train-at-2× = cheap LOW-EV secondary (17×).
+- **CLEARED OFF THE PATH (don't re-open):** capacity scaling (demoted, 17× arithmetic); PCA-codes rate
+  (negative); train-at-2× as a primary (it's a later thick-boundary multiplier only).
+
+### THE CRITICAL PATH TO THE POINTER (honest S arithmetic — this is "on track")
+Witness S = 100·d_seg + √(10·d_pose) + 25·bytes/N. Current witness terms (advisory): d_seg 0.0032→**0.32**,
+pose (in-frame) **0.094**, rate **0.049**.
+1. **FiLM-fix training arm** (THE gating unknown): does d_seg drop 0.0032 → ~0.001-0.0015? target 0.001 → d_seg
+   term **0.32→0.10**.
+2. **Compose the stored-pose sidecar** (Quantizr-style, ~1-5KB, "pose is solved" per frontier doc — the
+   current 0.094 is the witness's IN-FRAME pose, NOT the sidecar): pose term **0.094→~0.018**. Near-free,
+   known step — a big S drop independent of d_seg.
+3. **Byte-close** (rate ~0.049; PCA negative so rate stays ~0.05 unless a different rate lever lands).
+→ If d_seg hits ~0.001: S ≈ 0.10 + 0.018 + 0.05 = **~0.167 < 0.19 = POINTER MOVES (sub-0.19).** Sub-0.15
+   additionally needs a rate cut (0.05→~0.03) — a separate rate lever (decoder compression, NOT codes).
+**So the witness's two missing moves to sub-0.19 are: (a) FiLM-fix delivers d_seg~0.001, (b) compose the
+pose sidecar. (a) is gating + unknown; (b) is near-free + known.**
+
+### IN-FLIGHT (gates the path)
+Recursive review ROUND 2 re-spawned (ae6ed6aa / a1a7e7c8 / a5164dac) — 3-clean-pass before the FiLM-fix GPU
+arm. GPU FREE (gate done). mem 96% free.
+
+### NEXT CONCRETE MOVES (in order)
+1. Review → 3 clean passes (running). 2. **FiLM-fix TRAINING ARM** — warm-start L7, levers ON, resumable +
+   per-stage ckpt, ASK operator before launch → MEASURE d_seg (the gating unknown). 3. IF d_seg drops →
+   compose the stored-pose sidecar → byte-close → exact eval (contest-CPU/CUDA) = the real pointer attempt.
+   4. (parallel, when idle) a NON-code rate lever for sub-0.15 (decoder compression; codes are out per PCA).
