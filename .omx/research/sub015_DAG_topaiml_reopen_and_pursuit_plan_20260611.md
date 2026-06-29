@@ -5891,3 +5891,28 @@ testable here:
 DISCIPLINE (anti-Leon): the test of understanding = the mission — a measured byte-closed row < 0.19110. Elegance
 that doesn't move the pointer is a story; elegance that does is a law. The fun is the signal the structure is real.
 Vision/speculation tag; not a result. Pointer 0.19110.
+
+---
+
+## FEED-iz (2026-06-29T18:10Z) — GROK-TEST LANDED: pose-warp d_seg PARTIALLY CONFIRMS the grok → REFINES it into a STRATIFIED per-class warp (Road pose-free; static/survival/movables residual). Settles GAP 3, measures GAP 1, blind to GAP 2.
+`[macOS advisory / research-signal]`; pointer 0.19110 UNMOVED. Tool `tools/measure_pose_warp_dseg.py`; JSON
+`experiments/results/grok_pose_warp_dseg_20260629T181000Z/results.json` (+`_n200`); memo
+`.omx/research/grok_pose_warp_dseg_test_20260629T181000Z.md`. Test = the LOCAL consequence (no cumulative drift):
+predict `lstars[p+1] := warp(lstars[p], H_rel(pose))` vs persist null, real argmax-disagreement vs frozen SegNet
+`lstars`, per class. EON intrinsics (910/582/437) + height 1.22 + plane homography `K(R−t nᵀ/d)K⁻¹`, 3 global
+scalars fit on Road+Lane (per-frame variation 100% pose).
+RESULT (n96 ≈ n200, two samplings agree): **Road +15%/+17%** (pose-homography COMPRESSES the road-plane d_seg
+trajectory — calibration CLOSES, forward-zoom col0 the sole driver) · Lane −1%/−4% (thin/dashed survival,
+warp can't help) · Undriv/sky −9%/−43% (plane-at-∞, ground warp mis-warps) · MyCar −525%/−2677% (STATIC hood,
+ground warp DESTROYS it → needs identity) · Movable −3%/+11% (independent, irreducible).
+VERDICT (PARTIAL, adversarially audited per FEED-ix — STANDS at implementation level, paradigm intact):
+the stored pose IS a FREE d_seg modulation for the ROAD class, but a SINGLE global homography(pose) is the WRONG
+model for the full image. The grok is REFINED into a **stratified per-class warp**: ground-homography(pose) on
+Road, **identity** on MyCar (static core #139), rotation-only `KRK⁻¹` on sky, + small learned residual for
+Lane-survival + Movables. GAP 3 (vehicle): the BULK needs NO trained INR — a deterministic store-canonical +
+per-class pose-warp codec; the level-set INR is only for the survival+movables residual. GAP 1 (movables):
+magnitude ≈0.0008 (n96) of persist d_seg, area ~0.012–0.016, NOT warp-reducible (per-object low-rank-ness
+untested = follow-up). GAP 2 (R-survival): PRE-R ⇒ the Lane residual is a LOWER bound; same-warp-THROUGH-R is the
+queued $0 follow-up. Byte implication: pose is free (dual-use d_pose+d_seg); pay only the residual + a cheap
+static class-mask. Means≠ends: the byte-closed exact row <0.19110 is the only end. Memory:
+grok_pose_warp_dseg_test_20260629T181000Z. Pointer 0.19110.
