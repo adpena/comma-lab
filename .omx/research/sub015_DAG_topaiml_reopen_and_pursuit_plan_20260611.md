@@ -5042,3 +5042,52 @@ No build subagent was dispatched (paper notifications interrupted). The comprehe
 fired. It fires AFTER: (a) round-2 recursive review clears (3 reviewers in-flight), (b) the 4 research
 subagents land (GR-action ad70677 + 3 lit-hunts), (c) optimizer A/B folded into the spec. No GPU training
 without operator steer regardless. Pointer 0.19110. NO-FAKE: "fired" claim retracted.
+
+---
+
+## FEED-ia (2026-06-29T19:00Z) — GR-RESEARCH LANDED: it's QFT-on-FIXED-BACKGROUND (not full GR); ONE action unifies DM1/DM2/DM3+rate; 3 off-the-shelf theorems; $0 co-location test FIRED
+
+### The honest correction (the fresh-eyes payoff)
+NOT full general relativity. The scorer is FROZEN → the metric is a FIXED curved background the witness moves through but CANNOT bend back → NO Einstein field equation, NO back-reaction. Correct physics = matter on a fixed Riemannian manifold / geometric-optics / QFT-in-curved-spacetime. This is BETTER: the geometry is a KNOWN, MEASURABLE object (the scorer's Fisher metric), and the whole game = "least-action matter config in it." Well-posed.
+
+### The unified system (ONE action, ONE stationarity)
+S_τ[θ] = 100·D_seg^τ + √(10·D_pose) + 25·B(θ)/N. Metric G(θ)=E_x[J_xᵀ F_x J_x] (Fisher pullback of frozen
+scorer, F_x=diag(p)-ppᵀ). Field eq: G·θ̇ = −∇_θ S_τ (natural-gradient flow); on Ω: ∂φ_k/∂s=−δS_τ/δφ_k
+(multiphase level-set evolution). δS_τ/δφ=0 in metric G unifies: DM1 = G itself (rank-collapse = G
+ill-conditioned; Stiefel = VIELBEIN GAUGE flattening G) · DM2 = the GEODESIC lane (free boundary Σ={φ_top1=
+φ_top2}; 7:1 anisotropy = metric eigenratio) · DM3 = the natural-gradient/Dykstra FLOW in G · rate = Λ
+(cosmological-constant MDL term, allocated by reverse water-filling = indirect-RD). Caveats: d_seg is hard
+0/1 argmax → exact only for the convex SURROGATE (log-loss/IB), homotopic to truth via curriculum
+(viscosity); pose √ = concave field-dependent coupling (marginal→∞ as d_pose→0) → why pose rides a stored
+sufficient-statistic SIDECAR not a carrier (consistent w/ our pose-solved framing).
+
+### 3 OFF-THE-SHELF theorems make it concrete (web-verified citations)
+- Courtade-Weissman 1110.3069: remote source-coding UNDER LOG-LOSS = Information Bottleneck EXACTLY. Our
+  seg surrogate IS log-loss → IB is the EXACT optimal-coding theory (not analogy). + DVIB 1612.00410 = the
+  differentiable witness loss L=β·rate − I(Z;Y_scorer).
+- SinkGD/SWAN 2502.06742 + Muon + Bernstein "Old Optimizer New Norm" 2409.20325/Modular-Duality 2410.21265:
+  the BYTE-FREE conditioning (vielbein gauge = Sinkhorn/Newton-Schulz, ZERO optimizer state = 0 archive
+  bytes) = the DM1 fix. (= the optimizer-design thread.)
+- Ambrosio-Tortorelli 1990 + anisotropic Modica-Mortola/Esedoglu-Otto: the annulus = a TRAINABLE EDGE FIELD
+  z, ε-annealed, unifying our eikonal(0.01)+length(0.001) under one principled loss w/ 7:1 surface tension.
+- Topology: Morse-Smale codec (#180) = store the field TOPOLOGY (critical-point/cell skeleton, the
+  Λ/rate-cheap invariant), generate geometry deterministically (FREE-generic/COUNTED-learned boundary).
+
+### Highest-value direction (the principled v2 loss)
+ONE composite loss = (Sinkhorn-conditioned) anisotropic-AT/MM boundary energy + flip-cost-weighted IB data
+term, in the fixed Fisher background, annulus-localized. Next-gen: Morse-Smale skeleton as the PRIMARY
+stored object.
+
+### $0 CO-LOCATION TEST — FIRED (decisive, free, validates the WHOLE framing before any GPU-second)
+On cached gt_n96 SegNet logits, 3 maps over 512×384: (a) Fisher curvature ‖F_x‖, (b) margin stress-energy
+m=z_top1-z_top2, (c) boundary tangent anisotropy. Predictions (falsifiable TODAY): (a)&(b) CO-LOCATE on the
+codim-1 annulus Σ (high corr) → confirms curvature↔stress-energy coupling + "off-boundary px = free rate";
+tangent anisotropy ≈ 7:1 → confirms DM2 metric eigenratio. If co-locate → the annulus-localized anisotropic
+natural-gradient v2 loss is justified pre-GPU; else pivot to explicit-edge-field (AT) / topological-loss.
+Subagent running. Pointer 0.19110. NO exact score claimed (research/advisory).
+
+### Operator insight folded (2026-06-29): STAGE-NOISE-SHIFTS = our ringing + stage-transition perturbations
++ warmup. Per latent-SDE (2606.28228) these shifts → IDENTIFIABILITY (code disentanglement); per Hebbian
+(2505.18069) noise = anti-collapse. → REHEAT in the custom optimizer = CONTROLLED re-injection of the
+stage-noise-shift = a SECOND free route to the DM1 fix (disentangle + anti-collapse). Routed to optimizer-
+design subagent.
