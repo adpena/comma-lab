@@ -4947,3 +4947,38 @@ build spec → fire the ONE full-stack v2 build (DM1+DM2+DM3 + paper takeaways +
 [C1, resume-flag, torch-inflate, LOWs]) → 3-clean review → train. If a paper is unretrievable/hangs, proceed
 without it (don't stall the build); papers are the schedule refinement, not a blocker for the core design.
 Pointer 0.19110.
+
+---
+
+## FEED-hx (2026-06-29T17:40Z) — PAPER 1/5 HARVEST: 2502.06742 (SinkGD / Gradient Multi-Normalization, Scetbon/MSR) → schedule refinements
+
+[research/advisory]. Core: every adaptive optimizer = steepest descent under a norm `P_g(∇)=argmax_{g(z)=1}⟨∇,z⟩`
+(ℓ∞→sign/Adam; Frob→normalize; spectral→Muon/Shampoo UVᵀ; row/col-ℓ2→RMS-normalize). Multi-norm = ALTERNATING
+PROJECTION onto norm constraints (Thm 3.6, = our Dykstra/von-Neumann council machinery, on the GRAD step).
+SWAN = row-standardize→whiten (stateless 2nd-order precond; Kronecker-Hessian assumption); SinkGD = row+col
+normalize (Sinkhorn, O(mn), L=5). Sched HPs: cosine+10% warmup, per-module-class LR α=0.05, NO weight decay,
+FP32 preprocessing.
+
+### Ranked fold-ins to the v2 schedule (vs DM3)
+1. **[ADAPT #1] per-group normalize-to-CONSTANT-NORM + fixed 70/30 seg/pose reweight** → SUBSUMES + refines
+   DM3's per-group clip; scale-AND-stage-invariant by construction (kills cross-stage grad-scale heterogeneity
+   of the 4-stage curriculum). ~25 LOC. Regime-INDEPENDENT (the paper's proven P_g/Assumption-3.3). KEEP the
+   70/30 reweight AFTER normalize (pure normalize would equalize seg/pose → over-weight pose).
+2. **[ADAPT #2, 2nd A/B arm] SWAN-style row-standardize→whiten tail** (in place of/before pure Muon): whitening
+   equalizes learning across eigendirections → (INFERENCE) accelerates the high-freq boundary/lane residual =
+   our d_seg debt (coord-INR spectral bias). Cheap at 85K (the LLM-blocking O(m²(m+n)) is free for us). ~40 LOC.
+3. **[ADOPT #3, drop-in] per-module-class LR α** (separate mult for SDF-head/backbone/FiLM/pose). <10 LOC.
+4. [INSPIRE] norm-schedule=curriculum (which norm-geometry per stage; grounds CE→tau→l7→Muon). 5. [INSPIRE,low]
+   WD→0 in tail.
+
+### Reconciliation w/ DM3: per-group-clip → REFINE (constant-norm subsumes it; keep 70/30); Muon EMA-tail →
+REINFORCE (Thm 3.6 fixed-point convergence makes the EMA average well-posed); self-gating rank penalty → mild
+REINFORCE (whitening fights rank-collapse, partial overlap); PREVENT/REFINE → REINFORCE. NO CONTRADICTIONS.
+
+### Frozen-contest fit: HEADLINE speedup does NOT transfer (not LLM/memory-bound; Kronecker-Hessian fails for
+the non-smooth R-chain — do NOT overclaim). MECHANICS transfer (constant-norm-subsumes-clip = regime-indep
+math; per-group LR; FP32-precond validation; Muon-tail=whitening justification). Single highest-value = #1.
+SYNERGY: multi-normalization = Dykstra on gradient norms = the council's native frame.
+
+4 papers pending (a573f 2505.18069, a5d6f 2606.23595, a32be 2307.10644, ae918 2606.24543) → synthesis → fold
+#1/#3 into v2 build (per-group constant-norm + per-group LR), #2 as 2nd training A/B arm. Pointer 0.19110.
