@@ -5543,3 +5543,55 @@ per-position latents = directly on-point for per-pair-uniform vs per-position co
 oriented bases (DM2 lever lit), per-instance(global)-vs-per-position(spatial)-code + rate cost. (Our rate-half is
 byte-cheap per FEED-ik → a spatial latent grid is affordable IF it moves d_seg.) Sister: standing-authority
 memory feedback_full_online_oss_and_original_frontier_design_authority_standing_20260624. Pointer 0.19110.
+
+---
+
+## FEED-ip (2026-06-30T00:35Z) — DEEP-MATH AXIS VERDICT (aa05397bb, online+OSS): DM1 is the WRONG d_seg lever (EXACT) → v2 REDIRECTS to DM2(oriented basis)+DM3(spatial latent grid)
+
+### THE VERDICT (EXACT, $0, measured on per-stage ckpts levelset_ckpt_stage{CE_ep299,Tau_ep899,L7_ep1500}.npz)
+| stage | d_seg | PR(M) | PR(cov code) |
+| CE ep299 | 0.005927 | 3.08 | 11.75 |
+| Tau ep899 | 0.004393 | 1.26 | 5.23 |
+| L7 ep1500 | 0.003163 | 1.18 | 4.57 |
+PR(M) COLLAPSES 2.6× (3.08→1.18) WHILE d_seg IMPROVES 1.9× (0.00593→0.00316) → DM1 hypothesis INVALIDATED at
+the correlation level (if rank were necessary, d_seg would DEGRADE as PR collapsed; it does the OPPOSITE). The
+witness voluntarily uses ~1.2 of 768 FiLM DOF/pair, ~4.5 of 32 code dims. DM1 (Stiefel/spectral-entropy/rank-floor)
+restores a quantity whose collapse is BENIGN. DM1 = SECOND-ORDER, NOT the binding lever.
+
+### THE ALGEBRA (why): a per-pair FiLM perturbation gives Δφ(x) ∈ span{W_sdf[·,c]·act′·u_c(x)} = ≤2H=192 FIXED
+spatial channel-patterns. The per-pair code RE-WEIGHTS these; it CANNOT synthesize localized support outside the
+span. Localizing the moving lane annulus ⇔ oriented channel fields (DM2). Raising rank (DM1) = more GLOBAL
+selections of the SAME fixed supports → wasted. Binding axis = SPATIAL-BASIS SPAN (DM2). Matches CLAUDE.md
+measured (directional basis −48%; capacity-on-isotropic +6%/HURTS; capacity pays only after basis-match).
+
+### SPATIAL-LOCALITY measured: cross-pair partition variation enriched 10.5× in the 2px annulus (3.25% area holds
+34% of variation; top-10% px hold 89%) → the per-pair-varying signal is spatially CONCENTRATED (needs spatial DOF).
+
+### ATTRIBUTION RESOLVED ($0, deconfound run lane=0 tau-isolated): tau-onset → +4% blip @ep325 → RECOVERS @ep350
+→ monotone improve to 0.0031 → tau REFUTED (net-improves); FiLM-collapse REFUTED (the table). The "ep300
+degradation" R2 saw = the benign tau-transition wobble. Lane-hinge un-deconfounded (no lane-ON run reached ep300+)
+→ a fixed-CE+lane-30-from-ep300 GPU smoke is the only clean lane test (low priority). The DM1 smoke does NOT
+disentangle + M1 predicts it shows NO d_seg movement → DM1 smoke is MOOT (deep-math settled it $0).
+
+### V2 REDESIGN (literature-grounded, online+OSS authority — VERIFIED citations)
+- DM2-FIRST (byte-free): maximize the oriented self-orient/curvelet/WIRE basis (finer angular coverage under
+  stem-Nyquist; the freq_across=8/n_dir_freqs=4 config the code flags). Curvelets O(N⁻²) vs wavelet O(N⁻¹) for the
+  curved boundary (Candès-Donoho) → optimal thin-annulus carrier.
+- DM3 (byte-cheap, the real capacity lever): replace the GLOBAL per-pair FiLM code with a COARSE/SPARSE per-POSITION
+  SPATIAL LATENT GRID (Cool-Chic/SPADE-style), sampled per coordinate. Lit: SPADE (Park 1903.07291 — global
+  modulation "washes away" spatial structure); Spatial Functa (Bauer/Dupont 2302.03130 — a GLOBAL per-instance INR
+  code FAILS even on CIFAR-10 = our exact failure); Cool-Chic (2212.05458)/Cool-Chic-5.0 (2605.02726)/C3
+  (2312.02753)/LIIF (2012.09161)/Instant-NGP (2201.05989) — per-position entropy-coded spatial latent grid + tiny
+  fixed decoder (~1.5-2.5kB). Annulus is sparse → coarse grid = very few bytes; rate-half is byte-cheap (FEED-ik) → affordable.
+- Do NOT spend v2 GPU on DM1.
+
+### HONESTY SPLIT: DISSOLVED — "uniform modulation can't produce ANY localized change" is FALSE (channel-span
+algebra: re-weighting spatially-distinct channels yields spatially-varying output; FiLM not categorically non-local).
+CONFIRMED — "per-pair FiLM RANK is the right d_seg lever" is FALSE. PR(M) is a legit per-pair-distinguishability
+diagnostic, NOT the binding d_seg lever.
+
+### IMPACT: the review machinery WORKED end-to-end — round-1 caught a false-verdict smoke; the operator-directed
+deep-math review (with online+OSS authority) then INVALIDATED the DM1 lever at $0 + handed the literature-grounded
+right direction. v2 REDIRECTS to DM2+DM3-spatial; DM1 smoke deprioritized (don't launch); the fix subagent's
+faithful VOID-aware harness → reused for DM2/DM3 A/B. means-ends: don't spend GPU on DM1; the residual annulus
+long-tail is a SPATIAL-CONDITIONING problem. Pointer 0.19110.
