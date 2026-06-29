@@ -4541,3 +4541,37 @@ Pointer 0.19110.
 
 Findings → triage → fix CRITICAL/Med → re-review → 3 consecutive clean passes → THEN gate-vs-GPU launch
 decision to operator. NO-GPU (parallel with the gate). Pointer 0.19110.
+
+---
+
+## FEED-hn (2026-06-29T15:05Z) — RECOVERY: gate VERDICT + PCA NEGATIVE harvested (both COMPLETED pre-limit) + review re-spawn
+
+Weekly API limit (reset 10am CDT) killed the 3 review reviewers (a68d/ad60/a74c) mid-flight with ZERO findings
+(lost signal → re-running). BUT the two big jobs COMPLETED + are durable (no signal loss): the gate finished
+600 epochs; PCA committed 8409011b9. Limit now reset (10:05 > 10am). mem recovered (96% free, swap 567M).
+
+### (1) HELD-OUT AMORTIZATION GATE — COMPLETED ep600. VERDICT: PARTIAL / rank-limited [macOS-CPU advisory]
+Held-out d_seg CONVERGED flat at ~**0.01258** (last 5 verdicts: 0.012618/0.012550/0.012622/0.012584/0.012589).
+- vs trained 0.0032 = **×3.9**; vs pass-threshold 0.0048 = ×2.6 (does NOT pass "generalizes"); vs random-init
+  0.030 = the decoder DOES generalize structure (0.0126 << 0.030).
+- **VERDICT: PARTIAL amortization, rank-limited = the 2nd INDEPENDENT confirmation of the FiLM rank-1.2
+  collapse** (as predicted FEED-hd/he/hm). The shared decoder partially amortizes (structure transfers) but
+  the rank-1 per-pair conditioning caps how well FRESH held-out codes fit → held-out plateaus ~4× trained.
+  Implication: a 600-pair deploy needs co-trained codes OR the FiLM-fix (which lifts BOTH training d_seg AND
+  held-out generalization). Strengthens the FiLM-fix as THE primary lever.
+
+### (2) WAVE-3 PCA-CODES RATE LEVER — MEASURED NEGATIVE (committed 8409011b9) [macOS-CPU advisory]
+- NO-FAKE K=32 gate PASSED: byte-close d_seg 0.00311 vs trainer realized 0.00323 (cal 0.00325) — render faithful.
+- full32 byte-close: 72,500B → rate_term 0.0483 (base 61,414 + codes int8+brotli 11,086).
+- **NEGATIVE:** the codes' VARIANCE eff-rank (~11-16, what the dimensionality lens measured) is NOT the
+  d_seg-RELEVANT rank — dropping just 2 of 32 PCs → +27% d_seg. The codes use MORE dims for d_seg than their
+  variance suggests → NOT cheaply compressible 32→20. CORRECTS the dimensionality lens's "code-dim*≈20"
+  (that was variance-rank, not task-rank). The rate win must come elsewhere (or from a FiLM-fixed witness that
+  re-distributes code usage). Honest negative, banked; pointer UNMOVED.
+
+### RECOVERY ACTIONS
+- Re-spawning review ROUND 2 (3 independent reviewers, same lenses: ON-path ckpt/EMA integrity; loss
+  dynamics + rate/param rank-not-bytes; asserted-claims + assumption-challenge) — the lost signal.
+- **GPU is now FREE (gate done)** → the gate-vs-GPU allocation decision is MOOT; the FiLM-fix TRAINING arm is
+  launchable AFTER the review clears 3 passes (operator steer). Big unblock.
+- FiLM-fix 9d4629e19 + PCA 8409011b9 committed + safe; no CODE signal lost.
