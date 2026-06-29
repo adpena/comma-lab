@@ -5823,3 +5823,39 @@ PoseNet=ego-motion), NOT a measured exact row. Means≠ends: pointer 0.19110; th
 end. Fold the pose-as-modulation $0 probe into the v2 review (alongside per-class-rank + warp-vs-additive). The
 recursive self-reference (DSL/DAG/equations triality = the same low-DOF object describing us describing it) is the
 "Understand"-grok closure — noted, not load-bearing.
+
+---
+
+## FEED-iw (2026-06-30T04:20Z) — DEEPER RECURSIVE: the grok was FIRST-ORDER; the complete object is DYNAMIC STRUCTURE-FROM-MOTION; 3 named gaps staged against the running grok-test
+
+### The complete object (recurse past FEED-iv)
+The grok said "one rigid trajectory through one STATIC world." Completion: the world isn't fully static (movables).
+The complete sufficient statistic = DYNAMIC SfM:
+  source video = (static 3D scene geom) + (ego-motion trajectory) + (per-moving-object rigid trajectories) + (R: the rendering/projection 3D→scored-2D-argmax).
+Slots: static scene = canonical IPM partition (DM2/stored SDF); ego trajectory = the pose (modulation/d_pose/homography); moving objects = the movables residual (the recursion); rendering = R.
+
+### THE 3 GENUINE GAPS (what we don't completely understand yet)
+- GAP 1 — MOVABLES RECURSION (the grok eats its tail): movables are NOT high-rank-irreducible — EACH is its own
+  rigid ~6-DOF trajectory → the residual is a FEW MORE LOW-RANK POSE STREAMS, not a dense residual. The whole
+  statistic = static-scene + {ego-pose} + {object-pose}_1..N (multi-body SLAM / dynamic SfM). Changes the residual
+  budget (~6×N numbers, not dense). Grok-test measures the residual MAGNITUDE, not its per-object low-rank-ness.
+- GAP 2 — R-SURVIVAL PHYSICS (the binding wall; grok-test is PRE-R, can't see it): the lane long-tail brittleness
+  is a RENDERING problem not a representation problem — the partition can be geometrically correct and still FLIP
+  under R (↑874 bicubic → uint8 → ↓384 → argmax). The flip is born in the sub-pixel boundary placement at 874
+  BEFORE the downsample averages (#149) + basis Gibbs/aliasing + uint8 step. Fragments known (SDF 1-Lipschitz
+  survives; palette ×170-350 dies) but NO complete survival theory: what is the MINIMAL R-invariant boundary rep +
+  exactly what aliasing kills the thin dashed lane?
+- GAP 3 — VEHICLE (grok-test answers directly): if warping a STORED canonical partition by homography(pose) lands
+  low d_seg, the BULK needs NO trained INR — it's a deterministic store-canonical-SDF + pose-warp codec; the only
+  learned bytes are survival+movables residual. The level-set INR may be the wrong vehicle for the BULK. The
+  grok-test IS a first measurement of the store+warp vehicle.
+
+### STAGING (informs the wait, per operator "see results first"):
+- grok-test (a9ef42df, RUNNING) settles GAP 3 + measures GAP 1 magnitude.
+- GAP 2 (R-survival) = the natural FOLLOW-UP $0 probe (the same warp THROUGH R isolates rendering-survival cost vs
+  pre-R geometric cost) — fire the moment the grok-test lands.
+- GAP 1 recursion (per-object pose) = the follow-up after (does the movables residual decompose into a few rigid
+  trajectories?).
+HOLDING new heavy spawns until the grok-test lands (operator: see results first). Deeper recursion is now EXPLICIT
++ queued so each returned number maps to a closed gap. Lit anchors for when grounded: dynamic SfM / multi-body
+SLAM / dynamic-scene NeRF / monocular depth+ego (online+OSS at follow-up). Pointer 0.19110.
