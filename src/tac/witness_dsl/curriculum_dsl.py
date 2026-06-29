@@ -171,6 +171,10 @@ class WitnessProgram:
     levers: tuple[Lever, ...] = ()
     resume_from: str | None = None
     mlx_device: str = "gpu"
+    # the fixed gauge (a tac.witness_dsl.gauge.GaugeChoice); annotated lazily (object) so
+    # curriculum_dsl never imports the gauge module at load time (no import cycle). Does NOT
+    # affect flag_dict() — it is the chart-selection meta-layer ABOVE the trainer flags.
+    gauge: object | None = None
 
     # --- composition ---------------------------------------------------------
     def with_lever(self, *levers: Lever, resume_from=_INHERIT,
@@ -191,6 +195,34 @@ class WitnessProgram:
             resume_from=new_resume,
             out_dir=out_dir if out_dir is not None else self.out_dir,
         )
+
+    def with_gauge(self, gauge_choice=None, *, table=None,
+                   warp=None, carrier=None, residual=None, pose=None,
+                   movables=None, generation=None) -> "WitnessProgram":
+        """Fix the gauge for this program (the gauge-FIXING step of the 4-layer stack,
+        FEED-ji). Returns a NEW program with a validated ``GaugeChoice`` attached; this one
+        is UNMUTATED (pure composition, parallel to ``with_lever``). Composes:
+        ``BASELINE.with_gauge(carrier=CarrierGauge.SINGLE_SDF, ...).with_lever(...)``.
+
+        Pass a full ``GaugeChoice`` as the positional, OR per-component keyword overrides
+        (unspecified components inherit this program's current gauge, else the canonical
+        gauge). ``validate`` raises ``GaugeViolation`` if any selected chart is
+        non-compliant / non-deterministic per the cost ``table`` (BY CONSTRUCTION).
+
+        Imported lazily so ``curriculum_dsl`` never imports ``gauge`` at module-load time
+        (the gauge module imports THIS module — lazy import breaks the cycle).
+        """
+        from tac.witness_dsl.gauge import GaugeChoice, CANONICAL_GAUGE
+        if gauge_choice is None:
+            base_gauge = self.gauge if isinstance(self.gauge, GaugeChoice) else CANONICAL_GAUGE
+            overrides = {k: v for k, v in dict(
+                warp=warp, carrier=carrier, residual=residual,
+                pose=pose, movables=movables, generation=generation).items() if v is not None}
+            gauge_choice = replace(base_gauge, **overrides)
+        elif not isinstance(gauge_choice, GaugeChoice):
+            raise TypeError("with_gauge expects a GaugeChoice (or per-component keyword charts)")
+        gauge_choice.validate(table)
+        return replace(self, gauge=gauge_choice)
 
     # --- flag assembly -------------------------------------------------------
     def flag_dict(self) -> dict:
