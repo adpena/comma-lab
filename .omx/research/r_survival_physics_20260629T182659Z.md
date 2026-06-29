@@ -184,6 +184,34 @@ not a knife-edge.
 - Numbers are advisory `[macOS research-signal]` on n=96 cached GT; reproducible:
   `tools/r_survival_probe.py --n 96 --slopes 192,96,48,24,12 --render-res 96,128,192,256,320,384,874`.
 
+## 6b. Scale-space / fluid-dynamics lens (heat-equation framing — tested, partially CORRECTED)
+A lens proposed that R ≈ a DIFFUSION (the ↑874→↓384 anti-alias low-pass ≈ a heat kernel of effective σ);
+"what survives R" = Koenderink/Witkin scale-space stability, and the SDF survives because its zero-level-set
+is heat-stable. I TESTED it ($0, `--scale-space`); the lens is useful but the mechanism is REFINED:
+
+1. **R's own kernel is small/benign** (edge-spread → effective σ): @384 σ≈0.38px, @874 σ≈0.52px, growing only
+   to ≈1.2px @ render 96. An *isolated* thin bar survives R at every res (the bicubic ↑874 spreads it before
+   the ↓384). So R's intrinsic diffusion is NOT the killer — consistent with §0(A) "R is benign."
+2. **The heat-kernel claim for SDF survival is FALSIFIED for a thin minority class.** Applying the EXACT heat
+   kernel (Gaussian blur of the carrier → argmax), the SDF does NOT beat hard on the lane — it is marginally
+   WORSE (σ=1: hard 16.6% vs **SDF 26.8%** lane flip; σ=2: 74% vs 81%). Blurring averages the thin lane's
+   small-magnitude φ_lane (≤~1, the lane is 2px) into its large-magnitude neighbors → the thin-class argmax
+   collapses. The classic "level-set is heat-stable" result holds for a *single large region's* boundary
+   (shift ≈ ½·κ·σ², small for low curvature), NOT for a thin minority class competing in multi-class argmax.
+3. **The real mechanism is INTERPOLATION-exactness, not diffusion.** R = bicubic/bilinear INTERPOLATION
+   (subsample→reconstruct) + a mild low-pass. The SDF wins R because bicubic/bilinear is **exact on the
+   locally-linear 1-Lipschitz ramp** → the zero-crossing is reconstructed at sub-pixel precision across the
+   resolution change. Decisive contrast at equal coarsening: HEAT(σ≈1) SDF lane 26.8% (loses) vs INTERP/R@192
+   SDF lane 3.19% (wins). Same rep, different operator, opposite ranking → **R is interpolation-dominant.**
+
+So: scale-space gives the right **Nyquist condition** (a width-w lane needs render res `r ≳ 384·(σ_target/w)`;
+the measured cliff at r≈192 matches), but the rep-survival *ranking* is governed by interpolation-exactness on
+1-Lipschitz ramps, not heat-kernel level-set stability. The v2 spec (§4) is unchanged and now mechanistically
+grounded: use an SDF *because R interpolates* (and bicubic is exact on its linear ramp), render ≥192, wide ramp.
+Data: `.omx/research/r_survival_probe_scalespace_n48.json`. (NOT-PESSIMISTIC: the lens was high-value — it
+forced the decisive heat-vs-interp test that pinned the true mechanism. "rep vs test?": the heat test correctly
+*distinguishes* the operators; neither rep nor R-test was wrong.)
+
 ## 6. Wire-in hooks (per Catalog #125)
 1. sensitivity-map: ACTIVE — per-class survival-d_seg vs render-res is a per-axis sensitivity row (lane
    dominates). 2. Pareto: ACTIVE — render-res ↔ survival-d_seg is a rate↔distortion constraint for the

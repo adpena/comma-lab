@@ -317,6 +317,68 @@ def lane_geometry_stats(lstars: np.ndarray, lane_cls: int = 1) -> dict:
     }
 
 
+def estimate_R_kernel_sigma(render_h: int) -> dict:
+    """Effective Gaussian sigma of the R chain at a given render res, via edge-spread.
+
+    Push a vertical step edge (0|255) at render res through R; the 10-90 rise of the
+    edge-spread-function at 384 gives the effective kernel sigma (10-90 ~= 2.563*sigma
+    for a Gaussian).  Measures R's OWN low-pass (it is small/benign: ~0.4-1.2px).
+    """
+
+    rw = int(round(render_h * SEG_W / SEG_H))
+    f = np.zeros((1, render_h, rw), np.float32)
+    f[:, :, rw // 2:] = 255.0
+    out = apply_R(f, (render_h, rw))[0][SEG_H // 2]  # mid-row edge-spread at 384
+
+    def _cross(val):
+        idx = int(np.argmax(out >= val))
+        if idx == 0:
+            return 0.0
+        y0, y1 = out[idx - 1], out[idx]
+        return idx - 1 + (val - y0) / (y1 - y0 + 1e-9)
+
+    rise = _cross(229.5) - _cross(25.5)
+    return {"render_h": render_h, "rise_10_90_px": float(rise), "eff_sigma_px": float(rise / 2.563)}
+
+
+def heat_vs_interp_lane_survival(lstars: np.ndarray, sigmas: list[float]) -> dict:
+    """DECISIVE test: is the SDF's R-survival a HEAT-kernel (diffusion) effect or an
+    INTERPOLATION (subsample->reconstruct) effect?
+
+    HEAT path: Gaussian-blur the carrier (exact heat kernel, t=sigma^2/2) then argmax.
+    INTERP path: the actual R probe (bicubic subsample to render res -> R reconstruct).
+
+    Finding: under HEAT the SDF does NOT beat hard for the thin lane (blur averages the
+    thin class's small-magnitude phi into neighbors); under INTERP the SDF wins ~8x.
+    -> R is interpolation-dominant; the SDF wins via interpolation-exactness on the
+    1-Lipschitz linear ramp, NOT heat-kernel level-set stability.
+    """
+
+    from scipy import ndimage
+
+    from tac.boundary_math.bitmask_dseg import d_seg_reference
+
+    N = lstars.shape[0]
+    out = {"heat": {}, "interp_note": "see capacity grid (sdf vs hard survival_dseg)"}
+    for sg in sigmas:
+        hl, sl = [], []
+        for i in range(N):
+            lab = lstars[i]
+            hard = np.stack([(lab == k).astype(np.float32) for k in range(N_CLASSES)])
+            hard_b = np.stack([ndimage.gaussian_filter(hard[k], sg) for k in range(N_CLASSES)])
+            phi = np.transpose(signed_distance_fields(lab), (2, 0, 1))
+            phi_b = np.stack([ndimage.gaussian_filter(phi[k], sg) for k in range(N_CLASSES)])
+            m = lab == 1
+            if m.sum():
+                hl.append(float((hard_b.argmax(0)[m] != 1).mean()))
+                sl.append(float((phi_b.argmax(0)[m] != 1).mean()))
+        out["heat"][f"sigma{sg:g}"] = {
+            "hard_lane_flip": float(np.mean(hl)) if hl else float("nan"),
+            "sdf_lane_flip": float(np.mean(sl)) if sl else float("nan"),
+        }
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="R-survival physics probe (advisory [macOS research-signal]).")
     ap.add_argument("--gt-cache", default="experiments/results/mlx_fleet_gt_cache/gt_n96.npz")
@@ -327,6 +389,8 @@ def main(argv=None):
     ap.add_argument("--stress-res", type=int, default=192,
                     help="Render height for the SDF ramp-slope sweep (where survival bites).")
     ap.add_argument("--out", default=None, help="JSON output path.")
+    ap.add_argument("--scale-space", action="store_true",
+                    help="Also run scale-space diagnostics (R kernel sigma + heat-vs-interp).")
     args = ap.parse_args(argv)
 
     d = np.load(args.gt_cache)
@@ -379,8 +443,22 @@ def main(argv=None):
             "per_class_present_frac": {str(k): r.per_class_present_frac[k] for k in range(N_CLASSES)},
         }
 
+    scale_space = None
+    if args.scale_space:
+        ker = {h: estimate_R_kernel_sigma(h) for h in [874, 384, 320, 256, 192, 128, 96]}
+        heat = heat_vs_interp_lane_survival(lstars[: min(48, lstars.shape[0])], [0.5, 1.0, 1.5, 2.0, 3.0, 4.0])
+        scale_space = {"R_kernel_sigma": ker, "heat_vs_interp": heat}
+        print("\n[r_survival] === SCALE-SPACE: R kernel eff sigma (edge-spread @384) ===", flush=True)
+        for h, v in ker.items():
+            print(f"  render {h:>3}: eff_sigma={v['eff_sigma_px']:.3f}px (10-90 rise {v['rise_10_90_px']:.3f}px)", flush=True)
+        print("[r_survival] === HEAT (gaussian blur->argmax) vs INTERP (R): lane flip% ===", flush=True)
+        print("  (SDF beats hard under INTERP/R but NOT under HEAT -> R is interpolation-dominant)", flush=True)
+        for s, v in heat["heat"].items():
+            print(f"  {s}: hard {v['hard_lane_flip']*100:.2f}%  sdf {v['sdf_lane_flip']*100:.2f}%", flush=True)
+
     payload = {
         "evidence_grade": "macOS research-signal",
+        "scale_space": scale_space,
         "score_claim": False,
         "promotable": False,
         "n_frames": int(lstars.shape[0]),
