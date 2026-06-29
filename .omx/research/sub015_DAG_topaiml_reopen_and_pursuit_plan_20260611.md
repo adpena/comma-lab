@@ -5595,3 +5595,30 @@ deep-math review (with online+OSS authority) then INVALIDATED the DM1 lever at $
 right direction. v2 REDIRECTS to DM2+DM3-spatial; DM1 smoke deprioritized (don't launch); the fix subagent's
 faithful VOID-aware harness → reused for DM2/DM3 A/B. means-ends: don't spend GPU on DM1; the residual annulus
 long-tail is a SPATIAL-CONDITIONING problem. Pointer 0.19110.
+
+---
+
+## FEED-iq (2026-06-30T01:05Z) — round-1 fixes LANDED clean (667ea0cbc); DM1 smoke MOOT (deep-math redirect) → harness reused for DM2/DM3; PIVOT to v2 design
+
+### Fix subagent DONE (667ea0cbc): ALL round-1 findings fixed, cure-math UNTOUCHED, default-OFF byte-identity preserved, NO GPU. 200 passed/1 skipped.
+- C1 --dm1-telemetry on all arms (A0 logs PR). C2 --anneal-epochs (VERIFIED reproduces the ep300 disease regime:
+  temp 0.910→0.844, LR 0.915→0.852×peak; default-None bit-identical). C3 all arms --lane-edge-weight 30 (in-situ).
+  M1 EXECUTABLE harvester tools/dm1_smoke_verdict.py GO/SYMPTOM/MEANS_FALSIFIED/VOID (VOID fires when A0 fails
+  disease-present precondition → can't mis-read VOID as SYMPTOM; reads SHADOW PR). M2 self-calibrating PR bar from
+  A0 trajectory. M3 A3 relabeled Stiefel+entropy, inert flag dropped.
+- R1-Med1 live+shadow telemetry + re-orthonormalize shadow at verdict/snapshot/byte-close (deploy on-manifold;
+  resume sidecar keeps un-projected for bit-faithfulness); false comment fixed. R1-Med2 --film-stiefel+
+  --freeze-decoder-fit-codes raises explicit incompat. R3-M1 lane_thin_gate flip+re-treat (no-op fixed).
+- Lows: tall-matrix guard; composed test through the real cubic projection @~1e-2; NS5-regression-lock
+  (stiefel_residual(NS5)>0.5); claim-precision softened ("EXACTLY"→"~1e-2 residual"; WD→"global-magnitude").
+
+### REFRAME (per FEED-ip deep-math redirect): the DM1 smoke is MOOT — DM1 is the WRONG d_seg lever (PR collapses
+WHILE d_seg improves, EXACT). DO NOT launch the DM1 smoke (would just print MEANS_FALSIFIED, confirming the $0
+verdict). The recursive review ACHIEVED ITS PURPOSE: caught the false-verdict smoke AND the wrong lever before any
+GPU-second. The shared-infra fixes (faithful anneal-decoupled harness + VOID-aware executable verdict + shadow
+re-ortho + lane_thin fix + guards) are REUSABLE for the DM2/DM3 A/B arms — not wasted. The binding 3-clean-pass
+now attaches to the DM2+DM3 v2 (the thing that WILL run), not the moot DM1 smoke.
+
+### PIVOT: v2 = DM2 (oriented byte-free basis max) + DM3 (spatial latent grid, Cool-Chic/SPADE). Spawning the v2
+deep-math DESIGN (online+OSS) → concrete buildable spec + $0 validation → 3-clean review → operator steer on build+GPU.
+Pointer 0.19110.
