@@ -1,0 +1,70 @@
+{
+  "schema": "rate_recode_l21l32_assessment.v1",
+  "subagent": "rate_recode_l21l32_20260629",
+  "task": "lossless L21-L32 finishing-kit rate recode of the existing contest-CPU 0.19110 frontier to bank a sub-0.19110 pointer move",
+  "axis_tag": "[macOS-CPU advisory] (analysis is byte-count + arithmetic, hardware-independent)",
+  "verdict": "NO-RECODE-AVAILABLE — the kit's real win is ALREADY BANKED as the current frontier; zero remaining lossless headroom",
+  "pointer_move": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+
+  "frontier": {
+    "archive_path": "experiments/results/pr110_payload_entropy_recode_20260610/submission_dir/archive.zip",
+    "archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+    "bytes_old": 177169,
+    "score_old_contest_cpu": 0.19109982419209975,
+    "d_seg": 0.00055978,
+    "d_pose": 2.942e-05,
+    "architecture_class": "lane_pr110_payload_entropy_recode_20260610",
+    "label": "borrowed PR101/PR110 ctx-range-recode (defensive bank, NOT original v2)"
+  },
+
+  "recode_result": {
+    "bytes_new": 177169,
+    "byte_delta": 0,
+    "rate_delta": 0.0,
+    "new_S": 0.19109982419209975,
+    "crosses_0_19110": false,
+    "crosses_sub_0_19": false,
+    "lossless_proof": "N/A — no recode produced (re-running the materializer reproduces the existing frontier byte-identically; bytes_new == bytes_old)"
+  },
+
+  "why_blocked": "The 0.19110 frontier is ALREADY the lossless L21-L32 (specifically L30 range/arithmetic) recode. The kit's only GROUNDED real lever on a render-based (decoder+latents) substrate is range-coding the decoder+latent sections, and that is exactly the -1326-byte recode (decoder -1023B, latent -317B) that produced the current frontier from its r3 predecessor.",
+
+  "arithmetic_proof_recode_already_banked": {
+    "r3_predecessor_archive": "experiments/results/pr110pp_r3_onhost_mode_table_20260610/submission_dir/archive.zip",
+    "r3_bytes": 178495,
+    "r3_score_contest_cpu": 0.19198275316393976,
+    "banked_byte_delta": -1326,
+    "rate_delta": -0.0008829289718399992,
+    "r3_minus_rate_delta": 0.19109982419209975,
+    "equals_frontier_pointer_within_1e-9": true,
+    "banked_recode_lossless_proof": "experiments/results/pr110_payload_entropy_recode_20260610/byte_closure_proof.json (decoder_raw + latent_raw + sidecar byte-identical; decoded raw sha256 dacf6b33... identical to r3)",
+    "banked_recode_eval": "full 600-sample contest-CPU auth eval, call_id fc-01KTRAYS68F3S0YWFT0CX35HDG"
+  },
+
+  "measured_remaining_sections": {
+    "decoder_section_dec_sec": {"bytes": 161104, "coder": "PR112 ctx range coder (L30, applied)", "brotli_q11_retry_bytes": 161109, "headroom": "NONE (re-coding INCREASES bytes; already at floor)"},
+    "latent_section_lat_sec": {"bytes": 15070, "coder": "PR112 ctx AR range coder (L30, applied)", "brotli_q11_retry_bytes": 15074, "headroom": "NONE"},
+    "selector_FECa": {"bytes": 222, "headroom": "NONE — measured optimal across full in-tree codec grid", "alternatives_measured": {"fec10_adaptive_blend_min": 233, "fec8_markov_static_order2": 242, "fec8_markov_static_order1": 245, "fec8_markov_adaptive_order1": 270}},
+    "sidecar_canonical_huffman": {"bytes": 607, "coder": "PR101 L26 canonical-Huffman length-ranked + L27/L31 colex (applied)", "brotli_q11_retry_bytes": 611, "lzma_raw_retry_bytes": 623, "headroom": "NONE (both larger; already entropy-optimal)"},
+    "dqs1_tail": {"bytes": 42, "headroom": "NONE — structural framing"},
+    "fp11_outer_wrapper": {"bytes": 10}
+  },
+
+  "feed_ki_feed_kz_correction": {
+    "claimed_band": "-0.005 to -0.008 (~half-day materializer, ALL coders in-tree)",
+    "finding": "DOUBLE-COUNTED + OVER-COUNTED. (1) The FEED-ki note cites 'range/arithmetic coding L30 (GROUNDED: R1 -1023B / R2 -317B measured on frontier)' as the top lever -- but those EXACT deltas ARE the already-banked recode that produced 0.19110. (2) The band also counted S12 resize-null (-10..-19.5%), which yields ZERO bytes on a render-based substrate (decoder+latents, NO stored frames to compress; per distortion_finishing_kit.py docstring lines 16-20). Net real remaining kit headroom on the 0.19110 frontier = 0 bytes.",
+    "honest_kit_value_already_realized": "-1326 bytes = -0.00088 score, banked as the 0.19110 frontier (down from r3 0.19198)"
+  },
+
+  "no_fake_calibration": "No recode was fabricated and no score was claimed. A lossless recode IS available in principle (re-run the materializer) but it reproduces the existing frontier byte-for-byte (byte_delta=0), so it is NOT a pointer move. Reporting the honest blocker prevents a fake double-counted sub-0.19 claim.",
+
+  "pointer_update_prepared": "NONE — no move; canonical_frontier_pointer.json left UNCHANGED at 0.19110.",
+
+  "possible_followons_out_of_scope": [
+    "Sidecar/selector are entropy-optimal; further lossless rate requires a NEW grammar (not the L21-L32 kit).",
+    "Real sub-0.19110 must come from a DISTORTION lever (fewer bits, sensitivity-aware mixed int8/int6) or the v2 task-space witness -- NOT a lossless recode of the already-recoded frontier.",
+    "The contest-CUDA frontier (lane_pr106, 0.20533, 186876B) is a different grammar/axis and is above T_1; recoding it (if grammar-compatible) is untested and would not move the CPU ranking axis."
+  ]
+}
