@@ -36,6 +36,7 @@ __all__ = [
     "LaunchCommand",
     "parse_trainer_flags",
     "build_residual_inr_command",
+    "build_residual_only_command",
     "DEFAULT_TRAINER",
     "PERF_ENV",
 ]
@@ -208,6 +209,119 @@ def build_residual_inr_command(
     notes = (
         f"residual INR sized small (hidden_dim={hidden_dim}, mod_dim={mod_dim}) vs the full-partition "
         "96/32 — the rate-win lever (only valid once the bulk is subtracted, GPU-side).",
+        "means != ends: emitting this command moves NOTHING. The pointer (0.19110) moves only when "
+        "this run lands + the 4-section archive byte-closes + exact-evals below 0.19110.",
+    )
+    return LaunchCommand(
+        command=command,
+        flags_validated=flags_validated,
+        all_flags_valid=all_valid,
+        unknown_flags=unknown,
+        perf_env=dict(PERF_ENV),
+        trainer_path=str(trainer_path),
+        hold_note=hold_note,
+        missing_capability_note=missing_capability_note,
+        notes=notes,
+    )
+
+
+def build_residual_only_command(
+    *,
+    out_dir: str,
+    gt_cache: str,
+    residual_target_npz: str,
+    num_pairs: int = 600,
+    epochs: int = 1500,
+    seed: int = 0,
+    hidden_dim: int = 48,
+    mod_dim: int = 16,
+    ema_decay: float = 0.997,
+    resume_from: str | None = None,
+    use_curriculum: bool = True,
+    muon_start_epoch: int | None = None,
+    extra_flags: dict[str, Any] | None = None,
+    trainer_path: str | Path = DEFAULT_TRAINER,
+    interpreter: str = ".venv/bin/python",
+    strict: bool = True,
+) -> LaunchCommand:
+    """Build + flag-validate the CORRECTED residual-ONLY INR command (the rate-bearing run).
+
+    Supersedes :func:`build_residual_inr_command` (which used ``--structured-init`` =
+    init-into-weights = NO rate shrink). This emits the REAL residual mechanism: ``--residual-mode``
+    + ``--residual-target-npz`` so the FIXED deterministic bulk is GENERATED at decode (OUTSIDE the
+    counted weights) and COMPOSED before R, and the small INR (hidden 48 / mod 16) trains ONLY on
+    the Lane+Movable residual annulus (the byte win). EXPLICITLY does NOT pass ``--structured-init``
+    / ``--lane-prior-phi1`` (the trainer fail-closes on residual-mode + structured-init).
+
+    This is the CLEAN BASE (best-known priors, optimal-form-first): curriculum + per-stage ckpts +
+    small INR. The theta* lever sweep runs ON this hybrid residual: each arm == this command + ONE
+    surgical lever varied (``--lane-thin-weight`` / ``--margin-saliency-weight`` / ``--hardness-*``),
+    which weight the COMPOSED-render d_seg (the residual IS the Lane+Movable annulus -> maximally
+    relevant). Pass them via ``extra_flags`` (each validated against the real argparse).
+
+    Raises:
+        ValueError (when ``strict``) if any emitted flag is not in the real trainer argparse.
+    """
+    all_flags, _bool_opt = parse_trainer_flags(trainer_path)
+    pairs: list[tuple[str, Any]] = [
+        ("--out-dir", out_dir),
+        ("--gt-cache", gt_cache),
+        ("--num-pairs", num_pairs),
+        ("--epochs", epochs),
+        ("--seed", seed),
+        ("--mlx-device", "gpu"),
+        ("--hidden-dim", hidden_dim),
+        ("--mod-dim", mod_dim),
+        ("--ema-decay", ema_decay),
+        ("--residual-target-npz", residual_target_npz),
+    ]
+    bare: list[str] = ["--stage-checkpoints", "--residual-mode"]
+    if use_curriculum:
+        bare.append("--curriculum")
+    if resume_from:
+        pairs.append(("--resume-from", resume_from))
+    if muon_start_epoch is not None:
+        pairs.append(("--muon-start-epoch", muon_start_epoch))
+    if extra_flags:
+        for k, v in extra_flags.items():
+            flag = k if k.startswith("--") else "--" + k.replace("_", "-")
+            if isinstance(v, bool):
+                if v:
+                    bare.append(flag)
+            else:
+                pairs.append((flag, v))
+
+    emitted = [f for f, _ in pairs] + bare
+    flags_validated = {f: (f in all_flags) for f in emitted}
+    unknown = tuple(f for f, ok in flags_validated.items() if not ok)
+    all_valid = not unknown
+    if strict and not all_valid:
+        raise ValueError(
+            "build_residual_only_command: emitted flags NOT in the real trainer argparse "
+            f"(NEVER invent flags): {list(unknown)}. Real flags: {sorted(all_flags)[:12]}...")
+
+    env_prefix = " ".join(f"{k}={v}" for k, v in PERF_ENV.items())
+    parts: list[str] = [str(interpreter), str(trainer_path)]
+    for f, v in pairs:
+        parts += [f, str(v)]
+    parts += bare
+    command = env_prefix + " " + " ".join(shlex.quote(p) if " " in p else p for p in parts)
+
+    hold_note = (
+        "HOLD for operator GO + GPU reallocation. EMITS the command; does NOT launch. One GPU, "
+        "resumable (--resume-from) + per-stage checkpoints (--stage-checkpoints), EMA-shadow, "
+        "single seed. Verify the 'custom_grouped_backward active=true' log line at launch."
+    )
+    missing_capability_note = (
+        "CORRECTED: this is the REAL residual mechanism (--residual-mode + --residual-target-npz). "
+        "The bulk is GENERATED at decode (OUTSIDE the counted weights) and COMPOSED before R, so the "
+        "small INR carries ONLY the residual -> the rate shrinks. (build_residual_inr_command's "
+        "--structured-init bakes the bulk INTO the weights = NO shrink; that path is SUPERSEDED.)"
+    )
+    notes = (
+        f"residual INR sized small (hidden_dim={hidden_dim}, mod_dim={mod_dim}) vs the full-partition "
+        "96/32 -- valid now BECAUSE the bulk is subtracted (composed deterministically). The theta* "
+        "lever sweep runs ON this hybrid residual: each arm = this command + one surgical lever varied.",
         "means != ends: emitting this command moves NOTHING. The pointer (0.19110) moves only when "
         "this run lands + the 4-section archive byte-closes + exact-evals below 0.19110.",
     )

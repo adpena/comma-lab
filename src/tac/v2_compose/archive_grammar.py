@@ -50,15 +50,20 @@ __all__ = [
     "unpack_v2_archive",
     "build_store_blob",
     "parse_store_blob",
+    "build_residual_blob",
+    "parse_residual_blob",
+    "residual_inflate_reference",
     "assemble_v2_packet",
     "generate_v2_inflate_py",
     "byte_accounting",
     "V2StoreBlob",
+    "V2ResidualBlob",
     "WARP_TYPE_CODE",
 ]
 
 MAGIC_V2 = b"WTNV2\x00"
 _STORE_MAGIC = b"WSTR1\x00"
+_RESIDUAL_MAGIC = b"WRES1\x00"
 
 # warp-type codes for the per-class warp-mask (1 byte/class). Self-detected upstream; here just a code.
 WARP_TYPE_CODE = {
@@ -204,6 +209,168 @@ def parse_store_blob(store_blob: bytes) -> V2StoreBlob:
 
 
 # ---------------------------------------------------------------------------
+# residual_blob: the LEARN-tier INR (int8+brotli weights + per-frame code) + its cfg. The COUNTED
+# rate term. The curvelet bank B is NOT stored (rule-118: regenerated free from the 5 bank scalars).
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class V2ResidualBlob:
+    """Parsed residual_blob (the COUNTED LEARN-tier INR + its forward cfg)."""
+
+    params: dict[str, np.ndarray]       # dequantized weights (incl. "code") -- the INR
+    manifest: dict[str, Any]            # INR + bank + learn-class/dilate cfg (the forward contract)
+
+
+def _int8_sym(a: np.ndarray) -> tuple[np.ndarray, float]:
+    """Symmetric int8 quant (mirror of lever_b_levelset_generator._int8_symmetric)."""
+    s = float(np.abs(np.asarray(a, np.float64)).max()) + 1e-8
+    q = np.clip(np.round(np.asarray(a, np.float64) / s * 127.0), -127, 127).astype(np.int8)
+    return q, (s / 127.0)
+
+
+def build_residual_blob(params: dict[str, np.ndarray], inr_cfg: dict[str, Any]) -> bytes:
+    """Serialize the residual INR: ``WRES1`` magic + <I manifest_len + manifest_json + <I base_len +
+    brotli(int8 base) + <I code_len + brotli(int8 code). The bank ``B`` is EXCLUDED (rule-118 free;
+    regenerated at decode from the 5 bank scalars). ``inr_cfg`` MUST carry the forward contract:
+    n_hidden/hidden_dim/mod_dim/n_classes/activation/hosc_beta/hosc_omega/softmax_temp/wire_w0/
+    wire_s0/chroma/render_h/render_w + bank_* + learn_classes + dilate."""
+    import brotli
+
+    base_order = [k for k in params if k != "code" and not (k == "B" or k.endswith("_B"))]
+    base_chunks: list[bytes] = []
+    shapes: dict[str, list[int]] = {}
+    scales: dict[str, float] = {}
+    for name in base_order:
+        q, sc = _int8_sym(np.asarray(params[name], np.float32))
+        base_chunks.append(q.tobytes())
+        shapes[name] = list(np.asarray(params[name]).shape)
+        scales[name] = float(sc)
+    base_brotli = brotli.compress(b"".join(base_chunks), quality=11)
+    if "code" not in params:
+        raise ValueError("residual params must include the per-frame 'code' latent")
+    qc, code_scale = _int8_sym(np.asarray(params["code"], np.float32))
+    code_brotli = brotli.compress(qc.tobytes(), quality=11)
+
+    manifest = dict(inr_cfg)
+    manifest.update({
+        "base_param_order": base_order,
+        "base_shapes": shapes,
+        "base_scales": scales,
+        "code_shape": list(np.asarray(params["code"]).shape),
+        "code_scale": float(code_scale),
+        "learn_classes": [int(c) for c in inr_cfg.get("learn_classes", (1, 3))],
+        "dilate": int(inr_cfg.get("dilate", 0)),
+    })
+    mj = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
+    buf = bytearray()
+    buf += _RESIDUAL_MAGIC
+    for chunk in (mj, base_brotli, code_brotli):
+        buf += struct.pack("<I", len(chunk))
+        buf += chunk
+    return bytes(buf)
+
+
+def parse_residual_blob(residual_blob: bytes) -> V2ResidualBlob:
+    """Inverse of :func:`build_residual_blob` (dequantizes the INR weights + code)."""
+    import brotli
+
+    if residual_blob[: len(_RESIDUAL_MAGIC)] != _RESIDUAL_MAGIC:
+        raise ValueError("bad residual_blob magic")
+    off = len(_RESIDUAL_MAGIC)
+    out: list[bytes] = []
+    for _ in range(3):
+        (n,) = struct.unpack_from("<I", residual_blob, off)
+        off += 4
+        out.append(residual_blob[off : off + n])
+        off += n
+    mj, base_brotli, code_brotli = out
+    manifest = json.loads(mj.decode("utf-8"))
+    base_flat = np.frombuffer(brotli.decompress(base_brotli), dtype=np.int8)
+    params: dict[str, np.ndarray] = {}
+    o = 0
+    for name in manifest["base_param_order"]:
+        shp = tuple(manifest["base_shapes"][name])
+        n = int(np.prod(shp))
+        params[name] = (base_flat[o : o + n].astype(np.float32) * float(manifest["base_scales"][name])).reshape(shp)
+        o += n
+    code_flat = np.frombuffer(brotli.decompress(code_brotli), dtype=np.int8)
+    params["code"] = (code_flat.astype(np.float32) * float(manifest["code_scale"])).reshape(
+        tuple(manifest["code_shape"]))
+    return V2ResidualBlob(params=params, manifest=manifest)
+
+
+def residual_inflate_reference(
+    store: V2StoreBlob, residual: V2ResidualBlob, poses: np.ndarray, n_pairs: int
+) -> np.ndarray:
+    """NUMPY ORACLE (the NO-FAKE faithfulness anchor): the EXACT camera frames the residual inflate
+    MUST produce, computed from the BUILT tac primitives (bulk_generator render/warp +
+    levelset_rgb_forward_numpy + residual_compose). The parity test asserts the self-contained
+    inflate.py output is bit-identical to this. Returns (2*n_pairs, 874, 1164, 3) uint8.
+
+    Composition (the ONE rule): per pair p, warp the nearest keyframe -> bulk label -> bulk RGB
+    (render res, pre-R); mask = derive_composition_mask(bulk_label, learn_classes, dilate); INR RGB
+    via levelset_rgb_forward_numpy; composed = where(mask, INR, bulk); bicubic-up -> uint8."""
+    from tac.boundary_math.lever_b_levelset_generator import (
+        CurveletBankConfig,
+        curvelet_directional_B,
+        curvelet_feats,
+        levelset_rgb_forward_numpy,
+    )
+    from tac.v2_compose import bulk_generator as _bg
+    from tac.v2_compose.residual_compose import compose_residual_rgb, derive_composition_mask
+
+    m = residual.manifest
+    H, W = store.shape
+    learn = tuple(int(c) for c in m["learn_classes"])
+    dilate = int(m["dilate"])
+    palette = np.asarray(store.palette, np.float64)
+    params = residual.params
+    code = np.asarray(params["code"], np.float64)
+
+    bank = CurveletBankConfig(
+        n_scales=int(m["bank_n_scales"]), n_orient0=int(m["bank_n_orient0"]),
+        f0=float(m["bank_f0"]), base=float(m["bank_base"]), n_iso=int(m["bank_n_iso"]))
+    B = curvelet_directional_B(bank, max_freq=m.get("max_bank_freq"))
+    coords = _build_render_coords_np(H, W)
+    feats = curvelet_feats(coords, B)
+
+    keyframes = store.keyframe_indices
+    kf_map = {idx: store.keyframe_lstars[i] for i, idx in enumerate(keyframes)}
+    K = _bg.intrinsics_at(W, H)
+    Kinv = np.linalg.inv(K)
+    grid = _bg._target_grid(H, W)
+    params_calib = store.calib
+
+    def _fwd(code_idx: int) -> np.ndarray:
+        rgb, _phi = levelset_rgb_forward_numpy(
+            params, feats, code[code_idx], n_hidden=int(m["n_hidden"]), hidden_dim=int(m["hidden_dim"]),
+            n_classes=int(m["n_classes"]), activation=str(m["activation"]),
+            softmax_temp=float(m["softmax_temp"]), wire_w0=float(m["wire_w0"]), wire_s0=float(m["wire_s0"]),
+            hosc_beta=float(m["hosc_beta"]), hosc_omega=float(m["hosc_omega"]), chroma=bool(m["chroma"]))
+        return rgb.reshape(H, W, 3)
+
+    frames = np.empty((2 * n_pairs, _bg.NATIVE_H, _bg.NATIVE_W, 3), np.uint8)
+    for p in range(n_pairs):
+        anchor, k = _bg.nearest_keyframe(p, keyframes)
+        L_src = kf_map[anchor]
+        warped = L_src if k == 0 else _bg.composite_warped_labels(
+            L_src, poses, anchor, k, K, Kinv, params_calib, grid)
+        bulk_rgb = _bg.render_partition(warped, palette)  # (H,W,3) pre-R
+        mask = derive_composition_mask(warped, learn, dilate)
+        for fk in range(2):
+            comp = compose_residual_rgb(bulk_rgb, _fwd(2 * p + fk), mask)
+            frames[2 * p + fk] = _bg.bicubic_up_to_camera(comp).astype(np.uint8)
+    return frames
+
+
+def _build_render_coords_np(h: int, w: int) -> np.ndarray:
+    """The render coord grid (mirror of train_witness_realized_through_R_mlx._build_render_coords)."""
+    ys = np.linspace(-1.0, 1.0, h, dtype=np.float32)
+    xs = np.linspace(-1.0, 1.0, w, dtype=np.float32)
+    gy, gx = np.meshgrid(ys, xs, indexing="ij")
+    return np.stack([gx.ravel(), gy.ravel()], axis=-1).astype(np.float32)
+
+
+# ---------------------------------------------------------------------------
 # packet assembly (deterministic archive.zip + inflate.py + inflate.sh).
 # ---------------------------------------------------------------------------
 def assemble_v2_packet(blob: bytes, packet_dir: str | Path) -> tuple[Path, int]:
@@ -295,6 +462,7 @@ import numpy as np
 
 MAGIC = b"WTNV2\x00"
 STORE_MAGIC = b"WSTR1\x00"
+RES_MAGIC = b"WRES1\x00"
 NATIVE_H, NATIVE_W = 874, 1164
 CAMERA_HEIGHT_M = 1.22
 NATIVE_FX = NATIVE_FY = 910.0
@@ -446,6 +614,124 @@ def _render_partition(label_map, palette):
     return _gauss_blur(palette[label_map], 1.0)
 
 
+# ---- RESIDUAL INR (LEARN tier): self-contained MLX-free forward, bit-mirror of
+# tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy + the curvelet bank +
+# tac.v2_compose.residual_compose composition. Active ONLY when the residual section is non-empty.
+import brotli
+
+
+def _parse_residual(blob):
+    assert blob[:len(RES_MAGIC)] == RES_MAGIC, "bad residual magic"
+    off = len(RES_MAGIC); out = []
+    for _ in range(3):
+        (n,) = struct.unpack_from("<I", blob, off); off += 4
+        out.append(blob[off:off+n]); off += n
+    man = json.loads(out[0].decode())
+    base_flat = np.frombuffer(brotli.decompress(out[1]), dtype=np.int8)
+    params = {}; o = 0
+    for name in man["base_param_order"]:
+        shp = tuple(man["base_shapes"][name]); n = int(np.prod(shp))
+        params[name] = (base_flat[o:o+n].astype(np.float32) * float(man["base_scales"][name])).reshape(shp)
+        o += n
+    code_flat = np.frombuffer(brotli.decompress(out[2]), dtype=np.int8)
+    params["code"] = (code_flat.astype(np.float32) * float(man["code_scale"])).reshape(tuple(man["code_shape"]))
+    return man, params
+
+
+def _build_render_coords(h, w):
+    ys = np.linspace(-1.0, 1.0, h, dtype=np.float32)
+    xs = np.linspace(-1.0, 1.0, w, dtype=np.float32)
+    gy, gx = np.meshgrid(ys, xs, indexing="ij")
+    return np.stack([gx.ravel(), gy.ravel()], axis=-1).astype(np.float32)
+
+
+def _curvelet_B(man):
+    cols = []
+    for j in range(int(man["bank_n_scales"])):
+        f_j = float(man["bank_f0"]) * (float(man["bank_base"]) ** j)
+        l_j = int(man["bank_n_orient0"]) * (2 ** (j // 2))
+        for l in range(l_j):
+            theta = np.pi * l / l_j
+            cols.append(np.array([f_j*np.cos(theta), f_j*np.sin(theta)], dtype=np.float32))
+    for i in range(int(man["bank_n_iso"])):
+        theta = np.pi * i / max(int(man["bank_n_iso"]), 1)
+        f_low = float(man["bank_f0"]) * 0.5
+        cols.append(np.array([f_low*np.cos(theta), f_low*np.sin(theta)], dtype=np.float32))
+    stacked = np.stack(cols, axis=1).astype(np.float32)
+    mf = man.get("max_bank_freq")
+    if mf is not None:
+        norms = np.sqrt((stacked.astype(np.float64) ** 2).sum(axis=0))
+        keep = norms <= float(mf) + 1e-6
+        if not keep.any():
+            keep = norms <= float(norms.min()) + 1e-6
+        stacked = stacked[:, keep]
+    return stacked
+
+
+def _curvelet_feats(coords, B):
+    with np.errstate(all="ignore"):
+        proj = (2.0*np.pi) * (np.asarray(coords, np.float64) @ np.asarray(B, np.float64))
+        return np.concatenate([np.sin(proj), np.cos(proj)], axis=-1).astype(np.float32)
+
+
+def _act_ls(u, kind, beta, omega, w0, s0):
+    u = np.asarray(u, np.float64)
+    if kind == "wire":
+        return (np.cos(w0*u) * np.exp(-((s0*u)**2))).astype(np.float32)
+    if kind == "hosc":
+        return np.tanh(beta * np.sin(omega*u)).astype(np.float32)
+    return np.maximum(u, 0.0).astype(np.float32)
+
+
+def _levelset_forward(p, feats, code_row, man):
+    nh, hd = int(man["n_hidden"]), int(man["hidden_dim"])
+    kind = str(man["activation"]); beta = float(man["hosc_beta"]); omega = float(man["hosc_omega"])
+    w0 = float(man["wire_w0"]); s0 = float(man["wire_s0"]); st = float(man["softmax_temp"])
+    pp = {k: np.asarray(v, np.float64) for k, v in p.items()}
+    feats = np.asarray(feats, np.float64); code_row = np.asarray(code_row, np.float64)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        h = _act_ls(feats @ pp["in_proj.weight"].T + pp["in_proj.bias"], kind, beta, omega, w0, s0)
+        film = (code_row @ pp["film.weight"].T + pp["film.bias"]).reshape(nh, 2, hd)
+        has_pl = any(k.startswith("film_pl.") for k in pp)
+        has_cc = any(k.startswith("concat_pl.") for k in pp)
+        for li in range(nh):
+            scale = 1.0 + film[li, 0]; shift = film[li, 1]
+            if has_pl:
+                pl = (code_row @ pp[f"film_pl.{li}.weight"].T + pp[f"film_pl.{li}.bias"]).reshape(2, hd)
+                scale = scale + pl[0]; shift = shift + pl[1]
+            pre = (h @ pp[f"hidden.{li}.weight"].T + pp[f"hidden.{li}.bias"]) * scale + shift
+            if has_cc:
+                pre = pre + (code_row @ pp[f"concat_pl.{li}.weight"].T + pp[f"concat_pl.{li}.bias"])
+            h = _act_ls(pre, kind, beta, omega, w0, s0)
+        phi = h @ pp["out_sdf.weight"].T + pp["out_sdf.bias"]
+        tex = h @ pp["out_tex.weight"].T + pp["out_tex.bias"]
+        z = phi / st; z = z - z.max(axis=-1, keepdims=True)
+        soft = np.exp(z); soft = soft / soft.sum(axis=-1, keepdims=True)
+        base = soft @ pp["palette"]
+        rgb = (1.0 / (1.0 + np.exp(-(base + tex)))) * 255.0
+        if not bool(man["chroma"]):
+            luma = 0.299*rgb[:, 0:1] + 0.587*rgb[:, 1:2] + 0.114*rgb[:, 2:3]
+            rgb = np.concatenate([luma, luma, luma], axis=-1)
+    return rgb.astype(np.float32)
+
+
+def _dilate_bool(mask, rounds):
+    m = np.ascontiguousarray(np.asarray(mask, dtype=bool))
+    for _ in range(int(rounds)):
+        out = m.copy()
+        out[:-1, :] |= m[1:, :]; out[1:, :] |= m[:-1, :]
+        out[:, :-1] |= m[:, 1:]; out[:, 1:] |= m[:, :-1]
+        m = out
+    return m
+
+
+def _derive_comp_mask(warped_label, learn_classes, dilate):
+    mask = np.isin(warped_label, np.asarray(learn_classes, dtype=warped_label.dtype))
+    if int(dilate) > 0:
+        mask = _dilate_bool(mask, int(dilate))
+    return mask.astype(bool)
+
+
 def _bicubic_up(render384_f):
     import torch, torch.nn.functional as F
     x = torch.from_numpy(np.asarray(render384_f, dtype=np.float32)).permute(2, 0, 1)[None]
@@ -471,11 +757,19 @@ def main():
     n_pairs = int(s["n_pairs"])
     if poses is None:
         poses = np.zeros((n_pairs, 6), np.float64)  # no warp without poses (persist only)
-    K = _intrinsics(SEG_W, SEG_H); Kinv = np.linalg.inv(K); grid = _target_grid(SEG_H, SEG_W)
+    H, W = int(s["H"]), int(s["W"])  # store (== render == scorer) res; 384x512 in production.
+    K = _intrinsics(W, H); Kinv = np.linalg.inv(K); grid = _target_grid(H, W)
     palette = s["palette"]; keyframes = s["indices"]
     params = (float(s["calib"][0]), float(s["calib"][1]), float(s["calib"][2]))
     kf_map = {idx: s["lstars"][i] for i, idx in enumerate(keyframes)}
     has_residual = len(residual) > 0
+    if has_residual:
+        # RESIDUAL COMPOSE (LEARN tier): decode the small INR + regen its FREE curvelet feats
+        # (rule-118; B is regenerated, not stored). composed = where(bulk_label_mask, INR, bulk).
+        r_man, r_params = _parse_residual(residual)
+        r_feats = _curvelet_feats(_build_render_coords(H, W), _curvelet_B(r_man))
+        r_code = np.asarray(r_params["code"], np.float64)
+        learn_classes = r_man["learn_classes"]; dilate = int(r_man["dilate"])
     with open(dst, "wb") as f:
         for p in range(n_pairs):
             anchor, k = _nearest_keyframe(p, keyframes)
@@ -484,17 +778,21 @@ def main():
                 warped = L_src
             else:
                 warped = _composite_warped(L_src, poses, anchor, k, K, Kinv, params, grid)
-            # GENERATE the deterministic bulk frame (FREE).
-            frame = _bicubic_up(_render_partition(warped, palette))
+            # GENERATE the deterministic bulk RGB at render res (FREE, pre-R).
+            bulk_rgb = _render_partition(warped, palette)
             if has_residual:
-                # RESIDUAL COMPOSE HOOK (LEARN tier): when the GPU residual-INR weights are present,
-                # decode + forward the small INR and overwrite the residual cells here. The residual
-                # blob format is the GPU-side trainer's output (NEEDS-WIRING). No-op while empty so
-                # the deterministic FLOOR archive runs today. (NO-FAKE: not faked -- explicitly pending.)
-                raise SystemExit("residual-INR compose is NEEDS-WIRING (GPU run not landed); "
-                                 "byte-close the deterministic floor (empty residual) until then.")
-            f.write(frame.tobytes())  # frame0 == bulk render
-            f.write(frame.tobytes())  # frame1 == bulk render (SegNet scores frame1)
+                # the bulk-LABEL-derived override region (FREE; regenerated, ships 0 bytes).
+                mask = _derive_comp_mask(warped, learn_classes, dilate)[..., None]
+                inr0 = _levelset_forward(r_params, r_feats, r_code[2*p+0], r_man).reshape(H, W, 3)
+                inr1 = _levelset_forward(r_params, r_feats, r_code[2*p+1], r_man).reshape(H, W, 3)
+                frame0 = _bicubic_up(np.where(mask, inr0, bulk_rgb))
+                frame1 = _bicubic_up(np.where(mask, inr1, bulk_rgb))
+                f.write(frame0.tobytes())  # frame0 == composed (pose)
+                f.write(frame1.tobytes())  # frame1 == composed (SegNet scores frame1)
+            else:
+                frame = _bicubic_up(bulk_rgb)  # deterministic FLOOR (empty residual)
+                f.write(frame.tobytes())  # frame0 == bulk render
+                f.write(frame.tobytes())  # frame1 == bulk render
     print(f"inflated {2*n_pairs} frames ({n_pairs} pairs) -> {dst} "
           f"[{2*n_pairs}x{NATIVE_H}x{NATIVE_W}x3 uint8]", flush=True)
 

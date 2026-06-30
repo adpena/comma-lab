@@ -340,13 +340,20 @@ def build_witness_module(
 # apply_eval_roundtrip_nhwc (bicubic up to camera -> bilinear down to scorer ->
 # uint8 STE). Returns (1, h, w, 3) NHWC camera-equivalent scorer-res frame.
 # ---------------------------------------------------------------------------
-def render_through_R_mlx(witness, coord_feats, code_idx: int, render_h: int, render_w: int):
+def render_through_R_mlx(witness, coord_feats, code_idx: int, render_h: int, render_w: int, compose_fn=None):
     import mlx.core as mx
 
     from tac.local_acceleration.pr95_hnerv_mlx_training import apply_contest_faithful_roundtrip_nhwc
 
     rgb_flat = witness(coord_feats, code_idx)  # (h*w, 3)
     rgb = mx.reshape(rgb_flat, (1, render_h, render_w, 3))  # NHWC
+    # RESIDUAL COMPOSE HOOK (v2 hybrid; ADDITIVE, default None => BYTE-IDENTICAL). When given,
+    # ``compose_fn(rgb_nhwc, code_idx) -> rgb_nhwc`` composes the witness RGB with the FIXED
+    # deterministic bulk render BEFORE R (composed = bulk*(1-mask) + INR*mask), so the d_seg loss
+    # is realized through R on the COMPOSED witness (deterministic_bulk (+) small_INR_residual).
+    # The default None preserves the exact pre-residual-mode behavior op-for-op.
+    if compose_fn is not None:
+        rgb = compose_fn(rgb, code_idx)
     # CONTEST-EXACT R (DAG FEED-bf bug #1): render-grid -> camera (bicubic) -> uint8 @ CAMERA
     # -> bilinear down to scorer (NO trailing uint8). Matches upstream/evaluate.py +
     # modules.py:108-113 (recon is uint8 at 874x1164, scorer.preprocess_input bilinears to 384).
@@ -747,9 +754,16 @@ def make_loss_fn(
     tau_softplus_tau: float = 0.3,
     l7_mult: float = 4.0,
     l7_threshold: float = 0.42,
+    render_fn=None,
 ):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
     w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
+
+    ``render_fn`` (v2 residual-compose hook; ADDITIVE, default None => BYTE-IDENTICAL): when given,
+    every realized render uses ``render_fn(model, coord_feats, code_idx, render_h, render_w)``
+    instead of the bare ``render_through_R_mlx`` -- the trainer's residual mode passes a partial
+    that composes the FIXED deterministic bulk before R, so seg+pose are realized on the COMPOSED
+    witness. None preserves the exact pre-residual-mode behavior (one codepath, no divergence).
 
     SCORE-DOMAIN LOSS (CLAUDE.md "HNeRV/leaderboard parity" LESSON 6 -- score-domain
     Lagrangian, NOT weight-domain proxies). The contest score is
@@ -772,6 +786,8 @@ def make_loss_fn(
     import mlx.core as mx
 
     from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    _render = render_fn if render_fn is not None else render_through_R_mlx
 
     def _yuv6_pair_nhwc(f0, f1):
         # f0,f1: (1,H,W,3). Build (1,2,H,W,3) -> yuv6 (1,2,h2,w2,6) -> (1,h2,w2,12).
@@ -796,8 +812,8 @@ def make_loss_fn(
         # coarse->fine, PR95 signature). None -> the closed-over static value (back-compat).
         tau_use = tau_softplus_tau if tau_override is None else float(tau_override)
         l7_thr_use = l7_threshold if l7_thr_override is None else float(l7_thr_override)
-        f0 = render_through_R_mlx(model, coord_feats, code0, render_h, render_w)
-        f1 = render_through_R_mlx(model, coord_feats, code1, render_h, render_w)
+        f0 = _render(model, coord_feats, code0, render_h, render_w)
+        f1 = _render(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
         seg_logits = adapter.segnet(f1)  # (1,H,W,5)
 

@@ -20,6 +20,15 @@ the Lane-survival residual + small movables (the binding wall). See ``store_lear
 
 from __future__ import annotations
 
+from tac.v2_compose.residual_compose import (
+    LEARN_CLASSES,
+    ResidualBundle,
+    build_residual_training_bundle,
+    compose_residual_rgb,
+    derive_composition_mask,
+    load_residual_training_bundle,
+    save_residual_training_bundle,
+)
 from tac.v2_compose.store_learn_split import (
     ClassAssignment,
     ClassRecoverability,
@@ -36,4 +45,12 @@ __all__ = [
     "encode_known_split",
     "load_reach_kstar",
     "load_warp_recoverability_from_grok",
+    # residual composition (the rate-bearing seam)
+    "LEARN_CLASSES",
+    "ResidualBundle",
+    "build_residual_training_bundle",
+    "compose_residual_rgb",
+    "derive_composition_mask",
+    "load_residual_training_bundle",
+    "save_residual_training_bundle",
 ]

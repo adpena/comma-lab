@@ -67,6 +67,7 @@ __all__ = [
     "bicubic_up_to_camera",
     "bulk_argmax_through_R",
     "generate_bulk_argmax_stack",
+    "generate_bulk_render_and_labels",
     "segnet_selfcheck",
     "verify_k0_faithfulness",
     "load_calibration_from_reach",
@@ -275,6 +276,54 @@ def generate_bulk_argmax_stack(
         k0_bulk_mean=float(k0_bulk_mean),
         k0_within_r1_ref=bool(k0_within_ref),
     )
+
+
+def generate_bulk_render_and_labels(
+    lstars: np.ndarray,
+    poses: np.ndarray,
+    config: BulkConfig,
+    palette: np.ndarray,
+    *,
+    verbose: bool = False,
+) -> tuple[np.ndarray, np.ndarray]:
+    """LIGHT (NO SegNet) deterministic bulk: per-pair WARPED LABEL map + render-res RGB (pre-R).
+
+    This is the residual-bundle producer (Step 4 input): for each pair it warps the nearest
+    keyframe (the SAME per-class stratified ``composite_warped_labels`` router the heavy
+    :func:`generate_bulk_argmax_stack` uses) and renders the palette+R1-ramp RGB at render res --
+    WITHOUT the camera-R + SegNet pass (so it is cheap enough to run for the whole clip). The
+    returned ``bulk_rgb`` is exactly the witness's composition partner (pre-R); ``warped_labels``
+    is the mask source for :func:`tac.v2_compose.residual_compose.derive_composition_mask`. The
+    inflate.py regenerates BOTH bit-identically from the stored keyframes+pose (rule-118 FREE).
+
+    Returns:
+        (bulk_rgb (n, SEG_H, SEG_W, 3) float32, warped_labels (n, SEG_H, SEG_W) int64).
+    """
+    lstars = np.asarray(lstars, dtype=np.int64)
+    poses = np.asarray(poses, dtype=np.float64)
+    palette = np.asarray(palette, dtype=np.float64)
+    P = int(lstars.shape[0])
+    if P != config.n_pairs:
+        config = BulkConfig(config.s_t, config.s_r, config.pitch, config.reach_kstar, P)
+    keyframes = select_keyframes(P, config.reach_kstar)
+    K = intrinsics_at(SEG_W, SEG_H)
+    Kinv = np.linalg.inv(K)
+    grid = _target_grid(SEG_H, SEG_W)
+    rgb_stack = np.empty((P, SEG_H, SEG_W, 3), np.float32)
+    label_stack = np.empty((P, SEG_H, SEG_W), np.int64)
+    for p in range(P):
+        anchor, k = nearest_keyframe(p, keyframes)
+        if k == 0:
+            warped = lstars[anchor]
+        else:
+            warped = composite_warped_labels(
+                lstars[anchor], poses, anchor, k, K, Kinv, config.params, grid
+            )
+        label_stack[p] = warped
+        rgb_stack[p] = render_partition(warped, palette).astype(np.float32)
+        if verbose and (p + 1) % 32 == 0:
+            print(f"[bulk_generator] render+labels {p + 1}/{P}", file=sys.stderr)
+    return rgb_stack, label_stack
 
 
 def segnet_selfcheck(

@@ -1065,10 +1065,62 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     ema = MlxEMA(model, decay=args.ema_decay)
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
 
+    # ---- RESIDUAL-ONLY MODE (v2 hybrid; gap #1). Load the FIXED deterministic bulk + the
+    # bulk-derived composition mask, and build the compose hooks. The bulk arrays live in CLOSURE
+    # SCOPE (NOT model attributes) -> they are NEVER in model.parameters() => the EMA / optimizer /
+    # quantized blob / checkpoints see ONLY the INR (the bulk does NOT ship; THAT is the rate win).
+    # Every realized render (loss + levers + verdict) routes through ``_render_R`` / ``_compose_np``
+    # so the d_seg loss is on the COMPOSED witness (bulk (+) INR). Default OFF => _render_R is the
+    # bare render + _compose_np is None => byte-identical to the full-partition witness.
+    residual_mode = bool(getattr(args, "residual_mode", False))
+    _compose_np = None
+    _render_R = render_through_R_mlx
+    if residual_mode:
+        from tac.v2_compose.residual_compose import load_residual_training_bundle
+
+        _rb = load_residual_training_bundle(Path(args.residual_target_npz))
+        if (_rb.render_h, _rb.render_w) != (render_h, render_w):
+            raise ValueError(
+                f"--residual-target-npz render res {(_rb.render_h, _rb.render_w)} != "
+                f"--render-h/--render-w {(render_h, render_w)}: the composition is elementwise at "
+                "render res, so they MUST match.")
+        if _rb.n_pairs < P:
+            raise ValueError(
+                f"--residual-target-npz has {_rb.n_pairs} pairs < --num-pairs {P}: the bundle must "
+                "cover every trained pair (a larger bundle is fine -- the first P are used).")
+        _bulk_rgb_np = np.asarray(_rb.bulk_rgb_render_res[:P], np.float32)   # (P,H,W,3) pre-R RGB
+        _resid_mask_np = np.asarray(_rb.composition_mask[:P], bool)          # (P,H,W) override region
+        _bulk_rgb_mx = mx.array(_bulk_rgb_np)                                # (P,H,W,3)
+        _resid_mask_mx = mx.array(_resid_mask_np.astype(np.float32))[..., None]  # (P,H,W,1)
+
+        def _compose_mx(rgb_nhwc, code_idx):
+            # composed = where(mask, INR, bulk) = bulk*(1-m) + INR*m. ``code_idx`` is the per-frame
+            # index; the bulk frame is shared across f0/f1 of a pair => pair = code_idx // 2. The
+            # bulk is a CONSTANT (no grad) => gradients flow ONLY through the masked residual region.
+            pair = int(code_idx) // 2
+            m = _resid_mask_mx[pair][None]                # (1,H,W,1)
+            return _bulk_rgb_mx[pair][None] * (1.0 - m) + rgb_nhwc * m
+
+        def _render_R(witness, coord_feats, code_idx, rh, rw):  # noqa: F811 (residual override)
+            return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_compose_mx)
+
+        def _compose_np(rgb_hw3, pi):  # noqa: F811 (residual override)
+            m = _resid_mask_np[pi][..., None]             # (H,W,1)
+            return np.where(m, np.asarray(rgb_hw3, np.float32), _bulk_rgb_np[pi])
+
+        print(json.dumps({"stage": "residual_mode", "npz": str(args.residual_target_npz),
+                          "n_pairs": int(_rb.n_pairs), "learn_classes": list(_rb.learn_classes),
+                          "dilate": int(_rb.dilate),
+                          "composition_override_frac": float(_resid_mask_np.mean()),
+                          "note": "INR trains on the COMPOSED-render d_seg (bulk (+) INR); the bulk "
+                          "is OUTSIDE the counted weights (rate win). advisory; pointer UNMOVED 0.19110"}),
+              flush=True)
+
     base_loss = make_loss_fn(
         adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
         seg_loss=args.seg_loss, tau_softplus_tau=args.tau_softplus_tau, l7_mult=args.l7_mult,
         l7_threshold=args.l7_threshold,
+        render_fn=(_render_R if residual_mode else None),
     )
 
     # LEVER-3 (lane-edge fragility weighting) hyperparameters captured from args (static; closure
@@ -1171,7 +1223,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           (msal_w > 0.0 and msal_gate["on"]) or
                           (lane_thin_w > 0.0 and lane_thin_gate["on"]))
         if _seg_levers_on:
-            _f1 = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
+            # _render_R composes the FIXED bulk before R in residual mode (else == bare render) so
+            # the surgical levers (lane-thin/margin-saliency/lane-edge) weight the COMPOSED-render
+            # d_seg -- the residual IS the Lane+Movable annulus, so they are maximally relevant.
+            _f1 = _render_R(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
             _slog = adapter.segnet(_f1)                                    # (1, H, W, 5)
             _sig_gt = mx.sum(_slog * lstar_oh, axis=-1)                    # (1, H, W) gt-class logit
             _sig_run = mx.max(_slog + lstar_oh * (-1e9), axis=-1)          # (1, H, W) top competitor
@@ -1286,9 +1341,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     def _render_numpy_deploy(deploy: dict[str, np.ndarray], pi: int, fk: int) -> np.ndarray:
         """THE ONE CODEPATH (fp32 numpy, deploy-faithful) — same forward the byte-close/inflate use.
-        Uses the PER-PAIR feats (curvelet [+ self-orient]) so the verdict == the deploy render."""
+        Uses the PER-PAIR feats (curvelet [+ self-orient]) so the verdict == the deploy render. In
+        residual mode the INR RGB is COMPOSED with the FIXED bulk (where(mask, INR, bulk)) BEFORE R,
+        so the advisory d_seg reflects the COMPOSED witness that ships (NO-FAKE)."""
         rgb, _phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + fk])
-        return _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
+        rgb_hw3 = rgb.reshape(render_h, render_w, 3)
+        if _compose_np is not None:
+            rgb_hw3 = _compose_np(rgb_hw3, pi)
+        return _torch_R_to_camera_uint8(rgb_hw3)
 
     def _dir_feats_from_argmax(argmax: np.ndarray) -> np.ndarray:
         """argmax (H,W) int -> self-orientation directional feats (P, dir_w). SAME numpy/scipy
@@ -1418,8 +1478,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 deploy, fnp, deploy["code"][2 * pi + 1], n_hidden=args.n_hidden, hidden_dim=args.hidden_dim,
                 n_classes=5, activation=args.activation, softmax_temp=st, wire_w0=args.wire_w0,
                 wire_s0=args.wire_s0, hosc_beta=sb, hosc_omega=args.hosc_omega, chroma=args.chroma)
-            f0s.append(_torch_R_to_camera_uint8(rgb0.reshape(render_h, render_w, 3)))
-            f1s.append(_torch_R_to_camera_uint8(rgb1.reshape(render_h, render_w, 3)))
+            _r0 = rgb0.reshape(render_h, render_w, 3)
+            _r1 = rgb1.reshape(render_h, render_w, 3)
+            if _compose_np is not None:  # residual mode: compose the FIXED bulk before R (NO-FAKE)
+                _r0 = _compose_np(_r0, pi)
+                _r1 = _compose_np(_r1, pi)
+            f0s.append(_torch_R_to_camera_uint8(_r0))
+            f1s.append(_torch_R_to_camera_uint8(_r1))
         ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
         dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
         return {"d_seg": float(np.mean(ds)), "d_pose": float(np.mean(dp))}
@@ -2184,6 +2249,28 @@ def main(argv: list[str] | None = None) -> int:
                     "fit through the frozen render+R+scorer). The front-end config (--bank-*/--max-bank-"
                     "freq/--self-orient/--n-dir-freqs) MUST match the decoder's in_feat. Incompatible "
                     "with --resume-from/--structured-init. DEFAULT None = normal joint train.")
+    # ---- RESIDUAL-ONLY MODE (v2 hybrid; gap #1; ADDITIVE, default-OFF => BIT-IDENTICAL). The
+    # rate-bearing fix: train the small INR on the RESIDUAL the FIXED deterministic bulk leaves,
+    # with the bulk GENERATED at decode (OUTSIDE the counted weights) and COMPOSED before R --
+    # NOT baked into the weights via --structured-init (which does NOT shrink the rate). Every
+    # realized render becomes ``composed = where(bulk_label_mask, INR, bulk)`` (the mask is
+    # bulk-LABEL-derived => regenerated FREE at inflate, 0 counted bytes). The d_seg loss + ALL
+    # surgical levers (lane-thin/margin-saliency/hardness) then weight the COMPOSED-render d_seg,
+    # so the INR only has to flip the Lane+Movable residual annulus -> it can be SMALL (the rate
+    # win). --residual-mode OFF (default) => NONE of this fires => byte-identical to the
+    # full-partition witness. See tac.v2_compose.residual_compose + the landing memo.
+    ap.add_argument("--residual-mode", action=argparse.BooleanOptionalAction, default=False,
+                    help="RESIDUAL-ONLY MODE (v2 hybrid): compose the FIXED deterministic bulk (+) "
+                    "the small INR residual before R; train the INR on the COMPOSED-render d_seg. "
+                    "Requires --residual-target-npz. DEFAULT OFF => byte-identical full-partition "
+                    "witness. The rate win: the bulk is OUTSIDE the counted weights (NOT "
+                    "--structured-init, which bakes it IN).")
+    ap.add_argument("--residual-target-npz", type=str, default=None,
+                    help="RESIDUAL-ONLY MODE input: the residual training bundle "
+                    "(tac.v2_compose.residual_compose.save_residual_training_bundle) carrying the "
+                    "deterministic bulk RGB (render res, pre-R) + the bulk-derived composition mask "
+                    "per pair. Required when --residual-mode. The COUNTED bytes are the INR weights "
+                    "this run produces -- NEVER this bundle.")
     # (config-review #1) render-384 is the MEASURED R-survival floor (render-192 pre-caps at
     # 0.00085 d_seg = +0.085 S, mathematically blocking sub-0.15). camera-R + SegNet dominate
     # wall-clock, so 384 is ~free vs 192. The "SDF smooth -> low-res ok" assumption is FALSIFIED.
@@ -2667,6 +2754,39 @@ def main(argv: list[str] | None = None) -> int:
             "--lane-prior-phi1 requires --structured-init: the openpilot centerline SDF is injected "
             "into the structured-init pretrain target; without --structured-init the prior would "
             "never be applied = a silent no-op = a FALSE 'lane prior does nothing' verdict.")
+
+    # RESIDUAL-ONLY MODE fail-closed config guards (same NO-FAKE silent-no-op class). --residual-mode
+    # without the bundle would be a silent no-op (no composition) = a FALSE 'residual mode does
+    # nothing'. --structured-init / --lane-prior-phi1 / --freeze-decoder-fit-codes are the CONTRADICTORY
+    # mechanism (they bake the bulk INTO the weights = the opposite of residual mode, which keeps the
+    # bulk OUTSIDE the counted weights and composes it deterministically) -> fail LOUD rather than
+    # silently ship a non-shrinking INR. The loss-weighting surgical levers (--lane-thin-* /
+    # --margin-saliency-* / --hardness-*) ARE compatible (they weight the COMPOSED-render d_seg) and
+    # are intentionally NOT forbidden.
+    if getattr(args, "residual_mode", False):
+        if not args.residual_target_npz:
+            raise ValueError(
+                "--residual-mode requires --residual-target-npz (the residual training bundle): "
+                "without it the composition has no bulk to compose = a silent no-op = a FALSE "
+                "'residual mode does nothing' verdict.")
+        if args.structured_init or getattr(args, "lane_prior_phi1", False):
+            raise ValueError(
+                "--residual-mode is incompatible with --structured-init / --lane-prior-phi1: those "
+                "BAKE the bulk/static-core INTO the INR weights (a train-time init that ships the "
+                "bulk inside the counted weights = NO rate shrink), which is the EXACT mechanism "
+                "residual mode replaces (the bulk is GENERATED deterministically OUTSIDE the weights "
+                "and COMPOSED before R). Run residual mode WITHOUT --structured-init.")
+        if args.freeze_decoder_fit_codes:
+            raise ValueError(
+                "--residual-mode is incompatible with --freeze-decoder-fit-codes: residual mode "
+                "trains the INR's decoder to flip the residual annulus; a frozen decoder cannot "
+                "(only the per-pair code would move) = a silent no-op = a FALSE 'residual mode does "
+                "nothing' verdict.")
+    elif args.residual_target_npz:
+        raise ValueError(
+            "--residual-target-npz was given but --residual-mode is OFF: the bundle would be "
+            "loaded-and-ignored = a silent no-op = a FALSE 'residual bundle does nothing'. Pass "
+            "--residual-mode to engage the composition, or drop --residual-target-npz.")
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")
