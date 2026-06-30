@@ -131,10 +131,35 @@ def _kill_group(pgid: int) -> None:
         time.sleep(0.15)
 
 
+def _spawn_debug(cmd: list[str]) -> str:
+    """Detailed debug context for a spawn failure — NO silent failures.
+
+    Surfaces the collapse-to-one-arg class explicitly: an unquoted shell
+    expansion that folds a whole command line into a single argv[0] shows up as
+    ``len(cmd)=1`` with a cmd[0] full of spaces. Printing len(cmd), the first few
+    tokens, and cwd makes that root cause obvious instead of a bare 'not found'.
+    """
+    cmd0 = cmd[0] if cmd else "<none>"
+    detail = (
+        f"len(cmd)={len(cmd)} cmd[:3]={cmd[:3]!r} cwd={os.getcwd()!r}"
+    )
+    if len(cmd) == 1 and (" " in cmd0):
+        detail += (
+            "  HINT: cmd[0] contains spaces AND len(cmd)==1 -> the command was "
+            "likely word-split-collapsed into a single argv[0] (an unquoted shell "
+            "expansion). Pass the command as separate argv tokens or via a script."
+        )
+    return detail
+
+
 def main(argv: list[str]) -> int:
     ns, cmd = _parse_args(argv)
     if not cmd:
-        print("safe_run.py: no command given (use `-- CMD ARGS`)", file=sys.stderr)
+        print(
+            "safe_run.py: no command given (use `-- CMD ARGS`); "
+            f"received argv={argv[:6]!r} (len={len(argv)}) cwd={os.getcwd()!r}",
+            file=sys.stderr,
+        )
         return EXIT_SPAWN
 
     label = ns.label or os.path.basename(cmd[0])
@@ -145,11 +170,18 @@ def main(argv: list[str]) -> int:
         # start_new_session=True -> child is a session+group leader (pgid == pid),
         # so we can SIGKILL the whole tree and not just the immediate child.
         proc = subprocess.Popen(cmd, start_new_session=True)
-    except FileNotFoundError:
-        print(f"safe_run.py: command not found: {cmd[0]}", file=sys.stderr)
+    except FileNotFoundError as exc:
+        print(
+            f"safe_run.py: failed to start {cmd[0]!r}: command not found "
+            f"({exc}) [{_spawn_debug(cmd)}]",
+            file=sys.stderr,
+        )
         return EXIT_SPAWN
     except Exception as exc:  # noqa: BLE001
-        print(f"safe_run.py: failed to start {cmd[0]}: {exc}", file=sys.stderr)
+        print(
+            f"safe_run.py: failed to start {cmd[0]!r}: {exc!r} [{_spawn_debug(cmd)}]",
+            file=sys.stderr,
+        )
         return EXIT_SPAWN
 
     pgid = proc.pid  # equals the new session/group id

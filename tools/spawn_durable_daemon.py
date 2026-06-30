@@ -178,12 +178,14 @@ def _register_daemon(record: dict, *, path=None, lock_path=None) -> list[dict]:
     return _update_registry_locked(_upsert, path=path, lock_path=lock_path)
 
 
-def _mark_stopped(label: str, *, path=None, lock_path=None) -> list[dict]:
+def _mark_stopped(label: str, *, path=None, lock_path=None, reason: str | None = None) -> list[dict]:
     def _mark(rows: list[dict]) -> list[dict]:
         for r in rows:
             if r.get("label") == label:
                 r["status"] = "stopped"
                 r["stopped_utc"] = _utc_now_iso()
+                if reason:
+                    r["stopped_reason"] = reason
         return rows
 
     return _update_registry_locked(_mark, path=path, lock_path=lock_path)
@@ -245,6 +247,83 @@ def _pgid_alive(pgid: int) -> bool:
             return True
         return False
     return True
+
+
+# --------------------------------------------------------------------------
+# Post-spawn liveness verification (NO silent failures) — the bug class this
+# closes: Popen succeeds (the FORK is fine) but the child DIES at exec (e.g.
+# safe_run's `failed to start <cmd[0]>` when an unquoted shell expansion folded
+# the whole command into a single argv[0]). The old flow printed a healthy
+# "pid=... (detached session)" line and returned 0 regardless — masking the
+# immediate failure. We now bound-wait + scan the log so a dead launch EXITS
+# NONZERO with detailed debug instead of reporting a phantom-healthy daemon.
+# --------------------------------------------------------------------------
+_FAILURE_MARKERS = (
+    "failed to start",
+    "command not found",
+    "Traceback (most recent call last)",
+    "ModuleNotFoundError",
+    "No such file or directory",
+    "no command given",
+    "safe_run.py:",
+)
+
+
+def _log_tail(log_path, n: int = 20) -> str:
+    """Last ``n`` lines of the daemon log (best-effort; '' on any error)."""
+    try:
+        lines = Path(log_path).read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    return "\n".join(lines[-n:])
+
+
+def _scan_log_for_failures(log_path) -> list[str]:
+    """Return stripped log lines carrying a known spawn/exec failure marker."""
+    try:
+        lines = Path(log_path).read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    return [ln.strip() for ln in lines if any(m in ln for m in _FAILURE_MARKERS)]
+
+
+def _decode_exit(code) -> str:
+    """Readable status from a Popen.poll() returncode (negative => killed by signal)."""
+    if code is None:
+        return "still running"
+    if code < 0:
+        try:
+            return f"killed by signal {signal.Signals(-code).name} ({-code})"
+        except Exception:
+            return f"killed by signal {-code}"
+    return f"exited rc={code}"
+
+
+def _verify_child_survived(proc, pgid: int, log_path, verify_s: float) -> tuple[bool, dict]:
+    """Bounded liveness verification of a just-spawned child.
+
+    Polls up to ``verify_s`` seconds. Returns ``(ok, info)``. ``ok`` is False ONLY
+    when the child exited NONZERO during the window, OR exited rc=0 BUT the log
+    carries a failure marker (a contradiction that means the real work never ran).
+    A still-running child (the healthy daemon case) and a clean rc=0 fast-exit are
+    both ``ok``. ``verify_s <= 0`` skips the wait (back-compat / instant return).
+    """
+    code = None
+    if verify_s and verify_s > 0:
+        deadline = time.time() + float(verify_s)
+        while time.time() < deadline:
+            code = proc.poll()
+            if code is not None:
+                break
+            time.sleep(0.1)
+    failures = _scan_log_for_failures(log_path)
+    alive = (code is None) and (_pid_alive(proc.pid) or _pgid_alive(pgid))
+    info = {"code": code, "alive": alive, "failures": failures, "exit_str": _decode_exit(code)}
+    if code is not None and code != 0:
+        return False, info
+    if code is not None and code == 0 and failures:
+        return False, info
+    return True, info
 
 
 def _synth_label(cmd: list[str], pid: int) -> str:
@@ -363,15 +442,40 @@ def _do_start(a: argparse.Namespace) -> int:
     log = open(a.log, "ab", buffering=0)  # noqa: SIM115 — kept open for the child
     devnull = open(os.devnull, "rb")  # noqa: SIM115
     log.write(f"[durable-daemon] launching: {' '.join(cmd)}\n".encode())
-    proc = subprocess.Popen(
-        cmd,
-        stdin=devnull,
-        stdout=log,
-        stderr=log,
-        start_new_session=True,  # setsid() -> new session/pgroup -> survives parent
-        close_fds=True,
-        cwd=os.getcwd(),
-    )
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdin=devnull,
+            stdout=log,
+            stderr=log,
+            start_new_session=True,  # setsid() -> new session/pgroup -> survives parent
+            close_fds=True,
+            cwd=os.getcwd(),
+        )
+    except (FileNotFoundError, OSError) as exc:
+        # NO silent failures: exec itself failed (e.g. cmd[0] is a collapsed
+        # single-token command from an unquoted shell expansion, or a missing
+        # interpreter). Emit detailed debug + a failure line into the daemon log,
+        # then EXIT NONZERO — never report a phantom-healthy daemon.
+        msg = (
+            f"[durable-daemon] ERROR: failed to start child (exec failed before "
+            f"any process): {exc!r}\n"
+            f"  label      : {a.label}\n"
+            f"  cmd[0]     : {(cmd[0] if cmd else '<none>')!r}\n"
+            f"  cmd (full) : {cmd!r} (len={len(cmd)})\n"
+            f"  cwd        : {os.getcwd()!r}\n"
+            f"  log        : {a.log}\n"
+            f"  HINT: a len(cmd)==1 cmd[0] containing spaces means an unquoted shell "
+            f"expansion collapsed the command into a single argv[0]; pass separate "
+            f"argv tokens or a script file (bash launch.sh)."
+        )
+        with contextlib.suppress(Exception):
+            log.write((msg + "\n").encode())
+        print(msg, file=sys.stderr)
+        with contextlib.suppress(Exception):
+            log.close()
+            devnull.close()
+        return 4
 
     label = a.label
     if not label:
@@ -409,9 +513,43 @@ def _do_start(a: argparse.Namespace) -> int:
             file=sys.stderr,
         )
 
+    # NO silent failures: VERIFY the child actually survived exec before we report
+    # a healthy detached daemon. A dead launch EXITS NONZERO with detailed debug.
+    verify_s = getattr(a, "verify_s", 3.0)
+    ok, vinfo = _verify_child_survived(proc, pgid, a.log, verify_s)
+    if not ok:
+        with contextlib.suppress(Exception):
+            _mark_stopped(label, reason=f"died_at_exec_or_early_exit:{vinfo['exit_str']}")
+        tail = _log_tail(a.log, 20)
+        fail_block = (
+            ("  failure marker(s) in log:\n    " + "\n    ".join(vinfo["failures"]) + "\n")
+            if vinfo["failures"] else ""
+        )
+        tail_block = ("    " + tail.replace("\n", "\n    ")) if tail else "    <empty log>"
+        print(
+            f"[durable-daemon] ERROR: launched child DID NOT survive the "
+            f"{float(verify_s):.1f}s liveness window — NO healthy daemon (the "
+            f"optimistic 'detached session' report is SUPPRESSED).\n"
+            f"  label      : {label}\n"
+            f"  status     : {vinfo['exit_str']}\n"
+            f"  cmd[0]     : {cmd[0]!r}\n"
+            f"  cmd (full) : {cmd!r} (len={len(cmd)})\n"
+            f"  cwd        : {os.getcwd()!r}\n"
+            f"  log        : {a.log}\n"
+            f"{fail_block}"
+            f"  --- log tail (last 20 lines) ---\n"
+            f"{tail_block}\n"
+            f"  --------------------------------\n"
+            f"  HINT: if cmd[0] is a long string containing spaces (len(cmd) small), an "
+            f"unquoted shell expansion collapsed the command into argv[0]; pass the "
+            f"command as separate argv tokens or via a script file (bash launch.sh).",
+            file=sys.stderr,
+        )
+        return 4
+
     print(
         f"[durable-daemon] pid={proc.pid} pgid={pgid} label={label} "
-        f"(detached session) log={a.log}"
+        f"(detached session, VERIFIED alive {float(verify_s):.1f}s) log={a.log}"
     )
     return 0
 
@@ -558,6 +696,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="per-arm process-group RSS cap in MiB (wraps cmd in safe_run; layer 3)")
     ap.add_argument("--walltime-cap-s", type=float, default=None,
                     help="per-arm walltime cap in seconds (with --rss-cap-mb; defaults ~14d if only RSS set)")
+    # NO-silent-failure liveness verification: after Popen, bound-wait this many
+    # seconds and confirm the child survived exec (did not die at exec / exit
+    # nonzero) before reporting a healthy detached daemon. 0 disables (instant
+    # return, back-compat). Detailed debug + nonzero exit on a dead launch.
+    ap.add_argument("--verify-s", type=float, default=3.0,
+                    help="seconds to verify the child survived exec before reporting success "
+                         "(default 3.0; 0 disables — dead launch -> nonzero + detailed debug)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- <command> [args...] (start mode)")
     a = ap.parse_args(argv)
 
