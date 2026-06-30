@@ -157,6 +157,35 @@ def _atomic_savez(path: Path, arrays: dict[str, np.ndarray]) -> Path:
     return path
 
 
+def _atomic_write_json(path: Path, obj: dict[str, Any]) -> Path:
+    """Atomic JSON write (tmp + os.replace) per the durable-state discipline. Refuses /tmp.
+
+    Used for the tiny best-checkpoint POINTER (``levelset_best.json``) so a harvester / early-stop
+    reads the run's best realized-d_seg artifact WITHOUT re-deriving it from the log."""
+    path = Path(path)
+    _refuse_tmp(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(obj, fh, indent=2, sort_keys=True)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+    return path
+
+
+def _is_new_best(d_seg: float, prev_best: float) -> bool:
+    """NEW-best promotion rule (NO-FAKE): a FINITE, STRICTLY-better realized d_seg only. NaN/inf
+    never win; a tie keeps the EARLIER best (reproducible). The 1e-12 guard avoids float-noise
+    churn rewriting the best ckpt for sub-ULP "improvements". Module-level + pure -> unit-tested."""
+    return bool(np.isfinite(d_seg)) and (float(d_seg) < float(prev_best) - 1e-12)
+
+
 def _build_ema_checkpoint_arrays(
     shadow_np: dict[str, np.ndarray], *, args: Any, softmax_temp: float,
     render_h: int, render_w: int, epoch: int, in_feat: int,
@@ -1399,6 +1428,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _verdict_lock = threading.Lock()
     _verdict_thread: dict[str, Any] = {"t": None, "ep": None}
     _verdict_skipped = [0]
+    # ---- BEST-d_seg checkpoint tracker (EMA non-negotiable + per-stage discipline). The rolling
+    # "latest" + per-stage ckpts in _do_checkpoint can DRIFT PAST the best realized d_seg (tau
+    # over-trains past its knee; l7/Muon oscillate on the plateau) -> the best EMA shadow would be
+    # LOST (the gap that forced a manual ep725 snapshot worse than the ep700 best). Per-ARM scope
+    # (each out_dir tracks its own best); the campaign compares arm-bests across arms.
+    _best: dict[str, Any] = {"d_seg": float("inf"), "ep": None, "path": None}
 
     def _verdict_inflight() -> bool:
         t = _verdict_thread["t"]
@@ -1423,6 +1458,35 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             print(json.dumps(row), flush=True)
             history.append({"epoch": ep, **v, "implied_S": s})
 
+    def _maybe_preserve_best(d_seg: float, ep: int, shadow_np_proj: dict[str, np.ndarray],
+                             softmax_temp: float, hosc_beta: float) -> None:
+        """Preserve the EMA SHADOW that achieved a NEW best realized-through-R d_seg, as a DEPLOY
+        npz (shadow + cfg) -> byte-close-ready AND warm-startable (resume seeds live<-shadow).
+
+        NO-FAKE: only a FINITE, strictly-better d_seg promotes the best (NaN/inf never wins). The
+        ``shadow_np_proj`` is the SAME Stiefel-projected shadow the verdict measured (async: the
+        point-in-time snapshot; sync: the current shadow) -> the preserved artifact is EXACTLY what
+        produced the score (no drift). Atomic (tmp+os.replace). Thread-safe: holds _verdict_lock,
+        and only one async verdict is in flight at a time, so best writes never race."""
+        with _verdict_lock:
+            if not _is_new_best(d_seg, _best["d_seg"]):  # finite + strictly-better only
+                return
+            prev = _best["d_seg"]
+            ema_arrays = _build_ema_checkpoint_arrays(
+                shadow_np_proj, args=args, softmax_temp=float(softmax_temp),
+                render_h=render_h, render_w=render_w, epoch=int(ep), in_feat=in_feat,
+                hosc_beta=float(hosc_beta))
+            _atomic_savez(out_dir / "levelset_witness_ema_BEST.npz", ema_arrays)
+            _atomic_write_json(out_dir / "levelset_best.json", {
+                "d_seg": float(d_seg), "epoch": int(ep),
+                "path": "levelset_witness_ema_BEST.npz",
+                "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")})
+            _best.update(d_seg=float(d_seg), ep=int(ep), path="levelset_witness_ema_BEST.npz")
+            print(json.dumps({"stage": "checkpoint", "kind": "best", "epoch": int(ep),
+                              "d_seg": round(float(d_seg), 6),
+                              "prev_best": (round(prev, 6) if np.isfinite(prev) else None),
+                              "path": "levelset_witness_ema_BEST.npz"}), flush=True)
+
     def _schedule_async_verdict(ep: int, seg_form: str, ep_loss: float) -> bool:
         if _verdict_inflight():
             _verdict_skipped[0] += 1
@@ -1441,6 +1505,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             try:
                 v = _verdict_from_snapshot(snap)
                 _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True)
+                # HARDENING: preserve the best EMA shadow from the SAME snapshot the verdict scored
+                # (snap["ema_np"] is the point-in-time Stiefel-projected shadow; cfg from the snap).
+                _maybe_preserve_best(v["d_seg"], ep, snap["ema_np"],
+                                     snap["softmax_temp"], snap["hosc_beta"])
                 with _verdict_lock:
                     print(json.dumps({"stage": "verdict_async_done", "epoch": ep,
                                       "secs": round(time.time() - t0, 1)}), flush=True)
@@ -1956,6 +2024,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "ep_loss": round(ep_loss, 3),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     history.append({"epoch": ep, **v, "implied_S": s})
+                    # HARDENING: preserve the best EMA shadow (sync path = current shadow IS what
+                    # realized_verdict just scored; project film.weight on-manifold like the verdict).
+                    _maybe_preserve_best(
+                        v["d_seg"], ep,
+                        _project_shadow_film_np({k: np.asarray(vv, np.float32)
+                                                 for k, vv in ema.shadow.items()}),
+                        float(model.softmax_temp), float(model.hosc_beta))
             # DM1 telemetry (decisive-smoke signals; design memo §6 firewall). At eval cadence, log
             # PR(M) (per-pair FiLM modulation participation ratio), PR(cov(code)) and the Stiefel
             # residual ‖WᵀW−I‖_F so the A/B can SEPARATE "means fixed" (PR held >~3.0) from "end moved"
@@ -2036,6 +2111,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "front_end": "curvelet" + ("+self_orient" if use_self_orient else ""),
         "activation": args.activation, "in_feat": int(in_feat),
         "history": history, "checkpoint": str(ck), "stage_checkpoints": stage_ckpts,
+        # HARDENING: the BEST realized-d_seg EMA-shadow ckpt (None if no finite verdict landed).
+        # The harvester / next-arm warm-start reads this (or levelset_best.json) instead of the
+        # rolling "latest", which can have drifted past the best.
+        "best": (dict(_best) if _best["ep"] is not None else None),
         "resumable": True, "ckpt_every": int(args.ckpt_every),
         # (review C2) anneal schedule length (deterministic-reproducibility provenance). None default =>
         # records the resolved value (== epochs) so a reader knows the exact cosine denominator used.
