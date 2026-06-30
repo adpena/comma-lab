@@ -1,0 +1,93 @@
+{
+  "title": "v2 deterministic witness corner — PHASE 1 small-n byte-close smoke (REAL inflate.sh -> upstream/evaluate.py, CPU)",
+  "built_utc": "2026-06-30T00:24:00Z",
+  "agent": "v2_byteclose_smoke ($0 CPU-only byte-close agent)",
+  "lane_id": "lane_v2_deterministic_witness_byteclose_smoke",
+  "builder": "experiments/v2_witness_byteclose_smoke.py",
+  "eval_path": "REAL: archive.zip -> unzip -> inflate.sh -> inflate.py (NO scorer weights) -> inflated/0.raw -> upstream/evaluate.py --device cpu",
+  "eval_note": "upstream/evaluate.sh calls bare `python` (not on PATH locally) -> ran upstream/evaluate.py directly with .venv python after the sh-driven unzip+inflate. Small-n via --batch-size n so the n-pair comp is exactly ONE full batch matching the GT batch (avoids the partial-last-batch shape-mismatch assertion). zip(dl_gt,dl_comp) stops after that batch -> scores the first n pairs of 0.mkv.",
+
+  "false_authority": {
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "evidence_grade": "contest-CPU (LOCAL macOS x86-emulated? NO -> Apple-silicon CPU torch). Tag: [macOS-CPU advisory] for the SCORE AXIS; the d_seg/d_pose/byte components are REAL upstream evaluate.py outputs but on Apple-silicon CPU, NOT contest GHA Linux x86_64. Promotion requires Linux x86_64 [contest-CPU] AND/OR [contest-CUDA].",
+    "small_n_advisory": true,
+    "distortion_axis": "GROUNDED but ADVISORY-for-n600 (per-pair avg over the FIRST 24 pairs only; may not represent all 600).",
+    "rate_axis": "GROUNDED at small-n; n600 rate is PROJECTED (linear per-pair byte scaling).",
+    "frontier_pointer": "UNMOVED at contest-CPU 0.19110 (.omx/state/canonical_frontier_pointer.json). NO pointer move claimed. None of these rows is a frontier candidate."
+  },
+
+  "apparatus_validation": {
+    "claim": "A perfect-reconstruction (lossless) witness scores EXACTLY d_seg=0, d_pose=0 through the real eval, proving the full pipeline + GT pair-ordering + small-n truncation harness are trustworthy.",
+    "evidence_row": "store_raw_n24",
+    "result": "d_seg=0.00000000, d_pose=0.00000000 -> apparatus VALIDATED",
+    "gt_cache_matches_eval_gt": true,
+    "parity_all_rows": "inflate output 0.raw byte-equals the build-time render oracle for ALL modes (deterministic integer decode confirmed)."
+  },
+
+  "rate_budget_context": {
+    "score_formula": "S = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "rate_denom_bytes": 37545489,
+    "frontier_S_pointer": 0.19110,
+    "approx_frontier_archive_bytes": "~177000 (rate ~0.0047 -> 25*rate ~0.118); sub-0.19 needs the WHOLE 600-pair archive <~180KB i.e. <~300 bytes/pair.",
+    "implication": "Any per-pair pixel storage must be <~300 bytes/pair to fit. Measured per-pair below is 50KB-3.4MB -> 150x-11000x over budget."
+  },
+
+  "grounded_rows_n24": [
+    {
+      "mode": "store_raw",
+      "desc": "identity witness: store both frames losslessly (zlib). Proves pipeline + parity; bounds the rate of lossless per-pair storage.",
+      "n": 24, "batch_size": 24,
+      "d_seg": 0.0, "d_pose": 0.0,
+      "archive_zip_bytes": 80965947, "rate_smalln": 2.15647603,
+      "S_smalln": 53.91,
+      "per_pair_bytes": 3373581,
+      "submission_dir": "experiments/results/v2_smoke_storeraw_n24_20260630T001403Z/submission_dir",
+      "verdict": "RATE-DEAD (lossless). Apparatus-validator row."
+    },
+    {
+      "mode": "v2_warp",
+      "desc": "v2 deterministic corner, simplest form: store f0 (zlib) + 6-dof pose, f1 = per-class-pose-warp(f0) with NO residual (integer-deterministic decode). The crude per-class warp = top20%=identity(sky) / middle=road integer roll <=6px from pose / bottom22%=identity(hood).",
+      "n": 24, "batch_size": 24,
+      "d_seg": 0.02652083, "d_pose": 190.04124451,
+      "archive_zip_bytes": 40531838, "rate_smalln": 1.07953949,
+      "S_smalln": 73.23,
+      "per_pair_bytes": 1688827,
+      "submission_dir": "experiments/results/v2_smoke_v2warp_n24_20260630T001902Z/submission_dir",
+      "verdict": "POSE-CATASTROPHIC + RATE-DEAD. The crude integer warp produces ~static frames -> PoseNet reads ~no ego-motion -> d_pose=190 (frontier ~3.4e-5). The warp MUST be the real ground-homography (genuinely move the scene by the pose) to carry d_pose. f0 stored raw -> rate also dead."
+    },
+    {
+      "mode": "store_jpeg_q40",
+      "desc": "lossy per-pair storage with a REAL codec (JPEG q40, PIL decode at inflate = legal external lib). Isolates whether the RATE half is solvable by coding, independent of any warp, and how robust the SCORER is to lossy content.",
+      "n": 24, "batch_size": 24,
+      "d_seg": 0.00208685, "d_pose": 0.01338884,
+      "archive_zip_bytes": 1203020, "rate_smalln": 0.03204167,
+      "S_smalln": 1.38,
+      "per_pair_bytes": 50126,
+      "submission_dir": "experiments/results/v2_smoke_jpegq40_n24_20260630T002154Z/submission_dir",
+      "verdict": "DISTORTION FINE, RATE-DEAD. SegNet/PoseNet are ROBUST to JPEG q40 (d_seg 0.0021 ~3.5x frontier; d_pose 0.013 -> contributes 0.366). The blocker is PURELY rate: 50KB/pair = 167x over the ~300 byte/pair budget."
+    }
+  ],
+
+  "n600_projections": {
+    "method": "rate = per_pair_bytes*600/37545489 (linear); distortion carried from n24 advisory avg (NOT re-measured at n600).",
+    "store_raw":  {"n600_archive_bytes": 2024148675, "n600_rate": 53.91, "n600_S_proj": 1347.8, "blocker": "rate"},
+    "v2_warp":    {"n600_archive_bytes": 1013295950, "n600_rate": 26.99, "n600_S_proj": 720.9, "blocker": "rate + d_pose(190)"},
+    "store_jpeg_q40": {"n600_archive_bytes": 30075500, "n600_rate": 0.801, "n600_S_proj": 20.6, "blocker": "rate (167x over budget)"}
+  },
+
+  "verdict": {
+    "byte_closes": "YES — 3 REAL byte-closed exact-eval rows through the actual inflate.sh -> evaluate.py path on CPU. archive.zip is self-contained (NO scorer weights). The win for PHASE 1 (a real measurement + validated apparatus) is secured.",
+    "parity": "YES — inflate output byte-equals the render oracle for every mode (deterministic integer/codec decode).",
+    "clears_0p19_at_n600": "NO — and not close. The SIMPLEST per-pair-storage deterministic corner is FAR worse than 0.19 (n600 S projected 20.6-1347.8), dominated by RATE by 150x-450x. It is NOT PR95-adjacent (~0.19); it is much worse, because per-pair pixel storage in ANY form (raw/warp-keyframe/JPEG) cannot get within 100x of the ~180KB sub-0.19 rate budget.",
+    "decisive_structural_finding": "The scorer is ROBUST to lossy pixel content (store_jpeg q40 d_seg 0.0021) -> the corner does NOT need pixel fidelity. The corner's viability hinges ENTIRELY on the RATE term, and storing PER-PAIR content is structurally impossible (150x-450x over budget). The crude warp is separately pose-catastrophic (d_pose 190).",
+    "what_the_corner_actually_requires": [
+      "MUST NOT store per-pair content. Viable form = a SHARED canonical (one or few keyframes across many frames) + the 600x6 pose trajectory (~14KB) + a REAL ground-homography per-class warp that GENERATES frames (so PoseNet reads the right ego-motion) + a TINY task-survival residual (lane-edge survival + small movables).",
+      "Real ground-homography warp from comma2k19 intrinsics + 6-dof pose (replaces the d_pose=190 crude integer roll).",
+      "A real clustering/range/entropy residual coder for the lane-survival + movables sidecar (the FEED-ko ~0.103 coding path).",
+      "Whether the ambitious shared-canonical form clears 0.19 is UNMEASURED in PHASE 1 — it is the next build. PHASE 1 de-risked the eval apparatus so that build can be measured identically."
+    ],
+    "honest_scope": "GROUNDED: byte-close works, apparatus validated (lossless -> 0/0), 3 real exact rows, per-pair storage rate-dead (measured), crude warp pose-catastrophic (measured), scorer robust to JPEG (measured). PROJECTED/UNBUILT: the ambitious shared-canonical + real-homography + residual-coder corner (the only form that could clear 0.19) is build-gated and unmeasured."
+  }
+}
