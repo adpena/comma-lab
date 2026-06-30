@@ -6319,6 +6319,16 @@ def preflight_all(
         except ImportError:
             pass  # graceful if module missing during partial install
 
+        # 2026-06-30 Catalog #393/#394/#395 — residual-INR hybrid pipeline self-protection (review
+        # r1 B1/B2/B3 + the META-bug). STRICT-from-landing (live count 0): #393 the compose
+        # orchestrator emits ONLY real trainer flags + assembles the residual archive + has an
+        # end-to-end handoff-contract test (the "two correct halves, broken seam" META-bug); #394 a
+        # residual override must carry a coverage proof + GO gate (B2 geometry ceiling); #395 a
+        # "solved" axis claim must carry pipeline validation (B3 / NO-FAKE #8).
+        check_orchestrator_emits_valid_trainer_contract(strict=True, verbose=verbose)
+        check_residual_override_has_coverage_proof(strict=True, verbose=verbose)
+        check_axis_solved_claim_has_pipeline_validation(strict=True, verbose=verbose)
+
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
                 REPO_ROOT,
@@ -85165,6 +85175,268 @@ def check_no_witness_dseg_from_proxy_or_ema_only_harness(
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )
+    return violations
+
+
+# ============================================================================
+# Catalog #393 — check_orchestrator_emits_valid_trainer_contract
+#
+# B1 / review-r1 HIGH-1 + the META-bug ("two correct halves, broken seam, invisible to per-component
+# unit tests"). The residual-INR trainer side + the inflate side were each parity-tested in isolation,
+# but the compose orchestrator emitted the SUPERSEDED command (--structured-init = no rate shrink),
+# wrote the WRONG npz schema (KeyError on the trainer's load contract), and raised a SystemExit stub
+# instead of assembling the residual archive -- so the AUTOMATED pipeline never tested the hybrid.
+#
+# This gate generalizes the dead-flag / CALLSITE_CONTRACTS discipline to the ARTIFACT-SCHEMA handoff:
+#   (1) the canonical residual launch emitters MUST flag-validate against the REAL trainer argparse
+#       (NEVER invent CLI flags), verified DYNAMICALLY (no invented flag can slip through);
+#   (2) the multi-stage compose orchestrator MUST have an END-TO-END handoff-contract test (run
+#       inflate.py as a subprocess + assert bit-parity vs the numpy oracle) -- the test the
+#       per-component suites could not provide;
+#   (3) phase_b MUST assemble the residual archive (build_residual_blob / residual_blob_from_weights),
+#       not a SystemExit stub; and MUST emit build_residual_only_command (--residual-mode), not the
+#       superseded build_residual_inr_command (--structured-init).
+#
+# Memory: residual_pipeline_fix_and_selfprotect_*.md. Sister of the "NEVER invent CLI flags" +
+# CALLSITE_CONTRACTS discipline (the flag surface) extended to the npz-schema handoff surface.
+# ============================================================================
+def check_orchestrator_emits_valid_trainer_contract(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """Catalog #393 — a compose/launch orchestrator must emit ONLY real trainer flags AND assemble
+    the artifact whose schema the consumer loads AND carry an end-to-end handoff-contract test."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    # (1) DYNAMIC flag-contract validation of the canonical residual launch emitters.
+    lc_path = root / "src" / "tac" / "v2_compose" / "launch_command.py"
+    if lc_path.exists():
+        try:
+            import importlib
+
+            lc = importlib.import_module("tac.v2_compose.launch_command")
+            emitters = [
+                (lc.build_residual_only_command,
+                 dict(out_dir="x", gt_cache="c.npz", residual_target_npz="b.npz")),
+                (lc.build_residual_inr_command, dict(out_dir="x", gt_cache="c.npz")),
+            ]
+            for builder, kwargs in emitters:
+                try:
+                    cmd = builder(strict=False, **kwargs)
+                except Exception as exc:  # noqa: BLE001
+                    violations.append(
+                        f"src/tac/v2_compose/launch_command.py: {builder.__name__} raised "
+                        f"{type(exc).__name__} building a launch command ({exc}). The emitter must "
+                        "flag-validate against the real trainer argparse without error.")
+                    continue
+                if not cmd.all_flags_valid:
+                    violations.append(
+                        f"src/tac/v2_compose/launch_command.py: {builder.__name__} emits flags NOT "
+                        f"in the real trainer argparse (NEVER invent CLI flags): {list(cmd.unknown_flags)}")
+        except Exception as exc:  # noqa: BLE001 (import-time failure is not the bug class)
+            if verbose:
+                print(f"  [catalog-393] could not import launch_command ({exc}); skipping dynamic check")
+
+    # (2)+(3) the compose orchestrator's seam-coherence (e2e test + phase_b assembly + correct emitter).
+    orchestrator = root / "tools" / "compose_witness_archive.py"
+    if orchestrator.exists():
+        otxt = orchestrator.read_text(encoding="utf-8", errors="replace")
+        waived = "ORCHESTRATOR_CONTRACT_OK:" in otxt
+        if not waived:
+            test_f = root / "src" / "tac" / "tests" / "test_compose_witness_archive_pipeline.py"
+            if not test_f.exists():
+                violations.append(
+                    "tools/compose_witness_archive.py: no end-to-end handoff-contract test at "
+                    "src/tac/tests/test_compose_witness_archive_pipeline.py (the META-bug: a "
+                    "multi-stage orchestrator MUST have an end-to-end inflate==oracle test).")
+            else:
+                ttxt = test_f.read_text(encoding="utf-8", errors="replace")
+                if not ("inflate.py" in ttxt and "array_equal" in ttxt
+                        and "residual_inflate_reference" in ttxt and "subprocess" in ttxt):
+                    violations.append(
+                        "src/tac/tests/test_compose_witness_archive_pipeline.py: the e2e contract "
+                        "test must run inflate.py as a subprocess and assert bit-parity vs "
+                        "residual_inflate_reference (the oracle).")
+            if "build_residual_blob" not in otxt and "residual_blob_from_weights_npz" not in otxt:
+                violations.append(
+                    "tools/compose_witness_archive.py: phase_b must ASSEMBLE the residual archive "
+                    "(build_residual_blob / residual_blob_from_weights_npz), not a SystemExit stub.")
+            if "build_residual_inr_command" in otxt and "build_residual_only_command" not in otxt:
+                violations.append(
+                    "tools/compose_witness_archive.py: must emit build_residual_only_command "
+                    "(--residual-mode), not the SUPERSEDED build_residual_inr_command (--structured-"
+                    "init bakes the bulk into the weights = NO rate shrink).")
+
+    if verbose:
+        print(f"  [catalog-393] check_orchestrator_emits_valid_trainer_contract: "
+              f"{len(violations)} violation(s)" if violations else
+              "  [catalog-393] check_orchestrator_emits_valid_trainer_contract: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_orchestrator_emits_valid_trainer_contract found "
+            f"{len(violations)} violation(s) (B1 + META-bug; Catalog #393):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+# ============================================================================
+# Catalog #394 — check_residual_override_has_coverage_proof
+#
+# B2 / review-r1 HIGH-2: a residual/sidecar override region that the INR may repaint MUST be proven to
+# COVER the residual it must fix (where bulk != GT) BEFORE a decisive/paid run. The shipped mask was
+# isin(bulk_label, {Lane,Movable}) -- it reached only the Lane+Movable subset, NOT the ~63% of flips
+# on the Road/Undrivable/sky boundaries. An uncovered residual is a GEOMETRY ceiling the INR can NEVER
+# close, which would be MISREAD as an INR-capacity wall (a paradigm-level mis-kill from an
+# implementation-level cause). Two structural requirements:
+#   (1) the default composition mask mode must be the boundary annulus (covers ALL codim-1 flips,
+#       GT-free, self-detected), NOT the legacy learn_classes region;
+#   (2) any orchestrator that BUILDS a residual override must MEASURE coverage
+#       (measure_composition_coverage) AND GATE the GO on it (unreachable_dseg < the d_seg budget).
+#
+# Sister of Catalog #220 (substrate L1 scaffold operational mechanism / pays-rent) + #105/#139
+# (no-op detector). Memory: residual_pipeline_fix_and_selfprotect_*.md.
+# ============================================================================
+def check_residual_override_has_coverage_proof(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """Catalog #394 — a residual override region must carry a coverage proof + GO gate; the default
+    composition mask must be the boundary annulus (not the geometry-ceiling learn_classes region)."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    # (1) the default composition mask mode must be boundary_annulus.
+    rc_path = root / "src" / "tac" / "v2_compose" / "residual_compose.py"
+    if rc_path.exists():
+        try:
+            import importlib
+            import inspect
+
+            rc = importlib.import_module("tac.v2_compose.residual_compose")
+            sig = inspect.signature(rc.derive_composition_mask)
+            default_mode = sig.parameters["mode"].default
+            if default_mode != rc.MASK_MODE_BOUNDARY_ANNULUS:
+                violations.append(
+                    f"src/tac/v2_compose/residual_compose.py: derive_composition_mask default mode "
+                    f"is {default_mode!r}, must be boundary_annulus (the legacy learn_classes default "
+                    "reaches only the Lane+Movable subset -- a GEOMETRY ceiling, review-r1 HIGH-2).")
+        except Exception as exc:  # noqa: BLE001
+            if verbose:
+                print(f"  [catalog-394] could not import residual_compose ({exc}); skipping default-mode check")
+
+    # (2) orchestrators that build a residual override must measure + gate coverage.
+    override_builders = ("build_residual_training_bundle", "derive_composition_mask")
+    scan_roots = [root / "tools", root / "experiments"]
+    for sroot in scan_roots:
+        if not sroot.is_dir():
+            continue
+        for entry in sorted(sroot.rglob("*.py")):
+            rel = entry.relative_to(root).as_posix()
+            if "/tests/" in rel or entry.name.startswith("test_") or "_intake_" in rel:
+                continue
+            try:
+                txt = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if not any(b in txt for b in override_builders):
+                continue
+            if "RESIDUAL_OVERRIDE_COVERAGE_OK:" in txt:
+                continue
+            if "measure_composition_coverage" not in txt:
+                violations.append(
+                    f"{rel}: builds a residual override (matched a mask builder) but has NO "
+                    "measure_composition_coverage proof. The override must be proven to COVER the "
+                    "residual (where bulk != GT) before a decisive/paid run (B2). Add the coverage "
+                    "measurement + GO gate, OR a same-line `# RESIDUAL_OVERRIDE_COVERAGE_OK:<rationale>`.")
+                continue
+            if not any(g in txt for g in ("passes_gate", "coverage_gate", "unreachable_dseg")):
+                violations.append(
+                    f"{rel}: measures residual-override coverage but does NOT GATE on it "
+                    "(no passes_gate / coverage_gate / unreachable_dseg). The geometry ceiling must "
+                    "block the GO, not just be reported (B2).")
+
+    if verbose:
+        print(f"  [catalog-394] check_residual_override_has_coverage_proof: "
+              f"{len(violations)} violation(s)" if violations else
+              "  [catalog-394] check_residual_override_has_coverage_proof: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_residual_override_has_coverage_proof found "
+            f"{len(violations)} violation(s) (B2; Catalog #394):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+# ============================================================================
+# Catalog #395 — check_axis_solved_claim_has_pipeline_validation
+#
+# B3 / review-r1 MED-1 + NO-FAKE #8 (surrogate-optimized-but-not-exact-authority-verified). A
+# "solved" claim on a scorer axis (d_seg / d_pose / rate) for a dispatch/compose surface MUST carry
+# the validation artifact FOR THAT PIPELINE -- not a borrowed/prior claim. The v2 pose axis was
+# narrated as "SOLVED" (a borrowed Quantizr-sidecar claim) while the composed witness ships static-
+# bulk pairs whose composed d_pose was UNMEASURED for this pipeline. The byte cost (~0.9KB) is real,
+# but byte-measured != d_pose-validated. This gate forbids the overstatement at the v2 surface: a line
+# claiming an axis is "solved" must also carry an OPEN / advisory / measured-this-pipeline qualifier.
+#
+# Sister of NO-FAKE #8 + Catalog #324 (predicted-band post-training validation). Memory:
+# residual_pipeline_fix_and_selfprotect_*.md.
+# ============================================================================
+_AXIS_SOLVED_RE = re.compile(
+    r"(d_?pose|d_?seg|\bpose\b|\bseg\b|\brate\b)[^\n]{0,48}\bsolved\b"
+    r"|\bsolved\b[^\n]{0,48}(d_?pose|d_?seg|\bpose\b|\bseg\b|\brate\b)",
+    re.IGNORECASE,
+)
+_AXIS_VALIDATION_TOKENS = (
+    "open", "advisory", "measure_composition_coverage", "d_pose_realized", "measure_dpose",
+    "extract_posenet_targets", "not yet validated", "not measured", "no-fake", "budget",
+    "unmeasured", "pending",
+)
+
+
+def check_axis_solved_claim_has_pipeline_validation(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """Catalog #395 — a 'solved' claim on a scorer axis at the v2 compose/dispatch surface must carry
+    pipeline validation (a measurement for THIS pipeline / OPEN / advisory), not a borrowed claim."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    targets = [root / "tools" / "compose_witness_archive.py"]
+    v2_dir = root / "src" / "tac" / "v2_compose"
+    if v2_dir.is_dir():
+        targets += sorted(v2_dir.rglob("*.py"))
+    for entry in targets:
+        if not entry.exists():
+            continue
+        rel = entry.relative_to(root).as_posix()
+        if "/tests/" in rel or entry.name.startswith("test_"):
+            continue
+        try:
+            text = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for i, line in enumerate(text.splitlines(), start=1):
+            if not _AXIS_SOLVED_RE.search(line):
+                continue
+            low = line.lower()
+            if "axis_solved_claim_ok:" in low:
+                continue
+            if any(tok in low for tok in _AXIS_VALIDATION_TOKENS):
+                continue
+            violations.append(
+                f"{rel}:{i}: claims a scorer axis is 'solved' without a pipeline-validation qualifier "
+                "(OPEN / advisory / measured-this-pipeline / BUDGET). A borrowed 'solved' claim on "
+                "d_seg/d_pose/rate is NO-FAKE #8. Add the measured-this-pipeline validation or label "
+                "the axis OPEN/advisory, OR a same-line `# AXIS_SOLVED_CLAIM_OK:<rationale>`. "
+                f"Line: {line.strip()[:120]}")
+
+    if verbose:
+        print(f"  [catalog-395] check_axis_solved_claim_has_pipeline_validation: "
+              f"{len(violations)} violation(s)" if violations else
+              "  [catalog-395] check_axis_solved_claim_has_pipeline_validation: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_axis_solved_claim_has_pipeline_validation found "
+            f"{len(violations)} violation(s) (B3 / NO-FAKE #8; Catalog #395):\n  "
+            + "\n  ".join(violations))
     return violations
 
 

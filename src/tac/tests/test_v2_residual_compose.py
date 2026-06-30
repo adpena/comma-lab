@@ -76,29 +76,101 @@ def _load_sibling():
 # residual_compose module (pure numpy)
 # ===========================================================================
 def test_derive_composition_mask_selects_learn_classes():
-    from tac.v2_compose.residual_compose import LEARN_CLASSES, derive_composition_mask
+    from tac.v2_compose.residual_compose import (
+        LEARN_CLASSES,
+        MASK_MODE_LEARN_CLASSES,
+        derive_composition_mask,
+    )
 
     assert LEARN_CLASSES == (1, 3)  # Lane, Movable (canonical comma10k order)
     lbl = np.array([[0, 1, 2, 3], [4, 0, 1, 3]], dtype=np.int64)
-    m = derive_composition_mask(lbl, LEARN_CLASSES, dilate=0)
+    m = derive_composition_mask(lbl, LEARN_CLASSES, dilate=0, mode=MASK_MODE_LEARN_CLASSES)
     expected = np.array([[0, 1, 0, 1], [0, 0, 1, 1]], dtype=bool)
-    assert np.array_equal(m, expected), "mask must be exactly the Lane(1)+Movable(3) cells"
+    assert np.array_equal(m, expected), "learn_classes mask must be exactly the Lane(1)+Movable(3) cells"
     assert m.dtype == bool
 
 
 def test_derive_composition_mask_dilate_is_monotone_and_zero_is_exact():
-    from tac.v2_compose.residual_compose import derive_composition_mask
+    from tac.v2_compose.residual_compose import MASK_MODE_LEARN_CLASSES, derive_composition_mask
 
     lbl = np.zeros((9, 9), np.int64)
     lbl[4, 4] = 1  # single lane pixel
-    m0 = derive_composition_mask(lbl, (1, 3), dilate=0)
-    m1 = derive_composition_mask(lbl, (1, 3), dilate=1)
-    m2 = derive_composition_mask(lbl, (1, 3), dilate=2)
+    m0 = derive_composition_mask(lbl, (1, 3), dilate=0, mode=MASK_MODE_LEARN_CLASSES)
+    m1 = derive_composition_mask(lbl, (1, 3), dilate=1, mode=MASK_MODE_LEARN_CLASSES)
+    m2 = derive_composition_mask(lbl, (1, 3), dilate=2, mode=MASK_MODE_LEARN_CLASSES)
     assert int(m0.sum()) == 1
     assert int(m1.sum()) == 5  # 4-connectivity cross
     assert int(m2.sum()) == 13
     # dilation only grows the region
     assert np.all(m1[m0]) and np.all(m2[m1])
+
+
+def test_derive_composition_mask_boundary_annulus_is_default_and_self_detected():
+    """B2: the DEFAULT mask is the inter-class boundary annulus -- covers ALL codim-1 flips
+    (Road/Undriv/sky boundaries included), GT-free + self-detected (no class index)."""
+    from tac.v2_compose.residual_compose import (
+        MASK_MODE_BOUNDARY_ANNULUS,
+        derive_composition_mask,
+    )
+
+    # a Road(0) / Undriv(2) split with NO Lane/Movable anywhere -> the legacy learn_classes mask is
+    # EMPTY, but the boundary annulus covers the Road<->Undriv edge (the ~63% flip mass HIGH-2 flagged).
+    lbl = np.zeros((6, 6), np.int64)
+    lbl[3:, :] = 2  # bottom half = Undrivable
+    m_default = derive_composition_mask(lbl, (1, 3), dilate=0)  # default == boundary_annulus
+    m_explicit = derive_composition_mask(lbl, (1, 3), dilate=0, mode=MASK_MODE_BOUNDARY_ANNULUS)
+    assert np.array_equal(m_default, m_explicit), "boundary_annulus must be the DEFAULT mode"
+    # the boundary cells are rows 2 and 3 (both sides of the 2<->3 horizontal edge); nothing else.
+    expected = np.zeros((6, 6), bool)
+    expected[2, :] = True
+    expected[3, :] = True
+    assert np.array_equal(m_default, expected), "annulus must mark both sides of the Road/Undriv edge"
+    # a uniform partition has NO boundary -> empty annulus (no false override).
+    assert not derive_composition_mask(np.full((5, 5), 2, np.int64), (1, 3)).any()
+
+
+def test_derive_composition_mask_union_superset_of_both():
+    from tac.v2_compose.residual_compose import (
+        MASK_MODE_BOUNDARY_ANNULUS,
+        MASK_MODE_LEARN_CLASSES,
+        MASK_MODE_UNION,
+        derive_composition_mask,
+    )
+
+    lbl = np.array([[0, 0, 1], [2, 2, 3], [2, 2, 2]], dtype=np.int64)
+    ann = derive_composition_mask(lbl, (1, 3), dilate=0, mode=MASK_MODE_BOUNDARY_ANNULUS)
+    learn = derive_composition_mask(lbl, (1, 3), dilate=0, mode=MASK_MODE_LEARN_CLASSES)
+    union = derive_composition_mask(lbl, (1, 3), dilate=0, mode=MASK_MODE_UNION)
+    assert np.array_equal(union, ann | learn)
+    assert np.all(union[ann]) and np.all(union[learn])
+
+
+def test_derive_composition_mask_rejects_bad_mode():
+    from tac.v2_compose.residual_compose import derive_composition_mask
+
+    with pytest.raises(ValueError, match="mode must be one of"):
+        derive_composition_mask(np.zeros((3, 3), np.int64), (1, 3), mode="not_a_mode")
+
+
+def test_measure_composition_coverage_gate():
+    """B2: coverage measurement + the unreachable-d_seg GEOMETRY gate."""
+    from tac.v2_compose.residual_compose import measure_composition_coverage
+
+    # residual: 4 wrong cells; composition mask reaches 3 of them.
+    residual = np.zeros((1, 4, 4), bool)
+    residual[0, 0, 0] = residual[0, 0, 1] = residual[0, 1, 0] = residual[0, 3, 3] = True
+    comp = np.zeros((1, 4, 4), bool)
+    comp[0, 0, 0] = comp[0, 0, 1] = comp[0, 1, 0] = True  # misses (3,3)
+    rep = measure_composition_coverage(residual, comp, dseg_budget=0.01)
+    assert rep.n_residual_cells == 4 and rep.n_reachable_cells == 3
+    assert abs(rep.coverage - 0.75) < 1e-9
+    assert abs(rep.unreachable_dseg - (1.0 / 16.0)) < 1e-9  # 1 unreachable / 16 cells
+    assert rep.passes_gate is False  # 1/16 = 0.0625 >= 0.01 budget -> FLAG (NO-GO)
+    # a budget above the unreachable d_seg passes.
+    assert measure_composition_coverage(residual, comp, dseg_budget=0.1).passes_gate is True
+    # full coverage -> coverage 1.0, unreachable 0, always passes.
+    full = measure_composition_coverage(residual, residual, dseg_budget=1e-9)
+    assert full.coverage == 1.0 and full.unreachable_dseg == 0.0 and full.passes_gate is True
 
 
 def test_compose_residual_rgb_where_semantics():
@@ -130,6 +202,8 @@ def test_residual_training_bundle_roundtrip(tmp_path):
     assert np.array_equal(b.bulk_rgb_render_res, b2.bulk_rgb_render_res)
     assert np.array_equal(b.composition_mask, b2.composition_mask)
     assert b2.learn_classes == (1, 3) and b2.dilate == 1 and b2.n_pairs == 4
+    # B2: mask_mode roundtrips + defaults to boundary_annulus (the rate-bearing default).
+    assert b.mask_mode == "boundary_annulus" and b2.mask_mode == "boundary_annulus"
 
 
 def test_save_bundle_refuses_tmp_path():
@@ -210,7 +284,10 @@ def _build_tiny_v2_packet(tmp_path, *, with_residual: bool, dilate: int = 1):
     kf_lstars = rng.randint(0, n_classes, (len(keyframes), H, W)).astype(np.int64)
     palette = (rng.rand(n_classes, 3) * 255).astype(np.float32)
     calib = (0.16, 0.05, 0.02)
-    warp_codes = [0, 3, 2, 3, 1]
+    # PHYSICAL per-class warp-regime codes (A3.2): Road=ground(0), Lane=ground(0), Undriv=rotonly(2),
+    # Movable=ground(0), MyCar=identity(1). The inflate's _composite_warped CONSUMES these and is then
+    # bit-identical to the proven composite_warped_labels router (which the oracle uses).
+    warp_codes = [0, 0, 2, 0, 1]
     store_blob = build_store_blob(keyframes, kf_lstars, palette, calib, warp_codes, reach_kstar, n_pairs, n_classes=n_classes)
     sb = parse_store_blob(store_blob)
 

@@ -59,6 +59,7 @@ __all__ = [
     "V2StoreBlob",
     "V2ResidualBlob",
     "WARP_TYPE_CODE",
+    "screw_regime_warp_codes",
 ]
 
 MAGIC_V2 = b"WTNV2\x00"
@@ -73,6 +74,31 @@ WARP_TYPE_CODE = {
     "learn": 3,
 }
 _WARP_TYPE_NAME = {v: k for k, v in WARP_TYPE_CODE.items()}
+
+# bridge the SCREW_REGIME names (tools.measure_screw_reach_through_R: ground/rotonly/identity) to the
+# store_blob WARP_TYPE_CODE names. The store_blob warp-mask carries the PHYSICAL per-class regime so
+# the inflate's _composite_warped can ROUTE each class (A3.2: consumed, not dead) -- NOT the
+# store/learn DECISION (LEARN classes still ride the ground bulk; the residual INR overrides them).
+_SCREW_REGIME_TO_WARP_NAME = {
+    "ground": "ground_homography",
+    "rotonly": "rotation_only",
+    "identity": "identity",
+}
+
+
+def screw_regime_warp_codes(screw_regime: dict[int, str], n_classes: int = 5) -> list[int]:
+    """Per-class PHYSICAL warp-regime codes for the store_blob warp-mask, derived from the
+    ``SCREW_REGIME`` class->regime map (the single source of truth in
+    ``tools.measure_screw_reach_through_R``). The inflate's ``_composite_warped`` CONSUMES these
+    (A3.2: no hardcoded ``[0,1,3]/2/4`` routing; A3.1: one derivation shared by phase_a + phase_b).
+
+    For the canonical comma rig ``{0:ground,1:ground,2:rotonly,3:ground,4:identity}`` this returns
+    ``[0,0,2,0,1]``, which makes ``_composite_warped`` bit-identical to the proven
+    ``composite_warped_labels`` router. SELF-DETECTED: the regime is a physical per-NAMED-class fact
+    (Road rides the ground plane, sky rides rotation-only, the hood is static), not a SegNet index
+    decision -- the canonical comma10k order is SCORER_FIXED.
+    """
+    return [WARP_TYPE_CODE[_SCREW_REGIME_TO_WARP_NAME[screw_regime[c]]] for c in range(n_classes)]
 
 
 @dataclass(frozen=True)
@@ -259,6 +285,9 @@ def build_residual_blob(params: dict[str, np.ndarray], inr_cfg: dict[str, Any]) 
         "code_scale": float(code_scale),
         "learn_classes": [int(c) for c in inr_cfg.get("learn_classes", (1, 3))],
         "dilate": int(inr_cfg.get("dilate", 0)),
+        # the composition mask mode (B2): the inflate re-derives the SAME mask the trainer used,
+        # so train == inflate. boundary_annulus (default) covers ALL codim-1 flips, GT-free.
+        "mask_mode": str(inr_cfg.get("mask_mode", "boundary_annulus")),
     })
     mj = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
     buf = bytearray()
@@ -322,6 +351,7 @@ def residual_inflate_reference(
     H, W = store.shape
     learn = tuple(int(c) for c in m["learn_classes"])
     dilate = int(m["dilate"])
+    mask_mode = str(m.get("mask_mode", "boundary_annulus"))
     palette = np.asarray(store.palette, np.float64)
     params = residual.params
     code = np.asarray(params["code"], np.float64)
@@ -355,7 +385,7 @@ def residual_inflate_reference(
         warped = L_src if k == 0 else _bg.composite_warped_labels(
             L_src, poses, anchor, k, K, Kinv, params_calib, grid)
         bulk_rgb = _bg.render_partition(warped, palette)  # (H,W,3) pre-R
-        mask = derive_composition_mask(warped, learn, dilate)
+        mask = derive_composition_mask(warped, learn, dilate, mode=mask_mode)
         for fk in range(2):
             comp = compose_residual_rgb(bulk_rgb, _fwd(2 * p + fk), mask)
             frames[2 * p + fk] = _bg.bicubic_up_to_camera(comp).astype(np.uint8)
@@ -582,14 +612,22 @@ def _warp_persist(L_src, H, grid):
     return np.where(valid, pred, L_src)
 
 
-def _composite_warped(L_src, poses, a, k, K, Kinv, params, grid):
+def _composite_warped(L_src, poses, a, k, K, Kinv, params, grid, warp_codes):
+    # warp_codes[c] = the per-class PHYSICAL warp-regime code (0=ground, 1=identity, 2=rotonly),
+    # CONSUMED from the store_blob warp-mask (A3.2: no hardcoded [0,1,3]/2/4 routing). The decode
+    # routes each target pixel by the warped-source label's class regime: ground foreground first,
+    # then rotonly, then identity, else ground fallback. For the canonical comma rig
+    # warp_codes=[0,0,2,0,1] this is bit-identical to the proven composite_warped_labels router.
+    ground_cls = [c for c, wc in enumerate(warp_codes) if int(wc) == 0]
+    iden_cls = [c for c, wc in enumerate(warp_codes) if int(wc) == 1]
+    rot_cls = [c for c, wc in enumerate(warp_codes) if int(wc) == 2]
     Hg = _cumulative_homography(poses, a, k, K, Kinv, params, "ground")
     Hr = _cumulative_homography(poses, a, k, K, Kinv, params, "rotonly")
     cg = _warp_persist(L_src, Hg, grid)
     cr = _warp_persist(L_src, Hr, grid)
     ci = L_src
-    fg = np.isin(cg, [0, 1, 3])
-    return np.where(fg, cg, np.where(cr == 2, 2, np.where(ci == 4, 4, cg)))
+    fg = np.isin(cg, ground_cls)
+    return np.where(fg, cg, np.where(np.isin(cr, rot_cls), cr, np.where(np.isin(ci, iden_cls), ci, cg)))
 
 
 def _gauss_blur(img, sigma):
@@ -725,8 +763,25 @@ def _dilate_bool(mask, rounds):
     return m
 
 
-def _derive_comp_mask(warped_label, learn_classes, dilate):
-    mask = np.isin(warped_label, np.asarray(learn_classes, dtype=warped_label.dtype))
+def _inter_class_boundary(label):
+    # codim-1 inter-class boundary (both sides of every edge); self-detected, GT-free.
+    b = np.zeros(label.shape, dtype=bool)
+    ne_v = label[:-1, :] != label[1:, :]
+    b[:-1, :] |= ne_v; b[1:, :] |= ne_v
+    ne_h = label[:, :-1] != label[:, 1:]
+    b[:, :-1] |= ne_h; b[:, 1:] |= ne_h
+    return b
+
+
+def _derive_comp_mask(warped_label, learn_classes, dilate, mode="boundary_annulus"):
+    # bit-mirror of tac.v2_compose.residual_compose.derive_composition_mask (train == inflate).
+    if mode == "learn_classes":
+        mask = np.isin(warped_label, np.asarray(learn_classes, dtype=warped_label.dtype))
+    elif mode == "union":
+        mask = _inter_class_boundary(warped_label) | np.isin(
+            warped_label, np.asarray(learn_classes, dtype=warped_label.dtype))
+    else:  # boundary_annulus (default)
+        mask = _inter_class_boundary(warped_label)
     if int(dilate) > 0:
         mask = _dilate_bool(mask, int(dilate))
     return mask.astype(bool)
@@ -761,6 +816,7 @@ def main():
     K = _intrinsics(W, H); Kinv = np.linalg.inv(K); grid = _target_grid(H, W)
     palette = s["palette"]; keyframes = s["indices"]
     params = (float(s["calib"][0]), float(s["calib"][1]), float(s["calib"][2]))
+    warp_codes = s["warp_codes"]  # per-class physical warp-regime codes (A3.2: consumed, not dead)
     kf_map = {idx: s["lstars"][i] for i, idx in enumerate(keyframes)}
     has_residual = len(residual) > 0
     if has_residual:
@@ -770,6 +826,7 @@ def main():
         r_feats = _curvelet_feats(_build_render_coords(H, W), _curvelet_B(r_man))
         r_code = np.asarray(r_params["code"], np.float64)
         learn_classes = r_man["learn_classes"]; dilate = int(r_man["dilate"])
+        mask_mode = r_man.get("mask_mode", "boundary_annulus")
     with open(dst, "wb") as f:
         for p in range(n_pairs):
             anchor, k = _nearest_keyframe(p, keyframes)
@@ -777,12 +834,12 @@ def main():
             if k == 0:
                 warped = L_src
             else:
-                warped = _composite_warped(L_src, poses, anchor, k, K, Kinv, params, grid)
+                warped = _composite_warped(L_src, poses, anchor, k, K, Kinv, params, grid, warp_codes)
             # GENERATE the deterministic bulk RGB at render res (FREE, pre-R).
             bulk_rgb = _render_partition(warped, palette)
             if has_residual:
                 # the bulk-LABEL-derived override region (FREE; regenerated, ships 0 bytes).
-                mask = _derive_comp_mask(warped, learn_classes, dilate)[..., None]
+                mask = _derive_comp_mask(warped, learn_classes, dilate, mask_mode)[..., None]
                 inr0 = _levelset_forward(r_params, r_feats, r_code[2*p+0], r_man).reshape(H, W, 3)
                 inr1 = _levelset_forward(r_params, r_feats, r_code[2*p+1], r_man).reshape(H, W, 3)
                 frame0 = _bicubic_up(np.where(mask, inr0, bulk_rgb))

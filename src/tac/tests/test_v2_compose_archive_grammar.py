@@ -66,7 +66,9 @@ def test_store_blob_roundtrip_keyframes_bit_exact():
     palette = np.array([[128, 128, 128], [170, 170, 170], [100, 80, 60],
                         [120, 140, 160], [180, 200, 230]], np.float32)
     calib = (-0.003224, 0.0, -0.01)
-    warp_codes = [0, 3, 2, 3, 1]  # Road=ground, Lane=learn, Undriv=rot, Movable=learn, MyCar=identity
+    # PHYSICAL per-class warp-regime codes (A3.2): Road=ground(0), Lane=ground(0), Undriv=rot(2),
+    # Movable=ground(0), MyCar=identity(1). The inflate CONSUMES these (no hardcoded routing).
+    warp_codes = [0, 0, 2, 0, 1]
     blob = build_store_blob(indices, kf, palette, calib, warp_codes, reach_kstar=47, n_pairs=600)
     parsed = parse_store_blob(blob)
     assert parsed.keyframe_indices == indices
@@ -83,7 +85,7 @@ def test_store_blob_roundtrip_keyframes_bit_exact():
 def test_byte_accounting_real_archive(tmp_path):
     kf = _synthetic_keyframes(n_kf=1)
     store = build_store_blob([0], kf, np.zeros((5, 3), np.float32), (0.0, 0.0, 0.0),
-                             [0, 3, 2, 3, 1], reach_kstar=47, n_pairs=600)
+                             [0, 0, 2, 0, 1], reach_kstar=47, n_pairs=600)
     pose = b"PNTGxx"
     manifest = b'{"v":2}'
     blob = pack_v2_archive(store, b"", pose, manifest)
@@ -131,7 +133,7 @@ def test_inflate_bulk_bit_identical_to_proven_path(tmp_path):
     poses = np.array([[0.5, 0.1, 1.0, 0.001, 0.002, 0.003],
                       [0.6, 0.0, 1.1, 0.002, 0.001, 0.004]], np.float64)
 
-    store = build_store_blob(indices, kf, palette, calib, [0, 3, 2, 3, 1],
+    store = build_store_blob(indices, kf, palette, calib, [0, 0, 2, 0, 1],
                              reach_kstar=47, n_pairs=n_pairs)
     pose_path = tmp_path / "posenet_targets.bin"
     build_pose_sidecar_from_cache_poses(poses, pose_path)
