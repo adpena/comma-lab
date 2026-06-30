@@ -57,6 +57,7 @@ from types import SimpleNamespace
 # ── reuse the canonical verdict-parse + self-calibrating liveness (DRY) ──
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_levelset_dashboard as rld  # noqa: E402
+import dashboard_trajectory_model as dtm  # noqa: E402  (sophisticated DATA-DERIVED projection)
 
 from starlette.applications import Starlette  # noqa: E402
 from starlette.responses import (  # noqa: E402
@@ -308,11 +309,19 @@ class LiveState:
         self.n_pairs: int | None = None       # N for this run (n200 DOE pilot / n600 scored)
         self.warming_up: bool = False         # live run resolved but no verdict yet (structured-init)
         self.run_config: dict = {}            # parsed launch.sh/run.log config + curriculum schedule
+        self.projection: dict = {"ok": False, "reason": "calibrating"}  # DATA-DERIVED trajectory model
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
-        # cadence sub-state (per-log), persisted to disk like render_levelset_dashboard
-        self._cad_args = SimpleNamespace(stale_min=None, stale_floor_min=10.0,
-                                         cadence_k=2.5, cadence_prior_min=18.0)
+        # cadence sub-state (per-log). DATA-DERIVED ONLY — NO hardcoded cadence prior /
+        # minute floor (the retired 18.0/10.0 seeds were the false-stale "hardcoded
+        # garbage"). The only knobs are the dimensionless stale multiple K and an
+        # opt-in floor (default 0 = none). eval_every / preferred_cadence_s are filled
+        # PER REFRESH from the run's own schedule + measured CURRENT-stage rate.
+        self._cad_args = SimpleNamespace(stale_min=None, stale_floor_min=0.0,
+                                         cadence_k=rld._CADENCE_K, eval_every=None,
+                                         seconds_per_epoch=None,
+                                         preferred_cadence_s=None,
+                                         preferred_cadence_source="measured")
 
     # ---- refresh (sync; called via executor) ----
     def refresh(self) -> list[dict]:
@@ -377,25 +386,66 @@ class LiveState:
         if n_pairs is None and chain:
             n_pairs = _n_pairs_from_log(chain[0])
         self.n_pairs = n_pairs
-        # liveness + cadence from the LIVE (latest) arm only (the freshest log).
-        now = time.time()
-        ccfg = rld._cfg_from_args(self._cad_args)
-        latest_rows = rld._parse_verdicts(latest) if latest is not None else []
-        log_name = latest.name if latest is not None else "_none_"
-        all_state, sub = rld._load_cadence_state(cfg.cadence_state, log_name)
-        mtime = latest.stat().st_mtime if (latest is not None and latest.exists()) else None
-        self.liveness = rld._compute_liveness(latest_rows, mtime, now, sub, ccfg)
-        rld._save_cadence_state(cfg.cadence_state, all_state, log_name, sub)
-        self.watched = latest.name if latest is not None else None
-        self.watched_dir = str(latest.parent) if latest is not None else None
-
         # CONFIG + CURRICULUM SCHEDULE (full observability): parse the live run's OWN
         # artifacts (launch.sh primary, run.log stages fallback) — generalizable to
         # ANY future run with zero hand-config (operator "automatically in the future").
+        # Parsed BEFORE liveness so the stage-aware cadence/ETA can use the real schedule.
         try:
             self.run_config = rld.parse_run_config(latest.parent if latest is not None else None)
         except Exception:
             self.run_config = {"source": "none", "flags": {}, "groups": {}, "schedule": {}}
+
+        # Effective curriculum schedule (boundaries the cadence + projection use): the
+        # run's OWN flags, with the Muon boundary from the resume ancestry when present.
+        _sched = (self.run_config or {}).get("schedule", {}) or {}
+        eval_every = _sched.get("eval_every")
+        sched_eff = {
+            "tau_start": _sched.get("tau_start"), "l7_start": _sched.get("l7_start"),
+            "muon_start": (self.muon_start if self.muon_start is not None else _sched.get("muon_start")),
+            "epochs": _sched.get("epochs"), "eval_every": eval_every,
+            "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
+        }
+
+        # liveness + cadence from the LIVE (latest) arm only (the freshest log).
+        now = time.time()
+        latest_rows = rld._parse_verdicts(latest) if latest is not None else []
+        # STAGE-AWARE next-verdict cadence: epochs in different stages take different
+        # wall time (Muon's Newton–Schulz is slower than CE). Measure per-stage
+        # seconds/epoch from the verdict ts and use the CURRENT stage's rate × eval_every,
+        # recomputed each tick so a stale-stage rate is never carried across a boundary.
+        # Only fed to liveness when it is itself MEASURED (else gap-median takes over).
+        try:
+            stage_spe = dtm.per_stage_seconds_per_epoch(rows_full, sched_eff)
+            cur_ep = max((r["epoch"] for r in rows_full if isinstance(r.get("epoch"), int)), default=None)
+            pref_cad, _cur_stage, pref_src = (
+                dtm.current_stage_cadence(cur_ep, sched_eff, stage_spe, eval_every or 0)
+                if cur_ep is not None else (None, "CE", "calibrating"))
+        except Exception:
+            pref_cad, pref_src = None, "calibrating"
+        self._cad_args.eval_every = eval_every
+        self._cad_args.preferred_cadence_s = pref_cad if pref_src == "measured" else None
+        self._cad_args.preferred_cadence_source = pref_src
+        ccfg = rld._cfg_from_args(self._cad_args)
+        log_name = latest.name if latest is not None else "_none_"
+        all_state, sub = rld._load_cadence_state(cfg.cadence_state, log_name)
+        mtime = latest.stat().st_mtime if (latest is not None and latest.exists()) else None
+        async_grace = rld._async_grace_s(latest)  # MEASURED from verdict_async_done secs
+        self.liveness = rld._compute_liveness(latest_rows, mtime, now, sub, ccfg,
+                                              async_grace_s=async_grace)
+        rld._save_cadence_state(cfg.cadence_state, all_state, log_name, sub)
+        self.watched = latest.name if latest is not None else None
+        self.watched_dir = str(latest.parent) if latest is not None else None
+
+        # SOPHISTICATED DATA-DERIVED PROJECTION (critical-slowing d_seg model + stage-aware
+        # completion ETA + implied_S projection with bands) — all from the run's own
+        # trajectory + schedule; every estimate flagged; low-confidence -> 'calibrating'.
+        try:
+            self.projection = dtm.build_projection(
+                rows_full, {**sched_eff, "schedule": sched_eff},
+                sidecar_pose=DEPLOY_SIDECAR_D_POSE, archive_norm=_ARCHIVE_NORM_BYTES,
+                eval_every=eval_every)
+        except Exception as exc:
+            self.projection = {"ok": False, "reason": f"projection error: {exc}"}
 
         # Rebuild trajectory from the full chain each tick (cheap; few hundred points).
         # new_points = epochs not yet pushed to WS clients (snapshot carries the full set).
@@ -434,11 +484,13 @@ class LiveState:
 
     def snapshot(self) -> dict:
         return {"type": "snapshot", "trajectory": self.trajectory,
-                "liveness": self.liveness, "meta": self.meta()}
+                "liveness": self.liveness, "meta": self.meta(),
+                "projection": self.projection}
 
     def update_msg(self, new_points: list[dict]) -> dict:
         return {"type": "update", "new_points": new_points,
-                "liveness": self.liveness, "meta": self.meta()}
+                "liveness": self.liveness, "meta": self.meta(),
+                "projection": self.projection}
 
     # ---- broadcast ----
     async def broadcast(self, msg: dict) -> None:
@@ -854,7 +906,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 <div class="nbest" id="nbest" role="status" aria-live="polite"></div>
 <script>
 const BOOT = __BOOT__;
-let TRAJ = [], LIVE = {}, META = {};
+let TRAJ = [], LIVE = {}, META = {}, PROJ = {};
 let ws = null, wsOpen = false, wsTries = 0, pollTimer = null;
 // enrichment state (all derived client-side from TRAJ; no new backend data)
 let hoverEpoch=null, bestVal=null, bestEpoch=null, _celebrating=false, _celTimer=null;
@@ -1167,29 +1219,70 @@ function render(){
   scheduleDraw();
 }
 
+// ---------- projection (rendered from the SERVER-computed critical-slowing model) ----------
+// The fit MATH lives server-side in tools/dashboard_trajectory_model.py (pure numpy);
+// the client only RENDERS the returned numbers + their flags. Never a client-side fit.
+function fmtEps(n){return (n==null||!isFinite(n))?"?":fmtInt(n)+" ep";}
+function goalEtaStr(ge){
+  if(!ge||ge.state==="calibrating")return "calibrating";
+  if(ge.state==="reached")return "reached ✓";
+  if(ge.state==="not_descending")return "not descending";
+  if(ge.state==="asymptote_above")return "won't reach — asymptote "+sig(ge.asymptote,3)+" &gt; target";
+  if(ge.state==="eta"){
+    let s="~"+fmtEps(ge.eta_epochs);
+    if(ge.epoch_lo!=null||ge.epoch_hi!=null){
+      const lo=(ge.epoch_lo!=null)?fmtInt(ge.epoch_lo):"?";
+      const hi=(ge.epoch_hi!=null)?fmtInt(ge.epoch_hi):"≳";  // open upper band = may not reach in 1σ
+      s+=" (ep "+lo+"–"+hi+")";
+    }
+    return s;
+  }
+  return "?";
+}
 function renderProjection(g){
   const segEl=$("proj_seg"), sEl=$("proj_s"); if(!segEl||!sEl)return;
-  const g15=META.goal_dseg_15||BOOT.goal_dseg_15;
-  const dpts=TRAJ.map(d=>[d.epoch,d.d_seg]).filter(p=>p[0]!=null&&p[1]!=null&&isFinite(p[1])&&p[1]>0);
-  if(dpts.length<3){segEl.textContent="projection · collecting points…";sEl.textContent=" ";return;}
-  const f=linfit(dpts.slice(dpts.length-winSize(dpts.length)));
-  const last=dpts[dpts.length-1][1];
-  const slope=f?f.m:null, per100=(slope!=null)?slope*100:null;
-  const etaStr=goal=>{const e=etaEpochs(slope,last,goal);
-    if(e.state==="reached")return "reached ✓";if(e.state==="stalled")return "stalled";
-    if(e.state==="eta")return "~"+fmtInt(e.epochs)+" ep";return "?";};
-  const slopeStr=(per100!=null)?((per100>=0?"+":"")+sig(per100,2)+"/100ep"):"n/a";
-  segEl.innerHTML="projection · naive linear · advisory: d_seg <b>"+slopeStr+
-    "</b> · sub-0.19 <b>"+etaStr(g)+"</b> · sub-0.15 <b>"+etaStr(g15)+"</b>";
-  const spts=TRAJ.map(d=>[d.epoch,d.implied_S]).filter(p=>p[0]!=null&&p[1]!=null&&isFinite(p[1])&&p[1]>0);
-  const ptr=META.pointer||BOOT.pointer;
-  if(spts.length>=3){
-    const fs=linfit(spts.slice(spts.length-winSize(spts.length)));
-    const ls=spts[spts.length-1][1]; const es=etaEpochs(fs?fs.m:null,ls,ptr);
-    const t=(es.state==="reached")?"below pointer ✓":(es.state==="stalled")?"stalled":
-      (es.state==="eta")?("~"+fmtInt(es.epochs)+" ep"):"?";
-    sEl.innerHTML="implied_S (advisory) → pointer 0.19110: <b>"+t+"</b> · current "+sig(ls,4);
-  } else { sEl.textContent=" "; }
+  const P=PROJ||{};
+  if(!P.ok){
+    segEl.innerHTML="projection · <b>calibrating</b> — "+escHtml(P.reason||"collecting verdicts")+
+      " (critical-slowing fit needs ≥5 verdicts)";
+    sEl.textContent=" ";
+    return;
+  }
+  // d_seg critical-slowing model (Agmon–Tishby / Rose annealing): asymptote + exponent + R²
+  const fit=P.dseg_model||{};
+  if(fit.ok){
+    const conf=fit.confidence||"low";
+    const cflag=(conf==="low")?" ⚠low-confidence":"";
+    segEl.innerHTML="d_seg critical-slowing model · asymptote d_seg<sub>∞</sub> <b>"+sig(fit.asymptote,4)+
+      "</b> · α "+sig(fit.alpha,2)+" · R² "+sig(fit.r2,3)+" · "+conf+cflag+
+      " · sub-0.19 <b>"+goalEtaStr(P.goal_eta)+"</b> · sub-0.15 <b>"+goalEtaStr(P.goal15_eta)+"</b>";
+  } else {
+    segEl.innerHTML="d_seg model · <b>calibrating</b> — "+escHtml(fit.reason||"need more points");
+  }
+  // implied_S projection (model asymptote + sidecar pose + projected bytes) + stage-aware
+  // completion ETA + current-stage cadence flag
+  const bits=[];
+  const sp=P.implied_s_proj||{};
+  if(sp.ok&&sp.value!=null){
+    let s="projected final implied_S <b>"+sig(sp.value,4)+"</b>";
+    if(sp.value_lo!=null||sp.value_hi!=null)
+      s+=" ("+sig(sp.value_lo,4)+"–"+(sp.value_hi!=null?sig(sp.value_hi,4):"≳")+")";
+    s+=" vs pointer 0.19110";
+    bits.push(s);
+  }
+  const ce=P.completion_eta||{};
+  const tot=(META.schedule&&META.schedule.epochs)||null;
+  if(ce.ok&&ce.total_s!=null){
+    let c="ETA to ep"+(tot!=null?tot:"end")+" ~"+fmtAge(ce.total_s);
+    if(ce.has_estimate)c+=" (Muon estimated — refines at ep726)";
+    else c+=" (measured)";
+    bits.push(c);
+  }
+  if(P.next_verdict_cadence_s!=null){
+    const src=P.next_verdict_cadence_source||"measured";
+    bits.push((P.stage||"")+"-stage cadence ~"+(P.next_verdict_cadence_s/60).toFixed(0)+"m ("+src+")");
+  }
+  sEl.innerHTML=bits.join(" · ")||" ";
 }
 
 // setup / config / schedule / curriculum panel — rendered from META.config + META.schedule
@@ -1247,7 +1340,7 @@ function celebrate(val){
 function pulse(){const p=$("pill");if(!p||reduceMotion)return;
   p._beat=true;p.classList.remove("beat");void p.offsetWidth;p.classList.add("beat");
   setTimeout(()=>{p._beat=false;p.classList.remove("beat");},1000);}
-function applySnapshot(m){TRAJ=m.trajectory||[];LIVE=m.liveness||{};META=m.meta||{};render();}
+function applySnapshot(m){TRAJ=m.trajectory||[];LIVE=m.liveness||{};META=m.meta||{};PROJ=m.projection||{};render();}
 function applyUpdate(m){
   const np=m.new_points||[];
   let gotNew=false, beat=false;
@@ -1259,7 +1352,7 @@ function applyUpdate(m){
     }});
     TRAJ.sort((a,b)=>a.epoch-b.epoch);
   }
-  LIVE=m.liveness||LIVE;META=m.meta||META;
+  LIVE=m.liveness||LIVE;META=m.meta||META;PROJ=m.projection||PROJ;
   render();
   if(gotNew)pulse();
   if(beat)celebrate(bestVal);

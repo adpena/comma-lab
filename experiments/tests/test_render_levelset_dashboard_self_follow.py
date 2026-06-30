@@ -249,10 +249,12 @@ def test_arrival_times_self_observed_excludes_baseline():
     rows0 = [{"epoch": e} for e in (475, 500, 525)]
     _arrival_times(rows0, sub, now=t0)  # first observation -> baseline {475,500,525}
     assert set(sub["baseline_epochs"]) == {475, 500, 525}
-    cfg = {"min_samples": 3, "prior_s": 1080.0}
+    cfg = {"min_gaps": 1}
     arrivals0, baseline = _arrival_times(rows0, sub, now=t0)
     cad0, src0, n0 = _measure_cadence(arrivals0, baseline, cfg)
-    assert src0 == "prior" and n0 == 0  # baseline epochs are not measured samples
+    # baseline epochs (present at launch, no ts) are NOT measured gaps -> "calibrating"
+    # with NO fabricated cadence number (the retired hardcoded 18m prior is gone).
+    assert src0 == "calibrating" and cad0 is None and n0 == 0
 
 
 def test_measure_cadence_becomes_measured_after_three_new_arrivals():
@@ -294,7 +296,8 @@ def test_liveness_fresh_launch_reads_live_calibrating():
                              now=now, sub={}, cfg=_CFG)
     assert live["kind"] == "live"
     assert live["calibrating"] is True
-    assert live["cadence_source"] == "prior"
+    assert live["cadence_source"] == "calibrating"  # no gap yet -> calibrating, NOT a prior
+    assert live["cadence_s"] is None               # never a fabricated number
     assert live["next_epoch"] == 550  # last + spacing(25)
     # baseline epoch -> verdict_age falls back to log mtime (consistency invariant)
     assert live["verdict_age_s"] >= live["log_age_s"]
@@ -330,26 +333,46 @@ def test_liveness_live_within_cadence_self_observed():
     assert abs(live["verdict_age_s"] - 100.0) < 1e-6
 
 
-def test_liveness_stale_beyond_2p5x_cadence():
+def test_liveness_stale_beyond_2p5x_cadence_AND_log_quiet():
+    # DOUBLE-GATED stale: verdict overdue past K×cadence AND the log file ALSO quiet
+    # (genuinely hung). measured cadence 600 -> threshold max(600,2.5*600)=1500.
     sub = {"first_observation_at": 1000.0, "baseline_epochs": [0],
            "first_seen": {"0": 1000.0, "25": 1600.0, "50": 2200.0, "75": 2800.0}}
-    # measured cadence 600 -> threshold max(600, 2.5*600)=1500; verdict 1600s old
-    now = 2800.0 + 1600.0
-    live = _compute_liveness(_seg_rows((0, 25, 50, 75)), watched_mtime=now - 5,
+    now = 2800.0 + 1600.0  # verdict 1600s old (> 1500 threshold)
+    # log ALSO quiet (mtime 1600s old > log_threshold = cadence 600) -> genuinely hung
+    live = _compute_liveness(_seg_rows((0, 25, 50, 75)), watched_mtime=now - 1600,
                              now=now, sub=sub, cfg=_CFG)
     assert live["kind"] == "stale"
     assert live["verdict_age_s"] > live["threshold_s"]
+    assert live["log_age_s"] > live["log_threshold_s"]
 
 
-def test_liveness_calibrating_dead_process_caught_by_threshold():
-    # uncalibrated (prior) BUT log mtime older than max(floor, K*prior)=2700s ->
-    # dead -> stale (a process that died right after launch is not falsely live;
-    # baseline verdict_age falls back to log mtime so the threshold catches it).
+def test_liveness_overdue_but_log_fresh_is_NOT_stale():
+    # THE false-stale fix: verdict overdue past K×cadence but the LOG is being actively
+    # written (checkpoints / in-flight async eval) -> NOT hung -> NOT stale. The old
+    # logic flagged stale on verdict_age ALONE; the double-gate keeps a live run live.
+    sub = {"first_observation_at": 1000.0, "baseline_epochs": [0],
+           "first_seen": {"0": 1000.0, "25": 1600.0, "50": 2200.0, "75": 2800.0}}
+    now = 2800.0 + 1600.0  # verdict 1600s old (overdue) ...
+    live = _compute_liveness(_seg_rows((0, 25, 50, 75)), watched_mtime=now - 20,  # ... but log fresh
+                             now=now, sub=sub, cfg=_CFG)
+    assert live["kind"] == "live"  # process is writing -> alive
+
+
+def test_liveness_calibrating_never_time_stales_no_fabricated_threshold():
+    # NEW CONTRACT (operator "Telemetry accuracy vital"): while CALIBRATING (no measured
+    # gap yet) we CANNOT know the cadence, so we NEVER flag stale on a fabricated time
+    # threshold (the retired hardcoded prior/floor that mis-judged). A dead process in
+    # this window surfaces via the SEPARATE training-alive signal (meta.training_alive),
+    # not via an invented minute bound. So even a long-quiet calibrating log reads 'live'
+    # (warming) from the time-telemetry's view — honest "I can't time-judge yet".
     now = 5000.0
-    live = _compute_liveness(_seg_rows((475, 500)), watched_mtime=now - 3000,  # 50m
+    live = _compute_liveness(_seg_rows((475, 500)), watched_mtime=now - 3000,  # 50m quiet
                              now=now, sub={}, cfg=_CFG)
-    assert live["kind"] == "stale"
-    assert live["verdict_age_s"] > live["threshold_s"]
+    assert live["kind"] == "live"
+    assert live["calibrating"] is True
+    assert live["cadence_s"] is None      # no fabricated number
+    assert live["threshold_s"] is None    # no fabricated stale threshold while calibrating
 
 
 def test_liveness_calibrating_healthy_quiet_stretch_not_stale():
@@ -413,14 +436,14 @@ def test_cfg_stale_min_overrides_floor():
 def test_stale_min_hard_floor_keeps_live_when_default_would_stale():
     sub = {"first_observation_at": 1000.0, "baseline_epochs": [0],
            "first_seen": {"0": 1000.0, "25": 1600.0, "50": 2200.0, "75": 2800.0}}
-    now = 2800.0 + 1600.0  # verdict 1600s old; measured cadence 600s
+    now = 2800.0 + 1600.0  # verdict 1600s old; measured cadence 600s; log ALSO quiet (1600s)
     rows = _seg_rows((0, 25, 50, 75))
-    # default floor (10m=600s): threshold max(600, 1500)=1500 -> 1600 > 1500 -> STALE
+    # default floor (10m=600s): threshold max(600, 1500)=1500 -> 1600 > 1500 + log quiet -> STALE
     default_cfg = _cfg_from_args(_args())
-    assert _compute_liveness(rows, now - 5, now, dict(sub), default_cfg)["kind"] == "stale"
+    assert _compute_liveness(rows, now - 1600, now, dict(sub), default_cfg)["kind"] == "stale"
     # hard floor override (45m=2700s): threshold max(2700, 1500)=2700 -> 1600 < 2700 -> LIVE
     override_cfg = _cfg_from_args(_args(stale_min=45.0))
-    assert _compute_liveness(rows, now - 5, now, dict(sub), override_cfg)["kind"] == "live"
+    assert _compute_liveness(rows, now - 1600, now, dict(sub), override_cfg)["kind"] == "live"
 
 
 # ---------------------------------------------------------------------------

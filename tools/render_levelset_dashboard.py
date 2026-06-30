@@ -73,13 +73,24 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-# ── self-calibration defaults (data-derived staleness; NOT hand-tuned bands) ──
-_CADENCE_K = 2.5  # STALE only when verdict-age > K × measured cadence
-_STALE_FLOOR_MIN = 10.0  # sane minimum stale threshold (minutes), even for fast cadences
-_CADENCE_PRIOR_MIN = 18.0  # labeled prior used until cadence is measured (~25 ep cluster)
-_MIN_CADENCE_SAMPLES = 3  # measured NEW-verdict arrivals needed before cadence is "measured"
-_DEFAULT_EPOCH_SPACING = 25  # fallback verdict-epoch spacing for the next-verdict estimate
+# ── self-calibration: ALL time-telemetry DERIVED FROM THE RUN'S OWN DATA ──
+# (operator "Telemetry accuracy vital" 2026-06-30: confident-wrong is the worst failure.)
+# There is deliberately NO hardcoded cadence/ETA TIME constant here. Cadence is the run's
+# MEASURED inter-verdict gap (from the verdict ``ts`` or self-observed arrivals); until a
+# gap exists we say "calibrating" (no number) — never a fabricated value. The retired
+# ``_CADENCE_PRIOR_MIN`` (18 min) was the "hardcoded garbage" that false-flagged the live
+# n600 run (real cadence ~43 min = 104.5 s/epoch × eval-every-25). The only tunables that
+# remain are DIMENSIONLESS POLICY knobs (a stale multiple, a min-sample count) — not times.
+_CADENCE_K = 2.0           # STALE multiple: verdict overdue past K × MEASURED cadence
+_MIN_CADENCE_GAPS = 1      # >=1 measured inter-verdict gap (i.e. >=2 verdicts) => "measured"
+_DEFAULT_EPOCH_SPACING = 25  # next-EPOCH label spacing only (not a time); refined from data
+_ASYNC_GRACE_FALLBACK_S = 0.0  # async-eval grace is MEASURED from verdict_async_done secs
 _CADENCE_STATE_DEFAULT = ".omx/tmp/dash_levelset_cadence.json"
+# Back-compat shims — these no longer drive ANY judgment; retained so external --flags and
+# legacy callers don't crash. Defaults are inert (no hardcoded floor / no fabricated prior).
+_STALE_FLOOR_MIN = 0.0     # default: NO floor (the binding bound is K × MEASURED cadence)
+_CADENCE_PRIOR_MIN = 0.0   # DEPRECATED/unused — retained only for --cadence-prim back-compat
+_MIN_CADENCE_SAMPLES = 2   # DEPRECATED alias (>=2 verdicts); superseded by _MIN_CADENCE_GAPS
 
 # ── dark theme palette (clean, legible, comma10k-ish accents) ──
 _BG = "#14161a"
@@ -436,25 +447,69 @@ def _arrival_times(rows: list[dict], sub: dict, now: float) -> tuple[list[tuple[
     return out, baseline
 
 
-def _measure_cadence(arrivals: list[tuple[int, float, str]], baseline: set, cfg: dict) -> tuple[float, str, int]:
-    """Median inter-arrival (seconds) of NEW verdict epochs.
+def _measure_cadence(arrivals: list[tuple[int, float, str]], baseline: set, cfg: dict) -> tuple[float | None, str, int]:
+    """MEASURED cadence = median of POSITIVE consecutive inter-arrival gaps (seconds)
+    of verdict epochs, derived ENTIRELY from the run's own data.
 
-    A sample counts as MEASURED iff it has an embedded ts OR it was observed
-    AFTER launch (epoch not in the launch baseline). Returns
-    ``(cadence_s, source, n_measured)``: ('measured', median) once
-    ``>= cfg['min_samples']`` measured arrivals exist (>= min_samples-1 positive
-    intervals); otherwise ('prior', cfg prior) with the running sample count.
+    A sample's arrival time is KNOWN iff it carries an embedded ``ts`` (source "ts")
+    OR the dashboard observed the epoch APPEAR after launch (not a launch baseline
+    epoch latched at "now"). Returns ``(cadence_s_or_None, source, n_known)``:
+
+      * ``(median(gaps), "measured", n)`` as soon as there is at least
+        ``cfg["min_gaps"]`` positive gap (i.e. >= 2 known arrivals) — NEVER a
+        fabricated prior. With the trainer's per-verdict ``ts`` this is the very
+        SECOND verdict, so the live n600 run reads its real ~43-min cadence
+        immediately instead of the retired hardcoded 18 min.
+      * ``(None, "calibrating", n)`` while < 1 gap is measurable — the honest
+        "not enough data yet" state (the banner/UI shows 'calibrating', not a
+        number, and NEVER flags stale on a fabricated threshold).
+
+    No hardcoded minutes anywhere: the only input is the run's own arrival series.
+    ``cfg`` accepts ``min_gaps`` (preferred) or the legacy ``min_samples`` (which is
+    interpreted as a sample count -> ``min_samples - 1`` gaps) for back-compat.
     """
-    measured = sorted(
+    if "min_gaps" in cfg:
+        min_gaps = int(cfg["min_gaps"])
+    else:  # legacy cfg used a sample count; N samples => N-1 gaps
+        min_gaps = max(1, int(cfg.get("min_samples", 2)) - 1)
+    known = sorted(
         [(ep, a) for (ep, a, src) in arrivals if src == "ts" or ep not in baseline],
         key=lambda t: t[0],
     )
-    n = len(measured)
-    if n >= cfg["min_samples"]:
-        diffs = [b[1] - a[1] for a, b in zip(measured, measured[1:]) if b[1] > a[1]]
-        if len(diffs) >= cfg["min_samples"] - 1:
-            return _median(diffs), "measured", n
-    return cfg["prior_s"], "prior", n
+    n = len(known)
+    diffs = [b[1] - a[1] for a, b in zip(known, known[1:]) if b[1] > a[1]]
+    if len(diffs) >= min_gaps:
+        return _median(diffs), "measured", n
+    return None, "calibrating", n
+
+
+def _async_grace_s(log_path: Path | None) -> float:
+    """MEASURED async-eval grace (seconds) = max observed ``verdict_async_done`` secs
+    in the log — the time an async verdict itself takes (~200-240 s for n600). It is
+    added to the stale thresholds so a run is NEVER flagged stale merely because an
+    async verdict is in flight. Returns 0.0 when no such line exists (synchronous
+    eval) or on any error (telemetry must never crash the live dashboard)."""
+    if log_path is None:
+        return _ASYNC_GRACE_FALLBACK_S
+    try:
+        p = Path(log_path)
+        if not p.is_file():
+            return _ASYNC_GRACE_FALLBACK_S
+        best = 0.0
+        for line in p.read_text(errors="replace").splitlines():
+            if "verdict_async_done" not in line:
+                continue
+            try:
+                d = json.loads(line.strip())
+            except Exception:
+                continue
+            if d.get("stage") == "verdict_async_done":
+                s = d.get("secs")
+                if isinstance(s, (int, float)) and float(s) > best:
+                    best = float(s)
+        return best
+    except Exception:
+        return _ASYNC_GRACE_FALLBACK_S
 
 
 def _epoch_spacing(rows: list[dict], default: int) -> int:
@@ -464,86 +519,123 @@ def _epoch_spacing(rows: list[dict], default: int) -> int:
 
 
 def _compute_liveness(rows: list[dict], watched_mtime: float | None, now: float,
-                      sub: dict, cfg: dict) -> dict:
-    """The HEADLINE, DATA-DERIVED live/stale judgment.
+                      sub: dict, cfg: dict, async_grace_s: float = 0.0) -> dict:
+    """The HEADLINE, DATA-DERIVED live/stale judgment — NO hardcoded time constants.
 
-    ``watched_mtime`` is the watched log's file mtime (None when no log). ``sub``
-    is the per-log cadence sub-state (mutated with new observations). Returns a
-    rich dict the banner renders verbatim. NO IO here (pure + testable)."""
+    ``watched_mtime`` is the watched log's file mtime (None when no log). ``sub`` is
+    the per-log cadence sub-state (mutated with new observations). ``async_grace_s``
+    is the MEASURED async-verdict latency (``_async_grace_s``) added to the stale
+    thresholds so an in-flight async verdict never reads stale. ``cfg`` may carry
+    ``preferred_cadence_s``/``preferred_cadence_source`` (the CURRENT-stage cadence,
+    stage-aware) and ``bootstrap_cadence_s`` (a labeled estimate before any gap).
+    Returns a rich dict the banner/UI renders verbatim. NO IO here (pure + testable)."""
     log_age = (now - watched_mtime) if watched_mtime is not None else None
     base = {
         "kind": "missing", "calibrating": True, "last_epoch": None, "verdict_age_s": None,
         "log_age_s": log_age, "cadence_s": None, "cadence_source": None,
         "n_samples": 0, "next_epoch": None, "next_eta_s": None,
-        "threshold_s": None, "epoch_spacing": cfg["default_spacing"],
+        "threshold_s": None, "log_threshold_s": None, "async_grace_s": async_grace_s,
+        "epoch_spacing": cfg.get("default_spacing", _DEFAULT_EPOCH_SPACING),
     }
     if watched_mtime is None:
         return base
     arrivals, baseline = _arrival_times(rows, sub, now)
     cadence_s, cad_src, n = _measure_cadence(arrivals, baseline, cfg)
-    calibrating = cad_src != "measured"  # cadence is still the labeled prior
-    spacing = _epoch_spacing(rows, cfg["default_spacing"])
+    # Stage-aware PREFERRED cadence: when the server measured the CURRENT stage's
+    # epoch-time (Muon epochs are slower than CE; tau/l7 differ), use it for the
+    # next-verdict ETA + stale threshold so we never carry a stale-stage rate across
+    # a curriculum boundary. Only honored when it is itself MEASURED.
+    pref = cfg.get("preferred_cadence_s")
+    if pref and cfg.get("preferred_cadence_source", "measured") == "measured":
+        cadence_s, cad_src = float(pref), "measured"
+    # Bootstrap ESTIMATE (operator): before ANY measured gap, if an independent
+    # seconds-per-epoch is available derive cadence ~ eval_every × spe and LABEL it
+    # 'estimate'. None when unavailable -> stays 'calibrating' (we never invent a
+    # number, never a hardcoded prior).
+    if cadence_s is None and cfg.get("bootstrap_cadence_s"):
+        cadence_s, cad_src = float(cfg["bootstrap_cadence_s"]), "estimate"
+    calibrating = cad_src != "measured"  # estimate / calibrating are both "not yet measured"
+    spacing = _epoch_spacing(rows, cfg.get("default_spacing", _DEFAULT_EPOCH_SPACING))
     last_epoch = arrivals[-1][0] if arrivals else None
     last_src = arrivals[-1][2] if arrivals else None
     last_arr = arrivals[-1][1] if arrivals else None
 
-    # HONEST verdict recency. A verdict line IS a log write, so the true age of
-    # the last verdict can never be FRESHER than the log mtime — i.e. the
-    # invariant verdict_age >= log_age must always hold (the old latched-at-launch
-    # age violated it: it read "verdict 4m ago" while "log active 10m ago",
-    # internally inconsistent). Exact when we KNOW the wall-time (embedded ts, or
-    # an epoch we watched APPEAR after launch); for a pre-launch BASELINE epoch
-    # whose emit time we never observed, fall back to the LOG mtime (>= its real
-    # write time) rather than the launch time.
+    # HONEST verdict recency. A verdict line IS a log write, so the true age of the
+    # last verdict can never be FRESHER than the log mtime — the invariant
+    # verdict_age >= log_age must always hold. Exact when we KNOW the wall-time
+    # (embedded ts, or an epoch we watched APPEAR after launch); for a pre-launch
+    # BASELINE epoch whose emit time we never observed, fall back to the LOG mtime.
     if last_epoch is None:
         verdict_age = log_age
     elif last_src == "observed" and last_epoch in baseline:
         verdict_age = log_age
     else:
         verdict_age = now - last_arr
-    # enforce the invariant verdict_age >= log_age: a verdict line IS a log write,
-    # so the verdict can never be FRESHER than the file mtime. (Self-observed
-    # first_seen lags the real write by up to one poll interval, which could
-    # otherwise show "verdict 6.2m · log 6.3m" — the verdict looking fresher.)
     if verdict_age is not None and log_age is not None:
         verdict_age = max(verdict_age, log_age)
 
-    threshold = max(cfg["floor_s"], cfg["k"] * cadence_s)
     next_epoch = (last_epoch + spacing) if last_epoch is not None else None
-    next_eta = max(0.0, cadence_s - verdict_age) if verdict_age is not None else None
+    # next-verdict ETA = last_verdict + cadence (countdown). Honest: it can legitimately
+    # be ~40 min for n600. None while calibrating (no cadence to count down from).
+    next_eta = (max(0.0, cadence_s - verdict_age)
+                if (cadence_s is not None and verdict_age is not None) else None)
 
-    # ONE comparison, ONE threshold (the displayed cadence == the one used). STALE
-    # only when the last verdict is older than max(floor, K × cadence) — so a
-    # HEALTHY run mid-cadence (e.g. verdict 4-15 min ago at an ~18 min cadence →
-    # threshold ~45 min) always reads LIVE. While the cadence is the prior the
-    # banner annotates "(calibrating)"; it auto-tightens to "(measured)" once
-    # >= 3 genuine new-verdict-epoch arrivals are observed (instant with ts).
-    if verdict_age is not None and verdict_age > threshold:
-        kind = "stale"
-    else:
-        kind = "live"
+    # STALE is DATA-DERIVED, DOUBLE-GATED, and async-aware:
+    #  * threshold_s     = max(opt-in floor, K × MEASURED cadence) + async grace
+    #  * log_threshold_s = MEASURED cadence + async grace   (the file is touched at
+    #                      least once per ~cadence: ckpt-every == eval-every)
+    #  * STALE iff cadence is KNOWN (measured/estimate) AND the verdict is overdue
+    #    past threshold_s AND the LOG FILE itself is also quiet past log_threshold_s
+    #    (genuinely hung). So a healthy run mid-cadence — or mid in-flight async eval
+    #    (log still being written by checkpoints) — is NEVER flagged. While cadence
+    #    is unknown (calibrating, no gap yet) we NEVER flag stale on a fabricated
+    #    threshold; a dead process in that window surfaces via the separate
+    #    training-alive signal (meta.training_alive).
+    threshold = None
+    log_threshold = None
+    kind = "live"
+    if cadence_s is not None:
+        threshold = max(cfg.get("floor_s", 0.0), cfg["k"] * cadence_s) + async_grace_s
+        log_threshold = cadence_s + async_grace_s
+        verdict_overdue = verdict_age is not None and verdict_age > threshold
+        log_quiet = log_age is not None and log_age > log_threshold
+        if verdict_overdue and log_quiet:
+            kind = "stale"
 
     return {
         "kind": kind, "calibrating": calibrating, "last_epoch": last_epoch,
         "verdict_age_s": verdict_age, "log_age_s": log_age, "cadence_s": cadence_s,
         "cadence_source": cad_src, "n_samples": n, "next_epoch": next_epoch,
-        "next_eta_s": next_eta, "threshold_s": threshold, "epoch_spacing": spacing,
+        "next_eta_s": next_eta, "threshold_s": threshold, "log_threshold_s": log_threshold,
+        "async_grace_s": async_grace_s, "epoch_spacing": spacing,
     }
 
 
 def _cfg_from_args(args) -> dict:
-    """Build the cadence config. ``--stale-min`` (when given) is the HARD FLOOR
-    override; otherwise the floor is ``--stale-floor-min``. Self-calibration
-    (K × measured cadence) applies on top either way via ``max(floor, ...)``."""
+    """Build the cadence POLICY config from DIMENSIONLESS knobs only — no hardcoded
+    time. The binding stale bound is ``K × MEASURED cadence + async grace``.
+    ``--stale-floor-min`` (or legacy ``--stale-min``) is an OPT-IN ABSOLUTE floor
+    (minutes), default 0 (no floor). Optional ``eval_every`` + ``seconds_per_epoch``
+    (e.g. a measured per-epoch rate) yield a labeled bootstrap-cadence ESTIMATE used
+    only before the first measured gap; ``preferred_cadence_s`` (stage-aware) wins
+    when present + measured."""
     stale_min = getattr(args, "stale_min", None)
     floor_min = stale_min if stale_min is not None else getattr(args, "stale_floor_min", _STALE_FLOOR_MIN)
-    return {
+    cfg = {
         "k": float(getattr(args, "cadence_k", _CADENCE_K)),
-        "floor_s": float(floor_min) * 60.0,
-        "prior_s": float(getattr(args, "cadence_prior_min", _CADENCE_PRIOR_MIN)) * 60.0,
-        "min_samples": _MIN_CADENCE_SAMPLES,
+        "floor_s": float(floor_min or 0.0) * 60.0,
+        "min_gaps": _MIN_CADENCE_GAPS,
         "default_spacing": _DEFAULT_EPOCH_SPACING,
     }
+    spe = getattr(args, "seconds_per_epoch", None)
+    ee = getattr(args, "eval_every", None)
+    if spe and ee:
+        cfg["bootstrap_cadence_s"] = float(spe) * float(ee)
+    pref = getattr(args, "preferred_cadence_s", None)
+    if pref:
+        cfg["preferred_cadence_s"] = float(pref)
+        cfg["preferred_cadence_source"] = getattr(args, "preferred_cadence_source", "measured")
+    return cfg
 
 
 def _load_cadence_state(path: str | None, log_name: str) -> tuple[dict, dict]:
@@ -699,8 +791,12 @@ def _banner_html(live: dict | None, watched: Path | None, switched_note: str | N
     next_ep = live.get("next_epoch")
     next_eta = live.get("next_eta_s")
 
-    cad_m = f"{cadence_s / 60.0:.0f}m" if cadence_s else "?"
+    # cadence display: a real measured/estimate number, or the honest word
+    # "calibrating" — NEVER a fabricated "~?m" or a hardcoded prior.
     cad_tag = "calibrating" if calibrating else "measured"
+    cad_phrase = (f"cadence ~{cadence_s / 60.0:.0f}m ({cad_tag})"
+                  if cadence_s else "cadence calibrating (measuring 1st gap)")
+    cad_m = f"{cadence_s / 60.0:.0f}m" if cadence_s else "calibrating"
     # the two honest facts. verdict_age >= log_age by construction (a verdict IS
     # a log write), so they are always internally consistent.
     verdict_fact = (f"last verdict ep{last_ep} ({_fmt_age(verdict_age)} ago)"
@@ -713,20 +809,17 @@ def _banner_html(live: dict | None, watched: Path | None, switched_note: str | N
         glob_hint = f" (glob: {log_glob})" if log_glob else ""
         banner = f'<div class="banner stale">⚠ no run log found{glob_hint}</div>'
     elif kind == "stale":
-        # cite the BINDING bound honestly: the cadence multiple when it dominates,
-        # else the sane-minimum floor (so displayed == the threshold actually used).
-        if cadence_s and threshold_s and threshold_s <= _CADENCE_K * cadence_s + 1.0:
-            note = f">{_CADENCE_K:g}x the ~{cad_m} {cad_tag} cadence"
-        else:
-            note = f"> the {(threshold_s or 0) / 60.0:.0f}m floor"
+        # stale fires only with a KNOWN cadence; cite the binding multiple honestly.
+        note = (f">{_CADENCE_K:g}x the ~{cad_m} {cad_tag} cadence"
+                if cadence_s else f"> the {(threshold_s or 0) / 60.0:.0f}m bound")
         banner = (
             f'<div class="banner stale">⚠ STALE — no verdict in {_fmt_age(verdict_age)} '
             f'({note}) — likely STOPPED · {log_fact}</div>'
         )
-    else:  # live (healthy; cadence prior=calibrating or measured)
+    else:  # live (healthy; cadence measured, estimate, or still calibrating)
         banner = (
             f'<div class="banner live">● live · {verdict_fact} · {next_fact} · '
-            f'cadence ~{cad_m} ({cad_tag}) · {log_fact}</div>'
+            f'{cad_phrase} · {log_fact}</div>'
         )
 
     watched_line = ""
@@ -787,6 +880,8 @@ def _detail_line(live: dict | None) -> str:
     if cs:
         tag = "calibrating" if live.get("calibrating") else "measured"
         bits.append(f"cadence ~{cs / 60.0:.0f}m ({tag})")
+    else:
+        bits.append("cadence calibrating")  # honest: no gap measured yet (no fabricated number)
     return " · ".join(bits)
 
 
@@ -878,7 +973,8 @@ def _render_once(args, state: dict | None = None) -> dict:
     log_name = watched.name if watched is not None else "_none_"
     all_state, sub = _load_cadence_state(getattr(args, "cadence_state", _CADENCE_STATE_DEFAULT), log_name)
     mtime = watched.stat().st_mtime if (watched is not None and watched.exists()) else None
-    live = _compute_liveness(rows, mtime, now, sub, cfg)
+    async_grace = _async_grace_s(watched)
+    live = _compute_liveness(rows, mtime, now, sub, cfg, async_grace_s=async_grace)
     _save_cadence_state(getattr(args, "cadence_state", _CADENCE_STATE_DEFAULT), all_state, log_name, sub)
     png = _render_png(rows, args.tau, args.l7, args.goal_dseg)
     _write_html(Path(args.out), png, rows, args.refresh_seconds, watched, live,
@@ -903,16 +999,19 @@ def main() -> None:
     ap.add_argument("--l7", type=int, default=900)
     ap.add_argument("--goal-dseg", type=float, default=0.00112)
     ap.add_argument("--stale-min", type=float, default=None,
-                    help="OPTIONAL hard floor (minutes) override for the stale "
-                         "threshold; replaces --stale-floor-min in max(floor, "
-                         "K×cadence). UNSET (default) = fully self-calibrated.")
+                    help="OPTIONAL absolute floor (minutes) for the stale threshold; "
+                         "replaces --stale-floor-min in max(floor, K×cadence)+grace. "
+                         "UNSET (default) = fully data-derived (no floor).")
     ap.add_argument("--stale-floor-min", type=float, default=_STALE_FLOOR_MIN,
-                    help=f"sane minimum stale threshold in minutes (default {_STALE_FLOOR_MIN:g}); "
-                         "STALE fires at max(this, K×measured_cadence)")
+                    help=f"OPT-IN absolute floor (minutes; default {_STALE_FLOOR_MIN:g} = NONE). "
+                         "STALE fires at max(floor, K×MEASURED_cadence)+async_grace — the "
+                         "binding bound is the measured cadence, never a hardcoded minute value.")
     ap.add_argument("--cadence-k", type=float, default=_CADENCE_K,
-                    help=f"STALE multiplier on measured cadence (default {_CADENCE_K:g})")
+                    help=f"DIMENSIONLESS stale multiple on the MEASURED cadence (default {_CADENCE_K:g})")
     ap.add_argument("--cadence-prior-min", type=float, default=_CADENCE_PRIOR_MIN,
-                    help=f"labeled cadence prior (minutes) used until measured (default {_CADENCE_PRIOR_MIN:g})")
+                    help="DEPRECATED/IGNORED — there is no hardcoded cadence prior; cadence is "
+                         "the run's MEASURED inter-verdict gap ('calibrating' until the 1st gap). "
+                         "Retained only so legacy invocations do not crash.")
     ap.add_argument("--cadence-state", default=_CADENCE_STATE_DEFAULT,
                     help="tiny JSON state file persisting observed verdict arrival "
                          "times (keyed by log name) so cadence survives restarts")
