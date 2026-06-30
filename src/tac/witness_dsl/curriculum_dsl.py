@@ -280,6 +280,17 @@ class WitnessProgram:
                             "lever an epochs_delta window)")
             except Exception:
                 pass  # validation must not hard-fail on a missing/odd ckpt
+        # CURRICULUM ORDERING — surface the trainer's runtime assert at DSL-validate time so a
+        # doomed config (tau/l7 stages that silently never run) is refused BEFORE any launch.
+        _curr = fd.get("--curriculum")
+        if _curr is True or _curr == 1:
+            _tau_s = fd.get("--tau-softplus-start-epoch")
+            _l7_s = fd.get("--l7-start-epoch")
+            _ep = fd.get("--epochs")
+            if None not in (_tau_s, _l7_s, _ep) and not (0 < _tau_s < _l7_s <= _ep):
+                problems.append(
+                    f"CURRICULUM ORDERING: need 0 < tau_start ({_tau_s}) < l7_start ({_l7_s}) "
+                    f"<= epochs ({_ep}) (trainer asserts this; else tau/l7 stages never run)")
         # PRESERVE: ckpt cadence binding (<=25)
         if self.preserve.ckpt_every <= 0 or self.preserve.ckpt_every > 25:
             problems.append(
@@ -517,3 +528,102 @@ def DM1Minimal(beta: float = 0.01, window: int = 100) -> tuple[Lever, Lever]:  #
     The warm-start ``window`` is carried ONCE (on the Stiefel lever); the entropy lever uses
     ``window=0`` so composing both extends epochs by ``window`` (not ``2*window``)."""
     return StiefelW(window=window), CodeSpectralEntropy(beta=beta, window=0)
+
+
+# ---------------------------------------------------------------------------
+# The FIXED, KNOWN OPENING of the from-scratch openpilot-seeded d_seg curriculum.
+# (S0 seed -> S1 short-CE -> S2 tau_softplus). l7 + Muon are STACKED ADAPTIVELY by
+# ``campaign.plan_adaptive_step`` off this opening's measured per-stage checkpoints.
+# Deep-math anchors: FEED-bv (measured per-stage d_seg dirs), FEED-fs (separatrix
+# seed), FEED-fz/-bu (reheat), anneal-memo (tau=0.3 == reachability floor), FEED-fi
+# (Muon = spectral conditioner -> stacked, not fixed). DAG FEED-ln.
+# ---------------------------------------------------------------------------
+def openpilot_seeded_opening(  # noqa: N802 — DSL constructor
+    out_dir: str,
+    gt_cache: str,
+    num_pairs: int = 200,
+    *,
+    ce_to: int = 300,
+    tau_window: int = 300,
+    tau: float = 0.3,
+    w_pose: float = 0.0,
+    rewarmup_epochs: int = 8,
+    rewarmup_floor: float = 0.1,
+    seed: int = 0,
+    mlx_device: str = "gpu",
+) -> WitnessProgram:
+    """The FIXED, KNOWN OPENING (S0 seed -> S1 short-CE -> S2 tau_softplus) as ONE program.
+
+    The curriculum is NOT fully fixed up front (operator riff 2026-06-29): we KNOW the
+    opening; l7 + Muon are STACKED ADAPTIVELY from the MEASURED tau-stage d_seg trajectory
+    off the per-stage checkpoints (see ``campaign.plan_adaptive_step`` / ``decide_next_stage``).
+
+    S0 (pre-train seed, NOT an epoch stage): ``--structured-init`` + ``--lane-prior-phi1``
+       inject the openpilot deg-3 centerline SIGNED-DISTANCE field into the phi1 (lane)
+       channel of the structured-init pretrain target (FEED-fs separatrix residual 1.9e-5)
+       -> the level-set homotopy STARTS in-basin AT the Road<->Lane separatrix. NTK view:
+       the seed supplies the LOW-FREQUENCY lane structure free, so CE need not learn it.
+    S1 CE [1, ce_to): SHORT confidence-calibration over all pixels. The seed gives the
+       geometry (zero-level-set placement); CE only calibrates per-pixel argmax confidence
+       -> SHORTENED (not eliminated). Measured CE descent 0.01045 -> 0.00643 (FEED-bv).
+    S2 tau_softplus [ce_to, ce_to+tau_window): the PRIMARY measured d_seg drop
+       (0.00643 -> 0.00396, FEED-bv). ``tau=0.3`` == the anneal-memo reachability floor
+       Delta_min ~= 0.3 (the margin-RESONANCE T*=Delta for the *fixable* boundary flips;
+       grad ∝ (1/T)e^{-Delta/T} peaks at T=Delta).
+
+    l7 + Muon parked: ``--l7-start-epoch`` is set to ``epochs`` (no-op tail) so the opening
+    is EXACTLY ce->tau and the trainer validator ``tau_start < l7_start <= epochs`` holds;
+    the adaptive engine engages l7 (and then the Muon finisher) by warm-starting from the
+    preserved tau checkpoint.
+
+    REHEAT (FEED-fz BUILD 1 / FEED-bu, "different stages need different treatment") is ON at
+    every transition: ``--stage-transition-rewarmup-epochs`` (LR floor->1x over the window,
+    measured 0.1x/~8ep) + ``--stage-transition-reset-moments`` (zero stale AdamW 2nd-moments)
+    -> the ce->tau boundary is stable BY CONSTRUCTION. smooth + lambda/sigma stages are
+    SKIPPED (smooth measured to RAISE d_seg +6.8%; the trainer has no such curriculum stages
+    so the skip is STRUCTURAL, not a flag).
+
+    Pose rides the stored Quantizr-style sidecar -> ``w_pose=0`` (the witness's sole
+    controllable job is d_seg). DETERMINISTIC-REPRODUCIBLE: single recorded ``--seed``;
+    per-stage + periodic checkpoints ON (PRESERVE clause); EMA-shadow saved; ``--resume-from``
+    compatible. FROM-SCRATCH: ``resume_from=None`` (the structured-init IS the seed, not a ckpt).
+    """
+    epochs = ce_to + tau_window
+    base = dict(BASELINE.base)
+    base.update({
+        "--w-pose": w_pose,
+        "--tau-softplus-tau": tau,
+        "--structured-init": True,
+        "--structured-init-include-lane": True,
+        "--lane-prior-phi1": True,
+        "--lane-prior-phi1-mode": "replace",
+        "--lane-prior-phi1-dash-gate": True,
+        "--stage-transition-rewarmup-epochs": rewarmup_epochs,
+        "--stage-transition-rewarmup-floor": rewarmup_floor,
+        "--stage-transition-rewarmup-shape": "linear",
+        "--stage-transition-reset-moments": True,
+        "--seed": seed,
+    })
+    return WitnessProgram(
+        out_dir=out_dir,
+        gt_cache=gt_cache,
+        epochs=epochs,
+        num_pairs=num_pairs,
+        temp=Anneal(1.0, 0.05),  # RENDER-partition sharpness anneal (NOT the seg-surrogate tau);
+        stages=(                  # frozen at 0.05 by the Muon finisher (FEED-fm FIX-2).
+            Stage("CE", None, None),
+            Stage("tau_softplus", "--tau-softplus-start-epoch", ce_to),
+            # l7 PARKED at epochs (no-op tail); engaged adaptively via warm-start continuation.
+            Stage("l7_softplus", "--l7-start-epoch", epochs),
+        ),
+        regularizers=(
+            Regularizer("--eikonal-weight", 0.01),
+            Regularizer("--length-weight", 0.001),
+        ),
+        preserve=Preserve(stage_boundaries=True, ckpt_every=25),
+        contain=Contain(),
+        authority=Authority(),
+        base=base,
+        resume_from=None,  # FROM SCRATCH (structured-init seed, not a checkpoint)
+        mlx_device=mlx_device,
+    )
