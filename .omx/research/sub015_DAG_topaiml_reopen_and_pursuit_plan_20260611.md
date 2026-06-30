@@ -7038,3 +7038,26 @@ The fixed θ* OPENING (S0 seed -> CE -> tau) finished cleanly at ep600 (trainer 
 - ep600 = 1-epoch l7_softplus touch (d_seg 0.004561, just the loss-form switch, NOT a real l7 stage)
 **Opening baseline d_seg verdict ~0.0043** (EMA best). **ALL stage ckpts PRESERVED** (per-stage discipline working): levelset_ckpt_stage{CE_ep299,Tau_ep599,L7_ep600}.npz + resume_* + EMA. Re-warmup + reset-moments fired at each boundary (different-stages-different-treatment, built in).
 **NEXT (operator FOLDED IN the θ* schedule 2026-06-30):** the θ* A/B campaign launches off the preserved ckpts — TIER-1 {real l7 stage, Muon finisher} then TIER-2 additive {lane-edge directional hinge (was weight-0 OFF — the residual lane-orbit lever), capacity-routing, UNIWARD, hardness, StiefelW, CodeSpectralEntropy}; harvest_arm each -> select_winners -> compose_theta_star -> byte-close -> advisory S. Sequential one-GPU, local-MLX advisory, every ckpt preserved, baseline=control. HARD GATE: NO n600/paid/exact without operator go (operator chose "hold all paid for my review"). Pointer UNMOVED contest-CPU 0.19110.
+
+
+## FEED-lv (2026-06-30, overnight) — θ* DOE: l7 arm SATURATED + early-stopped; Muon arm LAUNCHED [macOS-MLX advisory, NON-PROMOTABLE]
+**Campaign reframe (operator 2026-06-30):** n200 is the DESIGN-OF-EXPERIMENTS PILOT to determine the optimal **n600 recipe** (per-stage epochs / order / recursion / config), NOT a grind-to-advisory-S. Each arm = a SATURATION measurement, early-stopped at the knee.
+
+**ARM 1 — l7-from-tau (warm-start stageTau_ep599, l7 engaged ep600):** realized-through-R d_seg (verdict-pairs 96):
+- ep600 0.00455 (l7 start) -> ep625 0.00433 -> ep650 0.004262 -> ep675 0.004264 -> ep700 **0.004227 (best)** -> ep725 0.004268.
+- ep650-725 oscillates in [0.00422, 0.00427] with NO net gain => **SATURATED** (Δd_seg/25ep ~2e-6 then noise).
+- **l7 KNEE ~ep700 (~100ep of l7); best d_seg 0.004227 vs tau-base 0.00431 => marginal −1.9%.**
+- **Signature: front-loaded + early-saturating = CONDITIONING lever** (re-orients within the basin), NOT capacity (which would keep descending). Consistent with l7 sharpening the level-set field, not adding representational power.
+- **n600 RECIPE PARAM: l7 window ~100ep (short tail; do NOT over-run).**
+- Early-stopped at ep725 (saved ~130 min GPU vs grind-to-ep900). Preserved: `levelset_resume_stageL7arm_final_ep725.npz` + `levelset_ema_stageL7arm_final_ep725.npz` (CONTAINMENT: killed only the l7 arm group; dashboard/tunnel/control-plane untouched).
+
+**ARM 2 — Muon (LAUNCHED):** warm-start from the preserved l7 ckpt (resume_epoch 725), `--muon-start-epoch 726` (engages at resume + fires the stage-transition rewarmup = "different stages need different treatment"), `--muon-lr 0.002`, epochs 1000 (early-stop at knee). DRY-EMITTED + 7/7 VERIFIED (resume-from = preserved l7 ckpt, NOT a CE rollback) before launch. trainer pid 57470, armdir `experiments/results/levelset_thetastar_muon_arm/` (run_muon.log). **Measures: does Muon (PR95's d_seg finisher) break below the l7 plateau 0.00422, and at what saturation epoch?** First verdict ~ep750 (~18 min).
+
+**n200 DOE recipe table so far (the deliverable, held for operator go on n600):**
+| stage | knee (n200) | best d_seg | role | n600 param |
+|---|---|---|---|---|
+| CE | ~ep275 | 0.00544 | floor-set | shorter CE |
+| tau_softplus | ~ep450 | 0.004307 | sharpen | ~150ep early-stop (over-trains after) |
+| l7 | ~ep700 (~100ep) | 0.004227 | conditioning (−1.9%) | ~100ep short tail |
+| Muon | (measuring) | — | finisher? | TBD |
+HARD GATE: NO n600/paid/exact-eval without operator go. Pointer UNMOVED 0.19110.
