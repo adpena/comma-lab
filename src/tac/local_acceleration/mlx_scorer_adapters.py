@@ -1124,18 +1124,23 @@ class MLXCustomKernelStridedGroupedConvAdapter:
 def _custom_metal_backward_status() -> tuple[bool, str]:
     """``(active, reason)`` for the fast custom Metal grouped backward path.
 
-    Gated by ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`` AND a working Metal grouped
-    backward backend. Default OFF so the bit-faithful Python-loop reference
-    remains the validated baseline; opt-in for the ~17x faster full-scorer
-    backward when training. The ``reason`` string is for the one-time runtime
-    confirmation log (max-observability) so a launched run CONFIRMS the fast
-    path is engaged rather than silently falling back to the loop reference.
+    Default ON (self-gated on a working Metal grouped-backward backend; falls
+    back to the bit-faithful Python-loop reference when Metal is unavailable).
+    The custom Metal backward is EXONERATED — bit-identical to the loop
+    reference (seeded witness-param grad cosine 1.0), so the ~17x-faster path is
+    the correct DEFAULT, not an opt-in. This removes the launch footgun where a
+    run that forgot ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`` silently ground ~17x
+    slow on the reference path (the recurring launch-gate signal-loss). Set
+    ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=0`` to FORCE the reference path (e.g. a
+    parity audit). The ``reason`` string feeds the one-time confirmation log
+    (max-observability) so every launched run still CONFIRMS which path engaged.
     """
 
     import os
 
-    if os.environ.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD", "0") not in {"1", "true", "True"}:
-        return False, "env_TAC_MLX_CUSTOM_GROUPED_BACKWARD_not_set"
+    # DEFAULT ON: an unset env => "1" => fast path (then Metal-availability gated below).
+    if os.environ.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD", "1") not in {"1", "true", "True"}:
+        return False, "env_TAC_MLX_CUSTOM_GROUPED_BACKWARD_explicitly_disabled"
     try:
         from tac.local_acceleration.metal_grouped_conv_backward import (
             metal_grouped_conv2d_backend_available,
