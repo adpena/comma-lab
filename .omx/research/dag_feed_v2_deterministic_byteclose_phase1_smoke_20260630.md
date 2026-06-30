@@ -94,6 +94,39 @@ the COMPOSITION into a byte-closed n600 archive, NOT from-scratch geometry:
   + the L13 format. The v2 6-section codec FLAGS remain build-gated DESIGN (FEED-kk);
   composition is what's unbuilt, not the parts.
 
+## How PHASE 1 connects to the canonical SDS-TSC design (build target)
+
+The canonical v2 design is `stratified_dynamic_sfm_taskspace_codec_design_20260629T182602Z.md`
+("STRATIFIED DYNAMIC-SfM TASK-SPACE CODEC", Status DESIGN ONLY). Its 6-section
+grammar EXPLICITLY avoids per-pair storage: S0 calib header (FREE intrinsics +
+~32-128B globals) · S1 ONE canonical static IPM scene C (~8-25KB, NOT 600
+frames) · S2 ego-pose stream (6 floats/frame, Quantizr-style, FREE dual-use with
+d_pose) · S3 per-class warp-type mask (~0.2-1KB) · S4 lane-survival residual (THE
+binding learned term, 6-20KB) · S5 movables residual (~0.5-2KB). Total ~20-50KB
+=> rate ~0.0013 (25*rate ~0.03) — WELL inside the sub-0.19 budget.
+
+**PHASE 1 empirically GROUNDS the design's central bet:** my measured rows show
+per-pair pixel storage is rate-dead by 150x-450x (raw/warp-keyframe/JPEG all >=
+50KB/pair) — which is EXACTLY why SDS-TSC stores ONE canonical scene + a pose
+stream, not per-pair content. And v2_warp's d_pose=190 shows why S3 must use the
+REAL plane-induced homography, not a crude roll. The scorer's robustness to JPEG
+q40 (d_seg 0.0021) grounds that S4's residual budget can be small (content need
+not be pixel-faithful, only task-faithful).
+
+In-tree assets for the build (NOT from scratch):
+- `tools/measure_pose_warp_dseg.py`: `pose_to_homography(pose6,K,Kinv,s_t,s_r,pitch)`
+  = real plane-induced homography `H = K(R - t n^T/d)K^-1`; `warp_labels(...)`.
+  Currently warps LABEL maps for d_seg accounting; the build extends it to warp
+  the canonical RGB/SDF scene.
+- `tools/witness_byte_close_and_eval.py`: existing byte-close harness (trained
+  MLX witness -> MLX-free numpy inflate.py -> full frames -> realized d_seg/d_pose).
+- `src/tac/witness_dsl/gauge.py`: warp-chart selector (SCREW_TWIST / PER_CLASS_HOMOGRAPHY).
+- boundary_math S1 components: `lane_sdf_component`, `hood_static_component`,
+  `road_horizon_component`, `context_partition_codec` (context-adaptive arithmetic).
+- FEED-ko ~0.103 = a FULL-content store through the REAL clustering coder
+  (bulk-only), NOT a synthetic render and NOT targeting/waterfill (refuted). So
+  the corner's promise already presumes the real coder on full content.
+
 ## Next unit (aimed at a real exact row that could move the pointer)
 
 Build the AMBITIOUS corner increment that attacks RATE first (the only blocker):
