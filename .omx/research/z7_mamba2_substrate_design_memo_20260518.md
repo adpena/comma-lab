@@ -393,9 +393,9 @@ append_manifest_row_to_jsonl(manifest_row)
 
 **Available local resources**:
 - M5 Max with 128GB unified memory; MPS available (verified 2026-05-18: `torch.backends.mps.is_available() == True`)
-- alejandros-mac-mini (100.125.140.94) Intel CPU build server with Python 3.13 + uv
-- bat00 (100.120.99.124) Windows + WSL2 Ubuntu 24.04 with RTX 2070S→3090; CUDA-capable via WSL2 GPU passthrough → could run pure-PyTorch Mamba-2 if `mamba_ssm` PyPI install works on Windows+WSL2 (untested)
-- tertiary (100.65.24.39) M1 MacBook Pro MPS
+- <host-redacted> (<tailscale-ip-redacted>) Intel CPU build server with Python 3.13 + uv
+- bat00 (<tailscale-ip-redacted>) Windows + WSL2 Ubuntu 24.04 with RTX 2070S→3090; CUDA-capable via WSL2 GPU passthrough → could run pure-PyTorch Mamba-2 if `mamba_ssm` PyPI install works on Windows+WSL2 (untested)
+- tertiary (<tailscale-ip-redacted>) M1 MacBook Pro MPS
 
 **Recommended pre-dispatch local protocol** (all $0):
 1. Install pure-PyTorch Mamba-2 reference on M5 Max (no CUDA dependency). Reference: `state-spaces/mamba` GitHub has a `Mamba2_torch.py` reference implementation that doesn't require CUDA kernels.

@@ -25,6 +25,11 @@ workspace/upstream_snapshot.json
 # this rule simply prevents it from leaking into the shared repo. (Codex F1
 # 2026-04-28: tracker had grown to 75 records / ~$305 active spend before
 # being caught.)
+# Local-only fleet inventory: real Tailscale IPs / hostnames / Windows paths.
+# Public template is fleet.example.toml; CLAUDE.md carries the same operational
+# guidance with literals redacted. NEVER push fleet.local.toml. Regenerate the
+# live view with `tailscale status`.
+fleet.local.toml
 .omx/state/*
 !.omx/state/artifact_kind_registry.yaml
 !.omx/state/next_catalog_number.txt

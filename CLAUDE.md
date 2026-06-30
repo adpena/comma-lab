@@ -2896,13 +2896,14 @@ All lab machines are on Tailscale. **Always use Tailscale IPs** for SSH, rsync, 
 
 | Machine | Tailscale IP | OS | GPU | Notes |
 |---------|-------------|-----|-----|-------|
-| primary (M5 Max) | 100.81.85.28 | macOS | MPS 128GB | This machine |
-| alejandros-mac-mini | 100.125.140.94 | macOS | Intel | Build server, Python 3.13 + uv |
-| bat00 | 100.120.99.124 | Windows + WSL2 Ubuntu 24.04 | RTX 2070S (→3090) | Port 22=PowerShell, port 2222=WSL2. Scripts: `C:\Users\adpena\Desktop\commalab\` |
-| molt | 100.114.131.54 | Linux | n/a | |
-| tertiary | 100.65.24.39 | macOS | MPS | M1 MacBook Pro |
+| primary (M5 Max) | <tailscale-ip> | macOS | MPS 128GB | This machine |
+| mac-mini (build server) | <tailscale-ip> | macOS | Intel | Build server, Python 3.13 + uv |
+| bat00 | <tailscale-ip> | Windows + WSL2 Ubuntu 24.04 | RTX 2070S (→3090) | Port 22=PowerShell, port 2222=WSL2. Scripts: `<bat00-scripts-path>` |
+| molt | <tailscale-ip> | Linux | n/a | |
+| tertiary | <tailscale-ip> | macOS | MPS | M1 MacBook Pro |
 
-- `ssh adpena@100.120.99.124` connects to bat00 (Windows OpenSSH → PowerShell)
+- Real fleet IPs/hostnames: `fleet.local.toml` (gitignored, local-only); template `fleet.example.toml`; or `tailscale status`.
+- `ssh <user>@<bat00-tailscale-ip>` connects to bat00 (Windows OpenSSH → PowerShell)
 - bat00 has WSL2 Ubuntu 24.04 running (accessible via `wsl` commands inside PowerShell)
 - bat00's NVIDIA driver supports WSL2 GPU passthrough
 - Run `tailscale status` to verify all machines are online

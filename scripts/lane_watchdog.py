@@ -42,8 +42,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+try:  # tomllib is stdlib on Python 3.11+; no third-party dependency.
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover — Python < 3.11
+    tomllib = None  # type: ignore[assignment]
+
 REPO = Path(__file__).resolve().parent.parent
 LOG_PATH = REPO / "reports" / "watchdog.log"
+
+# Local-only fleet inventory (gitignored). Real Tailscale IPs / hostnames /
+# paths live here; the committed public template is fleet.example.toml. The
+# watchdog does NOT require the fleet to poll Vast.ai — load_fleet() degrades
+# gracefully (empty dict + WARN) when the file is absent or unreadable.
+FLEET_TOML = REPO / "fleet.local.toml"
 
 STALE_HEARTBEAT_SEC = 600  # 10 min — heartbeats fire every 60s, 10x slack.
 IDLE_GPU_THRESHOLD_PCT = 1  # gpu_util < this counts as idle
@@ -93,6 +104,33 @@ def _emit(msg: str, *, level: str = "ALERT", extra: dict | None = None) -> None:
         f.write(json.dumps(rec) + "\n")
 
 
+def load_fleet(path: Path = FLEET_TOML) -> dict[str, dict]:
+    """Load the local Tailscale fleet inventory from ``fleet.local.toml``.
+
+    The fleet file is gitignored (real IPs / hostnames stay local-only); a
+    public schema template lives at ``fleet.example.toml``. Returns the
+    ``[hosts.*]`` mapping, or an empty dict (with a WARN) when the file is
+    absent / unreadable / has no ``[hosts]`` table. The watchdog degrades
+    gracefully because it does not need the fleet to poll Vast.ai instances.
+    """
+    if tomllib is None:  # pragma: no cover — Python < 3.11
+        _emit("tomllib unavailable (need Python 3.11+); cannot read fleet",
+              level="WARN")
+        return {}
+    if not path.exists():
+        _emit(f"fleet config absent ({path.name}); copy fleet.example.toml -> "
+              f"{path.name} to populate", level="WARN")
+        return {}
+    try:
+        with path.open("rb") as f:
+            data = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError) as e:
+        _emit(f"fleet config unreadable: {type(e).__name__}: {e}", level="WARN")
+        return {}
+    hosts = data.get("hosts")
+    return hosts if isinstance(hosts, dict) else {}
+
+
 def _vastai_show_instances() -> list[dict]:
     """Call `vastai show instances --raw` and parse JSON.
 
@@ -129,7 +167,7 @@ def _vastai_show_instances() -> list[dict]:
 def _instance_remote_heartbeat_mtime(inst: dict) -> float | None:
     """Best-effort mtime of /workspace/pact/**/heartbeat.log over SSH.
 
-    The watchdog can run from anywhere — laptop, alejandros-mac-mini, CI.
+    The watchdog can run from anywhere — laptop, build server, CI.
     We keep this side optional because Vast.ai SSH ports change per
     instance and may be locked behind a tunnel. If the SSH probe fails
     we return None (caller treats as "unknown" rather than "stale").
@@ -251,7 +289,22 @@ def main(argv: list[str] | None = None) -> int:
                    help="Loop forever at --interval cadence.")
     p.add_argument("--interval", type=int, default=300,
                    help="Daemon poll cadence in seconds (default 300 = 5 min).")
+    p.add_argument("--list-fleet", action="store_true",
+                   help="Print the local fleet inventory (fleet.local.toml) and exit.")
     args = p.parse_args(argv)
+
+    if args.list_fleet:
+        fleet = load_fleet()
+        if not fleet:
+            print("[lane_watchdog] no fleet configured "
+                  "(copy fleet.example.toml -> fleet.local.toml).")
+            return 0
+        for name, h in fleet.items():
+            if not isinstance(h, dict):
+                continue
+            print(f"  {name}: ip={h.get('ip', '?')} os={h.get('os', '?')} "
+                  f"gpu={h.get('gpu', '?')} role={h.get('role', '?')}")
+        return 0
 
     if not args.once and not args.daemon:
         args.once = True

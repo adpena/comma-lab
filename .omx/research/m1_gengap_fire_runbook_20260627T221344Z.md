@@ -8,7 +8,7 @@ the gate's authority is its **frozen CPU-torch SegNet argmax + PoseNet MSE** ver
 
 | item | state |
 |---|---|
-| host | M1 tertiary, Tailscale `100.65.24.39`, user `adpena` |
+| host | M1 tertiary, Tailscale `<tailscale-ip-redacted>`, user `<user>` |
 | repo | `~/Projects/pact` — `git clone --depth 1` from M5, **HEAD `a534e2ee74fd96acafa0322b0d1b4cfcb1f5eadb` == M5 HEAD** (true git remote-code-parity; no marker hack) |
 | venv | `~/Projects/pact/.venv` (uv, CPython 3.13.14 — matches M5 3.13.x) |
 | deps (pinned to M5) | mlx 0.31.1, torch 2.11.0, timm 1.0.26, einops 0.8.2, safetensors 0.7.0, segmentation_models_pytorch 0.5.0, numpy 1.26.4, scipy 1.17.1, brotli 1.2.0 |
@@ -49,10 +49,10 @@ RUN=experiments/results/levelset_amort_deconf_n200_taualone_20260627T194432Z
 L7=$(ls -t "$RUN"/levelset_ckpt_stageL7_ep*.npz | head -1); echo "$L7"
 
 # === STEP 2 (on M5): rsync it to the M1 (~350KB) ===
-rsync -a "$L7" adpena@100.65.24.39:/Users/adpena/Projects/pact/.omx/tmp/l7_decoder_ema.npz
+rsync -a "$L7" <user>@<tailscale-ip-redacted>:/Users/adpena/Projects/pact/.omx/tmp/l7_decoder_ema.npz
 
 # === STEP 3 (on M1): generate the exact trainer cmd via the gate --dry-run ===
-ssh adpena@100.65.24.39 'cd ~/Projects/pact && env TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
+ssh <user>@<tailscale-ip-redacted> 'cd ~/Projects/pact && env TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
   .venv/bin/python tools/levelset_heldout_codefit_gate.py \
     --decoder-ckpt .omx/tmp/l7_decoder_ema.npz \
     --heldout-gt experiments/results/mlx_fleet_gt_cache/gt_heldout_n400.npz \
@@ -60,7 +60,7 @@ ssh adpena@100.65.24.39 'cd ~/Projects/pact && env TAC_MLX_CUSTOM_GROUPED_BACKWA
 # -> prints {"stage":"dry_run","out_dir":".../heldout_gate_n400_<ts>","cmd_file":".omx/tmp/heldout_gate_cmd_<ts>.txt","cmd":"..."}
 
 # === STEP 4 (on M1): run that trainer cmd under a durable daemon, 8GB-safe (skip mem-preflight) ===
-ssh adpena@100.65.24.39 'cd ~/Projects/pact && \
+ssh <user>@<tailscale-ip-redacted> 'cd ~/Projects/pact && \
   CMDFILE=$(ls -t .omx/tmp/heldout_gate_cmd_*.txt | head -1) && \
   .venv/bin/python tools/spawn_durable_daemon.py --label m1_gengap_fire \
     --log .omx/tmp/m1_gengap_fire.log --skip-mem-preflight --min-free-gb 5 \
@@ -68,12 +68,12 @@ ssh adpena@100.65.24.39 'cd ~/Projects/pact && \
 # NOTE rss-cap 7000 leaves ~1GB for the OS; if it dies status=oom, re-run with a higher cap OR fire on the M5.
 
 # === STEP 5 (poll): ===
-ssh adpena@100.65.24.39 '/Users/adpena/Projects/pact/.venv/bin/python \
+ssh <user>@<tailscale-ip-redacted> '/Users/adpena/Projects/pact/.venv/bin/python \
   /Users/adpena/Projects/pact/tools/spawn_durable_daemon.py --status' | grep m1_gengap_fire
 
 # === STEP 6 (HARVEST verdict back to M5 when DEAD) ===
-OUT=$(ssh adpena@100.65.24.39 'ls -td ~/Projects/pact/experiments/results/heldout_gate_n400_* | head -1')
-rsync -a "adpena@100.65.24.39:$OUT/levelset_train_result.json" reports/m1_gengap_verdict.json
+OUT=$(ssh <user>@<tailscale-ip-redacted> 'ls -td ~/Projects/pact/experiments/results/heldout_gate_n400_* | head -1')
+rsync -a "<user>@<tailscale-ip-redacted>:$OUT/levelset_train_result.json" reports/m1_gengap_verdict.json
 # verdict d_seg = last history[].d_seg.  PASS if held-out d_seg <= 0.00186 ( = JOINT_REFERENCE_DSEG 0.00124 * 1.5 ).
 # PASS => frozen decoder amortizes -> fit all 600 codes -> byte-close -> exact eval.
 # FAIL => honest DEFER + resume the preserved n600 row.

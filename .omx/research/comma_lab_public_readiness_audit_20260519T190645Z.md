@@ -43,7 +43,7 @@ Local HEAD: `8bc07a92615e1e9ffc0828fa41b53985c390864c` (3 commits AHEAD of origi
 | 9 | CLAUDE.md suitable for public disclosure | **PARTIAL** | CLAUDE.md is 875,194 bytes and contains operator-facing non-negotiables (Tailscale IPs row + operator-routable infrastructure refs). It's tracked. Operator should decide: (a) publish as-is (most transparent; comma.ai would learn implementation discipline); (b) publish sanitized variant; (c) untrack |
 | 10 | CONTRIBUTING.md | **PASS** | Present (3,516 bytes) |
 | 11 | pyproject.toml valid | **PASS** | Present (12,638 bytes) |
-| 12 | No private operator metadata | **PARTIAL FAIL** | Tailscale IPs (100.81.85.28 + 100.120.99.124 + 100.114.131.54 + 100.65.24.39) in 4 files (`scripts/bat00.py`, `scripts/bat00_wsl_setup.ps1`, `.omx/research/domain_exploitation_catalog_20260509.md`, `.omx/research/z7_mamba2_substrate_design_memo_20260518.md`) AND CLAUDE.md fleet table |
+| 12 | No private operator metadata | **PARTIAL FAIL** | Tailscale IPs (<tailscale-ip-redacted> ×4) in 4 files (`scripts/bat00.py`, `scripts/bat00_wsl_setup.ps1`, `.omx/research/domain_exploitation_catalog_20260509.md`, `.omx/research/z7_mamba2_substrate_design_memo_20260518.md`) AND CLAUDE.md fleet table |
 | 13 | No account credentials | **PASS** | No HF tokens, Modal token IDs, AWS keys, GHA tokens found in tracked source via regex scan |
 | 14 | Code style consistent | **PASS** | Ruff + mypy + pytest discipline visible; multiple preflight Catalog gates enforce hygiene |
 | 15 | Repo size reasonable | **PARTIAL** | 1.9 GB is large for public hosting; `.git` history is the bulk; the working tree is bounded but historical experiment artifacts inflate it. Comma.ai's openpilot repo is also large (similar scale); not a blocker per se |
@@ -61,7 +61,7 @@ Local HEAD: `8bc07a92615e1e9ffc0828fa41b53985c390864c` (3 commits AHEAD of origi
   - (a) Untrack `experiments/results/`, `reports/raw/`, `.omx/logs/` via `git rm --cached -r` + add to `.gitignore` (would shrink visible repo significantly; preserves history in `.git` but makes browsing cleaner)
   - (b) Sanitize via `find ... -exec sed -i ''` (replace `/Users/adpena/Projects/pact/` with `<repo-root>/` everywhere); preserves traceability but requires backfill
   - (c) Accept as-is per "stealth + skunkworks" tone directive (operator name = `adpena` is already public via the GitHub handle; path leaks reveal `/Users/adpena/` = operator's $HOME, which is information-theoretically equivalent to knowing the GitHub username)
-- **Tailscale IPs in 4 non-CLAUDE.md tracked files**: `scripts/bat00.py:BAT00_IP = os.environ.get("BAT00_IP", "100.120.99.124")` is operator-side default (env-overridable; not a credential); the 3 research-memo references describe lab infrastructure context.
+- **Tailscale IPs in 4 non-CLAUDE.md tracked files**: `scripts/bat00.py:BAT00_IP = os.environ.get("BAT00_IP", "<tailscale-ip-redacted>")` is operator-side default (env-overridable; not a credential); the 3 research-memo references describe lab infrastructure context.
 - **bat00 WSL2 setup script + connection strings**: `scripts/bat00_wsl_setup.ps1` documents how to connect to bat00; this is documentation of the operator's home lab. Not credentials but operationally specific.
 - **3 `experiments/hf_jobs_*.py` files reference `/Users/adpena/.claude/plugins/cache/.../scripts/sam_segmentation_training.py`** as a path provenance comment. Inert at runtime.
 

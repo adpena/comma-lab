@@ -46,7 +46,7 @@ That single fact is the root of both the ~15 s/batch wall AND the half-precision
 
 ## ANGLE 1 (headline) — the fleet NVIDIA GPU we already own
 
-**bat00 = `100.120.99.124`, Tailscale ONLINE, Windows + WSL2, RTX 2070 SUPER (→ future 3090).**
+**bat00 = `<tailscale-ip-redacted>`, Tailscale ONLINE, Windows + WSL2, RTX 2070 SUPER (→ future 3090).**
 
 **Network reachability: CONFIRMED.** `ping` 4–6 ms; `tailscale ping` → direct pong via 192.168.1.216 in 4 ms.
 
@@ -60,7 +60,7 @@ port 5985 (WinRM)                        : CLOSED/FILTERED
 ```
 
 bat00's OS is up (RDP answers) but **both sshd services are stopped**, so `scripts/bat00.py wsl/ps/status`
-all time out. molt (`100.114.131.54`) has port 22 open but requires interactive Tailscale-SSH browser auth
+all time out. molt (`<tailscale-ip-redacted>`) has port 22 open but requires interactive Tailscale-SSH browser auth
 (can't complete non-interactively) and has no confirmed GPU. **I could not run the live GPU benchmark.** Per
 NO-FAKE I will NOT fabricate a measured row I couldn't produce — I give a **specs-estimate, labeled as such.**
 
@@ -92,7 +92,7 @@ another 4× on top, and 24 GB removes the Metal bs=16 VJP memory cliff the dream
 ### Concrete next build for Angle 1
 1. **Operator: restore SSH on bat00** (RDP in → `Start-Service sshd` for Windows OpenSSH, and/or start the
    WSL2 sshd on port 2222 per `bat00_wsl_setup.ps1`). This is the ONLY blocker.
-2. `export BAT00_IP=100.120.99.124 BAT00_USER=adpena` then `.venv/bin/python scripts/bat00.py status` to
+2. `export BAT00_IP=<tailscale-ip-redacted> BAT00_USER=<user>` then `.venv/bin/python scripts/bat00.py status` to
    confirm GPU + WSL2 torch/CUDA. If torch/CUDA isn't installed in WSL2, scope = `uv venv && uv pip install
    torch --index cu124` (driver-pin per CLAUDE.md cu13-vs-cu124 rule; verify NVIDIA driver ≥/< 580).
 3. Run `experiments/measure_local_scorer_throughput.py` (device=cuda) on bat00 → **the real measured speedup**,
@@ -185,5 +185,5 @@ the GPU lands.
 .venv/bin/python experiments/measure_surrogate_descent_equivalence.py --frames 6 --student-channels 32 \
     --distill-steps 400 --descent-steps 80 --descent-lr 5.0 --out-json experiments/results/surrogate_descent_equivalence_c32_v2.json
 # Angle 1 (after operator restores bat00 sshd):
-export BAT00_IP=100.120.99.124 BAT00_USER=adpena && .venv/bin/python scripts/bat00.py status
+export BAT00_IP=<tailscale-ip-redacted> BAT00_USER=<user> && .venv/bin/python scripts/bat00.py status
 ```

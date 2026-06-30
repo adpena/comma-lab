@@ -3006,7 +3006,7 @@ The SDF level-set is the **topologically correct chart** and the BEST measured w
 - `wire_iso` — `--activation wire --no-self-orient` (oscillatory paper-default; completes the activation axis).
 - `hosc_selforient` — `--activation hosc --self-orient` (directional-basis cell; RISKY memory — self-orient adds dir-feats + a per-pair reorient that was the FEED-eh n600 90GB OOM; at n1 likely fits ~7–8GB but may OOM → driver continues).
 
-**HARVEST (advisory d_seg ranking) — `ssh adpena@100.65.24.39`:**
+**HARVEST (advisory d_seg ranking) — `ssh <user>@<tailscale-ip-redacted>`:**
 ```
 # per-arm last realized d_seg verdict (the ranking):
 for a in hosc_iso relu_iso wire_iso hosc_selforient; do echo "== $a =="; grep '"stage": "verdict"' ~/Projects/pact/experiments/results/m1_sweep_feed_ez/$a/arm.log 2>/dev/null | tail -1; done
@@ -3570,7 +3570,7 @@ Repro: `.venv/bin/python tools/build_witness_showcase.py --frames 24 --out-dir e
 
 ## DAG FEED-ga (2026-06-27): M1 tertiary PROVISIONED as a 2nd Apple-MLX arm for the held-out gen-gap gate — READY TO FIRE when the M5 amort hits l7. All MEANS (infra); pointer UNMOVED **0.19110**. (CPU/SSH/network only — M5 GPU + amort pid 51464 UNTOUCHED.)
 
-**WHAT.** Provisioned the M1 (Tailscale `100.65.24.39`) so `tools/levelset_heldout_codefit_gate.py` can run there in parallel with the M5 amort. **`git clone --depth 1` from the M5 over Tailscale → `~/Projects/pact` at HEAD `a534e2ee7` == M5 (true git remote-code-parity, no marker hack);** fresh uv venv (CPython 3.13.14) with deps PINNED to M5 (mlx 0.31.1 / torch 2.11.0 / timm 1.0.26 / einops 0.8.2 / safetensors 0.7.0 / smp 0.5.0 / numpy 1.26.4 / scipy 1.17.1 / brotli 1.2.0); `upstream/{modules.py,frame_utils.py,evaluate.py,models/{segnet,posenet}.safetensors}` rsynced (gitignored on M5 → absent from clone); **`gt_heldout_n400.npz` (3385345610 B, size-verified == M5)** transferred. Gate import chain clean (`MISSING_TOPLEVEL: []`).
+**WHAT.** Provisioned the M1 (Tailscale `<tailscale-ip-redacted>`) so `tools/levelset_heldout_codefit_gate.py` can run there in parallel with the M5 amort. **`git clone --depth 1` from the M5 over Tailscale → `~/Projects/pact` at HEAD `a534e2ee7` == M5 (true git remote-code-parity, no marker hack);** fresh uv venv (CPython 3.13.14) with deps PINNED to M5 (mlx 0.31.1 / torch 2.11.0 / timm 1.0.26 / einops 0.8.2 / safetensors 0.7.0 / smp 0.5.0 / numpy 1.26.4 / scipy 1.17.1 / brotli 1.2.0); `upstream/{modules.py,frame_utils.py,evaluate.py,models/{segnet,posenet}.safetensors}` rsynced (gitignored on M5 → absent from clone); **`gt_heldout_n400.npz` (3385345610 B, size-verified == M5)** transferred. Gate import chain clean (`MISSING_TOPLEVEL: []`).
 
 **SMOKE (the validation).** `--smoke` on the M1: **`rc=0 SMOKE_OK=true secs=369`** — render(MLX-gpu)→R→**frozen CPU-torch SegNet argmax + PoseNet MSE** verdict emits a real d_seg (0.0363 @ 2pairs/3ep — machinery proof, NOT the verdict). in_feat pre-check 88==88 (gate SEALED defaults exactly match the amort front-end: hosc/h96/mod32/n_dir_freqs2/freq_across32/freq_along4/max_bank64/chroma/self_orient).
 

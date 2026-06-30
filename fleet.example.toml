@@ -1,0 +1,42 @@
+# fleet.example.toml — PUBLIC TEMPLATE (safe to commit; contains NO real values).
+#
+# Copy this to `fleet.local.toml` (gitignored) and fill in the real Tailscale
+# IPs / hostnames / paths. Real values live ONLY in fleet.local.toml and must
+# never be committed or pushed. Live view at any time: `tailscale status`.
+#
+# Schema: one [hosts.<key>] table per machine. Always use Tailscale IPs for
+# SSH/rsync — never raw LAN IPs or hostnames.
+#
+# Fields (all optional except `ip`):
+#   host         human-readable name / role label
+#   ip           Tailscale IP (100.x.x.x range)
+#   os           operating system
+#   gpu          GPU description (or "n/a")
+#   role         short role token (primary | build_server | cuda_wsl2 | linux | m1)
+#   ssh_user     ssh login user
+#   ssh_port     ssh port (default 22)
+#   wsl_port     WSL2 sshd port, if applicable
+#   scripts_path filesystem path to host-local scripts, if applicable
+#   notes        free-form notes
+
+[hosts.primary]
+host = "<role-or-hostname>"
+ip = "100.x.x.x"
+os = "macOS"
+gpu = "<gpu>"
+role = "primary"
+ssh_user = "<user>"
+ssh_port = 22
+notes = "This machine"
+
+[hosts.bat00]
+host = "bat00"
+ip = "100.x.x.x"
+os = "Windows + WSL2"
+gpu = "<gpu>"
+role = "cuda_wsl2"
+ssh_user = "<user>"
+ssh_port = 22
+wsl_port = 2222
+scripts_path = "<bat00-scripts-path>"
+notes = "Port 22=PowerShell, port 2222=WSL2"

@@ -24,9 +24,9 @@ CLAUDE.md "Executing actions with care" non-negotiable.
 
 ### Gap 2: Tailscale IPs in `scripts/bat00.{py,ps1}` — ✅ REMEDIATED
 
-- **Before:** `BAT00_IP = os.environ.get("BAT00_IP", "100.120.99.124")` +
-  `BAT00_USER = os.environ.get("BAT00_USER", "adpena")` + hardcoded
-  `ssh adpena@100.120.99.124` in PS1 output line.
+- **Before:** `BAT00_IP = os.environ.get("BAT00_IP", "<tailscale-ip-redacted>")` +
+  `BAT00_USER = os.environ.get("BAT00_USER", "<user>")` + hardcoded
+  `ssh <user>@<tailscale-ip-redacted>` in PS1 output line.
 - **After:** Both defaults empty string; explicit `SystemExit` guard in
   `ssh_target()` when env vars missing with operator-facing error message;
   PS1 output references `$env:BAT00_USER@$env:BAT00_IP` instead.
