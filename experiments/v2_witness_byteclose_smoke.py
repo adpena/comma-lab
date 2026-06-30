@@ -40,15 +40,90 @@ GT_CACHE = REPO / "experiments" / "results" / "mlx_fleet_gt_cache"
 CAM_W, CAM_H, C = 1164, 874, 3
 RATE_DENOM = 37_545_489  # bytes of upstream/videos/0.mkv (rate denominator)
 
-# Canonical comma10k SegNet class spatial signatures are NOT needed at decode.
-# The per-class warp uses 3 strata keyed by a fixed vertical band partition of
-# the CAMERA frame (deterministic, no scorer): a sky band (top), a road band
-# (middle/lower), and a hood band (bottom). This is a SIMPLE real stratification
-# (it is intentionally not the optimal scorer-resolution argmax partition; the
-# optimal-form version routes the SegNet argmax, which is a build-gated upgrade).
-SKY_FRAC = 0.20   # top 20% rows -> rotation-only (approximated by identity here)
-HOOD_FRAC = 0.78  # rows below 78% -> hood -> identity (static)
-# middle band [SKY_FRAC, HOOD_FRAC) -> road -> ground-plane shift from pose.
+# Vertical-band partition kept ONLY for the legacy/diagnostic stratified composite.
+SKY_FRAC = 0.20
+HOOD_FRAC = 0.78
+
+# ---------------------------------------------------------------------------
+# REAL plane-induced-homography warp (replaces the broken constant-roll warp).
+#
+# DAG FEED-la/lf root cause: the previous warp fed the velocity-scale forward
+# pose (~33.6) straight in as a pixel shift -> clip(round(33.6*2),+-6)==6 -> a
+# CONSTANT 6px vertical roll on EVERY pair -> PoseNet read ZERO coherent
+# ego-motion -> d_pose ~= 190 (= the zero-motion null). MEASURED FIX
+# (tools/measure_warp_dpose_through_R.py, n6+n24): the plane-induced homography
+# H = K (R - t n^T / d) K^{-1} at the d_pose-OPTIMAL translation scale (s_t~0.16,
+# positive geometric ego-motion scale, NOT the near-identity d_seg-optimal scale)
+# carries pose: d_pose 190 -> ~12.6 (93% drop). The geometry is a FREE generic
+# algorithm (rule-118, inflate.py-expandable); the per-pair 6-DOF pose is COUNTED-
+# but-existing; the 3-scalar clip CALIBRATION (s_t,s_r,pitch) is video-derived ->
+# COUNTED-but-tiny (stored in the archive payload, NOT hardcoded). EON intrinsics
+# (fx=fy=910, cx=582, cy=437 native 1164x874), camera height 1.22 m.
+NATIVE_FX = NATIVE_FY = 910.0
+NATIVE_CX, NATIVE_CY = 582.0, 437.0
+CAMERA_HEIGHT_M = 1.22
+# Default calibration = the MEASURED d_pose-optimal (advisory; stored in payload
+# so decode is self-contained and a future build can re-fit per clip).
+DEFAULT_CALIB = (0.16, 0.0, -0.07)  # (s_t, s_r, pitch)  [advisory; n24 d_pose-fit]
+
+
+def _native_K() -> np.ndarray:
+    return np.array([[NATIVE_FX, 0.0, NATIVE_CX],
+                     [0.0, NATIVE_FY, NATIVE_CY],
+                     [0.0, 0.0, 1.0]], dtype=np.float64)
+
+
+def _expmap_so3(omega: np.ndarray) -> np.ndarray:
+    theta = float(np.linalg.norm(omega))
+    Kx = np.array([[0.0, -omega[2], omega[1]],
+                   [omega[2], 0.0, -omega[0]],
+                   [-omega[1], omega[0], 0.0]], dtype=np.float64)
+    if theta < 1e-12:
+        return np.eye(3) + Kx
+    return (np.eye(3) + (np.sin(theta) / theta) * Kx
+            + ((1.0 - np.cos(theta)) / (theta * theta)) * (Kx @ Kx))
+
+
+def _pose_homography(pose6: np.ndarray, s_t: float, s_r: float, pitch: float) -> np.ndarray:
+    K = _native_K()
+    Kinv = np.linalg.inv(K)
+    t = s_t * np.array([pose6[2], pose6[1], pose6[0]], dtype=np.float64)  # (x,y,z=fwd)
+    R = _expmap_so3(s_r * np.array([pose6[3], pose6[4], pose6[5]], dtype=np.float64))
+    n = np.array([0.0, -np.cos(pitch), -np.sin(pitch)], dtype=np.float64)
+    M = R - np.outer(t, n) / CAMERA_HEIGHT_M
+    return K @ M @ Kinv
+
+
+def _warp_rgb_bilinear(src_hwc: np.ndarray, H: np.ndarray) -> np.ndarray:
+    """Inverse-warp (H,W,3) uint8 by homography H, bilinear, persist-fallback."""
+    Hh, Ww, Ch = src_hwc.shape
+    srcf = src_hwc.astype(np.float64)
+    flat = srcf.reshape(-1, Ch)
+    us, vs = np.meshgrid(np.arange(Ww), np.arange(Hh))
+    grid = np.stack([us.ravel(), vs.ravel(), np.ones(Hh * Ww)], 0).astype(np.float64)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        srch = np.linalg.inv(H) @ grid
+        z = srch[2]
+        su = srch[0] / z
+        sv = srch[1] / z
+    valid = (np.isfinite(su) & np.isfinite(sv) & (z > 0)
+             & (su >= 0) & (su <= Ww - 1) & (sv >= 0) & (sv <= Hh - 1))
+    su_c = np.clip(su, 0.0, Ww - 1)
+    sv_c = np.clip(sv, 0.0, Hh - 1)
+    x0 = np.floor(su_c).astype(np.int64)
+    y0 = np.floor(sv_c).astype(np.int64)
+    x1 = np.minimum(x0 + 1, Ww - 1)
+    y1 = np.minimum(y0 + 1, Hh - 1)
+    wx = (su_c - x0)[:, None]
+    wy = (sv_c - y0)[:, None]
+    Ia = flat[y0 * Ww + x0]; Ib = flat[y0 * Ww + x1]
+    Ic = flat[y1 * Ww + x0]; Id = flat[y1 * Ww + x1]
+    top = Ia * (1.0 - wx) + Ib * wx
+    bot = Ic * (1.0 - wx) + Id * wx
+    sampled = top * (1.0 - wy) + bot * wy
+    out = np.where(valid[:, None], sampled, flat)
+    out = np.clip(np.round(out.reshape(Hh, Ww, Ch)), 0.0, 255.0).astype(np.uint8)
+    return out
 
 
 def _zlib(b: bytes) -> bytes:
@@ -71,35 +146,32 @@ def load_gt(n: int):
 # Per-class pose warp (deterministic integer-friendly). Shared by builder and
 # the generated inflate.py. Kept tiny + dependency-free (numpy only).
 # ---------------------------------------------------------------------------
-def warp_frame0_to_pred1(f0: np.ndarray, pose6: np.ndarray) -> np.ndarray:
-    """Predict frame1 from frame0 using a class-stratified pose warp.
+def warp_frame0_to_pred1(f0: np.ndarray, pose6: np.ndarray, calib=DEFAULT_CALIB) -> np.ndarray:
+    """Predict frame1 from frame0 via the REAL plane-induced homography warp.
 
-    f0: (H,W,3) uint8. pose6: (6,) float (PoseNet 6 scalars; we use a small,
-    fixed linear map pose->pixel-shift for the road band). Returns (H,W,3) uint8.
+    f0: (H,W,3) uint8. pose6: (6,) PoseNet 6-vector. calib: (s_t, s_r, pitch)
+    clip calibration (stored in the payload, COUNTED-tiny). Returns (H,W,3) uint8.
 
-    This is a SIMPLE real warp: road band gets a vertical+horizontal integer
-    pixel shift proportional to the forward/yaw pose components; sky+hood bands
-    stay identity. Purely deterministic integer ops, no scorer.
+    Whole-frame ground-plane homography H = K (R - t n^T / d) K^{-1} at the
+    d_pose-OPTIMAL translation scale. MEASURED to carry pose (d_pose 190 -> ~12.6,
+    93% drop; tools/measure_warp_dpose_through_R.py). Replaces the broken
+    constant-6px-roll (units bug: velocity-scale pose fed as a pixel shift ->
+    constant roll -> zero ego-motion -> d_pose 190). Deterministic, no scorer.
+
+    NOTE (measured): the d_pose-optimal whole-frame warp REDUCES d_pose but
+    DEGRADES d_seg (the argmax-optimal warp is near-identity; the two terms want
+    opposite scales). For an EXACT v2_det witness this is fine (the stored residual
+    reconstructs gt_f1 exactly -> d_seg/d_pose = 0); the warp's only job here is to
+    SHRINK that residual. For the lossy v2_warp arm, prefer the already-built
+    stored pose sidecar for d_pose (the warp alone is dominated).
     """
-    H, W = f0.shape[:2]
-    pred = f0.copy()
-    sky_end = int(SKY_FRAC * H)
-    hood_start = int(HOOD_FRAC * H)
-    # forward translation (pose[0..2]) -> small vertical "zoom toward horizon"
-    # yaw / lateral (pose[3..5]) -> small horizontal shift. Scale chosen tiny so
-    # the residual stays small for nearby frames (20fps, adjacent frames).
-    fwd = float(pose6[0]) if pose6.shape[0] > 0 else 0.0
-    lat = float(pose6[4]) if pose6.shape[0] > 4 else 0.0
-    dy = int(round(np.clip(fwd * 2.0, -6, 6)))   # vertical shift in road band
-    dx = int(round(np.clip(lat * 2.0, -6, 6)))   # horizontal shift in road band
-    road = f0[sky_end:hood_start]
-    if dy != 0 or dx != 0:
-        shifted = np.roll(np.roll(road, dy, axis=0), dx, axis=1)
-        pred[sky_end:hood_start] = shifted
-    return pred
+    s_t, s_r, pitch = calib
+    H = _pose_homography(np.asarray(pose6, dtype=np.float64), s_t, s_r, pitch)
+    return _warp_rgb_bilinear(f0, H)
 
 
-def build_render(mode: str, f0: np.ndarray, f1: np.ndarray, poses: np.ndarray, jpeg_q: int = 40):
+def build_render(mode: str, f0: np.ndarray, f1: np.ndarray, poses: np.ndarray, jpeg_q: int = 40,
+                 calib=DEFAULT_CALIB):
     """Return (render_frames (2n,H,W,3) uint8 in pair order, archive_payload dict).
 
     render_frames is the EXACT bytes inflate.py must reproduce (parity oracle).
@@ -108,6 +180,7 @@ def build_render(mode: str, f0: np.ndarray, f1: np.ndarray, poses: np.ndarray, j
     n = f0.shape[0]
     H, W = f0.shape[1:3]
     render = np.empty((2 * n, H, W, C), dtype=np.uint8)
+    calib_arr = np.asarray(calib, dtype=np.float64)  # (3,) s_t,s_r,pitch (COUNTED-tiny)
 
     if mode == "store_raw":
         # identity: ship both frames exactly.
@@ -127,7 +200,7 @@ def build_render(mode: str, f0: np.ndarray, f1: np.ndarray, poses: np.ndarray, j
         # store integer residual r = f1 - pred1 (mod 256). Decode: pred1 + r.
         pred1 = np.empty_like(f1)
         for i in range(n):
-            pred1[i] = warp_frame0_to_pred1(f0[i], poses[i])
+            pred1[i] = warp_frame0_to_pred1(f0[i], poses[i], tuple(calib_arr))
         resid = (f1.astype(np.int16) - pred1.astype(np.int16)).astype(np.uint8)  # wraps mod 256
         for i in range(n):
             render[2 * i] = f0[i]
@@ -139,6 +212,7 @@ def build_render(mode: str, f0: np.ndarray, f1: np.ndarray, poses: np.ndarray, j
             "n": n,
             "f0": _zlib(f0.tobytes()),
             "poses": _zlib(poses.astype(np.float32).tobytes()),
+            "calib": _zlib(calib_arr.tobytes()),  # 3 float64 (COUNTED-tiny)
             "resid": _zlib(resid.tobytes()),
         }
         return render, payload
@@ -151,7 +225,7 @@ def build_render(mode: str, f0: np.ndarray, f1: np.ndarray, poses: np.ndarray, j
         # the scene well enough for d_seg/d_pose). f0 stored lossless here; the
         # n600 corner would replace f0 with a coded keyframe / shared canonical.
         for i in range(n):
-            pred1 = warp_frame0_to_pred1(f0[i], poses[i])
+            pred1 = warp_frame0_to_pred1(f0[i], poses[i], tuple(calib_arr))
             render[2 * i] = f0[i]
             render[2 * i + 1] = pred1
         payload = {
@@ -159,6 +233,7 @@ def build_render(mode: str, f0: np.ndarray, f1: np.ndarray, poses: np.ndarray, j
             "n": n,
             "f0": _zlib(f0.tobytes()),
             "poses": _zlib(poses.astype(np.float32).tobytes()),
+            "calib": _zlib(calib_arr.tobytes()),  # 3 float64 (COUNTED-tiny)
         }
         return render, payload
 
@@ -218,21 +293,57 @@ from pathlib import Path
 import numpy as np
 
 CAM_W, CAM_H, C = 1164, 874, 3
-SKY_FRAC, HOOD_FRAC = 0.20, 0.78
+# EON intrinsics (native 1164x874) + camera height. The plane-induced homography
+# warp is a FREE generic algorithm (rule-118); the 3-scalar calib is read from the
+# payload (COUNTED-tiny), the per-pair 6-DOF pose is COUNTED-but-existing.
+NATIVE_FX = NATIVE_FY = 910.0
+NATIVE_CX, NATIVE_CY = 582.0, 437.0
+CAMERA_HEIGHT_M = 1.22
 
 
-def warp_frame0_to_pred1(f0, pose6):
-    H, W = f0.shape[:2]
-    pred = f0.copy()
-    sky_end = int(SKY_FRAC * H); hood_start = int(HOOD_FRAC * H)
-    fwd = float(pose6[0]) if pose6.shape[0] > 0 else 0.0
-    lat = float(pose6[4]) if pose6.shape[0] > 4 else 0.0
-    dy = int(round(min(max(fwd * 2.0, -6), 6)))
-    dx = int(round(min(max(lat * 2.0, -6), 6)))
-    road = f0[sky_end:hood_start]
-    if dy != 0 or dx != 0:
-        pred[sky_end:hood_start] = np.roll(np.roll(road, dy, axis=0), dx, axis=1)
-    return pred
+def _native_K():
+    return np.array([[NATIVE_FX, 0.0, NATIVE_CX],
+                     [0.0, NATIVE_FY, NATIVE_CY],
+                     [0.0, 0.0, 1.0]], dtype=np.float64)
+
+
+def _expmap_so3(omega):
+    theta = float(np.linalg.norm(omega))
+    Kx = np.array([[0.0, -omega[2], omega[1]],
+                   [omega[2], 0.0, -omega[0]],
+                   [-omega[1], omega[0], 0.0]], dtype=np.float64)
+    if theta < 1e-12:
+        return np.eye(3) + Kx
+    return (np.eye(3) + (np.sin(theta) / theta) * Kx
+            + ((1.0 - np.cos(theta)) / (theta * theta)) * (Kx @ Kx))
+
+
+def warp_frame0_to_pred1(f0, pose6, calib):
+    s_t, s_r, pitch = float(calib[0]), float(calib[1]), float(calib[2])
+    K = _native_K(); Kinv = np.linalg.inv(K)
+    t = s_t * np.array([pose6[2], pose6[1], pose6[0]], dtype=np.float64)
+    R = _expmap_so3(s_r * np.array([pose6[3], pose6[4], pose6[5]], dtype=np.float64))
+    n = np.array([0.0, -np.cos(pitch), -np.sin(pitch)], dtype=np.float64)
+    Hm = K @ (R - np.outer(t, n) / CAMERA_HEIGHT_M) @ Kinv
+    Hh, Ww, Ch = f0.shape
+    flat = f0.astype(np.float64).reshape(-1, Ch)
+    us, vs = np.meshgrid(np.arange(Ww), np.arange(Hh))
+    grid = np.stack([us.ravel(), vs.ravel(), np.ones(Hh * Ww)], 0).astype(np.float64)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        srch = np.linalg.inv(Hm) @ grid
+        z = srch[2]; su = srch[0] / z; sv = srch[1] / z
+    valid = (np.isfinite(su) & np.isfinite(sv) & (z > 0)
+             & (su >= 0) & (su <= Ww - 1) & (sv >= 0) & (sv <= Hh - 1))
+    su_c = np.clip(su, 0.0, Ww - 1); sv_c = np.clip(sv, 0.0, Hh - 1)
+    x0 = np.floor(su_c).astype(np.int64); y0 = np.floor(sv_c).astype(np.int64)
+    x1 = np.minimum(x0 + 1, Ww - 1); y1 = np.minimum(y0 + 1, Hh - 1)
+    wx = (su_c - x0)[:, None]; wy = (sv_c - y0)[:, None]
+    Ia = flat[y0 * Ww + x0]; Ib = flat[y0 * Ww + x1]
+    Ic = flat[y1 * Ww + x0]; Id = flat[y1 * Ww + x1]
+    top = Ia * (1.0 - wx) + Ib * wx; bot = Ic * (1.0 - wx) + Id * wx
+    sampled = top * (1.0 - wy) + bot * wy
+    out = np.where(valid[:, None], sampled, flat)
+    return np.clip(np.round(out.reshape(Hh, Ww, Ch)), 0.0, 255.0).astype(np.uint8)
 
 
 def parse(blob):
@@ -262,16 +373,18 @@ def main():
         f1 = np.frombuffer(secs["f1"], dtype=np.uint8).reshape(n, H, W, C)
     elif mode == "v2_det":
         poses = np.frombuffer(secs["poses"], dtype=np.float32).reshape(n, 6)
+        calib = np.frombuffer(secs["calib"], dtype=np.float64).reshape(3)
         resid = np.frombuffer(secs["resid"], dtype=np.uint8).reshape(n, H, W, C)
         f1 = np.empty((n, H, W, C), dtype=np.uint8)
         for i in range(n):
-            pred = warp_frame0_to_pred1(f0[i], poses[i])
+            pred = warp_frame0_to_pred1(f0[i], poses[i], calib)
             f1[i] = (pred.astype(np.int16) + resid[i].astype(np.int16)).astype(np.uint8)
     elif mode == "v2_warp":
         poses = np.frombuffer(secs["poses"], dtype=np.float32).reshape(n, 6)
+        calib = np.frombuffer(secs["calib"], dtype=np.float64).reshape(3)
         f1 = np.empty((n, H, W, C), dtype=np.uint8)
         for i in range(n):
-            f1[i] = warp_frame0_to_pred1(f0[i], poses[i])
+            f1[i] = warp_frame0_to_pred1(f0[i], poses[i], calib)
     elif mode == "store_jpeg":
         from PIL import Image
         import io as _io
@@ -315,11 +428,17 @@ def main():
     ap.add_argument("--mode", choices=["store_raw", "v2_det", "v2_warp", "store_jpeg"], required=True)
     ap.add_argument("--n", type=int, required=True)
     ap.add_argument("--jpeg-q", type=int, default=40, help="JPEG quality for store_jpeg mode")
+    ap.add_argument("--calib-st", type=float, default=DEFAULT_CALIB[0],
+                    help="warp translation scale s_t (d_pose-optimal default; see "
+                         "tools/measure_warp_dpose_through_R.py)")
+    ap.add_argument("--calib-sr", type=float, default=DEFAULT_CALIB[1], help="warp rotation scale s_r")
+    ap.add_argument("--calib-pitch", type=float, default=DEFAULT_CALIB[2], help="road-plane pitch (rad)")
     ap.add_argument("--out", type=Path, required=True, help="submission_dir to create")
     a = ap.parse_args()
 
     f0, f1, poses = load_gt(a.n)
-    render, payload = build_render(a.mode, f0, f1, poses, jpeg_q=a.jpeg_q)
+    calib = (a.calib_st, a.calib_sr, a.calib_pitch)
+    render, payload = build_render(a.mode, f0, f1, poses, jpeg_q=a.jpeg_q, calib=calib)
     archive_bytes = pack_archive_bytes(payload)
 
     sub = a.out
