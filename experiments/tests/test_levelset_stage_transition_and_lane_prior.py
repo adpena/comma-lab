@@ -267,3 +267,116 @@ def test_lane_prior_homography_matches_task_K_at_scorer_res():
     # the "REUSE the existing helper == use the task's homography at scorer res" claim.
     import tac.boundary_math.lane_sdf_component as L
     assert L._FX == pytest.approx(910.0 * 512.0 / 1164.0, abs=0.6)
+
+
+# ===================================================================== C1 SELF-PROTECT (review FEED-hp/hr)
+# The C1 CRITICAL silent-no-op: ``lane_thin_gate`` (and the sibling lane-edge / margin-saliency gates)
+# was initialized ``{"on": start <= 1}`` ONCE and the loop never re-flipped the thin-lane gate, so
+# ``--lane-thin-start-epoch > 1`` (the help-RECOMMENDED 300) left it stuck OFF forever -> the loss
+# branch never fired -> a FALSE 'thin-lane prior does nothing' verdict from dead code = the NO-FAKE
+# silent-no-op class. The fix extracted ``lever_gate_on_at_epoch`` as the SINGLE engagement predicate
+# the loop now uses for ALL THREE levers; these tests are the self-protect (per CLAUDE.md "Bugs must be
+# permanently fixed AND self-protected against"): they FAIL if the predicate regresses OR if any of the
+# three loop gate-flips is removed (so the silent-no-op cannot silently re-emerge).
+G = T.lever_gate_on_at_epoch
+
+
+def test_c1_gate_engages_at_start_epoch_when_start_gt_1():
+    # THE C1 REGRESSION CASE: start>1 MUST engage at ep==start (and after). The pre-fix static
+    # init {"on": start<=1} returned False here forever -> silent no-op. This asserts the LIVE
+    # behavior is now correct.
+    assert G(0.5, 300, 300) is True          # engages exactly at the (recommended) start epoch
+    assert G(0.5, 300, 301) is True          # stays engaged after
+    assert G(0.5, 300, 1500) is True         # ... through the run
+    assert G(0.5, 300, 299) is False         # OFF before start (the intended warmup window)
+    assert G(0.5, 300, 1) is False           # OFF at ep1 when start>1 (NOT the buggy always/never)
+
+
+def test_c1_gate_default_start_engages_from_epoch_1():
+    # start<=1 (the default always-on path) engages from ep1 => bit-identical to the pre-lever path.
+    for start in (0, 1):
+        assert G(0.7, start, 1) is True
+        assert G(0.7, start, 2) is True
+
+
+def test_c1_gate_off_when_weight_nonpositive():
+    # weight<=0 (the lever is OFF) => NEVER engaged at ANY epoch (the loss branch also guards weight,
+    # but the predicate is the single source of truth and must agree).
+    for ep in (1, 5, 300, 1500):
+        assert G(0.0, 0, ep) is False
+        assert G(0.0, 300, ep) is False
+        assert G(-1.0, 0, ep) is False
+
+
+def test_c1_validator_catches_never_engage_silent_no_op():
+    # The fail-closed config guard: weight>0 but start>epochs => the hinge would NEVER engage => the
+    # SAME silent-no-op verdict. Must raise LOUDLY (the validator's job; complements the loop-flip).
+    with pytest.raises(ValueError) as ei:
+        T.validate_lane_thin_config(lane_thin_weight=0.5, lane_thin_start_epoch=2000,
+                                    epochs=1500, lane_thin_class=1, lane_thin_radius=4)
+    assert "NEVER engage" in str(ei.value) or "silent no-op" in str(ei.value)
+
+
+def test_c1_validator_passes_valid_and_noop_when_off():
+    # Valid config (start<=epochs) does NOT raise; and when the lever is OFF (weight<=0) the guard is
+    # a NO-OP (never gates the additive default path), even with a nonsense start.
+    T.validate_lane_thin_config(lane_thin_weight=0.5, lane_thin_start_epoch=300,
+                                epochs=1500, lane_thin_class=1, lane_thin_radius=4)
+    T.validate_lane_thin_config(lane_thin_weight=0.0, lane_thin_start_epoch=99999,
+                                epochs=1500, lane_thin_class=1, lane_thin_radius=4)
+
+
+def test_c1_all_three_loop_gates_route_through_the_tested_predicate():
+    # STRUCTURAL self-protect: the epoch loop MUST flip ALL THREE lever gates via the unit-tested
+    # ``lever_gate_on_at_epoch`` predicate. The C1 bug was the ABSENCE of the thin-lane flip; this
+    # guards that none of the three flips is silently dropped or hardcoded back to a static init / a
+    # bare ``ep >= start`` (which would dodge the tested predicate). If a future edit removes a flip,
+    # this fails -> the silent-no-op class cannot re-emerge unnoticed.
+    src = Path(T.__file__).read_text()
+    for gate in ("lane_gate", "msal_gate", "lane_thin_gate"):
+        needle = f'{gate}["on"] = lever_gate_on_at_epoch('
+        assert needle in src, (
+            f"epoch-loop gate-flip for {gate} no longer routes through lever_gate_on_at_epoch -> the "
+            "C1 silent-no-op class can re-emerge. Re-wire the loop flip through the tested predicate.")
+
+
+# ============================================================ R2a-MED-1 SELF-PROTECT (resume arch-flag)
+# The R2a-MEDIUM-1: the film_per_layer/film_concat_code ARCH flags were persisted ONLY in result.json
+# (loop-end), NOT in the resume checkpoint -> a crash-resume from the ckpt dir alone (the resumability
+# discipline) had no record FiLM was ON; if the resume cmd omitted the flag, MLX model.update would
+# SILENTLY DROP the trained film_pl/concat_pl params = a corrupted, non-reproducible resume. The fix
+# persists __cfg_film_* in the resume sidecar + a fail-closed arch-drift guard before model.update.
+import types as _types  # noqa: E402
+
+
+def _min_args_for_resume_builder(**over):
+    base = dict(n_hidden=4, hidden_dim=96, mod_dim=32, self_orient=False, w_pose=1.0,
+                film_per_layer=False, film_concat_code=False, film_stiefel=False)
+    base.update(over)
+    return _types.SimpleNamespace(**base)
+
+
+def test_r2a_resume_sidecar_persists_film_arch_flags():
+    live = {"film.weight": np.zeros((4, 3), np.float32), "code": np.zeros((2, 3), np.float32)}
+    a = _min_args_for_resume_builder(film_per_layer=True, film_concat_code=True, film_stiefel=True)
+    out = T._build_resume_state_arrays(live, live, None, args=a, epoch=5, in_feat=6)
+    # The arch flags that change param keys / training geometry MUST be persisted (== ON here).
+    assert int(out["__cfg_film_per_layer"]) == 1
+    assert int(out["__cfg_film_concat_code"]) == 1
+    assert int(out["__cfg_film_stiefel"]) == 1
+    # ... and reflect OFF when off (so a resume can detect the mismatch either direction).
+    a_off = _min_args_for_resume_builder()
+    out_off = T._build_resume_state_arrays(live, live, None, args=a_off, epoch=5, in_feat=6)
+    assert int(out_off["__cfg_film_per_layer"]) == 0
+    assert int(out_off["__cfg_film_concat_code"]) == 0
+    assert int(out_off["__cfg_film_stiefel"]) == 0
+
+
+def test_r2a_resume_block_has_fail_closed_arch_drift_guard():
+    # STRUCTURAL self-protect: the resume application MUST refuse (raise) when the checkpoint carries
+    # trained params the rebuilt model has no slot for (the silent-param-drop class), BEFORE model.update.
+    src = Path(T.__file__).read_text()
+    assert "_missing_in_model" in src and "model.update(" in src
+    assert src.index("_missing_in_model = sorted(set(rs[\"live\"])") < src.index(
+        "model.update(tree_unflatten([(k, mx.array(v)) for k, v in rs[\"live\"].items()])"), (
+        "the arch-drift guard must run BEFORE model.update (else it cannot prevent the silent drop).")

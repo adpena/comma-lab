@@ -228,6 +228,17 @@ def _build_resume_state_arrays(
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
     out["__cfg_in_feat"] = np.asarray(int(in_feat))
     out["__cfg_w_pose"] = np.asarray(float(args.w_pose))
+    # (review R2a-MED-1) ARCH flags that change the param KEYS / training geometry: persist them in the
+    # resume sidecar so a crash-resume from the ckpt dir ALONE can fail-closed if the resume command
+    # omits the flag the run was trained with (the silent-param-drop risk -- MLX model.update only
+    # touches EXISTING params, so a model rebuilt without film_pl/concat_pl would silently DROP the
+    # trained per-layer FiLM params). film_per_layer/film_concat_code add params (film_pl./concat_pl.);
+    # film_stiefel constrains the existing film.weight (training-dynamics, no new keys). The resume
+    # sidecar is NOT byte-closed -> these provenance scalars cost ZERO archive bytes. Per the
+    # resumability + deterministic-reproducibility non-negotiables.
+    out["__cfg_film_per_layer"] = np.asarray(int(bool(getattr(args, "film_per_layer", False))))
+    out["__cfg_film_concat_code"] = np.asarray(int(bool(getattr(args, "film_concat_code", False))))
+    out["__cfg_film_stiefel"] = np.asarray(int(bool(getattr(args, "film_stiefel", False))))
     return out
 
 
@@ -620,6 +631,23 @@ def validate_lane_thin_config(
         )
     if lane_thin_radius < 0:
         raise ValueError(f"--lane-thin-radius ({lane_thin_radius}) must be >= 0 (window half-width).")
+
+
+def lever_gate_on_at_epoch(weight: float, start_epoch: int, ep: int) -> bool:
+    """Engagement predicate for the additive margin levers (lane-edge / margin-saliency / thin-lane).
+
+    A lever is ENGAGED at training epoch ``ep`` iff its weight is > 0 AND the epoch has reached its
+    ``start_epoch``. This is the SINGLE source of truth the epoch loop uses to (re-)flip every
+    per-lever engagement gate every epoch. Extracting + unit-testing it is the SELF-PROTECT against
+    the C1 silent-no-op class (review FEED-hp/hr): a gate initialized OFF for ``start_epoch>1`` that is
+    NEVER re-flipped in the loop -> ``--<lever>-start-epoch>1`` (the help-RECOMMENDED 300) silently
+    never engages -> a FALSE '<lever> does nothing' verdict from dead code. The C1 regression is
+    EXACTLY ``lever_gate_on_at_epoch(w>0, start>1, ep=start)`` returning False; this predicate returns
+    True, and the loop assigns its result, so the bug cannot silently re-emerge while this helper is
+    the live decision. Pure + total => unit-testable at $0 (the realized-through-R loop needs MLX + the
+    frozen scorer + the GT cache; this predicate does not). Per CLAUDE.md "Bugs must be permanently
+    fixed AND self-protected against"."""
+    return float(weight) > 0.0 and int(ep) >= int(start_epoch)
 
 
 def _seg_form_for_epoch(ep: int, args) -> str:
@@ -1101,6 +1129,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         phi0 = model.sdf(cf, c0)
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w)
         L = L + eik_w * eik + len_w * length
+        # (review R2b-M3) SHARED realized through-R seg forward. LEVER-3 (lane-edge), LEVER-4
+        # (margin-saliency) and LEVER-B (thin-lane) all need the SAME realized decision margin
+        # ``signed = gt_logit - top_competitor`` from the SAME render(cf,c1)->R->frozen SegNet. The
+        # render is deterministic (uint8-STE round; no training noise), so computing it ONCE and
+        # reusing it across the stacked levers is BIT-IDENTICAL to the prior 3-separate-forwards code
+        # while doing 1 (not up to 3) of the expensive forward. Computed ONLY when >=1 seg-margin lever
+        # is engaged; default-off (all weights 0) => _seg_levers_on False => block skipped =>
+        # byte-identical to the additive default path. ``_f1`` is also reused for LEVER-4's UNIWARD
+        # texture map (same rendered frame).
+        _seg_levers_on = ((lane_w > 0.0 and lane_gate["on"]) or
+                          (msal_w > 0.0 and msal_gate["on"]) or
+                          (lane_thin_w > 0.0 and lane_thin_gate["on"]))
+        if _seg_levers_on:
+            _f1 = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
+            _slog = adapter.segnet(_f1)                                    # (1, H, W, 5)
+            _sig_gt = mx.sum(_slog * lstar_oh, axis=-1)                    # (1, H, W) gt-class logit
+            _sig_run = mx.max(_slog + lstar_oh * (-1e9), axis=-1)          # (1, H, W) top competitor
+            _signed = _sig_gt - _sig_run                                   # (1, H, W) realized margin
         # LEVER-3 (lane-edge fragility weighting, operator 2026-06-27 Yousfi-grounding): contest
         # SegNet argmax order is the comma10k CANONICAL order (MEASURED 2026-06-27 from the cached
         # argmax; CLAUDE.md NON-NEGOTIABLE): [Road0, Lane1, Undrivable2, Movable3, MyCar4]. The
@@ -1113,17 +1159,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # margin (gt_logit - top_competitor) ONLY where GT==lane, and penalizes relu(target-margin)
         # there. The hinge fires exactly on SMALL-MARGIN (fragile = boundary) lane pixels, so it
         # adds gradient pressure to widen the lane margin at the lane double-edges. Default-off
-        # (lane_w=0). When ON it costs a SECOND realized seg forward (acceptable per operator
-        # "score > training time"; the optimal-form fusion into the base seg loss needs a parent
-        # edit, out of scope for this additive prep).
+        # (lane_w=0). When ON it reuses the SHARED realized seg forward above (review R2b-M3: no
+        # longer a separate render -- bit-identical, 1 forward shared across the stacked levers).
         if lane_w > 0.0 and lane_gate["on"]:
-            f1 = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
-            seg_logits = adapter.segnet(f1)                              # (1, H, W, 5)
-            gt_logit = mx.sum(seg_logits * lstar_oh, axis=-1)           # (1, H, W)
-            runner_up = mx.max(seg_logits + lstar_oh * (-1e9), axis=-1)  # (1, H, W) max competitor
-            signed = gt_logit - runner_up                              # (1, H, W) decision margin
             lane_mask = lstar_oh[..., lane_cls]                         # (1, H, W) 1.0 where GT==lane
-            hinge_map = mx.maximum(lane_tgt - signed, 0.0) * lane_mask  # fragile lane pixels only
+            hinge_map = mx.maximum(lane_tgt - _signed, 0.0) * lane_mask  # fragile lane pixels only
             lane_term = mx.sum(hinge_map) / (mx.sum(lane_mask) + 1e-6)  # mean hinge over lane px
             L = L + lane_w * lane_term
         # LEVER-4 (margin-saliency, all-class generalization of LEVER-3). Same realized through-R
@@ -1132,17 +1172,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (small GT margin) lives across all classes (Road 47% / Lane 19% / Undriv 14% / ...), so this
         # adds widen-the-margin pressure exactly where d_seg lives. CLASS-AGNOSTIC. Default-off.
         if msal_w > 0.0 and msal_gate["on"]:
-            f1s = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
-            slog = adapter.segnet(f1s)                                    # (1, H, W, 5)
-            gt_l = mx.sum(slog * lstar_oh, axis=-1)                       # (1, H, W)
-            run2 = mx.max(slog + lstar_oh * (-1e9), axis=-1)             # (1, H, W) top competitor
-            sgn = gt_l - run2                                           # (1, H, W) decision margin
+            sgn = _signed                                              # (1, H, W) SHARED realized margin (R2b-M3)
             sal = mx.exp(-margin / msal_tau)                            # (1, H, W) fragility weight
             if msal_uni:
                 # UNIWARD: down-weight textured regions (SegNet-undetectable) -> concentrate on the
                 # SMOOTH boundary. Texture energy from the realized frame's spatial gradients, used as
-                # a STOP-GRAD weight (a cost map, not a loss path).
-                lum = mx.mean(mx.stop_gradient(f1s), axis=-1)            # (1, H, W)
+                # a STOP-GRAD weight (a cost map, not a loss path). Reuses the SHARED rendered frame _f1.
+                lum = mx.mean(mx.stop_gradient(_f1), axis=-1)            # (1, H, W)
                 dy = mx.pad(mx.abs(lum[:, 1:, :] - lum[:, :-1, :]), [(0, 0), (0, 1), (0, 0)])
                 dx = mx.pad(mx.abs(lum[:, :, 1:] - lum[:, :, :-1]), [(0, 0), (0, 0), (0, 1)])
                 tex = dy + dx
@@ -1184,16 +1220,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # PRECOMPUTED thin-lane map (nonzero ONLY on thin GT-lane pixels). Same realized decision
         # margin as LEVER-3 but concentrated on the DROPPED thin dashes (the PC0 residual). c0=2*pi
         # so c0//2 == pi keys the per-pair thin map to THIS pair's lstar_oh. Default-off (lane_thin_w
-        # =0). Costs a SECOND realized seg forward when ON (acceptable per operator "score > training
-        # time"; an optimal-form fusion into the base seg loss is a parent edit, out of this scope).
+        # =0). Reuses the SHARED realized seg forward above (review R2b-M3: no separate render --
+        # bit-identical, 1 forward shared across the stacked levers).
         if lane_thin_w > 0.0 and lane_thin_gate["on"] and thin_maps_mx is not None:
             tw = thin_maps_mx[int(c0) // 2]                            # (1, H, W) thin-lane weight (>=0)
-            f1t = render_through_R_mlx(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
-            slog = adapter.segnet(f1t)                                 # (1, H, W, 5)
-            gt_l = mx.sum(slog * lstar_oh, axis=-1)                   # (1, H, W)
-            run2 = mx.max(slog + lstar_oh * (-1e9), axis=-1)          # (1, H, W) top competitor
-            sgn = gt_l - run2                                         # (1, H, W) decision margin
-            hmap_t = mx.maximum(lane_thin_tgt - sgn, 0.0) * tw        # fragile thin-lane pixels only
+            hmap_t = mx.maximum(lane_thin_tgt - _signed, 0.0) * tw     # fragile thin-lane pixels only
             L = L + lane_thin_w * (mx.sum(hmap_t) / (mx.sum(tw) + 1e-6))
         return L
 
@@ -1511,6 +1542,32 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         resume_cfg = rs["cfg"]
         if not rs["live"]:
             raise ValueError(f"--resume-from {rp} has no live/param tensors (NO-FAKE: cannot resume).")
+        # (review R2a-MED-1) FAIL-CLOSED arch-drift guard BEFORE model.update. MLX model.update only
+        # writes params the model ALREADY has, so a resume whose ckpt carries trained params the
+        # freshly-built model lacks (e.g. the run trained with --film-per-layer / --film-concat-code but
+        # the resume command omitted it) would SILENTLY DROP those trained tensors -> a corrupted,
+        # non-reproducible resume discovered only at exact-eval. Refuse loudly instead. The check is
+        # arch-general (any missing key), not film-specific; the persisted __cfg_film_* flags name the
+        # likely cause + fix. Per CLAUDE.md resumability + deterministic-reproducibility + NO-FAKE.
+        _model_param_keys = {k for k, _ in tree_flatten(model.parameters())}
+        _missing_in_model = sorted(set(rs["live"]) - _model_param_keys)
+        if _missing_in_model:
+            _ckpt_pl = bool(int(resume_cfg.get("__cfg_film_per_layer", 0) or 0))
+            _ckpt_concat = bool(int(resume_cfg.get("__cfg_film_concat_code", 0) or 0))
+            _hint = []
+            if _ckpt_pl and not bool(getattr(args, "film_per_layer", False)):
+                _hint.append("add --film-per-layer")
+            if _ckpt_concat and not bool(getattr(args, "film_concat_code", False)):
+                _hint.append("add --film-concat-code")
+            raise ValueError(
+                f"--resume-from {rp}: the checkpoint carries {len(_missing_in_model)} trained param(s) the "
+                f"rebuilt model has NO slot for (first few: {_missing_in_model[:6]}) -> model.update would "
+                "SILENTLY DROP them = a corrupted, non-reproducible resume. The resume command's ARCH flags "
+                f"must MATCH the trained run. Ckpt arch flags: film_per_layer={_ckpt_pl}, "
+                f"film_concat_code={_ckpt_concat}, film_stiefel="
+                f"{bool(int(resume_cfg.get('__cfg_film_stiefel', 0) or 0))}. "
+                + (f"Fix: {', '.join(_hint)}." if _hint else
+                   "Rebuild the model with the SAME architecture the checkpoint was trained with."))
         model.update(tree_unflatten([(k, mx.array(v)) for k, v in rs["live"].items()]))
         mx.eval(model.parameters())
         ema_src = rs["ema"] if rs["ema"] else rs["live"]
@@ -1708,7 +1765,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # lane_start<=1 i.e. the default always-on-from-ep1 path -> zero behavior change).
             if lane_w > 0.0:
                 _was_on = lane_gate["on"]
-                lane_gate["on"] = ep >= lane_start
+                lane_gate["on"] = lever_gate_on_at_epoch(lane_w, lane_start, ep)
                 if lane_gate["on"] and not _was_on:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_edge_engage", "epoch": ep, "lane_start": lane_start,
@@ -1716,7 +1773,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # LEVER-4 margin-saliency engagement gate + transition RE-TREAT (same discipline as lane).
             if msal_w > 0.0:
                 _msal_was = msal_gate["on"]
-                msal_gate["on"] = ep >= msal_start
+                msal_gate["on"] = lever_gate_on_at_epoch(msal_w, msal_start, ep)
                 if msal_gate["on"] and not _msal_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "margin_saliency_engage", "epoch": ep, "start": msal_start,
@@ -1728,7 +1785,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # No-op when lane_thin_start<=1 (default-on-from-ep1) => zero behavior change.
             if lane_thin_w > 0.0:
                 _lt_was = lane_thin_gate["on"]
-                lane_thin_gate["on"] = ep >= lane_thin_start
+                lane_thin_gate["on"] = lever_gate_on_at_epoch(lane_thin_w, lane_thin_start, ep)
                 if lane_thin_gate["on"] and not _lt_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_thin_engage", "epoch": ep, "start": lane_thin_start,
@@ -2173,17 +2230,24 @@ def main(argv: list[str] | None = None) -> int:
     # amortization). All-off => byte-identical to the pre-LEVER-A witness (the extra submodules / loss
     # term are not created). See build_levelset_rgb_witness + the rank-floor branch in total_loss_fn.
     ap.add_argument("--film-per-layer", action="store_true",
-                    help="LEVER-A1: add SEPARATE per-layer RESIDUAL FiLM projections (identity at init: "
-                    "zero weight+bias) => more INDEPENDENT per-pair multiplicative modulation routes "
-                    "(raises modulation rank). Default OFF = shared-FiLM-only = current witness.")
+                    help="LEVER-A1 [CAPACITY, NOT rank -- review M2/FEED-ht]: add SEPARATE per-layer "
+                    "RESIDUAL FiLM projections (identity at init). +~25k params (~+0.01 rate). MEASURED "
+                    "(M2): does NOT raise modulation rank -- A1/A2/shared-FiLM are all functions of the "
+                    "SAME mod_dim code, so PR(M) <= rank(codes) <= mod_dim regardless of capacity. The "
+                    "byte-FREE rank lever is --film-stiefel (+ --code-spectral-entropy-weight): PR(M) "
+                    "1.19->4.57 at 0 added bytes. Prefer those. Default OFF = shared-FiLM-only.")
     ap.add_argument("--film-concat-code", action="store_true",
-                    help="LEVER-A2: add an ADDITIVE per-pair code-injection route (folded concat: "
-                    "concat([h,code])@W == h@W_h + code@W_c, one zero-init proj/layer; identity at init) "
-                    "= a NON-collapsing per-pair TRANSLATION route (what a moving lane needs). Default OFF.")
+                    help="LEVER-A2 [CAPACITY, NOT rank -- review M2/FEED-ht]: add an ADDITIVE per-pair "
+                    "code-injection route (folded concat; identity at init). +~12k params. Same mod_dim "
+                    "rank ceiling as A1 (cannot raise PR(M) above rank(codes)); use --film-stiefel for "
+                    "the byte-free rank fix. Default OFF.")
     ap.add_argument("--film-rank-floor-weight", type=float, default=0.0,
-                    help="LEVER-A3: weight of a SOFT participation-ratio FLOOR penalty relu(target-PR) on "
-                    "the realized per-pair modulation M=film(code), so the curriculum cannot funnel it to "
-                    "rank-1. 0.0 (default) = OFF. PR is Gram-computed (no eigendecomposition).")
+                    help="LEVER-A3 [DOMINATED by --film-stiefel; NOT recommended -- review FEED-ht/M1]: "
+                    "weight of a SOFT participation-ratio FLOOR penalty relu(target-PR) on M=film(code). "
+                    "0.0 (default) = OFF. CAVEAT (review M1): the PR measure is 0-homogeneous so its grad "
+                    "~1/||M|| can blow up at small codes (no warm-in/start-gate here) and proxy-games "
+                    "low-gain directions. Prefer the byte-free --film-stiefel (+ --code-spectral-entropy-"
+                    "weight), which makes PR(M)=PR(cov(code)) hold by construction. Kept for ablation only.")
     ap.add_argument("--film-rank-floor-target", type=float, default=4.0,
                     help="LEVER-A3: the participation-ratio FLOOR (effective-dim target) the penalty pushes "
                     "M toward (must be > 1 when --film-rank-floor-weight > 0; PR >= 1 always). Default 4.0.")
