@@ -1210,6 +1210,10 @@ def main() -> None:
     ap.add_argument("--auto-latest", action=argparse.BooleanOptionalAction, default=cfg.auto_latest,
                     help="follow the freshest witness arm across all dirs (default ON; --no-auto-latest to pin --run-dir)")
     ap.add_argument("--auto-base-glob", default=cfg.auto_base_glob)
+    ap.add_argument("--reuse-port", action=argparse.BooleanOptionalAction, default=True,
+                    help="SO_REUSEPORT (default ON) so a NEW instance can bind :port alongside the OLD "
+                         "one -> zero-downtime hot reload (tools/dashboard_reload.py) that never drops the "
+                         "cloudflared tunnel origin. --no-reuse-port to disable.")
     a = ap.parse_args()
     cfg = Config(run_dir=a.run_dir, log_glob=a.log_glob, tau=a.tau, l7=a.l7,
                  goal_dseg=a.goal_dseg, goal_dseg_15=a.goal_dseg_15, poll=a.poll,
@@ -1219,8 +1223,29 @@ def main() -> None:
                  auto_latest=a.auto_latest, auto_base_glob=a.auto_base_glob)
     application = create_app(cfg)
     # access_log=False so the ?k=<access key> never lands in a log line.
-    uvicorn.run(application, host=cfg.host, port=cfg.port, log_level="warning",
-                access_log=False, ws="websockets")
+    # SO_REUSEPORT zero-downtime hot reload: uvicorn 0.44's run()/Config has no reuse_port kwarg, so we
+    # bind the socket OURSELVES with SO_REUSEPORT and hand it to Server.run(sockets=[...]). That lets a
+    # fresh (new-code) instance co-bind :port WHILE the old one still serves, so tools/dashboard_reload.py
+    # brings the new up + healthz-confirms it BEFORE retiring the old -> the :port listener is never empty
+    # -> the cloudflared named tunnel origin sees no 502 window. Falls back to plain run on any error.
+    cfgu = uvicorn.Config(application, host=cfg.host, port=cfg.port, log_level="warning",
+                          access_log=False, ws="websockets")
+    server = uvicorn.Server(cfgu)
+    sock = None
+    if bool(a.reuse_port):
+        try:
+            import socket as _socket
+            sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+            sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+            if hasattr(_socket, "SO_REUSEPORT"):
+                sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEPORT, 1)
+            sock.bind((cfg.host, cfg.port))
+            sock.set_inheritable(True)
+        except OSError:
+            if sock is not None:
+                sock.close()
+            sock = None  # fall back to uvicorn binding the port itself
+    server.run(sockets=[sock] if sock is not None else None)
 
 
 if __name__ == "__main__":
