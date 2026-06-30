@@ -6837,3 +6837,31 @@ ROUND 1 of the CLAUDE.md 3-clean-pass protocol. ON LAND: synthesize → categori
 **(3) THE CONVERGENCE -> the decisive $0 gate.** The ONLY byte-viable rung (R4) is dead on distortion as a STATIC template, but its byte_note says "per-frame pose-warp (#138/#145) would refine." The warp-fix (FEED-lj) just fixed the warp units bug. So the make-or-break v2 measurement is now runnable: **R4 + per-frame STRATIFIED pose-warp (FEED-iz: Road=ground-homography(pose), MyCar=identity #139, sky/Undriv=rotation-only KRK^-1) — does warping the canonical per-frame via the stored pose drop d_seg from 0.71 toward R1's ~0.018, at ~0 extra bytes?** That IS the v2 thesis (store ONE canonical + screw-warp = cheap partition, no per-frame partition store). If YES -> v2 viable; R1 ramp is the free boundary cure on top + tiny lane-survival residual. If NO -> the warp can't generate the partition and the store-partition rate-wall (0.277) stands; pivot to distortion-quant of the frontier.
 
 **Next ($0, numpy/CPU, no GPU, this loop):** measure R4+stratified-warp through-R on n96. Reuse tools/measure_pose_warp_dseg.py + measure_screw_warp_through_R.py + src/tac/se3.py + camera.py + the FEED-lj fixed warp. Calibration: GROUNDED through-R bulk-advisory; only n600 byte-closed is a score. Pointer UNMOVED 0.19110.
+
+## DAG FEED-ll (2026-06-29) — SCREW-WARP REACH gate ($0 through-R, n96, advisory)
+
+**Built** `tools/measure_screw_reach_through_R.py` (committed 7def780da) + evidence `experiments/results/screw_reach/reach_n96.json` (gitignored durable). Warps ONE canonical SegNet partition keyframe FORWARD k pairs via the cumulative stratified per-class screw-warp (Road/Lane/Movable=ground homography, Undriv=rotonly KRK⁻¹, MyCar=identity; cumulative SE(3) compose of stored gt_poses; H=K·M_cum·K⁻¹), renders it (class-mean RGB + R1 σ=1.0 ramp, the FREE boundary cure), pushes through the EXACT ladder R (bicubic↑874→uint8→bilinear↓384→frozen CPU SegNet), measures d_seg vs lstars[a+k]. **NO-FAKE: k=0 over all 96 pairs reproduces the ladder R1 floor EXACTLY (k0_bulk=0.01851 == R1 0.0185, faithful=True); SegNet(gt_f1)==lstars self-check PASS.** 4 anchors (0/16/32/48), 216 SegNet fwds, 117s.
+
+**Reach curve (averaged 4 anchors, through R, bulk = GT∈{Road,Undriv,MyCar}):**
+| k(pairs) | strat_bulk | strat_full | persist_bulk | comp_bulk |
+|---|---|---|---|---|
+| 0 | 0.0060 | 0.0156 | 0.0060 | 0.0060 |
+| 1 | 0.0096 | 0.0216 | 0.0110 | 0.0136 |
+| 5 | 0.0101 | 0.0227 | 0.0119 | 0.0314 |
+| 13 | 0.0113 | 0.0254 | 0.0109 | 0.0893 |
+| 21 | 0.0156 | 0.0308 | 0.0158 | 0.1584 |
+| 34 | 0.0203 | 0.0401 | 0.0198 | 0.2769 |
+| 47 | 0.0219 | 0.0421 | 0.0219 | 0.2065 |
+
+**k\*** (stratified bulk ≤ 0.037 = 2× R1 floor) **= 47 pairs (the MAX tested — never crosses).** persist reach = 47 too. composite (naive single-image routing) k\*=5 (a ROUTING artifact, not the warp — a real decoder routes statics via a stored hood-mask/sky-region descriptor → stratified is the established per-class reach, primary).
+
+**Three findings (calibrated, GROUNDED through-R n96, bulk-advisory — NOT a score):**
+1. **The BULK partition is intrinsically STABLE for 47+ pairs (94 frames):** persist (NO warp) bulk d_seg stays ~0.006→0.022 across the whole window. You can store ONE partition keyframe and PERSIST it far.
+2. **The d_seg-optimal screw-warp is NEAR-IDENTITY (fitted s_t=-0.0032) and does NOT beat persist on bulk** (strat≈persist at every k; warp_beats_persist=False). CONFIRMS FEED-lj (d_seg wants near-identity scale; d_pose wants larger → lossy dual-use refuted). The reach is carried by partition STABILITY, not the warp; warp's value is at boundaries/lanes (full) + needs a region-descriptor to route cleanly.
+3. **RATE consequence:** k\*=47 → ceil(600/47)=**13 keyframes** → partition rate **0.0060** (+pose ~875B=0.0006 = 0.0066). One canonical partition = 809 B measured (~693 B/pair amortized). Even a 10× conservative reach (130 keyframes) → rate ~0.060. **All ≪ the store-everything partition wall 0.277 and ≪ frontier 0.191.**
+
+**VERDICT: GREEN on the RATE axis (the question this gate asked).** Keyframes+warp DECISIVELY beat the store-everything partition rate-wall (0.006–0.06 vs 0.277). The partition-store RATE is NOT the binding wall. **BUT the binding wall is SEPARATE and unmoved: the deterministic-render d_seg FLOOR (R1 ≈ 0.0185 bulk / 0.023 full at k=0) is ~30–40× the sub-0.15 d_seg budget (~6e-4).** So "build the v2 deterministic n600 materializer" would yield a cheap-rate archive that is d_seg-DOMINATED (S ≳ 2 from d_seg) — NOT sub-0.19.
+
+**SCOPE/caveats (calibration):** n96 = ONE ~10s highway window (steady forward driving → partition naturally stable); full-clip reach across turns/traffic UNTESTED (rate conclusion robust to ≥10× reach-shortening). bulk-only advisory; lane/movables stack on top. Anchors contiguous; deeper-clip anchors included (16/32/48) so not a clip-start artifact.
+
+**NEXT ACTION (redirected by the finding):** the RATE axis is settled CHEAP — do NOT spend effort on a deterministic partition materializer (d_seg-dead). The binding sub-0.15 lever is the **d_seg render FLOOR → the TRAINED amortized-residual generator** (established DAG finding), now DE-RISKED on rate (we know the partition keyframe budget is tiny and persists far). Pour the next unit into cracking the d_seg floor (trained generator that produces SegNet-recoverable content), composing with the cheap partition-keyframe + stored-pose sidecar. Pointer UNMOVED 0.19110; advisory, not a score.
