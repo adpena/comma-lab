@@ -537,3 +537,213 @@ def test_plan_adaptive_step_rollback_resumes_from_best_preserved_ckpt(tmp_path):
     # rolled back to the preserved ckpt at/<= the best epoch (300), not the final state
     assert step["next_resume_from"].endswith("levelset_resume_stageTau_ep300.npz")
     assert step["valid"] is True
+
+
+# ===========================================================================
+# SEARCH ENRICHMENT (stage × config × pass × scale) — operator 2026-06-29 (FEED-lo)
+# ===========================================================================
+from tac.witness_dsl import (  # noqa: E402
+    MarginSaliency,
+    UniWARD,
+    Cycle,
+    PrimingContext,
+    ScalePass,
+    SynergyResult,
+    ArmResult,
+    curvelet_scale_passes,
+    expand_cycles,
+    measure_synergy,
+    priming_chain,
+    rerun_stage_new_config,
+    scale_progression,
+    select_synergistic_combos,
+    synergy_map,
+)
+
+
+# --- B. UNIWARD + margin-saliency levers (Fridrich inverse-steganalysis; BUILT) ---
+def test_uniward_lever_validates_and_emits_real_flags():
+    arm = BASELINE.with_lever(UniWARD())
+    assert arm.validate() == []
+    real = real_trainer_flags()
+    for f in arm.levers[-1].overrides:
+        assert f in real, f"UniWARD emitted a non-real flag: {f}"
+
+
+def test_uniward_store_true_emitted_true_only():
+    ov = UniWARD(beta=6.0, start_epoch=900).overrides
+    assert ov["--margin-saliency-uniward"] is True  # store_true -> True only (never False)
+    assert ov["--margin-saliency-uniward-beta"] == 6.0
+    assert ov["--margin-saliency-start-epoch"] == 900  # late-stage (l7/Muon) arm
+    assert "--margin-saliency-uniward" in real_store_true_flags()
+
+
+def test_margin_saliency_lever_validates():
+    arm = BASELINE.with_lever(MarginSaliency(weight=2.0))
+    assert arm.validate() == []
+    assert arm.flag_dict()["--margin-saliency-weight"] == 2.0
+
+
+# --- A1. MULTI-PASS / RERUN_NEW_CONFIG (the config axis) ---
+_POLICY_RERUN = StagePolicy(rerun_floor=0.001)   # plateau above 0.001 -> re-run sharper
+
+
+def test_decide_rerun_when_plateau_above_floor():
+    d = decide_next_stage(_PLATEAU, policy=_POLICY_RERUN, final_ckpt="F.npz", best_ckpt="B.npz")
+    assert d.action == "RERUN_NEW_CONFIG"   # best ~0.00396 > rerun_floor 0.001
+    assert d.resume_from == "F.npz"
+
+
+def test_decide_advance_when_plateau_at_or_below_floor():
+    d = decide_next_stage(_PLATEAU, policy=StagePolicy(rerun_floor=0.005),
+                          final_ckpt="F.npz", best_ckpt="B.npz")
+    assert d.action == "ADVANCE"            # best ~0.00396 <= rerun_floor 0.005 -> exhausted -> advance
+
+
+def test_decide_rerun_off_by_default_back_compat():
+    # rerun_floor None (default) -> plateau ADVANCES (the 3-action back-compat path)
+    d = decide_next_stage(_PLATEAU, policy=StagePolicy(), final_ckpt="F.npz", best_ckpt="B.npz")
+    assert d.action == "ADVANCE"
+
+
+def test_rerun_stage_new_config_sharper_tau_validates():
+    op = _opening()
+    r = rerun_stage_new_config(op, resume_from="tau.npz", out_dir="OUT_tau2",
+                               window=300, config_overrides={"--tau-softplus-tau": 0.2})
+    fd = r.flag_dict()
+    assert fd["--tau-softplus-tau"] == 0.2          # sharper 2nd tau pass
+    assert fd["--l7-start-epoch"] == r.epochs       # l7 still parked (same stage)
+    assert r.epochs == op.epochs + 300
+    assert r.validate() == []
+
+
+def test_rerun_stage_refuses_shape_changing_override():
+    import pytest
+    with pytest.raises(ValueError, match="shape-changing"):
+        rerun_stage_new_config(_opening(), resume_from="x.npz", out_dir="O",
+                               window=100, config_overrides={"--hidden-dim": 128})
+
+
+def test_stack_next_program_rerun_dispatch():
+    op = _opening()
+    dec = decide_next_stage(_PLATEAU, policy=_POLICY_RERUN, final_ckpt="F.npz", best_ckpt="B.npz")
+    nxt = stack_next_program(op, dec, advance_to="l7", out_dir="OUT", policy=_POLICY_RERUN,
+                             rerun_config={"--tau-softplus-tau": 0.2})
+    assert nxt.flag_dict()["--tau-softplus-tau"] == 0.2
+    import pytest
+    with pytest.raises(ValueError, match="requires a rerun_config"):
+        stack_next_program(op, dec, advance_to="l7", out_dir="OUT", policy=_POLICY_RERUN)
+
+
+# --- A1'. Cycle multi-pass-with-varying-config + fresh + l7 auto-park ---
+def test_expand_cycles_applies_per_pass_config_and_parks_l7():
+    op = _opening()
+    cycles = [Cycle("tau_sharp", window=200, config={"--tau-softplus-tau": 0.2})]
+    progs = expand_cycles(op, cycles, start_resume_from="seed.npz", start_epoch=600,
+                          out_dir_prefix="OUT")
+    p = progs[0]
+    fd = p.flag_dict()
+    assert fd["--tau-softplus-tau"] == 0.2
+    assert fd["--l7-start-epoch"] == p.epochs == 800   # l7 auto-parked at the new end
+    assert p.resume_from == "seed.npz"                 # warm (value-only config)
+    assert p.validate() == []
+
+
+def test_expand_cycles_shape_changing_config_forces_fresh():
+    progs = expand_cycles(_opening(), [Cycle("grow", window=200, config={"--hidden-dim": 128})],
+                          start_resume_from="seed.npz", start_epoch=600, out_dir_prefix="OUT")
+    assert progs[0].resume_from is None   # shape change -> FRESH arm (no warm-start crash)
+
+
+# --- C. PRIMING (first-class) ---
+def test_priming_recorded_and_primer_conditioned_floor():
+    prime = PrimingContext(primer_stage="tau_softplus", resume_ckpt="tau.npz",
+                           primer_final_d_seg=0.00396)
+    pol = StagePolicy(rerun_floor_by_primer={"tau_softplus": 0.001})
+    d = decide_next_stage(_PLATEAU, policy=pol, final_ckpt="F.npz", best_ckpt="B.npz", priming=prime)
+    assert d.primed_by == "tau_softplus"       # priming recorded
+    assert d.action == "RERUN_NEW_CONFIG"      # primer-conditioned floor 0.001 -> best above -> rerun
+    assert d.to_record()["primed_by"] == "tau_softplus"
+
+
+def test_priming_chain_extracts_warm_start_edges():
+    op = _opening()
+    progs = expand_cycles(op, [Cycle("c0", 200), Cycle("c1", 200)],
+                          start_resume_from="seed.npz", start_epoch=600, out_dir_prefix="OUT")
+    chain = priming_chain([op] + progs)
+    assert chain[0]["from_scratch"] is True            # the opening is from-scratch (seeded)
+    assert chain[1]["primed_by_ckpt"] == "seed.npz"    # c0 primed by the seed
+    assert chain[2]["primed_by_ckpt"].endswith("levelset_resume_state.npz")  # c1 primed by c0
+
+
+# --- B'. SYNERGIES ---
+def _arm(label, delta):
+    return ArmResult(label, "l7_softplus", 5, None, None, None, None, None, delta, f"{label}.log")
+
+
+def test_measure_synergy_superadditive_is_compound():
+    ind = {"A": _arm("A", -0.0010), "B": _arm("B", -0.0005)}
+    combo = _arm("AB", -0.0020)   # better than the -0.0015 additive null
+    syn = measure_synergy(ind, combo, ("A", "B"))
+    assert syn.superadditive is True
+    assert abs(syn.synergy - (-0.0005)) < 1e-12
+
+
+def test_measure_synergy_subadditive_is_interference():
+    ind = {"A": _arm("A", -0.0010), "B": _arm("B", -0.0005)}
+    combo = _arm("AB", -0.0010)   # worse than the -0.0015 additive null -> interference
+    syn = measure_synergy(ind, combo, ("A", "B"))
+    assert syn.superadditive is False and syn.synergy > 0
+
+
+def test_measure_synergy_missing_delta_is_none():
+    ind = {"A": _arm("A", -0.001)}   # B missing
+    syn = measure_synergy(ind, _arm("AB", -0.002), ("A", "B"))
+    assert syn.synergy is None
+
+
+def test_synergy_map_and_select_compounding_combos():
+    from tac.witness_dsl import DirectionalBasis
+    ind = {"dir": _arm("dir", -0.0010), "uni": _arm("uni", -0.0005)}
+    combos = {("dir", "uni"): _arm("dir+uni", -0.0020)}   # compound
+    smap = synergy_map(ind, combos)
+    levers_by_label = {"dir": DirectionalBasis(), "uni": UniWARD()}
+    winners = select_synergistic_combos(smap, levers_by_label)
+    assert len(winners) == 1 and len(winners[0]) == 2   # the compounding (dir,uni) combo selected
+
+
+# --- D. SCALING = the curvelet coarse->fine multi-scale band climb ---
+def test_curvelet_scale_passes_coarse_to_fine_warm():
+    passes = curvelet_scale_passes((16.0, 32.0, 64.0), window=200, freq_across=48.0)
+    assert len(passes) == 3
+    assert passes[0].overrides["--max-bank-freq"] == 16.0    # coarse
+    assert passes[2].overrides["--max-bank-freq"] == 64.0    # fine
+    assert passes[0].overrides["--freq-across"] == 48.0      # anisotropy ratio (directional)
+    assert all(not p.is_fresh for p in passes)               # value-only -> warm-start safe
+
+
+def test_scale_progression_warm_chain_validates_and_parks_l7():
+    op = _opening()
+    passes = curvelet_scale_passes((32.0, 64.0), window=200)
+    progs = scale_progression(op, passes, start_resume_from="seed.npz", start_epoch=600,
+                              out_dir_prefix="experiments/results/curvelet")
+    assert [p.epochs for p in progs] == [800, 1000]
+    for p in progs:
+        assert p.flag_dict()["--l7-start-epoch"] == p.epochs   # l7 parked (finer-scale re-run)
+        assert p.validate() == []
+    assert progs[0].resume_from == "seed.npz"
+    assert progs[1].resume_from.endswith("levelset_resume_state.npz")  # warm chain
+
+
+def test_scale_progression_band_count_change_is_fresh():
+    # adding BANDS (--bank-n-scales) changes the feature count -> shape mismatch -> FRESH arm
+    fresh_pass = ScalePass("more_bands", window=200, overrides={"--bank-n-scales": 6})
+    assert fresh_pass.is_fresh is True
+    progs = scale_progression(_opening(), [fresh_pass], start_resume_from="seed.npz",
+                              start_epoch=600, out_dir_prefix="OUT")
+    assert progs[0].resume_from is None   # fresh (no warm-start shape crash)
+
+
+def test_max_bank_freq_is_warm_but_bank_n_scales_is_fresh():
+    assert ScalePass("a", 100, {"--max-bank-freq": 64.0}).is_fresh is False
+    assert ScalePass("b", 100, {"--bank-n-scales": 8}).is_fresh is True

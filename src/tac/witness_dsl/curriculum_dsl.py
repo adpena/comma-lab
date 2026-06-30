@@ -530,6 +530,42 @@ def DM1Minimal(beta: float = 0.01, window: int = 100) -> tuple[Lever, Lever]:  #
     return StiefelW(window=window), CodeSpectralEntropy(beta=beta, window=0)
 
 
+def MarginSaliency(weight: float = 1.0, start_epoch: int = 900,  # noqa: N802 — LEVER (KKT waterfill)
+                   tau: float = 0.5, target: float = 0.5, window: int = 100) -> Lever:
+    """Margin-saliency hinge (KKT waterfill on margin-saliency, `boundary_routing.py`) engaged
+    LATE (l7/Muon finetune; from-scratch margin starves the interior). Composes with ``UniWARD``
+    (the texture mask) + ``DirectionalBasis`` (the curvelet basis) in the synergy map. Carries a
+    warm-start ``window`` (else dead-arm when resumed at end-of-run, review C1)."""
+    return Lever("margin_saliency",
+                 overrides={"--margin-saliency-weight": weight,
+                            "--margin-saliency-start-epoch": start_epoch,
+                            "--margin-saliency-tau": tau,
+                            "--margin-saliency-target": target},
+                 epochs_delta=window,
+                 notes="KKT-waterfill margin-saliency hinge (late finetune)")
+
+
+def UniWARD(weight: float = 1.0, start_epoch: int = 900, beta: float = 4.0,  # noqa: N802 — LEVER-4
+            tau: float = 0.5, target: float = 0.5, window: int = 100) -> Lever:
+    """LEVER-4 (UniWARD inverse-steganalysis, Fridrich; BUILT + smoke-verified, `uniward_texture.py`
+    `compute_texture_probability` + `uniward_delta.py`): margin-saliency with the UNIWARD texture
+    DOWN-weight ``sal /= (1+beta*tex)`` (tex = stop-grad spatial-gradient energy of the realized
+    frame) -> let error HIDE in textured (SegNet-undetectable) regions, CONCENTRATE correctness on
+    the smooth boundary. On-theme: the contest IS inverse steganalysis. A LATE-STAGE (l7/Muon) A/B
+    arm; composes with ``MarginSaliency`` + ``DirectionalBasis`` (the curvelet directional basis) in
+    the synergy map. ``--margin-saliency-uniward`` is store_true -> emitted True ONLY (never False,
+    review C2). Carries a warm-start ``window`` (else dead-arm, review C1)."""
+    return Lever("LEVER4_uniward",
+                 overrides={"--margin-saliency-weight": weight,
+                            "--margin-saliency-start-epoch": start_epoch,
+                            "--margin-saliency-uniward": True,
+                            "--margin-saliency-uniward-beta": beta,
+                            "--margin-saliency-tau": tau,
+                            "--margin-saliency-target": target},
+                 epochs_delta=window,
+                 notes="UniWARD texture-masked margin-saliency (Fridrich; concentrate on smooth boundary)")
+
+
 # ---------------------------------------------------------------------------
 # The FIXED, KNOWN OPENING of the from-scratch openpilot-seeded d_seg curriculum.
 # (S0 seed -> S1 short-CE -> S2 tau_softplus). l7 + Muon are STACKED ADAPTIVELY by
