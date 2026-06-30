@@ -7061,3 +7061,51 @@ The fixed θ* OPENING (S0 seed -> CE -> tau) finished cleanly at ep600 (trainer 
 | l7 | ~ep700 (~100ep) | 0.004227 | conditioning (−1.9%) | ~100ep short tail |
 | Muon | (measuring) | — | finisher? | TBD |
 HARD GATE: NO n600/paid/exact-eval without operator go. Pointer UNMOVED 0.19110.
+
+## FEED-lw (2026-06-30) — DESIGN-REFINE θ*-residual-INR: residual-mode compose is NO-GO (geometry+rate); se(3) wired; mod-dim DERIVED [macOS-CPU advisory, NON-PROMOTABLE]
+Synthesis of the gauntlet 3-pass + se(3) lib (8b7529d68) + equations refresh (84a949775) + the
+$0 residual-ID/coverage MEASUREMENT (`experiments/results/design_refine_residual_coverage_id_20260630T225240Z/`).
+Memo: `.omx/research/design_refine_thetastar_residual_inr_20260630T230800Z.md`. **No GPU touched; live
+n600 full-partition run (pid 38641, ep100 d_seg 0.0071) untouched.**
+
+**DECISIVE MEASURED FIRE-BLOCKER — residual-mode (v2 compose) is NO-GO across the k* RD sweep (gt_n96, real store-canonical bulk through R + frozen CPU SegNet):**
+| k* | bulk d_seg floor | store_rate(proj600) | residual interior frac | union_d4 cov | unreachable_dseg | gate |
+|---|---|---|---|---|---|---|
+| 3 | 0.0276 | 0.0923 | 0.496 | 0.637 | **0.0100** | NO-GO |
+| 5 | 0.0321 | 0.0554 | 0.513 | 0.681 | 0.0103 | NO-GO |
+| 8 | 0.0369 | 0.0346 | 0.525 | 0.708 | 0.0108 | NO-GO |
+| 12 | 0.0481 | 0.0231 | 0.613 | 0.576 | 0.0204 | NO-GO |
+| 24 | 0.0899 | 0.0115 | 0.783 | 0.341 | 0.0593 | NO-GO |
+| 47 (default) | **0.1543** | 0.006 | **0.855** | 0.27 | 0.113 | NO-GO |
+- The deterministic warp-from-keyframes bulk has IRREDUCIBLE INTERIOR errors (moving objects, lane
+  dashes painted Road, warp drift) — ~50% of the residual sits >2px from ANY bulk boundary, so NO
+  GT-FREE composition mask (annulus/learn_classes/union, dilate≤8, even an ORACLE GT-lane-tube=22%)
+  reaches it. min unreachable_dseg ≈ **0.010** (×100 = **+1.0 in S**) and only shrinks by adding
+  keyframes (store rate → 0.055–0.092). Both axes are catastrophic. The `_BULK_DSEG_FLOOR=0.0185`
+  constant in `store_learn_split`/`measure_screw_reach` is the k=0 (un-warped keyframe) floor, NOT the
+  full warped-bulk floor (0.154 @ k*=47) — a calibration/assumption gap this MEASUREMENT closes.
+- **The "deterministic substrate for rate (cheap) + trained residual generator" HYBRID (FEED-ll) is
+  REFUTED as a COMPOSE mechanism.** The two "hybrids" are distinct: (1) the **structured-init** hybrid
+  (geometry as a TRAIN-TIME init; weights ship; the LIVE n600 run; WORKING @ 0.0071) vs (2) the
+  **residual-mode compose** hybrid (bulk GENERATED at decode OUTSIDE the weights; the rate hypothesis;
+  NO-GO here). The rate win does NOT come from compose-time bulk subtraction; it must come from the
+  full-partition witness path (smaller representation / distortion-quant of the trained weights).
+- **DERIVED (provisional on the current bulk; re-measure on the converged bulk):** residual-manifold
+  intrinsic dim TwoNN/MLE m≈4.3 (residual mask) / 10.0 (lane residual) → Whitney 2m+1 → residual
+  **mod-dim ≈ 19–21** (LOWER than the inherited 26) — the residual sub-manifold IS smaller, confirming
+  the autoconfig overfit=False floor (19), IF residual-mode were viable.
+- **se(3) WIRED (verified-equivalence):** `tac.lie` is the canonical tested oracle; the compress-side
+  warp (`measure_pose_warp_dseg._expmap_so3` + `measure_screw_reach._m_step` ground/rotonly regimes)
+  is now PARITY-GATED against it (`src/tac/tests/test_warp_se3_parity.py`, 4 green, max|Δ|<1e-10). The
+  mlx-free inflate.py template stays self-contained (no mlx-at-decode); parity is transitive via the
+  existing train==inflate tests. Screw-blend / SE(3) B-spline / ground-frame canonicalization remain
+  DESIGN-LEVEL (change the residual_target; bounded follow-on) and are MOOT while residual-mode is NO-GO.
+- **TRIALITY consistent:** equations (7 new, registered 84a949775) ↔ DSL gauge layer (WarpGauge.SCREW_TWIST,
+  ResidualGauge.CONDITIONAL_ON_LANE_PRIOR = Wyner-Ziv X−E[X|Y] Y=free centerline [the principled home for
+  the lane-residual fix the measurement motivates], MovablesGauge.STORE, PoseGauge.*, se3_bspline/screw_blend
+  consumers) ↔ DAG (this FEED). The residual command is flag-validated (mod-dim 19, full proven curriculum;
+  build_residual_only_command all_flags_valid=True) but **HELD NO-GO** by the coverage gate.
+- **OPERATOR DECISION:** do NOT fire a residual-mode run (geometry+rate blocked). Continue the LIVE
+  full-partition witness; aim the rate lever at quantization/smaller-representation of the trained
+  witness weights (per [[session-20260630]] "RATE binding; v2-done-right OR distortion-quant"). HARD
+  GATE unchanged: pointer UNMOVED 0.19110.
