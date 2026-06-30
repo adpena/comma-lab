@@ -138,6 +138,31 @@ Build the AMBITIOUS corner increment that attacks RATE first (the only blocker):
 3. Compose: shared canonical (coded) + trajectory + homography warp + tiny
    lane/movables residual -> byte-close at n600 -> real exact eval.
 
+## Method note: real reduced-n through the ACTUAL upstream evaluate.py
+
+A sister audit flagged that `upstream/evaluate.py:78` asserts
+`batch_gt.shape == batch_comp.shape`, so a capped `.raw` (n pairs) vs the full
+1200-frame `0.mkv` GT would mismatch — concluding reduced-n needs a separately
+truncated GT video. **This smoke found the cleaner solution: pass
+`--batch-size n`.** Then dl_comp yields exactly ONE batch of n, dl_gt's first
+batch is also n, `zip(dl_gt,dl_comp)` stops after that one matching batch -> the
+real `evaluate.py` scores the first n GT pairs with NO GT truncation. EMPIRICAL
+PROOF it is sound: store_raw n24 (render==GT[:24]) -> d_seg=0, d_pose=0 exactly.
+This makes the batch-size=n trick a real reduced-n harness through the TRUE
+evaluator (more authoritative for small-n than the frozen-CPU-torch advisory
+paths in `tools/{witness,levelset}_byte_close_and_eval.py --max-pairs --gt-cache`,
+which do NOT use upstream/evaluate.py).
+
+Canonical byte-close CLIs for the next build (sister audit): RGB witness full
+output `tools/witness_byte_close_and_eval.py` (magic WTNS1); level-set successor
+with small-n hooks `tools/levelset_byte_close_and_eval.py --gt-cache gt_n6.npz
+--max-pairs N` (magic LVLS1); the L13/"SCNV1" score-native grammar reference at
+`experiments/results/score_native_candidate_20260610/inflate.py`; the full
+exact-eval driver `experiments/contest_auth_eval.py --archive --inflate-sh
+--device {cpu,cuda}` (no --max-pairs; full 0.mkv only). Cleanest generating
+inflate.py examples: `submissions/nscs02_downsampled_renderer/inflate.py`,
+`submissions/sane_hnerv/inflate.py`.
+
 ## Reproduce
 
 ```
