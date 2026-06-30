@@ -157,6 +157,191 @@ def _resolve_watched_log(log: str | None, log_glob: str | None) -> Path | None:
     return verdict_logs[-1]
 
 
+def _is_run_log(path: Path) -> bool:
+    """True iff the file is a WITNESS RUN log (verdict-bearing OR still warming up).
+
+    The run-identity marker is the trainer's early ``{"stage": "gt"}`` line, emitted
+    a few seconds after launch — BEFORE the first verdict epoch. A verdict line also
+    qualifies (verdict-bearing is trivially a run log). This is the warming-up
+    sibling of ``_has_verdict``: it recognizes a run that is still in
+    ``structured_init`` (0 verdicts) while still EXCLUDING the dashboard's own daemon
+    log / any non-run log (no ``gt`` and no ``verdict`` line)."""
+    try:
+        if not path.is_file():
+            return False
+        for line in path.read_text(errors="replace").splitlines():
+            if '"stage": "gt"' in line or '"stage":"gt"' in line:
+                return True
+            if '"stage": "verdict"' in line or '"stage":"verdict"' in line:
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def _resolve_run_log(log: str | None, log_glob: str | None) -> Path | None:
+    """Resolve the NEWEST-mtime WITNESS RUN log (verdict-bearing OR warming up).
+
+    Mirror of ``_resolve_watched_log`` but keyed on ``_is_run_log`` instead of
+    ``_has_verdict``, so a freshly-launched run that has not yet emitted a verdict
+    (still in ``structured_init``) is surfaced IMMEDIATELY rather than being invisible
+    until its first verdict epoch (~ep25, ~45 min later). Explicit ``--log`` wins.
+    Ties on mtime break deterministically by filename (lexicographically last)."""
+    if log:
+        return Path(log)
+    if not log_glob:
+        return None
+    run_logs = [Path(p) for p in _glob.glob(log_glob) if _is_run_log(Path(p))]
+    if not run_logs:
+        return None
+    run_logs.sort(key=lambda p: (p.stat().st_mtime, p.name))
+    return run_logs[-1]
+
+
+# ─────────────────── run CONFIG + CURRICULUM SCHEDULE (full observability) ───────────────────
+# Curated display groups: which parsed launch.sh flags belong in which panel section.
+# Generalizable — any flag NOT listed is still kept in ``flags`` (raw), it just is not
+# placed in a named display group.
+_CONFIG_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("architecture", ("mod-dim", "hidden-dim", "n-hidden", "activation",
+                       "hosc-beta", "hosc-omega", "siren-init", "render-h", "render-w")),
+    ("basis", ("self-orient", "n-dir-freqs", "freq-across", "freq-along",
+               "max-bank-freq", "reorient-every", "chroma", "palette-anchor")),
+    ("optimizer", ("muon-lr", "muon-momentum", "muon-ns-steps", "grad-clip",
+                   "accum-pairs", "ema-decay", "softmax-temp-start", "softmax-temp-end")),
+    ("seed", ("seed", "structured-init", "structured-init-include-lane",
+              "lane-prior-phi1", "lane-prior-phi1-mode", "lane-prior-phi1-dash-gate")),
+    ("regularizers", ("eikonal-weight", "length-weight",
+                      "stage-transition-rewarmup-epochs", "stage-transition-rewarmup-floor",
+                      "stage-transition-rewarmup-shape", "stage-transition-reset-moments")),
+    ("loss", ("w-seg", "w-pose", "score-domain-loss", "tau-softplus-tau",
+              "num-pairs", "verdict-pairs")),
+)
+
+# run.log config-bearing stage lines used for the launch.sh-absent fallback.
+_CONFIG_STAGE_LINES = ("gt", "front_end", "custom_grouped_backward", "palette_anchor",
+                       "lane_prior_phi1", "structured_init", "stem_nyquist")
+
+
+def _parse_launch_sh_flags(text: str) -> dict:
+    """Parse ``--flag [value]`` pairs out of a launch.sh trainer invocation.
+
+    Generalizable token walk: a ``--flag`` followed by a non-flag token takes that
+    token as its value; a ``--flag`` followed by another ``--flag`` (or EOL) is a
+    boolean ``True``; ``--flag=value`` is split. Leading env assignments and the
+    python/script path (tokens not starting with ``--``) are ignored. NEVER raises —
+    a malformed script yields whatever parsed cleanly."""
+    toks: list[str] = []
+    for raw in text.splitlines():
+        s = raw.strip()
+        if s.endswith("\\"):
+            s = s[:-1].strip()
+        if not s or s.startswith("#"):
+            continue
+        toks.extend(t for t in s.split() if t)
+    flags: dict = {}
+    i = 0
+    while i < len(toks):
+        t = toks[i]
+        if t.startswith("--"):
+            key = t[2:]
+            if "=" in key:
+                k, v = key.split("=", 1)
+                flags[k] = v
+            elif i + 1 < len(toks) and not toks[i + 1].startswith("--"):
+                flags[key] = toks[i + 1]
+                i += 1
+            else:
+                flags[key] = True
+        i += 1
+    return flags
+
+
+def _int_flag(flags: dict, key: str):
+    v = flags.get(key)
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _schedule_from_flags(flags: dict) -> dict:
+    """Curriculum stage epoch-boundaries from the trainer flags. Builds the ordered
+    CE / tau / l7 / Muon stages from whatever boundary flags are present (future
+    stages included, so the full schedule is visible up front). All boundaries None
+    -> empty stages (the client then shows only what it can)."""
+    epochs = _int_flag(flags, "epochs")
+    eval_every = _int_flag(flags, "eval-every")
+    tau_start = _int_flag(flags, "tau-softplus-start-epoch")
+    l7_start = _int_flag(flags, "l7-start-epoch")
+    muon_start = _int_flag(flags, "muon-start-epoch")
+    bounds = [("CE", 0, tau_start), ("tau", tau_start, l7_start),
+              ("l7", l7_start, muon_start), ("Muon", muon_start, epochs)]
+    stages = [{"name": n, "start": a, "end": b} for (n, a, b) in bounds if a is not None]
+    return {"epochs": epochs, "eval_every": eval_every,
+            "curriculum": ("curriculum" in flags),
+            "tau_start": tau_start, "l7_start": l7_start, "muon_start": muon_start,
+            "stages": stages}
+
+
+def _stage_lines_from_run_log(run_dir: Path) -> list:
+    """Fallback config: the config-bearing ``{"stage": ...}`` JSON lines from the
+    run's primary log. Returns ``[[stage, dict], ...]``."""
+    cand = _resolve_run_log(None, str(Path(run_dir) / "*.log"))
+    if cand is None:
+        return []
+    out = []
+    try:
+        for line in cand.read_text(errors="replace").splitlines():
+            if '"stage"' not in line:
+                continue
+            try:
+                d = json.loads(line.strip())
+            except Exception:
+                continue
+            if d.get("stage") in _CONFIG_STAGE_LINES:
+                out.append([d.get("stage"), d])
+    except Exception:
+        return out
+    return out
+
+
+def parse_run_config(run_dir) -> dict:
+    """Parse the run's CONFIG + CURRICULUM SCHEDULE for the dashboard, AUTOMATICALLY,
+    from the run's OWN artifacts — so it generalizes to ANY future run with zero
+    hand-config. Source of truth = ``<run_dir>/launch.sh`` (the full flag-validated
+    command); falls back to the run.log structured-stage emissions when launch.sh is
+    absent. Returns a JSON-able ``{source, flags, groups, schedule, stages?}``.
+    NEVER raises."""
+    out = {"source": "none", "flags": {}, "groups": {}, "schedule": {}}
+    if run_dir is None:
+        return out
+    run_dir = Path(run_dir)
+    flags: dict = {}
+    launch = run_dir / "launch.sh"
+    if launch.is_file():
+        try:
+            flags = _parse_launch_sh_flags(launch.read_text(errors="replace"))
+            if flags:
+                out["source"] = "launch.sh"
+        except Exception:
+            flags = {}
+    if not flags:
+        stages = _stage_lines_from_run_log(run_dir)
+        if stages:
+            out["source"] = "run.log"
+            out["stages"] = stages
+    out["flags"] = flags
+    groups: dict = {}
+    for gname, keys in _CONFIG_GROUPS:
+        rows = [[k, flags[k]] for k in keys if k in flags]
+        if rows:
+            groups[gname] = rows
+    out["groups"] = groups
+    out["schedule"] = _schedule_from_flags(flags)
+    return out
+
+
 def _fmt_age(seconds: float | None) -> str:
     if seconds is None:
         return "?"

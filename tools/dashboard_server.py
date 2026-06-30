@@ -46,6 +46,7 @@ import asyncio
 import contextlib
 import hmac
 import json
+import math
 import os
 import sys
 import time
@@ -67,6 +68,16 @@ from starlette.routing import Route, WebSocketRoute  # noqa: E402
 from starlette.websockets import WebSocket, WebSocketDisconnect  # noqa: E402
 
 POINTER = 0.19110  # frontier pointer (contest-CPU), UNMOVED — advisory only here
+
+# Telemetry accuracy (operator 2026-06-30, "confident-wrong is the worst failure"):
+# the witness trains d_seg ONLY (``--w-pose 0``); the verdict's ``d_pose`` (~163
+# early) is MONITORING-ONLY. At DEPLOY, pose rides the SOLVED Quantizr stored-pose
+# sidecar (d_pose ~3.4e-5), so the honest implied_S uses the SIDECAR pose, not the
+# untrained monitoring pose (which would inflate S by ~40 via the sqrt(10·d_pose)
+# term — the misleading ~69). The DISPLAYED implied_S is recomputed with this
+# constant; the raw monitoring values stay visible + explicitly labeled.
+DEPLOY_SIDECAR_D_POSE = 3.4e-5      # solved stored-pose sidecar (the DEPLOY pose)
+_ARCHIVE_NORM_BYTES = 37_545_489   # contest rate-term normalizer (25·bytes/N)
 
 
 # ───────────────────────────── config ─────────────────────────────
@@ -123,13 +134,37 @@ def config_from_env() -> Config:
     )
 
 
-_TRAJ_KEYS = ("epoch", "d_seg", "d_pose", "blob_bytes", "implied_S", "ts")
+_TRAJ_KEYS = ("epoch", "d_seg", "d_pose", "blob_bytes", "implied_S",
+              "implied_S_monitoring", "ts")
+
+
+def _implied_s_deploy(d_seg, blob_bytes):
+    """Honest implied_S using the DEPLOY stored-pose sidecar (d_pose ~3.4e-5), NOT
+    the untrained monitoring pose. ``100·d_seg + sqrt(10·d_pose_sidecar) +
+    25·bytes/N``. Returns None when d_seg / blob_bytes are missing."""
+    if d_seg is None or blob_bytes is None:
+        return None
+    try:
+        return (100.0 * float(d_seg)
+                + math.sqrt(10.0 * DEPLOY_SIDECAR_D_POSE)
+                + 25.0 * float(blob_bytes) / _ARCHIVE_NORM_BYTES)
+    except (TypeError, ValueError):
+        return None
 
 
 def _slim(row: dict) -> dict:
     """Keep only the trajectory fields the client charts need (no leaking of the
-    full verdict dict). Numbers stay numeric; missing keys become None."""
-    return {k: row.get(k) for k in _TRAJ_KEYS}
+    full verdict dict). The DISPLAYED ``implied_S`` is recomputed with the deploy
+    stored-pose sidecar (telemetry accuracy — the verdict's own implied_S is
+    dominated by the monitoring pose); the trainer's raw value is preserved as
+    ``implied_S_monitoring`` for transparency. Numbers stay numeric; missing keys
+    become None."""
+    out = {k: row.get(k) for k in ("epoch", "d_seg", "d_pose", "blob_bytes", "ts")}
+    raw_s = row.get("implied_S")
+    out["implied_S_monitoring"] = raw_s
+    dep = _implied_s_deploy(out.get("d_seg"), out.get("blob_bytes"))
+    out["implied_S"] = dep if dep is not None else raw_s
+    return out
 
 
 def _pid_alive(pid: int) -> bool:
@@ -271,6 +306,8 @@ class LiveState:
         self.watched_dir: str | None = None  # live arm dir (auto-latest); shown as run_dir
         self.muon_start: int | None = None    # inferred l7 -> Muon boundary (additive meta)
         self.n_pairs: int | None = None       # N for this run (n200 DOE pilot / n600 scored)
+        self.warming_up: bool = False         # live run resolved but no verdict yet (structured-init)
+        self.run_config: dict = {}            # parsed launch.sh/run.log config + curriculum schedule
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
         # cadence sub-state (per-log), persisted to disk like render_levelset_dashboard
@@ -283,10 +320,36 @@ class LiveState:
         rebuild the FULL trajectory (CE->tau->l7->muon...) — not just the post-resume
         tail. Liveness reflects the live (latest) arm. Returns NEW points for WS deltas."""
         cfg = self.cfg
-        latest = rld._resolve_watched_log(None, cfg.resolved_glob())
-        # FULL trajectory across the warm-start chain (de-dup by epoch; later arm wins
-        # at boundary collisions since the chain is ordered root..latest).
-        chain = _resume_chain_logs(latest)
+        glob = cfg.resolved_glob()
+        verdict_latest = rld._resolve_watched_log(None, glob)  # newest VERDICT-bearing
+        run_latest = rld._resolve_run_log(None, glob)          # newest RUN log (verdict OR warming up)
+        # LIVE-RUN observability (Deliverable 1): a freshly-launched run emits its
+        # config stages (gt / front_end / structured_init ...) for seconds-to-minutes
+        # BEFORE its first verdict epoch. Without this, that run is INVISIBLE (the
+        # dashboard stays latched on the previous verdict-bearing arm until ~ep25,
+        # ~45 min later). When the newest RUN log is strictly newer than the newest
+        # VERDICT-bearing log AND carries no verdict of its own, FOLLOW IT NOW: meta +
+        # liveness reflect it; its own (empty) trajectory renders as "warming up".
+        # This re-resolves EVERY refresh tick, so ALL future launches auto-appear with
+        # no manual repoint/reload (only NEW dashboard CODE needs a reload).
+        warming = False
+        if run_latest is not None and not rld._has_verdict(run_latest):
+            if verdict_latest is None:
+                warming = True
+            else:
+                try:
+                    warming = run_latest.stat().st_mtime >= verdict_latest.stat().st_mtime
+                except OSError:
+                    warming = True
+        if warming:
+            latest = run_latest
+            chain = [run_latest]              # its own (0) verdicts — never a foreign trajectory
+        else:
+            latest = verdict_latest
+            # FULL trajectory across the warm-start chain (de-dup by epoch; later arm wins
+            # at boundary collisions since the chain is ordered root..latest).
+            chain = _resume_chain_logs(latest)
+        self.warming_up = warming
         merged: dict[int, dict] = {}
         for lg in chain:
             for r in rld._parse_verdicts(lg):
@@ -326,6 +389,14 @@ class LiveState:
         self.watched = latest.name if latest is not None else None
         self.watched_dir = str(latest.parent) if latest is not None else None
 
+        # CONFIG + CURRICULUM SCHEDULE (full observability): parse the live run's OWN
+        # artifacts (launch.sh primary, run.log stages fallback) — generalizable to
+        # ANY future run with zero hand-config (operator "automatically in the future").
+        try:
+            self.run_config = rld.parse_run_config(latest.parent if latest is not None else None)
+        except Exception:
+            self.run_config = {"source": "none", "flags": {}, "groups": {}, "schedule": {}}
+
         # Rebuild trajectory from the full chain each tick (cheap; few hundred points).
         # new_points = epochs not yet pushed to WS clients (snapshot carries the full set).
         new_points = [p for p in rows_full
@@ -338,16 +409,27 @@ class LiveState:
     # ---- snapshot for client ----
     def meta(self) -> dict:
         cfg = self.cfg
+        sched = (self.run_config or {}).get("schedule", {}) or {}
+        # Curriculum boundaries: prefer the run's OWN flags (the actual schedule) over
+        # the dashboard launch defaults; Muon boundary from the resume ancestry OR the
+        # --muon-start-epoch flag (from-scratch curriculum runs have no resume).
+        tau = sched.get("tau_start") if sched.get("tau_start") is not None else cfg.tau
+        l7 = sched.get("l7_start") if sched.get("l7_start") is not None else cfg.l7
+        muon = self.muon_start if self.muon_start is not None else sched.get("muon_start")
         return {
-            "tau": cfg.tau, "l7": cfg.l7,
+            "tau": tau, "l7": l7,
             "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
             "pointer": POINTER, "watched": self.watched,
             "run_dir": self.watched_dir or cfg.run_dir,  # auto-latest: the live arm dir
             "uptime_s": time.time() - self.started_at,
             "training_alive": _training_alive(cfg.training_pid, cfg.training_sig),
             "n_points": len(self.trajectory),
-            "muon_start": self.muon_start,  # additive: inferred l7 -> Muon boundary epoch
+            "muon_start": muon,             # l7 -> Muon boundary (ancestry OR curriculum flag)
             "n_pairs": self.n_pairs,        # additive: N (n200 DOE pilot / n600 scored)
+            "warming_up": self.warming_up,  # live run resolved, no verdict yet (structured-init)
+            "config": self.run_config or {},          # parsed setup/config + groups
+            "schedule": sched,                         # curriculum stage epoch-boundaries
+            "deploy_sidecar_d_pose": DEPLOY_SIDECAR_D_POSE,  # implied_S pose term basis
         }
 
     def snapshot(self) -> dict:
@@ -626,6 +708,25 @@ opacity:0;transition:opacity .12s ease;font-variant-numeric:tabular-nums}
   .nbest,.nbest.show{transition:none;animation:none}
   .pill.beat{animation:none}
 }
+
+/* setup / config / schedule / curriculum panel (full observability) */
+.cfg{background:var(--panel2);border:1px solid var(--line);border-radius:12px;margin:0 0 16px}
+.cfg>summary{cursor:pointer;list-style:none;padding:11px 14px;font-size:11px;font-weight:700;
+color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
+.cfg>summary::-webkit-details-marker{display:none}
+.cfg>summary::before{content:"\25B8  ";color:var(--muted)}
+.cfg[open]>summary::before{content:"\25BE  "}
+.cfgbody{padding:2px 14px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media(min-width:680px){.cfgbody{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cfgsec{min-width:0}
+.cfgsec.full{grid-column:1/-1}
+.cfgh{font-size:10px;color:var(--acc);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+.cfgrows{display:flex;flex-direction:column;gap:3px}
+.cfgrow{display:flex;justify-content:space-between;gap:14px;font-size:12px;min-width:0}
+.cfgk{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;min-width:0}
+.cfgv{color:var(--fg2);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cdot{width:9px;height:9px;border-radius:2px;display:inline-block;flex:0 0 auto}
+.cfgmeta{font-size:11px;color:var(--faint2);margin-top:6px}
 .hide{display:none}
 </style></head>
 <body><div class="wrap">
@@ -665,7 +766,7 @@ opacity:0;transition:opacity .12s ease;font-variant-numeric:tabular-nums}
     <div class="stat">
       <span class="slabel">implied_S <span class="trend fl" id="s_trend">&middot;</span></span>
       <span class="sval2" id="s_val">&mdash;</span>
-      <span class="ssub adv">advisory est.</span>
+      <span class="ssub adv">advisory &middot; d_seg + sidecar pose + rate</span>
     </div>
   </div>
   <div class="status" id="status">connecting&hellip;</div>
@@ -680,6 +781,10 @@ opacity:0;transition:opacity .12s ease;font-variant-numeric:tabular-nums}
     <span class="sc"><span class="dot" style="background:#ffd24a;border-radius:50%"></span>best</span>
   </div>
   <div class="proj" id="proj"><div id="proj_seg">&nbsp;</div><div class="proj2" id="proj_s">&nbsp;</div></div>
+  <details class="cfg" id="cfgpanel" open>
+    <summary id="cfgsum">setup &middot; config &middot; schedule &middot; curriculum</summary>
+    <div class="cfgbody" id="cfgbody"><div class="cfgmeta">parsing run config&hellip;</div></div>
+  </details>
   <div class="grid">
     <div class="panel"><canvas id="c_dseg" role="img" aria-label="d_seg chart"></canvas></div>
     <div class="panel"><canvas id="c_dpose" role="img" aria-label="d_pose chart"></canvas></div>
@@ -849,8 +954,10 @@ function drawPanel(canvas, key, opt){
   // data
   const pts=TRAJ.map(d=>[d.epoch,d[key]]).filter(p=>p[0]!=null&&p[1]!=null&&isFinite(p[1]));
   const log=!!opt.log;
-  // x range
-  let xmin=0, xmax=Math.max(META.l7||BOOT.l7, ...(pts.map(p=>p[0])), 1);
+  // x range — extend to the FULL curriculum horizon (schedule.epochs) so all 4
+  // stage bands (incl. the FUTURE Muon band) are visible up front, not just up to l7.
+  const schedEnd=(META.schedule&&META.schedule.epochs)||0;
+  let xmin=0, xmax=Math.max(META.l7||BOOT.l7, schedEnd, ...(pts.map(p=>p[0])), 1);
   if(xmax<=xmin) xmax=xmin+1;
   // y range over data + hlines
   let yvals=pts.map(p=>p[1]);
@@ -962,13 +1069,14 @@ function drawAll(){
     sub:"epoch · log scale · ★ best · goal lines = sub-0.19 / sub-0.15",color:"#5ab0ff",log:true,fmt:fS,
     star:star,starGlow:_celebrating,
     hlines:[{y:g,label:"sub-0.19  "+sig(g,4),color:"#46d369"},{y:g15,label:"sub-0.15  "+sig(g15,4),color:"#ffb454"}]});
-  drawPanel($("c_dpose"),"d_pose",{title:"d_pose — realized PoseNet MSE (pose on sidecar)",
-    sub:"epoch · log scale · existence-proof ~0.0009",color:"#ffb454",log:true,fmt:fP,
-    hlines:[{y:0.0009,label:"~0.0009",color:"#46d369"}]});
+  const sidePose=(META.deploy_sidecar_d_pose!=null)?META.deploy_sidecar_d_pose:0.000034;
+  drawPanel($("c_dpose"),"d_pose",{title:"d_pose — MONITORING ONLY (witness trains d_seg, --w-pose 0)",
+    sub:"epoch · log · deploy pose = stored sidecar ~"+sig(sidePose,2)+" (NOT this curve)",color:"#ffb454",log:true,fmt:fP,
+    hlines:[{y:sidePose,label:"deploy sidecar "+sig(sidePose,2),color:"#46d369"}]});
   drawPanel($("c_bytes"),"blob_bytes",{title:"blob_bytes — LEARNED payload (counted in archive)",
     sub:"epoch · smaller payload = lower rate term",color:"#c08cff",log:false,fmt:fI,hlines:[]});
-  drawPanel($("c_s"),"implied_S",{title:"implied_S — ADVISORY mid-training estimate (NOT the contest score)",
-    sub:"epoch · log scale · frontier pointer = 0.19110",color:"#ff6b6b",log:true,fmt:fSv,
+  drawPanel($("c_s"),"implied_S",{title:"implied_S — ADVISORY est. (d_seg + DEPLOY sidecar pose + rate)",
+    sub:"epoch · log · uses sidecar pose ~"+sig(sidePose,2)+", not monitoring d_pose · pointer 0.19110",color:"#ff6b6b",log:true,fmt:fSv,
     hlines:[{y:META.pointer||BOOT.pointer,label:"pointer 0.19110",color:"#46d369"}]});
   updateAria();
 }
@@ -1014,7 +1122,10 @@ function render(){
     else if(n===600){nb.className="nbadge scored";nb.textContent="n=600 · scored";}
     else{nb.className="nbadge other";nb.textContent="n="+n;}
   }
-  const rd=$("rdinfo"); if(rd)rd.textContent=META.run_dir?("watching "+META.run_dir):"resolving run…";
+  const rd=$("rdinfo"); if(rd){
+    if(!META.run_dir){rd.textContent="resolving run…";}
+    else{rd.textContent="watching "+META.run_dir+(META.warming_up?" · warming up (structured-init, no verdict yet)":"");}
+  }
   // headline stat cells - raw numbers in discrete cells; down=good arrows on all four
   if(last){
     $("d_seg_val").textContent=sig(last.d_seg,5);
@@ -1030,6 +1141,7 @@ function render(){
   const muOn=(META.muon_start!=null);
   document.querySelectorAll('#slegend .sc[data-st="muon"]').forEach(el=>el.classList.toggle("off",!muOn));
   renderProjection(g);
+  renderConfig();
   // status
   const ep=LIVE.last_epoch;
   let st=[];
@@ -1078,6 +1190,49 @@ function renderProjection(g){
       (es.state==="eta")?("~"+fmtInt(es.epochs)+" ep"):"?";
     sEl.innerHTML="implied_S (advisory) → pointer 0.19110: <b>"+t+"</b> · current "+sig(ls,4);
   } else { sEl.textContent=" "; }
+}
+
+// setup / config / schedule / curriculum panel — rendered from META.config + META.schedule
+// (parsed server-side from the run's OWN launch.sh / run.log; generalizable to any run)
+function escHtml(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function renderConfig(){
+  const body=$("cfgbody"), sum=$("cfgsum"); if(!body)return;
+  const cfg=META.config||{}, sched=(META.schedule||cfg.schedule||{});
+  const groups=cfg.groups||{};
+  const stageCol={CE:"#5ab0ff",tau:"#b08cff",l7:"#ffa454",Muon:"#46d3a0"};
+  let html="";
+  // curriculum schedule (full width)
+  const stages=sched.stages||[];
+  if(stages.length){
+    html+="<div class='cfgsec full'><div class='cfgh'>curriculum schedule</div><div class='cfgrows'>";
+    stages.forEach(s=>{
+      const end=(s.end!=null)?s.end:"…";
+      html+="<div class='cfgrow'><span class='cfgk'><span class='cdot' style='background:"+
+        (stageCol[s.name]||"#888")+"'></span>"+escHtml(s.name)+"</span><span class='cfgv'>ep ["+
+        s.start+", "+end+")</span></div>";
+    });
+    html+="</div>";
+    const m2=[];
+    if(sched.epochs!=null)m2.push("total "+sched.epochs+" ep");
+    if(sched.eval_every!=null)m2.push("eval every "+sched.eval_every+" ep");
+    if(LIVE.next_eta_s!=null)m2.push("next verdict ~"+fmtAge(LIVE.next_eta_s));
+    if(m2.length)html+="<div class='cfgmeta'>"+escHtml(m2.join(" · "))+"</div>";
+    html+="</div>";
+  }
+  // config groups
+  ["architecture","basis","optimizer","seed","regularizers","loss"].forEach(gn=>{
+    const rows=groups[gn]; if(!rows||!rows.length)return;
+    html+="<div class='cfgsec'><div class='cfgh'>"+escHtml(gn)+"</div><div class='cfgrows'>";
+    rows.forEach(kv=>{let v=kv[1]; if(v===true)v="on"; if(v===false)v="off";
+      html+="<div class='cfgrow'><span class='cfgk'>"+escHtml(kv[0])+"</span><span class='cfgv'>"+escHtml(v)+"</span></div>";});
+    html+="</div></div>";
+  });
+  if(!html){
+    html="<div class='cfgmeta'>"+(META.warming_up?"warming up — run config loading…":"config not yet available")+"</div>";
+  }
+  body.innerHTML=html;
+  if(sum){const src=cfg.source&&cfg.source!=="none"?(" · from "+cfg.source):"";
+    sum.textContent="setup · config · schedule · curriculum"+src;}
 }
 
 // new-best d_seg celebration (tasteful; respects reduced-motion via CSS)

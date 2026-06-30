@@ -78,7 +78,7 @@ def test_refresh_returns_only_new_points():
     with tempfile.TemporaryDirectory() as d:
         log = Path(d) / "run.log"
         _write(log, [_verdict(0, 0.7), _verdict(25, 0.3)])
-        cfg = ds.Config(run_dir=d, poll=1.0,
+        cfg = ds.Config(run_dir=d, poll=1.0, auto_latest=False,
                         cadence_state=str(Path(d) / "cad.json"))
         state = ds.LiveState(cfg)
         first = state.refresh()
@@ -101,7 +101,7 @@ def test_refresh_slims_to_traj_keys_only():
         row["axis"] = "[macOS-CPU advisory] NON-PROMOTABLE"
         row["secret_internal"] = "should-not-ship"
         _write(log, [row])
-        cfg = ds.Config(run_dir=d, cadence_state=str(Path(d) / "cad.json"))
+        cfg = ds.Config(run_dir=d, auto_latest=False, cadence_state=str(Path(d) / "cad.json"))
         state = ds.LiveState(cfg)
         pts = state.refresh()
         assert "secret_internal" not in pts[0]
@@ -112,7 +112,7 @@ def test_snapshot_and_meta_shape():
     with tempfile.TemporaryDirectory() as d:
         log = Path(d) / "run.log"
         _write(log, [_verdict(0, 0.7)])
-        cfg = ds.Config(run_dir=d, tau=300, l7=600, cadence_state=str(Path(d) / "cad.json"))
+        cfg = ds.Config(run_dir=d, tau=300, l7=600, auto_latest=False, cadence_state=str(Path(d) / "cad.json"))
         state = ds.LiveState(cfg)
         state.refresh()
         snap = state.snapshot()
@@ -125,7 +125,7 @@ def test_snapshot_and_meta_shape():
 
 def test_missing_log_is_graceful():
     with tempfile.TemporaryDirectory() as d:
-        cfg = ds.Config(run_dir=d, cadence_state=str(Path(d) / "cad.json"))
+        cfg = ds.Config(run_dir=d, auto_latest=False, cadence_state=str(Path(d) / "cad.json"))
         state = ds.LiveState(cfg)
         assert state.refresh() == []
         assert state.snapshot()["liveness"]["kind"] == "missing"
