@@ -70,14 +70,29 @@ de-risked the eval apparatus so the ambitious build is measurable identically.
 
 ## Scope: what's built vs build-gated (in-tree audit)
 
-[FOLD-IN from parallel Explore agents — pending] The boundary_math modules
-(amortized_luma_carrier, lane_sdf_component, hood_static_component,
-road_horizon_component, contour_codec, context_partition_codec) + witness_dsl +
-the L13 format + task #107/#163 byte-close tooling are the candidate substrate
-for the ambitious build. The v2 6-section codec FLAGS are build-gated DESIGN
-(FEED-kk). This PHASE-1 smoke used a self-contained throwaway codec
-(`experiments/v2_witness_byteclose_smoke.py`) precisely because the full v2
-codec is not yet flag-exposed.
+The ambitious corner's PRIMITIVES already exist in-tree — the missing piece is
+the COMPOSITION into a byte-closed n600 archive, NOT from-scratch geometry:
+
+- **Real ground-homography warp**: `src/tac/calibrated_geometry.py`
+  (`CalibratedGeometry` with pinned comma.ai EON intrinsics @ 384x512;
+  `homography_to_pose` / Faugeras decomposition / `make_pixel_grid` /
+  `compose_pose_from_decomposition`) + `src/tac/se3.py` (`exp_map_se3` /
+  `log_map_se3` / geodesic). This is the real pose<->homography<->pixel-warp
+  machinery that REPLACES the d_pose=190 crude integer roll.
+- **Real residual entropy coder**: `src/tac/lossless/range_coder.py`
+  (`RangeEncoder` / `RangeDecoder` / `encode_static_symbols`) = the FEED-ko
+  coding path for the lane-survival + movables sidecar.
+- **Canonical byte-close+eval harness**: `experiments/contest_auth_eval.py`
+  (`--archive --inflate-sh --upstream-dir --video-names-file --device {cpu,cuda}
+  --json-out --work-dir`) — the proper tool for the next build (handles custody;
+  this smoke used a self-contained throwaway codec
+  `experiments/v2_witness_byteclose_smoke.py` for speed). Note: upstream
+  `evaluate.sh` calls bare `python` (PATH miss locally) — run `evaluate.py`
+  directly with the venv python, or use `contest_auth_eval.py`.
+- **Witness substrate**: boundary_math (amortized_luma_carrier, lane_sdf,
+  hood_static, road_horizon, contour_codec, context_partition_codec) + witness_dsl
+  + the L13 format. The v2 6-section codec FLAGS remain build-gated DESIGN (FEED-kk);
+  composition is what's unbuilt, not the parts.
 
 ## Next unit (aimed at a real exact row that could move the pointer)
 
