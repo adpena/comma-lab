@@ -79,6 +79,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import re
 import struct
 import subprocess
 import sys
@@ -95,12 +97,22 @@ for _p in (_REPO, _REPO / "src", _REPO / "experiments", _REPO / "upstream"):
         sys.path.insert(0, str(_p))
 
 import train_witness_realized_through_R_mlx as twr  # noqa: E402  (frozen CPU-torch verdict + GT + R)
+
 from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     CurveletBankConfig,
     _int8_symmetric,
     curvelet_directional_B,
+    levelset_rgb_forward_numpy,
     quantize_levelset_blob,
 )
+from tac.local_acceleration import torch_levelset_inflate as _tli  # noqa: E402  (canonical FREE-table regen)
+
+# canonical FREE-table regen fns (rule-118 curvelet bank + self-orient dir feats) — the bit-exact
+# oracle reference reuses these so the gate compares against the SAME free tables the inflate uses.
+_canon_coords_grid = _tli.coords_grid
+_canon_curvelet_B = _tli.curvelet_B
+_canon_curvelet_feats = _tli.curvelet_feats
+_canon_dir_feats = _tli.dir_feats
 
 CAMERA_H, CAMERA_W = 874, 1164
 RATE_DENOM = 37_545_489.0
@@ -185,9 +197,9 @@ def _load_levelset_ckpt(
     cfg["bank_f0"] = float(raw_cfg.get("__bank_f0", 2.0))
     cfg["bank_base"] = float(raw_cfg.get("__bank_base", 2.0))
     cfg["bank_n_iso"] = int(raw_cfg.get("__bank_n_iso", 4))
-    mbf = raw_cfg.get("__cfg_max_bank_freq", None)
+    mbf = raw_cfg.get("__cfg_max_bank_freq")
     cfg["max_bank_freq"] = None if (mbf is None or float(mbf) < 0) else float(mbf)
-    rh = raw_cfg.get("__render_hw", None)
+    rh = raw_cfg.get("__render_hw")
     if rh is None:
         cfg["render_h"], cfg["render_w"] = 384, 512
         print("[WARN] npz lacks __render_hw -> defaulting render 384x512 (may NOT match the "
@@ -675,6 +687,293 @@ def parity_on_inflated(raw_path: Path, eval_pairs: int, gt_cache: str | None, nu
 
 
 # ---------------------------------------------------------------------------
+# BIT-EXACT ROUND-TRIP GATE (the correctness proof):
+#   shipped inflate.py(archive) output  ==  the canonical numpy-fp32 ORACLE forward
+#   (tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy) of the SAME
+#   int8-DEQUANTIZED checkpoint, over the SAME regenerated feats (curvelet bank + self-orient
+#   fixed point), bit-for-bit on the uint8 .raw frames (np.array_equal), which subsumes the SegNet
+#   argmax the score reads. This proves the shipped decoder faithfully implements the generator
+#   (it does NOT measure quant error -- both sides use the SAME dequantized weights; quant error is
+#   the separate realized-vs-fp32-EMA quantity the trainer verdict tracks).
+# ---------------------------------------------------------------------------
+def _torch_R_reference(rgb: np.ndarray, rh: int, rw: int, ch: int, cw: int) -> np.ndarray:
+    """Contest R, byte-identical to the shipped inflate.py ``_R``: bicubic up render->camera, round,
+    clamp -> uint8. ALWAYS fp32 (matches the shipped ``.float()`` cast)."""
+    import torch
+
+    x = torch.from_numpy(np.ascontiguousarray(rgb.reshape(rh, rw, 3))).permute(2, 0, 1)[None].float()
+    with torch.inference_mode():
+        up = torch.nn.functional.interpolate(x, size=(ch, cw), mode="bicubic", align_corners=False)
+        up = torch.clamp(torch.round(up), 0.0, 255.0)
+    return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)
+
+
+def numpy_oracle_reference_frames(
+    params: dict[str, np.ndarray], code: np.ndarray, manifest: dict[str, Any], n_pairs: int
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Regenerate the FULL uint8 camera frames for the first ``n_pairs`` pairs via the CANONICAL
+    numpy-fp32 oracle (``levelset_rgb_forward_numpy``) + the canonical FREE-table regen
+    (``torch_levelset_inflate`` numpy helpers) + the reference R. This is the independent authority
+    the shipped inflate.py must match bit-for-bit. Returns (frames [2*n_pairs uint8 arrays, f0,f1 per
+    pair], final_frame_argmax [render-res int argmax per pair]).
+
+    The self-orient fixed point mirrors the shipped inflate EXACTLY (same early-stop on
+    consecutive-equal argmax, same phi-only forwards). ``params``/``code`` are the int8-DEQUANTIZED
+    values read back from the byte-closed blob (so both sides render the SAME deploy weights)."""
+    rh, rw = int(manifest["render_h"]), int(manifest["render_w"])
+    ch, cw = int(manifest["camera_h"]), int(manifest["camera_w"])
+    coords = _canon_coords_grid(rh, rw)
+    B = _canon_curvelet_B(
+        manifest["bank_n_scales"], manifest["bank_n_orient0"], manifest["bank_f0"],
+        manifest["bank_base"], manifest["bank_n_iso"], manifest["max_bank_freq"],
+    )
+    curv = _canon_curvelet_feats(coords, B)
+    fwd_kw = {
+        "n_hidden": int(manifest["n_hidden"]), "hidden_dim": int(manifest["hidden_dim"]),
+        "n_classes": int(manifest["n_classes"]), "activation": str(manifest["activation"]),
+        "softmax_temp": float(manifest["softmax_temp"]), "wire_w0": float(manifest["wire_w0"]),
+        "wire_s0": float(manifest["wire_s0"]), "hosc_beta": float(manifest["hosc_beta"]),
+        "hosc_omega": float(manifest["hosc_omega"]), "chroma": bool(manifest["chroma"]),
+    }
+    frames: list[np.ndarray] = []
+    argmaxes: list[np.ndarray] = []
+    for pi in range(n_pairs):
+        if bool(manifest["self_orient"]):
+            ndf = int(manifest["n_dir_freqs"])
+            dirf = np.zeros((curv.shape[0], 4 * ndf), np.float32)
+            prev_am = None
+            for _ in range(int(manifest["so_iters"])):
+                feats = np.concatenate([curv, dirf], axis=-1)
+                _rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + 1], **fwd_kw)
+                am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+                if prev_am is not None and np.array_equal(am, prev_am):
+                    break  # argmax fixed point -> dirf frozen -> remaining iters no-ops (== shipped)
+                dirf = _canon_dir_feats(
+                    coords, am, ndf, float(manifest["so_freq_along"]),
+                    float(manifest["so_freq_across"]), float(manifest["so_tau"]),
+                )
+                prev_am = am
+            feats = np.concatenate([curv, dirf], axis=-1)
+        else:
+            feats = curv
+        for fk in range(2):
+            rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + fk], **fwd_kw)
+            frames.append(_torch_R_reference(rgb, rh, rw, ch, cw))
+            if fk == 1:
+                argmaxes.append(phi.argmax(-1).reshape(rh, rw).astype(np.int64))
+    return frames, argmaxes
+
+
+def bit_exact_roundtrip_gate(
+    packet_dir: Path, blob: bytes, gate_pairs: int, strict: bool
+) -> dict[str, Any]:
+    """THE correctness proof. Inflate a ``gate_pairs``-capped 0.bin with the SHIPPED inflate.py,
+    read back the uint8 .raw, and assert it is BIT-IDENTICAL (np.array_equal) to the canonical
+    numpy-fp32 oracle forward of the SAME dequantized checkpoint. Returns a report dict; raises in
+    ``strict`` mode on any mismatch."""
+    import brotli
+
+    # dequant the blob EXACTLY as the shipped inflate does (int8 -> fp32 * scale).
+    m, base_b, code_b, _pose = _read_blob_bytes(blob)
+    order = m["base_param_order"]
+    flat = np.frombuffer(brotli.decompress(base_b), dtype=np.int8)
+    params: dict[str, np.ndarray] = {}
+    off = 0
+    for name in order:
+        shp = tuple(m["base_shapes"][name])
+        n = int(np.prod(shp))
+        params[name] = (flat[off:off + n].astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
+        off += n
+    code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
+            * float(m["code_scale"])).reshape(m["code_shape"])
+    n_pairs_total = int(m["n_pairs"])
+    gp = max(1, min(int(gate_pairs), n_pairs_total))
+
+    # SHIPPED inflate.py on a gp-capped 0.bin -> .raw frames.
+    gate_root = packet_dir / "_bitexact_gate"
+    gate_root.mkdir(parents=True, exist_ok=True)
+    code_cap = code[: 2 * gp]
+    qc, sc = _int8_symmetric(code_cap)
+    man = dict(m)
+    man["n_pairs"] = gp
+    man["code_shape"] = list(code_cap.shape)
+    man["code_scale"] = float(sc)
+    mj = json.dumps(man, separators=(",", ":")).encode()
+    capped_bin = gate_root / "gate.bin"
+    capped_bin.write_bytes(_io_pack(mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11), None))
+    gate_raw = gate_root / "gate.raw"
+    proc = subprocess.run(
+        [sys.executable, str(packet_dir / "inflate.py"), str(capped_bin), str(gate_raw)],
+        capture_output=True, text=True, cwd=str(packet_dir),
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"bit-exact gate: shipped inflate.py FAILED rc={proc.returncode}\n{proc.stderr}")
+    ch, cw = int(m["camera_h"]), int(m["camera_w"])
+    fb = ch * cw * 3
+    shipped: list[np.ndarray] = []
+    with open(gate_raw, "rb") as f:
+        for _ in range(2 * gp):
+            shipped.append(np.frombuffer(f.read(fb), dtype=np.uint8).reshape(ch, cw, 3))
+
+    # canonical numpy-fp32 ORACLE reference (dequant capped code so both sides see identical values).
+    ref_params: dict[str, np.ndarray] = {}
+    for name in order:  # re-dequant from the SAME capped blob for byte-identical inputs
+        ref_params[name] = params[name]
+    ref_code = (qc.astype(np.float32) * sc).reshape(code_cap.shape)
+    ref_frames, ref_argmax = numpy_oracle_reference_frames(ref_params, ref_code, man, gp)
+
+    max_abs = 0
+    all_equal = True
+    n_diff_frames = 0
+    for a, b in zip(shipped, ref_frames, strict=True):
+        if not np.array_equal(a, b):
+            all_equal = False
+            n_diff_frames += 1
+            max_abs = max(max_abs, int(np.abs(a.astype(np.int32) - b.astype(np.int32)).max()))
+    import shutil
+    shutil.rmtree(gate_root, ignore_errors=True)  # disk-hygiene (rebuildable from archive.zip)
+
+    result = {
+        "bit_exact": bool(all_equal),
+        "gate_pairs": gp,
+        "frames_compared": 2 * gp,
+        "n_frames_differing": n_diff_frames,
+        "max_abs_uint8_diff": int(max_abs),
+        "reference": "tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy "
+                     "(numpy-fp32 oracle) + canonical FREE-table regen + reference R",
+        "proves": "shipped inflate.py bit-identically implements the canonical generator on the "
+                  "int8-dequantized checkpoint (argmax the score reads is byte-determined)",
+    }
+    verdict = "BIT-EXACT" if all_equal else f"MISMATCH ({n_diff_frames} frames, max_abs={max_abs})"
+    print(f"[bit-exact gate] {verdict} over {2 * gp} frames vs numpy-fp32 oracle  {_AUTHORITY}", flush=True)
+    if not all_equal and strict:
+        raise RuntimeError(
+            f"BIT-EXACT GATE FAILED: shipped inflate.py != numpy-fp32 oracle on {n_diff_frames} of "
+            f"{2 * gp} frames (max_abs={max_abs}). The shipped decoder diverges from the canonical "
+            "generator -> the byte-close is NOT a faithful witness (NO-FAKE).")
+    return result
+
+
+def _read_blob_bytes(blob: bytes) -> tuple[dict[str, Any], bytes, bytes, bytes]:
+    """Parse an in-memory LVLS1 blob (same grammar as the shipped inflate._read_blob)."""
+    assert blob[: len(_MAGIC)] == _MAGIC, "bad level-set magic"
+    off = len(_MAGIC)
+    out: list[bytes] = []
+    for _ in range(4):
+        (n,) = struct.unpack_from("<I", blob, off)
+        off += 4
+        out.append(blob[off:off + n])
+        off += n
+    return json.loads(out[0].decode("utf-8")), out[1], out[2], out[3]
+
+
+# ---------------------------------------------------------------------------
+# REAL upstream/evaluate.py wrapper (CPU only; NEVER MPS) on the EXACT archive bytes.
+#   archive.zip (0.bin) + inflated/0.raw  ->  upstream/evaluate.py --device cpu  ->  real
+#   d_seg + d_pose + rate + S, cross-checked against tac.contest_score.compute_contest_score.
+# This is the exact-eval path that turns the advisory realized-parity into a REAL evaluate.py row.
+# ---------------------------------------------------------------------------
+_EVAL_REPORT_PATTERNS = {
+    "d_pose": r"Average PoseNet Distortion:\s*([0-9.eE+\-]+)",
+    "d_seg": r"Average SegNet Distortion:\s*([0-9.eE+\-]+)",
+    "rate": r"Compression Rate:\s*([0-9.eE+\-]+)",
+    "final_score": r"Final score[^=]*=\s*([0-9.eE+\-]+)",
+    "n_samples": r"Evaluation results over\s*([0-9]+)\s*samples",
+}
+
+
+def _parse_evaluate_report(text: str) -> dict[str, Any]:
+    """Parse upstream/evaluate.py's report block (printed lines 93-101) into a structured dict.
+    NO-FAKE: a missing required field raises (never fabricate a score)."""
+    out: dict[str, Any] = {}
+    for key, pat in _EVAL_REPORT_PATTERNS.items():
+        mobj = re.search(pat, text)
+        if mobj is None:
+            if key == "n_samples":
+                out[key] = None
+                continue
+            raise ValueError(f"evaluate.py report missing {key!r} (pattern {pat!r}); refusing to "
+                             "fabricate a score (NO-FAKE). Report text:\n" + text[:2000])
+        out[key] = int(mobj.group(1)) if key == "n_samples" else float(mobj.group(1))
+    return out
+
+
+def run_upstream_evaluate(
+    packet_dir: Path, *, device: str, uncompressed_dir: Path, video_names_file: Path,
+    archive_bytes: int, timeout: int,
+) -> dict[str, Any]:
+    """Run the REAL contest scorer (``upstream/evaluate.py --device <cpu|cuda>``) on the exact
+    packet bytes (``packet_dir/archive.zip`` + ``packet_dir/inflated/0.raw``, both already produced
+    by run_inflate) and return the real d_seg/d_pose/rate + evaluate.py's own Final score, plus our
+    recomputed S via ``compute_contest_score`` (cross-check). CPU by default; MPS is REFUSED."""
+    if device == "mps":
+        raise ValueError("MPS is NEVER a score authority (CLAUDE.md). Use --eval-device cpu (or cuda).")
+    from tac.contest_score import compute_contest_score
+
+    submission_dir = packet_dir  # has archive.zip AND inflated/0.raw (== upstream/evaluate.py layout)
+    inflated = submission_dir / "inflated"
+    if not (submission_dir / "archive.zip").exists():
+        raise FileNotFoundError(f"run_upstream_evaluate: missing {submission_dir/'archive.zip'} (NO-FAKE).")
+    raws = list(inflated.glob("*.raw"))
+    if not raws:
+        raise FileNotFoundError(
+            f"run_upstream_evaluate: no inflated .raw in {inflated} -- the full inflate must run "
+            "FIRST (do NOT cap --max-pairs for the exact row; evaluate.py needs all 600 pairs).")
+    uncompressed_dir = Path(uncompressed_dir).resolve()
+    video_names_file = Path(video_names_file).resolve()
+    if not uncompressed_dir.exists():
+        raise FileNotFoundError(f"--uncompressed-dir missing: {uncompressed_dir} (needs the GT 0.mkv).")
+    if not video_names_file.exists():
+        raise FileNotFoundError(f"--video-names-file missing: {video_names_file}.")
+
+    report_path = submission_dir / "report.txt"
+    evaluate_py = _REPO / "upstream" / "evaluate.py"
+    cmd = [
+        sys.executable, str(evaluate_py),
+        "--submission-dir", str(submission_dir.resolve()),
+        "--uncompressed-dir", str(uncompressed_dir),
+        "--video-names-file", str(video_names_file),
+        "--device", device,
+        "--report", str(report_path.resolve()),
+        "--batch-size", "8",
+    ]
+    env = dict(os.environ)
+    up = str((_REPO / "upstream").resolve())
+    env["PYTHONPATH"] = up + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+    if device == "cpu":
+        env["CUDA_VISIBLE_DEVICES"] = ""  # force CPU (defensive: never let it pick an MPS/CUDA path)
+    print(f"[exact-eval] running upstream/evaluate.py --device {device} on {submission_dir.name} "
+          f"(this is the REAL contest scorer; CPU 600-pair ~1-2h)  {_AUTHORITY}", flush=True)
+    proc = subprocess.run(cmd, cwd=up, env=env, capture_output=True, text=True, timeout=timeout)
+    combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    if proc.returncode != 0:
+        raise RuntimeError(f"upstream/evaluate.py FAILED rc={proc.returncode}\n{combined[-4000:]}")
+
+    src_text = report_path.read_text() if report_path.exists() else combined
+    parsed = _parse_evaluate_report(src_text)
+    d_seg = float(parsed["d_seg"])
+    d_pose = float(parsed["d_pose"])
+    recomputed_S = compute_contest_score(d_seg, d_pose, archive_bytes)
+    axis = "[contest-CPU]" if (_AUTHORITY.startswith("[contest-CPU")) else "[macOS-CPU advisory]"
+    return {
+        "ran": True,
+        "device": device,
+        "evaluate_py_final_score": float(parsed["final_score"]),
+        "d_seg": d_seg,
+        "d_pose": d_pose,
+        "rate_from_evaluate": float(parsed["rate"]),
+        "n_samples": parsed.get("n_samples"),
+        "recomputed_S_compute_contest_score": recomputed_S,
+        "recomputed_vs_evaluate_delta": abs(recomputed_S - float(parsed["final_score"])),
+        "archive_bytes_scored": int(archive_bytes),
+        "report_path": str(report_path),
+        "score_axis": axis,
+        "authority": _AUTHORITY,
+        "promotion_claim": False,
+    }
+
+
+# ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
 def run(
@@ -689,10 +988,25 @@ def run(
     packet_dir: Path | None,
     skip_parity: bool,
     so_overrides: dict[str, Any],
+    verify_bit_exact: bool = False,
+    bit_exact_pairs: int = 2,
+    bit_exact_strict: bool = True,
+    run_exact_eval: bool = False,
+    eval_device: str = "cpu",
+    uncompressed_dir: Path | None = None,
+    video_names_file: Path | None = None,
+    eval_timeout: int = 18000,
 ) -> dict[str, Any]:
     params, cfg = _load_levelset_ckpt(ckpt_dir, npz_name)
     n_pairs = int(cfg["n_pairs"])
     so = detect_self_orient(cfg, so_overrides)
+    # The exact-eval row needs the FULL packet + ALL 600 pairs inflated on disk.
+    if run_exact_eval:
+        keep_packet = True
+        if max_pairs is not None:
+            print(f"[exact-eval] ignoring --max-pairs={max_pairs}: the real evaluate.py row needs ALL "
+                  f"{n_pairs} pairs (evaluate.py zips full GT with the inflated frames).", flush=True)
+            max_pairs = None
 
     pose_bytes: bytes | None = None
     pose_note = ("off (level-set witness carries pose in per-(pair,frame) codes/texture; train "
@@ -729,6 +1043,11 @@ def run(
     print(f"[byte-close] 0.bin={breakdown['total_0bin_bytes']} B  archive.zip={zip_bytes} B  "
           f"rate={rate:.6f} rate_term={rate_term:.4f}  bank=FREE(rule118)  pose={pose_note}", flush=True)
 
+    bit_exact: dict[str, Any] = {"checked": False}
+    if verify_bit_exact:
+        bit_exact = bit_exact_roundtrip_gate(packet_dir, blob, bit_exact_pairs, bit_exact_strict)
+        bit_exact["checked"] = True
+
     inflate_info = run_inflate(packet_dir, n_pairs, max_pairs)
     print(f"[inflate] {inflate_info['frame_layout']}  full_output_ok={inflate_info['full_output_shape_ok']}  "
           f"raw_bytes={inflate_info['raw_bytes']}", flush=True)
@@ -752,6 +1071,21 @@ def run(
                   "(--w-pose>0) is REQUIRED for the level-set ROW; a stored sidecar does NOT fix "
                   "it (the scorer runs PoseNet on the FRAMES).", flush=True)
         parity["pose_blind"] = bool(pose_blind)
+
+    exact_eval: dict[str, Any] = {"ran": False}
+    if run_exact_eval:
+        exact_eval = run_upstream_evaluate(
+            packet_dir,
+            device=eval_device,
+            uncompressed_dir=(uncompressed_dir or (_REPO / "upstream" / "videos")),
+            video_names_file=(video_names_file or (_REPO / "upstream" / "public_test_video_names.txt")),
+            archive_bytes=zip_bytes,
+            timeout=eval_timeout,
+        )
+        print(f"[exact-eval] REAL evaluate.py --device {eval_device}: d_seg={exact_eval['d_seg']:.8f} "
+              f"d_pose={exact_eval['d_pose']:.8f} -> S={exact_eval['evaluate_py_final_score']:.5f} "
+              f"(recomputed {exact_eval['recomputed_S_compute_contest_score']:.5f}, "
+              f"delta {exact_eval['recomputed_vs_evaluate_delta']:.2e}) {exact_eval['score_axis']}", flush=True)
 
     contest_cmd = (
         f".venv/bin/python experiments/contest_auth_eval.py "
@@ -786,7 +1120,9 @@ def run(
             "pose_sidecar": pose_note,
         },
         "inflate": inflate_info,
+        "bit_exact_roundtrip_gate": bit_exact,
         "parity_on_inflated_frames": parity,
+        "exact_eval_upstream_evaluate": exact_eval,
         "contest_cpu_eval_cmd": contest_cmd,
         "packet_dir": str(packet_dir),
         "self_orient_parity_caveat": (
@@ -829,6 +1165,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--so-freq-along", type=float, default=4.0, help="self-orient LOW freq along the edge (trainer default 4).")
     ap.add_argument("--so-tau", type=float, default=4.0, help="self-orient boundary-proximity tau (trainer default 4).")
     ap.add_argument("--so-iters", type=int, default=4, help="self-orient fixed-point iterations at decode (convergence).")
+    # BIT-EXACT round-trip gate (the correctness proof: shipped inflate == numpy-fp32 oracle).
+    ap.add_argument("--verify-bit-exact", action="store_true",
+                    help="prove inflate(archive) == numpy-fp32 oracle forward, bit-for-bit on the "
+                         ".raw frames (the correctness gate). Runs BEFORE the (long) full inflate.")
+    ap.add_argument("--bit-exact-pairs", type=int, default=2,
+                    help="pairs to compare in the bit-exact gate (per-pixel; 2 proves the forward).")
+    ap.add_argument("--no-bit-exact-strict", action="store_true",
+                    help="warn instead of raise on a bit-exact mismatch (default: strict/raise).")
+    # REAL upstream/evaluate.py exact-eval row (CPU; NEVER MPS). Forces --keep-packet + all pairs.
+    ap.add_argument("--run-exact-eval", action="store_true",
+                    help="after inflating ALL pairs, run upstream/evaluate.py on the exact archive "
+                         "bytes -> real d_seg/d_pose/rate/S. CPU 600-pair ~1-2h. Forces --keep-packet.")
+    ap.add_argument("--eval-device", type=str, default="cpu", choices=["cpu", "cuda"],
+                    help="evaluate.py device for --run-exact-eval (cpu default; MPS is REFUSED).")
+    ap.add_argument("--uncompressed-dir", type=Path, default=None,
+                    help="GT videos dir for evaluate.py (default upstream/videos; the rate denominator).")
+    ap.add_argument("--video-names-file", type=Path, default=None,
+                    help="video-names file for evaluate.py (default upstream/public_test_video_names.txt).")
+    ap.add_argument("--eval-timeout", type=int, default=18000,
+                    help="upstream/evaluate.py timeout seconds (default 5h for a CPU 600-pair run).")
     ap.add_argument("--out", type=Path, default=None, help="JSON report path")
     args = ap.parse_args(argv)
 
@@ -844,6 +1200,14 @@ def main(argv: list[str] | None = None) -> int:
         skip_parity=args.skip_parity,
         so_overrides={"freq_across": args.so_freq_across, "freq_along": args.so_freq_along,
                       "tau": args.so_tau, "iters": args.so_iters},
+        verify_bit_exact=args.verify_bit_exact,
+        bit_exact_pairs=args.bit_exact_pairs,
+        bit_exact_strict=not args.no_bit_exact_strict,
+        run_exact_eval=args.run_exact_eval,
+        eval_device=args.eval_device,
+        uncompressed_dir=args.uncompressed_dir,
+        video_names_file=args.video_names_file,
+        eval_timeout=args.eval_timeout,
     )
     out = args.out or (_REPO / "reports" / f"levelset_byte_close_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
