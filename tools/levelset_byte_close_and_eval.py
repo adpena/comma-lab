@@ -376,7 +376,16 @@ _INFLATE_PY = r'''#!/usr/bin/env python3
 #   (3) the in_proj activation h0 is computed ONCE per pair and shared by the pair's 2 final frames
 #       (identical feats => identical h0). All three preserve the EXACT float64/float32 op order of
 #       levelset_rgb_forward_numpy -> bit-identical .raw (proven by sha256 parity).
-import sys, json, struct
+# FEED-eh PARALLEL decode speedup (inflate.py code only -> FREE, archive bytes UNCHANGED, BIT-IDENTICAL):
+#   the n_pairs are INDEPENDENT -> render them across a process Pool (1-thread BLAS per worker so N
+#   workers scale cleanly instead of oversubscribing the already-threaded GEMM), each worker writing its
+#   2 frames to DISJOINT offsets of the preallocated .raw. Proven 10.8x on M5 Max (15w),
+#   max_abs_uint8_diff=0 vs the serial output. Contest: Linux fork (workers inherit setup); keeps the
+#   inflate.py cost well inside the 30-min upstream/evaluate.py budget (inflate + scoring).
+import os
+for _tv in ("VECLIB_MAXIMUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_tv, "1")  # 1-thread BLAS/worker (set BEFORE numpy import); user-overridable
+import sys, json, struct, multiprocessing as mp
 import numpy as np
 import brotli
 import torch
@@ -518,8 +527,13 @@ def _R(rgb, rh, rw, ch, cw):
     return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)
 
 
-def main():
-    src, dst = sys.argv[1], sys.argv[2]
+_G = {}
+
+
+def _setup(src):
+    # per-worker (spawn) / inherited-then-reset (fork) setup: dequant params + regen the FREE curvelet
+    # bank + coords. Deterministic + identical across workers -> bit-exact. ~150ms, amortized over the
+    # worker's pairs. Same op order as the serial main -> identical output.
     m, base_b, code_b, _pose = _read_blob(src)
     params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"])
     code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32) * float(m["code_scale"])).reshape(m["code_shape"])
@@ -527,30 +541,67 @@ def main():
     coords = _coords(rh, rw)
     B = _curvelet_B(m["bank_n_scales"], m["bank_n_orient0"], m["bank_f0"], m["bank_base"], m["bank_n_iso"], m["max_bank_freq"])
     curv = _curvelet_feats(coords, B)
-    n_pairs = int(m["n_pairs"])
     P = {k: np.asarray(v, np.float64) for k, v in params.items()}  # convert once (bit-identical)
-    with open(dst, "wb") as f:
+    _G.update(m=m, code=code, coords=coords, curv=curv, P=P, rh=rh, rw=rw, ch=ch, cw=cw,
+              framebytes=ch * cw * 3, dst=None)
+
+
+def _render_pair(pi):
+    # op-for-op the serial per-pair body; each pair is INDEPENDENT so parallel == serial (bit-identical).
+    # Writes the pair's 2 frames to disjoint offsets of the preallocated .raw (POSIX-safe concurrent write).
+    m, code, coords, curv, P = _G["m"], _G["code"], _G["coords"], _G["curv"], _G["P"]
+    rh, rw, ch, cw = _G["rh"], _G["rw"], _G["ch"], _G["cw"]
+    if m["self_orient"]:
+        # fixed-point: dir feats from the decoder's OWN frame1 argmax (GT-free, 0 bytes).
+        dirf = np.zeros((curv.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
+        prev_am = None
+        for _ in range(int(m["so_iters"])):
+            feats = np.concatenate([curv, dirf], axis=-1)
+            phi, _ = _outputs_from_h0(P, _in_proj_h0(P, feats, m), code[2 * pi + 1], m, False)
+            am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+            if prev_am is not None and np.array_equal(am, prev_am):
+                break  # argmax fixed point: dirf would not change -> remaining iters are no-ops
+            dirf = _dir_feats(coords, am, m["n_dir_freqs"], m["so_freq_along"], m["so_freq_across"], m["so_tau"])
+            prev_am = am
+        feats = np.concatenate([curv, dirf], axis=-1)
+    else:
+        feats = curv
+    h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
+    frames = []
+    for fk in range(2):
+        _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True)
+        frames.append(_R(rgb, rh, rw, ch, cw).tobytes())
+    fb = _G["framebytes"]
+    with open(_G["dst"], "r+b") as f:
+        f.seek(pi * 2 * fb); f.write(b"".join(frames))
+    return pi
+
+
+def _init_worker(src, dst):
+    _setup(src); _G["dst"] = dst
+
+
+def main():
+    src, dst = sys.argv[1], sys.argv[2]
+    _setup(src)  # main process: get n_pairs + dims (workers re-setup via _init_worker)
+    m = _G["m"]; n_pairs = int(m["n_pairs"]); ch, cw = _G["ch"], _G["cw"]
+    _cap = int(os.environ.get("INFLATE_MAX_PAIRS", "0"))  # 0 => all pairs (contest default); >0 = debug/CI bounded inflate
+    if _cap > 0:
+        n_pairs = min(n_pairs, _cap)
+    with open(dst, "wb") as f:  # preallocate the full .raw so workers write disjoint offsets
+        f.truncate(2 * n_pairs * _G["framebytes"])
+    nworkers = max(1, min(n_pairs, int(os.environ.get("INFLATE_WORKERS", "0")) or (os.cpu_count() or 1)))
+    if nworkers == 1:  # serial fallback (bit-identical) -- e.g. INFLATE_WORKERS=1 for debugging
+        _G["dst"] = dst
         for pi in range(n_pairs):
-            if m["self_orient"]:
-                # fixed-point: dir feats from the decoder's OWN frame1 argmax (GT-free, 0 bytes).
-                dirf = np.zeros((curv.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
-                prev_am = None
-                for _ in range(int(m["so_iters"])):
-                    feats = np.concatenate([curv, dirf], axis=-1)
-                    phi, _ = _outputs_from_h0(P, _in_proj_h0(P, feats, m), code[2 * pi + 1], m, False)
-                    am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
-                    if prev_am is not None and np.array_equal(am, prev_am):
-                        break  # argmax fixed point: dirf would not change -> remaining iters are no-ops
-                    dirf = _dir_feats(coords, am, m["n_dir_freqs"], m["so_freq_along"], m["so_freq_across"], m["so_tau"])
-                    prev_am = am
-                feats = np.concatenate([curv, dirf], axis=-1)
-            else:
-                feats = curv
-            h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
-            for fk in range(2):
-                _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True)
-                f.write(_R(rgb, rh, rw, ch, cw).tobytes())
-    print("inflated %d frames (%d pairs) -> %s [%dx%dx%dx3 uint8]" % (2 * n_pairs, n_pairs, dst, 2 * n_pairs, ch, cw), flush=True)
+            _render_pair(pi)
+    else:
+        methods = mp.get_all_start_methods()
+        ctx = mp.get_context("fork" if "fork" in methods else "spawn")  # Linux fork / macOS spawn
+        with ctx.Pool(nworkers, initializer=_init_worker, initargs=(src, dst)) as pool:
+            for _ in pool.imap_unordered(_render_pair, range(n_pairs), chunksize=1):
+                pass
+    print("inflated %d frames (%d pairs) -> %s [%dx%dx%dx3 uint8] (%d workers)" % (2 * n_pairs, n_pairs, dst, 2 * n_pairs, ch, cw, nworkers), flush=True)
 
 
 if __name__ == "__main__":
