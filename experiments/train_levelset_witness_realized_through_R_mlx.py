@@ -511,11 +511,21 @@ def build_levelset_rgb_witness(
 # boundary-perimeter prior (short, smooth class boundaries). Kept SMALL (topology bias, not
 # the driver — the realized seg loss drives d_seg).
 # ---------------------------------------------------------------------------
-def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1.0):
+def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1.0,
+                        junction_relax: float = 0.0, junction_tau: float = 0.5):
     """(fix h) Eikonal + Chan-Vese length on the DECISION MARGIN m = phi_top1 - phi_top2 (the
     quantity the argmax boundary lives on), NOT each field's own zero-set. Eikonal drives
     |grad m|->1 (the 1-Lipschitz margin = the R-survival quantity); the length term
-    delta_eps(m)*|grad m| penalizes the perimeter of the ACTUAL inter-class boundary {m=0}."""
+    delta_eps(m)*|grad m| penalizes the perimeter of the ACTUAL inter-class boundary {m=0}.
+
+    (THETA* TIER-2 STRETCH-1) ``junction_relax`` (default 0.0 = OFF = BIT-IDENTICAL) down-weights the
+    Eikonal |grad m|->1 residual near TRIPLE JUNCTIONS, where 3+ classes meet and the top1-top2 margin
+    surface m is genuinely non-smooth (a crease/kink), so forcing |grad m|=1 there fights the geometry
+    and injects boundary noise. Triple-junction proximity is the top2-top3 SDF gap g3 =
+    sort(phi)[-2]-sort(phi)[-3] (small => near a 3-way meet; needs >=3 classes). The per-pixel weight
+    w = 1 - junction_relax*exp(-g3/junction_tau) in [1-relax, 1] multiplies the SQUARED Eikonal residual
+    BEFORE the mean. junction_relax=0 => w==1.0 exactly => mean is BIT-IDENTICAL (x*1.0==x for finite
+    IEEE floats). The LENGTH term is unchanged (delta_eps already localizes it to the {m=0} boundary)."""
     import mlx.core as mx
 
     phi = mx.reshape(phi_pk, (render_h, render_w, -1))
@@ -524,11 +534,58 @@ def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1
     gy = m[1:, :] - m[:-1, :]
     gx = m[:, 1:] - m[:, :-1]
     gmag = mx.sqrt(gx[:-1, :] ** 2 + gy[:, :-1] ** 2 + 1e-8)  # (H-1,W-1)
-    eik = mx.mean((gmag - 1.0) ** 2)
+    eik_resid = (gmag - 1.0) ** 2
+    if junction_relax > 0.0 and phi.shape[-1] >= 3:
+        # (STRETCH-1) triple-junction proximity weight: down-weight the Eikonal where 3 classes nearly
+        # meet (small top2-top3 gap). Aligned to the (H-1,W-1) gmag grid by the matching [:-1,:-1] slice.
+        g3 = srt[..., -2] - srt[..., -3]                                  # (H,W) top2-top3 gap (>=0)
+        w = 1.0 - float(junction_relax) * mx.exp(-g3[:-1, :-1] / float(junction_tau))  # (H-1,W-1)
+        eik = mx.mean(w * eik_resid)
+    else:
+        eik = mx.mean(eik_resid)  # DEFAULT: BIT-IDENTICAL to the pre-theta* `mx.mean((gmag-1.0)**2)`.
     mc = m[:-1, :-1]
     delta = (len_eps / np.pi) / (len_eps * len_eps + mc * mc)  # delta_eps at the {m=0} boundary
     length = mx.mean(delta * gmag)
     return eik, length, mx.mean(gx * gx) + mx.mean(gy * gy)
+
+
+def _nuclear_norm_smooth_mlx(code, *, rel_eps: float = 1e-3, ns_iters: int = 25):
+    """(THETA* TIER-2 MUST-2) DIFFERENTIABLE smoothed nuclear norm of the per-(pair,frame) FiLM code
+    matrix ``code`` (shape (num_pairs*2, mod_dim)) -- a convex low-rank relaxation that drives the
+    learned per-pair codes toward a low-rank subspace (-> fewer effective DOF -> lower entropy / rate
+    at byte-close). DEFAULT-OFF at the call site (--code-nuclear-weight 0.0 => never invoked => the
+    loss is byte-identical).
+
+    WHY smoothed + Newton-Schulz (the differentiable-path choice, documented per NO-FAKE): MLX 0.31
+    has NO vjp for ``mx.linalg.svd`` NOR ``mx.linalg.eigvalsh`` ([Primitive::vjp] Not implemented),
+    so NEITHER can be a LOSS term (verified on CPU). The nuclear norm = sum of singular values =
+    trace(sqrt(C^T C)). The matrix square root is computed by the coupled Newton-Schulz iteration
+    (matmuls ONLY -> fully autodiff-able in MLX). Plain NS DIVERGES (->NaN) on exact-zero singular
+    values -- exactly the rank-deficient codes the penalty itself produces -- so we compute the
+    SMOOTHED nuclear norm ``trace(sqrt(C^T C + eps*||C^T C||_F * I)) = sum_i sqrt(sigma_i^2 +
+    eps*||G||_F)`` with a small RELATIVE floor ``eps`` (default 1e-3). This is a standard smoothed
+    nuclear-norm surrogate: -> the exact nuclear norm as eps->0; matches it to ~0.3% on well-conditioned
+    full-rank inputs (verified, gradient cosine 1.0000 vs the exact U V^T); stays FINITE +
+    monotone-in-the-singular-values (still drives low-rank) on rank-deficient inputs; and ->0 as the
+    codes ->0. It is NOT the exact nuclear norm (the smoothing floor over-counts near-zero singular
+    directions) -- labelled SMOOTHED, not exact, per NO-FAKE. MLX matmuls only (no model/scorer; runs
+    + autodiffs on CPU). Empirical anchor: experiments/tests/test_levelset_theta_star_tier2_levers.py."""
+    import mlx.core as mx
+
+    G = code.T @ code                              # (mod_dim, mod_dim) Gram, PSD
+    n = G.shape[0]
+    eye = mx.eye(n)
+    normG = mx.sqrt(mx.sum(G * G)) + 1e-20         # ||G||_F (scalar)
+    Y0 = G / normG + float(rel_eps) * eye          # eigvals in [rel_eps, 1+rel_eps] -> NS-stable
+    s = mx.sqrt(mx.sum(Y0 * Y0)) + 1e-20           # spectral renormalization (NS safety margin)
+    Y = Y0 / s
+    Z = eye
+    for _ in range(int(ns_iters)):
+        Tm = 0.5 * (3.0 * eye - Z @ Y)             # coupled Newton-Schulz for the matrix sqrt
+        Y = Y @ Tm
+        Z = Tm @ Z
+    # trace(sqrt(G + eps*||G||_F I)) = sqrt(normG)*sqrt(s)*trace(sqrt(Y))  [sqrt homogeneous deg-1/2]
+    return mx.trace(Y) * mx.sqrt(s) * mx.sqrt(normG)
 
 
 # ---------------------------------------------------------------------------
@@ -725,10 +782,39 @@ def _softmax_temp_for_epoch(ep: int, args) -> float:
     A WARM-START arm (resume the CE ckpt @ ep299, run 100 epochs => --epochs 399) must set
     --anneal-epochs to the ORIGINAL schedule length (1500) so ep300->400 reproduces the DISEASE
     regime temp (~0.91->0.84), not the schedule tail (~0.19->0.05). ``None or x == x`` and 0 is
-    treated as unset, so the default path is the pre-C2 formula bit-for-bit."""
+    treated as unset, so the default path is the pre-C2 formula bit-for-bit.
+
+    (THETA* TIER-2 MUST-1) ``--tau-anneal-shape`` selects the homotopy/continuation curve tau(ep) walks
+    from ``softmax_temp_start`` -> ``softmax_temp_end`` (the anneal denominator stays --anneal-epochs):
+      * ``cosine``      (DEFAULT) the pre-theta* cosine. BIT-IDENTICAL to the inline formula.
+      * ``geometric``   log-spaced (exponential) decay tau = start*(end/start)**prog == start**(1-prog)
+                        * end**prog -> spends MORE epochs at small tau (slows the near-tau->0
+                        continuation step that drives the measured late-tau d_seg volatility). Requires
+                        start>0, end>0 (guarded in main()).
+      * ``cosine_hold`` cosine that reaches the floor at ``--tau-hold-frac`` of the window, then HOLDS
+                        at ``softmax_temp_end``. ``--tau-hold-frac 1.0`` (DEFAULT) == NO hold == the
+                        cosine branch (BIT-IDENTICAL: prog/1.0==prog exactly for finite IEEE floats and
+                        hold_frac>=1.0 routes through the SAME final cosine line below).
+    Returns the EXACT value the pre-theta* inline cosine produced when shape=='cosine' (or
+    'cosine_hold' with hold_frac>=1.0) -- the #1 bit-identical-when-off gate. ``float(args.x) == args.x``
+    for the argparse floats, so the named locals do not perturb the arithmetic."""
     _ae = getattr(args, "anneal_epochs", None) or args.epochs
     prog_t = (ep - 1) / max(_ae - 1, 1)
-    return float(args.softmax_temp_end + 0.5 * (args.softmax_temp_start - args.softmax_temp_end) * (1 + np.cos(np.pi * prog_t)))
+    shape = str(getattr(args, "tau_anneal_shape", "cosine"))
+    start = float(args.softmax_temp_start)
+    end = float(args.softmax_temp_end)
+    if shape == "geometric":
+        # log-spaced (exponential) decay; endpoints are exact at prog 0/1. main() guards start>0,end>0.
+        return float(start * (end / start) ** prog_t)
+    if shape == "cosine_hold":
+        hold_frac = float(getattr(args, "tau_hold_frac", 1.0))
+        if hold_frac < 1.0:
+            if prog_t >= hold_frac:
+                return end                       # held at the floor for the tail of the window
+            prog_t = prog_t / hold_frac          # rescale [0,hold_frac)->[0,1); falls through to cosine
+        # hold_frac>=1.0: NO hold -> fall through with the ORIGINAL prog_t -> BIT-IDENTICAL cosine.
+    # DEFAULT cosine (and cosine_hold w/ hold_frac>=1.0): the pre-theta* inline formula, unchanged.
+    return float(end + 0.5 * (start - end) * (1 + np.cos(np.pi * prog_t)))
 
 
 def _stage_rewarmup_factor(
@@ -1063,6 +1149,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "shared decoder FROZEN (no weight-decay drift); fitting per-pair codes only "
                           "(amortization fast path -- viability per the small-n generalization estimate)"}), flush=True)
     ema = MlxEMA(model, decay=args.ema_decay)
+    # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA. DEFAULT-OFF: --ema-decay-finisher None =>
+    # ema_finisher_decay None => the loop NEVER mutates ema.decay => the EMA trajectory is
+    # BIT-IDENTICAL to the --ema-decay path. When set, from the resolved finisher-start epoch onward
+    # the EMA update uses the WIDER decay (averages over the late oscillation -> a flat-basin center,
+    # SWA-style). Start resolves to --ema-decay-finisher-start-epoch, else --muon-start-epoch (the
+    # natural finisher boundary). main() guards range + start-resolvability when the decay is set.
+    ema_finisher_decay = (float(args.ema_decay_finisher)
+                          if getattr(args, "ema_decay_finisher", None) is not None else None)
+    ema_finisher_start = (int(args.ema_decay_finisher_start_epoch)
+                          if getattr(args, "ema_decay_finisher_start_epoch", None) is not None
+                          else (int(args.muon_start_epoch) if args.muon_start_epoch is not None else None))
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
 
     # ---- RESIDUAL-ONLY MODE (v2 hybrid; gap #1). Load the FIXED deterministic bulk + the
@@ -1151,6 +1248,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     msal_uni_beta = float(args.margin_saliency_uniward_beta)
     msal_gate = {"on": msal_start <= 1}
 
+    # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty closure constants. code_nuc_w=0.0
+    # (DEFAULT) => the branch in total_loss_fn is skipped => L is byte-identical (fully additive).
+    code_nuc_w = float(getattr(args, "code_nuclear_weight", 0.0))
+    code_nuc_eps = float(getattr(args, "code_nuclear_eps", 1e-3))
+    code_nuc_iters = int(getattr(args, "code_nuclear_ns_iters", 25))
+    # (THETA* TIER-2 STRETCH-1) junction-aware Eikonal relax closure constants. eik_jrelax=0.0
+    # (DEFAULT) => _eikonal_length_mlx takes its BIT-IDENTICAL branch (w==1.0) => unchanged.
+    eik_jrelax = float(getattr(args, "eikonal_junction_relax", 0.0))
+    eik_jtau = float(getattr(args, "eikonal_junction_tau", 0.5))
+
     # LEVER-A (FiLM-rank-fix) loss term closure constants. A SOFT participation-ratio FLOOR on the
     # realized per-pair FiLM modulation M = film(code) so the curriculum cannot funnel it to rank-1
     # (MEASURED collapse PR 3.34@CE -> 1.19@l7). rankfloor_w=0.0 (default) => the branch is skipped =>
@@ -1208,7 +1315,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
         phi0 = model.sdf(cf, c0)
-        eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w)
+        # (THETA* TIER-2 STRETCH-1) junction relax threaded; eik_jrelax=0.0 (default) => BIT-IDENTICAL.
+        eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w,
+                                             junction_relax=eik_jrelax, junction_tau=eik_jtau)
         L = L + eik_w * eik + len_w * length
         # (review R2b-M3) SHARED realized through-R seg forward. LEVER-3 (lane-edge), LEVER-4
         # (margin-saliency) and LEVER-B (thin-lane) all need the SAME realized decision margin
@@ -1310,6 +1419,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             tw = thin_maps_mx[int(c0) // 2]                            # (1, H, W) thin-lane weight (>=0)
             hmap_t = mx.maximum(lane_thin_tgt - _signed, 0.0) * tw     # fragile thin-lane pixels only
             L = L + lane_thin_w * (mx.sum(hmap_t) / (mx.sum(tw) + 1e-6))
+        # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty. DEFAULT-OFF: code_nuc_w=0.0 =>
+        # this branch NEVER runs => L is byte-identical (fully additive). When >0 it adds
+        # weight * smoothed_nuclear_norm(model.code) -> drives the per-pair FiLM codes
+        # (num_pairs*2 x mod_dim) toward a low-rank subspace (rate). The code matrix is identical for
+        # every pair, so the per-pair value_and_grad sees the same term and the mean-over-chunk grad
+        # applies it ONCE per opt step (NOT P-scaled). Recomputed per value_and_grad call (a parent
+        # fusion could hoist it once-per-step; out of scope for this additive prep).
+        if code_nuc_w > 0.0:
+            L = L + code_nuc_w * _nuclear_norm_smooth_mlx(
+                model.code, rel_eps=code_nuc_eps, ns_iters=code_nuc_iters)
         return L
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
@@ -1981,6 +2100,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _beta = _hosc_beta_for_epoch(_anneal_ep, args)
             if _beta is not None:
                 model.hosc_beta = _beta
+            # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA: from the finisher-start epoch onward,
+            # widen the EMA decay so the EMA shadow averages over the late oscillation (a flat-basin
+            # center). Idempotent per-epoch set (keys off `ep`, not state) => RESUME-safe (ema.decay
+            # is not persisted; re-applied on resume into the finisher window). DEFAULT-OFF:
+            # ema_finisher_decay None => ema.decay is NEVER touched => the EMA trajectory is
+            # BIT-IDENTICAL to the --ema-decay path.
+            if (ema_finisher_decay is not None and ema_finisher_start is not None
+                    and ep >= ema_finisher_start and ema.decay != ema_finisher_decay):
+                _prev_decay = ema.decay
+                ema.decay = ema_finisher_decay
+                print(json.dumps({"stage": "ema_finisher_widen", "epoch": ep,
+                                  "from_decay": float(_prev_decay), "to_decay": float(ema_finisher_decay),
+                                  "start_epoch": int(ema_finisher_start),
+                                  "note": "SWA-style wider EMA averaging for the finisher (flat-basin "
+                                  "center over the late oscillation)"}), flush=True)
             # LR warmup->cosine. Gated OFF once the Muon finisher is active (operator 2026-06-26
             # "different stages need different treatment"): the finisher is a PR95 flat low-LR
             # polish at its own muon_lr/muon_adamw_lr, NOT the base cosine, and the MultiOptimizer's
@@ -2196,6 +2330,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "stage_transition_reset_moments": bool(getattr(args, "stage_transition_reset_moments", False)),
         "lane_prior_phi1": bool(getattr(args, "lane_prior_phi1", False)),
         "lane_prior_phi1_mode": str(getattr(args, "lane_prior_phi1_mode", "replace")),
+        # THETA* TIER-2 levers (deterministic-reproducibility: record config with the result). All
+        # default-OFF => these values reflect the bit-identical path.
+        "tau_anneal_shape": str(getattr(args, "tau_anneal_shape", "cosine")),
+        "tau_hold_frac": float(getattr(args, "tau_hold_frac", 1.0)),
+        "code_nuclear_weight": float(getattr(args, "code_nuclear_weight", 0.0)),
+        "code_nuclear_eps": float(getattr(args, "code_nuclear_eps", 1e-3)),
+        "code_nuclear_ns_iters": int(getattr(args, "code_nuclear_ns_iters", 25)),
+        "ema_decay_finisher": (float(args.ema_decay_finisher)
+                               if getattr(args, "ema_decay_finisher", None) is not None else None),
+        "ema_decay_finisher_start_epoch": (int(args.ema_decay_finisher_start_epoch)
+                                           if getattr(args, "ema_decay_finisher_start_epoch", None) is not None else None),
+        "eikonal_junction_relax": float(getattr(args, "eikonal_junction_relax", 0.0)),
+        "eikonal_junction_tau": float(getattr(args, "eikonal_junction_tau", 0.5)),
         # LEVER-A / LEVER-B provenance (deterministic-reproducibility; all default-OFF => the
         # bit-identical path is recorded as off).
         "film_per_layer": bool(getattr(args, "film_per_layer", False)),
@@ -2284,10 +2431,32 @@ def main(argv: list[str] | None = None) -> int:
     # (config-review #4) softmax-temp ANNEAL hi->lo (not fixed 0.1, which reintroduces RGB Gibbs).
     ap.add_argument("--softmax-temp-start", type=float, default=1.0, help="anneal START (soft; gradients flow).")
     ap.add_argument("--softmax-temp-end", type=float, default=0.05, help="anneal END (sharp; SDF partition pinned).")
+    # (THETA* TIER-2 MUST-1) softmax-temp anneal SHAPE (additive; default 'cosine' == bit-identical to
+    # the pre-theta* cosine). 'geometric' = log-spaced decay (more epochs at small tau; damps late-tau
+    # d_seg volatility). 'cosine_hold' = cosine to the floor at --tau-hold-frac, then HOLD at the end.
+    ap.add_argument("--tau-anneal-shape", choices=["cosine", "geometric", "cosine_hold"], default="cosine",
+                    help="THETA* MUST-1: softmax-temp anneal curve. cosine (default, bit-identical) | "
+                    "geometric (log-spaced, more epochs at small tau) | cosine_hold (reach floor at "
+                    "--tau-hold-frac then hold). geometric requires --softmax-temp-start/-end > 0.")
+    ap.add_argument("--tau-hold-frac", type=float, default=1.0,
+                    help="THETA* MUST-1: for --tau-anneal-shape cosine_hold, the fraction (0,1] of the "
+                    "anneal window at which tau reaches --softmax-temp-end and HOLDS. 1.0 (default) = "
+                    "no hold = BIT-IDENTICAL to cosine.")
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--lr-end", type=float, default=1e-4)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
     ap.add_argument("--ema-decay", type=float, default=0.997)
+    # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA (additive; default None == bit-identical to the
+    # --ema-decay path). When set, from the resolved finisher-start epoch onward the EMA uses this
+    # WIDER decay (averages over the late oscillation -> flat-basin center, SWA-style).
+    ap.add_argument("--ema-decay-finisher", type=float, default=None,
+                    help="THETA* MUST-3: wider EMA decay applied from the finisher-start epoch onward "
+                    "(SWA-style late-oscillation averaging). None (default) = use --ema-decay everywhere "
+                    "= BIT-IDENTICAL. Typically > --ema-decay (e.g. 0.999/0.9995). Must be in (0,1).")
+    ap.add_argument("--ema-decay-finisher-start-epoch", type=int, default=None,
+                    help="THETA* MUST-3: 1-based epoch at which the wider --ema-decay-finisher engages. "
+                    "None (default) = fall back to --muon-start-epoch. Required (here or via "
+                    "--muon-start-epoch) when --ema-decay-finisher is set.")
     ap.add_argument("--lr-schedule", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--warmup-epochs", type=int, default=1)
     ap.add_argument("--w-seg", type=float, default=100.0)
@@ -2524,6 +2693,29 @@ def main(argv: list[str] | None = None) -> int:
     # LEVEL-SET REG
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
+    # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty (additive; default 0.0 == OFF ==
+    # bit-identical loss). Drives the per-pair FiLM codes toward a low-rank subspace (rate). Computed
+    # as a DIFFERENTIABLE smoothed nuclear norm via Newton-Schulz matrix-sqrt trace (MLX has no svd/
+    # eigvalsh vjp); see _nuclear_norm_smooth_mlx.
+    ap.add_argument("--code-nuclear-weight", type=float, default=0.0,
+                    help="THETA* MUST-2: weight on the smoothed nuclear norm of the per-pair code "
+                    "matrix (low-rank -> rate). 0.0 (default) = OFF = bit-identical loss.")
+    ap.add_argument("--code-nuclear-eps", type=float, default=1e-3,
+                    help="THETA* MUST-2: relative smoothing floor for the nuclear norm (keeps "
+                    "Newton-Schulz stable on rank-deficient codes). ~0.3%% bias on well-conditioned "
+                    "inputs at 1e-3. Must be > 0.")
+    ap.add_argument("--code-nuclear-ns-iters", type=int, default=25,
+                    help="THETA* MUST-2: Newton-Schulz iterations for the matrix sqrt (converged by "
+                    "~25 for mod_dim<=48). Must be >= 1.")
+    # (THETA* TIER-2 STRETCH-1) junction-aware Eikonal relax (additive; default 0.0 == OFF ==
+    # bit-identical). Down-weights the Eikonal residual near triple junctions (the margin crease).
+    ap.add_argument("--eikonal-junction-relax", type=float, default=0.0,
+                    help="THETA* STRETCH-1: down-weight the Eikonal |grad m|->1 residual near triple "
+                    "junctions by factor (1 - relax*exp(-g3/tau)). 0.0 (default) = OFF = bit-identical. "
+                    "Must be in [0, 1).")
+    ap.add_argument("--eikonal-junction-tau", type=float, default=0.5,
+                    help="THETA* STRETCH-1: top2-top3 SDF-gap scale for the junction relax weight. "
+                    "Must be > 0.")
     # STRUCTURED-PRIOR phi INIT (FEED-ef, ADDITIVE, DEFAULT-OFF). When ON, initialize out_sdf so
     # argmax(phi) ~= the VALIDATED self-detected static-core partition (hood+sky+road[+lane] deep SDFs;
     # FEED-dm/du/dw/dx) instead of random/SIREN -> the row STARTS at the ~0.006 structured floor and
@@ -2787,6 +2979,63 @@ def main(argv: list[str] | None = None) -> int:
             "--residual-target-npz was given but --residual-mode is OFF: the bundle would be "
             "loaded-and-ignored = a silent no-op = a FALSE 'residual bundle does nothing'. Pass "
             "--residual-mode to engage the composition, or drop --residual-target-npz.")
+
+    # (THETA* TIER-2 MUST-1) tau-anneal-shape fail-closed guards (pure; fail LOUD before any GPU spend).
+    if args.tau_anneal_shape == "geometric" and not (args.softmax_temp_start > 0.0 and args.softmax_temp_end > 0.0):
+        raise ValueError(
+            f"--tau-anneal-shape geometric requires --softmax-temp-start ({args.softmax_temp_start}) > 0 "
+            f"AND --softmax-temp-end ({args.softmax_temp_end}) > 0: the log-spaced curve "
+            "tau=start*(end/start)**prog is undefined / non-positive otherwise.")
+    if not (0.0 < args.tau_hold_frac <= 1.0):
+        raise ValueError(
+            f"--tau-hold-frac ({args.tau_hold_frac}) must be in (0, 1] (the fraction of the anneal "
+            "window at which cosine_hold reaches the floor; 1.0 = no hold = bit-identical cosine).")
+
+    # (THETA* TIER-2 MUST-2) nuclear-norm penalty fail-closed guards.
+    if args.code_nuclear_weight < 0.0:
+        raise ValueError(f"--code-nuclear-weight ({args.code_nuclear_weight}) must be >= 0 (0 = OFF).")
+    if args.code_nuclear_weight > 0.0:
+        if args.code_nuclear_eps <= 0.0:
+            raise ValueError(
+                f"--code-nuclear-eps ({args.code_nuclear_eps}) must be > 0 (relative smoothing floor "
+                "that keeps Newton-Schulz stable on rank-deficient codes).")
+        if args.code_nuclear_ns_iters < 1:
+            raise ValueError(
+                f"--code-nuclear-ns-iters ({args.code_nuclear_ns_iters}) must be >= 1.")
+
+    # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA fail-closed guards (same NO-FAKE silent-no-op
+    # class as the lane/muon validators): a finisher decay set with no resolvable start would NEVER
+    # engage = a FALSE 'wider EMA does nothing' verdict.
+    if args.ema_decay_finisher is not None:
+        if not (0.0 < args.ema_decay_finisher < 1.0):
+            raise ValueError(
+                f"--ema-decay-finisher ({args.ema_decay_finisher}) must be in (0, 1).")
+        _ema_fin_start = (args.ema_decay_finisher_start_epoch
+                          if args.ema_decay_finisher_start_epoch is not None else args.muon_start_epoch)
+        if _ema_fin_start is None:
+            raise ValueError(
+                "--ema-decay-finisher requires a start epoch: set --ema-decay-finisher-start-epoch "
+                "(or --muon-start-epoch, which it falls back to). Without one the wider EMA would "
+                "NEVER engage = a silent no-op = a FALSE 'wider EMA does nothing' verdict.")
+        if not (1 <= _ema_fin_start <= args.epochs):
+            raise ValueError(
+                f"--ema-decay-finisher start epoch ({_ema_fin_start}) must be in [1, --epochs "
+                f"({args.epochs})]: outside the budget the wider EMA would never engage = a silent "
+                "no-op.")
+    elif args.ema_decay_finisher_start_epoch is not None:
+        raise ValueError(
+            "--ema-decay-finisher-start-epoch set without --ema-decay-finisher: the start epoch has "
+            "no effect = a silent no-op. Set --ema-decay-finisher too, or drop the start flag.")
+
+    # (THETA* TIER-2 STRETCH-1) junction-aware Eikonal relax fail-closed guards.
+    if not (0.0 <= args.eikonal_junction_relax < 1.0):
+        raise ValueError(
+            f"--eikonal-junction-relax ({args.eikonal_junction_relax}) must be in [0, 1) (0 = OFF; "
+            "the weight 1-relax*exp(-g3/tau) must stay positive).")
+    if args.eikonal_junction_relax > 0.0 and args.eikonal_junction_tau <= 0.0:
+        raise ValueError(
+            f"--eikonal-junction-tau ({args.eikonal_junction_tau}) must be > 0 (the top2-top3 SDF-gap "
+            "scale in exp(-g3/tau)).")
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")
