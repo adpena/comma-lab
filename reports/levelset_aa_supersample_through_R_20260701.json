@@ -1,0 +1,79 @@
+{
+  "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "n_pairs": 600,
+  "R_path": "experiments/train_witness_realized_through_R_mlx.py::_torch_R_to_camera_uint8 (render-grid -> torch bicubic^ to 874x1164 -> round/clamp/uint8) then cpu_verdict path = SegNet.preprocess_input (bilinear 874->384x512) -> argmax",
+  "render_grid": [
+    192,
+    256
+  ],
+  "metric": "class-1 (LANE) recall = mean(realized_argmax==1 | lstar==1); also d_seg",
+  "lane_recall": {
+    "realframe_point_sampled_nearest": 0.5611300890174782,
+    "realframe_supersampled_area": 0.9385056975730723,
+    "palette_point_sampled": 0.6983657146691419,
+    "palette_supersampled": 0.8479490752181751
+  },
+  "d_seg": {
+    "g2_realframe_nearest_192": {
+      "mean": 0.011161134507921007,
+      "median": 0.011027018229166666,
+      "p90": 0.012794494628906252,
+      "max": 0.016428629557291668,
+      "n": 600
+    },
+    "g2_realframe_area_192": {
+      "mean": 0.0024694146050347225,
+      "median": 0.002377827962239583,
+      "p90": 0.0031753540039062503,
+      "max": 0.004979451497395833,
+      "n": 600
+    },
+    "g2_palette_point_192": {
+      "mean": 0.21164835611979166,
+      "median": 0.2600555419921875,
+      "p90": 0.26931660970052085,
+      "max": 0.3140869140625,
+      "n": 600
+    },
+    "g2_palette_super_192": {
+      "mean": 0.07815992567274305,
+      "median": 0.017840067545572914,
+      "p90": 0.256689453125,
+      "max": 0.29779052734375,
+      "n": 600
+    }
+  },
+  "recall_stats": {
+    "g2_realframe_nearest_192": {
+      "mean": 0.5611300890174782,
+      "median": 0.5610718842428812,
+      "p90": 0.6495203464496379,
+      "max": 0.7923250564334086,
+      "n": 600
+    },
+    "g2_realframe_area_192": {
+      "mean": 0.9385056975730723,
+      "median": 0.9442781670434959,
+      "p90": 0.9655398612647029,
+      "max": 0.9903194578896418,
+      "n": 600
+    },
+    "g2_palette_point_192": {
+      "mean": 0.6983657146691419,
+      "median": 0.7018242421601752,
+      "p90": 0.8076965669988927,
+      "max": 0.9046283309957924,
+      "n": 600
+    },
+    "g2_palette_super_192": {
+      "mean": 0.8479490752181751,
+      "median": 0.856058945083616,
+      "p90": 0.9461994733320007,
+      "max": 0.9883624272651704,
+      "n": 600
+    }
+  },
+  "aa_lift_realframe": 0.37737560855559416,
+  "aa_lift_palette": 0.1495833605490332,
+  "verdict": "Real-frame lane recall: POINT-sampled(nearest)=0.5611 vs SUPERSAMPLED(area)=0.9385 (lift +0.3774). ALIASING is a real component -- area/box-filter (anti-aliased) rasterization recovers lane pixels that point-sampling erases -> pixel-footprint-integrated / AA rendering is a ~0-rate representation lever."
+}

@@ -1,0 +1,70 @@
+{
+  "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "n_pairs": 600,
+  "R_path": "experiments/train_witness_realized_through_R_mlx.py::_torch_R_to_camera_uint8 (render-grid -> torch bicubic^ to 874x1164 -> round/clamp/uint8) then cpu_verdict path = SegNet.preprocess_input (bilinear 874->384x512) -> argmax",
+  "render_grid_default": [
+    192,
+    256
+  ],
+  "conditions": {
+    "g1_realframe_R_cam": {
+      "mean": 1.6954210069444444e-08,
+      "median": 0.0,
+      "p90": 0.0,
+      "max": 5.086263020833333e-06,
+      "n": 600
+    },
+    "g1_realframe_R_384": {
+      "mean": 0.0009099748399522569,
+      "median": 0.0008748372395833334,
+      "p90": 0.0011703491210937503,
+      "max": 0.0018107096354166667,
+      "n": 600
+    },
+    "g1_realframe_R_192": {
+      "mean": 0.0024694146050347225,
+      "median": 0.002377827962239583,
+      "p90": 0.0031753540039062503,
+      "max": 0.004979451497395833,
+      "n": 600
+    },
+    "g1_realframe_R_96": {
+      "mean": 0.011080220540364583,
+      "median": 0.010609944661458332,
+      "p90": 0.014410909016927084,
+      "max": 0.042078653971354164,
+      "n": 600
+    },
+    "g1_palette_mean_noR": {
+      "mean": 0.05045316060384115,
+      "median": 0.01032257080078125,
+      "p90": 0.2007364908854167,
+      "max": 0.29742431640625,
+      "n": 600
+    },
+    "g1_palette_mean_R192": {
+      "mean": 0.21164835611979166,
+      "median": 0.2600555419921875,
+      "p90": 0.26931660970052085,
+      "max": 0.3140869140625,
+      "n": 600
+    },
+    "g1_palette_comma_noR": {
+      "mean": 0.01760801527235243,
+      "median": 0.013005574544270832,
+      "p90": 0.031363932291666674,
+      "max": 0.09490458170572917,
+      "n": 600
+    }
+  },
+  "witness_training_floor_ref": {
+    "best_measured": 0.004445,
+    "current_n600_ep175": 0.006265
+  },
+  "R_erasure_component_at_192": 0.0024694146050347225,
+  "training_gap_at_192": {
+    "vs_best_measured": 0.0019755853949652777,
+    "vs_current_ep175": 0.0037955853949652773
+  },
+  "verdict": "BOTH halves real. Real-frame->R at the witness render grid 192x256 imposes an ACHIEVABLE-THROUGH-R floor of 0.00247 d_seg on the IDEAL signal. That is BELOW the witness training floor (0.00445-0.00626), so ~0.00380 of the current gap is TRAINING (witness not reaching achievable). But R/render-grid itself is NOT free: at 96x128 it is 0.01108, at 192x256 0.00247, at 384x512 0.00091 -- so RENDERING AT A HIGHER GRID + AA is a large representation lever (384x512 nearly reaches the ~0.001 sub-0.15 need). Flat-palette task-space renders are CONFOUNDED (noR>>0) and structurally cannot represent the LANE class (solid-color SegNet lane-purity=0), so they are not the achievable floor."
+}
