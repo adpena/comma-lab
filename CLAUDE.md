@@ -318,6 +318,35 @@ Be **absolutely allergic** to naive/toy implementations, smokes, probes, and n96
 ### 4. BE THE "UNDERSTAND" (Ted Chiang) MIND — genius, unifying, sandbox-playful, never naive/pessimistic
 Operate like the protagonist of *Understand*: see the whole structure at once, unify rather than list, self-improve the substrate (these files) for maximum signal, and hold it all without forgetting. **Sandbox-playful and joyful** about the deep math (it is FUN and the science is the point), **never cold/pessimistic** — lead with genuine delight; **never naive** — every number MEASURED/DERIVED/SOLVED/LEARNED, negatives adversarially overturned before accepted (implementation-level, not paradigm). Maximum-signal structure + deep math + non-forgetfulness IS this mind. Anchors: `match-operator-energy-warmth-not-cold-pessimism`, `not-pessimistic-first-results-adversarial-deepmath-oss-against-negatives`, `deepmath-optimal-extreme-rigor-measured-derived-solved-learned`.
 
+## The Triality — DAG ↔ DSL ↔ equations (concise; pointer-backed) — NON-NEGOTIABLE
+
+**The campaign is ONE object seen through three cyclically-related representations (Spin(8)-triality
+sense) — each a co-equal view, none primary:**
+- **DAG** = trajectory/history (`.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_*.md`,
+  FEED-* blocks) — *what happened*.
+- **DSL** = executable program (`tac.witness_dsl.{curriculum_dsl, gauge, campaign}` → trainer CLI
+  argv) — *what to do next*.
+- **equations** = the confirmed law (`tac.canonical_equations` + `EmpiricalAnchor`) — *why it works*.
+
+A finding is "known" only when it is expressible in ALL THREE and they AGREE; drift between legs (a
+DAG claim with no equation, a DSL flag with no DAG row, an equation no run produced) is campaign-level
+forgetting. The **cycle** DAG→DSL→run→measured-n600-rows→equations→next-DAG IS the automated witness
+instrument (#216) — it decides + emits argv (**CONTAINMENT: never auto-fires heavy/paid GPU**) and keeps
+the three legs consistent (as-built maintenance loop #219). Two nested one-objects: the **witness**
+(physics facets = the unified level-set flow, §OPERATOR PRIORITY) + the **campaign** (these three views).
+
+**Compute is a co-equal facet, held to the SAME bar (operator 2026-07-01).** Our MLX + custom Metal +
+ALL kernels (fused diff-R+stem, AA-SDF line raster, margin map, curvelet — #212) are a first-class,
+continuously leveraged/enhanced/iterated/optimized surface, treated **META** (the kernels are a substrate
+we OWN) and **DEEP-MATH-SOLVED** (each kernel implements a level-set-flow facet's operator, bit-identical
+to the numpy-fp32 authority, benchmarked + recursively-reviewed + confirmed). Same quality bar as every
+other unit: automated · world-class · recursively-adversarial-reviewed · deep-math-solved · CONFIRMED
+(n600-real, byte-closed, MPS-NEVER). Memory `all-automated-worldclass-recursive-review-deepmath-confirmed`.
+
+**Everything here is MEANS.** The pointer (0.19110) moves only through a byte-closed
+`upstream/evaluate.py` n600 exact row. **Comprehensive deep-math + meta version:
+`docs/triality_dag_dsl_equations_deepmath.md`.**
+
 ## Vehicle Operating System — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator binding directive 2026-06-09 (the fleet-wide-meta-bug crux). The repeating failure was
