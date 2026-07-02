@@ -1,0 +1,21 @@
+{
+  "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "task": "#205 Phase-3 de-risk (a) T0 SCREEN: n600 GEOMETRY-only IPM-horizon sweep. Does moving the lane-IPM vanishing-point v_h 174 (shipped _V_HORIZON) -> 188 (FEED-dj claimed IPM-optimal) improve the analytic-lane band's geometric placement (band-vs-GT-lane recall UP, band FP frac DOWN) at dash_forward_max_m=55? Pure geometry (build_analytic_lane_band_prior); NO render, NO SegNet, NO R = genuinely $0. Tests seeding-audit R1.",
+  "producer": "tools/levelset_ipm_horizon_geom_sweep_n600.py",
+  "n_pairs": 600,
+  "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "dash_forward_max_m": 55.0,
+  "lane_cls": 1,
+  "wall_clock_s": 85,
+  "sweep": {
+    "174": {"band_recall": 0.5475, "band_fp_frac": 0.001979, "n_lines": 4.945, "note": "shipped _V_HORIZON default; best on BOTH axes"},
+    "182": {"band_recall": 0.5553, "band_fp_frac": 0.003271, "n_lines": 5.067, "d_recall_vs_174": 0.0078, "d_fp_vs_174": 0.001292},
+    "188": {"band_recall": 0.4966, "band_fp_frac": 0.003554, "n_lines": 5.518, "d_recall_vs_174": -0.0509, "d_fp_vs_174": 0.001575, "note": "FEED-dj claimed IPM-optimal; WORSE on both axes"},
+    "194": {"band_recall": 0.4267, "band_fp_frac": 0.003658, "n_lines": 5.482, "d_recall_vs_174": -0.1207, "d_fp_vs_174": 0.001679}
+  },
+  "verdict": {
+    "headline": "R1 FALSIFIED. The shipped v_h=174 is optimal; 188 DEGRADES band placement on BOTH axes (recall -0.0509, FP +0.001575), monotonically worsening past 182. The partition-level FEED-dj '188 IPM-optimal' anchor does NOT survive the GT-lstars-realized band-vs-GT placement (exactly the caveat the seeding audit flagged).",
+    "config_action": "NONE. 174 is the default build_analytic_lane_band_prior uses (trainer does not override). The shippable argv already ships the optimal value. Removes the only pre-launch motivation to edit lane_sdf_component._V_HORIZON or add a --lane-band-v-horizon flag.",
+    "caveat": "GEOMETRY screen (band-vs-GT recall/FP), not full render+SegNet+R realized d_seg. But band recall/FP vs GT lstars IS the direct upstream of the realized lane d_seg, and the config's WITNESS-UNCERTAINTY-gated band further attenuates FP downstream. The 188 degradation is large + monotone -> the ~2h realized confirm is NOT warranted to overturn a decisive $0 screen; burden shifts to anyone claiming 188."
+  }
+}

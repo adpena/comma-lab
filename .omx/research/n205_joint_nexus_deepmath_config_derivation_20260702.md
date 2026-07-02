@@ -427,6 +427,20 @@ At optimal form, composing the measured/derived surfaces:
 
 ---
 
+> **PHASE-3 RESOLVED (2026-07-02):** all §8 open questions below are ADJUDICATED (RESOLVED or
+> DEFERRED-with-reactivation; NONE launch-blocking) in `n205_phase3_recursive_adversarial_review_verdict_20260702.md`
+> → **VERDICT: SEAL — launch-ready, 0 config edits.** Headline resolutions: (1) l7 DEMOTE; (2) w_pose=1.0
+> shippable-first (not 0-advisory); (3) AA-render DISSOLVED (supersample disqualified — `none`); (4)
+> mod-dim 32; (5) β₂=0.999 (not the 0.9999999 MIS-ANCHOR); (6) epochs=1000 OPENING + MANDATORY EXTEND if
+> Muon slope<0; (7) directional −48% = #205-run attribution (DEFERRED); (8) `--verdict-pairs 0` = all-600
+> async bit-identical. **De-risk (a) horizon: R1 FALSIFIED — KEEP v_h=174** (n600 $0 geometry sweep; 188
+> degrades band recall −0.0509 + FP +0.0016). **De-risk (b) supersample: +49% HURT CONFIRMED** → `none`.
+> **TWO honest corrections (residuals, not config defects):** §7 rate OMITS the warp-real-luma keyframe
+> payload (13 keyframes≈+0.006/10s; first-row realistic sub-0.19, sub-0.15 TIGHT) → the §7 S-budget is an
+> optimistic LOWER BOUND on rate; and §4 coupling-4's "front-load AA-render / 0.00086 floor caps ceiling"
+> is STALE (SIGNAL-A real-frame ceiling ≠ witness-realized — the ~0.003→~0.001 gap is a Muon+persistence+
+> amplify TRAINING/LOSS bet, config CORRECT). Pointer 0.19110 UNMOVED.
+
 ## 8. OPEN QUESTIONS for the 3-CLEAN-PASS RECURSIVE ADVERSARIAL REVIEW (Phase 3)
 
 1. **l7 reconcile:** MLX-trace shows l7 lowering d_seg (−0.00027) but the 5-agent pass calls it a defect. Is DEMOTE right, or is l7 a small-but-real drop we're discarding? (Resolve: measure l7-on vs l7-off through-R at the tau-converged ckpt, T2.)
