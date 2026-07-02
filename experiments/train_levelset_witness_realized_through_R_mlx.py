@@ -231,6 +231,13 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_curriculum"] = np.asarray(int(bool(args.curriculum)))
     flat["__cfg_tau_softplus_start_epoch"] = np.asarray(int(args.tau_softplus_start_epoch))
     flat["__cfg_l7_start_epoch"] = np.asarray(int(args.l7_start_epoch))
+    # ---- #224 AA-SDF observation-map render cfg (additive provenance; the exact-eval decode
+    # (#202) reconstructs the SAME AA mode deterministically -- NO extra archive bytes: the IPE
+    # attenuation is a function of (B, render_hw, footprint) all already in the ckpt, and the
+    # supersample grid is deterministic at decode). DEFAULT none/1/1.0 => byte-identical cfg. ----
+    flat["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
+    flat["__cfg_aa_supersample"] = np.asarray(int(getattr(args, "aa_supersample", 1)))
+    flat["__cfg_aa_ipe_footprint"] = np.asarray(float(getattr(args, "aa_ipe_footprint", 1.0)))
     return flat
 
 
@@ -501,6 +508,27 @@ def build_levelset_rgb_witness(
                     pre = pre + self.concat_pl[li](codes)[:, None, :]
                 h = self._act(pre)
             return self._compose_rgb(h)                            # (K, P, 3)
+
+        # ---- #224 accessors for the analytic-lane render-band (ADDITIVE; only called when
+        # --lane-render-band is ON => the default render is byte-identical). ----
+        def call_margin(self, coord_feats, code_idx):
+            """top1-top2 softmax decision margin (PROB scale) of the witness partition — the
+            #141 quantity the analytic-lane uncertainty gate rides. Returns (P,); reshape to
+            (H,W) at the call site."""
+            soft = mx.softmax(self.out_sdf(self._trunk(coord_feats, code_idx)) / self.softmax_temp, axis=-1)
+            s = mx.sort(soft, axis=-1)                              # ascending
+            return s[..., -1] - s[..., -2]                          # (P,) top1 - top2
+
+        def render_lane_appearance(self, coord_feats, code_idx, lane_cls: int = 1):
+            """The witness's OWN per-pixel lane color = sigmoid(palette[lane_cls] + tex)*255
+            (self-consistent, byte-free; gradient flows through tex/palette per the band spec).
+            luma-collapsed when not chroma (matches _compose_rgb)."""
+            tex = self.out_tex(self._trunk(coord_feats, code_idx))  # (P,3)
+            rgb = mx.sigmoid(self.palette[lane_cls] + tex) * 255.0  # (P,3)
+            if not self.chroma:
+                luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
+                rgb = mx.concatenate([luma, luma, luma], axis=-1)
+            return rgb
 
     return LevelSetRGBWitness()
 
@@ -965,6 +993,48 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # The MLX render runs on mx.gpu via temporary_mlx_device(args.mlx_device) below; the torch
     # scorer/R/verdict are CPU authority. The device SPLIT: MLX "gpu" -> render; torch -> "cpu".
     adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device="cpu")
+    # ---- #224 AA-SDF observation-map render (aa_sdf_observation_render; MEASURED #1 rep lever,
+    # DAG FEED-ly/-ma). DEFAULT --render-aa none => this block is a NO-OP (curv_feats_np unchanged +
+    # coord_feats_fine_mx None) => BYTE-IDENTICAL. Two AA modes: (ipe) attenuate the curvelet basis
+    # columns by the mip-NeRF cone footprint (analytical, base grid; touches ONLY the curvelet feats,
+    # NOT the self-orient dir feats); (supersample) build a SEPARATE fine-grid feats for the render
+    # path only -- the BASE-grid coord_feats/_feats_np_for_pair stay base-grid so the eikonal/sdf(cf)
+    # reshape to (render_h, render_w) is unaffected; _render_R dispatches to render_aa_through_R_mlx. ----
+    render_aa = str(getattr(args, "render_aa", "none"))
+    aa_ss = int(getattr(args, "aa_supersample", 1))
+    coord_feats_fine_mx = None  # (supersample only) the fine-grid render feats; None => point-sample
+    if render_aa == "ipe":
+        from tac.boundary_math.aa_sdf_observation_render import (
+            apply_ipe_attenuation,
+            ipe_curvelet_attenuation,
+            ipe_footprint_sigma,
+        )
+        _aa_sx, _aa_sy = ipe_footprint_sigma(render_h, render_w, float(args.aa_ipe_footprint))
+        _aa_att = ipe_curvelet_attenuation(B, _aa_sx, _aa_sy)
+        curv_feats_np = apply_ipe_attenuation(curv_feats_np, _aa_att).astype(np.float32)  # (P, 2*cols)
+        print(json.dumps({"stage": "render_aa_ipe", "footprint": float(args.aa_ipe_footprint),
+                          "sigma_x": round(float(_aa_sx), 4), "sigma_y": round(float(_aa_sy), 4),
+                          "note": "curvelet basis attenuated (mip-NeRF cone); base grid; ~0 compute"}), flush=True)
+    elif render_aa == "supersample" and aa_ss > 1:
+        # Fail-closed on the un-wired combinations (NO-FAKE: no silent wrong result). The fine-grid
+        # self-orient per-pair dir-feat recompute + the structured-init render-res==L*-res invariant
+        # are not yet wired; refuse rather than render on mismatched feats.
+        if use_self_orient:
+            raise ValueError(
+                "--render-aa supersample is not yet wired with --self-orient: the per-pair directional "
+                "feats must be recomputed at the ss*grid (NN-upsample the argmax before the tangent EDT) "
+                "per docs/aa_sdf_observation_render_wire_in_spec.md. Run AA supersample WITHOUT "
+                "--self-orient, or use --render-aa ipe (basis-level AA, self-orient-compatible).")
+        if args.structured_init:
+            raise ValueError(
+                "--render-aa supersample is incompatible with --structured-init (which requires "
+                "--render-h/--render-w == the L* resolution; the fine grid breaks that invariant).")
+        from tac.boundary_math.aa_sdf_observation_render import build_supersampled_coords
+        _coords_fine = build_supersampled_coords(render_h, render_w, aa_ss)          # (ss^2*P, 2)
+        coord_feats_fine_mx = mx.array(curvelet_feats(_coords_fine, B).astype(np.float32))
+        print(json.dumps({"stage": "render_aa_supersample", "ss": aa_ss,
+                          "fine_grid": [render_h * aa_ss, render_w * aa_ss],
+                          "note": "separate fine-grid render feats; base-grid eikonal/sdf unaffected"}), flush=True)
     coord_feats_mx = mx.array(curv_feats_np)
 
     # (DIAGNOSED FIX) natural per-class palette = mean GT RGB per L* class (the transfer-probe's
@@ -1211,9 +1281,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             m = _resid_mask_mx[pair][None]                # (1,H,W,1)
             return _bulk_rgb_mx[pair][None] * (1.0 - m) + rgb_nhwc * m
 
-        def _render_R(witness, coord_feats, code_idx, rh, rw):  # noqa: F811 (residual override)
-            return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_compose_mx)
-
+        # (#224) the per-frame _render_R that chains _compose_mx is built in the UNIFIED RENDER
+        # PATH block below (so residual bulk composes with the analytic-lane band + AA supersample).
         def _compose_np(rgb_hw3, pi):  # noqa: F811 (residual override)
             m = _resid_mask_np[pi][..., None]             # (H,W,1)
             return np.where(m, np.asarray(rgb_hw3, np.float32), _bulk_rgb_np[pi])
@@ -1226,11 +1295,115 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "is OUTSIDE the counted weights (rate win). advisory; pointer UNMOVED 0.19110"}),
               flush=True)
 
+    # =====================================================================================
+    # #224 UNIFIED RENDER PATH — compose the render-side levers onto _render_R (the per-frame
+    # realized render used by make_loss_fn(render_fn=...) AND the shared seg-lever forward). DEFAULT
+    # (no residual / no AA / no lane-band / no pose-carrier) => _render_R stays render_through_R_mlx +
+    # render_fn=None => BYTE-IDENTICAL. Each lever is opt-in. Docs: analytic_lane_render_band /
+    # aa_sdf_observation_render wire-in specs.
+    # -------------------------------------------------------------------------------------
+    _aa_on = (render_aa == "supersample" and aa_ss > 1)
+    _band_active = bool(getattr(args, "lane_render_band", False))
+    if _band_active and _aa_on:
+        raise ValueError(
+            "--lane-render-band + --render-aa supersample are not wired together: the band coverage is "
+            "base-grid (H,W) but the AA compose happens at the ss*grid. Use --render-aa ipe (base grid) "
+            "with the band, or run them separately.")
+    # (2) analytic-lane render-band compose_fn (FEED-dv #203/#213/#215). Precompute the per-code
+    # LaneBandPrior ONCE from the frozen GT class-1 mask; ride the witness margin (#141) as the
+    # FP-killer uncertainty gate. compose_fn coverage/u_mask are stop-grad constants; the gradient
+    # flows through the witness rgb + the witness-derived lane appearance.
+    band_compose_fn = None
+    band_gate = {"on": False}
+    _band_start = int(getattr(args, "lane_band_start_epoch", 300))
+    if _band_active:
+        from tac.boundary_math.analytic_lane_render_band import (
+            build_analytic_lane_band_prior,
+            make_lane_band_compose_fn,
+        )
+        _lane_priors: dict[int, Any] = {}
+        for _pi in range(P):
+            _prior = build_analytic_lane_band_prior(
+                np.asarray(gt.lstars[_pi]), lane_cls=1, softness=float(args.lane_band_softness),
+                dash_gate=True, dash_forward_max_m=float(args.lane_band_dash_forward_max_m))
+            _lane_priors[2 * _pi + 1] = _prior   # frame1 (the SegNet-scored frame)
+            _lane_priors[2 * _pi] = _prior       # frame0 seg-free; keep symmetric
+        _u_src = str(args.lane_band_uncertainty_source)
+        if _u_src == "witness":
+            def _band_margin_provider(code_idx):
+                # shared coord_feats_mx (correct for the measured no-self-orient config); stop-grad.
+                return mx.stop_gradient(
+                    model.call_margin(coord_feats_mx, int(code_idx))).reshape(render_h, render_w)
+            _margin_provider: Any = _band_margin_provider
+        elif _u_src == "gt":
+            _margin_provider = {c: mx.array(np.asarray(gt.margins[c // 2], np.float32)) for c in _lane_priors}
+        else:
+            _margin_provider = None
+
+        def _band_lane_rgb(code_idx):
+            return model.render_lane_appearance(coord_feats_mx, int(code_idx), lane_cls=1).reshape(
+                render_h, render_w, 3)
+
+        band_compose_fn = make_lane_band_compose_fn(
+            _lane_priors, lane_rgb_provider=_band_lane_rgb, margin_provider=_margin_provider,
+            tau=float(args.lane_band_tau), eps=float(args.lane_band_eps),
+            weight=float(args.lane_band_weight), use_mlx=True)
+        band_gate["on"] = _band_start <= 1
+        _band_recalls = [float(_lane_priors[2 * pi + 1].band_recall) for pi in range(P)
+                         if np.isfinite(_lane_priors[2 * pi + 1].band_recall)]
+        print(json.dumps({"stage": "lane_render_band", "n_pairs": P, "uncertainty_source": _u_src,
+                          "start_epoch": _band_start,
+                          "band_vs_gt_lane_recall_mean": (round(float(np.mean(_band_recalls)), 4)
+                                                          if _band_recalls else None),
+                          "note": "class-1 render-time authority composited PRE-R; gated at start_epoch "
+                          "(spike-guard re-treat); advisory; pointer 0.19110 UNMOVED"}), flush=True)
+    # assemble the compose chain (residual bulk FIRST, then lane band on top). None => bare render.
+    _use_chain = residual_mode or _band_active
+
+    def _compose_chain(rgb_nhwc, code_idx):
+        if residual_mode:
+            rgb_nhwc = _compose_mx(rgb_nhwc, code_idx)
+        if _band_active and band_gate["on"]:
+            rgb_nhwc = band_compose_fn(rgb_nhwc, code_idx)
+        return rgb_nhwc
+
+    # (1) AA supersample render dispatch: IGNORE the passed base-grid coord_feats and use the
+    # fine-grid feats (the base-grid eikonal/sdf(cf) in total_loss_fn is unaffected -> still base grid).
+    if _aa_on or _use_chain:
+        from tac.boundary_math.aa_sdf_observation_render import (  # noqa: E402
+            render_aa_through_R_mlx as _render_aa_R,
+        )
+
+        def _render_R(witness, coord_feats, code_idx, rh, rw):  # noqa: F811 (unified #224 override)
+            _cf = _compose_chain if _use_chain else None
+            if _aa_on:
+                return _render_aa_R(witness, coord_feats_fine_mx, code_idx, rh, rw, aa_ss, compose_fn=_cf)
+            return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_cf)
+
+    render_fn = _render_R if (_aa_on or _use_chain) else None
+
+    # (3) warp-real-luma frame0 pose carrier — the parity-dispatch render_fn (even code=f0 -> the
+    # SE(3) ground-homography warp of the REAL keyframe luma; odd=f1 -> witness) + residual co-grad.
+    # FAIL-CLOSED: the render_fn build needs the measured xi calibration constants (s_t/s_r/pitch,
+    # per tools/measure_warp_real_luma_frame0_dpose.py) AND the residual training needs a
+    # value_and_grad that co-differentiates carrier.trainable_parameters() alongside the witness --
+    # a co-optimization restructure that is not GPU-validatable under CONTAINMENT. Flags + gauge
+    # (PoseGauge.WARP_REAL_LUMA) landed; this ON-path is the documented #224 follow-up. Default OFF
+    # => this guard never fires => byte-identical.
+    if bool(getattr(args, "pose_carrier", False)):
+        raise NotImplementedError(
+            "--pose-carrier: the frame0 real-luma warp render_fn + residual co-grad wire-in is the "
+            "#224 follow-up (needs the measured xi calibration s_t/s_r/pitch + a value_and_grad that "
+            "co-differentiates WarpRealLumaFrame0Carrier.trainable_parameters() with the witness). "
+            "The carrier module (src/tac/boundary_math/warp_real_luma_frame0.py) + its "
+            "make_pair_render_dispatch + the flags/gauge are landed; enabling this is gated on that "
+            "co-optimization restructure. Run without --pose-carrier (w_pose=0 pose-blind-by-design).")
+
     base_loss = make_loss_fn(
         adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
         seg_loss=args.seg_loss, tau_softplus_tau=args.tau_softplus_tau, l7_mult=args.l7_mult,
         l7_threshold=args.l7_threshold,
-        render_fn=(_render_R if residual_mode else None),
+        render_fn=render_fn,
     )
 
     # LEVER-3 (lane-edge fragility weighting) hyperparameters captured from args (static; closure
@@ -1348,6 +1521,71 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "margin_field_head", "weight": mfh_w,
                           "per_class_margin_target": [round(float(v), 4) for v in _mfh_tgt]}), flush=True)
 
+    # #224 (4) PERSISTENCE/TOPOLOGY loss setup (persistence_topology_loss; #218/TopologyLossGauge).
+    # persist_w=0 (default) => persist_classes=() + persist_gate["w"]=0 => branch inert => byte-identical.
+    persist_w = float(getattr(args, "persistence_loss_weight", 0.0))
+    persist_recall_w = float(getattr(args, "persistence_recall_weight", 1.0))
+    persist_cldice_iters = int(getattr(args, "cldice_iters", 5))
+    persist_warmup = int(getattr(args, "persistence_warmup_epochs", 0))
+    persist_classes: tuple[int, ...] = ()
+    persist_gate = {"w": 0.0}   # epoch-annealed weight (set in the loop); 0 => branch inert
+    if persist_w > 0.0:
+        from tac.boundary_math.persistence_topology_loss import (
+            detect_persistence_tail_classes,
+            persistence_anneal_weight,
+            persistence_topology_loss_mlx,
+        )
+        _pc = str(getattr(args, "persistence_classes", "auto")).strip()
+        if _pc.lower() == "auto":
+            _lst_stack_p = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+            persist_classes, _pev = detect_persistence_tail_classes(_lst_stack_p, n_classes=5)
+        else:
+            persist_classes = tuple(int(x) for x in _pc.split(",") if x.strip() != "")
+        print(json.dumps({"stage": "persistence_loss", "target_classes": list(persist_classes),
+                          "weight": persist_w, "recall_weight": persist_recall_w,
+                          "cldice_iters": persist_cldice_iters, "warmup_epochs": persist_warmup,
+                          "note": "soft-clDice + persistence-weighted island recall on the SHARED "
+                          "realized seg forward; annealed; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+
+    # #224 (5) ISLAND AMPLIFICATION setup (island_protection; #208/IslandProtectionGauge.AMPLIFY_ONLY).
+    # Rides the SHARED LEVER-4 realized margin _signed (#141) -- NO 2nd saliency / SegNet forward.
+    # amplify_w=0 (default) => island_weight_mx None => branch skipped => byte-identical.
+    amplify_w = float(getattr(args, "amplify_weight", 0.0))
+    amplify_form = str(getattr(args, "amplify_form", "hinge"))
+    amplify_mtgt = float(getattr(args, "amplify_margin_target", 1.0))
+    island_weight_mx: dict[int, Any] | None = None
+    if amplify_w > 0.0:
+        from tac.boundary_math.island_protection import (
+            build_island_masks,
+            identify_island_classes,
+            island_birth_from_signed_mx,
+            island_persistence_weight,
+        )
+        _lst_stack_i = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+        _idet = identify_island_classes(_lst_stack_i, n_classes=5)
+        island_weight_mx = {}
+        for pi in range(P):
+            _im = build_island_masks(np.asarray(gt.lstars[pi], np.int64), _idet.lane_cls,
+                                     _idet.movable_cls, dilate_px=int(args.island_dilate_px))
+            _iw = island_persistence_weight(_im.any_mask, kind=str(args.amplify_persist))
+            island_weight_mx[pi] = mx.array(np.asarray(_iw, np.float32)[None])   # (1,H,W)
+        print(json.dumps({"stage": "island_amplify", "island_classes": list(_idet.island_classes),
+                          "lane_cls": _idet.lane_cls, "movable_cls": _idet.movable_cls,
+                          "weight": amplify_w, "form": amplify_form, "margin_target": amplify_mtgt,
+                          "persist": str(args.amplify_persist),
+                          "note": "island-birth rides the SHARED realized _signed margin (#141); "
+                          "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+    # seed/containment (new protected-seed param + grad-shield between value_and_grad and opt.update)
+    # = the #224 follow-up (fail-closed; NOT GPU-validatable under CONTAINMENT). AMPLIFICATION above IS
+    # wired. The island module + gauge (SEED_CONTAIN/FULL) are landed.
+    if bool(getattr(args, "seed_islands", False)):
+        raise NotImplementedError(
+            "--seed-islands: the EARLY-SEED + CONTAINMENT stack needs a protected seed-residual PARAM "
+            "(build_island_seed/compose_seed via the base render compose_fn) + a grad-shield "
+            "(contain_protected_grad_mx) applied to THAT param's grad between value_and_grad and "
+            "opt.update (a new optimizer group + grad-path restructure). Enabling it is the documented "
+            "#224 follow-up. Use --amplify-weight (AMPLIFY_ONLY, rides _signed) which IS wired.")
+
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
         phi0 = model.sdf(cf, c0)
@@ -1367,7 +1605,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _seg_levers_on = ((lane_w > 0.0 and lane_gate["on"]) or
                           (msal_w > 0.0 and msal_gate["on"]) or
                           (lane_thin_w > 0.0 and lane_thin_gate["on"]) or
-                          (mfh_w > 0.0 and mfh_target_mx is not None))  # #218 facets 1b/3
+                          (mfh_w > 0.0 and mfh_target_mx is not None) or          # #218 facets 1b/3
+                          (amplify_w > 0.0 and island_weight_mx is not None) or   # #224 island amplify
+                          (persist_gate["w"] > 0.0 and bool(persist_classes)))    # #224 persistence loss
         if _seg_levers_on:
             # _render_R composes the FIXED bulk before R in residual mode (else == bare render) so
             # the surgical levers (lane-thin/margin-saliency/lane-edge) weight the COMPOSED-render
@@ -1417,6 +1657,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hmap = mx.maximum(msal_tgt - sgn, 0.0) * sal                 # fragile pixels weighted
             msal_term = mx.sum(hmap) / (mx.sum(sal) + 1e-6)             # saliency-weighted mean hinge
             L = L + msal_w * msal_term
+        # #224 (5) ISLAND AMPLIFICATION — the island-birth term on the SHARED realized _signed margin
+        # (island x persistence weight; orthogonal to LEVER-4's fragility x all-class weight). Default
+        # amplify_w=0 => skipped => byte-identical. c1 = 2*pi+1 (the SegNet-scored frame) => pi=c1//2.
+        if amplify_w > 0.0 and island_weight_mx is not None:
+            L = L + amplify_w * island_birth_from_signed_mx(
+                _signed, island_weight_mx[int(c1) // 2], amplify_mtgt, form=amplify_form)
+        # #224 (4) PERSISTENCE/TOPOLOGY loss — soft-clDice + persistence-weighted island recall on the
+        # SHARED realized seg logits (_slog). GT-presence-gated inside the module (never hallucinate).
+        # Annealed weight persist_gate["w"] (set per-epoch, coarse->fine); 0 => branch inert.
+        if persist_gate["w"] > 0.0 and persist_classes:
+            L = L + persist_gate["w"] * persistence_topology_loss_mlx(
+                _slog, lstar_oh, persist_classes, cldice_iters=persist_cldice_iters,
+                w_cldice=1.0, w_recall=persist_recall_w)
         # LEVER-A (FiLM-rank-fix) soft participation-ratio FLOOR. Pushes the per-pair modulation PR up
         # toward rankfloor_tgt (opposing the measured rank-1 collapse). PR computed Gram-wise (NO
         # eigendecomposition): trace(C)=||Mc||_F^2 (== mx.sum(Mc*Mc)), ||C||_F^2=||Mc Mc^T||_F^2. The
@@ -2088,6 +2341,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_thin_engage", "epoch": ep, "start": lane_thin_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # #224 (2) analytic-lane render-band engagement gate + transition RE-TREAT (mirrors the
+            # lane/margin/thin gates). No-op when --lane-render-band off (band never applies).
+            if _band_active:
+                _band_was = band_gate["on"]
+                band_gate["on"] = _band_start <= ep
+                if band_gate["on"] and not _band_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "lane_render_band_engage", "epoch": ep, "start": _band_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # #224 (4) persistence loss anneal (linear warm-up; coarse->fine). No-op when persist_w=0.
+            if persist_w > 0.0 and persist_classes:
+                persist_gate["w"] = persistence_anneal_weight(ep, persist_w, persist_warmup)
             # BUILD 1 (FEED-fw): apply stage-transition TREATMENT for an AdamW->AdamW boundary
             # detected above. Skipped during the Muon finisher (muon_switched True; it re-treats
             # itself + freezes the base LR schedule). The spike-guard re-treat already happened in the
@@ -2875,6 +3140,85 @@ def main(argv: list[str] | None = None) -> int:
                     "0, matching the structured-init pretrain's pair-0 feats convention).")
     ap.add_argument("--lane-prior-phi1-dash-gate", action=argparse.BooleanOptionalAction, default=True,
                     help="BUILD 2: model the lane dash period (deg-3 centerline + dash). Default on.")
+    # =====================================================================================
+    # #224 CONSOLIDATED WIRE-IN — the 6 LANDED components. ALL flags DEFAULT-OFF => the
+    # default render+loss+init path is BYTE-IDENTICAL to the pre-#224 baseline (the
+    # non-negotiable acceptance bar; proven by tools/wire_in_224_byte_identical_smoke.py).
+    # Each flag routes to the REAL (tested) module function when ON (NO-FAKE). Nothing here
+    # fires unless explicitly enabled. Docs: docs/aa_sdf_observation_render_wire_in_spec.md +
+    # docs/analytic_lane_render_band_wire_in_spec.md + the in-module WIRE-IN SPECs.
+    # -------- (1) AA-SDF observation-map render (aa_sdf_observation_render; MEASURED #1 rep lever) --
+    ap.add_argument("--render-aa", choices=["none", "supersample", "ipe"], default="none",
+                    help="#224/#220 AA observation-map render mode (default none = byte-identical "
+                    "point-sample). supersample=render at ss*grid+box-down; ipe=mip-NeRF cone "
+                    "attenuation of the curvelet basis (analytical, ~0-compute).")
+    ap.add_argument("--aa-supersample", type=int, default=1,
+                    help="#224 supersample factor ss for --render-aa supersample (ss=1 byte-identical).")
+    ap.add_argument("--aa-ipe-footprint", type=float, default=1.0,
+                    help="#224 footprint std scale for --render-aa ipe (1.0 = one-pixel box).")
+    # -------- (2) analytic-lane render-band (analytic_lane_render_band; FEED-dv #203/#213/#215) ------
+    ap.add_argument("--lane-render-band", action=argparse.BooleanOptionalAction, default=False,
+                    help="#224/FEED-dv: composite the analytic-lane render-band via compose_fn "
+                    "(class-1 render-time authority). DEFAULT OFF => byte-identical.")
+    ap.add_argument("--lane-band-softness", type=float, default=1.0,
+                    help="#224 AA-SDF coverage ramp width (px) on the band lateral edge.")
+    ap.add_argument("--lane-band-dash-forward-max-m", type=float, default=55.0,
+                    help="#224/#215 SegNet-Nyquist: dash-gate ONLY where forward < this (m); continuous beyond.")
+    ap.add_argument("--lane-band-uncertainty-source", type=str, default="witness",
+                    choices=["witness", "gt", "none"],
+                    help="#224 uncertainty margin source for the FP-killer gate (witness margin PROB; "
+                    "gt margin LOGIT; none disables the gate).")
+    ap.add_argument("--lane-band-tau", type=float, default=0.85,
+                    help="#224 uncertainty threshold (witness margin PROB [0,1]; gt margin LOGIT ~[0,13]).")
+    ap.add_argument("--lane-band-eps", type=float, default=0.35, help="#224 uncertainty ramp width.")
+    ap.add_argument("--lane-band-weight", type=float, default=1.0, help="#224 band strength (curriculum ramp).")
+    ap.add_argument("--lane-band-start-epoch", type=int, default=300, help="#224 engage the band at this epoch.")
+    # -------- (3) warp-real-luma frame0 pose carrier (warp_real_luma_frame0; PoseGauge.WARP_REAL_LUMA) --
+    ap.add_argument("--pose-carrier", action=argparse.BooleanOptionalAction, default=False,
+                    help="#224: render frame0 THROUGH the SE(3) ground-homography warp of the REAL "
+                    "keyframe luma (seg-free f0 -> real-luma pose carrier). Parity-dispatch render_fn "
+                    "(even code=f0->carrier, odd=f1->witness). Requires --w-pose>0. DEFAULT OFF => "
+                    "byte-identical (the witness's own f0 render).")
+    ap.add_argument("--pose-carrier-residual-mode", type=str, default="table", choices=["table", "film"],
+                    help="#224 pose-carrier residual parametrization: table (per-pair (P,6), byte-minimal) "
+                    "or film (code-conditioned MLP). Default table.")
+    ap.add_argument("--pose-carrier-residual-scale", type=float, default=1.0,
+                    help="#224 pose-carrier learnable-residual scale (dxi = scale * residual).")
+    # -------- (4) persistence/topology loss (persistence_topology_loss; TopologyLossGauge) -----------
+    ap.add_argument("--persistence-loss-weight", type=float, default=0.0,
+                    help="#224/#218: weight of the soft-clDice + persistence-weighted island-recall "
+                    "term on the SHARED realized-through-R seg forward (births the finest-scale "
+                    "erasure-tail the CE drops). 0 (default) => branch skipped => byte-identical.")
+    ap.add_argument("--persistence-recall-weight", type=float, default=1.0,
+                    help="#224 w_recall inside the persistence class loss (clDice weight fixed 1.0).")
+    ap.add_argument("--cldice-iters", type=int, default=5,
+                    help="#224 soft-skeleton peeling iterations for the clDice connectivity term.")
+    ap.add_argument("--persistence-warmup-epochs", type=int, default=0,
+                    help="#224 linear warm-up (epochs) for the persistence weight (coarse->fine; "
+                    "0=full weight immediately).")
+    ap.add_argument("--persistence-classes", type=str, default="auto",
+                    help="#224 target classes: 'auto' self-detects the thin/small erasure-tail classes "
+                    "from the cached GT argmax (detect_persistence_tail_classes), or a comma list e.g. '1,3'.")
+    # -------- (5) island seed/containment/amplification (island_protection; IslandProtectionGauge) ---
+    ap.add_argument("--seed-islands", action=argparse.BooleanOptionalAction, default=False,
+                    help="#224/#208: EARLY-SEED the finest-scale islands (self-detected lane+movable) "
+                    "into the structured-init phi target (accelerant; ships 0 archive bytes). Requires "
+                    "--structured-init. DEFAULT OFF => byte-identical.")
+    ap.add_argument("--island-dilate-px", type=int, default=1, help="#224 annulus dilation of the island masks.")
+    ap.add_argument("--containment-mode", type=str, default="shield", choices=["freeze", "damp", "shield"],
+                    help="#224 how the seeded island grad is protected from the bulk-CE wash "
+                    "(shield=zero only the destructive same-sign component).")
+    ap.add_argument("--containment-damp", type=float, default=0.1, help="#224 damp factor for --containment-mode damp.")
+    ap.add_argument("--amplify-weight", type=float, default=0.0,
+                    help="#224/#208: weight of the island-birth term (rides the SHARED LEVER-4 _signed "
+                    "margin; NO 2nd saliency/SegNet forward). 0 (default) => skipped => byte-identical.")
+    ap.add_argument("--amplify-form", type=str, default="hinge", choices=["hinge", "softplus"],
+                    help="#224 island-birth penalty form.")
+    ap.add_argument("--amplify-margin-target", type=float, default=1.0,
+                    help="#224 the margin the island must WIN its pixels by.")
+    ap.add_argument("--amplify-persist", type=str, default="inverse_thickness",
+                    choices=["uniform", "inverse_thickness"],
+                    help="#224 island birth-weight kind (inverse_thickness up-weights the thinnest tail).")
     args = ap.parse_args(argv)
 
     # (review C2) --anneal-epochs guard: must be >= 1 when set (it is a cosine DENOMINATOR). A value
