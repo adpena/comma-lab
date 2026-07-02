@@ -239,10 +239,18 @@ LANE_BAND_TRAINER_FLAGS: dict[LaneGauge, tuple[str, ...]] = {
     LaneGauge.NONE: (),
     LaneGauge.BAND_RENDER_AUTHORITY: ("--lane-render-band",),
 }
+# AM-softmax margin default (CosFace-family m~0.35-0.5, adapted to the realized-margin-hinge target).
+# The fixed ADDITIVE_MARGIN chart cannot carry a per-instance value, so this is the default the static
+# map bakes in; head_geometry_trainer_flags(chart, additive_margin=...) threads a campaign override.
+ADDITIVE_MARGIN_DEFAULT = 0.5
+
 HEAD_GEOMETRY_TRAINER_FLAGS: dict[HeadGeometryGauge, tuple[str, ...]] = {
     HeadGeometryGauge.SOFTMAX: (),
     HeadGeometryGauge.ETF: ("--head", "etf"),
-    HeadGeometryGauge.ADDITIVE_MARGIN: ("--head", "additive-margin"),
+    # (fix) --head additive-margin ALONE silently no-ops: the trainer's --additive-margin defaults 0.0,
+    # so the AM realized-margin-hinge target is 0 = a no-op head. Emit the margin value with it.
+    HeadGeometryGauge.ADDITIVE_MARGIN: ("--head", "additive-margin",
+                                        "--additive-margin", str(ADDITIVE_MARGIN_DEFAULT)),
     HeadGeometryGauge.MENON_LOGIT_ADJUST: ("--logit-adjust-per-class",),
 }
 
@@ -257,8 +265,15 @@ def lane_band_trainer_flags(chart: LaneGauge) -> tuple[str, ...]:
     return LANE_BAND_TRAINER_FLAGS[chart]
 
 
-def head_geometry_trainer_flags(chart: HeadGeometryGauge) -> tuple[str, ...]:
-    """The levelset-trainer argv flags for a HeadGeometryGauge chart (SOFTMAX => () byte-identical)."""
+def head_geometry_trainer_flags(chart: HeadGeometryGauge,
+                                additive_margin: float | None = None) -> tuple[str, ...]:
+    """The levelset-trainer argv flags for a HeadGeometryGauge chart (SOFTMAX => () byte-identical).
+
+    ADDITIVE_MARGIN emits ``--head additive-margin --additive-margin <m>`` (never a silent no-op: the
+    trainer's --additive-margin defaults 0.0). ``additive_margin`` (optional) overrides the baked
+    ADDITIVE_MARGIN_DEFAULT for a campaign-specific margin; ignored for non-AM charts."""
+    if chart is HeadGeometryGauge.ADDITIVE_MARGIN and additive_margin is not None:
+        return ("--head", "additive-margin", "--additive-margin", str(float(additive_margin)))
     return HEAD_GEOMETRY_TRAINER_FLAGS[chart]
 
 

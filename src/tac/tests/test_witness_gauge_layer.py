@@ -101,6 +101,28 @@ def test_wire_in_224_trainer_flag_emission_byte_identical_defaults():
     assert head_geometry_trainer_flags(HeadGeometryGauge.ETF) == ("--head", "etf")
 
 
+def test_additive_margin_emits_nonzero_margin_not_silent_noop():
+    """--head additive-margin ALONE silently no-ops (trainer --additive-margin defaults 0.0). The
+    chart MUST emit --additive-margin with a NON-ZERO margin, and support a threaded override."""
+    from tac.witness_dsl.gauge import (
+        ADDITIVE_MARGIN_DEFAULT,
+        HeadGeometryGauge,
+        head_geometry_trainer_flags,
+    )
+
+    flags = head_geometry_trainer_flags(HeadGeometryGauge.ADDITIVE_MARGIN)
+    assert flags[:2] == ("--head", "additive-margin")
+    assert "--additive-margin" in flags, "AM chart must emit --additive-margin (else silent no-op)"
+    margin = float(flags[flags.index("--additive-margin") + 1])
+    assert margin > 0.0, "AM margin must be non-zero"
+    assert margin == pytest.approx(ADDITIVE_MARGIN_DEFAULT)
+    # threaded override
+    flags2 = head_geometry_trainer_flags(HeadGeometryGauge.ADDITIVE_MARGIN, additive_margin=0.75)
+    assert flags2 == ("--head", "additive-margin", "--additive-margin", "0.75")
+    # override is ignored for non-AM charts (softmax stays byte-identical empty)
+    assert head_geometry_trainer_flags(HeadGeometryGauge.SOFTMAX, additive_margin=0.75) == ()
+
+
 # --- GaugeCost contracts (NO-FAKE) ------------------------------------------
 def test_gauge_cost_rejects_empty_provenance():
     with pytest.raises(GaugeCostError):
