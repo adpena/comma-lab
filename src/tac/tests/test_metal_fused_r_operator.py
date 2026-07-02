@@ -16,6 +16,9 @@ import pytest
 from tac.local_acceleration.metal_fused_r_operator import (
     CUBIC_A,
     _RESAMPLE_SRC,
+    _TRANSPOSE_SRC,
+    _fused_r_vjp_numpy_einsum_legacy,
+    _transpose_sorted_taps,
     fused_r_forward_numpy,
     fused_r_vjp_numpy,
     metal_fused_r_available,
@@ -329,8 +332,8 @@ def test_custom_function_vjp_matches_non_fused_mlx_path():
 
 @_needs_metal
 def test_assert_metal_matches_cpu_oracle_gate_passes():
-    # The GPU-gated parity gate must PASS on this chip: forward bit-identical (atol=0)
-    # AND VJP within tol. Guards both fixes end-to-end.
+    # The GPU-gated parity gate must PASS on this chip: forward AND VJP bit-identical
+    # (atol=0). Guards the forward contract-off fix + the metal transpose VJP (P2b).
     _mlx_gpu()
 
     from tac.local_acceleration.metal_fused_r_operator import assert_metal_matches_cpu_oracle
@@ -338,4 +341,158 @@ def test_assert_metal_matches_cpu_oracle_gate_passes():
     res = assert_metal_matches_cpu_oracle()
     assert res["forward_bit_identical"] is True
     assert res["forward_max_abs_delta"] == 0.0
-    assert res["grad_within_tol"] is True
+    assert res["grad_bit_identical"] is True
+    assert res["grad_max_abs_delta"] == 0.0
+    assert res["grad_via_custom_fn_max_abs_delta"] == 0.0
+    assert res["grad_within_tol"] is True  # legacy key, now == bit-identity
+
+
+# --------------------------------------------------------------------------- #
+# P2b: deterministic numpy VJP authority (CPU) — determinism + adjoint + ordering
+# --------------------------------------------------------------------------- #
+
+
+def test_transpose_kernel_source_disables_fp_contraction():
+    # LOAD-BEARING for VJP bit-identity: the transpose kernel must disable FP
+    # contraction so its per-tap ``acc += w*g`` is separate multiply-then-add (matches
+    # the numpy deterministic accumulation term-by-term instead of an fma).
+    assert "#pragma clang fp contract(off)" in _TRANSPOSE_SRC
+
+
+def test_numpy_vjp_is_deterministic():
+    # The deterministic authority must return bit-identical output across calls (no
+    # BLAS-order dependence) — the property that makes metal bit-identity reachable.
+    rng = np.random.default_rng(0)
+    x = (rng.random((2, _SMALL["in_hw"][0], _SMALL["in_hw"][1], 3)) * 255.0).astype(np.float32)
+    cot = rng.standard_normal(
+        fused_r_forward_numpy(x, camera_hw=_SMALL["camera_hw"], output_hw=_SMALL["output_hw"]).shape
+    ).astype(np.float32)
+    a = fused_r_vjp_numpy(x, cot, camera_hw=_SMALL["camera_hw"], output_hw=_SMALL["output_hw"])
+    b = fused_r_vjp_numpy(x, cot, camera_hw=_SMALL["camera_hw"], output_hw=_SMALL["output_hw"])
+    assert np.array_equal(a, b)
+
+
+def test_numpy_vjp_adjoint_inner_product():
+    # <R_lin(x), g> == <x, R_lin^T(g)> to float32 tol (validates the transpose is the
+    # exact adjoint of the LINEAR resamples, independent of the STE/clip). Use
+    # ste_round=False so R is purely linear.
+    rng = np.random.default_rng(4)
+    cam, out = _SMALL["camera_hw"], _SMALL["output_hw"]
+    x = (rng.random((1, _SMALL["in_hw"][0], _SMALL["in_hw"][1], 3)) * 180.0 + 38.0).astype(
+        np.float32
+    )
+    g = rng.standard_normal(fused_r_forward_numpy(x, camera_hw=cam, output_hw=out).shape).astype(
+        np.float32
+    )
+    rx = fused_r_forward_numpy(x, camera_hw=cam, output_hw=out, ste_round=False)
+    rtg = fused_r_vjp_numpy(x, g, camera_hw=cam, output_hw=out, ste_round=False)
+    lhs = float(np.sum(rx * g))
+    rhs = float(np.sum(x * rtg))
+    assert abs(lhs - rhs) / abs(lhs) < 1e-5
+
+
+def test_numpy_vjp_deterministic_vs_legacy_ordering_documented():
+    # The deterministic path differs from the legacy BLAS-einsum path only by (a) float
+    # accumulation ORDER (sub-ULP, everywhere) for interior inputs where the clip mask
+    # is all-ones. Documents/guards that the interior residual is tiny (< 1e-4).
+    rng = np.random.default_rng(6)
+    cam, out = _SMALL["camera_hw"], _SMALL["output_hw"]
+    # interior -> clip mask all-ones both paths -> only accumulation order differs
+    x = (rng.random((2, _SMALL["in_hw"][0], _SMALL["in_hw"][1], 3)) * 150.0 + 55.0).astype(
+        np.float32
+    )
+    g = rng.standard_normal(fused_r_forward_numpy(x, camera_hw=cam, output_hw=out).shape).astype(
+        np.float32
+    )
+    new = fused_r_vjp_numpy(x, g, camera_hw=cam, output_hw=out, ste_round=True)
+    legacy = _fused_r_vjp_numpy_einsum_legacy(x, g, camera_hw=cam, output_hw=out, ste_round=True)
+    assert float(np.max(np.abs(new - legacy))) < 1e-4
+
+
+def test_transpose_tables_precombine_clipped_edge_taps():
+    # Boundary care: at image edges, multiple forward taps clip to the same input
+    # index; the transpose table must PRE-COMBINE same-(out,in) taps so each (out,in)
+    # pair appears exactly once (the exact adjoint weight; no double count). Verify no
+    # duplicate s_out within any input's tap list.
+    t = _transpose_sorted_taps(in_size=24, out_size=55, mode="bicubic")
+    starts, counts, flat_idx = t["starts"], t["counts"], t["flat_idx"]
+    for i in range(t["in_size"]):
+        s, c = int(starts[i]), int(counts[i])
+        outs = list(flat_idx[s : s + c])
+        assert len(outs) == len(set(outs)), f"input {i} has duplicate s_out taps: {outs}"
+        assert outs == sorted(outs), f"input {i} taps not ascending: {outs}"
+
+
+# --------------------------------------------------------------------------- #
+# P2b GPU-gated: metal transpose VJP bit-identity (real res + boundary) + determinism
+# --------------------------------------------------------------------------- #
+
+
+@_needs_metal
+def test_metal_vjp_bit_identical_to_numpy_oracle_real_resolution():
+    # THE P2b gate: the fused metal transpose VJP must be BIT-IDENTICAL (max|Δ|=0) to
+    # the deterministic numpy oracle at the REAL witness resolution
+    # (48,64)->(874,1164)->(384,512), INCLUDING boundary pixels and with the clip mask
+    # engaged (over-saturating input). batch>1 too.
+    mx = _mlx_gpu()
+
+    from tac.local_acceleration.metal_fused_r_operator import _fused_r_metal_vjp
+
+    cam, out, in_hw = (874, 1164), (384, 512), (48, 64)
+    for seed, scale, off in [(0, 255.0, 0.0), (1, 300.0, -20.0), (2, 180.0, 38.0)]:
+        rng = np.random.default_rng(seed)
+        x = (rng.random((2, in_hw[0], in_hw[1], 3)) * scale + off).astype(np.float32)
+        g = rng.standard_normal((2, out[0], out[1], 3)).astype(np.float32)
+        gx_np = fused_r_vjp_numpy(x, g, camera_hw=cam, output_hw=out, ste_round=True)
+        gx_mx = np.asarray(
+            _fused_r_metal_vjp(mx.array(x), mx.array(g), camera_hw=cam, output_hw=out, ste_round=True)
+        )
+        assert np.array_equal(gx_mx, gx_np), (
+            f"metal VJP not bit-identical at seed={seed}: max|Δ|="
+            f"{float(np.max(np.abs(gx_mx - gx_np)))}"
+        )
+        # explicit boundary-pixel check (first/last 2 rows & cols of the input grid)
+        edge = np.zeros_like(gx_np, dtype=bool)
+        edge[:, :2, :, :] = edge[:, -2:, :, :] = True
+        edge[:, :, :2, :] = edge[:, :, -2:, :] = True
+        assert float(np.max(np.abs((gx_mx - gx_np)[edge]))) == 0.0
+
+
+@_needs_metal
+def test_metal_vjp_deterministic_run_to_run():
+    # P2b determinism: the atomics-free metal transpose VJP is bit-identical across
+    # repeated runs (beats the mx.vjp scatter ~1-ULP non-determinism floor).
+    _mlx_gpu()
+
+    from tac.local_acceleration.metal_fused_r_operator import assert_metal_vjp_deterministic
+
+    res = assert_metal_vjp_deterministic(repeats=4)
+    assert res["deterministic_bit_identical"] is True
+    assert res["max_run_to_run_abs_delta"] == 0.0
+
+
+@_needs_metal
+def test_metal_vjp_batch_gt_one_and_via_custom_fn():
+    # Guards the (x,)-unpack convention AND the metal VJP for B>1 through the custom
+    # function graph (mx.vjp(fn, ...)) == direct metal VJP == numpy oracle, all atol=0.
+    mx = _mlx_gpu()
+
+    from tac.local_acceleration.metal_fused_r_operator import (
+        _fused_r_metal_vjp,
+        make_fused_r_roundtrip,
+    )
+
+    cam, out = (55, 73), (24, 32)
+    fn = make_fused_r_roundtrip(camera_hw=cam, output_hw=out, ste_round=True)
+    rng = np.random.default_rng(9)
+    x = (rng.random((3, 24, 32, 3)) * 255.0).astype(np.float32)  # B=3, clip engaged
+    g = rng.standard_normal(fused_r_forward_numpy(x, camera_hw=cam, output_hw=out).shape).astype(
+        np.float32
+    )
+    gx_np = fused_r_vjp_numpy(x, g, camera_hw=cam, output_hw=out, ste_round=True)
+    gx_direct = np.asarray(
+        _fused_r_metal_vjp(mx.array(x), mx.array(g), camera_hw=cam, output_hw=out, ste_round=True)
+    )
+    _, (gx_fn,) = mx.vjp(fn, (mx.array(x),), (mx.array(g),))
+    assert np.array_equal(gx_direct, gx_np)
+    assert np.array_equal(np.asarray(gx_fn), gx_np)
