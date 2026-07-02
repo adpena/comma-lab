@@ -94,9 +94,8 @@ def build_equation(result: dict, result_path: str) -> CanonicalEquation:
         equation_id="aa_sdf_observation_footprint_render_dseg_v1",
         name="AA-SDF observation-map (footprint-integrated) render lowers d_seg at fixed rate",
         one_line_summary=(
-            "Footprint-integrated (supersample->box or mip-NeRF IPE cone) rendering of the witness "
-            "partition recovers finest-scale lane structure that point-sampling erases through R, "
-            "lowering d_seg / raising lane recall at ~0 rate (decode-time deterministic op)."
+            "Footprint-integrated (supersample->box / mip-NeRF IPE) render recovers finest-scale "
+            "lanes that point-sampling erases through R, lowering d_seg at ~0 rate."
         ),
         latex_form=(
             r"\hat{c}(p)=\frac{1}{|F_p|}\int_{F_p} g(x)\,dx \approx \frac{1}{s^2}\sum_{s\times s} g "

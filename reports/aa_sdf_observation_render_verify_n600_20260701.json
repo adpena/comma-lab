@@ -1,0 +1,205 @@
+{
+  "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "n_pairs": 600,
+  "supersample_ss": 2,
+  "primitive": "tac.boundary_math.aa_sdf_observation_render.box_downsample_np",
+  "R_path": "_torch_R_to_camera_uint8 (render->bicubic^874->uint8) + SegNet.preprocess_input bilinear 874->384 -> argmax (frozen CPU-torch authority; identical to the committed levelset_gate_discriminators_n600 gate)",
+  "render_grid_curve": {
+    "192": {
+      "real": {
+        "point": {
+          "d_seg": {
+            "mean": 0.011161134507921007,
+            "median": 0.011027018229166666,
+            "p90": 0.012794494628906252,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.5611300890174782,
+            "median": 0.5610718842428812,
+            "p90": 0.6495203464496379,
+            "n": 600
+          }
+        },
+        "aa": {
+          "d_seg": {
+            "mean": 0.0024076165093315973,
+            "median": 0.00231170654296875,
+            "p90": 0.0031087239583333336,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.9354092198870634,
+            "median": 0.9402150283710327,
+            "p90": 0.9640909629369213,
+            "n": 600
+          }
+        },
+        "aa_recall_lift": 0.3742791308695852,
+        "aa_dseg_gain": 0.00875351799858941
+      },
+      "partition_proxy_CONFOUNDED": {
+        "point": {
+          "d_seg": {
+            "mean": 0.21164835611979166,
+            "median": 0.2600555419921875,
+            "p90": 0.26931660970052085,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.6983657146691419,
+            "median": 0.7018242421601752,
+            "p90": 0.8076965669988927,
+            "n": 600
+          }
+        },
+        "aa": {
+          "d_seg": {
+            "mean": 0.07815966288248698,
+            "median": 0.017840067545572914,
+            "p90": 0.256689453125,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.8479503742568865,
+            "median": 0.856058945083616,
+            "p90": 0.9461994733320007,
+            "n": 600
+          }
+        },
+        "aa_recall_lift": 0.14958465958774458
+      }
+    },
+    "256": {
+      "real": {
+        "point": {
+          "d_seg": {
+            "mean": 0.008102442423502604,
+            "median": 0.008099873860677082,
+            "p90": 0.009328206380208334,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.6628259856936038,
+            "median": 0.6618944629405434,
+            "p90": 0.7289378354728722,
+            "n": 600
+          }
+        },
+        "aa": {
+          "d_seg": {
+            "mean": 0.0012887997097439235,
+            "median": 0.0012385050455729165,
+            "p90": 0.001678466796875,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.9660025763818961,
+            "median": 0.9681703997085058,
+            "p90": 0.9798073615941638,
+            "n": 600
+          }
+        },
+        "aa_recall_lift": 0.3031765906882923,
+        "aa_dseg_gain": 0.006813642713758681
+      },
+      "partition_proxy_CONFOUNDED": {
+        "point": {
+          "d_seg": {
+            "mean": 0.19269241333007814,
+            "median": 0.2537053426106771,
+            "p90": 0.26802622477213545,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.6717781689127484,
+            "median": 0.6701063829787235,
+            "p90": 0.7935273712045033,
+            "n": 600
+          }
+        },
+        "aa": {
+          "d_seg": {
+            "mean": 0.10975925869411893,
+            "median": 0.04585774739583333,
+            "p90": 0.2609334309895833,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.7563924983010035,
+            "median": 0.7545249258948915,
+            "p90": 0.8621155750321069,
+            "n": 600
+          }
+        },
+        "aa_recall_lift": 0.08461432938825508
+      }
+    },
+    "384": {
+      "real": {
+        "point": {
+          "d_seg": {
+            "mean": 0.0054940456814236115,
+            "median": 0.0054779052734375,
+            "p90": 0.006261698404947917,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.7734240618361586,
+            "median": 0.7735479387236056,
+            "p90": 0.8180565967016492,
+            "n": 600
+          }
+        },
+        "aa": {
+          "d_seg": {
+            "mean": 0.0008598581949869792,
+            "median": 0.0008290608723958334,
+            "p90": 0.0011093139648437503,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.975487688183233,
+            "median": 0.9768524969824245,
+            "p90": 0.9859791496825515,
+            "n": 600
+          }
+        },
+        "aa_recall_lift": 0.2020636263470743,
+        "aa_dseg_gain": 0.004634187486436632
+      },
+      "partition_proxy_CONFOUNDED": {
+        "point": {
+          "d_seg": {
+            "mean": 0.0497739495171441,
+            "median": 0.010281880696614584,
+            "p90": 0.1962310791015626,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.8515524153731838,
+            "median": 0.8565273759803482,
+            "p90": 0.9266830320324932,
+            "n": 600
+          }
+        },
+        "aa": {
+          "d_seg": {
+            "mean": 0.0497739495171441,
+            "median": 0.010281880696614584,
+            "p90": 0.1962310791015626,
+            "n": 600
+          },
+          "lane_recall": {
+            "mean": 0.8515524153731838,
+            "median": 0.8565273759803482,
+            "p90": 0.9266830320324932,
+            "n": 600
+          }
+        },
+        "aa_recall_lift": 0.0
+      }
+    }
+  },
+  "verdict": "AA (supersample->box, ss=2) vs POINT on the confound-free REAL-frame achievable-through-R signal: at grid 192 lane-recall lift +0.3743, d_seg 0.01116 (point) -> 0.00241 (AA). The render-grid curve maps the achievable-through-R floor as G -> camera; AA recovers finest-scale lanes WITHIN a fixed grid. Both are ~0-rate decode-time levers (witness bytes unchanged)."
+}
