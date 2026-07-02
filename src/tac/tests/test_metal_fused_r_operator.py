@@ -15,13 +15,20 @@ import pytest
 
 from tac.local_acceleration.metal_fused_r_operator import (
     CUBIC_A,
+    _RESAMPLE_SRC,
     fused_r_forward_numpy,
     fused_r_vjp_numpy,
+    metal_fused_r_available,
     resize_indices_weights_numpy,
 )
 
 # Small, fast shapes for CPU.
 _SMALL = dict(in_hw=(24, 32), camera_hw=(55, 73), output_hw=(24, 32))
+
+_needs_metal = pytest.mark.skipif(
+    not metal_fused_r_available(),
+    reason="requires a Metal (GPU) default device for the fused-R metal kernel",
+)
 
 
 def _mlx_cpu():
@@ -32,6 +39,24 @@ def _mlx_cpu():
     except Exception:  # pragma: no cover - environment guard
         pytest.skip("mlx not importable")
     mx.set_default_device(mx.cpu)
+    return mx
+
+
+def _mlx_gpu():
+    """Return mlx.core pinned to the GPU device, or skip if no Metal device.
+
+    NOTE: sibling CPU tests call ``mx.set_default_device(mx.cpu)`` and that state
+    persists process-wide, so every GPU-gated test MUST re-pin the GPU explicitly
+    (the collection-time ``skipif`` alone is insufficient).
+    """
+
+    try:
+        import mlx.core as mx
+    except Exception:  # pragma: no cover - environment guard
+        pytest.skip("mlx not importable")
+    mx.set_default_device(mx.gpu)
+    if not metal_fused_r_available():
+        pytest.skip("requires a Metal (GPU) default device")
     return mx
 
 
@@ -207,3 +232,110 @@ def test_ste_round_false_keeps_float_camera():
     # Identity resizes => round version is rint(x), float version is x (clipped).
     np.testing.assert_array_equal(y_round, np.rint(np.clip(x, 0, 255)))
     np.testing.assert_allclose(y_float, np.clip(x, 0, 255), atol=0.0)
+
+
+# --------------------------------------------------------------------------- #
+# bit-identity fix guard: the ``#pragma clang fp contract(off)`` is load-bearing
+# --------------------------------------------------------------------------- #
+
+
+def test_metal_kernel_source_disables_fp_contraction():
+    # LOAD-BEARING for bit-identity: Metal defaults to FP contraction (fuses w*x+acc
+    # into fma) which diverges from numpy's separate multiply-then-add (measured:
+    # 3.05e-05 on 14% of down-sampled pixels + a few 1-LSB round flips). Removing this
+    # pragma silently re-introduces the fused-R forward fidelity regression, so guard
+    # its presence. (``#pragma METAL fp math_mode(safe)`` does NOT disable contraction.)
+    assert "#pragma clang fp contract(off)" in _RESAMPLE_SRC
+
+
+# --------------------------------------------------------------------------- #
+# GPU-gated: the metal FORWARD + custom-function VJP (guards the two fixes)
+# --------------------------------------------------------------------------- #
+
+
+@_needs_metal
+def test_metal_forward_bit_identical_to_numpy_oracle():
+    # Guards the contract-off fix: metal forward must be BIT-IDENTICAL (max|Δ|=0) to
+    # the numpy-fp32 authority across the real witness resolution.
+    mx = _mlx_gpu()
+
+    from tac.local_acceleration.metal_fused_r_operator import _fused_r_metal_forward
+
+    for in_hw, cam, out in [((24, 32), (55, 73), (24, 32)), ((48, 64), (874, 1164), (384, 512))]:
+        rng = np.random.default_rng(0)
+        x_np = (rng.random((2, in_hw[0], in_hw[1], 3)) * 255.0).astype(np.float32)
+        y_metal = np.asarray(
+            _fused_r_metal_forward(mx.array(x_np), camera_hw=cam, output_hw=out, ste_round=True)
+        )
+        y_numpy = fused_r_forward_numpy(x_np, camera_hw=cam, output_hw=out, ste_round=True)
+        assert np.array_equal(y_metal, y_numpy), (
+            f"metal forward not bit-identical to numpy oracle at in={in_hw} cam={cam} out={out}: "
+            f"max|Δ|={float(np.max(np.abs(y_metal - y_numpy)))}"
+        )
+
+
+@_needs_metal
+def test_custom_function_vjp_runs_and_matches_numpy_transpose():
+    # Guards the ``(x,) = primals`` bug: for a SINGLE-arg custom_function MLX 0.31.2
+    # passes ``primals`` as the RAW array (not a length-1 tuple), so the old
+    # ``(x,) = primals`` raised ``ValueError: too many values to unpack``. The fix
+    # handles both conventions. Also verifies the adjoint matches the numpy analytic
+    # transpose within the GPU-reduction-non-determinism floor (~1 ULP).
+    mx = _mlx_gpu()
+
+    from tac.local_acceleration.metal_fused_r_operator import make_fused_r_roundtrip
+
+    cam, out = (55, 73), (24, 32)
+    fn = make_fused_r_roundtrip(camera_hw=cam, output_hw=out, ste_round=True)
+    rng = np.random.default_rng(0)
+    # away from the [0,255] clip boundary so the clip mask is all-ones
+    x_np = (rng.random((2, 24, 32, 3)) * 200.0 + 28.0).astype(np.float32)
+    y_shape = fused_r_forward_numpy(x_np, camera_hw=cam, output_hw=out).shape
+    cot_np = rng.standard_normal(y_shape).astype(np.float32)
+    _, (gx_mx,) = mx.vjp(fn, (mx.array(x_np),), (mx.array(cot_np),))
+    gx_mx = np.asarray(gx_mx)
+    gx_np = fused_r_vjp_numpy(x_np, cot_np, camera_hw=cam, output_hw=out, ste_round=True)
+    np.testing.assert_allclose(gx_mx, gx_np, rtol=2e-3, atol=2e-4)
+
+
+@_needs_metal
+def test_custom_function_vjp_matches_non_fused_mlx_path():
+    # The fused-R BACKWARD is ``mx.vjp`` of the SAME bit-faithful oracle the non-fused
+    # loss uses, so the fused gradient must equal the non-fused MLX-path gradient to
+    # the GPU-reduction-non-determinism floor (both share ~1 ULP scatter non-determinism).
+    mx = _mlx_gpu()
+
+    from tac.local_acceleration.metal_fused_r_operator import make_fused_r_roundtrip
+    from tac.local_acceleration.pr95_hnerv_mlx_training import (
+        apply_contest_faithful_roundtrip_nhwc,
+    )
+
+    cam, out = (55, 73), (24, 32)
+    fn = make_fused_r_roundtrip(camera_hw=cam, output_hw=out, ste_round=True)
+    rng = np.random.default_rng(1)
+    x_np = (rng.random((2, 24, 32, 3)) * 200.0 + 28.0).astype(np.float32)
+    x = mx.array(x_np)
+    y_shape = fused_r_forward_numpy(x_np, camera_hw=cam, output_hw=out).shape
+    cot = mx.array(rng.standard_normal(y_shape).astype(np.float32))
+
+    def ref(z):
+        return apply_contest_faithful_roundtrip_nhwc(z, camera_hw=cam, output_hw=out, ste_round=True)
+
+    _, (gx_fused,) = mx.vjp(fn, (x,), (cot,))
+    _, (gx_nonfused,) = mx.vjp(ref, (x,), (cot,))
+    # ~1 ULP GPU reduction non-determinism (the non-fused path has the same floor).
+    np.testing.assert_allclose(np.asarray(gx_fused), np.asarray(gx_nonfused), rtol=1e-4, atol=1e-5)
+
+
+@_needs_metal
+def test_assert_metal_matches_cpu_oracle_gate_passes():
+    # The GPU-gated parity gate must PASS on this chip: forward bit-identical (atol=0)
+    # AND VJP within tol. Guards both fixes end-to-end.
+    _mlx_gpu()
+
+    from tac.local_acceleration.metal_fused_r_operator import assert_metal_matches_cpu_oracle
+
+    res = assert_metal_matches_cpu_oracle()
+    assert res["forward_bit_identical"] is True
+    assert res["forward_max_abs_delta"] == 0.0
+    assert res["grad_within_tol"] is True

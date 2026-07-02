@@ -283,7 +283,19 @@ def fused_r_vjp_numpy(
 # One thread per OUTPUT element (n, ho, wo, c). Separable: W-outer, H-inner tap
 # loop (== MLX H-pass-then-W-pass order => bit-faithful). do_round -> clip[0,255]
 # then rint (round-half-to-even, matching mx.round).
+#
+# ``#pragma clang fp contract(off)`` is LOAD-BEARING for bit-identity: Metal is
+# clang-based and defaults to FP contraction (fuses ``w*x + acc`` into a single
+# ``fma`` with no intermediate rounding). numpy computes the separable resample as
+# separate multiply-then-add (each product rounded to float32 before the add), so
+# an FMA kernel diverges by sub-ULP on the float down-sample AND flips a handful of
+# camera pixels across the round-half boundary (measured on M5 Max: 3.05e-05 on 14%
+# of down-sampled pixels + a few 1-LSB round flips). Disabling contraction makes the
+# kernel bit-IDENTICAL (max|Δ|=0, 100% exact) to the numpy-fp32 authority, matching
+# the MLX production R. ``#pragma METAL fp math_mode(safe)`` does NOT disable
+# contraction; only ``clang fp contract(off)`` does (verified on this host).
 _RESAMPLE_SRC = """
+    #pragma clang fp contract(off)
     uint gid = thread_position_in_grid.x;
     int N     = dims[0];
     int Hin   = dims[1];
@@ -456,8 +468,19 @@ def make_fused_r_roundtrip(
 
     @fn.vjp
     def _fn_vjp(primals, cotangent, output):
-        (x,) = primals
-        _, (gx,) = mx.vjp(_reference, (x,), (cotangent,))
+        # MLX 0.31.2 calling convention: for a SINGLE-argument custom_function,
+        # ``primals`` is passed as the RAW array (NOT a length-1 tuple ``(x,)``);
+        # for multi-arg it is a tuple. The prior ``(x,) = primals`` unpacked the
+        # array's leading dim -> ``ValueError: too many values to unpack`` (crash
+        # whenever B != 1, silent wrong-shape when B == 1). Handle both conventions.
+        x = primals[0] if isinstance(primals, (tuple, list)) else primals
+        # cotangent mirrors the primal packing (raw for single output here).
+        cot = cotangent[0] if isinstance(cotangent, (tuple, list)) else cotangent
+        # BACKWARD = mx.vjp of the bit-faithful pure-MLX oracle. This is the SAME
+        # code path the non-fused loss uses, so the fused-R gradient is bit-identical
+        # to the non-fused MLX path (and the exact adjoint of the forward up to
+        # float32 rounding). ``mx.vjp`` wants tuple primals/cotangents.
+        _, (gx,) = mx.vjp(_reference, (x,), (cot,))
         return (gx,)
 
     return fn
