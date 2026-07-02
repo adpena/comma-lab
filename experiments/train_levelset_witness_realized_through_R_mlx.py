@@ -106,6 +106,73 @@ def _utc() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _rss_gib() -> float:
+    """Best-effort resident-set-size of THIS process in GiB (psutil, then resource fallback).
+
+    Used only for observability (the #205 OOM instrumentation) -- NEVER read back into training
+    (BIT-IDENTICAL). Returns -1.0 when unavailable (NO-FAKE: never a fabricated number)."""
+    try:
+        import psutil  # noqa: PLC0415
+
+        return float(psutil.Process().memory_info().rss) / (1024.0 ** 3)
+    except Exception:
+        try:
+            import resource  # noqa: PLC0415
+
+            ru = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            # macOS ru_maxrss is BYTES; Linux is KiB. Heuristic: >1e9 => already bytes.
+            return float(ru) / (1024.0 ** 3) if ru > 1e9 else float(ru) / (1024.0 ** 2)
+        except Exception:
+            return -1.0
+
+
+def _verdict_dseg_dpose_chunked(
+    seg_cpu: Any, posenet_cpu: Any,
+    f0s: list, f1s: list, lstars: list, poses: list, *, vbatch: int,
+) -> tuple[float, float]:
+    """(#205 REAL OOM FIX) mean d_seg / d_pose over N pairs, running SegNet/PoseNet in CHUNKS of
+    ``vbatch`` instead of one N-wide torch batch.
+
+    The batched verdict (``cpu_verdict_d_seg_batch`` / ``cpu_verdict_d_pose_batch``) casts a
+    ``(N, 2, 3, 874, 1164)`` uint8 stack to **fp32** (= ~14.6 GiB at N=600) and forwards it through
+    EfficientNet-B2 / FastViT-T12 in ONE batch -> tens of GiB of activations. That transient spike,
+    on top of the resident ~41 GiB self-orient cf_mx_cache, is what tripped the 90 GB safe-run guard
+    and killed the n600 launch before its first checkpoint. Chunking bounds the transient to
+    ``vbatch`` pairs.
+
+    BIT-IDENTICAL: the scorers run under ``torch.inference_mode()`` in EVAL mode -> BatchNorm uses
+    RUNNING stats (batch-size-independent), argmax is per-pixel, MSE is per-pair -> the per-chunk
+    concatenation equals the single N-wide batch to the last bit. ``vbatch<=0`` restores the
+    single-batch (pre-fix) path for the A/B parity check."""
+    n = len(f1s)
+    if vbatch is None or vbatch <= 0 or vbatch >= n:
+        ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, lstars)
+        dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, poses)
+        return float(np.mean(ds)), float(np.mean(dp))
+    ds_all: list[float] = []
+    dp_all: list[float] = []
+    for s in range(0, n, vbatch):
+        e = min(s + vbatch, n)
+        ds_all.extend(cpu_verdict_d_seg_batch(seg_cpu, f1s[s:e], lstars[s:e]))
+        dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+    return float(np.mean(ds_all)), float(np.mean(dp_all))
+
+
+def _mlx_mem_gib(mx: Any) -> dict[str, float]:
+    """MLX Metal allocator stats in GiB: active (LIVE arrays), cache (freed-but-pooled buffers),
+    peak (high-water since last reset). The active/cache split is the #205 OOM diagnosis instrument:
+    a small active + huge cache => the buffer POOL is the leak (fixed by ``mx.clear_cache()`` inside
+    the accum loop), NOT the live working set. Pure read; NEVER read back into training."""
+    out: dict[str, float] = {}
+    for key, fn in (("active", "get_active_memory"), ("cache", "get_cache_memory"),
+                    ("peak", "get_peak_memory")):
+        try:
+            out[key] = float(getattr(mx, fn)()) / (1024.0 ** 3)
+        except Exception:
+            out[key] = -1.0
+    return out
+
+
 def _refuse_tmp(path: Path) -> None:
     if any(str(path).startswith(p) for p in _FORBIDDEN_TMP):
         raise ValueError(f"{path!r} is a /tmp-class path; use the SSD/repo tier per CLAUDE.md.")
@@ -2305,11 +2372,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         for pi in vpairs:
             f0s.append(_render_numpy_deploy(deploy, pi, 0))
             f1s.append(_render_numpy_deploy(deploy, pi, 1))
-        ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
+        # (#205 OOM fix) chunk the CPU-scorer inference (bit-identical; eval-mode BN running stats).
         # pose VERDICT still measured (monitoring) but pose is NOT the witness's job (w_pose=0
         # default; deploy pose rides the SOLVED Quantizr stored-pose sidecar, d_pose 3.4e-5).
-        dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
-        return {"d_seg": float(np.mean(ds)), "d_pose": float(np.mean(dp))}
+        d_seg, d_pose = _verdict_dseg_dpose_chunked(
+            seg_cpu, posenet_cpu, f0s, f1s,
+            [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
+            vbatch=int(args.verdict_batch))
+        return {"d_seg": d_seg, "d_pose": d_pose}
 
     # ---- ASYNC verdict (FEED-em; ADDITIVE, DEFAULT-OFF via --async-verdict). The realized
     # CPU-torch verdict (render fp32 numpy + SegNet/PoseNet) is PURELY OBSERVATIONAL — the
@@ -2365,9 +2435,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             else:
                 f0s.append(_torch_R_to_camera_uint8(_r0))
             f1s.append(_torch_R_to_camera_uint8(_r1))
-        ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
-        dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
-        return {"d_seg": float(np.mean(ds)), "d_pose": float(np.mean(dp))}
+        # (#205 OOM fix) chunk the CPU-scorer inference (bit-identical; eval-mode BN running stats).
+        d_seg, d_pose = _verdict_dseg_dpose_chunked(
+            seg_cpu, posenet_cpu, f0s, f1s,
+            [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
+            vbatch=int(args.verdict_batch))
+        return {"d_seg": d_seg, "d_pose": d_pose}
 
     history: list[dict[str, Any]] = []
     _verdict_lock = threading.Lock()
@@ -2537,6 +2610,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     if use_self_orient:
         _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
         _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
+        if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
+            _mm = _mlx_mem_gib(mx)
+            print(json.dumps({"stage": "mem_probe", "phase": "after_cf_mx_cache_build",
+                              "n_pairs": P, "rss_gib": round(_rss_gib(), 2),
+                              "mlx_active_gib": round(_mm["active"], 2),
+                              "mlx_cache_gib": round(_mm["cache"], 2)}), flush=True)
 
     # ---- CHECKPOINT closures (FEED-dz; mx->np snapshot + atomic save of the deploy EMA npz + the
     # resume sidecar). The deploy npz keeps the canonical name so the byte-close tool consumes it
@@ -2703,7 +2782,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "resumed_into_finisher": bool(_resume_into_finisher)}), flush=True)
 
     # baseline verdict (epoch 0, or the resumed epoch) -- reflects any restored weights.
+    if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
+        _mm = _mlx_mem_gib(mx)
+        print(json.dumps({"stage": "mem_probe", "phase": "before_v0_verdict", "n_pairs": P,
+                          "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
+                          "mlx_active_gib": round(_mm["active"], 2)}), flush=True)
     v0 = realized_verdict()
+    if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
+        _mm = _mlx_mem_gib(mx)
+        print(json.dumps({"stage": "mem_probe", "phase": "after_v0_verdict", "n_pairs": P,
+                          "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
+                          "mlx_active_gib": round(_mm["active"], 2), "d_seg": round(v0["d_seg"], 6),
+                          "d_pose": round(v0["d_pose"], 6)}), flush=True)
     blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
     s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
     print(json.dumps({"stage": "verdict", "epoch": start_epoch - 1, **{k: round(v, 6) for k, v in v0.items()},
@@ -2812,8 +2902,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     muon_lr_eff = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
     muon_adamw_lr_eff = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
     muon_wd_eff = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
+    # (#205 OOM instrumentation) env-gated per-accum-batch memory telemetry. Default OFF -> no
+    # per-batch prints in production; set TAC_MEM_PROBE=1 to trace active/cache/peak/RSS for the
+    # first TAC_MEM_PROBE_EPOCHS epochs (the OOM-diagnosis + fix-verification A/B). Pure observability
+    # -> BIT-IDENTICAL training whether on or off.
+    _mem_probe_on = os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False")
+    _mem_probe_epochs = int(os.environ.get("TAC_MEM_PROBE_EPOCHS", "3"))
     with temporary_mlx_device(args.mlx_device):
         for ep in range(start_epoch, args.epochs + 1):
+            if _mem_probe_on and args.mlx_device == "gpu":
+                try:
+                    mx.reset_peak_memory()  # per-epoch high-water so mem_probe peak is this-epoch scoped
+                except Exception:
+                    pass
             seg_form = _seg_form_for_epoch(ep, args)
             # BUILD 1 (FEED-fw): detect an AdamW->AdamW stage boundary at THIS epoch BEFORE the
             # existing transition blocks mutate prev_seg_form / lane_gate / msal_gate. Consumed below
@@ -3085,6 +3186,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "spike_skip", "ep": ep,
                                       "batch_loss": (round(batch_loss, 4) if np.isfinite(batch_loss) else "nonfinite"),
                                       "gnorm": (round(gnorm, 4) if np.isfinite(gnorm) else "nonfinite")}), flush=True)
+                    # (#205 OOM fix) still return the render/backward buffer POOL to the OS even on a
+                    # spike-skipped batch, so a RUN of consecutive skips cannot balloon the Metal cache.
+                    if (args.mlx_device == "gpu" and args.mlx_cache_clear_accum > 0
+                            and ((s // args.accum_pairs) % args.mlx_cache_clear_accum == 0)):
+                        mx.clear_cache()
                     continue
                 opt.update(model, clipped)
                 mx.eval(model.parameters(), opt.state)
@@ -3120,6 +3226,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if len(recent_losses) > 50:
                     recent_losses.pop(0)
                 ep_loss += batch_loss
+                # (#205 OOM fix) return the Metal buffer POOL to the OS every N accum-batches. The
+                # lazy graph is already materialized per-pair; this frees the CACHED (already-freed)
+                # render+backward buffers so peak RSS ~= active working set + one batch (NOT a whole
+                # epoch's freed-buffer pool). clear_cache never touches LIVE arrays => BIT-IDENTICAL.
+                _bidx = s // args.accum_pairs
+                if (args.mlx_device == "gpu" and args.mlx_cache_clear_accum > 0
+                        and (_bidx % args.mlx_cache_clear_accum == 0)):
+                    mx.clear_cache()
+                if _mem_probe_on and ep <= _mem_probe_epochs:
+                    _mm = _mlx_mem_gib(mx)
+                    print(json.dumps({"stage": "mem_probe", "ep": ep, "accum_batch": _bidx,
+                                      "rss_gib": round(_rss_gib(), 2),
+                                      "mlx_active_gib": round(_mm["active"], 2),
+                                      "mlx_cache_gib": round(_mm["cache"], 2),
+                                      "mlx_peak_gib": round(_mm["peak"], 2),
+                                      "clear_accum": int(args.mlx_cache_clear_accum)}), flush=True)
             if args.mlx_device == "gpu":
                 mx.clear_cache()
             # #224 (5) SEED SURVIVAL telemetry: mean |seed residual| ON the island support. The
@@ -3417,8 +3539,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pose-eps", type=float, default=1e-2)
     ap.add_argument("--hinge-weight", type=float, default=4.0)
     ap.add_argument("--accum-pairs", type=int, default=8)
+    # (#205 OOM FIX) MLX Metal caching-allocator hygiene. The lazy graph is already materialized
+    # per-pair (mx.eval(loss, grads) + mx.eval(accum)); the leak is the Metal buffer POOL (freed
+    # render/backward buffers stay CACHED, not returned to the OS) growing across an epoch's ~P/8
+    # accum-batches -> a ~15 GiB active working set peaked at 90 GiB and tripped the 90 GB safe-run
+    # guard (killed the run before the first checkpoint). Calling mx.clear_cache() every N accum
+    # batches returns the pool to the OS -> peak RSS ~= active + one batch. clear_cache frees ONLY
+    # pooled (already-freed) buffers, NEVER live arrays, and MLX is lazy-but-deterministic -> WHEN we
+    # clear the pool cannot change WHAT is computed => BIT-IDENTICAL loss/d_seg (verified n64 A/B).
+    # 1 = clear every accum-batch (safest peak); 0 = never inside the loop (the pre-fix behaviour,
+    # for the A/B). GPU-only (no-op on cpu). The existing per-epoch clear at loop-end is preserved.
+    ap.add_argument("--mlx-cache-clear-accum", type=int, default=1,
+                    help="(#205 OOM fix) mx.clear_cache() every N accum-batches inside the epoch loop "
+                    "(GPU only; score-neutral). 0 disables the in-loop clear (pre-fix behaviour).")
     ap.add_argument("--grad-clip", type=float, default=1.0)
     ap.add_argument("--spike-factor", type=float, default=5.0)
+    # (#205 REAL OOM fix) chunk the CPU-scorer verdict inference into vbatch-pair torch batches so
+    # the fp32 (N,2,3,874,1164) cast + EfficientNet/FastViT activations do NOT spike ~30-50 GiB at
+    # N=600 on top of the resident ~41 GiB self-orient cf_mx_cache (the 90 GB OOM). BIT-IDENTICAL
+    # (eval-mode BN running stats). 0 = single N-wide batch (pre-fix, for the A/B parity check).
+    ap.add_argument("--verdict-batch", type=int, default=32,
+                    help="(#205 OOM fix) CPU-scorer verdict inference chunk size (pairs per torch "
+                    "batch); 0 = single N-wide batch (pre-fix). Score-neutral (eval-mode BN).")
     ap.add_argument("--verdict-pairs", type=int, default=24,
                     help="realized fp32-numpy EMA-shadow verdict subset (0=all); ALWAYS fp32 one-codepath, never mlx-gpu.")
     ap.add_argument("--async-verdict", action=argparse.BooleanOptionalAction, default=False,
