@@ -195,8 +195,11 @@ def test_trainer_retains_aa_supersample_self_orient_guard():
     # the opt-in memory-safe (batch) + wall-clock-viable (full) fine-feat modes ARE built.
     assert "--aa-self-orient-fine-mode" in src
     assert "def _cf_fine_mx" in src and "def _fine_dir_feats_np" in src
-    # the --structured-init supersample guard must ALSO remain.
-    assert "--render-aa supersample is incompatible with --structured-init" in src
+    # Wave C FIX-2: the --structured-init supersample sub-guard is RELAXED (composes: base-grid
+    # structured-init + shared coord-INR weights at fine coords; render_h/w == L* unchanged). The
+    # self-orient refuse-DEFAULT above is UNCHANGED; only the structured-init incompatibility is wired.
+    assert "--render-aa supersample is incompatible with --structured-init" not in src
+    assert "render_aa_supersample_structured_init" in src
 
 
 # ---------------------------------------------------------------------------

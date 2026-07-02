@@ -39,7 +39,7 @@ TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
   --chroma --palette-anchor \
   --eikonal-weight 0.01 --length-weight 0.001 \
   --render-h 384 --render-w 512 \
-  --render-aa ipe --aa-ipe-footprint 1.0 \
+  --render-aa supersample --aa-supersample 2 --aa-self-orient-fine-mode full \
   --lane-render-band --lane-band-start-epoch 300 --lane-band-uncertainty-source witness \
   --lane-band-tau 0.85 --lane-band-eps 0.35 --lane-band-softness 1.0 \
   --lane-band-dash-forward-max-m 55.0 --lane-band-weight 1.0 \
@@ -80,7 +80,7 @@ are NOT-YET-BUILT flag signatures — do NOT set them (mx.compile'd path is the 
 | `--self-orient` + `--n-dir-freqs 2` + `--freq-across 32` + `--freq-along 4` + `--reorient-every 50` | directional basis (#1 lever, −48%) | proven_base; basis-BEFORE-capacity (calibration DAG order) | HIGH (self-orient); MED (n-dir-freqs 2 = proven-arm, not independently swept vs default 6) |
 | `--max-bank-freq 64` | stem Nyquist | SEG_W/(4·stem_stride)=512/8=64; LEVER-2 anti-alias cap (calibration T0 boundary-Nyquist) | HIGH |
 | `--render-h 384` / `--render-w 512` | R-survival floor | eq `oracle_r_dseg_floor_by_render_grid`: g384 oracle floor ~0.00086 < first-row target 0.00118 (representation adequate; gap = training). render-192 pre-caps → blocks sub-0.15 | HIGH |
-| `--render-aa ipe` + `--aa-ipe-footprint 1.0` | ipe (self-orient-compatible AA) | supersample is FAIL-CLOSED with self-orient (n600 OOM ~164GB); ipe = basis-level mip-NeRF cone AA on shared curvelet cols, ~0 compute, self-orient-composable. footprint 1.0 = one-pixel box (Nyquist-matched) | MED-HIGH (ipe correct); MED (footprint 1.0 = principled default, T1 $0-gate calibratable) |
+| `--render-aa supersample` + `--aa-supersample 2` + `--aa-self-orient-fine-mode full` | supersample→box (the OBSERVATION-CORRECT AA) | **Wave C FIX-2 (2026-07-02)**: supersample = exact R+SegNet observation model (ss=2 render→box-down); oracle-R floor 0.00086 + class-1 lane recall +0.374 (ipe only SMOOTHS the basis). The ~164GB OOM fear was at n_dir_freqs=6; the shipped config uses n_dir_freqs=2 → **SCALED memory probe MEASURED 24.0 MB/pair fine dir-feat → fine-full n600 14.06 GB; extrapolated peak 63.06 GB (fine 14.06 + base-cache-anchor 41 + fwd overhead 8) → 64.94 GB headroom on 128 GB (rel-var 0.0)**. fine-mode `full` = amortized-per-reorient (no +8h batch-EDT thrash). structured-init guard relaxed (composes: base-grid pretrain + shared coord-INR weights at fine coords). | HIGH (observation-correct; probe-confirmed memory-safe) |
 | `--lane-render-band` + band params | trained-in class-1 render authority | build-state: naive band HURTS +0.000622 → witness-uncertainty gate kills 98% FP → net-win NEEDS training-in (3× confirmed). uncertainty-source=witness, start@300 (=tau; witness partition formed), dash-forward-max-m 55.0 (SegNet-Nyquist #215). eq `analytic_lane_render_band_fp_reduction_v1` | MED (all defaults; trained-in per build-state) |
 | `--persistence-loss-weight 1.0` + recall 1.0 + cldice-iters 5 + warmup 300 + classes auto | soft-clDice + persistence-recall on shared seg forward | wave-1 landed `122e59ba8` (111× more erasure-sensitive than CE). weight 1.0 = ENGAGE value (T2 knob per calibration — optimum only exists in-training); warmup 300 = coarse→fine (ramp over CE stage). eq `persistence_topology_cldice_betti_island_recall_v1` | LOW weight (T2-calibration start, no measured optimum — labeled) |
 | `--amplify-weight 1.0` + form hinge + margin-target 1.0 + persist inverse_thickness | island-birth on shared LEVER-4 `_signed` | wave-1 landed `0f013e17a`. AMPLIFY_ONLY path is WIRED (seed/containment is fail-closed). weight 1.0 = ENGAGE (T2 knob). eq `island_finest_scale_protection_survival_v1` | LOW weight (T2-calibration start — labeled) |
@@ -110,8 +110,11 @@ are NOT-YET-BUILT flag signatures — do NOT set them (mx.compile'd path is the 
    co-grad wire-in is the #224 follow-up. ⇒ `--w-pose 0` (pose-blind-by-design; d_seg-first).
 2. `--seed-islands` → `NotImplementedError` (line 1631): protected seed-residual PARAM + grad-shield
    restructure not wired. ⇒ use `--amplify-weight` (AMPLIFY_ONLY, WIRED, rides `_signed`) instead.
-3. `--render-aa supersample` + `--self-orient` → `ValueError` (line 1044): per-pair fine-grid dir-feats
-   n600-infeasible (~164GB cache OOM / non-viable on-demand). ⇒ use `--render-aa ipe` (self-orient-composable).
+3. ~~`--render-aa supersample` + `--self-orient` → `ValueError`~~ **SUPERSEDED by Wave C FIX-2 (2026-07-02)**:
+   the memory-safe fine dir-feat path is BUILT (`--aa-self-orient-fine-mode full`) and the SCALED probe
+   MEASURED the n600 peak at ~63 GB (not ~164 GB — that was n_dir_freqs=6; shipped config is n_dir_freqs=2
+   → 24 MB/pair). supersample (the observation-correct AA) is NOW the shipped all-levers AA; the
+   structured-init incompatibility guard is relaxed (verified small-MLX n6: composes, finite, descends).
 
 Also OFF (parent's authorized list excludes them; kept for a later warm-start re-treatment):
 - **LEVER-4 margin-saliency** (`--margin-saliency-weight 0`): calibration's #2 lever (KKT waterfill on

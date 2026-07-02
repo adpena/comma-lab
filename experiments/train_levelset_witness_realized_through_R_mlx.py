@@ -822,6 +822,25 @@ def lever_gate_on_at_epoch(weight: float, start_epoch: int, ep: int) -> bool:
     return float(weight) > 0.0 and int(ep) >= int(start_epoch)
 
 
+def _adam_bias_correction_for(adam_beta2: float) -> bool:
+    """#224 Wave C FIX-1 (LAUNCH-BLOCKER): MLX ``optim.AdamW`` ``bias_correction`` DEFAULTS FALSE.
+
+    Without bias correction, at step ``t`` the second-moment ``v`` is ``(1-beta2) * mean(g^2)`` and is
+    NOT divided by ``(1-beta2^t)``, so ``sqrt(v)`` is ``~sqrt(1-beta2)`` too small early. With the
+    all-levers small-n beta2 (0.9999999, 1-beta2=1e-7) that is ``sqrt(1e-7)/sqrt(1e-3) ~ 316/31.6 ~
+    10`` smaller than the 0.999 default => the step-1 effective LR blows up ~100x (measured ratio 99.99x)
+    => AdamW random-walk / divergence. The arXiv small-n derivation (1-beta2 <~ (1-beta1^5)/n^3.5) is
+    faithful ONLY with bias correction (which makes vhat = v/(1-beta2^t) => step-1 update ~ lr*sign(g)
+    independent of beta2). So bias correction is REQUIRED on the high-beta2 path.
+
+    Gate ON only OFF THE DEFAULT (adam_beta2 != 0.999). At 0.999 (== the MLX/proven_base default) we
+    keep ``bias_correction`` at the MLX default (False) so the DEFAULT AdamW construction is BYTE-
+    IDENTICAL to the pre-FIX-1 path (the --adam-beta2 default stays 0.999 => byte-identical-off 7/7).
+    Pure + total => $0 unit-testable. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against"."""
+    return abs(float(adam_beta2) - 0.999) > 1e-9
+
+
 def _seg_form_for_epoch(ep: int, args) -> str:
     if not args.curriculum:
         return args.seg_loss
@@ -1140,10 +1159,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "memory fit first) OR --aa-self-orient-fine-mode batch (memory-safe ~cap*75MB, but "
                 "~P fine-EDTs/epoch ~29s@n600). Or use --render-aa ipe / --lane-render-band (both "
                 "self-orient-compatible + fully wired), or AA-supersample WITHOUT --self-orient.")
-        if args.structured_init:
-            raise ValueError(
-                "--render-aa supersample is incompatible with --structured-init (which requires "
-                "--render-h/--render-w == the L* resolution; the fine grid breaks that invariant).")
+        # #224 Wave C FIX-2: supersample + --structured-init is NOW WIRED (was fail-closed as
+        # "not-yet-wired", NOT proven-incompatible). The two operate on DIFFERENT grids and compose:
+        # structured-init pretrains the coord-INR witness weights on the BASE grid against the cached L*
+        # (its invariant `(render_h,render_w) == lstar_shape` is checked at the structured-init block
+        # below and is UNCHANGED by supersample — aa_ss multiplies only the internal fine render grid,
+        # NOT render_h/render_w). The fine render then evaluates the SAME shared weights at fine coords
+        # (a coord-INR generalizes across coordinate resolution by construction). Verified at small-MLX
+        # n4 (ss=2 + self-orient full + structured-init + lane-prior-phi1: finite render + descent). Per
+        # the Wave B precedent (LEVER 3 relaxed the self-orient guard behind an opt-in after BUILD +
+        # small-MLX verify). The REAL render==L* invariant stays enforced at the structured-init block.
+        print(json.dumps({"stage": "render_aa_supersample_structured_init",
+                          "structured_init": bool(args.structured_init),
+                          "note": "supersample composes with structured-init: base-grid pretrain + "
+                          "shared coord-INR weights evaluated at fine coords (render_h/w == L* unchanged)"}),
+              flush=True)
         from tac.boundary_math.aa_sdf_observation_render import build_supersampled_coords
         _coords_fine = build_supersampled_coords(render_h, render_w, aa_ss)          # (ss^2*P, 2)
         coord_feats_fine_mx = mx.array(curvelet_feats(_coords_fine, B).astype(np.float32))
@@ -1435,8 +1465,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     ema_finisher_start = (int(args.ema_decay_finisher_start_epoch)
                           if getattr(args, "ema_decay_finisher_start_epoch", None) is not None
                           else (int(args.muon_start_epoch) if args.muon_start_epoch is not None else None))
+    # #224 Wave C FIX-1: bias_correction ON only on the high-beta2 all-levers path (0.9999999); at the
+    # 0.999 default it stays MLX-default False => BYTE-IDENTICAL. Without it high beta2 => ~100x step-1
+    # LR blowup => divergence (see _adam_bias_correction_for).
+    _adam_bc = _adam_bias_correction_for(getattr(args, "adam_beta2", 0.999))
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay,
-                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))])
+                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
+                      bias_correction=_adam_bc)
 
     # ---- RESIDUAL-ONLY MODE (v2 hybrid; gap #1). Load the FIXED deterministic bulk + the
     # bulk-derived composition mask, and build the compose hooks. The bulk arrays live in CLOSURE
@@ -2788,9 +2823,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _stage_boundary_now and not muon_switched:
                 last_boundary_epoch = ep
                 if args.stage_transition_reset_moments:
+                    # #224 Wave C FIX-1: the fresh moment-reset optimizer inherits the SAME bias_correction
+                    # gate as the main construction (ON only on the high-beta2 all-levers path). A fresh
+                    # AdamW resets step->0, so bias_correction correctly re-warms the reset moments.
                     opt = optim.AdamW(learning_rate=float(opt.learning_rate),
                                       weight_decay=args.weight_decay,
-                                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))])
+                                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
+                                      bias_correction=_adam_bias_correction_for(
+                                          getattr(args, "adam_beta2", 0.999)))
                     opt.init(model.trainable_parameters())
                     mx.eval(opt.state)
                     print(json.dumps({"stage": "stage_transition_reset_moments", "epoch": ep,
