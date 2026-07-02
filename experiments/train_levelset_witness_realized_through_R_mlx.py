@@ -111,6 +111,37 @@ def _refuse_tmp(path: Path) -> None:
         raise ValueError(f"{path!r} is a /tmp-class path; use the SSD/repo tier per CLAUDE.md.")
 
 
+def _git_provenance() -> dict[str, Any]:
+    """Best-effort git provenance captured ONCE at launch (deterministic-reproducibility
+    non-negotiable: provenance with every result = git hash + seed + config + upstream snapshot sha).
+
+    NO-FAKE: when git is unavailable / not a repo, every field is ``"unknown"`` / ``False`` -- NEVER
+    a fabricated sha. ``git_sha`` (repo HEAD) pins the trainer code AND the committed pinned
+    ``upstream/`` snapshot (both live in the same tree); ``git_dirty`` flags an uncommitted working
+    tree (a run from a dirty tree is NOT reproducible from the sha alone); ``upstream_tree_sha`` is the
+    ``upstream/`` subtree object id (the frozen-scorer snapshot the verdict authority runs)."""
+    import subprocess
+
+    def _g(*a: str) -> str:
+        try:
+            r = subprocess.run(["git", "-C", str(REPO), *a], capture_output=True, text=True, timeout=8)
+            return r.stdout.strip() if r.returncode == 0 else ""
+        except Exception:
+            return ""
+
+    sha = _g("rev-parse", "HEAD") or "unknown"
+    dirty = bool(_g("status", "--porcelain"))
+    # upstream/ is an UNTRACKED pinned snapshot (not in git HEAD), so the frozen-scorer authority is
+    # pinned by the CANONICAL content hash (tac.contest_compliance) -- the same upstream_snapshot_sha256
+    # every ledger/anchor carries -- NOT a git tree sha. Best-effort; "unknown" when absent (NO-FAKE).
+    try:
+        from tac.contest_compliance import compute_upstream_snapshot_sha256
+        upstream_sha = compute_upstream_snapshot_sha256(REPO) or "unknown"
+    except Exception:
+        upstream_sha = "unknown"
+    return {"git_sha": sha, "git_dirty": dirty, "upstream_snapshot_sha256": upstream_sha}
+
+
 # ---------------------------------------------------------------------------
 # INTERMEDIATE CHECKPOINT + RESUME (FEED-dz, additive, default-off). The trainer historically saved
 # the EMA-shadow npz ONLY at loop-end -> a multi-day n600 run is non-resumable (crash = total loss)
@@ -189,7 +220,7 @@ def _is_new_best(d_seg: float, prev_best: float) -> bool:
 def _build_ema_checkpoint_arrays(
     shadow_np: dict[str, np.ndarray], *, args: Any, softmax_temp: float,
     render_h: int, render_w: int, epoch: int, in_feat: int,
-    hosc_beta: float | None = None,
+    hosc_beta: float | None = None, provenance: dict[str, Any] | None = None,
 ) -> dict[str, np.ndarray]:
     """The deploy (byte-close) npz contents: EMA SHADOW params + cfg scalars. MLX-free.
 
@@ -231,12 +262,21 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_curriculum"] = np.asarray(int(bool(args.curriculum)))
     flat["__cfg_tau_softplus_start_epoch"] = np.asarray(int(args.tau_softplus_start_epoch))
     flat["__cfg_l7_start_epoch"] = np.asarray(int(args.l7_start_epoch))
+    # ---- PROVENANCE (deterministic-reproducibility: git sha + upstream snapshot sha in EVERY
+    # per-stage byte-close artifact so a shipped checkpoint traces to the exact code + frozen scorer.
+    # Additive + byte-close-ignored (.get()s only keys it knows); default "unknown" = NO-FAKE, never
+    # a fabricated sha). ----
+    _prov = provenance or {}
+    flat["__cfg_git_sha"] = np.asarray(str(_prov.get("git_sha", "unknown")))
+    flat["__cfg_git_dirty"] = np.asarray(int(bool(_prov.get("git_dirty", False))))
+    flat["__cfg_upstream_snapshot_sha256"] = np.asarray(str(_prov.get("upstream_snapshot_sha256", "unknown")))
     return flat
 
 
 def _build_resume_state_arrays(
     live_np: dict[str, np.ndarray], ema_np: dict[str, np.ndarray],
     opt_np: dict[str, np.ndarray] | None, *, args: Any, epoch: int, in_feat: int,
+    recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -268,6 +308,19 @@ def _build_resume_state_arrays(
     out["__cfg_film_per_layer"] = np.asarray(int(bool(getattr(args, "film_per_layer", False))))
     out["__cfg_film_concat_code"] = np.asarray(int(bool(getattr(args, "film_concat_code", False))))
     out["__cfg_film_stiefel"] = np.asarray(int(bool(getattr(args, "film_stiefel", False))))
+    # SPIKE-GUARD running-median window (the last <=50 batch losses). It GATES step-skipping
+    # (loss > spike_factor * median => the optimizer.update is skipped), so it is part of the
+    # weight trajectory: a resume with an EMPTY window (median None => never skips) would diverge
+    # from a continuous run that WOULD have skipped. Persist it so --resume-from is bit-faithful even
+    # across a spike. Empty list => a 0-length array (default-safe; a pre-fix ckpt lacks the key =>
+    # the loop's fresh [] is used, i.e. the prior behavior). Per the deterministic-repro non-negotiable.
+    out["__recent_losses"] = np.asarray(list(recent_losses or []), np.float64)
+    # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
+    # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
+    _prov = provenance or {}
+    out["__cfg_git_sha"] = np.asarray(str(_prov.get("git_sha", "unknown")))
+    out["__cfg_git_dirty"] = np.asarray(int(bool(_prov.get("git_dirty", False))))
+    out["__cfg_upstream_snapshot_sha256"] = np.asarray(str(_prov.get("upstream_snapshot_sha256", "unknown")))
     return out
 
 
@@ -909,6 +962,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     out_dir = Path(args.out_dir)
     _refuse_tmp(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    # #205 PROVENANCE: capture git sha + upstream snapshot sha ONCE at launch (threaded into result.json
+    # AND every per-stage checkpoint cfg so the #205 run + each byte-close artifact is reproducible from
+    # provenance). NO-FAKE: "unknown" when git is unavailable, never fabricated.
+    _run_provenance = _git_provenance()
+    print(json.dumps({"stage": "provenance", **_run_provenance,
+                      "seed": int(args.seed)}), flush=True)
     mx.random.seed(args.seed)
     np.random.seed(args.seed)
 
@@ -1805,9 +1864,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         ema_arrays = _build_ema_checkpoint_arrays(
             deploy_shadow_np, args=args, softmax_temp=float(model.softmax_temp),
             render_h=render_h, render_w=render_w, epoch=epoch, in_feat=in_feat,
-            hosc_beta=float(model.hosc_beta))  # FEED-fb: persist CURRENT annealed beta in deploy cfg
+            hosc_beta=float(model.hosc_beta),  # FEED-fb: persist CURRENT annealed beta in deploy cfg
+            provenance=_run_provenance)        # #205: git sha + upstream snapshot sha in EVERY deploy ckpt
         resume_arrays = _build_resume_state_arrays(
-            live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat)
+            live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat,
+            # #205: persist the spike-guard window (bit-faithful step-skip on resume) + git provenance.
+            recent_losses=recent_losses, provenance=_run_provenance)
         # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
@@ -1833,6 +1895,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     start_epoch = 1
     resume_cfg: dict[str, Any] | None = None  # FEED-fm FIX-1: holds the sidecar cfg for the RNG
     # restore that must run AFTER hardness_rng is constructed (below); None => fresh start.
+    # #205: True when --resume-from lands INSIDE the Muon finisher window (start_epoch > muon_start)
+    # -> the resume block rebuilds the Muon MultiOptimizer BEFORE restoring its state, and the loop's
+    # muon_switched initializes True so the in-loop switch does NOT re-init a fresh (momentum-lost)
+    # optimizer. Default False (fresh start / pre-finisher resume) => BIT-IDENTICAL to the prior path.
+    _resume_into_finisher = False
     if args.resume_from:
         from mlx.utils import tree_unflatten
         rp = _resolve_resume_path(Path(args.resume_from))
@@ -1874,6 +1941,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 ema.shadow[k] = mx.array(ema_src[k])
         mx.eval(list(ema.shadow.values()))
         start_epoch = int(rs["epoch"]) + 1
+        # #205 MUON-FINISHER RESUME: if the resumed epoch is INSIDE the finisher window, the saved
+        # optimizer state is the Muon MultiOptimizer's -> rebuild it HERE (before the restore below)
+        # and mark _resume_into_finisher so (a) the state restore keys match and (b) the loop's in-line
+        # switch is skipped (muon_switched initializes True). Otherwise a resume-into-finisher would
+        # re-init a FRESH optimizer at start_epoch, LOSING the Muon+AdamW momentum accumulated since
+        # muon_start_epoch = a NON-bit-identical continuation (the deterministic-repro non-negotiable).
+        _resume_into_finisher = (args.muon_start_epoch is not None
+                                 and start_epoch > int(args.muon_start_epoch))
+        if _resume_into_finisher:
+            _mlr = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
+            _malr = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
+            _mwd = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
+            opt = build_muon_finisher_optimizer(
+                muon_lr=_mlr, muon_adamw_lr=_malr, muon_momentum=float(args.muon_momentum),
+                muon_weight_decay=_mwd, muon_ns_steps=int(args.muon_ns_steps),
+                adamw_weight_decay=float(args.weight_decay),
+            )
+            print(json.dumps({"stage": "resume_muon_rebuild", "start_epoch": start_epoch,
+                              "muon_start_epoch": int(args.muon_start_epoch),
+                              "note": "resuming INSIDE the Muon finisher; rebuilt MultiOptimizer before "
+                              "state restore (bit-faithful finisher continuation)"}), flush=True)
         restored_opt = False
         if rs["has_opt"] and rs["opt"]:
             try:
@@ -1895,7 +1983,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _rebuild_cf_mx_cache()
             print(json.dumps({"stage": "resume_reorient", "mean_abs_dir_feat": round(mag, 5)}), flush=True)
         print(json.dumps({"stage": "resume", "from": str(rp), "resumed_epoch": int(rs["epoch"]),
-                          "start_epoch": start_epoch, "restored_opt": restored_opt}), flush=True)
+                          "start_epoch": start_epoch, "restored_opt": restored_opt,
+                          "resumed_into_finisher": bool(_resume_into_finisher)}), flush=True)
 
     # baseline verdict (epoch 0, or the resumed epoch) -- reflects any restored weights.
     v0 = realized_verdict()
@@ -1971,6 +2060,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
               flush=True)
 
     recent_losses: list[float] = []
+    # #205: restore the spike-guard window so --resume-from is bit-faithful across a spike-skip
+    # (the median gates step-skipping = part of the trajectory). DEFAULT-SAFE: no resume, or a pre-#205
+    # sidecar without __recent_losses => the fresh [] is used (prior behavior). MLX-free.
+    if resume_cfg is not None and "__recent_losses" in resume_cfg:
+        _rl = resume_cfg["__recent_losses"]
+        recent_losses = [float(x) for x in (_rl if isinstance(_rl, list) else [_rl])]
+        print(json.dumps({"stage": "resume_spike_guard", "restored_recent_losses": len(recent_losses)}),
+              flush=True)
     last_ep = start_epoch - 1
     stage_ckpts: list[dict[str, Any]] = []
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
@@ -1980,7 +2077,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # MUON FINISHER (FEED-fi) per-stage optimizer switch state. muon_start_epoch None (default) =>
     # muon_switched stays False forever => the switch block + tag suffix never fire => BIT-IDENTICAL
     # to the pre-FEED-fi AdamW-throughout path. Effective LRs default to 0.1*lr (PR95 ~0.1x finetune).
-    muon_switched = False
+    # #205: initialize True when resuming INSIDE the finisher (the opt was rebuilt as the Muon
+    # MultiOptimizer in the resume block above) so the in-loop switch does NOT re-init a fresh
+    # optimizer. Default False (fresh start / pre-finisher resume) => the in-loop switch fires normally.
+    muon_switched = bool(_resume_into_finisher)
     # BUILD 1 (FEED-fw): stage-transition treatment tracker. None until a registered AdamW->AdamW
     # boundary fires (curriculum seg-form change / lane-edge engage / margin-saliency engage); the LR
     # re-warmup + (optional) AdamW moment reset key off it. DEFAULT-OFF flags
@@ -2352,6 +2452,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     print(json.dumps({"stage": "checkpoint", "kind": "final", **final}), flush=True)
     result = {
         "utc": _utc(), "n_pairs": P, "epochs": args.epochs, "final_epoch": last_ep,
+        # #205 PROVENANCE (deterministic-reproducibility: git sha + upstream snapshot sha + seed).
+        "provenance": {**_run_provenance, "seed": int(args.seed)},
         "render_hw": [render_h, render_w],
         "front_end": "curvelet" + ("+self_orient" if use_self_orient else ""),
         "activation": args.activation, "in_feat": int(in_feat),
