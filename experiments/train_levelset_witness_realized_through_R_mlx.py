@@ -1536,14 +1536,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                                           if _band_recalls else None),
                           "note": "class-1 render-time authority composited PRE-R; gated at start_epoch "
                           "(spike-guard re-treat); advisory; pointer 0.19110 UNMOVED"}), flush=True)
-    # assemble the compose chain (residual bulk FIRST, then lane band on top). None => bare render.
-    _use_chain = residual_mode or _band_active
+    # #224 (5) island SEED compose state (LATE-BOUND; populated at the seed build below, which runs
+    # AFTER this chain is defined but BEFORE value_and_grad + the training loop, so _compose_chain
+    # reads it at CALL time). The seed is a SEPARATE module (own optimizer group) -> NOT in
+    # model.parameters()/EMA/blob/deploy, so the verdict (witness-alone) == the 0-byte-accelerant
+    # deploy (NO-FAKE, honestly measured). Default OFF (--seed-islands) => seed_state stays empty =>
+    # the seed branch never fires => _compose_chain BYTE-IDENTICAL.
+    seed_on = bool(getattr(args, "seed_islands", False))
+    seed_state: dict[str, Any] = {"mod": None, "masks": None}
+    # assemble the compose chain (residual bulk FIRST, then lane band, then island seed). None => bare.
+    _use_chain = residual_mode or _band_active or seed_on
 
     def _compose_chain(rgb_nhwc, code_idx):
         if residual_mode:
             rgb_nhwc = _compose_mx(rgb_nhwc, code_idx)
         if _band_active and band_gate["on"]:
             rgb_nhwc = band_compose_fn(rgb_nhwc, code_idx)
+        if seed_state["mod"] is not None and (int(code_idx) % 2 == 1):
+            # frame1 (SegNet-scored) ONLY: add the protected per-pair island seed residual (masked to
+            # the self-detected island support). Reads the LIVE seed_mod.residual -> the dual
+            # value_and_grad co-differentiates it; the compose flows through the SHARED _f1 -> _slog ->
+            # _signed (no 2nd SegNet). frame0 (even) is seg-free -> unseeded.
+            _pi = int(code_idx) // 2
+            rgb_nhwc = rgb_nhwc + seed_state["mod"].residual[_pi] * seed_state["masks"][_pi]
         return rgb_nhwc
 
     # (1) AA supersample render dispatch: IGNORE the passed base-grid coord_feats and use the
@@ -1763,16 +1778,74 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "persist": str(args.amplify_persist),
                           "note": "island-birth rides the SHARED realized _signed margin (#141); "
                           "advisory; pointer 0.19110 UNMOVED"}), flush=True)
-    # seed/containment (new protected-seed param + grad-shield between value_and_grad and opt.update)
-    # = the #224 follow-up (fail-closed; NOT GPU-validatable under CONTAINMENT). AMPLIFICATION above IS
-    # wired. The island module + gauge (SEED_CONTAIN/FULL) are landed.
-    if bool(getattr(args, "seed_islands", False)):
-        raise NotImplementedError(
-            "--seed-islands: the EARLY-SEED + CONTAINMENT stack needs a protected seed-residual PARAM "
-            "(build_island_seed/compose_seed via the base render compose_fn) + a grad-shield "
-            "(contain_protected_grad_mx) applied to THAT param's grad between value_and_grad and "
-            "opt.update (a new optimizer group + grad-path restructure). Enabling it is the documented "
-            "#224 follow-up. Use --amplify-weight (AMPLIFY_ONLY, rides _signed) which IS wired.")
+    # #224 (5) island SEED + CONTAINMENT build (SEPARATE protected-seed module + its OWN AdamW group;
+    # grad-shield applied to the seed leaf BETWEEN the dual value_and_grad and seed_opt.update — NEVER
+    # touching the witness grouped-backward / MD-decoupling grads). The seed is a per-pair RGB residual
+    # seeded at ep0 from the GT island appearance (build_island_seed), masked to the self-detected
+    # lane+movable island band; composited into the SEGNET-scored frame1 BEFORE R (via _compose_chain
+    # above) so it rides the SHARED realized _f1/_signed (no 2nd SegNet). Because it is a SEPARATE
+    # module (NOT model.parameters()), it is absent from EMA/blob/deploy => the verdict is witness-alone
+    # == the deploy render == the 0-byte training-time ACCELERANT semantics, HONESTLY measured (the
+    # verdict d_seg IS the deploy-absorption readout; the containment keeps the seed alive during
+    # training so the witness has a formed island to absorb). Default OFF => byte-identical.
+    seed_mod = None
+    seed_opt = None
+    seed_spec = None
+    _seed_shield = None
+    if seed_on:
+        if float(args.w_seg) <= 0.0:
+            raise ValueError("--seed-islands requires --w-seg > 0: the seed helps ONLY through the "
+                             "realized seg loss on the composed frame1; with w_seg=0 it is inert.")
+        import mlx.nn as _seed_nn
+        from tac.boundary_math.island_protection import (
+            ContainmentSpec as _SeedSpec,
+            build_island_masks as _build_isl_masks,
+            build_island_seed as _build_isl_seed,
+            contain_protected_grad_mx as _contain_grad_mx,
+            identify_island_classes as _ident_isl,
+        )
+        _seed_shield = _contain_grad_mx
+        _lst_stack_s = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+        _sdet = _ident_isl(_lst_stack_s, n_classes=5)
+        _seed_res_np = np.zeros((P, render_h, render_w, 3), np.float32)
+        _seed_msk_np = np.zeros((P, render_h, render_w, 1), np.float32)
+        _s_supp = []
+        for pi in range(P):
+            _im = _build_isl_masks(np.asarray(gt.lstars[pi], np.int64), _sdet.lane_cls,
+                                   _sdet.movable_cls, dilate_px=int(args.island_dilate_px))
+            _gt1 = np.asarray(gt.gt_f1[pi], np.float32)
+            if _gt1.shape[:2] != (render_h, render_w):
+                import torch  # noqa: PLC0415
+                import torch.nn.functional as _tF  # noqa: PLC0415
+                _gt1 = _tF.interpolate(torch.from_numpy(_gt1).permute(2, 0, 1)[None],
+                                       size=(render_h, render_w), mode="bilinear", align_corners=False
+                                       )[0].permute(1, 2, 0).numpy()
+            _seed = _build_isl_seed(_gt1, _im, base_render_segres=None, blend=float(args.seed_blend))
+            _seed_res_np[pi] = _seed.residual
+            _seed_msk_np[pi, ..., 0] = np.asarray(_im.any_mask, np.float32)
+            _s_supp.append(float(_seed.support_frac))
+
+        class _SeedMod(_seed_nn.Module):
+            def __init__(self, res):
+                super().__init__()
+                self.residual = mx.array(res)
+
+        seed_mod = _SeedMod(_seed_res_np)
+        mx.eval(seed_mod.parameters())
+        _seed_masks_mx = mx.array(_seed_msk_np)
+        seed_state["mod"] = seed_mod
+        seed_state["masks"] = [_seed_masks_mx[pi] for pi in range(P)]
+        seed_spec = _SeedSpec(mode=str(args.containment_mode), damp=float(args.containment_damp),
+                              protected_mask=None)
+        seed_opt = optim.AdamW(learning_rate=float(args.seed_lr), weight_decay=0.0)
+        print(json.dumps({"stage": "island_seed", "lane_cls": _sdet.lane_cls, "movable_cls": _sdet.movable_cls,
+                          "island_classes": list(_sdet.island_classes),
+                          "mean_support_frac": round(float(np.mean(_s_supp)), 5),
+                          "containment_mode": str(args.containment_mode), "seed_lr": float(args.seed_lr),
+                          "n_pairs": P,
+                          "note": "SEPARATE protected seed module (own AdamW; NOT in EMA/blob/deploy = "
+                          "0-byte accelerant; verdict=witness-alone=deploy=absorption readout); "
+                          "shield-grad defends it; advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
@@ -1919,6 +1992,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return L
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
+
+    # #224 (5) DUAL value_and_grad for the island SEED (its OWN param tree + optimizer). Co-differentiate
+    # the witness (model) AND the seed (seed_mod) w.r.t. the SAME loss (the seed enters via _compose_chain
+    # -> _f1 -> seg_l). Default OFF (seed_mod None) => _dual_vg None => the loop takes the single
+    # value_and_grad path (BYTE-IDENTICAL). The witness grad tree (grads[0]) is IDENTICAL to the single
+    # path (same loss, same model params); only the extra grads[1] (seed) is new -> the shield acts on
+    # grads[1] ONLY, then seed_opt (a DISTINCT AdamW) applies it -> the witness opt.update + MD-decoupling
+    # + grouped-backward path is UNTOUCHED.
+    _dual_vg = None
+    if seed_mod is not None:
+        def _combined_seed_loss(model_p, seed_p, cf, c0, c1, oh, mg, ptg, ws, wp, hg, mt, sf, ew, lw):
+            model.update(model_p)
+            seed_mod.update(seed_p)
+            return total_loss_fn(model, cf, c0, c1, oh, mg, ptg, ws, wp, hg, mt, sf, ew, lw)
+
+        _dual_vg = mx.value_and_grad(_combined_seed_loss, argnums=(0, 1))
 
     # one-hot L* + margin per pair at the SegNet OUTPUT res (gt.lstars/gt.margins are 384x512,
     # matching the realized seg_logits = adapter.segnet(R(rgb))). NOT render res.
@@ -2707,15 +2796,28 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             for s in range(0, P, args.accum_pairs):
                 chunk = order[s:s + args.accum_pairs]
                 accum = None
+                accum_seed = None   # #224 (5): seed grad accumulator (None unless --seed-islands)
                 lsum = 0.0
                 for pi_np in chunk:
                     pi = int(pi_np)
                     oh, mg = lstar_cache[pi]
-                    loss, grads = value_and_grad(
-                        model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
-                        args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
-                        args.eikonal_weight, args.length_weight,
-                    )
+                    if _dual_vg is None:
+                        loss, grads = value_and_grad(
+                            model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                            args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                            args.eikonal_weight, args.length_weight,
+                        )
+                    else:
+                        # #224 (5) dual co-grad: witness grads[0] (== the single-path grads, same loss/
+                        # params) + seed grads[1]. The seed leg is accumulated + shielded separately below.
+                        loss, (grads, sgrads) = _dual_vg(
+                            model.trainable_parameters(), seed_mod.trainable_parameters(),
+                            _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                            args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                            args.eikonal_weight, args.length_weight,
+                        )
+                        accum_seed = sgrads if accum_seed is None else tree_map(lambda a, b: a + b, accum_seed, sgrads)
+                        mx.eval(accum_seed)
                     mx.eval(loss, grads)  # materialize per pair (bound the lazy fwd+bwd graph)
                     lsum += float(loss)
                     accum = grads if accum is None else tree_map(lambda a, b: a + b, accum, grads)
@@ -2738,6 +2840,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     continue
                 opt.update(model, clipped)
                 mx.eval(model.parameters(), opt.state)
+                # #224 (5) SEED CONTAINMENT step: shield the seed grad (defend the seeded islands from
+                # the bulk-CE wash) then apply the SEPARATE seed AdamW. The shield touches ONLY the seed
+                # 'residual' leaf; the witness opt.update above + MD-decoupling below + grouped-backward
+                # are all UNTOUCHED (distinct optimizer + distinct param tree). Gated by the same spike
+                # skip as the witness step (only steps when the batch was not spike-skipped).
+                if seed_mod is not None and accum_seed is not None:
+                    _mean_sg = tree_map(lambda g, c=float(nb): g / c, accum_seed)
+                    _sg = _seed_shield(_mean_sg["residual"], seed_mod.residual, seed_spec)  # leaf-only shield
+                    seed_opt.update(seed_mod, {"residual": _sg})
+                    mx.eval(seed_mod.parameters(), seed_opt.state)
                 # DM1a (Stiefel-W): project the LIVE film.weight onto orthonormal columns AFTER the
                 # optimizer step, so PR(M)=PR(cov(code)) holds (to the projection's ~1e-2 residual) for
                 # the LIVE weight.
@@ -2762,6 +2874,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 ep_loss += batch_loss
             if args.mlx_device == "gpu":
                 mx.clear_cache()
+            # #224 (5) SEED SURVIVAL telemetry: mean |seed residual| ON the island support. The
+            # containment shield should keep this ABOVE ~0 (the seeded islands survive the bulk-CE
+            # wash); WITHOUT the shield the bulk wash drives it toward 0 (the failure this defends).
+            # Purely observational (never read back). Default OFF (seed_mod None) => never fires.
+            if seed_mod is not None and (ep % args.eval_every == 0 or ep == args.epochs):
+                _sr = np.asarray(seed_mod.residual)                       # (P,H,W,3)
+                _sm = np.stack([np.asarray(m) for m in seed_state["masks"]], axis=0)  # (P,H,W,1)
+                _mon = float(np.sum(np.abs(_sr) * _sm) / (np.sum(_sm) * 3.0 + 1e-9))
+                print(json.dumps({"stage": "seed_survival", "epoch": ep,
+                                  "mean_abs_seed_on_island": round(_mon, 5),
+                                  "containment_mode": str(args.containment_mode),
+                                  "note": "shield keeps seeded islands alive vs bulk-CE wash (advisory)"}),
+                      flush=True)
             if ep % args.eval_every == 0 or ep == args.epochs:
                 if args.async_verdict:
                     # FEED-em: offload the observational verdict to a background thread so the
@@ -3480,6 +3605,11 @@ def main(argv: list[str] | None = None) -> int:
                     "into the structured-init phi target (accelerant; ships 0 archive bytes). Requires "
                     "--structured-init. DEFAULT OFF => byte-identical.")
     ap.add_argument("--island-dilate-px", type=int, default=1, help="#224 annulus dilation of the island masks.")
+    ap.add_argument("--seed-blend", type=float, default=1.0,
+                    help="#224 island-seed blend (residual = blend*(gt_island_rgb - base) on the island).")
+    ap.add_argument("--seed-lr", type=float, default=0.02,
+                    help="#224 learning rate for the SEPARATE island-seed AdamW group (its own optimizer; "
+                    "the seed is NOT in the witness EMA/blob/deploy).")
     ap.add_argument("--containment-mode", type=str, default="shield", choices=["freeze", "damp", "shield"],
                     help="#224 how the seeded island grad is protected from the bulk-CE wash "
                     "(shield=zero only the destructive same-sign component).")
