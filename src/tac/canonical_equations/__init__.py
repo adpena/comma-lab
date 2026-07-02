@@ -125,6 +125,9 @@ from tac.canonical_equations.scorer_input_cache_hash_identity import (
     build_scorer_input_cache_hash_identity_v1,
     scorer_input_cache_hash_identity,
 )
+from tac.canonical_equations.witness_measured_findings_20260701 import (
+    build_all_witness_measured_findings_20260701,
+)
 from tac.canonical_equations.wyner_ziv_decoder_side_posenet_side_information import (
     build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1,
     predict_wyner_ziv_posenet_side_info_savings,
@@ -159,6 +162,7 @@ __all__ = [
     "auto_recalibrate_from_continual_learning_posterior",
     "bootstrap_posterior_from_anchor_residuals",
     "build_all_initial_equations",
+    "build_all_witness_measured_findings_20260701",
     "build_mlx_matmul_drift_m_series_canonical_floor_v1",
     "build_mlx_pytorch_drift_equation_from_result_json",
     "build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1",
