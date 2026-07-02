@@ -1,0 +1,482 @@
+[
+  {
+    "act": "hosc",
+    "beta": 4.0,
+    "siren_init": true,
+    "preact_std_L": [
+      0.046,
+      0.278,
+      0.944,
+      1.254,
+      1.299
+    ],
+    "mean_absgrad_L": [
+      3.8698,
+      2.2669,
+      0.8458,
+      0.6938,
+      0.6832
+    ],
+    "vanish_frac_L": [
+      0.0,
+      0.001,
+      0.255,
+      0.33,
+      0.338
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 4.97209,
+    "gnorm_hidden0": 0.4253,
+    "gnorm_out": 1.17599,
+    "gnorm_film": 0.40486,
+    "gnorm_code": 0.25345,
+    "chain_ratio_in_over_out": 4.228,
+    "ce_init": 1.6953,
+    "ce_traj": [
+      1.6953,
+      0.0456,
+      0.0026,
+      0.0011,
+      0.0008,
+      0.0006,
+      0.0005,
+      0.0004,
+      0.0004
+    ],
+    "ce_final": 0.0004,
+    "argmax_acc_final": 1.0,
+    "sec": 1.4
+  },
+  {
+    "act": "hosc",
+    "beta": 8.0,
+    "siren_init": true,
+    "preact_std_L": [
+      0.045,
+      0.471,
+      1.282,
+      1.375,
+      1.347
+    ],
+    "mean_absgrad_L": [
+      7.1513,
+      1.6712,
+      0.6954,
+      0.6729,
+      0.6786
+    ],
+    "vanish_frac_L": [
+      0.0,
+      0.265,
+      0.644,
+      0.654,
+      0.65
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 25.07145,
+    "gnorm_hidden0": 1.40339,
+    "gnorm_out": 0.71647,
+    "gnorm_film": 0.48689,
+    "gnorm_code": 0.24293,
+    "chain_ratio_in_over_out": 34.9929,
+    "ce_init": 1.7199,
+    "ce_traj": [
+      1.7199,
+      0.7876,
+      0.2837,
+      0.1494,
+      0.059,
+      0.0056,
+      0.0012,
+      0.0007,
+      0.0006
+    ],
+    "ce_final": 0.0006,
+    "argmax_acc_final": 1.0,
+    "sec": 1.3
+  },
+  {
+    "act": "hosc",
+    "beta": 1.0,
+    "siren_init": true,
+    "preact_std_L": [
+      0.046,
+      0.128,
+      0.202,
+      0.303,
+      0.379
+    ],
+    "mean_absgrad_L": [
+      0.9969,
+      0.9764,
+      0.9438,
+      0.8893,
+      0.8483
+    ],
+    "vanish_frac_L": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 0.7259,
+    "gnorm_hidden0": 0.39294,
+    "gnorm_out": 1.26319,
+    "gnorm_film": 0.6007,
+    "gnorm_code": 0.38137,
+    "chain_ratio_in_over_out": 0.5747,
+    "ce_init": 1.6116,
+    "ce_traj": [
+      1.6116,
+      0.144,
+      0.0109,
+      0.0033,
+      0.0017,
+      0.0012,
+      0.0009,
+      0.0008,
+      0.0006
+    ],
+    "ce_final": 0.0006,
+    "argmax_acc_final": 1.0,
+    "sec": 1.3
+  },
+  {
+    "act": "hosc",
+    "beta": 4.0,
+    "siren_init": false,
+    "preact_std_L": [
+      0.41,
+      0.449,
+      0.456,
+      0.475,
+      0.468
+    ],
+    "mean_absgrad_L": [
+      1.7044,
+      1.5982,
+      1.5899,
+      1.5392,
+      1.5476
+    ],
+    "vanish_frac_L": [
+      0.014,
+      0.027,
+      0.03,
+      0.036,
+      0.033
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 0.45711,
+    "gnorm_hidden0": 0.62366,
+    "gnorm_out": 1.63654,
+    "gnorm_film": 0.73902,
+    "gnorm_code": 0.40124,
+    "chain_ratio_in_over_out": 0.2793,
+    "ce_init": 1.5954,
+    "ce_traj": [
+      1.5954,
+      0.0135,
+      0.0025,
+      0.0012,
+      0.0008,
+      0.0006,
+      0.0004,
+      0.0004,
+      0.0003
+    ],
+    "ce_final": 0.0003,
+    "argmax_acc_final": 1.0,
+    "sec": 1.3
+  },
+  {
+    "act": "hosc",
+    "beta": 8.0,
+    "siren_init": false,
+    "preact_std_L": [
+      0.412,
+      0.524,
+      0.525,
+      0.533,
+      0.549
+    ],
+    "mean_absgrad_L": [
+      1.8685,
+      1.508,
+      1.5185,
+      1.4849,
+      1.4387
+    ],
+    "vanish_frac_L": [
+      0.208,
+      0.318,
+      0.315,
+      0.326,
+      0.34
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 0.94347,
+    "gnorm_hidden0": 0.84192,
+    "gnorm_out": 1.52453,
+    "gnorm_film": 0.60212,
+    "gnorm_code": 0.27544,
+    "chain_ratio_in_over_out": 0.6189,
+    "ce_init": 1.6252,
+    "ce_traj": [
+      1.6252,
+      0.0201,
+      0.0017,
+      0.0007,
+      0.0005,
+      0.0004,
+      0.0003,
+      0.0003,
+      0.0002
+    ],
+    "ce_final": 0.0002,
+    "argmax_acc_final": 1.0,
+    "sec": 1.3
+  },
+  {
+    "act": "siren",
+    "beta": 4.0,
+    "siren_init": true,
+    "preact_std_L": [
+      0.045,
+      0.121,
+      0.114,
+      0.118,
+      0.122
+    ],
+    "mean_absgrad_L": [
+      19.3968,
+      18.9234,
+      18.8485,
+      18.9397,
+      18.241
+    ],
+    "vanish_frac_L": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 1.59164,
+    "gnorm_hidden0": 2.7394,
+    "gnorm_out": 3.09515,
+    "gnorm_film": 6.23842,
+    "gnorm_code": 3.36833,
+    "chain_ratio_in_over_out": 0.5142,
+    "ce_init": 1.7144,
+    "ce_traj": [
+      1.7144,
+      1.36,
+      1.2141,
+      1.1734,
+      1.1589,
+      1.1541,
+      1.1502,
+      1.1486,
+      1.1473
+    ],
+    "ce_final": 1.1473,
+    "argmax_acc_final": 0.4883,
+    "sec": 1.1
+  },
+  {
+    "act": "finer",
+    "beta": 4.0,
+    "siren_init": true,
+    "preact_std_L": [
+      0.046,
+      0.118,
+      0.111,
+      0.119,
+      0.112
+    ],
+    "mean_absgrad_L": [
+      20.7794,
+      22.9741,
+      22.4444,
+      23.2065,
+      22.7526
+    ],
+    "vanish_frac_L": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 2.15303,
+    "gnorm_hidden0": 2.71868,
+    "gnorm_out": 2.10265,
+    "gnorm_film": 4.48385,
+    "gnorm_code": 2.26566,
+    "chain_ratio_in_over_out": 1.024,
+    "ce_init": 1.4814,
+    "ce_traj": [
+      1.4814,
+      1.1534,
+      1.1457,
+      1.147,
+      1.1464,
+      1.1437,
+      1.1443,
+      1.1445,
+      1.145
+    ],
+    "ce_final": 1.145,
+    "argmax_acc_final": 0.4883,
+    "sec": 1.4
+  },
+  {
+    "act": "wire",
+    "beta": 4.0,
+    "siren_init": true,
+    "preact_std_L": [
+      0.046,
+      0.131,
+      0.123,
+      0.118,
+      0.128
+    ],
+    "mean_absgrad_L": [
+      11.1662,
+      5.8527,
+      6.3618,
+      7.1436,
+      5.9613
+    ],
+    "vanish_frac_L": [
+      0.0,
+      0.011,
+      0.004,
+      0.0,
+      0.001
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 0.14175,
+    "gnorm_hidden0": 1.51237,
+    "gnorm_out": 1.53253,
+    "gnorm_film": 2.03708,
+    "gnorm_code": 1.33304,
+    "chain_ratio_in_over_out": 0.0925,
+    "ce_init": 1.7122,
+    "ce_traj": [
+      1.7122,
+      1.141,
+      1.1466,
+      1.1386,
+      1.0956,
+      0.9947,
+      0.8981,
+      0.8392,
+      0.71
+    ],
+    "ce_final": 0.71,
+    "argmax_acc_final": 0.7317,
+    "sec": 1.6
+  },
+  {
+    "act": "gauss",
+    "beta": 4.0,
+    "siren_init": false,
+    "preact_std_L": [
+      0.413,
+      0.252,
+      0.277,
+      0.272,
+      0.276
+    ],
+    "mean_absgrad_L": [
+      1.8812,
+      2.896,
+      2.77,
+      2.7956,
+      2.7251
+    ],
+    "vanish_frac_L": [
+      0.476,
+      0.246,
+      0.28,
+      0.27,
+      0.284
+    ],
+    "dead_units_L1": 0.0,
+    "gnorm_in": 4.84733,
+    "gnorm_hidden0": 1.47784,
+    "gnorm_out": 1.42707,
+    "gnorm_film": 0.46702,
+    "gnorm_code": 0.25207,
+    "chain_ratio_in_over_out": 3.3967,
+    "ce_init": 1.6985,
+    "ce_traj": [
+      1.6985,
+      1.0297,
+      0.6998,
+      0.285,
+      0.1904,
+      0.0746,
+      0.0456,
+      0.0395,
+      0.0361
+    ],
+    "ce_final": 0.0361,
+    "argmax_acc_final": 0.9913,
+    "sec": 1.2
+  },
+  {
+    "act": "relu",
+    "beta": 4.0,
+    "siren_init": false,
+    "preact_std_L": [
+      0.415,
+      0.2,
+      0.151,
+      0.154,
+      0.137
+    ],
+    "mean_absgrad_L": [
+      0.5009,
+      0.5336,
+      0.5719,
+      0.4333,
+      0.5402
+    ],
+    "vanish_frac_L": [
+      0.499,
+      0.466,
+      0.428,
+      0.567,
+      0.46
+    ],
+    "dead_units_L1": 0.017,
+    "gnorm_in": 0.00345,
+    "gnorm_hidden0": 0.01753,
+    "gnorm_out": 0.59942,
+    "gnorm_film": 0.17378,
+    "gnorm_code": 0.10649,
+    "chain_ratio_in_over_out": 0.0058,
+    "ce_init": 1.607,
+    "ce_traj": [
+      1.607,
+      0.9427,
+      0.3085,
+      0.0204,
+      0.0001,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "ce_final": 0.0,
+    "argmax_acc_final": 1.0,
+    "sec": 1.1
+  }
+]

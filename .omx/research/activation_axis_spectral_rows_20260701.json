@@ -1,0 +1,65 @@
+[
+  {
+    "act": "hosc4",
+    "mse": 0.00025,
+    "gibbs_overshoot": 0.009,
+    "fit_flip": 0.0,
+    "R_survival_flip": 0.0
+  },
+  {
+    "act": "hosc8",
+    "mse": 0.00013,
+    "gibbs_overshoot": 0.0037,
+    "fit_flip": 0.0,
+    "R_survival_flip": 0.0
+  },
+  {
+    "act": "step_basis",
+    "mse": 0.00077,
+    "gibbs_overshoot": 0.0275,
+    "fit_flip": 0.0,
+    "R_survival_flip": 0.0
+  },
+  {
+    "act": "fkan",
+    "mse": 0.00015,
+    "gibbs_overshoot": 0.0126,
+    "fit_flip": 0.0,
+    "R_survival_flip": 0.0
+  },
+  {
+    "act": "siren",
+    "mse": 0.24739,
+    "gibbs_overshoot": 0.734,
+    "fit_flip": 0.4497,
+    "R_survival_flip": 0.438
+  },
+  {
+    "act": "finer",
+    "mse": 0.24608,
+    "gibbs_overshoot": 0.6559,
+    "fit_flip": 0.4375,
+    "R_survival_flip": 0.4351
+  },
+  {
+    "act": "wire",
+    "mse": 0.00072,
+    "gibbs_overshoot": 0.1283,
+    "fit_flip": 0.0,
+    "R_survival_flip": 0.0
+  },
+  {
+    "act": "gauss",
+    "mse": 0.00023,
+    "gibbs_overshoot": 0.0072,
+    "fit_flip": 0.0,
+    "R_survival_flip": 0.0
+  },
+  {
+    "act": "relu",
+    "mse": 0.00015,
+    "gibbs_overshoot": 0.039,
+    "fit_flip": 0.0,
+    "R_survival_flip": 0.0
+  }
+]
