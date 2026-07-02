@@ -98,6 +98,15 @@ for _p in (_REPO, _REPO / "src", _REPO / "experiments", _REPO / "upstream"):
 
 import train_witness_realized_through_R_mlx as twr  # noqa: E402  (frozen CPU-torch verdict + GT + R)
 
+from tac.decode_memory_tier import (  # noqa: E402  (#224 Wave D decode memory-tier surface)
+    DECODE_MEMORY_TIERS,
+    DEFAULT_TIER_NAME,
+    require_contest_tier,
+    resolve_eval_device,
+    resolve_tier,
+    tier_inflate_env,
+)
+
 from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     CurveletBankConfig,
     _int8_symmetric,
@@ -1228,8 +1237,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--run-exact-eval", action="store_true",
                     help="after inflating ALL pairs, run upstream/evaluate.py on the exact archive "
                          "bytes -> real d_seg/d_pose/rate/S. CPU 600-pair ~1-2h. Forces --keep-packet.")
-    ap.add_argument("--eval-device", type=str, default="cpu", choices=["cpu", "cuda"],
-                    help="evaluate.py device for --run-exact-eval (cpu default; MPS is REFUSED).")
+    ap.add_argument("--eval-device", type=str, default=None, choices=["cpu", "cuda"],
+                    help="evaluate.py device for --run-exact-eval (default: driven by --memory-tier — "
+                         "cpu for decode_cpu_16gb, cuda for decode_t4_16gb; MPS is REFUSED).")
+    ap.add_argument("--memory-tier", type=str, default=DEFAULT_TIER_NAME,
+                    choices=sorted(DECODE_MEMORY_TIERS),
+                    help="#224 Wave D decode (inflate) memory-tier: decode_cpu_16gb (DEFAULT, the "
+                         "proven contest CPU path) / decode_t4_16gb (contest T4 CUDA host; SAME "
+                         "bit-exact inflate) / production_edge (edge runtime, REFUSED here). Contest "
+                         "tiers are bit-exact (fp64/CPU-torch-R/1-thread BLAS); a fp32/CUDA/multithread "
+                         "tier is FORBIDDEN on contest tiers.")
     ap.add_argument("--uncompressed-dir", type=Path, default=None,
                     help="GT videos dir for evaluate.py (default upstream/videos; the rate denominator).")
     ap.add_argument("--video-names-file", type=Path, default=None,
@@ -1238,6 +1255,19 @@ def main(argv: list[str] | None = None) -> int:
                     help="upstream/evaluate.py timeout seconds (default 5h for a CPU 600-pair run).")
     ap.add_argument("--out", type=Path, default=None, help="JSON report path")
     args = ap.parse_args(argv)
+
+    # #224 Wave D: resolve + validate the decode memory-tier BEFORE anything. Fail-closed: the
+    # contest byte-close/eval path REFUSES production_edge (its relaxed fp32/CUDA/multithread numeric
+    # path can flip uint8 boundaries and is DEFERRED #228). Apply the tier's inflate env (1-thread
+    # BLAS contract + optional worker cap) so the inflate subprocesses inherit it; drive the downstream
+    # evaluate.py device from the tier (explicit --eval-device wins).
+    tier = require_contest_tier(resolve_tier(args.memory_tier))  # raises DecodeTierError if refused
+    _tier_env = tier_inflate_env(tier)
+    for _k, _v in _tier_env.items():
+        os.environ[_k] = _v
+    eval_device = resolve_eval_device(tier, args.eval_device)
+    print(f"# decode memory-tier: {tier.name} (contest={tier.contest}, bit_exact={tier.bit_exact_contract}, "
+          f"eval_device={eval_device}); inflate env={_tier_env or '{} (inflate defaults)'}", flush=True)
 
     report = run(
         args.ckpt_dir,
@@ -1255,11 +1285,16 @@ def main(argv: list[str] | None = None) -> int:
         bit_exact_pairs=args.bit_exact_pairs,
         bit_exact_strict=not args.no_bit_exact_strict,
         run_exact_eval=args.run_exact_eval,
-        eval_device=args.eval_device,
+        eval_device=eval_device,
         uncompressed_dir=args.uncompressed_dir,
         video_names_file=args.video_names_file,
         eval_timeout=args.eval_timeout,
     )
+    # record the decode-tier contract in the report (observability + provenance).
+    report["decode_memory_tier"] = {
+        "name": tier.name, "contest": tier.contest, "bit_exact_contract": tier.bit_exact_contract,
+        "eval_device": eval_device, "inflate_env": _tier_env, "note": tier.note,
+    }
     out = args.out or (_REPO / "reports" / f"levelset_byte_close_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
