@@ -40,7 +40,8 @@ def test_chart_enum_membership_complete():
     assert {g.value for g in CarrierGauge} == {"single_sdf", "msdf", "hard_bitmap"}
     assert {g.value for g in ResidualGauge} == {
         "alard_lupton", "direct_learned", "persistence_events", "conditional_on_lane_prior"}
-    assert {g.value for g in PoseGauge} == {"scalar_store", "range_delta", "low_rank"}
+    # PoseGauge gained WARP_REAL_LUMA (#224, append-only).
+    assert {g.value for g in PoseGauge} == {"scalar_store", "range_delta", "low_rank", "warp_real_luma"}
     assert {g.value for g in MovablesGauge} == {"store", "warp_predict"}
     assert {g.value for g in GenerationGauge} == {"deterministic_free", "learned_counted"}
 
@@ -52,6 +53,52 @@ def test_component_gauges_registry_and_component_of():
     assert component_of(ResidualGauge.CONDITIONAL_ON_LANE_PRIOR) is GaugeComponent.RESIDUAL
     with pytest.raises(TypeError):
         component_of("not a chart")
+
+
+# --- #224 consolidated-wire-in gauges ---------------------------------------
+def test_wire_in_224_gauges_membership_and_registration():
+    from tac.witness_dsl import (
+        GaugeComponent,
+        HeadGeometryGauge,
+        LaneGauge,
+        PoseGauge,
+        RenderAAGauge,
+    )
+
+    # the 3 new components are registered + round-trip via component_of.
+    assert {g.value for g in RenderAAGauge} == {"none", "supersample_2x", "supersample_3x", "ipe"}
+    assert {g.value for g in LaneGauge} == {"none", "band_render_authority"}
+    assert {g.value for g in HeadGeometryGauge} == {
+        "softmax", "etf", "additive_margin", "menon_logit_adjust"}
+    for comp, cls in ((GaugeComponent.RENDER_AA, RenderAAGauge),
+                      (GaugeComponent.LANE_BAND, LaneGauge),
+                      (GaugeComponent.HEAD_GEOMETRY, HeadGeometryGauge)):
+        assert COMPONENT_GAUGES[comp] is cls
+        assert component_of(next(iter(cls))) is comp
+    # PoseGauge.WARP_REAL_LUMA still resolves to the POSE component.
+    assert component_of(PoseGauge.WARP_REAL_LUMA) is GaugeComponent.POSE
+
+
+def test_wire_in_224_trainer_flag_emission_byte_identical_defaults():
+    from tac.witness_dsl import (
+        HeadGeometryGauge,
+        LaneGauge,
+        RenderAAGauge,
+        head_geometry_trainer_flags,
+        lane_band_trainer_flags,
+        render_aa_trainer_flags,
+    )
+
+    # the byte-identical DEFAULT chart of each family emits NO flags.
+    assert render_aa_trainer_flags(RenderAAGauge.NONE) == ()
+    assert lane_band_trainer_flags(LaneGauge.NONE) == ()
+    assert head_geometry_trainer_flags(HeadGeometryGauge.SOFTMAX) == ()
+    # non-default charts emit the exact levelset-trainer flag names (never-invent-flags).
+    assert render_aa_trainer_flags(RenderAAGauge.SUPERSAMPLE_2X) == (
+        "--render-aa", "supersample", "--aa-supersample", "2")
+    assert render_aa_trainer_flags(RenderAAGauge.IPE) == ("--render-aa", "ipe")
+    assert lane_band_trainer_flags(LaneGauge.BAND_RENDER_AUTHORITY) == ("--lane-render-band",)
+    assert head_geometry_trainer_flags(HeadGeometryGauge.ETF) == ("--head", "etf")
 
 
 # --- GaugeCost contracts (NO-FAKE) ------------------------------------------

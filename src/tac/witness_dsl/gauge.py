@@ -70,6 +70,10 @@ class GaugeComponent(Enum):
     GENERATION = "generation"
     TOPOLOGY_LOSS = "topology_loss"
     ISLAND_PROTECTION = "island_protection"
+    # #224 consolidated-wire-in components (APPEND-ONLY).
+    RENDER_AA = "render_aa"            # AA-SDF observation-map render (aa_sdf_observation_render)
+    LANE_BAND = "lane_band"            # analytic-lane render-band (analytic_lane_render_band)
+    HEAD_GEOMETRY = "head_geometry"    # softmax/ETF/additive-margin/Menon head (laguerre_logit_offset)
 
 
 class WarpGauge(Enum):
@@ -104,6 +108,10 @@ class PoseGauge(Enum):
     SCALAR_STORE = "scalar_store"  # raw fp16 scalars (~5KB sidecar)
     RANGE_DELTA = "range_delta"    # range-coded temporal deltas (compressed)
     LOW_RANK = "low_rank"          # low-rank pose codec (task #140)
+    # #224 APPEND-ONLY: render frame0 THROUGH the SE(3) ground-homography warp of the REAL
+    # keyframe luma (seg-free f0 -> real-luma pose carrier; warp_real_luma_frame0). Composes with
+    # the stored twist + a learnable per-pair residual; hits the same d_pose target, different bytes.
+    WARP_REAL_LUMA = "warp_real_luma"
 
 
 class MovablesGauge(Enum):
@@ -156,6 +164,51 @@ class IslandProtectionGauge(Enum):
     FULL = "full"                    # early-seed + containment + amplification
 
 
+class RenderAAGauge(Enum):
+    """How the witness render is sampled through R (aa_sdf_observation_render; #224/#220).
+
+    POINT-sampling erases finest-scale lane structure through the contest R; FOOTPRINT-integrated
+    (anti-aliased) rendering recovers it (MEASURED #1 rep lever, FEED-ly/-ma; recall-lift +0.374,
+    AA floor 0.00086 < oracle-R need 0.00120). ~0-rate (decode-time deterministic; archive bytes
+    UNCHANGED — the IPE attenuation + supersample grid are functions of the checkpoint cfg).
+    Chart ↔ trainer flag: NONE=--render-aa none (byte-identical baseline); SUPERSAMPLE_2X/3X=
+    --render-aa supersample --aa-supersample 2/3 (ground-truth footprint integration); IPE=
+    --render-aa ipe (mip-NeRF cone attenuation of the curvelet basis, analytical ~0-compute)."""
+
+    NONE = "none"                    # point-sample (byte-identical to the pre-#224 trainer)
+    SUPERSAMPLE_2X = "supersample_2x"  # render at 2*grid + box-downsample (footprint integration)
+    SUPERSAMPLE_3X = "supersample_3x"  # render at 3*grid + box-downsample
+    IPE = "ipe"                      # mip-NeRF IPE cone attenuation of the curvelet columns
+
+
+class LaneGauge(Enum):
+    """How class-1 (lane) is authored (analytic_lane_render_band; #224/FEED-dv #203/#213/#215).
+
+    The witness owns the smooth classes; LANE (the finest-scale erasure tail) is supplied by the
+    analytic render-band = AA-SDF range-dependent coverage × dash gate × witness-uncertainty FP
+    killer, composited PRE-R via the base render compose_fn. Chart ↔ trainer flag: NONE=witness
+    renders lane itself (byte-identical baseline); BAND_RENDER_AUTHORITY=--lane-render-band (the
+    class-1 render-time authority; net-negative d_seg realized by TRAINING WITH the band active)."""
+
+    NONE = "none"                              # witness authors lane (byte-identical baseline)
+    BAND_RENDER_AUTHORITY = "band_render_authority"  # --lane-render-band analytic class-1 authority
+
+
+class HeadGeometryGauge(Enum):
+    """How the 5-class SDF head geometry / per-class margin is shaped (laguerre_logit_offset; #218).
+
+    Byte-free HEAD/margin-field facets. Chart ↔ trainer flag: SOFTMAX=--head softmax (default,
+    byte-identical); ETF=--head etf (frozen simplex-ETF head, removes minority NORM COLLAPSE,
+    regenerable => rate win); ADDITIVE_MARGIN=--head additive-margin --additive-margin <m>;
+    MENON_LOGIT_ADJUST=--logit-adjust-per-class --logit-adjust-tau <t> (rare-class target boost).
+    Composes with the realized margin-field hinge --margin-field-head-weight."""
+
+    SOFTMAX = "softmax"                  # standard softmax head (byte-identical baseline)
+    ETF = "etf"                          # frozen simplex-ETF head (neural-collapse optimal)
+    ADDITIVE_MARGIN = "additive_margin"  # additive-margin softmax
+    MENON_LOGIT_ADJUST = "menon_logit_adjust"  # Menon per-class logit adjustment (rare-class boost)
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -166,7 +219,47 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.GENERATION: GenerationGauge,
     GaugeComponent.TOPOLOGY_LOSS: TopologyLossGauge,
     GaugeComponent.ISLAND_PROTECTION: IslandProtectionGauge,
+    # #224 consolidated-wire-in components (APPEND-ONLY).
+    GaugeComponent.RENDER_AA: RenderAAGauge,
+    GaugeComponent.LANE_BAND: LaneGauge,
+    GaugeComponent.HEAD_GEOMETRY: HeadGeometryGauge,
 }
+
+
+# #224 chart -> trainer argv flags (never-invent-flags; the exact levelset-trainer flag names).
+# The DSL renders bools as ``--flag`` and valued flags as ``[flag, str(val)]``; NONE/SOFTMAX charts
+# emit NOTHING (they ARE the byte-identical default). Mirrors the sister-module *_flags() pattern.
+RENDER_AA_TRAINER_FLAGS: dict[RenderAAGauge, tuple[str, ...]] = {
+    RenderAAGauge.NONE: (),
+    RenderAAGauge.SUPERSAMPLE_2X: ("--render-aa", "supersample", "--aa-supersample", "2"),
+    RenderAAGauge.SUPERSAMPLE_3X: ("--render-aa", "supersample", "--aa-supersample", "3"),
+    RenderAAGauge.IPE: ("--render-aa", "ipe"),
+}
+LANE_BAND_TRAINER_FLAGS: dict[LaneGauge, tuple[str, ...]] = {
+    LaneGauge.NONE: (),
+    LaneGauge.BAND_RENDER_AUTHORITY: ("--lane-render-band",),
+}
+HEAD_GEOMETRY_TRAINER_FLAGS: dict[HeadGeometryGauge, tuple[str, ...]] = {
+    HeadGeometryGauge.SOFTMAX: (),
+    HeadGeometryGauge.ETF: ("--head", "etf"),
+    HeadGeometryGauge.ADDITIVE_MARGIN: ("--head", "additive-margin"),
+    HeadGeometryGauge.MENON_LOGIT_ADJUST: ("--logit-adjust-per-class",),
+}
+
+
+def render_aa_trainer_flags(chart: RenderAAGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv flags for a RenderAAGauge chart (NONE => () byte-identical)."""
+    return RENDER_AA_TRAINER_FLAGS[chart]
+
+
+def lane_band_trainer_flags(chart: LaneGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv flags for a LaneGauge chart (NONE => () byte-identical)."""
+    return LANE_BAND_TRAINER_FLAGS[chart]
+
+
+def head_geometry_trainer_flags(chart: HeadGeometryGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv flags for a HeadGeometryGauge chart (SOFTMAX => () byte-identical)."""
+    return HEAD_GEOMETRY_TRAINER_FLAGS[chart]
 
 
 def component_of(chart: Enum) -> GaugeComponent:
