@@ -1,0 +1,101 @@
+{
+  "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "task": "FEED-dv #203/#213/#215: NON-NAIVE analytic-lane render-band Delta d_seg (AA-SDF x range-dependent dash gate x witness-uncertainty mask) vs witness-alone, n600 through R.",
+  "n_pairs": 600,
+  "checkpoint": "experiments/results/levelset_n600_v2_attrclean_20260630T194549Z/levelset_witness_ema_BEST.npz",
+  "checkpoint_epoch": 650,
+  "params": {
+    "softness": 1.0,
+    "dash_forward_max_m": 55.0,
+    "tau_witness_prob": 0.85,
+    "eps_witness": 0.35,
+    "tau_gt_logit": 2.0,
+    "eps_gt": 1.5
+  },
+  "conditions": {
+    "c1_default": "witness bulk alone (sanity ~0.00333)",
+    "c_naive": "band, UNIFORM dash gate, NO uncertainty (naive)",
+    "c_range": "band, RANGE-DEPENDENT dash gate (#215), NO uncertainty",
+    "c_full_gt": "band, range-dep + uncertainty from FROZEN GT SegNet margin",
+    "c_full_wit": "band, range-dep + uncertainty from WITNESS softmax margin"
+  },
+  "d_seg": {
+    "c1_default": {
+      "mean": 0.0033304680718315976,
+      "median": 0.0032297770182291665,
+      "p90": 0.004120381673177084,
+      "max": 0.006434122721354167,
+      "n": 600
+    },
+    "c_naive": {
+      "mean": 0.003952068752712674,
+      "median": 0.0038096110026041665,
+      "p90": 0.004972330729166668,
+      "max": 0.007761637369791667,
+      "n": 600
+    },
+    "c_range": {
+      "mean": 0.003960181342230903,
+      "median": 0.003824869791666667,
+      "p90": 0.004965718587239583,
+      "max": 0.0079193115234375,
+      "n": 600
+    },
+    "c_full_gt": {
+      "mean": 0.0036641269259982635,
+      "median": 0.003557840983072917,
+      "p90": 0.004488118489583334,
+      "max": 0.007130940755208333,
+      "n": 600
+    },
+    "c_full_wit": {
+      "mean": 0.00334197998046875,
+      "median": 0.0032450358072916665,
+      "p90": 0.004161071777343751,
+      "max": 0.006403605143229167,
+      "n": 600
+    }
+  },
+  "delta_vs_default": {
+    "c1_default": 0.0,
+    "c_naive": 0.0006216006808810763,
+    "c_range": 0.000629713270399305,
+    "c_full_gt": 0.0003336588541666659,
+    "c_full_wit": 1.1511908637152572e-05
+  },
+  "lane_recall": {
+    "c1_default": 0.7579878468394812,
+    "c_naive": 0.7646293634634389,
+    "c_range": 0.7645768019628838,
+    "c_full_gt": 0.771370396618726,
+    "c_full_wit": 0.7633996164766423
+  },
+  "lane_fn_frac": {
+    "c1_default": 0.0013587866889105903,
+    "c_naive": 0.0013323550754123263,
+    "c_range": 0.0013329654269748263,
+    "c_full_gt": 0.0012890285915798613,
+    "c_full_wit": 0.001328854031032986
+  },
+  "lane_fp_frac": {
+    "c1_default": 0.0006022135416666667,
+    "c_naive": 0.0010240258110894096,
+    "c_range": 0.001023474799262153,
+    "c_full_gt": 0.0008860948350694444,
+    "c_full_wit": 0.0006357065836588542
+  },
+  "analytic_band_fit": {
+    "band_vs_gt_lane_recall_mean": 0.5474557765871068,
+    "n_lines_mean": 4.945
+  },
+  "sizing_reference": {
+    "c1_default": 0.0033304680718315976,
+    "c3_naive_lane": 0.004149373372395833,
+    "c3_delta": 0.0008189053005642358,
+    "note": "sizing c3 (naive band) HURT +0.00082"
+  },
+  "sanity": {
+    "c1_default_mean_d_seg": 0.0033304680718315976,
+    "note": "c1 must reproduce the sizing c1 ~0.00333 (same ckpt/render/R)."
+  }
+}
