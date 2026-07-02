@@ -40,8 +40,9 @@ def test_chart_enum_membership_complete():
     assert {g.value for g in CarrierGauge} == {"single_sdf", "msdf", "hard_bitmap"}
     assert {g.value for g in ResidualGauge} == {
         "alard_lupton", "direct_learned", "persistence_events", "conditional_on_lane_prior"}
-    # PoseGauge gained WARP_REAL_LUMA (#224, append-only).
-    assert {g.value for g in PoseGauge} == {"scalar_store", "range_delta", "low_rank", "warp_real_luma"}
+    # PoseGauge gained WARP_REAL_LUMA (#224) then STORE_NOTHING_XI (#205 Track B, append-only).
+    assert {g.value for g in PoseGauge} == {
+        "scalar_store", "range_delta", "low_rank", "warp_real_luma", "store_nothing_xi"}
     assert {g.value for g in MovablesGauge} == {"store", "warp_predict"}
     assert {g.value for g in GenerationGauge} == {"deterministic_free", "learned_counted"}
 
@@ -178,6 +179,11 @@ def test_default_table_seeded_measured_cells_match_cited_feeds():
     # pose (F4) — byte sidecars
     assert t.lookup(PoseGauge.RANGE_DELTA).counted_bytes == 875
     assert t.lookup(PoseGauge.SCALAR_STORE).counted_bytes == 4800
+    # pose (#205 Track B) — STORE-NOTHING carrier (byte-close BIT-EXACT this session)
+    snx = t.lookup(PoseGauge.STORE_NOTHING_XI)
+    assert snx.counted_bytes == 7200 and snx.measured is True  # byte-optimal xi-only 600*12B fp16
+    assert snx.compliant and snx.deterministic                 # byte-close proved BIT-EXACT (max_abs=0)
+    assert "store-nothing-but-xi" in snx.provenance and "BIT-EXACT" in snx.provenance
     # movables (F3 FEED-je 930b6d348)
     assert t.lookup(MovablesGauge.STORE).counted_bytes == 2700
     assert t.lookup(MovablesGauge.STORE).d_seg_through_R == 0.0

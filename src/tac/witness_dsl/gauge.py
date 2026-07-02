@@ -120,6 +120,14 @@ class PoseGauge(Enum):
     # (n600 null d_pose 163.12 -> warp 1.367 = -99%). The prior "one xi, both axes" dual-use framing
     # is superseded FOR LANES: xi serves ONLY the pose axis.
     WARP_REAL_LUMA = "warp_real_luma"
+    # #205 STORE-NOTHING-but-xi (Track B, 18927a1ae / keyframe_rate_minimization_builds_20260702).
+    # SAME warp physics as WARP_REAL_LUMA but the frame0 SOURCE is the witness's OWN frame0 INR render
+    # (generated FREE, rule-118) instead of a STORED real keyframe -> stores ONLY xi (+H) = ~0 marginal
+    # bytes (the keyframe payload the byte-close measured at 697941 B ds4 / MBs native collapses to a
+    # ~1 KB xi/H section). BYTE-CLOSE BIT-EXACT PROVEN (n6/t1, max_abs=0). d_pose is #205-gated (Track B
+    # classmean proxy 4.97 pre-residual; the witness render is richer -> <= 4.97; the trained dxi
+    # residual closes the offset). The A/B pose arm vs WARP_REAL_LUMA (--pose-carrier-source generated).
+    STORE_NOTHING_XI = "store_nothing_xi"
 
 
 class MovablesGauge(Enum):
@@ -589,6 +597,21 @@ def default_cost_table() -> GaugeCostTable:
             compliant=True, deterministic=True, measured=False,
             provenance="low-rank pose codec (task #140; ~2.7x over scalar-store predicted, "
                        "NOT byte-closed) — UNMEASURED"),
+        # #205 STORE-NOTHING carrier: a byte-close-MEASURED (BIT-EXACT) frame0-warp source. Unlike the
+        # SIDECAR charts above (dead bytes the render never reads on a code/texture-pose witness), this
+        # CARRIER actually warps frame0 -> it MOVES d_pose (Track B classmean proxy 4.97 pre-residual;
+        # #205-gated after the trained dxi residual). counted_bytes = byte-optimal xi-only (600*12 B fp16;
+        # H FREE via exp_se3); the store-nothing collapses the WARP_REAL_LUMA keyframe payload (697941 B
+        # ds4 MEASURED) to this ~7 KB. d_seg_through_R None (frame0 is seg-free) so it does not rank on
+        # d_seg; the byte term is the rankable cost.
+        PoseGauge.STORE_NOTHING_XI: GaugeCost(
+            counted_bytes=7200, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="Track B store-nothing-but-xi (18927a1ae; keyframe_rate_minimization_builds_"
+                       "20260702) + byte-close BIT-EXACT n6/t1 (levelset_byte_close_and_eval "
+                       "--pose-carrier-mode store_nothing; max_abs=0; section 697941B ds4 table -> 1049B "
+                       "store_nothing). byte-optimal xi-only 600*12B fp16 = 7200B (H derived FREE). "
+                       "CARRIER (moves d_pose), not a dead sidecar; d_pose #205-gated (<=4.97 pre-residual)"),
 
         # --- MOVABLES ----------------------------------------------------------
         MovablesGauge.STORE: GaugeCost(

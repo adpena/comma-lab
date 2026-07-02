@@ -125,6 +125,11 @@ from tac.canonical_equations.scorer_input_cache_hash_identity import (
     build_scorer_input_cache_hash_identity_v1,
     scorer_input_cache_hash_identity,
 )
+from tac.canonical_equations.store_nothing_pose_carrier_rate_dpose_20260702 import (
+    build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1,
+    store_nothing_marginal_bytes,
+    store_nothing_rate_term,
+)
 from tac.canonical_equations.witness_measured_findings_20260701 import (
     build_all_witness_measured_findings_20260701,
 )
@@ -169,6 +174,7 @@ __all__ = [
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_procedural_predictor_plus_residual_correction_savings_v1",
     "build_scorer_input_cache_hash_identity_v1",
+    "build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1",
     "build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1",
     "classify_mlx_matmul_drift",
     "compute_predicted_band_from_posterior",
@@ -187,6 +193,8 @@ __all__ = [
     "query_equations_by_producer",
     "register_canonical_equation",
     "scorer_input_cache_hash_identity",
+    "store_nothing_marginal_bytes",
+    "store_nothing_rate_term",
     "update_equation_with_anchor_via_conjugate_prior",
     "update_equation_with_domain_refinement",
     "update_equation_with_empirical_anchor",
