@@ -1109,15 +1109,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # self-orient per-pair dir-feat recompute + the structured-init render-res==L*-res invariant
         # are not yet wired; refuse rather than render on mismatched feats.
         #
+        # #224 Wave D AA CORRECTION (aa_feasibility_reconciliation_20260702.md): supersample is NOT
+        # the launch AA — it is train-only (neither shipped inflate applies ss → train/decode
+        # observation MISMATCH), its fp64 decode is 41min > the 30min budget, AND it HURTS the witness
+        # −49% (the 0.00086 floor is a REAL-FRAME ceiling, not witness-realized). The launch config
+        # ships --render-aa none + the analytic coverage-integrated --lane-render-band. This whole
+        # supersample+self-orient fail-closed path therefore never fires from the all-levers launch;
+        # it stays BUILT + fail-closeable for research only. Memory arithmetic below is RESOLVED
+        # (reconciliation Q3) but MOOT for the launch given the decode + witness-harm disqualification.
+        #
         # #224 Option-B DECISION (FAIL-CLOSED, precise n600 blocker — NOT a shape/impl gap):
         # AA-supersample + --self-orient needs PER-PAIR fine-grid feats = curvelet(coords_fine) ⊕
         # dir_feats_fine(pair), where dir_feats_fine is the spec's argmax-NN-upsample→fine-EDT→
-        # directional-Fourier (docs/aa_sdf_observation_render_wire_in_spec.md). At n600 this cannot be
-        # made simultaneously memory-safe AND wall-clock-viable WITHOUT a GPU run to pick the budget:
-        #   (a) CACHE per-pair fine feats (mirror cf_mx_cache): cf_mx_cache is ALREADY ~41GB at n600
-        #       (see _rebuild_cf_mx_cache); the fine cache is ss^2× = ~164GB @ ss=2, AND BOTH the base
-        #       cache (base_loss/sdf(cf) + reorient) and the fine cache (render) are live in this mode
-        #       => ~205GB => hard OOM (the operator's n600-scale allergy + the FEED-eh OOM history).
+        # directional-Fourier (docs/aa_sdf_observation_render_wire_in_spec.md). Reconciled n600 memory
+        # (Q3), ss=2, n_dir_freqs=2 (the shipped config), 384×512:
+        #   (a) The fine CURVELET feats are pair-INDEPENDENT → ONE SHARED tensor (~0.23GB), NOT
+        #       per-pair. ONLY the fine DIR-feats are per-pair: 25.2 MB/pair @ ndf2 × 600 = ~14GB
+        #       (full mode) — NOT the ~164GB the pre-reconciliation comment feared (that was the NAIVE
+        #       full-fine-feats-per-pair @ ndf6 over-estimate). Peak ≈ 63GB (fine 14 + base cf_mx_cache
+        #       ~41 [held STEADY via the in-place rebuild, L~2411, not 2×] + fwd ~8) → memory-SAFE on
+        #       the 128GB M5 Max, but this is a SCALED EXTRAPOLATION (24MB/pair measured), not a real
+        #       n600 allocation.
         #   (b) ON-DEMAND fine feats (no fine cache, memory-safe): recompute the fine EDT per render
         #       call. The base path amortizes P EDTs across --reorient-every (~50) epochs via the
         #       cache; on-demand does P fine (ss^2×) EDTs EVERY epoch (~50× more, 4× larger) =>
@@ -1136,16 +1148,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (argmax→ss*grid→fine-EDT→directional-Fourier, docs/aa_sdf_observation_render_wire_in_spec.md)
             # face a MEASURED memory↔wall-clock tradeoff that cannot be BOTH-satisfied AND n600-validated
             # under the no-launch CONTAINMENT (measured local-MLX, ss=2, 384x512):
-            #   * fine-EDT recompute = ~49 ms/pair; per-pair fine dir-feat = 75.5 MB.
+            #   * fine-EDT recompute = ~49 ms/pair; per-pair fine dir-feat = 25.2 MB @ n_dir_freqs=2
+            #     (the shipped config) — the older 75.5 MB was the ndf6 figure (reconciliation Q3).
             #   * MEMORY-SAFE (--aa-self-orient-fine-mode batch): a batch-bounded on-demand cache is
-            #     ~cap*75MB (0.6 GB @ cap=8 vs 45 GB all-600) => memory SOLVED. BUT every pair renders
-            #     every epoch, so a batch-bounded cache THRASHES => P fine-EDTs/epoch ~29 s/epoch @ n600
-            #     (50x the base --reorient-every amortization) => wall-clock NON-viable for the
+            #     ~cap*25MB (0.2 GB @ cap=8 vs ~14 GB all-600 @ ndf2) => memory SOLVED. BUT every pair
+            #     renders every epoch, so a batch-bounded cache THRASHES => P fine-EDTs/epoch ~29 s/epoch
+            #     @ n600 (50x the base --reorient-every amortization) => wall-clock NON-viable for the
             #     multi-thousand-epoch CE→tau→l7→Muon curriculum.
             #   * WALL-CLOCK-viable (--aa-self-orient-fine-mode full): compute the fine dir-feats ONCE
-            #     per --reorient-every (amortized ~0.6 s/epoch) BUT store all P => ~45 GB @ ss=2 (on top
-            #     of the ~41 GB base cf_mx_cache => ~86 GB), which needs a REAL n600 memory-fit run to
-            #     confirm it trains without OOM — forbidden by the no-n600-launch CONTAINMENT this wave.
+            #     per --reorient-every (amortized ~0.6 s/epoch) BUT store all P => ~14 GB @ ss=2, ndf2
+            #     (the fine curvelet feats are pair-independent → ONE shared ~0.23GB tensor, NOT per-pair);
+            #     peak ≈ 63 GB (fine 14 + base cf_mx_cache ~41 held STEADY via the in-place rebuild + fwd
+            #     ~8). This is a SCALED EXTRAPOLATION (24MB/pair measured); MOOT for the launch (supersample
+            #     is disqualified by the decode-budget + −49% witness-harm per the Wave D header above).
             # Both opt-in modes ARE now BUILT + small-MLX-verified (render finite+shape; memory scales
             # ~batch); the DEFAULT stays fail-closed so no unverified OOM / 50x-slow n600 run fires by
             # accident. This is THE operator's-call item: pick `full` after an n600 memory-fit check, or
@@ -1155,8 +1170,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             raise ValueError(
                 "--render-aa supersample + --self-orient is fail-closed by DEFAULT (Wave B). The fine "
                 "dir-feat path is BUILT + verified; enable it explicitly with "
-                "--aa-self-orient-fine-mode full (wall-clock-viable, ~45GB@ss2n600 — validate the n600 "
-                "memory fit first) OR --aa-self-orient-fine-mode batch (memory-safe ~cap*75MB, but "
+                "--aa-self-orient-fine-mode full (wall-clock-viable, ~14GB@ss2n600 @ndf2, peak ~63GB — "
+                "validate the n600 memory fit first) OR --aa-self-orient-fine-mode batch (memory-safe ~cap*25MB, but "
                 "~P fine-EDTs/epoch ~29s@n600). Or use --render-aa ipe / --lane-render-band (both "
                 "self-orient-compatible + fully wired), or AA-supersample WITHOUT --self-orient.")
         # #224 Wave C FIX-2: supersample + --structured-init is NOW WIRED (was fail-closed as
