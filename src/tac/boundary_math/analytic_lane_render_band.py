@@ -93,6 +93,8 @@ Borrowed-substrate accounting:
 
 from __future__ import annotations
 
+import json
+import struct
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -458,3 +460,223 @@ def decompose_lane_dseg(realized: np.ndarray, gt: np.ndarray, *, lane_cls: int =
         lane_fn_frac=float(np.sum(is_lane & (r != int(lane_cls))) / n),
         lane_fp_frac=float(np.sum((~is_lane) & (r == int(lane_cls))) / n),
     )
+
+
+# ===========================================================================
+# DECODE-CONSISTENT SERIALIZATION (#224 Wave E: the fork-B rate-118 boundary).
+#
+# THE PHANTOM THIS CLOSES (R5): the render-band was TRAIN-ONLY -- the training
+# composite fits per-pair ``LaneLine``s from the GT class-1 argmax (NOT decode-
+# available) and composites the band over the render, but the shipped inflate had
+# NO band code, so a witness verdicted WITH the band scored WITHOUT it -> phantom.
+#
+# THE FIX (rule 118): the video-derived sufficient statistic is the per-pair list
+# of ``LaneLine`` MANIFOLD COORDS (centerline_coeffs deg<=3 + halfwidth_coeffs deg1
+# + dash (period,phase,duty) + forward_range) -- ~7-13 floats/line, NOT the H*W
+# coverage field. Those coeffs are SERIALIZED (COUNTED in archive.zip); the
+# ``rasterize_lane_coverage_range_dependent`` that EXPANDS them into the (H,W)
+# coverage is a GENERIC deterministic rasterizer regenerated for FREE in inflate.py
+# (0 bytes). The scalar render params (softness / dash-gate / weight / uncertainty
+# tau,eps / lane_cls / geometry) ride the JSON header (lossless float64 repr).
+#
+# BIT-EXACT: coeffs are stored as raw float64 (the dtype the rasterizer casts to)
+# so ``deserialize`` -> ``rasterize`` reproduces the compress-side coverage BIT-FOR-
+# BIT. No GT mask, no scorer weights, no per-pixel table ships (NO-FAKE / rule 118).
+# ===========================================================================
+
+LANE_BAND_MAGIC = b"LBND1\x00"
+
+
+@dataclass(frozen=True)
+class LaneBandRenderConfig:
+    """The scalar render-band params (decode-reproducible; ride the serialized header).
+
+    ``weight`` scales the coverage (curriculum knob); ``u_mask_*`` control the
+    WITNESS-uncertainty gate (the FP killer): the uncertainty is the witness's OWN
+    softmax decision margin (top1-top2) -- DECODE-AVAILABLE (inflate computes it),
+    so this form is decode-consistent. The GT-SegNet-margin variant (``c_full_gt``
+    in the sizing tool) is NOT decode-consistent (needs GT) and is deliberately
+    unsupported here."""
+
+    softness: float = 1.0
+    dash_gate: bool = True
+    dash_forward_max_m: float = DEFAULT_DASH_FORWARD_MAX_M
+    v_h: float = _V_HORIZON
+    cx: float | None = None
+    weight: float = 1.0
+    lane_cls: int = 1
+    u_mask_enabled: bool = False
+    u_mask_tau: float = 0.85
+    u_mask_eps: float = 0.35
+    lane_rgb_mode: str = "witness_lane"  # v1: the witness's own per-pixel sigmoid(palette[lane]+tex)*255
+
+
+def _line_to_floats(line: LaneLine) -> tuple[list[float], dict[str, Any]]:
+    """(float64 payload, per-line layout meta) for ONE LaneLine. Order (fixed):
+    centerline_coeffs | halfwidth_coeffs | [period,phase,duty iff dash] | forward_range[0], [1]."""
+
+    cc = np.asarray(line.centerline_coeffs, np.float64).ravel()
+    hc = np.asarray(line.halfwidth_coeffs, np.float64).ravel()
+    has_dash = bool(line.dash_period_m > 0.0)
+    payload: list[float] = [*cc.tolist(), *hc.tolist()]
+    if has_dash:
+        payload += [float(line.dash_period_m), float(line.dash_phase_m), float(line.dash_duty)]
+    payload += [float(line.forward_range[0]), float(line.forward_range[1])]
+    meta = {"nc": int(cc.size), "nh": int(hc.size), "has_dash": has_dash}
+    return payload, meta
+
+
+def _floats_to_line(vals: np.ndarray, meta: dict[str, Any]) -> LaneLine:
+    """Inverse of ``_line_to_floats`` (bit-exact; ``vals`` is float64)."""
+
+    off = 0
+    nc, nh = int(meta["nc"]), int(meta["nh"])
+    cc = np.asarray(vals[off:off + nc], np.float64); off += nc
+    hc = np.asarray(vals[off:off + nh], np.float64); off += nh
+    dp = dph = 0.0
+    dd = 0.5
+    if bool(meta["has_dash"]):
+        dp = float(vals[off]); dph = float(vals[off + 1]); dd = float(vals[off + 2]); off += 3
+    fr = (float(vals[off]), float(vals[off + 1])); off += 2
+    return LaneLine(
+        centerline_coeffs=cc, halfwidth_coeffs=hc,
+        dash_period_m=dp, dash_phase_m=dph, dash_duty=dd, forward_range=fr,
+    )
+
+
+def serialize_lane_band(pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig) -> bytes:
+    """Deterministic, bit-exact, brotli-friendly serialization of the per-pair lane
+    manifold coords + the scalar render config. Layout:
+
+        LANE_BAND_MAGIC | u32 header_len | header_json(utf8) | float64_payload
+
+    ``header_json`` carries the structural ints + per-line layout + the (lossless
+    float64 repr) scalar params; ``float64_payload`` is the concatenated coeff floats
+    (pair-major, line-major). COUNTED bytes = ``len(serialize_lane_band(...))``; the
+    caller brotli-compresses the result for the measured rate term."""
+
+    header: dict[str, Any] = {
+        "format": 1,
+        "n_pairs": int(len(pairs_lines)),
+        "softness": float(cfg.softness),
+        "dash_gate": bool(cfg.dash_gate),
+        "dash_forward_max_m": float(cfg.dash_forward_max_m),
+        "v_h": float(cfg.v_h),
+        "cx": (None if cfg.cx is None else float(cfg.cx)),
+        "weight": float(cfg.weight),
+        "lane_cls": int(cfg.lane_cls),
+        "lane_rgb_mode": str(cfg.lane_rgb_mode),
+        "u_mask": (
+            {"source": "witness_margin", "tau": float(cfg.u_mask_tau), "eps": float(cfg.u_mask_eps)}
+            if cfg.u_mask_enabled else None
+        ),
+        # geometry constants (generic same-rig IPM; provenance + decode reproducibility). rule-118 FREE.
+        "geom": {"cam_h": _CAM_H, "fx": _FX, "fy": _FY, "seg_h": _SEG_H, "seg_w": _SEG_W},
+        "pairs": [],
+    }
+    floats: list[float] = []
+    for lines in pairs_lines:
+        line_metas: list[dict[str, Any]] = []
+        for ln in lines:
+            payload, meta = _line_to_floats(ln)
+            floats.extend(payload)
+            line_metas.append(meta)
+        header["pairs"].append(line_metas)
+    mj = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    fb = np.asarray(floats, dtype=np.float64).tobytes()
+    return LANE_BAND_MAGIC + struct.pack("<I", len(mj)) + mj + fb
+
+
+def deserialize_lane_band(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
+    """Bit-exact inverse of ``serialize_lane_band``. Returns (per-pair lines, header dict)."""
+
+    if blob[: len(LANE_BAND_MAGIC)] != LANE_BAND_MAGIC:
+        raise ValueError("bad lane-band magic (NO-FAKE: refusing to guess).")
+    off = len(LANE_BAND_MAGIC)
+    (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    header = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    vals = np.frombuffer(blob[off:], dtype=np.float64)
+    pairs_lines: list[list[LaneLine]] = []
+    vi = 0
+    for line_metas in header["pairs"]:
+        lines: list[LaneLine] = []
+        for meta in line_metas:
+            span = int(meta["nc"]) + int(meta["nh"]) + (3 if bool(meta["has_dash"]) else 0) + 2
+            lines.append(_floats_to_line(vals[vi:vi + span], meta))
+            vi += span
+        pairs_lines.append(lines)
+    return pairs_lines, header
+
+
+def render_config_from_header(header: dict[str, Any]) -> LaneBandRenderConfig:
+    """Reconstruct the scalar ``LaneBandRenderConfig`` from a deserialized header."""
+
+    um = header.get("u_mask")
+    return LaneBandRenderConfig(
+        softness=float(header["softness"]), dash_gate=bool(header["dash_gate"]),
+        dash_forward_max_m=float(header["dash_forward_max_m"]), v_h=float(header["v_h"]),
+        cx=(None if header.get("cx") is None else float(header["cx"])),
+        weight=float(header["weight"]), lane_cls=int(header["lane_cls"]),
+        u_mask_enabled=bool(um is not None),
+        u_mask_tau=float(um["tau"]) if um else 0.85,
+        u_mask_eps=float(um["eps"]) if um else 0.35,
+        lane_rgb_mode=str(header.get("lane_rgb_mode", "witness_lane")),
+    )
+
+
+def build_lane_band_pairs_from_lstars(
+    lstars: list[np.ndarray] | np.ndarray, cfg: LaneBandRenderConfig,
+    *, centerline_deg: int = 3,
+) -> tuple[list[list[LaneLine]], dict[str, Any]]:
+    """Fit the per-pair ``LaneLine`` manifold coords from the frozen GT SegNet argmax
+    label maps (compress-time; the source video is fully available at compress time).
+    Returns (per-pair lines, fit-quality stats). The lines ARE the counted video-
+    derived statistic; ``build_analytic_lane_band_prior`` is reused so the fit +
+    range-dependent dash exactly match the training composite (NO-FAKE)."""
+
+    pairs_lines: list[list[LaneLine]] = []
+    recalls: list[float] = []
+    n_lines: list[int] = []
+    for lst in lstars:
+        prior = build_analytic_lane_band_prior(
+            np.asarray(lst), lane_cls=cfg.lane_cls, softness=cfg.softness,
+            dash_gate=cfg.dash_gate, dash_forward_max_m=cfg.dash_forward_max_m,
+            centerline_deg=centerline_deg, v_h=cfg.v_h,
+        )
+        pairs_lines.append(prior.lines)
+        if not np.isnan(prior.band_recall):
+            recalls.append(float(prior.band_recall))
+        n_lines.append(int(prior.n_lines))
+    stats = {
+        "n_pairs": int(len(pairs_lines)),
+        "n_lines_mean": float(np.mean(n_lines)) if n_lines else 0.0,
+        "band_recall_mean": float(np.mean(recalls)) if recalls else float("nan"),
+        "total_lines": int(sum(n_lines)),
+    }
+    return pairs_lines, stats
+
+
+def band_alpha(coverage: np.ndarray, u_mask: np.ndarray | None, weight: float) -> np.ndarray:
+    """The composite alpha ``a = (coverage * weight) * u_mask`` (u_mask None -> 1).
+
+    Matches ``make_lane_band_compose_fn`` (weight scales coverage BEFORE the
+    uncertainty gate). float32."""
+
+    a = np.asarray(coverage, np.float32) * np.float32(weight)
+    if u_mask is not None:
+        a = a * np.asarray(u_mask, np.float32)
+    return a.astype(np.float32)
+
+
+def composite_band_on_render(
+    rgb: np.ndarray, lane_rgb: np.ndarray, coverage: np.ndarray,
+    u_mask: np.ndarray | None, weight: float,
+) -> np.ndarray:
+    """``comp = rgb*(1-a) + lane_rgb*a`` with ``a = band_alpha(coverage,u_mask,weight)``.
+
+    The canonical decode-consistent composite. ``rgb`` (H,W,3) witness bulk; ``lane_rgb``
+    (H,W,3) lane appearance; both float. Returns float32. The inline inflate ``_lane_*``
+    functions reproduce THIS op-for-op (bit-exact-gate proven)."""
+
+    a = band_alpha(coverage, u_mask, weight)[..., None]
+    return (np.asarray(rgb, np.float32) * (1.0 - a) + np.asarray(lane_rgb, np.float32) * a).astype(np.float32)

@@ -780,6 +780,79 @@ def levelset_rgb_forward_numpy(
     return rgb.astype(np.float32), phi.astype(np.float32)
 
 
+def levelset_band_forward_numpy(
+    params: dict[str, np.ndarray],
+    feats: np.ndarray,
+    code_row: np.ndarray,
+    *,
+    n_hidden: int,
+    hidden_dim: int,
+    n_classes: int,
+    activation: str,
+    softmax_temp: float,
+    wire_w0: float,
+    wire_s0: float,
+    hosc_beta: float,
+    hosc_omega: float,
+    chroma: bool,
+    lane_cls: int = 1,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """SUPERSET of :func:`levelset_rgb_forward_numpy` for the decode-consistent analytic-lane
+    RENDER-BAND (#224 Wave E). Returns ``(rgb, phi, lane_rgb, margin)`` where:
+
+      * ``rgb`` (P,3) -- the witness bulk, BIT-IDENTICAL to ``levelset_rgb_forward_numpy`` (same ops);
+      * ``phi`` (P,K) -- the SDF logits;
+      * ``lane_rgb`` (P,3) -- the witness's OWN per-pixel lane appearance ``sigmoid(palette[lane]+tex)*255``
+        (self-consistent, byte-free -- the same lane color the training composite used);
+      * ``margin`` (P,) -- the witness softmax decision margin (top1 - top2 of ``soft``), the
+        DECODE-AVAILABLE uncertainty the band's FP-killer mask rides.
+
+    The inline inflate ``_outputs_from_h0(..., want_lane=True)`` reproduces THIS op-for-op; the
+    byte-close bit-exact gate proves shipped-inflate == this numpy-fp32 oracle band render. Keeping
+    ``levelset_rgb_forward_numpy`` untouched preserves the default-off byte-identical guarantee."""
+
+    p = {k: np.asarray(v, np.float64) for k, v in params.items()}
+    feats = np.asarray(feats, np.float64)
+    code_row = np.asarray(code_row, np.float64)
+    akw = dict(w0=wire_w0, s0=wire_s0, beta=hosc_beta, omega=hosc_omega)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], activation, **akw)
+        film = (code_row @ p["film.weight"].T + p["film.bias"]).reshape(n_hidden, 2, hidden_dim)
+        _has_film_pl = any(k.startswith("film_pl.") for k in p)
+        _has_concat = any(k.startswith("concat_pl.") for k in p)
+        for li in range(n_hidden):
+            scale = 1.0 + film[li, 0]
+            shift = film[li, 1]
+            if _has_film_pl:
+                pl = (code_row @ p[f"film_pl.{li}.weight"].T + p[f"film_pl.{li}.bias"]).reshape(2, hidden_dim)
+                scale = scale + pl[0]
+                shift = shift + pl[1]
+            pre = (h @ p[f"hidden.{li}.weight"].T + p[f"hidden.{li}.bias"]) * scale + shift
+            if _has_concat:
+                pre = pre + (code_row @ p[f"concat_pl.{li}.weight"].T + p[f"concat_pl.{li}.bias"])
+            h = _act(pre, activation, **akw)
+        phi = h @ p["out_sdf.weight"].T + p["out_sdf.bias"]      # (P, K)
+        tex = h @ p["out_tex.weight"].T + p["out_tex.bias"]      # (P, 3)
+        z = phi / float(softmax_temp)
+        z = z - z.max(axis=-1, keepdims=True)
+        soft = np.exp(z)
+        soft = soft / soft.sum(axis=-1, keepdims=True)
+        base = soft @ p["palette"]                              # (P, 3)
+        rgb = (1.0 / (1.0 + np.exp(-(base + tex)))) * 255.0     # (P, 3) bulk (== levelset_rgb_forward_numpy)
+        # lane appearance = the witness's OWN lane color: sigmoid(palette[lane] + tex) * 255.
+        lane_rgb = (1.0 / (1.0 + np.exp(-(p["palette"][int(lane_cls)][None, :] + tex)))) * 255.0
+        # witness decision margin (top1 - top2 of the softmax); sort is stable + argmax-faithful.
+        ss = np.sort(soft, axis=-1)
+        margin = (ss[:, -1] - ss[:, -2]).astype(np.float64)
+        if not chroma:
+            def _lum(r: np.ndarray) -> np.ndarray:
+                luma = 0.299 * r[:, 0:1] + 0.587 * r[:, 1:2] + 0.114 * r[:, 2:3]
+                return np.concatenate([luma, luma, luma], axis=-1)
+            rgb = _lum(rgb)
+            lane_rgb = _lum(lane_rgb)
+    return rgb.astype(np.float32), phi.astype(np.float32), lane_rgb.astype(np.float32), margin.astype(np.float32)
+
+
 # ---------------------------------------------------------------------------
 # LEVER-A / LEVER-B pure-numpy primitives (MLX-free reference + unit-testable). The MLX trainer
 # mirrors these EXACTLY; keeping the reference here keeps the numpy-portable contract intact.
