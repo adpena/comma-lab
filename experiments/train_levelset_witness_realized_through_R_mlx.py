@@ -1036,6 +1036,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         in_feat += dir_w
     # per-pair directional feats (zeros until the first reorient -> ep<reorient = pure curvelet).
     dir_feats_per_pair = [np.zeros((curv_feats_np.shape[0], dir_w), np.float32) for _ in range(P)] if use_self_orient else None
+    # #224 (Wave B) AA-supersample + self-orient FINE dir-feat state (declared here so the render/
+    # reorient closures below see run-scope defaults even when AA/self-orient is OFF). Populated only
+    # when --render-aa supersample + --self-orient + --aa-self-orient-fine-mode {batch,full}. The base
+    # argmax per pair (H,W int8, ~118MB @ n600 — cheap) is snapshotted at each reorient so the fine
+    # dir-feats can be recomputed (NN-upsample argmax -> ss*grid -> fine EDT-tangent -> directional
+    # Fourier) without re-running the witness argmax.
+    _aa_so_fine = False
+    _aa_fine_mode = "refuse"
+    _aa_coords_fine = None
+    base_argmax_per_pair: list = [None] * P
+    _aa_fine_dir_full: list = [None] * P      # full mode: per-pair fine dir-feats (mx), rebuilt @ reorient
+    _aa_fine_lru: dict = {}                    # batch mode: bounded FIFO cache of per-pair fine dir-feats
 
     def _feats_np_for_pair(pi: int) -> np.ndarray:
         if not use_self_orient:
@@ -1099,16 +1111,35 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # touches ONLY the shared curvelet columns, self-orient-compatible, ~0 compute) AND/OR
         # --lane-render-band (class-1 render authority, NOW self-orient-composable per the Option-B
         # lane-band wire-in below). AA-supersample WITHOUT --self-orient also still works.
-        if use_self_orient:
+        _aa_fine_mode = str(getattr(args, "aa_self_orient_fine_mode", "refuse"))
+        if use_self_orient and _aa_fine_mode == "refuse":
+            # FAIL-CLOSED default (Wave B SHARPENED, MEASURED blocker). The per-pair fine-grid dir-feats
+            # (argmax→ss*grid→fine-EDT→directional-Fourier, docs/aa_sdf_observation_render_wire_in_spec.md)
+            # face a MEASURED memory↔wall-clock tradeoff that cannot be BOTH-satisfied AND n600-validated
+            # under the no-launch CONTAINMENT (measured local-MLX, ss=2, 384x512):
+            #   * fine-EDT recompute = ~49 ms/pair; per-pair fine dir-feat = 75.5 MB.
+            #   * MEMORY-SAFE (--aa-self-orient-fine-mode batch): a batch-bounded on-demand cache is
+            #     ~cap*75MB (0.6 GB @ cap=8 vs 45 GB all-600) => memory SOLVED. BUT every pair renders
+            #     every epoch, so a batch-bounded cache THRASHES => P fine-EDTs/epoch ~29 s/epoch @ n600
+            #     (50x the base --reorient-every amortization) => wall-clock NON-viable for the
+            #     multi-thousand-epoch CE→tau→l7→Muon curriculum.
+            #   * WALL-CLOCK-viable (--aa-self-orient-fine-mode full): compute the fine dir-feats ONCE
+            #     per --reorient-every (amortized ~0.6 s/epoch) BUT store all P => ~45 GB @ ss=2 (on top
+            #     of the ~41 GB base cf_mx_cache => ~86 GB), which needs a REAL n600 memory-fit run to
+            #     confirm it trains without OOM — forbidden by the no-n600-launch CONTAINMENT this wave.
+            # Both opt-in modes ARE now BUILT + small-MLX-verified (render finite+shape; memory scales
+            # ~batch); the DEFAULT stays fail-closed so no unverified OOM / 50x-slow n600 run fires by
+            # accident. This is THE operator's-call item: pick `full` after an n600 memory-fit check, or
+            # `batch` if the extra CPU-EDT wall-clock is acceptable. Self-orient-compatible alternatives
+            # that ARE fully wired: --render-aa ipe (basis-level cone AA, ~0 compute) and/or
+            # --lane-render-band; AA-supersample WITHOUT --self-orient also works.
             raise ValueError(
-                "--render-aa supersample is not wired with --self-orient (FAIL-CLOSED, #224 Option-B): "
-                "the per-pair fine-grid dir-feats (argmax→ss*grid→EDT→directional-Fourier, "
-                "docs/aa_sdf_observation_render_wire_in_spec.md) are n600-infeasible as a cache "
-                "(~164GB @ ss=2, on top of the ~41GB base cache => OOM) and non-viable on-demand "
-                "(P fine EDTs/epoch); the memory/wall-clock budget needs a GPU run to pick and is "
-                "unvalidatable under CONTAINMENT. Use --render-aa ipe (basis-level AA, "
-                "self-orient-compatible) and/or --lane-render-band (now self-orient-composable), or "
-                "run AA supersample WITHOUT --self-orient.")
+                "--render-aa supersample + --self-orient is fail-closed by DEFAULT (Wave B). The fine "
+                "dir-feat path is BUILT + verified; enable it explicitly with "
+                "--aa-self-orient-fine-mode full (wall-clock-viable, ~45GB@ss2n600 — validate the n600 "
+                "memory fit first) OR --aa-self-orient-fine-mode batch (memory-safe ~cap*75MB, but "
+                "~P fine-EDTs/epoch ~29s@n600). Or use --render-aa ipe / --lane-render-band (both "
+                "self-orient-compatible + fully wired), or AA-supersample WITHOUT --self-orient.")
         if args.structured_init:
             raise ValueError(
                 "--render-aa supersample is incompatible with --structured-init (which requires "
@@ -1116,8 +1147,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         from tac.boundary_math.aa_sdf_observation_render import build_supersampled_coords
         _coords_fine = build_supersampled_coords(render_h, render_w, aa_ss)          # (ss^2*P, 2)
         coord_feats_fine_mx = mx.array(curvelet_feats(_coords_fine, B).astype(np.float32))
+        if use_self_orient:
+            # opt-in fine self-orient (batch|full). _cf_fine_mx (below) sources per-pair fine dir-feats;
+            # rebuilt/invalidated at each reorient. Pre-first-reorient -> zeros -> pure-curvelet fine.
+            _aa_so_fine = True
+            _aa_coords_fine = _coords_fine
         print(json.dumps({"stage": "render_aa_supersample", "ss": aa_ss,
                           "fine_grid": [render_h * aa_ss, render_w * aa_ss],
+                          "self_orient_fine_mode": (_aa_fine_mode if use_self_orient else "n/a"),
                           "note": "separate fine-grid render feats; base-grid eikonal/sdf unaffected"}), flush=True)
     coord_feats_mx = mx.array(curv_feats_np)
 
@@ -1571,7 +1608,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         def _render_R(witness, coord_feats, code_idx, rh, rw):  # noqa: F811 (unified #224 override)
             _cf = _compose_chain if _use_chain else None
             if _aa_on:
-                return _render_aa_R(witness, coord_feats_fine_mx, code_idx, rh, rw, aa_ss, compose_fn=_cf)
+                # per-pair FINE feats when --self-orient (shared curvelet-fine [+ fine dir-feats]);
+                # else the shared curvelet-fine tensor. _cf_fine_mx is late-bound (defined below).
+                _feats_fine = _cf_fine_mx(int(code_idx) // 2) if _aa_so_fine else coord_feats_fine_mx
+                return _render_aa_R(witness, _feats_fine, code_idx, rh, rw, aa_ss, compose_fn=_cf)
             return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_cf)
 
     render_fn = _render_R if (_aa_on or _use_chain) else None
@@ -2102,6 +2142,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 argmax = np.asarray(amx).reshape(render_h, render_w).astype(np.int64)
                 df = _dir_feats_from_argmax(argmax)
                 dir_feats_per_pair[pi] = df
+                if _aa_so_fine:  # snapshot base argmax (int8) for the fine dir-feat recompute
+                    base_argmax_per_pair[pi] = argmax.astype(np.int8)
                 mag += float(np.abs(df).mean())
                 del feats_mx, amx, code_row
             mx.clear_cache()
@@ -2121,6 +2163,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             df = self_orientation_directional_feats(
                 coords_np, argmax, n_freqs=n_dir_freqs, freq_across=args.freq_across, freq_along=args.freq_along)
             dir_feats_per_pair[pi] = df.astype(np.float32)
+            if _aa_so_fine:  # snapshot base argmax (int8) for the fine dir-feat recompute
+                base_argmax_per_pair[pi] = argmax.astype(np.int8)
             mag += float(np.abs(df).mean())
         return mag / max(P, 1)
 
@@ -2338,8 +2382,52 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     def _cf_mx(pi: int):
         return coord_feats_mx if not use_self_orient else cf_mx_cache[pi]
 
+    # #224 (Wave B) FINE self-orient dir-feats (AA-supersample + --self-orient). Recompute from the
+    # snapshotted base argmax: NN-upsample to the ss*grid -> fine EDT-tangent -> directional Fourier
+    # (the SAME self_orientation_directional_feats path as the base, at fine coords). Pre-first-reorient
+    # (argmax None) -> zeros -> pure-curvelet fine (matches the base zeros-until-reorient contract).
+    def _fine_dir_feats_np(pi: int) -> np.ndarray:
+        cols = _aa_coords_fine.shape[0]
+        ba = base_argmax_per_pair[pi]
+        if ba is None:
+            return np.zeros((cols, dir_w), np.float32)
+        arg_fine = np.kron(np.asarray(ba, np.int64), np.ones((aa_ss, aa_ss), np.int64))
+        return self_orientation_directional_feats(
+            _aa_coords_fine, arg_fine, n_freqs=n_dir_freqs,
+            freq_across=args.freq_across, freq_along=args.freq_along).astype(np.float32)
+
+    def _rebuild_fine_dir_cache() -> None:
+        # full mode: recompute ALL P fine dir-feats ONCE (amortized across the reorient window).
+        # batch mode: just INVALIDATE the bounded LRU (recomputed lazily on next use).
+        if not _aa_so_fine:
+            return
+        _aa_fine_lru.clear()
+        if _aa_fine_mode == "full":
+            for pi in range(P):
+                _aa_fine_dir_full[pi] = mx.array(_fine_dir_feats_np(pi))
+            mx.eval([x for x in _aa_fine_dir_full if x is not None])
+
+    def _cf_fine_mx(pi: int):
+        # per-pair FINE render feats = shared curvelet-fine (coord_feats_fine_mx) [+ fine dir-feats].
+        if not _aa_so_fine:
+            return coord_feats_fine_mx
+        if _aa_fine_mode == "full":
+            df = _aa_fine_dir_full[pi]
+            if df is None:                       # pre-first-reorient safety
+                df = mx.array(_fine_dir_feats_np(pi))
+        else:  # batch: bounded FIFO on-demand cache (memory ~ cap*per-pair)
+            df = _aa_fine_lru.get(pi)
+            if df is None:
+                df = mx.array(_fine_dir_feats_np(pi))
+                _aa_fine_lru[pi] = df
+                _cap = max(1, int(getattr(args, "aa_self_orient_fine_cache_cap", 16)))
+                while len(_aa_fine_lru) > _cap:
+                    _aa_fine_lru.pop(next(iter(_aa_fine_lru)))
+        return mx.concatenate([coord_feats_fine_mx, df], axis=-1)
+
     if use_self_orient:
         _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
+        _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
 
     # ---- CHECKPOINT closures (FEED-dz; mx->np snapshot + atomic save of the deploy EMA npz + the
     # resume sidecar). The deploy npz keeps the canonical name so the byte-close tool consumes it
@@ -2470,6 +2558,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
             mag = recompute_self_orient(int8_dequant_params(ema_np))
             _rebuild_cf_mx_cache()
+            _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
             print(json.dumps({"stage": "resume_reorient", "mean_abs_dir_feat": round(mag, 5)}), flush=True)
         print(json.dumps({"stage": "resume", "from": str(rp), "resumed_epoch": int(rs["epoch"]),
                           "start_epoch": start_epoch, "restored_opt": restored_opt}), flush=True)
@@ -2719,6 +2808,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
                 mag = recompute_self_orient(int8_dequant_params(ema_np))
                 _rebuild_cf_mx_cache()
+                _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
                 print(json.dumps({"stage": "reorient", "epoch": ep, "mean_abs_dir_feat": round(mag, 5)}), flush=True)
             # (config-review #4) ANNEAL softmax-temp hi->lo (cosine): start soft (gradients flow,
             # no RGB-level Gibbs) -> end sharp (the SDF partition pinned). Fixing T=0.1 reintroduces
@@ -3544,6 +3634,20 @@ def main(argv: list[str] | None = None) -> int:
                     help="#224 supersample factor ss for --render-aa supersample (ss=1 byte-identical).")
     ap.add_argument("--aa-ipe-footprint", type=float, default=1.0,
                     help="#224 footprint std scale for --render-aa ipe (1.0 = one-pixel box).")
+    ap.add_argument("--aa-self-orient-fine-mode", type=str, default="refuse",
+                    choices=["refuse", "batch", "full"],
+                    help="#224 (Wave B) how --render-aa supersample + --self-orient sources the per-pair "
+                    "fine-grid dir-feats (measured: fine-EDT ~49ms/pair @ ss=2; per-pair fine dir-feat "
+                    "75.5MB). refuse (default) = fail-closed (memory/wall-clock tradeoff is the operator's "
+                    "call, see the guard). batch = MEMORY-SAFE bounded on-demand cache (~batch*75MB, e.g. "
+                    "0.6GB @ batch=8 vs 45GB all-600) but wall-clock-heavy (P fine-EDTs/epoch ~29s @ "
+                    "n600, since every pair renders every epoch => a batch-bounded cache thrashes). full "
+                    "= WALL-CLOCK-viable (fine dir-feats computed ONCE per --reorient-every, amortized) "
+                    "but ~45GB @ ss=2 n600 (on top of the ~41GB base cache => ~86GB; needs an n600 "
+                    "memory-fit validation the no-launch CONTAINMENT forbids this wave).")
+    ap.add_argument("--aa-self-orient-fine-cache-cap", type=int, default=16,
+                    help="#224 (Wave B) bounded per-pair fine dir-feat cache size for "
+                    "--aa-self-orient-fine-mode batch (memory ~ cap*75MB @ ss=2).")
     # -------- (2) analytic-lane render-band (analytic_lane_render_band; FEED-dv #203/#213/#215) ------
     ap.add_argument("--lane-render-band", action=argparse.BooleanOptionalAction, default=False,
                     help="#224/FEED-dv: composite the analytic-lane render-band via compose_fn "

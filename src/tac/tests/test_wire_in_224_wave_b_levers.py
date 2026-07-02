@@ -137,3 +137,51 @@ def test_seed_grad_shield_touches_only_seed_leaf():
     # grad there was +2*r (positive, r>0) -> shield removes it -> 0 on the island.
     g_seed_after = np.asarray(sf["seed"])
     assert float(np.abs(g_seed_after[0, 2:4, 3:6, :]).max()) < 1e-6
+
+
+# ---------------------------------------------------------------------------
+# LEVER 3 — AA-supersample + self-orient FINE dir-feats: shape-correct at the
+# ss*grid + the batch-scoped cache is MEMORY-BOUNDED (scales ~cap, NOT ~P).
+# ---------------------------------------------------------------------------
+def test_fine_dir_feats_shape_and_finite_at_ss_grid():
+    from tac.boundary_math.aa_sdf_observation_render import build_supersampled_coords
+    from tac.boundary_math.lever_b_generator import self_orientation_directional_feats
+    from scipy.ndimage import maximum_filter
+
+    H, W, ss, n_freqs = 48, 64, 2, 6
+    coords_fine = build_supersampled_coords(H, W, ss)
+    assert coords_fine.shape == (ss * ss * H * W, 2)
+    base_arg = maximum_filter(np.random.default_rng(5).integers(0, 5, size=(H, W)).astype(np.int64), size=5)
+    arg_fine = np.kron(base_arg, np.ones((ss, ss), np.int64))   # NN-upsample (trainer's np.kron)
+    assert arg_fine.shape == (ss * H, ss * W)
+    df = self_orientation_directional_feats(coords_fine, arg_fine, n_freqs=n_freqs)
+    assert df.shape == (ss * ss * H * W, 4 * n_freqs)
+    assert np.all(np.isfinite(df))
+
+
+def test_batch_scoped_fine_cache_is_memory_bounded():
+    # mirror the trainer's bounded FIFO: len never exceeds cap => memory scales ~cap, NOT ~P.
+    cap = 4
+    P = 40
+    lru: dict[int, object] = {}
+
+    def _get(pi):
+        v = lru.get(pi)
+        if v is None:
+            v = object()
+            lru[pi] = v
+            while len(lru) > cap:
+                lru.pop(next(iter(lru)))
+        return v
+
+    max_seen = 0
+    for _epoch in range(3):
+        for pi in range(P):        # every pair every epoch (the thrash the blocker measured)
+            _get(pi)
+            max_seen = max(max_seen, len(lru))
+    assert max_seen <= cap           # MEMORY-BOUNDED: ~cap not ~P
+    # per-pair fine dir-feat bytes scale ss^2*H*W*4*n_freqs*4 -> a cap-bounded cache is cap*that.
+    H, W, ss, n_freqs = 384, 512, 2, 6
+    per_pair = (ss * ss * H * W) * (4 * n_freqs) * 4
+    assert per_pair == 75497472                    # 75.5 MB/pair @ ss=2 (the measured n600 figure)
+    assert cap * per_pair < 0.5e9                   # cap=4 -> 0.30 GB (vs 45 GB for all-600)

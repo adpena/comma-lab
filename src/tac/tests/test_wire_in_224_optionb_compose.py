@@ -185,11 +185,16 @@ def test_aa_supersample_wrong_width_fine_feats_crash():
 
 
 def test_trainer_retains_aa_supersample_self_orient_guard():
-    """Regression: the trainer MUST keep the fail-closed AA-supersample + self-orient guard (the
-    n600-infeasible-without-GPU blocker), not silently render a wrong-width path."""
+    """Regression: the trainer MUST keep AA-supersample + self-orient FAIL-CLOSED BY DEFAULT (Wave B
+    sharpened the blocker + BUILT the opt-in fine-feat modes; the refuse default still refuses so no
+    unverified OOM / 50x-slow n600 path fires by accident), not silently render a wrong-width path."""
     src = (REPO / "experiments" / "train_levelset_witness_realized_through_R_mlx.py").read_text()
-    assert "--render-aa supersample is not wired with --self-orient" in src
-    assert "FAIL-CLOSED, #224 Option-B" in src
+    # fail-closed by default (refuse) is preserved (message updated in Wave B).
+    assert "supersample + --self-orient is fail-closed by DEFAULT (Wave B)" in src
+    assert 'use_self_orient and _aa_fine_mode == "refuse"' in src
+    # the opt-in memory-safe (batch) + wall-clock-viable (full) fine-feat modes ARE built.
+    assert "--aa-self-orient-fine-mode" in src
+    assert "def _cf_fine_mx" in src and "def _fine_dir_feats_np" in src
     # the --structured-init supersample guard must ALSO remain.
     assert "--render-aa supersample is incompatible with --structured-init" in src
 
