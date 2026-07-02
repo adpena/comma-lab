@@ -103,6 +103,17 @@ from tac.witness_dsl.gauge import (
     default_cost_table,
     fix_gauge,
 )
+from tac.witness_dsl.powerplay import (
+    CorrectnessDemonstration,
+    DemonstrationLevel,
+    EvidenceGrade,
+    LeverCandidate,
+    ScoredQuantity,
+    SolverCost,
+    powerplay_cost,
+    simplest_unsolvable_rank,
+    variant_ii_accept,
+)
 
 __all__ = [
     "Anneal",
@@ -190,4 +201,14 @@ __all__ = [
     "component_of",
     "default_cost_table",
     "fix_gauge",
+    # POWERPLAY campaign primitives (the contest as a Schmidhuber arXiv:1112.5309 search)
+    "CorrectnessDemonstration",
+    "DemonstrationLevel",
+    "EvidenceGrade",
+    "LeverCandidate",
+    "ScoredQuantity",
+    "SolverCost",
+    "powerplay_cost",
+    "simplest_unsolvable_rank",
+    "variant_ii_accept",
 ]
