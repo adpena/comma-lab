@@ -1,0 +1,150 @@
+{
+  "gt_cache": "/Users/adpena/projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "n_pairs": 600,
+  "fit_stats": {
+    "n_pairs": 600,
+    "n_lines_mean": 4.945,
+    "band_recall_mean": 0.5474557765871068,
+    "total_lines": 2967
+  },
+  "rate_denom_bytes": 37545489,
+  "timing_s": {
+    "load": 0.1,
+    "fit": 20.3,
+    "measure": 3.5
+  },
+  "K_sort": 6,
+  "K_persistent": 21,
+  "swap_diagnostic": {
+    "sort_top5pct_jump_mass": 0.8542876576497528,
+    "persistent_top5pct_jump_mass": 0.947995443663766,
+    "sort_total_delta_l1": 7578905.0,
+    "persistent_total_delta_l1": 7124145.0
+  },
+  "correspondence_lossless_vs_sort": true,
+  "rows": [
+    {
+      "variant": "LBND2_sort_baseline",
+      "pack": "sort",
+      "smooth": "none",
+      "brotli_bytes": 41526,
+      "rate_term": 0.02765045888735129,
+      "ratio_vs_lbnd2": 1.0,
+      "K": 6,
+      "induced_lateral_rms_m": 0.0
+    },
+    {
+      "variant": "coherent_slot_none",
+      "pack": "coherent_slot",
+      "smooth": "none",
+      "brotli_bytes": 41303,
+      "rate_term": 0.027501972340805043,
+      "ratio_vs_lbnd2": 0.9946298704426143,
+      "K": 6,
+      "n_births": 1,
+      "induced_lateral_rms_m": 0.021216932670011755
+    },
+    {
+      "variant": "persistent_none",
+      "pack": "persistent",
+      "smooth": "none",
+      "brotli_bytes": 45065,
+      "rate_term": 0.03000693372245065,
+      "ratio_vs_lbnd2": 1.0852237152627269,
+      "K": 21,
+      "n_births": 21,
+      "induced_lateral_rms_m": 0.021216932670011755
+    },
+    {
+      "variant": "coherent_slot_rts",
+      "pack": "coherent_slot",
+      "smooth": "rts",
+      "brotli_bytes": 27249,
+      "rate_term": 0.018143990613626048,
+      "ratio_vs_lbnd2": 0.656191301834995,
+      "K": 6,
+      "induced_lateral_rms_m": 9.497994570422946
+    },
+    {
+      "variant": "coherent_slot_l1trend",
+      "pack": "coherent_slot",
+      "smooth": "l1trend",
+      "brotli_bytes": 36087,
+      "rate_term": 0.024028852041319798,
+      "ratio_vs_lbnd2": 0.8690218176564081,
+      "K": 6,
+      "induced_lateral_rms_m": 8.217210936963445
+    },
+    {
+      "variant": "coherent_slot_median",
+      "pack": "coherent_slot",
+      "smooth": "median",
+      "brotli_bytes": 26436,
+      "rate_term": 0.017602647284737722,
+      "ratio_vs_lbnd2": 0.6366132061840775,
+      "K": 6,
+      "induced_lateral_rms_m": 7.023305825230275
+    },
+    {
+      "variant": "coherent_slot_rpca",
+      "pack": "coherent_slot",
+      "smooth": "rpca",
+      "brotli_bytes": 39360,
+      "rate_term": 0.026208208394888664,
+      "ratio_vs_lbnd2": 0.9478399075278139,
+      "K": 6,
+      "induced_lateral_rms_m": 2.963793523093896
+    },
+    {
+      "variant": "sort_MA_win9",
+      "pack": "sort",
+      "smooth": "median9",
+      "brotli_bytes": 26260,
+      "rate_term": 0.01748545610898822,
+      "ratio_vs_lbnd2": 0.6323748976544815,
+      "K": 6,
+      "induced_lateral_rms_m": 5.576537705123269
+    },
+    {
+      "variant": "sort_MA_win15",
+      "pack": "sort",
+      "smooth": "median15",
+      "brotli_bytes": 24149,
+      "rate_term": 0.016079827858947317,
+      "ratio_vs_lbnd2": 0.5815392765977941,
+      "K": 6,
+      "induced_lateral_rms_m": 5.976386560515568
+    },
+    {
+      "variant": "sort_MA_win25",
+      "pack": "sort",
+      "smooth": "median25",
+      "brotli_bytes": 22367,
+      "rate_term": 0.014893267204483607,
+      "ratio_vs_lbnd2": 0.5386264027356356,
+      "K": 6,
+      "induced_lateral_rms_m": 6.067959266609678
+    }
+  ],
+  "best_variant": "sort_MA_win25",
+  "best_bytes": 22367,
+  "best_rate_term": 0.014893267204483607,
+  "lbnd2_baseline_rate_term": 0.02765045888735129,
+  "correspondence_only_best": {
+    "variant": "coherent_slot_none",
+    "rate_term": 0.027501972340805043,
+    "ratio_vs_lbnd2": 0.9946298704426143
+  },
+  "moving_average_best": {
+    "variant": "sort_MA_win25",
+    "rate_term": 0.014893267204483607,
+    "induced_lateral_rms_m": 6.067959266609678
+  },
+  "verdict": {
+    "correspondence_lossless": true,
+    "correspondence_only_beats_baseline": true,
+    "best_beats_moving_average": false,
+    "note": "correspondence is LOSSLESS but a SMALL rate refinement (the delta mass is fit-JITTER, not slot-swaps); the moving-average remains the rate winner. The correspondence + edge-preserving denoise value is LOWER geometric distortion at matched rate -> the #205 through-R d_seg leg is the real gate."
+  },
+  "axis_labels": "[macOS-CPU advisory] MEASURED brotli byte counts; NOT a score claim; pointer 0.19110 UNMOVED"
+}
