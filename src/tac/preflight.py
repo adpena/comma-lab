@@ -4197,6 +4197,22 @@ def preflight_all(
         check_strict_flipped_catalog_entries_have_live_count_zero(
             strict=True, verbose=verbose,
         )
+        # Catalog #185 SCOPE EXTENSION (2026-07-02): strict-gate
+        # per-violation-count DRIFT ALARM. #185's row-self-claim scan above
+        # is STRUCTURALLY BLIND to a strict gate whose catalog row omits the
+        # "live count: 0" phrase (canonical anchor: Catalog #344, which
+        # silently drifted 0 -> 480 with no alarm). This companion reads the
+        # committed baseline manifest
+        # (.omx/state/strict_gate_violation_baseline.json) and WARNS when a
+        # watched strict gate's live violation count EXCEEDS its declared
+        # baseline_max. WARN-ONLY (Strict-flip atomicity + no new catalog
+        # number => no #176 obligation); the rc-bearing operator alarm is
+        # tools/audit_strict_gate_violation_drift.py. Known backlogs (#344 ->
+        # 480, #298 -> 61, #172 -> 2, #343 -> 6) are DECLARED in the manifest
+        # so this is green at landing and fires only on a NEW drift.
+        check_strict_gate_violation_counts_within_declared_baseline(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-13 Catalog #186 (FIX-WAVE-7 R7-1 self-protection):
         # ``tools/claim_catalog_number.py claim`` invocations from
         # subagent / fan-out contexts MUST pass ``--commit-via-serializer
@@ -52578,6 +52594,273 @@ def check_strict_flipped_catalog_entries_have_live_count_zero(
             "'Bugs must be permanently fixed AND self-protected against' "
             "non-negotiable, the catalog table is the canonical "
             "strictness ledger:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# Catalog #185 SCOPE EXTENSION — strict-gate per-violation-count DRIFT ALARM
+# (extends #185's LIVE_COUNT drift detection; NO new catalog number claimed
+#  per the gate-consolidation discipline / Catalog #299 quota brake).
+# ═════════════════════════════════════════════════════════════════════════
+#
+# The gap this closes (diagnosed 2026-07-02, anchor: Catalog #344 drifted
+# 0 -> 480 with NO alarm):
+#   #185's `check_strict_flipped_catalog_entries_have_live_count_zero` ONLY
+#   invokes a gate when that gate's CLAUDE.md catalog row LITERALLY contains
+#   a "live count: 0" self-claim phrase (_CHECK_185_LIVE_COUNT_ZERO_PHRASES)
+#   AND a STRICT phrase. A strict-flipped gate whose row says
+#   "strict-flipped 2026-05-19" but omits the "live count: 0" phrase is
+#   NEVER invoked -> its violation-count drift is INVISIBLE. #344 is exactly
+#   that shape (row: "strict-flipped 2026-05-19", no "live count: 0"), so
+#   its 0 -> 480 decay went unnoticed and preflight_all(strict=True) is red
+#   on it with no alarm. #185 also has NO committed baseline: it trusts the
+#   row-text's implicit "0", so intentional non-zero backlogs cannot be
+#   declared.
+#
+# The extension: a COMMITTED baseline manifest
+# (.omx/state/strict_gate_violation_baseline.json) declares, per WATCHED
+# strict gate, a `baseline_max` allowed violation count + a `reason`. The
+# alarm invokes each declared gate with strict=False and flags any whose
+# LIVE count EXCEEDS its declared baseline (a NEW regression), plus any
+# declared gate that is no longer a callable (a stale watchlist entry that
+# silently stopped watching). Intentional backlogs (#344 -> 480) are
+# DECLARED so they do not spuriously fire; growth past the declared count
+# fires immediately. This makes #344-class strict gates WATCHED regardless
+# of whether their row self-claims "live count: 0".
+#
+# Wired WARN-ONLY in preflight_all (Strict-flip atomicity + no new catalog
+# number => no #176 strict-callsite-needs-row obligation). The teeth are:
+#   (1) the always-visible preflight WARN when a declared gate drifts, and
+#   (2) tools/audit_strict_gate_violation_drift.py rc=1 (operator/CI alarm),
+#       which ALSO offers a --full best-effort sweep of EVERY strict
+#       callsite so a not-yet-declared gate's drift is discoverable.
+# The shared classifier lives here so the check + the tool never drift.
+
+_STRICT_GATE_BASELINE_RELPATH = ".omx/state/strict_gate_violation_baseline.json"
+
+# Drift verdicts (per watched gate). Shared by the check + the audit tool.
+STRICT_GATE_DRIFT_OVER_BASELINE = "OVER_BASELINE"      # alarm (violation)
+STRICT_GATE_DRIFT_AT_BASELINE = "AT_BASELINE"          # ok
+STRICT_GATE_DRIFT_UNDER_BASELINE = "UNDER_BASELINE"    # advisory: tighten
+STRICT_GATE_DRIFT_MISSING_CALLABLE = "MISSING_CALLABLE"  # alarm (stale entry)
+STRICT_GATE_DRIFT_NOT_INVOKABLE = "NOT_INVOKABLE"      # skip (needs kwargs)
+
+
+def load_strict_gate_violation_baseline(
+    repo_root: Path | str | None = None,
+) -> dict[str, dict]:
+    """Load the committed strict-gate baseline manifest.
+
+    Returns a mapping ``{check_name: {"catalog": int|None,
+    "baseline_max": int, "reason": str}}``. Missing file / malformed JSON /
+    missing ``gates`` key all resolve to an empty mapping (defensive: the
+    alarm is a no-op without a manifest). Entries whose ``baseline_max`` is
+    not a non-negative int are dropped.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    path = root / _STRICT_GATE_BASELINE_RELPATH
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    gates = data.get("gates")
+    if not isinstance(gates, dict):
+        return {}
+    out: dict[str, dict] = {}
+    for name, spec in gates.items():
+        if not isinstance(name, str) or not isinstance(spec, dict):
+            continue
+        bmax = spec.get("baseline_max")
+        if not isinstance(bmax, int) or isinstance(bmax, bool) or bmax < 0:
+            continue
+        out[name] = {
+            "catalog": spec.get("catalog"),
+            "baseline_max": bmax,
+            "reason": str(spec.get("reason", "")),
+        }
+    return out
+
+
+def snapshot_strict_gate_violation_count(
+    check_name: str,
+    *,
+    repo_root: Path | str | None = None,
+) -> int | None:
+    """Invoke a strict gate with ``strict=False`` and return its live
+    violation count. Returns ``None`` when the gate is not a callable in
+    ``tac.preflight`` globals, does not accept ``(strict, verbose)`` kwargs,
+    or raises (i.e. it is not cleanly snapshot-able from here).
+
+    Shared by the alarm check + the audit tool so they measure identically.
+    """
+    fn = globals().get(check_name)
+    if fn is None or not callable(fn):
+        return None
+    root = Path(repo_root or REPO_ROOT)
+    # Try the richest signature first (repo_root-aware gates), then fall
+    # back to the bare (strict, verbose) form. Any failure => not-invokable.
+    for kwargs in (
+        {"repo_root": root, "strict": False, "verbose": False},
+        {"strict": False, "verbose": False},
+    ):
+        try:
+            result = fn(**kwargs)
+        except TypeError:
+            continue
+        except Exception:  # pragma: no cover - defensive
+            return None
+        return len(result) if isinstance(result, list) else 0
+    return None
+
+
+def classify_strict_gate_drift(
+    live_count: int | None,
+    baseline_max: int,
+) -> str:
+    """Classify one watched gate's live count against its declared baseline.
+
+    ``live_count is None`` (gate missing / not invokable) is disambiguated
+    by the caller (MISSING_CALLABLE vs NOT_INVOKABLE); this helper handles
+    the numeric comparison for present counts.
+    """
+    if live_count is None:
+        return STRICT_GATE_DRIFT_NOT_INVOKABLE
+    if live_count > baseline_max:
+        return STRICT_GATE_DRIFT_OVER_BASELINE
+    if live_count < baseline_max:
+        return STRICT_GATE_DRIFT_UNDER_BASELINE
+    return STRICT_GATE_DRIFT_AT_BASELINE
+
+
+def evaluate_strict_gate_violation_drift(
+    repo_root: Path | str | None = None,
+) -> list[dict]:
+    """Snapshot + classify every gate declared in the baseline manifest.
+
+    Returns one record per declared gate:
+    ``{check_name, catalog, baseline_max, live_count, verdict, reason}``.
+    ``live_count`` is ``None`` for MISSING_CALLABLE / NOT_INVOKABLE. Shared
+    by the alarm check AND ``tools/audit_strict_gate_violation_drift.py`` so
+    the two surfaces never drift.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    baseline = load_strict_gate_violation_baseline(root)
+    records: list[dict] = []
+    for name in sorted(baseline):
+        spec = baseline[name]
+        bmax = spec["baseline_max"]
+        fn = globals().get(name)
+        if fn is None or not callable(fn):
+            verdict = STRICT_GATE_DRIFT_MISSING_CALLABLE
+            live: int | None = None
+        else:
+            live = snapshot_strict_gate_violation_count(name, repo_root=root)
+            verdict = classify_strict_gate_drift(live, bmax)
+        records.append({
+            "check_name": name,
+            "catalog": spec.get("catalog"),
+            "baseline_max": bmax,
+            "live_count": live,
+            "verdict": verdict,
+            "reason": spec.get("reason", ""),
+        })
+    return records
+
+
+def check_strict_gate_violation_counts_within_declared_baseline(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #185 (scope extension) — strict-gate per-violation-count
+    DRIFT ALARM against a committed baseline manifest.
+
+    Closes the #185 blind spot where a strict gate that does NOT self-claim
+    "live count: 0" in its catalog row (canonical anchor: Catalog #344,
+    which drifted 0 -> 480 unnoticed) is never invoked and its violation
+    drift is invisible. Reads
+    ``.omx/state/strict_gate_violation_baseline.json``, invokes each
+    declared gate with ``strict=False``, and flags:
+      * OVER_BASELINE  — live count EXCEEDS the declared baseline_max
+        (a NEW regression above the declared backlog); AND
+      * MISSING_CALLABLE — a declared gate is no longer a callable (the
+        watchlist entry is stale; a gate silently stopped being watched).
+    AT_BASELINE / UNDER_BASELINE / NOT_INVOKABLE are not violations
+    (UNDER_BASELINE surfaces as a verbose "tighten the baseline" advisory).
+
+    Wired WARN-ONLY in ``preflight_all`` (Strict-flip atomicity; the known
+    backlogs — e.g. #344 -> 480 — are DECLARED in the manifest so the alarm
+    is green at landing and fires only on a genuine drift past baseline).
+    The operator-facing rc-bearing alarm is
+    ``tools/audit_strict_gate_violation_drift.py``.
+
+    Sister of Catalog #185's row-self-claim scan
+    (``check_strict_flipped_catalog_entries_have_live_count_zero``),
+    Catalog #176 (strict-callsite-has-row), and Catalog #159 (text-vs-strict
+    value). Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against": a strict gate whose backlog decays red must trip an alarm.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    records = evaluate_strict_gate_violation_drift(root)
+    violations: list[str] = []
+    advisories: list[str] = []
+    for rec in records:
+        name = rec["check_name"]
+        cat = rec["catalog"]
+        cat_tag = f"Catalog #{cat} " if cat is not None else ""
+        if rec["verdict"] == STRICT_GATE_DRIFT_OVER_BASELINE:
+            violations.append(
+                f"{cat_tag}`{name}`: strict-gate DRIFT — live violation "
+                f"count {rec['live_count']} EXCEEDS declared baseline_max "
+                f"{rec['baseline_max']} in {_STRICT_GATE_BASELINE_RELPATH}. "
+                f"A strict gate's backlog grew past its declared level with "
+                f"no alarm — fix the new violations OR (if intentional) raise "
+                f"the declared baseline_max with a documented reason."
+            )
+        elif rec["verdict"] == STRICT_GATE_DRIFT_MISSING_CALLABLE:
+            violations.append(
+                f"{cat_tag}`{name}`: declared in "
+                f"{_STRICT_GATE_BASELINE_RELPATH} but is not a callable gate "
+                f"in tac.preflight — the watchlist entry is STALE (a gate "
+                f"was renamed/removed and silently stopped being watched). "
+                f"Update or remove the manifest entry."
+            )
+        elif rec["verdict"] == STRICT_GATE_DRIFT_UNDER_BASELINE:
+            advisories.append(
+                f"{cat_tag}`{name}`: live count {rec['live_count']} is BELOW "
+                f"declared baseline_max {rec['baseline_max']} — backlog "
+                f"burned down; TIGHTEN the baseline_max to lock in the gain."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [strict-gate-drift-alarm] ALARM: {len(violations)} "
+                f"watched strict gate(s) drifted above baseline "
+                f"(strict={strict}):"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:220]}")
+        else:
+            n = len(records)
+            print(
+                f"  [strict-gate-drift-alarm] OK ({n} watched strict gate(s) "
+                f"within declared baseline; {len(advisories)} tighten-advisory)"
+            )
+        for a in advisories[:5]:
+            print(f"    - (advisory) {a[:200]}")
+    if violations and strict:
+        raise PreflightError(
+            "check_strict_gate_violation_counts_within_declared_baseline "
+            f"found {len(violations)} strict-gate(s) drifted above the "
+            "declared baseline. Per CLAUDE.md 'Bugs must be permanently "
+            "fixed AND self-protected against':\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

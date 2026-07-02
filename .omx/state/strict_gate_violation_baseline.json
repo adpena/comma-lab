@@ -1,0 +1,32 @@
+{
+  "_doc": "DECLARED per-gate baseline max live-violation count for watched STRICT preflight gates. The strict-gate DRIFT ALARM (tac.preflight.check_strict_gate_violation_counts_within_declared_baseline + tools/audit_strict_gate_violation_drift.py) invokes each listed gate with strict=False and ALARMS when its live violation count EXCEEDS baseline_max. This is the committed baseline that lets INTENTIONAL non-zero backlogs be DECLARED (not spuriously alarmed) while a NEW regression above the declared count fires immediately. Purpose: close the Catalog #185 blind spot where a strict gate (canonical anchor: #344) silently drifted 0->480 with no alarm because #185 only invokes gates whose CLAUDE.md row literally self-claims 'live count: 0'. Burn a backlog down -> LOWER its baseline_max here (or run the tool with --update-baseline). Add every NEW watched strict gate here with baseline_max 0 (a gate that should be clean).",
+  "_catalog": 185,
+  "_alarm_semantics": "live_count > baseline_max => OVER_BASELINE (alarm/violation). live_count == baseline_max => AT_BASELINE (ok). live_count < baseline_max => UNDER_BASELINE (advisory: backlog burned down, tighten this baseline). declared gate not a callable => MISSING_CALLABLE (config error: manifest is stale, a gate stopped being watched).",
+  "generated_at_utc": "2026-07-02T23:09:03Z",
+  "gates": {
+    "check_empirical_finding_memo_references_canonical_equation": {
+      "catalog": 344,
+      "baseline_max": 480,
+      "first_seen_utc": "2026-07-02T23:09:03Z",
+      "reason": "KNOWN BACKLOG (operator-scoped, task #225 burndown; NOT this landing's job): 480 .omx/research/*.md memos dated 2026-05-20 .. 2026-07-02 carry a #344 empirical-finding trigger token with no canonical_equation reference and no FORMALIZATION_PENDING waiver. #344 IS strict-wired (preflight.py:5818) so preflight_all(strict=True) is currently RED here. #185's row-self-claim scan is STRUCTURALLY BLIND to it because #344's catalog row says 'strict-flipped 2026-05-19', NOT 'live count: 0'. This is the canonical anchor for the whole alarm. Burn down (register equations or add FORMALIZATION_PENDING waivers) then LOWER baseline_max. Alarm fires the instant it grows past 480."
+    },
+    "check_substrate_lane_l1_scaffold_not_stale_dispatch": {
+      "catalog": 298,
+      "baseline_max": 61,
+      "first_seen_utc": "2026-07-02T23:09:03Z",
+      "reason": "KNOWN BACKLOG: 61 stale L1 substrate lanes. #298's row DOES self-claim live-count-0, so #185's existing scan ALSO flags it; declared here so the unified drift alarm has one source of truth and further growth alarms. Burndown per CLAUDE.md 'Substrate retirement discipline' (advance to L2+ / research_only / archived), then LOWER baseline_max."
+    },
+    "check_substrate_trainers_declare_autocast_fp16_support": {
+      "catalog": 172,
+      "baseline_max": 2,
+      "first_seen_utc": "2026-07-02T23:09:03Z",
+      "reason": "KNOWN BACKLOG: 2 substrate trainers missing the autocast-fp16 declaration. Also flagged by #185's row-self-claim scan; declared here for the unified alarm. Fix the 2 trainers (or waive), then LOWER baseline_max."
+    },
+    "check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded": {
+      "catalog": 343,
+      "baseline_max": 6,
+      "first_seen_utc": "2026-07-02T23:09:03Z",
+      "reason": "KNOWN BACKLOG: 6 hardcoded frontier-score literals without a HISTORICAL_SCORE_LITERAL_OK waiver or canonical-pointer reference. Also flagged by #185's row-self-claim scan. Backfill waivers/pointer refs, then LOWER baseline_max."
+    }
+  }
+}
