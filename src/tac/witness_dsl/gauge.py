@@ -113,6 +113,12 @@ class PoseGauge(Enum):
     # #224 APPEND-ONLY: render frame0 THROUGH the SE(3) ground-homography warp of the REAL
     # keyframe luma (seg-free f0 -> real-luma pose carrier; warp_real_luma_frame0). Composes with
     # the stored twist + a learnable per-pair residual; hits the same d_pose target, different bytes.
+    # MEASURED CORRECTION (Wave-F unified-xi BUILD 2026-07-02,
+    # ``lane_band_source_reparam_measured_resolution_v1``): xi is a PURE-POSE codec, NOT a lane
+    # dual-use object -- the lane rate axis DECLINED xi (ego-predictive lane coding REFUTED; source
+    # smoothing wins with ZERO xi), so xi is optimally calibrated for d_pose at ZERO lane cost
+    # (n600 null d_pose 163.12 -> warp 1.367 = -99%). The prior "one xi, both axes" dual-use framing
+    # is superseded FOR LANES: xi serves ONLY the pose axis.
     WARP_REAL_LUMA = "warp_real_luma"
 
 
@@ -197,8 +203,24 @@ class LaneGauge(Enum):
     (L4 slots + L3 geometric-tolerance quantize + L2 temporal-delta + zigzag + brotli) = the DEFAULT
     in tools/levelset_byte_close_and_eval.py (opt-out ``--lane-band-naive`` on the BYTE-CLOSE TOOL,
     NOT the trainer). MEASURED n600: naive 156340 B (0.1041) -> RD 41526 B (0.02765) = 3.76x,
-    decode-consistent. Shannon floor 26179 B => the residual is INFORMATION-bound; the DERIVED next
-    lever is the SE(3) ego-factorization (``lane_band_ego_factorization_source_reparam_v1``)."""
+    decode-consistent. Shannon floor 26179 B => the residual is INFORMATION-bound.
+
+    STAGE-2 SOURCE RE-PARAMETERIZATION (Wave-F unified-xi BUILD, MEASURED 2026-07-02): the SE(3)
+    ego-factorization VIA EGO-WARP is REFUTED (``lane_band_source_reparam_measured_resolution_v1``:
+    ego-motion-compensated predictive coding LBND3 = 1.04-1.34x WORSE) -- the camera-frame residual
+    is per-frame fit JITTER + SLOT-SWAPs, NOT a coherent ego sweep. The source-reparam THESIS holds
+    via a DIFFERENT mechanism: temporal SMOOTHING of the coeff trajectory = -42% (24149 B / 0.01608,
+    BELOW the Shannon floor). The DERIVED OPTIMAL next lever is the CORRESPONDENCE-FIRST pipeline
+    (``correspondence_first_lane_coding_optimal_pipeline_v1``): global min-cost-flow track assignment
+    (LOSSLESS on geometry; kills the 44% slot-swap mass) -> per-track Kalman-RTS batch smoother [or
+    RPCA] -> ll1-trend/TV/Potts edge-preserving denoise (lambda_i = margin-saliency d(d_seg)/d(coeff_i))
+    -> the UNCHANGED LBND2 backend. It is a COMPRESS-TIME SOURCE PRE-TRANSFORM (ships as LBND2 bytes,
+    ZERO new inflate code); DESIGN-STAGE pending the #234 ``tac.boundary_math.lane_track_and_smooth``
+    build (DERIVED ~0.007-0.012, UNMEASURED byte-closed -- the #205 d_seg-through-R leg is the gate).
+    OPTIONAL design-stage PRIOR: the openpilot coherent recurrent lane model (same comma rig) as the
+    tracker's association affinity + RTS measurement-noise covariance
+    (``openpilot_unified_physical_prior_both_scored_axes_v1``) -- a PRIOR/INIT/REGULARIZER, NEVER the
+    fit target (the SegNet class-1 argmax mask through R is the sole authority)."""
 
     NONE = "none"                              # witness authors lane (byte-identical baseline)
     BAND_RENDER_AUTHORITY = "band_render_authority"  # --lane-render-band analytic class-1 authority
@@ -234,8 +256,15 @@ class PoseTrainingGauge(Enum):
     design-stage charts, documenting the INTENDED arg -- it does NOT fabricate a flag. Ranked
     plan H1 > D1 > E1:
       NONE                    = pose rides warp-real-luma alone (the measured baseline);
-      H1_OPENPILOT_XI_WARMSTART = seed the ego xi from the openpilot polynomial (DUAL-AXIS warm-start:
-                                seeds BOTH the pose warp AND the lane-advection xi; co-#1 lever);
+      H1_OPENPILOT_XI_WARMSTART = seed the ego xi from the openpilot polynomial. MEASURED CORRECTION
+                                (Wave-F unified-xi BUILD 2026-07-02): xi is PURE-POSE -- the lane rate
+                                axis DECLINED xi (ego-predictive lane coding REFUTED; source smoothing
+                                wins with ZERO xi), so H1 is a POSE-ONLY warm-start (co-#1 pose lever),
+                                NOT the "dual-axis / lane-advection xi" originally claimed. The openpilot
+                                LANE prior is a SEPARATE design-stage lever -- the coherent recurrent
+                                lane model -> coherent SOURCE for the correspondence-first tracker
+                                (LaneGauge; ``openpilot_unified_physical_prior_both_scored_axes_v1``),
+                                a PRIOR/INIT/REGULARIZER, never the fit target;
       D1_DISJOINT_FREEZE_ADD  = pose on EVEN frames (f0->real-luma warp) + d_seg on ODD frames
                                 (f1->witness) + trunk stop-grad => disjoint params, freeze-and-add
                                 EXACT at cos~6e-5 (realizes the measured seg-perp-pose orthogonality);
@@ -243,7 +272,7 @@ class PoseTrainingGauge(Enum):
                                 descends (most GOAL-aligned; a KKT active-set, not a fixed weight)."""
 
     NONE = "none"                                  # warp-real-luma alone (measured baseline)
-    H1_OPENPILOT_XI_WARMSTART = "h1_openpilot_xi_warmstart"  # dual-axis xi warm-start (co-#1)
+    H1_OPENPILOT_XI_WARMSTART = "h1_openpilot_xi_warmstart"  # pure-pose xi warm-start (co-#1; lane axis declined xi)
     D1_DISJOINT_FREEZE_ADD = "d1_disjoint_freeze_add"        # disjoint-frame freeze-and-add (+trunk stopgrad)
     E1_KKT_POSE_TUBE = "e1_kkt_pose_tube"                    # KKT pose-tube trust region
 
