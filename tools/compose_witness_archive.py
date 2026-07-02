@@ -120,6 +120,72 @@ def _warp_codes_for_clip(n_classes: int = 5) -> list[int]:
     return ag.screw_regime_warp_codes(SCREW_REGIME, n_classes=n_classes)
 
 
+def keyframe_payload_accounting(args: argparse.Namespace) -> dict[str, Any]:
+    """EXPLICIT COUNTED byte accounting for the real-luma pose-carrier keyframes (rule-118 / NO-FAKE).
+
+    The warp-real-luma pose carrier (``--pose-carrier``; ``tac.boundary_math.warp_real_luma_frame0``,
+    the #205 sealed-config pose path) produces the render's FRAME0 by warping a STORED REAL keyframe by
+    the per-pair ego twist. Rule-118 boundary:
+
+      * FREE  (inflate.py, uncounted): the plane homography + ``exp_se3`` + inverse-warp bilinear + R
+        (generic algorithm) AND the per-pair twist ``xi`` (DUAL-USE — already counted in the pose
+        sidecar for d_pose, so ~0 MARGINAL bytes).
+      * COUNTED (archive.zip): the STORED REAL keyframe luma (video-derived) — the payload
+        ``warp_real_luma_frame0.py`` explicitly flags as "the vehicle's ... concern ... NOT smuggled
+        into this module's byte claim". THIS is that line item, so the composed byte-closed rate is
+        HONEST rather than silently omitting the keyframes (the borrowed "13 keyframes ~ 0.0060"
+        partition figure the ``warp_keyframe_payload_rate_minimization`` memo corrects).
+
+    Sources (priority): ``--keyframe-payload-path`` (counts a REAL blob's ``st_size``) OR
+    ``--keyframe-payload-bytes`` (an explicit MEASURED codec byte count from the memo §2 sweep).
+    Default 0 -> NO real-luma carrier (pose via the stored sidecar, which the scorer never reads as
+    frames -> does NOT lower realized d_pose); a real-luma ``--pose-carrier`` ROW REQUIRES payload > 0.
+    """
+    path = getattr(args, "keyframe_payload_path", None)
+    explicit = int(getattr(args, "keyframe_payload_bytes", 0) or 0)
+    if explicit < 0:
+        raise ValueError("--keyframe-payload-bytes must be >= 0")
+    source = "none"
+    real_path: str | None = None
+    if path:
+        pp = _resolve(path)
+        if not pp.exists():
+            raise FileNotFoundError(f"--keyframe-payload-path not found: {pp}")
+        kbytes = int(pp.stat().st_size)
+        source = "real_payload_file"
+        real_path = str(pp)
+    elif explicit > 0:
+        kbytes = explicit
+        source = "explicit_measured_bytes"
+    else:
+        kbytes = 0
+    return {
+        "keyframe_blob_bytes": kbytes,
+        "keyframe_blob_rate": rate_term(kbytes),
+        "source": source,
+        "payload_path": real_path,
+        "keyframe_count_hint": getattr(args, "keyframe_count", None),
+        "rule_118": {
+            "COUNTED (archive.zip)": ("stored real keyframe luma (video-derived); warped at decode by "
+                                      "the per-pair ego twist to synthesize frame0"),
+            "FREE (inflate.py)": ("plane homography + exp_se3 + inverse-warp bilinear + R (generic "
+                                  "algorithm) + the DUAL-USE twist (already counted in the pose sidecar)"),
+        },
+        "note": (
+            "NO real-luma pose-carrier keyframes counted (0 B). Pose path = the stored screw/twist "
+            "sidecar, which the scorer never reads as frames -> does NOT lower realized d_pose. A "
+            "real-luma --pose-carrier ROW (the #205 sealed config) REQUIRES a keyframe payload > 0 "
+            "here; pass --keyframe-payload-bytes (measured codec, memo warp_keyframe_payload_rate_"
+            "minimization_20260702 §2) or --keyframe-payload-path <blob>."
+            if kbytes == 0 else
+            f"real-luma pose-carrier keyframes: {kbytes} B ({source}) COUNTED into the rate "
+            f"(+{rate_term(kbytes):.5f}). Codec/resolution/count MEASURED in the "
+            "warp_keyframe_payload_rate_minimization memo; the cheap-vs-expensive branch is decided by "
+            "the residual-compensation measurement (memo §4.2, needs the trained #205 residual)."
+        ),
+    }
+
+
 def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     """PHASE-A: plan + deterministic bulk + residual target + pose sidecar + launch command."""
     cache = _resolve(args.gt_cache)
@@ -185,16 +251,29 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     store_bytes_proj600 = int(round(store_bytes * (proj_kf_full / max(measured_kf, 1))))
 
     # --- byte budget arithmetic ---
-    known_store = store_bytes_proj600 + pose_bytes
+    # EXPLICIT real-luma pose-carrier keyframe line item (rule-118 COUNTED; the accounting gap the
+    # warp_keyframe_payload_rate_minimization memo flags — no longer silently omitted).
+    kf = keyframe_payload_accounting(args)
+    kf_bytes = int(kf["keyframe_blob_bytes"])
+    known_store_excl_kf = store_bytes_proj600 + pose_bytes
+    known_store = known_store_excl_kf + kf_bytes  # HONEST total: partition store + pose sidecar + keyframes
     break_even_dseg = float((_FRONTIER_S - (10.0 * _D_POSE_SIDECAR) ** 0.5 - rate_term(known_store)) / 100.0)
     sub015_dseg = float((0.15 - (10.0 * _D_POSE_SIDECAR) ** 0.5 - rate_term(known_store)) / 100.0)
+    print(f"[phase-A] keyframe payload (real-luma pose carrier): {kf_bytes} B "
+          f"({kf['source']}; rate +{kf['keyframe_blob_rate']:.5f}) -> honest known-store "
+          f"{known_store} B (rate {rate_term(known_store):.5f})", file=sys.stderr)
     budget = {
         "store_blob_bytes_measured_subset": store_bytes,
         "store_keyframes_measured": measured_kf,
         "store_blob_bytes_projected_600": store_bytes_proj600,
         "projected_keyframes_600": proj_kf_full,
         "pose_sidecar_bytes": pose_bytes,
-        "known_store_total_bytes_proj600": known_store,
+        # EXPLICIT keyframe line item (real-luma pose carrier); COUNTED in the honest total below.
+        "keyframe_blob_bytes": kf_bytes,
+        "keyframe_blob_rate": kf["keyframe_blob_rate"],
+        "keyframe_payload": kf,
+        "known_store_excl_keyframes_bytes_proj600": known_store_excl_kf,
+        "known_store_total_bytes_proj600": known_store,  # NOW includes the real-luma keyframe payload
         "known_store_rate_proj600": rate_term(known_store),
         "residual_inr_bytes": None,  # OPEN — the GPU run
         "free_generated_bytes": 0,
@@ -303,8 +382,11 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
                 "measured d_pose for this composition (NO-FAKE)."
             ),
             "rate": (
-                f"PARTIAL: known store {known_store} B (rate {rate_term(known_store):.5f}) is MEASURED; "
-                "the residual INR bytes are OPEN until the GPU run byte-closes."
+                f"PARTIAL: known store {known_store} B (rate {rate_term(known_store):.5f}) is MEASURED "
+                f"= partition store {store_bytes_proj600} + pose sidecar {pose_bytes} + real-luma "
+                f"keyframe payload {kf_bytes} B (EXPLICIT rule-118 line item; {kf['source']}). The "
+                "residual INR bytes are OPEN until the GPU run byte-closes; the keyframe payload's "
+                "final size is decided by the residual-compensation measurement (memo §4.2)."
             ),
         },
         "means_not_ends": (
@@ -473,7 +555,30 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     packet_dir = out_dir / "packet"
     zip_path, zip_bytes = ag.assemble_v2_packet(blob, packet_dir)
     acct = ag.byte_accounting(zip_path, store_blob, residual_blob, pose_blob, manifest_bytes)
-    print(f"[phase-B] archive.zip = {zip_bytes} B (rate {acct['rate']:.5f}); sections={acct['section_bytes']}",
+    # EXPLICIT real-luma pose-carrier keyframe line item (rule-118). This archive's pose path is the
+    # stored sidecar, so its zip does NOT pack keyframes; when a real-luma --pose-carrier is adopted
+    # the keyframe payload is COUNTED into the honest rate (no silent omission). accounting-only here.
+    kf = keyframe_payload_accounting(args)
+    kf_bytes = int(kf["keyframe_blob_bytes"])
+    honest_total_bytes = int(zip_bytes) + kf_bytes
+    acct = {
+        **acct,
+        "keyframe_payload": kf,
+        "keyframe_blob_bytes": kf_bytes,
+        "keyframe_in_this_zip": False,
+        "honest_total_bytes_incl_keyframes": honest_total_bytes,
+        "honest_rate_incl_keyframes": rate_term(honest_total_bytes),
+        "honest_rate_note": (
+            "archive.zip st_size is the rate of the store+residual+pose sections (stored-sidecar pose "
+            "path). The real-luma pose-carrier keyframe payload is NOT packed in THIS zip; its EXPLICIT "
+            "COUNTED bytes are added here for the honest real-luma-carrier rate. Fully byte-closing a "
+            "real-luma --pose-carrier row additionally requires the pose-carrier warp decode wired into "
+            "inflate (a separate wiring dependency, flagged; not fabricated here)."
+        ),
+    }
+    print(f"[phase-B] archive.zip = {zip_bytes} B (rate {acct['rate']:.5f}); sections={acct['section_bytes']}"
+          + (f"; + keyframe payload {kf_bytes} B -> honest rate {acct['honest_rate_incl_keyframes']:.5f}"
+             if kf_bytes else "; keyframe payload 0 B (stored-sidecar pose path)"),
           file=sys.stderr)
 
     realized: dict[str, Any] = {"skipped": bool(args.skip_inflate)}
@@ -654,6 +759,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--residual-bundle", default=None,
                     help="(PHASE-B) the residual bundle the INR trained against (learn_classes/dilate/"
                          "mask_mode for the inflate mask). Default <out_dir>/residual_bundle.npz")
+    # real-luma pose-carrier keyframe payload (EXPLICIT rule-118 COUNTED line item; the accounting
+    # gap warp_keyframe_payload_rate_minimization_20260702 flags). Default 0 -> stored-sidecar pose.
+    ap.add_argument("--keyframe-payload-bytes", type=int, default=0,
+                    help="EXPLICIT measured byte count of the stored real-luma pose-carrier keyframes "
+                         "(video-derived -> COUNTED in the rate). From the codec sweep in memo "
+                         "warp_keyframe_payload_rate_minimization_20260702 §2 (e.g. 384x512 HEVC crf34 "
+                         "13-keyframe ~32875 B). Default 0 = no real-luma carrier (pose via stored sidecar).")
+    ap.add_argument("--keyframe-payload-path", type=str, default=None,
+                    help="path to a REAL stored keyframe blob; its st_size is COUNTED (overrides "
+                         "--keyframe-payload-bytes). The warp decode stays FREE (rule-118).")
+    ap.add_argument("--keyframe-count", type=int, default=None,
+                    help="observability hint: number of stored keyframes (reach-gate schedule; ~13).")
     ap.add_argument("--max-pairs", type=int, default=None, help="(PHASE-B) cap inflate+d_seg pairs for speed")
     ap.add_argument("--measure-dpose", action="store_true",
                     help="(PHASE-B) measure advisory composed d_pose through the frozen CPU PoseNet (B3)")

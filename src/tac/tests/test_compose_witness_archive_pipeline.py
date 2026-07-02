@@ -227,3 +227,85 @@ def test_phase_b_residual_archive_inflate_equals_oracle_end_to_end(tmp_path):
         "handoff-contract proof (B1 + META-bug)")
     # the inflate composes (residual present) -> f0 != f1 somewhere (not the flat floor).
     assert not all(np.array_equal(raw[2 * p], raw[2 * p + 1]) for p in range(n_pairs))
+
+
+# ---------------------------------------------------------------------------
+# EXPLICIT real-luma pose-carrier keyframe accounting (the rate-honesty line item;
+# closes the warp_keyframe_payload_rate_minimization gap: partition keyframes + pose sidecar
+# were counted but the real-luma --pose-carrier keyframes were silently omitted).
+# ---------------------------------------------------------------------------
+def _kf_args(**kw):
+    from types import SimpleNamespace
+
+    base = dict(keyframe_payload_bytes=0, keyframe_payload_path=None, keyframe_count=None)
+    base.update(kw)
+    return SimpleNamespace(**base)
+
+
+def test_keyframe_payload_default_is_zero_stored_sidecar():
+    """Default (no --keyframe-payload-*) -> 0 B COUNTED, source 'none', and the note REQUIRES a
+    payload for a real-luma --pose-carrier row (the stored sidecar is dead bytes for d_pose)."""
+    tool = _load_compose_tool()
+    kf = tool.keyframe_payload_accounting(_kf_args())
+    assert kf["keyframe_blob_bytes"] == 0
+    assert kf["keyframe_blob_rate"] == 0.0
+    assert kf["source"] == "none"
+    assert "REQUIRES a keyframe payload > 0" in kf["note"]
+
+
+def test_keyframe_payload_explicit_bytes_counted():
+    """--keyframe-payload-bytes N -> N B COUNTED at the canonical rate_term (25*N/RATE_DENOM)."""
+    from tac.contest_score import rate_term
+
+    tool = _load_compose_tool()
+    kf = tool.keyframe_payload_accounting(_kf_args(keyframe_payload_bytes=32875, keyframe_count=13))
+    assert kf["keyframe_blob_bytes"] == 32875
+    assert kf["keyframe_blob_rate"] == rate_term(32875)
+    assert kf["source"] == "explicit_measured_bytes"
+    assert kf["keyframe_count_hint"] == 13
+    assert "COUNTED into the rate" in kf["note"]
+
+
+def test_keyframe_payload_path_counts_st_size_and_overrides_bytes(tmp_path):
+    """--keyframe-payload-path counts the REAL blob st_size and OVERRIDES --keyframe-payload-bytes."""
+    from tac.contest_score import rate_term
+
+    tool = _load_compose_tool()
+    blob = tmp_path / "keyframes.bin"
+    payload = b"\x00" * 4096
+    blob.write_bytes(payload)
+    kf = tool.keyframe_payload_accounting(
+        _kf_args(keyframe_payload_bytes=999999, keyframe_payload_path=str(blob)))
+    assert kf["keyframe_blob_bytes"] == len(payload)
+    assert kf["keyframe_blob_rate"] == rate_term(len(payload))
+    assert kf["source"] == "real_payload_file"
+    assert kf["payload_path"] == str(blob)
+
+
+def test_keyframe_payload_negative_bytes_raises():
+    tool = _load_compose_tool()
+    with pytest.raises(ValueError):
+        tool.keyframe_payload_accounting(_kf_args(keyframe_payload_bytes=-1))
+
+
+def test_keyframe_payload_missing_path_raises(tmp_path):
+    tool = _load_compose_tool()
+    with pytest.raises(FileNotFoundError):
+        tool.keyframe_payload_accounting(_kf_args(keyframe_payload_path=str(tmp_path / "nope.bin")))
+
+
+def test_phase_a_budget_folds_keyframes_into_honest_total(tmp_path):
+    """The phase_a byte-budget arithmetic: known-store total = partition store + pose sidecar +
+    real-luma keyframe payload (the honest rate). We assert the fold via the helper + rate_term so the
+    test is decoupled from the (GPU-touching) full phase_a bulk generation."""
+    from tac.contest_score import rate_term
+
+    tool = _load_compose_tool()
+    store_proj600, pose_bytes = 40_000, 2_424
+    kf = tool.keyframe_payload_accounting(_kf_args(keyframe_payload_bytes=32_875))
+    known_excl = store_proj600 + pose_bytes
+    known_incl = known_excl + kf["keyframe_blob_bytes"]
+    # honest total strictly larger; rate is monotone; keyframe rate is additive.
+    assert known_incl == known_excl + 32_875
+    assert rate_term(known_incl) > rate_term(known_excl)
+    assert abs((rate_term(known_incl) - rate_term(known_excl)) - kf["keyframe_blob_rate"]) < 1e-12
