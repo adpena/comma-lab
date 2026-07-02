@@ -92,9 +92,15 @@ def test_router_selects_rle_over_path_tube_for_two_stripe_support() -> None:
     report = route_support_codecs_for_path_candidate(candidate, source_effect=_source_effect(candidate))
 
     assert report["selected_support_encoding"] == "rle"
+    receipt = report["selected_support_survival_receipt"]
+    assert receipt["support_encoding"] == "rle"
+    assert receipt["parseback_survived"] is True
+    assert receipt["inflate_survived"] is True
     rle = _row_by_encoding(report, "rle")
     path = _row_by_encoding(report, "path_tube")
     assert rle["encoded_bytes"] < path["encoded_bytes"]
+    assert rle["parseback_survived"] is True
+    assert rle["inflate_survived"] is True
     assert _row_by_encoding(report, "path_tube")["rejection_reason"] == "support_codec_dominated_by_selected_codec"
     assert len(report["candidate_queue"]) == 1
     assert report["candidate_queue"][0]["support_encoding"] == "rle"
@@ -158,8 +164,9 @@ def test_selected_action_effect_includes_codec_bytes_and_stays_non_promotable() 
     assert selected["delta_score_total"] is not None
     assert selected["value_per_byte"] is not None
     assert selected["promotion_eligible"] is False
-    assert selected["parseback_survived"] is False
-    assert selected["inflate_survived"] is False
+    assert selected["parseback_survived"] is True
+    assert selected["inflate_survived"] is True
+    assert "path_action_support_without_wrong_to_target_is_not_birth" in selected["blockers"]
     assert report["candidate_queue"][0]["ready_for_exact_eval_dispatch"] is False
 
 
@@ -230,9 +237,40 @@ def test_selected_rle_survival_receipt_must_match_same_action_identity() -> None
     selected_row = next(row for row in report["support_codec_candidates"] if row["selected"])
 
     assert report["selected_support_encoding"] == "rle"
+    assert selected_row["parseback_survived"] is True
+    assert selected_row["inflate_survived"] is True
+    assert selected_row["survival_receipt_id"] != "wrong-support"
+    assert selected["parseback_survived"] is True
+    assert selected["inflate_survived"] is True
+
+
+def test_selected_rle_matching_negative_receipt_fails_closed() -> None:
+    mask = np.zeros((64, 96), dtype=bool)
+    mask[8:10, 5:91] = True
+    mask[42:44, 5:91] = True
+    candidate = _candidate_from_mask(mask)
+    receipt = {
+        "schema": "tac.support_codec_survival_receipt.v1",
+        "receipt_id": "matching-negative",
+        "action_id": candidate["action_id"],
+        "support_sha256": candidate["support"]["support_sha256"],
+        "support_encoding": "rle",
+        "parseback_survived": False,
+        "inflate_survived": False,
+        "blockers": ["external_archive_parseback_failed"],
+    }
+
+    report = route_support_codecs_for_path_candidate(
+        candidate,
+        source_effect=_source_effect(candidate),
+        survival_receipts=[receipt],
+    )
+    selected = report["selected_action_effect"]
+    selected_row = next(row for row in report["support_codec_candidates"] if row["selected"])
+
     assert selected_row["parseback_survived"] is False
     assert selected_row["inflate_survived"] is False
-    assert selected_row["survival_receipt_id"] is None
+    assert selected_row["survival_receipt_id"] == "matching-negative"
     assert selected["parseback_survived"] is False
     assert selected["inflate_survived"] is False
 
@@ -288,6 +326,8 @@ def test_route_path_action_support_codecs_cli_writes_selected_only_queue(tmp_pat
     assert proc.returncode == 0, proc.stderr
     summary = json.loads(proc.stdout)
     assert summary["candidate_queue_row_count"] == 1
+    assert summary["support_codec_survival_receipt_count"] == 1
+    assert Path(summary["support_codec_survival_receipts_path"]).exists()
     assert summary["candidate_queue_contains_selected_only"] is True
     assert summary["selected_support_encodings"] == ["rle"]
     report = json.loads((out_dir / "support_codec_router_report.json").read_text(encoding="utf-8"))
@@ -359,8 +399,9 @@ def test_router_emits_base_bound_rent_evaluation_for_selected_effect() -> None:
     assert row["schema"] == "hi_nerv_candidate_action_evaluation.v1"
     assert row["base_archive_sha256"] == _BASE_SHA
     assert row["action_id"] == candidate["action_id"]
-    # Selected effect has not yet survived parse-back/inflate => not rent-paying.
-    assert row["scorer_effect_survived"] is False
+    # Selected support survives parse-back/inflate, but this no-op support still
+    # fails the rent law because its score does not improve.
+    assert row["scorer_effect_survived"] is True
     assert row["pays_rent"] is False
     assert row["promotion_eligible"] is False
     assert report["every_action_must_pay_rent"] is True

@@ -1,0 +1,77 @@
+{
+  "tool": "perclass_recall_n209",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "n_pairs": 600,
+  "overall_d_seg_realized": 0.006655036078559028,
+  "note_vs_exact_row": "exact-row daemon measured d_seg 0.006655 on this same EMA-best; this recomputes + breaks down per class",
+  "per_class": {
+    "Road": {
+      "gt_pixels": 27407046,
+      "witness_pixels": 27638736,
+      "recall": 0.9915157219059654,
+      "witness_produces_frac_of_gt": 1.0084536655282004,
+      "flip_mass_frac_of_all_flips": 0.2961926476957175,
+      "misclassified_as": {
+        "Lane": 102879,
+        "Undrivable": 45763,
+        "MyCar": 43734
+      }
+    },
+    "Lane": {
+      "gt_pixels": 690639,
+      "witness_pixels": 448068,
+      "recall": 0.4986483531917543,
+      "witness_produces_frac_of_gt": 0.6487730927445453,
+      "flip_mass_frac_of_all_flips": 0.4410529131531348,
+      "misclassified_as": {
+        "Road": 344743,
+        "Movable": 737,
+        "MyCar": 678
+      }
+    },
+    "Undrivable": {
+      "gt_pixels": 58413281,
+      "witness_pixels": 58440520,
+      "recall": 0.998734756912559,
+      "witness_produces_frac_of_gt": 1.0004663151860962,
+      "flip_mass_frac_of_all_flips": 0.09414184903064735,
+      "misclassified_as": {
+        "Road": 43292,
+        "Movable": 30608,
+        "Lane": 7
+      }
+    },
+    "Movable": {
+      "gt_pixels": 1460325,
+      "witness_pixels": 1436366,
+      "recall": 0.9346035985140294,
+      "witness_produces_frac_of_gt": 0.9835933781863626,
+      "flip_mass_frac_of_all_flips": 0.12164675311441164,
+      "misclassified_as": {
+        "Undrivable": 55288,
+        "Road": 40054,
+        "Lane": 98
+      }
+    },
+    "MyCar": {
+      "gt_pixels": 29993509,
+      "witness_pixels": 30001110,
+      "recall": 0.998770700687272,
+      "witness_produces_frac_of_gt": 1.0002534214986316,
+      "flip_mass_frac_of_all_flips": 0.04696583700608871,
+      "misclassified_as": {
+        "Road": 36130,
+        "Lane": 698,
+        "Movable": 43
+      }
+    }
+  },
+  "SMOKING_GUN": {
+    "lane_recall": 0.4986483531917543,
+    "lane_witness_produces_frac": 0.6487730927445453,
+    "movable_recall": 0.9346035985140294,
+    "movable_witness_produces_frac": 0.9835933781863626,
+    "interpretation": "if lane/movable recall << 1 and witness_produces_frac ~ 0 -> rare-class-collapse persists at ep200 -> #208 seeded-init HIGH-EV"
+  },
+  "elapsed_s": 88.89221070799977
+}

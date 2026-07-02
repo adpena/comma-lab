@@ -1,6 +1,6 @@
 {
   "schema": "realized_harness_vs_oracle_validation.v1",
-  "validated_at_utc": "2026-06-26T18:35:29Z",
+  "validated_at_utc": "2026-06-26T19:00:50Z",
   "authority": "[contest-CPU advisory] harness-equivalence proof (NOT a score claim)",
   "promotion_eligible": false,
   "score_claim": false,

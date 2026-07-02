@@ -440,6 +440,63 @@ def test_operator_briefing_routes_grouped_tensor_payload_to_receiver_binding(
     assert "receiver_work=True" in text
 
 
+def test_operator_briefing_surfaces_track_a_finishing_kit_residual(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "research"
+    artifact = _write_json(
+        root / "finishing_kit_converged_residual_selection_fixture.json",
+        {
+            "schema": "track_a_finishing_kit_converged_residual_selection.v1",
+            "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+            "selection_status": "selected_pr98_residual_only",
+            "source_revalidation": ".omx/research/reval.json",
+            "source_production_verify": ".omx/research/prod.json",
+            "selected_kit": {
+                "name": "converged_residual_pr98_only",
+                "factory": "DistortionKitConfig.from_converged_residual_pr98()",
+                "default_off": True,
+                "archive_bytes_when_off": 0,
+                "section_bytes_when_enabled": 54,
+                "banked_advisory_distortion_delta": -0.002493455944075962,
+                "promotion_blocker": "final n=600 refit plus CPU/CUDA exact replay",
+            },
+            "decision": {
+                "full_affine_rejected": True,
+                "retained_fraction_vs_mid_basin": 0.05024962249546303,
+            },
+            "rejected_assumptions": [
+                "mid_basin_-0.058_full_kit_gain",
+                "t10_affine_as_default_banked_gain",
+            ],
+        },
+    )
+    monkeypatch.setattr(mod, "TRACK_A_FINISHING_KIT_SCAN_ROOTS", (root,))
+    mod._track_a_finishing_kit_summary.cache_clear()
+
+    summary = mod._track_a_finishing_kit_summary()
+    text = mod._format_track_a_finishing_kit_summary()
+
+    assert summary["schema"] == "pact.track_a_finishing_kit_summary.v1"
+    assert summary["track"] == "Track-A"
+    assert summary["item"] == "Item C - L3 distortion finishing-kit"
+    assert summary["status"] == "RESIDUAL_ONLY_WIRED"
+    assert summary["selected_kit_name"] == "converged_residual_pr98_only"
+    assert summary["default_off"] is True
+    assert summary["archive_bytes_when_off"] == 0
+    assert summary["section_bytes_when_enabled"] == 54
+    assert summary["full_affine_rejected"] is True
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["latest_row"]["path"].endswith(artifact.name)
+    assert "Track-A Item C" in text
+    assert "converged_residual_pr98_only" in text
+    assert "score_claim: False" in text
+    assert "ready_for_exact_eval_dispatch: False" in text
+    assert "probe_finishing_kit_convergence_revalidation.py" in text
+
+
 def test_operator_briefing_surfaces_saturated_section_payload_grammar(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -608,6 +665,7 @@ def test_briefing_runs_all_three_phases(tmp_path: Path):
     assert "Phase 1 exact-ready queues" in proc.stdout
     assert "Phase 1 materializer exact-ready handoffs" in proc.stdout
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
+    assert "Track-A Item C — finishing-kit residual selector" in proc.stdout
     assert "Phase 6c — High-level byte-shaving acquisition queue" in proc.stdout
     assert "Phase 6e — PR95 MLX control profiles" in proc.stdout
     assert "Phase 6f — Distortion-axis scorer probe signals" in proc.stdout
@@ -670,6 +728,9 @@ def test_briefing_json_composite_has_all_three_keys(tmp_path: Path):
         "BLOCKED",
         "PENDING",
     }
+    assert out["track_a_finishing_kit"]["schema"] == "pact.track_a_finishing_kit_summary.v1"
+    assert out["track_a_finishing_kit"]["track"] == "Track-A"
+    assert out["dispatch_readiness"]["track_a_item_c_finishing_kit"]["score_claim"] is False
     assert len(out["xray_tools"]) >= 5
     assert all(row["score_claim"] is False for row in out["xray_tools"])
     assert all(row["score_claim_valid"] is False for row in out["xray_tools"])

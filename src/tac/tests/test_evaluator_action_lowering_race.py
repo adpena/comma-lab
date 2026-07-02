@@ -251,6 +251,35 @@ def test_lowering_race_rejects_blocked_negative_delta_row() -> None:
     assert report["lowering_candidates"][0]["first_failing_surface"] == "support_identity_mismatch"
 
 
+def test_lowering_race_advances_to_support_birth_blocker_after_survival() -> None:
+    survived = _effect(delta_good=True, parseback=True, inflate=True)
+    payload = survived.as_dict()
+    payload["blockers"] = ["path_action_support_without_wrong_to_target_is_not_birth"]
+    survived = ActionEffect.from_dict(payload)
+    support_codec_report = {
+        "schema": "tac.support_codec_router.v1",
+        "reports": [
+            {
+                "action_id": survived.action_id,
+                "selected_support_encoding": "rle",
+                "selected_total_cost_bytes": 100,
+                "selected_action_effect": survived.as_dict(),
+            }
+        ],
+    }
+
+    report = build_lowering_race_report(
+        action_id=survived.action_id,
+        support_codec_report=support_codec_report,
+    )
+
+    assert report["verdict"]["best_lowering"] == "discard"
+    assert report["verdict"]["first_failing_surface"] == "path_action_support_without_wrong_to_target_is_not_birth"
+    assert report["verdict"]["first_failing_surface"] not in {PARSEBACK_FAILED, INFLATE_FAILED}
+    assert report["lowering_candidates"][0]["parseback_survived"] is True
+    assert report["lowering_candidates"][0]["inflate_survived"] is True
+
+
 def test_lowering_race_consumes_support_codec_report_and_cli_writes_verdict(tmp_path: Path) -> None:
     effect = _effect()
     support_codec_report = {
@@ -290,6 +319,7 @@ def test_lowering_race_consumes_support_codec_report_and_cli_writes_verdict(tmp_
     summary = json.loads(proc.stdout)
     assert summary["best_lowering"] == "discard"
     assert summary["first_failing_surface"] in {PARSEBACK_FAILED, INFLATE_FAILED}
+    assert Path(summary["next_blocker_path"]).exists()
     verdict = json.loads((out_dir / "lowering_verdict.json").read_text(encoding="utf-8"))
     assert verdict["action_id"] == effect.action_id
 

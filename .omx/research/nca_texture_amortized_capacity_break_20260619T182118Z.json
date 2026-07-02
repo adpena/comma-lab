@@ -1,0 +1,106 @@
+{
+  "schema": "nca_texture_amortized_capacity_break.v1",
+  "produced_at_utc": "2026-06-19T18:24:15.258386+00:00",
+  "producer": "experiments/probe_nca_texture_amortized_capacity_break.py",
+  "axis_tag": "[contest-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_moved": false,
+  "the_three_caveats_fixed": {
+    "caveat_1_convergence": "Mordvintsev POOL + sample-replay + fire-rate + random CA steps + multi-restart keep-best",
+    "caveat_2_amortization": "ONE shared rule across 1 REAL frames + per-frame latents; AVERAGE d_seg + TRUE amortized rate",
+    "caveat_3_capacity_break": "rule-size sweep -> avg d_seg(params) vs 29.3*params^-0.71 power law"
+  },
+  "thresholds": {
+    "frontier_dseg": 0.00056,
+    "frontier_S": 0.1911,
+    "green_dseg_threshold": 0.0012,
+    "gt_rgb_roundtrip_dseg": 0.00022,
+    "byte_cheap_rate_threshold": 0.05,
+    "S_target": 0.15,
+    "powerlaw_A": 29.3,
+    "powerlaw_K": 0.71
+  },
+  "method": {
+    "representation": "ONE shared NCA rule (perception fixed Sobel+ident, MLP w1/b1/w2 zero-init residual, readout C->3 RGB) + per-frame latent seeds. grow_rgb iterates SAME rule per frame.",
+    "stabilizers": "persistent state pool + sample-replay (replace highest-loss with fresh seed) + fire-rate 1.0 + random CA steps [48,72] + per-param grad-norm + LR warmup + step-decay + 1 restarts keep-best",
+    "fit_objective": "sum_frames[ CE(real-SegNet(roundtrip(grown-RGB)), L*) + recon_w*MSE(grown-RGB, GT-RGB) ]",
+    "dseg_metric": "AVERAGE over frames of realized argmax-flip-rate through the EXACT roundtrip vs L* (CPU authority)",
+    "train_device": "mps",
+    "authority_device": "cpu",
+    "n_channels": 16,
+    "latent_dim": 24,
+    "n_frames": 1,
+    "iters": 800
+  },
+  "rows": {
+    "h96": {
+      "hidden": 96,
+      "n_channels": 16,
+      "latent_dim": 24,
+      "n_frames": 1,
+      "rule_param_count": 24723,
+      "n_restarts": 1,
+      "n_converged_restarts": 0,
+      "convergence_rate": 0.0,
+      "best_converged_avg_realized_dseg": 0.2636362711588542,
+      "best_converged_median_realized_dseg": 0.2636362711588542,
+      "best_converged_best_frame_realized_dseg": 0.2636362711588542,
+      "best_converged_worst_frame_realized_dseg": 0.2636362711588542,
+      "best_converged_avg_geometric_dseg": 0.2594350179036458,
+      "best_converged_avg_recon_rmse": 76.64158630371094,
+      "best_converged_avg_boundary_band_flip": 0.7743626399809388,
+      "best_converged_avg_interior_flip": 0.24085880965284198,
+      "best_converged_n_converged_frames": 0,
+      "powerlaw_dseg_at_this_param_count": 0.02227233706291806,
+      "amortized_avg_dseg_over_powerlaw": 11.836937920528817,
+      "beats_powerlaw": false,
+      "bytes": {
+        "rule_param_count": 24723,
+        "rule_bytes": 13597.650000000001,
+        "latent_dim": 24,
+        "latent_bytes_per_frame": 13.200000000000001,
+        "total_600_amortized_bytes": 21517.65
+      },
+      "rate_amortized": 0.01432771990264929,
+      "S_projected_amortized": 26.43626435473652,
+      "avg_realized_dseg_x_frontier": 470.77905564081107,
+      "all_restarts": [
+        {
+          "restart_seed": 1234,
+          "rule_param_count": 24723,
+          "per_frame_realized_dseg": [
+            0.2636362711588542
+          ],
+          "avg_realized_dseg": 0.2636362711588542,
+          "median_realized_dseg": 0.2636362711588542,
+          "best_frame_realized_dseg": 0.2636362711588542,
+          "worst_frame_realized_dseg": 0.2636362711588542,
+          "avg_geometric_dseg": 0.2594350179036458,
+          "avg_recon_rmse": 76.64158630371094,
+          "avg_boundary_band_flip": 0.7743626399809388,
+          "avg_interior_flip": 0.24085880965284198,
+          "n_converged_frames": 0,
+          "elapsed_s": 175.7
+        }
+      ]
+    }
+  },
+  "capacity_break": {
+    "our_fitted_exponent_k": null,
+    "our_fitted_A": null,
+    "powerlaw_exponent_k": 0.71,
+    "iteration_breaks_exponent": false,
+    "n_rule_sizes_beating_powerlaw": 0,
+    "interpretation": "If our_fitted_exponent_k > 0.71 AND points land below the power law, weight-shared iteration gives effective-depth-N detail that the one-shot decoder lacks (the capacity escape). If k ~ 0.71 or points sit on/above the wall, iteration does NOT break the capacity wall = the generative axis caps like the static families."
+  },
+  "best_converged_avg_realized_dseg": Infinity,
+  "best_S_projected_amortized": Infinity,
+  "best_row_key": null,
+  "overall_convergence_rate": 0.0,
+  "n_sub015_rows": 0,
+  "n_beats_frontier_rows": 0,
+  "verdict": "RED_AMORTIZED_NCA_OBEYS_CAPACITY_WALL_GENERATIVE_AXIS_CAPS",
+  "verdict_basis": "MEASUREMENT-FIRST: AVERAGE realized d_seg (NOT best-frame) of ONE shared rule across 1 real frames, through the real SegNet + exact roundtrip, multi-restart keep-best for convergence robustness. The capacity-break is the fitted d_seg(params) exponent vs 29.3*params^-0.71."
+}

@@ -1,0 +1,64 @@
+{
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "candidate_deltas": {
+    "full_affine_camera_float_slice1": -0.0030633169486410927,
+    "full_affine_camera_float_slice2": -0.0027656392608326197,
+    "full_affine_camera_float_transfer_s1_to_s2": -0.002457623154809685,
+    "full_affine_production_post_round_n24": -0.002793366581402834,
+    "pr98_camera_float_slice1": -0.002493455944075962,
+    "pr98_camera_float_slice2": -0.002616903737454601,
+    "pr98_camera_float_transfer_s1_to_s2": -0.002616903737454601,
+    "pr98_production_post_round_n24": -0.0024958423980278033
+  },
+  "decision": {
+    "full_affine_rejected": true,
+    "full_affine_rejection_reason": "same-slice affine helps, but slice1->slice2 transfer is weaker than PR98-only; do not bank T10 as a default assumption",
+    "mid_basin_full_delta": -0.058,
+    "retained_fraction_vs_mid_basin": 0.05024962249546303
+  },
+  "generated_at_utc": "2026-06-13T13:05:09Z",
+  "rejected_assumptions": [
+    "mid_basin_-0.058_full_kit_gain",
+    "canonical_pr98_frame1_green_bias_transfer",
+    "t10_affine_as_default_banked_gain",
+    "s12_as_render_base_byte_savings"
+  ],
+  "schema": "track_a_finishing_kit_converged_residual_selection.v1",
+  "selected_kit": {
+    "archive_bytes_when_off": 0,
+    "banked_advisory_distortion_delta": -0.002493455944075962,
+    "bias_frame_channel": [
+      [
+        1.0,
+        0.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "default_off": true,
+    "factory": "DistortionKitConfig.from_converged_residual_pr98()",
+    "name": "converged_residual_pr98_only",
+    "promotion_blocker": "Re-fit on final n=600 converged decoder and run byte-closed same-runtime CPU/CUDA exact replay before any frontier claim.",
+    "provenance": "[contest-CPU advisory] NON-PROMOTABLE; 2026-06-13 converged ep2120 under-power audit: mid-basin PR98/T10 shrank, cross-slice transfer kept only PR98 frame0 R/B residual.",
+    "scale_frame_channel": [
+      [
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        1.0,
+        1.0,
+        1.0
+      ]
+    ],
+    "section_bytes_when_enabled": 54
+  },
+  "selection_status": "selected_pr98_residual_only",
+  "source_production_verify": ".omx/research/finishing_kit_production_path_verify_RESULT.json",
+  "source_revalidation": ".omx/research/finishing_kit_convergence_revalidation_RESULT.json"
+}

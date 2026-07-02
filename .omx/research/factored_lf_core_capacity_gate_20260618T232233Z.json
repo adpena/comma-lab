@@ -1,0 +1,368 @@
+{
+  "schema": "factored_lf_core_capacity_gate.v1",
+  "produced_at_utc": "2026-06-18T23:37:13.596127+00:00",
+  "producer": "experiments/probe_factored_lf_core_capacity_gate.py",
+  "axis_tag": "[contest-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_moved": false,
+  "the_question": "Can a SMALL LF-only d_seg-core floor d_seg << bc20's 0.0022 (toward ~0.0003-0.0006) at small bytes? GREEN -> spec the factored build; RED -> route to RANK-4 geometry core.",
+  "thresholds": {
+    "bc20_dseg_wall": 0.0022,
+    "frontier_dseg_target": 0.0003,
+    "green_dseg_threshold": 0.0012
+  },
+  "vehicle_basis": {
+    "basin_ckpt": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/torch_vehicle_checkpoint_state.pt",
+    "basin_base_channels": 20,
+    "basin_n_params": 83356,
+    "basin_dseg_floor": 0.0022,
+    "n_gt_pairs": 100,
+    "n_dseg_frames": 24
+  },
+  "method": {
+    "lf_core": "narrow-channel HNeRV decoder (canonical exact-eval renderer), trained 100% on d_seg",
+    "train_objective": "CE on GT argmax through the EXACT eval roundtrip (scored last frame rgb_1)",
+    "dseg_metric": "argmax-flip-rate vs GT over subset of GT pairs (exact metric def, faithful proxy)",
+    "ema": "warmup-decay shadow (capstone EMA-shadow-lag fix); d_seg measured on shadow",
+    "train_device": "mps",
+    "authority_device": "cpu",
+    "epochs_budget": 1200,
+    "early_falsification": "stretched-exp asymptote projection + recent-slope (gate working)"
+  },
+  "cores": {
+    "bc8": {
+      "base_channels": 8,
+      "n_params": 20078,
+      "byte_estimate": 21437.473007342003,
+      "rate_estimate": 0.014274333334253554,
+      "curve": [
+        {
+          "ep": 0,
+          "dseg": 0.5064390003681183,
+          "ce": 2.268421173095703
+        },
+        {
+          "ep": 50,
+          "dseg": 0.4546612650156021,
+          "ce": 0.9004722237586975
+        },
+        {
+          "ep": 100,
+          "dseg": 0.26345803899069625,
+          "ce": 0.5974188446998596
+        },
+        {
+          "ep": 150,
+          "dseg": 0.16257625197370848,
+          "ce": 0.25816109776496887
+        },
+        {
+          "ep": 200,
+          "dseg": 0.10285631862158577,
+          "ce": 0.27384212613105774
+        },
+        {
+          "ep": 250,
+          "dseg": 0.06864208603898685,
+          "ce": 0.17504048347473145
+        },
+        {
+          "ep": 300,
+          "dseg": 0.055073208175599575,
+          "ce": 0.2098827362060547
+        },
+        {
+          "ep": 350,
+          "dseg": 0.04819891167183717,
+          "ce": 0.1377624273300171
+        },
+        {
+          "ep": 400,
+          "dseg": 0.043814765056595206,
+          "ce": 0.1583816260099411
+        },
+        {
+          "ep": 450,
+          "dseg": 0.03946918908817073,
+          "ce": 0.11816515773534775
+        },
+        {
+          "ep": 500,
+          "dseg": 0.035993152065202594,
+          "ce": 0.13625912368297577
+        },
+        {
+          "ep": 550,
+          "dseg": 0.03372912931566437,
+          "ce": 0.10632607340812683
+        },
+        {
+          "ep": 600,
+          "dseg": 0.0321998594639202,
+          "ce": 0.12281902879476547
+        },
+        {
+          "ep": 650,
+          "dseg": 0.030982123222202063,
+          "ce": 0.09884103387594223
+        },
+        {
+          "ep": 700,
+          "dseg": 0.02996253959524135,
+          "ce": 0.11493126302957535
+        },
+        {
+          "ep": 750,
+          "dseg": 0.02896330109797418,
+          "ce": 0.09412107616662979
+        },
+        {
+          "ep": 800,
+          "dseg": 0.02831310701246063,
+          "ce": 0.10928409546613693
+        },
+        {
+          "ep": 850,
+          "dseg": 0.027631335736562807,
+          "ce": 0.09081677347421646
+        },
+        {
+          "ep": 900,
+          "dseg": 0.02714029955677688,
+          "ce": 0.10588619858026505
+        },
+        {
+          "ep": 950,
+          "dseg": 0.026738908452292282,
+          "ce": 0.08871672302484512
+        },
+        {
+          "ep": 1000,
+          "dseg": 0.026443905429914594,
+          "ce": 0.10411134362220764
+        },
+        {
+          "ep": 1050,
+          "dseg": 0.026231553715964157,
+          "ce": 0.08765708655118942
+        },
+        {
+          "ep": 1100,
+          "dseg": 0.02607938980994125,
+          "ce": 0.10323560237884521
+        },
+        {
+          "ep": 1150,
+          "dseg": 0.025954776210710406,
+          "ce": 0.08716585487127304
+        },
+        {
+          "ep": 1199,
+          "dseg": 0.025843090765799086,
+          "ce": 0.17982375621795654
+        }
+      ],
+      "best_dseg_subset": 0.025843090765799086,
+      "stretched_exp_fit": {
+        "a": 0.5064390003681183,
+        "tau": 200,
+        "beta": 1.0,
+        "c": 0.0,
+        "asymptote": 0.0,
+        "sse": 0.03528766815184186
+      },
+      "projected_floor": 0.0,
+      "early_falsified": false,
+      "elapsed_s": 435.7,
+      "best_shadow_available": true,
+      "best_shadow_path": "experiments/results/factored_lf_core_capacity_gate/lf_core_bc8_best_shadow.pt"
+    },
+    "bc12": {
+      "base_channels": 12,
+      "n_params": 36540,
+      "byte_estimate": 39014.10816257978,
+      "rate_estimate": 0.025977893218130533,
+      "curve": [
+        {
+          "ep": 0,
+          "dseg": 0.5065267384052277,
+          "ce": 2.130221366882324
+        },
+        {
+          "ep": 50,
+          "dseg": 0.28733507947375375,
+          "ce": 0.6949737668037415
+        },
+        {
+          "ep": 100,
+          "dseg": 0.17375564637283483,
+          "ce": 0.427049845457077
+        },
+        {
+          "ep": 150,
+          "dseg": 0.08231586900850137,
+          "ce": 0.20661954581737518
+        },
+        {
+          "ep": 200,
+          "dseg": 0.05104976279350618,
+          "ce": 0.17898397147655487
+        },
+        {
+          "ep": 250,
+          "dseg": 0.039232889733587704,
+          "ce": 0.13161088526248932
+        },
+        {
+          "ep": 300,
+          "dseg": 0.03307045817685624,
+          "ce": 0.12286708503961563
+        },
+        {
+          "ep": 350,
+          "dseg": 0.030056423507630825,
+          "ce": 0.09300551563501358
+        },
+        {
+          "ep": 400,
+          "dseg": 0.02776039958310624,
+          "ce": 0.09471043944358826
+        },
+        {
+          "ep": 450,
+          "dseg": 0.025912814463178318,
+          "ce": 0.07383611053228378
+        },
+        {
+          "ep": 500,
+          "dseg": 0.0244138502360632,
+          "ce": 0.0777541771531105
+        },
+        {
+          "ep": 550,
+          "dseg": 0.023226419929414988,
+          "ce": 0.06114039942622185
+        },
+        {
+          "ep": 600,
+          "dseg": 0.022155761641139787,
+          "ce": 0.06778080016374588
+        },
+        {
+          "ep": 650,
+          "dseg": 0.021012836135923862,
+          "ce": 0.05372827127575874
+        },
+        {
+          "ep": 700,
+          "dseg": 0.02001635233561198,
+          "ce": 0.06110496446490288
+        },
+        {
+          "ep": 750,
+          "dseg": 0.019202762205774587,
+          "ce": 0.05031633749604225
+        },
+        {
+          "ep": 800,
+          "dseg": 0.018610424362123013,
+          "ce": 0.05763305723667145
+        },
+        {
+          "ep": 850,
+          "dseg": 0.018198861042037606,
+          "ce": 0.048422083258628845
+        },
+        {
+          "ep": 900,
+          "dseg": 0.017842822630579274,
+          "ce": 0.0554904043674469
+        },
+        {
+          "ep": 950,
+          "dseg": 0.0175420973294725,
+          "ce": 0.047519657760858536
+        },
+        {
+          "ep": 1000,
+          "dseg": 0.017349243086452287,
+          "ce": 0.05428041145205498
+        },
+        {
+          "ep": 1050,
+          "dseg": 0.01719050935935229,
+          "ce": 0.04702294245362282
+        },
+        {
+          "ep": 1100,
+          "dseg": 0.017061233520507812,
+          "ce": 0.05377085134387016
+        },
+        {
+          "ep": 1150,
+          "dseg": 0.01698070108735313,
+          "ce": 0.04682806506752968
+        },
+        {
+          "ep": 1199,
+          "dseg": 0.016893598871926468,
+          "ce": 0.07520695775747299
+        }
+      ],
+      "best_dseg_subset": 0.016893598871926468,
+      "stretched_exp_fit": {
+        "a": 0.5065267384052277,
+        "tau": 200,
+        "beta": 0.86,
+        "c": 0.0,
+        "asymptote": 0.0,
+        "sse": 0.09500291103842151
+      },
+      "projected_floor": 0.0,
+      "early_falsified": false,
+      "elapsed_s": 443.0,
+      "best_shadow_available": true,
+      "best_shadow_path": "experiments/results/factored_lf_core_capacity_gate/lf_core_bc12_best_shadow.pt"
+    }
+  },
+  "best_lf_core_dseg_subset": 0.016893598871926468,
+  "best_projected_floor": 0.0,
+  "S_projection_rows": [
+    {
+      "core": "bc12",
+      "lf_core_dseg_subset": 0.016893598871926468,
+      "projected_floor": 0.0,
+      "b_lf": 39014.10816257978,
+      "b_hf_int4_model": 22427.999999999996,
+      "b_total_model": 61442.10816257978,
+      "rate_total_model": 0.04091177781875459,
+      "S_projected": 1.7885811839598544,
+      "early_falsified": false
+    },
+    {
+      "core": "bc8",
+      "lf_core_dseg_subset": 0.025843090765799086,
+      "projected_floor": 0.0,
+      "b_lf": 21437.473007342003,
+      "b_hf_int4_model": 22427.999999999996,
+      "b_total_model": 43865.473007342,
+      "rate_total_model": 0.029208217934877607,
+      "S_projected": 2.6718268134632397,
+      "early_falsified": false
+    }
+  ],
+  "best_S_projected": {
+    "core": "bc12",
+    "lf_core_dseg_subset": 0.016893598871926468,
+    "projected_floor": 0.0,
+    "b_lf": 39014.10816257978,
+    "b_hf_int4_model": 22427.999999999996,
+    "b_total_model": 61442.10816257978,
+    "rate_total_model": 0.04091177781875459,
+    "S_projected": 1.7885811839598544,
+    "early_falsified": false
+  },
+  "verdict": "GREEN_TENTATIVE_PROJECTED_FLOOR_BELOW_WALL"
+}

@@ -1,0 +1,102 @@
+{
+  "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "task": "#221 fine-tune-path opener: render-side d_seg sizing of the l7-best level-set witness WITHOUT retraining",
+  "n_pairs": 600,
+  "checkpoint": "experiments/results/levelset_n600_v2_attrclean_20260630T194549Z/levelset_witness_ema_BEST.npz",
+  "checkpoint_epoch": 650,
+  "render_grid": [
+    384,
+    512
+  ],
+  "supersample_factor": 2,
+  "R_path": "experiments/train_witness_realized_through_R_mlx.py::_torch_R_to_camera_uint8 (render-grid float RGB -> torch bicubic^ to 874x1164 -> round/clamp/uint8), then SegNet.preprocess_input (contest bilinear 874->384x512) -> argmax; counted vs GT lstars. Render REUSES tac.local_acceleration.torch_levelset_inflate primitives.",
+  "conditions": {
+    "c1_default": "witness rendered as-is at 384x512",
+    "c2_aa": "witness field supersampled 2x -> area/box-down to 384x512 -> R (AA)",
+    "c3_lane": "witness bulk + analytic openpilot AA-SDF lane band (build_structured_lane_sdf, GT-fit BEV) composited as class-1 render-time authority; lane appearance = witness's own per-pixel sigmoid(palette[1]+tex)*255 (NOT flat)",
+    "c4_aa_lane": "c2 AA + c3 analytic lane"
+  },
+  "d_seg": {
+    "c1_default": {
+      "mean": 0.0033304680718315976,
+      "median": 0.0032297770182291665,
+      "p90": 0.004120381673177084,
+      "max": 0.006434122721354167,
+      "n": 600
+    },
+    "c2_aa": {
+      "mean": 0.00495880126953125,
+      "median": 0.004793802897135416,
+      "p90": 0.006195068359375002,
+      "max": 0.009526570638020834,
+      "n": 600
+    },
+    "c3_lane": {
+      "mean": 0.004149373372395833,
+      "median": 0.003992716471354167,
+      "p90": 0.0052581787109375,
+      "max": 0.00811767578125,
+      "n": 600
+    },
+    "c4_aa_lane": {
+      "mean": 0.005462222629123263,
+      "median": 0.005259195963541667,
+      "p90": 0.006933085123697917,
+      "max": 0.010793050130208334,
+      "n": 600
+    }
+  },
+  "lane_recall": {
+    "c1_default": 0.7579878468394812,
+    "c2_aa": 0.6563940820377817,
+    "c3_lane": 0.7666735441752013,
+    "c4_aa_lane": 0.701000063302666
+  },
+  "lane_fn_frac": {
+    "c1_default": 0.0013587866889105903,
+    "c2_aa": 0.0019359419080946182,
+    "c3_lane": 0.0013225809733072916,
+    "c4_aa_lane": 0.0016943105061848957
+  },
+  "lane_fp_frac": {
+    "c1_default": 0.0006022135416666667,
+    "c2_aa": 0.0007979922824435764,
+    "c3_lane": 0.0011537848578559028,
+    "c4_aa_lane": 0.0013056098090277778
+  },
+  "delta_vs_default": {
+    "c1_default": 0.0,
+    "c2_aa": 0.0016283331976996527,
+    "c3_lane": 0.0008189053005642358,
+    "c4_aa_lane": 0.0021317545572916655
+  },
+  "analytic_band_fit": {
+    "band_vs_gt_lane_recall_mean": 0.6390034471949857,
+    "n_lines_mean": 4.945,
+    "note": "band_vs_gt_lane_recall = fraction of GT class-1 pixels inside the analytic band; the complement + band false-positives (dash-gap leakage) drive c3/c4 d_seg."
+  },
+  "witness_training_floor_ref": {
+    "best_measured": 0.004445,
+    "current_n600_ep175": 0.006265,
+    "l7_best_this_ckpt_reported": 0.004048,
+    "islands_target": 0.001
+  },
+  "sanity": {
+    "c1_default_mean_d_seg": 0.0033304680718315976,
+    "note": "SANITY: c1 must reproduce the trained ~0.004 realized d_seg."
+  },
+  "VERDICT": {
+    "headline": "ZERO of the d_seg gap is render-side-reachable POST-HOC. All 3 render-side levers HURT d_seg on the l7-best ckpt (n600): AA +0.00163 (+49%), analytic-lane +0.00082 (+25%), both +0.00213 (+64%).",
+    "mechanism_aa": "Box-filtering the witness OWN sharp synthetic palette edges blurs thin lane markings -> SegNet erases MORE lanes (lane_recall 0.758->0.656, lane_fn 0.00136->0.00194). AA recovers UNDERSAMPLED real detail; it degrades OVERSAMPLED synthetic renders.",
+    "mechanism_lane": "The analytic band adds net FALSE-POSITIVE lane pixels (lane_fp 0.00060->0.00115, ~2x) from dash-gap leakage + fit error (band-vs-GT-lane recall only 0.639) that outweigh the tiny recall gain (0.758->0.767). Matches FEED-dj dash-gap-FP finding.",
+    "root_cause": "The witness OVERFIT its EXACT render pipeline (point-sample @384 -> contest R). Any post-hoc render change (AA / composite) moves OFF the training distribution -> d_seg rises.",
+    "implication_221": "The 0.0033->0.001 islands gap requires RETRAINING that changes the learned field, NOT a cheap post-hoc render-side patch. Fine-tune-FIRST is favored (0.0033 is a strong init) BUT the render-side levers (AA / analytic-lane) must be trained INTO the render+loss jointly (fine-tune with the new render ACTIVE), never bolted on post-hoc. This is the -render-side levers need the boundaries re-adapted- branch.",
+    "sanity": "c1=0.00333 = byte-closeable deployment render (self-checked byte-identical to decode_levelset_torch). ~0.0007 below the trainer in-loop best 0.004024 (levelset_best.json) = the documented self-orient fixed-point reconstruction gap (close-but-not-bit-identical), not a bug. Correct ~0.003-0.004 regime.",
+    "caveats": [
+      "macOS-CPU advisory NON-PROMOTABLE (pointer cannot move)",
+      "analytic band fit imperfect (band-vs-GT-lane recall 0.639, ~4.9 lines/frame) -> dash-gate-tuned or uncertainty-masked band might do better but the naive form HURTS",
+      "AA S=2; larger S smooths more (worse here)",
+      "c3/c4 lane appearance = witness OWN per-pixel sigmoid(palette[1]+tex) (byte-free, NOT flat); a GT-bright appearance ceiling unmeasured but band-geometry FP would still cap it"
+    ]
+  }
+}

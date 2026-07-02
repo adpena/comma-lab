@@ -1,0 +1,203 @@
+{
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "converged_archive": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/best/best_archive.bin",
+  "converged_meta": {
+    "base_channels": 20,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 600
+  },
+  "converged_slice1_refit": {
+    "baseline_d_pose": 9.541719434006761e-05,
+    "baseline_d_seg": 0.002468321161965529,
+    "baseline_distortion_score": 0.27772178993067764,
+    "full_kit_delta_vs_base": -0.0030633169486410927,
+    "full_kit_distortion_score": 0.27465847298203655,
+    "n_pairs": 24,
+    "pr98_refit": {
+      "best_bias_frame_channel": [
+        [
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "canonical_pr98_measured": {
+        "bias_frame_channel": [
+          [
+            1.0,
+            0.0,
+            1.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "d_pose": 0.00010746277500099193,
+        "d_seg": 0.0024784935327867665,
+        "distortion_score": 0.2806308686495365
+      },
+      "fit_d_pose": 8.063451847798812e-05,
+      "fit_d_seg": 0.002468321161965529,
+      "fit_distortion_score": 0.2752283339866017,
+      "pr98_delta_vs_base": -0.002493455944075962
+    },
+    "t10_affine": {
+      "affine_d_pose": 8.137170273888235e-05,
+      "affine_d_seg": 0.0024613274727016687,
+      "affine_delta_vs_pr98": -0.0005698610045651309,
+      "affine_distortion_score": 0.27465847298203655,
+      "best_bias_frame_channel": [
+        [
+          2.254096832275392,
+          1.0036308288574227,
+          -1.500774383544924
+        ],
+        [
+          0.9859508514404306,
+          0.0,
+          1.479215698242189
+        ]
+      ],
+      "best_scale_frame_channel": [
+        [
+          1.01,
+          1.01,
+          0.98
+        ],
+        [
+          1.01,
+          1.0,
+          1.01
+        ]
+      ]
+    }
+  },
+  "converged_slice2_refit": {
+    "baseline_d_pose": 9.10269651891819e-05,
+    "baseline_d_seg": 0.002465460061406096,
+    "baseline_distortion_score": 0.27671668150414463,
+    "full_kit_delta_vs_base": -0.0027656392608326197,
+    "full_kit_distortion_score": 0.273951042243312,
+    "n_pairs": 48,
+    "pr98_refit": {
+      "best_bias_frame_channel": [
+        [
+          1.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "canonical_pr98_measured": {
+        "bias_frame_channel": [
+          [
+            1.0,
+            0.0,
+            1.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "d_pose": 0.00010250890773022547,
+        "d_seg": 0.002474572897578279,
+        "distortion_score": 0.2794743020685082
+      },
+      "fit_d_pose": 7.592103308221947e-05,
+      "fit_d_seg": 0.002465460061406096,
+      "fit_distortion_score": 0.27409977776669003,
+      "pr98_delta_vs_base": -0.002616903737454601
+    },
+    "t10_affine": {
+      "affine_d_pose": 7.72090121851458e-05,
+      "affine_d_seg": 0.0024616453253353634,
+      "affine_delta_vs_pr98": -0.00014873552337801854,
+      "affine_distortion_score": 0.273951042243312,
+      "best_bias_frame_channel": [
+        [
+          1.0,
+          0.0,
+          -1.5008898925781273
+        ],
+        [
+          0.9861981964111337,
+          0.0,
+          0.0
+        ]
+      ],
+      "best_scale_frame_channel": [
+        [
+          1.0,
+          1.0,
+          0.98
+        ],
+        [
+          1.01,
+          1.0,
+          1.0
+        ]
+      ]
+    }
+  },
+  "cross_slice_transfer_s1_to_s2": {
+    "applied_full_kit": {
+      "d_pose": 7.738977243813376e-05,
+      "d_seg": 0.0024644004103417196,
+      "distortion_score": 0.27425905834933495,
+      "full_kit_delta_vs_base": -0.002457623154809685
+    },
+    "applied_pr98": {
+      "d_pose": 7.592103308221947e-05,
+      "d_seg": 0.002465460061406096,
+      "distortion_score": 0.27409977776669003,
+      "pr98_delta_vs_base": -0.002616903737454601
+    },
+    "baseline_d_pose": 9.10269651891819e-05,
+    "baseline_d_seg": 0.002465460061406096,
+    "baseline_distortion_score": 0.27671668150414463,
+    "full_kit_delta_vs_base": -0.002457623154809685,
+    "full_kit_distortion_score": 0.27425905834933495,
+    "n_pairs": 48
+  },
+  "elapsed_seconds": 5570.0,
+  "mid_basin_n24_reference": {
+    "baseline_d_pose": 0.001478,
+    "baseline_d_seg": 0.003532,
+    "baseline_distortion_score": 0.47479,
+    "full_kit_delta": -0.058,
+    "full_kit_distortion_score": 0.41677,
+    "note": "from track_a_distortion_finishing_kit_20260612T220727Z.md (ep340 fork-point)",
+    "pr98_delta": -0.047981,
+    "pr98_distortion_score": 0.42681
+  },
+  "n_primary": 24,
+  "n_secondary": 48,
+  "verdict": {
+    "converged_mean_full_kit_delta": -0.002914478104736856,
+    "converged_slice1_full_kit_delta": -0.0030633169486410927,
+    "converged_slice2_full_kit_delta": -0.0027656392608326197,
+    "converged_transfer_full_kit_delta": -0.002457623154809685,
+    "interpretation": "PERSISTS -> real uint8-round-trip / color-balance artifact the converged decoder did NOT learn away (like PR101's shipped PR98); BANK as a convergence-robust candidate. SHRINKS -> the gain was an under-training artifact (the converged decoder already learned the color balance); do NOT bank \u2014 it is a mid-basin mirage.",
+    "mid_basin_n24_full_kit_delta": -0.058,
+    "retained_fraction_vs_mid_basin": 0.05024962249546303,
+    "sign_consistent_across_slices_and_transfer": true,
+    "verdict": "SHRINKS"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE",
+  "promotion_claim": false,
+  "score_axis": "contest-CPU-advisory",
+  "ckpt_dir": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/best",
+  "video_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv",
+  "rate_denominator_bytes": 37545489,
+  "n_pairs_total": 600,
+  "eval_pairs": 8,
+  "latent_dim": 28,
+  "base_channels": 20,
+  "taper_channels": null,
+  "pose_film_version": null,
+  "pose_film_hidden": null,
+  "decoder_params": 83356,
+  "archive_bin_bytes": 89136,
+  "archive_zip_bytes": 89274,
+  "zip_container_overhead_bytes": 138,
+  "section_byte_breakdown": {
+    "meta_brotli": 81,
+    "decoder_blob": 73469,
+    "latents_brotli": 15574,
+    "length_prefixes": 12,
+    "consumed": 89136,
+    "trailing": 0
+  },
+  "runtime_files": [
+    "inflate.py",
+    "inflate.sh",
+    "README.md",
+    "src/"
+  ],
+  "parseback_parity": {
+    "build_deterministic": true,
+    "weights_fixed_point": true,
+    "latents_fixed_point": true,
+    "keys_match": true,
+    "meta_roundtrip_base_channels": 20,
+    "parity_ok": true
+  },
+  "d_seg": 0.0024401347618550062,
+  "d_pose": 0.00010179582022828981,
+  "rate": 0.002377755687241149,
+  "seg_term": 0.24401347618550062,
+  "pose_term": 0.03190545726490843,
+  "rate_term": 0.059443892181028725,
+  "score_S": 0.3353628256314378,
+  "rate_bin": 0.0023740801458199145,
+  "score_S_from_bin_bytes": 0.33527093709590694,
+  "archive_zip_sha256": "0320297a89fb90d67d95f858d84a4444c19c2d451ea6e1800c17d8d2911d7e76",
+  "packet_dir": "/Users/adpena/Projects/pact/experiments/results/e2e_byte_close_packet_20260618T012144Z",
+  "checkpoint_recorded_advisory": {
+    "d_seg": 0.002600919948890805,
+    "d_pose": 0.00034168662969022987,
+    "score": 0.377897965875575,
+    "archive_bytes": 89136
+  }
+}

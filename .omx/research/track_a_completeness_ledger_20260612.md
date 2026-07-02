@@ -79,47 +79,55 @@ advisory number exists · `UNBUILT` not started.
   decoder learns coarse-grid robustness and RECOVERS the distortion). Path (b) folds into a
   distortion-arm QAT stage — it is NOT a standalone bolt-on. Then: recursive review (3 clean) +
   MEASURE deployed net on a real base_ch20 archive.
-- **HONEST VALUE (UPGRADED — Partner B math-optimal waterfill, commit 57be37a2c): the path-(a)
-  math-optimal KKT/convex-hull allocation MEASURED `NET_POSITIVE_AT_$0` = −0.0052 to −0.0104 score
-  improvement on BOTH 24-pair slices, real frozen scorer, byte Δ ~−845 B surviving inflate, KKT
-  certified (convex-hull restriction, 200/200). The operator's "math-optimal may be net positive"
-  was RIGHT. CAVEAT (apples-to-apples gate): the −0.0104/−0.0052 are small-slice (d_pose noise) —
-  Partner B is re-confirming at ≥96 pairs before banking. If it holds at scale, ITEM B is a REAL
-  rate WIN (a substantial fraction of a medal-gap) — NO retrain needed (path b unnecessary). Then:
-  driver wire-in (D2) + SEAL.**
+- **HONEST VALUE (CORRECTED — Partner B math-optimal waterfill respawn, memo
+  `track_a_itemB_math_optimal_waterfill_20260612T222125Z.md`): `NET_POSITIVE_AT_$0` AT A
+  CONSERVATIVE OPERATING POINT, but OPERATING-POINT-FRAGILE.** The KKT/convex-hull allocation banks
+  worst-slice net **−0.005213** at **−2731 deployed B** (surviving inflate) on TWO slices ([0:24] +
+  [60:84]) at n=24, real frozen scorer, `[macOS-CPU advisory]` NON-PROMOTABLE. **CORRECTION of the
+  first landing (57be37a2c):** that landing claimed the hull fix left "the run2 verdict STANDS" — the
+  respawn's run3 deployed re-measure FALSIFIES that: the hull-fixed `net_stop` OVER-SPENDS (−29614 B
+  → confirm **+0.044**, REGRESSES). The RD table is fit on the primary slice, so `net_stop` chases
+  the RD-table optimum past what generalizes. **The win is real ONLY at a conservative `byte_target`
+  (NOT `net_stop`).** Operator's "math-optimal may be net positive" was RIGHT at the conservative
+  point. The larger-slice (≥42) confirmation was CONTENTION-BLOCKED (OOM under load≈40 / 97%-swap;
+  honest, reactivation noted) — but the conservative-win / aggressive-regress verdict is established
+  at n=24 on two slices and is the bankable result. NEXT: driver wire-in (D2) at the conservative
+  `byte_target` (default-OFF byte-identical) + dual CPU/CUDA 600-pair exact eval for promotion.**
 
-## ITEM C — L3 distortion finishing-kit (PR98 color-bias / T10 boundary / S12 null-preimage / Lever-D margin-residual)
-- **State (LANDED 2026-06-12 by partner ae43ac8d; commits de6cf6597 / c1a331376 / 38f748bf7;
-  memo `.omx/research/track_a_distortion_finishing_kit_20260612T220727Z.md`):** built, wired
-  default-OFF byte-identical (`cfg.distortion_kit=None`), 27 tests green, pure-numpy postproc AFTER
-  the pristine vendored inflate.py. MEASURED (n=24, real scorer, MID-BASIN ep340 fork-point,
-  `[contest-CPU advisory]`):
-  - **PR98 re-fit** bias `[[+1,+1,+1],[−1,−1,−1]]` → distortion-score −0.048, **POSE-axis** (d_pose
-    −64%, d_seg flat). KEY: PR101's canonical constants do NOT transfer (worse than zero) — re-fit
-    mandatory.
-  - **T10** small per-channel affine → −0.010 more (pose-axis). Full kit PR98+T10 = **−0.058
-    distortion-score** (0 bytes).
+## ITEM C — L3 distortion finishing-kit (PR98 residual / T10 refit search / S12 null-preimage / Lever-D margin-residual)
+- **State (REFIT 2026-06-13 by Codex lane
+  `lane_track_a_finishing_kit_converged_residual_20260613`):** built, wired
+  default-OFF byte-identical (`cfg.distortion_kit=None`), pure-numpy postproc AFTER the pristine
+  vendored inflate.py. **CORRECTED:** the old mid-basin ep340 PR98+T10 `-0.058` headline is
+  superseded and must not be banked. The converged ep2120 audit artifacts
+  `.omx/research/finishing_kit_convergence_revalidation_RESULT.json` and
+  `.omx/research/finishing_kit_production_path_verify_RESULT.json` show:
+  - **Banked residual only:** PR98 bias `[[+1,0,+1],[0,0,0]]` (frame0 R/B only), with
+    camera-float deltas `-0.002493` / `-0.002617` and production-path n=24 delta `-0.002496`
+    `[contest-CPU advisory]` NON-PROMOTABLE. This is now exposed as
+    `DistortionKitConfig.from_converged_residual_pr98()` and selected by
+    `experiments/select_finishing_kit_converged_residual.py`.
+  - **T10 affine NOT banked by default:** same-slice affine still helps (`-0.003063` / `-0.002766`;
+    production n=24 `-0.002793`) but slice1->slice2 transfer is weaker than PR98-only
+    (`-0.002458` vs `-0.002617`). Keep affine as a future final-decoder refit/search path, not a
+    default assumption.
+  - **Canonical/mid-basin PR98 rejected:** canonical frame1-G bias regresses on the converged
+    decoder (`+0.002909` in `finishing_kit_converged_fast_check.json`); the old ep340 fitted bias
+    is a dead under-training assumption.
   - **S12** invisibility mask certified-exact (residual 0.0, d_seg/d_pose bit-identical) but NO byte
     lever on a render base (stores decoder+latents, not frames).
   - **LeverD NO-GO at convergence** (the probe's "GO" is a MID-BASIN artifact crediting the
-    un-converged 0.35 seg term — reproduces the witness flip-count crux). d_seg win belongs IN
-    TRAINING (Lever-5), not a stored sidecar. Kit ships no seg-repair section.
+    un-converged 0.35 seg term; d_seg win belongs IN TRAINING via Lever-5, not a stored sidecar).
 - **`[CORE]`** decoded-frame postproc + real scorer — agnostic. **`[ADAPTER]`** a fixed 54-B section
   appended post-render; numpy-portable inflate unchanged.
-- **GATE TO SEAL — TWO open risks, both UNDER-POWERED (the operator's lens):** (1) C ran NO formal
-  3-clean recursive review (spawned pre-directive) → needs it; (2) PR98/T10 are n=24 MID-BASIN
-  pose-axis wins — the SAME operating-point risk that flipped LeverD: the converged decoder (trained
-  against the real scorer) may have ALREADY learned the color balance (→ win shrinks to ~0, an
-  under-training artifact) OR the win persists as a uint8-round-trip artifact (PR101 shipped PR98 on
-  a converged decoder). DECISIVE $0 TEST: apply the kit to the basin ep2236 best (d_pose 0.00034, far
-  more converged) and see if the PR98/T10 gain shrinks-with-convergence or persists. Until resolved,
-  the kit is a CONVERGENCE-GATED candidate, NOT a banked win.
-- **HONEST VALUE (RESOLVED — under-power audit, commit 665dbbef1): the −0.058 COLLAPSES 19× to
-  −0.003 on the converged ep2120 decoder (5.3% retained, 3 agreeing probes) — it was a pose-axis
-  correction of the UNDER-TRAINED decoder; the converged decoder already learned the color balance.
-  PR98/T10 = under-training artifact (NOT a persistent win); the existing pose loss already handles
-  it (so #113 color-offset penalty is NOT needed). Bank ONLY the ~−0.003 residual, RE-FIT on the
-  FINAL n=600 converged decoder. Kit stays WIRED (engineering sound, default byte-identical).**
+- **GATE TO SEAL:** residual-only kit is wired and default-off, but still advisory. Before SEAL:
+  (1) run the selector on the final n=600 converged decoder refit artifact; (2) run byte-closed
+  same-runtime CPU/CUDA exact replay; (3) pass recursive review. **#113 color-offset training
+  penalty is CLOSED / not fired** because the converged decoder already learned the large color
+  balance correction; only the post-round residual survives.
+- **HONEST VALUE:** bank ONLY the conservative residual advisory delta `-0.002493` until final
+  n=600 refit. The `-0.058` mid-basin value, canonical PR98 transfer, and default T10 affine
+  assumption are dead.
 
 ## ITEM D — L3 rate recodes
 - **D1 — T1 cross-pair latent dedup:** **BUILT + SEALED — MEASURED HONEST NEGATIVE on the
@@ -196,12 +204,12 @@ owner + a firing condition. Track-A is HIGH; Track-B is tracked-but-deprioritize
 | # | Item | Layer | Owner | Status | Firing condition / next |
 |---|---|---|---|---|---|
 | #100 | L2 lever SEAL (R9/R10/R11) | L2 levers 1–5 | Partner A (a744a06f8) | RUNNING | 3 clean → SEAL |
-| #104 | Variable codec — math-optimal waterfill (is it net-positive at $0?) | L2 rate | Partner B (a1e690f6) | RUNNING | NET_POSITIVE → wire-in; else → #111 |
+| #104 | Variable codec — math-optimal waterfill (is it net-positive at $0?) | L2 rate | Partner B (a1e690f6) | NET_POSITIVE_AT_CONSERVATIVE_OP (SEALED, advisory) | banked worst-slice −0.0052 @ −2731 B (2 slices, n=24); `net_stop` over-spends → wire-in at conservative `byte_target` (D2); larger-slice ≥42 confirm = reactivation (OOM-blocked under load≈40) |
 | #111 | Variable-grid QAT (train decoder at deployed grid) | L2/L3 rate | — | QUEUED (blocked-by #104) | fires if #104 ≠ net-positive |
-| #105 | Finishing-kit (PR98/T10/S12/LeverD) LANDED | L3 distortion | Partner C (done) | LANDED, under re-validation | gated on #109 ep2236 verdict |
-| #109 | Under-power audit ALL findings + ep2236 finishing-kit re-validation | meta | Partner under-power (acd38e069) | RUNNING | verdict → fires #113, confirms #105 |
+| #105 | Finishing-kit (PR98/T10/S12/LeverD) LANDED | L3 distortion | Partner C + Codex residual refit | RESIDUAL_ONLY_WIRED (advisory) | final n=600 refit + CPU/CUDA exact replay + review |
+| #109 | Under-power audit ALL findings + ep2236 finishing-kit re-validation | meta | Partner under-power (acd38e069) | RESOLVED_SHRINKS | mid-basin PR98/T10 demoted; #113 closed |
 | #112 | Lever-D nuanced (survival-robust selective + full-stack economics) | L3 distortion | Partner Lever-D (aacd61e6) | RUNNING | emits flip set → fires #114 |
-| #113 | Color-offset training penalty (PR98/T10 fold-in) | L3 distortion | — | QUEUED (blocked-by #109) | fires if PR98/T10 SHRINKS at convergence |
+| #113 | Color-offset training penalty (PR98/T10 fold-in) | L3 distortion | — | CLOSED_NOT_NEEDED | converged decoder already learned large color balance; keep post-round residual only |
 | #114 | Boundary-flip → Lever-5 feed (fix flips in training, 0 bytes) | L2 lever-5 | — | QUEUED (blocked-by #112) | fires on #112 survival-robust flip set |
 | #110 | NOVEL latent-structure-inducing regularizer (unlocks D1 + Cool-Chic-AR) | L1/L2 latents | — | QUEUED (next slot) | $0 design now; ablation wants arm converged |
 | #106 | D1 latent dedup SEALED (honest 0-B negative, auto-fires on structure) | L3 rate | done | SEALED | reactivates via #110 (induced structure) |

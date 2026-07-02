@@ -1,0 +1,53 @@
+{
+  "schema": "batch_saturation_throughput.v1",
+  "authority": "[advisory] throughput-only NON-PROMOTABLE",
+  "base_channels": 36,
+  "n_pairs": 600,
+  "budget": 30,
+  "results": [
+    {
+      "batch_size": 64,
+      "rc": 0,
+      "oom": false,
+      "wall_s": 419.2,
+      "n_epochs": 31,
+      "s_per_ep": 13.429,
+      "steps_per_epoch": 10,
+      "last_d_seg": null,
+      "stderr_tail": ""
+    },
+    {
+      "batch_size": 150,
+      "rc": -9,
+      "oom": false,
+      "wall_s": 1697.4,
+      "n_epochs": null,
+      "s_per_ep": null,
+      "steps_per_epoch": 4,
+      "last_d_seg": null,
+      "stderr_tail": ""
+    },
+    {
+      "batch_size": 300,
+      "rc": -9,
+      "oom": false,
+      "wall_s": 32.6,
+      "n_epochs": null,
+      "s_per_ep": null,
+      "steps_per_epoch": 2,
+      "last_d_seg": null,
+      "stderr_tail": ""
+    },
+    {
+      "batch_size": 600,
+      "rc": -9,
+      "oom": false,
+      "wall_s": 45.9,
+      "n_epochs": null,
+      "s_per_ep": null,
+      "steps_per_epoch": 1,
+      "last_d_seg": null,
+      "stderr_tail": ""
+    }
+  ]
+}

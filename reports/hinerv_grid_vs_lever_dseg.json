@@ -1,0 +1,81 @@
+{
+  "n_pairs": 16,
+  "epochs": 400,
+  "lr": 0.002,
+  "seg_weight": 100.0,
+  "pose_weight": 1.0,
+  "margin_tau": 2.0,
+  "seed": 0,
+  "arms": [
+    {
+      "name": "L0_hnerv_plain",
+      "family": "hnerv",
+      "grid_on": false,
+      "margin_lever": false,
+      "decoder_param_bytes_fp16": 166712,
+      "decoder_params": 83356,
+      "d_seg": 0.008637109771370888,
+      "d_pose": 0.00014265318168327212,
+      "forward_sane": true,
+      "d_seg_trace": []
+    },
+    {
+      "name": "L_hnerv_lever",
+      "family": "hnerv",
+      "grid_on": false,
+      "margin_lever": true,
+      "decoder_param_bytes_fp16": 166712,
+      "decoder_params": 83356,
+      "d_seg": 0.02326107118278742,
+      "d_pose": 0.0001671644495218061,
+      "forward_sane": true,
+      "d_seg_trace": []
+    },
+    {
+      "name": "Hoff_hinerv_gridoff_plain",
+      "family": "hinerv",
+      "grid_on": false,
+      "margin_lever": false,
+      "decoder_param_bytes_fp16": 172804,
+      "decoder_params": 86402,
+      "d_seg": 0.5067234039306641,
+      "d_pose": 5.741916656494141,
+      "forward_sane": true,
+      "d_seg_trace": []
+    },
+    {
+      "name": "H0_hinerv_gridon_plain",
+      "family": "hinerv",
+      "grid_on": true,
+      "margin_lever": false,
+      "decoder_param_bytes_fp16": 176820,
+      "decoder_params": 88410,
+      "d_seg": 0.5067234039306641,
+      "d_pose": 5.976460695266724,
+      "forward_sane": true,
+      "d_seg_trace": []
+    },
+    {
+      "name": "H_hinerv_gridon_lever",
+      "family": "hinerv",
+      "grid_on": true,
+      "margin_lever": true,
+      "decoder_param_bytes_fp16": 176820,
+      "decoder_params": 88410,
+      "d_seg": 0.5067234039306641,
+      "d_pose": 11.420906066894531,
+      "forward_sane": true,
+      "d_seg_trace": []
+    }
+  ],
+  "d_seg_L_lever": 0.02326107118278742,
+  "d_seg_H_best": 0.5067234039306641,
+  "d_seg_H_best_arm": "H0_hinerv_gridon_plain",
+  "pct_reduction_vs_lever": -20.78418181814542,
+  "grid_intrinsic_pct_vs_hoff": 0.0,
+  "hinerv_grid_forward_sane": true,
+  "roundtrip_survived": true,
+  "threshold_pct": 0.2,
+  "verdict": "NO-GO",
+  "authority": "[contest-CPU advisory] NON-PROMOTABLE \u2014 score_claim=false, promotable=false, ready_for_exact_eval_dispatch=false. Small-n matched-byte overfit; the >=20% threshold comparison is the deliverable, the absolute magnitude is advisory. Per Catalog #307 this is an EV/build-vs-defer verdict, NOT a paradigm kill. Exact verdict requires paired CPU/CUDA upstream/evaluate.py on a byte-closed archive."
+}

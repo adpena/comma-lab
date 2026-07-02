@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Track-A DISTORTION finishing-kit — inflate-side, zero/near-zero-byte bolt-ons.
+"""Track-A DISTORTION finishing-kit -- inflate-side, zero/near-zero-byte bolt-ons.
 
 This is the polished, wired, tested realization of the Track-A distortion
 finishing-kit (the inflate-side frame postprocessing half of the bolt-on
@@ -7,17 +7,24 @@ stacking plan, ``bolton_inventory_and_stacking_plan_20260612.md``). It is applie
 to the CONVERGED distortion-arm decoder's rendered frames; it is DISJOINT from the
 weight/latent codec the rate-lever surface edits (per the scope split):
 
-  * **PR98** (L28) — decode-side per-(frame-parity, channel) constant bias that
+  * **PR98** (L28) -- decode-side per-(frame-parity, channel) constant bias that
     cancels the substrate's systematic color-space bias. ``0 archive bytes`` (the
     constants ride in a ~tens-of-bytes section). RE-FIT per base.
-  * **T10** — a richer per-(frame-parity, channel) AFFINE (scale + bias) fitted to
+  * **T10** -- a richer per-(frame-parity, channel) AFFINE (scale + bias) fitted to
     the exact ``frame_utils.yuv420_to_rgb`` CPU GT, the 2nd-order generalization of
     PR98. Same tiny section; CPU-axis fit (CUDA needs its own).
-  * **S12** — resize-null preimage. On a RENDER-based substrate (this one stores
+  * **S12** -- resize-null preimage. On a RENDER-based substrate (this one stores
     decoder+latents, NOT frames) the byte savings do NOT materialize (there is no
     stored-frame section to make compressible); the certified zero-distortion
     invisibility mask is still carried as a SAFE-PERTURB region for the in-frame
     levers. So S12 here is the certification, not a byte lever (honest scope).
+
+2026-06-13 under-power audit correction: the old mid-basin ``PR98+T10 = -0.058``
+headline was a decoder-convergence artifact. On the converged ep2120 decoder it
+shrinks to about ``-0.003`` advisory distortion-score, and the cross-slice transfer
+prefers the PR98-only residual ``[[1,0,1],[0,0,0]]`` over the same-slice T10 affine.
+Therefore the shipped default fixture is residual-only PR98; T10 remains a refit
+search capability, not a banked default assumption.
 
 Authority: this module APPLIES the kit; the FIT (the constants) is produced by the
 real-scorer probe ``experiments/probe_track_a_distortion_finishing_kit.py`` and is
@@ -39,7 +46,7 @@ Hooks per Catalog #125 6-hook wire-in declaration:
   * #1 sensitivity-map = ACTIVE (the per-(frame,channel) fit IS the measured
     color-bias sensitivity; S12 mask is the per-pixel scorer-invisibility prior).
   * #2 Pareto constraint = ACTIVE (PR98/T10 move the distortion vertex at 0 rate;
-    S12 is a rate lever ONLY on frame-carrying sections — N/A on this render base).
+    S12 is a rate lever ONLY on frame-carrying sections -- N/A on this render base).
   * #3 bit-allocator = N/A (zero/near-zero archive bytes; no bit allocation).
   * #4 cathedral autopilot = N/A (an inflate-side postproc applied at export, not a
     dispatch surface; the converged-checkpoint finishing pass is the consumer).
@@ -55,6 +62,8 @@ Cross-references:
   * ``experiments/probe_track_a_distortion_finishing_kit.py`` (the fit + measure).
   * ``bolton_inventory_and_stacking_plan_20260612.md`` (the inventory; rows PR98/T10/S12/LeverD).
   * ``witness_seg_boundary_decisive_probe_20260612.md`` (the LeverD NO-GO flip-count crux).
+  * ``.omx/research/finishing_kit_convergence_revalidation_RESULT.json`` (the
+    converged-decoder audit that demotes mid-basin PR98/T10 assumptions).
 """
 
 from __future__ import annotations
@@ -71,6 +80,15 @@ DISTORTION_SECTION_VERSION = 1
 _N_SLOTS = 6
 CAMERA_H, CAMERA_W = 874, 1164
 
+CONVERGED_RESIDUAL_PR98_BIAS: tuple[
+    tuple[float, float, float], tuple[float, float, float]
+] = ((1.0, 0.0, 1.0), (0.0, 0.0, 0.0))
+CONVERGED_RESIDUAL_PR98_PROVENANCE = (
+    "[contest-CPU advisory] NON-PROMOTABLE; 2026-06-13 converged ep2120 "
+    "under-power audit: mid-basin PR98/T10 shrank, cross-slice transfer kept "
+    "only PR98 frame0 R/B residual."
+)
+
 
 @dataclass(frozen=True)
 class DistortionKitConfig:
@@ -82,8 +100,8 @@ class DistortionKitConfig:
         x_out = scale[fr, ch] * x_in - bias[fr, ch]
 
     PR98 is the special case ``scale == 1`` (pure bias). T10 fits ``scale != 1``.
-    The DEFAULT is the IDENTITY (scale=1, bias=0) — applying it is a byte-identical
-    no-op (proven by the kit's own no-op test), so a converged checkpoint exported
+    The DEFAULT is disabled identity (scale=1, bias=0). A disabled kit serializes
+    no section bytes and applies no transform, so a converged checkpoint exported
     WITHOUT a fit is unchanged.
 
     ``enabled``: master switch. When False the kit serializes NO section and the
@@ -130,7 +148,11 @@ class DistortionKitConfig:
 
     @classmethod
     def from_pr98_bias(
-        cls, bias_frame_channel: np.ndarray, *, s12_certified: bool = False
+        cls,
+        bias_frame_channel: np.ndarray,
+        *,
+        s12_certified: bool = False,
+        provenance: str = "[contest-CPU advisory] NON-PROMOTABLE",
     ) -> DistortionKitConfig:
         """Build a PR98-only kit (scale=1) from a fitted (2,3) bias matrix."""
         b = np.asarray(bias_frame_channel, dtype=np.float64)
@@ -141,6 +163,7 @@ class DistortionKitConfig:
             scale=((1.0, 1.0, 1.0), (1.0, 1.0, 1.0)),
             bias=tuple(tuple(float(v) for v in row) for row in b),
             s12_invisibility_certified=s12_certified,
+            provenance=provenance,
         )
 
     @classmethod
@@ -150,6 +173,7 @@ class DistortionKitConfig:
         bias_frame_channel: np.ndarray,
         *,
         s12_certified: bool = False,
+        provenance: str = "[contest-CPU advisory] NON-PROMOTABLE",
     ) -> DistortionKitConfig:
         """Build a T10 affine kit from fitted (2,3) scale + bias matrices."""
         s = np.asarray(scale_frame_channel, dtype=np.float64)
@@ -161,6 +185,24 @@ class DistortionKitConfig:
             scale=tuple(tuple(float(v) for v in row) for row in s),
             bias=tuple(tuple(float(v) for v in row) for row in b),
             s12_invisibility_certified=s12_certified,
+            provenance=provenance,
+        )
+
+    @classmethod
+    def from_converged_residual_pr98(
+        cls, *, s12_certified: bool = False
+    ) -> DistortionKitConfig:
+        """Build the only residual kit that survived the converged under-power audit.
+
+        This is intentionally not the old mid-basin PR98+T10/full-affine kit. The
+        2026-06-13 converged ep2120 revalidation retained only a small PR98-only
+        residual on frame_0 red/blue; full T10 affine stays available through
+        ``from_affine`` for future final-decoder refits.
+        """
+        return cls.from_pr98_bias(
+            np.asarray(CONVERGED_RESIDUAL_PR98_BIAS, dtype=np.float64),
+            s12_certified=s12_certified,
+            provenance=CONVERGED_RESIDUAL_PR98_PROVENANCE,
         )
 
 
@@ -318,6 +360,8 @@ class LeverDVerdict:
 __all__ = [
     "CAMERA_H",
     "CAMERA_W",
+    "CONVERGED_RESIDUAL_PR98_BIAS",
+    "CONVERGED_RESIDUAL_PR98_PROVENANCE",
     "DISTORTION_SECTION_MAGIC",
     "DISTORTION_SECTION_VERSION",
     "DistortionKitConfig",

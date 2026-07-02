@@ -1,0 +1,144 @@
+{
+  "authority": "contest-CPU advisory (exact frozen-SegNet argmax cache)",
+  "n_frames_measured": 12,
+  "subsample": 1,
+  "argmaps_source": "experiments/results/indep_dseg_bets_20260623_inflated/seg_argmaps.npz",
+  "stage1_topology": {
+    "n_frames": 12,
+    "num_distinct_adjacency_graphs": 4,
+    "modal_adjacency_frac": 0.4166666666666667,
+    "modal_adjacency_graph": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "num_distinct_component_count_vectors": 10,
+    "modal_component_count_frac": 0.16666666666666666,
+    "modal_component_counts_per_class": [
+      1,
+      32,
+      1,
+      2,
+      1
+    ],
+    "component_count_mean_per_class": [
+      1.083,
+      30.333,
+      1.083,
+      2.333,
+      1.0
+    ],
+    "component_count_std_per_class": [
+      0.276,
+      3.223,
+      0.276,
+      0.624,
+      0.0
+    ],
+    "total_components_mean": 35.833333333333336,
+    "total_components_std": 3.077697552103231,
+    "euler_mean": 15.0,
+    "euler_std": 1.7320508075688772,
+    "num_distinct_full_signatures": 12,
+    "modal_full_signature_frac": 0.08333333333333333
+  },
+  "stage2_boundary_dim": {
+    "n_frames": 12,
+    "curve_dim": 1024,
+    "boundary_effective_rank_participation_ratio": 3.350963796253693,
+    "boundary_singular_values_top10": [
+      90.86,
+      50.78,
+      41.47,
+      33.3,
+      31.33,
+      23.26,
+      21.22,
+      16.64,
+      14.82,
+      12.92
+    ],
+    "boundary_top1_var_share": 0.5022740928168575,
+    "boundary_top3_var_share": 0.7637733513954879,
+    "boundary_top6_var_share": 0.9238758699981379,
+    "k_for_50pct": 1,
+    "k_for_80pct": 4,
+    "k_for_90pct": 6,
+    "k_for_95pct": 7,
+    "k_for_99pct": 10,
+    "vh_traj_mean": 285.6666666666667,
+    "vh_traj_std": 0.4714045207910316,
+    "road_class_modal": 4
+  },
+  "stage3_ego": {
+    "explained_by_horizon_proxy": {
+      "r2_overall": 0.1594243677881202,
+      "n": 12,
+      "k_regressors": 2
+    },
+    "posenet_available": true,
+    "posenet_pose_std_per_dim": [
+      0.68204,
+      0.01607,
+      0.00673,
+      0.00713,
+      0.00555,
+      0.00113
+    ],
+    "explained_by_posenet6": {
+      "r2_overall": 0.6738898682759076,
+      "n": 12,
+      "k_regressors": 6
+    },
+    "explained_by_posenet6_cumulative": {
+      "r2_overall": 0.8302483838752044,
+      "n": 12,
+      "k_regressors": 6
+    },
+    "corr_vh_vs_posenet_dims": [
+      -0.027,
+      -0.095,
+      -0.091,
+      -0.198,
+      -0.247,
+      -0.02
+    ],
+    "max_abs_corr_vh_posenet": 0.2466425681975745
+  },
+  "stage4_byte_projection": {
+    "template_bytes_once": 896,
+    "low_rank_k95": 7,
+    "low_rank_coeff_bytes_600": 127,
+    "low_rank_residual_rms_rows": 0.2552971542475361,
+    "topological_lowrank_total_bytes": 1023,
+    "lossless_template_per_frame_extrapolation_600": 10752,
+    "ref_52_lossless_524KB": 524800,
+    "ref_L13_witness_bytes": 72217,
+    "ref_frontier_bytes": 177169,
+    "break_even_dseg_per_byte": 6.658589531221714e-09,
+    "topo_lowrank_vs_L13_ratio": 0.014165639669329936,
+    "topo_lowrank_vs_frontier_ratio": 0.005774147847535404
+  },
+  "elapsed_sec": 3.266953945159912
+}

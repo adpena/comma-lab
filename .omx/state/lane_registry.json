@@ -73921,6 +73921,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_reveng_pr95_prune_capacity_rd_20260623",
+      "name": "PR95 reverse-engineer + capacity-RD prune (borrowed-substrate measurement + defensive bank)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/reverse_engineer_pr95_prune_executor.py + 7 NO-FAKE tests pass (experiments/test_reverse_engineer_pr95_prune.py); sanity gate reproduces bc36 d_seg 6.02e-4 [contest-CPU advisory]"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[contest-CPU advisory] in-process exact SegNet/PoseNet on real GT (yuv420_to_rgb): bc28+KD d_seg 0.01704 S 2.674, bc20+KD d_seg 0.02393 S 3.490; experiments/results/reveng_pr95_prune_20260623/kd_bc{28,20}.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "7 NO-FAKE behavior tests pass (inflate reproduces 229K params; prune shrinks+monotone+loads; KD frame-MSE decreases; seg-CE differentiable+decreases; score math matches upstream; render uint8 roundtrip shape)"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/reverse_engineer_pr95_prune_capacity_rd_20260623.md (commit a50c8ae90) + MEMORY topic entry"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_v2_deterministic_witness_byteclose_smoke",
+      "name": "v2 deterministic witness byte-close small-n smoke",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/v2_witness_byteclose_smoke.py + 3 real byte-closed exact-eval rows [macOS-CPU advisory]; experiments/results/v2_deterministic_byteclose_smoke_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -73930,5 +74012,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-23T15:46:23Z"
+  "updated_at": "2026-06-30T00:25:13Z"
 }

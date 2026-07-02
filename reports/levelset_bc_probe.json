@@ -1,0 +1,73 @@
+{
+  "tool": "levelset_byte_close_and_eval",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "promotion_claim": false,
+  "utc": "2026-07-01T00:52:37Z",
+  "ckpt_dir": "experiments/results/levelset_n600_v2_attrclean_20260630T194549Z",
+  "npz_name": "levelset_witness_ema_BEST.npz",
+  "n_pairs_total": 600,
+  "self_orient": {
+    "self_orient": true,
+    "curvelet_feat_width": 80,
+    "dir_w": 8,
+    "n_dir_freqs": 2,
+    "freq_across": 32.0,
+    "freq_along": 4.0,
+    "tau": 4.0,
+    "iters": 4
+  },
+  "config": {
+    "n_classes": 5,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 26,
+    "activation": "hosc",
+    "softmax_temp": 0.9488030124695292,
+    "chroma": true,
+    "render_h": 384,
+    "render_w": 512,
+    "in_feat": 88,
+    "max_bank_freq": 64.0,
+    "lane_edge_weight": 0.0
+  },
+  "byte_close": {
+    "n_params": 98519,
+    "manifest_bytes": 1891,
+    "base_int8_brotli_bytes": 55923,
+    "code_int8_brotli_bytes": 25917,
+    "pose_sidecar_bytes": 0,
+    "magic_and_prefixes_bytes": 22,
+    "total_0bin_bytes": 83753,
+    "canonical_quantize_blob_bytes": 81840,
+    "accounting_matches_canonical": true,
+    "archive_zip_bytes": 83062,
+    "zip_container_overhead_bytes": -691,
+    "rate": 0.0022123030545693517,
+    "rate_term": 0.05530757636423379,
+    "rate_denom_bytes": 37545489,
+    "archive_zip_sha256": "b8f0132cfdc4aa0ca99276ff0a67bba8f9c3f819b77f2211428d7b35d812a75c",
+    "free_vs_counted": {
+      "FREE_rule118": "curvelet bank (5 scalars) + self-orient directional feats (decoder-own-argmax fixed point) -- generic algorithm, 0 bytes",
+      "COUNTED": "in_proj/film/hidden.*/out_sdf/out_tex/palette weights + per-frame code (int8+brotli, the learned video-derived payload)"
+    },
+    "pose_sidecar": "off (level-set witness carries pose in per-(pair,frame) codes/texture; train --w-pose>0. A stored sidecar adds COUNTED bytes the scorer never reads -> does NOT lower realized d_pose)."
+  },
+  "inflate": {
+    "inflate_stdout": "inflated 4 frames (2 pairs) -> /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260701T005223Z/inflated/0.raw [4x874x1164x3 uint8]",
+    "eval_pairs": 2,
+    "n_frames_emitted": 4,
+    "raw_path": "/Users/adpena/Projects/pact/experiments/results/levelset_packet_20260701T005223Z/inflated/0.raw",
+    "raw_bytes": 12208032,
+    "expected_bytes": 12208032,
+    "full_output_shape_ok": true,
+    "frame_layout": "(4, 874, 1164, 3) uint8 [f0,f1 per pair]"
+  },
+  "parity_on_inflated_frames": {
+    "skipped": true
+  },
+  "contest_cpu_eval_cmd": ".venv/bin/python experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260701T005223Z/archive.zip --inflate-sh /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260701T005223Z/inflate.sh --device cpu  # [contest-CPU] authoritative ONLY on Linux x86_64 (Modal CPU); macOS-local = advisory",
+  "packet_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_packet_20260701T005223Z",
+  "self_orient_parity_caveat": "self-orient deploy dir feats are a FIXED-POINT on the FINAL weights; the trainer's implied_S used dir feats accumulated along the training trajectory -> close but not bit-identical; realized d_seg on the inflated frames is the TRUTH.",
+  "contest_ready_full_600": true,
+  "contest_ready_note": "n_pairs==600 -> full 1200-frame .raw, contest-ready"
+}

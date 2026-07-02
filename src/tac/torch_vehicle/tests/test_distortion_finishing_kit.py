@@ -16,9 +16,9 @@ A. **DEFAULT-OFF BYTE IDENTITY (the daemon-safety guard).** A disabled/identity
    no-op returns the SAME object AND a non-identity kit returns a DIFFERENT one.
 
 B. **THE POSTPROC ACTUALLY CHANGES THE FRAMES IN THE CLAIMED DIRECTION** (no
-   constant-checking): a PR98-style ``frame_1 G -= 1`` kit lowers ONLY the
-   frame_1 green channel and leaves frame_0 + other channels untouched; a T10
-   affine ``scale != 1`` scales the channel; the change is the EXACT
+   constant-checking): the converged residual fixture lowers ONLY frame_0 red and
+   blue by 1 and leaves frame_1 + other channels untouched; a T10 affine
+   ``scale != 1`` scales the channel; the change is the EXACT
    ``round(clip(scale*x - bias))`` the contract claims.
 
 C. **THE SECTION ROUND-TRIPS BIT-EXACTLY** and is fail-closed on corruption; the
@@ -35,6 +35,8 @@ import numpy as np
 import pytest
 
 from tac.torch_vehicle.distortion_finishing_kit import (
+    CONVERGED_RESIDUAL_PR98_BIAS,
+    CONVERGED_RESIDUAL_PR98_PROVENANCE,
     DISTORTION_SECTION_MAGIC,
     DistortionKitConfig,
     apply_distortion_kit_to_camera_float,
@@ -140,6 +142,29 @@ def test_pr98_bias_only_touches_targeted_slot():
     assert np.all(out[1, :, :, 0] == 128)
     assert np.all(out[1, :, :, 2] == 128)
     assert np.all(out[3, :, :, 1] == 127)
+
+
+def test_converged_residual_fixture_is_pr98_only_frame0_red_blue():
+    cfg = DistortionKitConfig.from_converged_residual_pr98()
+    assert cfg.enabled is True
+    assert cfg.scale == ((1.0, 1.0, 1.0), (1.0, 1.0, 1.0))
+    assert cfg.bias == CONVERGED_RESIDUAL_PR98_BIAS
+    assert "under-power audit" in cfg.provenance
+    assert cfg.provenance == CONVERGED_RESIDUAL_PR98_PROVENANCE
+
+    frames = np.full((4, 8, 8, 3), 128, dtype=np.uint8)
+    out = apply_distortion_kit_to_raw_frames(frames, cfg)
+
+    # frame_0 (even indices) red/blue decrease by 1; green remains unchanged.
+    assert np.all(out[0, :, :, 0] == 127)
+    assert np.all(out[0, :, :, 1] == 128)
+    assert np.all(out[0, :, :, 2] == 127)
+    assert np.all(out[2, :, :, 0] == 127)
+    assert np.all(out[2, :, :, 2] == 127)
+
+    # frame_1 (odd indices) is not part of the residual survivor.
+    assert np.array_equal(out[1], frames[1])
+    assert np.array_equal(out[3], frames[3])
 
 
 def test_affine_scale_applies_round_clip_contract():
@@ -289,13 +314,13 @@ def test_full_inflate_chain_with_kit(tmp_path, enabled):
         meta_dict={"n_pairs": n_pairs, "latent_dim": 28, "base_channels": 8, "eval_size": [384, 512]},
     )
 
-    # Build the kit: enabled -> a PR98-style frame_1 G -1; disabled -> byte-identical.
-    if enabled:
-        bias = np.zeros((2, 3))
-        bias[1, 1] = 1.0
-        cfg = DistortionKitConfig.from_pr98_bias(bias)
-    else:
-        cfg = DistortionKitConfig(enabled=False)
+    # Build the kit: enabled -> converged residual PR98 frame_0 R/B -1;
+    # disabled -> byte-identical.
+    cfg = (
+        DistortionKitConfig.from_converged_residual_pr98()
+        if enabled
+        else DistortionKitConfig(enabled=False)
+    )
 
     finished = finish_checkpoint_with_distortion_kit(base_arch, cfg)["finished_archive"]
     if not enabled:
@@ -320,10 +345,11 @@ def test_full_inflate_chain_with_kit(tmp_path, enabled):
     if not enabled:
         assert finished_raw is raw  # disabled -> the raw frames pass through unchanged
     else:
-        # frame_1 (odd indices) green decreased; frame_0 (even) unchanged.
+        # frame_0 (even indices) red/blue decreased; frame_1 (odd) unchanged.
         assert not np.array_equal(finished_raw, raw)
-        assert np.array_equal(finished_raw[0], raw[0])  # frame_0 untouched
-        # frame_1 green is raw_green - 1 (clipped at 0)
-        expected_g = np.clip(raw[1, :, :, 1].astype(int) - 1, 0, 255).astype(np.uint8)
-        assert np.array_equal(finished_raw[1, :, :, 1], expected_g)
-        assert np.array_equal(finished_raw[1, :, :, 0], raw[1, :, :, 0])  # R untouched
+        expected_r = np.clip(raw[0, :, :, 0].astype(int) - 1, 0, 255).astype(np.uint8)
+        expected_b = np.clip(raw[0, :, :, 2].astype(int) - 1, 0, 255).astype(np.uint8)
+        assert np.array_equal(finished_raw[0, :, :, 0], expected_r)
+        assert np.array_equal(finished_raw[0, :, :, 1], raw[0, :, :, 1])
+        assert np.array_equal(finished_raw[0, :, :, 2], expected_b)
+        assert np.array_equal(finished_raw[1], raw[1])

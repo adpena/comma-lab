@@ -202,13 +202,65 @@ def write_lowering_race_report(report: Mapping[str, Any], output_dir: str | Path
     out_dir.mkdir(parents=True, exist_ok=True)
     report_path = out_dir / "evaluator_action_lowering_race_report.json"
     verdict_path = out_dir / "lowering_verdict.json"
+    next_blocker_path = out_dir / "next_blocker.md"
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     verdict = report.get("verdict") if isinstance(report.get("verdict"), Mapping) else {}
     verdict_path.write_text(json.dumps(verdict, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    next_blocker_path.write_text(_next_blocker_markdown(report), encoding="utf-8")
     return {
         "report_path": report_path.as_posix(),
         "verdict_path": verdict_path.as_posix(),
+        "next_blocker_path": next_blocker_path.as_posix(),
     }
+
+
+def _next_blocker_markdown(report: Mapping[str, Any]) -> str:
+    verdict = report.get("verdict") if isinstance(report.get("verdict"), Mapping) else {}
+    support_summary = (
+        report.get("support_codec_summary")
+        if isinstance(report.get("support_codec_summary"), Mapping)
+        else {}
+    )
+    support_rows = (
+        support_summary.get("reports")
+        if isinstance(support_summary.get("reports"), Sequence)
+        else []
+    )
+    selected_support = next((row for row in support_rows if isinstance(row, Mapping)), {})
+    candidates = (
+        report.get("lowering_candidates")
+        if isinstance(report.get("lowering_candidates"), Sequence)
+        else []
+    )
+    selected_candidate = next((row for row in candidates if isinstance(row, Mapping)), {})
+    lines = [
+        "# Evaluator Action Lowering Next Blocker",
+        "",
+        f"- action_id: `{verdict.get('action_id')}`",
+        f"- selected_support_encoding: `{selected_support.get('selected_support_encoding')}`",
+        f"- best_lowering: `{verdict.get('best_lowering')}`",
+        f"- first_failing_surface: `{verdict.get('first_failing_surface')}`",
+        f"- next_blocker: `{verdict.get('next_blocker')}`",
+        f"- parseback_survived: `{selected_candidate.get('parseback_survived')}`",
+        f"- inflate_survived: `{selected_candidate.get('inflate_survived')}`",
+        f"- promotion_eligible: `{report.get('promotion_eligible')}`",
+        f"- score_claim: `{report.get('score_claim')}`",
+        "",
+        "## Boundary",
+        "",
+        (
+            "The selected support codec has receiver-surface survival only for "
+            "the support decode path. This is not a full-frame contest score, "
+            "not a CPU/CUDA authority artifact, and not promotion authority."
+        ),
+        "",
+    ]
+    blockers = selected_candidate.get("blockers")
+    if isinstance(blockers, Sequence) and not isinstance(blockers, str | bytes):
+        lines.extend(["## Candidate Blockers", ""])
+        lines.extend(f"- `{blocker}`" for blocker in blockers)
+        lines.append("")
+    return "\n".join(lines)
 
 
 def _scorer_effect_survived_from_effect(effect: ActionEffect) -> bool:

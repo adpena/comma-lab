@@ -176,6 +176,13 @@ TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS = _env_scan_roots(
     BRIEFING_SCAN_ROOTS_ENV, TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
 )
 SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS = TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
+TRACK_A_FINISHING_KIT_SCAN_ROOTS = (
+    REPO_ROOT / ".omx" / "research",
+    REPO_ROOT / "experiments" / "results",
+)
+TRACK_A_FINISHING_KIT_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, TRACK_A_FINISHING_KIT_SCAN_ROOTS
+)
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
 FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
 FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
@@ -197,6 +204,12 @@ TENSOR_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA = "tensor_payload_grammar_consumer_result
 SECTION_PAYLOAD_GRAMMAR_REPORT_GLOB = "*section_payload*report*.json"
 SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "section_payload_grammar_optimizer.v1"
 SECTION_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA = "section_payload_grammar_consumer_result.v1"
+TRACK_A_FINISHING_KIT_SELECTION_GLOB = (
+    "finishing_kit_converged_residual_selection*.json"
+)
+TRACK_A_FINISHING_KIT_SELECTION_SCHEMA = (
+    "track_a_finishing_kit_converged_residual_selection.v1"
+)
 OPTIMAL_GRAMMAR_CAMPAIGN_REPORT_NAME = "campaign_summary.json"
 PR101_OPTIMAL_GRAMMAR_CAMPAIGN_SCHEMA = "pr101_optimal_grammar_campaign_summary.v1"
 DISTORTION_AXIS_PROBE_VERDICT_GLOB = "probe_*_verdict.json"
@@ -6209,6 +6222,182 @@ def _format_tensor_payload_grammar_summary() -> str:
     return "\n".join(lines)
 
 
+def _track_a_finishing_kit_selection_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+    *,
+    max_depth: int = 3,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = TRACK_A_FINISHING_KIT_SCAN_ROOTS
+    patterns = tuple(
+        f"{'*/' * depth}{TRACK_A_FINISHING_KIT_SELECTION_GLOB}"
+        for depth in range(max_depth + 1)
+    )
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
+        reverse=True,
+    )
+
+
+def _track_a_finishing_kit_row(path: Path) -> dict[str, object] | None:
+    payload = _load_json_file(path)
+    if payload.get("schema") != TRACK_A_FINISHING_KIT_SELECTION_SCHEMA:
+        return None
+    selected = payload.get("selected_kit")
+    if not isinstance(selected, dict):
+        selected = {}
+    decision = payload.get("decision")
+    if not isinstance(decision, dict):
+        decision = {}
+    return {
+        "path": _repo_rel(path),
+        "schema": payload.get("schema"),
+        "selection_status": str(payload.get("selection_status") or ""),
+        "authority": str(payload.get("authority") or ""),
+        "selected_kit_name": str(selected.get("name") or ""),
+        "factory": str(selected.get("factory") or ""),
+        "default_off": selected.get("default_off") is True,
+        "archive_bytes_when_off": _safe_int(selected.get("archive_bytes_when_off")),
+        "section_bytes_when_enabled": _safe_int(
+            selected.get("section_bytes_when_enabled")
+        ),
+        "banked_advisory_distortion_delta": _safe_float(
+            selected.get("banked_advisory_distortion_delta")
+        ),
+        "promotion_blocker": str(selected.get("promotion_blocker") or ""),
+        "full_affine_rejected": decision.get("full_affine_rejected") is True,
+        "retained_fraction_vs_mid_basin": _safe_float(
+            decision.get("retained_fraction_vs_mid_basin")
+        ),
+        "source_revalidation": str(payload.get("source_revalidation") or ""),
+        "source_production_verify": str(payload.get("source_production_verify") or ""),
+        "rejected_assumptions": [
+            str(item)
+            for item in payload.get("rejected_assumptions", [])
+            if isinstance(item, str)
+        ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "mtime": path.stat().st_mtime if path.exists() else 0.0,
+    }
+
+
+def _track_a_finishing_kit_next_command(summary: dict[str, object]) -> str:
+    latest = summary.get("latest_row")
+    if isinstance(latest, dict) and latest.get("selection_status") == "selected_pr98_residual_only":
+        return (
+            ".venv/bin/python experiments/probe_finishing_kit_convergence_revalidation.py "
+            "--n-primary 600 --n-secondary 600 --out "
+            ".omx/research/finishing_kit_convergence_revalidation_FINAL_N600.json "
+            "# then rerun experiments/select_finishing_kit_converged_residual.py "
+            "and byte-closed CPU/CUDA exact replay"
+        )
+    return ".venv/bin/python experiments/select_finishing_kit_converged_residual.py"
+
+
+@lru_cache(maxsize=1)
+def _track_a_finishing_kit_summary() -> dict[str, object]:
+    rows = [
+        row
+        for path in _track_a_finishing_kit_selection_paths()
+        if (row := _track_a_finishing_kit_row(path)) is not None
+    ]
+    latest = rows[0] if rows else None
+    if latest is None:
+        status = "PENDING"
+        reason = "no Track-A finishing-kit residual selection artifact found"
+    elif latest.get("selection_status") == "selected_pr98_residual_only":
+        status = "RESIDUAL_ONLY_WIRED"
+        reason = (
+            "converged residual PR98-only kit is selected and default-off; "
+            "full affine is not banked"
+        )
+    else:
+        status = "BLOCKED"
+        reason = f"latest selection status is {latest.get('selection_status')}"
+
+    summary: dict[str, object] = {
+        "schema": "pact.track_a_finishing_kit_summary.v1",
+        "track": "Track-A",
+        "item": "Item C - L3 distortion finishing-kit",
+        "scan_roots": [_repo_rel(root) for root in TRACK_A_FINISHING_KIT_SCAN_ROOTS],
+        "status": status,
+        "reason": reason,
+        "selection_artifact_count": len(rows),
+        "latest_row": latest or {},
+        "latest_selection_status": latest.get("selection_status") if latest else "",
+        "selected_kit_name": latest.get("selected_kit_name") if latest else "",
+        "banked_advisory_distortion_delta": latest.get(
+            "banked_advisory_distortion_delta"
+        )
+        if latest
+        else 0.0,
+        "default_off": latest.get("default_off") is True if latest else False,
+        "archive_bytes_when_off": latest.get("archive_bytes_when_off") if latest else 0,
+        "section_bytes_when_enabled": latest.get("section_bytes_when_enabled")
+        if latest
+        else 0,
+        "full_affine_rejected": latest.get("full_affine_rejected") is True
+        if latest
+        else False,
+        "next_command": "",
+        **_false_authority_fields(),
+    }
+    summary["next_command"] = _track_a_finishing_kit_next_command(summary)
+    return summary
+
+
+def _format_track_a_finishing_kit_summary() -> str:
+    payload = _track_a_finishing_kit_summary()
+    lines = [
+        "Track-A Item C finishing-kit residual selector. "
+        "This is advisory kit state, not score/rank authority.",
+        f"status: {payload['status']} — {payload['reason']}",
+        (
+            "selection: "
+            f"artifacts={payload['selection_artifact_count']} "
+            f"kit={payload['selected_kit_name'] or '<none>'} "
+            f"default_off={payload['default_off']} "
+            f"off_bytes={payload['archive_bytes_when_off']} "
+            f"enabled_section_bytes={payload['section_bytes_when_enabled']} "
+            "banked_advisory_delta="
+            f"{_safe_float(payload['banked_advisory_distortion_delta']):.6g} "
+            f"full_affine_rejected={payload['full_affine_rejected']}"
+        ),
+        f"score_claim: {payload['score_claim']}",
+        f"ready_for_exact_eval_dispatch: {payload['ready_for_exact_eval_dispatch']}",
+    ]
+    latest = payload.get("latest_row")
+    if isinstance(latest, dict) and latest:
+        lines.append(
+            "latest artifact: "
+            f"{latest.get('path')} status={latest.get('selection_status')} "
+            f"authority={latest.get('authority')}"
+        )
+        blocker = latest.get("promotion_blocker")
+        if blocker:
+            lines.append(f"promotion blocker: {blocker}")
+        rejected = latest.get("rejected_assumptions")
+        if isinstance(rejected, list) and rejected:
+            lines.append("rejected assumptions: " + ", ".join(str(v) for v in rejected))
+    lines.append("next command:")
+    lines.append(f"  {payload['next_command']}")
+    return "\n".join(lines)
+
+
 def _section_payload_grammar_artifact_paths(
     scan_roots: tuple[Path, ...] | None = None,
     *,
@@ -8493,6 +8682,7 @@ def _dispatch_readiness() -> dict[str, object]:
     nerv_campaign_plan = _nerv_long_training_campaign_plan_summary()
     tensor_payload_grammar = _tensor_payload_grammar_summary()
     section_payload_grammar = _section_payload_grammar_summary()
+    track_a_finishing_kit = _track_a_finishing_kit_summary()
     optimal_grammar_campaign = _optimal_grammar_campaign_summary()
     archive_contract_hygiene = _archive_bound_contract_hygiene_summary()
     return {
@@ -8652,6 +8842,19 @@ def _dispatch_readiness() -> dict[str, object]:
             "max_selected_over_floor_ratio": section_payload_grammar[
                 "max_selected_over_floor_ratio"
             ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
+        "track_a_item_c_finishing_kit": {
+            "status": track_a_finishing_kit["status"],
+            "reason": track_a_finishing_kit["reason"],
+            "selected_kit_name": track_a_finishing_kit["selected_kit_name"],
+            "banked_advisory_distortion_delta": track_a_finishing_kit[
+                "banked_advisory_distortion_delta"
+            ],
+            "default_off": track_a_finishing_kit["default_off"],
+            "full_affine_rejected": track_a_finishing_kit["full_affine_rejected"],
+            "next_command": track_a_finishing_kit["next_command"],
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
@@ -9056,6 +9259,7 @@ def main(argv: list[str] | None = None) -> int:
                 _cooperative_receiver_solver_integration()
             ),
             "public_submission_audit": _public_submission_audit_status(),
+            "track_a_finishing_kit": _track_a_finishing_kit_summary(),
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
             "tensor_payload_grammar": _tensor_payload_grammar_summary(),
             "section_payload_grammar": _section_payload_grammar_summary(),
@@ -9154,6 +9358,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Public submission PR audit — release/bundle/wording hygiene",
         _format_public_submission_audit_status(),
+    ))
+    parts.append(_section(
+        "Track-A Item C — finishing-kit residual selector",
+        _format_track_a_finishing_kit_summary(),
     ))
     if not args.skip_pareto:
         parts.append(_section(

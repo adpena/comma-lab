@@ -1,0 +1,181 @@
+{
+  "evidence_grade": "[contest-CPU advisory] NON-PROMOTABLE",
+  "tau": 0.5,
+  "waterline_bytes_per_flip": 1.2731082153320312,
+  "total_flips_measured": 106094,
+  "mean_d_seg": 0.0044968499077690975,
+  "seg_term_100_dseg": 0.44968499077690977,
+  "A_boundary_frac_of_frame": 0.005422719319661459,
+  "A_flips_frac_of_frame": 0.0044968499077690975,
+  "A_mean_flips_per_pair": 884.1166666666667,
+  "A_mean_boundary_size_per_pair": 1066.15,
+  "A_sparse_boundary": true,
+  "B_mean_cond_bytes_per_flip": 1.0227145199708068,
+  "B_median_cond_bytes_per_flip": 1.0217238435228801,
+  "B_mean_uncond_bytes_per_flip": 1.375623667891036,
+  "B_frac_pairs_cond_under_waterline": 1.0,
+  "B_cost_under_break_even": true,
+  "B_total_residual_bytes_600_scaled": 543123.8648853465,
+  "B_net_delta_S_boundary_sidecar_if_all_fixed": -0.08804110268868526,
+  "B_boundary_sidecar_net_negative_S": true,
+  "C_survival_fraction": 0.47265625,
+  "C_survived_over_attempted": "242/512",
+  "C_survives_threshold_0p50": false,
+  "D_direct_store_partition_bytes_600": 614430.0,
+  "D_direct_store_LOSES_vs_frontier": true,
+  "D_witness_bytes_amortized_lo": 564680.8648853465,
+  "D_witness_bytes_amortized_hi": 599680.8648853465,
+  "D_frontier_bytes": 177169,
+  "D_conditional_mdl_band": [
+    24600,
+    64600
+  ],
+  "D_pose_traj_bytes_measured": 1557,
+  "D_witness_mdl_below_frontier": false,
+  "D_witness_mdl_in_conditional_band": false,
+  "VERDICT_SEG_HALF": "HYBRID_FOLD_INTO_TRAINING",
+  "n_survival_records": 8,
+  "survival_records": [
+    {
+      "pair_index": 0,
+      "k_attempted": 64,
+      "k_survived": 28,
+      "survival_fraction": 0.4375
+    },
+    {
+      "pair_index": 1,
+      "k_attempted": 64,
+      "k_survived": 20,
+      "survival_fraction": 0.3125
+    },
+    {
+      "pair_index": 2,
+      "k_attempted": 64,
+      "k_survived": 36,
+      "survival_fraction": 0.5625
+    },
+    {
+      "pair_index": 3,
+      "k_attempted": 64,
+      "k_survived": 36,
+      "survival_fraction": 0.5625
+    },
+    {
+      "pair_index": 4,
+      "k_attempted": 64,
+      "k_survived": 34,
+      "survival_fraction": 0.53125
+    },
+    {
+      "pair_index": 5,
+      "k_attempted": 64,
+      "k_survived": 29,
+      "survival_fraction": 0.453125
+    },
+    {
+      "pair_index": 6,
+      "k_attempted": 64,
+      "k_survived": 32,
+      "survival_fraction": 0.5
+    },
+    {
+      "pair_index": 7,
+      "k_attempted": 64,
+      "k_survived": 27,
+      "survival_fraction": 0.421875
+    }
+  ],
+  "wall_seconds": 109.0,
+  "which_decoder": "live",
+  "n_pairs_measured": 120,
+  "per_pair_sample": [
+    {
+      "pair_index": 0,
+      "n_flips": 880,
+      "boundary_size_tau05": 1050,
+      "flips_in_boundary_tau05": 430,
+      "cond_bytes_per_flip": 1.0209926783886762,
+      "uncond_bytes_per_flip": 1.379181894946179,
+      "cond_total_bytes": 898.473556982035,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 1083
+    },
+    {
+      "pair_index": 1,
+      "n_flips": 890,
+      "boundary_size_tau05": 1078,
+      "flips_in_boundary_tau05": 413,
+      "cond_bytes_per_flip": 1.0618912614763105,
+      "uncond_bytes_per_flip": 1.392544801846035,
+      "cond_total_bytes": 945.0832227139164,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 1069
+    },
+    {
+      "pair_index": 2,
+      "n_flips": 808,
+      "boundary_size_tau05": 1004,
+      "flips_in_boundary_tau05": 391,
+      "cond_bytes_per_flip": 1.0369777248548948,
+      "uncond_bytes_per_flip": 1.3933103187606555,
+      "cond_total_bytes": 837.878001682755,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 994
+    },
+    {
+      "pair_index": 3,
+      "n_flips": 717,
+      "boundary_size_tau05": 1024,
+      "flips_in_boundary_tau05": 385,
+      "cond_bytes_per_flip": 1.0057136409924765,
+      "uncond_bytes_per_flip": 1.4123547233241844,
+      "cond_total_bytes": 721.0966805916057,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 1043
+    },
+    {
+      "pair_index": 4,
+      "n_flips": 664,
+      "boundary_size_tau05": 1012,
+      "flips_in_boundary_tau05": 385,
+      "cond_bytes_per_flip": 0.9652034036285598,
+      "uncond_bytes_per_flip": 1.4175376333230378,
+      "cond_total_bytes": 640.8950600093638,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 1030
+    },
+    {
+      "pair_index": 5,
+      "n_flips": 709,
+      "boundary_size_tau05": 993,
+      "flips_in_boundary_tau05": 378,
+      "cond_bytes_per_flip": 0.9994295909322102,
+      "uncond_bytes_per_flip": 1.405470658983386,
+      "cond_total_bytes": 708.595579970937,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 1096
+    },
+    {
+      "pair_index": 6,
+      "n_flips": 783,
+      "boundary_size_tau05": 1053,
+      "flips_in_boundary_tau05": 420,
+      "cond_bytes_per_flip": 0.9948935325910129,
+      "uncond_bytes_per_flip": 1.399704137236997,
+      "cond_total_bytes": 779.0016360187631,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 968
+    },
+    {
+      "pair_index": 7,
+      "n_flips": 770,
+      "boundary_size_tau05": 1050,
+      "flips_in_boundary_tau05": 401,
+      "cond_bytes_per_flip": 1.0090968535459215,
+      "uncond_bytes_per_flip": 1.397412328536981,
+      "cond_total_bytes": 777.0045772303595,
+      "gt_n_regions": 5,
+      "rendered_frame1_argmax_bytes_lzma_proxy": 1022
+    }
+  ]
+}

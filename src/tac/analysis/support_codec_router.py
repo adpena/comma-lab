@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import struct
 from collections.abc import Iterable, Mapping, Sequence
@@ -18,12 +19,14 @@ from tac.analysis.path_action_producer import (
     BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
     PathTubeSupport,
     candidate_action_evaluation_row,
+    decode_path_tube_payload,
     support_mask_sha256,
 )
 
 SUPPORT_CODEC_ROUTER_SCHEMA = "tac.support_codec_router.v1"
 SUPPORT_CODEC_CANDIDATE_SCHEMA = "tac.support_codec_candidate.v1"
 SUPPORT_CODEC_REPORT_SCHEMA = "tac.support_codec_router_report.v1"
+SUPPORT_CODEC_SURVIVAL_RECEIPT_SCHEMA = "tac.support_codec_survival_receipt.v1"
 
 BLOCKER_CODEC_DECODED_HASH_MISMATCH = "support_codec_decoded_support_sha256_mismatch"
 BLOCKER_CODEC_RESEARCH_ONLY = "support_codec_research_only_support_not_archive_closed"
@@ -42,6 +45,7 @@ class SupportCodecCandidate:
     support_encoding: str
     support_cardinality: int
     decoded_support_sha256: str | None
+    encoded_payload_sha256: str | None
     encoded_bytes: int | None
     action_payload_bytes: int = 0
     metadata_bytes: int = 0
@@ -64,6 +68,7 @@ class SupportCodecCandidate:
             "support_encoding": self.support_encoding,
             "support_cardinality": int(self.support_cardinality),
             "decoded_support_sha256": self.decoded_support_sha256,
+            "encoded_payload_sha256": self.encoded_payload_sha256,
             "encoded_bytes": self.encoded_bytes,
             "action_payload_bytes": int(self.action_payload_bytes),
             "metadata_bytes": int(self.metadata_bytes),
@@ -125,11 +130,16 @@ def route_support_codecs_for_path_candidate(
         base_blockers=base_blockers,
     )
     selected = _select_candidate(rows)
-    survival_receipt = (
-        None
-        if selected is None
-        else _matched_survival_receipt(selected, survival_receipts)
-    )
+    survival_receipt = None
+    selected_survival_receipt: Mapping[str, Any] | None = None
+    if selected is not None:
+        survival_receipt = _matched_survival_receipt(selected, survival_receipts)
+        if survival_receipt is None:
+            survival_receipt = build_support_codec_survival_receipt(
+                selected,
+                support=support,
+            )
+        selected_survival_receipt = survival_receipt
     selected_rows: list[SupportCodecCandidate] = []
     for row in rows:
         if selected is not None and row.support_encoding == selected.support_encoding:
@@ -191,6 +201,9 @@ def route_support_codecs_for_path_candidate(
         "selected_support_encoding": None if selected is None else selected.support_encoding,
         "selected_total_cost_bytes": None if selected is None else selected.total_cost_bytes,
         "support_codec_candidates": [row.as_dict() for row in selected_rows],
+        "selected_support_survival_receipt": (
+            None if selected_survival_receipt is None else dict(selected_survival_receipt)
+        ),
         "selected_action_effect": None if effect is None else effect.as_dict(),
         "selected_action_candidate_evaluation": rent_evaluation,
         "candidate_queue": queue_rows,
@@ -228,11 +241,18 @@ def route_support_codecs_for_path_candidates(
         for row in candidates
         if _mapping(row.get("support"))
     ]
+    receipts = [
+        receipt
+        for report in reports
+        for receipt in [report.get("selected_support_survival_receipt")]
+        if isinstance(receipt, Mapping)
+    ]
     return {
         "schema": SUPPORT_CODEC_ROUTER_SCHEMA,
         "report_count": len(reports),
         "reports": reports,
         "candidate_queue": [queue for report in reports for queue in report.get("candidate_queue", [])],
+        "support_survival_receipts": receipts,
         "promotion_eligible": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
@@ -348,6 +368,9 @@ def _candidate(
         support_encoding=support_encoding,
         support_cardinality=int(np.count_nonzero(mask)),
         decoded_support_sha256=decoded_support_sha256,
+        encoded_payload_sha256=(
+            None if encoded is None else hashlib.sha256(encoded).hexdigest()
+        ),
         encoded_bytes=encoded_bytes,
         action_payload_bytes=int(action_payload_bytes),
         metadata_bytes=int(metadata_bytes),
@@ -378,6 +401,7 @@ def _replace_candidate(
         support_encoding=row.support_encoding,
         support_cardinality=row.support_cardinality,
         decoded_support_sha256=row.decoded_support_sha256,
+        encoded_payload_sha256=row.encoded_payload_sha256,
         encoded_bytes=row.encoded_bytes,
         action_payload_bytes=row.action_payload_bytes,
         metadata_bytes=row.metadata_bytes,
@@ -411,6 +435,76 @@ def _select_candidate(rows: Sequence[SupportCodecCandidate]) -> SupportCodecCand
     if not valid:
         return None
     return min(valid, key=lambda row: (int(row.total_cost_bytes or 0), row.support_encoding))
+
+
+def build_support_codec_survival_receipt(
+    selected: SupportCodecCandidate,
+    *,
+    support: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build a support-codec parse-back/inflate receipt for the selected row."""
+
+    source_mask = _mask_from_path_tube_support(support)
+    source_sha = support_mask_sha256(source_mask)
+    blockers: list[str] = []
+    payload = _encode_support_codec_payload(
+        selected.support_encoding,
+        source_mask,
+        support=support,
+    )
+    payload_sha = None if payload is None else hashlib.sha256(payload).hexdigest()
+    decoded_sha: str | None = None
+    decoded_bytes_sha: str | None = None
+    decoded_shape: list[int] | None = None
+    if source_sha != selected.support_sha256:
+        blockers.append(BLOCKER_CODEC_DECODED_HASH_MISMATCH)
+    if payload is None:
+        blockers.append(BLOCKER_CODEC_UNAVAILABLE)
+    else:
+        try:
+            decoded = _decode_support_codec_payload(selected.support_encoding, payload)
+            decoded_sha = support_mask_sha256(decoded)
+            decoded_bytes_sha = hashlib.sha256(
+                decoded.astype(np.uint8).tobytes(order="C")
+            ).hexdigest()
+            decoded_shape = [int(decoded.shape[0]), int(decoded.shape[1])]
+            if decoded_sha != selected.support_sha256:
+                blockers.append(BLOCKER_CODEC_DECODED_HASH_MISMATCH)
+        except (ValueError, struct.error) as exc:
+            blockers.append(f"support_codec_parseback_failed:{exc}")
+    survived = not blockers
+    receipt_seed = "|".join(
+        (
+            selected.action_id,
+            selected.support_sha256,
+            selected.support_encoding,
+            payload_sha or "no-payload",
+            decoded_sha or "no-decode",
+        )
+    )
+    return {
+        "schema": SUPPORT_CODEC_SURVIVAL_RECEIPT_SCHEMA,
+        "receipt_id": hashlib.sha256(receipt_seed.encode("utf-8")).hexdigest(),
+        "action_id": selected.action_id,
+        "support_sha256": selected.support_sha256,
+        "support_encoding": selected.support_encoding,
+        "support_cardinality": int(selected.support_cardinality),
+        "encoded_bytes": selected.encoded_bytes,
+        "encoded_payload_sha256": payload_sha,
+        "decoded_support_sha256": decoded_sha,
+        "decoded_support_bytes_sha256": decoded_bytes_sha,
+        "decoded_support_shape": decoded_shape,
+        "parseback_survived": survived,
+        "inflate_survived": survived,
+        "inflate_surface": "support_codec_mask_decode_only_not_full_frame_inflate",
+        "authority": "support_codec_parseback_inflate_same_action",
+        "full_frame_inflate_output_parity": False,
+        "contest_score_authority": False,
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
 
 
 def _selected_action_effect(
@@ -516,11 +610,7 @@ def _matched_survival_receipt(
             continue
         if str(receipt.get("support_encoding") or "") != selected.support_encoding:
             continue
-        if (
-            receipt.get("parseback_survived") is True
-            and receipt.get("inflate_survived") is True
-        ):
-            return receipt
+        return receipt
     return None
 
 
@@ -560,6 +650,30 @@ def _path_tube_payload_from_support(support: Mapping[str, Any]) -> bytes:
         residual_remove_yx=_points(support.get("residual_remove_yx")),
     )
     return tube.encode_payload()
+
+
+def _encode_support_codec_payload(
+    support_encoding: str,
+    mask: np.ndarray,
+    *,
+    support: Mapping[str, Any],
+) -> bytes | None:
+    if support_encoding == "rle":
+        return _encode_rle(mask)
+    if support_encoding == "bitmap_bitset":
+        return _encode_bitmap(mask)
+    if support_encoding == "coordinate_list_u16":
+        return _encode_coordinate_list(mask)
+    if support_encoding == "path_tube":
+        return _path_tube_payload_from_support(support)
+    if support_encoding.startswith("tile_set_") and support_encoding.endswith("_bitmap"):
+        parts = support_encoding.removeprefix("tile_set_").removesuffix("_bitmap").split("x", maxsplit=1)
+        if len(parts) == 2 and parts[0] == parts[1]:
+            try:
+                return _encode_tile_set(mask, tile=int(parts[0]))
+            except ValueError:
+                return None
+    return None
 
 
 def _encode_bitmap(mask: np.ndarray) -> bytes:
@@ -606,6 +720,119 @@ def _encode_tile_set(mask: np.ndarray, *, tile: int) -> bytes:
     return b"".join(chunks)
 
 
+def _decode_support_codec_payload(support_encoding: str, payload: bytes) -> np.ndarray:
+    if support_encoding == "rle":
+        return _decode_rle(payload)
+    if support_encoding == "bitmap_bitset":
+        return _decode_bitmap(payload)
+    if support_encoding == "coordinate_list_u16":
+        return _decode_coordinate_list(payload)
+    if support_encoding == "path_tube":
+        return decode_path_tube_payload(payload).decode_mask()
+    if support_encoding.startswith("tile_set_") and support_encoding.endswith("_bitmap"):
+        return _decode_tile_set(payload)
+    raise ValueError(f"unsupported support codec: {support_encoding}")
+
+
+def _decode_bitmap(payload: bytes) -> np.ndarray:
+    magic = b"SCBM1"
+    header_size = len(magic) + struct.calcsize("<HHI")
+    if len(payload) < header_size or payload[: len(magic)] != magic:
+        raise ValueError("bad bitmap_bitset payload")
+    height, width, packed_size = struct.unpack("<HHI", payload[len(magic) : header_size])
+    packed = payload[header_size:]
+    if len(packed) != int(packed_size):
+        raise ValueError("bitmap_bitset packed length mismatch")
+    total = int(height) * int(width)
+    bits = np.unpackbits(np.frombuffer(packed, dtype=np.uint8))[:total]
+    if bits.size != total:
+        raise ValueError("bitmap_bitset decoded size mismatch")
+    return bits.astype(bool, copy=False).reshape((int(height), int(width)))
+
+
+def _decode_coordinate_list(payload: bytes) -> np.ndarray:
+    magic = b"SCCL1"
+    header_size = len(magic) + struct.calcsize("<HHI")
+    if len(payload) < header_size or payload[: len(magic)] != magic:
+        raise ValueError("bad coordinate_list_u16 payload")
+    height, width, count = struct.unpack("<HHI", payload[len(magic) : header_size])
+    coord_bytes = payload[header_size:]
+    expected = int(count) * 2 * np.dtype("<u2").itemsize
+    if len(coord_bytes) != expected:
+        raise ValueError("coordinate_list_u16 length mismatch")
+    mask = np.zeros((int(height), int(width)), dtype=bool)
+    if count:
+        coords = np.frombuffer(coord_bytes, dtype="<u2").reshape((int(count), 2))
+        ys = coords[:, 0].astype(np.int64)
+        xs = coords[:, 1].astype(np.int64)
+        if np.any(ys < 0) or np.any(ys >= int(height)) or np.any(xs < 0) or np.any(xs >= int(width)):
+            raise ValueError("coordinate_list_u16 coordinate out of bounds")
+        mask[ys, xs] = True
+    return mask
+
+
+def _decode_rle(payload: bytes) -> np.ndarray:
+    magic = b"SCRL1"
+    header_size = len(magic) + struct.calcsize("<HHBI")
+    if len(payload) < header_size or payload[: len(magic)] != magic:
+        raise ValueError("bad rle payload")
+    height, width, start, run_count = struct.unpack("<HHBI", payload[len(magic) : header_size])
+    run_bytes = payload[header_size:]
+    expected = int(run_count) * np.dtype("<u4").itemsize
+    if len(run_bytes) != expected:
+        raise ValueError("rle run length mismatch")
+    runs = np.frombuffer(run_bytes, dtype="<u4")
+    total = int(height) * int(width)
+    if int(runs.astype(np.uint64).sum()) != total:
+        raise ValueError("rle decoded size mismatch")
+    flat = np.empty(total, dtype=bool)
+    value = bool(start)
+    offset = 0
+    for run in runs:
+        next_offset = offset + int(run)
+        flat[offset:next_offset] = value
+        offset = next_offset
+        value = not value
+    return flat.reshape((int(height), int(width)))
+
+
+def _decode_tile_set(payload: bytes) -> np.ndarray:
+    magic = b"SCTS1"
+    header_size = len(magic) + struct.calcsize("<HHHI")
+    if len(payload) < header_size or payload[: len(magic)] != magic:
+        raise ValueError("bad tile_set payload")
+    height, width, tile, tile_count = struct.unpack("<HHHI", payload[len(magic) : header_size])
+    if int(tile) <= 0:
+        raise ValueError("tile_set tile size must be positive")
+    mask = np.zeros((int(height), int(width)), dtype=bool)
+    offset = header_size
+    record_header = struct.calcsize("<HHH")
+    for _ in range(int(tile_count)):
+        if offset + record_header > len(payload):
+            raise ValueError("truncated tile_set record")
+        y0, x0, packed_size = struct.unpack("<HHH", payload[offset : offset + record_header])
+        offset += record_header
+        packed = payload[offset : offset + int(packed_size)]
+        if len(packed) != int(packed_size):
+            raise ValueError("truncated tile_set payload")
+        offset += int(packed_size)
+        if int(y0) >= int(height) or int(x0) >= int(width):
+            raise ValueError("tile_set coordinate out of bounds")
+        block_h = min(int(tile), int(height) - int(y0))
+        block_w = min(int(tile), int(width) - int(x0))
+        total = block_h * block_w
+        bits = np.unpackbits(np.frombuffer(packed, dtype=np.uint8))[:total]
+        if bits.size != total:
+            raise ValueError("tile_set decoded block size mismatch")
+        mask[int(y0) : int(y0) + block_h, int(x0) : int(x0) + block_w] = bits.astype(
+            bool,
+            copy=False,
+        ).reshape((block_h, block_w))
+    if offset != len(payload):
+        raise ValueError("tile_set payload has trailing bytes")
+    return mask
+
+
 def _optional_declared_codec_rows(
     action_id: str,
     support_sha256: str,
@@ -624,6 +851,7 @@ def _optional_declared_codec_rows(
                 support_encoding=key,
                 support_cardinality=int(np.count_nonzero(mask)),
                 decoded_support_sha256=None,
+                encoded_payload_sha256=None,
                 encoded_bytes=None,
                 total_cost_bytes=None,
                 decoder_runtime_estimate=None,
@@ -652,6 +880,7 @@ def _optional_declared_codec_rows(
                 support_encoding=str(row.get("support_encoding") or f"{key}_{index}"),
                 support_cardinality=int(np.count_nonzero(mask)),
                 decoded_support_sha256=decoded or None,
+                encoded_payload_sha256=None,
                 encoded_bytes=encoded,
                 total_cost_bytes=encoded,
                 decoder_runtime_estimate=str(row.get("decoder_runtime_estimate") or key),
@@ -706,6 +935,7 @@ def write_support_codec_router_report(report: Mapping[str, Any], output_dir: str
     report_path = out_dir / "support_codec_router_report.json"
     queue_path = out_dir / "candidate_queue.jsonl"
     rows_path = out_dir / "selected_action_effect_rows.jsonl"
+    receipts_path = out_dir / "support_codec_survival_receipts.jsonl"
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     queue_rows = list(report.get("candidate_queue", []))
     with open(queue_path, "w", encoding="utf-8") as out:
@@ -719,12 +949,22 @@ def write_support_codec_router_report(report: Mapping[str, Any], output_dir: str
     with open(rows_path, "w", encoding="utf-8") as out:
         for row in selected_rows:
             out.write(json.dumps(row, sort_keys=True) + "\n")
+    receipt_rows = [
+        sub.get("selected_support_survival_receipt")
+        for sub in report.get("reports", [])
+        if isinstance(sub, Mapping) and isinstance(sub.get("selected_support_survival_receipt"), Mapping)
+    ]
+    with open(receipts_path, "w", encoding="utf-8") as out:
+        for row in receipt_rows:
+            out.write(json.dumps(row, sort_keys=True) + "\n")
     return {
         "report_path": report_path.as_posix(),
         "candidate_queue_path": queue_path.as_posix(),
         "selected_action_effect_rows_path": rows_path.as_posix(),
+        "support_codec_survival_receipts_path": receipts_path.as_posix(),
         "candidate_queue_row_count": len(queue_rows),
         "selected_action_effect_row_count": len(selected_rows),
+        "support_codec_survival_receipt_count": len(receipt_rows),
     }
 
 
@@ -737,7 +977,9 @@ __all__ = [
     "SUPPORT_CODEC_CANDIDATE_SCHEMA",
     "SUPPORT_CODEC_REPORT_SCHEMA",
     "SUPPORT_CODEC_ROUTER_SCHEMA",
+    "SUPPORT_CODEC_SURVIVAL_RECEIPT_SCHEMA",
     "SupportCodecCandidate",
+    "build_support_codec_survival_receipt",
     "route_support_codecs_for_path_candidate",
     "route_support_codecs_for_path_candidates",
     "write_support_codec_router_report",

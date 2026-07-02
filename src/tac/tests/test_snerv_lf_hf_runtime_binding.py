@@ -7,8 +7,10 @@ from pathlib import Path
 import numpy as np
 
 from tac.analysis.snerv_lf_hf_runtime_binding import (
+    NATIVE_TUB_LF_HF_OUTPUT2_BINDING_SCHEMA,
     SCHEMA,
     build_snerv_lf_hf_runtime_binding_proof,
+    build_snerv_native_tub_lf_hf_output2_runtime_binding,
 )
 from tac.substrates.snerv_inverse_steg_carrier.joint_lf_hf_codebook import (
     build_joint_lf_hf_factorized_codebook_receiver_proof,
@@ -80,6 +82,86 @@ def test_runtime_binding_blocks_payload_sha_mismatch(tmp_path: Path) -> None:
     assert row["runtime_binding_proven"] is False
     assert "snerv_lf_hf_runtime_binding_payload_sha256_mismatch" in row["blockers"]
     assert report["closed_campaign_blockers"] == []
+
+
+def test_native_tub_lf_hf_output2_binding_clears_source_identical_false_authority() -> None:
+    report = build_snerv_native_tub_lf_hf_output2_runtime_binding(
+        {
+            "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+            "packet_path": "/artifacts/native_packet.snar",
+            "packet_sha256": "1" * 64,
+            "archive_path": "/artifacts/archive.zip",
+            "archive_sha256": "2" * 64,
+            "snerv_lf_hf_solution_family": "official_tub_lf_hf_decoder_replacement",
+            "snerv_official_tub_source_fixture_binding": {
+                "schema": "snerv_official_tub_source_fixture_binding.v1",
+                "source_fixture_replay_bound": True,
+                "official_tub_temporal_encoder_output2_source_fixture_replay_passed": True,
+                "source_forward_replay_authority": False,
+            },
+            "snerv_official_tub_source_fixture_replay_bound": True,
+            "snerv_official_tub_source_fixture_replay_passed": True,
+            "official_primitive_binding": {
+                "official_receiver_payload_bound": True,
+                "selected_packet_frame_producing_official_export": True,
+                "selected_packet_receiver_payload_frame_replay_passed": True,
+            },
+            "selected_official_authority": {
+                "frame_producing_official_export": True,
+                "receiver_payload_frame_replay_passed": True,
+                "official_tub_output2_storage": {
+                    "section": "decoder_payload.output_2",
+                    "stored": True,
+                    "source_payload_present": True,
+                    "receiver_executes_output2_fusion_from_payload": True,
+                    "receiver_frame_decode_consumes_output2": True,
+                    "receiver_output2_frame_shape_match": True,
+                },
+                "official_tub_output2_payload_source_available": True,
+                "official_tub_output2_payload_export_bound": True,
+                "official_tub_output2_payload_stored": True,
+                "official_tub_output2_receiver_fusion_from_payload": True,
+                "official_tub_output2_receiver_executed": True,
+                "receiver_frame_decode_consumes_output2": True,
+                "official_tub_output2_receiver_frame_bound": True,
+                "official_tub_output2_receiver_output2_frame_shape_match": True,
+            },
+        },
+        generated_utc="2026-06-13T00:00:00+00:00",
+    )
+
+    assert report["schema"] == NATIVE_TUB_LF_HF_OUTPUT2_BINDING_SCHEMA
+    assert report["runtime_binding_proven"] is True
+    assert report["output2_source_identical"] is True
+    assert report["output2_boundary_verdict"]["verdict"] == "SOURCE_IDENTICAL"
+    assert report["output2_boundary_verdict"]["passed"] is True
+    assert report["source_forward_replay_authority"] is False
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "migration_required_before_runner_execution" in report["closed_campaign_blockers"]
+
+
+def test_native_tub_lf_hf_output2_binding_blocks_missing_receiver_frame_bound() -> None:
+    report = build_snerv_native_tub_lf_hf_output2_runtime_binding(
+        {
+            "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+            "snerv_lf_hf_solution_family": "official_tub_lf_hf_decoder_replacement",
+            "snerv_official_tub_source_fixture_replay_bound": True,
+            "snerv_official_tub_source_fixture_replay_passed": True,
+            "official_primitive_binding": {
+                "official_receiver_payload_bound": True,
+                "selected_packet_frame_producing_official_export": True,
+                "selected_packet_receiver_payload_frame_replay_passed": True,
+            },
+        }
+    )
+
+    assert report["runtime_binding_proven"] is False
+    assert "snerv_native_output2_payload_not_export_bound" in report["blockers"]
+    assert report["output2_boundary_verdict"]["verdict"] == (
+        "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS"
+    )
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_runtime_binding_cli_writes_json(tmp_path: Path) -> None:

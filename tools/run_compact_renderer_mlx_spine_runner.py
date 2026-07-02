@@ -109,11 +109,6 @@ def _select_target_region_action_program_from_birth_payload(
                 value = _string(direct.get(support_key))
                 if value is not None:
                     return value
-            action_effect = direct.get("action_effect")
-            if isinstance(action_effect, Mapping):
-                value = _string(action_effect.get("support_sha256"))
-                if value is not None:
-                    return value
         return None
 
     def _direct_teacher_support_sha256_from_node(node: Mapping[str, Any]) -> str | None:
@@ -157,33 +152,92 @@ def _select_target_region_action_program_from_birth_payload(
         """
 
         preferences: list[tuple[str | None, str]] = []
+        search_root = node
+
+        def _wall_normal_direct_mask_supports(wall_normal: Mapping[str, Any]) -> set[str]:
+            direct = wall_normal.get("direct_teacher")
+            direct = direct if isinstance(direct, Mapping) else {}
+            out: set[str] = set()
+            for key in ("support_sha256", "direct_teacher_support_sha256"):
+                value = _string(direct.get(key))
+                if value is not None:
+                    out.add(value)
+            action_effect = direct.get("action_effect")
+            if isinstance(action_effect, Mapping):
+                value = _string(action_effect.get("support_sha256"))
+                if value is not None:
+                    out.add(value)
+            return out
+
+        def _candidate_archive_support_for_wall_normal(
+            value: Any,
+            *,
+            direct_mask_supports: set[str],
+        ) -> str | None:
+            if isinstance(value, Mapping):
+                action_support = _candidate_action_support_sha256(value)
+                direct_mask_support = _candidate_direct_teacher_mask_support_sha256(value)
+                if (
+                    action_support is not None
+                    and _candidate_is_true_wall_normal_teacher(value)
+                    and (
+                        not direct_mask_supports
+                        or (
+                            direct_mask_support is not None
+                            and direct_mask_support in direct_mask_supports
+                        )
+                    )
+                ):
+                    return action_support
+                for child in value.values():
+                    if isinstance(child, (Mapping, list, tuple)):
+                        found = _candidate_archive_support_for_wall_normal(
+                            child,
+                            direct_mask_supports=direct_mask_supports,
+                        )
+                        if found is not None:
+                            return found
+            elif isinstance(value, (list, tuple)):
+                for child in value:
+                    if isinstance(child, (Mapping, list, tuple)):
+                        found = _candidate_archive_support_for_wall_normal(
+                            child,
+                            direct_mask_supports=direct_mask_supports,
+                        )
+                        if found is not None:
+                            return found
+            return None
 
         def _wall_normal_support(wall_normal: Mapping[str, Any]) -> str | None:
-            sidecar = wall_normal.get("sidecar_fallback")
-            if isinstance(sidecar, Mapping):
-                for key in (
-                    "support_sha256",
-                    "target_region_action_support_sha256",
-                    "archive_executable_support_sha256",
-                ):
-                    value = _string(sidecar.get(key))
-                    if value is not None:
-                        return value
             direct = wall_normal.get("direct_teacher")
             if isinstance(direct, Mapping):
                 for key in (
                     "archive_executable_support_sha256",
                     "target_region_action_support_sha256",
-                    "support_sha256",
                 ):
                     value = _string(direct.get(key))
                     if value is not None:
                         return value
-                action_effect = direct.get("action_effect")
-                if isinstance(action_effect, Mapping):
-                    value = _string(action_effect.get("support_sha256"))
+            derived = _candidate_archive_support_for_wall_normal(
+                search_root,
+                direct_mask_supports=_wall_normal_direct_mask_supports(wall_normal),
+            )
+            if derived is not None:
+                return derived
+            sidecar = wall_normal.get("sidecar_fallback")
+            if isinstance(sidecar, Mapping):
+                for key in (
+                    "target_region_action_support_sha256",
+                    "archive_executable_support_sha256",
+                    "support_sha256",
+                ):
+                    value = _string(sidecar.get(key))
                     if value is not None:
                         return value
+            if isinstance(direct, Mapping):
+                value = _string(direct.get("support_sha256"))
+                if value is not None:
+                    return value
             return None
 
         def _visit_preference(value: Any) -> None:
@@ -214,11 +268,6 @@ def _select_target_region_action_program_from_birth_payload(
         _visit_preference(node)
         return preferences[0] if preferences else (None, None)
 
-    (
-        wall_normal_preferred_action_id,
-        wall_normal_preferred_support_sha256,
-    ) = _wall_normal_export_preference_from_payload(payload)
-
     def _visit(
         node: Any,
         *,
@@ -230,7 +279,6 @@ def _select_target_region_action_program_from_birth_payload(
             current_direct_support = (
                 _direct_teacher_archive_support_sha256_from_node(node)
                 or inherited_direct_teacher_support_sha256
-                or _direct_teacher_support_sha256_from_node(node)
             )
             program = node.get("target_region_action_program_base64")
             if isinstance(program, str) and program:
@@ -320,12 +368,46 @@ def _select_target_region_action_program_from_birth_payload(
             return value
         direct = row.get("direct_seg_wall_oracle")
         direct = direct if isinstance(direct, Mapping) else {}
-        value = direct.get("archive_executable_support_sha256") or direct.get("support_sha256")
+        value = direct.get("archive_executable_support_sha256") or direct.get(
+            "target_region_action_support_sha256"
+        )
+        if value:
+            return str(value) if isinstance(value, str) and value else None
+        action_support = _candidate_action_support_sha256(row)
+        if action_support and _candidate_is_true_wall_normal_teacher(row):
+            return action_support
+        value = direct.get("support_sha256")
         if not value:
             action_effect = direct.get("action_effect")
             if isinstance(action_effect, Mapping):
                 value = action_effect.get("support_sha256")
         return str(value) if isinstance(value, str) and value else None
+
+    def _candidate_direct_teacher_mask_support_sha256(row: Mapping[str, Any]) -> str | None:
+        direct = row.get("direct_seg_wall_oracle")
+        direct = direct if isinstance(direct, Mapping) else {}
+        value = _string(direct.get("support_sha256"))
+        if value is not None:
+            return value
+        action_effect = direct.get("action_effect")
+        if isinstance(action_effect, Mapping):
+            value = _string(action_effect.get("support_sha256"))
+            if value is not None:
+                return value
+        return None
+
+    def _candidate_is_true_wall_normal_teacher(row: Mapping[str, Any]) -> bool:
+        if row.get("candidate_is_true_wall_normal_teacher") is True:
+            return True
+        direct = row.get("direct_seg_wall_oracle")
+        direct = direct if isinstance(direct, Mapping) else {}
+        return bool(
+            direct.get("teacher_is_true_wall_normal") is True
+            and direct.get("inverse_source") == "support_projected_segnet_margin_vjp"
+            and direct.get("inverse_basis") == "support_projected_receiver_pixel_adam_ste"
+            and direct.get("uses_official_seg_preprocess") is True
+            and direct.get("uses_target_class_margin") is True
+        )
 
     def _candidate_same_support_as_direct_teacher(row: Mapping[str, Any]) -> bool:
         action_support = _candidate_action_support_sha256(row)
@@ -347,6 +429,11 @@ def _select_target_region_action_program_from_birth_payload(
             payload_bytes,
             delta,
         )
+
+    (
+        wall_normal_preferred_action_id,
+        wall_normal_preferred_support_sha256,
+    ) = _wall_normal_export_preference_from_payload(payload)
 
     all_eligible_candidates = [
         row
@@ -392,6 +479,9 @@ def _select_target_region_action_program_from_birth_payload(
             "best_candidate_action_id": best.get("action_id"),
             "best_candidate_action_support_sha256": _candidate_action_support_sha256(best),
             "best_candidate_direct_teacher_support_sha256": _candidate_direct_teacher_support_sha256(best),
+            "best_candidate_direct_teacher_mask_support_sha256": (
+                _candidate_direct_teacher_mask_support_sha256(best)
+            ),
             "best_candidate_exact_delta_score_nonrate": _candidate_delta_nonrate(best),
             "best_candidate_estimated_delta_score_total": _candidate_key(best)[3],
             "best_candidate_target_region_action_payload_bytes": _candidate_payload_bytes(best),
@@ -426,6 +516,7 @@ def _select_target_region_action_program_from_birth_payload(
         "target_region_action_support_encoding": telemetry.get("support_encoding"),
         "target_region_action_support_encoded_bytes": telemetry.get("support_encoded_bytes"),
         "direct_teacher_support_sha256": _candidate_direct_teacher_support_sha256(selected),
+        "direct_teacher_mask_support_sha256": _candidate_direct_teacher_mask_support_sha256(selected),
         "same_support_as_direct_teacher": _candidate_same_support_as_direct_teacher(selected),
         "exact_delta_score_nonrate": _candidate_delta_nonrate(selected),
         "estimated_delta_score_total": _candidate_key(selected)[3],
@@ -682,6 +773,9 @@ from tac.analysis.nerv_stack_synergy_audit import (  # noqa: E402
 from tac.analysis.snerv_binary_profile import (  # noqa: E402
     SnervBinaryProfileError,
     write_snerv_binary_profile,
+)
+from tac.analysis.snerv_lf_hf_runtime_binding import (  # noqa: E402
+    build_snerv_native_tub_lf_hf_output2_runtime_binding,
 )
 from tac.analysis.snerv_long_run_launch_gate_consumption import (  # noqa: E402
     snerv_long_run_launch_gate_blockers,
@@ -4481,6 +4575,7 @@ def _run_snerv_native_mlx_export_attachment(
     source_video_path: str | Path,
     scorer_upstream_dir: str | Path,
     modelsize_candidate: Mapping[str, Any] | None,
+    snerv_lf_hf_solution_family: str = "official_tub_lf_hf_decoder_replacement",
     prioritized_pair_indices: tuple[int, ...],
     scorer_error_pair_sampling_weights: Mapping[int, float] | None,
     scorer_error_pair_curriculum: Mapping[str, Any] | None,
@@ -5027,12 +5122,29 @@ def _run_snerv_native_mlx_export_attachment(
                     "snerv_mlx_native_full600_not_campaign_ready_without_learned_training",
                 ]
             )
+        snerv_native_tub_lf_hf_output2_runtime_binding = (
+            build_snerv_native_tub_lf_hf_output2_runtime_binding(
+                artifact,
+                lf_hf_solution_family=str(snerv_lf_hf_solution_family),
+            )
+        )
         payload = {
             "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
             "executed": True,
             "requested": True,
             "axis_tag": "[macOS-MLX research-signal]",
             "num_pairs": int(num_pairs),
+            "snerv_lf_hf_solution_family": str(snerv_lf_hf_solution_family),
+            "snerv_native_tub_lf_hf_output2_runtime_binding": (
+                snerv_native_tub_lf_hf_output2_runtime_binding
+            ),
+            "output2_boundary_verdict": snerv_native_tub_lf_hf_output2_runtime_binding.get(
+                "output2_boundary_verdict"
+            ),
+            "snerv_native_output2_source_identical": bool(
+                snerv_native_tub_lf_hf_output2_runtime_binding.get("output2_source_identical")
+                is True
+            ),
             "source_pair_indices": [int(value) for value in artifact.get("source_pair_indices") or []],
             "prioritized_pair_training": {
                 "schema": "compact_snerv_native_mlx_prioritized_pair_training.v1",
@@ -6432,6 +6544,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             source_video_path=resolved_source_video,
             scorer_upstream_dir=scorer_upstream,
             modelsize_candidate=resolved_snerv_modelsize_candidate,
+            snerv_lf_hf_solution_family=str(snerv_lf_hf_solution_family),
             prioritized_pair_indices=prioritized_pair_indices,
             scorer_error_pair_sampling_weights=scorer_error_pair_sampling_weights,
             scorer_error_pair_curriculum=scorer_error_pair_curriculum,
@@ -7374,6 +7487,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         source_video_path=resolved_source_video,
         scorer_upstream_dir=scorer_upstream,
         modelsize_candidate=resolved_snerv_modelsize_candidate,
+        snerv_lf_hf_solution_family=str(snerv_lf_hf_solution_family),
         prioritized_pair_indices=prioritized_pair_indices,
         scorer_error_pair_sampling_weights=scorer_error_pair_sampling_weights,
         scorer_error_pair_curriculum=scorer_error_pair_curriculum,
@@ -11031,8 +11145,34 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             training_dir=training_dir,
         )
     )
+    target_region_action_inflate_materialization = None
+    metadata_scoreaware = (
+        artifact_dict.get("substrate_artifact_metadata", {})
+        if isinstance(artifact_dict.get("substrate_artifact_metadata"), Mapping)
+        else {}
+    )
+    if isinstance(metadata_scoreaware, Mapping):
+        metadata_scoreaware = (
+            metadata_scoreaware.get("score_aware_training", {})
+            if isinstance(metadata_scoreaware.get("score_aware_training"), Mapping)
+            else {}
+        )
+        candidate_materialization = metadata_scoreaware.get(
+            "target_region_action_inflate_materialization"
+        )
+        if isinstance(candidate_materialization, Mapping):
+            target_region_action_inflate_materialization = candidate_materialization
+    target_region_action_survival_archive_resolution = dict(archive_resolution)
+    if (
+        isinstance(target_region_action_inflate_materialization, Mapping)
+        and target_region_action_inflate_materialization.get("inflate_survived") is True
+        and isinstance(target_region_action_inflate_materialization.get("inflated_raw_path"), str)
+    ):
+        target_region_action_survival_archive_resolution["inflated_raw_path"] = str(
+            target_region_action_inflate_materialization["inflated_raw_path"]
+        )
     target_region_action_parseback_survival = _write_hi_nerv_target_region_action_parseback_survival(
-        archive_resolution=archive_resolution,
+        archive_resolution=target_region_action_survival_archive_resolution,
         output_dir=training_dir,
         artifact_dict=artifact_dict,
         export_selection=(
@@ -13940,6 +14080,8 @@ def _compact_base_campaign_rows(
                 route_status = "queued_for_mlx_training_archive_export_receiver_proof"
             elif status == ("mlx_archive_export_adapter_available_distortion_fit_actuator_pending"):
                 route_status = "queued_for_mlx_archive_adapter_smoke_scoreaware_training_pending"
+            elif status == "executable_cpu_advisory_plus_mlx_native_export_adapter_available":
+                route_status = "queued_for_snerv_native_tub_lf_hf_output2_runtime_binding"
             elif status == "checkpoint_adapter_available":
                 route_status = "queued_for_checkpoint_import_or_long_continuation"
             elif status in {
@@ -17822,6 +17964,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         target_region_action_program_base64,
         target_region_action_export_selection,
     ) = _select_target_region_action_program_from_birth_payload(target_region_birth_payload)
+    target_region_action_inflate_materialization_holder: dict[str, Any] = {}
 
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         # Keep the byte cap coupled to the final archive, not only to train-time
@@ -17851,12 +17994,35 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         }
         if isinstance(target_region_action_export_selection, Mapping):
             export_artifact_dict["target_region_birth_payload"] = dict(target_region_action_export_selection)
+        target_region_action_inflate_materialization = None
+        if isinstance(target_region_action_program_base64, str) and target_region_action_program_base64:
+            target_region_action_inflate_materialization = (
+                _write_hi_nerv_target_region_action_inflate_materialization(
+                    archive_path=archive_path,
+                    output_dir=archive_output_dir,
+                )
+            )
+            target_region_action_inflate_materialization_holder["manifest"] = dict(
+                target_region_action_inflate_materialization
+            )
+            export_artifact_dict["target_region_action_inflate_materialization"] = dict(
+                target_region_action_inflate_materialization
+            )
+        survival_archive_resolution = {
+            "archive_path": Path(archive_path).as_posix(),
+            "archive_sha256": archive_sha256,
+            "archive_bytes": int(archive_bytes),
+        }
+        if (
+            isinstance(target_region_action_inflate_materialization, Mapping)
+            and target_region_action_inflate_materialization.get("inflate_survived") is True
+            and isinstance(target_region_action_inflate_materialization.get("inflated_raw_path"), str)
+        ):
+            survival_archive_resolution["inflated_raw_path"] = str(
+                target_region_action_inflate_materialization["inflated_raw_path"]
+            )
         _write_hi_nerv_target_region_action_parseback_survival(
-            archive_resolution={
-                "archive_path": Path(archive_path).as_posix(),
-                "archive_sha256": archive_sha256,
-                "archive_bytes": int(archive_bytes),
-            },
+            archive_resolution=survival_archive_resolution,
             output_dir=archive_output_dir,
             artifact_dict=export_artifact_dict,
             export_selection=(
@@ -18385,6 +18551,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     if target_region_action_export_selection is not None:
         artifact_metadata["score_aware_training"]["target_region_action_export_selection"] = (
             _strip_substrate_metadata_authority_fields(target_region_action_export_selection)
+        )
+    if isinstance(target_region_action_inflate_materialization_holder.get("manifest"), Mapping):
+        artifact_metadata["score_aware_training"]["target_region_action_inflate_materialization"] = (
+            _strip_substrate_metadata_authority_fields(
+                target_region_action_inflate_materialization_holder["manifest"]
+            )
         )
 
     def _hi_nerv_archive_replay_components_with_birth_survival(
@@ -20374,6 +20546,92 @@ def _write_hi_nerv_target_region_action_parseback_survival(
                 json.dumps(artifact, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
+    return row
+
+
+def _write_hi_nerv_target_region_action_inflate_materialization(
+    *,
+    archive_path: str | Path,
+    output_dir: str | Path,
+) -> dict[str, Any]:
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    archive = Path(archive_path).expanduser().resolve(strict=False)
+    raw_path = out / "hi_nerv_target_region_action_inflated.raw"
+    manifest_path = out / "hi_nerv_target_region_action_inflate_materialization.json"
+
+    def _blocked(blocker: str, *, reason: str | None = None) -> dict[str, Any]:
+        row = {
+            "schema": "hi_nerv_target_region_action_inflate_materialization.v1",
+            "archive_path": archive.as_posix(),
+            "inflated_raw_path": raw_path.as_posix(),
+            "survived": False,
+            "inflate_survived": False,
+            "blockers": [blocker],
+            "reason": reason or blocker,
+            "artifact_path": manifest_path.as_posix(),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        if archive.is_file():
+            row["archive_sha256"] = _sha256_file(archive)
+            row["archive_bytes"] = int(archive.stat().st_size)
+        _write_json(manifest_path, row)
+        return row
+
+    if not archive.is_file():
+        return _blocked("target_region_action_inflate_archive_zip_missing")
+
+    try:
+        from tac.substrates.hi_nerv.archive_candidate import (
+            _read_hiv1_payload_from_archive_zip,
+        )
+        from tac.substrates.hi_nerv.inflate import inflate_one_video
+
+        payload = _read_hiv1_payload_from_archive_zip(archive)
+        inflate_one_video(payload, raw_path, device="cpu")
+    except Exception as exc:
+        return _blocked(
+            "target_region_action_inflate_materialization_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+
+    row = {
+        "schema": "hi_nerv_target_region_action_inflate_materialization.v1",
+        "archive_path": archive.as_posix(),
+        "archive_sha256": _sha256_file(archive),
+        "archive_bytes": int(archive.stat().st_size),
+        "archive_payload_sha256": hashlib.sha256(payload).hexdigest(),
+        "inflated_raw_path": raw_path.as_posix(),
+        "inflated_raw_sha256": _sha256_file(raw_path),
+        "inflated_raw_bytes": int(raw_path.stat().st_size),
+        "command": (
+            "tac.substrates.hi_nerv.inflate.inflate_one_video("
+            "payload_from_archive_zip, hi_nerv_target_region_action_inflated.raw, device=cpu)"
+        ),
+        "survived": True,
+        "inflate_survived": True,
+        "blockers": [],
+        "artifact_path": manifest_path.as_posix(),
+        "cleanup_contract": {
+            "schema": "target_region_action_inflated_raw_cleanup_contract.v1",
+            "raw_output_rebuildable_from_archive": True,
+            "archive_path": archive.as_posix(),
+            "archive_sha256": _sha256_file(archive),
+            "inflated_raw_path": raw_path.as_posix(),
+            "inflated_raw_sha256": _sha256_file(raw_path),
+            "inflated_raw_bytes": int(raw_path.stat().st_size),
+            "retained_on_ssd": True,
+            "delete_only_after_manifest_preserved": True,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    _write_json(manifest_path, row)
     return row
 
 

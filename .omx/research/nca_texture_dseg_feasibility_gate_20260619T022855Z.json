@@ -1,0 +1,92 @@
+{
+  "schema": "nca_texture_dseg_feasibility_gate.v1",
+  "produced_at_utc": "2026-06-19T02:41:07.663571+00:00",
+  "producer": "experiments/probe_nca_texture_dseg_feasibility_gate.py",
+  "axis_tag": "[contest-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_moved": false,
+  "the_question": "Can a few-KB iterated NCA rule grow CONTINUOUS RGB TEXTURE (replacing the 161KB decoder) whose realized d_seg (through the real SegNet + roundtrip) gives S < 0.15? The premise: GT-RGB through the roundtrip realizes d_seg 0.00022 (frontier-grade) \u2014 continuous texture CAN survive; the bet is whether a few-KB rule reproduces it.",
+  "premise_gt_rgb_roundtrip_dseg": 0.00022,
+  "thresholds": {
+    "frontier_dseg": 0.00257,
+    "sub015_dseg": 0.0006,
+    "green_dseg_threshold": 0.0012,
+    "flat_partition_nca_floor": 0.0162,
+    "byte_cheap_rate_threshold": 0.05,
+    "S_target": 0.15
+  },
+  "method": {
+    "representation": "Continuous-texture NCA: fixed depthwise perception -> 1x1 conv 3C->hidden (ReLU) -> 1x1 conv hidden->C (zero-init) = the RULE, iterated N steps from a per-frame LATENT-conditioned seed -> 1x1 readout C->3 RGB (the generator IS the renderer; CONTINUOUS RGB, not a class partition). Stored bytes = rule + readout + latent_proj (once) + per-frame latent.",
+    "fit_objective": "CE(real-SegNet(roundtrip(grown-RGB)), L*) [d_seg DIRECT] + recon_w*MSE(grown-RGB, GT-RGB)",
+    "dseg_metric": "realized argmax-flip-rate of the grown RGB through the EXACT roundtrip vs L* (authority)",
+    "train_device": "mps",
+    "authority_device": "cpu",
+    "n_channels": 16,
+    "latent_dim": 32,
+    "n_steps": 64,
+    "n_frames": 1
+  },
+  "rows": {
+    "h128": {
+      "hidden": 128,
+      "n_channels": 16,
+      "latent_dim": 32,
+      "n_steps": 64,
+      "n_frames": 1,
+      "avg_rule_param_count": 32947.0,
+      "avg_geometric_dseg": 0.5485738118489584,
+      "avg_realized_dseg": 0.5485738118489584,
+      "avg_recon_rmse": 137.0182342529297,
+      "avg_boundary_band_flip": 0.8811055515844651,
+      "avg_interior_flip": 0.533743504733973,
+      "avg_rate_amortized": 0.01909740075565403,
+      "avg_S_projected_amortized": 54.934788104599946,
+      "best_realized_dseg": 0.5485738118489584,
+      "per_frame": [
+        {
+          "hidden": 128,
+          "n_channels": 16,
+          "latent_dim": 32,
+          "n_steps": 64,
+          "rule_param_count": 32947,
+          "geometric_dseg": 0.5485738118489584,
+          "realized_dseg": 0.5485738118489584,
+          "recon_rmse": 137.0182342529297,
+          "boundary_band_flip": 0.8811055515844651,
+          "interior_flip": 0.533743504733973,
+          "final_ce_seg": 8.759871482849121,
+          "final_recon": 0.28871965408325195,
+          "ce_seg_first": 2.104722023010254,
+          "bytes": {
+            "rule_param_count": 32947,
+            "rule_bytes": 18120.850000000002,
+            "latent_dim": 32,
+            "latent_bytes_per_frame": 17.6,
+            "total_600_amortized_bytes": 28680.850000000002,
+            "total_600_full_bytes": 10883070.0
+          },
+          "rate_amortized": 0.01909740075565403,
+          "S_projected_amortized": 54.934788104599946,
+          "realized_dseg_x_frontier": 213.45284507741573,
+          "realized_dseg_x_gt_rgb_floor": 2493.5173265861745,
+          "realized_dseg_x_flat_partition_nca": 33.86258097833077,
+          "elapsed_s": 730.9
+        }
+      ]
+    }
+  },
+  "best_realized_dseg": 0.5485738118489584,
+  "best_avg_realized_dseg": 0.5485738118489584,
+  "best_realized_dseg_x_frontier": 213.45284507741573,
+  "best_realized_dseg_x_gt_rgb_floor": 2493.5173265861745,
+  "improvement_vs_flat_partition_nca": 0.029531121701559512,
+  "best_S_projected_amortized": 54.934788104599946,
+  "best_row_key": "h128",
+  "n_byte_cheap_rows": 1,
+  "n_sub015_rows": 0,
+  "byte_escape_real": true,
+  "verdict": "RED_TEXTURE_NCA_CAPS_ABOVE_SUB015",
+  "verdict_basis": "MEASUREMENT-FIRST: realized d_seg of the grown CONTINUOUS RGB through the real SegNet + exact roundtrip. The continuous-texture variant (the operator's true reframe) is tested here, distinct from the sister flat-partition NCA. Reports best-per-frame to guard false-GREEN/false-RED."
+}

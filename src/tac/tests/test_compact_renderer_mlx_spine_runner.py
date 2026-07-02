@@ -1559,6 +1559,100 @@ def test_hinerv_action_program_selection_prefers_wall_normal_support() -> None:
     assert selection["exact_delta_score_nonrate"] == -1.0
 
 
+def test_hinerv_action_program_selection_derives_legacy_wall_normal_archive_support() -> None:
+    payload = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "d" * 64,
+        "target_region_wall_normal_lift": {
+            "schema": "tac.target_region_wall_normal_lift.v1",
+            "action_id": "d" * 64,
+            "direct_teacher": {
+                "support_sha256": "wall-mask-support",
+                "action_effect": {"support_sha256": "wall-mask-support"},
+                "teacher_is_true_wall_normal": True,
+                "uses_official_seg_preprocess": True,
+                "uses_target_class_margin": True,
+            },
+            "sidecar_fallback": {
+                "support_sha256": "generic-sidecar-support",
+            },
+        },
+        "candidate_frontier_telemetry": {
+            "masked_residual_oracle": {
+                "best_candidate": {
+                    "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                    "direct_seg_wall_oracle": {
+                        "support_sha256": "generic-mask-support",
+                        "teacher_is_true_wall_normal": False,
+                        "inverse_source": "masked_residual",
+                    },
+                    "target_region_action_program_base64": "generic-program",
+                    "target_region_action_payload_bytes": 8,
+                    "target_region_action_section_telemetry": {
+                        "support_sha256": "generic-sidecar-support",
+                        "support_cardinality": 4,
+                        "support_encoding": "explicit_yx_u16_coordinates",
+                        "support_encoded_bytes": 16,
+                        "payload_bytes": 8,
+                    },
+                    "admission_decision": {
+                        "accepted": True,
+                        "exact_score_decision": "accepted",
+                        "exact_delta_score_nonrate": -10.0,
+                    },
+                    "region_argmax_transitions": {
+                        "wrong_to_target_count": 4,
+                        "net_target_support_delta": 4,
+                    },
+                },
+                "best_wall_normal_candidate": {
+                    "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                    "candidate_is_true_wall_normal_teacher": True,
+                    "direct_seg_wall_oracle": {
+                        "support_sha256": "wall-mask-support",
+                        "action_effect": {"support_sha256": "wall-mask-support"},
+                        "teacher_is_true_wall_normal": True,
+                        "inverse_source": "support_projected_segnet_margin_vjp",
+                        "inverse_basis": "support_projected_receiver_pixel_adam_ste",
+                        "uses_official_seg_preprocess": True,
+                        "uses_target_class_margin": True,
+                    },
+                    "target_region_action_program_base64": "wall-normal-program",
+                    "target_region_action_payload_bytes": 16,
+                    "target_region_action_section_telemetry": {
+                        "support_sha256": "wall-action-support",
+                        "support_cardinality": 6,
+                        "support_encoding": "explicit_yx_u16_coordinates",
+                        "support_encoded_bytes": 24,
+                        "payload_bytes": 16,
+                    },
+                    "admission_decision": {
+                        "accepted": True,
+                        "exact_score_decision": "accepted",
+                        "exact_delta_score_nonrate": -1.0,
+                    },
+                    "region_argmax_transitions": {
+                        "wrong_to_target_count": 6,
+                        "net_target_support_delta": 6,
+                    },
+                },
+            },
+        },
+    }
+
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(payload)
+
+    assert program == "wall-normal-program"
+    assert selection is not None
+    assert selection["selected_for_export"] is True
+    assert selection["wall_normal_preferred_support_sha256"] == "wall-action-support"
+    assert selection["target_region_action_support_sha256"] == "wall-action-support"
+    assert selection["direct_teacher_support_sha256"] == "wall-action-support"
+    assert selection["direct_teacher_mask_support_sha256"] == "wall-mask-support"
+    assert selection["same_support_as_direct_teacher"] is True
+    assert selection["selected_matches_wall_normal_support"] is True
+
+
 def test_hinerv_action_payload_selection_reads_persisted_readiness_metadata() -> None:
     nested_birth = {
         "schema": "hi_nerv_target_region_birth.v1",
@@ -10811,7 +10905,9 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     assert campaign_plan["planner_action"] == ("run_receiver_closed_modelsize_ladder_before_score_aware_training")
     assert campaign_plan["linf_latent_posthoc_status"] == "demoted"
     assert campaign_plan["promotion_eligible"] is False
-    assert rows[("snerv", 178_000)]["route_status"] == ("migration_required_before_runner_execution")
+    assert rows[("snerv", 178_000)]["route_status"] == (
+        "queued_for_snerv_native_tub_lf_hf_output2_runtime_binding"
+    )
     assert rows[("snerv", 178_000)]["stack_role"] == "primary_carrier"
     assert rows[("sr_nerv", 178_000)]["route_status"] == ("migration_required_before_runner_execution")
     assert rows[("sr_nerv", 178_000)]["stack_role"] == ("resolution_axis_enhancer_or_design_knob")
@@ -19635,6 +19731,7 @@ def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
             "receiver_proof_path": (out / "receiver_proof.json").as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
+            "snerv_lf_hf_solution_family": "official_tub_lf_hf_decoder_replacement",
             "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
             "snerv_official_mfu_hfr_tub_export_bound": True,
             "snerv_official_mfu_hfr_tub_export_bound_semantics": ("receiver_payload_bound_not_source_forward_parity"),
@@ -19642,6 +19739,36 @@ def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
             "snerv_official_mfu_hfr_tub_frame_producing_export": True,
             "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
             "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
+            "snerv_official_tub_source_fixture_binding": {
+                "schema": "snerv_official_tub_source_fixture_binding.v1",
+                "source_fixture_replay_bound": True,
+                "official_tub_temporal_encoder_output2_source_fixture_replay_passed": True,
+                "full_tub_source_forward_parity_proven": False,
+                "source_forward_replay_authority": False,
+                "blockers": ["snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "snerv_official_tub_source_fixture_replay_bound": True,
+            "snerv_official_tub_source_fixture_replay_passed": True,
+            "official_tub_output2_storage": {
+                "section": "decoder_payload.output_2",
+                "stored": True,
+                "source_payload_present": True,
+                "receiver_executes_output2_fusion_from_payload": True,
+                "receiver_frame_decode_consumes_output2": True,
+                "receiver_output2_frame_shape_match": True,
+            },
+            "official_tub_output2_payload_source_available": True,
+            "official_tub_output2_payload_export_bound": True,
+            "official_tub_output2_payload_stored": True,
+            "official_tub_output2_receiver_fusion_from_payload": True,
+            "official_tub_output2_receiver_executed": True,
+            "official_tub_output2_fusion_executed": True,
+            "receiver_frame_decode_consumes_output2": True,
+            "official_tub_output2_receiver_frame_bound": True,
+            "official_tub_output2_receiver_output2_frame_shape_match": True,
             "snerv_official_mfu_hfr_tub_export_blockers": [
                 "snerv_official_mfu_hfr_tub_weight_mapping_missing",
                 "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
@@ -19664,6 +19791,24 @@ def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
                 "official_decoder_payload_selected": True,
                 "frame_producing_official_export": True,
                 "frame_decode_succeeded": True,
+                "receiver_payload_frame_replay_passed": True,
+                "official_tub_output2_storage": {
+                    "section": "decoder_payload.output_2",
+                    "stored": True,
+                    "source_payload_present": True,
+                    "receiver_executes_output2_fusion_from_payload": True,
+                    "receiver_frame_decode_consumes_output2": True,
+                    "receiver_output2_frame_shape_match": True,
+                },
+                "official_tub_output2_payload_source_available": True,
+                "official_tub_output2_payload_export_bound": True,
+                "official_tub_output2_payload_stored": True,
+                "official_tub_output2_receiver_fusion_from_payload": True,
+                "official_tub_output2_receiver_executed": True,
+                "official_tub_output2_fusion_executed": True,
+                "receiver_frame_decode_consumes_output2": True,
+                "official_tub_output2_receiver_frame_bound": True,
+                "official_tub_output2_receiver_output2_frame_shape_match": True,
                 "blockers": [],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -19808,6 +19953,13 @@ def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
     assert attachment["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert attachment["packet_source"] == "mlx_target_hydration_numpy_closed_form_decoder_fit"
     assert attachment["official_primitive_binding"]["official_receiver_payload_bound"] is True
+    binding = attachment["snerv_native_tub_lf_hf_output2_runtime_binding"]
+    assert binding["runtime_binding_proven"] is True
+    assert binding["output2_source_identical"] is True
+    assert binding["source_forward_replay_authority"] is False
+    assert binding["ready_for_exact_eval_dispatch"] is False
+    assert attachment["output2_boundary_verdict"]["verdict"] == "SOURCE_IDENTICAL"
+    assert attachment["output2_boundary_verdict"]["ready_for_exact_eval_dispatch"] is False
 
     plan = build_snerv_candidate_curriculum_plan(
         candidate={

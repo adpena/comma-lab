@@ -1,0 +1,122 @@
+{
+  "probe": "variable_level_waterfill_net",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE \u2014 RD curves + net on real frozen scorer, NOT a 600-pair contest eval",
+  "basin_checkpoint": "experiments/results/forkpoints/basin_bc20_20260612T121523Z/torch_vehicle_checkpoint_state.pt",
+  "rd_pairs": 24,
+  "level_grid": [
+    127,
+    96,
+    64,
+    48,
+    32,
+    16
+  ],
+  "baseline_score": 0.519685,
+  "baseline_d_seg": 0.00339,
+  "baseline_d_pose": 0.0014672,
+  "baseline_archive_bytes": 89413,
+  "waterfill_levels_coarsened": 13,
+  "waterfill_levels": {
+    "stem.weight": 16,
+    "blocks.0.weight": 16,
+    "blocks.1.weight": 16,
+    "blocks.2.weight": 16,
+    "blocks.3.weight": 16,
+    "blocks.4.weight": 16,
+    "blocks.5.weight": 32,
+    "skips.2.weight": 32,
+    "skips.3.weight": 96,
+    "skips.4.weight": 48,
+    "refine.0.weight": 96,
+    "rgb_0.weight": 16,
+    "rgb_1.weight": 32
+  },
+  "waterfill_total_byte_saving_predicted": 29437.0,
+  "waterfill_net_predicted_from_rd_table": -0.094728,
+  "kkt_marginal_equalization_holds": true,
+  "kkt_explanation": "KKT marginal-equalization HOLDS: accepted marginals in [-3.177e-04, -2.624e-07] all <= byte value 6.659e-07 <= rejected frontier 2.246e-06; 17 distinct steps walk monotonically UP to the boundary (not a constant).",
+  "kkt_byte_value_per_byte": 6.658589531221714e-07,
+  "kkt_max_accepted_ratio": -2.624134402344625e-07,
+  "kkt_min_rejected_ratio": 2.2459940722470374e-06,
+  "primary_net_score_delta_MEASURED": -0.026082,
+  "primary_byte_delta_MEASURED": -29614,
+  "primary_d_seg": 0.004014,
+  "primary_d_pose": 0.00027474,
+  "confirm_slice": {
+    "confirm_slice": "[60:84]",
+    "baseline_score": 0.621196,
+    "waterfill_score": 0.665479,
+    "net_score_delta": 0.044283,
+    "byte_delta": -29614,
+    "baseline_d_seg": 0.004393,
+    "waterfill_d_seg": 0.005155,
+    "baseline_d_pose": 0.00149707,
+    "waterfill_d_pose": 0.00121372
+  },
+  "rd_frontier": [
+    {
+      "byte_target": 631.0,
+      "achieved_byte_delta": -1135,
+      "primary_net_score_delta": -0.028033,
+      "n_coarsened": 7,
+      "confirm_net_score_delta": -0.01081,
+      "worst_slice_net": -0.01081
+    },
+    {
+      "byte_target": 1372.0,
+      "achieved_byte_delta": -2604,
+      "primary_net_score_delta": -0.030217,
+      "n_coarsened": 8,
+      "confirm_net_score_delta": -0.011937,
+      "worst_slice_net": -0.011937
+    },
+    {
+      "byte_target": 2141.0,
+      "achieved_byte_delta": -2604,
+      "primary_net_score_delta": -0.030217,
+      "n_coarsened": 8,
+      "confirm_net_score_delta": -0.011937,
+      "worst_slice_net": -0.011937
+    },
+    {
+      "byte_target": 2731.0,
+      "achieved_byte_delta": -4793,
+      "primary_net_score_delta": -0.043771,
+      "n_coarsened": 9,
+      "confirm_net_score_delta": -0.012882,
+      "worst_slice_net": -0.012882
+    },
+    {
+      "byte_target": 4695.0,
+      "achieved_byte_delta": -4793,
+      "primary_net_score_delta": -0.043771,
+      "n_coarsened": 9,
+      "confirm_net_score_delta": -0.012882,
+      "worst_slice_net": -0.012882
+    },
+    {
+      "byte_target": 8000.0,
+      "achieved_byte_delta": -12246,
+      "primary_net_score_delta": -0.054863,
+      "n_coarsened": 12,
+      "confirm_net_score_delta": 0.001577,
+      "worst_slice_net": 0.001577
+    }
+  ],
+  "net_stop_slice_robust_best_net": -0.026082,
+  "net_stop_slice_robust_worst_net": 0.044283,
+  "net_stop_robust_negative": false,
+  "robust_operating_point": {
+    "byte_target": 2731.0,
+    "achieved_byte_delta": -4793,
+    "primary_net_score_delta": -0.043771,
+    "n_coarsened": 9,
+    "confirm_net_score_delta": -0.012882,
+    "worst_slice_net": -0.012882
+  },
+  "crude_probe_net_ratio050": 0.001053,
+  "crude_probe_net_ratio075": 0.00603,
+  "improvement_vs_crude_best": 0.027135,
+  "verdict": "NET_POSITIVE_AT_$0",
+  "recommendation": "ready $0 rate win at the ROBUST OPERATING POINT (the byte target whose WORST slice is net-negative) \u2014 recommend driver wire-in at that conservative target (DEFERRED, next gate). NOTE: net_stop OVER-SPENDS (RD table fit on primary slice) \u2014 wire the conservative byte target, not net_stop."
+}

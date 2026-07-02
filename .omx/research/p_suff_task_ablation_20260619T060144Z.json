@@ -1,0 +1,24 @@
+{
+  "schema": "p_suff_task_ablation.v1",
+  "produced_at_utc": "2026-06-19T06:01:44.400984+00:00",
+  "producer": "experiments/probe_p_suff_task_ablation.py",
+  "axis_tag": "[contest-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "pointer_moved": false,
+  "n_pairs_measured": 24,
+  "the_question": "How much of the 0.19110 frontier archive does the frozen scorer IGNORE? (the indirect-RD R_\u1ef8\u2212R_X invariance gap on the binding rate term). Total scorer-invariant byte mass = fraction deletable/coarsenable keeping \u0394S_task < +0.005.",
+  "state": {
+    "phases": {},
+    "headline": {
+      "joint_bit_floor_verification": {
+        "joint_section_byte_saving": 70867.6,
+        "joint_delta_S_task": 0.002
+      }
+    },
+    "verdict_basis": "JOINT bit-floor: 40.0% byte saving, combined \u0394S_task=+0.00200",
+    "verdict": "GREEN_LARGE_SCORER_INVARIANT_MASS_DOMINATED_RUNG_RATE_CUT"
+  },
+  "verdict": "GREEN_LARGE_SCORER_INVARIANT_MASS_DOMINATED_RUNG_RATE_CUT"
+}

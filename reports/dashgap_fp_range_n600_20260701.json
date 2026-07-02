@@ -1,0 +1,262 @@
+{
+  "tool": "dashgap_fp_range_n215",
+  "authority": "[partition-level on GT lstars = real SegNet argmax] advisory",
+  "n_pairs": 600,
+  "n_bins": 16,
+  "profile": [
+    {
+      "bin": 0,
+      "rows": [
+        0,
+        24
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 1,
+      "rows": [
+        24,
+        48
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 2,
+      "rows": [
+        48,
+        72
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 3,
+      "rows": [
+        72,
+        96
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 4,
+      "rows": [
+        96,
+        120
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 5,
+      "rows": [
+        120,
+        144
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 6,
+      "rows": [
+        144,
+        168
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 7,
+      "rows": [
+        168,
+        192
+      ],
+      "mean_fwd_m": 41.06,
+      "corridor_px": 159799,
+      "dashedness_gtlane_frac_of_corridor": 0.2729,
+      "fp_cont_frac_of_corridor": 0.6268,
+      "fp_cont_px": 100158,
+      "fp_gated_px": 38592,
+      "fn_cont_px": 3114,
+      "fn_gated_px": 20953
+    },
+    {
+      "bin": 8,
+      "rows": [
+        192,
+        216
+      ],
+      "mean_fwd_m": 17.23,
+      "corridor_px": 541426,
+      "dashedness_gtlane_frac_of_corridor": 0.4555,
+      "fp_cont_frac_of_corridor": 0.5042,
+      "fp_cont_px": 272988,
+      "fp_gated_px": 80702,
+      "fn_cont_px": 14765,
+      "fn_gated_px": 88939
+    },
+    {
+      "bin": 9,
+      "rows": [
+        216,
+        240
+      ],
+      "mean_fwd_m": 9.26,
+      "corridor_px": 381706,
+      "dashedness_gtlane_frac_of_corridor": 0.4558,
+      "fp_cont_frac_of_corridor": 0.5345,
+      "fp_cont_px": 204005,
+      "fp_gated_px": 79066,
+      "fn_cont_px": 6121,
+      "fn_gated_px": 43097
+    },
+    {
+      "bin": 10,
+      "rows": [
+        240,
+        264
+      ],
+      "mean_fwd_m": 6.27,
+      "corridor_px": 209890,
+      "dashedness_gtlane_frac_of_corridor": 0.4329,
+      "fp_cont_frac_of_corridor": 0.5671,
+      "fp_cont_px": 119020,
+      "fp_gated_px": 40965,
+      "fn_cont_px": 2145,
+      "fn_gated_px": 31090
+    },
+    {
+      "bin": 11,
+      "rows": [
+        264,
+        288
+      ],
+      "mean_fwd_m": 4.76,
+      "corridor_px": 180654,
+      "dashedness_gtlane_frac_of_corridor": 0.5756,
+      "fp_cont_frac_of_corridor": 0.401,
+      "fp_cont_px": 72439,
+      "fp_gated_px": 19424,
+      "fn_cont_px": 3934,
+      "fn_gated_px": 64175
+    },
+    {
+      "bin": 12,
+      "rows": [
+        288,
+        312
+      ],
+      "mean_fwd_m": 3.84,
+      "corridor_px": 162600,
+      "dashedness_gtlane_frac_of_corridor": 0.0089,
+      "fp_cont_frac_of_corridor": 0.0049,
+      "fp_cont_px": 793,
+      "fp_gated_px": 175,
+      "fn_cont_px": 65,
+      "fn_gated_px": 974
+    },
+    {
+      "bin": 13,
+      "rows": [
+        312,
+        336
+      ],
+      "mean_fwd_m": 3.36,
+      "corridor_px": 65109,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 14,
+      "rows": [
+        336,
+        360
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    },
+    {
+      "bin": 15,
+      "rows": [
+        360,
+        384
+      ],
+      "mean_fwd_m": null,
+      "corridor_px": 0,
+      "dashedness_gtlane_frac_of_corridor": 0.0,
+      "fp_cont_frac_of_corridor": 0.0,
+      "fp_cont_px": 0,
+      "fp_gated_px": 0,
+      "fn_cont_px": 0,
+      "fn_gated_px": 0
+    }
+  ],
+  "totals": {
+    "fp_cont_px": 769403,
+    "fp_gated_px": 258924,
+    "fn_cont_px": 30144,
+    "fn_gated_px": 249228,
+    "gate_fp_reduction": 0.6635,
+    "gate_fn_increase_px": 219084
+  },
+  "RANGE_DEPENDENCE": {
+    "near_dashedness(bottom_quarter)": 0.0022,
+    "far_dashedness(top_occupied)": 0.4043,
+    "interpretation": "if far_dashedness >> near_dashedness (far->~1.0 continuous, near~duty dashed) -> RANGE-DEPENDENT -> uniform gate over-corrects far -> use range-dependent gate. Crossover = bin where dashedness rises."
+  },
+  "caveat": "PARTITION-LEVEL (band vs GT lstars); realized-through-R+SegNet re-confirm is separate (#213)."
+}

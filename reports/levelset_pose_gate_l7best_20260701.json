@@ -1,0 +1,223 @@
+{
+  "tool": "tools/levelset_pose_gate.py",
+  "gate": "#206 mission-framing pose gate",
+  "utc": "2026-07-01T23:27:01Z",
+  "authority": "[macOS-CPU advisory / CPU-torch research-signal] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "promotable": false,
+  "frontier_pointer": "UNMOVED 0.19110 (advisory measurement; not a contest score)",
+  "ckpt_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_v2_attrclean_20260630T194549Z",
+  "npz_name": "levelset_witness_ema_BEST.npz",
+  "config": {
+    "n_classes": 5,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 26,
+    "activation": "hosc",
+    "softmax_temp": 0.30982047258105083,
+    "chroma": true,
+    "render_h": 384,
+    "render_w": 512,
+    "in_feat": 88
+  },
+  "self_orient": {
+    "self_orient": true,
+    "curvelet_feat_width": 80,
+    "dir_w": 8,
+    "n_dir_freqs": 2,
+    "freq_across": 32.0,
+    "freq_along": 4.0,
+    "tau": 4.0,
+    "iters": 4
+  },
+  "n_pairs_total": 600,
+  "n_geom_strided": 32,
+  "stride": 18,
+  "strided_indices": [
+    0,
+    18,
+    36,
+    54,
+    72,
+    90,
+    108,
+    126,
+    144,
+    162,
+    180,
+    198,
+    216,
+    234,
+    252,
+    270,
+    288,
+    306,
+    324,
+    342,
+    360,
+    378,
+    396,
+    414,
+    432,
+    450,
+    468,
+    486,
+    504,
+    522,
+    540,
+    558
+  ],
+  "n_real_reference": 16,
+  "work_resolution": [
+    384,
+    512
+  ],
+  "no_fake_selfcheck": {
+    "pairs": 4,
+    "pose_max_abs_err": 0.0,
+    "seg_max_disagree_px": 0,
+    "PASS": true
+  },
+  "measurements": {
+    "1_render_space_seg_pose_cosine": {
+      "cos_ce": {
+        "mean": 0.0010069255082120968,
+        "median": 5.8839930603814776e-05,
+        "n": 32,
+        "min": -0.02156918434234261,
+        "max": 0.02993355342836977
+      },
+      "cos_margin": {
+        "mean": 0.0019947016639134717,
+        "median": 0.0030147940878127288,
+        "n": 32,
+        "min": -0.029921860254269864,
+        "max": 0.02230688642437595
+      },
+      "abs_median_ce": 0.006855751966027792,
+      "interpretation": "cos\u22480 \u21d2 seg-descent direction \u27c2 pose-gradient \u21d2 moving the frame to fix d_seg leaves d_pose ~unchanged \u21d2 seg\u22a5pose decoupling is FREE."
+    },
+    "2_posenet_jacobian_eff_dim_sdf_vs_real": {
+      "witness_sdf_eff_dim": {
+        "mean": 1.088892231005821,
+        "median": 1.0912639694387543,
+        "n": 32,
+        "min": 1.0432381416677987,
+        "max": 1.1275235654122433
+      },
+      "real_frame_eff_dim": {
+        "mean": 1.1088691280677863,
+        "median": 1.0972808541846764,
+        "n": 16,
+        "min": 1.071826499932815,
+        "max": 1.1758155293812644
+      },
+      "witness_rank": {
+        "mean": 6.0,
+        "median": 6.0,
+        "n": 32,
+        "min": 6.0,
+        "max": 6.0
+      },
+      "real_rank": {
+        "mean": 6.0,
+        "median": 6.0,
+        "n": 16,
+        "min": 6.0,
+        "max": 6.0
+      },
+      "witness_sigma_max": {
+        "mean": 0.07801340704628373,
+        "median": 0.0761008149332216,
+        "n": 32,
+        "min": 0.05917446583353007,
+        "max": 0.10734871392603307
+      },
+      "real_sigma_max": {
+        "mean": 0.05556326305624429,
+        "median": 0.05289140387029532,
+        "n": 16,
+        "min": 0.0377253543972468,
+        "max": 0.10100839949161815
+      },
+      "sigma_max_ratio_witness_over_real_median": 1.4388125359622204,
+      "n_severed_jacobian": 0,
+      "eff_dim_note": "the RAW participation-ratio eff-dim is dominated by pose dim0 (forward motion, ~34 vs others ~1e-3) so it is ~1 on BOTH witness AND real (NOT the in-tree ~4.08, which was measured differently \u2014 likely slot0/scale-normalized). The apples-to-apples baseline is the REAL eff-dim/rank/\u03c3_max measured IDENTICALLY here; the discriminators are RANK (full=6 \u21d2 all pose DOFs sensitive) and \u03c3_max ratio (\u22481 \u21d2 PoseNet as sensitive to the SDF render as to a real frame).",
+      "interpretation": "rank-collapse and/or \u03c3_max ratio \u226a 1 \u21d2 PoseNet near-blind on the flat SDF render \u21d2 \u03be UNREACHABLE. Full rank + \u03c3_max \u2248 real \u21d2 \u03be REACHABLE."
+    },
+    "3_seg_driven_delta_pose_null_fraction": {
+      "null_energy_frac": {
+        "mean": 0.9993574528078589,
+        "median": 0.9995181814215447,
+        "n": 32,
+        "min": 0.9975842752436819,
+        "max": 0.9998489262131712
+      },
+      "sensitive_energy_frac": {
+        "mean": 0.0006425471921396491,
+        "median": 0.0004818185784541641,
+        "n": 32,
+        "min": 0.00015107378682716486,
+        "max": 0.00241572475631655
+      },
+      "isotropic_sensitive_frac_baseline": {
+        "mean": 1.0172526041666666e-05,
+        "median": 1.0172526041666666e-05,
+        "n": 32,
+        "min": 1.0172526041666666e-05,
+        "max": 1.0172526041666666e-05
+      },
+      "interpretation": "null_frac\u22481 and sensitive_frac ~ the isotropic baseline \u21d2 the seg-driven frame change lands in the pose-null \u21d2 decoupling is free (corroborates #1)."
+    },
+    "4_A_vs_B_readback": {
+      "A_film_sdf": {
+        "d_pose_witness_render_through_R_baseline": {
+          "mean": 100.80433098142467,
+          "median": 97.83570077513437,
+          "n": 32,
+          "min": 76.2618714896785,
+          "max": 131.35028271544772
+        },
+        "reachability_sigma_max_median": 0.0761008149332216,
+        "reachability_eff_dim_median": 1.0912639694387543,
+        "note": "A = condition the flat SDF render toward stored \u03be*. Its FEASIBILITY is the reachability (#2): if \u03c3_max/eff-dim on the render are \u226a real, PoseNet cannot read \u03be back no matter the conditioning. d_pose baseline is the pose-BLIND render."
+      },
+      "B_warp_real_luma": {
+        "ran": true,
+        "n_pairs": 96,
+        "naive_copy_d_pose_null": 181.99885529717412,
+        "band_posecal_d_pose": 27.666454745747966,
+        "full_ground_posecal_d_pose": 10.531363335535286,
+        "best_corrected_d_pose": 10.531363335535286,
+        "pose_drop_frac_vs_null": 0.9421350023419691,
+        "POSE_CARRIED_BY_WARP": true,
+        "results_json": "/Users/adpena/Projects/pact/experiments/results/pose_gate_warp_readback_n96/results.json"
+      },
+      "warp_carries_pose": true
+    }
+  },
+  "verdicts": {
+    "seg_perp_pose_decoupling_FREE": true,
+    "abs_median_render_cos_seg_pose": 0.006855751966027792,
+    "pose_reachable_on_sdf_render": true,
+    "witness_jacobian_rank_median": 6.0,
+    "real_jacobian_rank_median": 6.0,
+    "sigma_max_ratio_witness_over_real": 1.4388125359622204,
+    "witness_render_d_pose_median_POSE_BLIND": 97.83570077513437,
+    "warp_real_luma_carries_pose": true,
+    "warp_real_luma_best_d_pose": 10.531363335535286,
+    "DECISION": "BOTH FEASIBLE, WARP-REAL-LUMA PREFERRED: PoseNet's Jacobian on the SDF render is full-rank with healthy \u03c3_max (\u03be IS locally reachable, so FiLM-SDF conditioning is not blocked), BUT warping the real keyframe by the stored pose carries d_pose cheaply (deterministic, ~0 training) \u2014 the pragmatic pose path. Pose-blindness (d_pose~100) is by-design (w_pose=0), NOT unreachability."
+  },
+  "caveats": [
+    "SAMPLE: geometry on a strided sample of 32/600 pairs across the whole clip (representative, avoids Lens-A contiguous-prefix optimism); the warp readback (B) uses the warp tool's contiguous prefix of 96 pairs (its own flagged caveat).",
+    "R DIFFERENTIABILITY: through-R gradients use the STE round (round.detach identity backward) + differentiable bicubic-up/bilinear-down; the uint8 cliff is straight-through, so the gradient GEOMETRY is the eval-faithful one but the exact d_pose value is the frozen verdict.",
+    "POSENET LOAD: DistortionNet CPU + differentiable yuv6 patch (validated 0-abs-error vs upstream; NO-FAKE self-check asserts PoseNet(GT)==gt_poses <1e-4). NEVER MPS.",
+    "eff-dim measured at frame_slot=1 (the SegNet-shared frame). The in-tree ~4.08 reference is at slot 0; the real-frame eff-dim measured HERE (slot 1) is the apples-to-apples baseline.",
+    "SELF-ORIENT deploy render uses the fixed-point dir feats (small parity gap vs the trainer's training-trajectory feats, per the byte-close tool); it is the SHIPPABLE render.",
+    "cos at the GT operating point is undefined (\u2202d_pose/\u2202F vanishes at d_pose=0); #1 is measured ONLY at the pose-blind witness operating point, which is the honest interference regime."
+  ],
+  "elapsed_secs": 1509.9
+}

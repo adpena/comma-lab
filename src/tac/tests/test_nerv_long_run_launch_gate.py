@@ -43,6 +43,9 @@ from tac.analysis.nerv_long_run_launch_gate import (
     NervLongRunLaunchGateError,
     evaluate_nerv_long_run_launch_gate,
 )
+from tac.analysis.snerv_lf_hf_runtime_binding import (
+    build_snerv_native_tub_lf_hf_output2_runtime_binding,
+)
 from tac.analysis.snerv_source_forward_proof import (
     DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
     SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
@@ -2883,6 +2886,76 @@ def test_snerv_native_export_requires_output2_boundary_row(
         for item in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
+
+
+def test_snerv_native_export_accepts_runtime_bound_output2_source_identical(
+    tmp_path: Path,
+) -> None:
+    binding = build_snerv_native_tub_lf_hf_output2_runtime_binding(
+        {
+            "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+            "snerv_lf_hf_solution_family": "official_tub_lf_hf_decoder_replacement",
+            "snerv_official_tub_source_fixture_binding": {
+                "source_fixture_replay_bound": True,
+                "official_tub_temporal_encoder_output2_source_fixture_replay_passed": True,
+            },
+            "snerv_official_tub_source_fixture_replay_bound": True,
+            "snerv_official_tub_source_fixture_replay_passed": True,
+            "official_primitive_binding": {
+                "official_receiver_payload_bound": True,
+                "selected_packet_frame_producing_official_export": True,
+                "selected_packet_receiver_payload_frame_replay_passed": True,
+            },
+            "selected_official_authority": {
+                "frame_producing_official_export": True,
+                "receiver_payload_frame_replay_passed": True,
+                "official_tub_output2_storage": {
+                    "section": "decoder_payload.output_2",
+                    "stored": True,
+                    "source_payload_present": True,
+                    "receiver_executes_output2_fusion_from_payload": True,
+                    "receiver_frame_decode_consumes_output2": True,
+                    "receiver_output2_frame_shape_match": True,
+                },
+                "official_tub_output2_payload_source_available": True,
+                "official_tub_output2_payload_export_bound": True,
+                "official_tub_output2_payload_stored": True,
+                "official_tub_output2_receiver_fusion_from_payload": True,
+                "official_tub_output2_receiver_executed": True,
+                "receiver_frame_decode_consumes_output2": True,
+                "official_tub_output2_receiver_frame_bound": True,
+                "official_tub_output2_receiver_output2_frame_shape_match": True,
+            },
+        }
+    )
+    root = tmp_path / "run"
+    row = _snerv_source_forward_action_row()
+    row["output2_boundary_verdict"] = binding["output2_boundary_verdict"]
+    row["passed"] = False
+    row["source_forward_replay_bound"] = False
+    row["source_forward_replay_verified"] = False
+    row["full_stack_source_forward_replay_proven"] = False
+    row["launch_gate_clearable"] = False
+    row["blockers"] = ["synthetic_source_forward_hold_not_part_of_output2_gate"]
+    _write(root / "proof.json", row)
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="snerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert binding["output2_boundary_verdict"]["verdict"] == SOURCE_IDENTICAL
+    assert verdict["approved"] is False
+    assert not any(
+        item.startswith("snerv_native_export_output2_")
+        for item in verdict["blocking_evidence"]
+    )
+    assert not any(
+        item.endswith("snerv_output2_boundary_verdict_missing")
+        for item in verdict["blocking_evidence"]
+    )
 
 
 def test_snerv_source_forward_requires_per_surface_scorer_metrics(
