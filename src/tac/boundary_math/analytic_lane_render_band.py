@@ -989,8 +989,10 @@ def roundtrip_lines_through_rd(
 
 # --- magic-dispatching helpers (so the byte-close tool + tests are format-agnostic) --
 def deserialize_lane_band_any(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
-    """Dispatch on magic: LBND1 -> ``deserialize_lane_band``, LBND2 -> ``deserialize_lane_band_rd``."""
+    """Dispatch on magic: LBND1 -> naive, LBND2 -> temporal-delta RD, LBND3 -> ego-predictive."""
 
+    if blob[:len(LANE_BAND_RD3_MAGIC)] == LANE_BAND_RD3_MAGIC:
+        return deserialize_lane_band_rd3(blob)
     if blob[:len(LANE_BAND_RD_MAGIC)] == LANE_BAND_RD_MAGIC:
         return deserialize_lane_band_rd(blob)
     return deserialize_lane_band(blob)
@@ -1009,6 +1011,314 @@ def serialize_lane_band_any(
             pairs_lines, cfg,
             base_steps=np.asarray(rd["base_steps"], np.float64), f_near=float(rd.get("f_near", _RD_F_NEAR)))
     return serialize_lane_band(pairs_lines, cfg)
+
+
+# ===========================================================================
+# WAVE-F STAGE-2: EGO-MOTION-COMPENSATED PREDICTIVE CODING (LBND3). The design
+# revision #1 (``unified_xi_design_and_adversarial_review_20260702.md`` §2): DO NOT
+# store-in-world-frame (needs an exact-invertible warp -- the deferred determinism
+# hazard). Instead use ξ_ego as a PREDICTOR for the camera-frame coeffs -- the exact
+# P-frame construction of every video codec:
+#
+#   Encode:  pred_t  = advect(DECODED camera_coeffs_{t-1}, ξ_at(t))   # numpy-fp64
+#            innov_t = Q(camera_coeffs_t) - Q(pred_t)                  # coded (tiny)
+#   Decode:  pred_t  = advect(DECODED camera_coeffs_{t-1}, ξ_at(t))   # SAME fn, SAME inputs
+#            Q_t     = Q(pred_t) + innov_t                             # exact reconstruct
+#
+# BIT-EXACT + HAZARD-FREE: no inverse-warp is ever required (unwarp(warp(x))==x is a
+# non-requirement); the ONLY determinism obligation is that ``advect`` is bit-identical
+# both sides -- trivially guaranteed (SAME ``advect_slot_matrix`` on the SAME DECODED
+# previous row + the SAME stored+DEQUANTIZED ξ). The closed-loop predicts from the
+# QUANTIZED previous coeffs so the quantization interaction is exact. Estimator error
+# costs RATE (larger innov), never d_seg/d_pose correctness (design §5.4).
+#
+# LBND3 is a STRICT GENERALIZATION of LBND2: when ξ = 0 (ds=dpsi=0 ∀t) the advect is
+# the identity, so ``Q(pred_t) = Q_{t-1}`` and the innovation stream == the LBND2 raw
+# temporal delta. Held/absent slots (present_mask=False) keep identity -> 0 innovation
+# during a hold, matching the LBND2 carry-forward semantics exactly.
+#
+# rule-118: COUNTED = the innovation stream + presence bitmap + the tiny per-pair
+# ego (ds,dpsi) quantized stream (ξ counted ONCE, dual-use pose+lane). FREE = advect /
+# quantize / dequantize / rasterize / composite (generic numpy). NO GT mask, NO scorer
+# weights, NO per-pixel table, NO mlx/metal in inflate. Steps are DERIVED (geometric).
+# ===========================================================================
+
+LANE_BAND_RD3_MAGIC = b"LBND3\x00"
+_EGO_DS_STEP = 0.01      # forward-advance quantization (m); << lat_tol effect via c'(f)*δds
+_EGO_DY_STEP = 0.01      # lateral-displacement quantization (m); direct c0 offset
+_EGO_DPSI_STEP = 1.0e-4  # yaw quantization (rad); lateral error at 30 m = 30*δdpsi < lat_tol
+
+
+def _quantize_ego(ds: np.ndarray, dy: np.ndarray, dpsi: np.ndarray):
+    """Quantize the per-pair 3-DOF planar ego (ds, dy, dpsi) to their DERIVED geometric
+    steps. Returns (Qds, Qdy, Qdpsi int64, ds_dq, dy_dq, dpsi_dq float64). The DEQUANTIZED
+    values are what BOTH the compress closed-loop AND the decode use (measure-what-you-ship);
+    the quantized ints are the counted stream."""
+
+    Qds = np.round(np.asarray(ds, np.float64) / _EGO_DS_STEP).astype(np.int64)
+    Qdy = np.round(np.asarray(dy, np.float64) / _EGO_DY_STEP).astype(np.int64)
+    Qdpsi = np.round(np.asarray(dpsi, np.float64) / _EGO_DPSI_STEP).astype(np.int64)
+    return (Qds, Qdy, Qdpsi,
+            Qds.astype(np.float64) * _EGO_DS_STEP,
+            Qdy.astype(np.float64) * _EGO_DY_STEP,
+            Qdpsi.astype(np.float64) * _EGO_DPSI_STEP)
+
+
+def _predictive_encode(Q: np.ndarray, presence: np.ndarray, steps_full: np.ndarray,
+                       ds_dq: np.ndarray, dy_dq: np.ndarray, dpsi_dq: np.ndarray, K: int) -> np.ndarray:
+    """Closed-loop ego-advected predictive residual. ``Q`` (P,D) int64 target; returns
+    the innovation ``innov`` (P,D) int64 (row0 = seed = Q[0]). Predicts each row from the
+    DECODED (== quantized*steps) previous row advected by (ds_dq[t], dy_dq[t], dpsi_dq[t])."""
+
+    from tac.boundary_math.ego_xi_trajectory import advect_slot_matrix
+
+    P, D = Q.shape
+    innov = np.zeros_like(Q)
+    if D == 0 or P == 0:
+        return innov
+    innov[0] = Q[0]
+    Mhat_prev = Q[0].astype(np.float64) * steps_full
+    for t in range(1, P):
+        pred_row = advect_slot_matrix(Mhat_prev, float(ds_dq[t]), float(dy_dq[t]), float(dpsi_dq[t]),
+                                      K, present_mask=presence[t])
+        Qpred = np.round(pred_row / steps_full).astype(np.int64)
+        innov[t] = Q[t] - Qpred
+        Mhat_prev = Q[t].astype(np.float64) * steps_full
+    return innov
+
+
+def _predictive_decode(innov: np.ndarray, presence: np.ndarray, steps_full: np.ndarray,
+                       ds_dq: np.ndarray, dy_dq: np.ndarray, dpsi_dq: np.ndarray, K: int) -> np.ndarray:
+    """Inverse of ``_predictive_encode``: reconstruct Q (P,D) int64 from the innovation.
+    Bit-identical to the encode's closed loop (SAME advect, SAME decoded-previous)."""
+
+    from tac.boundary_math.ego_xi_trajectory import advect_slot_matrix
+
+    P, D = innov.shape
+    Q = np.zeros_like(innov)
+    if D == 0 or P == 0:
+        return Q
+    Q[0] = innov[0]
+    Mhat_prev = Q[0].astype(np.float64) * steps_full
+    for t in range(1, P):
+        pred_row = advect_slot_matrix(Mhat_prev, float(ds_dq[t]), float(dy_dq[t]), float(dpsi_dq[t]),
+                                      K, present_mask=presence[t])
+        Qpred = np.round(pred_row / steps_full).astype(np.int64)
+        Q[t] = Qpred + innov[t]
+        Mhat_prev = Q[t].astype(np.float64) * steps_full
+    return Q
+
+
+def serialize_lane_band_rd3(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, xi_traj: Any, *,
+    tol: LaneBandRDTolerance | None = None,
+    base_steps: np.ndarray | None = None,
+    f_near: float = _RD_F_NEAR,
+) -> bytes:
+    """EGO-MOTION-COMPENSATED predictive serialization (LBND3). Layout::
+
+        LANE_BAND_RD3_MAGIC | u32 hlen | header_json | u32 plen | presence_bytes
+                            | u32 elen | ego_zz[P,2] uint32 | innov_zz[P,D] uint32
+
+    ``xi_traj`` is a ``tac.boundary_math.ego_xi_trajectory.XiEgoTrajectory`` (the ONE
+    counted seam). The header ``"ego"`` block carries the estimator id + ego steps; the
+    per-pair (ds,dpsi) ride the ``ego_zz`` quantized stream (dual-use pose+lane, counted
+    once). The render scalars + ``"rd"`` block are IDENTICAL to LBND2 (so the inflate
+    coverage/composite reuse unchanged)."""
+
+    steps = np.asarray(base_steps, np.float64) if base_steps is not None else derive_rd_base_steps(tol)
+    if steps.shape != (_RD_D_SLOT,):
+        raise ValueError(f"base_steps must be ({_RD_D_SLOT},); got {steps.shape}")
+    M, presence, K = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
+    P = int(M.shape[0])
+    D = K * _RD_D_SLOT
+    if int(xi_traj.n_pairs) != P:
+        raise ValueError(f"xi_traj.n_pairs {xi_traj.n_pairs} != n_pairs {P} (NO-FAKE: refusing mismatch).")
+    steps_full = np.tile(steps, K) if K else np.zeros(0, np.float64)
+    Q = _quantize_matrix(M, steps_full)                       # (P, D) int64 target
+    Qds, Qdy, Qdpsi, ds_dq, dy_dq, dpsi_dq = _quantize_ego(xi_traj.ds, xi_traj.dy, xi_traj.dpsi)
+    innov = _predictive_encode(Q, presence, steps_full, ds_dq, dy_dq, dpsi_dq, K)
+    zz = _zigzag_encode(innov) if innov.size else np.zeros((P, D), np.uint32)
+    if zz.size and int(zz.max()) >= 2 ** 31:
+        raise ValueError(
+            "LBND3 innovation exceeds int32 range -- ego predictor is diverging (bad ξ); refusing to "
+            "overflow (NO-FAKE). Investigate the estimator or widen the step schedule.")
+    ego_stack = np.stack([Qds, Qdy, Qdpsi], axis=1)           # (P, 3) int64
+    ego_zz = _zigzag_encode(ego_stack)
+    if ego_zz.size and int(ego_zz.max()) >= 2 ** 31:
+        raise ValueError("LBND3 ego (ds,dpsi) exceeds int32 range -- pathological ego estimate (NO-FAKE).")
+
+    header: dict[str, Any] = {
+        "format": 3,
+        "softness": float(cfg.softness),
+        "dash_gate": bool(cfg.dash_gate),
+        "dash_forward_max_m": float(cfg.dash_forward_max_m),
+        "v_h": float(cfg.v_h),
+        "cx": (None if cfg.cx is None else float(cfg.cx)),
+        "weight": float(cfg.weight),
+        "lane_cls": int(cfg.lane_cls),
+        "lane_rgb_mode": str(cfg.lane_rgb_mode),
+        "u_mask": (
+            {"source": "witness_margin", "tau": float(cfg.u_mask_tau), "eps": float(cfg.u_mask_eps)}
+            if cfg.u_mask_enabled else None
+        ),
+        "geom": {"cam_h": _CAM_H, "fx": _FX, "fy": _FY, "seg_h": _SEG_H, "seg_w": _SEG_W},
+        "rd": {
+            "K": int(K), "d_slot": int(_RD_D_SLOT), "n_pairs": int(P),
+            "base_steps": [float(s) for s in steps.tolist()], "f_near": float(f_near),
+        },
+        "ego": {
+            "ds_step": float(_EGO_DS_STEP), "dy_step": float(_EGO_DY_STEP),
+            "dpsi_step": float(_EGO_DPSI_STEP), "estimator_id": str(xi_traj.estimator_id),
+        },
+    }
+    mj = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    presence_bytes = np.packbits(presence.reshape(-1)).tobytes() if presence.size else b""
+    ego_bytes = np.ascontiguousarray(ego_zz, dtype=np.uint32).tobytes()
+    innov_bytes = np.ascontiguousarray(zz, dtype=np.uint32).tobytes()
+    return (LANE_BAND_RD3_MAGIC + struct.pack("<I", len(mj)) + mj
+            + struct.pack("<I", len(presence_bytes)) + presence_bytes
+            + struct.pack("<I", len(ego_bytes)) + ego_bytes + innov_bytes)
+
+
+def deserialize_lane_band_rd3(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
+    """Bit-exact inverse of ``serialize_lane_band_rd3``. Reconstructs the DEQUANTIZED
+    per-pair LaneLines via the ego-advected closed-loop predictor (numpy-fp64)."""
+
+    if blob[:len(LANE_BAND_RD3_MAGIC)] != LANE_BAND_RD3_MAGIC:
+        raise ValueError("bad LBND3 magic (NO-FAKE: refusing to guess).")
+    off = len(LANE_BAND_RD3_MAGIC)
+    (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    header = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    (plen,) = struct.unpack_from("<I", blob, off); off += 4
+    presence_bytes = blob[off:off + plen]; off += plen
+    (elen,) = struct.unpack_from("<I", blob, off); off += 4
+    ego_bytes = blob[off:off + elen]; off += elen
+    rd = header["rd"]; ego = header["ego"]
+    K = int(rd["K"]); P = int(rd["n_pairs"]); d_slot = int(rd["d_slot"])
+    steps = np.asarray(rd["base_steps"], np.float64)
+    ds_step = float(ego["ds_step"]); dy_step = float(ego["dy_step"]); dpsi_step = float(ego["dpsi_step"])
+    D = K * d_slot
+    ego_stack = _zigzag_decode(np.frombuffer(ego_bytes, dtype=np.uint32).reshape(P, 3))
+    ds_dq = ego_stack[:, 0].astype(np.float64) * ds_step
+    dy_dq = ego_stack[:, 1].astype(np.float64) * dy_step
+    dpsi_dq = ego_stack[:, 2].astype(np.float64) * dpsi_step
+    if K:
+        presence = np.unpackbits(np.frombuffer(presence_bytes, dtype=np.uint8))[:P * K].reshape(P, K).astype(bool)
+        zz = np.frombuffer(blob[off:], dtype=np.uint32).reshape(P, D)
+        innov = _zigzag_decode(zz)
+        steps_full = np.tile(steps, K)
+        Q = _predictive_decode(innov, presence, steps_full, ds_dq, dy_dq, dpsi_dq, K)
+        M = Q.astype(np.float64) * steps_full
+    else:
+        presence = np.zeros((P, 0), dtype=bool)
+        M = np.zeros((P, 0), np.float64)
+    pairs_lines = _unpack_matrix_to_pairs(M, presence, K)
+    return pairs_lines, header
+
+
+def roundtrip_lines_through_rd3(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, xi_traj: Any, *,
+    tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
+) -> tuple[list[list[LaneLine]], bytes]:
+    """Return the DEQUANTIZED per-pair lines (what LBND3 ships) + the serialized blob.
+    The compress-side render MUST use these dequantized lines (measure-what-you-ship)."""
+
+    blob = serialize_lane_band_rd3(pairs_lines, cfg, xi_traj, tol=tol, f_near=f_near)
+    dq_lines, _hdr = deserialize_lane_band_rd3(blob)
+    return dq_lines, blob
+
+
+# --- SOURCE TEMPORAL SMOOTHING (the L1 source re-parameterization the ego-predictor
+#     negative REVEALED, measured 2026-07-02) -------------------------------------------
+# The ego-motion-compensated predictor (LBND3) does NOT beat LBND2's temporal delta,
+# because the frame-to-frame centerline change is dominated by PER-FRAME FIT JITTER (each
+# pair is fit INDEPENDENTLY from the noisy SegNet argmax; ~44% of the delta L1 mass is in
+# the top-5% largest jumps -- a slot-swap/outlier signature), NOT a coherent ego sweep a
+# planar advect can predict. The CORRECT L1 lever is to DENOISE THE SOURCE: fit a smoother
+# world-lane trajectory by temporally median-smoothing the per-slot coeff time-series. This
+# is the Stage-1 memo's "fit the world lane ONCE + code the tiny per-frame innovation" thesis
+# realized via denoising -- scorer-free, decode-consistent (both sides ship the SMOOTHED
+# lines), and MEASURED ~48% additional rate reduction (n96 5614->2911 B @ win9). It is a
+# lossy RD tradeoff on the geometry (the smoothed lane differs slightly from the raw per-
+# frame fit); whether it NETS lower S is the #205 trained-in d_seg measurement (out of scope).
+def temporal_smooth_pairs_lines(
+    pairs_lines: list[list[LaneLine]], *, win: int = 5, f_near: float = _RD_F_NEAR,
+    smooth_centerline: bool = True, smooth_halfwidth: bool = True, smooth_range: bool = True,
+) -> list[list[LaneLine]]:
+    """Presence-aware temporal median smoothing of the per-slot coeff trajectory (the L1
+    source re-parameterization). Packs the ragged lines into the canonical L4 slots, then
+    for each (slot, dim) median-smooths ONLY over the frames where the slot is PRESENT
+    (absent frames keep the carry-forward hold), then unpacks. ``win`` = odd smoothing
+    window. Dash phase/period/duty are NOT smoothed (world-invariant / discrete). Returns
+    the smoothed per-pair lines (the compress-side render + the codec both consume these)."""
+
+    M, presence, K = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
+    if K == 0:
+        return [list(ls) for ls in pairs_lines]
+    P = int(M.shape[0])
+    w = int(win) | 1
+    h = w // 2
+    # which slot-local dims to smooth: centerline [0:4], halfwidth [4:6], forward_range [9:11]
+    dims: list[int] = []
+    if smooth_centerline:
+        dims += [0, 1, 2, 3]
+    if smooth_halfwidth:
+        dims += [4, 5]
+    if smooth_range:
+        dims += [9, 10]
+    Ms = M.copy()
+    for slot in range(K):
+        present_t = np.where(presence[:, slot])[0]
+        if present_t.size < 3:
+            continue
+        base = slot * _RD_D_SLOT
+        for d in dims:
+            col = M[present_t, base + d].astype(np.float64)
+            xp = np.pad(col, h, mode="edge")
+            sm = np.array([float(np.median(xp[i:i + w])) for i in range(col.size)], np.float64)
+            Ms[present_t, base + d] = sm
+    return _unpack_matrix_to_pairs(Ms, presence, K)
+
+
+def lane_band_rd3_rate_report(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, xi_traj: Any, *,
+    tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
+) -> dict[str, Any]:
+    """Measured byte accounting for LBND3 (ego-predictive) vs LBND2 (temporal-delta), on
+    the given lines + ego trajectory. Reports the COUNTED brotli bytes (innovation +
+    presence + ego), the rate term, the ratio vs LBND2, and the ego payload share. All
+    numbers MEASURED (real byte counts). rate_term = 25*bytes/RATE_DENOM."""
+
+    import brotli
+
+    rate_denom = 37_545_489.0
+    # LBND2 baseline (identity predictor)
+    rd2_raw = serialize_lane_band_rd(pairs_lines, cfg, tol=tol, f_near=f_near)
+    rd2_brotli = brotli.compress(rd2_raw, quality=11)
+    # LBND3 ego-predictive
+    rd3_raw = serialize_lane_band_rd3(pairs_lines, cfg, xi_traj, tol=tol, f_near=f_near)
+    rd3_brotli = brotli.compress(rd3_raw, quality=11)
+    # ego payload share (the counted ξ stream, isolated)
+    Qds, Qdy, Qdpsi, *_ = _quantize_ego(xi_traj.ds, xi_traj.dy, xi_traj.dpsi)
+    ego_zz = _zigzag_encode(np.stack([Qds, Qdy, Qdpsi], axis=1))
+    ego_raw_bytes = int(np.ascontiguousarray(ego_zz, dtype=np.uint32).nbytes)
+    ego_brotli_bytes = int(len(brotli.compress(np.ascontiguousarray(ego_zz, dtype=np.uint32).tobytes(), quality=11)))
+    return {
+        "n_pairs": int(xi_traj.n_pairs),
+        "estimator_id": str(xi_traj.estimator_id),
+        "rd_lbnd2_brotli_bytes": len(rd2_brotli),
+        "rd_lbnd2_rate_term": 25.0 * len(rd2_brotli) / rate_denom,
+        "rd3_lbnd3_raw_bytes": len(rd3_raw),
+        "rd3_lbnd3_brotli_bytes": len(rd3_brotli),
+        "rd3_rate_term": 25.0 * len(rd3_brotli) / rate_denom,
+        "rd3_vs_rd2_ratio": (len(rd3_brotli) / len(rd2_brotli)) if rd2_brotli else float("nan"),
+        "ego_payload_raw_bytes": ego_raw_bytes,
+        "ego_payload_brotli_bytes": ego_brotli_bytes,
+        "ds_step_m": float(_EGO_DS_STEP),
+        "dpsi_step_rad": float(_EGO_DPSI_STEP),
+        "rate_denom_bytes": int(rate_denom),
+    }
 
 
 # --- rate report (observability; per-lever measured bytes + Shannon floor) --------
