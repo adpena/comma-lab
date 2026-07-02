@@ -74,6 +74,8 @@ class GaugeComponent(Enum):
     RENDER_AA = "render_aa"            # AA-SDF observation-map render (aa_sdf_observation_render)
     LANE_BAND = "lane_band"            # analytic-lane render-band (analytic_lane_render_band)
     HEAD_GEOMETRY = "head_geometry"    # softmax/ETF/additive-margin/Menon head (laguerre_logit_offset)
+    # Wave-F #205 pose-plan (APPEND-ONLY; DESIGN-STAGE, loss-side, pending #224 trainer wire-in).
+    POSE_TRAINING = "pose_training"    # HOW d_pose is trained in-loop (H1/D1/E1; NOT the STORE gauge)
 
 
 class WarpGauge(Enum):
@@ -188,7 +190,15 @@ class LaneGauge(Enum):
     analytic render-band = AA-SDF range-dependent coverage × dash gate × witness-uncertainty FP
     killer, composited PRE-R via the base render compose_fn. Chart ↔ trainer flag: NONE=witness
     renders lane itself (byte-identical baseline); BAND_RENDER_AUTHORITY=--lane-render-band (the
-    class-1 render-time authority; net-negative d_seg realized by TRAINING WITH the band active)."""
+    class-1 render-time authority; net-negative d_seg realized by TRAINING WITH the band active).
+
+    BYTE-CLOSE REALIZATION (Wave-F Stage-1; equation ``lane_band_camera_frame_rd_rate_v1``): the
+    BAND_RENDER_AUTHORITY per-pair lane coeffs are serialized by the OPTIMAL LBND2 RD codec
+    (L4 slots + L3 geometric-tolerance quantize + L2 temporal-delta + zigzag + brotli) = the DEFAULT
+    in tools/levelset_byte_close_and_eval.py (opt-out ``--lane-band-naive`` on the BYTE-CLOSE TOOL,
+    NOT the trainer). MEASURED n600: naive 156340 B (0.1041) -> RD 41526 B (0.02765) = 3.76x,
+    decode-consistent. Shannon floor 26179 B => the residual is INFORMATION-bound; the DERIVED next
+    lever is the SE(3) ego-factorization (``lane_band_ego_factorization_source_reparam_v1``)."""
 
     NONE = "none"                              # witness authors lane (byte-identical baseline)
     BAND_RENDER_AUTHORITY = "band_render_authority"  # --lane-render-band analytic class-1 authority
@@ -209,6 +219,35 @@ class HeadGeometryGauge(Enum):
     MENON_LOGIT_ADJUST = "menon_logit_adjust"  # Menon per-class logit adjustment (rare-class boost)
 
 
+class PoseTrainingGauge(Enum):
+    """How d_pose is lowered DURING the witness training loop (Wave-F #205 pose plan).
+
+    DISTINCT from PoseGauge (which is how the 6-dim TARGET is STORED = bytes). This is the
+    in-training STRATEGY. Survey verdict (equation ``pose_in_training_lever_survey_verdict_v1``):
+    13 levers surveyed, NONE beats warp-real-luma alone -- all are COMPLEMENTS. The load-bearing
+    quantitative claim: the seg-perp-pose gradient cosine is ~6e-5 => disjoint-frame freeze-and-add
+    is EXACT and PCGrad (gradient surgery) is a FALSE FRIEND (a no-op when already orthogonal).
+
+    DESIGN-STAGE: these charts describe the DSL design space; the H1/D1/E1 trainer flags are NOT
+    yet wired (pending the #224/#205 trainer wire-in). Per never-invent-flags, the accessor
+    ``pose_training_trainer_flags`` emits NOTHING for NONE and RAISES (fail-closed) for the
+    design-stage charts, documenting the INTENDED arg -- it does NOT fabricate a flag. Ranked
+    plan H1 > D1 > E1:
+      NONE                    = pose rides warp-real-luma alone (the measured baseline);
+      H1_OPENPILOT_XI_WARMSTART = seed the ego xi from the openpilot polynomial (DUAL-AXIS warm-start:
+                                seeds BOTH the pose warp AND the lane-advection xi; co-#1 lever);
+      D1_DISJOINT_FREEZE_ADD  = pose on EVEN frames (f0->real-luma warp) + d_seg on ODD frames
+                                (f1->witness) + trunk stop-grad => disjoint params, freeze-and-add
+                                EXACT at cos~6e-5 (realizes the measured seg-perp-pose orthogonality);
+      E1_KKT_POSE_TUBE        = a trust-region constraint keeping d_pose inside its tube while d_seg
+                                descends (most GOAL-aligned; a KKT active-set, not a fixed weight)."""
+
+    NONE = "none"                                  # warp-real-luma alone (measured baseline)
+    H1_OPENPILOT_XI_WARMSTART = "h1_openpilot_xi_warmstart"  # dual-axis xi warm-start (co-#1)
+    D1_DISJOINT_FREEZE_ADD = "d1_disjoint_freeze_add"        # disjoint-frame freeze-and-add (+trunk stopgrad)
+    E1_KKT_POSE_TUBE = "e1_kkt_pose_tube"                    # KKT pose-tube trust region
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -223,6 +262,9 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.RENDER_AA: RenderAAGauge,
     GaugeComponent.LANE_BAND: LaneGauge,
     GaugeComponent.HEAD_GEOMETRY: HeadGeometryGauge,
+    # Wave-F #205 pose-plan (APPEND-ONLY; DESIGN-STAGE, NOT in GaugeChoice — a loss-side
+    # component like TOPOLOGY_LOSS / ISLAND_PROTECTION, not a fixable STORE chart).
+    GaugeComponent.POSE_TRAINING: PoseTrainingGauge,
 }
 
 
@@ -275,6 +317,33 @@ def head_geometry_trainer_flags(chart: HeadGeometryGauge,
     if chart is HeadGeometryGauge.ADDITIVE_MARGIN and additive_margin is not None:
         return ("--head", "additive-margin", "--additive-margin", str(float(additive_margin)))
     return HEAD_GEOMETRY_TRAINER_FLAGS[chart]
+
+
+# Wave-F #205 pose-plan INTENDED (not-yet-wired) trainer args — documented, NEVER emitted, per
+# never-invent-flags. When the #224/#205 wire-in lands with the real argparse flags, replace this
+# doc map with a real POSE_TRAINING_TRAINER_FLAGS dict + drop the NotImplementedError branch.
+POSE_TRAINING_INTENDED_ARGS: dict[PoseTrainingGauge, str] = {
+    PoseTrainingGauge.NONE: "",  # warp-real-luma alone; emits nothing (baseline)
+    PoseTrainingGauge.H1_OPENPILOT_XI_WARMSTART: "--pose-xi-warmstart openpilot (INTENDED; not wired)",
+    PoseTrainingGauge.D1_DISJOINT_FREEZE_ADD: "--pose-disjoint-frame --trunk-stopgrad (INTENDED; not wired)",
+    PoseTrainingGauge.E1_KKT_POSE_TUBE: "--pose-kkt-tube <d_pose_cap> (INTENDED; not wired)",
+}
+
+
+def pose_training_trainer_flags(chart: PoseTrainingGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a PoseTrainingGauge chart. NONE => () (warp-real-luma baseline).
+
+    DESIGN-STAGE fail-closed (never-invent-flags): the H1/D1/E1 trainer flags are NOT yet wired, so
+    this RAISES NotImplementedError naming the INTENDED arg rather than fabricating a flag (mirrors
+    the levelset trainer's ``--pose-carrier`` NotImplementedError). Cross-ref equation
+    ``pose_in_training_lever_survey_verdict_v1`` + DAG FEED pose-survey."""
+    if chart is PoseTrainingGauge.NONE:
+        return ()
+    raise NotImplementedError(
+        f"PoseTrainingGauge.{chart.name} is DESIGN-STAGE (#205 pose-plan, pending #224 trainer "
+        f"wire-in); intended arg: {POSE_TRAINING_INTENDED_ARGS[chart]}. never-invent-flags: emit "
+        "nothing until the real argparse flag lands."
+    )
 
 
 def component_of(chart: Enum) -> GaugeComponent:

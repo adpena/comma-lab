@@ -412,3 +412,31 @@ def test_compose_gauged_program_validates_and_is_pure():
         movables=MovablesGauge.STORE, generation=GenerationGauge.LEARNED_COUNTED)
     with pytest.raises(GaugeViolation):
         compose_gauged_program(BASELINE, bad)
+
+
+def test_pose_training_gauge_wave_f_205_design_stage():
+    """Wave-F #205 pose-plan: PoseTrainingGauge registered as a loss-side DESIGN-STAGE component
+    (like TOPOLOGY_LOSS / ISLAND_PROTECTION), fail-closed per never-invent-flags."""
+    from tac.witness_dsl import (
+        GaugeComponent,
+        PoseTrainingGauge,
+        COMPONENT_GAUGES,
+        component_of,
+        pose_training_trainer_flags,
+    )
+    # registered + round-trips via component_of
+    assert COMPONENT_GAUGES[GaugeComponent.POSE_TRAINING] is PoseTrainingGauge
+    assert component_of(PoseTrainingGauge.H1_OPENPILOT_XI_WARMSTART) is GaugeComponent.POSE_TRAINING
+    assert {g.value for g in PoseTrainingGauge} == {
+        "none", "h1_openpilot_xi_warmstart", "d1_disjoint_freeze_add", "e1_kkt_pose_tube"}
+    # NONE emits the baseline (warp-real-luma alone)
+    assert pose_training_trainer_flags(PoseTrainingGauge.NONE) == ()
+    # DESIGN-STAGE charts fail closed (never-invent-flags): raise, do NOT fabricate a flag
+    for chart in (PoseTrainingGauge.H1_OPENPILOT_XI_WARMSTART,
+                  PoseTrainingGauge.D1_DISJOINT_FREEZE_ADD,
+                  PoseTrainingGauge.E1_KKT_POSE_TUBE):
+        with pytest.raises(NotImplementedError):
+            pose_training_trainer_flags(chart)
+    # POSE_TRAINING is NOT a GaugeChoice field (loss-side, like TOPOLOGY_LOSS) -> GaugeChoice unbroken
+    assert not hasattr(CANONICAL_GAUGE, "pose_training")
+    assert CANONICAL_GAUGE.validate() is CANONICAL_GAUGE
