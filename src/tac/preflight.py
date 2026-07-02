@@ -5819,6 +5819,20 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #396: orphaned-measured-win findings-memo gate. The
+        # apparatus-blindness repair of #344's trigger-gap (which is STRICT
+        # but structurally blind to "MEASURED ... WINS ... BETTER than ..."
+        # phrasing) + the #219 triality-integration axis (task -> gate) +
+        # "Results must become system intelligence", consolidated. WARN-ONLY
+        # at landing per CLAUDE.md "Strict-flip atomicity rule": a real orphan
+        # backlog (store-nothing, wave-f, ...) exists;
+        # tools/audit_orphaned_measured_wins.py surfaces it for burndown, then
+        # strict-flip. Memory: orphaned_measured_win_not_wired_into_vehicle_
+        # and_triality_bug_class_20260702.
+        check_measured_win_findings_are_wired_or_research_only(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #359: refuse canonical equation #26 misapplication to
         # residual-hybrid stacking-extension contexts per WAVE-3-MAGIC-CODEC-
         # PAIR-1-2-ENGINEERING-FIX self-protect. STRICT-from-byte-one because
@@ -79718,7 +79732,19 @@ def check_modal_dispatcher_pre_spawn_fatal_observability(
 # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
 # because today's pre-framework memos predate this gate; strict-flip
 # planned after the initial 6 equations populate the registry + the
-# first wave of memo backfills complete.
+# first wave of memo backfills complete. (This gate was later STRICT-
+# flipped 2026-05-19; see the preflight_all() callsite.)
+#
+# APPARATUS-BLINDNESS NOTE (2026-07-02). This gate's trigger-token set does
+# NOT recognize MEASURED-MECHANISM-WIN phrasing ("MEASURED ... WINS ...
+# BETTER than ... -N%"), so despite being STRICT it was structurally blind
+# to keyframe_rate_minimization_builds_20260702.md (a real orphaned win
+# with 0 of 10 trigger tokens, no registered canonical equation). That
+# measured-win class is covered by the sister gate Catalog #396
+# (check_measured_win_findings_are_wired_or_research_only), WARN-ONLY.
+# #344's strict trigger is deliberately left NARROW to avoid strict-
+# breaking the live orphan backlog (Strict-flip atomicity rule); #396 is
+# the warn-only surface that burns the backlog down first.
 
 _CHECK_344_RESEARCH_RELPATH = ".omx/research"
 _CHECK_344_CUTOFF_DATE_SUFFIX_INT = 20260519  # framework's birthday
@@ -79895,6 +79921,351 @@ def check_empirical_finding_memo_references_canonical_equation(
             "reference. Per CLAUDE.md \"Canonical equations + models registry\" "
             "non-negotiable + operator NON-NEGOTIABLE 2026-05-19. Catalog #344 "
             "(sister of #287 / #290 / #294 / #296 / #297 / #303 / #305).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #396 - check_measured_win_findings_are_wired_or_research_only
+# ============================================================================
+# APPARATUS-BLINDNESS REPAIR + ORPHANED-MEASURED-WIN self-protection
+# (operator 2026-07-02, on Track B's store-nothing keyframe codec sitting
+# un-wired while the launch config silently shipped the inferior
+# warp-real-luma carrier: "not wiring Track B's store-nothing win was
+# CLASSIC ORPHANED SIGNAL and a related meta-bug ... but that was a meta
+# bug too").
+#
+# ROOT CAUSE (DIAGNOSED, provable). The "Canonical equations + models
+# registry" non-negotiable says "FORBIDDEN: introducing a new empirical-
+# finding memo without ALSO registering the underlying canonical
+# equation", and its enforcement gate Catalog #344
+# (check_empirical_finding_memo_references_canonical_equation) is STRICT.
+# Yet keyframe_rate_minimization_builds_20260702.md landed with NO
+# registered canonical equation and NOTHING fired. WHY: #344's trigger-
+# token set ("empirical anchor" / "predicted vs measured" / "ratified" /
+# "falsified" / "posterior update" / ...) does NOT match how a MEASURED
+# MECHANISM WIN memo is actually written ("MEASURED n600 ... WINS ...
+# BETTER than ... -N%"). The store-nothing memo contains ZERO of #344's
+# 10 trigger tokens -> strict-#344 was STRUCTURALLY BLIND to the highest-
+# value class it should protect. And #219 (triality-maintenance: DSL
+# gauge + canonical_equation + DAG) is a TASK, never a gate; "Results
+# must become system intelligence" + "Subagent coherence-by-default"
+# (Mandatory wire-in) are doctrine WITHOUT a findings-memo firewall. So a
+# measured win becomes a ledger row and drifts as ORPHANED SIGNAL while
+# the launch config silently ships an inferior un-integrated mechanism,
+# and the recursive review is blind (it reviews the CONFIG, not "is this
+# the best MEASURED mechanism available?").
+#
+# THIS GATE consolidates FOUR previously-unenforced doctrinal surfaces
+# into ONE binding gate (a legitimate consolidation per the gate-
+# consolidation discipline, NOT pure-additive):
+#   1. the canonical-equations non-negotiable, for the measured-win memo
+#      class that #344's narrow trigger structurally misses
+#      (FORMALIZATION axis);
+#   2. #219 triality-maintenance (DSL gauge + canonical_equation + DAG),
+#      lifted from a TASK to a GATE (INTEGRATION axis);
+#   3. "Results must become system intelligence", at the findings-memo
+#      surface;
+#   4. "Subagent coherence-by-default" Mandatory wire-in, for measured
+#      findings.
+# #344 (strict, narrow trigger) is left UNMUTATED on purpose: widening
+# its strict trigger would immediately strict-break the live orphan
+# backlog (store-nothing, wave-f) and violate the Strict-flip atomicity
+# rule. #396 covers the class #344 misses AND is WARN-ONLY so it surfaces
+# the backlog without breaking the build.
+#
+# A `.omx/research/*.md` memo dated >= 2026-07-02 that claims a MEASURED
+# mechanism-level win (a MEASURED-evidence token AND a mechanism-win
+# token co-occur) MUST satisfy ONE of:
+#   (a) WIRED         -- references a canonical_equation (reuses #344's
+#       reference token set) AND a launch-config/DSL/wiring-task pointer;
+#   (b) RESEARCH_ONLY -- carries `research_only` AND `reactivation`
+#       criteria pinned;
+#   (c) WAIVER        -- same-line `# ORPHAN_WIN_WAIVED:<rationale>`
+#       (placeholder rationale rejected per Catalog #287; min length 4).
+# else ORPHAN -> violation.
+#
+# WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule": a real
+# orphan backlog exists at landing; tools/audit_orphaned_measured_wins.py
+# (task #225 retroactive sweep) surfaces it, sister agents wire/tag it,
+# THEN strict-flip. AGENT-BEHAVIOR default (encoded here + in memory
+# orphaned_measured_win_not_wired_into_vehicle_and_triality_bug_class_
+# 20260702.md): a measured win is NOT done at the ledger -- proactive
+# integration (wire into vehicle+config + all 3 triality legs, OR tag
+# research_only+reactivation) is a DEFAULT agent step, not operator-
+# prompted.
+
+_CHECK_396_RESEARCH_RELPATH = ".omx/research"
+# The day the bug class was named (forward-looking gate cutoff). The
+# retroactive sweep tool scans a WIDER window for backlog burndown.
+_CHECK_396_CUTOFF_DATE_SUFFIX_INT = 20260702
+_CHECK_396_DESIGN_FILENAME_RE = _CHECK_344_DESIGN_FILENAME_RE
+
+# MEASURED-evidence tokens (real measurement, not a plan/derivation).
+_CHECK_396_MEASURED_TOKENS: tuple[str, ...] = (
+    "measured",
+    "n600",
+    "byte-closed",
+    "byte closed",
+    "realized-through-r",
+    "realized through r",
+    "gt_n600",
+)
+
+# Mechanism-superiority (WIN) tokens.
+_CHECK_396_WIN_TOKENS: tuple[str, ...] = (
+    " wins",
+    "wins ",
+    " beats ",
+    "better than",
+    "outperforms",
+    "measured-optimal",
+    "measured optimal",
+    "lowers s",
+    "lower s ",
+    "lowers the score",
+    "would lower the score",
+    "strongest single",
+    "net win",
+    "huge win",
+)
+# A "-N%" / "−N%" reduction is also a mechanism-win signal.
+_CHECK_396_PERCENT_REDUCTION_RE = re.compile(r"[-−]\s?\d+(?:\.\d+)?\s?%")
+
+# WIRED path: launch-config / DSL / wiring-task pointer tokens (co-required
+# with a canonical-equation reference, reusing #344's token set).
+_CHECK_396_WIRING_POINTER_TOKENS: tuple[str, ...] = (
+    "witness_autoconfig",
+    "proven_base",
+    "sealed_205",
+    "launch_witness_run",
+    "tac.witness_dsl",
+    "witness_dsl",
+    "curriculum_dsl",
+    "campaign_dsl",
+    "wired into the vehicle",
+    "wired into config",
+    "wired into the launch config",
+    "trainer mode",
+    "trainer_mode",
+    "wiring task",
+    "wiring-task",
+)
+
+# RESEARCH_ONLY path acceptance tokens.
+_CHECK_396_RESEARCH_ONLY_TOKENS: tuple[str, ...] = ("research_only", "research-only")
+_CHECK_396_REACTIVATION_TOKENS: tuple[str, ...] = ("reactivation",)
+
+# Same-line waiver (sister of Catalog #303/#344 design).
+_CHECK_396_WAIVER_MARKER = "ORPHAN_WIN_WAIVED"
+_CHECK_396_WAIVER_RE = re.compile(
+    r"#\s*" + re.escape(_CHECK_396_WAIVER_MARKER) + r":\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_396_PLACEHOLDER_RATIONALES: tuple[str, ...] = ("<rationale>", "<reason>")
+_CHECK_396_MIN_RATIONALE_LEN = 4
+
+# Self-exempt: the gate's own definition + test + the audit tool's ledger
+# (the meta landing explains the class using the trigger phrasing).
+_CHECK_396_SELF_EXEMPT_PATHS: tuple[str, ...] = (
+    "src/tac/preflight.py",
+    "src/tac/tests/test_check_396_measured_win_findings_wired_or_research_only.py",
+)
+
+# Classification verdicts (public; imported by
+# tools/audit_orphaned_measured_wins.py so there is ONE source of truth).
+ORPHAN_WIN_STATUS_NOT_A_WIN = "NOT_A_WIN"
+ORPHAN_WIN_STATUS_WIRED = "WIRED"
+ORPHAN_WIN_STATUS_RESEARCH_ONLY = "RESEARCH_ONLY"
+ORPHAN_WIN_STATUS_WAIVED = "WAIVED"
+ORPHAN_WIN_STATUS_ORPHAN = "ORPHAN"
+
+
+def _check_396_text_has_measured_evidence(text_low: str) -> bool:
+    """True iff text (lowercased) carries a MEASURED-evidence token."""
+    return any(tok in text_low for tok in _CHECK_396_MEASURED_TOKENS)
+
+
+def _check_396_text_has_win_claim(text: str, text_low: str) -> bool:
+    """True iff text carries a mechanism-superiority (WIN) signal."""
+    if any(tok in text_low for tok in _CHECK_396_WIN_TOKENS):
+        return True
+    return bool(_CHECK_396_PERCENT_REDUCTION_RE.search(text))
+
+
+def _check_396_text_is_measured_win(text: str) -> bool:
+    """True iff text co-mentions MEASURED evidence AND a WIN claim."""
+    text_low = text.lower()
+    return _check_396_text_has_measured_evidence(
+        text_low
+    ) and _check_396_text_has_win_claim(text, text_low)
+
+
+def _check_396_text_is_wired(text_low: str) -> bool:
+    """WIRED iff a canonical-equation reference AND a wiring pointer are
+    both present (formalization AND integration)."""
+    has_eq = any(
+        tok.lower() in text_low
+        for tok in _CHECK_344_CANONICAL_EQUATION_REFERENCE_TOKENS
+    )
+    has_ptr = any(tok in text_low for tok in _CHECK_396_WIRING_POINTER_TOKENS)
+    return has_eq and has_ptr
+
+
+def _check_396_text_is_research_only(text_low: str) -> bool:
+    """RESEARCH_ONLY iff a research_only tag AND reactivation criteria are
+    both present."""
+    has_ro = any(tok in text_low for tok in _CHECK_396_RESEARCH_ONLY_TOKENS)
+    has_react = any(tok in text_low for tok in _CHECK_396_REACTIVATION_TOKENS)
+    return has_ro and has_react
+
+
+def _check_396_text_has_valid_waiver(text: str) -> bool:
+    """True iff text carries a well-formed ORPHAN_WIN_WAIVED waiver."""
+    for m in _CHECK_396_WAIVER_RE.finditer(text):
+        rationale = m.group("rationale").strip()
+        if not rationale:
+            continue
+        if rationale in _CHECK_396_PLACEHOLDER_RATIONALES:
+            continue
+        if len(rationale) < _CHECK_396_MIN_RATIONALE_LEN:
+            continue
+        return True
+    return False
+
+
+def classify_findings_memo_orphan_status(text: str) -> str:
+    """Classify a findings-memo body per the orphaned-measured-win
+    discipline (Catalog #396).
+
+    Returns exactly one of:
+      - ``NOT_A_WIN``       -- no MEASURED mechanism-win claim detected;
+      - ``WIRED``           -- canonical_equation reference AND a
+        launch-config/DSL/wiring pointer both present;
+      - ``RESEARCH_ONLY``   -- ``research_only`` AND ``reactivation``
+        criteria both present;
+      - ``WAIVED``          -- a valid ``# ORPHAN_WIN_WAIVED:<rationale>``
+        waiver present;
+      - ``ORPHAN``          -- a MEASURED mechanism win with none of the
+        above -> the bug class (orphaned signal).
+
+    This is the ONE canonical classifier shared by the preflight gate and
+    ``tools/audit_orphaned_measured_wins.py`` so the two never drift.
+    """
+    if not _check_396_text_is_measured_win(text):
+        return ORPHAN_WIN_STATUS_NOT_A_WIN
+    text_low = text.lower()
+    if _check_396_text_is_wired(text_low):
+        return ORPHAN_WIN_STATUS_WIRED
+    if _check_396_text_is_research_only(text_low):
+        return ORPHAN_WIN_STATUS_RESEARCH_ONLY
+    if _check_396_text_has_valid_waiver(text):
+        return ORPHAN_WIN_STATUS_WAIVED
+    return ORPHAN_WIN_STATUS_ORPHAN
+
+
+def check_measured_win_findings_are_wired_or_research_only(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #396 - refuse findings memos claiming a MEASURED mechanism
+    win that are neither WIRED into the vehicle nor tagged research_only.
+
+    Per operator 2026-07-02 (store-nothing orphaned-signal meta-bug) +
+    CLAUDE.md "Results must become system intelligence" + "Canonical
+    equations + models registry" + "Subagent coherence-by-default"
+    (Mandatory wire-in). Scans repo-local ``.omx/research/*.md`` files
+    dated >= 2026-07-02 (the naming day). A memo whose body co-mentions a
+    MEASURED-evidence token AND a mechanism-win token is a measured-win
+    memo; it MUST be WIRED (canonical_equation ref AND config/DSL/wiring
+    pointer) OR RESEARCH_ONLY (research_only + reactivation) OR carry a
+    same-line ``# ORPHAN_WIN_WAIVED:<rationale>`` waiver (placeholder
+    rejected per Catalog #287). Else it is an ORPHAN -> violation.
+
+    Apparatus-blindness repair: Catalog #344 (strict) enforces the
+    canonical-equations non-negotiable but its trigger-token set does NOT
+    recognize measured-mechanism-win phrasing, so it was structurally
+    blind to the store-nothing memo (0 of 10 tokens present). #396 covers
+    that class AND adds the triality-integration axis, consolidating four
+    previously-unenforced doctrinal surfaces into one gate.
+
+    WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule"
+    (live orphan backlog exists; ``tools/audit_orphaned_measured_wins.py``
+    surfaces it for burndown; strict-flip after).
+
+    Memory: ``orphaned_measured_win_not_wired_into_vehicle_and_triality_bug_class_20260702.md``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    research_root = root / _CHECK_396_RESEARCH_RELPATH
+    if not research_root.is_dir():
+        if verbose:
+            print(f"  [catalog-396] {_CHECK_396_RESEARCH_RELPATH} not present, skipping")
+        return []
+
+    violations: list[str] = []
+    try:
+        candidates = sorted(research_root.iterdir())
+    except OSError:
+        return []
+
+    for entry in candidates:
+        if not entry.is_file() or not entry.name.endswith(".md"):
+            continue
+        try:
+            rel = entry.relative_to(root)
+        except ValueError:
+            rel = entry
+        rel_str = str(rel)
+        if any(exempt in rel_str for exempt in _CHECK_396_SELF_EXEMPT_PATHS):
+            continue
+        m = _CHECK_396_DESIGN_FILENAME_RE.match(entry.name)
+        if not m:
+            continue
+        try:
+            date_int = int(m.group(1))
+        except (TypeError, ValueError):
+            continue
+        if date_int < _CHECK_396_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            text = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        status = classify_findings_memo_orphan_status(text)
+        if status != ORPHAN_WIN_STATUS_ORPHAN:
+            continue
+        violations.append(
+            f"{rel}: memo dated {date_int} claims a MEASURED mechanism-level "
+            f"win but is NEITHER wired into the vehicle (no canonical_equation "
+            f"reference + launch-config/DSL/wiring pointer) NOR tagged "
+            f"research_only + reactivation. Per operator 2026-07-02 "
+            f"(orphaned-measured-win meta-bug) + CLAUDE.md \"Results must "
+            f"become system intelligence\" + \"Canonical equations + models "
+            f"registry\": a measured win is NOT done at the ledger -- wire it "
+            f"into vehicle+config + all 3 triality legs (DSL gauge + "
+            f"canonical_equation + DAG), OR tag `research_only: true` + "
+            f"`reactivation_criteria`, OR carry same-line "
+            f"`# ORPHAN_WIN_WAIVED:<rationale>`. Catalog #396 (apparatus-"
+            f"blindness repair of #344's trigger-gap; sister of #219/#344)."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-396] {len(violations)} orphaned measured-win "
+                "memo(s) (not wired, not research_only)"
+            )
+        else:
+            print("  [catalog-396] OK (no orphaned measured-win memos)")
+    if violations and strict:
+        raise PreflightError(
+            "check_measured_win_findings_are_wired_or_research_only found "
+            f"{len(violations)} orphaned measured-win memo(s). Per operator "
+            "2026-07-02 (orphaned-measured-win meta-bug) + CLAUDE.md "
+            "\"Results must become system intelligence\". Catalog #396 "
+            "(sister of #219 / #344).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
