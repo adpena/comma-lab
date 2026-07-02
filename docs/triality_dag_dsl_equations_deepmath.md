@@ -97,6 +97,56 @@ the automation quality-bar extincts (`all-automated-worldclass-recursive-review-
   `decide` and the equations' recalibration both consume; the ordering (which scale locked in
   when) is itself the persistence spectrum the curriculum is trying to invert.
 
+## 4b. The campaign-meta layer — the triality IS a POWERPLAY search (Schmidhuber, arXiv:1112.5309)
+
+The double unification (§2) has a third, sharper reading: the *campaign itself* is a **POWERPLAY
+search**, and this is now an equation (`powerplay_variant_ii_cost_isomorphism_v1`), not just prose.
+
+- **S IS a POWERPLAY Variant-II cost.** `C(s)=L(s)+α·Σ_T[t'_s(T)−r(T)]` maps term-for-term onto
+  `S = 100·d_seg + √(10·d_pose) + 25·|archive|/N`: `L(s)` (solver **description bits** / SPACE) = the
+  rate term; `α·Σ[t'−r]` (weighted **task deficit** over the 2-task repertoire {SegNet-argmax,
+  PoseNet-6}) = the distortion terms; `α` = the RD-Lagrangian λ. The identity
+  `tac.witness_dsl.powerplay.powerplay_cost(x).S == tac.contest_score.compute_contest_score(x)` is
+  **exact for all inputs** (VERIFIED_VIA_SOURCE_INSPECTION, residual 0.0).
+- **The Correctness Demonstration = review axis-9.** POWERPLAY never ACCEPTS a solver-modification
+  until a Correctness Demonstration proves (i) the new task is solved, (ii) no prior task regressed,
+  (iii) the predecessor did not already solve it. Our launch-SEAL **axis-9** — *a SEAL is INVALID until
+  it EXECUTES the real config and measures every scored quantity THROUGH the real byte-closed decode
+  (never a proxy / ancestor / MPS / training-side surrogate)* — IS that Demonstration. The #205 SEAL
+  failure (accepting a config on a borrowed ancestor d_pose with no runnability check → OOM) was
+  accepting a modification on an *unproven* Demonstration. Executable:
+  `tac.witness_dsl.powerplay.CorrectnessDemonstration`.
+- **Variant-II acceptance `c*_pred − c_new > ε`** = the compose-without-regression / admit-only-when-
+  net-S-improves gate. **`K(T,q | history)` simplest-still-unsolvable** = the principled `next()` for
+  the #216 instrument (rank levers by ΔS per description+validation bit). Executable:
+  `variant_ii_accept` / `simplest_unsolvable_rank`.
+- **The two POWERPLAY cautions are OUR failure modes:** trivial-task-invention = the means-as-ends trap
+  (levers that don't move the EXACT n600 S); generalization-vs-novelty tension = a real #211 corpus-
+  generalize caution.
+
+This is why Schmidhuber holds a grand-council seat: **task-aware compression = intelligence =
+creativity-as-compression-progress** is the backbone, and POWERPLAY is its algorithmic skeleton. NOT a
+contest lever (no through-R ΔS) — a campaign-structure law. Ledger:
+`.omx/research/powerplay_1112.5309_deep_crossref_20260702.md`.
+
+## 4c. Compression-as-intelligence grounding (why the task-space direction is PROVEN)
+
+The equations leg carries the framing theorems that name and justify the machine (ledger
+`.omx/research/compression_as_intelligence_lineage_crossref_20260702.md`):
+
+- **Task R(D) < reconstruction R(D) — a THEOREM** (`task_rd_dominates_reconstruction_rd_v1`;
+  arXiv:2602.12866 "Model-Aware Rate-Distortion Limits"; Dobrushin–Witsenhausen remote/indirect RD).
+  For a fixed downstream model M, `R_M(D) ≤ R_X(D)` with gap = the task-irrelevant RGB-slack. So the
+  NON-RGB task-space witness dominating a full-RGB codec is **proven, not asserted** — keeping any bit
+  the frozen scorer never reads is provable rate waste. Kills any "just build a good RGB codec" revival.
+- **The names for the machine we already built:** MDL-S (S is a two-part code); the **structure-function
+  model/noise split** (Vereshchagin–Vitányi: `K(S)+log|S|=K(x)+O(1)` at the minimal sufficient
+  statistic) = compile-the-generator (free deterministic generator = the model S; counted video-derived
+  residual = the incompressible index); the **Speed-Prior / Levin-Kt** reading of the 30-min budget
+  (minimize length + log runtime → the *fastest sufficient* generator wins, not merely the shortest);
+  Sutskever's conditional `K(Y|X)` = the amortized meta-init / warm-start (#211). Naming = non-forgetting
+  = the triality staying consistent.
+
 ## 5. Consistency = campaign non-forgetfulness (the maintenance loop)
 
 Per lever, ONLY after build + wire + integrate + rigorous test + recursive-adversarial-review
@@ -121,10 +171,26 @@ caught the n200/mod-32-vs-n600/mod-26 confounder *structurally*), MPS-never, con
 falsifier, 3-clean-pass recursive adversarial review. Negatives are SUSPECT — implementation-
 level, not paradigm-level — until an adversarial + deep-math + OSS pass tries to overturn them.
 
-## 7. Pointers
+## 7. Live campaign state (2026-07-02, the current thread)
+
+- **Pointer 0.19110 UNMOVED** — the borrowed PR101/PR110 recode; the honest state until a byte-closed
+  n600 `upstream/evaluate.py` row crosses it.
+- **#205 SEALED + launcher-ready but LAUNCH HELD.** `--config sealed_205` (or `store_nothing_205`)
+  reproduces the SEALed §7 argv byte-identically; the GO is the operator's, **gated on R1** (the robust
+  trained-pose gate, agent `ae55c8617`, in flight — measures whether a trained rank-6 dξ residual drives
+  the pose carrier d_pose low on a real converged checkpoint; the OPEN #205 pose question, no borrowed
+  3.4e-5) + the two held prerequisites (real optimal pose, confirmed byte-close). Infra ready; NO GPU.
+- **Pose carrier A/B ready:** store-nothing-but-ξ (`store_nothing_205`) vs table (`sealed_205`) — rate
+  collapse byte-close BIT-EXACT (1049 B / rate 0.0491); real d_pose is #205-gated.
+- **OOM self-protection live:** `--verdict-batch 32` (default) + `witness_memory_preflight` REFUSE
+  (rc=4) projected peak > 0.70×RAM — always chunk full-P scorer forwards (score-neutral).
+
+## 8. Pointers
 
 - Concise awareness: CLAUDE.md § "The Triality — DAG ↔ DSL ↔ equations".
 - Memories: `project-witness-dsl-and-dag-dsl-duality` (canonical), `unified-variational-levelset-flow-everything-is-facets` (Layer A), `all-automated-worldclass-recursive-review-deepmath-confirmed` (the automation bar), `asbuilt-maintenance-loop-and-adversarial-experiment-gate` (the sync loop).
-- Code: `tac.witness_dsl.{campaign,curriculum_dsl,gauge}`, `tac.canonical_equations`, `tools/levelset_byte_close_and_eval.py` (#202), `tools/dashboard_trajectory_model.py`.
-- DAG: `.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md`.
+- Code: `tac.witness_dsl.{campaign,curriculum_dsl,gauge,powerplay}`, `tac.canonical_equations`, `tools/levelset_byte_close_and_eval.py` (#202), `tools/witness_memory_preflight.py` (#205 OOM guard), `tools/dashboard_trajectory_model.py`.
+- Campaign-meta + grounding ledgers: `.omx/research/powerplay_1112.5309_deep_crossref_20260702.md`, `.omx/research/compression_as_intelligence_lineage_crossref_20260702.md`.
+- Equations (this session): `powerplay_variant_ii_cost_isomorphism_v1`, `oom_verdict_batch_spike_peak_rss_v1`, `task_rd_dominates_reconstruction_rd_v1`, `store_nothing_pose_carrier_rate_collapse_vs_dpose_v1` (all in `.omx/state/canonical_equations_registry.jsonl`).
+- DAG: `.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md` (FEED-pp / -oom / -rdd / -219recon).
 - Tasks: #216 (the automated instrument = the cycle engine), #219 (as-built triality sync), #189 (the DSL), #205 (the exact-row run it serves).
