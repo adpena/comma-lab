@@ -146,6 +146,36 @@ def test_sealed_205_dsl_program_validates_and_agrees_with_autoconfig():
         f"ds-only={ {k: ds[k] for k in ds if ds.get(k)!=ac.get(k)} }")
 
 
+# --------------------------------------------------------------------------- store_nothing_205 (F6)
+def test_store_nothing_205_is_sealed_plus_exactly_one_flag():
+    """The STORE-NOTHING variant = sealed_205 + exactly one trailing --pose-carrier-source generated;
+    sealed_205 itself stays BYTE-IDENTICAL (never emits --pose-carrier-source)."""
+    sealed = _sealed_cfg()
+    snn = wac.derive_store_nothing_205_config(_GT, num_pairs=600, epochs=1000)
+    assert sealed.pose_carrier_source == "real_keyframe"
+    assert snn.pose_carrier_source == "generated"
+    sealed_flags = sealed.to_trainer_flags("/OUT")
+    snn_flags = snn.to_trainer_flags("/OUT")
+    # sealed emits NO --pose-carrier-source (byte-identity preserved); store_nothing emits exactly one.
+    assert not any(f == "--pose-carrier-source" for f, _ in sealed_flags)
+    extra = [(f, v) for (f, v) in snn_flags if (f, v) not in sealed_flags]
+    assert extra == [("--pose-carrier-source", "generated")], f"unexpected delta: {extra}"
+    # the store-nothing flag is placed right after the pose SLOT block (--pose-carrier-residual-mode).
+    fnames = [f for f, _ in snn_flags]
+    assert (fnames.index("--pose-carrier-source")
+            == fnames.index("--pose-carrier-residual-mode") + 1)
+
+
+def test_store_nothing_205_flags_all_valid_in_trainer_argparse():
+    """No invented flags: every store_nothing_205 flag (incl. --pose-carrier-source) exists in the
+    trainer's real argparse (never-invent-flags / NO-FAKE)."""
+    from tools import launch_witness_run as lwr  # noqa: PLC0415
+    snn = wac.derive_store_nothing_205_config(_GT, num_pairs=600, epochs=1000)
+    ok, results = lwr.validate_emitted_flags(snn, "/OUT")
+    assert ok, f"invented flag(s): {[f for f, good in results if not good]}"
+    assert len(results) == 84, f"expected 84 flags (83 sealed + 1 store-nothing), got {len(results)}"
+
+
 # --------------------------------------------------------------------------- backward-compat
 def test_backward_compat_all_levers_and_proven_base_still_render():
     """--all-levers and the proven_base default still derive + flag-validate (no regression)."""

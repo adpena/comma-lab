@@ -56,6 +56,7 @@ __all__ = [
     "portability_split",
     "derive_config",
     "derive_sealed_205_config",
+    "derive_store_nothing_205_config",
 ]
 
 # --------------------------------------------------------------------------
@@ -506,6 +507,14 @@ class WitnessConfig:
     # reproduces the SEALED launch.sh BYTE-IDENTICALLY (modulo --out-dir). Built by
     # ``derive_sealed_205_config``. Default False => the all-levers / proven_base paths are unchanged.
     sealed_205: bool = False
+    # (F6) #205 pose-carrier frame0 SOURCE (Track B store-nothing-but-xi, 18927a1ae). "real_keyframe"
+    # (default) = warp a STORED real keyframe (warp_real_luma table; COUNTS the keyframe luma).
+    # "generated" = STORE-NOTHING: warp the witness's OWN frame0 INR render by the twist (stores ONLY
+    # xi/H, ~0 marginal bytes; the render is FREE, rule-118). Emitted as ``--pose-carrier-source`` ONLY
+    # when != "real_keyframe" so ``sealed_205`` stays BYTE-IDENTICAL; ``derive_store_nothing_205_config``
+    # sets it to "generated". A/B-able against sealed_205 at #205 (measures the store-nothing d_pose
+    # through the real byte-closed decode vs the table carrier). Default "real_keyframe" => unchanged.
+    pose_carrier_source: str = "real_keyframe"
     all_levers_base: dict = field(default_factory=dict)
     adam_beta2: float = 0.999  # #222; 0.999 == MLX default (bit-identical); all-levers sets 0.9999999.
 
@@ -689,6 +698,12 @@ class WitnessConfig:
         pb = self.proven_base
         alb = self.all_levers_base
         d = _sealed_205_deltas()
+        # (F6) STORE-NOTHING variant: emit --pose-carrier-source generated ONLY when != real_keyframe
+        # (default real_keyframe => not emitted => sealed_205 byte-identical). Placed immediately after
+        # --pose-carrier-residual-mode (the pose SLOT block) so the argv reads as one coherent group.
+        _pc_source_flags: list[tuple[str, object]] = (
+            [("--pose-carrier-source", self.pose_carrier_source)]
+            if str(self.pose_carrier_source) != "real_keyframe" else [])
         return [
             ("--out-dir", out_dir),
             ("--gt-cache", self.gt_cache),
@@ -716,6 +731,7 @@ class WitnessConfig:
             ("--score-domain-loss", None),
             ("--pose-carrier", None),                        # SEALED add (Q2)
             ("--pose-carrier-residual-mode", d["pose_carrier_residual_mode"]),  # SEALED add (Q2)
+            *_pc_source_flags,                               # (F6) store-nothing variant only (default OFF)
             ("--mod-dim", self.mod_dim),                     # SEALED delta (Q4): 32
             ("--hidden-dim", self.hidden_dim),
             ("--n-hidden", pb["n_hidden"]),
@@ -966,6 +982,47 @@ def derive_sealed_205_config(
         adam_beta2=float(d["adam_beta2"]),
         provenance=prov,
     )
+
+
+def derive_store_nothing_205_config(
+    gt_cache_path: str | Path,
+    *,
+    num_pairs: int,
+    epochs: int = 1000,
+    code_matrix: np.ndarray | None = None,
+    byte_close_result: dict | None = None,
+) -> WitnessConfig:
+    """The **#205 STORE-NOTHING pose-carrier variant** of the SEALED capstone config (Track B
+    store-nothing-but-xi, ``18927a1ae`` / ``keyframe_rate_minimization_builds_20260702``).
+
+    IDENTICAL to :func:`derive_sealed_205_config` in every knob EXCEPT the pose-carrier frame0 SOURCE:
+    the sealed table carrier warps a STORED real keyframe (COUNTS the keyframe luma in archive.zip);
+    this variant sets ``pose_carrier_source="generated"`` -> STORE-NOTHING: frame0 = warp(the witness's
+    OWN frame0 INR render, xi). It stores ONLY xi/H (~0 marginal bytes; the render is FREE per rule-118)
+    -> the keyframe payload the byte-close measured (697941 B ds4 / much more native) collapses to ~1 KB.
+
+    This is the A/B arm the #205 run runs against ``sealed_205``: same seg/curriculum/optimizer, only
+    the pose STORE gauge differs, so the measured d_pose + rate delta is a clean attribution. Its
+    ``to_trainer_flags`` renders the sealed §7 argv + a single trailing ``--pose-carrier-source
+    generated`` (sealed_205 stays byte-identical because it never emits that flag). The trained rank-6
+    dxi residual (residual-mode table, w_pose>0) closes the store-nothing offset toward the target;
+    whether it reaches the table carrier's d_pose is the OPEN #205 question this arm MEASURES.
+
+    means != ends: returns a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110 from
+    ``upstream/evaluate.py`` (contest-CPU/CUDA, NEVER MPS) moves the pointer.
+    """
+    base = derive_sealed_205_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    prov = dict(base.provenance)
+    prov["pose_carrier_source"] = ProvenancedValue(
+        "generated", SRC_RECALLED,
+        "#205 STORE-NOTHING variant (Track B 18927a1ae): --pose-carrier-source generated -> frame0 = "
+        "warp(the witness's OWN INR render, xi); stores ONLY xi/H (~0 marginal bytes) vs the sealed "
+        "table carrier's stored keyframe luma. MEASURED n6/t1 byte-close BIT-EXACT: section 697941B(ds4 "
+        "table)->1049B(store_nothing). A/B arm over sealed_205 (same seg/curriculum; only the pose STORE "
+        "gauge differs).", Portability.SCORER_FIXED)
+    return replace(base, pose_carrier_source="generated", provenance=prov)
 
 
 def derive_config(

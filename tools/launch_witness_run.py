@@ -204,13 +204,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--aggressive", action="store_true",
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--config", default=None,
-                    choices=["proven_base", "all_levers", "sealed_205"],
+                    choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
-                    "--all-levers is given), all_levers (== --all-levers), or sealed_205 (the #205 "
+                    "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
                     "Phase-3 SEALED capstone argv — the deep-math-OPTIMAL all-levers base + the 4 "
                     "SEALED deltas mod-dim 32 / adam-beta2 0.999 / w-pose 1.0 + pose-carrier table; "
-                    "reproduces the sealed §7 launch.sh BYTE-IDENTICALLY modulo --out-dir).")
+                    "reproduces the sealed §7 launch.sh BYTE-IDENTICALLY modulo --out-dir), or "
+                    "store_nothing_205 (the sealed capstone + --pose-carrier-source generated = Track B "
+                    "STORE-NOTHING-but-xi: frame0 = warp(witness's OWN render, xi), stores ONLY xi/H; "
+                    "the A/B pose arm vs sealed_205).")
     ap.add_argument("--all-levers", action="store_true",
                     help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact); "
                     "equivalent to --config all_levers. "
@@ -227,6 +230,11 @@ def main(argv: list[str] | None = None) -> int:
                     help="per-arm RSS cap (MiB) for safe_run layer-3 (default 90000)")
     ap.add_argument("--min-free-gb", type=float, default=10.0,
                     help="OOM launch-preflight free-memory floor (default 10; operator-relaxed)")
+    ap.add_argument("--mem-preflight-safe-frac", type=float, default=0.70,
+                    help="(#205 OOM self-protection) REFUSE launch if projected peak RSS exceeds this "
+                    "fraction of total RAM (default 0.70 — leaves OS + control-plane + coexistence headroom)")
+    ap.add_argument("--skip-mem-preflight", action="store_true",
+                    help="bypass the projected-peak-RSS memory preflight (WARN instead of REFUSE)")
     ap.add_argument("--verify-s", type=float, default=4.0,
                     help="seconds spawn_durable_daemon verifies the child survived exec")
     ap.add_argument("--perf-env-timeout-s", type=float, default=45.0,
@@ -259,6 +267,10 @@ def main(argv: list[str] | None = None) -> int:
         # The #205 P3 SEALED capstone config fixes its own knobs (mod-dim 32 etc.); overfit N/A.
         cfg = wac.derive_sealed_205_config(args.gt_cache, num_pairs=args.num_pairs,
                                            epochs=args.epochs)
+    elif config == "store_nothing_205":
+        # The sealed capstone + STORE-NOTHING pose-carrier source (Track B) — the A/B pose arm.
+        cfg = wac.derive_store_nothing_205_config(args.gt_cache, num_pairs=args.num_pairs,
+                                                  epochs=args.epochs)
     else:
         cfg = wac.derive_config(args.gt_cache, num_pairs=args.num_pairs,
                                 overfit=overfit, epochs=args.epochs,
@@ -291,6 +303,37 @@ def main(argv: list[str] | None = None) -> int:
     launch_sh = write_launch_sh(cfg, out_dir)
     run_log = out_dir / "run.log"
     print(f"# wrote {launch_sh}")
+
+    # (b1) MEMORY PREFLIGHT (#205 OOM self-protection). Project peak RSS from the EMITTED launch.sh
+    # using MEASURED constants (2026-07-02 ledger) and REFUSE a config whose projected peak busts a
+    # control-plane-safe fraction of RAM. The throughput gate measures COMPUTE at B=8; it NEVER
+    # projected memory at the real n600 config, so the #205 OOM config passed it. This closes that
+    # gap: it refuses e.g. --verdict-batch 0 at n600 (the ~66 GiB verdict spike) or n so large the
+    # resident cf_mx_cache alone busts RAM. safe_run's --rss-cap-mb remains the runtime backstop.
+    try:
+        import witness_memory_preflight as wmp  # tools/ is on sys.path (same dir as this launcher)
+
+        proj = wmp.project_from_launch_sh(launch_sh, safe_frac=args.mem_preflight_safe_frac)
+        print(f"# mem-preflight: projected peak {proj.projected_peak_gib} GiB "
+              f"(fixed {proj.fixed_overhead_gib} + cf_mx_cache {proj.cf_cache_gib} + gt {proj.gt_gib} "
+              f"+ verdict {proj.verdict_transient_gib}); safe ceiling {proj.safe_ceiling_gib} GiB "
+              f"({proj.safe_frac:.0%} of {proj.total_ram_gib} GiB)")
+        rss_cap_gib = args.rss_cap_mb / 1024.0
+        if proj.projected_peak_gib > rss_cap_gib:
+            print(f"# mem-preflight: NOTE projected peak {proj.projected_peak_gib} GiB > "
+                  f"--rss-cap-mb {args.rss_cap_mb} MiB ({rss_cap_gib:.1f} GiB) — safe_run would kill it.")
+        if not proj.safe:
+            if args.skip_mem_preflight:
+                print(f"[launch-witness] WARNING: mem-preflight would REFUSE ({proj.reason}) but "
+                      f"--skip-mem-preflight set; proceeding.", file=sys.stderr)
+            else:
+                print(f"[launch-witness] ERROR: REFUSING to launch — {proj.reason} "
+                      f"(pass --skip-mem-preflight to override, or reduce --num-pairs / raise "
+                      f"--verdict-batch / free RAM).", file=sys.stderr)
+                return 4
+    except Exception as exc:  # projection must never crash a launch; WARN and continue.
+        print(f"[launch-witness] WARNING: mem-preflight unavailable ({type(exc).__name__}: {exc}); "
+              f"safe_run --rss-cap-mb {args.rss_cap_mb} remains the runtime backstop.", file=sys.stderr)
 
     if args.dry_run:
         print("# DRY-RUN: launch.sh written + flags validated; NOT spawning. "
