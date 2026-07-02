@@ -264,6 +264,19 @@ def _build_resume_state_arrays(
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
     out["__cfg_in_feat"] = np.asarray(int(in_feat))
     out["__cfg_w_pose"] = np.asarray(float(args.w_pose))
+    # (F2 fix) #224 render-side LEVER cfg: persist the levers whose engagement CHANGES the loss /
+    # render target mid-run so a --resume-from can FAIL-CLOSED (via _resume_lever_divergences) when the
+    # resume command silently drops or diverges a lever the run was trained with (a deterministic-repro
+    # violation the film-arch guard does NOT cover -- these are loss/render-only, they add no param
+    # KEYS so the missing-param guard cannot see them). ZERO archive bytes (resume sidecar is not
+    # byte-closed). hosc_beta_end None -> -1.0 sentinel (matches the current-arg encoding in the guard).
+    out["__cfg_lane_render_band"] = np.asarray(int(bool(getattr(args, "lane_render_band", False))))
+    out["__cfg_lane_band_start_epoch"] = np.asarray(int(getattr(args, "lane_band_start_epoch", 300)))
+    out["__cfg_persistence_loss_weight"] = np.asarray(float(getattr(args, "persistence_loss_weight", 0.0)))
+    out["__cfg_amplify_weight"] = np.asarray(float(getattr(args, "amplify_weight", 0.0)))
+    out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
+    _hbe = getattr(args, "hosc_beta_end", None)
+    out["__cfg_hosc_beta_end"] = np.asarray(-1.0 if _hbe is None else float(_hbe))
     # (review R2a-MED-1) ARCH flags that change the param KEYS / training geometry: persist them in the
     # resume sidecar so a crash-resume from the ckpt dir ALONE can fail-closed if the resume command
     # omits the flag the run was trained with (the silent-param-drop risk -- MLX model.update only
@@ -305,6 +318,51 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
         "live": live, "ema": ema, "opt": opt,
         "epoch": epoch, "has_opt": bool(int(cfg.get("__resume_has_opt", 0))), "cfg": cfg,
     }
+
+
+def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str]:
+    """(F2) List render-side LEVER cfg keys that DIVERGE between the resume sidecar (what the run was
+    trained with) and the current argv (what this resume would run). A non-empty list means a
+    ``--resume-from`` would SILENTLY change / drop a lever = a deterministic-reproducibility violation
+    the film-arch guard cannot see (these loss/render-only levers add NO param keys). Only keys PRESENT
+    in the sidecar are checked, so a pre-F2 sidecar (which lacks them) yields NO spurious divergence.
+    Pure / MLX-free -> unit-tested. ``lane_band_start_epoch`` is only flagged when the band is engaged
+    in EITHER config (a start-epoch change is inert while the band is OFF in both)."""
+    div: list[str] = []
+    _hbe = getattr(args, "hosc_beta_end", None)
+    cur_hbe = -1.0 if _hbe is None else float(_hbe)
+    cur_band = int(bool(getattr(args, "lane_render_band", False)))
+    # (key, current value, is_float) — non-float compared as string (int/bool/str all normalize).
+    checks: list[tuple[str, object, bool]] = [
+        ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
+        ("__cfg_lane_render_band", cur_band, False),
+        ("__cfg_persistence_loss_weight", float(getattr(args, "persistence_loss_weight", 0.0)), True),
+        ("__cfg_amplify_weight", float(getattr(args, "amplify_weight", 0.0)), True),
+        ("__cfg_render_aa", str(getattr(args, "render_aa", "none")), False),
+        ("__cfg_hosc_beta_end", cur_hbe, True),
+    ]
+    for key, cur, is_float in checks:
+        if key not in resume_cfg:
+            continue
+        ckpt = resume_cfg[key]
+        if is_float:
+            try:
+                diverged = abs(float(ckpt) - float(cur)) > 1e-6
+            except (TypeError, ValueError):
+                diverged = str(ckpt) != str(cur)
+        else:
+            diverged = str(ckpt) != str(cur)
+        if diverged:
+            div.append(f"{key[len('__cfg_'):]}: ckpt={ckpt!r} != resume-argv={cur!r}")
+    # lane_band_start_epoch: inert while the band is OFF in BOTH -> only flag when engaged in either.
+    if "__cfg_lane_band_start_epoch" in resume_cfg:
+        ckpt_band = int(resume_cfg.get("__cfg_lane_render_band", cur_band) or 0)
+        if (ckpt_band or cur_band):
+            ckpt_se = int(resume_cfg["__cfg_lane_band_start_epoch"])
+            cur_se = int(getattr(args, "lane_band_start_epoch", 300))
+            if ckpt_se != cur_se:
+                div.append(f"lane_band_start_epoch: ckpt={ckpt_se} != resume-argv={cur_se}")
+    return div
 
 
 def _load_decoder_params(npz_path: Path) -> dict[str, np.ndarray]:
@@ -1269,7 +1327,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     ema_finisher_start = (int(args.ema_decay_finisher_start_epoch)
                           if getattr(args, "ema_decay_finisher_start_epoch", None) is not None
                           else (int(args.muon_start_epoch) if args.muon_start_epoch is not None else None))
-    opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
+    opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay,
+                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))])
 
     # ---- RESIDUAL-ONLY MODE (v2 hybrid; gap #1). Load the FIXED deterministic bulk + the
     # bulk-derived composition mask, and build the compose hooks. The bulk arrays live in CLOSURE
@@ -2168,6 +2227,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 f"{bool(int(resume_cfg.get('__cfg_film_stiefel', 0) or 0))}. "
                 + (f"Fix: {', '.join(_hint)}." if _hint else
                    "Rebuild the model with the SAME architecture the checkpoint was trained with."))
+        # (F2) FAIL-CLOSED render-side LEVER-drift guard (BEFORE model.update, like the film guard).
+        # The loss/render-only levers add no param KEYS, so the missing-param guard above cannot see
+        # them; a resume that silently drops/changes a lever the run was trained with is a
+        # deterministic-repro violation. Escape: --resume-allow-lever-drift (explicit warm-start).
+        if not bool(getattr(args, "resume_allow_lever_drift", False)):
+            _lever_div = _resume_lever_divergences(resume_cfg, args)
+            if _lever_div:
+                raise ValueError(
+                    f"--resume-from {rp}: {len(_lever_div)} render-side LEVER(s) DIVERGE between the "
+                    "checkpoint's training config and this resume command -> a silent lever drop/change "
+                    "= a deterministic-reproducibility violation (these loss/render-only levers add no "
+                    "param keys, so the arch guard above cannot catch them). Diverged: "
+                    + "; ".join(_lever_div)
+                    + ". Fix: MATCH the trained run's lever flags, OR pass --resume-allow-lever-drift "
+                    "if this is an INTENTIONAL warm-start re-treatment.")
         model.update(tree_unflatten([(k, mx.array(v)) for k, v in rs["live"].items()]))
         mx.eval(model.parameters())
         ema_src = rs["ema"] if rs["ema"] else rs["live"]
@@ -2314,7 +2388,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (review R3-M1) LEVER-B thin-lane engagement is ALSO an AdamW->AdamW treatment boundary
             # (mirrors _bnd_lane/_bnd_msal). Default lane_thin_w=0.0 => never fires => bit-identical.
             _bnd_lane_thin = (lane_thin_w > 0.0 and (ep >= lane_thin_start) and not lane_thin_gate["on"])
-            _stage_boundary_now = _bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
+            # (F3 fix) #224 analytic-lane render-band engagement is ALSO an AdamW->AdamW treatment
+            # boundary (the band's render-target CHANGES at --lane-band-start-epoch): its sibling levers
+            # (lane/margin/thin) already OR into _stage_boundary_now, but the band did NOT, so the
+            # LR re-warmup + optional moment-reset never fired on band engagement -> stale AdamW momentum
+            # pushed through the render-target change. Mirrors _bnd_lane exactly (computed BEFORE the band
+            # gate flips at the engage block below). Default --lane-render-band OFF => _band_active False
+            # => never fires => bit-identical.
+            _bnd_band = (_band_active and (ep >= _band_start) and not band_gate["on"])
+            _stage_boundary_now = (_bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
+                                   or _bnd_band)
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -2416,7 +2499,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 last_boundary_epoch = ep
                 if args.stage_transition_reset_moments:
                     opt = optim.AdamW(learning_rate=float(opt.learning_rate),
-                                      weight_decay=args.weight_decay)
+                                      weight_decay=args.weight_decay,
+                                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))])
                     opt.init(model.trainable_parameters())
                     mx.eval(opt.state)
                     print(json.dumps({"stage": "stage_transition_reset_moments", "epoch": ep,
@@ -2424,6 +2508,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "from_lane_engage": bool(_bnd_lane),
                                       "from_margin_saliency_engage": bool(_bnd_msal),
                                       "from_lane_thin_engage": bool(_bnd_lane_thin),
+                                      "from_lane_render_band_engage": bool(_bnd_band),
                                       "note": "AdamW m/v zeroed (fresh optimizer); spike-guard already "
                                       "re-treated; stale-momentum-through-landscape-change avoided"}),
                           flush=True)
@@ -2749,6 +2834,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="resume a run from a checkpoint: a run DIR (prefers levelset_resume_state.npz, "
                     "falls back to levelset_witness_ema_mlx.npz) OR an explicit npz. Restores decoder + "
                     "per-pair codes + EMA shadow + optimizer (best-effort) + the epoch position.")
+    ap.add_argument("--resume-allow-lever-drift", action=argparse.BooleanOptionalAction, default=False,
+                    help="(F2) allow a --resume-from whose render-side LEVERS (lane_render_band / "
+                    "persistence_loss_weight / amplify_weight / lane_band_start_epoch / render_aa / "
+                    "hosc_beta_end / mod_dim) DIFFER from the checkpoint's training config. DEFAULT OFF "
+                    "= FAIL-CLOSED (a silent lever drop is a deterministic-repro violation). Set ON only "
+                    "for an INTENTIONAL warm-start re-treatment (loss/render-only levers add no params).")
     ap.add_argument("--freeze-decoder-fit-codes", type=str, default=None,
                     help="FEED-eo AMORTIZATION (days->hours): load the SHARED decoder from this level-set "
                     "EMA/deploy npz (trained on a SUBSET, e.g. n96/n192), FREEZE it, and fit ONLY the "
@@ -2805,6 +2896,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--lr-end", type=float, default=1e-4)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
+    # (#222 deep-math gap-1) Adam second-moment decay beta2. Default 0.999 == the MLX AdamW default
+    # betas=[0.9, 0.999] => BIT-IDENTICAL to the pre-flag path. The n600 accumulated-microbatch regime
+    # has only n = P/accum_pairs ~ 75 optimizer steps per epoch's worth of distinct gradient statistics;
+    # the arXiv 2603.02092 small-n rule 1-beta2 <~ (1-beta1^5)/n^3.5 => for beta1=0.9, n=75:
+    # (1-0.59049)/75^3.5 ~ 1.12e-7 => beta2* ~ 0.99999988. The default 0.999 (1-beta2=1e-3) is ~4 orders
+    # ABOVE that floor = under-smoothed for n~75. The launch config (witness_autoconfig all_levers)
+    # sets 0.9999999 (1-beta2=1e-7 < 1.12e-7 => clears the threshold). beta1 stays 0.9 (MLX default).
+    ap.add_argument("--adam-beta2", type=float, default=0.999,
+                    help="#222 AdamW second-moment decay beta2 (beta1 fixed 0.9). Default 0.999 = MLX "
+                    "default => bit-identical. Small-n (n~75 accum steps) optimum ~0.9999999 per "
+                    "arXiv 2603.02092 (1-beta2 <~ (1-beta1^5)/n^3.5).")
     ap.add_argument("--ema-decay", type=float, default=0.997)
     # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA (additive; default None == bit-identical to the
     # --ema-decay path). When set, from the resolved finisher-start epoch onward the EMA uses this

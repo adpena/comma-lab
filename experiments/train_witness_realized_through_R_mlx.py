@@ -1756,7 +1756,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             "are no-ops for the decoupled (direction-on-sphere) weights.",
                 }), flush=True)
             else:
-                opt = optim.AdamW(learning_rate=build_lr_schedule(), weight_decay=args.weight_decay)
+                opt = optim.AdamW(learning_rate=build_lr_schedule(), weight_decay=args.weight_decay,
+                                  betas=[0.9, float(getattr(args, "adam_beta2", 0.999))])
             value_and_grad = nn.value_and_grad(model, loss_fn)
             holder["model"] = model
             holder["ema"] = ema
@@ -2215,6 +2216,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lr", type=float, default=1e-3,
                     help="base LR (lowered 2e-3->1e-3 for stability; warmup ramps 0->lr then cosine to --lr-end).")
     ap.add_argument("--weight-decay", type=float, default=1e-4)
+    # (#222) AdamW second-moment decay beta2 (beta1 fixed 0.9). Default 0.999 == MLX default =>
+    # bit-identical. Small-n (n = P/accum_pairs) optimum ~0.9999999 per arXiv 2603.02092
+    # (1-beta2 <~ (1-beta1^5)/n^3.5). Sister of the levelset trainer's --adam-beta2.
+    ap.add_argument("--adam-beta2", type=float, default=0.999,
+                    help="#222 AdamW beta2 (beta1 fixed 0.9). 0.999 default = bit-identical; small-n "
+                    "optimum ~0.9999999.")
     ap.add_argument("--ema-decay", type=float, default=0.997)
     ap.add_argument("--hinge-weight", type=float, default=4.0)
     # Score-aligned defaults: the contest score weights d_seg 100x and damps d_pose
