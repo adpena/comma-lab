@@ -121,9 +121,13 @@ from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402  (#224 W
     build_lane_band_pairs_from_lstars,
     composite_band_on_render,
     deserialize_lane_band,
+    deserialize_lane_band_any,  # Wave-F: LBND1/LBND2 magic dispatch
+    lane_band_rd_rate_report,   # Wave-F: measured per-lever byte accounting
     rasterize_lane_coverage_range_dependent,
     render_config_from_header,
     serialize_lane_band,
+    serialize_lane_band_any,    # Wave-F: format-preserving re-serialize (capped inflate)
+    serialize_lane_band_rd,     # Wave-F: LBND2 optimal RD serializer
     witness_uncertainty_mask,
 )
 from tac.local_acceleration import torch_levelset_inflate as _tli  # noqa: E402  (canonical FREE-table regen)
@@ -615,6 +619,49 @@ def _lane_parse(blob):
     return pairs, hdr
 
 
+# Wave-F: LBND2 optimal RD parse -- bit-exact inverse of analytic_lane_render_band.
+# serialize_lane_band_rd. PURE numpy/struct/json (NO constriction/mlx dep): quantize ->
+# temporal-delta -> zigzag-uint32 stream + brotli (outer) is the entropy backend. Returns
+# the SAME (cc, hc, dp, dph, dd, fr0, fr1) tuple format _lane_coverage consumes.
+LANE_MAGIC_RD = b"LBND2\x00"
+_D_SLOT_RD = 11
+
+
+def _lane_parse_rd(blob):
+    assert blob[:len(LANE_MAGIC_RD)] == LANE_MAGIC_RD, "bad LBND2 magic"
+    off = len(LANE_MAGIC_RD); (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    (plen,) = struct.unpack_from("<I", blob, off); off += 4
+    pbytes = blob[off:off + plen]; off += plen
+    rd = hdr["rd"]; K = int(rd["K"]); P = int(rd["n_pairs"]); ds = int(rd["d_slot"])
+    steps = np.asarray(rd["base_steps"], np.float64); D = K * ds
+    pairs = []
+    if K:
+        presence = np.unpackbits(np.frombuffer(pbytes, dtype=np.uint8))[:P * K].reshape(P, K).astype(bool)
+        zz = np.frombuffer(blob[off:], dtype=np.uint32).reshape(P, D).astype(np.int64)
+        dq = (zz >> 1) ^ -(zz & 1)                     # zigzag -> signed int64
+        Q = np.cumsum(dq, axis=0)                      # undo temporal delta (row0=seed)
+        M = Q.astype(np.float64) * np.tile(steps, K)   # dequant (float64, bit-exact vs module)
+        for p in range(P):
+            lines = []
+            for slot in range(K):
+                if presence[p, slot]:
+                    v = M[p, slot * ds:(slot + 1) * ds]
+                    lines.append((np.asarray(v[0:4], np.float64), np.asarray(v[4:6], np.float64),
+                                  float(v[6]), float(v[7]), float(v[8]), float(v[9]), float(v[10])))
+            pairs.append(lines)
+    else:
+        pairs = [[] for _ in range(P)]
+    return pairs, hdr
+
+
+def _lane_parse_any(blob):
+    # magic dispatch: LBND2 (Wave-F RD) else LBND1 (Wave-E naive).
+    if blob[:len(LANE_MAGIC_RD)] == LANE_MAGIC_RD:
+        return _lane_parse_rd(blob)
+    return _lane_parse(blob)
+
+
 def _lane_coverage(lines, rh, rw, hdr):
     # AA-SDF range-dependent coverage raster (float64 -> float32), mirror of
     # rasterize_lane_coverage_range_dependent + _line_row_params + _forward_of_rows. Returns (rh,rw).
@@ -690,7 +737,7 @@ def _setup(src):
     # rasters (FREE regen; computed ONCE per pair, cached). Absent -> lane_pairs=None -> band skipped.
     lane_pairs = lane_hdr = None
     if m.get("lane_render_band") is not None and lane_b is not None:
-        lane_pairs, lane_hdr = _lane_parse(brotli.decompress(lane_b))
+        lane_pairs, lane_hdr = _lane_parse_any(brotli.decompress(lane_b))  # Wave-F: LBND1/LBND2 dispatch
     _G.update(m=m, code=code, coords=coords, curv=curv, P=P, rh=rh, rw=rw, ch=ch, cw=cw,
               framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr)
 
@@ -840,9 +887,10 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
         # #224 Wave E: cap the lane render-band to eval_pairs too (slice + re-serialize).
         lane_cap = None
         if lane_b is not None and man.get("lane_render_band") is not None:
-            all_pairs, _hdr = deserialize_lane_band(brotli.decompress(lane_b))
+            all_pairs, lane_hdr = deserialize_lane_band_any(brotli.decompress(lane_b))  # Wave-F dispatch
             lane_cfg_cap = render_config_from_header({**man["lane_render_band"], "pairs": []})
-            lane_cap = brotli.compress(serialize_lane_band(all_pairs[:eval_pairs], lane_cfg_cap), quality=11)
+            lane_cap = brotli.compress(
+                serialize_lane_band_any(all_pairs[:eval_pairs], lane_cfg_cap, lane_hdr), quality=11)
         mj = json.dumps(man, separators=(",", ":")).encode()
         capped = _io_pack(mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11), pose_b or None, lane_cap)
         src_bin.write_bytes(capped)
@@ -1031,10 +1079,11 @@ def bit_exact_roundtrip_gate(
     lane_pairs_cap = None
     lane_b_cap = None
     if lane_b is not None and m.get("lane_render_band") is not None:
-        all_pairs, _hdr = deserialize_lane_band(brotli.decompress(lane_b))
+        all_pairs, lane_hdr = deserialize_lane_band_any(brotli.decompress(lane_b))  # Wave-F dispatch
         lane_pairs_cap = all_pairs[:gp]
         lane_cfg_cap = render_config_from_header({**m["lane_render_band"], "pairs": []})
-        lane_b_cap = brotli.compress(serialize_lane_band(lane_pairs_cap, lane_cfg_cap), quality=11)
+        lane_b_cap = brotli.compress(
+            serialize_lane_band_any(lane_pairs_cap, lane_cfg_cap, lane_hdr), quality=11)
     mj = json.dumps(man, separators=(",", ":")).encode()
     capped_bin = gate_root / "gate.bin"
     capped_bin.write_bytes(_io_pack(
@@ -1240,11 +1289,16 @@ def _lane_manifest_from_cfg(cfg: LaneBandRenderConfig, fit_stats: dict[str, Any]
 
 
 def build_lane_band_section(
-    gt_cache: str | None, n_pairs: int, cfg: LaneBandRenderConfig,
+    gt_cache: str | None, n_pairs: int, cfg: LaneBandRenderConfig, *, rd: bool = True,
 ) -> tuple[bytes, dict[str, Any], dict[str, Any]]:
     """Fit the per-pair lane manifold coords from the GT SegNet argmax cache (compress-time; the
     source is fully available), serialize + brotli them (COUNTED), and build the manifest cfg.
-    Returns (brotli_lane_bytes, lane_manifest, report). NO-FAKE: missing GT cache raises."""
+    Returns (brotli_lane_bytes, lane_manifest, report). NO-FAKE: missing GT cache raises.
+
+    ``rd=True`` (Wave-F default) uses the OPTIMAL LBND2 rate-distortion codec
+    (quantize->temporal-delta->L4-slots->zigzag, brotli entropy backend). ``rd=False`` uses
+    the naive LBND1 float64 serializer (kept for the default-off byte-identical gate + the
+    naive-vs-RD rate comparison). The report carries the MEASURED per-lever byte accounting."""
     import brotli
 
     if not gt_cache:
@@ -1260,23 +1314,29 @@ def build_lane_band_section(
     ncap = min(int(n_pairs), int(len(lstars)))
     lst_list = [np.asarray(lstars[i], np.int64) for i in range(ncap)]
     pairs_lines, fit_stats = build_lane_band_pairs_from_lstars(lst_list, cfg)
-    raw = serialize_lane_band(pairs_lines, cfg)
+    # Wave-F: measured per-lever rate accounting (naive LBND1 vs optimal LBND2 RD).
+    rate_report = lane_band_rd_rate_report(pairs_lines, cfg)
+    raw = serialize_lane_band_rd(pairs_lines, cfg) if rd else serialize_lane_band(pairs_lines, cfg)
     lane_bytes = brotli.compress(raw, quality=11)
     lane_manifest = _lane_manifest_from_cfg(cfg, fit_stats)
     report = {
         "active": True,
+        "codec": ("LBND2_rd" if rd else "LBND1_naive"),
         "source_gt_cache": str(p),
         "n_pairs_fit": ncap,
         "serialized_raw_bytes": len(raw),
         "counted_brotli_bytes": len(lane_bytes),
         "counted_rate_term_contribution": 25.0 * len(lane_bytes) / RATE_DENOM,
         "fit_stats": fit_stats,
+        "rate_report": rate_report,  # Wave-F: naive-vs-RD + Shannon floor + PTC1 + induced lat RMS
         "u_mask_enabled": bool(cfg.u_mask_enabled),
         "rule_118": {
-            "COUNTED (archive.zip)": "per-pair LaneLine manifold coords (centerline+halfwidth+dash+"
-                                     "forward_range, int-tagged float64) -- the video-derived statistic",
-            "FREE (inflate.py)": "rasterize_lane_coverage_range_dependent (the AA-SDF coverage raster) + "
-                                 "the composite -- generic deterministic algorithm, 0 archive bytes",
+            "COUNTED (archive.zip)": ("per-pair LaneLine manifold coords, QUANTIZED (geometric-tolerance "
+                                      "steps) + temporal-delta + zigzag -- the video-derived statistic"
+                                      if rd else
+                                      "per-pair LaneLine manifold coords (float64) -- the video-derived statistic"),
+            "FREE (inflate.py)": "quantize/dequantize + rasterize_lane_coverage_range_dependent (the AA-SDF "
+                                 "coverage raster) + the composite -- generic deterministic algorithm, 0 archive bytes",
             "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship",
         },
     }
@@ -1300,6 +1360,7 @@ def run(
     so_overrides: dict[str, Any],
     lane_render_band: bool = False,
     lane_band_cfg: LaneBandRenderConfig | None = None,
+    lane_rd: bool = True,  # Wave-F: LBND2 optimal RD codec (default); False -> naive LBND1
     verify_bit_exact: bool = False,
     bit_exact_pairs: int = 2,
     bit_exact_strict: bool = True,
@@ -1340,11 +1401,15 @@ def run(
     lane_report: dict[str, Any] = {"active": False}
     if lane_render_band:
         lane_cfg = lane_band_cfg or LaneBandRenderConfig()
-        lane_band_bytes, lane_manifest, lane_report = build_lane_band_section(gt_cache, n_pairs, lane_cfg)
-        print(f"[lane-band] active: {lane_report['n_pairs_fit']} pairs fit, "
+        lane_band_bytes, lane_manifest, lane_report = build_lane_band_section(
+            gt_cache, n_pairs, lane_cfg, rd=lane_rd)
+        _rr = lane_report.get("rate_report", {})
+        print(f"[lane-band] active ({lane_report['codec']}): {lane_report['n_pairs_fit']} pairs fit, "
               f"COUNTED brotli={lane_report['counted_brotli_bytes']} B "
               f"(rate_term += {lane_report['counted_rate_term_contribution']:.5f}); "
-              f"u_mask={lane_report['u_mask_enabled']}; coverage raster = FREE (rule 118)  {_AUTHORITY}",
+              f"naive-LBND1 brotli={_rr.get('naive_lbnd1_brotli_bytes','?')} B "
+              f"(rd/naive={_rr.get('rd_vs_naive_ratio', float('nan')):.3f}); "
+              f"u_mask={lane_report['u_mask_enabled']}; quantize+raster = FREE (rule 118)  {_AUTHORITY}",
               flush=True)
 
     blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest)
@@ -1503,6 +1568,10 @@ def main(argv: list[str] | None = None) -> int:
                          "decode-consistent FP killer (c_full_wit). OFF -> coverage-only band (c_range).")
     ap.add_argument("--lane-band-tau", type=float, default=0.85, help="witness-margin uncertainty threshold (prob).")
     ap.add_argument("--lane-band-eps", type=float, default=0.35, help="witness-margin uncertainty ramp.")
+    ap.add_argument("--lane-band-naive", action="store_true",
+                    help="Wave-F: use the NAIVE LBND1 float64 serializer instead of the OPTIMAL LBND2 RD "
+                         "codec (quantize+temporal-delta+zigzag). Default = LBND2 RD (rate-viable). The "
+                         "naive path is kept for the naive-vs-RD rate comparison + the default-off gate.")
     # self-orient params the trainer does NOT persist (a trainer gap, flagged) -> trainer defaults.
     ap.add_argument("--so-freq-across", type=float, default=32.0, help="self-orient HIGH freq across the edge (trainer default 32).")
     ap.add_argument("--so-freq-along", type=float, default=4.0, help="self-orient LOW freq along the edge (trainer default 4).")
@@ -1571,6 +1640,7 @@ def main(argv: list[str] | None = None) -> int:
             lane_cls=args.lane_band_lane_cls, u_mask_enabled=args.lane_band_umask,
             u_mask_tau=args.lane_band_tau, u_mask_eps=args.lane_band_eps,
         ),
+        lane_rd=not args.lane_band_naive,
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,
         bit_exact_strict=not args.no_bit_exact_strict,

@@ -38,14 +38,22 @@ lbce = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(lbce)
 
 from tac.boundary_math.analytic_lane_render_band import (
+    LaneBandRDTolerance,
     LaneBandRenderConfig,
     band_alpha,
     build_lane_band_pairs_from_lstars,
     composite_band_on_render,
+    derive_rd_base_steps,
     deserialize_lane_band,
+    deserialize_lane_band_any,
+    deserialize_lane_band_rd,
+    lane_band_rd_rate_report,
     rasterize_lane_coverage_range_dependent,
     render_config_from_header,
+    roundtrip_lines_through_rd,
     serialize_lane_band,
+    serialize_lane_band_any,
+    serialize_lane_band_rd,
     witness_uncertainty_mask,
 )
 from tac.boundary_math.lane_sdf_component import LaneLine
@@ -295,15 +303,29 @@ def _synthetic_gt_cache(tmp_path, n_pairs: int = 2) -> Path:
 
 def test_build_lane_band_section_from_gt_cache(tmp_path):
     gt = _synthetic_gt_cache(tmp_path, n_pairs=2)
-    lane_bytes, manifest, report = lbce.build_lane_band_section(str(gt), 2, _lane_cfg())
+    lane_bytes, manifest, report = lbce.build_lane_band_section(str(gt), 2, _lane_cfg())  # Wave-F: rd default
     assert report["active"] is True and report["n_pairs_fit"] == 2
+    assert report["codec"] == "LBND2_rd"               # Wave-F: the optimal RD codec is the default
     assert report["counted_brotli_bytes"] == len(lane_bytes) > 0
     assert report["fit_stats"]["total_lines"] >= 1     # the synthetic lane was actually fit
+    # Wave-F: measured per-lever rate report is attached (naive-vs-RD).
+    rr = report["rate_report"]
+    assert rr["rd_lbnd2_brotli_bytes"] == len(lane_bytes)
+    assert rr["naive_lbnd1_brotli_bytes"] > 0
     # rule-118 honesty is recorded in the report.
     assert "no_gt_no_scorer" in report["rule_118"]
     assert report["counted_rate_term_contribution"] == pytest.approx(25.0 * len(lane_bytes) / lbce.RATE_DENOM)
-    # parse-back reproduces the fit lines bit-exactly.
-    pl, hdr = deserialize_lane_band(lane_bytes and __import__("brotli").decompress(lane_bytes))
+    # parse-back reproduces the fit lines bit-exactly (format-agnostic dispatch).
+    pl, hdr = deserialize_lane_band_any(lane_bytes and __import__("brotli").decompress(lane_bytes))
+    assert len(pl) == 2
+
+
+def test_build_lane_band_section_naive_opt_out(tmp_path):
+    """rd=False -> the naive LBND1 float64 codec (kept for the naive-vs-RD comparison + default-off gate)."""
+    gt = _synthetic_gt_cache(tmp_path, n_pairs=2)
+    lane_bytes, manifest, report = lbce.build_lane_band_section(str(gt), 2, _lane_cfg(), rd=False)
+    assert report["codec"] == "LBND1_naive"
+    pl, hdr = deserialize_lane_band(__import__("brotli").decompress(lane_bytes))  # LBND1 parses
     assert len(pl) == 2
 
 
@@ -317,3 +339,144 @@ def test_build_lane_band_section_missing_lstars(tmp_path):
     np.savez(p, foo=np.zeros(3))
     with pytest.raises(ValueError, match="lstars"):
         lbce.build_lane_band_section(str(p), 2, _lane_cfg())
+
+
+# ===========================================================================
+# GROUP E — Wave-F: the OPTIMAL LBND2 rate-distortion codec (replaces naive LBND1)
+# ===========================================================================
+def _lane_section_rd(cfg_band: LaneBandRenderConfig, pairs=None, tol=None) -> tuple[bytes, dict]:
+    """LBND2 (RD) lane section: quantize+temporal-delta+zigzag, brotli'd (COUNTED)."""
+    pairs = pairs or _synthetic_lines()
+    raw = serialize_lane_band_rd(pairs, cfg_band, tol=tol)
+    lane_bytes = brotli.compress(raw, quality=11)
+    manifest = lbce._lane_manifest_from_cfg(cfg_band, {"n_pairs": len(pairs)})
+    return lane_bytes, manifest
+
+
+def _packet_rd(tmp_path, lane_cfg, tol=None):
+    cfg = _tiny_cfg()
+    params = _tiny_params(cfg)
+    lane_bytes, manifest = _lane_section_rd(lane_cfg, tol=tol)
+    blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None, lane_bytes, manifest)
+    pkt = tmp_path / "pkt_rd"
+    lbce.assemble_packet(blob, pkt)
+    return pkt, blob, cfg
+
+
+def test_rd_steps_derived_positive_and_ordered():
+    """The RD steps are DERIVED from a geometric tolerance (not fabricated) and all > 0."""
+    steps = derive_rd_base_steps()
+    assert steps.shape == (11,) and (steps > 0).all()
+    # higher-power centerline coeffs get finer steps (scaled by f_ref**k).
+    assert steps[0] < steps[1] < steps[2] < steps[3]  # c3<c2<c1<c0
+
+
+def test_rd_serialize_deserialize_bit_exact_and_deterministic():
+    pairs = _synthetic_lines()
+    cfg = _lane_cfg(u_mask_enabled=True, u_mask_tau=0.8, u_mask_eps=0.3, weight=0.7)
+    blob = serialize_lane_band_rd(pairs, cfg)
+    assert blob == serialize_lane_band_rd(pairs, cfg)          # deterministic
+    dq, hdr = deserialize_lane_band_rd(blob)
+    assert len(dq) == len(pairs)
+    assert hdr["rd"]["K"] == max(len(p) for p in pairs)
+    # magic dispatch routes LBND2 correctly.
+    dq_any, _ = deserialize_lane_band_any(blob)
+    assert len(dq_any) == len(pairs)
+    # render config survives the RD header.
+    got = render_config_from_header(hdr)
+    assert got.weight == cfg.weight and got.u_mask_enabled and got.u_mask_tau == cfg.u_mask_tau
+
+
+def test_rd_coverage_decode_consistency_bit_identical():
+    """THE decode-consistency of the RD codec: coverage(deserialized dequant lines) ==
+    coverage(roundtrip_lines_through_rd), bit-for-bit -- both are what SHIPS."""
+    pairs = _synthetic_lines()
+    cfg = _lane_cfg()
+    dq_lines, blob = roundtrip_lines_through_rd(pairs, cfg)
+    dq2, hdr = deserialize_lane_band_rd(blob)
+    dc = render_config_from_header(hdr)
+    for a, b in zip(dq_lines, dq2, strict=True):
+        cov_a = rasterize_lane_coverage_range_dependent(
+            a, h=48, w=64, softness=dc.softness, dash_gate=dc.dash_gate,
+            dash_forward_max_m=dc.dash_forward_max_m, v_h=dc.v_h, cx=dc.cx)
+        cov_b = rasterize_lane_coverage_range_dependent(
+            b, h=48, w=64, softness=dc.softness, dash_gate=dc.dash_gate,
+            dash_forward_max_m=dc.dash_forward_max_m, v_h=dc.v_h, cx=dc.cx)
+        assert np.array_equal(cov_a, cov_b)
+        assert cov_a.max() > 0.0
+
+
+def test_rd_reserialize_idempotent_on_quantized_grid():
+    """The capped-inflate re-serialize path: serialize_lane_band_any(dequant lines, hdr) on the
+    SAME grid reproduces the byte-identical blob (bit-exact cap)."""
+    pairs = _synthetic_lines()
+    cfg = _lane_cfg()
+    blob = serialize_lane_band_rd(pairs, cfg)
+    dq, hdr = deserialize_lane_band_rd(blob)
+    assert serialize_lane_band_any(dq, cfg, hdr) == blob
+
+
+def test_rd_bit_exact_gate_coverage_only(tmp_path):
+    """DECODE-CONSISTENCY PROOF (LBND2): the SHIPPED inflate.py RD-band render == the numpy-fp32
+    oracle band render, bit-for-bit (coverage-only). The whole point of Wave-F preserved."""
+    pkt, blob, _ = _packet_rd(tmp_path, _lane_cfg(u_mask_enabled=False))
+    res = lbce.bit_exact_roundtrip_gate(pkt, blob, gate_pairs=2, strict=True)
+    assert res["bit_exact"] is True and res["max_abs_uint8_diff"] == 0 and res["frames_compared"] == 4
+
+
+def test_rd_bit_exact_gate_witness_margin_umask(tmp_path):
+    """DECODE-CONSISTENCY PROOF (LBND2) WITH the witness-margin uncertainty FP-killer."""
+    pkt, blob, _ = _packet_rd(tmp_path, _lane_cfg(u_mask_enabled=True, u_mask_tau=0.8, u_mask_eps=0.3))
+    res = lbce.bit_exact_roundtrip_gate(pkt, blob, gate_pairs=2, strict=True)
+    assert res["bit_exact"] is True and res["max_abs_uint8_diff"] == 0
+
+
+def test_rd_band_changes_frames_non_trivially(tmp_path):
+    """NO-FAKE: the RD band actually mutates the rendered frames (not a silent no-op)."""
+    pkt_on, _, cfg = _packet_rd(tmp_path, _lane_cfg())
+    pkt_off, _, _ = _packet(tmp_path / "off", None)
+    a = np.fromfile(lbce.run_inflate(pkt_on, cfg["n_pairs"], None)["raw_path"], dtype=np.uint8)
+    b = np.fromfile(lbce.run_inflate(pkt_off, cfg["n_pairs"], None)["raw_path"], dtype=np.uint8)
+    assert a.shape == b.shape and not np.array_equal(a, b)
+
+
+def test_rd_default_off_still_byte_identical():
+    """With the RD codec available, the band-OFF path is STILL byte-identical to the pre-Wave-E
+    grammar (the RD codec is band-on-only; the 7/7 default-off guarantee is untouched)."""
+    cfg = _tiny_cfg()
+    params = _tiny_params(cfg)
+    blob_none, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None)
+    blob_off, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None, None, None)
+    assert blob_none == blob_off
+    m, base_b, code_b, pose, lane_b = lbce._read_blob_bytes(blob_none)
+    assert lane_b is None and "lane_render_band" not in m
+
+
+def test_rd_rate_report_measures_naive_vs_rd():
+    """The RD codec quantizes -> its brotli bytes are <= the naive float64 codec (rate win),
+    and the report exposes the measured per-lever accounting + the Shannon floor."""
+    # a longer temporally-coherent synthetic sequence so the temporal-delta win is real.
+    from tac.boundary_math.lane_sdf_component import LaneLine as _LL
+    pairs = []
+    for t in range(24):
+        pairs.append([
+            _LL(centerline_coeffs=np.array([1e-6 * t, -2e-4, 0.01, -1.5 + 0.01 * t]),
+                halfwidth_coeffs=np.array([0.0, 2.5]), dash_period_m=6.0, dash_phase_m=0.5,
+                dash_duty=0.5, forward_range=(1.0, 200.0)),
+            _LL(centerline_coeffs=np.array([1e-6 * t, -2e-4, 0.01, 1.5 + 0.01 * t]),
+                halfwidth_coeffs=np.array([0.0, 2.0]), dash_period_m=0.0,
+                forward_range=(1.0, 200.0)),
+        ])
+    rep = lane_band_rd_rate_report(pairs, _lane_cfg())
+    assert rep["n_pairs"] == 24 and rep["K_slots"] == 2
+    assert rep["rd_lbnd2_brotli_bytes"] < rep["naive_lbnd1_brotli_bytes"]   # RD wins on coherent data
+    assert rep["induced_lateral_rms_m"] < 0.05                              # sub-5cm geometric error
+    assert rep["delta_stream_shannon_floor_bytes"] >= 0.0
+
+
+def test_rd_empty_pairs_no_lines():
+    """Edge case: pairs with zero lines -> K=0 -> empty payload -> decodes to empty lines."""
+    cfg = _lane_cfg()
+    blob = serialize_lane_band_rd([[], []], cfg)
+    dq, hdr = deserialize_lane_band_rd(blob)
+    assert hdr["rd"]["K"] == 0 and dq == [[], []]
