@@ -881,6 +881,66 @@ def _quantize_matrix(M: np.ndarray, steps_full: np.ndarray) -> np.ndarray:
     return np.round(M / steps_full).astype(np.int64)
 
 
+def _serialize_matrix_lbnd2(
+    M: np.ndarray, presence: np.ndarray, K: int, cfg: LaneBandRenderConfig,
+    steps: np.ndarray, *, f_near: float, extra_rd: dict[str, Any] | None = None,
+) -> bytes:
+    """LBND2 wire-format serialization of an ALREADY-PACKED (M, presence, K) matrix.
+
+    Extracted core so BOTH the lateral-SORT packing (``serialize_lane_band_rd``) AND
+    the CORRESPONDENCE-tracked packing (``serialize_lane_band_rd_tracked``) emit the
+    IDENTICAL wire grammar (magic ``LBND2``) -- the decode + the inflate ``_lane_parse_rd``
+    are UNCHANGED (they cumsum-dequant-unpack; they never re-pack), so a tracked blob
+    ships as STANDARD LBND2 bytes with ZERO new inflate code. ``extra_rd`` (tracked path
+    only; None for the sort path -> byte-identical) records provenance keys the decode
+    ignores (``pack_mode`` / ``coherent_fit``)."""
+
+    steps = np.asarray(steps, np.float64)
+    if steps.shape != (_RD_D_SLOT,):
+        raise ValueError(f"base_steps must be ({_RD_D_SLOT},); got {steps.shape}")
+    P = int(M.shape[0])
+    D = K * _RD_D_SLOT
+    steps_full = np.tile(steps, K) if K else np.zeros(0, np.float64)
+    Q = _quantize_matrix(M, steps_full)                       # (P, D) int64
+    dq = Q.copy()
+    if P > 1 and D:
+        dq[1:] = Q[1:] - Q[:-1]                                 # row0 = seed, rows>0 = temporal delta
+    zz = _zigzag_encode(dq) if dq.size else np.zeros((P, D), np.uint32)
+    if zz.size and int(zz.max()) >= 2 ** 31:
+        raise ValueError(
+            "LBND2 zigzag delta exceeds int32 range -- lane coeff magnitudes are pathological; "
+            "refusing to overflow (NO-FAKE). Widen the step schedule or investigate the fit.")
+
+    rd_block: dict[str, Any] = {
+        "K": int(K), "d_slot": int(_RD_D_SLOT), "n_pairs": int(P),
+        "base_steps": [float(s) for s in steps.tolist()], "f_near": float(f_near),
+    }
+    if extra_rd:
+        rd_block.update(extra_rd)
+    header: dict[str, Any] = {
+        "format": 2,
+        "softness": float(cfg.softness),
+        "dash_gate": bool(cfg.dash_gate),
+        "dash_forward_max_m": float(cfg.dash_forward_max_m),
+        "v_h": float(cfg.v_h),
+        "cx": (None if cfg.cx is None else float(cfg.cx)),
+        "weight": float(cfg.weight),
+        "lane_cls": int(cfg.lane_cls),
+        "lane_rgb_mode": str(cfg.lane_rgb_mode),
+        "u_mask": (
+            {"source": "witness_margin", "tau": float(cfg.u_mask_tau), "eps": float(cfg.u_mask_eps)}
+            if cfg.u_mask_enabled else None
+        ),
+        "geom": {"cam_h": _CAM_H, "fx": _FX, "fy": _FY, "seg_h": _SEG_H, "seg_w": _SEG_W},
+        "rd": rd_block,
+    }
+    mj = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    presence_bytes = np.packbits(presence.reshape(-1)).tobytes() if presence.size else b""
+    delta_bytes = np.ascontiguousarray(zz, dtype=np.uint32).tobytes()
+    return (LANE_BAND_RD_MAGIC + struct.pack("<I", len(mj)) + mj
+            + struct.pack("<I", len(presence_bytes)) + presence_bytes + delta_bytes)
+
+
 def serialize_lane_band_rd(
     pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
     tol: LaneBandRDTolerance | None = None,
@@ -897,50 +957,15 @@ def serialize_lane_band_rd(
     (P,K) presence. ``zz_delta`` = zigzag(row0=Q[0]; rows>0 = Q[t]-Q[t-1]) as uint32.
     The COUNTED archive bytes are ``len(brotli(serialize_lane_band_rd(...)))`` (the
     byte-close 5th block brotli-compresses this). ``base_steps`` overrides the derived
-    steps (used by the capped-inflate re-serialize to preserve the exact grid)."""
+    steps (used by the capped-inflate re-serialize to preserve the exact grid).
+
+    The L4 slot packing is the lateral-SORT (``_pack_pairs_to_matrix``). The Stage-2
+    CORRESPONDENCE-tracked variant (``serialize_lane_band_rd_tracked``) emits the SAME
+    LBND2 wire format from a Hungarian-tracked packing (no slot-swap jitter)."""
 
     steps = np.asarray(base_steps, np.float64) if base_steps is not None else derive_rd_base_steps(tol)
-    if steps.shape != (_RD_D_SLOT,):
-        raise ValueError(f"base_steps must be ({_RD_D_SLOT},); got {steps.shape}")
     M, presence, K = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
-    P = int(M.shape[0])
-    D = K * _RD_D_SLOT
-    steps_full = np.tile(steps, K) if K else np.zeros(0, np.float64)
-    Q = _quantize_matrix(M, steps_full)                       # (P, D) int64
-    dq = Q.copy()
-    if P > 1 and D:
-        dq[1:] = Q[1:] - Q[:-1]                                 # row0 = seed, rows>0 = temporal delta
-    zz = _zigzag_encode(dq) if dq.size else np.zeros((P, D), np.uint32)
-    if zz.size and int(zz.max()) >= 2 ** 31:
-        raise ValueError(
-            "LBND2 zigzag delta exceeds int32 range -- lane coeff magnitudes are pathological; "
-            "refusing to overflow (NO-FAKE). Widen the step schedule or investigate the fit.")
-
-    header: dict[str, Any] = {
-        "format": 2,
-        "softness": float(cfg.softness),
-        "dash_gate": bool(cfg.dash_gate),
-        "dash_forward_max_m": float(cfg.dash_forward_max_m),
-        "v_h": float(cfg.v_h),
-        "cx": (None if cfg.cx is None else float(cfg.cx)),
-        "weight": float(cfg.weight),
-        "lane_cls": int(cfg.lane_cls),
-        "lane_rgb_mode": str(cfg.lane_rgb_mode),
-        "u_mask": (
-            {"source": "witness_margin", "tau": float(cfg.u_mask_tau), "eps": float(cfg.u_mask_eps)}
-            if cfg.u_mask_enabled else None
-        ),
-        "geom": {"cam_h": _CAM_H, "fx": _FX, "fy": _FY, "seg_h": _SEG_H, "seg_w": _SEG_W},
-        "rd": {
-            "K": int(K), "d_slot": int(_RD_D_SLOT), "n_pairs": int(P),
-            "base_steps": [float(s) for s in steps.tolist()], "f_near": float(f_near),
-        },
-    }
-    mj = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    presence_bytes = np.packbits(presence.reshape(-1)).tobytes() if presence.size else b""
-    delta_bytes = np.ascontiguousarray(zz, dtype=np.uint32).tobytes()
-    return (LANE_BAND_RD_MAGIC + struct.pack("<I", len(mj)) + mj
-            + struct.pack("<I", len(presence_bytes)) + presence_bytes + delta_bytes)
+    return _serialize_matrix_lbnd2(M, presence, K, cfg, steps, f_near=f_near)
 
 
 def deserialize_lane_band_rd(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
@@ -1440,3 +1465,210 @@ def derive_task_rd_steps(
         raise ValueError(f"sensitivity shape {s.shape} != base_steps shape {base.shape}")
     scale = np.clip(np.sqrt(float(lam) / (np.abs(s) + 1e-30)), float(step_floor), float(step_ceil))
     return base * scale
+
+
+# ===========================================================================
+# WAVE-F STAGE-2b: CORRESPONDENCE-FIRST tracked + coherent-denoise serialization.
+# The research-optimal lane-coeff source re-parameterization (authority
+# ``.omx/research/lane_coeff_tracking_denoising_optimal_survey_20260702.md``): replace the
+# LBND2 lateral-SORT slot packing (which injects slot-swap jitter -- ~44% of the temporal-
+# delta L1 mass) with a Hungarian TRACKED packing (slot k = the same physical lane over its
+# lifetime -> swaps vanish LOSSLESSLY), then per-track BATCH edge-preserving denoise (Kalman-
+# RTS MMSE / l1-trend / RPCA -- NOT the causal ego-predictor that measured WORSE, NOT the
+# edge-blurring moving-average). It emits the SAME LBND2 wire format via ``_serialize_matrix_
+# lbnd2`` -> the decode + inflate ``_lane_parse_rd`` are UNCHANGED (ships as standard LBND2
+# bytes, ZERO new inflate code), exactly the ``temporal_smooth_pairs_lines`` property.
+#
+# GATE ORDER (measured by ``lane_band_tracking_rate_report``): (i) tracked-ONLY bytes (isolate
+# the LOSSLESS correspondence gain; verify the top-5% jump mass DROPS) -> (ii) + RTS/l1-trend
+# denoise (kill jitter, keep edges) -> (iii) RPCA probe. rule-118: tracking+denoise FREE
+# (offline generic algorithm); COUNTED = the (smaller, coherent) LBND2 coeff stream + presence.
+# The d_seg WIN is OUT OF SCOPE (the #205 through-R leg); this delivers the lower-rate,
+# LESS-LOSSY band SOURCE + the MEASURED rate. Determinism: numpy LBND2 decode (zero mlx).
+# ===========================================================================
+def serialize_lane_band_rd_tracked(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None,
+    base_steps: np.ndarray | None = None,
+    f_near: float = _RD_F_NEAR,
+    smooth: str = "none",
+    gate_dist_m: float = 1.5,
+    max_gap: int = 6,
+    smooth_kwargs: dict[str, Any] | None = None,
+) -> tuple[bytes, dict[str, Any]]:
+    """CORRESPONDENCE-FIRST tracked serialization -> a STANDARD LBND2 blob (format=2, magic
+    ``LBND2``) the UNCHANGED decode/inflate parse. Returns (blob, meta). ``smooth`` in
+    {"none","median","rts","l1trend","rpca"} selects the per-track batch denoise applied to
+    the tracked matrix (default "none" = pure LOSSLESS correspondence re-labeling). The header
+    ``rd`` block gains provenance keys (``pack_mode="tracked"`` / ``coherent_fit`` / ``n_tracks``)
+    the decode ignores (so the sort path stays byte-identical). ``smooth_kwargs`` forwards the
+    RTS/l1-trend/RPCA/median knobs to ``coherent_denoise_track_matrix``."""
+
+    from tac.boundary_math.lane_track_and_smooth import (
+        coherent_denoise_track_matrix, track_lane_slots,
+    )
+
+    steps = np.asarray(base_steps, np.float64) if base_steps is not None else derive_rd_base_steps(tol)
+    ta = track_lane_slots(pairs_lines, f_near=f_near, gate_dist_m=gate_dist_m, max_gap=max_gap)
+    M, presence, K = ta.M, ta.presence, ta.K
+    if smooth != "none":
+        M = coherent_denoise_track_matrix(M, presence, K, method=smooth, **(smooth_kwargs or {}))
+    extra_rd = {
+        "pack_mode": "tracked", "coherent_fit": str(smooth), "n_tracks": int(K),
+        "n_births": int(ta.n_births), "n_deaths": int(ta.n_deaths),
+        "gate_dist_m": float(gate_dist_m), "max_gap": int(max_gap),
+    }
+    blob = _serialize_matrix_lbnd2(M, presence, K, cfg, steps, f_near=f_near, extra_rd=extra_rd)
+    meta = {"K": int(K), "n_births": int(ta.n_births), "n_deaths": int(ta.n_deaths),
+            "n_matched": int(ta.n_matched), "smooth": str(smooth),
+            "tracker_provenance": ta.provenance}
+    return blob, meta
+
+
+def roundtrip_lines_through_rd_tracked(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
+    smooth: str = "none", gate_dist_m: float = 1.5, max_gap: int = 6,
+    smooth_kwargs: dict[str, Any] | None = None,
+) -> tuple[list[list[LaneLine]], bytes, dict[str, Any]]:
+    """Return the DEQUANTIZED per-pair lines the tracked codec ships (via the UNCHANGED
+    ``deserialize_lane_band_rd``) + the blob + meta. The compress-side render MUST use these
+    dequantized lines (measure-what-you-ship). NO-FAKE: the blob is a valid LBND2 blob that
+    round-trips bit-exact through the standard decode."""
+
+    blob, meta = serialize_lane_band_rd_tracked(
+        pairs_lines, cfg, tol=tol, f_near=f_near, smooth=smooth,
+        gate_dist_m=gate_dist_m, max_gap=max_gap, smooth_kwargs=smooth_kwargs)
+    dq_lines, _hdr = deserialize_lane_band_rd(blob)
+    return dq_lines, blob, meta
+
+
+def _dequant_lines_multiset_key(pairs_lines: list[list[LaneLine]], steps: np.ndarray) -> list[tuple]:
+    """Per-pair CANONICAL multiset of quantized slot vectors (sorted) -- for the LOSSLESS
+    invariant (tracked-no-smooth dequant lines == sort dequant lines as a per-pair SET)."""
+
+    steps = np.asarray(steps, np.float64)
+    out: list[tuple] = []
+    for lines in pairs_lines:
+        rows = []
+        for ln in lines:
+            v = _line_to_slot_vec(ln)
+            q = np.round(v / steps).astype(np.int64)
+            rows.append(tuple(int(x) for x in q))
+        out.append(tuple(sorted(rows)))
+    return out
+
+
+def lane_band_tracking_rate_report(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
+    gate_dist_m: float = 1.5, max_gap: int = 6,
+    smooth_methods: tuple[str, ...] = ("none", "rts", "l1trend", "median", "rpca"),
+    smooth_kwargs: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """MEASURED byte accounting for the CORRESPONDENCE-FIRST pipeline, in GATE ORDER:
+    LBND2 sort baseline -> tracked-ONLY (lossless correspondence) -> tracked + each batch
+    denoise. Reports the COUNTED brotli bytes + rate_term + ratio-vs-LBND2 per variant, the
+    top-5% jump-mass drop (sort vs tracked = the swap-kill diagnostic), the LOSSLESS invariant
+    (tracked-no-smooth dequant lines == sort dequant lines, per-pair set), and the induced
+    lateral RMS for the denoised variants. All numbers MEASURED (real brotli byte counts);
+    the d_seg WIN is the #205 through-R follow-up (out of scope). rate = 25*bytes/RATE_DENOM."""
+
+    import brotli
+
+    from tac.boundary_math.lane_track_and_smooth import (
+        coherent_denoise_track_matrix, top_pct_jump_mass, track_lane_slots,
+    )
+
+    rate_denom = 37_545_489.0
+    steps = derive_rd_base_steps(tol)
+    steps_slot = steps  # (11,)
+
+    def _brotli(b: bytes) -> int:
+        return int(len(brotli.compress(b, quality=11)))
+
+    # --- LBND2 sort baseline ---
+    sort_blob = serialize_lane_band_rd(pairs_lines, cfg, tol=tol, f_near=f_near)
+    b_sort = _brotli(sort_blob)
+    M_sort, pres_sort, K_sort = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
+    steps_full_sort = np.tile(steps_slot, K_sort) if K_sort else np.zeros(0)
+    jm_sort = top_pct_jump_mass(M_sort, pres_sort, K_sort, steps_full_sort, pct=5.0)
+
+    # --- tracked packing (once) ---
+    ta = track_lane_slots(pairs_lines, f_near=f_near, gate_dist_m=gate_dist_m, max_gap=max_gap)
+    Mt, prest, Kt = ta.M, ta.presence, ta.K
+    steps_full_trk = np.tile(steps_slot, Kt) if Kt else np.zeros(0)
+    jm_trk = top_pct_jump_mass(Mt, prest, Kt, steps_full_trk, pct=5.0)
+
+    rows: list[dict[str, Any]] = [
+        {"variant": "LBND2_sort_baseline", "pack": "sort", "smooth": "none",
+         "brotli_bytes": b_sort, "rate_term": 25.0 * b_sort / rate_denom, "ratio_vs_lbnd2": 1.0,
+         "K": int(K_sort), "top5pct_jump_mass": jm_sort["top_pct_mass_frac"]},
+    ]
+
+    # LOSSLESS invariant: tracked-no-smooth == sort as a per-pair quantized multiset
+    trk_none_blob, trk_meta = serialize_lane_band_rd_tracked(
+        pairs_lines, cfg, tol=tol, f_near=f_near, smooth="none",
+        gate_dist_m=gate_dist_m, max_gap=max_gap)
+    dq_sort, _ = deserialize_lane_band_rd(sort_blob)
+    dq_trk, _ = deserialize_lane_band_rd(trk_none_blob)
+    lossless = (_dequant_lines_multiset_key(dq_sort, steps_slot)
+                == _dequant_lines_multiset_key(dq_trk, steps_slot))
+
+    for method in smooth_methods:
+        blob, meta = serialize_lane_band_rd_tracked(
+            pairs_lines, cfg, tol=tol, f_near=f_near, smooth=method,
+            gate_dist_m=gate_dist_m, max_gap=max_gap, smooth_kwargs=smooth_kwargs)
+        bb = _brotli(blob)
+        # induced lateral RMS vs the raw per-frame fits (0 for "none" by the lossless invariant)
+        dq_lines, _ = deserialize_lane_band_rd(blob)
+        lat_rms = _induced_lateral_rms_vs_raw(pairs_lines, dq_lines, f_near=f_near)
+        rows.append({
+            "variant": f"tracked_{method}", "pack": "tracked", "smooth": method,
+            "brotli_bytes": bb, "rate_term": 25.0 * bb / rate_denom, "ratio_vs_lbnd2": bb / b_sort,
+            "K": int(meta["K"]), "n_births": int(meta["n_births"]), "n_deaths": int(meta["n_deaths"]),
+            "induced_lateral_rms_m": lat_rms,
+        })
+
+    best = min(rows, key=lambda r: r["brotli_bytes"])
+    return {
+        "n_pairs": int(len(pairs_lines)),
+        "K_sort": int(K_sort), "K_tracked": int(Kt),
+        "n_births": int(ta.n_births), "n_deaths": int(ta.n_deaths), "n_matched": int(ta.n_matched),
+        "swap_diagnostic": {
+            "sort_top5pct_jump_mass": jm_sort["top_pct_mass_frac"],
+            "tracked_top5pct_jump_mass": jm_trk["top_pct_mass_frac"],
+            "sort_total_delta_l1": jm_sort["total_l1"],
+            "tracked_total_delta_l1": jm_trk["total_l1"],
+        },
+        "tracked_no_smooth_lossless_vs_sort": bool(lossless),
+        "rows": rows,
+        "best_variant": best["variant"], "best_bytes": int(best["brotli_bytes"]),
+        "best_rate_term": float(best["rate_term"]),
+        "lbnd2_baseline_rate_term": 25.0 * b_sort / rate_denom,
+        "rate_denom_bytes": int(rate_denom),
+        "tracker_provenance": ta.provenance,
+        "axis_labels": "[macOS-CPU advisory] MEASURED brotli byte counts; NOT a score claim; pointer 0.19110 UNMOVED",
+    }
+
+
+def _induced_lateral_rms_vs_raw(
+    raw_pairs: list[list[LaneLine]], out_pairs: list[list[LaneLine]], *, f_near: float,
+) -> float:
+    """Mean per-line lateral RMS (over forward 5..60 m) between the RAW per-frame fits and the
+    coherent/tracked output, matched per-pair by nearest lateral-at-f_near. Observability for
+    'how lossy is the denoise' (0 for lossless correspondence-only)."""
+
+    fwd = np.linspace(5.0, 60.0, 12)
+    errs: list[float] = []
+    for raw_lines, out_lines in zip(raw_pairs, out_pairs):
+        if not raw_lines or not out_lines:
+            continue
+        raw_lat = np.array([float(np.polyval(np.asarray(r.centerline_coeffs, np.float64), f_near)) for r in raw_lines])
+        out_lat = np.array([float(np.polyval(np.asarray(o.centerline_coeffs, np.float64), f_near)) for o in out_lines])
+        for j, o in enumerate(out_lines):
+            i = int(np.argmin(np.abs(raw_lat - out_lat[j])))
+            ro = np.polyval(np.asarray(raw_lines[i].centerline_coeffs, np.float64), fwd)
+            oo = np.polyval(np.asarray(o.centerline_coeffs, np.float64), fwd)
+            errs.append(float(np.sqrt(np.mean((ro - oo) ** 2))))
+    return float(np.mean(errs)) if errs else float("nan")
