@@ -37,10 +37,12 @@ BYTE ACCOUNTING (rule-118 / NO-FAKE #6)
 * FREE (generic algorithm in inflate.py, uncounted): the plane-induced homography
   + ``exp_se3`` + inverse-warp bilinear + R. EON intrinsics + plane (n, d) are a
   static per-clip descriptor (counted-but-tens-of-bytes).
-* COUNTED (in ``archive.zip``): the per-pair twist ``xi`` (6-DOF/pair). ~875 B/600
-  at fp16; ~325 B via the rank-2 low-rank pose codec (task #140). This is the SAME
-  order as the stored pose sidecar S2 — DUAL-USE: the one stored twist both drives
-  the warp (d_seg-free frame0 generation) AND is the PoseNet ego-motion.
+* COUNTED (in ``archive.zip``): the per-pair twist ``xi`` (6-DOF/pair). 7200 B/600
+  raw fp16; 2424 B via the rank-2 low-rank factorization (``xi_store_bytes(600,
+  low_rank=2)``); further compressible with range/temporal-delta coding toward the
+  ~875 B stored-pose-sidecar scale (S2, task #140). DUAL-USE: the one stored twist
+  both drives the warp (d_seg-free frame0 generation) AND is the PoseNet ego-motion
+  -> ~0 MARGINAL bytes over the pose sidecar we already store for d_pose.
 * The SOURCE luma (gt_f0) at decode is NOT the original video (unavailable) — it is
   a stored REAL keyframe (counted; the W9/W10 reach gate schedules ~13 keyframes for
   the tested ~10 s window). This module is AGNOSTIC to the source: it warps whatever
