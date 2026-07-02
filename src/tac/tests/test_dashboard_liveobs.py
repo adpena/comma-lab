@@ -230,3 +230,53 @@ def test_refresh_normal_run_with_verdicts_parses_schedule(tmp_path):
     # implied_S in the trajectory is the DEPLOY recompute, not the monitoring 68.99
     assert snap["trajectory"][0]["implied_S"] < 30.0
     assert snap["trajectory"][0]["implied_S_monitoring"] == 68.99
+
+
+# ─────────────────── #205 run-info strip surfaced by the LIVE server ───────────────────
+def test_meta_surfaces_run_info_strip_when_run_present(tmp_path):
+    """The LIVE server must surface the SAME #205 run-info strip the standalone HTML does:
+    refresh() composes rld._collect_run_info + pre-renders rld._run_info_html, and meta()
+    ships it as ``run_info_html``. Proves the strip is wired into the WS/JSON page, not only
+    the standalone renderer's _write_html output."""
+    rundir = tmp_path / "run1"; rundir.mkdir()
+    (rundir / "launch.sh").write_text(_LAUNCH_SH)
+    (rundir / "run.log").write_text(
+        _gt_line() + "\n" + _verdict_line(0, 0.285409) + "\n" + _verdict_line(25, 0.2) + "\n"
+    )
+    st = _state_for(tmp_path, str(tmp_path / "*" / "*.log"))
+    st.refresh()
+    m = st.snapshot()["meta"]
+    # the pre-rendered strip HTML is present, non-empty, and carries the real card grid.
+    html = m["run_info_html"]
+    assert isinstance(html, str) and html
+    assert 'class="grid"' in html and 'class="card"' in html
+    assert "curriculum stage" in html            # stage-progress card
+    assert "throughput" in html.lower()          # throughput+ETA card
+    # the underlying run_info dict is the REAL composed telemetry (not a stub).
+    ri = st.run_info
+    for key in ("stage_prog", "best", "checkpoints", "resume", "throughput", "perf", "config"):
+        assert key in ri
+    # config provenance rides through the strip's data path too.
+    assert ri["config"]["source"] == "launch.sh"
+
+
+def test_run_info_strip_empty_when_no_run_resolved(tmp_path):
+    """Back-compat: no run resolved -> run_info_html == '' so the strip (:empty) is hidden
+    and the page is unchanged."""
+    st = _state_for(tmp_path, str(tmp_path / "no_such" / "*.log"))
+    st.refresh()
+    m = st.snapshot()["meta"]
+    assert m["run_info_html"] == ""
+    assert st.run_info == {}
+
+
+def test_page_template_wires_run_info_strip():
+    """The served page must (a) carry the strip target div, (b) scope the strip CSS under
+    .rinfo so it never restyles the chart .grid/.card/.fill, and (c) render META.run_info_html
+    into it. Guards the client half of the wire-in."""
+    page = ds._page_html(ds.Config())
+    assert 'id="runinfostrip"' in page               # target div
+    assert ".rinfo .grid{" in page and ".rinfo .card{" in page  # scoped CSS (no chart collision)
+    assert "function renderRunInfo()" in page        # client renderer
+    assert "META.run_info_html" in page              # consumes the server-shipped strip
+    assert "renderRunInfo();" in page                # called from render()

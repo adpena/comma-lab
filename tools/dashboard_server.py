@@ -309,6 +309,8 @@ class LiveState:
         self.n_pairs: int | None = None       # N for this run (n200 DOE pilot / n600 scored)
         self.warming_up: bool = False         # live run resolved but no verdict yet (structured-init)
         self.run_config: dict = {}            # parsed launch.sh/run.log config + curriculum schedule
+        self.run_info: dict = {}              # #205 full run-info dict (rld._collect_run_info)
+        self.run_info_html: str = ""          # #205 strip HTML (rld._run_info_html), pre-rendered off-loop
         self.projection: dict = {"ok": False, "reason": "calibrating"}  # DATA-DERIVED trajectory model
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
@@ -436,6 +438,21 @@ class LiveState:
         self.watched = latest.name if latest is not None else None
         self.watched_dir = str(latest.parent) if latest is not None else None
 
+        # #205 run-info strip: the FULL operational telemetry (stage-progress / best-d_seg
+        # deploy / throughput+ETA / checkpoint ledger / resumability-now / MLX fast-path /
+        # config) the standalone HTML surfaces. REUSE rld's crash-safe collectors + renderer
+        # verbatim (already imported), rendered HERE in the executor thread so the event loop
+        # never formats it. No run resolved -> "" (strip hidden; page unchanged = back-compat).
+        if latest is not None:
+            try:
+                self.run_info = rld._collect_run_info(
+                    latest, glob, cfg.run_dir, rows_full, self.liveness, now)
+                self.run_info_html = rld._run_info_html(self.run_info)
+            except Exception:
+                self.run_info, self.run_info_html = {}, ""
+        else:
+            self.run_info, self.run_info_html = {}, ""
+
         # SOPHISTICATED DATA-DERIVED PROJECTION (critical-slowing d_seg model + stage-aware
         # completion ETA + implied_S projection with bands) — all from the run's own
         # trajectory + schedule; every estimate flagged; low-confidence -> 'calibrating'.
@@ -480,6 +497,7 @@ class LiveState:
             "config": self.run_config or {},          # parsed setup/config + groups
             "schedule": sched,                         # curriculum stage epoch-boundaries
             "deploy_sidecar_d_pose": DEPLOY_SIDECAR_D_POSE,  # implied_S pose term basis
+            "run_info_html": self.run_info_html,       # #205 pre-rendered run-info strip (rld._run_info_html)
         }
 
     def snapshot(self) -> dict:
@@ -723,6 +741,19 @@ padding:10px 10px 6px;min-width:0;overflow:hidden}
 .nbadge.other{background:#2a2f39;color:#c2c9d4}
 .runinfo{font-size:11px;color:var(--faint2);margin:0 2px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+/* #205 run-info strip (rld._run_info_html) — SCOPED under .rinfo so its .grid/.card/.fill
+   never restyle the chart .grid/.tri .card (specificity 0,2,0 > server 0,1,0) */
+.rinfo{margin:0 0 16px}
+.rinfo:empty{display:none}
+.rinfo .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;max-width:100%;margin:0;text-align:left}
+.rinfo .card{background:var(--panel);border:1px solid var(--grid);border-radius:10px;padding:10px 12px;min-width:0}
+.rinfo .clabel{font-size:10px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase}
+.rinfo .cval{font-size:17px;color:var(--fg);font-weight:600;margin:3px 0;font-variant-numeric:tabular-nums;word-break:break-word}
+.rinfo .csub{font-size:10.5px;color:var(--faint2);line-height:1.5;word-break:break-word}
+.rinfo .bar{height:5px;background:var(--grid);border-radius:3px;margin:5px 0 4px;overflow:hidden}
+.rinfo .fill{height:100%;border-radius:3px}
+.rinfo .badge{font-size:10px;font-weight:600;color:#46d369;background:#173d22;padding:1px 6px;border-radius:8px;vertical-align:middle}
+
 /* stage legend strip */
 .slegend{display:flex;flex-wrap:wrap;gap:7px 13px;align-items:center;margin:2px 2px 12px;font-size:11px;color:var(--muted)}
 .slegend .sc{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -837,6 +868,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <summary id="cfgsum">setup &middot; config &middot; schedule &middot; curriculum</summary>
     <div class="cfgbody" id="cfgbody"><div class="cfgmeta">parsing run config&hellip;</div></div>
   </details>
+  <div class="rinfo" id="runinfostrip"></div>
   <div class="grid">
     <div class="panel"><canvas id="c_dseg" role="img" aria-label="d_seg chart"></canvas></div>
     <div class="panel"><canvas id="c_dpose" role="img" aria-label="d_pose chart"></canvas></div>
@@ -1194,6 +1226,7 @@ function render(){
   document.querySelectorAll('#slegend .sc[data-st="muon"]').forEach(el=>el.classList.toggle("off",!muOn));
   renderProjection(g);
   renderConfig();
+  renderRunInfo();
   // status
   const ep=LIVE.last_epoch;
   let st=[];
@@ -1326,6 +1359,14 @@ function renderConfig(){
   body.innerHTML=html;
   if(sum){const src=cfg.source&&cfg.source!=="none"?(" · from "+cfg.source):"";
     sum.textContent="setup · config · schedule · curriculum"+src;}
+}
+
+// #205 run-info strip — server pre-renders the card grid (stage-progress / best-d_seg
+// deploy / throughput+ETA / checkpoint ledger / resumability / MLX fast-path / config)
+// via rld._run_info_html and ships it as an HTML string in META. Empty -> hidden (:empty).
+function renderRunInfo(){
+  const el=$("runinfostrip"); if(!el)return;
+  el.innerHTML=META.run_info_html||"";
 }
 
 // new-best d_seg celebration (tasteful; respects reduced-motion via CSS)
