@@ -365,6 +365,273 @@ def _fmt_age(seconds: float | None) -> str:
     return f"{m / 60.0:.1f}h"
 
 
+def _fmt_bytes(n: float | int | None) -> str:
+    """Human byte size (KB/MB/GB) for the checkpoint-footprint display. None -> '?'."""
+    if n is None:
+        return "?"
+    n = float(n)
+    for unit, div in (("GB", 1024 ** 3), ("MB", 1024 ** 2), ("KB", 1024)):
+        if n >= div:
+            return f"{n / div:.1f}{unit}"
+    return f"{int(n)}B"
+
+
+# ─────────────── #205 MULTI-DAY RUN OBSERVABILITY (all REAL trainer telemetry) ───────────────
+# Every reader below sources a REAL file/line the trainer emits (never a fabricated field):
+#   * levelset_best.json                    -> _read_best_json          (best-so-far EMA-shadow)
+#   * {"stage":"checkpoint",...} log lines  -> _parse_checkpoints       (per-stage ckpt ledger)
+#   * levelset_resume_state.npz / _ema_mlx  -> _resume_status           (resumability RIGHT NOW)
+#   * levelset_*.npz on disk                -> _ckpt_disk_footprint      (disk hygiene visibility)
+#   * {"stage":"custom_grouped_backward"}   -> _perf_env_status         (~17x fast-path active?)
+#   * launch.sh schedule flags              -> parse_run_config/schedule (curriculum boundaries)
+# A missing/partial/mid-write file yields a graceful {} or None — NEVER a crash (the dashboard is
+# a load-bearing multi-day daemon). No reader fabricates a value it cannot source.
+
+def _run_dir_for(watched: Path | None, log_glob: str | None, run_dir_arg: str | None) -> Path | None:
+    """Resolve the RUN DIR (where launch.sh + the npz/json artifacts live).
+
+    Explicit ``--run-dir`` wins; else the watched log's PARENT (the trainer writes
+    run.log + all artifacts into out_dir); else the dir component of ``--log-glob``.
+    Returns None when none is resolvable (readers then no-op)."""
+    if run_dir_arg:
+        return Path(run_dir_arg)
+    if watched is not None:
+        return Path(watched).parent
+    if log_glob:
+        d = os.path.dirname(log_glob)
+        if d:
+            return Path(d)
+    return None
+
+
+def _read_best_json(run_dir: Path | None) -> dict | None:
+    """The BEST realized-through-R EMA-shadow pointer the trainer atomically writes to
+    ``levelset_best.json`` ({d_seg, epoch, path, ts}) on each new best. This IS the
+    deploy artifact the byte-close / next-arm warm-start consumes. None when absent."""
+    if run_dir is None:
+        return None
+    p = Path(run_dir) / "levelset_best.json"
+    try:
+        if not p.is_file():
+            return None
+        d = json.loads(p.read_text(errors="replace"))
+        return d if isinstance(d, dict) else None
+    except Exception:
+        return None
+
+
+def _parse_checkpoints(log_path: Path | None) -> dict:
+    """Parse the trainer's ``{"stage":"checkpoint", ...}`` log lines into a ledger.
+
+    Kinds emitted by the trainer: ``best`` (new best EMA shadow), ``stage_transition``
+    (PRESERVED stage-encoded ckpt at a curriculum boundary), ``intra_stage`` (rolling
+    --ckpt-every crash window), ``final``. Returns
+    ``{best, last, preserved:[...], counts:{...}, last_intra}`` — the crash-insurance
+    visibility (which per-stage ckpts landed + the last resumable position). NEVER
+    raises (a mid-write/truncated line is skipped)."""
+    out: dict = {"best": None, "last": None, "preserved": [], "counts": {},
+                 "last_intra": None}
+    if log_path is None or not Path(log_path).exists():
+        return out
+    counts: dict = {}
+    try:
+        for line in Path(log_path).read_text(errors="replace").splitlines():
+            if '"checkpoint"' not in line:
+                continue
+            try:
+                d = json.loads(line.strip())
+            except Exception:
+                continue
+            if d.get("stage") != "checkpoint":
+                continue
+            kind = d.get("kind")
+            counts[kind] = counts.get(kind, 0) + 1
+            if kind == "best":
+                out["best"] = d
+                continue
+            out["last"] = d  # latest non-best ckpt line = most-recent resumable write
+            if kind == "intra_stage":
+                out["last_intra"] = d
+            # PRESERVED stage-encoded ckpts (stage_transition + final carry ema_preserved)
+            if d.get("ema_preserved"):
+                out["preserved"].append(
+                    {"kind": kind, "epoch": d.get("epoch"),
+                     "ema": d.get("ema_preserved"), "resume": d.get("resume_preserved")})
+    except Exception:
+        return out
+    out["counts"] = counts
+    return out
+
+
+def _ckpt_disk_footprint(run_dir: Path | None) -> dict:
+    """Disk footprint of the run's checkpoint npzs (``levelset_*.npz``) — the
+    disk-hygiene visibility for a multi-day run. Returns
+    ``{total_bytes, count, biggest:[(name, bytes)...]}``. NEVER raises."""
+    out = {"total_bytes": 0, "count": 0, "biggest": []}
+    if run_dir is None:
+        return out
+    try:
+        files = sorted(Path(run_dir).glob("levelset_*.npz"))
+        sized = []
+        for f in files:
+            try:
+                sized.append((f.name, f.stat().st_size))
+            except OSError:
+                continue
+        out["count"] = len(sized)
+        out["total_bytes"] = sum(b for _, b in sized)
+        out["biggest"] = sorted(sized, key=lambda t: -t[1])[:4]
+    except Exception:
+        return out
+    return out
+
+
+def _resume_status(run_dir: Path | None, checkpoints: dict, now: float | None = None) -> dict:
+    """Is the run resumable-from-disk RIGHT NOW? Reads the ACTUAL artifacts + the last
+    checkpoint line. Returns ``{resumable, resume_epoch, resume_npz, resume_age_s,
+    deploy_npz, deploy_age_s, best_npz}``. The resume sidecar (``levelset_resume_state.npz``)
+    is the crash-continue target; the deploy npz (``levelset_witness_ema_mlx.npz``) is the
+    EMA-shadow byte-close artifact. NEVER raises."""
+    now = time.time() if now is None else now
+    out = {"resumable": False, "resume_epoch": None, "resume_npz": False,
+           "resume_age_s": None, "deploy_npz": False, "deploy_age_s": None,
+           "best_npz": False}
+    if run_dir is None:
+        return out
+    run_dir = Path(run_dir)
+
+    def _age(name: str):
+        p = run_dir / name
+        try:
+            if p.is_file():
+                return True, now - p.stat().st_mtime
+        except OSError:
+            pass
+        return False, None
+
+    out["resume_npz"], out["resume_age_s"] = _age("levelset_resume_state.npz")
+    out["deploy_npz"], out["deploy_age_s"] = _age("levelset_witness_ema_mlx.npz")
+    out["best_npz"], _ = _age("levelset_witness_ema_BEST.npz")
+    last = checkpoints.get("last") or checkpoints.get("last_intra")
+    if isinstance(last, dict):
+        out["resume_epoch"] = last.get("epoch")
+    # resumable iff a resume sidecar OR the deploy npz exists on disk (the trainer's
+    # --resume-from accepts either), matching _resolve_resume_path in the trainer.
+    out["resumable"] = bool(out["resume_npz"] or out["deploy_npz"])
+    return out
+
+
+def _perf_env_status(log_path: Path | None) -> dict:
+    """Is the ~17x custom-grouped-backward fast path ACTIVE (the launch-gate perf
+    invariant)? Reads the trainer's ``{"stage":"custom_grouped_backward","active":..}``
+    line. Returns ``{active, reason}`` (active None => line not seen yet). NEVER raises."""
+    out: dict = {"active": None, "reason": None}
+    if log_path is None or not Path(log_path).exists():
+        return out
+    try:
+        for line in Path(log_path).read_text(errors="replace").splitlines():
+            if "custom_grouped_backward" not in line:
+                continue
+            try:
+                d = json.loads(line.strip())
+            except Exception:
+                continue
+            if d.get("stage") == "custom_grouped_backward":
+                out["active"] = bool(d.get("active"))
+                out["reason"] = d.get("reason")
+                # keep scanning: the LAST such line wins (most recent truth)
+    except Exception:
+        return out
+    return out
+
+
+def _first_verdict_ts(rows: list[dict]) -> float | None:
+    """Wall-clock (epoch seconds) of the EARLIEST verdict carrying an embedded ``ts``
+    — used to compute run elapsed. None when no verdict has a ts (elapsed then N/A)."""
+    for r in rows:
+        t = _verdict_ts_epoch(r)
+        if t is not None:
+            return t
+    return None
+
+
+def _stage_progress(last_epoch: int | None, last_seg_form: str | None, schedule: dict) -> dict:
+    """Curriculum stage + progress from the REAL schedule (launch.sh boundaries) and the
+    last verdict. Prefers the verdict row's own ``seg_form`` for the stage NAME (the
+    trainer's authoritative label) and the schedule for the %-progress boundaries.
+    Returns ``{stage, stage_start, stage_end, stage_pct, total_pct, epochs, next_name,
+    next_epoch, muon_active}`` — any unknown field is None (never fabricated)."""
+    epochs = schedule.get("epochs")
+    tau = schedule.get("tau_start")
+    l7 = schedule.get("l7_start")
+    muon = schedule.get("muon_start")
+    out = {"stage": None, "stage_start": None, "stage_end": None, "stage_pct": None,
+           "total_pct": None, "epochs": epochs, "next_name": None, "next_epoch": None,
+           "muon_active": None}
+    if last_epoch is None:
+        return out
+    # Stage name: trust the verdict's seg_form when present; else derive from boundaries.
+    _seg_name = {"ce": "CE", "tau_softplus": "tau", "l7_softplus": "l7"}
+    stage = _seg_name.get(str(last_seg_form)) if last_seg_form else None
+    # boundaries (may be partially None; treat missing future stages as absent)
+    b_tau = tau if tau is not None else None
+    b_l7 = l7 if l7 is not None else None
+    if stage is None:
+        if b_tau is not None and last_epoch < b_tau:
+            stage = "CE"
+        elif b_l7 is not None and (b_tau is None or last_epoch >= b_tau) and last_epoch < b_l7:
+            stage = "tau"
+        elif b_l7 is not None and last_epoch >= b_l7:
+            stage = "l7"
+    # stage span from the ordered boundaries
+    span = {"CE": (0, b_tau), "tau": (b_tau, b_l7), "l7": (b_l7, epochs)}.get(stage, (None, None))
+    s0, s1 = span
+    out["stage"] = stage
+    out["stage_start"], out["stage_end"] = s0, s1
+    if s0 is not None and s1 is not None and s1 > s0:
+        out["stage_pct"] = max(0.0, min(1.0, (last_epoch - s0) / (s1 - s0)))
+    if epochs and epochs > 0:
+        out["total_pct"] = max(0.0, min(1.0, last_epoch / epochs))
+    # next stage boundary (for the ETA)
+    for name, bnd in (("tau", b_tau), ("l7", b_l7), ("Muon", muon), ("end", epochs)):
+        if bnd is not None and bnd > last_epoch:
+            out["next_name"], out["next_epoch"] = name, bnd
+            break
+    # Muon finisher overlay (optimizer switch; runs concurrently with l7 seg-form)
+    out["muon_active"] = (muon is not None and last_epoch >= muon)
+    return out
+
+
+def _throughput_eta(live: dict | None, schedule: dict, stage_prog: dict,
+                    first_ts: float | None, now: float | None = None) -> dict:
+    """Throughput + ETA for the multi-day run, DERIVED from the MEASURED verdict cadence.
+    ``s_per_epoch = cadence / eval_every`` (verdicts land every eval_every epochs). ETA to
+    the next stage boundary + to total completion use s_per_epoch × epochs-remaining.
+    Elapsed = now - first_verdict_ts. Any input unknown => that output stays None (never
+    a fabricated number). Returns ``{s_per_epoch, epochs_per_hour, elapsed_s,
+    eta_next_boundary_s, eta_total_s}``."""
+    now = time.time() if now is None else now
+    out = {"s_per_epoch": None, "epochs_per_hour": None, "elapsed_s": None,
+           "eta_next_boundary_s": None, "eta_total_s": None}
+    cadence = (live or {}).get("cadence_s")
+    eval_every = schedule.get("eval_every")
+    last_epoch = (live or {}).get("last_epoch")
+    epochs = schedule.get("epochs")
+    if first_ts is not None:
+        out["elapsed_s"] = max(0.0, now - first_ts)
+    if cadence and eval_every and eval_every > 0 and (live or {}).get("cadence_source") == "measured":
+        spe = cadence / float(eval_every)
+        out["s_per_epoch"] = spe
+        out["epochs_per_hour"] = (3600.0 / spe) if spe > 0 else None
+        if last_epoch is not None:
+            nb = stage_prog.get("next_epoch")
+            if nb is not None and nb > last_epoch:
+                out["eta_next_boundary_s"] = (nb - last_epoch) * spe
+            if epochs is not None and epochs > last_epoch:
+                out["eta_total_s"] = (epochs - last_epoch) * spe
+    return out
+
+
 def _staleness(watched: Path | None, stale_min: float) -> dict:
     """File-mtime LOG-ACTIVITY signal (NOT the headline judgment): is the data
     source still being WRITTEN? Returns ``age_s = now - mtime`` and an mtime-based
@@ -704,7 +971,8 @@ def _style_ax(ax) -> None:
     ax.grid(alpha=0.18, color=_GRIDC)
 
 
-def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float) -> bytes:
+def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float,
+                muon: int | None = None, best_dseg: float | None = None) -> bytes:
     # NO figure suptitle — the HTML header already carries the title + epoch; a
     # bold matplotlib suptitle on top of it reads as redundant clutter. Each panel
     # is self-labelled (title + caption), which is where the per-metric meaning
@@ -724,8 +992,11 @@ def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float) -> bytes:
         for a, b, col in segs:
             if b > a:
                 ax.axvspan(a, b, color=col, alpha=0.22, lw=0)
-        for x, lab, col in ((tau, "tau", _STAGE_TAU), (l7, "l7", _STAGE_L7)):
-            if lo <= x <= hi:
+        _bounds = [(tau, "tau", _STAGE_TAU), (l7, "l7", _STAGE_L7)]
+        if muon is not None:
+            _bounds.append((muon, "Muon", _GOAL))  # optimizer-switch boundary (overlays l7)
+        for x, lab, col in _bounds:
+            if x is not None and lo <= x <= hi:
                 ax.axvline(x, ls="--", lw=1, color=_MUTED, alpha=0.7)
                 ax.text(x, ax.get_ylim()[1], f" {lab}", color=_FG, fontsize=8,
                         va="top", ha="left", alpha=0.85)
@@ -756,6 +1027,11 @@ def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float) -> bytes:
     _panel(axes[0, 0], "d_seg", "d_seg — realized SegNet-argmax disagreement",
            "epoch · GOAL line = 0.00112 (sub-0.19) · LOWER is better", _ACC,
            logy=True, hline=goal_dseg, hlabel="sub-0.19 goal")
+    # BEST-so-far marker on the d_seg panel (the deploy artifact's realized d_seg).
+    if best_dseg is not None and best_dseg > 0:
+        axes[0, 0].axhline(best_dseg, ls="-", lw=1.1, color=_GOAL, alpha=0.55)
+        axes[0, 0].text(xhi, best_dseg, f"best {best_dseg:.5f} ", color=_GOAL, fontsize=7.5,
+                        va="bottom", ha="right", alpha=0.9)
     _panel(axes[0, 1], "d_pose", "d_pose — realized PoseNet MSE (6-dim)",
            "epoch · target ~9e-4 (parent existence-proof) · LOWER is better", _POSE,
            logy=True, hline=9e-4, hlabel="existence-proof ~9e-4")
@@ -885,13 +1161,161 @@ def _detail_line(live: dict | None) -> str:
     return " · ".join(bits)
 
 
+def _fmt_pct(x: float | None) -> str:
+    return f"{x * 100:.0f}%" if isinstance(x, (int, float)) else "?"
+
+
+def _fmt_sig(x, nd: int = 5) -> str:
+    """Compact numeric format for a score/telemetry value; '?' when unknown."""
+    if isinstance(x, bool) or x is None:
+        return "?" if x is None else str(x)
+    if isinstance(x, (int, float)):
+        return f"{x:.{nd}f}" if isinstance(x, float) else str(x)
+    return str(x)
+
+
+def _progress_bar_html(frac: float | None, color: str) -> str:
+    """A tiny inline progress bar (0..1). None => empty track."""
+    pct = max(0.0, min(1.0, frac)) * 100.0 if isinstance(frac, (int, float)) else 0.0
+    return (f'<div class="bar"><div class="fill" style="width:{pct:.1f}%;'
+            f'background:{color}"></div></div>')
+
+
+def _run_info_html(info: dict | None) -> str:
+    """The #205 multi-day observability strip: a compact card grid BELOW the trajectory
+    PNG surfacing stage-progress / best-so-far / throughput+ETA / checkpoint ledger /
+    resumability / perf-fast-path / config — ALL from the REAL trainer telemetry. Any
+    unknown field renders '?' / 'N/A' (never a fabricated number). ``info=None`` (or an
+    empty run) yields '' so the page is unchanged (back-compat)."""
+    if not info:
+        return ""
+    sched = info.get("schedule") or {}
+    sp = info.get("stage_prog") or {}
+    best = info.get("best") or {}
+    ck = info.get("checkpoints") or {}
+    res = info.get("resume") or {}
+    thr = info.get("throughput") or {}
+    perf = info.get("perf") or {}
+    disk = info.get("disk") or {}
+    cfg_flags = (info.get("config") or {}).get("flags") or {}
+    cfg_src = (info.get("config") or {}).get("source", "none")
+
+    cards: list[str] = []
+
+    def _card(label: str, body: str, sub: str = "", bar: str = "") -> str:
+        sub_html = f'<div class="csub">{sub}</div>' if sub else ""
+        return (f'<div class="card"><div class="clabel">{label}</div>'
+                f'<div class="cval">{body}</div>{bar}{sub_html}</div>')
+
+    # 1) STAGE + progress ────────────────────────────────────────────────
+    stage = sp.get("stage") or "—"
+    epochs = sp.get("epochs")
+    muon_badge = ' <span class="badge">+Muon</span>' if sp.get("muon_active") else ""
+    stage_body = f"{stage}{muon_badge}"
+    tot = _fmt_pct(sp.get("total_pct"))
+    stage_pct = _fmt_pct(sp.get("stage_pct"))
+    ep_now = sp.get("__last_epoch")
+    ep_str = f"ep{ep_now}" if ep_now is not None else "ep?"
+    ep_tot = f"/{epochs}" if epochs else ""
+    stage_sub = f"{ep_str}{ep_tot} · {stage_pct} of stage · {tot} total"
+    cards.append(_card("curriculum stage", stage_body, stage_sub,
+                       _progress_bar_html(sp.get("total_pct"), _ACC)))
+
+    # 2) BEST-so-far (deploy artifact) ───────────────────────────────────
+    if best:
+        bd = best.get("d_seg")
+        bep = best.get("epoch")
+        # need-band for sub-0.15 d_seg is 0.00077-0.00118 (MEMORY CURRENT-STATE).
+        band = ""
+        if isinstance(bd, (int, float)):
+            # sub-0.19 goal d_seg (0.00112) sits INSIDE the sub-0.15 need-band (0.00077-0.00118),
+            # so the need-band is the binding annotation; below the floor = even better than needed.
+            if bd < 0.00077:
+                band = "✓ below sub-0.15 need-band floor"
+            elif bd <= 0.00118:
+                band = "✓ in sub-0.15 need-band"
+        cards.append(_card("best d_seg (deploy)",
+                           _fmt_sig(bd), f"@ ep{bep} · {best.get('path', '')} {band}".strip()))
+    else:
+        cards.append(_card("best d_seg (deploy)", "—", "no finite best yet"))
+
+    # 3) THROUGHPUT + ETA ────────────────────────────────────────────────
+    spe = thr.get("s_per_epoch")
+    eph = thr.get("epochs_per_hour")
+    thr_body = (f"{spe:.1f}s/ep" if isinstance(spe, (int, float)) else "calibrating")
+    thr_sub_bits = []
+    if isinstance(eph, (int, float)):
+        thr_sub_bits.append(f"{eph:.0f} ep/hr")
+    if thr.get("elapsed_s") is not None:
+        thr_sub_bits.append(f"elapsed {_fmt_age(thr['elapsed_s'])}")
+    if thr.get("eta_next_boundary_s") is not None:
+        thr_sub_bits.append(f"→{sp.get('next_name', 'next')} ~{_fmt_age(thr['eta_next_boundary_s'])}")
+    if thr.get("eta_total_s") is not None:
+        thr_sub_bits.append(f"→done ~{_fmt_age(thr['eta_total_s'])}")
+    cards.append(_card("throughput · ETA", thr_body, " · ".join(thr_sub_bits) or "measuring cadence"))
+
+    # 4) CHECKPOINT ledger (crash insurance) ─────────────────────────────
+    counts = ck.get("counts") or {}
+    n_pres = len(ck.get("preserved") or [])
+    n_intra = counts.get("intra_stage", 0)
+    ck_every = sched.get("__ckpt_every")
+    ck_body = f"{n_pres} per-stage · {n_intra} intra"
+    ck_sub_bits = []
+    if ck_every is not None:
+        ck_sub_bits.append(f"ckpt-every {ck_every if ck_every else 'off'}")
+    if disk.get("count"):
+        ck_sub_bits.append(f"{disk['count']} npz · {_fmt_bytes(disk.get('total_bytes'))} on disk")
+    # name the preserved stage ckpts (crash-resume + per-stage A/B visibility)
+    pres_names = [f"ep{p.get('epoch')}" for p in (ck.get("preserved") or [])[-4:]]
+    if pres_names:
+        ck_sub_bits.append("preserved @ " + ",".join(pres_names))
+    cards.append(_card("checkpoints", ck_body, " · ".join(ck_sub_bits) or "none yet"))
+
+    # 5) RESUMABILITY (resume-from-disk RIGHT NOW) ───────────────────────
+    resumable = res.get("resumable")
+    res_body = "✓ resumable" if resumable else "✗ not yet"
+    res_bits = []
+    if res.get("resume_epoch") is not None:
+        res_bits.append(f"from ep{res['resume_epoch']}")
+    if res.get("resume_npz"):
+        res_bits.append(f"resume npz {_fmt_age(res.get('resume_age_s'))}")
+    if res.get("deploy_npz"):
+        res_bits.append(f"deploy npz {_fmt_age(res.get('deploy_age_s'))}")
+    cards.append(_card("resumability", res_body, " · ".join(res_bits) or "no checkpoint on disk"))
+
+    # 6) PERF fast-path (~17x grouped-backward) ──────────────────────────
+    active = perf.get("active")
+    if active is True:
+        perf_body, perf_sub = "✓ active", "custom_grouped_backward ~17x"
+    elif active is False:
+        perf_body, perf_sub = "✗ INACTIVE", "SLOW — TAC_MLX_CUSTOM_GROUPED_BACKWARD unset"
+    else:
+        perf_body, perf_sub = "?", "grouped-backward line not seen yet"
+    cards.append(_card("MLX fast path", perf_body, perf_sub))
+
+    # 7) CONFIG + provenance (loss weights / arch / seed) ─────────────────
+    def _g(k, default="?"):
+        v = cfg_flags.get(k)
+        return v if v is not None else default
+    cfg_bits = [f"w_seg {_g('w-seg')}", f"w_pose {_g('w-pose')}", f"act {_g('activation')}",
+                f"mod {_g('mod-dim')}", f"hid {_g('hidden-dim')}", f"seed {_g('seed')}",
+                f"pairs {_g('num-pairs')}"]
+    cards.append(_card("config", cfg_src, " · ".join(cfg_bits)))
+
+    return '<div class="grid">' + "".join(cards) + "</div>"
+
+
 def _write_html(out: Path, png: bytes, rows: list[dict], refresh: int,
                 watched: Path | None = None, live: dict | None = None,
                 switched_note: str | None = None, log_glob: str | None = None,
-                tau: int = 300, l7: int = 900, goal_dseg: float = 0.00112) -> None:
+                tau: int = 300, l7: int = 900, goal_dseg: float = 0.00112,
+                run_info: dict | None = None) -> None:
     """Clean, minimal single-page dashboard: title + status pill, one big d_seg
     headline, one compact status line, one tiny telemetry detail line, the 4
-    panels (each self-explanatory in its own caption), a minimal footer. No JS."""
+    panels (each self-explanatory in its own caption), the #205 run-info card grid
+    (stage progress · best · throughput/ETA · checkpoints · resumability · perf ·
+    config — all REAL telemetry; omitted when ``run_info`` is None), a minimal
+    footer. No JS."""
     b64 = base64.b64encode(png).decode("ascii")
     last = rows[-1] if rows else {}
     d_seg = last.get("d_seg")
@@ -932,6 +1356,17 @@ def _write_html(out: Path, png: bytes, rows: list[dict], refresh: int,
         f".status{{font-size:14px;color:{_FG};margin:10px 0 2px}}"
         f".detail{{font-size:11px;color:{_MUTED};margin-bottom:20px;font-variant-numeric:tabular-nums}}"
         "img{max-width:100%;border-radius:8px}"
+        # #205 run-info card grid (stage / best / throughput / checkpoints / resume / perf / config)
+        ".grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));"
+        "gap:10px;max-width:1000px;margin:18px auto 0;text-align:left}"
+        f".card{{background:{_PANEL};border:1px solid {_GRIDC};border-radius:8px;padding:10px 12px}}"
+        f".clabel{{font-size:10px;color:{_MUTED};letter-spacing:.6px;text-transform:uppercase}}"
+        f".cval{{font-size:17px;color:{_FG};font-weight:600;margin:3px 0;font-variant-numeric:tabular-nums}}"
+        f".csub{{font-size:10.5px;color:{_MUTED};line-height:1.5}}"
+        f".bar{{height:5px;background:{_GRIDC};border-radius:3px;margin:5px 0 4px;overflow:hidden}}"
+        ".fill{height:100%;border-radius:3px}"
+        f".badge{{font-size:10px;font-weight:600;color:{_GOAL};background:#173d22;"
+        "padding:1px 6px;border-radius:8px;vertical-align:middle}"
         f".foot{{font-size:10.5px;color:{_MUTED};opacity:.75;margin-top:18px;line-height:1.7}}"
         f".sw{{font-size:10.5px;color:{_ACC};opacity:.8;margin-top:4px}}"
         "</style></head>"
@@ -941,6 +1376,7 @@ def _write_html(out: Path, png: bytes, rows: list[dict], refresh: int,
         f'<div class="status">{status}</div>'
         f"{detail_html}"
         f'<img src="data:image/png;base64,{b64}">'
+        f"{_run_info_html(run_info)}"
         f'<div class="foot">[macOS-MLX advisory · NON-PROMOTABLE] · pointer 0.19110 · '
         f"stages CE · tau · l7 · Muon · refresh {refresh}s"
         + (f" · {watched_name}" if watched_name else "")
@@ -954,11 +1390,47 @@ def _write_html(out: Path, png: bytes, rows: list[dict], refresh: int,
     os.replace(tmp, out)
 
 
+def _collect_run_info(watched: Path | None, log_glob: str | None, run_dir_arg: str | None,
+                      rows: list[dict], live: dict, now: float) -> dict:
+    """Compose the #205 run-info dict from the REAL run artifacts (launch.sh schedule +
+    levelset_best.json + checkpoint log lines + resume/deploy npzs on disk +
+    custom_grouped_backward perf line). Purely READS + composes the crash-safe readers
+    above; NEVER raises (an empty dict/None per field on any failure). Returns a
+    JSON-able dict consumed by ``_run_info_html``."""
+    run_dir = _run_dir_for(watched, log_glob, run_dir_arg)
+    try:
+        config = parse_run_config(run_dir)
+    except Exception:
+        config = {"source": "none", "flags": {}, "groups": {}, "schedule": {}}
+    schedule = dict(config.get("schedule") or {})
+    # ckpt-every isn't a curriculum boundary; surface it for the checkpoint card.
+    schedule["__ckpt_every"] = _int_flag(config.get("flags") or {}, "ckpt-every")
+    last_epoch = live.get("last_epoch")
+    last_seg_form = rows[-1].get("seg_form") if rows else None
+    stage_prog = _stage_progress(last_epoch, last_seg_form, schedule)
+    stage_prog["__last_epoch"] = last_epoch
+    checkpoints = _parse_checkpoints(watched)
+    # prefer the atomically-written levelset_best.json; fall back to the log 'best' line.
+    best = _read_best_json(run_dir) or checkpoints.get("best")
+    resume = _resume_status(run_dir, checkpoints, now=now)
+    perf = _perf_env_status(watched)
+    disk = _ckpt_disk_footprint(run_dir)
+    first_ts = _first_verdict_ts(rows)
+    throughput = _throughput_eta(live, schedule, stage_prog, first_ts, now=now)
+    return {"run_dir": (str(run_dir) if run_dir is not None else None),
+            "config": config, "schedule": schedule, "stage_prog": stage_prog,
+            "best": best, "checkpoints": checkpoints, "resume": resume,
+            "perf": perf, "disk": disk, "throughput": throughput}
+
+
 def _render_once(args, state: dict | None = None) -> dict:
     """Render one cycle. ``state`` persists across watch cycles (in-process) so
     the watched log can be re-resolved (self-follow) and switches detected. The
     cadence calibration is persisted to DISK (``--cadence-state``) keyed by log
-    name so it also survives a dashboard restart."""
+    name so it also survives a dashboard restart. The curriculum stage boundaries
+    (tau/l7/muon) + the #205 run-info strip are read AUTOMATICALLY from the run's OWN
+    launch.sh + artifacts (falling back to the --tau/--l7 CLI defaults for the PNG
+    shading when no schedule is resolvable)."""
     if state is None:
         state = {}
     watched = _resolve_watched_log(getattr(args, "log", None), getattr(args, "log_glob", None))
@@ -976,13 +1448,24 @@ def _render_once(args, state: dict | None = None) -> dict:
     async_grace = _async_grace_s(watched)
     live = _compute_liveness(rows, mtime, now, sub, cfg, async_grace_s=async_grace)
     _save_cadence_state(getattr(args, "cadence_state", _CADENCE_STATE_DEFAULT), all_state, log_name, sub)
-    png = _render_png(rows, args.tau, args.l7, args.goal_dseg)
+    # #205: read the REAL curriculum schedule + run-info from the run's own artifacts.
+    run_info = _collect_run_info(watched, getattr(args, "log_glob", None),
+                                 getattr(args, "run_dir", None), rows, live, now)
+    sched = run_info.get("schedule") or {}
+    # PNG stage shading uses the REAL boundaries when resolvable; else the CLI defaults.
+    tau_png = sched.get("tau_start") if sched.get("tau_start") is not None else args.tau
+    l7_png = sched.get("l7_start") if sched.get("l7_start") is not None else args.l7
+    muon_png = sched.get("muon_start")
+    best_dseg = (run_info.get("best") or {}).get("d_seg")
+    png = _render_png(rows, tau_png, l7_png, args.goal_dseg, muon=muon_png, best_dseg=best_dseg)
     _write_html(Path(args.out), png, rows, args.refresh_seconds, watched, live,
                 state.get("switched_note"), getattr(args, "log_glob", None),
-                tau=args.tau, l7=args.l7, goal_dseg=args.goal_dseg)
+                tau=tau_png, l7=l7_png, goal_dseg=args.goal_dseg, run_info=run_info)
     return {"verdicts": len(rows),
             "watched": (watched.name if watched is not None else None),
-            "kind": live["kind"], "cadence_source": live.get("cadence_source")}
+            "kind": live["kind"], "cadence_source": live.get("cadence_source"),
+            "stage": (run_info.get("stage_prog") or {}).get("stage"),
+            "perf_active": (run_info.get("perf") or {}).get("active")}
 
 
 def main() -> None:
@@ -993,10 +1476,19 @@ def main() -> None:
                     help="self-follow: each cycle watch the NEWEST verdict-bearing "
                          "log matching this glob (ignored when --log is given)")
     ap.add_argument("--out", default=".omx/tmp/dash_levelset/index.html")
+    ap.add_argument("--run-dir", default=None,
+                    help="run directory holding launch.sh + the checkpoint npzs + "
+                         "levelset_best.json (the #205 run-info source). Default None => "
+                         "derived from the watched log's parent (or the --log-glob dir).")
     ap.add_argument("--watch", action="store_true")
     ap.add_argument("--refresh-seconds", type=int, default=30)
-    ap.add_argument("--tau", type=int, default=300)
-    ap.add_argument("--l7", type=int, default=900)
+    ap.add_argument("--tau", type=int, default=300,
+                    help="FALLBACK CE->tau boundary for PNG shading when no launch.sh "
+                         "schedule is resolvable (the REAL boundary is read from the run's "
+                         "own launch.sh --tau-softplus-start-epoch when present).")
+    ap.add_argument("--l7", type=int, default=900,
+                    help="FALLBACK tau->l7 boundary for PNG shading (REAL value read from "
+                         "the run's launch.sh --l7-start-epoch when present).")
     ap.add_argument("--goal-dseg", type=float, default=0.00112)
     ap.add_argument("--stale-min", type=float, default=None,
                     help="OPTIONAL absolute floor (minutes) for the stale threshold; "
