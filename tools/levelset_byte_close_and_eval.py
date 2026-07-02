@@ -131,6 +131,7 @@ from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402  (#224 W
     witness_uncertainty_mask,
 )
 from tac.local_acceleration import torch_levelset_inflate as _tli  # noqa: E402  (canonical FREE-table regen)
+from tac.boundary_math import warp_real_luma_frame0 as _wrl  # noqa: E402  (#205 pose carrier: warp-real-luma frame0)
 
 # canonical FREE-table regen fns (rule-118 curvelet bank + self-orient dir feats) — the bit-exact
 # oracle reference reuses these so the gate compares against the SAME free tables the inflate uses.
@@ -142,6 +143,7 @@ _canon_dir_feats = _tli.dir_feats
 CAMERA_H, CAMERA_W = 874, 1164
 RATE_DENOM = 37_545_489.0
 _MAGIC = b"LVLS1\x00"  # level-set softmax-of-SDF carrier v1
+_PCAR_MAGIC = b"PCAR1\x00"  # #205 pose carrier: warp-real-luma frame0 (stored keyframe luma + per-pair homography)
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
 
@@ -288,6 +290,7 @@ def detect_self_orient(cfg: dict[str, Any], so_overrides: dict[str, Any]) -> dic
 def build_levelset_blob(
     params: dict[str, np.ndarray], cfg: dict[str, Any], so: dict[str, Any], pose_sidecar: bytes | None,
     lane_band_bytes: bytes | None = None, lane_manifest: dict[str, Any] | None = None,
+    pose_carrier_bytes: bytes | None = None, pose_carrier_manifest: dict[str, Any] | None = None,
 ) -> tuple[bytes, dict[str, Any]]:
     """Layout: magic | u32 manifest_len | manifest_json | u32 base_brotli_len | base_brotli |
             u32 code_brotli_len | code_brotli | u32 pose_len | pose_sidecar
@@ -351,8 +354,12 @@ def build_levelset_blob(
     # inflate reproduces the coverage raster + composite decode-consistently (rule 118 FREE rasterizer).
     if lane_band_bytes is not None and lane_manifest is not None:
         manifest["lane_render_band"] = lane_manifest
+    # #205 warp-real-luma pose carrier (6th block). Manifest flag gates the READ (so the reader
+    # knows to expect the trailing block); default-off -> byte-identical to the pre-#205 grammar.
+    if pose_carrier_bytes is not None and pose_carrier_manifest is not None:
+        manifest["pose_carrier"] = pose_carrier_manifest
     mj = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
-    out = _io_pack(mj, base_brotli, code_brotli, pose_sidecar, lane_band_bytes)
+    out = _io_pack(mj, base_brotli, code_brotli, pose_sidecar, lane_band_bytes, pose_carrier_bytes)
     # cross-check our accounting against the canonical quantize_levelset_blob (same int8 grammar).
     canon = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in params.items()})
     breakdown = {
@@ -362,7 +369,9 @@ def build_levelset_blob(
         "code_int8_brotli_bytes": len(code_brotli),
         "pose_sidecar_bytes": (len(pose_sidecar) if pose_sidecar else 0),
         "lane_band_counted_bytes": (len(lane_band_bytes) if lane_band_bytes else 0),
-        "magic_and_prefixes_bytes": len(_MAGIC) + 16 + (4 if lane_band_bytes is not None else 0),
+        "pose_carrier_counted_bytes": (len(pose_carrier_bytes) if pose_carrier_bytes else 0),
+        "magic_and_prefixes_bytes": (len(_MAGIC) + 16 + (4 if lane_band_bytes is not None else 0)
+                                     + (4 if pose_carrier_bytes is not None else 0)),
         "total_0bin_bytes": len(out),
         "canonical_quantize_blob_bytes": int(canon["total_quantized_blob_bytes"]),
         "accounting_matches_canonical": bool(
@@ -374,22 +383,300 @@ def build_levelset_blob(
 
 def _io_pack(
     manifest: bytes, base: bytes, code: bytes, pose: bytes | None,
-    lane_band: bytes | None = None,
+    lane_band: bytes | None = None, pose_carrier: bytes | None = None,
 ) -> bytes:
-    """Pack the LVLS1 blob. The 5th ``lane_band`` block (#224 Wave E) is OPTIONAL and only
-    appended when non-None -> absent it, the output is BYTE-IDENTICAL to the pre-Wave-E 4-block
-    grammar (the default-off guarantee). ``lane_band`` = brotli(serialize_lane_band(...)), the
-    COUNTED video-derived lane manifold coords (rule 118)."""
+    """Pack the LVLS1 blob. The 5th ``lane_band`` block (#224 Wave E) and the 6th
+    ``pose_carrier`` block (#205 warp-real-luma frame0) are OPTIONAL and appended, in that order,
+    ONLY when non-None -> absent both, the output is BYTE-IDENTICAL to the pre-Wave-E 4-block
+    grammar (the default-off guarantee). Trailing blocks are gated at READ time by the manifest
+    flags (``lane_render_band`` / ``pose_carrier``), so the reader knows how many trailing blocks
+    to expect -- NEVER by a bare ``off < len(raw)`` (which would misread a lone pose_carrier block
+    as lane). ``lane_band`` = the COUNTED lane manifold coords; ``pose_carrier`` = the COUNTED
+    real-luma keyframe payload + per-pair homography (rule 118: keyframe COUNTED, warp decoder FREE)."""
 
     buf = bytearray()
     buf += _MAGIC
     for chunk in (manifest, base, code, (pose or b"")):
         buf += struct.pack("<I", len(chunk))
         buf += chunk
-    if lane_band is not None:
-        buf += struct.pack("<I", len(lane_band))
-        buf += lane_band
+    for opt in (lane_band, pose_carrier):
+        if opt is not None:
+            buf += struct.pack("<I", len(opt))
+            buf += opt
     return bytes(buf)
+
+
+# ---------------------------------------------------------------------------
+# #205 POSE CARRIER (warp-real-luma frame0): serialize / warp / parse.
+#   The scorer reads d_pose = MSE(PoseNet(gen_pair)[:6], PoseNet(gt_pair)[:6]) ON THE FRAMES.
+#   A dead pose SIDECAR (block 3) is bytes the render never reads -> does NOT lower realized d_pose.
+#   The POSE CARRIER instead REPLACES the render's FRAME0 (SEG-free: SegNet reads only frame1,
+#   upstream/modules.py:108) with a STORED REAL keyframe SE(3)-warped by the stored per-pair ego
+#   twist -> PoseNet reads real warped motion and the pose becomes measurable through the FRAMES
+#   (the ``tac.boundary_math.warp_real_luma_frame0`` semantics). Rule-118 boundary:
+#     * COUNTED (archive.zip): the stored real keyframe luma (video-derived) + per-pair homography.
+#     * FREE (inflate.py): the inverse-warp bilinear + R (generic algorithm). The dual-use twist xi
+#       is stored (fp16) for provenance; the per-pair H (fp64) is what the decode uses (bit-exact,
+#       no exp_se3 needed in the decode path -> the shipped inflate == numpy authority by
+#       construction). H is a deterministic function of xi (byte-optimal design stores ONLY xi and
+#       derives H FREE; H stored here is the decode-simplicity choice, ~72 B/pair, negligible vs
+#       the keyframe payload).
+# ---------------------------------------------------------------------------
+def _pcar_warp_frame0_from_H(src_native: np.ndarray, H: np.ndarray, native_hw: tuple[int, int]) -> np.ndarray:
+    """Inverse-warp a native ``(H,W,3)`` real-luma frame by the fp64 homography ``H`` -> uint8.
+
+    OP-FOR-OP identical to ``tac.boundary_math.warp_real_luma_frame0.warp_frame0_native_numpy`` FROM
+    ``Hinv = inv(H)`` ONWARD (bilinear inverse-sample + persist fallback + round/clip), so that with
+    ``H = homography_from_xi_numpy(xi, geom)`` (fp64) this returns the module authority
+    ``warp_frame0_uint8_numpy(src, xi, geom)`` BIT-FOR-BIT (proven 0-diff, tests). The shipped
+    inflate inlines a VERBATIM copy of this body -> shipped == this oracle by construction."""
+    src = np.asarray(src_native, dtype=np.float64)
+    Hh, Ww = int(native_hw[0]), int(native_hw[1])
+    if src.shape[:2] != (Hh, Ww):
+        raise ValueError(f"pose-carrier keyframe native {src.shape[:2]} != {(Hh, Ww)} (NO-FAKE)")
+    C = src.shape[2]
+    flat = src.reshape(-1, C)
+    us, vs = np.meshgrid(np.arange(Ww), np.arange(Hh))
+    grid = np.stack([us.ravel(), vs.ravel(), np.ones(Hh * Ww)], 0).astype(np.float64)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        Hinv = np.linalg.inv(np.asarray(H, np.float64))
+        src_h = Hinv @ grid
+        z = src_h[2]
+        su = src_h[0] / z
+        sv = src_h[1] / z
+    valid = (np.isfinite(su) & np.isfinite(sv) & (z > 0)
+             & (su >= 0) & (su <= Ww - 1) & (sv >= 0) & (sv <= Hh - 1))
+    su_c = np.clip(su, 0.0, Ww - 1)
+    sv_c = np.clip(sv, 0.0, Hh - 1)
+    x0 = np.floor(su_c).astype(np.int64)
+    y0 = np.floor(sv_c).astype(np.int64)
+    x1 = np.minimum(x0 + 1, Ww - 1)
+    y1 = np.minimum(y0 + 1, Hh - 1)
+    wx = (su_c - x0)[:, None]
+    wy = (sv_c - y0)[:, None]
+    Ia = flat[y0 * Ww + x0]
+    Ib = flat[y0 * Ww + x1]
+    Ic = flat[y1 * Ww + x0]
+    Id = flat[y1 * Ww + x1]
+    top = Ia * (1.0 - wx) + Ib * wx
+    bot = Ic * (1.0 - wx) + Id * wx
+    sampled = top * (1.0 - wy) + bot * wy
+    out = np.where(valid[:, None], sampled, flat).reshape(Hh, Ww, C)
+    return np.clip(np.round(out), 0.0, 255.0).astype(np.uint8)
+
+
+def serialize_pose_carrier(
+    H_stack: np.ndarray, xi_stack: np.ndarray, keyframes: list[np.ndarray],
+    kf_of_pair: list[int], hdr_extra: dict[str, Any],
+) -> bytes:
+    """Serialize the pose-carrier section (NOT re-brotli'd; keyframes are brotli'd individually).
+
+    Layout: PCAR1 | u32 hdr_len | hdr_json | H(P*9 fp64) | xi(P*6 fp16) | u32 n_kf |
+            [u32 blen | brotli(uint8 (kf_h,kf_w,3))]*n_kf.
+    ``kf_of_pair[p]`` indexes into ``keyframes``; H/xi are per-pair (P rows)."""
+    import brotli
+
+    P = int(H_stack.shape[0])
+    hdr = {
+        "n_pairs": P,
+        "native_h": CAMERA_H, "native_w": CAMERA_W,
+        "kf_of_pair": [int(k) for k in kf_of_pair],
+        "n_keyframes": len(keyframes),
+        **hdr_extra,
+    }
+    hj = json.dumps(hdr, separators=(",", ":")).encode("utf-8")
+    buf = bytearray()
+    buf += _PCAR_MAGIC
+    buf += struct.pack("<I", len(hj)); buf += hj
+    buf += np.asarray(H_stack, dtype=np.float64).tobytes()
+    buf += np.asarray(xi_stack, dtype=np.float16).tobytes()
+    buf += struct.pack("<I", len(keyframes))
+    for kf in keyframes:
+        kb = brotli.compress(np.ascontiguousarray(kf, dtype=np.uint8).tobytes(), quality=11)
+        buf += struct.pack("<I", len(kb)); buf += kb
+    return bytes(buf)
+
+
+def parse_pose_carrier(blob: bytes) -> dict[str, Any]:
+    """Inverse of ``serialize_pose_carrier`` (tool-side; the shipped inflate inlines the same)."""
+    import brotli
+
+    assert blob[: len(_PCAR_MAGIC)] == _PCAR_MAGIC, "bad pose-carrier magic"
+    off = len(_PCAR_MAGIC)
+    (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    P = int(hdr["n_pairs"])
+    H = np.frombuffer(blob[off:off + P * 9 * 8], dtype=np.float64).reshape(P, 3, 3).copy(); off += P * 9 * 8
+    xi = np.frombuffer(blob[off:off + P * 6 * 2], dtype=np.float16).reshape(P, 6).astype(np.float64); off += P * 6 * 2
+    (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
+    kh, kw = int(hdr["kf_store_h"]), int(hdr["kf_store_w"])
+    keyframes = []
+    for _ in range(n_kf):
+        (blen,) = struct.unpack_from("<I", blob, off); off += 4
+        raw = brotli.decompress(blob[off:off + blen]); off += blen
+        keyframes.append(np.frombuffer(raw, dtype=np.uint8).reshape(kh, kw, 3).copy())
+    return {"hdr": hdr, "H": H, "xi": xi, "keyframes": keyframes, "kf_of_pair": hdr["kf_of_pair"]}
+
+
+def _pcar_upsample_to_native(kf: np.ndarray, native_hw: tuple[int, int]) -> np.ndarray:
+    """Bilinear-upsample a stored keyframe (kh,kw,3) uint8 -> native fp64. Deterministic torch CPU
+    (bit-identical run-to-run + between inflate/oracle). Identity when already native."""
+    import torch
+
+    Hh, Ww = int(native_hw[0]), int(native_hw[1])
+    if kf.shape[:2] == (Hh, Ww):
+        return np.asarray(kf, dtype=np.float64)
+    x = torch.from_numpy(np.ascontiguousarray(kf)).permute(2, 0, 1)[None].float()
+    with torch.inference_mode():
+        up = torch.nn.functional.interpolate(x, size=(Hh, Ww), mode="bilinear", align_corners=False)
+    return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.float64)
+
+
+def pose_carrier_frame0(pc: dict[str, Any], pi: int) -> np.ndarray:
+    """Decode frame0 for pair ``pi`` = warp(stored keyframe, stored H[pi]) at native res -> uint8.
+    The tool-side authority; the shipped inflate inlines a verbatim copy."""
+    native_hw = (int(pc["hdr"]["native_h"]), int(pc["hdr"]["native_w"]))
+    kf = pc["keyframes"][int(pc["kf_of_pair"][pi])]
+    src = _pcar_upsample_to_native(kf, native_hw)
+    return _pcar_warp_frame0_from_H(src, pc["H"][pi], native_hw)
+
+
+def _downscale_keyframe(gt_f0_native: np.ndarray, store_hw: tuple[int, int]) -> np.ndarray:
+    """Store-res keyframe: bilinear-downscale native gt_f0 -> (store_h,store_w,3) uint8 (torch CPU,
+    deterministic). Identity when store_hw == native. Round-trips through the decode-time upsample."""
+    import torch
+
+    sh, sw = int(store_hw[0]), int(store_hw[1])
+    if (sh, sw) == (gt_f0_native.shape[0], gt_f0_native.shape[1]):
+        return np.ascontiguousarray(gt_f0_native, dtype=np.uint8)
+    x = torch.from_numpy(np.ascontiguousarray(gt_f0_native)).permute(2, 0, 1)[None].float()
+    with torch.inference_mode():
+        dn = torch.nn.functional.interpolate(x, size=(sh, sw), mode="bilinear", align_corners=False)
+        dn = torch.clamp(torch.round(dn), 0.0, 255.0)
+    return dn[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)
+
+
+def build_pose_carrier_section(
+    gt_cache: str | None, n_pairs: int, pc: dict[str, Any],
+) -> tuple[bytes, dict[str, Any], dict[str, Any]]:
+    """Build the #205 warp-real-luma pose-carrier section from the GT cache (compress-time: the
+    real keyframe luma ``gt_f0`` + the ego pose ``gt_poses`` are fully available). Returns
+    (pose_carrier_bytes, manifest_cfg, report). NO-FAKE: missing cache raises.
+
+    For each pair p: the per-pair ego twist ``xi[p] = xi_from_pose_calibration(gt_poses[p], s_t,
+    s_r, pitch)`` (dual-use with the pose sidecar); ``H[p] = homography_from_xi_numpy(xi[p], geom)``
+    (fp64, the exact warp). Keyframes stored at ``store_hw`` (native = lossless; downscaled = the
+    cheap-rate lever, matched to PoseNet's 512x384 working res). ``stride`` keyframes: pair p uses
+    keyframe ``round(p/stride)*stride`` (stride=1 -> per-pair, the exact upper bound; stride>1 ->
+    shared keyframes warped by each pair's own xi -- a cheaper, geometrically-approximate variant,
+    LOUDLY flagged). The rate cost is the SUM of the keyframe brotli bytes + H(72 B/pair) +
+    xi(12 B/pair); it is COUNTED in archive.zip (the real st_size)."""
+    if not gt_cache:
+        raise ValueError("--pose-carrier requires --gt-cache (the real gt_f0 keyframes + gt_poses). "
+                         "NO-FAKE: refusing to fabricate the pose payload.")
+    cp = Path(gt_cache)
+    if not cp.exists():
+        raise FileNotFoundError(f"--gt-cache {cp} not found (pose-carrier needs gt_f0 + gt_poses).")
+    z = np.load(cp, allow_pickle=False)
+    for req in ("gt_f0", "gt_poses"):
+        if req not in z.files:
+            raise ValueError(f"gt cache {cp} lacks {req!r} (pose-carrier needs the real keyframes + poses).")
+    gt_f0 = z["gt_f0"]
+    gt_poses = np.asarray(z["gt_poses"], dtype=np.float64)
+    P = min(int(n_pairs), int(gt_f0.shape[0]), int(gt_poses.shape[0]))
+    s_t, s_r, pitch = float(pc["s_t"]), float(pc["s_r"]), float(pc["pitch"])
+    stride = max(1, int(pc["stride"]))
+    ds = max(1, int(pc.get("downscale", 1)))
+    store_hw = (CAMERA_H, CAMERA_W) if ds == 1 else (CAMERA_H // ds, CAMERA_W // ds)
+    geom = _wrl.GroundHomographyGeom.eon(pitch=pitch)
+
+    # per-pair twist + homography (fp64 authority).
+    xi_stack = np.zeros((P, 6), dtype=np.float64)
+    H_stack = np.zeros((P, 3, 3), dtype=np.float64)
+    for p in range(P):
+        xi = _wrl.xi_from_pose_calibration(gt_poses[p], s_t, s_r, pitch)
+        xi_stack[p] = xi
+        H_stack[p] = _wrl.homography_from_xi_numpy(xi, geom)
+
+    # keyframe schedule + stored luma (store-res).
+    kf_indices = sorted({min(P - 1, (p // stride) * stride) for p in range(P)})
+    kf_pos = {k: i for i, k in enumerate(kf_indices)}
+    kf_of_pair = [kf_pos[min(P - 1, (p // stride) * stride)] for p in range(P)]
+    keyframes = [_downscale_keyframe(np.asarray(gt_f0[k]), store_hw) for k in kf_indices]
+
+    hdr_extra = {
+        "s_t": s_t, "s_r": s_r, "pitch": pitch, "stride": stride,
+        "kf_store_h": int(store_hw[0]), "kf_store_w": int(store_hw[1]),
+        "keyframe_lossless_native": bool(ds == 1),
+        "calibration_note": ("per-pair xi = xi_from_pose_calibration(gt_poses, s_t, s_r, pitch); "
+                             "H = homography_from_xi_numpy(xi). warp-real-luma frame0 semantics "
+                             "(tac.boundary_math.warp_real_luma_frame0)."),
+    }
+    blob = serialize_pose_carrier(H_stack, xi_stack, keyframes, kf_of_pair, hdr_extra)
+
+    kf_bytes_total = sum(int(len(s)) for s in _pcar_keyframe_blob_sizes(keyframes))
+    manifest = {
+        "s_t": s_t, "s_r": s_r, "pitch": pitch, "stride": stride,
+        "kf_store_h": int(store_hw[0]), "kf_store_w": int(store_hw[1]),
+        "n_keyframes": len(keyframes), "n_pairs": P,
+        "keyframe_lossless_native": bool(ds == 1),
+    }
+    report = {
+        "active": True,
+        "source_gt_cache": str(cp),
+        "n_pairs": P,
+        "n_keyframes": len(keyframes),
+        "stride": stride,
+        "keyframe_store_hw": [int(store_hw[0]), int(store_hw[1])],
+        "keyframe_lossless_native": bool(ds == 1),
+        "pose_carrier_section_bytes": len(blob),
+        "keyframe_blob_bytes_total": kf_bytes_total,
+        "H_bytes": int(P * 9 * 8),
+        "xi_bytes": int(P * 6 * 2),
+        "calibration": {"s_t": s_t, "s_r": s_r, "pitch": pitch},
+        "stride_note": ("stride>1 shares one stored keyframe across a window but warps each pair by "
+                        "ITS OWN intra-pair xi (no kf->pair displacement) -> geometrically approximate "
+                        "for shared keyframes; stride=1 (per-pair) is the EXACT warp-real-luma upper bound."
+                        if stride > 1 else "stride=1: per-pair keyframe, exact warp-real-luma."),
+        "rule_118": {
+            "COUNTED (archive.zip)": ("stored real keyframe luma (video-derived) + per-pair homography H; "
+                                      "warped at decode by the per-pair ego twist to synthesize frame0"),
+            "FREE (inflate.py)": ("inverse-warp bilinear + R (generic algorithm); the dual-use twist xi is "
+                                  "the pose sidecar (~0 marginal bytes in the byte-optimal design)"),
+            "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship",
+        },
+        "byte_optimal_note": ("H (fp64, 72 B/pair) is stored for BIT-EXACT decode simplicity (no exp_se3 in "
+                              "the decode path); the byte-optimal design stores ONLY xi (fp16, 12 B/pair, "
+                              "dual-use with the pose sidecar) and derives H FREE via exp_se3. Keyframe "
+                              "SPARSITY (stride>1 with kf->pair relative warp) + lossy keyframe codec are "
+                              "the OPEN rate levers -- NOT applied/borrowed here (measured rate is of what "
+                              "is ACTUALLY stored)."),
+    }
+    return blob, manifest, report
+
+
+def _pcar_keyframe_blob_sizes(keyframes: list[np.ndarray]) -> list[bytes]:
+    """Recompute the per-keyframe brotli blobs (for the byte report). Deterministic == the serializer."""
+    import brotli
+
+    return [brotli.compress(np.ascontiguousarray(kf, dtype=np.uint8).tobytes(), quality=11) for kf in keyframes]
+
+
+def _cap_pose_carrier(pcar_bytes: bytes, eval_pairs: int) -> bytes:
+    """Slice a pose-carrier section to the first ``eval_pairs`` pairs (for the capped/gate inflate):
+    keep H/xi[:eval_pairs], prune to the referenced keyframes, remap kf_of_pair. Re-serialized ==
+    the full serializer, so the shipped inflate + oracle stay bit-exact on the capped set."""
+    pc = parse_pose_carrier(pcar_bytes)
+    P = min(int(eval_pairs), int(pc["hdr"]["n_pairs"]))
+    kf_of_pair = [int(k) for k in pc["kf_of_pair"][:P]]
+    used = sorted(set(kf_of_pair))
+    remap = {old: i for i, old in enumerate(used)}
+    keyframes = [pc["keyframes"][old] for old in used]
+    kf_of_pair_new = [remap[k] for k in kf_of_pair]
+    hdr = pc["hdr"]
+    hdr_extra = {k: hdr[k] for k in ("s_t", "s_r", "pitch", "stride", "kf_store_h", "kf_store_w",
+                                     "keyframe_lossless_native", "calibration_note") if k in hdr}
+    return serialize_pose_carrier(pc["H"][:P], pc["xi"][:P], keyframes, kf_of_pair_new, hdr_extra)
 
 
 # ---------------------------------------------------------------------------
@@ -442,6 +729,7 @@ import brotli
 import torch
 
 MAGIC = b"LVLS1\x00"
+PCAR_MAGIC = b"PCAR1\x00"  # #205 warp-real-luma pose carrier (stored keyframe luma + per-pair homography)
 
 
 def _read_blob(path):
@@ -451,11 +739,17 @@ def _read_blob(path):
     for _ in range(4):
         (n,) = struct.unpack_from("<I", raw, off); off += 4
         out.append(raw[off:off + n]); off += n
-    lane_b = None  # #224 Wave E: optional 5th COUNTED lane-band block (absent -> pre-Wave-E grammar)
-    if off < len(raw):
+    m = json.loads(out[0].decode("utf-8"))
+    # Optional trailing blocks are gated by the MANIFEST flags (NOT bare off<len): 5th = lane band
+    # (#224 Wave E), 6th = pose carrier (#205). A lone pose-carrier block must NOT be misread as lane.
+    lane_b = pcar_b = None
+    if m.get("lane_render_band") is not None:
         (n,) = struct.unpack_from("<I", raw, off); off += 4
         lane_b = raw[off:off + n]; off += n
-    return json.loads(out[0].decode("utf-8")), out[1], out[2], out[3], lane_b
+    if m.get("pose_carrier") is not None:
+        (n,) = struct.unpack_from("<I", raw, off); off += 4
+        pcar_b = raw[off:off + n]; off += n
+    return m, out[1], out[2], out[3], lane_b, pcar_b
 
 
 def _dequant(blob, order, shapes, scales):
@@ -718,6 +1012,68 @@ def _R(rgb, rh, rw, ch, cw):
     return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)
 
 
+# --- #205 warp-real-luma pose carrier (FREE inverse-warp; the keyframe luma + H are COUNTED) --------
+# frame0 = warp(stored keyframe, stored per-pair homography H) at native res (seg-free: SegNet reads
+# only frame1). VERBATIM op-for-op mirror of the tool-side _pcar_warp_frame0_from_H / pose_carrier_frame0
+# (== tac.boundary_math.warp_real_luma_frame0.warp_frame0_uint8_numpy when H=homography_from_xi_numpy(xi)),
+# so the shipped inflate == the numpy oracle bit-for-bit (proven by the bit-exact gate on frame0 too).
+def _pcar_parse(blob):
+    assert blob[:len(PCAR_MAGIC)] == PCAR_MAGIC, "bad pose-carrier magic"
+    off = len(PCAR_MAGIC)
+    (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    P = int(hdr["n_pairs"])
+    H = np.frombuffer(blob[off:off + P * 9 * 8], dtype=np.float64).reshape(P, 3, 3).copy(); off += P * 9 * 8
+    off += P * 6 * 2  # xi (fp16, provenance-only; the decode uses H)
+    (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
+    kh, kw = int(hdr["kf_store_h"]), int(hdr["kf_store_w"])
+    kfs = []
+    for _ in range(n_kf):
+        (blen,) = struct.unpack_from("<I", blob, off); off += 4
+        raw = brotli.decompress(blob[off:off + blen]); off += blen
+        kfs.append(np.frombuffer(raw, dtype=np.uint8).reshape(kh, kw, 3).copy())
+    return {"hdr": hdr, "H": H, "keyframes": kfs, "kf_of_pair": hdr["kf_of_pair"]}
+
+
+def _pcar_upsample(kf, ch, cw):
+    if kf.shape[0] == ch and kf.shape[1] == cw:
+        return np.asarray(kf, dtype=np.float64)
+    x = torch.from_numpy(np.ascontiguousarray(kf)).permute(2, 0, 1)[None].float()
+    with torch.inference_mode():
+        up = torch.nn.functional.interpolate(x, size=(ch, cw), mode="bilinear", align_corners=False)
+    return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.float64)
+
+
+def _pcar_warp_f0(src, H, ch, cw):
+    src = np.asarray(src, dtype=np.float64)
+    Hh, Ww, C = int(ch), int(cw), src.shape[2]
+    flat = src.reshape(-1, C)
+    us, vs = np.meshgrid(np.arange(Ww), np.arange(Hh))
+    grid = np.stack([us.ravel(), vs.ravel(), np.ones(Hh * Ww)], 0).astype(np.float64)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        Hinv = np.linalg.inv(np.asarray(H, np.float64))
+        src_h = Hinv @ grid
+        z = src_h[2]; su = src_h[0] / z; sv = src_h[1] / z
+    valid = (np.isfinite(su) & np.isfinite(sv) & (z > 0)
+             & (su >= 0) & (su <= Ww - 1) & (sv >= 0) & (sv <= Hh - 1))
+    su_c = np.clip(su, 0.0, Ww - 1); sv_c = np.clip(sv, 0.0, Hh - 1)
+    x0 = np.floor(su_c).astype(np.int64); y0 = np.floor(sv_c).astype(np.int64)
+    x1 = np.minimum(x0 + 1, Ww - 1); y1 = np.minimum(y0 + 1, Hh - 1)
+    wx = (su_c - x0)[:, None]; wy = (sv_c - y0)[:, None]
+    Ia = flat[y0 * Ww + x0]; Ib = flat[y0 * Ww + x1]
+    Ic = flat[y1 * Ww + x0]; Id = flat[y1 * Ww + x1]
+    top = Ia * (1.0 - wx) + Ib * wx; bot = Ic * (1.0 - wx) + Id * wx
+    sampled = top * (1.0 - wy) + bot * wy
+    out = np.where(valid[:, None], sampled, flat).reshape(Hh, Ww, C)
+    return np.clip(np.round(out), 0.0, 255.0).astype(np.uint8)
+
+
+def _pcar_frame0(pc, pi, ch, cw):
+    kf = pc["keyframes"][int(pc["kf_of_pair"][pi])]
+    src = _pcar_upsample(kf, ch, cw)
+    return _pcar_warp_f0(src, pc["H"][pi], ch, cw)
+
+
 _G = {}
 
 
@@ -725,7 +1081,7 @@ def _setup(src):
     # per-worker (spawn) / inherited-then-reset (fork) setup: dequant params + regen the FREE curvelet
     # bank + coords. Deterministic + identical across workers -> bit-exact. ~150ms, amortized over the
     # worker's pairs. Same op order as the serial main -> identical output.
-    m, base_b, code_b, _pose, lane_b = _read_blob(src)
+    m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob(src)
     params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"])
     code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32) * float(m["code_scale"])).reshape(m["code_shape"])
     rh, rw, ch, cw = int(m["render_h"]), int(m["render_w"]), int(m["camera_h"]), int(m["camera_w"])
@@ -738,8 +1094,12 @@ def _setup(src):
     lane_pairs = lane_hdr = None
     if m.get("lane_render_band") is not None and lane_b is not None:
         lane_pairs, lane_hdr = _lane_parse_any(brotli.decompress(lane_b))  # Wave-F: LBND1/LBND2 dispatch
+    # #205 warp-real-luma pose carrier: parse the OPTIONAL keyframe luma + per-pair H (frame0 warp).
+    pcar = None
+    if m.get("pose_carrier") is not None and pcar_b is not None:
+        pcar = _pcar_parse(pcar_b)
     _G.update(m=m, code=code, coords=coords, curv=curv, P=P, rh=rh, rw=rw, ch=ch, cw=cw,
-              framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr)
+              framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr, pcar=pcar)
 
 
 def _render_pair(pi):
@@ -765,12 +1125,19 @@ def _render_pair(pi):
     h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
     lane_pairs, lane_hdr = _G.get("lane_pairs"), _G.get("lane_hdr")
     band = lane_pairs is not None and pi < len(lane_pairs)
+    pcar = _G.get("pcar")
     cov_flat = None
     if band:
         # coverage depends ONLY on the pair's lines (per-pair) -> rasterize ONCE, share across f0/f1.
         cov_flat = _lane_coverage(lane_pairs[pi], rh, rw, lane_hdr).reshape(-1)
     frames = []
     for fk in range(2):
+        # #205: frame0 (fk==0) is the stored keyframe warped by the stored per-pair homography
+        # (seg-free), written at native res directly (no _R -- warp is already camera-native). frame1
+        # (fk==1) stays the witness render (d_seg). Absent pose carrier -> frame0 is the INR render.
+        if fk == 0 and pcar is not None and pi < int(pcar["hdr"]["n_pairs"]):
+            frames.append(_pcar_frame0(pcar, pi, ch, cw).tobytes())
+            continue
         if band:
             _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True)
             rgb = _lane_composite(rgb, lane_rgb, cov_flat, margin, lane_hdr)
@@ -876,7 +1243,7 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
     if eval_pairs < n_pairs_total:
         import brotli
 
-        man, base_b, code_b, pose_b, lane_b = _read_blob_bytes(src_bin.read_bytes())
+        man, base_b, code_b, pose_b, lane_b, pcar_b = _read_blob_bytes(src_bin.read_bytes())
         code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
                 * man["code_scale"]).reshape(man["code_shape"])
         code_cap = code[: 2 * eval_pairs]
@@ -891,8 +1258,14 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
             lane_cfg_cap = render_config_from_header({**man["lane_render_band"], "pairs": []})
             lane_cap = brotli.compress(
                 serialize_lane_band_any(all_pairs[:eval_pairs], lane_cfg_cap, lane_hdr), quality=11)
+        # #205: cap the pose carrier to eval_pairs (slice H/xi + prune to referenced keyframes).
+        pcar_cap = None
+        if pcar_b is not None and man.get("pose_carrier") is not None:
+            pcar_cap = _cap_pose_carrier(pcar_b, eval_pairs)
+            man["pose_carrier"] = {**man["pose_carrier"], "n_pairs": eval_pairs}
         mj = json.dumps(man, separators=(",", ":")).encode()
-        capped = _io_pack(mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11), pose_b or None, lane_cap)
+        capped = _io_pack(mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11),
+                          pose_b or None, lane_cap, pcar_cap)
         src_bin.write_bytes(capped)
 
     dst_raw = inflated_dir / "0.raw"
@@ -941,6 +1314,76 @@ def parity_on_inflated(raw_path: Path, eval_pairs: int, gt_cache: str | None, nu
     }
 
 
+def pose_carrier_confirm(
+    raw_path: Path, eval_pairs: int, gt_cache: str | None, num_pairs: int, pose_carrier_bytes: bytes,
+) -> dict[str, Any]:
+    """CONFIRM the pose-carrier decode through the REAL byte-closed inflate (the #205 launch gate).
+
+    (1) frame0 DECODE-REPRODUCTION: the inflated .raw frame0 == the numpy authority
+        ``pose_carrier_frame0(pc, pi)`` BIT-FOR-BIT (proves the shipped inflate warps the stored
+        keyframe by the stored H exactly -> the training-side warp d_pose IS the real-decode d_pose,
+        no gap by construction).
+    (2) CONTEXT d_pose triad (frozen CPU-torch PoseNet, the authority; NEVER MPS):
+        * carrier (raw f0 = warp, raw f1 = witness) -- the REAL row d_pose (what evaluate.py scores);
+        * unwarped (gt_f0 real, raw f1 = witness) -- isolates the warp's marginal effect;
+        * CEILING (gt_f0 real, warp(gt_f0, H)) -- the (real, warped-real) pair the reference tool
+          ``measure_warp_dpose_through_R`` measures (the ~10.53 upper bound; NOT the witness
+          composition). The carrier-vs-ceiling GAP is the OPEN witness-f1 / trained-residual work.
+    NON-PROMOTABLE (macOS-CPU advisory)."""
+    pc = parse_pose_carrier(pose_carrier_bytes)
+    if gt_cache:
+        gt, _seg, posenet_cpu = twr.load_gt_from_cache(Path(gt_cache), num_pairs)
+    else:
+        gt, _seg, posenet_cpu = twr.precompute_gt(num_pairs)
+    P = min(int(eval_pairs), gt.n_pairs, int(pc["hdr"]["n_pairs"]))
+    fb = CAMERA_H * CAMERA_W * 3
+    raw_f0, raw_f1 = [], []
+    with open(raw_path, "rb") as f:
+        for _pi in range(P):
+            raw_f0.append(np.frombuffer(f.read(fb), dtype=np.uint8).reshape(CAMERA_H, CAMERA_W, 3))
+            raw_f1.append(np.frombuffer(f.read(fb), dtype=np.uint8).reshape(CAMERA_H, CAMERA_W, 3))
+    # (1) frame0 decode-reproduction (authority == the shipped inflate .raw).
+    max_abs = 0
+    n_diff = 0
+    auth_f0 = []
+    for pi in range(P):
+        a0 = pose_carrier_frame0(pc, pi)
+        auth_f0.append(a0)
+        d = int(np.abs(raw_f0[pi].astype(np.int32) - a0.astype(np.int32)).max())
+        if d != 0:
+            n_diff += 1
+        max_abs = max(max_abs, d)
+    # (2) d_pose triad (authority PoseNet).
+    gt_f0 = [np.asarray(gt.gt_f0[pi]) for pi in range(P)]
+    poses = [gt.gt_poses[pi] for pi in range(P)]
+    dp_carrier = twr.cpu_verdict_d_pose_batch(posenet_cpu, raw_f0, raw_f1, poses)
+    dp_unwarped = twr.cpu_verdict_d_pose_batch(posenet_cpu, gt_f0, raw_f1, poses)
+    dp_ceiling = twr.cpu_verdict_d_pose_batch(posenet_cpu, gt_f0, auth_f0, poses)
+    return {
+        "pairs": P,
+        "frame0_decode_bit_exact": bool(max_abs == 0),
+        "frame0_max_abs_uint8_diff": int(max_abs),
+        "frame0_n_frames_differing": int(n_diff),
+        "d_pose_carrier_warp_f0_witness_f1": float(np.mean(dp_carrier)),
+        "d_pose_unwarped_gtf0_witness_f1": float(np.mean(dp_unwarped)),
+        "d_pose_ceiling_gtf0_warpf0": float(np.mean(dp_ceiling)),
+        "d_pose_null_pose_blind_ref": 189.62,
+        "training_side_vs_real_decode_parity": (
+            "IDENTICAL by construction: raw frame0 == numpy-authority warp frame0 bit-for-bit (above) "
+            "AND raw frame1 == witness render (bit-exact gate) -> the training-side warp d_pose EQUALS "
+            "the real-decode d_pose (no surrogate gap)." if max_abs == 0 else
+            f"MISMATCH: raw frame0 != authority warp (max_abs={max_abs}) -> the byte-close does NOT "
+            "faithfully reproduce the pose decode (NO-FAKE: investigate)."),
+        "gap_note": (
+            "carrier (warp-f0 + WITNESS-f1) vs ceiling (real-f0 + warped-real-f1): the gap is the OPEN "
+            "witness-composition work -- the witness f1 is non-photoreal + the trained dxi residual "
+            "(w_pose>0) is UNMEASURED. The ceiling is the reference (real,warped-real) pair, NOT the "
+            "contest-legal witness pair. NO borrowed 3.4e-5 (ancestor-RGB, never validated on the witness)."),
+        "authority": _AUTHORITY,
+        "promotion_claim": False,
+    }
+
+
 # ---------------------------------------------------------------------------
 # BIT-EXACT ROUND-TRIP GATE (the correctness proof):
 #   shipped inflate.py(archive) output  ==  the canonical numpy-fp32 ORACLE forward
@@ -965,7 +1408,7 @@ def _torch_R_reference(rgb: np.ndarray, rh: int, rw: int, ch: int, cw: int) -> n
 
 def numpy_oracle_reference_frames(
     params: dict[str, np.ndarray], code: np.ndarray, manifest: dict[str, Any], n_pairs: int,
-    lane_pairs: list[list[Any]] | None = None,
+    lane_pairs: list[list[Any]] | None = None, pose_carrier: dict[str, Any] | None = None,
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Regenerate the FULL uint8 camera frames for the first ``n_pairs`` pairs via the CANONICAL
     numpy-fp32 oracle (``levelset_rgb_forward_numpy`` / ``levelset_band_forward_numpy``) + the
@@ -1026,6 +1469,12 @@ def numpy_oracle_reference_frames(
                 v_h=lane_cfg.v_h, cx=lane_cfg.cx,
             ).reshape(-1)
         for fk in range(2):
+            # #205 pose carrier: frame0 (fk==0) is the STORED keyframe warped by the stored per-pair
+            # homography (seg-free), NOT the INR render. frame1 (fk==1) stays the witness render (it
+            # drives d_seg + the argmax). The argmax is taken at fk==1 -> pose carrier is argmax-free.
+            if fk == 0 and pose_carrier is not None:
+                frames.append(pose_carrier_frame0(pose_carrier, pi))
+                continue
             if cov is not None:
                 rgb, phi, lane_rgb, margin = levelset_band_forward_numpy(
                     params, feats, code[2 * pi + fk], lane_cls=lane_cfg.lane_cls, **fwd_kw)
@@ -1050,7 +1499,7 @@ def bit_exact_roundtrip_gate(
     import brotli
 
     # dequant the blob EXACTLY as the shipped inflate does (int8 -> fp32 * scale).
-    m, base_b, code_b, _pose, lane_b = _read_blob_bytes(blob)
+    m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob_bytes(blob)
     order = m["base_param_order"]
     flat = np.frombuffer(brotli.decompress(base_b), dtype=np.int8)
     params: dict[str, np.ndarray] = {}
@@ -1084,10 +1533,18 @@ def bit_exact_roundtrip_gate(
         lane_cfg_cap = render_config_from_header({**m["lane_render_band"], "pairs": []})
         lane_b_cap = brotli.compress(
             serialize_lane_band_any(lane_pairs_cap, lane_cfg_cap, lane_hdr), quality=11)
+    # #205: carry the pose carrier through the gp-capped repack (slice to gp) so the shipped inflate
+    # warps the SAME frame0's the oracle does over the SAME gp pairs (bit-exact frame0 too).
+    pcar_cap = None
+    pose_carrier_oracle = None
+    if pcar_b is not None and m.get("pose_carrier") is not None:
+        pcar_cap = _cap_pose_carrier(pcar_b, gp)
+        pose_carrier_oracle = parse_pose_carrier(pcar_cap)
+        man["pose_carrier"] = {**m["pose_carrier"], "n_pairs": gp}
     mj = json.dumps(man, separators=(",", ":")).encode()
     capped_bin = gate_root / "gate.bin"
     capped_bin.write_bytes(_io_pack(
-        mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11), None, lane_b_cap))
+        mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11), None, lane_b_cap, pcar_cap))
     gate_raw = gate_root / "gate.raw"
     proc = subprocess.run(
         [sys.executable, str(packet_dir / "inflate.py"), str(capped_bin), str(gate_raw)],
@@ -1107,7 +1564,8 @@ def bit_exact_roundtrip_gate(
     for name in order:  # re-dequant from the SAME capped blob for byte-identical inputs
         ref_params[name] = params[name]
     ref_code = (qc.astype(np.float32) * sc).reshape(code_cap.shape)
-    ref_frames, ref_argmax = numpy_oracle_reference_frames(ref_params, ref_code, man, gp, lane_pairs_cap)
+    ref_frames, ref_argmax = numpy_oracle_reference_frames(
+        ref_params, ref_code, man, gp, lane_pairs_cap, pose_carrier=pose_carrier_oracle)
 
     max_abs = 0
     all_equal = True
@@ -1141,10 +1599,13 @@ def bit_exact_roundtrip_gate(
     return result
 
 
-def _read_blob_bytes(blob: bytes) -> tuple[dict[str, Any], bytes, bytes, bytes, bytes | None]:
+def _read_blob_bytes(
+    blob: bytes,
+) -> tuple[dict[str, Any], bytes, bytes, bytes, bytes | None, bytes | None]:
     """Parse an in-memory LVLS1 blob (same grammar as the shipped inflate._read_blob). Returns
-    (manifest, base, code, pose, lane_band|None); ``lane_band`` is None when the 4-block (pre-Wave-E)
-    grammar is present (default-off)."""
+    (manifest, base, code, pose, lane_band|None, pose_carrier|None). Trailing optional blocks are
+    gated by the MANIFEST flags (lane_render_band / pose_carrier), NOT a bare off<len -- so a lone
+    pose_carrier block is not misread as lane. Default-off -> both trailing are None."""
     assert blob[: len(_MAGIC)] == _MAGIC, "bad level-set magic"
     off = len(_MAGIC)
     out: list[bytes] = []
@@ -1153,13 +1614,16 @@ def _read_blob_bytes(blob: bytes) -> tuple[dict[str, Any], bytes, bytes, bytes, 
         off += 4
         out.append(blob[off:off + n])
         off += n
+    manifest = json.loads(out[0].decode("utf-8"))
     lane_band: bytes | None = None
-    if off < len(blob):
-        (n,) = struct.unpack_from("<I", blob, off)
-        off += 4
-        lane_band = blob[off:off + n]
-        off += n
-    return json.loads(out[0].decode("utf-8")), out[1], out[2], out[3], lane_band
+    pose_carrier: bytes | None = None
+    if manifest.get("lane_render_band") is not None:
+        (n,) = struct.unpack_from("<I", blob, off); off += 4
+        lane_band = blob[off:off + n]; off += n
+    if manifest.get("pose_carrier") is not None:
+        (n,) = struct.unpack_from("<I", blob, off); off += 4
+        pose_carrier = blob[off:off + n]; off += n
+    return manifest, out[1], out[2], out[3], lane_band, pose_carrier
 
 
 # ---------------------------------------------------------------------------
@@ -1361,6 +1825,8 @@ def run(
     lane_render_band: bool = False,
     lane_band_cfg: LaneBandRenderConfig | None = None,
     lane_rd: bool = True,  # Wave-F: LBND2 optimal RD codec (default); False -> naive LBND1
+    pose_carrier: bool = False,  # #205 warp-real-luma frame0 pose carrier
+    pose_carrier_cfg: dict[str, Any] | None = None,
     verify_bit_exact: bool = False,
     bit_exact_pairs: int = 2,
     bit_exact_strict: bool = True,
@@ -1412,7 +1878,34 @@ def run(
               f"u_mask={lane_report['u_mask_enabled']}; quantize+raster = FREE (rule 118)  {_AUTHORITY}",
               flush=True)
 
-    blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest)
+    # #205 warp-real-luma pose carrier: build the COUNTED keyframe luma + per-pair homography section.
+    pose_carrier_bytes: bytes | None = None
+    pose_carrier_manifest: dict[str, Any] | None = None
+    pose_carrier_report: dict[str, Any] = {"active": False}
+    keyframe_accounting: dict[str, Any] | None = None
+    if pose_carrier:
+        pc_cfg = pose_carrier_cfg or {"s_t": 0.16, "s_r": 1.0, "pitch": 0.02, "stride": 1, "downscale": 1}
+        pose_carrier_bytes, pose_carrier_manifest, pose_carrier_report = build_pose_carrier_section(
+            gt_cache, n_pairs, pc_cfg)
+        # REUSE the canonical keyframe_payload_accounting (tools.compose_witness_archive, f7c6abdea) for
+        # the rule-118 line item -- fed the MEASURED keyframe blob bytes actually stored (NOT an estimate).
+        from tools.compose_witness_archive import keyframe_payload_accounting  # noqa: PLC0415
+        kf_measured = int(pose_carrier_report["keyframe_blob_bytes_total"])
+        keyframe_accounting = keyframe_payload_accounting(
+            argparse.Namespace(keyframe_payload_path=None, keyframe_payload_bytes=kf_measured,
+                               keyframe_count=int(pose_carrier_report["n_keyframes"])))
+        pose_note = (f"WARP-REAL-LUMA frame0 carrier ACTIVE: {pose_carrier_report['n_keyframes']} stored "
+                     f"keyframe(s) (store_hw={pose_carrier_report['keyframe_store_hw']}, "
+                     f"lossless_native={pose_carrier_report['keyframe_lossless_native']}) COUNTED "
+                     f"{kf_measured} B; frame0 = warp(keyframe, per-pair H) -> PoseNet reads real warped "
+                     f"motion. Section={pose_carrier_report['pose_carrier_section_bytes']} B.")
+        print(f"[pose-carrier] warp-real-luma frame0 ACTIVE: n_kf={pose_carrier_report['n_keyframes']} "
+              f"stride={pose_carrier_report['stride']} store_hw={pose_carrier_report['keyframe_store_hw']} "
+              f"keyframe_bytes={kf_measured} section={pose_carrier_report['pose_carrier_section_bytes']} B "
+              f"(rate += {keyframe_accounting['keyframe_blob_rate']:.5f})  {_AUTHORITY}", flush=True)
+
+    blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest,
+                                          pose_carrier_bytes, pose_carrier_manifest)
     if not breakdown["accounting_matches_canonical"]:
         print(f"[WARN] byte-close accounting (base={breakdown['base_int8_brotli_bytes']}, "
               f"code={breakdown['code_int8_brotli_bytes']}) != canonical quantize_levelset_blob "
@@ -1461,6 +1954,23 @@ def run(
                   "it (the scorer runs PoseNet on the FRAMES).", flush=True)
         parity["pose_blind"] = bool(pose_blind)
 
+    # #205: CONFIRM the pose-carrier decode through the REAL byte-closed inflate (frame0 bit-exact
+    # reproduction + the d_pose triad). Only when the carrier is active AND we have GT to score.
+    pose_carrier_confirmation: dict[str, Any] = {"checked": False}
+    if pose_carrier and pose_carrier_bytes is not None and not skip_parity:
+        pose_carrier_confirmation = pose_carrier_confirm(
+            Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, n_pairs, pose_carrier_bytes)
+        pose_carrier_confirmation["checked"] = True
+        pc_c = pose_carrier_confirmation
+        print(f"[pose-carrier CONFIRM] frame0 decode bit-exact={pc_c['frame0_decode_bit_exact']} "
+              f"(max_abs={pc_c['frame0_max_abs_uint8_diff']}) | d_pose: carrier(warp-f0+witness-f1)="
+              f"{pc_c['d_pose_carrier_warp_f0_witness_f1']:.4f}  unwarped(gtf0+witness-f1)="
+              f"{pc_c['d_pose_unwarped_gtf0_witness_f1']:.4f}  ceiling(gtf0+warp-gtf0)="
+              f"{pc_c['d_pose_ceiling_gtf0_warpf0']:.4f}  (null~189.62)  {_AUTHORITY}", flush=True)
+        if not pc_c["frame0_decode_bit_exact"]:
+            print("[pose-carrier CONFIRM] WARNING: frame0 decode NOT bit-exact vs the numpy authority "
+                  "-> the byte-close does NOT faithfully reproduce the pose decode (NO-FAKE).", flush=True)
+
     exact_eval: dict[str, Any] = {"ran": False}
     if run_exact_eval:
         exact_eval = run_upstream_evaluate(
@@ -1508,8 +2018,28 @@ def run(
             },
             "pose_sidecar": pose_note,
             "lane_render_band": lane_report,
+            "pose_carrier": pose_carrier_report,
         },
         "lane_render_band": lane_report,
+        "pose_carrier": pose_carrier_report,
+        "pose_carrier_keyframe_accounting": (
+            None if keyframe_accounting is None else {
+                **keyframe_accounting,
+                # VERIFY the counted keyframe bytes against the ACTUAL bytes in the composed archive.
+                "verified_against_archive": {
+                    "pose_carrier_section_bytes_in_0bin": int(breakdown.get("pose_carrier_counted_bytes", 0)),
+                    "section_bytes_match_report": bool(
+                        int(breakdown.get("pose_carrier_counted_bytes", 0))
+                        == int(pose_carrier_report.get("pose_carrier_section_bytes", -1))),
+                    "keyframe_bytes_le_section": bool(
+                        int(pose_carrier_report.get("keyframe_blob_bytes_total", 0))
+                        <= int(breakdown.get("pose_carrier_counted_bytes", 0))),
+                    "note": "keyframe payload is COUNTED inside archive.zip (0.bin 6th block -> the "
+                            "measured rate term already includes it); the accounting is cross-checked "
+                            "against the real section st_size (not an estimate).",
+                },
+            }),
+        "pose_carrier_confirmation": pose_carrier_confirmation,
         "inflate": inflate_info,
         "bit_exact_roundtrip_gate": bit_exact,
         "parity_on_inflated_frames": parity,
@@ -1551,6 +2081,25 @@ def main(argv: list[str] | None = None) -> int:
                          "default. The inflate render does NOT read it -> does NOT lower realized d_pose.")
     ap.add_argument("--pose-sidecar-path", type=Path, default=None,
                     help="prebuilt posenet_targets.bin (tac.scorer_targets.extract_and_save)")
+    # #205 WARP-REAL-LUMA FRAME0 POSE CARRIER. OFF by default -> byte-identical. Needs --gt-cache
+    # (real gt_f0 keyframes + gt_poses). Replaces the render's SEG-free frame0 with a stored real
+    # keyframe warped by the per-pair ego homography -> PoseNet reads real warped motion; the keyframe
+    # payload is COUNTED in archive.zip (rule 118: keyframe COUNTED, warp decoder FREE).
+    ap.add_argument("--pose-carrier", action="store_true",
+                    help="#205 warp-real-luma frame0 pose carrier (needs --gt-cache). frame0 = "
+                         "warp(stored real keyframe, per-pair ego H); COUNTS the keyframe luma + H in "
+                         "archive.zip. OFF by default (archive byte-identical when off).")
+    ap.add_argument("--pc-s-t", type=float, default=0.16, help="pose-carrier translation calibration scale (s_t).")
+    ap.add_argument("--pc-s-r", type=float, default=1.0, help="pose-carrier rotation calibration scale (s_r).")
+    ap.add_argument("--pc-pitch", type=float, default=0.02, help="pose-carrier road-plane pitch (rad).")
+    ap.add_argument("--pc-keyframe-stride", type=int, default=1,
+                    help="pose-carrier keyframe stride (1 = per-pair, the exact warp-real-luma upper "
+                         "bound; >1 shares one stored keyframe across a window -> cheaper rate, "
+                         "geometrically approximate for shared keyframes -- LOUDLY flagged).")
+    ap.add_argument("--pc-keyframe-downscale", type=int, default=1,
+                    help="pose-carrier keyframe store downscale factor (1 = native lossless; 2 = "
+                         "native/2, upsampled before warp -- the cheap-rate lever, ~matched to PoseNet's "
+                         "512x384 working res).")
     # #224 Wave E: decode-consistent analytic-lane RENDER-BAND (fork B). OFF by default -> byte-identical.
     # Fits per-pair lane manifold coords from --gt-cache (COUNTED), reproduces the coverage+composite
     # in inflate (FREE, rule 118) so the band is a REAL (non-phantom) score. Closes R5_BLOCK.
@@ -1641,6 +2190,11 @@ def main(argv: list[str] | None = None) -> int:
             u_mask_tau=args.lane_band_tau, u_mask_eps=args.lane_band_eps,
         ),
         lane_rd=not args.lane_band_naive,
+        pose_carrier=args.pose_carrier,
+        pose_carrier_cfg={
+            "s_t": args.pc_s_t, "s_r": args.pc_s_r, "pitch": args.pc_pitch,
+            "stride": args.pc_keyframe_stride, "downscale": args.pc_keyframe_downscale,
+        },
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,
         bit_exact_strict=not args.no_bit_exact_strict,
