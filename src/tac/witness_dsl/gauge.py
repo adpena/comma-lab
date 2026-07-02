@@ -501,6 +501,81 @@ def default_cost_table() -> GaugeCostTable:
             provenance="rule-118: LEARNED/video-derived content is COUNTED in archive.zip; bytes "
                        "= the learned residual (UNMEASURED, sister of ResidualGauge.DIRECT_LEARNED). "
                        "deterministic flag depends on the trained-decode being certified bit-identical"),
+
+        # --- RENDER_AA (#224/#220; ~0-rate decode-time observation model) --------------------
+        # NONE = the byte-identical point-sample baseline. Its d_seg IS the witness's OWN through-R
+        # floor (NOT an independent chart delta) -> UNRANKED here (bytes/d_seg None => s_contribution
+        # None => fix_gauge lists it "unrankable", so the auto-selector cannot mis-pick it merely for
+        # being byte-free). Still measured=True + compliant+deterministic so GaugeChoice.validate()
+        # (the default field) passes.
+        RenderAAGauge.NONE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="#224/#220 --render-aa none: byte-identical point-sample baseline (the "
+                       "witness's own through-R floor; not a chart delta -> unranked in fix_gauge)"),
+        RenderAAGauge.SUPERSAMPLE_2X: GaugeCost(
+            counted_bytes=0, d_seg_through_R=0.00086, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-ly/-ma tools/levelset_gate_discriminators_n600.py [macOS-CPU advisory "
+                       "NON-PROMOTABLE]: ss=2 supersample->box footprint integration recovers the "
+                       "finest-scale lane structure through the contest R (AA floor d_seg~0.00086, "
+                       "lane recall +0.374 vs point-sample); ~0-rate (decode-time deterministic, "
+                       "archive bytes UNCHANGED). NOTE: composing with --self-orient is FAIL-CLOSED "
+                       "at n600 (fine per-pair dir-feat cache OOM / on-demand EDT wall-clock; see the "
+                       "levelset trainer supersample guard); use with --render-aa without self-orient "
+                       "OR pair self-orient with --render-aa ipe / --lane-render-band"),
+        RenderAAGauge.SUPERSAMPLE_3X: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="ss=3 supersample->box (finer footprint integration; 9x forward; 0-rate "
+                       "decode-time); through-R d_seg UNMEASURED (pending) -- dominated-until-"
+                       "measured by SUPERSAMPLE_2X"),
+        RenderAAGauge.IPE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="mip-NeRF IPE cone attenuation of the curvelet columns (analytical ~0-compute "
+                       "AA proxy, 0-rate; self-orient-COMPATIBLE, already wired in the trainer); "
+                       "through-R d_seg floor UNMEASURED (pending) -- supersample->box is the authority"),
+
+        # --- LANE_BAND (#224/FEED-dv #203/#213/#215; class-1 render-time authority, 0-byte) ----
+        LaneGauge.NONE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="--lane-render-band OFF: the witness authors class-1 itself (byte-identical "
+                       "baseline; the lane d_seg is the witness's own floor -> unranked in fix_gauge)"),
+        LaneGauge.BAND_RENDER_AUTHORITY: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="FEED-dv #203/#213/#215 --lane-render-band: analytic class-1 render authority "
+                       "composited PRE-R (AA-SDF range-dependent coverage x dash gate x witness-margin "
+                       "FP killer); 0-byte decode-deterministic. Advisory openpilot-poly band base "
+                       "d_seg~0.00087 (FEED-dj); the NET-NEGATIVE through-R d_seg is realized by "
+                       "TRAINING WITH the band active (GPU-pending) -> measured=False PENDING. NOW "
+                       "self-orient-composable (Option-B lane-band wire-in)"),
+
+        # --- HEAD_GEOMETRY (#218; byte-free head/margin-field facets) --------------------------
+        HeadGeometryGauge.SOFTMAX: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="--head softmax: standard softmax head (byte-identical baseline; the head "
+                       "d_seg is the witness's own floor -> unranked in fix_gauge)"),
+        HeadGeometryGauge.ETF: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#218 --head etf: frozen simplex-ETF head (Yang 2022, neural-collapse optimal) "
+                       "removes minority-class NORM COLLAPSE that erases Lane/Movable; regenerable "
+                       "from a fixed seed at inflate => the KxD head weight is FREE (rate win, 0 bytes "
+                       "counted); through-R d_seg delta UNMEASURED (pending)"),
+        HeadGeometryGauge.ADDITIVE_MARGIN: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#218 --head additive-margin: additive-margin softmax (boundary sharpening, "
+                       "0-byte); through-R d_seg delta UNMEASURED (pending)"),
+        HeadGeometryGauge.MENON_LOGIT_ADJUST: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#218 --logit-adjust-per-class: Menon per-class logit adjustment (rare-class "
+                       "Lane/Movable target boost, 0-byte); through-R d_seg delta UNMEASURED (pending)"),
     }
     return GaugeCostTable(cells)
 
@@ -525,6 +600,13 @@ class GaugeChoice:
     pose: PoseGauge
     movables: MovablesGauge
     generation: GenerationGauge
+    # #224 Option-B APPEND-ONLY render/head components. OPTIONAL (defaults = the fail-closed OFF /
+    # byte-identical member) so EVERY existing 6-field GaugeChoice(...) caller is UNBROKEN: an old
+    # call constructs render_aa=NONE / lane_band=NONE / head_geometry=SOFTMAX, which validate() as
+    # compliant+deterministic byte-identical baselines. Selecting an ACTIVE chart is opt-in.
+    render_aa: RenderAAGauge = RenderAAGauge.NONE
+    lane_band: LaneGauge = LaneGauge.NONE
+    head_geometry: HeadGeometryGauge = HeadGeometryGauge.SOFTMAX
 
     def items(self) -> tuple[tuple[GaugeComponent, Enum], ...]:
         return (
@@ -534,6 +616,9 @@ class GaugeChoice:
             (GaugeComponent.POSE, self.pose),
             (GaugeComponent.MOVABLES, self.movables),
             (GaugeComponent.GENERATION, self.generation),
+            (GaugeComponent.RENDER_AA, self.render_aa),
+            (GaugeComponent.LANE_BAND, self.lane_band),
+            (GaugeComponent.HEAD_GEOMETRY, self.head_geometry),
         )
 
     def validate(self, table: GaugeCostTable | None = None) -> "GaugeChoice":
