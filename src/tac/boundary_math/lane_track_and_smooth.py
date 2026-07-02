@@ -83,29 +83,38 @@ def track_lane_slots(
     pairs_lines: list[list[Any]], *,
     f_near: float = _RD_F_NEAR,
     gate_dist_m: float = 1.5,
-    max_gap: int = 6,
+    max_gap: int = 24,
+    shape_weight: float = 0.0,
     f_lo: float = 8.0,
-    f_hi: float = 40.0,
-    n_samples: int = 8,
+    f_hi: float = 25.0,
+    n_samples: int = 6,
 ) -> TrackAssignment:
     """Assign each per-frame lane fit to a PERSISTENT track so slot ``k`` = the same physical
     lane for its lifetime (kills the slot-swap jitter LOSSLESSLY). Tier-A per-frame Hungarian
     (``scipy.optimize.linear_sum_assignment``) with ``max_gap`` revival (a track absent for
-    <= max_gap frames may re-match -> windowed-global; handles momentary occlusion/cross).
+    <= max_gap frames may re-match -> windowed-global; handles a lane transiently dropping out).
 
-    Cost = RMS lateral difference (metres) over sampled forward distances between a candidate
-    line's centerline and a track's last-observed centerline; a match is accepted only if the
-    cost <= ``gate_dist_m`` (else the line BIRTHS a new track). Deterministic: within-frame
-    lines are lateral-sorted (stable) so birth ids are assigned left-to-right; the LAP is
-    deterministic. Returns a ``TrackAssignment`` with the packed (M, presence, K)."""
+    ASSOCIATION COST = the STABLE near-field lateral position at ``f_near`` (metres) -- the SAME
+    key the LBND2 lateral-sort uses. For the contest's parallel non-crossing lanes the observed
+    "swaps" are lane-COUNT re-indexing (a lane appears/leaves -> every slot's index shifts), NOT
+    lateral crossings, so the near-field lateral is the correct, robust association feature. It
+    is deliberately NOT the far-field curvature (c2/c3), whose per-frame FIT-JITTER (measured
+    p99 ~2.6 m at 40 m) would otherwise FORK a persistent lane into spurious births (the
+    over-fragmentation bug). ``shape_weight`` (default 0) optionally adds a near-field
+    (f_lo..f_hi) RMS-shape tiebreak for genuine crossings; keep 0 for parallel-lane data. A
+    match is accepted only if the cost <= ``gate_dist_m`` (else the line BIRTHS a new track).
+    Deterministic: within-frame lines are lateral-sorted (stable) so birth ids are assigned
+    left-to-right; the LAP is deterministic. Returns a ``TrackAssignment`` (packed M/presence/K)."""
 
     from scipy.optimize import linear_sum_assignment
 
     P = len(pairs_lines)
     fs = np.linspace(float(f_lo), float(f_hi), int(n_samples))
+    sw = float(shape_weight)
 
-    # per-frame slot vectors + centerline forward-samples, lateral-sorted (deterministic births)
+    # per-frame slot vectors + near-field lateral (+ optional near-shape samples), lateral-sorted
     frame_vecs: list[np.ndarray] = []
+    frame_lat: list[np.ndarray] = []
     frame_samp: list[np.ndarray] = []
     for lines in pairs_lines:
         if lines:
@@ -113,14 +122,18 @@ def track_lane_slots(
             lat = np.array([float(np.polyval(v[0:4], f_near)) for v in vecs], np.float64)
             order = np.argsort(lat, kind="stable")
             vecs = vecs[order]
-            samp = np.stack([np.polyval(vecs[i, 0:4], fs) for i in range(vecs.shape[0])])
+            lat = lat[order]
+            samp = (np.stack([np.polyval(vecs[i, 0:4], fs) for i in range(vecs.shape[0])])
+                    if sw > 0.0 else np.zeros((vecs.shape[0], fs.size), np.float64))
         else:
             vecs = np.zeros((0, _RD_D_SLOT), np.float64)
+            lat = np.zeros(0, np.float64)
             samp = np.zeros((0, fs.size), np.float64)
         frame_vecs.append(vecs)
+        frame_lat.append(lat)
         frame_samp.append(samp)
 
-    # active tracks: dict tid -> {"vec","samp","last_frame"}
+    # active tracks: dict tid -> {"vec","lat","samp","last_frame"}
     tracks: dict[int, dict[str, Any]] = {}
     next_tid = 0
     assignments: list[dict[int, np.ndarray]] = [dict() for _ in range(P)]
@@ -128,6 +141,7 @@ def track_lane_slots(
     n_births = 0
     for t in range(P):
         vecs = frame_vecs[t]
+        lat = frame_lat[t]
         samp = frame_samp[t]
         n = vecs.shape[0]
         # prune dead tracks (unseen > max_gap frames)
@@ -139,13 +153,17 @@ def track_lane_slots(
         tids = sorted(tracks.keys())
         matched_lines: set[int] = set()
         if tids:
-            trk_samp = np.stack([tracks[tid]["samp"] for tid in tids])   # (T, S)
-            C = np.sqrt(((trk_samp[:, None, :] - samp[None, :, :]) ** 2).mean(axis=2))  # (T, n)
+            trk_lat = np.array([tracks[tid]["lat"] for tid in tids], np.float64)
+            C = np.abs(trk_lat[:, None] - lat[None, :])                  # (T, n) near-field lateral
+            if sw > 0.0:
+                trk_samp = np.stack([tracks[tid]["samp"] for tid in tids])
+                C = C + sw * np.sqrt(((trk_samp[:, None, :] - samp[None, :, :]) ** 2).mean(axis=2))
             ri, ci = linear_sum_assignment(C)
             for r, c in zip(ri.tolist(), ci.tolist()):
                 if float(C[r, c]) <= gate_dist_m:
                     tid = tids[r]
                     tracks[tid]["vec"] = vecs[c]
+                    tracks[tid]["lat"] = float(lat[c])
                     tracks[tid]["samp"] = samp[c]
                     tracks[tid]["last_frame"] = t
                     assignments[t][tid] = vecs[c]
@@ -156,7 +174,7 @@ def track_lane_slots(
                 continue
             tid = next_tid
             next_tid += 1
-            tracks[tid] = {"vec": vecs[c], "samp": samp[c], "last_frame": t}
+            tracks[tid] = {"vec": vecs[c], "lat": float(lat[c]), "samp": samp[c], "last_frame": t}
             assignments[t][tid] = vecs[c]
             n_births += 1
 
@@ -188,6 +206,120 @@ def track_lane_slots(
                     "max_gap": int(max_gap), "f_near": float(f_near),
                     "f_lo": float(f_lo), "f_hi": float(f_hi), "n_samples": int(n_samples)},
     )
+
+
+# --------------------------------------------------------------------------- #
+# #1b BOUNDED-K COHERENT SLOTTING: the RATE-optimal realization of correspondence.
+#    Persistent tracks (unbounded K, above) give clean per-lane series but a COLUMN
+#    EXPLOSION (K grows with total lane turnover -> more sparse columns + birth spikes ->
+#    MEASURED WORSE bytes at n600). Bounded-K coherent slotting keeps K = max-concurrent
+#    lanes (like the LBND2 sort) but assigns each frame's lines to slots by MINIMIZING the
+#    temporal delta vs the previous frame's slot values (Hungarian) instead of by lateral
+#    order -> a persistent lane KEEPS its slot (zero delta), and a slot is REUSED (not a new
+#    column) when its lane leaves and a new one arrives. LOSSLESS on geometry (only the slot
+#    INDEX changes) and compact (K = sort's K). MEASURED n600: a small (~0.7%) lossless rate
+#    win over the lateral-sort -- the honest size of the correspondence gain (the dominant
+#    delta mass is per-frame fit JITTER, not slot-swaps, so correspondence is a marginal
+#    refinement, not the decisive lever the survey DERIVED).
+# --------------------------------------------------------------------------- #
+def coherent_slot_pack(
+    pairs_lines: list[list[Any]], *, f_near: float = _RD_F_NEAR, shape_weight: float = 0.0,
+    f_lo: float = 8.0, f_hi: float = 25.0, n_samples: int = 6,
+) -> TrackAssignment:
+    """Bounded-K temporally-coherent slot assignment (K = max per-frame line count, like the
+    LBND2 sort). Each frame's lines are Hungarian-assigned to the K slots to MINIMIZE the
+    delta vs the previous frame's slot values (near-field lateral cost; optional near-shape
+    tiebreak) -> persistent lanes keep their slot (0 delta), slots are REUSED across
+    births/deaths. Frame 0 is seeded by lateral order (deterministic). LOSSLESS (only the slot
+    index changes). Returns a ``TrackAssignment`` (M, presence, K); ``n_births`` counts
+    slot-reuse/first-fill events (observability, not columns)."""
+
+    from scipy.optimize import linear_sum_assignment
+
+    P = len(pairs_lines)
+    K = max((len(p) for p in pairs_lines), default=0)
+    if K == 0:
+        return TrackAssignment(M=np.zeros((P, 0)), presence=np.zeros((P, 0), bool), K=0,
+                               n_births=0, n_deaths=0, n_matched=0,
+                               provenance={"tier": "bounded_K_coherent_slot"})
+    D = K * _RD_D_SLOT
+    fs = np.linspace(float(f_lo), float(f_hi), int(n_samples))
+    sw = float(shape_weight)
+    M = np.zeros((P, D), np.float64)
+    presence = np.zeros((P, K), dtype=bool)
+    prev = np.zeros((K, _RD_D_SLOT), np.float64)     # held slot values
+    ever = np.zeros(K, dtype=bool)                    # slot has been filled at least once
+    n_reuse = 0
+    n_matched = 0
+    for t in range(P):
+        lines = pairs_lines[t]
+        n = len(lines)
+        if n == 0:
+            M[t] = prev.reshape(-1)
+            continue
+        vecs = np.stack([_line_to_slot_vec(ln) for ln in lines]).astype(np.float64)
+        lat = np.array([float(np.polyval(v[0:4], f_near)) for v in vecs], np.float64)
+        order = np.argsort(lat, kind="stable")
+        vecs = vecs[order]
+        lat = lat[order]
+        if t == 0 or not ever.any():
+            for slot in range(min(n, K)):
+                prev[slot] = vecs[slot]
+                ever[slot] = True
+                presence[t, slot] = True
+        else:
+            slot_lat = np.array([float(np.polyval(prev[k, 0:4], f_near)) for k in range(K)], np.float64)
+            C = np.abs(lat[:, None] - slot_lat[None, :])                # (n, K) near-field lateral
+            # bias genuinely-unused slots so a NEW lane prefers an empty slot over evicting a lane
+            C = C + np.where(ever[None, :], 0.0, 1e-6)
+            if sw > 0.0:
+                ls = np.stack([np.polyval(vecs[i, 0:4], fs) for i in range(n)])
+                ps = np.stack([np.polyval(prev[k, 0:4], fs) for k in range(K)])
+                C = C + sw * np.sqrt(((ls[:, None, :] - ps[None, :, :]) ** 2).mean(axis=2))
+            ri, ci = linear_sum_assignment(C)
+            for r, c in zip(ri.tolist(), ci.tolist()):
+                if ever[c] and float(np.polyval(prev[c, 0:4], f_near) - lat[r]) != 0.0:
+                    n_matched += 1
+                if not ever[c]:
+                    n_reuse += 1
+                prev[c] = vecs[r]
+                ever[c] = True
+                presence[t, c] = True
+        M[t] = prev.reshape(-1)
+    return TrackAssignment(
+        M=M, presence=presence, K=int(K), n_births=int(n_reuse), n_deaths=0, n_matched=int(n_matched),
+        provenance={"tier": "bounded_K_coherent_slot", "f_near": float(f_near),
+                    "shape_weight": float(sw)})
+
+
+def track_and_batch_denoise_lines(
+    pairs_lines: list[list[Any]], *, method: str = "rts",
+    gate_dist_m: float = 1.5, max_gap: int = 24, dims: tuple[int, ...] = _SMOOTH_DIMS,
+    **denoise_kwargs: Any,
+) -> list[list[Any]]:
+    """The CLEAN batch-denoise SOURCE transform (correspondence-aware analogue of
+    ``temporal_smooth_pairs_lines``): PERSISTENT-track the lines (each physical lane = a clean
+    continuous series), batch-denoise each track (RTS/l1trend/median/rpca), then UNPACK to
+    per-pair lines (which the caller serializes via the COMPACT sort/coherent-slot pack -> the
+    decoupling that avoids the persistent-track column explosion). Denoising in clean track-
+    space (not the swap-corrupted sort slots) is the whole point: a moving-average over sort
+    slots smears ACROSS slot-swaps; this smooths WITHIN a physical lane. Returns denoised lines."""
+
+    from tac.boundary_math.analytic_lane_render_band import _slot_vec_to_line
+
+    if method == "none":
+        return [list(ls) for ls in pairs_lines]
+    ta = track_lane_slots(pairs_lines, gate_dist_m=gate_dist_m, max_gap=max_gap)
+    Ms = coherent_denoise_track_matrix(ta.M, ta.presence, ta.K, method=method, dims=dims,
+                                       **denoise_kwargs)
+    out: list[list[Any]] = []
+    for p in range(Ms.shape[0]):
+        lines = []
+        for slot in range(ta.K):
+            if ta.presence[p, slot]:
+                lines.append(_slot_vec_to_line(Ms[p, slot * _RD_D_SLOT:(slot + 1) * _RD_D_SLOT]))
+        out.append(lines)
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -310,31 +442,41 @@ def _rpca_pcp(Mmat: np.ndarray, *, lam: float | None = None, mu: float | None = 
     X = np.asarray(Mmat, np.float64)
     if X.ndim != 2 or min(X.shape) == 0:
         return X.copy(), np.zeros_like(X)
+    if not np.all(np.isfinite(X)):
+        return X.copy(), np.zeros_like(X)
     m, n = X.shape
     lam = float(lam) if lam is not None else 1.0 / np.sqrt(max(m, n))
-    norm2 = np.linalg.norm(X, 2)
-    norm_inf = np.abs(X).max() / max(lam, 1e-30)
+    norm2 = float(np.linalg.norm(X, 2))
+    if norm2 < 1e-30:
+        return X.copy(), np.zeros_like(X)                     # ~constant matrix: nothing to separate
+    norm_inf = float(np.abs(X).max()) / max(lam, 1e-30)
     dual_norm = max(norm2, norm_inf)
     Y = X / max(dual_norm, 1e-30)
-    mu = float(mu) if mu is not None else 1.25 / max(norm2, 1e-30)
+    mu = float(mu) if mu is not None else 1.25 / norm2
     mu_bar = mu * 1e7
     rho = 1.5
-    L = np.zeros_like(X)
+    L = X.copy()
     S = np.zeros_like(X)
-    Xfro = max(np.linalg.norm(X, "fro"), 1e-30)
-    for _ in range(int(n_iter)):
-        # L = SVT(X - S + Y/mu, 1/mu)
-        U, sig, Vt = np.linalg.svd(X - S + Y / mu, full_matrices=False)
-        sig = np.maximum(sig - 1.0 / mu, 0.0)
-        L = (U * sig) @ Vt
-        # S = soft(X - L + Y/mu, lam/mu)
-        Z = X - L + Y / mu
-        S = np.sign(Z) * np.maximum(np.abs(Z) - lam / mu, 0.0)
-        Res = X - L - S
-        Y = Y + mu * Res
-        mu = min(mu * rho, mu_bar)
-        if np.linalg.norm(Res, "fro") / Xfro < tol:
-            break
+    Xfro = max(float(np.linalg.norm(X, "fro")), 1e-30)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        for _ in range(int(n_iter)):
+            Warg = X - S + Y / mu
+            if not np.all(np.isfinite(Warg)):                 # diverged -> bail to the input (safe probe)
+                return X.copy(), np.zeros_like(X)
+            # L = SVT(X - S + Y/mu, 1/mu)
+            U, sig, Vt = np.linalg.svd(Warg, full_matrices=False)
+            sig = np.maximum(sig - 1.0 / mu, 0.0)
+            L = (U * sig) @ Vt
+            # S = soft(X - L + Y/mu, lam/mu)
+            Z = X - L + Y / mu
+            S = np.sign(Z) * np.maximum(np.abs(Z) - lam / mu, 0.0)
+            Res = X - L - S
+            Y = Y + mu * Res
+            mu = min(mu * rho, mu_bar)
+            if float(np.linalg.norm(Res, "fro")) / Xfro < tol:
+                break
+    if not (np.all(np.isfinite(L)) and np.all(np.isfinite(S))):
+        return X.copy(), np.zeros_like(X)
     return L, S
 
 

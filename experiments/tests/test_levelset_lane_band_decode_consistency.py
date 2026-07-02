@@ -54,6 +54,7 @@ from tac.boundary_math.analytic_lane_render_band import (
     serialize_lane_band,
     serialize_lane_band_any,
     serialize_lane_band_rd,
+    serialize_lane_band_rd_tracked,
     witness_uncertainty_mask,
 )
 from tac.boundary_math.lane_sdf_component import LaneLine
@@ -281,6 +282,38 @@ def test_capped_inflate_carries_band(tmp_path):
     info = lbce.run_inflate(pkt, cfg["n_pairs"], 1)
     assert info["eval_pairs"] == 1 and info["n_frames_emitted"] == 2
     assert info["full_output_shape_ok"] is True
+
+
+# --- Stage-2b: CORRESPONDENCE-FIRST tracked LBND2 section (ships as LBND2, ZERO new inflate code) ---
+def _lane_section_tracked(cfg_band, pairs=None, *, pack_mode="coherent_slot", smooth="none"):
+    pairs = pairs or _synthetic_lines()
+    raw, _meta = serialize_lane_band_rd_tracked(pairs, cfg_band, pack_mode=pack_mode, smooth=smooth)
+    lane_bytes = brotli.compress(raw, quality=11)
+    manifest = lbce._lane_manifest_from_cfg(cfg_band, {"n_pairs": len(pairs)})
+    return lane_bytes, manifest
+
+
+def _packet_tracked(tmp_path, lane_cfg, *, pack_mode="coherent_slot", smooth="none"):
+    cfg = _tiny_cfg()
+    params = _tiny_params(cfg)
+    lane_bytes, manifest = _lane_section_tracked(lane_cfg, pack_mode=pack_mode, smooth=smooth)
+    blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None, lane_bytes, manifest)
+    pkt = tmp_path / "pkt"
+    lbce.assemble_packet(blob, pkt)
+    return pkt, blob, cfg
+
+
+@pytest.mark.parametrize("pack_mode,smooth", [("coherent_slot", "none"), ("coherent_slot", "rts"),
+                                              ("persistent", "none")])
+def test_bit_exact_gate_tracked_lbnd2(tmp_path, pack_mode, smooth):
+    """DECODE-CONSISTENCY PROOF: a CORRESPONDENCE-tracked LBND2 band, rendered by the SHIPPED
+    inflate.py (the UNCHANGED _lane_parse_rd), is BIT-IDENTICAL to the numpy-fp32 oracle band.
+    Correspondence + batch denoise are compress-time SOURCE transforms -> ships as LBND2 bytes,
+    ZERO new inflate code (the same rule-118 property that made moving-average shippable)."""
+    pkt, blob, _ = _packet_tracked(tmp_path, _lane_cfg(u_mask_enabled=False),
+                                   pack_mode=pack_mode, smooth=smooth)
+    res = lbce.bit_exact_roundtrip_gate(pkt, blob, gate_pairs=2, strict=True)
+    assert res["bit_exact"] is True and res["max_abs_uint8_diff"] == 0
 
 
 # ===========================================================================

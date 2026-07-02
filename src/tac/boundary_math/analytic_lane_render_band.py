@@ -1471,73 +1471,101 @@ def derive_task_rd_steps(
 # WAVE-F STAGE-2b: CORRESPONDENCE-FIRST tracked + coherent-denoise serialization.
 # The research-optimal lane-coeff source re-parameterization (authority
 # ``.omx/research/lane_coeff_tracking_denoising_optimal_survey_20260702.md``): replace the
-# LBND2 lateral-SORT slot packing (which injects slot-swap jitter -- ~44% of the temporal-
-# delta L1 mass) with a Hungarian TRACKED packing (slot k = the same physical lane over its
-# lifetime -> swaps vanish LOSSLESSLY), then per-track BATCH edge-preserving denoise (Kalman-
-# RTS MMSE / l1-trend / RPCA -- NOT the causal ego-predictor that measured WORSE, NOT the
-# edge-blurring moving-average). It emits the SAME LBND2 wire format via ``_serialize_matrix_
-# lbnd2`` -> the decode + inflate ``_lane_parse_rd`` are UNCHANGED (ships as standard LBND2
-# bytes, ZERO new inflate code), exactly the ``temporal_smooth_pairs_lines`` property.
+# LBND2 lateral-SORT slot packing with a CORRESPONDENCE-aware packing (slot = a temporally-
+# consistent physical lane), optionally per-track BATCH edge-preserving denoise (Kalman-RTS
+# MMSE / l1-trend / RPCA -- NOT the causal ego-predictor that measured WORSE). It emits the
+# SAME LBND2 wire format via ``_serialize_matrix_lbnd2`` -> the decode + inflate
+# ``_lane_parse_rd`` are UNCHANGED (ships as standard LBND2 bytes, ZERO new inflate code),
+# exactly the ``temporal_smooth_pairs_lines`` property.
 #
-# GATE ORDER (measured by ``lane_band_tracking_rate_report``): (i) tracked-ONLY bytes (isolate
-# the LOSSLESS correspondence gain; verify the top-5% jump mass DROPS) -> (ii) + RTS/l1-trend
-# denoise (kill jitter, keep edges) -> (iii) RPCA probe. rule-118: tracking+denoise FREE
-# (offline generic algorithm); COUNTED = the (smaller, coherent) LBND2 coeff stream + presence.
-# The d_seg WIN is OUT OF SCOPE (the #205 through-R leg); this delivers the lower-rate,
-# LESS-LOSSY band SOURCE + the MEASURED rate. Determinism: numpy LBND2 decode (zero mlx).
+# TWO packings (the MEASURED distinction, n600):
+#   * ``coherent_slot`` (DEFAULT) -- bounded-K (= max-concurrent, like the sort) Hungarian
+#     slot assignment minimizing the temporal delta. LOSSLESS + compact -> a SMALL (~0.7%)
+#     lossless rate win over the lateral sort. This is the honest size of the correspondence
+#     gain: the dominant delta mass is per-frame fit JITTER, NOT slot-swaps (the survey's
+#     "44% swaps" over-estimated; MEASURED sort top-5% mass is jitter-dominated), so
+#     correspondence is a marginal refinement, not the decisive lever.
+#   * ``persistent`` -- unbounded-K one-column-per-physical-lane. Clean per-lane series (best
+#     for the batch DENOISE) but a COLUMN EXPLOSION at scale (MEASURED n600 K=21 -> WORSE
+#     bytes than the sort). Used ONLY as the clean series for the decoupled denoise, then
+#     re-packed compact.
+# The batch denoise (``smooth``) runs in the CLEAN persistent-track space
+# (``track_and_batch_denoise_lines``), then the denoised LINES are packed by ``pack_mode`` --
+# the DECOUPLING that avoids the column explosion.
+#
+# rule-118: tracking + denoise FREE (offline generic algorithm); COUNTED = the (coherent)
+# LBND2 coeff stream + presence. The d_seg WIN is OUT OF SCOPE (the #205 through-R leg); this
+# delivers the correspondence-lossless + denoised band SOURCE + the MEASURED rate + geometric
+# distortion. Determinism: numpy LBND2 decode (zero mlx).
 # ===========================================================================
 def serialize_lane_band_rd_tracked(
     pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
     tol: LaneBandRDTolerance | None = None,
     base_steps: np.ndarray | None = None,
     f_near: float = _RD_F_NEAR,
+    pack_mode: str = "coherent_slot",
     smooth: str = "none",
     gate_dist_m: float = 1.5,
-    max_gap: int = 6,
+    max_gap: int = 24,
     smooth_kwargs: dict[str, Any] | None = None,
 ) -> tuple[bytes, dict[str, Any]]:
-    """CORRESPONDENCE-FIRST tracked serialization -> a STANDARD LBND2 blob (format=2, magic
-    ``LBND2``) the UNCHANGED decode/inflate parse. Returns (blob, meta). ``smooth`` in
-    {"none","median","rts","l1trend","rpca"} selects the per-track batch denoise applied to
-    the tracked matrix (default "none" = pure LOSSLESS correspondence re-labeling). The header
-    ``rd`` block gains provenance keys (``pack_mode="tracked"`` / ``coherent_fit`` / ``n_tracks``)
-    the decode ignores (so the sort path stays byte-identical). ``smooth_kwargs`` forwards the
-    RTS/l1-trend/RPCA/median knobs to ``coherent_denoise_track_matrix``."""
+    """CORRESPONDENCE-FIRST serialization -> a STANDARD LBND2 blob (format=2, magic ``LBND2``)
+    the UNCHANGED decode/inflate parse. Returns (blob, meta). ``smooth`` in
+    {"none","median","rts","l1trend","rpca"} runs the batch denoise in CLEAN persistent-track
+    space (``track_and_batch_denoise_lines``); ``pack_mode`` in {"coherent_slot","persistent",
+    "sort"} packs the (denoised) lines. Default = ``coherent_slot`` + no smooth = the LOSSLESS,
+    compact correspondence re-labeling. The header ``rd`` block gains provenance keys
+    (``pack_mode`` / ``coherent_fit`` / ``n_tracks``) the decode IGNORES (so the sort path stays
+    byte-identical)."""
 
     from tac.boundary_math.lane_track_and_smooth import (
-        coherent_denoise_track_matrix, track_lane_slots,
+        coherent_slot_pack, track_and_batch_denoise_lines, track_lane_slots,
     )
 
     steps = np.asarray(base_steps, np.float64) if base_steps is not None else derive_rd_base_steps(tol)
-    ta = track_lane_slots(pairs_lines, f_near=f_near, gate_dist_m=gate_dist_m, max_gap=max_gap)
-    M, presence, K = ta.M, ta.presence, ta.K
-    if smooth != "none":
-        M = coherent_denoise_track_matrix(M, presence, K, method=smooth, **(smooth_kwargs or {}))
+    # (1) CLEAN batch denoise in persistent-track space (a source pre-transform on the LINES)
+    src = (track_and_batch_denoise_lines(pairs_lines, method=smooth, gate_dist_m=gate_dist_m,
+                                         max_gap=max_gap, **(smooth_kwargs or {}))
+           if smooth != "none" else pairs_lines)
+    # (2) pack the (denoised) lines -- compact coherent-slot (default) / persistent / sort
+    if pack_mode == "coherent_slot":
+        ta = coherent_slot_pack(src, f_near=f_near)
+        M, presence, K = ta.M, ta.presence, ta.K
+        n_births, n_deaths = ta.n_births, ta.n_deaths
+    elif pack_mode == "persistent":
+        ta = track_lane_slots(src, f_near=f_near, gate_dist_m=gate_dist_m, max_gap=max_gap)
+        M, presence, K = ta.M, ta.presence, ta.K
+        n_births, n_deaths = ta.n_births, ta.n_deaths
+    elif pack_mode == "sort":
+        M, presence, K = _pack_pairs_to_matrix(src, f_near=f_near)
+        n_births = n_deaths = 0
+    else:
+        raise ValueError(f"unknown pack_mode {pack_mode!r} (coherent_slot / persistent / sort)")
     extra_rd = {
-        "pack_mode": "tracked", "coherent_fit": str(smooth), "n_tracks": int(K),
-        "n_births": int(ta.n_births), "n_deaths": int(ta.n_deaths),
+        "pack_mode": str(pack_mode), "coherent_fit": str(smooth), "n_tracks": int(K),
+        "n_births": int(n_births), "n_deaths": int(n_deaths),
         "gate_dist_m": float(gate_dist_m), "max_gap": int(max_gap),
     }
     blob = _serialize_matrix_lbnd2(M, presence, K, cfg, steps, f_near=f_near, extra_rd=extra_rd)
-    meta = {"K": int(K), "n_births": int(ta.n_births), "n_deaths": int(ta.n_deaths),
-            "n_matched": int(ta.n_matched), "smooth": str(smooth),
-            "tracker_provenance": ta.provenance}
+    meta = {"K": int(K), "pack_mode": str(pack_mode), "smooth": str(smooth),
+            "n_births": int(n_births), "n_deaths": int(n_deaths)}
     return blob, meta
 
 
 def roundtrip_lines_through_rd_tracked(
     pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
     tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
-    smooth: str = "none", gate_dist_m: float = 1.5, max_gap: int = 6,
+    pack_mode: str = "coherent_slot", smooth: str = "none",
+    gate_dist_m: float = 1.5, max_gap: int = 24,
     smooth_kwargs: dict[str, Any] | None = None,
 ) -> tuple[list[list[LaneLine]], bytes, dict[str, Any]]:
-    """Return the DEQUANTIZED per-pair lines the tracked codec ships (via the UNCHANGED
+    """Return the DEQUANTIZED per-pair lines the codec ships (via the UNCHANGED
     ``deserialize_lane_band_rd``) + the blob + meta. The compress-side render MUST use these
     dequantized lines (measure-what-you-ship). NO-FAKE: the blob is a valid LBND2 blob that
     round-trips bit-exact through the standard decode."""
 
     blob, meta = serialize_lane_band_rd_tracked(
-        pairs_lines, cfg, tol=tol, f_near=f_near, smooth=smooth,
+        pairs_lines, cfg, tol=tol, f_near=f_near, pack_mode=pack_mode, smooth=smooth,
         gate_dist_m=gate_dist_m, max_gap=max_gap, smooth_kwargs=smooth_kwargs)
     dq_lines, _hdr = deserialize_lane_band_rd(blob)
     return dq_lines, blob, meta
@@ -1545,7 +1573,7 @@ def roundtrip_lines_through_rd_tracked(
 
 def _dequant_lines_multiset_key(pairs_lines: list[list[LaneLine]], steps: np.ndarray) -> list[tuple]:
     """Per-pair CANONICAL multiset of quantized slot vectors (sorted) -- for the LOSSLESS
-    invariant (tracked-no-smooth dequant lines == sort dequant lines as a per-pair SET)."""
+    invariant (correspondence-only dequant lines == sort dequant lines as a per-pair SET)."""
 
     steps = np.asarray(steps, np.float64)
     out: list[tuple] = []
@@ -1562,92 +1590,117 @@ def _dequant_lines_multiset_key(pairs_lines: list[list[LaneLine]], steps: np.nda
 def lane_band_tracking_rate_report(
     pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
     tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
-    gate_dist_m: float = 1.5, max_gap: int = 6,
+    gate_dist_m: float = 1.5, max_gap: int = 24,
     smooth_methods: tuple[str, ...] = ("none", "rts", "l1trend", "median", "rpca"),
+    ref_smooth_wins: tuple[int, ...] = (9, 15, 25),
     smooth_kwargs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """MEASURED byte accounting for the CORRESPONDENCE-FIRST pipeline, in GATE ORDER:
-    LBND2 sort baseline -> tracked-ONLY (lossless correspondence) -> tracked + each batch
-    denoise. Reports the COUNTED brotli bytes + rate_term + ratio-vs-LBND2 per variant, the
-    top-5% jump-mass drop (sort vs tracked = the swap-kill diagnostic), the LOSSLESS invariant
-    (tracked-no-smooth dequant lines == sort dequant lines, per-pair set), and the induced
-    lateral RMS for the denoised variants. All numbers MEASURED (real brotli byte counts);
-    the d_seg WIN is the #205 through-R follow-up (out of scope). rate = 25*bytes/RATE_DENOM."""
+    """MEASURED byte + geometric-distortion accounting for the CORRESPONDENCE-FIRST pipeline,
+    in GATE ORDER (all rows MEASURED brotli bytes; the d_seg leg is the #205 through-R
+    follow-up, out of scope):
+
+      * ``LBND2_sort_baseline`` -- the Stage-1 lateral-sort codec.
+      * ``coherent_slot_none`` -- bounded-K coherent slotting, NO denoise (the LOSSLESS
+        correspondence gain; verify it beats the sort marginally + the top-5% jump-mass drop).
+      * ``persistent_none`` -- persistent tracks, NO denoise (shows the column explosion).
+      * ``coherent_slot_{rts,l1trend,median,rpca}`` -- clean track-space batch denoise, packed
+        compact.
+      * ``sort_MA_win{N}`` -- the incumbent moving-average (median) source smoothing, WITH its
+        induced geometric RMS (the LESS-LOSSY head-to-head at matched rate).
+
+    Reports rate_term + ratio-vs-LBND2 + induced lateral RMS per variant, the top-5% jump-mass
+    drop, and the LOSSLESS invariant. rate = 25*bytes/RATE_DENOM."""
 
     import brotli
 
-    from tac.boundary_math.lane_track_and_smooth import (
-        coherent_denoise_track_matrix, top_pct_jump_mass, track_lane_slots,
-    )
+    from tac.boundary_math.lane_track_and_smooth import top_pct_jump_mass, track_lane_slots
 
     rate_denom = 37_545_489.0
     steps = derive_rd_base_steps(tol)
-    steps_slot = steps  # (11,)
 
     def _brotli(b: bytes) -> int:
         return int(len(brotli.compress(b, quality=11)))
+
+    def _rms(out_pairs) -> float:
+        return _induced_lateral_rms_vs_raw(pairs_lines, out_pairs, f_near=f_near)
 
     # --- LBND2 sort baseline ---
     sort_blob = serialize_lane_band_rd(pairs_lines, cfg, tol=tol, f_near=f_near)
     b_sort = _brotli(sort_blob)
     M_sort, pres_sort, K_sort = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
-    steps_full_sort = np.tile(steps_slot, K_sort) if K_sort else np.zeros(0)
-    jm_sort = top_pct_jump_mass(M_sort, pres_sort, K_sort, steps_full_sort, pct=5.0)
-
-    # --- tracked packing (once) ---
-    ta = track_lane_slots(pairs_lines, f_near=f_near, gate_dist_m=gate_dist_m, max_gap=max_gap)
-    Mt, prest, Kt = ta.M, ta.presence, ta.K
-    steps_full_trk = np.tile(steps_slot, Kt) if Kt else np.zeros(0)
-    jm_trk = top_pct_jump_mass(Mt, prest, Kt, steps_full_trk, pct=5.0)
+    jm_sort = top_pct_jump_mass(M_sort, pres_sort, K_sort, np.tile(steps, K_sort) if K_sort else np.zeros(0))
 
     rows: list[dict[str, Any]] = [
         {"variant": "LBND2_sort_baseline", "pack": "sort", "smooth": "none",
          "brotli_bytes": b_sort, "rate_term": 25.0 * b_sort / rate_denom, "ratio_vs_lbnd2": 1.0,
-         "K": int(K_sort), "top5pct_jump_mass": jm_sort["top_pct_mass_frac"]},
-    ]
+         "K": int(K_sort), "induced_lateral_rms_m": 0.0}]
 
-    # LOSSLESS invariant: tracked-no-smooth == sort as a per-pair quantized multiset
-    trk_none_blob, trk_meta = serialize_lane_band_rd_tracked(
-        pairs_lines, cfg, tol=tol, f_near=f_near, smooth="none",
-        gate_dist_m=gate_dist_m, max_gap=max_gap)
-    dq_sort, _ = deserialize_lane_band_rd(sort_blob)
-    dq_trk, _ = deserialize_lane_band_rd(trk_none_blob)
-    lossless = (_dequant_lines_multiset_key(dq_sort, steps_slot)
-                == _dequant_lines_multiset_key(dq_trk, steps_slot))
-
-    for method in smooth_methods:
+    # --- correspondence-only (both packings, no denoise) ---
+    ta_persist = track_lane_slots(pairs_lines, f_near=f_near, gate_dist_m=gate_dist_m, max_gap=max_gap)
+    jm_trk = top_pct_jump_mass(ta_persist.M, ta_persist.presence, ta_persist.K,
+                               np.tile(steps, ta_persist.K) if ta_persist.K else np.zeros(0))
+    lossless = True
+    for pack_mode in ("coherent_slot", "persistent"):
         blob, meta = serialize_lane_band_rd_tracked(
-            pairs_lines, cfg, tol=tol, f_near=f_near, smooth=method,
+            pairs_lines, cfg, tol=tol, f_near=f_near, pack_mode=pack_mode, smooth="none",
+            gate_dist_m=gate_dist_m, max_gap=max_gap)
+        bb = _brotli(blob)
+        dq_lines, _ = deserialize_lane_band_rd(blob)
+        if (_dequant_lines_multiset_key(dq_lines, steps)
+                != _dequant_lines_multiset_key(deserialize_lane_band_rd(sort_blob)[0], steps)):
+            lossless = False
+        rows.append({"variant": f"{pack_mode}_none", "pack": pack_mode, "smooth": "none",
+                     "brotli_bytes": bb, "rate_term": 25.0 * bb / rate_denom, "ratio_vs_lbnd2": bb / b_sort,
+                     "K": int(meta["K"]), "n_births": int(meta["n_births"]),
+                     "induced_lateral_rms_m": _rms(dq_lines)})
+
+    # --- coherent-slot + clean-track-space batch denoise ---
+    for method in smooth_methods:
+        if method == "none":
+            continue
+        blob, meta = serialize_lane_band_rd_tracked(
+            pairs_lines, cfg, tol=tol, f_near=f_near, pack_mode="coherent_slot", smooth=method,
             gate_dist_m=gate_dist_m, max_gap=max_gap, smooth_kwargs=smooth_kwargs)
         bb = _brotli(blob)
-        # induced lateral RMS vs the raw per-frame fits (0 for "none" by the lossless invariant)
         dq_lines, _ = deserialize_lane_band_rd(blob)
-        lat_rms = _induced_lateral_rms_vs_raw(pairs_lines, dq_lines, f_near=f_near)
-        rows.append({
-            "variant": f"tracked_{method}", "pack": "tracked", "smooth": method,
-            "brotli_bytes": bb, "rate_term": 25.0 * bb / rate_denom, "ratio_vs_lbnd2": bb / b_sort,
-            "K": int(meta["K"]), "n_births": int(meta["n_births"]), "n_deaths": int(meta["n_deaths"]),
-            "induced_lateral_rms_m": lat_rms,
-        })
+        rows.append({"variant": f"coherent_slot_{method}", "pack": "coherent_slot", "smooth": method,
+                     "brotli_bytes": bb, "rate_term": 25.0 * bb / rate_denom, "ratio_vs_lbnd2": bb / b_sort,
+                     "K": int(meta["K"]), "induced_lateral_rms_m": _rms(dq_lines)})
+
+    # --- incumbent sort + moving-average (median) reference, WITH geometric RMS ---
+    for w in ref_smooth_wins:
+        sm = temporal_smooth_pairs_lines(pairs_lines, win=int(w))
+        bb = _brotli(serialize_lane_band_rd(sm, cfg, tol=tol, f_near=f_near))
+        rows.append({"variant": f"sort_MA_win{int(w)}", "pack": "sort", "smooth": f"median{int(w)}",
+                     "brotli_bytes": bb, "rate_term": 25.0 * bb / rate_denom, "ratio_vs_lbnd2": bb / b_sort,
+                     "K": int(K_sort), "induced_lateral_rms_m": _rms(sm)})
 
     best = min(rows, key=lambda r: r["brotli_bytes"])
+    corr_only = min((r for r in rows if r["variant"] in ("coherent_slot_none", "persistent_none")),
+                    key=lambda r: r["brotli_bytes"])
+    ma_best = min((r for r in rows if r["variant"].startswith("sort_MA_win")),
+                  key=lambda r: r["brotli_bytes"], default=None)
     return {
         "n_pairs": int(len(pairs_lines)),
-        "K_sort": int(K_sort), "K_tracked": int(Kt),
-        "n_births": int(ta.n_births), "n_deaths": int(ta.n_deaths), "n_matched": int(ta.n_matched),
+        "K_sort": int(K_sort), "K_persistent": int(ta_persist.n_births),
         "swap_diagnostic": {
             "sort_top5pct_jump_mass": jm_sort["top_pct_mass_frac"],
-            "tracked_top5pct_jump_mass": jm_trk["top_pct_mass_frac"],
+            "persistent_top5pct_jump_mass": jm_trk["top_pct_mass_frac"],
             "sort_total_delta_l1": jm_sort["total_l1"],
-            "tracked_total_delta_l1": jm_trk["total_l1"],
+            "persistent_total_delta_l1": jm_trk["total_l1"],
         },
-        "tracked_no_smooth_lossless_vs_sort": bool(lossless),
+        "correspondence_lossless_vs_sort": bool(lossless),
         "rows": rows,
         "best_variant": best["variant"], "best_bytes": int(best["brotli_bytes"]),
         "best_rate_term": float(best["rate_term"]),
+        "correspondence_only_best": {"variant": corr_only["variant"],
+                                     "rate_term": corr_only["rate_term"],
+                                     "ratio_vs_lbnd2": corr_only["ratio_vs_lbnd2"]},
+        "moving_average_best": (None if ma_best is None else
+                                {"variant": ma_best["variant"], "rate_term": ma_best["rate_term"],
+                                 "induced_lateral_rms_m": ma_best["induced_lateral_rms_m"]}),
         "lbnd2_baseline_rate_term": 25.0 * b_sort / rate_denom,
         "rate_denom_bytes": int(rate_denom),
-        "tracker_provenance": ta.provenance,
         "axis_labels": "[macOS-CPU advisory] MEASURED brotli byte counts; NOT a score claim; pointer 0.19110 UNMOVED",
     }
 
