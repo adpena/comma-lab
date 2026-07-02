@@ -203,10 +203,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--epochs", type=int, default=1000)
     ap.add_argument("--aggressive", action="store_true",
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
+    ap.add_argument("--config", default=None,
+                    choices=["proven_base", "all_levers", "sealed_205"],
+                    help="canonical named config resolved from the triality (tac.witness_autoconfig): "
+                    "proven_base (attribution-clean baseline; the default when neither --config nor "
+                    "--all-levers is given), all_levers (== --all-levers), or sealed_205 (the #205 "
+                    "Phase-3 SEALED capstone argv — the deep-math-OPTIMAL all-levers base + the 4 "
+                    "SEALED deltas mod-dim 32 / adam-beta2 0.999 / w-pose 1.0 + pose-carrier table; "
+                    "reproduces the sealed §7 launch.sh BYTE-IDENTICALLY modulo --out-dir).")
     ap.add_argument("--all-levers", action="store_true",
-                    help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact): "
+                    help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact); "
+                    "equivalent to --config all_levers. "
                     "--render-aa none + analytic coverage-integrated lane-render-band (Wave D AA "
-                    "correction; supersample DISQUALIFIED: hurts -49% + decode over budget) + "
+                    "correction; supersample DISQUALIFIED: hurts -49%% + decode over budget) + "
                     "persistence/topology loss + "
                     "island-birth amplification + annealed hosc 1->4 + l7 DEMOTED + verdict-pairs 0 + "
                     "mod-dim 19 (Whitney floor) + adam-beta2 0.9999999. Default OFF => attribution-clean "
@@ -235,8 +244,25 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     overfit = not args.aggressive
-    cfg = wac.derive_config(args.gt_cache, num_pairs=args.num_pairs,
-                            overfit=overfit, epochs=args.epochs, all_levers=args.all_levers)
+
+    # Resolve the canonical named config (triality selector). Backward-compat: --all-levers is an
+    # alias for --config all_levers; the historical default (neither given) is proven_base.
+    config = args.config
+    if config is None:
+        config = "all_levers" if args.all_levers else "proven_base"
+    elif args.all_levers and config != "all_levers":
+        print(f"[launch-witness] ERROR: --config {config} conflicts with --all-levers "
+              f"(--all-levers == --config all_levers); pass exactly one.", file=sys.stderr)
+        return 2
+
+    if config == "sealed_205":
+        # The #205 P3 SEALED capstone config fixes its own knobs (mod-dim 32 etc.); overfit N/A.
+        cfg = wac.derive_sealed_205_config(args.gt_cache, num_pairs=args.num_pairs,
+                                           epochs=args.epochs)
+    else:
+        cfg = wac.derive_config(args.gt_cache, num_pairs=args.num_pairs,
+                                overfit=overfit, epochs=args.epochs,
+                                all_levers=(config == "all_levers"))
 
     out_dir = Path(args.out_dir) if args.out_dir else (
         _REPO / "experiments" / "results" / f"levelset_n{args.num_pairs}_witness_{_utc()}")
@@ -244,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"# launch_witness_run {wac.ADVISORY_TAG}  pointer 0.19110 UNMOVED")
     print(f"# clip={args.gt_cache} num_pairs={args.num_pairs} epochs={args.epochs} "
-          f"overfit={overfit} all_levers={args.all_levers}")
+          f"overfit={overfit} config={config}")
     print(f"# out_dir={out_dir}")
     if not (_REPO / args.gt_cache).exists() and not Path(args.gt_cache).exists():
         print(f"# NOTE: gt-cache {args.gt_cache} not found on disk -> gt regen required at launch",

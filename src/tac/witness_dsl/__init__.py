@@ -41,6 +41,7 @@ from tac.witness_dsl.curriculum_dsl import (
     UniWARD,
     WarpRealLumaFrame0,
     openpilot_seeded_opening,
+    sealed_205_program,
 )
 from tac.witness_dsl.campaign import (
     Arm,
@@ -130,6 +131,7 @@ __all__ = [
     "MarginSaliency",
     "UniWARD",
     "openpilot_seeded_opening",
+    "sealed_205_program",
     # campaign engine
     "Arm",
     "ArmResult",

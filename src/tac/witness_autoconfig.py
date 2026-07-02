@@ -35,7 +35,7 @@ Provenance anchors (this session, all read-only):
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -55,6 +55,7 @@ __all__ = [
     "warp_priors",
     "portability_split",
     "derive_config",
+    "derive_sealed_205_config",
 ]
 
 # --------------------------------------------------------------------------
@@ -498,6 +499,13 @@ class WitnessConfig:
     # per .omx/research/capstone_witness_launch_config_deepmath_optimal_20260702.md (#205). Default
     # False => the attribution-clean proven_base baseline stays available byte-identically.
     all_levers: bool = False
+    # (F5) #205 P3 SEALED capstone config: when True, ``to_trainer_flags`` renders the exact
+    # canonical §7 argv (n205_phase3_recursive_adversarial_review_verdict_20260702.md §7) = the
+    # deep-math-OPTIMAL all-levers base + the 4 SEALED deltas (mod-dim 32 / adam-beta2 0.999 /
+    # w-pose 1.0 + pose-carrier table), emitted in the hand-authored §7 token ORDER so the launcher
+    # reproduces the SEALED launch.sh BYTE-IDENTICALLY (modulo --out-dir). Built by
+    # ``derive_sealed_205_config``. Default False => the all-levers / proven_base paths are unchanged.
+    sealed_205: bool = False
     all_levers_base: dict = field(default_factory=dict)
     adam_beta2: float = 0.999  # #222; 0.999 == MLX default (bit-identical); all-levers sets 0.9999999.
 
@@ -522,6 +530,8 @@ class WitnessConfig:
         Every flag here is validated against the trainer's real argparse by :func:`validate_flags`
         (the CLI dogfood); none is invented.
         """
+        if self.sealed_205:
+            return self._sealed_205_flags(out_dir)
         al = bool(self.all_levers)
         alb = self.all_levers_base if al else {}
         pb = self.proven_base
@@ -647,6 +657,126 @@ class WitnessConfig:
         ]
         return flags
 
+    def _sealed_205_flags(self, out_dir: str) -> list[tuple[str, object]]:
+        """The #205 Phase-3 SEALED launch argv, in the EXACT canonical §7 token order
+        (``.omx/research/n205_phase3_recursive_adversarial_review_verdict_20260702.md`` §7).
+
+        Composition = the deep-math-OPTIMAL all-levers base (every value generator-derived via
+        ``derive_config(all_levers=True)``) + the 4 SEALED deltas adjudicated in §2 of the P3
+        verdict:
+
+          * Q4  ``--mod-dim 32``  (proven arm reached d_seg 0.003698; covers composite m~13 with
+                headroom; d_seg is the BINDING term and 19's neutrality is UNMEASURED) — SEALED over
+                the all-levers Whitney-floor 19.
+          * Q5  ``--adam-beta2 0.999``  (== the MLX default => byte-identical, no bias-correction
+                confound on the first attribution row) — SEALED over the all-levers 0.9999999 anchor.
+          * Q2  ``--w-pose 1.0 --pose-carrier --pose-carrier-residual-mode table``  (pose SLOT
+                shippable-first; a w_pose=0 row does NOT move the pointer — means/ends firewall;
+                carrier wired + durability-proven) — SEALED over the proven_base ``w_pose=0``.
+
+        Every non-delta value is read from the SAME source the all-levers config derived it from
+        (``self`` field / ``proven_base`` / ``all_levers_base``), so this method canonicalizes the
+        sealed config WITHOUT re-typing the generators' values. Emitted in the hand-authored §7 order
+        (the two local re-orderings vs all-levers — ``--async-verdict`` after ``--verdict-pairs``, and
+        the structured-init/lane-prior block BEFORE the accum/lr/adam block — are reproduced here) so
+        the launcher's ``launch.sh`` reproduces the SEALED argv BYTE-IDENTICALLY (modulo ``--out-dir``).
+        ``--lr / --lr-end / --weight-decay`` are the §7 string literals (``1e-3 / 1e-4 / 1e-4`` ==
+        the trainer float defaults) so the emitted tokens match the sealed argv byte-for-byte.
+
+        means != ends: this renders a MEANS (a launch config). Only a byte-closed n600 exact row
+        < 0.19110 from ``upstream/evaluate.py`` (contest-CPU/CUDA, NEVER MPS) moves the pointer.
+        """
+        pb = self.proven_base
+        alb = self.all_levers_base
+        d = _sealed_205_deltas()
+        return [
+            ("--out-dir", out_dir),
+            ("--gt-cache", self.gt_cache),
+            ("--num-pairs", self.num_pairs),
+            ("--mlx-device", pb["mlx_device"]),
+            ("--seed", pb["seed"]),
+            ("--epochs", self.epochs),
+            ("--eval-every", pb["eval_every"]),
+            ("--verdict-pairs", self.verdict_pairs),
+            ("--async-verdict", None),
+            ("--curriculum", None),
+            ("--tau-softplus-start-epoch", self.tau_softplus_start_epoch),
+            ("--tau-softplus-tau", pb["tau_softplus_tau"]),
+            ("--l7-start-epoch", self.l7_start_epoch),
+            ("--muon-start-epoch", self.muon_start_epoch),
+            ("--muon-lr", self.muon_lr),
+            ("--muon-momentum", pb["muon_momentum"]),
+            ("--muon-ns-steps", pb["muon_ns_steps"]),
+            ("--stage-transition-rewarmup-epochs", pb["st_rewarmup_epochs"]),
+            ("--stage-transition-rewarmup-floor", pb["st_rewarmup_floor"]),
+            ("--stage-transition-rewarmup-shape", pb["st_rewarmup_shape"]),
+            ("--stage-transition-reset-moments", None),
+            ("--w-seg", pb["w_seg"]),
+            ("--w-pose", d["w_pose"]),                       # SEALED delta (Q2) over proven_base 0
+            ("--score-domain-loss", None),
+            ("--pose-carrier", None),                        # SEALED add (Q2)
+            ("--pose-carrier-residual-mode", d["pose_carrier_residual_mode"]),  # SEALED add (Q2)
+            ("--mod-dim", self.mod_dim),                     # SEALED delta (Q4): 32
+            ("--hidden-dim", self.hidden_dim),
+            ("--n-hidden", pb["n_hidden"]),
+            ("--activation", pb["activation"]),
+            ("--hosc-beta", alb["hosc_beta"]),
+            ("--hosc-beta-end", alb["hosc_beta_end"]),
+            ("--hosc-beta-anneal", alb["hosc_beta_anneal"]),
+            ("--hosc-omega", pb["hosc_omega"]),
+            ("--siren-init", None),
+            ("--softmax-temp-start", pb["softmax_temp_start"]),
+            ("--softmax-temp-end", pb["softmax_temp_end"]),
+            ("--tau-anneal-shape", alb["tau_anneal_shape"]),
+            ("--self-orient", None),
+            ("--n-dir-freqs", pb["n_dir_freqs"]),
+            ("--freq-across", pb["freq_across"]),
+            ("--freq-along", pb["freq_along"]),
+            ("--reorient-every", pb["reorient_every"]),
+            ("--max-bank-freq", pb["max_bank_freq"]),
+            ("--chroma", None),
+            ("--palette-anchor", None),
+            ("--eikonal-weight", pb["eikonal_weight"]),
+            ("--length-weight", pb["length_weight"]),
+            ("--render-h", pb["render_h"]),
+            ("--render-w", pb["render_w"]),
+            ("--render-aa", alb["render_aa"]),
+            ("--lane-render-band", None),
+            ("--lane-band-start-epoch", alb["lane_band_start_epoch"]),
+            ("--lane-band-uncertainty-source", alb["lane_band_uncertainty_source"]),
+            ("--lane-band-tau", alb["lane_band_tau"]),
+            ("--lane-band-eps", alb["lane_band_eps"]),
+            ("--lane-band-softness", alb["lane_band_softness"]),
+            ("--lane-band-dash-forward-max-m", alb["lane_band_dash_forward_max_m"]),
+            ("--lane-band-weight", alb["lane_band_weight"]),
+            ("--persistence-loss-weight", alb["persistence_loss_weight"]),
+            ("--persistence-recall-weight", alb["persistence_recall_weight"]),
+            ("--cldice-iters", alb["cldice_iters"]),
+            ("--persistence-warmup-epochs", alb["persistence_warmup_epochs"]),
+            ("--persistence-classes", alb["persistence_classes"]),
+            ("--amplify-weight", alb["amplify_weight"]),
+            ("--amplify-form", alb["amplify_form"]),
+            ("--amplify-margin-target", alb["amplify_margin_target"]),
+            ("--amplify-persist", alb["amplify_persist"]),
+            ("--island-dilate-px", alb["island_dilate_px"]),
+            # §7 tail ORDER: the structured-init / lane-prior-phi1 block precedes the accum / lr /
+            # adam block (the reverse of the all-levers renderer) — reproduced here for byte-identity.
+            ("--structured-init", None),
+            ("--structured-init-include-lane", None),
+            ("--lane-prior-phi1", None),
+            ("--lane-prior-phi1-mode", pb["lane_prior_phi1_mode"]),
+            ("--lane-prior-phi1-dash-gate", None),
+            ("--accum-pairs", pb["accum_pairs"]),
+            ("--grad-clip", pb["grad_clip"]),
+            ("--ema-decay", pb["ema_decay"]),
+            ("--lr", _SEALED_205_LR),          # "1e-3" literal == trainer default (§7 byte-identity)
+            ("--lr-end", _SEALED_205_LR_END),  # "1e-4"
+            ("--weight-decay", _SEALED_205_WD),  # "1e-4"
+            ("--adam-beta2", self.adam_beta2),  # SEALED delta (Q5): 0.999
+            ("--ckpt-every", pb["ckpt_every"]),
+            ("--stage-checkpoints", None),
+        ]
+
     def to_command(self, out_dir: str, *, perf_env: bool = True) -> str:
         """Render the GO-ready launch command string (attribution-clean)."""
         parts = []
@@ -748,6 +878,94 @@ def _all_levers_base(tau_start: int) -> dict:
 # (beta1=0.9) => beta2* ~ 0.99999988. 0.9999999 (1-beta2=1e-7) clears the threshold. Default path
 # stays 0.999 (== MLX default => bit-identical) unless all_levers.
 _ALL_LEVERS_ADAM_BETA2 = 0.9999999
+
+
+# --------------------------------------------------------------------------
+# #205 Phase-3 SEALED capstone config (the triality DEFINITION of the launch-ready argv)
+# --------------------------------------------------------------------------
+# The lr trio is rendered as the §7 STRING literals so the emitted tokens equal the sealed argv
+# byte-for-byte (``1e-3``/``1e-4`` == the trainer's float defaults 1e-3/1e-4; float would render
+# "0.001"/"0.0001" and break the byte-identity gate).
+_SEALED_205_LR = "1e-3"
+_SEALED_205_LR_END = "1e-4"
+_SEALED_205_WD = "1e-4"
+
+
+def _sealed_205_deltas() -> dict:
+    """The 4 SEALED deltas over the deep-math-OPTIMAL all-levers base, per the #205 Phase-3
+    recursive-adversarial-review VERDICT §2 (SEAL). Single source for the non-generator sealed
+    values consumed by :meth:`WitnessConfig._sealed_205_flags` + :func:`derive_sealed_205_config`.
+
+      * ``mod_dim`` 32   — Q4 (proven arm; d_seg BINDING; 19's neutrality UNMEASURED).
+      * ``adam_beta2`` 0.999 — Q5 (== MLX default; byte-identical; no bias-correction confound).
+      * ``w_pose`` 1.0 + ``pose_carrier`` + ``pose_carrier_residual_mode`` "table" — Q2 (pose SLOT
+        shippable-first; w_pose=0 does NOT move the pointer).
+    """
+    return {
+        "mod_dim": 32,
+        "adam_beta2": 0.999,
+        "w_pose": 1.0,
+        "pose_carrier": True,
+        "pose_carrier_residual_mode": "table",
+    }
+
+
+def derive_sealed_205_config(
+    gt_cache_path: str | Path,
+    *,
+    num_pairs: int,
+    epochs: int = 1000,
+    code_matrix: np.ndarray | None = None,
+    byte_close_result: dict | None = None,
+) -> WitnessConfig:
+    """Canonical **#205 Phase-3 SEALED capstone config** — the triality DEFINITION of the
+    operator's launch-ready argv (the config the SEAL verdict certified).
+
+    Built from the deep-math-OPTIMAL all-levers base (``derive_config(all_levers=True)`` — every
+    value generator-derived) + the 4 SEALED deltas (:func:`_sealed_205_deltas`, adjudicated in the
+    P3 verdict §2). The returned config's ``to_trainer_flags`` renders the EXACT §7 argv order, so
+    launching it via ``tools/launch_witness_run.py --config sealed_205`` writes a ``launch.sh`` whose
+    command is BYTE-IDENTICAL (modulo ``--out-dir``) to the hand-authored §7 oracle.
+
+    Pure CPU; does NOT load the (5 GB) GT cache. ``overfit`` is not a parameter — the sealed config
+    fixes mod-dim to the proven 32 (NOT the aggressive Whitney floor) per Q4.
+
+    means != ends: returns a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110
+    moves the pointer.
+    """
+    base = derive_config(
+        gt_cache_path, num_pairs=num_pairs, overfit=True, epochs=epochs,
+        code_matrix=code_matrix, byte_close_result=byte_close_result, all_levers=True)
+    d = _sealed_205_deltas()
+    prov = dict(base.provenance)
+    prov["mod_dim"] = ProvenancedValue(
+        int(d["mod_dim"]), SRC_RECALLED,
+        "#205 P3 §2 Q4 SEALED: launch at mod-dim 32 (proven arm reached measured d_seg 0.003698; "
+        "covers composite m~13 with headroom; d_seg is the BINDING term and 19's d_seg-neutrality is "
+        "UNMEASURED; rate slack 0.055<0.081). SEALED delta over the all-levers Whitney-floor 19.",
+        Portability.INSTANCE)
+    prov["adam_beta2"] = ProvenancedValue(
+        float(d["adam_beta2"]), SRC_RECALLED,
+        "#205 P3 §2 Q5 SEALED: launch at adam-beta2 0.999 (== MLX default => byte-identical, no "
+        "bias-correction confound on the first attribution row). SEALED delta over the all-levers "
+        "0.9999999 mis-anchor.", Portability.SCORER_FIXED)
+    prov["w_pose"] = ProvenancedValue(
+        float(d["w_pose"]), SRC_RECALLED,
+        "#205 P3 §2 Q2 SEALED: w-pose 1.0 + --pose-carrier (residual-mode table) shippable-first — a "
+        "w_pose=0 row does NOT move the pointer (means/ends firewall); carrier wired + "
+        "durability-proven. SEALED delta over the proven_base w_pose=0.", Portability.SCORER_FIXED)
+    prov["pose_carrier_residual_mode"] = ProvenancedValue(
+        d["pose_carrier_residual_mode"], SRC_RECALLED,
+        "#205 P3 §2 Q2 SEALED: --pose-carrier-residual-mode table (per-pair (P,6) byte-minimal; "
+        "isolates the code manifold, cos 5.9e-5 => seg⊥pose additive-S attribution safeguard).",
+        Portability.SCORER_FIXED)
+    return replace(
+        base,
+        sealed_205=True,
+        mod_dim=int(d["mod_dim"]),
+        adam_beta2=float(d["adam_beta2"]),
+        provenance=prov,
+    )
 
 
 def derive_config(

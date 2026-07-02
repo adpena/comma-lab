@@ -729,3 +729,78 @@ def openpilot_seeded_opening(  # noqa: N802 — DSL constructor
         resume_from=None,  # FROM SCRATCH (structured-init seed, not a checkpoint)
         mlx_device=mlx_device,
     )
+
+
+# ---------------------------------------------------------------------------
+# The #205 Phase-3 SEALED capstone program — the DSL leg of the triality.
+# ---------------------------------------------------------------------------
+# flag_dict()-managed flags (emitted via the WitnessProgram fields below, NOT via ``base``,
+# so there is exactly one emitter per flag and no dict-overwrite mismatch).
+_SEALED_205_MANAGED_FLAGS = frozenset({
+    "--num-pairs", "--epochs", "--gt-cache", "--out-dir", "--mlx-device",
+    "--softmax-temp-start", "--softmax-temp-end",
+    "--tau-softplus-start-epoch", "--l7-start-epoch", "--muon-start-epoch",
+    "--eikonal-weight", "--length-weight", "--ckpt-every", "--stage-checkpoints",
+})
+
+
+def sealed_205_program(  # noqa: N802 — DSL constructor
+    out_dir: str,
+    gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    num_pairs: int = 600,
+    epochs: int = 1000,
+) -> WitnessProgram:
+    """The **#205 Phase-3 SEALED capstone config** as a :class:`WitnessProgram` — the DSL leg of
+    the DAG↔DSL↔equations triality (nexus §5c; the calibrated OPTIMAL-CONTROL schedule expressed
+    as a program the campaign engine can EXTEND/ADVANCE/ROLLBACK via ``decide_next_stage`` #188).
+
+    SINGLE SOURCE OF TRUTH: the flag VALUES are pulled from
+    ``tac.witness_autoconfig.derive_sealed_205_config`` (the byte-exact gate leg) so the two legs
+    provably AGREE — the curriculum schedule (CE→tau→l7-parked→Muon @726) is expressed via
+    ``Stage`` objects, the render-partition anneal via ``Anneal``, the live PDE regularizers via
+    ``Regularizer``, the PRESERVE cadence via ``Preserve``, and every remaining lever/substrate flag
+    flows through ``base``. ``validate()`` re-checks every flag against the trainer argparse
+    (never-invent-flags) + the curriculum-ordering / preserve / contain / authority clauses.
+
+    NOTE: the DSL compiles flags in ``flag_dict`` INSERTION order (its own canonical order), which is
+    NOT the hand-authored §7 token order — the BYTE-IDENTICAL-to-§7 gate is the ``witness_autoconfig``
+    ``sealed_205`` launcher path. This program is the SYMBOLIC leg (same flag SET + values, campaign-
+    engine-operable); the ``test_sealed_205_canonical_config`` cross-check asserts the two agree.
+
+    means != ends: a MEANS (a launch program). Only a byte-closed n600 exact row < 0.19110 moves
+    the pointer.
+    """
+    from tac import witness_autoconfig as _wac  # lazy: no module-load cycle (wac imports numpy only)
+
+    cfg = _wac.derive_sealed_205_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+    pb = cfg.proven_base
+    base: dict = {}
+    for flag, val in cfg.to_trainer_flags(out_dir):
+        if flag in _SEALED_205_MANAGED_FLAGS:
+            continue
+        base[flag] = True if val is None else val  # DSL convention: bare flag == True
+    return WitnessProgram(
+        out_dir=out_dir,
+        gt_cache=cfg.gt_cache,
+        epochs=cfg.epochs,
+        num_pairs=cfg.num_pairs,
+        temp=Anneal(pb["softmax_temp_start"], pb["softmax_temp_end"]),
+        stages=(
+            Stage("CE", None, None),
+            Stage("tau_softplus", "--tau-softplus-start-epoch", cfg.tau_softplus_start_epoch),
+            # l7 DEMOTED to epochs (measured L∞-sharpening defect; parks as a <=1-ep no-op tail).
+            Stage("l7_softplus", "--l7-start-epoch", cfg.l7_start_epoch),
+            # Muon finisher (spectral conditioner) — the LAST stage of the annealing flow.
+            Stage("muon", "--muon-start-epoch", cfg.muon_start_epoch),
+        ),
+        regularizers=(
+            Regularizer("--eikonal-weight", pb["eikonal_weight"]),
+            Regularizer("--length-weight", pb["length_weight"]),
+        ),
+        preserve=Preserve(stage_boundaries=True, ckpt_every=pb["ckpt_every"]),
+        contain=Contain(),
+        authority=Authority(),
+        base=base,
+        resume_from=None,  # FROM SCRATCH (structured-init + lane-prior seed, not a checkpoint)
+        mlx_device=cfg.proven_base["mlx_device"],
+    )

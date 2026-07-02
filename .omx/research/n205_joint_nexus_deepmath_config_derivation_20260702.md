@@ -441,6 +441,19 @@ At optimal form, composing the measured/derived surfaces:
 > is STALE (SIGNAL-A real-frame ceiling ≠ witness-realized — the ~0.003→~0.001 gap is a Muon+persistence+
 > amplify TRAINING/LOSS bet, config CORRECT). Pointer 0.19110 UNMOVED.
 
+> **CANONICALIZED (2026-07-02, FEED-205canon):** the SEALED §7 argv is now a CANONICAL TRIALITY OBJECT,
+> not a hand-authored one-off. It launches by NAME via `tools/launch_witness_run.py --config sealed_205`
+> (generalized to resolve `{proven_base, all_levers, sealed_205}`), with a `--dry-run` that reproduces the
+> §7 oracle `launch.sh` BYTE-IDENTICALLY (modulo `--out-dir`; 83/83 flags in-argparse, 0 invented; verified
+> token-for-token). The three legs are single-sourced + agree: **autoconfig**
+> `tac.witness_autoconfig.derive_sealed_205_config` (the gate leg = deep-math-OPTIMAL all-levers base +
+> the 4 SEALED §2 deltas mod-dim 32 / adam-beta2 0.999 / w-pose 1.0 + pose-carrier table, emitted in §7
+> token order) ↔ **DSL** `tac.witness_dsl.sealed_205_program` (WitnessProgram; `validate()`==[]; campaign-
+> engine EXTEND/ADVANCE-able) ↔ **DAG** FEED-205canon. Regression: `test_sealed_205_canonical_config.py`
+> (6 tests GREEN). Launch command (no `--dry-run`): `TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 .venv/bin/python
+> tools/launch_witness_run.py --config sealed_205 --gt-cache experiments/results/mlx_fleet_gt_cache/
+> gt_n600.npz --num-pairs 600 --epochs 1000`. means≠ends: pointer 0.19110 UNMOVED — canonicalizes a MEANS.
+
 ## 8. OPEN QUESTIONS for the 3-CLEAN-PASS RECURSIVE ADVERSARIAL REVIEW (Phase 3)
 
 1. **l7 reconcile:** MLX-trace shows l7 lowering d_seg (−0.00027) but the 5-agent pass calls it a defect. Is DEMOTE right, or is l7 a small-but-real drop we're discarding? (Resolve: measure l7-on vs l7-off through-R at the tau-converged ckpt, T2.)
