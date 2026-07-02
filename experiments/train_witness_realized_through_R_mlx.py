@@ -361,12 +361,18 @@ def render_through_R_mlx(witness, coord_feats, code_idx: int, render_h: int, ren
     return r  # (1, SEG_H, SEG_W, 3)
 
 
-def render_batch_through_R_mlx(witness, coord_feats, code_indices, render_h: int, render_w: int):
+def render_batch_through_R_mlx(witness, coord_feats, code_indices, render_h: int, render_w: int, compose_fn=None):
     """Batched render-through-R: code_indices (M,) -> (M, SEG_H, SEG_W, 3).
 
     M is the number of frames in the batch (= 2*K for K pairs, f0+f1 interleaved).
     One MLP forward over the M codes, one batched R roundtrip. Same R math as the
     per-frame path (leading dims preserved by apply_eval_roundtrip_nhwc).
+
+    COMPOSE HOOK (v2 residual / analytic-lane render-band; ADDITIVE, default None =>
+    BYTE-IDENTICAL). When given, ``compose_fn(rgb_nhwc, code_indices) -> rgb_nhwc`` composes
+    the batched witness RGB with a FIXED deterministic field (bulk render / analytic lane band)
+    BEFORE R, mirroring the per-frame ``render_through_R_mlx`` compose hook. Default None
+    preserves the exact pre-hook behavior op-for-op. (analytic_lane_render_band wire-in §5.)
     """
     import mlx.core as mx
 
@@ -374,6 +380,8 @@ def render_batch_through_R_mlx(witness, coord_feats, code_indices, render_h: int
 
     rgb_flat = witness.call_batch(coord_feats, code_indices)  # (M, P_px, 3)
     rgb = mx.reshape(rgb_flat, (-1, render_h, render_w, 3))  # (M, h, w, 3) NHWC
+    if compose_fn is not None:
+        rgb = compose_fn(rgb, code_indices)
     # CONTEST-EXACT R (bug #1): uint8 @ CAMERA res, then bilinear to scorer (no trailing uint8).
     r = apply_contest_faithful_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
     return r  # (M, SEG_H, SEG_W, 3)
