@@ -1355,11 +1355,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # reorient -> pure-curvelet width base+dir_w -> correct in_proj shape from epoch 0). Sister
         # of the --render-aa supersample + --self-orient wire-in below.
         def _band_feats(code_idx):
-            # base-grid per-pair coord feats for the band providers: shared array when no self-orient
-            # (exact-object-identical to the measured path); per-pair curvelet⊕dir when self-orient.
-            if not use_self_orient:
-                return coord_feats_mx
-            return mx.array(_feats_np_for_pair(int(code_idx) // 2))
+            # base-grid per-pair coord feats for the band providers, via the canonical _cf_mx accessor
+            # (late-bound; _cf_mx + cf_mx_cache are defined below at main scope and exist by the time
+            # band_compose_fn calls this during training). _cf_mx returns the shared coord_feats_mx
+            # when no self-orient (exact-object-identical to the measured path) and the already-synced
+            # per-pair cf_mx_cache[pi] when self-orient -- BIT-IDENTICAL to mx.array(_feats_np_for_pair
+            # (pi)) (rebuild_per_pair_feats_in_place guarantees it) but REUSES the cache rebuilt after
+            # every reorient instead of a fresh full-res np.concatenate + mx.array per call (senior-
+            # review efficiency fix: kills ~2400 redundant full-res rebuilds/epoch once the band gate
+            # opens at --lane-band-start-epoch; serves the shortest-train / MLX-first discipline).
+            return _cf_mx(int(code_idx) // 2)
         from tac.boundary_math.analytic_lane_render_band import (
             build_analytic_lane_band_prior,
             make_lane_band_compose_fn,
