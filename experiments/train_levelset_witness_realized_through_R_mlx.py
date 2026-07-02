@@ -1315,6 +1315,77 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "in_feat": int(in_feat), "trainable": tnames, "n_code_params": int(model.code.size),
                           "note": "shared decoder FROZEN (no weight-decay drift); fitting per-pair codes only "
                           "(amortization fast path -- viability per the small-n generalization estimate)"}), flush=True)
+    # ---- #224 (3) warp-real-luma frame0 POSE CARRIER build + CHILD-ATTACH (BEFORE EMA/opt so the
+    # EMA shadow + AdamW/Muon state + checkpoints all track the carrier residual through the SAME
+    # machinery). DEFAULT OFF (--pose-carrier) => no attach => model.trainable_parameters() unchanged
+    # => value_and_grad/opt/ema BYTE-IDENTICAL. The RENDER dispatch (even code=f0->carrier warp,
+    # odd=f1->witness) is wired below at the render-fn assembly (replacing the old fail-closed guard).
+    # The residual co-grad rides the ONE nn.value_and_grad(model, ...) (probe-verified: child dxi gets
+    # a finite grad; the carrier's self.freeze(["xi_stored"]) keeps the stored twist out of the
+    # trainable tree under parent recursion, so the optimizer never corrupts it).
+    pose_carrier = None
+    pose_carrier_geom = None
+    pose_carrier_xi_stored = None
+    if bool(getattr(args, "pose_carrier", False)):
+        if bool(getattr(args, "freeze_decoder_fit_codes", False)):
+            raise ValueError(
+                "--pose-carrier is incompatible with --freeze-decoder-fit-codes: the decoder freeze "
+                "runs BEFORE the carrier attach and its trainable-set assertion (only 'code') would "
+                "either fail or freeze the carrier residual. Run them separately.")
+        if float(args.w_pose) <= 0.0:
+            raise ValueError(
+                "--pose-carrier requires --w-pose > 0: the residual dxi trains ONLY on the realized "
+                "d_pose term; with w_pose=0 the carrier stays at the stored-twist init (no co-grad).")
+        from tac.boundary_math.warp_real_luma_frame0 import (
+            GroundHomographyGeom as _PCGeom,
+            WarpRealLumaFrame0Carrier as _PCCarrier,
+            warp_frame0_uint8_numpy as _pc_warp_uint8_np,
+            xi_from_pose_calibration as _pc_xi_from_calib,
+        )
+        _pc_nat_h, _pc_nat_w = int(np.asarray(gt.gt_f0[0]).shape[0]), int(np.asarray(gt.gt_f0[0]).shape[1])
+        pose_carrier_geom = _PCGeom.eon(native_hw=(_pc_nat_h, _pc_nat_w), pitch=float(args.pose_carrier_pitch))
+        _pc_sr = float(args.pose_carrier_s_r)
+        _pc_pitch = float(args.pose_carrier_pitch)
+        if args.pose_carrier_s_t is not None:
+            _pc_st = float(args.pose_carrier_s_t)
+            _pc_fit = None
+        else:
+            # self-calibrating s_t fit on the frozen CPU-torch PoseNet d_pose grid (mirrors
+            # tools/measure_warp_real_luma_frame0_dpose): deterministic, GT-derived, NEVER MPS.
+            _pc_nf = max(1, min(int(args.pose_carrier_fit_pairs), P))
+            _pc_grid = [0.0, 0.02, 0.044, 0.08, 0.12, 0.16, 0.22, 0.30]
+
+            def _pc_mean_dpose(_st: float) -> float:
+                f0s = [np.asarray(gt.gt_f0[p]) for p in range(_pc_nf)]
+                preds = [_pc_warp_uint8_np(
+                    f0s[p], _pc_xi_from_calib(np.asarray(gt.gt_poses[p]), _st, _pc_sr, _pc_pitch),
+                    pose_carrier_geom) for p in range(_pc_nf)]
+                dps = cpu_verdict_d_pose_batch(
+                    posenet_cpu, f0s, preds, [np.asarray(gt.gt_poses[p]) for p in range(_pc_nf)])
+                return float(np.mean(dps))
+
+            _pc_fit = {s: _pc_mean_dpose(s) for s in _pc_grid}
+            _pc_st = float(min(_pc_fit, key=_pc_fit.get))
+        pose_carrier_xi_stored = np.stack([
+            _pc_xi_from_calib(np.asarray(gt.gt_poses[p]), _pc_st, _pc_sr, _pc_pitch)
+            for p in range(P)]).astype(np.float32)
+        _pc_code_dim = int(args.mod_dim) if str(args.pose_carrier_residual_mode) == "film" else None
+        pose_carrier = _PCCarrier.build(
+            pose_carrier_xi_stored, pose_carrier_geom,
+            residual_mode=str(args.pose_carrier_residual_mode),
+            residual_scale=float(args.pose_carrier_residual_scale),
+            code_dim=_pc_code_dim, film_hidden=32)
+        mx.eval(pose_carrier.parameters())
+        model.pose_carrier = pose_carrier.impl   # child-attach: dxi joins model.trainable_parameters()
+        mx.eval(model.parameters())
+        print(json.dumps({"stage": "pose_carrier", "residual_mode": str(args.pose_carrier_residual_mode),
+                          "s_t": round(_pc_st, 5), "s_r": _pc_sr, "pitch": _pc_pitch,
+                          "s_t_fit": ({str(k): round(v, 3) for k, v in _pc_fit.items()} if _pc_fit else None),
+                          "native_hw": [_pc_nat_h, _pc_nat_w], "n_pairs": P,
+                          "note": "frame0 real-luma SE(3)-warp pose carrier; residual co-grad via "
+                          "child-attach (ONE value_and_grad + opt + EMA); advisory; pointer 0.19110 UNMOVED"}),
+              flush=True)
+
     ema = MlxEMA(model, decay=args.ema_decay)
     # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA. DEFAULT-OFF: --ema-decay-finisher None =>
     # ema_finisher_decay None => the loop NEVER mutates ema.decay => the EMA trajectory is
@@ -1491,21 +1562,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     render_fn = _render_R if (_aa_on or _use_chain) else None
 
     # (3) warp-real-luma frame0 pose carrier — the parity-dispatch render_fn (even code=f0 -> the
-    # SE(3) ground-homography warp of the REAL keyframe luma; odd=f1 -> witness) + residual co-grad.
-    # FAIL-CLOSED: the render_fn build needs the measured xi calibration constants (s_t/s_r/pitch,
-    # per tools/measure_warp_real_luma_frame0_dpose.py) AND the residual training needs a
-    # value_and_grad that co-differentiates carrier.trainable_parameters() alongside the witness --
-    # a co-optimization restructure that is not GPU-validatable under CONTAINMENT. Flags + gauge
-    # (PoseGauge.WARP_REAL_LUMA) landed; this ON-path is the documented #224 follow-up. Default OFF
-    # => this guard never fires => byte-identical.
-    if bool(getattr(args, "pose_carrier", False)):
-        raise NotImplementedError(
-            "--pose-carrier: the frame0 real-luma warp render_fn + residual co-grad wire-in is the "
-            "#224 follow-up (needs the measured xi calibration s_t/s_r/pitch + a value_and_grad that "
-            "co-differentiates WarpRealLumaFrame0Carrier.trainable_parameters() with the witness). "
-            "The carrier module (src/tac/boundary_math/warp_real_luma_frame0.py) + its "
-            "make_pair_render_dispatch + the flags/gauge are landed; enabling this is gated on that "
-            "co-optimization restructure. Run without --pose-carrier (w_pose=0 pose-blind-by-design).")
+    # SE(3) ground-homography warp of the REAL keyframe luma; odd=f1 -> witness). The carrier BUILD +
+    # child-ATTACH (residual co-grad through the ONE value_and_grad + AdamW/Muon + EMA) happened
+    # ABOVE, pre-EMA; here we only WRAP render_fn with the parity dispatch. The measured s_t/s_r/pitch
+    # calibration is self-fit at build (or --pose-carrier-s-t); the residual dxi co-grad rides the
+    # child-attach. Default OFF (pose_carrier is None) => render_fn unchanged => byte-identical.
+    if pose_carrier is not None:
+        _pc_witness_render = _render_R if (_aa_on or _use_chain) else render_through_R_mlx
+
+        def _pc_gt_f0_provider(pi: int):
+            # native-res (H,W,3) REAL keyframe luma as mx float32; per-call (transient, no P-length
+            # fp32 cache -> n600-memory-safe; the uint8 GT already resides in gt.gt_f0).
+            return mx.array(np.asarray(gt.gt_f0[pi], np.float32))
+
+        _pc_code_provider = None
+        if str(args.pose_carrier_residual_mode) == "film":
+            def _pc_code_provider(pi: int):
+                return model.code[2 * pi + 0]   # frame0 per-pair code for the FiLM residual MLP
+
+        render_fn = pose_carrier.make_pair_render_dispatch(
+            _pc_witness_render, _pc_gt_f0_provider, code_provider=_pc_code_provider)
+        print(json.dumps({"stage": "pose_carrier_render_dispatch", "residual_mode": str(args.pose_carrier_residual_mode),
+                          "witness_render": ("aa/chain" if (_aa_on or _use_chain) else "bare"),
+                          "note": "parity dispatch (even code=f0->carrier warp, odd=f1->witness) wired "
+                          "into make_loss_fn(render_fn=...); advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
     base_loss = make_loss_fn(
         adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
@@ -1865,11 +1945,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             chroma=args.chroma,
         )
 
+    def _pc_verdict_f0_uint8(pi: int, deploy: dict[str, np.ndarray]) -> np.ndarray:
+        """#224 pose-carrier NO-FAKE verdict frame0: warp the REAL keyframe luma by the DEPLOYED
+        (EMA-shadow, int8-dequant) carrier twist xi_eff, so the advisory d_pose measures what the
+        carrier actually produces (NOT the witness's own f0). xi_stored uses the original fp32 table
+        (the stored twist ships fp16, not int8; the trained residual dxi rides the deploy dict).
+        Native-res uint8 (874x1164x3) matching the witness f1 verdict contract + cpu_verdict_d_pose."""
+        from tac.boundary_math.warp_real_luma_frame0 import warp_frame0_uint8_numpy as _pc_warp_u8
+        xi = np.asarray(pose_carrier_xi_stored[pi], np.float64)
+        scale = float(args.pose_carrier_residual_scale)
+        if str(args.pose_carrier_residual_mode) == "table":
+            dxi = np.asarray(deploy.get("pose_carrier.dxi"), np.float64)[pi]
+        else:  # film: numpy twin of gelu(film_in(code)) -> film_out (advisory reconstruction)
+            from scipy.special import erf
+            code = np.asarray(deploy["code"][2 * pi + 0], np.float64)
+            w_in = np.asarray(deploy["pose_carrier.film_in.weight"], np.float64)
+            b_in = np.asarray(deploy["pose_carrier.film_in.bias"], np.float64)
+            w_out = np.asarray(deploy["pose_carrier.film_out.weight"], np.float64)
+            b_out = np.asarray(deploy["pose_carrier.film_out.bias"], np.float64)
+            h = code @ w_in.T + b_in
+            h = 0.5 * h * (1.0 + erf(h / np.sqrt(2.0)))    # exact gelu (matches mlx.nn.gelu)
+            dxi = (h @ w_out.T + b_out).reshape(-1)
+        xi_eff = xi + scale * dxi
+        return _pc_warp_u8(np.asarray(gt.gt_f0[pi]), xi_eff, pose_carrier_geom)
+
     def _render_numpy_deploy(deploy: dict[str, np.ndarray], pi: int, fk: int) -> np.ndarray:
         """THE ONE CODEPATH (fp32 numpy, deploy-faithful) — same forward the byte-close/inflate use.
         Uses the PER-PAIR feats (curvelet [+ self-orient]) so the verdict == the deploy render. In
         residual mode the INR RGB is COMPOSED with the FIXED bulk (where(mask, INR, bulk)) BEFORE R,
-        so the advisory d_seg reflects the COMPOSED witness that ships (NO-FAKE)."""
+        so the advisory d_seg reflects the COMPOSED witness that ships (NO-FAKE). #224 pose-carrier:
+        frame0 (fk==0) routes through the carrier warp so the d_pose verdict measures the carrier."""
+        if pose_carrier is not None and fk == 0:
+            return _pc_verdict_f0_uint8(pi, deploy)
         rgb, _phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + fk])
         rgb_hw3 = rgb.reshape(render_h, render_w, 3)
         if _compose_np is not None:
@@ -2009,7 +2116,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _compose_np is not None:  # residual mode: compose the FIXED bulk before R (NO-FAKE)
                 _r0 = _compose_np(_r0, pi)
                 _r1 = _compose_np(_r1, pi)
-            f0s.append(_torch_R_to_camera_uint8(_r0))
+            # #224 pose-carrier: frame0 through the carrier warp (deploy int8-dequant xi_eff) so the
+            # ASYNC d_pose verdict measures the carrier too (matches the sync _render_numpy_deploy path).
+            if pose_carrier is not None:
+                f0s.append(_pc_verdict_f0_uint8(pi, deploy))
+            else:
+                f0s.append(_torch_R_to_camera_uint8(_r0))
             f1s.append(_torch_R_to_camera_uint8(_r1))
         ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
         dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
@@ -3335,6 +3447,18 @@ def main(argv: list[str] | None = None) -> int:
                     "or film (code-conditioned MLP). Default table.")
     ap.add_argument("--pose-carrier-residual-scale", type=float, default=1.0,
                     help="#224 pose-carrier learnable-residual scale (dxi = scale * residual).")
+    ap.add_argument("--pose-carrier-s-t", type=float, default=None,
+                    help="#224 pose-carrier ground-homography translation scale s_t for the stored twist "
+                    "xi = xi_from_pose_calibration(gt_pose, s_t, s_r, pitch). None (default) => FIT s_t at "
+                    "startup on --pose-carrier-fit-pairs via the frozen CPU-torch PoseNet d_pose grid "
+                    "(self-calibrating, deterministic; mirrors tools/measure_warp_real_luma_frame0_dpose).")
+    ap.add_argument("--pose-carrier-s-r", type=float, default=0.0,
+                    help="#224 pose-carrier rotation scale s_r for the stored twist (default 0.0 = the "
+                    "measured d_pose-optimal whole-ground calibration).")
+    ap.add_argument("--pose-carrier-pitch", type=float, default=0.0,
+                    help="#224 pose-carrier ground-plane pitch (rad) for the homography geom (default 0.0).")
+    ap.add_argument("--pose-carrier-fit-pairs", type=int, default=24,
+                    help="#224 # pairs for the startup s_t fit grid (only when --pose-carrier-s-t is None).")
     # -------- (4) persistence/topology loss (persistence_topology_loss; TopologyLossGauge) -----------
     ap.add_argument("--persistence-loss-weight", type=float, default=0.0,
                     help="#224/#218: weight of the soft-clDice + persistence-weighted island-recall "
