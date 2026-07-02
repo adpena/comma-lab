@@ -1,0 +1,36 @@
+{
+  "schema": "island_protection_survival_smoke.v1",
+  "utc": "2026-07-02T00:24:04Z",
+  "cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "authority": "frozen_cpu_torch_segnet_argmax",
+  "evidence_axis": "[contest-CPU advisory] (surrogate erasure; real scorer birth verdict)",
+  "promotion_eligible": false,
+  "island_detect": {
+    "lane_cls": 1,
+    "movable_cls": 3
+  },
+  "summary": {
+    "n": 600,
+    "erase_factor": 4,
+    "wash_k": 5,
+    "dilate_px": 1,
+    "lane": {
+      "baseline": 1.0,
+      "erased": 0.5646,
+      "seeded": 0.9304,
+      "wash_uncontained": 0.7961,
+      "wash_contained": 0.9531,
+      "seed_birth_gain": 0.3658,
+      "containment_gain": 0.157
+    },
+    "movable": {
+      "baseline": 1.0,
+      "erased": 0.9102,
+      "seeded": 0.9773,
+      "wash_uncontained": 0.9746,
+      "wash_contained": 0.9765,
+      "seed_birth_gain": 0.0671,
+      "containment_gain": 0.0019
+    }
+  }
+}

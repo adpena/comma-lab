@@ -69,6 +69,7 @@ class GaugeComponent(Enum):
     MOVABLES = "movables"
     GENERATION = "generation"
     TOPOLOGY_LOSS = "topology_loss"
+    ISLAND_PROTECTION = "island_protection"
 
 
 class WarpGauge(Enum):
@@ -134,6 +135,27 @@ class TopologyLossGauge(Enum):
     CLDICE_BETTI = "cldice_betti"    # clDice + persistence-weighted island recall (the birth force)
 
 
+class IslandProtectionGauge(Enum):
+    """How the finest-scale islands (lane dashes cls-1 + small movables cls-3) are PROTECTED
+    from spectral-bias-slow LATE discovery + the bulk-CE wash (FEED-lz; task #208).
+
+    The 3-lever islands-protection stack (0-byte train-time; the seed is an ACCELERANT, NOT a
+    shipped dense residual — the HPRC dense-sidecar rate-negative is respected). Chart ↔ trainer:
+      NONE          = --no-seed-islands + --amplify-weight 0 (byte-identical baseline);
+      AMPLIFY_ONLY  = the island-birth term (rides the SHARED realized margin _signed, the SAME
+                      field the levelset trainer's LEVER-4 margin-saliency uses — NOT a 2nd saliency);
+      SEED_CONTAIN  = EARLY-SEED (structured-init lane+movable) + CONTAINMENT (protected-pathway
+                      grad projection) only;
+      FULL          = EARLY-SEED + CONTAINMENT + AMPLIFICATION (all three).
+    Impl: tac.boundary_math.island_protection. $0 n600 frozen-CPU-torch signal (advisory): LANE
+    erased-recall 0.56 -> seeded 0.93 (+0.37 birth) -> wash 0.80 -> contained 0.95 (+0.16)."""
+
+    NONE = "none"                    # no island protection (byte-identical baseline)
+    AMPLIFY_ONLY = "amplify_only"    # the island-birth term only (rides LEVER-4 _signed)
+    SEED_CONTAIN = "seed_contain"    # early-seed + containment only
+    FULL = "full"                    # early-seed + containment + amplification
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -143,6 +165,7 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.MOVABLES: MovablesGauge,
     GaugeComponent.GENERATION: GenerationGauge,
     GaugeComponent.TOPOLOGY_LOSS: TopologyLossGauge,
+    GaugeComponent.ISLAND_PROTECTION: IslandProtectionGauge,
 }
 
 
