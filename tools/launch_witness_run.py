@@ -163,7 +163,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--all-levers", action="store_true",
                     help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact): "
-                    "AA-SDF supersample render (ss=2, fine-mode full) + analytic lane-render-band + "
+                    "--render-aa none + analytic coverage-integrated lane-render-band (Wave D AA "
+                    "correction; supersample DISQUALIFIED: hurts -49% + decode over budget) + "
                     "persistence/topology loss + "
                     "island-birth amplification + annealed hosc 1->4 + l7 DEMOTED + verdict-pairs 0 + "
                     "mod-dim 19 (Whitney floor) + adam-beta2 0.9999999. Default OFF => attribution-clean "

@@ -39,7 +39,7 @@ TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
   --chroma --palette-anchor \
   --eikonal-weight 0.01 --length-weight 0.001 \
   --render-h 384 --render-w 512 \
-  --render-aa supersample --aa-supersample 2 --aa-self-orient-fine-mode full \
+  --render-aa none \
   --lane-render-band --lane-band-start-epoch 300 --lane-band-uncertainty-source witness \
   --lane-band-tau 0.85 --lane-band-eps 0.35 --lane-band-softness 1.0 \
   --lane-band-dash-forward-max-m 55.0 --lane-band-weight 1.0 \
@@ -50,7 +50,7 @@ TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
   --structured-init --structured-init-include-lane \
   --lane-prior-phi1 --lane-prior-phi1-mode replace --lane-prior-phi1-dash-gate \
   --accum-pairs 8 --grad-clip 1.0 --ema-decay 0.997 \
-  --lr 1e-3 --lr-end 1e-4 --weight-decay 1e-4 \
+  --lr 1e-3 --lr-end 1e-4 --weight-decay 1e-4 --adam-beta2 0.9999999 \
   --ckpt-every 25 --stage-checkpoints
 ```
 
@@ -80,7 +80,7 @@ are NOT-YET-BUILT flag signatures — do NOT set them (mx.compile'd path is the 
 | `--self-orient` + `--n-dir-freqs 2` + `--freq-across 32` + `--freq-along 4` + `--reorient-every 50` | directional basis (#1 lever, −48%) | proven_base; basis-BEFORE-capacity (calibration DAG order) | HIGH (self-orient); MED (n-dir-freqs 2 = proven-arm, not independently swept vs default 6) |
 | `--max-bank-freq 64` | stem Nyquist | SEG_W/(4·stem_stride)=512/8=64; LEVER-2 anti-alias cap (calibration T0 boundary-Nyquist) | HIGH |
 | `--render-h 384` / `--render-w 512` | R-survival floor | eq `oracle_r_dseg_floor_by_render_grid`: g384 oracle floor ~0.00086 < first-row target 0.00118 (representation adequate; gap = training). render-192 pre-caps → blocks sub-0.15 | HIGH |
-| `--render-aa supersample` + `--aa-supersample 2` + `--aa-self-orient-fine-mode full` | supersample→box (the OBSERVATION-CORRECT AA) | **Wave C FIX-2 (2026-07-02)**: supersample = exact R+SegNet observation model (ss=2 render→box-down); oracle-R floor 0.00086 + class-1 lane recall +0.374 (ipe only SMOOTHS the basis). The ~164GB OOM fear was at n_dir_freqs=6; the shipped config uses n_dir_freqs=2 → **SCALED memory probe MEASURED 24.0 MB/pair fine dir-feat → fine-full n600 14.06 GB; extrapolated peak 63.06 GB (fine 14.06 + base-cache-anchor 41 + fwd overhead 8) → 64.94 GB headroom on 128 GB (rel-var 0.0)**. fine-mode `full` = amortized-per-reorient (no +8h batch-EDT thrash). structured-init guard relaxed (composes: base-grid pretrain + shared coord-INR weights at fine coords). | HIGH (observation-correct; probe-confirmed memory-safe) |
+| `--render-aa none` + `--lane-render-band` | analytic coverage-integrated AA (the contest-feasible OPTIMAL) | **Wave D AA CORRECTION (2026-07-02, supersedes Wave C FIX-2)** per `aa_feasibility_reconciliation_20260702.md`: brute `--render-aa supersample` is DISQUALIFIED on TWO independent grounds — (1) it HURTS the witness **−49%** (MEASURED; the 0.00086 floor is a REAL-FRAME *ceiling* SIGNAL-A, NOT the witness-realized SIGNAL-B, which supersampling an already-smooth softmax-of-SDF partition cannot improve), AND (2) the fp64 decode is **41.3 min > the 30-min budget** (4-core CPU) AND neither shipped inflate even *applies* supersample (both render base-grid point-sample) → a train/decode observation MISMATCH. `--render-aa none` + the analytic coverage-integrated `--lane-render-band` (O(1)/pixel, base-grid, `mx.compile`-friendly, decode IN budget ~10 min fp64/4.4 min fp32) IS the contest-feasible optimal AA and composes with `--self-orient` (no fine dir-feat cache). This removes the 14 GB fine-dir-feat cache, the ss² decode risk, the −49% witness harm, and the train/decode mismatch in ONE edit. The supersample code path stays BUILT + fail-closeable in the trainer (OUT of the launch config); `--render-aa ipe` (O(1), decode-safe) is the documented alt if a full-partition AA is ever wanted — NEVER supersample. | HIGH (contest-feasible; MEASURED to help; decode-in-budget) |
 | `--lane-render-band` + band params | trained-in class-1 render authority | build-state: naive band HURTS +0.000622 → witness-uncertainty gate kills 98% FP → net-win NEEDS training-in (3× confirmed). uncertainty-source=witness, start@300 (=tau; witness partition formed), dash-forward-max-m 55.0 (SegNet-Nyquist #215). eq `analytic_lane_render_band_fp_reduction_v1` | MED (all defaults; trained-in per build-state) |
 | `--persistence-loss-weight 1.0` + recall 1.0 + cldice-iters 5 + warmup 300 + classes auto | soft-clDice + persistence-recall on shared seg forward | wave-1 landed `122e59ba8` (111× more erasure-sensitive than CE). weight 1.0 = ENGAGE value (T2 knob per calibration — optimum only exists in-training); warmup 300 = coarse→fine (ramp over CE stage). eq `persistence_topology_cldice_betti_island_recall_v1` | LOW weight (T2-calibration start, no measured optimum — labeled) |
 | `--amplify-weight 1.0` + form hinge + margin-target 1.0 + persist inverse_thickness | island-birth on shared LEVER-4 `_signed` | wave-1 landed `0f013e17a`. AMPLIFY_ONLY path is WIRED (seed/containment is fail-closed). weight 1.0 = ENGAGE (T2 knob). eq `island_finest_scale_protection_survival_v1` | LOW weight (T2-calibration start — labeled) |
@@ -110,11 +110,14 @@ are NOT-YET-BUILT flag signatures — do NOT set them (mx.compile'd path is the 
    co-grad wire-in is the #224 follow-up. ⇒ `--w-pose 0` (pose-blind-by-design; d_seg-first).
 2. `--seed-islands` → `NotImplementedError` (line 1631): protected seed-residual PARAM + grad-shield
    restructure not wired. ⇒ use `--amplify-weight` (AMPLIFY_ONLY, WIRED, rides `_signed`) instead.
-3. ~~`--render-aa supersample` + `--self-orient` → `ValueError`~~ **SUPERSEDED by Wave C FIX-2 (2026-07-02)**:
-   the memory-safe fine dir-feat path is BUILT (`--aa-self-orient-fine-mode full`) and the SCALED probe
-   MEASURED the n600 peak at ~63 GB (not ~164 GB — that was n_dir_freqs=6; shipped config is n_dir_freqs=2
-   → 24 MB/pair). supersample (the observation-correct AA) is NOW the shipped all-levers AA; the
-   structured-init incompatibility guard is relaxed (verified small-MLX n6: composes, finite, descends).
+3. ~~`--render-aa supersample`~~ **NOT in the launch config — Wave D AA CORRECTION (2026-07-02, supersedes
+   Wave C FIX-2)** per `aa_feasibility_reconciliation_20260702.md`: supersample is DISQUALIFIED (HURTS
+   the witness −49% [SIGNAL-A ceiling ≠ SIGNAL-B realized] AND fp64 decode 41min > 30min budget AND
+   neither shipped inflate applies ss → train/decode mismatch). The launch AA is `--render-aa none` +
+   the analytic coverage-integrated `--lane-render-band`. The supersample code path (`--aa-supersample`
+   / `--aa-self-orient-fine-mode`) stays BUILT + fail-closeable in the trainer but is NOT emitted by
+   the all-levers config; re-open ONLY if a witness-realized (SIGNAL-B byte-closed through-R) n600
+   measurement shows it HELPS AND decode is moved to fp32-torch or T4-GPU inflate (<18 min).
 
 Also OFF (parent's authorized list excludes them; kept for a later warm-start re-treatment):
 - **LEVER-4 margin-saliency** (`--margin-saliency-weight 0`): calibration's #2 lever (KKT waterfill on
@@ -124,14 +127,17 @@ Also OFF (parent's authorized list excludes them; kept for a later warm-start re
   (`--margin-field-head-weight 0`, head=softmax): margin-field is WIRED but net-positivity is UNCONFIRMED
   (in-flight #218 Laguerre/ETF sweep) → OFF per parent's "if net-positive, else off".
 
-## CANNOT SET — honest gaps (NO-FAKE)
+## Resolved gaps (was "CANNOT SET" — now actuated)
 
-- **#222 Adam β₂**: the trainer exposes NO `--adam-beta2` / `--betas` flag (grep = 0 matches in both
-  trainers). DERIVED optimum (calibration T0, arXiv 2603.02092): with β₁=0.9, n=75 (=P/accum_pairs=600/8),
+- **#222 Adam β₂ — RESOLVED (Wave C FIX-1 + Wave D)**: the trainer NOW exposes `--adam-beta2` (added
+  Wave C; `experiments/train_levelset_witness_realized_through_R_mlx.py:3273` + sister base trainer).
+  DERIVED optimum (calibration T0, arXiv 2603.02092): with β₁=0.9, n=75 (=P/accum_pairs=600/8),
   `1−β₂* ≲ (1−β₁⁵)/n^3.5 = (1−0.59049)/75^3.5 = 0.40951/3.653e6 = 1.12e-7` ⇒ **β₂* ≈ 0.9999999**
   (≈ 1−1.1e-7; the default 0.999 → 1−β₂=1e-3 is ~4 orders ABOVE the floor = under-smoothed for n=75).
-  **Actuation requires a code change** (add `--adam-beta2`, thread into the MLX AdamW/Muon-fallback
-  `betas`) — out of scope for this build-only pass. **#1 follow-up before launch if β₂ is to be tuned.**
+  The all-levers argv above emits `--adam-beta2 0.9999999`; the trainer gates bias-correction ON off
+  the 0.999 default (`_adam_bias_correction_for`; without it the high β₂ = ~100× step-1 LR blowup) and
+  Wave D threads the SAME β₂ + gate into the Muon-finisher AdamW rest-group (ep726-1000) so the whole
+  run is CONSISTENT. Default 0.999 stays == the MLX default (byte-identical-off).
 
 ## Caveats / watch-items (for the recursive + senior review)
 

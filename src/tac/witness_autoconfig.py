@@ -492,8 +492,9 @@ class WitnessConfig:
     dm1_enabled: bool
 
     # (F1) all-levers opt-in: when True, ``to_trainer_flags`` renders the deep-math-OPTIMAL all-levers
-    # from-scratch argv (AA-SDF supersample render + analytic lane-render-band + persistence/topology loss +
-    # island-birth amplification + annealed hosc 1->4 + l7 DEMOTED + verdict-pairs 0 + adam-beta2),
+    # from-scratch argv (--render-aa none + analytic coverage-integrated lane-render-band [Wave D AA
+    # correction] + persistence/topology loss + island-birth amplification + annealed hosc 1->4 +
+    # l7 DEMOTED + verdict-pairs 0 + adam-beta2),
     # per .omx/research/capstone_witness_launch_config_deepmath_optimal_20260702.md (#205). Default
     # False => the attribution-clean proven_base baseline stays available byte-identically.
     all_levers: bool = False
@@ -591,11 +592,17 @@ class WitnessConfig:
         # when NOT emitted; here they are the ENGAGE values from the deep-math config artifact).
         if al:
             flags += [
-                # #224 Wave C FIX-2: supersample AA (the optimal observation-correct render) + ss=2 +
-                # the memory-safe FULL fine self-orient mode (probe-confirmed ~63GB n600 peak).
+                # #224 Wave D AA CORRECTION (aa_feasibility_reconciliation_20260702.md): the
+                # contest-feasible OPTIMAL AA is --render-aa NONE + the analytic coverage-integrated
+                # --lane-render-band (O(1)/pixel, in the 30-min decode budget, MEASURED to HELP).
+                # Brute --render-aa supersample is DISQUALIFIED on TWO independent grounds: (1) it
+                # HURTS the witness -49% (0.00086 is a REAL-FRAME ceiling, not witness-realized), and
+                # (2) fp64 decode 41min > 30min budget AND neither shipped inflate even applies ss
+                # (train/decode observation MISMATCH). The supersample code path stays BUILT +
+                # fail-closeable in the trainer but is OUT of the launch config (--aa-supersample /
+                # --aa-self-orient-fine-mode are NOT emitted). --render-aa ipe (O(1), decode-safe)
+                # is the documented alt if a full-partition AA is ever wanted; never supersample.
                 ("--render-aa", alb["render_aa"]),
-                ("--aa-supersample", alb["aa_supersample"]),
-                ("--aa-self-orient-fine-mode", alb["aa_self_orient_fine_mode"]),
                 ("--lane-render-band", None),
                 ("--lane-band-start-epoch", alb["lane_band_start_epoch"]),
                 ("--lane-band-uncertainty-source", alb["lane_band_uncertainty_source"]),
@@ -701,16 +708,15 @@ def _all_levers_base(tau_start: int) -> dict:
         "hosc_beta_end": 4.0,
         "hosc_beta_anneal": "linear",
         "tau_anneal_shape": "cosine",
-        # #224 Wave C FIX-2: AA-SDF SUPERSAMPLE observation-map render (the OPTIMAL, observation-CORRECT
-        # AA — renders ss*grid -> box-down = the exact R+SegNet observation model; MEASURED oracle-R
-        # floor 0.00086 + +0.374 class-1 lane recall; ipe only SMOOTHS the basis). ss=2 (Nyquist-doubling)
-        # + self-orient fine-mode FULL (amortized-per-reorient, NO +8h batch-EDT thrash). full is memory-
-        # safe: SCALED probe measured per-pair fine dir-feat 24.0MB (n_dir_freqs=2) => fine-full n600
-        # ~14GB; extrapolated peak ~63GB (fine 14 + base-cache-anchor 41 + fwd overhead 8) => ~65GB
-        # headroom on the 128GB M5 Max (>> the ~13GB safety floor). See the FIX-2 memory-probe note.
-        "render_aa": "supersample",
-        "aa_supersample": 2,
-        "aa_self_orient_fine_mode": "full",
+        # #224 Wave D AA CORRECTION (aa_feasibility_reconciliation_20260702.md, supersedes Wave C
+        # FIX-2): --render-aa NONE. The contest-feasible OPTIMAL AA is the analytic coverage-integrated
+        # --lane-render-band below (O(1)/pixel, decode-in-budget, MEASURED to HELP). Brute supersample
+        # is DISQUALIFIED: it HURTS the witness -49% (the 0.00086 floor is a REAL-FRAME ceiling, not
+        # the witness-realized number) AND its fp64 decode is 41min > the 30min budget AND neither
+        # shipped inflate applies ss (train/decode observation mismatch). ss code path stays BUILT +
+        # fail-closeable in the trainer but OUT of the launch config; --render-aa ipe is the O(1)
+        # decode-safe alt if a full-partition AA is ever wanted (never supersample).
+        "render_aa": "none",
         # analytic lane-render-band (class-1 render-time authority; witness-uncertainty FP gate).
         "lane_band_start_epoch": int(tau_start),
         "lane_band_uncertainty_source": "witness",

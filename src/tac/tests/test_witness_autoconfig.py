@@ -270,9 +270,9 @@ def test_all_levers_argv_matches_deepmath_artifact():
     lau_keys = set(launcher) - drop
     # every artifact flag is emitted by the launcher
     assert art_keys - lau_keys == set(), f"artifact flags missing from launcher: {art_keys - lau_keys}"
-    # the ONLY launcher-extra is --adam-beta2 (the documented F4 code-change superset; the artifact
-    # itself flags beta2 as a required code change it could not emit)
-    assert lau_keys - art_keys == {"--adam-beta2"}, f"unexpected launcher extras: {lau_keys - art_keys}"
+    # Wave D: --adam-beta2 is now IN the artifact argv (the --adam-beta2 flag was added in Wave C, so
+    # the artifact no longer flags it as an un-emittable code change) => no launcher extras.
+    assert lau_keys - art_keys == set(), f"unexpected launcher extras: {lau_keys - art_keys}"
     # every shared flag's VALUE matches (numeric-aware so 1e-3 == 0.001)
     mism = [(k, artifact[k], launcher[k]) for k in (art_keys & lau_keys)
             if _num_or_str(artifact[k]) != _num_or_str(launcher[k])]
@@ -309,3 +309,26 @@ def test_all_levers_beta2_clears_smalln_threshold():
 def test_baseline_beta2_is_mlx_default_bit_identical():
     cfg = wac.derive_config(_GT_N600, num_pairs=600)  # all_levers default False
     assert cfg.adam_beta2 == pytest.approx(0.999)  # == MLX AdamW default => bit-identical path
+
+
+# --------------------------------------------------------------------------
+# Wave D AA CORRECTION: all-levers ships --render-aa none + lane-render-band
+# (supersample DISQUALIFIED per aa_feasibility_reconciliation_20260702.md)
+# --------------------------------------------------------------------------
+def test_all_levers_aa_is_none_not_supersample():
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, epochs=1000, all_levers=True)
+    fd = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
+    # --render-aa NONE is the contest-feasible optimal AA (Wave D correction)
+    assert fd.get("--render-aa") == "none", f"all-levers must ship --render-aa none, got {fd.get('--render-aa')}"
+    # the analytic coverage-integrated lane-render-band IS the AA (kept)
+    assert "--lane-render-band" in fd
+    # the disqualified supersample flags are NOT emitted by the launch config
+    assert "--aa-supersample" not in fd, "supersample DISQUALIFIED (hurts -49% + decode over budget)"
+    assert "--aa-self-orient-fine-mode" not in fd, "fine dir-feat cache dropped with supersample"
+
+
+def test_all_levers_base_dict_has_no_supersample_keys():
+    base = wac._all_levers_base(300)
+    assert base["render_aa"] == "none"
+    assert "aa_supersample" not in base
+    assert "aa_self_orient_fine_mode" not in base
