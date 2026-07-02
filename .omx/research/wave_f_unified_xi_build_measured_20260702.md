@@ -98,13 +98,15 @@ the re-parameterization it revealed.
   shared sidecar — the shared-ξ-vs-per-axis-optima tension is resolved trivially: **ξ is a pure-pose
   object**, optimally calibrated for d_pose at zero lane cost. The "one ξ, both axes" claim is MOOT
   (the lane axis declined ξ), which is a cleaner outcome than the anticipated compromise.
-- **d_pose warm-start:** the seam's `dense_xi` feeds the already-built `warp_real_luma_frame0` carrier
-  (`warp_frame0_uint8_numpy`). The authoritative n600 warm-start is measured by
-  `tools/measure_warp_real_luma_frame0_dpose.py` (real frozen CPU-torch PoseNet, NEVER MPS): the
-  zero-motion null (~182) → the ξ-calibrated ground-homography warp (~10.5, −94%), residual to ~3.4e-5
-  closed by a trained per-pair `dxi` (`w_pose>0`, #205). `[FRESH n600 RESULT: see
-  wave_f_pose_warmstart_dpose_n600_RESULT.json — POSE_WARMSTART_ROW]`. This is our prior FEED-lj physics
-  (`warp_real_luma_frame0_pose_carrier_dpose_v1`); the seam is the estimator-agnostic front end feeding it.
+- **d_pose warm-start — FRESH n600 MEASURED** (`tools/measure_warp_real_luma_frame0_dpose.py`, real frozen
+  CPU-torch PoseNet, NEVER MPS; `wave_f_pose_warmstart_dpose_n600_RESULT.json`, 142.7 s):
+  **zero-motion null d_pose = 163.12 (√10·d = 40.39) → ξ-calibrated ground-homography warp = 1.367
+  (√10·d = 3.697), a −99% drop.** Best global forward calibration `s_t = 0.044` (NO-FAKE self-check
+  `PoseNet(gt pair) == gt_poses` PASS, 4 pairs). ξ store = 7,200 B fp16 / 2,424 B low-rank-r2. The seam's
+  `dense_xi` feeds this exact `warp_real_luma_frame0` carrier (`warp_frame0_uint8_numpy`, numpy-fp64
+  authority); the residual from 1.367 → ~3.4e-5 (√10·d ~0.018) is the trained per-pair `dxi` (`w_pose>0`,
+  #205). **MLX↔numpy warp parity caveat:** the MLX fast path drifts (rel_diff 0.252) — the d_pose VERDICT
+  is ALWAYS the numpy/torch authority; decode is numpy-fp64 (MLX is training-gradient only, never a score).
 - **Q4 up-to-affine identifiability:** `PoseTargetEgoEstimator(calib='affine_to_lane')` fits the affine
   map from the `gt_poses` PoseNet channels to a reference ξ; the physical/pose calibration is the fitted
   `(s_t, s_r)` in `xi_from_pose_calibration`. Since the lane axis rejects ξ, the affine calibration is a
@@ -117,7 +119,7 @@ the re-parameterization it revealed.
 | axis | LBND2 | LBND3 ego (lane-opt / PoseNet) | LBND2-on-smoothed (win15) |
 |---|---|---|---|
 | **(i) lane-rate @ n600** | 0.02765 | 0.0316 / 0.0299 (WORSE) | **0.01608 (−42%)** |
-| **(ii) d_pose warm-start** | ξ-free (pose sidecar decoupled) | same (ξ is pure-pose) | same |
+| **(ii) d_pose warm-start** (n600, pure-pose ξ) | null 163.1 → warp **1.367** (−99%); →~3.4e-5 via #205 dxi | — | ξ-free lane axis |
 | **(iii) determinism / decode** | bit-exact ✓ | bit-exact ✓ (but not shipped) | bit-exact ✓ (existing LBND2 inflate path) |
 | **(iv) rule-118 cleanliness** | ✓ | ✓ (ξ counted, but net-negative) | ✓ (no ξ; smoothing is a compress-time source transform) |
 
@@ -157,8 +159,8 @@ crossing the old Shannon floor) holds; the specific mechanism (predictive coding
 1. **#205 trained-in d_seg with the smoothed band** — the ONLY thing that moves the pointer: does the −42%
    rate + the denoised geometry NET a lower exact S? Sweep the smoothing window for the S-optimum (win15
    rate-optimal may over-smooth d_seg; win5 conservative). This is a scorer run, gated.
-2. **Pose warm-start fold-in** — the fresh n600 `measure_warp_real_luma_frame0_dpose` row confirms the pure-
-   pose ξ warm-start (decoupled from the lane rate).
+2. **Pose warm-start — DONE** (fresh n600 row: null 163.1 → warp 1.367, −99%; pure-pose ξ, decoupled). The
+   residual 1.367 → ~3.4e-5 is the trained per-pair `dxi` (part of the #205 witness run).
 3. **Non-negatives to try before closing predictive-coding** (per "negatives adversarially overturned"):
    joint MULTI-FRAME world-lane fit (fit ONE world lane + a smooth ego trajectory jointly, not per-frame
    fits then denoise) — the strongest form of the L1 source re-param; and slot-correspondence stabilization
