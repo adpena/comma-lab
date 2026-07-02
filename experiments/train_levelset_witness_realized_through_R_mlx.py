@@ -1317,6 +1317,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     band_gate = {"on": False}
     _band_start = int(getattr(args, "lane_band_start_epoch", 300))
     if _band_active:
+        # Fail-closed on the un-wired lane-band + self-orient combination (NO-FAKE: no silent
+        # mid-run crash). BOTH the witness margin provider (call_margin) AND the lane RGB provider
+        # (render_lane_appearance) feed the shared base-grid coord_feats_mx into the model in_proj,
+        # which expects base+dir_w width when --self-orient is on -> MLX matmul shape crash at
+        # --lane-band-start-epoch (default 300), AFTER real compute is spent. The per-pair
+        # self-orient dir-feat recompute for the band providers (mirror _cf_mx) is the pending fix.
+        # Sister of the --render-aa supersample + --self-orient guard above.
+        if use_self_orient:
+            raise ValueError(
+                "--lane-render-band is not yet wired with --self-orient: the lane-band margin/"
+                "appearance providers use the shared no-self-orient coord_feats_mx, but the model "
+                "in_proj expects base+dir_w feats under --self-orient (MLX shape crash at "
+                "--lane-band-start-epoch). Run --lane-render-band WITHOUT --self-orient, OR land the "
+                "per-pair self-orient dir-feat recompute for the band providers (mirror _cf_mx) first.")
         from tac.boundary_math.analytic_lane_render_band import (
             build_analytic_lane_band_prior,
             make_lane_band_compose_fn,
