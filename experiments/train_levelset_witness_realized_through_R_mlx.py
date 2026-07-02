@@ -1019,12 +1019,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # Fail-closed on the un-wired combinations (NO-FAKE: no silent wrong result). The fine-grid
         # self-orient per-pair dir-feat recompute + the structured-init render-res==L*-res invariant
         # are not yet wired; refuse rather than render on mismatched feats.
+        #
+        # #224 Option-B DECISION (FAIL-CLOSED, precise n600 blocker — NOT a shape/impl gap):
+        # AA-supersample + --self-orient needs PER-PAIR fine-grid feats = curvelet(coords_fine) ⊕
+        # dir_feats_fine(pair), where dir_feats_fine is the spec's argmax-NN-upsample→fine-EDT→
+        # directional-Fourier (docs/aa_sdf_observation_render_wire_in_spec.md). At n600 this cannot be
+        # made simultaneously memory-safe AND wall-clock-viable WITHOUT a GPU run to pick the budget:
+        #   (a) CACHE per-pair fine feats (mirror cf_mx_cache): cf_mx_cache is ALREADY ~41GB at n600
+        #       (see _rebuild_cf_mx_cache); the fine cache is ss^2× = ~164GB @ ss=2, AND BOTH the base
+        #       cache (base_loss/sdf(cf) + reorient) and the fine cache (render) are live in this mode
+        #       => ~205GB => hard OOM (the operator's n600-scale allergy + the FEED-eh OOM history).
+        #   (b) ON-DEMAND fine feats (no fine cache, memory-safe): recompute the fine EDT per render
+        #       call. The base path amortizes P EDTs across --reorient-every (~50) epochs via the
+        #       cache; on-demand does P fine (ss^2×) EDTs EVERY epoch (~50× more, 4× larger) =>
+        #       minutes/epoch of scipy EDT over thousands of epochs => non-n600-viable wall-clock.
+        # Neither the cache-memory budget nor the on-demand wall-clock can be measured under
+        # CONTAINMENT (no GPU). Per CLAUDE.md OPERATOR PRIORITY (fail-closed when "can't be verified
+        # correct without a GPU run") this lever stays fail-closed with THIS precise blocker rather
+        # than shipping an unverified / non-n600-viable path. WIRED self-orient-compatible AA/lane
+        # alternatives (use these for the from-scratch launch): --render-aa ipe (basis-level cone AA,
+        # touches ONLY the shared curvelet columns, self-orient-compatible, ~0 compute) AND/OR
+        # --lane-render-band (class-1 render authority, NOW self-orient-composable per the Option-B
+        # lane-band wire-in below). AA-supersample WITHOUT --self-orient also still works.
         if use_self_orient:
             raise ValueError(
-                "--render-aa supersample is not yet wired with --self-orient: the per-pair directional "
-                "feats must be recomputed at the ss*grid (NN-upsample the argmax before the tangent EDT) "
-                "per docs/aa_sdf_observation_render_wire_in_spec.md. Run AA supersample WITHOUT "
-                "--self-orient, or use --render-aa ipe (basis-level AA, self-orient-compatible).")
+                "--render-aa supersample is not wired with --self-orient (FAIL-CLOSED, #224 Option-B): "
+                "the per-pair fine-grid dir-feats (argmax→ss*grid→EDT→directional-Fourier, "
+                "docs/aa_sdf_observation_render_wire_in_spec.md) are n600-infeasible as a cache "
+                "(~164GB @ ss=2, on top of the ~41GB base cache => OOM) and non-viable on-demand "
+                "(P fine EDTs/epoch); the memory/wall-clock budget needs a GPU run to pick and is "
+                "unvalidatable under CONTAINMENT. Use --render-aa ipe (basis-level AA, "
+                "self-orient-compatible) and/or --lane-render-band (now self-orient-composable), or "
+                "run AA supersample WITHOUT --self-orient.")
         if args.structured_init:
             raise ValueError(
                 "--render-aa supersample is incompatible with --structured-init (which requires "
@@ -1317,20 +1343,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     band_gate = {"on": False}
     _band_start = int(getattr(args, "lane_band_start_epoch", 300))
     if _band_active:
-        # Fail-closed on the un-wired lane-band + self-orient combination (NO-FAKE: no silent
-        # mid-run crash). BOTH the witness margin provider (call_margin) AND the lane RGB provider
-        # (render_lane_appearance) feed the shared base-grid coord_feats_mx into the model in_proj,
-        # which expects base+dir_w width when --self-orient is on -> MLX matmul shape crash at
-        # --lane-band-start-epoch (default 300), AFTER real compute is spent. The per-pair
-        # self-orient dir-feat recompute for the band providers (mirror _cf_mx) is the pending fix.
-        # Sister of the --render-aa supersample + --self-orient guard above.
-        if use_self_orient:
-            raise ValueError(
-                "--lane-render-band is not yet wired with --self-orient: the lane-band margin/"
-                "appearance providers use the shared no-self-orient coord_feats_mx, but the model "
-                "in_proj expects base+dir_w feats under --self-orient (MLX shape crash at "
-                "--lane-band-start-epoch). Run --lane-render-band WITHOUT --self-orient, OR land the "
-                "per-pair self-orient dir-feat recompute for the band providers (mirror _cf_mx) first.")
+        # #224 Option-B WIRE-IN (self-orient composable): BOTH the witness margin provider
+        # (call_margin) AND the lane RGB provider (render_lane_appearance) feed the model in_proj,
+        # which expects base+dir_w feats when --self-orient is on. The pre-Option-B code hardcoded
+        # the shared no-self-orient coord_feats_mx -> MLX matmul shape crash under --self-orient at
+        # --lane-band-start-epoch. FIX: feed the PER-PAIR self-orient feats (base curvelet + this
+        # pair's live dir feats) via _band_feats(code_idx) below (mirrors _cf_mx). NO-FAKE: when
+        # --self-orient is OFF this returns the SAME shared coord_feats_mx object (numerically
+        # byte-identical to the pre-Option-B measured no-self-orient band path); when ON it returns
+        # mx.array(_feats_np_for_pair(pair)) = base curvelet ⊕ this pair's dir feats (zeros pre-first-
+        # reorient -> pure-curvelet width base+dir_w -> correct in_proj shape from epoch 0). Sister
+        # of the --render-aa supersample + --self-orient wire-in below.
+        def _band_feats(code_idx):
+            # base-grid per-pair coord feats for the band providers: shared array when no self-orient
+            # (exact-object-identical to the measured path); per-pair curvelet⊕dir when self-orient.
+            if not use_self_orient:
+                return coord_feats_mx
+            return mx.array(_feats_np_for_pair(int(code_idx) // 2))
         from tac.boundary_math.analytic_lane_render_band import (
             build_analytic_lane_band_prior,
             make_lane_band_compose_fn,
@@ -1345,9 +1374,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _u_src = str(args.lane_band_uncertainty_source)
         if _u_src == "witness":
             def _band_margin_provider(code_idx):
-                # shared coord_feats_mx (correct for the measured no-self-orient config); stop-grad.
+                # per-pair self-orient feats (base curvelet ⊕ this pair's dir feats) via _band_feats;
+                # == shared coord_feats_mx when --self-orient is OFF (measured no-self-orient config).
                 return mx.stop_gradient(
-                    model.call_margin(coord_feats_mx, int(code_idx))).reshape(render_h, render_w)
+                    model.call_margin(_band_feats(code_idx), int(code_idx))).reshape(render_h, render_w)
             _margin_provider: Any = _band_margin_provider
         elif _u_src == "gt":
             _margin_provider = {c: mx.array(np.asarray(gt.margins[c // 2], np.float32)) for c in _lane_priors}
@@ -1355,7 +1385,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _margin_provider = None
 
         def _band_lane_rgb(code_idx):
-            return model.render_lane_appearance(coord_feats_mx, int(code_idx), lane_cls=1).reshape(
+            return model.render_lane_appearance(_band_feats(code_idx), int(code_idx), lane_cls=1).reshape(
                 render_h, render_w, 3)
 
         band_compose_fn = make_lane_band_compose_fn(
