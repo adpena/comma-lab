@@ -68,6 +68,7 @@ class GaugeComponent(Enum):
     POSE = "pose"
     MOVABLES = "movables"
     GENERATION = "generation"
+    TOPOLOGY_LOSS = "topology_loss"
 
 
 class WarpGauge(Enum):
@@ -118,6 +119,21 @@ class GenerationGauge(Enum):
     LEARNED_COUNTED = "learned_counted"        # learned weights in archive.zip (counted)
 
 
+class TopologyLossGauge(Enum):
+    """How the finest-scale (low-persistence) island topology is preserved in the seg loss.
+
+    The #218 HEAD/margin-field facet. 0-byte (train-time only): the erasure-tail birth of the
+    lane dashes (class-1) + small movables (class-3) the topology-blind per-pixel CE drops.
+    Chart ↔ trainer flag: NONE=--persistence-loss-weight 0 (byte-identical baseline);
+    CLDICE=clDice-only (w_recall 0); CLDICE_BETTI=clDice + persistence-weighted island recall.
+    Impl: tac.boundary_math.persistence_topology_loss. $0 n600 signal (advisory): topology is
+    ~111x more erasure-sensitive than CE; toy-descent island-recall gain +0.44."""
+
+    NONE = "none"                    # no topology term (byte-identical to the pre-wire trainer)
+    CLDICE = "cldice"                # soft-clDice connectivity (β0/β1) on self-detected thin classes
+    CLDICE_BETTI = "cldice_betti"    # clDice + persistence-weighted island recall (the birth force)
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -126,6 +142,7 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.POSE: PoseGauge,
     GaugeComponent.MOVABLES: MovablesGauge,
     GaugeComponent.GENERATION: GenerationGauge,
+    GaugeComponent.TOPOLOGY_LOSS: TopologyLossGauge,
 }
 
 
