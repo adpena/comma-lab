@@ -148,5 +148,81 @@ def test_inflate_string_pcar_matches_tool_oracle():
         assert np.array_equal(a, b), f"pair {pi}: inflate _pcar_frame0 != tool oracle"
 
 
+# --------------------------------------------------------------------------- #
+# 6. STORE-NOTHING (Track B): serialize with EMPTY keyframes round-trips; mode readable
+# --------------------------------------------------------------------------- #
+def test_store_nothing_serialize_parse_empty_keyframes():
+    P = 4
+    H = np.random.default_rng(21).standard_normal((P, 3, 3)) + np.eye(3)[None]
+    xi = np.zeros((P, 6), np.float32)
+    hdr_extra = {"pose_carrier_mode": "store_nothing", "generator": "witness_render_frame0",
+                 "s_t": 0.16, "s_r": 1.0, "pitch": 0.02, "stride": 1,
+                 "kf_store_h": L.CAMERA_H, "kf_store_w": L.CAMERA_W, "keyframe_lossless_native": True}
+    blob = L.serialize_pose_carrier(H, xi, [], [0] * P, hdr_extra)  # NO keyframes
+    pc = L.parse_pose_carrier(blob)
+    assert L.pose_carrier_mode(pc) == "store_nothing"
+    assert len(pc["keyframes"]) == 0  # store-nothing stores ZERO keyframe luma
+    assert np.array_equal(pc["H"], H)
+    # the section is tiny (H+xi + hdr only) -- far below a single native keyframe.
+    assert len(blob) < 2000, f"store-nothing section should be ~H+xi bytes, got {len(blob)}"
+
+
+# --------------------------------------------------------------------------- #
+# 7. STORE-NOTHING _cap_pose_carrier survives empty keyframes + preserves mode
+# --------------------------------------------------------------------------- #
+def test_store_nothing_cap_pose_carrier_empty_keyframes():
+    P = 6
+    H = np.random.default_rng(22).standard_normal((P, 3, 3)) + np.eye(3)[None]
+    xi = np.zeros((P, 6), np.float32)
+    hdr_extra = {"pose_carrier_mode": "store_nothing", "generator": "witness_render_frame0",
+                 "s_t": 1.0, "s_r": 1.0, "pitch": 0.0, "stride": 1,
+                 "kf_store_h": L.CAMERA_H, "kf_store_w": L.CAMERA_W, "keyframe_lossless_native": True}
+    blob = L.serialize_pose_carrier(H, xi, [], [0] * P, hdr_extra)
+    capped = L._cap_pose_carrier(blob, 2)  # must NOT IndexError on the empty keyframe list
+    pc = L.parse_pose_carrier(capped)
+    assert int(pc["hdr"]["n_pairs"]) == 2
+    assert len(pc["keyframes"]) == 0
+    assert L.pose_carrier_mode(pc) == "store_nothing"
+    assert np.array_equal(pc["H"], H[:2])
+
+
+# --------------------------------------------------------------------------- #
+# 8. STORE-NOTHING frame0-from-source warp == the module authority warp on the SAME source
+#    (proves the generated-frame warp is the identical op as warp_real_luma, just a different src)
+# --------------------------------------------------------------------------- #
+def test_store_nothing_frame0_from_source_bit_matches_authority():
+    from tac.boundary_math import warp_real_luma_frame0 as W
+
+    geom = W.GroundHomographyGeom.eon(pitch=0.02)
+    # a GENERATED (non-keyframe) camera-native source -- stands in for the witness's own render.
+    src = _rng_frame(L.CAMERA_H, L.CAMERA_W, 33).astype(np.float64)
+    xi = W.xi_from_pose_calibration(np.array([28.0, 0.0, 0.05, 0.0, 0.0, 0.0]), 0.16, 1.0, 0.02)
+    H = W.homography_from_xi_numpy(xi, geom)
+    pc = {"hdr": {"native_h": L.CAMERA_H, "native_w": L.CAMERA_W,
+                  "pose_carrier_mode": "store_nothing"}, "H": np.stack([H])}
+    got = L.pose_carrier_frame0_from_source(pc, 0, src)
+    auth = W.warp_frame0_uint8_numpy(src, xi, geom)  # same warp, same src
+    assert np.array_equal(got, auth), "store-nothing warp-from-source must equal the module authority"
+
+
+# --------------------------------------------------------------------------- #
+# 9. STORE-NOTHING build_pose_carrier_section on REAL gt (n6): 0 keyframes, tiny section, mode set
+# --------------------------------------------------------------------------- #
+def test_store_nothing_build_section_zero_keyframes_real_gt():
+    gt = _REPO / "experiments" / "results" / "mlx_fleet_gt_cache" / "gt_n6.npz"
+    if not gt.exists():
+        pytest.skip("gt_n6 cache not present")
+    pc_cfg = {"s_t": 0.16, "s_r": 1.0, "pitch": 0.02, "stride": 1, "downscale": 1, "mode": "store_nothing"}
+    blob, manifest, report = L.build_pose_carrier_section(str(gt), 6, pc_cfg)
+    assert manifest["mode"] == "store_nothing"
+    assert report["n_keyframes"] == 0
+    assert report["keyframe_blob_bytes_total"] == 0  # ZERO keyframe payload (the store-nothing win)
+    assert report["generator"] == "witness_render_frame0"
+    # the whole section is H (72 B/pair) + xi (12 B/pair) + hdr -> tiny vs a stored keyframe.
+    assert report["pose_carrier_section_bytes"] < 4000
+    pc = L.parse_pose_carrier(blob)
+    assert L.pose_carrier_mode(pc) == "store_nothing" and len(pc["keyframes"]) == 0
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-q"]))

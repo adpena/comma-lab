@@ -534,11 +534,28 @@ def _pcar_upsample_to_native(kf: np.ndarray, native_hw: tuple[int, int]) -> np.n
 
 def pose_carrier_frame0(pc: dict[str, Any], pi: int) -> np.ndarray:
     """Decode frame0 for pair ``pi`` = warp(stored keyframe, stored H[pi]) at native res -> uint8.
-    The tool-side authority; the shipped inflate inlines a verbatim copy."""
+    The tool-side authority (warp_real_luma mode); the shipped inflate inlines a verbatim copy."""
     native_hw = (int(pc["hdr"]["native_h"]), int(pc["hdr"]["native_w"]))
     kf = pc["keyframes"][int(pc["kf_of_pair"][pi])]
     src = _pcar_upsample_to_native(kf, native_hw)
     return _pcar_warp_frame0_from_H(src, pc["H"][pi], native_hw)
+
+
+def pose_carrier_mode(pc: dict[str, Any]) -> str:
+    """The pose-carrier decode mode from the PCAR hdr. ``warp_real_luma`` (default; stored real
+    keyframe) or ``store_nothing`` (store ONLY xi/H; frame0 = warp(GENERATED witness render, H))."""
+    return str(pc["hdr"].get("pose_carrier_mode", "warp_real_luma"))
+
+
+def pose_carrier_frame0_from_source(pc: dict[str, Any], pi: int, src_native: np.ndarray) -> np.ndarray:
+    """STORE-NOTHING frame0 = warp(a GENERATED camera-native ``src_native``, stored H[pi]) -> uint8.
+
+    ``src_native`` is the witness's OWN frame0 RGB render at camera resolution (NOT a stored real
+    keyframe -- store_nothing stores ONLY xi/H, ~0 marginal bytes). Op-for-op the SAME warp as
+    ``_pcar_warp_frame0_from_H`` so the shipped inflate's inlined store-nothing warp == this oracle
+    bit-for-bit (the general bit-exact gate proves it over frame0 too)."""
+    native_hw = (int(pc["hdr"]["native_h"]), int(pc["hdr"]["native_w"]))
+    return _pcar_warp_frame0_from_H(np.asarray(src_native, dtype=np.float64), pc["H"][pi], native_hw)
 
 
 def _downscale_keyframe(gt_f0_native: np.ndarray, store_hw: tuple[int, int]) -> np.ndarray:
@@ -559,38 +576,54 @@ def _downscale_keyframe(gt_f0_native: np.ndarray, store_hw: tuple[int, int]) -> 
 def build_pose_carrier_section(
     gt_cache: str | None, n_pairs: int, pc: dict[str, Any],
 ) -> tuple[bytes, dict[str, Any], dict[str, Any]]:
-    """Build the #205 warp-real-luma pose-carrier section from the GT cache (compress-time: the
-    real keyframe luma ``gt_f0`` + the ego pose ``gt_poses`` are fully available). Returns
+    """Build the #205 pose-carrier section from the GT cache (compress-time: the ego pose
+    ``gt_poses`` [+ real keyframe luma ``gt_f0`` for warp_real_luma] are fully available). Returns
     (pose_carrier_bytes, manifest_cfg, report). NO-FAKE: missing cache raises.
 
+    Two selectable modes (``pc["mode"]``, A/B-able against each other at #205; NEITHER removed):
+
+    * ``warp_real_luma`` (default) -- store the real keyframe luma; frame0 = warp(stored keyframe,
+      per-pair H). Keyframes stored at ``store_hw`` (native=lossless; downscaled=cheap-rate lever).
+      Rate = keyframe brotli + H(72 B/pair) + xi(12 B/pair), COUNTED in archive.zip.
+    * ``store_nothing`` (Track B ``18927a1ae`` / ``keyframe_rate_minimization_builds``) -- store ONLY
+      xi (+ H for decode simplicity), NO real keyframe. frame0 = warp(the witness's OWN frame0 RGB
+      render [generated FREE by the INR from the counted weights+code -- rule-118], per-pair H). The
+      keyframe payload collapses to ~0 marginal bytes (rate ~= xi/H only). MEASURED n600 (Track B,
+      classmean proxy): d_pose 4.97 pre-residual (witness render is richer -> <= 4.97); the trained
+      rank-6 dxi residual (#205, w_pose>0) closes the fixed offset toward ~3.4e-5 (UNMEASURED here).
+
     For each pair p: the per-pair ego twist ``xi[p] = xi_from_pose_calibration(gt_poses[p], s_t,
-    s_r, pitch)`` (dual-use with the pose sidecar); ``H[p] = homography_from_xi_numpy(xi[p], geom)``
-    (fp64, the exact warp). Keyframes stored at ``store_hw`` (native = lossless; downscaled = the
-    cheap-rate lever, matched to PoseNet's 512x384 working res). ``stride`` keyframes: pair p uses
-    keyframe ``round(p/stride)*stride`` (stride=1 -> per-pair, the exact upper bound; stride>1 ->
-    shared keyframes warped by each pair's own xi -- a cheaper, geometrically-approximate variant,
-    LOUDLY flagged). The rate cost is the SUM of the keyframe brotli bytes + H(72 B/pair) +
-    xi(12 B/pair); it is COUNTED in archive.zip (the real st_size)."""
+    s_r, pitch)``; ``H[p] = homography_from_xi_numpy(xi[p], geom)`` (fp64, the exact warp). ``stride``
+    keyframes (warp_real_luma only): pair p uses keyframe ``(p//stride)*stride`` (stride=1 -> per-pair
+    exact upper bound; stride>1 -> shared, geometrically-approximate, LOUDLY flagged)."""
+    mode = str(pc.get("mode", "warp_real_luma"))
+    if mode not in ("warp_real_luma", "store_nothing"):
+        raise ValueError(f"pose-carrier mode {mode!r} unknown (warp_real_luma|store_nothing).")
+    store_nothing = mode == "store_nothing"
     if not gt_cache:
-        raise ValueError("--pose-carrier requires --gt-cache (the real gt_f0 keyframes + gt_poses). "
+        raise ValueError("--pose-carrier requires --gt-cache (gt_poses [+ gt_f0 for warp_real_luma]). "
                          "NO-FAKE: refusing to fabricate the pose payload.")
     cp = Path(gt_cache)
     if not cp.exists():
-        raise FileNotFoundError(f"--gt-cache {cp} not found (pose-carrier needs gt_f0 + gt_poses).")
+        raise FileNotFoundError(f"--gt-cache {cp} not found (pose-carrier needs gt_poses [+ gt_f0]).")
     z = np.load(cp, allow_pickle=False)
-    for req in ("gt_f0", "gt_poses"):
+    # store_nothing needs ONLY the ego poses (no real keyframe luma -> the pure "store nothing but xi").
+    required = ("gt_poses",) if store_nothing else ("gt_f0", "gt_poses")
+    for req in required:
         if req not in z.files:
-            raise ValueError(f"gt cache {cp} lacks {req!r} (pose-carrier needs the real keyframes + poses).")
-    gt_f0 = z["gt_f0"]
+            raise ValueError(f"gt cache {cp} lacks {req!r} (pose-carrier mode={mode}).")
     gt_poses = np.asarray(z["gt_poses"], dtype=np.float64)
-    P = min(int(n_pairs), int(gt_f0.shape[0]), int(gt_poses.shape[0]))
+    P = int(min(int(n_pairs), int(gt_poses.shape[0])))
+    if not store_nothing:
+        gt_f0 = z["gt_f0"]
+        P = min(P, int(gt_f0.shape[0]))
     s_t, s_r, pitch = float(pc["s_t"]), float(pc["s_r"]), float(pc["pitch"])
     stride = max(1, int(pc["stride"]))
     ds = max(1, int(pc.get("downscale", 1)))
-    store_hw = (CAMERA_H, CAMERA_W) if ds == 1 else (CAMERA_H // ds, CAMERA_W // ds)
+    store_hw = (CAMERA_H, CAMERA_W) if (store_nothing or ds == 1) else (CAMERA_H // ds, CAMERA_W // ds)
     geom = _wrl.GroundHomographyGeom.eon(pitch=pitch)
 
-    # per-pair twist + homography (fp64 authority).
+    # per-pair twist + homography (fp64 authority) -- identical for both modes.
     xi_stack = np.zeros((P, 6), dtype=np.float64)
     H_stack = np.zeros((P, 3, 3), dtype=np.float64)
     for p in range(P):
@@ -598,59 +631,91 @@ def build_pose_carrier_section(
         xi_stack[p] = xi
         H_stack[p] = _wrl.homography_from_xi_numpy(xi, geom)
 
-    # keyframe schedule + stored luma (store-res).
-    kf_indices = sorted({min(P - 1, (p // stride) * stride) for p in range(P)})
-    kf_pos = {k: i for i, k in enumerate(kf_indices)}
-    kf_of_pair = [kf_pos[min(P - 1, (p // stride) * stride)] for p in range(P)]
-    keyframes = [_downscale_keyframe(np.asarray(gt_f0[k]), store_hw) for k in kf_indices]
+    if store_nothing:
+        # store-nothing: NO stored keyframe luma. frame0 = warp(witness's OWN frame0 render, H) at
+        # decode (the generator is FREE; only xi/H are COUNTED). kf_of_pair is a valid (unused) list.
+        keyframes: list[np.ndarray] = []
+        kf_of_pair = [0] * P
+    else:
+        # keyframe schedule + stored luma (store-res).
+        kf_indices = sorted({min(P - 1, (p // stride) * stride) for p in range(P)})
+        kf_pos = {k: i for i, k in enumerate(kf_indices)}
+        kf_of_pair = [kf_pos[min(P - 1, (p // stride) * stride)] for p in range(P)]
+        keyframes = [_downscale_keyframe(np.asarray(gt_f0[k]), store_hw) for k in kf_indices]
 
     hdr_extra = {
+        "pose_carrier_mode": mode,
         "s_t": s_t, "s_r": s_r, "pitch": pitch, "stride": stride,
         "kf_store_h": int(store_hw[0]), "kf_store_w": int(store_hw[1]),
-        "keyframe_lossless_native": bool(ds == 1),
+        "keyframe_lossless_native": bool(store_nothing or ds == 1),
+        "generator": ("witness_render_frame0" if store_nothing else "stored_real_keyframe"),
         "calibration_note": ("per-pair xi = xi_from_pose_calibration(gt_poses, s_t, s_r, pitch); "
-                             "H = homography_from_xi_numpy(xi). warp-real-luma frame0 semantics "
-                             "(tac.boundary_math.warp_real_luma_frame0)."),
+                             "H = homography_from_xi_numpy(xi). "
+                             + ("STORE-NOTHING: frame0 = warp(witness's OWN frame0 INR render, H) -- "
+                                "no stored keyframe, ~0 marginal bytes (Track B store-nothing-but-xi)."
+                                if store_nothing else
+                                "warp-real-luma frame0 semantics (tac.boundary_math.warp_real_luma_frame0).")),
     }
     blob = serialize_pose_carrier(H_stack, xi_stack, keyframes, kf_of_pair, hdr_extra)
 
-    kf_bytes_total = sum(int(len(s)) for s in _pcar_keyframe_blob_sizes(keyframes))
+    kf_bytes_total = sum(int(len(s)) for s in _pcar_keyframe_blob_sizes(keyframes))  # 0 for store_nothing
     manifest = {
+        "mode": mode,
         "s_t": s_t, "s_r": s_r, "pitch": pitch, "stride": stride,
         "kf_store_h": int(store_hw[0]), "kf_store_w": int(store_hw[1]),
         "n_keyframes": len(keyframes), "n_pairs": P,
-        "keyframe_lossless_native": bool(ds == 1),
+        "keyframe_lossless_native": bool(store_nothing or ds == 1),
     }
     report = {
         "active": True,
+        "mode": mode,
+        "generator": ("witness_render_frame0" if store_nothing else "stored_real_keyframe"),
         "source_gt_cache": str(cp),
         "n_pairs": P,
         "n_keyframes": len(keyframes),
         "stride": stride,
         "keyframe_store_hw": [int(store_hw[0]), int(store_hw[1])],
-        "keyframe_lossless_native": bool(ds == 1),
+        "keyframe_lossless_native": bool(store_nothing or ds == 1),
         "pose_carrier_section_bytes": len(blob),
         "keyframe_blob_bytes_total": kf_bytes_total,
         "H_bytes": int(P * 9 * 8),
         "xi_bytes": int(P * 6 * 2),
         "calibration": {"s_t": s_t, "s_r": s_r, "pitch": pitch},
-        "stride_note": ("stride>1 shares one stored keyframe across a window but warps each pair by "
-                        "ITS OWN intra-pair xi (no kf->pair displacement) -> geometrically approximate "
-                        "for shared keyframes; stride=1 (per-pair) is the EXACT warp-real-luma upper bound."
-                        if stride > 1 else "stride=1: per-pair keyframe, exact warp-real-luma."),
+        "stride_note": (
+            "store_nothing: no stored keyframe -> frame0 = warp(witness's OWN frame0 render, per-pair H); "
+            "stride is unused (only xi/H stored, ~0 marginal bytes = the pure store-nothing-but-xi endpoint)."
+            if store_nothing else
+            ("stride>1 shares one stored keyframe across a window but warps each pair by ITS OWN intra-pair "
+             "xi (no kf->pair displacement) -> geometrically approximate for shared keyframes; stride=1 "
+             "(per-pair) is the EXACT warp-real-luma upper bound." if stride > 1 else
+             "stride=1: per-pair keyframe, exact warp-real-luma.")),
         "rule_118": {
-            "COUNTED (archive.zip)": ("stored real keyframe luma (video-derived) + per-pair homography H; "
-                                      "warped at decode by the per-pair ego twist to synthesize frame0"),
-            "FREE (inflate.py)": ("inverse-warp bilinear + R (generic algorithm); the dual-use twist xi is "
-                                  "the pose sidecar (~0 marginal bytes in the byte-optimal design)"),
+            "COUNTED (archive.zip)": (
+                "ONLY the per-pair ego twist xi (fp16) + homography H (fp64); NO stored keyframe luma "
+                "(the witness's OWN frame0 render is generated FREE by the INR)"
+                if store_nothing else
+                "stored real keyframe luma (video-derived) + per-pair homography H; warped at decode by "
+                "the per-pair ego twist to synthesize frame0"),
+            "FREE (inflate.py)": (
+                "the witness INR frame0 render (generic generator from counted weights+code) + inverse-warp "
+                "bilinear + R (generic algorithm)"
+                if store_nothing else
+                "inverse-warp bilinear + R (generic algorithm); the dual-use twist xi is the pose sidecar "
+                "(~0 marginal bytes in the byte-optimal design)"),
             "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship",
         },
-        "byte_optimal_note": ("H (fp64, 72 B/pair) is stored for BIT-EXACT decode simplicity (no exp_se3 in "
-                              "the decode path); the byte-optimal design stores ONLY xi (fp16, 12 B/pair, "
-                              "dual-use with the pose sidecar) and derives H FREE via exp_se3. Keyframe "
-                              "SPARSITY (stride>1 with kf->pair relative warp) + lossy keyframe codec are "
-                              "the OPEN rate levers -- NOT applied/borrowed here (measured rate is of what "
-                              "is ACTUALLY stored)."),
+        "byte_optimal_note": (
+            "STORE-NOTHING: only xi(12 B/pair) + H(72 B/pair, fp64, kept for bit-exact decode-simplicity; "
+            "the byte-optimal design stores ONLY xi and derives H FREE via exp_se3). ZERO keyframe bytes -- "
+            "the frame0 source is the witness's own render (FREE). Track B MEASURED d_pose 4.97 pre-residual "
+            "(classmean proxy; witness render is richer -> <= 4.97); the trained rank-6 dxi residual (#205 "
+            "w_pose>0) closes the fixed offset toward ~3.4e-5 (UNMEASURED here; NO borrowed number)."
+            if store_nothing else
+            "H (fp64, 72 B/pair) is stored for BIT-EXACT decode simplicity (no exp_se3 in the decode path); "
+            "the byte-optimal design stores ONLY xi (fp16, 12 B/pair, dual-use with the pose sidecar) and "
+            "derives H FREE via exp_se3. Keyframe SPARSITY (stride>1 with kf->pair relative warp) + lossy "
+            "keyframe codec are the OPEN rate levers -- NOT applied/borrowed here (measured rate is of what "
+            "is ACTUALLY stored)."),
     }
     return blob, manifest, report
 
@@ -668,14 +733,17 @@ def _cap_pose_carrier(pcar_bytes: bytes, eval_pairs: int) -> bytes:
     the full serializer, so the shipped inflate + oracle stay bit-exact on the capped set."""
     pc = parse_pose_carrier(pcar_bytes)
     P = min(int(eval_pairs), int(pc["hdr"]["n_pairs"]))
+    hdr = pc["hdr"]
+    hdr_extra = {k: hdr[k] for k in ("pose_carrier_mode", "generator", "s_t", "s_r", "pitch", "stride",
+                                     "kf_store_h", "kf_store_w", "keyframe_lossless_native",
+                                     "calibration_note") if k in hdr}
+    if len(pc["keyframes"]) == 0:  # store_nothing: no keyframes; kf_of_pair is an unused placeholder
+        return serialize_pose_carrier(pc["H"][:P], pc["xi"][:P], [], [0] * P, hdr_extra)
     kf_of_pair = [int(k) for k in pc["kf_of_pair"][:P]]
     used = sorted(set(kf_of_pair))
     remap = {old: i for i, old in enumerate(used)}
     keyframes = [pc["keyframes"][old] for old in used]
     kf_of_pair_new = [remap[k] for k in kf_of_pair]
-    hdr = pc["hdr"]
-    hdr_extra = {k: hdr[k] for k in ("s_t", "s_r", "pitch", "stride", "kf_store_h", "kf_store_w",
-                                     "keyframe_lossless_native", "calibration_note") if k in hdr}
     return serialize_pose_carrier(pc["H"][:P], pc["xi"][:P], keyframes, kf_of_pair_new, hdr_extra)
 
 
@@ -1132,11 +1200,18 @@ def _render_pair(pi):
         cov_flat = _lane_coverage(lane_pairs[pi], rh, rw, lane_hdr).reshape(-1)
     frames = []
     for fk in range(2):
-        # #205: frame0 (fk==0) is the stored keyframe warped by the stored per-pair homography
-        # (seg-free), written at native res directly (no _R -- warp is already camera-native). frame1
+        # #205: frame0 (fk==0) is the pose carrier (seg-free: SegNet reads only frame1). frame1
         # (fk==1) stays the witness render (d_seg). Absent pose carrier -> frame0 is the INR render.
+        #  * warp_real_luma: frame0 = warp(stored keyframe, stored per-pair H).
+        #  * store_nothing:  frame0 = warp(the witness's OWN frame0 INR render, stored per-pair H)
+        #                    -- NO stored keyframe (rule-118: the render is FREE, only xi/H COUNTED).
         if fk == 0 and pcar is not None and pi < int(pcar["hdr"]["n_pairs"]):
-            frames.append(_pcar_frame0(pcar, pi, ch, cw).tobytes())
+            if pcar["hdr"].get("pose_carrier_mode") == "store_nothing":
+                _phi0, rgb0 = _outputs_from_h0(P, h0, code[2 * pi + 0], m, True)
+                src0 = _R(rgb0, rh, rw, ch, cw).astype(np.float64)  # witness frame0 render, camera-native
+                frames.append(_pcar_warp_f0(src0, pcar["H"][pi], ch, cw).tobytes())
+            else:
+                frames.append(_pcar_frame0(pcar, pi, ch, cw).tobytes())
             continue
         if band:
             _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True)
@@ -1314,23 +1389,54 @@ def parity_on_inflated(raw_path: Path, eval_pairs: int, gt_cache: str | None, nu
     }
 
 
+def _dequant_blob(blob: bytes) -> tuple[dict[str, Any], dict[str, np.ndarray], np.ndarray,
+                                        list[list[Any]] | None, dict[str, Any] | None]:
+    """Dequant (int8 -> fp32*scale) the base params + code from a LVLS1 blob, EXACTLY as the shipped
+    inflate does (the numpy-fp32 oracle authority uses the SAME dequantized weights). Returns
+    (manifest, params, code, lane_pairs|None, pose_carrier_parsed|None). Used by store_nothing's
+    ``pose_carrier_confirm`` to regenerate the witness-render frame0 authority (no stored keyframe)."""
+    import brotli
+
+    m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob_bytes(blob)
+    order = m["base_param_order"]
+    flat = np.frombuffer(brotli.decompress(base_b), dtype=np.int8)
+    params: dict[str, np.ndarray] = {}
+    off = 0
+    for name in order:
+        shp = tuple(m["base_shapes"][name])
+        n = int(np.prod(shp))
+        params[name] = (flat[off:off + n].astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
+        off += n
+    code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
+            * float(m["code_scale"])).reshape(m["code_shape"])
+    lane_pairs: list[list[Any]] | None = None
+    if lane_b is not None and m.get("lane_render_band") is not None:
+        lane_pairs, _hdr = deserialize_lane_band_any(brotli.decompress(lane_b))
+    pcar_parsed = parse_pose_carrier(pcar_b) if (pcar_b is not None and m.get("pose_carrier") is not None) else None
+    return m, params, code, lane_pairs, pcar_parsed
+
+
 def pose_carrier_confirm(
     raw_path: Path, eval_pairs: int, gt_cache: str | None, num_pairs: int, pose_carrier_bytes: bytes,
+    blob: bytes | None = None,
 ) -> dict[str, Any]:
     """CONFIRM the pose-carrier decode through the REAL byte-closed inflate (the #205 launch gate).
 
-    (1) frame0 DECODE-REPRODUCTION: the inflated .raw frame0 == the numpy authority
-        ``pose_carrier_frame0(pc, pi)`` BIT-FOR-BIT (proves the shipped inflate warps the stored
-        keyframe by the stored H exactly -> the training-side warp d_pose IS the real-decode d_pose,
-        no gap by construction).
+    (1) frame0 DECODE-REPRODUCTION: the inflated .raw frame0 == the numpy AUTHORITY frame0 BIT-FOR-BIT
+        (proves the shipped inflate warps by the stored H exactly -> the training-side warp d_pose IS
+        the real-decode d_pose, no gap by construction). The authority frame0 is mode-dependent:
+          * warp_real_luma: ``pose_carrier_frame0(pc, pi)`` = warp(stored keyframe, H).
+          * store_nothing:  the numpy-fp32 ORACLE frame0 = warp(the witness's OWN f0 render, H) --
+            regenerated from ``blob`` via ``numpy_oracle_reference_frames`` (needs ``blob``; NO-FAKE).
     (2) CONTEXT d_pose triad (frozen CPU-torch PoseNet, the authority; NEVER MPS):
         * carrier (raw f0 = warp, raw f1 = witness) -- the REAL row d_pose (what evaluate.py scores);
         * unwarped (gt_f0 real, raw f1 = witness) -- isolates the warp's marginal effect;
         * CEILING (gt_f0 real, warp(gt_f0, H)) -- the (real, warped-real) pair the reference tool
-          ``measure_warp_dpose_through_R`` measures (the ~10.53 upper bound; NOT the witness
-          composition). The carrier-vs-ceiling GAP is the OPEN witness-f1 / trained-residual work.
+          ``measure_warp_dpose_through_R`` measures. The carrier-vs-ceiling GAP is the OPEN
+          witness-f1 / trained-residual work.
     NON-PROMOTABLE (macOS-CPU advisory)."""
     pc = parse_pose_carrier(pose_carrier_bytes)
+    mode = pose_carrier_mode(pc)
     if gt_cache:
         gt, _seg, posenet_cpu = twr.load_gt_from_cache(Path(gt_cache), num_pairs)
     else:
@@ -1342,25 +1448,38 @@ def pose_carrier_confirm(
         for _pi in range(P):
             raw_f0.append(np.frombuffer(f.read(fb), dtype=np.uint8).reshape(CAMERA_H, CAMERA_W, 3))
             raw_f1.append(np.frombuffer(f.read(fb), dtype=np.uint8).reshape(CAMERA_H, CAMERA_W, 3))
-    # (1) frame0 decode-reproduction (authority == the shipped inflate .raw).
+    gt_f0 = [np.asarray(gt.gt_f0[pi]) for pi in range(P)]
+    poses = [gt.gt_poses[pi] for pi in range(P)]
+    # (1) frame0 decode-reproduction (numpy authority == the shipped inflate .raw).
+    if mode == "store_nothing":
+        if blob is None:
+            raise ValueError(
+                "store_nothing pose_carrier_confirm needs the LVLS1 blob to regenerate the "
+                "witness-render frame0 authority (the frame0 source is the FREE INR render, not a "
+                "stored keyframe). NO-FAKE: refusing to fabricate the authority.")
+        m, params, code, lane_pairs, pc_oracle = _dequant_blob(blob)
+        oracle_frames, _am = numpy_oracle_reference_frames(params, code, m, P, lane_pairs, pose_carrier=pc_oracle)
+        auth_f0 = [np.asarray(oracle_frames[2 * pi]) for pi in range(P)]
+        # store_nothing ceiling = (real f0, warp(real f0, H)) -- the keyframe-INDEPENDENT reference
+        # (matches measure_warp_dpose_through_R), NOT warp(witness render) which is non-photoreal.
+        ceiling_f1 = [pose_carrier_frame0_from_source(pc, pi, gt_f0[pi]) for pi in range(P)]
+    else:
+        auth_f0 = [pose_carrier_frame0(pc, pi) for pi in range(P)]
+        ceiling_f1 = auth_f0  # warp_real_luma: stored keyframe ~= gt_f0, warp(keyframe, H) is the ceiling
     max_abs = 0
     n_diff = 0
-    auth_f0 = []
     for pi in range(P):
-        a0 = pose_carrier_frame0(pc, pi)
-        auth_f0.append(a0)
-        d = int(np.abs(raw_f0[pi].astype(np.int32) - a0.astype(np.int32)).max())
+        d = int(np.abs(raw_f0[pi].astype(np.int32) - auth_f0[pi].astype(np.int32)).max())
         if d != 0:
             n_diff += 1
         max_abs = max(max_abs, d)
     # (2) d_pose triad (authority PoseNet).
-    gt_f0 = [np.asarray(gt.gt_f0[pi]) for pi in range(P)]
-    poses = [gt.gt_poses[pi] for pi in range(P)]
     dp_carrier = twr.cpu_verdict_d_pose_batch(posenet_cpu, raw_f0, raw_f1, poses)
     dp_unwarped = twr.cpu_verdict_d_pose_batch(posenet_cpu, gt_f0, raw_f1, poses)
-    dp_ceiling = twr.cpu_verdict_d_pose_batch(posenet_cpu, gt_f0, auth_f0, poses)
+    dp_ceiling = twr.cpu_verdict_d_pose_batch(posenet_cpu, gt_f0, ceiling_f1, poses)
     return {
         "pairs": P,
+        "pose_carrier_mode": mode,
         "frame0_decode_bit_exact": bool(max_abs == 0),
         "frame0_max_abs_uint8_diff": int(max_abs),
         "frame0_n_frames_differing": int(n_diff),
@@ -1369,16 +1488,20 @@ def pose_carrier_confirm(
         "d_pose_ceiling_gtf0_warpf0": float(np.mean(dp_ceiling)),
         "d_pose_null_pose_blind_ref": 189.62,
         "training_side_vs_real_decode_parity": (
-            "IDENTICAL by construction: raw frame0 == numpy-authority warp frame0 bit-for-bit (above) "
-            "AND raw frame1 == witness render (bit-exact gate) -> the training-side warp d_pose EQUALS "
-            "the real-decode d_pose (no surrogate gap)." if max_abs == 0 else
-            f"MISMATCH: raw frame0 != authority warp (max_abs={max_abs}) -> the byte-close does NOT "
+            ("IDENTICAL by construction: raw frame0 == numpy-authority "
+             + ("store-nothing witness-render warp" if mode == "store_nothing" else "stored-keyframe warp")
+             + " frame0 bit-for-bit (above) AND raw frame1 == witness render (bit-exact gate) -> the "
+               "training-side warp d_pose EQUALS the real-decode d_pose (no surrogate gap).")
+            if max_abs == 0 else
+            f"MISMATCH: raw frame0 != authority (max_abs={max_abs}) -> the byte-close does NOT "
             "faithfully reproduce the pose decode (NO-FAKE: investigate)."),
         "gap_note": (
             "carrier (warp-f0 + WITNESS-f1) vs ceiling (real-f0 + warped-real-f1): the gap is the OPEN "
             "witness-composition work -- the witness f1 is non-photoreal + the trained dxi residual "
             "(w_pose>0) is UNMEASURED. The ceiling is the reference (real,warped-real) pair, NOT the "
-            "contest-legal witness pair. NO borrowed 3.4e-5 (ancestor-RGB, never validated on the witness)."),
+            "contest-legal witness pair. NO borrowed 3.4e-5 (ancestor-RGB, never validated on the witness)."
+            + (" store_nothing stores ONLY xi/H (~0 marginal bytes) -- the frame0 source is the FREE "
+               "witness render, so the WHOLE keyframe payload (the warp_real_luma rate) is GONE." if mode == "store_nothing" else "")),
         "authority": _AUTHORITY,
         "promotion_claim": False,
     }
@@ -1469,11 +1592,17 @@ def numpy_oracle_reference_frames(
                 v_h=lane_cfg.v_h, cx=lane_cfg.cx,
             ).reshape(-1)
         for fk in range(2):
-            # #205 pose carrier: frame0 (fk==0) is the STORED keyframe warped by the stored per-pair
-            # homography (seg-free), NOT the INR render. frame1 (fk==1) stays the witness render (it
-            # drives d_seg + the argmax). The argmax is taken at fk==1 -> pose carrier is argmax-free.
+            # #205 pose carrier: frame0 (fk==0) is the carrier (seg-free), NOT the plain INR frame0.
+            # frame1 (fk==1) stays the witness render (it drives d_seg + the argmax). argmax is taken
+            # at fk==1 -> the pose carrier is argmax-free. Mode-aware (bit-mirrors the shipped inflate):
+            #  * warp_real_luma: warp(stored keyframe, H); store_nothing: warp(witness's OWN f0 render, H).
             if fk == 0 and pose_carrier is not None:
-                frames.append(pose_carrier_frame0(pose_carrier, pi))
+                if pose_carrier_mode(pose_carrier) == "store_nothing":
+                    rgb0, _phi0 = levelset_rgb_forward_numpy(params, feats, code[2 * pi + 0], **fwd_kw)
+                    src0 = _torch_R_reference(rgb0, rh, rw, ch, cw).astype(np.float64)
+                    frames.append(pose_carrier_frame0_from_source(pose_carrier, pi, src0))
+                else:
+                    frames.append(pose_carrier_frame0(pose_carrier, pi))
                 continue
             if cov is not None:
                 rgb, phi, lane_rgb, margin = levelset_band_forward_numpy(
@@ -1884,25 +2013,36 @@ def run(
     pose_carrier_report: dict[str, Any] = {"active": False}
     keyframe_accounting: dict[str, Any] | None = None
     if pose_carrier:
-        pc_cfg = pose_carrier_cfg or {"s_t": 0.16, "s_r": 1.0, "pitch": 0.02, "stride": 1, "downscale": 1}
+        pc_cfg = pose_carrier_cfg or {"s_t": 0.16, "s_r": 1.0, "pitch": 0.02, "stride": 1,
+                                      "downscale": 1, "mode": "warp_real_luma"}
+        pc_mode = str(pc_cfg.get("mode", "warp_real_luma"))
         pose_carrier_bytes, pose_carrier_manifest, pose_carrier_report = build_pose_carrier_section(
             gt_cache, n_pairs, pc_cfg)
         # REUSE the canonical keyframe_payload_accounting (tools.compose_witness_archive, f7c6abdea) for
-        # the rule-118 line item -- fed the MEASURED keyframe blob bytes actually stored (NOT an estimate).
+        # the rule-118 line item -- fed the MEASURED keyframe blob bytes actually stored (0 for store_nothing).
         from tools.compose_witness_archive import keyframe_payload_accounting  # noqa: PLC0415
         kf_measured = int(pose_carrier_report["keyframe_blob_bytes_total"])
         keyframe_accounting = keyframe_payload_accounting(
             argparse.Namespace(keyframe_payload_path=None, keyframe_payload_bytes=kf_measured,
                                keyframe_count=int(pose_carrier_report["n_keyframes"])))
-        pose_note = (f"WARP-REAL-LUMA frame0 carrier ACTIVE: {pose_carrier_report['n_keyframes']} stored "
-                     f"keyframe(s) (store_hw={pose_carrier_report['keyframe_store_hw']}, "
-                     f"lossless_native={pose_carrier_report['keyframe_lossless_native']}) COUNTED "
-                     f"{kf_measured} B; frame0 = warp(keyframe, per-pair H) -> PoseNet reads real warped "
-                     f"motion. Section={pose_carrier_report['pose_carrier_section_bytes']} B.")
-        print(f"[pose-carrier] warp-real-luma frame0 ACTIVE: n_kf={pose_carrier_report['n_keyframes']} "
-              f"stride={pose_carrier_report['stride']} store_hw={pose_carrier_report['keyframe_store_hw']} "
-              f"keyframe_bytes={kf_measured} section={pose_carrier_report['pose_carrier_section_bytes']} B "
-              f"(rate += {keyframe_accounting['keyframe_blob_rate']:.5f})  {_AUTHORITY}", flush=True)
+        _pc_section = int(pose_carrier_report["pose_carrier_section_bytes"])
+        if pc_mode == "store_nothing":
+            pose_note = (f"STORE-NOTHING (xi-only) carrier ACTIVE: NO stored keyframe (0 B) -- frame0 = "
+                         f"warp(the witness's OWN frame0 render, per-pair H). Section={_pc_section} B "
+                         f"(xi/H only; ~0 marginal keyframe rate). Track B store-nothing-but-xi (18927a1ae).")
+            print(f"[pose-carrier] STORE-NOTHING (xi-only) ACTIVE: keyframe_bytes=0 "
+                  f"section={_pc_section} B (H+xi only; witness render warped by xi = FREE frame0)  "
+                  f"{_AUTHORITY}", flush=True)
+        else:
+            pose_note = (f"WARP-REAL-LUMA frame0 carrier ACTIVE: {pose_carrier_report['n_keyframes']} stored "
+                         f"keyframe(s) (store_hw={pose_carrier_report['keyframe_store_hw']}, "
+                         f"lossless_native={pose_carrier_report['keyframe_lossless_native']}) COUNTED "
+                         f"{kf_measured} B; frame0 = warp(keyframe, per-pair H) -> PoseNet reads real warped "
+                         f"motion. Section={_pc_section} B.")
+            print(f"[pose-carrier] warp-real-luma frame0 ACTIVE: n_kf={pose_carrier_report['n_keyframes']} "
+                  f"stride={pose_carrier_report['stride']} store_hw={pose_carrier_report['keyframe_store_hw']} "
+                  f"keyframe_bytes={kf_measured} section={_pc_section} B "
+                  f"(rate += {keyframe_accounting['keyframe_blob_rate']:.5f})  {_AUTHORITY}", flush=True)
 
     blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest,
                                           pose_carrier_bytes, pose_carrier_manifest)
@@ -1959,7 +2099,8 @@ def run(
     pose_carrier_confirmation: dict[str, Any] = {"checked": False}
     if pose_carrier and pose_carrier_bytes is not None and not skip_parity:
         pose_carrier_confirmation = pose_carrier_confirm(
-            Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, n_pairs, pose_carrier_bytes)
+            Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, n_pairs,
+            pose_carrier_bytes, blob=blob)
         pose_carrier_confirmation["checked"] = True
         pc_c = pose_carrier_confirmation
         print(f"[pose-carrier CONFIRM] frame0 decode bit-exact={pc_c['frame0_decode_bit_exact']} "
@@ -2086,9 +2227,15 @@ def main(argv: list[str] | None = None) -> int:
     # keyframe warped by the per-pair ego homography -> PoseNet reads real warped motion; the keyframe
     # payload is COUNTED in archive.zip (rule 118: keyframe COUNTED, warp decoder FREE).
     ap.add_argument("--pose-carrier", action="store_true",
-                    help="#205 warp-real-luma frame0 pose carrier (needs --gt-cache). frame0 = "
-                         "warp(stored real keyframe, per-pair ego H); COUNTS the keyframe luma + H in "
-                         "archive.zip. OFF by default (archive byte-identical when off).")
+                    help="#205 frame0 pose carrier (needs --gt-cache). frame0 = warp(source, per-pair "
+                         "ego H); source per --pose-carrier-mode. OFF by default (archive byte-identical "
+                         "when off).")
+    ap.add_argument("--pose-carrier-mode", type=str, default="warp_real_luma",
+                    choices=["warp_real_luma", "store_nothing"],
+                    help="pose-carrier frame0 source. warp_real_luma (default) = warp a STORED real "
+                         "keyframe (COUNTS keyframe luma+H). store_nothing = store ONLY xi/H (~0 marginal "
+                         "bytes); frame0 = warp(the witness's OWN frame0 INR render, H) -- Track B "
+                         "store-nothing-but-xi (18927a1ae). A/B-able against warp_real_luma at #205.")
     ap.add_argument("--pc-s-t", type=float, default=0.16, help="pose-carrier translation calibration scale (s_t).")
     ap.add_argument("--pc-s-r", type=float, default=1.0, help="pose-carrier rotation calibration scale (s_r).")
     ap.add_argument("--pc-pitch", type=float, default=0.02, help="pose-carrier road-plane pitch (rad).")
@@ -2194,6 +2341,7 @@ def main(argv: list[str] | None = None) -> int:
         pose_carrier_cfg={
             "s_t": args.pc_s_t, "s_r": args.pc_s_r, "pitch": args.pc_pitch,
             "stride": args.pc_keyframe_stride, "downscale": args.pc_keyframe_downscale,
+            "mode": args.pose_carrier_mode,
         },
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,
