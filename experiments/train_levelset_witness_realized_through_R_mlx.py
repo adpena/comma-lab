@@ -998,6 +998,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         film_concat_code=bool(getattr(args, "film_concat_code", False)),
     )
     mx.eval(model.parameters())
+    # #218 facet-1a — fixed simplex-ETF head (Yang et al. 2022, neural-collapse optimal). Replaces the
+    # LEARNED out_sdf weight with a deterministic simplex ETF (equal-norm, max-equiangular K prototypes)
+    # and FREEZES it: removes the minority-class NORM COLLAPSE that erases Lane/Movable, AND is
+    # regenerable from a fixed seed at inflate => the K x d head weight is FREE (rate win). out_sdf.bias
+    # stays trainable. args.head != "etf" (default) => untouched => byte-identical.
+    if str(getattr(args, "head", "softmax")) == "etf":
+        from tac.boundary_math.laguerre_logit_offset import etf_gram_offdiag, simplex_etf
+        _etf_w = simplex_etf(5, args.hidden_dim).astype(np.float32)
+        model.out_sdf.weight = mx.array(_etf_w)
+        model.out_sdf.freeze(keys=["weight"])
+        mx.eval(model.parameters())
+        print(json.dumps({"stage": "head_etf", "offdiag_cos": round(float(etf_gram_offdiag(_etf_w)), 4),
+                          "target_cos": round(-1.0 / 4.0, 4), "frozen_weight": True}), flush=True)
     # SIREN init (Sitzmann 2020) for the periodic family (hosc/wire) — the canonical from-scratch
     # trainability fix (parent: hosc-without-SIREN-init was d_seg 0.689). Reuses the parent's
     # apply_siren_init on in_proj (first) + hidden (subsequent); out_sdf/out_tex/palette/film keep
@@ -1312,6 +1325,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             for pi in range(P)
         }
 
+    # #218 MARGIN-FIELD HEAD levers (facets 1b + 3, BYTE-FREE). A REALIZED through-R per-class margin
+    # hinge composing with LEVER-3/4/B on the SHARED _signed. mfh_w=0.0 (default) => branch skipped =>
+    # L is byte-identical. Per-pixel margin TARGET b_c = additive-margin (facet-1b, when head==
+    # additive-margin) + facet-3 Menon boost on RARE classes: tau*relu(-log pi_c) mean-centered so ONLY
+    # rare classes (Lane/Movable) RAISE their target (common classes stay at base). Priors from cached
+    # GT L* (deterministic; this is a TRAIN-TIME loss shape => 0 archive bytes). facet-1a (ETF head) is
+    # applied at model build above and is orthogonal to this lever.
+    mfh_w = float(getattr(args, "margin_field_head_weight", 0.0))
+    mfh_target_mx = None
+    if mfh_w > 0.0:
+        from tac.boundary_math.laguerre_logit_offset import menon_logit_adjustment_offsets
+        _mfh_counts = np.bincount(
+            np.concatenate([np.asarray(gt.lstars[pi]).reshape(-1) for pi in range(P)]),
+            minlength=5).astype(np.float64)
+        _mfh_base = float(getattr(args, "additive_margin", 0.0)) if str(getattr(args, "head", "softmax")) == "additive-margin" else 0.0
+        _mfh_tgt = np.full(5, _mfh_base, np.float64)
+        if bool(getattr(args, "logit_adjust_per_class", False)):
+            _mfh_tgt = _mfh_tgt + float(getattr(args, "logit_adjust_tau", 1.0)) * np.maximum(
+                menon_logit_adjustment_offsets(_mfh_counts, tau=1.0), 0.0)
+        mfh_target_mx = mx.array(_mfh_tgt.reshape(1, 1, 1, 5).astype(np.float32))
+        print(json.dumps({"stage": "margin_field_head", "weight": mfh_w,
+                          "per_class_margin_target": [round(float(v), 4) for v in _mfh_tgt]}), flush=True)
+
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
         phi0 = model.sdf(cf, c0)
@@ -1330,7 +1366,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # texture map (same rendered frame).
         _seg_levers_on = ((lane_w > 0.0 and lane_gate["on"]) or
                           (msal_w > 0.0 and msal_gate["on"]) or
-                          (lane_thin_w > 0.0 and lane_thin_gate["on"]))
+                          (lane_thin_w > 0.0 and lane_thin_gate["on"]) or
+                          (mfh_w > 0.0 and mfh_target_mx is not None))  # #218 facets 1b/3
         if _seg_levers_on:
             # _render_R composes the FIXED bulk before R in residual mode (else == bare render) so
             # the surgical levers (lane-thin/margin-saliency/lane-edge) weight the COMPOSED-render
@@ -1419,6 +1456,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             tw = thin_maps_mx[int(c0) // 2]                            # (1, H, W) thin-lane weight (>=0)
             hmap_t = mx.maximum(lane_thin_tgt - _signed, 0.0) * tw     # fragile thin-lane pixels only
             L = L + lane_thin_w * (mx.sum(hmap_t) / (mx.sum(tw) + 1e-6))
+        # #218 facets 1b/3 (MARGIN-FIELD HEAD, byte-free): realized through-R PER-CLASS margin hinge.
+        # per-pixel target = additive-margin (facet-1b) + per-class Menon boost on rare classes
+        # (facet-3), broadcast to each pixel by its GT class via lstar_oh. Reuses the SHARED _signed
+        # (R2b-M3). Default-off (mfh_w=0) => byte-identical. This widens the realized SegNet decision
+        # margin MORE for the erasure-prone rare classes (Lane<->Road 57% tail, #209).
+        if mfh_w > 0.0 and mfh_target_mx is not None:
+            per_pix_tgt = mx.sum(lstar_oh * mfh_target_mx, axis=-1)     # (1,H,W) per-class margin target
+            hmap_m = mx.maximum(per_pix_tgt - _signed, 0.0)            # fragile pixels below their target
+            L = L + mfh_w * mx.mean(hmap_m)
         # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty. DEFAULT-OFF: code_nuc_w=0.0 =>
         # this branch NEVER runs => L is byte-identical (fully additive). When >0 it adds
         # weight * smoothed_nuclear_norm(model.code) -> drives the per-pair FiLM codes
@@ -2555,6 +2601,22 @@ def main(argv: list[str] | None = None) -> int:
                     "order [Road0,Lane1,Undrivable2,Movable3,MyCar4] for 2/3/4 -- NOT the forbidden luma-sort).")
     ap.add_argument("--lane-margin-target", type=float, default=0.5,
                     help="LEVER-3: target decision margin for the lane hinge relu(target - margin).")
+    # #218 MARGIN-FIELD HEAD levers (facets 1 & 3, BYTE-FREE; see src/tac/boundary_math/laguerre_logit_offset.py
+    # + experiments/probe_laguerre_logit_offset_sweep.py). Default (head=softmax, weight 0) => byte-identical.
+    ap.add_argument("--head", choices=["softmax", "etf", "additive-margin"], default="softmax",
+                    help="#218 facet-1: out_sdf head geometry. 'etf'=fixed simplex-ETF weight (frozen, "
+                    "byte-free + rate-win, neural-collapse minority-norm fix). 'additive-margin'=use the AM "
+                    "realized-margin hinge target from --additive-margin. 'softmax'=default (byte-identical).")
+    ap.add_argument("--additive-margin", type=float, default=0.0,
+                    help="#218 facet-1b: AM-softmax margin (target realized SegNet decision margin) fed to the "
+                    "margin-field hinge when --head additive-margin.")
+    ap.add_argument("--logit-adjust-per-class", action="store_true",
+                    help="#218 facet-3 (Menon 2007.07314): raise the realized-margin target for RARE classes "
+                    "(Lane/Movable) by tau*relu(-log pi_c). Byte-free. Needs --margin-field-head-weight>0.")
+    ap.add_argument("--logit-adjust-tau", type=float, default=1.0, help="#218 facet-3 tau scale.")
+    ap.add_argument("--margin-field-head-weight", type=float, default=0.0,
+                    help="#218 facets 1b/3 loss weight for the realized through-R per-class margin hinge "
+                    "(0.0=off=byte-identical). Composes with LEVER-3/4/B on the shared _signed.")
     ap.add_argument("--lane-edge-start-epoch", type=int, default=0,
                     help="LEVER-3 OPTIMAL-FORM: engage the lane hinge only at ep>=this (0=from ep1=current "
                     "behavior). Gate to the tau_softplus/l7 margin stage (e.g. 300) to avoid the "
