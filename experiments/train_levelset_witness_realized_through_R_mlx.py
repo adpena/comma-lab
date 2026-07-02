@@ -2752,6 +2752,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     muon_lr=muon_lr_eff, muon_adamw_lr=muon_adamw_lr_eff,
                     muon_momentum=float(args.muon_momentum), muon_weight_decay=muon_wd_eff,
                     muon_ns_steps=int(args.muon_ns_steps), adamw_weight_decay=float(args.weight_decay),
+                    # #224 Wave D (R4 #2): thread the same beta2 as the main AdamW so the finisher
+                    # rest-group is consistent (default 0.999 => byte-identical).
+                    adamw_beta2=float(getattr(args, "adam_beta2", 0.999)),
                 )
                 opt.init(model.trainable_parameters())
                 mx.eval(opt.state)

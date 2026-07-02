@@ -14,6 +14,7 @@ import pytest
 
 from tac.optimization.muon_finisher_mlx import (
     MUON_EXCLUDE_TOKENS,
+    _adamw_bias_correction_for,
     build_muon_finisher_optimizer,
     count_muon_adamw_split,
     muon_active_for_epoch,
@@ -338,3 +339,95 @@ def test_opt_update_on_nn_module_with_hidden_list_drives_muon_group():
     # the two list-indexed hidden weights + in_proj.weight MUST have moved (Muon group).
     for k in ("hidden.0.weight", "hidden.1.weight", "in_proj.weight"):
         assert np.linalg.norm(after[k] - before[k]) > 1e-7, f"{k} did NOT move via opt.update (production Muon path broken)"
+
+
+# ---------------------------------------------------------------------------
+# #224 Wave D (R4 non-blocking #2): adamw_beta2 threading + bias-correction gate
+# ---------------------------------------------------------------------------
+def _adamw_sub(opt):
+    """Return the AdamW sub-optimizer of the MultiOptimizer (fallback = last)."""
+    subs = getattr(opt, "optimizers", None) or getattr(opt, "_optimizers", None)
+    assert subs is not None, "MultiOptimizer exposes no optimizers list"
+    adamws = [s for s in subs if type(s).__name__ == "AdamW"]
+    assert len(adamws) == 1, f"expected exactly one AdamW sub-optimizer, got {len(adamws)}"
+    return adamws[0]
+
+
+def test_adamw_bias_correction_gate_off_at_default():
+    """The gate is OFF at exactly the MLX default 0.999 (byte-identical path)."""
+    assert _adamw_bias_correction_for(0.999) is False
+
+
+def test_adamw_bias_correction_gate_on_off_default():
+    """The gate is ON for the all-levers small-n optimum (and any value != 0.999)."""
+    assert _adamw_bias_correction_for(0.9999999) is True
+    assert _adamw_bias_correction_for(0.95) is True
+    # tolerant to float noise right at the default
+    assert _adamw_bias_correction_for(0.999 + 1e-12) is False
+
+
+def test_finisher_default_beta2_is_mlx_default_byte_identical():
+    """Default build => AdamW rest-group carries betas [0.9, 0.999] + bias_correction False,
+    which are the MLX AdamW defaults => byte-identical to the pre-Wave-D finisher construction."""
+    opt = build_muon_finisher_optimizer(muon_lr=0.002, muon_adamw_lr=1e-4)
+    adamw = _adamw_sub(opt)
+    betas = [float(b) for b in adamw.betas]
+    assert betas == [0.9, 0.999], f"default betas drifted: {betas}"
+    assert bool(adamw.bias_correction) is False
+
+
+def test_finisher_all_levers_beta2_threaded():
+    """adamw_beta2=0.9999999 (the derived small-n optimum) is threaded into the AdamW
+    rest-group AND turns bias_correction ON (the divergence fix)."""
+    opt = build_muon_finisher_optimizer(
+        muon_lr=0.002, muon_adamw_lr=1e-4, adamw_beta2=0.9999999,
+    )
+    adamw = _adamw_sub(opt)
+    betas = [float(b) for b in adamw.betas]
+    assert betas[0] == 0.9
+    assert abs(betas[1] - 0.9999999) < 1e-12, f"beta2 not threaded: {betas}"
+    assert bool(adamw.bias_correction) is True
+
+
+def test_finisher_high_beta2_step_is_finite():
+    """A finisher step at the high beta2 (+ bias correction) is FINITE (no ~100x LR blowup /
+    NaN) on a tiny real model — the small-MLX smoke the Wave D task requires."""
+    nn = pytest.importorskip("mlx.nn")
+    from mlx.utils import tree_flatten
+
+    class _Tiny(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.code = mx.zeros((4, 8))
+            self.in_proj = nn.Linear(8, 16)
+            self.hidden = [nn.Linear(16, 16) for _ in range(2)]
+            self.out_sdf = nn.Linear(16, 5)
+
+        def __call__(self, x):
+            h = self.in_proj(x)
+            for layer in self.hidden:
+                h = layer(h)
+            return self.out_sdf(h)
+
+    model = _Tiny()
+    mx.eval(model.parameters())
+    opt = build_muon_finisher_optimizer(
+        muon_lr=0.002, muon_adamw_lr=1e-3, muon_momentum=0.0,
+        muon_weight_decay=0.0, muon_ns_steps=5, adamw_weight_decay=0.0,
+        adamw_beta2=0.9999999, nesterov=False,
+    )
+    opt.init(model.trainable_parameters())
+    rng = np.random.default_rng(7)
+    x = mx.array(rng.normal(size=(16, 8)).astype(np.float32))
+    y = mx.array(rng.normal(size=(16, 5)).astype(np.float32))
+
+    def _loss(m, x, y):
+        return ((m(x) - y) ** 2).mean()
+
+    for _ in range(3):
+        _, grads = nn.value_and_grad(model, _loss)(model, x, y)
+        opt.update(model, grads)
+        mx.eval(model.parameters(), opt.state)
+    after = {k: np.array(v) for k, v in tree_flatten(model.parameters())}
+    for k, v in after.items():
+        assert np.all(np.isfinite(v)), f"{k} became non-finite at high beta2 (divergence not gated)"
