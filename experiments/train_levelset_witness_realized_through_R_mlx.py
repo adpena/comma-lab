@@ -2416,8 +2416,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             f0s.append(_render_numpy_deploy(deploy, pi, 0))
             f1s.append(_render_numpy_deploy(deploy, pi, 1))
         # (#205 OOM fix) chunk the CPU-scorer inference (bit-identical; eval-mode BN running stats).
-        # pose VERDICT still measured (monitoring) but pose is NOT the witness's job (w_pose=0
-        # default; deploy pose rides the SOLVED Quantizr stored-pose sidecar, d_pose 3.4e-5).
+        # pose VERDICT still measured (monitoring) but pose is NOT the witness's job at w_pose=0
+        # (default). The deploy d_pose is OPEN on the witness — measured through the byte-closed
+        # store_nothing/table carrier (#205 R1), NO ancestor number (the 3.4e-5 was ANCESTOR-RGB,
+        # never validated on this vehicle; see CLAUDE.md "Pose is SOLVED" caveat + axis-9).
         d_seg, d_pose = _verdict_dseg_dpose_chunked(
             seg_cpu, posenet_cpu, f0s, f1s,
             [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],

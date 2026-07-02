@@ -19,13 +19,16 @@ from tac.witness_dsl import sealed_205_program
 
 _GT = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
 
-# The canonical Phase-3 SEALED argv (§7), out-dir dropped. This is the ground-truth token sequence
-# the operator's launch reproduces; the gate is exact equality against it. Sourced verbatim from the
-# hand-authored §7 oracle launch.sh (83 flags / 149 tokens without --out-dir).
+# The canonical Phase-3 SEALED argv (§7 + the R2 OOM-fix flag), out-dir dropped. This is the
+# ground-truth token sequence the operator's launch reproduces; the gate is exact equality against it.
+# Sourced from the hand-authored §7 oracle launch.sh PLUS the R2 `--verdict-batch 32` OOM-fix flag
+# (review 2026-07-02 C4: the §7 argv is the config that OOM-died; the chunk-the-verdict safety flag now
+# belongs IN the launched config -> 84 flags / 151 tokens without --out-dir).
 SEALED_205_ARGV_NO_OUTDIR = (
     '--gt-cache', 'experiments/results/mlx_fleet_gt_cache/gt_n600.npz', '--num-pairs', '600',
     '--mlx-device', 'gpu', '--seed', '0', '--epochs', '1000', '--eval-every', '25',
-    '--verdict-pairs', '0', '--async-verdict', '--curriculum', '--tau-softplus-start-epoch',
+    '--verdict-pairs', '0', '--async-verdict', '--verdict-batch', '32', '--curriculum',
+    '--tau-softplus-start-epoch',
     '300', '--tau-softplus-tau', '0.3', '--l7-start-epoch', '1000', '--muon-start-epoch',
     '726', '--muon-lr', '0.002', '--muon-momentum', '0.95', '--muon-ns-steps', '5',
     '--stage-transition-rewarmup-epochs', '8', '--stage-transition-rewarmup-floor', '0.1',
@@ -110,7 +113,7 @@ def test_sealed_205_flag_count_and_no_invented_flags():
     cfg = _sealed_cfg()
     all_pass, results = lwr.validate_emitted_flags(cfg, "/OUT")
     assert all_pass, f"invented flag(s): {[f for f, ok in results if not ok]}"
-    assert len(results) == 83, f"expected 83 flags, got {len(results)}"
+    assert len(results) == 84, f"expected 84 flags (83 §7 + R2 --verdict-batch), got {len(results)}"
 
 
 # --------------------------------------------------------------------------- the 4 SEALED deltas
@@ -173,7 +176,7 @@ def test_store_nothing_205_flags_all_valid_in_trainer_argparse():
     snn = wac.derive_store_nothing_205_config(_GT, num_pairs=600, epochs=1000)
     ok, results = lwr.validate_emitted_flags(snn, "/OUT")
     assert ok, f"invented flag(s): {[f for f, good in results if not good]}"
-    assert len(results) == 84, f"expected 84 flags (83 sealed + 1 store-nothing), got {len(results)}"
+    assert len(results) == 85, f"expected 85 flags (84 sealed incl. R2 --verdict-batch + 1 store-nothing), got {len(results)}"
 
 
 # --------------------------------------------------------------------------- backward-compat

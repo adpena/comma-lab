@@ -714,6 +714,17 @@ class WitnessConfig:
             ("--eval-every", pb["eval_every"]),
             ("--verdict-pairs", self.verdict_pairs),
             ("--async-verdict", None),
+            # (R2, review 2026-07-02) EXPLICIT --verdict-batch 32 (== trainer argparse default +
+            # witness_memory_preflight DEFAULT_VERDICT_BATCH): the #205 OOM fix. With --verdict-pairs 0
+            # (ALL 600) the CPU-scorer verdict is a P-wide batch = a +66 GiB transient spike ON TOP of
+            # the ~41 GiB resident self-orient cf_mx_cache -> the n600 run OOM-died before the first
+            # ckpt. Chunking (32) bounds the spike to a ~6 GiB floor (bit-identical d_seg; ~1e-6 BLAS
+            # d_pose; the verdict is PURELY OBSERVATIONAL so score-neutral by construction). Emitting it
+            # EXPLICITLY (vs relying on the coupled implicit trainer+preflight default) self-documents
+            # the fix in launch.sh + makes witness_memory_preflight parse the REAL value (C1 defense-in-
+            # depth). Breaks the §7 byte-identity by design: the §7 argv is the config that OOM'd, and
+            # this safety flag now belongs IN the launched config (P3 verdict C4).
+            ("--verdict-batch", 32),
             ("--curriculum", None),
             ("--tau-softplus-start-epoch", self.tau_softplus_start_epoch),
             ("--tau-softplus-tau", pb["tau_softplus_tau"]),
