@@ -125,10 +125,22 @@ from tac.canonical_equations.scorer_input_cache_hash_identity import (
     build_scorer_input_cache_hash_identity_v1,
     scorer_input_cache_hash_identity,
 )
+from tac.canonical_equations.oom_verdict_batch_spike_peak_rss_20260702 import (
+    build_oom_verdict_batch_spike_peak_rss_v1,
+    verdict_transient_gib,
+)
+from tac.canonical_equations.powerplay_variant_ii_cost_isomorphism_20260702 import (
+    build_powerplay_variant_ii_cost_isomorphism_v1,
+    contest_score_as_powerplay_cost,
+)
 from tac.canonical_equations.store_nothing_pose_carrier_rate_dpose_20260702 import (
     build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1,
     store_nothing_marginal_bytes,
     store_nothing_rate_term,
+)
+from tac.canonical_equations.task_rd_dominates_reconstruction_rd_20260702 import (
+    build_task_rd_dominates_reconstruction_rd_v1,
+    task_rd_dominance_gap,
 )
 from tac.canonical_equations.witness_measured_findings_20260701 import (
     build_all_witness_measured_findings_20260701,
@@ -171,12 +183,16 @@ __all__ = [
     "build_mlx_matmul_drift_m_series_canonical_floor_v1",
     "build_mlx_pytorch_drift_equation_from_result_json",
     "build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1",
+    "build_oom_verdict_batch_spike_peak_rss_v1",
     "build_pairset_component_marginal_score_decomposition_v1",
+    "build_powerplay_variant_ii_cost_isomorphism_v1",
     "build_procedural_predictor_plus_residual_correction_savings_v1",
     "build_scorer_input_cache_hash_identity_v1",
     "build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1",
+    "build_task_rd_dominates_reconstruction_rd_v1",
     "build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1",
     "classify_mlx_matmul_drift",
+    "contest_score_as_powerplay_cost",
     "compute_predicted_band_from_posterior",
     "get_equation_by_id",
     "load_equation_registry_strict",
@@ -195,8 +211,10 @@ __all__ = [
     "scorer_input_cache_hash_identity",
     "store_nothing_marginal_bytes",
     "store_nothing_rate_term",
+    "task_rd_dominance_gap",
     "update_equation_with_anchor_via_conjugate_prior",
     "update_equation_with_domain_refinement",
     "update_equation_with_empirical_anchor",
     "validate_residual_hybrid_context",
+    "verdict_transient_gib",
 ]
