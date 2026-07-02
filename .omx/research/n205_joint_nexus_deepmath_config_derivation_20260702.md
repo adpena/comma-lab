@@ -231,7 +231,67 @@ TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
 
 ---
 
+## 5b. PHASE-2 FINALIZED SHIPPABLE ARGV (post-#224 wire-in, 2026-07-02; HEAD `e28cbab63`)
+
+**GO received 2026-07-02. Durability CONFIRMED** (crash-resume smoke ALL_PASS on `e28cbab63`, ~47 s; base + Muon-finisher bit-identical resume 0/28; fail-closed all pass — commit `e28cbab63`/`2ca1726ae`). **#224 CLOSED the §6 blocking gaps:** the LIVE levelset trainer (`experiments/train_levelset_witness_realized_through_R_mlx.py`) now has `--pose-carrier` (WarpRealLumaFrame0Carrier — FULLY WIRED, the FEED-224 fail-closed guard REPLACED), `--render-aa`, `--lane-render-band`, `--adam-beta2`, `--persistence-loss-weight`, `--amplify-weight`, `--seed-islands` (also fully wired) all reaching render/loss (callsite-traced, NOT argparse-only). This subsection SUPERSEDES the §5 candidate argv for the shippable row; §5 is preserved (Phase-1 provenance).
+
+**The reconcile (§5 candidate → shippable), 4 load-bearing deltas — each toward the MEASURED/REQUIRED value:**
+1. **render-aa: `supersample 2` → `none` + `--lane-render-band` (Wave D AA CORRECTION, DECISIVE).** The §5 "wire supersample as the #1 floor lever" is SUPERSEDED by `aa_feasibility_reconciliation_20260702.md` (same-day, MEASURED): brute supersample is DISQUALIFIED on TWO independent grounds — (a) it HURTS the witness **−49%** (the 0.00086 is a REAL-FRAME *ceiling* SIGNAL-A, NOT the witness-realized SIGNAL-B — supersampling an already-smooth softmax-of-SDF partition recovers nothing), and (b) fp64 decode **41.3 min > the 30-min budget** AND neither shipped inflate applies ss (archive stores render_h/w=384; decode point-samples) = a train/decode observation **MISMATCH** ⇒ the AA benefit is NOT realized at decode = a FAKE optimization. The contest-feasible OPTIMAL AA is `--render-aa none` + the analytic coverage-integrated `--lane-render-band` (O(1)/pixel, base-grid, decode IN budget, MEASURED to HELP via the witness-uncertainty FP gate). This is the code + capstone-artifact + Wave-D consensus.
+2. **pose: `--w-pose 0` → `--w-pose 1.0 --pose-carrier` (means/ends firewall; #237/SLOT-POSE).** A `--w-pose 0` leg is ADVISORY (pose-blind SDF → d_pose~190, S-catastrophic; does NOT move the pointer). The pose-carrier is now WIRED (requires w-pose>0; default `--pose-carrier-residual-mode table` = a SEPARATE per-pair dξ table ⇒ the code manifold stays PURE d_seg (seg⊥pose additive-S EXACT, cos 5.9e-5); frame0 seg-free ⇒ 0 d_seg cost). Warp-real-luma measured d_pose 163→1.37; residual→ε≈0.018 is the largest open uncertainty (Phase-3 Q).
+3. **mod-dim: `32` (SLOT-223, task-directed) — NOT the capstone's aggressive `19`.** d_seg is the BINDING term; 19 (Whitney floor for m~9) is rate-saving but its d_seg-neutrality is UNMEASURED (§2A). Rate has slack (0.055 vs 0.081 RD-optimum). 32 is the PROVEN arm value (reached the measured d_seg 0.003698) AND covers the composite m~13 (d_seg⊕screw) with headroom. #223 byte-close sweep may fold 32→26→19 ONLY if measured d_seg-neutral.
+4. **β₂: `0.999` (MEASURED anchor) — NOT the capstone's `0.9999999`.** §2D flags 0.9999999 as a possible MIS-ANCHOR + says #222 must disambiguate; 0.999 is the MEASURED anchor == MLX default (byte-identical, no bias-correction-gate confound on the first attribution row). 0.9999999 is the T0-DERIVED candidate (arXiv 2603.02092 small-n) gated on #222.
+
+**Reasoned deep-math call on the finest-scale erasure levers (persistence/amplify/seed):** persistence-loss + amplify are **ON** (the §4 coupling #4 "floor caps ceiling": with render-aa=none, NO supersample floor-setter, the finest-scale ERASURE recovery becomes the PRIMARY ~0.003→0.00086 gap-closer; persistence is 111× more erasure-sensitive than CE (+0.443 island recall), amplify rides the SHARED `_signed` margin (+0.366) — both ride the shared seg forward = no extra cost). weights = ENGAGE (T2-calibration start, LABELLED not measured-optima). `--seed-islands` **OFF** (now wired, but a separate optimizer-group + grad-shield restructure = more confound; amplify carries the island mechanism loss-only). DEMOTED ablation arms (margin-saliency/lane-thin/film-stiefel/head-etf/code-nuclear/residual-mode) OFF (attribution-clean first; warm-start re-treat). l7 DEMOTED (parked `--l7-start-epoch 1000` = epochs; L∞-defect).
+
+**THE FINALIZED SHIPPABLE ARGV (every flag grep-verified in the LIVE trainer; 83/83 in-argparse, 0 invented; `--help` parser builds clean; all choice-values valid):**
+
+```
+TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
+.venv/bin/python experiments/train_levelset_witness_realized_through_R_mlx.py \
+  --out-dir experiments/results/levelset_n600_witness_capstone_<UTC> \
+  --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz --num-pairs 600 \
+  --mlx-device gpu --seed 0 \
+  --epochs 1000 --eval-every 25 --verdict-pairs 0 --async-verdict \
+  --curriculum \
+  --tau-softplus-start-epoch 300 --tau-softplus-tau 0.3 \
+  --l7-start-epoch 1000 \
+  --muon-start-epoch 726 --muon-lr 0.002 --muon-momentum 0.95 --muon-ns-steps 5 \
+  --stage-transition-rewarmup-epochs 8 --stage-transition-rewarmup-floor 0.1 \
+  --stage-transition-rewarmup-shape linear --stage-transition-reset-moments \
+  --w-seg 100 --w-pose 1.0 --score-domain-loss \
+  --pose-carrier --pose-carrier-residual-mode table \
+  --mod-dim 32 --hidden-dim 96 --n-hidden 4 \
+  --activation hosc --hosc-beta 1.0 --hosc-beta-end 4.0 --hosc-beta-anneal linear \
+  --hosc-omega 1.0 --siren-init \
+  --softmax-temp-start 1.0 --softmax-temp-end 0.05 --tau-anneal-shape cosine \
+  --self-orient --n-dir-freqs 2 --freq-across 32 --freq-along 4 --reorient-every 50 \
+  --max-bank-freq 64 \
+  --chroma --palette-anchor \
+  --eikonal-weight 0.01 --length-weight 0.001 \
+  --render-h 384 --render-w 512 --render-aa none \
+  --lane-render-band --lane-band-start-epoch 300 --lane-band-uncertainty-source witness \
+  --lane-band-tau 0.85 --lane-band-eps 0.35 --lane-band-softness 1.0 \
+  --lane-band-dash-forward-max-m 55.0 --lane-band-weight 1.0 \
+  --persistence-loss-weight 1.0 --persistence-recall-weight 1.0 --cldice-iters 5 \
+  --persistence-warmup-epochs 300 --persistence-classes auto \
+  --amplify-weight 1.0 --amplify-form hinge --amplify-margin-target 1.0 \
+  --amplify-persist inverse_thickness --island-dilate-px 1 \
+  --structured-init --structured-init-include-lane \
+  --lane-prior-phi1 --lane-prior-phi1-mode replace --lane-prior-phi1-dash-gate \
+  --accum-pairs 8 --grad-clip 1.0 --ema-decay 0.997 \
+  --lr 1e-3 --lr-end 1e-4 --weight-decay 1e-4 --adam-beta2 0.999 \
+  --ckpt-every 25 --stage-checkpoints
+```
+
+**S-NEUTRAL speed (lexicographic-secondary, bit-identical → S unchanged):** `TAC_MLX_CUSTOM_GROUPED_BACKWARD=1` (16.9× banked, verify `custom_grouped_backward active=true`); K=1 (pair-batch MEASURED NEGATIVE); `--async-verdict --eval-every 25`; fp32. **metal-VJP verdict (`840e39a56` p2b_metal_vjp):** fully-fused metal transpose VJP for fused-R, **S-NEUTRAL + determinism-clean (bit-identical to numpy authority, atol=0, atomics-free)**, 3.06× fwd+bwd / 5.12× bwd-only vs pure-MLX — a candidate S-neutral render-path lever whose #205 wire-in is **Phase-2b-audit-gated (NOT yet on the #205 render path); negligible #205 impact; KEEP for #214 inflate** (decode parallelization, sister of the 10.8× bit-exact inflate `db264bb2f`). The island/persistence Metal kernels are NOT-YET-BUILT (do NOT set `TAC_MLX_CUSTOM_ISLAND_BIRTH`/`_PERSISTENCE_POOL`; the `mx.compile`'d path is the authority). `--compile-step` remains a NON-flag (grep empty) → wire-in + parity-gate is a FUTURE S-neutral ~5% win.
+
+**Launch (operator-gated, NOT this pass):** `.venv/bin/python tools/launch_witness_run.py --gt-cache … --num-pairs 600 --epochs 1000 --all-levers` reproduces the CAPSTONE all-levers config (mod-dim 19 / β₂ 0.9999999 / w-pose 0) — the shippable argv above HAND-DIVERGES on the 4 deltas (a hand-assembled bash `launch.sh`, or a small `witness_autoconfig` extension). If the Muon finisher is still descending @ep1000, EXTEND from the ep1000 ckpt (`--resume-from`, warm-start, free) rather than committing to 1500 upfront — reaches ≤ the same d_seg, training-time-efficient.
+
+---
+
 ## 6. THE WIRING-GAP LIST (coordinator requirement — grepped against the LIVE levelset trainer)
+
+> **PHASE-2 UPDATE (2026-07-02, HEAD `e28cbab63`): #224 CLOSED both BLOCKING gaps + the 3 high-value + the β₂ optional.** The two "MODULE-ONLY BLOCKING" gaps below — **(A) warp-real-luma pose carrier** and **(B) AA-SDF render** — are now FULLY WIRED with real flags reaching render/loss (callsite-traced): `--pose-carrier` (build+child-attach+render-dispatch+NO-FAKE-verdict, requires `--w-pose>0`; the FEED-224 fail-closed guard REPLACED) + `--render-aa {none,supersample,ipe}` / `--aa-supersample`. The 3 high-value (`--lane-render-band`, `--persistence-loss-weight`, `--amplify-weight`) + `--seed-islands` + `--adam-beta2` are ALSO wired. Residual gaps: **MD-optimizer into levelset** (still base-only subset-miss) + **`--compile-step`** (S-neutral ~5%, still NON-flag). The AA reconcile flipped the (B) verdict: `--render-aa none` + `--lane-render-band`, NOT supersample (Wave D, §5b delta 1). The list below is the Phase-1 as-of-derivation snapshot (PRE-#224).
 
 Every lever's state vs `experiments/train_levelset_witness_realized_through_R_mlx.py` argparse + body (the base's flags are a SUBSET — the subset-miss is real and bit us before).
 
