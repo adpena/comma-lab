@@ -680,3 +680,439 @@ def composite_band_on_render(
 
     a = band_alpha(coverage, u_mask, weight)[..., None]
     return (np.asarray(rgb, np.float32) * (1.0 - a) + np.asarray(lane_rgb, np.float32) * a).astype(np.float32)
+
+
+# ===========================================================================
+# WAVE-F: OPTIMAL RATE-DISTORTION lane-band code (LBND2). The naive LBND1
+# serializer (above) stores per-pair float64 coeffs -> ~367 B/pair -> ~220 KB @
+# n600 -> rate_term +0.147 (CATASTROPHIC). The float64 mantissa noise of a fitted
+# polynomial is HIGH-ENTROPY -> brotli cannot compress it. Wave-F replaces that
+# with the coding-for-machines RD pipeline (design authority
+# ``wave_f_optimal_lane_band_rd_code_design_20260702.md`` L2/L3/L4):
+#
+#   (L3) QUANTIZE each coeff to its OWN principled geometric tolerance (~sub-pixel
+#        lateral in the argmax band) -> kills the mantissa noise, per-coeff-TYPE.
+#   (L4) CANONICALIZE lines into fixed lateral-sorted SLOTS (ego-lane + offsets)
+#        so the trajectory is temporally coherent per slot.
+#   (L2) TEMPORAL-DELTA each quantized coeff across the 600 pairs (near-static
+#        world geometry -> near-zero innovations) + carry-forward hold for absent
+#        slots (delta 0 during a hold) -> low-entropy integer stream.
+#   entropy: the delta stream is emitted as a zigzag int32 matrix that the outer
+#        brotli(quality=11) (applied by the byte-close 5th block) entropy-codes.
+#        Brotli is ALREADY an inflate dependency -> the decode stays rule-118-clean
+#        (ZERO new inflate deps; the range-coder floor is REPORTED for comparison
+#        via ``pose_trajectory_entropy``, see ``lane_band_rd_rate_report``).
+#
+# BIT-EXACT + DECODE-CONSISTENT: ``serialize_lane_band_rd`` and its inflate mirror
+# (``_lane_parse_rd`` in ``tools/levelset_byte_close_and_eval.py::_INFLATE_PY``)
+# reconstruct the IDENTICAL DEQUANTIZED ``LaneLine``s (float64, Q*steps), so the
+# coverage raster (the FREE rule-118 generic algorithm, unchanged) is bit-for-bit
+# identical train==decode. The compress-side render MUST use the dequantized lines
+# (``roundtrip_lines_through_rd``) so the shipped render == the verdicted render
+# (measure-what-you-ship). rule-118: COUNTED = the per-coeff quantized delta stream
+# + presence bitmap; FREE = quantize/dequantize/rasterize/composite. NO GT mask, NO
+# scorer weights, NO per-pixel table. Steps are DERIVED from a geometric tolerance
+# (never a fake number). Bit-exactness is GATED (roundtrip assert + the Wave-E
+# decode-consistency gate, extended for LBND2).
+#
+# Stage-2 (SE(3) ego-factorization L1 + task-RD KKT waterfill) is a SEPARATE
+# refinement layer (LBND2 leaves hooks): the ONE ``tac.lie.se3_bspline`` twist xi
+# (stored once, counted, TRIPLE-use pose+lane-advection+temporal, decoded via the
+# ``tac.lie._se3_numpy`` fp64 authority -- ZERO mlx in inflate) advects the whole
+# argmax Morse-Smale complex to a static world frame; the task-RD sensitivity
+# (finite-diff d_seg through R) drives ``frontier_exact_bitalloc.waterfill_bit_
+# allocation`` to the KKT operating point. Those need the frozen SegNet -> flagged
+# as measured follow-ups (``derive_task_rd_steps``); Stage-1 needs neither.
+# ===========================================================================
+
+LANE_BAND_RD_MAGIC = b"LBND2\x00"
+_RD_D_SLOT = 11  # fixed per-slot schema: [c3,c2,c1,c0, hw1,hw0, dp,dph,dd, fr0,fr1]
+_RD_F_NEAR = 15.0  # forward distance (m) at which lines are lateral-sorted into canonical slots
+_RD_MAX_SLOTS = 32  # sanity cap (real cluster_lane_lines yields <=~6); >this -> raise (NO-FAKE, no silent drop)
+
+
+@dataclass(frozen=True)
+class LaneBandRDTolerance:
+    """Principled geometric quantization tolerances for the LBND2 RD code.
+
+    The per-coeff step is DERIVED (never a fabricated number) so each coeff is
+    quantized to its OWN contribution scale in the argmax band. ``lat_tol_m`` is a
+    ~sub-pixel lateral error budget; the per-power centerline steps scale it by the
+    reference forward distance ``f_ref_m`` (a coeff on ``forward**k`` contributes
+    ``coeff * f_ref**k`` metres of lateral, so its step is ``lat_tol_m / f_ref**k``).
+    """
+
+    lat_tol_m: float = 0.02       # centerline lateral tolerance (metres; ~sub-px at near range)
+    f_ref_m: float = 30.0         # reference forward distance for per-power centerline scaling
+    hw_tol_px: float = 0.1        # halfwidth tolerance (render-pixels)
+    v_ref_rows: float = 200.0     # reference image-row span for the halfwidth slope step
+    dash_period_tol_m: float = 0.1
+    dash_phase_tol_m: float = 0.1
+    dash_duty_tol: float = 0.02
+    forward_range_tol_m: float = 0.5
+
+
+def derive_rd_base_steps(tol: LaneBandRDTolerance | None = None) -> np.ndarray:
+    """Per-dim (11,) quantization steps DERIVED from a geometric tolerance.
+
+    Order matches the fixed slot schema ``[c3,c2,c1,c0, hw1,hw0, dp,dph,dd, fr0,fr1]``.
+    All steps > 0. This is the L3 "quantize-at-a-principled-tolerance" schedule; the
+    Stage-2 task-RD KKT waterfill (``derive_task_rd_steps``) refines it per-coeff by
+    measured ``d_seg`` sensitivity, but the geometric schedule is the honest default.
+    """
+
+    tol = tol or LaneBandRDTolerance()
+    lt, fr = float(tol.lat_tol_m), float(tol.f_ref_m)
+    step_c3 = lt / (fr ** 3)
+    step_c2 = lt / (fr ** 2)
+    step_c1 = lt / fr
+    step_c0 = lt
+    step_hw1 = float(tol.hw_tol_px) / float(tol.v_ref_rows)
+    step_hw0 = float(tol.hw_tol_px)
+    steps = np.array(
+        [step_c3, step_c2, step_c1, step_c0, step_hw1, step_hw0,
+         float(tol.dash_period_tol_m), float(tol.dash_phase_tol_m), float(tol.dash_duty_tol),
+         float(tol.forward_range_tol_m), float(tol.forward_range_tol_m)],
+        dtype=np.float64,
+    )
+    if np.any(steps <= 0.0):
+        raise ValueError("all RD quantization steps must be > 0 (check the tolerance config).")
+    return steps
+
+
+# --- fixed-slot pack/unpack (L4 canonicalization) --------------------------------
+def _line_to_slot_vec(line: LaneLine) -> np.ndarray:
+    """(11,) fixed-schema float64 vector for one LaneLine (centerline right-aligned to
+    deg-3 with leading zeros -> bit-exact via polyval, halfwidth to deg-1)."""
+
+    cc = np.asarray(line.centerline_coeffs, np.float64).ravel()
+    cc4 = np.zeros(4, np.float64)
+    if cc.size:
+        cc4[4 - min(4, cc.size):] = cc[-4:]
+    hc = np.asarray(line.halfwidth_coeffs, np.float64).ravel()
+    hc2 = np.zeros(2, np.float64)
+    if hc.size:
+        hc2[2 - min(2, hc.size):] = hc[-2:]
+    return np.array(
+        [cc4[0], cc4[1], cc4[2], cc4[3], hc2[0], hc2[1],
+         float(line.dash_period_m), float(line.dash_phase_m), float(line.dash_duty),
+         float(line.forward_range[0]), float(line.forward_range[1])],
+        dtype=np.float64,
+    )
+
+
+def _slot_vec_to_line(v: np.ndarray) -> LaneLine:
+    """Inverse of ``_line_to_slot_vec`` (always 4-coeff centerline; leading zeros are
+    polyval-identity so the reconstructed line rasterizes identically)."""
+
+    v = np.asarray(v, np.float64)
+    return LaneLine(
+        centerline_coeffs=np.asarray(v[0:4], np.float64),
+        halfwidth_coeffs=np.asarray(v[4:6], np.float64),
+        dash_period_m=float(v[6]), dash_phase_m=float(v[7]), dash_duty=float(v[8]),
+        forward_range=(float(v[9]), float(v[10])),
+    )
+
+
+def _pack_pairs_to_matrix(
+    pairs_lines: list[list[LaneLine]], *, f_near: float = _RD_F_NEAR,
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """L4 canonicalization: pack ragged per-pair lines into a fixed (P, K*11) float64
+    matrix + (P, K) presence, lateral-sorted into slots with carry-forward hold for
+    absent slots (temporal-delta 0 during a hold). Returns (matrix, presence, K)."""
+
+    P = len(pairs_lines)
+    K = max((len(ls) for ls in pairs_lines), default=0)
+    if K > _RD_MAX_SLOTS:
+        raise ValueError(
+            f"pair has {K} lane lines > _RD_MAX_SLOTS={_RD_MAX_SLOTS}; refusing to silently drop "
+            "lines (NO-FAKE). Investigate the fit (cluster_lane_lines anomaly) or raise the cap.")
+    D = K * _RD_D_SLOT
+    M = np.zeros((P, D), np.float64)
+    presence = np.zeros((P, K), dtype=bool)
+    hold = np.zeros(D, np.float64)
+    for p, lines in enumerate(pairs_lines):
+        order = sorted(
+            range(len(lines)),
+            key=lambda i: float(np.polyval(np.asarray(lines[i].centerline_coeffs, np.float64), f_near)),
+        )
+        for slot, li in enumerate(order):
+            vec = _line_to_slot_vec(lines[li])
+            hold[slot * _RD_D_SLOT:(slot + 1) * _RD_D_SLOT] = vec
+            presence[p, slot] = True
+        M[p] = hold  # present slots updated in hold; absent slots retain the prior pair's value
+    return M, presence, K
+
+
+def _unpack_matrix_to_pairs(M: np.ndarray, presence: np.ndarray, K: int) -> list[list[LaneLine]]:
+    """Inverse of ``_pack_pairs_to_matrix`` (only present slots emit a LaneLine)."""
+
+    P = int(M.shape[0])
+    pairs: list[list[LaneLine]] = []
+    for p in range(P):
+        lines: list[LaneLine] = []
+        for slot in range(K):
+            if presence[p, slot]:
+                lines.append(_slot_vec_to_line(M[p, slot * _RD_D_SLOT:(slot + 1) * _RD_D_SLOT]))
+        pairs.append(lines)
+    return pairs
+
+
+# --- zigzag (signed<->unsigned) --------------------------------------------------
+def _zigzag_encode(x: np.ndarray) -> np.ndarray:
+    """int64 signed -> uint32 (small-magnitude values only; asserted by caller)."""
+
+    x = np.asarray(x, np.int64)
+    return ((x << 1) ^ (x >> 63)).astype(np.uint32)
+
+
+def _zigzag_decode(z: np.ndarray) -> np.ndarray:
+    """uint32 -> int64 (inverse of ``_zigzag_encode``)."""
+
+    z = np.asarray(z, np.int64)
+    return (z >> 1) ^ -(z & 1)
+
+
+def _quantize_matrix(M: np.ndarray, steps_full: np.ndarray) -> np.ndarray:
+    """Q = round(M / steps) int64. Deterministic (numpy round-half-to-even)."""
+
+    if M.size == 0:
+        return np.zeros(M.shape, np.int64)
+    return np.round(M / steps_full).astype(np.int64)
+
+
+def serialize_lane_band_rd(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None,
+    base_steps: np.ndarray | None = None,
+    f_near: float = _RD_F_NEAR,
+) -> bytes:
+    """OPTIMAL RD serialization of the per-pair lane manifold (LBND2). Layout::
+
+        LANE_BAND_RD_MAGIC | u32 hlen | header_json | u32 plen | presence_bytes | uint32 zz_delta[P,D]
+
+    ``header_json`` carries the render scalars (same keys ``render_config_from_header``
+    reads, so the inflate coverage/composite reuse unchanged) + an ``"rd"`` block
+    (K, D_slot, n_pairs, base_steps, f_near). ``presence_bytes`` = packbits of the
+    (P,K) presence. ``zz_delta`` = zigzag(row0=Q[0]; rows>0 = Q[t]-Q[t-1]) as uint32.
+    The COUNTED archive bytes are ``len(brotli(serialize_lane_band_rd(...)))`` (the
+    byte-close 5th block brotli-compresses this). ``base_steps`` overrides the derived
+    steps (used by the capped-inflate re-serialize to preserve the exact grid)."""
+
+    steps = np.asarray(base_steps, np.float64) if base_steps is not None else derive_rd_base_steps(tol)
+    if steps.shape != (_RD_D_SLOT,):
+        raise ValueError(f"base_steps must be ({_RD_D_SLOT},); got {steps.shape}")
+    M, presence, K = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
+    P = int(M.shape[0])
+    D = K * _RD_D_SLOT
+    steps_full = np.tile(steps, K) if K else np.zeros(0, np.float64)
+    Q = _quantize_matrix(M, steps_full)                       # (P, D) int64
+    dq = Q.copy()
+    if P > 1 and D:
+        dq[1:] = Q[1:] - Q[:-1]                                 # row0 = seed, rows>0 = temporal delta
+    zz = _zigzag_encode(dq) if dq.size else np.zeros((P, D), np.uint32)
+    if zz.size and int(zz.max()) >= 2 ** 31:
+        raise ValueError(
+            "LBND2 zigzag delta exceeds int32 range -- lane coeff magnitudes are pathological; "
+            "refusing to overflow (NO-FAKE). Widen the step schedule or investigate the fit.")
+
+    header: dict[str, Any] = {
+        "format": 2,
+        "softness": float(cfg.softness),
+        "dash_gate": bool(cfg.dash_gate),
+        "dash_forward_max_m": float(cfg.dash_forward_max_m),
+        "v_h": float(cfg.v_h),
+        "cx": (None if cfg.cx is None else float(cfg.cx)),
+        "weight": float(cfg.weight),
+        "lane_cls": int(cfg.lane_cls),
+        "lane_rgb_mode": str(cfg.lane_rgb_mode),
+        "u_mask": (
+            {"source": "witness_margin", "tau": float(cfg.u_mask_tau), "eps": float(cfg.u_mask_eps)}
+            if cfg.u_mask_enabled else None
+        ),
+        "geom": {"cam_h": _CAM_H, "fx": _FX, "fy": _FY, "seg_h": _SEG_H, "seg_w": _SEG_W},
+        "rd": {
+            "K": int(K), "d_slot": int(_RD_D_SLOT), "n_pairs": int(P),
+            "base_steps": [float(s) for s in steps.tolist()], "f_near": float(f_near),
+        },
+    }
+    mj = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    presence_bytes = np.packbits(presence.reshape(-1)).tobytes() if presence.size else b""
+    delta_bytes = np.ascontiguousarray(zz, dtype=np.uint32).tobytes()
+    return (LANE_BAND_RD_MAGIC + struct.pack("<I", len(mj)) + mj
+            + struct.pack("<I", len(presence_bytes)) + presence_bytes + delta_bytes)
+
+
+def deserialize_lane_band_rd(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
+    """Bit-exact inverse of ``serialize_lane_band_rd``. Returns (per-pair DEQUANTIZED
+    LaneLines, header). The DEQUANTIZED lines are what BOTH the compress-side render
+    and the inflate render use (decode-consistency)."""
+
+    if blob[:len(LANE_BAND_RD_MAGIC)] != LANE_BAND_RD_MAGIC:
+        raise ValueError("bad LBND2 magic (NO-FAKE: refusing to guess).")
+    off = len(LANE_BAND_RD_MAGIC)
+    (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    header = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    (plen,) = struct.unpack_from("<I", blob, off); off += 4
+    presence_bytes = blob[off:off + plen]; off += plen
+    rd = header["rd"]
+    K = int(rd["K"]); P = int(rd["n_pairs"]); d_slot = int(rd["d_slot"])
+    steps = np.asarray(rd["base_steps"], np.float64)
+    D = K * d_slot
+    if K:
+        presence = np.unpackbits(np.frombuffer(presence_bytes, dtype=np.uint8))[:P * K].reshape(P, K).astype(bool)
+        zz = np.frombuffer(blob[off:], dtype=np.uint32).reshape(P, D)
+        dq = _zigzag_decode(zz)
+        Q = np.cumsum(dq, axis=0)                               # row0=seed; cumsum undoes temporal delta
+        steps_full = np.tile(steps, K)
+        M = Q.astype(np.float64) * steps_full
+    else:
+        presence = np.zeros((P, 0), dtype=bool)
+        M = np.zeros((P, 0), np.float64)
+    pairs_lines = _unpack_matrix_to_pairs(M, presence, K)
+    return pairs_lines, header
+
+
+def roundtrip_lines_through_rd(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
+) -> tuple[list[list[LaneLine]], bytes]:
+    """Return the DEQUANTIZED per-pair lines (what the RD code ships) + the serialized
+    blob. The compress-side render MUST use these dequantized lines so the verdicted
+    render == the shipped render (measure-what-you-ship). NO-FAKE: asserts the blob
+    round-trips bit-exact."""
+
+    blob = serialize_lane_band_rd(pairs_lines, cfg, tol=tol, f_near=f_near)
+    dq_lines, _hdr = deserialize_lane_band_rd(blob)
+    return dq_lines, blob
+
+
+# --- magic-dispatching helpers (so the byte-close tool + tests are format-agnostic) --
+def deserialize_lane_band_any(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
+    """Dispatch on magic: LBND1 -> ``deserialize_lane_band``, LBND2 -> ``deserialize_lane_band_rd``."""
+
+    if blob[:len(LANE_BAND_RD_MAGIC)] == LANE_BAND_RD_MAGIC:
+        return deserialize_lane_band_rd(blob)
+    return deserialize_lane_band(blob)
+
+
+def serialize_lane_band_any(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, orig_header: dict[str, Any],
+) -> bytes:
+    """Re-serialize preserving the input format (detected from ``orig_header``). For LBND2
+    it reuses the header's ``base_steps`` + ``f_near`` so a re-serialized subset lands on
+    the EXACT SAME quantization grid (bit-exact for the capped-inflate gate)."""
+
+    rd = orig_header.get("rd")
+    if rd is not None:
+        return serialize_lane_band_rd(
+            pairs_lines, cfg,
+            base_steps=np.asarray(rd["base_steps"], np.float64), f_near=float(rd.get("f_near", _RD_F_NEAR)))
+    return serialize_lane_band(pairs_lines, cfg)
+
+
+# --- rate report (observability; per-lever measured bytes + Shannon floor) --------
+def lane_band_rd_rate_report(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
+) -> dict[str, Any]:
+    """Measured per-lever byte accounting for the LBND2 code vs the naive LBND1, on the
+    given per-pair lines. Reports: naive brotli bytes, RD raw+brotli bytes, the order-0
+    Shannon floor of the delta stream, the PTC1 range-coder bytes (the entropy-coder
+    lower bound, needs constriction), and the induced geometric lateral RMS error. All
+    numbers MEASURED (real byte counts), never asserted. rate_term = 25*bytes/RATE_DENOM."""
+
+    import brotli
+
+    rate_denom = 37_545_489.0
+    steps = derive_rd_base_steps(tol)
+    # naive LBND1
+    naive_raw = serialize_lane_band(pairs_lines, cfg)
+    naive_brotli = brotli.compress(naive_raw, quality=11)
+    # RD LBND2
+    rd_raw = serialize_lane_band_rd(pairs_lines, cfg, tol=tol, f_near=f_near)
+    rd_brotli = brotli.compress(rd_raw, quality=11)
+    # decompose the RD blob for observability
+    M, presence, K = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
+    P = int(M.shape[0])
+    D = K * _RD_D_SLOT
+    steps_full = np.tile(steps, K) if K else np.zeros(0, np.float64)
+    Q = _quantize_matrix(M, steps_full)
+    dq = Q.copy()
+    if P > 1 and D:
+        dq[1:] = Q[1:] - Q[:-1]
+    presence_bytes = int(np.packbits(presence.reshape(-1)).nbytes) if presence.size else 0
+    # order-0 Shannon floor of the delta stream (per-dim), for "is brotli near-optimal?"
+    shannon_bits = 0.0
+    ptc1_bytes: int | None = None
+    try:
+        from tac.optimization.pose_trajectory_entropy import (
+            _symbol_entropy_bits,
+            encode_pose_trajectory,
+        )
+
+        for k in range(D):
+            shannon_bits += float(_symbol_entropy_bits(dq[:, k]))
+        # PTC1 real range-coded bytes (the entropy-coder lower bound; adds constriction dep at decode)
+        if D:
+            ptc1_payload = encode_pose_trajectory(M, deltas=steps_full)
+            ptc1_bytes = int(len(ptc1_payload)) + presence_bytes
+    except Exception:  # constriction/pose_trajectory_entropy unavailable -> skip the comparison
+        shannon_bits = float("nan")
+        ptc1_bytes = None
+    # induced geometric lateral RMS error from quantization (observability; not d_seg)
+    dequant_M = Q.astype(np.float64) * steps_full if D else np.zeros((P, 0))
+    lat_rms = float("nan")
+    if D and presence.any():
+        errs: list[float] = []
+        fwd = np.linspace(5.0, 60.0, 12)
+        for p in range(P):
+            for slot in range(K):
+                if presence[p, slot]:
+                    o = M[p, slot * _RD_D_SLOT:slot * _RD_D_SLOT + 4]
+                    r = dequant_M[p, slot * _RD_D_SLOT:slot * _RD_D_SLOT + 4]
+                    errs.append(float(np.sqrt(np.mean((np.polyval(o, fwd) - np.polyval(r, fwd)) ** 2))))
+        lat_rms = float(np.mean(errs)) if errs else float("nan")
+
+    return {
+        "n_pairs": P,
+        "K_slots": K,
+        "total_lines": int(sum(len(ls) for ls in pairs_lines)),
+        "naive_lbnd1_raw_bytes": len(naive_raw),
+        "naive_lbnd1_brotli_bytes": len(naive_brotli),
+        "naive_rate_term": 25.0 * len(naive_brotli) / rate_denom,
+        "rd_lbnd2_raw_bytes": len(rd_raw),
+        "rd_lbnd2_brotli_bytes": len(rd_brotli),
+        "rd_rate_term": 25.0 * len(rd_brotli) / rate_denom,
+        "rd_vs_naive_ratio": (len(rd_brotli) / len(naive_brotli)) if naive_brotli else float("nan"),
+        "presence_bitmap_bytes": presence_bytes,
+        "delta_stream_shannon_floor_bytes": (shannon_bits / 8.0) if shannon_bits == shannon_bits else float("nan"),
+        "ptc1_range_coded_bytes": ptc1_bytes,
+        "ptc1_note": "constriction range-coder lower bound (adds a constriction inflate dep; brotli is the default)",
+        "induced_lateral_rms_m": lat_rms,
+        "base_steps": [float(s) for s in steps.tolist()],
+        "rate_denom_bytes": int(rate_denom),
+    }
+
+
+def derive_task_rd_steps(
+    base_steps: np.ndarray, per_dim_dseg_sensitivity: np.ndarray, lam: float, *,
+    step_floor: float = 1.0, step_ceil: float = 64.0,
+) -> np.ndarray:
+    """Stage-2 TASK-RD step refinement (KKT reverse-waterfill on d_seg sensitivity).
+
+    Given a MEASURED per-dim ``d_seg`` sensitivity ``s_k = |d(d_seg)/d(coeff_k)|`` (finite-
+    diff through R + the frozen SegNet -- REQUIRES the scorer; NEVER a fabricated number),
+    scale each geometric step by ``clip(sqrt(lam / (s_k + eps)), floor, ceil)``: coeffs the
+    SegNet argmax is insensitive to get COARSER steps (fewer bytes), sensitive coeffs get
+    finer steps. ``lam`` is the RD operating-point knob solved so the marginal
+    ``d(d_seg)/d(byte)`` crosses ``25/(100*RATE_DENOM)`` (KKT stationarity). This is the
+    HOOK that consumes real ``frontier_exact_bitalloc``-style sensitivities; Stage-1 uses
+    the geometric ``base_steps`` directly (this refinement is a measured follow-up)."""
+
+    s = np.asarray(per_dim_dseg_sensitivity, np.float64)
+    base = np.asarray(base_steps, np.float64)
+    if s.shape != base.shape:
+        raise ValueError(f"sensitivity shape {s.shape} != base_steps shape {base.shape}")
+    scale = np.clip(np.sqrt(float(lam) / (np.abs(s) + 1e-30)), float(step_floor), float(step_ceil))
+    return base * scale
