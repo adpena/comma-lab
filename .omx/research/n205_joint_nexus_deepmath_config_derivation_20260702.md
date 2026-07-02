@@ -289,6 +289,85 @@ TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \
 
 ---
 
+## 5c. THE CURRICULUM SCHEDULE AS A CALIBRATED OPTIMAL-CONTROL PROGRAM (operator 2026-07-02: co-equal with lever SELECTION)
+
+**Frame:** the schedule is the CONTROL TRAJECTORY `u(t)` of the level-set annealing flow (CE→tau→Muon = coarse-to-fine curvelet scale = Morse-Smale persistence order = temperature anneal). Objective (lexicographic): **minimize terminal d_seg (reach 0.00086) in minimal wall-clock, s.t. the flow dynamics + critical-slowing at transitions.** NOT a fixed proven-fraction pin — a calibrated program. **It ALREADY IS a first-class object:** `tac.witness_dsl.WitnessProgram` (`stages: tuple[Stage,…]` = the ORDER, `.with_lever(Lever(start_epoch=…))` = the STACKING, `Anneal`/`Freeze` = intra-stage, `.compile_trainer_argv()`→ the §5b argv, `.validate()` refuses invented flags) + `tac.witness_dsl.campaign` (`decide_next_stage` / `plan_adaptive_step` / `Cycle` = the CLOSED loop). I express the finalized schedule as that program; I do NOT reinvent.
+
+### (a) The coupling-ordered stage DAG (a partial order — the §3 couplings collapse the permutation explosion; each edge justified)
+
+```
+[INIT ep0]  self-orient DIRECTIONAL basis + structured-init + lane-prior-φ1 + palette-anchor  (rule-118 FREE priors seed the coarse partition)
+   │ edge: basis-BEFORE-capacity (§3-3: capacity on isotropic basis HURTS +6%, on directional pays −64%)
+   │ edge: representation-BEFORE-dynamics (§3-4: the chart/floor is set before any optimizer dynamics)
+   ▼
+[S1 CE  ep0–300]  coarse partition formation (softmax-temp 1.0)
+   │ edge: tau-BEFORE-Muon (§3-5: the softplus surrogate must be REACHABLE before orthogonalized conditioning)
+   ▼
+[S2 tau_softplus(0.3)  ep300–726]  THE primary drop (softmax-temp anneal 1.0→0.05)
+   ├─ branch: persistence-loss + island-amplify (warmup@300, ramp S2→S3)   edge: finest-scale erasure long-tail EMERGES as the partition sharpens (late-emergent → late-engaged)
+   ├─ branch: lane-render-band (@300)                                       edge: the witness-uncertainty FP gate is only VALID once the partition is formed (§2A)
+   ├─ branch: pose-carrier dξ (trains throughout, w-pose>0)                 edge: seg⊥pose FREE (§3-1); d_pose descends free once rendered
+   └─ (l7 DEMOTED — parked @epochs)                                         edge: l7 = L∞ sharpening inside a viscosity flow = d_seg-DECOUPLING defect (§3-5, eq l7_linf_sharpening_defect)
+   ▼
+[S3 Muon  ep726–1000]  conditioning finisher on the FORMED partition (tau+temp FROZEN 0.05)   edge: §3-5 Muon orthogonalizes on a formed partition; AdamW grad-norm COLLAPSES on the κ~19 Hessian
+   ▼
+[CLOSED-LOOP GATE @ep1000]  campaign.decide_next_stage → EXTEND / ADVANCE / RERUN_NEW_CONFIG / ROLLBACK_BRANCH
+```
+
+### (b) The lever × stage STACKING matrix (coupling-justified per cell)
+
+| lever | INIT | S1 CE (0–300) | S2 tau (300–726) | S3 Muon (726–1000) | justification |
+|---|:--:|:--:|:--:|:--:|---|
+| self-orient directional basis | ● | ● | ● | ● | basis-BEFORE-capacity (§3-3); −48%/−31% |
+| structured-init + lane-prior-φ1 + palette-anchor | SEED | — | — | — | rule-118 FREE coarse seed; separatrix residual 1.9e-5 |
+| chroma | ● | ● | ● | ● | SegNet argmax on RGB → chroma is a d_seg lever |
+| AA render | `none` | `none` | `none` | `none` | Wave D: supersample DISQUALIFIED (−49% + decode/mismatch) |
+| CE loss | — | ● | — | — | coarse partition formation |
+| tau_softplus(0.3) | — | — | ● | frozen | primary drop; Δ_min≈0.3 reachability floor |
+| softmax-temp | 1.0 | 1.0 | anneal→0.05 | frozen 0.05 | deterministic annealing (cosine) |
+| lane-render-band (witness-gated) | — | — | ●@300 | ● | uncertainty gate needs a FORMED partition |
+| persistence-loss + island-amplify | — | warmup ramp | ●@300 | ● | **finest-scale erasure long-tail = the late-emergent ~0.003→0.00086 gap-closer** |
+| pose-carrier dξ (w-pose>0) | init | ● | ● | ● | seg⊥pose FREE; descends free when rendered |
+| Muon finisher | — | — | — | ●@726 | conditioning on FORMED partition (§3-5) |
+| margin-saliency / UniWARD | — | — | — | (late-slot, DEMOTED) | texture regime; OFF attribution-clean first → warm-start re-treat |
+| EMA | 0.997 | 0.997 | 0.997 | 0.997 (finisher 0.9995 optional) | shadow ships (non-neg) |
+
+### (c) Calibrated epoch allotment (from per-stage DESCENT DYNAMICS, NOT proven-fraction-scaled)
+
+| stage | epochs | Δd_seg realized through-R (MLX-rs/CPU-adv advisory) | calibration evidence |
+|---|:--:|---|---|
+| **S1 CE** | 0–300 (300) | 0.01045 → 0.005443 (−0.0050) | the coarse-formation knee; the partition forms in ~300 ep |
+| **S2 tau_softplus** | 300–726 (426) | 0.005443 → 0.004563 (**−0.000879 = THE primary single drop**) | tau-knee = the largest single-stage drop; held to 726 (the proven Muon-start) so tau saturates before conditioning |
+| l7 | DEMOTED (parked @1000, ≤1 trailing ep) | (L∞ defect: decouples d_seg) | eq `l7_linf_sharpening_defect` + the 5-agent pass |
+| **S3 Muon** | 726–1000 (274) | 0.004563 → 0.003718 (−0.000569, **STILL DESCENDING/decelerating @ep800**) | long900 @ep800 = 0.002176 still descending → **EXTEND-eligible (the (e) closed loop decides, not a pin)**; overfit-onset ~ep400 is CAP-config-specific (h192 overfits), NOT h96 |
+
+Total ~1000 ep × ~54 s/ep ≈ **~15 h** (T = informational secondary; NOT an S-term). Allotment is the OPENING trajectory; (e) governs the terminal length.
+
+### (d) Intra-stage + inter-stage (transition) controls
+
+**Intra-stage** (`Anneal`/`Freeze` + the schedule flags): LR `1e-3→1e-4` (`--lr-schedule`, `--warmup-epochs`, `--anneal-epochs`); softmax-temp `1.0→0.05` (`--tau-anneal-shape cosine`, FROZEN 0.05 through Muon); tau_softplus_tau `0.3` (`--tau-softplus-tau`; the seg-surrogate Δ_min≈0.3 reachability floor); hosc-β `1.0→4.0` (`--hosc-beta-anneal linear`; the drift-fix — fixed-β4 diverges); max-bank-freq `64` (curvelet stem-Nyquist; the 16→32→64 warm-safe climb is an INTER-LAUNCH escalation, fixed within a launch).
+
+**Inter-stage (transition)** — critical-slowing-aware: `--stage-transition-rewarmup-epochs 8 --stage-transition-rewarmup-floor 0.1 --stage-transition-rewarmup-shape linear --stage-transition-reset-moments` (partial restart; MEASURED — full 1.0× re-destabilizes; flush stale AdamW moments at each boundary). The tau→Muon switch ALSO re-treats via a fresh MultiOptimizer (bit-faithful finisher continuation on resume, `2ca1726ae`). **MD-Decoupling** (`--optimizer md --md-base {adam,muon}`) = a stable-BY-CONSTRUCTION alternative to reheat, BUT SUBSET-MISS (wired in the BASE trainer only, not the levelset entry) → DEMOTED ablation arm.
+
+### (e) The ENGAGED dynamical (closed-loop) control — the real optimality (NOT blind open-loop)
+
+The §5b fixed schedule is the **OPENING trajectory, not a pin.** Two facts MAKE the loop closeable: `--stage-checkpoints --ckpt-every 25` (every stage independently resumable) + `--verdict-pairs 0 --async-verdict --eval-every 25` (all-600 realized-d_seg verdicts, bit-identical training). The closed loop is `tac.witness_dsl.campaign` (BETWEEN-launch, `--resume-from` warm-start — CONTAINMENT: never auto-fires heavy GPU; operator-gated):
+- **`decide_next_stage`** (#188 early-stop policy; trailing window=4, `plateau_abs_slope 1e-6`, `descend_slope -1e-5`, extend/advance/rerun window 300): at the ep1000 Muon boundary → **EXTEND** (steep-negative slope, still descending — the long900 evidence) · **ADVANCE** (plateau at/below floor + reheat) · **RERUN_NEW_CONFIG** (plateau but best > rerun_floor → sharper same-stage) · **ROLLBACK_BRANCH** (regressed vs own best → roll to BEST ckpt + branch). Deterministic + recorded → bit-faithful replay.
+- **`Cycle` / `expand_cycles`** = the cyclic-stage RECURSION (Muon-priming: re-enter a stage for `cycles[i].window` more ep) — the "recursive" facet.
+- **curvelet-scale climb** (`--max-bank-freq` 16→32→64) = the warm-safe inter-launch escalation (shape-changing → FRESH arm per `plan_adaptive_step`; loss/projection levers land as warm re-treatments).
+
+### Schedule-OPTIMIZATION open questions for Phase-3 (DERIVED-now vs NEEDS-TRAJECTORY-MEASUREMENT)
+
+1. **tau→Muon boundary @726** — DERIVED from the proven fraction; the OPTIMAL boundary needs a per-stage-ckpt A/B (measure d_seg vs muon-start-epoch). NEEDS-TRAJECTORY.
+2. **Muon length (274 ep)** — long900 still descending @ep800; RESOLVED DYNAMICALLY by (e) EXTEND, not pinned. DERIVED-now (the policy), measured-at-run.
+3. **persistence/amplify warmup@300 + ramp SHAPE** — start=tau DERIVED; the linear ramp is a default, no measured optimum. NEEDS-TRAJECTORY.
+4. **l7 DEMOTE vs small-drop** — MLX-trace −0.00027 vs the 5-agent DEFECT verdict; the through-R A/B at the tau-converged ckpt resolves it. NEEDS-TRAJECTORY.
+5. **reheat floor/shape per boundary (0.1×/8ep)** — MEASURED partial-restart; the exact floor/shape per transition is calibratable. DERIVED-now, refine-measurable.
+6. **closed-loop thresholds (`plateau_abs_slope 1e-6`, `descend_slope -1e-5`)** — DERIVED defaults; they must calibrate to the n600 verdict-NOISE floor (needs the verdict-variance measurement so a plateau isn't called on noise). NEEDS-TRAJECTORY.
+7. **stage ORDER robustness** — the DAG edges are coupling-DERIVED (basis-before-capacity etc.); a single-swap ablation (e.g. tau-before-directional) would CONFIRM the partial order empirically. NEEDS-TRAJECTORY (low-priority; couplings are measured).
+
+---
+
 ## 6. THE WIRING-GAP LIST (coordinator requirement — grepped against the LIVE levelset trainer)
 
 > **PHASE-2 UPDATE (2026-07-02, HEAD `e28cbab63`): #224 CLOSED both BLOCKING gaps + the 3 high-value + the β₂ optional.** The two "MODULE-ONLY BLOCKING" gaps below — **(A) warp-real-luma pose carrier** and **(B) AA-SDF render** — are now FULLY WIRED with real flags reaching render/loss (callsite-traced): `--pose-carrier` (build+child-attach+render-dispatch+NO-FAKE-verdict, requires `--w-pose>0`; the FEED-224 fail-closed guard REPLACED) + `--render-aa {none,supersample,ipe}` / `--aa-supersample`. The 3 high-value (`--lane-render-band`, `--persistence-loss-weight`, `--amplify-weight`) + `--seed-islands` + `--adam-beta2` are ALSO wired. Residual gaps: **MD-optimizer into levelset** (still base-only subset-miss) + **`--compile-step`** (S-neutral ~5%, still NON-flag). The AA reconcile flipped the (B) verdict: `--render-aa none` + `--lane-render-band`, NOT supersample (Wave D, §5b delta 1). The list below is the Phase-1 as-of-derivation snapshot (PRE-#224).
