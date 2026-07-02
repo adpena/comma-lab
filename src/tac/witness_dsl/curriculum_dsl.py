@@ -492,6 +492,40 @@ def LanePrior(weight: float = 1.0, start_epoch: int = 300,  # noqa: N802 — LEV
                  notes="thin-lane dropped-dash prior (realized margin hinge weighted by thinness)")
 
 
+def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
+    softness: float = 1.0, dash_forward_max_m: float = 55.0,
+    uncertainty_source: str = "witness", tau: float = 0.85, eps: float = 0.35,
+    weight: float = 1.0, start_epoch: int = 300, window: int = 200,
+) -> Lever:
+    """FEED-dv (#203/#213/#215) analytic-lane RENDER-BAND: composite the analytic
+    openpilot lane band OVER the witness render BEFORE R (the ``compose_fn`` hook), so
+    the frozen SegNet reads the composited frame and the d_seg loss backprops into the
+    witness. NON-NAIVE form (the naive band HURT +0.00082, sizing c3): AA-SDF coverage x
+    RANGE-DEPENDENT dash gate (#215) x WITNESS-UNCERTAINTY mask (rides #141 margin) so the
+    band paints ONLY where the witness ERASES the lane, killing the dash-gap FALSE-POSITIVE.
+
+    Impl: ``tac.boundary_math.analytic_lane_render_band.make_lane_band_compose_fn`` passed
+    to the trainer's ``render_fn`` (compose hook). MEASURED post-hoc n600: the levers take
+    naive +0.00082 -> ~break-even; the NET-NEGATIVE win is realized by TRAINING WITH the
+    band active (the witness re-adapts its boundaries; sizing VERDICT).
+
+    PAIRED WITH the trainer wire-in (docs/analytic_lane_render_band_wire_in_spec.md): the
+    ``--lane-band-*`` flags LAND WITH the compose wire-in; until then this Lever will be
+    REFUSED by the never-invent-flags validator (fail-closed = correct)."""
+    return Lever("FEED_dv_analytic_lane_render_band",
+                 overrides={"--lane-render-band": True,
+                            "--lane-band-softness": softness,
+                            "--lane-band-dash-forward-max-m": dash_forward_max_m,
+                            "--lane-band-uncertainty-source": uncertainty_source,
+                            "--lane-band-tau": tau,
+                            "--lane-band-eps": eps,
+                            "--lane-band-weight": weight,
+                            "--lane-band-start-epoch": start_epoch},
+                 epochs_delta=window,
+                 notes="analytic-lane render-band compose (AA-SDF x range-dash-gate x "
+                       "witness-uncertainty); FP-killed non-naive form; realized THROUGH R")
+
+
 def StiefelW(window: int = 100) -> Lever:  # noqa: N802 — DM1a
     """DM1a (Stiefel-W): per-step project film.weight onto orthonormal columns (WᵀW=I) so W is an
     ISOMETRY => PR(M)=PR(cov(code)) to the projection's ~1e-2 residual (the byte-free root half-1 of the
@@ -564,6 +598,33 @@ def UniWARD(weight: float = 1.0, start_epoch: int = 900, beta: float = 4.0,  # n
                             "--margin-saliency-target": target},
                  epochs_delta=window,
                  notes="UniWARD texture-masked margin-saliency (Fridrich; concentrate on smooth boundary)")
+
+
+def WarpRealLumaFrame0(  # noqa: N802 — DSL constructor
+    w_pose: float = 1.0, start_epoch: int = 0, window: int = 0,
+) -> Lever:
+    """POSE CARRIER B — warp-real-luma FRAME0 (``tac.boundary_math.warp_real_luma_frame0``).
+
+    Engages the pose term (``--w-pose``, default 0.0 = pose-blind) so the SE(3)-twist
+    residual trains to close d_pose from the deterministic warp floor (~2.6-10.5 at n600
+    advisory) toward ~3.4e-5. The CARRIER ITSELF is a CODE wire-in (NOT a trainer flag):
+    the parent routes the f0 render slot through
+    ``WarpRealLumaFrame0Carrier.make_pair_render_dispatch(...)`` and passes it to
+    ``make_loss_fn(render_fn=...)`` (even code_idx=f0 -> warp(gt_f0, xi) through R; odd=f1
+    -> witness). frame0 is seg-free (upstream/modules.py:108) so this lever CANNOT disturb
+    d_seg — it side-steps the W8 d_seg-vs-d_pose warp-scale crux. Byte cost = the per-pair
+    6-DOF twist (~875 B/600 fp16, ~325 B low-rank r2; dual-use with the stored pose).
+
+    Gauge: ``WarpGauge.SCREW_TWIST`` x ``PoseGauge.LOW_RANK`` (the twist IS the pose).
+    Composes with every d_seg lever (orthogonal frame). MEASURED reference: FEED-lj/W7.
+    ``w_pose`` is the pose-term weight; ``--pose-eps`` is left at the trainer default.
+    """
+    return Lever("warp_real_luma_frame0_pose_carrier",
+                 overrides={"--w-pose": w_pose},
+                 epochs_delta=window,
+                 notes=("pose carrier B: warp-real-luma frame0 (SE(3)-twist ground-homography, seg-free); "
+                        "render_fn code wire-in via make_pair_render_dispatch; --w-pose>0 trains the "
+                        "rank-6 twist residual to d_pose~3.4e-5 (FEED-lj/W7; advisory pointer 0.19110)"))
 
 
 # ---------------------------------------------------------------------------

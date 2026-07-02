@@ -39,6 +39,7 @@ from tac.witness_dsl.curriculum_dsl import (
     DM1Minimal,
     MarginSaliency,
     UniWARD,
+    WarpRealLumaFrame0,
     openpilot_seeded_opening,
 )
 from tac.witness_dsl.campaign import (
