@@ -491,6 +491,16 @@ class WitnessConfig:
     surgical_levers_enabled: bool
     dm1_enabled: bool
 
+    # (F1) all-levers opt-in: when True, ``to_trainer_flags`` renders the deep-math-OPTIMAL all-levers
+    # from-scratch argv (--render-aa none + analytic coverage-integrated lane-render-band [Wave D AA
+    # correction] + persistence/topology loss + island-birth amplification + annealed hosc 1->4 +
+    # l7 DEMOTED + verdict-pairs 0 + adam-beta2),
+    # per .omx/research/capstone_witness_launch_config_deepmath_optimal_20260702.md (#205). Default
+    # False => the attribution-clean proven_base baseline stays available byte-identically.
+    all_levers: bool = False
+    all_levers_base: dict = field(default_factory=dict)
+    adam_beta2: float = 0.999  # #222; 0.999 == MLX default (bit-identical); all-levers sets 0.9999999.
+
     # rich design fields
     lever_priors: dict = field(default_factory=dict)
     warp_priors: dict = field(default_factory=dict)
@@ -501,67 +511,138 @@ class WitnessConfig:
     tag: str = ADVISORY_TAG
 
     def to_trainer_flags(self, out_dir: str) -> list[tuple[str, object]]:
-        """Ordered list of (flag, value) — value ``None`` means a bare boolean
-        flag. Renders the ATTRIBUTION-CLEAN command (surgical levers + DM1 OFF).
+        """Ordered list of (flag, value) — value ``None`` means a bare boolean flag.
 
-        Every flag here is validated against the trainer's real argparse by
-        :func:`validate_flags` (the CLI dogfood); none is invented.
+        Default renders the ATTRIBUTION-CLEAN command (surgical levers + DM1 OFF, byte-identical to the
+        pre-F1 output). When ``self.all_levers`` is True it renders the deep-math-OPTIMAL all-levers
+        from-scratch argv (per the #205 config artifact): the derived fields (``mod_dim`` 19, ``l7``
+        DEMOTED to epochs, ``verdict_pairs`` 0) are already set by ``derive_config``; the extra render/
+        loss levers + the annealed-hosc / tau-anneal-shape / lr / adam-beta2 flags are added here.
+
+        Every flag here is validated against the trainer's real argparse by :func:`validate_flags`
+        (the CLI dogfood); none is invented.
         """
+        al = bool(self.all_levers)
+        alb = self.all_levers_base if al else {}
+        pb = self.proven_base
         flags: list[tuple[str, object]] = [
             ("--out-dir", out_dir),
             ("--gt-cache", self.gt_cache),
             ("--num-pairs", self.num_pairs),
-            ("--mlx-device", self.proven_base["mlx_device"]),
-            ("--seed", self.proven_base["seed"]),
+            ("--mlx-device", pb["mlx_device"]),
+            ("--seed", pb["seed"]),
             ("--async-verdict", None),
             ("--epochs", self.epochs),
-            ("--eval-every", self.proven_base["eval_every"]),
+            ("--eval-every", pb["eval_every"]),
             ("--verdict-pairs", self.verdict_pairs),
             ("--curriculum", None),
             ("--tau-softplus-start-epoch", self.tau_softplus_start_epoch),
-            ("--tau-softplus-tau", self.proven_base["tau_softplus_tau"]),
+            ("--tau-softplus-tau", pb["tau_softplus_tau"]),
             ("--l7-start-epoch", self.l7_start_epoch),
             ("--muon-start-epoch", self.muon_start_epoch),
             ("--muon-lr", self.muon_lr),
-            ("--muon-momentum", self.proven_base["muon_momentum"]),
-            ("--muon-ns-steps", self.proven_base["muon_ns_steps"]),
-            ("--stage-transition-rewarmup-epochs", self.proven_base["st_rewarmup_epochs"]),
-            ("--stage-transition-rewarmup-floor", self.proven_base["st_rewarmup_floor"]),
-            ("--stage-transition-rewarmup-shape", self.proven_base["st_rewarmup_shape"]),
+            ("--muon-momentum", pb["muon_momentum"]),
+            ("--muon-ns-steps", pb["muon_ns_steps"]),
+            ("--stage-transition-rewarmup-epochs", pb["st_rewarmup_epochs"]),
+            ("--stage-transition-rewarmup-floor", pb["st_rewarmup_floor"]),
+            ("--stage-transition-rewarmup-shape", pb["st_rewarmup_shape"]),
             ("--stage-transition-reset-moments", None),
-            ("--w-seg", self.proven_base["w_seg"]),
-            ("--w-pose", self.proven_base["w_pose"]),
+            ("--w-seg", pb["w_seg"]),
+            ("--w-pose", pb["w_pose"]),
             ("--score-domain-loss", None),
             ("--mod-dim", self.mod_dim),
             ("--hidden-dim", self.hidden_dim),
-            ("--n-hidden", self.proven_base["n_hidden"]),
-            ("--activation", self.proven_base["activation"]),
-            ("--hosc-beta", self.proven_base["hosc_beta"]),
-            ("--hosc-omega", self.proven_base["hosc_omega"]),
+            ("--n-hidden", pb["n_hidden"]),
+            ("--activation", pb["activation"]),
+        ]
+        # hosc activation: baseline = fixed --hosc-beta (proven_base); all-levers = annealed 1.0->4.0
+        # (the CLAUDE.md fixed-beta=4 divergence fix: start 1.0, anneal to 4.0 as the SDF pins).
+        if al:
+            flags += [
+                ("--hosc-beta", alb["hosc_beta"]),
+                ("--hosc-beta-end", alb["hosc_beta_end"]),
+                ("--hosc-beta-anneal", alb["hosc_beta_anneal"]),
+            ]
+        else:
+            flags.append(("--hosc-beta", pb["hosc_beta"]))
+        flags += [
+            ("--hosc-omega", pb["hosc_omega"]),
             ("--siren-init", None),
-            ("--softmax-temp-start", self.proven_base["softmax_temp_start"]),
-            ("--softmax-temp-end", self.proven_base["softmax_temp_end"]),
+            ("--softmax-temp-start", pb["softmax_temp_start"]),
+            ("--softmax-temp-end", pb["softmax_temp_end"]),
+        ]
+        if al:
+            flags.append(("--tau-anneal-shape", alb["tau_anneal_shape"]))
+        flags += [
             ("--self-orient", None),
-            ("--n-dir-freqs", self.proven_base["n_dir_freqs"]),
-            ("--freq-across", self.proven_base["freq_across"]),
-            ("--freq-along", self.proven_base["freq_along"]),
-            ("--reorient-every", self.proven_base["reorient_every"]),
-            ("--max-bank-freq", self.proven_base["max_bank_freq"]),
+            ("--n-dir-freqs", pb["n_dir_freqs"]),
+            ("--freq-across", pb["freq_across"]),
+            ("--freq-along", pb["freq_along"]),
+            ("--reorient-every", pb["reorient_every"]),
+            ("--max-bank-freq", pb["max_bank_freq"]),
             ("--chroma", None),
             ("--palette-anchor", None),
-            ("--eikonal-weight", self.proven_base["eikonal_weight"]),
-            ("--length-weight", self.proven_base["length_weight"]),
-            ("--render-h", self.proven_base["render_h"]),
-            ("--render-w", self.proven_base["render_w"]),
-            ("--accum-pairs", self.proven_base["accum_pairs"]),
-            ("--grad-clip", self.proven_base["grad_clip"]),
-            ("--ema-decay", self.proven_base["ema_decay"]),
+            ("--eikonal-weight", pb["eikonal_weight"]),
+            ("--length-weight", pb["length_weight"]),
+            ("--render-h", pb["render_h"]),
+            ("--render-w", pb["render_w"]),
+        ]
+        # all-levers render/loss levers: AA-SDF supersample render + analytic lane-render-band + persistence/
+        # topology loss + island-birth amplification (all default-OFF in the trainer => byte-identical
+        # when NOT emitted; here they are the ENGAGE values from the deep-math config artifact).
+        if al:
+            flags += [
+                # #224 Wave D AA CORRECTION (aa_feasibility_reconciliation_20260702.md): the
+                # contest-feasible OPTIMAL AA is --render-aa NONE + the analytic coverage-integrated
+                # --lane-render-band (O(1)/pixel, in the 30-min decode budget, MEASURED to HELP).
+                # Brute --render-aa supersample is DISQUALIFIED on TWO independent grounds: (1) it
+                # HURTS the witness -49% (0.00086 is a REAL-FRAME ceiling, not witness-realized), and
+                # (2) fp64 decode 41min > 30min budget AND neither shipped inflate even applies ss
+                # (train/decode observation MISMATCH). The supersample code path stays BUILT +
+                # fail-closeable in the trainer but is OUT of the launch config (--aa-supersample /
+                # --aa-self-orient-fine-mode are NOT emitted). --render-aa ipe (O(1), decode-safe)
+                # is the documented alt if a full-partition AA is ever wanted; never supersample.
+                ("--render-aa", alb["render_aa"]),
+                ("--lane-render-band", None),
+                ("--lane-band-start-epoch", alb["lane_band_start_epoch"]),
+                ("--lane-band-uncertainty-source", alb["lane_band_uncertainty_source"]),
+                ("--lane-band-tau", alb["lane_band_tau"]),
+                ("--lane-band-eps", alb["lane_band_eps"]),
+                ("--lane-band-softness", alb["lane_band_softness"]),
+                ("--lane-band-dash-forward-max-m", alb["lane_band_dash_forward_max_m"]),
+                ("--lane-band-weight", alb["lane_band_weight"]),
+                ("--persistence-loss-weight", alb["persistence_loss_weight"]),
+                ("--persistence-recall-weight", alb["persistence_recall_weight"]),
+                ("--cldice-iters", alb["cldice_iters"]),
+                ("--persistence-warmup-epochs", alb["persistence_warmup_epochs"]),
+                ("--persistence-classes", alb["persistence_classes"]),
+                ("--amplify-weight", alb["amplify_weight"]),
+                ("--amplify-form", alb["amplify_form"]),
+                ("--amplify-margin-target", alb["amplify_margin_target"]),
+                ("--amplify-persist", alb["amplify_persist"]),
+                ("--island-dilate-px", alb["island_dilate_px"]),
+            ]
+        flags += [
+            ("--accum-pairs", pb["accum_pairs"]),
+            ("--grad-clip", pb["grad_clip"]),
+            ("--ema-decay", pb["ema_decay"]),
+        ]
+        # all-levers explicit lr schedule + adam-beta2 (#222). The lr trio == trainer defaults (the
+        # artifact emits them explicitly); adam-beta2 is the small-n optimum (launcher-only F4 superset).
+        if al:
+            flags += [
+                ("--lr", alb["lr"]),
+                ("--lr-end", alb["lr_end"]),
+                ("--weight-decay", alb["weight_decay"]),
+                ("--adam-beta2", self.adam_beta2),
+            ]
+        flags += [
             ("--structured-init", None),
             ("--structured-init-include-lane", None),
             ("--lane-prior-phi1", None),
-            ("--lane-prior-phi1-mode", self.proven_base["lane_prior_phi1_mode"]),
+            ("--lane-prior-phi1-mode", pb["lane_prior_phi1_mode"]),
             ("--lane-prior-phi1-dash-gate", None),
-            ("--ckpt-every", self.proven_base["ckpt_every"]),
+            ("--ckpt-every", pb["ckpt_every"]),
             ("--stage-checkpoints", None),
         ]
         return flags
@@ -616,6 +697,59 @@ def _proven_base() -> dict:
     }
 
 
+# the ENGAGE values for the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact
+# .omx/research/capstone_witness_launch_config_deepmath_optimal_20260702.md). Every value verified to
+# exist + be wired in the levelset trainer argparse. lane_band_start / persistence_warmup are tied to
+# the curriculum ``tau_start`` (the artifact = 300 = tau @ epochs=1000; both generalize with the schedule).
+def _all_levers_base(tau_start: int) -> dict:
+    return {
+        # annealed hosc (fixed-beta=4 divergence fix: start 1.0 -> anneal to 4.0 as the SDF pins).
+        "hosc_beta": 1.0,
+        "hosc_beta_end": 4.0,
+        "hosc_beta_anneal": "linear",
+        "tau_anneal_shape": "cosine",
+        # #224 Wave D AA CORRECTION (aa_feasibility_reconciliation_20260702.md, supersedes Wave C
+        # FIX-2): --render-aa NONE. The contest-feasible OPTIMAL AA is the analytic coverage-integrated
+        # --lane-render-band below (O(1)/pixel, decode-in-budget, MEASURED to HELP). Brute supersample
+        # is DISQUALIFIED: it HURTS the witness -49% (the 0.00086 floor is a REAL-FRAME ceiling, not
+        # the witness-realized number) AND its fp64 decode is 41min > the 30min budget AND neither
+        # shipped inflate applies ss (train/decode observation mismatch). ss code path stays BUILT +
+        # fail-closeable in the trainer but OUT of the launch config; --render-aa ipe is the O(1)
+        # decode-safe alt if a full-partition AA is ever wanted (never supersample).
+        "render_aa": "none",
+        # analytic lane-render-band (class-1 render-time authority; witness-uncertainty FP gate).
+        "lane_band_start_epoch": int(tau_start),
+        "lane_band_uncertainty_source": "witness",
+        "lane_band_tau": 0.85,
+        "lane_band_eps": 0.35,
+        "lane_band_softness": 1.0,
+        "lane_band_dash_forward_max_m": 55.0,
+        "lane_band_weight": 1.0,
+        # persistence / topology loss (soft-clDice + persistence-recall on the shared seg forward).
+        "persistence_loss_weight": 1.0,
+        "persistence_recall_weight": 1.0,
+        "cldice_iters": 5,
+        "persistence_warmup_epochs": int(tau_start),
+        "persistence_classes": "auto",
+        # island-birth amplification (rides the shared LEVER-4 _signed margin; AMPLIFY_ONLY WIRED path).
+        "amplify_weight": 1.0,
+        "amplify_form": "hinge",
+        "amplify_margin_target": 1.0,
+        "amplify_persist": "inverse_thickness",
+        "island_dilate_px": 1,
+        # explicit lr schedule (== trainer defaults; the artifact emits them explicitly).
+        "lr": 1e-3,
+        "lr_end": 1e-4,
+        "weight_decay": 1e-4,
+    }
+
+
+# #222 small-n (n = P/accum_pairs ~ 75) AdamW beta2 optimum: 1-beta2 <~ (1-beta1^5)/n^3.5 ~ 1.12e-7
+# (beta1=0.9) => beta2* ~ 0.99999988. 0.9999999 (1-beta2=1e-7) clears the threshold. Default path
+# stays 0.999 (== MLX default => bit-identical) unless all_levers.
+_ALL_LEVERS_ADAM_BETA2 = 0.9999999
+
+
 def derive_config(
     gt_cache_path: str | Path,
     *,
@@ -624,6 +758,7 @@ def derive_config(
     code_matrix: np.ndarray | None = None,
     epochs: int = 1000,
     byte_close_result: dict | None = None,
+    all_levers: bool = False,
 ) -> WitnessConfig:
     """Turn a clip's GT cache into a launch-ready :class:`WitnessConfig`.
 
@@ -636,7 +771,11 @@ def derive_config(
     means != ends: the returned config is a MEANS. Only a byte-closed exact n600
     row < 0.19110 moves the pointer.
     """
-    mod = mod_dim_generator(code_matrix, overfit=overfit)
+    # (F1) all-levers => the deep-math-OPTIMAL config: mod-dim is the aggressive Whitney FLOOR (19 for
+    # m~9; rate-saving) regardless of the `overfit` flag; verdict-pairs 0 (ALL pairs, async); l7 DEMOTED
+    # to epochs (the measured-defect l7 collapses to <=1 trailing epoch). Baseline (all_levers=False) is
+    # unchanged (byte-identical). Per the #205 artifact.
+    mod = mod_dim_generator(code_matrix, overfit=(False if all_levers else overfit))
     hid = hidden_dim_generator(byte_close_result, overfit=overfit)
     sched = curriculum_schedule(epochs)
     mlr = muon_lr_generator()
@@ -645,15 +784,35 @@ def derive_config(
     warps = warp_priors()
     port = portability_split()
 
+    tau_start = int(sched["tau_softplus_start_epoch"].value)
+    l7_start = int(epochs) if all_levers else int(sched["l7_start_epoch"].value)
+    verdict_pairs = 0 if all_levers else int(vp.value)
+    adam_beta2 = _ALL_LEVERS_ADAM_BETA2 if all_levers else 0.999
+    all_levers_base = _all_levers_base(tau_start) if all_levers else {}
+
     provenance = {
         "mod_dim": mod,
         "hidden_dim": hid,
         "muon_lr": mlr,
-        "verdict_pairs": vp,
+        "verdict_pairs": (
+            ProvenancedValue(0, SRC_RECALLED,
+                             "all-levers: --verdict-pairs 0 (ALL pairs, --async-verdict; n600-allergy: "
+                             "override the proven-arm 96-subset for decision-informing telemetry)",
+                             Portability.SCORER_FIXED) if all_levers else vp),
         "epochs": ProvenancedValue(epochs, SRC_RECALLED, "proven total epoch budget",
                                    Portability.INSTANCE),
         **sched,
     }
+    if all_levers:
+        provenance["l7_start_epoch"] = ProvenancedValue(
+            l7_start, SRC_DESIGN,
+            "all-levers: l7 DEMOTED to epochs (measured DEFECT eq l7_linf_sharpening_defect: L-inf "
+            "sharpening inside a viscosity flow; the curriculum guard forbids l7>epochs so it fires "
+            "<=1 trailing epoch under Muon+EMA => negligible)", Portability.INSTANCE)
+        provenance["adam_beta2"] = ProvenancedValue(
+            adam_beta2, SRC_DESIGN,
+            "#222 small-n (n~75) AdamW beta2 optimum ~0.9999999 (1-beta2=1e-7 < (1-0.9^5)/75^3.5"
+            "~1.12e-7); DERIVED (arXiv 2603.02092)", Portability.SCORER_FIXED)
 
     return WitnessConfig(
         gt_cache=str(gt_cache_path),
@@ -662,13 +821,16 @@ def derive_config(
         mod_dim=int(mod.value),
         hidden_dim=int(hid.value),
         muon_lr=float(mlr.value),
-        verdict_pairs=int(vp.value),
+        verdict_pairs=int(verdict_pairs),
         epochs=int(epochs),
-        tau_softplus_start_epoch=int(sched["tau_softplus_start_epoch"].value),
-        l7_start_epoch=int(sched["l7_start_epoch"].value),
+        tau_softplus_start_epoch=tau_start,
+        l7_start_epoch=l7_start,
         muon_start_epoch=int(sched["muon_start_epoch"].value),
         surgical_levers_enabled=bool(levers["surgical_levers_enabled"]),
         dm1_enabled=bool(levers["dm1_enabled"]),
+        all_levers=bool(all_levers),
+        all_levers_base=all_levers_base,
+        adam_beta2=float(adam_beta2),
         lever_priors=levers,
         warp_priors=warps,
         portability=port,

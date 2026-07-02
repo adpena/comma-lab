@@ -211,3 +211,124 @@ def test_command_has_critical_revisions_and_is_attribution_clean():
     assert "--resume-from" not in cmd
     # perf-env prefix present
     assert "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1" in cmd
+    # baseline does NOT emit the all-levers flags (proven_base stays available)
+    for off in ("--all-levers", "--render-aa", "--lane-render-band", "--persistence-loss-weight",
+                "--amplify-weight", "--hosc-beta-end", "--adam-beta2"):
+        assert off not in cmd, f"{off} should be OFF in the baseline (non-all-levers) config"
+
+
+# --------------------------------------------------------------------------
+# F1: all-levers config MATCHES the deep-math #205 artifact + is flag-valid
+# --------------------------------------------------------------------------
+_ARTIFACT = _REPO / ".omx/research/capstone_witness_launch_config_deepmath_optimal_20260702.md"
+
+
+def _parse_flag_dict(pairs) -> dict:
+    """(flag -> value) from a to_trainer_flags list; bare flag -> True."""
+    return {f: (True if v is None else str(v)) for f, v in pairs}
+
+
+def _parse_artifact_argv() -> dict:
+    """Parse the ```bash``` launch block of the #205 artifact into a (flag -> value) dict."""
+    m = re.search(r"```bash\n(.*?)\n```", _ARTIFACT.read_text(), re.S)
+    assert m, "no ```bash``` block in the #205 artifact"
+    block = m.group(1).replace("\\\n", " ")
+    toks = block.split()
+    i = 0
+    while i < len(toks) and not toks[i].startswith("--"):  # skip env + python + script
+        i += 1
+    out: dict = {}
+    while i < len(toks):
+        t = toks[i]
+        if t.startswith("--"):
+            if i + 1 < len(toks) and not toks[i + 1].startswith("--"):
+                out[t] = toks[i + 1]
+                i += 2
+            else:
+                out[t] = True
+                i += 1
+        else:
+            i += 1
+    return out
+
+
+def _num_or_str(v):
+    if v is True:
+        return True
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return str(v)
+
+
+def test_all_levers_argv_matches_deepmath_artifact():
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, epochs=1000, all_levers=True)
+    launcher = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
+    artifact = _parse_artifact_argv()
+    drop = {"--out-dir", "--gt-cache"}  # paths differ by construction
+    art_keys = set(artifact) - drop
+    lau_keys = set(launcher) - drop
+    # every artifact flag is emitted by the launcher
+    assert art_keys - lau_keys == set(), f"artifact flags missing from launcher: {art_keys - lau_keys}"
+    # Wave D: --adam-beta2 is now IN the artifact argv (the --adam-beta2 flag was added in Wave C, so
+    # the artifact no longer flags it as an un-emittable code change) => no launcher extras.
+    assert lau_keys - art_keys == set(), f"unexpected launcher extras: {lau_keys - art_keys}"
+    # every shared flag's VALUE matches (numeric-aware so 1e-3 == 0.001)
+    mism = [(k, artifact[k], launcher[k]) for k in (art_keys & lau_keys)
+            if _num_or_str(artifact[k]) != _num_or_str(launcher[k])]
+    assert mism == [], f"value mismatches vs artifact: {mism}"
+
+
+def test_all_levers_flags_all_exist_in_trainer_argparse():
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, epochs=1000, all_levers=True)
+    real = _real_trainer_flags()
+    emitted = [flag for flag, _ in cfg.to_trainer_flags("out/dir")]
+    missing = [f for f in emitted if f not in real]
+    assert missing == [], f"invented flags not in trainer argparse: {missing}"
+
+
+def test_all_levers_derived_fields():
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, epochs=1000, all_levers=True)
+    assert cfg.all_levers is True
+    assert cfg.mod_dim == 19          # Whitney floor (aggressive) regardless of overfit
+    assert cfg.verdict_pairs == 0     # ALL pairs, async
+    assert cfg.l7_start_epoch == 1000  # l7 DEMOTED to epochs
+    assert cfg.adam_beta2 == pytest.approx(0.9999999)
+    # muon<l7 after demote is intentional (benign trainer WARN); do NOT assert muon>=l7 here.
+    assert cfg.muon_start_epoch == 726
+
+
+def test_all_levers_beta2_clears_smalln_threshold():
+    # #222: 1-beta2 must be <= (1-0.9^5)/n^3.5 for n=75.
+    n = 75
+    thresh = (1.0 - 0.9 ** 5) / (n ** 3.5)
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, epochs=1000, all_levers=True)
+    assert (1.0 - cfg.adam_beta2) <= thresh, "all-levers beta2 must clear the small-n threshold"
+
+
+def test_baseline_beta2_is_mlx_default_bit_identical():
+    cfg = wac.derive_config(_GT_N600, num_pairs=600)  # all_levers default False
+    assert cfg.adam_beta2 == pytest.approx(0.999)  # == MLX AdamW default => bit-identical path
+
+
+# --------------------------------------------------------------------------
+# Wave D AA CORRECTION: all-levers ships --render-aa none + lane-render-band
+# (supersample DISQUALIFIED per aa_feasibility_reconciliation_20260702.md)
+# --------------------------------------------------------------------------
+def test_all_levers_aa_is_none_not_supersample():
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, epochs=1000, all_levers=True)
+    fd = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
+    # --render-aa NONE is the contest-feasible optimal AA (Wave D correction)
+    assert fd.get("--render-aa") == "none", f"all-levers must ship --render-aa none, got {fd.get('--render-aa')}"
+    # the analytic coverage-integrated lane-render-band IS the AA (kept)
+    assert "--lane-render-band" in fd
+    # the disqualified supersample flags are NOT emitted by the launch config
+    assert "--aa-supersample" not in fd, "supersample DISQUALIFIED (hurts -49% + decode over budget)"
+    assert "--aa-self-orient-fine-mode" not in fd, "fine dir-feat cache dropped with supersample"
+
+
+def test_all_levers_base_dict_has_no_supersample_keys():
+    base = wac._all_levers_base(300)
+    assert base["render_aa"] == "none"
+    assert "aa_supersample" not in base
+    assert "aa_self_orient_fine_mode" not in base

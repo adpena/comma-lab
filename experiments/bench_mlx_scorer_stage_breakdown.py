@@ -73,10 +73,12 @@ def _time(fn, *, warmup, iters):
 def _run(pose_np, seg_np, *, custom: bool, warmup, iters):
     import mlx.core as mx
 
-    if custom:
-        os.environ["TAC_MLX_CUSTOM_GROUPED_BACKWARD"] = "1"
-    else:
-        os.environ.pop("TAC_MLX_CUSTOM_GROUPED_BACKWARD", None)
+    # #224 Wave D FIX: the reference (default) column MUST force the env to "0", NOT pop it. The
+    # adapter reads ``os.environ.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD", "1")`` with DEFAULT "1"
+    # (mlx_scorer_adapters.py ~L1142), so popping the var leaves the custom path ENABLED and BOTH
+    # columns silently run the custom Metal backward — the "ref" numbers were never the reference.
+    # Setting "0" makes the get() return "0" (not in {"1","true","True"}) => the true reference path.
+    os.environ["TAC_MLX_CUSTOM_GROUPED_BACKWARD"] = "1" if custom else "0"
 
     from tac.local_acceleration.mlx_scorer_adapters import (
         nchw_to_nhwc,

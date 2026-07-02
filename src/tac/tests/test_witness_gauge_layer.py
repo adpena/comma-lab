@@ -40,7 +40,8 @@ def test_chart_enum_membership_complete():
     assert {g.value for g in CarrierGauge} == {"single_sdf", "msdf", "hard_bitmap"}
     assert {g.value for g in ResidualGauge} == {
         "alard_lupton", "direct_learned", "persistence_events", "conditional_on_lane_prior"}
-    assert {g.value for g in PoseGauge} == {"scalar_store", "range_delta", "low_rank"}
+    # PoseGauge gained WARP_REAL_LUMA (#224, append-only).
+    assert {g.value for g in PoseGauge} == {"scalar_store", "range_delta", "low_rank", "warp_real_luma"}
     assert {g.value for g in MovablesGauge} == {"store", "warp_predict"}
     assert {g.value for g in GenerationGauge} == {"deterministic_free", "learned_counted"}
 
@@ -52,6 +53,74 @@ def test_component_gauges_registry_and_component_of():
     assert component_of(ResidualGauge.CONDITIONAL_ON_LANE_PRIOR) is GaugeComponent.RESIDUAL
     with pytest.raises(TypeError):
         component_of("not a chart")
+
+
+# --- #224 consolidated-wire-in gauges ---------------------------------------
+def test_wire_in_224_gauges_membership_and_registration():
+    from tac.witness_dsl import (
+        GaugeComponent,
+        HeadGeometryGauge,
+        LaneGauge,
+        PoseGauge,
+        RenderAAGauge,
+    )
+
+    # the 3 new components are registered + round-trip via component_of.
+    assert {g.value for g in RenderAAGauge} == {"none", "supersample_2x", "supersample_3x", "ipe"}
+    assert {g.value for g in LaneGauge} == {"none", "band_render_authority"}
+    assert {g.value for g in HeadGeometryGauge} == {
+        "softmax", "etf", "additive_margin", "menon_logit_adjust"}
+    for comp, cls in ((GaugeComponent.RENDER_AA, RenderAAGauge),
+                      (GaugeComponent.LANE_BAND, LaneGauge),
+                      (GaugeComponent.HEAD_GEOMETRY, HeadGeometryGauge)):
+        assert COMPONENT_GAUGES[comp] is cls
+        assert component_of(next(iter(cls))) is comp
+    # PoseGauge.WARP_REAL_LUMA still resolves to the POSE component.
+    assert component_of(PoseGauge.WARP_REAL_LUMA) is GaugeComponent.POSE
+
+
+def test_wire_in_224_trainer_flag_emission_byte_identical_defaults():
+    from tac.witness_dsl import (
+        HeadGeometryGauge,
+        LaneGauge,
+        RenderAAGauge,
+        head_geometry_trainer_flags,
+        lane_band_trainer_flags,
+        render_aa_trainer_flags,
+    )
+
+    # the byte-identical DEFAULT chart of each family emits NO flags.
+    assert render_aa_trainer_flags(RenderAAGauge.NONE) == ()
+    assert lane_band_trainer_flags(LaneGauge.NONE) == ()
+    assert head_geometry_trainer_flags(HeadGeometryGauge.SOFTMAX) == ()
+    # non-default charts emit the exact levelset-trainer flag names (never-invent-flags).
+    assert render_aa_trainer_flags(RenderAAGauge.SUPERSAMPLE_2X) == (
+        "--render-aa", "supersample", "--aa-supersample", "2")
+    assert render_aa_trainer_flags(RenderAAGauge.IPE) == ("--render-aa", "ipe")
+    assert lane_band_trainer_flags(LaneGauge.BAND_RENDER_AUTHORITY) == ("--lane-render-band",)
+    assert head_geometry_trainer_flags(HeadGeometryGauge.ETF) == ("--head", "etf")
+
+
+def test_additive_margin_emits_nonzero_margin_not_silent_noop():
+    """--head additive-margin ALONE silently no-ops (trainer --additive-margin defaults 0.0). The
+    chart MUST emit --additive-margin with a NON-ZERO margin, and support a threaded override."""
+    from tac.witness_dsl.gauge import (
+        ADDITIVE_MARGIN_DEFAULT,
+        HeadGeometryGauge,
+        head_geometry_trainer_flags,
+    )
+
+    flags = head_geometry_trainer_flags(HeadGeometryGauge.ADDITIVE_MARGIN)
+    assert flags[:2] == ("--head", "additive-margin")
+    assert "--additive-margin" in flags, "AM chart must emit --additive-margin (else silent no-op)"
+    margin = float(flags[flags.index("--additive-margin") + 1])
+    assert margin > 0.0, "AM margin must be non-zero"
+    assert margin == pytest.approx(ADDITIVE_MARGIN_DEFAULT)
+    # threaded override
+    flags2 = head_geometry_trainer_flags(HeadGeometryGauge.ADDITIVE_MARGIN, additive_margin=0.75)
+    assert flags2 == ("--head", "additive-margin", "--additive-margin", "0.75")
+    # override is ignored for non-AM charts (softmax stays byte-identical empty)
+    assert head_geometry_trainer_flags(HeadGeometryGauge.SOFTMAX, additive_margin=0.75) == ()
 
 
 # --- GaugeCost contracts (NO-FAKE) ------------------------------------------
@@ -343,3 +412,31 @@ def test_compose_gauged_program_validates_and_is_pure():
         movables=MovablesGauge.STORE, generation=GenerationGauge.LEARNED_COUNTED)
     with pytest.raises(GaugeViolation):
         compose_gauged_program(BASELINE, bad)
+
+
+def test_pose_training_gauge_wave_f_205_design_stage():
+    """Wave-F #205 pose-plan: PoseTrainingGauge registered as a loss-side DESIGN-STAGE component
+    (like TOPOLOGY_LOSS / ISLAND_PROTECTION), fail-closed per never-invent-flags."""
+    from tac.witness_dsl import (
+        GaugeComponent,
+        PoseTrainingGauge,
+        COMPONENT_GAUGES,
+        component_of,
+        pose_training_trainer_flags,
+    )
+    # registered + round-trips via component_of
+    assert COMPONENT_GAUGES[GaugeComponent.POSE_TRAINING] is PoseTrainingGauge
+    assert component_of(PoseTrainingGauge.H1_OPENPILOT_XI_WARMSTART) is GaugeComponent.POSE_TRAINING
+    assert {g.value for g in PoseTrainingGauge} == {
+        "none", "h1_openpilot_xi_warmstart", "d1_disjoint_freeze_add", "e1_kkt_pose_tube"}
+    # NONE emits the baseline (warp-real-luma alone)
+    assert pose_training_trainer_flags(PoseTrainingGauge.NONE) == ()
+    # DESIGN-STAGE charts fail closed (never-invent-flags): raise, do NOT fabricate a flag
+    for chart in (PoseTrainingGauge.H1_OPENPILOT_XI_WARMSTART,
+                  PoseTrainingGauge.D1_DISJOINT_FREEZE_ADD,
+                  PoseTrainingGauge.E1_KKT_POSE_TUBE):
+        with pytest.raises(NotImplementedError):
+            pose_training_trainer_flags(chart)
+    # POSE_TRAINING is NOT a GaugeChoice field (loss-side, like TOPOLOGY_LOSS) -> GaugeChoice unbroken
+    assert not hasattr(CANONICAL_GAUGE, "pose_training")
+    assert CANONICAL_GAUGE.validate() is CANONICAL_GAUGE

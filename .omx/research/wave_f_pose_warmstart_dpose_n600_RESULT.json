@@ -1,0 +1,65 @@
+{
+  "tool": "tools/measure_warp_real_luma_frame0_dpose.py",
+  "module": "tac.boundary_math.warp_real_luma_frame0",
+  "utc": "2026-07-02T16:07:13Z",
+  "authority": "[macOS advisory / CPU-torch research-signal]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "promotable": false,
+  "frontier_pointer": "UNMOVED 0.19110 (advisory measurement; not a contest score)",
+  "cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "n_pairs": 600,
+  "native_hw": [
+    874,
+    1164
+  ],
+  "no_fake_selfcheck": {
+    "pairs": 4,
+    "pose_max_abs_mse": 0.0,
+    "PASS": true
+  },
+  "calibration": {
+    "s_t": 0.044,
+    "s_r": 0.0,
+    "pitch": 0.0,
+    "whole_ground": true,
+    "s_t_sweep_mean_dpose": {
+      "0.0": 188.57208433818803,
+      "0.02": 11.178623674566444,
+      "0.044": 2.562323659419128,
+      "0.08": 11.12759833083762,
+      "0.12": 15.605677907762322,
+      "0.16": 17.333878373581538,
+      "0.22": 100.69698533219314,
+      "0.3": 133.59395551450555
+    }
+  },
+  "results": {
+    "path_A_zero_motion_null_d_pose": 163.12186572747632,
+    "warp_carrier_d_pose": 1.3668890000969431,
+    "warp_carrier_d_pose_median": 0.773242920268339,
+    "d_pose_drop_frac_vs_null": 0.9916204428265885,
+    "pose_contribution_sqrt10_null": 40.38834803844747,
+    "pose_contribution_sqrt10_warp": 3.6971461968617674
+  },
+  "mlx_numpy_parity": {
+    "parity_pairs": 48,
+    "d_pose_mlx_mean": 1.2173742539452423,
+    "d_pose_numpy_mean": 1.3086359772484535,
+    "d_pose_rel_diff_mean": 0.2520190095829807,
+    "d_pose_agreement_within_5pct": 0.2916666666666667
+  },
+  "byte_accounting": {
+    "xi_store_bytes_full_fp16": 7200,
+    "xi_store_bytes_lowrank_r2": 2424,
+    "note": "the per-pair 6-DOF twist is the ONLY counted payload of this carrier (dual-use: warp + PoseNet ego-motion). The SOURCE luma at decode is a stored keyframe (W9/W10 reach gate; separate counted payload) \u2014 NOT smuggled here."
+  },
+  "verdict": {
+    "WARP_CARRIES_POSE": true,
+    "reproduces_reference_182_to_10p5": false,
+    "note": "path-A (pose-blind frame0 / zero-motion) ~= the null; the warp-real-luma carrier cuts d_pose by ~90%+ (reproduces FEED-lj/W7 via tac.lie-xi). The residual from here to d_pose~3.4e-5 is the w_pose>0 TRAINER job (rank-6 twist residual; this module is differentiable so it is reachable). This warp is NOT the exact both-synthetic path-A (needs a trained witness) \u2014 it is the MEASURED pose-carrier physics the carrier uses."
+  },
+  "elapsed_secs": 142.7
+}

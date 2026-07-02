@@ -148,6 +148,48 @@ def ensure_dashboard(port: int) -> bool:
     return False
 
 
+# ───────────────────────── throughput gate (compute pass) ─────────────────────────
+def _emitted_flag_names(cfg, out_dir: str) -> set[str]:
+    return {flag for flag, _ in cfg.to_trainer_flags(out_dir)}
+
+
+def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None) -> int:
+    """Pre-spawn SegNet fwd+bwd throughput assertion (the ~17x fast-path gate) + the
+    conditional --compile-step bit-identical requirement. Returns 0 (proceed) / nonzero
+    (REFUSE). NEVER blocks on unavailability (measured-slow only)."""
+    try:
+        from tac.local_acceleration.scorer_throughput_gate import (
+            ABS_THRESHOLD_MS,
+            evaluate_throughput,
+        )
+    except Exception as exc:  # helper import failure must not block the launch
+        print(f"[launch-witness] WARNING: throughput gate unavailable (import: {exc}); "
+              f"proceeding (perf-env log check still runs post-spawn).", file=sys.stderr)
+        return 0
+    thr = float(threshold_ms) if threshold_ms is not None else ABS_THRESHOLD_MS
+    print(f"# throughput gate: measuring SegNet fwd+bwd (B=8, custom fast path) — REFUSE if median "
+          f"> {thr:.0f}ms (measured ON~396 / OFF~6713)")
+    verdict = evaluate_throughput(abs_threshold_ms=thr)
+    if verdict.status == "fast":
+        print(f"[launch-witness] throughput OK: SegNet fwd+bwd {verdict.segnet_fwd_bwd_ms:.1f}ms "
+              f"<= {thr:.0f}ms (custom-grouped-backward fast path ACTIVE).")
+    elif verdict.status == "unavailable":
+        print(f"[launch-witness] WARNING: throughput gate could not measure "
+              f"({verdict.reason}); proceeding (perf-env log check still runs post-spawn).",
+              file=sys.stderr)
+    else:  # slow
+        print(f"[launch-witness] ERROR: REFUSING to launch — {verdict.reason}", file=sys.stderr)
+        return 3
+    # sub-part 3: --compile-step (or any --compile* flag) requires bit-identical compiled step.
+    compile_flags = {f for f in _emitted_flag_names(cfg, str(out_dir)) if f.startswith("--compile")}
+    if compile_flags:
+        print(f"[launch-witness] NOTE: {sorted(compile_flags)} emitted — the trainer MUST assert "
+              f"assert_compile_bit_identical at construction (compiled step == uncompiled + "
+              f"deterministic). See tac.local_acceleration.scorer_throughput_gate."
+              f"assert_compile_step_bit_identical.")
+    return 0
+
+
 # ───────────────────────── main ─────────────────────────
 def _utc() -> str:
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -161,6 +203,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--epochs", type=int, default=1000)
     ap.add_argument("--aggressive", action="store_true",
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
+    ap.add_argument("--all-levers", action="store_true",
+                    help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact): "
+                    "--render-aa none + analytic coverage-integrated lane-render-band (Wave D AA "
+                    "correction; supersample DISQUALIFIED: hurts -49% + decode over budget) + "
+                    "persistence/topology loss + "
+                    "island-birth amplification + annealed hosc 1->4 + l7 DEMOTED + verdict-pairs 0 + "
+                    "mod-dim 19 (Whitney floor) + adam-beta2 0.9999999. Default OFF => attribution-clean "
+                    "proven_base baseline.")
     ap.add_argument("--out-dir", default=None,
                     help="run out-dir (default: experiments/results/levelset_n<N>_witness_<utc>)")
     ap.add_argument("--label", default=None, help="daemon label (default: derived from out-dir)")
@@ -172,6 +222,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="seconds spawn_durable_daemon verifies the child survived exec")
     ap.add_argument("--perf-env-timeout-s", type=float, default=45.0,
                     help="seconds to wait for the custom_grouped_backward perf line")
+    ap.add_argument("--skip-throughput-gate", action="store_true",
+                    help="skip the pre-spawn SegNet fwd+bwd throughput micro-bench (the ~17x fast-path "
+                    "assertion). Default runs it (a measured gate, not a flag-grep).")
+    ap.add_argument("--throughput-threshold-ms", type=float, default=None,
+                    help="override the SegNet fwd+bwd median ms gate (default 700; measured ON~396 / "
+                    "OFF~6713). >threshold => REFUSE (custom-grouped-backward fast path not active).")
     ap.add_argument("--dashboard-port", type=int, default=8790)
     ap.add_argument("--no-dashboard", action="store_true", help="skip the dashboard up-check")
     ap.add_argument("--dry-run", action="store_true",
@@ -180,14 +236,15 @@ def main(argv: list[str] | None = None) -> int:
 
     overfit = not args.aggressive
     cfg = wac.derive_config(args.gt_cache, num_pairs=args.num_pairs,
-                            overfit=overfit, epochs=args.epochs)
+                            overfit=overfit, epochs=args.epochs, all_levers=args.all_levers)
 
     out_dir = Path(args.out_dir) if args.out_dir else (
         _REPO / "experiments" / "results" / f"levelset_n{args.num_pairs}_witness_{_utc()}")
     label = args.label or f"levelset_witness_{out_dir.name}"
 
     print(f"# launch_witness_run {wac.ADVISORY_TAG}  pointer 0.19110 UNMOVED")
-    print(f"# clip={args.gt_cache} num_pairs={args.num_pairs} epochs={args.epochs} overfit={overfit}")
+    print(f"# clip={args.gt_cache} num_pairs={args.num_pairs} epochs={args.epochs} "
+          f"overfit={overfit} all_levers={args.all_levers}")
     print(f"# out_dir={out_dir}")
     if not (_REPO / args.gt_cache).exists() and not Path(args.gt_cache).exists():
         print(f"# NOTE: gt-cache {args.gt_cache} not found on disk -> gt regen required at launch",
@@ -213,6 +270,16 @@ def main(argv: list[str] | None = None) -> int:
         print("# DRY-RUN: launch.sh written + flags validated; NOT spawning. "
               "Re-run without --dry-run to launch.")
         return 0
+
+    # (b2) THROUGHPUT GATE (compute pass): a MEASURED SegNet fwd+bwd micro-bench (B=8), NOT a flag-grep.
+    # REFUSE if the custom-grouped-backward ~17x fast path is not actually active on this machine
+    # (median > threshold => the ~6713ms reference accumulator, not the ~396ms fast path). Unavailable
+    # (no MLX/scorer/GPU) => WARN, never block. Sub-part 3: if a --compile* flag is emitted, the compiled
+    # step must be bit-identical (asserted at trainer construction; the gate flags the requirement here).
+    if not args.skip_throughput_gate:
+        gate_rc = _run_throughput_gate(cfg, out_dir, threshold_ms=args.throughput_threshold_ms)
+        if gate_rc != 0:
+            return gate_rc
 
     # (c) LAUNCH durably (spawn_durable_daemon auto-verifies the child survived exec).
     import spawn_durable_daemon as sdd  # late import: heavy-ish + only needed for real launch

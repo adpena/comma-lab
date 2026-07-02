@@ -678,11 +678,22 @@ def _build_carrier_impl_class():
                 self.film_out.bias = mx.zeros_like(self.film_out.bias)
             else:
                 raise WarpRealLumaFrame0Error(f"unknown residual_mode {residual_mode!r}")
+            # FREEZE the stored-twist buffer via MLX's _no_grad set so it is excluded from
+            # trainable_parameters() BOTH standalone AND under PARENT-module recursion. The
+            # trainable_parameters() override below only guards the standalone case; when this
+            # carrier is attached as a CHILD of the witness (the trainer's value_and_grad
+            # co-differentiation wire-in, #224), the parent's filter_and_map recursion bypasses
+            # the child override, so without this freeze the optimizer would UPDATE (corrupt) the
+            # frozen stored twist. Empirically verified (probe: xi_stored leaked into the parent
+            # trainable tree before this line; clean after). recurse=False -> only this module's
+            # xi_stored, not any child (table mode has none; film mode's Linear params stay live).
+            self.freeze(recurse=False, keys=["xi_stored"])
 
         def trainable_parameters(self):
             # xi_stored is a plain buffer, never trainable. MLX treats bare mx.array
-            # attributes as parameters; we filter xi_stored out so the optimizer only
-            # touches the residual.
+            # attributes as parameters; the self.freeze(keys=["xi_stored"]) in __init__ is the
+            # primary guard (survives parent recursion); this override is belt-and-suspenders for
+            # the standalone path (bit-identical result either way).
             params = super().trainable_parameters()
             if "xi_stored" in params:
                 params = {k: v for k, v in params.items() if k != "xi_stored"}

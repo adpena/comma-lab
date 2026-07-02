@@ -1,0 +1,151 @@
+{
+  "gt_cache": "/Users/adpena/projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "n_pairs": 600,
+  "K_slots": 6,
+  "fit_stats": {
+    "n_pairs": 600,
+    "n_lines_mean": 4.945,
+    "band_recall_mean": 0.5474557765871068,
+    "total_lines": 2967
+  },
+  "rate_denom_bytes": 37545489,
+  "timing_s": {
+    "load": 0.1,
+    "fit": 17.5
+  },
+  "rows": [
+    {
+      "variant": "LBND2_baseline",
+      "brotli_bytes": 41526,
+      "rate_term": 0.02765045888735129,
+      "ratio_vs_lbnd2": 1.0
+    },
+    {
+      "variant": "LBND3_ego_lane_optimal_full",
+      "brotli_bytes": 47453,
+      "rate_term": 0.031597004902506394,
+      "ratio_vs_lbnd2": 1.1427298559938353,
+      "ego_payload_brotli_bytes": 2744,
+      "ds_med_m": 4.927795334676671,
+      "dy_med_m": 0.20767786609306338
+    },
+    {
+      "variant": "LBND3_ego_lane_optimal_dy_yaw",
+      "brotli_bytes": 44652,
+      "rate_term": 0.029731933974811196,
+      "ratio_vs_lbnd2": 1.0752781389972548,
+      "ego_payload_brotli_bytes": 1842,
+      "ds_med_m": 0.0,
+      "dy_med_m": 0.22517300917267016
+    },
+    {
+      "variant": "LBND3_ego_lane_optimal_dy_yaw_smooth5",
+      "brotli_bytes": 43228,
+      "rate_term": 0.028783750825565224,
+      "ratio_vs_lbnd2": 1.0409863699850697,
+      "ego_payload_brotli_bytes": 1081,
+      "ds_med_m": 0.0,
+      "dy_med_m": 0.08064627174862622
+    },
+    {
+      "variant": "LBND3_ego_posenet_affine",
+      "brotli_bytes": 44908,
+      "rate_term": 0.02990239386681047,
+      "ratio_vs_lbnd2": 1.0814429514039396,
+      "ego_payload_brotli_bytes": 2092,
+      "affine_calib": {
+        "fwd_ch": 0,
+        "lat_ch": 2,
+        "yaw_ch": 4,
+        "calib": "affine_to_lane",
+        "affine_ds": [
+          0.7107238878328307,
+          -24.533899304502967
+        ],
+        "affine_dy": [
+          -2.0859144910091074,
+          -0.004149067829746841
+        ],
+        "affine_dpsi": [
+          0.22700707277993615,
+          -0.00021960975875052246
+        ]
+      }
+    },
+    {
+      "variant": "LBND2_smoothed_win3",
+      "brotli_bytes": 31360,
+      "rate_term": 0.020881336769911295,
+      "ratio_vs_lbnd2": 0.7551895198189086,
+      "n_lines": 2967
+    },
+    {
+      "variant": "LBND2_smoothed_win5",
+      "brotli_bytes": 28050,
+      "rate_term": 0.018677343635076907,
+      "ratio_vs_lbnd2": 0.6754804219043491,
+      "n_lines": 2967
+    },
+    {
+      "variant": "LBND2_smoothed_win9",
+      "brotli_bytes": 26260,
+      "rate_term": 0.01748545610898822,
+      "ratio_vs_lbnd2": 0.6323748976544815,
+      "n_lines": 2967
+    },
+    {
+      "variant": "LBND2_smoothed_win15",
+      "brotli_bytes": 24149,
+      "rate_term": 0.016079827858947317,
+      "ratio_vs_lbnd2": 0.5815392765977941,
+      "n_lines": 2967
+    },
+    {
+      "variant": "LBND3_ego_on_smoothed_win15",
+      "brotli_bytes": 32463,
+      "rate_term": 0.021615779195205048,
+      "ratio_vs_lbnd2": 1.3442792662222038,
+      "smoothed_lbnd2_bytes": 24149
+    }
+  ],
+  "best_variant": "LBND2_smoothed_win15",
+  "best_bytes": 24149,
+  "best_rate_term": 0.016079827858947317,
+  "bspline_fit_error_curve": [
+    {
+      "M": 8,
+      "fwd_rms_m": 120.7084976210615,
+      "ctrl_bytes_fp16": 96
+    },
+    {
+      "M": 12,
+      "fwd_rms_m": 74.20007653264307,
+      "ctrl_bytes_fp16": 144
+    },
+    {
+      "M": 16,
+      "fwd_rms_m": 53.79752732930091,
+      "ctrl_bytes_fp16": 192
+    },
+    {
+      "M": 24,
+      "fwd_rms_m": 33.49182672188343,
+      "ctrl_bytes_fp16": 288
+    },
+    {
+      "M": 32,
+      "fwd_rms_m": 25.342144183686482,
+      "ctrl_bytes_fp16": 384
+    },
+    {
+      "M": 48,
+      "fwd_rms_m": 16.390937614958116,
+      "ctrl_bytes_fp16": 576
+    }
+  ],
+  "verdict": {
+    "ego_predictive_helps": false,
+    "source_smoothing_best_ratio": 0.5815392765977941
+  },
+  "axis_labels": "[macOS-CPU advisory] MEASURED brotli byte counts; NOT a score claim; pointer 0.19110 UNMOVED"
+}

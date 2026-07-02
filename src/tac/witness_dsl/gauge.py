@@ -70,6 +70,12 @@ class GaugeComponent(Enum):
     GENERATION = "generation"
     TOPOLOGY_LOSS = "topology_loss"
     ISLAND_PROTECTION = "island_protection"
+    # #224 consolidated-wire-in components (APPEND-ONLY).
+    RENDER_AA = "render_aa"            # AA-SDF observation-map render (aa_sdf_observation_render)
+    LANE_BAND = "lane_band"            # analytic-lane render-band (analytic_lane_render_band)
+    HEAD_GEOMETRY = "head_geometry"    # softmax/ETF/additive-margin/Menon head (laguerre_logit_offset)
+    # Wave-F #205 pose-plan (APPEND-ONLY; DESIGN-STAGE, loss-side, pending #224 trainer wire-in).
+    POSE_TRAINING = "pose_training"    # HOW d_pose is trained in-loop (H1/D1/E1; NOT the STORE gauge)
 
 
 class WarpGauge(Enum):
@@ -104,6 +110,16 @@ class PoseGauge(Enum):
     SCALAR_STORE = "scalar_store"  # raw fp16 scalars (~5KB sidecar)
     RANGE_DELTA = "range_delta"    # range-coded temporal deltas (compressed)
     LOW_RANK = "low_rank"          # low-rank pose codec (task #140)
+    # #224 APPEND-ONLY: render frame0 THROUGH the SE(3) ground-homography warp of the REAL
+    # keyframe luma (seg-free f0 -> real-luma pose carrier; warp_real_luma_frame0). Composes with
+    # the stored twist + a learnable per-pair residual; hits the same d_pose target, different bytes.
+    # MEASURED CORRECTION (Wave-F unified-xi BUILD 2026-07-02,
+    # ``lane_band_source_reparam_measured_resolution_v1``): xi is a PURE-POSE codec, NOT a lane
+    # dual-use object -- the lane rate axis DECLINED xi (ego-predictive lane coding REFUTED; source
+    # smoothing wins with ZERO xi), so xi is optimally calibrated for d_pose at ZERO lane cost
+    # (n600 null d_pose 163.12 -> warp 1.367 = -99%). The prior "one xi, both axes" dual-use framing
+    # is superseded FOR LANES: xi serves ONLY the pose axis.
+    WARP_REAL_LUMA = "warp_real_luma"
 
 
 class MovablesGauge(Enum):
@@ -156,6 +172,111 @@ class IslandProtectionGauge(Enum):
     FULL = "full"                    # early-seed + containment + amplification
 
 
+class RenderAAGauge(Enum):
+    """How the witness render is sampled through R (aa_sdf_observation_render; #224/#220).
+
+    POINT-sampling erases finest-scale lane structure through the contest R; FOOTPRINT-integrated
+    (anti-aliased) rendering recovers it (MEASURED #1 rep lever, FEED-ly/-ma; recall-lift +0.374,
+    AA floor 0.00086 < oracle-R need 0.00120). ~0-rate (decode-time deterministic; archive bytes
+    UNCHANGED — the IPE attenuation + supersample grid are functions of the checkpoint cfg).
+    Chart ↔ trainer flag: NONE=--render-aa none (byte-identical baseline); SUPERSAMPLE_2X/3X=
+    --render-aa supersample --aa-supersample 2/3 (ground-truth footprint integration); IPE=
+    --render-aa ipe (mip-NeRF cone attenuation of the curvelet basis, analytical ~0-compute)."""
+
+    NONE = "none"                    # point-sample (byte-identical to the pre-#224 trainer)
+    SUPERSAMPLE_2X = "supersample_2x"  # render at 2*grid + box-downsample (footprint integration)
+    SUPERSAMPLE_3X = "supersample_3x"  # render at 3*grid + box-downsample
+    IPE = "ipe"                      # mip-NeRF IPE cone attenuation of the curvelet columns
+
+
+class LaneGauge(Enum):
+    """How class-1 (lane) is authored (analytic_lane_render_band; #224/FEED-dv #203/#213/#215).
+
+    The witness owns the smooth classes; LANE (the finest-scale erasure tail) is supplied by the
+    analytic render-band = AA-SDF range-dependent coverage × dash gate × witness-uncertainty FP
+    killer, composited PRE-R via the base render compose_fn. Chart ↔ trainer flag: NONE=witness
+    renders lane itself (byte-identical baseline); BAND_RENDER_AUTHORITY=--lane-render-band (the
+    class-1 render-time authority; net-negative d_seg realized by TRAINING WITH the band active).
+
+    BYTE-CLOSE REALIZATION (Wave-F Stage-1; equation ``lane_band_camera_frame_rd_rate_v1``): the
+    BAND_RENDER_AUTHORITY per-pair lane coeffs are serialized by the OPTIMAL LBND2 RD codec
+    (L4 slots + L3 geometric-tolerance quantize + L2 temporal-delta + zigzag + brotli) = the DEFAULT
+    in tools/levelset_byte_close_and_eval.py (opt-out ``--lane-band-naive`` on the BYTE-CLOSE TOOL,
+    NOT the trainer). MEASURED n600: naive 156340 B (0.1041) -> RD 41526 B (0.02765) = 3.76x,
+    decode-consistent. Shannon floor 26179 B => the residual is INFORMATION-bound.
+
+    STAGE-2 SOURCE RE-PARAMETERIZATION (Wave-F unified-xi BUILD, MEASURED 2026-07-02): the SE(3)
+    ego-factorization VIA EGO-WARP is REFUTED (``lane_band_source_reparam_measured_resolution_v1``:
+    ego-motion-compensated predictive coding LBND3 = 1.04-1.34x WORSE) -- the camera-frame residual
+    is per-frame fit JITTER + SLOT-SWAPs, NOT a coherent ego sweep. The source-reparam THESIS holds
+    via a DIFFERENT mechanism: temporal SMOOTHING of the coeff trajectory = -42% (24149 B / 0.01608,
+    BELOW the Shannon floor). The DERIVED OPTIMAL next lever is the CORRESPONDENCE-FIRST pipeline
+    (``correspondence_first_lane_coding_optimal_pipeline_v1``): global min-cost-flow track assignment
+    (LOSSLESS on geometry; kills the 44% slot-swap mass) -> per-track Kalman-RTS batch smoother [or
+    RPCA] -> ll1-trend/TV/Potts edge-preserving denoise (lambda_i = margin-saliency d(d_seg)/d(coeff_i))
+    -> the UNCHANGED LBND2 backend. It is a COMPRESS-TIME SOURCE PRE-TRANSFORM (ships as LBND2 bytes,
+    ZERO new inflate code); DESIGN-STAGE pending the #234 ``tac.boundary_math.lane_track_and_smooth``
+    build (DERIVED ~0.007-0.012, UNMEASURED byte-closed -- the #205 d_seg-through-R leg is the gate).
+    OPTIONAL design-stage PRIOR: the openpilot coherent recurrent lane model (same comma rig) as the
+    tracker's association affinity + RTS measurement-noise covariance
+    (``openpilot_unified_physical_prior_both_scored_axes_v1``) -- a PRIOR/INIT/REGULARIZER, NEVER the
+    fit target (the SegNet class-1 argmax mask through R is the sole authority)."""
+
+    NONE = "none"                              # witness authors lane (byte-identical baseline)
+    BAND_RENDER_AUTHORITY = "band_render_authority"  # --lane-render-band analytic class-1 authority
+
+
+class HeadGeometryGauge(Enum):
+    """How the 5-class SDF head geometry / per-class margin is shaped (laguerre_logit_offset; #218).
+
+    Byte-free HEAD/margin-field facets. Chart ↔ trainer flag: SOFTMAX=--head softmax (default,
+    byte-identical); ETF=--head etf (frozen simplex-ETF head, removes minority NORM COLLAPSE,
+    regenerable => rate win); ADDITIVE_MARGIN=--head additive-margin --additive-margin <m>;
+    MENON_LOGIT_ADJUST=--logit-adjust-per-class --logit-adjust-tau <t> (rare-class target boost).
+    Composes with the realized margin-field hinge --margin-field-head-weight."""
+
+    SOFTMAX = "softmax"                  # standard softmax head (byte-identical baseline)
+    ETF = "etf"                          # frozen simplex-ETF head (neural-collapse optimal)
+    ADDITIVE_MARGIN = "additive_margin"  # additive-margin softmax
+    MENON_LOGIT_ADJUST = "menon_logit_adjust"  # Menon per-class logit adjustment (rare-class boost)
+
+
+class PoseTrainingGauge(Enum):
+    """How d_pose is lowered DURING the witness training loop (Wave-F #205 pose plan).
+
+    DISTINCT from PoseGauge (which is how the 6-dim TARGET is STORED = bytes). This is the
+    in-training STRATEGY. Survey verdict (equation ``pose_in_training_lever_survey_verdict_v1``):
+    13 levers surveyed, NONE beats warp-real-luma alone -- all are COMPLEMENTS. The load-bearing
+    quantitative claim: the seg-perp-pose gradient cosine is ~6e-5 => disjoint-frame freeze-and-add
+    is EXACT and PCGrad (gradient surgery) is a FALSE FRIEND (a no-op when already orthogonal).
+
+    DESIGN-STAGE: these charts describe the DSL design space; the H1/D1/E1 trainer flags are NOT
+    yet wired (pending the #224/#205 trainer wire-in). Per never-invent-flags, the accessor
+    ``pose_training_trainer_flags`` emits NOTHING for NONE and RAISES (fail-closed) for the
+    design-stage charts, documenting the INTENDED arg -- it does NOT fabricate a flag. Ranked
+    plan H1 > D1 > E1:
+      NONE                    = pose rides warp-real-luma alone (the measured baseline);
+      H1_OPENPILOT_XI_WARMSTART = seed the ego xi from the openpilot polynomial. MEASURED CORRECTION
+                                (Wave-F unified-xi BUILD 2026-07-02): xi is PURE-POSE -- the lane rate
+                                axis DECLINED xi (ego-predictive lane coding REFUTED; source smoothing
+                                wins with ZERO xi), so H1 is a POSE-ONLY warm-start (co-#1 pose lever),
+                                NOT the "dual-axis / lane-advection xi" originally claimed. The openpilot
+                                LANE prior is a SEPARATE design-stage lever -- the coherent recurrent
+                                lane model -> coherent SOURCE for the correspondence-first tracker
+                                (LaneGauge; ``openpilot_unified_physical_prior_both_scored_axes_v1``),
+                                a PRIOR/INIT/REGULARIZER, never the fit target;
+      D1_DISJOINT_FREEZE_ADD  = pose on EVEN frames (f0->real-luma warp) + d_seg on ODD frames
+                                (f1->witness) + trunk stop-grad => disjoint params, freeze-and-add
+                                EXACT at cos~6e-5 (realizes the measured seg-perp-pose orthogonality);
+      E1_KKT_POSE_TUBE        = a trust-region constraint keeping d_pose inside its tube while d_seg
+                                descends (most GOAL-aligned; a KKT active-set, not a fixed weight)."""
+
+    NONE = "none"                                  # warp-real-luma alone (measured baseline)
+    H1_OPENPILOT_XI_WARMSTART = "h1_openpilot_xi_warmstart"  # pure-pose xi warm-start (co-#1; lane axis declined xi)
+    D1_DISJOINT_FREEZE_ADD = "d1_disjoint_freeze_add"        # disjoint-frame freeze-and-add (+trunk stopgrad)
+    E1_KKT_POSE_TUBE = "e1_kkt_pose_tube"                    # KKT pose-tube trust region
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -166,7 +287,92 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.GENERATION: GenerationGauge,
     GaugeComponent.TOPOLOGY_LOSS: TopologyLossGauge,
     GaugeComponent.ISLAND_PROTECTION: IslandProtectionGauge,
+    # #224 consolidated-wire-in components (APPEND-ONLY).
+    GaugeComponent.RENDER_AA: RenderAAGauge,
+    GaugeComponent.LANE_BAND: LaneGauge,
+    GaugeComponent.HEAD_GEOMETRY: HeadGeometryGauge,
+    # Wave-F #205 pose-plan (APPEND-ONLY; DESIGN-STAGE, NOT in GaugeChoice — a loss-side
+    # component like TOPOLOGY_LOSS / ISLAND_PROTECTION, not a fixable STORE chart).
+    GaugeComponent.POSE_TRAINING: PoseTrainingGauge,
 }
+
+
+# #224 chart -> trainer argv flags (never-invent-flags; the exact levelset-trainer flag names).
+# The DSL renders bools as ``--flag`` and valued flags as ``[flag, str(val)]``; NONE/SOFTMAX charts
+# emit NOTHING (they ARE the byte-identical default). Mirrors the sister-module *_flags() pattern.
+RENDER_AA_TRAINER_FLAGS: dict[RenderAAGauge, tuple[str, ...]] = {
+    RenderAAGauge.NONE: (),
+    RenderAAGauge.SUPERSAMPLE_2X: ("--render-aa", "supersample", "--aa-supersample", "2"),
+    RenderAAGauge.SUPERSAMPLE_3X: ("--render-aa", "supersample", "--aa-supersample", "3"),
+    RenderAAGauge.IPE: ("--render-aa", "ipe"),
+}
+LANE_BAND_TRAINER_FLAGS: dict[LaneGauge, tuple[str, ...]] = {
+    LaneGauge.NONE: (),
+    LaneGauge.BAND_RENDER_AUTHORITY: ("--lane-render-band",),
+}
+# AM-softmax margin default (CosFace-family m~0.35-0.5, adapted to the realized-margin-hinge target).
+# The fixed ADDITIVE_MARGIN chart cannot carry a per-instance value, so this is the default the static
+# map bakes in; head_geometry_trainer_flags(chart, additive_margin=...) threads a campaign override.
+ADDITIVE_MARGIN_DEFAULT = 0.5
+
+HEAD_GEOMETRY_TRAINER_FLAGS: dict[HeadGeometryGauge, tuple[str, ...]] = {
+    HeadGeometryGauge.SOFTMAX: (),
+    HeadGeometryGauge.ETF: ("--head", "etf"),
+    # (fix) --head additive-margin ALONE silently no-ops: the trainer's --additive-margin defaults 0.0,
+    # so the AM realized-margin-hinge target is 0 = a no-op head. Emit the margin value with it.
+    HeadGeometryGauge.ADDITIVE_MARGIN: ("--head", "additive-margin",
+                                        "--additive-margin", str(ADDITIVE_MARGIN_DEFAULT)),
+    HeadGeometryGauge.MENON_LOGIT_ADJUST: ("--logit-adjust-per-class",),
+}
+
+
+def render_aa_trainer_flags(chart: RenderAAGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv flags for a RenderAAGauge chart (NONE => () byte-identical)."""
+    return RENDER_AA_TRAINER_FLAGS[chart]
+
+
+def lane_band_trainer_flags(chart: LaneGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv flags for a LaneGauge chart (NONE => () byte-identical)."""
+    return LANE_BAND_TRAINER_FLAGS[chart]
+
+
+def head_geometry_trainer_flags(chart: HeadGeometryGauge,
+                                additive_margin: float | None = None) -> tuple[str, ...]:
+    """The levelset-trainer argv flags for a HeadGeometryGauge chart (SOFTMAX => () byte-identical).
+
+    ADDITIVE_MARGIN emits ``--head additive-margin --additive-margin <m>`` (never a silent no-op: the
+    trainer's --additive-margin defaults 0.0). ``additive_margin`` (optional) overrides the baked
+    ADDITIVE_MARGIN_DEFAULT for a campaign-specific margin; ignored for non-AM charts."""
+    if chart is HeadGeometryGauge.ADDITIVE_MARGIN and additive_margin is not None:
+        return ("--head", "additive-margin", "--additive-margin", str(float(additive_margin)))
+    return HEAD_GEOMETRY_TRAINER_FLAGS[chart]
+
+
+# Wave-F #205 pose-plan INTENDED (not-yet-wired) trainer args — documented, NEVER emitted, per
+# never-invent-flags. When the #224/#205 wire-in lands with the real argparse flags, replace this
+# doc map with a real POSE_TRAINING_TRAINER_FLAGS dict + drop the NotImplementedError branch.
+POSE_TRAINING_INTENDED_ARGS: dict[PoseTrainingGauge, str] = {
+    PoseTrainingGauge.NONE: "",  # warp-real-luma alone; emits nothing (baseline)
+    PoseTrainingGauge.H1_OPENPILOT_XI_WARMSTART: "--pose-xi-warmstart openpilot (INTENDED; not wired)",
+    PoseTrainingGauge.D1_DISJOINT_FREEZE_ADD: "--pose-disjoint-frame --trunk-stopgrad (INTENDED; not wired)",
+    PoseTrainingGauge.E1_KKT_POSE_TUBE: "--pose-kkt-tube <d_pose_cap> (INTENDED; not wired)",
+}
+
+
+def pose_training_trainer_flags(chart: PoseTrainingGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a PoseTrainingGauge chart. NONE => () (warp-real-luma baseline).
+
+    DESIGN-STAGE fail-closed (never-invent-flags): the H1/D1/E1 trainer flags are NOT yet wired, so
+    this RAISES NotImplementedError naming the INTENDED arg rather than fabricating a flag (mirrors
+    the levelset trainer's ``--pose-carrier`` NotImplementedError). Cross-ref equation
+    ``pose_in_training_lever_survey_verdict_v1`` + DAG FEED pose-survey."""
+    if chart is PoseTrainingGauge.NONE:
+        return ()
+    raise NotImplementedError(
+        f"PoseTrainingGauge.{chart.name} is DESIGN-STAGE (#205 pose-plan, pending #224 trainer "
+        f"wire-in); intended arg: {POSE_TRAINING_INTENDED_ARGS[chart]}. never-invent-flags: emit "
+        "nothing until the real argparse flag lands."
+    )
 
 
 def component_of(chart: Enum) -> GaugeComponent:
@@ -408,6 +614,81 @@ def default_cost_table() -> GaugeCostTable:
             provenance="rule-118: LEARNED/video-derived content is COUNTED in archive.zip; bytes "
                        "= the learned residual (UNMEASURED, sister of ResidualGauge.DIRECT_LEARNED). "
                        "deterministic flag depends on the trained-decode being certified bit-identical"),
+
+        # --- RENDER_AA (#224/#220; ~0-rate decode-time observation model) --------------------
+        # NONE = the byte-identical point-sample baseline. Its d_seg IS the witness's OWN through-R
+        # floor (NOT an independent chart delta) -> UNRANKED here (bytes/d_seg None => s_contribution
+        # None => fix_gauge lists it "unrankable", so the auto-selector cannot mis-pick it merely for
+        # being byte-free). Still measured=True + compliant+deterministic so GaugeChoice.validate()
+        # (the default field) passes.
+        RenderAAGauge.NONE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="#224/#220 --render-aa none: byte-identical point-sample baseline (the "
+                       "witness's own through-R floor; not a chart delta -> unranked in fix_gauge)"),
+        RenderAAGauge.SUPERSAMPLE_2X: GaugeCost(
+            counted_bytes=0, d_seg_through_R=0.00086, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-ly/-ma tools/levelset_gate_discriminators_n600.py [macOS-CPU advisory "
+                       "NON-PROMOTABLE]: ss=2 supersample->box footprint integration recovers the "
+                       "finest-scale lane structure through the contest R (AA floor d_seg~0.00086, "
+                       "lane recall +0.374 vs point-sample); ~0-rate (decode-time deterministic, "
+                       "archive bytes UNCHANGED). NOTE: composing with --self-orient is FAIL-CLOSED "
+                       "at n600 (fine per-pair dir-feat cache OOM / on-demand EDT wall-clock; see the "
+                       "levelset trainer supersample guard); use with --render-aa without self-orient "
+                       "OR pair self-orient with --render-aa ipe / --lane-render-band"),
+        RenderAAGauge.SUPERSAMPLE_3X: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="ss=3 supersample->box (finer footprint integration; 9x forward; 0-rate "
+                       "decode-time); through-R d_seg UNMEASURED (pending) -- dominated-until-"
+                       "measured by SUPERSAMPLE_2X"),
+        RenderAAGauge.IPE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="mip-NeRF IPE cone attenuation of the curvelet columns (analytical ~0-compute "
+                       "AA proxy, 0-rate; self-orient-COMPATIBLE, already wired in the trainer); "
+                       "through-R d_seg floor UNMEASURED (pending) -- supersample->box is the authority"),
+
+        # --- LANE_BAND (#224/FEED-dv #203/#213/#215; class-1 render-time authority, 0-byte) ----
+        LaneGauge.NONE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="--lane-render-band OFF: the witness authors class-1 itself (byte-identical "
+                       "baseline; the lane d_seg is the witness's own floor -> unranked in fix_gauge)"),
+        LaneGauge.BAND_RENDER_AUTHORITY: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="FEED-dv #203/#213/#215 --lane-render-band: analytic class-1 render authority "
+                       "composited PRE-R (AA-SDF range-dependent coverage x dash gate x witness-margin "
+                       "FP killer); 0-byte decode-deterministic. Advisory openpilot-poly band base "
+                       "d_seg~0.00087 (FEED-dj); the NET-NEGATIVE through-R d_seg is realized by "
+                       "TRAINING WITH the band active (GPU-pending) -> measured=False PENDING. NOW "
+                       "self-orient-composable (Option-B lane-band wire-in)"),
+
+        # --- HEAD_GEOMETRY (#218; byte-free head/margin-field facets) --------------------------
+        HeadGeometryGauge.SOFTMAX: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="--head softmax: standard softmax head (byte-identical baseline; the head "
+                       "d_seg is the witness's own floor -> unranked in fix_gauge)"),
+        HeadGeometryGauge.ETF: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#218 --head etf: frozen simplex-ETF head (Yang 2022, neural-collapse optimal) "
+                       "removes minority-class NORM COLLAPSE that erases Lane/Movable; regenerable "
+                       "from a fixed seed at inflate => the KxD head weight is FREE (rate win, 0 bytes "
+                       "counted); through-R d_seg delta UNMEASURED (pending)"),
+        HeadGeometryGauge.ADDITIVE_MARGIN: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#218 --head additive-margin: additive-margin softmax (boundary sharpening, "
+                       "0-byte); through-R d_seg delta UNMEASURED (pending)"),
+        HeadGeometryGauge.MENON_LOGIT_ADJUST: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#218 --logit-adjust-per-class: Menon per-class logit adjustment (rare-class "
+                       "Lane/Movable target boost, 0-byte); through-R d_seg delta UNMEASURED (pending)"),
     }
     return GaugeCostTable(cells)
 
@@ -432,6 +713,13 @@ class GaugeChoice:
     pose: PoseGauge
     movables: MovablesGauge
     generation: GenerationGauge
+    # #224 Option-B APPEND-ONLY render/head components. OPTIONAL (defaults = the fail-closed OFF /
+    # byte-identical member) so EVERY existing 6-field GaugeChoice(...) caller is UNBROKEN: an old
+    # call constructs render_aa=NONE / lane_band=NONE / head_geometry=SOFTMAX, which validate() as
+    # compliant+deterministic byte-identical baselines. Selecting an ACTIVE chart is opt-in.
+    render_aa: RenderAAGauge = RenderAAGauge.NONE
+    lane_band: LaneGauge = LaneGauge.NONE
+    head_geometry: HeadGeometryGauge = HeadGeometryGauge.SOFTMAX
 
     def items(self) -> tuple[tuple[GaugeComponent, Enum], ...]:
         return (
@@ -441,6 +729,9 @@ class GaugeChoice:
             (GaugeComponent.POSE, self.pose),
             (GaugeComponent.MOVABLES, self.movables),
             (GaugeComponent.GENERATION, self.generation),
+            (GaugeComponent.RENDER_AA, self.render_aa),
+            (GaugeComponent.LANE_BAND, self.lane_band),
+            (GaugeComponent.HEAD_GEOMETRY, self.head_geometry),
         )
 
     def validate(self, table: GaugeCostTable | None = None) -> "GaugeChoice":

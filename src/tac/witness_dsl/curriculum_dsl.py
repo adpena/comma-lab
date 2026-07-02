@@ -198,7 +198,8 @@ class WitnessProgram:
 
     def with_gauge(self, gauge_choice=None, *, table=None,
                    warp=None, carrier=None, residual=None, pose=None,
-                   movables=None, generation=None) -> "WitnessProgram":
+                   movables=None, generation=None,
+                   render_aa=None, lane_band=None, head_geometry=None) -> "WitnessProgram":
         """Fix the gauge for this program (the gauge-FIXING step of the 4-layer stack,
         FEED-ji). Returns a NEW program with a validated ``GaugeChoice`` attached; this one
         is UNMUTATED (pure composition, parallel to ``with_lever``). Composes:
@@ -206,7 +207,9 @@ class WitnessProgram:
 
         Pass a full ``GaugeChoice`` as the positional, OR per-component keyword overrides
         (unspecified components inherit this program's current gauge, else the canonical
-        gauge). ``validate`` raises ``GaugeViolation`` if any selected chart is
+        gauge). The #224 Option-B render/head components (``render_aa`` / ``lane_band`` /
+        ``head_geometry``) are also selectable here; unspecified ones inherit the OFF /
+        byte-identical default. ``validate`` raises ``GaugeViolation`` if any selected chart is
         non-compliant / non-deterministic per the cost ``table`` (BY CONSTRUCTION).
 
         Imported lazily so ``curriculum_dsl`` never imports ``gauge`` at module-load time
@@ -217,7 +220,9 @@ class WitnessProgram:
             base_gauge = self.gauge if isinstance(self.gauge, GaugeChoice) else CANONICAL_GAUGE
             overrides = {k: v for k, v in dict(
                 warp=warp, carrier=carrier, residual=residual,
-                pose=pose, movables=movables, generation=generation).items() if v is not None}
+                pose=pose, movables=movables, generation=generation,
+                render_aa=render_aa, lane_band=lane_band, head_geometry=head_geometry).items()
+                if v is not None}
             gauge_choice = replace(base_gauge, **overrides)
         elif not isinstance(gauge_choice, GaugeChoice):
             raise TypeError("with_gauge expects a GaugeChoice (or per-component keyword charts)")

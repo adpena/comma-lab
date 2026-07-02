@@ -270,6 +270,13 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_git_sha"] = np.asarray(str(_prov.get("git_sha", "unknown")))
     flat["__cfg_git_dirty"] = np.asarray(int(bool(_prov.get("git_dirty", False))))
     flat["__cfg_upstream_snapshot_sha256"] = np.asarray(str(_prov.get("upstream_snapshot_sha256", "unknown")))
+    # ---- #224 AA-SDF observation-map render cfg (additive provenance; the exact-eval decode
+    # (#202) reconstructs the SAME AA mode deterministically -- NO extra archive bytes: the IPE
+    # attenuation is a function of (B, render_hw, footprint) all already in the ckpt, and the
+    # supersample grid is deterministic at decode). DEFAULT none/1/1.0 => byte-identical cfg. ----
+    flat["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
+    flat["__cfg_aa_supersample"] = np.asarray(int(getattr(args, "aa_supersample", 1)))
+    flat["__cfg_aa_ipe_footprint"] = np.asarray(float(getattr(args, "aa_ipe_footprint", 1.0)))
     return flat
 
 
@@ -297,6 +304,19 @@ def _build_resume_state_arrays(
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
     out["__cfg_in_feat"] = np.asarray(int(in_feat))
     out["__cfg_w_pose"] = np.asarray(float(args.w_pose))
+    # (F2 fix) #224 render-side LEVER cfg: persist the levers whose engagement CHANGES the loss /
+    # render target mid-run so a --resume-from can FAIL-CLOSED (via _resume_lever_divergences) when the
+    # resume command silently drops or diverges a lever the run was trained with (a deterministic-repro
+    # violation the film-arch guard does NOT cover -- these are loss/render-only, they add no param
+    # KEYS so the missing-param guard cannot see them). ZERO archive bytes (resume sidecar is not
+    # byte-closed). hosc_beta_end None -> -1.0 sentinel (matches the current-arg encoding in the guard).
+    out["__cfg_lane_render_band"] = np.asarray(int(bool(getattr(args, "lane_render_band", False))))
+    out["__cfg_lane_band_start_epoch"] = np.asarray(int(getattr(args, "lane_band_start_epoch", 300)))
+    out["__cfg_persistence_loss_weight"] = np.asarray(float(getattr(args, "persistence_loss_weight", 0.0)))
+    out["__cfg_amplify_weight"] = np.asarray(float(getattr(args, "amplify_weight", 0.0)))
+    out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
+    _hbe = getattr(args, "hosc_beta_end", None)
+    out["__cfg_hosc_beta_end"] = np.asarray(-1.0 if _hbe is None else float(_hbe))
     # (review R2a-MED-1) ARCH flags that change the param KEYS / training geometry: persist them in the
     # resume sidecar so a crash-resume from the ckpt dir ALONE can fail-closed if the resume command
     # omits the flag the run was trained with (the silent-param-drop risk -- MLX model.update only
@@ -351,6 +371,51 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
         "live": live, "ema": ema, "opt": opt,
         "epoch": epoch, "has_opt": bool(int(cfg.get("__resume_has_opt", 0))), "cfg": cfg,
     }
+
+
+def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str]:
+    """(F2) List render-side LEVER cfg keys that DIVERGE between the resume sidecar (what the run was
+    trained with) and the current argv (what this resume would run). A non-empty list means a
+    ``--resume-from`` would SILENTLY change / drop a lever = a deterministic-reproducibility violation
+    the film-arch guard cannot see (these loss/render-only levers add NO param keys). Only keys PRESENT
+    in the sidecar are checked, so a pre-F2 sidecar (which lacks them) yields NO spurious divergence.
+    Pure / MLX-free -> unit-tested. ``lane_band_start_epoch`` is only flagged when the band is engaged
+    in EITHER config (a start-epoch change is inert while the band is OFF in both)."""
+    div: list[str] = []
+    _hbe = getattr(args, "hosc_beta_end", None)
+    cur_hbe = -1.0 if _hbe is None else float(_hbe)
+    cur_band = int(bool(getattr(args, "lane_render_band", False)))
+    # (key, current value, is_float) — non-float compared as string (int/bool/str all normalize).
+    checks: list[tuple[str, object, bool]] = [
+        ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
+        ("__cfg_lane_render_band", cur_band, False),
+        ("__cfg_persistence_loss_weight", float(getattr(args, "persistence_loss_weight", 0.0)), True),
+        ("__cfg_amplify_weight", float(getattr(args, "amplify_weight", 0.0)), True),
+        ("__cfg_render_aa", str(getattr(args, "render_aa", "none")), False),
+        ("__cfg_hosc_beta_end", cur_hbe, True),
+    ]
+    for key, cur, is_float in checks:
+        if key not in resume_cfg:
+            continue
+        ckpt = resume_cfg[key]
+        if is_float:
+            try:
+                diverged = abs(float(ckpt) - float(cur)) > 1e-6
+            except (TypeError, ValueError):
+                diverged = str(ckpt) != str(cur)
+        else:
+            diverged = str(ckpt) != str(cur)
+        if diverged:
+            div.append(f"{key[len('__cfg_'):]}: ckpt={ckpt!r} != resume-argv={cur!r}")
+    # lane_band_start_epoch: inert while the band is OFF in BOTH -> only flag when engaged in either.
+    if "__cfg_lane_band_start_epoch" in resume_cfg:
+        ckpt_band = int(resume_cfg.get("__cfg_lane_render_band", cur_band) or 0)
+        if (ckpt_band or cur_band):
+            ckpt_se = int(resume_cfg["__cfg_lane_band_start_epoch"])
+            cur_se = int(getattr(args, "lane_band_start_epoch", 300))
+            if ckpt_se != cur_se:
+                div.append(f"lane_band_start_epoch: ckpt={ckpt_se} != resume-argv={cur_se}")
+    return div
 
 
 def _load_decoder_params(npz_path: Path) -> dict[str, np.ndarray]:
@@ -554,6 +619,27 @@ def build_levelset_rgb_witness(
                     pre = pre + self.concat_pl[li](codes)[:, None, :]
                 h = self._act(pre)
             return self._compose_rgb(h)                            # (K, P, 3)
+
+        # ---- #224 accessors for the analytic-lane render-band (ADDITIVE; only called when
+        # --lane-render-band is ON => the default render is byte-identical). ----
+        def call_margin(self, coord_feats, code_idx):
+            """top1-top2 softmax decision margin (PROB scale) of the witness partition — the
+            #141 quantity the analytic-lane uncertainty gate rides. Returns (P,); reshape to
+            (H,W) at the call site."""
+            soft = mx.softmax(self.out_sdf(self._trunk(coord_feats, code_idx)) / self.softmax_temp, axis=-1)
+            s = mx.sort(soft, axis=-1)                              # ascending
+            return s[..., -1] - s[..., -2]                          # (P,) top1 - top2
+
+        def render_lane_appearance(self, coord_feats, code_idx, lane_cls: int = 1):
+            """The witness's OWN per-pixel lane color = sigmoid(palette[lane_cls] + tex)*255
+            (self-consistent, byte-free; gradient flows through tex/palette per the band spec).
+            luma-collapsed when not chroma (matches _compose_rgb)."""
+            tex = self.out_tex(self._trunk(coord_feats, code_idx))  # (P,3)
+            rgb = mx.sigmoid(self.palette[lane_cls] + tex) * 255.0  # (P,3)
+            if not self.chroma:
+                luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
+                rgb = mx.concatenate([luma, luma, luma], axis=-1)
+            return rgb
 
     return LevelSetRGBWitness()
 
@@ -789,6 +875,25 @@ def lever_gate_on_at_epoch(weight: float, start_epoch: int, ep: int) -> bool:
     return float(weight) > 0.0 and int(ep) >= int(start_epoch)
 
 
+def _adam_bias_correction_for(adam_beta2: float) -> bool:
+    """#224 Wave C FIX-1 (LAUNCH-BLOCKER): MLX ``optim.AdamW`` ``bias_correction`` DEFAULTS FALSE.
+
+    Without bias correction, at step ``t`` the second-moment ``v`` is ``(1-beta2) * mean(g^2)`` and is
+    NOT divided by ``(1-beta2^t)``, so ``sqrt(v)`` is ``~sqrt(1-beta2)`` too small early. With the
+    all-levers small-n beta2 (0.9999999, 1-beta2=1e-7) that is ``sqrt(1e-7)/sqrt(1e-3) ~ 316/31.6 ~
+    10`` smaller than the 0.999 default => the step-1 effective LR blows up ~100x (measured ratio 99.99x)
+    => AdamW random-walk / divergence. The arXiv small-n derivation (1-beta2 <~ (1-beta1^5)/n^3.5) is
+    faithful ONLY with bias correction (which makes vhat = v/(1-beta2^t) => step-1 update ~ lr*sign(g)
+    independent of beta2). So bias correction is REQUIRED on the high-beta2 path.
+
+    Gate ON only OFF THE DEFAULT (adam_beta2 != 0.999). At 0.999 (== the MLX/proven_base default) we
+    keep ``bias_correction`` at the MLX default (False) so the DEFAULT AdamW construction is BYTE-
+    IDENTICAL to the pre-FIX-1 path (the --adam-beta2 default stays 0.999 => byte-identical-off 7/7).
+    Pure + total => $0 unit-testable. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against"."""
+    return abs(float(adam_beta2) - 0.999) > 1e-9
+
+
 def _seg_form_for_epoch(ep: int, args) -> str:
     if not args.curriculum:
         return args.seg_loss
@@ -1009,6 +1114,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         in_feat += dir_w
     # per-pair directional feats (zeros until the first reorient -> ep<reorient = pure curvelet).
     dir_feats_per_pair = [np.zeros((curv_feats_np.shape[0], dir_w), np.float32) for _ in range(P)] if use_self_orient else None
+    # #224 (Wave B) AA-supersample + self-orient FINE dir-feat state (declared here so the render/
+    # reorient closures below see run-scope defaults even when AA/self-orient is OFF). Populated only
+    # when --render-aa supersample + --self-orient + --aa-self-orient-fine-mode {batch,full}. The base
+    # argmax per pair (H,W int8, ~118MB @ n600 — cheap) is snapshotted at each reorient so the fine
+    # dir-feats can be recomputed (NN-upsample argmax -> ss*grid -> fine EDT-tangent -> directional
+    # Fourier) without re-running the witness argmax.
+    _aa_so_fine = False
+    _aa_fine_mode = "refuse"
+    _aa_coords_fine = None
+    base_argmax_per_pair: list = [None] * P
+    _aa_fine_dir_full: list = [None] * P      # full mode: per-pair fine dir-feats (mx), rebuilt @ reorient
+    _aa_fine_lru: dict = {}                    # batch mode: bounded FIFO cache of per-pair fine dir-feats
 
     def _feats_np_for_pair(pi: int) -> np.ndarray:
         if not use_self_orient:
@@ -1024,6 +1141,125 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # The MLX render runs on mx.gpu via temporary_mlx_device(args.mlx_device) below; the torch
     # scorer/R/verdict are CPU authority. The device SPLIT: MLX "gpu" -> render; torch -> "cpu".
     adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device="cpu")
+    # ---- #224 AA-SDF observation-map render (aa_sdf_observation_render; MEASURED #1 rep lever,
+    # DAG FEED-ly/-ma). DEFAULT --render-aa none => this block is a NO-OP (curv_feats_np unchanged +
+    # coord_feats_fine_mx None) => BYTE-IDENTICAL. Two AA modes: (ipe) attenuate the curvelet basis
+    # columns by the mip-NeRF cone footprint (analytical, base grid; touches ONLY the curvelet feats,
+    # NOT the self-orient dir feats); (supersample) build a SEPARATE fine-grid feats for the render
+    # path only -- the BASE-grid coord_feats/_feats_np_for_pair stay base-grid so the eikonal/sdf(cf)
+    # reshape to (render_h, render_w) is unaffected; _render_R dispatches to render_aa_through_R_mlx. ----
+    render_aa = str(getattr(args, "render_aa", "none"))
+    aa_ss = int(getattr(args, "aa_supersample", 1))
+    coord_feats_fine_mx = None  # (supersample only) the fine-grid render feats; None => point-sample
+    if render_aa == "ipe":
+        from tac.boundary_math.aa_sdf_observation_render import (
+            apply_ipe_attenuation,
+            ipe_curvelet_attenuation,
+            ipe_footprint_sigma,
+        )
+        _aa_sx, _aa_sy = ipe_footprint_sigma(render_h, render_w, float(args.aa_ipe_footprint))
+        _aa_att = ipe_curvelet_attenuation(B, _aa_sx, _aa_sy)
+        curv_feats_np = apply_ipe_attenuation(curv_feats_np, _aa_att).astype(np.float32)  # (P, 2*cols)
+        print(json.dumps({"stage": "render_aa_ipe", "footprint": float(args.aa_ipe_footprint),
+                          "sigma_x": round(float(_aa_sx), 4), "sigma_y": round(float(_aa_sy), 4),
+                          "note": "curvelet basis attenuated (mip-NeRF cone); base grid; ~0 compute"}), flush=True)
+    elif render_aa == "supersample" and aa_ss > 1:
+        # Fail-closed on the un-wired combinations (NO-FAKE: no silent wrong result). The fine-grid
+        # self-orient per-pair dir-feat recompute + the structured-init render-res==L*-res invariant
+        # are not yet wired; refuse rather than render on mismatched feats.
+        #
+        # #224 Wave D AA CORRECTION (aa_feasibility_reconciliation_20260702.md): supersample is NOT
+        # the launch AA — it is train-only (neither shipped inflate applies ss → train/decode
+        # observation MISMATCH), its fp64 decode is 41min > the 30min budget, AND it HURTS the witness
+        # −49% (the 0.00086 floor is a REAL-FRAME ceiling, not witness-realized). The launch config
+        # ships --render-aa none + the analytic coverage-integrated --lane-render-band. This whole
+        # supersample+self-orient fail-closed path therefore never fires from the all-levers launch;
+        # it stays BUILT + fail-closeable for research only. Memory arithmetic below is RESOLVED
+        # (reconciliation Q3) but MOOT for the launch given the decode + witness-harm disqualification.
+        #
+        # #224 Option-B DECISION (FAIL-CLOSED, precise n600 blocker — NOT a shape/impl gap):
+        # AA-supersample + --self-orient needs PER-PAIR fine-grid feats = curvelet(coords_fine) ⊕
+        # dir_feats_fine(pair), where dir_feats_fine is the spec's argmax-NN-upsample→fine-EDT→
+        # directional-Fourier (docs/aa_sdf_observation_render_wire_in_spec.md). Reconciled n600 memory
+        # (Q3), ss=2, n_dir_freqs=2 (the shipped config), 384×512:
+        #   (a) The fine CURVELET feats are pair-INDEPENDENT → ONE SHARED tensor (~0.23GB), NOT
+        #       per-pair. ONLY the fine DIR-feats are per-pair: 25.2 MB/pair @ ndf2 × 600 = ~14GB
+        #       (full mode) — NOT the ~164GB the pre-reconciliation comment feared (that was the NAIVE
+        #       full-fine-feats-per-pair @ ndf6 over-estimate). Peak ≈ 63GB (fine 14 + base cf_mx_cache
+        #       ~41 [held STEADY via the in-place rebuild, L~2411, not 2×] + fwd ~8) → memory-SAFE on
+        #       the 128GB M5 Max, but this is a SCALED EXTRAPOLATION (24MB/pair measured), not a real
+        #       n600 allocation.
+        #   (b) ON-DEMAND fine feats (no fine cache, memory-safe): recompute the fine EDT per render
+        #       call. The base path amortizes P EDTs across --reorient-every (~50) epochs via the
+        #       cache; on-demand does P fine (ss^2×) EDTs EVERY epoch (~50× more, 4× larger) =>
+        #       minutes/epoch of scipy EDT over thousands of epochs => non-n600-viable wall-clock.
+        # Neither the cache-memory budget nor the on-demand wall-clock can be measured under
+        # CONTAINMENT (no GPU). Per CLAUDE.md OPERATOR PRIORITY (fail-closed when "can't be verified
+        # correct without a GPU run") this lever stays fail-closed with THIS precise blocker rather
+        # than shipping an unverified / non-n600-viable path. WIRED self-orient-compatible AA/lane
+        # alternatives (use these for the from-scratch launch): --render-aa ipe (basis-level cone AA,
+        # touches ONLY the shared curvelet columns, self-orient-compatible, ~0 compute) AND/OR
+        # --lane-render-band (class-1 render authority, NOW self-orient-composable per the Option-B
+        # lane-band wire-in below). AA-supersample WITHOUT --self-orient also still works.
+        _aa_fine_mode = str(getattr(args, "aa_self_orient_fine_mode", "refuse"))
+        if use_self_orient and _aa_fine_mode == "refuse":
+            # FAIL-CLOSED default (Wave B SHARPENED, MEASURED blocker). The per-pair fine-grid dir-feats
+            # (argmax→ss*grid→fine-EDT→directional-Fourier, docs/aa_sdf_observation_render_wire_in_spec.md)
+            # face a MEASURED memory↔wall-clock tradeoff that cannot be BOTH-satisfied AND n600-validated
+            # under the no-launch CONTAINMENT (measured local-MLX, ss=2, 384x512):
+            #   * fine-EDT recompute = ~49 ms/pair; per-pair fine dir-feat = 25.2 MB @ n_dir_freqs=2
+            #     (the shipped config) — the older 75.5 MB was the ndf6 figure (reconciliation Q3).
+            #   * MEMORY-SAFE (--aa-self-orient-fine-mode batch): a batch-bounded on-demand cache is
+            #     ~cap*25MB (0.2 GB @ cap=8 vs ~14 GB all-600 @ ndf2) => memory SOLVED. BUT every pair
+            #     renders every epoch, so a batch-bounded cache THRASHES => P fine-EDTs/epoch ~29 s/epoch
+            #     @ n600 (50x the base --reorient-every amortization) => wall-clock NON-viable for the
+            #     multi-thousand-epoch CE→tau→l7→Muon curriculum.
+            #   * WALL-CLOCK-viable (--aa-self-orient-fine-mode full): compute the fine dir-feats ONCE
+            #     per --reorient-every (amortized ~0.6 s/epoch) BUT store all P => ~14 GB @ ss=2, ndf2
+            #     (the fine curvelet feats are pair-independent → ONE shared ~0.23GB tensor, NOT per-pair);
+            #     peak ≈ 63 GB (fine 14 + base cf_mx_cache ~41 held STEADY via the in-place rebuild + fwd
+            #     ~8). This is a SCALED EXTRAPOLATION (24MB/pair measured); MOOT for the launch (supersample
+            #     is disqualified by the decode-budget + −49% witness-harm per the Wave D header above).
+            # Both opt-in modes ARE now BUILT + small-MLX-verified (render finite+shape; memory scales
+            # ~batch); the DEFAULT stays fail-closed so no unverified OOM / 50x-slow n600 run fires by
+            # accident. This is THE operator's-call item: pick `full` after an n600 memory-fit check, or
+            # `batch` if the extra CPU-EDT wall-clock is acceptable. Self-orient-compatible alternatives
+            # that ARE fully wired: --render-aa ipe (basis-level cone AA, ~0 compute) and/or
+            # --lane-render-band; AA-supersample WITHOUT --self-orient also works.
+            raise ValueError(
+                "--render-aa supersample + --self-orient is fail-closed by DEFAULT (Wave B). The fine "
+                "dir-feat path is BUILT + verified; enable it explicitly with "
+                "--aa-self-orient-fine-mode full (wall-clock-viable, ~14GB@ss2n600 @ndf2, peak ~63GB — "
+                "validate the n600 memory fit first) OR --aa-self-orient-fine-mode batch (memory-safe ~cap*25MB, but "
+                "~P fine-EDTs/epoch ~29s@n600). Or use --render-aa ipe / --lane-render-band (both "
+                "self-orient-compatible + fully wired), or AA-supersample WITHOUT --self-orient.")
+        # #224 Wave C FIX-2: supersample + --structured-init is NOW WIRED (was fail-closed as
+        # "not-yet-wired", NOT proven-incompatible). The two operate on DIFFERENT grids and compose:
+        # structured-init pretrains the coord-INR witness weights on the BASE grid against the cached L*
+        # (its invariant `(render_h,render_w) == lstar_shape` is checked at the structured-init block
+        # below and is UNCHANGED by supersample — aa_ss multiplies only the internal fine render grid,
+        # NOT render_h/render_w). The fine render then evaluates the SAME shared weights at fine coords
+        # (a coord-INR generalizes across coordinate resolution by construction). Verified at small-MLX
+        # n4 (ss=2 + self-orient full + structured-init + lane-prior-phi1: finite render + descent). Per
+        # the Wave B precedent (LEVER 3 relaxed the self-orient guard behind an opt-in after BUILD +
+        # small-MLX verify). The REAL render==L* invariant stays enforced at the structured-init block.
+        print(json.dumps({"stage": "render_aa_supersample_structured_init",
+                          "structured_init": bool(args.structured_init),
+                          "note": "supersample composes with structured-init: base-grid pretrain + "
+                          "shared coord-INR weights evaluated at fine coords (render_h/w == L* unchanged)"}),
+              flush=True)
+        from tac.boundary_math.aa_sdf_observation_render import build_supersampled_coords
+        _coords_fine = build_supersampled_coords(render_h, render_w, aa_ss)          # (ss^2*P, 2)
+        coord_feats_fine_mx = mx.array(curvelet_feats(_coords_fine, B).astype(np.float32))
+        if use_self_orient:
+            # opt-in fine self-orient (batch|full). _cf_fine_mx (below) sources per-pair fine dir-feats;
+            # rebuilt/invalidated at each reorient. Pre-first-reorient -> zeros -> pure-curvelet fine.
+            _aa_so_fine = True
+            _aa_coords_fine = _coords_fine
+        print(json.dumps({"stage": "render_aa_supersample", "ss": aa_ss,
+                          "fine_grid": [render_h * aa_ss, render_w * aa_ss],
+                          "self_orient_fine_mode": (_aa_fine_mode if use_self_orient else "n/a"),
+                          "note": "separate fine-grid render feats; base-grid eikonal/sdf unaffected"}), flush=True)
     coord_feats_mx = mx.array(curv_feats_np)
 
     # (DIAGNOSED FIX) natural per-class palette = mean GT RGB per L* class (the transfer-probe's
@@ -1220,6 +1456,77 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "in_feat": int(in_feat), "trainable": tnames, "n_code_params": int(model.code.size),
                           "note": "shared decoder FROZEN (no weight-decay drift); fitting per-pair codes only "
                           "(amortization fast path -- viability per the small-n generalization estimate)"}), flush=True)
+    # ---- #224 (3) warp-real-luma frame0 POSE CARRIER build + CHILD-ATTACH (BEFORE EMA/opt so the
+    # EMA shadow + AdamW/Muon state + checkpoints all track the carrier residual through the SAME
+    # machinery). DEFAULT OFF (--pose-carrier) => no attach => model.trainable_parameters() unchanged
+    # => value_and_grad/opt/ema BYTE-IDENTICAL. The RENDER dispatch (even code=f0->carrier warp,
+    # odd=f1->witness) is wired below at the render-fn assembly (replacing the old fail-closed guard).
+    # The residual co-grad rides the ONE nn.value_and_grad(model, ...) (probe-verified: child dxi gets
+    # a finite grad; the carrier's self.freeze(["xi_stored"]) keeps the stored twist out of the
+    # trainable tree under parent recursion, so the optimizer never corrupts it).
+    pose_carrier = None
+    pose_carrier_geom = None
+    pose_carrier_xi_stored = None
+    if bool(getattr(args, "pose_carrier", False)):
+        if bool(getattr(args, "freeze_decoder_fit_codes", False)):
+            raise ValueError(
+                "--pose-carrier is incompatible with --freeze-decoder-fit-codes: the decoder freeze "
+                "runs BEFORE the carrier attach and its trainable-set assertion (only 'code') would "
+                "either fail or freeze the carrier residual. Run them separately.")
+        if float(args.w_pose) <= 0.0:
+            raise ValueError(
+                "--pose-carrier requires --w-pose > 0: the residual dxi trains ONLY on the realized "
+                "d_pose term; with w_pose=0 the carrier stays at the stored-twist init (no co-grad).")
+        from tac.boundary_math.warp_real_luma_frame0 import (
+            GroundHomographyGeom as _PCGeom,
+            WarpRealLumaFrame0Carrier as _PCCarrier,
+            warp_frame0_uint8_numpy as _pc_warp_uint8_np,
+            xi_from_pose_calibration as _pc_xi_from_calib,
+        )
+        _pc_nat_h, _pc_nat_w = int(np.asarray(gt.gt_f0[0]).shape[0]), int(np.asarray(gt.gt_f0[0]).shape[1])
+        pose_carrier_geom = _PCGeom.eon(native_hw=(_pc_nat_h, _pc_nat_w), pitch=float(args.pose_carrier_pitch))
+        _pc_sr = float(args.pose_carrier_s_r)
+        _pc_pitch = float(args.pose_carrier_pitch)
+        if args.pose_carrier_s_t is not None:
+            _pc_st = float(args.pose_carrier_s_t)
+            _pc_fit = None
+        else:
+            # self-calibrating s_t fit on the frozen CPU-torch PoseNet d_pose grid (mirrors
+            # tools/measure_warp_real_luma_frame0_dpose): deterministic, GT-derived, NEVER MPS.
+            _pc_nf = max(1, min(int(args.pose_carrier_fit_pairs), P))
+            _pc_grid = [0.0, 0.02, 0.044, 0.08, 0.12, 0.16, 0.22, 0.30]
+
+            def _pc_mean_dpose(_st: float) -> float:
+                f0s = [np.asarray(gt.gt_f0[p]) for p in range(_pc_nf)]
+                preds = [_pc_warp_uint8_np(
+                    f0s[p], _pc_xi_from_calib(np.asarray(gt.gt_poses[p]), _st, _pc_sr, _pc_pitch),
+                    pose_carrier_geom) for p in range(_pc_nf)]
+                dps = cpu_verdict_d_pose_batch(
+                    posenet_cpu, f0s, preds, [np.asarray(gt.gt_poses[p]) for p in range(_pc_nf)])
+                return float(np.mean(dps))
+
+            _pc_fit = {s: _pc_mean_dpose(s) for s in _pc_grid}
+            _pc_st = float(min(_pc_fit, key=_pc_fit.get))
+        pose_carrier_xi_stored = np.stack([
+            _pc_xi_from_calib(np.asarray(gt.gt_poses[p]), _pc_st, _pc_sr, _pc_pitch)
+            for p in range(P)]).astype(np.float32)
+        _pc_code_dim = int(args.mod_dim) if str(args.pose_carrier_residual_mode) == "film" else None
+        pose_carrier = _PCCarrier.build(
+            pose_carrier_xi_stored, pose_carrier_geom,
+            residual_mode=str(args.pose_carrier_residual_mode),
+            residual_scale=float(args.pose_carrier_residual_scale),
+            code_dim=_pc_code_dim, film_hidden=32)
+        mx.eval(pose_carrier.parameters())
+        model.pose_carrier = pose_carrier.impl   # child-attach: dxi joins model.trainable_parameters()
+        mx.eval(model.parameters())
+        print(json.dumps({"stage": "pose_carrier", "residual_mode": str(args.pose_carrier_residual_mode),
+                          "s_t": round(_pc_st, 5), "s_r": _pc_sr, "pitch": _pc_pitch,
+                          "s_t_fit": ({str(k): round(v, 3) for k, v in _pc_fit.items()} if _pc_fit else None),
+                          "native_hw": [_pc_nat_h, _pc_nat_w], "n_pairs": P,
+                          "note": "frame0 real-luma SE(3)-warp pose carrier; residual co-grad via "
+                          "child-attach (ONE value_and_grad + opt + EMA); advisory; pointer 0.19110 UNMOVED"}),
+              flush=True)
+
     ema = MlxEMA(model, decay=args.ema_decay)
     # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA. DEFAULT-OFF: --ema-decay-finisher None =>
     # ema_finisher_decay None => the loop NEVER mutates ema.decay => the EMA trajectory is
@@ -1232,7 +1539,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     ema_finisher_start = (int(args.ema_decay_finisher_start_epoch)
                           if getattr(args, "ema_decay_finisher_start_epoch", None) is not None
                           else (int(args.muon_start_epoch) if args.muon_start_epoch is not None else None))
-    opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay)
+    # #224 Wave C FIX-1: bias_correction ON only on the high-beta2 all-levers path (0.9999999); at the
+    # 0.999 default it stays MLX-default False => BYTE-IDENTICAL. Without it high beta2 => ~100x step-1
+    # LR blowup => divergence (see _adam_bias_correction_for).
+    _adam_bc = _adam_bias_correction_for(getattr(args, "adam_beta2", 0.999))
+    opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay,
+                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
+                      bias_correction=_adam_bc)
 
     # ---- RESIDUAL-ONLY MODE (v2 hybrid; gap #1). Load the FIXED deterministic bulk + the
     # bulk-derived composition mask, and build the compose hooks. The bulk arrays live in CLOSURE
@@ -1270,9 +1583,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             m = _resid_mask_mx[pair][None]                # (1,H,W,1)
             return _bulk_rgb_mx[pair][None] * (1.0 - m) + rgb_nhwc * m
 
-        def _render_R(witness, coord_feats, code_idx, rh, rw):  # noqa: F811 (residual override)
-            return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_compose_mx)
-
+        # (#224) the per-frame _render_R that chains _compose_mx is built in the UNIFIED RENDER
+        # PATH block below (so residual bulk composes with the analytic-lane band + AA supersample).
         def _compose_np(rgb_hw3, pi):  # noqa: F811 (residual override)
             m = _resid_mask_np[pi][..., None]             # (H,W,1)
             return np.where(m, np.asarray(rgb_hw3, np.float32), _bulk_rgb_np[pi])
@@ -1285,11 +1597,165 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "is OUTSIDE the counted weights (rate win). advisory; pointer UNMOVED 0.19110"}),
               flush=True)
 
+    # =====================================================================================
+    # #224 UNIFIED RENDER PATH — compose the render-side levers onto _render_R (the per-frame
+    # realized render used by make_loss_fn(render_fn=...) AND the shared seg-lever forward). DEFAULT
+    # (no residual / no AA / no lane-band / no pose-carrier) => _render_R stays render_through_R_mlx +
+    # render_fn=None => BYTE-IDENTICAL. Each lever is opt-in. Docs: analytic_lane_render_band /
+    # aa_sdf_observation_render wire-in specs.
+    # -------------------------------------------------------------------------------------
+    _aa_on = (render_aa == "supersample" and aa_ss > 1)
+    _band_active = bool(getattr(args, "lane_render_band", False))
+    if _band_active and _aa_on:
+        raise ValueError(
+            "--lane-render-band + --render-aa supersample are not wired together: the band coverage is "
+            "base-grid (H,W) but the AA compose happens at the ss*grid. Use --render-aa ipe (base grid) "
+            "with the band, or run them separately.")
+    # (2) analytic-lane render-band compose_fn (FEED-dv #203/#213/#215). Precompute the per-code
+    # LaneBandPrior ONCE from the frozen GT class-1 mask; ride the witness margin (#141) as the
+    # FP-killer uncertainty gate. compose_fn coverage/u_mask are stop-grad constants; the gradient
+    # flows through the witness rgb + the witness-derived lane appearance.
+    band_compose_fn = None
+    band_gate = {"on": False}
+    _band_start = int(getattr(args, "lane_band_start_epoch", 300))
+    if _band_active:
+        # #224 Option-B WIRE-IN (self-orient composable): BOTH the witness margin provider
+        # (call_margin) AND the lane RGB provider (render_lane_appearance) feed the model in_proj,
+        # which expects base+dir_w feats when --self-orient is on. The pre-Option-B code hardcoded
+        # the shared no-self-orient coord_feats_mx -> MLX matmul shape crash under --self-orient at
+        # --lane-band-start-epoch. FIX: feed the PER-PAIR self-orient feats (base curvelet + this
+        # pair's live dir feats) via _band_feats(code_idx) below (mirrors _cf_mx). NO-FAKE: when
+        # --self-orient is OFF this returns the SAME shared coord_feats_mx object (numerically
+        # byte-identical to the pre-Option-B measured no-self-orient band path); when ON it returns
+        # mx.array(_feats_np_for_pair(pair)) = base curvelet ⊕ this pair's dir feats (zeros pre-first-
+        # reorient -> pure-curvelet width base+dir_w -> correct in_proj shape from epoch 0). Sister
+        # of the --render-aa supersample + --self-orient wire-in below.
+        def _band_feats(code_idx):
+            # base-grid per-pair coord feats for the band providers, via the canonical _cf_mx accessor
+            # (late-bound; _cf_mx + cf_mx_cache are defined below at main scope and exist by the time
+            # band_compose_fn calls this during training). _cf_mx returns the shared coord_feats_mx
+            # when no self-orient (exact-object-identical to the measured path) and the already-synced
+            # per-pair cf_mx_cache[pi] when self-orient -- BIT-IDENTICAL to mx.array(_feats_np_for_pair
+            # (pi)) (rebuild_per_pair_feats_in_place guarantees it) but REUSES the cache rebuilt after
+            # every reorient instead of a fresh full-res np.concatenate + mx.array per call (senior-
+            # review efficiency fix: kills ~2400 redundant full-res rebuilds/epoch once the band gate
+            # opens at --lane-band-start-epoch; serves the shortest-train / MLX-first discipline).
+            return _cf_mx(int(code_idx) // 2)
+        from tac.boundary_math.analytic_lane_render_band import (
+            build_analytic_lane_band_prior,
+            make_lane_band_compose_fn,
+        )
+        _lane_priors: dict[int, Any] = {}
+        for _pi in range(P):
+            _prior = build_analytic_lane_band_prior(
+                np.asarray(gt.lstars[_pi]), lane_cls=1, softness=float(args.lane_band_softness),
+                dash_gate=True, dash_forward_max_m=float(args.lane_band_dash_forward_max_m))
+            _lane_priors[2 * _pi + 1] = _prior   # frame1 (the SegNet-scored frame)
+            _lane_priors[2 * _pi] = _prior       # frame0 seg-free; keep symmetric
+        _u_src = str(args.lane_band_uncertainty_source)
+        if _u_src == "witness":
+            def _band_margin_provider(code_idx):
+                # per-pair self-orient feats (base curvelet ⊕ this pair's dir feats) via _band_feats;
+                # == shared coord_feats_mx when --self-orient is OFF (measured no-self-orient config).
+                return mx.stop_gradient(
+                    model.call_margin(_band_feats(code_idx), int(code_idx))).reshape(render_h, render_w)
+            _margin_provider: Any = _band_margin_provider
+        elif _u_src == "gt":
+            _margin_provider = {c: mx.array(np.asarray(gt.margins[c // 2], np.float32)) for c in _lane_priors}
+        else:
+            _margin_provider = None
+
+        def _band_lane_rgb(code_idx):
+            return model.render_lane_appearance(_band_feats(code_idx), int(code_idx), lane_cls=1).reshape(
+                render_h, render_w, 3)
+
+        band_compose_fn = make_lane_band_compose_fn(
+            _lane_priors, lane_rgb_provider=_band_lane_rgb, margin_provider=_margin_provider,
+            tau=float(args.lane_band_tau), eps=float(args.lane_band_eps),
+            weight=float(args.lane_band_weight), use_mlx=True)
+        band_gate["on"] = _band_start <= 1
+        _band_recalls = [float(_lane_priors[2 * pi + 1].band_recall) for pi in range(P)
+                         if np.isfinite(_lane_priors[2 * pi + 1].band_recall)]
+        print(json.dumps({"stage": "lane_render_band", "n_pairs": P, "uncertainty_source": _u_src,
+                          "start_epoch": _band_start,
+                          "band_vs_gt_lane_recall_mean": (round(float(np.mean(_band_recalls)), 4)
+                                                          if _band_recalls else None),
+                          "note": "class-1 render-time authority composited PRE-R; gated at start_epoch "
+                          "(spike-guard re-treat); advisory; pointer 0.19110 UNMOVED"}), flush=True)
+    # #224 (5) island SEED compose state (LATE-BOUND; populated at the seed build below, which runs
+    # AFTER this chain is defined but BEFORE value_and_grad + the training loop, so _compose_chain
+    # reads it at CALL time). The seed is a SEPARATE module (own optimizer group) -> NOT in
+    # model.parameters()/EMA/blob/deploy, so the verdict (witness-alone) == the 0-byte-accelerant
+    # deploy (NO-FAKE, honestly measured). Default OFF (--seed-islands) => seed_state stays empty =>
+    # the seed branch never fires => _compose_chain BYTE-IDENTICAL.
+    seed_on = bool(getattr(args, "seed_islands", False))
+    seed_state: dict[str, Any] = {"mod": None, "masks": None}
+    # assemble the compose chain (residual bulk FIRST, then lane band, then island seed). None => bare.
+    _use_chain = residual_mode or _band_active or seed_on
+
+    def _compose_chain(rgb_nhwc, code_idx):
+        if residual_mode:
+            rgb_nhwc = _compose_mx(rgb_nhwc, code_idx)
+        if _band_active and band_gate["on"]:
+            rgb_nhwc = band_compose_fn(rgb_nhwc, code_idx)
+        if seed_state["mod"] is not None and (int(code_idx) % 2 == 1):
+            # frame1 (SegNet-scored) ONLY: add the protected per-pair island seed residual (masked to
+            # the self-detected island support). Reads the LIVE seed_mod.residual -> the dual
+            # value_and_grad co-differentiates it; the compose flows through the SHARED _f1 -> _slog ->
+            # _signed (no 2nd SegNet). frame0 (even) is seg-free -> unseeded.
+            _pi = int(code_idx) // 2
+            rgb_nhwc = rgb_nhwc + seed_state["mod"].residual[_pi] * seed_state["masks"][_pi]
+        return rgb_nhwc
+
+    # (1) AA supersample render dispatch: IGNORE the passed base-grid coord_feats and use the
+    # fine-grid feats (the base-grid eikonal/sdf(cf) in total_loss_fn is unaffected -> still base grid).
+    if _aa_on or _use_chain:
+        from tac.boundary_math.aa_sdf_observation_render import (  # noqa: E402
+            render_aa_through_R_mlx as _render_aa_R,
+        )
+
+        def _render_R(witness, coord_feats, code_idx, rh, rw):  # noqa: F811 (unified #224 override)
+            _cf = _compose_chain if _use_chain else None
+            if _aa_on:
+                # per-pair FINE feats when --self-orient (shared curvelet-fine [+ fine dir-feats]);
+                # else the shared curvelet-fine tensor. _cf_fine_mx is late-bound (defined below).
+                _feats_fine = _cf_fine_mx(int(code_idx) // 2) if _aa_so_fine else coord_feats_fine_mx
+                return _render_aa_R(witness, _feats_fine, code_idx, rh, rw, aa_ss, compose_fn=_cf)
+            return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_cf)
+
+    render_fn = _render_R if (_aa_on or _use_chain) else None
+
+    # (3) warp-real-luma frame0 pose carrier — the parity-dispatch render_fn (even code=f0 -> the
+    # SE(3) ground-homography warp of the REAL keyframe luma; odd=f1 -> witness). The carrier BUILD +
+    # child-ATTACH (residual co-grad through the ONE value_and_grad + AdamW/Muon + EMA) happened
+    # ABOVE, pre-EMA; here we only WRAP render_fn with the parity dispatch. The measured s_t/s_r/pitch
+    # calibration is self-fit at build (or --pose-carrier-s-t); the residual dxi co-grad rides the
+    # child-attach. Default OFF (pose_carrier is None) => render_fn unchanged => byte-identical.
+    if pose_carrier is not None:
+        _pc_witness_render = _render_R if (_aa_on or _use_chain) else render_through_R_mlx
+
+        def _pc_gt_f0_provider(pi: int):
+            # native-res (H,W,3) REAL keyframe luma as mx float32; per-call (transient, no P-length
+            # fp32 cache -> n600-memory-safe; the uint8 GT already resides in gt.gt_f0).
+            return mx.array(np.asarray(gt.gt_f0[pi], np.float32))
+
+        _pc_code_provider = None
+        if str(args.pose_carrier_residual_mode) == "film":
+            def _pc_code_provider(pi: int):
+                return model.code[2 * pi + 0]   # frame0 per-pair code for the FiLM residual MLP
+
+        render_fn = pose_carrier.make_pair_render_dispatch(
+            _pc_witness_render, _pc_gt_f0_provider, code_provider=_pc_code_provider)
+        print(json.dumps({"stage": "pose_carrier_render_dispatch", "residual_mode": str(args.pose_carrier_residual_mode),
+                          "witness_render": ("aa/chain" if (_aa_on or _use_chain) else "bare"),
+                          "note": "parity dispatch (even code=f0->carrier warp, odd=f1->witness) wired "
+                          "into make_loss_fn(render_fn=...); advisory; pointer 0.19110 UNMOVED"}), flush=True)
+
     base_loss = make_loss_fn(
         adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
         seg_loss=args.seg_loss, tau_softplus_tau=args.tau_softplus_tau, l7_mult=args.l7_mult,
         l7_threshold=args.l7_threshold,
-        render_fn=(_render_R if residual_mode else None),
+        render_fn=render_fn,
     )
 
     # LEVER-3 (lane-edge fragility weighting) hyperparameters captured from args (static; closure
@@ -1407,6 +1873,129 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "margin_field_head", "weight": mfh_w,
                           "per_class_margin_target": [round(float(v), 4) for v in _mfh_tgt]}), flush=True)
 
+    # #224 (4) PERSISTENCE/TOPOLOGY loss setup (persistence_topology_loss; #218/TopologyLossGauge).
+    # persist_w=0 (default) => persist_classes=() + persist_gate["w"]=0 => branch inert => byte-identical.
+    persist_w = float(getattr(args, "persistence_loss_weight", 0.0))
+    persist_recall_w = float(getattr(args, "persistence_recall_weight", 1.0))
+    persist_cldice_iters = int(getattr(args, "cldice_iters", 5))
+    persist_warmup = int(getattr(args, "persistence_warmup_epochs", 0))
+    persist_classes: tuple[int, ...] = ()
+    persist_gate = {"w": 0.0}   # epoch-annealed weight (set in the loop); 0 => branch inert
+    if persist_w > 0.0:
+        from tac.boundary_math.persistence_topology_loss import (
+            detect_persistence_tail_classes,
+            persistence_anneal_weight,
+            persistence_topology_loss_mlx,
+        )
+        _pc = str(getattr(args, "persistence_classes", "auto")).strip()
+        if _pc.lower() == "auto":
+            _lst_stack_p = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+            persist_classes, _pev = detect_persistence_tail_classes(_lst_stack_p, n_classes=5)
+        else:
+            persist_classes = tuple(int(x) for x in _pc.split(",") if x.strip() != "")
+        print(json.dumps({"stage": "persistence_loss", "target_classes": list(persist_classes),
+                          "weight": persist_w, "recall_weight": persist_recall_w,
+                          "cldice_iters": persist_cldice_iters, "warmup_epochs": persist_warmup,
+                          "note": "soft-clDice + persistence-weighted island recall on the SHARED "
+                          "realized seg forward; annealed; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+
+    # #224 (5) ISLAND AMPLIFICATION setup (island_protection; #208/IslandProtectionGauge.AMPLIFY_ONLY).
+    # Rides the SHARED LEVER-4 realized margin _signed (#141) -- NO 2nd saliency / SegNet forward.
+    # amplify_w=0 (default) => island_weight_mx None => branch skipped => byte-identical.
+    amplify_w = float(getattr(args, "amplify_weight", 0.0))
+    amplify_form = str(getattr(args, "amplify_form", "hinge"))
+    amplify_mtgt = float(getattr(args, "amplify_margin_target", 1.0))
+    island_weight_mx: dict[int, Any] | None = None
+    if amplify_w > 0.0:
+        from tac.boundary_math.island_protection import (
+            build_island_masks,
+            identify_island_classes,
+            island_birth_from_signed_mx,
+            island_persistence_weight,
+        )
+        _lst_stack_i = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+        _idet = identify_island_classes(_lst_stack_i, n_classes=5)
+        island_weight_mx = {}
+        for pi in range(P):
+            _im = build_island_masks(np.asarray(gt.lstars[pi], np.int64), _idet.lane_cls,
+                                     _idet.movable_cls, dilate_px=int(args.island_dilate_px))
+            _iw = island_persistence_weight(_im.any_mask, kind=str(args.amplify_persist))
+            island_weight_mx[pi] = mx.array(np.asarray(_iw, np.float32)[None])   # (1,H,W)
+        print(json.dumps({"stage": "island_amplify", "island_classes": list(_idet.island_classes),
+                          "lane_cls": _idet.lane_cls, "movable_cls": _idet.movable_cls,
+                          "weight": amplify_w, "form": amplify_form, "margin_target": amplify_mtgt,
+                          "persist": str(args.amplify_persist),
+                          "note": "island-birth rides the SHARED realized _signed margin (#141); "
+                          "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+    # #224 (5) island SEED + CONTAINMENT build (SEPARATE protected-seed module + its OWN AdamW group;
+    # grad-shield applied to the seed leaf BETWEEN the dual value_and_grad and seed_opt.update — NEVER
+    # touching the witness grouped-backward / MD-decoupling grads). The seed is a per-pair RGB residual
+    # seeded at ep0 from the GT island appearance (build_island_seed), masked to the self-detected
+    # lane+movable island band; composited into the SEGNET-scored frame1 BEFORE R (via _compose_chain
+    # above) so it rides the SHARED realized _f1/_signed (no 2nd SegNet). Because it is a SEPARATE
+    # module (NOT model.parameters()), it is absent from EMA/blob/deploy => the verdict is witness-alone
+    # == the deploy render == the 0-byte training-time ACCELERANT semantics, HONESTLY measured (the
+    # verdict d_seg IS the deploy-absorption readout; the containment keeps the seed alive during
+    # training so the witness has a formed island to absorb). Default OFF => byte-identical.
+    seed_mod = None
+    seed_opt = None
+    seed_spec = None
+    _seed_shield = None
+    if seed_on:
+        if float(args.w_seg) <= 0.0:
+            raise ValueError("--seed-islands requires --w-seg > 0: the seed helps ONLY through the "
+                             "realized seg loss on the composed frame1; with w_seg=0 it is inert.")
+        import mlx.nn as _seed_nn
+        from tac.boundary_math.island_protection import (
+            ContainmentSpec as _SeedSpec,
+            build_island_masks as _build_isl_masks,
+            build_island_seed as _build_isl_seed,
+            contain_protected_grad_mx as _contain_grad_mx,
+            identify_island_classes as _ident_isl,
+        )
+        _seed_shield = _contain_grad_mx
+        _lst_stack_s = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+        _sdet = _ident_isl(_lst_stack_s, n_classes=5)
+        _seed_res_np = np.zeros((P, render_h, render_w, 3), np.float32)
+        _seed_msk_np = np.zeros((P, render_h, render_w, 1), np.float32)
+        _s_supp = []
+        for pi in range(P):
+            _im = _build_isl_masks(np.asarray(gt.lstars[pi], np.int64), _sdet.lane_cls,
+                                   _sdet.movable_cls, dilate_px=int(args.island_dilate_px))
+            _gt1 = np.asarray(gt.gt_f1[pi], np.float32)
+            if _gt1.shape[:2] != (render_h, render_w):
+                import torch  # noqa: PLC0415
+                import torch.nn.functional as _tF  # noqa: PLC0415
+                _gt1 = _tF.interpolate(torch.from_numpy(_gt1).permute(2, 0, 1)[None],
+                                       size=(render_h, render_w), mode="bilinear", align_corners=False
+                                       )[0].permute(1, 2, 0).numpy()
+            _seed = _build_isl_seed(_gt1, _im, base_render_segres=None, blend=float(args.seed_blend))
+            _seed_res_np[pi] = _seed.residual
+            _seed_msk_np[pi, ..., 0] = np.asarray(_im.any_mask, np.float32)
+            _s_supp.append(float(_seed.support_frac))
+
+        class _SeedMod(_seed_nn.Module):
+            def __init__(self, res):
+                super().__init__()
+                self.residual = mx.array(res)
+
+        seed_mod = _SeedMod(_seed_res_np)
+        mx.eval(seed_mod.parameters())
+        _seed_masks_mx = mx.array(_seed_msk_np)
+        seed_state["mod"] = seed_mod
+        seed_state["masks"] = [_seed_masks_mx[pi] for pi in range(P)]
+        seed_spec = _SeedSpec(mode=str(args.containment_mode), damp=float(args.containment_damp),
+                              protected_mask=None)
+        seed_opt = optim.AdamW(learning_rate=float(args.seed_lr), weight_decay=0.0)
+        print(json.dumps({"stage": "island_seed", "lane_cls": _sdet.lane_cls, "movable_cls": _sdet.movable_cls,
+                          "island_classes": list(_sdet.island_classes),
+                          "mean_support_frac": round(float(np.mean(_s_supp)), 5),
+                          "containment_mode": str(args.containment_mode), "seed_lr": float(args.seed_lr),
+                          "n_pairs": P,
+                          "note": "SEPARATE protected seed module (own AdamW; NOT in EMA/blob/deploy = "
+                          "0-byte accelerant; verdict=witness-alone=deploy=absorption readout); "
+                          "shield-grad defends it; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
         phi0 = model.sdf(cf, c0)
@@ -1426,7 +2015,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _seg_levers_on = ((lane_w > 0.0 and lane_gate["on"]) or
                           (msal_w > 0.0 and msal_gate["on"]) or
                           (lane_thin_w > 0.0 and lane_thin_gate["on"]) or
-                          (mfh_w > 0.0 and mfh_target_mx is not None))  # #218 facets 1b/3
+                          (mfh_w > 0.0 and mfh_target_mx is not None) or          # #218 facets 1b/3
+                          (amplify_w > 0.0 and island_weight_mx is not None) or   # #224 island amplify
+                          (persist_gate["w"] > 0.0 and bool(persist_classes)))    # #224 persistence loss
         if _seg_levers_on:
             # _render_R composes the FIXED bulk before R in residual mode (else == bare render) so
             # the surgical levers (lane-thin/margin-saliency/lane-edge) weight the COMPOSED-render
@@ -1476,6 +2067,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hmap = mx.maximum(msal_tgt - sgn, 0.0) * sal                 # fragile pixels weighted
             msal_term = mx.sum(hmap) / (mx.sum(sal) + 1e-6)             # saliency-weighted mean hinge
             L = L + msal_w * msal_term
+        # #224 (5) ISLAND AMPLIFICATION — the island-birth term on the SHARED realized _signed margin
+        # (island x persistence weight; orthogonal to LEVER-4's fragility x all-class weight). Default
+        # amplify_w=0 => skipped => byte-identical. c1 = 2*pi+1 (the SegNet-scored frame) => pi=c1//2.
+        if amplify_w > 0.0 and island_weight_mx is not None:
+            L = L + amplify_w * island_birth_from_signed_mx(
+                _signed, island_weight_mx[int(c1) // 2], amplify_mtgt, form=amplify_form)
+        # #224 (4) PERSISTENCE/TOPOLOGY loss — soft-clDice + persistence-weighted island recall on the
+        # SHARED realized seg logits (_slog). GT-presence-gated inside the module (never hallucinate).
+        # Annealed weight persist_gate["w"] (set per-epoch, coarse->fine); 0 => branch inert.
+        if persist_gate["w"] > 0.0 and persist_classes:
+            L = L + persist_gate["w"] * persistence_topology_loss_mlx(
+                _slog, lstar_oh, persist_classes, cldice_iters=persist_cldice_iters,
+                w_cldice=1.0, w_recall=persist_recall_w)
         # LEVER-A (FiLM-rank-fix) soft participation-ratio FLOOR. Pushes the per-pair modulation PR up
         # toward rankfloor_tgt (opposing the measured rank-1 collapse). PR computed Gram-wise (NO
         # eigendecomposition): trace(C)=||Mc||_F^2 (== mx.sum(Mc*Mc)), ||C||_F^2=||Mc Mc^T||_F^2. The
@@ -1538,6 +2142,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
 
+    # #224 (5) DUAL value_and_grad for the island SEED (its OWN param tree + optimizer). Co-differentiate
+    # the witness (model) AND the seed (seed_mod) w.r.t. the SAME loss (the seed enters via _compose_chain
+    # -> _f1 -> seg_l). Default OFF (seed_mod None) => _dual_vg None => the loop takes the single
+    # value_and_grad path (BYTE-IDENTICAL). The witness grad tree (grads[0]) is IDENTICAL to the single
+    # path (same loss, same model params); only the extra grads[1] (seed) is new -> the shield acts on
+    # grads[1] ONLY, then seed_opt (a DISTINCT AdamW) applies it -> the witness opt.update + MD-decoupling
+    # + grouped-backward path is UNTOUCHED.
+    _dual_vg = None
+    if seed_mod is not None:
+        def _combined_seed_loss(model_p, seed_p, cf, c0, c1, oh, mg, ptg, ws, wp, hg, mt, sf, ew, lw):
+            model.update(model_p)
+            seed_mod.update(seed_p)
+            return total_loss_fn(model, cf, c0, c1, oh, mg, ptg, ws, wp, hg, mt, sf, ew, lw)
+
+        _dual_vg = mx.value_and_grad(_combined_seed_loss, argnums=(0, 1))
+
     # one-hot L* + margin per pair at the SegNet OUTPUT res (gt.lstars/gt.margins are 384x512,
     # matching the realized seg_logits = adapter.segnet(R(rgb))). NOT render res.
     def _lstar_oh(pi: int):
@@ -1563,11 +2183,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             chroma=args.chroma,
         )
 
+    def _pc_verdict_f0_uint8(pi: int, deploy: dict[str, np.ndarray]) -> np.ndarray:
+        """#224 pose-carrier NO-FAKE verdict frame0: warp the REAL keyframe luma by the DEPLOYED
+        (EMA-shadow, int8-dequant) carrier twist xi_eff, so the advisory d_pose measures what the
+        carrier actually produces (NOT the witness's own f0). xi_stored uses the original fp32 table
+        (the stored twist ships fp16, not int8; the trained residual dxi rides the deploy dict).
+        Native-res uint8 (874x1164x3) matching the witness f1 verdict contract + cpu_verdict_d_pose."""
+        from tac.boundary_math.warp_real_luma_frame0 import warp_frame0_uint8_numpy as _pc_warp_u8
+        xi = np.asarray(pose_carrier_xi_stored[pi], np.float64)
+        scale = float(args.pose_carrier_residual_scale)
+        if str(args.pose_carrier_residual_mode) == "table":
+            dxi = np.asarray(deploy.get("pose_carrier.dxi"), np.float64)[pi]
+        else:  # film: numpy twin of gelu(film_in(code)) -> film_out (advisory reconstruction)
+            from scipy.special import erf
+            code = np.asarray(deploy["code"][2 * pi + 0], np.float64)
+            w_in = np.asarray(deploy["pose_carrier.film_in.weight"], np.float64)
+            b_in = np.asarray(deploy["pose_carrier.film_in.bias"], np.float64)
+            w_out = np.asarray(deploy["pose_carrier.film_out.weight"], np.float64)
+            b_out = np.asarray(deploy["pose_carrier.film_out.bias"], np.float64)
+            h = code @ w_in.T + b_in
+            h = 0.5 * h * (1.0 + erf(h / np.sqrt(2.0)))    # exact gelu (matches mlx.nn.gelu)
+            dxi = (h @ w_out.T + b_out).reshape(-1)
+        xi_eff = xi + scale * dxi
+        return _pc_warp_u8(np.asarray(gt.gt_f0[pi]), xi_eff, pose_carrier_geom)
+
     def _render_numpy_deploy(deploy: dict[str, np.ndarray], pi: int, fk: int) -> np.ndarray:
         """THE ONE CODEPATH (fp32 numpy, deploy-faithful) — same forward the byte-close/inflate use.
         Uses the PER-PAIR feats (curvelet [+ self-orient]) so the verdict == the deploy render. In
         residual mode the INR RGB is COMPOSED with the FIXED bulk (where(mask, INR, bulk)) BEFORE R,
-        so the advisory d_seg reflects the COMPOSED witness that ships (NO-FAKE)."""
+        so the advisory d_seg reflects the COMPOSED witness that ships (NO-FAKE). #224 pose-carrier:
+        frame0 (fk==0) routes through the carrier warp so the d_pose verdict measures the carrier."""
+        if pose_carrier is not None and fk == 0:
+            return _pc_verdict_f0_uint8(pi, deploy)
         rgb, _phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + fk])
         rgb_hw3 = rgb.reshape(render_h, render_w, 3)
         if _compose_np is not None:
@@ -1604,6 +2251,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 argmax = np.asarray(amx).reshape(render_h, render_w).astype(np.int64)
                 df = _dir_feats_from_argmax(argmax)
                 dir_feats_per_pair[pi] = df
+                if _aa_so_fine:  # snapshot base argmax (int8) for the fine dir-feat recompute
+                    base_argmax_per_pair[pi] = argmax.astype(np.int8)
                 mag += float(np.abs(df).mean())
                 del feats_mx, amx, code_row
             mx.clear_cache()
@@ -1623,6 +2272,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             df = self_orientation_directional_feats(
                 coords_np, argmax, n_freqs=n_dir_freqs, freq_across=args.freq_across, freq_along=args.freq_along)
             dir_feats_per_pair[pi] = df.astype(np.float32)
+            if _aa_so_fine:  # snapshot base argmax (int8) for the fine dir-feat recompute
+                base_argmax_per_pair[pi] = argmax.astype(np.int8)
             mag += float(np.abs(df).mean())
         return mag / max(P, 1)
 
@@ -1707,7 +2358,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _compose_np is not None:  # residual mode: compose the FIXED bulk before R (NO-FAKE)
                 _r0 = _compose_np(_r0, pi)
                 _r1 = _compose_np(_r1, pi)
-            f0s.append(_torch_R_to_camera_uint8(_r0))
+            # #224 pose-carrier: frame0 through the carrier warp (deploy int8-dequant xi_eff) so the
+            # ASYNC d_pose verdict measures the carrier too (matches the sync _render_numpy_deploy path).
+            if pose_carrier is not None:
+                f0s.append(_pc_verdict_f0_uint8(pi, deploy))
+            else:
+                f0s.append(_torch_R_to_camera_uint8(_r0))
             f1s.append(_torch_R_to_camera_uint8(_r1))
         ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, [gt.lstars[pi] for pi in vpairs])
         dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, [gt.gt_poses[pi] for pi in vpairs])
@@ -1835,8 +2491,52 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     def _cf_mx(pi: int):
         return coord_feats_mx if not use_self_orient else cf_mx_cache[pi]
 
+    # #224 (Wave B) FINE self-orient dir-feats (AA-supersample + --self-orient). Recompute from the
+    # snapshotted base argmax: NN-upsample to the ss*grid -> fine EDT-tangent -> directional Fourier
+    # (the SAME self_orientation_directional_feats path as the base, at fine coords). Pre-first-reorient
+    # (argmax None) -> zeros -> pure-curvelet fine (matches the base zeros-until-reorient contract).
+    def _fine_dir_feats_np(pi: int) -> np.ndarray:
+        cols = _aa_coords_fine.shape[0]
+        ba = base_argmax_per_pair[pi]
+        if ba is None:
+            return np.zeros((cols, dir_w), np.float32)
+        arg_fine = np.kron(np.asarray(ba, np.int64), np.ones((aa_ss, aa_ss), np.int64))
+        return self_orientation_directional_feats(
+            _aa_coords_fine, arg_fine, n_freqs=n_dir_freqs,
+            freq_across=args.freq_across, freq_along=args.freq_along).astype(np.float32)
+
+    def _rebuild_fine_dir_cache() -> None:
+        # full mode: recompute ALL P fine dir-feats ONCE (amortized across the reorient window).
+        # batch mode: just INVALIDATE the bounded LRU (recomputed lazily on next use).
+        if not _aa_so_fine:
+            return
+        _aa_fine_lru.clear()
+        if _aa_fine_mode == "full":
+            for pi in range(P):
+                _aa_fine_dir_full[pi] = mx.array(_fine_dir_feats_np(pi))
+            mx.eval([x for x in _aa_fine_dir_full if x is not None])
+
+    def _cf_fine_mx(pi: int):
+        # per-pair FINE render feats = shared curvelet-fine (coord_feats_fine_mx) [+ fine dir-feats].
+        if not _aa_so_fine:
+            return coord_feats_fine_mx
+        if _aa_fine_mode == "full":
+            df = _aa_fine_dir_full[pi]
+            if df is None:                       # pre-first-reorient safety
+                df = mx.array(_fine_dir_feats_np(pi))
+        else:  # batch: bounded FIFO on-demand cache (memory ~ cap*per-pair)
+            df = _aa_fine_lru.get(pi)
+            if df is None:
+                df = mx.array(_fine_dir_feats_np(pi))
+                _aa_fine_lru[pi] = df
+                _cap = max(1, int(getattr(args, "aa_self_orient_fine_cache_cap", 16)))
+                while len(_aa_fine_lru) > _cap:
+                    _aa_fine_lru.pop(next(iter(_aa_fine_lru)))
+        return mx.concatenate([coord_feats_fine_mx, df], axis=-1)
+
     if use_self_orient:
         _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
+        _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
 
     # ---- CHECKPOINT closures (FEED-dz; mx->np snapshot + atomic save of the deploy EMA npz + the
     # resume sidecar). The deploy npz keeps the canonical name so the byte-close tool consumes it
@@ -1933,6 +2633,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 f"{bool(int(resume_cfg.get('__cfg_film_stiefel', 0) or 0))}. "
                 + (f"Fix: {', '.join(_hint)}." if _hint else
                    "Rebuild the model with the SAME architecture the checkpoint was trained with."))
+        # (F2) FAIL-CLOSED render-side LEVER-drift guard (BEFORE model.update, like the film guard).
+        # The loss/render-only levers add no param KEYS, so the missing-param guard above cannot see
+        # them; a resume that silently drops/changes a lever the run was trained with is a
+        # deterministic-repro violation. Escape: --resume-allow-lever-drift (explicit warm-start).
+        if not bool(getattr(args, "resume_allow_lever_drift", False)):
+            _lever_div = _resume_lever_divergences(resume_cfg, args)
+            if _lever_div:
+                raise ValueError(
+                    f"--resume-from {rp}: {len(_lever_div)} render-side LEVER(s) DIVERGE between the "
+                    "checkpoint's training config and this resume command -> a silent lever drop/change "
+                    "= a deterministic-reproducibility violation (these loss/render-only levers add no "
+                    "param keys, so the arch guard above cannot catch them). Diverged: "
+                    + "; ".join(_lever_div)
+                    + ". Fix: MATCH the trained run's lever flags, OR pass --resume-allow-lever-drift "
+                    "if this is an INTENTIONAL warm-start re-treatment.")
         model.update(tree_unflatten([(k, mx.array(v)) for k, v in rs["live"].items()]))
         mx.eval(model.parameters())
         ema_src = rs["ema"] if rs["ema"] else rs["live"]
@@ -1981,6 +2696,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
             mag = recompute_self_orient(int8_dequant_params(ema_np))
             _rebuild_cf_mx_cache()
+            _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
             print(json.dumps({"stage": "resume_reorient", "mean_abs_dir_feat": round(mag, 5)}), flush=True)
         print(json.dumps({"stage": "resume", "from": str(rp), "resumed_epoch": int(rs["epoch"]),
                           "start_epoch": start_epoch, "restored_opt": restored_opt,
@@ -2112,7 +2828,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (review R3-M1) LEVER-B thin-lane engagement is ALSO an AdamW->AdamW treatment boundary
             # (mirrors _bnd_lane/_bnd_msal). Default lane_thin_w=0.0 => never fires => bit-identical.
             _bnd_lane_thin = (lane_thin_w > 0.0 and (ep >= lane_thin_start) and not lane_thin_gate["on"])
-            _stage_boundary_now = _bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
+            # (F3 fix) #224 analytic-lane render-band engagement is ALSO an AdamW->AdamW treatment
+            # boundary (the band's render-target CHANGES at --lane-band-start-epoch): its sibling levers
+            # (lane/margin/thin) already OR into _stage_boundary_now, but the band did NOT, so the
+            # LR re-warmup + optional moment-reset never fired on band engagement -> stale AdamW momentum
+            # pushed through the render-target change. Mirrors _bnd_lane exactly (computed BEFORE the band
+            # gate flips at the engage block below). Default --lane-render-band OFF => _band_active False
+            # => never fires => bit-identical.
+            _bnd_band = (_band_active and (ep >= _band_start) and not band_gate["on"])
+            _stage_boundary_now = (_bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
+                                   or _bnd_band)
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -2142,6 +2867,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     muon_lr=muon_lr_eff, muon_adamw_lr=muon_adamw_lr_eff,
                     muon_momentum=float(args.muon_momentum), muon_weight_decay=muon_wd_eff,
                     muon_ns_steps=int(args.muon_ns_steps), adamw_weight_decay=float(args.weight_decay),
+                    # #224 Wave D (R4 #2): thread the same beta2 as the main AdamW so the finisher
+                    # rest-group is consistent (default 0.999 => byte-identical).
+                    adamw_beta2=float(getattr(args, "adam_beta2", 0.999)),
                 )
                 opt.init(model.trainable_parameters())
                 mx.eval(opt.state)
@@ -2188,6 +2916,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_thin_engage", "epoch": ep, "start": lane_thin_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # #224 (2) analytic-lane render-band engagement gate + transition RE-TREAT (mirrors the
+            # lane/margin/thin gates). No-op when --lane-render-band off (band never applies).
+            if _band_active:
+                _band_was = band_gate["on"]
+                band_gate["on"] = _band_start <= ep
+                if band_gate["on"] and not _band_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "lane_render_band_engage", "epoch": ep, "start": _band_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # #224 (4) persistence loss anneal (linear warm-up; coarse->fine). No-op when persist_w=0.
+            if persist_w > 0.0 and persist_classes:
+                persist_gate["w"] = persistence_anneal_weight(ep, persist_w, persist_warmup)
             # BUILD 1 (FEED-fw): apply stage-transition TREATMENT for an AdamW->AdamW boundary
             # detected above. Skipped during the Muon finisher (muon_switched True; it re-treats
             # itself + freezes the base LR schedule). The spike-guard re-treat already happened in the
@@ -2201,8 +2941,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _stage_boundary_now and not muon_switched:
                 last_boundary_epoch = ep
                 if args.stage_transition_reset_moments:
+                    # #224 Wave C FIX-1: the fresh moment-reset optimizer inherits the SAME bias_correction
+                    # gate as the main construction (ON only on the high-beta2 all-levers path). A fresh
+                    # AdamW resets step->0, so bias_correction correctly re-warms the reset moments.
                     opt = optim.AdamW(learning_rate=float(opt.learning_rate),
-                                      weight_decay=args.weight_decay)
+                                      weight_decay=args.weight_decay,
+                                      betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
+                                      bias_correction=_adam_bias_correction_for(
+                                          getattr(args, "adam_beta2", 0.999)))
                     opt.init(model.trainable_parameters())
                     mx.eval(opt.state)
                     print(json.dumps({"stage": "stage_transition_reset_moments", "epoch": ep,
@@ -2210,6 +2956,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "from_lane_engage": bool(_bnd_lane),
                                       "from_margin_saliency_engage": bool(_bnd_msal),
                                       "from_lane_thin_engage": bool(_bnd_lane_thin),
+                                      "from_lane_render_band_engage": bool(_bnd_band),
                                       "note": "AdamW m/v zeroed (fresh optimizer); spike-guard already "
                                       "re-treated; stale-momentum-through-landscape-change avoided"}),
                           flush=True)
@@ -2219,6 +2966,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
                 mag = recompute_self_orient(int8_dequant_params(ema_np))
                 _rebuild_cf_mx_cache()
+                _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
                 print(json.dumps({"stage": "reorient", "epoch": ep, "mean_abs_dir_feat": round(mag, 5)}), flush=True)
             # (config-review #4) ANNEAL softmax-temp hi->lo (cosine): start soft (gradients flow,
             # no RGB-level Gibbs) -> end sharp (the SDF partition pinned). Fixing T=0.1 reintroduces
@@ -2296,15 +3044,28 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             for s in range(0, P, args.accum_pairs):
                 chunk = order[s:s + args.accum_pairs]
                 accum = None
+                accum_seed = None   # #224 (5): seed grad accumulator (None unless --seed-islands)
                 lsum = 0.0
                 for pi_np in chunk:
                     pi = int(pi_np)
                     oh, mg = lstar_cache[pi]
-                    loss, grads = value_and_grad(
-                        model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
-                        args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
-                        args.eikonal_weight, args.length_weight,
-                    )
+                    if _dual_vg is None:
+                        loss, grads = value_and_grad(
+                            model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                            args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                            args.eikonal_weight, args.length_weight,
+                        )
+                    else:
+                        # #224 (5) dual co-grad: witness grads[0] (== the single-path grads, same loss/
+                        # params) + seed grads[1]. The seed leg is accumulated + shielded separately below.
+                        loss, (grads, sgrads) = _dual_vg(
+                            model.trainable_parameters(), seed_mod.trainable_parameters(),
+                            _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                            args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                            args.eikonal_weight, args.length_weight,
+                        )
+                        accum_seed = sgrads if accum_seed is None else tree_map(lambda a, b: a + b, accum_seed, sgrads)
+                        mx.eval(accum_seed)
                     mx.eval(loss, grads)  # materialize per pair (bound the lazy fwd+bwd graph)
                     lsum += float(loss)
                     accum = grads if accum is None else tree_map(lambda a, b: a + b, accum, grads)
@@ -2327,6 +3088,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     continue
                 opt.update(model, clipped)
                 mx.eval(model.parameters(), opt.state)
+                # #224 (5) SEED CONTAINMENT step: shield the seed grad (defend the seeded islands from
+                # the bulk-CE wash) then apply the SEPARATE seed AdamW. The shield touches ONLY the seed
+                # 'residual' leaf; the witness opt.update above + MD-decoupling below + grouped-backward
+                # are all UNTOUCHED (distinct optimizer + distinct param tree). Gated by the same spike
+                # skip as the witness step (only steps when the batch was not spike-skipped).
+                if seed_mod is not None and accum_seed is not None:
+                    _mean_sg = tree_map(lambda g, c=float(nb): g / c, accum_seed)
+                    _sg = _seed_shield(_mean_sg["residual"], seed_mod.residual, seed_spec)  # leaf-only shield
+                    seed_opt.update(seed_mod, {"residual": _sg})
+                    mx.eval(seed_mod.parameters(), seed_opt.state)
                 # DM1a (Stiefel-W): project the LIVE film.weight onto orthonormal columns AFTER the
                 # optimizer step, so PR(M)=PR(cov(code)) holds (to the projection's ~1e-2 residual) for
                 # the LIVE weight.
@@ -2351,6 +3122,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 ep_loss += batch_loss
             if args.mlx_device == "gpu":
                 mx.clear_cache()
+            # #224 (5) SEED SURVIVAL telemetry: mean |seed residual| ON the island support. The
+            # containment shield should keep this ABOVE ~0 (the seeded islands survive the bulk-CE
+            # wash); WITHOUT the shield the bulk wash drives it toward 0 (the failure this defends).
+            # Purely observational (never read back). Default OFF (seed_mod None) => never fires.
+            if seed_mod is not None and (ep % args.eval_every == 0 or ep == args.epochs):
+                _sr = np.asarray(seed_mod.residual)                       # (P,H,W,3)
+                _sm = np.stack([np.asarray(m) for m in seed_state["masks"]], axis=0)  # (P,H,W,1)
+                _mon = float(np.sum(np.abs(_sr) * _sm) / (np.sum(_sm) * 3.0 + 1e-9))
+                print(json.dumps({"stage": "seed_survival", "epoch": ep,
+                                  "mean_abs_seed_on_island": round(_mon, 5),
+                                  "containment_mode": str(args.containment_mode),
+                                  "note": "shield keeps seeded islands alive vs bulk-CE wash (advisory)"}),
+                      flush=True)
             if ep % args.eval_every == 0 or ep == args.epochs:
                 if args.async_verdict:
                     # FEED-em: offload the observational verdict to a background thread so the
@@ -2537,6 +3321,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="resume a run from a checkpoint: a run DIR (prefers levelset_resume_state.npz, "
                     "falls back to levelset_witness_ema_mlx.npz) OR an explicit npz. Restores decoder + "
                     "per-pair codes + EMA shadow + optimizer (best-effort) + the epoch position.")
+    ap.add_argument("--resume-allow-lever-drift", action=argparse.BooleanOptionalAction, default=False,
+                    help="(F2) allow a --resume-from whose render-side LEVERS (lane_render_band / "
+                    "persistence_loss_weight / amplify_weight / lane_band_start_epoch / render_aa / "
+                    "hosc_beta_end / mod_dim) DIFFER from the checkpoint's training config. DEFAULT OFF "
+                    "= FAIL-CLOSED (a silent lever drop is a deterministic-repro violation). Set ON only "
+                    "for an INTENTIONAL warm-start re-treatment (loss/render-only levers add no params).")
     ap.add_argument("--freeze-decoder-fit-codes", type=str, default=None,
                     help="FEED-eo AMORTIZATION (days->hours): load the SHARED decoder from this level-set "
                     "EMA/deploy npz (trained on a SUBSET, e.g. n96/n192), FREEZE it, and fit ONLY the "
@@ -2593,6 +3383,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--lr-end", type=float, default=1e-4)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
+    # (#222 deep-math gap-1) Adam second-moment decay beta2. Default 0.999 == the MLX AdamW default
+    # betas=[0.9, 0.999] => BIT-IDENTICAL to the pre-flag path. The n600 accumulated-microbatch regime
+    # has only n = P/accum_pairs ~ 75 optimizer steps per epoch's worth of distinct gradient statistics;
+    # the arXiv 2603.02092 small-n rule 1-beta2 <~ (1-beta1^5)/n^3.5 => for beta1=0.9, n=75:
+    # (1-0.59049)/75^3.5 ~ 1.12e-7 => beta2* ~ 0.99999988. The default 0.999 (1-beta2=1e-3) is ~4 orders
+    # ABOVE that floor = under-smoothed for n~75. The launch config (witness_autoconfig all_levers)
+    # sets 0.9999999 (1-beta2=1e-7 < 1.12e-7 => clears the threshold). beta1 stays 0.9 (MLX default).
+    ap.add_argument("--adam-beta2", type=float, default=0.999,
+                    help="#222 AdamW second-moment decay beta2 (beta1 fixed 0.9). Default 0.999 = MLX "
+                    "default => bit-identical. Small-n (n~75 accum steps) optimum ~0.9999999 per "
+                    "arXiv 2603.02092 (1-beta2 <~ (1-beta1^5)/n^3.5).")
     ap.add_argument("--ema-decay", type=float, default=0.997)
     # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA (additive; default None == bit-identical to the
     # --ema-decay path). When set, from the resolved finisher-start epoch onward the EMA uses this
@@ -2977,6 +3778,116 @@ def main(argv: list[str] | None = None) -> int:
                     "0, matching the structured-init pretrain's pair-0 feats convention).")
     ap.add_argument("--lane-prior-phi1-dash-gate", action=argparse.BooleanOptionalAction, default=True,
                     help="BUILD 2: model the lane dash period (deg-3 centerline + dash). Default on.")
+    # =====================================================================================
+    # #224 CONSOLIDATED WIRE-IN — the 6 LANDED components. ALL flags DEFAULT-OFF => the
+    # default render+loss+init path is BYTE-IDENTICAL to the pre-#224 baseline (the
+    # non-negotiable acceptance bar; proven by tools/wire_in_224_byte_identical_smoke.py).
+    # Each flag routes to the REAL (tested) module function when ON (NO-FAKE). Nothing here
+    # fires unless explicitly enabled. Docs: docs/aa_sdf_observation_render_wire_in_spec.md +
+    # docs/analytic_lane_render_band_wire_in_spec.md + the in-module WIRE-IN SPECs.
+    # -------- (1) AA-SDF observation-map render (aa_sdf_observation_render; MEASURED #1 rep lever) --
+    ap.add_argument("--render-aa", choices=["none", "supersample", "ipe"], default="none",
+                    help="#224/#220 AA observation-map render mode (default none = byte-identical "
+                    "point-sample). supersample=render at ss*grid+box-down; ipe=mip-NeRF cone "
+                    "attenuation of the curvelet basis (analytical, ~0-compute).")
+    ap.add_argument("--aa-supersample", type=int, default=1,
+                    help="#224 supersample factor ss for --render-aa supersample (ss=1 byte-identical).")
+    ap.add_argument("--aa-ipe-footprint", type=float, default=1.0,
+                    help="#224 footprint std scale for --render-aa ipe (1.0 = one-pixel box).")
+    ap.add_argument("--aa-self-orient-fine-mode", type=str, default="refuse",
+                    choices=["refuse", "batch", "full"],
+                    help="#224 (Wave B) how --render-aa supersample + --self-orient sources the per-pair "
+                    "fine-grid dir-feats (measured: fine-EDT ~49ms/pair @ ss=2; per-pair fine dir-feat "
+                    "75.5MB). refuse (default) = fail-closed (memory/wall-clock tradeoff is the operator's "
+                    "call, see the guard). batch = MEMORY-SAFE bounded on-demand cache (~batch*75MB, e.g. "
+                    "0.6GB @ batch=8 vs 45GB all-600) but wall-clock-heavy (P fine-EDTs/epoch ~29s @ "
+                    "n600, since every pair renders every epoch => a batch-bounded cache thrashes). full "
+                    "= WALL-CLOCK-viable (fine dir-feats computed ONCE per --reorient-every, amortized) "
+                    "but ~45GB @ ss=2 n600 (on top of the ~41GB base cache => ~86GB; needs an n600 "
+                    "memory-fit validation the no-launch CONTAINMENT forbids this wave).")
+    ap.add_argument("--aa-self-orient-fine-cache-cap", type=int, default=16,
+                    help="#224 (Wave B) bounded per-pair fine dir-feat cache size for "
+                    "--aa-self-orient-fine-mode batch (memory ~ cap*75MB @ ss=2).")
+    # -------- (2) analytic-lane render-band (analytic_lane_render_band; FEED-dv #203/#213/#215) ------
+    ap.add_argument("--lane-render-band", action=argparse.BooleanOptionalAction, default=False,
+                    help="#224/FEED-dv: composite the analytic-lane render-band via compose_fn "
+                    "(class-1 render-time authority). DEFAULT OFF => byte-identical.")
+    ap.add_argument("--lane-band-softness", type=float, default=1.0,
+                    help="#224 AA-SDF coverage ramp width (px) on the band lateral edge.")
+    ap.add_argument("--lane-band-dash-forward-max-m", type=float, default=55.0,
+                    help="#224/#215 SegNet-Nyquist: dash-gate ONLY where forward < this (m); continuous beyond.")
+    ap.add_argument("--lane-band-uncertainty-source", type=str, default="witness",
+                    choices=["witness", "gt", "none"],
+                    help="#224 uncertainty margin source for the FP-killer gate (witness margin PROB; "
+                    "gt margin LOGIT; none disables the gate).")
+    ap.add_argument("--lane-band-tau", type=float, default=0.85,
+                    help="#224 uncertainty threshold (witness margin PROB [0,1]; gt margin LOGIT ~[0,13]).")
+    ap.add_argument("--lane-band-eps", type=float, default=0.35, help="#224 uncertainty ramp width.")
+    ap.add_argument("--lane-band-weight", type=float, default=1.0, help="#224 band strength (curriculum ramp).")
+    ap.add_argument("--lane-band-start-epoch", type=int, default=300, help="#224 engage the band at this epoch.")
+    # -------- (3) warp-real-luma frame0 pose carrier (warp_real_luma_frame0; PoseGauge.WARP_REAL_LUMA) --
+    ap.add_argument("--pose-carrier", action=argparse.BooleanOptionalAction, default=False,
+                    help="#224: render frame0 THROUGH the SE(3) ground-homography warp of the REAL "
+                    "keyframe luma (seg-free f0 -> real-luma pose carrier). Parity-dispatch render_fn "
+                    "(even code=f0->carrier, odd=f1->witness). Requires --w-pose>0. DEFAULT OFF => "
+                    "byte-identical (the witness's own f0 render).")
+    ap.add_argument("--pose-carrier-residual-mode", type=str, default="table", choices=["table", "film"],
+                    help="#224 pose-carrier residual parametrization: table (per-pair (P,6), byte-minimal) "
+                    "or film (code-conditioned MLP). Default table.")
+    ap.add_argument("--pose-carrier-residual-scale", type=float, default=1.0,
+                    help="#224 pose-carrier learnable-residual scale (dxi = scale * residual).")
+    ap.add_argument("--pose-carrier-s-t", type=float, default=None,
+                    help="#224 pose-carrier ground-homography translation scale s_t for the stored twist "
+                    "xi = xi_from_pose_calibration(gt_pose, s_t, s_r, pitch). None (default) => FIT s_t at "
+                    "startup on --pose-carrier-fit-pairs via the frozen CPU-torch PoseNet d_pose grid "
+                    "(self-calibrating, deterministic; mirrors tools/measure_warp_real_luma_frame0_dpose).")
+    ap.add_argument("--pose-carrier-s-r", type=float, default=0.0,
+                    help="#224 pose-carrier rotation scale s_r for the stored twist (default 0.0 = the "
+                    "measured d_pose-optimal whole-ground calibration).")
+    ap.add_argument("--pose-carrier-pitch", type=float, default=0.0,
+                    help="#224 pose-carrier ground-plane pitch (rad) for the homography geom (default 0.0).")
+    ap.add_argument("--pose-carrier-fit-pairs", type=int, default=24,
+                    help="#224 # pairs for the startup s_t fit grid (only when --pose-carrier-s-t is None).")
+    # -------- (4) persistence/topology loss (persistence_topology_loss; TopologyLossGauge) -----------
+    ap.add_argument("--persistence-loss-weight", type=float, default=0.0,
+                    help="#224/#218: weight of the soft-clDice + persistence-weighted island-recall "
+                    "term on the SHARED realized-through-R seg forward (births the finest-scale "
+                    "erasure-tail the CE drops). 0 (default) => branch skipped => byte-identical.")
+    ap.add_argument("--persistence-recall-weight", type=float, default=1.0,
+                    help="#224 w_recall inside the persistence class loss (clDice weight fixed 1.0).")
+    ap.add_argument("--cldice-iters", type=int, default=5,
+                    help="#224 soft-skeleton peeling iterations for the clDice connectivity term.")
+    ap.add_argument("--persistence-warmup-epochs", type=int, default=0,
+                    help="#224 linear warm-up (epochs) for the persistence weight (coarse->fine; "
+                    "0=full weight immediately).")
+    ap.add_argument("--persistence-classes", type=str, default="auto",
+                    help="#224 target classes: 'auto' self-detects the thin/small erasure-tail classes "
+                    "from the cached GT argmax (detect_persistence_tail_classes), or a comma list e.g. '1,3'.")
+    # -------- (5) island seed/containment/amplification (island_protection; IslandProtectionGauge) ---
+    ap.add_argument("--seed-islands", action=argparse.BooleanOptionalAction, default=False,
+                    help="#224/#208: EARLY-SEED the finest-scale islands (self-detected lane+movable) "
+                    "into the structured-init phi target (accelerant; ships 0 archive bytes). Requires "
+                    "--structured-init. DEFAULT OFF => byte-identical.")
+    ap.add_argument("--island-dilate-px", type=int, default=1, help="#224 annulus dilation of the island masks.")
+    ap.add_argument("--seed-blend", type=float, default=1.0,
+                    help="#224 island-seed blend (residual = blend*(gt_island_rgb - base) on the island).")
+    ap.add_argument("--seed-lr", type=float, default=0.02,
+                    help="#224 learning rate for the SEPARATE island-seed AdamW group (its own optimizer; "
+                    "the seed is NOT in the witness EMA/blob/deploy).")
+    ap.add_argument("--containment-mode", type=str, default="shield", choices=["freeze", "damp", "shield"],
+                    help="#224 how the seeded island grad is protected from the bulk-CE wash "
+                    "(shield=zero only the destructive same-sign component).")
+    ap.add_argument("--containment-damp", type=float, default=0.1, help="#224 damp factor for --containment-mode damp.")
+    ap.add_argument("--amplify-weight", type=float, default=0.0,
+                    help="#224/#208: weight of the island-birth term (rides the SHARED LEVER-4 _signed "
+                    "margin; NO 2nd saliency/SegNet forward). 0 (default) => skipped => byte-identical.")
+    ap.add_argument("--amplify-form", type=str, default="hinge", choices=["hinge", "softplus"],
+                    help="#224 island-birth penalty form.")
+    ap.add_argument("--amplify-margin-target", type=float, default=1.0,
+                    help="#224 the margin the island must WIN its pixels by.")
+    ap.add_argument("--amplify-persist", type=str, default="inverse_thickness",
+                    choices=["uniform", "inverse_thickness"],
+                    help="#224 island birth-weight kind (inverse_thickness up-weights the thinnest tail).")
     args = ap.parse_args(argv)
 
     # (review C2) --anneal-epochs guard: must be >= 1 when set (it is a cosine DENOMINATOR). A value
