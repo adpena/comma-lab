@@ -126,12 +126,14 @@ def test_read_blob_bytes_matches_pack():
     cfg = _tiny_cfg(False)
     params = _tiny_params(cfg)
     blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None)
-    manifest, base_b, code_b, pose = lbce._read_blob_bytes(blob)
+    manifest, base_b, code_b, pose, lane_b = lbce._read_blob_bytes(blob)
     assert manifest["n_pairs"] == cfg["n_pairs"]
     assert manifest["n_classes"] == cfg["n_classes"]
     assert manifest["render_h"] == cfg["render_h"] and manifest["render_w"] == cfg["render_w"]
     assert manifest["base_param_order"] and len(base_b) > 0 and len(code_b) > 0
     assert pose == b""
+    assert lane_b is None  # default-off: no 5th block, grammar identical to pre-Wave-E
+    assert "lane_render_band" not in manifest
 
 
 def test_int8_accounting_matches_canonical():
@@ -267,7 +269,7 @@ def test_numpy_oracle_reference_frames_shape(tmp_path):
     cfg = _tiny_cfg(False)
     params = _tiny_params(cfg, seed=4)
     blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None)
-    m, base_b, code_b, _pose = lbce._read_blob_bytes(blob)
+    m, base_b, code_b, _pose, _lane = lbce._read_blob_bytes(blob)
     import brotli
 
     flat = np.frombuffer(brotli.decompress(base_b), dtype=np.int8)
