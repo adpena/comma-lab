@@ -161,6 +161,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--epochs", type=int, default=1000)
     ap.add_argument("--aggressive", action="store_true",
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
+    ap.add_argument("--all-levers", action="store_true",
+                    help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact): "
+                    "AA-SDF ipe render + analytic lane-render-band + persistence/topology loss + "
+                    "island-birth amplification + annealed hosc 1->4 + l7 DEMOTED + verdict-pairs 0 + "
+                    "mod-dim 19 (Whitney floor) + adam-beta2 0.9999999. Default OFF => attribution-clean "
+                    "proven_base baseline.")
     ap.add_argument("--out-dir", default=None,
                     help="run out-dir (default: experiments/results/levelset_n<N>_witness_<utc>)")
     ap.add_argument("--label", default=None, help="daemon label (default: derived from out-dir)")
@@ -180,14 +186,15 @@ def main(argv: list[str] | None = None) -> int:
 
     overfit = not args.aggressive
     cfg = wac.derive_config(args.gt_cache, num_pairs=args.num_pairs,
-                            overfit=overfit, epochs=args.epochs)
+                            overfit=overfit, epochs=args.epochs, all_levers=args.all_levers)
 
     out_dir = Path(args.out_dir) if args.out_dir else (
         _REPO / "experiments" / "results" / f"levelset_n{args.num_pairs}_witness_{_utc()}")
     label = args.label or f"levelset_witness_{out_dir.name}"
 
     print(f"# launch_witness_run {wac.ADVISORY_TAG}  pointer 0.19110 UNMOVED")
-    print(f"# clip={args.gt_cache} num_pairs={args.num_pairs} epochs={args.epochs} overfit={overfit}")
+    print(f"# clip={args.gt_cache} num_pairs={args.num_pairs} epochs={args.epochs} "
+          f"overfit={overfit} all_levers={args.all_levers}")
     print(f"# out_dir={out_dir}")
     if not (_REPO / args.gt_cache).exists() and not Path(args.gt_cache).exists():
         print(f"# NOTE: gt-cache {args.gt_cache} not found on disk -> gt regen required at launch",
