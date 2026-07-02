@@ -1587,11 +1587,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         model.pose_carrier = pose_carrier.impl   # child-attach: dxi joins model.trainable_parameters()
         mx.eval(model.parameters())
         print(json.dumps({"stage": "pose_carrier", "residual_mode": str(args.pose_carrier_residual_mode),
+                          "source": str(getattr(args, "pose_carrier_source", "real_keyframe")),
                           "s_t": round(_pc_st, 5), "s_r": _pc_sr, "pitch": _pc_pitch,
                           "s_t_fit": ({str(k): round(v, 3) for k, v in _pc_fit.items()} if _pc_fit else None),
                           "native_hw": [_pc_nat_h, _pc_nat_w], "n_pairs": P,
-                          "note": "frame0 real-luma SE(3)-warp pose carrier; residual co-grad via "
-                          "child-attach (ONE value_and_grad + opt + EMA); advisory; pointer 0.19110 UNMOVED"}),
+                          "note": (("STORE-NOTHING: frame0 = warp(witness's OWN render, xi); stores ONLY "
+                                    "xi/H (~0 marginal bytes)" if str(getattr(args, "pose_carrier_source",
+                                    "real_keyframe")) == "generated" else
+                                    "frame0 real-luma SE(3)-warp pose carrier (stored keyframe)")
+                                   + "; residual co-grad via child-attach (ONE value_and_grad + opt + EMA); "
+                                     "advisory; pointer 0.19110 UNMOVED")}),
               flush=True)
 
     ema = MlxEMA(model, decay=args.ema_decay)
@@ -1800,23 +1805,49 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # child-attach. Default OFF (pose_carrier is None) => render_fn unchanged => byte-identical.
     if pose_carrier is not None:
         _pc_witness_render = _render_R if (_aa_on or _use_chain) else render_through_R_mlx
-
-        def _pc_gt_f0_provider(pi: int):
-            # native-res (H,W,3) REAL keyframe luma as mx float32; per-call (transient, no P-length
-            # fp32 cache -> n600-memory-safe; the uint8 GT already resides in gt.gt_f0).
-            return mx.array(np.asarray(gt.gt_f0[pi], np.float32))
+        _pc_source_generated = str(getattr(args, "pose_carrier_source", "real_keyframe")) == "generated"
 
         _pc_code_provider = None
         if str(args.pose_carrier_residual_mode) == "film":
             def _pc_code_provider(pi: int):
                 return model.code[2 * pi + 0]   # frame0 per-pair code for the FiLM residual MLP
 
-        render_fn = pose_carrier.make_pair_render_dispatch(
-            _pc_witness_render, _pc_gt_f0_provider, code_provider=_pc_code_provider)
+        if _pc_source_generated:
+            # #205 STORE-NOTHING-but-xi: frame0 = warp(the witness's OWN plain frame0 render, xi_eff).
+            # NO stored keyframe -> stores ONLY xi/H (~0 marginal bytes; the render is FREE, rule-118).
+            # The plain (no-compose) witness f0 render is up-sampled to camera-native (the R "up" step,
+            # == the byte-close store_nothing warp source _R), then the carrier warps it + R-downs to
+            # SEG. The dxi residual co-grads THROUGH the witness f0 render (the co-adaptation).
+            from tac.local_acceleration.pr95_hnerv_mlx_training import (
+                CAMERA_HW as _PC_CAMERA_HW,
+                apply_contest_faithful_roundtrip_nhwc as _pc_up_to_camera,
+            )
+            _pc_impl = pose_carrier.impl
+
+            def render_fn(model, coord_feats, code_idx, rh, rw):
+                if int(code_idx) % 2 == 1:  # f1 -> witness render (drives d_seg)
+                    return _pc_witness_render(model, coord_feats, code_idx, rh, rw)
+                # f0 -> STORE-NOTHING: the witness's OWN plain frame0 render, up to camera-native, warped.
+                pair_idx = int(code_idx) // 2
+                rgb = mx.reshape(model(coord_feats, code_idx), (1, rh, rw, 3))
+                src_native = _pc_up_to_camera(rgb, output_hw=_PC_CAMERA_HW, ste_round=True)[0]
+                code_vec = model.code[2 * pair_idx] if (_pc_code_provider is not None) else None
+                return _pc_impl.render_f0(src_native, pair_idx, code_vec, ste_round=True)
+        else:
+            def _pc_gt_f0_provider(pi: int):
+                # native-res (H,W,3) REAL keyframe luma as mx float32; per-call (transient, no P-length
+                # fp32 cache -> n600-memory-safe; the uint8 GT already resides in gt.gt_f0).
+                return mx.array(np.asarray(gt.gt_f0[pi], np.float32))
+
+            render_fn = pose_carrier.make_pair_render_dispatch(
+                _pc_witness_render, _pc_gt_f0_provider, code_provider=_pc_code_provider)
         print(json.dumps({"stage": "pose_carrier_render_dispatch", "residual_mode": str(args.pose_carrier_residual_mode),
+                          "source": ("generated" if _pc_source_generated else "real_keyframe"),
                           "witness_render": ("aa/chain" if (_aa_on or _use_chain) else "bare"),
-                          "note": "parity dispatch (even code=f0->carrier warp, odd=f1->witness) wired "
-                          "into make_loss_fn(render_fn=...); advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                          "note": ("STORE-NOTHING: frame0 = warp(witness's OWN render, xi); stores ONLY xi/H"
+                                   if _pc_source_generated else
+                                   "parity dispatch (even code=f0->carrier warp of the stored real keyframe, "
+                                   "odd=f1->witness)") + "; advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
     base_loss = make_loss_fn(
         adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
@@ -2251,11 +2282,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     def _pc_verdict_f0_uint8(pi: int, deploy: dict[str, np.ndarray]) -> np.ndarray:
-        """#224 pose-carrier NO-FAKE verdict frame0: warp the REAL keyframe luma by the DEPLOYED
+        """#224/#205 pose-carrier NO-FAKE verdict frame0: warp the carrier SOURCE by the DEPLOYED
         (EMA-shadow, int8-dequant) carrier twist xi_eff, so the advisory d_pose measures what the
-        carrier actually produces (NOT the witness's own f0). xi_stored uses the original fp32 table
-        (the stored twist ships fp16, not int8; the trained residual dxi rides the deploy dict).
-        Native-res uint8 (874x1164x3) matching the witness f1 verdict contract + cpu_verdict_d_pose."""
+        carrier actually produces. xi_stored uses the original fp32 table (the stored twist ships fp16,
+        not int8; the trained residual dxi rides the deploy dict). Native-res uint8 (874x1164x3)
+        matching the witness f1 verdict contract + cpu_verdict_d_pose.
+
+        SOURCE (per --pose-carrier-source): real_keyframe (default) warps the STORED gt_f0;
+        generated (STORE-NOTHING) warps the witness's OWN plain frame0 render up-to-camera (== the
+        byte-close store_nothing warp source: _fwd_numpy(f0 code) -> _torch_R_to_camera_uint8), so the
+        advisory d_pose reflects the store-nothing decode (NOT the real keyframe)."""
         from tac.boundary_math.warp_real_luma_frame0 import warp_frame0_uint8_numpy as _pc_warp_u8
         xi = np.asarray(pose_carrier_xi_stored[pi], np.float64)
         scale = float(args.pose_carrier_residual_scale)
@@ -2272,7 +2308,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             h = 0.5 * h * (1.0 + erf(h / np.sqrt(2.0)))    # exact gelu (matches mlx.nn.gelu)
             dxi = (h @ w_out.T + b_out).reshape(-1)
         xi_eff = xi + scale * dxi
-        return _pc_warp_u8(np.asarray(gt.gt_f0[pi]), xi_eff, pose_carrier_geom)
+        if str(getattr(args, "pose_carrier_source", "real_keyframe")) == "generated":
+            # STORE-NOTHING: warp the witness's OWN plain frame0 render (up to camera-native uint8),
+            # not the stored real keyframe -> the same source the store_nothing byte-close decodes.
+            rgb, _phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + 0])
+            src_native = _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
+        else:
+            src_native = np.asarray(gt.gt_f0[pi])
+        return _pc_warp_u8(src_native, xi_eff, pose_carrier_geom)
 
     def _render_numpy_deploy(deploy: dict[str, np.ndarray], pi: int, fk: int) -> np.ndarray:
         """THE ONE CODEPATH (fp32 numpy, deploy-faithful) — same forward the byte-close/inflate use.
@@ -3973,6 +4016,14 @@ def main(argv: list[str] | None = None) -> int:
                     "keyframe luma (seg-free f0 -> real-luma pose carrier). Parity-dispatch render_fn "
                     "(even code=f0->carrier, odd=f1->witness). Requires --w-pose>0. DEFAULT OFF => "
                     "byte-identical (the witness's own f0 render).")
+    ap.add_argument("--pose-carrier-source", type=str, default="real_keyframe",
+                    choices=["real_keyframe", "generated"],
+                    help="#205 pose-carrier frame0 SOURCE (Track B store-nothing-but-xi, 18927a1ae). "
+                    "real_keyframe (default) = warp the STORED real keyframe luma (gt_f0; COUNTS the "
+                    "keyframe in archive.zip). generated = STORE-NOTHING: warp the witness's OWN plain "
+                    "frame0 INR render (up to camera-native) by the twist -> stores ONLY xi/H (~0 "
+                    "marginal bytes; the render is FREE, rule-118). The dxi residual co-adapts to the "
+                    "witness-render warp. Default real_keyframe => byte-identical (unchanged wiring).")
     ap.add_argument("--pose-carrier-residual-mode", type=str, default="table", choices=["table", "film"],
                     help="#224 pose-carrier residual parametrization: table (per-pair (P,6), byte-minimal) "
                     "or film (code-conditioned MLP). Default table.")
