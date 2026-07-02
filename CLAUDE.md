@@ -347,6 +347,26 @@ other unit: automated · world-class · recursively-adversarial-reviewed · deep
 `upstream/evaluate.py` n600 exact row. **Comprehensive deep-math + meta version:
 `docs/triality_dag_dsl_equations_deepmath.md`.**
 
+## Capstone θ* witness trainer — canonical entry point — NON-NEGOTIABLE
+
+**The LIVE launch-path trainer for ALL capstone θ* / level-set witness work is
+`experiments/train_levelset_witness_realized_through_R_mlx.py`** (the ~208 KB entry point
+invoked by `tools/launch_witness_run.py:59` (`_TRAINER`) + `src/tac/witness_autoconfig.py:576`).
+It **imports** the shared primitives from **`experiments/train_witness_realized_through_R_mlx.py`**
+(the ~150 KB BASE: `render_through_R_mlx` compose-hook, `render_batch_through_R_mlx`,
+`make_loss_fn`, `build_witness_module`, the base argparse). **Rule: edit/wire capstone θ* levers
+into the LEVELSET trainer** — it carries the inline default-off levers (self-orient directional
+basis, lane-edge, margin-saliency LEVER-4, thin-lane, UNIWARD `msal_uni`, eikonal, length;
+COMPOSE, do NOT duplicate); use the BASE only for the shared primitives it exports. **Auditing or
+grepping the base file alone MISSES the live launch levers** (the 2026-07-01 wiring-audit
+near-miss — the base's 84 flags are a SUBSET of the levelset entry point). Launch config default =
+`witness_autoconfig.proven_base`. **Activation/curriculum caveat (MEASURED, DAG FEED 2026-06-25a +
+FEED-ly): fixed-β hosc DIVERGES (tanh(β·sin) saturation → vanishing-grad → AdamW random-walk →
+d_seg RISES); the launch config must use `step_basis` (the stable trainable-slope survivor) OR
+annealed-hosc (β 1.0→4.0), NEVER fixed β=4. l7 is a measured DEFECT (L∞ sharpening inside a
+smoothing/viscosity flow = the d_seg-decoupling) — demote it from the default curriculum before
+launch.** Memory: `[[fine-tune-config-wiring-audit-chart-vs-loss-crux]]`.
+
 ## Vehicle Operating System — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator binding directive 2026-06-09 (the fleet-wide-meta-bug crux). The repeating failure was
