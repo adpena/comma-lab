@@ -1043,7 +1043,14 @@ def lane_band_rd_rate_report(
         dq[1:] = Q[1:] - Q[:-1]
     presence_bytes = int(np.packbits(presence.reshape(-1)).nbytes) if presence.size else 0
     # order-0 Shannon floor of the delta stream (per-dim), for "is brotli near-optimal?"
+    # + the per-dim-TYPE breakdown (summed over slots): shows WHERE the residual entropy
+    # lives. If it concentrates in the ego-swept dims (centerline c1/c2/c3 curvature +
+    # forward_range), the residual is EGO-MOTION-bound -> L1 SE(3) ego-factorization is the
+    # lever that collapses it (a better entropy coder cannot; the residual is information-bound).
+    _DIM_TYPE_NAMES = ["c3", "c2", "c1", "c0", "hw1", "hw0", "dash_period", "dash_phase",
+                       "dash_duty", "fwd0", "fwd1"]
     shannon_bits = 0.0
+    per_dim_type_floor_bytes: dict[str, float] = {}
     ptc1_bytes: int | None = None
     try:
         from tac.optimization.pose_trajectory_entropy import (
@@ -1051,14 +1058,20 @@ def lane_band_rd_rate_report(
             encode_pose_trajectory,
         )
 
+        type_bits = np.zeros(_RD_D_SLOT, np.float64)
         for k in range(D):
-            shannon_bits += float(_symbol_entropy_bits(dq[:, k]))
+            b = float(_symbol_entropy_bits(dq[:, k]))
+            shannon_bits += b
+            type_bits[k % _RD_D_SLOT] += b
+        per_dim_type_floor_bytes = {
+            _DIM_TYPE_NAMES[i]: float(type_bits[i] / 8.0) for i in range(_RD_D_SLOT)}
         # PTC1 real range-coded bytes (the entropy-coder lower bound; adds constriction dep at decode)
         if D:
             ptc1_payload = encode_pose_trajectory(M, deltas=steps_full)
             ptc1_bytes = int(len(ptc1_payload)) + presence_bytes
     except Exception:  # constriction/pose_trajectory_entropy unavailable -> skip the comparison
         shannon_bits = float("nan")
+        per_dim_type_floor_bytes = {}
         ptc1_bytes = None
     # induced geometric lateral RMS error from quantization (observability; not d_seg)
     dequant_M = Q.astype(np.float64) * steps_full if D else np.zeros((P, 0))
@@ -1087,6 +1100,7 @@ def lane_band_rd_rate_report(
         "rd_vs_naive_ratio": (len(rd_brotli) / len(naive_brotli)) if naive_brotli else float("nan"),
         "presence_bitmap_bytes": presence_bytes,
         "delta_stream_shannon_floor_bytes": (shannon_bits / 8.0) if shannon_bits == shannon_bits else float("nan"),
+        "delta_floor_bytes_per_dim_type": per_dim_type_floor_bytes,  # WHERE the residual entropy lives (L1 evidence)
         "ptc1_range_coded_bytes": ptc1_bytes,
         "ptc1_note": "constriction range-coder lower bound (adds a constriction inflate dep; brotli is the default)",
         "induced_lateral_rms_m": lat_rms,
