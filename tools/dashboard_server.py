@@ -127,6 +127,18 @@ class Config:
     flow_seq_cache_dir: str = ".omx/tmp/dash_flow_seq"  # sanctioned repo-local ephemeral scratch
     flow_seq_rss_mb: int = 7000          # the subprocess's OWN safe_run RSS cap (isolated group)
     flow_seq_timeout_s: int = 2400       # the subprocess's OWN safe_run wall-clock cap (40 min)
+    # ORACLE tab (Tab 1): "the detector I built, and the world it reads" — the frozen scorer +
+    # the openpilot physical priors (lane band -> d_seg, ego-ξ screw -> d_pose) + the SegNet
+    # detectability field. STATIC: depends only on the GT cache (never changes), so it renders
+    # ONCE via a DETACHED governed safe_run subprocess (own process group + own RSS cap, CPU-only,
+    # numpy+matplotlib, NO torch/SegNet/GPU) and is cached to disk. Light (~170 MB peak, ~2 s).
+    oracle_enable: bool = True
+    oracle_gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"  # 6 pairs, ~48 MB
+    oracle_frames: str = "0,2,4"         # representative frames for the physical-prior atlas
+    oracle_cache_dir: str = ".omx/tmp/dash_oracle"  # sanctioned repo-local ephemeral scratch
+    oracle_rss_mb: int = 2600            # the subprocess's OWN safe_run RSS cap (isolated group)
+    oracle_timeout_s: int = 420          # the subprocess's OWN safe_run wall-clock cap (7 min)
+    oracle_dpi: int = 80
 
     def resolved_glob(self) -> str:
         if self.log_glob:               # explicit --log-glob is a hard override
@@ -171,6 +183,13 @@ def config_from_env() -> Config:
         flow_seq_cache_dir=e("DASH_FLOW_SEQ_CACHE_DIR", ".omx/tmp/dash_flow_seq"),
         flow_seq_rss_mb=int(e("DASH_FLOW_SEQ_RSS_MB", "7000")),
         flow_seq_timeout_s=int(e("DASH_FLOW_SEQ_TIMEOUT_S", "2400")),
+        oracle_enable=e("DASH_ORACLE_ENABLE", "1") not in ("0", "false", "False"),
+        oracle_gt_cache=e("DASH_ORACLE_GT_CACHE", "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"),
+        oracle_frames=e("DASH_ORACLE_FRAMES", "0,2,4"),
+        oracle_cache_dir=e("DASH_ORACLE_CACHE_DIR", ".omx/tmp/dash_oracle"),
+        oracle_rss_mb=int(e("DASH_ORACLE_RSS_MB", "2600")),
+        oracle_timeout_s=int(e("DASH_ORACLE_TIMEOUT_S", "420")),
+        oracle_dpi=int(e("DASH_ORACLE_DPI", "80")),
     )
 
 
@@ -300,6 +319,109 @@ def _resume_chain_logs(latest):
     return chain
 
 
+# ───────────────────────── TRIALITY (data-driven, self-updating) ─────────────────────────
+_TRIALITY_CACHE: dict = {"ts": 0.0, "data": None}
+_TRIALITY_TTL_S = 180.0
+
+
+def _latest_dag_feeds(n: int = 8) -> dict:
+    """The last N ``### DAG FEED ...`` headers from the newest sub015 DAG file (the
+    lab TRAJECTORY leg). Pure file IO — never mutates the DAG (other work owns it)."""
+    import glob
+    import re
+    files = sorted(glob.glob(".omx/research/sub015_DAG_*.md"),
+                   key=lambda p: os.path.getmtime(p) if os.path.exists(p) else 0.0)
+    if not files:
+        return {"ok": False, "reason": "no sub015 DAG file found"}
+    path = files[-1]
+    feeds: list[dict] = []
+    pat = re.compile(r"^#+\s*DAG FEED\s+(?P<tick>[0-9A-Za-z\-]+)\s*\((?P<summary>.*)$")
+    try:
+        for line in open(path, encoding="utf-8", errors="replace"):
+            m = pat.match(line.strip())
+            if m:
+                summ = m.group("summary").rstrip()
+                if summ.endswith(")"):
+                    summ = summ[:-1]
+                feeds.append({"tick": m.group("tick"), "summary": summ[:320]})
+    except Exception as exc:
+        return {"ok": False, "reason": f"DAG read error: {exc}"}
+    return {"ok": True, "file": os.path.basename(path), "total": len(feeds),
+            "recent": feeds[-int(n):]}
+
+
+def _latest_equations(n: int = 8) -> dict:
+    """The last N registered canonical equations (the LAW leg) — read straight from the
+    JSONL registry ledger (no import; latest-row-wins by equation_id)."""
+    path = ".omx/state/canonical_equations_registry.jsonl"
+    if not os.path.exists(path):
+        return {"ok": False, "reason": "no canonical equations registry"}
+    latest: dict[str, dict] = {}
+    total = 0
+    try:
+        for line in open(path, encoding="utf-8", errors="replace"):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except Exception:
+                continue
+            total += 1
+            eid = row.get("equation_id") or row.get("id") or row.get("name")
+            if not eid:
+                continue
+            pay = row.get("equation_payload") or {}
+            desc = (pay.get("one_line_summary") or pay.get("name")
+                    or pay.get("latex_form") or row.get("notes") or "")
+            latest[eid] = {"id": str(eid), "desc": str(desc)[:220]}
+    except Exception as exc:
+        return {"ok": False, "reason": f"registry read error: {exc}"}
+    items = list(latest.values())[-int(n):]
+    return {"ok": True, "distinct": len(latest), "rows": total, "recent": items}
+
+
+def _dsl_summary() -> dict:
+    """The DSL (CONTROL leg) — the witness program + canonical gauge, introspected from
+    ``tac.witness_dsl`` (torch-free; lean-safe to import). Read-only (never edits the DSL)."""
+    try:
+        import tac.witness_dsl as w
+        prog = w.BASELINE
+        stages = [getattr(s, "name", str(s)) for s in getattr(prog, "stages", ())]
+        gauge = w.CANONICAL_GAUGE
+        gsum = {}
+        for f in ("warp", "carrier", "residual"):
+            v = getattr(gauge, f, None)
+            gsum[f] = getattr(v, "value", str(v)) if v is not None else None
+        return {"ok": True,
+                "program": {"epochs": getattr(prog, "epochs", None),
+                            "num_pairs": getattr(prog, "num_pairs", None),
+                            "stages": stages},
+                "gauge": gsum}
+    except Exception as exc:
+        return {"ok": False, "reason": f"witness_dsl introspection error: {exc}"}
+
+
+def triality_snapshot() -> dict:
+    """Assemble the data-driven TRIALITY payload (cached; TTL-refreshed). The three legs
+    self-update from the LIVE artifacts: DAG FEEDs (trajectory) + witness_dsl (control) +
+    canonical_equations registry (law). Advisory / NON-PROMOTABLE — a viz moves no pointer."""
+    now = time.time()
+    if _TRIALITY_CACHE["data"] is not None and (now - _TRIALITY_CACHE["ts"]) < _TRIALITY_TTL_S:
+        return _TRIALITY_CACHE["data"]
+    data = {
+        "ok": True,
+        "built_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "pointer": POINTER,
+        "dag": _latest_dag_feeds(),
+        "dsl": _dsl_summary(),
+        "equations": _latest_equations(),
+        "authority": "macOS-MLX training advisory · NON-PROMOTABLE",
+    }
+    _TRIALITY_CACHE.update(ts=now, data=data)
+    return data
+
+
 # ───────────────────────── access gate (pure, testable) ─────────────────────────
 def gate_decision(headers: dict, query_key: str | None, cookie_key: str | None,
                   access_key: str, strict_local: bool = False) -> str:
@@ -370,6 +492,16 @@ class LiveState:
         self._flowseq_done_mtime: float = 0.0          # ckpt mtime we already have output for
         self._flowseq_last_attempt: float = 0.0
         self._flowseq_err: str = ""
+        # ORACLE (Tab 1): STATIC physical-prior atlas — depends only on the GT cache. Rendered
+        # ONCE by a DETACHED governed safe_run subprocess (tools/oracle_dashboard_panels.py) and
+        # cached to disk; served on demand via /api/oracle. Bytes held here after the one ingest.
+        self._oracle_bytes: bytes | None = None        # the served oracle.json payload
+        self._oracle_meta: dict = {}                   # {built_at_utc,frames_shown,render_secs}
+        self._oracle_running: bool = False
+        self._oracle_proc = None                       # subprocess.Popen | None
+        self._oracle_stem: Path | None = None
+        self._oracle_last_attempt: float = 0.0
+        self._oracle_err: str = ""
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
         # cadence sub-state (per-log). DATA-DERIVED ONLY — NO hardcoded cadence prior /
@@ -544,7 +676,117 @@ class LiveState:
             except Exception as exc:
                 self._flowseq_err = f"flowseq orchestration error: {exc}"
                 print(json.dumps({"stage": "dashboard_server", "flowseq_error": str(exc)}), flush=True)
+
+        # ORACLE (Tab 1): render the STATIC physical-prior atlas ONCE (detached governed subprocess).
+        if with_witness and cfg.oracle_enable and self._oracle_bytes is None:
+            try:
+                self._maybe_oracle(now)
+            except Exception as exc:
+                self._oracle_err = f"oracle orchestration error: {exc}"
+                print(json.dumps({"stage": "dashboard_server", "oracle_error": str(exc)}), flush=True)
         return new_points
+
+    # ---- detached governed ORACLE render (STATIC physical-prior atlas; renders ONCE) ----
+    def _oracle_stem_for(self) -> Path:
+        cache = Path(self.cfg.oracle_gt_cache)
+        try:
+            mtime = int(cache.stat().st_mtime)
+        except OSError:
+            mtime = 0
+        key = f"{cache.stem}_{mtime}_f{self.cfg.oracle_frames.replace(',', '-')}"
+        return Path(self.cfg.oracle_cache_dir) / f"oracle_{key}"
+
+    def _maybe_oracle(self, now: float) -> None:
+        """Idempotent per tick: ingest a cached/finished ORACLE payload, poll a running
+        subprocess, or spawn ONE (static render; memory-gated, throttled)."""
+        cfg = self.cfg
+        stem = self._oracle_stem_for()
+        done = stem.with_suffix(".done")
+        out = stem.with_suffix(".json")
+        # 1) output already on disk (prior session or a just-finished subprocess) -> ingest.
+        if done.exists() and out.exists():
+            self._ingest_oracle(stem)
+            return
+        # 2) a subprocess in flight?
+        if self._oracle_running:
+            rc = self._oracle_proc.poll() if self._oracle_proc is not None else 0
+            if rc is None:
+                return
+            self._oracle_running = False
+            if (self._oracle_stem and self._oracle_stem.with_suffix(".done").exists()):
+                self._ingest_oracle(self._oracle_stem)
+            else:
+                self._oracle_err = f"oracle subprocess exited rc={rc} without output"
+                print(json.dumps({"stage": "dashboard_server", "oracle_no_output": rc}), flush=True)
+            return
+        # 3) throttle + memory floor, then spawn ONCE.
+        if now - self._oracle_last_attempt < 60.0:
+            return
+        free = self._free_gib()
+        if free is not None and free < cfg.witness_min_free_gib:
+            print(json.dumps({"stage": "dashboard_server", "oracle_skip": "low_free_ram",
+                              "free_gib": round(free, 1)}), flush=True)
+            return
+        self._oracle_last_attempt = now
+        self._spawn_oracle(stem)
+
+    def _spawn_oracle(self, stem: Path) -> None:
+        """Launch tools/oracle_dashboard_panels.py DETACHED (own session/process group) under its
+        OWN tools/safe_run.py cap. CPU-only, numpy+matplotlib, NO torch — writes <stem>.json/.done."""
+        import subprocess
+        cfg = self.cfg
+        tools = Path(__file__).resolve().parent
+        repo = tools.parent
+        stem.parent.mkdir(parents=True, exist_ok=True)
+        inner = [
+            sys.executable, str(tools / "oracle_dashboard_panels.py"),
+            "--gt-cache", cfg.oracle_gt_cache, "--frames", cfg.oracle_frames,
+            "--dpi", str(cfg.oracle_dpi),
+            "--out", str(stem.with_suffix(".json")), "--done", str(stem.with_suffix(".done")),
+        ]
+        cmd = [
+            sys.executable, str(tools / "safe_run.py"),
+            "--rss-mb", str(cfg.oracle_rss_mb), "--timeout", str(cfg.oracle_timeout_s),
+            "--label", "oracle_atlas", "--", *inner,
+        ]
+        log_path = stem.with_suffix(".log")
+        try:
+            logf = open(log_path, "ab")
+            self._oracle_proc = subprocess.Popen(
+                cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
+                start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
+            self._oracle_running = True
+            self._oracle_stem = stem
+            self._oracle_err = ""
+            print(json.dumps({"stage": "dashboard_server", "oracle_spawn": True,
+                              "pid": self._oracle_proc.pid, "stem": str(stem)}), flush=True)
+        except Exception as exc:
+            self._oracle_running = False
+            self._oracle_err = f"oracle spawn failed: {exc}"
+            print(json.dumps({"stage": "dashboard_server", "oracle_spawn_error": str(exc)}), flush=True)
+
+    def _ingest_oracle(self, stem: Path) -> None:
+        """Load a finished ORACLE payload; hold its bytes for /api/oracle (served once, static)."""
+        try:
+            self._oracle_bytes = stem.with_suffix(".json").read_bytes()
+            dj = json.loads(stem.with_suffix(".done").read_text())
+            self._oracle_meta = {"built_at_utc": dj.get("built_at_utc"),
+                                 "frames_shown": dj.get("frames_shown"),
+                                 "render_secs": dj.get("render_secs")}
+            self._oracle_err = ""
+            print(json.dumps({"stage": "dashboard_server", "oracle_ingested": True,
+                              "bytes": len(self._oracle_bytes),
+                              "frames": dj.get("frames_shown")}), flush=True)
+        except Exception as exc:
+            self._oracle_err = f"oracle load error: {exc}"
+
+    def _oracle_ready_public(self) -> dict:
+        """Lightweight ORACLE readiness (the client fetches /api/oracle on ok)."""
+        if self._oracle_bytes is not None and self._oracle_meta:
+            return {"ok": True, **self._oracle_meta}
+        status = ("rendering" if self._oracle_running
+                  else ("error" if self._oracle_err else "idle"))
+        return {"ok": False, "status": status, "err": self._oracle_err or None}
 
     # ---- detached governed 600-pass: WITNESS panels + FLOW n600 video sequence ----
     def _free_gib(self) -> float | None:
@@ -853,6 +1095,30 @@ def create_app(cfg: Config) -> Starlette:
                             headers={"Cache-Control": "no-store"})
         return JSONResponse(state._flow_ready_public(), status_code=202)
 
+    async def api_oracle(request):
+        # The Tab-1 ORACLE physical-prior atlas (fetched ONCE; static — depends only on the GT
+        # cache). Served as pre-built bytes when ready, else a 202 readiness ping.
+        qk, ck = _req_keys(request)
+        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+            return JSONResponse({"error": "access key required"}, status_code=401)
+        if state._oracle_bytes is not None:
+            from starlette.responses import Response
+            return Response(state._oracle_bytes, media_type="application/json",
+                            headers={"Cache-Control": "no-store"})
+        return JSONResponse(state._oracle_ready_public(), status_code=202)
+
+    async def api_triality(request):
+        # The Tab-6 TRIALITY payload — DATA-DRIVEN, self-updating from the LIVE artifacts
+        # (DAG FEEDs + witness_dsl + canonical_equations registry). Computed off-loop (cached).
+        qk, ck = _req_keys(request)
+        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+            return JSONResponse({"error": "access key required"}, status_code=401)
+        try:
+            data = await asyncio.get_event_loop().run_in_executor(None, triality_snapshot)
+        except Exception as exc:
+            return JSONResponse({"ok": False, "reason": f"triality error: {exc}"}, status_code=200)
+        return JSONResponse(data, headers={"Cache-Control": "no-store"})
+
     async def healthz(request):
         # ungated, reveals nothing sensitive (used by the supervisor + tunnel health)
         return JSONResponse({"ok": True, "watched": state.watched,
@@ -886,6 +1152,8 @@ def create_app(cfg: Config) -> Starlette:
         Route("/", index),
         Route("/api/state", api_state),
         Route("/api/flow_sequence", api_flow_sequence),
+        Route("/api/oracle", api_oracle),
+        Route("/api/triality", api_triality),
         Route("/healthz", healthz),
         WebSocketRoute("/ws", ws_endpoint),
     ]
@@ -1037,7 +1305,45 @@ padding:10px 10px 6px;min-width:0;overflow:hidden}
 /* footer */
 .foot{font-size:10.5px;color:var(--faint2);margin-top:22px;line-height:1.7;text-align:center;word-break:break-word}
 
+/* ORACLE tab (Tab 1) — the detector + openpilot physical priors + detectability field */
+.orc h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:16px 0 8px}
+.orc h3{font-size:12.5px;color:var(--goal);margin:20px 0 8px;letter-spacing:.4px}
+.orc p,.orc li{font-size:13px;color:var(--fg2);line-height:1.6}
+.orc b{color:var(--fg)}.orc code{background:#11141a;color:#9fc6ff;padding:1px 5px;border-radius:5px;font-size:12px;word-break:break-word}
+.orcintro{margin-bottom:6px}
+.orchdr{font-size:11.5px;color:var(--faint2);margin:8px 2px 2px;font-variant-numeric:tabular-nums}
+.orcstats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 4px}
+@media(min-width:680px){.orcstats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.orcstat{background:var(--panel);border:1px solid var(--grid);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.orcstat .ol{font-size:9.5px;color:var(--acc);letter-spacing:.5px;text-transform:uppercase;font-weight:700}
+.orcstat .ov{font-size:16px;color:var(--fg);font-weight:700;font-variant-numeric:tabular-nums}
+.orcstat .os{font-size:10.5px;color:var(--muted);line-height:1.35}
+.orcgrid{display:flex;flex-direction:column;gap:16px;margin:14px 0 6px}
+.orcfig{margin:0;background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:10px;overflow-x:auto}
+.orcfig img{display:block;width:100%;max-width:100%;height:auto;border-radius:8px}
+.orcfig figcaption{font-size:11px;color:var(--muted);margin-top:7px;font-variant-numeric:tabular-nums}
+.orcxi{margin-top:20px}
+.orcxi img{display:block;width:100%;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--grid);background:var(--panel);margin-top:8px}
+.orccredits{margin-top:22px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.orccredits ul{padding-left:20px;margin:6px 0}.orccredits li{margin-bottom:6px;font-size:12.5px}
+.wch{font-size:10px;color:var(--acc);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+.wcnote{font-size:10.5px;color:var(--faint2);margin-top:10px;line-height:1.55}
+
+/* WHY / HOW tab (Tab 4) — deep-math museum stub */
+.why h2{font-size:clamp(14px,3.6vw,17px);color:var(--acc);letter-spacing:.4px;margin:16px 0 6px}
+.why p,.why li{font-size:13.5px;color:var(--fg2);line-height:1.6}.why b{color:var(--fg)}
+.why .m{color:var(--muted);font-size:12.5px}
+.whywrap{background:var(--panel);border:1px solid var(--grid);border-radius:14px;padding:20px 22px;margin-top:12px}
+.whycoming{font-size:12px;color:var(--goal);letter-spacing:1.2px;text-transform:uppercase;font-weight:700;margin:0 0 10px}
+.why ul{padding-left:20px}.why li{margin-bottom:8px}
+
 /* triality tab */
+.cardsub{font-size:9px;color:var(--faint2);font-weight:500;letter-spacing:.4px;text-transform:none;margin-left:6px}
+.tribuilt{font-size:11px;color:var(--faint2);margin:6px 2px 12px;font-variant-numeric:tabular-nums}
+.trileg{display:flex;flex-direction:column;gap:6px}
+.trirow{font-size:11.5px;color:var(--fg2);line-height:1.5;word-break:break-word}
+.trirow .tk{display:inline-block;background:#11141a;color:#9fc6ff;padding:0 5px;border-radius:4px;font-size:10px;margin-right:6px;font-weight:600}
+.trimeta{font-size:10px;color:var(--faint2);letter-spacing:.3px;margin-bottom:2px}
 .tri h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:22px 0 8px}
 .tri p,.tri li{font-size:13.5px;color:var(--fg2);line-height:1.6}
 .tri .m{color:var(--muted);font-size:12.5px}
@@ -1209,13 +1515,57 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   </span>
 </div>
 <div class="tabs">
-  <div class="tab on" data-tab="live">LIVE</div>
-  <div class="tab" data-tab="witness">WITNESS</div>
-  <div class="tab" data-tab="flow">FLOW</div>
-  <div class="tab" data-tab="tri">TRIALITY &middot; PLAN</div>
+  <div class="tab on" data-tab="oracle">ORACLE</div>
+  <div class="tab" data-tab="flow">WITNESS</div>
+  <div class="tab" data-tab="witness">RESIDUAL</div>
+  <div class="tab" data-tab="whyhow">WHY / HOW</div>
+  <div class="tab" data-tab="live">DESCENT</div>
+  <div class="tab" data-tab="tri">TRIALITY</div>
 </div>
 
-<section id="tab-live">
+<section id="tab-oracle" class="orc">
+  <div class="orcintro">
+    <h2>The detector I built &mdash; and the world it reads</h2>
+    <p>Before the witness, the <b>oracle</b>: the frozen contest scorer (Yousfi's comma10k
+    EfficientNet-B2 SegNet, whose argmax IS the d_seg authority), the <b>openpilot physical
+    priors</b> that structure the scene, and the scorer's own <b>detectability field</b>. This is
+    the world the witness must survive in. The thesis in one line:
+    <b>openpilot is the unified FREE physical prior for BOTH scored axes</b> &mdash; the lane
+    polynomial &rarr; the analytic lane band (<b>d_seg</b>), and the ego-motion screw &xi; &rarr;
+    the pose (<b>d_pose</b>). Every prior below is a REAL in-tree module, self-detecting its
+    classes (no hardcoded indices), fit to the EXACT frames the scorer's verdict uses.</p>
+    <div class="orchdr" id="orchdr">rendering the physical-prior atlas (governed CPU pass)&hellip;</div>
+  </div>
+  <div class="orcstats" id="orcstats"></div>
+  <div class="orcgrid" id="orcpanels"></div>
+  <div class="orcxi">
+    <h3>Ego-&xi; &mdash; the SE(3) screw twist across the segment</h3>
+    <p>The lane-optimal per-pair ego trajectory (<code>LaneOptimalEgoEstimator</code> over the
+    openpilot lane fit). The <b>same twist &xi;</b> that warps the partition for d_seg IS the pose
+    for d_pose (Chasles' theorem) &mdash; encode it once, spend it twice.</p>
+    <img id="orcxichart" alt="ego-ξ screw twist across the segment" />
+  </div>
+  <div class="orccredits">
+    <div class="wch">Physical priors wired &mdash; de-orphaned, not rebuilt</div>
+    <ul>
+      <li><b>openpilot lane band</b> (<code>analytic_lane_render_band.build_analytic_lane_band_prior</code>)
+      &mdash; deg-3 centerline fit to the GT class-1 argmax + AA-SDF range-dependent dash coverage;
+      the FREE inflate-time rasterizer (rule&nbsp;118). The <b>d_seg</b> physical prior.</li>
+      <li><b>ego-&xi; screw</b> (<code>ego_xi_trajectory.LaneOptimalEgoEstimator</code>, se(3) engine
+      <code>tac.lie</code>) &mdash; the SE(3) twist that is BOTH the partition-warp and the pose.
+      The <b>d_pose</b> physical prior, dual-use with d_seg.</li>
+      <li><b>ground-plane structure</b> (<code>road_horizon_component</code> +
+      <code>hood_static_component</code>) &mdash; the self-detected road/sky horizon + static ego hood
+      (the #139 static core).</li>
+      <li><b>detectability field &rho;_seg</b> &mdash; the SegNet top1&minus;top2 argmax margin; bright
+      where the argmax can flip = where d_seg lives = where the detector is most sensitive.</li>
+    </ul>
+    <div class="wcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
+    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</div>
+  </div>
+</section>
+
+<section id="tab-live" class="hide">
   <div class="runinfo" id="rdinfo">resolving run&hellip;</div>
   <div class="metrics" id="headline">
     <div class="stat hero">
@@ -1381,59 +1731,81 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   </div>
 </section>
 
+<section id="tab-whyhow" class="why hide">
+  <div class="whywrap">
+    <h2>Why &amp; how &mdash; the deep-math museum</h2>
+    <p class="whycoming">coming soon</p>
+    <p>A focused WebGPU exhibit of the two load-bearing proofs, built next:</p>
+    <ul>
+      <li><b>The optimal chart.</b> Why a piecewise-constant argmax target under a capacity limit wants a
+      step-native / partition-indicator basis (no Gibbs, O(1) params per edge, L&infin;-at-edge optimal) &mdash;
+      the topology-matched chart for the codim-1 separatrix, not a full-RGB reconstruction.</li>
+      <li><b>The screw / twist mechanism.</b> Why the SAME se(3) ego twist &xi; that warps the partition for
+      d_seg IS the pose for d_pose (Chasles) &mdash; encode it once, spend it twice; the dual-use that makes
+      the pose sidecar near-free.</li>
+    </ul>
+    <p class="m">This tab is a clean seam for the next agent's focused WebGPU build. Everything here is
+    advisory / NON-PROMOTABLE &mdash; the pointer is 0.19110 and UNMOVED.</p>
+  </div>
+</section>
+
 <section id="tab-tri" class="tri hide">
   <h2>One coherent object &mdash; the DAG &harr; DSL &harr; equations triality</h2>
-  <p>The lab is one object viewed three ways. The witness is a gauge-invariant target (the
-  frozen-scorer equivalence class); the three views below are the math, the program, and the trajectory of running it.</p>
+  <p>The lab is one object viewed three ways &mdash; and this tab reads them <b>live</b> from the
+  artifacts themselves (DAG FEEDs, the <code>tac.witness_dsl</code> program, the
+  <code>tac.canonical_equations</code> registry), so it self-updates as the campaign moves. A finding is
+  "known" only when it is expressible in all three and they AGREE; drift between legs is campaign-level
+  forgetting.</p>
+  <div class="tribuilt" id="tri_built">loading the three legs from the live artifacts&hellip;</div>
   <div class="cards">
-    <div class="card"><h3>System of equations</h3><p class="m">The MATH / grammar. ONE master action
-    <code>S_&tau; = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;rate</code>, with terms E0&ndash;E12 in
-    <code>tac.canonical_equations</code>. Every lever is a term / relaxation of this same action &mdash;
-    which is why composing levers is principled, not a sweep.</p></div>
-    <div class="card"><h3>DSL &mdash; the witness program</h3><p class="m">A declarative recursion+math front-end
-    (<code>tac.witness_dsl</code>) that COMPILES to the proven trainer CLI and VALIDATES every emitted flag
-    against the real argparse (never-invent-flags). Arms = <code>BASELINE.with_lever(&hellip;)</code>; the composed
-    optimum &theta;* = <code>compose</code> of the measured-positive levers.</p></div>
-    <div class="card"><h3>DAG &mdash; the lab trajectory</h3><p class="m">The dependency graph of
-    findings / experiments / decisions (the append-only FEEDs in
-    <code>sub015_DAG_&hellip;.md</code>). The campaign engine literally IS a DAG: nodes = arms,
-    edges = warm-start chains, sink = the &theta;* compose.</p></div>
+    <div class="card"><h3>DAG &mdash; state <span class="cardsub">the trajectory</span></h3>
+    <div class="trileg" id="tri_dag">&mdash;</div></div>
+    <div class="card"><h3>DSL &mdash; control <span class="cardsub">the program</span></h3>
+    <div class="trileg" id="tri_dsl">&mdash;</div></div>
+    <div class="card"><h3>equations &mdash; law <span class="cardsub">the master action</span></h3>
+    <div class="trileg" id="tri_eq">&mdash;</div></div>
   </div>
-  <p class="m">Above all three sits the GAUGE meta-layer: equivalent expressions (screw-twist vs per-class
-  homography warp; single-SDF vs MSDF carrier; stored vs learned residual) are different gauges with
-  gauge-dependent cost (counted bytes / d_seg-through-R), selected hard-gates-first &rarr; min-S &rarr; synergy.</p>
+  <p class="m">Master action <code>S_&tau; = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;rate</code>.
+  Above all three sits the <b>costate controller</b> &mdash; the 4th shadow (marginal-&Delta;S per byte,
+  never-regress) that turns the DSL from a passive program into an active controller (fire the lever with
+  the best &Delta;S/cost; POWERPLAY-style never-worsen).</p>
 
-  <h2>This run &mdash; from-scratch openpilot-seeded level-set witness</h2>
+  <h2>The organic-evolution lineage</h2>
+  <p class="m">task-aware compression (video-coding-for-machines) &rarr; <b>task-sufficient statistic</b>
+  (code the scorer's DECISION, not RGB; measured task-RD floor S_floor&asymp;0.118) &rarr;
+  <b>compression-as-intelligence</b> (Schmidhuber POWERPLAY: never-regress self-invented curriculum) &rarr;
+  the <b>costate controller</b> (marginal-&Delta;S/cost, never-regress) &mdash; one line, each stage the
+  natural generalization of the last.</p>
+
+  <h2>The ByteDance / EdgeBench convergence</h2>
+  <p class="m">Our own deep memo <code>edgebench_scaling_laws_deepdive_20260703T033159Z.md</code>: EdgeBench
+  (ByteDance Seed, 2026-07-02) is the <b>descriptive</b> log-sigmoid scaling law (R&sup2;=0.998) of the
+  <b>prescriptive</b> POWERPLAY we already hold. Its measured result &mdash; continuous experience beats
+  restarts (+6.9 @ 12h, and the gap GROWS with horizon) &mdash; is our durable-memory spine, measured. It is
+  reflexive: the paper's top curve is <b>Claude Opus 4.8</b> (this session's model); our campaign IS an
+  EdgeBench-class task, the DAG IS the latent task graph, and the campaign frontier
+  <code>&beta;&thinsp;x&thinsp;(1&minus;x)</code> is the SAME Fisher&ndash;KPP equation as the witness
+  boundary flow. Honest citation &mdash; the convergence is real, not manufactured.</p>
+
+  <h2>The council &mdash; the lenses</h2>
+  <p class="m"><b>Shannon</b> LEAD &middot; <b>Dykstra</b> / <b>Rudin</b> / <b>Daubechies</b> CO-LEADS &middot;
+  <b>Ballé</b> &middot; <b>Yousfi</b> &middot; <b>Fridrich</b> &middot; <b>Quantizr</b> &middot;
+  <b>Hotz</b> &middot; <b>Selfcomp</b> &middot; <b>MacKay</b> &middot; <b>Schmidhuber</b> + the grand council.
+  <b>Shannon&thinsp;/&thinsp;Ballé&thinsp;/&thinsp;Dykstra</b> bracket the rate&ndash;distortion spine
+  (the R(D) bound / the neural codec / the feasibility intersection); Yousfi + Fridrich are the
+  detection-game home turf (this contest IS inverse steganalysis).</p>
+
+  <h2>The campaign journey &mdash; honest</h2>
   <ul>
-    <li>A <b>nonlinear coordinate-INR witness</b> that amortizes the SegNet argmax partition directly
-    (scorer-only-trained, no full-RGB reconstruction) &mdash; OUR carrier, NOT a PR95/HNeRV reskin.</li>
-    <li><b>From scratch</b> with an <b>openpilot seeding prior</b>: <code>--structured-init</code> builds the
-    static-core partition SDFs (road/sky/hood/lane, self-detected) and <code>--lane-prior-phi1</code> injects the
-    openpilot deg-3 centerline SDF into the &phi;1 lane channel (the measured Road&harr;Lane separatrix; a
-    rule-118 FREE training-time init that ships 0 archive bytes).</li>
-    <li>Carrier: <code>hosc</code> activation + SIREN init, hidden 96 / mod 32, curvelet front-end
-    (<code>--self-orient</code>, directional Fourier bank) + <b>chroma</b> (a genuine d_seg actuator &mdash; SegNet reads RGB).</li>
-    <li>Curriculum: CE &rarr; tau-softplus (&tau;=0.3, the measured reachability floor) at ep <span id="b_tau">300</span>,
-    l7 / Muon stacking at ep <span id="b_l7">600</span>. Pose rides the stored-target sidecar
-    (<code>--w-pose 0</code>); the witness's sole binding controllable job is <b>d_seg</b>.</li>
-    <li><b>Binding unknown:</b> the realized-through-R d_seg as the seg-surrogate engages &mdash; does the
-    seeded basin + directional basis + chroma drive d_seg toward the sub-0.19 budget
-    (&lt;<span id="b_goal">0.00092</span>) and onward to sub-0.15 (&lt;0.00032)?</li>
+    <li>The grand-council-symposium apparatus made us <b>organized</b> enough to hold a decade-long program
+    without losing signal &mdash; the discipline is the scaffold, not the score.</li>
+    <li>Compute arc: we <b>burned cloud money</b>, then ported the whole loop to <b>MLX + custom Metal</b>
+    (fused-R, grouped-backward) &mdash; it now runs on the laptop, bit-identical to the numpy-fp32 authority.</li>
+    <li>Dual objective, <b>and not binary</b>: contest-overfit (openpilot-seeded, this exact drive) AND a
+    platform-agnostic, generalizable, scalable production value-generator &mdash; the same investment buys both.</li>
   </ul>
-
-  <h2>Next steps &mdash; toward a byte-closed exact row</h2>
-  <ol>
-    <li>Watch realized-through-R d_seg through CE &rarr; tau; adaptively stack l7 / Muon (extend / advance+reheat /
-    rollback-to-best) per the campaign policy.</li>
-    <li>Compose the measured-positive levers into &theta;* (the DSL <code>compose</code>); map the RD curve
-    (deterministic &harr; hybrid &harr; neural Pareto set), not one point.</li>
-    <li>Byte-close in the L13 task-space format + the stored pose sidecar; then run the dual exact eval
-    (contest-CPU AND contest-CUDA) on the EXACT archive bytes.</li>
-    <li>Only a measured exact row below <b>0.19110</b> moves the pointer &mdash; toward sub-0.19, then the
-    sub-0.15 target. Everything on this page is advisory until that row lands.</li>
-  </ol>
   <p class="m">Authority: <code>[macOS-MLX training advisory]</code> NON-PROMOTABLE. The exact score is the only
-  score; the pointer is 0.19110 and UNMOVED.</p>
+  score; the pointer is 0.19110 and UNMOVED. Everything on this page is a MEANS.</p>
 </section>
 
 </div>
@@ -1523,6 +1895,8 @@ function activateTab(t){
   if(which==="live") scheduleDraw();
   if(which==="witness") renderWitness();
   if(which==="flow"&&window.__flowActivate){try{window.__flowActivate();}catch(e){}}
+  if(which==="oracle") activateOracle();
+  if(which==="tri") activateTriality();
 }
 document.querySelectorAll(".tab").forEach(t=>{
   t.setAttribute("role","tab");t.setAttribute("tabindex","0");
@@ -1985,7 +2359,123 @@ function renderRunInfo(){
   el.innerHTML=META.run_info_html||"";
 }
 
-// ---------- witness tab (Tab 2): live comma10k 6-panel + tribute, streamed over the WS ----------
+// ---------- ORACLE tab (Tab 1): the detector + openpilot physical priors + detectability field ----------
+// Static payload (depends only on the GT cache) fetched ONCE from /api/oracle; 202 -> poll a few times.
+let ORACLE=null, _oracleFetching=false, _oracleTries=0;
+function activateOracle(){
+  if(ORACLE){renderOracle();return;}
+  if(_oracleFetching)return;
+  _oracleFetching=true;
+  fetch("/api/oracle",{cache:"no-store"}).then(r=>{
+    if(r.status===200)return r.json();
+    return r.json().then(j=>{_oracleFetching=false;_oracleReady(j);return null;});
+  }).then(d=>{
+    _oracleFetching=false;
+    if(d&&d.ok){ORACLE=d;renderOracle();}
+  }).catch(()=>{_oracleFetching=false;
+    const h=$("orchdr");if(h)h.textContent="oracle fetch failed — retrying on next visit.";});
+}
+function _oracleReady(j){
+  const h=$("orchdr"); if(!h)return;
+  if(j&&j.status==="rendering") h.textContent="rendering the physical-prior atlas (governed CPU pass, ~2 s)…";
+  else if(j&&j.status==="error") h.textContent="oracle render error: "+(j.err||"unknown");
+  else h.textContent="waiting for the physical-prior atlas (governed CPU pass)…";
+  if(_oracleTries++<40) setTimeout(activateOracle, 3000);
+}
+function renderOracle(){
+  const O=ORACLE; if(!O||!O.ok)return;
+  const hdr=$("orchdr"); if(hdr)hdr.style.display="none";
+  const st=$("orcstats");
+  if(st){
+    const roleName=i=>((O.classes||[]).find(c=>c.i===i)||{}).label||("class "+i);
+    const rec=(O.lane_band&&O.lane_band.band_recall_mean);
+    st.innerHTML=""+
+      _stat("lane band → d_seg", (rec!=null?(rec).toFixed(2)+" recall":"—"),
+            (O.lane_band?O.lane_band.total_lines:0)+" lines over "+O.n_frames+" frames")+
+      _stat("ego-ξ → d_pose", (O.xi?O.xi.mean_speed_ms.toFixed(1)+" m/s":"—"),
+            "estimator "+((O.xi&&O.xi.estimator_id)||"?")+" (SE(3) screw)")+
+      _stat("static core", roleName(O.roles?O.roles.hood:-1),
+            "self-detected hood · road "+roleName(O.roles?O.roles.road:-1))+
+      _stat("detectability", "ρ_seg margin", "bright = fragile separatrix = where d_seg lives");
+  }
+  const host=$("orcpanels");
+  if(host){
+    host.innerHTML="";
+    (O.panels||[]).forEach(p=>{
+      const fig=document.createElement("figure"); fig.className="orcfig";
+      const img=document.createElement("img");
+      img.src=p.atlas; img.alt="ORACLE physical-prior atlas · frame "+p.frame_idx;
+      const cap=document.createElement("figcaption");
+      cap.innerHTML="frame "+p.frame_idx+
+        " · lane recall "+(p.lane_recall!=null?p.lane_recall.toFixed(2):"—")+
+        " · ds "+(p.ds>=0?"+":"")+p.ds+"m · dψ "+(p.dpsi>=0?"+":"")+p.dpsi+"rad";
+      fig.appendChild(img); fig.appendChild(cap); host.appendChild(fig);
+    });
+  }
+  const xc=$("orcxichart"); if(xc&&O.xi_chart)xc.src=O.xi_chart;
+}
+function _stat(label,val,sub){
+  return "<div class='orcstat'><span class='ol'>"+label+"</span><span class='ov'>"+val+
+         "</span><span class='os'>"+(sub||"")+"</span></div>";
+}
+
+// ---------- TRIALITY tab (Tab 6): DATA-DRIVEN from the live DAG / DSL / equations artifacts ----------
+let _triFetching=false, _triAt=0;
+function activateTriality(){
+  const now=Date.now();
+  if(_triFetching)return;
+  if(now-_triAt<60000 && $("tri_dag") && $("tri_dag").dataset.loaded==="1")return;
+  _triFetching=true;
+  fetch("/api/triality",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+    _triFetching=false; _triAt=Date.now(); renderTriality(d);
+  }).catch(()=>{_triFetching=false;
+    const b=$("tri_built");if(b)b.textContent="triality fetch failed — retrying on next visit.";});
+}
+function _esc(s){return String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function renderTriality(d){
+  if(!d)return;
+  const b=$("tri_built");
+  if(b){
+    b.dataset.loaded="1";
+    const ok=d.dag&&d.dag.ok, ok2=d.dsl&&d.dsl.ok, ok3=d.equations&&d.equations.ok;
+    b.innerHTML="live · built "+_esc(d.built_at_utc||"?")+
+      " · legs: DAG "+(ok?"✓":"—")+" · DSL "+(ok2?"✓":"—")+" · equations "+(ok3?"✓":"—")+
+      " · pointer "+(d.pointer!=null?d.pointer:"0.19110")+" (UNMOVED)";
+  }
+  const dag=$("tri_dag");
+  if(dag){
+    const D=d.dag||{};
+    if(D.ok&&Array.isArray(D.recent)){
+      dag.innerHTML="<div class='trimeta'>"+_esc(D.file)+" · "+D.total+" FEEDs</div>"+
+        D.recent.slice().reverse().map(f=>
+          "<div class='trirow'><span class='tk'>"+_esc(f.tick)+"</span>"+_esc(f.summary)+"</div>").join("");
+    } else dag.textContent=(D.reason||"no DAG");
+  }
+  const dsl=$("tri_dsl");
+  if(dsl){
+    const S=d.dsl||{};
+    if(S.ok){
+      const p=S.program||{}, g=S.gauge||{};
+      dsl.innerHTML=
+        "<div class='trirow'><span class='tk'>program</span>"+(p.epochs||"?")+" ep · "+
+          (p.num_pairs||"?")+" pairs · stages "+_esc((p.stages||[]).join(" → "))+"</div>"+
+        "<div class='trirow'><span class='tk'>gauge</span>warp="+_esc(g.warp)+" · carrier="+
+          _esc(g.carrier)+" · residual="+_esc(g.residual)+"</div>"+
+        "<div class='trimeta'>tac.witness_dsl → validated trainer CLI (never-invent-flags)</div>";
+    } else dsl.textContent=(S.reason||"no DSL");
+  }
+  const eq=$("tri_eq");
+  if(eq){
+    const E=d.equations||{};
+    if(E.ok&&Array.isArray(E.recent)){
+      eq.innerHTML="<div class='trimeta'>"+E.distinct+" distinct · "+E.rows+" rows</div>"+
+        E.recent.slice().reverse().map(e=>
+          "<div class='trirow'><span class='tk'>"+_esc(e.id)+"</span>"+_esc(e.desc)+"</div>").join("");
+    } else eq.textContent=(E.reason||"no equations");
+  }
+}
+
+// ---------- witness tab (RESIDUAL): live comma10k 6-panel + tribute, streamed over the WS ----------
 // Panels arrive as data: URIs in the snapshot (first paint) + a {type:"witness"} WS message on
 // each NEW checkpoint. Build each pair's <figure> once, then swap its <img> src IN PLACE (no
 // reload). Rare + possibly-hidden tab -> cheap.
@@ -2131,6 +2621,8 @@ window.addEventListener("orientationchange",scheduleDraw);
 connectWS();
 // safety net: if WS never opens within 4s, ensure polling is running
 setTimeout(()=>{if(!wsOpen)startPoll();},4000);
+// ORACLE is the default-visible tab (arc entry point) -> kick its one-shot fetch on load.
+try{activateOracle();}catch(e){}
 </script>
 <script>
 __FLOW_JS__
