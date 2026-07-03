@@ -227,11 +227,15 @@ level, not paradigm-level — until an adversarial + deep-math + OSS pass tries 
   admission HARD-gate (ENFORCING, `56147e797`; independently reviewed SAFE-TO-ENFORCE) + reversible
   throttle; canonical eq `adaptive_ceiling_admission_control_v1`. One lost-signal casualty (#238
   byte-close) re-tasked; recovery sweep `.omx/research/crash_signal_loss_recovery_sweep_20260703.md`.
-- **R1 relaunched (pid 19940, crash-resumable per-epoch), first descent point in.** The trained-pose
-  gate for #205: ep1001 verdict d_seg 0.004502 / d_pose **62.44** (store-nothing pose at its untrained
-  start — high as expected) / implied_S 25.5; ~35 min per async point. Question = does d_pose descend as
-  the render co-adapts? Descent slope TBD (one point ≠ trend). `--verdict-pairs 0 --eval-every 1` = the
-  dense per-epoch pose-behavior signal; `--verdict-batch 32` chunking keeps it memory-safe (score-neutral).
+- **R1 VERDICT (2026-07-03): store-nothing pose VIABLE, not yet optimal.** d_pose descended
+  62.44→**0.0011** (plateau, ep1074/1093 ~0.00108); d_seg HELD ~0.0046 (no coupling collapse; seg⊥pose
+  held). Viability CONFIRMED (the operator HOLD condition) — but contribution √(10·0.0011)=**0.105** is
+  ~6× the ancestor 0.018 (~70% of a sub-0.15 budget). ⇒ the **POSE-CARRIER LADDER** (#248, DAG
+  FEED-poseladder): P-A store-nothing (measured, 0.105) → **P-B FiLM 6-scalar stored-target** (target
+  0.018 @ ~0.001 rate IF the witness render reads it back — the DECISIVE ~90:1-ΔS/byte rung) → P-C
+  rank-residual interpolant / P-D warp-real fallback, run AS a rate↔pose **SWEEP** (map the Pareto,
+  controller picks the knee). RATE-coupled (cheaper θ buys a better pose carrier). R1 stops at +1 point;
+  byte-close #238 = P-A authoritative. d_seg is the remaining wall (lane/movable erasure → #205 islands).
 - **#205 LAUNCH HELD** on operator GO, gated on R1's descent verdict + the two prerequisites (real optimal
   pose, confirmed byte-close). `--config sealed_205`/`store_nothing_205` reproduces the SEALed argv
   byte-identically. Pose carrier A/B ready (store-nothing-but-ξ vs table — rate collapse byte-close
