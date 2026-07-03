@@ -1353,6 +1353,19 @@ padding:10px 10px 6px;min-width:0;overflow:hidden}
 .tri .card{background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:14px}
 .tri .card h3{font-size:12px;color:var(--goal);margin:0 0 7px;letter-spacing:.5px;text-transform:uppercase}
 .tri ol,.tri ul{padding-left:20px}.tri li{margin-bottom:5px}
+/* triality credits & tribute — warm, tasteful, dark-theme */
+.trilead{color:var(--fg2);border-left:2px solid var(--goal);padding-left:12px;margin:14px 0 2px;font-size:13.5px}
+.trigrat{color:var(--fg2);border-left:2px solid var(--acc);padding-left:12px;font-size:13px !important;line-height:1.65;margin:14px 0 4px}
+.tricredits{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:16px 0 8px}
+.tch{font-size:11px;color:var(--goal);letter-spacing:.7px;text-transform:uppercase;font-weight:700;margin-bottom:5px}
+.tcintro{font-size:12.5px !important;color:var(--muted);line-height:1.6;margin:0 0 14px}
+.tcperson{margin:0 0 13px;padding:0 0 13px;border-bottom:1px solid var(--grid)}
+.tcperson:last-of-type{border-bottom:none;padding-bottom:2px}
+.tcperson h4{font-size:13px;color:var(--fg);margin:0 0 5px;letter-spacing:.2px;line-height:1.4}
+.tcrole{font-size:10px;color:var(--acc);letter-spacing:.4px;text-transform:uppercase;font-weight:600;margin-left:8px;white-space:nowrap}
+.tcperson p{font-size:12.5px !important;color:var(--fg2);line-height:1.62;margin:0}
+.tcseat{color:var(--muted);font-style:italic}
+.tcnote{font-size:11px;color:#b89a4a;line-height:1.6;border-top:1px solid var(--grid);padding-top:11px;margin-top:2px}
 
 /* witness tab (Tab 2) — comma10k 6-panel + Yousfi/Fridrich tribute, live over WS */
 .wit h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:20px 0 8px}
@@ -1776,6 +1789,13 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <b>compression-as-intelligence</b> (Schmidhuber POWERPLAY: never-regress self-invented curriculum) &rarr;
   the <b>costate controller</b> (marginal-&Delta;S/cost, never-regress) &mdash; one line, each stage the
   natural generalization of the last.</p>
+  <p class="m">A live example of the campaign <b>compounding on the current frontier</b>:
+  <b>MD-Decoupling</b> (H&auml;gele, Hern&aacute;ndez-Cano, Kosson, Jaggi &mdash; EPFL / Jaggi lab,
+  <code>arXiv:2606.25971</code>, 2026-06-24) is our <code>--optimizer md</code> (#175) &mdash; it factorizes
+  each weight matrix into a fixed-norm <b>direction</b> + learnable <b>magnitude</b> gains at separate
+  learning rates, which makes <b>curriculum stage-transitions stable by construction</b> (the
+  &ldquo;different stages need different treatment&rdquo; rule, made structural). Super-recent
+  (June&nbsp;2026), folded straight into the live curriculum.</p>
 
   <h2>The ByteDance / EdgeBench convergence</h2>
   <p class="m">Our own deep memo <code>edgebench_scaling_laws_deepdive_20260703T033159Z.md</code>: EdgeBench
@@ -1796,7 +1816,33 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   detection-game home turf (this contest IS inverse steganalysis).</p>
 
   <h2>The campaign journey &mdash; honest</h2>
+  <p class="trilead">This is our capstone &mdash; what the past few months have given bloom to.</p>
   <ul>
+    <li><b>Aaron Leslie turned the whole competition on its head</b>, and his result was so good it was
+    <b>intimidating</b>. But porting his work to <b>MLX + custom Metal</b> and running it natively &mdash;
+    then studying his own trajectory against the deep math &mdash; let us <b>see past the design itself</b>:
+    the full-RGB reconstruction, the <b>~30,000-epoch</b> curriculum, the inert <code>l7</code> stage (we
+    later <i>measured</i> it as a defect and disabled it), the spectral bias / Gibbs ringing. That is exactly
+    what pointed us at the <b>task-space level-set</b> direction. Honoring him meant building <b>on and past</b>
+    his cathedral, grounded in measurement &mdash; not merely reproducing it. We stand on the cathedral he
+    built.</li>
+    <li>We played the <b>byte-nibbling</b> game honestly &mdash; <b>PR107</b>, then <b>PR110</b> &mdash; and we
+    had the <b>PR112</b> work sitting ready for a couple of weeks. But we <b>would not submit another nibble on
+    top of our own nibble</b>. After Aaron Leslie turned the competition on its head we were <b>never
+    satisfied</b> with incremental; we wanted the real thing.</li>
+    <li>So we <b>struggled</b> &mdash; to climb out of local minima, and to build a <b>recursively, fractally
+    optimal</b> stack: one perfectly <b>suited to</b>, <b>informed by measurement of</b>, and <b>following
+    theory about</b> the <b>frozen and complete contest information space</b> &mdash; the one video, the frozen
+    scorers; a closed, fully-observed world we could measure exhaustively and theorize about precisely.</li>
+    <li><b>And the deep math didn&rsquo;t come first &mdash; it came <i>from</i> the measurement.</b> We studied
+    what <b>SegNet and PoseNet were actually seeing</b>, and in doing so discovered the <b>annulus</b> (the
+    thin codim-1 boundary band where essentially <i>all</i> of d_seg lives), the <b>long tail</b> (the
+    finest-scale features &mdash; lane dashes, distant movers &mdash; erased first; the ~8-dimensional
+    lane-orbit manifold), and the specific <b>class-and-region interactions</b> (the road&harr;lane separatrix,
+    the all-class edge set, the static hood core, the movable band). Realizing all of <i>that</i>, from
+    measurement, is what the deep-math analysis fell out of &mdash; the <b>level-set flow</b>, the
+    <b>margin = Fisher = UNIWARD</b> unity, the curvelet chart, the Morse&ndash;Smale topology. <b>Measurement
+    first; then the theory that fit it.</b></li>
     <li>The grand-council-symposium apparatus made us <b>organized</b> enough to hold a decade-long program
     without losing signal &mdash; the discipline is the scaffold, not the score.</li>
     <li>Compute arc: we <b>burned cloud money</b>, then ported the whole loop to <b>MLX + custom Metal</b>
@@ -1804,6 +1850,61 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <li>Dual objective, <b>and not binary</b>: contest-overfit (openpilot-seeded, this exact drive) AND a
     platform-agnostic, generalizable, scalable production value-generator &mdash; the same investment buys both.</li>
   </ul>
+  <p class="trigrat">Our work and belief and passion and untiring curiosity have yielded <b>something we are
+  proud of</b> &mdash; and that we hope is <b>interesting and useful to the very people who introduced us to
+  such an interesting and fulfilling problem.</b></p>
+
+  <div class="tricredits">
+    <div class="tch">Credits &amp; tribute</div>
+    <p class="tcintro">Named for what each one actually gave us &mdash; a thank-you, not a citation list.</p>
+
+    <div class="tcperson">
+      <h4>Aaron Leslie <span class="tcrole">PR95 &middot; the HNeRV cathedral</span></h4>
+      <p>Author of PR95 and its HNeRV cathedral. He turned the whole competition on its head and showed what
+      was possible &mdash; a result so good it was intimidating. He <b>taught us schedule and curriculum</b>,
+      and more than any single technique he drove us to obsessively dig into the <b>math and geometry of the
+      video</b> (starting from what we&rsquo;d gleaned from openpilot). The honest twist, and the deepest
+      respect we could pay: porting his work to <b>MLX + Metal</b> and analyzing his own trajectory + the deep
+      math let us <b>see past</b> the design &mdash; full-RGB, ~30k epochs, the inert <code>l7</code> stage,
+      spectral bias &mdash; which is exactly what pointed us at the task-space level-set direction. We stand on
+      the cathedral he built. <span class="tcseat">(Our inner-council &ldquo;PR95Author&rdquo; seat is him.)</span></p>
+    </div>
+
+    <div class="tcperson">
+      <h4>Quantizr &middot; Jimmy <span class="tcrole">the earlier mind-opening</span></h4>
+      <p>He opened our minds even earlier to what was possible. Beyond his <b>0.33</b> HNeRV result, it is his
+      <b>spirit</b> we carry &mdash; experimentation, openness, curiosity, playfulness, competitiveness,
+      confidence. He <b>affirmed some of our earliest intuitions</b>, the ones that made us feel we were biting
+      off more than we could chew &mdash; except we <b>loved the flavor and became obsessed</b>.
+      <span class="tcseat">(Our inner-council &ldquo;Quantizr&rdquo; seat is him.)</span></p>
+    </div>
+
+    <div class="tcperson">
+      <h4>Yassine Yousfi &amp; Jessica Fridrich <span class="tcrole">the detection game</span></h4>
+      <p>Yousfi built the SegNet/PoseNet scorer (from comma10k) and framed the whole thing as <b>inverse
+      steganalysis</b>; Fridrich&rsquo;s <b>UNIWARD</b> (DDE Lab) is the cost that turns out to <i>equal</i> the
+      scorer&rsquo;s own sensitivity metric (measured Pearson <b>0.978</b>). This entire dashboard is arranged
+      as Yousfi&rsquo;s detection game, in their honor.</p>
+    </div>
+
+    <div class="tcperson">
+      <h4>comma.ai &amp; George Hotz <span class="tcrole">the free physical prior</span></h4>
+      <p>openpilot is the unified <b>free physical prior</b> for both scored axes &mdash; lane geometry
+      &rarr; d_seg, the ego-motion <b>screw</b> &rarr; d_pose; comma10k is the palette and the scene.</p>
+    </div>
+
+    <div class="tcperson">
+      <h4>The council <span class="tcrole">the lenses we think through</span></h4>
+      <p><b>Shannon</b> (LEAD; R(D) / entropy / sufficiency &mdash; the floor S_floor&asymp;0.118 is his bound),
+      <b>Dykstra</b> / <b>Rudin</b> / <b>Daubechies</b> (co-leads; feasibility / interpretability / wavelets),
+      <b>Ball&eacute;</b> (the neural codec of task-aware compression), and <b>Schmidhuber</b>
+      (compression-as-intelligence / POWERPLAY &mdash; the campaign-scale front), among the full roster.</p>
+    </div>
+
+    <div class="tcnote">A genuine thank-you to the people who introduced us to such an interesting and
+    fulfilling problem. [macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a tribute moves no pointer.</div>
+  </div>
+
   <p class="m">Authority: <code>[macOS-MLX training advisory]</code> NON-PROMOTABLE. The exact score is the only
   score; the pointer is 0.19110 and UNMOVED. Everything on this page is a MEANS.</p>
 </section>
