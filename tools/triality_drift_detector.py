@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Triality drift detector — a Claude Code ``Stop`` hook.
+
+Fires at the end of each main-agent turn. Detects the **velocity-orphaning**
+failure mode (our own "deepest signal-loss meta-bug"): a SUBSTANTIVE commit
+landed this turn — a measured row / launch / build / lever / byte-close /
+d_seg-d_pose / pointer move — WITHOUT a corresponding touch to the triality
+(a DAG FEED / the DSL / the canonical equations / the research index). When it
+finds that, it injects ONE firm nudge so the trajectory point gets recorded
+before the turn truly ends.
+
+This is the STRUCTURAL BACKSTOP for the triality-consistency discipline; it does
+not replace proactive recording. It should rarely fire — a turn that already
+touched a triality leg, or that landed nothing substantive, passes silently.
+
+Design invariants (all NON-NEGOTIABLE for a Stop hook):
+  * FAIL-OPEN — any error, non-git dir, or timeout ⇒ allow the stop (exit 0).
+    A Stop hook must NEVER wedge a session.
+  * LOOP-SAFE — one firm nudge per drift state, guarded by BOTH Claude Code's
+    own ``stop_hook_active`` flag AND a persisted ``last_block_head`` backstop,
+    so it cannot loop even if ``stop_hook_active`` is absent.
+  * EVENT-TRIGGERED, not per-turn — silent when there are no new commits since
+    the last stop, and silent when this window already touched a triality leg.
+  * ESCAPE VALVE ("never binary") — a commit whose message contains
+    ``[no-triality]`` (or ``[skip-drift]``) is a deliberate chore/apparatus
+    commit and does not count as drift. Not every substantive keyword forces a
+    DAG feed.
+
+Wired via ``.claude/settings.json`` ``hooks.Stop``. Pure logic lives in
+module-level functions (``classify`` et al.) so it is unit-testable without a
+crafted git HEAD. Not placed in ``tac`` — this is Claude-workflow apparatus, not
+contest/codec logic (per CLAUDE.md ``tac`` cleanliness rule).
+"""
+from __future__ import annotations
+
+import datetime
+import json
+import os
+import re
+import subprocess
+import sys
+
+# --- state files (both gitignored under .omx/state/*) ---
+MARKER = ".omx/state/triality_drift_marker.json"
+LOG = ".omx/state/triality_drift_detector.log"
+
+# Commit-subject signatures of a score/trajectory/build event that WARRANTS a
+# triality touch. Inclusive-but-focused; the [no-triality] escape valve + the
+# triality-touch check keep false positives cheap (worst case: add a DAG line).
+# Stems end in \w* (not a trailing \b) so prefix-stems like "clos" match the
+# whole word ("byte-close"); the leading \b + \w* keep matches word-anchored
+# (e.g. "\blever\w*" hits "lever/levers" but NOT "clever"/"level").
+SUBSTANTIVE = re.compile(
+    r"\b(?:"
+    r"measur\w*|byte.?clos\w*|exact.?eval\w*|exact\s+row|d_seg|d_pose|pointer\w*|"
+    r"launch\w*|lever\w*|verdict\w*|carrier\w*|coder\w*|kernel\w*|attribution\w*|"
+    r"witness\w*|wire.?in\w*|integrat\w*|rate.?term\w*|score.?row\w*|scored|"
+    r"probe\w*|erasure\w*|island\w*|n600|frontier\w*|curriculum\w*"
+    r")",
+    re.IGNORECASE,
+)
+
+# In-repo surfaces whose modification means "a triality leg was updated this
+# window" (DAG = trajectory · DSL = control · equations = law · index = memory
+# proxy). MEMORY.md lives outside the repo (~/.claude/...) so it cannot be
+# git-detected; the DAG is the primary in-repo trajectory leg and is sufficient.
+TRIALITY_PREFIXES = (
+    ".omx/research/sub015_DAG_",
+    "src/tac/witness_dsl/",
+    "src/tac/canonical_equations",
+    "docs/triality_dag_dsl_equations",
+    ".omx/research/CANONICAL_RESEARCH_INDEX",
+)
+
+SKIP_TOKEN = re.compile(r"\[(no-triality|skip-drift)\]", re.IGNORECASE)
+
+
+# ----------------------------- pure logic (tested) -----------------------------
+def is_substantive(subjects: list[str]) -> bool:
+    """True if any commit subject names a score/trajectory/build event."""
+    return any(SUBSTANTIVE.search(s or "") for s in subjects)
+
+
+def is_opted_out(subjects: list[str]) -> bool:
+    """True if any commit in the window opts out via [no-triality]/[skip-drift]."""
+    return any(SKIP_TOKEN.search(s or "") for s in subjects)
+
+
+def has_triality_touch(files: list[str]) -> bool:
+    """True if any changed file is a triality leg (DAG/DSL/equations/index)."""
+    return any((f or "").startswith(TRIALITY_PREFIXES) for f in files)
+
+
+def classify(subjects: list[str], files: list[str]) -> str:
+    """Return ``"drift"`` iff substantive-and-unrecorded-and-not-opted-out, else ``"clean"``."""
+    if not subjects:
+        return "clean"
+    if is_opted_out(subjects):
+        return "clean"
+    if is_substantive(subjects) and not has_triality_touch(files):
+        return "drift"
+    return "clean"
+
+
+def build_reason(subjects: list[str]) -> str:
+    """The one firm nudge injected on drift (concise + actionable)."""
+    preview = "; ".join((s or "")[:70] for s in subjects[:3])
+    return (
+        "Triality drift-detector: "
+        f"{len(subjects)} commit(s) landed this turn without touching the "
+        "DAG / DSL / equations / research-index. Substantive commit(s): "
+        f"{preview}. Append a DAG FEED (.omx/research/sub015_DAG_*) recording "
+        "this trajectory point (and a MEMORY.md line if it is a durable "
+        "finding), then finish. If these commits are pure chore/apparatus that "
+        "do not warrant a trajectory row, that is fine — note it and stop (add "
+        "[no-triality] to such commit messages to skip this check next time). "
+        "This is the structural backstop for the triality-consistency "
+        "discipline; record proactively next turn so it need not fire."
+    )
+
+
+# ------------------------------- IO / glue -------------------------------------
+def _git(root: str, *args: str, timeout: int = 5) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", *args], cwd=root, capture_output=True, text=True, timeout=timeout
+    )
+
+
+def _now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def _log(root: str, msg: str) -> None:
+    try:
+        p = os.path.join(root, LOG)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "a") as f:
+            f.write(f"{_now()} {msg}\n")
+    except Exception:
+        pass
+
+
+def _read_marker(root: str) -> dict:
+    try:
+        with open(os.path.join(root, MARKER)) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _write_marker(root: str, data: dict) -> None:
+    try:
+        p = os.path.join(root, MARKER)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        tmp = p + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(data, f)
+        os.replace(tmp, p)
+    except Exception:
+        pass
+
+
+def _advance_and_allow(root: str, head: str) -> None:
+    """Advance the marker to HEAD, clear block state, allow the stop."""
+    _write_marker(root, {"last_head": head, "last_block_head": None, "updated_utc": _now()})
+    sys.exit(0)
+
+
+def main() -> None:
+    # --- read hook input (fail-open on anything) ---
+    try:
+        raw = sys.stdin.read()
+        inp = json.loads(raw) if raw.strip() else {}
+    except Exception:
+        inp = {}
+    stop_hook_active = bool(inp.get("stop_hook_active"))
+
+    # resolve repo root: hook cwd → git toplevel → "."
+    root = inp.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or ""
+    if not root:
+        try:
+            r = _git(".", "rev-parse", "--show-toplevel")
+            root = r.stdout.strip() if r.returncode == 0 else "."
+        except Exception:
+            root = "."
+
+    try:
+        r = _git(root, "rev-parse", "HEAD")
+        if r.returncode != 0:
+            sys.exit(0)  # not a git repo / no HEAD — fail open
+        head = r.stdout.strip()
+    except Exception:
+        sys.exit(0)
+
+    marker = _read_marker(root)
+    last_head = marker.get("last_head")
+    last_block_head = marker.get("last_block_head")
+
+    # First run (no marker): initialize to HEAD; nothing to compare against.
+    if not last_head:
+        _advance_and_allow(root, head)
+
+    # Already nudged for this exact state → advance + allow (loop-safe).
+    if stop_hook_active or (last_block_head and last_block_head == head):
+        _log(root, f"allow(already-nudged) head={head[:9]} sha_active={stop_hook_active}")
+        _advance_and_allow(root, head)
+
+    # No new commits since the last stop → nothing to check (leave marker as-is).
+    if last_head == head:
+        sys.exit(0)
+
+    # --- gather this-window commits + touched files ---
+    try:
+        rl = _git(root, "log", "--format=%s", f"{last_head}..{head}")
+        subjects = [s for s in rl.stdout.splitlines() if s.strip()] if rl.returncode == 0 else []
+        rd = _git(root, "diff", "--name-only", f"{last_head}..{head}")
+        files = [f for f in rd.stdout.splitlines() if f.strip()] if rd.returncode == 0 else []
+    except Exception:
+        _advance_and_allow(root, head)  # can't diff → fail open, advance
+
+    verdict = classify(subjects, files)
+
+    if verdict == "drift":
+        # Persist last_block_head (do NOT advance last_head — so the fix commit
+        # lands inside the next window and clears the drift on re-check).
+        marker["last_block_head"] = head
+        marker["updated_utc"] = _now()
+        _write_marker(root, marker)
+        _log(root, f"BLOCK head={head[:9]} n={len(subjects)} subj={subjects[:3]!r}")
+        print(json.dumps({"decision": "block", "reason": build_reason(subjects)}))
+        sys.exit(0)
+
+    _log(root, f"allow(clean) head={head[:9]} n={len(subjects)}")
+    _advance_and_allow(root, head)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:
+        # absolute last-resort fail-open — never wedge a session.
+        sys.exit(0)
