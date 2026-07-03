@@ -40,6 +40,8 @@ from tac.witness_dsl.curriculum_dsl import (
     MarginSaliency,
     UniWARD,
     WarpRealLumaFrame0,
+    CacheGtSkeleton,
+    MicroBatch,
     openpilot_seeded_opening,
     sealed_205_program,
 )
@@ -141,6 +143,8 @@ __all__ = [
     "DM1Minimal",
     "MarginSaliency",
     "UniWARD",
+    "CacheGtSkeleton",
+    "MicroBatch",
     "openpilot_seeded_opening",
     "sealed_205_program",
     # campaign engine

@@ -2000,6 +2000,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "soft-clDice + persistence-weighted island recall on the SHARED "
                           "realized seg forward; annealed; advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
+    # (--cache-gt-skeleton, #260) declared here (in the enclosing scope, BEFORE total_loss_fn) so the
+    # closure binds the cell; POPULATED after lstar_cache is built (see the build block below). None
+    # (default OFF) => total_loss_fn passes sg_precomputed=None => byte-identical to the pre-flag path.
+    cache_gt_skeleton = bool(getattr(args, "cache_gt_skeleton", False))
+    _sg_cache: dict[int, Any] | None = None
+
     # #224 (5) ISLAND AMPLIFICATION setup (island_protection; #208/IslandProtectionGauge.AMPLIFY_ONLY).
     # Rides the SHARED LEVER-4 realized margin _signed (#141) -- NO 2nd saliency / SegNet forward.
     # amplify_w=0 (default) => island_weight_mx None => branch skipped => byte-identical.
@@ -2178,9 +2184,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # SHARED realized seg logits (_slog). GT-presence-gated inside the module (never hallucinate).
         # Annealed weight persist_gate["w"] (set per-epoch, coarse->fine); 0 => branch inert.
         if persist_gate["w"] > 0.0 and persist_classes:
+            # (--cache-gt-skeleton #260) reuse the precomputed CONSTANT GT skeleton for THIS pair
+            # (pi == c0//2, the SAME key thin_maps_mx/island_weight_mx use). None => inline recompute
+            # (byte-identical default); a cache MISS also falls back to None (still bit-identical).
+            _sg_pre = _sg_cache.get(int(c0) // 2) if _sg_cache is not None else None
             L = L + persist_gate["w"] * persistence_topology_loss_mlx(
                 _slog, lstar_oh, persist_classes, cldice_iters=persist_cldice_iters,
-                w_cldice=1.0, w_recall=persist_recall_w)
+                w_cldice=1.0, w_recall=persist_recall_w, sg_precomputed=_sg_pre)
         # LEVER-A (FiLM-rank-fix) soft participation-ratio FLOOR. Pushes the per-pair modulation PR up
         # toward rankfloor_tgt (opposing the measured rank-1 collapse). PR computed Gram-wise (NO
         # eigendecomposition): trace(C)=||Mc||_F^2 (== mx.sum(Mc*Mc)), ||C||_F^2=||Mc Mc^T||_F^2. The
@@ -2351,6 +2361,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     pose_tgts = [mx.array(np.asarray(gt.gt_poses[pi], np.float32)) for pi in range(P)]
     lstar_cache = [_lstar_oh(pi) for pi in range(P)]
+
+    # (--cache-gt-skeleton, #260 SPEED) BUILD the per-pair GT soft-skeleton cache ONCE (each sg is
+    # mx.eval'd to a concrete constant, detached from any lazy graph, OUTSIDE any value_and_grad
+    # transform -> safe + bit-identical to the inline recompute). Keyed by pair index pi (== c0//2 ==
+    # c1//2, the SAME key thin_maps_mx / island_weight_mx use). Gated on persist-on AND not
+    # micro-batch (the serial total_loss_fn is the only consumer; the batched twin recomputes). The
+    # per-pair sg built here matches persistence_topology_loss_mlx's inline `g` construction op-for-op
+    # (precompute_sg_mlx uses the identical stack->reshape->soft_skeleton), so sg_precomputed== inline.
+    if cache_gt_skeleton and persist_w > 0.0 and persist_classes and not _use_micro_batch:
+        from tac.boundary_math.persistence_topology_loss import precompute_sg_mlx as _precompute_sg_mlx
+        _sg_cache = {}
+        for _pi in range(P):
+            _sg = _precompute_sg_mlx(lstar_cache[_pi][0], persist_classes, persist_cldice_iters)
+            mx.eval(_sg)  # materialize as a concrete constant (bit-identical to the inline recompute)
+            _sg_cache[_pi] = _sg
+        print(json.dumps({"stage": "cache_gt_skeleton", "n_pairs": int(P),
+                          "target_classes": list(persist_classes), "cldice_iters": persist_cldice_iters,
+                          "note": "precomputed CONSTANT GT soft-skeleton per pair (bit-identical "
+                          "speed-only; skips ~half the clDice recompute); pointer 0.19110 UNMOVED"}),
+              flush=True)
 
     # ---- realized CPU-torch verdict over a subset (the AUTHORITY trajectory) ----
     vpairs = list(range(0, P, max(1, P // max(args.verdict_pairs, 1)))) if args.verdict_pairs < P else list(range(P))
@@ -3764,6 +3794,18 @@ def main(argv: list[str] | None = None) -> int:
                     "byte-identical per-pair path; >1 = opt-in batched scorer forward, trajectory-"
                     "affecting, ~2-4x). Sub-batches each --accum-pairs chunk; grads weighted by pair "
                     "count so the accum-step grad == the serial mean-over-chunk. NOT with --seed-islands.")
+    # (--cache-gt-skeleton, #260 SPEED, BIT-IDENTICAL) opt-in per-pair cache of the CONSTANT GT
+    # soft-skeleton the persistence loss recomputes every step. sg=soft_skeleton(gt) is a function of
+    # the FROZEN GT argmax one-hot ONLY (constant across epochs) + carries NO gradient (it multiplies
+    # pred in tsens), so precomputing it once per pair + reusing via sg_precomputed= is BIT-IDENTICAL
+    # (a materialized concrete constant == the inline recompute) while skipping ~half the clDice cost.
+    # Default OFF => total_loss_fn passes sg_precomputed=None => byte-identical to the pre-flag path.
+    # No-op unless --persistence-loss-weight>0 (the only consumer); skipped under --micro-batch-pairs>1.
+    ap.add_argument("--cache-gt-skeleton", action="store_true",
+                    help="(speed, bit-identical) cache the CONSTANT per-pair GT soft-skeleton for the "
+                    "persistence loss (sg=soft_skeleton(gt) is epoch-invariant + gradient-free). "
+                    "Default OFF = byte-identical. No-op unless --persistence-loss-weight>0; "
+                    "skipped under --micro-batch-pairs>1 (serial total_loss_fn is the only consumer).")
     # (#205 OOM FIX) MLX Metal caching-allocator hygiene. The lazy graph is already materialized
     # per-pair (mx.eval(loss, grads) + mx.eval(accum)); the leak is the Metal buffer POOL (freed
     # render/backward buffers stay CACHED, not returned to the OS) growing across an epoch's ~P/8

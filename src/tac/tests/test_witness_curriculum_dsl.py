@@ -27,6 +27,8 @@ from tac.witness_dsl import (
     StiefelW,
     CodeSpectralEntropy,
     DM1Minimal,
+    CacheGtSkeleton,
+    MicroBatch,
 )
 
 # the exact flags the completed CE->tau->l7 run was launched with (grounded from the log)
@@ -747,3 +749,70 @@ def test_scale_progression_band_count_change_is_fresh():
 def test_max_bank_freq_is_warm_but_bank_n_scales_is_fresh():
     assert ScalePass("a", 100, {"--max-bank-freq": 64.0}).is_fresh is False
     assert ScalePass("b", 100, {"--bank-n-scales": 8}).is_fresh is True
+
+
+# --- SPEED levers (#260 cache-gt-skeleton, #261 micro-batch) — the gauge's non-curriculum
+#     compute config that compiles to trainer argv (re-syncs triality leg 2) ---
+def test_cache_gt_skeleton_lever_emits_store_true_only():
+    # store_true flag: emitted True ONLY (never False), so validate() never trips the C2 --no- guard.
+    arm = BASELINE.with_lever(CacheGtSkeleton())
+    fd = arm.flag_dict()
+    assert fd["--cache-gt-skeleton"] is True
+    assert arm.validate() == []
+    # it is a store_true trainer flag, so a False would be a C2 violation — the lever never emits one
+    assert "--cache-gt-skeleton" in real_store_true_flags()
+
+
+def test_cache_gt_skeleton_compiles_as_bare_flag():
+    # bare boolean: no value token follows in the compiled argv (matches --siren-init etc.)
+    argv = BASELINE.with_lever(CacheGtSkeleton()).compile_trainer_argv()
+    assert "--cache-gt-skeleton" in argv
+    i = argv.index("--cache-gt-skeleton")
+    assert i == len(argv) - 1 or argv[i + 1].startswith("--")
+
+
+def test_cache_gt_skeleton_is_global_config_not_an_epoch_extension():
+    # SPEED lever: no warm-start window (it is global config, not an A/B stage) -> epochs unchanged.
+    arm = BASELINE.with_lever(CacheGtSkeleton())
+    assert arm.epochs == BASELINE.epochs
+
+
+def test_micro_batch_lever_emits_int_value():
+    arm = BASELINE.with_lever(MicroBatch(4))
+    fd = arm.flag_dict()
+    assert fd["--micro-batch-pairs"] == 4
+    assert arm.validate() == []
+    # value flag (not store_true) — the trainer declares it type=int
+    assert "--micro-batch-pairs" not in real_store_true_flags()
+
+
+def test_micro_batch_default_is_four_and_value_flag_in_argv():
+    argv = BASELINE.with_lever(MicroBatch()).compile_trainer_argv()  # default pairs=4
+    j = argv.index("--micro-batch-pairs")
+    assert argv[j + 1] == "4"
+
+
+def test_micro_batch_one_emits_serial_baseline_explicitly():
+    # B=1 is the byte-identical serial path -> MicroBatch(1) emits it for an apples-to-apples A/B.
+    arm = BASELINE.with_lever(MicroBatch(1))
+    assert arm.flag_dict()["--micro-batch-pairs"] == 1
+    assert arm.validate() == []
+
+
+def test_micro_batch_is_global_config_not_an_epoch_extension():
+    arm = BASELINE.with_lever(MicroBatch(4))
+    assert arm.epochs == BASELINE.epochs
+
+
+def test_speed_levers_compose_and_validate_clean():
+    combo = BASELINE.with_lever(CacheGtSkeleton(), MicroBatch(4))
+    fd = combo.flag_dict()
+    assert fd["--cache-gt-skeleton"] is True
+    assert fd["--micro-batch-pairs"] == 4
+    assert combo.validate() == []
+
+
+def test_speed_levers_do_not_mutate_baseline():
+    _ = BASELINE.with_lever(CacheGtSkeleton(), MicroBatch(4))
+    assert "--cache-gt-skeleton" not in BASELINE.flag_dict()
+    assert "--micro-batch-pairs" not in BASELINE.flag_dict()

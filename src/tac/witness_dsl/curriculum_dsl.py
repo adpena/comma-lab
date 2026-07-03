@@ -633,6 +633,42 @@ def WarpRealLumaFrame0(  # noqa: N802 — DSL constructor
 
 
 # ---------------------------------------------------------------------------
+# COMPUTE/SPEED levers (the gauge's non-curriculum config that compiles to trainer argv).
+# These move WALL-CLOCK, not the witness math/bytes/verdict: CacheGtSkeleton is BIT-IDENTICAL (a
+# constant-recompute elision, PROVEN by the #260 n=8 CPU A/B: EMA-shadow max_abs=0); MicroBatch is
+# trajectory-affecting (batched fp reduction) but its accum-step grad == the serial mean-over-chunk
+# within fp tol. Both compose with any curriculum lever; neither carries an epochs_delta (they are
+# GLOBAL config, not a warm-start A/B stage). means != ends: SPEED buys nothing on S — only a
+# byte-closed n600 exact row moves the 0.19110 pointer.
+# ---------------------------------------------------------------------------
+def CacheGtSkeleton() -> Lever:  # noqa: N802 — SPEED lever (#260, bit-identical)
+    """SPEED (BIT-IDENTICAL): cache the CONSTANT per-pair GT soft-skeleton for the persistence loss
+    (``--cache-gt-skeleton``). ``sg = soft_skeleton(gt)`` is epoch-invariant + gradient-free (it
+    multiplies ``pred`` in the clDice ``tsens`` term), so precomputing it once per pair + reusing it
+    every step is bit-identical (a materialized concrete constant == the inline recompute) while
+    skipping ~half the clDice cost. No-op unless ``--persistence-loss-weight>0`` (the only consumer);
+    skipped under ``--micro-batch-pairs>1`` (the serial ``total_loss_fn`` is the sole consumer).
+    ``--cache-gt-skeleton`` is store_true -> emitted True ONLY (never False, review C2)."""
+    return Lever("cache_gt_skeleton",
+                 overrides={"--cache-gt-skeleton": True},
+                 notes="speed (bit-identical): cache the constant GT soft-skeleton for the persistence loss")
+
+
+def MicroBatch(pairs: int = 4) -> Lever:  # noqa: N802 — SPEED lever
+    """SPEED (trajectory-affecting): batch ``pairs`` per frozen-scorer forward (``--micro-batch-pairs``).
+
+    The single-pair EfficientNet-B2 SegNet / FastViT PoseNet forward under-utilizes the GPU; B>1
+    renders + scores B pairs in ONE batched forward (~2-4x). Grads are weighted by pair count so the
+    accum-step grad == the serial mean-over-chunk (NOT bit-identical: batched fp reduction order -> a
+    short trajectory A/B validates it). Incompatible with ``--seed-islands`` (fail-closed at the
+    trainer build). B=1 (the default) is the byte-identical serial path -> ``MicroBatch(1)`` emits it
+    explicitly for an apples-to-apples A/B baseline. A value flag (never store_true)."""
+    return Lever("micro_batch_pairs",
+                 overrides={"--micro-batch-pairs": int(pairs)},
+                 notes="speed lever: B pairs per batched scorer forward (trajectory-affecting, ~2-4x)")
+
+
+# ---------------------------------------------------------------------------
 # The FIXED, KNOWN OPENING of the from-scratch openpilot-seeded d_seg curriculum.
 # (S0 seed -> S1 short-CE -> S2 tau_softplus). l7 + Muon are STACKED ADAPTIVELY by
 # ``campaign.plan_adaptive_step`` off this opening's measured per-stage checkpoints.
