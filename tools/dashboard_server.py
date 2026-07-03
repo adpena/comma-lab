@@ -46,7 +46,6 @@ import asyncio
 import contextlib
 import hmac
 import json
-import math
 import os
 import sys
 import time
@@ -70,14 +69,13 @@ from starlette.websockets import WebSocket, WebSocketDisconnect  # noqa: E402
 
 POINTER = 0.19110  # frontier pointer (contest-CPU), UNMOVED — advisory only here
 
-# Telemetry accuracy (operator 2026-06-30, "confident-wrong is the worst failure"):
-# the witness trains d_seg ONLY (``--w-pose 0``); the verdict's ``d_pose`` (~163
-# early) is MONITORING-ONLY. At DEPLOY, pose rides the SOLVED Quantizr stored-pose
-# sidecar (d_pose ~3.4e-5), so the honest implied_S uses the SIDECAR pose, not the
-# untrained monitoring pose (which would inflate S by ~40 via the sqrt(10·d_pose)
-# term — the misleading ~69). The DISPLAYED implied_S is recomputed with this
-# constant; the raw monitoring values stay visible + explicitly labeled.
-DEPLOY_SIDECAR_D_POSE = 3.4e-5      # solved stored-pose sidecar (the DEPLOY pose)
+# Telemetry accuracy (operator 2026-07-03, "confident-wrong is the worst failure"):
+# #205 runs the MODERN store-nothing screw pose carrier (``--pose-carrier
+# --pose-carrier-residual-mode table``), so the verdict's ``d_pose`` is the
+# carrier's OWN measured pose — the honest composite, NOT a separate untrained
+# monitoring signal. The DISPLAYED implied_S therefore uses that REAL measured
+# d_pose everywhere; we NEVER substitute the old ancestor sidecar 3.4e-5 (which
+# was never witness-validated). Byte-closed deploy-pose confirmation is task #238.
 _ARCHIVE_NORM_BYTES = 37_545_489   # contest rate-term normalizer (25·bytes/N)
 
 
@@ -215,18 +213,20 @@ _TRAJ_KEYS = ("epoch", "d_seg", "d_pose", "blob_bytes", "implied_S",
               "implied_S_monitoring", "ts")
 
 
-def _implied_s_deploy(d_seg, blob_bytes):
-    """Honest implied_S using the DEPLOY stored-pose sidecar (d_pose ~3.4e-5), NOT
-    the untrained monitoring pose. ``100·d_seg + sqrt(10·d_pose_sidecar) +
-    25·bytes/N``. Returns None when d_seg / blob_bytes are missing."""
-    if d_seg is None or blob_bytes is None:
-        return None
-    try:
-        return (100.0 * float(d_seg)
-                + math.sqrt(10.0 * DEPLOY_SIDECAR_D_POSE)
-                + 25.0 * float(blob_bytes) / _ARCHIVE_NORM_BYTES)
-    except (TypeError, ValueError):
-        return None
+def _last_measured_dpose(rows):
+    """Most-recent non-None ``d_pose`` from the trajectory as a float (None if the
+    run has emitted no pose yet). #205's store-nothing screw carrier measures its
+    OWN pose in-run, so this feeds the forward implied_S projection with the REAL
+    measured pose — never the old ancestor sidecar 3.4e-5."""
+    for row in reversed(rows or []):
+        dp = row.get("d_pose") if isinstance(row, dict) else None
+        if dp is None:
+            continue
+        try:
+            return float(dp)
+        except (TypeError, ValueError):
+            continue
+    return None
 
 
 def _flowseq_lock_alive(lock_path: Path) -> bool:
@@ -251,16 +251,15 @@ def _flowseq_lock_alive(lock_path: Path) -> bool:
 
 def _slim(row: dict) -> dict:
     """Keep only the trajectory fields the client charts need (no leaking of the
-    full verdict dict). The DISPLAYED ``implied_S`` is recomputed with the deploy
-    stored-pose sidecar (telemetry accuracy — the verdict's own implied_S is
-    dominated by the monitoring pose); the trainer's raw value is preserved as
-    ``implied_S_monitoring`` for transparency. Numbers stay numeric; missing keys
-    become None."""
+    full verdict dict). The DISPLAYED ``implied_S`` is the run's OWN measured
+    composite — ``100·d_seg + sqrt(10·d_pose) + 25·bytes/N`` with the
+    store-nothing screw carrier's measured d_pose — with NO deploy override.
+    ``implied_S_monitoring`` is kept as an alias of the same measured value so
+    the client's honest-vs-displayed sanity check trivially agrees. Numbers stay
+    numeric; missing keys become None."""
     out = {k: row.get(k) for k in ("epoch", "d_seg", "d_pose", "blob_bytes", "ts")}
-    raw_s = row.get("implied_S")
-    out["implied_S_monitoring"] = raw_s
-    dep = _implied_s_deploy(out.get("d_seg"), out.get("blob_bytes"))
-    out["implied_S"] = dep if dep is not None else raw_s
+    out["implied_S"] = row.get("implied_S")
+    out["implied_S_monitoring"] = row.get("implied_S")
     return out
 
 
@@ -701,7 +700,8 @@ class LiveState:
         try:
             self.projection = dtm.build_projection(
                 rows_full, {**sched_eff, "schedule": sched_eff},
-                sidecar_pose=DEPLOY_SIDECAR_D_POSE, archive_norm=_ARCHIVE_NORM_BYTES,
+                sidecar_pose=(_last_measured_dpose(rows_full) or 0.0),
+                archive_norm=_ARCHIVE_NORM_BYTES,
                 eval_every=eval_every)
         except Exception as exc:
             self.projection = {"ok": False, "reason": f"projection error: {exc}"}
@@ -1140,7 +1140,6 @@ class LiveState:
             "warming_up": self.warming_up,  # live run resolved, no verdict yet (structured-init)
             "config": self.run_config or {},          # parsed setup/config + groups
             "schedule": sched,                         # curriculum stage epoch-boundaries
-            "deploy_sidecar_d_pose": DEPLOY_SIDECAR_D_POSE,  # implied_S pose term basis
             "archive_norm_bytes": _ARCHIVE_NORM_BYTES,       # rate-term normalizer (client S breakdown)
             "run_info_html": self.run_info_html,       # #205 pre-rendered run-info strip (rld._run_info_html)
         }
@@ -1915,7 +1914,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <div class="stat">
       <span class="slabel">implied_S <span class="trend fl" id="s_trend">&middot;</span></span>
       <span class="sval2" id="s_val">&mdash;</span>
-      <span class="ssub adv">deploy-projected &middot; pose target 3.4e-5 (unvalidated) &middot; vs honest S below</span>
+      <span class="ssub adv">advisory &middot; measured d_seg + store-nothing-carrier d_pose + rate &middot; NOT the 0.19110 pointer</span>
     </div>
   </div>
   <div class="sbreak" id="sbreak">
@@ -2749,14 +2748,13 @@ function drawAll(){
     sub:"epoch · log scale · ★ best · goal lines = sub-0.19 / sub-0.15",color:"#5ab0ff",log:true,fmt:fS,
     star:star,starGlow:_celebrating,
     hlines:[{y:g,label:"sub-0.19  "+sig(g,4),color:"#46d369"},{y:g15,label:"sub-0.15  "+sig(g15,4),color:"#ffb454"}]});
-  const sidePose=(META.deploy_sidecar_d_pose!=null)?META.deploy_sidecar_d_pose:0.000034;
-  drawPanel($("c_dpose"),"d_pose",{title:"d_pose — MONITORING ONLY (witness trains d_seg, --w-pose 0)",
-    sub:"epoch · log · deploy pose = stored sidecar ~"+sig(sidePose,2)+" (NOT this curve)",color:"#ffb454",log:true,fmt:fP,
-    hlines:[{y:sidePose,label:"deploy sidecar "+sig(sidePose,2),color:"#46d369"}]});
+  drawPanel($("c_dpose"),"d_pose",{title:"d_pose — store-nothing screw carrier · in-run measured (byte-closed confirm pending #238)",
+    sub:"epoch · log · the carrier's own measured pose",color:"#ffb454",log:true,fmt:fP,
+    hlines:[]});
   drawPanel($("c_bytes"),"blob_bytes",{title:"blob_bytes — LEARNED payload (counted in archive)",
     sub:"epoch · smaller payload = lower rate term",color:"#c08cff",log:false,fmt:fI,hlines:[]});
-  drawPanel($("c_s"),"implied_S",{title:"implied_S — ADVISORY est. (d_seg + DEPLOY sidecar pose + rate)",
-    sub:"epoch · log · uses sidecar pose ~"+sig(sidePose,2)+", not monitoring d_pose · pointer 0.19110",color:"#ff6b6b",log:true,fmt:fSv,
+  drawPanel($("c_s"),"implied_S",{title:"implied_S — advisory (measured d_seg + store-nothing-carrier d_pose + rate)",
+    sub:"epoch · log · run's own measured composite · NOT the exact 0.19110 pointer",color:"#ff6b6b",log:true,fmt:fSv,
     hlines:[{y:META.pointer||BOOT.pointer,label:"pointer 0.19110",color:"#46d369"}]});
   updateAria();
 }
@@ -2783,10 +2781,10 @@ function stageWord(ep){if(ep==null)return "starting";
   if(mu!=null&&ep>=mu)return "Muon";
   return (mu!=null)?"l7":"l7/Muon";}
 
-// ---------- scorer breakdown (implied-S decomposition; HONEST measured-pose primary) ----------
-// S = 100·d_seg + √(10·d_pose) + 25·(bytes/N). The PRIMARY S here uses the MEASURED d_pose
-// (== implied_S_monitoring, the honest current score). The deploy projection (stored-pose
-// sidecar 3.4e-5) is shown clearly labeled optimistic/UNVALIDATED — never as the honest score.
+// ---------- scorer breakdown (implied-S decomposition; HONEST measured terms) ----------
+// S = 100·d_seg + √(10·d_pose) + 25·(bytes/N), all three from the last measured row.
+// d_pose is the store-nothing screw carrier's OWN measured pose — the honest composite.
+// This is advisory (NOT the exact 0.19110 pointer); byte-closed pose confirmation is #238.
 function renderScorerBreakdown(last){
   const subEl=$("sb_subst"), termsEl=$("sb_terms"), depEl=$("sb_deploy");
   if(!subEl||!termsEl||!depEl)return;
@@ -2797,31 +2795,22 @@ function renderScorerBreakdown(last){
   const N=META.archive_norm_bytes||37545489, Nstr=N.toLocaleString("en-US");
   const ds=last.d_seg, dp=last.d_pose, by=last.blob_bytes;
   const t1=100.0*ds, t2=Math.sqrt(10.0*dp), t3=25.0*by/N;
-  const honestS=t1+t2+t3;
+  const measuredS=t1+t2+t3;
   // (2) substituted formula with the latest row's actual MEASURED values
   subEl.innerHTML="with our values (measured): S = 100&middot;(<b>"+sig(ds,6)+
     "</b>) + &radic;(10&middot;<b>"+sig(dp,6)+"</b>) + 25&middot;(<b>"+fmtInt(by)+"</b> / "+Nstr+")";
-  // (3) weighted terms -> S. sanity-check honest S vs implied_S_monitoring; surface divergence.
-  const mon=last.implied_S_monitoring;
-  const diverges=(mon!=null&&isFinite(mon)&&Math.abs(honestS-mon)>Math.max(5e-3,Math.abs(mon)*1e-3));
+  // (3) weighted terms -> S (all three measured)
   let html="";
   [["100&middot;d_seg",t1],["&radic;(10&middot;d_pose)",t2],["25&middot;bytes / "+Nstr,t3]].forEach(r=>{
     html+="<div class='sbrow'><span class='sbk'>"+r[0]+"</span><span class='sbv'>= "+sig(r[1],4)+"</span></div>";
   });
   html+="<div class='sbrule'></div>";
-  html+="<div class='sbrow sbtot"+(diverges?" sbwarn":"")+"'><span class='sbk'>S (honest, measured pose)</span>"+
-    "<span class='sbv'>= "+sig(honestS,4)+"</span></div>";
-  if(diverges){
-    html+="<div class='sbrow sbdiv'><span class='sbk'>&#9888; &ne; implied_S_monitoring</span>"+
-      "<span class='sbv'>"+sig(mon,4)+"</span></div>";
-  }
+  html+="<div class='sbrow sbtot'><span class='sbk'>S (measured) = implied_S</span>"+
+    "<span class='sbv'>= "+sig(measuredS,4)+"</span></div>";
   termsEl.innerHTML=html;
-  // (4) deploy projection — OPTIMISTIC / UNVALIDATED, clearly secondary (never the honest score)
-  const sidePose=(META.deploy_sidecar_d_pose!=null)?META.deploy_sidecar_d_pose:3.4e-5;
-  const t2dep=Math.sqrt(10.0*sidePose), depS=t1+t2dep+t3;
-  depEl.innerHTML="<span class='sbdl'>deploy projection</span> &mdash; assumes pose reaches the store-nothing "+
-    "target d_pose="+sig(sidePose,2)+" (<b>UNVALIDATED on the witness</b>): pose term &rarr; <b>"+sig(t2dep,4)+
-    "</b>, S &rarr; <b>"+sig(depS,4)+"</b> &middot; optimistic &mdash; NOT the honest score above.";
+  // (4) one-line advisory note — this is the run's own measured composite, not the pointer
+  depEl.innerHTML="advisory &mdash; the run's own measured composite (store-nothing-carrier d_pose), "+
+    "NOT the exact 0.19110 pointer &middot; byte-closed pose confirmation is #238.";
 }
 
 function render(){
@@ -2930,12 +2919,12 @@ function renderProjection(g){
   } else {
     segEl.innerHTML="d_seg model · <b>calibrating</b> — "+escHtml(fit.reason||"need more points");
   }
-  // implied_S projection (model asymptote + sidecar pose + projected bytes) + stage-aware
-  // completion ETA + current-stage cadence flag
+  // implied_S projection (model asymptote + measured store-nothing-carrier pose + projected
+  // bytes) + stage-aware completion ETA + current-stage cadence flag — advisory
   const bits=[];
   const sp=P.implied_s_proj||{};
   if(sp.ok&&sp.value!=null){
-    let s="projected final implied_S <b>"+sig(sp.value,4)+"</b>";
+    let s="projected final implied_S (advisory) <b>"+sig(sp.value,4)+"</b>";
     if(sp.value_lo!=null||sp.value_hi!=null)
       s+=" ("+sig(sp.value_lo,4)+"–"+(sp.value_hi!=null?sig(sp.value_hi,4):"≳")+")";
     s+=" vs pointer 0.19110";
