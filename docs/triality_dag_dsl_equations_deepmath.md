@@ -147,6 +147,52 @@ The equations leg carries the framing theorems that name and justify the machine
   Sutskever's conditional `K(Y|X)` = the amortized meta-init / warm-start (#211). Naming = non-forgetting
   = the triality staying consistent.
 
+## 4d. The layer ABOVE the triality — the Hamiltonian/optimal-control costate-controller (the canonical-consumer brain)
+
+The triality has a **dimension above it, from which it falls out** (operator insight 2026-07-03, from the
+EdgeBench arXiv:2512-class symposium; memory `meta-layer-above-triality-hamiltonian-optimal-control-costate`).
+The three legs are not a free choice — they are the three unavoidable **shadows of one controlled learning
+dynamics**: DAG = the **state trajectory** x(t), DSL = the **control policy** u(t), equations = the
+**generator / action-law** S. That object is the learning process as a **Hamiltonian / optimal-control action**
+(`δS/δθ = 0`, the "unified Lagrangian action" CLAUDE.md already half-named). In the D4 picture: the triality is
+the **three outer nodes** (8v/8s/8c); the layer above is the **one central node** they hang off — the generator.
+The DAG→DSL→equations cycle (§3) is the S₃/order-3 symmetry that rotates the shadows.
+
+- **The missing 4th object — the COSTATE λ.** A pure {state, control, law} triality omits the adjoint: the
+  **sensitivity of goal-value to state = the measured marginal-ΔS per lever** (grounded in the margin-saliency
+  field #141 + the measured n600 rows). The costate is the shadow-price that flows DAG→DSL; **without it the DSL
+  can only EMIT recipes, not OPTIMALLY SELECT** — a passive emitter, not the active controller the layer demands.
+- **The measured equation of motion (EdgeBench).** Frontier expansion on a latent task graph gives
+  `dx/du = β·x(1−x)` (logistic; the reaction term of Fisher–KPP), with `u ~ log t` from self-similar/fractal
+  structure (they cite self-organized criticality). It is the SAME front-propagation equation at the **witness**
+  scale (the level-set boundary, Layer A) AND the **campaign** scale (this triality, Layer B) — the meta-layer is
+  scale-free, so the {state, control, law} triality precipitates at every zoom. HONEST caveat (fresh-eyes,
+  App D.5): the clean log-sigmoid holds only on well-mixed graphs; a **bottleneck** (our d_seg ~8-dim lane
+  manifold) yields plateaus / a sum-of-sigmoids — so the controller ranks by MEASURED marginal-ΔS per cost,
+  NEVER by fitting the aggregate curve to a single bottlenecked run. FRAMING/VALIDATION, not a contest lever
+  (no through-R ΔS). Ledgers: `.omx/research/edgebench_scaling_laws_deepdive_*.md`,
+  `.omx/research/edgebench_freshpass_dynamics_derivation_*.md`, `.omx/research/gaussian_quant_2512.06609_deepdive_*.md`.
+- **The form = the canonical-consumer bidirectional brain (operator: "sensors + actuators + turbo brain in one").**
+  Close the DSL leg as an interpretable, ADVISORY (CONTAINMENT — never auto-fires paid/heavy GPU),
+  continually-updated controller: `next_lever = argmax over READY levers of [predicted ΔS-toward-target · effect −
+  cost]`, never-regress — simultaneously Pontryagin control-max, POWERPLAY frontier-selection (§4b), and
+  learning-progress acquisition. **Sensors** = the `*_sensitivity*` producer family (the costate). **Brain** =
+  `pareto_polytope_unified_solver`/`dykstra_pareto_solver`, `autopilot_rudin_daubechies/rashomon_ensemble`,
+  `continual_learning`/`council_continual_learning`, `canonical_equations`. **Actuators** = `atom/atom.py`,
+  `nerv_master_consumer_bridge`, the rate-allocator queue.
+- **This is a DE-ORPHANING UNIFICATION, not a blank build.** We already have this brain sprawled from an earlier,
+  clumsy attempt — the **cathedral autopilot** (`tools/cathedral_autopilot*.py` + `src/tac/{cathedral,
+  cathedral_autopilot,cathedral_consumers,cathedral_solver_wire_in}`). It sprawled and orphaned producers because
+  it was a *framework without a variational skeleton*; the Hamiltonian form is that skeleton (Carmack: a scoring
+  function, not a framework). **The orphan problem restated = "a costate producer with no controller consuming
+  it."** Build = task #247; Catalog #335 auto-discovery + the 6-hook wire-in are the standing anti-orphan enforcement.
+- **The velocity-orphaning meta-bug (the deepest signal loss).** Even WITH that architecture, valuable things
+  drifted / stagnated / were forgotten "due to extreme, sustained grueling dev velocity" — the producer-rate
+  outran the consumption-rate, and consumption was a *manual step a relentless pace skipped*. The cure must survive
+  the velocity that broke the last one: consumption **automatic + continuous**, the costate ranking its own
+  orphans; re-consumption is **measured + costate-ranked, not a frantic sweep** (do not fight drift with more
+  grind). Memory: `velocity-driven-orphaning-the-deepest-signal-loss-meta-bug`.
+
 ## 5. Consistency = campaign non-forgetfulness (the maintenance loop)
 
 Per lever, ONLY after build + wire + integrate + rigorous test + recursive-adversarial-review
@@ -171,19 +217,28 @@ caught the n200/mod-32-vs-n600/mod-26 confounder *structurally*), MPS-never, con
 falsifier, 3-clean-pass recursive adversarial review. Negatives are SUSPECT — implementation-
 level, not paradigm-level — until an adversarial + deep-math + OSS pass tries to overturn them.
 
-## 7. Live campaign state (2026-07-02, the current thread)
+## 7. Live campaign state (2026-07-03, the current thread)
 
 - **Pointer 0.19110 UNMOVED** — the borrowed PR101/PR110 recode; the honest state until a byte-closed
   n600 `upstream/evaluate.py` row crosses it.
-- **#205 SEALED + launcher-ready but LAUNCH HELD.** `--config sealed_205` (or `store_nothing_205`)
-  reproduces the SEALed §7 argv byte-identically; the GO is the operator's, **gated on R1** (the robust
-  trained-pose gate, agent `ae55c8617`, in flight — measures whether a trained rank-6 dξ residual drives
-  the pose carrier d_pose low on a real converged checkpoint; the OPEN #205 pose question, no borrowed
-  3.4e-5) + the two held prerequisites (real optimal pose, confirmed byte-close). Infra ready; NO GPU.
-- **Pose carrier A/B ready:** store-nothing-but-ξ (`store_nothing_205`) vs table (`sealed_205`) — rate
-  collapse byte-close BIT-EXACT (1049 B / rate 0.0491); real d_pose is #205-gated.
-- **OOM self-protection live:** `--verdict-batch 32` (default) + `witness_memory_preflight` REFUSE
-  (rc=4) projected peak > 0.70×RAM — always chunk full-P scorer forwards (score-neutral).
+- **Machine CRASHED 2026-07-02 (concurrent jobs summed >128 GB → memory-pressure hang) → RECOVERED.**
+  Root cause = per-process caps blind to the system total. Fix landed: the **system-memory governor**
+  (`tools/system_memory_governor.py` + `memory_blackbox.py`) — a black-box recorder + system-wide
+  admission HARD-gate (ENFORCING, `56147e797`; independently reviewed SAFE-TO-ENFORCE) + reversible
+  throttle; canonical eq `adaptive_ceiling_admission_control_v1`. One lost-signal casualty (#238
+  byte-close) re-tasked; recovery sweep `.omx/research/crash_signal_loss_recovery_sweep_20260703.md`.
+- **R1 relaunched (pid 19940, crash-resumable per-epoch), first descent point in.** The trained-pose
+  gate for #205: ep1001 verdict d_seg 0.004502 / d_pose **62.44** (store-nothing pose at its untrained
+  start — high as expected) / implied_S 25.5; ~35 min per async point. Question = does d_pose descend as
+  the render co-adapts? Descent slope TBD (one point ≠ trend). `--verdict-pairs 0 --eval-every 1` = the
+  dense per-epoch pose-behavior signal; `--verdict-batch 32` chunking keeps it memory-safe (score-neutral).
+- **#205 LAUNCH HELD** on operator GO, gated on R1's descent verdict + the two prerequisites (real optimal
+  pose, confirmed byte-close). `--config sealed_205`/`store_nothing_205` reproduces the SEALed argv
+  byte-identically. Pose carrier A/B ready (store-nothing-but-ξ vs table — rate collapse byte-close
+  BIT-EXACT 1049 B / rate 0.0491). NO GPU till GO.
+- **Meta-layer recognized (§4d):** the costate-controller / canonical-consumer brain = the de-orphaning
+  unification of the cathedral autopilot + `*_sensitivity*` producers (task #247); its first act is the
+  next-lever pick after R1's verdict + a costate-ranked re-consumption of velocity-drifted producers.
 
 ## 8. Pointers
 
