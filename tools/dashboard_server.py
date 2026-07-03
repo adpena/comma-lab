@@ -564,7 +564,7 @@ class LiveState:
         live = Path(self.watched_dir) / self.cfg.witness_ema_name
         return live if live.exists() else None
 
-    def _flowseq_stem(self, best: Path, mtime: float) -> Path:
+    def _stem_for(self, best: Path, mtime: float) -> Path:
         cfg = self.cfg
         key = f"{best.parent.name}_{int(mtime)}_ds{cfg.flow_seq_downsample}"
         return Path(cfg.flow_seq_cache_dir) / f"flow_{key}"
@@ -582,7 +582,7 @@ class LiveState:
             return
         if mtime == self._flowseq_done_mtime:
             return  # already have (and ingested) the output for this checkpoint
-        stem = self._flowseq_stem(best, mtime)
+        stem = self._stem_for(best, mtime)
         done = stem.with_suffix(".done")
         # 1) output already on disk (prior run/session or a just-finished subprocess) -> ingest.
         if done.exists():
