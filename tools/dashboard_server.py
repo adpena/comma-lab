@@ -103,6 +103,17 @@ class Config:
     # follows it automatically and resets to show ONLY that run — no repoint, no restart.
     auto_latest: bool = True
     auto_base_glob: str = "experiments/results/levelset_*/*.log"
+    # WITNESS tab (Tab 2): live comma10k 6-panel + Yousfi/Fridrich tribute rendered FROM the
+    # live EMA checkpoint, re-rendered on checkpoint-mtime change (NOT every tick), in the
+    # tailer executor (never blocks the loop), broadcast over the SAME WebSocket. Light
+    # (~2 GB peak, ~8 s CPU-only, gt_n6 aligned) — yields to #205 under a memory floor.
+    witness_enable: bool = True
+    witness_gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"
+    witness_pairs: str = "0,2,4"
+    witness_ema_name: str = "levelset_witness_ema_mlx.npz"
+    witness_min_free_gib: float = 5.0    # skip a render when free RAM is below this (yield to #205)
+    witness_min_interval_s: float = 45.0  # rate-limit re-renders even if the ckpt mtime flaps
+    witness_dpi: int = 80
 
     def resolved_glob(self) -> str:
         if self.log_glob:               # explicit --log-glob is a hard override
@@ -132,6 +143,13 @@ def config_from_env() -> Config:
         training_sig=e("DASH_TRAINING_SIG", "train_levelset_witness"),
         auto_latest=e("DASH_AUTO_LATEST", "1") not in ("0", "false", "False"),
         auto_base_glob=e("DASH_AUTO_BASE_GLOB", "experiments/results/levelset_*/*.log"),
+        witness_enable=e("DASH_WITNESS_ENABLE", "1") not in ("0", "false", "False"),
+        witness_gt_cache=e("DASH_WITNESS_GT_CACHE", "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"),
+        witness_pairs=e("DASH_WITNESS_PAIRS", "0,2,4"),
+        witness_ema_name=e("DASH_WITNESS_EMA_NAME", "levelset_witness_ema_mlx.npz"),
+        witness_min_free_gib=float(e("DASH_WITNESS_MIN_FREE_GIB", "5.0")),
+        witness_min_interval_s=float(e("DASH_WITNESS_MIN_INTERVAL_S", "45.0")),
+        witness_dpi=int(e("DASH_WITNESS_DPI", "80")),
     )
 
 
@@ -312,6 +330,15 @@ class LiveState:
         self.run_info: dict = {}              # #205 full run-info dict (rld._collect_run_info)
         self.run_info_html: str = ""          # #205 strip HTML (rld._run_info_html), pre-rendered off-loop
         self.projection: dict = {"ok": False, "reason": "calibrating"}  # DATA-DERIVED trajectory model
+        # WITNESS tab (Tab 2) live-render state: re-rendered ONLY on EMA-ckpt-mtime change, in the
+        # tailer executor, broadcast over the same WS. self.witness holds the last payload (panels
+        # as data: URIs) so a fresh page's snapshot() first-paints without waiting for the next ckpt.
+        self.witness: dict = {}
+        self._witness_renderer = None          # lazy WitnessPanelRenderer (loads scorer+gt once)
+        self._witness_ckpt_mtime: float = 0.0  # mtime of the EMA ckpt the panels were rendered from
+        self._witness_last_attempt: float = 0.0
+        self._witness_dirty: bool = False      # set when a NEW payload is ready to broadcast
+        self._witness_err: str = ""
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
         # cadence sub-state (per-log). DATA-DERIVED ONLY — NO hardcoded cadence prior /
@@ -326,10 +353,14 @@ class LiveState:
                                          preferred_cadence_source="measured")
 
     # ---- refresh (sync; called via executor) ----
-    def refresh(self) -> list[dict]:
+    def refresh(self, with_witness: bool = True) -> list[dict]:
         """Auto-resolve the freshest arm (auto-latest), walk its RESUME ANCESTRY, and
         rebuild the FULL trajectory (CE->tau->l7->muon...) — not just the post-resume
-        tail. Liveness reflects the live (latest) arm. Returns NEW points for WS deltas."""
+        tail. Liveness reflects the live (latest) arm. Returns NEW points for WS deltas.
+
+        ``with_witness`` gates the Tab-2 panel render (heavy-ish CPU, ~8 s): the lifespan
+        PRIMING call passes False so startup is instant; the tailer passes True so the
+        panels re-render on ckpt-mtime change inside the executor (never the event loop)."""
         cfg = self.cfg
         glob = cfg.resolved_glob()
         verdict_latest = rld._resolve_watched_log(None, glob)  # newest VERDICT-bearing
@@ -471,7 +502,71 @@ class LiveState:
         for p in new_points:
             self._epochs.add(p["epoch"])
         self.trajectory = rows_full
+
+        # WITNESS panels (Tab 2): re-render ONLY when the live EMA checkpoint mtime advances
+        # (a NEW checkpoint landed) — throttled, memory-gated, in THIS executor thread. Sets
+        # self._witness_dirty so the tailer broadcasts the fresh payload over the WS.
+        if with_witness and cfg.witness_enable and latest is not None and self.watched_dir:
+            try:
+                self._maybe_render_witness(now)
+            except Exception as exc:  # a viz must NEVER take down the live telemetry
+                self._witness_err = f"witness render error: {exc}"
+                print(json.dumps({"stage": "dashboard_server", "witness_error": str(exc)}), flush=True)
         return new_points
+
+    # ---- witness panels (Tab 2): render on ckpt-mtime change; memory-gated; executor thread ----
+    def _free_gib(self) -> float | None:
+        try:
+            import psutil
+            return psutil.virtual_memory().available / (1024 ** 3)
+        except Exception:
+            return None
+
+    def _maybe_render_witness(self, now: float) -> None:
+        cfg = self.cfg
+        ema = Path(self.watched_dir) / cfg.witness_ema_name
+        if not ema.exists():
+            return
+        try:
+            mtime = ema.stat().st_mtime
+        except OSError:
+            return
+        if mtime <= self._witness_ckpt_mtime:
+            return  # no new checkpoint since the last render -> nothing to do (the throttle)
+        if now - self._witness_last_attempt < cfg.witness_min_interval_s:
+            return  # rate-limit (belt-and-suspenders in case mtime flaps)
+        free = self._free_gib()
+        if free is not None and free < cfg.witness_min_free_gib:
+            # yield to the live #205 GPU run under memory pressure; retry next tick (mtime still new)
+            print(json.dumps({"stage": "dashboard_server", "witness_skip": "low_free_ram",
+                              "free_gib": round(free, 1)}), flush=True)
+            return
+        self._witness_last_attempt = now
+        if self._witness_renderer is None:
+            from witness_dashboard_panels import WitnessPanelRenderer  # tools/ on sys.path
+            pairs = [int(x) for x in str(cfg.witness_pairs).split(",") if x.strip() != ""]
+            self._witness_renderer = WitnessPanelRenderer(cfg.witness_gt_cache, pairs)
+        epoch = self.liveness.get("last_epoch")
+        if epoch is None:
+            epoch = max((r["epoch"] for r in self.trajectory
+                         if isinstance(r.get("epoch"), int)), default=None)
+        payload = self._witness_renderer.render(
+            self.watched_dir, cfg.witness_ema_name, epoch, cfg.witness_dpi)
+        self.witness = payload
+        self._witness_ckpt_mtime = mtime
+        self._witness_err = ""
+        self._witness_dirty = True
+        print(json.dumps({"stage": "dashboard_server", "witness_rendered": True,
+                          "epoch": epoch, "n_pairs": payload.get("n_pairs_shown"),
+                          "mean_dseg": payload.get("mean_dseg"),
+                          "secs": payload.get("render_secs")}), flush=True)
+
+    def consume_witness_dirty(self) -> bool:
+        """Return+clear the witness-dirty flag (single-threaded event loop -> race-free)."""
+        if self._witness_dirty:
+            self._witness_dirty = False
+            return True
+        return False
 
     # ---- snapshot for client ----
     def meta(self) -> dict:
@@ -502,14 +597,28 @@ class LiveState:
         }
 
     def snapshot(self) -> dict:
+        # witness panels ride the snapshot (WS connect + /api/state fallback) so a fresh page
+        # FIRST-PAINTS the Tab-2 imagery without waiting for the next checkpoint. The recurring
+        # 5 s update_msg deliberately OMITS them (keeps the live delta stream tiny).
         return {"type": "snapshot", "trajectory": self.trajectory,
                 "liveness": self.liveness, "meta": self.meta(),
-                "projection": self.projection}
+                "projection": self.projection, "witness": self._witness_public()}
 
     def update_msg(self, new_points: list[dict]) -> dict:
         return {"type": "update", "new_points": new_points,
                 "liveness": self.liveness, "meta": self.meta(),
                 "projection": self.projection}
+
+    def _witness_public(self) -> dict:
+        """The witness payload for the client (panels + metadata), or an honest status stub
+        while the first render is still in flight."""
+        if self.witness:
+            return self.witness
+        return {"ok": False, "err": self._witness_err,
+                "status": ("error" if self._witness_err else "rendering")}
+
+    def witness_msg(self) -> dict:
+        return {"type": "witness", "witness": self._witness_public()}
 
     # ---- broadcast ----
     async def broadcast(self, msg: dict) -> None:
@@ -539,6 +648,9 @@ def create_app(cfg: Config) -> Starlette:
             try:
                 new_points = await loop.run_in_executor(None, state.refresh)
                 await state.broadcast(state.update_msg(new_points))
+                # a fresh witness render (new checkpoint) -> push the panels over the SAME WS
+                if state.consume_witness_dirty():
+                    await state.broadcast(state.witness_msg())
             except Exception as exc:  # telemetry must never crash the live server
                 print(json.dumps({"stage": "dashboard_server", "tailer_error": str(exc)}),
                       flush=True)
@@ -549,9 +661,11 @@ def create_app(cfg: Config) -> Starlette:
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
-        # prime once so the first client gets data immediately
+        # prime once so the first client gets data immediately (skip the ~8 s witness render
+        # here so startup/hot-reload is instant; the first tailer tick renders the panels).
         with contextlib.suppress(Exception):
-            await asyncio.get_event_loop().run_in_executor(None, state.refresh)
+            await asyncio.get_event_loop().run_in_executor(
+                None, lambda: state.refresh(with_witness=False))
         stop = asyncio.Event()
         task = asyncio.create_task(tailer(stop))
         app.state.live = state
@@ -761,6 +875,36 @@ padding:10px 10px 6px;min-width:0;overflow:hidden}
 .tri .card h3{font-size:12px;color:var(--goal);margin:0 0 7px;letter-spacing:.5px;text-transform:uppercase}
 .tri ol,.tri ul{padding-left:20px}.tri li{margin-bottom:5px}
 
+/* witness tab (Tab 2) — comma10k 6-panel + Yousfi/Fridrich tribute, live over WS */
+.wit h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:20px 0 8px}
+.wit h3{font-size:12.5px;color:var(--goal);margin:20px 0 8px;letter-spacing:.4px;text-transform:uppercase}
+.wit p,.wit li{font-size:13px;color:var(--fg2);line-height:1.6}
+.wit b{color:var(--fg)}
+.witintro{margin-bottom:6px}
+.withdr{font-size:11.5px;color:var(--faint2);margin:8px 2px 2px;font-variant-numeric:tabular-nums;
+word-break:break-word;line-height:1.55}
+.withdr b{color:var(--fg2);font-weight:600}
+.witgrid{display:flex;flex-direction:column;gap:16px;margin:12px 0 6px}
+.witfig{margin:0;background:var(--panel);border:1px solid var(--grid);border-radius:12px;
+padding:8px;overflow-x:auto;min-width:0}
+.witfig img{display:block;width:100%;max-width:100%;height:auto;border-radius:8px}
+.witfig figcaption{font-size:11.5px;color:var(--muted);margin:7px 3px 2px;font-variant-numeric:tabular-nums}
+.witfig figcaption b{color:var(--fg2);font-weight:600}
+.wittrip{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:14px 0}
+.wittrip p{font-size:12.5px;margin:0 0 9px}
+.witthesis{color:var(--fg2);border-left:2px solid var(--acc);padding-left:11px;margin-top:11px !important}
+.witcredits{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 8px}
+.witcredits .wch{font-size:11px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+.witcredits ul{padding-left:20px;margin:0 0 10px}
+.witcredits li{font-size:12.5px;margin-bottom:7px}
+.witcredits .wcnote{font-size:11px;color:#b89a4a;line-height:1.55;border-top:1px solid var(--grid);padding-top:9px}
+
+/* flow tab (Tab 3) — stub */
+.flow h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:22px 0 10px}
+.flow p{font-size:13.5px;color:var(--fg2);line-height:1.6;max-width:760px}
+.flow .m{color:var(--muted);font-size:12.5px}
+.flowstub{background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:22px 20px;margin-top:12px}
+
 /* n-badge (which run am I watching) */
 .nbadge{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;letter-spacing:.3px;line-height:1.3}
 .nbadge.doe{background:#16263a;color:#7fc0ff}
@@ -855,6 +999,8 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 </div>
 <div class="tabs">
   <div class="tab on" data-tab="live">LIVE</div>
+  <div class="tab" data-tab="witness">WITNESS</div>
+  <div class="tab" data-tab="flow">FLOW</div>
   <div class="tab" data-tab="tri">TRIALITY &middot; PLAN</div>
 </div>
 
@@ -914,6 +1060,59 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <div class="panel"><canvas id="c_s" role="img" aria-label="implied S chart"></canvas></div>
   </div>
   <div class="foot" id="foot"></div>
+</section>
+
+<section id="tab-witness" class="wit hide">
+  <div class="witintro">
+    <h2>The scorer's eye &mdash; comma10k 6-panel + the inverse-steganalysis tribute</h2>
+    <p>Rendered LIVE from the &#8203;#205 EMA checkpoint (re-renders when a new checkpoint lands,
+    streamed over the same WebSocket &mdash; no reload). Each pair is the canonical comma multipane:
+    <b>Row A</b> GT &middot; our witness render (through the contest R operator) &middot; pixel error;
+    <b>Row B</b> the SegNet argmax the scorer actually sees for GT vs our render, and their
+    disagreement (the d_seg pixels); <b>Row C</b> the tribute triptych.</p>
+    <div class="withdr" id="withdr">rendering witness panels from the live checkpoint&hellip;</div>
+  </div>
+  <div class="witgrid" id="witpanels"></div>
+  <div class="wittrip">
+    <h3>Row C &mdash; the tribute triptych</h3>
+    <p><b>&rho;_seg &mdash; SegNet margin field.</b> Top1&minus;top2 logit margin per pixel;
+    <b>bright = small margin = fragile</b>, the codim-1 <i>separatrix</i> where the argmax can flip
+    &mdash; i.e. where d_seg lives. Yassine <b>Yousfi</b>'s comma10k segmentation baseline IS the
+    contest SegNet; this panel is the detector's own sensitivity map.</p>
+    <p><b>&rho;_uniward &mdash; S-UNIWARD cost.</b> The real Holub&ndash;Fridrich&ndash;Denemark 2014
+    universal distortion (directional-Haar wavelet residual reciprocal-energy &mdash; the same
+    approximation Yousfi 2017 uses), computed on our render. High (textured) = <b>undetectable</b> to
+    embed into; smooth regions are where a perturbation would be caught.</p>
+    <p class="witthesis">Read together: <b>UNIWARD undetectability</b> (Fridrich) &rarr;
+    <b>SegNet detection</b> (Yousfi) &rarr; our <b>inverse-steganalysis witness</b> &mdash; a
+    task-space carrier that spends its bytes on the small-margin separatrix the detector is most
+    sensitive to, and nowhere else.</p>
+  </div>
+  <div class="witcredits">
+    <div class="wch">Credits &amp; lineage &mdash; a genuine tribute</div>
+    <ul>
+      <li><b>comma10k-baseline</b> (Yassine Yousfi) &mdash; the segmentation baseline whose
+      EfficientNet-B2 U-Net is the contest's frozen SegNet; the argmax it produces IS the d_seg
+      authority this page measures against.</li>
+      <li><b>S-UNIWARD</b> (Vojt&#283;ch Holub, Jessica Fridrich, Tom&aacute;&#353; Denemark, 2014,
+      Binghamton DDE Lab) &mdash; the universal steganographic distortion; the theory that textured
+      regions hide a perturbation and smooth ones expose it.</li>
+      <li>The framing that this contest <b>IS inverse steganalysis</b>: the scorer is the steganalyst;
+      the shortest archive whose witness survives the detector wins.</li>
+    </ul>
+    <div class="wcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
+    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</div>
+  </div>
+</section>
+
+<section id="tab-flow" class="flow hide">
+  <div class="flowstub">
+    <h2>FLOW &mdash; coming soon</h2>
+    <p>The level-set flow view: the witness as a variational level-set PDE evolving the
+    Morse&ndash;Smale complex of the SegNet argmax (curvelet coarse&rarr;fine = persistence order =
+    temperature anneal), with the margin / eikonal / length terms animated as the separatrix sharpens.</p>
+    <p class="m">Placeholder for now &mdash; the LIVE and WITNESS tabs carry the measured state.</p>
+  </div>
 </section>
 
 <section id="tab-tri" class="tri hide">
@@ -976,7 +1175,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 <div class="nbest" id="nbest" role="status" aria-live="polite"></div>
 <script>
 const BOOT = __BOOT__;
-let TRAJ = [], LIVE = {}, META = {}, PROJ = {};
+let TRAJ = [], LIVE = {}, META = {}, PROJ = {}, WITNESS = {};
 let ws = null, wsOpen = false, wsTries = 0, pollTimer = null;
 // enrichment state (all derived client-side from TRAJ; no new backend data)
 let hoverEpoch=null, bestVal=null, bestEpoch=null, _celebrating=false, _celTimer=null;
@@ -1043,9 +1242,9 @@ function activateTab(t){
   document.querySelectorAll(".tab").forEach(x=>{x.classList.remove("on");x.setAttribute("aria-selected","false");});
   t.classList.add("on");t.setAttribute("aria-selected","true");
   const which=t.dataset.tab;
-  $("tab-live").classList.toggle("hide",which!=="live");
-  $("tab-tri").classList.toggle("hide",which!=="tri");
+  document.querySelectorAll("section[id^='tab-']").forEach(s=>{s.classList.toggle("hide",s.id!=="tab-"+which);});
   if(which==="live") scheduleDraw();
+  if(which==="witness") renderWitness();
 }
 document.querySelectorAll(".tab").forEach(t=>{
   t.setAttribute("role","tab");t.setAttribute("tabindex","0");
@@ -1508,6 +1707,43 @@ function renderRunInfo(){
   el.innerHTML=META.run_info_html||"";
 }
 
+// ---------- witness tab (Tab 2): live comma10k 6-panel + tribute, streamed over the WS ----------
+// Panels arrive as data: URIs in the snapshot (first paint) + a {type:"witness"} WS message on
+// each NEW checkpoint. Build each pair's <figure> once, then swap its <img> src IN PLACE (no
+// reload). Rare + possibly-hidden tab -> cheap.
+function renderWitness(){
+  const host=$("witpanels"), hdr=$("withdr"); if(!host)return;
+  const W=WITNESS||{};
+  if(!W.ok||!Array.isArray(W.pairs)||!W.pairs.length){
+    if(hdr) hdr.textContent=(W.status==="error"||W.err)
+      ? ("witness render error — "+(W.err||"see server log"))
+      : "rendering witness panels from the live checkpoint… (first render ~8s; refreshes on each new checkpoint)";
+    return;
+  }
+  if(hdr){
+    hdr.innerHTML="rendered from EMA checkpoint @ epoch <b>"+(W.epoch!=null?W.epoch:"?")+"</b> · "+
+      W.n_pairs_shown+" pairs · mean realized d_seg <b>"+sig(W.mean_dseg,5)+"</b> · "+
+      escHtml(W.gt_cache||"")+" (aligned) · rendered in "+sig(W.render_secs,3)+"s · built "+
+      escHtml(W.built_at_utc||"")+" · "+escHtml(W.authority||"");
+  }
+  const present=new Set();
+  W.pairs.forEach(p=>{
+    const fid="witfig-"+p.pair_idx; present.add(fid);
+    let fig=$(fid);
+    if(!fig){
+      fig=document.createElement("figure");fig.className="witfig";fig.id=fid;
+      const img=document.createElement("img");img.id="witimg-"+p.pair_idx;img.loading="lazy";
+      img.alt="witness pair "+p.pair_idx+" — comma10k 6-panel + margin/UNIWARD tribute";
+      const cap=document.createElement("figcaption");cap.id="witcap-"+p.pair_idx;
+      fig.appendChild(img);fig.appendChild(cap);host.appendChild(fig);
+    }
+    const im=$("witimg-"+p.pair_idx); if(im&&im.src!==p.panel) im.src=p.panel;
+    const cp=$("witcap-"+p.pair_idx);
+    if(cp) cp.innerHTML="pair "+p.pair_idx+" · realized d_seg through R <b>"+sig(p.our_dseg,5)+"</b>";
+  });
+  Array.from(host.querySelectorAll(".witfig")).forEach(f=>{if(!present.has(f.id))f.remove();});
+}
+
 // new-best d_seg celebration (tasteful; respects reduced-motion via CSS)
 function celebrate(val){
   const b=$("nbest"); if(!b)return;
@@ -1520,7 +1756,9 @@ function celebrate(val){
 function pulse(){const p=$("pill");if(!p||reduceMotion)return;
   p._beat=true;p.classList.remove("beat");void p.offsetWidth;p.classList.add("beat");
   setTimeout(()=>{p._beat=false;p.classList.remove("beat");},1000);}
-function applySnapshot(m){TRAJ=m.trajectory||[];LIVE=m.liveness||{};META=m.meta||{};PROJ=m.projection||{};render();}
+function applySnapshot(m){TRAJ=m.trajectory||[];LIVE=m.liveness||{};META=m.meta||{};PROJ=m.projection||{};
+  if(m.witness)WITNESS=m.witness;
+  render();renderWitness();}
 function applyUpdate(m){
   const np=m.new_points||[];
   let gotNew=false, beat=false;
@@ -1545,7 +1783,10 @@ function connectWS(){
   const proto=location.protocol==="https:"?"wss:":"ws:";
   try{ws=new WebSocket(proto+"//"+location.host+"/ws"+location.search);}catch(e){startPoll();return;}
   ws.onopen=()=>{wsOpen=true;wsTries=0;setWsPill(true);stopPoll();};
-  ws.onmessage=ev=>{try{const m=JSON.parse(ev.data);if(m.type==="snapshot")applySnapshot(m);else applyUpdate(m);}catch(e){}};
+  ws.onmessage=ev=>{try{const m=JSON.parse(ev.data);
+    if(m.type==="snapshot")applySnapshot(m);
+    else if(m.type==="witness"){WITNESS=m.witness||{};renderWitness();}
+    else applyUpdate(m);}catch(e){}};
   ws.onclose=()=>{wsOpen=false;setWsPill(false);wsTries++;startPoll();
     setTimeout(connectWS,Math.min(15000,1000*Math.pow(1.6,Math.min(wsTries,8))));};
   ws.onerror=()=>{try{ws.close();}catch(e){}};
@@ -1638,6 +1879,15 @@ def main() -> None:
     ap.add_argument("--auto-latest", action=argparse.BooleanOptionalAction, default=cfg.auto_latest,
                     help="follow the freshest witness arm across all dirs (default ON; --no-auto-latest to pin --run-dir)")
     ap.add_argument("--auto-base-glob", default=cfg.auto_base_glob)
+    ap.add_argument("--witness", action=argparse.BooleanOptionalAction, default=cfg.witness_enable,
+                    help="Tab-2 WITNESS live panels (default ON; --no-witness to disable the render)")
+    ap.add_argument("--witness-gt-cache", default=cfg.witness_gt_cache)
+    ap.add_argument("--witness-pairs", default=cfg.witness_pairs,
+                    help="comma-separated GT-cache pair indices to render (default 0,2,4)")
+    ap.add_argument("--witness-ema-name", default=cfg.witness_ema_name)
+    ap.add_argument("--witness-min-free-gib", type=float, default=cfg.witness_min_free_gib)
+    ap.add_argument("--witness-min-interval-s", type=float, default=cfg.witness_min_interval_s)
+    ap.add_argument("--witness-dpi", type=int, default=cfg.witness_dpi)
     ap.add_argument("--reuse-port", action=argparse.BooleanOptionalAction, default=True,
                     help="SO_REUSEPORT (default ON) so a NEW instance can bind :port alongside the OLD "
                          "one -> zero-downtime hot reload (tools/dashboard_reload.py) that never drops the "
@@ -1648,7 +1898,11 @@ def main() -> None:
                  host=a.host, port=a.port, access_key=a.access_key,
                  cadence_state=a.cadence_state, training_pid=a.training_pid,
                  training_sig=a.training_sig,
-                 auto_latest=a.auto_latest, auto_base_glob=a.auto_base_glob)
+                 auto_latest=a.auto_latest, auto_base_glob=a.auto_base_glob,
+                 witness_enable=a.witness, witness_gt_cache=a.witness_gt_cache,
+                 witness_pairs=a.witness_pairs, witness_ema_name=a.witness_ema_name,
+                 witness_min_free_gib=a.witness_min_free_gib,
+                 witness_min_interval_s=a.witness_min_interval_s, witness_dpi=a.witness_dpi)
     application = create_app(cfg)
     # access_log=False so the ?k=<access key> never lands in a log line.
     # SO_REUSEPORT zero-downtime hot reload: uvicorn 0.44's run()/Config has no reuse_port kwarg, so we
