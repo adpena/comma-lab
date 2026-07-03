@@ -1306,6 +1306,47 @@ def _advisory_axis_label(non_promotable: bool = True) -> str:
     return f"{base} NON-PROMOTABLE" if non_promotable else base
 
 
+def _seed_muon_momentum_from_adam(muon_opt: Any, old_adam_state: Any) -> int:
+    """GAP 2 warm-start: seed an ALREADY-INITIALIZED ``mlx.optimizers.Muon``'s momentum
+    buffer (``state[<path>]['v']``) from the OUTGOING Adam/AdamW first-moment
+    (``state[<path>]['m']``) for every param path the two share.
+
+    Both buffers are exponential moving averages of the raw gradient (Muon's
+    ``v = 0.95 v + 0.05 g``; Adam's ``m = 0.9 m + 0.1 g``) and Muon's Newton-Schulz
+    step re-normalizes the update to ~unit spectral norm, so the transferred
+    DIRECTION (not the absolute scale) is what removes the cold-start "wild unit-norm
+    direction from one noisy gradient" boundary thrash / d_seg spike.
+
+    ``muon_opt`` MUST already be initialized (caller ran ``opt.init(params)``) so its
+    ``v`` leaves exist to overwrite. Returns the number of leaves seeded (0 when the
+    old state carries no matching ``.m`` leaf — e.g. a non-Adam base — leaving the
+    fresh Muon at its cold zero start). Shapes must match exactly (they always do for
+    the same path); mismatches are skipped. Any exception is the CALLER's to catch;
+    the caller falls back to the cold-start path so the run never crashes here.
+    """
+    from mlx.utils import tree_flatten, tree_unflatten
+
+    # Map param-path -> Adam first-moment `m` (strip the trailing ".m" state suffix).
+    m_map = {k[:-2]: v for (k, v) in tree_flatten(old_adam_state) if k.endswith(".m")}
+    new_flat: list[tuple[str, Any]] = []
+    n_seed = 0
+    for k, v in tree_flatten(muon_opt.state):
+        if k.endswith(".v"):  # a Muon momentum leaf (NOT "step"/"learning_rate")
+            src = m_map.get(k[:-2])
+            if src is not None and tuple(src.shape) == tuple(v.shape):
+                v = src.astype(v.dtype)
+                n_seed += 1
+        new_flat.append((k, v))
+    if n_seed:
+        # Reassigning .state flips _initialized False; we fully repopulated every
+        # leaf, so re-assert True to skip the lazy re-init (which would zero nothing
+        # new but is a wasted pass). _schedulers is a separate attr -> LR schedule
+        # (warmup/decay) keeps working; "step" is preserved (starts at 0 as cold).
+        muon_opt.state = tree_unflatten(new_flat)
+        muon_opt._initialized = True
+    return n_seed
+
+
 def run_train(args: argparse.Namespace) -> dict[str, Any]:
     import mlx.core as mx
     import mlx.nn as nn
@@ -2054,13 +2095,40 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     muon_adam_lr = float(_madam) if _madam is not None else muon_lr
                     wu_eps_m = int(getattr(args, "margin_stage_lr_warmup_epochs", 8))
                     lr_floor_m = float(getattr(args, "margin_stage_lr_floor", 0.1))
+                    # GAP 2 (default-off): capture the OUTGOING Adam/AdamW first-moment (m)
+                    # BEFORE `opt` is rebound below, to warm-start the fresh Muon momentum (v).
+                    # Only a plain Adam/AdamW base exposes .m; MD-Decoupling / non-Adam bases
+                    # (or --muon-warm-start-momentum off) leave the Muon at its cold zero start.
+                    _warm_start = bool(getattr(args, "muon_warm_start_momentum", False))
+                    _old_adam_state = (
+                        opt.state if (_warm_start and isinstance(opt, (optim.Adam, optim.AdamW))) else None
+                    )
                     if wu_eps_m > 0:  # fix 4: re-warmup at the Muon boundary (fresh opt -> step 0)
                         win_m = max(1, wu_eps_m * opt_steps_per_epoch)
                         muon_sched: Any = optim.linear_schedule(muon_lr * lr_floor_m, muon_lr, win_m)
                         adam_sched: Any = optim.linear_schedule(muon_adam_lr * lr_floor_m, muon_adam_lr, win_m)
                     else:
+                        win_m = 0
                         muon_sched = muon_lr
                         adam_sched = muon_adam_lr
+                    # GAP 1 (default-off): cosine DECAY the Muon LR from muon_lr -> muon_lr*final_frac
+                    # across the muon-stage span. Muon's Newton-Schulz fixes update MAGNITUDE, so a
+                    # flat Muon LR cannot self-reduce the step near the minimum (river-valley Muon
+                    # 2606.21514) -> plateau/overstep. Composes AFTER the optional warmup (warmup THEN
+                    # decay via join_schedules). final_frac >= 1.0 (the default) => muon_sched is left
+                    # exactly as above (byte-identical). Only the Muon group decays; the Adam tail
+                    # self-adapts its effective step via v, so it keeps the existing (flat/warmup) LR.
+                    muon_lr_final_frac = float(getattr(args, "muon_lr_final_frac", 1.0))
+                    if muon_lr_final_frac < 1.0:
+                        _stage_steps = max(1, (int(args.epochs) - int(ep) + 1) * opt_steps_per_epoch)
+                        _decay_steps = max(1, _stage_steps - int(win_m))
+                        _muon_decay = optim.cosine_decay(
+                            muon_lr, _decay_steps, end=muon_lr * muon_lr_final_frac
+                        )
+                        muon_sched = (
+                            optim.join_schedules([muon_sched, _muon_decay], [int(win_m)])
+                            if win_m > 0 else _muon_decay
+                        )
                     muon_all = bool(getattr(args, "muon_all_params", False))
                     if muon_all:
                         opt = optim.Muon(learning_rate=muon_sched, momentum=muon_momentum,
@@ -2070,6 +2138,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                                weight_decay=float(args.weight_decay))
                         _adam_tail = optim.Adam(learning_rate=adam_sched)
                         opt = optim.MultiOptimizer([_muon_opt, _adam_tail], filters=[_is_muon_weight])
+                    # GAP 2 (default-off): seed the fresh Muon momentum (v) from the captured Adam m.
+                    _warm_seeded = 0
+                    if _old_adam_state is not None:
+                        try:
+                            opt.init(model.trainable_parameters())  # allocate v (zeros) to overwrite
+                            _warm_target = opt if muon_all else _muon_opt
+                            _warm_seeded = _seed_muon_momentum_from_adam(_warm_target, _old_adam_state)
+                        except Exception as _warm_err:  # fall back to cold start; never crash the run
+                            _warm_seeded = -1
+                            print(json.dumps({
+                                "stage": "muon_warm_start_FAILED_cold_fallback",
+                                "restart": restart_i, "ep": ep, "err": str(_warm_err),
+                            }), flush=True)
                     _muon_switched = True
                     recent = deque(maxlen=recent_maxlen)  # re-treat the Muon transition too
                     print(json.dumps({
@@ -2078,6 +2159,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         "muon_on_hidden_only": (not muon_all),
                         "adam_tail_lr": (None if muon_all else muon_adam_lr),
                         "muon_lr_rewarmup_epochs": (wu_eps_m if wu_eps_m > 0 else 0),
+                        "muon_lr_final_frac": muon_lr_final_frac,
+                        "muon_lr_decay_active": bool(muon_lr_final_frac < 1.0),
+                        "muon_warm_start_momentum": _warm_start,
+                        "muon_warm_seeded_leaves": _warm_seeded,
                         "trigger": ("plateau_or_cap" if plateau_trigger else "fixed_cap"),
                         "note": "AdamW -> Muon(hidden) + Adam(code-latent/biases/out) finisher; EMA + params continue",
                     }), flush=True)
@@ -2374,6 +2459,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "l7_mult": float(getattr(args, "l7_mult", 4.0)),
             "l7_threshold": float(getattr(args, "l7_threshold", 1.0)),
             "muon_lr": float(getattr(args, "muon_lr", 1e-4)),
+            "muon_lr_final_frac": float(getattr(args, "muon_lr_final_frac", 1.0)),
+            "muon_warm_start_momentum": bool(getattr(args, "muon_warm_start_momentum", False)),
             "resume_from": (str(getattr(args, "resume_from")) if getattr(args, "resume_from", None) else None),
             "verdict_device": str(getattr(args, "verdict_device", "mlx-cpu")),
             "verdict_which": str(getattr(args, "verdict_which", "live")),
@@ -2762,6 +2849,25 @@ def main(argv: list[str] | None = None) -> int:
         help="(FEED-ca fix 5) ABLATION: apply Muon to ALL params in the finisher (back-compat). "
         "Default OFF = Muon ONLY on decoder-hidden weight matrices; code-latent (video-derived "
         "payload) + biases + final layer route to Adam (PR95: Muon degrades embedding/final).",
+    )
+    ap.add_argument(
+        "--muon-lr-final-frac", type=float, default=1.0,
+        help="(GAP 1, default-off) COSINE-DECAY the Muon-group LR from --muon-lr down to "
+        "--muon-lr * this fraction across the Muon-stage span (composes AFTER the optional "
+        "--margin-stage-lr-warmup-epochs re-warmup: warmup THEN decay). Muon's Newton-Schulz "
+        "fixes update MAGNITUDE so a flat LR cannot self-reduce the step near the minimum "
+        "(river-valley Muon 2606.21514). 1.0 (default) = flat/unchanged = byte-identical; "
+        "e.g. 0.1 decays to 10%% of --muon-lr by stage end. Only the Muon group (the Adam tail "
+        "self-adapts via its second moment). A/B-ready; no effect until the Muon stage.",
+    )
+    ap.add_argument(
+        "--muon-warm-start-momentum", action=argparse.BooleanOptionalAction, default=False,
+        help="(GAP 2, default-off) WARM-START the fresh Muon momentum buffer (state 'v') from the "
+        "OUTGOING AdamW first-moment (state 'm') for the shared param paths, instead of cold zeros. "
+        "Both are gradient EMAs and Newton-Schulz re-normalizes the update, so the transferred "
+        "DIRECTION removes the cold-start 'wild unit-norm direction from one noisy gradient' "
+        "boundary thrash / d_seg spike. Default OFF = cold zero start = byte-identical. Only a plain "
+        "Adam/AdamW base is transferable; MD-Decoupling / non-Adam bases fall back to cold. A/B-ready.",
     )
     args = ap.parse_args(argv)
 
