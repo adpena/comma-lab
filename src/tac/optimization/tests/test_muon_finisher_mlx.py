@@ -150,10 +150,103 @@ def test_build_finisher_is_multioptimizer_with_muon_and_adamw():
     dict(muon_lr=2e-3, muon_adamw_lr=-1.0),
     dict(muon_lr=2e-3, muon_adamw_lr=1e-4, muon_ns_steps=0),
     dict(muon_lr=2e-3, muon_adamw_lr=1e-4, muon_momentum=1.0),
+    dict(muon_lr=2e-3, muon_adamw_lr=1e-4, muon_lr_final_frac=0.0),   # GAP 1: must be > 0
+    dict(muon_lr=2e-3, muon_adamw_lr=1e-4, muon_lr_final_frac=1.5),   # GAP 1: must be <= 1
+    dict(muon_lr=2e-3, muon_adamw_lr=1e-4, muon_anneal_steps=-1),     # GAP 1: must be >= 0
 ])
 def test_build_finisher_rejects_invalid_hparams(bad):
     with pytest.raises(ValueError):
         build_muon_finisher_optimizer(**bad)
+
+
+# ---------------------------------------------------------------------------
+# GAP 1 (default-off): --muon-lr-final-frac cosine-decays the Muon-GROUP LR.
+# Default (final_frac=1.0 OR anneal_steps<=0) => the Muon child keeps the LITERAL
+# pre-change SCALAR construction => byte-identical.
+# ---------------------------------------------------------------------------
+def _muon_has_lr_schedule(opt):
+    return "learning_rate" in getattr(opt.optimizers[0], "_schedulers", {})
+
+
+@pytest.mark.parametrize("kw", [
+    {},                                                       # pure default
+    dict(muon_lr_final_frac=1.0, muon_anneal_steps=500),      # frac>=1 dominates
+    dict(muon_lr_final_frac=0.1, muon_anneal_steps=0),        # anneal<=0 guard
+])
+def test_muon_lr_final_frac_default_off_is_scalar_byte_identical(kw):
+    """Every 'off' combination builds the Muon child with the IDENTICAL scalar LR the
+    pre-change code used (``optim.Muon(learning_rate=float(muon_lr))``) -> no schedule."""
+    mlr = 3e-3
+    pre_change_scalar = float(optim.Muon(learning_rate=float(mlr)).learning_rate)
+    opt = build_muon_finisher_optimizer(muon_lr=mlr, muon_adamw_lr=1e-4, **kw)
+    muon = opt.optimizers[0]
+    assert not _muon_has_lr_schedule(opt), f"{kw} unexpectedly attached a schedule (not byte-identical)"
+    assert float(muon.learning_rate) == pre_change_scalar, f"{kw} scalar drifted from pre-change build"
+
+
+def test_muon_lr_final_frac_builds_cosine_decay_over_the_span():
+    """final_frac<1.0 + anneal_steps>0 => the Muon GROUP LR cosine-decays from muon_lr
+    (step 0) to muon_lr*final_frac (step==anneal_steps), monotone; the AdamW fallback
+    keeps a scalar LR (only the Muon group anneals, mirroring the base trainer)."""
+    mlr, frac, steps = 3e-3, 0.1, 100
+    opt = build_muon_finisher_optimizer(
+        muon_lr=mlr, muon_adamw_lr=1e-4, muon_lr_final_frac=frac, muon_anneal_steps=steps,
+    )
+    assert _muon_has_lr_schedule(opt), "Muon group must carry the cosine schedule"
+    sched = opt.optimizers[0]._schedulers["learning_rate"]
+    lr0, lr_mid, lr_end = (float(sched(mx.array(s))) for s in (0, steps // 2, steps))
+    assert abs(lr0 - mlr) <= 1e-6 * mlr, f"schedule must start at muon_lr, got {lr0}"
+    assert abs(lr_end - mlr * frac) <= 1e-6 * mlr, f"schedule must end at muon_lr*frac, got {lr_end}"
+    assert lr0 > lr_mid > lr_end, f"schedule must decay monotonically: {lr0}, {lr_mid}, {lr_end}"
+    # AdamW fallback group is NOT scheduled (only the Muon group decays).
+    assert "learning_rate" not in getattr(opt.optimizers[1], "_schedulers", {})
+
+
+# ---------------------------------------------------------------------------
+# GAP 2 (default-off): --muon-warm-start-momentum seeds the fresh Muon child's
+# momentum (state 'v') from the OUTGOING AdamW first-moment (state 'm'). The seeder
+# lives in the base trainer (imported by the levelset launch path); this test proves
+# it seeds the MultiOptimizer's Muon CHILD (opt.optimizers[0]) correctly.
+# ---------------------------------------------------------------------------
+def test_warm_start_seeds_muon_child_momentum_from_adamw():
+    import sys
+    from pathlib import Path
+
+    _exp = str(Path(__file__).resolve().parents[4] / "experiments")
+    if _exp not in sys.path:
+        sys.path.insert(0, _exp)
+    try:
+        from train_witness_realized_through_R_mlx import _seed_muon_momentum_from_adam
+    except Exception as e:  # base trainer unimportable in this env -> skip (not a helper failure)
+        pytest.skip(f"base trainer not importable: {e}")
+
+    from mlx.utils import tree_flatten
+
+    params = {"hidden": {"weight": mx.ones((4, 4)), "bias": mx.zeros((4,))}}
+    # An outgoing AdamW that has accumulated a nonzero first moment on the 2-D weight.
+    adam = optim.AdamW(learning_rate=1e-3)
+    adam.init(params)
+    adam.apply_gradients({"hidden": {"weight": mx.full((4, 4), 0.5), "bias": mx.zeros((4,))}}, params)
+    mx.eval(adam.state)
+
+    opt = build_muon_finisher_optimizer(muon_lr=2e-3, muon_adamw_lr=1e-4)
+    opt.init(params)
+    mx.eval(opt.state)
+    # cold init: Muon momentum is all zeros BEFORE seeding
+    v_before = float(mx.sum(mx.abs(dict(tree_flatten(opt.optimizers[0].state))["hidden.weight.v"])))
+    assert v_before == 0.0
+
+    n = _seed_muon_momentum_from_adam(opt.optimizers[0], adam.state)
+    mx.eval(opt.state)
+    vmap = {k: v for k, v in tree_flatten(opt.optimizers[0].state) if k.endswith(".v")}
+    mmap = {k[:-2]: v for k, v in tree_flatten(adam.state) if k.endswith(".m")}
+    # exactly the one 2-D weight got seeded; its momentum now equals the outgoing AdamW m
+    assert n == 1
+    seeded = float(mx.sum(mx.abs(vmap["hidden.weight.v"])))
+    src = float(mx.sum(mx.abs(mmap["hidden.weight"])))
+    assert seeded > 0.0 and abs(seeded - src) < 1e-6
+    # the 1-D bias is AdamW-routed -> NOT present in the Muon child's state
+    assert "hidden.bias.v" not in vmap
 
 
 # ---------------------------------------------------------------------------

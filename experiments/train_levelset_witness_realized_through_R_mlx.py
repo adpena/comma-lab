@@ -63,6 +63,7 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     SEG_W,
     _build_render_coords,
     _render_rgb_render_res,
+    _seed_muon_momentum_from_adam,
     _torch_R_to_camera_uint8,
     cpu_verdict_d_pose_batch,
     cpu_verdict_d_seg_batch,
@@ -2956,13 +2957,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _mlr = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
             _malr = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
             _mwd = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
+            # GAP 1 (default-off): rebuild with the SAME cosine schedule the switch block built (anchored
+            # on muon_start_epoch -> epochs), so the RESTORED opt.step reproduces the bit-faithful finisher
+            # LR. WARM-START (GAP 2) is N/A here: the Muon momentum ('v') is restored from the checkpoint
+            # below (there is no live outgoing AdamW). final_frac >= 1.0 (default) => scalar LR => the
+            # rebuild is byte-identical to the pre-GAP-1 resume construction.
+            _r_final_frac = float(getattr(args, "muon_lr_final_frac", 1.0))
+            _r_anneal_steps = 0
+            if _r_final_frac < 1.0:
+                _r_steps_per_ep = max(1, (P + args.accum_pairs - 1) // args.accum_pairs)
+                _r_anneal_steps = max(
+                    1, (int(args.epochs) - int(args.muon_start_epoch) + 1) * _r_steps_per_ep
+                )
             opt = build_muon_finisher_optimizer(
                 muon_lr=_mlr, muon_adamw_lr=_malr, muon_momentum=float(args.muon_momentum),
                 muon_weight_decay=_mwd, muon_ns_steps=int(args.muon_ns_steps),
                 adamw_weight_decay=float(args.weight_decay),
+                muon_lr_final_frac=_r_final_frac, muon_anneal_steps=_r_anneal_steps,
             )
             print(json.dumps({"stage": "resume_muon_rebuild", "start_epoch": start_epoch,
                               "muon_start_epoch": int(args.muon_start_epoch),
+                              "muon_lr_final_frac": _r_final_frac,
+                              "muon_lr_decay_active": bool(_r_final_frac < 1.0),
+                              "muon_anneal_steps": _r_anneal_steps,
                               "note": "resuming INSIDE the Muon finisher; rebuilt MultiOptimizer before "
                               "state restore (bit-faithful finisher continuation)"}), flush=True)
         restored_opt = False
@@ -3195,6 +3212,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (best-effort, like the resume path); the DECODER weights are unchanged at the switch.
             if (args.muon_start_epoch is not None) and (not muon_switched) and (ep >= args.muon_start_epoch):
                 n_muon, n_adamw = count_muon_adamw_split(model.trainable_parameters())
+                # GAP 2 (default-off): capture the OUTGOING AdamW first-moment (state 'm') BEFORE `opt`
+                # is rebound, to warm-start the fresh Muon momentum (state 'v'). Only a plain Adam/AdamW
+                # base is transferable; anything else (or the flag off) leaves the Muon at cold zeros.
+                _warm_start = bool(getattr(args, "muon_warm_start_momentum", False))
+                _old_adam_state = (
+                    opt.state if (_warm_start and isinstance(opt, (optim.Adam, optim.AdamW))) else None
+                )
+                # GAP 1 (default-off): cosine-DECAY the Muon-group LR from muon_lr -> muon_lr*final_frac
+                # across the finisher span (muon_start_epoch -> epochs). Anchored on muon_start_epoch (NOT
+                # `ep`) so the schedule is deterministic in the config -> a resume rebuilds the SAME
+                # schedule. opt_updates_per_epoch == ceil(P / accum_pairs) (one opt.update per accum chunk;
+                # spike-skips only shorten it, matching the base trainer's step-count semantics).
+                # final_frac >= 1.0 (default) => muon_anneal_steps stays 0 => scalar LR => byte-identical.
+                _muon_final_frac = float(getattr(args, "muon_lr_final_frac", 1.0))
+                _muon_anneal_steps = 0
+                if _muon_final_frac < 1.0:
+                    _steps_per_ep = max(1, (P + args.accum_pairs - 1) // args.accum_pairs)
+                    _muon_anneal_steps = max(
+                        1, (int(args.epochs) - int(args.muon_start_epoch) + 1) * _steps_per_ep
+                    )
                 opt = build_muon_finisher_optimizer(
                     muon_lr=muon_lr_eff, muon_adamw_lr=muon_adamw_lr_eff,
                     muon_momentum=float(args.muon_momentum), muon_weight_decay=muon_wd_eff,
@@ -3202,9 +3239,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # #224 Wave D (R4 #2): thread the same beta2 as the main AdamW so the finisher
                     # rest-group is consistent (default 0.999 => byte-identical).
                     adamw_beta2=float(getattr(args, "adam_beta2", 0.999)),
+                    # GAP 1: default (1.0 / 0) => scalar Muon LR => byte-identical.
+                    muon_lr_final_frac=_muon_final_frac, muon_anneal_steps=_muon_anneal_steps,
                 )
                 opt.init(model.trainable_parameters())
                 mx.eval(opt.state)
+                # GAP 2 (default-off): seed the fresh Muon child's momentum (v) from the captured AdamW m.
+                # The Muon child is opt.optimizers[0] (MultiOptimizer([Muon, AdamW], [filter])); its state
+                # flattens to '<path>.v' matching the outgoing AdamW's '<path>.m'. try/except cold-fallback
+                # so a mismatch never crashes the run (deterministic-repro: cold zeros is the safe default).
+                _warm_seeded = 0
+                if _old_adam_state is not None:
+                    try:
+                        _warm_seeded = _seed_muon_momentum_from_adam(opt.optimizers[0], _old_adam_state)
+                    except Exception as _warm_err:  # fall back to cold start; never crash the run
+                        _warm_seeded = -1
+                        print(json.dumps({
+                            "stage": "muon_warm_start_FAILED_cold_fallback", "epoch": ep,
+                            "err": str(_warm_err),
+                        }), flush=True)
+                    mx.eval(opt.state)
                 muon_switched = True
                 recent_losses.clear()
                 print(json.dumps({"stage": "muon_finisher_switch", "epoch": ep,
@@ -3212,6 +3266,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "muon_adamw_lr": muon_adamw_lr_eff, "muon_momentum": float(args.muon_momentum),
                                   "muon_ns_steps": int(args.muon_ns_steps), "muon_weight_decay": muon_wd_eff,
                                   "n_muon_params": n_muon, "n_adamw_params": n_adamw,
+                                  "muon_lr_final_frac": _muon_final_frac,
+                                  "muon_lr_decay_active": bool(_muon_final_frac < 1.0),
+                                  "muon_anneal_steps": _muon_anneal_steps,
+                                  "muon_warm_start_momentum": _warm_start,
+                                  "muon_warm_seeded_leaves": _warm_seeded,
                                   "note": "AdamW->Muon (2D hidden weights; biases/code/heads stay AdamW); "
                                   "spike-guard re-treated; LR schedule frozen for the finisher"}), flush=True)
                 if args.stage_checkpoints:
@@ -4221,6 +4280,27 @@ def main(argv: list[str] | None = None) -> int:
                     help="MUON FINISHER: Muon-group decoupled weight decay (default None => --weight-decay).")
     ap.add_argument("--muon-ns-steps", type=int, default=5,
                     help="MUON FINISHER: Newton-Schulz iteration count (Keller Jordan default 5).")
+    ap.add_argument(
+        "--muon-lr-final-frac", type=float, default=1.0,
+        help="(GAP 1, default-off) COSINE-DECAY the Muon-group LR from --muon-lr down to "
+        "--muon-lr * this fraction across the Muon-stage span (muon_start_epoch -> --epochs). Muon's "
+        "Newton-Schulz fixes update MAGNITUDE so a flat LR cannot self-reduce the step near the minimum "
+        "(river-valley Muon 2606.21514); the decay lets the finisher settle. 1.0 (default) = flat/"
+        "unchanged = byte-identical; e.g. 0.1 decays to 10%% of --muon-lr by stage end. Only the Muon "
+        "group decays (the AdamW fallback self-adapts via its second moment). The schedule is anchored on "
+        "--muon-start-epoch so a RESUME into the finisher rebuilds the SAME schedule (bit-faithful). "
+        "A/B-ready; no effect until the Muon stage. Must be in (0, 1].",
+    )
+    ap.add_argument(
+        "--muon-warm-start-momentum", action=argparse.BooleanOptionalAction, default=False,
+        help="(GAP 2, default-off) WARM-START the fresh Muon momentum buffer (state 'v') from the "
+        "OUTGOING AdamW first-moment (state 'm') for the shared param paths at the switch, instead of "
+        "cold zeros. Both are gradient EMAs and Newton-Schulz re-normalizes the update, so the "
+        "transferred DIRECTION removes the cold-start 'wild unit-norm direction from one noisy gradient' "
+        "boundary thrash / d_seg spike. Default OFF = cold zero start = byte-identical. Only a plain "
+        "Adam/AdamW base is transferable; non-Adam bases fall back to cold. On a RESUME INTO the "
+        "finisher this is N/A (the Muon momentum is restored from the checkpoint). A/B-ready.",
+    )
     # ---- BUILD 1 (FEED-fw): STAGE-TRANSITION TREATMENT (ADDITIVE, all default-OFF => BIT-IDENTICAL).
     # "different stages need different treatment" applied to the TRANSITIONS so the AdamW->AdamW stage
     # boundaries (ce->tau, tau->l7) + the lane-edge / margin-saliency re-engage epochs are stable by

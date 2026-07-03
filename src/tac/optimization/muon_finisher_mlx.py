@@ -178,6 +178,8 @@ def build_muon_finisher_optimizer(
     adamw_weight_decay: float = 1e-4,
     adamw_beta2: float = 0.999,
     nesterov: bool = True,
+    muon_lr_final_frac: float = 1.0,
+    muon_anneal_steps: int = 0,
 ) -> Any:
     """Build the PR95 stage-8 finisher optimizer (MLX ``MultiOptimizer``).
 
@@ -213,6 +215,24 @@ def build_muon_finisher_optimizer(
         AdamW; bias correction is auto-gated ON off the 0.999 default (see ``_adamw_bias_correction_for``).
     nesterov : bool
         Nesterov momentum for Muon (default ``True``; recommended).
+    muon_lr_final_frac : float
+        (GAP 1, default-off) COSINE-DECAY the Muon-GROUP LR from ``muon_lr`` down to
+        ``muon_lr * muon_lr_final_frac`` across ``muon_anneal_steps`` optimizer
+        updates. Muon's Newton-Schulz fixes update MAGNITUDE, so a flat Muon LR
+        cannot self-reduce the step near the minimum (river-valley Muon 2606.21514)
+        => plateau/overstep; the decay lets the finisher settle. Only the Muon group
+        decays (the AdamW fallback self-adapts its effective step via its second
+        moment). ``1.0`` (the default) OR ``muon_anneal_steps <= 0`` => the Muon
+        group keeps the SCALAR ``muon_lr`` => BYTE-IDENTICAL to the pre-GAP-1 build.
+        Must be in ``(0, 1]``.
+    muon_anneal_steps : int
+        (GAP 1) Number of optimizer ``.update`` calls over which the cosine decay
+        runs (the schedule denominator). The caller computes it as
+        ``(epochs - muon_start_epoch + 1) * opt_updates_per_epoch`` so the schedule
+        is DETERMINISTIC in ``muon_start_epoch`` (a RESUME into the finisher rebuilds
+        the SAME schedule and the restored ``opt.step`` reproduces the bit-faithful
+        LR). ``0`` (default) => no decay (scalar LR). Inert unless
+        ``muon_lr_final_frac < 1.0``.
 
     Returns
     -------
@@ -228,9 +248,23 @@ def build_muon_finisher_optimizer(
         raise ValueError(f"muon_ns_steps must be >= 1, got {muon_ns_steps}")
     if not 0.0 <= float(muon_momentum) < 1.0:
         raise ValueError(f"muon_momentum must be in [0, 1), got {muon_momentum}")
+    if not 0.0 < float(muon_lr_final_frac) <= 1.0:
+        raise ValueError(f"muon_lr_final_frac must be in (0, 1], got {muon_lr_final_frac}")
+    if int(muon_anneal_steps) < 0:
+        raise ValueError(f"muon_anneal_steps must be >= 0, got {muon_anneal_steps}")
+
+    # GAP 1 (default-off): scalar LR (byte-identical) unless a real decay is requested.
+    # final_frac >= 1.0 OR anneal_steps <= 0 => keep the scalar muon_lr EXACTLY as before.
+    if float(muon_lr_final_frac) < 1.0 and int(muon_anneal_steps) > 0:
+        muon_learning_rate: Any = optim.cosine_decay(
+            float(muon_lr), int(muon_anneal_steps),
+            end=float(muon_lr) * float(muon_lr_final_frac),
+        )
+    else:
+        muon_learning_rate = float(muon_lr)
 
     muon = optim.Muon(
-        learning_rate=float(muon_lr),
+        learning_rate=muon_learning_rate,
         momentum=float(muon_momentum),
         weight_decay=float(muon_weight_decay),
         nesterov=bool(nesterov),
