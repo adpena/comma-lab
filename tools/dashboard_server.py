@@ -1603,6 +1603,46 @@ color:var(--muted);cursor:pointer;background:var(--panel2);user-select:none}
 .whyseam li b{color:var(--fg2)}
 .whyabout{font-size:11.5px;color:var(--faint2);line-height:1.55;margin-top:10px}
 .wcnote2{font-size:10.5px;color:var(--faint2);margin-top:12px;line-height:1.55}
+/* §1 the spine + §4 the finale (Pass 2) — the unifying hero (violet accent) */
+.mvhead.spine{color:var(--bytes)}
+.plate.accent-spine,.plate.accent-fin{border-top:2px solid #7a52c0}
+.why .plate code,.why .spannote code,.why .snote code{background:#11141a;color:#c6b3ff;padding:1px 5px;border-radius:5px;font-size:11px;word-break:break-word}
+.whylens{background:#191526;border:1px solid #3a2c5c;border-left:3px solid var(--bytes);border-radius:10px;
+padding:10px 13px;margin:10px 0;font-size:11.5px;color:var(--fg2);line-height:1.55}
+.whylens b{color:var(--fg)}.whylens i{color:var(--muted)}
+.whylens .lenstag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;
+color:#120c1e;background:var(--bytes);padding:2px 8px;border-radius:6px;margin-right:8px}
+.spinegrid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin:12px 0 2px}
+@media(min-width:760px){.spinegrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.spinehalf{min-width:0}
+.spsub{font-size:11px;font-weight:700;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin:0 0 6px}
+.whystage.light{background:#0b0e13;min-height:170px}
+.spannote{font-size:11px;color:var(--faint2);line-height:1.5;margin-top:6px}.spannote b{color:var(--fg2)}
+.spinelabel{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:11px 0 2px;
+background:var(--panel2);border:1px solid var(--grid);border-radius:10px;padding:9px 13px}
+.spinelabel .stag{flex:0 0 auto;font-size:9.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;padding:3px 10px;border-radius:999px}
+.spinelabel .stag.hard{background:#12281b;color:var(--goal);border:1px solid #2c5a3a}
+.spinelabel .stag.live{background:#122234;color:var(--acc);border:1px solid #2f4d6b}
+.spinelabel .stag.pde{background:#1c1630;color:var(--bytes);border:1px solid #3a2c5c}
+.spinelabel .stag.soft{background:#2a2410;color:var(--pose);border:1px solid #4a3a1f}
+.spinelabel .snote{flex:1 1 220px;font-size:11.5px;color:var(--fg2);line-height:1.5}.spinelabel .snote b{color:var(--fg)}
+/* the finale */
+.fingrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0 4px}
+@media(min-width:720px){.fingrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.finpanel{background:#0b0e13;border:1px solid var(--line);border-radius:10px;padding:8px 8px 6px}
+.finpanel canvas{display:block;width:100%;height:auto;border-radius:6px}
+.finlab{font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:0 0 5px;text-align:center}
+.fineq{text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#d9c9ff;
+background:#140f22;border:1px solid #33265c;border-radius:10px;padding:11px;margin:11px 0 2px;box-shadow:0 0 22px rgba(150,108,220,.18)}
+.finrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:11px 0 2px}
+.finsix{margin-top:12px;border:1px dashed #3a2c5c;border-radius:12px;padding:0 16px;overflow:hidden;max-height:0;opacity:0;
+transition:max-height .7s ease,opacity .55s ease}
+.finsix.on{max-height:640px;opacity:1;padding:15px 16px}
+.finsix .fsx{display:grid;grid-template-columns:minmax(0,1fr);gap:13px;align-items:center}
+@media(min-width:640px){.finsix .fsx{grid-template-columns:minmax(0,230px) 1fr}}
+.finsix canvas{display:block;width:100%;height:auto;border-radius:8px;background:#0b0e13}
+.finsix .fsxt{font-size:12.5px;color:var(--fg2);line-height:1.6}.finsix .fsxt b{color:var(--fg)}
+.finsig{font-size:12.5px;color:var(--bytes);font-weight:600;margin-top:9px}
 
 /* triality tab */
 .cardsub{font-size:9px;color:var(--faint2);font-weight:500;letter-spacing:.4px;text-transform:none;margin-left:6px}
@@ -2148,14 +2188,122 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     </div>
   </div>
 
-  <!-- ================= the spine + finale + About (Pass 2 / Pass 5) ================= -->
+  <!-- ================= §1 — ONE FRONT, FIVE SCALES (the spine hero · Pass 2) ================= -->
+  <div class="mvhead spine">The spine &mdash; ONE FRONT, FIVE SCALES
+    <span class="mvsub">the same traveling-wave front at five scales of the campaign &mdash; drag the scale</span></div>
+
+  <div class="plate accent-spine" id="plate-spine">
+    <div class="whytop">
+      <span class="pnum">&sect;1</span><span class="ptitle">One front, five scales</span>
+      <span id="whybadge_spine" class="whybadge off">detecting&hellip;</span>
+      <span class="whystatus" id="whyspine_status">the live Fisher&ndash;KPP front renders on activate&hellip;</span>
+    </div>
+    <div class="peq">&part;<sub>t</sub>&thinsp;x = &beta;&thinsp;x&thinsp;(1&minus;x) + &nabla;&sup2;x
+      &nbsp;&middot;&nbsp; <span id="whyspine_units">units: correct-fraction / epoch</span></div>
+
+    <div class="whylens">
+      <span class="lenstag">Lens &middot; not a proven identity</span>
+      Two of these five curves are <b>hard data</b>: EdgeBench&rsquo;s log-sigmoid (<b>R&sup2;=0.998</b>, ByteDance Seed
+      &mdash; <i>theirs</i>) and <b>#205&rsquo;s live d_seg descent</b> (<i>ours</i>). That all five scales are literally
+      the SAME Fisher&ndash;KPP front is a <b>unifying interpretation we find beautiful and testable &mdash; not</b> a
+      measured cross-scale identity. The integrator at left integrates the <b>real</b> PDE; that our five scales <i>are</i>
+      that PDE is the conjecture.
+    </div>
+
+    <div class="spinegrid">
+      <div class="spinehalf">
+        <div class="spsub">live Fisher&ndash;KPP front &mdash; integrated forward every frame</div>
+        <div class="whystage"><canvas id="whycanvas_kpp" role="img" aria-label="live Fisher-KPP traveling-wave front, integrated forward"></canvas>
+          <div class="whymsg" id="whymsg_kpp">the front integrates on activate&hellip;</div></div>
+        <div class="spannote">&beta;&thinsp;x(1&minus;x) grows the correct phase; &nabla;&sup2;x diffuses it &rarr; a
+          front travels at speed&nbsp;2&radic;&beta; with a self-similar log-sigmoid profile. <b>Explicit
+          finite-difference, stepped live</b> (render: WebGPU, else canvas2d).</div>
+      </div>
+      <div class="spinehalf">
+        <div class="spsub" id="whyscale_title">TRAINING &mdash; the correct partition invading (LIVE #205)</div>
+        <div class="whystage light"><canvas id="whycanvas_scale" role="img" aria-label="the selected scale's own curve against the shared traveling-wave shape"></canvas></div>
+        <div class="spannote">Dashed = the shared logistic front <code>x(u)=1/(1+e^{&minus;k(u&minus;u&#8320;)})</code>;
+          solid = the selected scale&rsquo;s own curve. Drag the scale to morph between them.</div>
+      </div>
+    </div>
+
+    <div class="whyctl">
+      <div class="whyrow">
+        <span class="rl">scale <span class="rv" id="whyscale_v">pixel &rarr; campaign</span></span>
+        <input type="range" id="whyscale" min="0" max="4" step="0.001" value="2" aria-label="morph across the five scales, pixel to campaign">
+      </div>
+      <div class="whyrow">
+        <span class="whyseg" id="whyscalejump">
+          <span class="sg" data-s="0">boundary</span>
+          <span class="sg" data-s="1">erasure</span>
+          <span class="sg on" data-s="2">training</span>
+          <span class="sg" data-s="3">curriculum</span>
+          <span class="sg" data-s="4">campaign</span>
+        </span>
+        <span class="whytoggle on" id="whytog_play" role="button" tabindex="0">&#9614;&#9614; pause front</span>
+      </div>
+    </div>
+
+    <div class="spinelabel" id="whyscale_honesty">
+      <span class="stag live" id="whyscale_tag">live data</span>
+      <span class="snote" id="whyscale_note">&mdash;</span>
+    </div>
+
+    <p class="pcap">One equation, five readings. The <b>live front</b> at left is the Fisher&ndash;KPP traveling wave
+      integrating forward &mdash; &beta;&thinsp;x(1&minus;x) (reaction) + &nabla;&sup2;x (diffusion). At right, the
+      <b>selected scale&rsquo;s own curve</b> against the same logistic-front template: the <b>campaign</b> (EdgeBench,
+      R&sup2;=0.998), our <b>training</b> descent (live&nbsp;#205), the <b>boundary</b> separatrix (a genuine level-set =
+      reaction&ndash;diffusion identity), the <b>curriculum</b> anneal, and the <b>erasure</b> long tail. Slide from
+      pixel to campaign and watch the same shape recur.</p>
+    <p class="pcite"><b>Grounded:</b> EdgeBench R&sup2;=0.998 (ByteDance Seed, 2026-07-02 &mdash; <i>their</i> published
+      fit; the top curve is Claude Opus&nbsp;4.8). #205 verdicts <b>ep25&rarr;125</b>: d_seg 0.0103&rarr;0.0058, implied_S
+      1.72&rarr;0.87 (live, read from the run log; single run &mdash; a descriptive fit, not a law). Boundary = level-set
+      flow PDE identity; the curriculum &amp; erasure shapes are <b>schematic/interpretive</b>, honestly labelled. The
+      unifying cross-scale identity is a <b>conjecture</b> per our own discipline &mdash; NO fabricated curve.</p>
+  </div>
+
+  <!-- ================= §4 — THE FRACTAL FINALE (Pass 2) ================= -->
+  <div class="plate accent-fin" id="plate-fin">
+    <div class="whytop">
+      <span class="pnum">&sect;4</span><span class="ptitle">The fractal finale &mdash; all five, phase-locked</span>
+    </div>
+    <p class="pcap">Now that you have seen each front alone, here they are together &mdash; five scales, one playhead,
+      the same wave rolling through all of them at once. Beneath: the one equation.</p>
+    <div class="fingrid" id="whyfingrid">
+      <div class="finpanel"><div class="finlab">boundary</div><canvas id="whyfin0" aria-label="boundary front, phase-locked"></canvas></div>
+      <div class="finpanel"><div class="finlab">erasure</div><canvas id="whyfin1" aria-label="erasure tail front, phase-locked"></canvas></div>
+      <div class="finpanel"><div class="finlab">training &middot; live</div><canvas id="whyfin2" aria-label="training front, phase-locked"></canvas></div>
+      <div class="finpanel"><div class="finlab">curriculum</div><canvas id="whyfin3" aria-label="curriculum front, phase-locked"></canvas></div>
+      <div class="finpanel"><div class="finlab">campaign</div><canvas id="whyfin4" aria-label="campaign front, phase-locked"></canvas></div>
+    </div>
+    <div class="fineq">&part;<sub>t</sub>&thinsp;x = &beta;&thinsp;x&thinsp;(1&minus;x) + &nabla;&sup2;x</div>
+    <div class="finrow">
+      <span class="whytoggle on" id="whytog_finplay" role="button" tabindex="0">&#9614;&#9614; pause</span>
+      <span class="whytoggle" id="whytog_zoom" role="button" tabindex="0">zoom out once more &rarr;</span>
+    </div>
+
+    <div class="finsix" id="whyfinsix">
+      <div class="fsx">
+        <canvas id="whyfin_six" aria-label="the campaign front with the current session marked as a point on it"></canvas>
+        <div class="fsxt">
+          <b>The sixth, implied panel.</b> Zoom out once more and the viewer is themselves a front on the campaign
+          graph. EdgeBench&rsquo;s <b>top curve is Claude Opus&nbsp;4.8</b> &mdash; this session &mdash; and the
+          operator&rsquo;s steering is the feedback term &eta; that keeps the reaction from stalling. The physics of the
+          <b>witness</b> (the boundary the chart paints) and the epistemics of the <b>campaign</b> (the program that
+          painted it) are the <b>same equation</b> &mdash; two nested one-objects, Fisher&ndash;KPP all the way up and down.
+          <div class="finsig">That is the sentence the museum opened with, now earned.</div>
+        </div>
+      </div>
+    </div>
+    <p class="pcite"><b>Honest:</b> the finale is the interpretive / aesthetic capstone &mdash; the five little fronts
+      are the same curves shown above (two hard-data, three schematic), phase-locked for the eye. It asserts no new
+      measurement; the pointer is <b>0.19110, UNMOVED</b> &mdash; a museum moves no pointer.</p>
+  </div>
+
+  <!-- About plate seamed for Pass 5 -->
   <div class="whyseam">
-    <p class="st">the hero &amp; the finale &middot; Pass 2 / Pass 5</p>
+    <p class="st">the About plate &middot; Pass 5</p>
     <ul>
-      <li><b>&sect;1 ONE FRONT, FIVE SCALES</b> &mdash; the same logistic front `x(u)=1/(1+e^{&minus;&beta;(u&minus;u&#8320;)})`
-      at campaign / training / boundary / curriculum / erasure scales, a scale slider morphing between them
-      (EdgeBench R&sup2;=0.998 &middot; #205 verdicts &middot; the PDE identity).</li>
-      <li><b>&sect;4 the fractal reveal</b> &mdash; all five phase-locked, the one equation glowing beneath.</li>
       <li><b>About</b> &mdash; the ideas &amp; the people (design &sect;7 / <code>dashboard_tribute_credits</code>):
       Aaron Leslie, Quantizr, Yousfi &amp; Fridrich, comma / Hotz, the council &mdash; Chasles to yesterday.
       <span class="whyabout">The past few months, given bloom.</span></li>
