@@ -1,0 +1,231 @@
+{
+  "tool": "tools/pose_frame0_inverse_solve_probe.py --parity-gate",
+  "task": "#251 MLX/Metal engine parity gate",
+  "utc": "2026-07-03T09:03:32Z",
+  "authority": "[macOS-CPU advisory / CPU-torch research-signal] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotable": false,
+  "frontier_pointer": "UNMOVED 0.19110",
+  "engine_config": {
+    "mlx_iters": 6,
+    "polish_iters": 2,
+    "cpu_iters": 8,
+    "mlx_device": "gpu"
+  },
+  "mlx_posenet_forward_parity": {
+    "posenet_forward_max_abs_err_vs_cpu": 0.08790969848632812,
+    "device": "gpu",
+    "note": "MLX PoseNet vs CPU-torch on GT pair 0 (research-signal; proposer sanity). GPU parity test bound <=5e-2."
+  },
+  "render_decision": {
+    "f1_source": "numpy_oracle (camera-res 874x1164)",
+    "reason": "MLX render is scorer-res 384x512; probe warp-base + authority are camera-res -> resolution mismatch -> keep numpy oracle per task fallback; MLX accelerates the SEARCH.",
+    "mlx_search_f1_preprocess_validated_by": "mlx_parity (end-to-end PoseNet forward vs CPU-torch)"
+  },
+  "n_pairs": 24,
+  "dpose_cpu_authority_median": 1.2686737373609109e-08,
+  "dpose_mlx_hybrid_authority_median": 1.884634110345858e-08,
+  "dpose_cpu_authority_max": 0.0007276774833212171,
+  "dpose_mlx_hybrid_authority_max": 1.8967416225886453e-06,
+  "ratio_median_mlx_over_cpu": 1.485515191846144,
+  "cpu_solve_total_s": 96.09,
+  "mlx_hybrid_solve_total_s": 54.11,
+  "P_E_solve_wall_clock_speedup": 1.7759152821157294,
+  "GATE_PASS": true,
+  "gate_criteria": "median mlx-hybrid authority d_pose <= 1.5x median cpu-only AND same order of magnitude; both [contest-CPU authority via CPU-torch verdict]. MLX search is [macOS-MLX research-signal].",
+  "per_pair": [
+    {
+      "pair": 0,
+      "dpose_cpu_authority": 1.272465870820009e-07,
+      "dpose_mlx_hybrid_authority": 1.3334431124093863e-08,
+      "warp_dpose": 4.676767174849673,
+      "cpu_solve_s": 3.862,
+      "mlx_hybrid_solve_s": 2.667
+    },
+    {
+      "pair": 1,
+      "dpose_cpu_authority": 2.9367621613244726e-07,
+      "dpose_mlx_hybrid_authority": 9.602821741487115e-07,
+      "warp_dpose": 6.355560539387246,
+      "cpu_solve_s": 4.991,
+      "mlx_hybrid_solve_s": 2.273
+    },
+    {
+      "pair": 2,
+      "dpose_cpu_authority": 2.702734783847453e-07,
+      "dpose_mlx_hybrid_authority": 2.7351207510887637e-07,
+      "warp_dpose": 1.1960017823880607,
+      "cpu_solve_s": 5.628,
+      "mlx_hybrid_solve_s": 2.158
+    },
+    {
+      "pair": 3,
+      "dpose_cpu_authority": 1.91346657962832e-09,
+      "dpose_mlx_hybrid_authority": 2.4348167843024626e-08,
+      "warp_dpose": 1.6218436162947807,
+      "cpu_solve_s": 4.111,
+      "mlx_hybrid_solve_s": 2.257
+    },
+    {
+      "pair": 4,
+      "dpose_cpu_authority": 8.16829612791207e-06,
+      "dpose_mlx_hybrid_authority": 6.63257021758327e-07,
+      "warp_dpose": 3.472711982423496,
+      "cpu_solve_s": 2.505,
+      "mlx_hybrid_solve_s": 2.165
+    },
+    {
+      "pair": 5,
+      "dpose_cpu_authority": 1.0671096413913024e-10,
+      "dpose_mlx_hybrid_authority": 9.956247326581291e-09,
+      "warp_dpose": 3.0734604317675154,
+      "cpu_solve_s": 4.492,
+      "mlx_hybrid_solve_s": 2.102
+    },
+    {
+      "pair": 6,
+      "dpose_cpu_authority": 2.0967638605003577e-07,
+      "dpose_mlx_hybrid_authority": 7.988841532746704e-10,
+      "warp_dpose": 1.0020691642477009,
+      "cpu_solve_s": 4.622,
+      "mlx_hybrid_solve_s": 2.583
+    },
+    {
+      "pair": 7,
+      "dpose_cpu_authority": 2.1169470805955845e-10,
+      "dpose_mlx_hybrid_authority": 1.3344514363892538e-08,
+      "warp_dpose": 2.9261143576491353,
+      "cpu_solve_s": 5.16,
+      "mlx_hybrid_solve_s": 2.663
+    },
+    {
+      "pair": 8,
+      "dpose_cpu_authority": 2.1034599127315683e-08,
+      "dpose_mlx_hybrid_authority": 2.5317249805848857e-07,
+      "warp_dpose": 1.5476265018044113,
+      "cpu_solve_s": 5.039,
+      "mlx_hybrid_solve_s": 2.457
+    },
+    {
+      "pair": 9,
+      "dpose_cpu_authority": 1.0074185087990036e-08,
+      "dpose_mlx_hybrid_authority": 2.6589426863991386e-09,
+      "warp_dpose": 3.162536453306586,
+      "cpu_solve_s": 3.028,
+      "mlx_hybrid_solve_s": 2.221
+    },
+    {
+      "pair": 10,
+      "dpose_cpu_authority": 1.961410682020196e-09,
+      "dpose_mlx_hybrid_authority": 5.142609842597364e-08,
+      "warp_dpose": 2.121345353592146,
+      "cpu_solve_s": 4.085,
+      "mlx_hybrid_solve_s": 2.06
+    },
+    {
+      "pair": 11,
+      "dpose_cpu_authority": 5.762636784423236e-09,
+      "dpose_mlx_hybrid_authority": 4.2311129599958974e-10,
+      "warp_dpose": 1.7617040956618144,
+      "cpu_solve_s": 3.037,
+      "mlx_hybrid_solve_s": 1.79
+    },
+    {
+      "pair": 12,
+      "dpose_cpu_authority": 0.0007276774833212171,
+      "dpose_mlx_hybrid_authority": 1.8967416225886453e-06,
+      "warp_dpose": 1.17834096026256,
+      "cpu_solve_s": 1.966,
+      "mlx_hybrid_solve_s": 2.059
+    },
+    {
+      "pair": 13,
+      "dpose_cpu_authority": 5.762604587955522e-09,
+      "dpose_mlx_hybrid_authority": 8.719577226923292e-08,
+      "warp_dpose": 1.48442333523717,
+      "cpu_solve_s": 5.367,
+      "mlx_hybrid_solve_s": 2.664
+    },
+    {
+      "pair": 14,
+      "dpose_cpu_authority": 2.9652671059328856e-10,
+      "dpose_mlx_hybrid_authority": 1.122454286924442e-09,
+      "warp_dpose": 2.470812150811162,
+      "cpu_solve_s": 2.867,
+      "mlx_hybrid_solve_s": 1.965
+    },
+    {
+      "pair": 15,
+      "dpose_cpu_authority": 1.637815387941129e-08,
+      "dpose_mlx_hybrid_authority": 1.26416764278936e-08,
+      "warp_dpose": 1.2438998610153398,
+      "cpu_solve_s": 4.087,
+      "mlx_hybrid_solve_s": 2.025
+    },
+    {
+      "pair": 16,
+      "dpose_cpu_authority": 3.784674582988738e-09,
+      "dpose_mlx_hybrid_authority": 1.330305358093753e-07,
+      "warp_dpose": 1.7396424093960778,
+      "cpu_solve_s": 5.065,
+      "mlx_hybrid_solve_s": 2.639
+    },
+    {
+      "pair": 17,
+      "dpose_cpu_authority": 7.979943927871602e-10,
+      "dpose_mlx_hybrid_authority": 1.0947081047207874e-08,
+      "warp_dpose": 1.9472165139478437,
+      "cpu_solve_s": 3.169,
+      "mlx_hybrid_solve_s": 2.565
+    },
+    {
+      "pair": 18,
+      "dpose_cpu_authority": 6.837643081366214e-09,
+      "dpose_mlx_hybrid_authority": 4.892521778450861e-08,
+      "warp_dpose": 2.911796841390874,
+      "cpu_solve_s": 4.229,
+      "mlx_hybrid_solve_s": 2.207
+    },
+    {
+      "pair": 19,
+      "dpose_cpu_authority": 2.6596955503740044e-07,
+      "dpose_mlx_hybrid_authority": 3.188901741095022e-07,
+      "warp_dpose": 2.3253171154670755,
+      "cpu_solve_s": 5.203,
+      "mlx_hybrid_solve_s": 2.128
+    },
+    {
+      "pair": 20,
+      "dpose_cpu_authority": 1.5299289659228183e-08,
+      "dpose_mlx_hybrid_authority": 6.897229944587598e-09,
+      "warp_dpose": 1.310269496742302,
+      "cpu_solve_s": 3.399,
+      "mlx_hybrid_solve_s": 2.157
+    },
+    {
+      "pair": 21,
+      "dpose_cpu_authority": 5.318564348192704e-09,
+      "dpose_mlx_hybrid_authority": 4.84425204579549e-09,
+      "warp_dpose": 2.793129888806769,
+      "cpu_solve_s": 3.023,
+      "mlx_hybrid_solve_s": 1.782
+    },
+    {
+      "pair": 22,
+      "dpose_cpu_authority": 3.798456469731685e-08,
+      "dpose_mlx_hybrid_authority": 1.971867271318336e-09,
+      "warp_dpose": 2.3818538042457327,
+      "cpu_solve_s": 3.566,
+      "mlx_hybrid_solve_s": 2.025
+    },
+    {
+      "pair": 23,
+      "dpose_cpu_authority": 2.096427375493833e-07,
+      "dpose_mlx_hybrid_authority": 8.944698657679477e-08,
+      "warp_dpose": 0.8670925274046892,
+      "cpu_solve_s": 3.592,
+      "mlx_hybrid_solve_s": 2.497
+    }
+  ],
+  "elapsed_secs": 346.8
+}
