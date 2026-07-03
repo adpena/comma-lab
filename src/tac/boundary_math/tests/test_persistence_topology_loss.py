@@ -55,6 +55,42 @@ def test_soft_skeleton_nonzero_on_line_zero_on_uniform():
     assert P.soft_skeleton_np(uni, 5).sum() == pytest.approx(0.0, abs=1e-5)
 
 
+# ---------------------------------------------------------- sg-cache (bit-identical speed, #260)
+def _rand_seg(n=2, H=24, W=32, C=5, seed=0):
+    rng = np.random.default_rng(seed)
+    logits = rng.standard_normal((n, H, W, C)).astype(np.float32)
+    oh = np.eye(C, dtype=np.float32)[rng.integers(0, C, size=(n, H, W))]
+    return mx.array(logits), mx.array(oh)
+
+
+def test_sg_precompute_is_bit_identical():
+    """precompute_sg_mlx + sg_precomputed= gives the EXACT same loss (sg is a constant → free)."""
+    logits, oh = _rand_seg(seed=7)
+    cls = [1, 3]
+    base = P.persistence_topology_loss_mlx(logits, oh, cls)
+    sg = P.precompute_sg_mlx(oh, cls)
+    cached = P.persistence_topology_loss_mlx(logits, oh, cls, sg_precomputed=sg)
+    mx.eval(base, cached)
+    assert float(base) == float(cached)  # BIT-IDENTICAL, not approx
+
+
+def test_sg_precompute_bit_identical_gradient():
+    """The gradient w.r.t. logits must ALSO be bit-identical (sg carries no gradient)."""
+    logits, oh = _rand_seg(seed=11)
+    cls = [1, 3]
+    sg = P.precompute_sg_mlx(oh, cls)
+    gb = mx.grad(lambda lg: P.persistence_topology_loss_mlx(lg, oh, cls))(logits)
+    gc = mx.grad(lambda lg: P.persistence_topology_loss_mlx(lg, oh, cls, sg_precomputed=sg))(logits)
+    mx.eval(gb, gc)
+    assert bool(mx.all(gb == gc))
+
+
+def test_sg_precompute_shape_guard():
+    logits, oh = _rand_seg(seed=3)
+    with pytest.raises(ValueError):
+        P.persistence_topology_loss_mlx(logits, oh, [1, 3], sg_precomputed=mx.zeros((99, 4, 4)))
+
+
 # --------------------------------------------------------------------------- clDice
 def test_cldice_identity_is_zero():
     g = np.zeros((16, 16), np.float32)

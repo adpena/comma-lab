@@ -480,6 +480,28 @@ def persistence_recall_weight_mlx(gt_mask, density_iters: int = DEFAULT_DENSITY_
     return mx.stop_gradient(w)  # NO-FAKE: allocation PRIOR, not a differentiable knob
 
 
+def precompute_sg_mlx(lstar_oh, target_classes, cldice_iters: int = DEFAULT_CLDICE_ITERS):
+    """Precompute the GT soft-skeleton ``sg`` (M,H,W) for ``persistence_topology_loss_mlx``.
+
+    ``sg = soft_skeleton(gt)`` is a CONSTANT across epochs (the frozen SegNet GT argmax one-hot
+    never changes) and carries NO gradient (it multiplies ``pred`` in ``tsens``), yet the loss
+    recomputes it every step — ~half the skeleton work. Precompute it ONCE per pair-set and pass
+    it via ``sg_precomputed=`` for a BIT-IDENTICAL ~half-cut to the clDice cost (measured: clDice
+    is ~7.5% of a levers-on step; caching sg roughly halves it). Returns ``None`` if no target
+    classes. SPEED-ONLY; the numpy path stays the bit-identical authority. #260 / #212 / #252.
+    """
+    import mlx.core as mx
+
+    cls = [int(c) for c in target_classes]
+    if not cls:
+        return None
+    oh = lstar_oh if lstar_oh.ndim == 4 else lstar_oh[None]
+    n = oh.shape[0]
+    g = mx.stack([oh[..., c] for c in cls], axis=1)
+    g = mx.reshape(g, (n * len(cls), g.shape[-2], g.shape[-1]))
+    return soft_skeleton_mlx(g, cldice_iters)
+
+
 def persistence_topology_loss_mlx(
     seg_logits,
     lstar_oh,
@@ -490,6 +512,7 @@ def persistence_topology_loss_mlx(
     w_recall: float = DEFAULT_W_RECALL,
     density_iters: int = DEFAULT_DENSITY_ITERS,
     eps: float = DEFAULT_EPS,
+    sg_precomputed=None,
     extra_weight=None,
 ):
     """Top-level persistence/topology loss (MLX) — FULLY BATCHED/VECTORIZED. Differentiable scalar.
@@ -521,7 +544,14 @@ def persistence_topology_loss_mlx(
     g = mx.reshape(g, (n * k, g.shape[-2], g.shape[-1]))  # (M,H,W)
 
     sp = soft_skeleton_mlx(p, cldice_iters)  # (M,H,W)
-    sg = soft_skeleton_mlx(g, cldice_iters)  # (M,H,W)
+    # sg = soft_skeleton(gt) is CONSTANT across epochs (gt frozen) and carries NO gradient; accept
+    # a precomputed cache (precompute_sg_mlx) to skip the recompute BIT-IDENTICALLY. Speed-only.
+    if sg_precomputed is not None:
+        sg = sg_precomputed
+        if tuple(sg.shape) != tuple(g.shape):
+            raise ValueError(f"sg_precomputed shape {tuple(sg.shape)} != expected {tuple(g.shape)}")
+    else:
+        sg = soft_skeleton_mlx(g, cldice_iters)  # (M,H,W)
     ax = (1, 2)
     tprec = (mx.sum(sp * g, axis=ax) + eps) / (mx.sum(sp, axis=ax) + eps)   # (M,)
     tsens = (mx.sum(sg * p, axis=ax) + eps) / (mx.sum(sg, axis=ax) + eps)   # (M,)
