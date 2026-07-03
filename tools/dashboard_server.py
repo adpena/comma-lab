@@ -211,6 +211,26 @@ def _implied_s_deploy(d_seg, blob_bytes):
         return None
 
 
+def _flowseq_lock_alive(lock_path: Path) -> bool:
+    """Is a flow-seq render for this stem already in progress (possibly under ANOTHER dashboard
+    instance — a reload/supervisor restart mid-render leaves the prior render detached)? The lock
+    file holds the render's process-group pid; a live pid means "someone is rendering this stem".
+    A stale lock (dead pid / unreadable) is removed and treated as free. This makes the spawn
+    idempotent across instances so restarts never pile up duplicate 16-min renders."""
+    try:
+        pid = int(lock_path.read_text().strip())
+    except Exception:
+        with contextlib.suppress(Exception):
+            if lock_path.exists():
+                lock_path.unlink()
+        return False
+    if _pid_alive(pid):
+        return True
+    with contextlib.suppress(Exception):
+        lock_path.unlink()  # stale -> free it
+    return False
+
+
 def _slim(row: dict) -> dict:
     """Keep only the trajectory fields the client charts need (no leaking of the
     full verdict dict). The DISPLAYED ``implied_S`` is recomputed with the deploy
@@ -830,7 +850,11 @@ class LiveState:
         if done.exists():
             self._ingest_flowseq(stem, mtime)
             return
-        # 2) a subprocess in flight?
+        # 1b) another instance/render is already producing this stem (reload/restart mid-render
+        # leaves the prior render detached) -> do NOT spawn a duplicate; wait for its .done.
+        if not self._flowseq_running and _flowseq_lock_alive(stem.with_suffix(".lock")):
+            return
+        # 2) a subprocess in flight (this instance)?
         if self._flowseq_running:
             rc = self._flowseq_proc.poll() if self._flowseq_proc is not None else 0
             if rc is None:
@@ -841,6 +865,9 @@ class LiveState:
             else:
                 self._flowseq_err = f"flow-seq subprocess exited rc={rc} without output"
                 print(json.dumps({"stage": "dashboard_server", "flowseq_no_output": rc}), flush=True)
+                if self._flowseq_stem is not None:  # release the lock so a retry can spawn
+                    with contextlib.suppress(Exception):
+                        self._flowseq_stem.with_suffix(".lock").unlink()
             return
         # 3) throttle + memory floor, then spawn.
         if now - self._flowseq_last_attempt < cfg.flow_seq_min_interval_s:
@@ -892,6 +919,10 @@ class LiveState:
             self._flowseq_stem = stem
             self._flowseq_target_mtime = mtime
             self._flowseq_err = ""
+            # cross-instance lock: record the render's pid so a reload/restart mid-render does NOT
+            # spawn a duplicate (the detached render survives the reload; the new instance waits).
+            with contextlib.suppress(Exception):
+                stem.with_suffix(".lock").write_text(str(self._flowseq_proc.pid))
             print(json.dumps({"stage": "dashboard_server", "flowseq_spawn": True,
                               "pid": self._flowseq_proc.pid, "epoch": int(epoch),
                               "ckpt": best.name, "stem": str(stem)}), flush=True)
@@ -922,6 +953,8 @@ class LiveState:
         except Exception as exc:
             self._flowseq_err = f"flow load error: {exc}"
         self._flowseq_done_mtime = mtime  # mark this checkpoint's output consumed (no re-spawn)
+        with contextlib.suppress(Exception):  # release the cross-instance render lock
+            stem.with_suffix(".lock").unlink()
 
     def consume_flowseq_dirty(self) -> bool:
         if self._flowseq_dirty:
