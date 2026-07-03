@@ -497,6 +497,7 @@ class LiveState:
             "config": self.run_config or {},          # parsed setup/config + groups
             "schedule": sched,                         # curriculum stage epoch-boundaries
             "deploy_sidecar_d_pose": DEPLOY_SIDECAR_D_POSE,  # implied_S pose term basis
+            "archive_norm_bytes": _ARCHIVE_NORM_BYTES,       # rate-term normalizer (client S breakdown)
             "run_info_html": self.run_info_html,       # #205 pre-rendered run-info strip (rld._run_info_html)
         }
 
@@ -709,6 +710,32 @@ font-weight:600;letter-spacing:-.4px}
 .trend{font-size:13px;font-weight:700}
 .trend.dn{color:var(--good)}.trend.up{color:var(--bad)}.trend.fl{color:var(--muted)}
 
+/* scorer breakdown card (implied-S decomposition; HONEST measured-pose primary) */
+.sbreak{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:clamp(13px,3.2vw,17px) clamp(14px,3.4vw,18px);margin:0 0 14px}
+.sbreak .sbh{font-size:11px;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;
+font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}
+.sbreak .sbtag{font-size:10px;font-weight:600;color:#7fe0a0;background:#173d22;
+padding:2px 8px;border-radius:8px;letter-spacing:.3px;text-transform:none}
+.sbformula{font-size:12.5px;color:var(--fg2);line-height:1.5;word-break:break-word;margin-bottom:4px;
+font-variant-numeric:tabular-nums}
+.sbsubst{font-size:12.5px;color:var(--muted);line-height:1.55;word-break:break-word;margin-bottom:11px;
+font-variant-numeric:tabular-nums}
+.sbsubst b{color:var(--fg2);font-weight:600}
+.sbterms{display:flex;flex-direction:column;gap:5px;margin:0 0 11px;font-variant-numeric:tabular-nums}
+.sbrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:baseline;font-size:12.5px}
+.sbrow .sbk{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sbrow .sbv{color:var(--fg2);font-weight:600;text-align:right;white-space:nowrap}
+.sbrule{height:1px;background:var(--grid);margin:3px 0 1px}
+.sbrow.sbtot .sbk{color:var(--fg2);font-weight:600;white-space:normal}
+.sbrow.sbtot .sbv{color:var(--acc);font-weight:700;font-size:16px}
+.sbrow.sbtot.sbwarn .sbv{color:var(--bad)}
+.sbrow.sbdiv .sbk{color:var(--bad)}.sbrow.sbdiv .sbv{color:var(--bad)}
+.sbdeploy{font-size:11px;color:var(--faint2);line-height:1.55;margin-top:2px;word-break:break-word;
+font-variant-numeric:tabular-nums}
+.sbdeploy b{color:#b89a4a;font-weight:600}
+.sbdeploy .sbdl{color:#b89a4a;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+
 /* status / detail (space reserved to avoid layout shift) */
 .status{font-size:14px;color:var(--fg2);margin:0 2px 4px;min-height:21px}
 .detail{font-size:11.5px;color:var(--muted);margin:0 2px 18px;min-height:17px}
@@ -808,6 +835,10 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 .cfgrow{display:flex;justify-content:space-between;gap:14px;font-size:12px;min-width:0}
 .cfgk{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;min-width:0}
 .cfgv{color:var(--fg2);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cfgsubh{font-size:9.5px;color:var(--faint2);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin:9px 0 4px}
+.cfgrows+.cfgsubh{margin-top:11px}
+.cfgrow.off{opacity:.62}
+.cfgv.dis{color:var(--faint2);font-weight:500;white-space:normal;text-align:right;font-variant-numeric:normal}
 .cdot{width:9px;height:9px;border-radius:2px;display:inline-block;flex:0 0 auto}
 .cfgmeta{font-size:11px;color:var(--faint2);margin-top:6px}
 .hide{display:none}
@@ -849,8 +880,15 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <div class="stat">
       <span class="slabel">implied_S <span class="trend fl" id="s_trend">&middot;</span></span>
       <span class="sval2" id="s_val">&mdash;</span>
-      <span class="ssub adv">advisory &middot; d_seg + sidecar pose + rate</span>
+      <span class="ssub adv">deploy-projected &middot; pose target 3.4e-5 (unvalidated) &middot; vs honest S below</span>
     </div>
+  </div>
+  <div class="sbreak" id="sbreak">
+    <div class="sbh">Scorer breakdown <span class="sbtag">honest &middot; measured pose</span></div>
+    <div class="sbformula">S = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;(bytes / 37,545,489)</div>
+    <div class="sbsubst" id="sb_subst">&nbsp;</div>
+    <div class="sbterms" id="sb_terms"></div>
+    <div class="sbdeploy" id="sb_deploy">&nbsp;</div>
   </div>
   <div class="status" id="status">connecting&hellip;</div>
   <div class="detail" id="detail">&nbsp;</div>
@@ -1187,6 +1225,47 @@ function stageWord(ep){if(ep==null)return "starting";
   if(mu!=null&&ep>=mu)return "Muon";
   return (mu!=null)?"l7":"l7/Muon";}
 
+// ---------- scorer breakdown (implied-S decomposition; HONEST measured-pose primary) ----------
+// S = 100·d_seg + √(10·d_pose) + 25·(bytes/N). The PRIMARY S here uses the MEASURED d_pose
+// (== implied_S_monitoring, the honest current score). The deploy projection (stored-pose
+// sidecar 3.4e-5) is shown clearly labeled optimistic/UNVALIDATED — never as the honest score.
+function renderScorerBreakdown(last){
+  const subEl=$("sb_subst"), termsEl=$("sb_terms"), depEl=$("sb_deploy");
+  if(!subEl||!termsEl||!depEl)return;
+  if(!last||last.d_seg==null||last.d_pose==null||last.blob_bytes==null||
+     !isFinite(last.d_seg)||!isFinite(last.d_pose)||!isFinite(last.blob_bytes)){
+    subEl.innerHTML="&nbsp;"; termsEl.innerHTML=""; depEl.innerHTML="&nbsp;"; return;
+  }
+  const N=META.archive_norm_bytes||37545489, Nstr=N.toLocaleString("en-US");
+  const ds=last.d_seg, dp=last.d_pose, by=last.blob_bytes;
+  const t1=100.0*ds, t2=Math.sqrt(10.0*dp), t3=25.0*by/N;
+  const honestS=t1+t2+t3;
+  // (2) substituted formula with the latest row's actual MEASURED values
+  subEl.innerHTML="with our values (measured): S = 100&middot;(<b>"+sig(ds,6)+
+    "</b>) + &radic;(10&middot;<b>"+sig(dp,6)+"</b>) + 25&middot;(<b>"+fmtInt(by)+"</b> / "+Nstr+")";
+  // (3) weighted terms -> S. sanity-check honest S vs implied_S_monitoring; surface divergence.
+  const mon=last.implied_S_monitoring;
+  const diverges=(mon!=null&&isFinite(mon)&&Math.abs(honestS-mon)>Math.max(5e-3,Math.abs(mon)*1e-3));
+  let html="";
+  [["100&middot;d_seg",t1],["&radic;(10&middot;d_pose)",t2],["25&middot;bytes / "+Nstr,t3]].forEach(r=>{
+    html+="<div class='sbrow'><span class='sbk'>"+r[0]+"</span><span class='sbv'>= "+sig(r[1],4)+"</span></div>";
+  });
+  html+="<div class='sbrule'></div>";
+  html+="<div class='sbrow sbtot"+(diverges?" sbwarn":"")+"'><span class='sbk'>S (honest, measured pose)</span>"+
+    "<span class='sbv'>= "+sig(honestS,4)+"</span></div>";
+  if(diverges){
+    html+="<div class='sbrow sbdiv'><span class='sbk'>&#9888; &ne; implied_S_monitoring</span>"+
+      "<span class='sbv'>"+sig(mon,4)+"</span></div>";
+  }
+  termsEl.innerHTML=html;
+  // (4) deploy projection — OPTIMISTIC / UNVALIDATED, clearly secondary (never the honest score)
+  const sidePose=(META.deploy_sidecar_d_pose!=null)?META.deploy_sidecar_d_pose:3.4e-5;
+  const t2dep=Math.sqrt(10.0*sidePose), depS=t1+t2dep+t3;
+  depEl.innerHTML="<span class='sbdl'>deploy projection</span> &mdash; assumes pose reaches the store-nothing "+
+    "target d_pose="+sig(sidePose,2)+" (<b>UNVALIDATED on the witness</b>): pose term &rarr; <b>"+sig(t2dep,4)+
+    "</b>, S &rarr; <b>"+sig(depS,4)+"</b> &middot; optimistic &mdash; NOT the honest score above.";
+}
+
 function render(){
   recomputeBest();
   const last=TRAJ.length?TRAJ[TRAJ.length-1]:null;
@@ -1221,6 +1300,7 @@ function render(){
     $("bytes_val").textContent=fmtInt(last.blob_bytes);
     $("s_val").textContent=sig(last.implied_S,4);
   }
+  renderScorerBreakdown(last);
   // stage legend: light up Muon only when the boundary is known
   const muOn=(META.muon_start!=null);
   document.querySelectorAll('#slegend .sc[data-st="muon"]').forEach(el=>el.classList.toggle("off",!muOn));
@@ -1321,23 +1401,82 @@ function renderProjection(g){
 // setup / config / schedule / curriculum panel — rendered from META.config + META.schedule
 // (parsed server-side from the run's OWN launch.sh / run.log; generalizable to any run)
 function escHtml(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+// one curriculum row. disReason!=null -> DISABLED (never runs); no inverted [a,b).
+function schStageRow(dot,name,start,end,note,disReason){
+  const inner=disReason
+    ? "<span class='cfgv dis'>"+disReason+"</span>"
+    : "<span class='cfgv'>ep ["+start+", "+(end!=null?end:"&hellip;")+")"+(note?(" &middot; "+note):"")+"</span>";
+  return "<div class='cfgrow"+(disReason?" off":"")+"'><span class='cfgk'><span class='cdot' style='background:"+
+    dot+"'></span>"+escHtml(name)+"</span>"+inner+"</div>";
+}
+// Build the curriculum schedule as TWO ORTHOGONAL AXES, data-driven from the raw
+// schedule fields (generalizes to any run). Returns {body} or null.
+//  * LOSS-FORM axis (seg_form): CE -> tau -> l7. Each loss stage ENDS at the NEXT
+//    ENABLED loss stage's start, clamped to epochs — the OPTIMIZER switch does NOT
+//    terminate a loss stage (different axis). A loss stage whose start >= epochs is
+//    DISABLED (never runs) and rendered as such, NEVER an inverted/empty [a,b).
+//  * OPTIMIZER axis (orthogonal, composes): AdamW -> Muon (Muon replaces AdamW at
+//    muon_start). Muon disabled when muon_start is unset or >= epochs.
+function buildScheduleRows(sched){
+  const col={CE:"#5ab0ff",tau:"#b08cff",l7:"#ffa454",Muon:"#46d3a0",AdamW:"#8b93a3"};
+  const epochs=(sched.epochs!=null)?sched.epochs:null;
+  const tau=sched.tau_start, l7=sched.l7_start;
+  const muon=(META.muon_start!=null)?META.muon_start:sched.muon_start;
+  const enabled=s=>(s!=null&&(epochs==null||s<epochs));
+  const disMsg=s=>"disabled ("+s+" &ge; epochs"+(epochs!=null?(" "+epochs):"")+")";
+  const hasFlags=(tau!=null||l7!=null||muon!=null||epochs!=null);
+  if(hasFlags){
+    // ---- LOSS-FORM axis: CE -> tau -> l7 (CE always starts at 0) ----
+    const cand=[["CE",0],["tau",tau],["l7",l7]];
+    let loss="";
+    for(let i=0;i<cand.length;i++){
+      const name=cand[i][0], start=cand[i][1];
+      if(start==null)continue;                          // stage not configured for this run
+      if(!enabled(start)){                              // start >= epochs -> DISABLED (never runs)
+        loss+=schStageRow(col[name]||"#888",name,start,null,null,disMsg(start));
+        continue;
+      }
+      let end=epochs;                                   // end = next ENABLED loss start, clamped
+      for(let j=i+1;j<cand.length;j++){
+        if(enabled(cand[j][1])){end=cand[j][1];break;}
+      }
+      loss+=schStageRow(col[name]||"#888",name,start,end,null,null);
+    }
+    // ---- OPTIMIZER axis (orthogonal): AdamW -> Muon ----
+    let opt="";
+    if(enabled(muon)){
+      opt+=schStageRow(col.AdamW,"AdamW",0,muon,"then Muon",null);
+      opt+=schStageRow(col.Muon,"Muon (optimizer)",muon,epochs,"replaces AdamW",null);
+    } else {
+      opt+=schStageRow(col.AdamW,"AdamW (optimizer)",0,epochs,"whole run",null);
+      if(muon!=null)opt+=schStageRow(col.Muon,"Muon (optimizer)",muon,null,null,disMsg(muon));
+    }
+    let body="";
+    if(loss)body+="<div class='cfgsubh'>loss form (seg_form)</div><div class='cfgrows'>"+loss+"</div>";
+    if(opt)body+="<div class='cfgsubh'>optimizer</div><div class='cfgrows'>"+opt+"</div>";
+    return body?{body:body}:null;
+  }
+  // ---- fallback: run.log-sourced stages array; GUARD against inverted/empty ranges ----
+  const stages=sched.stages||[];
+  if(!stages.length)return null;
+  let rows="";
+  stages.forEach(s=>{
+    const st=s.start, en=s.end, inv=(en!=null&&st!=null&&en<=st);
+    rows+=schStageRow(col[s.name]||"#888",s.name,st,en,null,inv?"never (inverted range)":null);
+  });
+  return {body:"<div class='cfgrows'>"+rows+"</div>"};
+}
 function renderConfig(){
   const body=$("cfgbody"), sum=$("cfgsum"); if(!body)return;
   const cfg=META.config||{}, sched=(META.schedule||cfg.schedule||{});
   const groups=cfg.groups||{};
-  const stageCol={CE:"#5ab0ff",tau:"#b08cff",l7:"#ffa454",Muon:"#46d3a0"};
   let html="";
-  // curriculum schedule (full width)
-  const stages=sched.stages||[];
-  if(stages.length){
-    html+="<div class='cfgsec full'><div class='cfgh'>curriculum schedule</div><div class='cfgrows'>";
-    stages.forEach(s=>{
-      const end=(s.end!=null)?s.end:"…";
-      html+="<div class='cfgrow'><span class='cfgk'><span class='cdot' style='background:"+
-        (stageCol[s.name]||"#888")+"'></span>"+escHtml(s.name)+"</span><span class='cfgv'>ep ["+
-        s.start+", "+end+")</span></div>";
-    });
-    html+="</div>";
+  // curriculum schedule (full width) — TWO ORTHOGONAL AXES, data-driven from the raw
+  // schedule fields (NOT the naive [start,next_start) bounds, which INVERT when the
+  // optimizer switch muon_start precedes a disabled l7_start -> e.g. l7 [1000,726)).
+  const sch=buildScheduleRows(sched);
+  if(sch){
+    html+="<div class='cfgsec full'><div class='cfgh'>curriculum schedule</div>"+sch.body;
     const m2=[];
     if(sched.epochs!=null)m2.push("total "+sched.epochs+" ep");
     if(sched.eval_every!=null)m2.push("eval every "+sched.eval_every+" ep");
