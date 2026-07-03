@@ -76,6 +76,11 @@ class GaugeComponent(Enum):
     HEAD_GEOMETRY = "head_geometry"    # softmax/ETF/additive-margin/Menon head (laguerre_logit_offset)
     # Wave-F #205 pose-plan (APPEND-ONLY; DESIGN-STAGE, loss-side, pending #224 trainer wire-in).
     POSE_TRAINING = "pose_training"    # HOW d_pose is trained in-loop (H1/D1/E1; NOT the STORE gauge)
+    # Triality-sync levers (FEED-03n..03q, APPEND-ONLY; train-time / optimizer-side, 0 archive bytes;
+    # NOT GaugeChoice STORE fields -- a loss/optimizer facet like TOPOLOGY_LOSS / POSE_TRAINING).
+    MARGIN_SALIENCY = "margin_saliency"  # LEVER-4 multiplier chart (S_R reachability vs texture proxy)
+    MUON_MOMENTUM = "muon_momentum"      # Muon finisher momentum-buffer init (warm-start vs cold)
+    MUON_LR = "muon_lr"                  # Muon finisher LR schedule (cosine anneal vs flat)
 
 
 class WarpGauge(Enum):
@@ -285,6 +290,75 @@ class PoseTrainingGauge(Enum):
     E1_KKT_POSE_TUBE = "e1_kkt_pose_tube"                    # KKT pose-tube trust region
 
 
+class MarginSaliencyGauge(Enum):
+    """How LEVER-4 margin-saliency weights the fragility hinge (the through-R reachability chart;
+    f99a3863a, DAG FEED-03n/03p, memory
+    [[msal-uni-texture-proxy-inert-build-exact-sR-reachability-weight]]).
+
+    The base LEVER-4 saliency is ``w = exp(-margin/tau)`` (the fragility factor); THIS component
+    fixes the MULTIPLIER on top of it. Both charts presuppose an active ``--margin-saliency-weight
+    > 0`` and are LEVELSET-trainer ``store_true`` flags. Chart <-> trainer flag:
+      TEXTURE_PROXY          = ``--margin-saliency-uniward`` -- the UNIWARD texture down-weight
+                               ``sal /= (1 + beta*tex)``. MEASURED INERT: texture is orthogonal to
+                               through-R detector reachability (Pearson -0.033 vs S_R, top-5%
+                               Jaccard 0.024 ~= chance 0.026; the full lever's 0.21 S_R-alignment is
+                               ENTIRELY the w factor, texture adds +0.009 P) and mildly MISDIRECTS
+                               (texprox vs |grad margin| -0.215 -> up-weights smooth interiors AWAY
+                               from the boundary band).
+      THROUGH_R_REACHABILITY = ``--margin-saliency-reachability`` -- REPLACES the texture path with
+                               the exact through-R fragility-weighted margin-Jacobian
+                               ``S_R = |d(sum_p w_p*margin_p)/dx|``, ``w = exp(-margin/tau)`` ->
+                               ``sal = exp(-margin/tau) * S_R_norm``. MEASURED 3.0x concentrated on
+                               the fragile margin band (S_R vs |grad margin| +0.272, vs margin
+                               -0.323); theta-INDEPENDENT -> cached alongside ``margins`` in the
+                               gt-cache (tools/precompute_sR_reachability.py, strictly cheaper than
+                               the per-step tex recompute).
+    HONEST scope: upgrades a SECONDARY multiplier (the primary ``w`` already carries the fragility
+    alignment) -> expect a MODEST d_seg refinement. The NET n600 d_seg is #205-gated (the A/B is a
+    #205 arm; advisory, MEANS)."""
+
+    TEXTURE_PROXY = "texture_proxy"                    # --margin-saliency-uniward (MEASURED INERT)
+    THROUGH_R_REACHABILITY = "through_r_reachability"  # --margin-saliency-reachability (S_R replaces it)
+
+
+class MuonMomentumGauge(Enum):
+    """How the Muon finisher's momentum buffer is initialized at the AdamW->Muon boundary
+    (cba2e4375, DAG FEED-03o/03q, memory
+    [[muon-deep-dive-keep-and-tune-finishing-stage-schedule-not-switch]]).
+
+    Chart <-> trainer flag. These are BASE-trainer flags (``experiments/
+    train_witness_realized_through_R_mlx.py`` -- the Muon-stage carrier per CLAUDE.md "Capstone
+    theta* witness trainer"; the levelset entry point imports the base's Muon primitives). They are
+    NOT on the levelset launch argparse yet (the launch-path wire-in of the two GAP flags is owed):
+      COLD_MOMENTUM = fresh ``optim.Muon`` -> zero buffer. A cold first orthogonalized step is a
+                      wild unit-norm direction from ONE noisy gradient -> boundary-pixel thrash ->
+                      a MEASURED +0.000357 d_seg SPIKE at the transition (sister thetastar run,
+                      ep750 saddle-gate). The byte-identical DEFAULT (emits NOTHING).
+      WARM_START    = ``--muon-warm-start-momentum`` -- seed the Muon momentum ``v`` from the
+                      OUTGOING AdamW first-moment ``m`` (both are gradient EMAs; Newton-Schulz
+                      re-normalizes the update, so the transferred DIRECTION removes the cold-start
+                      thrash / spike). Net d_seg improvement is #205-gated (advisory, MEANS)."""
+
+    COLD_MOMENTUM = "cold_momentum"    # fresh zero buffer (byte-identical default; +0.000357 spike)
+    WARM_START = "warm_start"          # --muon-warm-start-momentum (seed v from AdamW m)
+
+
+class MuonLRGauge(Enum):
+    """How the Muon finisher's learning rate is scheduled across the Muon span (cba2e4375, DAG
+    FEED-03o/03q). BASE-trainer flags (the Muon-stage carrier; NOT the levelset launch argparse):
+      FLAT_LR   = flat Muon LR (the byte-identical DEFAULT; ``--muon-lr-final-frac`` 1.0 -> no
+                  decay). Muon's Newton-Schulz fixes update MAGNITUDE, so a flat LR cannot
+                  self-reduce the step near a minimum -> plateaus / oversteps (river-valley Muon
+                  2606.21514, Keller Jordan).
+      ANNEAL_LR = ``--muon-lr-final-frac <f>`` (default 0.1) -- cosine-DECAY the Muon-group LR from
+                  ``--muon-lr`` down to ``--muon-lr * f`` across the Muon span (composed AFTER the
+                  optional re-warmup; only the Muon group -- the Adam tail self-adapts via its 2nd
+                  moment). Net d_seg improvement is #205-gated (advisory, MEANS)."""
+
+    FLAT_LR = "flat_lr"      # flat Muon LR (byte-identical default; frac>=1.0 = no decay)
+    ANNEAL_LR = "anneal_lr"  # --muon-lr-final-frac <f> (cosine decay to floor)
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -302,6 +376,11 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     # Wave-F #205 pose-plan (APPEND-ONLY; DESIGN-STAGE, NOT in GaugeChoice — a loss-side
     # component like TOPOLOGY_LOSS / ISLAND_PROTECTION, not a fixable STORE chart).
     GaugeComponent.POSE_TRAINING: PoseTrainingGauge,
+    # Triality-sync levers (FEED-03n..03q, APPEND-ONLY; train-time/optimizer-side, NOT GaugeChoice
+    # STORE fields — real flags, unlike the DESIGN-STAGE POSE_TRAINING charts).
+    GaugeComponent.MARGIN_SALIENCY: MarginSaliencyGauge,
+    GaugeComponent.MUON_MOMENTUM: MuonMomentumGauge,
+    GaugeComponent.MUON_LR: MuonLRGauge,
 }
 
 
@@ -354,6 +433,59 @@ def head_geometry_trainer_flags(chart: HeadGeometryGauge,
     if chart is HeadGeometryGauge.ADDITIVE_MARGIN and additive_margin is not None:
         return ("--head", "additive-margin", "--additive-margin", str(float(additive_margin)))
     return HEAD_GEOMETRY_TRAINER_FLAGS[chart]
+
+
+# ---------------------------------------------------------------------------
+# Triality-sync levers (FEED-03n..03q): S_R reachability + Muon finishing-stage schedule.
+# The margin-saliency charts are LEVELSET-trainer flags (self-orient LEVER-4 lives on the levelset
+# entry point per CLAUDE.md); the Muon charts are BASE-trainer flags (the Muon-stage carrier). The
+# two GAP flags were built in cba2e4375 on the BASE trainer, so the never-invent-flags validation of
+# the muon charts is against ``BASE_TRAINER_REL`` (real), NOT the levelset argparse (owed wire-in).
+# ---------------------------------------------------------------------------
+LEVELSET_TRAINER_REL = "experiments/train_levelset_witness_realized_through_R_mlx.py"
+BASE_TRAINER_REL = "experiments/train_witness_realized_through_R_mlx.py"
+
+MARGIN_SALIENCY_TRAINER_FLAGS: dict[MarginSaliencyGauge, tuple[str, ...]] = {
+    MarginSaliencyGauge.TEXTURE_PROXY: ("--margin-saliency-uniward",),
+    MarginSaliencyGauge.THROUGH_R_REACHABILITY: ("--margin-saliency-reachability",),
+}
+MUON_MOMENTUM_TRAINER_FLAGS: dict[MuonMomentumGauge, tuple[str, ...]] = {
+    MuonMomentumGauge.COLD_MOMENTUM: (),                          # byte-identical default
+    MuonMomentumGauge.WARM_START: ("--muon-warm-start-momentum",),
+}
+# The cosine-decay floor fraction the ANNEAL_LR chart bakes in (the DAG-cited #205-arm config
+# ``--muon-lr-final-frac 0.1`` -> muon_lr 0.002 -> 2e-4 across the Muon span). muon_lr_trainer_flags
+# threads a campaign override (mirrors head_geometry_trainer_flags / ADDITIVE_MARGIN_DEFAULT).
+MUON_LR_FINAL_FRAC_DEFAULT = 0.1
+
+
+def margin_saliency_trainer_flags(chart: MarginSaliencyGauge) -> tuple[str, ...]:
+    """The LEVELSET-trainer argv flags for a MarginSaliencyGauge chart (both are real store_true
+    flags on ``train_levelset_witness_realized_through_R_mlx.py`` — presuppose ``--margin-saliency-
+    weight > 0``). THROUGH_R_REACHABILITY REPLACES the (measured-inert) texture path when set."""
+    return MARGIN_SALIENCY_TRAINER_FLAGS[chart]
+
+
+def muon_momentum_trainer_flags(chart: MuonMomentumGauge) -> tuple[str, ...]:
+    """The BASE-trainer argv for a MuonMomentumGauge chart. COLD_MOMENTUM => () (byte-identical
+    default); WARM_START => ``--muon-warm-start-momentum`` (a real BASE-trainer BooleanOptionalAction
+    flag — the Muon-stage carrier is the base trainer, NOT the levelset launch argparse)."""
+    return MUON_MOMENTUM_TRAINER_FLAGS[chart]
+
+
+def muon_lr_trainer_flags(chart: MuonLRGauge, final_frac: float | None = None) -> tuple[str, ...]:
+    """The BASE-trainer argv for a MuonLRGauge chart. FLAT_LR => () (byte-identical default);
+    ANNEAL_LR => ``--muon-lr-final-frac <f>`` (a real BASE-trainer float flag). ``final_frac``
+    (optional) overrides MUON_LR_FINAL_FRAC_DEFAULT for a campaign-specific floor; a value >= 1.0 is
+    REFUSED (that IS the no-decay default = the FLAT_LR chart, not an anneal)."""
+    if chart is MuonLRGauge.FLAT_LR:
+        return ()
+    frac = MUON_LR_FINAL_FRAC_DEFAULT if final_frac is None else float(final_frac)
+    if frac >= 1.0:
+        raise ValueError(
+            f"MuonLRGauge.ANNEAL_LR final_frac={frac} >= 1.0 is the no-decay default (== FLAT_LR); "
+            "pass a fraction in (0, 1) OR select MuonLRGauge.FLAT_LR")
+    return ("--muon-lr-final-frac", str(frac))
 
 
 # Wave-F #205 pose-plan INTENDED (not-yet-wired) trainer args — documented, NEVER emitted, per
@@ -712,6 +844,70 @@ def default_cost_table() -> GaugeCostTable:
             compliant=True, deterministic=True, measured=False,
             provenance="#218 --logit-adjust-per-class: Menon per-class logit adjustment (rare-class "
                        "Lane/Movable target boost, 0-byte); through-R d_seg delta UNMEASURED (pending)"),
+
+        # --- MARGIN_SALIENCY (FEED-03n/03p; LEVER-4 multiplier chart, 0 archive bytes train-time) ----
+        # Both charts are 0-archive-byte train-time saliency weights; the DISCRIMINATOR is a d_seg-
+        # through-R effect that is #205-gated, NOT a byte cost -> BOTH numeric fields stay None so
+        # fix_gauge lists them as PENDING (measured-but-unrankable) = the NO-FAKE honest state (like the
+        # baseline RENDER_AA.NONE cell). The MEASURED correlation diagnostics live in provenance (the
+        # same discipline as the WARP charts' pre-R numbers: feeding a byte=0 tie would MIS-RANK them).
+        MarginSaliencyGauge.TEXTURE_PROXY: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="f99a3863a + memory [[msal-uni-texture-proxy-inert-build-exact-sR-reachability-"
+                       "weight]] (scratchpad/measure_SR_vs_texproxy.py, n6/n16/n96 advisory): the "
+                       "--margin-saliency-uniward texture multiplier 1/(1+beta*tex) is MEASURED INERT -- "
+                       "texture is orthogonal to through-R detector reachability (Pearson -0.033 vs S_R, "
+                       "top-5% Jaccard 0.024 ~= chance 0.026; the full lever's 0.21 S_R-alignment is "
+                       "ENTIRELY the fragility factor w=exp(-margin/tau), texture adds +0.009 P) AND "
+                       "mildly MISDIRECTS (texprox vs |grad margin| -0.215). 0 archive bytes (train-time); "
+                       "numeric fields None (the net d_seg is a #205-gated A/B, not a byte cost) -> "
+                       "PENDING/unrankable in fix_gauge (NO-FAKE)"),
+        MarginSaliencyGauge.THROUGH_R_REACHABILITY: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="f99a3863a + tools/precompute_sR_reachability.py: --margin-saliency-reachability "
+                       "REPLACES the texture path with the exact through-R fragility-weighted margin-"
+                       "Jacobian S_R=|d(sum_p w_p*margin_p)/dx|, w=exp(-margin/tau) -> sal=exp(-margin/"
+                       "tau)*S_R_norm. MEASURED 3.0x concentrated on the fragile margin band (S_R vs "
+                       "|grad margin| +0.272, vs margin -0.323); theta-INDEPENDENT -> cached alongside "
+                       "'margins' in the gt-cache (strictly cheaper than the per-step tex recompute). "
+                       "0 archive bytes; net d_seg #205-gated -> numeric fields None (unrankable, MEANS)"),
+
+        # --- MUON_MOMENTUM (FEED-03o/03q; base-trainer finisher schedule, 0 archive bytes train-time) -
+        MuonMomentumGauge.COLD_MOMENTUM: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="cba2e4375 (base-trainer default) + memory [[muon-deep-dive-keep-and-tune-"
+                       "finishing-stage-schedule-not-switch]]: fresh optim.Muon -> zero buffer; the cold "
+                       "first orthogonalized step is a wild unit-norm direction from ONE noisy gradient "
+                       "-> boundary thrash -> MEASURED +0.000357 d_seg SPIKE at the sister thetastar Muon "
+                       "transition (ep750 saddle-gate). byte-identical default; the spike is a transition "
+                       "effect not a byte cost -> numeric fields None (PENDING)"),
+        MuonMomentumGauge.WARM_START: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="cba2e4375 --muon-warm-start-momentum (base trainer; BooleanOptionalAction): seed "
+                       "Muon momentum v from the OUTGOING AdamW first-moment m (both gradient EMAs; "
+                       "Newton-Schulz re-normalizes) -> removes the cold-start +0.000357 spike. PROVEN "
+                       "byte-identical when OFF (0 nonzero cold v). Net d_seg #205-gated (arm #270, "
+                       "GO-gated) -> numeric fields None (unrankable, advisory MEANS)"),
+
+        # --- MUON_LR (FEED-03o/03q; base-trainer finisher schedule, 0 archive bytes train-time) --------
+        MuonLRGauge.FLAT_LR: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="cba2e4375 (base-trainer default; --muon-lr-final-frac 1.0 = no decay): flat Muon "
+                       "LR. Muon's Newton-Schulz fixes update MAGNITUDE so a flat LR cannot self-reduce "
+                       "the step near a minimum -> plateaus/oversteps (river-valley Muon 2606.21514). "
+                       "byte-identical default -> numeric fields None (PENDING)"),
+        MuonLRGauge.ANNEAL_LR: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="cba2e4375 --muon-lr-final-frac <f> (base trainer; default 0.1): cosine-DECAY the "
+                       "Muon-group LR to --muon-lr*f across the Muon span (the #205-arm config 0.002-> "
+                       "2e-4). PROVEN byte-identical at frac>=1.0 (max|dLR|=0). Net d_seg #205-gated -> "
+                       "numeric fields None (unrankable, advisory MEANS)"),
     }
     return GaugeCostTable(cells)
 

@@ -212,6 +212,21 @@ Plus the operator-facing surfaces (novel-contributions doc, writeup, θ* candida
 leg asserts a WIN — they record MEANS + advisory rows + honest negatives; a score claim requires
 the byte-closed #202 exact row.
 
+**Sync pass 2026-07-03 (three built+DAG-recorded levers now expressed across ALL three legs):**
+
+| lever | DAG | DSL gauge | equation |
+|---|---|---|---|
+| **S_R reachability** (LEVER-4) — replaces the MEASURED-inert texture multiplier `1/(1+β·tex)` (Pearson −0.033 vs S_R, Jaccard 0.024 ≈ chance) with `sal = exp(−margin/τ)·S_R_norm` (3.0× on the fragile band, θ-independent cache) | FEED-03n/03p (`f99a3863a`) | `MarginSaliencyGauge.{TEXTURE_PROXY,THROUGH_R_REACHABILITY}` → `--margin-saliency-uniward` / `--margin-saliency-reachability` (levelset argparse) | `margin_saliency_reachability_replaces_texture_proxy_v1` |
+| **Muon warm-start momentum** — seed Muon `v` from the outgoing AdamW `m`, killing the MEASURED +0.000357 d_seg cold-start transition spike | FEED-03o/03q (`cba2e4375`) | `MuonMomentumGauge.{COLD_MOMENTUM,WARM_START}` → `--muon-warm-start-momentum` (BASE argparse) | `muon_finisher_schedule_warmstart_and_lr_anneal_v1` |
+| **Muon LR anneal** — cosine-decay the flat Muon LR to a floor (NS fixes magnitude → flat can't self-reduce → river-valley plateau) | FEED-03o/03q (`cba2e4375`) | `MuonLRGauge.{FLAT_LR,ANNEAL_LR}` → `--muon-lr-final-frac` (BASE argparse) | `muon_finisher_schedule_warmstart_and_lr_anneal_v1` |
+
+All three are 0-archive-byte train-time/optimizer levers; their gauge cost cells carry the MEASURED
+diagnostics in `provenance` with numeric fields `None` (unrankable → `fix_gauge` lists them PENDING),
+so the leg records the honest #205-gated state, not a fabricated S-ranking. The margin-saliency
+charts flag-validate against the LEVELSET trainer argparse; the two `--muon-*` charts against the
+BASE trainer (the Muon-stage carrier per §"Capstone θ* witness trainer") — the base's two GAP flags'
+levelset launch-path wire-in is the owed follow-up.
+
 ## 6. Adversarial + deep-math gates (the quality bar, applied to the triality)
 
 Every automated cycle self-reviews before any verdict is load-bearing: n600-authority flag,

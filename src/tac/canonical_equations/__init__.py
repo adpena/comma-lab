@@ -138,6 +138,12 @@ from tac.canonical_equations.powerplay_variant_ii_cost_isomorphism_20260702 impo
     build_powerplay_variant_ii_cost_isomorphism_v1,
     contest_score_as_powerplay_cost,
 )
+from tac.canonical_equations.margin_saliency_reachability_and_muon_finisher_20260703 import (
+    build_margin_saliency_reachability_replaces_texture_proxy_v1,
+    build_muon_finisher_schedule_warmstart_and_lr_anneal_v1,
+    muon_cold_start_transition_spike,
+    through_r_saliency,
+)
 from tac.canonical_equations.store_nothing_pose_carrier_rate_dpose_20260702 import (
     build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1,
     store_nothing_marginal_bytes,
@@ -191,6 +197,8 @@ __all__ = [
     "build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1",
     "build_oom_verdict_batch_spike_peak_rss_v1",
     "build_pairset_component_marginal_score_decomposition_v1",
+    "build_margin_saliency_reachability_replaces_texture_proxy_v1",
+    "build_muon_finisher_schedule_warmstart_and_lr_anneal_v1",
     "build_powerplay_variant_ii_cost_isomorphism_v1",
     "build_procedural_predictor_plus_residual_correction_savings_v1",
     "build_scorer_input_cache_hash_identity_v1",
@@ -204,6 +212,7 @@ __all__ = [
     "load_equation_registry_strict",
     "load_registry_events_lenient",
     "mlx_pytorch_full_decoder_downstream_scorer_drift_bound",
+    "muon_cold_start_transition_spike",
     "pairset_component_marginal_payload",
     "pairset_component_marginal_score_delta",
     "populate_initial_equations",
@@ -218,6 +227,7 @@ __all__ = [
     "store_nothing_marginal_bytes",
     "store_nothing_rate_term",
     "task_rd_dominance_gap",
+    "through_r_saliency",
     "update_equation_with_anchor_via_conjugate_prior",
     "update_equation_with_domain_refinement",
     "update_equation_with_empirical_anchor",
