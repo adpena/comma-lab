@@ -86,8 +86,11 @@ the automation quality-bar extincts (`all-automated-worldclass-recursive-review-
   gauge vocabulary (`gauge.py`) types the facets (Warp/Carrier/Residual/Pose/Movables/Generation/
   Head/Topology…) so a program is a checkable object, flag-validated against the real argparse.
 
-- **equations — the confirmed laws.** e.g. margin field = Fisher surrogate = UNIWARD cost
-  (Pearson 0.978); saddle-to-saddle escape time ∝ exp(leap exponent) with Muon ≈ Stiefel
+- **equations — the confirmed laws.** e.g. margin field = Fisher surrogate (Pearson 0.978,
+  the two are logit-derived → collinear by construction); UNIWARD = the same *detector-cost idea*
+  but keyed to a GENERIC steganalyzer, so kindred-NOT-equal (pixelwise margin↔UNIWARD ≈ 0, measured
+  n6 — the unity is metric-level via the Fisher/Jacobian, not a scalar-map correlation);
+  saddle-to-saddle escape time ∝ exp(leap exponent) with Muon ≈ Stiefel
   (Spectral-Flattening 2605.13079); argmax-of-SDF ≡ power diagram (per-class offset = Laguerre
   weight); base-fiber ≡ task-space quotient (rate on base, uniform on fiber); the 96↔600
   subsample-bias law. Each carries Provenance (axis_tag + hardware + evidence_grade) + ≥1
