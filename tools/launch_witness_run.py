@@ -59,6 +59,14 @@ from tac import witness_autoconfig as wac  # noqa: E402
 _TRAINER = _REPO / "experiments/train_levelset_witness_realized_through_R_mlx.py"
 
 
+def _admission_override_ok(text: str | None) -> bool:
+    """Reject empty / placeholder admission-override rationales (per Catalog #287 discipline)."""
+    if not text or not text.strip():
+        return False
+    low = text.strip().lower()
+    return low not in {"<rationale>", "<reason>", "placeholder", "tbd", "todo", "n/a"} and len(low) >= 8
+
+
 # ───────────────────────── never-invent-a-flag guard ─────────────────────────
 def real_trainer_flags() -> frozenset[str]:
     """The SET of real ``--flag`` names parsed from the trainer's argparse."""
@@ -235,6 +243,9 @@ def main(argv: list[str] | None = None) -> int:
                     "fraction of total RAM (default 0.70 — leaves OS + control-plane + coexistence headroom)")
     ap.add_argument("--skip-mem-preflight", action="store_true",
                     help="bypass the projected-peak-RSS memory preflight (WARN instead of REFUSE)")
+    ap.add_argument("--admission-override-rationale", default=None,
+                    help="operator-quoted rationale to OVERRIDE a SYSTEM admission REFUSAL (the "
+                         "SUM-over-RAM crash gate); the ONLY non-skip bypass (placeholder/empty rejected)")
     ap.add_argument("--verify-s", type=float, default=4.0,
                     help="seconds spawn_durable_daemon verifies the child survived exec")
     ap.add_argument("--perf-env-timeout-s", type=float, default=45.0,
@@ -310,10 +321,13 @@ def main(argv: list[str] | None = None) -> int:
     # projected memory at the real n600 config, so the #205 OOM config passed it. This closes that
     # gap: it refuses e.g. --verdict-batch 0 at n600 (the ~66 GiB verdict spike) or n so large the
     # resident cf_mx_cache alone busts RAM. safe_run's --rss-cap-mb remains the runtime backstop.
+    projected_peak_gib: float | None = None
+    wmp = None
     try:
         import witness_memory_preflight as wmp  # tools/ is on sys.path (same dir as this launcher)
 
         proj = wmp.project_from_launch_sh(launch_sh, safe_frac=args.mem_preflight_safe_frac)
+        projected_peak_gib = proj.projected_peak_gib
         print(f"# mem-preflight: projected peak {proj.projected_peak_gib} GiB "
               f"(fixed {proj.fixed_overhead_gib} + cf_mx_cache {proj.cf_cache_gib} + gt {proj.gt_gib} "
               f"+ verdict {proj.verdict_transient_gib}); safe ceiling {proj.safe_ceiling_gib} GiB "
@@ -335,6 +349,41 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[launch-witness] WARNING: mem-preflight unavailable ({type(exc).__name__}: {exc}); "
               f"safe_run --rss-cap-mb {args.rss_cap_mb} remains the runtime backstop.", file=sys.stderr)
 
+    # (b1-sys) SYSTEM ADMISSION HARD GATE — the SUM-over-RAM crash guard (the P0 fix). The per-run
+    # projection above is blind to what ELSE is running; this composes THIS run's projected peak with
+    # the live system-wide used RAM + all active jobs' remaining growth vs the adaptive ceiling. REFUSE
+    # (rc=4) when the SUM would bust the machine — the exact multi-job overflow that crashed us. NOT a
+    # dry-run advisory: it BLOCKS the launch. Bypass only via an operator-quoted override rationale.
+    if projected_peak_gib is not None and wmp is not None:
+        try:
+            ctx = wmp.system_aware_admission(projected_peak_gib)
+            d = ctx.decision
+            print(f"# system-admission: {'ADMIT' if d.admit else 'REFUSE'} — {d.reason}")
+            print(f"#   total={ctx.snapshot.total_gib:.0f} used={ctx.snapshot.used_gib:.1f} "
+                  f"available={ctx.snapshot.available_gib:.1f} ceiling={ctx.ceiling.adaptive_ceiling_gib:.1f} "
+                  f"budget={ctx.ceiling.training_budget_gib:.1f} active_jobs={len(ctx.active_jobs)} "
+                  f"fail_safe={ctx.snapshot.fail_safe} GiB")
+            if not d.admit and not args.dry_run:
+                import system_memory_governor as _gov  # tools/ on sys.path
+                if _admission_override_ok(args.admission_override_rationale):
+                    print(f"[launch-witness] ADMISSION OVERRIDE (operator rationale): "
+                          f"{args.admission_override_rationale!r} — proceeding despite: {d.reason}",
+                          file=sys.stderr)
+                elif _gov.admission_enforcing():
+                    print(f"[launch-witness] ERROR: REFUSING to launch — SYSTEM admission [ENFORCE]: "
+                          f"{d.reason}\n  Free RAM / wait for an active job to finish / reduce this run's "
+                          f"peak, or pass --admission-override-rationale \"<operator verbatim>\".",
+                          file=sys.stderr)
+                    return 4
+                else:
+                    print(f"[launch-witness] WOULD-REFUSE (ADVISORY) — SYSTEM admission: {d.reason}\n"
+                          f"  Gate ships ADVISORY pending independent adversarial review; PROCEEDING. "
+                          f"Flip to enforce with {_gov.ADMISSION_ENFORCE_ENV}=1 after review.",
+                          file=sys.stderr)
+        except Exception as exc:  # governor unavailable => fail-open here; spawn's gate is the backstop.
+            print(f"[launch-witness] WARNING: system admission unavailable ({type(exc).__name__}: {exc}); "
+                  f"spawn_durable_daemon's admission gate remains the backstop.", file=sys.stderr)
+
     if args.dry_run:
         print("# DRY-RUN: launch.sh written + flags validated; NOT spawning. "
               "Re-run without --dry-run to launch.")
@@ -350,15 +399,22 @@ def main(argv: list[str] | None = None) -> int:
         if gate_rc != 0:
             return gate_rc
 
-    # (c) LAUNCH durably (spawn_durable_daemon auto-verifies the child survived exec).
+    # (c) LAUNCH durably (spawn_durable_daemon auto-verifies the child survived exec + auto-starts the
+    # black box + re-checks the SYSTEM admission gate as a defense-in-depth backstop). We pass the
+    # projected peak so the registry records it (the NEXT launch's admission gate sums it) + the
+    # operator override rationale (so the daemon's gate honors the same override the launcher did).
     import spawn_durable_daemon as sdd  # late import: heavy-ish + only needed for real launch
     spawn_argv = [
         "--log", str(run_log), "--label", label,
         "--rss-cap-mb", str(int(args.rss_cap_mb)),
         "--min-free-gb", str(float(args.min_free_gb)),
         "--verify-s", str(float(args.verify_s)),
-        "--", "bash", str(launch_sh),
     ]
+    if projected_peak_gib is not None:
+        spawn_argv += ["--projected-peak-gib", str(round(float(projected_peak_gib), 3))]
+    if _admission_override_ok(args.admission_override_rationale):
+        spawn_argv += ["--admission-override-rationale", args.admission_override_rationale]
+    spawn_argv += ["--", "bash", str(launch_sh)]
     rc = sdd.main(spawn_argv)
     if rc != 0:
         print(f"[launch-witness] ERROR: durable launch FAILED (spawn rc={rc}); see the "

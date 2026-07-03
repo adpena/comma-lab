@@ -65,6 +65,11 @@ from pathlib import Path
 # CLAUDE.md "Forbidden /tmp paths in any persisted artifact" non-negotiable).
 # --------------------------------------------------------------------------
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+# Ensure the tools/ dir is importable so the sibling governor / black-box modules resolve regardless
+# of the caller's sys.path (the admission gate + black-box auto-start must not silently no-op).
+_TOOLS_DIR = Path(__file__).resolve().parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
 _REGISTRY_PATH = _REPO_ROOT / ".omx" / "state" / "durable_daemons.json"
 _REGISTRY_LOCK = _REPO_ROOT / ".omx" / "state" / ".durable_daemons.lock"
 
@@ -385,6 +390,96 @@ def _mem_preflight(a: argparse.Namespace) -> int | None:
     return None
 
 
+def _is_protection_infra_cmd(cmd: list[str]) -> bool:
+    """True iff cmd is control-plane / protection infra (black-box / memory guard / governor) that MUST
+    launch even under memory pressure and is never admission-gated (else it could not protect us)."""
+    joined = " ".join(str(t) for t in cmd)
+    return any(tok in joined for tok in
+               ("memory_blackbox.py", "memory_guard.py", "system_memory_governor.py"))
+
+
+def _rationale_is_real(text: str | None) -> bool:
+    """Reject empty / placeholder override rationales (per Catalog #287 placeholder discipline)."""
+    if not text or not text.strip():
+        return False
+    low = text.strip().lower()
+    return low not in {"<rationale>", "<reason>", "placeholder", "tbd", "todo", "n/a"} and len(low) >= 8
+
+
+def _system_admission_gate(a: argparse.Namespace, cmd: list[str]) -> int | None:
+    """SYSTEM-aware admission HARD gate (the P0 crash-prevention). Returns an exit code to ABORT with,
+    or None to proceed.
+
+    REFUSE (rc=5) when launching this job would push projected SYSTEM-wide used RAM over the adaptive
+    ceiling (current used + active jobs' remaining growth-to-peak + this job's projected peak). The
+    ``used`` reading is the REAL vm_stat total (counts EVERY consumer: OS + control-plane + training +
+    byte-close + inflate + bsdtar + probes) — job-type-blind, the exact SUM-over-128GB gap that crashed
+    the machine. Bypass ONLY via --skip-admission-gate (infra) or a real operator-quoted
+    --admission-override-rationale. Protection infra (black-box/guard/governor) is auto-exempt.
+    """
+    if getattr(a, "skip_admission_gate", False) or _is_protection_infra_cmd(cmd):
+        return None
+    try:
+        import system_memory_governor as gov  # tools/ on sys.path
+    except Exception as exc:  # never let a governor import hiccup BLOCK a launch silently
+        print(f"[durable-daemon] WARNING: system admission gate unavailable ({exc!r}); proceeding "
+              f"(per-arm safe_run cap + free-floor preflight remain).", file=sys.stderr)
+        return None
+    projected_new = getattr(a, "projected_peak_gib", None)
+    if projected_new is None:
+        projected_new = float(getattr(a, "projected_gb", 25.0))
+    try:
+        ctx = gov.live_admission_decision(projected_new_gib=float(projected_new))
+    except Exception as exc:
+        print(f"[durable-daemon] WARNING: admission read failed ({exc!r}); proceeding.", file=sys.stderr)
+        return None
+    d = ctx.decision
+    if d.admit:
+        print(f"[durable-daemon] ADMISSION OK: {d.reason}")
+        return None
+    if _rationale_is_real(getattr(a, "admission_override_rationale", None)):
+        print(f"[durable-daemon] ADMISSION OVERRIDE (operator rationale): "
+              f"{a.admission_override_rationale!r} — proceeding despite: {d.reason}", file=sys.stderr)
+        return None
+    enforcing = gov.admission_enforcing()
+    mode = "ENFORCE" if enforcing else "ADVISORY"
+    print(
+        f"[durable-daemon] {'REFUSED' if enforcing else 'WOULD-REFUSE (ADVISORY)'} "
+        f"(system admission gate — SUM-over-RAM crash guard) [{mode}]:\n"
+        f"  {d.reason}\n"
+        f"  total={ctx.snapshot.total_gib:.0f}GiB used={ctx.snapshot.used_gib:.1f}GiB "
+        f"available={ctx.snapshot.available_gib:.1f}GiB ceiling={ctx.ceiling.adaptive_ceiling_gib:.1f}GiB "
+        f"budget={ctx.ceiling.training_budget_gib:.1f}GiB active_jobs={len(ctx.active_jobs)} "
+        f"fail_safe={ctx.snapshot.fail_safe}\n"
+        f"  Another concurrent job would push the SYSTEM over the ceiling. Wait for an active job to\n"
+        f"  finish, reduce this job's --projected-peak-gib, free RAM, or pass\n"
+        f"  --admission-override-rationale \"<operator verbatim>\" to override.",
+        file=sys.stderr,
+    )
+    if not enforcing:
+        print("[durable-daemon] NOTE: admission gate is in ADVISORY mode (ships advisory pending "
+              "independent adversarial review); PROCEEDING. Flip to enforce with "
+              f"{gov.ADMISSION_ENFORCE_ENV}=1 after review.", file=sys.stderr)
+        return None
+    return 5
+
+
+def _maybe_autostart_blackbox(a: argparse.Namespace, cmd: list[str]) -> None:
+    """Auto-start the always-on memory black-box recorder before a training launch (idempotent
+    singleton). Skipped for the black box itself (recursion guard) + infra + --skip-blackbox-autostart."""
+    if getattr(a, "skip_blackbox_autostart", False):
+        return
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return  # never spawn a real daemon during tests (hermetic)
+    if _is_protection_infra_cmd(cmd) or (getattr(a, "label", None) == "memory_blackbox"):
+        return
+    try:
+        import memory_blackbox as mbb  # tools/ on sys.path
+        mbb.ensure_blackbox_running(verbose=True)
+    except Exception as exc:  # never let the black-box hiccup block a launch
+        print(f"[durable-daemon] WARNING: black-box auto-start skipped ({exc!r})", file=sys.stderr)
+
+
 _SAFE_RUN = Path(__file__).resolve().parent / "safe_run.py"
 # When wrapping a training arm in safe_run for a per-arm RSS cap, default the
 # walltime cap to ~14 days so safe_run's 30s default never kills a long run; the
@@ -438,6 +533,16 @@ def _do_start(a: argparse.Namespace) -> int:
 
     # Layer 3: wrap a training arm in safe_run for a per-arm RSS/walltime cap.
     cmd = _maybe_wrap_safe_run(cmd, a)
+
+    # Auto-start the always-on memory black-box recorder BEFORE any heavy job, so the trajectory into a
+    # future crash is captured (idempotent singleton; skipped for infra + the black box itself).
+    _maybe_autostart_blackbox(a, cmd)
+
+    # SYSTEM admission HARD gate (P0 crash prevention): REFUSE if launching this job would push the
+    # SUM over the adaptive ceiling. Runs BEFORE any Popen so a refused launch starts nothing.
+    refusal = _system_admission_gate(a, cmd)
+    if refusal is not None:
+        return refusal
 
     log = open(a.log, "ab", buffering=0)  # noqa: SIM115 — kept open for the child
     devnull = open(os.devnull, "rb")  # noqa: SIM115
@@ -503,6 +608,15 @@ def _do_start(a: argparse.Namespace) -> int:
         "cwd": os.getcwd(),
         "status": "running",
     }
+    # System-governor metadata: the projected peak (so the NEXT launch's admission gate can sum it)
+    # and an explicit throttle priority (so the governor can rank this job when shedding). getattr so a
+    # partial namespace (tests / non-CLI callers) never crashes the launch.
+    _proj_peak = getattr(a, "projected_peak_gib", None)
+    if _proj_peak is not None:
+        record["projected_peak_gib"] = float(_proj_peak)
+    _prio = getattr(a, "priority", None)
+    if _prio is not None:
+        record["priority"] = int(_prio)
     try:
         _register_daemon(record)
     except Exception as exc:  # never let a registry hiccup orphan a live daemon
@@ -696,6 +810,24 @@ def main(argv: list[str] | None = None) -> int:
                     help="per-arm process-group RSS cap in MiB (wraps cmd in safe_run; layer 3)")
     ap.add_argument("--walltime-cap-s", type=float, default=None,
                     help="per-arm walltime cap in seconds (with --rss-cap-mb; defaults ~14d if only RSS set)")
+    # SYSTEM-aware admission (the P0 crash-prevention HARD gate). Before Popen, refuse to START a job
+    # whose projected peak, ADDED to the current system-wide used RAM + the remaining growth of all
+    # active jobs, would exceed the adaptive ceiling (total - baseline - margin). This is the SUM-over-
+    # 128GB crash fix. It is a PREVENT gate (nonzero exit, starts nothing); the ONLY bypass is an
+    # explicit operator-quoted --admission-override-rationale (or --skip-admission-gate for infra).
+    ap.add_argument("--projected-peak-gib", type=float, default=None,
+                    help="projected PEAK RSS (GiB) of THIS job for the system admission gate + registry "
+                         "record (falls back to --projected-gb when unset)")
+    ap.add_argument("--priority", type=int, default=None,
+                    help="explicit throttle priority for THIS job (higher = shed/pause LAST); recorded "
+                         "in the registry so the governor's throttle can rank it")
+    ap.add_argument("--skip-admission-gate", action="store_true",
+                    help="skip the SYSTEM admission gate (ONLY for control-plane/watchdog/black-box infra)")
+    ap.add_argument("--admission-override-rationale", default=None,
+                    help="operator-quoted rationale to OVERRIDE a system admission REFUSAL (the only "
+                         "non-infra bypass; placeholder/empty rejected)")
+    ap.add_argument("--skip-blackbox-autostart", action="store_true",
+                    help="do NOT auto-start the memory black-box recorder before launching (infra only)")
     # NO-silent-failure liveness verification: after Popen, bound-wait this many
     # seconds and confirm the child survived exec (did not die at exec / exit
     # nonzero) before reporting a healthy detached daemon. 0 disables (instant

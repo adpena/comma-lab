@@ -133,3 +133,33 @@ def test_measured_constants_match_ledger():
     assert 5.0 <= wmp.VERDICT_FLOOR_GIB <= 7.0
     # cf_mx_cache measured 0.070-0.072 GiB/pair @ 384x512
     assert 0.065 <= wmp.CF_PER_PAIR_GIB_REF <= 0.075
+
+
+# ── SYSTEM-aware admission composition (the P0 SUM-over-RAM gate) ───────────────────────────────
+import system_memory_governor as gov  # noqa: E402
+
+
+def _fixed_snapshot(used_gib):
+    return gov.SystemMemorySnapshot(
+        total_gib=128.0, available_gib=128.0 - used_gib, used_gib=used_gib, free_gib=128.0 - used_gib,
+        wired_gib=0.0, compressor_gib=0.0, swap_used_gib=0.0, pressure_level=1, load1=0.0, load5=0.0,
+        load15=0.0, available_primary_gib=128.0 - used_gib, closure_gib=1.0, closure_ok=True,
+        cross_validated=True, discrepancy_gib=0.0, fail_safe=False)
+
+
+def test_system_aware_admission_refuses_second_concurrent_run(monkeypatch):
+    """R1 (~67 GB) already running; a 2nd ~67 GB run must be REFUSED (the crash)."""
+    r1 = gov.TrackedJob(label="r1", pid=1, pgid=1, cmd="python train_witness.py", priority=100,
+                        projected_peak_gib=67.0, current_rss_gib=67.0, paused=False,
+                        throttle_eligible=True, own_group_leader=True)
+    monkeypatch.setattr(gov, "read_system_memory_snapshot", lambda: _fixed_snapshot(70.0))
+    monkeypatch.setattr(gov, "list_tracked_jobs", lambda: [r1])
+    ctx = wmp.system_aware_admission(67.0)
+    assert not ctx.decision.admit  # 70 + 0 growth + 67 = 137 > ceiling 117.76
+
+
+def test_system_aware_admission_admits_lone_run(monkeypatch):
+    monkeypatch.setattr(gov, "read_system_memory_snapshot", lambda: _fixed_snapshot(18.0))
+    monkeypatch.setattr(gov, "list_tracked_jobs", lambda: [])
+    ctx = wmp.system_aware_admission(67.0)
+    assert ctx.decision.admit  # 18 + 0 + 67 = 85 < ceiling 117.76

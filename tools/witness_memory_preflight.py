@@ -161,6 +161,21 @@ def project_from_launch_sh(path: Path, *, safe_frac: float = DEFAULT_SAFE_FRAC,
         safe_frac=safe_frac, total_ram_gib=total_ram_gib)
 
 
+# ── SYSTEM-aware admission (P0 crash prevention) ────────────────────────────────────────────────
+# The per-run projection above is a SINGLE-JOB peak vs a fraction of RAM. It is BLIND to what else is
+# already running — two runs each individually under the fraction can still SUM over total RAM (the
+# 2026-07-02 crash). ``system_aware_admission`` composes this projection's peak with the live
+# system-wide used RAM + all active jobs' remaining growth via the system_memory_governor, so the
+# launcher can HARD-REFUSE the SUM-over-RAM case. The per-run projection remains a fast local floor.
+def system_aware_admission(projected_peak_gib: float, *, exclude_pid: int | None = None):
+    """Return the governor's live ``LiveAdmissionContext`` for a job whose projected peak is
+    ``projected_peak_gib`` (imports the governor lazily; raises if it is unavailable so the caller can
+    decide fail-open vs fail-closed)."""
+    import system_memory_governor as gov  # tools/ is on sys.path (same dir)
+
+    return gov.live_admission_decision(projected_new_gib=float(projected_peak_gib), exclude_pid=exclude_pid)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Witness-launch peak-RSS memory preflight (#205 OOM self-protection).")
     ap.add_argument("--launch-sh", type=str, help="path to an emitted launch.sh to project")
@@ -173,6 +188,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--safe-frac", type=float, default=DEFAULT_SAFE_FRAC)
     ap.add_argument("--total-ram-gib", type=float, default=None)
     ap.add_argument("--strict", action="store_true", help="exit rc=3 when projected peak is unsafe")
+    ap.add_argument("--system-aware", action="store_true",
+                    help="ALSO run the live SYSTEM admission gate (this run's peak + current system-wide "
+                         "used + active jobs' growth vs the adaptive ceiling); with --strict, exit rc=4 "
+                         "when the SUM over RAM would exceed the ceiling")
     args = ap.parse_args(argv)
 
     if args.launch_sh:
@@ -190,8 +209,27 @@ def main(argv: list[str] | None = None) -> int:
           f"+ gt={proj.gt_gib} + verdict={proj.verdict_transient_gib} = peak {proj.projected_peak_gib}")
     print(f"  config: num_pairs={proj.num_pairs} render={proj.render_h}x{proj.render_w} "
           f"self_orient={proj.self_orient} verdict_batch={proj.verdict_batch}")
-    if not proj.safe and args.strict:
-        return 3
+
+    admit_refused = False
+    if args.system_aware:
+        try:
+            ctx = system_aware_admission(proj.projected_peak_gib)
+            d = ctx.decision
+            atag = "ADMIT" if d.admit else "REFUSE"
+            print(f"[system-admission] {atag}: {d.reason}")
+            print(f"  system: total={ctx.snapshot.total_gib:.0f}GiB used={ctx.snapshot.used_gib:.1f}GiB "
+                  f"available={ctx.snapshot.available_gib:.1f}GiB ceiling={ctx.ceiling.adaptive_ceiling_gib:.1f}GiB "
+                  f"budget={ctx.ceiling.training_budget_gib:.1f}GiB active_jobs={len(ctx.active_jobs)}")
+            admit_refused = not d.admit
+        except Exception as exc:  # governor unavailable => fail-open on the SYSTEM axis (per-run still gates)
+            print(f"[system-admission] WARNING: unavailable ({type(exc).__name__}: {exc}); "
+                  f"per-run projection still applies.")
+
+    if args.strict:
+        if not proj.safe:
+            return 3
+        if admit_refused:
+            return 4
     return 0
 
 

@@ -129,6 +129,11 @@ from tac.canonical_equations.oom_verdict_batch_spike_peak_rss_20260702 import (
     build_oom_verdict_batch_spike_peak_rss_v1,
     verdict_transient_gib,
 )
+from tac.canonical_equations.adaptive_ceiling_admission_control_20260703 import (
+    adaptive_ceiling_gib,
+    admits,
+    build_adaptive_ceiling_admission_control_v1,
+)
 from tac.canonical_equations.powerplay_variant_ii_cost_isomorphism_20260702 import (
     build_powerplay_variant_ii_cost_isomorphism_v1,
     contest_score_as_powerplay_cost,
@@ -178,6 +183,7 @@ __all__ = [
     "append_empirical_anchor_to_equation_with_posterior_update",
     "auto_recalibrate_from_continual_learning_posterior",
     "bootstrap_posterior_from_anchor_residuals",
+    "build_adaptive_ceiling_admission_control_v1",
     "build_all_initial_equations",
     "build_all_witness_measured_findings_20260701",
     "build_mlx_matmul_drift_m_series_canonical_floor_v1",

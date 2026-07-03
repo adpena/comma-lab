@@ -232,6 +232,9 @@ HOST_CONTROL_PLANE_LINEAGE_PROTECTED_EXECUTABLE_NAMES: frozenset[str] = (
 EXTRA_PROTECTED_TOKENS: tuple[str, ...] = (
     "/usr/bin/ssh", " ssh ", "sshd", "tmux", "/sbin/launchd", "WindowServer",
     "loginwindow", "memory_guard.py", "spawn_durable_daemon.py",
+    # Memory-protection infra: the black-box recorder + system governor MUST never be shed/paused —
+    # they ARE the protection layer (a governor that pauses itself cannot recover the machine).
+    "memory_blackbox.py", "system_memory_governor.py",
 )
 EXTRA_PROTECTED_EXECUTABLE_NAMES: frozenset[str] = frozenset(
     {"ssh", "sshd", "tmux", "launchd", "login", "-bash", "-zsh", "-sh",
