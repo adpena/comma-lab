@@ -252,13 +252,13 @@ class WitnessPanelRenderer:
 
         manifest, params, code_np = build_witness_render_context(ckpt_dir, npz_name, _SO_OVERRIDES)
         idx = sorted(self.pair_indices)
-        lo, hi = idx[0], idx[-1] + 1
-        if manifest["n_pairs"] < hi:
-            idx = [i for i in idx if i < manifest["n_pairs"]]
-            if not idx:
-                raise ValueError(f"witness has {manifest['n_pairs']} pairs < requested {self.pair_indices}")
-            lo, hi = idx[0], idx[-1] + 1
-        rendered = render_our_pairs(manifest, params, code_np, lo, hi)  # contiguous [lo,hi)
+        idx = [i for i in idx if i < manifest["n_pairs"]]
+        if not idx:
+            raise ValueError(f"witness has {manifest['n_pairs']} pairs < requested {self.pair_indices}")
+        # Render ONLY the requested pairs. The Tab-2 hardest/most-diverse selection is SPREAD across
+        # the drive (e.g. pairs 74..517), so rendering the contiguous span [min,max] would decode
+        # ~450 pairs to use 6 (a second full pass). Render each selected pair on its own instead.
+        rendered = {pi: render_our_pairs(manifest, params, code_np, pi, pi + 1)[0] for pi in idx}
 
         pairs_out: list[dict[str, Any]] = []
         dsegs: list[float] = []
@@ -267,7 +267,7 @@ class WitnessPanelRenderer:
         fsl = (slice(None, None, ds), slice(None, None, ds))
         fw = fh = 0
         for pi in idx:
-            our_f0, our_f1 = rendered[pi - lo]
+            our_f0, our_f1 = rendered[pi]
             gt_f1 = self._gt["gt_f1"][pi]
             gt_lstar = self._gt["lstars"][pi]
             gt_margin = self._gt["margins"].get(pi)
