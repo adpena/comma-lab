@@ -80,6 +80,16 @@ def _utc() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _git_hash() -> str:
+    import subprocess
+
+    try:
+        return subprocess.check_output(["git", "-C", str(_REPO), "rev-parse", "HEAD"],
+                                       text=True, stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return "unknown"
+
+
 def _advisory_axis() -> str:
     import platform
 
@@ -265,6 +275,142 @@ def pe_free_solve(posenet, f0_init_work, f1_cam_t, target, camera_h, camera_w,
 
 
 # ---------------------------------------------------------------------------
+# 1b. MLX/METAL PROPOSER (task #251): the FAST coarse free-frame0 GN solve on the Apple GPU.
+#     The MLX PoseNet adapter (custom-Metal-VJP, tac.local_acceleration.mlx_scorer_adapters) mirrors
+#     the frozen CPU-torch PoseNet numerics (parity test bound <=5e-2 on GPU; MEASURED ~2e-5 on this
+#     build) -> a fast SEARCH PROPOSER only. It runs the SAME LM-GN min-norm inverse solve as the CPU
+#     pe_free_solve, but assembles the 6xN Jacobian via mx.vjp on Metal. The promotable d_pose VERDICT
+#     ALWAYS comes from the frozen CPU-torch PoseNet (never MLX); MLX-derived intermediates are
+#     [macOS-MLX research-signal]. The mlx-engine flow is: MLX coarse solve -> SHORT CPU-torch GN polish
+#     (pe_free_solve warm-started from the MLX frame0) -> CPU frozen-authority verdict. Because the MLX
+#     PoseNet closely tracks the CPU one, the CPU polish needs few iters, so the net speedup survives.
+# ---------------------------------------------------------------------------
+class MLXPoseSolver:
+    """MLX/Metal PROPOSER for the free-frame0 pose inverse-solve (task #251). NEVER a score authority."""
+
+    def __init__(self, posenet, camera_h: int, camera_w: int, seg_h: int = 384, seg_w: int = 512,
+                 device: str = "gpu"):
+        import mlx.core as mx
+
+        from tac.local_acceleration.mlx_scorer_adapters import torch_posenet_to_mlx
+        from tac.local_acceleration.pr95_hnerv_mlx_training import (
+            resize_nhwc_align_corners_false,
+            rgb_to_yuv6_mlx,
+        )
+
+        self.mx = mx
+        self._dev = mx.gpu if str(device).lower() == "gpu" else mx.cpu
+        self.adapter = torch_posenet_to_mlx(posenet)  # reads frozen weights once
+        self.camera_h, self.camera_w = int(camera_h), int(camera_w)
+        self.seg_h, self.seg_w = int(seg_h), int(seg_w)  # contest scorer input size (segnet_model_input_size)
+        self._yuv6 = rgb_to_yuv6_mlx
+        self._resize = resize_nhwc_align_corners_false
+
+    def _ste_u8(self, x):
+        mx = self.mx
+        c = mx.clip(x, 0.0, 255.0)
+        return c + mx.stop_gradient(mx.round(c) - c)  # STE: forward uint8-quantized, backward identity
+
+    def _pose6_fn(self, yuv1):
+        """Closure f0_work_nhwc (1,h,w,3) [0,255] -> pose6 (6,), mirroring the CPU _posenet6 path
+        (bilinear up work->camera, STE uint8 @ camera, bilinear down camera->scorer, yuv6, adapter)."""
+        mx = self.mx
+
+        def fn(f0_nhwc):
+            f0_cam = self._resize(f0_nhwc, size=(self.camera_h, self.camera_w), mode="bilinear")
+            f0_cam = self._ste_u8(f0_cam)
+            f0_seg = self._resize(f0_cam, size=(self.seg_h, self.seg_w), mode="bilinear")
+            yuv0 = self._yuv6(f0_seg)
+            pair = mx.concatenate([yuv0, yuv1], axis=-1)  # (1,192,256,12) order [f0_6, f1_6] (upstream)
+            out = self.adapter(pair)
+            return out["pose"][0, :6]
+
+        return fn
+
+    def solve(self, f0_init_chw: np.ndarray, f1_cam_uint8: np.ndarray, target, max_iter: int = 6):
+        """MLX GN min-norm free-frame0 solve (PROPOSER). Returns (f0_work np (3,h,w), dpose_grad_mlx).
+        The dpose is the MLX gradient-space d_pose [macOS-MLX research-signal], NOT an authority score."""
+        mx = self.mx
+        with mx.stream(self._dev):
+            f1_seg = self._resize(mx.array(np.asarray(f1_cam_uint8, np.float32))[None],
+                                  size=(self.seg_h, self.seg_w), mode="bilinear")
+            yuv1 = self._yuv6(f1_seg)
+            mx.eval(yuv1)
+            fn = self._pose6_fn(yuv1)
+            tgt = np.asarray(target, np.float64)
+            f0chw = np.asarray(f0_init_chw, np.float32)
+            C, H, W = f0chw.shape
+            n = C * H * W
+            f0 = mx.array(np.transpose(f0chw, (1, 2, 0))[None])  # (1,H,W,3) NHWC
+
+            def _fwd(f0m):
+                p = fn(f0m)
+                mx.eval(p)
+                return np.array(p).astype(np.float64)
+
+            def _jac(f0m):
+                p = fn(f0m)
+                mx.eval(p)
+                rows = []
+                for k in range(6):
+                    ck = np.zeros(6, np.float32)
+                    ck[k] = 1.0
+                    _o, vj = mx.vjp(fn, (f0m,), (mx.array(ck),))
+                    mx.eval(vj)
+                    rows.append(np.array(vj[0]).reshape(-1).astype(np.float64))  # NHWC-flatten
+                return np.array(p).astype(np.float64), np.stack(rows, 0)  # (6,), (6,N)
+
+            pose6, jac = _jac(f0)
+            r = pose6 - tgt
+            dpose = float((r * r).mean())
+            lam = 1e-8
+            for _it in range(1, int(max_iter) + 1):
+                jjt = jac @ jac.T
+                max_eig = float(np.linalg.eigvalsh(jjt)[-1]) if n else 0.0
+                accepted = False
+                for _ls in range(6):  # LM damping line search (mirror pe_free_solve)
+                    try:
+                        coef = np.linalg.solve(jjt + lam * max_eig * np.eye(6) + 1e-30 * np.eye(6), r)
+                    except np.linalg.LinAlgError:
+                        coef = np.linalg.lstsq(jjt + lam * max_eig * np.eye(6), r, rcond=None)[0]
+                    delta = -(jac.T @ coef)  # (N,) min-norm step
+                    f0_try = mx.clip(f0 + mx.array(delta.reshape(1, H, W, C).astype(np.float32)), 0.0, 255.0)
+                    rt = _fwd(f0_try) - tgt
+                    dt = float((rt * rt).mean())
+                    if dt < dpose:
+                        f0 = f0_try
+                        r = rt
+                        dpose = dt
+                        lam = max(lam * 0.3, 1e-12)
+                        accepted = True
+                        break
+                    lam = min(lam * 5.0, 1e3)
+                if not accepted or dpose < 1e-12:
+                    break
+                pose6, jac = _jac(f0)
+                r = pose6 - tgt
+            f0_out = np.array(f0)[0]  # (H,W,3)
+            return np.transpose(f0_out, (2, 0, 1)).astype(np.float32), float(dpose)
+
+
+def _solve_free_frame0(engine, solver, posenet, f0_init_chw, f1_cam_uint8, f1_cam_t, target,
+                       camera_h, camera_w, cpu_iters, mlx_iters, polish_iters):
+    """Unified P-E free-frame0 solve dispatch. CPU engine: pe_free_solve (authority-grade). MLX engine:
+    MLX coarse GN PROPOSER -> SHORT CPU-torch pe_free_solve polish (warm-started). Both END in a
+    CPU-torch GN min-norm step so the returned f0 is CPU-authority-grade + P-F-comparable (same basin).
+    Returns the pe_free_solve-shaped dict (f0_work np, J, trace, dpose_grad_final)."""
+    import torch
+
+    if engine == "mlx" and solver is not None:
+        f0_mlx, _dp_mlx = solver.solve(np.asarray(f0_init_chw, np.float32), f1_cam_uint8, target,
+                                       max_iter=mlx_iters)
+        return pe_free_solve(posenet, torch.as_tensor(f0_mlx, dtype=torch.float32), f1_cam_t, target,
+                             camera_h, camera_w, max_iter=polish_iters)
+    return pe_free_solve(posenet, torch.as_tensor(np.asarray(f0_init_chw, np.float32)), f1_cam_t,
+                         target, camera_h, camera_w, max_iter=cpu_iters)
+
+
+# ---------------------------------------------------------------------------
 # 2. WARP BASE (P-A / rigid anchor): per-pair s_t-fit ground-homography warp of the witness render f1
 #    (the FREE, rule-118 generic warp — reuses the PROVEN regime_homography + warp_rgb + s_t grid fit).
 # ---------------------------------------------------------------------------
@@ -407,8 +553,11 @@ def run(args) -> dict:
     camera_h, camera_w = lbc.CAMERA_H, lbc.CAMERA_W
     work_h, work_w = int(args.work_h), int(args.work_w)
 
-    # GT + frozen PoseNet (patched yuv6 so the Jacobian is not severed)
-    gt, _seg_cpu, _pn = twr.load_gt_from_cache(Path(args.gt_cache), n_total)
+    # GT + frozen PoseNet (patched yuv6 so the Jacobian is not severed). Load only the pairs we need
+    # (min 4 for the NO-FAKE self-check) -- the shared gt cache is ~4.8 GB at n600, so a small parity
+    # gate / smoke must NOT materialize all 600 pairs (startup RSS + wall-clock scale with the count).
+    n_gt = max(n_pairs, min(4, n_total))
+    gt, _seg_cpu, _pn = twr.load_gt_from_cache(Path(args.gt_cache), n_gt)
     patch_upstream_yuv6_globally()
     dn = DistortionNet().eval()
     dn.load_state_dicts(posenet_sd_path, segnet_sd_path, torch.device("cpu"))
@@ -418,7 +567,7 @@ def run(args) -> dict:
 
     # NO-FAKE self-check: PoseNet(GT pair) == gt_poses under the patch (proves the differentiable yuv6 is
     # numerically faithful so the verdict d_pose authority is unchanged).
-    sc = {"pairs": min(4, n_total), "pose_max_abs_err": 0.0}
+    sc = {"pairs": min(4, n_gt), "pose_max_abs_err": 0.0}
     for p in range(sc["pairs"]):
         dp0 = twr.cpu_verdict_d_pose(posenet, gt.gt_f0[p], gt.gt_f1[p], gt.gt_poses[p])
         sc["pose_max_abs_err"] = max(sc["pose_max_abs_err"], float(dp0))
@@ -426,6 +575,33 @@ def run(args) -> dict:
     if not sc["PASS"]:
         raise SystemExit(f"NO-FAKE self-check FAILED under yuv6 patch: {sc}")
     print(f"[probe] NO-FAKE self-check PASS (pose_err={sc['pose_max_abs_err']:.2e})  {authority}", flush=True)
+
+    # ENGINE (task #251): --engine mlx builds the MLX/Metal PoseNet PROPOSER for the FAST coarse
+    # free-frame0 GN solve; the d_pose VERDICT still comes from the frozen CPU-torch PoseNet (never MLX).
+    engine = str(args.engine).lower()
+    solver = None
+    mlx_parity = None
+    if engine == "mlx" or getattr(args, "parity_gate", False):
+        print(f"[probe] engine=mlx: building MLX/Metal PoseNet PROPOSER (device={args.mlx_device}) "
+              f"[macOS-MLX research-signal]...", flush=True)
+        solver = MLXPoseSolver(posenet, camera_h, camera_w, seg_h=twr.SEG_H, seg_w=twr.SEG_W,
+                               device=args.mlx_device)
+        # MLX-vs-CPU PoseNet forward parity on the FIRST GT pair (wiring/numerics sanity; research-signal).
+        _f0g = np.transpose(np.asarray(gt.gt_f0[0], np.float32), (2, 0, 1))
+        _f0g_seg = F.interpolate(torch.as_tensor(_f0g).unsqueeze(0), size=(work_h, work_w),
+                                 mode="bilinear", align_corners=False)[0].numpy()
+        _cpu_p6 = twr._cpu_pose_raw(posenet, gt.gt_f0[0], gt.gt_f1[0])
+        _fn = solver._pose6_fn(solver._yuv6(solver._resize(
+            solver.mx.array(np.asarray(gt.gt_f1[0], np.float32))[None], size=(twr.SEG_H, twr.SEG_W),
+            mode="bilinear")))
+        _p6m = _fn(solver.mx.array(np.transpose(_f0g_seg, (1, 2, 0))[None]))
+        solver.mx.eval(_p6m)
+        _mlx_p6 = np.array(_p6m).astype(np.float64)
+        mlx_parity = {"posenet_forward_max_abs_err_vs_cpu": float(np.abs(_cpu_p6 - _mlx_p6).max()),
+                      "device": args.mlx_device, "note": "MLX PoseNet vs CPU-torch on GT pair 0 "
+                      "(research-signal; proposer sanity). GPU parity test bound <=5e-2."}
+        print(f"[probe] MLX PoseNet forward parity vs CPU: max_abs_err="
+              f"{mlx_parity['posenet_forward_max_abs_err_vs_cpu']:.3e}", flush=True)
 
     # render ALL n witness pairs through R (f1 = clean witness render; f0 re-solved freely). Cache the
     # rendered f1 frames to npz so RESUME chunks (Bash caps a call at 10 min -> we run in --max-seconds
@@ -449,11 +625,94 @@ def run(args) -> dict:
         np.savez_compressed(fcache, f1=np.stack([np.asarray(f, np.uint8) for f in f1s], 0))
         print(f"[probe] rendered {n_pairs} pairs in {time.time()-t0:.0f}s (cached -> {fcache.name})", flush=True)
 
+    # RENDER DECISION (task #251 part a): the MLX render (render_batch_through_R_mlx) emits at SCORER
+    # res (384x512), whereas this probe's warp-base + frozen-authority pipeline operate at CAMERA res
+    # (874x1164, the numpy oracle numpy_oracle_reference_frames). Because those two resolutions differ,
+    # per the task's explicit fallback ("if they diverge, keep the numpy oracle for f1 and only
+    # MLX-accelerate the search") the NUMPY ORACLE is retained for f1; the MLX/Metal acceleration
+    # targets the SEARCH (the per-pair Jacobian solve, the real bottleneck). The MLX search's f1
+    # preprocessing (bilinear camera->384 + yuv6) is validated end-to-end by the MLX-vs-CPU PoseNet
+    # forward parity above (mlx_parity.posenet_forward_max_abs_err_vs_cpu).
+    render_decision = {
+        "f1_source": "numpy_oracle (camera-res 874x1164)",
+        "reason": "MLX render is scorer-res 384x512; probe warp-base + authority are camera-res -> "
+                  "resolution mismatch -> keep numpy oracle per task fallback; MLX accelerates the SEARCH.",
+        "mlx_search_f1_preprocess_validated_by": "mlx_parity (end-to-end PoseNet forward vs CPU-torch)",
+    }
+
     # native intrinsics + target grid for the ground-homography warp base (reuse the proven engine)
     from tools.measure_pose_warp_dseg import _target_grid, intrinsics_at
     K_nat = intrinsics_at(camera_w, camera_h)
     Kinv_nat = np.linalg.inv(K_nat)
     grid_nat = _target_grid(camera_h, camera_w)
+
+    # ===== PARITY GATE (task #251 part e): run BOTH engines on the first parity_pairs and compare the
+    # frozen CPU-authority d_pose of the mlx-hybrid-found frame0 vs the pure-CPU-found frame0 + record
+    # the wall-clock speedup of the P-E SOLVE (warp base is shared CPU cost, excluded from the ratio). =====
+    if getattr(args, "parity_gate", False):
+        npair = min(int(args.parity_pairs), n_pairs)
+        print(f"[probe] PARITY GATE: BOTH engines on {npair} pairs (mlx_iters={args.mlx_iters} "
+              f"polish_iters={args.polish_iters} cpu_iters={args.max_iter})...", flush=True)
+        pg = []
+        for pidx in range(npair):
+            f1 = np.asarray(f1s[pidx], np.uint8)
+            target = np.asarray(gt.gt_poses[pidx], np.float64)
+            f1_cam_t = torch.as_tensor(f1, dtype=torch.float32).permute(2, 0, 1)
+            best_st, dpose_warp, f0_warp_work = warp_base_fit(
+                posenet, f1, target, K_nat, Kinv_nat, grid_nat, camera_h, camera_w, work_h, work_w)
+            # CPU engine (authority-grade search)
+            tc = time.time()
+            sol_cpu = pe_free_solve(posenet, torch.as_tensor(f0_warp_work, dtype=torch.float32),
+                                    f1_cam_t, target, camera_h, camera_w, max_iter=args.max_iter)
+            cpu_s = time.time() - tc
+            dp_cpu, _oc, _ = _frozen_dpose(posenet, sol_cpu["f0_work"], f1, target, camera_h, camera_w)
+            # MLX-hybrid engine (Metal PROPOSER -> short CPU polish)
+            tm = time.time()
+            f0_mlx, dp_mlx_grad = solver.solve(f0_warp_work, f1, target, max_iter=args.mlx_iters)
+            sol_mlx = pe_free_solve(posenet, torch.as_tensor(f0_mlx, dtype=torch.float32), f1_cam_t,
+                                    target, camera_h, camera_w, max_iter=args.polish_iters)
+            mlx_s = time.time() - tm
+            dp_mlx, _om, _ = _frozen_dpose(posenet, sol_mlx["f0_work"], f1, target, camera_h, camera_w)
+            pg.append({"pair": int(pidx), "dpose_cpu_authority": float(dp_cpu),
+                       "dpose_mlx_hybrid_authority": float(dp_mlx), "warp_dpose": float(dpose_warp),
+                       "cpu_solve_s": round(cpu_s, 3), "mlx_hybrid_solve_s": round(mlx_s, 3)})
+            print(f"  [{pidx+1}/{npair}] cpu={dp_cpu:.3g}({cpu_s:.1f}s) mlx_hybrid={dp_mlx:.3g}({mlx_s:.1f}s) "
+                  f"warp={dpose_warp:.3g}", flush=True)
+        dp_cpu_a = np.asarray([r["dpose_cpu_authority"] for r in pg], np.float64)
+        dp_mlx_a = np.asarray([r["dpose_mlx_hybrid_authority"] for r in pg], np.float64)
+        cpu_tot = float(sum(r["cpu_solve_s"] for r in pg))
+        mlx_tot = float(sum(r["mlx_hybrid_solve_s"] for r in pg))
+        med_cpu, med_mlx = float(np.median(dp_cpu_a)), float(np.median(dp_mlx_a))
+        # PASS: mlx-hybrid reaches the same regime (median <= 1.5x cpu-only AND same order of magnitude).
+        same_oom = bool(med_cpu > 0 and med_mlx > 0 and
+                        abs(np.log10(med_mlx) - np.log10(med_cpu)) <= 1.0)
+        ratio_ok = bool(med_mlx <= 1.5 * med_cpu or (med_mlx < 1e-5 and med_cpu < 1e-5))
+        gate_pass = bool(same_oom and ratio_ok)
+        speedup = float(cpu_tot / mlx_tot) if mlx_tot > 0 else None
+        pgreport = {
+            "tool": "tools/pose_frame0_inverse_solve_probe.py --parity-gate",
+            "task": "#251 MLX/Metal engine parity gate", "utc": _utc(), "git_hash": _git_hash(),
+            "authority": authority,
+            "score_claim": False, "promotable": False, "frontier_pointer": "UNMOVED 0.19110",
+            "engine_config": {"mlx_iters": args.mlx_iters, "polish_iters": args.polish_iters,
+                              "cpu_iters": args.max_iter, "mlx_device": args.mlx_device},
+            "mlx_posenet_forward_parity": mlx_parity, "render_decision": render_decision,
+            "n_pairs": npair,
+            "dpose_cpu_authority_median": med_cpu, "dpose_mlx_hybrid_authority_median": med_mlx,
+            "dpose_cpu_authority_max": float(dp_cpu_a.max()), "dpose_mlx_hybrid_authority_max": float(dp_mlx_a.max()),
+            "ratio_median_mlx_over_cpu": float(med_mlx / med_cpu) if med_cpu > 0 else None,
+            "cpu_solve_total_s": round(cpu_tot, 2), "mlx_hybrid_solve_total_s": round(mlx_tot, 2),
+            "P_E_solve_wall_clock_speedup": speedup,
+            "GATE_PASS": gate_pass,
+            "gate_criteria": "median mlx-hybrid authority d_pose <= 1.5x median cpu-only AND same order "
+                             "of magnitude; both [contest-CPU authority via CPU-torch verdict]. "
+                             "MLX search is [macOS-MLX research-signal].",
+            "per_pair": pg,
+            "elapsed_secs": round(time.time() - t0, 1),
+        }
+        print(f"\n=== PARITY GATE {'PASS' if gate_pass else 'FAIL'} ===  "
+              f"cpu_median={med_cpu:.3g} mlx_median={med_mlx:.3g} speedup={speedup:.1f}x", flush=True)
+        return pgreport
 
     # 0. affine calibration (REPORTED characterization: how affine is the render-warp xi->PoseNet map?)
     cal_idx = list(range(0, n_pairs, max(1, n_pairs // args.n_cal)))[: args.n_cal]
@@ -504,9 +763,10 @@ def run(args) -> dict:
 
         # P-E free solve (FULL work res), INITIALIZED from the warp base (delta = f0_free - f0_warp).
         # quantization-aware (STE round) so it minimizes the ACTUAL uint8 frozen d_pose (the eval floor).
-        f0_warp_t = torch.as_tensor(f0_warp_work, dtype=torch.float32)
-        sol = pe_free_solve(posenet, f0_warp_t, f1_cam_t, target, camera_h, camera_w,
-                            max_iter=args.max_iter)
+        # ENGINE dispatch: cpu = pe_free_solve; mlx = MLX/Metal coarse GN PROPOSER -> SHORT CPU polish.
+        sol = _solve_free_frame0(engine, solver, posenet, f0_warp_work, f1, f1_cam_t, target,
+                                 camera_h, camera_w, cpu_iters=args.max_iter,
+                                 mlx_iters=args.mlx_iters, polish_iters=args.polish_iters)
         f0_free = sol["f0_work"]
         dpose_free_frozen, oob_free, _ = _frozen_dpose(posenet, f0_free, f1, target, camera_h, camera_w)
         delta_tot = f0_free - f0_warp_work
@@ -522,8 +782,9 @@ def run(args) -> dict:
             for (ch, cw) in coarse_grids:
                 f0_warp_c = F.interpolate(torch.as_tensor(f0_warp_work, dtype=torch.float32).unsqueeze(0),
                                           size=(ch, cw), mode="bilinear", align_corners=False)[0]
-                solc = pe_free_solve(posenet, f0_warp_c, f1_cam_t, target, camera_h, camera_w,
-                                     max_iter=max(4, args.max_iter - 2))
+                solc = _solve_free_frame0(engine, solver, posenet, f0_warp_c.numpy(), f1, f1_cam_t, target,
+                                          camera_h, camera_w, cpu_iters=max(4, args.max_iter - 2),
+                                          mlx_iters=max(3, args.mlx_iters - 1), polish_iters=args.polish_iters)
                 f0c = solc["f0_work"]
                 # frozen d_pose of the coarse solve (upsample coarse->camera->uint8 is inside _frozen_dpose,
                 # but here f0c is (3,ch,cw); _frozen_dpose upsamples work->camera regardless of work size).
@@ -704,7 +965,7 @@ def run(args) -> dict:
     report = {
         "tool": "tools/pose_frame0_inverse_solve_probe.py",
         "gate": "#249 $0 deep-math pose frame0 inverse-solve probe (P-E / P-F)",
-        "utc": _utc(),
+        "utc": _utc(), "git_hash": _git_hash(),
         "authority": authority,
         "score_claim": False, "promotion_eligible": False, "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False, "promotable": False,
@@ -713,6 +974,11 @@ def run(args) -> dict:
         "config": {k: cfg.get(k) for k in ("hidden_dim", "n_hidden", "mod_dim", "activation",
                                            "render_h", "render_w", "chroma")},
         "n_pairs": n_pairs, "work_resolution": [work_h, work_w], "self_orient": so.get("self_orient"),
+        "engine": engine,
+        "engine_config": ({"mlx_iters": args.mlx_iters, "polish_iters": args.polish_iters,
+                           "cpu_iters": args.max_iter, "mlx_device": args.mlx_device}
+                          if engine == "mlx" else {"cpu_iters": args.max_iter}),
+        "mlx_posenet_forward_parity": mlx_parity, "render_decision": render_decision,
         "no_fake_selfcheck": sc,
         "0_affine_calibration": affine,
         "1_P_E_free_frame0_solve": {
@@ -776,7 +1042,20 @@ def main(argv=None) -> int:
                     default=str(_REPO / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"))
     ap.add_argument("--n-pairs", type=int, default=600)
     ap.add_argument("--n-cal", type=int, default=8, help="pairs for the affine A,b calibration")
-    ap.add_argument("--max-iter", type=int, default=8, help="LM-GN iterations for the free solve")
+    ap.add_argument("--max-iter", type=int, default=8, help="CPU LM-GN iterations for the free solve")
+    # ENGINE (task #251): cpu = frozen CPU-torch LM-GN (default, unchanged). mlx = MLX/Metal PoseNet
+    # PROPOSER coarse GN solve -> short CPU-torch polish. d_pose VERDICT is ALWAYS the frozen CPU-torch
+    # PoseNet (never MLX); MLX intermediates are [macOS-MLX research-signal].
+    ap.add_argument("--engine", choices=["cpu", "mlx"], default="cpu",
+                    help="cpu (default; unchanged) or mlx (Metal PoseNet proposer + CPU polish)")
+    ap.add_argument("--mlx-iters", type=int, default=6, help="MLX GN proposer iterations (mlx engine)")
+    ap.add_argument("--polish-iters", type=int, default=2,
+                    help="CPU-torch GN polish iterations warm-started from the MLX frame0 (mlx engine)")
+    ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu",
+                    help="MLX stream device for the proposer (gpu=Metal; cpu=MLX-CPU, tighter parity)")
+    ap.add_argument("--parity-gate", action="store_true",
+                    help="run BOTH engines on --parity-pairs, compare CPU-authority d_pose + speedup, exit")
+    ap.add_argument("--parity-pairs", type=int, default=24, help="pairs for the parity gate")
     ap.add_argument("--work-h", type=int, default=384)
     ap.add_argument("--work-w", type=int, default=512)
     ap.add_argument("--pf", action="store_true", help="run the P-F coarse-resolution free-solve rate sweep")
@@ -789,13 +1068,23 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path,
                     default=_REPO / "reports/pose_frame0_inverse_solve_probe.json")
     args = ap.parse_args(argv)
-    _refuse_tmp(Path(args.out), "out")
+    out_path = Path(args.out)
+    if args.parity_gate:  # distinct output file so a parity gate never clobbers a full-run report
+        out_path = out_path.with_name(out_path.stem + "_parity_gate.json")
+    _refuse_tmp(out_path, "out")
     report = run(args)
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out).write_text(json.dumps(report, indent=2))
-    print("\n=== POSE FRAME0 INVERSE-SOLVE VERDICT ===", flush=True)
-    print(json.dumps(report["verdicts"], indent=2), flush=True)
-    print(f"[report] wrote {args.out}  {report['authority']}", flush=True)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(report, indent=2))
+    if "verdicts" in report:
+        print("\n=== POSE FRAME0 INVERSE-SOLVE VERDICT ===", flush=True)
+        print(json.dumps(report["verdicts"], indent=2), flush=True)
+    else:  # parity-gate report
+        print("\n=== PARITY GATE SUMMARY ===", flush=True)
+        print(json.dumps({k: report[k] for k in (
+            "GATE_PASS", "dpose_cpu_authority_median", "dpose_mlx_hybrid_authority_median",
+            "ratio_median_mlx_over_cpu", "P_E_solve_wall_clock_speedup",
+            "mlx_posenet_forward_parity") if k in report}, indent=2), flush=True)
+    print(f"[report] wrote {out_path}  {report['authority']}", flush=True)
     return 0
 
 
