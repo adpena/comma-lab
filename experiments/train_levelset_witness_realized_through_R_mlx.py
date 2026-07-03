@@ -1886,6 +1886,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     msal_uni = bool(args.margin_saliency_uniward)
     msal_uni_beta = float(args.margin_saliency_uniward_beta)
     msal_gate = {"on": msal_start <= 1}
+    # LEVER-4 REACHABILITY (default-off; REPLACES the texture path when on): per-pair through-R
+    # margin-Jacobian S_R weight. _sR_provider is a list[mx.array (1,H,W)] indexed by pi==int(c1)//2
+    # (same key as island_weight_mx); it is POPULATED after lstar_cache is built (see the build site)
+    # ONLY when msal_reach AND msal_w>0. Declared None here so the closure name always exists and the
+    # OFF path (msal_reach False) NEVER references it => byte-identical to the pre-reachability code.
+    msal_reach = bool(getattr(args, "margin_saliency_reachability", False))
+    _sR_provider: Any = None
 
     # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty closure constants. code_nuc_w=0.0
     # (DEFAULT) => the branch in total_loss_fn is skipped => L is byte-identical (fully additive).
@@ -2161,7 +2168,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if msal_w > 0.0 and msal_gate["on"]:
             sgn = _signed                                              # (1, H, W) SHARED realized margin (R2b-M3)
             sal = mx.exp(-margin / msal_tau)                            # (1, H, W) fragility weight
-            if msal_uni:
+            if msal_reach and _sR_provider is not None:
+                # REACHABILITY (REPLACES the inert texture proxy; MEASURED Pearson -0.033 for 1/(1+b*tex)):
+                # multiply the fragility saliency by the cached THROUGH-R margin-Jacobian S_R for THIS pair
+                # (stop-grad [0,1] weight; theta-independent reachability of the CORRECT answer). Product
+                # concentrates capacity where the pixel is BOTH fragile (small GT margin) AND reachable
+                # (high S_R) = the actionable margin-boundary band. pi==int(c1)//2 (same key as
+                # island_weight_mx). The cache is precomputed => this is CHEAPER than the per-step tex recompute.
+                sal = sal * _sR_provider[int(c1) // 2]                   # (1, H, W) reachability-weighted
+            elif msal_uni:
                 # UNIWARD: down-weight textured regions (SegNet-undetectable) -> concentrate on the
                 # SMOOTH boundary. Texture energy from the realized frame's spatial gradients, used as
                 # a STOP-GRAD weight (a cost map, not a loss path). Reuses the SHARED rendered frame _f1.
@@ -2361,6 +2376,40 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     pose_tgts = [mx.array(np.asarray(gt.gt_poses[pi], np.float32)) for pi in range(P)]
     lstar_cache = [_lstar_oh(pi) for pi in range(P)]
+
+    # LEVER-4 REACHABILITY (default-off): POPULATE the per-pair through-R S_R provider ONLY when
+    # --margin-saliency-reachability AND msal_w>0. Loads the precomputed 'sR' (P,H,W) [0,1] weight from
+    # --gt-cache (lazy npz: inflates ONLY the sR member) -> a list[mx.array (1,H,W)] indexed by pi (==
+    # int(c1)//2, the SAME key island_weight_mx / _sR_provider[...] use). Fails CLOSED (never silently)
+    # if the flag is set but the cache lacks 'sR' (run tools/precompute_sR_reachability.py) or if
+    # micro-batch is on (the batched twin's LEVER-4 does not yet consume S_R). When OFF, _sR_provider
+    # stays None (declared above) and the LEVER-4 branch never references it => byte-identical resume.
+    if msal_reach and msal_w > 0.0:
+        if _use_micro_batch:
+            raise ValueError(
+                "--margin-saliency-reachability is not supported with --micro-batch-pairs>1 (the batched "
+                "LEVER-4 twin does not consume S_R yet); run the reachability arm at --micro-batch-pairs 1.")
+        if not args.gt_cache:
+            raise ValueError(
+                "--margin-saliency-reachability requires --gt-cache (the 'sR' reachability map is cached "
+                "there); build it with tools/precompute_sR_reachability.py --gt-cache <path>.")
+        _zc = np.load(Path(args.gt_cache), allow_pickle=False)
+        if "sR" not in _zc.files:
+            raise ValueError(
+                f"--gt-cache {args.gt_cache} has no 'sR' key; build it first: "
+                f"tools/precompute_sR_reachability.py --gt-cache {args.gt_cache} --num-pairs {P}.")
+        _sR_all = _zc["sR"]  # (cached_P, H, W) float32 in [0,1]; inflate the sR member ONCE
+        if int(_sR_all.shape[0]) < P:
+            raise ValueError(
+                f"--gt-cache {args.gt_cache} 'sR' has {int(_sR_all.shape[0])} pairs < --num-pairs {P}; "
+                "re-run tools/precompute_sR_reachability.py at >= the requested size.")
+        _sR_provider = [mx.array(np.asarray(_sR_all[pi], np.float32)[None]) for pi in range(P)]
+        print(json.dumps({"stage": "margin_saliency_reachability", "active": True, "n_pairs": int(P),
+                          "gt_cache": str(args.gt_cache),
+                          "sR_norm_mean": round(float(np.asarray(_sR_all[:P]).mean()), 5),
+                          "note": "LEVER-4 saliency weighted by cached through-R margin-Jacobian S_R "
+                          "(REPLACES the measured-inert 1/(1+beta*tex) texture path); advisory build, "
+                          "A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
 
     # (--cache-gt-skeleton, #260 SPEED) BUILD the per-pair GT soft-skeleton cache ONCE (each sg is
     # mx.eval'd to a concrete constant, detached from any lazy graph, OUTSIDE any value_and_grad
@@ -2971,6 +3020,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "margin_saliency", "active": True, "weight": msal_w, "tau": msal_tau,
                           "target": msal_tgt, "start_epoch": msal_start, "uniward": msal_uni,
                           "uniward_beta": (msal_uni_beta if msal_uni else None),
+                          # reachability field ADDED to the JSON ONLY when it is on -> the OFF-path print
+                          # (incl. any live --resume) is byte-identical to the pre-reachability telemetry.
+                          **({"reachability": True} if (msal_reach and _sR_provider is not None) else {}),
                           "note": "LEVER-4 ALL-CLASS GT-margin-saliency-weighted realized margin hinge "
                           "(generalizes class-1 lane-edge to every inter-class edge; class-agnostic)"}), flush=True)
 
@@ -4053,6 +4105,15 @@ def main(argv: list[str] | None = None) -> int:
                     "gradients (stop-grad WEIGHT). Default off.")
     ap.add_argument("--margin-saliency-uniward-beta", type=float, default=4.0,
                     help="LEVER-4 UNIWARD: texture down-weight strength sal /= (1 + beta*tex_norm).")
+    ap.add_argument("--margin-saliency-reachability", action="store_true",
+                    help="LEVER-4 REACHABILITY (REPLACES the UNIWARD texture path when set): multiply the "
+                    "fragility saliency by the cached THROUGH-R fragility-weighted margin-Jacobian S_R "
+                    "(reachability of the CORRECT answer at the GT target frame) instead of 1/(1+beta*tex). "
+                    "The texture proxy was MEASURED inert (Pearson -0.033 vs S_R, top-5%% Jaccard 0.024 = "
+                    "statistical chance, mildly misdirects); S_R lives on the fragile margin band where the "
+                    "d_seg debt is. Requires an 'sR' key in --gt-cache (build via "
+                    "tools/precompute_sR_reachability.py). Default OFF => byte-identical (texture path "
+                    "unchanged). NOT supported with --micro-batch-pairs>1 (serial path only; fails closed).")
     # LEVER-5 (per-pair HARDNESS-weighted code-fit / training, DAG FEED-eq, ADDITIVE, DEFAULT-OFF).
     # WATERFILL the per-epoch pair-iteration budget toward HARD pairs (high d_seg debt). The frozen-
     # decoder code-fit fits independent per-pair codes, so giving a hard pair MORE update STEPS (not a
