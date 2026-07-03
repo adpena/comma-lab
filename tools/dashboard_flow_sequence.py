@@ -134,10 +134,15 @@ def classify_failure_mode(our_lstar: np.ndarray, gt_lstar: np.ndarray) -> tuple[
 
 def select_hard_diverse(per_pair_dseg: list[float], per_pair_mode: list[str],
                         k: int = 6) -> list[int]:
-    """Pick k pairs = the HARDEST per equal timeline bin -> genuinely hard AND spread
-    across the whole drive (never clustered), covering whatever failure modes honestly
-    occur. Bins guarantee timeline spread; hardest-per-bin guarantees each is a real
-    local worst-case. Falls back to global-hardest if fewer non-empty bins than k."""
+    """Pick k pairs that are HARD, spread across the whole drive, and cover distinct
+    failure modes where they genuinely occur.
+
+    1. TIMELINE SPREAD: the hardest pair in each of k equal timeline bins -> never
+       clustered, each a real local worst-case.
+    2. MODE DIVERSITY: if that set covers few failure modes but other modes exist among
+       genuinely-hard pairs, swap the WEAKEST duplicate-mode pick for the hardest pair of
+       a MISSING mode (keeping a timeline gap so we do not re-cluster). Honest: nothing is
+       injected unless a genuinely-hard pair of that mode exists."""
     n = len(per_pair_dseg)
     if n == 0:
         return []
@@ -148,17 +153,34 @@ def select_hard_diverse(per_pair_dseg: list[float], per_pair_mode: list[str],
         lo, hi = edges[b], edges[b + 1]
         if hi <= lo:
             continue
-        seg = range(lo, hi)
-        best = max(seg, key=lambda i: per_pair_dseg[i])
-        picks.append(best)
-    # if any bin was empty (n<k), backfill with the next-hardest unpicked pairs
-    if len(picks) < k:
-        order = sorted(range(n), key=lambda i: -per_pair_dseg[i])
-        for i in order:
+        picks.append(max(range(lo, hi), key=lambda i: per_pair_dseg[i]))
+    if len(picks) < k:  # some bin empty (n<k) -> backfill with next-hardest unpicked
+        for i in sorted(range(n), key=lambda i: -per_pair_dseg[i]):
             if i not in picks:
                 picks.append(i)
             if len(picks) >= k:
                 break
+    picks = sorted(set(picks))
+    # mode-diversity injection (bounded, honest)
+    if picks:
+        thr = float(np.median([per_pair_dseg[i] for i in picks]))
+        min_gap = max(1, n // (k * 3))
+        order = sorted(range(n), key=lambda i: -per_pair_dseg[i])
+        for i in order:
+            m = per_pair_mode[i]
+            if per_pair_dseg[i] < thr * 0.6:
+                break  # remaining candidates too easy to be worth injecting
+            present = {per_pair_mode[p] for p in picks}
+            if m in present:
+                continue
+            dups = [p for p in picks
+                    if sum(1 for q in picks if per_pair_mode[q] == per_pair_mode[p]) > 1
+                    and abs(p - i) >= min_gap]
+            if not dups:
+                continue
+            weakest = min(dups, key=lambda p: per_pair_dseg[p])
+            picks.remove(weakest)
+            picks.append(i)
     return sorted(set(picks))
 
 
