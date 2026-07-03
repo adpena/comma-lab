@@ -126,7 +126,7 @@ def test_read_blob_bytes_matches_pack():
     cfg = _tiny_cfg(False)
     params = _tiny_params(cfg)
     blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None)
-    manifest, base_b, code_b, pose, lane_b = lbce._read_blob_bytes(blob)
+    manifest, base_b, code_b, pose, lane_b, pcar_b = lbce._read_blob_bytes(blob)
     assert manifest["n_pairs"] == cfg["n_pairs"]
     assert manifest["n_classes"] == cfg["n_classes"]
     assert manifest["render_h"] == cfg["render_h"] and manifest["render_w"] == cfg["render_w"]
@@ -250,6 +250,34 @@ def test_bit_exact_gate_self_orient(tmp_path):
     assert res["bit_exact"] is True and res["max_abs_uint8_diff"] == 0
 
 
+@pytest.mark.parametrize("coder", ["delta_ar", "none"])
+def test_bit_exact_gate_store_nothing_v2_derive_H(tmp_path, coder):
+    """#257 END-TO-END: the SHIPPED inflate.py (inline ξ decoder + DERIVE-H) == the numpy oracle
+    BIT-FOR-BIT on a store-nothing v2 packet, for BOTH coders. Proves the derived-H frame0 the
+    real byte-closed inflate produces is exactly the authority frame0 (no surrogate gap)."""
+    from tac.boundary_math import warp_real_luma_frame0 as W
+
+    cfg = _tiny_cfg(False)
+    cfg["n_pairs"] = 2
+    params = _tiny_params(cfg, seed=11)
+    # a synthetic 2-pair store-nothing v2 carrier (derive-H; no stored H, no keyframes).
+    xi = np.stack([W.xi_from_pose_calibration(np.array([30.0 + 0.4 * p, 0.05, -0.02, 0.0, 0.001, 0.0]),
+                                              0.044, 0.0, 0.0) for p in range(2)])
+    hdr_extra = {"pose_carrier_mode": "store_nothing", "s_t": 0.044, "s_r": 0.0, "pitch": 0.0,
+                 "stride": 1, "kf_store_h": lbce.CAMERA_H, "kf_store_w": lbce.CAMERA_W,
+                 "keyframe_lossless_native": True, "generator": "witness_render_frame0"}
+    pcar_bytes, _qr = lbce.serialize_pose_carrier_store_nothing(xi, hdr_extra, coder=coder, q_levels=4096)
+    pc_manifest = {"mode": "store_nothing", "n_pairs": 2, "s_t": 0.044, "s_r": 0.0, "pitch": 0.0,
+                   "stride": 1, "kf_store_h": lbce.CAMERA_H, "kf_store_w": lbce.CAMERA_W,
+                   "n_keyframes": 0, "keyframe_lossless_native": True}
+    blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None, None, None, pcar_bytes, pc_manifest)
+    pkt = tmp_path / "pkt_sn"
+    lbce.assemble_packet(blob, pkt)
+    res = lbce.bit_exact_roundtrip_gate(pkt, blob, gate_pairs=2, strict=True)
+    assert res["bit_exact"] is True, f"{coder}: shipped inflate derive-H != numpy oracle"
+    assert res["max_abs_uint8_diff"] == 0 and res["n_frames_differing"] == 0
+
+
 def test_bit_exact_gate_detects_corruption(tmp_path):
     """NO-FAKE: if the shipped inflate.py is corrupted, the gate MUST catch it (strict raises)."""
     cfg = _tiny_cfg(False)
@@ -269,7 +297,7 @@ def test_numpy_oracle_reference_frames_shape(tmp_path):
     cfg = _tiny_cfg(False)
     params = _tiny_params(cfg, seed=4)
     blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None)
-    m, base_b, code_b, _pose, _lane = lbce._read_blob_bytes(blob)
+    m, base_b, code_b, _pose, _lane, _pcar = lbce._read_blob_bytes(blob)
     import brotli
 
     flat = np.frombuffer(brotli.decompress(base_b), dtype=np.int8)

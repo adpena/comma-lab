@@ -132,6 +132,7 @@ from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402  (#224 W
 )
 from tac.local_acceleration import torch_levelset_inflate as _tli  # noqa: E402  (canonical FREE-table regen)
 from tac.boundary_math import warp_real_luma_frame0 as _wrl  # noqa: E402  (#205 pose carrier: warp-real-luma frame0)
+from tac.boundary_math import xi_pose_coder as _xip  # noqa: E402  (#257 store-nothing derive-H + ξ entropy coder)
 
 # canonical FREE-table regen fns (rule-118 curvelet bank + self-orient dir feats) — the bit-exact
 # oracle reference reuses these so the gate compares against the SAME free tables the inflate uses.
@@ -497,8 +498,49 @@ def serialize_pose_carrier(
     return bytes(buf)
 
 
+def serialize_pose_carrier_store_nothing(
+    xi_stack: np.ndarray, hdr_extra: dict[str, Any], *, coder: str = "delta_ar", q_levels: int = 4096,
+) -> tuple[bytes, dict[str, Any]]:
+    """#257 STORE-NOTHING v2 serializer -- stores ONLY the (quantized, coded) per-pair ego twist ξ.
+
+    The redundant fp64 H (43,200 B/600 pairs = 83% of the old section, FINDING-1) is DROPPED and
+    DERIVED FREE at decode (``_xip.homographies_from_xi``, rule-118). The useless
+    ``kf_of_pair=[0]*P`` header list is also DROPPED (unused when n_keyframes=0). Layout:
+        PCAR1\\x00 | u32 hdr_len | hdr_json | u32 xi_payload_len | xi_payload | u32 n_kf(=0)
+    ``xi_payload`` (``tac.boundary_math.xi_pose_coder``) carries the per-channel scales + q
+    (``coder='none'`` raw int16 ~0.005 rate, or ``coder='delta_ar'`` temporal-Δ + arithmetic ~0.002).
+    Returns (blob, quant_report). The shipped inflate inlines the inverse (ξ decode + derive-H)."""
+    q, scales = _xip.quantize_xi(np.asarray(xi_stack, dtype=np.float64), q_levels=int(q_levels))
+    xi_payload = _xip.serialize_xi_payload(q, scales, coder=coder)
+    P = int(q.shape[0])
+    hdr = {
+        "n_pairs": P,
+        "native_h": CAMERA_H, "native_w": CAMERA_W,
+        "n_keyframes": 0,
+        "pcar_store_nothing_v": 2,          # discriminator: v2 = derive-H, NO stored H block
+        "xi_coder": str(coder),
+        "xi_q_levels": int(q_levels),
+        **hdr_extra,
+    }
+    hj = json.dumps(hdr, separators=(",", ":")).encode("utf-8")
+    buf = bytearray()
+    buf += _PCAR_MAGIC
+    buf += struct.pack("<I", len(hj)); buf += hj
+    buf += struct.pack("<I", len(xi_payload)); buf += xi_payload
+    buf += struct.pack("<I", 0)              # n_kf = 0 (store-nothing: NO keyframe luma)
+    quant_report = {
+        "xi_coder": str(coder), "xi_q_levels": int(q_levels),
+        "xi_payload_bytes": len(xi_payload),
+        "xi_raw_bytes_ref": len(_xip.serialize_xi_payload(q, scales, coder="none")),
+    }
+    return bytes(buf), quant_report
+
+
 def parse_pose_carrier(blob: bytes) -> dict[str, Any]:
-    """Inverse of ``serialize_pose_carrier`` (tool-side; the shipped inflate inlines the same)."""
+    """Inverse of ``serialize_pose_carrier`` / ``serialize_pose_carrier_store_nothing`` (tool-side;
+    the shipped inflate inlines the same). Discriminates on the header ``pcar_store_nothing_v``:
+    v2 store-nothing DERIVES H from the coded ξ (no stored H block); everything else reads the
+    legacy fp64-H block (warp_real_luma stays byte-identical)."""
     import brotli
 
     assert blob[: len(_PCAR_MAGIC)] == _PCAR_MAGIC, "bad pose-carrier magic"
@@ -506,6 +548,16 @@ def parse_pose_carrier(blob: bytes) -> dict[str, Any]:
     (hlen,) = struct.unpack_from("<I", blob, off); off += 4
     hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
     P = int(hdr["n_pairs"])
+    if int(hdr.get("pcar_store_nothing_v", 0)) == 2:
+        # #257 v2: ξ payload -> dequant ξ -> DERIVE H (FREE, rule-118). No stored H, no kf_of_pair.
+        (xlen,) = struct.unpack_from("<I", blob, off); off += 4
+        xi_dq = _xip.decode_xi_payload(blob[off:off + xlen]); off += xlen
+        (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
+        if n_kf != 0:
+            raise ValueError(f"store-nothing v2 must have n_kf=0; got {n_kf} (NO-FAKE)")
+        H = _xip.homographies_from_xi(xi_dq, float(hdr["pitch"]))
+        return {"hdr": hdr, "H": H, "xi": xi_dq, "keyframes": [], "kf_of_pair": [0] * P}
+    # legacy: stored fp64 H block (warp_real_luma; and any pre-#257 store-nothing archive).
     H = np.frombuffer(blob[off:off + P * 9 * 8], dtype=np.float64).reshape(P, 3, 3).copy(); off += P * 9 * 8
     xi = np.frombuffer(blob[off:off + P * 6 * 2], dtype=np.float16).reshape(P, 6).astype(np.float64); off += P * 6 * 2
     (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
@@ -620,43 +672,56 @@ def build_pose_carrier_section(
     s_t, s_r, pitch = float(pc["s_t"]), float(pc["s_r"]), float(pc["pitch"])
     stride = max(1, int(pc["stride"]))
     ds = max(1, int(pc.get("downscale", 1)))
+    xi_coder = str(pc.get("xi_coder", "delta_ar"))     # #257: 'delta_ar' (default) | 'none' (raw fallback)
+    xi_q_levels = int(pc.get("xi_q_levels", 4096))     # #257: ξ quantization precision (store_nothing only)
     store_hw = (CAMERA_H, CAMERA_W) if (store_nothing or ds == 1) else (CAMERA_H // ds, CAMERA_W // ds)
     geom = _wrl.GroundHomographyGeom.eon(pitch=pitch)
 
-    # per-pair twist + homography (fp64 authority) -- identical for both modes.
+    # per-pair ego twist ξ (fp64 authority) -- both modes. H is DERIVED FREE at decode for
+    # store_nothing (#257), STORED only for warp_real_luma (the legacy stored-keyframe path).
     xi_stack = np.zeros((P, 6), dtype=np.float64)
-    H_stack = np.zeros((P, 3, 3), dtype=np.float64)
     for p in range(P):
-        xi = _wrl.xi_from_pose_calibration(gt_poses[p], s_t, s_r, pitch)
-        xi_stack[p] = xi
-        H_stack[p] = _wrl.homography_from_xi_numpy(xi, geom)
+        xi_stack[p] = _wrl.xi_from_pose_calibration(gt_poses[p], s_t, s_r, pitch)
 
+    quant_report: dict[str, Any] = {}
     if store_nothing:
-        # store-nothing: NO stored keyframe luma. frame0 = warp(witness's OWN frame0 render, H) at
-        # decode (the generator is FREE; only xi/H are COUNTED). kf_of_pair is a valid (unused) list.
+        # #257 STORE-NOTHING v2: store ONLY the (quantized+coded) ξ. NO stored H (43,200 B redundancy
+        # DROPPED -> derived FREE at decode), NO kf_of_pair junk list. frame0 = warp(witness's OWN
+        # frame0 render, DERIVED H). The whole keyframe payload is GONE (rule-118: render is FREE).
         keyframes: list[np.ndarray] = []
-        kf_of_pair = [0] * P
+        hdr_extra = {
+            "pose_carrier_mode": mode,
+            "s_t": s_t, "s_r": s_r, "pitch": pitch, "stride": stride,
+            "kf_store_h": int(store_hw[0]), "kf_store_w": int(store_hw[1]),
+            "keyframe_lossless_native": True,
+            "generator": "witness_render_frame0",
+            "calibration_note": ("STORE-NOTHING v2 (#257): store ONLY the per-pair ego twist ξ "
+                                 "(quantized+coded); H = homographies_from_xi(ξ, pitch) DERIVED FREE at "
+                                 "decode (rule-118). frame0 = warp(witness's OWN frame0 INR render, H)."),
+        }
+        blob, quant_report = serialize_pose_carrier_store_nothing(
+            xi_stack, hdr_extra, coder=xi_coder, q_levels=xi_q_levels)
+        kf_of_pair: list[int] = [0] * P
     else:
-        # keyframe schedule + stored luma (store-res).
+        # warp_real_luma (legacy): store fp64 H + keyframe luma (BYTE-IDENTICAL to pre-#257).
+        H_stack = np.zeros((P, 3, 3), dtype=np.float64)
+        for p in range(P):
+            H_stack[p] = _wrl.homography_from_xi_numpy(xi_stack[p], geom)
         kf_indices = sorted({min(P - 1, (p // stride) * stride) for p in range(P)})
         kf_pos = {k: i for i, k in enumerate(kf_indices)}
         kf_of_pair = [kf_pos[min(P - 1, (p // stride) * stride)] for p in range(P)]
         keyframes = [_downscale_keyframe(np.asarray(gt_f0[k]), store_hw) for k in kf_indices]
-
-    hdr_extra = {
-        "pose_carrier_mode": mode,
-        "s_t": s_t, "s_r": s_r, "pitch": pitch, "stride": stride,
-        "kf_store_h": int(store_hw[0]), "kf_store_w": int(store_hw[1]),
-        "keyframe_lossless_native": bool(store_nothing or ds == 1),
-        "generator": ("witness_render_frame0" if store_nothing else "stored_real_keyframe"),
-        "calibration_note": ("per-pair xi = xi_from_pose_calibration(gt_poses, s_t, s_r, pitch); "
-                             "H = homography_from_xi_numpy(xi). "
-                             + ("STORE-NOTHING: frame0 = warp(witness's OWN frame0 INR render, H) -- "
-                                "no stored keyframe, ~0 marginal bytes (Track B store-nothing-but-xi)."
-                                if store_nothing else
-                                "warp-real-luma frame0 semantics (tac.boundary_math.warp_real_luma_frame0).")),
-    }
-    blob = serialize_pose_carrier(H_stack, xi_stack, keyframes, kf_of_pair, hdr_extra)
+        hdr_extra = {
+            "pose_carrier_mode": mode,
+            "s_t": s_t, "s_r": s_r, "pitch": pitch, "stride": stride,
+            "kf_store_h": int(store_hw[0]), "kf_store_w": int(store_hw[1]),
+            "keyframe_lossless_native": bool(ds == 1),
+            "generator": "stored_real_keyframe",
+            "calibration_note": ("per-pair xi = xi_from_pose_calibration(gt_poses, s_t, s_r, pitch); "
+                                 "H = homography_from_xi_numpy(xi). warp-real-luma frame0 semantics "
+                                 "(tac.boundary_math.warp_real_luma_frame0)."),
+        }
+        blob = serialize_pose_carrier(H_stack, xi_stack, keyframes, kf_of_pair, hdr_extra)
 
     kf_bytes_total = sum(int(len(s)) for s in _pcar_keyframe_blob_sizes(keyframes))  # 0 for store_nothing
     manifest = {
@@ -678,12 +743,17 @@ def build_pose_carrier_section(
         "keyframe_lossless_native": bool(store_nothing or ds == 1),
         "pose_carrier_section_bytes": len(blob),
         "keyframe_blob_bytes_total": kf_bytes_total,
-        "H_bytes": int(P * 9 * 8),
-        "xi_bytes": int(P * 6 * 2),
+        # #257: store_nothing v2 stores NO H (derived FREE) -> H_bytes=0; xi_bytes = the coded/raw
+        # ξ payload actually stored. warp_real_luma keeps the legacy stored fp64-H (72 B/pair).
+        "H_bytes": 0 if store_nothing else int(P * 9 * 8),
+        "xi_bytes": int(quant_report.get("xi_payload_bytes", P * 6 * 2)) if store_nothing else int(P * 6 * 2),
+        "xi_coder": quant_report.get("xi_coder") if store_nothing else None,
+        "xi_q_levels": quant_report.get("xi_q_levels") if store_nothing else None,
+        "xi_raw_bytes_ref": quant_report.get("xi_raw_bytes_ref") if store_nothing else None,
         "calibration": {"s_t": s_t, "s_r": s_r, "pitch": pitch},
         "stride_note": (
-            "store_nothing: no stored keyframe -> frame0 = warp(witness's OWN frame0 render, per-pair H); "
-            "stride is unused (only xi/H stored, ~0 marginal bytes = the pure store-nothing-but-xi endpoint)."
+            "store_nothing v2 (#257): no stored keyframe AND no stored H -> frame0 = warp(witness's OWN "
+            "frame0 render, DERIVED per-pair H); stride unused (only the coded ξ is stored)."
             if store_nothing else
             ("stride>1 shares one stored keyframe across a window but warps each pair by ITS OWN intra-pair "
              "xi (no kf->pair displacement) -> geometrically approximate for shared keyframes; stride=1 "
@@ -691,25 +761,28 @@ def build_pose_carrier_section(
              "stride=1: per-pair keyframe, exact warp-real-luma.")),
         "rule_118": {
             "COUNTED (archive.zip)": (
-                "ONLY the per-pair ego twist xi (fp16) + homography H (fp64); NO stored keyframe luma "
-                "(the witness's OWN frame0 render is generated FREE by the INR)"
+                "ONLY the per-pair ego twist ξ (quantized + entropy-coded) + 6 per-channel scales + the "
+                "scalar pitch; NO stored H (43,200 B redundancy DROPPED -> derived FREE), NO keyframe luma"
                 if store_nothing else
                 "stored real keyframe luma (video-derived) + per-pair homography H; warped at decode by "
                 "the per-pair ego twist to synthesize frame0"),
             "FREE (inflate.py)": (
-                "the witness INR frame0 render (generic generator from counted weights+code) + inverse-warp "
-                "bilinear + R (generic algorithm)"
+                "the witness INR frame0 render + exp_se3 + H=K(R-t nT/d)K^-1 (DERIVE-H) + the ξ arithmetic "
+                "decoder + inverse-warp bilinear + R -- all generic algorithm, 0 archive bytes (rule-118)"
                 if store_nothing else
                 "inverse-warp bilinear + R (generic algorithm); the dual-use twist xi is the pose sidecar "
                 "(~0 marginal bytes in the byte-optimal design)"),
             "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship",
         },
         "byte_optimal_note": (
-            "STORE-NOTHING: only xi(12 B/pair) + H(72 B/pair, fp64, kept for bit-exact decode-simplicity; "
-            "the byte-optimal design stores ONLY xi and derives H FREE via exp_se3). ZERO keyframe bytes -- "
-            "the frame0 source is the witness's own render (FREE). Track B MEASURED d_pose 4.97 pre-residual "
-            "(classmean proxy; witness render is richer -> <= 4.97); the trained rank-6 dxi residual (#205 "
-            "w_pose>0) closes the fixed offset toward ~3.4e-5 (UNMEASURED here; NO borrowed number)."
+            "STORE-NOTHING v2 (#257): stores ONLY the coded ξ ({} B, coder={}, q_levels={}; raw-ξ ref {} B). "
+            "The redundant per-pair fp64 H (43,200 B = 83% of the pre-#257 section, FINDING-1) is DROPPED "
+            "and DERIVED FREE at decode (exp_se3 + plane homography, rule-118); the kf_of_pair junk list "
+            "is DROPPED. ZERO keyframe bytes. d_pose is measured through the REAL byte-closed decode (the "
+            "derived H reproduces the fp64-H warp; the trained rank-6 dξ residual (#205 w_pose>0) closes "
+            "d_pose -- UNMEASURED here; NO borrowed number).".format(
+                quant_report.get("xi_payload_bytes", "?"), quant_report.get("xi_coder", "?"),
+                quant_report.get("xi_q_levels", "?"), quant_report.get("xi_raw_bytes_ref", "?"))
             if store_nothing else
             "H (fp64, 72 B/pair) is stored for BIT-EXACT decode simplicity (no exp_se3 in the decode path); "
             "the byte-optimal design stores ONLY xi (fp16, 12 B/pair, dual-use with the pose sidecar) and "
@@ -737,7 +810,12 @@ def _cap_pose_carrier(pcar_bytes: bytes, eval_pairs: int) -> bytes:
     hdr_extra = {k: hdr[k] for k in ("pose_carrier_mode", "generator", "s_t", "s_r", "pitch", "stride",
                                      "kf_store_h", "kf_store_w", "keyframe_lossless_native",
                                      "calibration_note") if k in hdr}
-    if len(pc["keyframes"]) == 0:  # store_nothing: no keyframes; kf_of_pair is an unused placeholder
+    if int(hdr.get("pcar_store_nothing_v", 0)) == 2:  # #257 v2: re-serialize the sliced coded ξ (derive-H)
+        capped, _qr = serialize_pose_carrier_store_nothing(
+            np.asarray(pc["xi"][:P], dtype=np.float64), hdr_extra,
+            coder=str(hdr.get("xi_coder", "delta_ar")), q_levels=int(hdr.get("xi_q_levels", 4096)))
+        return capped
+    if len(pc["keyframes"]) == 0:  # legacy store_nothing: no keyframes; kf_of_pair unused placeholder
         return serialize_pose_carrier(pc["H"][:P], pc["xi"][:P], [], [0] * P, hdr_extra)
     kf_of_pair = [int(k) for k in pc["kf_of_pair"][:P]]
     used = sorted(set(kf_of_pair))
@@ -750,15 +828,19 @@ def _cap_pose_carrier(pcar_bytes: bytes, eval_pairs: int) -> bytes:
 # ---------------------------------------------------------------------------
 # the self-contained inflate.py (numpy fwd + torch R [+ scipy iff self-orient]).
 # ---------------------------------------------------------------------------
-# REVIEW-GATE: inflate.py exceeds the 100-LOC default budget (~250 LOC) under an explicit <=260-LOC
-# waiver: it inlines TWO rule-118 FREE levers the archive-counted statistics require -- (1) the
+# REVIEW-GATE: inflate.py exceeds the 100-LOC default budget (~320 LOC) under an explicit <=340-LOC
+# waiver: it inlines THREE rule-118 FREE levers the archive-counted statistics require -- (1) the
 # SELF-ORIENT fixed-point (curvelet bank regen + decoder-own-argmax tangent + directional feats), the
 # byte-closeable directional lever the mod-32 target uses; (2) the #224 Wave E analytic-lane
 # RENDER-BAND decode reproduction (_lane_parse + _lane_coverage AA-SDF rasterizer + _lane_composite),
 # which EXPANDS the counted per-pair lane manifold coords into the (H,W) coverage + composites the
-# band over the render FREE (0 archive bytes). Both are op-for-op mirrors of the canonical numpy-fp32
-# authority (levelset_rgb_forward_numpy / levelset_band_forward_numpy / rasterize_lane_coverage_range_
-# dependent / composite_band_on_render) and are BIT-EXACT-gate proven vs it.
+# band over the render FREE (0 archive bytes); (3) the #257 STORE-NOTHING DERIVE-H + ξ ARITHMETIC
+# DECODER (_ar_decode + _xip_parse + _xip_H_from_xi), which EXPANDS the counted per-pair ego twist ξ
+# into the per-pair plane-induced homography H (exp_se3 + K(R-t nT/d)K^-1) FREE at decode -- dropping
+# the 43,200 B redundant stored fp64 H (FINDING-1). All THREE are op-for-op mirrors of the canonical
+# numpy authority (levelset_rgb_forward_numpy / levelset_band_forward_numpy / rasterize_lane_coverage_
+# range_dependent / composite_band_on_render / tac.boundary_math.xi_pose_coder / tac.lossless.range_
+# coder.decode_static_symbols) and are BIT-EXACT-gate proven vs it.
 # FEED-eg (2026-06-27): n600 inflate is float64-activation-bound (~50-60 min on a 4-core CPU for
 # 600 pairs x 6 forwards x 5 tanh(sin) layers @ 384x512 -- OVER the 30-min budget). The forward is
 # split into _in_proj_h0 (feats-only) + _outputs_from_h0 (code-dependent, want_rgb flag) to enable
@@ -792,12 +874,14 @@ import os
 for _tv in ("VECLIB_MAXIMUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
     os.environ.setdefault(_tv, "1")  # 1-thread BLAS/worker (set BEFORE numpy import); user-overridable
 import sys, json, struct, multiprocessing as mp
+from bisect import bisect_right as _bisect_right  # #257 ξ arithmetic decoder (pure stdlib)
 import numpy as np
 import brotli
 import torch
 
 MAGIC = b"LVLS1\x00"
 PCAR_MAGIC = b"PCAR1\x00"  # #205 warp-real-luma pose carrier (stored keyframe luma + per-pair homography)
+XIP_MAGIC = b"XIP2"        # #257 store-nothing ξ payload (quantized + coded ego twist)
 
 
 def _read_blob(path):
@@ -1085,14 +1169,123 @@ def _R(rgb, rh, rw, ch, cw):
 # only frame1). VERBATIM op-for-op mirror of the tool-side _pcar_warp_frame0_from_H / pose_carrier_frame0
 # (== tac.boundary_math.warp_real_luma_frame0.warp_frame0_uint8_numpy when H=homography_from_xi_numpy(xi)),
 # so the shipped inflate == the numpy oracle bit-for-bit (proven by the bit-exact gate on frame0 too).
+# --- #257 store-nothing ξ arithmetic decoder + DERIVE-H (rule-118 FREE: 0 archive bytes). VERBATIM
+# op-for-op copies of tac.lossless.range_coder.decode_static_symbols + tac.boundary_math.xi_pose_coder
+# (parse_xi_payload + homographies_from_xi) -> the shipped inflate derives the SAME H the tool oracle
+# derives, bit-for-bit (bit-exact-gate proven). The 43,200 B redundant stored fp64 H is GONE.
+_ST_BITS = 32; _FULL = 1 << _ST_BITS; _HALF = _FULL >> 1; _QTR = _HALF >> 1; _TQTR = _QTR * 3
+_XI_FX = 910.0; _XI_CX = 582.0; _XI_CY = 437.0; _XI_D = 1.22; _XI_EPS = 1e-6
+
+
+def _ar_decode(encoded, count, freqs):
+    # op-for-op range_coder.decode_static_symbols (static-frequency arithmetic decode, pure stdlib).
+    if count <= 0:
+        return []
+    cum = [0]
+    for f in freqs:
+        cum.append(cum[-1] + int(f))
+    total = cum[-1]
+    nby = len(encoded); pos = [0, 0]  # [byte_index, bit_index]
+    def _bit():
+        if pos[0] >= nby:
+            return 0
+        b = (encoded[pos[0]] >> (7 - pos[1])) & 1
+        pos[1] += 1
+        if pos[1] == 8:
+            pos[1] = 0; pos[0] += 1
+        return b
+    low = 0; high = _FULL - 1; code = 0
+    for _ in range(_ST_BITS):
+        code = (code << 1) | _bit()
+    out = []
+    for _ in range(count):
+        rng = high - low + 1
+        scaled = ((code - low + 1) * total - 1) // rng
+        sym = _bisect_right(cum, scaled) - 1
+        out.append(sym)
+        high = low + (rng * cum[sym + 1] // total) - 1
+        low = low + (rng * cum[sym] // total)
+        while True:
+            if high < _HALF:
+                pass
+            elif low >= _HALF:
+                low -= _HALF; high -= _HALF; code -= _HALF
+            elif low >= _QTR and high < _TQTR:
+                low -= _QTR; high -= _QTR; code -= _QTR
+            else:
+                break
+            low <<= 1; high = (high << 1) | 1; code = (code << 1) | _bit()
+    return out
+
+
+def _xip_parse(blob):
+    # op-for-op xi_pose_coder.parse_xi_payload -> (q int16 (P,D), scales fp32 (D,)).
+    assert blob[:4] == XIP_MAGIC, "bad xi-payload magic"
+    off = 4
+    cid, P, D = struct.unpack_from("<BHB", blob, off); off += 4
+    scales = np.frombuffer(blob[off:off + D * 4], dtype=np.float32).copy(); off += D * 4
+    if cid == 0:
+        q = np.frombuffer(blob[off:off + P * D * 2], dtype=np.int16).reshape(P, D).copy()
+        return q, scales
+    cols = []
+    for _k in range(D):
+        seed, lo, hi = struct.unpack_from("<iii", blob, off); off += 12
+        (mlen,) = struct.unpack_from("<I", blob, off); off += 4
+        counts = np.frombuffer(brotli.decompress(blob[off:off + mlen]), dtype=np.uint32) if mlen else None
+        off += mlen
+        (slen,) = struct.unpack_from("<I", blob, off); off += 4
+        stream = blob[off:off + slen]; off += slen
+        col = np.empty(P, dtype=np.int64)
+        if P:
+            col[0] = seed
+        if P > 1:
+            if hi > lo and counts is not None:
+                d = np.asarray(_ar_decode(stream, P - 1, counts.tolist()), dtype=np.int64) + lo
+            else:
+                d = np.full(P - 1, lo, dtype=np.int64)
+            col[1:] = seed + np.cumsum(d)
+        cols.append(col)
+    return np.stack(cols, axis=1).astype(np.int16), scales
+
+
+def _xip_H_from_xi(xi, pitch):
+    # op-for-op xi_pose_coder.homographies_from_xi (exp_se3 -> plane-induced homography, batched).
+    xi = np.asarray(xi, np.float64); rho = xi[:, :3]; om = xi[:, 3:]
+    a, b, c = om[:, 0], om[:, 1], om[:, 2]; z = np.zeros_like(a)
+    Ks = np.stack([np.stack([z, -c, b], -1), np.stack([c, z, -a], -1), np.stack([-b, a, z], -1)], -2)
+    Ks2 = Ks @ Ks
+    th2 = (om * om).sum(-1); th = np.sqrt(np.maximum(th2, 0.0))
+    sm = th < _XI_EPS
+    ths = np.maximum(th, _XI_EPS); th2s = np.maximum(th2, _XI_EPS * _XI_EPS); th3s = np.maximum(th ** 3, _XI_EPS ** 3)
+    A = np.where(sm, 1.0 - th2 / 6.0 + th2 * th2 / 120.0, np.sin(th) / ths)
+    B = np.where(sm, 0.5 - th2 / 24.0 + th2 * th2 / 720.0, (1.0 - np.cos(th)) / th2s)
+    C = np.where(sm, 1.0 / 6.0 - th2 / 120.0 + th2 * th2 / 5040.0, (th - np.sin(th)) / th3s)
+    eye = np.broadcast_to(np.eye(3, dtype=np.float64), Ks.shape).copy()
+    R = eye + A[..., None, None] * Ks + B[..., None, None] * Ks2
+    V = eye + B[..., None, None] * Ks + C[..., None, None] * Ks2
+    t = (V @ rho[..., None])[..., 0]
+    K = np.array([[_XI_FX, 0.0, _XI_CX], [0.0, _XI_FX, _XI_CY], [0.0, 0.0, 1.0]], np.float64)
+    Kinv = np.linalg.inv(K)
+    n = np.array([0.0, -np.cos(float(pitch)), -np.sin(float(pitch))], np.float64)
+    M = R - (t[..., :, None] * n[None, None, :]) / _XI_D
+    return K[None] @ M @ Kinv[None]
+
+
 def _pcar_parse(blob):
     assert blob[:len(PCAR_MAGIC)] == PCAR_MAGIC, "bad pose-carrier magic"
     off = len(PCAR_MAGIC)
     (hlen,) = struct.unpack_from("<I", blob, off); off += 4
     hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
     P = int(hdr["n_pairs"])
+    if int(hdr.get("pcar_store_nothing_v", 0)) == 2:
+        # #257 store-nothing v2: decode ξ -> DERIVE H FREE (rule-118). No stored H, no kf_of_pair.
+        (xlen,) = struct.unpack_from("<I", blob, off); off += 4
+        q, scales = _xip_parse(blob[off:off + xlen]); off += xlen
+        xi = q.astype(np.float64) * scales.astype(np.float64)
+        H = _xip_H_from_xi(xi, float(hdr["pitch"]))
+        return {"hdr": hdr, "H": H, "keyframes": [], "kf_of_pair": [0] * P}
     H = np.frombuffer(blob[off:off + P * 9 * 8], dtype=np.float64).reshape(P, 3, 3).copy(); off += P * 9 * 8
-    off += P * 6 * 2  # xi (fp16, provenance-only; the decode uses H)
+    off += P * 6 * 2  # xi (fp16, provenance-only; the legacy decode uses the stored H)
     (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
     kh, kw = int(hdr["kf_store_h"]), int(hdr["kf_store_w"])
     kfs = []
@@ -2247,6 +2440,17 @@ def main(argv: list[str] | None = None) -> int:
                     help="pose-carrier keyframe store downscale factor (1 = native lossless; 2 = "
                          "native/2, upsampled before warp -- the cheap-rate lever, ~matched to PoseNet's "
                          "512x384 working res).")
+    # #257 store-nothing ξ coder (store_nothing mode only; H is DERIVED FREE at decode, kf_of_pair DROPPED).
+    ap.add_argument("--pc-xi-coder", type=str, default="delta_ar", choices=["delta_ar", "none"],
+                    help="store-nothing ξ payload coder: delta_ar (DEFAULT) = per-channel temporal-delta + "
+                         "arithmetic coder (~0.002 n600 rate); none = raw int16 ξ (~0.005, the "
+                         "GUARANTEED-today fallback + strict-parity reference). Both decode to the IDENTICAL "
+                         "quantized ξ. Ignored for warp_real_luma.")
+    ap.add_argument("--no-xi-coder", action="store_true",
+                    help="store-nothing: store raw int16 ξ (== --pc-xi-coder none). The guaranteed fallback.")
+    ap.add_argument("--pc-xi-qlevels", type=int, default=4096,
+                    help="store-nothing ξ quantization levels per channel (default 4096 ~ fp16+; finer -> "
+                         "more coded bytes, coarser -> looser d_pose. Both coders share it -> strict parity).")
     # #224 Wave E: decode-consistent analytic-lane RENDER-BAND (fork B). OFF by default -> byte-identical.
     # Fits per-pair lane manifold coords from --gt-cache (COUNTED), reproduces the coverage+composite
     # in inflate (FREE, rule 118) so the band is a REAL (non-phantom) score. Closes R5_BLOCK.
@@ -2342,6 +2546,8 @@ def main(argv: list[str] | None = None) -> int:
             "s_t": args.pc_s_t, "s_r": args.pc_s_r, "pitch": args.pc_pitch,
             "stride": args.pc_keyframe_stride, "downscale": args.pc_keyframe_downscale,
             "mode": args.pose_carrier_mode,
+            "xi_coder": ("none" if args.no_xi_coder else args.pc_xi_coder),  # #257
+            "xi_q_levels": args.pc_xi_qlevels,
         },
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,

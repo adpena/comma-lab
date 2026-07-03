@@ -224,5 +224,127 @@ def test_store_nothing_build_section_zero_keyframes_real_gt():
     assert L.pose_carrier_mode(pc) == "store_nothing" and len(pc["keyframes"]) == 0
 
 
+# --------------------------------------------------------------------------- #
+# 10. #257 STORE-NOTHING v2: derive-H serializer drops the H block + kf_of_pair; ξ round-trips
+# --------------------------------------------------------------------------- #
+def _sn_xi(P, seed=0):
+    from tac.boundary_math import warp_real_luma_frame0 as W
+    rng = np.random.default_rng(seed)
+    poses = np.zeros((P, 6))
+    poses[:, 0] = 30.0 + 0.4 * np.arange(P) + 0.2 * rng.standard_normal(P)
+    poses[:, 1] = 0.05 * np.sin(np.arange(P) / 6.0)
+    return np.stack([W.xi_from_pose_calibration(poses[p], 0.044, 0.0, 0.0) for p in range(P)])
+
+
+@pytest.mark.parametrize("coder", ["delta_ar", "none"])
+def test_store_nothing_v2_serialize_parse_derive_H(coder):
+    P, pitch = 24, 0.0
+    xi = _sn_xi(P, 1)
+    hdr_extra = {"pose_carrier_mode": "store_nothing", "s_t": 0.044, "s_r": 0.0, "pitch": pitch,
+                 "stride": 1, "kf_store_h": L.CAMERA_H, "kf_store_w": L.CAMERA_W,
+                 "keyframe_lossless_native": True, "generator": "witness_render_frame0"}
+    blob, qr = L.serialize_pose_carrier_store_nothing(xi, hdr_extra, coder=coder, q_levels=4096)
+    pc = L.parse_pose_carrier(blob)
+    assert L.pose_carrier_mode(pc) == "store_nothing"
+    assert pc["hdr"]["pcar_store_nothing_v"] == 2 and pc["hdr"]["xi_coder"] == coder
+    assert "kf_of_pair" not in pc["hdr"], "v2 must DROP the kf_of_pair junk list"
+    assert len(pc["keyframes"]) == 0
+    # H is DERIVED (not stored): the section must NOT contain the 43,200-B/600 fp64 H block.
+    assert len(blob) < P * 9 * 8, "v2 section must be far smaller than a stored fp64 H block"
+    # derived H == the per-pair module authority on the decoded ξ (bit-for-bit)
+    from tac.boundary_math import warp_real_luma_frame0 as W
+    geom = W.GroundHomographyGeom.eon(pitch=pitch)
+    for p in range(P):
+        assert np.array_equal(pc["H"][p], W.homography_from_xi_numpy(pc["xi"][p], geom))
+
+
+def test_store_nothing_v2_both_coders_strict_parity_identical_frames():
+    """The coded + raw variants decode to the IDENTICAL derived H -> IDENTICAL warp (strict parity)."""
+    P, pitch = 16, 0.02
+    xi = _sn_xi(P, 2)
+    hdr_extra = {"pose_carrier_mode": "store_nothing", "s_t": 0.044, "s_r": 0.0, "pitch": pitch,
+                 "stride": 1, "kf_store_h": L.CAMERA_H, "kf_store_w": L.CAMERA_W,
+                 "keyframe_lossless_native": True, "generator": "witness_render_frame0"}
+    b_cod, _ = L.serialize_pose_carrier_store_nothing(xi, hdr_extra, coder="delta_ar", q_levels=4096)
+    b_raw, _ = L.serialize_pose_carrier_store_nothing(xi, hdr_extra, coder="none", q_levels=4096)
+    pc_cod, pc_raw = L.parse_pose_carrier(b_cod), L.parse_pose_carrier(b_raw)
+    assert np.array_equal(pc_cod["H"], pc_raw["H"]), "coded vs raw derived-H differ (strict-parity broken)"
+    src = _rng_frame(L.CAMERA_H, L.CAMERA_W, 5).astype(np.float64)
+    f_cod = L.pose_carrier_frame0_from_source(pc_cod, 0, src)
+    f_raw = L.pose_carrier_frame0_from_source(pc_raw, 0, src)
+    assert np.array_equal(f_cod, f_raw)
+    assert len(b_cod) <= len(b_raw)  # the coder never hurts on a smooth trajectory
+
+
+def test_store_nothing_v2_inflate_string_matches_tool_oracle():
+    """The SHIPPED inflate.py inline _pcar_parse (v2 derive-H + ξ decoder) == the tool oracle bit-for-bit."""
+    ns: dict = {}
+    exec(compile(L._INFLATE_PY, "<inflate.py>", "exec"), ns)  # test-only, trusted source
+    P, pitch = 20, 0.0
+    xi = _sn_xi(P, 3)
+    hdr_extra = {"pose_carrier_mode": "store_nothing", "s_t": 0.044, "s_r": 0.0, "pitch": pitch,
+                 "stride": 1, "kf_store_h": L.CAMERA_H, "kf_store_w": L.CAMERA_W,
+                 "keyframe_lossless_native": True, "generator": "witness_render_frame0"}
+    for coder in ("delta_ar", "none"):
+        blob, _ = L.serialize_pose_carrier_store_nothing(xi, hdr_extra, coder=coder, q_levels=4096)
+        pc_tool = L.parse_pose_carrier(blob)
+        pc_ship = ns["_pcar_parse"](blob)
+        assert np.array_equal(pc_tool["H"], pc_ship["H"]), f"{coder}: shipped derive-H != tool oracle"
+        src = _rng_frame(L.CAMERA_H, L.CAMERA_W, 7).astype(np.float64)
+        a = L.pose_carrier_frame0_from_source(pc_tool, 0, src)
+        b = ns["_pcar_warp_f0"](src, pc_ship["H"][0], L.CAMERA_H, L.CAMERA_W)
+        assert np.array_equal(a, b), f"{coder}: shipped frame0 warp != tool oracle"
+
+
+def test_store_nothing_v2_cap_pose_carrier():
+    P, pitch = 12, 0.0
+    xi = _sn_xi(P, 4)
+    hdr_extra = {"pose_carrier_mode": "store_nothing", "s_t": 0.044, "s_r": 0.0, "pitch": pitch,
+                 "stride": 1, "kf_store_h": L.CAMERA_H, "kf_store_w": L.CAMERA_W,
+                 "keyframe_lossless_native": True, "generator": "witness_render_frame0"}
+    blob, _ = L.serialize_pose_carrier_store_nothing(xi, hdr_extra, coder="delta_ar", q_levels=4096)
+    capped = L._cap_pose_carrier(blob, 4)
+    pc = L.parse_pose_carrier(capped)
+    assert int(pc["hdr"]["n_pairs"]) == 4 and len(pc["keyframes"]) == 0
+    assert pc["hdr"]["pcar_store_nothing_v"] == 2
+    assert pc["H"].shape == (4, 3, 3) and pc["xi"].shape == (4, 6)
+    # the capped section stores NO H block (derived free) -> far smaller than the full section
+    assert len(capped) < len(blob) and pc["hdr"]["xi_coder"] == "delta_ar"
+
+
+def test_store_nothing_v2_build_section_rate_accounting_real_gt():
+    gt = _REPO / "experiments" / "results" / "mlx_fleet_gt_cache" / "gt_n6.npz"
+    if not gt.exists():
+        pytest.skip("gt_n6 cache not present")
+    pc_cfg = {"s_t": 0.044, "s_r": 0.0, "pitch": 0.0, "stride": 1, "downscale": 1,
+              "mode": "store_nothing", "xi_coder": "delta_ar", "xi_q_levels": 4096}
+    blob, manifest, report = L.build_pose_carrier_section(str(gt), 6, pc_cfg)
+    assert report["H_bytes"] == 0, "v2 must store NO H (the 43,200-B/600 redundancy is DROPPED)"
+    assert report["xi_coder"] == "delta_ar"
+    assert 0 < report["xi_bytes"] < report["pose_carrier_section_bytes"]  # xi payload is the bulk
+    assert report["keyframe_blob_bytes_total"] == 0
+    # at n600 the section is ~3.2 KB vs the pre-#257 ~52 KB (43,200-B H DROPPED); at tiny n6 the JSON
+    # header dominates -> just assert the H-drop is REAL (H_bytes==0 above) + section < a full keyframe.
+    assert report["pose_carrier_section_bytes"] < L.CAMERA_H * L.CAMERA_W  # << one stored keyframe
+    pc = L.parse_pose_carrier(blob)
+    assert L.pose_carrier_mode(pc) == "store_nothing" and int(pc["hdr"]["pcar_store_nothing_v"]) == 2
+
+
+def test_warp_real_luma_still_byte_identical_after_257():
+    """REGRESSION: the #257 store-nothing change must NOT touch warp_real_luma bytes (A/B preserved)."""
+    P = 3
+    H = (np.random.default_rng(8).standard_normal((P, 3, 3)) + np.eye(3)[None])
+    xi = np.zeros((P, 6), np.float32)
+    kfs = [_rng_frame(30, 40, s) for s in range(P)]
+    kf_of_pair = [0, 1, 2]
+    hdr_extra = {"pose_carrier_mode": "warp_real_luma", "s_t": 0.16, "s_r": 1.0, "pitch": 0.02,
+                 "stride": 1, "kf_store_h": 30, "kf_store_w": 40, "keyframe_lossless_native": False}
+    blob = L.serialize_pose_carrier(H, xi, kfs, kf_of_pair, hdr_extra)
+    pc = L.parse_pose_carrier(blob)
+    assert np.array_equal(pc["H"], H)  # legacy fp64-H path unchanged
+    assert pc["kf_of_pair"] == kf_of_pair and len(pc["keyframes"]) == 3
+    assert "pcar_store_nothing_v" not in pc["hdr"]  # warp_real_luma is NOT tagged v2
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-q"]))
