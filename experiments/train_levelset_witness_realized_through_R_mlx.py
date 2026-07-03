@@ -2259,6 +2259,88 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
         _dual_vg = mx.value_and_grad(_combined_seed_loss, argnums=(0, 1))
 
+    # ===================================================================================
+    # (--micro-batch-pairs, DAG FEED 2026-07-03c) BATCHED twin of ``total_loss_fn``. OPT-IN
+    # (--micro-batch-pairs > 1); the DEFAULT B=1 path NEVER calls this (the accum loop keeps its
+    # UNCHANGED serial per-pair value_and_grad). The ONLY batched operations are the EXPENSIVE realized
+    # render + FROZEN-SCORER forwards (one segnet over the B f1 frames, one posenet over the B pairs) —
+    # the measured bottleneck (single-pair EfficientNet-B2 under-utilizes the GPU). EVERY per-pair loss
+    # reduction (base seg-form; the score-domain pose ``sqrt(10*d_pose)`` which is NONLINEAR so
+    # sqrt(mean)!=mean(sqrt); and every weighted-mean lever ``sum(x*w)/sum(w)``) is computed PER PAIR on
+    # the batched scorer outputs and MEAN-ed over B, so
+    #     total_loss_fn_batch(B pairs) == mean_b total_loss_fn(pair_b)
+    # WITHIN fp tolerance (batched conv/BN is batch-independent in SegNet/PoseNet eval mode -> per-frame
+    # logits are unchanged by batching; the mean-over-B is the only reduction re-order). That EXACT
+    # per-pair-mean identity makes the accum-loop grad match the serial mean-over-chunk EXACTLY (the
+    # accum loop weights each group's mean-grad by its pair count) and lets the numerical-equivalence
+    # test pin batched-grad == mean-of-per-pair-grad. The realized segnet(f1) forward is computed ONCE
+    # and SHARED by the base seg-form AND the lever ``_signed`` — bit-identical to total_loss_fn's two
+    # deterministic-render forwards ((f'+g')·dS == f'·dS + g'·dS). The once-per-step per-MODEL code
+    # penalties (rankfloor / code-spec / code-nuc) are added ONCE (matching the serial mean-over-chunk
+    # of an identical-per-pair term). NOT bit-identical to the serial path (batched fp reduction order):
+    # a trajectory-affecting opt-in validated by a short A/B. Mirrors total_loss_fn op-for-op.
+    # ===================================================================================
+    # (--micro-batch-pairs) BATCHED twin of total_loss_fn -> delegates to the importable + unit-tested
+    # tac.boundary_math.levelset_micro_batch_loss (the nested closure cannot be reached from a test).
+    # The LeverConfig SNAPSHOTS the ~30 lever closures; the gate dicts (lane_gate / msal_gate /
+    # lane_thin_gate / persist_gate) + the lever tensor dicts (island_weight_mx / thin_maps_mx) are
+    # passed BY REFERENCE and are MUTATED-IN-PLACE by the epoch loop, so the per-epoch gate/anneal
+    # changes are seen live -- exactly like total_loss_fn re-reads them each value_and_grad call.
+    from tac.boundary_math.levelset_micro_batch_loss import (
+        LeverConfig as _MicroBatchLeverConfig,
+        batched_realized_loss as _micro_batched_realized_loss,
+    )
+
+    _micro_batch_lc = _MicroBatchLeverConfig(
+        seg_loss_default=args.seg_loss, tau_use=float(args.tau_softplus_tau),
+        l7_thr_use=float(args.l7_threshold), l7_mult=float(args.l7_mult),
+        score_domain=bool(args.score_domain_loss), pose_eps=float(args.pose_eps),
+        eik_jrelax=eik_jrelax, eik_jtau=eik_jtau,
+        eikonal_length=_eikonal_length_mlx, nuclear_norm_smooth=_nuclear_norm_smooth_mlx,
+        lane_w=lane_w, lane_gate=lane_gate, lane_cls=lane_cls, lane_tgt=lane_tgt,
+        msal_w=msal_w, msal_gate=msal_gate, msal_tau=msal_tau, msal_tgt=msal_tgt,
+        msal_uni=msal_uni, msal_uni_beta=msal_uni_beta,
+        amplify_w=amplify_w, island_weight_mx=island_weight_mx, amplify_mtgt=amplify_mtgt,
+        amplify_form=amplify_form,
+        persist_gate=persist_gate, persist_classes=persist_classes,
+        persist_cldice_iters=persist_cldice_iters, persist_recall_w=persist_recall_w,
+        lane_thin_w=lane_thin_w, lane_thin_gate=lane_thin_gate, thin_maps_mx=thin_maps_mx,
+        lane_thin_tgt=lane_thin_tgt,
+        mfh_w=mfh_w, mfh_target_mx=mfh_target_mx,
+        rankfloor_w=rankfloor_w, rankfloor_idx=rankfloor_idx, rankfloor_tgt=rankfloor_tgt,
+        code_spec_w=code_spec_w, code_spec_idx=code_spec_idx,
+        code_nuc_w=code_nuc_w, code_nuc_eps=code_nuc_eps, code_nuc_iters=code_nuc_iters,
+    )
+
+    def total_loss_fn_batch(model, cf_list, c0_list, c1_list, oh_list, mg_list, pose_tgt_list,
+                            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
+        # THIN wrapper: the batched loss body + equivalence contract live in the importable module.
+        # render_fn (witness / residual-compose / AA / pose-carrier) or the bare R render, exactly as
+        # base_loss picks it in total_loss_fn.
+        _render = render_fn if render_fn is not None else render_through_R_mlx
+        return _micro_batched_realized_loss(
+            model, adapter, _render, render_h, render_w,
+            cf_list, c0_list, c1_list, oh_list, mg_list, pose_tgt_list,
+            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, _micro_batch_lc)
+
+    # OPT-IN batched accum path. Build the batched value_and_grad ONLY when engaged (>1). Fail CLOSED
+    # with --seed-islands: the seed co-grad dual value_and_grad path is per-pair only (batched + seed
+    # co-grad is unsupported -> raise rather than silently diverge). DEFAULT (1) => _use_micro_batch
+    # False => value_and_grad_batch None => the accum loop takes the UNCHANGED serial path.
+    _micro_batch_pairs = int(getattr(args, "micro_batch_pairs", 1))
+    if _micro_batch_pairs > 1 and seed_mod is not None:
+        raise ValueError(
+            "--micro-batch-pairs > 1 is not supported together with --seed-islands (the seed co-grad "
+            "dual value_and_grad path is per-pair only). Run seed-islands at --micro-batch-pairs 1.")
+    _use_micro_batch = _micro_batch_pairs > 1
+    value_and_grad_batch = nn.value_and_grad(model, total_loss_fn_batch) if _use_micro_batch else None
+    if _use_micro_batch:
+        print(json.dumps({"stage": "micro_batch_pairs", "B": int(_micro_batch_pairs),
+                          "accum_pairs": int(args.accum_pairs),
+                          "note": "OPT-IN batched scorer forward (B pairs/forward); trajectory-affecting "
+                          "(batched fp reduction) but grad == serial mean-over-chunk within fp tol; "
+                          "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+
     # one-hot L* + margin per pair at the SegNet OUTPUT res (gt.lstars/gt.margins are 384x512,
     # matching the realized seg_logits = adapter.segnet(R(rgb))). NOT render res.
     def _lstar_oh(pi: int):
@@ -3216,30 +3298,55 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 accum = None
                 accum_seed = None   # #224 (5): seed grad accumulator (None unless --seed-islands)
                 lsum = 0.0
-                for pi_np in chunk:
-                    pi = int(pi_np)
-                    oh, mg = lstar_cache[pi]
-                    if _dual_vg is None:
-                        loss, grads = value_and_grad(
-                            model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                if _use_micro_batch:
+                    # (--micro-batch-pairs B) sub-batch each accum chunk into B-pair groups; ONE batched
+                    # value_and_grad per group. Weight each group's MEAN grad/loss by its pair count so
+                    # sum-over-groups / nb == the serial per-pair mean-over-chunk (mean_grads + batch_loss
+                    # below are UNCHANGED). _use_micro_batch guarantees seed_mod is None (fail-closed
+                    # at build) so there is NO seed co-grad leg here.
+                    _B = _micro_batch_pairs
+                    for _ss in range(0, len(chunk), _B):
+                        _sub = [int(p) for p in chunk[_ss:_ss + _B]]
+                        _bn = len(_sub)
+                        loss_b, grads_b = value_and_grad_batch(
+                            model,
+                            [_cf_mx(p) for p in _sub],
+                            [2 * p + 0 for p in _sub], [2 * p + 1 for p in _sub],
+                            [lstar_cache[p][0] for p in _sub], [lstar_cache[p][1] for p in _sub],
+                            [pose_tgts[p] for p in _sub],
                             args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
                             args.eikonal_weight, args.length_weight,
                         )
-                    else:
-                        # #224 (5) dual co-grad: witness grads[0] (== the single-path grads, same loss/
-                        # params) + seed grads[1]. The seed leg is accumulated + shielded separately below.
-                        loss, (grads, sgrads) = _dual_vg(
-                            model.trainable_parameters(), seed_mod.trainable_parameters(),
-                            _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
-                            args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
-                            args.eikonal_weight, args.length_weight,
-                        )
-                        accum_seed = sgrads if accum_seed is None else tree_map(lambda a, b: a + b, accum_seed, sgrads)
-                        mx.eval(accum_seed)
-                    mx.eval(loss, grads)  # materialize per pair (bound the lazy fwd+bwd graph)
-                    lsum += float(loss)
-                    accum = grads if accum is None else tree_map(lambda a, b: a + b, accum, grads)
-                    mx.eval(accum)
+                        mx.eval(loss_b, grads_b)  # materialize per group (bound the lazy fwd+bwd graph)
+                        lsum += float(loss_b) * _bn          # mean-over-group * count = group sum
+                        _wg = tree_map(lambda g, c=float(_bn): g * c, grads_b)  # mean-grad * count = group-sum grad
+                        accum = _wg if accum is None else tree_map(lambda a, b: a + b, accum, _wg)
+                        mx.eval(accum)
+                else:
+                    for pi_np in chunk:
+                        pi = int(pi_np)
+                        oh, mg = lstar_cache[pi]
+                        if _dual_vg is None:
+                            loss, grads = value_and_grad(
+                                model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                                args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                                args.eikonal_weight, args.length_weight,
+                            )
+                        else:
+                            # #224 (5) dual co-grad: witness grads[0] (== the single-path grads, same loss/
+                            # params) + seed grads[1]. The seed leg is accumulated + shielded separately below.
+                            loss, (grads, sgrads) = _dual_vg(
+                                model.trainable_parameters(), seed_mod.trainable_parameters(),
+                                _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                                args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                                args.eikonal_weight, args.length_weight,
+                            )
+                            accum_seed = sgrads if accum_seed is None else tree_map(lambda a, b: a + b, accum_seed, sgrads)
+                            mx.eval(accum_seed)
+                        mx.eval(loss, grads)  # materialize per pair (bound the lazy fwd+bwd graph)
+                        lsum += float(loss)
+                        accum = grads if accum is None else tree_map(lambda a, b: a + b, accum, grads)
+                        mx.eval(accum)
                 nb = max(len(chunk), 1)
                 batch_loss = lsum / nb
                 mean_grads = tree_map(lambda g, c=float(nb): g / c, accum)
@@ -3642,6 +3749,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pose-eps", type=float, default=1e-2)
     ap.add_argument("--hinge-weight", type=float, default=4.0)
     ap.add_argument("--accum-pairs", type=int, default=8)
+    # (SPEED LEVER, DAG FEED 2026-07-03c) micro-batch B pairs per forward. DEFAULT 1 => the accum loop
+    # takes the UNCHANGED serial per-pair value_and_grad path (BYTE-IDENTICAL). B>1 renders + scores B
+    # pairs in ONE batched frozen-scorer forward (EfficientNet-B2 SegNet / FastViT PoseNet saturate the
+    # GPU far better than single-pair batches) -> the measured ~2-4x speed lever. NOT bit-identical
+    # (batched fp reduction order) => a trajectory-affecting opt-in, validated by a short trajectory A/B.
+    # The per-pair loss reductions (base seg-form, score-domain pose sqrt, weighted-mean levers) are
+    # computed PER PAIR on the batched scorer outputs and MEAN-ed over B, so total_loss_fn_batch(B) ==
+    # mean_b total_loss_fn(pair_b) within fp tolerance -> the accum-loop grad matches the serial
+    # mean-over-chunk EXACTLY (see the accum loop's per-group `* _bn` weighting). Incompatible with
+    # --seed-islands (fail-closed at build). Score-neutral verdict authority is unaffected.
+    ap.add_argument("--micro-batch-pairs", type=int, default=1,
+                    help="(speed lever) pairs per batched value_and_grad forward (1 = serial "
+                    "byte-identical per-pair path; >1 = opt-in batched scorer forward, trajectory-"
+                    "affecting, ~2-4x). Sub-batches each --accum-pairs chunk; grads weighted by pair "
+                    "count so the accum-step grad == the serial mean-over-chunk. NOT with --seed-islands.")
     # (#205 OOM FIX) MLX Metal caching-allocator hygiene. The lazy graph is already materialized
     # per-pair (mx.eval(loss, grads) + mx.eval(accum)); the leak is the Metal buffer POOL (freed
     # render/backward buffers stay CACHED, not returned to the OS) growing across an epoch's ~P/8
