@@ -1440,11 +1440,16 @@ text-transform:uppercase;font-weight:700;margin-right:auto}
 .pill.ws{background:#16263a;color:#7fc0ff}.pill.wsoff{background:#3a2a16;color:#e6b97a}
 
 /* tabs */
-.tabs{display:flex;gap:4px;margin:16px 0 18px;border-bottom:1px solid var(--grid)}
+.tabs{display:flex;gap:4px;margin:16px 0 18px;border-bottom:1px solid var(--grid);
+overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
 .tab{font-size:13px;font-weight:600;color:var(--muted);padding:12px 16px;cursor:pointer;
+white-space:nowrap;flex:0 0 auto;
 border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;user-select:none}
 .tab:hover{color:var(--fg2)}
 .tab.on{color:var(--fg);border-bottom-color:var(--acc)}
+/* mobile: tighten so more tabs are visible; the strip scrolls horizontally for the rest */
+@media(max-width:520px){.tabs{gap:2px}.tab{font-size:12px;padding:11px 11px;letter-spacing:.2px}}
 
 /* headline stat grid: 2x2 phone -> row of 4 desktop. discrete cells, no mid-stat wrap */
 .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(10px,2.5vw,14px);margin-bottom:14px}
