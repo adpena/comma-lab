@@ -108,24 +108,37 @@ class WitnessPanelRenderer:
             from tools.render_comma_baseline_vs_ours_viz import _load_scorers
             self._seg, self._seg_argmax, _ = _load_scorers(False)  # SegNet only (pose not needed)
         if self._gt is None:
-            z = np.load(self.gt_cache)
+            self._gt = self._load_gt(self.pair_indices)
+
+    def _load_gt(self, pair_indices: list[int]) -> dict:
+        """Pull ONLY the requested pairs from the GT cache. Reads each member ONCE (not
+        per-pair) so a big cache (gt_n600, 5 GB) does not re-materialize a 1.8 GB member
+        for every index -- transient peak stays ~one member, then dropped."""
+        z = np.load(self.gt_cache)
+        try:
             n = int(z["gt_f1"].shape[0])
-            idx = [i for i in self.pair_indices if 0 <= i < n]
+            idx = sorted({i for i in pair_indices if 0 <= i < n})
             if not idx:
-                raise ValueError(f"no valid pair indices {self.pair_indices} for gt cache with {n} pairs")
-            self.pair_indices = idx
-            self._gt = {
-                "n": n,
-                "gt_f1": {i: np.asarray(z["gt_f1"][i], np.uint8) for i in idx},
-                "lstars": {i: np.asarray(z["lstars"][i], np.int64) for i in idx},
-                "margins": ({i: np.asarray(z["margins"][i], np.float64) for i in idx}
-                            if "margins" in z.files else {}),
-            }
+                raise ValueError(f"no valid pair indices {pair_indices} for gt cache with {n} pairs")
+            f1_full = z["gt_f1"]
+            gt_f1 = {i: np.asarray(f1_full[i], np.uint8) for i in idx}
+            del f1_full
+            ls_full = z["lstars"]
+            lstars = {i: np.asarray(ls_full[i], np.int64) for i in idx}
+            del ls_full
+            margins = {}
+            if "margins" in z.files:
+                mg_full = z["margins"]
+                margins = {i: np.asarray(mg_full[i], np.float64) for i in idx}
+                del mg_full
+        finally:
             z.close()
+        return {"n": n, "idx": idx, "gt_f1": gt_f1, "lstars": lstars, "margins": margins}
 
     # -- one 3x3 comma multipane + tribute figure for a single pair --
     def _pair_figure(self, pi: int, gt_f1, our_f1, gt_lstar, our_lstar, our_margin,
-                     gt_margin, uni, our_dseg: float, epoch, dpi: int) -> str:
+                     gt_margin, uni, our_dseg: float, epoch, dpi: int,
+                     mode_label: str | None = None) -> str:
         import matplotlib
         matplotlib.use("Agg")
         from matplotlib.figure import Figure
@@ -188,24 +201,30 @@ class WitnessPanelRenderer:
         c2.legend(handles=handles, loc="center", frameon=False, fontsize=9,
                   labelcolor=FG, handlelength=1.3, borderpad=0.6, labelspacing=0.7)
 
+        _mode = f"  ·  {mode_label}" if mode_label else ""
         fig.suptitle(
             f"pair {pi}  ·  epoch {epoch if epoch is not None else '?'}  "
-            f"·  d_seg {our_dseg:.5f}  ·  [macOS-CPU advisory · NON-PROMOTABLE]",
+            f"·  d_seg {our_dseg:.5f}{_mode}  ·  [macOS-CPU advisory · NON-PROMOTABLE]",
             color=FG, fontsize=10.5, y=0.995)
         fig.subplots_adjust(left=0.01, right=0.99, top=0.95, bottom=0.01, wspace=0.05, hspace=0.12)
         return _png_data_uri(fig, dpi)
 
     def render(self, ckpt_dir: str | os.PathLike, npz_name: str | None = None,
                epoch: int | None = None, dpi: int = 80,
-               emit_fields: bool = False, field_downsample: int = 2) -> dict[str, Any]:
+               emit_fields: bool = False, field_downsample: int = 2,
+               pair_indices: list[int] | None = None,
+               labels: dict[int, str] | None = None) -> dict[str, Any]:
         """Render the witness panels for the configured pairs from the given checkpoint dir.
         Returns a payload dict (JSON-safe) with per-pair ``data:image/png`` URIs + metadata.
 
-        ``emit_fields`` (Tab 3 FLOW): ALSO attach a ``"fields"`` block carrying the RAW
+        ``pair_indices`` (Tab 2 hardest/diverse selection): render these EXACT pairs instead
+        of the constructor default (reloads the GT slice for them if changed). ``labels`` maps
+        a pair index to a short failure-mode tag appended to the figure caption.
+
+        ``emit_fields`` (legacy Tab 3 path): ALSO attach a ``"fields"`` block carrying the RAW
         SegNet margin (float16) + argmax (uint8) + GT argmax (uint8) per pair, downsampled
-        by ``field_downsample`` and base64-encoded, so the client-side WebGPU renderer can
-        upload them as textures. These reuse the exact arrays the panels already computed —
-        the scorer forward runs ONCE per pair regardless of ``emit_fields``."""
+        by ``field_downsample`` and base64-encoded. (The n600 FLOW video uses the separate
+        dashboard_flow_sequence renderer; this path is retained for back-compat / CLI probes.)"""
         import torch
 
         from tac.uniward_delta import compute_uniward_cost_map
@@ -215,7 +234,18 @@ class WitnessPanelRenderer:
         )
 
         t0 = time.time()
-        self._ensure_loaded()
+        labels = labels or {}
+        if pair_indices is not None:
+            want = sorted({int(i) for i in pair_indices})
+            if self._seg is None:
+                from tools.render_comma_baseline_vs_ours_viz import _load_scorers
+                self._seg, self._seg_argmax, _ = _load_scorers(False)
+            if self._gt is None or want != self._gt.get("idx"):
+                self._gt = self._load_gt(want)
+        else:
+            self._ensure_loaded()
+        # reconcile to the pairs actually present in the loaded GT slice (drops any out-of-range)
+        self.pair_indices = list(self._gt.get("idx", self.pair_indices))
         ckpt_dir = Path(ckpt_dir)
         ema = ckpt_dir / (npz_name or _DEFAULT_EMA)
         ckpt_mtime = ema.stat().st_mtime if ema.exists() else None
@@ -249,8 +279,9 @@ class WitnessPanelRenderer:
             with torch.inference_mode():
                 uni = compute_uniward_cost_map(fr).squeeze(0).numpy()
             uri = self._pair_figure(pi, gt_f1, our_f1, gt_lstar, our_lstar, our_margin,
-                                    gt_margin, uni, our_dseg, epoch, dpi)
-            pairs_out.append({"pair_idx": pi, "our_dseg": round(our_dseg, 6), "panel": uri})
+                                    gt_margin, uni, our_dseg, epoch, dpi, labels.get(pi))
+            pairs_out.append({"pair_idx": pi, "our_dseg": round(our_dseg, 6),
+                              "mode": labels.get(pi), "panel": uri})
             if emit_fields:
                 # RAW fields for the FLOW client (Tab 3) — reuse the arrays just computed.
                 # margin fixed-normalized to the GT margin's p96 (static reference scale) so

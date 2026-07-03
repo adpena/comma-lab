@@ -107,21 +107,26 @@ class Config:
     # live EMA checkpoint, re-rendered on checkpoint-mtime change (NOT every tick), in the
     # tailer executor (never blocks the loop), broadcast over the SAME WebSocket. Light
     # (~2 GB peak, ~8 s CPU-only, gt_n6 aligned) — yields to #205 under a memory floor.
+    # WITNESS (Tab 2) + FLOW (Tab 3) are fed by ONE heavy governed 600-pass over the BEST
+    # checkpoint, run as a DETACHED subprocess (own process group + own safe_run cap) so its
+    # ~2.6 GB torch+SegNet footprint is NEVER summed into THIS lean dashboard's safe_run RSS
+    # group (it could never crash the dashboard or the machine). gt_n600 (all 600 pairs) is
+    # required for the full-video timeline + the hardest/most-diverse Tab-2 pair selection.
     witness_enable: bool = True
-    witness_gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"
-    witness_pairs: str = "0,2,4"
-    witness_ema_name: str = "levelset_witness_ema_mlx.npz"
-    witness_min_free_gib: float = 5.0    # skip a render when free RAM is below this (yield to #205)
-    witness_min_interval_s: float = 45.0  # rate-limit re-renders even if the ckpt mtime flaps
+    witness_gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+    witness_ema_name: str = "levelset_witness_ema_mlx.npz"  # fallback if BEST is absent
+    witness_min_free_gib: float = 5.0    # skip spawning a pass when free RAM is below this (yield to #205)
     witness_dpi: int = 80
-    # FLOW tab (Tab 3): a CLIENT-SIDE WebGPU interactive renderer of the witness level-set field.
-    # The SegNet margin (float16) + argmax (uint8) + GT argmax (uint8) fields ride the SAME Tab-2
-    # per-checkpoint render (NO second scorer pass) — emitted downsampled + base64 over the WS.
-    # A rolling history of the last N checkpoints' pair-0 fields lets the client scrub/animate the
-    # level-set FLOWING across training. Everything advisory (NON-PROMOTABLE); a viz moves no pointer.
     flow_enable: bool = True
-    flow_downsample: int = 2       # field downsample factor (384x512 -> 192x256): 4x smaller payload
-    flow_history: int = 12         # rolling checkpoints kept server-side for the epoch scrubber
+    flow_best_ema_name: str = "levelset_witness_ema_BEST.npz"  # the checkpoint the 600-pass renders
+    flow_seq_downsample: int = 4         # field downsample (384x512 -> 96x128) for the video payload
+    flow_seq_jpeg_q: int = 62            # JPEG quality for the per-frame witness-render layer
+    flow_seq_frag_levels: int = 32       # margin-fragility quantization (PNG-compressibility)
+    flow_seq_hard_k: int = 6             # hardest/most-diverse Tab-2 pairs to select
+    flow_seq_min_interval_s: float = 900.0   # do not re-render within 15 min even if ckpt mtime flaps
+    flow_seq_cache_dir: str = ".omx/tmp/dash_flow_seq"  # sanctioned repo-local ephemeral scratch
+    flow_seq_rss_mb: int = 7000          # the subprocess's OWN safe_run RSS cap (isolated group)
+    flow_seq_timeout_s: int = 2400       # the subprocess's OWN safe_run wall-clock cap (40 min)
 
     def resolved_glob(self) -> str:
         if self.log_glob:               # explicit --log-glob is a hard override
@@ -152,15 +157,20 @@ def config_from_env() -> Config:
         auto_latest=e("DASH_AUTO_LATEST", "1") not in ("0", "false", "False"),
         auto_base_glob=e("DASH_AUTO_BASE_GLOB", "experiments/results/levelset_*/*.log"),
         witness_enable=e("DASH_WITNESS_ENABLE", "1") not in ("0", "false", "False"),
-        witness_gt_cache=e("DASH_WITNESS_GT_CACHE", "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"),
-        witness_pairs=e("DASH_WITNESS_PAIRS", "0,2,4"),
+        witness_gt_cache=e("DASH_WITNESS_GT_CACHE", "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"),
         witness_ema_name=e("DASH_WITNESS_EMA_NAME", "levelset_witness_ema_mlx.npz"),
         witness_min_free_gib=float(e("DASH_WITNESS_MIN_FREE_GIB", "5.0")),
-        witness_min_interval_s=float(e("DASH_WITNESS_MIN_INTERVAL_S", "45.0")),
         witness_dpi=int(e("DASH_WITNESS_DPI", "80")),
         flow_enable=e("DASH_FLOW_ENABLE", "1") not in ("0", "false", "False"),
-        flow_downsample=int(e("DASH_FLOW_DOWNSAMPLE", "2")),
-        flow_history=int(e("DASH_FLOW_HISTORY", "12")),
+        flow_best_ema_name=e("DASH_FLOW_BEST_EMA_NAME", "levelset_witness_ema_BEST.npz"),
+        flow_seq_downsample=int(e("DASH_FLOW_SEQ_DOWNSAMPLE", "4")),
+        flow_seq_jpeg_q=int(e("DASH_FLOW_SEQ_JPEG_Q", "62")),
+        flow_seq_frag_levels=int(e("DASH_FLOW_SEQ_FRAG_LEVELS", "32")),
+        flow_seq_hard_k=int(e("DASH_FLOW_SEQ_HARD_K", "6")),
+        flow_seq_min_interval_s=float(e("DASH_FLOW_SEQ_MIN_INTERVAL_S", "900.0")),
+        flow_seq_cache_dir=e("DASH_FLOW_SEQ_CACHE_DIR", ".omx/tmp/dash_flow_seq"),
+        flow_seq_rss_mb=int(e("DASH_FLOW_SEQ_RSS_MB", "7000")),
+        flow_seq_timeout_s=int(e("DASH_FLOW_SEQ_TIMEOUT_S", "2400")),
     )
 
 
@@ -341,22 +351,25 @@ class LiveState:
         self.run_info: dict = {}              # #205 full run-info dict (rld._collect_run_info)
         self.run_info_html: str = ""          # #205 strip HTML (rld._run_info_html), pre-rendered off-loop
         self.projection: dict = {"ok": False, "reason": "calibrating"}  # DATA-DERIVED trajectory model
-        # WITNESS tab (Tab 2) live-render state: re-rendered ONLY on EMA-ckpt-mtime change, in the
-        # tailer executor, broadcast over the same WS. self.witness holds the last payload (panels
-        # as data: URIs) so a fresh page's snapshot() first-paints without waiting for the next ckpt.
+        # WITNESS (Tab 2) + FLOW (Tab 3) are produced by ONE detached governed subprocess
+        # (tools/dashboard_flow_sequence.py) run on each NEW best checkpoint. This dashboard
+        # process NEVER imports torch / renders in-process -> it stays lean (~few hundred MB,
+        # safe under its safe_run RSS cap). self.witness holds the Tab-2 panels (small; rides
+        # the WS snapshot). self._flow_seq_bytes holds the Tab-3 n600 video payload (bigger)
+        # served on demand via /api/flow_sequence; only a lightweight {type:flow_ready} pings
+        # clients to (re)fetch it.
         self.witness: dict = {}
-        self._witness_renderer = None          # lazy WitnessPanelRenderer (loads scorer+gt once)
-        self._witness_ckpt_mtime: float = 0.0  # mtime of the EMA ckpt the panels were rendered from
-        self._witness_last_attempt: float = 0.0
-        self._witness_dirty: bool = False      # set when a NEW payload is ready to broadcast
-        self._witness_err: str = ""
-        # FLOW tab (Tab 3): the raw margin/argmax fields ride the SAME witness render. self.flow is
-        # the latest frame (all configured pairs); self.flow_history is a rolling last-N pair-0 stack
-        # for the client's epoch scrubber (the level-set FLOWING across training). Set from the SAME
-        # payload the panels come from -> zero extra scorer passes.
-        self.flow: dict = {}
-        self.flow_history: list[dict] = []
-        self._flow_dirty: bool = False
+        self._witness_dirty: bool = False
+        self._flow_seq_bytes: bytes | None = None      # the served flow.json (Tab-3 sequence)
+        self._flow_seq_meta: dict = {}                 # {epoch,n,mean_dseg,built_at_utc}
+        self._flowseq_dirty: bool = False              # a fresh sequence -> broadcast flow_ready
+        self._flowseq_running: bool = False
+        self._flowseq_proc = None                      # subprocess.Popen | None
+        self._flowseq_stem: Path | None = None
+        self._flowseq_target_mtime: float = 0.0
+        self._flowseq_done_mtime: float = 0.0          # ckpt mtime we already have output for
+        self._flowseq_last_attempt: float = 0.0
+        self._flowseq_err: str = ""
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
         # cadence sub-state (per-log). DATA-DERIVED ONLY — NO hardcoded cadence prior /
@@ -521,18 +534,19 @@ class LiveState:
             self._epochs.add(p["epoch"])
         self.trajectory = rows_full
 
-        # WITNESS panels (Tab 2): re-render ONLY when the live EMA checkpoint mtime advances
-        # (a NEW checkpoint landed) — throttled, memory-gated, in THIS executor thread. Sets
-        # self._witness_dirty so the tailer broadcasts the fresh payload over the WS.
-        if with_witness and cfg.witness_enable and latest is not None and self.watched_dir:
+        # WITNESS (Tab 2) + FLOW (Tab 3): orchestrate the detached governed 600-pass subprocess
+        # (spawn on new best checkpoint / ingest its output when done). NON-blocking + NO torch
+        # in-process; the ~2.6 GB render lives in its OWN process group so it can never touch
+        # THIS dashboard's safe_run RSS cap. A viz must NEVER take down the live telemetry.
+        if with_witness and (cfg.witness_enable or cfg.flow_enable) and self.watched_dir:
             try:
-                self._maybe_render_witness(now)
-            except Exception as exc:  # a viz must NEVER take down the live telemetry
-                self._witness_err = f"witness render error: {exc}"
-                print(json.dumps({"stage": "dashboard_server", "witness_error": str(exc)}), flush=True)
+                self._maybe_flowseq(now)
+            except Exception as exc:
+                self._flowseq_err = f"flowseq orchestration error: {exc}"
+                print(json.dumps({"stage": "dashboard_server", "flowseq_error": str(exc)}), flush=True)
         return new_points
 
-    # ---- witness panels (Tab 2): render on ckpt-mtime change; memory-gated; executor thread ----
+    # ---- detached governed 600-pass: WITNESS panels + FLOW n600 video sequence ----
     def _free_gib(self) -> float | None:
         try:
             import psutil
@@ -540,103 +554,149 @@ class LiveState:
         except Exception:
             return None
 
-    def _maybe_render_witness(self, now: float) -> None:
+    def _best_ckpt(self) -> Path | None:
+        """The checkpoint the 600-pass renders from: the BEST ema, or the live ema fallback."""
+        if not self.watched_dir:
+            return None
+        best = Path(self.watched_dir) / self.cfg.flow_best_ema_name
+        if best.exists():
+            return best
+        live = Path(self.watched_dir) / self.cfg.witness_ema_name
+        return live if live.exists() else None
+
+    def _flowseq_stem(self, best: Path, mtime: float) -> Path:
         cfg = self.cfg
-        ema = Path(self.watched_dir) / cfg.witness_ema_name
-        if not ema.exists():
+        key = f"{best.parent.name}_{int(mtime)}_ds{cfg.flow_seq_downsample}"
+        return Path(cfg.flow_seq_cache_dir) / f"flow_{key}"
+
+    def _maybe_flowseq(self, now: float) -> None:
+        """Idempotent per tick: ingest a cached/finished output, poll a running subprocess, or
+        spawn a new one when a NEW best checkpoint appears (throttled + memory-gated)."""
+        cfg = self.cfg
+        best = self._best_ckpt()
+        if best is None:
             return
         try:
-            mtime = ema.stat().st_mtime
+            mtime = best.stat().st_mtime
         except OSError:
             return
-        if mtime <= self._witness_ckpt_mtime:
-            return  # no new checkpoint since the last render -> nothing to do (the throttle)
-        if now - self._witness_last_attempt < cfg.witness_min_interval_s:
-            return  # rate-limit (belt-and-suspenders in case mtime flaps)
+        if mtime == self._flowseq_done_mtime:
+            return  # already have (and ingested) the output for this checkpoint
+        stem = self._flowseq_stem(best, mtime)
+        done = stem.with_suffix(".done")
+        # 1) output already on disk (prior run/session or a just-finished subprocess) -> ingest.
+        if done.exists():
+            self._ingest_flowseq(stem, mtime)
+            return
+        # 2) a subprocess in flight?
+        if self._flowseq_running:
+            rc = self._flowseq_proc.poll() if self._flowseq_proc is not None else 0
+            if rc is None:
+                return  # still rendering (a full n600 pass is ~14 min)
+            self._flowseq_running = False
+            if (self._flowseq_stem and (self._flowseq_stem.with_suffix(".done")).exists()):
+                self._ingest_flowseq(self._flowseq_stem, self._flowseq_target_mtime)
+            else:
+                self._flowseq_err = f"flow-seq subprocess exited rc={rc} without output"
+                print(json.dumps({"stage": "dashboard_server", "flowseq_no_output": rc}), flush=True)
+            return
+        # 3) throttle + memory floor, then spawn.
+        if now - self._flowseq_last_attempt < cfg.flow_seq_min_interval_s:
+            return
         free = self._free_gib()
         if free is not None and free < cfg.witness_min_free_gib:
-            # yield to the live #205 GPU run under memory pressure; retry next tick (mtime still new)
-            print(json.dumps({"stage": "dashboard_server", "witness_skip": "low_free_ram",
+            print(json.dumps({"stage": "dashboard_server", "flowseq_skip": "low_free_ram",
                               "free_gib": round(free, 1)}), flush=True)
             return
-        self._witness_last_attempt = now
-        if self._witness_renderer is None:
-            from witness_dashboard_panels import WitnessPanelRenderer  # tools/ on sys.path
-            pairs = [int(x) for x in str(cfg.witness_pairs).split(",") if x.strip() != ""]
-            self._witness_renderer = WitnessPanelRenderer(cfg.witness_gt_cache, pairs)
+        self._flowseq_last_attempt = now
+        self._spawn_flowseq(best, mtime, stem)
+
+    def _spawn_flowseq(self, best: Path, mtime: float, stem: Path) -> None:
+        """Launch tools/dashboard_flow_sequence.py DETACHED (own session/process group) under its
+        OWN tools/safe_run.py cap, so its ~2.6 GB torch+SegNet footprint is isolated from this
+        dashboard's safe_run RSS group. Writes <stem>.flow.json / .witness.json / .done."""
+        import subprocess
+        cfg = self.cfg
+        tools = Path(__file__).resolve().parent
+        repo = tools.parent
+        stem.parent.mkdir(parents=True, exist_ok=True)
         epoch = self.liveness.get("last_epoch")
         if epoch is None:
             epoch = max((r["epoch"] for r in self.trajectory
-                         if isinstance(r.get("epoch"), int)), default=None)
-        payload = self._witness_renderer.render(
-            self.watched_dir, cfg.witness_ema_name, epoch, cfg.witness_dpi,
-            emit_fields=cfg.flow_enable, field_downsample=cfg.flow_downsample)
-        # Split: the heavy raw fields go to Tab-3 FLOW; the Tab-2 witness payload stays lean
-        # (panels only) so the {type:"witness"} delta and its snapshot never carry the fields.
-        fields = payload.pop("fields", None)
-        self.witness = payload
-        self._witness_ckpt_mtime = mtime
-        self._witness_err = ""
-        self._witness_dirty = True
-        if fields:
-            self._ingest_flow(fields, epoch)
-        print(json.dumps({"stage": "dashboard_server", "witness_rendered": True,
-                          "epoch": epoch, "n_pairs": payload.get("n_pairs_shown"),
-                          "mean_dseg": payload.get("mean_dseg"),
-                          "secs": payload.get("render_secs"),
-                          "flow_fields": bool(fields),
-                          "flow_history": len(self.flow_history)}), flush=True)
+                         if isinstance(r.get("epoch"), int)), default=0)
+        run_token = Path(self.watched_dir).name  # pgrep -f token for #205 liveness logging
+        inner = [
+            sys.executable, str(tools / "dashboard_flow_sequence.py"),
+            "--ckpt-dir", str(self.watched_dir), "--npz-name", best.name,
+            "--gt-cache", cfg.witness_gt_cache, "--out-stem", str(stem),
+            "--epoch", str(int(epoch)), "--downsample", str(cfg.flow_seq_downsample),
+            "--jpeg-quality", str(cfg.flow_seq_jpeg_q), "--frag-levels", str(cfg.flow_seq_frag_levels),
+            "--hard-k", str(cfg.flow_seq_hard_k), "--dpi", str(cfg.witness_dpi),
+            "--min-free-gib", str(cfg.witness_min_free_gib), "--run-token", run_token,
+            "--torch-threads", "3",
+        ]
+        cmd = [
+            sys.executable, str(tools / "safe_run.py"),
+            "--rss-mb", str(cfg.flow_seq_rss_mb), "--timeout", str(cfg.flow_seq_timeout_s),
+            "--label", f"flow_seq_{int(mtime)}", "--", *inner,
+        ]
+        log_path = stem.with_suffix(".log")
+        try:
+            logf = open(log_path, "ab")
+            self._flowseq_proc = subprocess.Popen(
+                cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
+                start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
+            self._flowseq_running = True
+            self._flowseq_stem = stem
+            self._flowseq_target_mtime = mtime
+            self._flowseq_err = ""
+            print(json.dumps({"stage": "dashboard_server", "flowseq_spawn": True,
+                              "pid": self._flowseq_proc.pid, "epoch": int(epoch),
+                              "ckpt": best.name, "stem": str(stem)}), flush=True)
+        except Exception as exc:
+            self._flowseq_running = False
+            self._flowseq_err = f"flow-seq spawn failed: {exc}"
+            print(json.dumps({"stage": "dashboard_server", "flowseq_spawn_error": str(exc)}), flush=True)
 
-    # ---- FLOW fields (Tab 3): build latest frame + rolling pair-0 history from the render ----
-    def _ingest_flow(self, fields: dict, epoch) -> None:
-        """Turn the render's raw ``fields`` (all pairs) into the client payload: a ``latest``
-        frame (every configured pair, full detail) + a rolling ``flow_history`` of the SMALLEST
-        pair (pair 0) so the client can scrub the level-set flowing across checkpoints. GT argmax
-        + margin_vmax are static per pair, so history frames carry only the changing witness
-        fields; the client pulls the static reference from ``latest``."""
-        pairs = fields.get("pairs") or []
-        if not pairs:
-            return
-        self.flow = {
-            "ok": True, "epoch": epoch,
-            "w": fields.get("w"), "h": fields.get("h"),
-            "downsample": fields.get("downsample"),
-            "classes": fields.get("classes"),
-            "built_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "authority": "macOS-CPU advisory · NON-PROMOTABLE",
-            "pairs": pairs,
-        }
-        p0 = min(pairs, key=lambda p: p.get("pair_idx", 0))
-        frame = {"epoch": epoch, "our_dseg": p0.get("our_dseg"),
-                 "our_margin_b64": p0.get("our_margin_b64"),
-                 "our_argmax_b64": p0.get("our_argmax_b64")}
-        if self.flow_history and self.flow_history[-1].get("epoch") == epoch:
-            self.flow_history[-1] = frame  # re-render of the same epoch -> replace, don't duplicate
-        else:
-            self.flow_history.append(frame)
-            cap = max(1, int(self.cfg.flow_history))
-            if len(self.flow_history) > cap:
-                self.flow_history = self.flow_history[-cap:]
-        self._flow_dirty = True
+    def _ingest_flowseq(self, stem: Path, mtime: float) -> None:
+        """Load a finished 600-pass output: witness panels into memory (rides the WS snapshot),
+        flow.json bytes held for /api/flow_sequence, and mark both dirty for broadcast."""
+        try:
+            self.witness = json.loads(stem.with_suffix(".witness.json").read_text())
+            self._witness_dirty = True
+        except Exception as exc:
+            self._flowseq_err = f"witness load error: {exc}"
+        try:
+            self._flow_seq_bytes = stem.with_suffix(".flow.json").read_bytes()
+            dj = json.loads(stem.with_suffix(".done").read_text())
+            self._flow_seq_meta = {"epoch": dj.get("epoch"), "n": dj.get("n"),
+                                   "mean_dseg": dj.get("mean_dseg"),
+                                   "built_at_utc": dj.get("built_at_utc")}
+            self._flowseq_dirty = True
+            self._flowseq_err = ""
+            print(json.dumps({"stage": "dashboard_server", "flowseq_ingested": True,
+                              "epoch": dj.get("epoch"), "n": dj.get("n"),
+                              "flow_bytes": len(self._flow_seq_bytes)}), flush=True)
+        except Exception as exc:
+            self._flowseq_err = f"flow load error: {exc}"
+        self._flowseq_done_mtime = mtime  # mark this checkpoint's output consumed (no re-spawn)
 
-    def consume_flow_dirty(self) -> bool:
-        if self._flow_dirty:
-            self._flow_dirty = False
+    def consume_flowseq_dirty(self) -> bool:
+        if self._flowseq_dirty:
+            self._flowseq_dirty = False
             return True
         return False
 
-    def _flow_public(self) -> dict:
-        """The FLOW payload for the client (latest frame + rolling pair-0 history), or an honest
-        status stub while the first checkpoint render is still in flight."""
-        if self.flow:
-            hp = min((p.get("pair_idx", 0) for p in self.flow.get("pairs", [])), default=0)
-            return {"ok": True, "latest": self.flow, "history": self.flow_history,
-                    "history_pair": hp}
-        return {"ok": False, "latest": None, "history": [],
-                "status": ("error" if self._witness_err else "rendering")}
+    def _flow_ready_public(self) -> dict:
+        """Lightweight FLOW readiness ping (the client fetches /api/flow_sequence on this)."""
+        if self._flow_seq_bytes is not None and self._flow_seq_meta:
+            return {"ok": True, **self._flow_seq_meta}
+        status = ("rendering" if self._flowseq_running
+                  else ("error" if self._flowseq_err else "idle"))
+        return {"ok": False, "status": status, "err": self._flowseq_err or None}
 
-    def flow_msg(self) -> dict:
-        return {"type": "flow", "flow": self._flow_public()}
+    def flow_ready_msg(self) -> dict:
+        return {"type": "flow_ready", "flow_ready": self._flow_ready_public()}
 
     def consume_witness_dirty(self) -> bool:
         """Return+clear the witness-dirty flag (single-threaded event loop -> race-free)."""
@@ -680,7 +740,7 @@ class LiveState:
         return {"type": "snapshot", "trajectory": self.trajectory,
                 "liveness": self.liveness, "meta": self.meta(),
                 "projection": self.projection, "witness": self._witness_public(),
-                "flow": self._flow_public()}
+                "flow_ready": self._flow_ready_public()}
 
     def update_msg(self, new_points: list[dict]) -> dict:
         return {"type": "update", "new_points": new_points,
@@ -692,8 +752,9 @@ class LiveState:
         while the first render is still in flight."""
         if self.witness:
             return self.witness
-        return {"ok": False, "err": self._witness_err,
-                "status": ("error" if self._witness_err else "rendering")}
+        status = ("rendering" if self._flowseq_running
+                  else ("error" if self._flowseq_err else "idle"))
+        return {"ok": False, "err": self._flowseq_err or None, "status": status}
 
     def witness_msg(self) -> dict:
         return {"type": "witness", "witness": self._witness_public()}
@@ -726,12 +787,12 @@ def create_app(cfg: Config) -> Starlette:
             try:
                 new_points = await loop.run_in_executor(None, state.refresh)
                 await state.broadcast(state.update_msg(new_points))
-                # a fresh witness render (new checkpoint) -> push the panels over the SAME WS
+                # a finished 600-pass (new best checkpoint) -> push the Tab-2 panels over the WS
                 if state.consume_witness_dirty():
                     await state.broadcast(state.witness_msg())
-                # the same render also produced the FLOW fields -> push them (Tab 3)
-                if state.consume_flow_dirty():
-                    await state.broadcast(state.flow_msg())
+                # ...and ping clients that a fresh Tab-3 n600 video sequence is ready to fetch
+                if state.consume_flowseq_dirty():
+                    await state.broadcast(state.flow_ready_msg())
             except Exception as exc:  # telemetry must never crash the live server
                 print(json.dumps({"stage": "dashboard_server", "tailer_error": str(exc)}),
                       flush=True)
@@ -780,6 +841,18 @@ def create_app(cfg: Config) -> Starlette:
             return JSONResponse({"error": "access key required"}, status_code=401)
         return JSONResponse(state.snapshot())
 
+    async def api_flow_sequence(request):
+        # The Tab-3 n600 VIDEO payload (fetched ONCE per new sequence; the client then scrubs +
+        # plays locally). Served as pre-built bytes so the ~7 MB dict is never re-serialized.
+        qk, ck = _req_keys(request)
+        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+            return JSONResponse({"error": "access key required"}, status_code=401)
+        if state._flow_seq_bytes is not None:
+            from starlette.responses import Response
+            return Response(state._flow_seq_bytes, media_type="application/json",
+                            headers={"Cache-Control": "no-store"})
+        return JSONResponse(state._flow_ready_public(), status_code=202)
+
     async def healthz(request):
         # ungated, reveals nothing sensitive (used by the supervisor + tunnel health)
         return JSONResponse({"ok": True, "watched": state.watched,
@@ -812,6 +885,7 @@ def create_app(cfg: Config) -> Starlette:
     routes = [
         Route("/", index),
         Route("/api/state", api_state),
+        Route("/api/flow_sequence", api_flow_sequence),
         Route("/healthz", healthz),
         WebSocketRoute("/ws", ws_endpoint),
     ]
@@ -1201,13 +1275,17 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 
 <section id="tab-witness" class="wit hide">
   <div class="witintro">
-    <h2>The scorer's eye &mdash; comma10k 6-panel + the inverse-steganalysis tribute</h2>
-    <p>Rendered LIVE from the &#8203;#205 EMA checkpoint (re-renders when a new checkpoint lands,
-    streamed over the same WebSocket &mdash; no reload). Each pair is the canonical comma multipane:
-    <b>Row A</b> GT &middot; our witness render (through the contest R operator) &middot; pixel error;
-    <b>Row B</b> the SegNet argmax the scorer actually sees for GT vs our render, and their
-    disagreement (the d_seg pixels); <b>Row C</b> the tribute triptych.</p>
-    <div class="withdr" id="withdr">rendering witness panels from the live checkpoint&hellip;</div>
+    <h2>The scorer's eye &mdash; the hardest &amp; most-diverse pairs</h2>
+    <p>The pairs with the <b>highest realized d_seg</b> across the whole n600 drive, chosen to be
+    <b>spread across the segment</b> (not clustered) and to cover distinct failure modes &mdash; each
+    labelled with its <b>per-pair d_seg + failure-mode tag</b> (adjacent/movable vehicle, lane-marking
+    dash, distant object, or boundary flips, read honestly from the disagreement composition).
+    Selected from the SAME governed 600-pass that builds the FLOW video, refreshed when a new best
+    checkpoint lands. Each pair is the canonical comma multipane: <b>Row A</b> GT &middot; our witness
+    render (through the contest R operator) &middot; pixel error; <b>Row B</b> the SegNet argmax the
+    scorer sees for GT vs our render, and their disagreement (the d_seg pixels); <b>Row C</b> the
+    tribute triptych.</p>
+    <div class="withdr" id="withdr">selecting the hardest pairs from the n600 pass&hellip;</div>
   </div>
   <div class="witgrid" id="witpanels"></div>
   <div class="wittrip">
@@ -1243,28 +1321,37 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 </section>
 
 <section id="tab-flow" class="flow hide">
-  <h2>FLOW &mdash; the witness level-set field, live &amp; interactive (WebGPU)</h2>
-  <p>The SegNet <b>margin field</b> and <b>argmax partition</b> the scorer actually sees, uploaded
-  as GPU textures and shaded in your browser. <b>Small margin = the codim-1 separatrix</b> where the
-  argmax can flip &mdash; where d_seg lives. Drag the sliders to probe the fragile band; scrub the
-  epoch axis to watch the level-set <i>flow</i> toward the argmax partition as the witness trains.</p>
+  <h2>FLOW &mdash; the full n600 drive, as a video (WebGPU)</h2>
+  <p>Scrub or play the <b>entire 600-pair segment</b> the scorer evaluates &mdash; the witness's own
+  render, its 5-class partition, the <b>SegNet argmax the scorer actually sees</b>, and their
+  <b>disagreement vs GT</b> (the d_seg pixels), flowing across the drive. The <b>frame slider is the
+  timeline</b> (0&nbsp;&rarr;&nbsp;599); <b>play</b> animates it at ~12&nbsp;fps. Switch the layer to
+  read the partition (canonical comma10k colors) or the fragility heat where the argmax can flip.</p>
   <div class="flowtop">
     <span id="flowbadge" class="flowbadge off">detecting&hellip;</span>
-    <span class="flowstatus" id="flowstatus">waiting for the first checkpoint field&hellip;</span>
+    <span class="flowstatus" id="flowstatus">waiting for the first n600 sequence&hellip;</span>
   </div>
   <div class="flowstage">
-    <canvas id="flowcanvas" role="img" aria-label="witness level-set margin/argmax field"></canvas>
-    <div class="flowmsg" id="flowmsg">rendering the first field from the live checkpoint&hellip;</div>
+    <canvas id="flowcanvas" role="img" aria-label="n600 witness drive video — partition / SegNet / disagreement"></canvas>
+    <div class="flowmsg" id="flowmsg">the first n600 video renders on the next best checkpoint (~14&nbsp;min governed pass)&hellip;</div>
+  </div>
+  <div class="flowscrub">
+    <button class="flowplay" id="flowplay" aria-pressed="false">&#9654; play</button>
+    <div class="sc">
+      <span class="fl">frame (segment timeline) <span class="fv" id="flowframe_v">0 / 599</span></span>
+      <input type="range" id="flowframe" min="0" max="599" step="1" value="0" aria-label="frame / segment timeline">
+    </div>
   </div>
   <div class="flowlegend" id="flowlegend"></div>
   <div class="flowctl">
     <div class="flowrow">
-      <span class="fl">colormap / blend <span class="fv" id="flowmode_v">margin heat</span></span>
+      <span class="fl">layer <span class="fv" id="flowmode_v">SegNet argmax</span></span>
       <select id="flowmode">
-        <option value="0">margin heat (fragility)</option>
-        <option value="1">argmax partition</option>
-        <option value="2">blend: partition &harr; heat</option>
+        <option value="0">witness render (RGB)</option>
+        <option value="1">witness partition (own argmax)</option>
+        <option value="2" selected>SegNet argmax (what the scorer sees)</option>
         <option value="3">disagreement vs GT (d_seg pixels)</option>
+        <option value="4">margin heat (fragility)</option>
       </select>
     </div>
     <div class="flowrow">
@@ -1275,34 +1362,20 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
         <option value="1">1 Lane</option>
         <option value="2">2 Undrivable</option>
         <option value="3">3 Movable</option>
-        <option value="4">4 MyCar</option>
+        <option value="4">4 MyCar / hood</option>
       </select>
     </div>
     <div class="flowrow">
       <span class="fl">margin threshold (fragile band) <span class="fv" id="flowthr_v">0.55</span></span>
       <input type="range" id="flowthr" min="0" max="1" step="0.01" value="0.55">
     </div>
-    <div class="flowrow">
-      <span class="fl">blend (partition &harr; heat) <span class="fv" id="flowblend_v">0.50</span></span>
-      <input type="range" id="flowblend" min="0" max="1" step="0.01" value="0.5">
-    </div>
-    <div class="flowrow">
-      <span class="fl">pair <span class="fv" id="flowpair_v">0</span></span>
-      <select id="flowpair"><option value="0">pair 0</option></select>
-    </div>
-    <div class="flowscrub">
-      <button class="flowplay" id="flowplay" aria-pressed="false">&#9654; play</button>
-      <div class="sc">
-        <span class="fl">epoch scrubber <span class="fv" id="flowscrub_v">live</span></span>
-        <input type="range" id="flowscrub" min="0" max="0" step="1" value="0" aria-label="epoch scrubber">
-      </div>
-    </div>
   </div>
   <div class="flowcap">
-    <p>The margin field is the scorer's own <b>sensitivity / UNIWARD geometry</b> read as a field
-    (Yousfi's comma10k SegNet is the detector; Fridrich's UNIWARD says the smooth/high-margin interior
-    is where a perturbation is <i>caught</i>). FLOW renders the witness level-set evolving toward the
-    SegNet argmax partition &mdash; the dynamical-system view of the variational flow.</p>
+    <p>The partition layer uses the <b>canonical comma10k / openpilot segmentation palette</b> (the
+    colors Yousfi + comma read instantly). The margin-heat layer is the scorer's own <b>sensitivity /
+    UNIWARD geometry</b> read as a field: <b>bright = small margin = the codim-1 separatrix</b> where
+    the argmax can flip (where d_seg lives). Playing the timeline is the dynamical-system view &mdash;
+    the witness partition flowing toward the SegNet argmax across the whole drive.</p>
     <p class="fcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
     The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</p>
   </div>
@@ -1380,17 +1453,15 @@ const BANDS={ce:"#1f3b5f",tau:"#3a2a5f",l7:"#5f3320",muon:"#1f4f43"};
 
 function $(id){return document.getElementById(id);}
 
-// ---- FLOW (Tab 3) data bridge: the injected WebGPU client (dashboard_flow_client.js) reads
-// window.__flow and registers window.__flowActivate / window.__flowNotify. Kept on window so the
-// separate inlined <script> shares state cleanly (no lexical-scope coupling). ----
-window.__flow = {latest:null, history:[], historyPair:0};
-function _pushFlow(f){
-  if(!f)return;
-  window.__flow.latest = f.latest || null;
-  window.__flow.history = Array.isArray(f.history) ? f.history : [];
-  window.__flow.historyPair = (f.history_pair!=null) ? f.history_pair : 0;
-  window.__flow.status = f.status || (f.ok===false ? "rendering" : "");
-  if(window.__flowNotify){try{window.__flowNotify();}catch(e){}}
+// ---- FLOW (Tab 3) data bridge: the injected client (dashboard_flow_client.js) reads
+// window.__flow.ready (the lightweight readiness ping) and registers window.__flowActivate /
+// window.__flowReady. The client FETCHES the full n600 video sequence itself from
+// /api/flow_sequence (once per new sequence), then scrubs/plays locally. ----
+window.__flow = {ready:null};
+function _onFlowReady(fr){
+  if(!fr)return;
+  window.__flow.ready = fr;
+  if(window.__flowReady){try{window.__flowReady(fr);}catch(e){}}
 }
 
 // least-squares fit of (epoch,value) over raw points -> {m,b} or null
@@ -1928,10 +1999,11 @@ function renderWitness(){
     return;
   }
   if(hdr){
-    hdr.innerHTML="rendered from EMA checkpoint @ epoch <b>"+(W.epoch!=null?W.epoch:"?")+"</b> · "+
-      W.n_pairs_shown+" pairs · mean realized d_seg <b>"+sig(W.mean_dseg,5)+"</b> · "+
-      escHtml(W.gt_cache||"")+" (aligned) · rendered in "+sig(W.render_secs,3)+"s · built "+
-      escHtml(W.built_at_utc||"")+" · "+escHtml(W.authority||"");
+    hdr.innerHTML="the <b>"+W.n_pairs_shown+" hardest &amp; most-diverse pairs</b> of the n600 drive "+
+      "(spread across the segment, labelled by failure mode) · from BEST checkpoint @ epoch <b>"+
+      (W.epoch!=null?W.epoch:"?")+"</b> · mean realized d_seg over the selection <b>"+sig(W.mean_dseg,5)+
+      "</b> · rendered in "+sig(W.render_secs,3)+"s · built "+escHtml(W.built_at_utc||"")+" · "+
+      escHtml(W.authority||"");
   }
   const present=new Set();
   W.pairs.forEach(p=>{
@@ -1946,7 +2018,8 @@ function renderWitness(){
     }
     const im=$("witimg-"+p.pair_idx); if(im&&im.src!==p.panel) im.src=p.panel;
     const cp=$("witcap-"+p.pair_idx);
-    if(cp) cp.innerHTML="pair "+p.pair_idx+" · realized d_seg through R <b>"+sig(p.our_dseg,5)+"</b>";
+    if(cp) cp.innerHTML="pair "+p.pair_idx+" · realized d_seg through R <b>"+sig(p.our_dseg,5)+"</b>"+
+      (p.mode?" · <b>"+escHtml(p.mode)+"</b>":"");
   });
   Array.from(host.querySelectorAll(".witfig")).forEach(f=>{if(!present.has(f.id))f.remove();});
 }
@@ -1966,7 +2039,7 @@ function pulse(){const p=$("pill");if(!p||reduceMotion)return;
 function applySnapshot(m){TRAJ=m.trajectory||[];LIVE=m.liveness||{};META=m.meta||{};PROJ=m.projection||{};
   if(m.witness)WITNESS=m.witness;
   render();renderWitness();
-  if(m.flow)_pushFlow(m.flow);}
+  if(m.flow_ready)_onFlowReady(m.flow_ready);}
 function applyUpdate(m){
   const np=m.new_points||[];
   let gotNew=false, beat=false;
@@ -1994,7 +2067,7 @@ function connectWS(){
   ws.onmessage=ev=>{try{const m=JSON.parse(ev.data);
     if(m.type==="snapshot")applySnapshot(m);
     else if(m.type==="witness"){WITNESS=m.witness||{};renderWitness();}
-    else if(m.type==="flow"){_pushFlow(m.flow||{});}
+    else if(m.type==="flow_ready"){_onFlowReady(m.flow_ready||{});}
     else applyUpdate(m);}catch(e){}};
   ws.onclose=()=>{wsOpen=false;setWsPill(false);wsTries++;startPoll();
     setTimeout(connectWS,Math.min(15000,1000*Math.pow(1.6,Math.min(wsTries,8))));};
@@ -2093,19 +2166,21 @@ def main() -> None:
     ap.add_argument("--auto-base-glob", default=cfg.auto_base_glob)
     ap.add_argument("--witness", action=argparse.BooleanOptionalAction, default=cfg.witness_enable,
                     help="Tab-2 WITNESS live panels (default ON; --no-witness to disable the render)")
-    ap.add_argument("--witness-gt-cache", default=cfg.witness_gt_cache)
-    ap.add_argument("--witness-pairs", default=cfg.witness_pairs,
-                    help="comma-separated GT-cache pair indices to render (default 0,2,4)")
-    ap.add_argument("--witness-ema-name", default=cfg.witness_ema_name)
+    ap.add_argument("--witness-gt-cache", default=cfg.witness_gt_cache,
+                    help="GT cache for the 600-pass (needs all 600 pairs: gt_n600.npz)")
+    ap.add_argument("--witness-ema-name", default=cfg.witness_ema_name,
+                    help="fallback EMA npz if the BEST checkpoint is absent")
     ap.add_argument("--witness-min-free-gib", type=float, default=cfg.witness_min_free_gib)
-    ap.add_argument("--witness-min-interval-s", type=float, default=cfg.witness_min_interval_s)
     ap.add_argument("--witness-dpi", type=int, default=cfg.witness_dpi)
     ap.add_argument("--flow", action=argparse.BooleanOptionalAction, default=cfg.flow_enable,
-                    help="Tab-3 FLOW WebGPU field export (default ON; --no-flow to disable)")
-    ap.add_argument("--flow-downsample", type=int, default=cfg.flow_downsample,
-                    help="downsample factor for the FLOW fields (default 2 -> 192x256)")
-    ap.add_argument("--flow-history", type=int, default=cfg.flow_history,
-                    help="rolling checkpoints kept for the FLOW epoch scrubber (default 12)")
+                    help="Tab-3 FLOW n600 video + Tab-2 hardest pairs (default ON; --no-flow to disable)")
+    ap.add_argument("--flow-best-ema-name", default=cfg.flow_best_ema_name,
+                    help="the checkpoint the 600-pass renders (default levelset_witness_ema_BEST.npz)")
+    ap.add_argument("--flow-seq-downsample", type=int, default=cfg.flow_seq_downsample,
+                    help="field downsample for the video (default 4 -> 96x128)")
+    ap.add_argument("--flow-seq-hard-k", type=int, default=cfg.flow_seq_hard_k,
+                    help="hardest/most-diverse Tab-2 pairs to select (default 6)")
+    ap.add_argument("--flow-seq-min-interval-s", type=float, default=cfg.flow_seq_min_interval_s)
     ap.add_argument("--reuse-port", action=argparse.BooleanOptionalAction, default=True,
                     help="SO_REUSEPORT (default ON) so a NEW instance can bind :port alongside the OLD "
                          "one -> zero-downtime hot reload (tools/dashboard_reload.py) that never drops the "
@@ -2118,11 +2193,11 @@ def main() -> None:
                  training_sig=a.training_sig,
                  auto_latest=a.auto_latest, auto_base_glob=a.auto_base_glob,
                  witness_enable=a.witness, witness_gt_cache=a.witness_gt_cache,
-                 witness_pairs=a.witness_pairs, witness_ema_name=a.witness_ema_name,
-                 witness_min_free_gib=a.witness_min_free_gib,
-                 witness_min_interval_s=a.witness_min_interval_s, witness_dpi=a.witness_dpi,
-                 flow_enable=a.flow, flow_downsample=a.flow_downsample,
-                 flow_history=a.flow_history)
+                 witness_ema_name=a.witness_ema_name,
+                 witness_min_free_gib=a.witness_min_free_gib, witness_dpi=a.witness_dpi,
+                 flow_enable=a.flow, flow_best_ema_name=a.flow_best_ema_name,
+                 flow_seq_downsample=a.flow_seq_downsample, flow_seq_hard_k=a.flow_seq_hard_k,
+                 flow_seq_min_interval_s=a.flow_seq_min_interval_s)
     application = create_app(cfg)
     # access_log=False so the ?k=<access key> never lands in a log line.
     # SO_REUSEPORT zero-downtime hot reload: uvicorn 0.44's run()/Config has no reuse_port kwarg, so we
