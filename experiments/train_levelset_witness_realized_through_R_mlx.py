@@ -69,9 +69,12 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     implied_score_from_verdict,
     load_gt_from_cache,
     make_loss_fn,
+    maybe_enable_mx_compile_r,
     precompute_gt,
     quantize_witness_blob,
+    r_isolated_microbench,
     render_through_R_mlx,
+    set_fused_r_kernel,
 )
 
 # ── imports from this campaign's level-set module + the byte-closeable directional basis ──
@@ -2953,8 +2956,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # -> BIT-IDENTICAL training whether on or off.
     _mem_probe_on = os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False")
     _mem_probe_epochs = int(os.environ.get("TAC_MEM_PROBE_EPOCHS", "3"))
+    # ── compute-facet #252 activation (DEFAULT-OFF => byte-identical to the pre-#252 path) ──
+    _profile_timing = bool(getattr(args, "profile_timing", False))
+    set_fused_r_kernel(bool(getattr(args, "fused_r_kernel", False)))
     with temporary_mlx_device(args.mlx_device):
+        if getattr(args, "fused_r_kernel", False):
+            if args.mlx_device != "gpu":
+                raise ValueError("--fused-r-kernel requires --mlx-device gpu (the fused R is a Metal kernel).")
+            from tac.local_acceleration.metal_fused_r_operator import assert_metal_matches_cpu_oracle
+            _fr_gate = assert_metal_matches_cpu_oracle()  # per-chip parity: FAILS CLOSED if not bit-identical
+            print(json.dumps({"stage": "fused_r_kernel", "active": True,
+                              "forward_bit_identical": bool(_fr_gate["forward_bit_identical"]),
+                              "grad_bit_identical": bool(_fr_gate["grad_bit_identical"]),
+                              "note": "fused Metal R roundtrip active; per-chip parity gate PASSED; buys "
+                              "SPEED not score (verdict stays numpy/torch-CPU authority); pointer 0.19110 UNMOVED"}),
+                  flush=True)
+        _mxc = maybe_enable_mx_compile_r(bool(getattr(args, "mx_compile", False)), render_hw=(render_h, render_w))
+        if _mxc:
+            print(json.dumps({"stage": "mx_compile_r", "active": True, **_mxc,
+                              "note": "mx.compile'd R installed (startup bit-identity gate PASSED)"}), flush=True)
         for ep in range(start_epoch, args.epochs + 1):
+            _prof = {"ep_start": time.perf_counter(), "step_s": 0.0, "verdict_s": 0.0} if _profile_timing else None
             if _mem_probe_on and args.mlx_device == "gpu":
                 try:
                     mx.reset_peak_memory()  # per-epoch high-water so mem_probe peak is this-epoch scoped
@@ -3187,6 +3209,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 extra = hardness_rng.choice(P, size=n_extra, replace=True, p=hardness_prob)
                 order = np.random.permutation(np.concatenate([order, extra]))
             ep_loss = 0.0
+            if _prof is not None:
+                _prof["_step0"] = time.perf_counter()  # #252 profile: fwd+bwd+opt+ema step start
             for s in range(0, P, args.accum_pairs):
                 chunk = order[s:s + args.accum_pairs]
                 accum = None
@@ -3287,6 +3311,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "mlx_cache_gib": round(_mm["cache"], 2),
                                       "mlx_peak_gib": round(_mm["peak"], 2),
                                       "clear_accum": int(args.mlx_cache_clear_accum)}), flush=True)
+            if _prof is not None:
+                _prof["step_s"] = time.perf_counter() - _prof["_step0"]  # #252 profile: step (fwd+bwd+opt+ema)
             if args.mlx_device == "gpu":
                 mx.clear_cache()
             # #224 (5) SEED SURVIVAL telemetry: mean |seed residual| ON the island support. The
@@ -3302,6 +3328,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "containment_mode": str(args.containment_mode),
                                   "note": "shield keeps seeded islands alive vs bulk-CE wash (advisory)"}),
                       flush=True)
+            if _prof is not None:
+                _prof["_v0"] = time.perf_counter()  # #252 profile: verdict start
             if ep % args.eval_every == 0 or ep == args.epochs:
                 if args.async_verdict:
                     # FEED-em: offload the observational verdict to a background thread so the
@@ -3327,6 +3355,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _project_shadow_film_np({k: np.asarray(vv, np.float32)
                                                  for k, vv in ema.shadow.items()}),
                         float(model.softmax_temp), float(model.hosc_beta))
+            if _prof is not None:
+                _prof["verdict_s"] += time.perf_counter() - _prof["_v0"]  # #252 profile: verdict wall-clock
             # DM1 telemetry (decisive-smoke signals; design memo §6 firewall). At eval cadence, log
             # PR(M) (per-pair FiLM modulation participation ratio), PR(cov(code)) and the Stiefel
             # residual ‖WᵀW−I‖_F so the A/B can SEPARATE "means fixed" (PR held >~3.0) from "end moved"
@@ -3383,6 +3413,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             elif do_periodic:
                 w = _do_checkpoint(ep)
                 print(json.dumps({"stage": "checkpoint", "kind": "intra_stage", **w}), flush=True)
+            # ── #252 per-epoch timing emit (advisory; at eval cadence so no per-epoch spam). The
+            # split is fwd+bwd-step (INR+R+scorer+loss+backward+opt+ema, fused inside value_and_grad)
+            # vs verdict vs overhead (gates/reorient/permutation/LR). R is NOT separable inside the
+            # fused graph, so its share is measured DIRECTLY by an isolated in-situ R micro-bench at the
+            # real render resolution (reference vs fused, fwd + fwd+bwd) -> R_fraction = R_fwdbwd *
+            # frames/epoch / step_s, and the realized whole-run speedup follows by Amdahl. Emitted only
+            # when --profile-timing (default OFF => this whole block is skipped => byte-identical).
+            if _prof is not None and (ep % args.eval_every == 0 or ep == args.epochs):
+                _ep_s = time.perf_counter() - _prof["ep_start"]
+                _frames = int(2 * len(order))  # 2 frames (f0,f1) per pair-visit this epoch
+                _rmb = r_isolated_microbench(render_h=render_h, render_w=render_w, n_frames=2, reps=15)
+                _step_s = float(_prof["step_s"])
+                _rfwdbwd_ms = _rmb.get("ref_fwdbwd_ms_per_frame")
+                _r_share = (
+                    (_rfwdbwd_ms / 1e3 * _frames / _step_s) if (_rfwdbwd_ms and _step_s > 0) else None)
+                print(json.dumps({
+                    "stage": "profile_timing", "epoch": ep,
+                    "t_epoch_s": round(_ep_s, 4),
+                    "t_step_fwd_bwd_opt_ema_s": round(_step_s, 4),
+                    "t_verdict_s": round(float(_prof["verdict_s"]), 4),
+                    "t_overhead_s": round(max(_ep_s - _step_s - float(_prof["verdict_s"]), 0.0), 4),
+                    "frames_per_epoch": _frames,
+                    "R_isolated": _rmb,
+                    "R_fraction_of_step_est": (round(_r_share, 4) if _r_share is not None else None),
+                    "fused_r_active": bool(getattr(args, "fused_r_kernel", False)),
+                    "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl "
+                    "1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED"}),
+                    flush=True)
             last_ep = ep
 
     # FEED-em: JOIN any in-flight async verdict so the final verdict row + history land BEFORE
@@ -3615,6 +3673,22 @@ def main(argv: list[str] | None = None) -> int:
                     "CADENCE may self-throttle under load (at-most-one in-flight). DEFAULT OFF = the "
                     "current synchronous bit-identical behavior.")
     ap.add_argument("--mlx-device", choices=["gpu", "cpu"], default="gpu")
+    # ── compute-facet #252 (MLX + custom Metal). All DEFAULT-OFF + bit-identical when off. ──
+    ap.add_argument("--fused-r-kernel", action=argparse.BooleanOptionalAction, default=False,
+                    help="(#252) swap the pure-MLX R roundtrip for the fused Metal kernel "
+                    "(metal_fused_r_operator; bit-identical fwd to the numpy-fp32 authority, ~1 ULP VJP). "
+                    "A startup per-chip parity gate (assert_metal_matches_cpu_oracle) fails CLOSED if the "
+                    "kernel is not bit-identical on this GPU. NO-FAKE: buys SPEED, never a score. Default OFF.")
+    ap.add_argument("--mx-compile", action=argparse.BooleanOptionalAction, default=False,
+                    help="(#252) install an mx.compile'd reference R, GATED by a startup bit-identity check. "
+                    "MEASURED 2026-07-03: mx.compile reintroduces fp-contraction that flips the uint8-STE "
+                    "d_seg argmax (fwd Δ~4.8e-3, ~1.11x) so this FAILS CLOSED on non-bit-identical hosts. "
+                    "Prefer --fused-r-kernel. Default OFF.")
+    ap.add_argument("--profile-timing", action=argparse.BooleanOptionalAction, default=False,
+                    help="(#252) emit per-epoch wall-clock phase split (fwd+bwd step / opt+ema / verdict / "
+                    "overhead) + an isolated R micro-bench (fwd and fwd+bwd, reference vs fused) so the R "
+                    "fraction -> realized whole-run speedup is MEASURED, not estimated. Advisory; DEFAULT OFF "
+                    "=> zero added work, byte-identical.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--gt-cache", type=str, default=None)
     ap.add_argument("--chroma", action=argparse.BooleanOptionalAction, default=True)

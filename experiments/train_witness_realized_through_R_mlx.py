@@ -77,6 +77,207 @@ RATE_DENOM = 37_545_489.0
 N_CLASSES = 5
 
 
+# ---------------------------------------------------------------------------
+# R-OPERATOR DISPATCH (compute-facet #252; DEFAULT-OFF, bit-identical when off).
+# The contest-exact eval roundtrip R (bicubic-up -> uint8 STE @ camera -> bilinear
+# down to scorer) is the hot per-frame compute inside the loss (runs 2x/pair). By
+# default it is the pure-MLX oracle ``apply_contest_faithful_roundtrip_nhwc`` --
+# EXACTLY the pre-existing call, so a run with the flag OFF is BYTE-IDENTICAL (a
+# running --resume-from is unaffected).
+#
+# ``--fused-r-kernel`` (set via ``set_fused_r_kernel``) swaps in the fused Metal
+# kernel ``metal_fused_r_operator.make_fused_r_roundtrip`` -- a benchmarked drop-in
+# that is BIT-IDENTICAL to the numpy-fp32 authority on the FORWARD (contraction-off
+# kernels) and matches the pure-MLX VJP to ~1 ULP (the same oracle both paths' loss
+# uses). Proven by ``src/tac/tests/test_metal_fused_r_operator.py`` (25 tests, incl.
+# forward bit-identity at real 874x1164->384x512 resolution + fused-vs-non-fused VJP
+# parity). NO-FAKE: this buys SPEED + training-gradient fidelity, NEVER a score --
+# the d_seg/d_pose verdict + byte-closed archive remain the numpy/torch-CPU authority.
+#
+# ``--mx-compile`` (set via ``set_mx_compile_r``) is FAIL-CLOSED-GATED: mx.compile
+# reintroduces fp-contraction (fma) that the STE-round path deliberately avoids,
+# which was MEASURED (2026-07-03) to shift camera pixels by up to 4.8e-3 across the
+# uint8 round boundary -> flips d_seg argmax pixels (a NO-FAKE score risk) for only
+# ~1.11x. So enabling it runs a startup bit-identity gate; if the compiled R is NOT
+# bit-identical to the reference at real resolution it RAISES (never silently drifts
+# d_seg). The fused Metal kernel (contraction-off) is the correct fast path instead.
+_FUSED_R_KERNEL_ENABLED = False
+_MX_COMPILE_R_FN = None  # optional mx.compile'd reference R, installed only after a bit-identity gate.
+_FUSED_R_FN_CACHE: dict = {}
+
+
+def set_fused_r_kernel(enabled: bool) -> None:
+    """Enable/disable the fused Metal R kernel in the render path (default OFF)."""
+
+    global _FUSED_R_KERNEL_ENABLED
+    _FUSED_R_KERNEL_ENABLED = bool(enabled)
+
+
+def fused_r_kernel_enabled() -> bool:
+    return bool(_FUSED_R_KERNEL_ENABLED)
+
+
+def set_mx_compile_r(compiled_fn) -> None:
+    """Install a bit-identity-verified mx.compile'd reference R (or None to clear).
+
+    Only the caller's fail-closed gate (see ``maybe_enable_mx_compile_r``) should set
+    this -- passing a non-verified compiled fn would risk silent d_seg drift.
+    """
+
+    global _MX_COMPILE_R_FN
+    _MX_COMPILE_R_FN = compiled_fn
+
+
+def _reference_R(rgb_nhwc):
+    """Pure-MLX contest-exact R (the pre-existing default; byte-identical path)."""
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_contest_faithful_roundtrip_nhwc
+
+    return apply_contest_faithful_roundtrip_nhwc(rgb_nhwc, output_hw=(SEG_H, SEG_W), ste_round=True)
+
+
+def _apply_R(rgb_nhwc):
+    """R-op dispatch. DEFAULT (no flags) => exactly ``_reference_R`` => byte-identical."""
+
+    if _FUSED_R_KERNEL_ENABLED:
+        from tac.local_acceleration.metal_fused_r_operator import (
+            CAMERA_HW as _FR_CAM,
+            make_fused_r_roundtrip,
+            metal_fused_r_available,
+        )
+
+        if metal_fused_r_available():
+            key = ((int(SEG_H), int(SEG_W)), True)
+            fn = _FUSED_R_FN_CACHE.get(key)
+            if fn is None:
+                fn = make_fused_r_roundtrip(camera_hw=_FR_CAM, output_hw=(SEG_H, SEG_W), ste_round=True)
+                _FUSED_R_FN_CACHE[key] = fn
+            return fn(rgb_nhwc)
+        # non-Metal device: fall through to the reference (fused kernel needs a GPU).
+    if _MX_COMPILE_R_FN is not None:
+        return _MX_COMPILE_R_FN(rgb_nhwc)
+    return _reference_R(rgb_nhwc)
+
+
+def maybe_enable_mx_compile_r(enabled: bool, *, render_hw: tuple[int, int] = (48, 64)) -> dict:
+    """FAIL-CLOSED gate for ``--mx-compile`` on the R op.
+
+    mx.compile fuses mul+add into fma, which reintroduces the fp-contraction that the
+    STE-round path deliberately avoids -- MEASURED (2026-07-03) to shift camera pixels
+    up to ~4.8e-3 across the uint8 round boundary => flip d_seg argmax pixels for only
+    ~1.11x speed. So enabling installs the compiled R ONLY if it is bit-identical to the
+    reference at the given resolution; otherwise it RAISES (never silently drifts d_seg).
+
+    Returns a measured-parity dict (advisory). No-op + empty dict when ``enabled`` is
+    False (byte-identical). Call once at startup from the launch path.
+    """
+
+    if not enabled:
+        return {}
+    import mlx.core as mx
+    import numpy as _np
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_contest_faithful_roundtrip_nhwc
+
+    def _r_ref(z):
+        return apply_contest_faithful_roundtrip_nhwc(z, output_hw=(SEG_H, SEG_W), ste_round=True)
+
+    _r_cmp = mx.compile(_r_ref)
+    rng = _np.random.default_rng(0)
+    x = mx.array((rng.random((2, int(render_hw[0]), int(render_hw[1]), 3)) * 255.0).astype(_np.float32))
+    y_ref = _np.asarray(_r_ref(x))
+    y_cmp = _np.asarray(_r_cmp(x))
+    fwd_max = float(_np.max(_np.abs(y_ref - y_cmp))) if y_ref.size else 0.0
+    cot = mx.array(rng.standard_normal(y_ref.shape).astype(_np.float32))
+    _, (g_ref,) = mx.vjp(_r_ref, (x,), (cot,))
+    _, (g_cmp,) = mx.vjp(_r_cmp, (x,), (cot,))
+    grad_max = float(_np.max(_np.abs(_np.asarray(g_ref) - _np.asarray(g_cmp))))
+    res = {
+        "fwd_max_abs_delta": fwd_max,
+        "grad_max_abs_delta": grad_max,
+        "fwd_bit_identical": bool(fwd_max == 0.0),
+        "render_hw": [int(render_hw[0]), int(render_hw[1])],
+    }
+    if fwd_max != 0.0:
+        raise AssertionError(
+            "--mx-compile refused (fail-closed, NO-FAKE d_seg guard): mx.compile of the R op is NOT "
+            f"bit-identical to the reference (fwd max|Δ|={fwd_max:.3e} at render {tuple(render_hw)}); "
+            "mx.compile reintroduces fp-contraction that flips the uint8-STE argmax knife-edge. Use "
+            "--fused-r-kernel (contraction-off Metal kernel, bit-identical) for the fast R instead."
+        )
+    set_mx_compile_r(_r_cmp)
+    return res
+
+
+def r_isolated_microbench(
+    *, render_h: int, render_w: int, n_frames: int = 2, reps: int = 20, seed: int = 0
+) -> dict:
+    """Isolated in-situ timing of the R op (reference vs fused Metal), fwd and fwd+bwd.
+
+    Times the contest-exact R at the REAL render->camera->scorer resolution on a throwaway
+    tensor (fixed-seed; does NOT touch training RNG/model/opt/ema). Returns per-frame ms for
+    the pure-MLX reference and (if a Metal device is available) the fused kernel, plus the
+    fused speedup. This is what lets the profile compute R's FRACTION of the step -> the
+    realized whole-run speedup, MEASURED not estimated (Amdahl: whole = 1/((1-f)+f/su_R)).
+    """
+
+    import time as _time
+
+    import mlx.core as mx
+    import numpy as _np
+
+    rng = _np.random.default_rng(int(seed))
+    x = mx.array((rng.random((int(n_frames), int(render_h), int(render_w), 3)) * 255.0).astype(_np.float32))
+    cot_shape = (int(n_frames), int(SEG_H), int(SEG_W), 3)
+    cot = mx.array(rng.standard_normal(cot_shape).astype(_np.float32))
+
+    def _time_fwd(fn) -> float:
+        for _ in range(3):
+            mx.eval(fn(x))
+        t0 = _time.perf_counter()
+        for _ in range(int(reps)):
+            mx.eval(fn(x))
+        return (_time.perf_counter() - t0) / int(reps) / int(n_frames) * 1e3  # ms per frame
+
+    def _time_fwdbwd(fn) -> float:
+        for _ in range(3):
+            _, (g,) = mx.vjp(fn, (x,), (cot,))
+            mx.eval(g)
+        t0 = _time.perf_counter()
+        for _ in range(int(reps)):
+            _, (g,) = mx.vjp(fn, (x,), (cot,))
+            mx.eval(g)
+        return (_time.perf_counter() - t0) / int(reps) / int(n_frames) * 1e3
+
+    ref_fwd = _time_fwd(_reference_R)
+    ref_fwdbwd = _time_fwdbwd(_reference_R)
+    out: dict = {
+        "render_hw": [int(render_h), int(render_w)],
+        "n_frames": int(n_frames),
+        "reps": int(reps),
+        "ref_fwd_ms_per_frame": round(ref_fwd, 4),
+        "ref_fwdbwd_ms_per_frame": round(ref_fwdbwd, 4),
+    }
+    try:
+        from tac.local_acceleration.metal_fused_r_operator import (
+            CAMERA_HW as _FR_CAM,
+            make_fused_r_roundtrip,
+            metal_fused_r_available,
+        )
+
+        if metal_fused_r_available():
+            _fused = make_fused_r_roundtrip(camera_hw=_FR_CAM, output_hw=(SEG_H, SEG_W), ste_round=True)
+            f_fwd = _time_fwd(_fused)
+            f_fwdbwd = _time_fwdbwd(_fused)
+            out["fused_fwd_ms_per_frame"] = round(f_fwd, 4)
+            out["fused_fwdbwd_ms_per_frame"] = round(f_fwdbwd, 4)
+            out["fused_fwd_speedup"] = round(ref_fwd / f_fwd, 3) if f_fwd > 0 else None
+            out["fused_fwdbwd_speedup"] = round(ref_fwdbwd / f_fwdbwd, 3) if f_fwdbwd > 0 else None
+    except Exception as _e:  # pragma: no cover - advisory micro-bench, never fatal
+        out["fused_error"] = str(_e)
+    return out
+
+
 def _load_frontier() -> float:
     """Read the canonical contest-CPU frontier from the pointer (NEVER a hardcoded literal,
     per CLAUDE.md "Frontier scores are pointer-only"). Falls back to the last-known 0.19110
@@ -343,8 +544,6 @@ def build_witness_module(
 def render_through_R_mlx(witness, coord_feats, code_idx: int, render_h: int, render_w: int, compose_fn=None):
     import mlx.core as mx
 
-    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_contest_faithful_roundtrip_nhwc
-
     rgb_flat = witness(coord_feats, code_idx)  # (h*w, 3)
     rgb = mx.reshape(rgb_flat, (1, render_h, render_w, 3))  # NHWC
     # RESIDUAL COMPOSE HOOK (v2 hybrid; ADDITIVE, default None => BYTE-IDENTICAL). When given,
@@ -357,7 +556,9 @@ def render_through_R_mlx(witness, coord_feats, code_idx: int, render_h: int, ren
     # CONTEST-EXACT R (DAG FEED-bf bug #1): render-grid -> camera (bicubic) -> uint8 @ CAMERA
     # -> bilinear down to scorer (NO trailing uint8). Matches upstream/evaluate.py +
     # modules.py:108-113 (recon is uint8 at 874x1164, scorer.preprocess_input bilinears to 384).
-    r = apply_contest_faithful_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
+    # R-op dispatch (#252): DEFAULT => the pure-MLX oracle (byte-identical); ``--fused-r-kernel``
+    # swaps the bit-faithful fused Metal kernel; ``--mx-compile`` swaps a bit-identity-gated compile.
+    r = _apply_R(rgb)
     return r  # (1, SEG_H, SEG_W, 3)
 
 
@@ -376,14 +577,13 @@ def render_batch_through_R_mlx(witness, coord_feats, code_indices, render_h: int
     """
     import mlx.core as mx
 
-    from tac.local_acceleration.pr95_hnerv_mlx_training import apply_contest_faithful_roundtrip_nhwc
-
     rgb_flat = witness.call_batch(coord_feats, code_indices)  # (M, P_px, 3)
     rgb = mx.reshape(rgb_flat, (-1, render_h, render_w, 3))  # (M, h, w, 3) NHWC
     if compose_fn is not None:
         rgb = compose_fn(rgb, code_indices)
     # CONTEST-EXACT R (bug #1): uint8 @ CAMERA res, then bilinear to scorer (no trailing uint8).
-    r = apply_contest_faithful_roundtrip_nhwc(rgb, output_hw=(SEG_H, SEG_W), ste_round=True)
+    # R-op dispatch (#252): DEFAULT => pure-MLX oracle (byte-identical); flags swap fused/compiled R.
+    r = _apply_R(rgb)
     return r  # (M, SEG_H, SEG_W, 3)
 
 
