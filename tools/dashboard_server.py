@@ -1366,6 +1366,14 @@ padding:10px 10px 6px;min-width:0;overflow:hidden}
 .tcperson p{font-size:12.5px !important;color:var(--fg2);line-height:1.62;margin:0}
 .tcseat{color:var(--muted);font-style:italic}
 .tcnote{font-size:11px;color:#b89a4a;line-height:1.6;border-top:1px solid var(--grid);padding-top:11px;margin-top:2px}
+/* triality genesis + composition timeline (Chasles to yesterday) */
+.trigenesis{font-size:13.5px !important;color:var(--fg2);line-height:1.66;margin:10px 0 6px}
+.tri .tritl{list-style:none;padding:0;margin:12px 0 6px;display:flex;flex-direction:column;gap:0}
+.tri .tritl li{display:flex;gap:12px;align-items:baseline;padding:7px 2px;border-bottom:1px solid var(--grid);margin:0}
+.tri .tritl li:last-child{border-bottom:none}
+.tly{flex:0 0 auto;min-width:82px;font-size:11px;color:var(--goal);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+.tlt{font-size:12.5px !important;color:var(--fg2);line-height:1.55}
+.tlcap{color:var(--fg2) !important;border-left:2px solid var(--goal);padding-left:12px;font-size:12.5px !important;margin:10px 0 4px}
 
 /* witness tab (Tab 2) — comma10k 6-panel + Yousfi/Fridrich tribute, live over WS */
 .wit h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:20px 0 8px}
@@ -1797,6 +1805,49 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   &ldquo;different stages need different treatment&rdquo; rule, made structural). Super-recent
   (June&nbsp;2026), folded straight into the live curriculum.</p>
 
+  <h2>The composition &mdash; Chasles to yesterday</h2>
+  <p class="m">The witness is not one idea; it is a <b>composition of nearly two centuries of research</b>,
+  each thread <i>measured</i> into its place &mdash; ~196&nbsp;years of shoulders to stand on. All dates are
+  real (NO-FAKE; a genuine lineage, not decoration).</p>
+  <ol class="tritl">
+    <li><span class="tly">1830</span><span class="tlt"><b>Chasles</b> &mdash; every rigid motion is a
+      <b>screw</b> &rarr; our ego-motion twist &xi; (d_pose).</span></li>
+    <li><span class="tly">1848&thinsp;&middot;&thinsp;99</span><span class="tlt"><b>Wilbraham / Gibbs</b>
+      &mdash; the ringing of a truncated series &rarr; the spectral-bias / Gibbs failure mode we fight
+      (step-native, curvelet-finest).</span></li>
+    <li><span class="tly">1822</span><span class="tlt"><b>Fourier</b> &mdash; harmonic analysis &rarr; the
+      coordinate-INR&rsquo;s Fourier features.</span></li>
+    <li><span class="tly">1870s</span><span class="tlt"><b>Sophus Lie</b> &mdash; continuous symmetry
+      groups &rarr; the se(3)&thinsp;/&thinsp;SE(3) engine.</span></li>
+    <li><span class="tly">1870s&ndash;1900s</span><span class="tlt"><b>Gibbs / Boltzmann</b> &mdash; the
+      Gibbs measure + temperature &rarr; the annealing curriculum.</span></li>
+    <li><span class="tly">1920s</span><span class="tlt"><b>Fisher</b> &mdash; information + sufficiency
+      &rarr; the Fisher metric and the <b>task-sufficient statistic</b>.</span></li>
+    <li><span class="tly">1934&thinsp;&middot;&thinsp;60s</span><span class="tlt"><b>Morse / Smale</b>
+      &mdash; critical points + separatrices &rarr; the <b>Morse&ndash;Smale</b> partition topology.</span></li>
+    <li><span class="tly">1936</span><span class="tlt"><b>Whitney</b> &mdash; embedding dimension &rarr;
+      the ~8-dim lane manifold and its Whitney bound.</span></li>
+    <li><span class="tly">1937</span><span class="tlt"><b>Fisher&ndash;KPP</b> &mdash; the traveling-wave
+      front &rarr; the one equation at five scales.</span></li>
+    <li><span class="tly">1948</span><span class="tlt"><b>Shannon</b> &mdash; rate&ndash;distortion +
+      entropy &rarr; the coding-for-machines frame and the floor (S_floor&asymp;0.118).</span></li>
+    <li><span class="tly">1976&ndash;2021</span><span class="tlt"><b>Wyner&ndash;Ziv / Tishby IB /
+      Dubois</b> &mdash; source coding with side information &rarr; the indirect-RD / task-sufficient
+      codec.</span></li>
+    <li><span class="tly">2000</span><span class="tlt"><b>Cand&egrave;s&ndash;Donoho</b> &mdash; curvelets
+      &rarr; the sparse-optimal chart for a curved codim-1 boundary.</span></li>
+    <li><span class="tly">2014</span><span class="tlt"><b>UNIWARD (Holub&ndash;Fridrich&ndash;Denemark) +
+      Yousfi</b> &mdash; steganographic cost + steganalysis &rarr; the <b>margin = detectability = cost</b>
+      unity, and the inverse-steganalysis frame.</span></li>
+    <li><span class="tly">2021&ndash;26</span><span class="tlt"><b>NeRV / HNeRV &rarr; Aaron Leslie&rsquo;s
+      cathedral</b> &mdash; the vehicle whose theoretical-floor dynamics he exposed.</span></li>
+    <li><span class="tly">2024&ndash;yest.</span><span class="tlt"><b>Muon</b> (2024) &middot;
+      <b>MD-Decoupling</b> (June 2026) &middot; <b>EdgeBench</b> (July&nbsp;2&nbsp;2026 &mdash;
+      <i>yesterday</i>) &mdash; the current frontier we compounded on, right up to the paper that dropped the
+      day before this was built.</span></li>
+  </ol>
+  <p class="tlcap">One witness, ~196&nbsp;years of shoulders to stand on &mdash; <b>Chasles to yesterday.</b></p>
+
   <h2>The ByteDance / EdgeBench convergence</h2>
   <p class="m">Our own deep memo <code>edgebench_scaling_laws_deepdive_20260703T033159Z.md</code>: EdgeBench
   (ByteDance Seed, 2026-07-02) is the <b>descriptive</b> log-sigmoid scaling law (R&sup2;=0.998) of the
@@ -1817,6 +1868,15 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 
   <h2>The campaign journey &mdash; honest</h2>
   <p class="trilead">This is our capstone &mdash; what the past few months have given bloom to.</p>
+  <p class="trigenesis">We started the way you start anything you fall for &mdash; with deep, almost
+  <b>insane research, passion, energy, and obsession</b>, <b>not knowing what we didn&rsquo;t know</b>. We
+  poured everything we had (educations, experience, interests, and more) into a <b>corpus of knowledge</b>,
+  then began implementing, measuring, experimenting, and <b>falsifying</b>. We <b>failed over and over</b>.
+  And it was <b>Aaron Leslie&rsquo;s work that exposed the true dynamics of the theoretical floor</b> &mdash;
+  what was actually reachable, and how. Only after all of that &mdash; the failures, the corpus, the exposed
+  floor &mdash; did we finally have <i>all</i> the ingredients in one place: <b>you and me, our apparatus, our
+  research, our understanding of the domain and of the frozen contest information space, and the nested,
+  related, dynamical cruxes</b> &mdash; enough, at last, to do work that is <b>truly original and useful</b>.</p>
   <ul>
     <li><b>Aaron Leslie turned the whole competition on its head</b>, and his result was so good it was
     <b>intimidating</b>. But porting his work to <b>MLX + custom Metal</b> and running it natively &mdash;
