@@ -139,6 +139,18 @@ class Config:
     oracle_rss_mb: int = 2600            # the subprocess's OWN safe_run RSS cap (isolated group)
     oracle_timeout_s: int = 420          # the subprocess's OWN safe_run wall-clock cap (7 min)
     oracle_dpi: int = 80
+    # WHY/HOW tab (Tab 4): the deep-math museum. PASS 1 = the tab shell + §I.1 "the live field"
+    # + §I.4 "the Unity morph". STATIC single-frame FIELD BUNDLE (raw co-registered scalar fields:
+    # ρ_seg margin / real S-UNIWARD / separatrix sensitivity) for the client-side WebGPU plates —
+    # depends only on the GT cache, so it renders ONCE via a DETACHED governed safe_run subprocess
+    # (own process group + own RSS cap; ~270 MB peak, ~1 s; imports torch ONLY for the one-frame
+    # S-UNIWARD wavelet cost — NO SegNet forward, NO witness checkpoint) and is cached to disk.
+    whyhow_enable: bool = True
+    whyhow_gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"  # 6 pairs, ~48 MB
+    whyhow_frame: str = ""               # "" = richest-separatrix auto-pick; else a fixed index
+    whyhow_cache_dir: str = ".omx/tmp/dash_whyhow"  # sanctioned repo-local ephemeral scratch
+    whyhow_rss_mb: int = 3200            # the subprocess's OWN safe_run RSS cap (isolated group)
+    whyhow_timeout_s: int = 420          # the subprocess's OWN safe_run wall-clock cap (7 min)
 
     def resolved_glob(self) -> str:
         if self.log_glob:               # explicit --log-glob is a hard override
@@ -190,6 +202,12 @@ def config_from_env() -> Config:
         oracle_rss_mb=int(e("DASH_ORACLE_RSS_MB", "2600")),
         oracle_timeout_s=int(e("DASH_ORACLE_TIMEOUT_S", "420")),
         oracle_dpi=int(e("DASH_ORACLE_DPI", "80")),
+        whyhow_enable=e("DASH_WHYHOW_ENABLE", "1") not in ("0", "false", "False"),
+        whyhow_gt_cache=e("DASH_WHYHOW_GT_CACHE", "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"),
+        whyhow_frame=e("DASH_WHYHOW_FRAME", ""),
+        whyhow_cache_dir=e("DASH_WHYHOW_CACHE_DIR", ".omx/tmp/dash_whyhow"),
+        whyhow_rss_mb=int(e("DASH_WHYHOW_RSS_MB", "3200")),
+        whyhow_timeout_s=int(e("DASH_WHYHOW_TIMEOUT_S", "420")),
     )
 
 
@@ -522,6 +540,16 @@ class LiveState:
         self._oracle_stem: Path | None = None
         self._oracle_last_attempt: float = 0.0
         self._oracle_err: str = ""
+        # WHY/HOW (Tab 4): STATIC single-frame deep-math FIELD BUNDLE — depends only on the GT
+        # cache. Rendered ONCE by a DETACHED governed safe_run subprocess
+        # (tools/whyhow_deepmath_panels.py) and cached to disk; served on demand via /api/whyhow.
+        self._whyhow_bytes: bytes | None = None        # the served whyhow.json payload
+        self._whyhow_meta: dict = {}                   # {built_at_utc,frame_idx,render_secs}
+        self._whyhow_running: bool = False
+        self._whyhow_proc = None                       # subprocess.Popen | None
+        self._whyhow_stem: Path | None = None
+        self._whyhow_last_attempt: float = 0.0
+        self._whyhow_err: str = ""
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
         # cadence sub-state (per-log). DATA-DERIVED ONLY — NO hardcoded cadence prior /
@@ -704,6 +732,14 @@ class LiveState:
             except Exception as exc:
                 self._oracle_err = f"oracle orchestration error: {exc}"
                 print(json.dumps({"stage": "dashboard_server", "oracle_error": str(exc)}), flush=True)
+
+        # WHY/HOW (Tab 4): render the STATIC deep-math field bundle ONCE (detached governed subprocess).
+        if with_witness and cfg.whyhow_enable and self._whyhow_bytes is None:
+            try:
+                self._maybe_whyhow(now)
+            except Exception as exc:
+                self._whyhow_err = f"whyhow orchestration error: {exc}"
+                print(json.dumps({"stage": "dashboard_server", "whyhow_error": str(exc)}), flush=True)
         return new_points
 
     # ---- detached governed ORACLE render (STATIC physical-prior atlas; renders ONCE) ----
@@ -807,6 +843,107 @@ class LiveState:
         status = ("rendering" if self._oracle_running
                   else ("error" if self._oracle_err else "idle"))
         return {"ok": False, "status": status, "err": self._oracle_err or None}
+
+    # ---- detached governed WHY/HOW deep-math field bundle (STATIC; renders ONCE) ----
+    def _whyhow_stem_for(self) -> Path:
+        cache = Path(self.cfg.whyhow_gt_cache)
+        try:
+            mtime = int(cache.stat().st_mtime)
+        except OSError:
+            mtime = 0
+        frame_key = self.cfg.whyhow_frame.strip() or "auto"
+        return Path(self.cfg.whyhow_cache_dir) / f"whyhow_{cache.stem}_{mtime}_f{frame_key}"
+
+    def _maybe_whyhow(self, now: float) -> None:
+        """Idempotent per tick: ingest a cached/finished WHY/HOW payload, poll a running
+        subprocess, or spawn ONE (static render; memory-gated, throttled)."""
+        cfg = self.cfg
+        stem = self._whyhow_stem_for()
+        done = stem.with_suffix(".done")
+        out = stem.with_suffix(".json")
+        if done.exists() and out.exists():
+            self._ingest_whyhow(stem)
+            return
+        if self._whyhow_running:
+            rc = self._whyhow_proc.poll() if self._whyhow_proc is not None else 0
+            if rc is None:
+                return
+            self._whyhow_running = False
+            if (self._whyhow_stem and self._whyhow_stem.with_suffix(".done").exists()):
+                self._ingest_whyhow(self._whyhow_stem)
+            else:
+                self._whyhow_err = f"whyhow subprocess exited rc={rc} without output"
+                print(json.dumps({"stage": "dashboard_server", "whyhow_no_output": rc}), flush=True)
+            return
+        if now - self._whyhow_last_attempt < 60.0:
+            return
+        free = self._free_gib()
+        if free is not None and free < cfg.witness_min_free_gib:
+            print(json.dumps({"stage": "dashboard_server", "whyhow_skip": "low_free_ram",
+                              "free_gib": round(free, 1)}), flush=True)
+            return
+        self._whyhow_last_attempt = now
+        self._spawn_whyhow(stem)
+
+    def _spawn_whyhow(self, stem: Path) -> None:
+        """Launch tools/whyhow_deepmath_panels.py DETACHED (own session/process group) under its
+        OWN tools/safe_run.py cap. ~270 MB peak (torch only for the one-frame S-UNIWARD; NO SegNet
+        forward, NO witness checkpoint) — writes <stem>.json/.done."""
+        import subprocess
+        cfg = self.cfg
+        tools = Path(__file__).resolve().parent
+        repo = tools.parent
+        stem.parent.mkdir(parents=True, exist_ok=True)
+        inner = [
+            sys.executable, str(tools / "whyhow_deepmath_panels.py"),
+            "--gt-cache", cfg.whyhow_gt_cache,
+            "--out", str(stem.with_suffix(".json")), "--done", str(stem.with_suffix(".done")),
+        ]
+        if cfg.whyhow_frame.strip():
+            inner += ["--frame", cfg.whyhow_frame.strip()]
+        cmd = [
+            sys.executable, str(tools / "safe_run.py"),
+            "--rss-mb", str(cfg.whyhow_rss_mb), "--timeout", str(cfg.whyhow_timeout_s),
+            "--label", "whyhow_fields", "--", *inner,
+        ]
+        log_path = stem.with_suffix(".log")
+        try:
+            logf = open(log_path, "ab")
+            self._whyhow_proc = subprocess.Popen(
+                cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
+                start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
+            self._whyhow_running = True
+            self._whyhow_stem = stem
+            self._whyhow_err = ""
+            print(json.dumps({"stage": "dashboard_server", "whyhow_spawn": True,
+                              "pid": self._whyhow_proc.pid, "stem": str(stem)}), flush=True)
+        except Exception as exc:
+            self._whyhow_running = False
+            self._whyhow_err = f"whyhow spawn failed: {exc}"
+            print(json.dumps({"stage": "dashboard_server", "whyhow_spawn_error": str(exc)}), flush=True)
+
+    def _ingest_whyhow(self, stem: Path) -> None:
+        """Load a finished WHY/HOW payload; hold its bytes for /api/whyhow (served once, static)."""
+        try:
+            self._whyhow_bytes = stem.with_suffix(".json").read_bytes()
+            dj = json.loads(stem.with_suffix(".done").read_text())
+            self._whyhow_meta = {"built_at_utc": dj.get("built_at_utc"),
+                                 "frame_idx": dj.get("frame_idx"),
+                                 "render_secs": dj.get("render_secs")}
+            self._whyhow_err = ""
+            print(json.dumps({"stage": "dashboard_server", "whyhow_ingested": True,
+                              "bytes": len(self._whyhow_bytes),
+                              "frame_idx": dj.get("frame_idx")}), flush=True)
+        except Exception as exc:
+            self._whyhow_err = f"whyhow load error: {exc}"
+
+    def _whyhow_ready_public(self) -> dict:
+        """Lightweight WHY/HOW readiness (the client fetches /api/whyhow on ok)."""
+        if self._whyhow_bytes is not None and self._whyhow_meta:
+            return {"ok": True, **self._whyhow_meta}
+        status = ("rendering" if self._whyhow_running
+                  else ("error" if self._whyhow_err else "idle"))
+        return {"ok": False, "status": status, "err": self._whyhow_err or None}
 
     # ---- detached governed 600-pass: WITNESS panels + FLOW n600 video sequence ----
     def _free_gib(self) -> float | None:
@@ -1140,6 +1277,18 @@ def create_app(cfg: Config) -> Starlette:
                             headers={"Cache-Control": "no-store"})
         return JSONResponse(state._oracle_ready_public(), status_code=202)
 
+    async def api_whyhow(request):
+        # The Tab-4 WHY/HOW deep-math field bundle (fetched ONCE; static — depends only on the GT
+        # cache). Served as pre-built bytes when ready, else a 202 readiness ping.
+        qk, ck = _req_keys(request)
+        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+            return JSONResponse({"error": "access key required"}, status_code=401)
+        if state._whyhow_bytes is not None:
+            from starlette.responses import Response
+            return Response(state._whyhow_bytes, media_type="application/json",
+                            headers={"Cache-Control": "no-store"})
+        return JSONResponse(state._whyhow_ready_public(), status_code=202)
+
     async def api_triality(request):
         # The Tab-6 TRIALITY payload — DATA-DRIVEN, self-updating from the LIVE artifacts
         # (DAG FEEDs + witness_dsl + canonical_equations registry). Computed off-loop (cached).
@@ -1186,6 +1335,7 @@ def create_app(cfg: Config) -> Starlette:
         Route("/api/state", api_state),
         Route("/api/flow_sequence", api_flow_sequence),
         Route("/api/oracle", api_oracle),
+        Route("/api/whyhow", api_whyhow),
         Route("/api/triality", api_triality),
         Route("/healthz", healthz),
         WebSocketRoute("/ws", ws_endpoint),
@@ -1231,6 +1381,21 @@ def _flow_client_js() -> str:
                 "if(b){b.className='flowbadge off';b.textContent='unavailable';}};")
 
 
+def _whyhow_client_js() -> str:
+    """Read the WHY/HOW (Tab 4) deep-math museum WebGPU client asset for INLINE injection (CSP-strict:
+    self-contained, no external <script src>). Kept in a sibling file for craft + readability.
+    Missing -> a tiny honest stub so the rest of the page is unaffected."""
+    try:
+        js = (Path(__file__).with_name("dashboard_whyhow_client.js")).read_text(encoding="utf-8")
+        if "</script>" in js:  # would break the inline injection; refuse rather than corrupt the page
+            raise ValueError("whyhow client asset contains </script>")
+        return js
+    except Exception as exc:
+        return ("window.__whyhowActivate=function(){var m=document.getElementById('whystatus');"
+                "if(m){m.textContent='WHY/HOW client asset unavailable: "
+                + json.dumps(str(exc))[1:-1] + "';}};")
+
+
 def _page_html(cfg: Config) -> str:
     boot = json.dumps({
         "tau": cfg.tau, "l7": cfg.l7,
@@ -1239,7 +1404,8 @@ def _page_html(cfg: Config) -> str:
     })
     return (_PAGE_TEMPLATE
             .replace("__BOOT__", boot)
-            .replace("__FLOW_JS__", _flow_client_js()))
+            .replace("__FLOW_JS__", _flow_client_js())
+            .replace("__WHYHOW_JS__", _whyhow_client_js()))
 
 
 _PAGE_TEMPLATE = r"""<!doctype html>
@@ -1362,13 +1528,81 @@ padding:10px 10px 6px;min-width:0;overflow:hidden}
 .wch{font-size:10px;color:var(--acc);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
 .wcnote{font-size:10.5px;color:var(--faint2);margin-top:10px;line-height:1.55}
 
-/* WHY / HOW tab (Tab 4) — deep-math museum stub */
-.why h2{font-size:clamp(14px,3.6vw,17px);color:var(--acc);letter-spacing:.4px;margin:16px 0 6px}
-.why p,.why li{font-size:13.5px;color:var(--fg2);line-height:1.6}.why b{color:var(--fg)}
+/* WHY / HOW tab (Tab 4) — the deep-math museum (PASS 1: shell + I.1 field + I.4 unity) */
+.why h2{font-size:clamp(14px,3.6vw,17px);color:var(--fg);letter-spacing:.3px;margin:18px 0 6px;font-weight:700}
+.why p,.why li{font-size:13.5px;color:var(--fg2);line-height:1.62}.why b{color:var(--fg)}
 .why .m{color:var(--muted);font-size:12.5px}
-.whywrap{background:var(--panel);border:1px solid var(--grid);border-radius:14px;padding:20px 22px;margin-top:12px}
-.whycoming{font-size:12px;color:var(--goal);letter-spacing:1.2px;text-transform:uppercase;font-weight:700;margin:0 0 10px}
-.why ul{padding-left:20px}.why li{margin-bottom:8px}
+.why ul{padding-left:20px}.why li{margin-bottom:7px}
+/* the one idea + movement intros */
+.whyhero{background:linear-gradient(180deg,#171b22,#14171d);border:1px solid var(--grid);
+border-radius:16px;padding:20px 22px;margin:6px 0 4px}
+.whyhero .idea{font-size:clamp(14px,3.4vw,17px);color:var(--fg);line-height:1.6;font-weight:600;margin:0}
+.whyhero .idea b{color:var(--acc)}
+.whyhero .sub{font-size:12px;color:var(--muted);margin:11px 0 0;line-height:1.55}
+/* movement rail */
+.mvrail{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
+.mvchip{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:6px 13px;
+border-radius:999px;border:1px solid var(--grid);color:var(--muted);cursor:pointer;user-select:none;background:var(--panel2)}
+.mvchip.on.why-i{color:#bfe0ff;border-color:#2f4d6b;background:#122234}
+.mvchip.on.why-ii{color:#ffd9a8;border-color:#4a3a1f;background:#241c0e}
+.mvchip:hover{color:var(--fg2)}
+.mvhead{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin:20px 0 2px}
+.mvhead.i{color:#7fc0ff}.mvhead.ii{color:var(--pose)}
+.mvhead .mvsub{display:block;font-size:11.5px;font-weight:500;letter-spacing:.2px;text-transform:none;color:var(--muted);margin-top:4px}
+/* engraved plate */
+.plate{background:var(--panel);border:1px solid var(--grid);border-radius:16px;padding:18px 20px 16px;
+margin:14px 0;position:relative;overflow:hidden}
+.plate.accent-i{border-top:2px solid #2f6ab0}.plate.accent-ii{border-top:2px solid #b0762f}
+.plate .ptitle{font-size:14.5px;color:var(--fg);font-weight:700;margin:0 0 3px;letter-spacing:.2px}
+.plate .pnum{font-size:10.5px;color:var(--faint2);font-weight:700;letter-spacing:1px;margin-right:8px}
+.plate .peq{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:#bcd6f2;
+background:#10161f;border:1px solid #1e2a38;border-radius:8px;padding:7px 11px;margin:9px 0;display:inline-block}
+.plate .pcap{font-size:12.5px;color:var(--fg2);line-height:1.58;margin:8px 0 0}
+.plate .pcite{font-size:10.5px;color:var(--faint2);margin-top:9px;line-height:1.5}
+.plate .pcite b{color:var(--muted)}
+/* WebGPU canvas stage */
+.whystage{position:relative;background:#0c0f14;border:1px solid var(--line);border-radius:12px;
+overflow:hidden;margin:11px 0 4px;min-height:150px}
+.whystage canvas{display:block;width:100%;height:auto}
+.whymsg{position:absolute;left:12px;top:11px;font-size:11.5px;color:#aeb7c6;background:rgba(12,15,20,.72);
+padding:4px 9px;border-radius:7px;pointer-events:none;max-width:80%}
+.whymsg.hide{display:none}
+.whybadge{font-size:10px;font-weight:700;letter-spacing:.6px;padding:3px 9px;border-radius:999px;text-transform:uppercase}
+.whybadge.gpu{background:#16263a;color:#7fc0ff}.whybadge.cpu{background:#3a2a16;color:#e6b97a}
+.whybadge.off{background:#3a1f1f;color:#ff9b9b}
+.whytop{display:flex;align-items:center;gap:10px;margin-bottom:2px;flex-wrap:wrap}
+.whytop .whystatus{font-size:11.5px;color:var(--faint2);font-variant-numeric:tabular-nums}
+/* control rows (sliders / toggles) */
+.whyctl{display:flex;flex-direction:column;gap:9px;margin:11px 0 2px}
+.whyrow{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.whyrow .rl{flex:0 0 auto;min-width:150px;font-size:11.5px;color:var(--muted)}
+.whyrow .rl .rv{color:var(--acc);font-weight:700;font-variant-numeric:tabular-nums}
+.whyrow input[type=range]{flex:1 1 180px;min-width:150px}
+.whyseg{display:flex;gap:5px;flex-wrap:wrap}
+.whyseg .sg{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;border:1px solid var(--grid);
+color:var(--muted);cursor:pointer;background:var(--panel2);user-select:none}
+.whyseg .sg.on{color:var(--fg);border-color:var(--acc);background:#122234}
+.whytoggle{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;border:1px solid var(--grid);
+color:var(--muted);cursor:pointer;background:var(--panel2);user-select:none}
+.whytoggle.on{color:var(--goal);border-color:#2c5a3a;background:#12281b}
+/* the unity correlation readout */
+.whycorr{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0 2px}
+.whycorr .cc{background:var(--panel2);border:1px solid var(--grid);border-radius:11px;padding:9px 13px;min-width:150px}
+.whycorr .cc .ck{font-size:10px;color:var(--faint2);text-transform:uppercase;letter-spacing:.5px;display:block}
+.whycorr .cc .cv{font-size:19px;color:var(--fg);font-weight:700;font-variant-numeric:tabular-nums;display:block;margin:2px 0}
+.whycorr .cc .cs{font-size:10.5px;color:var(--muted);line-height:1.4;display:block}
+.whycorr .cc.hi .cv{color:var(--goal)}.whycorr .cc.lo .cv{color:var(--pose)}.whycorr .cc.anchor .cv{color:var(--acc)}
+/* legend chips (classes) */
+.whyleg{display:flex;gap:9px;flex-wrap:wrap;margin:9px 0 2px}
+.whyleg .lc{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.whyleg .lc .dot{width:11px;height:11px;border-radius:3px;display:inline-block;border:1px solid #2a2f39}
+/* seams for later passes */
+.whyseam{background:var(--panel2);border:1px dashed var(--grid);border-radius:12px;padding:13px 16px;margin:12px 0}
+.whyseam .st{font-size:10.5px;color:var(--goal);letter-spacing:1.1px;text-transform:uppercase;font-weight:700;margin:0 0 5px}
+.whyseam ul{margin:4px 0 0;padding-left:18px}.whyseam li{font-size:12px;color:var(--muted);margin-bottom:4px}
+.whyseam li b{color:var(--fg2)}
+.whyabout{font-size:11.5px;color:var(--faint2);line-height:1.55;margin-top:10px}
+.wcnote2{font-size:10.5px;color:var(--faint2);margin-top:12px;line-height:1.55}
 
 /* triality tab */
 .cardsub{font-size:9px;color:var(--faint2);font-weight:500;letter-spacing:.4px;text-transform:none;margin-left:6px}
@@ -1786,21 +2020,151 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 </section>
 
 <section id="tab-whyhow" class="why hide">
-  <div class="whywrap">
-    <h2>Why &amp; how &mdash; the deep-math museum</h2>
-    <p class="whycoming">coming soon</p>
-    <p>A focused WebGPU exhibit of the two load-bearing proofs, built next:</p>
-    <ul>
-      <li><b>The optimal chart.</b> Why a piecewise-constant argmax target under a capacity limit wants a
-      step-native / partition-indicator basis (no Gibbs, O(1) params per edge, L&infin;-at-edge optimal) &mdash;
-      the topology-matched chart for the codim-1 separatrix, not a full-RGB reconstruction.</li>
-      <li><b>The screw / twist mechanism.</b> Why the SAME se(3) ego twist &xi; that warps the partition for
-      d_seg IS the pose for d_pose (Chasles) &mdash; encode it once, spend it twice; the dual-use that makes
-      the pose sidecar near-free.</li>
-    </ul>
-    <p class="m">This tab is a clean seam for the next agent's focused WebGPU build. Everything here is
-    advisory / NON-PROMOTABLE &mdash; the pointer is 0.19110 and UNMOVED.</p>
+  <div class="whyhero">
+    <p class="idea">The task is <b>boundary geometry</b>; the witness is the <b>chart that fits it</b>; and the
+    same traveling front governs it at every scale &mdash; from the pixel boundary to the campaign.</p>
+    <p class="sub">Two movements. <b>WHY</b> &mdash; the static invariant that makes the chart optimal.
+    <b>HOW</b> &mdash; the dynamics that flow to it. Pass&nbsp;1 opens the museum with the two highest-ROI
+    plates (the live field &amp; the Unity); the five-scale spine, the screw, and the finale are seamed
+    below. Every plate is a MEASURED fact &mdash; <b>[macOS-CPU advisory &middot; NON-PROMOTABLE]</b>,
+    a viz moves no pointer (0.19110, UNMOVED).</p>
   </div>
+
+  <div class="mvrail" id="whymvrail">
+    <span class="mvchip on why-i" data-mv="i">Movement I &middot; WHY</span>
+    <span class="mvchip why-ii" data-mv="ii">Movement II &middot; HOW</span>
+  </div>
+
+  <!-- ================= MOVEMENT I — WHY (the static invariant) ================= -->
+  <div id="whymv-i">
+    <div class="mvhead i">Movement I &mdash; WHY
+      <span class="mvsub">the optimal chart: why this vehicle can't be beaten on this geometry</span></div>
+
+    <!-- I.1 — the live field -->
+    <div class="plate accent-i" id="plate-i1">
+      <div class="whytop">
+        <span class="pnum">I.1</span><span class="ptitle">The field, alive</span>
+        <span id="whybadge_field" class="whybadge off">detecting&hellip;</span>
+        <span class="whystatus" id="whystatus">loading the deep-math field bundle&hellip;</span>
+      </div>
+      <div class="peq">&phi;(x) &nbsp;&middot;&nbsp; level set {&phi; = t} &nbsp;&rarr;&nbsp; the argmax separatrix</div>
+      <div class="whystage">
+        <canvas id="whycanvas_field" role="img" aria-label="the witness detectability field, level sets sweeping the separatrix"></canvas>
+        <div class="whymsg" id="whymsg_field">the field renders on the first governed pass&hellip;</div>
+      </div>
+      <div class="whyctl">
+        <div class="whyrow">
+          <span class="rl">level-set threshold t <span class="rv" id="whythr_v">0.55</span></span>
+          <input type="range" id="whythr" min="0" max="1" step="0.01" value="0.55" aria-label="level-set threshold">
+        </div>
+        <div class="whyrow">
+          <span class="rl">overlays</span>
+          <span class="whytoggle on" id="whytog_zero" role="button" tabindex="0">zero-level-set (argmax boundary)</span>
+          <span class="whytoggle" id="whytog_grad" role="button" tabindex="0">&nabla;&phi; gradient / normals</span>
+        </div>
+        <div class="whyrow">
+          <span class="rl">base layer</span>
+          <div class="whyseg" id="whyfieldbase">
+            <span class="sg on" data-b="0">&phi; heat (&rho;_seg margin)</span>
+            <span class="sg" data-b="1">scene render</span>
+            <span class="sg" data-b="2">comma10k partition</span>
+          </div>
+        </div>
+      </div>
+      <div class="whyleg" id="whyleg_field"></div>
+      <p class="pcap">The <b>SegNet detectability field</b> &phi; over the scored frame: bright where the argmax
+      is fragile (small top1&minus;top2 margin) &mdash; the codim-1 <b>separatrix</b>, a ~1-pixel curve that
+      carries essentially <b>all</b> of d_seg. Drag the threshold to sweep the level sets like contour lines;
+      toggle the <b>zero-level-set</b> (the argmax partition boundary) and the <b>gradient field</b> &nabla;&phi;
+      (boundary normals &mdash; the derivative you can see).</p>
+      <p class="pcite"><b>Grounded:</b> the real cached SegNet argmax + top1&minus;top2 margin (gt_n6, the exact
+      frames the verdict uses); flip-mass measured ~50% Road / 19% Lane / 13% Undrivable (#141). The live
+      per-checkpoint witness INR &phi; is the Pass-2 upgrade (reuses the governed 600-pass FLOW cache).</p>
+    </div>
+
+    <!-- I.4 — the Unity -->
+    <div class="plate accent-i" id="plate-i4">
+      <div class="whytop">
+        <span class="pnum">I.4</span><span class="ptitle">The Unity &mdash; one geometry, three readings</span>
+        <span id="whybadge_unity" class="whybadge off">detecting&hellip;</span>
+      </div>
+      <div class="peq">&rho;(x) &nbsp;&asymp;&nbsp; 1 / &Vert;&part;(detector)/&part;(pixel)&Vert; &nbsp;&mdash;&nbsp; the Fisher metric, read three ways</div>
+      <div class="whystage">
+        <canvas id="whycanvas_unity" role="img" aria-label="one field, three readings: SegNet margin, S-UNIWARD cost, our distortion sensitivity"></canvas>
+        <div class="whymsg" id="whymsg_unity">the unity morph renders on the first governed pass&hellip;</div>
+      </div>
+      <div class="whyctl">
+        <div class="whyrow">
+          <span class="rl">morph <span class="rv" id="whymorph_v">&rho;_seg</span></span>
+          <input type="range" id="whymorph" min="0" max="2" step="0.01" value="0" aria-label="morph between the three readings">
+        </div>
+        <div class="whyrow">
+          <span class="whyseg" id="whyunityjump">
+            <span class="sg on" data-t="0">&rho;_seg &middot; SegNet margin (Yousfi)</span>
+            <span class="sg" data-t="1">our distortion sensitivity</span>
+            <span class="sg" data-t="2">&rho;_uniward &middot; S-UNIWARD (Fridrich)</span>
+          </span>
+        </div>
+      </div>
+      <div class="whycorr" id="whycorr"></div>
+      <p class="pcap"><b>The tribute's heart.</b> One scene, three sensitivity fields. Drag the morph:
+      <b>&rho;_seg</b> (the detector's own margin) and <b>our distortion sensitivity</b> (the separatrix geometry
+      &mdash; where a pixel flip changes the decision) dissolve into <b>the same picture</b> &mdash; measured
+      Pearson <span id="whycorr_hi">&mdash;</span> on this frame. Fridrich's <b>&rho;_uniward</b> (S-UNIWARD
+      embedding cost) is the kindred steganographic reading: it lights image texture, so pixelwise it is
+      <b>honestly weaker</b> here (<span id="whycorr_lo">&mdash;</span>) &mdash; the deep tie between detector and
+      steganography runs through the <b>Fisher metric</b>, where the margin field IS the Fisher surrogate
+      (canonical <b>0.978</b>, Fisher&nbsp;curvature&nbsp;&harr;&nbsp;&minus;margin).</p>
+      <p class="pcite"><b>Grounded:</b> real S-UNIWARD via <code>tac.uniward_delta.compute_uniward_cost_map</code>
+      (Holub&ndash;Fridrich&ndash;Denemark 2014); real cached SegNet margin; live per-frame Pearson computed on
+      the served fields (NO fabricated curve); canonical 0.978 = memory <code>unified-variational-levelset-flow</code>.
+      Steganography (Fridrich) &rarr; steganalysis (Yousfi) &rarr; our loss &mdash; the arc is Yousfi's detection game.</p>
+    </div>
+
+    <div class="whyseam">
+      <p class="st">seamed for Pass 2+ &middot; Movement I</p>
+      <ul>
+        <li><b>I.2 the separatrix</b> &mdash; dim the flat interior, light the codim-1 annulus (margin-saliency #141).</li>
+        <li><b>I.3 curvature &harr; the chart</b> &mdash; the anisotropic/curvelet basis vs the isotropic-Fourier Gibbs ring (&minus;48% directional basis).</li>
+        <li><b>I.5 the ~8-dim manifold</b> &mdash; the lane-orbit surface + the bc20 under-capacity tear.</li>
+        <li><b>I.6 the task-sufficient statistic</b> &mdash; the RGB collapses to the decision (S_floor&asymp;0.118).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ================= MOVEMENT II — HOW (the dynamics) ================= -->
+  <div id="whymv-ii" class="hide">
+    <div class="mvhead ii">Movement II &mdash; HOW
+      <span class="mvsub">the flow to the chart: how it gets there, and how it all falls out</span></div>
+    <div class="whyseam">
+      <p class="st">seamed for Pass 2+ &middot; Movement II</p>
+      <ul>
+        <li><b>II.1 the level-set flowing</b> &mdash; the Fisher&ndash;KPP front, softmax sharpening as &tau; anneals (live checkpoint sequence).</li>
+        <li><b>II.2 curriculum = one axis, four names</b> &mdash; curvelet-scale &middot; CE&rarr;&tau;&rarr;Muon &middot; temperature &middot; persistence, one playhead.</li>
+        <li><b>II.3 Morse&ndash;Smale &amp; saddles</b> &mdash; critical points + separatrices; erasure &prop; 1/persistence.</li>
+        <li><b>II.4 the screw that falls out</b> &mdash; drag the se(3) twist &xi;; the SAME &xi; warps d_seg AND is d_pose (Chasles, #193).</li>
+        <li><b>II.5 critical slowing</b> &mdash; relaxation time diverging at a stage transition (a second-order phase transition).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ================= the spine + finale + About (Pass 2 / Pass 5) ================= -->
+  <div class="whyseam">
+    <p class="st">the hero &amp; the finale &middot; Pass 2 / Pass 5</p>
+    <ul>
+      <li><b>&sect;1 ONE FRONT, FIVE SCALES</b> &mdash; the same logistic front `x(u)=1/(1+e^{&minus;&beta;(u&minus;u&#8320;)})`
+      at campaign / training / boundary / curriculum / erasure scales, a scale slider morphing between them
+      (EdgeBench R&sup2;=0.998 &middot; #205 verdicts &middot; the PDE identity).</li>
+      <li><b>&sect;4 the fractal reveal</b> &mdash; all five phase-locked, the one equation glowing beneath.</li>
+      <li><b>About</b> &mdash; the ideas &amp; the people (design &sect;7 / <code>dashboard_tribute_credits</code>):
+      Aaron Leslie, Quantizr, Yousfi &amp; Fridrich, comma / Hotz, the council &mdash; Chasles to yesterday.
+      <span class="whyabout">The past few months, given bloom.</span></li>
+    </ul>
+  </div>
+
+  <p class="wcnote2">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer. Every field
+  is a real cached computation (SegNet argmax/margin + real S-UNIWARD); the exact row is byte-closed on
+  contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</p>
 </section>
 
 <section id="tab-tri" class="tri hide">
@@ -2090,6 +2454,7 @@ function activateTab(t){
   if(which==="witness") renderWitness();
   if(which==="flow"&&window.__flowActivate){try{window.__flowActivate();}catch(e){}}
   if(which==="oracle") activateOracle();
+  if(which==="whyhow"&&window.__whyhowActivate){try{window.__whyhowActivate();}catch(e){}}
   if(which==="tri") activateTriality();
 }
 document.querySelectorAll(".tab").forEach(t=>{
@@ -2820,6 +3185,9 @@ try{activateOracle();}catch(e){}
 </script>
 <script>
 __FLOW_JS__
+</script>
+<script>
+__WHYHOW_JS__
 </script>
 </body></html>
 """
