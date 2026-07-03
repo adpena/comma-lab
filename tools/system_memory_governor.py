@@ -109,12 +109,28 @@ _GIB = 1024.0 ** 3
 # accounting + control-plane allowlist + fail-safe paths. Flip to ENFORCE by setting the env var (a
 # one-line, reviewable flip — the canonical warn-only -> strict-flip pattern).
 ADMISSION_ENFORCE_ENV = "TAC_ADMISSION_ENFORCE"
+# Durable, project-scoped strict-flip marker (gitignored per-machine state). Presence with a truthy
+# first line arms ENFORCE for ALL launches — this session, future sessions, AND subagents (they all
+# call admission_enforcing()) — surviving the shell-env reset between Bash calls. Reversible: delete
+# the file. The env var remains an equivalent per-invocation override. Absolute path (cwd-independent).
+_ADMISSION_ENFORCE_FLAG = _TOOLS.parent / ".omx" / "state" / "admission_enforce.flag"
 
 
 def admission_enforcing() -> bool:
     """True iff the admission gate is in ENFORCE mode (blocks launches). Default FALSE (ADVISORY —
-    logs what it WOULD refuse) until independent review flips ``TAC_ADMISSION_ENFORCE=1``."""
-    return os.environ.get(ADMISSION_ENFORCE_ENV, "0").strip().lower() in {"1", "true", "yes", "on"}
+    logs what it WOULD refuse) until independent review arms enforce via the env var
+    ``TAC_ADMISSION_ENFORCE=1`` OR the durable flag file ``.omx/state/admission_enforce.flag``
+    (truthy first line). Only ADDS refusals the gate already computes (enforce ⊆ advisory)."""
+    _truthy = {"1", "true", "yes", "on"}
+    if os.environ.get(ADMISSION_ENFORCE_ENV, "0").strip().lower() in _truthy:
+        return True
+    try:
+        if _ADMISSION_ENFORCE_FLAG.is_file():
+            first = (_ADMISSION_ENFORCE_FLAG.read_text().splitlines() or [""])[0].strip().lower()
+            return first in _truthy
+    except OSError:
+        return False
+    return False
 
 # BROAD "our heavy jobs" allowlist for THROTTLE candidate discovery (beyond the registry).
 # The crash summed HETEROGENEOUS jobs, so the throttle must be able to pause a byte-close / inflate /

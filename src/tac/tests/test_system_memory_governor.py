@@ -263,3 +263,46 @@ def test_matches_our_jobs():
     assert gov.matches_our_jobs(".venv/bin/python experiments/train_levelset_witness_realized_through_R_mlx.py")
     assert gov.matches_our_jobs("python tools/levelset_byte_close_and_eval.py")
     assert not gov.matches_our_jobs("node /Applications/Claude.app/cli.js")
+
+
+# ── enforce arming: env var OR durable flag file (survives shell-env reset between Bash calls) ────
+def test_admission_enforcing_default_advisory(monkeypatch, tmp_path):
+    """Default is ADVISORY: no env, no flag file -> False (logs WOULD-REFUSE, does not block)."""
+    monkeypatch.delenv(gov.ADMISSION_ENFORCE_ENV, raising=False)
+    monkeypatch.setattr(gov, "_ADMISSION_ENFORCE_FLAG", tmp_path / "absent.flag")
+    assert gov.admission_enforcing() is False
+
+
+def test_admission_enforcing_env_arms(monkeypatch, tmp_path):
+    monkeypatch.setattr(gov, "_ADMISSION_ENFORCE_FLAG", tmp_path / "absent.flag")
+    for truthy in ("1", "true", "YES", "on"):
+        monkeypatch.setenv(gov.ADMISSION_ENFORCE_ENV, truthy)
+        assert gov.admission_enforcing() is True
+    for falsy in ("0", "no", "off", ""):
+        monkeypatch.setenv(gov.ADMISSION_ENFORCE_ENV, falsy)
+        assert gov.admission_enforcing() is False
+
+
+def test_admission_enforcing_durable_flag_file_arms(monkeypatch, tmp_path):
+    """The durable file arms enforce even with NO env var (survives the shell-env reset)."""
+    monkeypatch.delenv(gov.ADMISSION_ENFORCE_ENV, raising=False)
+    flag = tmp_path / "admission_enforce.flag"
+    monkeypatch.setattr(gov, "_ADMISSION_ENFORCE_FLAG", flag)
+    # truthy first line (comment on a later line is ignored) -> armed
+    flag.write_text("1\n# armed after independent review\n")
+    assert gov.admission_enforcing() is True
+    # explicit disarm content -> advisory; empty -> advisory
+    flag.write_text("0\n")
+    assert gov.admission_enforcing() is False
+    flag.write_text("")
+    assert gov.admission_enforcing() is False
+
+
+def test_admission_enforcing_flag_read_error_fails_advisory(monkeypatch, tmp_path):
+    """An unreadable flag path must not crash the launcher (fail to ADVISORY, not raise)."""
+    monkeypatch.delenv(gov.ADMISSION_ENFORCE_ENV, raising=False)
+    # a directory at the flag path -> read_text raises OSError -> caught -> False
+    d = tmp_path / "flag_is_a_dir.flag"
+    d.mkdir()
+    monkeypatch.setattr(gov, "_ADMISSION_ENFORCE_FLAG", d)
+    assert gov.admission_enforcing() is False
