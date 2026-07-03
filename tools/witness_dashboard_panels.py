@@ -71,6 +71,15 @@ def _png_data_uri(fig, dpi: int) -> str:
     return "data:image/png;base64," + base64.b64encode(buf.read()).decode("ascii")
 
 
+def _field_b64(arr: np.ndarray, dtype) -> str:
+    """Base64 of a contiguous little-endian array of ``dtype`` (the raw field bytes the
+    WebGPU / canvas2d FLOW client (Tab 3) uploads as a GPU texture). float16 for the
+    continuous SegNet margin field (the separatrix), uint8 for the argmax partition.
+    Reuses the arrays the Tab-2 render already computed — NO second scorer pass."""
+    return base64.b64encode(
+        np.ascontiguousarray(arr, dtype=dtype).tobytes()).decode("ascii")
+
+
 class WitnessPanelRenderer:
     """Lazy-loads + CACHES the frozen SegNet scorer and the GT cache once (they never change),
     and reloads only the witness checkpoint each render (the weights DO change every checkpoint
@@ -187,9 +196,16 @@ class WitnessPanelRenderer:
         return _png_data_uri(fig, dpi)
 
     def render(self, ckpt_dir: str | os.PathLike, npz_name: str | None = None,
-               epoch: int | None = None, dpi: int = 80) -> dict[str, Any]:
+               epoch: int | None = None, dpi: int = 80,
+               emit_fields: bool = False, field_downsample: int = 2) -> dict[str, Any]:
         """Render the witness panels for the configured pairs from the given checkpoint dir.
-        Returns a payload dict (JSON-safe) with per-pair ``data:image/png`` URIs + metadata."""
+        Returns a payload dict (JSON-safe) with per-pair ``data:image/png`` URIs + metadata.
+
+        ``emit_fields`` (Tab 3 FLOW): ALSO attach a ``"fields"`` block carrying the RAW
+        SegNet margin (float16) + argmax (uint8) + GT argmax (uint8) per pair, downsampled
+        by ``field_downsample`` and base64-encoded, so the client-side WebGPU renderer can
+        upload them as textures. These reuse the exact arrays the panels already computed —
+        the scorer forward runs ONCE per pair regardless of ``emit_fields``."""
         import torch
 
         from tac.uniward_delta import compute_uniward_cost_map
@@ -216,6 +232,10 @@ class WitnessPanelRenderer:
 
         pairs_out: list[dict[str, Any]] = []
         dsegs: list[float] = []
+        field_pairs: list[dict[str, Any]] = []
+        ds = max(1, int(field_downsample))
+        fsl = (slice(None, None, ds), slice(None, None, ds))
+        fw = fh = 0
         for pi in idx:
             our_f0, our_f1 = rendered[pi - lo]
             gt_f1 = self._gt["gt_f1"][pi]
@@ -231,8 +251,24 @@ class WitnessPanelRenderer:
             uri = self._pair_figure(pi, gt_f1, our_f1, gt_lstar, our_lstar, our_margin,
                                     gt_margin, uni, our_dseg, epoch, dpi)
             pairs_out.append({"pair_idx": pi, "our_dseg": round(our_dseg, 6), "panel": uri})
+            if emit_fields:
+                # RAW fields for the FLOW client (Tab 3) — reuse the arrays just computed.
+                # margin fixed-normalized to the GT margin's p96 (static reference scale) so
+                # the epoch-scrubber shows the witness field CHANGING, not a renormalization.
+                mref = np.asarray(gt_margin if gt_margin is not None else our_margin)[fsl]
+                vmax = float(np.percentile(mref, 96)) or 1.0
+                mds = np.asarray(our_margin)[fsl]
+                fh, fw = mds.shape
+                field_pairs.append({
+                    "pair_idx": pi,
+                    "our_dseg": round(our_dseg, 6),
+                    "margin_vmax": vmax,
+                    "our_margin_b64": _field_b64(mds, np.float16),
+                    "our_argmax_b64": _field_b64(np.asarray(our_lstar)[fsl], np.uint8),
+                    "gt_argmax_b64": _field_b64(np.asarray(gt_lstar)[fsl], np.uint8),
+                })
 
-        return {
+        payload: dict[str, Any] = {
             "ok": True,
             "epoch": epoch,
             "ckpt_dir": str(ckpt_dir),
@@ -246,6 +282,14 @@ class WitnessPanelRenderer:
             "authority": "macOS-CPU advisory · NON-PROMOTABLE",
             "pairs": pairs_out,
         }
+        if emit_fields and field_pairs:
+            payload["fields"] = {
+                "w": int(fw), "h": int(fh), "downsample": ds,
+                "classes": [{"i": i, "label": self._SEG_LABELS[i], "hex": self._SEG_PALETTE_HEX[i]}
+                            for i in range(len(self._SEG_LABELS))],
+                "pairs": field_pairs,
+            }
+        return payload
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -256,13 +300,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pairs", default="0,2,4", help="comma-separated pair indices")
     ap.add_argument("--epoch", type=int, default=None)
     ap.add_argument("--dpi", type=int, default=80)
+    ap.add_argument("--emit-fields", action="store_true",
+                    help="also emit the raw margin/argmax fields (Tab 3 FLOW) as base64")
+    ap.add_argument("--field-downsample", type=int, default=2,
+                    help="downsample factor for the emitted FLOW fields (default 2 -> 192x256)")
     ap.add_argument("--out", default=None, help="write the payload JSON here (durable path; NOT /tmp)")
     a = ap.parse_args(argv)
 
     pairs = [int(x) for x in str(a.pairs).split(",") if x.strip() != ""]
     r = WitnessPanelRenderer(a.gt_cache, pairs)
-    payload = r.render(a.ckpt_dir, a.npz_name, a.epoch, a.dpi)
+    payload = r.render(a.ckpt_dir, a.npz_name, a.epoch, a.dpi,
+                       emit_fields=a.emit_fields, field_downsample=a.field_downsample)
     sizes = [len(p["panel"]) for p in payload["pairs"]]
+    if "fields" in payload:
+        fp = payload["fields"]
+        fbytes = sum(len(p["our_margin_b64"]) + len(p["our_argmax_b64"]) + len(p["gt_argmax_b64"])
+                     for p in fp["pairs"])
+        print(f"fields: {fp['w']}x{fp['h']} (ds {fp['downsample']}) · {len(fp['pairs'])} pairs · "
+              f"~{fbytes} base64 bytes total", flush=True)
     print(json.dumps({k: v for k, v in payload.items() if k != "pairs"}, indent=2))
     print(f"panel data-uri sizes (bytes): {sizes}  total={sum(sizes)}  "
           f"pairs={[p['pair_idx'] for p in payload['pairs']]}  "

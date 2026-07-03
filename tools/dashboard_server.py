@@ -114,6 +114,14 @@ class Config:
     witness_min_free_gib: float = 5.0    # skip a render when free RAM is below this (yield to #205)
     witness_min_interval_s: float = 45.0  # rate-limit re-renders even if the ckpt mtime flaps
     witness_dpi: int = 80
+    # FLOW tab (Tab 3): a CLIENT-SIDE WebGPU interactive renderer of the witness level-set field.
+    # The SegNet margin (float16) + argmax (uint8) + GT argmax (uint8) fields ride the SAME Tab-2
+    # per-checkpoint render (NO second scorer pass) — emitted downsampled + base64 over the WS.
+    # A rolling history of the last N checkpoints' pair-0 fields lets the client scrub/animate the
+    # level-set FLOWING across training. Everything advisory (NON-PROMOTABLE); a viz moves no pointer.
+    flow_enable: bool = True
+    flow_downsample: int = 2       # field downsample factor (384x512 -> 192x256): 4x smaller payload
+    flow_history: int = 12         # rolling checkpoints kept server-side for the epoch scrubber
 
     def resolved_glob(self) -> str:
         if self.log_glob:               # explicit --log-glob is a hard override
@@ -150,6 +158,9 @@ def config_from_env() -> Config:
         witness_min_free_gib=float(e("DASH_WITNESS_MIN_FREE_GIB", "5.0")),
         witness_min_interval_s=float(e("DASH_WITNESS_MIN_INTERVAL_S", "45.0")),
         witness_dpi=int(e("DASH_WITNESS_DPI", "80")),
+        flow_enable=e("DASH_FLOW_ENABLE", "1") not in ("0", "false", "False"),
+        flow_downsample=int(e("DASH_FLOW_DOWNSAMPLE", "2")),
+        flow_history=int(e("DASH_FLOW_HISTORY", "12")),
     )
 
 
@@ -339,6 +350,13 @@ class LiveState:
         self._witness_last_attempt: float = 0.0
         self._witness_dirty: bool = False      # set when a NEW payload is ready to broadcast
         self._witness_err: str = ""
+        # FLOW tab (Tab 3): the raw margin/argmax fields ride the SAME witness render. self.flow is
+        # the latest frame (all configured pairs); self.flow_history is a rolling last-N pair-0 stack
+        # for the client's epoch scrubber (the level-set FLOWING across training). Set from the SAME
+        # payload the panels come from -> zero extra scorer passes.
+        self.flow: dict = {}
+        self.flow_history: list[dict] = []
+        self._flow_dirty: bool = False
         self.started_at = time.time()
         self.clients: set[WebSocket] = set()
         # cadence sub-state (per-log). DATA-DERIVED ONLY — NO hardcoded cadence prior /
@@ -551,15 +569,74 @@ class LiveState:
             epoch = max((r["epoch"] for r in self.trajectory
                          if isinstance(r.get("epoch"), int)), default=None)
         payload = self._witness_renderer.render(
-            self.watched_dir, cfg.witness_ema_name, epoch, cfg.witness_dpi)
+            self.watched_dir, cfg.witness_ema_name, epoch, cfg.witness_dpi,
+            emit_fields=cfg.flow_enable, field_downsample=cfg.flow_downsample)
+        # Split: the heavy raw fields go to Tab-3 FLOW; the Tab-2 witness payload stays lean
+        # (panels only) so the {type:"witness"} delta and its snapshot never carry the fields.
+        fields = payload.pop("fields", None)
         self.witness = payload
         self._witness_ckpt_mtime = mtime
         self._witness_err = ""
         self._witness_dirty = True
+        if fields:
+            self._ingest_flow(fields, epoch)
         print(json.dumps({"stage": "dashboard_server", "witness_rendered": True,
                           "epoch": epoch, "n_pairs": payload.get("n_pairs_shown"),
                           "mean_dseg": payload.get("mean_dseg"),
-                          "secs": payload.get("render_secs")}), flush=True)
+                          "secs": payload.get("render_secs"),
+                          "flow_fields": bool(fields),
+                          "flow_history": len(self.flow_history)}), flush=True)
+
+    # ---- FLOW fields (Tab 3): build latest frame + rolling pair-0 history from the render ----
+    def _ingest_flow(self, fields: dict, epoch) -> None:
+        """Turn the render's raw ``fields`` (all pairs) into the client payload: a ``latest``
+        frame (every configured pair, full detail) + a rolling ``flow_history`` of the SMALLEST
+        pair (pair 0) so the client can scrub the level-set flowing across checkpoints. GT argmax
+        + margin_vmax are static per pair, so history frames carry only the changing witness
+        fields; the client pulls the static reference from ``latest``."""
+        pairs = fields.get("pairs") or []
+        if not pairs:
+            return
+        self.flow = {
+            "ok": True, "epoch": epoch,
+            "w": fields.get("w"), "h": fields.get("h"),
+            "downsample": fields.get("downsample"),
+            "classes": fields.get("classes"),
+            "built_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "authority": "macOS-CPU advisory · NON-PROMOTABLE",
+            "pairs": pairs,
+        }
+        p0 = min(pairs, key=lambda p: p.get("pair_idx", 0))
+        frame = {"epoch": epoch, "our_dseg": p0.get("our_dseg"),
+                 "our_margin_b64": p0.get("our_margin_b64"),
+                 "our_argmax_b64": p0.get("our_argmax_b64")}
+        if self.flow_history and self.flow_history[-1].get("epoch") == epoch:
+            self.flow_history[-1] = frame  # re-render of the same epoch -> replace, don't duplicate
+        else:
+            self.flow_history.append(frame)
+            cap = max(1, int(self.cfg.flow_history))
+            if len(self.flow_history) > cap:
+                self.flow_history = self.flow_history[-cap:]
+        self._flow_dirty = True
+
+    def consume_flow_dirty(self) -> bool:
+        if self._flow_dirty:
+            self._flow_dirty = False
+            return True
+        return False
+
+    def _flow_public(self) -> dict:
+        """The FLOW payload for the client (latest frame + rolling pair-0 history), or an honest
+        status stub while the first checkpoint render is still in flight."""
+        if self.flow:
+            hp = min((p.get("pair_idx", 0) for p in self.flow.get("pairs", [])), default=0)
+            return {"ok": True, "latest": self.flow, "history": self.flow_history,
+                    "history_pair": hp}
+        return {"ok": False, "latest": None, "history": [],
+                "status": ("error" if self._witness_err else "rendering")}
+
+    def flow_msg(self) -> dict:
+        return {"type": "flow", "flow": self._flow_public()}
 
     def consume_witness_dirty(self) -> bool:
         """Return+clear the witness-dirty flag (single-threaded event loop -> race-free)."""
@@ -602,7 +679,8 @@ class LiveState:
         # 5 s update_msg deliberately OMITS them (keeps the live delta stream tiny).
         return {"type": "snapshot", "trajectory": self.trajectory,
                 "liveness": self.liveness, "meta": self.meta(),
-                "projection": self.projection, "witness": self._witness_public()}
+                "projection": self.projection, "witness": self._witness_public(),
+                "flow": self._flow_public()}
 
     def update_msg(self, new_points: list[dict]) -> dict:
         return {"type": "update", "new_points": new_points,
@@ -651,6 +729,9 @@ def create_app(cfg: Config) -> Starlette:
                 # a fresh witness render (new checkpoint) -> push the panels over the SAME WS
                 if state.consume_witness_dirty():
                     await state.broadcast(state.witness_msg())
+                # the same render also produced the FLOW fields -> push them (Tab 3)
+                if state.consume_flow_dirty():
+                    await state.broadcast(state.flow_msg())
             except Exception as exc:  # telemetry must never crash the live server
                 print(json.dumps({"stage": "dashboard_server", "tailer_error": str(exc)}),
                       flush=True)
@@ -759,13 +840,31 @@ def _login_html() -> str:
     )
 
 
+def _flow_client_js() -> str:
+    """Read the FLOW (Tab 3) WebGPU client asset and return it for INLINE injection into the page
+    (CSP-strict: self-contained, no external <script src>). Kept in a sibling file for craft +
+    readability. Missing -> a tiny honest stub so the rest of the page is unaffected."""
+    try:
+        js = (Path(__file__).with_name("dashboard_flow_client.js")).read_text(encoding="utf-8")
+        if "</script>" in js:  # would break the inline injection; refuse rather than corrupt the page
+            raise ValueError("flow client asset contains </script>")
+        return js
+    except Exception as exc:
+        return ("window.__flowActivate=function(){var m=document.getElementById('flowmsg');"
+                "if(m){m.classList.remove('hide');m.textContent='FLOW client asset unavailable: "
+                + json.dumps(str(exc))[1:-1] + "';}var b=document.getElementById('flowbadge');"
+                "if(b){b.className='flowbadge off';b.textContent='unavailable';}};")
+
+
 def _page_html(cfg: Config) -> str:
     boot = json.dumps({
         "tau": cfg.tau, "l7": cfg.l7,
         "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
         "pointer": POINTER, "poll": cfg.poll,
     })
-    return _PAGE_TEMPLATE.replace("__BOOT__", boot)
+    return (_PAGE_TEMPLATE
+            .replace("__BOOT__", boot)
+            .replace("__FLOW_JS__", _flow_client_js()))
 
 
 _PAGE_TEMPLATE = r"""<!doctype html>
@@ -899,11 +998,49 @@ padding:8px;overflow-x:auto;min-width:0}
 .witcredits li{font-size:12.5px;margin-bottom:7px}
 .witcredits .wcnote{font-size:11px;color:#b89a4a;line-height:1.55;border-top:1px solid var(--grid);padding-top:9px}
 
-/* flow tab (Tab 3) — stub */
-.flow h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:22px 0 10px}
-.flow p{font-size:13.5px;color:var(--fg2);line-height:1.6;max-width:760px}
+/* flow tab (Tab 3) — client-side WebGPU interactive level-set field renderer */
+.flow h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:20px 0 8px}
+.flow p{font-size:13px;color:var(--fg2);line-height:1.6;max-width:820px}
 .flow .m{color:var(--muted);font-size:12.5px}
 .flowstub{background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:22px 20px;margin-top:12px}
+.flowtop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 10px}
+.flowbadge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.4px;white-space:nowrap}
+.flowbadge.gpu{background:#16263a;color:#7fc0ff}
+.flowbadge.cpu{background:#3a2a16;color:#e6b97a}
+.flowbadge.off{background:#3a1f1f;color:#ff9b9b}
+.flowstatus{font-size:11.5px;color:var(--faint2);font-variant-numeric:tabular-nums;margin-left:auto;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.flowstage{position:relative;background:#0e1014;border:1px solid var(--grid);border-radius:12px;
+overflow:hidden;margin:0 0 12px}
+.flowstage canvas{display:block;width:100%;height:auto;aspect-ratio:512/384;image-rendering:auto;
+touch-action:none}
+.flowmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+padding:20px;font-size:12.5px;color:var(--muted);line-height:1.6;pointer-events:none}
+.flowmsg.hide{display:none}
+.flowctl{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;background:var(--panel2);
+border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:0 0 12px}
+@media(min-width:680px){.flowctl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.flowrow{display:flex;flex-direction:column;gap:6px;min-width:0}
+.flowrow .fl{font-size:10.5px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;
+font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.flowrow .fl .fv{color:var(--acc);font-weight:700;font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0}
+.flowrow input[type=range]{width:100%;accent-color:var(--acc);height:22px;cursor:pointer}
+.flowrow select{background:#11141a;border:1px solid var(--grid);color:var(--fg2);border-radius:7px;
+padding:6px 9px;font-size:12.5px;width:100%}
+.flowscrub{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.flowscrub .sc{flex:1 1 220px;min-width:0}
+.flowplay{background:#173d22;color:#7fe0a0;border:0;padding:8px 14px;border-radius:8px;font-size:13px;
+font-weight:600;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.flowplay.on{background:#3a3413;color:#e6cf7a}
+.flowlegend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:2px 2px 12px;font-size:11px;color:var(--muted)}
+.flowlegend .lc{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;cursor:pointer;user-select:none;
+padding:2px 6px;border-radius:6px}
+.flowlegend .lc.on{background:#1b1e24}
+.flowlegend .lc .dot{width:10px;height:10px;border-radius:2px;display:inline-block;flex:0 0 auto;border:1px solid #2a2f39}
+.flowcap{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:0 0 8px}
+.flowcap p{font-size:12.5px;color:var(--fg2);line-height:1.6;margin:0 0 8px;max-width:none}
+.flowcap p:last-child{margin-bottom:0}
+.flowcap .fcnote{font-size:11px;color:#b89a4a;line-height:1.55;border-top:1px solid var(--grid);padding-top:9px;margin-top:2px}
 
 /* n-badge (which run am I watching) */
 .nbadge{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;letter-spacing:.3px;line-height:1.3}
@@ -1106,12 +1243,68 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 </section>
 
 <section id="tab-flow" class="flow hide">
-  <div class="flowstub">
-    <h2>FLOW &mdash; coming soon</h2>
-    <p>The level-set flow view: the witness as a variational level-set PDE evolving the
-    Morse&ndash;Smale complex of the SegNet argmax (curvelet coarse&rarr;fine = persistence order =
-    temperature anneal), with the margin / eikonal / length terms animated as the separatrix sharpens.</p>
-    <p class="m">Placeholder for now &mdash; the LIVE and WITNESS tabs carry the measured state.</p>
+  <h2>FLOW &mdash; the witness level-set field, live &amp; interactive (WebGPU)</h2>
+  <p>The SegNet <b>margin field</b> and <b>argmax partition</b> the scorer actually sees, uploaded
+  as GPU textures and shaded in your browser. <b>Small margin = the codim-1 separatrix</b> where the
+  argmax can flip &mdash; where d_seg lives. Drag the sliders to probe the fragile band; scrub the
+  epoch axis to watch the level-set <i>flow</i> toward the argmax partition as the witness trains.</p>
+  <div class="flowtop">
+    <span id="flowbadge" class="flowbadge off">detecting&hellip;</span>
+    <span class="flowstatus" id="flowstatus">waiting for the first checkpoint field&hellip;</span>
+  </div>
+  <div class="flowstage">
+    <canvas id="flowcanvas" role="img" aria-label="witness level-set margin/argmax field"></canvas>
+    <div class="flowmsg" id="flowmsg">rendering the first field from the live checkpoint&hellip;</div>
+  </div>
+  <div class="flowlegend" id="flowlegend"></div>
+  <div class="flowctl">
+    <div class="flowrow">
+      <span class="fl">colormap / blend <span class="fv" id="flowmode_v">margin heat</span></span>
+      <select id="flowmode">
+        <option value="0">margin heat (fragility)</option>
+        <option value="1">argmax partition</option>
+        <option value="2">blend: partition &harr; heat</option>
+        <option value="3">disagreement vs GT (d_seg pixels)</option>
+      </select>
+    </div>
+    <div class="flowrow">
+      <span class="fl">class isolation <span class="fv" id="flowiso_v">all classes</span></span>
+      <select id="flowiso">
+        <option value="-1">all classes</option>
+        <option value="0">0 Road</option>
+        <option value="1">1 Lane</option>
+        <option value="2">2 Undrivable</option>
+        <option value="3">3 Movable</option>
+        <option value="4">4 MyCar</option>
+      </select>
+    </div>
+    <div class="flowrow">
+      <span class="fl">margin threshold (fragile band) <span class="fv" id="flowthr_v">0.55</span></span>
+      <input type="range" id="flowthr" min="0" max="1" step="0.01" value="0.55">
+    </div>
+    <div class="flowrow">
+      <span class="fl">blend (partition &harr; heat) <span class="fv" id="flowblend_v">0.50</span></span>
+      <input type="range" id="flowblend" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="flowrow">
+      <span class="fl">pair <span class="fv" id="flowpair_v">0</span></span>
+      <select id="flowpair"><option value="0">pair 0</option></select>
+    </div>
+    <div class="flowscrub">
+      <button class="flowplay" id="flowplay" aria-pressed="false">&#9654; play</button>
+      <div class="sc">
+        <span class="fl">epoch scrubber <span class="fv" id="flowscrub_v">live</span></span>
+        <input type="range" id="flowscrub" min="0" max="0" step="1" value="0" aria-label="epoch scrubber">
+      </div>
+    </div>
+  </div>
+  <div class="flowcap">
+    <p>The margin field is the scorer's own <b>sensitivity / UNIWARD geometry</b> read as a field
+    (Yousfi's comma10k SegNet is the detector; Fridrich's UNIWARD says the smooth/high-margin interior
+    is where a perturbation is <i>caught</i>). FLOW renders the witness level-set evolving toward the
+    SegNet argmax partition &mdash; the dynamical-system view of the variational flow.</p>
+    <p class="fcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
+    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</p>
   </div>
 </section>
 
@@ -1187,6 +1380,19 @@ const BANDS={ce:"#1f3b5f",tau:"#3a2a5f",l7:"#5f3320",muon:"#1f4f43"};
 
 function $(id){return document.getElementById(id);}
 
+// ---- FLOW (Tab 3) data bridge: the injected WebGPU client (dashboard_flow_client.js) reads
+// window.__flow and registers window.__flowActivate / window.__flowNotify. Kept on window so the
+// separate inlined <script> shares state cleanly (no lexical-scope coupling). ----
+window.__flow = {latest:null, history:[], historyPair:0};
+function _pushFlow(f){
+  if(!f)return;
+  window.__flow.latest = f.latest || null;
+  window.__flow.history = Array.isArray(f.history) ? f.history : [];
+  window.__flow.historyPair = (f.history_pair!=null) ? f.history_pair : 0;
+  window.__flow.status = f.status || (f.ok===false ? "rendering" : "");
+  if(window.__flowNotify){try{window.__flowNotify();}catch(e){}}
+}
+
 // least-squares fit of (epoch,value) over raw points -> {m,b} or null
 function linfit(pts){
   const n=pts.length; if(n<2)return null;
@@ -1245,6 +1451,7 @@ function activateTab(t){
   document.querySelectorAll("section[id^='tab-']").forEach(s=>{s.classList.toggle("hide",s.id!=="tab-"+which);});
   if(which==="live") scheduleDraw();
   if(which==="witness") renderWitness();
+  if(which==="flow"&&window.__flowActivate){try{window.__flowActivate();}catch(e){}}
 }
 document.querySelectorAll(".tab").forEach(t=>{
   t.setAttribute("role","tab");t.setAttribute("tabindex","0");
@@ -1758,7 +1965,8 @@ function pulse(){const p=$("pill");if(!p||reduceMotion)return;
   setTimeout(()=>{p._beat=false;p.classList.remove("beat");},1000);}
 function applySnapshot(m){TRAJ=m.trajectory||[];LIVE=m.liveness||{};META=m.meta||{};PROJ=m.projection||{};
   if(m.witness)WITNESS=m.witness;
-  render();renderWitness();}
+  render();renderWitness();
+  if(m.flow)_pushFlow(m.flow);}
 function applyUpdate(m){
   const np=m.new_points||[];
   let gotNew=false, beat=false;
@@ -1786,6 +1994,7 @@ function connectWS(){
   ws.onmessage=ev=>{try{const m=JSON.parse(ev.data);
     if(m.type==="snapshot")applySnapshot(m);
     else if(m.type==="witness"){WITNESS=m.witness||{};renderWitness();}
+    else if(m.type==="flow"){_pushFlow(m.flow||{});}
     else applyUpdate(m);}catch(e){}};
   ws.onclose=()=>{wsOpen=false;setWsPill(false);wsTries++;startPoll();
     setTimeout(connectWS,Math.min(15000,1000*Math.pow(1.6,Math.min(wsTries,8))));};
@@ -1850,6 +2059,9 @@ connectWS();
 // safety net: if WS never opens within 4s, ensure polling is running
 setTimeout(()=>{if(!wsOpen)startPoll();},4000);
 </script>
+<script>
+__FLOW_JS__
+</script>
 </body></html>
 """
 
@@ -1888,6 +2100,12 @@ def main() -> None:
     ap.add_argument("--witness-min-free-gib", type=float, default=cfg.witness_min_free_gib)
     ap.add_argument("--witness-min-interval-s", type=float, default=cfg.witness_min_interval_s)
     ap.add_argument("--witness-dpi", type=int, default=cfg.witness_dpi)
+    ap.add_argument("--flow", action=argparse.BooleanOptionalAction, default=cfg.flow_enable,
+                    help="Tab-3 FLOW WebGPU field export (default ON; --no-flow to disable)")
+    ap.add_argument("--flow-downsample", type=int, default=cfg.flow_downsample,
+                    help="downsample factor for the FLOW fields (default 2 -> 192x256)")
+    ap.add_argument("--flow-history", type=int, default=cfg.flow_history,
+                    help="rolling checkpoints kept for the FLOW epoch scrubber (default 12)")
     ap.add_argument("--reuse-port", action=argparse.BooleanOptionalAction, default=True,
                     help="SO_REUSEPORT (default ON) so a NEW instance can bind :port alongside the OLD "
                          "one -> zero-downtime hot reload (tools/dashboard_reload.py) that never drops the "
@@ -1902,7 +2120,9 @@ def main() -> None:
                  witness_enable=a.witness, witness_gt_cache=a.witness_gt_cache,
                  witness_pairs=a.witness_pairs, witness_ema_name=a.witness_ema_name,
                  witness_min_free_gib=a.witness_min_free_gib,
-                 witness_min_interval_s=a.witness_min_interval_s, witness_dpi=a.witness_dpi)
+                 witness_min_interval_s=a.witness_min_interval_s, witness_dpi=a.witness_dpi,
+                 flow_enable=a.flow, flow_downsample=a.flow_downsample,
+                 flow_history=a.flow_history)
     application = create_app(cfg)
     # access_log=False so the ?k=<access key> never lands in a log line.
     # SO_REUSEPORT zero-downtime hot reload: uvicorn 0.44's run()/Config has no reuse_port kwarg, so we
