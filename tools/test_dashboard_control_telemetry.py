@@ -241,7 +241,10 @@ def test_lever_status_rows_205_states():
     sr = dct.parse_stage_rows([json.dumps(_205_STRUCTURED_INIT), json.dumps(_205_LANE_PRIOR)])
     ctl = dct.build_control(sr, _205_FLAGS, _verdicts_205_like(), {"muon_start": 726})
     by = {r["lever"]: r for r in ctl["levers"]}
-    assert by["paint-seed"]["state"] == "bad"
+    # CORRECTED gate (FEED-04x): #205's verdicts sit BELOW the lane-frac bound (0.00475<0.0059)
+    # which PROVES its CE birthed partial lane — #205's true failure was tau EROSION (carried by
+    # the DECOUPLED/DIVERGING_ERASING panels), NOT zero-birth. So paint-seed reads BIRTH, not bad.
+    assert by["paint-seed"]["state"] == "ok" and "BIRTH" in by["paint-seed"]["value"]
     assert by["eikonal-ramp"]["state"] == "off"
     assert by["event-trigger"]["state"] == "off"
     assert by["closed-loop"]["state"] == "off"
@@ -273,7 +276,9 @@ def test_lever_status_rows_fresh_live_fired():
     ctl = dct.build_control(dct.parse_stage_rows(lines), _FRESH_FLAGS, verdicts,
                             {"muon_start": 726})
     by = {r["lever"]: r for r in ctl["levers"]}
-    assert by["paint-seed"]["state"] == "ok" and "0.0064" in by["paint-seed"]["value"]
+    # verdicts 0.004/0.0039 < LANE_FRAC_BOUND ⟹ BIRTH_CONFIRMED outranks the init part_frac
+    assert by["paint-seed"]["state"] == "ok" and "BIRTH" in by["paint-seed"]["value"]
+    assert "0.0039" in by["paint-seed"]["value"]
     assert by["eikonal-ramp"]["state"] == "ok"            # max_epoch 775 >= fired 250
     assert by["event-trigger"]["state"] == "ok" and "loss_plateau" in by["event-trigger"]["detail"]
     assert by["closed-loop"]["state"] == "ok"             # rows present, no action yet
@@ -297,7 +302,8 @@ def test_html_renderers_carry_key_tokens_and_advisory():
     sr = dct.parse_stage_rows([json.dumps(_205_STRUCTURED_INIT), json.dumps(_205_LANE_PRIOR)])
     ctl = dct.build_control(sr, _205_FLAGS, _verdicts_205_like(), {"muon_start": 726})
     h = dct.render_control_panel_html(ctl)
-    assert "nucleation gate" in h and "FAIL" in h and "DECOUPLED" in h
+    # #205 fixture renders BIRTH (its verdicts prove partial lane) + DECOUPLED (the erosion story)
+    assert "nucleation gate" in h and "BIRTH" in h and "DECOUPLED" in h
     assert "NON-PROMOTABLE" in h and "0.19110" in h
     hb = dct.render_lever_board_html(ctl["levers"])
     assert "lever status board" in hb and "paint-seed" in hb
@@ -326,3 +332,63 @@ if __name__ == "__main__":
             _fn()
             print(f"PASS {_name}")
     print("ALL PASS")
+
+
+# ── CORRECTED nucleation-gate semantics (FEED-04x; the UI/UX fix 2026-07-04) ────────────
+def test_nucleation_seeded_watch_fresh_init():
+    """Fresh-run init: witness partition 0 (EXPECTED) but mechanism MEASURED present
+    (paint-signal disagree ≈ band + island-seed support) => SEEDED_WATCH, NOT FAIL."""
+    si = {"stage": "structured_init", "roles": {"lane": 1}, "part_frac": {"1": 0.0},
+          "lane_px": 0, "pretrain_direct_argmax_disagree_vs_part": 0.00589}
+    lp = {"stage": "lane_prior_phi1", "mode": "paint", "lane_band_px": 1261}
+    isd = {"stage": "island_seed", "mean_support_frac": 0.02488}
+    nuc = dct.nucleation_gate(si, lp, island_seed=isd, verdicts=[])
+    assert nuc["state"] == "SEEDED_WATCH"
+    assert nuc["pretrain_disagree"] == 0.00589 and nuc["seed_support"] == 0.02488
+
+
+def test_nucleation_seeded_watch_on_seed_alone():
+    """island_seed support alone (no paint signal) still arms the watch — mechanism present."""
+    si = {"stage": "structured_init", "roles": {"lane": 1}, "part_frac": {"1": 0.0},
+          "lane_px": 0, "pretrain_direct_argmax_disagree_vs_part": 0.0004}
+    nuc = dct.nucleation_gate(si, {"mode": "replace", "lane_band_px": 1261},
+                              island_seed={"mean_support_frac": 0.02}, verdicts=[])
+    assert nuc["state"] == "SEEDED_WATCH"
+
+
+def test_nucleation_true_205_signature_is_fail():
+    """The TRUE #205 init signature: replace no-op (disagree 0.00035 — lane-less target fit
+    near-perfectly), NO seed module, partition 0, no sub-bound verdict => FAIL."""
+    si = {"stage": "structured_init", "roles": {"lane": 1}, "part_frac": {"1": 0.0},
+          "lane_px": 0, "pretrain_direct_argmax_disagree_vs_part": 0.00035}
+    nuc = dct.nucleation_gate(si, {"mode": "replace", "lane_band_px": 1261},
+                              island_seed=None, verdicts=[{"epoch": 25, "d_seg": 0.0103}])
+    assert nuc["state"] == "FAIL"
+
+
+def test_nucleation_birth_confirmed_by_pixel_arithmetic():
+    """Any verdict d_seg < LANE_FRAC_BOUND PROVES partial lane presence (a lane-less witness
+    cannot score below the lane pixel fraction) — outranks every init state."""
+    si = {"stage": "structured_init", "roles": {"lane": 1}, "part_frac": {"1": 0.0},
+          "lane_px": 0, "pretrain_direct_argmax_disagree_vs_part": 0.00035}
+    nuc = dct.nucleation_gate(si, {"mode": "replace"}, island_seed=None,
+                              verdicts=[{"epoch": 300, "d_seg": 0.004752}])
+    assert nuc["state"] == "BIRTH_CONFIRMED"
+    assert nuc["birth_epoch"] == 300 and nuc["birth_d_seg"] == 0.004752
+
+
+def test_nucleation_seeded_watch_renders_amber_not_fail():
+    """The UI/UX fix itself: the fresh-run init state must render SEEDED · WATCH (amber),
+    never the big red FAIL the pre-correction panel showed."""
+    sr = dct.parse_stage_rows([
+        json.dumps({"stage": "structured_init", "roles": {"lane": 1}, "part_frac": {"1": 0.0},
+                    "lane_px": 0, "pretrain_direct_argmax_disagree_vs_part": 0.00589}),
+        json.dumps({"stage": "lane_prior_phi1", "mode": "paint", "lane_band_px": 1261}),
+        json.dumps({"stage": "island_seed", "mean_support_frac": 0.02488}),
+    ])
+    ctl = dct.build_control(sr, {}, [{"epoch": 0, "d_seg": 0.466, "ep_loss": 500.0,
+                                      "seg_form": "ce"}], {})
+    assert ctl["nucleation"]["state"] == "SEEDED_WATCH"
+    h = dct.render_control_panel_html(ctl)
+    assert "SEEDED · WATCH" in h and "FAIL" not in h
+    assert "paint-signal IN target" in h and "birth watch armed" in h

@@ -89,6 +89,7 @@ def parse_stage_rows(lines) -> dict:
     closed_loop: list[dict] = []
     structured_init: dict | None = None
     lane_prior: dict | None = None
+    island_seed: dict | None = None
     for raw in lines:
         s = raw.strip()
         if '"stage"' not in s:
@@ -112,6 +113,8 @@ def parse_stage_rows(lines) -> dict:
             structured_init = d
         elif st == "lane_prior_phi1":
             lane_prior = d
+        elif st == "island_seed":
+            island_seed = d
     # de-dup (an event-fired row + a legacy row for the same boundary): fired wins.
     seen: dict[tuple, dict] = {}
     for t in transitions:
@@ -121,36 +124,96 @@ def parse_stage_rows(lines) -> dict:
     out_tr = sorted(seen.values(), key=lambda t: (t.get("epoch") is None, t.get("epoch") or 0))
     closed_loop.sort(key=lambda r: r.get("epoch") or 0)
     return {"transitions": out_tr, "closed_loop": closed_loop,
-            "structured_init": structured_init, "lane_prior_phi1": lane_prior}
+            "structured_init": structured_init, "lane_prior_phi1": lane_prior,
+            "island_seed": island_seed}
 
 
-def nucleation_gate(structured_init: dict | None, lane_prior: dict | None = None) -> dict:
-    """The ep0 NUCLEATION ACCEPTANCE GATE (ledger §1, binding): the run is valid only if
-    the MEASURED ``part_frac[lane] > 0`` in the structured_init row — flag presence is
-    NOT evidence. Lane class index comes from the row's own ``roles`` dict (JSON keys the
-    part_frac dict by class-index STRINGS). Returns ``{state: PASS|FAIL|UNMEASURED,
-    lane_part_frac, lane_px, lane_cls, mode}`` (mode = paint|replace|bias from the
-    lane_prior_phi1 row when present). Pure; never raises."""
+# ── nucleation-gate MEASURED constants (provenance in each comment) ────────────────────────
+# Lane pixel fraction of the frame (measured: 0.59-0.64% across n600; nucleation memory +
+# FEED-04x). A witness with ZERO lane scores d_seg >= this bound (all lane pixels wrong), so a
+# verdict BELOW it PROVES partial lane presence — the birth-confirmation pixel argument.
+LANE_FRAC_BOUND = 0.0059
+# Paint-signal discriminator on structured_init's pretrain disagree: a paint-carrying target the
+# pretrain hasn't absorbed leaves disagree ~= the lane band (fresh run MEASURED 0.00589); the #205
+# replace-no-op (lane-LESS target, fit near-perfectly) measured 0.00035. 0.003 sits ~2x/8x between.
+PAINT_SIGNAL_MIN_DISAGREE = 0.003
+
+
+def nucleation_gate(structured_init: dict | None, lane_prior: dict | None = None,
+                    island_seed: dict | None = None,
+                    verdicts: list[dict] | None = None) -> dict:
+    """The ep0 NUCLEATION ACCEPTANCE GATE — CORRECTED semantics (FEED-04x, 2026-07-04).
+
+    ``part_frac`` in the structured_init row is the WITNESS partition, which starts at 0 in
+    ANY run (including a perfectly seeded one) — so part_frac[lane]==0 at init is NOT by
+    itself a failure; rendering it as FAIL was the pre-correction bug (a wrong verdict shown
+    with high confidence — worse than 'insufficient data'). The honest, fully MEASURED
+    falling-rule states:
+
+      * BIRTH_CONFIRMED — any verdict d_seg < LANE_FRAC_BOUND (0.0059): a lane-less witness
+        CANNOT score below the lane pixel fraction, so this PROVES partial lane presence.
+      * PASS — part_frac[lane] > 0 at init (the witness partition itself starts seeded).
+      * SEEDED_WATCH — init partition is 0 BUT the seeding MECHANISM is measured-present:
+        paint mode with band px > 0 AND pretrain disagree >= PAINT_SIGNAL_MIN_DISAGREE
+        (the paint IS in the target as a standing signal), and/or an island_seed row with
+        support > 0 (the render-level seed #205 lacked). Birth watch armed: CE verdicts
+        must out-descend #205's CE trace by ep50-75.
+      * FAIL — structured_init present and NO mechanism: the true #205 signature
+        (replace-no-op target fit near-perfectly + no seed module).
+      * UNMEASURED — no structured_init row yet.
+
+    Pure; never raises. Returns the state + every measured input it judged from."""
     mode = None
+    band_px = None
     if isinstance(lane_prior, dict):
         mode = lane_prior.get("mode")
+        band_px = lane_prior.get("lane_band_px")
+    seed_support = None
+    if isinstance(island_seed, dict):
+        try:
+            seed_support = float(island_seed.get("mean_support_frac"))
+        except (TypeError, ValueError):
+            seed_support = None
+    # birth confirmation from verdicts (usable even before structured_init parses)
+    birth_ep, birth_dseg = None, None
+    for v in (verdicts or []):
+        try:
+            ds = float(v.get("d_seg"))
+        except (TypeError, ValueError):
+            continue
+        if ds < LANE_FRAC_BOUND and (birth_dseg is None or ds < birth_dseg):
+            birth_ep, birth_dseg = v.get("epoch"), ds
+    base = {"lane_px": None, "lane_cls": None, "mode": mode, "lane_band_px": band_px,
+            "seed_support": seed_support, "pretrain_disagree": None,
+            "birth_epoch": birth_ep, "birth_d_seg": birth_dseg, "lane_part_frac": None}
     if not isinstance(structured_init, dict):
-        return {"state": "UNMEASURED", "lane_part_frac": None, "lane_px": None,
-                "lane_cls": None, "mode": mode}
+        state = "BIRTH_CONFIRMED" if birth_dseg is not None else "UNMEASURED"
+        return {"state": state, **base}
     roles = structured_init.get("roles") or {}
     lane_cls = roles.get("lane", 1)
     pf = structured_init.get("part_frac") or {}
     lane_frac = pf.get(str(lane_cls), pf.get(lane_cls))
     lane_px = structured_init.get("lane_px")
-    if lane_frac is None:
-        state = "UNMEASURED"
-    elif float(lane_frac) > 0.0:
+    try:
+        disagree = float(structured_init.get("pretrain_direct_argmax_disagree_vs_part"))
+    except (TypeError, ValueError):
+        disagree = None
+    base.update({"lane_px": lane_px, "lane_cls": lane_cls, "pretrain_disagree": disagree,
+                 "lane_part_frac": (float(lane_frac) if lane_frac is not None else None)})
+    paint_signal = (mode == "paint" and (band_px or 0) > 0
+                    and disagree is not None and disagree >= PAINT_SIGNAL_MIN_DISAGREE)
+    seed_present = seed_support is not None and seed_support > 0.0
+    if birth_dseg is not None:
+        state = "BIRTH_CONFIRMED"
+    elif lane_frac is not None and float(lane_frac) > 0.0:
         state = "PASS"
+    elif paint_signal or seed_present:
+        state = "SEEDED_WATCH"
+    elif lane_frac is None:
+        state = "UNMEASURED"
     else:
         state = "FAIL"
-    return {"state": state,
-            "lane_part_frac": (float(lane_frac) if lane_frac is not None else None),
-            "lane_px": lane_px, "lane_cls": lane_cls, "mode": mode}
+    return {"state": state, **base}
 
 
 # ─────────────── eikonal effective-weight derivation (pure trainer replicas) ───────────────
@@ -385,19 +448,36 @@ def lever_status_rows(flags: dict, control: dict, schedule: dict | None = None,
     closed_loop = control.get("closed_loop") or []
     rows: list[dict] = []
 
-    # 1) paint-seed (ep0 part_frac measured — THE acceptance gate)
+    # 1) paint-seed (the CORRECTED gate, FEED-04x: mechanism + birth, not init-part_frac alone)
     mode = nuc.get("mode") or flags.get("lane-prior-phi1-mode") or "?"
-    if nuc["state"] == "PASS":
+    if nuc["state"] == "BIRTH_CONFIRMED":
+        rows.append({"lever": "paint-seed", "state": "ok",
+                     "value": f"BIRTH d_seg={nuc['birth_d_seg']:.4f}@ep{nuc.get('birth_epoch')}",
+                     "detail": (f"mode={mode} · d_seg < lane-frac bound {LANE_FRAC_BOUND} PROVES "
+                                f"partial lane presence (pixel arithmetic)")})
+    elif nuc["state"] == "PASS":
         rows.append({"lever": "paint-seed", "state": "ok",
                      "value": f"part_frac[lane]={nuc['lane_part_frac']:.4f}",
-                     "detail": f"mode={mode} · lane_px={nuc.get('lane_px')} · ep0 gate PASS (measured)"})
+                     "detail": f"mode={mode} · lane_px={nuc.get('lane_px')} · init partition seeded (measured)"})
+    elif nuc["state"] == "SEEDED_WATCH":
+        dis = nuc.get("pretrain_disagree")
+        sup = nuc.get("seed_support")
+        ev = " + ".join(filter(None, [
+            (f"paint-signal disagree {dis:.4f}≈band" if dis is not None
+             and dis >= PAINT_SIGNAL_MIN_DISAGREE else None),
+            (f"seed support {sup:.3f}" if sup else None)]))
+        rows.append({"lever": "paint-seed", "state": "warn",
+                     "value": "SEEDED · birth watch",
+                     "detail": (f"mode={mode} · init partition 0 (expected) but mechanism MEASURED "
+                                f"present: {ev} · confirm = d_seg<{LANE_FRAC_BOUND}")})
     elif nuc["state"] == "FAIL":
         rows.append({"lever": "paint-seed", "state": "bad",
-                     "value": "part_frac[lane]=0",
-                     "detail": f"mode={mode} · NUCLEATION FAIL (measured; the #205 signature)"})
+                     "value": "NO seeding mechanism",
+                     "detail": (f"mode={mode} · no paint-signal, no seed support, partition 0 "
+                                f"(measured; the true #205 signature)")})
     else:
         rows.append({"lever": "paint-seed", "state": "pending", "value": "awaiting run",
-                     "detail": f"mode={mode} · gate = measured part_frac[lane]>0 at ep0"})
+                     "detail": f"mode={mode} · gate = mechanism present at ep0, birth = d_seg<{LANE_FRAC_BOUND}"})
 
     # 2) eikonal-ramp (build-1): base/end config; stepped yet?
     base = flags.get("eikonal-weight", "?")
@@ -489,7 +569,8 @@ def lever_status_rows(flags: dict, control: dict, schedule: dict | None = None,
 def build_control(stage_rows: dict, flags: dict, verdicts: list[dict],
                   schedule: dict | None = None) -> dict:
     """Compose the full control-telemetry dict from parsed pieces (pure)."""
-    nuc = nucleation_gate(stage_rows.get("structured_init"), stage_rows.get("lane_prior_phi1"))
+    nuc = nucleation_gate(stage_rows.get("structured_init"), stage_rows.get("lane_prior_phi1"),
+                          island_seed=stage_rows.get("island_seed"), verdicts=verdicts)
     max_ep = max((int(v["epoch"]) for v in verdicts
                   if isinstance(v.get("epoch"), (int, float))), default=None)
     lane = classification_lane(verdicts, stage_rows.get("closed_loop") or [])
@@ -571,17 +652,45 @@ def render_control_panel_html(control: dict) -> str:
     if not control:
         return ""
     nuc = control.get("nucleation") or {}
-    # (c) nucleation gate — rendered PROMINENTLY
+    # (c) nucleation gate — rendered PROMINENTLY, with the CORRECTED (FEED-04x) semantics:
+    # init part_frac[lane]==0 is the EXPECTED starting point of every run; only mechanism-absent
+    # is FAIL, and birth is PROVABLE from verdicts (d_seg < the lane pixel fraction).
     st = nuc.get("state", "UNMEASURED")
-    nuc_color = {"PASS": _GOOD, "FAIL": _BAD}.get(st, _MUTED)
+    nuc_color = {"PASS": _GOOD, "BIRTH_CONFIRMED": _GOOD, "SEEDED_WATCH": _WARN,
+                 "FAIL": _BAD}.get(st, _MUTED)
+    st_label = {"BIRTH_CONFIRMED": "BIRTH ✓", "SEEDED_WATCH": "SEEDED · WATCH"}.get(st, st)
     pf = nuc.get("lane_part_frac")
     pf_s = f"{pf:.4f}" if isinstance(pf, float) else "—"
-    nuc_html = (f'<span style="font-size:19px;font-weight:700;color:{nuc_color}">{st}</span>'
-                f'<span style="font-size:11.5px;color:{_FG};margin-left:12px">'
-                f'part_frac[lane] = <b>{pf_s}</b> · lane_px {_esc(nuc.get("lane_px", "—"))} · '
-                f'seed mode {_esc(nuc.get("mode") or "—")}</span>'
-                f'<div style="font-size:10px;color:{_MUTED};margin-top:2px">acceptance gate: '
-                f'MEASURED part_frac[lane] &gt; 0 at ep0 (flag presence is NOT evidence)</div>')
+    dis = nuc.get("pretrain_disagree")
+    sup = nuc.get("seed_support")
+    if st == "BIRTH_CONFIRMED":
+        evidence = (f'd_seg <b>{nuc.get("birth_d_seg"):.4f}</b>@ep{_esc(nuc.get("birth_epoch"))} '
+                    f'&lt; lane-frac bound {LANE_FRAC_BOUND} ⟹ lane PRESENT (pixel arithmetic)')
+        gate_note = ('a lane-less witness cannot score below the lane pixel fraction — '
+                     'birth is PROVEN, not inferred')
+    elif st == "SEEDED_WATCH":
+        ev_bits = []
+        if dis is not None and dis >= PAINT_SIGNAL_MIN_DISAGREE:
+            ev_bits.append(f'paint-signal IN target (pretrain disagree <b>{dis:.4f}</b> ≈ the '
+                           f'lane band; the #205 no-op measured 0.0004)')
+        if sup:
+            ev_bits.append(f'island-seed support <b>{sup:.3f}</b> (#205 had none)')
+        evidence = (f'init part_frac[lane] = {pf_s} (EXPECTED 0 at init — the witness partition '
+                    f'starts empty in every run) · ' + " · ".join(ev_bits))
+        gate_note = (f'mechanism MEASURED present → birth watch armed: CE verdicts must '
+                     f'out-descend #205 by ep50-75; BIRTH confirms at d_seg &lt; {LANE_FRAC_BOUND}')
+    elif st == "FAIL":
+        evidence = (f'part_frac[lane] = <b>{pf_s}</b> · NO paint-signal (disagree '
+                    f'{dis if dis is not None else "—"}) · NO seed support — mechanism ABSENT')
+        gate_note = 'the true #205 signature: nothing present that can birth the lane'
+    else:
+        evidence = (f'part_frac[lane] = <b>{pf_s}</b> · lane_px {_esc(nuc.get("lane_px", "—"))} · '
+                    f'seed mode {_esc(nuc.get("mode") or "—")}')
+        gate_note = ('gate = seeding MECHANISM measured at ep0 (paint-signal / seed support / '
+                     'partition); flag presence is NOT evidence')
+    nuc_html = (f'<span style="font-size:19px;font-weight:700;color:{nuc_color}">{_esc(st_label)}</span>'
+                f'<span style="font-size:11.5px;color:{_FG};margin-left:12px">{evidence}</span>'
+                f'<div style="font-size:10px;color:{_MUTED};margin-top:2px">{gate_note}</div>')
     # (a) stage timeline with FIRED transitions
     trs = control.get("transitions") or []
     if trs:
