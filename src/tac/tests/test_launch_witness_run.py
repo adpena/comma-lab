@@ -202,3 +202,89 @@ def test_main_extra_bank6_is_caught_by_the_fixed_mem_preflight(tmp_path, monkeyp
     assert rc == 4
     err = capsys.readouterr().err
     assert "REFUSING to launch" in err
+
+
+# ───────────────── safe-frac policy derivation (L5/XC-ii, operator memory policy 2026-07-04) ────
+def test_derive_safe_frac_explicit_cli_always_wins(monkeypatch):
+    def _must_not_read():
+        raise AssertionError("explicit CLI value must not consult governor state")
+    monkeypatch.setattr(lw, "_governed_active_jobs", _must_not_read)
+    frac, branch, why = lw.derive_safe_frac(0.6)
+    assert frac == 0.6 and branch == "explicit"
+
+
+def test_derive_safe_frac_single_workload_branch(monkeypatch):
+    """No other governed heavy job admitted/running -> 0.85 (sole-workload; the branch that
+    activates on this box AFTER the #205 preserve+stop)."""
+    monkeypatch.setattr(lw, "_governed_active_jobs", lambda: [])
+    frac, branch, why = lw.derive_safe_frac(None)
+    assert frac == lw.SAFE_FRAC_SINGLE_WORKLOAD == 0.85
+    assert branch == "single_workload" and "sole-workload" in why
+
+
+def test_derive_safe_frac_concurrent_branch(monkeypatch):
+    """A governed heavy job admitted/running -> 0.70 (the CORRECT branch on this box today,
+    while #205 is live)."""
+    monkeypatch.setattr(lw, "_governed_active_jobs",
+                        lambda: [{"label": "levelset_witness_n600", "pid": 29129}])
+    frac, branch, why = lw.derive_safe_frac(None)
+    assert frac == lw.SAFE_FRAC_CONCURRENT == 0.70
+    assert branch == "concurrent" and "levelset_witness_n600" in why
+
+
+def test_derive_safe_frac_unreadable_state_falls_back_conservative(monkeypatch):
+    def _boom():
+        raise OSError("registry unreadable")
+    monkeypatch.setattr(lw, "_governed_active_jobs", _boom)
+    frac, branch, why = lw.derive_safe_frac(None)
+    assert frac == 0.70 and branch == "fallback_conservative" and "unreadable" in why
+
+
+def test_governed_active_jobs_readonly_registry_view(tmp_path, monkeypatch):
+    """The read path itself: running rows with a LIVE pid AND a heavy signature are counted;
+    dead-pid (stale), non-running, and telemetry/control-plane rows (no projection, cmd outside
+    the governor's heavy vocabulary — e.g. memory_blackbox) are dropped, so a telemetry daemon
+    can never pin the box at 0.70 after the real run stops. Pure read — never modified."""
+    import json as _json
+
+    import system_memory_governor as gov
+    me = os.getpid()
+    reg = tmp_path / "durable_daemons.json"
+    rows = [
+        # heavy via recorded governed projection
+        {"label": "live_run", "pid": me, "status": "running", "projected_peak_gib": 67.6},
+        # heavy via the governor's OUR_JOBS_PATTERN cmd vocabulary (no projection recorded)
+        {"label": "legacy_trainer", "pid": me, "status": "running",
+         "cmd": [".venv/bin/python", "experiments/train_levelset_witness_realized_through_R_mlx.py"]},
+        # telemetry daemon: no projection, cmd outside the heavy vocabulary -> NOT a workload
+        {"label": "memory_blackbox", "pid": me, "status": "running",
+         "cmd": [".venv/bin/python", "tools/memory_blackbox.py"]},
+        # sub-threshold projection -> NOT heavy
+        {"label": "tiny_probe", "pid": me, "status": "running", "projected_peak_gib": 0.5},
+        {"label": "stale_dead", "pid": 987654, "status": "running",   # ESRCH -> dropped
+         "projected_peak_gib": 67.6},
+        {"label": "finished", "pid": me, "status": "exited", "projected_peak_gib": 67.6},
+    ]
+    reg.write_text(_json.dumps(rows))
+    before = reg.read_text()
+    monkeypatch.setattr(gov, "_DURABLE_DAEMON_REGISTRY", reg)
+    jobs = lw._governed_active_jobs()
+    assert [j["label"] for j in jobs] == ["live_run", "legacy_trainer"]
+    assert reg.read_text() == before  # READ-ONLY
+
+
+def test_main_dry_run_prints_safe_frac_policy_branch(tmp_path, monkeypatch, capsys):
+    """Observability: the launcher prints WHICH policy branch fired and why (both branches)."""
+    out1 = tmp_path / "single"
+    monkeypatch.setattr(lw, "_governed_active_jobs", lambda: [])
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out1),
+                  "--dry-run", "--no-dashboard"])
+    assert rc == 0
+    assert "safe-frac 0.85 [single_workload]" in capsys.readouterr().out
+    out2 = tmp_path / "concurrent"
+    monkeypatch.setattr(lw, "_governed_active_jobs",
+                        lambda: [{"label": "levelset_205", "pid": 29129}])
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out2),
+                  "--dry-run", "--no-dashboard"])
+    assert rc == 0
+    assert "safe-frac 0.70 [concurrent]" in capsys.readouterr().out

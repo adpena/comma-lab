@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
+import os
 import re
 import sys
 import time
@@ -64,6 +65,82 @@ def _admission_override_ok(text: str | None) -> bool:
         return False
     low = text.strip().lower()
     return low not in {"<rationale>", "<reason>", "placeholder", "tbd", "todo", "n/a"} and len(low) >= 8
+
+
+# ───────────── safe-frac policy (operator memory policy 2026-07-04; review XC-ii/L5) ────────────
+SAFE_FRAC_SINGLE_WORKLOAD = 0.85   # sole-workload: no artificial ceiling (>=10 GiB fail-safe floor
+#                                    + ~10 GiB margin => 0.85 is the physics-derived safe fraction)
+SAFE_FRAC_CONCURRENT = 0.70        # only under admitted concurrency (coexistence headroom), and the
+#                                    CONSERVATIVE fallback when the governor state is unreadable
+
+
+HEAVY_MIN_PROJECTED_GIB = 4.0      # a governed row is a HEAVY workload iff its recorded projection
+#                                    is at least this (telemetry daemons record no/near-zero peaks)
+
+
+def _governed_active_jobs() -> list[dict]:
+    """READ-ONLY view of the governor's admitted/running HEAVY jobs: the durable-daemon registry
+    rows with ``status == "running"`` AND a live pid (stale rows for dead pids are dropped) AND a
+    heavy-workload signature — a recorded ``projected_peak_gib >= HEAVY_MIN_PROJECTED_GIB`` (the
+    governed admission path), or, when no projection was recorded, a cmd matching the governor's
+    own OUR_JOBS_PATTERN heavy vocabulary. Control-plane/telemetry daemons (memory_blackbox,
+    dashboards) record neither and must NOT pin the box at 0.70 after the real run stops.
+    Consumes ONLY the governor's read helpers — never its action surface, never mutates state."""
+    import system_memory_governor as _gov  # tools/ is on sys.path (same dir as this launcher)
+
+    jobs: list[dict] = []
+    for r in _gov._running_registry_jobs(_gov._load_registry_rows()):
+        try:
+            pid = int(r.get("pid", 0))
+        except (TypeError, ValueError):
+            continue
+        if pid <= 0:
+            continue
+        try:
+            os.kill(pid, 0)              # liveness probe only — signal 0 sends nothing
+        except ProcessLookupError:
+            continue                      # dead pid => stale registry row, not a live workload
+        except PermissionError:
+            pass                          # alive but not ours => still a live workload
+        proj = r.get("projected_peak_gib")
+        if proj is not None:
+            try:
+                heavy = float(proj) >= HEAVY_MIN_PROJECTED_GIB
+            except (TypeError, ValueError):
+                heavy = True              # malformed projection => count it (conservative)
+        else:
+            cmd = r.get("cmd")
+            cmd_str = " ".join(str(t) for t in cmd) if isinstance(cmd, list) else str(cmd or "")
+            heavy = _gov.matches_our_jobs(cmd_str)
+        if not heavy:
+            continue
+        jobs.append({"label": str(r.get("label", "")) or f"pid{pid}", "pid": pid})
+    return jobs
+
+
+def derive_safe_frac(explicit: float | None) -> tuple[float, str, str]:
+    """Policy-aware ``--mem-preflight-safe-frac`` (operator memory policy 2026-07-04, memory
+    ``operator_memory_policy_sole_workload_no_artificial_ceiling_20260704``): 0.85 when NO other
+    governed heavy job is admitted/running (sole-workload — no artificial ceiling), 0.70 only
+    under admitted concurrency. An EXPLICIT CLI value always wins; unreadable governor state
+    falls back CONSERVATIVE to 0.70. Returns ``(safe_frac, branch, why)`` for observability."""
+    if explicit is not None:
+        return (float(explicit), "explicit",
+                "CLI --mem-preflight-safe-frac overrides the policy derivation")
+    try:
+        jobs = _governed_active_jobs()
+    except Exception as exc:  # read-only consumption must never crash the launcher
+        return (SAFE_FRAC_CONCURRENT, "fallback_conservative",
+                f"governor state unreadable ({type(exc).__name__}: {exc}) -> conservative "
+                f"{SAFE_FRAC_CONCURRENT:.2f}")
+    if jobs:
+        names = ", ".join(sorted(j["label"] for j in jobs)[:4])
+        return (SAFE_FRAC_CONCURRENT, "concurrent",
+                f"{len(jobs)} governed heavy job(s) admitted/running ({names}) -> "
+                f"{SAFE_FRAC_CONCURRENT:.2f} (coexistence headroom)")
+    return (SAFE_FRAC_SINGLE_WORKLOAD, "single_workload",
+            f"no other governed heavy job admitted/running -> {SAFE_FRAC_SINGLE_WORKLOAD:.2f} "
+            f"(sole-workload policy 2026-07-04: >=10 GiB fail-safe floor + ~10 GiB margin)")
 
 
 # ───────────────────────── never-invent-a-flag guard ─────────────────────────
@@ -395,9 +472,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="per-arm RSS cap (MiB) for safe_run layer-3 (default 90000)")
     ap.add_argument("--min-free-gb", type=float, default=10.0,
                     help="OOM launch-preflight free-memory floor (default 10; operator-relaxed)")
-    ap.add_argument("--mem-preflight-safe-frac", type=float, default=0.70,
+    ap.add_argument("--mem-preflight-safe-frac", type=float, default=None,
                     help="(#205 OOM self-protection) REFUSE launch if projected peak RSS exceeds this "
-                    "fraction of total RAM (default 0.70 — leaves OS + control-plane + coexistence headroom)")
+                    "fraction of total RAM. DEFAULT = POLICY-DERIVED at runtime (operator memory "
+                    "policy 2026-07-04): 0.85 when NO other governed heavy job is admitted/running "
+                    "(sole-workload — no artificial ceiling), 0.70 under admitted concurrency; "
+                    "governor state unreadable -> conservative 0.70. The read is READ-ONLY (registry "
+                    "rows + pid liveness). An explicit value here always wins over the policy.")
     ap.add_argument("--skip-mem-preflight", action="store_true",
                     help="bypass the projected-peak-RSS memory preflight (WARN instead of REFUSE)")
     ap.add_argument("--calibrate-rss", action="store_true",
@@ -433,6 +514,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true",
                     help="emit + flag-validate + write launch.sh, but DO NOT spawn (CPU-only, safe)")
     args = ap.parse_args(argv)
+
+    # (L5/XC-ii) POLICY-AWARE safe-frac: derive the memory-preflight fraction from the operator
+    # memory policy (2026-07-04) unless the CLI pinned it. Printed loud so the fired branch (and
+    # why) is always in the launch record; every downstream consumer (b1 preflight + calibrate-rss)
+    # reads the resolved value from args.
+    _sf, _sf_branch, _sf_why = derive_safe_frac(args.mem_preflight_safe_frac)
+    args.mem_preflight_safe_frac = _sf
+    print(f"# mem-preflight safe-frac {_sf:.2f} [{_sf_branch}] — {_sf_why}")
 
     overfit = not args.aggressive
 
