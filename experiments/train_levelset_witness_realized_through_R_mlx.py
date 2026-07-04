@@ -356,6 +356,7 @@ def _build_resume_state_arrays(
     opt_np: dict[str, np.ndarray] | None, *, args: Any, epoch: int, in_feat: int,
     recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
     evt_curriculum_state: "dict | None" = None,
+    closed_loop_state: "dict | None" = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -421,6 +422,11 @@ def _build_resume_state_arrays(
         out["__evt_stage_start"] = np.asarray(int(evt_curriculum_state.get("stage_start", 1)))
         out["__evt_stage_losses"] = np.asarray(
             list(evt_curriculum_state.get("losses", []) or []), np.float64)
+    # (#292 build-3) CLOSED-LOOP LEVER CONTROL state: persist bump/stop state + the captured verdict
+    # history so an ON-run --resume-from is bit-faithful (same classifications => same bumps + stop).
+    # Default None (closed-loop OFF, incl. #205) => ZERO new keys => sidecar byte-identical.
+    if closed_loop_state is not None:
+        out.update(_cl_state_arrays(closed_loop_state, closed_loop_state.get("verdicts", [])))
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
     # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
     _prov = provenance or {}
@@ -1117,6 +1123,170 @@ def _scheduled_eikonal_weight(ep: int, args) -> float:
     frac = (ep - step_ep) / float(ease)                 # 0..1 across the ease window
     w = 0.5 * (1.0 - float(np.cos(np.pi * frac)))        # cosine 0->1 (same map as hosc-beta cosine)
     return base + (end - base) * w
+
+
+# ── (#292 build-3) CLOSED-LOOP LEVER CONTROL — pure, deterministic, default-OFF ──────────────────
+# Classification sentinels + slope/persistence math MUST MATCH tools/witness_control_monitor.py::
+# classify_trajectory (the monitor is the read-only sibling; this is the in-run actuator). Replicated
+# INLINE (not imported) because the trainer's entry point runs with sys.path[0]=experiments/ (no
+# repo-root `tools` package on the live #205 launch path); parity is regression-guarded by
+# experiments/test_closed_loop_control.py which importlib-loads BOTH and cross-checks classifications.
+_CL_DIVERGING_ERASING = "diverging_erasing"
+_CL_TRANSITION_TRANSIENT = "transition_transient"
+_CL_VOLATILE = "volatile"
+_CL_PLATEAU = "plateau"
+_CL_CONVERGING = "converging"
+
+
+def _cl_lstsq_slope(xs: "list[float]", ys: "list[float]") -> float:
+    """Least-squares slope dy/dx (0.0 if <2 points or zero x-spread). VERBATIM replica of
+    tools/witness_control_monitor._lstsq_slope (pure, numpy-free => identical floats)."""
+    n = len(xs)
+    if n < 2:
+        return 0.0
+    mx_ = sum(xs) / n
+    my_ = sum(ys) / n
+    sxx = sum((x - mx_) ** 2 for x in xs)
+    if sxx <= 0.0:
+        return 0.0
+    sxy = sum((x - mx_) * (y - my_) for x, y in zip(xs, ys))
+    return sxy / sxx
+
+
+def _cl_classify(
+    verdicts: "list[dict]", *, window: int = 5, creep_eps: float = 1e-6,
+    plateau_eps: float = 5e-7, volatile_cv: float = 0.5, min_sustained_windows: int = 3,
+) -> "dict":
+    """(#292 build-3) Classify the CURRENT within-stage d_seg trajectory. The classification core of
+    tools/witness_control_monitor.classify_trajectory, replicated EXACTLY (same falling-rule order,
+    same within-stage filtering on seg_form, same sustained-vs-transient persistence test): sustained
+    DIVERGING_ERASING requires the rise to persist >= min_sustained_windows within-stage verdicts AND
+    the net-stage slope > 0 — distinct from a recoverable TRANSITION_TRANSIENT (boundary shock).
+    PURE (no numpy/MLX/wall-clock): same verdict history => same classification. Each verdict row:
+    {"epoch": int, "seg_form": str, "d_seg": float, "ep_loss": float}."""
+    if not verdicts:
+        raise ValueError("no verdicts to classify")
+    latest_stage = str(verdicts[-1].get("seg_form", ""))
+    same = [v for v in verdicts if str(v.get("seg_form", "")) == latest_stage]
+    win = same[-int(window):] if window > 0 else same
+    eps_x = [float(v["epoch"]) for v in win]
+    dsegs = [float(v["d_seg"]) for v in win]
+    losses = [float(v.get("ep_loss", 0.0)) for v in win]
+    d_slope = _cl_lstsq_slope(eps_x, dsegs)
+    l_slope = _cl_lstsq_slope(eps_x, losses)
+    mean_ds = sum(dsegs) / len(dsegs)
+    if len(dsegs) >= 2 and mean_ds > 0:
+        var = sum((d - mean_ds) ** 2 for d in dsegs) / len(dsegs)
+        cv = (var ** 0.5) / mean_ds
+    else:
+        cv = 0.0
+    # Persistence: NET slope since the stage started (transient rises recover; erosion doesn't).
+    full_slope = _cl_lstsq_slope([float(v["epoch"]) for v in same], [float(v["d_seg"]) for v in same])
+    n_stage = len(same)
+    if d_slope > creep_eps and l_slope < 0.0:
+        sustained = (n_stage >= min_sustained_windows) and (full_slope > 0.0)
+        cls = _CL_DIVERGING_ERASING if sustained else _CL_TRANSITION_TRANSIENT
+    elif cv > volatile_cv:
+        cls = _CL_VOLATILE
+    elif abs(d_slope) <= plateau_eps:
+        cls = _CL_PLATEAU
+    else:
+        cls = _CL_CONVERGING
+    return {"classification": cls, "d_seg_slope": d_slope, "ep_loss_slope": l_slope,
+            "net_stage_slope": full_slope, "n_stage": n_stage, "d_seg_cv": cv}
+
+
+def _cl_effective_eikonal(scheduled: float, bump_add: float, eikonal_max: float) -> float:
+    """(#292 build-3) Effective eikonal weight = the build-1 schedule PLUS the bounded closed-loop
+    bump: ``min(scheduled + bump_add, eikonal_max)`` — with the cap floored at ``scheduled`` so a
+    mis-set max can NEVER pull the weight BELOW the schedule (bounded ABOVE, never below).
+    ``bump_add <= 0.0`` returns ``scheduled`` EXACTLY (the byte-identity contract: OFF, or ON with
+    no bump fired, is bit-for-bit ``_scheduled_eikonal_weight``). Pure; unit-tested."""
+    if bump_add <= 0.0:
+        return float(scheduled)
+    return float(min(scheduled + bump_add, max(eikonal_max, scheduled)))
+
+
+def _cl_step(classification: str, state: dict, ep: int, *,
+             bump: float, max_bumps: int, stop_after: int) -> "dict | None":
+    """(#292 build-3) ONE deterministic controller transition at an eval point. Mutates ``state``
+    IN PLACE; returns a JSON-ready action event or ``None`` (no action).
+
+    Policy (Tier-3 "ramp eikonal on creep" + "early termination"):
+      * classification != DIVERGING_ERASING  => NO action; the post-budget stop countdown RESETS
+        (erosion must PERSIST consecutively to stop — a recovered window breaks persistence).
+      * SUSTAINED DIVERGING_ERASING with bump budget left => BOUNDED eikonal bump: bumps += 1,
+        bump_add += bump (total add bounded by max_bumps*bump; the APPLICATION is further capped at
+        --closed-loop-eikonal-max by _cl_effective_eikonal).
+      * SUSTAINED DIVERGING_ERASING with budget SPENT => count consecutive post-budget erosion
+        windows; at >= stop_after, arm ``stop_epoch`` (clean early-stop; best ckpt already preserved
+        continuously by _maybe_preserve_best). The controller NEVER launches anything (CONTAINMENT):
+        it only mutates the in-run eikonal weight + arms the stop flag.
+    PURE in (classification, state, ep, params): same inputs => same mutation => same action."""
+    if state.get("stop_epoch") is not None:
+        return None                                     # already armed; terminal
+    if classification != _CL_DIVERGING_ERASING:
+        state["post_budget_windows"] = 0                # persistence broken => reset countdown
+        return None
+    if state["bumps"] < int(max_bumps) and float(bump) > 0.0:
+        state["bumps"] = int(state["bumps"]) + 1
+        state["bump_add"] = float(state["bump_add"]) + float(bump)
+        state["post_budget_windows"] = 0
+        return {"action": "eikonal_bump", "bumps_used": state["bumps"],
+                "bump_add": round(state["bump_add"], 6)}
+    state["post_budget_windows"] = int(state["post_budget_windows"]) + 1
+    if state["post_budget_windows"] >= max(1, int(stop_after)):
+        state["stop_epoch"] = int(ep)
+        return {"action": "early_stop", "stop_epoch": int(ep),
+                "post_budget_windows": state["post_budget_windows"]}
+    return {"action": "stop_countdown", "post_budget_windows": state["post_budget_windows"],
+            "stop_after": int(stop_after)}
+
+
+def _cl_state_arrays(state: dict, verdicts: "list[dict]") -> "dict[str, np.ndarray]":
+    """(#292 build-3) Closed-loop controller state -> resume-sidecar arrays (mirrors the build-2
+    __evt_* pattern). Written ONLY when --closed-loop-control is ON (the caller passes None when OFF
+    => ZERO new sidecar keys => byte-identical sidecar, the #205-safe path). Persists the bump/stop
+    state AND the captured verdict history so an ON-run --resume-from classifies from the SAME
+    within-stage trajectory a continuous run would (bit-faithful resume). MLX-free."""
+    _se = state.get("stop_epoch")
+    return {
+        "__cl_bumps": np.asarray(int(state.get("bumps", 0))),
+        "__cl_bump_add": np.asarray(float(state.get("bump_add", 0.0))),
+        "__cl_post_budget_windows": np.asarray(int(state.get("post_budget_windows", 0))),
+        "__cl_stop_epoch": np.asarray(-1 if _se is None else int(_se)),
+        "__cl_v_epochs": np.asarray([int(v["epoch"]) for v in verdicts], np.int64),
+        "__cl_v_dseg": np.asarray([float(v["d_seg"]) for v in verdicts], np.float64),
+        "__cl_v_eploss": np.asarray([float(v.get("ep_loss", 0.0)) for v in verdicts], np.float64),
+        "__cl_v_segform": np.asarray([str(v.get("seg_form", "")) for v in verdicts]),
+    }
+
+
+def _cl_restore_from_cfg(cfg: dict) -> "tuple[dict, list[dict]] | None":
+    """(#292 build-3) Inverse of _cl_state_arrays through the _load_resume_state cfg parse
+    (``a.item() if a.size == 1 else a.tolist()`` => scalars OR lists). Returns (state, verdicts) or
+    ``None`` when the sidecar predates the feature / was written with closed-loop OFF (the caller
+    then starts fresh — deterministic going forward, mirroring the build-2 cap-fallback honesty)."""
+    if "__cl_bumps" not in cfg:
+        return None
+
+    def _as_list(x) -> list:
+        return x if isinstance(x, list) else [x]
+
+    _se = int(cfg.get("__cl_stop_epoch", -1))
+    state = {
+        "bumps": int(cfg["__cl_bumps"]),
+        "bump_add": float(cfg.get("__cl_bump_add", 0.0)),
+        "post_budget_windows": int(cfg.get("__cl_post_budget_windows", 0)),
+        "stop_epoch": None if _se < 0 else _se,
+    }
+    eps_l = _as_list(cfg.get("__cl_v_epochs", []))
+    ds_l = _as_list(cfg.get("__cl_v_dseg", []))
+    el_l = _as_list(cfg.get("__cl_v_eploss", []))
+    sf_l = _as_list(cfg.get("__cl_v_segform", []))
+    verdicts = [{"epoch": int(e), "d_seg": float(d), "ep_loss": float(l), "seg_form": str(s)}
+                for e, d, l, s in zip(eps_l, ds_l, el_l, sf_l)]
+    return state, verdicts
 
 
 def _hosc_beta_for_epoch(ep: int, args) -> float | None:
@@ -3084,6 +3254,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # LOST (the gap that forced a manual ep725 snapshot worse than the ep700 best). Per-ARM scope
     # (each out_dir tracks its own best); the campaign compares arm-bests across arms.
     _best: dict[str, Any] = {"d_seg": float("inf"), "ep": None, "path": None}
+    # (#292 build-3) CLOSED-LOOP LEVER CONTROL. _cl_on gates the ENTIRE feature: OFF (default; the
+    # #205 path) => no verdict capture, no bump, no early-stop, no sidecar keys => BYTE-IDENTICAL.
+    # _cl_verdicts is the deterministic IN-MEMORY capture of (epoch, seg_form, d_seg, ep_loss) the
+    # controller classifies on — the async verdict thread is JOINED at each eval-point decision when
+    # ON, so the action depends on the deterministic d_seg VALUE, never wall-clock/thread timing.
+    # Resume restore (ON only) happens next to the _evt_state restore below (where resume_cfg lives).
+    _cl_on = bool(getattr(args, "closed_loop_control", False))
+    _cl_state: dict[str, Any] = {"bumps": 0, "bump_add": 0.0, "post_budget_windows": 0,
+                                 "stop_epoch": None}
+    _cl_verdicts: list[dict[str, Any]] = []
 
     def _verdict_inflight() -> bool:
         t = _verdict_thread["t"]
@@ -3107,6 +3287,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 row["async"] = True
             print(json.dumps(row), flush=True)
             history.append({"epoch": ep, **v, "implied_S": s})
+            # (#292 build-3) deterministic closed-loop capture (ON only; OFF appends nothing =>
+            # byte-identical). Under _verdict_lock; the decision point joins the thread first, so
+            # this row is ALWAYS visible to the controller that classifies epoch ``ep``.
+            if _cl_on:
+                _cl_verdicts.append({"epoch": int(ep), "seg_form": str(seg_form),
+                                     "d_seg": float(v["d_seg"]), "ep_loss": float(ep_loss)})
 
     def _maybe_preserve_best(d_seg: float, ep: int, shadow_np_proj: dict[str, np.ndarray],
                              softmax_temp: float, hosc_beta: float) -> None:
@@ -3284,7 +3470,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (#292 build-2) persist the event-triggered curriculum controller state ONLY when the
             # feature is ON (closure vars _evt_on/_evt_state, assigned before any _do_checkpoint call,
             # mirroring recent_losses). OFF => None => ZERO new sidecar keys => byte-identical (#205-safe).
-            evt_curriculum_state=(_evt_state if _evt_on else None))
+            evt_curriculum_state=(_evt_state if _evt_on else None),
+            # (#292 build-3) persist the closed-loop controller state ONLY when the feature is ON
+            # (closure vars _cl_on/_cl_state/_cl_verdicts, assigned before any _do_checkpoint call,
+            # mirroring _evt_state). OFF => None => ZERO new sidecar keys => byte-identical (#205-safe).
+            closed_loop_state=({**_cl_state, "verdicts": list(_cl_verdicts)} if _cl_on else None))
         # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
@@ -3571,6 +3761,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "tau": _evt_state["tau"], "l7": _evt_state["l7"],
                               "note": "no persisted event state; past-cap boundaries pinned to hardcoded caps"}),
                   flush=True)
+    # (#292 build-3) CLOSED-LOOP resume restore (ON only; mirrors the __evt_* pattern above). A
+    # sidecar with the __cl_* keys reproduces the SAME bump/stop state + verdict history a continuous
+    # run would hold => bit-faithful ON-resume. A pre-feature / OFF-written sidecar lacks the keys =>
+    # fresh state, deterministic going forward (the build-2 cap-fallback honesty). OFF => skipped.
+    if _cl_on and resume_cfg is not None:
+        _clr = _cl_restore_from_cfg(resume_cfg)
+        if _clr is not None:
+            _cl_state.update(_clr[0])
+            _cl_verdicts[:] = _clr[1]
+            print(json.dumps({"stage": "resume_closed_loop", "bumps": _cl_state["bumps"],
+                              "bump_add": _cl_state["bump_add"],
+                              "post_budget_windows": _cl_state["post_budget_windows"],
+                              "stop_epoch": _cl_state["stop_epoch"],
+                              "restored_verdicts": len(_cl_verdicts)}), flush=True)
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
     # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0). Under
@@ -3642,6 +3846,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 seg_form = _seg_form_for_epoch(ep, args)
                 _evt_event = None
             eik_w_ep = _scheduled_eikonal_weight(ep, args)   # (#292) eikonal STEP-ramp; base if --eikonal-weight-end unset (BYTE-IDENTICAL)
+            # (#292 build-3) closed-loop BOUNDED bump composes ON TOP of the build-1 schedule:
+            # eff = min(scheduled + bump_add, max(--closed-loop-eikonal-max, scheduled)). Guarded so
+            # OFF (or ON with no bump fired) leaves eik_w_ep EXACTLY _scheduled_eikonal_weight
+            # (the byte-identity contract; #205 runs closed-loop OFF).
+            if _cl_on and _cl_state["bump_add"] > 0.0:
+                eik_w_ep = _cl_effective_eikonal(eik_w_ep, float(_cl_state["bump_add"]),
+                                                 float(args.closed_loop_eikonal_max))
             # BUILD 1 (FEED-fw): detect an AdamW->AdamW stage boundary at THIS epoch BEFORE the
             # existing transition blocks mutate prev_seg_form / lane_gate / msal_gate. Consumed below
             # (after the Muon block, so muon_switched is current) to register the LR re-warmup anchor
@@ -4096,6 +4307,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "ep_loss": round(ep_loss, 3),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     history.append({"epoch": ep, **v, "implied_S": s})
+                    # (#292 build-3) closed-loop capture on the SYNC verdict path too (already
+                    # deterministic — no thread). OFF => appends nothing => byte-identical.
+                    if _cl_on:
+                        _cl_verdicts.append({"epoch": int(ep), "seg_form": str(seg_form),
+                                             "d_seg": float(v["d_seg"]), "ep_loss": float(ep_loss)})
                     # HARDENING: preserve the best EMA shadow (sync path = current shadow IS what
                     # realized_verdict just scored; project film.weight on-manifold like the verdict).
                     _maybe_preserve_best(
@@ -4105,6 +4321,43 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         float(model.softmax_temp), float(model.hosc_beta))
             if _prof is not None:
                 _prof["verdict_s"] += time.perf_counter() - _prof["_v0"]  # #252 profile: verdict wall-clock
+            # ── (#292 build-3) CLOSED-LOOP LEVER CONTROL decision point (eval cadence; ON only) ──
+            # Placed IMMEDIATELY after the verdict block and BEFORE the checkpoint blocks so the
+            # resume sidecar written this epoch carries the POST-decision state + THIS epoch's
+            # verdict row => an ON-run --resume-from reproduces the continuous decisions exactly.
+            # DETERMINISM: JOIN the in-flight async verdict FIRST so the decision consumes the
+            # deterministic d_seg VALUE for THIS epoch — never wall-clock/thread timing. Joining at
+            # every decision also means no verdict is ever in-flight at the next schedule call, so
+            # the skip-throttle never fires => the verdict EPOCH SET itself is deterministic when ON.
+            # Then classify the within-stage trend (same math as tools/witness_control_monitor —
+            # sustained erosion vs recoverable transient) and take the BOUNDED action via _cl_step.
+            # CONTAINMENT: only mutates the in-run eikonal bump + arms a clean early-stop; the best
+            # EMA-shadow ckpt is already preserved continuously by _maybe_preserve_best. OFF
+            # (default; the #205 path) => _cl_stop_now stays False and NOTHING below runs.
+            _cl_stop_now = False
+            if _cl_on and (ep % args.eval_every == 0 or ep == args.epochs):
+                if args.async_verdict:
+                    _join_async_verdict()
+                if _cl_verdicts:
+                    _clc = _cl_classify(
+                        _cl_verdicts,
+                        min_sustained_windows=int(args.closed_loop_min_sustained_windows))
+                    _cla = _cl_step(
+                        _clc["classification"], _cl_state, ep,
+                        bump=float(args.closed_loop_eikonal_bump),
+                        max_bumps=int(args.closed_loop_max_bumps),
+                        stop_after=int(args.closed_loop_stop_after_windows))
+                    print(json.dumps({
+                        "stage": "closed_loop", "epoch": ep,
+                        "classification": _clc["classification"],
+                        "d_seg_slope": _clc["d_seg_slope"],
+                        "net_stage_slope": _clc["net_stage_slope"],
+                        "n_stage": _clc["n_stage"],
+                        "eikonal_bump": round(float(_cl_state["bump_add"]), 6),
+                        "bumps_used": int(_cl_state["bumps"]),
+                        "action": (_cla["action"] if _cla is not None else "none"),
+                        **({k: v for k, v in (_cla or {}).items() if k != "action"})}), flush=True)
+                    _cl_stop_now = _cl_state["stop_epoch"] is not None
             # DM1 telemetry (decisive-smoke signals; design memo §6 firewall). At eval cadence, log
             # PR(M) (per-pair FiLM modulation participation ratio), PR(cov(code)) and the Stiefel
             # residual ‖WᵀW−I‖_F so the A/B can SEPARATE "means fixed" (PR held >~3.0) from "end moved"
@@ -4204,6 +4457,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # this block is skipped entirely => byte-identical.
                 _evt_state["losses"].append(float(ep_loss))
             last_ep = ep
+            # (#292 build-3) closed-loop EARLY-STOP: break at the END of the loop body (after
+            # last_ep + the checkpoint/telemetry blocks above ran for this epoch) so the post-loop
+            # final checkpoint + result.json land normally with last_ep == the stop epoch. The stop
+            # was ARMED at the decision point above (before the sidecar write => armed state
+            # persists). OFF (default) => _cl_stop_now is always False => never fires.
+            if _cl_stop_now:
+                print(json.dumps({
+                    "stage": "closed_loop_early_stop", "epoch": ep,
+                    "reason": "sustained diverging_erasing persisted "
+                              f"{_cl_state['post_budget_windows']} eval-windows after the "
+                              f"bump budget ({int(args.closed_loop_max_bumps)}) was spent",
+                    "best_d_seg": (round(float(_best["d_seg"]), 6)
+                                   if _best["ep"] is not None else None),
+                    "best_epoch": _best["ep"], "best_path": _best["path"],
+                    "note": "clean stop; final checkpoint + result.json follow (best EMA "
+                            "shadow preserved); structural erosion — don't waste epochs"}),
+                    flush=True)
+                break
 
     # FEED-em: JOIN any in-flight async verdict so the final verdict row + history land BEFORE
     # result.json is written (the DONE-marker contract). No-op when --async-verdict is off.
@@ -4554,6 +4825,34 @@ def main(argv: list[str] | None = None) -> int:
                     help="#292: |relative least-squares slope| threshold (slope/mean over the window) for plateau.")
     ap.add_argument("--curriculum-plateau-windows", type=int, default=4,
                     help="#292: number of trailing within-stage ep_loss values in the plateau slope window.")
+    # (#292 build-3) CLOSED-LOOP LEVER CONTROL: at each eval point, JOIN the async verdict (the
+    # deterministic d_seg VALUE, never thread timing), classify the within-stage trend with the SAME
+    # sustained-erosion-vs-transient math as tools/witness_control_monitor, and on SUSTAINED
+    # DIVERGING_ERASING take BOUNDED action: (a) step the effective eikonal weight up (composes with
+    # the build-1 schedule, capped at --closed-loop-eikonal-max, at most --closed-loop-max-bumps
+    # times); (b) after the bump budget is spent, if erosion persists --closed-loop-stop-after-windows
+    # consecutive eval-windows, EARLY-STOP cleanly (best EMA-shadow ckpt already preserved). DEFAULT
+    # OFF => no capture, no bump, no stop, no sidecar keys => BYTE-IDENTICAL (the #205-safe path).
+    # Tier-3 operator 2026-07-04: "closed-loop monitor->lever control, ramp eikonal/lane-prior on
+    # creep" + "self convergence + early termination using a mathematical system". CONTAINMENT: the
+    # loop never launches anything; it only mutates the in-run eikonal + arms a clean stop.
+    ap.add_argument("--closed-loop-control", action=argparse.BooleanOptionalAction, default=False,
+                    help="#292 build-3: closed-loop d_seg-trend monitor->lever control (bounded eikonal "
+                    "bump on sustained erosion + early-stop after budget). Default OFF => byte-identical.")
+    ap.add_argument("--closed-loop-eikonal-bump", type=float, default=0.05,
+                    help="#292 build-3: eikonal weight ADDED per sustained-erosion bump (bounded step).")
+    ap.add_argument("--closed-loop-eikonal-max", type=float, default=0.20,
+                    help="#292 build-3: HARD CAP on the effective eikonal weight (schedule + bumps); the "
+                    "cap is floored at the scheduled value so it can never pull BELOW the schedule.")
+    ap.add_argument("--closed-loop-max-bumps", type=int, default=2,
+                    help="#292 build-3: max eikonal bumps per run (the bounded actuation budget).")
+    ap.add_argument("--closed-loop-stop-after-windows", type=int, default=3,
+                    help="#292 build-3: consecutive post-budget sustained-erosion eval-windows before the "
+                    "clean early-stop is armed (best ckpt preserved).")
+    ap.add_argument("--closed-loop-min-sustained-windows", type=int, default=3,
+                    help="#292 build-3: within-stage verdicts a d_seg rise must persist (with net-stage "
+                    "slope > 0) before it counts as EROSION rather than a recoverable boundary transient "
+                    "(matches tools/witness_control_monitor classify_trajectory).")
     ap.add_argument("--tau-softplus-tau", type=float, default=0.3)
     ap.add_argument("--l7-mult", type=float, default=4.0)
     ap.add_argument("--l7-threshold", type=float, default=1.0)
