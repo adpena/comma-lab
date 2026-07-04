@@ -975,6 +975,36 @@ def _seg_form_for_epoch(ep: int, args) -> str:
     return "l7_softplus"
 
 
+def _scheduled_eikonal_weight(ep: int, args) -> float:
+    """(#292 transition-analysis) Per-epoch eikonal weight — the eikonal STEP-ramp control lever.
+
+    BYTE-IDENTICAL constant ``--eikonal-weight`` unless ``--eikonal-weight-end`` is set != base:
+    then STEP base -> end at the tau/MCF onset (``--tau-softplus-start-epoch``, the same boundary
+    ``_seg_form_for_epoch`` uses), cosine-eased over ``--stage-transition-rewarmup-epochs``.
+    Rationale (MEASURED, gt_n6 survival probe): CE holds a valid SDF at eikonal 0.05; at the tau
+    onset mean-curvature flow narrows the interface (half-width tau/2) toward sigma1.5 / 49% lane
+    survival, so raise the unit-gradient enforcement (knee ~0.10) to keep the thin lane a valid
+    unit-gradient SDF (sigma0.8 / 93% survival). With ``--softmax-temp-end 1.0`` (the measured
+    resolution floor) no inverse-tau tracking is needed; only this MCF-onset step is load-bearing.
+    Mirrors ``_hosc_beta_for_epoch``'s byte-identical-when-unset contract."""
+    base = float(args.eikonal_weight)
+    end_raw = getattr(args, "eikonal_weight_end", None)
+    if end_raw is None:
+        return base
+    end = float(end_raw)
+    if end == base or not getattr(args, "curriculum", False):
+        return base
+    step_ep = int(args.tau_softplus_start_epoch)
+    if step_ep <= 0 or ep < step_ep:
+        return base
+    ease = int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0)
+    if ease <= 0 or ep >= step_ep + ease:
+        return end
+    frac = (ep - step_ep) / float(ease)                 # 0..1 across the ease window
+    w = 0.5 * (1.0 - float(np.cos(np.pi * frac)))        # cosine 0->1 (same map as hosc-beta cosine)
+    return base + (end - base) * w
+
+
 def _hosc_beta_for_epoch(ep: int, args) -> float | None:
     """(FEED-fb) Annealed hosc ``beta`` at 1-based epoch ``ep``, or ``None`` when NO anneal applies.
 
@@ -3442,6 +3472,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 except Exception:
                     pass
             seg_form = _seg_form_for_epoch(ep, args)
+            eik_w_ep = _scheduled_eikonal_weight(ep, args)   # (#292) eikonal STEP-ramp; base if --eikonal-weight-end unset (BYTE-IDENTICAL)
             # BUILD 1 (FEED-fw): detect an AdamW->AdamW stage boundary at THIS epoch BEFORE the
             # existing transition blocks mutate prev_seg_form / lane_gate / msal_gate. Consumed below
             # (after the Muon block, so muon_switched is current) to register the LR re-warmup anchor
@@ -3756,7 +3787,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             [lstar_cache[p][0] for p in _sub], [lstar_cache[p][1] for p in _sub],
                             [pose_tgts[p] for p in _sub],
                             args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
-                            args.eikonal_weight, args.length_weight,
+                            eik_w_ep, args.length_weight,
                         )
                         mx.eval(loss_b, grads_b)  # materialize per group (bound the lazy fwd+bwd graph)
                         lsum += float(loss_b) * _bn          # mean-over-group * count = group sum
@@ -3771,7 +3802,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             loss, grads = value_and_grad(
                                 model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
                                 args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
-                                args.eikonal_weight, args.length_weight,
+                                eik_w_ep, args.length_weight,
                             )
                         else:
                             # #224 (5) dual co-grad: witness grads[0] (== the single-path grads, same loss/
@@ -3780,7 +3811,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                 model.trainable_parameters(), seed_mod.trainable_parameters(),
                                 _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
                                 args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
-                                args.eikonal_weight, args.length_weight,
+                                eik_w_ep, args.length_weight,
                             )
                             accum_seed = sgrads if accum_seed is None else tree_map(lambda a, b: a + b, accum_seed, sgrads)
                             mx.eval(accum_seed)
@@ -4565,6 +4596,12 @@ def main(argv: list[str] | None = None) -> int:
                     "the per-pair hardness = mean(gt_margin < band).")
     # LEVEL-SET REG
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
+    ap.add_argument("--eikonal-weight-end", type=float, default=None,
+                    help="(#292 control-system) STEP the eikonal weight from --eikonal-weight (CE) up "
+                    "to this value at the tau/MCF onset (--tau-softplus-start-epoch), cosine-eased over "
+                    "--stage-transition-rewarmup-epochs. Unset or ==base => BYTE-IDENTICAL constant. "
+                    "Fresh run: base 0.05 -> end 0.10 (the MEASURED survival knee; holds the thin lane "
+                    "at sigma0.8/93% vs sigma1.5/49% as MCF narrows the interface).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
     # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty (additive; default 0.0 == OFF ==
     # bit-identical loss). Drives the per-pair FiLM codes toward a low-rank subspace (rate). Computed
