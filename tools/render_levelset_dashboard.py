@@ -296,14 +296,28 @@ def _schedule_from_flags(flags: dict) -> dict:
     """Curriculum stage epoch-boundaries from the trainer flags. Builds the ordered
     CE / tau / l7 / Muon stages from whatever boundary flags are present (future
     stages included, so the full schedule is visible up front). All boundaries None
-    -> empty stages (the client then shows only what it can)."""
+    -> empty stages (the client then shows only what it can).
+
+    (L7-F1 fix, throughput review 2026-07-04) A DEMOTED l7 — ``--l7-start-epoch >=
+    epochs`` (the "never" form, e.g. 1001 @ epochs=1000 in fresh_seeded) or ``>
+    muon_start`` (unreachable under Muon precedence) — emits NO l7 segment and Muon
+    follows tau directly. The naive chain otherwise produced an INVERTED [1001, 726)
+    l7 segment + a tau stage overlapping Muon (the exact class
+    ``dashboard_trajectory_model._stage_segments`` fixes on its surface)."""
     epochs = _int_flag(flags, "epochs")
     eval_every = _int_flag(flags, "eval-every")
     tau_start = _int_flag(flags, "tau-softplus-start-epoch")
     l7_start = _int_flag(flags, "l7-start-epoch")
     muon_start = _int_flag(flags, "muon-start-epoch")
-    bounds = [("CE", 0, tau_start), ("tau", tau_start, l7_start),
-              ("l7", l7_start, muon_start), ("Muon", muon_start, epochs)]
+    l7_demoted = l7_start is not None and (
+        (epochs is not None and l7_start >= epochs)
+        or (muon_start is not None and l7_start > muon_start))
+    if l7_demoted:
+        bounds = [("CE", 0, tau_start), ("tau", tau_start, muon_start),
+                  ("Muon", muon_start, epochs)]
+    else:
+        bounds = [("CE", 0, tau_start), ("tau", tau_start, l7_start),
+                  ("l7", l7_start, muon_start), ("Muon", muon_start, epochs)]
     stages = [{"name": n, "start": a, "end": b} for (n, a, b) in bounds if a is not None]
     return {"epochs": epochs, "eval_every": eval_every,
             "curriculum": ("curriculum" in flags),

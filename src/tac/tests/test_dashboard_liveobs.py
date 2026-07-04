@@ -131,6 +131,31 @@ def test_schedule_from_flags_four_stages():
     assert names == [("CE", 0, 300), ("tau", 300, 600), ("l7", 600, 726), ("Muon", 726, 1000)]
 
 
+def test_schedule_from_flags_demoted_l7_never_emits_no_l7_segment():
+    """(L7-F1 fix) ``--l7-start-epoch 1001`` @ epochs=1000 (the demoted-"never" form the
+    fresh_seeded config emits) must NOT produce the inverted [1001, 726) l7 segment nor a tau
+    stage overlapping Muon: the chain skips l7 and Muon follows tau directly."""
+    flags = {"epochs": "1000", "eval-every": "25", "tau-softplus-start-epoch": "300",
+             "l7-start-epoch": "1001", "muon-start-epoch": "726"}
+    sched = rld._schedule_from_flags(flags)
+    names = [(s["name"], s["start"], s["end"]) for s in sched["stages"]]
+    assert names == [("CE", 0, 300), ("tau", 300, 726), ("Muon", 726, 1000)]
+    # no inverted segment anywhere (end can be None for an open tail; never end < start)
+    assert all(s["end"] is None or s["start"] < s["end"] for s in sched["stages"])
+    # the raw flag value is still surfaced for clients that display it
+    assert sched["l7_start"] == 1001
+
+
+def test_schedule_from_flags_l7_past_muon_skipped_too():
+    """(L7-F1 fix, second form) l7_start > muon_start but < epochs is unreachable under Muon
+    precedence — also skipped (no overlap, no inversion)."""
+    flags = {"epochs": "1000", "tau-softplus-start-epoch": "300",
+             "l7-start-epoch": "900", "muon-start-epoch": "726"}
+    sched = rld._schedule_from_flags(flags)
+    assert [(s["name"], s["start"], s["end"]) for s in sched["stages"]] == \
+        [("CE", 0, 300), ("tau", 300, 726), ("Muon", 726, 1000)]
+
+
 def test_parse_run_config_from_launch_sh(tmp_path):
     (tmp_path / "launch.sh").write_text(_LAUNCH_SH)
     (tmp_path / "run.log").write_text(_gt_line() + "\n")
