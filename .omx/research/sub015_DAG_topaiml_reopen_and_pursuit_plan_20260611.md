@@ -7797,3 +7797,20 @@ CONTAINMENT: research + registry only; NO trainer edit, NO #205 touch, NO paid G
 **PRESERVE + CONTAIN (operator's call; heavy launch GO-gated + governor + CONTAINMENT):** PRESERVE done — CE-best `levelset_ckpt_stageCE_ep299.npz` (ep300, d_seg 0.00475) + per-stage resume states kept, no signal lost. CONTAIN: the seed must be at INIT ⟹ can't retrofit by resuming #205 ⟹ fix = a FRESH seeded run. Deep-math says #205's remaining 326 ep to Muon are low-EV. **RECOMMENDED: preserve #205 + fresh run with #208 seed + #286 eikonal + geometric-τ + Ch.6 easing. NO autonomous stop/launch — operator GO.**
 
 **PROBES STILL OWED (the operator's "more smokes before deciding"):** memory-gated per-class d_seg attribution on the REAL #205 witness @n600 (confirm creep=lane at scale; run when #205 frees / GO) · critical-nucleus knee ($0, extend probe) · OT head-offset lane-mass restore (8bc91449c, memory-gated). CONTAINMENT: analysis + $0-probe only; NO #205 touch, NO heavy launch, NO paid GPU. **HARD GATE: pointer 0.19110 UNMOVED.**
+
+---
+
+**FEED-04c (2026-07-04) — GEOMETRY-OPTIMAL SCALING-LAW ENGINEERING pass LAUNCHED (5 facets, #289; the Muon generalization + seed-both + separatrix/asymmetry seed + dynamic self-convergence). INTERIM: facet-1 landed, F2-5 running; synthesis + fresh-run config pending.** (Operator directives 2026-07-04, all APPROVED; MEANS, pointer 0.19110 UNMOVED.)
+
+**THE FRAME:** a gradient flow's SCALING LAW = f(metric κ · effective-dim · geodesic-distance-to-target · schedule · CONTROL). Muon changed ONLY the metric (weight-space spectral, busted κ≈19, −32%). Engineer ALL → change the EXPONENT not just the constant. The 5 facets, each grounded in a PROVEN deep-math law:
+1. **METRIC** (Fisher-NG preconditioning; law #2/#3 Fisher=caustic/mirror-descent=NG) — facet-1 LANDED (`scaling_law_facet1_metric_preconditioning`), synthesis folds it in.
+2. **DIM** (shearlet/curvelet parametrization on the intrinsic ~8-dim manifold; law #4) — running.
+3. **SEED** (separatrix+asymmetry-informed SDF seed — seed the zero-level-set ON the true separatrix from openpilot lane poly, the fold-caustic asymmetry [law #2] sets the SIGN; + pose ego-ξ + meta-init #211; MEASURING init-d_seg) — running.
+4. **SCHEDULE** (adiabatic Maslov/Modica-Mortola τ [law #6 τ=ε=ħ] + seeded-grow nucleation) — running.
+5. **DYNAMIC CONTROL** (Pontryagin/costate λ=marginal-ΔS → the costate-controller #247/meta-layer; Lyapunov certificate → EARLY-TERMINATION [the tau-creep detector]; adaptive/MPC schedule; recursive-self-reflection lifted to training; deterministic+resumable, EMITS decisions not auto-fire GPU) — running.
+
+**THE MEASURED PAYOFF (why seed-both is the unlock):** the openpilot lane prior rendered through R MEASURES d_seg ≈ **0.00087 — at the 0.00092 goal** (#138). The lane target is SOLVED by the prior; the witness fails only because it seeds the lane at ZERO + erodes it (FEED-04b nucleation). Seed FROM the prior (seg + pose) + engineer the flow to GROW not erase.
+
+**CALIBRATED (the $0 nucleus-knee probe, n24):** LANE survival under σ=1.5 tau/MCF: native **44.6%** → +1px **90.0%** → +2px **98.3%** (sub-critical, needs dilation). MOVABLE native **99.5%** (blob, above nucleus — birth-seed at native, no dilation). **SEED SPEC = LANE separatrix-SDF +2px, MOVABLE separatrix-SDF native** (→ #208).
+
+**SEQUENCE (operator-approved; "fresh seeded run after A/B/calibration"):** 5 facets synthesize → I build the CALIBRATED optimal fresh-run config (seed+metric+basis+adiabatic-schedule+dynamic-controller+eikonal) → memory-preflight through the governor → PRESERVE + cleanly stop #205 (CE-best already kept) → LAUNCH fresh seeded run via the governed launcher (resumable, per-stage). A 10-second final config-confirm precedes the stop-and-launch (heavy/hard-to-reverse). FULL SYNTHESIS FEED + the scaling-law canonical equations pending all 5 facets. CONTAINMENT: research + $0-probe only; NO #205 touch, NO heavy launch, NO paid GPU. **HARD GATE: pointer 0.19110 UNMOVED.**
