@@ -2245,6 +2245,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _sq = mx.square(_t_wit - _t_ref) * _active                  # placement error on genuine-V px
             subpix_term = mx.sum(_sq) / (mx.sum(_active) + 1e-6)        # mean over active straddles
             L = L + subpix_w * subpix_term
+        # CONSUMER B (SPEC ONLY, NOT built here -- for the lane-band render integration): the SAME
+        # precomputed theta-independent (_subpix_t_prov, _subpix_dir_prov) maps are a decode-time
+        # RENDER-PLACEMENT target. The AA-SDF / analytic-lane-band render (--lane-render-band /
+        # tac.boundary_math.{aa_sdf_observation_render,analytic_lane_render_band}) can place the band
+        # boundary at the sub-pixel position `t` between p and its dominant partner q (dir), instead of
+        # the nearest grid edge, falling back to grid placement where the lane V is NOT genuine
+        # (t sentinel <0). That render path is owned by the lane-band lever, not this loss term -- spec
+        # noted here so the maps are reused, never re-derived (triality: DSL VectorFieldMarginSaliency).
         # #224 (5) ISLAND AMPLIFICATION — the island-birth term on the SHARED realized _signed margin
         # (island x persistence weight; orthogonal to LEVER-4's fragility x all-class weight). Default
         # amplify_w=0 => skipped => byte-identical. c1 = 2*pi+1 (the SegNet-scored frame) => pi=c1//2.
