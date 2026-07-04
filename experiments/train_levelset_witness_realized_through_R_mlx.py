@@ -1895,6 +1895,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     msal_reach = bool(getattr(args, "margin_saliency_reachability", False))
     _sR_provider: Any = None
 
+    # LEVER-4b (SUB-PIXEL BOUNDARY-PLACEMENT `t`, DIRECTIONAL upgrade of the scalar margin-saliency
+    # #141; asymmetry probe a8afad40 GREEN 2026-07-03). The cross-boundary GT margin RATIO
+    # t = M_GT[p] / (M_GT[p] + M_GT[q]) (p,q = the two straddle pixels across an inter-class edge) is a
+    # FREE sub-pixel boundary-POSITION localizer LATENT in the already-computed GT margin field (no
+    # SegNet forward; pure numpy from gt.margins/gt.lstars). It upgrades LEVER-4's DIRECTIONLESS
+    # per-pixel weight -> a SIGNED sub-pixel placement TARGET: where the GT margin V is genuine, supervise
+    # the witness's OWN realized margin ratio t_wit = Mw[p]/(Mw[p]+Mw[q]) toward the GT t (a DENSER,
+    # sub-pixel, differentiable signal than the argmax weight). Reuses the SHARED realized through-R
+    # margin ``_signed`` (Mw = relu(_signed) = witness GT-class margin, the honest mirror of the GT
+    # top1-top2 the target is built from) -- NO 2nd SegNet forward (bit-identical to LEVER-4's forward,
+    # ``_seg_levers_on`` gated). subpix_w=0.0 (DEFAULT) => the branch is skipped => byte-identical (fully
+    # additive). Providers declared None here (closure binds the cells) so the OFF path never references
+    # them; POPULATED after lstar_cache is built (spike-map style, inline -- theta-independent + cheap).
+    subpix_w = float(getattr(args, "seg_subpix_boundary_weight", 0.0))
+    subpix_start = int(getattr(args, "seg_subpix_boundary_start_epoch", 0))
+    subpix_band = float(getattr(args, "seg_subpix_boundary_v_band", 1.0))
+    subpix_eps = 1e-6
+    subpix_gate = {"on": subpix_start <= 1}
+    _subpix_t_prov: Any = None     # list[mx.array (1,H,W)] f32, GT t in [0,1] where active, -1.0 sentinel
+    _subpix_dir_prov: Any = None   # list[mx.array (1,H,W)] f32 in {0,1}, dominant-straddle dir (0=right,1=down)
+
     # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty closure constants. code_nuc_w=0.0
     # (DEFAULT) => the branch in total_loss_fn is skipped => L is byte-identical (fully additive).
     code_nuc_w = float(getattr(args, "code_nuclear_weight", 0.0))
@@ -2135,6 +2156,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           (lane_thin_w > 0.0 and lane_thin_gate["on"]) or
                           (mfh_w > 0.0 and mfh_target_mx is not None) or          # #218 facets 1b/3
                           (amplify_w > 0.0 and island_weight_mx is not None) or   # #224 island amplify
+                          (subpix_w > 0.0 and subpix_gate["on"] and               # LEVER-4b sub-pixel t
+                           _subpix_t_prov is not None) or
                           (persist_gate["w"] > 0.0 and bool(persist_classes)))    # #224 persistence loss
         if _seg_levers_on:
             # _render_R composes the FIXED bulk before R in residual mode (else == bare render) so
@@ -2193,6 +2216,35 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hmap = mx.maximum(msal_tgt - sgn, 0.0) * sal                 # fragile pixels weighted
             msal_term = mx.sum(hmap) / (mx.sum(sal) + 1e-6)             # saliency-weighted mean hinge
             L = L + msal_w * msal_term
+        # LEVER-4b (SUB-PIXEL BOUNDARY-PLACEMENT `t`; DIRECTIONAL upgrade of LEVER-4, GREEN 2026-07-03).
+        # Rides the SAME SHARED realized through-R margin `_signed` (Mw = relu(_signed) = the witness
+        # GT-class margin at every pixel, the honest mirror of the GT top1-top2 the target `t` is built
+        # from) -- NO 2nd SegNet forward. At each pre-selected genuine-V straddle pixel p (dominant
+        # inter-class edge; both GT margins in the flip band) the GT boundary sits at fractional position
+        # t = M_GT[p]/(M_GT[p]+M_GT[q]) between p and its cross-edge partner q. We supervise the witness's
+        # OWN realized margin ratio t_wit = Mw[p]/(Mw[p]+Mw[q]) toward that GT t: a DENSER, sub-pixel,
+        # differentiable placement signal that pulls both Mw[p] and Mw[q] to seat the witness boundary at
+        # the correct sub-pixel spot. q is the precomputed dominant direction (0=right (i,j+1), 1=down
+        # (i+1,j)); Mw[q] is a pure shift of the SHARED Mw (fully vectorized, both differentiable). Masked
+        # to the precomputed active straddle set (sentinel t<0 => weight 0). Default subpix_w=0 => skipped
+        # => byte-identical. MODEST 2nd-order refinement (weakest on thin lanes; effect in the 1-2px flip
+        # band, #149) -> an A/B arm, NOT a claim. pointer 0.19110 UNMOVED.
+        if subpix_w > 0.0 and subpix_gate["on"] and _subpix_t_prov is not None:
+            _pi_sp = int(c1) // 2
+            _t_tgt = _subpix_t_prov[_pi_sp]                              # (1,H,W) f32, -1 sentinel
+            _dir_m = _subpix_dir_prov[_pi_sp]                            # (1,H,W) f32 in {0,1}
+            _active = (_t_tgt >= 0.0).astype(_signed.dtype)             # (1,H,W) genuine-V straddle mask
+            _Mw = mx.maximum(_signed, 0.0)                              # (1,H,W) witness GT-class margin
+            # partner margin via a pure shift of the SHARED Mw (edge-col/row pad is inert: those pixels
+            # can never be active in the corresponding direction, so the pad value is masked out).
+            _M_right = mx.pad(_Mw[:, :, 1:], [(0, 0), (0, 0), (0, 1)])   # _M_right[i,j] = Mw[i,j+1]
+            _M_down = mx.pad(_Mw[:, 1:, :], [(0, 0), (0, 1), (0, 0)])    # _M_down[i,j]  = Mw[i+1,j]
+            _Mq = mx.where(_dir_m < 0.5, _M_right, _M_down)             # dominant cross-edge partner
+            _t_wit = _Mw / (_Mw + _Mq + subpix_eps)                     # witness sub-pixel boundary ratio
+            _t_ref = mx.maximum(_t_tgt, 0.0)                            # sentinel -1 -> 0 (masked anyway)
+            _sq = mx.square(_t_wit - _t_ref) * _active                  # placement error on genuine-V px
+            subpix_term = mx.sum(_sq) / (mx.sum(_active) + 1e-6)        # mean over active straddles
+            L = L + subpix_w * subpix_term
         # #224 (5) ISLAND AMPLIFICATION — the island-birth term on the SHARED realized _signed margin
         # (island x persistence weight; orthogonal to LEVER-4's fragility x all-class weight). Default
         # amplify_w=0 => skipped => byte-identical. c1 = 2*pi+1 (the SegNet-scored frame) => pi=c1//2.
@@ -2459,6 +2511,73 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "per-pixel seg-CE reweight: down-weight single-frame flicker "
                           "(~88.6%% irreducible, smooth-is-optimal), up-weight coherent boundary; "
                           "A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+
+    # LEVER-4b (SUB-PIXEL BOUNDARY `t`) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy from the cached
+    # gt.margins/gt.lstars -- NO SegNet forward, NO torch autograd), so it is built INLINE here (spike-map
+    # style), not by a separate tool like the through-R S_R. For each pair pi, per pixel p=(i,j) we form
+    # the two axis-aligned inter-class straddles -- RIGHT (p,(i,j+1)) and DOWN (p,(i+1,j)) -- keep only
+    # GENUINE-V straddles (lstar differs AND both GT margins < the flip-band `subpix_band`; MEASURED n96:
+    # band 1.0 -> ~2196 active px/frame = 1.12%% of pixels, t mean 0.527 std 0.263 ~ informative Uniform),
+    # and assign p its DOMINANT straddle = the one with the SHALLOWER partner margin (== the smaller-sum V,
+    # since p's own margin is shared; the sharpest / most-defined boundary). Stored per pair: t_map (1,H,W)
+    # f32 = the GT ratio M_GT[p]/(M_GT[p]+M_GT[q]) in [0,1] where active, -1.0 sentinel elsewhere (encodes
+    # the active mask); dir_map (1,H,W) f32 in {0,1} = the dominant direction (0=right,1=down) the loss
+    # shifts Mw by to gather Mw[q]. Providers stay None unless subpix_w>0 => the OFF path is byte-identical.
+    # Fails CLOSED with micro-batch (the batched twin's LeverConfig does not carry this lever yet). Memory
+    # ~ 2x the down-weight map (t + dir float maps): P*H*W*4*2 ~= 940 MB at n600 (trivial vs RAM; noted for
+    # the launcher preflight). A/B owed (needs GO); pointer 0.19110 UNMOVED.
+    if subpix_w > 0.0:
+        if _use_micro_batch:
+            raise ValueError(
+                "--seg-subpix-boundary-weight>0 is not supported with --micro-batch-pairs>1 (the batched "
+                "twin does not consume the sub-pixel boundary lever yet); run this arm at "
+                "--micro-batch-pairs 1.")
+        _sx_H, _sx_W = np.asarray(gt.lstars[0]).shape
+        _subpix_t_prov = []
+        _subpix_dir_prov = []
+        _sx_n_active = 0
+        _sx_t_sum = 0.0
+        for pi in range(P):
+            _lst = np.asarray(gt.lstars[pi], np.int64)
+            _mg = np.asarray(gt.margins[pi], np.float32)
+            # RIGHT straddles (p,(i,j+1)) live in cols [:, :W-1]; DOWN straddles (p,(i+1,j)) in rows [:H-1, :].
+            _dh = _lst[:, :-1] != _lst[:, 1:]
+            _mph = _mg[:, :-1]; _mqh = _mg[:, 1:]
+            _th = _mph / (_mph + _mqh + subpix_eps)
+            _vh = _dh & (_mph < subpix_band) & (_mqh < subpix_band)     # genuine-V RIGHT straddles
+            _dv = _lst[:-1, :] != _lst[1:, :]
+            _mpv = _mg[:-1, :]; _mqv = _mg[1:, :]
+            _tv = _mpv / (_mpv + _mqv + subpix_eps)
+            _vv = _dv & (_mpv < subpix_band) & (_mqv < subpix_band)     # genuine-V DOWN straddles
+            # per-pixel candidate fields (inf partner margin where no candidate -> loses the min).
+            _has_r = np.zeros((_sx_H, _sx_W), bool); _has_r[:, :_sx_W - 1] = _vh
+            _qr = np.full((_sx_H, _sx_W), np.inf, np.float32); _qr[:, :_sx_W - 1] = _mqh
+            _tr = np.zeros((_sx_H, _sx_W), np.float32); _tr[:, :_sx_W - 1] = _th
+            _has_d = np.zeros((_sx_H, _sx_W), bool); _has_d[:_sx_H - 1, :] = _vv
+            _qd = np.full((_sx_H, _sx_W), np.inf, np.float32); _qd[:_sx_H - 1, :] = _mqv
+            _td = np.zeros((_sx_H, _sx_W), np.float32); _td[:_sx_H - 1, :] = _tv
+            # dominant = shallower partner margin (ties -> right). p's own margin is shared, so this is the
+            # smaller-sum (sharpest) V.
+            _pick_r = _has_r & (~_has_d | (_qr <= _qd))
+            _pick_d = _has_d & (~_has_r | (_qd < _qr))
+            _t_full = np.full((_sx_H, _sx_W), -1.0, np.float32)
+            _dir_full = np.zeros((_sx_H, _sx_W), np.float32)
+            _t_full[_pick_r] = _tr[_pick_r]; _dir_full[_pick_r] = 0.0
+            _t_full[_pick_d] = _td[_pick_d]; _dir_full[_pick_d] = 1.0
+            _act = _pick_r | _pick_d
+            _sx_n_active += int(_act.sum())
+            _sx_t_sum += float(_t_full[_act].sum()) if _act.any() else 0.0
+            _subpix_t_prov.append(mx.array(_t_full[None]))              # (1,H,W)
+            _subpix_dir_prov.append(mx.array(_dir_full[None]))          # (1,H,W)
+        _sx_t_mean = round(_sx_t_sum / _sx_n_active, 4) if _sx_n_active else 0.0
+        print(json.dumps({"stage": "seg_subpix_boundary", "active": True, "n_pairs": int(P),
+                          "weight": subpix_w, "v_band": subpix_band, "start_epoch": int(subpix_start),
+                          "active_px_total": int(_sx_n_active),
+                          "active_px_per_frame": round(_sx_n_active / max(P, 1), 1),
+                          "t_target_mean": _sx_t_mean,
+                          "note": "sub-pixel boundary-placement target t=M_GT[p]/(M_GT[p]+M_GT[q]) on "
+                          "genuine-V straddles; supervises the witness realized margin ratio (DIRECTIONAL "
+                          "upgrade of LEVER-4 #141); A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
 
     # (--cache-gt-skeleton, #260 SPEED) BUILD the per-pair GT soft-skeleton cache ONCE (each sg is
     # mx.eval'd to a concrete constant, detached from any lazy graph, OUTSIDE any value_and_grad
@@ -3225,6 +3344,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (review R3-M1) LEVER-B thin-lane engagement is ALSO an AdamW->AdamW treatment boundary
             # (mirrors _bnd_lane/_bnd_msal). Default lane_thin_w=0.0 => never fires => bit-identical.
             _bnd_lane_thin = (lane_thin_w > 0.0 and (ep >= lane_thin_start) and not lane_thin_gate["on"])
+            # LEVER-4b sub-pixel boundary engagement is ALSO an AdamW->AdamW treatment boundary (mirrors
+            # _bnd_lane/_bnd_msal). Default subpix_w=0.0 => never fires => bit-identical.
+            _bnd_subpix = (subpix_w > 0.0 and (ep >= subpix_start) and not subpix_gate["on"])
             # (F3 fix) #224 analytic-lane render-band engagement is ALSO an AdamW->AdamW treatment
             # boundary (the band's render-target CHANGES at --lane-band-start-epoch): its sibling levers
             # (lane/margin/thin) already OR into _stage_boundary_now, but the band did NOT, so the
@@ -3234,7 +3356,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # => never fires => bit-identical.
             _bnd_band = (_band_active and (ep >= _band_start) and not band_gate["on"])
             _stage_boundary_now = (_bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
-                                   or _bnd_band)
+                                   or _bnd_band or _bnd_subpix)
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -3342,6 +3464,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if msal_gate["on"] and not _msal_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "margin_saliency_engage", "epoch": ep, "start": msal_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # LEVER-4b sub-pixel boundary engagement gate + transition RE-TREAT (same discipline as LEVER-4).
+            if subpix_w > 0.0:
+                _subpix_was = subpix_gate["on"]
+                subpix_gate["on"] = lever_gate_on_at_epoch(subpix_w, subpix_start, ep)
+                if subpix_gate["on"] and not _subpix_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # LEVER-B thin-lane engagement gate + transition RE-TREAT (review R3-M1: the gate was
             # initialized at :lane_thin_gate but NEVER flipped, so --lane-thin-start-epoch > 1 left the
@@ -4221,6 +4351,27 @@ def main(argv: list[str] | None = None) -> int:
                     "d_seg debt is. Requires an 'sR' key in --gt-cache (build via "
                     "tools/precompute_sR_reachability.py). Default OFF => byte-identical (texture path "
                     "unchanged). NOT supported with --micro-batch-pairs>1 (serial path only; fails closed).")
+    # LEVER-4b SUB-PIXEL BOUNDARY-PLACEMENT `t` (asymmetry probe a8afad40 GREEN 2026-07-03; DIRECTIONAL
+    # upgrade of LEVER-4 #141; ADDITIVE, DEFAULT-OFF). Supervises the witness's realized margin ratio
+    # t_wit = Mw[p]/(Mw[p]+Mw[q]) toward the FREE GT cross-boundary margin ratio t = M_GT[p]/(M_GT[p]+
+    # M_GT[q]) on genuine-V straddles (a denser sub-pixel placement signal than the argmax weight). Reuses
+    # the SHARED realized through-R margin (no 2nd SegNet forward). subpix_w=0.0 (DEFAULT) => byte-identical.
+    ap.add_argument("--seg-subpix-boundary-weight", type=float, default=0.0,
+                    help="LEVER-4b: weight on the additive sub-pixel boundary-placement loss "
+                    "(t_wit - t_GT)^2 over genuine-V inter-class straddles (0=off). The GT target "
+                    "t=M_GT[p]/(M_GT[p]+M_GT[q]) is a FREE sub-pixel localizer latent in the GT margin "
+                    "field; supervises the witness's OWN realized margin ratio. Reuses the SHARED "
+                    "LEVER-4 through-R margin forward. NOT supported with --micro-batch-pairs>1 (fails closed).")
+    ap.add_argument("--seg-subpix-boundary-v-band", type=float, default=1.0,
+                    help="LEVER-4b: genuine-V flip-band. A straddle qualifies only when BOTH GT margins "
+                    "are < this (t is meaningful only where the margin V is clean). MEASURED gt_n96: "
+                    "band 1.0 -> ~2196 active px/frame (1.12%% of px), t mean 0.527 std 0.263 "
+                    "(informative ~Uniform); the straddle set saturates by ~2.0 (boundary pixels are "
+                    "already low-margin on both sides).")
+    ap.add_argument("--seg-subpix-boundary-start-epoch", type=int, default=0,
+                    help="LEVER-4b OPTIMAL-FORM: engage only at ep>=this (0=from ep1). Gate to the "
+                    "tau_softplus/l7 margin stage (placement is meaningful once the argmax is roughly "
+                    "correct); the engage epoch re-treats the spike-guard (same discipline as LEVER-4).")
     # SPIKE-AWARE seg REWEIGHT (source-split MEASURED n600 2026-07-03; ADDITIVE, DEFAULT-OFF). Reweight
     # the per-pixel base seg CE by a theta-INDEPENDENT map from the GT argmax TEMPORAL neighbors: a SPIKE
     # pixel (lstar[t] != lstar[t-1] AND != lstar[t+1]) is single-frame argmax FLICKER a per-frame witness

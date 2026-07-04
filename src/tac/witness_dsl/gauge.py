@@ -392,10 +392,12 @@ class VectorFieldMarginSaliencyGauge(Enum):
 
     SCALAR_MAGNITUDE  = the existing scalar margin-saliency path (byte-identical baseline; emits
                         nothing beyond the campaign's ``--margin-saliency-weight``).
-    VECTOR_T_SUBPIXEL = DESIGN-STAGE upgrade to the vector ``t = M_p/(M_p+M_q)`` (magnitude +
-                        boundary-normal + sub-pixel flip-side). The t diagnostic is MEASURED GREEN
-                        (self-consistency +0.560 disjoint); the TRAINING lever is UNBUILT -> the
-                        accessor fail-closes (never-invent-flags) naming the intended arg."""
+    VECTOR_T_SUBPIXEL = BUILT upgrade to the vector ``t = M_p/(M_p+M_q)`` (magnitude + boundary-normal
+                        + sub-pixel flip-side). The t diagnostic is MEASURED GREEN (self-consistency
+                        +0.560 disjoint); the TRAINING lever LANDED as LEVER-4b
+                        ``--seg-subpix-boundary-weight`` (a sub-pixel boundary-placement loss on the
+                        SHARED realized margin; default-off byte-identical, PROVEN A==B vs HEAD). The
+                        accessor now EMITS the real flag; the net d_seg is a #205-class A/B (owed)."""
 
     SCALAR_MAGNITUDE = "scalar_magnitude"    # existing scalar saliency (byte-identical baseline)
     VECTOR_T_SUBPIXEL = "vector_t_subpixel"  # DESIGN-STAGE asymmetry-t vector saliency
@@ -631,6 +633,15 @@ CHROMA_BOUNDARY_TRAINER_FLAGS: dict[ChromaBoundaryGauge, tuple[str, ...]] = {
     ChromaBoundaryGauge.CHROMA_ACTIVE: (),            # --chroma default ON = byte-identical baseline
     ChromaBoundaryGauge.LUMA_ONLY: ("--no-chroma",),
 }
+# LEVER-4b sub-pixel boundary-placement `t` BUILT (probe a8afad40 GREEN; landed in the levelset
+# trainer, --help-verified, default-off byte-identical PROVEN A==B vs HEAD). SCALAR_MAGNITUDE => ()
+# (the existing scalar #141 path = baseline). VECTOR_T_SUBPIXEL => the REAL weighted flag at a
+# REPRESENTATIVE starter weight (the A/B tunes the weight + --seg-subpix-boundary-v-band; the gauge
+# selects the STRUCTURE = vector-t on, mirroring ALONG_TANGENT_FREQ baking --n-dir-freqs 4).
+VECTOR_MARGIN_SALIENCY_TRAINER_FLAGS: dict[VectorFieldMarginSaliencyGauge, tuple[str, ...]] = {
+    VectorFieldMarginSaliencyGauge.SCALAR_MAGNITUDE: (),   # existing scalar saliency = baseline
+    VectorFieldMarginSaliencyGauge.VECTOR_T_SUBPIXEL: ("--seg-subpix-boundary-weight", "5.0"),
+}
 
 # DESIGN-STAGE INTENDED (not-yet-wired) trainer args — documented, NEVER emitted, per
 # never-invent-flags (mirrors POSE_TRAINING_INTENDED_ARGS). Replace with a real *_TRAINER_FLAGS map
@@ -638,7 +649,7 @@ CHROMA_BOUNDARY_TRAINER_FLAGS: dict[ChromaBoundaryGauge, tuple[str, ...]] = {
 VECTOR_MARGIN_SALIENCY_INTENDED_ARGS: dict[VectorFieldMarginSaliencyGauge, str] = {
     VectorFieldMarginSaliencyGauge.SCALAR_MAGNITUDE: "",  # existing scalar path; emits nothing
     VectorFieldMarginSaliencyGauge.VECTOR_T_SUBPIXEL:
-        "--margin-saliency-vector-t (INTENDED; asymmetry-t sub-pixel skew; not wired)",
+        "--seg-subpix-boundary-weight (WIRED as LEVER-4b; see VECTOR_MARGIN_SALIENCY_TRAINER_FLAGS)",
 }
 FLICKER_TREATMENT_INTENDED_ARGS: dict[FlickerTreatmentGauge, str] = {
     FlickerTreatmentGauge.NONE: "",  # no flicker treatment; emits nothing (baseline)
@@ -670,16 +681,11 @@ def chroma_boundary_trainer_flags(chart: ChromaBoundaryGauge) -> tuple[str, ...]
 
 def vector_margin_saliency_trainer_flags(chart: VectorFieldMarginSaliencyGauge) -> tuple[str, ...]:
     """The levelset-trainer argv for a VectorFieldMarginSaliencyGauge chart. SCALAR_MAGNITUDE => ()
-    (the existing scalar saliency path = baseline). VECTOR_T_SUBPIXEL is DESIGN-STAGE -> RAISES
-    NotImplementedError naming the intended arg (never-invent-flags; the t diagnostic is GREEN but
-    the training lever is unbuilt)."""
-    if chart is VectorFieldMarginSaliencyGauge.SCALAR_MAGNITUDE:
-        return ()
-    raise NotImplementedError(
-        f"VectorFieldMarginSaliencyGauge.{chart.name} is DESIGN-STAGE (asymmetry-t vector saliency, "
-        f"probe a8afad40 GREEN but lever unbuilt); intended arg: "
-        f"{VECTOR_MARGIN_SALIENCY_INTENDED_ARGS[chart]}. never-invent-flags: emit nothing until wired."
-    )
+    (the existing scalar saliency path = baseline). VECTOR_T_SUBPIXEL => the REAL BUILT LEVER-4b flag
+    ``--seg-subpix-boundary-weight <w>`` (probe a8afad40 GREEN; landed + --help-verified; default-off
+    byte-identical PROVEN A==B vs HEAD). The baked weight is a REPRESENTATIVE A/B starter (the A/B
+    tunes weight + --seg-subpix-boundary-v-band); the net d_seg is a #205-class A/B (owed)."""
+    return VECTOR_MARGIN_SALIENCY_TRAINER_FLAGS[chart]
 
 
 def flicker_treatment_trainer_flags(chart: FlickerTreatmentGauge) -> tuple[str, ...]:
@@ -1135,8 +1141,9 @@ def default_cost_table() -> GaugeCostTable:
             provenance="FEED-03t + eq separatrix_asymmetry_t_subpixel_boundary_localizer_v1 (probe "
                        "a8afad40 GREEN): t=M_p/(M_p+M_q) is a self-consistent (+0.560 disjoint) sub-pixel "
                        "boundary position + flip-side localizer -> upgrades margin-saliency scalar->vector. "
-                       "GREEN candidate lever; the TRAINING lever is UNBUILT (accessor fail-closes) and the "
-                       "net d_seg is a #205-class A/B -> numeric None (unrankable, advisory MEANS)"),
+                       "TRAINING lever BUILT (LEVER-4b --seg-subpix-boundary-weight; default-off "
+                       "byte-identical PROVEN A==B vs HEAD); the net d_seg is a #205-class A/B (owed) -> "
+                       "numeric None (unrankable, advisory MEANS)"),
 
         # --- CHROMA_BOUNDARY (FEED-03t; PROVEN independent d_seg DOF, 0 archive bytes; --chroma) -----
         ChromaBoundaryGauge.CHROMA_ACTIVE: GaugeCost(
