@@ -2038,6 +2038,21 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 </section>
 
 <section id="tab-live">
+  <div class="grid">
+    <div class="panel"><canvas id="c_dseg" role="img" aria-label="d_seg chart"></canvas></div>
+    <div class="panel"><canvas id="c_dpose" role="img" aria-label="d_pose chart"></canvas></div>
+    <div class="panel"><canvas id="c_bytes" role="img" aria-label="blob bytes chart"></canvas></div>
+    <div class="panel"><canvas id="c_s" role="img" aria-label="implied S chart"></canvas></div>
+  </div>
+  <div class="slegend" id="slegend">
+    <span class="sc" data-st="ce"><span class="dot" style="background:#5ab0ff"></span>CE</span>
+    <span class="sc" data-st="tau"><span class="dot" style="background:#b08cff"></span>tau</span>
+    <span class="sc" data-st="l7"><span class="dot" style="background:#ffa454"></span>l7</span>
+    <span class="sc off" data-st="muon"><span class="dot" style="background:#46d3a0"></span>Muon</span>
+    <span class="sc" style="margin-left:auto"><span class="dot" style="background:rgba(226,232,240,.45)"></span>EMA</span>
+    <span class="sc"><span class="dot" style="border:1px dashed #9aa3b2;background:transparent;border-radius:0"></span>trend</span>
+    <span class="sc"><span class="dot" style="background:#ffd24a;border-radius:50%"></span>best</span>
+  </div>
   <div class="runinfo" id="rdinfo">resolving run&hellip;</div>
   <div class="metrics" id="headline">
     <div class="stat hero">
@@ -2071,27 +2086,12 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   </div>
   <div class="status" id="status">connecting&hellip;</div>
   <div class="detail" id="detail">&nbsp;</div>
-  <div class="slegend" id="slegend">
-    <span class="sc" data-st="ce"><span class="dot" style="background:#5ab0ff"></span>CE</span>
-    <span class="sc" data-st="tau"><span class="dot" style="background:#b08cff"></span>tau</span>
-    <span class="sc" data-st="l7"><span class="dot" style="background:#ffa454"></span>l7</span>
-    <span class="sc off" data-st="muon"><span class="dot" style="background:#46d3a0"></span>Muon</span>
-    <span class="sc" style="margin-left:auto"><span class="dot" style="background:rgba(226,232,240,.45)"></span>EMA</span>
-    <span class="sc"><span class="dot" style="border:1px dashed #9aa3b2;background:transparent;border-radius:0"></span>trend</span>
-    <span class="sc"><span class="dot" style="background:#ffd24a;border-radius:50%"></span>best</span>
-  </div>
   <div class="proj" id="proj"><div id="proj_seg">&nbsp;</div><div class="proj2" id="proj_s">&nbsp;</div></div>
   <details class="cfg" id="cfgpanel" open>
     <summary id="cfgsum">setup &middot; config &middot; schedule &middot; curriculum</summary>
     <div class="cfgbody" id="cfgbody"><div class="cfgmeta">parsing run config&hellip;</div></div>
   </details>
   <div class="rinfo" id="runinfostrip"></div>
-  <div class="grid">
-    <div class="panel"><canvas id="c_dseg" role="img" aria-label="d_seg chart"></canvas></div>
-    <div class="panel"><canvas id="c_dpose" role="img" aria-label="d_pose chart"></canvas></div>
-    <div class="panel"><canvas id="c_bytes" role="img" aria-label="blob bytes chart"></canvas></div>
-    <div class="panel"><canvas id="c_s" role="img" aria-label="implied S chart"></canvas></div>
-  </div>
   <div class="foot" id="foot"></div>
 </section>
 
