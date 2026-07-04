@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import threading
@@ -387,6 +388,11 @@ def _build_resume_state_arrays(
     out["__cfg_lane_band_start_epoch"] = np.asarray(int(getattr(args, "lane_band_start_epoch", 300)))
     out["__cfg_persistence_loss_weight"] = np.asarray(float(getattr(args, "persistence_loss_weight", 0.0)))
     out["__cfg_amplify_weight"] = np.asarray(float(getattr(args, "amplify_weight", 0.0)))
+    # BUILD #300: the seed-absorption levers are loss/render-only (trajectory-affecting, no param KEYS) ->
+    # record them so a --resume-from that silently drops/changes them fails closed (deterministic-repro).
+    out["__cfg_witness_alone_island_loss"] = np.asarray(int(bool(getattr(args, "witness_alone_island_loss", False))))
+    out["__cfg_seed_anneal_epochs"] = np.asarray(int(getattr(args, "seed_anneal_epochs", 0)))
+    out["__cfg_seed_anneal_shape"] = np.asarray(str(getattr(args, "seed_anneal_shape", "linear")))
     out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
     _hbe = getattr(args, "hosc_beta_end", None)
     out["__cfg_hosc_beta_end"] = np.asarray(-1.0 if _hbe is None else float(_hbe))
@@ -483,6 +489,9 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_lane_render_band", cur_band, False),
         ("__cfg_persistence_loss_weight", float(getattr(args, "persistence_loss_weight", 0.0)), True),
         ("__cfg_amplify_weight", float(getattr(args, "amplify_weight", 0.0)), True),
+        # BUILD #300 seed-absorption levers (material, trajectory-affecting).
+        ("__cfg_witness_alone_island_loss", int(bool(getattr(args, "witness_alone_island_loss", False))), False),
+        ("__cfg_seed_anneal_epochs", int(getattr(args, "seed_anneal_epochs", 0)), False),
         ("__cfg_render_aa", str(getattr(args, "render_aa", "none")), False),
         ("__cfg_hosc_beta_end", cur_hbe, True),
     ]
@@ -507,6 +516,16 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
             cur_se = int(getattr(args, "lane_band_start_epoch", 300))
             if ckpt_se != cur_se:
                 div.append(f"lane_band_start_epoch: ckpt={ckpt_se} != resume-argv={cur_se}")
+    # BUILD #300 seed_anneal_shape: inert while the anneal is OFF (epochs 0) in BOTH -> only flag when
+    # engaged in either (mirrors lane_band_start_epoch's engaged-gate).
+    if "__cfg_seed_anneal_shape" in resume_cfg:
+        ckpt_ep = int(resume_cfg.get("__cfg_seed_anneal_epochs", 0) or 0)
+        cur_ep = int(getattr(args, "seed_anneal_epochs", 0))
+        if (ckpt_ep or cur_ep):
+            ckpt_shape = str(resume_cfg["__cfg_seed_anneal_shape"])
+            cur_shape = str(getattr(args, "seed_anneal_shape", "linear"))
+            if ckpt_shape != cur_shape:
+                div.append(f"seed_anneal_shape: ckpt={ckpt_shape!r} != resume-argv={cur_shape!r}")
     return div
 
 
@@ -965,6 +984,41 @@ def lever_gate_on_at_epoch(weight: float, start_epoch: int, ep: int) -> bool:
     frozen scorer + the GT cache; this predicate does not). Per CLAUDE.md "Bugs must be permanently
     fixed AND self-protected against"."""
     return float(weight) > 0.0 and int(ep) >= int(start_epoch)
+
+
+def seed_compose_weight_at_epoch(anneal_epochs: int, shape: str, ep: int) -> float:
+    """BUILD #300 (b): island-SEED compose-weight anneal (transfer schedule) full(1.0) -> 0.0.
+
+    The island seed (``--seed-islands``) is composited into the SegNet-scored frame1 (via
+    ``_compose_chain``) so the witness has a formed island to absorb. Per the seed-absorption fix
+    (memo ``plateau_disambiguator_results_20260704.md``) the seed compose weight is ANNEALED to 0
+    across the CE stage so that by the anneal end the composed frame == the witness render (the deploy
+    surface -- the ``eval_roundtrip`` discipline applied to the island crutch). Pure + total => the
+    schedule is $0 unit-testable (the compose itself needs MLX + the frozen scorer; this schedule does
+    not).
+
+    ``anneal_epochs <= 0`` (DEFAULT) => constant ``1.0`` => ``_compose_chain`` is BYTE-IDENTICAL to the
+    pre-#300 seed compose (the caller multiplies by the weight only when it differs from 1.0). For
+    ``anneal_epochs > 0`` the weight is ``1.0`` at ``ep <= 1``, ramps to ``0.0`` at
+    ``ep >= anneal_epochs`` (linear or cosine full->0), and clamps to ``0.0`` after. Deterministic in
+    ``ep`` (a pure function) => a RESUME reproduces the same weight bit-for-bit; nothing to checkpoint.
+    Set ``anneal_epochs ~= --tau-softplus-start-epoch`` so the seed is fully transferred to the witness
+    BEFORE the tau/MCF stage erodes sub-critical island structure. Per CLAUDE.md "Bugs must be
+    permanently fixed AND self-protected against" (the compose-time-crutch-starves-the-gradient
+    meta-pattern: any compose-time assist added to a scored forward MUST anneal to zero OR route the
+    absorption gradient through the deploy surface, else it starves the gradient it bootstraps)."""
+    if int(anneal_epochs) <= 0:
+        return 1.0
+    e = int(ep)
+    if e <= 1:
+        return 1.0
+    if e >= int(anneal_epochs):
+        return 0.0
+    frac = (float(e) - 1.0) / (float(anneal_epochs) - 1.0)   # in (0, 1)
+    frac = min(max(frac, 0.0), 1.0)
+    if str(shape) == "cosine":
+        return 0.5 * (1.0 + math.cos(math.pi * frac))         # cosine 1 -> 0
+    return 1.0 - frac                                         # linear 1 -> 0
 
 
 def _adam_bias_correction_for(adam_beta2: float) -> bool:
@@ -2004,6 +2058,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     residual_mode = bool(getattr(args, "residual_mode", False))
     _compose_np = None
     _render_R = render_through_R_mlx
+    # BUILD #300 (a): default alias for the witness-alone island render. Re-bound below (in the
+    # AA/chain block) to a seed-EXCLUDED render when a compose chain is active; the bare-render default
+    # here means the OFF path (no chain) never pays a 2nd forward (== _render_R).
+    _render_R_wa = render_through_R_mlx
     if residual_mode:
         from tac.v2_compose.residual_compose import load_residual_training_bundle
 
@@ -2136,7 +2194,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # deploy (NO-FAKE, honestly measured). Default OFF (--seed-islands) => seed_state stays empty =>
     # the seed branch never fires => _compose_chain BYTE-IDENTICAL.
     seed_on = bool(getattr(args, "seed_islands", False))
-    seed_state: dict[str, Any] = {"mod": None, "masks": None}
+    # BUILD #300 (SEED-ABSORPTION FIX; root cause of the CE plateau = seed-compose island-gradient
+    # starvation, memo plateau_disambiguator_results_20260704.md / memory
+    # seed_compose_island_gradient_starvation_the_crutch_that_blocks_learning). Two coupled DEFAULT-OFF
+    # mechanisms: (a) --witness-alone-island-loss routes the island-FORMATION levers (island amplify +
+    # persistence) through the seed-EXCLUDED render so the witness gets the absorption gradient the seed
+    # was starving; (b) --seed-anneal-epochs ramps the seed compose weight full->0 across CE (transfer
+    # schedule). Both OFF => byte-identical. (a) requires a seed to exclude (else inert -> fail closed).
+    wa_island = bool(getattr(args, "witness_alone_island_loss", False))
+    if wa_island and not seed_on:
+        raise ValueError(
+            "--witness-alone-island-loss requires --seed-islands: it routes the island-formation "
+            "levers through the seed-EXCLUDED (witness-alone) render; with no seed there is nothing "
+            "to exclude (the composed frame already == the witness render) => the flag is inert.")
+    seed_anneal_epochs = int(getattr(args, "seed_anneal_epochs", 0))
+    seed_anneal_shape = str(getattr(args, "seed_anneal_shape", "linear"))
+    # compose_w: the epoch-annealed island-seed compose weight (1.0 => byte-identical seed compose;
+    # ramped full->0 by the epoch loop when --seed-anneal-epochs > 0). Read LIVE by _compose_chain.
+    seed_state: dict[str, Any] = {"mod": None, "masks": None, "compose_w": 1.0}
     # assemble the compose chain (residual bulk FIRST, then lane band, then island seed). None => bare.
     _use_chain = residual_mode or _band_active or seed_on
 
@@ -2150,8 +2225,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # the self-detected island support). Reads the LIVE seed_mod.residual -> the dual
             # value_and_grad co-differentiates it; the compose flows through the SHARED _f1 -> _slog ->
             # _signed (no 2nd SegNet). frame0 (even) is seg-free -> unseeded.
+            # BUILD #300 (b): scale by the epoch-annealed compose weight (transfer schedule full->0).
+            # compose_w == 1.0 (DEFAULT / --seed-anneal-epochs 0) => the `!= 1.0` guard is False => the
+            # extra multiply is NEVER emitted => BYTE-IDENTICAL to the pre-#300 seed compose.
             _pi = int(code_idx) // 2
-            rgb_nhwc = rgb_nhwc + seed_state["mod"].residual[_pi] * seed_state["masks"][_pi]
+            _sd = seed_state["mod"].residual[_pi] * seed_state["masks"][_pi]
+            _cw = seed_state.get("compose_w", 1.0)
+            if _cw != 1.0:
+                _sd = _sd * _cw
+            rgb_nhwc = rgb_nhwc + _sd
+        return rgb_nhwc
+
+    def _compose_chain_noseed(rgb_nhwc, code_idx):
+        # BUILD #300 (a): the WITNESS-ALONE compose chain -- residual bulk + lane band (the deploy-time
+        # composers) but WITHOUT the deploy-EXCLUDED island seed. Used to route the island-FORMATION
+        # levers (island amplify + persistence) through the seed-EXCLUDED render so the witness gets the
+        # absorption gradient the seed was starving (memo plateau_disambiguator_results_20260704.md).
+        # It is ONLY invoked when the seed is live AND --witness-alone-island-loss is set (see
+        # total_loss_fn); the OFF path never calls it. When there is no seed this is identical to
+        # _compose_chain (the seed branch is a no-op), so no correctness gap if it were called.
+        if residual_mode:
+            rgb_nhwc = _compose_mx(rgb_nhwc, code_idx)
+        if _band_active and band_gate["on"]:
+            rgb_nhwc = band_compose_fn(rgb_nhwc, code_idx)
         return rgb_nhwc
 
     # (1) AA supersample render dispatch: IGNORE the passed base-grid coord_feats and use the
@@ -2166,6 +2262,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _aa_on:
                 # per-pair FINE feats when --self-orient (shared curvelet-fine [+ fine dir-feats]);
                 # else the shared curvelet-fine tensor. _cf_fine_mx is late-bound (defined below).
+                _feats_fine = _cf_fine_mx(int(code_idx) // 2) if _aa_so_fine else coord_feats_fine_mx
+                return _render_aa_R(witness, _feats_fine, code_idx, rh, rw, aa_ss, compose_fn=_cf)
+            return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_cf)
+
+        def _render_R_wa(witness, coord_feats, code_idx, rh, rw):  # noqa: F811 (BUILD #300 wa override)
+            # BUILD #300 (a): witness-alone render (island seed EXCLUDED via _compose_chain_noseed) for
+            # the island-formation levers. Mirrors _render_R exactly but with the no-seed compose chain
+            # so amplify/persistence push the WITNESS (not the seed) to form Lane+Movable itself.
+            _cf = _compose_chain_noseed if _use_chain else None
+            if _aa_on:
                 _feats_fine = _cf_fine_mx(int(code_idx) // 2) if _aa_so_fine else coord_feats_fine_mx
                 return _render_aa_R(witness, _feats_fine, code_idx, rh, rw, aa_ss, compose_fn=_cf)
             return render_through_R_mlx(witness, coord_feats, code_idx, rh, rw, compose_fn=_cf)
@@ -2553,25 +2659,57 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # is engaged; default-off (all weights 0) => _seg_levers_on False => block skipped =>
         # byte-identical to the additive default path. ``_f1`` is also reused for LEVER-4's UNIWARD
         # texture map (same rendered frame).
-        _seg_levers_on = ((lane_w > 0.0 and lane_gate["on"]) or
-                          (msal_w > 0.0 and msal_gate["on"]) or
-                          (lane_thin_w > 0.0 and lane_thin_gate["on"]) or
-                          (mfh_w > 0.0 and mfh_target_mx is not None) or          # #218 facets 1b/3
-                          (amplify_w > 0.0 and island_weight_mx is not None) or   # #224 island amplify
-                          (subpix_w > 0.0 and subpix_gate["on"] and               # LEVER-4b sub-pixel t
-                           _subpix_t_prov is not None) or
-                          (chroma_bnd_w > 0.0 and chroma_bnd_gate["on"] and        # LEVER-4c chroma-sharpen
-                           _chroma_gt_prov is not None) or
-                          (persist_gate["w"] > 0.0 and bool(persist_classes)))    # #224 persistence loss
-        if _seg_levers_on:
+        # (review R2b-M3 + BUILD #300 a) SHARED realized through-R seg forward(s), split into the
+        # SEED-COMPOSED forward the surgical levers read and the WITNESS-ALONE (seed-EXCLUDED) forward the
+        # island-FORMATION levers read under --witness-alone-island-loss. Each forward is paid LAZILY,
+        # only when a lever that needs it is engaged. Levers that read the SEED-COMPOSED margin/logits:
+        _nonwa_levers_on = ((lane_w > 0.0 and lane_gate["on"]) or
+                            (msal_w > 0.0 and msal_gate["on"]) or
+                            (lane_thin_w > 0.0 and lane_thin_gate["on"]) or
+                            (mfh_w > 0.0 and mfh_target_mx is not None) or          # #218 facets 1b/3
+                            (subpix_w > 0.0 and subpix_gate["on"] and               # LEVER-4b sub-pixel t
+                             _subpix_t_prov is not None) or
+                            (chroma_bnd_w > 0.0 and chroma_bnd_gate["on"] and        # LEVER-4c chroma
+                             _chroma_gt_prov is not None))
+        # island-FORMATION levers (#224 amplify + persistence): read the WITNESS-ALONE margin when the
+        # BUILD #300 (a) routing is active, else the seed-composed margin (== the pre-#300 path).
+        _island_levers_on = ((amplify_w > 0.0 and island_weight_mx is not None) or  # #224 island amplify
+                             (persist_gate["w"] > 0.0 and bool(persist_classes)))   # #224 persistence loss
+        _wa_route = wa_island and (seed_state["mod"] is not None) and _island_levers_on
+        # the seed-composed forward is needed by the non-wa levers, and by the island levers ONLY when
+        # they are NOT wa-routed (wa off, or no seed). When wa-routed the composed forward would be
+        # UNUSED -> skip it (saves 1 SegNet forward/step; the live config engages only island levers).
+        # BYTE-IDENTITY (wa off): _wa_route False => _need_composed == the pre-#300 _seg_levers_on OR =>
+        # _signed/_slog computed under the SAME condition, _signed_wa/_slog_wa ALIAS them (SAME objects).
+        _need_composed = _nonwa_levers_on or (_island_levers_on and not _wa_route)
+        _signed = None
+        _slog = None
+        if _need_composed:
             # _render_R composes the FIXED bulk before R in residual mode (else == bare render) so
             # the surgical levers (lane-thin/margin-saliency/lane-edge) weight the COMPOSED-render
             # d_seg -- the residual IS the Lane+Movable annulus, so they are maximally relevant.
-            _f1 = _render_R(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3)
+            _f1 = _render_R(model, cf, c1, render_h, render_w)  # (1, SEG_H, SEG_W, 3) SEED-COMPOSED
             _slog = adapter.segnet(_f1)                                    # (1, H, W, 5)
             _sig_gt = mx.sum(_slog * lstar_oh, axis=-1)                    # (1, H, W) gt-class logit
             _sig_run = mx.max(_slog + lstar_oh * (-1e9), axis=-1)          # (1, H, W) top competitor
             _signed = _sig_gt - _sig_run                                   # (1, H, W) realized margin
+        # BUILD #300 (a) WITNESS-ALONE island render/margin. The seed-composed _signed satisfies the seg
+        # loss ON the island (the seed CARRIES it) so dL/d(witness) ~= 0 there and the witness never
+        # learns to FORM Lane+Movable itself -> deploy (witness-alone) has ~0 island mass (MEASURED: 71%
+        # of the plateau = the 2 seeded classes at 100% within-class flip; memo
+        # plateau_disambiguator_results_20260704.md). Routing the island levers through the seed-EXCLUDED
+        # (witness-alone == deploy) render restores the missing absorption gradient. Default (no routing)
+        # => _signed_wa/_slog_wa ALIAS _signed/_slog (SAME objects) => BYTE-IDENTICAL, no 2nd forward.
+        # When routed, the seed is ABSENT from _compose_chain_noseed => d(_signed_wa)/d(seed) == 0, so the
+        # seed correctly gets NO gradient from these levers (it still trains via the base-CE composed path).
+        _signed_wa = _signed
+        _slog_wa = _slog
+        if _wa_route:
+            _f1_wa = _render_R_wa(model, cf, c1, render_h, render_w)   # seed EXCLUDED (witness-alone)
+            _slog_wa = adapter.segnet(_f1_wa)                          # (1, H, W, 5)
+            _sig_gt_wa = mx.sum(_slog_wa * lstar_oh, axis=-1)         # (1, H, W)
+            _sig_run_wa = mx.max(_slog_wa + lstar_oh * (-1e9), axis=-1)
+            _signed_wa = _sig_gt_wa - _sig_run_wa                     # (1, H, W) witness-alone margin
         # LEVER-3 (lane-edge fragility weighting, operator 2026-06-27 Yousfi-grounding): contest
         # SegNet argmax order is the comma10k CANONICAL order (MEASURED 2026-06-27 from the cached
         # argmax; CLAUDE.md NON-NEGOTIABLE): [Road0, Lane1, Undrivable2, Movable3, MyCar4]. The
@@ -2684,8 +2822,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (island x persistence weight; orthogonal to LEVER-4's fragility x all-class weight). Default
         # amplify_w=0 => skipped => byte-identical. c1 = 2*pi+1 (the SegNet-scored frame) => pi=c1//2.
         if amplify_w > 0.0 and island_weight_mx is not None:
+            # BUILD #300 (a): the island-BIRTH term reads the WITNESS-ALONE margin (_signed_wa aliases
+            # _signed when --witness-alone-island-loss is off => byte-identical) so it pushes the witness
+            # to form the island, not the deploy-excluded seed.
             L = L + amplify_w * island_birth_from_signed_mx(
-                _signed, island_weight_mx[int(c1) // 2], amplify_mtgt, form=amplify_form)
+                _signed_wa, island_weight_mx[int(c1) // 2], amplify_mtgt, form=amplify_form)
         # #224 (4) PERSISTENCE/TOPOLOGY loss — soft-clDice + persistence-weighted island recall on the
         # SHARED realized seg logits (_slog). GT-presence-gated inside the module (never hallucinate).
         # Annealed weight persist_gate["w"] (set per-epoch, coarse->fine); 0 => branch inert.
@@ -2694,8 +2835,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (pi == c0//2, the SAME key thin_maps_mx/island_weight_mx use). None => inline recompute
             # (byte-identical default); a cache MISS also falls back to None (still bit-identical).
             _sg_pre = _sg_cache.get(int(c0) // 2) if _sg_cache is not None else None
+            # BUILD #300 (a): island RECALL/topology reads the WITNESS-ALONE seg logits (_slog_wa aliases
+            # _slog when --witness-alone-island-loss is off => byte-identical) so the recall term drives
+            # the witness to reproduce the island skeleton itself, not free-ride the deploy-excluded seed.
             L = L + persist_gate["w"] * persistence_topology_loss_mlx(
-                _slog, lstar_oh, persist_classes, cldice_iters=persist_cldice_iters,
+                _slog_wa, lstar_oh, persist_classes, cldice_iters=persist_cldice_iters,
                 w_cldice=1.0, w_recall=persist_recall_w, sg_precomputed=_sg_pre)
         # LEVER-A (FiLM-rank-fix) soft participation-ratio FLOOR. Pushes the per-pair modulation PR up
         # toward rankfloor_tgt (opposing the measured rank-1 collapse). PR computed Gram-wise (NO
@@ -2853,6 +2997,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # loop takes the UNCHANGED serial path (BYTE-IDENTICAL; the serial _dual_vg dispatch is untouched).
     _micro_batch_pairs = int(getattr(args, "micro_batch_pairs", 1))
     _use_micro_batch = _micro_batch_pairs > 1
+    # BUILD #300 (a) is a SERIAL-path lever (the witness-alone island routing lives in total_loss_fn,
+    # not the importable batched twin tac.boundary_math.levelset_micro_batch_loss). FAIL CLOSED rather
+    # than SILENTLY ignore the routing under --micro-batch-pairs (NO-FAKE: a silently-wrong result is
+    # worse than a refused one). --seed-anneal-epochs (mechanism b) DOES compose with micro-batch (it
+    # lives in _compose_chain, which the batched render invokes) so it is NOT gated here.
+    if wa_island and _use_micro_batch:
+        raise NotImplementedError(
+            "--witness-alone-island-loss is not wired into the --micro-batch-pairs batched loss path "
+            "(serial B=1 only; the island-formation levers route through total_loss_fn's witness-alone "
+            "render, not the batched twin). Run with --micro-batch-pairs 1, or extend "
+            "tac.boundary_math.levelset_micro_batch_loss before batching this lever.")
     value_and_grad_batch = None
     _dual_vg_batch = None
     if _use_micro_batch:
@@ -4254,6 +4409,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # #224 (4) persistence loss anneal (linear warm-up; coarse->fine). No-op when persist_w=0.
             if persist_w > 0.0 and persist_classes:
                 persist_gate["w"] = persistence_anneal_weight(ep, persist_w, persist_warmup)
+            # BUILD #300 (b) island-SEED compose-weight anneal (transfer schedule full->0). Deterministic
+            # in ep => RESUME reproduces the same weight (nothing to checkpoint). No spike-guard re-treat:
+            # the ramp is SMOOTH (small per-epoch delta), not a discrete engage, so it never trips the
+            # jump-detector (unlike the lever-engage boundaries above). No-op unless --seed-anneal-epochs
+            # > 0 AND a seed is live => compose_w stays 1.0 => _compose_chain byte-identical.
+            if seed_on and seed_anneal_epochs > 0:
+                seed_state["compose_w"] = seed_compose_weight_at_epoch(
+                    seed_anneal_epochs, seed_anneal_shape, ep)
             # BUILD 1 (FEED-fw): apply stage-transition TREATMENT for an AdamW->AdamW boundary
             # detected above. Skipped during the Muon finisher (muon_switched True; it re-treats
             # itself + freezes the base LR schedule). The spike-guard re-treat already happened in the
@@ -5606,6 +5769,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--amplify-persist", type=str, default="inverse_thickness",
                     choices=["uniform", "inverse_thickness"],
                     help="#224 island birth-weight kind (inverse_thickness up-weights the thinnest tail).")
+    # BUILD #300 (SEED-ABSORPTION FIX; memo plateau_disambiguator_results_20260704.md). The island seed
+    # (--seed-islands) is composited into the SegNet-scored frame1 and read by EVERY realized-through-R
+    # seg lever, so once the seed satisfies the loss on the Lane+Movable island, dL/d(witness) ~= 0 there
+    # and the witness never learns to FORM the islands itself -> deploy (witness-alone) has ~0 island mass
+    # (MEASURED: 71% of the plateau = the 2 seeded classes at 100% within-class flip). Two coupled,
+    # DEFAULT-OFF mechanisms restore the absorption gradient (both OFF => byte-identical current trainer):
+    ap.add_argument("--witness-alone-island-loss", action=argparse.BooleanOptionalAction, default=False,
+                    help="BUILD #300 (a): score the island-FORMATION levers (--amplify-weight island-birth "
+                    "+ --persistence-loss-weight island-recall) on the WITNESS-ALONE render (island seed "
+                    "EXCLUDED from the compose chain) so the witness gets the absorption gradient the seed "
+                    "was starving. The seed still composes for the OTHER levers (base CE etc.) + nucleation. "
+                    "REQUIRES --seed-islands (else there is no seed to exclude => fail closed). SERIAL-only "
+                    "(not wired into --micro-batch-pairs; fails closed there). DEFAULT OFF => byte-identical.")
+    ap.add_argument("--seed-anneal-epochs", type=int, default=0,
+                    help="BUILD #300 (b): ramp the island-seed COMPOSE WEIGHT full(1.0)->0.0 over epochs "
+                    "[1, seed-anneal-epochs] (transfer schedule: nucleation early, deploy-surface "
+                    "(witness == composed) by the anneal end). 0 (DEFAULT) => constant 1.0 => _compose_chain "
+                    "byte-identical. Set ~= --tau-softplus-start-epoch so the seed is fully transferred to "
+                    "the witness BEFORE the tau/MCF stage erodes sub-critical island structure.")
+    ap.add_argument("--seed-anneal-shape", type=str, default="linear", choices=["linear", "cosine"],
+                    help="BUILD #300 (b): island-seed compose-weight anneal shape (full->0). Consulted only "
+                    "when --seed-anneal-epochs > 0.")
     args = ap.parse_args(argv)
 
     # (review C2) --anneal-epochs guard: must be >= 1 when set (it is a cosine DENOMINATOR). A value
