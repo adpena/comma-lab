@@ -349,6 +349,16 @@ def inject_lane_sdf(phi_hwk: np.ndarray, phi_1_lane: np.ndarray, *, lane_cls: in
     mode="replace": phi[...,lane_cls] = phi_1_lane (the isolation/representation test).
     mode="bias":    phi[...,lane_cls] += bias_scale * phi_1_lane (the prior/bias option,
                     keeps the learned lane head and pulls it toward the manifold).
+    mode="paint":   PAINT-THEN-SDF (facet-3, 2026-07-04, task #291). ``replace`` is a MEASURED
+                    NO-OP for nucleation: the thin lane SDF (max ~+halfwidth ~3) LOSES the argmax
+                    to the deep road/static-core SDF (~+20), so ``argmax`` never picks lane and
+                    the seed part_frac[lane]==0 (the LANE NUCLEATION FAILURE — the tau/MCF stage
+                    then erodes a zero-mass class, d_seg creeps UP). ``paint`` instead PAINTS the
+                    lane LABEL into the argmax at the band pixels (phi_1_lane>0), then REBUILDS
+                    all K per-class SDFs from the painted label map via ``signed_distance_fields``
+                    (invariant argmax_k phi_k == labels EXACTLY), so the lane WINS by construction
+                    and the seed is above the critical nucleus. Measured field-level: lane FN
+                    0.0058 -> 0.0019 (3x) vs replace's 0.00583 -> 0.00538. bias_scale unused.
     """
 
     out = np.asarray(phi_hwk, np.float32).copy()
@@ -356,8 +366,16 @@ def inject_lane_sdf(phi_hwk: np.ndarray, phi_1_lane: np.ndarray, *, lane_cls: in
         out[..., int(lane_cls)] = np.asarray(phi_1_lane, np.float32)
     elif mode == "bias":
         out[..., int(lane_cls)] = out[..., int(lane_cls)] + float(bias_scale) * np.asarray(phi_1_lane, np.float32)
+    elif mode == "paint":
+        # Lazy import (avoids a module-load cycle: lever_b imports scipy/curvelet, not this file).
+        from tac.boundary_math.lever_b_levelset_generator import signed_distance_fields
+        n_k = int(out.shape[-1])
+        labels = out.argmax(-1)                                   # current seed partition
+        band = np.asarray(phi_1_lane, np.float32) > 0.0           # inside the lane band (+EDT)
+        labels = np.where(band, int(lane_cls), labels)            # PAINT the lane label
+        out = signed_distance_fields(labels, n_classes=n_k)       # REBUILD consistent K-field
     else:
-        raise ValueError(f"mode must be 'replace' or 'bias', got {mode!r}")
+        raise ValueError(f"mode must be 'replace', 'bias', or 'paint', got {mode!r}")
     return out
 
 

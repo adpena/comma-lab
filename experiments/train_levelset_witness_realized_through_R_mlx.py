@@ -4697,9 +4697,14 @@ def main(argv: list[str] | None = None) -> int:
                     help="BUILD 2: init the structured-init target's lane (phi1) channel to the "
                     "openpilot deg-3 centerline signed distance (default OFF => bit-identical). "
                     "Requires --structured-init.")
-    ap.add_argument("--lane-prior-phi1-mode", choices=["replace", "bias"], default="replace",
+    ap.add_argument("--lane-prior-phi1-mode", choices=["replace", "bias", "paint"], default="replace",
                     help="BUILD 2: inject the centerline SDF by REPLACE (lane channel becomes the "
-                    "openpilot fit) or BIAS (add to the static-core lane channel). Default replace.")
+                    "openpilot fit) or BIAS (add to the static-core lane channel) or PAINT "
+                    "(paint-then-SDF #291: paint the lane label into the argmax at band pixels then "
+                    "rebuild all K SDFs so the lane WINS by construction — the NUCLEATION fix; "
+                    "replace is a MEASURED NO-OP: the thin lane SDF loses argmax to the deep road "
+                    "static-core -> part_frac[lane]=0). Default replace (byte-identical); fresh "
+                    "seeded run uses paint.")
     ap.add_argument("--lane-prior-phi1-bias-scale", type=float, default=1.0,
                     help="BUILD 2: scale for --lane-prior-phi1-mode bias (unused for replace).")
     ap.add_argument("--lane-prior-phi1-source-pair", type=int, default=0,
