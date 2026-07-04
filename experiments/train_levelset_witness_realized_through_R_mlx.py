@@ -2839,22 +2839,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             cf_list, c0_list, c1_list, oh_list, mg_list, pose_tgt_list,
             w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, _micro_batch_lc)
 
-    # OPT-IN batched accum path. Build the batched value_and_grad ONLY when engaged (>1). Fail CLOSED
-    # with --seed-islands: the seed co-grad dual value_and_grad path is per-pair only (batched + seed
-    # co-grad is unsupported -> raise rather than silently diverge). DEFAULT (1) => _use_micro_batch
-    # False => value_and_grad_batch None => the accum loop takes the UNCHANGED serial path.
+    # OPT-IN batched accum path. Build the batched value_and_grad ONLY when engaged (>1).
+    # (BUILD #293) BATCHED SEED CO-GRAD: --micro-batch-pairs > 1 now COMPOSES with --seed-islands via
+    # a DUAL value_and_grad over BOTH param trees (model + seed_mod) of the SAME total_loss_fn_batch
+    # the single-tree batched path differentiates. The seed enters the batched forward exactly as in
+    # the serial path: through render_fn -> _compose_chain (frame1-odd residual*mask compose, PRE-R),
+    # which batched_realized_loss invokes PER pair before stacking -> the batched loss already
+    # contains the seed term; the dual grad just adds the second argnum. Equivalence (the NO-FAKE
+    # gate, executed by experiments/test_batched_seed_cograd.py on real gt_n6 + the real frozen MLX
+    # scorer): dual-batched(B) loss == mean_b dual-serial(pair_b) loss AND both grad legs match the
+    # mean-of-per-pair-grads within fp32 tolerance (MLX CPU: matmul/reductions batch-independent).
+    # DEFAULT (1) => _use_micro_batch False => value_and_grad_batch/_dual_vg_batch None => the accum
+    # loop takes the UNCHANGED serial path (BYTE-IDENTICAL; the serial _dual_vg dispatch is untouched).
     _micro_batch_pairs = int(getattr(args, "micro_batch_pairs", 1))
-    if _micro_batch_pairs > 1 and seed_mod is not None:
-        raise ValueError(
-            "--micro-batch-pairs > 1 is not supported together with --seed-islands (the seed co-grad "
-            "dual value_and_grad path is per-pair only). Run seed-islands at --micro-batch-pairs 1.")
     _use_micro_batch = _micro_batch_pairs > 1
-    value_and_grad_batch = nn.value_and_grad(model, total_loss_fn_batch) if _use_micro_batch else None
+    value_and_grad_batch = None
+    _dual_vg_batch = None
     if _use_micro_batch:
+        if seed_mod is not None:
+            # (BUILD #293) dual co-grad twin of the serial _dual_vg: same in-place model/seed update
+            # trick, batched arg lists. argnums=(0,1) -> (witness grads, seed grads); the loop weights
+            # each group's MEAN grads (both legs) by its pair count so accum/accum_seed keep the
+            # serial mean-over-chunk invariant and everything downstream (mean_grads, clip, opt.update,
+            # _seed_shield, seed_opt.update) is UNTOUCHED.
+            def _combined_seed_loss_batch(model_p, seed_p, cf_l, c0_l, c1_l, oh_l, mg_l, ptg_l,
+                                          ws, wp, hg, mt, sf, ew, lw):
+                model.update(model_p)
+                seed_mod.update(seed_p)
+                return total_loss_fn_batch(model, cf_l, c0_l, c1_l, oh_l, mg_l, ptg_l,
+                                           ws, wp, hg, mt, sf, ew, lw)
+
+            _dual_vg_batch = mx.value_and_grad(_combined_seed_loss_batch, argnums=(0, 1))
+        else:
+            value_and_grad_batch = nn.value_and_grad(model, total_loss_fn_batch)
         print(json.dumps({"stage": "micro_batch_pairs", "B": int(_micro_batch_pairs),
                           "accum_pairs": int(args.accum_pairs),
+                          "seed_cograd": bool(seed_mod is not None),
                           "note": "OPT-IN batched scorer forward (B pairs/forward); trajectory-affecting "
                           "(batched fp reduction) but grad == serial mean-over-chunk within fp tol; "
+                          "seed_cograd=dual value_and_grad (BUILD #293) when --seed-islands; "
                           "advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
     # one-hot L* + margin per pair at the SegNet OUTPUT res (gt.lstars/gt.margins are 384x512,
@@ -4330,14 +4353,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # (--micro-batch-pairs B) sub-batch each accum chunk into B-pair groups; ONE batched
                     # value_and_grad per group. Weight each group's MEAN grad/loss by its pair count so
                     # sum-over-groups / nb == the serial per-pair mean-over-chunk (mean_grads + batch_loss
-                    # below are UNCHANGED). _use_micro_batch guarantees seed_mod is None (fail-closed
-                    # at build) so there is NO seed co-grad leg here.
+                    # below are UNCHANGED). (BUILD #293) with --seed-islands the group call is the DUAL
+                    # _dual_vg_batch -> (witness grads, seed grads); BOTH legs are group-MEAN grads and
+                    # BOTH are weighted by the group's pair count, so accum AND accum_seed preserve the
+                    # same invariant (sum-over-groups / nb == serial per-pair mean) and the downstream
+                    # seed step (_mean_sg = accum_seed/nb -> shield -> seed_opt) is UNTOUCHED.
                     _B = _micro_batch_pairs
                     for _ss in range(0, len(chunk), _B):
                         _sub = [int(p) for p in chunk[_ss:_ss + _B]]
                         _bn = len(_sub)
-                        loss_b, grads_b = value_and_grad_batch(
-                            model,
+                        _vg_args = (
                             [_cf_mx(p) for p in _sub],
                             [2 * p + 0 for p in _sub], [2 * p + 1 for p in _sub],
                             [lstar_cache[p][0] for p in _sub], [lstar_cache[p][1] for p in _sub],
@@ -4345,6 +4370,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
                             eik_w_ep, args.length_weight,
                         )
+                        if _dual_vg_batch is None:
+                            loss_b, grads_b = value_and_grad_batch(model, *_vg_args)
+                        else:
+                            loss_b, (grads_b, sgrads_b) = _dual_vg_batch(
+                                model.trainable_parameters(), seed_mod.trainable_parameters(), *_vg_args)
+                            _wsg = tree_map(lambda g, c=float(_bn): g * c, sgrads_b)  # mean-seed-grad * count
+                            accum_seed = _wsg if accum_seed is None else tree_map(lambda a, b: a + b, accum_seed, _wsg)
+                            mx.eval(accum_seed)
                         mx.eval(loss_b, grads_b)  # materialize per group (bound the lazy fwd+bwd graph)
                         lsum += float(loss_b) * _bn          # mean-over-group * count = group sum
                         _wg = tree_map(lambda g, c=float(_bn): g * c, grads_b)  # mean-grad * count = group-sum grad
@@ -4865,13 +4898,15 @@ def main(argv: list[str] | None = None) -> int:
     # The per-pair loss reductions (base seg-form, score-domain pose sqrt, weighted-mean levers) are
     # computed PER PAIR on the batched scorer outputs and MEAN-ed over B, so total_loss_fn_batch(B) ==
     # mean_b total_loss_fn(pair_b) within fp tolerance -> the accum-loop grad matches the serial
-    # mean-over-chunk EXACTLY (see the accum loop's per-group `* _bn` weighting). Incompatible with
-    # --seed-islands (fail-closed at build). Score-neutral verdict authority is unaffected.
+    # mean-over-chunk EXACTLY (see the accum loop's per-group `* _bn` weighting). (BUILD #293)
+    # COMPOSES with --seed-islands via the batched DUAL co-grad (_dual_vg_batch; equivalence executed
+    # by experiments/test_batched_seed_cograd.py). Score-neutral verdict authority is unaffected.
     ap.add_argument("--micro-batch-pairs", type=int, default=1,
                     help="(speed lever) pairs per batched value_and_grad forward (1 = serial "
                     "byte-identical per-pair path; >1 = opt-in batched scorer forward, trajectory-"
                     "affecting, ~2-4x). Sub-batches each --accum-pairs chunk; grads weighted by pair "
-                    "count so the accum-step grad == the serial mean-over-chunk. NOT with --seed-islands.")
+                    "count so the accum-step grad == the serial mean-over-chunk. Composes with "
+                    "--seed-islands (BUILD #293 dual co-grad).")
     # (--cache-gt-skeleton, #260 SPEED, BIT-IDENTICAL) opt-in per-pair cache of the CONSTANT GT
     # soft-skeleton the persistence loss recomputes every step. sg=soft_skeleton(gt) is a function of
     # the FROZEN GT argmax one-hot ONLY (constant across epochs) + carries NO gradient (it multiplies
