@@ -346,7 +346,16 @@ def test_equivalence_real_gt_real_scorer_seed_islands():
     ys, xs = np.meshgrid(np.linspace(-1, 1, RH, dtype=np.float32),
                          np.linspace(-1, 1, RW, dtype=np.float32), indexing="ij")
     coords = np.stack([ys.ravel(), xs.ravel()], axis=1)
-    proj = coords @ (rng.standard_normal((6, 2)).astype(np.float32) * 2.0).T
+    # (DV-F1, throughput review 2026-07-04) macOS Accelerate BLAS raises SPURIOUS FP-status
+    # RuntimeWarnings on this clean finite GEMM — the flag class varies with process state
+    # ("invalid value" in the review round; "divide by zero" in isolation; "overflow" with
+    # torch/mlx loaded) and reproduces at BOTH f32 and f64 and with a contiguous RHS, so it is
+    # not fixable at the dtype/shape level (known numpy-on-Accelerate quirk). Suppress ONLY the
+    # FP-flag classes on THIS one statement and assert finiteness immediately, so a real
+    # NaN/Inf can never hide inside the ignore.
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        proj = coords @ (rng.standard_normal((6, 2)).astype(np.float32) * 2.0).T
+    assert np.isfinite(proj).all(), "cograd fixture projection produced non-finite values"
     cf = mx.array(np.concatenate([np.sin(2 * np.pi * proj), np.cos(2 * np.pi * proj)], axis=1))
     mx.eval(cf)
 
