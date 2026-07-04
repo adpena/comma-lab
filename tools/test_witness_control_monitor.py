@@ -19,6 +19,7 @@ from tools.witness_control_monitor import (  # noqa: E402
     CONVERGING,
     DIVERGING_ERASING,
     PLATEAU,
+    TRANSITION_TRANSIENT,
     VOLATILE,
     _lstsq_slope,
     classify_trajectory,
@@ -75,6 +76,34 @@ def test_stage_filter_only_fits_current_stage():
     out = classify_trajectory(ce + tau, window=5)
     assert out.stage == "tau_softplus"
     assert out.classification == DIVERGING_ERASING   # the tau creep, not the CE descent
+
+
+def test_recent_rise_is_transition_transient_not_erosion():
+    """A d_seg rise only 2 verdicts into a NEW stage (loss falling) is a recoverable boundary
+    TRANSIENT, not confirmed erosion — same signal, opposite action (min_sustained_windows=3)."""
+    ce = [_v(0 + 25 * i, 0.02 - 0.001 * i, 200.0, seg_form="ce") for i in range(6)]
+    tau_onset = [_v(300, 0.0047, 150.0), _v(325, 0.0052, 146.0)]   # just 2 verdicts in, rising
+    out = classify_trajectory(ce + tau_onset, window=5, min_sustained_windows=3)
+    assert out.classification == TRANSITION_TRANSIENT, out
+    assert out.stage == "tau_softplus"
+
+
+def test_recovered_spike_is_not_erosion():
+    """A rise that RECOVERED (net-stage slope <= 0) is not erosion even with >= min_sustained
+    verdicts — the recent window may tick up but the stage as a whole is not rising."""
+    # spike at the boundary then recover below the start: net-stage slope negative
+    tau = [_v(300, 0.0060, 150.0), _v(325, 0.0075, 146.0), _v(350, 0.0058, 142.0),
+           _v(375, 0.0050, 138.0), _v(400, 0.0052, 134.0)]   # last window ticks up but net is down
+    out = classify_trajectory(tau, window=2, min_sustained_windows=3)
+    assert out.classification != DIVERGING_ERASING, out   # must NOT over-react to the recovered spike
+
+
+def test_sustained_rise_is_still_erosion():
+    """The refinement must NOT suppress a genuine sustained erosion: >= min_sustained verdicts,
+    net-stage slope positive, loss falling => DIVERGING_ERASING (the #205 case)."""
+    tau = [_v(300 + 25 * i, 0.0047 + 0.0004 * i, 150.0 - 4.0 * i) for i in range(6)]
+    out = classify_trajectory(tau, window=5, min_sustained_windows=3)
+    assert out.classification == DIVERGING_ERASING, out
 
 
 def test_real_205_shape_is_flagged():

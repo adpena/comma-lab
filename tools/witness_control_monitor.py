@@ -36,7 +36,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 
 # Classification sentinels (a falling-rule list, most-severe first).
-DIVERGING_ERASING = "diverging_erasing"   # tau-creep: d_seg UP while loss DOWN (a class eroding)
+DIVERGING_ERASING = "diverging_erasing"   # SUSTAINED tau-creep: d_seg UP while loss DOWN (a class eroding)
+TRANSITION_TRANSIENT = "transition_transient"  # d_seg UP while loss DOWN but RECENT/unconfirmed = a
+#   recoverable boundary shock (moment-reset / Muon cold-start / stage switch). SAME signal as
+#   DIVERGING_ERASING, OPPOSITE action: WATCH, do not act, re-classify next window. (transition-analysis
+#   2026-07-04: at a regime boundary a transient briefly looks identical to erosion; only PERSISTENCE
+#   over >= min_sustained_windows distinguishes them.)
 VOLATILE = "volatile"                       # high within-window variance -> no clean slope
 PLATEAU = "plateau"                         # |dV/dt| ~ 0 -> converged within stage
 CONVERGING = "converging"                   # dV/dt < 0 -> healthy descent
@@ -88,13 +93,16 @@ def _read_verdicts(run_log: Path) -> list[dict]:
 
 def classify_trajectory(
     verdicts: list[dict], *, window: int = 5, creep_eps: float = 1e-6,
-    plateau_eps: float = 5e-7, volatile_cv: float = 0.5,
+    plateau_eps: float = 5e-7, volatile_cv: float = 0.5, min_sustained_windows: int = 3,
 ) -> ControlVerdict:
     """Classify the CURRENT within-stage trajectory (the last ``window`` same-stage verdicts).
 
     creep_eps / plateau_eps are per-epoch d_seg slopes; volatile_cv is the CV above which the
-    window is 'volatile' (no clean slope). All thresholds MEASURED-tunable, defaults from the
-    #205 trace (its tau slope ~ +9e-6/ep, well above creep_eps)."""
+    window is 'volatile' (no clean slope). ``min_sustained_windows`` is the number of within-stage
+    verdicts a d_seg-rise must persist before it counts as EROSION rather than a recoverable boundary
+    TRANSIENT (transition-analysis 2026-07-04: a regime-boundary shock briefly looks identical to
+    erosion; only persistence distinguishes them — same signal, opposite action). All thresholds
+    MEASURED-tunable; defaults from the #205 trace (tau steady ~ +6e-6/ep, well above creep_eps)."""
 
     if not verdicts:
         raise ValueError("no verdicts to classify")
@@ -113,17 +121,32 @@ def classify_trajectory(
         cv = (var ** 0.5) / mean_ds
     else:
         cv = 0.0
+    # Persistence test: the NET slope since the stage started (transient rises recover; erosion doesn't).
+    full_slope = _lstsq_slope([float(v["epoch"]) for v in same], [float(v["d_seg"]) for v in same])
+    n_stage = len(same)
 
     # Falling-rule classification (most-severe first).
     if d_slope > creep_eps and l_slope < 0.0:
-        cls = DIVERGING_ERASING
-        rec = ("tau-CREEP: d_seg is RISING while ep_loss FALLS (surrogate<->verdict DECOUPLING) — "
-               "a minority class is being ERODED by the flow (the #205 nucleation-failure signature). "
-               "For a live run this is low-EV to continue; for the fresh run apply the seed fix.")
-        diffs = ("--lane-prior-phi1-mode paint (nucleate the lane, #291)",
-                 "--eikonal-weight 0.05 (hold the thin interface sharp)",
-                 "per-class area constraint (auction-MBO, pin mass != 0)",
-                 "verify part_frac[rare-class] > 0 at ep0 (the acceptance gate)")
+        # d_seg RISING while loss FALLS. SUSTAINED (erosion) vs RECENT (recoverable boundary transient)?
+        sustained = (n_stage >= min_sustained_windows) and (full_slope > 0.0)
+        if sustained:
+            cls = DIVERGING_ERASING
+            rec = ("SUSTAINED tau-CREEP: d_seg RISING while ep_loss FALLS over >= "
+                   f"{min_sustained_windows} within-stage verdicts (net-stage slope {full_slope:+.2e} > 0) "
+                   "= a minority class ERODED by the flow (the #205 nucleation-failure signature). "
+                   "ACT: for a live run low-EV to continue; for the fresh run apply the seed fix.")
+            diffs = ("--lane-prior-phi1-mode paint (nucleate the lane, #291)",
+                     "--eikonal-weight step-up ~0.10 at the tau/MCF onset (hold the thin interface)",
+                     "per-class area constraint (auction-MBO, pin mass != 0)",
+                     "verify part_frac[rare-class] > 0 at ep0 (the acceptance gate)")
+        else:
+            cls = TRANSITION_TRANSIENT
+            rec = (f"d_seg rising while loss falls, but RECENT ({n_stage} verdict(s) into the stage; "
+                   f"net-stage slope {full_slope:+.2e}) — a recoverable boundary TRANSIENT (moment-reset "
+                   "/ Muon cold-start / stage switch), NOT confirmed erosion. WATCH, do NOT act; "
+                   f"re-classify after >= {min_sustained_windows} within-stage verdicts. It becomes "
+                   "DIVERGING_ERASING iff the rise persists AND the net-stage slope turns positive.")
+            diffs = (f"hold — re-evaluate after >= {min_sustained_windows} within-stage verdicts",)
     elif cv > volatile_cv:
         cls = VOLATILE
         rec = ("high within-window variance — no clean slope; widen the window or reduce LR / "
