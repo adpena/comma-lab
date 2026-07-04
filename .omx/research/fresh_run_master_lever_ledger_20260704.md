@@ -65,7 +65,8 @@ GT-margin N-term log-log SLOPE probe (`pre_metric_nterm_basis_slope.py` SPEC) + 
 histogram. Build the exponent levers ONLY if the slope is power-law over the surviving flip mass.
 
 ## 5. PRE-LAUNCH CHECKLIST (gates the governed stop-and-launch)
-**BUILD (blocking for the primary run):** (1) `--lane-prior-phi1-mode paint` #291 (~10 LOC, decisive) ·
+**BUILD (blocking for the primary run):** (1) `--lane-prior-phi1-mode paint` #291 — ✅ **DONE 4f1580d0c**
+(real-GT smoke: part_frac[lane] 0→0.0064, lane_FN 0.00713→0.00211 3.4×; 5 unit tests; byte-identical default) ·
 (2) per-class area constraint (auction-MBO) · (3) `tools/witness_control_monitor.py` (the safety net).
 **MEASURE-first ($0, gate the config values):** (a) `part_frac[lane]>0` acceptance smoke on the paint-seed ·
 (b) mod-19 N-term SLOPE (confirm m≈8, avoid the capacity cliff) · (c) `--softmax-temp-end` floor magnitude
