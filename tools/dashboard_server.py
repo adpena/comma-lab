@@ -1913,6 +1913,9 @@ padding:2px 6px;border-radius:6px}
 .rinfo .bar{height:5px;background:var(--grid);border-radius:3px;margin:5px 0 4px;overflow:hidden}
 .rinfo .fill{height:100%;border-radius:3px}
 .rinfo .badge{font-size:10px;font-weight:600;color:#46d369;background:#173d22;padding:1px 6px;border-radius:8px;vertical-align:middle}
+/* phone: strip tables (checkpoint ledger etc.) have inline-styled div parents with no
+   class — scroll the table inside its own card instead of forcing horizontal page scroll */
+.rinfo div:has(> table){overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
 
 /* stage legend strip */
 .slegend{display:flex;flex-wrap:wrap;gap:7px 13px;align-items:center;margin:2px 2px 12px;font-size:11px;color:var(--muted)}
