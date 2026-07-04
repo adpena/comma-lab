@@ -25,19 +25,20 @@ primaries; secondaries run as subsequent ISOLATED A/Bs (§3). All flags grep-ver
 | `--seed-islands` | OFF → **ON** | INCLUDE | the nucleation fix; amplify was a no-op without it (sweep-A #1) |
 | **SEED mechanism** | replace → **paint-then-SDF (#291 BUILD ~10 LOC)** | BUILD→INCLUDE | facet-3: `replace` NO-OP; paint → lane-FN 0.0058→0.0019 (3×) |
 | `--island-dilate-px` | 1 → **KEEP 1 (NOT 2)** | INCLUDE | facet-3: +2px FP-costly ~15:1 — survival gained < FP lost |
-| `--eikonal-weight` | 0.01 → **0.05** | INCLUDE | facet-4 interface-width control; holds the thin edge sharp at τ/2 |
+| `--eikonal-weight` | 0.01 → **0.05** | INCLUDE (**REFINED: final config ramps 0.05 → `--eikonal-weight-end 0.1`; §Supersessions S3**) | facet-4 interface-width control; holds the thin edge sharp at τ/2 |
 | `--length-weight` | 0.001 → **KEEP 0.001** | INCLUDE | facet-4 + sweep-A/B/C: it IS the MCF surface-tension erosion term — do NOT raise |
 | per-class AREA constraint (auction-MBO) | — → **BUILD** | BUILD→INCLUDE | the principled hold vs the 95.7%-Lane MCF erosion (sweep-B orphan) |
 | `--tau-anneal-shape` + `--softmax-temp-end` | cosine/0.05 → **geometric / 1.0** | INCLUDE ✅ | facet-4 adiabatic Fisher-Rao geodesic; **τ_end=1.0 MEASURED the resolution floor** (0.05 = 20× sub-pixel aliasing) |
 | `--mod-dim` | 32 → **19** | ✅ **MEASURED-SAFE** | m≈7.15 (TwoNN) = scene-PR 7.29; Whitney 2m+1=15.3 < 19 → no cliff; 32 = waste |
-| `--bank-n-scales` | 4 → **6** | INCLUDE (slope-gated) | facet-2: use full stem-Nyquist f_max=64 |
+| `--bank-n-scales` | 4 → **6** | INCLUDE (slope-gated) **⛔ SUPERSEDED → bank-4 (review C3; §Supersessions S1)** | facet-2: use full stem-Nyquist f_max=64 |
 | `--film-stiefel` | OFF → **ON** | INCLUDE | facet-2: byte-free rank fix, PR 1.19→4.57 |
 | `--muon-warm-start-momentum` + `--muon-lr-final-frac 0.1` | OFF/1.0 → **ON/0.1** | INCLUDE | #270/facet-1: kills the cold-start spike + escapes flat-LR plateau |
 | `--lane-band-start-epoch` + rewarmup | 300/8-linear → **350/20-cosine** | INCLUDE | Ch.6: deconflict the MEASURED ep300 collision (3.4× harm) |
 
 **KEEP from #205 (correctly optimal):** render 384×512 · `--hosc` ANNEALED β1→4 (NEVER fixed) ·
 `--self-orient --n-dir-freqs 2` · `--render-aa none + --lane-render-band` · palette-anchor · persistence
-1.0/warmup 300 · `--verdict-batch 32` · `--cache-gt-skeleton` · muon@726 · pose-carrier generated (store-nothing).
+1.0/warmup 300 · `--verdict-batch 32` (**⛔ SUPERSEDED → 64; FEED-04n/04r + WF-F1 correction; §Supersessions S2**) ·
+`--cache-gt-skeleton` · muon@726 · pose-carrier generated (store-nothing).
 
 **ACCEPTANCE GATE (sweep-A #2, binding):** the run is only valid if the ep0 structured_init log shows
 **`part_frac[lane] > 0` (≈0.006)** — measured, NOT inferred from flag presence. Abort+fix if lane_px=0.
@@ -116,3 +117,37 @@ memory-preflight through the governor → PRESERVE + cleanly stop #205 (CE-best 
 seeded run via the governed launcher (resumable, per-stage, `witness_control_monitor` attached) →
 byte-closed exact row → secondary isolated A/Bs (§3). NO autonomous heavy launch; operator GO + P0 governor
 gate the actuation. **HARD GATE: pointer 0.19110 UNMOVED until a byte-closed row proves otherwise.**
+
+## Supersessions (APPEND-ONLY, 2026-07-04 — rows above overridden by the FINAL `fresh_seeded` config)
+
+The launch-authority argv is `witness_autoconfig.derive_fresh_seeded_config` (`--config fresh_seeded`,
+verified end-to-end in the throughput adversarial review `throughput_review_findings_20260704.md`,
+commit 8bd0e74ce). Where a §1 row disagrees, THESE lines win; a reader reconstructing the argv from
+this ledger alone must apply them (review finding XC-i):
+
+- **S1 — `--bank-n-scales`: 6 → 4 (default; NO bank flags emitted).** The §1 "4 → 6 INCLUDE
+  (slope-gated)" row is SUPERSEDED by review disposition C3: bank-6 re-derives in_feat 88 → 176 and
+  projects 111.85 GiB (> the 108.8 GiB envelope) — the memory preflight REFUSES it (rc=4, executed
+  in the review). Bank-6 remains a slope-gated candidate for a later ISOLATED A/B only if the §4
+  exponent probe pays, at a reduced-memory operating point.
+- **S2 — `--verdict-batch`: KEEP-32 → 64.** The §1 "KEEP `--verdict-batch 32`" line is SUPERSEDED by
+  FEED-04n + the #294 waterfill (FEED-04r): vb=64 is baked into `_FRESH_SEEDED_DELTAS` (adjusted peak
+  77.43 ≤ 108.8, SAFE + never-slower-than-32). **WF-F1 correction (binding):** the waterfill's
+  "×1.183 [modeled]" speedup for vb=64 was an ANCHOR ARTIFACT — `MEASURED_TRAIN_WINDOW_S` was set to
+  the 2062s verdict-wall minimum, not the measured ~5,042s 25-ep train window; with the corrected
+  anchor the verdict wall is already fully hidden at vb=32 under M2 and the expected speedup is
+  ×1.000. Do NOT cite ×1.183 as expected speedup (re-anchored in e7f1091d0); vb=64 stands on
+  SAFE + never-slower, and starts paying only if the fresh run's 25-ep window drops below ~2,400s
+  (measure via TAC_MEM_PROBE + verdict_async_done rows in the first eval windows).
+- **S3 — `--eikonal-weight`: constant 0.05 → ramp 0.05 with `--eikonal-weight-end 0.1`.** The §1 row
+  predates the LIVE-STATUS eikonal 0.05→0.10 decision; the final config carries the ramp (nucleation
+  hold strengthening through the tau stage), plus the bounded `--closed-loop-control` eikonal bump
+  (#292 build-3) on top.
+- **S4 — controller: §2's "EMITS decisions ONLY" monitor → PLUS in-trainer `--closed-loop-control`.**
+  The final config carries the trainer's bounded closed-loop controller (#292 build-3: classify →
+  bounded eikonal bump → early-stop countdown; M2 decide-on-previous async) in ADDITION to the
+  external decision-only monitor. Training is no longer bit-identical-to-uncontrolled when it acts —
+  by design, bounded, and fully telemetered (`closed_loop` rows).
+- (Non-supersessions, confirmed by the review: mod-dim 19, film-stiefel, paint+`--seed-islands`,
+  dilate 1, geometric τ 1.0, band 350 + rewarmup 20-cosine, muon warm-start/final-frac 0.1, l7
+  demoted to 1001, NO event-trigger flags — all §1 rows match the final argv.)
