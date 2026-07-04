@@ -323,7 +323,12 @@ def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label:
     }
     (out_dir / "calibration_rss.json").write_text(json.dumps(report, indent=2))
     try:
-        wmp.reconcile_run_dir(calib_dir)
+        # LG-F1 (throughput review 2026-07-04): calib_dir has no run.log and safe_run never
+        # registers it with the governor/blackbox, so the source-sniffing reconcile leg was dead
+        # code. The measured peak is ALREADY in hand (safe_run telemetry parsed above) — pass it
+        # as the explicit actual_override so every calibration truly feeds calibrated_margin().
+        wmp.reconcile_run_dir(calib_dir, actual_override=(
+            actual_gib, "safe_run peak_rss telemetry (calibrate_rss smoke, parsed by launcher)"))
     except Exception as exc:
         print(f"[launch-witness] WARNING: calibration reconcile append failed ({exc})",
               file=sys.stderr)

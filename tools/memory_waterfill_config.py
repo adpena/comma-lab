@@ -52,11 +52,17 @@ MEASURED_TAG = "[measured]"
 
 # ── MEASURED anchors (inputs with provenance; NOT fabricated curves) ────────────────────────────
 # #205 verdict wall at vbatch 32, per 25-epoch eval window (run.log verdict_async_done rows,
-# 2026-07-03/04): 2062–2439 s. Conservative throughput accounting uses the WORST wall vs the
-# FASTEST train window so exposure is never under-stated.
+# 2026-07-03/04): 2062–2439 s. Conservative throughput accounting uses the WORST wall.
 MEASURED_VERDICT_WALL_REF_S = 2439.0
 MEASURED_VERDICT_WALL_REF_VB = 32
-MEASURED_TRAIN_WINDOW_S = 2062.0
+# The 25-ep TRAIN window itself (what the async-hidden verdict must overhang to cost anything):
+# #205 mine, 505 epochs / 28.29 h wall ⟹ 28.29*3600 / (505/25) ≈ 5,042 s per 25-ep window (duty
+# 47% verdict-active ✓ consistent: 2439/5042 ≈ 0.48). WF-F1 (throughput review 2026-07-04): the
+# prior value 2062.0 mislabeled the verdict-wall MINIMUM as the train window, which manufactured
+# a phantom ×1.183 speedup at vb=64. Corrected: exposed(vb=32)=max(0,2439−5042)=0 already, so
+# vb≥32 are all throughput-EQUIVALENT under async-hide — vb=64 is chosen as never-slower + deeper
+# hide margin, NOT as a speedup. Do not cite a vb-64 speedup from this model.
+MEASURED_TRAIN_WINDOW_S = 5042.0
 
 # #261 micro-batch measured points (DAG FEED-03g, 2026-07-03): n=8, 6 epochs, GPU shared with #205
 # (contention-confounded — B1 inflated 2.23 s vs the prior clean ~1.56 s). These are the DEFAULT
@@ -170,7 +176,8 @@ def exposed_verdict_wait_s(vb: int, *, train_window_s: float = MEASURED_TRAIN_WI
                            ref_vb: int = MEASURED_VERDICT_WALL_REF_VB) -> float:
     """Wall-clock the verdict EXPOSES per eval window. async_hidden=True models the M2
     decide-on-previous landing (join the PREVIOUS window's verdict => only the overhang beyond the
-    train window stalls); False models the synchronous join (the pre-M2 ~2x wall)."""
+    train window stalls); False models the synchronous join (pre-M2: +wall(vb) per window — at the
+    measured anchors 2439/5042 ≈ +48%, NOT the earlier "~2x" claim; WF-F1 correction)."""
     w = verdict_wall_s(vb, ref_wall_s=ref_wall_s, ref_vb=ref_vb)
     return max(0.0, w - float(train_window_s)) if async_hidden else w
 

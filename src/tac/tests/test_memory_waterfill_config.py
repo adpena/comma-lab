@@ -72,21 +72,28 @@ def test_verdict_wall_refuses_unchunked_zero():
 
 
 def test_async_hidden_exposes_only_overhang():
-    # wall(64) = 1219.5 < train window 2062 => fully hidden
+    # WF-F1 corrected anchors: the 25-ep TRAIN window is 5042 s (mine: 505 ep / 28.29 h), not the
+    # verdict-wall minimum 2062 the prior version mislabeled.
+    # wall(64) = 1219.5 < 5042 => fully hidden; wall(32) = 2439 < 5042 => ALSO fully hidden.
     assert mwc.exposed_verdict_wait_s(64) == 0.0
-    # wall(32) = 2439 > 2062 => 377 s exposed (worst-wall vs fastest-window conservatism)
-    assert abs(mwc.exposed_verdict_wait_s(32) - 377.0) < 1.0
+    assert mwc.exposed_verdict_wait_s(32) == 0.0
+    # wall(8) = 9756 > 5042 => 4714 s exposed
+    assert abs(mwc.exposed_verdict_wait_s(8) - 4714.0) < 1.0
 
 
 def test_sync_mode_exposes_full_wall():
     assert mwc.exposed_verdict_wait_s(32, async_hidden=False) == mwc.MEASURED_VERDICT_WALL_REF_S
 
 
-def test_throughput_multiplier_64_beats_32_async():
+def test_throughput_multiplier_64_equals_32_async():
+    """WF-F1 (throughput review 2026-07-04): with the CORRECTED train window (5042 s) both vb=32
+    and vb=64 are already fully hidden => throughput-EQUIVALENT (x1.0). The prior 'x1.183 at
+    vb=64' was an anchor artifact (train window mislabeled as 2062). vb=64 is never-SLOWER; any
+    cited speedup from this model is forbidden."""
     m64 = mwc.throughput_multiplier(64)
     m32 = mwc.throughput_multiplier(32)
     assert m32 == 1.0
-    assert m64 > 1.0  # the operator's 32->64 memory-leverage ask emerges from the arithmetic
+    assert m64 == 1.0  # equivalent, NOT faster — the phantom speedup is dead
 
 
 def test_throughput_multiplier_small_batch_penalized():
@@ -106,15 +113,24 @@ def test_solver_uses_real_preflight_numbers():
     assert c32.projected_peak_gib == ref.projected_peak_gib == 67.61
 
 
-def test_solver_best_is_vb64_at_085_envelope():
-    """At the 0.85 single-workload envelope on the fresh bank-4 config, vb=64 is the argmax:
-    equal-throughput ties (64/128/256 all fully hidden) break to LOWEST (adjusted) memory."""
+def test_solver_best_ties_break_to_lowest_memory_and_vb64_stays_safe():
+    """WF-F1 corrected model at the 0.85 envelope: vb in {16,32,64,128,256} are ALL fully hidden
+    (x1.0 ties) => the solver's tie-break lands on the lowest-adjusted-memory candidate (vb=16,
+    73.91 GiB). The SEALED run-1 config keeps vb=64 anyway — never-slower (x1.0), SAFE (77.43 <<
+    108.8), and retained for hide-margin ROBUSTNESS: wall(64)=1220 s vs wall(16)=4878 s ~= the
+    5042 s window itself, so vb=16 gets exposed the moment the throughput program shrinks the
+    train window (#293 B>1 aims 2-4x) while vb=64 survives a 4x shrink. Reviewer disposition:
+    config stands; do not cite a speedup."""
     res = _solve()
     assert res.best is not None
     assert res.best.micro_batch == 1          # micro-batch UNMEASURED-excluded
-    assert res.best.verdict_batch == 64
-    assert res.best.projected_peak_gib == 68.65  # the FEED-04n dry-run number
-    assert res.best.adjusted_peak_gib == 77.43   # net - 7.04 + (12.3 + 0.11*32) [modeled]
+    assert res.best.verdict_batch == 16
+    assert res.best.adjusted_peak_gib == 73.91
+    c64 = next(c for c in res.candidates if c.verdict_batch == 64)
+    assert c64.safe
+    assert c64.projected_peak_gib == 68.65    # the FEED-04n dry-run number
+    assert c64.adjusted_peak_gib == 77.43     # net - 7.04 + (12.3 + 0.11*32) [modeled]
+    assert mwc.throughput_multiplier(64) == 1.0
     assert res.best.throughput_label == mwc.MODELED_TAG
 
 
@@ -164,8 +180,12 @@ def test_solver_grid_boundary_vb256_safe_vb600_not():
 
 
 def test_envelope_070_still_admits_vb64():
+    """The sealed run-1 vb=64 stays admissible even at the conservative 0.70 envelope
+    (68.65 net / 77.43 adjusted <= 89.6) — the launch-gating fact, independent of tie-breaks."""
     res = _solve(safe_frac=0.70)
-    assert res.best is not None and res.best.verdict_batch == 64  # 68.65 <= 89.6
+    assert res.best is not None
+    c64 = next(c for c in res.candidates if c.verdict_batch == 64)
+    assert c64.safe  # 77.43 adjusted <= 89.6
 
 
 def test_floor_violation_refuses_everything():
