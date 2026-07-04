@@ -141,6 +141,112 @@ def menon_logit_adjustment_offsets(
 
 
 # ---------------------------------------------------------------------------
+# Facet 3b — damped-Newton semi-discrete OT offset (the deep-math "Amortizing the
+# Argmax" Ch.1 tropical/Laguerre lens; Kitagawa-Merigot-Thibert 2019). The
+# PRINCIPLED solver that REPLACES the Menon -tau*log(pi) heuristic: it SOLVES the
+# exact per-class offset b* whose Laguerre-reweighted cell MASSES equal the target
+# frequencies, accounting for THIS witness's logit geometry (boundary lengths) that
+# the log-freq heuristic ignores. Byte-free (K offsets); apply via
+# apply_offset_to_sdf_bias. Attacks the minority-collapse ASYMMETRY at its root.
+# ---------------------------------------------------------------------------
+def soft_cell_masses(phi: np.ndarray, offsets: np.ndarray, *, tau: float = 1.0) -> np.ndarray:
+    """Mean soft (``softmax_tau``) class masses of the Laguerre-reweighted field.
+
+    ``m_c(b) = mean_p softmax((phi_p + b)/tau)_c`` -- smooth in ``b``; the hard
+    ``tau -> 0`` limit is the :func:`power_diagram_argmax` cell-mass fraction. Returns
+    ``(K,)`` summing to 1. Numerically stable (row-max subtracted before exp).
+    """
+    z = np.asarray(phi, dtype=np.float64)
+    z = z.reshape(-1, z.shape[-1]) + np.asarray(offsets, dtype=np.float64).reshape(-1)
+    z = z / max(float(tau), 1e-9)
+    z = z - z.max(axis=1, keepdims=True)
+    e = np.exp(z)
+    s = e / np.maximum(e.sum(axis=1, keepdims=True), 1e-300)
+    return s.mean(axis=0)
+
+
+def hard_cell_masses(phi: np.ndarray, offsets: np.ndarray) -> np.ndarray:
+    """Mean HARD (argmax) Laguerre cell masses ``m_c = mean_p [argmax(phi_p+b)==c]``
+    -- the ``tau -> 0`` limit of :func:`soft_cell_masses`; the quantity the offset is
+    solved to match. Returns ``(K,)`` summing to 1."""
+    lab = power_diagram_argmax(phi, offsets)
+    k = int(np.asarray(phi).shape[-1])
+    return np.bincount(lab.reshape(-1), minlength=k).astype(np.float64) / float(lab.size)
+
+
+def damped_newton_ot_offsets(
+    phi: np.ndarray, target_masses: np.ndarray, *, tau: float = 1.0,
+    max_iter: int = 64, tol: float = 1e-10, rcond: float = 1e-10,
+) -> tuple[np.ndarray, dict[str, float]]:
+    """Damped-Newton semi-discrete OT solve for the zero-sum per-class offset ``b*``
+    with ``soft_cell_masses(phi, b*, tau) == target_masses`` (Kitagawa-Merigot-Thibert
+    2019; the hard ``tau -> 0`` limit is the Aurenhammer-Hoffmann-Aronov power-diagram
+    weight). A REAL Newton solve (NOT a sweep):
+
+      dual   Phi(b) = <pi, b> - tau * mean_p logsumexp((phi_p + b)/tau)   (concave)
+      grad   g(b)   = pi - m(b)                                            (m = soft masses)
+      Hess   H(b)   = -(1/tau) * (diag(m) - mean_p s_p s_p^T)             (NSD softmax cov)
+      step   b <- b + t * pinv(diag(m) - mean_p s_p s_p^T) @ (pi - m) * tau
+
+    ``H`` is rank ``K-1`` (all-ones gauge nullspace) => zero-sum pseudo-inverse
+    (``rcond``); ``t`` is backtracked (halved) until the dual increases (Armijo), which
+    guarantees global convergence; the terminal rate is quadratic. ``phi``: ``(...,K)``
+    witness SDF/logit field; ``target_masses``: ``(K,)`` non-negative (renormalized).
+    Returns ``(b*, info)`` with ``info`` = {converged, iters, max_mass_err, dual}.
+    Byte-free: fold ``b*`` into the bias via :func:`apply_offset_to_sdf_bias`.
+    """
+    z0 = np.asarray(phi, dtype=np.float64)
+    z0 = z0.reshape(-1, z0.shape[-1])
+    n, k = z0.shape
+    pi = np.asarray(target_masses, dtype=np.float64).reshape(-1)
+    if pi.shape[0] != k:
+        raise LaguerreLogitOffsetError(f"target_masses K={pi.shape[0]} != phi K={k}")
+    if (pi < 0).any() or float(pi.sum()) <= 0:
+        raise LaguerreLogitOffsetError("target_masses must be non-negative with sum>0")
+    pi = pi / float(pi.sum())
+    taus = max(float(tau), 1e-9)
+    phi_c = z0 / taus  # (N,K), the b-independent part of z/tau
+
+    b = np.zeros(k, dtype=np.float64)
+
+    # concave dual  Phi(b) = <pi,b> - tau*mean_p LSE(phi_c + b/tau),  phi_c := phi/tau
+    def _dual(bb: np.ndarray) -> float:
+        zz = phi_c + (bb / taus)
+        mm = zz.max(axis=1, keepdims=True)
+        lse = mm[:, 0] + np.log(np.exp(zz - mm).sum(axis=1))
+        return float(np.dot(pi, bb) - taus * lse.mean())
+
+    info = {"converged": 0.0, "iters": 0.0, "max_mass_err": 1.0, "dual": _dual(b)}
+    for it in range(1, int(max_iter) + 1):
+        zz = phi_c + (b / taus)
+        zz = zz - zz.max(axis=1, keepdims=True)
+        e = np.exp(zz)
+        s = e / np.maximum(e.sum(axis=1, keepdims=True), 1e-300)   # (N,K) softmax
+        m = s.mean(axis=0)                                          # (K,) soft masses
+        g = pi - m                                                 # gradient of the dual
+        err = float(np.max(np.abs(g)))
+        info.update(iters=float(it), max_mass_err=err, dual=_dual(b))
+        if err <= tol:
+            info["converged"] = 1.0
+            break
+        cov = np.diag(m) - (s.T @ s) / float(n)                    # (K,K) softmax covariance (PSD, rank K-1)
+        step = taus * (np.linalg.pinv(cov, rcond=rcond) @ g)       # Newton direction (dual ascent)
+        step = step - step.mean()                                  # stay zero-sum (gauge)
+        # Backtracking on the concave dual: accept the largest t in {1,1/2,...} whose
+        # step does NOT DECREASE Phi. Near the optimum the ascent direction's full
+        # (t=1) Newton step barely moves Phi (flat), so a non-decrease criterion (not
+        # strict-increase) is what preserves terminal QUADRATIC convergence.
+        t, base = 1.0, _dual(b)
+        for _ in range(60):
+            if _dual(b + t * step) >= base - 1e-15 * max(1.0, abs(base)):
+                break
+            t *= 0.5
+        b = b + t * step
+        b = b - b.mean()
+    return b.astype(np.float64), info
+
+
+# ---------------------------------------------------------------------------
 # Facet 1a — fixed simplex Equiangular Tight Frame (ETF) head
 # ---------------------------------------------------------------------------
 def simplex_etf(num_classes: int, dim: int, *, scale: float = 1.0, seed: int = _ETF_SEED) -> np.ndarray:
