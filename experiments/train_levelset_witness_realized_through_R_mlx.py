@@ -2112,7 +2112,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "shield-grad defends it; advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
-        L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form)
+        # (--seg-spike-reweight) per-pixel spike/coherent map for THIS pair (pi==int(c1)//2); None when
+        # the lever is off => base_loss byte-identical. A stop-grad theta-independent constant multiplier.
+        _seg_px_w = _spike_w_mx[int(c1) // 2] if _spike_reweight_on else None
+        L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form, seg_pixel_w=_seg_px_w)
         phi0 = model.sdf(cf, c0)
         # (THETA* TIER-2 STRETCH-1) junction relax threaded; eik_jrelax=0.0 (default) => BIT-IDENTICAL.
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w,
@@ -2410,6 +2413,51 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "sR_norm_mean": round(float(np.asarray(_sR_all[:P]).mean()), 5),
                           "note": "LEVER-4 saliency weighted by cached through-R margin-Jacobian S_R "
                           "(REPLACES the measured-inert 1/(1+beta*tex) texture path); advisory build, "
+                          "A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+
+    # (--seg-spike-reweight, source-split MEASURED 2026-07-03) precompute the theta-INDEPENDENT per-pair
+    # spike/coherent weight map from the GT argmax TEMPORAL neighbors (list[mx.array (1,H,W)] indexed by
+    # pi == int(c1)//2, the SAME key _sR_provider/island_weight_mx use). A pixel is a SPIKE at pair pi if
+    # lstar[pi] differs from BOTH neighbors lstar[pi-1] & lstar[pi+1] (single-frame argmax FLICKER a
+    # per-frame witness structurally cannot fit -- MEASURED n600 ~88.6% IRREDUCIBLE appearance change, so
+    # smooth-is-optimal there); COHERENT = temporally-UNSTABLE but matches >=1 neighbor (the winnable
+    # boundary residual). Map = downweight@spike, upweight@coherent, 1.0 else. Endpoints (pi in {0,P-1},
+    # only one neighbor) => all-1.0. Default OFF (_spike_w_mx None) OR both scalars==1.0 (map==1.0) =>
+    # base_loss gets seg_pixel_w=None/ones => BYTE-IDENTICAL. Fails CLOSED with micro-batch (serial path
+    # only; the batched twin does not consume seg_pixel_w yet). A/B owed (needs GO); pointer 0.19110 UNMOVED.
+    _spike_reweight_on = bool(getattr(args, "seg_spike_reweight", False))
+    _spike_w_mx = None
+    if _spike_reweight_on:
+        if _use_micro_batch:
+            raise ValueError(
+                "--seg-spike-reweight is not supported with --micro-batch-pairs>1 (the batched twin does "
+                "not consume the per-pixel seg reweight yet); run this arm at --micro-batch-pairs 1.")
+        _sp_dn = float(getattr(args, "seg_spike_downweight", 1.0))
+        _sp_up = float(getattr(args, "seg_coherent_upweight", 1.0))
+        _sp_H, _sp_W = np.asarray(gt.lstars[0]).shape
+        _sp_stack = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)])  # (P,H,W)
+        _spike_w_mx = []
+        _sp_n_spike = 0
+        _sp_n_coh = 0
+        for pi in range(P):
+            wmap = np.ones((_sp_H, _sp_W), np.float32)
+            if 0 < pi < P - 1:
+                c_, p_, n_ = _sp_stack[pi], _sp_stack[pi - 1], _sp_stack[pi + 1]
+                dp, dn = (c_ != p_), (c_ != n_)
+                sp = dp & dn                 # differs from BOTH neighbors = unfittable flicker
+                coh = (dp | dn) & (~sp)       # unstable but matches >=1 neighbor = winnable boundary
+                wmap[coh] = _sp_up
+                wmap[sp] = _sp_dn
+                _sp_n_spike += int(sp.sum())
+                _sp_n_coh += int(coh.sum())
+            _spike_w_mx.append(mx.array(wmap[None]))  # (1,H,W)
+        _sp_byte_identical = (_sp_dn == 1.0 and _sp_up == 1.0)
+        print(json.dumps({"stage": "seg_spike_reweight", "active": True, "n_pairs": int(P),
+                          "downweight": _sp_dn, "upweight": _sp_up,
+                          "spike_px_total": _sp_n_spike, "coherent_px_total": _sp_n_coh,
+                          "byte_identical_scalars": _sp_byte_identical,
+                          "note": "per-pixel seg-CE reweight: down-weight single-frame flicker "
+                          "(~88.6%% irreducible, smooth-is-optimal), up-weight coherent boundary; "
                           "A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
 
     # (--cache-gt-skeleton, #260 SPEED) BUILD the per-pair GT soft-skeleton cache ONCE (each sg is
@@ -4173,6 +4221,26 @@ def main(argv: list[str] | None = None) -> int:
                     "d_seg debt is. Requires an 'sR' key in --gt-cache (build via "
                     "tools/precompute_sR_reachability.py). Default OFF => byte-identical (texture path "
                     "unchanged). NOT supported with --micro-batch-pairs>1 (serial path only; fails closed).")
+    # SPIKE-AWARE seg REWEIGHT (source-split MEASURED n600 2026-07-03; ADDITIVE, DEFAULT-OFF). Reweight
+    # the per-pixel base seg CE by a theta-INDEPENDENT map from the GT argmax TEMPORAL neighbors: a SPIKE
+    # pixel (lstar[t] != lstar[t-1] AND != lstar[t+1]) is single-frame argmax FLICKER a per-frame witness
+    # structurally CANNOT fit. MEASURED: the flicker is ~88.6%% IRREDUCIBLE appearance-change (spike luma
+    # temporal-delta 34 vs 4 stable = 8.4x) -> a SMOOTH witness is PROVABLY optimal there (d_seg=q(1-r)+
+    # r(1-q), min r=0 for q<0.5). DOWN-weight the unfittable flicker gradient; UP-weight the COHERENT
+    # temporally-consistent boundary (the winnable residual). Default scalars 1.0/1.0 => map==1.0 =>
+    # BYTE-IDENTICAL even with --seg-spike-reweight set. MODEST headroom (live residual d_seg ~ the
+    # popout floor; benefit is 2nd-order reallocation) -> an A/B arm, NOT a claim. Store-the-flicker is
+    # net-NEGATIVE (rate +0.56 > d_seg 0.52) and the REPLICATE alternative is not warranted (predictable
+    # fraction ~11.4%%, weak ego-coupling r=0.16). NOT supported with --micro-batch-pairs>1 (fails closed).
+    ap.add_argument("--seg-spike-reweight", action="store_true",
+                    help="Enable the spike-aware per-pixel seg-CE reweight (DEFAULT OFF => byte-identical). "
+                    "Down-weights unfittable single-frame argmax flicker, up-weights the coherent boundary.")
+    ap.add_argument("--seg-spike-downweight", type=float, default=1.0,
+                    help="Per-pixel seg-loss weight at SPIKE (single-frame flicker) pixels. <1.0 down-weights "
+                    "the unfittable flicker gradient. 1.0 (DEFAULT) => no change (byte-identical).")
+    ap.add_argument("--seg-coherent-upweight", type=float, default=1.0,
+                    help="Per-pixel seg-loss weight at COHERENT (temporally-consistent, unstable) boundary "
+                    "pixels. >1.0 concentrates capacity on the winnable residual. 1.0 (DEFAULT) => no change.")
     # LEVER-5 (per-pair HARDNESS-weighted code-fit / training, DAG FEED-eq, ADDITIVE, DEFAULT-OFF).
     # WATERFILL the per-epoch pair-iteration budget toward HARD pairs (high d_seg debt). The frozen-
     # decoder code-fit fits independent per-pair codes, so giving a hard pair MORE update STEPS (not a

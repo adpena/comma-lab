@@ -1004,7 +1004,12 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None):
+        # ``seg_pixel_w`` (ADDITIVE per-pixel seg-loss reweight hook; default None => BYTE-IDENTICAL):
+        # when given a (1,H,W) map it MULTIPLIES the per-pixel seg map (all forms) BEFORE the mean --
+        # the spike-aware reweight lever (down-weight unfittable single-frame flicker, up-weight the
+        # coherent boundary). None preserves the exact pre-hook expression. Mirrors the ``render_fn``
+        # additive-hook idiom above.
         # ``seg_form`` (FEED-bv 4-stage curriculum): the seg LOSS FORM for THIS epoch's stage.
         # None -> the closure default ``seg_loss`` (non-curriculum, back-compat). The PR95 d_seg
         # SEQUENCE (digest pr95_segnet_stage_evolution...): ce (coarse argmax) -> tau_softplus
@@ -1036,7 +1041,8 @@ def make_loss_fn(
             # PR95 stage-2 (digest: THE primary d_seg drop, 0.00643->0.00396). mean(tau*softplus(-m/tau)).
             signed = _live_signed()
             z = -signed / tau_use
-            seg_l = mx.mean(tau_use * mx.logaddexp(mx.zeros_like(z), z))
+            _pp = tau_use * mx.logaddexp(mx.zeros_like(z), z)
+            seg_l = mx.mean(_pp if seg_pixel_w is None else _pp * seg_pixel_w)
         elif form == "l7_softplus":
             # PR95 stage-5 l7 (digest: hard-pixel refine; KEEP loss, DROP C1a). softplus * (1+mult
             # on margin<thr), renorm mean-1, weight stop-grad. THE margin-weight refine stage.
@@ -1045,14 +1051,15 @@ def make_loss_fn(
             per_pixel = tau_use * mx.logaddexp(mx.zeros_like(z), z)
             w = 1.0 + l7_mult * (signed < l7_thr_use).astype(seg_logits.dtype)
             w = mx.stop_gradient(w / (mx.mean(w) + 1e-8))
-            seg_l = mx.mean(per_pixel * w)
+            _pp = per_pixel * w
+            seg_l = mx.mean(_pp if seg_pixel_w is None else _pp * seg_pixel_w)
         elif form == "margin_hinge":
             # lensA d_seg-optimal surrogate: relu(m - (logit[GT] - max_{c!=GT} logit[c])).
             signed = _live_signed()
             hinge_map = mx.maximum(margin_target - signed, 0.0)  # (1,H,W)
             if apply_mw:
                 hinge_map = hinge_map * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
-            seg_l = mx.mean(hinge_map)
+            seg_l = mx.mean(hinge_map if seg_pixel_w is None else hinge_map * seg_pixel_w)
         else:  # "ce"
             logsum = mx.logsumexp(seg_logits, axis=-1)
             tgt = mx.sum(seg_logits * lstar_oh, axis=-1)
@@ -1061,7 +1068,7 @@ def make_loss_fn(
             pw = ce * w[None]  # (1,H,W)
             if apply_mw:
                 pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
-            seg_l = mx.mean(pw)
+            seg_l = mx.mean(pw if seg_pixel_w is None else pw * seg_pixel_w)
         # Realized pose MSE on the pair (== realized d_pose).
         yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
         pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]
