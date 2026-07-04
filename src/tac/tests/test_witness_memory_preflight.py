@@ -135,6 +135,114 @@ def test_measured_constants_match_ledger():
     assert 0.065 <= wmp.CF_PER_PAIR_GIB_REF <= 0.075
 
 
+# ── C4 fix (SEAL review 2026-07-04): the --launch-sh path derives in_feat from the bank flags ────
+# The FALSE-SAFE this extincts: bank-6 + self-orient => in_feat 176 => cf_mx_cache 86.4 GiB =>
+# true peak 110.81 GiB REFUSE, but the in_feat-BLIND parser projected "SAFE 67.6".
+
+_BANK4_LAUNCH_BODY = (
+    "#!/bin/bash\nset -euo pipefail\ncd /repo\n"
+    "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \\\n"
+    "  .venv/bin/python experiments/train_levelset_witness_realized_through_R_mlx.py \\\n"
+    "  --num-pairs 600 \\\n  --self-orient \\\n  --n-dir-freqs 2 \\\n  --freq-across 32 \\\n"
+    "  --freq-along 4 \\\n  --max-bank-freq 64 \\\n  --verdict-batch 32 \\\n"
+    "  --render-h 384 \\\n  --render-w 512 \\\n"
+)
+_BANK6_LAUNCH_BODY = _BANK4_LAUNCH_BODY.replace(
+    "--max-bank-freq 64", "--bank-n-scales 6 --max-bank-freq 64")
+
+
+def test_derive_in_feat_bank4_default_matches_ref_88():
+    """#205-style flags (default bank-4, self-orient, n-dir-freqs 2) -> the measured REF 88."""
+    flags = wmp.parse_launch_flags(_BANK4_LAUNCH_BODY)
+    flags["self_orient"] = True
+    assert wmp.derive_in_feat_from_flags(flags) == wmp.REF_IN_FEAT == 88
+
+
+def test_derive_in_feat_bank6_capped_is_176():
+    """bank-6 @ max-bank-freq 64 -> cols 84 (float32 cap drops 4 of the f=64 atoms) -> in_feat
+    2*84 + 4*2 = 176 — the review-measured number the blind path missed."""
+    flags = wmp.parse_launch_flags(_BANK6_LAUNCH_BODY)
+    flags["self_orient"] = True
+    assert wmp.derive_in_feat_from_flags(flags) == 176
+
+
+def test_derive_in_feat_self_orient_off_drops_dir_feats():
+    flags = wmp.parse_launch_flags(_BANK4_LAUNCH_BODY)
+    flags["self_orient"] = False
+    assert wmp.derive_in_feat_from_flags(flags) == 80  # 2*40 curvelet cols only
+
+
+def test_derive_in_feat_uses_trainer_default_n_dir_freqs_when_absent():
+    """self-orient with NO --n-dir-freqs -> trainer argparse default 6 -> dir_w 24."""
+    assert wmp.derive_in_feat_from_flags({"self_orient": True, "max_bank_freq": 64.0}) == 80 + 24
+
+
+def test_parse_launch_flags_extracts_bank_flags():
+    flags = wmp.parse_launch_flags(_BANK6_LAUNCH_BODY)
+    assert flags["bank_n_scales"] == 6
+    assert flags["max_bank_freq"] == 64.0
+    assert flags["n_dir_freqs"] == 2
+
+
+def test_launch_sh_bank6_refuses_at_true_in_feat(tmp_path):
+    """The C4 FALSE-SAFE regression: the bank-6 launch.sh must now project the TRUE peak
+    (110.81 GiB per the review's executed number) and REFUSE on a 128 GiB box."""
+    p = tmp_path / "launch.sh"
+    p.write_text(_BANK6_LAUNCH_BODY)
+    proj = wmp.project_from_launch_sh(p, total_ram_gib=RAM)
+    assert proj.in_feat == 176
+    assert proj.projected_peak_gib == 110.81
+    assert not proj.safe
+
+
+def test_launch_sh_bank4_safe_at_67_61(tmp_path):
+    p = tmp_path / "launch.sh"
+    p.write_text(_BANK4_LAUNCH_BODY)
+    proj = wmp.project_from_launch_sh(p, total_ram_gib=RAM)
+    assert proj.in_feat == 88
+    assert proj.projected_peak_gib == 67.61
+    assert proj.safe
+
+
+def test_launch_sh_in_feat_override_honored(tmp_path):
+    """--in-feat alongside --launch-sh must be honored (it was silently ignored pre-fix)."""
+    p = tmp_path / "launch.sh"
+    p.write_text(_BANK4_LAUNCH_BODY)
+    proj = wmp.project_from_launch_sh(p, total_ram_gib=RAM, in_feat_override=176)
+    assert proj.in_feat == 176
+    assert not proj.safe
+
+
+def test_cli_launch_sh_bank6_strict_returns_3(tmp_path, capsys):
+    p = tmp_path / "launch.sh"
+    p.write_text(_BANK6_LAUNCH_BODY)
+    rc = wmp.main(["--launch-sh", str(p), "--total-ram-gib", "128", "--strict"])
+    assert rc == 3
+    out = capsys.readouterr().out
+    assert "REFUSE" in out and "in_feat=176" in out
+
+
+def test_cli_launch_sh_honors_in_feat_override(tmp_path, capsys):
+    p = tmp_path / "launch.sh"
+    p.write_text(_BANK4_LAUNCH_BODY)
+    rc = wmp.main(["--launch-sh", str(p), "--in-feat", "176", "--total-ram-gib", "128", "--strict"])
+    assert rc == 3
+    assert "in_feat=176" in capsys.readouterr().out
+
+
+def test_real_205_launch_sh_still_projects_safe():
+    """The #205 real launch.sh (bank-4 default, verdict-batch 32) must still project SAFE ~67.6."""
+    real = _REPO / "experiments/results/levelset_n600_witness_20260703T120444Z/launch.sh"
+    if not real.exists():
+        import pytest
+
+        pytest.skip("#205 launch.sh not present")
+    proj = wmp.project_from_launch_sh(real, total_ram_gib=RAM)
+    assert proj.in_feat == 88
+    assert proj.projected_peak_gib == 67.61
+    assert proj.safe
+
+
 # ── SYSTEM-aware admission composition (the P0 SUM-over-RAM gate) ───────────────────────────────
 import system_memory_governor as gov  # noqa: E402
 

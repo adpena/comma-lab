@@ -23,6 +23,15 @@ n205_oom_probe_*/verdict_mem_microprobe.py`` + the trainer TAC_MEM_PROBE rows):
   * verdict transient (peak over baseline): unchunked N=600 -> +66.2 GiB; chunked vbatch in {8,32}
     -> +5.6 GiB floor. => ~0.11 GiB/pair marginal, ~6 GiB floor.
   * gt uint8 keyframes: 2 frames x 874x1164x3 / pair.
+
+C4 FIX (pre-launch SEAL review 2026-07-04, .omx/research/fresh_run_config_adversarial_review_
+20260704.md): the ``--launch-sh`` path was in_feat-BLIND — it parsed neither the curvelet-bank
+flags (``--bank-n-scales`` etc.) nor ``--n-dir-freqs``/``--max-bank-freq``, and silently ignored an
+``--in-feat`` override, so a bank-6 config (measured in_feat 176 -> cf_mx_cache 86.4 GiB -> true
+peak 110.81 GiB REFUSE) was handed a FALSE "SAFE 67.6" — the exact surrogate-green class this tool
+exists to extinct. The fix derives ``in_feat`` from the parsed launch flags EXACTLY the way the
+trainer does (see :func:`derive_in_feat_from_flags`) and honors an explicit ``--in-feat`` override
+alongside ``--launch-sh``.
 """
 from __future__ import annotations
 
@@ -123,7 +132,10 @@ def _total_ram_gib() -> float:
             return 128.0  # last-resort assumption for this fleet's M5 Max
 
 
-_FLAG_INT = {"--num-pairs", "--render-h", "--render-w", "--verdict-batch", "--mod-dim", "--hidden-dim"}
+_FLAG_INT = {"--num-pairs", "--render-h", "--render-w", "--verdict-batch", "--mod-dim", "--hidden-dim",
+             # C4 fix: the front-end flags in_feat is derived from (trainer argparse:4785-4799).
+             "--bank-n-scales", "--bank-n-orient0", "--bank-n-iso", "--n-dir-freqs"}
+_FLAG_FLOAT = {"--bank-f0", "--bank-base", "--max-bank-freq"}
 
 
 def parse_launch_flags(text: str) -> dict:
@@ -141,6 +153,13 @@ def parse_launch_flags(text: str) -> dict:
                 pass
             i += 2
             continue
+        if t in _FLAG_FLOAT and i + 1 < len(toks):
+            try:
+                out[t.lstrip("-").replace("-", "_")] = float(toks[i + 1])
+            except ValueError:
+                pass
+            i += 2
+            continue
         if t == "--self-orient":
             out["self_orient"] = True
         if t == "--no-self-orient":
@@ -149,14 +168,94 @@ def parse_launch_flags(text: str) -> dict:
     return out
 
 
+# ── C4 fix: in_feat derivation from the launch flags (the trainer's EXACT arithmetic) ───────────
+# Trainer front-end defaults, cited from the trainer argparse
+# (experiments/train_levelset_witness_realized_through_R_mlx.py:4785-4799):
+#   --bank-n-scales 4  --bank-n-orient0 6  --bank-f0 2.0  --bank-base 2.0  --bank-n-iso 4
+#   --max-bank-freq None  --self-orient False  --n-dir-freqs 6
+_TRAINER_BANK_DEFAULTS: dict = {
+    "bank_n_scales": 4, "bank_n_orient0": 6, "bank_f0": 2.0, "bank_base": 2.0,
+    "bank_n_iso": 4, "max_bank_freq": None, "n_dir_freqs": 6,
+}
+
+
+def curvelet_bank_cols(*, n_scales: int, n_orient0: int, f0: float, base: float, n_iso: int,
+                       max_freq: float | None) -> int:
+    """Column count of the generic curvelet/shearlet bank — an EXACT replication of
+    ``curvelet_directional_B`` (src/tac/boundary_math/lever_b_levelset_generator.py:136-173, the
+    function the trainer calls at train_levelset_witness_realized_through_R_mlx.py:1491-1499).
+
+    Deliberately replicated (NOT imported — per the C4 fix contract this tool stays standalone and
+    must not import the trainer; the bank helper's arithmetic is frozen here with the same dtype
+    dance): columns are built as float32 vectors, the ``max_freq`` cap computes float64 norms OF the
+    float32-rounded components, ``keep = norms <= max_freq + 1e-6``. The float32 rounding is
+    LOAD-BEARING at the cap boundary: bank-6 @ max_freq 64 keeps 84 of 88 atoms (4 of the f=64
+    atoms round a hair above 64+1e-6), which is exactly the measured in_feat 176 = 2*84 + 8.
+    """
+    import numpy as np  # lazy: keep bare-module import light; .venv (the only launch env) has numpy
+
+    cols: list = []
+    for j in range(int(n_scales)):
+        f_j = float(f0) * (float(base) ** j)
+        l_j = int(n_orient0) * (2 ** (j // 2))  # parabolic curvelet doubling
+        for l in range(l_j):  # noqa: E741 — mirrors the bank helper's loop variable
+            theta = np.pi * l / l_j
+            cols.append(np.array([f_j * np.cos(theta), f_j * np.sin(theta)], dtype=np.float32))
+    for i in range(int(n_iso)):
+        theta = np.pi * i / max(int(n_iso), 1)
+        f_low = float(f0) * 0.5
+        cols.append(np.array([f_low * np.cos(theta), f_low * np.sin(theta)], dtype=np.float32))
+    stacked = np.stack(cols, axis=1).astype(np.float32)  # (2, n_feats)
+    if max_freq is not None:
+        norms = np.sqrt((stacked.astype(np.float64) ** 2).sum(axis=0))
+        keep = norms <= float(max_freq) + 1e-6
+        if not keep.any():  # never empty the bank — keep the single lowest-freq atom
+            keep = norms <= float(norms.min()) + 1e-6
+        stacked = stacked[:, keep]
+    return int(stacked.shape[1])
+
+
+def derive_in_feat_from_flags(flags: dict) -> int:
+    """Derive ``in_feat`` from parsed launch flags EXACTLY the way the trainer derives it
+    (train_levelset_witness_realized_through_R_mlx.py:1491-1513):
+
+        B = curvelet_directional_B(bank, max_freq)        # cols atoms
+        in_feat = curvelet_feats(...).shape[1]            # = 2 * cols  (sin + cos)
+        if self_orient: in_feat += 4 * n_dir_freqs        # dir_w
+
+    Missing flags fall back to the trainer argparse defaults (``_TRAINER_BANK_DEFAULTS``;
+    self_orient default False)."""
+    d = _TRAINER_BANK_DEFAULTS
+    cols = curvelet_bank_cols(
+        n_scales=int(flags.get("bank_n_scales", d["bank_n_scales"])),
+        n_orient0=int(flags.get("bank_n_orient0", d["bank_n_orient0"])),
+        f0=float(flags.get("bank_f0", d["bank_f0"])),
+        base=float(flags.get("bank_base", d["bank_base"])),
+        n_iso=int(flags.get("bank_n_iso", d["bank_n_iso"])),
+        max_freq=flags.get("max_bank_freq", d["max_bank_freq"]),
+    )
+    in_feat = 2 * cols
+    if bool(flags.get("self_orient", False)):
+        in_feat += 4 * int(flags.get("n_dir_freqs", d["n_dir_freqs"]))
+    return int(in_feat)
+
+
 def project_from_launch_sh(path: Path, *, safe_frac: float = DEFAULT_SAFE_FRAC,
-                           total_ram_gib: float | None = None) -> MemoryProjection:
-    flags = parse_launch_flags(Path(path).read_text())
+                           total_ram_gib: float | None = None,
+                           in_feat_override: int | None = None) -> MemoryProjection:
+    text = Path(path).read_text()
+    flags = parse_launch_flags(text)
+    self_orient = bool(flags.get("self_orient", "--self-orient" in text))
+    flags["self_orient"] = self_orient
+    # C4 fix: derive in_feat from the emitted bank/dir flags (the FALSE-SAFE hole: bank-6 =>
+    # in_feat 176 => cf_mx_cache x2 => 110.81 GiB REFUSE, previously projected 67.6 SAFE).
+    in_feat = int(in_feat_override) if in_feat_override is not None else derive_in_feat_from_flags(flags)
     return project_peak_rss_gib(
         num_pairs=int(flags.get("num_pairs", 600)),
         render_h=int(flags.get("render_h", 384)),
         render_w=int(flags.get("render_w", 512)),
-        self_orient=bool(flags.get("self_orient", "--self-orient" in Path(path).read_text())),
+        in_feat=in_feat,
+        self_orient=self_orient,
         verdict_batch=int(flags.get("verdict_batch", DEFAULT_VERDICT_BATCH)),
         safe_frac=safe_frac, total_ram_gib=total_ram_gib)
 
@@ -182,7 +281,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--num-pairs", type=int, default=600)
     ap.add_argument("--render-h", type=int, default=384)
     ap.add_argument("--render-w", type=int, default=512)
-    ap.add_argument("--in-feat", type=int, default=REF_IN_FEAT)
+    ap.add_argument("--in-feat", type=int, default=None,
+                    help="override the coord-feature width (default: derived from the launch.sh "
+                    "bank/dir flags on the --launch-sh path, else the measured reference "
+                    f"{REF_IN_FEAT}). Honored on BOTH paths (C4 fix).")
     ap.add_argument("--verdict-batch", type=int, default=DEFAULT_VERDICT_BATCH)
     ap.add_argument("--no-self-orient", action="store_true")
     ap.add_argument("--safe-frac", type=float, default=DEFAULT_SAFE_FRAC)
@@ -196,11 +298,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.launch_sh:
         proj = project_from_launch_sh(Path(args.launch_sh), safe_frac=args.safe_frac,
-                                      total_ram_gib=args.total_ram_gib)
+                                      total_ram_gib=args.total_ram_gib,
+                                      in_feat_override=args.in_feat)
     else:
         proj = project_peak_rss_gib(
             num_pairs=args.num_pairs, render_h=args.render_h, render_w=args.render_w,
-            in_feat=args.in_feat, self_orient=not args.no_self_orient,
+            in_feat=(REF_IN_FEAT if args.in_feat is None else args.in_feat),
+            self_orient=not args.no_self_orient,
             verdict_batch=args.verdict_batch, safe_frac=args.safe_frac, total_ram_gib=args.total_ram_gib)
 
     tag = "SAFE" if proj.safe else "REFUSE"
@@ -208,7 +312,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  breakdown (GiB): fixed={proj.fixed_overhead_gib} + cf_mx_cache={proj.cf_cache_gib} "
           f"+ gt={proj.gt_gib} + verdict={proj.verdict_transient_gib} = peak {proj.projected_peak_gib}")
     print(f"  config: num_pairs={proj.num_pairs} render={proj.render_h}x{proj.render_w} "
-          f"self_orient={proj.self_orient} verdict_batch={proj.verdict_batch}")
+          f"in_feat={proj.in_feat} self_orient={proj.self_orient} verdict_batch={proj.verdict_batch}")
 
     admit_refused = False
     if args.system_aware:
