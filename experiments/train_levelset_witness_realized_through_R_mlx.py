@@ -5102,7 +5102,7 @@ def main(argv: list[str] | None = None) -> int:
                     "to this value at the tau/MCF onset (--tau-softplus-start-epoch), cosine-eased over "
                     "--stage-transition-rewarmup-epochs. Unset or ==base => BYTE-IDENTICAL constant. "
                     "Fresh run: base 0.05 -> end 0.10 (the MEASURED survival knee; holds the thin lane "
-                    "at sigma0.8/93% vs sigma1.5/49% as MCF narrows the interface).")
+                    "at sigma0.8/93%% vs sigma1.5/49%% as MCF narrows the interface).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
     # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty (additive; default 0.0 == OFF ==
     # bit-identical loss). Drives the per-pair FiLM codes toward a low-rank subspace (rate). Computed
