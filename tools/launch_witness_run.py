@@ -41,7 +41,6 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
-import os
 import re
 import sys
 import time
@@ -116,6 +115,11 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
         "#!/bin/bash\n"
         "set -euo pipefail\n"
         f"cd {repo}\n"
+        # Trainer memory telemetry (mem_probe rows). The #205 run was SILENT because this env-gated
+        # default-off flag was never set in launch.sh (memory mine 2026-07-04 §1/§6) — the launcher
+        # now sets it so every future run feeds the projection ledger's reconcile path. Telemetry
+        # only: the gate emits mem_probe log rows; it never touches training numerics.
+        "export TAC_MEM_PROBE=1\n"
         f"{cmd}\n"
     )
 
@@ -222,9 +226,120 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None) -> int:
     return 0
 
 
+# ───────────────────────── named-config derivation (shared by launch + calibration) ─────────────
+def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: int, overfit: bool):
+    """Resolve a canonical named config to a derived trainer config at the given scale. The
+    RSS-calibration smoke reuses this with a SMALL num_pairs/epochs but the SAME config name, so
+    the calibration exercises the REAL flag set (not a toy variant)."""
+    if config == "sealed_205":
+        # The #205 P3 SEALED capstone config fixes its own knobs (mod-dim 32 etc.); overfit N/A.
+        return wac.derive_sealed_205_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+    if config == "store_nothing_205":
+        # The sealed capstone + STORE-NOTHING pose-carrier source (Track B) — the A/B pose arm.
+        return wac.derive_store_nothing_205_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+    if config == "fresh_seeded":
+        # The 2026-07-04 SEAL-review REVISED run-1 argv (sealed_205 + seed/control deltas; C5).
+        return wac.derive_fresh_seeded_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+    return wac.derive_config(gt_cache, num_pairs=num_pairs, overfit=overfit, epochs=epochs,
+                             all_levers=(config == "all_levers"))
+
+
+# ───────────────────────── RSS calibration smoke (BUILD #294 piece B; optional, default OFF) ────
+_SAFE_RUN_PEAK_MIB_RE = re.compile(r"peak_rss=(\d+(?:\.\d+)?)MiB")
+_SAFE_RUN_JSON_PEAK_RE = re.compile(r'"peak_rss_mib"\s*:\s*(\d+(?:\.\d+)?)')
+
+
+def parse_safe_run_peak_mib(text: str) -> float | None:
+    """Parse safe_run's exit peak-RSS telemetry (detail line or --json row). PURE."""
+    peaks = [float(m) for m in _SAFE_RUN_PEAK_MIB_RE.findall(text)]
+    peaks += [float(m) for m in _SAFE_RUN_JSON_PEAK_RE.findall(text)]
+    return max(peaks) if peaks else None
+
+
+def calibration_verdict(projected_gib: float, actual_gib: float,
+                        overrun_pct: float) -> tuple[bool, str]:
+    """PURE overrun check: REFUSE when the MEASURED calibration peak already exceeds the projection
+    by more than overrun_pct (the projection under-modeled the config => the full-scale projection
+    cannot be trusted)."""
+    limit = float(projected_gib) * (1.0 + float(overrun_pct) / 100.0)
+    ok = float(actual_gib) <= limit
+    detail = (f"calibration actual {actual_gib:.2f} GiB vs projected {projected_gib:.2f} GiB "
+              f"(limit +{overrun_pct:.0f}% = {limit:.2f} GiB)")
+    return (True, f"OK: {detail}") if ok else (
+        False, f"OVERRUN: {detail} — the projection under-models this flag set; REFUSING the "
+               f"full-scale launch (recalibrate the preflight constants before launching)")
+
+
+def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label: str,
+                         extra_flags: list[str] | None, wmp) -> int:
+    """Run the emitted config at SMALL scale (REAL flag set, governed safe_run path, FOREGROUND,
+    minutes) capturing actual peak RSS; write calibration_rss.json next to launch.sh; REFUSE
+    (rc=5) on projection overrun > --calibrate-overrun-pct. Also appends projection+reconcile rows
+    to the margin ledger — every calibration feeds calibrated_margin()."""
+    import subprocess
+
+    calib_dir = out_dir / "calibrate_rss"
+    cfg_c = derive_named_config(config, args.gt_cache, num_pairs=args.calibrate_pairs,
+                                epochs=args.calibrate_epochs, overfit=overfit)
+    launch_c = write_launch_sh(cfg_c, calib_dir, extra_flags=extra_flags)
+    proj_c = wmp.project_from_launch_sh(launch_c, safe_frac=args.mem_preflight_safe_frac)
+    print(f"# calibrate-rss: n={args.calibrate_pairs} epochs={args.calibrate_epochs} "
+          f"projected peak {proj_c.projected_peak_gib} GiB — running FOREGROUND via safe_run "
+          f"(timeout {args.calibrate_timeout_s:.0f}s)")
+    try:
+        wmp.record_projection(calib_dir, launch_c, proj_c, note="calibrate_rss")
+    except Exception as exc:
+        print(f"[launch-witness] WARNING: calibration ledger append failed ({exc})", file=sys.stderr)
+
+    cmd = [sys.executable, str(_REPO / "tools" / "safe_run.py"),
+           "--rss-mb", str(int(args.rss_cap_mb)), "--timeout", str(float(args.calibrate_timeout_s)),
+           "--json", "--label", f"calib_{label}", "--", "bash", str(launch_c)]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True,
+                             timeout=float(args.calibrate_timeout_s) + 120.0)
+    except subprocess.TimeoutExpired:
+        print("[launch-witness] ERROR: calibration smoke exceeded its outer timeout — REFUSING "
+              "the full-scale launch (no measured peak).", file=sys.stderr)
+        return 5
+    peak_mib = parse_safe_run_peak_mib((res.stderr or "") + (res.stdout or ""))
+    if peak_mib is None:
+        print(f"[launch-witness] ERROR: calibration smoke produced NO safe_run peak telemetry "
+              f"(rc={res.returncode}) — REFUSING the full-scale launch (never launch on an "
+              f"unmeasured calibration). stderr tail: {(res.stderr or '')[-500:]}", file=sys.stderr)
+        return 5
+    actual_gib = peak_mib / 1024.0
+    ok, reason = calibration_verdict(proj_c.projected_peak_gib, actual_gib,
+                                     args.calibrate_overrun_pct)
+    report = {
+        "config": config, "calibrate_pairs": args.calibrate_pairs,
+        "calibrate_epochs": args.calibrate_epochs,
+        "projected_peak_gib": proj_c.projected_peak_gib,
+        "actual_peak_gib": round(actual_gib, 3),
+        "overrun_pct_limit": args.calibrate_overrun_pct,
+        "smoke_rc": res.returncode, "ok": ok, "reason": reason,
+        "note": ("small-n calibration validates the model's fixed-overhead + verdict-floor terms; "
+                 "the n600 cf-cache scaling term is validated by the ledger's full-run reconciles"),
+        "ts": _utc(),
+    }
+    (out_dir / "calibration_rss.json").write_text(json.dumps(report, indent=2))
+    try:
+        wmp.reconcile_run_dir(calib_dir)
+    except Exception as exc:
+        print(f"[launch-witness] WARNING: calibration reconcile append failed ({exc})",
+              file=sys.stderr)
+    if not ok:
+        print(f"[launch-witness] ERROR: REFUSING to launch — {reason}", file=sys.stderr)
+        return 5
+    print(f"[launch-witness] calibrate-rss {reason}")
+    if res.returncode != 0:
+        print(f"[launch-witness] WARNING: calibration smoke exited rc={res.returncode} (peak was "
+              f"still measured; inspect {calib_dir} before trusting the run).", file=sys.stderr)
+    return 0
+
+
 # ───────────────────────── main ─────────────────────────
 def _utc() -> str:
-    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -280,6 +395,21 @@ def main(argv: list[str] | None = None) -> int:
                     "fraction of total RAM (default 0.70 — leaves OS + control-plane + coexistence headroom)")
     ap.add_argument("--skip-mem-preflight", action="store_true",
                     help="bypass the projected-peak-RSS memory preflight (WARN instead of REFUSE)")
+    ap.add_argument("--calibrate-rss", action="store_true",
+                    help="(BUILD #294 optional pre-launch hardening) run the emitted config for a few "
+                    "epochs at small n (REAL flag set, governed safe_run path, FOREGROUND, minutes) "
+                    "capturing actual peak RSS next to the projection; REFUSE the full launch if the "
+                    "measured peak already exceeds the projection by > --calibrate-overrun-pct. "
+                    "Default OFF — the default launch path is unchanged.")
+    ap.add_argument("--calibrate-pairs", type=int, default=24,
+                    help="n-pairs for the RSS calibration smoke (default 24)")
+    ap.add_argument("--calibrate-epochs", type=int, default=3,
+                    help="epochs for the RSS calibration smoke (default 3)")
+    ap.add_argument("--calibrate-overrun-pct", type=float, default=15.0,
+                    help="REFUSE the launch when calibration actual peak exceeds its projection by "
+                    "more than this percent (default 15)")
+    ap.add_argument("--calibrate-timeout-s", type=float, default=1800.0,
+                    help="safe_run timeout for the calibration smoke (default 1800s)")
     ap.add_argument("--admission-override-rationale", default=None,
                     help="operator-quoted rationale to OVERRIDE a SYSTEM admission REFUSAL (the "
                          "SUM-over-RAM crash gate); the ONLY non-skip bypass (placeholder/empty rejected)")
@@ -311,22 +441,8 @@ def main(argv: list[str] | None = None) -> int:
               f"(--all-levers == --config all_levers); pass exactly one.", file=sys.stderr)
         return 2
 
-    if config == "sealed_205":
-        # The #205 P3 SEALED capstone config fixes its own knobs (mod-dim 32 etc.); overfit N/A.
-        cfg = wac.derive_sealed_205_config(args.gt_cache, num_pairs=args.num_pairs,
-                                           epochs=args.epochs)
-    elif config == "store_nothing_205":
-        # The sealed capstone + STORE-NOTHING pose-carrier source (Track B) — the A/B pose arm.
-        cfg = wac.derive_store_nothing_205_config(args.gt_cache, num_pairs=args.num_pairs,
-                                                  epochs=args.epochs)
-    elif config == "fresh_seeded":
-        # The 2026-07-04 SEAL-review REVISED run-1 argv (sealed_205 + seed/control deltas; C5).
-        cfg = wac.derive_fresh_seeded_config(args.gt_cache, num_pairs=args.num_pairs,
-                                             epochs=args.epochs)
-    else:
-        cfg = wac.derive_config(args.gt_cache, num_pairs=args.num_pairs,
-                                overfit=overfit, epochs=args.epochs,
-                                all_levers=(config == "all_levers"))
+    cfg = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
+                              epochs=args.epochs, overfit=overfit)
 
     out_dir = Path(args.out_dir) if args.out_dir else (
         _REPO / "experiments" / "results" / f"levelset_n{args.num_pairs}_witness_{_utc()}")
@@ -378,6 +494,14 @@ def main(argv: list[str] | None = None) -> int:
 
         proj = wmp.project_from_launch_sh(launch_sh, safe_frac=args.mem_preflight_safe_frac)
         projected_peak_gib = proj.projected_peak_gib
+        if not args.dry_run:
+            # BUILD #294 piece D: every gated launch appends its projection to the margin ledger
+            # ({run_dir, projected_peak, config_hash, ts}); --reconcile closes the loop post-run.
+            try:
+                wmp.record_projection(out_dir, launch_sh, proj, note=f"launcher_b1:{config}")
+            except Exception as exc:  # ledger telemetry must never block a launch
+                print(f"[launch-witness] WARNING: projection ledger append failed ({exc})",
+                      file=sys.stderr)
         print(f"# mem-preflight: projected peak {proj.projected_peak_gib} GiB "
               f"(fixed {proj.fixed_overhead_gib} + cf_mx_cache {proj.cf_cache_gib} + gt {proj.gt_gib} "
               f"+ verdict {proj.verdict_transient_gib}); safe ceiling {proj.safe_ceiling_gib} GiB "
@@ -439,6 +563,20 @@ def main(argv: list[str] | None = None) -> int:
               "Re-run without --dry-run to launch.")
         return 0
 
+    # (b1.5) OPTIONAL RSS CALIBRATION SMOKE (BUILD #294 piece B; default OFF — the default launch
+    # path is unchanged). Runs the REAL flag set at small n FOREGROUND via the governed safe_run
+    # path, measures actual peak RSS, and REFUSES (rc=5) if the measurement already busts the
+    # projection by > --calibrate-overrun-pct.
+    if args.calibrate_rss:
+        if wmp is None:
+            print("[launch-witness] ERROR: --calibrate-rss requires the memory preflight module "
+                  "(unavailable above) — refusing the calibration-gated launch.", file=sys.stderr)
+            return 5
+        calib_rc = _run_rss_calibration(args, config, overfit, out_dir, label,
+                                        extra_flags or None, wmp)
+        if calib_rc != 0:
+            return calib_rc
+
     # (b2) THROUGHPUT GATE (compute pass): a MEASURED SegNet fwd+bwd micro-bench (B=8), NOT a flag-grep.
     # REFUSE if the custom-grouped-backward ~17x fast path is not actually active on this machine
     # (median > threshold => the ~6713ms reference accumulator, not the ~396ms fast path). Unavailable
@@ -474,7 +612,7 @@ def main(argv: list[str] | None = None) -> int:
     # (d) VERIFY the perf-env fast path (loud warning on the silent-slow footgun).
     status, line = verify_perf_env(run_log, timeout_s=args.perf_env_timeout_s)
     if status == "active":
-        print(f"[launch-witness] perf-env OK: custom_grouped_backward ACTIVE (~17x fast path).")
+        print("[launch-witness] perf-env OK: custom_grouped_backward ACTIVE (~17x fast path).")
     elif status == "inactive":
         print(f"[launch-witness] WARNING: custom_grouped_backward is INACTIVE — the run will be "
               f"~17x SLOW (TAC_MLX_CUSTOM_GROUPED_BACKWARD unset/disabled). line: {line}",
@@ -490,7 +628,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"[launch-witness] LAUNCHED + VERIFIED: label={label} log={run_log}")
     print(f"  stop:   .venv/bin/python tools/spawn_durable_daemon.py --stop {label}")
-    print(f"  status: .venv/bin/python tools/spawn_durable_daemon.py --status")
+    print("  status: .venv/bin/python tools/spawn_durable_daemon.py --status")
     return 0
 
 

@@ -36,6 +36,7 @@ alongside ``--launch-sh``.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -122,7 +123,7 @@ def project_peak_rss_gib(
 
 def _total_ram_gib() -> float:
     try:
-        import psutil  # noqa: PLC0415
+        import psutil
 
         return float(psutil.virtual_memory().total) / (1024.0 ** 3)
     except Exception:
@@ -275,6 +276,208 @@ def system_aware_admission(projected_peak_gib: float, *, exclude_pid: int | None
     return gov.live_admission_decision(projected_new_gib=float(projected_peak_gib), exclude_pid=exclude_pid)
 
 
+# ── SELF-CALIBRATING MARGIN LEDGER (BUILD #294 piece D) ─────────────────────────────────────────
+# The projection is a MODEL; the ledger measures the model. Every gated launch appends
+# {run_dir, projected_peak, config_hash, ts}; ``--reconcile <run_dir>`` appends the MEASURED
+# actual peak + residual; ``calibrated_margin()`` returns the measured p95 |projected - actual|
+# over the ledger (falling back to the policy's ASSUMED ~10 GiB spike/model-error margin when
+# < 3 reconciled rows exist — labeled, never silently invented). fcntl-locked JSONL append,
+# mirroring the canonical .omx/state store pattern (Catalog #128/#131 sister discipline).
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+LEDGER_PATH = _REPO_ROOT / ".omx" / "state" / "memory_projection_ledger.jsonl"
+BLACKBOX_PATH = _REPO_ROOT / ".omx" / "state" / "memory_blackbox.jsonl"
+ASSUMED_MARGIN_GIB = 10.0   # operator memory-policy leg 2 (spike/model-error) — the <3-row fallback
+_MIN_ROWS_FOR_CALIBRATION = 3
+
+
+def config_hash_from_launch_sh(path: Path) -> str:
+    """Stable 16-hex config hash = sha256 of the launch.sh bytes."""
+    import hashlib
+
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
+
+
+def append_ledger_row(row: dict, ledger_path: Path | None = None) -> dict:
+    """fcntl-LOCK_EX append of one JSON line (canonical .omx/state JSONL store pattern)."""
+    import datetime as _dt
+    import fcntl
+
+    row = dict(row)
+    row.setdefault("ts", _dt.datetime.now(_dt.UTC).isoformat())
+    ledger_path = Path(ledger_path if ledger_path is not None else LEDGER_PATH)
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(ledger_path, "a", encoding="utf-8") as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        try:
+            f.write(json.dumps(row, sort_keys=True) + "\n")
+            f.flush()
+        finally:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    return row
+
+
+def read_ledger_rows(ledger_path: Path | None = None) -> list[dict]:
+    p = Path(ledger_path if ledger_path is not None else LEDGER_PATH)
+    if not p.exists():
+        return []
+    rows: list[dict] = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def record_projection(run_dir: Path, launch_sh: Path, proj: MemoryProjection,
+                      *, note: str = "", ledger_path: Path | None = None) -> dict:
+    """Append the projection row the launch gate computed ({run_dir, projected_peak, config_hash, ts})."""
+    return append_ledger_row({
+        "event": "projection",
+        "run_dir": str(run_dir),
+        "projected_peak_gib": float(proj.projected_peak_gib),
+        "config_hash": config_hash_from_launch_sh(launch_sh),
+        "num_pairs": proj.num_pairs, "in_feat": proj.in_feat,
+        "verdict_batch": proj.verdict_batch, "self_orient": proj.self_orient,
+        "safe_frac": proj.safe_frac, "safe": proj.safe,
+        "note": note,
+    }, ledger_path)
+
+
+_SAFE_RUN_PEAK_RE = re.compile(r"peak_rss=(\d+(?:\.\d+)?)MiB")
+_SAFE_RUN_JSON_PEAK_RE = re.compile(r'"peak_rss_mib"\s*:\s*(\d+(?:\.\d+)?)')
+
+
+def actual_peak_from_run_log(text: str) -> tuple[float, str] | None:
+    """Parse the run's actual peak RSS (GiB) from safe_run's exit telemetry in run.log:
+    the ``SAFE_RUN ... peak_rss=NNNNMiB`` detail line or the ``"peak_rss_mib": N`` JSON row.
+    Present only after the wrapped process EXITS (safe_run reports peak at exit). Returns
+    ``(peak_gib, source)`` or None."""
+    peaks = [float(m) for m in _SAFE_RUN_PEAK_RE.findall(text)]
+    peaks += [float(m) for m in _SAFE_RUN_JSON_PEAK_RE.findall(text)]
+    if not peaks:
+        return None
+    return (max(peaks) / 1024.0, "run_log_safe_run_peak")
+
+
+# UNITS (measured, load-bearing — #205 memory mine §1, n205_memory_behavior_mine_20260704.md):
+# the governor/blackbox tracked field NAMED ``current_rss_gib`` is actually KiB/1e6 units
+# (memory_guard.group_rss_gb returns sum(rss_kb)/1e6): 1 unit = 1.024e9 B ~= 0.9537 true GiB
+# (cross-validated vs ps: 65.27 units == 62.25 true GiB). The blackbox SYSTEM fields are true GiB.
+# Underlying rename/fix is owned upstream (memory_guard) — until then every consumer converts.
+TRACKED_RSS_UNIT_TO_GIB = 1e6 * 1024 / (1024.0 ** 3)   # = 0.95367431640625
+
+
+def actual_peak_from_blackbox(run_dir: Path, blackbox_path: Path | None = None,
+                              ) -> tuple[float, str] | None:
+    """Fallback actual-peak source for a STILL-RUNNING (or telemetry-less) run: max group RSS over
+    the governor black-box samples whose tracked label references this run dir's name — scanning
+    the LIVE file AND its rotated archives (.omx/state/archive/), converted from tracked units to
+    TRUE GiB (see TRACKED_RSS_UNIT_TO_GIB). This is a MEASURED lower bound on the true peak (2s
+    sampling; the run may still grow). Returns ``(peak_gib, source)`` or None."""
+    p = Path(blackbox_path if blackbox_path is not None else BLACKBOX_PATH)
+    candidates = [p] if p.exists() else []
+    archive_dir = p.parent / "archive"
+    if archive_dir.is_dir():
+        candidates += sorted(archive_dir.glob(p.stem + "_*" + p.suffix))
+    if not candidates:
+        return None
+    name = Path(run_dir).name
+    peak_units = 0.0
+    found = False
+    for fp in candidates:
+        try:
+            f = open(fp, encoding="utf-8")  # noqa: SIM115 - closed by the with below; open guarded for OSError
+        except OSError:
+            continue
+        with f:
+            for line in f:
+                if name not in line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                for t in row.get("tracked", []):
+                    if name in str(t.get("label", "")):
+                        found = True
+                        r = float(t.get("current_rss_gib", 0.0))
+                        if r > peak_units:
+                            peak_units = r
+    if not found:
+        return None
+    return (peak_units * TRACKED_RSS_UNIT_TO_GIB, "blackbox_tracked_max_units_corrected")
+
+
+def reconcile_run_dir(run_dir: Path, *, ledger_path: Path | None = None,
+                      blackbox_path: Path | None = None,
+                      actual_override: tuple[float, str] | None = None) -> dict:
+    """Measure the run's actual peak (run.log safe_run telemetry, else black-box tracked max) and
+    append the residual row. ``actual_override=(gib, source)`` records an actual peak MEASURED
+    elsewhere (e.g. the #205 mine's 46,618-sample units-corrected 67.68 — memo
+    n205_memory_behavior_mine_20260704.md §4); the source cite is mandatory + non-placeholder.
+    Raises RuntimeError when no measured actual-peak source exists (never invents a number) or
+    when no projection row exists for the run_dir."""
+    run_dir = Path(run_dir)
+    if actual_override is not None:
+        src = str(actual_override[1]).strip().lower()
+        if not src or src in {"<source>", "tbd", "todo", "placeholder", "n/a"}:
+            raise RuntimeError("actual_override requires a real measurement-source cite")
+    projections = [r for r in read_ledger_rows(ledger_path)
+                   if r.get("event") == "projection" and r.get("run_dir") == str(run_dir)]
+    if not projections:
+        raise RuntimeError(f"no projection ledger row for run_dir {run_dir} — append one first "
+                           f"(the launch gate does this automatically; --record-projection for backfill)")
+    proj_row = projections[-1]
+
+    run_log = run_dir / "run.log"
+    actual: tuple[float, str] | None = actual_override
+    if actual is None and run_log.exists():
+        actual = actual_peak_from_run_log(run_log.read_text(errors="replace"))
+    still_running = actual is None
+    if actual is None:
+        actual = actual_peak_from_blackbox(run_dir, blackbox_path)
+    if actual is None:
+        raise RuntimeError(
+            f"no MEASURED actual-peak source for {run_dir}: run.log has no safe_run peak telemetry "
+            f"(run still alive?) and the black-box has no tracked samples for this label. "
+            f"Refusing to invent a number.")
+    actual_gib, source = actual
+    projected = float(proj_row["projected_peak_gib"])
+    return append_ledger_row({
+        "event": "reconcile",
+        "run_dir": str(run_dir),
+        "config_hash": proj_row.get("config_hash"),
+        "projected_peak_gib": projected,
+        "actual_peak_gib": round(actual_gib, 3),
+        "residual_gib": round(projected - actual_gib, 3),   # + => over-projection (conservative side)
+        "actual_source": source,
+        "in_progress": bool(still_running and source.startswith("blackbox")),
+    }, ledger_path)
+
+
+def calibrated_margin(ledger_path: Path | None = None) -> tuple[float, str]:
+    """Measured p95 of |projected - actual| over the ledger's reconcile rows. Falls back to the
+    ASSUMED policy margin (10 GiB) when < 3 reconciled rows exist — labeled, never silent."""
+    ledger_path = Path(ledger_path if ledger_path is not None else LEDGER_PATH)
+    residuals = sorted(abs(float(r["residual_gib"])) for r in read_ledger_rows(ledger_path)
+                       if r.get("event") == "reconcile" and r.get("residual_gib") is not None)
+    n = len(residuals)
+    if n < _MIN_ROWS_FOR_CALIBRATION:
+        return (ASSUMED_MARGIN_GIB,
+                f"assumed_default_insufficient_rows(n={n}<{_MIN_ROWS_FOR_CALIBRATION}) "
+                f"[policy leg-2 spike/model-error margin]")
+    import math
+
+    idx = max(0, min(n - 1, math.ceil(0.95 * n) - 1))
+    return (residuals[idx], f"measured_p95_over_{n}_reconciled_rows")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Witness-launch peak-RSS memory preflight (#205 OOM self-protection).")
     ap.add_argument("--launch-sh", type=str, help="path to an emitted launch.sh to project")
@@ -294,7 +497,45 @@ def main(argv: list[str] | None = None) -> int:
                     help="ALSO run the live SYSTEM admission gate (this run's peak + current system-wide "
                          "used + active jobs' growth vs the adaptive ceiling); with --strict, exit rc=4 "
                          "when the SUM over RAM would exceed the ceiling")
+    # ── ledger modes (BUILD #294 piece D) ──
+    ap.add_argument("--record-projection", action="store_true",
+                    help="append the projection to the margin ledger (requires --launch-sh + --run-dir)")
+    ap.add_argument("--run-dir", type=str, default=None,
+                    help="run directory for --record-projection")
+    ap.add_argument("--projected-peak-gib", type=float, default=None,
+                    help="with --record-projection: record THIS projected peak instead of the computed "
+                         "one (backfill of a historically-recorded projection, e.g. the registry value)")
+    ap.add_argument("--reconcile", type=str, default=None, metavar="RUN_DIR",
+                    help="measure the run's actual peak (run.log safe_run telemetry, else black-box "
+                         "tracked max, units-corrected) and append the residual row; prints the row")
+    ap.add_argument("--reconcile-actual-gib", type=float, default=None,
+                    help="with --reconcile: record THIS measured actual peak (true GiB) from an "
+                         "external measurement (requires --reconcile-actual-source cite)")
+    ap.add_argument("--reconcile-actual-source", type=str, default=None,
+                    help="mandatory measurement-source cite for --reconcile-actual-gib")
+    ap.add_argument("--calibrated-margin", action="store_true",
+                    help="print the measured p95 |projected-actual| margin over the ledger "
+                         "(falls back to the assumed 10 GiB when <3 reconciled rows; labeled)")
     args = ap.parse_args(argv)
+
+    if args.reconcile:
+        override = None
+        if args.reconcile_actual_gib is not None:
+            override = (float(args.reconcile_actual_gib), str(args.reconcile_actual_source or ""))
+        try:
+            row = reconcile_run_dir(Path(args.reconcile), actual_override=override)
+        except RuntimeError as exc:
+            print(f"[witness-mem-preflight] RECONCILE ERROR: {exc}", file=sys.stderr)
+            return 5
+        print(f"[witness-mem-preflight] reconciled: {json.dumps(row, sort_keys=True)}")
+        margin, label = calibrated_margin()
+        print(f"[witness-mem-preflight] calibrated margin: {margin:.2f} GiB ({label})")
+        return 0
+
+    if args.calibrated_margin:
+        margin, label = calibrated_margin()
+        print(f"[witness-mem-preflight] calibrated margin: {margin:.2f} GiB ({label})")
+        return 0
 
     if args.launch_sh:
         proj = project_from_launch_sh(Path(args.launch_sh), safe_frac=args.safe_frac,
@@ -306,6 +547,20 @@ def main(argv: list[str] | None = None) -> int:
             in_feat=(REF_IN_FEAT if args.in_feat is None else args.in_feat),
             self_orient=not args.no_self_orient,
             verdict_batch=args.verdict_batch, safe_frac=args.safe_frac, total_ram_gib=args.total_ram_gib)
+
+    if args.record_projection:
+        if not (args.launch_sh and args.run_dir):
+            print("[witness-mem-preflight] ERROR: --record-projection requires --launch-sh + --run-dir",
+                  file=sys.stderr)
+            return 5
+        if args.projected_peak_gib is not None:
+            # Backfill path: record the HISTORICALLY-recorded projection (e.g. the daemon-registry
+            # value) rather than the freshly computed one, so residuals measure the model AS GATED.
+            import dataclasses
+
+            proj = dataclasses.replace(proj, projected_peak_gib=float(args.projected_peak_gib))
+        row = record_projection(Path(args.run_dir), Path(args.launch_sh), proj, note="cli")
+        print(f"[witness-mem-preflight] projection recorded: {json.dumps(row, sort_keys=True)}")
 
     tag = "SAFE" if proj.safe else "REFUSE"
     print(f"[witness-mem-preflight] {tag}: {proj.reason}")
