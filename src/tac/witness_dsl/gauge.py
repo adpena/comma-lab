@@ -88,6 +88,11 @@ class GaugeComponent(Enum):
     CHROMA_BOUNDARY = "chroma_boundary"                # chroma as an argmax-boundary d_seg actuator
     FLICKER_TREATMENT = "flicker_treatment"            # predictable-replicate vs irreducible-downweight
     TRIPLE_JUNCTION_MARGIN = "triple_junction_margin"  # scalar top1-top2 vs multi-class simplex (WEAK)
+    # Deep-math pass #284 "Amortizing the Argmax" levers (FEED-03y/03z, APPEND-ONLY; train-time
+    # schedule/loss facets, 0 archive bytes; NOT GaugeChoice STORE fields — like ALONG_TANGENT_FREQ /
+    # MUON_*). Both are the §7 cross-chapter-converged next-run A/Bs (config B / #285), UNMEASURED.
+    GAMMA_TAU_EIKONAL = "gamma_tau_eikonal"              # Ch.4 phase-field: geometric tau-floor + eikonal
+    STAGE_TRANSITION_EASING = "stage_transition_easing"  # Ch.6 dynamics: deconflict ep300 + LR re-warmup
 
 
 class WarpGauge(Enum):
@@ -333,6 +338,17 @@ class MuonMomentumGauge(Enum):
     (cba2e4375, DAG FEED-03o/03q, memory
     [[muon-deep-dive-keep-and-tune-finishing-stage-schedule-not-switch]]).
 
+    NO-FAKE cross-ref (#284 FEED-03y/03z): "Muon = natural gradient" is a FALSE FRIEND. Muon's
+    Newton-Schulz orthogonalization is a WEIGHT-SPACE SPECTRAL normalizer (unit singular values of the
+    update matrix), NOT the OUTPUT-SPACE Fisher-Rao natural gradient the categorical head actually
+    defines (equations ``ce_softmax_mirror_descent_natural_gradient_v1`` — CE-softmax descent IS
+    mirror-descent / natural-gradient in the logit simplex — and
+    ``fisher_curvature_equals_categorical_fisher_trace_caustic_v1`` — the Fisher metric lives in
+    output/class space). The MEASURED -32%
+    d_seg of Muon vs AdamW is REAL; the ATTRIBUTION "because Muon approximates the natural gradient" is
+    a CONJECTURE (registered as a conjecture, NOT a canonical law) — the schedule levers below are tuned
+    on the measured win, never on the conjectured mechanism.
+
     Chart <-> trainer flag. These are BASE-trainer flags (``experiments/
     train_witness_realized_through_R_mlx.py`` -- the Muon-stage carrier per CLAUDE.md "Capstone
     theta* witness trainer"; the levelset entry point imports the base's Muon primitives). They are
@@ -352,7 +368,17 @@ class MuonMomentumGauge(Enum):
 
 class MuonLRGauge(Enum):
     """How the Muon finisher's learning rate is scheduled across the Muon span (cba2e4375, DAG
-    FEED-03o/03q). BASE-trainer flags (the Muon-stage carrier; NOT the levelset launch argparse):
+    FEED-03o/03q).
+
+    NO-FAKE cross-ref (#284 FEED-03y/03z; sister MuonMomentumGauge): "Muon = natural gradient" is a
+    FALSE FRIEND — Newton-Schulz is a weight-space SPECTRAL normalizer, not the output-space Fisher-Rao
+    natural gradient of the categorical head (equations ``ce_softmax_mirror_descent_natural_gradient_v1``
+    + ``fisher_curvature_equals_categorical_fisher_trace_caustic_v1``). The -32% d_seg win is REAL; the
+    NG attribution is a CONJECTURE (not registered as a law). The LR-anneal lever is tuned on the
+    measured win (a flat Newton-Schulz update magnitude cannot self-reduce near a minimum), not the
+    conjectured mechanism.
+
+    BASE-trainer flags (the Muon-stage carrier; NOT the levelset launch argparse):
       FLAT_LR   = flat Muon LR (the byte-identical DEFAULT; ``--muon-lr-final-frac`` 1.0 -> no
                   decay). Muon's Newton-Schulz fixes update MAGNITUDE, so a flat LR cannot
                   self-reduce the step near a minimum -> plateaus / oversteps (river-valley Muon
@@ -370,6 +396,14 @@ class AlongTangentFrequencyGauge(Enum):
     """How much ALONG-TANGENT Fourier bandwidth the anisotropic self-orient/curvelet basis carries
     (FEED-03t, equation ``anisotropic_basis_along_tangent_frequency_deficit_v1`` + memory
     [[lane-dash-residual-root-is-along-tangent-freq-deficit-R-allpass]]).
+
+    Deep-math cross-ref (#284 FEED-03y/03z, equation ``shearlet_nterm_upper_bounds_task_rate_v1``):
+    the self-orient directional basis IS a discrete SHEARLET frame — the provably-optimal sparse basis
+    for a curved codim-1 (cartoon) singularity — so the MEASURED -48% D1 d_seg of the all-class
+    directional basis is the cartoon-optimal outcome, and the N-term shearlet coefficient count
+    UPPER-BOUNDS the task rate of the argmax-edge manifold (the rate half of the sub-0.15 path). HONEST
+    scope: the shearlet advantage over wavelets is ASYMPTOTIC (N->infinity), not guaranteed at the
+    finite curvelet-column budget here; the cross-ref frames the basis-match, the net is still a #205 A/B.
 
     Lens-2 ROOT CAUSE of the lane-dash d_seg residual: the basis is SHARP ACROSS edges
     (freq_across -> 32,64 = Nyquist) but SMOOTH ALONG them (freq_along <= 8 cyc/unit); the lane
@@ -484,6 +518,67 @@ class TripleJunctionMarginGauge(Enum):
     MULTICLASS_SIMPLEX = "multiclass_simplex"  # DESIGN-STAGE + BANKED WEAK (car-corners, not lane)
 
 
+class GammaTauEikonalGauge(Enum):
+    """Ch.4 phase-field lever from the #284 deep-math pass: the Γ-optimal τ-anneal SHAPE + a
+    resolution-scale τ-FLOOR + a raised eikonal, treated as ONE COUPLED arm (FEED-03y/03z, config B
+    / #285 `.omx/research/deepmath_converged_next_run_config_20260704.md`; equations
+    ``tau_eps_hbar_one_dequantization_two_scales_v1``
+    + ``multiphase_modica_mortola_perimeter_gamma_limit_v1``
+    + ``mcf_minority_erasure_inevitability_v1``).
+
+    Deep-math: the softmax temperature τ IS the Modica-Mortola interface width (τ=ε=ħ). Three coupled
+    consequences: (a) the anneal SHAPE should be ``geometric`` = equal epochs per octave of interface
+    width (scale-space / GNC-correct), not cosine; (b) τ_end should FLOOR at the resolution scale —
+    annealing to the razor default 0.05 = a 0.025px interface = ~40x sub-grid aliasing (wasted, and it
+    fuels the late-τ d_seg volatility of the minority-erasure MCF); (c) the eikonal ``|grad phi|->1``
+    must be RAISED so a non-vanishing τ still yields a well-conditioned SDF partition — the eikonal is
+    what ENABLES the τ-floor, hence the three flags are ONE arm. All three charts emit the REAL
+    levelset-trainer flags ``--tau-anneal-shape`` / ``--softmax-temp-end`` / ``--eikonal-weight``
+    (never-invent-flags; READ defaults: cosine / 0.05 / 0.01). 0 archive bytes (train-time schedule).
+      BASELINE = the trainer's CURRENT defaults (cosine anneal / temp-end 0.05 / eikonal-weight 0.01)
+                 -> emits () = BYTE-IDENTICAL to the #205-live config (the pinned baseline arm).
+      GEOMETRIC_TAU_FLOOR_EIKONAL = ``--tau-anneal-shape geometric --softmax-temp-end <resolution-scale
+                 ~1.0> --eikonal-weight 0.05`` (the config-B tuple). NOTE the trainer's default
+                 ``--softmax-temp-start`` is ALSO 1.0, so end=1.0 HOLDS τ at the resolution/dequantization
+                 scale (the eikonal-conditioned SDF, not a sub-grid τ, supplies the crisp partition); a
+                 campaign that wants a genuine geometric DECAY to the floor raises --softmax-temp-start
+                 above it (threaded via gamma_tau_eikonal_trainer_flags(temp_end=..., eikonal_weight=...)).
+    UNMEASURED -> the cost cell is PENDING; the net d_seg is a #205-class A/B (net-S #205-gated, operator-
+    GO-gated for any dispatch; MEANS, pointer 0.19110 UNMOVED)."""
+
+    BASELINE = "baseline"                                          # cosine/0.05/0.01 defaults = () byte-identical
+    GEOMETRIC_TAU_FLOOR_EIKONAL = "geometric_tau_floor_eikonal"    # geometric + tau-floor + raised eikonal
+
+
+class StageTransitionEasingGauge(Enum):
+    """Ch.6 dynamics lever from the #284 deep-math pass: EASE the ep300 curriculum stage transition so
+    the two homotopy/continuation params do not collide at full LR with stale momentum (FEED-03y/03z +
+    the MEASURED FEED-ft bump; config B / #285; equations
+    ``ce_softmax_mirror_descent_natural_gradient_v1``
+    + ``muon_finisher_schedule_warmstart_and_lr_anneal_v1``).
+
+    Deep-math: the ep300 d_seg bump (MEASURED FEED-ft: 0.0056 -> 0.020, 3.4x, PERSISTENT 75+ep) is a
+    NUMERICAL-CONTINUATION failure, NOT a loss failure — the CE->tau switch
+    (``--tau-softplus-start-epoch 300``) and the lane-band engage (``--lane-band-start-epoch 300``)
+    change the objective SIMULTANEOUSLY at one epoch at full LR with stale AdamW momentum. Fix = move
+    ONE homotopy param at a time (deconflict the band to 350) + a reduced-step corrector (a short LR
+    re-warmup from a floor eases the optimizer through the objective change). All flags are REAL
+    levelset-trainer flags (never-invent-flags; READ defaults: band-start 300, rewarmup-epochs 0 =
+    OFF, rewarmup-floor 0.1, rewarmup-shape linear). 0 archive bytes (train-time schedule). The
+    DECONFLICT_REWARMUP arm presupposes an active ``--lr-schedule`` (the trainer REQUIRES it when
+    rewarmup-epochs > 0), the sister of MarginSaliency presupposing ``--margin-saliency-weight > 0``.
+      NONE = the CURRENT #205 config (band engages @300 colliding with the tau switch; rewarmup OFF)
+             -> emits () = BYTE-IDENTICAL (the pinned baseline arm).
+      DECONFLICT_REWARMUP = ``--lane-band-start-epoch 350 --stage-transition-rewarmup-epochs 20
+             --stage-transition-rewarmup-floor 0.1 --stage-transition-rewarmup-shape cosine`` (config-B
+             tuple; band moved off 300 + a 20-epoch cosine LR re-warmup from 0.1 of the scheduled LR).
+    UNMEASURED -> the cost cell is PENDING; the net d_seg is a #205-class A/B (net-S #205-gated,
+    operator-GO-gated; MEANS, pointer 0.19110 UNMOVED)."""
+
+    NONE = "none"                                    # band@300 collide + rewarmup off = () byte-identical
+    DECONFLICT_REWARMUP = "deconflict_rewarmup"      # band@350 + 20ep cosine LR re-warmup
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -513,6 +608,10 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.CHROMA_BOUNDARY: ChromaBoundaryGauge,
     GaugeComponent.FLICKER_TREATMENT: FlickerTreatmentGauge,
     GaugeComponent.TRIPLE_JUNCTION_MARGIN: TripleJunctionMarginGauge,
+    # Deep-math pass #284 levers (FEED-03y/03z, APPEND-ONLY; train-time schedule/loss facets, NOT
+    # GaugeChoice STORE fields — like ALONG_TANGENT_FREQ / MUON_*).
+    GaugeComponent.GAMMA_TAU_EIKONAL: GammaTauEikonalGauge,
+    GaugeComponent.STAGE_TRANSITION_EASING: StageTransitionEasingGauge,
 }
 
 
@@ -782,6 +881,83 @@ def triple_junction_margin_trainer_flags(chart: TripleJunctionMarginGauge) -> tu
         f"a4c66f2f closed WEAK: scalar margin is already the exact distance-to-flip); intended arg: "
         f"{TRIPLE_JUNCTION_MARGIN_INTENDED_ARGS[chart]}. never-invent-flags: emit nothing until wired."
     )
+
+
+# ---------------------------------------------------------------------------
+# Deep-math pass #284 levers (FEED-03y/03z, config B / #285): Ch.4 phase-field (geometric tau-floor +
+# eikonal, COUPLED) + Ch.6 dynamics (deconflict ep300 + LR re-warmup). ALL flags are REAL levelset-
+# trainer flags (never-invent-flags; the UNBUILT Ch.5-M2 NTK-whitening + Ch.1 dash-comb are EXCLUDED —
+# no flag exists, emitting them would be an invented flag). 0-archive-byte train-time schedule facets.
+# The BASELINE/NONE chart is the trainer's CURRENT defaults -> emits () BYTE-IDENTICAL (READ from the
+# argparse: --tau-anneal-shape cosine / --softmax-temp-end 0.05 / --eikonal-weight 0.01 ; band@300 /
+# rewarmup 0=off / floor 0.1 / shape linear).
+# ---------------------------------------------------------------------------
+# Ch.4 config-B values (READ from the trainer + the §7 converged config): the resolution-scale tau
+# FLOOR (from the razor default 0.05) + the raised eikonal (from 0.01) that ENABLES the floor. These
+# are REPRESENTATIVE A/B starters the arm tunes; gamma_tau_eikonal_trainer_flags threads overrides
+# (mirrors head_geometry_trainer_flags / muon_lr_trainer_flags baking a starter value).
+TAU_FLOOR_SOFTMAX_TEMP_END_DEFAULT = 1.0    # resolution/dequantization-scale tau floor (default 0.05)
+EIKONAL_TAU_FLOOR_WEIGHT_DEFAULT = 0.05     # raised |grad phi|->1 eikonal (default 0.01) enables the floor
+
+GAMMA_TAU_EIKONAL_TRAINER_FLAGS: dict[GammaTauEikonalGauge, tuple[str, ...]] = {
+    GammaTauEikonalGauge.BASELINE: (),  # cosine / temp-end 0.05 / eikonal 0.01 defaults = byte-identical
+    GammaTauEikonalGauge.GEOMETRIC_TAU_FLOOR_EIKONAL: (
+        "--tau-anneal-shape", "geometric",
+        "--softmax-temp-end", str(TAU_FLOOR_SOFTMAX_TEMP_END_DEFAULT),
+        "--eikonal-weight", str(EIKONAL_TAU_FLOOR_WEIGHT_DEFAULT)),
+}
+
+# Ch.6 config-B values (READ from the trainer + §7): band deconflicted off the tau@300 collision + a
+# short cosine LR re-warmup from a floor. Representative A/B starters.
+DECONFLICT_LANE_BAND_START_EPOCH_DEFAULT = 350   # move band off the tau@300 collision (default 300)
+STAGE_TRANSITION_REWARMUP_EPOCHS_DEFAULT = 20    # length of the reduced-step corrector (default 0=off)
+STAGE_TRANSITION_REWARMUP_FLOOR_DEFAULT = 0.1    # LR fraction at the boundary epoch (== trainer default)
+
+STAGE_TRANSITION_EASING_TRAINER_FLAGS: dict[StageTransitionEasingGauge, tuple[str, ...]] = {
+    StageTransitionEasingGauge.NONE: (),  # band@300 + rewarmup off = byte-identical current #205 config
+    StageTransitionEasingGauge.DECONFLICT_REWARMUP: (
+        "--lane-band-start-epoch", str(DECONFLICT_LANE_BAND_START_EPOCH_DEFAULT),
+        "--stage-transition-rewarmup-epochs", str(STAGE_TRANSITION_REWARMUP_EPOCHS_DEFAULT),
+        "--stage-transition-rewarmup-floor", str(STAGE_TRANSITION_REWARMUP_FLOOR_DEFAULT),
+        "--stage-transition-rewarmup-shape", "cosine"),
+}
+
+
+def gamma_tau_eikonal_trainer_flags(chart: GammaTauEikonalGauge, *,
+                                    temp_end: float | None = None,
+                                    eikonal_weight: float | None = None) -> tuple[str, ...]:
+    """The levelset-trainer argv for a GammaTauEikonalGauge chart. BASELINE => () (the trainer's
+    current cosine / temp-end 0.05 / eikonal-weight 0.01 defaults = byte-identical). GEOMETRIC_TAU_
+    FLOOR_EIKONAL => the REAL COUPLED tuple ``--tau-anneal-shape geometric --softmax-temp-end <te>
+    --eikonal-weight <ew>`` (config-B defaults te=1.0, ew=0.05). ``temp_end`` / ``eikonal_weight``
+    (optional) thread a campaign override; ``temp_end`` must be > 0 (``--tau-anneal-shape geometric``
+    requires --softmax-temp-end > 0) and ``eikonal_weight`` must be >= 0."""
+    if chart is GammaTauEikonalGauge.BASELINE:
+        return ()
+    if temp_end is None and eikonal_weight is None:
+        return GAMMA_TAU_EIKONAL_TRAINER_FLAGS[chart]
+    te = TAU_FLOOR_SOFTMAX_TEMP_END_DEFAULT if temp_end is None else float(temp_end)
+    ew = EIKONAL_TAU_FLOOR_WEIGHT_DEFAULT if eikonal_weight is None else float(eikonal_weight)
+    if not te > 0.0:
+        raise ValueError(
+            f"GammaTauEikonalGauge.GEOMETRIC_TAU_FLOOR_EIKONAL temp_end={te} must be > 0 "
+            "(--tau-anneal-shape geometric requires --softmax-temp-end > 0)")
+    if not ew >= 0.0:
+        raise ValueError(
+            f"GammaTauEikonalGauge.GEOMETRIC_TAU_FLOOR_EIKONAL eikonal_weight={ew} must be >= 0")
+    return ("--tau-anneal-shape", "geometric",
+            "--softmax-temp-end", str(te), "--eikonal-weight", str(ew))
+
+
+def stage_transition_easing_trainer_flags(chart: StageTransitionEasingGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a StageTransitionEasingGauge chart. NONE => () (band@300 +
+    rewarmup off = the byte-identical current #205 config). DECONFLICT_REWARMUP => the REAL config-B
+    tuple ``--lane-band-start-epoch 350 --stage-transition-rewarmup-epochs 20 --stage-transition-
+    rewarmup-floor 0.1 --stage-transition-rewarmup-shape cosine`` (deconflict the band off the tau@300
+    collision + a 20-epoch cosine LR re-warmup). NOTE: the trainer REQUIRES an active ``--lr-schedule``
+    when rewarmup-epochs > 0 (the arm presupposes it, like MarginSaliency presupposes
+    --margin-saliency-weight > 0)."""
+    return STAGE_TRANSITION_EASING_TRAINER_FLAGS[chart]
 
 
 def component_of(chart: Enum) -> GaugeComponent:
@@ -1285,6 +1461,49 @@ def default_cost_table() -> GaugeCostTable:
                        "tail. Bench lever w(p)=fragility*(1+lambda*1[gap13<eps]) composes orthogonally but "
                        "targets car-corners -> BEHIND the facet levers. WEAK NEGATIVE that SHARPENS the "
                        "crux (aim at the codim-1 Road|Lane facet). numeric None (banked, MEANS)"),
+
+        # --- GAMMA_TAU_EIKONAL (#284 Ch.4; COUPLED geometric tau-floor + eikonal, 0 archive bytes) ----
+        # UNMEASURED deep-math-pass lever (config B / #285): both charts are PENDING (measured=False,
+        # None numbers per the NO-FAKE __post_init__ invariant). The net d_seg is a #205-class A/B; no
+        # isolated-measured probe has run for this facet yet (unlike the FEED-03t levers whose deficit
+        # was measured). fix_gauge lists both as pending -> chosen None (honest state).
+        GammaTauEikonalGauge.BASELINE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#284 FEED-03y/03z + config B (deepmath_converged_next_run_config_20260704.md): "
+                       "the trainer's CURRENT defaults (--tau-anneal-shape cosine / --softmax-temp-end "
+                       "0.05 / --eikonal-weight 0.01) = the byte-identical baseline arm. PENDING (no "
+                       "isolated through-R d_seg probe for this facet; net is the #205-class A/B, MEANS)"),
+        GammaTauEikonalGauge.GEOMETRIC_TAU_FLOOR_EIKONAL: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#284 FEED-03y/03z + config B + eqs tau_eps_hbar_one_dequantization_two_scales_v1 "
+                       "+ multiphase_modica_mortola_perimeter_gamma_limit_v1 + mcf_minority_erasure_"
+                       "inevitability_v1: geometric anneal (equal epochs/octave of interface width) + "
+                       "tau_end floored at the resolution scale (--softmax-temp-end 1.0, from 0.05) + "
+                       "raised eikonal (--eikonal-weight 0.05, from 0.01) that ENABLES the floor = ONE "
+                       "COUPLED arm, 0 archive bytes (train-time schedule). UNMEASURED -> PENDING "
+                       "(measured=False, numeric None); net d_seg is a #205-class A/B (net-S #205-gated, "
+                       "operator-GO-gated, MEANS, pointer 0.19110 UNMOVED)"),
+
+        # --- STAGE_TRANSITION_EASING (#284 Ch.6; deconflict ep300 + LR re-warmup, 0 archive bytes) -----
+        StageTransitionEasingGauge.NONE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#284 FEED-03y/03z + config B: the CURRENT #205 config (band engages @300 "
+                       "colliding with the CE->tau switch; --stage-transition-rewarmup-epochs 0 = off) "
+                       "= the byte-identical baseline arm. PENDING (net is the #205-class A/B, MEANS)"),
+        StageTransitionEasingGauge.DECONFLICT_REWARMUP: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="#284 FEED-03y/03z + config B + the MEASURED FEED-ft ep300 bump (d_seg 0.0056-> "
+                       "0.020, 3.4x persistent 75+ep = a numerical-continuation failure, NOT a loss "
+                       "failure) + eqs ce_softmax_mirror_descent_natural_gradient_v1 + muon_finisher_"
+                       "schedule_warmstart_and_lr_anneal_v1: deconflict the band to 350 (one homotopy "
+                       "param at a time) + a 20-epoch cosine LR re-warmup from 0.1 (reduced-step "
+                       "corrector). 0 archive bytes (train-time schedule); requires --lr-schedule. "
+                       "UNMEASURED -> PENDING (measured=False, numeric None); net d_seg is a #205-class "
+                       "A/B (net-S #205-gated, operator-GO-gated, MEANS, pointer 0.19110 UNMOVED)"),
     }
     return GaugeCostTable(cells)
 
