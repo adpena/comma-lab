@@ -72,6 +72,22 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.transforms as mtransforms  # noqa: E402
+
+# ── DASHBOARD PASS 2026-07-04: control-system telemetry + lever panels + the fresh-run
+# A/B projection. Guarded imports (sister modules in tools/): when either is unimportable
+# the dashboard renders WITHOUT the new panels — never crashes the load-bearing daemon.
+import sys as _sys  # noqa: E402
+
+_sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import dashboard_control_telemetry as _dct  # noqa: E402
+except Exception:  # pragma: no cover - degraded-but-alive path
+    _dct = None
+try:
+    import dashboard_trajectory_model as _dtm  # noqa: E402
+except Exception:  # pragma: no cover - degraded-but-alive path
+    _dtm = None
 
 # ── self-calibration: ALL time-telemetry DERIVED FROM THE RUN'S OWN DATA ──
 # (operator "Telemetry accuracy vital" 2026-06-30: confident-wrong is the worst failure.)
@@ -971,13 +987,97 @@ def _style_ax(ax) -> None:
     ax.grid(alpha=0.18, color=_GRIDC)
 
 
+def _render_control_panel(ax, control: dict, tau: int) -> None:
+    """PNG panel: CONTROL SYSTEM — eikonal effective weight (line) + fired stage
+    transitions (vlines, trigger-coded) + the closed-loop classification lane
+    (color-coded dots along the bottom) + action markers. All from run.log telemetry
+    (dashboard_control_telemetry). Empty control renders an honest placeholder."""
+    _style_ax(ax)
+    ax.set_title("control system — eikonal weight · transitions · closed-loop lane",
+                 fontsize=10.5, color=_FG, loc="left")
+    ax.set_xlabel("epoch · lane dots: green=converging blue=plateau amber=transient "
+                  "red=ERASING · ▲=action", fontsize=8, color=_MUTED)
+    if not control or _dct is None:
+        ax.text(0.5, 0.5, "awaiting control-system telemetry", color=_MUTED,
+                fontsize=9, ha="center", va="center", transform=ax.transAxes)
+        return
+    eik = control.get("eikonal_series") or []
+    if eik:
+        xs, ws = zip(*eik)
+        ax.plot(xs, ws, "-", lw=1.6, color=_BYTES, label="eikonal effective weight")
+        ax.set_ylim(0, max(max(ws) * 1.35, 0.02))
+    # fired transitions (trigger-coded)
+    for t in control.get("transitions") or []:
+        epx = t.get("epoch")
+        if epx is None:
+            continue
+        col = {"loss_plateau": _GOAL, "cap": "#e6cf7a"}.get(t.get("trigger"), _MUTED)
+        ax.axvline(epx, ls="--", lw=1.1, color=col, alpha=0.85)
+        ax.text(epx, ax.get_ylim()[1], f' {t.get("to")}@{epx}·{t.get("trigger")}',
+                color=col, fontsize=7, va="top", ha="left", rotation=0)
+    # classification lane (dots at a fixed axes-fraction height; x in data coords)
+    lane = control.get("classification_lane") or []
+    if lane:
+        trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
+        for e in lane:
+            c = _dct.CLASS_COLORS.get(e.get("classification"), _MUTED)
+            acted = e.get("action") not in (None, "none")
+            ax.plot([e["epoch"]], [0.06], marker=("^" if acted else "o"),
+                    ms=(6 if acted else 4), color=c, transform=trans, clip_on=False)
+    if eik:  # only the eikonal line carries a legend label (lane dots are caption-coded)
+        ax.legend(loc="upper left", fontsize=7, facecolor=_PANEL, edgecolor=_GRIDC,
+                  labelcolor=_FG, framealpha=0.9)
+
+
+def _render_projection_panel(ax, rows: list[dict], proj: dict | None, tau: int,
+                             goal_dseg: float) -> None:
+    """PNG panel: PROJECTED TRAJECTORIES — the measured d_seg points + the #205
+    measured-slope erosion continuation vs the fresh SEEDED run's HYPOTHESIS band,
+    both from dtm.build_fresh_run_projection (measured-anchored; the below-CE-floor
+    segment is explicitly a hypothesis). The A/B is visually falsifiable."""
+    _style_ax(ax)
+    ax.set_title("projected trajectories — #205 erosion vs fresh-run HYPOTHESIS band",
+                 fontsize=10.5, color=_FG, loc="left")
+    ax.set_xlabel("epoch · red dashes = #205 measured-slope continuation · green band = "
+                  "seeded HYPOTHESIS [projected/advisory]", fontsize=8, color=_MUTED)
+    xy = [(r["epoch"], r.get("d_seg")) for r in rows
+          if isinstance(r.get("d_seg"), (int, float)) and r["d_seg"] > 0]
+    if xy:
+        xs, ys = zip(*xy)
+        ax.plot(xs, ys, "o", ms=3.0, color=_ACC, label="measured d_seg [this run]")
+    if proj and proj.get("ok"):
+        pe = proj["epochs"]
+        ax.plot(pe, proj["eroding_205"], "--", lw=1.5, color=_SVAL,
+                label="#205 erosion [measured slopes]")
+        ax.fill_between(pe, proj["fresh_lo"], proj["fresh_hi"], color=_GOAL, alpha=0.18,
+                        label="fresh seeded band [HYPOTHESIS]")
+        ax.plot(pe, proj["fresh_lo"], "-", lw=1.0, color=_GOAL, alpha=0.7)
+        dv = proj.get("divergence_epoch")
+        if dv is not None:
+            ax.axvline(dv, ls=":", lw=1.2, color=_FG, alpha=0.6)
+            _btr = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
+            ax.text(dv, 0.97, f" divergence @ep{dv} (tau/MCF onset)", color=_FG,
+                    fontsize=7, va="top", ha="left", alpha=0.85, transform=_btr)
+    ax.axhline(goal_dseg, ls=":", lw=1.3, color=_GOAL, alpha=0.9)
+    ax.text(0, goal_dseg, f" goal {goal_dseg:g}", color=_GOAL, fontsize=8, va="bottom")
+    if xy or (proj and proj.get("ok")):
+        ax.set_yscale("log")
+        ax.legend(loc="upper right", fontsize=7, facecolor=_PANEL, edgecolor=_GRIDC,
+                  labelcolor=_FG, framealpha=0.9)
+    else:
+        ax.text(0.5, 0.5, "no data / projection yet", color=_MUTED, fontsize=9,
+                ha="center", va="center", transform=ax.transAxes)
+
+
 def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float,
-                muon: int | None = None, best_dseg: float | None = None) -> bytes:
+                muon: int | None = None, best_dseg: float | None = None,
+                control: dict | None = None, fresh_proj: dict | None = None) -> bytes:
     # NO figure suptitle — the HTML header already carries the title + epoch; a
     # bold matplotlib suptitle on top of it reads as redundant clutter. Each panel
     # is self-labelled (title + caption), which is where the per-metric meaning
-    # belongs (clean > complete).
-    fig, axes = plt.subplots(2, 2, figsize=(12, 7.2))
+    # belongs (clean > complete). Rows 1-2 = the original 4 metric panels; row 3 =
+    # the control-system panel + the fresh-run A/B projection (2026-07-04 pass).
+    fig, axes = plt.subplots(3, 2, figsize=(12, 10.8))
     fig.patch.set_facecolor(_BG)
     ep = [r["epoch"] for r in rows]
     xlo, xhi = (min(ep), max(ep)) if ep else (0, l7)
@@ -1040,6 +1140,10 @@ def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float,
     _panel(axes[1, 1], "implied_S", "implied_S — ADVISORY mid-training estimate (NOT the contest score)",
            "epoch · frontier pointer = 0.19110 · the real row is byte-closed CPU/CUDA", _SVAL,
            logy=True, hline=0.19110, hlabel="pointer 0.19110")
+    # row 3: CONTROL-SYSTEM TELEMETRY + the fresh-run A/B projection (measured-anchored)
+    _render_control_panel(axes[2, 0], control or {}, tau)
+    axes[2, 0].set_xlim(xlo, xhi)
+    _render_projection_panel(axes[2, 1], rows, fresh_proj, tau, goal_dseg)
     fig.tight_layout()
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=92, facecolor=_BG)
@@ -1302,7 +1406,20 @@ def _run_info_html(info: dict | None) -> str:
                 f"pairs {_g('num-pairs')}"]
     cards.append(_card("config", cfg_src, " · ".join(cfg_bits)))
 
-    return '<div class="grid">' + "".join(cards) + "</div>"
+    out_html = '<div class="grid">' + "".join(cards) + "</div>"
+    # ── DASHBOARD PASS 2026-07-04: run-role line + control-system telemetry panel +
+    # lever status board + the primary-lever CONFIG table. All inline-styled pure HTML
+    # (dashboard_control_telemetry) so the server's #runinfostrip renders them too —
+    # panels slot INTO the DESCENT tab with zero server/tab changes. Guarded: absent
+    # module or absent telemetry keys leave the strip exactly as before (back-compat).
+    if _dct is not None:
+        try:
+            role = info.get("role") or {}
+            out_html = (_dct.render_role_line_html(role) + out_html
+                        + _dct.render_all_html(info.get("control"), cfg_flags, role))
+        except Exception:
+            pass  # a panel bug must never take down the run-info strip
+    return out_html
 
 
 def _write_html(out: Path, png: bytes, rows: list[dict], refresh: int,
@@ -1417,10 +1534,22 @@ def _collect_run_info(watched: Path | None, log_glob: str | None, run_dir_arg: s
     disk = _ckpt_disk_footprint(run_dir)
     first_ts = _first_verdict_ts(rows)
     throughput = _throughput_eta(live, schedule, stage_prog, first_ts, now=now)
-    return {"run_dir": (str(run_dir) if run_dir is not None else None),
+    info = {"run_dir": (str(run_dir) if run_dir is not None else None),
             "config": config, "schedule": schedule, "stage_prog": stage_prog,
             "best": best, "checkpoints": checkpoints, "resume": resume,
             "perf": perf, "disk": disk, "throughput": throughput}
+    # ── 2026-07-04: control-system telemetry (fired transitions / closed-loop rows /
+    # ep0 nucleation gate / per-stage slopes / eikonal effective-weight series) + the
+    # run's CONFIG ROLE (#205 diagnosed-erosion vs fresh seeded successor). All from
+    # the run's OWN run.log + launch.sh; crash-safe (collect_control never raises).
+    if _dct is not None:
+        try:
+            flags = config.get("flags") or {}
+            info["control"] = _dct.collect_control(watched, flags, rows, schedule)
+            info["role"] = _dct.run_role(flags)
+        except Exception:
+            info["control"], info["role"] = None, {}
+    return info
 
 
 def _render_once(args, state: dict | None = None) -> dict:
@@ -1457,7 +1586,16 @@ def _render_once(args, state: dict | None = None) -> dict:
     l7_png = sched.get("l7_start") if sched.get("l7_start") is not None else args.l7
     muon_png = sched.get("muon_start")
     best_dseg = (run_info.get("best") or {}).get("d_seg")
-    png = _render_png(rows, tau_png, l7_png, args.goal_dseg, muon=muon_png, best_dseg=best_dseg)
+    # 2026-07-04: fresh-run A/B projection (measured-anchored; hypothesis band labeled)
+    fresh_proj = None
+    if _dtm is not None:
+        try:
+            fresh_proj = _dtm.build_fresh_run_projection(sched, args.goal_dseg)
+        except Exception:
+            fresh_proj = None
+    png = _render_png(rows, tau_png, l7_png, args.goal_dseg, muon=muon_png,
+                      best_dseg=best_dseg, control=run_info.get("control"),
+                      fresh_proj=fresh_proj)
     _write_html(Path(args.out), png, rows, args.refresh_seconds, watched, live,
                 state.get("switched_note"), getattr(args, "log_glob", None),
                 tau=tau_png, l7=l7_png, goal_dseg=args.goal_dseg, run_info=run_info)
