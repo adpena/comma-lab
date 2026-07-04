@@ -152,6 +152,13 @@ from tac.canonical_equations.lane_dash_residual_root_cause_findings_20260703 imp
     independent_jitter_dseg,
     r_mtf_amplitude_at,
 )
+from tac.canonical_equations.leverd_flicker_residual_reactivation_economics_20260703 import (
+    build_leverd_flicker_residual_reactivation_economics_v1,
+    leverd_break_even_recovery,
+    leverd_coder_go,
+    leverd_net_delta_s,
+    leverd_survival_threshold,
+)
 from tac.canonical_equations.margin_saliency_reachability_and_muon_finisher_20260703 import (
     build_margin_saliency_reachability_replaces_texture_proxy_v1,
     build_muon_finisher_schedule_warmstart_and_lr_anneal_v1,
@@ -212,6 +219,7 @@ __all__ = [
     "build_chroma_decides_lane_and_movable_at_annulus_v1",
     "build_contest_R_operator_mtf_allpass_to_2px_v1",
     "build_independent_flicker_jitter_dseg_floor_smooth_optimal_v1",
+    "build_leverd_flicker_residual_reactivation_economics_v1",
     "build_mlx_matmul_drift_m_series_canonical_floor_v1",
     "build_mlx_pytorch_drift_equation_from_result_json",
     "build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1",
@@ -234,6 +242,10 @@ __all__ = [
     "gap13_minus_gap12_min",
     "get_equation_by_id",
     "independent_jitter_dseg",
+    "leverd_break_even_recovery",
+    "leverd_coder_go",
+    "leverd_net_delta_s",
+    "leverd_survival_threshold",
     "load_equation_registry_strict",
     "load_registry_events_lenient",
     "mlx_pytorch_full_decoder_downstream_scorer_drift_bound",

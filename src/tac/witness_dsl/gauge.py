@@ -430,21 +430,40 @@ class ChromaBoundaryGauge(Enum):
 
 
 class FlickerTreatmentGauge(Enum):
-    """How temporal FLICKER is treated (FEED-03t, equation
-    ``independent_flicker_jitter_dseg_floor_smooth_optimal_v1``, probe a949ff63 -- still measuring).
+    """How temporal FLICKER (the #205 residual = the popout floor) is treated. FEED-03t/03u/03v/03w,
+    equations ``independent_flicker_jitter_dseg_floor_smooth_optimal_v1`` (probe a949ff63) +
+    ``leverd_flicker_residual_reactivation_economics_v1`` (the FEED-03w synthesis of the Lever-D net-S
+    band + the 6.897 coder floor).
 
     d_seg = q(1-r)+r(1-q) => for a GT minority-flicker q<0.5, an INDEPENDENT witness jitter r only
     RAISES d_seg (smooth r=0 optimal); lowering d_seg by replicating flicker REQUIRES temporal
-    CORRELATION (predictability). The two treatment charts are DESIGN-STAGE loss-side levers (no
-    trainer flag yet); NONE is the byte-identical baseline:
+    CORRELATION (predictability). The THREE treatment buckets (NONE = the byte-identical baseline):
       NONE                   = no flicker treatment (byte-identical baseline; the #205-live behavior)
-      DOWNWEIGHT_IRREDUCIBLE = down-weight the provably-irreducible sensor-noise flicker (smooth-optimal)
-      REPLICATE_PREDICTABLE  = replicate+reward the PREDICTABLE (ego-xi/quant-phase) flicker (correlated)
-    The design-stage charts fail-closed (never-invent-flags)."""
+      DOWNWEIGHT_IRREDUCIBLE = BUILT (#274, 6e355170d): down-weight the provably-irreducible sensor-noise
+                               flicker (smooth-optimal). REAL flags ``--seg-spike-reweight
+                               --seg-spike-downweight <w<1.0>`` (the value NO-OPs without the gate flag,
+                               the additive-margin trap -> BOTH emitted); default-off byte-identical. The
+                               STANDING seg play if Lever-D NO-GOes.
+      REPLICATE_PREDICTABLE  = NOT-WARRANTED (design-stage, fail-closed): replicate+reward the PREDICTABLE
+                               flicker would need strong temporal correlation, but only ~11.4% of the
+                               spike floor is predictable and the ego-coupling is weak (r=0.16) -> the
+                               correlated-replicate lever is not warranted at the measured predictability.
+      STORE_REGIONAL_LEVERD  = Lever-D reactivation (#279, DESIGN-STAGE, fail-closed): STORE the
+                               regionally-coherent temporal flip-residual as a COUNTED 7th archive block
+                               (inverse-steg detector-informed INDUCE at decode; no ``--seg-flip-residual``
+                               flag BUILT yet). GATED on the ONE Stage-0 byte-measurement min(b)<0.65
+                               B/flip AND subset net ΔS<0 (eq ``leverd_flicker_residual_reactivation_
+                               economics_v1``); net-S band -0.35 optimistic / -0.048 expected / +0.117
+                               pessimistic-WORSE. Even the optimistic corner leaves witness S ~0.40 (~2x
+                               above the 0.19110 pointer) -- a d_seg-competitiveness increment, NOT a
+                               pointer move.
+    DOWNWEIGHT_IRREDUCIBLE emits its REAL BUILT flags; REPLICATE_PREDICTABLE + STORE_REGIONAL_LEVERD
+    fail-closed (never-invent-flags)."""
 
     NONE = "none"                                      # no flicker treatment (byte-identical baseline)
-    DOWNWEIGHT_IRREDUCIBLE = "downweight_irreducible"  # DESIGN-STAGE: smooth-optimal down-weight
-    REPLICATE_PREDICTABLE = "replicate_predictable"    # DESIGN-STAGE: correlated replicate+reward
+    DOWNWEIGHT_IRREDUCIBLE = "downweight_irreducible"  # BUILT #274: --seg-spike-reweight + -downweight
+    REPLICATE_PREDICTABLE = "replicate_predictable"    # NOT-WARRANTED (11.4% predictable, weak ego r=0.16)
+    STORE_REGIONAL_LEVERD = "store_regional_leverd"    # #279 DESIGN-STAGE: COUNTED 7th block, b<0.65 gate
 
 
 class TripleJunctionMarginGauge(Enum):
@@ -665,12 +684,31 @@ VECTOR_MARGIN_SALIENCY_INTENDED_ARGS: dict[VectorFieldMarginSaliencyGauge, str] 
     VectorFieldMarginSaliencyGauge.VECTOR_T_SUBPIXEL:
         "--seg-subpix-boundary-weight (WIRED as LEVER-4b; see VECTOR_MARGIN_SALIENCY_TRAINER_FLAGS)",
 }
+# DOWNWEIGHT_IRREDUCIBLE is BUILT (#274, 6e355170d): the spike-aware seg-CE reweight. The value flag
+# --seg-spike-downweight only takes effect WITH the --seg-spike-reweight gate (else silent no-op = the
+# additive-margin trap) -> emit BOTH. The baked value is a REPRESENTATIVE scale-appropriate A/B starter
+# (the A/B tunes it + the sister --seg-coherent-upweight); mirrors ADDITIVE_MARGIN_DEFAULT / the other
+# BUILT levers baking a starter value.
+SEG_SPIKE_DOWNWEIGHT_DEFAULT = 0.25
+
+FLICKER_TREATMENT_TRAINER_FLAGS: dict[FlickerTreatmentGauge, tuple[str, ...]] = {
+    FlickerTreatmentGauge.NONE: (),  # byte-identical baseline
+    FlickerTreatmentGauge.DOWNWEIGHT_IRREDUCIBLE: (
+        "--seg-spike-reweight", "--seg-spike-downweight", str(SEG_SPIKE_DOWNWEIGHT_DEFAULT)),
+}
+
+# REPLICATE_PREDICTABLE (NOT-WARRANTED) + STORE_REGIONAL_LEVERD (#279 Lever-D DESIGN-STAGE) are UNBUILT
+# -> documented, NEVER emitted (never-invent-flags; mirrors POSE_TRAINING_INTENDED_ARGS). Replace with a
+# real map + drop the NotImplementedError branch when/if the lever lands (STORE_REGIONAL is gated on the
+# Stage-0 min(b)<0.65 B/flip byte-measurement).
 FLICKER_TREATMENT_INTENDED_ARGS: dict[FlickerTreatmentGauge, str] = {
     FlickerTreatmentGauge.NONE: "",  # no flicker treatment; emits nothing (baseline)
     FlickerTreatmentGauge.DOWNWEIGHT_IRREDUCIBLE:
-        "--flicker-downweight-irreducible (INTENDED; smooth-optimal; not wired)",
+        "--seg-spike-reweight --seg-spike-downweight (WIRED as #274; see FLICKER_TREATMENT_TRAINER_FLAGS)",
     FlickerTreatmentGauge.REPLICATE_PREDICTABLE:
-        "--flicker-replicate-predictable (INTENDED; correlated reward; not wired)",
+        "--flicker-replicate-predictable (NOT-WARRANTED: ~11.4% predictable, weak ego r=0.16; not wired)",
+    FlickerTreatmentGauge.STORE_REGIONAL_LEVERD:
+        "--seg-flip-residual (#279 Lever-D DESIGN-STAGE; gated on Stage-0 min(b)<0.65 B/flip; not wired)",
 }
 TRIPLE_JUNCTION_MARGIN_INTENDED_ARGS: dict[TripleJunctionMarginGauge, str] = {
     TripleJunctionMarginGauge.TOP1_TOP2_SCALAR: "",  # exact scalar margin; emits nothing (baseline)
@@ -705,15 +743,30 @@ def vector_margin_saliency_trainer_flags(chart: VectorFieldMarginSaliencyGauge) 
     return VECTOR_MARGIN_SALIENCY_TRAINER_FLAGS[chart]
 
 
-def flicker_treatment_trainer_flags(chart: FlickerTreatmentGauge) -> tuple[str, ...]:
+def flicker_treatment_trainer_flags(chart: FlickerTreatmentGauge,
+                                    downweight: float | None = None) -> tuple[str, ...]:
     """The levelset-trainer argv for a FlickerTreatmentGauge chart. NONE => () (no treatment =
-    baseline). DOWNWEIGHT_IRREDUCIBLE / REPLICATE_PREDICTABLE are DESIGN-STAGE -> RAISE
-    NotImplementedError naming the intended arg (never-invent-flags; probe a949ff63 measuring)."""
+    baseline). DOWNWEIGHT_IRREDUCIBLE => the REAL BUILT #274 flags ``--seg-spike-reweight
+    --seg-spike-downweight <w>`` (the value NO-OPs without the gate flag -> BOTH emitted; ``downweight``
+    (optional, in [0, 1)) overrides SEG_SPIKE_DOWNWEIGHT_DEFAULT). REPLICATE_PREDICTABLE (NOT-WARRANTED)
+    + STORE_REGIONAL_LEVERD (#279 Lever-D DESIGN-STAGE, gated on Stage-0 min(b)<0.65 B/flip) are UNBUILT
+    -> RAISE NotImplementedError naming the intended arg (never-invent-flags)."""
     if chart is FlickerTreatmentGauge.NONE:
         return ()
+    if chart is FlickerTreatmentGauge.DOWNWEIGHT_IRREDUCIBLE:
+        if downweight is None:
+            return FLICKER_TREATMENT_TRAINER_FLAGS[chart]
+        w = float(downweight)
+        if not 0.0 <= w < 1.0:
+            raise ValueError(
+                f"FlickerTreatmentGauge.DOWNWEIGHT_IRREDUCIBLE downweight={w} must be in [0, 1) "
+                "(>= 1.0 is the byte-identical no-op == FlickerTreatmentGauge.NONE)")
+        return ("--seg-spike-reweight", "--seg-spike-downweight", str(w))
     raise NotImplementedError(
-        f"FlickerTreatmentGauge.{chart.name} is DESIGN-STAGE (flicker decomposition probe a949ff63); "
-        f"intended arg: {FLICKER_TREATMENT_INTENDED_ARGS[chart]}. never-invent-flags: emit nothing."
+        f"FlickerTreatmentGauge.{chart.name} is UNBUILT (never-invent-flags); intended arg: "
+        f"{FLICKER_TREATMENT_INTENDED_ARGS[chart]}. REPLICATE_PREDICTABLE is NOT-WARRANTED (~11.4% "
+        "predictable, weak ego r=0.16); STORE_REGIONAL_LEVERD is #279 DESIGN-STAGE gated on the Stage-0 "
+        "min(b)<0.65 B/flip byte-measurement (eq leverd_flicker_residual_reactivation_economics_v1)."
     )
 
 
@@ -1189,16 +1242,31 @@ def default_cost_table() -> GaugeCostTable:
                        "jitter_dseg_floor_smooth_optimal_v1). numeric None (baseline)"),
         FlickerTreatmentGauge.DOWNWEIGHT_IRREDUCIBLE: GaugeCost(
             counted_bytes=None, d_seg_through_R=None, conditioning=None,
-            compliant=True, deterministic=True, measured=False,
-            provenance="FEED-03t DESIGN-STAGE (probe a949ff63 still measuring the predictable/irreducible "
-                       "split): down-weight the provably-irreducible sensor-noise flicker (smooth-optimal). "
-                       "loss lever UNBUILT (accessor fail-closes) -> PENDING (measured=False)"),
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t/03u: down-weight the provably-irreducible sensor-noise flicker (smooth-"
+                       "optimal for an INDEPENDENT jitter). TRAINING lever BUILT (#274, 6e355170d; REAL "
+                       "flags --seg-spike-reweight --seg-spike-downweight <w<1.0>; default-off byte-"
+                       "identical). The STANDING seg play if Lever-D NO-GOes; net d_seg is a #205-class "
+                       "A/B (owed) -> numeric None (unrankable, advisory MEANS)"),
         FlickerTreatmentGauge.REPLICATE_PREDICTABLE: GaugeCost(
             counted_bytes=None, d_seg_through_R=None, conditioning=None,
             compliant=True, deterministic=True, measured=False,
-            provenance="FEED-03t DESIGN-STAGE (probe a949ff63 still measuring): replicate+reward the "
-                       "PREDICTABLE (ego-xi/quant-phase) flicker (requires temporal correlation to lower "
-                       "d_seg). loss lever UNBUILT (accessor fail-closes) -> PENDING (measured=False)"),
+            provenance="FEED-03t/03u NOT-WARRANTED (probe a949ff63): replicate+reward the PREDICTABLE "
+                       "(ego-xi/quant-phase) flicker REQUIRES strong temporal correlation, but only ~11.4% "
+                       "of the spike floor is predictable and the ego-coupling is weak (r=0.16) -> the "
+                       "correlated-replicate lever is not warranted. loss lever UNBUILT (accessor fail-"
+                       "closes) -> PENDING (measured=False)"),
+        FlickerTreatmentGauge.STORE_REGIONAL_LEVERD: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="FEED-03u/03v/03w (#279 Lever-D reactivation, eq leverd_flicker_residual_"
+                       "reactivation_economics_v1): STORE the regionally-coherent temporal flip-residual "
+                       "as a COUNTED 7th archive block (rule-118 compliant: residual COUNTED, nudge/contour "
+                       "FREE; CPU-locked bit-exact decode). DESIGN-STAGE, no --seg-flip-residual flag BUILT "
+                       "(accessor fail-closes). GATED on the ONE Stage-0 byte-measurement min(b)<0.65 "
+                       "B/flip AND subset net ΔS<0; net-S band -0.35 optimistic / -0.048 expected / +0.117 "
+                       "pessimistic-WORSE (even optimistic ~2x above the 0.19110 pointer). PENDING "
+                       "(measured=False)"),
 
         # --- TRIPLE_JUNCTION_MARGIN (FEED-03t; a4c66f2f CLOSED WEAK, 0 archive bytes) ----------------
         TripleJunctionMarginGauge.TOP1_TOP2_SCALAR: GaugeCost(
