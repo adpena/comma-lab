@@ -388,7 +388,7 @@ def actual_peak_from_blackbox(run_dir: Path, blackbox_path: Path | None = None,
     if not candidates:
         return None
     name = Path(run_dir).name
-    peak_units = 0.0
+    peak_gib = 0.0
     found = False
     for fp in candidates:
         try:
@@ -403,15 +403,20 @@ def actual_peak_from_blackbox(run_dir: Path, blackbox_path: Path | None = None,
                     row = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                # MIXED-ERA rows (GB-F1 units fix, BUILD #298): rows written after the governor's
+                # units-at-read fix carry ``tracked_units: "true_gib"`` and need NO correction;
+                # legacy rows are KiB/1e6 units and get the x0.9537 correction. Convert PER ROW
+                # before taking the max so old+new archives reconcile coherently.
+                factor = 1.0 if row.get("tracked_units") == "true_gib" else TRACKED_RSS_UNIT_TO_GIB
                 for t in row.get("tracked", []):
                     if name in str(t.get("label", "")):
                         found = True
-                        r = float(t.get("current_rss_gib", 0.0))
-                        if r > peak_units:
-                            peak_units = r
+                        r = float(t.get("current_rss_gib", 0.0)) * factor
+                        if r > peak_gib:
+                            peak_gib = r
     if not found:
         return None
-    return (peak_units * TRACKED_RSS_UNIT_TO_GIB, "blackbox_tracked_max_units_corrected")
+    return (peak_gib, "blackbox_tracked_max_units_corrected")
 
 
 def reconcile_run_dir(run_dir: Path, *, ledger_path: Path | None = None,

@@ -13,10 +13,12 @@ THE THREE THINGS THIS ADDS (all SYSTEM-wide, job-type-BLIND — the ceiling is o
 
   1. **Adaptive ceiling** (``compute_adaptive_ceiling``): measure the OS + control-plane BASELINE
      (real vm_stat used MINUS the current RSS of our tracked jobs) and set
-     ``training_budget = TOTAL_RAM - baseline - safety_margin`` (``safety_margin = max(8 GiB,
-     8 % of TOTAL)``). On this 128 GB box baseline+margin ~= 16-20 GiB, so ~108-112 GiB is spendable
-     — MUCH higher than the old blind 90 GB per-process cap, AND concurrent runs are bounded by the
-     SAME system budget.
+     ``training_budget = TOTAL_RAM - baseline - safety_margin`` where ``safety_margin`` is the
+     TIER-SCALED DYNAMICAL FLOOR (BUILD #298; constants block + ``derive_safety_floor``):
+     ``clamp(max(2, measured_cp + max(1, 0.05T), 0.08T), 2, 0.5T)`` — 10.24+ GiB @128 (never below
+     the operator-policy 10 GiB), capped at 4.0 @8 (the old constant 8.0 equalled that ENTIRE box).
+     On this 128 GB box baseline+margin ~= 16-20 GiB, so ~108-112 GiB is spendable — MUCH higher
+     than the old blind 90 GB per-process cap, AND concurrent runs are bounded by the SAME budget.
 
   2. **Admission control** (``admission_decision`` — a HARD PREVENT gate): before a launch, REFUSE if
      ``current_system_used + (active jobs' remaining growth to peak) + this run's projected peak >
@@ -28,9 +30,11 @@ THE THREE THINGS THIS ADDS (all SYSTEM-wide, job-type-BLIND — the ceiling is o
 
   3. **Dynamic throttle** (``decide_governor_action`` + ``select_throttle_target``): the black-box
      daemon (``tools/memory_blackbox.py``) evaluates pressure each sample; under WARN (available <
-     ~15 GiB or pressure=warn) it SIGSTOP-pauses the LOWEST-priority throttle-eligible job (growth
-     halts, fully reversible via SIGCONT on recovery); under CRITICAL (available < ~8 GiB or
-     pressure=critical) it pauses more aggressively to stay well under jetsam. It NEVER SIGSTOPs/kills
+     tier-derived ``derived_warn_free_gib`` ~14.8 GiB @128 / 4.0 @8, or pressure=warn) it
+     SIGSTOP-pauses the LOWEST-priority throttle-eligible job's FULL process tree (#246 fix; growth
+     halts, fully reversible via SIGCONT on recovery); under CRITICAL (available < tier-derived
+     ~8.4 GiB @128 / 3.0 @8 or pressure=critical) it pauses more aggressively to stay well under
+     jetsam. It NEVER SIGSTOPs/kills
      the control plane (Claude / Codex / shells / the black-box / the guard) — the target selector
      reuses ``memory_guard``'s vendored control-plane exclusion gates. Killing (last-resort SIGTERM)
      stays with the existing ``memory_guard.py --watch``; the governor only PAUSES (reversible).
@@ -80,8 +84,67 @@ except Exception:  # pragma: no cover - defensive
 _DURABLE_DAEMON_REGISTRY = _REPO_ROOT / ".omx" / "state" / "durable_daemons.json"
 
 # ── policy constants ────────────────────────────────────────────────────────────────────────
-DEFAULT_SAFETY_MARGIN_FLOOR_GIB = 8.0    # never leave less than this for OS+control-plane spikes
-DEFAULT_SAFETY_MARGIN_FRAC = 0.08        # or 8% of total RAM, whichever is larger
+DEFAULT_SAFETY_MARGIN_FLOOR_GIB = 8.0    # LEGACY fixed-mode floor (128 GB-calibrated; kept for
+#                                          --safety-floor-mode fixed + the canonical-equation mirror;
+#                                          the DEFAULT is now the tier-scaled derived floor below)
+DEFAULT_SAFETY_MARGIN_FRAC = 0.08        # static physics leg: 8% of total RAM (10.24 GiB @128 —
+#                                          the operator-policy control-plane floor; 0.64 GiB @8)
+
+# ── tier-scaled DYNAMICAL safety floor (BUILD #298; replaces the hardcoded 8 GiB floor) ──────────
+# WHY (tertiary edge-sweep spec §2, 2026-07-04): the 8.0 GiB constant was 128 GB-calibrated; on the
+# 8 GiB M1 it equals the ENTIRE box -> adaptive_ceiling 0.0, training_budget -5.99, the admission
+# gate refuses EVERYTHING, and no CLI/env override existed. The floor is now DERIVED (see
+# ``derive_safety_floor``) — every term physical, every number traceable:
+#
+#   floor = clamp( max( ABS_MIN,
+#                       measured_cp_rss + cp_headroom(T),   # DYNAMICAL leg (follows the live
+#                                                           #   control plane; None when unmeasured)
+#                       0.08 * T ),                         # STATIC physics leg (measurement-free)
+#                  ABS_MIN, cap_frac * T )                  # a floor may NEVER eat the box
+#
+# Term derivations (from the measured rows in n205_memory_behavior_mine_20260704.md +
+# tertiary_edge_sweep_spec_20260704.md + operator_memory_policy_sole_workload_* legs):
+#   * ABS_MIN 2.0 GiB — jetsam-avoidance minimum on ANY tier: the M1 ran its 3.69 GiB smoke without
+#     swap-thrash while conservative available sat ~1.9-2.5 GiB; below ~2 GiB reclaimable macOS
+#     pressure escalates. Never reserve less, even on the smallest box.
+#   * cp_headroom = max(1.0, 0.05*T) — control-plane SPIKE headroom: @128 -> 6.4 GiB (2-3 concurrent
+#     build/review agents at 1-3 GiB each — the 2026-07-02 crash's unaccounted contributors were
+#     exactly control-plane-adjacent agents); @8 -> 1.0 GiB (single-agent burst; same order as the
+#     tier's measured verdict step +1.26 GiB — the sub-sample-interval transient scale on that box).
+#   * measured_cp_rss + cp_headroom — the DYNAMICAL leg: when the control plane is measured to be
+#     BIGGER than the static assumption, the floor follows it up (reserving growth room on the same
+#     order as its current footprint — agents spawn in bursts proportional to current activity).
+#     Deliberately conservative on top of the used-based admission arithmetic; bounded by cap_frac.
+#   * 0.08*T static leg — protects when measurement is unavailable; reproduces the operator-policy
+#     >=10 GiB control-plane floor on 128 GiB (10.24) and scales to 0.64 @8 / 15.36 @192.
+#   * cap_frac 0.5 — a floor that eats more than half the box is the 8-GiB-tier pathology being
+#     fixed; structurally impossible after this (applies to EVERY mode, overrides included). On the
+#     M1 the cap binds at 4.0 GiB, reproducing the tier's MEASURED safe envelope (~4.0-4.4 GiB,
+#     tertiary spec §2; the 3.69 GiB smoke peak fits inside it).
+# On this 128 GiB box the derived floor is >= 10.24 GiB in EVERY scenario (static leg is the
+# minimum; the measured leg only raises it) — backward-compatible with the >=10 GiB operator policy.
+ABS_MIN_SAFETY_FLOOR_GIB = 2.0
+DEFAULT_CP_HEADROOM_MIN_GIB = 1.0
+DEFAULT_CP_HEADROOM_FRAC = 0.05
+DEFAULT_FLOOR_CAP_FRAC = 0.5
+SAFETY_FLOOR_ENV = "TAC_GOV_SAFETY_FLOOR_GIB"    # env override (GiB); CLI --safety-floor-gib wins
+FLOOR_MODE_DERIVED = "derived"
+FLOOR_MODE_FIXED = "fixed"
+FLOOR_MODES = (FLOOR_MODE_DERIVED, FLOOR_MODE_FIXED)
+# Hysteresis: the floor RISES instantly (protection never lags a control-plane burst) and decays at
+# most this many GiB per tick (admission verdicts don't flap on an oscillating control plane).
+DEFAULT_FLOOR_MAX_DECAY_GIB_PER_TICK = 0.25
+
+# UNITS (measured, load-bearing — #205 memory mine §1, n205_memory_behavior_mine_20260704.md):
+# memory_guard.group_rss_gb returns sum(rss_kb)/1e6 = units of 1e6 KiB ~= 0.95367 TRUE GiB despite
+# its ``_gb`` name (cross-validated vs ps: 65.27 units == 62.25 true GiB). Post GB-F1 (throughput
+# review 2026-07-04) the conversion is applied EXACTLY ONCE, at the tracked-job READ boundary in
+# ``list_tracked_jobs`` — so TrackedJob.current_rss_gib, growth_headroom_gib, the admission
+# baseline, the band comparison, and the blackbox rows are ALL true GiB downstream. (Pre-fix the
+# admission path mixed units: growth_headroom = peak[true] - current[units] under-counted remaining
+# growth by a MEASURED 2.63 GiB — anti-conservative.) The underlying memory_guard rename is still
+# owned upstream; until then this constant is the single boundary converter.
+TRACKED_RSS_UNITS_TO_GIB = 1e6 * 1024 / (1024.0 ** 3)   # = 0.95367431640625
 DEFAULT_WARN_FREE_GIB = 15.0             # available (free+inactive) below this => WARN
 DEFAULT_CRITICAL_FREE_GIB = 8.0          # available below this => CRITICAL (well above jetsam)
 PRESSURE_NORMAL = 1                       # macOS kern.memorystatus_vm_pressure_level values
@@ -454,29 +517,207 @@ def _log_fail_safe(acct: MemoryAccounting) -> None:
         pass
 
 
+# ─────────────────────────── tier-scaled dynamical safety floor (pure) ───────────────────────────
+def cp_headroom_gib(
+    total_gib: float,
+    *,
+    min_gib: float = DEFAULT_CP_HEADROOM_MIN_GIB,
+    frac: float = DEFAULT_CP_HEADROOM_FRAC,
+) -> float:
+    """Control-plane SPIKE headroom = max(1 GiB, 5% of RAM). @128 -> 6.4; @8 -> 1.0. PURE.
+    Derivation: see the tier-scaled-floor constants block (agent-burst scale per tier, traceable to
+    the #205 mine + tertiary smoke measurements)."""
+    return max(float(min_gib), float(frac) * float(total_gib))
+
+
+def measured_control_plane_rss_gib(*, used_gib: float, tracked_current_gib: float) -> float:
+    """The DYNAMICAL floor leg's input: live NON-workload footprint = system used minus the sum of
+    our tracked (governed) jobs' current RSS. Both inputs are TRUE GiB post GB-F1 (the units
+    conversion happens once, at the ``list_tracked_jobs`` read boundary). Clamped >= 0. PURE."""
+    return max(0.0, float(used_gib) - float(tracked_current_gib))
+
+
+@dataclass(frozen=True)
+class SafetyFloorDecomposition:
+    """Full decomposition of one derived-floor evaluation — every leg's value + which leg won —
+    emitted into the governor/blackbox JSONL rows each tick (max observability)."""
+    floor_gib: float                       # the clamped, applied floor
+    winning_leg: str                       # abs_min | measured_cp | static_frac | fixed_legacy | override
+    total_gib: float
+    abs_min_gib: float
+    measured_cp_rss_gib: float | None      # true GiB; None = measurement unavailable
+    cp_headroom_gib: float
+    measured_leg_gib: float | None         # measured_cp_rss + cp_headroom (None when unmeasured)
+    static_leg_gib: float                  # DEFAULT_SAFETY_MARGIN_FRAC * total
+    cap_gib: float                         # max(abs_min, cap_frac * total) — the never-eat-the-box bound
+    raw_floor_gib: float                   # pre-clamp value of the winning leg / override
+    clamped: bool                          # True => raw was clamped into [abs_min, cap]
+    mode: str                              # derived | fixed
+    override_gib: float | None             # explicit CLI/env override (wins when present)
+
+    def to_json(self) -> dict:
+        return {k: (round(v, 3) if isinstance(v, float) else v) for k, v in asdict(self).items()}
+
+
+def derive_safety_floor(
+    *,
+    total_gib: float,
+    measured_cp_rss_gib: float | None = None,
+    mode: str = FLOOR_MODE_DERIVED,
+    override_gib: float | None = None,
+    abs_min_gib: float = ABS_MIN_SAFETY_FLOOR_GIB,
+    cp_headroom_min_gib: float = DEFAULT_CP_HEADROOM_MIN_GIB,
+    cp_headroom_frac: float = DEFAULT_CP_HEADROOM_FRAC,
+    static_frac: float = DEFAULT_SAFETY_MARGIN_FRAC,
+    cap_frac: float = DEFAULT_FLOOR_CAP_FRAC,
+    legacy_floor_gib: float = DEFAULT_SAFETY_MARGIN_FLOOR_GIB,
+    log_fn=None,
+) -> SafetyFloorDecomposition:
+    """The tier-scaled DYNAMICAL safety floor (BUILD #298). PURE (``log_fn`` optional loud-clamp
+    sink; pass e.g. a stderr printer from live callsites).
+
+        floor = clamp( max(ABS_MIN, measured_cp + cp_headroom(T), static_frac*T), ABS_MIN, cap_frac*T )
+
+    Precedence: an explicit ``override_gib`` (CLI/env) WINS, clamped to the same [ABS_MIN, cap]
+    range with a loud log when clamped. ``mode='fixed'`` reproduces the legacy max(8, 0.08T)
+    formula — still cap-clamped, so even fixed mode can no longer eat an 8 GiB box.
+    Derivations for every constant: the tier-scaled-floor constants block above."""
+    total = float(total_gib)
+    abs_min = float(abs_min_gib)
+    cap = max(abs_min, float(cap_frac) * total)
+    ch = cp_headroom_gib(total, min_gib=cp_headroom_min_gib, frac=cp_headroom_frac)
+    static_leg = float(static_frac) * total
+    cp = None if measured_cp_rss_gib is None else max(0.0, float(measured_cp_rss_gib))
+    measured_leg = None if cp is None else cp + ch
+
+    if override_gib is not None:
+        raw = float(override_gib)
+        winning = "override"
+    elif mode == FLOOR_MODE_FIXED:
+        raw = max(float(legacy_floor_gib), static_leg)
+        winning = "fixed_legacy"
+    else:
+        raw = max(abs_min, static_leg, measured_leg if measured_leg is not None else 0.0)
+        if measured_leg is not None and raw == measured_leg:
+            winning = "measured_cp"
+        elif raw == static_leg:
+            winning = "static_frac"
+        else:
+            winning = "abs_min"
+
+    floor = min(max(raw, abs_min), cap)
+    clamped = abs(floor - raw) > 1e-12
+    if clamped and log_fn is not None:
+        log_fn(f"[system-governor] SAFETY-FLOOR CLAMP: {winning} value {raw:.2f} GiB clamped to "
+               f"{floor:.2f} GiB (allowed range [{abs_min:.2f}, {cap:.2f}] on a {total:.0f} GiB box "
+               f"— a floor may never eat the box)")
+    return SafetyFloorDecomposition(
+        floor_gib=floor, winning_leg=winning, total_gib=total, abs_min_gib=abs_min,
+        measured_cp_rss_gib=cp, cp_headroom_gib=ch, measured_leg_gib=measured_leg,
+        static_leg_gib=static_leg, cap_gib=cap, raw_floor_gib=raw, clamped=clamped,
+        mode=(FLOOR_MODE_FIXED if mode == FLOOR_MODE_FIXED else FLOOR_MODE_DERIVED),
+        override_gib=(None if override_gib is None else float(override_gib)),
+    )
+
+
+def safety_floor_env_override_gib(env: Mapping[str, str] | None = None) -> float | None:
+    """Parse the ``TAC_GOV_SAFETY_FLOOR_GIB`` env override (None when unset/blank/non-numeric —
+    a bad value is LOUDLY ignored, never silently misapplied)."""
+    raw = (env if env is not None else os.environ).get(SAFETY_FLOOR_ENV, "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        print(f"[system-governor] WARNING: ignoring non-numeric {SAFETY_FLOOR_ENV}={raw!r}",
+              file=sys.stderr)
+        return None
+
+
+def resolve_floor_override_gib(cli_value: float | None,
+                               env: Mapping[str, str] | None = None) -> float | None:
+    """Override precedence: explicit CLI flag > ``TAC_GOV_SAFETY_FLOOR_GIB`` env > None (derive).
+    (Clamping to [ABS_MIN, cap] happens inside ``derive_safety_floor`` with a loud log.)"""
+    return cli_value if cli_value is not None else safety_floor_env_override_gib(env)
+
+
+class SafetyFloorSmoother:
+    """Asymmetric hysteresis for the per-tick derived floor: RISES INSTANTLY (protection never lags
+    a control-plane burst), decays at most ``max_decay_gib_per_tick`` per update — so admission
+    verdicts do not flap when the control-plane RSS oscillates between samples. Deterministic;
+    one instance per sampling loop (one-shot CLI reads use the raw floor)."""
+
+    def __init__(self, max_decay_gib_per_tick: float = DEFAULT_FLOOR_MAX_DECAY_GIB_PER_TICK):
+        self.max_decay_gib_per_tick = float(max_decay_gib_per_tick)
+        self._prev: float | None = None
+
+    def update(self, raw_floor_gib: float) -> float:
+        raw = float(raw_floor_gib)
+        if self._prev is None or raw >= self._prev:
+            self._prev = raw
+        else:
+            self._prev = max(raw, self._prev - self.max_decay_gib_per_tick)
+        return self._prev
+
+
+def derived_critical_free_gib(total_gib: float) -> float:
+    """Tier-scaled CRITICAL available-threshold = ABS_MIN + cp_headroom(T): fire while there is
+    still room to absorb one control-plane burst above the jetsam minimum. @128 -> 8.4 GiB
+    (strictly MORE protective than the legacy 8.0); @8 -> 3.0 GiB (the legacy constant was above
+    everything an 8 GiB box can ever free). PURE."""
+    return ABS_MIN_SAFETY_FLOOR_GIB + cp_headroom_gib(total_gib)
+
+
+def derived_warn_free_gib(total_gib: float) -> float:
+    """Tier-scaled WARN available-threshold = critical + one more cp_headroom. @128 -> 14.8 GiB
+    (within 1.4% of the legacy 15.0 — warn-pauses fire one 0.2 GiB step later; the jetsam-guarding
+    CRITICAL rung above got strictly earlier); @8 -> 4.0 GiB. PURE."""
+    return derived_critical_free_gib(total_gib) + cp_headroom_gib(total_gib)
+
+
 # ─────────────────────────── adaptive ceiling (pure) ───────────────────────────
 def compute_safety_margin_gib(
     total_gib: float,
     *,
-    floor_gib: float = DEFAULT_SAFETY_MARGIN_FLOOR_GIB,
-    frac: float = DEFAULT_SAFETY_MARGIN_FRAC,
+    floor_gib: float | None = None,
+    frac: float | None = None,
+    measured_cp_rss_gib: float | None = None,
+    override_gib: float | None = None,
+    mode: str = FLOOR_MODE_DERIVED,
 ) -> float:
-    """Adaptive safety margin = max(floor, frac * total). On 128 GiB -> max(8, 10.24) = 10.24 GiB."""
-    return max(float(floor_gib), float(frac) * float(total_gib))
+    """Adaptive safety margin — now the tier-scaled DERIVED floor by default (BUILD #298).
+
+    Backward-compat wrapper around ``derive_safety_floor``: passing the legacy ``floor_gib``/``frac``
+    kwargs reproduces the old max(floor, frac*T) formula (cap-clamped — even legacy arithmetic can
+    no longer eat an 8 GiB box). With no measured control plane the derived value @128 is 10.24 GiB
+    (identical to legacy); @64 -> 5.12; @8 -> 2.0 (vs the legacy 8.0 = the whole box)."""
+    if floor_gib is not None or frac is not None:
+        legacy = max(
+            float(floor_gib if floor_gib is not None else DEFAULT_SAFETY_MARGIN_FLOOR_GIB),
+            float(frac if frac is not None else DEFAULT_SAFETY_MARGIN_FRAC) * float(total_gib),
+        )
+        cap = max(ABS_MIN_SAFETY_FLOOR_GIB, DEFAULT_FLOOR_CAP_FRAC * float(total_gib))
+        return min(legacy, cap)
+    return derive_safety_floor(
+        total_gib=total_gib, measured_cp_rss_gib=measured_cp_rss_gib,
+        override_gib=(override_gib if override_gib is not None else safety_floor_env_override_gib()),
+        mode=mode,
+    ).floor_gib
 
 
 @dataclass(frozen=True)
 class AdaptiveCeiling:
     total_gib: float
     used_gib: float                # current SYSTEM-wide used (truth)
-    tracked_current_gib: float     # sum of current RSS of our tracked jobs
+    tracked_current_gib: float     # sum of current RSS of our tracked jobs (TRUE GiB post GB-F1)
     baseline_gib: float            # OS + control-plane = used - tracked_current (clamped >= 0)
     safety_margin_gib: float
     adaptive_ceiling_gib: float    # total - safety_margin (max system-used we tolerate)
     training_budget_gib: float     # ceiling - baseline (total peak all our jobs may collectively use)
+    floor_decomposition: dict | None = None   # SafetyFloorDecomposition.to_json() when derived
 
     def to_json(self) -> dict:
-        return {k: round(v, 3) for k, v in asdict(self).items()}
+        return {k: (round(v, 3) if isinstance(v, float) else v) for k, v in asdict(self).items()}
 
 
 def compute_adaptive_ceiling(
@@ -485,21 +726,43 @@ def compute_adaptive_ceiling(
     used_gib: float,
     tracked_current_gib: float,
     safety_margin_gib: float | None = None,
+    floor: SafetyFloorDecomposition | None = None,
+    floor_override_gib: float | None = None,
+    floor_mode: str = FLOOR_MODE_DERIVED,
 ) -> AdaptiveCeiling:
-    """Compute the adaptive ceiling + training budget. PURE.
+    """Compute the adaptive ceiling + training budget. PURE (env consulted only on the default
+    path, for the ``TAC_GOV_SAFETY_FLOOR_GIB`` override).
 
     ``training_budget = (total - margin) - baseline`` where ``baseline = used - tracked_current``
-    (the OS + control-plane footprint). This is how we MAX OUT the box safely: the budget floats up
-    when the OS/control-plane baseline is small, and concurrent jobs share the SAME budget.
-    """
-    margin = compute_safety_margin_gib(total_gib) if safety_margin_gib is None else float(safety_margin_gib)
+    (the OS + control-plane footprint). The margin is now the tier-scaled DERIVED floor by default
+    (BUILD #298): ``baseline`` doubles as the derived floor's measured-control-plane input, so the
+    floor FOLLOWS the live control plane each tick. Precedence: explicit ``safety_margin_gib``
+    (e.g. a smoothed floor from the sampling loop) > pre-computed ``floor`` decomposition >
+    derive-from-inputs (+ env override). An explicit margin is still cap-clamped — a floor may
+    never eat the box (the 8 GiB-tier pathology this build extincts)."""
+    cap = max(ABS_MIN_SAFETY_FLOOR_GIB, DEFAULT_FLOOR_CAP_FRAC * float(total_gib))
     baseline = max(0.0, float(used_gib) - float(tracked_current_gib))
+    if safety_margin_gib is not None:
+        margin = min(float(safety_margin_gib), cap)
+    elif floor is not None:
+        margin = min(floor.floor_gib, cap)
+    else:
+        floor = derive_safety_floor(
+            total_gib=total_gib,
+            measured_cp_rss_gib=baseline,
+            override_gib=(floor_override_gib if floor_override_gib is not None
+                          else safety_floor_env_override_gib()),
+            mode=floor_mode,
+            log_fn=lambda m: print(m, file=sys.stderr),
+        )
+        margin = floor.floor_gib
     ceiling = float(total_gib) - margin
     budget = ceiling - baseline
     return AdaptiveCeiling(
         total_gib=float(total_gib), used_gib=float(used_gib),
         tracked_current_gib=float(tracked_current_gib), baseline_gib=baseline,
         safety_margin_gib=margin, adaptive_ceiling_gib=ceiling, training_budget_gib=budget,
+        floor_decomposition=(floor.to_json() if floor is not None else None),
     )
 
 
@@ -769,7 +1032,11 @@ def list_tracked_jobs(
             s, samples=samples, self_pid=self_pid, self_pgid=self_pgid,
             protected_pgids=protected_pgids, guard_ancestors=guard_ancestors, owned_pids=owned_pids,
         )
-        current_rss = _mg.group_rss_gb(samples, pid)
+        # GB-F1 units fix: group_rss_gb returns KiB/1e6 units — convert to TRUE GiB HERE, exactly
+        # once, at the read boundary. Everything downstream (growth_headroom, admission baseline,
+        # band comparison, blackbox rows) is true GiB. Pre-fix the admission path under-counted
+        # remaining growth by a measured 2.63 GiB (anti-conservative mixed-unit arithmetic).
+        current_rss = _mg.group_rss_gb(samples, pid) * TRACKED_RSS_UNITS_TO_GIB
         # projected peak: explicit registry field wins; else fall back to current RSS (a floor).
         proj = rec.get("projected_peak_gib")
         try:
@@ -900,9 +1167,108 @@ def decide_governor_action(
                           f"critical={consecutive_critical}/{critical_consecutive})")
 
 
-# ─────────────────────────── SIGSTOP/SIGCONT actuators (reversible) ───────────────────────────
-def pause_job(job: TrackedJob) -> bool:
-    """SIGSTOP the job (group if it is its own group leader, else the pid). Reversible. Returns ok."""
+# ─────────────────────────── SIGSTOP/SIGCONT actuators (reversible, FULL-TREE) ───────────────────
+# #246 FIX (throughput-review F1): the old actuator killpg'd the registered job's pgid only. On the
+# canonical launch tree (safe_run wrapper -> bash -> trainer started via start_new_session) the
+# memory-bearing trainer sits in its OWN session/process-group, so the wrapper-pgid SIGSTOP reached
+# a MEASURED 0.02 GiB of a 54 GiB run — the pause was cosmetic. The actuators now cover the job's
+# FULL process TREE (recursive ppid-descendants of the registered root, which crosses session
+# boundaries, PLUS the root's own pgid members), SIGSTOP deepest-first / SIGCONT in reverse,
+# idempotent (a second pause re-signals stopped pids harmlessly and reports them), and STILL only
+# ever pause/resume — no kill-class signal exists on this path. NOTHING outside the registered
+# job's own tree can enter the stop set: the set is CONSTRUCTED from the job's descendants/group
+# (an unregistered bystander pid is unreachable by construction) and every member is re-checked
+# against the control-plane exclusion gates (defense-in-depth).
+def _tree_depth(samples: Mapping[int, object], pid: int) -> int:
+    """Parent-chain depth of ``pid`` within ``samples`` (cycle-safe). PURE."""
+    depth = 0
+    seen: set[int] = set()
+    current = pid
+    while current > 0 and current not in seen:
+        seen.add(current)
+        s = samples.get(current)
+        if s is None or getattr(s, "ppid", 0) <= 0 or s.ppid == current:
+            break
+        current = s.ppid
+        depth += 1
+    return depth
+
+
+def job_tree_pids(job: TrackedJob, *, samples: Mapping[int, object] | None = None) -> list[int]:
+    """The FULL signal scope of a registered tracked job, DEEPEST-FIRST: recursive ppid-descendants
+    of ``job.pid`` (crosses the start_new_session boundary the wrapper pgid missed — the #246 gap)
+    plus, when the job is its own group leader, the members of its own pgid. Control-plane gates
+    re-applied per member (the guard itself, its ancestors, control-plane apps, and the extra
+    protected denylist can NEVER be in the set). Empty when memory_guard is unavailable (fail-safe:
+    no gates -> no actuation)."""
+    if _mg is None:
+        return []
+    if samples is None:
+        samples = _mg.sample_processes()
+    pids = set(_mg.descendant_pids(samples, job.pid))
+    if job.own_group_leader and job.pgid > 0:
+        pids |= {p for p, s in samples.items() if _mg._sample_pgid(s) == job.pgid}
+    self_pid = os.getpid()
+    guard_ancestors = _mg._ancestor_pids(samples, self_pid)
+    out: list[int] = []
+    for p in pids:
+        s = samples.get(p)
+        if s is None or p == self_pid or p in guard_ancestors:
+            continue
+        if _mg.is_host_control_plane_process(s):
+            continue
+        if _mg._matches_extra_protected(s.command):
+            continue
+        out.append(p)
+    out.sort(key=lambda p: (-_tree_depth(samples, p), p))   # deepest first, deterministic
+    return out
+
+
+def job_tree_rss_gib(job: TrackedJob, *, samples: Mapping[int, object] | None = None) -> float:
+    """TRUE-GiB RSS summed over the job's full signal scope (``job_tree_pids``) — the pause scope
+    the band row reports. Post-#246 this should ~= the run's actual RSS (the gap field becomes the
+    VERIFICATION that the pause reaches the memory)."""
+    if _mg is None:
+        return 0.0
+    if samples is None:
+        samples = _mg.sample_processes()
+    total_kib = 0
+    for p in job_tree_pids(job, samples=samples):
+        s = samples.get(p)
+        if s is not None:
+            total_kib += int(getattr(s, "rss_kb", 0))
+    return total_kib / (1024.0 ** 2)
+
+
+def _signal_job_tree(job: TrackedJob, sig: int, *, samples: Mapping[int, object] | None = None,
+                     reverse: bool = False) -> dict:
+    """Send ``sig`` (SIGSTOP/SIGCONT ONLY — asserted) to every pid in the job's tree scope.
+    Deepest-first by default; ``reverse`` for resume. Per-pid errors tolerated (races). Returns a
+    machine-readable record {signalled, missed, order}."""
+    assert sig in (signal.SIGSTOP, signal.SIGCONT), "pause/resume path is STOP/CONT only — no kill"
+    order = job_tree_pids(job, samples=samples)
+    if reverse:
+        order = list(reversed(order))
+    signalled: list[int] = []
+    missed: list[int] = []
+    for p in order:
+        try:
+            os.kill(p, sig)
+            signalled.append(p)
+        except (ProcessLookupError, PermissionError, OSError):
+            missed.append(p)
+    return {"signalled": signalled, "missed": missed, "order": order}
+
+
+def pause_job(job: TrackedJob, *, samples: Mapping[int, object] | None = None) -> bool:
+    """SIGSTOP the registered job's FULL process tree, deepest-first (#246 fix — covers the
+    detached-session trainer the old pgid-only pause missed). Reversible + idempotent. Falls back
+    to the legacy pgid/pid stop when the process sampler is unavailable. Returns ok (>=1 pid
+    signalled)."""
+    rec = _signal_job_tree(job, signal.SIGSTOP, samples=samples) if _mg is not None else {"signalled": []}
+    if rec["signalled"]:
+        return True
+    # Fail-safe fallback (sampler unavailable or tree scan raced to empty): legacy scope.
     try:
         if job.own_group_leader and job.pgid > 0:
             os.killpg(job.pgid, signal.SIGSTOP)
@@ -913,8 +1279,12 @@ def pause_job(job: TrackedJob) -> bool:
         return False
 
 
-def resume_job(job: TrackedJob) -> bool:
-    """SIGCONT the job (group or pid). Returns ok."""
+def resume_job(job: TrackedJob, *, samples: Mapping[int, object] | None = None) -> bool:
+    """SIGCONT the registered job's full process tree in REVERSE (shallowest-first) order —
+    restores exactly the scope the pause stopped. Same fallback as ``pause_job``. Returns ok."""
+    rec = _signal_job_tree(job, signal.SIGCONT, samples=samples, reverse=True) if _mg is not None else {"signalled": []}
+    if rec["signalled"]:
+        return True
     try:
         if job.own_group_leader and job.pgid > 0:
             os.killpg(job.pgid, signal.SIGCONT)
@@ -938,21 +1308,18 @@ def resume_job(job: TrackedJob) -> bool:
 # SYSTEM availability (<15/<8 GiB free); the bands act on the RUN's actual RSS vs its envelope. When
 # system pressure is already warn/critical the band DEFERS to the throttle (backstop BEHIND it, never
 # a replacement); the band's clean-pause fires only in the sole-workload case the pressure ladder
-# cannot see early (a run busting its envelope while the system still looks calm). KNOWN + REPORTED
-# (NOT fixed here — task #246 / governor-review F1): pause_job SIGSTOPs the registered custody
-# group; on the current launch tree (safe_run -> bash -> trainer in a CHILD group) the memory-bearing
-# trainer group is NOT halted by that pause — the band decision measures + reports this efficacy gap
-# (pause_scope vs run RSS) so the row is honest about what the pause actually stopped.
-# UNITS (measured, load-bearing — #205 memory mine §1, n205_memory_behavior_mine_20260704.md):
-# TrackedJob.current_rss_gib comes from memory_guard.group_rss_gb = sum(rss_kb)/1e6, i.e. units of
-# 1e6 KiB ~= 0.9537 TRUE GiB — despite the ``_gib`` name (cross-validated vs ps: 65.27 units ==
-# 62.25 true GiB). The SYSTEM snapshot fields ARE true GiB. The band logic converts tracked units
-# to TRUE GiB at the boundary so bands never mis-trigger on a mislabeled unit. The underlying
-# memory_guard rename is REPORTED, not fixed here (outside this build's write-surface). The
-# blackbox ``tracked_sum_gib`` double-count (wrapper group + trainer child counted twice, mine §7)
-# does NOT affect the bands: select_band_run picks own-group-leader jobs only, so the run is
-# counted once via its descendant-inclusive custody group.
-TRACKED_RSS_UNITS_TO_GIB = 1e6 * 1024 / (1024.0 ** 3)   # = 0.95367431640625
+# cannot see early (a run busting its envelope while the system still looks calm).
+# #246 (governor-review F1) is FIXED as of BUILD #298: pause_job now SIGSTOPs the job's FULL
+# process tree (recursive descendants + own pgid, deepest-first — see the actuator section), so the
+# detached-session trainer IS halted. The band row's pause_scope field (now job_tree_rss_gib) is
+# the standing VERIFICATION: post-fix it should ~= the run's actual RSS; the efficacy-gap note only
+# fires if a future launch-tree shape re-opens the gap.
+# UNITS: post GB-F1 the tracked units->true-GiB conversion happens ONCE at the list_tracked_jobs
+# read boundary (see TRACKED_RSS_UNITS_TO_GIB in the constants block) — TrackedJob.current_rss_gib
+# IS true GiB here; the band compares true-vs-true with no local conversion. The blackbox
+# ``tracked_sum_gib`` double-count (wrapper group + trainer child counted twice, mine §7) does NOT
+# affect the bands: select_band_run picks own-group-leader jobs only, so the run is counted once
+# via its descendant-inclusive custody group.
 
 BAND_GREEN = "green"
 BAND_YELLOW = "yellow"
@@ -1172,29 +1539,46 @@ def band_tick(
     red_frac: float = DEFAULT_BAND_RED_FRAC,
     run_dir: Path | None = None,
     apply: bool = False,
+    floor_override_gib: float | None = None,
+    floor_mode: str = FLOOR_MODE_DERIVED,
 ) -> GuardBandDecision:
-    """ONE live guard-band evaluation (I/O wrapper around the pure policy). Emits the telemetry row;
-    with ``apply`` actually SIGSTOP-pauses on clean_pause (reversible; resume via the governor's
-    normal-pressure resume path or ``kill -CONT``). NOTE: the black-box daemon does NOT call this
-    yet — run it via ``--band-tick`` (cron/loop) until the daemon wiring lands (reported blocker)."""
+    """ONE live guard-band evaluation (I/O wrapper around the pure policy). Emits the telemetry row
+    (including the tick's derived-floor decomposition — max observability); with ``apply`` actually
+    SIGSTOP-pauses on clean_pause (reversible; resume via the governor's normal-pressure resume
+    path or ``kill -CONT``). The black-box daemon calls this in-process on its band cadence
+    (BUILD #298 wiring); ``--band-tick`` (cron/loop) remains the standalone entry point."""
     snap = read_system_memory_snapshot()
     jobs = list_tracked_jobs()
     job = select_band_run(jobs)
     envelope = band_envelope_gib(snap.total_gib, envelope_frac)
-    # tracked-units -> TRUE GiB conversion (mine §1); the envelope is true GiB (system total).
-    actual = (job.current_rss_gib * TRACKED_RSS_UNITS_TO_GIB) if job is not None else 0.0
+    # TrackedJob.current_rss_gib is TRUE GiB post GB-F1 (converted once at the read boundary);
+    # the envelope is true GiB (system total) — true-vs-true, no local conversion.
+    actual = job.current_rss_gib if job is not None else 0.0
     band = classify_guard_band(actual, envelope, yellow_frac=yellow_frac, red_frac=red_frac)
-    pressure = classify_pressure(snap)
+    # Tier-scaled pressure thresholds (derived from the same headroom physics as the floor).
+    pressure = classify_pressure(snap, warn_free_gib=derived_warn_free_gib(snap.total_gib),
+                                 critical_free_gib=derived_critical_free_gib(snap.total_gib))
     ck_age = checkpoint_age_seconds(run_dir) if run_dir is not None else None
-    scope = pgid_only_rss_gib(job.pgid) if job is not None else None
+    # Post-#246 the pause scope is the FULL job tree — this field is the standing verification
+    # that the pause reaches the run's memory (scope ~= actual; gap note fires only on regression).
+    scope = job_tree_rss_gib(job) if job is not None else None
     decision = decide_guard_band_action(
         band=band, job=job, pressure_class=pressure, actual_rss_gib=actual,
         envelope_gib=envelope, checkpoint_age_s=ck_age, pause_scope_rss_gib=scope)
     applied = False
     if apply and decision.action == "clean_pause" and decision.target is not None:
         applied = pause_job(decision.target)
+    floor = derive_safety_floor(
+        total_gib=snap.total_gib,
+        measured_cp_rss_gib=measured_control_plane_rss_gib(
+            used_gib=snap.used_gib, tracked_current_gib=sum_tracked_current_gib(jobs)),
+        override_gib=(floor_override_gib if floor_override_gib is not None
+                      else safety_floor_env_override_gib()),
+        mode=floor_mode, log_fn=lambda m: print(m, file=sys.stderr),
+    )
     row = {"kind": "guard_band", "decision": decision.to_json(), "pressure": pressure,
-           "system_used_gib": round(snap.used_gib, 2), "applied": applied}
+           "system_used_gib": round(snap.used_gib, 2), "applied": applied,
+           "safety_floor": floor.to_json(), "tracked_units": "true_gib"}
     append_band_row(row)
     if band == BAND_RED:
         print(f"[system-governor] GUARD-BAND RED: {decision.reason} (applied={applied})",
@@ -1225,10 +1609,14 @@ def live_admission_decision(
     snapshot: SystemMemorySnapshot | None = None,
     jobs: Sequence[TrackedJob] | None = None,
     exclude_pid: int | None = None,
+    floor_override_gib: float | None = None,
+    floor_mode: str = FLOOR_MODE_DERIVED,
 ) -> LiveAdmissionContext:
     """Read the live system + tracked jobs and evaluate the HARD admission gate for a new job whose
     projected peak is ``projected_new_gib``. ``exclude_pid`` drops a job (e.g. the launcher's own
-    to-be-replaced pid) from the active set so it is not double-counted as both active and new."""
+    to-be-replaced pid) from the active set so it is not double-counted as both active and new.
+    The safety floor is the tier-scaled DERIVED floor (BUILD #298); ``floor_override_gib`` /
+    ``TAC_GOV_SAFETY_FLOOR_GIB`` / ``floor_mode`` thread the explicit overrides."""
     if snapshot is None:
         snapshot = read_system_memory_snapshot()
     if jobs is None:
@@ -1238,6 +1626,7 @@ def live_admission_decision(
     ceiling = compute_adaptive_ceiling(
         total_gib=snapshot.total_gib, used_gib=snapshot.used_gib,
         tracked_current_gib=sum_tracked_current_gib(jobs),
+        floor_override_gib=floor_override_gib, floor_mode=floor_mode,
     )
     decision = admission_decision(
         projected_new_gib=projected_new_gib, system_used_gib=snapshot.used_gib,
@@ -1264,8 +1653,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--governor-tick", action="store_true",
                     help="evaluate ONE governor decision from a live read (dry unless --apply)")
     ap.add_argument("--apply", action="store_true", help="with --governor-tick: actually pause/resume")
-    ap.add_argument("--warn-free-gib", type=float, default=DEFAULT_WARN_FREE_GIB)
-    ap.add_argument("--critical-free-gib", type=float, default=DEFAULT_CRITICAL_FREE_GIB)
+    ap.add_argument("--warn-free-gib", type=float, default=None,
+                    help="WARN available threshold (GiB); default: tier-derived "
+                         "derived_warn_free_gib(total) (14.8 @128, 4.0 @8)")
+    ap.add_argument("--critical-free-gib", type=float, default=None,
+                    help="CRITICAL available threshold (GiB); default: tier-derived "
+                         "derived_critical_free_gib(total) (8.4 @128, 3.0 @8)")
+    # ── tier-scaled dynamical safety floor (BUILD #298) ──
+    ap.add_argument("--safety-floor-gib", type=float, default=None,
+                    help="EXPLICIT safety-floor override (GiB). Wins over the "
+                         f"{SAFETY_FLOOR_ENV} env var; clamped to [ABS_MIN, cap_frac*RAM] with a "
+                         "loud log when clamped")
+    ap.add_argument("--safety-floor-mode", choices=FLOOR_MODES, default=FLOOR_MODE_DERIVED,
+                    help="'derived' (default): tier-scaled dynamical floor; 'fixed': legacy "
+                         "max(8, 0.08*T) formula (still cap-clamped — can no longer eat an 8 GiB box)")
     # ── graduated guard bands (BUILD #294 piece C) ──
     ap.add_argument("--band-tick", action="store_true",
                     help="evaluate ONE guard-band decision on the largest tracked run's ACTUAL RSS "
@@ -1278,12 +1679,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                     help="run dir for checkpoint-freshness in the band decision")
     args = ap.parse_args(argv)
 
+    # Floor override precedence: CLI flag > env var > none (each clamped inside derive).
+    floor_override = resolve_floor_override_gib(args.safety_floor_gib)
+
     if args.band_tick:
         decision = band_tick(
             envelope_frac=args.band_envelope_frac, yellow_frac=args.band_yellow_frac,
             red_frac=args.band_red_frac,
             run_dir=Path(args.band_run_dir) if args.band_run_dir else None,
-            apply=args.apply)
+            apply=args.apply, floor_override_gib=floor_override, floor_mode=args.safety_floor_mode)
         print(json.dumps(decision.to_json(), indent=2))
         return 0 if decision.band != BAND_RED else 6
 
@@ -1296,7 +1700,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         jobs = list_tracked_jobs()
         ceiling = compute_adaptive_ceiling(
             total_gib=snap.total_gib, used_gib=snap.used_gib,
-            tracked_current_gib=sum_tracked_current_gib(jobs))
+            tracked_current_gib=sum_tracked_current_gib(jobs),
+            floor_override_gib=floor_override, floor_mode=args.safety_floor_mode)
         print(json.dumps({
             "snapshot": snap.to_json(), "ceiling": ceiling.to_json(),
             "active_jobs": [j.to_json() for j in jobs],
@@ -1305,7 +1710,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.admit:
-        ctx = live_admission_decision(projected_new_gib=args.projected_gib, exclude_pid=args.exclude_pid)
+        ctx = live_admission_decision(projected_new_gib=args.projected_gib, exclude_pid=args.exclude_pid,
+                                      floor_override_gib=floor_override,
+                                      floor_mode=args.safety_floor_mode)
         print(json.dumps(ctx.to_json(), indent=2))
         return 0 if ctx.decision.admit else 4
 
@@ -1322,8 +1729,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.governor_tick:
         snap = read_system_memory_snapshot()
         jobs = list_tracked_jobs()
-        level = classify_pressure(snap, warn_free_gib=args.warn_free_gib,
-                                  critical_free_gib=args.critical_free_gib)
+        warn_free = (args.warn_free_gib if args.warn_free_gib is not None
+                     else derived_warn_free_gib(snap.total_gib))
+        critical_free = (args.critical_free_gib if args.critical_free_gib is not None
+                         else derived_critical_free_gib(snap.total_gib))
+        level = classify_pressure(snap, warn_free_gib=warn_free,
+                                  critical_free_gib=critical_free)
         cw = DEFAULT_WARN_CONSECUTIVE if level == "warn" else 0
         cc = DEFAULT_CRITICAL_CONSECUTIVE if level == "critical" else 0
         action = decide_governor_action(level=level, consecutive_warn=cw, consecutive_critical=cc, jobs=jobs)

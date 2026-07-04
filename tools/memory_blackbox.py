@@ -79,15 +79,30 @@ def _read_boottime_sec() -> int:
 
 
 # ─────────────────────────── one sample ───────────────────────────
-def sample_once(*, jobs=None, snapshot=None) -> dict:
-    """Gather ONE black-box sample: system snapshot + adaptive ceiling + per-tracked-job RSS. Pure I/O
-    (no side effects). ``jobs``/``snapshot`` injectable for testing."""
+def sample_once(*, jobs=None, snapshot=None, floor_smoother=None) -> dict:
+    """Gather ONE black-box sample: system snapshot + adaptive ceiling (tier-scaled DERIVED safety
+    floor, BUILD #298 — full decomposition recorded per tick) + per-tracked-job RSS. Pure I/O (no
+    side effects). ``jobs``/``snapshot``/``floor_smoother`` injectable for testing; the daemon
+    passes a persistent ``gov.SafetyFloorSmoother`` so the applied floor rises instantly but decays
+    slowly (admission verdicts don't flap on an oscillating control plane)."""
     snap = snapshot if snapshot is not None else gov.read_system_memory_snapshot()
     tracked = jobs if jobs is not None else gov.list_tracked_jobs()
     tracked_current = gov.sum_tracked_current_gib(tracked)
+    floor = gov.derive_safety_floor(
+        total_gib=snap.total_gib,
+        measured_cp_rss_gib=gov.measured_control_plane_rss_gib(
+            used_gib=snap.used_gib, tracked_current_gib=tracked_current),
+        override_gib=gov.safety_floor_env_override_gib(),
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    applied_floor = (float(floor_smoother.update(floor.floor_gib))
+                     if floor_smoother is not None else floor.floor_gib)
     ceiling = gov.compute_adaptive_ceiling(
-        total_gib=snap.total_gib, used_gib=snap.used_gib, tracked_current_gib=tracked_current)
-    level = gov.classify_pressure(snap)
+        total_gib=snap.total_gib, used_gib=snap.used_gib, tracked_current_gib=tracked_current,
+        safety_margin_gib=applied_floor, floor=floor)
+    level = gov.classify_pressure(
+        snap, warn_free_gib=gov.derived_warn_free_gib(snap.total_gib),
+        critical_free_gib=gov.derived_critical_free_gib(snap.total_gib))
     return {
         "ts": round(time.time(), 3),
         "ts_iso": _utc_now_iso(),
@@ -119,6 +134,14 @@ def sample_once(*, jobs=None, snapshot=None) -> dict:
         "system_used_headroom_gib": round(ceiling.adaptive_ceiling_gib - snap.used_gib, 2),
         "tracked_sum_gib": round(tracked_current, 2),
         "tracked": [j.to_json() for j in tracked],
+        # Post GB-F1 tracked rows are TRUE GiB (converted once at the list_tracked_jobs read
+        # boundary); this marker lets mixed-era JSONL consumers (witness_memory_preflight) skip
+        # the legacy x0.9537 units correction on new rows.
+        "tracked_units": "true_gib",
+        # Per-tick derived-floor decomposition (which leg won + all leg values + the applied,
+        # possibly-smoothed floor) — max observability into the tier-scaled floor (BUILD #298).
+        "safety_floor": {**floor.to_json(), "applied_floor_gib": round(applied_floor, 3),
+                         "smoothed": floor_smoother is not None},
         "sampler_pid": os.getpid(),
     }
 
@@ -287,7 +310,12 @@ def _govern_tick(consecutive_warn: int, consecutive_critical: int) -> tuple[int,
     consecutive counters + an action record (or None)."""
     snap = gov.read_system_memory_snapshot()
     jobs = gov.list_tracked_jobs()
-    level = gov.classify_pressure(snap)
+    # Tier-scaled thresholds (BUILD #298): @128 -> warn 14.8 / critical 8.4 (critical strictly
+    # earlier than the legacy 8.0); @8 -> 4.0 / 3.0 (the legacy 15/8 were above everything an
+    # 8 GiB box can ever free -> permanent warn).
+    level = gov.classify_pressure(
+        snap, warn_free_gib=gov.derived_warn_free_gib(snap.total_gib),
+        critical_free_gib=gov.derived_critical_free_gib(snap.total_gib))
     consecutive_warn = consecutive_warn + 1 if level == "warn" else 0
     consecutive_critical = consecutive_critical + 1 if level == "critical" else 0
     action = gov.decide_governor_action(
@@ -310,27 +338,48 @@ def _govern_tick(consecutive_warn: int, consecutive_critical: int) -> tuple[int,
     return consecutive_warn, consecutive_critical, record
 
 
+DEFAULT_BAND_INTERVAL_S = 30.0   # guard-band evaluation cadence inside the daemon loop (BUILD #298)
+
+
 def run_daemon(
     *,
     interval: float = DEFAULT_INTERVAL_S,
     fast_interval: float = DEFAULT_FAST_INTERVAL_S,
     govern: bool = True,
     max_iterations: int | None = None,
+    band: bool = True,
+    band_interval_s: float = DEFAULT_BAND_INTERVAL_S,
+    band_envelope_frac: float | None = None,
+    band_run_dir: Path | None = None,
 ) -> int:
-    """The always-on recorder loop (+ governor). Samples, appends, and — when ``govern`` — evaluates the
-    dynamic throttle each tick. Cadence speeds up (``fast_interval``) whenever pressure is elevated."""
+    """The always-on recorder loop (+ governor + guard bands). Samples, appends, and — when
+    ``govern`` — evaluates the dynamic throttle each tick. Cadence speeds up (``fast_interval``)
+    whenever pressure is elevated.
+
+    BUILD #298 band wiring: every ``band_interval_s`` (default 30 s; ``band=False`` / ``--no-band``
+    opts out) the loop calls the governor's ``band_tick`` IN-PROCESS — exactly the #294 semantics
+    (green/yellow/red on ACTUAL RSS vs the frac*RAM envelope; never-kill; defer_to_throttle when
+    the system pressure ladder is engaged; red = reversible clean-pause via the canonical
+    ``pause_job`` only in the sole-workload case) — with actuation enabled iff ``govern``
+    (a ``--no-govern`` recorder emits dry band rows). Band thresholds auto-scale per tier because
+    they are fractions of the SAME envelope machinery (0.85*128 -> yellow 92.48 / red 97.92 true
+    GiB; 0.55*8 -> 3.74 / 3.96). A persistent ``SafetyFloorSmoother`` keeps the per-tick derived
+    floor flap-free (rise-instant / decay <= 0.25 GiB per tick)."""
     fd = _acquire_singleton()
     if fd is None:
         print("[memory-blackbox] another instance already holds the singleton lock; exiting 0.")
         return 0
-    _log_action(f"BLACKBOX start pid={os.getpid()} interval={interval}s fast={fast_interval}s govern={govern}")
+    _log_action(f"BLACKBOX start pid={os.getpid()} interval={interval}s fast={fast_interval}s "
+                f"govern={govern} band={band} band_interval={band_interval_s}s")
     consecutive_warn = consecutive_critical = 0
+    floor_smoother = gov.SafetyFloorSmoother()
+    last_band_mono: float | None = None
     it = 0
     try:
         while max_iterations is None or it < max_iterations:
             it += 1
             try:
-                sample = sample_once()
+                sample = sample_once(floor_smoother=floor_smoother)
                 append_sample(sample)
                 elevated = sample.get("pressure") != "normal"
                 if govern:
@@ -341,6 +390,19 @@ def run_daemon(
                             sample["governor_action"] = rec  # (not re-appended; live-log only)
                     except Exception as exc:  # governor hiccup must NEVER kill the recorder
                         _log_action(f"GOVERNOR ERROR (non-fatal): {exc!r}")
+                if band:
+                    now_mono = time.monotonic()
+                    if last_band_mono is None or (now_mono - last_band_mono) >= band_interval_s:
+                        last_band_mono = now_mono
+                        try:
+                            d = gov.band_tick(
+                                envelope_frac=(band_envelope_frac if band_envelope_frac is not None
+                                               else gov.DEFAULT_BAND_ENVELOPE_FRAC),
+                                run_dir=band_run_dir, apply=govern)
+                            if d.action != "none":
+                                _log_action(f"BAND {d.band}/{d.action}: {d.reason}")
+                        except Exception as exc:  # band hiccup must NEVER kill the recorder
+                            _log_action(f"BAND ERROR (non-fatal): {exc!r}")
             except Exception as exc:  # a sample hiccup must never kill the black box
                 _log_action(f"SAMPLE ERROR (non-fatal): {exc!r}")
                 elevated = False
@@ -422,6 +484,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--interval", type=float, default=DEFAULT_INTERVAL_S)
     ap.add_argument("--fast-interval", type=float, default=DEFAULT_FAST_INTERVAL_S)
     ap.add_argument("--no-govern", action="store_true", help="record only; do NOT run the throttle governor")
+    # ── guard-band wiring (BUILD #298): in-loop band evaluation, #294 semantics ──
+    ap.add_argument("--no-band", action="store_true",
+                    help="disable the in-loop guard-band evaluation (default: every --band-interval s)")
+    ap.add_argument("--band-interval", type=float, default=DEFAULT_BAND_INTERVAL_S,
+                    help="guard-band evaluation cadence in seconds (default 30)")
+    ap.add_argument("--band-envelope-frac", type=float, default=None,
+                    help="single-workload envelope fraction of total RAM for the bands "
+                         "(default: governor DEFAULT_BAND_ENVELOPE_FRAC=0.85; tertiary tier uses 0.55)")
+    ap.add_argument("--band-run-dir", type=str, default=None,
+                    help="run dir for checkpoint-freshness in band decisions")
     ap.add_argument("--json", action="store_true", help="JSON output for --sample-once / --tail")
     args = ap.parse_args(argv)
 
@@ -446,7 +518,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                           "jsonl": str(_BLACKBOX), "exists": _BLACKBOX.exists()}))
         return 0
     if args.daemon:
-        return run_daemon(interval=args.interval, fast_interval=args.fast_interval, govern=not args.no_govern)
+        return run_daemon(
+            interval=args.interval, fast_interval=args.fast_interval, govern=not args.no_govern,
+            band=not args.no_band, band_interval_s=args.band_interval,
+            band_envelope_frac=args.band_envelope_frac,
+            band_run_dir=Path(args.band_run_dir) if args.band_run_dir else None)
     ap.print_help()
     return 0
 
