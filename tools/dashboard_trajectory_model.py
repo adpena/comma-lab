@@ -39,6 +39,7 @@ contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED. A projection is a
 """
 from __future__ import annotations
 
+import itertools
 from datetime import datetime
 from typing import Any
 
@@ -88,21 +89,34 @@ def stage_at_epoch(epoch: float, schedule: dict) -> str:
 
 
 def _stage_segments(schedule: dict, total_epochs: int) -> list[tuple[str, int, int]]:
-    """Ordered ``[(stage, start, end)]`` epoch segments [start, end) covering
-    [0, total_epochs) from the schedule boundaries. Skips empty / absent stages."""
-    tau = schedule.get("tau_start")
-    l7 = schedule.get("l7_start")
-    muon = schedule.get("muon_start")
-    bounds = [("CE", 0, tau), ("tau", tau, l7), ("l7", l7, muon), ("Muon", muon, total_epochs)]
+    """Ordered NON-OVERLAPPING ``[(stage, start, end)]`` epoch segments [start, end)
+    covering [0, total_epochs), derived from the PRECEDENCE-correct ``stage_at_epoch``.
+
+    Deriving the windows from ``stage_at_epoch`` (rather than a static CE→tau→l7→Muon
+    boundary chain) makes them robust to OUT-OF-ORDER or DISABLED boundaries. E.g. when
+    ``muon_start`` (726) < a disabled ``l7_start`` (1000), the old naive chain gave tau
+    ``[300, 1000)`` OVERLAPPING Muon ``[726, 1000)``; here tau is correctly ``[300, 726)``
+    and the unreachable l7 window collapses away. Consecutive same-stage windows merge.
+    """
+    if total_epochs is None or int(total_epochs) <= 0:
+        return []
+    total = int(total_epochs)
+    # candidate step points: 0, total, and each enabled in-range stage boundary
+    points = {0, total}
+    for key in ("tau_start", "l7_start", "muon_start"):
+        b = schedule.get(key)
+        if b is not None and 0 < int(b) < total:
+            points.add(int(b))
+    ordered = sorted(points)
     segs: list[tuple[str, int, int]] = []
-    for name, a, b in bounds:
-        if a is None:
+    for a, b in itertools.pairwise(ordered):
+        if b <= a:
             continue
-        end = b if b is not None else total_epochs
-        if end is None:
-            continue
-        if end > a:
-            segs.append((name, int(a), int(end)))
+        stage = stage_at_epoch(a, schedule)  # precedence-correct (Muon > l7 > tau > CE)
+        if segs and segs[-1][0] == stage:
+            segs[-1] = (stage, segs[-1][1], b)  # merge a disabled/shadowed boundary
+        else:
+            segs.append((stage, a, b))
     return segs
 
 

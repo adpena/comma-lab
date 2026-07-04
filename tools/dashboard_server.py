@@ -45,7 +45,6 @@ import argparse
 import asyncio
 import contextlib
 import hmac
-import itertools
 import json
 import os
 import sys
@@ -232,36 +231,19 @@ def _last_measured_dpose(rows):
 
 def _stage_windows(sched: dict) -> list[tuple[str, int, int]]:
     """Ordered, NON-overlapping ``[(stage, start, end)]`` epoch windows covering
-    ``[0, epochs)``, derived by sampling ``dtm.stage_at_epoch`` at the schedule's OWN
-    boundary points and merging equal-stage neighbours.
+    ``[0, epochs)`` — delegates to the canonical ``dtm._stage_segments``.
 
-    Correct even when the raw boundaries are NOT epoch-monotone — this run has
-    ``muon_start`` 726 < the disabled ``l7_start`` 1000, a case ``dtm._stage_segments``
-    renders as OVERLAPPING windows (tau [300,1000) overlapping Muon [726,1000)). Sampling
-    the (correct, precedence-ordered) ``stage_at_epoch`` step function avoids that.
+    ``dtm._stage_segments`` was fixed 2026-07-03 to derive windows from the
+    precedence-correct ``stage_at_epoch`` step function, so out-of-order / disabled
+    boundaries — e.g. this run's ``muon_start`` 726 < the disabled ``l7_start`` 1000 —
+    can no longer produce overlapping windows (previously tau [300,1000) overlapped
+    Muon [726,1000)). Kept as a thin local alias so callers read against the schedule.
     Pure; empty list when the schedule carries no usable epoch count."""
     try:
         ep = int(sched.get("epochs") or 0)
     except (TypeError, ValueError):
         ep = 0
-    if ep <= 0:
-        return []
-    cand = {0, ep}
-    for k in ("tau_start", "l7_start", "muon_start"):
-        b = sched.get(k)
-        if isinstance(b, (int, float)) and 0 <= b <= ep:
-            cand.add(int(b))
-    bounds = sorted(cand)
-    out: list[list] = []
-    for a, b in itertools.pairwise(bounds):
-        if b <= a:
-            continue
-        st = dtm.stage_at_epoch(a, sched)
-        if out and out[-1][0] == st:  # merge equal-stage neighbours (e.g. disabled l7)
-            out[-1][2] = b
-        else:
-            out.append([st, int(a), int(b)])
-    return [(s, a, b) for s, a, b in out]
+    return dtm._stage_segments(sched, ep)
 
 
 def _build_stage_aware_projection(rows, sched: dict, *, sidecar_pose: float,
