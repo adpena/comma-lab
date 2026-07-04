@@ -475,6 +475,93 @@ def test_reconcile_skipped_when_row_already_landed():
     assert not all(int(v["epoch"]) != int(pend["epoch"]) for v in verdicts)
 
 
+# ──────────── (M2-F2 fix) failed pending recompute: DROPPED explicit + deterministic ────────────
+
+def _drive_async_with_failed_verdict(dsegs_losses: list[tuple[int, float, float]], failed_ep: int,
+                                     *, bump=0.05, max_bumps=2, stop_after=3, min_sustained=3):
+    """``_drive_async`` where the verdict scheduled at ``failed_ep`` FAILS in flight: its row is
+    never joined (the worker's ``verdict_async_failed`` path — a failed verdict produces NO row)
+    and training continues. This is the CONTINUOUS reference for the M2-F2 fail-safe."""
+    state = _fresh_state()
+    verdicts: list[dict] = []
+    inflight: dict | None = None
+    actions: list[tuple[int, str | None, str]] = []
+    for ep, d, loss in dsegs_losses:
+        if inflight is not None:
+            if int(inflight["epoch"]) != int(failed_ep):
+                verdicts.append(inflight)
+            inflight = None
+        if verdicts:
+            c = _cl_classify(verdicts, min_sustained_windows=min_sustained)
+            a = _cl_step(c["classification"], state, ep, bump=bump, max_bumps=max_bumps,
+                         stop_after=stop_after)
+            actions.append((ep, c["classification"], (a or {}).get("action", "none")))
+        else:
+            actions.append((ep, None, "none"))
+        inflight = _v(ep, d, loss)
+        if state["stop_epoch"] is not None:
+            break
+    return actions, state
+
+
+def test_resume_reconcile_failed_recompute_drops_row_matches_continuous_failure():
+    """(M2-F2 fix, throughput review 2026-07-04) A pending record whose SYNCHRONOUS recompute
+    FAILS on resume is DROPPED — explicitly logged, deterministic, never appended, and never
+    crashing a resume the continuous run would have survived. The resumed decision history then
+    equals the CONTINUOUS run in which that verdict FAILED in flight (worker produced no row)."""
+    stream = [(100 + 25 * i, 0.005 + 1e-4 * i, 150.0 - 2.0 * i) for i in range(12)]
+    for cut in (1, 3, 5, 7):
+        actions, state2, inflight, verdicts = _drive_async(stream[:cut])
+        assert inflight is not None
+        cfg = _sim_loader(_cl_state_arrays({**state2, "pending": _pend_rec(inflight)}, verdicts))
+        state2, verdicts2 = _cl_restore_from_cfg(cfg)
+        pend = _cl_pending_from_cfg(cfg)
+        assert pend is not None
+        # trainer failure path: the recompute raises => the row is DROPPED (NOTHING appended);
+        # the resumed history is exactly the restored rows.
+        assert [v["epoch"] for v in verdicts2] == [v["epoch"] for v in verdicts]
+        # continuous reference: the SAME run where that eval's worker FAILED (row never joined).
+        cont_actions, cont_state = _drive_async_with_failed_verdict(stream, int(pend["epoch"]))
+        # continue the reordered loop over the remaining stream with NO reconciled row.
+        inflight2: dict | None = None
+        for ep, d, loss in stream[cut:]:
+            if inflight2 is not None:
+                verdicts2.append(inflight2)
+                inflight2 = None
+            if verdicts2:
+                c = _cl_classify(verdicts2, min_sustained_windows=3)
+                a = _cl_step(c["classification"], state2, ep, bump=0.05, max_bumps=2, stop_after=3)
+                actions.append((ep, c["classification"], (a or {}).get("action", "none")))
+            else:
+                actions.append((ep, None, "none"))
+            inflight2 = _v(ep, d, loss)
+            if state2["stop_epoch"] is not None:
+                break
+        assert actions == cont_actions, f"failed-recompute drop drift at cut={cut}"
+        assert state2 == cont_state, f"state drift at cut={cut}"
+
+
+def test_trainer_reconcile_failed_recompute_is_explicit_logged_gated():
+    """(M2-F2 fix) Source guard on the trainer's pending reconcile: the recompute is wrapped in
+    try/except, the failure path emits an explicit ``resume_pending_verdict_failed`` row with
+    ``action=dropped``, and the append is GATED on success (no silent resurrection, no silent
+    drop). The sidecar reshape stays OUTSIDE the guard (a corrupted resume must still raise,
+    per NO-FAKE fail-loud)."""
+    src = _TRAINER.read_text()
+    start = src.index("PENDING-VERDICT reconcile")
+    block = src[start:src.index("CURRICULUM stage-transition spike-guard", start)]
+    r = block.index("_pshadow = {")
+    t = block.index("try:")
+    v = block.index("_pv = _verdict_from_snapshot")
+    e = block.index("except Exception")
+    f = block.index('"stage": "resume_pending_verdict_failed"')
+    g = block.index("if _pv is not None:")
+    ap = block.index("_cl_verdicts.append")
+    assert r < t < v < e < f < g < ap, \
+        "reconcile order must be reshape(fail-loud) -> try recompute -> except(log DROPPED) -> gated append"
+    assert '"action": "dropped"' in block, "the drop must be machine-readable in the log row"
+
+
 # ───────────────── (M2 fix) structural wall guard: NO join of the just-scheduled verdict ─────────
 
 def test_async_decision_path_has_no_join_after_schedule():

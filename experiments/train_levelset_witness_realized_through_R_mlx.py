@@ -3461,8 +3461,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             except Exception as exc:  # an eval failure must NOT kill training (daemon thread).
                 with _verdict_lock:
                     # (M2 fix) a FAILED verdict produces NO row in the continuous run => drop the
-                    # pending record so a resume does not resurrect a row that never existed
-                    # (continuous == resumed on the failure path too).
+                    # pending record so a resume does not resurrect a row that never existed.
+                    # HONEST SCOPE (review M2-F2): this clear only helps sidecars written AFTER
+                    # the failure; a sidecar written WHILE this verdict was in flight still
+                    # carries the pending record, and a later resume recomputes it (row the
+                    # continuous run dropped — bounded, deterministic, note-and-carry). The
+                    # resume-side fail-safe (resume_pending_verdict_failed) covers the case
+                    # where that recompute itself fails.
                     _rec = _cl_pending["rec"]
                     if _cl_on and _rec is not None and int(_rec["epoch"]) == int(ep):
                         _cl_pending["rec"] = None
@@ -3950,22 +3955,42 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # Fail-loud on any mismatch (a corrupted resume must raise, per NO-FAKE).
         _pend = _cl_pending_from_cfg(resume_cfg)
         if _pend is not None and all(int(v["epoch"]) != int(_pend["epoch"]) for v in _cl_verdicts):
+            # NOTE: the reshape stays OUTSIDE the failure guard below — a CORRUPTED sidecar
+            # (shape/key mismatch) must still raise, per the NO-FAKE fail-loud contract.
             _pshadow = {k: np.asarray(v, np.float32).reshape(np.asarray(ema.shadow[k]).shape)
                         for k, v in _pend["ema_np"].items()}
-            _pv = _verdict_from_snapshot({
-                "ema_np": _pshadow,
-                "softmax_temp": float(_pend["softmax_temp"]),
-                "hosc_beta": float(_pend["hosc_beta"]),
-                "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs}
-                        if use_self_orient else None)})
-            _cl_verdicts.append({"epoch": int(_pend["epoch"]), "seg_form": str(_pend["seg_form"]),
-                                 "d_seg": float(_pv["d_seg"]), "ep_loss": float(_pend["ep_loss"])})
-            print(json.dumps({"stage": "resume_pending_verdict", "epoch": int(_pend["epoch"]),
-                              "seg_form": str(_pend["seg_form"]),
-                              "d_seg": round(float(_pv["d_seg"]), 6),
-                              "d_pose": round(float(_pv["d_pose"]), 6),
-                              "note": "in-flight-at-checkpoint verdict recomputed from the persisted "
-                              "snapshot (M2 decide-on-previous bit-faithful resume)"}), flush=True)
+            try:
+                _pv = _verdict_from_snapshot({
+                    "ema_np": _pshadow,
+                    "softmax_temp": float(_pend["softmax_temp"]),
+                    "hosc_beta": float(_pend["hosc_beta"]),
+                    "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs}
+                            if use_self_orient else None)})
+            except Exception as exc:
+                # (M2-F2 fix, throughput review 2026-07-04) FAIL-SAFE: a pending record whose
+                # synchronous recompute FAILS is DROPPED — explicitly, logged, deterministically.
+                # The continuous run's failed worker produces NO row (verdict_async_failed) and
+                # training continues, so appending nothing here is the decision-history-preserving
+                # behavior: resurrecting a partial row, or CRASHING a resume the continuous run
+                # survived, would diverge the post-resume row set. Never silent — the row below
+                # records the drop + the error; classification proceeds on the restored rows only.
+                _pv = None
+                print(json.dumps({"stage": "resume_pending_verdict_failed",
+                                  "epoch": int(_pend["epoch"]), "action": "dropped",
+                                  "err": f"{type(exc).__name__}: {exc}",
+                                  "note": "pending-verdict recompute FAILED on resume; row DROPPED "
+                                  "deterministically (a failed verdict produces NO row in the "
+                                  "continuous run — M2-F2 fail-safe, explicit + never silent)"}),
+                      flush=True)
+            if _pv is not None:
+                _cl_verdicts.append({"epoch": int(_pend["epoch"]), "seg_form": str(_pend["seg_form"]),
+                                     "d_seg": float(_pv["d_seg"]), "ep_loss": float(_pend["ep_loss"])})
+                print(json.dumps({"stage": "resume_pending_verdict", "epoch": int(_pend["epoch"]),
+                                  "seg_form": str(_pend["seg_form"]),
+                                  "d_seg": round(float(_pv["d_seg"]), 6),
+                                  "d_pose": round(float(_pv["d_pose"]), 6),
+                                  "note": "in-flight-at-checkpoint verdict recomputed from the persisted "
+                                  "snapshot (M2 decide-on-previous bit-faithful resume)"}), flush=True)
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
     # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0). Under
