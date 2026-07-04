@@ -1987,15 +1987,15 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   </span>
 </div>
 <div class="tabs">
-  <div class="tab on" data-tab="oracle">ORACLE</div>
+  <div class="tab on" data-tab="live">LIVE</div>
+  <div class="tab" data-tab="oracle">ORACLE</div>
   <div class="tab" data-tab="flow">WITNESS</div>
   <div class="tab" data-tab="witness">RESIDUAL</div>
   <div class="tab" data-tab="whyhow">WHY / HOW</div>
-  <div class="tab" data-tab="live">DESCENT</div>
   <div class="tab" data-tab="tri">TRIALITY</div>
 </div>
 
-<section id="tab-oracle" class="orc">
+<section id="tab-oracle" class="orc hide">
   <div class="orcintro">
     <h2>The detector I built &mdash; and the world it reads</h2>
     <p>Before the witness, the <b>oracle</b>: the frozen contest scorer (Yousfi's comma10k
@@ -2037,7 +2037,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   </div>
 </section>
 
-<section id="tab-live" class="hide">
+<section id="tab-live">
   <div class="runinfo" id="rdinfo">resolving run&hellip;</div>
   <div class="metrics" id="headline">
     <div class="stat hero">
