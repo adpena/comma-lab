@@ -81,6 +81,13 @@ class GaugeComponent(Enum):
     MARGIN_SALIENCY = "margin_saliency"  # LEVER-4 multiplier chart (S_R reachability vs texture proxy)
     MUON_MOMENTUM = "muon_momentum"      # Muon finisher momentum-buffer init (warm-start vs cold)
     MUON_LR = "muon_lr"                  # Muon finisher LR schedule (cosine anneal vs flat)
+    # Lane-dash root-cause levers (FEED-03t, APPEND-ONLY; train-time basis/loss/optimizer facets, 0
+    # archive bytes; NOT GaugeChoice STORE fields — like MARGIN_SALIENCY / MUON_*).
+    ALONG_TANGENT_FREQ = "along_tangent_freq"          # anisotropic-basis along-tangent Fourier bandwidth
+    VECTOR_MARGIN_SALIENCY = "vector_margin_saliency"  # margin-saliency scalar->vector (asymmetry-t)
+    CHROMA_BOUNDARY = "chroma_boundary"                # chroma as an argmax-boundary d_seg actuator
+    FLICKER_TREATMENT = "flicker_treatment"            # predictable-replicate vs irreducible-downweight
+    TRIPLE_JUNCTION_MARGIN = "triple_junction_margin"  # scalar top1-top2 vs multi-class simplex (WEAK)
 
 
 class WarpGauge(Enum):
@@ -359,6 +366,95 @@ class MuonLRGauge(Enum):
     ANNEAL_LR = "anneal_lr"  # --muon-lr-final-frac <f> (cosine decay to floor)
 
 
+class AlongTangentFrequencyGauge(Enum):
+    """How much ALONG-TANGENT Fourier bandwidth the anisotropic self-orient/curvelet basis carries
+    (FEED-03t, equation ``anisotropic_basis_along_tangent_frequency_deficit_v1`` + memory
+    [[lane-dash-residual-root-is-along-tangent-freq-deficit-R-allpass]]).
+
+    Lens-2 ROOT CAUSE of the lane-dash d_seg residual: the basis is SHARP ACROSS edges
+    (freq_across -> 32,64 = Nyquist) but SMOOTH ALONG them (freq_along <= 8 cyc/unit); the lane
+    dashes modulate at ~25 cyc/unit ALONG the tangent (10px @scorer-512) => a 3.2x DEFICIT => the
+    dashes erase finest-first (error ~ 1/persistence). Both charts emit the REAL levelset-trainer
+    value flag ``--n-dir-freqs`` (never-invent-flags; default 6, #205 runs 2 = the deficit). The #1
+    ranked ep300+ lever (~0 archive bytes, R-safe <= Nyquist; net d_seg is a #205-class A/B).
+      N_DIR_FREQS_2_DEFICIT = ``--n-dir-freqs 2`` (the #205-LIVE deficit config = the ROOT CAUSE)
+      N_DIR_FREQS_4         = ``--n-dir-freqs 4`` (the lever; raises along-tangent bandwidth; pairs
+                              optionally with ``--bank-n-scales 4->5`` as a 2nd frequency axis)."""
+
+    N_DIR_FREQS_2_DEFICIT = "n_dir_freqs_2_deficit"
+    N_DIR_FREQS_4 = "n_dir_freqs_4"
+
+
+class VectorFieldMarginSaliencyGauge(Enum):
+    """Whether margin-saliency #141 weights with a SCALAR magnitude or a VECTOR (the asymmetry-t
+    sub-pixel skew; FEED-03t, equation ``separatrix_asymmetry_t_subpixel_boundary_localizer_v1``,
+    probe a8afad40 GREEN).
+
+    SCALAR_MAGNITUDE  = the existing scalar margin-saliency path (byte-identical baseline; emits
+                        nothing beyond the campaign's ``--margin-saliency-weight``).
+    VECTOR_T_SUBPIXEL = DESIGN-STAGE upgrade to the vector ``t = M_p/(M_p+M_q)`` (magnitude +
+                        boundary-normal + sub-pixel flip-side). The t diagnostic is MEASURED GREEN
+                        (self-consistency +0.560 disjoint); the TRAINING lever is UNBUILT -> the
+                        accessor fail-closes (never-invent-flags) naming the intended arg."""
+
+    SCALAR_MAGNITUDE = "scalar_magnitude"    # existing scalar saliency (byte-identical baseline)
+    VECTOR_T_SUBPIXEL = "vector_t_subpixel"  # DESIGN-STAGE asymmetry-t vector saliency
+
+
+class ChromaBoundaryGauge(Enum):
+    """Whether the witness represents CHROMA (a PROVEN independent argmax-boundary d_seg actuator;
+    SegNet reads RGB; FEED-03t, equation ``chroma_decides_lane_and_movable_at_annulus_v1``, probe
+    a3e9f0bd GREEN; CLAUDE.md "Chroma is a d_seg lever" / operator "Chroma too" 2026-06-25).
+
+    MEASURED GREEN (a3e9f0bd, n96 advisory, 100% L*-match to the frozen SegNet): removing chroma
+    (constant-luma) flips 7.54% Lane->Road + 4.38% Movable->Undrivable, 93.4% of chroma-flips in the
+    margin<1 annulus, proven independent of luma (margin-gradient energy 78.8% luma / 21.2% chroma).
+    Chart <-> the REAL levelset-trainer BooleanOptional flag ``--chroma`` (default True; #205 runs ON):
+      CHROMA_ACTIVE = ``--chroma`` default ON (byte-identical baseline; #205-live; the GREEN DOF)
+      LUMA_ONLY     = ``--no-chroma`` (the ablation that MEASURED chroma's d_seg contribution GREEN).
+    The deeper "route chroma CAPACITY INTO the boundary annulus" refinement (beyond the on/off flag)
+    is the A/B-owed lever and is NOT invented here."""
+
+    CHROMA_ACTIVE = "chroma_active"    # --chroma default ON (#205 baseline; the GREEN d_seg DOF)
+    LUMA_ONLY = "luma_only"            # --no-chroma (ablation; MEASURED chroma removal HURTS d_seg)
+
+
+class FlickerTreatmentGauge(Enum):
+    """How temporal FLICKER is treated (FEED-03t, equation
+    ``independent_flicker_jitter_dseg_floor_smooth_optimal_v1``, probe a949ff63 -- still measuring).
+
+    d_seg = q(1-r)+r(1-q) => for a GT minority-flicker q<0.5, an INDEPENDENT witness jitter r only
+    RAISES d_seg (smooth r=0 optimal); lowering d_seg by replicating flicker REQUIRES temporal
+    CORRELATION (predictability). The two treatment charts are DESIGN-STAGE loss-side levers (no
+    trainer flag yet); NONE is the byte-identical baseline:
+      NONE                   = no flicker treatment (byte-identical baseline; the #205-live behavior)
+      DOWNWEIGHT_IRREDUCIBLE = down-weight the provably-irreducible sensor-noise flicker (smooth-optimal)
+      REPLICATE_PREDICTABLE  = replicate+reward the PREDICTABLE (ego-xi/quant-phase) flicker (correlated)
+    The design-stage charts fail-closed (never-invent-flags)."""
+
+    NONE = "none"                                      # no flicker treatment (byte-identical baseline)
+    DOWNWEIGHT_IRREDUCIBLE = "downweight_irreducible"  # DESIGN-STAGE: smooth-optimal down-weight
+    REPLICATE_PREDICTABLE = "replicate_predictable"    # DESIGN-STAGE: correlated replicate+reward
+
+
+class TripleJunctionMarginGauge(Enum):
+    """Whether margin fragility uses the SCALAR top1-top2 or a MULTI-CLASS simplex (FEED-03t,
+    equation ``scalar_top1_top2_margin_is_exact_distance_to_flip_v1``, probe a4c66f2f CLOSED WEAK).
+
+    MEASURED n600 exact (a4c66f2f): gap13 >= gap12 at ALL 118M pixels (min 0.0) => the scalar
+    top1-top2 margin IS the exact distance-to-flip; the multi-class simplex adds NO flip-ONSET DOF.
+    Triple junctions are a flip-STRUCTURE DOF (0.027% of pixels, ~1-2% flip mass, 53.9%
+    Road|Undriv|Movable car-corners) = NOT the lane tail (the lane residual is a codim-1 Road|Lane
+    FACET = 41.4% of all facets the scalar margin already describes exactly).
+      TOP1_TOP2_SCALAR   = the exact scalar distance-to-flip (byte-identical baseline; #205-live)
+      MULTICLASS_SIMPLEX = DESIGN-STAGE + BANKED/WEAK (low-EV): the bench lever
+                           w(p)=fragility(p)*(1+lambda*1[gap13<eps]) composes orthogonally but
+                           targets car-corners -> BEHIND the facet levers. Accessor fail-closes."""
+
+    TOP1_TOP2_SCALAR = "top1_top2_scalar"      # exact scalar distance-to-flip (baseline)
+    MULTICLASS_SIMPLEX = "multiclass_simplex"  # DESIGN-STAGE + BANKED WEAK (car-corners, not lane)
+
+
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
@@ -381,6 +477,13 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.MARGIN_SALIENCY: MarginSaliencyGauge,
     GaugeComponent.MUON_MOMENTUM: MuonMomentumGauge,
     GaugeComponent.MUON_LR: MuonLRGauge,
+    # Lane-dash root-cause levers (FEED-03t, APPEND-ONLY; train-time basis/loss/optimizer facets,
+    # NOT GaugeChoice STORE fields — like MARGIN_SALIENCY / MUON_* / POSE_TRAINING).
+    GaugeComponent.ALONG_TANGENT_FREQ: AlongTangentFrequencyGauge,
+    GaugeComponent.VECTOR_MARGIN_SALIENCY: VectorFieldMarginSaliencyGauge,
+    GaugeComponent.CHROMA_BOUNDARY: ChromaBoundaryGauge,
+    GaugeComponent.FLICKER_TREATMENT: FlickerTreatmentGauge,
+    GaugeComponent.TRIPLE_JUNCTION_MARGIN: TripleJunctionMarginGauge,
 }
 
 
@@ -512,6 +615,96 @@ def pose_training_trainer_flags(chart: PoseTrainingGauge) -> tuple[str, ...]:
         f"PoseTrainingGauge.{chart.name} is DESIGN-STAGE (#205 pose-plan, pending #224 trainer "
         f"wire-in); intended arg: {POSE_TRAINING_INTENDED_ARGS[chart]}. never-invent-flags: emit "
         "nothing until the real argparse flag lands."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Lane-dash root-cause levers (FEED-03t): along-tangent freq + chroma are REAL levelset-trainer
+# flags; vector-t / flicker / multiclass-simplex are DESIGN-STAGE (fail-closed, never-invent-flags,
+# mirroring pose_training_trainer_flags). All are 0-archive-byte train-time facets.
+# ---------------------------------------------------------------------------
+ALONG_TANGENT_FREQ_TRAINER_FLAGS: dict[AlongTangentFrequencyGauge, tuple[str, ...]] = {
+    AlongTangentFrequencyGauge.N_DIR_FREQS_2_DEFICIT: ("--n-dir-freqs", "2"),
+    AlongTangentFrequencyGauge.N_DIR_FREQS_4: ("--n-dir-freqs", "4"),
+}
+CHROMA_BOUNDARY_TRAINER_FLAGS: dict[ChromaBoundaryGauge, tuple[str, ...]] = {
+    ChromaBoundaryGauge.CHROMA_ACTIVE: (),            # --chroma default ON = byte-identical baseline
+    ChromaBoundaryGauge.LUMA_ONLY: ("--no-chroma",),
+}
+
+# DESIGN-STAGE INTENDED (not-yet-wired) trainer args — documented, NEVER emitted, per
+# never-invent-flags (mirrors POSE_TRAINING_INTENDED_ARGS). Replace with a real *_TRAINER_FLAGS map
+# + drop the NotImplementedError branch when the loss/head lever actually lands.
+VECTOR_MARGIN_SALIENCY_INTENDED_ARGS: dict[VectorFieldMarginSaliencyGauge, str] = {
+    VectorFieldMarginSaliencyGauge.SCALAR_MAGNITUDE: "",  # existing scalar path; emits nothing
+    VectorFieldMarginSaliencyGauge.VECTOR_T_SUBPIXEL:
+        "--margin-saliency-vector-t (INTENDED; asymmetry-t sub-pixel skew; not wired)",
+}
+FLICKER_TREATMENT_INTENDED_ARGS: dict[FlickerTreatmentGauge, str] = {
+    FlickerTreatmentGauge.NONE: "",  # no flicker treatment; emits nothing (baseline)
+    FlickerTreatmentGauge.DOWNWEIGHT_IRREDUCIBLE:
+        "--flicker-downweight-irreducible (INTENDED; smooth-optimal; not wired)",
+    FlickerTreatmentGauge.REPLICATE_PREDICTABLE:
+        "--flicker-replicate-predictable (INTENDED; correlated reward; not wired)",
+}
+TRIPLE_JUNCTION_MARGIN_INTENDED_ARGS: dict[TripleJunctionMarginGauge, str] = {
+    TripleJunctionMarginGauge.TOP1_TOP2_SCALAR: "",  # exact scalar margin; emits nothing (baseline)
+    TripleJunctionMarginGauge.MULTICLASS_SIMPLEX:
+        "--margin-simplex-triple-junction (INTENDED + BANKED/WEAK low-EV; not wired)",
+}
+
+
+def along_tangent_freq_trainer_flags(chart: AlongTangentFrequencyGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for an AlongTangentFrequencyGauge chart. Both charts emit the REAL
+    value flag ``--n-dir-freqs <n>`` (2 = the #205-live deficit, 4 = the lever). Optionally pair the
+    lever with ``--bank-n-scales 4->5`` as a 2nd along-tangent frequency axis (not baked here)."""
+    return ALONG_TANGENT_FREQ_TRAINER_FLAGS[chart]
+
+
+def chroma_boundary_trainer_flags(chart: ChromaBoundaryGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a ChromaBoundaryGauge chart. CHROMA_ACTIVE => () (``--chroma``
+    default ON = byte-identical #205 baseline); LUMA_ONLY => ``--no-chroma`` (the GREEN-measured
+    ablation)."""
+    return CHROMA_BOUNDARY_TRAINER_FLAGS[chart]
+
+
+def vector_margin_saliency_trainer_flags(chart: VectorFieldMarginSaliencyGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a VectorFieldMarginSaliencyGauge chart. SCALAR_MAGNITUDE => ()
+    (the existing scalar saliency path = baseline). VECTOR_T_SUBPIXEL is DESIGN-STAGE -> RAISES
+    NotImplementedError naming the intended arg (never-invent-flags; the t diagnostic is GREEN but
+    the training lever is unbuilt)."""
+    if chart is VectorFieldMarginSaliencyGauge.SCALAR_MAGNITUDE:
+        return ()
+    raise NotImplementedError(
+        f"VectorFieldMarginSaliencyGauge.{chart.name} is DESIGN-STAGE (asymmetry-t vector saliency, "
+        f"probe a8afad40 GREEN but lever unbuilt); intended arg: "
+        f"{VECTOR_MARGIN_SALIENCY_INTENDED_ARGS[chart]}. never-invent-flags: emit nothing until wired."
+    )
+
+
+def flicker_treatment_trainer_flags(chart: FlickerTreatmentGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a FlickerTreatmentGauge chart. NONE => () (no treatment =
+    baseline). DOWNWEIGHT_IRREDUCIBLE / REPLICATE_PREDICTABLE are DESIGN-STAGE -> RAISE
+    NotImplementedError naming the intended arg (never-invent-flags; probe a949ff63 measuring)."""
+    if chart is FlickerTreatmentGauge.NONE:
+        return ()
+    raise NotImplementedError(
+        f"FlickerTreatmentGauge.{chart.name} is DESIGN-STAGE (flicker decomposition probe a949ff63); "
+        f"intended arg: {FLICKER_TREATMENT_INTENDED_ARGS[chart]}. never-invent-flags: emit nothing."
+    )
+
+
+def triple_junction_margin_trainer_flags(chart: TripleJunctionMarginGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a TripleJunctionMarginGauge chart. TOP1_TOP2_SCALAR => () (the
+    exact scalar distance-to-flip = baseline). MULTICLASS_SIMPLEX is DESIGN-STAGE + BANKED/WEAK ->
+    RAISES NotImplementedError naming the intended arg (never-invent-flags; a4c66f2f closed WEAK ->
+    low-EV bench item, behind the facet levers)."""
+    if chart is TripleJunctionMarginGauge.TOP1_TOP2_SCALAR:
+        return ()
+    raise NotImplementedError(
+        f"TripleJunctionMarginGauge.{chart.name} is DESIGN-STAGE + BANKED/WEAK (simplex probe "
+        f"a4c66f2f closed WEAK: scalar margin is already the exact distance-to-flip); intended arg: "
+        f"{TRIPLE_JUNCTION_MARGIN_INTENDED_ARGS[chart]}. never-invent-flags: emit nothing until wired."
     )
 
 
@@ -908,6 +1101,98 @@ def default_cost_table() -> GaugeCostTable:
                        "Muon-group LR to --muon-lr*f across the Muon span (the #205-arm config 0.002-> "
                        "2e-4). PROVEN byte-identical at frac>=1.0 (max|dLR|=0). Net d_seg #205-gated -> "
                        "numeric fields None (unrankable, advisory MEANS)"),
+
+        # --- ALONG_TANGENT_FREQ (FEED-03t; the ROOT-CAUSE lever, 0 archive bytes, R-safe) -----------
+        # Both charts emit the real --n-dir-freqs flag; the deficit is MEASURED, the net d_seg of
+        # raising the frequency is a #205-class A/B -> numeric fields None (unrankable, advisory MEANS).
+        AlongTangentFrequencyGauge.N_DIR_FREQS_2_DEFICIT: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t + eq anisotropic_basis_along_tangent_frequency_deficit_v1 + memory "
+                       "[[lane-dash-residual-root-is-along-tangent-freq-deficit-R-allpass]]: --n-dir-"
+                       "freqs 2 = the #205-LIVE deficit (basis freq_along<=8 vs dash ~25 cyc/unit = 3.2x "
+                       "deficit -> lane dashes erase finest-first). The ROOT CAUSE. R is all-pass to 2px "
+                       "(eq contest_r_operator_mtf_allpass_to_2px_v1) -> the deficit is representational, "
+                       "not R-washout. numeric None (baseline; net is the A/B arm)"),
+        AlongTangentFrequencyGauge.N_DIR_FREQS_4: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t --n-dir-freqs 4: the #1 ranked ep300+ lever -- raises along-tangent "
+                       "bandwidth to attack the dash residual at its representational root (~0 archive "
+                       "bytes, R-safe <=Nyquist; optionally pair --bank-n-scales 4->5). Deficit MEASURED; "
+                       "net n600 d_seg is a #205-class A/B (operator GO, next-run/improved-Muon-restart) "
+                       "-> numeric None (unrankable, advisory MEANS)"),
+
+        # --- VECTOR_MARGIN_SALIENCY (FEED-03t; margin-saliency scalar->vector, 0 archive bytes) ------
+        VectorFieldMarginSaliencyGauge.SCALAR_MAGNITUDE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t: the existing SCALAR margin-saliency #141 path (byte-identical "
+                       "baseline; #205-live). numeric None (baseline; the witness's own floor)"),
+        VectorFieldMarginSaliencyGauge.VECTOR_T_SUBPIXEL: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t + eq separatrix_asymmetry_t_subpixel_boundary_localizer_v1 (probe "
+                       "a8afad40 GREEN): t=M_p/(M_p+M_q) is a self-consistent (+0.560 disjoint) sub-pixel "
+                       "boundary position + flip-side localizer -> upgrades margin-saliency scalar->vector. "
+                       "GREEN candidate lever; the TRAINING lever is UNBUILT (accessor fail-closes) and the "
+                       "net d_seg is a #205-class A/B -> numeric None (unrankable, advisory MEANS)"),
+
+        # --- CHROMA_BOUNDARY (FEED-03t; PROVEN independent d_seg DOF, 0 archive bytes; --chroma) -----
+        ChromaBoundaryGauge.CHROMA_ACTIVE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t + eq chroma_decides_lane_and_movable_at_annulus_v1 (probe a3e9f0bd "
+                       "GREEN, n96 advisory, 100% L*-match to frozen SegNet): --chroma default ON = the "
+                       "#205-live baseline; chroma is a PROVEN independent boundary d_seg DOF (margin-"
+                       "gradient energy 78.8% luma / 21.2% chroma). numeric None (baseline)"),
+        ChromaBoundaryGauge.LUMA_ONLY: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t (probe a3e9f0bd GREEN): --no-chroma ablation MEASURED chroma removal "
+                       "(constant-luma) flips 7.54% Lane->Road + 4.38% Movable->Undrivable, 93.4% of "
+                       "chroma-flips in the margin<1 annulus (33.7% at margin<0.25) -> chroma is an "
+                       "independent d_seg DOF concentrated on the lane crux + Movable over-dilation, "
+                       "orthogonal to the geometry levers. The 'route chroma INTO the annulus' refinement "
+                       "is the A/B-owed lever -> numeric None (advisory MEANS)"),
+
+        # --- FLICKER_TREATMENT (FEED-03t; design-stage loss levers, probe a949ff63 still measuring) --
+        FlickerTreatmentGauge.NONE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t: no flicker treatment (byte-identical baseline; #205-live). For an "
+                       "INDEPENDENT jitter, smooth (r=0) is provably optimal (eq independent_flicker_"
+                       "jitter_dseg_floor_smooth_optimal_v1). numeric None (baseline)"),
+        FlickerTreatmentGauge.DOWNWEIGHT_IRREDUCIBLE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="FEED-03t DESIGN-STAGE (probe a949ff63 still measuring the predictable/irreducible "
+                       "split): down-weight the provably-irreducible sensor-noise flicker (smooth-optimal). "
+                       "loss lever UNBUILT (accessor fail-closes) -> PENDING (measured=False)"),
+        FlickerTreatmentGauge.REPLICATE_PREDICTABLE: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=False,
+            provenance="FEED-03t DESIGN-STAGE (probe a949ff63 still measuring): replicate+reward the "
+                       "PREDICTABLE (ego-xi/quant-phase) flicker (requires temporal correlation to lower "
+                       "d_seg). loss lever UNBUILT (accessor fail-closes) -> PENDING (measured=False)"),
+
+        # --- TRIPLE_JUNCTION_MARGIN (FEED-03t; a4c66f2f CLOSED WEAK, 0 archive bytes) ----------------
+        TripleJunctionMarginGauge.TOP1_TOP2_SCALAR: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t + eq scalar_top1_top2_margin_is_exact_distance_to_flip_v1 (probe "
+                       "a4c66f2f, n600 exact): gap13>=gap12 at ALL 118M pixels -> the scalar top1-top2 "
+                       "margin IS the exact distance-to-flip (PROVEN sufficient baseline; #205-live). "
+                       "numeric None (baseline)"),
+        TripleJunctionMarginGauge.MULTICLASS_SIMPLEX: GaugeCost(
+            counted_bytes=None, d_seg_through_R=None, conditioning=None,
+            compliant=True, deterministic=True, measured=True,
+            provenance="FEED-03t (probe a4c66f2f CLOSED WEAK -- BANKED low-EV): the multi-class simplex "
+                       "adds NO flip-onset DOF (gap13>=gap12 everywhere); triple junctions = 0.027% of "
+                       "pixels, ~1-2% flip mass, 53.9% Road|Undriv|Movable car-corners = NOT the lane "
+                       "tail. Bench lever w(p)=fragility*(1+lambda*1[gap13<eps]) composes orthogonally but "
+                       "targets car-corners -> BEHIND the facet levers. WEAK NEGATIVE that SHARPENS the "
+                       "crux (aim at the codim-1 Road|Lane facet). numeric None (banked, MEANS)"),
     }
     return GaugeCostTable(cells)
 
