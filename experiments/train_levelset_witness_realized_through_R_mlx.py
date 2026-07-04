@@ -1257,14 +1257,26 @@ def _cl_step(classification: str, state: dict, ep: int, *,
             "stop_after": int(stop_after)}
 
 
+_CL_PEND_SHADOW_PREFIX = "__cl_pend_shadow."
+
+
 def _cl_state_arrays(state: dict, verdicts: "list[dict]") -> "dict[str, np.ndarray]":
     """(#292 build-3) Closed-loop controller state -> resume-sidecar arrays (mirrors the build-2
     __evt_* pattern). Written ONLY when --closed-loop-control is ON (the caller passes None when OFF
     => ZERO new sidecar keys => byte-identical sidecar, the #205-safe path). Persists the bump/stop
     state AND the captured verdict history so an ON-run --resume-from classifies from the SAME
-    within-stage trajectory a continuous run would (bit-faithful resume). MLX-free."""
+    within-stage trajectory a continuous run would (bit-faithful resume). MLX-free.
+
+    (M2 fix, decide-on-previous) When ``state["pending"]`` is set — an async verdict is IN FLIGHT at
+    sidecar-write time, so its row is absent from ``verdicts`` — also persist the PENDING-VERDICT
+    record: the epoch/seg_form/ep_loss the row will carry plus the EXACT point-in-time snapshot the
+    worker thread is scoring (fp32 shadow arrays + softmax_temp + hosc_beta, ~hundreds of KB). A
+    resume recomputes the verdict SYNCHRONOUSLY from these inputs (the verdict is deterministic
+    given them) => the recomputed row is bit-identical to what the continuous run's thread produced
+    => post-resume decisions match the continuous run EXACTLY. No pending (None/absent) => ZERO
+    ``__cl_pend_*`` keys (the pre-M2 sidecar shape, byte-identical)."""
     _se = state.get("stop_epoch")
-    return {
+    out = {
         "__cl_bumps": np.asarray(int(state.get("bumps", 0))),
         "__cl_bump_add": np.asarray(float(state.get("bump_add", 0.0))),
         "__cl_post_budget_windows": np.asarray(int(state.get("post_budget_windows", 0))),
@@ -1274,6 +1286,16 @@ def _cl_state_arrays(state: dict, verdicts: "list[dict]") -> "dict[str, np.ndarr
         "__cl_v_eploss": np.asarray([float(v.get("ep_loss", 0.0)) for v in verdicts], np.float64),
         "__cl_v_segform": np.asarray([str(v.get("seg_form", "")) for v in verdicts]),
     }
+    pend = state.get("pending")
+    if pend is not None:
+        out["__cl_pend_epoch"] = np.asarray(int(pend["epoch"]))
+        out["__cl_pend_segform"] = np.asarray(str(pend["seg_form"]))
+        out["__cl_pend_eploss"] = np.asarray(float(pend["ep_loss"]), np.float64)
+        out["__cl_pend_temp"] = np.asarray(float(pend["softmax_temp"]), np.float64)
+        out["__cl_pend_beta"] = np.asarray(float(pend["hosc_beta"]), np.float64)
+        for k, v in pend["ema_np"].items():
+            out[_CL_PEND_SHADOW_PREFIX + k] = np.asarray(v, np.float32)
+    return out
 
 
 def _cl_restore_from_cfg(cfg: dict) -> "tuple[dict, list[dict]] | None":
@@ -1301,6 +1323,27 @@ def _cl_restore_from_cfg(cfg: dict) -> "tuple[dict, list[dict]] | None":
     verdicts = [{"epoch": int(e), "d_seg": float(d), "ep_loss": float(l), "seg_form": str(s)}
                 for e, d, l, s in zip(eps_l, ds_l, el_l, sf_l)]
     return state, verdicts
+
+
+def _cl_pending_from_cfg(cfg: dict) -> dict | None:
+    """(M2 fix, decide-on-previous) Parse the PENDING-VERDICT record written by _cl_state_arrays
+    through the _load_resume_state cfg parse (``a.item() if a.size == 1 else a.tolist()``). Returns
+    ``None`` when no verdict was in flight at sidecar-write time (or a pre-M2/OFF sidecar) — the
+    caller then reconciles nothing. Shadow arrays round-trip EXACTLY: fp32 -> tolist (float64,
+    exact superset) -> back to fp32; a size-1 array flattens to a scalar through ``.item()`` so the
+    reconcile RESHAPES each array against the restored shadow's shapes (lossless). MLX-free."""
+    if "__cl_pend_epoch" not in cfg:
+        return None
+    shadow: dict[str, np.ndarray] = {}
+    for k, v in cfg.items():
+        if k.startswith(_CL_PEND_SHADOW_PREFIX):
+            shadow[k[len(_CL_PEND_SHADOW_PREFIX):]] = np.asarray(v, np.float32)
+    return {"epoch": int(cfg["__cl_pend_epoch"]),
+            "seg_form": str(cfg["__cl_pend_segform"]),
+            "ep_loss": float(cfg["__cl_pend_eploss"]),
+            "softmax_temp": float(cfg["__cl_pend_temp"]),
+            "hosc_beta": float(cfg["__cl_pend_beta"]),
+            "ema_np": shadow}
 
 
 def _hosc_beta_for_epoch(ep: int, args) -> float | None:
@@ -3271,13 +3314,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (#292 build-3) CLOSED-LOOP LEVER CONTROL. _cl_on gates the ENTIRE feature: OFF (default; the
     # #205 path) => no verdict capture, no bump, no early-stop, no sidecar keys => BYTE-IDENTICAL.
     # _cl_verdicts is the deterministic IN-MEMORY capture of (epoch, seg_form, d_seg, ep_loss) the
-    # controller classifies on — the async verdict thread is JOINED at each eval-point decision when
-    # ON, so the action depends on the deterministic d_seg VALUE, never wall-clock/thread timing.
-    # Resume restore (ON only) happens next to the _evt_state restore below (where resume_cfg lives).
+    # controller classifies on. (M2 fix) ASYNC mode DECIDES-ON-PREVIOUS: at each eval point the
+    # PREVIOUS eval's verdict is joined FIRST (it has had a full eval window to run => wait ~ 0
+    # instead of the full 2062-2439s verdict wall), the decision classifies the rows ending at the
+    # previous eval, and only THEN is this epoch's verdict scheduled (never joined this iteration).
+    # The action still depends on deterministic d_seg VALUES, never wall-clock/thread timing.
+    # _cl_pending holds the PENDING-VERDICT record for the in-flight verdict (its EXACT snapshot
+    # inputs) so a sidecar written before the row lands stays bit-faithfully resumable; cleared
+    # under _verdict_lock when the row lands (or the worker fails). Resume restore (ON only)
+    # happens next to the _evt_state restore below (where resume_cfg lives).
     _cl_on = bool(getattr(args, "closed_loop_control", False))
     _cl_state: dict[str, Any] = {"bumps": 0, "bump_add": 0.0, "post_budget_windows": 0,
                                  "stop_epoch": None}
     _cl_verdicts: list[dict[str, Any]] = []
+    _cl_pending: dict[str, Any] = {"rec": None}
 
     def _verdict_inflight() -> bool:
         t = _verdict_thread["t"]
@@ -3302,11 +3352,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             print(json.dumps(row), flush=True)
             history.append({"epoch": ep, **v, "implied_S": s})
             # (#292 build-3) deterministic closed-loop capture (ON only; OFF appends nothing =>
-            # byte-identical). Under _verdict_lock; the decision point joins the thread first, so
-            # this row is ALWAYS visible to the controller that classifies epoch ``ep``.
+            # byte-identical). Under _verdict_lock; (M2 fix) the decision point joins the PREVIOUS
+            # eval's thread first, so this row is ALWAYS visible to the controller that decides at
+            # the NEXT eval point (decide-on-previous).
             if _cl_on:
                 _cl_verdicts.append({"epoch": int(ep), "seg_form": str(seg_form),
                                      "d_seg": float(v["d_seg"]), "ep_loss": float(ep_loss)})
+                # (M2 fix) the row landed => drop the pending record for this epoch (sidecar
+                # invariant, kept consistent by _cl_sidecar_snapshot's locked read: the pending
+                # record is present IFF its verdict row is absent).
+                _rec = _cl_pending["rec"]
+                if _rec is not None and int(_rec["epoch"]) == int(ep):
+                    _cl_pending["rec"] = None
 
     def _maybe_preserve_best(d_seg: float, ep: int, shadow_np_proj: dict[str, np.ndarray],
                              softmax_temp: float, hosc_beta: float) -> None:
@@ -3348,6 +3405,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "(GPU never blocks)"}), flush=True)
             return False
         snap = _capture_verdict_snapshot()  # MAIN thread, cheap, point-in-time
+        if _cl_on:
+            # (M2 fix) PENDING-VERDICT record: THIS verdict is now in flight, so any resume sidecar
+            # written before its row lands persists the EXACT inputs the worker scores (the SAME
+            # point-in-time snapshot arrays captured above — snap["ema_np"] IS the materialized
+            # numpy copy of the shadow at call time). A --resume-from recomputes the row
+            # synchronously from these inputs through the same deterministic CPU-torch path =>
+            # bit-identical to what the continuous run's thread produces => post-resume decisions
+            # match the continuous run EXACTLY. Cleared under _verdict_lock when the row lands, or
+            # on worker failure (a failed verdict never produces a row in the continuous run, so
+            # the sidecar must not resurrect it).
+            with _verdict_lock:
+                _cl_pending["rec"] = {
+                    "epoch": int(ep), "seg_form": str(seg_form), "ep_loss": float(ep_loss),
+                    "softmax_temp": float(snap["softmax_temp"]),
+                    "hosc_beta": float(snap["hosc_beta"]),
+                    "ema_np": snap["ema_np"]}
         _verdict_thread["ep"] = ep
 
         def _worker() -> None:
@@ -3364,6 +3437,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "secs": round(time.time() - t0, 1)}), flush=True)
             except Exception as exc:  # an eval failure must NOT kill training (daemon thread).
                 with _verdict_lock:
+                    # (M2 fix) a FAILED verdict produces NO row in the continuous run => drop the
+                    # pending record so a resume does not resurrect a row that never existed
+                    # (continuous == resumed on the failure path too).
+                    _rec = _cl_pending["rec"]
+                    if _cl_on and _rec is not None and int(_rec["epoch"]) == int(ep):
+                        _cl_pending["rec"] = None
                     print(json.dumps({"stage": "verdict_async_failed", "epoch": ep,
                                       "err": f"{type(exc).__name__}: {exc}"}), flush=True)
 
@@ -3379,6 +3458,48 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "note": "waiting for in-flight async verdict before continuing"}), flush=True)
             t.join()
         _verdict_thread["t"] = None
+
+    def _cl_sidecar_snapshot() -> dict[str, Any]:
+        """(M2 fix) Consistent (state, verdicts, pending) view for the resume sidecar, under
+        _verdict_lock so the async worker can never land a row BETWEEN the two reads (which could
+        otherwise lose the row on resume: verdicts snapshotted without it AND pending read after
+        the worker's clear). Locked invariant: pending present IFF its verdict row is absent."""
+        with _verdict_lock:
+            _rec = _cl_pending["rec"]
+            return {**_cl_state, "verdicts": list(_cl_verdicts),
+                    "pending": (dict(_rec) if _rec is not None else None)}
+
+    def _cl_decide(ep: int) -> bool:
+        """(#292 build-3; M2 decide-on-previous reorder) ONE closed-loop decision at an eval point:
+        classify the captured verdict rows (same math as tools/witness_control_monitor — sustained
+        erosion vs recoverable transient), take the BOUNDED action via _cl_step, emit the
+        closed_loop telemetry row. Returns True when the early-stop is armed. ASYNC mode calls this
+        AFTER joining the PREVIOUS eval's verdict and BEFORE scheduling this epoch's — the row set
+        deterministically ends at the previous eval (1-eval lag = eval_every epochs ≪ the ~100-ep
+        erosion timescale) and the GPU never waits the full verdict wall. SYNC mode calls it after
+        the inline verdict (current-epoch row; unchanged semantics — sync has no wall problem).
+        No rows captured yet => no action => False. Never joins/schedules a verdict itself."""
+        if not _cl_verdicts:
+            return False
+        _clc = _cl_classify(
+            _cl_verdicts,
+            min_sustained_windows=int(args.closed_loop_min_sustained_windows))
+        _cla = _cl_step(
+            _clc["classification"], _cl_state, ep,
+            bump=float(args.closed_loop_eikonal_bump),
+            max_bumps=int(args.closed_loop_max_bumps),
+            stop_after=int(args.closed_loop_stop_after_windows))
+        print(json.dumps({
+            "stage": "closed_loop", "epoch": ep,
+            "classification": _clc["classification"],
+            "d_seg_slope": _clc["d_seg_slope"],
+            "net_stage_slope": _clc["net_stage_slope"],
+            "n_stage": _clc["n_stage"],
+            "eikonal_bump": round(float(_cl_state["bump_add"]), 6),
+            "bumps_used": int(_cl_state["bumps"]),
+            "action": (_cla["action"] if _cla is not None else "none"),
+            **({k: v for k, v in (_cla or {}).items() if k != "action"})}), flush=True)
+        return _cl_state["stop_epoch"] is not None
 
     # per-pair MLX coord-feats cache: shared curvelet tensor when no self-orient; rebuilt on each
     # reorient when self-orient is on (so the train forward uses the SAME per-pair feats the
@@ -3486,9 +3607,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # mirroring recent_losses). OFF => None => ZERO new sidecar keys => byte-identical (#205-safe).
             evt_curriculum_state=(_evt_state if _evt_on else None),
             # (#292 build-3) persist the closed-loop controller state ONLY when the feature is ON
-            # (closure vars _cl_on/_cl_state/_cl_verdicts, assigned before any _do_checkpoint call,
-            # mirroring _evt_state). OFF => None => ZERO new sidecar keys => byte-identical (#205-safe).
-            closed_loop_state=({**_cl_state, "verdicts": list(_cl_verdicts)} if _cl_on else None))
+            # (closure vars _cl_on/_cl_state/_cl_verdicts/_cl_pending, assigned before any
+            # _do_checkpoint call, mirroring _evt_state). OFF => None => ZERO new sidecar keys =>
+            # byte-identical (#205-safe). (M2 fix) the snapshot is taken under _verdict_lock and
+            # includes the PENDING-VERDICT record when one is in flight (bit-faithful resume).
+            closed_loop_state=(_cl_sidecar_snapshot() if _cl_on else None))
         # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
@@ -3789,6 +3912,37 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "post_budget_windows": _cl_state["post_budget_windows"],
                               "stop_epoch": _cl_state["stop_epoch"],
                               "restored_verdicts": len(_cl_verdicts)}), flush=True)
+        # (M2 fix) PENDING-VERDICT reconcile: the sidecar was written while an async verdict was in
+        # flight => its row is ABSENT from the restored verdicts but its EXACT inputs (the
+        # point-in-time snapshot the worker was scoring) were persisted. Recompute it SYNCHRONOUSLY
+        # through the SAME _verdict_from_snapshot chunked-CPU-torch path => the row is bit-identical
+        # to what the continuous run's thread produced => every post-resume decision consumes the
+        # SAME row set the continuous run's decisions do (decide-on-previous bit-faithful resume).
+        # One-time resume cost ~= one verdict wall. The pending epoch is strictly greater than every
+        # restored row's (it was the LAST scheduled) => appending keeps epoch order. SELF-ORIENT
+        # caveat (pre-existing resume contract, NOT introduced here): snap["dir"] is rebuilt from
+        # the RESTORED shadow (resume_reorient above) exactly like the training forward itself on
+        # any self-orient resume — the reconcile inherits that same fidelity envelope. Shapes are
+        # restored against the live shadow's (a size-1 sidecar array flattens through .item()).
+        # Fail-loud on any mismatch (a corrupted resume must raise, per NO-FAKE).
+        _pend = _cl_pending_from_cfg(resume_cfg)
+        if _pend is not None and all(int(v["epoch"]) != int(_pend["epoch"]) for v in _cl_verdicts):
+            _pshadow = {k: np.asarray(v, np.float32).reshape(np.asarray(ema.shadow[k]).shape)
+                        for k, v in _pend["ema_np"].items()}
+            _pv = _verdict_from_snapshot({
+                "ema_np": _pshadow,
+                "softmax_temp": float(_pend["softmax_temp"]),
+                "hosc_beta": float(_pend["hosc_beta"]),
+                "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs}
+                        if use_self_orient else None)})
+            _cl_verdicts.append({"epoch": int(_pend["epoch"]), "seg_form": str(_pend["seg_form"]),
+                                 "d_seg": float(_pv["d_seg"]), "ep_loss": float(_pend["ep_loss"])})
+            print(json.dumps({"stage": "resume_pending_verdict", "epoch": int(_pend["epoch"]),
+                              "seg_form": str(_pend["seg_form"]),
+                              "d_seg": round(float(_pv["d_seg"]), 6),
+                              "d_pose": round(float(_pv["d_pose"]), 6),
+                              "note": "in-flight-at-checkpoint verdict recomputed from the persisted "
+                              "snapshot (M2 decide-on-previous bit-faithful resume)"}), flush=True)
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
     # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0). Under
@@ -4311,12 +4465,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       flush=True)
             if _prof is not None:
                 _prof["_v0"] = time.perf_counter()  # #252 profile: verdict start
+            # (#292 build-3) closed-loop early-stop flag, re-armed each epoch by the decision
+            # point below. OFF (default; the #205 path) => stays False => never fires.
+            _cl_stop_now = False
             if ep % args.eval_every == 0 or ep == args.epochs:
                 if args.async_verdict:
                     # FEED-em: offload the observational verdict to a background thread so the
                     # GPU loop never idles. BIT-IDENTICAL training (verdict is never read back).
-                    # At the FINAL epoch, JOIN first so the last verdict row is not skip-throttled.
-                    if ep == args.epochs:
+                    if _cl_on:
+                        # ── (M2 fix) DECIDE-ON-PREVIOUS-VERDICT reorder (closed-loop + async) ──
+                        # The pre-fix order (schedule THIS epoch's verdict, then JOIN it at the
+                        # decision point) blocked the GPU for the FULL verdict wall at every eval
+                        # (measured 2062-2439s ~= the 25-epoch train wall => ~2x total run wall,
+                        # ~22h -> ~44h). Airtight reorder:
+                        #   1. JOIN the PREVIOUS eval's verdict FIRST — it has had a full eval
+                        #      window to run => wait ~= max(0, verdict_wall - window_wall) ~= 0.
+                        #      After the join NOTHING is in flight and _cl_verdicts holds ALL rows
+                        #      for evals < ep, deterministically.
+                        #   2. DECIDE on those rows (decide-on-previous; a pure function of the
+                        #      seeded trajectory — the verdict EPOCH SET is fixed because
+                        #      join-before-schedule means the skip-throttle can never fire when ON).
+                        #   3. THEN schedule THIS epoch's verdict — it is NEVER joined in this
+                        #      iteration, so the GPU never blocks on it. It is scheduled even when
+                        #      the early-stop just armed: the post-loop _join_async_verdict() lands
+                        #      the final row (valuable telemetry) before the final checkpoint +
+                        #      result.json. Any sidecar written below while it is in flight carries
+                        #      the PENDING-VERDICT record (bit-faithful resume; see
+                        #      _schedule_async_verdict + the resume reconcile).
+                        _join_async_verdict()
+                        _cl_stop_now = _cl_decide(ep)
+                    elif ep == args.epochs:
+                        # closed-loop OFF async path — the ORIGINAL FEED-em order, unchanged:
+                        # at the FINAL epoch, JOIN first so the last row is not skip-throttled.
                         _join_async_verdict()
                     _schedule_async_verdict(ep, seg_form, ep_loss)
                 else:
@@ -4343,43 +4523,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         float(model.softmax_temp), float(model.hosc_beta))
             if _prof is not None:
                 _prof["verdict_s"] += time.perf_counter() - _prof["_v0"]  # #252 profile: verdict wall-clock
-            # ── (#292 build-3) CLOSED-LOOP LEVER CONTROL decision point (eval cadence; ON only) ──
-            # Placed IMMEDIATELY after the verdict block and BEFORE the checkpoint blocks so the
-            # resume sidecar written this epoch carries the POST-decision state + THIS epoch's
-            # verdict row => an ON-run --resume-from reproduces the continuous decisions exactly.
-            # DETERMINISM: JOIN the in-flight async verdict FIRST so the decision consumes the
-            # deterministic d_seg VALUE for THIS epoch — never wall-clock/thread timing. Joining at
-            # every decision also means no verdict is ever in-flight at the next schedule call, so
-            # the skip-throttle never fires => the verdict EPOCH SET itself is deterministic when ON.
-            # Then classify the within-stage trend (same math as tools/witness_control_monitor —
-            # sustained erosion vs recoverable transient) and take the BOUNDED action via _cl_step.
-            # CONTAINMENT: only mutates the in-run eikonal bump + arms a clean early-stop; the best
-            # EMA-shadow ckpt is already preserved continuously by _maybe_preserve_best. OFF
-            # (default; the #205 path) => _cl_stop_now stays False and NOTHING below runs.
-            _cl_stop_now = False
-            if _cl_on and (ep % args.eval_every == 0 or ep == args.epochs):
-                if args.async_verdict:
-                    _join_async_verdict()
-                if _cl_verdicts:
-                    _clc = _cl_classify(
-                        _cl_verdicts,
-                        min_sustained_windows=int(args.closed_loop_min_sustained_windows))
-                    _cla = _cl_step(
-                        _clc["classification"], _cl_state, ep,
-                        bump=float(args.closed_loop_eikonal_bump),
-                        max_bumps=int(args.closed_loop_max_bumps),
-                        stop_after=int(args.closed_loop_stop_after_windows))
-                    print(json.dumps({
-                        "stage": "closed_loop", "epoch": ep,
-                        "classification": _clc["classification"],
-                        "d_seg_slope": _clc["d_seg_slope"],
-                        "net_stage_slope": _clc["net_stage_slope"],
-                        "n_stage": _clc["n_stage"],
-                        "eikonal_bump": round(float(_cl_state["bump_add"]), 6),
-                        "bumps_used": int(_cl_state["bumps"]),
-                        "action": (_cla["action"] if _cla is not None else "none"),
-                        **({k: v for k, v in (_cla or {}).items() if k != "action"})}), flush=True)
-                    _cl_stop_now = _cl_state["stop_epoch"] is not None
+            # ── (#292 build-3) CLOSED-LOOP decision point — SYNC-verdict path ONLY (M2 fix) ──
+            # The async+ON path decided ABOVE (decide-on-previous: join the PREVIOUS eval's verdict,
+            # decide, THEN schedule — no join of the just-scheduled verdict anywhere, so the GPU
+            # never waits the full verdict wall). The SYNC path has no wall problem (the verdict was
+            # computed inline this epoch) and keeps the original current-epoch-row semantics
+            # unchanged. Placed BEFORE the checkpoint blocks so the resume sidecar written this
+            # epoch carries the POST-decision state (+ THIS epoch's row on the sync path; the async
+            # path's in-flight row rides the PENDING-VERDICT record instead). CONTAINMENT: only
+            # mutates the in-run eikonal bump + arms a clean early-stop; the best EMA-shadow ckpt
+            # is preserved continuously by _maybe_preserve_best. OFF (default; the #205 path) =>
+            # _cl_stop_now stays False and NOTHING here runs.
+            if _cl_on and not args.async_verdict and (ep % args.eval_every == 0 or ep == args.epochs):
+                _cl_stop_now = _cl_decide(ep)
             # DM1 telemetry (decisive-smoke signals; design memo §6 firewall). At eval cadence, log
             # PR(M) (per-pair FiLM modulation participation ratio), PR(cov(code)) and the Stiefel
             # residual ‖WᵀW−I‖_F so the A/B can SEPARATE "means fixed" (PR held >~3.0) from "end moved"
