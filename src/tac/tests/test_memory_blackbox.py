@@ -34,18 +34,31 @@ def _job(label="probe", pid=1234):
 
 
 # ── sample shape ────────────────────────────────────────────────────────────────────────────────
-def test_sample_once_has_all_trust_and_ceiling_fields():
+def test_sample_once_has_all_trust_and_ceiling_fields(monkeypatch):
+    monkeypatch.delenv(gov.SAFETY_FLOOR_ENV, raising=False)  # hermetic vs a leaked floor override
     s = mbb.sample_once(jobs=[_job()], snapshot=_snap())
     for k in ("ts", "ts_iso", "mono", "boottime", "total_gib", "used_gib", "available_gib",
               "pressure", "pressure_level", "adaptive_ceiling_gib", "training_budget_gib",
               "baseline_gib", "system_used_headroom_gib", "tracked_sum_gib", "tracked",
-              "closure_ok", "cross_validated", "fail_safe", "load1"):
+              "closure_ok", "cross_validated", "fail_safe", "load1",
+              "safety_floor", "tracked_units"):
         assert k in s, f"missing sample field {k}"
     assert s["tracked_sum_gib"] == 20.0
     assert s["tracked"][0]["label"] == "probe"
-    # ceiling: baseline = used(28) - tracked(20) = 8; margin 10.24; ceiling 117.76; budget 109.76
+    assert s["tracked_units"] == "true_gib"   # GB-F1: tracked rows are TRUE GiB post units-at-read
+    # BUILD #298 derived floor: baseline = used(28) - tracked(20) = 8 = measured cp;
+    # floor = max(2, 8 + 6.4, 10.24) = 14.4; ceiling = 128 - 14.4 = 113.6; budget = 105.6.
     assert abs(s["baseline_gib"] - 8.0) < 1e-6
-    assert abs(s["adaptive_ceiling_gib"] - 117.76) < 1e-6
+    assert abs(s["adaptive_ceiling_gib"] - 113.6) < 1e-6
+    assert abs(s["training_budget_gib"] - 105.6) < 1e-6
+    # full per-tick decomposition recorded (max observability): which leg won + all leg values
+    sf = s["safety_floor"]
+    assert sf["winning_leg"] == "measured_cp"
+    assert abs(sf["floor_gib"] - 14.4) < 1e-6
+    assert abs(sf["measured_cp_rss_gib"] - 8.0) < 1e-6
+    assert abs(sf["static_leg_gib"] - 10.24) < 1e-6
+    assert abs(sf["cp_headroom_gib"] - 6.4) < 1e-6
+    assert sf["smoothed"] is False and abs(sf["applied_floor_gib"] - 14.4) < 1e-6
 
 
 # ── append + rotation ─────────────────────────────────────────────────────────────────────────

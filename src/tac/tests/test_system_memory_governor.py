@@ -17,7 +17,16 @@ _REPO = Path(__file__).resolve().parents[3]
 if str(_REPO / "tools") not in sys.path:
     sys.path.insert(0, str(_REPO / "tools"))
 
+import pytest  # noqa: E402
 import system_memory_governor as gov  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _no_floor_env(monkeypatch):
+    """Keep every test hermetic vs a leaked TAC_GOV_SAFETY_FLOOR_GIB (the derived-floor default
+    path consults the env override; BUILD #298)."""
+    monkeypatch.delenv(gov.SAFETY_FLOOR_ENV, raising=False)
+
 
 # EXACT captured live counters (2026-07-02; page size 16384, hw.memsize 137438953472 = 128.0 GiB).
 _SNAP = dict(
@@ -101,17 +110,50 @@ def test_reconcile_psutil_more_generous_is_not_a_failure():
     assert a.cross_validated and not a.fail_safe
 
 
-# ── adaptive ceiling ──────────────────────────────────────────────────────────────────────────
-def test_safety_margin_floor_and_frac():
-    assert gov.compute_safety_margin_gib(128.0) == 128.0 * 0.08   # 10.24 (frac wins)
-    assert gov.compute_safety_margin_gib(64.0) == 8.0             # floor wins (64*0.08=5.12 < 8)
+# ── adaptive ceiling (BUILD #298: the margin is the tier-scaled DERIVED floor) ──────────────────
+def test_safety_margin_is_tier_scaled_derived():
+    """The hardcoded 8 GiB floor is GONE: with no measured control plane the static 0.08*T leg
+    (>= ABS_MIN 2.0) applies — @128 unchanged vs legacy (10.24); @64 now 5.12 (was 8.0); @8 now
+    2.0 (the old floor equalled the ENTIRE box -> ceiling 0.0, budget -5.99, refuse-everything)."""
+    assert gov.compute_safety_margin_gib(128.0) == 128.0 * 0.08   # 10.24 — backward-compatible
+    assert gov.compute_safety_margin_gib(64.0) == 64.0 * 0.08     # 5.12 (legacy 8.0 hardcode gone)
+    assert gov.compute_safety_margin_gib(8.0) == 2.0              # ABS_MIN (was 8.0 = whole box)
+    # legacy kwargs reproduce the old max(floor, frac*T) — but cap-clamped (never eats the box):
+    assert gov.compute_safety_margin_gib(64.0, floor_gib=8.0, frac=0.08) == 8.0
+    assert gov.compute_safety_margin_gib(8.0, floor_gib=8.0, frac=0.08) == 4.0   # capped 0.5*8
 
 
 def test_adaptive_ceiling_math_maxes_out_128():
-    c = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=24.0, tracked_current_gib=8.0)
+    # Explicit legacy margin: identical arithmetic to pre-#298 (backward-compat surface).
+    c = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=24.0, tracked_current_gib=8.0,
+                                     safety_margin_gib=10.24)
     assert c.baseline_gib == 16.0                    # used - tracked = OS+control-plane
     assert abs(c.adaptive_ceiling_gib - 117.76) < 1e-6  # total - 10.24 margin
     assert abs(c.training_budget_gib - 101.76) < 1e-6   # ceiling - baseline (>> old blind 90 GB cap)
+
+
+def test_adaptive_ceiling_default_is_derived_and_follows_control_plane():
+    """Default path: the floor FOLLOWS the measured control plane (baseline doubles as the
+    dynamical leg's input): cp=16 -> floor 16+6.4=22.4 -> ceiling 105.6, budget 89.6; a realistic
+    live scenario (used 70, tracked 62 true GiB -> cp 8) -> floor 14.4 -> ceiling 113.6."""
+    d = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=24.0, tracked_current_gib=8.0)
+    assert abs(d.safety_margin_gib - 22.4) < 1e-9
+    assert abs(d.adaptive_ceiling_gib - 105.6) < 1e-9
+    assert abs(d.training_budget_gib - 89.6) < 1e-9
+    assert d.floor_decomposition is not None
+    assert d.floor_decomposition["winning_leg"] == "measured_cp"
+    live = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=70.0, tracked_current_gib=62.0)
+    assert abs(live.safety_margin_gib - 14.4) < 1e-9
+    assert abs(live.adaptive_ceiling_gib - 113.6) < 1e-9
+    assert live.safety_margin_gib >= 10.0   # >= the operator-policy 10 GiB on the 128 box, always
+
+
+def test_adaptive_ceiling_derived_floor_at_least_10_on_128_for_any_cp():
+    """Backward-compat invariant (operator memory policy): on a 128 GiB box the derived floor is
+    >= 10 GiB in EVERY scenario (static leg 10.24 is the minimum; the measured leg only raises)."""
+    for cp in (0.0, 1.0, 3.84, 8.0, 16.0, 40.0, 100.0):
+        d = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=cp, tracked_current_gib=0.0)
+        assert d.safety_margin_gib >= 10.0, f"cp={cp} floor={d.safety_margin_gib}"
 
 
 # ── admission (the crash math) ──────────────────────────────────────────────────────────────────
