@@ -355,6 +355,7 @@ def _build_resume_state_arrays(
     live_np: dict[str, np.ndarray], ema_np: dict[str, np.ndarray],
     opt_np: dict[str, np.ndarray] | None, *, args: Any, epoch: int, in_feat: int,
     recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
+    evt_curriculum_state: "dict | None" = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -406,6 +407,20 @@ def _build_resume_state_arrays(
     # across a spike. Empty list => a 0-length array (default-safe; a pre-fix ckpt lacks the key =>
     # the loop's fresh [] is used, i.e. the prior behavior). Per the deterministic-repro non-negotiable.
     out["__recent_losses"] = np.asarray(list(recent_losses or []), np.float64)
+    # (#292 build-2) EVENT-TRIGGERED CURRICULUM controller state: persist the resolved stage boundaries
+    # + within-stage ep_loss history so a --resume-from of an event-triggered run reproduces the SAME
+    # fired transition epochs (deterministic-reproducibility non-negotiable). Default None (event-
+    # triggered OFF, incl. #205) => ZERO new keys written => the sidecar is byte-identical to the pre-
+    # #292-build-2 path. A pre-feature sidecar lacks these keys => the resume loop falls back to the
+    # SAFE cap-resolution (past-cap boundaries -> hardcoded caps) so the stage is never mis-assigned.
+    if evt_curriculum_state is not None:
+        _bt = evt_curriculum_state.get("tau")
+        _bl = evt_curriculum_state.get("l7")
+        out["__evt_boundary_tau"] = np.asarray(-1 if _bt is None else int(_bt))
+        out["__evt_boundary_l7"] = np.asarray(-1 if _bl is None else int(_bl))
+        out["__evt_stage_start"] = np.asarray(int(evt_curriculum_state.get("stage_start", 1)))
+        out["__evt_stage_losses"] = np.asarray(
+            list(evt_curriculum_state.get("losses", []) or []), np.float64)
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
     # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
     _prov = provenance or {}
@@ -973,6 +988,105 @@ def _seg_form_for_epoch(ep: int, args) -> str:
     if ep < args.l7_start_epoch:
         return "tau_softplus"
     return "l7_softplus"
+
+
+def _stage_converged(
+    stage_epochs: "list[int]",
+    stage_losses: "list[float]",
+    *,
+    min_stage_epochs: int,
+    plateau_rel_eps: float,
+    plateau_windows: int,
+) -> bool:
+    """(#292 build-2) DETERMINISTIC convergence test for an event-triggered curriculum transition.
+
+    Returns ``True`` iff BOTH hold:
+      (a) at least ``min_stage_epochs`` COMPLETED epochs have elapsed in the current stage
+          (``len(stage_epochs) >= min_stage_epochs``), AND
+      (b) the synchronous per-epoch training loss has PLATEAUED: the least-squares slope of the last
+          ``plateau_windows`` within-stage ``ep_loss`` values, NORMALIZED by that window's mean (a
+          scale-free RELATIVE slope), has magnitude ``<= plateau_rel_eps``.
+
+    PURE (numpy only; NO MLX, NO async d_seg verdict, NO wall-clock) => identical inputs give the
+    identical bool => the fired transition epoch is a deterministic function of the seeded loss
+    trajectory. A FALLING loss (slope << 0 relative to the level) does NOT plateau => ``False`` (the
+    stage keeps training). Mirrors ``_scheduled_eikonal_weight``'s discipline one layer up: the
+    CONTROLLER, not the schedule, is byte-clean and unit-testable. Cf. #292 build 1 (eikonal
+    STEP-ramp) + the CE->tau transition analysis (CE terminal convergence ~-4.4e-7/ep => a plateau)."""
+    n = len(stage_epochs)
+    if n < max(1, int(min_stage_epochs)):
+        return False
+    w = max(2, int(plateau_windows))
+    if len(stage_losses) < w:
+        return False
+    y = np.asarray(stage_losses[-w:], dtype=np.float64)
+    if not np.all(np.isfinite(y)):
+        return False
+    x = np.arange(w, dtype=np.float64)
+    xm = float(x.mean())
+    ym = float(y.mean())
+    denom = float(((x - xm) ** 2).sum())
+    if denom <= 0.0:
+        return False
+    slope = float(((x - xm) * (y - ym)).sum() / denom)   # ep_loss per epoch (deterministic closed form)
+    mean_mag = abs(ym)
+    if mean_mag <= 0.0:
+        return slope == 0.0                              # degenerate zero-mean window: flat-only
+    return abs(slope / mean_mag) <= float(plateau_rel_eps)
+
+
+def _evt_current_stage_form(state: dict) -> str:
+    """(#292 build-2) The seg_form of the stage the event-triggered controller is CURRENTLY in, read
+    from resolved boundaries WITHOUT firing (no mutation). CE until ``tau`` resolves, then
+    ``tau_softplus`` until ``l7`` resolves, then ``l7_softplus``."""
+    if state.get("tau") is None:
+        return "ce"
+    if state.get("l7") is None:
+        return "tau_softplus"
+    return "l7_softplus"
+
+
+def _evt_resolve_seg_form(ep: int, state: dict, args) -> "tuple[str, dict | None]":
+    """(#292 build-2) Event-triggered effective seg_form at 1-based epoch ``ep`` + boundary resolution.
+
+    Mutates ``state`` IN PLACE: fills ``state['tau']`` / ``state['l7']`` the FIRST epoch the current
+    stage either (i) CONVERGES per ``_stage_converged`` on the within-stage loss history
+    ``state['losses']``, OR (ii) reaches its hardcoded cap (``--tau-softplus-start-epoch`` /
+    ``--l7-start-epoch``) -- whichever is EARLIER. The cap is a HARD CEILING: the trigger NEVER fires
+    LATER than the OFF schedule, so an event-triggered run whose loss never plateaus reproduces the
+    hardcoded ``_seg_form_for_epoch`` schedule EXACTLY. On firing, ``stage_start`` is reset to ``ep``
+    and ``losses`` cleared so the next stage's convergence is judged on its OWN history only.
+
+    Returns ``(seg_form, event)`` where ``event`` is ``None`` (no transition this epoch) or a JSON-
+    ready dict describing the fired transition (deterministic log). PURE w.r.t. ``(ep, state, args)``:
+    NO MLX, NO async verdict, NO wall-clock => same seeded loss trajectory (captured in
+    ``state['losses']``) => same fired epochs. Only reads PAST epochs' losses (the caller appends the
+    current epoch's ``ep_loss`` at the END of the epoch)."""
+    mse = int(getattr(args, "curriculum_min_stage_epochs", 150))
+    reps = float(getattr(args, "curriculum_plateau_rel_eps", 1e-3))
+    win = int(getattr(args, "curriculum_plateau_windows", 4))
+    n = len(state["losses"])
+    stage_epochs = list(range(int(state["stage_start"]), int(state["stage_start"]) + n))
+
+    def _fire(boundary_key: str, cap: int, from_form: str, to_form: str):
+        converged = _stage_converged(
+            stage_epochs, state["losses"],
+            min_stage_epochs=mse, plateau_rel_eps=reps, plateau_windows=win)
+        hit_cap = (int(cap) > 0 and ep >= int(cap))
+        if not (converged or hit_cap):
+            return from_form, None
+        state[boundary_key] = int(ep)
+        state["stage_start"] = int(ep)
+        state["losses"] = []
+        return to_form, {
+            "stage": "curriculum_transition_fired", "from": from_form, "to": to_form,
+            "epoch": int(ep), "trigger": ("loss_plateau" if converged else "cap")}
+
+    if state.get("tau") is None:
+        return _fire("tau", int(args.tau_softplus_start_epoch), "ce", "tau_softplus")
+    if state.get("l7") is None:
+        return _fire("l7", int(args.l7_start_epoch), "tau_softplus", "l7_softplus")
+    return "l7_softplus", None
 
 
 def _scheduled_eikonal_weight(ep: int, args) -> float:
@@ -3166,7 +3280,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         resume_arrays = _build_resume_state_arrays(
             live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat,
             # #205: persist the spike-guard window (bit-faithful step-skip on resume) + git provenance.
-            recent_losses=recent_losses, provenance=_run_provenance)
+            recent_losses=recent_losses, provenance=_run_provenance,
+            # (#292 build-2) persist the event-triggered curriculum controller state ONLY when the
+            # feature is ON (closure vars _evt_on/_evt_state, assigned before any _do_checkpoint call,
+            # mirroring recent_losses). OFF => None => ZERO new sidecar keys => byte-identical (#205-safe).
+            evt_curriculum_state=(_evt_state if _evt_on else None))
         # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
@@ -3413,10 +3531,52 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
               flush=True)
     last_ep = start_epoch - 1
     stage_ckpts: list[dict[str, Any]] = []
+    # (#292 build-2) EVENT-TRIGGERED CURRICULUM controller state. _evt_on gates the ENTIRE feature:
+    # OFF (default; requires --curriculum too) => the loop calls _seg_form_for_epoch(ep, args) UNCHANGED
+    # => BYTE-IDENTICAL to the hardcoded schedule (the #205-safe path; #205 runs event-triggered OFF).
+    # The state dict tracks the two resolved transition epochs (None until fired) + the current stage's
+    # start epoch + its within-stage ep_loss history (consumed by _evt_resolve_seg_form). Deterministic
+    # in the seeded loss trajectory; NOT the async d_seg verdict.
+    _evt_on = bool(getattr(args, "curriculum_event_triggered", False)) and bool(args.curriculum)
+    _evt_state = {"tau": None, "l7": None, "stage_start": int(start_epoch), "losses": []}
+    if _evt_on:
+        _rc = resume_cfg if resume_cfg is not None else {}
+        if "__evt_boundary_tau" in _rc:
+            # bit-faithful restore: the persisted controller state reproduces the SAME fired epochs.
+            _bt = int(_rc["__evt_boundary_tau"])
+            _bl = int(_rc["__evt_boundary_l7"])
+            _evt_state["tau"] = None if _bt < 0 else _bt
+            _evt_state["l7"] = None if _bl < 0 else _bl
+            _evt_state["stage_start"] = int(_rc.get("__evt_stage_start", start_epoch))
+            _sl = _rc.get("__evt_stage_losses", [])
+            _evt_state["losses"] = [float(x) for x in (_sl if isinstance(_sl, list) else [_sl])]
+            print(json.dumps({"stage": "resume_event_curriculum", "restored_tau": _evt_state["tau"],
+                              "restored_l7": _evt_state["l7"], "stage_start": _evt_state["stage_start"],
+                              "within_stage_losses": len(_evt_state["losses"])}), flush=True)
+        elif start_epoch > 1:
+            # SAFE cap-fallback: resuming an event-triggered run whose sidecar predates this feature
+            # (or an OFF->ON switch) -- the truncated history cannot re-derive the true fired epochs, so
+            # resolve any boundary ALREADY PAST its hardcoded cap to that cap (== the OFF stage at the
+            # resume point) and detect convergence fresh from here for any not-yet-passed boundary. This
+            # guarantees the CORRECT stage assignment on resume (never a mis-stage); it only forfeits the
+            # "fire early" benefit for the pre-resume portion. Honest + deterministic going forward.
+            _tc = int(args.tau_softplus_start_epoch)
+            _lc = int(args.l7_start_epoch)
+            if start_epoch > _tc:
+                _evt_state["tau"] = _tc
+            if start_epoch > _lc:
+                _evt_state["l7"] = _lc
+            _evt_state["stage_start"] = int(start_epoch)
+            print(json.dumps({"stage": "resume_event_curriculum_cap_fallback",
+                              "tau": _evt_state["tau"], "l7": _evt_state["l7"],
+                              "note": "no persisted event state; past-cap boundaries pinned to hardcoded caps"}),
+                  flush=True)
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
-    # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0).
-    prev_seg_form = _seg_form_for_epoch(start_epoch, args)
+    # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0). Under
+    # event-triggering, read the current stage from the (possibly restored) controller state instead.
+    prev_seg_form = (_evt_current_stage_form(_evt_state) if _evt_on
+                     else _seg_form_for_epoch(start_epoch, args))
     # MUON FINISHER (FEED-fi) per-stage optimizer switch state. muon_start_epoch None (default) =>
     # muon_switched stays False forever => the switch block + tag suffix never fire => BIT-IDENTICAL
     # to the pre-FEED-fi AdamW-throughout path. Effective LRs default to 0.1*lr (PR95 ~0.1x finetune).
@@ -3471,7 +3631,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     mx.reset_peak_memory()  # per-epoch high-water so mem_probe peak is this-epoch scoped
                 except Exception:
                     pass
-            seg_form = _seg_form_for_epoch(ep, args)
+            # (#292 build-2) EVENT-TRIGGERED CURRICULUM: when ON, the stage form + boundary resolution
+            # come from the deterministic loss-plateau controller (caps = the hardcoded epochs). When OFF
+            # (default), this is the ORIGINAL hardcoded call, UNCHANGED => byte-identical (the #205 path).
+            if _evt_on:
+                seg_form, _evt_event = _evt_resolve_seg_form(ep, _evt_state, args)
+                if _evt_event is not None:
+                    print(json.dumps(_evt_event), flush=True)
+            else:
+                seg_form = _seg_form_for_epoch(ep, args)
+                _evt_event = None
             eik_w_ep = _scheduled_eikonal_weight(ep, args)   # (#292) eikonal STEP-ramp; base if --eikonal-weight-end unset (BYTE-IDENTICAL)
             # BUILD 1 (FEED-fw): detect an AdamW->AdamW stage boundary at THIS epoch BEFORE the
             # existing transition blocks mutate prev_seg_form / lane_gate / msal_gate. Consumed below
@@ -3978,9 +4147,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
             # stage-encoded, byte-close-loadable ckpt (per-stage A/B of which stage moves d_seg).
             # INTRA-STAGE: every --ckpt-every epochs save the rolling latest (crash-resume window).
-            is_transition = (
-                args.stage_checkpoints and ep < args.epochs
-                and _seg_form_for_epoch(ep + 1, args) != seg_form)
+            if _evt_on:
+                # (#292 build-2) event-triggered: the OFF lookahead _seg_form_for_epoch(ep+1) is invalid
+                # (the next transition depends on FUTURE losses not yet known), so save the PRESERVED
+                # stage-transition ckpt at the epoch the transition ACTUALLY fired (this epoch, the first
+                # of the new stage). _evt_event is set at the START of this epoch by _evt_resolve_seg_form.
+                is_transition = bool(args.stage_checkpoints and _evt_event is not None)
+            else:
+                is_transition = (
+                    args.stage_checkpoints and ep < args.epochs
+                    and _seg_form_for_epoch(ep + 1, args) != seg_form)
             do_periodic = args.ckpt_every > 0 and ep % args.ckpt_every == 0
             if is_transition:
                 # FEED-fi: tag the preserved ckpt with the optimizer phase too, so a curriculum
@@ -4020,6 +4196,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl "
                     "1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED"}),
                     flush=True)
+            if _evt_on:
+                # (#292 build-2) record THIS epoch's synchronous training loss into the current stage's
+                # history, consumed by _evt_resolve_seg_form at the START of the NEXT epoch (so the
+                # controller only ever reads PAST epochs -> no lookahead). ep_loss is the seeded per-epoch
+                # loss sum (NOT the async d_seg verdict) => the fired epochs stay deterministic. OFF =>
+                # this block is skipped entirely => byte-identical.
+                _evt_state["losses"].append(float(ep_loss))
             last_ep = ep
 
     # FEED-em: JOIN any in-flight async verdict so the final verdict row + history land BEFORE
@@ -4030,7 +4213,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # FINAL checkpoint (replaces the historical loop-end-only save, which is now FORBIDDEN). Always
     # writes the rolling latest + a PRESERVED final stage-encoded ckpt -> the run is byte-closeable
     # and resumable from disk at completion. Saves the EMA SHADOW (deploy), NOT live (EMA rule).
-    final_form = _seg_form_for_epoch(last_ep, args) if last_ep >= 1 else args.seg_loss
+    # (#292 build-2) event-triggered: the final stage form is the controller's CURRENT stage (the OFF
+    # _seg_form_for_epoch(last_ep) would use the hardcoded caps, not the actually-fired boundaries).
+    final_form = (
+        _evt_current_stage_form(_evt_state) if (_evt_on and last_ep >= 1)
+        else (_seg_form_for_epoch(last_ep, args) if last_ep >= 1 else args.seg_loss))
     # FEED-fi: the FINAL ckpt is the Muon-finished decoder when the finisher ran -> tag it "_muon"
     # so it is distinctly byte-closeable (suffix "" when off => identical to the pre-FEED-fi path).
     _final_tag = (_stage_tag(final_form) + ("_muon" if muon_switched else "")) if args.stage_checkpoints else None
@@ -4352,6 +4539,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--curriculum", action=argparse.BooleanOptionalAction, default=False)
     ap.add_argument("--tau-softplus-start-epoch", type=int, default=300)
     ap.add_argument("--l7-start-epoch", type=int, default=800)
+    # (#292 build-2) EVENT-TRIGGERED CURRICULUM: fire the CE->tau_softplus->l7_softplus transitions on
+    # loss-plateau CONVERGENCE (deterministic, from the SYNCHRONOUS ep_loss -- never the async d_seg
+    # verdict) instead of the hardcoded epochs above, which then act as HARD CAPS (the trigger only
+    # fires EARLIER, never later). DEFAULT OFF => _seg_form_for_epoch is called unchanged => BYTE-
+    # IDENTICAL to the hardcoded schedule (the #205-safe path). Operator 2026-07-04 "epochs should not
+    # be hardcoded but dynamical according to convergence trajectory".
+    ap.add_argument("--curriculum-event-triggered", action=argparse.BooleanOptionalAction, default=False,
+                    help="#292: fire curriculum stage transitions on ep_loss-plateau convergence (caps = "
+                    "--tau-softplus-start-epoch / --l7-start-epoch). Default OFF => byte-identical hardcoded.")
+    ap.add_argument("--curriculum-min-stage-epochs", type=int, default=150,
+                    help="#292: min COMPLETED epochs in a stage before an event-triggered transition may fire.")
+    ap.add_argument("--curriculum-plateau-rel-eps", type=float, default=1e-3,
+                    help="#292: |relative least-squares slope| threshold (slope/mean over the window) for plateau.")
+    ap.add_argument("--curriculum-plateau-windows", type=int, default=4,
+                    help="#292: number of trailing within-stage ep_loss values in the plateau slope window.")
     ap.add_argument("--tau-softplus-tau", type=float, default=0.3)
     ap.add_argument("--l7-mult", type=float, default=4.0)
     ap.add_argument("--l7-threshold", type=float, default=1.0)
