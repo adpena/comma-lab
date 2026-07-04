@@ -1916,6 +1916,37 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _subpix_t_prov: Any = None     # list[mx.array (1,H,W)] f32, GT t in [0,1] where active, -1.0 sentinel
     _subpix_dir_prov: Any = None   # list[mx.array (1,H,W)] f32 in {0,1}, dominant-straddle dir (0=right,1=down)
 
+    # LEVER-4c (ANNULUS-DIRECTED CHROMA-SHARPENING; chroma DOF probe a3e9f0bd GREEN 2026-07-03; operator
+    # 2026-06-25 "Chroma too"; CLAUDE.md "Chroma is a d_seg lever"). Chroma is a PROVEN INDEPENDENT
+    # argmax-boundary d_seg actuator: MEASURED n96 (a3e9f0bd, 100% L*-match to the frozen SegNet) removing
+    # chroma (constant-luma) flips 7.54% Lane->Road + 4.38% Movable->Undrivable, 93.4% of chroma-flips in
+    # the margin<1 ANNULUS (->33.7% at margin<0.25), proven independent of luma (constant-luma DESAT still
+    # flips 3.1% of the annulus; margin-gradient energy 78.8% luma / 21.2% chroma). Chroma is a BOUNDARY
+    # SHARPENER (power at the knife-edge large-signal flips, not bulk), ORTHOGONAL to the geometry levers
+    # (along-tangent-freq / lane-render-band / sub-pixel-t). The witness UNDER-exploits it: its rendered
+    # chroma converges to a near per-class CONSTANT palette (the seg CE only rewards argmax; nothing
+    # supervises per-pixel chroma) whose inter-class separation (~2.84 Lane/Road) is SMALLER than the
+    # intra-class chroma std -> it cannot PAINT the per-pixel boundary chroma SegNet keys on. FIX (this
+    # lever): at the fragile annulus supervise the witness's OWN rendered chroma toward the GT chroma
+    # (a realized-through-R chroma-MATCH term) so the per-pixel RGB head (self.out = Linear(hidden,3), which
+    # HAS per-pixel chroma CAPACITY -- the constant palette is a convergence habit, not a structural
+    # ceiling) learns the boundary chroma the constant palette can't. Chroma := rgb - BT.601-luma (the SAME
+    # BT.601 the witness _apply_chroma uses); LUMA-INVARIANT by construction (rgb + c*[1,1,1] leaves chroma
+    # unchanged) => ORTHOGONAL to every luma lever (NOT a full-RGB reconstruction). RIDES the SHARED
+    # rendered frame ``_f1`` (through R) -- NO 2nd render, NO 2nd SegNet forward (``_seg_levers_on`` gated);
+    # ``_signed`` (the margin) and ``_f1`` (the RGB) both come from that ONE shared realized-through-R
+    # render. Pose synergy (NOTED, not built): pose rides the stored-target sidecar (solved) => the
+    # seg-frame's texture chroma is FREE for d_seg (seg (+) pose, orphan #227). chroma_bnd_w=0.0 (DEFAULT)
+    # => the branch is skipped => byte-identical (fully additive). Providers declared None here (closure
+    # binds the cells) so the OFF path never references them; POPULATED after lstar_cache is built
+    # (spike-map / subpix style, inline -- theta-independent + cheap). Fails CLOSED with micro-batch.
+    chroma_bnd_w = float(getattr(args, "seg_chroma_boundary_weight", 0.0))
+    chroma_bnd_start = int(getattr(args, "seg_chroma_boundary_start_epoch", 0))
+    chroma_bnd_band = float(getattr(args, "seg_chroma_boundary_margin_band", 1.0))
+    chroma_bnd_gate = {"on": chroma_bnd_start <= 1}
+    _chroma_gt_prov: Any = None    # list[mx.array (1,H,W,3)] f32, GT BT.601 chroma at (SEG_H,SEG_W)
+    _chroma_w_prov: Any = None     # list[mx.array (1,H,W)] f32 annulus weight (margin<band) in {0,1}
+
     # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty closure constants. code_nuc_w=0.0
     # (DEFAULT) => the branch in total_loss_fn is skipped => L is byte-identical (fully additive).
     code_nuc_w = float(getattr(args, "code_nuclear_weight", 0.0))
@@ -2158,6 +2189,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           (amplify_w > 0.0 and island_weight_mx is not None) or   # #224 island amplify
                           (subpix_w > 0.0 and subpix_gate["on"] and               # LEVER-4b sub-pixel t
                            _subpix_t_prov is not None) or
+                          (chroma_bnd_w > 0.0 and chroma_bnd_gate["on"] and        # LEVER-4c chroma-sharpen
+                           _chroma_gt_prov is not None) or
                           (persist_gate["w"] > 0.0 and bool(persist_classes)))    # #224 persistence loss
         if _seg_levers_on:
             # _render_R composes the FIXED bulk before R in residual mode (else == bare render) so
@@ -2245,6 +2278,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _sq = mx.square(_t_wit - _t_ref) * _active                  # placement error on genuine-V px
             subpix_term = mx.sum(_sq) / (mx.sum(_active) + 1e-6)        # mean over active straddles
             L = L + subpix_w * subpix_term
+        # LEVER-4c (ANNULUS-DIRECTED CHROMA-SHARPENING; chroma DOF probe a3e9f0bd GREEN 2026-07-03).
+        # RIDES the SHARED rendered frame ``_f1`` (through R; the SAME render the SegNet forward /
+        # ``_signed`` come from) -- NO 2nd render, NO 2nd SegNet forward. At the fragile annulus
+        # (precomputed GT margin < band, where MEASURED 93.4% of chroma-flips live) supervise the
+        # witness's OWN rendered chroma toward the GT chroma. Chroma := rgb - BT.601-luma (the SAME
+        # BT.601 the witness _apply_chroma uses) -> LUMA-INVARIANT (adding a constant luma to all 3
+        # channels leaves chroma unchanged) => ORTHOGONAL to every luma lever; this is a per-pixel
+        # chroma-MATCH at the boundary, NOT a full-RGB reconstruction. The GT chroma target + annulus
+        # weight are precomputed theta-independent constants (stop-grad by construction); the witness
+        # chroma is the differentiable loss path that pulls the per-pixel RGB head to paint the boundary
+        # chroma the near-per-class-constant palette can't. Default chroma_bnd_w=0 => skipped =>
+        # byte-identical. BOUNDARY SHARPENER (weakest in bulk; power at the knife-edge flips) -> an A/B
+        # arm, NOT a claim. pointer 0.19110 UNMOVED.
+        if chroma_bnd_w > 0.0 and chroma_bnd_gate["on"] and _chroma_gt_prov is not None:
+            _pi_ch = int(c1) // 2
+            _cgt = _chroma_gt_prov[_pi_ch]                              # (1,H,W,3) GT chroma const
+            _cw = _chroma_w_prov[_pi_ch]                                # (1,H,W) annulus weight const
+            # witness BT.601 luma (differentiable) -> chroma = rgb - luma (broadcast over 3 channels).
+            _lum_w = 0.299 * _f1[..., 0:1] + 0.587 * _f1[..., 1:2] + 0.114 * _f1[..., 2:3]  # (1,H,W,1)
+            _cwit = _f1 - _lum_w                                        # (1,H,W,3) witness chroma
+            _cdiff2 = mx.sum(mx.square(_cwit - _cgt), axis=-1)          # (1,H,W) 3-chan sq chroma error
+            chroma_bnd_term = mx.sum(_cdiff2 * _cw) / (mx.sum(_cw) + 1e-6)  # mean over annulus px
+            L = L + chroma_bnd_w * chroma_bnd_term
         # CONSUMER B (SPEC ONLY, NOT built here -- for the lane-band render integration): the SAME
         # precomputed theta-independent (_subpix_t_prov, _subpix_dir_prov) maps are a decode-time
         # RENDER-PLACEMENT target. The AA-SDF / analytic-lane-band render (--lane-render-band /
@@ -2586,6 +2642,53 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "sub-pixel boundary-placement target t=M_GT[p]/(M_GT[p]+M_GT[q]) on "
                           "genuine-V straddles; supervises the witness realized margin ratio (DIRECTIONAL "
                           "upgrade of LEVER-4 #141); A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+
+    # LEVER-4c (ANNULUS-DIRECTED CHROMA-SHARPENING) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy +
+    # the numpy-portable bilinear ``_resize_map`` -- NO SegNet forward, NO torch autograd), so it is
+    # built INLINE here (spike-map / subpix style), not by a separate tool. Per pair pi: (1) resize the
+    # CAMERA GT frame gt.gt_f1[pi] (874x1164x3, [0,255]) to the SegNet-INPUT (SEG_H,SEG_W)=(384,512) with
+    # the SAME bilinear (align_corners=False) that SegNet.preprocess_input uses (upstream/modules.py:109
+    # F.interpolate mode='bilinear', no normalization) -> the GT frame AS SegNet reads it; (2) chroma :=
+    # rgb - BT.601-luma (the SAME BT.601 the witness _apply_chroma uses) -> the per-pixel GT chroma target
+    # (LUMA-INVARIANT); (3) annulus weight = (GT margin < band) as {0,1} (MEASURED gt_n96: band 1.0 =>
+    # 93.4% of chroma-flips inside it). Stored per pair: chroma_gt (1,H,W,3) f32 + annulus_w (1,H,W) f32.
+    # Providers stay None unless chroma_bnd_w>0 => the OFF path is byte-identical. Fails CLOSED with
+    # micro-batch (the batched twin's LeverConfig does not carry this lever yet). Memory ~ P*H*W*4*4 (3
+    # chroma channels + 1 mask) ~= 1.9 GB at n600 (trivial vs RAM; noted for the launcher preflight).
+    # A/B owed (needs GO); pointer 0.19110 UNMOVED.
+    if chroma_bnd_w > 0.0:
+        if _use_micro_batch:
+            raise ValueError(
+                "--seg-chroma-boundary-weight>0 is not supported with --micro-batch-pairs>1 (the batched "
+                "twin does not consume the chroma-sharpening lever yet); run this arm at "
+                "--micro-batch-pairs 1.")
+        from tac.optimization.frame1_seg_safe_pose_atoms import _resize_map as _chroma_resize_map
+        _ch_H, _ch_W = np.asarray(gt.lstars[0]).shape                  # (384, 512) SegNet output == input
+        _chroma_gt_prov = []
+        _chroma_w_prov = []
+        _ch_n_active = 0
+        for pi in range(P):
+            _cam = np.asarray(gt.gt_f1[pi], np.float32)                # (874,1164,3) camera GT [0,255]
+            # per-channel bilinear resize (align_corners=False) to SegNet-input res == what SegNet reads.
+            _rs = np.stack([_chroma_resize_map(_cam[:, :, ch], _ch_H, _ch_W)
+                            for ch in range(3)], axis=-1).astype(np.float32)   # (384,512,3)
+            _lum = 0.299 * _rs[:, :, 0] + 0.587 * _rs[:, :, 1] + 0.114 * _rs[:, :, 2]  # (384,512) BT.601
+            _chr = _rs - _lum[:, :, None]                              # (384,512,3) GT chroma (luma-inv)
+            _mg = np.asarray(gt.margins[pi], np.float32)               # (384,512) GT top1-top2 margin
+            _ann = (_mg < chroma_bnd_band).astype(np.float32)          # (384,512) fragile-annulus mask
+            _ch_n_active += int(_ann.sum())
+            _chroma_gt_prov.append(mx.array(_chr[None].astype(np.float32)))    # (1,H,W,3)
+            _chroma_w_prov.append(mx.array(_ann[None]))                        # (1,H,W)
+        print(json.dumps({"stage": "seg_chroma_boundary", "active": True, "n_pairs": int(P),
+                          "weight": chroma_bnd_w, "margin_band": chroma_bnd_band,
+                          "start_epoch": int(chroma_bnd_start),
+                          "annulus_px_total": int(_ch_n_active),
+                          "annulus_px_per_frame": round(_ch_n_active / max(P, 1), 1),
+                          "annulus_frac": round(_ch_n_active / max(P * _ch_H * _ch_W, 1), 4),
+                          "note": "GT chroma-match at the fragile annulus (margin<band); chroma=rgb-"
+                          "BT.601-luma (luma-invariant) on the SHARED realized _f1; boundary-SHARPENER "
+                          "orthogonal to the geometry levers; A/B owed (needs GO); pointer 0.19110 "
+                          "UNMOVED"}), flush=True)
 
     # (--cache-gt-skeleton, #260 SPEED) BUILD the per-pair GT soft-skeleton cache ONCE (each sg is
     # mx.eval'd to a concrete constant, detached from any lazy graph, OUTSIDE any value_and_grad
@@ -3355,6 +3458,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # LEVER-4b sub-pixel boundary engagement is ALSO an AdamW->AdamW treatment boundary (mirrors
             # _bnd_lane/_bnd_msal). Default subpix_w=0.0 => never fires => bit-identical.
             _bnd_subpix = (subpix_w > 0.0 and (ep >= subpix_start) and not subpix_gate["on"])
+            # LEVER-4c chroma-sharpening engagement is ALSO an AdamW->AdamW treatment boundary (mirrors
+            # _bnd_subpix). Default chroma_bnd_w=0.0 => never fires => bit-identical.
+            _bnd_chroma = (chroma_bnd_w > 0.0 and (ep >= chroma_bnd_start) and not chroma_bnd_gate["on"])
             # (F3 fix) #224 analytic-lane render-band engagement is ALSO an AdamW->AdamW treatment
             # boundary (the band's render-target CHANGES at --lane-band-start-epoch): its sibling levers
             # (lane/margin/thin) already OR into _stage_boundary_now, but the band did NOT, so the
@@ -3364,7 +3470,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # => never fires => bit-identical.
             _bnd_band = (_band_active and (ep >= _band_start) and not band_gate["on"])
             _stage_boundary_now = (_bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
-                                   or _bnd_band or _bnd_subpix)
+                                   or _bnd_band or _bnd_subpix or _bnd_chroma)
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -3480,6 +3586,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if subpix_gate["on"] and not _subpix_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # LEVER-4c chroma-sharpening engagement gate + transition RE-TREAT (same discipline as LEVER-4b).
+            if chroma_bnd_w > 0.0:
+                _chroma_was = chroma_bnd_gate["on"]
+                chroma_bnd_gate["on"] = lever_gate_on_at_epoch(chroma_bnd_w, chroma_bnd_start, ep)
+                if chroma_bnd_gate["on"] and not _chroma_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "seg_chroma_boundary_engage", "epoch": ep, "start": chroma_bnd_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # LEVER-B thin-lane engagement gate + transition RE-TREAT (review R3-M1: the gate was
             # initialized at :lane_thin_gate but NEVER flipped, so --lane-thin-start-epoch > 1 left the
@@ -4380,6 +4494,28 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-4b OPTIMAL-FORM: engage only at ep>=this (0=from ep1). Gate to the "
                     "tau_softplus/l7 margin stage (placement is meaningful once the argmax is roughly "
                     "correct); the engage epoch re-treats the spike-guard (same discipline as LEVER-4).")
+    # LEVER-4c ANNULUS-DIRECTED CHROMA-SHARPENING (chroma DOF probe a3e9f0bd GREEN 2026-07-03; operator
+    # 2026-06-25 "Chroma too"; ADDITIVE, DEFAULT-OFF). At the fragile margin annulus supervise the
+    # witness's OWN rendered chroma (rgb - BT.601-luma, LUMA-INVARIANT) toward the GT chroma so the
+    # per-pixel RGB head paints the boundary chroma the near-per-class-constant palette can't. Reuses the
+    # SHARED realized-through-R rendered frame _f1 (no 2nd render/SegNet). chroma_bnd_w=0 => byte-identical.
+    ap.add_argument("--seg-chroma-boundary-weight", type=float, default=0.0,
+                    help="LEVER-4c: weight on the additive chroma-MATCH loss ||chroma(_f1)-chroma(GT)||^2 "
+                    "over the fragile margin annulus (0=off). chroma := rgb - BT.601-luma (LUMA-INVARIANT, "
+                    "so ORTHOGONAL to every luma lever; NOT a full-RGB reconstruction). GT chroma target is "
+                    "the camera GT bilinear-resized to SegNet-input res (what SegNet reads). Reuses the "
+                    "SHARED realized-through-R render _f1. Chroma is a PROVEN independent d_seg BOUNDARY "
+                    "SHARPENER (probe a3e9f0bd: 93.4%% of chroma-flips in the margin<1 annulus). NOT "
+                    "supported with --micro-batch-pairs>1 (fails closed).")
+    ap.add_argument("--seg-chroma-boundary-margin-band", type=float, default=1.0,
+                    help="LEVER-4c: fragile-annulus band. A pixel is supervised only where the GT top1-top2 "
+                    "margin is < this (chroma's d_seg power is at the knife-edge). MEASURED gt_n96: band 1.0 "
+                    "captures 93.4%% of chroma-flips (->33.7%% at 0.25).")
+    ap.add_argument("--seg-chroma-boundary-start-epoch", type=int, default=0,
+                    help="LEVER-4c OPTIMAL-FORM: engage only at ep>=this (0=from ep1). Gate to the "
+                    "tau_softplus/l7 margin stage (chroma-boundary supervision is meaningful once the "
+                    "argmax is roughly seated); the engage epoch re-treats the spike-guard (same "
+                    "discipline as LEVER-4b).")
     # SPIKE-AWARE seg REWEIGHT (source-split MEASURED n600 2026-07-03; ADDITIVE, DEFAULT-OFF). Reweight
     # the per-pixel base seg CE by a theta-INDEPENDENT map from the GT argmax TEMPORAL neighbors: a SPIKE
     # pixel (lstar[t] != lstar[t-1] AND != lstar[t+1]) is single-frame argmax FLICKER a per-frame witness

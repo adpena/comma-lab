@@ -415,10 +415,18 @@ class ChromaBoundaryGauge(Enum):
       CHROMA_ACTIVE = ``--chroma`` default ON (byte-identical baseline; #205-live; the GREEN DOF)
       LUMA_ONLY     = ``--no-chroma`` (the ablation that MEASURED chroma's d_seg contribution GREEN).
     The deeper "route chroma CAPACITY INTO the boundary annulus" refinement (beyond the on/off flag)
-    is the A/B-owed lever and is NOT invented here."""
+    is now BUILT as LEVER-4c:
+      ANNULUS_CHROMA_SHARPEN = ``--seg-chroma-boundary-weight <w>`` (BUILT, --help-verified, default-off
+                        byte-identical PROVEN A==B vs HEAD). At the fragile margin annulus it supervises
+                        the witness's OWN rendered chroma (rgb - BT.601-luma, LUMA-INVARIANT) toward the
+                        GT chroma so the per-pixel RGB head paints the boundary chroma the near-per-class
+                        CONSTANT palette can't. Reuses the SHARED realized-through-R render _f1 (no 2nd
+                        render/SegNet); ORTHOGONAL to the geometry levers (a BOUNDARY sharpener). The
+                        net d_seg is a #205-class A/B (owed)."""
 
     CHROMA_ACTIVE = "chroma_active"    # --chroma default ON (#205 baseline; the GREEN d_seg DOF)
     LUMA_ONLY = "luma_only"            # --no-chroma (ablation; MEASURED chroma removal HURTS d_seg)
+    ANNULUS_CHROMA_SHARPEN = "annulus_chroma_sharpen"  # LEVER-4c --seg-chroma-boundary-weight (BUILT)
 
 
 class FlickerTreatmentGauge(Enum):
@@ -632,6 +640,12 @@ ALONG_TANGENT_FREQ_TRAINER_FLAGS: dict[AlongTangentFrequencyGauge, tuple[str, ..
 CHROMA_BOUNDARY_TRAINER_FLAGS: dict[ChromaBoundaryGauge, tuple[str, ...]] = {
     ChromaBoundaryGauge.CHROMA_ACTIVE: (),            # --chroma default ON = byte-identical baseline
     ChromaBoundaryGauge.LUMA_ONLY: ("--no-chroma",),
+    # LEVER-4c annulus chroma-sharpening BUILT (probe a3e9f0bd GREEN; landed in the levelset trainer,
+    # --help-verified, default-off byte-identical PROVEN A==B vs HEAD). The baked weight is a
+    # REPRESENTATIVE scale-appropriate A/B starter: the chroma-match term is in [0,255]^2 units (measured
+    # ~10^3 at init vs CE ~243) so a SMALL weight balances it; the A/B tunes weight +
+    # --seg-chroma-boundary-margin-band. The gauge selects the STRUCTURE (annulus chroma-sharpen ON).
+    ChromaBoundaryGauge.ANNULUS_CHROMA_SHARPEN: ("--seg-chroma-boundary-weight", "0.05"),
 }
 # LEVER-4b sub-pixel boundary-placement `t` BUILT (probe a8afad40 GREEN; landed in the levelset
 # trainer, --help-verified, default-off byte-identical PROVEN A==B vs HEAD). SCALAR_MAGNITUDE => ()
@@ -675,7 +689,10 @@ def along_tangent_freq_trainer_flags(chart: AlongTangentFrequencyGauge) -> tuple
 def chroma_boundary_trainer_flags(chart: ChromaBoundaryGauge) -> tuple[str, ...]:
     """The levelset-trainer argv for a ChromaBoundaryGauge chart. CHROMA_ACTIVE => () (``--chroma``
     default ON = byte-identical #205 baseline); LUMA_ONLY => ``--no-chroma`` (the GREEN-measured
-    ablation)."""
+    ablation); ANNULUS_CHROMA_SHARPEN => the REAL BUILT LEVER-4c flag ``--seg-chroma-boundary-weight <w>``
+    (probe a3e9f0bd GREEN; landed + --help-verified; default-off byte-identical PROVEN A==B vs HEAD). The
+    baked weight is a REPRESENTATIVE scale-appropriate A/B starter (the A/B tunes weight +
+    --seg-chroma-boundary-margin-band); the net d_seg is a #205-class A/B (owed)."""
     return CHROMA_BOUNDARY_TRAINER_FLAGS[chart]
 
 
