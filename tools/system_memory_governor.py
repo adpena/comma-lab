@@ -60,9 +60,9 @@ import re
 import signal
 import subprocess
 import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Mapping, Sequence
 
 _TOOLS = Path(__file__).resolve().parent
 _REPO_ROOT = _TOOLS.parent
@@ -73,7 +73,7 @@ if str(_TOOLS) not in sys.path:
 # still does adaptive-ceiling + admission (pure math on live vm_stat) but throttles
 # NOTHING (fail-safe: never risk the control plane without the exclusion gates).
 try:
-    import memory_guard as _mg  # noqa: E402
+    import memory_guard as _mg
 except Exception:  # pragma: no cover - defensive
     _mg = None
 
@@ -303,7 +303,7 @@ def _read_memory_pressure_total_bytes() -> int | None:
 
 def _read_psutil_available_bytes() -> int | None:
     try:
-        import psutil  # noqa: PLC0415
+        import psutil
         return int(psutil.virtual_memory().available)
     except Exception:
         return None
@@ -449,7 +449,7 @@ def _log_fail_safe(acct: MemoryAccounting) -> None:
         log.parent.mkdir(parents=True, exist_ok=True)
         with open(log, "a", encoding="utf-8") as f:
             import datetime as _d
-            f.write(f"{_d.datetime.now(_d.timezone.utc).isoformat()} {msg}\n")
+            f.write(f"{_d.datetime.now(_d.UTC).isoformat()} {msg}\n")
     except OSError:
         pass
 
@@ -925,6 +925,283 @@ def resume_job(job: TrackedJob) -> bool:
         return False
 
 
+# ─────────────────────────── GRADUATED GUARD BANDS (BUILD #294 piece C) ───────────────────────────
+# Operator memory policy 2026-07-04: bands act on ACTUAL RSS (protective ONLY — the runtime NEVER
+# mutates training knobs from RSS, per the deterministic-reproducibility non-negotiable). Relative to
+# the single-workload ENVELOPE (safe_frac x total RAM, ~108.8 GiB @ 0.85 x 128):
+#   green  < yellow_frac (85%) of envelope  -> normal, no action
+#   yellow [85%, 90%)                       -> telemetry alert row + PREP (checkpoint-freshness check)
+#   red    >= red_frac (90%)                -> loud operator row + CLEAN CHECKPOINT-FRESHNESS record +
+#                                              reversible PAUSE (SIGSTOP via pause_job — the canonical
+#                                              pause actuator; NEVER SIGKILL, NEVER the control plane)
+# Interaction with the existing pressure throttle (decide_governor_action): the throttle acts on
+# SYSTEM availability (<15/<8 GiB free); the bands act on the RUN's actual RSS vs its envelope. When
+# system pressure is already warn/critical the band DEFERS to the throttle (backstop BEHIND it, never
+# a replacement); the band's clean-pause fires only in the sole-workload case the pressure ladder
+# cannot see early (a run busting its envelope while the system still looks calm). KNOWN + REPORTED
+# (NOT fixed here — task #246 / governor-review F1): pause_job SIGSTOPs the registered custody
+# group; on the current launch tree (safe_run -> bash -> trainer in a CHILD group) the memory-bearing
+# trainer group is NOT halted by that pause — the band decision measures + reports this efficacy gap
+# (pause_scope vs run RSS) so the row is honest about what the pause actually stopped.
+# UNITS (measured, load-bearing — #205 memory mine §1, n205_memory_behavior_mine_20260704.md):
+# TrackedJob.current_rss_gib comes from memory_guard.group_rss_gb = sum(rss_kb)/1e6, i.e. units of
+# 1e6 KiB ~= 0.9537 TRUE GiB — despite the ``_gib`` name (cross-validated vs ps: 65.27 units ==
+# 62.25 true GiB). The SYSTEM snapshot fields ARE true GiB. The band logic converts tracked units
+# to TRUE GiB at the boundary so bands never mis-trigger on a mislabeled unit. The underlying
+# memory_guard rename is REPORTED, not fixed here (outside this build's write-surface). The
+# blackbox ``tracked_sum_gib`` double-count (wrapper group + trainer child counted twice, mine §7)
+# does NOT affect the bands: select_band_run picks own-group-leader jobs only, so the run is
+# counted once via its descendant-inclusive custody group.
+TRACKED_RSS_UNITS_TO_GIB = 1e6 * 1024 / (1024.0 ** 3)   # = 0.95367431640625
+
+BAND_GREEN = "green"
+BAND_YELLOW = "yellow"
+BAND_RED = "red"
+DEFAULT_BAND_ENVELOPE_FRAC = 0.85       # single-workload envelope (operator policy 2026-07-04)
+DEFAULT_BAND_YELLOW_FRAC = 0.85         # of the envelope
+DEFAULT_BAND_RED_FRAC = 0.90            # of the envelope
+DEFAULT_CKPT_STALE_S = 3600.0           # resume checkpoint older than this = stale (prep alert)
+_BAND_LEDGER = _REPO_ROOT / ".omx" / "state" / "memory_governor_bands.jsonl"
+_CKPT_GLOBS = ("levelset_resume*.npz", "*_resume_*.npz", "levelset_ckpt_*.npz", "*_ckpt_*.npz")
+
+
+def band_envelope_gib(total_gib: float, envelope_frac: float = DEFAULT_BAND_ENVELOPE_FRAC) -> float:
+    """The single-workload envelope the bands are fractions OF (safe_frac x total RAM)."""
+    return float(envelope_frac) * float(total_gib)
+
+
+def classify_guard_band(
+    actual_rss_gib: float,
+    envelope_gib: float,
+    *,
+    yellow_frac: float = DEFAULT_BAND_YELLOW_FRAC,
+    red_frac: float = DEFAULT_BAND_RED_FRAC,
+) -> str:
+    """green | yellow | red from ACTUAL RSS vs the envelope. PURE."""
+    if envelope_gib <= 0:
+        return BAND_RED  # degenerate envelope => most protective classification
+    frac = float(actual_rss_gib) / float(envelope_gib)
+    if frac >= red_frac:
+        return BAND_RED
+    if frac >= yellow_frac:
+        return BAND_YELLOW
+    return BAND_GREEN
+
+
+@dataclass(frozen=True)
+class GuardBandDecision:
+    band: str                 # green | yellow | red
+    action: str               # none | alert_prep | already_paused | defer_to_throttle |
+    #                           alert_no_target | clean_pause   (NO kill action EXISTS)
+    reason: str
+    target: TrackedJob | None = None
+    actual_rss_gib: float = 0.0
+    envelope_gib: float = 0.0
+    checkpoint_age_s: float | None = None
+    checkpoint_fresh: bool | None = None
+    pause_scope_rss_gib: float | None = None   # own-pgid-only RSS the SIGSTOP actually reaches
+    efficacy_gap_gib: float | None = None      # run RSS - pause scope (the #246 gap, measured)
+
+    def to_json(self) -> dict:
+        return {
+            "band": self.band, "action": self.action, "reason": self.reason,
+            "target": self.target.to_json() if self.target else None,
+            "actual_rss_gib": round(self.actual_rss_gib, 2),
+            "envelope_gib": round(self.envelope_gib, 2),
+            "checkpoint_age_s": (round(self.checkpoint_age_s, 1)
+                                 if self.checkpoint_age_s is not None else None),
+            "checkpoint_fresh": self.checkpoint_fresh,
+            "pause_scope_rss_gib": (round(self.pause_scope_rss_gib, 2)
+                                    if self.pause_scope_rss_gib is not None else None),
+            "efficacy_gap_gib": (round(self.efficacy_gap_gib, 2)
+                                 if self.efficacy_gap_gib is not None else None),
+        }
+
+
+# The complete, closed action vocabulary. Tests assert no kill-class action can ever be emitted.
+GUARD_BAND_ACTIONS = ("none", "alert_prep", "already_paused", "defer_to_throttle",
+                      "alert_no_target", "clean_pause")
+
+
+def decide_guard_band_action(
+    *,
+    band: str,
+    job: TrackedJob | None,
+    pressure_class: str,                 # classify_pressure(): normal | warn | critical
+    actual_rss_gib: float,
+    envelope_gib: float,
+    checkpoint_age_s: float | None = None,
+    checkpoint_stale_s: float = DEFAULT_CKPT_STALE_S,
+    pause_scope_rss_gib: float | None = None,
+) -> GuardBandDecision:
+    """PURE band policy. Protective only (never mutates training knobs); NEVER kills; NEVER targets
+    a non-throttle-eligible (control-plane-protected) process; DEFERS to the pressure throttle when
+    the system pressure ladder is already engaged (backstop BEHIND the throttle, not a replacement).
+    """
+    fresh = (None if checkpoint_age_s is None else bool(checkpoint_age_s <= checkpoint_stale_s))
+    ck = ("checkpoint age unknown" if checkpoint_age_s is None else
+          f"latest resume checkpoint {checkpoint_age_s:.0f}s old "
+          f"({'FRESH' if fresh else f'STALE > {checkpoint_stale_s:.0f}s'})")
+    base = {"actual_rss_gib": float(actual_rss_gib), "envelope_gib": float(envelope_gib),
+            "checkpoint_age_s": checkpoint_age_s, "checkpoint_fresh": fresh,
+            "pause_scope_rss_gib": pause_scope_rss_gib}
+
+    if band == BAND_GREEN:
+        return GuardBandDecision(band=band, action="none",
+                                 reason=f"green: {actual_rss_gib:.1f} GiB < "
+                                        f"{DEFAULT_BAND_YELLOW_FRAC:.0%} of envelope "
+                                        f"{envelope_gib:.1f} GiB", target=job, **base)
+    if band == BAND_YELLOW:
+        return GuardBandDecision(
+            band=band, action="alert_prep", target=job,
+            reason=f"yellow: {actual_rss_gib:.1f} GiB in [{DEFAULT_BAND_YELLOW_FRAC:.0%},"
+                   f"{DEFAULT_BAND_RED_FRAC:.0%}) of envelope {envelope_gib:.1f} GiB — "
+                   f"alert + prep; {ck}", **base)
+
+    # RED band.
+    if job is None:
+        return GuardBandDecision(band=band, action="alert_no_target",
+                                 reason=f"red: {actual_rss_gib:.1f} GiB >= "
+                                        f"{DEFAULT_BAND_RED_FRAC:.0%} of envelope but NO tracked "
+                                        f"training job to pause — alert only (killing NOTHING)",
+                                 **base)
+    if job.paused:
+        return GuardBandDecision(band=band, action="already_paused", target=job,
+                                 reason=f"red: job {job.label!r} already paused — no double-actuation",
+                                 **base)
+    if pressure_class in ("warn", "critical"):
+        return GuardBandDecision(
+            band=band, action="defer_to_throttle", target=job,
+            reason=f"red: system pressure is {pressure_class} — the pressure throttle owns "
+                   f"actuation (band stays the backstop BEHIND it, never a replacement); {ck}",
+            **base)
+    if not job.throttle_eligible:
+        return GuardBandDecision(
+            band=band, action="alert_no_target", target=job,
+            reason=f"red: job {job.label!r} is NOT throttle-eligible (control-plane exclusion "
+                   f"gates) — alert only; killing/pausing NOTHING", **base)
+
+    gap = None
+    gap_note = ""
+    if pause_scope_rss_gib is not None:
+        gap = max(0.0, float(actual_rss_gib) - float(pause_scope_rss_gib))
+        if float(pause_scope_rss_gib) < 0.5 * float(actual_rss_gib):
+            gap_note = (f" | #246 EFFICACY GAP (governor-review F1, REPORTED not fixed here): the "
+                        f"SIGSTOP scope (pgid {job.pgid}) holds only {pause_scope_rss_gib:.1f} GiB "
+                        f"of the run's {actual_rss_gib:.1f} GiB — the memory-bearing descendant "
+                        f"group is NOT halted by this pause")
+    return GuardBandDecision(
+        band=band, action="clean_pause", target=job, efficacy_gap_gib=gap,
+        reason=f"red: {actual_rss_gib:.1f} GiB >= {DEFAULT_BAND_RED_FRAC:.0%} of envelope "
+               f"{envelope_gib:.1f} GiB — CLEAN PAUSE (reversible SIGSTOP; NEVER SIGKILL): {ck}"
+               + gap_note,
+        actual_rss_gib=float(actual_rss_gib), envelope_gib=float(envelope_gib),
+        checkpoint_age_s=checkpoint_age_s, checkpoint_fresh=fresh,
+        pause_scope_rss_gib=pause_scope_rss_gib)
+
+
+def checkpoint_age_seconds(run_dir: Path) -> float | None:
+    """Age (s) of the NEWEST resume/stage checkpoint in the run dir (I/O helper). None if none."""
+    import time as _t
+
+    run_dir = Path(run_dir)
+    newest: float | None = None
+    for pat in _CKPT_GLOBS:
+        for p in run_dir.glob(pat):
+            try:
+                m = p.stat().st_mtime
+            except OSError:
+                continue
+            if newest is None or m > newest:
+                newest = m
+    if newest is None:
+        return None
+    return max(0.0, _t.time() - newest)
+
+
+def pgid_only_rss_gib(pgid: int) -> float:
+    """RSS (GiB) of ONLY the processes whose pgid == the given group — the exact scope a
+    killpg(SIGSTOP) reaches (vs group_rss_gb which is descendant-inclusive). Measures the #246 gap."""
+    if pgid <= 0:
+        return 0.0
+    try:
+        out = subprocess.run(["ps", "-o", "rss=", "-g", str(pgid)],
+                             capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return 0.0
+    total_kib = 0
+    for tok in out.stdout.split():
+        if tok.isdigit():
+            total_kib += int(tok)
+    return total_kib / (1024.0 ** 2)
+
+
+def select_band_run(jobs: Sequence[TrackedJob]) -> TrackedJob | None:
+    """The run the bands watch = the LARGEST-RSS tracked job that is its own group leader (the
+    registered custody daemon whose descendant-inclusive group RSS covers the whole run). PURE."""
+    leaders = [j for j in jobs if j.own_group_leader]
+    if not leaders:
+        return None
+    return max(leaders, key=lambda j: j.current_rss_gib)
+
+
+def append_band_row(row: dict, ledger_path: Path = _BAND_LEDGER) -> None:
+    """fcntl-locked JSONL telemetry append (canonical .omx/state store pattern)."""
+    import datetime as _dt
+    import fcntl
+
+    row = dict(row)
+    row.setdefault("ts", _dt.datetime.now(_dt.UTC).isoformat())
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(ledger_path, "a", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.write(json.dumps(row, sort_keys=True) + "\n")
+                f.flush()
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except OSError as exc:  # telemetry must never take down the governor
+        print(f"[system-governor] WARNING: band telemetry append failed: {exc}", file=sys.stderr)
+
+
+def band_tick(
+    *,
+    envelope_frac: float = DEFAULT_BAND_ENVELOPE_FRAC,
+    yellow_frac: float = DEFAULT_BAND_YELLOW_FRAC,
+    red_frac: float = DEFAULT_BAND_RED_FRAC,
+    run_dir: Path | None = None,
+    apply: bool = False,
+) -> GuardBandDecision:
+    """ONE live guard-band evaluation (I/O wrapper around the pure policy). Emits the telemetry row;
+    with ``apply`` actually SIGSTOP-pauses on clean_pause (reversible; resume via the governor's
+    normal-pressure resume path or ``kill -CONT``). NOTE: the black-box daemon does NOT call this
+    yet — run it via ``--band-tick`` (cron/loop) until the daemon wiring lands (reported blocker)."""
+    snap = read_system_memory_snapshot()
+    jobs = list_tracked_jobs()
+    job = select_band_run(jobs)
+    envelope = band_envelope_gib(snap.total_gib, envelope_frac)
+    # tracked-units -> TRUE GiB conversion (mine §1); the envelope is true GiB (system total).
+    actual = (job.current_rss_gib * TRACKED_RSS_UNITS_TO_GIB) if job is not None else 0.0
+    band = classify_guard_band(actual, envelope, yellow_frac=yellow_frac, red_frac=red_frac)
+    pressure = classify_pressure(snap)
+    ck_age = checkpoint_age_seconds(run_dir) if run_dir is not None else None
+    scope = pgid_only_rss_gib(job.pgid) if job is not None else None
+    decision = decide_guard_band_action(
+        band=band, job=job, pressure_class=pressure, actual_rss_gib=actual,
+        envelope_gib=envelope, checkpoint_age_s=ck_age, pause_scope_rss_gib=scope)
+    applied = False
+    if apply and decision.action == "clean_pause" and decision.target is not None:
+        applied = pause_job(decision.target)
+    row = {"kind": "guard_band", "decision": decision.to_json(), "pressure": pressure,
+           "system_used_gib": round(snap.used_gib, 2), "applied": applied}
+    append_band_row(row)
+    if band == BAND_RED:
+        print(f"[system-governor] GUARD-BAND RED: {decision.reason} (applied={applied})",
+              file=sys.stderr)
+    return decision
+
+
 # ─────────────────────────── live admission (the HARD gate entry point) ───────────────────────────
 @dataclass(frozen=True)
 class LiveAdmissionContext:
@@ -989,7 +1266,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--apply", action="store_true", help="with --governor-tick: actually pause/resume")
     ap.add_argument("--warn-free-gib", type=float, default=DEFAULT_WARN_FREE_GIB)
     ap.add_argument("--critical-free-gib", type=float, default=DEFAULT_CRITICAL_FREE_GIB)
+    # ── graduated guard bands (BUILD #294 piece C) ──
+    ap.add_argument("--band-tick", action="store_true",
+                    help="evaluate ONE guard-band decision on the largest tracked run's ACTUAL RSS "
+                         "vs the single-workload envelope (green<85%% / yellow 85-90%% / red>=90%%); "
+                         "dry unless --apply (red clean_pause = reversible SIGSTOP; NEVER kills)")
+    ap.add_argument("--band-envelope-frac", type=float, default=DEFAULT_BAND_ENVELOPE_FRAC)
+    ap.add_argument("--band-yellow-frac", type=float, default=DEFAULT_BAND_YELLOW_FRAC)
+    ap.add_argument("--band-red-frac", type=float, default=DEFAULT_BAND_RED_FRAC)
+    ap.add_argument("--band-run-dir", type=str, default=None,
+                    help="run dir for checkpoint-freshness in the band decision")
     args = ap.parse_args(argv)
+
+    if args.band_tick:
+        decision = band_tick(
+            envelope_frac=args.band_envelope_frac, yellow_frac=args.band_yellow_frac,
+            red_frac=args.band_red_frac,
+            run_dir=Path(args.band_run_dir) if args.band_run_dir else None,
+            apply=args.apply)
+        print(json.dumps(decision.to_json(), indent=2))
+        return 0 if decision.band != BAND_RED else 6
 
     if args.snapshot:
         print(json.dumps(read_system_memory_snapshot().to_json()))
