@@ -1090,6 +1090,12 @@ def _evt_resolve_seg_form(ep: int, state: dict, args) -> "tuple[str, dict | None
 
     if state.get("tau") is None:
         return _fire("tau", int(args.tau_softplus_start_epoch), "ce", "tau_softplus")
+    # (C2 SEAL-review guard, 4bf533cab) l7 is a MEASURED DEFECT stage demoted from the default
+    # curriculum by setting --l7-start-epoch >= --epochs ("never"). The convergence trigger must
+    # HONOR that intent: never converge-fire l7 when its cap says never (else a tau plateau —
+    # measured rel slope -4.7e-4 on #205 — would fire the defect stage mid-run).
+    if int(args.l7_start_epoch) >= int(args.epochs):
+        return "tau_softplus", None
     if state.get("l7") is None:
         return _fire("l7", int(args.l7_start_epoch), "tau_softplus", "l7_softplus")
     return "l7_softplus", None

@@ -209,6 +209,41 @@ def test_same_loss_history_same_fired_boundaries():
     assert tau == 22 and l7 == 32
 
 
+def test_l7_never_fires_when_demoted():
+    """(C2 SEAL-review guard) l7 is the measured-defect stage, demoted via l7-start >= epochs
+    ("never"). The convergence trigger must honor that: a hard tau plateau must NOT fire l7."""
+    import importlib.util as _ilu
+    from argparse import Namespace
+    from pathlib import Path
+    _t = Path(__file__).resolve().parent / "train_levelset_witness_realized_through_R_mlx.py"
+    _sp = _ilu.spec_from_file_location("_lv_c2", _t)
+    _m = _ilu.module_from_spec(_sp)
+    _sp.loader.exec_module(_m)
+    args = Namespace(curriculum=True, seg_loss="ce", tau_softplus_start_epoch=300,
+                     l7_start_epoch=1000, epochs=1000,
+                     curriculum_min_stage_epochs=5, curriculum_plateau_rel_eps=1e-3,
+                     curriculum_plateau_windows=3)
+    state = {"tau": 300, "l7": None, "stage_start": 300, "losses": []}
+    # feed a HARD tau plateau (identical losses) far past min-stage: must stay tau, never l7
+    for ep in range(301, 400):
+        state["losses"].append(100.0)
+        form, event = _m._evt_resolve_seg_form(ep, state, args)
+        assert form == "tau_softplus", f"l7 fired at ep {ep} despite l7_start>=epochs"
+        assert event is None or event.get("to") != "l7_softplus"
+    assert state["l7"] is None
+    # control: with l7 GENUINELY scheduled (l7_start < epochs) the same plateau MAY fire it
+    args2 = Namespace(**{**vars(args), "l7_start_epoch": 500, "epochs": 1000})
+    state2 = {"tau": 300, "l7": None, "stage_start": 300, "losses": []}
+    fired = False
+    for ep in range(301, 520):
+        state2["losses"].append(100.0)
+        form, event = _m._evt_resolve_seg_form(ep, state2, args2)
+        if event is not None and event.get("to") == "l7_softplus":
+            fired = True
+            break
+    assert fired, "guard must NOT block a genuinely-scheduled l7"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
