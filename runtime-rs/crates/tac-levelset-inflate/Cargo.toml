@@ -1,0 +1,62 @@
+# `tac-levelset-inflate` — Rust native port for the level-set (#171/#205 capstone)
+# INFLATE-side DECODE primitives whose Python oracle is bit-exact-portable.
+#
+# Status (2026-07-03, task #282): FIRST bit-exact increment. The level-set inflate
+# forward is dominated by a coord-INR neural forward (matmuls + hosc `_act`) that is
+# NOT bit-exact-portable against the numpy-fp64 oracle — numpy `@` dispatches to Apple
+# Accelerate dgemm (blocked+FMA reduction order a portable Rust kernel does not match;
+# MEASURED 4497/6144 elements diverge at ~1e-14) and numpy's fp64 `tanh` differs from
+# the scalar system libm (MEASURED 844/4096 at 1 ULP). See `binary_source_audit.md`
+# "Feasibility verdict" for the full measured breakdown + the deferred path.
+#
+# The ONE genuinely bit-exact-by-CONSTRUCTION piece — the #257 store-nothing POSE-CARRIER
+# ξ decode (a pure-INTEGER static-frequency arithmetic range-decoder + integer column
+# reconstruction) — is lowered here, grammar-first, per CLAUDE.md "Native eval-time runtime
+# discipline". It has zero dependence on FMA / rounding / reduction-order / transcendental
+# libm, so byte-for-byte parity is provable by construction and verified on committed golden
+# vectors derived from REAL contest gt_poses ξ.
+#
+# Primitives lowered (bit-exact-provable ONLY, grammar-first):
+#   1. `decode_static_symbols` — the pure-integer CACM range decoder
+#      (mirror of `tac.lossless.range_coder.decode_static_symbols`).
+#   2. `decode_xi_column`      — arithmetic decode -> `+lo` -> cumsum -> `seed`
+#      (mirror of `tac.boundary_math.xi_pose_coder._channel_delta_decode`, minus the
+#       brotli-of-counts step which is a separately-covered primitive).
+#
+# OUT OF SCOPE (NO FAKE — not bit-exact-portable against the numpy oracle):
+#   * the coord-INR neural forward (in_proj/hidden/out matmuls, hosc `_act`) — blocked by
+#     Accelerate dgemm order + numpy tanh. The ONLY viable route to a fast Rust forward is
+#     fp32-TOLERANT (gated on task #281's fp32 score-preserving verdict), NOT bit-exact.
+#   * the lane AA-SDF render-band rasterizer — MEASURED matmul/transcendental-FREE, so it IS
+#     bit-exact-able and is the highest-value NEXT increment (real per-pixel wall-clock,
+#     rule-118 FREE generic rasterizer). Deferred to a follow-on unit.
+#
+# PAYLOAD CLEANLINESS (CLAUDE.md "Native eval-time runtime discipline"): this crate's source
+# is PURE DECODE LOGIC. ZERO learned / video-derived constants are embedded in the binary; the
+# only structural constants are the range-coder state-bit literals. See `binary_source_audit.md`
+# + `embedded_constants_audit.txt`. Python remains the oracle until native parity is proven on
+# the golden vectors.
+
+[package]
+name = "tac-levelset-inflate"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Rust native port for the level-set inflate DECODE primitives that are bit-exact-portable against the tac Python oracle (store-nothing ξ pose-carrier range decode); byte-for-byte parity GREEN on committed golden vectors from real contest gt_poses."
+homepage = "https://github.com/adpena/comma-lab"
+documentation = "https://github.com/adpena/comma-lab#readme"
+repository = "https://github.com/adpena/comma-lab"
+readme = "README.md"
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+# JSON for loading golden-vector manifests under tests + diagnostics.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# SHA-256 for byte-for-byte parity verification against committed vectors.
+sha2 = "0.10"
+
+# Hex encoding for human-readable SHA-256 diff diagnostics.
+hex = "0.4"

@@ -1,0 +1,43 @@
+{
+  "crate": "tac-levelset-inflate",
+  "purpose": "Native DECODE for the level-set inflate primitives that are bit-exact-portable against the tac Python oracle.",
+  "discipline": "CLAUDE.md 'Native eval-time runtime discipline' + rule 118 (generic algorithm FREE in inflate; video-derived payload COUNTED in archive.zip).",
+  "counted_payload_this_crate_decodes": {
+    "name": "#257 store-nothing ξ pose-carrier payload (XIP2, coder=delta_ar)",
+    "location": "archive.zip -> pose-carrier section (PCAR1, pcar_store_nothing_v=2) -> xi_payload",
+    "wire_format": "XIP2 | <B coder=1> <H P> <B D> | scales(D fp32) | per-channel [ <iii seed lo hi> <I mlen> brotli(counts u32) <I slen> range_coded_stream ]",
+    "what_is_counted": "the per-channel range-coded ξ delta streams + brotli'd histograms + seeds/scales (video-derived ego-motion), ~6.4 KB for 600 pairs",
+    "what_is_free": "the decode ALGORITHM in this crate (arithmetic decode + cumsum) AND the downstream exp_se3 + plane-homography DERIVE-H (rule 118 generic compute), which regenerate the per-pair homography H from ξ with ZERO stored H bytes"
+  },
+  "primitives": [
+    {
+      "fn": "range_decode::decode_static_symbols",
+      "python_oracle": "tac.lossless.range_coder.decode_static_symbols",
+      "golden_vector": "levelset_xi_range_decode_v1",
+      "bit_exact": true,
+      "bit_exact_basis": "pure integer (u64 intermediates exact; max (2^32)*total ~= 2^44.9 for the real payload); no FMA/rounding/reduction/transcendental dependence"
+    },
+    {
+      "fn": "xi_column::decode_xi_column",
+      "python_oracle": "tac.boundary_math.xi_pose_coder._channel_delta_decode (sans brotli-of-counts)",
+      "golden_vector": "levelset_xi_column_delta_v1",
+      "bit_exact": true,
+      "bit_exact_basis": "arithmetic decode + integer +lo + prefix-sum + seed"
+    }
+  ],
+  "out_of_scope_not_bit_exact_portable": {
+    "coord_inr_neural_forward": "in_proj/hidden/out matmuls + hosc tanh(beta*sin) _act; numpy @ = Apple Accelerate dgemm (non-portable reduction order, MEASURED 4497/6144 diverge ~1e-14) and numpy fp64 tanh != scalar libm (MEASURED 844/4096 @ 1 ULP). Viable Rust route is fp32-TOLERANT only, gated on task #281.",
+    "pose_carrier_warp": "np.linalg.inv (LAPACK) + Hinv @ grid (BLAS) block bit-exactness, same root cause.",
+    "brotli_of_counts": "the per-channel histogram brotli-decompress is a separately-covered primitive (sibling tac-packet-compiler split_brotli); this crate's column decode takes the already-decompressed frequencies."
+  },
+  "highest_value_next_bit_exact_increment": {
+    "fn": "_lane_coverage (lane AA-SDF render-band rasterizer)",
+    "why": "MEASURED matmul- and transcendental-FREE (np.polyval Horner + elementwise / max abs clip mod compare) => bit-exact-able; a real per-pixel render-res wall-clock contributor; rule-118 FREE generic rasterizer."
+  },
+  "parity_proof": {
+    "rust_gate": "tests/golden_vector_parity.rs (assert_sha256_parity vs Python-oracle digest on committed real-xi fixtures)",
+    "python_mirror": "python_reference_equivalence_test.py (re-derives the same digests from the REAL oracle)",
+    "negative_control": "flipping 1 bit of the input stream fails range_decode_parity with ShaMismatch (verified 2026-07-03)"
+  },
+  "pointer": "0.19110 UNMOVED — this crate is decode wall-clock MEANS, moves no score."
+}

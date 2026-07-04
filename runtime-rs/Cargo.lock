@@ -1378,6 +1378,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tac-levelset-inflate"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "tac-packet-compiler"
 version = "0.2.0-rc1"
 dependencies = [

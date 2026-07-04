@@ -1,0 +1,11 @@
+{
+  "count": 599,
+  "n_frequencies": 7645,
+  "oracle": "tac.lossless.range_coder.decode_static_symbols",
+  "output_encoding": "decoded symbols as little-endian int64 (<i8), C-order",
+  "schema": "levelset_xi_range_decode.v1",
+  "sha256": "31d6edd13d16eb204b1c5816765f2dc3e90b856c0018e8551602a40583799199",
+  "source": "real gt_poses -> xi_from_pose_calibration -> quantize_xi -> serialize_xi_payload(delta_ar), column 4",
+  "stream_bytes": 952,
+  "total": 7706
+}

@@ -9,6 +9,7 @@ members = [
   "crates/residual-codec",
   "crates/stbm1br-codec",
   "crates/tac-boundary-decode",
+  "crates/tac-levelset-inflate",
   "crates/tac-packet-compiler",
   "crates/zipwire"
 ]

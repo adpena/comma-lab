@@ -1,0 +1,14 @@
+{
+  "hi": 770,
+  "lo": -899,
+  "n_frequencies": 1670,
+  "oracle": "tac.boundary_math.xi_pose_coder._channel_delta_decode (sans brotli-of-counts)",
+  "output_encoding": "reconstructed int64 column (P,) as little-endian int64 (<i8), C-order",
+  "p_count": 600,
+  "schema": "levelset_xi_column_delta.v1",
+  "seed": 4001,
+  "sha256": "688e402482ae60f06f9533280d896973e54e7a0e8b23b365558b82ba4b731a9c",
+  "source": "real gt_poses -> ... -> serialize_xi_payload(delta_ar), column 2",
+  "stream_bytes": 739,
+  "total": 1938
+}

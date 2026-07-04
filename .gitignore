@@ -560,3 +560,9 @@ submission_packets/
 # otherwise hide them; track them as committed conformance fixtures (sibling of
 # tac-packet-compiler's golden-vector fixture pattern).
 !runtime-rs/crates/tac-boundary-decode/golden_vectors/*.bin
+
+# tac-levelset-inflate golden-vector input fixtures (task #282) — REAL #257 store-nothing
+# ξ pose-carrier range-coded streams + uint32 frequency tables (~44K total), deterministic,
+# regenerable via generate_golden_vectors.py, and REQUIRED for the Rust↔Python bit-identical
+# parity gate (sibling of the tac-boundary-decode fixture pattern above).
+!runtime-rs/crates/tac-levelset-inflate/golden_vectors/*.bin
