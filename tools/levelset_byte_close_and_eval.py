@@ -870,6 +870,15 @@ _INFLATE_PY = r'''#!/usr/bin/env python3
 #   2 frames to DISJOINT offsets of the preallocated .raw. Proven 10.8x on M5 Max (15w),
 #   max_abs_uint8_diff=0 vs the serial output. Contest: Linux fork (workers inherit setup); keeps the
 #   inflate.py cost well inside the 30-min upstream/evaluate.py budget (inflate + scoring).
+# FEED-ei bit-identical _act fusion (inflate.py code only -> FREE, archive bytes UNCHANGED): the hosc
+#   activation tanh(beta*sin(omega*u)) is the #1 hot path (~66% of decode; ~29 acts/pair on the (H*W,
+#   hidden) float64 grid = ~151MB/array). (1) SKIP the identity full-array multiplies when omega==1 /
+#   beta==1 (1.0*x === x in IEEE754, but numpy still executes the whole ~151MB DRAM round-trip); (2)
+#   compute sin -> (beta) -> tanh IN-PLACE in one buffer (the 'pre' input is dead after _act) -> fewer
+#   151MB allocs. In-place ufunc == out-of-place ufunc elementwise, so the exact float64 op values are
+#   preserved -> BIT-IDENTICAL .raw (proven: cmp -s == identical vs the pre-fusion forward, n40/4w). The
+#   DRAM-traffic cut helps MOST under the parallel Pool (workers share memory bandwidth): measured 1.24x
+#   4-worker wall-clock (contest-4-core full-600 inflate ~20 min -> ~16 min).
 import os
 for _tv in ("VECLIB_MAXIMUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
     os.environ.setdefault(_tv, "1")  # 1-thread BLAS/worker (set BEFORE numpy import); user-overridable
@@ -942,8 +951,17 @@ def _curvelet_feats(coords, B):
 
 def _act(u, kind, w0, s0, beta, omega):
     u = np.asarray(u, np.float64)
+    if kind == "hosc":
+        # tanh(beta*sin(omega*u)). BIT-IDENTICAL fused form: (1) omega==1 / beta==1 skip the identity
+        # full-array float64 multiply (1.0*x === x in IEEE754 -- these are ~151MB DRAM round-trips per
+        # act, ~29x/pair); (2) in-place np.multiply/np.tanh reuse the sin buffer (u='pre' is not reused
+        # after _act) -> fewer 151MB allocs. In-place ufunc == out-of-place ufunc elementwise -> the
+        # exact float64 op values are preserved (proven by sha256 .raw parity vs the pre-fusion forward).
+        t = np.sin(u) if omega == 1.0 else np.sin(omega * u)
+        if beta != 1.0: np.multiply(t, beta, out=t)
+        np.tanh(t, out=t)
+        return t.astype(np.float32)
     if kind == "wire": return (np.cos(w0 * u) * np.exp(-((s0 * u) ** 2))).astype(np.float32)
-    if kind == "hosc": return np.tanh(beta * np.sin(omega * u)).astype(np.float32)
     return np.maximum(u, 0.0).astype(np.float32)
 
 
