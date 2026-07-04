@@ -5566,12 +5566,16 @@ def main(argv: list[str] | None = None) -> int:
     # (fix d) curriculum boundaries must be strictly ordered and fit inside the budget, else the
     # tau_softplus / l7 stages silently never run (or run for ~0 epochs) -> untrustworthy d_seg.
     if args.curriculum:
-        if not (0 < args.tau_softplus_start_epoch < args.l7_start_epoch <= args.epochs):
+        # (L1 SEAL-review relax, 4bf533cab) l7_start_epoch > epochs is the LEGITIMATE "l7 NEVER runs"
+        # form (l7 is a MEASURED DEFECT demoted from the default curriculum; the C2 event-guard and
+        # _seg_form_for_epoch both honor >= epochs as never). Note l7_start == epochs is the L1
+        # off-by-one (l7 WOULD run on the final epoch) — the fresh config uses epochs+1 (e.g. 1001).
+        if not (0 < args.tau_softplus_start_epoch < args.l7_start_epoch):
             raise ValueError(
                 f"--curriculum requires 0 < tau_softplus_start_epoch ({args.tau_softplus_start_epoch}) "
-                f"< l7_start_epoch ({args.l7_start_epoch}) <= epochs ({args.epochs}). The PR95 d_seg "
-                "sequence (ce->tau_softplus->l7) needs each stage to actually run; tau_softplus is "
-                "THE primary d_seg drop and must not be skipped."
+                f"< l7_start_epoch ({args.l7_start_epoch}). The d_seg sequence (ce->tau_softplus[->l7]) "
+                "needs tau_softplus to actually run (THE primary d_seg drop); l7_start_epoch > epochs "
+                "is allowed and means l7 NEVER runs (the demoted-defect form)."
             )
 
     # (FEED-df R2) LEVER-3 fail-closed config guard (pure helper; fails LOUD before any GPU spend).
