@@ -600,12 +600,22 @@ class ControlSystemGauge(Enum):
           classification, K-window transient/erosion split) => bounded eikonal bump (<=2, cap 0.20)
           => early-stop+preserve-best if erosion persists post-budget. Decision-only; never launches.
     BASELINE = all four OFF => () = BYTE-IDENTICAL to the #205-live config (the pinned baseline arm).
-    CONTROLLED = the fresh seeded run's composed arm (all four ON at their tested defaults).
+    CONTROLLED = the FULL composed arm (all four ON) — after the 2026-07-04 adversarial REVISE
+    round this is the RUN-2 CANDIDATE form, NOT run-1: the review MEASURED the event trigger
+    firing CE->tau ~ep150 on #205's own trace at the default eps (C1, 15%% CE-floor loss) and
+    found the l7-fire hole (C2, since guarded 7226d2651) -> run-2 re-arms it at recalibrated
+    eps 1e-4 / windows 25 / min-stage 250.
+    CONTROLLED_NO_EVENT = the RUN-1 SEALED form (the ``fresh_seeded`` launcher config, FEED-04n):
+    (a)+(b)+(d) ON, event trigger OFF -> the eikonal steps at the hardcoded tau onset ep300 =
+    the true boundary, fully coherent. Config-as-code SoT: ``tac.witness_autoconfig.
+    derive_fresh_seeded_config()`` (this gauge's tuple is its control-system SUBSET; the
+    launcher's ``--config fresh_seeded`` is the ONE launch path).
     UNMEASURED as a composed arm -> net-S verdict is the fresh run's byte-closed exact row (MEANS,
     pointer 0.19110 UNMOVED; launch operator-GO + governor gated)."""
 
     BASELINE = "baseline"        # all control-system flags off = byte-identical #205 path
-    CONTROLLED = "controlled"    # paint-seed + eik-ramp + event-trigger + closed-loop (fresh run)
+    CONTROLLED = "controlled"    # paint-seed + eik-ramp + event-trigger + closed-loop (RUN-2 cand.)
+    CONTROLLED_NO_EVENT = "controlled_no_event"  # run-1 SEALED: paint-seed + eik-ramp + closed-loop
 
 
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
@@ -952,6 +962,10 @@ STAGE_TRANSITION_EASING_TRAINER_FLAGS: dict[StageTransitionEasingGauge, tuple[st
 }
 
 # #292 control-system composed arm (real levelset-trainer flags, grep-verified; BASELINE=() byte-identical).
+# CONTROLLED_NO_EVENT = the run-1 SEALED subset (FEED-04n/04u): event trigger DROPPED per the
+# REVISE round (C1 measured-premature at default eps + C2 l7-hole); eikonal steps at the hardcoded
+# tau onset. CONTROLLED (full arm) = run-2 candidate at recalibrated eps 1e-4/windows 25/min-stage
+# 250 (the C1 disposition) — its min-stage-epochs 150 default below predates that recalibration.
 CONTROL_SYSTEM_TRAINER_FLAGS: dict[ControlSystemGauge, tuple[str, ...]] = {
     ControlSystemGauge.BASELINE: (),  # all off = byte-identical #205 path
     ControlSystemGauge.CONTROLLED: (
@@ -961,6 +975,12 @@ CONTROL_SYSTEM_TRAINER_FLAGS: dict[ControlSystemGauge, tuple[str, ...]] = {
         "--eikonal-weight-end", "0.10",
         "--curriculum-event-triggered",
         "--curriculum-min-stage-epochs", "150",
+        "--closed-loop-control"),
+    ControlSystemGauge.CONTROLLED_NO_EVENT: (
+        "--lane-prior-phi1-mode", "paint",
+        "--seed-islands",
+        "--eikonal-weight", "0.05",
+        "--eikonal-weight-end", "0.10",
         "--closed-loop-control"),
 }
 
