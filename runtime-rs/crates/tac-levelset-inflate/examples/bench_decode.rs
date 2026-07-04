@@ -18,6 +18,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 
+use tac_levelset_inflate::lane_coverage::{lane_coverage, parse_lane_band_lbnd1};
 use tac_levelset_inflate::range_decode::decode_static_symbols;
 use tac_levelset_inflate::xi_column::decode_xi_column;
 
@@ -100,4 +101,28 @@ fn main() {
         "6-column full ξ decode estimate: ~{:.4} ms/inflate (one-time)",
         dt_a * 1e3 * 6.0
     );
+
+    // #283: lane AA-SDF render-band raster (the per-pixel HOT path; per-pair, shared
+    // across the pair's 2 frames). Time the whole real golden-vector pair set.
+    let lane_json = gv_dir().join("levelset_lane_coverage_v1.json");
+    if lane_json.exists() {
+        let blob = read("levelset_lane_coverage_v1_band.bin");
+        let rh = manifest_usize("levelset_lane_coverage_v1.json", "render_h");
+        let rw = manifest_usize("levelset_lane_coverage_v1.json", "render_w");
+        let (pairs, geom) = parse_lane_band_lbnd1(&blob).expect("LBND1 parse");
+        let n = pairs.len();
+        let _ = lane_coverage(&pairs[0], rh, rw, &geom); // warm up
+        let t2 = Instant::now();
+        let mut px = 0.0f64;
+        for lines in &pairs {
+            let cov = lane_coverage(lines, rh, rw, &geom);
+            px += cov[cov.len() - 1] as f64;
+        }
+        let dt_c = t2.elapsed().as_secs_f64() / n as f64;
+        println!("lane_coverage: {:.4} ms/pair  ({n} real pairs @ {rh}x{rw}, sink={px})", dt_c * 1e3);
+        println!(
+            "n600 lane raster estimate: ~{:.3} s/inflate (once/pair, shared across the pair's 2 frames)",
+            dt_c * 600.0
+        );
+    }
 }

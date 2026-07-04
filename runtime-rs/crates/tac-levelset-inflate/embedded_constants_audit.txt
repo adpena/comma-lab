@@ -3,25 +3,42 @@ EMBEDDED CONSTANTS AUDIT — tac-levelset-inflate
 CLAUDE.md "Native eval-time runtime discipline": the native decoder must embed ZERO
 learned / video-derived constants. Only structural codec parameters are permitted.
 
-Exhaustive scan of every `const` / `static` in src/ (grep 'const |static ', 2026-07-03):
+Exhaustive scan of every `const` / `static` in src/ (grep 'const |static ', 2026-07-04):
 
   src/range_decode.rs:20  const STATE_BITS: u32 = 32;
   src/range_decode.rs:21  const FULL_RANGE: u64 = 1 << STATE_BITS;   // 2^32
   src/range_decode.rs:22  const HALF: u64 = FULL_RANGE >> 1;         // 2^31
   src/range_decode.rs:23  const QUARTER: u64 = HALF >> 1;            // 2^30
   src/range_decode.rs:24  const THREE_QUARTERS: u64 = QUARTER * 3;   // 3*2^30
+  src/lane_coverage.rs:95  const LANE_MAGIC: &[u8] = b"LBND1\x00";   // lane-band wire magic
+  src/ffi.rs:22-25         const ERR_NULL/ERR_PARSE/ERR_OUT_LEN/ERR_PANIC: i64 = -1..-4;
 
-CLASSIFICATION: all 5 are the CACM static-frequency range-coder's 32-bit range-state
-boundaries. They are byte-for-byte identical to the Python oracle's module constants
-(tac.lossless.range_coder.STATE_BITS / FULL_RANGE / HALF / QUARTER / THREE_QUARTERS).
-They are FIXED codec structure — they do not depend on the video, the trained witness,
-the ξ values, or any per-frame data.
+CLASSIFICATION (range_decode): the 5 range-coder consts are the CACM static-frequency
+range-coder's 32-bit range-state boundaries, byte-for-byte identical to the Python oracle's
+module constants (tac.lossless.range_coder.STATE_BITS / FULL_RANGE / HALF / QUARTER /
+THREE_QUARTERS). FIXED codec structure.
+
+CLASSIFICATION (lane_coverage, #283): LANE_MAGIC is the LBND1 wire-format magic (structural
+grammar tag, == tac...analytic_lane_render_band.LANE_BAND_MAGIC). The rasterizer's numeric
+LITERALS are the AA-SDF / openpilot-IPM STRUCTURAL scalars copied VERBATIM from the shipped
+oracle `_lane_coverage` (exhaustive):
+  1e-6  -> softness floor   `max(softness, 1e-6)`
+  1e-3  -> forward-denom floor `max(vr - v_h, 1e-3)`
+  2.0   -> cx default = W/2.0 (image-center fallback when header cx is null)
+  1.0   -> horizon row offset `v_h + 1.0`; near-range offset `fr0 - 1.0`; clip upper 1.0; gate 1.0
+  5.0   -> far-range offset `fr1 + 5.0`
+  0.5   -> half-width floor `max(polyval(hc,v), 0.5)`; AA clip bias `s/soft + 0.5`; dash-duty default
+  0.0   -> clip lower; gate off; polyval/acc init
+These are FIXED rasterizer geometry — they do NOT depend on the video, the trained witness, the
+lane coeffs, ξ, or any per-frame data.
+
+CLASSIFICATION (ffi): the 4 error sentinels are structural return codes. No data.
 
 NOT PRESENT (verified absent): learned weights, FiLM/palette tables, per-frame or per-pair
-lookup tables, ξ / homography / pose values, Fourier bank `B`, class counts, palettes,
-frequency tables (caller-supplied at runtime from the archive), or any video-derived array.
+lookup tables, ξ / homography / pose values, LANE POLYNOMIAL COEFFS, camera geometry
+(cam_h/fx/fy/v_h/dash_forward_max_m), Fourier bank `B`, class counts, palettes, or frequency
+tables — ALL of these are RUNTIME INPUTS read from `archive.zip` (the COUNTED payload: the
+range-coded ξ streams + histograms/seeds/lo for the pose carrier; the LBND lane blob's JSON
+header geometry + fp64 coeff payload for the lane band), never embedded here.
 
-The frequency tables, range-coded streams, seeds, and lo-offsets the decoder consumes are
-ALL runtime inputs read from `archive.zip` (the COUNTED payload), never embedded here.
-
-VERDICT: CLEAN — payload-cleanliness contract satisfied.
+VERDICT: CLEAN — payload-cleanliness contract satisfied (ξ decode + lane raster).

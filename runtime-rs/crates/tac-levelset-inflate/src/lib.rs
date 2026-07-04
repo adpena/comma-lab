@@ -34,8 +34,17 @@
 //! |----|---------------|-------------|
 //! | [`range_decode::decode_static_symbols`] | `range_coder.decode_static_symbols` | `levelset_xi_range_decode_v1` |
 //! | [`xi_column::decode_xi_column`] | `xi_pose_coder._channel_delta_decode` | `levelset_xi_column_delta_v1` |
+//! | [`lane_coverage::lane_coverage`] | `_INFLATE_PY::_lane_coverage` (AA-SDF render-band raster) | `levelset_lane_coverage_v1` |
+//!
+//! Task #283 adds the lane AA-SDF render-band rasterizer ([`lane_coverage`]) — the
+//! SECOND bit-exact-portable increment. It is MEASURED matmul- and transcendental-FREE
+//! (`np.polyval` Horner + elementwise IEEE-754 fp64 ops), so it ships where the fp32
+//! raster (#281) and the BLAS/`tanh` neural forward (#282) cannot. [`ffi`] exposes it
+//! over a C ABI for the `ctypes` inflate swap-in (opt-in `INFLATE_RUST_LANE=1`).
 
 pub mod conformance;
+pub mod ffi;
+pub mod lane_coverage;
 pub mod range_decode;
 pub mod xi_column;
 
@@ -55,6 +64,10 @@ pub enum LevelSetInflateError {
     InconsistentStream(String),
     /// Golden-vector manifest i/o or JSON parse failure.
     GoldenVectorIo(String),
+    /// LBND1 lane-band blob failed to parse (bad magic, truncated header/payload,
+    /// or a layout mismatch vs the JSON header). Mirrors the shipped inflate
+    /// `_lane_parse`'s fail-loud `assert`.
+    BadLaneBand(String),
     /// Byte-for-byte parity mismatch vs the committed Python-oracle digest.
     ShaMismatch {
         schema: String,
@@ -71,6 +84,7 @@ impl fmt::Display for LevelSetInflateError {
                 write!(f, "encoded range stream inconsistent with frequency table: {m}")
             }
             LevelSetInflateError::GoldenVectorIo(m) => write!(f, "golden vector io: {m}"),
+            LevelSetInflateError::BadLaneBand(m) => write!(f, "bad LBND1 lane-band blob: {m}"),
             LevelSetInflateError::ShaMismatch {
                 schema,
                 produced,

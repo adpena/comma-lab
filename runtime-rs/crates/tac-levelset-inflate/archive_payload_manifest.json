@@ -2,13 +2,22 @@
   "crate": "tac-levelset-inflate",
   "purpose": "Native DECODE for the level-set inflate primitives that are bit-exact-portable against the tac Python oracle.",
   "discipline": "CLAUDE.md 'Native eval-time runtime discipline' + rule 118 (generic algorithm FREE in inflate; video-derived payload COUNTED in archive.zip).",
-  "counted_payload_this_crate_decodes": {
-    "name": "#257 store-nothing ξ pose-carrier payload (XIP2, coder=delta_ar)",
-    "location": "archive.zip -> pose-carrier section (PCAR1, pcar_store_nothing_v=2) -> xi_payload",
-    "wire_format": "XIP2 | <B coder=1> <H P> <B D> | scales(D fp32) | per-channel [ <iii seed lo hi> <I mlen> brotli(counts u32) <I slen> range_coded_stream ]",
-    "what_is_counted": "the per-channel range-coded ξ delta streams + brotli'd histograms + seeds/scales (video-derived ego-motion), ~6.4 KB for 600 pairs",
-    "what_is_free": "the decode ALGORITHM in this crate (arithmetic decode + cumsum) AND the downstream exp_se3 + plane-homography DERIVE-H (rule 118 generic compute), which regenerate the per-pair homography H from ξ with ZERO stored H bytes"
-  },
+  "counted_payload_this_crate_decodes": [
+    {
+      "name": "#257 store-nothing ξ pose-carrier payload (XIP2, coder=delta_ar)",
+      "location": "archive.zip -> pose-carrier section (PCAR1, pcar_store_nothing_v=2) -> xi_payload",
+      "wire_format": "XIP2 | <B coder=1> <H P> <B D> | scales(D fp32) | per-channel [ <iii seed lo hi> <I mlen> brotli(counts u32) <I slen> range_coded_stream ]",
+      "what_is_counted": "the per-channel range-coded ξ delta streams + brotli'd histograms + seeds/scales (video-derived ego-motion), ~6.4 KB for 600 pairs",
+      "what_is_free": "the decode ALGORITHM in this crate (arithmetic decode + cumsum) AND the downstream exp_se3 + plane-homography DERIVE-H (rule 118 generic compute), which regenerate the per-pair homography H from ξ with ZERO stored H bytes"
+    },
+    {
+      "name": "#224 lane render-band coeffs (LBND1; LBND2/Wave-F RD in the shipped path)",
+      "location": "archive.zip -> lane_render_band section (5th block) -> brotli(LBND blob)",
+      "wire_format": "LBND1 | <I header_len> header_json(utf8: geom{cam_h,fx,fy} + v_h/softness/dash_gate/dash_forward_max_m/cx + per-pair per-line {nc,nh,has_dash}) | float64 payload (per-line centerline+halfwidth coeffs, dash period/phase/duty, forward_range)",
+      "what_is_counted": "the per-pair openpilot-IPM lane POLYNOMIAL COEFFS (~8-11 fp64/line, video-derived lane geometry), COUNTED in archive.zip",
+      "what_is_free": "the AA-SDF COVERAGE RASTER in this crate (lane_coverage.rs): polyval Horner + elementwise fp64 that EXPANDS the coeffs into the (H,W) coverage field with ZERO stored per-pixel bytes (rule 118 generic rasterizer)"
+    }
+  ],
   "primitives": [
     {
       "fn": "range_decode::decode_static_symbols",
@@ -23,6 +32,17 @@
       "golden_vector": "levelset_xi_column_delta_v1",
       "bit_exact": true,
       "bit_exact_basis": "arithmetic decode + integer +lo + prefix-sum + seed"
+    },
+    {
+      "fn": "lane_coverage::lane_coverage (+ parse_lane_band_lbnd1, ffi::tac_lane_coverage_all_lbnd1)",
+      "python_oracle": "tools/levelset_byte_close_and_eval.py::_INFLATE_PY::_lane_coverage (== tac.boundary_math.analytic_lane_render_band.rasterize_lane_coverage_range_dependent)",
+      "golden_vector": "levelset_lane_coverage_v1",
+      "task": 283,
+      "bit_exact": true,
+      "portable": true,
+      "bit_exact_basis": "np.polyval Horner (sequential mul+add, no FMA) + elementwise IEEE-754 fp64 (/ * - abs max min clip mod, np-remainder) + f64->f32 round-to-nearest-even; matmul/transcendental-FREE -> host-portable (no BLAS reduction order, no libm ULP gap) -- the property fp32 (#281) and the neural forward (#282) lack",
+      "end_to_end_swap_in": "lane_end_to_end_parity.py: numpy inflate coverage == Rust ctypes coverage == oracle SHA (byte-identical, 32 real pairs @ 384x512); speedup ~2.18x on the raster hot path",
+      "negative_control": "flipping 1 coeff byte of the LBND1 blob fails lane_coverage_parity with a SHA mismatch (verified 2026-07-04)"
     }
   ],
   "out_of_scope_not_bit_exact_portable": {
@@ -30,14 +50,19 @@
     "pose_carrier_warp": "np.linalg.inv (LAPACK) + Hinv @ grid (BLAS) block bit-exactness, same root cause.",
     "brotli_of_counts": "the per-channel histogram brotli-decompress is a separately-covered primitive (sibling tac-packet-compiler split_brotli); this crate's column decode takes the already-decompressed frequencies."
   },
-  "highest_value_next_bit_exact_increment": {
-    "fn": "_lane_coverage (lane AA-SDF render-band rasterizer)",
-    "why": "MEASURED matmul- and transcendental-FREE (np.polyval Horner + elementwise / max abs clip mod compare) => bit-exact-able; a real per-pixel render-res wall-clock contributor; rule-118 FREE generic rasterizer."
+  "ship_readiness_lane_283": {
+    "status": "SHIP-ABLE (bit-exact + portable), unlike fp32 (#281 non-portable) / neural forward (#282 non-portable)",
+    "remaining_ship_integration_follow_on": [
+      "wire opt-in INFLATE_RUST_LANE=1 fast path into the shipped inflate (_lane_coverage -> ctypes FFI; default OFF = numpy, byte-identical; #205 byte-close untouched)",
+      "LBND2 (Wave-F RD) parse mirror (coverage raster IDENTICAL for LBND1/LBND2; both dequantize to the same fp64 LaneLines -- only the parse differs)",
+      "deterministic reproducible build + runtime-tree custody + inflate.sh closure per CLAUDE.md 'Native eval-time runtime discipline'"
+    ]
   },
   "parity_proof": {
-    "rust_gate": "tests/golden_vector_parity.rs (assert_sha256_parity vs Python-oracle digest on committed real-xi fixtures)",
-    "python_mirror": "python_reference_equivalence_test.py (re-derives the same digests from the REAL oracle)",
-    "negative_control": "flipping 1 bit of the input stream fails range_decode_parity with ShaMismatch (verified 2026-07-03)"
+    "rust_gate": "tests/golden_vector_parity.rs (assert_sha256_parity vs Python-oracle digest on committed REAL fixtures: xi decode + lane coverage)",
+    "python_mirror": "python_reference_equivalence_test.py (re-derives all digests from the REAL oracle; ALL PASS incl. lane)",
+    "end_to_end_swap_in": "lane_end_to_end_parity.py (numpy inflate coverage == Rust ctypes coverage == oracle SHA, byte-identical)",
+    "negative_control": "xi: 1-bit stream flip fails range_decode_parity; lane: 1 coeff-byte flip fails lane_coverage_parity (both ShaMismatch; verified 2026-07-03/04)"
   },
   "pointer": "0.19110 UNMOVED — this crate is decode wall-clock MEANS, moves no score."
 }

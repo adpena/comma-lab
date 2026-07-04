@@ -5,13 +5,19 @@ Python oracle is **bit-exact-portable**. Task #282 first increment (2026-07-03).
 
 ## Status
 
-`v0.1.0` — byte-for-byte parity **GREEN** on committed golden vectors derived from REAL contest
-`gt_poses` ξ. Two primitives lowered, both bit-exact-by-construction:
+`v0.2.0` — byte-for-byte parity **GREEN** on committed golden vectors derived from REAL contest
+`gt_poses` ξ + REAL lane coeffs (fitted from the frozen SegNet argmax `gt_n96`). Three primitives
+lowered, all bit-exact:
 
 | fn | Python oracle | golden vector | basis |
 |----|---------------|---------------|-------|
 | `range_decode::decode_static_symbols` | `tac.lossless.range_coder.decode_static_symbols` | `levelset_xi_range_decode_v1` | pure-integer CACM range decode |
 | `xi_column::decode_xi_column` | `tac.boundary_math.xi_pose_coder._channel_delta_decode` | `levelset_xi_column_delta_v1` | arithmetic decode + `+lo` + prefix-sum + `seed` |
+| `lane_coverage::lane_coverage` (#283) | `_INFLATE_PY::_lane_coverage` (AA-SDF render-band raster) | `levelset_lane_coverage_v1` | `polyval` Horner + elementwise IEEE-754 fp64 → **bit-exact + PORTABLE** |
+
+The lane rasterizer is the FIRST genuinely **ship-able** Rust inflate raster: bit-exact AND
+host-portable (matmul/transcendental-FREE), proven byte-identical when swapped into the numpy
+inflate via `ctypes` (`lane_end_to_end_parity.py`; opt-in `INFLATE_RUST_LANE=1`, default numpy).
 
 ## Feasibility boundary (why only these two — MEASURED)
 
@@ -23,13 +29,17 @@ The level-set inflate's wall-clock hot path is the coord-INR neural forward (mat
 - numpy fp64 `tanh` ≠ scalar system libm `tanh` — **844/4096** at 1 ULP (numpy `sin`/`cos`/`exp`
   DO match libm; `tanh` is the blocker).
 
-So the only genuinely bit-exact piece is the **#257 store-nothing ξ pose-carrier decode** (pure
-integer) — this crate. Deferred, with the honest route recorded in `binary_source_audit.md`:
+Two pieces ARE bit-exact-portable and are lowered here:
 
-- the neural forward → **fp32-TOLERANT** Rust (gated on task #281's fp32 score-preserving verdict;
-  not bit-exact → needs a score-equivalence gate, not `assert_sha256_parity`);
-- the **lane AA-SDF render-band rasterizer** (`_lane_coverage`) → MEASURED matmul/transcendental-FREE
-  ⇒ bit-exact-able AND a real per-pixel wall-clock contributor ⇒ the **highest-value NEXT increment**.
+- the **#257 store-nothing ξ pose-carrier decode** (pure integer) — #282;
+- the **lane AA-SDF render-band rasterizer** (`_lane_coverage`) — #283: MEASURED matmul/transcendental
+  -FREE ⇒ bit-exact + host-portable, and a real per-pixel wall-clock contributor (rule-118 FREE raster).
+  Proven byte-identical swapped into the numpy inflate; ~2.18× on the raster hot path.
+
+Still deferred (honest route in `binary_source_audit.md`): the neural forward → **fp32-TOLERANT**
+Rust only (gated on task #281's fp32 score-preserving verdict; not bit-exact → needs a
+score-equivalence gate, not `assert_sha256_parity`) — blocked by Apple Accelerate `dgemm` reduction
+order + numpy fp64 `tanh` (both non-portable).
 
 ## Discipline
 
@@ -44,8 +54,9 @@ integer) — this crate. Deferred, with the honest route recorded in `binary_sou
 
 ```bash
 cd runtime-rs
-cargo test -p tac-levelset-inflate --offline           # 11 tests incl. 2 real-xi SHA parity gates
-.venv/bin/python runtime-rs/crates/tac-levelset-inflate/python_reference_equivalence_test.py
+cargo test -p tac-levelset-inflate --offline           # 18 tests incl. 3 real-data SHA parity gates + lane negative control
+.venv/bin/python runtime-rs/crates/tac-levelset-inflate/python_reference_equivalence_test.py   # ALL PASS incl. lane
+.venv/bin/python runtime-rs/crates/tac-levelset-inflate/lane_end_to_end_parity.py              # numpy==rust==oracle SHA; ~2.18x raster
 ```
 
-See `rebuild_instructions.md` for golden-vector regeneration + the bench + the negative control.
+See `rebuild_instructions.md` for golden-vector regeneration + the bench + the negative controls.

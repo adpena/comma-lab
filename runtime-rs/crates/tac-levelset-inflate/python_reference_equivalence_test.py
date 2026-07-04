@@ -28,6 +28,10 @@ REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "src"))
 
 from tac.lossless.range_coder import decode_static_symbols  # noqa: E402
+from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402
+    deserialize_lane_band,
+    rasterize_lane_coverage_range_dependent,
+)
 
 
 def _sha(b: bytes) -> str:
@@ -72,10 +76,38 @@ def check_xi_column() -> bool:
     return _sha(_i64le(col)) == m["sha256"]
 
 
+def check_lane_coverage() -> bool:
+    # #283: re-derive the AA-SDF coverage stack from the canonical source module
+    # (`rasterize_lane_coverage_range_dependent`, which the golden-vector generator
+    # proved BIT-IDENTICAL to the shipped inflate `_lane_coverage` oracle) and confirm
+    # it equals the manifest digest -> the Python side agrees with the Rust port.
+    import numpy as np
+
+    m = _manifest("levelset_lane_coverage_v1")
+    blob = _bin("levelset_lane_coverage_v1_band.bin")
+    rh, rw, n_pairs = int(m["render_h"]), int(m["render_w"]), int(m["n_pairs"])
+    pairs, hdr = deserialize_lane_band(blob)
+    stack = np.stack(
+        [
+            rasterize_lane_coverage_range_dependent(
+                pairs[i], h=rh, w=rw, softness=float(hdr["softness"]),
+                dash_gate=bool(hdr["dash_gate"]),
+                dash_forward_max_m=float(hdr["dash_forward_max_m"]),
+                v_h=float(hdr["v_h"]),
+                cx=(None if hdr.get("cx") is None else float(hdr["cx"])),
+            )
+            for i in range(n_pairs)
+        ],
+        axis=0,
+    ).astype("<f4")
+    return _sha(stack.tobytes(order="C")) == m["sha256"]
+
+
 def main() -> int:
     checks = [
         ("levelset_xi_range_decode_v1", check_range_decode()),
         ("levelset_xi_column_delta_v1", check_xi_column()),
+        ("levelset_lane_coverage_v1", check_lane_coverage()),
     ]
     ok = True
     for name, passed in checks:

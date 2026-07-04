@@ -50,6 +50,11 @@ readme = "README.md"
 rust-version = "1.85"
 publish = false
 
+# rlib for the sibling crates + cargo tests; cdylib for the numpy-inflate ctypes swap-in
+# (task #283 `_lane_coverage` ship-integration surface — opt-in `INFLATE_RUST_LANE=1`).
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 # JSON for loading golden-vector manifests under tests + diagnostics.
 serde = { version = "1", features = ["derive"] }
