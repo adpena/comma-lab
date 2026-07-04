@@ -57,6 +57,7 @@ __all__ = [
     "derive_config",
     "derive_sealed_205_config",
     "derive_store_nothing_205_config",
+    "derive_fresh_seeded_config",
 ]
 
 # --------------------------------------------------------------------------
@@ -515,6 +516,17 @@ class WitnessConfig:
     # sets it to "generated". A/B-able against sealed_205 at #205 (measures the store-nothing d_pose
     # through the real byte-closed decode vs the table carrier). Default "real_keyframe" => unchanged.
     pose_carrier_source: str = "real_keyframe"
+    # (C5, SEAL review 2026-07-04) the explicit --verdict-batch value the sealed-family argv emits
+    # (the R2 OOM-fix flag). Default 32 == the trainer default == the sealed §7+R2 argv => the
+    # sealed_205 byte-identity gate is UNCHANGED. ``fresh_seeded`` sets 64 (review-verified: bounded
+    # verdict spike max(6, 0.11*64)=7.04 GiB, still SAFE-by-projection).
+    verdict_batch: int = 32
+    # (C5) FRESH SEEDED run-1 config (fresh_run_config_adversarial_review_20260704.md "revised launch
+    # shape"): when True, ``_sealed_205_flags`` additionally emits the seed/control flags that have no
+    # sealed-argv slot (--seed-islands / --eikonal-weight-end / --film-stiefel /
+    # --muon-warm-start-momentum / --muon-lr-final-frac / --closed-loop-control). Built by
+    # ``derive_fresh_seeded_config``. Default False => sealed_205 / store_nothing_205 byte-identical.
+    fresh_seeded: bool = False
     all_levers_base: dict = field(default_factory=dict)
     adam_beta2: float = 0.999  # #222; 0.999 == MLX default (bit-identical); all-levers sets 0.9999999.
 
@@ -704,7 +716,7 @@ class WitnessConfig:
         _pc_source_flags: list[tuple[str, object]] = (
             [("--pose-carrier-source", self.pose_carrier_source)]
             if str(self.pose_carrier_source) != "real_keyframe" else [])
-        return [
+        flags: list[tuple[str, object]] = [
             ("--out-dir", out_dir),
             ("--gt-cache", self.gt_cache),
             ("--num-pairs", self.num_pairs),
@@ -723,8 +735,10 @@ class WitnessConfig:
             # EXPLICITLY (vs relying on the coupled implicit trainer+preflight default) self-documents
             # the fix in launch.sh + makes witness_memory_preflight parse the REAL value (C1 defense-in-
             # depth). Breaks the §7 byte-identity by design: the §7 argv is the config that OOM'd, and
-            # this safety flag now belongs IN the launched config (P3 verdict C4).
-            ("--verdict-batch", 32),
+            # this safety flag now belongs IN the launched config (P3 verdict C4). Value is the
+            # ``verdict_batch`` field (default 32 == this historical literal => sealed unchanged;
+            # fresh_seeded sets 64 per the 2026-07-04 SEAL review).
+            ("--verdict-batch", self.verdict_batch),
             ("--curriculum", None),
             ("--tau-softplus-start-epoch", self.tau_softplus_start_epoch),
             ("--tau-softplus-tau", pb["tau_softplus_tau"]),
@@ -803,6 +817,20 @@ class WitnessConfig:
             ("--ckpt-every", pb["ckpt_every"]),
             ("--stage-checkpoints", None),
         ]
+        if self.fresh_seeded:
+            # (C5) the FRESH SEEDED flags with no sealed-argv slot, appended as one trailing block
+            # (argparse is order-insensitive; the sealed prefix above stays byte-stable). Values per
+            # the 2026-07-04 SEAL review "revised launch shape" — every flag grep-verified against the
+            # trainer argparse (never-invent-flags).
+            flags += [
+                ("--seed-islands", None),                 # #208 nucleation: EARLY-SEED lane+movable
+                ("--eikonal-weight-end", 0.10),           # 0.05 -> 0.10 step @ tau (survival knee)
+                ("--film-stiefel", None),                 # Stiefel column-orthonormal FiLM (mod-19)
+                ("--muon-warm-start-momentum", None),     # Muon v <- AdamW m at the switch
+                ("--muon-lr-final-frac", 0.1),            # cosine-decay Muon LR to 10% by stage end
+                ("--closed-loop-control", None),          # the seed-survival safety net (review AXIS 8)
+            ]
+        return flags
 
     def to_command(self, out_dir: str, *, perf_env: bool = True) -> str:
         """Render the GO-ready launch command string (attribution-clean)."""
@@ -1034,6 +1062,115 @@ def derive_store_nothing_205_config(
         "table)->1049B(store_nothing). A/B arm over sealed_205 (same seg/curriculum; only the pose STORE "
         "gauge differs).", Portability.SCORER_FIXED)
     return replace(base, pose_carrier_source="generated", provenance=prov)
+
+
+# The FRESH SEEDED run-1 deltas over the #205 sealed argv, per the pre-launch SEAL review
+# ``.omx/research/fresh_run_config_adversarial_review_20260704.md`` ("The revised launch shape").
+# Single source consumed by :func:`derive_fresh_seeded_config` (reuse-not-retype: everything NOT
+# listed here is read from the sealed config exactly as ``derive_sealed_205_config`` built it).
+_FRESH_SEEDED_DELTAS: dict = {
+    # proven_base overrides (flags the sealed argv already emits from proven_base):
+    "lane_prior_phi1_mode": "paint",     # #291 paint-then-SDF nucleation fix (replace = MEASURED NO-OP)
+    "eikonal_weight": 0.05,              # base of the 0.05 -> 0.10 survival step
+    "softmax_temp_end": 1.0,             # constant render-tau 1.0 (with geometric shape: inert-exact, L2)
+    "st_rewarmup_epochs": 20,            # rewarmup 20-cosine at stage transitions
+    "st_rewarmup_shape": "cosine",
+    # all_levers_base overrides (flags the sealed argv emits from all_levers_base):
+    "tau_anneal_shape": "geometric",     # with start==end==1.0 => constant tau EXACTLY (review L2)
+    "lane_band_start_epoch": 350,        # 50-ep deconflict gap after tau@300
+    "hosc_beta_end": 5.134,              # M4: beta(ep726 muon-freeze) = 4.00 exactly
+    # WitnessConfig field overrides:
+    "mod_dim": 19,                       # Whitney floor (mod-19 + film-stiefel well-posed, review L4)
+    "l7_start_epoch": 1001,              # L1: TRUE "never" (1000 would run l7_softplus on the final ep)
+    "verdict_batch": 64,
+}
+
+
+def derive_fresh_seeded_config(
+    gt_cache_path: str | Path,
+    *,
+    num_pairs: int,
+    epochs: int = 1000,
+    code_matrix: np.ndarray | None = None,
+    byte_close_result: dict | None = None,
+) -> WitnessConfig:
+    """The **FRESH SEEDED run-1 config** — the REVISED launch shape from the pre-launch SEAL
+    adversarial review (``.omx/research/fresh_run_config_adversarial_review_20260704.md``, commit
+    4bf533cab): the #205 sealed config (:func:`derive_sealed_205_config` — reused, not retyped) +
+    the lane-NUCLEATION seed fix + the survival/control levers, EXACTLY the review's deltas
+    (:data:`_FRESH_SEEDED_DELTAS` + the six no-sealed-slot flags ``fresh_seeded=True`` appends):
+
+      paint / --seed-islands / eikonal 0.05->0.10 / geometric+constant tau=1.0 / mod-dim 19 /
+      --film-stiefel / --muon-warm-start-momentum + --muon-lr-final-frac 0.1 / band 350 /
+      rewarmup 20-cosine / --closed-loop-control / --l7-start-epoch 1001 / --hosc-beta-end 5.134 /
+      --verdict-batch 64.
+
+    Deliberately NOT included (per the review's CRITICAL findings — do not "fix" these back in):
+
+      * NO ``--curriculum-event-triggered`` — C1 (plateau eps 1e-3 fires CE->tau ~ep150 mid-descent,
+        15% CE-floor loss) + C2 (could converge-fire the l7 DEFECT stage) + M1 (de-synchronizes 3
+        epoch-anchored levers). Run-2 lever, gated behind recalibration + boundary re-anchoring.
+      * NO ``--bank-n-scales`` change — C3: bank-6 is memory-UNSAFE at n600+self-orient (in_feat 176
+        -> cf_mx_cache 86.4 GiB -> projected peak 110.81 GiB REFUSE). bank-4 (trainer default) KEEP;
+        re-open only after an fp16 / on-the-fly per-pair feats path lands.
+      * NO ``--island-dilate-px`` change — KEEP 1 (the sealed value; the seed acceptance gate is the
+        measured ep0 ``part_frac[lane] > 0``).
+
+    NOTE (honest dependency): ``--l7-start-epoch 1001`` satisfies the review's L1 hardening but at
+    trainer HEAD the ``--curriculum`` ordering guard requires ``l7_start_epoch <= epochs``
+    (train_levelset_witness_realized_through_R_mlx.py:5413) — the operator's parallel trainer edit
+    (the C2/L1 wave) is expected to admit the ">= epochs == never" form; until it lands, the trainer
+    would fail-loud at startup (a REFUSE, never a silent wrong run).
+
+    means != ends: returns a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110
+    from ``upstream/evaluate.py`` (contest-CPU/CUDA, NEVER MPS) moves the pointer.
+    """
+    base = derive_sealed_205_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    d = _FRESH_SEEDED_DELTAS
+    pb = dict(base.proven_base)
+    pb.update({
+        "lane_prior_phi1_mode": d["lane_prior_phi1_mode"],
+        "eikonal_weight": d["eikonal_weight"],
+        "softmax_temp_end": d["softmax_temp_end"],
+        "st_rewarmup_epochs": d["st_rewarmup_epochs"],
+        "st_rewarmup_shape": d["st_rewarmup_shape"],
+    })
+    alb = dict(base.all_levers_base)
+    alb.update({
+        "tau_anneal_shape": d["tau_anneal_shape"],
+        "lane_band_start_epoch": d["lane_band_start_epoch"],
+        "hosc_beta_end": d["hosc_beta_end"],
+    })
+    prov = dict(base.provenance)
+    prov["mod_dim"] = ProvenancedValue(
+        int(d["mod_dim"]), SRC_RECALLED,
+        "FRESH SEEDED (SEAL review 2026-07-04): mod-dim 19 = the Whitney floor for measured m~9 "
+        "(2m+1), paired with --film-stiefel (film weight (768,19) tall => column-orthonormalization "
+        "well-posed, review L4). Delta over the sealed Q4 value 32.", Portability.INSTANCE)
+    prov["l7_start_epoch"] = ProvenancedValue(
+        int(d["l7_start_epoch"]), SRC_RECALLED,
+        "FRESH SEEDED (SEAL review L1): l7 'never' hardening — at 1000 (== epochs) the final epoch "
+        "still runs l7_softplus (ep < l7_start off-by-one); 1001 makes never mean never.",
+        Portability.INSTANCE)
+    prov["fresh_seeded_deltas"] = ProvenancedValue(
+        dict(d), SRC_RECALLED,
+        "fresh_run_config_adversarial_review_20260704.md 'revised launch shape': paint+seed-islands "
+        "nucleation fix, eikonal 0.05->0.10 survival step, constant tau=1.0 (geometric, inert-exact), "
+        "rewarmup 20-cosine, band 350, muon warm-start+final-frac 0.1, hosc-beta-end 5.134 (M4), "
+        "verdict-batch 64, closed-loop control ON; event-triggered curriculum + bank-6 + dilate "
+        "changes deliberately EXCLUDED (C1/C2/C3).", Portability.INSTANCE)
+    return replace(
+        base,
+        fresh_seeded=True,
+        mod_dim=int(d["mod_dim"]),
+        l7_start_epoch=int(d["l7_start_epoch"]),
+        verdict_batch=int(d["verdict_batch"]),
+        proven_base=pb,
+        all_levers_base=alb,
+        provenance=prov,
+    )
 
 
 def derive_config(

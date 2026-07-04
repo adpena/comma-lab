@@ -332,3 +332,95 @@ def test_all_levers_base_dict_has_no_supersample_keys():
     assert base["render_aa"] == "none"
     assert "aa_supersample" not in base
     assert "aa_self_orient_fine_mode" not in base
+
+
+# --------------------------------------------------------------------------
+# C5 (SEAL review 2026-07-04): the FRESH SEEDED run-1 config — sealed_205 +
+# EXACTLY the review's deltas; event-triggered / bank-6 / dilate EXCLUDED.
+# --------------------------------------------------------------------------
+def _fresh_cfg():
+    return wac.derive_fresh_seeded_config(_GT_N600, num_pairs=600, epochs=1000)
+
+
+def test_fresh_seeded_carries_all_review_deltas():
+    fd = _parse_flag_dict(_fresh_cfg().to_trainer_flags("OUT"))
+    # the 13-lever revised shape, value by value (numeric-aware where rendering varies)
+    assert fd["--lane-prior-phi1-mode"] == "paint"
+    assert "--seed-islands" in fd
+    assert float(fd["--eikonal-weight"]) == 0.05
+    assert float(fd["--eikonal-weight-end"]) == 0.10
+    assert fd["--tau-anneal-shape"] == "geometric"
+    assert float(fd["--softmax-temp-end"]) == 1.0
+    assert fd["--mod-dim"] == "19"
+    assert "--film-stiefel" in fd
+    assert "--muon-warm-start-momentum" in fd
+    assert float(fd["--muon-lr-final-frac"]) == 0.1
+    assert fd["--lane-band-start-epoch"] == "350"
+    assert fd["--stage-transition-rewarmup-epochs"] == "20"
+    assert fd["--stage-transition-rewarmup-shape"] == "cosine"
+    assert "--closed-loop-control" in fd
+    assert fd["--l7-start-epoch"] == "1001"
+    assert float(fd["--hosc-beta-end"]) == 5.134
+    assert fd["--verdict-batch"] == "64"
+
+
+def test_fresh_seeded_constant_tau_is_inert_exact():
+    """Review L2: geometric shape with start==end==1.0 => tau constant 1.0 EXACTLY."""
+    fd = _parse_flag_dict(_fresh_cfg().to_trainer_flags("OUT"))
+    assert float(fd["--softmax-temp-start"]) == 1.0
+    assert float(fd["--softmax-temp-end"]) == 1.0
+    assert fd["--tau-anneal-shape"] == "geometric"
+
+
+def test_fresh_seeded_excludes_the_critical_findings():
+    """C1/C2: NO event-triggered curriculum. C3: NO bank change (bank-4 = trainer default, memory-
+    UNSAFE at bank-6). Dilate KEEP 1 (sealed value)."""
+    fd = _parse_flag_dict(_fresh_cfg().to_trainer_flags("OUT"))
+    assert "--curriculum-event-triggered" not in fd, "C1/C2: run-2 lever, must NOT be in run 1"
+    assert "--bank-n-scales" not in fd, "C3: bank stays at the trainer default 4 (bank-6 REFUSEd)"
+    assert fd["--island-dilate-px"] == "1"
+
+
+def test_fresh_seeded_flags_all_exist_in_trainer_argparse():
+    real = _real_trainer_flags()
+    emitted = [flag for flag, _ in _fresh_cfg().to_trainer_flags("out/dir")]
+    missing = [f for f in emitted if f not in real]
+    assert missing == [], f"invented flags not in trainer argparse: {missing}"
+
+
+def test_fresh_seeded_inherits_sealed_non_delta_values():
+    """Reuse-not-retype: every non-delta knob must equal the sealed config's value."""
+    sealed = _parse_flag_dict(
+        wac.derive_sealed_205_config(_GT_N600, num_pairs=600, epochs=1000).to_trainer_flags("OUT"))
+    fresh = _parse_flag_dict(_fresh_cfg().to_trainer_flags("OUT"))
+    deltas = {"--lane-prior-phi1-mode", "--eikonal-weight", "--tau-anneal-shape",
+              "--softmax-temp-end", "--mod-dim", "--lane-band-start-epoch",
+              "--stage-transition-rewarmup-epochs", "--stage-transition-rewarmup-shape",
+              "--l7-start-epoch", "--hosc-beta-end", "--verdict-batch"}
+    new_only = {"--seed-islands", "--eikonal-weight-end", "--film-stiefel",
+                "--muon-warm-start-momentum", "--muon-lr-final-frac", "--closed-loop-control"}
+    assert set(fresh) - set(sealed) == new_only
+    for k in set(sealed) & set(fresh) - deltas:
+        assert fresh[k] == sealed[k], f"non-delta knob drifted: {k}: {sealed[k]} -> {fresh[k]}"
+
+
+def test_sealed_205_unchanged_by_fresh_seeded_machinery():
+    """Regression: the new verdict_batch/fresh_seeded fields default so sealed_205 is byte-stable
+    (--verdict-batch 32, NONE of the fresh-only flags emitted)."""
+    cfg = wac.derive_sealed_205_config(_GT_N600, num_pairs=600, epochs=1000)
+    assert cfg.fresh_seeded is False and cfg.verdict_batch == 32
+    fd = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
+    assert fd["--verdict-batch"] == "32"
+    for f in ("--seed-islands", "--eikonal-weight-end", "--film-stiefel",
+              "--muon-warm-start-momentum", "--muon-lr-final-frac", "--closed-loop-control"):
+        assert f not in fd, f"sealed_205 must not emit the fresh-only flag {f}"
+
+
+def test_fresh_seeded_provenance_records_the_deltas():
+    cfg = _fresh_cfg()
+    assert cfg.fresh_seeded is True
+    for k in ("mod_dim", "l7_start_epoch", "fresh_seeded_deltas"):
+        assert k in cfg.provenance
+        assert "2026-07-04" in cfg.provenance[k].provenance or \
+               "fresh" in cfg.provenance[k].provenance.lower() or \
+               "SEAL review" in cfg.provenance[k].provenance
