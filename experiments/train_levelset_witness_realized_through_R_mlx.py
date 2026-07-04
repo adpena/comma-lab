@@ -1095,8 +1095,16 @@ def _evt_resolve_seg_form(ep: int, state: dict, args) -> "tuple[str, dict | None
     return "l7_softplus", None
 
 
-def _scheduled_eikonal_weight(ep: int, args) -> float:
+def _scheduled_eikonal_weight(ep: int, args, step_epoch: "int | None" = None) -> float:
     """(#292 transition-analysis) Per-epoch eikonal weight — the eikonal STEP-ramp control lever.
+
+    ``step_epoch`` (SEAL fix, 2026-07-04 pre-launch review): the ACTUAL tau/MCF onset epoch to step
+    at. Default ``None`` == the hardcoded ``--tau-softplus-start-epoch`` (BYTE-IDENTICAL to the
+    original build-1 behavior — the OFF/#205 path). With ``--curriculum-event-triggered`` ON the
+    caller passes the RESOLVED boundary (the event-fired epoch, or a large sentinel while unfired)
+    so the survival step tracks the REAL transition — without this, an early event-fired tau would
+    run mean-curvature flow at BASE eikonal until the hardcoded cap (the exact survival window the
+    ramp exists to protect).
 
     BYTE-IDENTICAL constant ``--eikonal-weight`` unless ``--eikonal-weight-end`` is set != base:
     then STEP base -> end at the tau/MCF onset (``--tau-softplus-start-epoch``, the same boundary
@@ -1114,7 +1122,7 @@ def _scheduled_eikonal_weight(ep: int, args) -> float:
     end = float(end_raw)
     if end == base or not getattr(args, "curriculum", False):
         return base
-    step_ep = int(args.tau_softplus_start_epoch)
+    step_ep = int(args.tau_softplus_start_epoch) if step_epoch is None else int(step_epoch)
     if step_ep <= 0 or ep < step_ep:
         return base
     ease = int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0)
@@ -3845,7 +3853,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             else:
                 seg_form = _seg_form_for_epoch(ep, args)
                 _evt_event = None
-            eik_w_ep = _scheduled_eikonal_weight(ep, args)   # (#292) eikonal STEP-ramp; base if --eikonal-weight-end unset (BYTE-IDENTICAL)
+            # (#292 SEAL fix) With event-triggering ON the eikonal STEP tracks the RESOLVED tau
+            # boundary (the ACTUAL MCF onset), not the hardcoded cap — else an early-fired tau runs
+            # MCF at base eikonal until the cap (the survival window the ramp protects). Unfired ->
+            # large sentinel -> base (still CE). OFF -> original call, BYTE-IDENTICAL (#205 path).
+            if _evt_on:
+                _eik_step_ep = _evt_state["tau"] if _evt_state["tau"] is not None else (1 << 30)
+                eik_w_ep = _scheduled_eikonal_weight(ep, args, step_epoch=_eik_step_ep)
+            else:
+                eik_w_ep = _scheduled_eikonal_weight(ep, args)   # (#292) eikonal STEP-ramp; base if --eikonal-weight-end unset (BYTE-IDENTICAL)
             # (#292 build-3) closed-loop BOUNDED bump composes ON TOP of the build-1 schedule:
             # eff = min(scheduled + bump_add, max(--closed-loop-eikonal-max, scheduled)). Guarded so
             # OFF (or ON with no bump fired) leaves eik_w_ep EXACTLY _scheduled_eikonal_weight

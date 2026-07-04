@@ -64,6 +64,24 @@ def test_ease_is_monotone_nondecreasing():
     assert vals[0] == 0.05 and abs(vals[-1] - 0.10) < 1e-12
 
 
+def test_step_epoch_override_tracks_event_fired_boundary():
+    """(SEAL fix) With event-triggering, the step must track the RESOLVED boundary: fired earlier
+    -> step earlier; unfired (large sentinel) -> base even past the hardcoded cap; None -> identical
+    to the original hardcoded behavior (byte-identity of the OFF path)."""
+    a = _args(eikonal_weight_end=0.10)
+    # None == original behavior at every epoch (the OFF/#205 path)
+    for e in (0, 299, 300, 310, 320, 400):
+        assert _scheduled_eikonal_weight(e, a, step_epoch=None) == _scheduled_eikonal_weight(e, a)
+    # event fired EARLY at ep180: step tracks 180, fully stepped by 200, NOT waiting for 300
+    assert _scheduled_eikonal_weight(179, a, step_epoch=180) == 0.05
+    assert _scheduled_eikonal_weight(200, a, step_epoch=180) == 0.10
+    assert _scheduled_eikonal_weight(250, a, step_epoch=180) == 0.10
+    # unfired sentinel: base everywhere (still CE), even past the hardcoded cap epoch
+    big = 1 << 30
+    for e in (100, 300, 500):
+        assert _scheduled_eikonal_weight(e, a, step_epoch=big) == 0.05
+
+
 def test_zero_ease_is_a_hard_step():
     a = _args(eikonal_weight_end=0.10, stage_transition_rewarmup_epochs=0)
     assert _scheduled_eikonal_weight(299, a) == 0.05
