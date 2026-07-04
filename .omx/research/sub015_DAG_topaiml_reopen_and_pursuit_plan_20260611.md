@@ -7781,3 +7781,19 @@ CONTAINMENT: research + registry only; NO trainer edit, NO #205 touch, NO paid G
 **TRIALITY COMPLETE (the operator-sequenced A→triality→B, closed):** DAG ✓ (03y/03z/this) · equations ✓ (A2, 8 laws e4524c94d) · DSL ✓ (GammaTauEikonalGauge + StageTransitionEasingGauge 73e16eb67) · B ✓ (config plan). All three legs consistent for the deep-math pass. **#284 DONE.**
 
 **SOLVER QUEUE (next geometry-native builds, each $0-gated):** auction-MBO (the proven-erasure cure as a solver) · Airy caustic profile (the asymmetry) · RKMK ξ-transport (dash phase near-free + coherent) · FISTA shearlet. CONTAINMENT: build + $0-gate-designed only; NO #205 trainer edit, NO heavy launch, NO paid GPU. **HARD GATE: pointer 0.19110 UNMOVED.**
+
+---
+
+**FEED-04b (2026-07-04) — #205 d_seg-CREEP ROOT CAUSE = LANE NUCLEATION FAILURE (operator "seed earlier" + "preserve and contain earlier"). $0 probe MEASURES the mechanism + the seed spec. Recommended pivot: fresh SEEDED run.** (memory `lane_nucleation_failure_seed_above_critical_nucleus_20260704`; scratchpad probe; pointer 0.19110 UNMOVED, MEANS.)
+
+**THE CRUX (from #205 run.log):** `structured_init` @ep0 seeds `part_frac = {road 0.248, lane 0.0, sky 0.498, movable 0.0, hood 0.254}` — **LANE + MOVABLE seeded at ZERO** (lane_px=0, lane_mean_iou=0.0). The witness starts with NO lane (the binding residual per all 4 lenses) and must birth it from nothing.
+
+**DEEP-MATH (nucleation):** tau_softplus stage = mean-curvature flow (law #7 mcf_minority_erasure). **Allen-Cahn/MCF critical-nucleus theorem: a phase below a critical size SHRINKS to zero under the flow.** The thin 6px lane, seeded at exactly 0, is maximally sub-critical → can NEVER nucleate + is actively eroded → d_seg (lane-dominated) CREEPS UP (0.004752@ep300→0.006568@ep400, +38%) while ep_loss FALLS (148.5→134.1) = the smooth-surrogate↔hard-verdict decoupling. **Muon@726 sharpens but CANNOT nucleate a zero-mass class ⟹ #205 predicted NOT to reach the lane goal.** The ep300 bump was never "transition-harm" that recovers — it's un-nucleated lane being erased.
+
+**$0 PROBE (MEASURED, n6 cached GT, no #205 memory competition, advisory/directional):** lane median width **6px**; lane survival after Gaussian smooth (MCF proxy): σ=0.8→**0.941**, **σ=1.5→0.489 (51% ERASED)**; **SEED wider (above nucleus): +1px→0.903, +2px→0.979.** ⟹ SEED SPEC for #208: dilate lane+movable ~+2px above native (→~8-10px) so the flow GROWS not erases. The nucleation theory + the seed fix, both MEASURED.
+
+**THE FIX (four lenses, one object):** #208 seed-earlier (physics-required, at INIT) · #286 Ch.4 RAISED EIKONAL (= the interface-width σ knob; keeps the thin lane sharp) · per-class area constraint (auction-MBO, pins lane mass≠0; the OT head-offset solver 8bc91449c is its tropical sibling) · Ch.6 easing. YOUSFI: absent lane = maximally detectable-wrong; seed it SHARP+wide, never globally smooth the structure the scorer keys on (per-region treatment).
+
+**PRESERVE + CONTAIN (operator's call; heavy launch GO-gated + governor + CONTAINMENT):** PRESERVE done — CE-best `levelset_ckpt_stageCE_ep299.npz` (ep300, d_seg 0.00475) + per-stage resume states kept, no signal lost. CONTAIN: the seed must be at INIT ⟹ can't retrofit by resuming #205 ⟹ fix = a FRESH seeded run. Deep-math says #205's remaining 326 ep to Muon are low-EV. **RECOMMENDED: preserve #205 + fresh run with #208 seed + #286 eikonal + geometric-τ + Ch.6 easing. NO autonomous stop/launch — operator GO.**
+
+**PROBES STILL OWED (the operator's "more smokes before deciding"):** memory-gated per-class d_seg attribution on the REAL #205 witness @n600 (confirm creep=lane at scale; run when #205 frees / GO) · critical-nucleus knee ($0, extend probe) · OT head-offset lane-mass restore (8bc91449c, memory-gated). CONTAINMENT: analysis + $0-probe only; NO #205 touch, NO heavy launch, NO paid GPU. **HARD GATE: pointer 0.19110 UNMOVED.**
