@@ -7830,3 +7830,13 @@ CONTAINMENT: research + registry only; NO trainer edit, NO #205 touch, NO paid G
 **BUILD queue (pre-launch):** paint-then-SDF #291 (~10 LOC, decisive) · `tools/witness_control_monitor.py` (facet-5, MISSING) · per-class area-constraint (auction-MBO) · NTK feature-Gram whitening (exponent, slope-gated) · parabolic-shearlet front-end (exponent) · sR-into-gt_n600.
 
 **STALE/SUPERSEDED (do NOT re-open, sweep-C):** Lever-D flicker coder (#280 NO-GO) · deconv/pre-emphasis/matched-filter/brute-AA (measured-neg) · β₂ mis-anchor · 198:1→9.56/37.8 · "level-set has no exact-eval path" (resolved). NEXT: sweep-B lands → I merge A+B+C → ONE master lever ledger + paranoid completeness critic → the CALIBRATED fresh-run config (recommend: fresh run = SEED-fix + Ch.6 + DIM + geometric-τ ONLY; secondaries as isolated A/Bs). CONTAINMENT unchanged. **HARD GATE: pointer 0.19110 UNMOVED.**
+
+---
+
+**FEED-04e (2026-07-04) — MASTER LEVER LEDGER LANDED (9c28f6a3c; sweep #290 complete: A+B+C all in + 5-facet pass). `fresh_run_master_lever_ledger_20260704.md` = the CALIBRATED fresh-run config + the pre-launch gate.** (MEANS, pointer 0.19110 UNMOVED.)
+
+**THE CALIBRATED FRESH-RUN CONFIG (primary levers, ONE coherent seeded run — secondaries as isolated A/Bs for clean attribution):** `--seed-islands ON` + **SEED=paint-then-SDF (#291 BUILD)** + `--island-dilate-px 1` (KEEP, NOT 2 — facet-3 FP-15:1) + per-class AREA constraint (auction-MBO BUILD) + `--eikonal-weight 0.05` + `--length-weight 0.001` (KEEP — the MCF erosion term) + `--tau-anneal-shape geometric` + `--mod-dim 19` [slope-gate cliff] + `--bank-n-scales 6` + `--film-stiefel ON` + `--muon-warm-start-momentum --muon-lr-final-frac 0.1` + Ch.6 easing (band@350, rewarmup 20/cosine). ACCEPTANCE GATE (binding): MEASURED `part_frac[lane]>0` @ep0.
+
+**CONTROLLER (facet-5):** `tools/witness_control_monitor.py` (BUILD) = τ-creep detector + Lyapunov early-term; EMITS decisions only, never launches (would have caught #205's erosion @ep325 not ep425).
+
+**PRE-LAUNCH GATE:** BUILD {paint-then-SDF #291, area-constraint, control-monitor} · MEASURE-first {part_frac smoke, mod-19 slope, softmax-temp floor} · APPARATUS {**flush the 6 code-live 07-03 lever laws to JSONL** (registry blind to fresh levers), mod-32-vs-19 reconcile, gauge-not-launch-path note}. EXPONENT bet (NTK-whiten/parabolic-shearlet) gated by the $0 N-term-slope probe. COMPLETENESS CRITIC: **pose OPEN on witness** (warp 1.37-10.53; 3.4e-5=abandoned ancestor; #238 owed) — run's S is d_seg-primary/pose-provisional; exact-eval is the ONLY authority. SEQUENCE: BUILD→MEASURE+APPARATUS→10-sec final confirm→governor→preserve+stop #205→governed launch. NO autonomous heavy launch. **HARD GATE: pointer 0.19110 UNMOVED.**
