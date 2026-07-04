@@ -879,6 +879,24 @@ _INFLATE_PY = r'''#!/usr/bin/env python3
 #   preserved -> BIT-IDENTICAL .raw (proven: cmp -s == identical vs the pre-fusion forward, n40/4w). The
 #   DRAM-traffic cut helps MOST under the parallel Pool (workers share memory bandwidth): measured 1.24x
 #   4-worker wall-clock (contest-4-core full-600 inflate ~20 min -> ~16 min).
+# FEED-ej bit-identical self-orient CONVERGED-h0 reuse (inflate.py code only -> FREE, archive UNCHANGED):
+#   the self-orient fixed point (task #281) EARLY-STOPS when the decoder's argmax stops changing (FEED-eg);
+#   on the converging iteration the loop's `feats` are already the FINAL feats, so its in_proj activation
+#   h0 IS the post-loop h0 -> cache + reuse it instead of recomputing _in_proj_h0 once more. BIT-EXACT: the
+#   reuse only fires on the early-break (feats frozen); when the loop runs to completion (no convergence)
+#   h0 is recomputed exactly as before. Proven byte-identical vs baseline on the #205 config (n24) AND by a
+#   determinism micro-proof on the real weights (dir_feats/in_proj_h0 are pure functions of their inputs).
+#   Like the early-stop it is a NO-OP on a mid-training archive (the argmax does not converge even at
+#   so_iters=12) and pays only on a well-trained archive whose argmax stabilizes within so_iters.
+# FEED-ek OPT-IN fp32 forward (task #281; INFLATE_FP32=1, DEFAULT OFF -> the shipped path stays fp64, the
+#   bit-exact cross-host authority). fp32 runs the INR forward in float32: ~1.7-1.9x faster (sin/tanh 3.7x,
+#   GEMM 4.3x). It is LOCAL FAST-DECODE ONLY and MUST NOT ship in a contest archive: fp32 last-bit rounding
+#   can move an argmax-boundary pixel by up to ~22 uint8 levels, and a different BLAS/SIMD/FMA host produces
+#   DIFFERENT boundary flips -> it BREAKS cross-host bit-identity (the deterministic-reproducibility hard
+#   limit: same archive.zip -> bit-identical inflate output on EVERY host). Measured score-preservation is
+#   only WITHIN ~1e-4 on OUR host (#205 mid-train n24: 100*Δd_seg=-8.5e-5, Δsqrt(10*d_pose)=+1.6e-7); that
+#   is same-host-deterministic (run1==run2 byte-identical) but NOT contest-portable. fp64 already meets the
+#   30-min budget via the parallel Pool, so the default never needs fp32; the flag exists for dev-loop speed.
 import os
 for _tv in ("VECLIB_MAXIMUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
     os.environ.setdefault(_tv, "1")  # 1-thread BLAS/worker (set BEFORE numpy import); user-overridable
@@ -887,6 +905,11 @@ from bisect import bisect_right as _bisect_right  # #257 ξ arithmetic decoder (
 import numpy as np
 import brotli
 import torch
+
+# FEED-ek OPT-IN fp32 forward flag (default OFF). Read ONCE at process start (deterministic within a run).
+# _FDT is the forward's working dtype: float64 (default, bit-exact authority) or float32 (local fast mode).
+_FP32 = os.environ.get("INFLATE_FP32", "0") == "1"
+_FDT = np.float32 if _FP32 else np.float64
 
 MAGIC = b"LVLS1\x00"
 PCAR_MAGIC = b"PCAR1\x00"  # #205 warp-real-luma pose carrier (stored keyframe luma + per-pair homography)
@@ -945,12 +968,13 @@ def _curvelet_B(ns, no0, f0, base, niso, max_freq):
 
 
 def _curvelet_feats(coords, B):
-    proj = (2.0 * np.pi) * (np.asarray(coords, np.float64) @ np.asarray(B, np.float64))
+    # _FDT = float64 (default, bit-exact) or float32 (FEED-ek opt-in fast mode). Default path unchanged.
+    proj = (2.0 * np.pi) * (np.asarray(coords, _FDT) @ np.asarray(B, _FDT))
     return np.concatenate([np.sin(proj), np.cos(proj)], axis=-1).astype(np.float32)
 
 
 def _act(u, kind, w0, s0, beta, omega):
-    u = np.asarray(u, np.float64)
+    u = np.asarray(u, _FDT)  # _FDT = float64 (default, bit-exact) or float32 (FEED-ek opt-in fast mode)
     if kind == "hosc":
         # tanh(beta*sin(omega*u)). BIT-IDENTICAL fused form: (1) omega==1 / beta==1 skip the identity
         # full-array float64 multiply (1.0*x === x in IEEE754 -- these are ~151MB DRAM round-trips per
@@ -1367,7 +1391,7 @@ def _setup(src):
     coords = _coords(rh, rw)
     B = _curvelet_B(m["bank_n_scales"], m["bank_n_orient0"], m["bank_f0"], m["bank_base"], m["bank_n_iso"], m["max_bank_freq"])
     curv = _curvelet_feats(coords, B)
-    P = {k: np.asarray(v, np.float64) for k, v in params.items()}  # convert once (bit-identical)
+    P = {k: np.asarray(v, _FDT) for k, v in params.items()}  # convert once; _FDT=float64 default (bit-identical), float32 = FEED-ek opt-in fast mode
     # #224 Wave E: parse the OPTIONAL lane render-band (per-pair coords + hdr) -> per-pair coverage
     # rasters (FREE regen; computed ONCE per pair, cached). Absent -> lane_pairs=None -> band skipped.
     lane_pairs = lane_hdr = None
@@ -1389,19 +1413,24 @@ def _render_pair(pi):
     if m["self_orient"]:
         # fixed-point: dir feats from the decoder's OWN frame1 argmax (GT-free, 0 bytes).
         dirf = np.zeros((curv.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
-        prev_am = None
+        prev_am = None; _h0_conv = None  # FEED-ej: cache the converged iter's h0 (== the post-loop h0)
         for _ in range(int(m["so_iters"])):
             feats = np.concatenate([curv, dirf], axis=-1)
-            phi, _ = _outputs_from_h0(P, _in_proj_h0(P, feats, m), code[2 * pi + 1], m, False)
+            _h0_it = _in_proj_h0(P, feats, m)
+            phi, _ = _outputs_from_h0(P, _h0_it, code[2 * pi + 1], m, False)
             am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
             if prev_am is not None and np.array_equal(am, prev_am):
+                _h0_conv = _h0_it  # converged: feats frozen from here -> this h0 IS the final h0 (bit-exact reuse)
                 break  # argmax fixed point: dirf would not change -> remaining iters are no-ops
             dirf = _dir_feats(coords, am, m["n_dir_freqs"], m["so_freq_along"], m["so_freq_across"], m["so_tau"])
             prev_am = am
         feats = np.concatenate([curv, dirf], axis=-1)
+        # FEED-ej: on the early-break `feats` is unchanged from the converged iter -> reuse its h0
+        # (bit-exact: identical feats -> identical _in_proj_h0). No convergence -> recompute (as before).
+        h0 = _h0_conv if _h0_conv is not None else _in_proj_h0(P, feats, m)
     else:
         feats = curv
-    h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
+        h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
     lane_pairs, lane_hdr = _G.get("lane_pairs"), _G.get("lane_hdr")
     band = lane_pairs is not None and pi < len(lane_pairs)
     pcar = _G.get("pcar")
