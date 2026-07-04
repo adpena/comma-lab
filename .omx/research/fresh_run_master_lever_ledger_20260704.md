@@ -42,8 +42,8 @@ primaries; secondaries run as subsequent ISOLATED A/Bs (§3). All flags grep-ver
 **ACCEPTANCE GATE (sweep-A #2, binding):** the run is only valid if the ep0 structured_init log shows
 **`part_frac[lane] > 0` (≈0.006)** — measured, NOT inferred from flag presence. Abort+fix if lane_px=0.
 
-## 2. THE CONTROLLER (facet-5) — the self-converging safety net
-`tools/witness_control_monitor.py` (BUILD; de-orphans the existing trajectory instrument #188/#216):
+## 2. THE CONTROLLER (facet-5) — the self-converging safety net ✅ BUILT (3db114735)
+`tools/witness_control_monitor.py` (✅ BUILT + 7 tests; de-orphans the trajectory instrument #188/#216):
 follows the verdict log, computes the **τ-creep detector** (`r̂≥+δ ∧ net_Δd_seg>0 ∧ ep_loss↓` = the #205
 signature) + a **Lyapunov early-termination** (OT-dual gap V_OT PROVEN tier / EWMA descent-rate MEASURED
 tier), classifies 4-value (converging/plateau/diverging-ERASING/volatile), and **EMITS decisions +
@@ -65,9 +65,17 @@ GT-margin N-term log-log SLOPE probe (`pre_metric_nterm_basis_slope.py` SPEC) + 
 histogram. Build the exponent levers ONLY if the slope is power-law over the surviving flip mass.
 
 ## 5. PRE-LAUNCH CHECKLIST (gates the governed stop-and-launch)
-**BUILD (blocking for the primary run):** (1) `--lane-prior-phi1-mode paint` #291 — ✅ **DONE 4f1580d0c**
-(real-GT smoke: part_frac[lane] 0→0.0064, lane_FN 0.00713→0.00211 3.4×; 5 unit tests; byte-identical default) ·
-(2) per-class area constraint (auction-MBO) · (3) `tools/witness_control_monitor.py` (the safety net).
+**BUILD:** (1) `--lane-prior-phi1-mode paint` #291 — ✅ **DONE 4f1580d0c** (real-GT smoke: part_frac[lane]
+0→0.0064, lane_FN 0.00713→0.00211 3.4×; 5 unit tests; byte-identical default) · (3) `tools/witness_control_monitor.py`
+— ✅ **DONE 3db114735** (flags DIVERGING_ERASING on the live #205 log; 7 tests; decision-only). · (2) per-class
+area constraint (auction-MBO) — ✅ **DEFERRED, MEASURED-justified (not signal loss):** the $0 MCF-survival
+pre-check (gt_n6, per-channel σ-smoothing of the paint-seed phi + re-argmax) shows **native paint retains 93%
+of the nucleated lane at σ0.8 (the eikonal-0.05-sharpened regime) vs only 52% at σ1.5 (raw MCF, no eikonal)** —
+so **paint + eikonal-0.05 holds the lane at native mass with no FP inflation**; +2px retains 98% but at 2.7× the
+mass (the FP cost). The eikonal is the critical survival partner; the area-constraint is deferrable. Caveat
+(NO-FAKE): σ0.8↔eikonal-0.05 is a directional PROXY, not an exact prediction — the real run + the monitor (3)
+are authority; build the area-constraint IF the fresh run's tau stage erodes despite paint+eikonal.
+**PRE-LAUNCH BUILD QUEUE CLOSED: 2 built (paint, monitor) + 1 measured-deferred (area-constraint).**
 **MEASURE-first ($0, gate the config values):** (a) `part_frac[lane]>0` acceptance smoke on the paint-seed ·
 (b) mod-19 N-term SLOPE (confirm m≈8, avoid the capacity cliff) · (c) `--softmax-temp-end` floor magnitude
 (unit-unverified — blind 0.25 could stall) · (d) re-measure seeded init d_seg with paint-then-SDF.
