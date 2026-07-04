@@ -28,8 +28,8 @@ primaries; secondaries run as subsequent ISOLATED A/Bs (§3). All flags grep-ver
 | `--eikonal-weight` | 0.01 → **0.05** | INCLUDE | facet-4 interface-width control; holds the thin edge sharp at τ/2 |
 | `--length-weight` | 0.001 → **KEEP 0.001** | INCLUDE | facet-4 + sweep-A/B/C: it IS the MCF surface-tension erosion term — do NOT raise |
 | per-class AREA constraint (auction-MBO) | — → **BUILD** | BUILD→INCLUDE | the principled hold vs the 95.7%-Lane MCF erosion (sweep-B orphan) |
-| `--tau-anneal-shape` | cosine → **geometric** | INCLUDE | facet-4: the UNIQUE adiabatic Fisher-Rao geodesic (DERIVED) |
-| `--mod-dim` | 32 → **19** | CALIBRATE ⚠ | facet-2: intrinsic m≈8, Whitney 2m+1=17-19; but slope-gate the capacity cliff |
+| `--tau-anneal-shape` + `--softmax-temp-end` | cosine/0.05 → **geometric / 1.0** | INCLUDE ✅ | facet-4 adiabatic Fisher-Rao geodesic; **τ_end=1.0 MEASURED the resolution floor** (0.05 = 20× sub-pixel aliasing) |
+| `--mod-dim` | 32 → **19** | ✅ **MEASURED-SAFE** | m≈7.15 (TwoNN) = scene-PR 7.29; Whitney 2m+1=15.3 < 19 → no cliff; 32 = waste |
 | `--bank-n-scales` | 4 → **6** | INCLUDE (slope-gated) | facet-2: use full stem-Nyquist f_max=64 |
 | `--film-stiefel` | OFF → **ON** | INCLUDE | facet-2: byte-free rank fix, PR 1.19→4.57 |
 | `--muon-warm-start-momentum` + `--muon-lr-final-frac 0.1` | OFF/1.0 → **ON/0.1** | INCLUDE | #270/facet-1: kills the cold-start spike + escapes flat-LR plateau |
@@ -76,9 +76,12 @@ mass (the FP cost). The eikonal is the critical survival partner; the area-const
 (NO-FAKE): σ0.8↔eikonal-0.05 is a directional PROXY, not an exact prediction — the real run + the monitor (3)
 are authority; build the area-constraint IF the fresh run's tau stage erodes despite paint+eikonal.
 **PRE-LAUNCH BUILD QUEUE CLOSED: 2 built (paint, monitor) + 1 measured-deferred (area-constraint).**
-**MEASURE-first ($0, gate the config values):** (a) `part_frac[lane]>0` acceptance smoke on the paint-seed ·
-(b) mod-19 N-term SLOPE (confirm m≈8, avoid the capacity cliff) · (c) `--softmax-temp-end` floor magnitude
-(unit-unverified — blind 0.25 could stall) · (d) re-measure seeded init d_seg with paint-then-SDF.
+**MEASURE-first ($0, gate the config values) — ✅ ALL DONE:** (a) `part_frac[lane]>0` acceptance smoke on
+the paint-seed ✅ (0.0064, nucleated) · (b) mod-dim intrinsic-dim gate ✅ **MEASURED: combined nonlinear
+m≈7.15 (TwoNN) = scene linear-PR 7.29; Whitney 2m+1=15.3 < 19 → mod-dim 19 SAFE, NO capacity cliff, mod-32
+= waste** · (c) `--softmax-temp-end` floor ✅ **MEASURED: τ_end=1.0 is the resolution floor (only τ where the
+discrete EDT-SDF boundary enters a resolvable soft transition, 2.83% band); τ≤0.5 = hard sub-pixel step
+(0% band, aliasing) → use 1.0, NOT the 0.05 default or 0.25** · (d) paint-seed init d_seg ✅ (lane_FN 0.00211).
 **APPARATUS hygiene (sweep-B, fix so the run's records are trustworthy):** (I) **flush the 6 code-live
 2026-07-03 lever laws to the JSONL registry** (currently JSONL=0 → the equations leg is blind to the
 fresh-run levers) · (II) reconcile the mod-32-vs-19 record · (III) note the gauge accessor layer is
