@@ -439,6 +439,125 @@ def project_implied_s(dseg_inf: float | None, bytes_proj: float | None,
 
 
 # ────────────────────────── top-level projection builder ──────────────────────────
+# ────────────────────── fresh-run A/B projection (measured-anchored) ──────────────────────
+# DASHBOARD PASS 2026-07-04: the fresh SEEDED run's projection band, grounded ONLY in
+# MEASURED anchors from the #205 real log (+ the field-level paint-seed measurement),
+# with the below-CE-floor segment explicitly a HYPOTHESIS band ([projected/advisory]).
+# Sources: FEED-04i (transition analysis, MEASURED on the #205 run.log) + the master
+# lever ledger + witness_converged_to_flicker_floor (CE-best 0.004964@ep225; popout
+# floor 0.00520). NO fabricated convergence promise: every anchor carries its label.
+FRESH_RUN_ANCHORS: dict = {
+    "ce_transient": {"label": "[measured #205]", "ep0_dseg": 0.745683, "ep25_dseg": 0.010299,
+                     "note": "72x CE collapse (FiLM code-differentiation transient)"},
+    "ce_floor": {"label": "[measured #205]", "lo": 0.0047, "hi": 0.0052,
+                 "best": 0.004964, "best_epoch": 225, "popout_floor": 0.00520},
+    "tau_erosion": {"label": "[measured #205]", "onset_slope": 4.68e-5, "steady_slope": 6.0e-6,
+                    "onset_window_ep": 25, "net_rise_frac_by_ep450": 0.404,
+                    "note": "d_seg RISING while ep_loss fell 148->130 (decoupling)"},
+    "seed_delta": {"label": "[measured field-level]", "lane_fn_seeded": 0.00211,
+                   "lane_fn_unseeded": 0.00583,
+                   "note": "paint-seed lane_FN at init (field-level, pre-training)"},
+    "fresh_tau": {"label": "[projected/advisory HYPOTHESIS]",
+                  "note": "continued descent below the CE floor — the seed-fix thesis; "
+                          "falsifiable when real fresh-run data lands"},
+}
+
+
+def build_fresh_run_projection(schedule: dict, goal_dseg: float, *,
+                               anchors: dict | None = None,
+                               total_epochs: int | None = None) -> dict:
+    """The A/B projection pair the dashboard renders so the seed-fix thesis is VISUALLY
+    falsifiable when real data lands:
+
+      * ``eroding_205`` — the #205 MEASURED trajectory shape: CE transient (72x collapse,
+        measured points) -> CE floor -> tau-stage EROSION at the MEASURED slopes
+        (+4.68e-5/ep onset for the onset window, then +6.0e-6/ep steady). Continuation
+        past the measured range is the measured-slope extrapolation (labeled).
+      * ``fresh_lo`` / ``fresh_hi`` — the fresh SEEDED run's band: identical CE shape
+        (same transient physics), then from the tau boundary a HYPOTHESIS band easing
+        from the CE floor toward ``max(goal_dseg, ce_floor - seed_lane_FN_delta)``
+        (lower edge) while the upper edge holds the CE floor (no-improvement bound).
+        The below-CE-floor segment is a HYPOTHESIS — labeled, never a promise.
+
+    The divergence point (where the two curves split) is the tau/MCF onset from the
+    run's OWN schedule (``tau_start``; default 300). Pure; never raises for sane input.
+    All series share the same ``epochs`` grid; values clamped > 0.
+    """
+    a = anchors or FRESH_RUN_ANCHORS
+    tau = int(schedule.get("tau_start") or 300)
+    total = int(total_epochs or schedule.get("epochs") or 1000)
+    total = max(total, tau + 1)
+    ce = a["ce_transient"]
+    fl = a["ce_floor"]
+    er = a["tau_erosion"]
+    sd = a["seed_delta"]
+
+    ep0, ep25 = float(ce["ep0_dseg"]), float(ce["ep25_dseg"])
+    ce_best = float(fl["best"])
+    ce_lo, ce_hi = float(fl["lo"]), float(fl["hi"])
+    onset, steady = float(er["onset_slope"]), float(er["steady_slope"])
+    onset_w = int(er["onset_window_ep"])
+    seed_gain = max(float(sd["lane_fn_unseeded"]) - float(sd["lane_fn_seeded"]), 0.0)
+    fresh_floor = max(float(goal_dseg), ce_lo - seed_gain)
+
+    step = max(1, total // 400)
+    grid = set(range(0, total + 1, step))
+    # always include the measured-anchor epochs + boundaries so the rendered curve
+    # passes EXACTLY through the anchors (and tests can assert them).
+    grid.update(e for e in (0, 25, tau, tau + onset_w, total) if 0 <= e <= total)
+    epochs = sorted(grid)
+
+    def _ce_value(t: float) -> float:
+        """CE-phase shape through the MEASURED points (log-space piecewise):
+        (0, ep0) -> (25, ep25) -> (tau, ce_best)."""
+        if t <= 0:
+            return ep0
+        if t <= 25:
+            f = t / 25.0
+            return float(np.exp(np.log(ep0) + f * (np.log(ep25) - np.log(ep0))))
+        if t >= tau:
+            return ce_best
+        f = (t - 25.0) / max(tau - 25.0, 1.0)
+        return float(np.exp(np.log(ep25) + f * (np.log(ce_best) - np.log(ep25))))
+
+    eroding, f_lo, f_hi = [], [], []
+    for t in epochs:
+        if t < tau:
+            v = _ce_value(t)
+            eroding.append(v)
+            f_lo.append(v)
+            f_hi.append(v)
+        else:
+            dt = t - tau
+            # #205: measured erosion slopes (onset window, then steady)
+            rise = onset * min(dt, onset_w) + steady * max(dt - onset_w, 0)
+            eroding.append(ce_best + rise)
+            # fresh band: upper = CE floor held (no-improvement bound); lower eases
+            # cosine from ce_best toward the hypothesis floor across the tau stage.
+            span = max(total - tau, 1)
+            f = 0.5 * (1.0 - float(np.cos(np.pi * min(dt / span, 1.0))))
+            f_lo.append(max(ce_best + f * (fresh_floor - ce_best), 1e-9))
+            f_hi.append(ce_hi)
+    return {
+        "ok": True,
+        "epochs": epochs,
+        "eroding_205": eroding,
+        "fresh_lo": f_lo,
+        "fresh_hi": f_hi,
+        "divergence_epoch": tau,
+        "fresh_floor": fresh_floor,
+        "anchors": a,
+        "labels": {
+            "eroding_205": "#205 measured erosion (+4.68e-5/ep onset, +6.0e-6/ep steady) "
+                           "[measured slopes; continuation extrapolated]",
+            "fresh_band": "fresh SEEDED run — HYPOTHESIS band [projected/advisory; "
+                          "falsifiable when real data lands]",
+            "ce_phase": "CE phase [measured #205 shape: 72x collapse -> floor ~0.0047-0.0052]",
+        },
+        "authority": "[macOS-MLX advisory · NON-PROMOTABLE] · pointer 0.19110 UNMOVED",
+    }
+
+
 def build_projection(trajectory: list[dict], meta: dict, *, sidecar_pose: float,
                      archive_norm: float, eval_every: int | None = None) -> dict:
     """Assemble the full DATA-DERIVED projection the dashboard renders. ALL inputs come
