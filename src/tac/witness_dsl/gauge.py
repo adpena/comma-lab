@@ -93,6 +93,7 @@ class GaugeComponent(Enum):
     # MUON_*). Both are the §7 cross-chapter-converged next-run A/Bs (config B / #285), UNMEASURED.
     GAMMA_TAU_EIKONAL = "gamma_tau_eikonal"              # Ch.4 phase-field: geometric tau-floor + eikonal
     STAGE_TRANSITION_EASING = "stage_transition_easing"  # Ch.6 dynamics: deconflict ep300 + LR re-warmup
+    CONTROL_SYSTEM = "control_system"                    # #292: seed-paint + eik-ramp + event-trigger + closed-loop
 
 
 class WarpGauge(Enum):
@@ -580,6 +581,33 @@ class StageTransitionEasingGauge(Enum):
 
 
 # component → its chart Enum class (for fix_gauge iteration + full-stack sweeps)
+class ControlSystemGauge(Enum):
+    """#292 control-system composed arm (FEED-04i..04l): the fresh seeded run's training-as-a-
+    controlled-dynamical-system layer, deployed as ONE composed arm (operator-approved Tier-1+Tier-3,
+    2026-07-04). Four coupled facets, each built + tested + default-OFF/byte-identical in the LIVE
+    levelset trainer (commits #291 4f1580d0c / build-1 2a125ab62 / build-2 2bf4ac94f / build-3
+    9da07aa34 / SEAL-fix 3e3b9c697):
+      (a) SEED nucleation: ``--lane-prior-phi1-mode paint`` + ``--seed-islands`` (paint-then-SDF;
+          ``replace`` is the MEASURED no-op; lane_FN 0.00713->0.00211 on real GT; the ep0 admission
+          gate is MEASURED part_frac[lane]>0, never flag presence);
+      (b) SURVIVAL eikonal STEP-ramp: ``--eikonal-weight 0.05 --eikonal-weight-end 0.10`` stepping at
+          the ACTUAL tau/MCF onset (event-fired boundary when (c) is on — the 3e3b9c697 coupling fix;
+          measured knee sigma0.8/93%% vs sigma1.5/49%% lane survival);
+      (c) EVENT-TRIGGERED curriculum: ``--curriculum-event-triggered`` — stages advance on the
+          DETERMINISTIC synchronous ep_loss plateau (hardcoded stage epochs become CAPS; fired epochs
+          are logged OUTPUTS; same seed+config => same fired epochs);
+      (d) CLOSED LOOP: ``--closed-loop-control`` — sustained DIVERGING_ERASING (monitor-parity
+          classification, K-window transient/erosion split) => bounded eikonal bump (<=2, cap 0.20)
+          => early-stop+preserve-best if erosion persists post-budget. Decision-only; never launches.
+    BASELINE = all four OFF => () = BYTE-IDENTICAL to the #205-live config (the pinned baseline arm).
+    CONTROLLED = the fresh seeded run's composed arm (all four ON at their tested defaults).
+    UNMEASURED as a composed arm -> net-S verdict is the fresh run's byte-closed exact row (MEANS,
+    pointer 0.19110 UNMOVED; launch operator-GO + governor gated)."""
+
+    BASELINE = "baseline"        # all control-system flags off = byte-identical #205 path
+    CONTROLLED = "controlled"    # paint-seed + eik-ramp + event-trigger + closed-loop (fresh run)
+
+
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
     GaugeComponent.CARRIER: CarrierGauge,
@@ -612,6 +640,7 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     # GaugeChoice STORE fields — like ALONG_TANGENT_FREQ / MUON_*).
     GaugeComponent.GAMMA_TAU_EIKONAL: GammaTauEikonalGauge,
     GaugeComponent.STAGE_TRANSITION_EASING: StageTransitionEasingGauge,
+    GaugeComponent.CONTROL_SYSTEM: ControlSystemGauge,
 }
 
 
@@ -920,6 +949,19 @@ STAGE_TRANSITION_EASING_TRAINER_FLAGS: dict[StageTransitionEasingGauge, tuple[st
         "--stage-transition-rewarmup-epochs", str(STAGE_TRANSITION_REWARMUP_EPOCHS_DEFAULT),
         "--stage-transition-rewarmup-floor", str(STAGE_TRANSITION_REWARMUP_FLOOR_DEFAULT),
         "--stage-transition-rewarmup-shape", "cosine"),
+}
+
+# #292 control-system composed arm (real levelset-trainer flags, grep-verified; BASELINE=() byte-identical).
+CONTROL_SYSTEM_TRAINER_FLAGS: dict[ControlSystemGauge, tuple[str, ...]] = {
+    ControlSystemGauge.BASELINE: (),  # all off = byte-identical #205 path
+    ControlSystemGauge.CONTROLLED: (
+        "--lane-prior-phi1-mode", "paint",
+        "--seed-islands",
+        "--eikonal-weight", "0.05",
+        "--eikonal-weight-end", "0.10",
+        "--curriculum-event-triggered",
+        "--curriculum-min-stage-epochs", "150",
+        "--closed-loop-control"),
 }
 
 
