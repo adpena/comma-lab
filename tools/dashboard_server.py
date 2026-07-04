@@ -45,6 +45,7 @@ import argparse
 import asyncio
 import contextlib
 import hmac
+import itertools
 import json
 import os
 import sys
@@ -227,6 +228,149 @@ def _last_measured_dpose(rows):
         except (TypeError, ValueError):
             continue
     return None
+
+
+def _stage_windows(sched: dict) -> list[tuple[str, int, int]]:
+    """Ordered, NON-overlapping ``[(stage, start, end)]`` epoch windows covering
+    ``[0, epochs)``, derived by sampling ``dtm.stage_at_epoch`` at the schedule's OWN
+    boundary points and merging equal-stage neighbours.
+
+    Correct even when the raw boundaries are NOT epoch-monotone — this run has
+    ``muon_start`` 726 < the disabled ``l7_start`` 1000, a case ``dtm._stage_segments``
+    renders as OVERLAPPING windows (tau [300,1000) overlapping Muon [726,1000)). Sampling
+    the (correct, precedence-ordered) ``stage_at_epoch`` step function avoids that.
+    Pure; empty list when the schedule carries no usable epoch count."""
+    try:
+        ep = int(sched.get("epochs") or 0)
+    except (TypeError, ValueError):
+        ep = 0
+    if ep <= 0:
+        return []
+    cand = {0, ep}
+    for k in ("tau_start", "l7_start", "muon_start"):
+        b = sched.get(k)
+        if isinstance(b, (int, float)) and 0 <= b <= ep:
+            cand.add(int(b))
+    bounds = sorted(cand)
+    out: list[list] = []
+    for a, b in itertools.pairwise(bounds):
+        if b <= a:
+            continue
+        st = dtm.stage_at_epoch(a, sched)
+        if out and out[-1][0] == st:  # merge equal-stage neighbours (e.g. disabled l7)
+            out[-1][2] = b
+        else:
+            out.append([st, int(a), int(b)])
+    return [(s, a, b) for s, a, b in out]
+
+
+def _build_stage_aware_projection(rows, sched: dict, *, sidecar_pose: float,
+                                  archive_norm: float) -> dict:
+    """STAGE-AWARE d_seg / implied_S projection (ADVISORY; ``[macOS-MLX]`` non-promotable).
+
+    Operator-approved 2026-07-03. The prior GLOBAL critical-slowing power-law (in
+    ``dtm.build_projection``) fits ALL verdicts as ONE curve and, from the CE flicker
+    plateau, mis-declares "sub-0.19 won't reach". That is wrong: the run is a 3-stage
+    curriculum. This fits the critical-slowing model PER CURRICULUM STAGE (reset at each
+    boundary), reports each ENTERED stage's OWN asymptote as that stage's floor, and marks
+    the tau (lane-band birth) + Muon (finishing) boundaries as EXPECTED-BREAKTHROUGH
+    regimes the CE fit does NOT model. Muon is a saddle-to-saddle STAIRCASE (polynomial
+    escape, #217/MFLD), NEVER a power-law — labelled unmodeled-until-measured, never
+    extrapolated.
+
+    NO-FAKE: no fabricated stage-boundary drop is invented. A stage with fewer than
+    ``dtm._MIN_FIT_POINTS`` verdicts reports 'insufficient' (never a borrowed CE number);
+    an un-entered stage reports 'not entered'. The frontier pointer (0.19110) moves ONLY
+    through a byte-closed exact eval — this is a MEANS. Pure; never raises."""
+    try:
+        verdicts = [v for v in (rows or []) if isinstance(v, dict)
+                    and isinstance(v.get("epoch"), (int, float))
+                    and isinstance(v.get("d_seg"), (int, float))]
+        if not verdicts:
+            return {"ok": False, "reason": "no d_seg verdicts yet"}
+        cur_ep = float(max(v["epoch"] for v in verdicts))
+        cur_stage = dtm.stage_at_epoch(cur_ep, sched)
+        windows = _stage_windows(sched)
+        min_fit = int(dtm._MIN_FIT_POINTS)  # >=5 verdicts before a stage asymptote is claimed
+        # group verdicts by the CORRECT (precedence-ordered) stage, never the overlapping segments
+        by_stage: dict[str, list] = {}
+        for v in verdicts:
+            by_stage.setdefault(dtm.stage_at_epoch(float(v["epoch"]), sched), []).append(v)
+
+        stages: list[dict] = []
+        modeled: dict | None = None  # latest ENTERED stage with a real fit -> best-modeled floor
+        iter_windows = windows or [(cur_stage, 0, int(sched.get("epochs") or 0))]
+        for name, a, b in iter_windows:
+            svs = sorted(by_stage.get(name, []), key=lambda v: v["epoch"])
+            n = len(svs)
+            rec: dict = {"name": name, "start": int(a), "end": int(b), "n": n, "entered": n > 0}
+            if name == "Muon":
+                rec["model"] = "saddle_staircase"
+                rec["note"] = ("saddle-to-saddle (polynomial escape) — not power-law; "
+                               f"unmodeled until measured @{int(a)}")
+                if n:
+                    rec["observed_min"] = float(min(v["d_seg"] for v in svs))
+                stages.append(rec)
+                continue
+            if n == 0:
+                rec["note"] = "not entered yet"
+                stages.append(rec)
+                continue
+            rec["observed_min"] = float(min(v["d_seg"] for v in svs))
+            if n < min_fit:
+                rec["fit_state"] = "insufficient"
+                rec["min_needed"] = min_fit
+                rec["note"] = (f"{n} verdict{'' if n == 1 else 's'} — insufficient for a "
+                               f"stage fit yet (need >= {min_fit})")
+                stages.append(rec)
+                continue
+            fit = dtm.fit_critical_slowing([v["epoch"] for v in svs],
+                                           [v["d_seg"] for v in svs], min_points=min_fit)
+            if fit.get("ok"):
+                rec["fit_state"] = "ok"
+                rec.update({"asymptote": fit["asymptote"], "alpha": fit["alpha"],
+                            "r2": fit["r2"], "confidence": fit["confidence"],
+                            "residual_std": fit.get("residual_std", 0.0)})
+                modeled = rec
+            else:
+                rec["fit_state"] = "no_fit"
+                rec["note"] = fit.get("reason", "no decaying fit")
+            stages.append(rec)
+
+        # implied_S from the current best-modeled stage floor — LABELLED (in the renderer)
+        # as a current-stage extrapolation that EXCLUDES the downstream tau/Muon breakthroughs.
+        modeled_floor: dict | None = None
+        if modeled is not None:
+            asym = float(modeled["asymptote"])
+            sig = float(modeled.get("residual_std", 0.0) or 0.0)
+            band = (max(asym - sig, 0.0), asym + sig)
+            total = int(sched.get("epochs") or 0)
+            bytes_proj = dtm.project_bytes(verdicts, float(total) if total else None)
+            s_proj = dtm.project_implied_s(asym, bytes_proj.get("value"), sidecar_pose,
+                                           archive_norm, dseg_band=band)
+            modeled_floor = {"stage": modeled["name"], "asymptote": asym,
+                             "observed_min": modeled.get("observed_min"),
+                             "is_current_stage": (modeled["name"] == cur_stage),
+                             "implied_s": s_proj}
+
+        # expected-breakthrough boundaries the current fit does NOT model
+        tau = sched.get("tau_start")
+        muon = sched.get("muon_start")
+        downstream: list[dict] = []
+        if isinstance(tau, (int, float)):
+            downstream.append({"epoch": int(tau), "label": "lane-band birth (tau)",
+                               "status": "engaged" if cur_ep >= tau else "pending"})
+        if isinstance(muon, (int, float)):
+            downstream.append({"epoch": int(muon), "label": "Muon finishing (saddle staircase)",
+                               "status": "engaged" if cur_ep >= muon else "pending"})
+
+        return {"ok": True, "current_stage": cur_stage, "current_epoch": cur_ep,
+                "stages": stages, "modeled_floor": modeled_floor, "downstream": downstream,
+                "tau_start": (int(tau) if isinstance(tau, (int, float)) else None),
+                "muon_start": (int(muon) if isinstance(muon, (int, float)) else None),
+                "epochs": int(sched.get("epochs") or 0)}
+    except Exception as exc:  # never crash the live telemetry
+        return {"ok": False, "reason": f"stage projection error: {exc}"}
 
 
 def _flowseq_lock_alive(lock_path: Path) -> bool:
@@ -705,6 +849,20 @@ class LiveState:
                 eval_every=eval_every)
         except Exception as exc:
             self.projection = {"ok": False, "reason": f"projection error: {exc}"}
+
+        # STAGE-AWARE reframe (operator-approved 2026-07-03): the single GLOBAL critical-slowing
+        # power-law above fits the CE flicker plateau and mis-declares "sub-0.19 won't reach".
+        # Attach a PER-STAGE projection so the dashboard shows each stage's OWN floor + marks the
+        # tau (lane-band birth) / Muon (finishing) EXPECTED-BREAKTHROUGH boundaries the CE fit does
+        # NOT model. ADVISORY; the pointer (0.19110) moves ONLY through a byte-closed exact eval.
+        if isinstance(self.projection, dict):
+            try:
+                self.projection["stage_proj"] = _build_stage_aware_projection(
+                    rows_full, sched_eff,
+                    sidecar_pose=(_last_measured_dpose(rows_full) or 0.0),
+                    archive_norm=_ARCHIVE_NORM_BYTES)
+            except Exception as exc:
+                self.projection["stage_proj"] = {"ok": False, "reason": f"stage projection error: {exc}"}
 
         # Rebuild trajectory from the full chain each tick (cheap; few hundred points).
         # new_points = epochs not yet pushed to WS clients (snapshot carries the full set).
@@ -2913,28 +3071,67 @@ function renderProjection(g){
     sEl.textContent=" ";
     return;
   }
-  // d_seg critical-slowing model (Agmon–Tishby / Rose annealing): asymptote + exponent + R²
-  const fit=P.dseg_model||{};
-  if(fit.ok){
-    const conf=fit.confidence||"low";
-    const cflag=(conf==="low")?" ⚠low-confidence":"";
-    segEl.innerHTML="d_seg critical-slowing model · asymptote d_seg<sub>∞</sub> <b>"+sig(fit.asymptote,4)+
-      "</b> · α "+sig(fit.alpha,2)+" · R² "+sig(fit.r2,3)+" · "+conf+cflag+
-      " · sub-0.19 <b>"+goalEtaStr(P.goal_eta)+"</b> · sub-0.15 <b>"+goalEtaStr(P.goal15_eta)+"</b>";
-  } else {
-    segEl.innerHTML="d_seg model · <b>calibrating</b> — "+escHtml(fit.reason||"need more points");
-  }
-  // implied_S projection (model asymptote + measured store-nothing-carrier pose + projected
-  // bytes) + stage-aware completion ETA + current-stage cadence flag — advisory
+  // ---- STAGE-AWARE d_seg model (per-curriculum-stage critical-slowing fits) ----
+  // The GLOBAL fit (P.dseg_model) collapses the 3-stage curriculum into ONE power-law and,
+  // from the CE flicker plateau, mis-declares "won't reach". We render P.stage_proj instead:
+  // each stage's OWN asymptote/floor + the ep-tau (lane-band birth) / ep-Muon (finishing)
+  // EXPECTED-BREAKTHROUGH boundaries the CE fit does NOT model. Muon = saddle-to-saddle
+  // staircase (polynomial escape), NEVER power-law-extrapolated. Advisory.
   const bits=[];
-  const sp=P.implied_s_proj||{};
-  if(sp.ok&&sp.value!=null){
-    let s="projected final implied_S (advisory) <b>"+sig(sp.value,4)+"</b>";
-    if(sp.value_lo!=null||sp.value_hi!=null)
-      s+=" ("+sig(sp.value_lo,4)+"–"+(sp.value_hi!=null?sig(sp.value_hi,4):"≳")+")";
-    s+=" vs pointer 0.19110";
-    bits.push(s);
+  const SP=P.stage_proj||{};
+  if(SP.ok){
+    const parts=[];
+    (SP.stages||[]).forEach(st=>{
+      const cur=(st.name===SP.current_stage)?" <b>◀ current</b>":"";
+      if(st.name==="Muon"){
+        parts.push("<b>Muon</b> ep"+fmtInt(st.start)+"+ · "+escHtml(st.note||"saddle staircase — not power-law")+cur);
+      } else if(!st.entered){
+        parts.push("<b>"+escHtml(st.name)+"</b> ep"+fmtInt(st.start)+"–"+fmtInt(st.end)+" · not entered yet"+cur);
+      } else if(st.fit_state==="ok"){
+        const cflag=(st.confidence==="low")?" ⚠low-conf":"";
+        let s="<b>"+escHtml(st.name)+"</b> asymptote d_seg<sub>∞</sub> "+sig(st.asymptote,4)+
+          " (α "+sig(st.alpha,2)+" · R² "+sig(st.r2,3)+" · "+(st.confidence||"?")+cflag+")";
+        if(st.observed_min!=null) s+=" ≈ observed floor "+sig(st.observed_min,4);
+        if(st.name==="CE") s+=" — the CE plateau, NOT the final floor (as expected)";
+        parts.push(s+cur);
+      } else if(st.fit_state==="insufficient"){
+        parts.push("<b>"+escHtml(st.name)+"</b> "+(st.n||0)+" verdict"+((st.n===1)?"":"s")+
+          " — insufficient for a stage fit yet"+cur);
+      } else {
+        parts.push("<b>"+escHtml(st.name)+"</b> "+escHtml(st.note||"no fit")+cur);
+      }
+    });
+    segEl.innerHTML="d_seg per-stage critical-slowing model · "+parts.join(" &nbsp;&middot;&nbsp; ");
+    // downstream EXPECTED-BREAKTHROUGH boundaries (the CE fit does NOT model these)
+    if((SP.downstream||[]).length){
+      const dlab=SP.downstream.map(d=>"ep"+fmtInt(d.epoch)+" "+escHtml(d.label)+
+        (d.status==="engaged"?" (engaged)":" (expected)")).join(" · ");
+      bits.push("EXPECTED-BREAKTHROUGH boundaries the CE fit does NOT model: "+dlab);
+    }
+    // implied_S from the best-modeled stage floor — LABELLED current-stage-only (excludes breakthroughs)
+    const mf=SP.modeled_floor, is=(mf&&mf.implied_s)||{};
+    if(mf&&is.ok&&is.value!=null){
+      const gap=mf.is_current_stage?"":" (latest modeled; current "+escHtml(SP.current_stage||"?")+" still calibrating)";
+      let s=escHtml(mf.stage)+"-stage floor"+gap+" → implied_S <b>"+sig(is.value,4)+"</b>";
+      if(is.value_lo!=null||is.value_hi!=null)
+        s+=" ("+sig(is.value_lo,4)+"–"+(is.value_hi!=null?sig(is.value_hi,4):"≳")+")";
+      const ts=(SP.tau_start!=null)?fmtInt(SP.tau_start):"?", ms=(SP.muon_start!=null)?fmtInt(SP.muon_start):"?";
+      s+=" — CURRENT-STAGE extrapolation ONLY, EXCLUDES the ep"+ts+"/ep"+ms+" breakthroughs · vs pointer 0.19110";
+      bits.push(s);
+    }
+  } else {
+    // stage projection unavailable -> fall back to the global fit, but WITHOUT a "won't reach" verdict
+    const fit=P.dseg_model||{};
+    if(fit.ok){
+      const cflag=(fit.confidence==="low")?" ⚠low-confidence":"";
+      segEl.innerHTML="d_seg critical-slowing model (global) · asymptote d_seg<sub>∞</sub> <b>"+sig(fit.asymptote,4)+
+        "</b> · α "+sig(fit.alpha,2)+" · R² "+sig(fit.r2,3)+" · "+(fit.confidence||"low")+cflag+
+        " — current-trajectory floor; stage breakthroughs (tau/Muon) unmodeled";
+    } else {
+      segEl.innerHTML="d_seg model · <b>calibrating</b> — "+escHtml(fit.reason||"need more points");
+    }
   }
+  // ---- keep the good parts: MEASURED completion ETA + current-stage cadence ----
   const ce=P.completion_eta||{};
   const tot=(META.schedule&&META.schedule.epochs)||null;
   if(ce.ok&&ce.total_s!=null){
