@@ -135,3 +135,70 @@ def test_main_refuses_invented_flag(tmp_path, monkeypatch, capsys):
     assert not (out / "launch.sh").exists()  # refused BEFORE writing
     err = capsys.readouterr().err
     assert "invented flag" in err
+
+
+# ───────────────────────── C5 (SEAL review 2026-07-04): fresh_seeded + passthrough ─────────────
+def test_main_dry_run_fresh_seeded_emits_the_review_deltas(tmp_path, capsys):
+    out = tmp_path / "fresh"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--epochs", "1000",
+                  "--config", "fresh_seeded", "--out-dir", str(out), "--dry-run", "--no-dashboard"])
+    assert rc == 0
+    body = (out / "launch.sh").read_text()
+    for token in ("--lane-prior-phi1-mode paint", "--seed-islands", "--eikonal-weight 0.05",
+                  "--eikonal-weight-end 0.1", "--tau-anneal-shape geometric",
+                  "--softmax-temp-end 1.0", "--mod-dim 19", "--film-stiefel",
+                  "--muon-warm-start-momentum", "--muon-lr-final-frac 0.1",
+                  "--lane-band-start-epoch 350", "--stage-transition-rewarmup-epochs 20",
+                  "--stage-transition-rewarmup-shape cosine", "--closed-loop-control",
+                  "--l7-start-epoch 1001", "--hosc-beta-end 5.134", "--verdict-batch 64"):
+        assert token in body, f"fresh_seeded launch.sh missing {token}"
+    # the review's excluded levers must NOT appear (C1/C2/C3)
+    assert "--curriculum-event-triggered" not in body
+    assert "--bank-n-scales" not in body
+    assert not (out / "run.log").exists()  # DRY-RUN must NOT spawn
+
+
+def test_parse_extra_trainer_flags_validates_against_argparse():
+    toks, invented = lw.parse_extra_trainer_flags("--eikonal-weight 0.07 --seed-islands")
+    assert toks == ["--eikonal-weight", "0.07", "--seed-islands"]
+    assert invented == []
+    toks, invented = lw.parse_extra_trainer_flags("--totally-made-up-flag 1")
+    assert invented == ["--totally-made-up-flag"]
+    assert lw.parse_extra_trainer_flags(None) == ([], [])
+    assert lw.parse_extra_trainer_flags("   ") == ([], [])
+
+
+def test_main_extra_trainer_flags_appended_to_launch_sh(tmp_path, capsys):
+    out = tmp_path / "extras"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out),
+                  "--extra-trainer-flags", "--eikonal-weight 0.07 --seed-islands",
+                  "--dry-run", "--no-dashboard"])
+    assert rc == 0
+    body = (out / "launch.sh").read_text()
+    assert "--eikonal-weight 0.07 --seed-islands" in body
+
+
+def test_main_extra_trainer_flags_invented_refused(tmp_path, capsys):
+    out = tmp_path / "extras_bad"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out),
+                  "--extra-trainer-flags", "--not-a-real-flag 3",
+                  "--dry-run", "--no-dashboard"])
+    assert rc == 2
+    assert not (out / "launch.sh").exists()  # refused BEFORE writing
+    assert "invented flag" in capsys.readouterr().err
+
+
+def test_main_extra_bank6_is_caught_by_the_fixed_mem_preflight(tmp_path, monkeypatch, capsys):
+    """C4+C5 composing end-to-end: a memory-relevant EXTRA flag (--bank-n-scales 6) lands in the
+    emitted launch.sh, the FIXED in_feat-aware preflight projects the true 110.81 GiB and REFUSES
+    (rc=4) — the exact FALSE-SAFE path the review executed, now closed."""
+    import witness_memory_preflight as wmp
+    monkeypatch.setattr(wmp, "_total_ram_gib", lambda: 128.0)  # pin RAM so the gate is deterministic
+    out = tmp_path / "bank6"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--config", "sealed_205",
+                  "--out-dir", str(out),
+                  "--extra-trainer-flags", "--bank-n-scales 6",
+                  "--dry-run", "--no-dashboard"])
+    assert rc == 4
+    err = capsys.readouterr().err
+    assert "REFUSING to launch" in err

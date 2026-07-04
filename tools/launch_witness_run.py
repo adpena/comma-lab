@@ -81,14 +81,37 @@ def validate_emitted_flags(cfg, out_dir: str) -> tuple[bool, list[tuple[str, boo
     return all(ok for _, ok in results), results
 
 
+# ───────────────────────── extra-trainer-flags passthrough (C5, SEAL review 2026-07-04) ─────────
+def parse_extra_trainer_flags(text: str | None) -> tuple[list[str], list[str]]:
+    """Shell-split an ``--extra-trainer-flags`` string and validate every ``--flag`` token against
+    the trainer's REAL argparse (:func:`real_trainer_flags` — the same never-invent-a-flag guard the
+    derived config goes through). Returns ``(tokens, invented_flags)``; empty/None -> ``([], [])``.
+    """
+    import shlex
+
+    if not text or not text.strip():
+        return [], []
+    toks = shlex.split(text)
+    real = real_trainer_flags()
+    invented = [t for t in toks if t.startswith("--") and t.split("=", 1)[0] not in real]
+    return toks, invented
+
+
 # ───────────────────────── launch.sh (no word-split fragility) ─────────────────────────
-def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None) -> str:
+def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
+                    extra_flags: list[str] | None = None) -> str:
     """Render the launch.sh body. The trainer command goes into a SCRIPT so the
     daemon cmd is ``bash launch.sh`` (2 clean tokens) — never a space-bearing
     single argv[0]. Includes the perf-env prefix (TAC_MLX_CUSTOM_GROUPED_BACKWARD=1)
-    via cfg.to_command(perf_env=True)."""
+    via cfg.to_command(perf_env=True). ``extra_flags`` (already flag-validated
+    tokens from --extra-trainer-flags) are appended as a trailing continuation
+    line, so the memory preflight parses them off the SAME launch.sh it gates."""
+    import shlex
+
     repo = str(repo_root or _REPO)
     cmd = cfg.to_command(out_dir, perf_env=True)
+    if extra_flags:
+        cmd += " \\\n  " + " ".join(shlex.quote(t) for t in extra_flags)
     return (
         "#!/bin/bash\n"
         "set -euo pipefail\n"
@@ -97,11 +120,12 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None) -> str:
     )
 
 
-def write_launch_sh(cfg, out_dir: Path, repo_root: Path | None = None) -> Path:
+def write_launch_sh(cfg, out_dir: Path, repo_root: Path | None = None,
+                    extra_flags: list[str] | None = None) -> Path:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     launch = out_dir / "launch.sh"
-    launch.write_text(build_launch_sh(cfg, str(out_dir), repo_root))
+    launch.write_text(build_launch_sh(cfg, str(out_dir), repo_root, extra_flags=extra_flags))
     launch.chmod(0o755)
     return launch
 
@@ -212,16 +236,29 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--aggressive", action="store_true",
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--config", default=None,
-                    choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205"],
+                    choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205",
+                             "fresh_seeded"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
                     "Phase-3 SEALED capstone argv — the deep-math-OPTIMAL all-levers base + the 4 "
                     "SEALED deltas mod-dim 32 / adam-beta2 0.999 / w-pose 1.0 + pose-carrier table; "
-                    "reproduces the sealed §7 launch.sh BYTE-IDENTICALLY modulo --out-dir), or "
+                    "reproduces the sealed §7 launch.sh BYTE-IDENTICALLY modulo --out-dir), "
                     "store_nothing_205 (the sealed capstone + --pose-carrier-source generated = Track B "
                     "STORE-NOTHING-but-xi: frame0 = warp(witness's OWN render, xi), stores ONLY xi/H; "
-                    "the A/B pose arm vs sealed_205).")
+                    "the A/B pose arm vs sealed_205), or fresh_seeded (the REVISED run-1 argv from the "
+                    "2026-07-04 pre-launch SEAL review: sealed_205 + the lane-nucleation seed fix "
+                    "[paint + --seed-islands] + eikonal 0.05->0.10 + constant tau=1.0 + mod-dim 19 + "
+                    "film-stiefel + muon warm-start/final-frac + band 350 + rewarmup 20-cosine + "
+                    "closed-loop control; event-triggered curriculum + bank-6 deliberately EXCLUDED "
+                    "per C1/C2/C3).")
+    ap.add_argument("--extra-trainer-flags", default=None,
+                    help="(C5 passthrough) EXTRA trainer flags appended verbatim to the emitted "
+                    "launch.sh command (shell-split; e.g. \"--eikonal-weight 0.07 --seed-islands\"). "
+                    "Every --flag token is validated against the trainer's REAL argparse "
+                    "(never-invent-a-flag) and the memory preflight re-parses the final launch.sh, so "
+                    "memory-relevant extras (e.g. --bank-n-scales) are gated too. This is the governed "
+                    "escape hatch — raw heavy python launches remain FORBIDDEN.")
     ap.add_argument("--all-levers", action="store_true",
                     help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact); "
                     "equivalent to --config all_levers. "
@@ -282,6 +319,10 @@ def main(argv: list[str] | None = None) -> int:
         # The sealed capstone + STORE-NOTHING pose-carrier source (Track B) — the A/B pose arm.
         cfg = wac.derive_store_nothing_205_config(args.gt_cache, num_pairs=args.num_pairs,
                                                   epochs=args.epochs)
+    elif config == "fresh_seeded":
+        # The 2026-07-04 SEAL-review REVISED run-1 argv (sealed_205 + seed/control deltas; C5).
+        cfg = wac.derive_fresh_seeded_config(args.gt_cache, num_pairs=args.num_pairs,
+                                             epochs=args.epochs)
     else:
         cfg = wac.derive_config(args.gt_cache, num_pairs=args.num_pairs,
                                 overfit=overfit, epochs=args.epochs,
@@ -310,8 +351,17 @@ def main(argv: list[str] | None = None) -> int:
               f"not in the trainer argparse: {bad}", file=sys.stderr)
         return 2
 
+    # (a2) EXTRA-TRAINER-FLAGS passthrough (C5): same never-invent-a-flag bar as the derived config.
+    extra_flags, invented = parse_extra_trainer_flags(args.extra_trainer_flags)
+    if invented:
+        print(f"[launch-witness] ERROR: REFUSING to launch — --extra-trainer-flags contains "
+              f"invented flag(s) not in the trainer argparse: {invented}", file=sys.stderr)
+        return 2
+    if extra_flags:
+        print(f"# extra trainer flags (validated): {' '.join(extra_flags)}")
+
     # (b) WRITE launch.sh (script-based command — no word-split fragility).
-    launch_sh = write_launch_sh(cfg, out_dir)
+    launch_sh = write_launch_sh(cfg, out_dir, extra_flags=extra_flags or None)
     run_log = out_dir / "run.log"
     print(f"# wrote {launch_sh}")
 
