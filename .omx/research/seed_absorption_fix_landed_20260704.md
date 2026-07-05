@@ -104,3 +104,84 @@ assist on a scored forward MUST anneal→0 OR route the absorption gradient thro
 Commit shas: (recorded at serializer commit). Sisters:
 `plateau_disambiguator_results_20260704.md` · `lane_nucleation_failure_seed_above_critical_nucleus` ·
 `council_grand_symposium_ce_plateau_20260704.md`.
+
+---
+
+## STALL DIAGNOSIS + GPU-SMOKE CONFIRMATION (2026-07-04, appended)
+
+**The reported "GPU stall" at ep3/accum_batch74 was investigated, and the parent's strong hypothesis
+(the witness-alone `_render_R_wa` graph accumulates as an unbounded lazy graph that is never
+`mx.eval`'d per accum-step, so the periodic forced eval grinds forever — the #240 OOM/stall class) is
+REFUTED by direct measurement. There is NO wa-routing eval-discipline bug; the wa path already obeys the
+per-pair `mx.eval` discipline. No trainer code change was warranted (NO-FAKE: a behavior-neutral "fix"
+for a non-existent bug is forbidden).**
+
+### Evidence (4 independent, converging)
+
+1. **n600 mem_probe is FLAT, not growing.** In the reported run
+   (`levelset_n600_witness_20260704T234054Z/run.log`) the per-batch `mem_probe` is **constant at
+   `mlx_active_gib=52.02`, `mlx_peak_gib=57.30`** across ALL 75 accum-batches of ep3 (batch 0→74). An
+   unbounded lazy graph would GROW memory batch-over-batch; it does not. → the per-pair
+   `mx.eval(loss, grads)` (trainer L4595) already bounds the graph, wa render included (wa output feeds
+   `L` via `island_birth_from_signed_mx(_signed_wa, …)` L2828 + `persistence_topology_loss_mlx(_slog_wa,
+   …)` L2841, so it IS forced by that eval).
+
+2. **The "freeze at ep3/batch74" was a LOG-SILENCE MISREAD.** `mem_probe` only logs for
+   `ep ≤ TAC_MEM_PROBE_EPOCHS` (default 3), so per-batch logging STOPS at ep3/batch74 by design. The
+   next log line is the ep25 verdict (`--eval-every 25`). That run in fact **reached ep25 and emitted a
+   verdict** (`d_seg 0.159614`, `implied_S 17.37`, ts 01:23:15Z) — ep0→ep25 spanned ~90 min (~3.6
+   min/epoch), so the ~80 min of log silence during ep4–24 is a healthy-but-quiet loop, exactly where a
+   process sample lands the main thread inside a normal `mx::core::eval`.
+
+3. **GPU smoke (n24, real MLX-GPU, governed via `tools/safe_run.py`) — per-epoch train time is BOUNDED
+   and CONSTANT, wa ON vs OFF.** Faithful #205 config (self-orient, chroma, lane-render-band, seed-islands,
+   amplify=1.0, persistence, pose-carrier, hosc, film-stiefel; CE regime ep0–7). The wa route provably
+   fired (`island_seed` live, `island_amplify weight=1.0 class=1`, `persistence_loss` active,
+   `seed_survival` every epoch → `_island_levers_on=True` → `_wa_route=True` → `_render_R_wa` every pair):
+
+   | epoch | t_step (fwd+bwd+opt+ema) — WA ON | t_step — BASE (pre-#300, wa OFF) |
+   |---|---|---|
+   | 1 | 5.45s | 5.72s |
+   | 5 | 5.44s | 5.70s |
+   | 8 | 5.43s | 5.69s |
+   | 11 | 5.45s | 5.70s |
+
+   **Flat across all epochs; NO runaway growth.** Peak RSS 5.7 GiB at n24 (both). WA is marginally
+   *cheaper* than BASE, not 2× more expensive.
+
+4. **Code confirms no second forward in the live config.** With the #205 flags NO non-wa surgical lever
+   is engaged (no `--lane-edge`/`--margin-saliency`/`--lane-thin`/`--mfh`/`--subpix`/`--chroma-boundary`;
+   `--lane-render-band` is a composer, not a lever), so `_nonwa_levers_on=False` →
+   `_need_composed = _nonwa_levers_on or (_island_levers_on and not _wa_route) = False` (L2684). #300
+   therefore SKIPS the seed-composed SegNet forward and runs ONLY the witness-alone forward — **one
+   SegNet forward per pair either way** (wa slightly cheaper because `_compose_chain_noseed` omits the
+   seed residual add). The parent's "second render+scorer per island pair" is only real if a non-wa
+   lever is ALSO on (then both forwards run → ~2× cost, still BOUNDED, still eval'd per pair — a
+   throughput cost, never a stall). The live #205 config is NOT that case.
+
+### The real cause of the "apparent stall" (not a #300 bug)
+
+Log-silence after ep3 (mem_probe off; verdicts only every 25 ep) + **`--async-verdict` GPU contention**:
+the ep0 and ep25 verdicts run over ALL 600 pairs (`--verdict-pairs 0` is falsy → full P) on the SAME
+GPU in a background thread; the ep25 verdict took **1437 s (~24 min)** (`verdict_async_done secs 1437.1`).
+While an async verdict grinds the GPU, the main training `mx.eval` shares the device and slows — a
+healthy-but-slow window that reads as a freeze under log-silence.
+
+### Byte-identity-off + gate
+
+- Golden test `experiments/test_seed_absorption_fix.py`: **9/9 pass** (no trainer change → off-path
+  byte-identity trivially intact; re-run as the gate).
+- Smoke evidence preserved: `experiments/results/wa_stall_diag_{wa,base}/run.log` (repro:
+  seed 0, deterministic).
+
+### Recommendation to the parent (relaunch)
+
+- **No trainer code change is needed** for the wa eval discipline. Relaunch the #300 config **as-is**
+  (`--witness-alone-island-loss --seed-anneal-epochs 300 --seed-anneal-shape cosine`); it trains
+  cleanly and bounded.
+- To remove the misdiagnosis-inducing silence/contention on the next long run (OBSERVABILITY, separate
+  from this fix): consider a lightweight per-epoch heartbeat print and/or gating the async full-600
+  verdict less aggressively (e.g. a small `--verdict-pairs` for the interim verdicts, full only at
+  stage boundaries). These are throughput/observability niceties, NOT correctness fixes.
+- Pointer 0.19110 UNMOVED (this is diagnosis + confirmation; the pointer moves only via the byte-closed
+  n600 exact row from the relaunch).
