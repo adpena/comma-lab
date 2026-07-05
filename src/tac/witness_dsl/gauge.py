@@ -94,6 +94,9 @@ class GaugeComponent(Enum):
     GAMMA_TAU_EIKONAL = "gamma_tau_eikonal"              # Ch.4 phase-field: geometric tau-floor + eikonal
     STAGE_TRANSITION_EASING = "stage_transition_easing"  # Ch.6 dynamics: deconflict ep300 + LR re-warmup
     CONTROL_SYSTEM = "control_system"                    # #292: seed-paint + eik-ramp + event-trigger + closed-loop
+    # #302 curriculum-derivation symposium (FEED-05i, APPEND-ONLY; train-time schedule facet, 0
+    # archive bytes; NOT a GaugeChoice STORE field — like CONTROL_SYSTEM / STAGE_TRANSITION_EASING).
+    CURRICULUM = "curriculum"                            # #302: clock-vs-trigger schedule provenance
 
 
 class WarpGauge(Enum):
@@ -618,6 +621,42 @@ class ControlSystemGauge(Enum):
     CONTROLLED_NO_EVENT = "controlled_no_event"  # run-1 SEALED: paint-seed + eik-ramp + closed-loop
 
 
+class CurriculumGauge(Enum):
+    """#302 curriculum-derivation symposium lever (FEED-05i; memo
+    ``.omx/research/council_grand_symposium_curriculum_derivation_20260705.md``; equations
+    ``curriculum_handoff_critical_nucleus_v1`` + ``ema_window_pi_group_v1``
+    + ``muon_switch_conditioning_criterion_v1`` + ``rewarmup_beta2_memory_window_v1``).
+
+    The audit's headline: the schedule's CONTINUOUS laws (tau path, eikonal ramp, length, Muon
+    tuning, band deconflict) are DERIVED; what remains PR95/Quantizr-inherited is the CLOCK — the
+    discrete event structure fires on wall-clock epochs transferred from OTHER trajectories
+    (tau@300 = the cert arm's CE knee; Muon@726 = "PR95 stage-8 placement" verbatim, cert A7), and
+    the live run-2 still carries a 3-way ep300 collision (tau onset + persistence-warmup completion
+    + seed-anneal completion — Ch.6's one-homotopy-param rule applied to only 1 of 4 schedules).
+    Charts (0 archive bytes; train-time schedule provenance):
+      PR95_ECHO = the as-launched run-2 fixed-epoch clock (300/726/1000, ema 0.997 flat, linear
+                  hosc-beta, 3-way ep300 collision) -> emits () = BYTE-IDENTICAL (the pinned live
+                  arm; the honest name for what is running).
+      DERIVED_NATIVE = the run-3 derived-native schedule DELTA that is expressible with REAL flags
+                  today: stagger the ep300 collision (``--seed-anneal-epochs 275
+                  --persistence-warmup-epochs 275`` — crutch + protection complete >=25 ep BEFORE
+                  MCF onset) + stage-dependent finisher EMA (``--ema-decay-finisher 0.9995``,
+                  pi_ema ~ 0.1-0.3 of the finisher per ema_window_pi_group_v1). COMPOSES with
+                  ControlSystemGauge.CONTROLLED (the recalibrated CE->tau event trigger, eps 1e-4 /
+                  windows 25 / min-stage 250; l7 converge-fire guard LANDED 7226d2651). Remaining
+                  BUILDs named in the memo run-3 spec: per-class nucleus guard (handoff law's
+                  forall-class clause), Muon engage-on-trigger (Muon is verified NOT event-fireable
+                  today), geometric ``--hosc-beta-anneal`` (choices are linear|cosine only).
+      UNIFIED_ENERGY = the theta*/capstone design (ONE continuously-annealed energy, costate
+                  controller, stages dissolve; #218/#78/#247 lineage) — DESIGN-STAGE, fail-closed.
+    UNMEASURED as arms -> net d_seg is a run-3-class A/B (net-S gated, operator-GO gated; MEANS,
+    pointer 0.19110 UNMOVED)."""
+
+    PR95_ECHO = "pr95_echo"              # run-2 as launched: fixed-epoch clock = () byte-identical
+    DERIVED_NATIVE = "derived_native"    # run-3 delta: collision stagger + finisher EMA (real flags)
+    UNIFIED_ENERGY = "unified_energy"    # theta* design-stage (fail-closed NotImplementedError)
+
+
 COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.WARP: WarpGauge,
     GaugeComponent.CARRIER: CarrierGauge,
@@ -651,6 +690,9 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     GaugeComponent.GAMMA_TAU_EIKONAL: GammaTauEikonalGauge,
     GaugeComponent.STAGE_TRANSITION_EASING: StageTransitionEasingGauge,
     GaugeComponent.CONTROL_SYSTEM: ControlSystemGauge,
+    # #302 curriculum-derivation symposium (FEED-05i, APPEND-ONLY; train-time schedule facet, NOT
+    # a GaugeChoice STORE field — like CONTROL_SYSTEM / STAGE_TRANSITION_EASING).
+    GaugeComponent.CURRICULUM: CurriculumGauge,
 }
 
 
@@ -1020,6 +1062,36 @@ def stage_transition_easing_trainer_flags(chart: StageTransitionEasingGauge) -> 
     when rewarmup-epochs > 0 (the arm presupposes it, like MarginSaliency presupposes
     --margin-saliency-weight > 0)."""
     return STAGE_TRANSITION_EASING_TRAINER_FLAGS[chart]
+
+
+# #302 chart -> trainer argv (never-invent-flags; all three flags grep-verified in the levelset
+# trainer argparse: --seed-anneal-epochs / --persistence-warmup-epochs / --ema-decay-finisher).
+CURRICULUM_TRAINER_FLAGS: dict[CurriculumGauge, tuple[str, ...]] = {
+    CurriculumGauge.PR95_ECHO: (),
+    CurriculumGauge.DERIVED_NATIVE: (
+        "--seed-anneal-epochs", "275",
+        "--persistence-warmup-epochs", "275",
+        "--ema-decay-finisher", "0.9995",
+    ),
+}
+
+
+def curriculum_trainer_flags(chart: CurriculumGauge) -> tuple[str, ...]:
+    """The levelset-trainer argv for a CurriculumGauge chart. PR95_ECHO => () (the as-launched
+    run-2 fixed-epoch clock = byte-identical). DERIVED_NATIVE => the run-3 delta expressible with
+    REAL flags today (ep300 collision stagger + SWA finisher EMA); compose with
+    ``CONTROL_SYSTEM_TRAINER_FLAGS[ControlSystemGauge.CONTROLLED]``-class arms for the
+    recalibrated CE->tau event trigger. UNIFIED_ENERGY is DESIGN-STAGE fail-closed
+    (never-invent-flags): RAISES rather than fabricating a flag (mirrors
+    ``pose_training_trainer_flags``)."""
+    if chart is CurriculumGauge.UNIFIED_ENERGY:
+        raise NotImplementedError(
+            "CurriculumGauge.UNIFIED_ENERGY is DESIGN-STAGE (theta* unified-energy costate "
+            "curriculum, #218/#78/#247 lineage; memo "
+            ".omx/research/council_grand_symposium_curriculum_derivation_20260705.md sec C.iii). "
+            "never-invent-flags: emit nothing until the real trainer surface lands."
+        )
+    return CURRICULUM_TRAINER_FLAGS[chart]
 
 
 def component_of(chart: Enum) -> GaugeComponent:
