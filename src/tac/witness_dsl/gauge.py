@@ -396,6 +396,32 @@ class MuonLRGauge(Enum):
     ANNEAL_LR = "anneal_lr"  # --muon-lr-final-frac <f> (cosine decay to floor)
 
 
+class EikonalViscoStabGauge(Enum):
+    """How the ViscoReg eikonal-viscosity eps is scheduled (V6 #320; DAG FEED-06c). The DERIVED
+    mechanism cure for the v5 ep110 eikonal RE-ENTRY (memo adaptive_eps_mechanism_cure_20260705;
+    equation ``adaptive_eps_cfl_edge_tracking_v1``).
+
+    NO-FAKE / mechanism (DE #318 §3.1): the v5 death is a TWO-SIDED CFL squeeze — eps ANNEALS DOWN
+    toward the lower edge ``eps_lower = |c_a|*sqrt(eta*lambda_eik/8)`` while progressive sharpening
+    GROWS ``|c_a(t)|`` (raising that edge) => ``pi_eik = eta*lambda_eik*|c_a|^2/(8*eps^2)`` crosses 1.
+    ADAPTIVE_EPS floors/tracks eps ABOVE the rising edge instead of annealing into it.
+
+    LEVELSET-trainer flags (real store_true/float flags on the levelset entry point; requires
+    ``--eikonal-viscosity > 0`` so the visco term is active):
+      LINEAR_ANNEAL = () (the byte-identical DEFAULT: ``--eikonal-viscosity-anneal`` linear decay to 0).
+      ADAPTIVE_EPS  = ``--eikonal-viscosity-adaptive --eikonal-visco-eps-floor <lo>
+                       --eikonal-visco-eps-upper <hi> --eikonal-visco-margin-factor <m>`` -- eps(t) =
+                       clamp(|c_a(t)|*sqrt(eta*lambda_eik/8)*(1+m), lo, hi), recomputed per-epoch with
+                       |c_a(t)| measured no-grad on the witness decision margin (witness-only, zero
+                       SegNet cost). NOTE (constant-dependent, honest): at eta~1e-3/lambda~0.05 the edge
+                       is far below the 0.3 floor unless |c_a| explodes => ADAPTIVE_EPS degrades to a
+                       CONSTANT-0.3-FLOOR (which alone removes the eps->0 HALF of the DE §3.1 re-entry)
+                       + explosion insurance. Net d_seg is #205/n600-gated (advisory, MEANS)."""
+
+    LINEAR_ANNEAL = "linear_anneal"  # --eikonal-viscosity-anneal (byte-identical default)
+    ADAPTIVE_EPS = "adaptive_eps"    # --eikonal-viscosity-adaptive + floor/upper/margin (V6 #320)
+
+
 class AlongTangentFrequencyGauge(Enum):
     """How much ALONG-TANGENT Fourier bandwidth the anisotropic self-orient/curvelet basis carries
     (FEED-03t, equation ``anisotropic_basis_along_tangent_frequency_deficit_v1`` + memory
@@ -809,6 +835,48 @@ def muon_lr_trainer_flags(chart: MuonLRGauge, final_frac: float | None = None) -
             f"MuonLRGauge.ANNEAL_LR final_frac={frac} >= 1.0 is the no-decay default (== FLAT_LR); "
             "pass a fraction in (0, 1) OR select MuonLRGauge.FLAT_LR")
     return ("--muon-lr-final-frac", str(frac))
+
+
+# V6 #320 adaptive-eps CFL-edge tracker (DAG FEED-06c; the EIK-STAB flag family, minimally
+# triality-synced per #317 — a full EIK-STAB gauge pass (steik/steik-normalized/visco base) is a
+# noted follow-up). LEVELSET-trainer flags (real; the eikonal stabilizer lives on the levelset entry
+# point). ADAPTIVE_EPS presupposes --eikonal-viscosity > 0 (the visco term must be active).
+EIKONAL_VISCO_EPS_FLOOR_DEFAULT = 0.3    # FEED-05v measured stable floor (never anneal below)
+EIKONAL_VISCO_EPS_UPPER_DEFAULT = 0.7    # below the eps=1.0 biharmonic explosion (FEED-05v)
+EIKONAL_VISCO_MARGIN_FACTOR_DEFAULT = 0.5  # DE #318 §7.4 safety margin above the CFL lower edge
+EIKONAL_VISCO_STAB_TRAINER_FLAGS: dict[EikonalViscoStabGauge, tuple[str, ...]] = {
+    EikonalViscoStabGauge.LINEAR_ANNEAL: (),                       # byte-identical default
+    EikonalViscoStabGauge.ADAPTIVE_EPS: (
+        "--eikonal-viscosity-adaptive",
+        "--eikonal-visco-eps-floor", str(EIKONAL_VISCO_EPS_FLOOR_DEFAULT),
+        "--eikonal-visco-eps-upper", str(EIKONAL_VISCO_EPS_UPPER_DEFAULT),
+        "--eikonal-visco-margin-factor", str(EIKONAL_VISCO_MARGIN_FACTOR_DEFAULT)),
+}
+
+
+def eikonal_visco_stab_trainer_flags(chart: EikonalViscoStabGauge,
+                                     eps_floor: float | None = None,
+                                     eps_upper: float | None = None,
+                                     margin_factor: float | None = None) -> tuple[str, ...]:
+    """The LEVELSET-trainer argv for an EikonalViscoStabGauge chart. LINEAR_ANNEAL => () (the
+    byte-identical --eikonal-viscosity-anneal default). ADAPTIVE_EPS => the real
+    ``--eikonal-viscosity-adaptive --eikonal-visco-eps-floor/-upper/-margin-factor`` tuple (V6 #320);
+    optional overrides thread a campaign-specific clamp window (defaults = the FEED-05v-measured
+    stable floor 0.3 / biharmonic-safe upper 0.7 / DE §7.4 margin 0.5). Presupposes
+    ``--eikonal-viscosity > 0`` so the visco term is active (never a silent no-op)."""
+    if chart is EikonalViscoStabGauge.LINEAR_ANNEAL:
+        return ()
+    lo = EIKONAL_VISCO_EPS_FLOOR_DEFAULT if eps_floor is None else float(eps_floor)
+    hi = EIKONAL_VISCO_EPS_UPPER_DEFAULT if eps_upper is None else float(eps_upper)
+    mf = EIKONAL_VISCO_MARGIN_FACTOR_DEFAULT if margin_factor is None else float(margin_factor)
+    if hi < lo:
+        raise ValueError(
+            f"EikonalViscoStabGauge.ADAPTIVE_EPS eps_upper={hi} < eps_floor={lo} is degenerate; "
+            "pass eps_upper >= eps_floor (the clamp window)")
+    return ("--eikonal-viscosity-adaptive",
+            "--eikonal-visco-eps-floor", str(lo),
+            "--eikonal-visco-eps-upper", str(hi),
+            "--eikonal-visco-margin-factor", str(mf))
 
 
 # Wave-F #205 pose-plan INTENDED (not-yet-wired) trainer args — documented, NEVER emitted, per

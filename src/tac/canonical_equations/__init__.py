@@ -179,6 +179,10 @@ from tac.canonical_equations.leverd_flicker_residual_reactivation_economics_2026
     leverd_net_delta_s,
     leverd_survival_threshold,
 )
+from tac.canonical_equations.adaptive_eps_cfl_edge_tracking_20260705 import (
+    build_adaptive_eps_cfl_edge_tracking_v1,
+    populate_adaptive_eps_cfl_edge_tracking_equation,
+)
 from tac.canonical_equations.margin_saliency_reachability_and_muon_finisher_20260703 import (
     build_margin_saliency_reachability_replaces_texture_proxy_v1,
     build_muon_finisher_schedule_warmstart_and_lr_anneal_v1,
@@ -253,6 +257,8 @@ __all__ = [
     "build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1",
     "build_oom_verdict_batch_spike_peak_rss_v1",
     "build_pairset_component_marginal_score_decomposition_v1",
+    "build_adaptive_eps_cfl_edge_tracking_v1",
+    "populate_adaptive_eps_cfl_edge_tracking_equation",
     "build_margin_saliency_reachability_replaces_texture_proxy_v1",
     "build_multiphase_modica_mortola_perimeter_gamma_limit_v1",
     "build_muon_finisher_schedule_warmstart_and_lr_anneal_v1",
