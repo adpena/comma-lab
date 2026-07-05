@@ -189,10 +189,18 @@ def test_total_loss_fn_gates_on_closure_cell():
     assert 'terms_out["eik_steik"]' in SRC
 
 
-def test_micro_batch_fails_closed_for_stabilizers():
-    m = re.search(r'_eik_stab\["steik_w"\] > 0\.0 or _eik_stab\["visco_eps0"\] > 0\.0.*?'
-                  r'raise NotImplementedError', SRC, re.S)
-    assert m, "stabilizer flags must FAIL CLOSED under --micro-batch-pairs (NO-FAKE silent-drop)"
+def test_micro_batch_routes_raw_stabilizers_into_twin_and_fails_closed_on_normalized():
+    # (#313/#315 co-land bc2ece94f) the RAW StEik + ViscoReg stabilizers are no longer fail-closed
+    # under --micro-batch-pairs: they now ROUTE into the batched twin (LeverConfig carries eik_stab
+    # BY REF; the twin applies visco/steik — tac.boundary_math.levelset_micro_batch_loss). The V6
+    # #317 NORMALIZED n^T H n variant, however, is NOT in the twin (it has only the raw fn), so it
+    # MUST fail closed under micro-batch (NO-FAKE silent-drop) — the current fail-closed boundary.
+    from tac.boundary_math import levelset_micro_batch_loss as _twin
+    tsrc = pathlib.Path(_twin.__file__).read_text()
+    assert 'eik_stab["visco_eps"]' in tsrc and 'eik_stab["steik_w"]' in tsrc, \
+        "the micro-batch twin must APPLY raw visco/steik (the routed leg that replaced fail-closed)"
+    assert '--eikonal-steik-normalized is NOT wired into the micro-batch twin' in SRC, \
+        "normalized n^T H n MUST fail closed under --micro-batch-pairs (twin has only the raw fn)"
 
 
 def test_visco_junction_relax_mutual_exclusion_guard():
