@@ -255,3 +255,31 @@ Baseline: d_seg(ep100) = 0.12129 (frozen-EMA readout ≈ ep92 state).
 
 **Pointer 0.19110 UNMOVED.** This package is MEANS; the END remains a byte-closed
 `upstream/evaluate.py` row below it.
+
+---
+
+## ADDENDUM (2026-07-05, post-adversarial-review round 1 — APPEND-ONLY)
+
+Per `.omx/research/adversarial_review_ce_window_intervention_20260705.md` (acd508447, T2
+PROCEED_WITH_REVISIONS, 0 CRIT / 3 MED / 6 LOW): the SC gates are AMENDED as follows.
+- **SC1' (supersedes SC1's ep101–125 window):** skip-rate alarm EVERY epoch until tau@400 —
+  ALARM if >10% skips in any epoch OR 3 consecutive epochs with nonzero skips. Rationale (M1):
+  the ep92 onset timescale (92 ep) exceeds the original 25-ep window; no in-loop escape hatch
+  is in the live build (#304 lands it before run-3).
+- **SC3' (extends SC3):** at ep150–175 ALSO recompute the bd share on the fresh EMA;
+  pre-registered de-rate — halve w_bd at the next gated restart if share >20% (M2: share grows
+  as CE falls; measured 15.1% @CE=20, 22.8% @CE=12 from the registered mixing law).
+- **M3 restated first-batch test:** first accepted batch losses ~58–70 OR ~10–16 are BOTH
+  consistent (the fresh-seed restart confounds the original single-band test; ~10–16 implicates
+  the discarded seed as the ep92 jump carrier = attribution win). Alarming signal is SC1'/SC2,
+  not the loss level.
+- Live v0 boot data resolving review items: L5 CLOSED — `resume_spike_guard
+  cleared_frozen_window_len: 50` row present; v0 verdict d_seg 0.123767 (consistent with the
+  frozen ep100 state within known MLX-GPU cross-process non-bit-identity), d_pose 20.754 =
+  pose-carrier TABLE refit transient (matches the original run's ep0 pre-fit d_pose 25.74;
+  RETROACTIVELY explains the frozen-weight d_pose wobble 0.120→0.216 — the table is
+  per-epoch-fit state, degenerate under zero accepted batches). Expect d_pose recovery by ep125
+  as in the original ep0→25 (25.74→0.128); if NOT recovered by ep150, that is a NEW finding
+  (table state lost in resume, investigate under #304's verdict-nondeterminism item).
+All rows [macOS-CPU advisory] NON-PROMOTABLE. Round-1 clean-pass counter: 0/3 (FINDINGS);
+round 2 rides on the M1/#304 escape-hatch landing + first live SC data. Pointer 0.19110 UNMOVED.
