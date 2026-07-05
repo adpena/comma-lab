@@ -510,6 +510,33 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
     }
 
 
+def _resolve_weights_only_warm_start(
+    rs: dict[str, Any], *, warm_start_weights_only: bool, warm_start_epoch: int,
+    ckpt_start_epoch: int,
+) -> dict[str, Any]:
+    """(DE#3 clean warm-start) Decide the weights-only warm-start effects and MUTATE ``rs`` to
+    discard the optimizer moments when the flag is set. Pure / MLX-free -> unit-tested.
+
+    Effects when ``warm_start_weights_only`` is True (the poisoned-resume-trap cure): take ONLY the
+    trained WEIGHTS (``rs['live']`` / ``rs['ema']`` are untouched), DISCARD ``rs['opt']`` + set
+    ``rs['has_opt']=False`` so the caller's optimizer-state restore is SKIPPED (=> fresh AdamW), and
+    return the start-epoch override (``warm_start_epoch`` if >=0, else keep the caller's
+    ``ckpt_start_epoch``). The spike-guard clear + lever-drift auto-allow are gated on the same flag
+    at their own call sites. DEFAULT (flag OFF) => ``rs`` untouched, override None => byte-identical.
+
+    Returns {'discarded_opt': bool, 'clear_spike_guard': bool, 'allow_lever_drift': bool,
+             'start_epoch': int, 'ckpt_had_opt': bool}."""
+    ckpt_had_opt = bool(rs.get("has_opt", False)) and bool(rs.get("opt"))
+    if not warm_start_weights_only:
+        return {"discarded_opt": False, "clear_spike_guard": False, "allow_lever_drift": False,
+                "start_epoch": int(ckpt_start_epoch), "ckpt_had_opt": ckpt_had_opt}
+    rs["opt"] = {}
+    rs["has_opt"] = False
+    _ep = int(warm_start_epoch) if int(warm_start_epoch) >= 0 else int(ckpt_start_epoch)
+    return {"discarded_opt": True, "clear_spike_guard": True, "allow_lever_drift": True,
+            "start_epoch": _ep, "ckpt_had_opt": ckpt_had_opt}
+
+
 def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str]:
     """(F2) List render-side LEVER cfg keys that DIVERGE between the resume sidecar (what the run was
     trained with) and the current argv (what this resume would run). A non-empty list means a
@@ -1013,6 +1040,68 @@ def _visco_eps_for_epoch(ep: int, eps0: float, anneal_epochs: int) -> float:
     if n <= 0:
         return e0
     return e0 * max(0.0, 1.0 - float(ep) / float(n))
+
+
+def _adaptive_visco_eps(c_a: float, eta: float, lam_eik: float, margin_factor: float,
+                        eps_floor: float, eps_upper: float) -> float:
+    """(V6 #320 / DE #318 §4 Arm-2 / symposium #317 §7.4) ADAPTIVE vanishing-viscosity eps tracking
+    the CFL LOWER edge eps_lower = |c_a|*sqrt(eta*lambda_eik/8):
+
+        eps(t) = clamp( |c_a(t)| * sqrt(eta * lambda_eik / 8) * (1 + margin_factor), eps_floor, eps_upper )
+
+    The DERIVED mechanism cure for the v5 ep110 re-entry: a FIXED eps eventually falls below the
+    RISING lower edge (as progressive sharpening grows |c_a(t)|); this eps TRACKS it, holding
+    pi_eik = eta*lambda_eik*|c_a|^2/(8*eps^2) <= 1 by construction with least isotropic over-damping.
+    eta, lambda_eik clamped at 0 under the sqrt; eps_upper raised to eps_floor if inverted. Pure /
+    unit-tested; BIT-parity with the numpy ``adaptive_visco_eps`` reference
+    (tac.boundary_math.eikonal_sharpness_proxy_reference)."""
+    edge = abs(float(c_a)) * math.sqrt(max(0.0, float(eta) * float(lam_eik) / 8.0))
+    eps = edge * (1.0 + float(margin_factor))
+    lo = float(eps_floor)
+    hi = float(eps_upper)
+    if hi < lo:
+        hi = lo
+    return min(max(eps, lo), hi)
+
+
+def _ca_from_margin_mlx(m, band: float = 0.0) -> float:
+    """(V6 #320) Sharpness proxy |c_a| = mean|(|grad m|-1)/|grad m|| over the decision-margin
+    interior of a single (H,W) margin field ``m`` (MLX array). band>0 => restrict to the small-margin
+    annulus |m|<band (DE #318 §2 flat regime); band==0 (DEFAULT) => interior mean (symposium §7.4
+    exact launch formula). Uses the SAME central-diff interior stencil + 1e-8 gmag floor as
+    ``_eikonal_margin_interior_mlx`` / the numpy ``sharpness_proxy_c_a`` reference (byte-parity)."""
+    import mlx.core as mx
+
+    gx = 0.5 * (m[1:-1, 2:] - m[1:-1, :-2])   # central d/dx (cols)
+    gy = 0.5 * (m[2:, 1:-1] - m[:-2, 1:-1])   # central d/dy (rows)
+    gmag = mx.sqrt(gx * gx + gy * gy + 1e-8)
+    c_a = mx.abs((gmag - 1.0) / gmag)         # (H-2, W-2)
+    if band > 0.0:
+        m_int = m[1:-1, 1:-1]
+        mask = mx.abs(m_int) < float(band)
+        denom = float(mx.sum(mask.astype(mx.float32)))
+        num = float(mx.sum(mx.where(mask, c_a, mx.zeros_like(c_a))))
+        return num / denom if denom > 0.0 else 0.0
+    return float(mx.mean(c_a))
+
+
+def _measure_ca_mlx(model, pairs, cf_fn, render_h: int, render_w: int, band: float = 0.0) -> float:
+    """(V6 #320) No-grad per-epoch |c_a(t)| over a small FIXED deterministic subset of pairs. One
+    ``model.sdf`` forward per pair (frame0, matching the loss's phi0) => the WITNESS decision margin
+    m = top1-top2 (NOT a SegNet forward — |c_a| is the witness's own field, zero SegNet cost); reshape
+    to (H,W); |c_a| via ``_ca_from_margin_mlx``; averaged over the subset. Deterministic (no RNG)."""
+    import mlx.core as mx
+
+    acc = 0.0
+    n = 0
+    for pi in pairs:
+        phi = model.sdf(cf_fn(int(pi)), 2 * int(pi) + 0)      # (H*W, K) frame0 SDF logits, no grad
+        phi_r = mx.reshape(phi, (render_h, render_w, -1))
+        srt = mx.sort(phi_r, axis=-1)
+        m = srt[..., -1] - srt[..., -2]                       # (H,W) decision margin (top1-top2)
+        acc += _ca_from_margin_mlx(m, band)
+        n += 1
+    return acc / max(n, 1)
 
 
 class SpikeGuardRollback:
@@ -1962,7 +2051,8 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
 
 
 def _loss_terms_row(terms: "dict[str, float]", total: float, ep: int, accum_batch: int,
-                    *, gnorm: "float | None" = None, skipped: "bool | None" = None) -> dict:
+                    *, gnorm: "float | None" = None, skipped: "bool | None" = None,
+                    visco_eps: "float | None" = None, visco_c_a: "float | None" = None) -> dict:
     """(#304 item 4) Build the canonical machine-readable per-term loss telemetry row. Pure /
     MLX-free / unit-tested. Every LOSS_TERM_KEYS key is present (missing/inactive terms -> 0.0) so
     the row schema is STABLE across configs; ``sum_terms`` and ``sum_minus_total`` make the
@@ -1978,6 +2068,12 @@ def _loss_terms_row(terms: "dict[str, float]", total: float, ep: int, accum_batc
         row["gnorm"] = round(float(gnorm), 4) if np.isfinite(gnorm) else "nonfinite"
     if skipped is not None:
         row["spike_skipped"] = bool(skipped)
+    # (V6 #320) adaptive-eps control-state observability: top-level fields (NOT in `terms`, so
+    # sum_minus_total stays a clean loss-addend check). Emitted only when adaptive is active.
+    if visco_eps is not None:
+        row["visco_eps"] = round(float(visco_eps), 6)
+    if visco_c_a is not None:
+        row["visco_c_a"] = round(float(visco_c_a), 6)
     return row
 
 
@@ -2965,7 +3061,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "visco_eps0": float(getattr(args, "eikonal_viscosity", 0.0)),
         "visco_eps": float(getattr(args, "eikonal_viscosity", 0.0)),
         "visco_anneal": int(getattr(args, "eikonal_viscosity_anneal", 0)),
+        # (V6 #320) adaptive-eps CFL-edge tracker config. adaptive=False (DEFAULT) => the linear
+        # anneal path runs unchanged => visco_eps is set exactly as before => BYTE-IDENTICAL.
+        "visco_adaptive": bool(getattr(args, "eikonal_viscosity_adaptive", False)),
+        "visco_eps_floor": float(getattr(args, "eikonal_visco_eps_floor", 0.3)),
+        "visco_eps_upper": float(getattr(args, "eikonal_visco_eps_upper", 0.7)),
+        "visco_margin_factor": float(getattr(args, "eikonal_visco_margin_factor", 0.5)),
+        "visco_ca_band": float(getattr(args, "eikonal_visco_ca_band", 0.0)),
+        # last measured |c_a(t)| (telemetry only; 0.0 until the first adaptive epoch).
+        "visco_c_a": 0.0,
     }
+    # (V6 #320) FIXED deterministic strided pair subset for the per-epoch |c_a| measurement (built
+    # once; adaptive OFF => never used). Strided over P so the sample spans the sequence.
+    _ca_npairs = max(1, int(getattr(args, "eikonal_visco_ca_pairs", 16)))
+    _ca_stride = max(1, P // _ca_npairs)
+    _ca_pairs = list(range(0, P, _ca_stride))[:_ca_npairs]
 
     # LEVER-A (FiLM-rank-fix) loss term closure constants. A SOFT participation-ratio FLOOR on the
     # realized per-pair FiLM modulation M = film(code) so the curriculum cannot funnel it to rank-1
@@ -4552,6 +4662,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         resume_cfg = rs["cfg"]
         if not rs["live"]:
             raise ValueError(f"--resume-from {rp} has no live/param tensors (NO-FAKE: cannot resume).")
+        # (DE#3 clean warm-start) --warm-start-weights-only: take ONLY the trained weights; DISCARD the
+        # checkpoint's optimizer moments (=> fresh AdamW) here so the has_opt restore below is skipped
+        # EVEN when the sidecar carries optP__ (the poisoned-resume trap: a DEADLOCKED resume_state has
+        # stale ep150 moments + a frozen spike-guard window; the WEIGHTS are clean, the run STATE is not).
+        # The spike-guard clear (below) and epoch override are gated on the same flag; lever-drift is
+        # auto-allowed (a warm-start is an intentional re-treatment). DEFAULT OFF => rs is untouched =>
+        # byte-identical. NOTE: a deploy ema/BEST npz ALREADY has has_opt=False + no __recent_losses, so
+        # this flag is a NO-OP for that path (it only bites a full sidecar).
+        _warm_start_wo = bool(getattr(args, "warm_start_weights_only", False))
+        _ws = _resolve_weights_only_warm_start(
+            rs, warm_start_weights_only=_warm_start_wo,
+            warm_start_epoch=int(getattr(args, "warm_start_epoch", -1)),
+            ckpt_start_epoch=int(rs["epoch"]) + 1)
+        if _warm_start_wo:
+            print(json.dumps({"stage": "warm_start_weights_only",
+                              "note": "DISCARDING checkpoint optimizer moments + spike-guard window "
+                              "(fresh AdamW; weights-only clean warm-start)",
+                              "ckpt_had_opt": _ws["ckpt_had_opt"], "ckpt_epoch": int(rs["epoch"]),
+                              "start_epoch": _ws["start_epoch"]}), flush=True)
         # (review R2a-MED-1) FAIL-CLOSED arch-drift guard BEFORE model.update. MLX model.update only
         # writes params the model ALREADY has, so a resume whose ckpt carries trained params the
         # freshly-built model lacks (e.g. the run trained with --film-per-layer / --film-concat-code but
@@ -4582,7 +4711,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # The loss/render-only levers add no param KEYS, so the missing-param guard above cannot see
         # them; a resume that silently drops/changes a lever the run was trained with is a
         # deterministic-repro violation. Escape: --resume-allow-lever-drift (explicit warm-start).
-        if not bool(getattr(args, "resume_allow_lever_drift", False)):
+        if not (bool(getattr(args, "resume_allow_lever_drift", False)) or _ws["allow_lever_drift"]):
             _lever_div = _resume_lever_divergences(resume_cfg, args)
             if _lever_div:
                 raise ValueError(
@@ -4600,7 +4729,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if k in ema_src:
                 ema.shadow[k] = mx.array(ema_src[k])
         mx.eval(list(ema.shadow.values()))
-        start_epoch = int(rs["epoch"]) + 1
+        # (DE#3) start epoch: _ws["start_epoch"] == int(rs["epoch"])+1 unless --warm-start-weights-only
+        # + --warm-start-epoch overrode it (e.g. 126 to continue just past the ep125 BEST verdict when
+        # the sidecar's __resume_epoch is the later DEADLOCK epoch). Non-warm-start => byte-identical.
+        if _ws["start_epoch"] != int(rs["epoch"]) + 1:
+            print(json.dumps({"stage": "warm_start_epoch_override",
+                              "from": int(rs["epoch"]) + 1, "to": _ws["start_epoch"]}), flush=True)
+        start_epoch = _ws["start_epoch"]
         # #205 MUON-FINISHER RESUME: if the resumed epoch is INSIDE the finisher window, the saved
         # optimizer state is the Muon MultiOptimizer's -> rebuild it HERE (before the restore below)
         # and mark _resume_into_finisher so (a) the state restore keys match and (b) the loop's in-line
@@ -4790,7 +4925,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (the median gates step-skipping = part of the trajectory). DEFAULT-SAFE: no resume, or a pre-#205
     # sidecar without __recent_losses => the fresh [] is used (prior behavior). MLX-free.
     if resume_cfg is not None and "__recent_losses" in resume_cfg:
-        if bool(getattr(args, "resume_clear_spike_guard", False)):
+        if bool(getattr(args, "resume_clear_spike_guard", False)) or bool(
+                getattr(args, "warm_start_weights_only", False)):
             # DEADLOCK RE-TREAT (explicit, flag-gated): discard the frozen window so the median
             # re-anchors to the post-resume loss level (guard re-arms after the FIRST accepted
             # batch — exposure is 1 batch, not 50). Bit-faithful default path below is unchanged.
@@ -5490,8 +5626,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 model.hosc_beta = _beta
             # (EIK-STAB build 1b) vanishing-viscosity anneal: mutate the closure cell so
             # total_loss_fn reads the CURRENT eps live (same pattern as the lever gate dicts).
-            # Default eps0 0.0 => never touched => byte-identical.
-            if _eik_stab["visco_eps0"] > 0.0:
+            # Default eps0 0.0 => never touched => byte-identical. (V6 #320) when
+            # --eikonal-viscosity-adaptive is set the LINEAR anneal is SKIPPED here and visco_eps is
+            # instead set by the adaptive-eps block BELOW (after the LR is known, so eta(t) is current).
+            if _eik_stab["visco_eps0"] > 0.0 and not _eik_stab["visco_adaptive"]:
                 _ve = _visco_eps_for_epoch(ep, _eik_stab["visco_eps0"], _eik_stab["visco_anneal"])
                 if _ve != _eik_stab["visco_eps"]:
                     print(json.dumps({"stage": "eik_stabilizer", "epoch": ep,
@@ -5556,6 +5694,28 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if _sg_state["lr_scale"] != 1.0:
                     lr = lr * _sg_state["lr_scale"]
                 opt.learning_rate = float(lr)
+            # (V6 #320) ADAPTIVE-eps CFL-edge tracker: eps(t) = clamp(|c_a(t)|*sqrt(eta*lambda_eik/8)
+            # *(1+margin), floor, upper). Placed AFTER the LR assignment so eta(t)=opt.learning_rate is
+            # the CURRENT epoch's flow time-step and eik_w_ep is the CURRENT lambda_eik. Replaces the
+            # linear anneal (skipped above when adaptive). |c_a(t)| = no-grad witness-margin sharpness
+            # over a FIXED strided pair subset (witness-only, zero SegNet cost). DEFAULT-OFF
+            # (visco_adaptive False) => this whole block is skipped => BYTE-IDENTICAL.
+            if _eik_stab["visco_adaptive"] and _eik_stab["visco_eps0"] > 0.0:
+                _eta_t = float(opt.learning_rate)
+                _ca_t = _measure_ca_mlx(model, _ca_pairs, _cf_mx, render_h, render_w,
+                                        band=_eik_stab["visco_ca_band"])
+                _ve = _adaptive_visco_eps(_ca_t, _eta_t, float(eik_w_ep),
+                                          _eik_stab["visco_margin_factor"],
+                                          _eik_stab["visco_eps_floor"], _eik_stab["visco_eps_upper"])
+                _eik_stab["visco_c_a"] = _ca_t
+                if _ve != _eik_stab["visco_eps"]:
+                    print(json.dumps({"stage": "eik_stabilizer_adaptive", "epoch": ep,
+                                      "visco_eps": round(_ve, 6), "c_a": round(_ca_t, 6),
+                                      "eta": round(_eta_t, 8), "lambda_eik": round(float(eik_w_ep), 6),
+                                      "note": "adaptive-eps tracks the CFL lower edge "
+                                      "|c_a|*sqrt(eta*lambda_eik/8)*(1+margin), clamped [floor,upper]"}),
+                          flush=True)
+                _eik_stab["visco_eps"] = _ve
             # LEVER-5: base permutation (every pair >=1 step, never starved) + hardness-allocated
             # extras. n_extra=0 (default) => order == permutation(P) => byte-identical to before.
             order = np.random.permutation(P)
@@ -5671,8 +5831,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _bidx_lt = s // args.accum_pairs
                 if _lt_stride and (_bidx_lt % _lt_stride == 0):
                     _t_agg, _t_tot = _loss_terms_for_chunk(chunk, seg_form, eik_w_ep)
+                    # (V6 #320) thread the adaptive-eps control state when active (None => omitted =>
+                    # byte-identical row schema for non-adaptive runs).
+                    _lt_ve = _eik_stab["visco_eps"] if _eik_stab["visco_adaptive"] else None
+                    _lt_ca = _eik_stab["visco_c_a"] if _eik_stab["visco_adaptive"] else None
                     print(json.dumps(_loss_terms_row(
-                        _t_agg, _t_tot, ep, _bidx_lt, gnorm=gnorm, skipped=skip)), flush=True)
+                        _t_agg, _t_tot, ep, _bidx_lt, gnorm=gnorm, skipped=skip,
+                        visco_eps=_lt_ve, visco_c_a=_lt_ca)), flush=True)
                 # (EIK-STAB build 2) SUSTAINED-runaway rollback: restore last-good + cut lr +
                 # re-arm, then skip THIS batch's step too (its gradient came from the diverged
                 # state). Legacy mode: _sg_act is None => never fires => byte-identical.
@@ -6108,6 +6273,25 @@ def main(argv: list[str] | None = None) -> int:
                     "so after a persistent >spike_factor loss-level shift EVERY batch skips forever "
                     "(#205 run 20260705T015247Z: 75/75 skips/ep from ep92, frozen median ~6-8 vs loss "
                     "~58-66). DEFAULT OFF = the bit-faithful restore is unchanged.")
+    ap.add_argument("--warm-start-weights-only", action=argparse.BooleanOptionalAction, default=False,
+                    help="(DE#3 clean warm-start 2026-07-05) on --resume-from, take ONLY the trained "
+                    "WEIGHTS from the checkpoint (EMA-shadow preferred, else live params) and DISCARD its "
+                    "optimizer moments (=> fresh AdamW), its saved spike-guard window (=> re-seeded), and "
+                    "(unless --warm-start-epoch is given) advance the epoch normally. Extincts the "
+                    "POISONED-RESUME trap: resuming a DEADLOCKED levelset_resume_state.npz re-enters the "
+                    "stale-optimizer + frozen-spike-guard-window deadlock (v5 deadlocked ep110-172; its "
+                    "resume_state carries the runaway __recent_losses + ep150 moments), whereas the BEST "
+                    "WEIGHTS (ema_BEST, d_seg 0.025) are clean. This flag lets a warm-start take the clean "
+                    "weights from EITHER a deploy npz OR the poisoned sidecar. Also auto-allows lever "
+                    "drift (a warm-start is an intentional re-treatment). NOTE: --resume-from a deploy "
+                    "ema/BEST npz ALREADY yields fresh moments (has_opt=False) + no frozen guard; this "
+                    "flag makes the weights-only intent EXPLICIT and safe from a full sidecar too. "
+                    "DEFAULT OFF => the resume path is byte-identical.")
+    ap.add_argument("--warm-start-epoch", type=int, default=-1,
+                    help="(DE#3) with --warm-start-weights-only, set the start epoch explicitly "
+                    "(e.g. 126 to continue just past the ep125 BEST verdict when warm-starting from a "
+                    "resume_state.npz whose __resume_epoch is the later DEADLOCK epoch). Default -1 => "
+                    "use the checkpoint's own epoch + 1 (the deploy-npz path's natural continuation).")
     ap.add_argument("--freeze-decoder-fit-codes", type=str, default=None,
                     help="FEED-eo AMORTIZATION (days->hours): load the SHARED decoder from this level-set "
                     "EMA/deploy npz (trained on a SUBSET, e.g. n96/n192), FREEZE it, and fit ONLY the "
@@ -6729,6 +6913,33 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--eikonal-viscosity-anneal", type=int, default=0,
                     help="EIK-STAB build 1b: linear eps decay to 0 over this many ABSOLUTE epochs "
                     "(0 = constant eps; ViscoReg-style vanishing viscosity).")
+    ap.add_argument("--eikonal-viscosity-adaptive", action="store_true",
+                    help="V6 #320 (DE #318 §4 Arm-2 / symposium #317 §7.4): REPLACE the linear "
+                    "--eikonal-viscosity-anneal with the ADAPTIVE-eps CFL-edge tracker eps(t) = "
+                    "clamp(|c_a(t)|*sqrt(eta*lambda_eik/8)*(1+margin), floor, upper), recomputed "
+                    "per-epoch. |c_a(t)| = mean|(|grad m|-1)/|grad m|| measured no-grad on the witness "
+                    "decision margin (the DERIVED mechanism cure for the ep110 eikonal re-entry: a "
+                    "FIXED eps falls below the RISING lower edge as sharpening grows |c_a|). Requires "
+                    "--eikonal-viscosity>0 (the visco term must be active). Default OFF = the linear "
+                    "anneal path = BYTE-IDENTICAL.")
+    ap.add_argument("--eikonal-visco-eps-floor", type=float, default=0.3,
+                    help="V6 #320: adaptive-eps LOWER clamp (never anneal below the FEED-05v measured "
+                    "stable floor 0.3). Only used with --eikonal-viscosity-adaptive.")
+    ap.add_argument("--eikonal-visco-eps-upper", type=float, default=0.7,
+                    help="V6 #320: adaptive-eps UPPER clamp (stay below the eps=1.0 biharmonic "
+                    "explosion measured at n24/FEED-05v). Only used with --eikonal-viscosity-adaptive.")
+    ap.add_argument("--eikonal-visco-margin-factor", type=float, default=0.5,
+                    help="V6 #320: adaptive-eps safety margin above the CFL lower edge "
+                    "(eps = edge*(1+margin_factor); DE #318 §7.4 margin~0.5). "
+                    "Only used with --eikonal-viscosity-adaptive.")
+    ap.add_argument("--eikonal-visco-ca-pairs", type=int, default=16,
+                    help="V6 #320: number of FIXED (strided) pairs the per-epoch no-grad |c_a| "
+                    "measurement forwards over (cheap; witness-only, no SegNet). "
+                    "Only used with --eikonal-viscosity-adaptive.")
+    ap.add_argument("--eikonal-visco-ca-band", type=float, default=0.0,
+                    help="V6 #320: if >0, restrict |c_a| to the small-margin annulus |m|<band "
+                    "(DE #318 §2 flat regime). Default 0.0 = interior mean = symposium §7.4 exact "
+                    "launch formula. Only used with --eikonal-viscosity-adaptive.")
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--eikonal-weight-end", type=float, default=None,
                     help="(#292 control-system) STEP the eikonal weight from --eikonal-weight (CE) up "
