@@ -1552,6 +1552,54 @@ def _stage_rewarmup_factor(
     return float(floor + (1.0 - floor) * prog)
 
 
+LOSS_TERM_KEYS: tuple[str, ...] = (
+    # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
+    # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
+    "seg", "pose", "eikonal", "length", "boundary_distance", "lane_edge", "margin_saliency",
+    "subpix", "chroma_boundary", "island_amplify", "persistence", "rankfloor", "code_spectral",
+    "thin_lane", "margin_field_head", "code_nuclear",
+)
+
+
+def _loss_terms_row(terms: "dict[str, float]", total: float, ep: int, accum_batch: int,
+                    *, gnorm: "float | None" = None, skipped: "bool | None" = None) -> dict:
+    """(#304 item 4) Build the canonical machine-readable per-term loss telemetry row. Pure /
+    MLX-free / unit-tested. Every LOSS_TERM_KEYS key is present (missing/inactive terms -> 0.0) so
+    the row schema is STABLE across configs; ``sum_terms`` and ``sum_minus_total`` make the
+    breakdown self-checking (|sum_minus_total| should sit at fp tolerance -- the terms ARE the
+    total's addends, recomputed on the same state)."""
+    t = {k: float(terms.get(k, 0.0)) for k in LOSS_TERM_KEYS}
+    ssum = float(sum(t.values()))
+    row: dict[str, object] = {"stage": "loss_terms", "ep": int(ep), "accum_batch": int(accum_batch),
+                              "terms": {k: round(v, 6) for k, v in t.items()},
+                              "total": round(float(total), 6), "sum_terms": round(ssum, 6),
+                              "sum_minus_total": round(ssum - float(total), 8)}
+    if gnorm is not None:
+        row["gnorm"] = round(float(gnorm), 4) if np.isfinite(gnorm) else "nonfinite"
+    if skipped is not None:
+        row["spike_skipped"] = bool(skipped)
+    return row
+
+
+def _loss_term_log_stride(env_probe: bool, log_every: int, chunks_per_epoch: int) -> int:
+    """(#304 item 4) Resolve the loss-term telemetry cadence to an accum-chunk STRIDE.
+
+    * env_probe (TAC_LOSS_TERM_PROBE=1)  -> 1   (every accum chunk = per-batch)
+    * log_every > 0 (--loss-term-log-every N) -> N (every N chunks)
+    * log_every < 0                       -> 0   (telemetry fully OFF; zero extra forwards)
+    * default (log_every == 0)            -> chunks_per_epoch (first chunk of each epoch =
+                                              the standing per-epoch summary)
+    A chunk logs when ``stride > 0 and (accum_batch % stride == 0)``. Pure; unit-tested."""
+    if env_probe:
+        return 1
+    le = int(log_every)
+    if le > 0:
+        return le
+    if le < 0:
+        return 0
+    return max(int(chunks_per_epoch), 1)
+
+
 def _rng_state_arrays(hardness_rng: "np.random.Generator | None") -> dict[str, np.ndarray]:
     """(FEED-fm FIX-1) Snapshot EVERY RNG the TRAINING LOOP advances, so a ``--resume-from`` run
     reproduces the CONTINUOUS draw sequence bit-for-bit (the deterministic-reproducibility
@@ -2711,24 +2759,35 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "0-byte accelerant; verdict=witness-alone=deploy=absorption readout); "
                           "shield-grad defends it; advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
-    def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w):
+    def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, terms_out=None):
+        # ``terms_out`` (#304 item 4 per-term loss telemetry; ADDITIVE, default None => BYTE-IDENTICAL):
+        # when given a dict, every ADDITIVE contribution to L is recorded as a (lazy) mx array under
+        # its LOSS_TERM_KEYS name. Recording only NAMES the same subexpressions L is built from --
+        # the graph/loss/grads are bitwise identical (value_and_grad NEVER passes terms_out; only the
+        # no-grad loss-term probe recompute in the epoch loop does).
         # (--seg-spike-reweight) per-pixel spike/coherent map for THIS pair (pi==int(c1)//2); None when
         # the lever is off => base_loss byte-identical. A stop-grad theta-independent constant multiplier.
         _seg_px_w = _spike_w_mx[int(c1) // 2] if _spike_reweight_on else None
-        L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form, seg_pixel_w=_seg_px_w)
+        L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form, seg_pixel_w=_seg_px_w, terms_out=terms_out)
         phi0 = model.sdf(cf, c0)
         # (THETA* TIER-2 STRETCH-1) junction relax threaded; eik_jrelax=0.0 (default) => BIT-IDENTICAL.
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w,
                                              junction_relax=eik_jrelax, junction_tau=eik_jtau)
         L = L + eik_w * eik + len_w * length
+        if terms_out is not None:
+            terms_out["eikonal"] = eik_w * eik
+            terms_out["length"] = len_w * length
         # (--boundary-distance-weight) SDF-native boundary-placement term on FRAME1 (the SegNet-
         # scored frame): band-weighted mean |phi_GT - phi_runner| on the precomputed GT-boundary
         # band (distance-transform of the GT inter-class edges). One extra sdf trunk forward per
         # pair when ON (flag-gated; the eikonal phi0 above is frame0 — different code, not shared).
         # Default bd_w=0.0 => skipped => byte-identical.
         if bd_w > 0.0 and _bd_band_prov is not None:
-            L = L + bd_w * boundary_distance_term_mlx(
+            _bd_contrib = bd_w * boundary_distance_term_mlx(
                 model.sdf(cf, c1), lstar_oh, _bd_band_prov[int(c1) // 2], render_h, render_w)
+            L = L + _bd_contrib
+            if terms_out is not None:
+                terms_out["boundary_distance"] = _bd_contrib
         # (review R2b-M3) SHARED realized through-R seg forward. LEVER-3 (lane-edge), LEVER-4
         # (margin-saliency) and LEVER-B (thin-lane) all need the SAME realized decision margin
         # ``signed = gt_logit - top_competitor`` from the SAME render(cf,c1)->R->frozen SegNet. The
@@ -2808,6 +2867,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hinge_map = mx.maximum(lane_tgt - _signed, 0.0) * lane_mask  # fragile lane pixels only
             lane_term = mx.sum(hinge_map) / (mx.sum(lane_mask) + 1e-6)  # mean hinge over lane px
             L = L + lane_w * lane_term
+            if terms_out is not None:
+                terms_out["lane_edge"] = lane_w * lane_term
         # LEVER-4 (margin-saliency, all-class generalization of LEVER-3). Same realized through-R
         # decision margin, but the hinge is weighted PER-PIXEL by the GT-margin fragility saliency
         # sal=exp(-gt_margin/tau) over EVERY GT pixel (not a single class mask). The flip-prone band
@@ -2837,6 +2898,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             hmap = mx.maximum(msal_tgt - sgn, 0.0) * sal                 # fragile pixels weighted
             msal_term = mx.sum(hmap) / (mx.sum(sal) + 1e-6)             # saliency-weighted mean hinge
             L = L + msal_w * msal_term
+            if terms_out is not None:
+                terms_out["margin_saliency"] = msal_w * msal_term
         # LEVER-4b (SUB-PIXEL BOUNDARY-PLACEMENT `t`; DIRECTIONAL upgrade of LEVER-4, GREEN 2026-07-03).
         # Rides the SAME SHARED realized through-R margin `_signed` (Mw = relu(_signed) = the witness
         # GT-class margin at every pixel, the honest mirror of the GT top1-top2 the target `t` is built
@@ -2866,6 +2929,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _sq = mx.square(_t_wit - _t_ref) * _active                  # placement error on genuine-V px
             subpix_term = mx.sum(_sq) / (mx.sum(_active) + 1e-6)        # mean over active straddles
             L = L + subpix_w * subpix_term
+            if terms_out is not None:
+                terms_out["subpix"] = subpix_w * subpix_term
         # LEVER-4c (ANNULUS-DIRECTED CHROMA-SHARPENING; chroma DOF probe a3e9f0bd GREEN 2026-07-03).
         # RIDES the SHARED rendered frame ``_f1`` (through R; the SAME render the SegNet forward /
         # ``_signed`` come from) -- NO 2nd render, NO 2nd SegNet forward. At the fragile annulus
@@ -2889,6 +2954,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _cdiff2 = mx.sum(mx.square(_cwit - _cgt), axis=-1)          # (1,H,W) 3-chan sq chroma error
             chroma_bnd_term = mx.sum(_cdiff2 * _cw) / (mx.sum(_cw) + 1e-6)  # mean over annulus px
             L = L + chroma_bnd_w * chroma_bnd_term
+            if terms_out is not None:
+                terms_out["chroma_boundary"] = chroma_bnd_w * chroma_bnd_term
         # CONSUMER B (SPEC ONLY, NOT built here -- for the lane-band render integration): the SAME
         # precomputed theta-independent (_subpix_t_prov, _subpix_dir_prov) maps are a decode-time
         # RENDER-PLACEMENT target. The AA-SDF / analytic-lane-band render (--lane-render-band /
@@ -2904,8 +2971,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # BUILD #300 (a): the island-BIRTH term reads the WITNESS-ALONE margin (_signed_wa aliases
             # _signed when --witness-alone-island-loss is off => byte-identical) so it pushes the witness
             # to form the island, not the deploy-excluded seed.
-            L = L + amplify_w * island_birth_from_signed_mx(
+            _amp_contrib = amplify_w * island_birth_from_signed_mx(
                 _signed_wa, island_weight_mx[int(c1) // 2], amplify_mtgt, form=amplify_form)
+            L = L + _amp_contrib
+            if terms_out is not None:
+                terms_out["island_amplify"] = _amp_contrib
         # #224 (4) PERSISTENCE/TOPOLOGY loss — soft-clDice + persistence-weighted island recall on the
         # SHARED realized seg logits (_slog). GT-presence-gated inside the module (never hallucinate).
         # Annealed weight persist_gate["w"] (set per-epoch, coarse->fine); 0 => branch inert.
@@ -2917,9 +2987,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # BUILD #300 (a): island RECALL/topology reads the WITNESS-ALONE seg logits (_slog_wa aliases
             # _slog when --witness-alone-island-loss is off => byte-identical) so the recall term drives
             # the witness to reproduce the island skeleton itself, not free-ride the deploy-excluded seed.
-            L = L + persist_gate["w"] * persistence_topology_loss_mlx(
+            _per_contrib = persist_gate["w"] * persistence_topology_loss_mlx(
                 _slog_wa, lstar_oh, persist_classes, cldice_iters=persist_cldice_iters,
                 w_cldice=1.0, w_recall=persist_recall_w, sg_precomputed=_sg_pre)
+            L = L + _per_contrib
+            if terms_out is not None:
+                terms_out["persistence"] = _per_contrib
         # LEVER-A (FiLM-rank-fix) soft participation-ratio FLOOR. Pushes the per-pair modulation PR up
         # toward rankfloor_tgt (opposing the measured rank-1 collapse). PR computed Gram-wise (NO
         # eigendecomposition): trace(C)=||Mc||_F^2 (== mx.sum(Mc*Mc)), ||C||_F^2=||Mc Mc^T||_F^2. The
@@ -2932,7 +3005,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             G = Mc @ Mc.T                                               # (S, S) Gram
             fro2 = mx.sum(G * G)                                        # sum eigenvalues^2
             pr = (tr * tr) / (fro2 + 1e-12)                            # participation ratio in [1, S]
-            L = L + rankfloor_w * mx.maximum(rankfloor_tgt - pr, 0.0)
+            _rf_contrib = rankfloor_w * mx.maximum(rankfloor_tgt - pr, 0.0)
+            L = L + _rf_contrib
+            if terms_out is not None:
+                terms_out["rankfloor"] = _rf_contrib
         # DM1b (code spectral-entropy CAPACITY penalty): -beta*log(PR(cov(code))) on the per-pair code
         # covariance C = cov(code). Maximizes PR(cov(code)) => keeps all ~mod_dim code directions live;
         # via the Stiefel identity (--film-stiefel) WᵀW=I => PR(M)=PR(cov(code)) this is the other half
@@ -2948,7 +3024,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             ctr = mx.sum(Cc * Cc)                                      # trace(Cov) = sum eigenvalues
             cfro2 = mx.sum(Cov * Cov)                                  # sum eigenvalues^2
             cpr = (ctr * ctr) / (cfro2 + 1e-12)                        # PR(cov(code)) in [1, D]
-            L = L - code_spec_w * mx.log(cpr + 1e-12)                  # -beta*log(PR) => raises PR
+            _cs_contrib = -(code_spec_w * mx.log(cpr + 1e-12))         # -beta*log(PR) => raises PR
+            L = L + _cs_contrib
+            if terms_out is not None:
+                terms_out["code_spectral"] = _cs_contrib
         # LEVER-B (thin-lane dropped-dash prior): realized through-R margin hinge weighted by the
         # PRECOMPUTED thin-lane map (nonzero ONLY on thin GT-lane pixels). Same realized decision
         # margin as LEVER-3 but concentrated on the DROPPED thin dashes (the PC0 residual). c0=2*pi
@@ -2958,7 +3037,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if lane_thin_w > 0.0 and lane_thin_gate["on"] and thin_maps_mx is not None:
             tw = thin_maps_mx[int(c0) // 2]                            # (1, H, W) thin-lane weight (>=0)
             hmap_t = mx.maximum(lane_thin_tgt - _signed, 0.0) * tw     # fragile thin-lane pixels only
-            L = L + lane_thin_w * (mx.sum(hmap_t) / (mx.sum(tw) + 1e-6))
+            _lt_contrib = lane_thin_w * (mx.sum(hmap_t) / (mx.sum(tw) + 1e-6))
+            L = L + _lt_contrib
+            if terms_out is not None:
+                terms_out["thin_lane"] = _lt_contrib
         # #218 facets 1b/3 (MARGIN-FIELD HEAD, byte-free): realized through-R PER-CLASS margin hinge.
         # per-pixel target = additive-margin (facet-1b) + per-class Menon boost on rare classes
         # (facet-3), broadcast to each pixel by its GT class via lstar_oh. Reuses the SHARED _signed
@@ -2967,7 +3049,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if mfh_w > 0.0 and mfh_target_mx is not None:
             per_pix_tgt = mx.sum(lstar_oh * mfh_target_mx, axis=-1)     # (1,H,W) per-class margin target
             hmap_m = mx.maximum(per_pix_tgt - _signed, 0.0)            # fragile pixels below their target
-            L = L + mfh_w * mx.mean(hmap_m)
+            _mfh_contrib = mfh_w * mx.mean(hmap_m)
+            L = L + _mfh_contrib
+            if terms_out is not None:
+                terms_out["margin_field_head"] = _mfh_contrib
         # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty. DEFAULT-OFF: code_nuc_w=0.0 =>
         # this branch NEVER runs => L is byte-identical (fully additive). When >0 it adds
         # weight * smoothed_nuclear_norm(model.code) -> drives the per-pair FiLM codes
@@ -2976,8 +3061,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # applies it ONCE per opt step (NOT P-scaled). Recomputed per value_and_grad call (a parent
         # fusion could hoist it once-per-step; out of scope for this additive prep).
         if code_nuc_w > 0.0:
-            L = L + code_nuc_w * _nuclear_norm_smooth_mlx(
+            _cn_contrib = code_nuc_w * _nuclear_norm_smooth_mlx(
                 model.code, rel_eps=code_nuc_eps, ns_iters=code_nuc_iters)
+            L = L + _cn_contrib
+            if terms_out is not None:
+                terms_out["code_nuclear"] = _cn_contrib
         return L
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
@@ -4141,6 +4229,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                    "pre-FEED-fm sidecar (no RNG state); fresh-seeded RNGs (back-compat)")}),
               flush=True)
 
+    # ---- (#304 item 4) PER-TERM LOSS TELEMETRY. A NO-GRAD RECOMPUTE of total_loss_fn with
+    # ``terms_out`` on the logged chunk's pairs -- it reads model/gates/caches and mutates NOTHING
+    # (no opt/ema/RNG/recent_losses touch; the loss math has no RNG), so the training trajectory is
+    # BIT-IDENTICAL with the telemetry on or off (proven by the n1 CPU A/B in the landing memo).
+    # Cadence: TAC_LOSS_TERM_PROBE=1 -> every accum chunk (per-batch, the diagnostic mode);
+    # --loss-term-log-every N>0 -> every N chunks; N<0 -> OFF; default 0 -> first chunk of each
+    # epoch (the standing per-epoch summary). Cost: one extra serial forward per logged pair.
+    _lt_chunks_per_epoch = max(1, (P + args.accum_pairs - 1) // args.accum_pairs)
+    _lt_stride = _loss_term_log_stride(
+        os.environ.get("TAC_LOSS_TERM_PROBE", "0") not in ("", "0", "false", "False"),
+        int(getattr(args, "loss_term_log_every", 0)), _lt_chunks_per_epoch)
+
+    def _loss_terms_for_chunk(chunk, seg_form, eik_w_ep) -> "tuple[dict[str, float], float]":
+        """Mean per-term breakdown over the chunk's pairs (mirrors the accum loop's batch_loss =
+        mean over chunk). Returns (mean terms dict, mean recomputed total)."""
+        agg: dict[str, float] = {}
+        tot = 0.0
+        for _pn in chunk:
+            _pi = int(_pn)
+            _oh, _mg = lstar_cache[_pi]
+            _d: dict[str, Any] = {}
+            _Lp = total_loss_fn(model, _cf_mx(_pi), 2 * _pi + 0, 2 * _pi + 1, _oh, _mg,
+                                pose_tgts[_pi], args.w_seg, args.w_pose, args.hinge_weight,
+                                args.margin_target_end, seg_form, eik_w_ep, args.length_weight,
+                                terms_out=_d)
+            mx.eval(_Lp, *list(_d.values()))
+            tot += float(_Lp)
+            for _k, _v in _d.items():
+                agg[_k] = agg.get(_k, 0.0) + float(_v)
+        _n = max(len(chunk), 1)
+        return {k: v / _n for k, v in agg.items()}, tot / _n
+
     recent_losses: list[float] = []
     # #205: restore the spike-guard window so --resume-from is bit-faithful across a spike-skip
     # (the median gates step-skipping = part of the trajectory). DEFAULT-SAFE: no resume, or a pre-#205
@@ -4731,6 +4851,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 skip = (not np.isfinite(batch_loss)) or (not np.isfinite(gnorm)) or (
                     med is not None and batch_loss > args.spike_factor * med
                 )
+                # (#304 item 4) per-term loss telemetry: BEFORE the skip branch so spike-skipped
+                # chunks (the deadlock state) are covered too. Pure no-grad recompute + print.
+                _bidx_lt = s // args.accum_pairs
+                if _lt_stride and (_bidx_lt % _lt_stride == 0):
+                    _t_agg, _t_tot = _loss_terms_for_chunk(chunk, seg_form, eik_w_ep)
+                    print(json.dumps(_loss_terms_row(
+                        _t_agg, _t_tot, ep, _bidx_lt, gnorm=gnorm, skipped=skip)), flush=True)
                 if skip:
                     print(json.dumps({"stage": "spike_skip", "ep": ep,
                                       "batch_loss": (round(batch_loss, 4) if np.isfinite(batch_loss) else "nonfinite"),
@@ -5281,6 +5408,12 @@ def main(argv: list[str] | None = None) -> int:
                     "(GPU only; score-neutral). 0 disables the in-loop clear (pre-fix behaviour).")
     ap.add_argument("--grad-clip", type=float, default=1.0)
     ap.add_argument("--spike-factor", type=float, default=5.0)
+    ap.add_argument("--loss-term-log-every", type=int, default=0,
+                    help="(#304 item 4) per-term loss telemetry cadence in accum chunks: 0 (default) "
+                    "= first chunk of each epoch (standing per-epoch summary); N>0 = every N chunks; "
+                    "-1 = fully OFF (zero extra forwards). TAC_LOSS_TERM_PROBE=1 overrides to every "
+                    "chunk (per-batch diagnostic). Pure no-grad recompute: the training trajectory is "
+                    "bit-identical on/off.")
     # (#205 REAL OOM fix) chunk the CPU-scorer verdict inference into vbatch-pair torch batches so
     # the fp32 (N,2,3,874,1164) cast + EfficientNet/FastViT activations do NOT spike ~30-50 GiB at
     # N=600 on top of the resident ~41 GiB self-orient cf_mx_cache (the 90 GB OOM). BIT-IDENTICAL

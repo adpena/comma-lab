@@ -1022,7 +1022,13 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None, terms_out=None):
+        # ``terms_out`` (#304 item 4 per-term loss telemetry; ADDITIVE, default None => BYTE-IDENTICAL):
+        # when given a dict, the WEIGHTED contributions {"seg": w_seg*seg_l, "pose": w_pose*pose_term}
+        # are recorded as (lazy) mx arrays for the caller to eval OUTSIDE any grad transform. The
+        # return expression is UNCHANGED; recording only NAMES the same subexpressions, so the graph,
+        # loss and grads are bitwise identical. NEVER pass terms_out under value_and_grad -- the
+        # telemetry caller is a separate no-grad recompute (see the levelset trainer's loss-term probe).
         # ``seg_pixel_w`` (ADDITIVE per-pixel seg-loss reweight hook; default None => BYTE-IDENTICAL):
         # when given a (1,H,W) map it MULTIPLIES the per-pixel seg map (all forms) BEFORE the mean --
         # the spike-aware reweight lever (down-weight unfittable single-frame flicker, up-weight the
@@ -1103,6 +1109,10 @@ def make_loss_fn(
         pose_l = mx.mean(mx.square(pose[0] - pose_tgt))
         # Score-domain: sqrt(10*d_pose) mirrors S's pose term (damp-then-sharpen).
         pose_term = mx.sqrt(10.0 * pose_l + pose_eps) if score_domain else pose_l
+        if terms_out is not None:
+            # #304 item 4: record the weighted contributions (lazy; caller evals outside grad).
+            terms_out["seg"] = w_seg * seg_l
+            terms_out["pose"] = w_pose * pose_term
         return w_seg * seg_l + w_pose * pose_term
 
     return loss_fn
