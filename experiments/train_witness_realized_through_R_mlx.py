@@ -949,6 +949,23 @@ def _live_margin_weight(seg_logits: Any, fn: str, temp: float) -> Any:
 # ---------------------------------------------------------------------------
 # Realized loss (mx, through both frozen MLX scorers). The training signal.
 # ---------------------------------------------------------------------------
+def focal_pixel_weight_mlx(seg_logits, lstar_oh, gamma: float):
+    """(--seg-focal-gamma; council memo council_grand_symposium_levelset_loss_geometry_20260705.md)
+    Focal per-pixel seg-loss reweight ``(1 - p_y)^gamma`` from the REALIZED softmax GT-class
+    probability ``p_y = softmax(seg_logits)[GT]``, STOP-GRAD + mean-1 RENORMALIZED (the l7-weight
+    idiom): the loss stays the base form; only the per-pixel gradient BUDGET is reallocated
+    (Shannon's concentration knob — the total budget is conserved by the renorm). Under stop-grad
+    the gradient-weight ratio between two pixels is EXACTLY ((1-p1)/(1-p2))^gamma — Rudin's 5^gamma
+    readback for (p1,p2)=(0.5,0.9) — which full-differentiable focal would NOT satisfy (its extra
+    d(1-p)^gamma term breaks the closed-form ratio). Returns a (1,H,W) weight; callers gate on
+    gamma > 0 so the DEFAULT 0.0 path never builds this graph (byte-identical)."""
+    import mlx.core as mx
+
+    p_y = mx.exp(mx.sum(seg_logits * lstar_oh, axis=-1) - mx.logsumexp(seg_logits, axis=-1))
+    fw = mx.power(mx.clip(1.0 - p_y, 1e-12, 1.0), gamma)  # (1,H,W)
+    return mx.stop_gradient(fw / (mx.mean(fw) + 1e-8))
+
+
 def make_loss_fn(
     adapter,
     render_h: int,
@@ -963,6 +980,7 @@ def make_loss_fn(
     l7_mult: float = 4.0,
     l7_threshold: float = 0.42,
     render_fn=None,
+    focal_gamma: float = 0.0,
 ):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
     w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
@@ -1029,6 +1047,16 @@ def make_loss_fn(
         f1 = _render(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
         seg_logits = adapter.segnet(f1)  # (1,H,W,5)
+        # (--seg-focal-gamma; DEFAULT 0.0 => this branch NEVER runs => graph + loss + grads
+        # BYTE-IDENTICAL). Focal reweight (1-p_y)^gamma from the REALIZED softmax of the SAME
+        # ``seg_logits`` the base form reads (i.e. whatever surface ``render_fn`` composed —
+        # in the levelset trainer that is the SEED-COMPOSED frame the base CE reads; the
+        # island-formation levers keep their own witness-alone routing untouched). Folded into
+        # ``seg_pixel_w`` so it composes MULTIPLICATIVELY with the spike-reweight hook and applies
+        # uniformly to EVERY seg form before the mean (same surface, one idiom).
+        if focal_gamma > 0.0:
+            _fw_focal = focal_pixel_weight_mlx(seg_logits, lstar_oh, focal_gamma)
+            seg_pixel_w = _fw_focal if seg_pixel_w is None else seg_pixel_w * _fw_focal
 
         def _live_signed():
             # live per-pixel margin = target_logit - max_competing_logit (the sign-quantity

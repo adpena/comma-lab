@@ -68,6 +68,7 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     _torch_R_to_camera_uint8,
     cpu_verdict_d_pose_batch,
     cpu_verdict_d_seg_batch,
+    focal_pixel_weight_mlx,
     implied_score_from_verdict,
     load_gt_from_cache,
     make_loss_fn,
@@ -391,6 +392,8 @@ def _build_resume_state_arrays(
     # BUILD #300: the seed-absorption levers are loss/render-only (trajectory-affecting, no param KEYS) ->
     # record them so a --resume-from that silently drops/changes them fails closed (deterministic-repro).
     out["__cfg_witness_alone_island_loss"] = np.asarray(int(bool(getattr(args, "witness_alone_island_loss", False))))
+    out["__cfg_seg_focal_gamma"] = np.asarray(float(getattr(args, "seg_focal_gamma", 0.0)))
+    out["__cfg_boundary_distance_weight"] = np.asarray(float(getattr(args, "boundary_distance_weight", 0.0)))
     out["__cfg_seed_anneal_epochs"] = np.asarray(int(getattr(args, "seed_anneal_epochs", 0)))
     out["__cfg_seed_anneal_shape"] = np.asarray(str(getattr(args, "seed_anneal_shape", "linear")))
     out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
@@ -494,6 +497,10 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_seed_anneal_epochs", int(getattr(args, "seed_anneal_epochs", 0)), False),
         ("__cfg_render_aa", str(getattr(args, "render_aa", "none")), False),
         ("__cfg_hosc_beta_end", cur_hbe, True),
+        # focal-gamma + boundary-distance seg-loss levers (council levelset-loss-geometry symposium
+        # 2026-07-05; loss-only, trajectory-affecting, no param keys — same class as the #300 levers).
+        ("__cfg_seg_focal_gamma", float(getattr(args, "seg_focal_gamma", 0.0)), True),
+        ("__cfg_boundary_distance_weight", float(getattr(args, "boundary_distance_weight", 0.0)), True),
     ]
     for key, cur, is_float in checks:
         if key not in resume_cfg:
@@ -527,6 +534,52 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
             if ckpt_shape != cur_shape:
                 div.append(f"seed_anneal_shape: ckpt={ckpt_shape!r} != resume-argv={cur_shape!r}")
     return div
+
+
+def boundary_distance_band_map(lstar_hw: np.ndarray, band_px: float = 2.0) -> np.ndarray:
+    """(--boundary-distance-weight; council levelset-loss-geometry symposium 2026-07-05) The
+    theta-INDEPENDENT per-pair TARGET boundary-band weight (H,W) f32, computed ONCE per pair from
+    the cached GT argmax (Kervadec-style distance-transform discipline; cacheable).
+
+    Boundary set = pixels straddling any GT inter-class edge (label differs from the RIGHT or DOWN
+    neighbor; BOTH straddle pixels marked — the same edge convention as the LEVER-4b straddles).
+    Weight = relu(1 - D/band_px) where D = Euclidean distance (px) to the nearest boundary pixel:
+    1.0 ON the GT boundary, linear ramp to 0 at band_px (default 2.0 px = the measured 1-2 px flip
+    band, #149; matches ``_boundary_band``'s radius-2 default). Pure numpy/scipy — unit-tested."""
+    from scipy.ndimage import distance_transform_edt
+
+    ls = np.asarray(lstar_hw)
+    bnd = np.zeros(ls.shape, bool)
+    dif_r = ls[:, :-1] != ls[:, 1:]
+    bnd[:, :-1] |= dif_r
+    bnd[:, 1:] |= dif_r
+    dif_d = ls[:-1, :] != ls[1:, :]
+    bnd[:-1, :] |= dif_d
+    bnd[1:, :] |= dif_d
+    if not bnd.any():
+        return np.zeros(ls.shape, np.float32)  # degenerate single-class frame: no target boundary
+    dist = distance_transform_edt(~bnd)
+    return np.clip(1.0 - dist / float(band_px), 0.0, 1.0).astype(np.float32)
+
+
+def boundary_distance_term_mlx(phi_flat, lstar_oh, band_map, render_h: int, render_w: int):
+    """(--boundary-distance-weight) SDF-NATIVE boundary-placement loss term (scalar mx).
+
+    At GT-boundary-band pixels the witness partition boundary should PASS THROUGH the target
+    boundary, i.e. the SDF decision gap ``phi_[GT] - max_{k != GT} phi_k`` should be ZERO there
+    (a partition boundary is a tie of the top two fields). The term is the band-weighted mean of
+    |gap| — Mallat's "move the contour" degree of freedom, scored on the SDF head DIRECTLY (the
+    DOF the witness owns), not through SegNet. With the eikonal |grad phi|=1 constraint the gap
+    is calibrated in ~pixel units, so this is the |phi_pred|-on-the-band Kervadec form stated in
+    the symposium memo, generalized to the K-field partition. ``phi_flat`` (P_px, K) from
+    ``model.sdf``; ``lstar_oh`` (1,H,W,K); ``band_map`` (1,H,W) theta-independent constant."""
+    import mlx.core as mx
+
+    phi = mx.reshape(phi_flat, (1, render_h, render_w, -1))
+    gt_phi = mx.sum(phi * lstar_oh, axis=-1)                 # (1,H,W) GT-class field
+    run_phi = mx.max(phi + lstar_oh * (-1e9), axis=-1)       # (1,H,W) top competitor field
+    gap = mx.abs(gt_phi - run_phi)
+    return mx.sum(gap * band_map) / (mx.sum(band_map) + 1e-6)
 
 
 def _load_decoder_params(npz_path: Path) -> dict[str, np.ndarray]:
@@ -2330,11 +2383,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                    "parity dispatch (even code=f0->carrier warp of the stored real keyframe, "
                                    "odd=f1->witness)") + "; advisory; pointer 0.19110 UNMOVED"}), flush=True)
 
+    # (--seg-focal-gamma, council levelset-loss-geometry symposium 2026-07-05; DEFAULT 0.0 =>
+    # make_loss_fn's focal branch NEVER runs => loss + grads BYTE-IDENTICAL). The reweight applies
+    # inside base_loss on the SAME seg_logits surface the base form reads — i.e. the render_fn-
+    # composed frame (SEED-COMPOSED when --seed-islands; the island-formation levers' witness-alone
+    # #300 routing below is UNTOUCHED). Calibrated gamma* comes from
+    # experiments/probe_focal_gamma_calibration.py (measured, never guessed).
+    focal_gamma = float(getattr(args, "seg_focal_gamma", 0.0))
     base_loss = make_loss_fn(
         adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
         seg_loss=args.seg_loss, tau_softplus_tau=args.tau_softplus_tau, l7_mult=args.l7_mult,
         l7_threshold=args.l7_threshold,
         render_fn=render_fn,
+        focal_gamma=focal_gamma,
     )
 
     # LEVER-3 (lane-edge fragility weighting) hyperparameters captured from args (static; closure
@@ -2423,6 +2484,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     chroma_bnd_gate = {"on": chroma_bnd_start <= 1}
     _chroma_gt_prov: Any = None    # list[mx.array (1,H,W,3)] f32, GT BT.601 chroma at (SEG_H,SEG_W)
     _chroma_w_prov: Any = None     # list[mx.array (1,H,W)] f32 annulus weight (margin<band) in {0,1}
+
+    # (--boundary-distance-weight, council levelset-loss-geometry symposium 2026-07-05) SDF-native
+    # Kervadec-style boundary-placement loss closure constants. bd_w=0.0 (DEFAULT) => the branch in
+    # total_loss_fn is skipped AND the provider stays None => byte-identical (fully additive). The
+    # per-pair GT-boundary band map (distance transform of the GT inter-class edge set, computed ONCE
+    # per pair — cacheable/theta-independent) is POPULATED after lstar_cache is built (spike-map
+    # style); the term reads the SDF head DIRECTLY (model.sdf(cf, c1), frame1 = the SegNet-scored
+    # frame) so the contour is moved on the DOF the witness owns. Fails CLOSED with micro-batch.
+    bd_w = float(getattr(args, "boundary_distance_weight", 0.0))
+    _bd_band_prov: Any = None   # list[mx.array (1,H,W)] f32 band weights, keyed by pi == int(c1)//2
 
     # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty closure constants. code_nuc_w=0.0
     # (DEFAULT) => the branch in total_loss_fn is skipped => L is byte-identical (fully additive).
@@ -2650,6 +2721,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w,
                                              junction_relax=eik_jrelax, junction_tau=eik_jtau)
         L = L + eik_w * eik + len_w * length
+        # (--boundary-distance-weight) SDF-native boundary-placement term on FRAME1 (the SegNet-
+        # scored frame): band-weighted mean |phi_GT - phi_runner| on the precomputed GT-boundary
+        # band (distance-transform of the GT inter-class edges). One extra sdf trunk forward per
+        # pair when ON (flag-gated; the eikonal phi0 above is frame0 — different code, not shared).
+        # Default bd_w=0.0 => skipped => byte-identical.
+        if bd_w > 0.0 and _bd_band_prov is not None:
+            L = L + bd_w * boundary_distance_term_mlx(
+                model.sdf(cf, c1), lstar_oh, _bd_band_prov[int(c1) // 2], render_h, render_w)
         # (review R2b-M3) SHARED realized through-R seg forward. LEVER-3 (lane-edge), LEVER-4
         # (margin-saliency) and LEVER-B (thin-lane) all need the SAME realized decision margin
         # ``signed = gt_logit - top_competitor`` from the SAME render(cf,c1)->R->frozen SegNet. The
@@ -3008,6 +3087,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "(serial B=1 only; the island-formation levers route through total_loss_fn's witness-alone "
             "render, not the batched twin). Run with --micro-batch-pairs 1, or extend "
             "tac.boundary_math.levelset_micro_batch_loss before batching this lever.")
+    # (--seg-focal-gamma / --boundary-distance-weight) FAIL CLOSED with micro-batch (NO-FAKE: the
+    # batched twin computes its own seg forms in tac.boundary_math.levelset_micro_batch_loss and
+    # would SILENTLY drop both levers — a silently-wrong result is worse than a refused one).
+    if focal_gamma > 0.0 and _use_micro_batch:
+        raise NotImplementedError(
+            "--seg-focal-gamma>0 is not wired into the --micro-batch-pairs batched loss path (the "
+            "batched twin's LeverConfig does not carry the focal reweight yet); run this arm at "
+            "--micro-batch-pairs 1, or extend tac.boundary_math.levelset_micro_batch_loss first.")
+    if bd_w > 0.0 and _use_micro_batch:
+        raise NotImplementedError(
+            "--boundary-distance-weight>0 is not wired into the --micro-batch-pairs batched loss path "
+            "(the boundary term lives in total_loss_fn, serial B=1 only); run this arm at "
+            "--micro-batch-pairs 1, or extend tac.boundary_math.levelset_micro_batch_loss first.")
     value_and_grad_batch = None
     _dual_vg_batch = None
     if _use_micro_batch:
@@ -3124,6 +3216,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "per-pixel seg-CE reweight: down-weight single-frame flicker "
                           "(~88.6%% irreducible, smooth-is-optimal), up-weight coherent boundary; "
                           "A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+
+    # (--boundary-distance-weight) PRECOMPUTE the per-pair GT-boundary band maps. theta-INDEPENDENT
+    # + computed ONCE per pair from the cached GT argmax (pure numpy/scipy distance transform — NO
+    # SegNet forward), spike-map style. Memory when ON: P*H*W*4 B ~= 472 MB at n600 (noted for the
+    # launcher preflight); DEFAULT OFF => _bd_band_prov stays None => zero cost, byte-identical.
+    if bd_w > 0.0:
+        _bd_band_prov = []
+        _bd_mass = 0.0
+        for pi in range(P):
+            _bmap = boundary_distance_band_map(np.asarray(gt.lstars[pi]))
+            _bd_mass += float(_bmap.mean())
+            _bd_band_prov.append(mx.array(_bmap[None]))  # (1,H,W)
+        print(json.dumps({"stage": "boundary_distance", "active": True, "n_pairs": int(P),
+                          "weight": bd_w, "band_px": 2.0,
+                          "band_px_share_mean": round(_bd_mass / max(P, 1), 5),
+                          "note": "SDF-native Kervadec boundary-placement loss on the GT-boundary "
+                          "band (distance-transform, once per pair); council levelset-loss-geometry "
+                          "symposium 2026-07-05; A/B owed (needs GO); pointer 0.19110 UNMOVED"}),
+              flush=True)
 
     # LEVER-4b (SUB-PIXEL BOUNDARY `t`) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy from the cached
     # gt.margins/gt.lstars -- NO SegNet forward, NO torch autograd), so it is built INLINE here (spike-map
@@ -4795,6 +4906,33 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "stiefel_residual_shadow": (round(_sres_shadow, 5) if _sres_shadow is not None else None),
                                   "film_stiefel": bool(args.film_stiefel),
                                   "code_spec_w": code_spec_w}), flush=True)
+            # (--seg-focal-gamma) Rudin observability: per-epoch MEASURED island-gradient share row
+            # (no silent reweighting). One ROTATING pair per epoch: render frame1 through the SAME
+            # base-loss surface (render_fn = the composed chain when engaged), stop-grad the frame,
+            # and take d(focal-weighted base-CE)/d(frame) — a true (post-R-surface) gradient share,
+            # cheap (ONE SegNet fwd+bwd on ONE pair). DEFAULT 0.0 => never fires => bit-identical
+            # observability. Islands = GT classes {1,3} (Lane, Movable; canonical comma10k order).
+            if focal_gamma > 0.0:
+                _fo_pi = (ep - 1) % P
+                _fo_c1 = 2 * _fo_pi + 1
+                _fo_render = render_fn if render_fn is not None else render_through_R_mlx
+                _fo_f1 = mx.stop_gradient(_fo_render(model, _cf_mx(_fo_pi), _fo_c1, render_h, render_w))
+                _fo_oh, _fo_mg = lstar_cache[_fo_pi]
+
+                def _fo_loss(fv, _oh=_fo_oh, _mg=_fo_mg):
+                    logits = adapter.segnet(fv)
+                    ce = mx.logsumexp(logits, axis=-1) - mx.sum(logits * _oh, axis=-1)
+                    pw = ce * (1.0 + args.hinge_weight * mx.exp(-mx.clip(_mg, 0.0, 1e9)))
+                    return mx.mean(pw * focal_pixel_weight_mlx(logits, _oh, focal_gamma))
+
+                _fo_g = mx.grad(_fo_loss)(_fo_f1)
+                mx.eval(_fo_g)
+                _fo_gm = np.abs(np.asarray(_fo_g))[0].sum(-1)          # (H,W) per-pixel |grad| mass
+                _fo_isl = np.isin(np.asarray(gt.lstars[_fo_pi]), (1, 3))
+                _fo_share = float(_fo_gm[_fo_isl].sum() / (_fo_gm.sum() + 1e-12))
+                print(json.dumps({"stage": "focal", "epoch": ep, "pair": int(_fo_pi),
+                                  "gamma": focal_gamma,
+                                  "island_grad_share": round(_fo_share, 5)}), flush=True)
             # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
             # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
             # stage-encoded, byte-close-loadable ckpt (per-stage A/B of which stage moves d_seg).
@@ -5469,6 +5607,27 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seg-coherent-upweight", type=float, default=1.0,
                     help="Per-pixel seg-loss weight at COHERENT (temporally-consistent, unstable) boundary "
                     "pixels. >1.0 concentrates capacity on the winnable residual. 1.0 (DEFAULT) => no change.")
+    # FOCAL-GAMMA + BOUNDARY-DISTANCE seg-loss levers (council levelset-loss-geometry symposium
+    # 2026-07-05, PROCEED_WITH_REVISIONS; BUILT default-OFF, READY, NOT deployed — the pre-registered
+    # fire criterion (ep50->100 witness-alone slope flattening, |d(d_seg)| < 0.02 per 25ep window
+    # with islands still >50%% of residual) is the PARENT's decision, never auto-fired here).
+    # gamma* comes MEASURED from experiments/probe_focal_gamma_calibration.py (never guessed).
+    ap.add_argument("--seg-focal-gamma", type=float, default=0.0,
+                    help="Focal reweight (1-p_y)^gamma on the BASE per-pixel seg loss (all seg forms), "
+                    "p_y = realized softmax GT prob on the SAME surface the base loss reads (the "
+                    "render_fn-composed frame). STOP-GRAD + mean-1 renormalized (gradient-BUDGET "
+                    "reallocation; Rudin readback: weight ratio p=0.5 vs p=0.9 is exactly 5^gamma). "
+                    "0.0 (DEFAULT) => branch never built => byte-identical. Emits a per-epoch "
+                    "{'stage':'focal','island_grad_share':...} observability row when >0. "
+                    "NOT supported with --micro-batch-pairs>1 (fails closed).")
+    ap.add_argument("--boundary-distance-weight", type=float, default=0.0,
+                    help="SDF-native Kervadec-style boundary-placement loss: band-weighted mean "
+                    "|phi_GT - phi_runner| on the GT inter-class boundary band (distance transform "
+                    "per pair, computed ONCE from the cached GT argmax; band ramp = 2 px, the "
+                    "measured 1-2 px flip band). Read off model.sdf on frame1 directly (the contour "
+                    "DOF the witness owns; Mallat's move-the-contour). 0.0 (DEFAULT) => provider not "
+                    "built, branch skipped => byte-identical. NOT supported with "
+                    "--micro-batch-pairs>1 (fails closed).")
     # LEVER-5 (per-pair HARDNESS-weighted code-fit / training, DAG FEED-eq, ADDITIVE, DEFAULT-OFF).
     # WATERFILL the per-epoch pair-iteration budget toward HARD pairs (high d_seg debt). The frozen-
     # decoder code-fit fits independent per-pair codes, so giving a hard pair MORE update STEPS (not a
