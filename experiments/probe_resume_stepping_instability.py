@@ -184,6 +184,14 @@ ARMS: dict[str, dict] = {
     # (e) the UNCHANGED v1 config resumed (pure-resume control; fresh seed at v1 compose weight).
     "v1_pure": dict(drop_opt=False, bd=0.0, lr=1e-3, lr_end=1e-4, seed_anneal=300,
                     tau_start=300, band_start=350, persist_warmup=300),
+    # (f-h) lr-threshold BRACKETING arms (calibrate-don't-guess: 9.1e-4 unstable / 9.1e-5 stable
+    # per the 5-arm run; locate the eikonal-direction stability threshold between them).
+    "lr_5e4": dict(drop_opt=False, bd=0.2, lr=5e-4, lr_end=5e-5, seed_anneal=101,
+                   tau_start=400, band_start=450, persist_warmup=275),
+    "lr_3e4": dict(drop_opt=False, bd=0.2, lr=3e-4, lr_end=3e-5, seed_anneal=101,
+                   tau_start=400, band_start=450, persist_warmup=275),
+    "lr_18e5": dict(drop_opt=False, bd=0.2, lr=1.8e-4, lr_end=1.8e-5, seed_anneal=101,
+                    tau_start=400, band_start=450, persist_warmup=275),
 }
 
 
