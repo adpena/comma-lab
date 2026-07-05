@@ -238,6 +238,18 @@ def test_trainer_flag_exists_default_off_and_fails_closed():
     assert "msal_reach and _sR_provider is not None" in src
 
 
+def test_trainer_sidecar_fallback_contract():
+    # #268 sidecar fallback: precedence main-cache 'sR' > '<stem>_sR.npz' sidecar > fail closed,
+    # INSIDE the msal_reach gate (OFF path untouched — byte-identity proven bitwise on n6:
+    # A2==A and F(sidecar)==E(main-cache) modulo the __cfg_git_sha provenance leaf, 2026-07-05).
+    src = (REPO / "experiments" / "train_levelset_witness_realized_through_R_mlx.py").read_text()
+    assert '_sR.npz' in src and "SIDECAR FALLBACK (#268)" in src
+    assert '"sR_source": _sR_src' in src  # telemetry reports which source fed the provider
+    i = src.index("SIDECAR FALLBACK (#268)")
+    gate = src.rindex("if msal_reach and msal_w > 0.0:", 0, i)
+    assert i - gate < 2500  # fallback lives inside the flag-gated populate block
+
+
 def test_probe_argparse_contract_matches_tool_surface():
     src = (REPO / "experiments" / "probe_sr_reachability_calibration.py").read_text()
     for flag in ("--ckpt", "--gt-cache", "--out-json", "--pairs", "--msal-tau",

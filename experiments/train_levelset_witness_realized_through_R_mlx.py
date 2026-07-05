@@ -3430,10 +3430,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "--margin-saliency-reachability requires --gt-cache (the 'sR' reachability map is cached "
                 "there); build it with tools/precompute_sR_reachability.py --gt-cache <path>.")
         _zc = np.load(Path(args.gt_cache), allow_pickle=False)
+        _sR_src = str(args.gt_cache)
+        if "sR" not in _zc.files:
+            # SIDECAR FALLBACK (#268): tools/precompute_sR_reachability.py --mode sidecar writes
+            # '<stem>_sR.npz' so a LIVE main cache (e.g. gt_n600 under a running arm) NEVER needs an
+            # inplace rewrite. Precedence: main-cache 'sR' > sidecar > fail closed. Inside the
+            # msal_reach gate => the default/OFF path is untouched (byte-identity preserved).
+            _sidecar = Path(args.gt_cache).with_name(Path(args.gt_cache).stem + "_sR.npz")
+            if _sidecar.exists():
+                _zc = np.load(_sidecar, allow_pickle=False)
+                _sR_src = str(_sidecar)
         if "sR" not in _zc.files:
             raise ValueError(
-                f"--gt-cache {args.gt_cache} has no 'sR' key; build it first: "
-                f"tools/precompute_sR_reachability.py --gt-cache {args.gt_cache} --num-pairs {P}.")
+                f"--gt-cache {args.gt_cache} has no 'sR' key (and no '<stem>_sR.npz' sidecar); "
+                f"build it first: tools/precompute_sR_reachability.py --gt-cache {args.gt_cache} "
+                f"--num-pairs {P} [--mode sidecar].")
         _sR_all = _zc["sR"]  # (cached_P, H, W) float32 in [0,1]; inflate the sR member ONCE
         if int(_sR_all.shape[0]) < P:
             raise ValueError(
@@ -3441,7 +3452,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "re-run tools/precompute_sR_reachability.py at >= the requested size.")
         _sR_provider = [mx.array(np.asarray(_sR_all[pi], np.float32)[None]) for pi in range(P)]
         print(json.dumps({"stage": "margin_saliency_reachability", "active": True, "n_pairs": int(P),
-                          "gt_cache": str(args.gt_cache),
+                          "gt_cache": str(args.gt_cache), "sR_source": _sR_src,
                           "sR_norm_mean": round(float(np.asarray(_sR_all[:P]).mean()), 5),
                           "note": "LEVER-4 saliency weighted by cached through-R margin-Jacobian S_R "
                           "(REPLACES the measured-inert 1/(1+beta*tex) texture path); advisory build, "
