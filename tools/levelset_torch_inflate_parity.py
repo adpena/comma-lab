@@ -57,6 +57,19 @@ CAMERA_H, CAMERA_W = 874, 1164
 _FRAME_BYTES = CAMERA_H * CAMERA_W * 3
 
 
+def _pick_npz(ckpt_dir: Path) -> Path:
+    """Prefer *_ema_mlx.npz then *_live_mlx.npz (same precedence as levelset_byte_close_and_eval)."""
+    ckpt_dir = Path(ckpt_dir)
+    for name in ("levelset_witness_ema_mlx.npz", "levelset_witness_live_mlx.npz"):
+        p = ckpt_dir / name
+        if p.exists():
+            return p
+    cands = sorted(ckpt_dir.glob("*_mlx.npz"))
+    if not cands:
+        raise FileNotFoundError(f"no level-set *_mlx.npz in {ckpt_dir}")
+    return cands[0]
+
+
 # ---------------------------------------------------------------------------
 # synthetic checkpoint at the row dims (non-degenerate argmax for a real parity stress)
 # ---------------------------------------------------------------------------
@@ -249,6 +262,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gt-cache", type=str, default=str(_REPO / "experiments/results/mlx_fleet_gt_cache/gt_n6.npz"))
     ap.add_argument("--threads", type=int, default=4, help="CPU threads (contest 4-core); 0=leave default")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--ckpt-dir", type=str, default=None,
+                    help="REAL trained level-set run dir (has levelset_witness_ema_mlx.npz). When set, "
+                         "byte-close the ACTUAL weights instead of a synthetic fixture (NO-FAKE #3 "
+                         "real-weight parity gate). Default None = synthetic fixture (arithmetic parity).")
+    ap.add_argument("--so-tau", type=float, default=4.0, help="self-orient tau (persisted-gap default 4).")
+    ap.add_argument("--so-iters", type=int, default=4, help="self-orient fixed-point iters (default 4).")
     ap.add_argument("--keep-packet", action="store_true")
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args(argv)
@@ -259,9 +278,25 @@ def main(argv: list[str] | None = None) -> int:
         torch.set_num_threads(int(args.threads))
 
     work = _REPO / "experiments" / "results" / f"levelset_torch_parity_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
-    ckpt_dir = work / "ckpt"
-    n_total = max(args.parity_pairs, args.time_pairs)
-    build_synthetic_ckpt(ckpt_dir, n_pairs=n_total, seed=args.seed)
+    # REAL-WEIGHT path (--ckpt-dir): byte-close an actual trained level-set checkpoint (NOT a
+    # synthetic fixture) so the parity+timing reflect the WITNESS score path, per NO-FAKE #3
+    # ("re-measure on the FIRST real ckpt"). so_overrides freq_across/freq_along are read from the
+    # npz __cfg (persisted); tau/iters default to the trainer/byte-close CLI defaults (4/4, the
+    # trainer-gap-not-persisted scalars). Synthetic path unchanged (default).
+    synthetic = args.ckpt_dir is None
+    if synthetic:
+        ckpt_dir = work / "ckpt"
+        n_total = max(args.parity_pairs, args.time_pairs)
+        build_synthetic_ckpt(ckpt_dir, n_pairs=n_total, seed=args.seed)
+        so_overrides = {"freq_across": 32.0, "freq_along": 4.0, "tau": 4.0, "iters": 4}
+    else:
+        ckpt_dir = Path(args.ckpt_dir)
+        _npz = np.load(_pick_npz(ckpt_dir))
+        so_overrides = {
+            "freq_across": float(_npz["__cfg_freq_across"]) if "__cfg_freq_across" in _npz else 32.0,
+            "freq_along": float(_npz["__cfg_freq_along"]) if "__cfg_freq_along" in _npz else 4.0,
+            "tau": float(args.so_tau), "iters": int(args.so_iters),
+        }
 
     # --- byte-close + SHIPPED numpy inflate (authority .raw) at parity_pairs ---
     packet_dir = work / "packet"
@@ -269,7 +304,7 @@ def main(argv: list[str] | None = None) -> int:
         ckpt_dir, npz_name=None, max_pairs=args.parity_pairs, fold_pose_sidecar=False,
         pose_sidecar_path=None, gt_cache=None, keep_packet=True, packet_dir=packet_dir,
         skip_parity=True,
-        so_overrides={"freq_across": 32.0, "freq_along": 4.0, "tau": 4.0, "iters": 4},
+        so_overrides=so_overrides,
     )
     numpy_raw = Path(rep["inflate"]["raw_path"])  # shipped numpy-fp64 .raw (authority)
     capped_0bin = packet_dir / "archive" / "0.bin"  # capped to parity_pairs by run_inflate
@@ -368,7 +403,8 @@ def main(argv: list[str] | None = None) -> int:
         "authority": "[macOS-CPU advisory] NON-PROMOTABLE (numpy-fp64=bit-identical reference; torch=fast decode, parity-gated)",
         "promotion_claim": False,
         "utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "synthetic_fixture": True,
+        "synthetic_fixture": synthetic,
+        "ckpt_dir": (None if synthetic else str(ckpt_dir)),
         "row_config": {"n_hidden": 4, "hidden": 96, "mod": 32, "in_feat": int(m["in_feat"]) if "in_feat" in m else 88,
                        "n_classes": 5, "activation": m["activation"], "self_orient": bool(m["self_orient"]),
                        "n_dir_freqs": int(m["n_dir_freqs"]), "render": [int(m["render_h"]), int(m["render_w"])],
