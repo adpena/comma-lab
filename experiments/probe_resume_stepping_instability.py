@@ -92,11 +92,18 @@ def slice_snapshot(src: Path, dst: Path, n_pairs: int, *, drop_opt: bool) -> dic
 
 def _base_argv(out_dir: Path, snap: Path, *, epochs: int, accum: int, seed_anneal_epochs: int,
                bd_weight: float, lr: float, lr_end: float, tau_start: int, band_start: int,
-               persist_warmup: int) -> list[str]:
+               persist_warmup: int, extra: list[str] | None = None,
+               guard: str = "disarm", eval_every: int = 999) -> list[str]:
     """The v3 launch argv translated to n24 diagnostics: verdicts at the resume point only,
     spike guard DISARMED (observe, don't deadlock), closed-loop/async OFF (no threads), per-term
-    telemetry driven by TAC_LOSS_TERM_PROBE=1 in the env."""
-    return [
+    telemetry driven by TAC_LOSS_TERM_PROBE=1 in the env.
+
+    (EIK-STAB build 3) ``extra`` appends arm-specific stabilizer flags; ``guard`` selects the
+    spike-guard treatment: "disarm" (the original --spike-factor 1e9 observe-don't-deadlock) or
+    "rollback" (--spike-guard-mode rollback ARMED at the production --spike-factor 5 — the
+    actuator-under-test arms); ``eval_every`` re-enables periodic verdicts so the arbitration can
+    read d_seg drift (does the damping DEGRADE boundary sharpness?)."""
+    argv = [
         sys.executable, str(TRAINER),
         "--out-dir", str(out_dir),
         "--gt-cache", str(GT_N24),
@@ -108,7 +115,7 @@ def _base_argv(out_dir: Path, snap: Path, *, epochs: int, accum: int, seed_annea
         # anneals all use --anneal-epochs as denominator (review C2), so the probe's per-epoch
         # schedule VALUES match the n600 runs (epochs=1000) exactly at ep101-104.
         "--anneal-epochs", "1000",
-        "--eval-every", "999",
+        "--eval-every", str(eval_every),
         "--verdict-pairs", "24",
         "--verdict-batch", "24",
         "--curriculum",
@@ -163,9 +170,20 @@ def _base_argv(out_dir: Path, snap: Path, *, epochs: int, accum: int, seed_annea
         "--resume-from", str(snap),
         "--resume-allow-lever-drift", "--resume-clear-spike-guard",
         "--boundary-distance-weight", f"{bd_weight:g}",
-        "--spike-factor", "1e9",  # DISARM the guard: observe the evolution, don't deadlock
         "--loss-term-log-every", "1",
     ]
+    if guard == "rollback":
+        # (EIK-STAB build 3) actuator-under-test: guard ARMED at the production factor, rollback
+        # mode; window/frac tuned to the n24 cadence (3 accum-chunks/epoch at accum 8 => window 6
+        # = a 2-epoch sustained-runaway trigger, matching the measured descend-then-runaway shape).
+        argv += ["--spike-factor", "5", "--spike-guard-mode", "rollback",
+                 "--spike-rollback-window", "6", "--spike-rollback-frac", "0.5",
+                 "--spike-rollback-lr-cut", "0.5", "--spike-rollback-max", "8"]
+    else:
+        argv += ["--spike-factor", "1e9"]  # DISARM the guard: observe the evolution, don't deadlock
+    if extra:
+        argv += list(extra)
+    return argv
 
 
 ARMS: dict[str, dict] = {
@@ -192,11 +210,37 @@ ARMS: dict[str, dict] = {
                    tau_start=400, band_start=450, persist_warmup=275),
     "lr_18e5": dict(drop_opt=False, bd=0.2, lr=1.8e-4, lr_end=1.8e-5, seed_anneal=101,
                     tau_start=400, band_start=450, persist_warmup=275),
+    # ── (EIK-STAB build 3) ARBITRATION arms: the two candidate eikonal-runaway CURES + the
+    # rollback-guard actuator, ALL at the UNSTABLE lr 1e-3 (the exploding baseline) so a STABLE
+    # verdict is attributable to the cure, not the step size. StEik weights log-spaced x10;
+    # ViscoReg eps at {0.3, 1.0} (the paper starts eps=1 with |grad u| ~ 1 — our margin's scale);
+    # constant eps (no anneal) at this short horizon. d_seg drift read via eval_every=10.
+    "steik_005": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                      tau_start=400, band_start=450, persist_warmup=275,
+                      extra=["--eikonal-steik-weight", "0.05"]),
+    "steik_05": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                     tau_start=400, band_start=450, persist_warmup=275,
+                     extra=["--eikonal-steik-weight", "0.5"]),
+    "steik_5": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                    tau_start=400, band_start=450, persist_warmup=275,
+                    extra=["--eikonal-steik-weight", "5.0"]),
+    "visco_03": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                     tau_start=400, band_start=450, persist_warmup=275,
+                     extra=["--eikonal-viscosity", "0.3"]),
+    "visco_1": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                    tau_start=400, band_start=450, persist_warmup=275,
+                    extra=["--eikonal-viscosity", "1.0"]),
+    "rollback_guard": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                           tau_start=400, band_start=450, persist_warmup=275,
+                           guard="rollback"),
+    "steik05_rollback": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                             tau_start=400, band_start=450, persist_warmup=275,
+                             guard="rollback", extra=["--eikonal-steik-weight", "0.5"]),
 }
 
 
 def _parse_rows(run_log: Path) -> dict:
-    terms_rows, verdicts, spikes = [], [], 0
+    terms_rows, verdicts, spikes, rollbacks = [], [], 0, []
     for line in run_log.read_text().splitlines():
         line = line.strip()
         if not line.startswith("{"):
@@ -212,7 +256,11 @@ def _parse_rows(run_log: Path) -> dict:
             verdicts.append({k: row.get(k) for k in ("epoch", "d_seg", "d_pose")})
         elif st == "spike_skip":
             spikes += 1
-    return {"terms_rows": terms_rows, "verdicts": verdicts, "spike_skips": spikes}
+        elif st == "spike_rollback":
+            rollbacks.append({k: row.get(k) for k in
+                              ("ep", "restored_from_epoch", "lr_before", "lr_after", "lr_scale")})
+    return {"terms_rows": terms_rows, "verdicts": verdicts, "spike_skips": spikes,
+            "rollbacks": rollbacks}
 
 
 def _summarize_arm(name: str, parsed: dict, epochs_run: int) -> dict:
@@ -258,6 +306,7 @@ def _summarize_arm(name: str, parsed: dict, epochs_run: int) -> dict:
         "total_ratio": round(tot1 / max(tot0, 1e-9), 3),
         "n_rows": len(rows), "epochs_run": epochs_run,
         "spike_skips": parsed["spike_skips"],
+        "rollbacks": parsed.get("rollbacks", []),
         "dominant_terms_by_delta": [
             {"term": k, **v} for k, v in dominant[:5]
         ],
@@ -283,6 +332,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--epochs-past-resume", type=int, default=3)
     ap.add_argument("--accum-pairs", type=int, default=8)
     ap.add_argument("--timeout-s", type=int, default=3600, help="per-arm subprocess timeout")
+    ap.add_argument("--eval-every", type=int, default=999,
+                    help="(EIK-STAB build 3) trainer --eval-every: <999 re-enables periodic "
+                    "verdicts so the arbitration reads d_seg drift under the damping terms.")
     args = ap.parse_args(argv)
 
     out_dir: Path = args.out_dir
@@ -307,7 +359,9 @@ def main(argv: list[str] | None = None) -> int:
         argv_t = _base_argv(arm_dir, snap, epochs=epochs, accum=args.accum_pairs,
                             seed_anneal_epochs=cfg["seed_anneal"], bd_weight=cfg["bd"],
                             lr=cfg["lr"], lr_end=cfg["lr_end"], tau_start=cfg["tau_start"],
-                            band_start=cfg["band_start"], persist_warmup=cfg["persist_warmup"])
+                            band_start=cfg["band_start"], persist_warmup=cfg["persist_warmup"],
+                            extra=cfg.get("extra"), guard=cfg.get("guard", "disarm"),
+                            eval_every=args.eval_every)
         (out_dir / f"arm_{name}.argv.json").write_text(json.dumps(argv_t, indent=1))
         log_path = out_dir / f"arm_{name}.log"
         print(json.dumps({"stage": "arm_start", "arm": name, "log": str(log_path)}), flush=True)

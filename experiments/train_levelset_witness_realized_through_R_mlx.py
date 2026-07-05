@@ -852,6 +852,156 @@ def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1
     return eik, length, mx.mean(gx * gx) + mx.mean(gy * gy)
 
 
+def _eikonal_margin_interior_mlx(phi_pk, render_h: int, render_w: int):
+    """(EIK-STAB build 1) Shared interior-stencil geometry of the decision margin m = top1-top2:
+    central first derivatives + second derivatives on the (H-2, W-2) interior grid (h = 1 px).
+    Returns (gx, gy, m_xx, m_yy, m_xy), each (H-2, W-2). Used ONLY by the default-OFF stabilizer
+    terms below (never on the default path -> zero compute unless a stabilizer flag is set)."""
+    import mlx.core as mx
+
+    phi = mx.reshape(phi_pk, (render_h, render_w, -1))
+    srt = mx.sort(phi, axis=-1)
+    m = srt[..., -1] - srt[..., -2]                                # (H,W) decision margin
+    gx = 0.5 * (m[1:-1, 2:] - m[1:-1, :-2])                        # central d/dx
+    gy = 0.5 * (m[2:, 1:-1] - m[:-2, 1:-1])                        # central d/dy
+    m_xx = m[1:-1, 2:] - 2.0 * m[1:-1, 1:-1] + m[1:-1, :-2]
+    m_yy = m[2:, 1:-1] - 2.0 * m[1:-1, 1:-1] + m[:-2, 1:-1]
+    m_xy = 0.25 * (m[2:, 2:] - m[2:, :-2] - m[:-2, 2:] + m[:-2, :-2])
+    return gx, gy, m_xx, m_yy, m_xy
+
+
+def _eikonal_steik_mlx(phi_pk, render_h: int, render_w: int):
+    """(EIK-STAB build 1a) StEik directional-divergence stabilizer (Yang-Walker-Parkinson et al.,
+    NeurIPS 2023, arXiv 2305.18414): L_dir = mean |grad u^T D^2u grad u| — the second-order
+    derivative along the (RAW, un-normalized) gradient direction, in ABSOLUTE VALUE (L1), exactly
+    the paper's integrand. Differentiating |grad u|=1 gives D^2u·grad u = 0 for a true SDF, so the
+    term damps ONLY the normal-direction second-order mode (the anti-diffusive/backward-heat
+    instability of the (|grad u|-1)^2 gradient flow the paper proves), leaving tangential curvature
+    (our lane dashes / fine geometry) FREE — unlike the DiGS full-Laplacian (Delta u)^2 which
+    over-smooths (would eat the dashes, the MCF-erasure enemy).
+
+    HONEST ADAPTATIONS (documented per NO-FAKE; litsweep memo 'exact term to be lifted from the
+    paper, never invented'): (1) our field is the DECISION MARGIN m = phi_top1 - phi_top2 — the
+    same field our eikonal term drives to |grad m|=1 (fix h in _eikonal_length_mlx), NOT a single
+    SDF head; the instability we measured (the eikonal runaway along |grad phi|) lives on m, so the
+    damping is applied where the disease is. (2) discrete central stencils on the pixel grid (h=1)
+    replace the paper's autograd Hessian (our margin is a grid field, not a coordinate-MLP output
+    we can double-differentiate cheaply through R). (3) the paper anneals alpha_l linearly to zero
+    mid-training; here the weight is a CONSTANT flag (--eikonal-steik-weight) — the n24 arbitration
+    probe runs are short; a schedule can be added if the arm wins. Default weight 0.0 => this
+    function is NEVER CALLED => byte-identical."""
+    import mlx.core as mx
+
+    gx, gy, m_xx, m_yy, m_xy = _eikonal_margin_interior_mlx(phi_pk, render_h, render_w)
+    dir_div = gx * gx * m_xx + 2.0 * gx * gy * m_xy + gy * gy * m_yy   # grad m^T H(m) grad m
+    return mx.mean(mx.abs(dir_div))
+
+
+def _eikonal_visco_mlx(phi_pk, render_h: int, render_w: int, visco_eps: float):
+    """(EIK-STAB build 1b) ViscoReg vanishing-viscosity eikonal residual (arXiv 2507.00412):
+    L_veik = mean( (|grad m| - 1 - eps*Lap m)^2 )  [the paper's p=2 form]. The inviscid eikonal
+    equation |grad u|=1 is ill-posed (infinitely many weak solutions; the (|grad u|-1)^2 flow is
+    anti-diffusive along grad u — the measured runaway); the VISCOUS equation |grad u| = 1 + eps*Lap u
+    selects the true SDF (the viscosity solution) as eps->0. Training with the viscous residual and
+    ANNEALING eps to zero (--eikonal-viscosity-anneal; the paper uses piecewise-linear decay to 0 and
+    reports insensitivity to the exact profile) is a continuation in eps — literally our Gamma/GNC
+    curriculum philosophy applied to the eikonal term itself.
+
+    HONEST ADAPTATIONS (per NO-FAKE): (1) applied on the decision margin m (same field as the
+    legacy eikonal term; see _eikonal_steik_mlx note 1). (2) central interior stencil (H-2, W-2)
+    for BOTH |grad m| and Lap m (the legacy term uses forward differences on (H-1, W-1)); when the
+    anneal reaches eps == 0.0 exactly, the call site switches BACK to the legacy stencil — the two
+    eikonal residuals differ by O(stencil) at that instant (documented discontinuity; by then
+    eps ~ 0 so the viscous residual ~= the central eikonal residual). This REPLACES the eikonal
+    residual while eps > 0 (it is the same constraint, viscous form — adding both would double-count);
+    the Chan-Vese length term is unchanged. Default eps 0.0 => NEVER CALLED => byte-identical."""
+    import mlx.core as mx
+
+    gx, gy, m_xx, m_yy, _ = _eikonal_margin_interior_mlx(phi_pk, render_h, render_w)
+    gmag = mx.sqrt(gx * gx + gy * gy + 1e-8)
+    lap = m_xx + m_yy
+    resid = gmag - 1.0 - float(visco_eps) * lap
+    return mx.mean(resid * resid)
+
+
+def _visco_eps_for_epoch(ep: int, eps0: float, anneal_epochs: int) -> float:
+    """(EIK-STAB build 1b) Per-epoch vanishing-viscosity schedule: linear decay from eps0 at ep=0
+    to 0.0 at ep>=anneal_epochs (ViscoReg's 'many reasonable decays work; decay to zero' finding —
+    the simplest monotone-to-zero profile). anneal_epochs<=0 => CONSTANT eps0 (no anneal). Pure /
+    unit-tested. NOTE the schedule is in ABSOLUTE epochs (matches the trainer's other anneals: a
+    resumed run continues the same schedule bit-faithfully)."""
+    e0 = float(eps0)
+    n = int(anneal_epochs)
+    if e0 <= 0.0:
+        return 0.0
+    if n <= 0:
+        return e0
+    return e0 * max(0.0, 1.0 - float(ep) / float(n))
+
+
+class SpikeGuardRollback:
+    """(EIK-STAB build 2; sweep lever #3 + #304) Pure decision state machine for
+    ``--spike-guard-mode rollback`` — the physics-informed replacement for the legacy
+    skip-with-frozen-median actuator whose absorbing deadlock we measured 3x (#205 runs
+    015247Z/083453Z/095728Z: median updates only on ACCEPTED batches, so a persistent
+    loss-level shift => 100% skip forever).
+
+    Physics (litsweep DOMAIN 2, contradiction row 3): at an Edge-of-Stability crossing the
+    oscillation along the sharp direction IS the mechanism that reduces sharpness
+    (Damian-Nichani-Lee self-stabilization); skipping every spiked batch BLOCKS that feedback.
+    So this guard: (a) TOLERATES bounded oscillation — single finite spikes are ACCEPTED (stepped),
+    only counted; (b) on SUSTAINED runaway (spike fraction > ``frac`` over a FULL ``window`` of
+    recent batches) returns "rollback" — the trainer restores the last-good weights/EMA/opt
+    snapshot, cuts lr x``lr_cut``, clears the loss window (fresh median re-arm), and continues:
+    an actuator that returns to the stable basin AT A STABLE STEP SIZE instead of freezing.
+    After ``max_rollbacks`` the budget is spent and the machine returns "exhausted" forever
+    (the trainer reverts to legacy skip semantics — bounded actuation, loud in the log).
+
+    Pure python (no MLX): unit-testable with synthetic spike sequences (the induced-runaway test).
+    The trainer owns the side effects; this class owns ONLY the decision."""
+
+    def __init__(self, window: int, frac: float, max_rollbacks: int) -> None:
+        if int(window) < 1:
+            raise ValueError(f"spike-rollback window must be >= 1, got {window}")
+        if not (0.0 < float(frac) <= 1.0):
+            raise ValueError(f"spike-rollback frac must be in (0, 1], got {frac}")
+        if int(max_rollbacks) < 1:
+            raise ValueError(f"spike-rollback max must be >= 1, got {max_rollbacks}")
+        self.window = int(window)
+        self.frac = float(frac)
+        self.max_rollbacks = int(max_rollbacks)
+        self.rollbacks = 0
+        self._events: list[bool] = []
+
+    @property
+    def exhausted(self) -> bool:
+        return self.rollbacks >= self.max_rollbacks
+
+    def spike_frac(self) -> float:
+        if not self._events:
+            return 0.0
+        return sum(1 for e in self._events if e) / float(len(self._events))
+
+    def rearm(self) -> None:
+        """Clear the event window (fresh start after a rollback / a stage re-treat)."""
+        self._events.clear()
+
+    def observe(self, spiked: bool) -> str:
+        """Record one batch outcome; return the action: 'ok' | 'rollback' | 'exhausted'.
+        'rollback' fires ONLY on a FULL window with spike fraction > frac, and self-rearms
+        (the next trigger needs a freshly refilled window => bounded trigger frequency)."""
+        if self.exhausted:
+            return "exhausted"
+        self._events.append(bool(spiked))
+        if len(self._events) > self.window:
+            self._events.pop(0)
+        if len(self._events) == self.window and self.spike_frac() > self.frac:
+            self.rollbacks += 1
+            self.rearm()
+            return "rollback"
+        return "ok"
+
+
 def _nuclear_norm_smooth_mlx(code, *, rel_eps: float = 1e-3, ns_iters: int = 25):
     """(THETA* TIER-2 MUST-2) DIFFERENTIABLE smoothed nuclear norm of the per-(pair,frame) FiLM code
     matrix ``code`` (shape (num_pairs*2, mod_dim)) -- a convex low-rank relaxation that drives the
@@ -1555,9 +1705,13 @@ def _stage_rewarmup_factor(
 LOSS_TERM_KEYS: tuple[str, ...] = (
     # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
-    "seg", "pose", "eikonal", "length", "boundary_distance", "lane_edge", "margin_saliency",
-    "subpix", "chroma_boundary", "island_amplify", "persistence", "rankfloor", "code_spectral",
-    "thin_lane", "margin_field_head", "code_nuclear",
+    "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
+    "margin_saliency", "subpix", "chroma_boundary", "island_amplify", "persistence", "rankfloor",
+    "code_spectral", "thin_lane", "margin_field_head", "code_nuclear",
+    # "eik_steik" (EIK-STAB build 1a): the additive StEik directional-divergence stabilizer; 0.0
+    # unless --eikonal-steik-weight > 0. NOTE: when --eikonal-viscosity > 0 the "eikonal" key holds
+    # the VISCOUS residual contribution (ViscoReg replaces the residual; same constraint, viscous
+    # form) — the schema is unchanged, the semantic is logged by the "eik_stabilizer" stage row.
 )
 
 
@@ -2552,6 +2706,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (DEFAULT) => _eikonal_length_mlx takes its BIT-IDENTICAL branch (w==1.0) => unchanged.
     eik_jrelax = float(getattr(args, "eikonal_junction_relax", 0.0))
     eik_jtau = float(getattr(args, "eikonal_junction_tau", 0.5))
+    # (EIK-STAB build 1) eikonal-stabilizer closure CELL (mutable dict, read LIVE inside
+    # total_loss_fn each value_and_grad call — the same pattern as the lever gate dicts; the epoch
+    # loop mutates "visco_eps" per the vanishing-viscosity anneal). BOTH default 0.0 => both
+    # branches in total_loss_fn are skipped => the loss graph is BYTE-IDENTICAL (fully additive).
+    _eik_stab = {
+        "steik_w": float(getattr(args, "eikonal_steik_weight", 0.0)),
+        "visco_eps0": float(getattr(args, "eikonal_viscosity", 0.0)),
+        "visco_eps": float(getattr(args, "eikonal_viscosity", 0.0)),
+        "visco_anneal": int(getattr(args, "eikonal_viscosity_anneal", 0)),
+    }
 
     # LEVER-A (FiLM-rank-fix) loss term closure constants. A SOFT participation-ratio FLOOR on the
     # realized per-pair FiLM modulation M = film(code) so the curriculum cannot funnel it to rank-1
@@ -2773,10 +2937,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (THETA* TIER-2 STRETCH-1) junction relax threaded; eik_jrelax=0.0 (default) => BIT-IDENTICAL.
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w,
                                              junction_relax=eik_jrelax, junction_tau=eik_jtau)
+        # (EIK-STAB build 1b) ViscoReg vanishing-viscosity residual REPLACES the eikonal residual
+        # while eps > 0 (same constraint, viscous form — the stable object; adding both would
+        # double-count). eps==0.0 (default, or the anneal's end) => branch skipped => the legacy
+        # residual above is used unchanged (byte-identical; the unused legacy `eik` subgraph is
+        # never evaluated by MLX's lazy engine when replaced). The length term is unchanged.
+        if _eik_stab["visco_eps"] > 0.0:
+            eik = _eikonal_visco_mlx(phi0, render_h, render_w, _eik_stab["visco_eps"])
         L = L + eik_w * eik + len_w * length
         if terms_out is not None:
             terms_out["eikonal"] = eik_w * eik
             terms_out["length"] = len_w * length
+        # (EIK-STAB build 1a) StEik directional-divergence damping (ADDITIVE; arXiv 2305.18414):
+        # damps ONLY the normal-direction second-order mode (the proven anti-diffusive instability
+        # of the eikonal flow), tangential curvature free. Default weight 0.0 => skipped => L is
+        # byte-identical.
+        if _eik_stab["steik_w"] > 0.0:
+            _steik_contrib = _eik_stab["steik_w"] * _eikonal_steik_mlx(phi0, render_h, render_w)
+            L = L + _steik_contrib
+            if terms_out is not None:
+                terms_out["eik_steik"] = _steik_contrib
         # (--boundary-distance-weight) SDF-native boundary-placement term on FRAME1 (the SegNet-
         # scored frame): band-weighted mean |phi_GT - phi_runner| on the precomputed GT-boundary
         # band (distance-transform of the GT inter-class edges). One extra sdf trunk forward per
@@ -3188,6 +3368,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "--boundary-distance-weight>0 is not wired into the --micro-batch-pairs batched loss path "
             "(the boundary term lives in total_loss_fn, serial B=1 only); run this arm at "
             "--micro-batch-pairs 1, or extend tac.boundary_math.levelset_micro_batch_loss first.")
+    # (EIK-STAB build 1) FAIL CLOSED with micro-batch (NO-FAKE: the batched twin would SILENTLY
+    # drop the stabilizer — a silently-wrong result is worse than a refused one).
+    if (_eik_stab["steik_w"] > 0.0 or _eik_stab["visco_eps0"] > 0.0) and _use_micro_batch:
+        raise NotImplementedError(
+            "--eikonal-steik-weight/--eikonal-viscosity are not wired into the --micro-batch-pairs "
+            "batched loss path (the stabilizer terms live in total_loss_fn, serial B=1 only); run "
+            "at --micro-batch-pairs 1, or extend tac.boundary_math.levelset_micro_batch_loss first.")
     value_and_grad_batch = None
     _dual_vg_batch = None
     if _use_micro_batch:
@@ -4410,6 +4597,71 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # never consumed => BIT-IDENTICAL. NOT persisted across resume (re-derived; None at resume start
     # => no spurious re-warmup until a real boundary).
     last_boundary_epoch: "int | None" = None
+    # (EIK-STAB build 2; sweep lever #3 + #304) spike-guard MODE dispatch. Default "legacy" =>
+    # _sg_guard is None => every guard branch below is skipped and _sg_state["lr_scale"] stays 1.0
+    # (never multiplied in) => BYTE-IDENTICAL to the pre-build trainer. "rollback" = the
+    # physics-informed actuator: tolerate bounded oscillation (EoS self-stabilization is
+    # FUNCTIONAL — litsweep contradiction row 3), and on SUSTAINED runaway restore the last-good
+    # snapshot + cut lr + re-arm a fresh median (fight the disease, don't freeze).
+    _sg_mode = str(getattr(args, "spike_guard_mode", "legacy"))
+    _sg_guard = (SpikeGuardRollback(int(args.spike_rollback_window),
+                                    float(args.spike_rollback_frac),
+                                    int(args.spike_rollback_max))
+                 if _sg_mode == "rollback" else None)
+    _sg_state: dict[str, Any] = {"lr_scale": 1.0, "snap": None, "snap_epoch": None,
+                                 "ep_spikes": 0, "ep_batches": 0, "exhausted_warned": False}
+
+    def _sg_take_snapshot(ep: int) -> None:
+        """Reference-snapshot of the last-good training state (model + EMA + opt [+ seed]).
+        ZERO-COPY: MLX arrays are immutable and every consumer (opt.update / ema.update /
+        model.update / attribute rebinds) REBINDS leaves rather than mutating them, so holding
+        the current array objects is a faithful point-in-time snapshot (same guarantee the
+        resume-sidecar save path relies on)."""
+        snap: dict[str, Any] = {
+            "live": dict(tree_flatten(model.parameters())),
+            "ema": dict(ema.shadow),
+            "opt": dict(tree_flatten(opt.state)),
+        }
+        if seed_mod is not None:
+            snap["seed"] = dict(tree_flatten(seed_mod.parameters()))
+            snap["seed_opt"] = dict(tree_flatten(seed_opt.state))
+        _sg_state["snap"] = snap
+        _sg_state["snap_epoch"] = int(ep)
+
+    def _sg_do_rollback(ep: int, batch_loss: float, gnorm: float) -> None:
+        """SUSTAINED-runaway response: restore last-good weights/EMA/opt, cut lr x lr_cut,
+        clear the spike-guard median window (fresh re-arm). The restored opt state carries the
+        snapshot's Adam moments (measured: restored moments DAMP the runaway 6.7x vs fresh 25.3x
+        — never reset them) and the snapshot's step count (consistent bias-correction state)."""
+        snap = _sg_state["snap"]
+        cut = float(args.spike_rollback_lr_cut)
+        cur_lr = float(opt.learning_rate)
+        model.update(tree_unflatten(list(snap["live"].items())))
+        mx.eval(model.parameters())
+        for _k, _v in snap["ema"].items():
+            ema.shadow[_k] = _v
+        mx.eval(list(ema.shadow.values()))
+        opt.state = tree_unflatten(list(snap["opt"].items()))
+        new_lr = cur_lr * cut
+        opt.learning_rate = new_lr        # AFTER the state restore (state carries learning_rate)
+        mx.eval(opt.state)
+        if seed_mod is not None and "seed" in snap:
+            seed_mod.update(tree_unflatten(list(snap["seed"].items())))
+            seed_opt.state = tree_unflatten(list(snap["seed_opt"].items()))
+            mx.eval(seed_mod.parameters(), seed_opt.state)
+        _sg_state["lr_scale"] *= cut      # persists through the per-epoch scheduled-lr assignment
+        recent_losses.clear()             # fresh median re-arm (the frozen-median deadlock killer)
+        print(json.dumps({"stage": "spike_rollback", "ep": int(ep),
+                          "restored_from_epoch": _sg_state["snap_epoch"],
+                          "batch_loss": (round(float(batch_loss), 4) if np.isfinite(batch_loss) else "nonfinite"),
+                          "gnorm": (round(float(gnorm), 4) if np.isfinite(gnorm) else "nonfinite"),
+                          "lr_before": round(cur_lr, 8), "lr_after": round(new_lr, 8),
+                          "lr_scale": round(float(_sg_state["lr_scale"]), 6),
+                          "rollbacks_used": int(_sg_guard.rollbacks),
+                          "rollbacks_max": int(_sg_guard.max_rollbacks),
+                          "note": "sustained runaway -> restore last-good weights/EMA/opt (moments "
+                          "RESTORED not reset), lr cut, median re-armed (EIK-STAB build 2)"}),
+              flush=True)
     # (review C2) anneal SCHEDULE length: --anneal-epochs decouples the cosine denominator (the
     # schedule the temp/LR were designed against) from --epochs (this run's length). Default None =>
     # args.epochs => the LR cosine below is BIT-IDENTICAL. A warm-start arm sets it to the ORIGINAL
@@ -4443,6 +4695,154 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if _mxc:
             print(json.dumps({"stage": "mx_compile_r", "active": True, **_mxc,
                               "note": "mx.compile'd R installed (startup bit-identity gate PASSED)"}), flush=True)
+        # ══ (EIK-STAB build 4; sweep lever #1) lambda_pre HVP PROBE — measure the Adam-
+        # PRECONDITIONED sharpness lambda_max(P^-1/2 H P^-1/2) at the (resumed) start state, print
+        # JSON rows, and EXIT before ANY training step. Default --lambda-pre-probe-iters 0 => this
+        # whole block is skipped => byte-identical. Method: preconditioned power iteration with
+        # FORWARD-DIFFERENCE HVPs over the FULL P-pair batch gradient (H u ~= (g(th+h*u)-g(th))/h),
+        # fp64 accumulation in numpy; a final CENTRAL-difference consistency check validates the
+        # converged eigenvector. Preconditioner matches the LIVE MLX AdamW exactly: P = diag(
+        # sqrt(v_hat)+eps) with v from the RESTORED optimizer state (v_hat = v/(1-beta2^step) only
+        # when bias_correction is on, mirroring mlx.optimizers.Adam), so lambda_pre is the quantity
+        # the Adam-EoS threshold law lambda_pre* ~= 2(1+b1)/(1-b1)/eta = 38/eta (b1=0.9; Cohen et
+        # al. arXiv 2207.14484) actually bounds. Tests the litsweep DOMAIN-2 prediction
+        # lambda_pre in [4.2e4, 7.6e4] (= 38/eta at the measured bracket [5e-4 stable, 9.1e-4
+        # unstable]) on the ep100 snapshot. ══
+        if int(getattr(args, "lambda_pre_probe_iters", 0)) > 0:
+            _lp_iters = int(args.lambda_pre_probe_iters)
+            _lp_fd = float(args.lambda_pre_probe_fd_eps)
+            _lp_ep = int(start_epoch)
+            # mirror the loop's per-epoch schedule application for the start epoch (so the loss
+            # landscape probed IS the one the first post-resume step would see).
+            model.softmax_temp = _softmax_temp_for_epoch(_lp_ep, args)
+            _lp_beta = _hosc_beta_for_epoch(_lp_ep, args)
+            if _lp_beta is not None:
+                model.hosc_beta = _lp_beta
+            _lp_seg_form = _seg_form_for_epoch(_lp_ep, args)
+            _lp_eik_w = _scheduled_eikonal_weight(_lp_ep, args)
+            if args.lr_schedule:
+                if _lp_ep <= args.warmup_epochs:
+                    _lp_eta = float(args.lr) * _lp_ep / max(args.warmup_epochs, 1)
+                else:
+                    _lp_prog = (_lp_ep - args.warmup_epochs) / max(anneal_epochs - args.warmup_epochs, 1)
+                    _lp_eta = float(args.lr_end + 0.5 * (args.lr - args.lr_end)
+                                    * (1 + np.cos(np.pi * _lp_prog)))
+            else:
+                _lp_eta = float(args.lr)
+            # optimizer state: need the v (2nd-moment) tree. Restored resume state already ran
+            # opt.init + restore; a fresh run has an UNINITIALIZED state -> init to zeros (the probe
+            # then reports moments_norm=0 and the preconditioner is the eps floor — a WARNED,
+            # near-meaningless lambda_pre; the probe's design point is RESTORED moments).
+            _lp_state_flat = dict(tree_flatten(opt.state))
+            if not any(k.endswith(".v") for k in _lp_state_flat):
+                opt.init(model.trainable_parameters())
+                _lp_state_flat = dict(tree_flatten(opt.state))
+            _lp_theta_mx = dict(tree_flatten(model.trainable_parameters()))
+            _lp_keys = sorted(_lp_theta_mx.keys())
+            _lp_shapes = {k: tuple(np.asarray(_lp_theta_mx[k]).shape) for k in _lp_keys}
+            _lp_theta = {k: np.asarray(_lp_theta_mx[k], np.float64) for k in _lp_keys}
+
+            def _lp_vec(tree_np: dict) -> np.ndarray:
+                return np.concatenate([np.ravel(np.asarray(tree_np[k], np.float64)) for k in _lp_keys])
+
+            def _lp_unvec_to_model(vec: np.ndarray) -> None:
+                out, off = [], 0
+                for k in _lp_keys:
+                    n = int(np.prod(_lp_shapes[k])) if _lp_shapes[k] else 1
+                    out.append((k, mx.array(vec[off:off + n].reshape(_lp_shapes[k]).astype(np.float32))))
+                    off += n
+                model.update(tree_unflatten(out))
+                mx.eval(model.parameters())
+
+            def _lp_full_grad() -> np.ndarray:
+                acc = None
+                for _pi in range(P):
+                    _oh, _mg = lstar_cache[_pi]
+                    _, _grads = value_and_grad(
+                        model, _cf_mx(_pi), 2 * _pi + 0, 2 * _pi + 1, _oh, _mg, pose_tgts[_pi],
+                        args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end,
+                        _lp_seg_form, _lp_eik_w, args.length_weight)
+                    mx.eval(_grads)
+                    acc = _grads if acc is None else tree_map(lambda a, b: a + b, acc, _grads)
+                    mx.eval(acc)
+                flat = dict(tree_flatten(acc))
+                return np.concatenate([np.ravel(np.asarray(flat[k], np.float64)) for k in _lp_keys]) / float(P)
+
+            # Adam preconditioner diag, matching mlx.optimizers.Adam.apply_single EXACTLY:
+            # denom = sqrt(v_hat) + eps; v_hat = v/(1-beta2^step) iff bias_correction else v.
+            _lp_eps_adam = float(getattr(opt, "eps", 1e-8))
+            _lp_b2 = float(getattr(opt, "betas", [0.9, 0.999])[1])
+            _lp_bc = bool(getattr(opt, "bias_correction", False))
+            _lp_step = float(np.asarray(_lp_state_flat.get("step", 0)))
+            _lp_vparts = []
+            for k in _lp_keys:
+                _v = _lp_state_flat.get(k + ".v")
+                _va = (np.zeros(int(np.prod(_lp_shapes[k])) if _lp_shapes[k] else 1, np.float64)
+                       if _v is None else np.ravel(np.asarray(_v, np.float64)))
+                _lp_vparts.append(_va)
+            _lp_v = np.concatenate(_lp_vparts)
+            if _lp_bc and _lp_step > 0:
+                _lp_v = _lp_v / (1.0 - _lp_b2 ** _lp_step)
+            _lp_denom = np.sqrt(np.maximum(_lp_v, 0.0)) + _lp_eps_adam     # = P diag
+            _lp_d = np.sqrt(_lp_denom)                                     # = P^{1/2} diag
+            _lp_theta_vec = _lp_vec(_lp_theta)
+            _lp_theta_norm = float(np.linalg.norm(_lp_theta_vec))
+            print(json.dumps({"stage": "lambda_pre_probe_start", "epoch": _lp_ep, "n_pairs": P,
+                              "iters": _lp_iters, "fd_eps": _lp_fd, "eta": _lp_eta,
+                              "adam_eps": _lp_eps_adam, "beta2": _lp_b2,
+                              "bias_correction": _lp_bc, "opt_step": _lp_step,
+                              "dim": int(_lp_theta_vec.size),
+                              "v_norm": float(np.linalg.norm(_lp_v)),
+                              "moments_restored": bool(np.linalg.norm(_lp_v) > 0.0),
+                              "axis": "[n24 advisory -- mechanism probe, NOT n600 evidence]"}),
+                  flush=True)
+            _lp_g0 = _lp_full_grad()
+            _lp_rng = np.random.default_rng(1234)
+            _lp_w = _lp_rng.standard_normal(_lp_theta_vec.size)
+            _lp_w /= np.linalg.norm(_lp_w)
+            _lp_lam = float("nan")
+            for _it in range(_lp_iters):
+                _u = _lp_w / _lp_d
+                _h = _lp_fd * (1.0 + _lp_theta_norm) / max(float(np.linalg.norm(_u)), 1e-20)
+                _lp_unvec_to_model(_lp_theta_vec + _h * _u)
+                _g1 = _lp_full_grad()
+                _lp_unvec_to_model(_lp_theta_vec)          # restore
+                _Hu = (_g1 - _lp_g0) / _h
+                _r = _Hu / _lp_d
+                _lp_lam = float(np.dot(_lp_w, _r))
+                _rn = float(np.linalg.norm(_r))
+                print(json.dumps({"stage": "lambda_pre_iter", "iter": _it,
+                                  "lambda_pre": _lp_lam, "residual_norm": _rn}), flush=True)
+                if _rn <= 1e-30:
+                    break
+                _lp_w = _r / _rn
+            # central-difference consistency check on the converged direction (validates the
+            # forward-difference HVP: |lam_fwd - lam_central| / |lam_central| should be small).
+            _u = _lp_w / _lp_d
+            _h = _lp_fd * (1.0 + _lp_theta_norm) / max(float(np.linalg.norm(_u)), 1e-20)
+            _lp_unvec_to_model(_lp_theta_vec + _h * _u)
+            _gp = _lp_full_grad()
+            _lp_unvec_to_model(_lp_theta_vec - _h * _u)
+            _gm = _lp_full_grad()
+            _lp_unvec_to_model(_lp_theta_vec)
+            _lam_c = float(np.dot(_lp_w, ((_gp - _gm) / (2.0 * _h)) / _lp_d))
+            _lp_bracket = [4.2e4, 7.6e4]   # 38/eta at the MEASURED lr bracket [9.1e-4 unstable, 5e-4 stable]
+            _lp_report = {
+                "stage": "lambda_pre", "epoch": _lp_ep, "n_pairs": P,
+                "lambda_pre": _lp_lam, "lambda_pre_central_check": _lam_c,
+                "fwd_vs_central_rel": (abs(_lp_lam - _lam_c) / abs(_lam_c) if _lam_c else None),
+                "eta": _lp_eta, "pi_eos": _lp_eta * _lp_lam / 38.0,
+                "eta_max_from_law": (38.0 / _lp_lam if _lp_lam > 0 else None),
+                "bracket_38_over_eta": _lp_bracket,
+                "in_window": bool(_lp_bracket[0] <= _lp_lam <= _lp_bracket[1]),
+                "law": "eos_adam_preconditioned_threshold_v1 (FORMALIZATION_PENDING): stability iff "
+                       "eta*lambda_pre <~ 2(1+b1)/(1-b1) = 38 at b1=0.9",
+                "axis": "[n24 advisory -- mechanism probe, NOT n600 evidence]",
+                "pointer": "0.19110 UNMOVED",
+            }
+            print(json.dumps(_lp_report), flush=True)
+            _atomic_write_json(out_dir / "lambda_pre_probe.json", _lp_report)
+            raise SystemExit(0)   # probe mode: NO training steps (default-OFF flag => unreachable)
         for ep in range(start_epoch, args.epochs + 1):
             _prof = {"ep_start": time.perf_counter(), "step_s": 0.0, "verdict_s": 0.0} if _profile_timing else None
             if _mem_probe_on and args.mlx_device == "gpu":
@@ -4727,6 +5127,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _beta = _hosc_beta_for_epoch(_anneal_ep, args)
             if _beta is not None:
                 model.hosc_beta = _beta
+            # (EIK-STAB build 1b) vanishing-viscosity anneal: mutate the closure cell so
+            # total_loss_fn reads the CURRENT eps live (same pattern as the lever gate dicts).
+            # Default eps0 0.0 => never touched => byte-identical.
+            if _eik_stab["visco_eps0"] > 0.0:
+                _ve = _visco_eps_for_epoch(ep, _eik_stab["visco_eps0"], _eik_stab["visco_anneal"])
+                if _ve != _eik_stab["visco_eps"]:
+                    print(json.dumps({"stage": "eik_stabilizer", "epoch": ep,
+                                      "visco_eps": round(_ve, 6),
+                                      "note": "ViscoReg vanishing-viscosity eps annealed (replaces "
+                                      "the eikonal residual while eps>0; legacy stencil at eps==0)"}),
+                          flush=True)
+                _eik_stab["visco_eps"] = _ve
+            # (EIK-STAB build 2) last-good snapshot refresh at epoch top: refresh ONLY when the
+            # PREVIOUS epoch was healthy (spike fraction strictly below the trigger frac), so a
+            # runaway epoch can never overwrite the good basin. First epoch (snap None) => take
+            # unconditionally. Legacy mode (_sg_guard None) => skipped => byte-identical.
+            if _sg_guard is not None:
+                _prev_frac = (_sg_state["ep_spikes"] / float(_sg_state["ep_batches"])
+                              if _sg_state["ep_batches"] > 0 else 0.0)
+                if _sg_state["snap"] is None or _prev_frac < float(args.spike_rollback_frac):
+                    _sg_take_snapshot(ep)
+                _sg_state["ep_spikes"] = 0
+                _sg_state["ep_batches"] = 0
             # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA: from the finisher-start epoch onward,
             # widen the EMA decay so the EMA shadow averages over the late oscillation (a flat-basin
             # center). Idempotent per-epoch set (keys off `ep`, not state) => RESUME-safe (ema.decay
@@ -4766,6 +5189,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     ep, last_boundary_epoch, args.stage_transition_rewarmup_epochs,
                     args.stage_transition_rewarmup_floor, args.stage_transition_rewarmup_shape)
                 lr = lr * _rw
+                # (EIK-STAB build 2) rollback-guard persistent lr cut: fold the accumulated
+                # x0.5-per-rollback scale into every scheduled assignment. scale==1.0 (legacy mode,
+                # or rollback mode before any rollback) => branch skipped => byte-identical.
+                if _sg_state["lr_scale"] != 1.0:
+                    lr = lr * _sg_state["lr_scale"]
                 opt.learning_rate = float(lr)
             # LEVER-5: base permutation (every pair >=1 step, never starved) + hardness-allocated
             # extras. n_extra=0 (default) => order == permutation(P) => byte-identical to before.
@@ -4847,10 +5275,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 mx.eval(total)
                 gnorm = float(total)
                 # spike-guard: skip non-finite / >spike_factor x running median.
+                # (EIK-STAB build 2) MODE DISPATCH. legacy (default; _sg_guard None): skip =
+                # nonfinite OR spiked — IDENTICAL semantics to the pre-build expression (with a
+                # nonfinite loss the original or-chain short-circuited True; _spiked's isfinite
+                # guard only avoids a nan-comparison, same result). rollback: tolerate single
+                # finite spikes (STEP them — EoS oscillation is the self-stabilization mechanism),
+                # skip only nonfinite, and respond to SUSTAINED runaway with rollback+lr-cut+re-arm.
                 med = float(np.median(recent_losses)) if recent_losses else None
-                skip = (not np.isfinite(batch_loss)) or (not np.isfinite(gnorm)) or (
-                    med is not None and batch_loss > args.spike_factor * med
-                )
+                _nonfinite = (not np.isfinite(batch_loss)) or (not np.isfinite(gnorm))
+                _spiked = bool(med is not None and np.isfinite(batch_loss)
+                               and batch_loss > args.spike_factor * med)
+                _sg_act = None
+                if _sg_guard is not None:
+                    _sg_state["ep_batches"] += 1
+                    if _spiked or _nonfinite:
+                        _sg_state["ep_spikes"] += 1
+                    _sg_act = _sg_guard.observe(_spiked or _nonfinite)
+                    if _sg_act == "exhausted":
+                        if not _sg_state["exhausted_warned"]:
+                            print(json.dumps({
+                                "stage": "spike_rollback_exhausted", "ep": ep,
+                                "rollbacks_used": int(_sg_guard.rollbacks),
+                                "note": "rollback budget spent (--spike-rollback-max); guard "
+                                "REVERTS to legacy skip semantics from here (bounded actuation)"}),
+                                flush=True)
+                            _sg_state["exhausted_warned"] = True
+                        skip = _nonfinite or _spiked
+                    else:
+                        skip = _nonfinite or (_sg_act == "rollback")
+                else:
+                    skip = _nonfinite or _spiked
                 # (#304 item 4) per-term loss telemetry: BEFORE the skip branch so spike-skipped
                 # chunks (the deadlock state) are covered too. Pure no-grad recompute + print.
                 _bidx_lt = s // args.accum_pairs
@@ -4858,6 +5312,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _t_agg, _t_tot = _loss_terms_for_chunk(chunk, seg_form, eik_w_ep)
                     print(json.dumps(_loss_terms_row(
                         _t_agg, _t_tot, ep, _bidx_lt, gnorm=gnorm, skipped=skip)), flush=True)
+                # (EIK-STAB build 2) SUSTAINED-runaway rollback: restore last-good + cut lr +
+                # re-arm, then skip THIS batch's step too (its gradient came from the diverged
+                # state). Legacy mode: _sg_act is None => never fires => byte-identical.
+                if _sg_act == "rollback":
+                    _sg_do_rollback(ep, batch_loss, gnorm)
+                    if (args.mlx_device == "gpu" and args.mlx_cache_clear_accum > 0
+                            and ((s // args.accum_pairs) % args.mlx_cache_clear_accum == 0)):
+                        mx.clear_cache()
+                    continue
                 if skip:
                     print(json.dumps({"stage": "spike_skip", "ep": ep,
                                       "batch_loss": (round(batch_loss, 4) if np.isfinite(batch_loss) else "nonfinite"),
@@ -4898,9 +5361,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     mx.eval(model.film.weight)
                 ema.update(model)
                 mx.eval(list(ema.shadow.values()))
-                recent_losses.append(batch_loss)
-                if len(recent_losses) > 50:
-                    recent_losses.pop(0)
+                # (EIK-STAB build 2) median hygiene: in rollback mode an ACCEPTED-but-spiked batch
+                # must NOT poison the running median (the spike detector's healthy reference).
+                # Legacy mode reaches here only for non-spiked batches => condition True => the
+                # append is byte-identical to the pre-build unconditional append.
+                if _sg_guard is None or not (_spiked or _nonfinite):
+                    recent_losses.append(batch_loss)
+                    if len(recent_losses) > 50:
+                        recent_losses.pop(0)
                 ep_loss += batch_loss
                 # (#205 OOM fix) return the Metal buffer POOL to the OS every N accum-batches. The
                 # lazy graph is already materialized per-pair; this frees the CACHED (already-freed)
@@ -5408,6 +5876,34 @@ def main(argv: list[str] | None = None) -> int:
                     "(GPU only; score-neutral). 0 disables the in-loop clear (pre-fix behaviour).")
     ap.add_argument("--grad-clip", type=float, default=1.0)
     ap.add_argument("--spike-factor", type=float, default=5.0)
+    # (EIK-STAB build 2; sweep lever #3 + #304) spike-guard actuator mode. Default legacy =>
+    # BYTE-IDENTICAL skip-with-frozen-median. rollback = tolerate bounded oscillation (single
+    # finite spikes STEP; EoS self-stabilization is functional) + on SUSTAINED runaway (> frac of
+    # a full window) restore the last-good snapshot, cut lr x lr-cut, re-arm a fresh median.
+    ap.add_argument("--spike-guard-mode", type=str, default="legacy",
+                    choices=("legacy", "rollback"),
+                    help="EIK-STAB build 2: spike-guard actuator (legacy=skip-with-frozen-median; "
+                    "rollback=bounded-oscillation tolerance + rollback-to-last-good + lr cut on "
+                    "sustained runaway). Default legacy (byte-identical).")
+    ap.add_argument("--spike-rollback-window", type=int, default=20,
+                    help="rollback mode: batch window for the sustained-runaway trigger.")
+    ap.add_argument("--spike-rollback-frac", type=float, default=0.5,
+                    help="rollback mode: trigger when spike fraction over a FULL window exceeds this.")
+    ap.add_argument("--spike-rollback-lr-cut", type=float, default=0.5,
+                    help="rollback mode: multiply lr by this on every rollback (persistent).")
+    ap.add_argument("--spike-rollback-max", type=int, default=8,
+                    help="rollback mode: max rollbacks per run; after that the guard reverts to "
+                    "legacy skip semantics (bounded actuation).")
+    # (EIK-STAB build 4; sweep lever #1) lambda_pre HVP probe: measure the Adam-PRECONDITIONED
+    # sharpness lambda_max(P^-1/2 H P^-1/2) at the (resumed) start state via preconditioned power
+    # iteration with finite-difference HVPs over the FULL n-pair batch, print JSON rows, and EXIT
+    # before any training step. Tests the Adam-EoS threshold law lambda_pre* ~= 38/eta
+    # (litsweep DOMAIN 2) against the measured lr bracket. Default 0 => OFF => byte-identical.
+    ap.add_argument("--lambda-pre-probe-iters", type=int, default=0,
+                    help="EIK-STAB build 4: >0 => run N preconditioned power iterations (FD HVP) "
+                    "at the start state, print lambda_pre rows, and exit WITHOUT training.")
+    ap.add_argument("--lambda-pre-probe-fd-eps", type=float, default=1e-3,
+                    help="relative finite-difference step for the HVP probe.")
     ap.add_argument("--loss-term-log-every", type=int, default=0,
                     help="(#304 item 4) per-term loss telemetry cadence in accum chunks: 0 (default) "
                     "= first chunk of each epoch (standing per-epoch summary); N>0 = every N chunks; "
@@ -5810,6 +6306,21 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-5 (margin source): GT-margin threshold defining a flip-prone pixel for "
                     "the per-pair hardness = mean(gt_margin < band).")
     # LEVEL-SET REG
+    # (EIK-STAB build 1) the two candidate eikonal-runaway CURES (litsweep DOMAIN 1), both
+    # default-OFF => byte-identical; the n24 arbitration probe decides which (if either) rides
+    # the GO-gated relaunch. steik = ADDITIVE StEik directional-divergence damping
+    # (arXiv 2305.18414: mean |grad m^T H(m) grad m|, damps only the normal-direction unstable
+    # mode). viscosity = ViscoReg vanishing-viscosity residual (arXiv 2507.00412: REPLACES
+    # (|grad m|-1)^2 with (|grad m|-1-eps*Lap m)^2 while eps>0; anneal eps -> 0).
+    ap.add_argument("--eikonal-steik-weight", type=float, default=0.0,
+                    help="EIK-STAB build 1a: StEik directional-divergence stabilizer weight "
+                    "(additive; 0 = OFF = byte-identical).")
+    ap.add_argument("--eikonal-viscosity", type=float, default=0.0,
+                    help="EIK-STAB build 1b: ViscoReg viscosity eps (replaces the eikonal residual "
+                    "with the viscous form while >0; 0 = OFF = byte-identical).")
+    ap.add_argument("--eikonal-viscosity-anneal", type=int, default=0,
+                    help="EIK-STAB build 1b: linear eps decay to 0 over this many ABSOLUTE epochs "
+                    "(0 = constant eps; ViscoReg-style vanishing viscosity).")
     ap.add_argument("--eikonal-weight", type=float, default=0.01, help="Eikonal |grad phi|->1 (topology bias, small).")
     ap.add_argument("--eikonal-weight-end", type=float, default=None,
                     help="(#292 control-system) STEP the eikonal weight from --eikonal-weight (CE) up "
@@ -6331,6 +6842,34 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError(
             f"--eikonal-junction-tau ({args.eikonal_junction_tau}) must be > 0 (the top2-top3 SDF-gap "
             "scale in exp(-g3/tau)).")
+
+    # (EIK-STAB build 1/2/4) fail-closed config guards (silent-no-op / silent-drop NO-FAKE class).
+    if float(args.eikonal_steik_weight) < 0.0:
+        raise ValueError(f"--eikonal-steik-weight ({args.eikonal_steik_weight}) must be >= 0.")
+    if float(args.eikonal_viscosity) < 0.0:
+        raise ValueError(f"--eikonal-viscosity ({args.eikonal_viscosity}) must be >= 0.")
+    if float(args.eikonal_viscosity) > 0.0 and float(args.eikonal_junction_relax) > 0.0:
+        raise ValueError(
+            "--eikonal-viscosity > 0 REPLACES the eikonal residual (central interior stencil) and "
+            "does NOT carry the junction-relax weight; composing both would SILENTLY drop the "
+            "junction relax. Run one or the other (fail-closed per NO-FAKE).")
+    if int(args.eikonal_viscosity_anneal) > 0 and float(args.eikonal_viscosity) <= 0.0:
+        raise ValueError(
+            "--eikonal-viscosity-anneal set without --eikonal-viscosity > 0: the anneal has no "
+            "effect = a silent no-op. Set --eikonal-viscosity too, or drop the anneal flag.")
+    if args.spike_guard_mode == "rollback":
+        if int(args.spike_rollback_window) < 1:
+            raise ValueError(f"--spike-rollback-window ({args.spike_rollback_window}) must be >= 1.")
+        if not (0.0 < float(args.spike_rollback_frac) <= 1.0):
+            raise ValueError(f"--spike-rollback-frac ({args.spike_rollback_frac}) must be in (0, 1].")
+        if not (0.0 < float(args.spike_rollback_lr_cut) < 1.0):
+            raise ValueError(f"--spike-rollback-lr-cut ({args.spike_rollback_lr_cut}) must be in (0, 1).")
+        if int(args.spike_rollback_max) < 1:
+            raise ValueError(f"--spike-rollback-max ({args.spike_rollback_max}) must be >= 1.")
+    if int(args.lambda_pre_probe_iters) < 0:
+        raise ValueError(f"--lambda-pre-probe-iters ({args.lambda_pre_probe_iters}) must be >= 0.")
+    if int(args.lambda_pre_probe_iters) > 0 and float(args.lambda_pre_probe_fd_eps) <= 0.0:
+        raise ValueError(f"--lambda-pre-probe-fd-eps ({args.lambda_pre_probe_fd_eps}) must be > 0.")
 
     result = run_train(args)
     print("\n=== LEVEL-SET WITNESS RESULT (realized through R) ===")
