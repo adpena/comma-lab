@@ -4146,10 +4146,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (the median gates step-skipping = part of the trajectory). DEFAULT-SAFE: no resume, or a pre-#205
     # sidecar without __recent_losses => the fresh [] is used (prior behavior). MLX-free.
     if resume_cfg is not None and "__recent_losses" in resume_cfg:
-        _rl = resume_cfg["__recent_losses"]
-        recent_losses = [float(x) for x in (_rl if isinstance(_rl, list) else [_rl])]
-        print(json.dumps({"stage": "resume_spike_guard", "restored_recent_losses": len(recent_losses)}),
-              flush=True)
+        if bool(getattr(args, "resume_clear_spike_guard", False)):
+            # DEADLOCK RE-TREAT (explicit, flag-gated): discard the frozen window so the median
+            # re-anchors to the post-resume loss level (guard re-arms after the FIRST accepted
+            # batch — exposure is 1 batch, not 50). Bit-faithful default path below is unchanged.
+            _rl = resume_cfg["__recent_losses"]
+            _n_disc = len(_rl) if isinstance(_rl, (list, np.ndarray)) else 1
+            print(json.dumps({"stage": "resume_spike_guard", "restored_recent_losses": 0,
+                              "cleared_frozen_window_len": int(_n_disc),
+                              "note": "--resume-clear-spike-guard: frozen median discarded "
+                              "(spike-skip deadlock re-treat); re-seeds from first accepted batch"}),
+                  flush=True)
+        else:
+            _rl = resume_cfg["__recent_losses"]
+            recent_losses = [float(x) for x in (_rl if isinstance(_rl, list) else [_rl])]
+            print(json.dumps({"stage": "resume_spike_guard",
+                              "restored_recent_losses": len(recent_losses)}),
+                  flush=True)
     last_ep = start_epoch - 1
     stage_ckpts: list[dict[str, Any]] = []
     # (#292 build-2) EVENT-TRIGGERED CURRICULUM controller state. _evt_on gates the ENTIRE feature:
@@ -5126,6 +5139,14 @@ def main(argv: list[str] | None = None) -> int:
                     "hosc_beta_end / mod_dim) DIFFER from the checkpoint's training config. DEFAULT OFF "
                     "= FAIL-CLOSED (a silent lever drop is a deterministic-repro violation). Set ON only "
                     "for an INTENTIONAL warm-start re-treatment (loss/render-only levers add no params).")
+    ap.add_argument("--resume-clear-spike-guard", action=argparse.BooleanOptionalAction, default=False,
+                    help="(CE-window pre-stage 2026-07-05) on --resume-from, DISCARD the checkpoint's "
+                    "saved spike-guard window (__recent_losses) instead of restoring it, so the guard "
+                    "re-seeds its running median from the first post-resume accepted batch. The escape "
+                    "for the measured guard DEADLOCK class: the median updates only on ACCEPTED batches, "
+                    "so after a persistent >spike_factor loss-level shift EVERY batch skips forever "
+                    "(#205 run 20260705T015247Z: 75/75 skips/ep from ep92, frozen median ~6-8 vs loss "
+                    "~58-66). DEFAULT OFF = the bit-faithful restore is unchanged.")
     ap.add_argument("--freeze-decoder-fit-codes", type=str, default=None,
                     help="FEED-eo AMORTIZATION (days->hours): load the SHARED decoder from this level-set "
                     "EMA/deploy npz (trained on a SUBSET, e.g. n96/n192), FREEZE it, and fit ONLY the "
