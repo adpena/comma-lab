@@ -752,6 +752,27 @@ def cpu_verdict_d_seg_batch(segnet_cpu, frames1_uint8: list, gt_argmax_list: lis
     return [float(np.count_nonzero(realized[i] != g)) / g.size for i, g in enumerate(gt_argmax_list)]
 
 
+def cpu_verdict_d_seg_argmax_batch(segnet_cpu, frames1_uint8: list, gt_argmax_list: list):
+    """(#302 nucleus guard) Batched SegNet argmax verdict that ALSO returns the realized argmax maps
+    in ONE forward (no double cost). Returns ``(d_seg_list, realized (N,h,w) int64)``.
+
+    The ``d_seg_list`` is BIT-IDENTICAL to ``cpu_verdict_d_seg_batch`` (same preprocess -> forward ->
+    argmax(dim=1) -> per-pixel disagreement). The extra return value is the same ``realized`` argmax
+    the per-pair count already used, exposed so the per-class critical-nucleus guard
+    (``_evt_nucleus_counts``) can decompose the flip mass by class WITHOUT a second SegNet forward.
+    Additive: nothing calls this unless the nucleus guard / readiness telemetry is engaged."""
+    import torch
+
+    arr = np.stack([np.asarray(f)[None] for f in frames1_uint8], axis=0)  # (N,1,H,W,3)
+    xp = torch.from_numpy(arr).permute(0, 1, 4, 2, 3).contiguous().float()  # (N,1,3,H,W)
+    with torch.inference_mode():
+        seg_in = segnet_cpu.preprocess_input(xp)
+        realized = segnet_cpu(seg_in).argmax(dim=1).cpu().numpy().astype(np.int64)  # (N,h,w)
+    d_seg = [float(np.count_nonzero(realized[i] != g)) / g.size
+             for i, g in enumerate(gt_argmax_list)]
+    return d_seg, realized
+
+
 def cpu_verdict_d_pose_batch(posenet_cpu, f0_uint8: list, f1_uint8: list, gt_pose_list: list) -> list:
     """Batched PoseNet MSE verdict over N pairs -> list of d_pose. Mirrors ``_cpu_pose_raw``."""
     import einops

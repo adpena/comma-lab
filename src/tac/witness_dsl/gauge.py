@@ -647,6 +647,16 @@ class CurriculumGauge(Enum):
                   BUILDs named in the memo run-3 spec: per-class nucleus guard (handoff law's
                   forall-class clause), Muon engage-on-trigger (Muon is verified NOT event-fireable
                   today), geometric ``--hosc-beta-anneal`` (choices are linear|cosine only).
+      HANDOFF_NUCLEUS = (#302 build, LANDED) the COMPLETED CE->tau hand-off: the recalibrated
+                  event trigger (``--curriculum-event-triggered``; eps default now 1e-4) GATED on
+                  the per-class critical-nucleus guard (``--curriculum-nucleus-guard`` — forall
+                  scored class BORN part_frac>0 AND FORMED within-flip<=thresh, MEASURED at verdict
+                  cadence), with the TAU-RELATIVE wall-clock levers re-anchored to the fired boundary
+                  (``--curriculum-reanchor-levers``: persistence-warmup + seed-anneal + analytic
+                  band) and the per-class handoff_readiness telemetry on. This is DERIVED_NATIVE's
+                  stagger SUPERSEDED by event-triggering (the levers now track the FIRED tau, so the
+                  fixed 275 stagger is unnecessary) COMPOSED with the nucleus guard. All flags
+                  DEFAULT-OFF => byte-identical until this chart emits them; net d_seg is a run-3 A/B.
       UNIFIED_ENERGY = the theta*/capstone design (ONE continuously-annealed energy, costate
                   controller, stages dissolve; #218/#78/#247 lineage) — DESIGN-STAGE, fail-closed.
     UNMEASURED as arms -> net d_seg is a run-3-class A/B (net-S gated, operator-GO gated; MEANS,
@@ -654,6 +664,7 @@ class CurriculumGauge(Enum):
 
     PR95_ECHO = "pr95_echo"              # run-2 as launched: fixed-epoch clock = () byte-identical
     DERIVED_NATIVE = "derived_native"    # run-3 delta: collision stagger + finisher EMA (real flags)
+    HANDOFF_NUCLEUS = "handoff_nucleus"  # #302 build: event trigger + per-class nucleus guard + reanchor
     UNIFIED_ENERGY = "unified_energy"    # theta* design-stage (fail-closed NotImplementedError)
 
 
@@ -1072,6 +1083,19 @@ CURRICULUM_TRAINER_FLAGS: dict[CurriculumGauge, tuple[str, ...]] = {
         "--seed-anneal-epochs", "275",
         "--persistence-warmup-epochs", "275",
         "--ema-decay-finisher", "0.9995",
+    ),
+    # (#302 build, LANDED) the completed CE->tau hand-off: recalibrated event trigger (eps default
+    # now 1e-4) + per-class nucleus guard + tau-relative lever re-anchor + readiness telemetry.
+    # Event-triggering makes the levers track the FIRED tau, so the fixed 275 collision stagger is
+    # unnecessary here (re-anchor replaces it). Compose with the finisher-EMA arm separately.
+    CurriculumGauge.HANDOFF_NUCLEUS: (
+        "--curriculum-event-triggered",
+        "--curriculum-plateau-rel-eps", "1e-4",
+        "--curriculum-plateau-windows", "25",
+        "--curriculum-min-stage-epochs", "250",
+        "--curriculum-nucleus-guard",
+        "--curriculum-reanchor-levers",
+        "--handoff-readiness-telemetry",
     ),
 }
 

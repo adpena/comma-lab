@@ -151,8 +151,10 @@ def _max_rel_grad_err(g_batched, g_mean):
 
 
 def _batched_and_meanpairs(env, lc, *, w_seg=100.0, w_pose=1.0, hinge=4.0, mtgt=0.5,
-                           seg_form=None, eik_w=0.0, len_w=0.0):
-    """Return (loss_batched, grad_batched, mean_loss_pairs, mean_grad_pairs)."""
+                           seg_form=None, eik_w=0.0, len_w=0.0, render_fn_wa=None):
+    """Return (loss_batched, grad_batched, mean_loss_pairs, mean_grad_pairs). ``render_fn_wa``
+    routes the island levers (amplify/persistence) through a distinct (seed-excluded) forward in
+    BOTH the batched and the mean-of-per-pair paths — the equivalence gate for the wa leg."""
     model = env["model"]
 
     def _bfn(m):
@@ -160,7 +162,7 @@ def _batched_and_meanpairs(env, lc, *, w_seg=100.0, w_pose=1.0, hinge=4.0, mtgt=
             m, env["adapter"], _render_fn, env["rh"], env["rw"],
             env["cf_list"], env["c0_list"], env["c1_list"],
             env["oh_list"], env["mg_list"], env["pt_list"],
-            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc)
+            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, render_fn_wa=render_fn_wa)
 
     lb, gb = nn.value_and_grad(model, _bfn)(model)
     mx.eval(lb, gb)
@@ -175,7 +177,7 @@ def _batched_and_meanpairs(env, lc, *, w_seg=100.0, w_pose=1.0, hinge=4.0, mtgt=
             m, env["adapter"], _render_fn, env["rh"], env["rw"],
             env["cf_list"][k], env["c0_list"][k], env["c1_list"][k],
             env["oh_list"][k], env["mg_list"][k], env["pt_list"][k],
-            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc)
+            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, render_fn_wa=render_fn_wa)
 
     for k in range(K):
         ls, gs = nn.value_and_grad(model, _sfn)(model, k)
@@ -287,3 +289,232 @@ def test_single_base_matches_canonical_make_loss_fn(seg_form, score_domain):
     assert abs(float(ls) - float(lc_val)) / (abs(float(lc_val)) + 1e-6) < 1e-4, (seg_form, score_domain, float(ls), float(lc_val))
     err = _max_rel_grad_err(gs, gc)
     assert err < 1e-4, f"{seg_form} score_domain={score_domain} base-vs-canonical grad err {err:.2e}"
+
+
+# ===========================================================================
+# MB-TWIN #313 — newly-ROUTED legs (were fail-closed): focal / boundary-distance /
+# eik-stab (ViscoReg + StEik) / witness-alone-island routing. Each pins the SAME #1 gate:
+# batched grad == mean-of-per-pair grad within fp tol (MLX-CPU ~1e-7). The fail-closed
+# remainder (msal-reachability, spike-reweight) is a trainer-level gate, tested separately below.
+# ===========================================================================
+_FOCAL = _lvl.focal_pixel_weight_mlx
+_BDTERM = _lvl.boundary_distance_term_mlx
+_BDBAND = _lvl.boundary_distance_band_map
+_VISCO = _lvl._eikonal_visco_mlx
+_STEIK = _lvl._eikonal_steik_mlx
+
+
+def _island_weight_prov(env, val=1.0):
+    """dict[pair -> (1,H,W) island weight] keyed by pi == c1//2 (same key the levers use)."""
+    prov = {}
+    for k in range(len(env["c1_list"])):
+        pi = int(env["c1_list"][k]) // 2
+        prov[pi] = mx.array(np.full((1, env["rh"], env["rw"]), val, np.float32))
+    return prov
+
+
+def _bd_band_prov(env, band_px=2.0):
+    """dict[pair -> (1,H,W) GT-boundary band map] built from each pair's GT argmax."""
+    prov = {}
+    for k in range(len(env["c1_list"])):
+        pi = int(env["c1_list"][k]) // 2
+        arg = np.asarray(env["oh_list"][k])[0].argmax(-1).astype(np.int64)  # (H,W)
+        prov[pi] = mx.array(_BDBAND(arg, band_px=band_px)[None].astype(np.float32))
+    return prov
+
+
+# ---- LEG 1: FOCAL ---------------------------------------------------------
+@pytest.mark.parametrize("seg_form", ["ce", "tau_softplus", "l7_softplus", "margin_hinge"])
+@pytest.mark.parametrize("K", [2, 3])
+def test_leg_focal_batched_grad_equals_mean_of_pairs(seg_form, K):
+    env = _build(K, seed=400 + K)
+    lc = _base_lc(seg_loss_default=seg_form, focal_gamma=2.0, focal_pixel_weight=_FOCAL)
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form=seg_form, eik_w=1e-2, len_w=1e-3)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (seg_form, K, lb, lm)
+    err = _max_rel_grad_err(gb, gm)
+    assert err < 1e-4, f"focal {seg_form} K={K} grad err {err:.2e}"
+
+
+def test_leg_focal_single_matches_canonical_make_loss_fn_with_gamma():
+    """The batched twin's focal must be BIT-consistent with the canonical make_loss_fn focal path
+    (same focal_pixel_weight callable, same multiplicative fold) — the one-math-one-backend gate."""
+    from experiments.train_witness_realized_through_R_mlx import make_loss_fn
+
+    env = _build(1, seed=411)
+    gamma = 2.5
+    lc = _base_lc(seg_loss_default="ce", focal_gamma=gamma, focal_pixel_weight=_FOCAL)
+    w_seg, w_pose, hinge, mtgt = 100.0, 1.0, 4.0, 0.5
+
+    def _sfn(m):
+        return single_realized_loss(
+            m, env["adapter"], _render_fn, env["rh"], env["rw"],
+            env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+            env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+            w_seg, w_pose, hinge, mtgt, "ce", 0.0, 0.0, lc)
+
+    ls, gs = nn.value_and_grad(env["model"], _sfn)(env["model"])
+    mx.eval(ls, gs)
+    canonical = make_loss_fn(env["adapter"], env["rh"], env["rw"], score_domain=True,
+                             pose_eps=lc.pose_eps, seg_loss="ce", tau_softplus_tau=lc.tau_use,
+                             l7_mult=lc.l7_mult, l7_threshold=lc.l7_thr_use, render_fn=_render_fn,
+                             focal_gamma=gamma)
+
+    def _cfn(m):
+        return canonical(m, env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+                         env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+                         w_seg, w_pose, hinge, mtgt)
+
+    lcv, gc = nn.value_and_grad(env["model"], _cfn)(env["model"])
+    mx.eval(lcv, gc)
+    assert abs(float(ls) - float(lcv)) / (abs(float(lcv)) + 1e-6) < 1e-4, (float(ls), float(lcv))
+    assert _max_rel_grad_err(gs, gc) < 1e-4
+
+
+def test_leg_focal_actually_changes_the_loss():
+    """NO-FAKE: focal>0 must MOVE the loss vs focal=0 (else it's a silent no-op)."""
+    env = _build(2, seed=412)
+    l_off = _batched_and_meanpairs(env, _base_lc(seg_loss_default="ce"), seg_form="ce")[0]
+    l_on = _batched_and_meanpairs(env, _base_lc(seg_loss_default="ce", focal_gamma=2.0,
+                                                focal_pixel_weight=_FOCAL), seg_form="ce")[0]
+    assert abs(l_on - l_off) > 1e-6, (l_on, l_off)
+
+
+# ---- LEG 2: BOUNDARY-DISTANCE --------------------------------------------
+@pytest.mark.parametrize("K", [2, 4])
+def test_leg_boundary_distance_batched_grad_equals_mean_of_pairs(K):
+    env = _build(K, seed=500 + K)
+    lc = _base_lc(bd_w=0.3, bd_band_prov=_bd_band_prov(env), boundary_distance_term=_BDTERM)
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="ce", eik_w=1e-2, len_w=1e-3)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (K, lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4
+
+
+def test_leg_boundary_distance_actually_changes_the_loss():
+    env = _build(2, seed=511)
+    l_off = _batched_and_meanpairs(env, _base_lc(), seg_form="ce")[0]
+    l_on = _batched_and_meanpairs(env, _base_lc(bd_w=0.3, bd_band_prov=_bd_band_prov(env),
+                                                boundary_distance_term=_BDTERM), seg_form="ce")[0]
+    assert abs(l_on - l_off) > 1e-6, (l_on, l_off)
+
+
+# ---- LEG 3: EIK-STAB (ViscoReg + StEik) ----------------------------------
+@pytest.mark.parametrize("K", [2, 3])
+def test_leg_eik_viscosity_batched_grad_equals_mean_of_pairs(K):
+    env = _build(K, seed=600 + K)
+    lc = _base_lc(eik_stab={"visco_eps": 0.05, "steik_w": 0.0}, eikonal_visco=_VISCO,
+                  eikonal_steik=_STEIK)
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="ce", eik_w=1e-2, len_w=1e-3)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (K, lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4
+
+
+@pytest.mark.parametrize("K", [2, 3])
+def test_leg_eik_steik_batched_grad_equals_mean_of_pairs(K):
+    env = _build(K, seed=650 + K)
+    lc = _base_lc(eik_stab={"visco_eps": 0.0, "steik_w": 0.02}, eikonal_visco=_VISCO,
+                  eikonal_steik=_STEIK)
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="ce", eik_w=1e-2, len_w=1e-3)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (K, lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4
+
+
+def test_leg_eik_viscosity_replaces_residual_not_double_counts():
+    """ViscoReg REPLACES the eikonal residual (not additive): visco-on differs from visco-off. The
+    eikonal term is ISOLATED (w_seg=w_pose=len_w=0, eik_w=1) so its magnitude is not swamped by the
+    ~1e4 seg/pose loss (fp32 resolution)."""
+    env = _build(2, seed=611)
+    l_legacy = _batched_and_meanpairs(env, _base_lc(), seg_form="ce",
+                                      w_seg=0.0, w_pose=0.0, eik_w=1.0, len_w=0.0)[0]
+    l_visco = _batched_and_meanpairs(
+        env, _base_lc(eik_stab={"visco_eps": 0.05, "steik_w": 0.0}, eikonal_visco=_VISCO,
+                      eikonal_steik=_STEIK), seg_form="ce",
+        w_seg=0.0, w_pose=0.0, eik_w=1.0, len_w=0.0)[0]
+    assert abs(l_visco - l_legacy) > 1e-6, (l_visco, l_legacy)
+    # eik_w=0 kills BOTH the legacy residual and the visco replacement -> visco branch rides eik_w
+    # (replaces the SAME term) -> with only the length term left, visco-on == visco-off.
+    l_visco_noeik = _batched_and_meanpairs(
+        env, _base_lc(eik_stab={"visco_eps": 0.05, "steik_w": 0.0}, eikonal_visco=_VISCO,
+                      eikonal_steik=_STEIK), seg_form="ce",
+        w_seg=0.0, w_pose=0.0, eik_w=0.0, len_w=1.0)[0]
+    l_legacy_noeik = _batched_and_meanpairs(env, _base_lc(), seg_form="ce",
+                                            w_seg=0.0, w_pose=0.0, eik_w=0.0, len_w=1.0)[0]
+    assert abs(l_visco_noeik - l_legacy_noeik) / (abs(l_legacy_noeik) + 1e-9) < 1e-5
+
+
+# ---- LEG 4: WITNESS-ALONE ISLAND ROUTING ---------------------------------
+def _render_fn_wa(model, cf, code_idx, rh, rw):
+    # DISTINCT (seed-excluded analog) render: a genuine perturbation so sl_wa != sl and the
+    # routing is OBSERVABLE. Both batched + single use this SAME fn -> equivalence must hold.
+    return mx.reshape(model(cf, int(code_idx)) * 0.85 + 6.0, (1, rh, rw, 3))
+
+
+@pytest.mark.parametrize("K", [2, 3])
+def test_leg_wa_island_amplify_batched_grad_equals_mean_of_pairs(K):
+    env = _build(K, seed=700 + K)
+    lc = _base_lc(wa_island=True, amplify_w=0.6, amplify_mtgt=1.0, amplify_form="hinge",
+                  island_weight_mx=_island_weight_prov(env))
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="ce", eik_w=1e-2, len_w=1e-3,
+                                            render_fn_wa=_render_fn_wa)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (K, lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4
+
+
+@pytest.mark.parametrize("K", [2, 3])
+def test_leg_wa_island_persist_batched_grad_equals_mean_of_pairs(K):
+    env = _build(K, seed=750 + K)
+    lc = _base_lc(wa_island=True, persist_gate={"w": 0.4}, persist_classes=(1, 3),
+                  persist_cldice_iters=3, persist_recall_w=1.0)
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="ce", eik_w=1e-2, len_w=1e-3,
+                                            render_fn_wa=_render_fn_wa)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (K, lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4
+
+
+def test_leg_wa_island_routing_is_real_not_aliased():
+    """NO-FAKE: with wa_island ON and a DISTINCT render_fn_wa, the amplify term must read the
+    seed-excluded forward -> loss differs from the aliased (render_fn_wa=None) case. If the two
+    were equal, the wa routing would be a silent no-op."""
+    env = _build(2, seed=711)
+    lc = _base_lc(wa_island=True, amplify_w=0.6, amplify_mtgt=1.0, amplify_form="hinge",
+                  island_weight_mx=_island_weight_prov(env))
+    l_wa = _batched_and_meanpairs(env, lc, seg_form="ce", render_fn_wa=_render_fn_wa)[0]
+    l_aliased = _batched_and_meanpairs(env, lc, seg_form="ce", render_fn_wa=None)[0]
+    assert abs(l_wa - l_aliased) > 1e-6, (l_wa, l_aliased)
+
+
+def test_leg_wa_off_is_byte_identical_regardless_of_render_fn_wa():
+    """When wa_island is False, passing render_fn_wa must NOT change anything (no 2nd forward):
+    the island levers alias the composed forward -> byte-identical to render_fn_wa=None."""
+    env = _build(2, seed=712)
+    lc = _base_lc(wa_island=False, amplify_w=0.6, amplify_mtgt=1.0, amplify_form="hinge",
+                  island_weight_mx=_island_weight_prov(env))
+    l_passed = _batched_and_meanpairs(env, lc, seg_form="ce", render_fn_wa=_render_fn_wa)[0]
+    l_none = _batched_and_meanpairs(env, lc, seg_form="ce", render_fn_wa=None)[0]
+    assert abs(l_passed - l_none) < 1e-9, (l_passed, l_none)
+
+
+def test_leg_wa_no_island_lever_no_second_forward():
+    """wa_island True but NO island lever engaged -> _wa_route_active False -> render_fn_wa ignored
+    (base + surgical levers never read a wa forward) -> byte-identical to wa off."""
+    from tac.boundary_math.levelset_micro_batch_loss import _wa_route_active
+    lc = _base_lc(wa_island=True)  # no amplify / persist
+    assert _wa_route_active(lc, _render_fn_wa) is False
+
+
+# ---- COMBINED: all four legs stacked still equivalent ---------------------
+def test_all_four_new_legs_stacked_batched_grad_equals_mean_of_pairs():
+    K = 3
+    env = _build(K, seed=800)
+    lc = _base_lc(
+        seg_loss_default="ce", focal_gamma=2.0, focal_pixel_weight=_FOCAL,
+        bd_w=0.3, bd_band_prov=_bd_band_prov(env), boundary_distance_term=_BDTERM,
+        eik_stab={"visco_eps": 0.05, "steik_w": 0.02}, eikonal_visco=_VISCO, eikonal_steik=_STEIK,
+        wa_island=True, amplify_w=0.6, amplify_mtgt=1.0, amplify_form="hinge",
+        island_weight_mx=_island_weight_prov(env),
+        persist_gate={"w": 0.3}, persist_classes=(1, 3), persist_cldice_iters=3,
+    )
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="ce", eik_w=1e-2, len_w=1e-3,
+                                            render_fn_wa=_render_fn_wa)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (lb, lm)
+    err = _max_rel_grad_err(gb, gm)
+    assert err < 1e-4, f"all-four-legs grad err {err:.2e}"

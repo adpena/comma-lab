@@ -150,6 +150,45 @@ def build_curriculum_handoff_critical_nucleus_v1() -> CanonicalEquation:
             "re-derive the plateau constants if the vehicle's CE timescale shifts (they are "
             "trajectory-calibrated); the nucleus guard itself is a BUILD (run-3 spec item 1b)"),
     )
+    # (#302 build, LANDED 2026-07-05) the per-class nucleus guard + readiness telemetry that
+    # IMPLEMENT the law's forall-class clause. Additive anchor: the law was DERIVED (anchor above);
+    # this records that its measured trigger is now BUILT (default-OFF, byte-identical), so the
+    # NEXT run passively yields the per-class validation data the law needs to be confirmed.
+    build_anchor = EmpiricalAnchor(
+        anchor_id="handoff_nucleus_guard_build_landed_20260705",
+        measurement_utc="2026-07-05T20:30:00Z",
+        inputs={
+            "trainer": "experiments/train_levelset_witness_realized_through_R_mlx.py "
+                       "(_evt_nucleus_counts/_evt_nucleus_stats/_evt_nucleus_satisfied/"
+                       "_evt_readiness_row/_evt_reanchor_epoch + _verdict_dseg_dpose_nucleus_chunked)",
+            "flags": "--curriculum-nucleus-guard / --curriculum-nucleus-within-flip / "
+                     "--handoff-readiness-telemetry / --curriculum-reanchor-levers; "
+                     "--curriculum-plateau-rel-eps default recalibrated 1e-3->1e-4",
+            "gauge": "tac.witness_dsl.gauge.CurriculumGauge.HANDOFF_NUCLEUS",
+        },
+        predicted_output={
+            "forall_class_clause": "MEASURED at verdict cadence: fire CE->tau only when every scored "
+                                   "class is BORN (part_frac>0) AND FORMED (within-flip<=thresh)",
+        },
+        empirical_output={
+            "byte_identity_off": "all flags default-OFF => nucleus_ready True, verdict path unchanged "
+                                 "(_verdict_dseg_dpose_chunked), no readiness row => the #205 path is "
+                                 "byte-identical (existing event/closed-loop tests 39/39 green)",
+            "tests": "21 pure-function tests (guard/trigger/reanchor/counts/readiness) green",
+            "cap_never_hangs": "the hardcoded cap still fires unconditionally even if nucleus never "
+                               "satisfies (verified)",
+            "readiness_telemetry": "handoff_readiness row emitted per verdict (observability-first: "
+                                   "the next run yields per-class validation data even trigger-OFF)",
+        },
+        residual=0.0,
+        source_artifact=".omx/research/event_handoff_perclass_lambda_20260705.md",
+        measurement_method="build landing (default-OFF byte-identity + 21 unit tests); no new "
+                           "training run — the per-class nucleus DATA is a run-3 A/B (net-S gated)",
+        empirical_verification_status="VERIFIED_VIA_SOURCE_INSPECTION",
+        provenance=_sidecar_prov(
+            "confirm the within-flip threshold empirically from the NEXT run's handoff_readiness "
+            "telemetry (the theoretical knee pi_1~5 is the operational proxy target)"),
+    )
     return CanonicalEquation(
         equation_id="curriculum_handoff_critical_nucleus_v1",
         name=("CE->tau handoff = readiness trigger: fire <=> plateau(|rel slope|<=1e-4, 25-ep "
@@ -174,7 +213,7 @@ def build_curriculum_handoff_critical_nucleus_v1() -> CanonicalEquation:
         units_in={"rel_slope": "per_epoch_fraction", "epochs_in_stage": "epochs",
                   "per_class_nucleus_ok": "bool_per_scored_class"},
         units_out={"fire": "bool"},
-        empirical_anchors=(anchor,),
+        empirical_anchors=(anchor, build_anchor),
         predicted_vs_empirical_residual={
             # naive eps 1e-3 vs measured knee: fires 124+ epochs early on #205's trace
             "naive_eps_early_fire_epochs": 124.0,

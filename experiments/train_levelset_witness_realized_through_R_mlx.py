@@ -67,6 +67,7 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     _seed_muon_momentum_from_adam,
     _torch_R_to_camera_uint8,
     cpu_verdict_d_pose_batch,
+    cpu_verdict_d_seg_argmax_batch,
     cpu_verdict_d_seg_batch,
     focal_pixel_weight_mlx,
     implied_score_from_verdict,
@@ -162,6 +163,36 @@ def _verdict_dseg_dpose_chunked(
         ds_all.extend(cpu_verdict_d_seg_batch(seg_cpu, f1s[s:e], lstars[s:e]))
         dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
     return float(np.mean(ds_all)), float(np.mean(dp_all))
+
+
+def _verdict_dseg_dpose_nucleus_chunked(
+    seg_cpu: Any, posenet_cpu: Any,
+    f0s: list, f1s: list, lstars: list, poses: list, *, vbatch: int,
+) -> "tuple[float, float, dict]":
+    """(#302 nucleus guard) Same chunked mean d_seg / d_pose as ``_verdict_dseg_dpose_chunked`` PLUS
+    the per-class critical-nucleus COUNTS, in the SAME single SegNet forward (no double cost).
+
+    Returns ``(d_seg, d_pose, counts)`` where ``counts`` is the accumulated ``_evt_nucleus_counts``
+    dict over all pairs. The d_seg / d_pose are BIT-IDENTICAL to ``_verdict_dseg_dpose_chunked``
+    (same ``cpu_verdict_d_seg_argmax_batch`` d_seg + same ``cpu_verdict_d_pose_batch`` MSE). The
+    argmax the seg verdict already computed is decomposed by class per chunk and accumulated, so the
+    nucleus guard costs ZERO extra SegNet forwards. Called ONLY when the nucleus guard / readiness
+    telemetry is engaged (else the OFF path uses ``_verdict_dseg_dpose_chunked`` unchanged =>
+    byte-identical). ``vbatch <= 0`` runs the single-batch path (parity check)."""
+    n = len(f1s)
+    vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
+    ds_all: list[float] = []
+    dp_all: list[float] = []
+    counts: "dict | None" = None
+    for s in range(0, n, vb):
+        e = min(s + vb, n)
+        ds_chunk, realized = cpu_verdict_d_seg_argmax_batch(seg_cpu, f1s[s:e], lstars[s:e])
+        ds_all.extend(ds_chunk)
+        dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+        counts = _evt_counts_add(
+            counts, _evt_nucleus_counts([realized[i] for i in range(e - s)], lstars[s:e]))
+    return (float(np.mean(ds_all)), float(np.mean(dp_all)),
+            counts if counts is not None else _evt_nucleus_counts([], []))
 
 
 def _mlx_mem_gib(mx: Any) -> dict[str, float]:
@@ -431,6 +462,11 @@ def _build_resume_state_arrays(
         out["__evt_stage_start"] = np.asarray(int(evt_curriculum_state.get("stage_start", 1)))
         out["__evt_stage_losses"] = np.asarray(
             list(evt_curriculum_state.get("losses", []) or []), np.float64)
+        # (#302) MEASURED nucleus-readiness state (nucleus half of the CE->tau trigger). Default True
+        # (nucleus guard OFF => never blocks). Persisted so an ON-resume reproduces the SAME fired
+        # epoch bit-faithfully (the guard reads the last verdict's nucleus_ready).
+        out["__evt_nucleus_ready"] = np.asarray(
+            1 if bool(evt_curriculum_state.get("nucleus_ready", True)) else 0)
     # (#292 build-3) CLOSED-LOOP LEVER CONTROL state: persist bump/stop state + the captured verdict
     # history so an ON-run --resume-from is bit-faithful (same classifications => same bumps + stop).
     # Default None (closed-loop OFF, incl. #205) => ZERO new keys => sidecar byte-identical.
@@ -897,6 +933,46 @@ def _eikonal_steik_mlx(phi_pk, render_h: int, render_w: int):
     return mx.mean(mx.abs(dir_div))
 
 
+def _eikonal_steik_normalized_mlx(phi_pk, render_h: int, render_w: int, norm_eps: float = 1e-2):
+    """(V6 SYMPOSIUM #317, EIK-STAB build 1a-N) NORMALIZED StEik: the UNIT-NORMAL second-order
+    curvature n^T H(m) n, n = grad m / |grad m|, in ABSOLUTE VALUE (L1, matching the raw form). This
+    is the theoretically-principled fix for the raw-StEik self-amplification NO-GO measured in the
+    FEED-05v arbitration (raw |grad m^T H grad m| = |grad m|^2 * |n^T H n| carries a QUARTIC |grad m|^2
+    scaling that self-amplifies at the far-from-SDF resumed state where |grad m| >> 1 -> 575x-1431x
+    runaway). Removing the |grad m|^2 factor:
+
+        L_norm = mean | (grad m^T H(m) grad m) / (|grad m|^2 + norm_eps) |   = mean |n^T H n|
+
+    Deep math (why this is the SURGICAL cure, not ViscoReg's isotropic one):
+    * StEik proves the (|grad u|-1)^2 gradient flow is anti-diffusive along grad u (the NORMAL
+      direction n). The unstable mode is EXACTLY the normal-direction 2nd derivative n^T H n. For a
+      true SDF |grad u|=1 everywhere => H(m) grad m = 0 => n^T H n = 0, so penalizing |n^T H n|
+      drives the field toward the SDF property along n WITHOUT the raw form's scaling.
+    * ANISOTROPY vs ViscoReg: Laplacian Lap m = n^T H n + t^T H t (trace = sum of 2nd derivs along
+      ANY orthonormal frame; t = the unit tangent). ViscoReg's viscous residual damps the FULL Lap m
+      (normal + tangential = isotropic; risks eroding the lane dashes = tangential geometry).
+      n^T H n damps the NORMAL direction ONLY (the proven anti-diffusive mode), tangential curvature
+      (dashes / fine boundary geometry) FREE. This is the more-surgical of the two cures by design.
+    * norm_eps regularizes n where |grad m| -> 0 (flat argmax-stable interior, where n is undefined
+      but also IRRELEVANT: there m_xx=m_yy=m_xy=0 too, so dir_div=0 and the term vanishes). At the
+      boundary annulus |grad m| ~ 1 (the eikonal target) so norm_eps=1e-2 leaves the boundary term
+      essentially intact (1/(1+0.01) ~ 0.99) while suppressing spurious flat-region amplification.
+
+    HONEST ADAPTATIONS (per NO-FAKE): same (1)/(2) as _eikonal_steik_mlx (decision-margin field;
+    discrete central stencils on (H-2,W-2)); the normalization by (|grad m|^2 + eps) is OURS (the
+    named FEED-05v follow-up 'normalized variant n^T H n, build only if visco walls' — the paper's
+    directional-divergence integrand is the RAW form; we adapt it to remove the measured
+    self-amplification). Reuses --eikonal-steik-weight for the weight; selected by
+    --eikonal-steik-normalized. Default OFF => this function is NEVER CALLED => byte-identical."""
+    import mlx.core as mx
+
+    gx, gy, m_xx, m_yy, m_xy = _eikonal_margin_interior_mlx(phi_pk, render_h, render_w)
+    dir_div = gx * gx * m_xx + 2.0 * gx * gy * m_xy + gy * gy * m_yy   # grad m^T H(m) grad m
+    gmag2 = gx * gx + gy * gy                                          # |grad m|^2
+    n_hess_n = dir_div / (gmag2 + float(norm_eps))                    # n^T H n (unit-normal curvature)
+    return mx.mean(mx.abs(n_hess_n))
+
+
 def _eikonal_visco_mlx(phi_pk, render_h: int, render_w: int, visco_eps: float):
     """(EIK-STAB build 1b) ViscoReg vanishing-viscosity eikonal residual (arXiv 2507.00412):
     L_veik = mean( (|grad m| - 1 - eps*Lap m)^2 )  [the paper's p=2 form]. The inviscid eikonal
@@ -1324,17 +1400,34 @@ def _evt_resolve_seg_form(ep: int, state: dict, args) -> "tuple[str, dict | None
     ready dict describing the fired transition (deterministic log). PURE w.r.t. ``(ep, state, args)``:
     NO MLX, NO async verdict, NO wall-clock => same seeded loss trajectory (captured in
     ``state['losses']``) => same fired epochs. Only reads PAST epochs' losses (the caller appends the
-    current epoch's ``ep_loss`` at the END of the epoch)."""
+    current epoch's ``ep_loss`` at the END of the epoch).
+
+    (#302) When ``--curriculum-nucleus-guard`` is on, the CE->tau CONVERGENCE fire ALSO requires the
+    MEASURED ``state['nucleus_ready']`` (updated at verdict cadence — the critical-nucleus law: MCF
+    erodes a below-nucleus class, never grows it). This makes the CE->tau fired epoch depend on the
+    verdict cadence (a MEASURED trigger, not pure-on-losses) — but the CAP still fires
+    unconditionally (ceiling fallback => the run never hangs), and ``nucleus_ready`` is persisted in
+    the resume sidecar so an ON-resume is bit-faithful. Guard OFF => ``nucleus_ready`` stays True =>
+    the fire is pure-on-losses exactly as before (byte-identical)."""
     mse = int(getattr(args, "curriculum_min_stage_epochs", 150))
     reps = float(getattr(args, "curriculum_plateau_rel_eps", 1e-3))
     win = int(getattr(args, "curriculum_plateau_windows", 4))
     n = len(state["losses"])
     stage_epochs = list(range(int(state["stage_start"]), int(state["stage_start"]) + n))
 
-    def _fire(boundary_key: str, cap: int, from_form: str, to_form: str):
+    def _fire(boundary_key: str, cap: int, from_form: str, to_form: str, *,
+              nucleus_gate: bool = False):
         converged = _stage_converged(
             stage_epochs, state["losses"],
             min_stage_epochs=mse, plateau_rel_eps=reps, plateau_windows=win)
+        # (#302) MEASURED nucleus gate on the CE->tau hand-off: a plateau is NECESSARY but NOT
+        # SUFFICIENT — hold in the from-stage until every scored class is above its critical nucleus.
+        # The CAP still fires unconditionally below (ceiling fallback). Guard OFF => nucleus_gate
+        # False => this never trips => byte-identical.
+        nucleus_held = bool(nucleus_gate and converged
+                            and not bool(state.get("nucleus_ready", True)))
+        if nucleus_held:
+            converged = False
         hit_cap = (int(cap) > 0 and ep >= int(cap))
         if not (converged or hit_cap):
             return from_form, None
@@ -1343,10 +1436,14 @@ def _evt_resolve_seg_form(ep: int, state: dict, args) -> "tuple[str, dict | None
         state["losses"] = []
         return to_form, {
             "stage": "curriculum_transition_fired", "from": from_form, "to": to_form,
-            "epoch": int(ep), "trigger": ("loss_plateau" if converged else "cap")}
+            "epoch": int(ep),
+            "trigger": ("loss_plateau" if converged else "cap"),
+            "nucleus_gated": bool(nucleus_gate),
+            "nucleus_ready": bool(state.get("nucleus_ready", True))}
 
     if state.get("tau") is None:
-        return _fire("tau", int(args.tau_softplus_start_epoch), "ce", "tau_softplus")
+        return _fire("tau", int(args.tau_softplus_start_epoch), "ce", "tau_softplus",
+                     nucleus_gate=bool(getattr(args, "curriculum_nucleus_guard", False)))
     # (C2 SEAL-review guard, 4bf533cab) l7 is a MEASURED DEFECT stage demoted from the default
     # curriculum by setting --l7-start-epoch >= --epochs ("never"). The convergence trigger must
     # HONOR that intent: never converge-fire l7 when its cap says never (else a tau plateau —
@@ -1356,6 +1453,155 @@ def _evt_resolve_seg_form(ep: int, state: dict, args) -> "tuple[str, dict | None
     if state.get("l7") is None:
         return _fire("l7", int(args.l7_start_epoch), "tau_softplus", "l7_softplus")
     return "l7_softplus", None
+
+
+# ── (#302 curriculum-derivation) PER-CLASS CRITICAL-NUCLEUS GUARD + BOUNDARY RE-ANCHOR ───────────
+# The CE->tau hand-off law (T3 symposium 2026-07-05 §B.2; canonical equation
+# ``curriculum_handoff_critical_nucleus_v1``): the tau stage is sharp-limit mean-curvature flow, and
+# Allen-Cahn's critical-nucleus theorem says any scored class-region BELOW its critical size is
+# ERASED, never grown (MEASURED: #205 seeded a lane at part_frac 0 -> d_seg CREPT 0.004752@ep300 ->
+# 0.006568@ep400 while smooth-loss fell; Muon/MCF cannot nucleate a zero-mass class). Therefore the
+# recalibrated plateau trigger (``_stage_converged``, eps 1e-4) is NECESSARY BUT NOT SUFFICIENT:
+# CE->tau is admissible only when EVERY scored class is ALSO above its nucleus (born + partition
+# formed), else MCF is handed a half-formed partition to erode. The functions below are the guard.
+#
+# ALL PURE (numpy on argmax int arrays; NO MLX / model / async verdict / wall-clock) => same argmax
+# inputs give the same booleans, unit-testable. DEFAULT-OFF: the guard is consulted by the event
+# trigger ONLY when --curriculum-nucleus-guard is set; the readiness telemetry row is emitted
+# passively (observability-first, so the NEXT run yields validation data even with the trigger OFF)
+# but is NEVER read back into training/parity => byte-identical to the #205 path.
+#
+# CANONICAL CLASS ORDER (CLAUDE.md NON-NEGOTIABLE; NOT a luma-sort of class_values):
+#   0=Road 1=Lane 2=Undrivable(incl sky) 3=Movable(cars) 4=MyCar(ego hood).
+N_SCORED_CLASSES = 5
+
+
+def _evt_nucleus_counts(realized_argmax_list: list, gt_argmax_list: list,
+                        n_classes: int = N_SCORED_CLASSES) -> dict:
+    """Raw per-class pixel counts over a batch of realized/GT argmax maps (the COUNTS interchange
+    format — chunk-additive so the chunked verdict can accumulate without holding all argmax).
+
+    ``realized_argmax_list`` / ``gt_argmax_list``: matching lists of (h,w) int argmax maps (the
+    frozen CPU-torch SegNet argmax of the R-rendered witness frame1 and the GT ``lstars`` — the SAME
+    surfaces the d_seg verdict consumes). Returns ``{"total_px", "pred_px":[...], "gt_px":[...],
+    "wrong_px":[...], "n_classes"}``. VERBATIM the arithmetic of
+    ``tools/witness_per_stage_annulus_attribution.stage_stats`` (reused, not reinvented). Pure."""
+    import numpy as _np
+    pred_px = [0] * n_classes
+    gt_px = [0] * n_classes
+    wrong_px = [0] * n_classes
+    total_px = 0
+    for am, g in zip(realized_argmax_list, gt_argmax_list):
+        am = _np.asarray(am).astype(_np.int64)
+        g = _np.asarray(g).astype(_np.int64)
+        wrong = am != g
+        total_px += int(g.size)
+        for c in range(n_classes):
+            pred_px[c] += int((am == c).sum())
+            gt_px[c] += int((g == c).sum())
+            wrong_px[c] += int((wrong & (g == c)).sum())
+    return {"total_px": total_px, "pred_px": pred_px, "gt_px": gt_px,
+            "wrong_px": wrong_px, "n_classes": n_classes}
+
+
+def _evt_counts_add(a: "dict | None", b: dict) -> dict:
+    """Accumulate two ``_evt_nucleus_counts`` dicts (chunk-additive). ``a is None`` => a copy of ``b``."""
+    if a is None:
+        return {"total_px": int(b["total_px"]), "pred_px": list(b["pred_px"]),
+                "gt_px": list(b["gt_px"]), "wrong_px": list(b["wrong_px"]),
+                "n_classes": int(b["n_classes"])}
+    nc = int(b["n_classes"])
+    return {"total_px": int(a["total_px"]) + int(b["total_px"]), "n_classes": nc,
+            "pred_px": [int(a["pred_px"][c]) + int(b["pred_px"][c]) for c in range(nc)],
+            "gt_px": [int(a["gt_px"][c]) + int(b["gt_px"][c]) for c in range(nc)],
+            "wrong_px": [int(a["wrong_px"][c]) + int(b["wrong_px"][c]) for c in range(nc)]}
+
+
+def _evt_nucleus_stats(counts: dict) -> "dict[int, dict]":
+    """Per-class partition-fraction + within-class flip rate from accumulated ``counts``.
+
+    For each class ``c``:
+      * ``part_frac[c]``   = pred_px[c] / total_px (the witness's PREDICTED partition area for ``c``;
+        part_frac == 0 => a zero-mass class MCF cannot nucleate — the binding nucleus gate).
+      * ``within_flip[c]`` = wrong_px[c] / gt_px[c] (per-class disagreement; measured against ``c``'s
+        true support, not per-frame-averaged, so a rare class's flip rate is honest).
+    Returns ``{c: {"part_frac","within_flip","gt_px","pred_px"}}``. Pure."""
+    nc = int(counts["n_classes"])
+    total = int(counts["total_px"])
+    out: dict[int, dict] = {}
+    for c in range(nc):
+        gt = int(counts["gt_px"][c])
+        out[c] = {
+            "part_frac": (int(counts["pred_px"][c]) / total) if total else 0.0,
+            "within_flip": (int(counts["wrong_px"][c]) / gt) if gt else 0.0,
+            "gt_px": gt, "pred_px": int(counts["pred_px"][c]),
+        }
+    return out
+
+
+def _evt_nucleus_satisfied(stats: "dict[int, dict]", within_flip_thresh: float,
+                           min_part_frac: float = 0.0) -> "tuple[dict[int, bool], bool]":
+    """Per-class nucleus satisfaction + the all-classes AND.
+
+    Class ``c`` is ABOVE nucleus iff ``part_frac[c] > min_part_frac`` (BORN — nonzero predicted mass,
+    the MCF-cannot-nucleate gate) AND ``within_flip[c] <= within_flip_thresh`` (FORMED — the partition
+    for ``c`` is settled below the flip threshold). A class with ``gt_px == 0`` in the batch is
+    VACUOUSLY satisfied (not scored on this batch — never blocks the hand-off). Returns
+    ``(per_class_bool, all_ok)``."""
+    per_class: dict[int, bool] = {}
+    for c, s in stats.items():
+        if int(s.get("gt_px", 0)) == 0:
+            per_class[c] = True                     # unscored on this batch => vacuously above nucleus
+            continue
+        per_class[c] = (float(s["part_frac"]) > float(min_part_frac)
+                        and float(s["within_flip"]) <= float(within_flip_thresh))
+    return per_class, all(per_class.values())
+
+
+def _evt_readiness_row(ep: int, seg_form: str, stats: "dict[int, dict]",
+                       satisfied: "dict[int, bool]", nucleus_all_ok: bool, plateau_ok: bool,
+                       within_flip_thresh: float, min_part_frac: float,
+                       guard_active: bool) -> dict:
+    """The deterministic ``handoff_readiness`` telemetry row (JSON-ready). Emitted per verdict even
+    when the CE->tau trigger is OFF (observability-first => the NEXT run passively yields the
+    per-class validation data the hand-off law needs). PURE telemetry — NEVER read back into
+    training/parity/resume. ``ready`` = plateau_ok AND nucleus_all_ok (the full readiness predicate
+    of the hand-off law)."""
+    return {
+        "stage": "handoff_readiness", "epoch": int(ep), "seg_form": str(seg_form),
+        "plateau_ok": bool(plateau_ok), "nucleus_all_ok": bool(nucleus_all_ok),
+        "ready": bool(plateau_ok and nucleus_all_ok), "guard_active": bool(guard_active),
+        "within_flip_thresh": float(within_flip_thresh), "min_part_frac": float(min_part_frac),
+        "per_class": {str(c): {"part_frac": round(float(stats[c]["part_frac"]), 6),
+                               "within_flip": round(float(stats[c]["within_flip"]), 6),
+                               "gt_px": int(stats[c]["gt_px"]),
+                               "nucleus_ok": bool(satisfied[c])}
+                      for c in sorted(stats)},
+    }
+
+
+def _evt_reanchor_epoch(ep: int, boundary_fired: "int | None",
+                        boundary_hardcoded: int) -> int:
+    """(#302 M1) Map a real epoch into the schedule frame a TAU-RELATIVE wall-clock lever was
+    CALIBRATED in, so its boundary-relative event tracks the ACTUAL FIRED tau boundary.
+
+    A lever calibrated so its key event lands at ``boundary_hardcoded`` (the fixed
+    ``--tau-softplus-start-epoch``, default 300) should, under event-triggering, land at the fired
+    boundary ``boundary_fired`` instead. Feeding the lever the SHIFTED epoch
+    ``ep + (boundary_hardcoded - boundary_fired)`` moves the lever's event to ``boundary_fired`` while
+    PRESERVING the schedule's shape + length (a shift, not a rescale). Worked: tau calibrated @300,
+    fires @200 => shift +100 => a lever completing at virtual 300 completes at real 200; the analytic
+    band starting at virtual 350 (=tau+50) starts at real 250 (=fired+50). ``boundary_fired is None``
+    (unfired) OR == ``boundary_hardcoded`` (fired exactly at the cap) => returns ``ep`` UNCHANGED
+    (the byte-identity contract: OFF, unfired, and fire-at-cap all leave every lever bit-for-bit as
+    the #205 path). Pure; unit-tested. Mirrors ``_scheduled_eikonal_weight``'s ``step_epoch``
+    re-anchoring one layer up (eikonal was already re-anchored; this completes the tau-relative set:
+    persistence-warmup + seed-anneal + analytic-band). hosc-beta is NOT re-anchored here — its beta=4
+    freeze is anchored to the MUON boundary, which stays a fixed cap until the Muon-event-trigger
+    BUILD (symposium §C.ii item 5); re-anchoring it to tau would mis-place the freeze point."""
+    if boundary_fired is None or int(boundary_fired) == int(boundary_hardcoded):
+        return int(ep)
+    return int(ep) + (int(boundary_hardcoded) - int(boundary_fired))
 
 
 def _scheduled_eikonal_weight(ep: int, args, step_epoch: "int | None" = None) -> float:
@@ -2712,6 +2958,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # branches in total_loss_fn are skipped => the loss graph is BYTE-IDENTICAL (fully additive).
     _eik_stab = {
         "steik_w": float(getattr(args, "eikonal_steik_weight", 0.0)),
+        # (V6 #317) normalized unit-normal curvature n^T H n instead of raw |grad m^T H grad m|;
+        # default False => raw form => byte-identical to the pre-V6 steik branch.
+        "steik_normalized": bool(getattr(args, "eikonal_steik_normalized", False)),
+        "steik_norm_eps": float(getattr(args, "eikonal_steik_norm_eps", 1e-2)),
         "visco_eps0": float(getattr(args, "eikonal_viscosity", 0.0)),
         "visco_eps": float(getattr(args, "eikonal_viscosity", 0.0)),
         "visco_anneal": int(getattr(args, "eikonal_viscosity_anneal", 0)),
@@ -2953,7 +3203,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # of the eikonal flow), tangential curvature free. Default weight 0.0 => skipped => L is
         # byte-identical.
         if _eik_stab["steik_w"] > 0.0:
-            _steik_contrib = _eik_stab["steik_w"] * _eikonal_steik_mlx(phi0, render_h, render_w)
+            # (V6 #317) NORMALIZED n^T H n (removes the |grad m|^2 self-amplification) when
+            # --eikonal-steik-normalized; else the RAW form (byte-identical to the pre-V6 branch).
+            if _eik_stab["steik_normalized"]:
+                _steik_term = _eikonal_steik_normalized_mlx(
+                    phi0, render_h, render_w, _eik_stab["steik_norm_eps"])
+            else:
+                _steik_term = _eikonal_steik_mlx(phi0, render_h, render_w)
+            _steik_contrib = _eik_stab["steik_w"] * _steik_term
             L = L + _steik_contrib
             if terms_out is not None:
                 terms_out["eik_steik"] = _steik_contrib
@@ -3317,6 +3574,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         rankfloor_w=rankfloor_w, rankfloor_idx=rankfloor_idx, rankfloor_tgt=rankfloor_tgt,
         code_spec_w=code_spec_w, code_spec_idx=code_spec_idx,
         code_nuc_w=code_nuc_w, code_nuc_eps=code_nuc_eps, code_nuc_iters=code_nuc_iters,
+        # (MB-TWIN #313) newly-ROUTED legs (were fail-closed): focal / boundary-distance /
+        # eik-stab (ViscoReg+StEik) / witness-alone-island routing. Callables passed to stay
+        # bit-identical to the canonical helpers (avoids a tac<-trainer import cycle). _eik_stab
+        # is passed BY REFERENCE so the batched twin reads the per-epoch viscosity anneal live.
+        focal_gamma=focal_gamma, focal_pixel_weight=focal_pixel_weight_mlx,
+        bd_w=bd_w, bd_band_prov=_bd_band_prov, boundary_distance_term=boundary_distance_term_mlx,
+        eik_stab=_eik_stab, eikonal_visco=_eikonal_visco_mlx, eikonal_steik=_eikonal_steik_mlx,
+        wa_island=wa_island,
     )
 
     def total_loss_fn_batch(model, cf_list, c0_list, c1_list, oh_list, mg_list, pose_tgt_list,
@@ -3325,10 +3590,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # render_fn (witness / residual-compose / AA / pose-carrier) or the bare R render, exactly as
         # base_loss picks it in total_loss_fn.
         _render = render_fn if render_fn is not None else render_through_R_mlx
+        # (MB-TWIN #313) --witness-alone-island-loss: pass the SEED-EXCLUDED render so the batched twin
+        # routes the island levers (amplify/persistence) through the seed-excluded margin, exactly as
+        # total_loss_fn's _wa_route does. The twin no-ops it (byte-identical) unless wa_island AND an
+        # island lever is engaged. _render_R_wa == _render_R when wa routing is off.
+        _render_wa = _render_R_wa if wa_island else None
         return _micro_batched_realized_loss(
             model, adapter, _render, render_h, render_w,
             cf_list, c0_list, c1_list, oh_list, mg_list, pose_tgt_list,
-            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, _micro_batch_lc)
+            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, _micro_batch_lc,
+            render_fn_wa=_render_wa)
 
     # OPT-IN batched accum path. Build the batched value_and_grad ONLY when engaged (>1).
     # (BUILD #293) BATCHED SEED CO-GRAD: --micro-batch-pairs > 1 now COMPOSES with --seed-islands via
@@ -3344,37 +3615,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # loop takes the UNCHANGED serial path (BYTE-IDENTICAL; the serial _dual_vg dispatch is untouched).
     _micro_batch_pairs = int(getattr(args, "micro_batch_pairs", 1))
     _use_micro_batch = _micro_batch_pairs > 1
-    # BUILD #300 (a) is a SERIAL-path lever (the witness-alone island routing lives in total_loss_fn,
-    # not the importable batched twin tac.boundary_math.levelset_micro_batch_loss). FAIL CLOSED rather
-    # than SILENTLY ignore the routing under --micro-batch-pairs (NO-FAKE: a silently-wrong result is
-    # worse than a refused one). --seed-anneal-epochs (mechanism b) DOES compose with micro-batch (it
-    # lives in _compose_chain, which the batched render invokes) so it is NOT gated here.
-    if wa_island and _use_micro_batch:
-        raise NotImplementedError(
-            "--witness-alone-island-loss is not wired into the --micro-batch-pairs batched loss path "
-            "(serial B=1 only; the island-formation levers route through total_loss_fn's witness-alone "
-            "render, not the batched twin). Run with --micro-batch-pairs 1, or extend "
-            "tac.boundary_math.levelset_micro_batch_loss before batching this lever.")
-    # (--seg-focal-gamma / --boundary-distance-weight) FAIL CLOSED with micro-batch (NO-FAKE: the
-    # batched twin computes its own seg forms in tac.boundary_math.levelset_micro_batch_loss and
-    # would SILENTLY drop both levers — a silently-wrong result is worse than a refused one).
-    if focal_gamma > 0.0 and _use_micro_batch:
-        raise NotImplementedError(
-            "--seg-focal-gamma>0 is not wired into the --micro-batch-pairs batched loss path (the "
-            "batched twin's LeverConfig does not carry the focal reweight yet); run this arm at "
-            "--micro-batch-pairs 1, or extend tac.boundary_math.levelset_micro_batch_loss first.")
-    if bd_w > 0.0 and _use_micro_batch:
-        raise NotImplementedError(
-            "--boundary-distance-weight>0 is not wired into the --micro-batch-pairs batched loss path "
-            "(the boundary term lives in total_loss_fn, serial B=1 only); run this arm at "
-            "--micro-batch-pairs 1, or extend tac.boundary_math.levelset_micro_batch_loss first.")
-    # (EIK-STAB build 1) FAIL CLOSED with micro-batch (NO-FAKE: the batched twin would SILENTLY
-    # drop the stabilizer — a silently-wrong result is worse than a refused one).
-    if (_eik_stab["steik_w"] > 0.0 or _eik_stab["visco_eps0"] > 0.0) and _use_micro_batch:
-        raise NotImplementedError(
-            "--eikonal-steik-weight/--eikonal-viscosity are not wired into the --micro-batch-pairs "
-            "batched loss path (the stabilizer terms live in total_loss_fn, serial B=1 only); run "
-            "at --micro-batch-pairs 1, or extend tac.boundary_math.levelset_micro_batch_loss first.")
+    # (MB-TWIN #313) The witness-alone island routing (#300a), --seg-focal-gamma,
+    # --boundary-distance-weight, and the EIK-STAB stabilizers (--eikonal-viscosity /
+    # --eikonal-steik-weight) are now ROUTED into the batched twin
+    # (tac.boundary_math.levelset_micro_batch_loss): the LeverConfig carries focal / bd /
+    # eik_stab (by-ref) / wa_island, total_loss_fn_batch passes _render_R_wa, and the batched
+    # amplify/persistence read the seed-excluded margin exactly as the serial _wa_route does. The
+    # equivalence (batched grad == mean-of-per-pair grad within fp tol) is pinned per-leg by
+    # src/tac/tests/test_levelset_micro_batch_loss.py. The prior four NotImplementedError
+    # fail-closes are removed. STILL fail-closed below (not yet routed): --margin-saliency-reachability
+    # and --seg-spike-reweight. --seed-anneal-epochs composes via _compose_chain (batched render).
     value_and_grad_batch = None
     _dual_vg_batch = None
     if _use_micro_batch:
@@ -3521,6 +3771,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "band (distance-transform, once per pair); council levelset-loss-geometry "
                           "symposium 2026-07-05; A/B owed (needs GO); pointer 0.19110 UNMOVED"}),
               flush=True)
+        # (MB-TWIN #313) RE-POINT the batched twin's LeverConfig at the populated provider: unlike the
+        # gate dicts (mutated in place, reference-captured), ``_bd_band_prov`` is REASSIGNED from its
+        # None default to a NEW list HERE — AFTER the _micro_batch_lc snapshot above — so the config's
+        # captured None is stale. Without this refresh, --boundary-distance-weight would be SILENTLY
+        # dropped under --micro-batch-pairs (NO-FAKE: a silent wrong result is worse than a refused one).
+        # The serial total_loss_fn is unaffected (it reads _bd_band_prov live at call time).
+        _micro_batch_lc.bd_band_prov = _bd_band_prov
 
     # LEVER-4b (SUB-PIXEL BOUNDARY `t`) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy from the cached
     # gt.margins/gt.lstars -- NO SegNet forward, NO torch autograd), so it is built INLINE here (spike-map
@@ -3793,6 +4050,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             stiefel_project_columns(mx.array(params_np["film.weight"])), np.float32)
         return out
 
+    # (#302) PER-CLASS CRITICAL-NUCLEUS GUARD gate. ON when the CE->tau nucleus guard is enabled OR
+    # the readiness telemetry is requested (the guard consumes the same per-class counts). OFF
+    # (default; the #205 path) => the verdict uses _verdict_dseg_dpose_chunked UNCHANGED, no counts,
+    # no handoff_readiness row, _evt_state["nucleus_ready"] stays True => the trigger + every lever
+    # are byte-identical. The readiness telemetry is OBSERVABILITY-ONLY (never read into training).
+    _nucleus_guard_on = bool(getattr(args, "curriculum_nucleus_guard", False))
+    _nucleus_on = _nucleus_guard_on or bool(getattr(args, "handoff_readiness_telemetry", False))
+    _nucleus_within_flip_thresh = float(getattr(args, "curriculum_nucleus_within_flip", 0.5))
+    _nucleus_min_part_frac = float(getattr(args, "curriculum_nucleus_min_part_frac", 0.0))
+
     def realized_verdict() -> dict[str, float]:
         # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
         # (NOT the MLX-GPU reduced-precision forward — the 4th artifact). This IS the deploy render.
@@ -3809,6 +4076,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (default). The deploy d_pose is OPEN on the witness — measured through the byte-closed
         # store_nothing/table carrier (#205 R1), NO ancestor number (the 3.4e-5 was ANCESTOR-RGB,
         # never validated on this vehicle; see CLAUDE.md "Pose is SOLVED" caveat + axis-9).
+        # (#302) nucleus path: same bit-identical d_seg/d_pose PLUS per-class counts in the SAME
+        # SegNet forward (OFF => the original chunked call, byte-identical, no extra cost).
+        if _nucleus_on:
+            d_seg, d_pose, _ncounts = _verdict_dseg_dpose_nucleus_chunked(
+                seg_cpu, posenet_cpu, f0s, f1s,
+                [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
+                vbatch=int(args.verdict_batch))
+            return {"d_seg": d_seg, "d_pose": d_pose, "nucleus_counts": _ncounts}
         d_seg, d_pose = _verdict_dseg_dpose_chunked(
             seg_cpu, posenet_cpu, f0s, f1s,
             [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
@@ -3870,6 +4145,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 f0s.append(_torch_R_to_camera_uint8(_r0))
             f1s.append(_torch_R_to_camera_uint8(_r1))
         # (#205 OOM fix) chunk the CPU-scorer inference (bit-identical; eval-mode BN running stats).
+        # (#302) nucleus path in the ASYNC worker: bit-identical d_seg/d_pose + per-class counts.
+        if _nucleus_on:
+            d_seg, d_pose, _ncounts = _verdict_dseg_dpose_nucleus_chunked(
+                seg_cpu, posenet_cpu, f0s, f1s,
+                [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
+                vbatch=int(args.verdict_batch))
+            return {"d_seg": d_seg, "d_pose": d_pose, "nucleus_counts": _ncounts}
         d_seg, d_pose = _verdict_dseg_dpose_chunked(
             seg_cpu, posenet_cpu, f0s, f1s,
             [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
@@ -3908,8 +4190,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         t = _verdict_thread["t"]
         return t is not None and t.is_alive()
 
+    def _emit_handoff_readiness(counts: "dict | None", ep: int, seg_form: str) -> None:
+        """(#302) Emit the ``handoff_readiness`` telemetry row from the verdict's per-class counts +
+        update ``_evt_state['nucleus_ready']`` (the MEASURED half of the CE->tau trigger). Runs at
+        VERDICT cadence (litsweep guard: NO per-step adaptive). ``counts is None`` (nucleus feature
+        OFF) => no row, no state change => byte-identical. plateau_ok reads the CE-stage ep_loss
+        history in ``_evt_state['losses']`` (populated when the nucleus feature is on) through the
+        SAME ``_stage_converged`` the trigger uses, so the passive telemetry reports the FULL
+        readiness predicate (plateau AND nucleus) the NEXT run's trigger will consume. Pure
+        telemetry (never read back into training/parity/resume). Holds _verdict_lock (thread-safe
+        with the async worker)."""
+        if counts is None:
+            return
+        stats = _evt_nucleus_stats(counts)
+        satisfied, all_ok = _evt_nucleus_satisfied(
+            stats, _nucleus_within_flip_thresh, _nucleus_min_part_frac)
+        _losses = list(_evt_state.get("losses", []))
+        _ss = int(_evt_state.get("stage_start", 1))
+        plateau_ok = bool(_stage_converged(
+            list(range(_ss, _ss + len(_losses))), _losses,
+            min_stage_epochs=int(getattr(args, "curriculum_min_stage_epochs", 150)),
+            plateau_rel_eps=float(getattr(args, "curriculum_plateau_rel_eps", 1e-3)),
+            plateau_windows=int(getattr(args, "curriculum_plateau_windows", 4))))
+        row = _evt_readiness_row(ep, seg_form, stats, satisfied, all_ok, plateau_ok,
+                                 _nucleus_within_flip_thresh, _nucleus_min_part_frac,
+                                 guard_active=_nucleus_guard_on)
+        with _verdict_lock:
+            print(json.dumps(row), flush=True)
+            # MEASURED trigger state: the nucleus half of the CE->tau readiness predicate. Default
+            # True so a guard-OFF run never blocks (plateau/cap alone decide). Only set when the
+            # guard is active; only the CE stage's readiness gates the hand-off downstream.
+            if _nucleus_guard_on:
+                _evt_state["nucleus_ready"] = bool(all_ok)
+
     def _emit_verdict_row(v: dict[str, float], ema_np: dict[str, np.ndarray], ep: int,
                           seg_form: str, ep_loss: float, *, async_tag: bool) -> None:
+        # (#302) split per-class counts OUT of ``v`` before it flows to the float-only verdict row /
+        # history / closed-loop capture (those consume d_seg/d_pose scalars only), then emit the
+        # separate handoff_readiness row. ``v`` has no "nucleus_counts" unless the feature is ON.
+        _ncounts = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
         blob = quantize_levelset_blob(ema_np)
         s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
         with _verdict_lock:
@@ -3939,6 +4258,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _rec = _cl_pending["rec"]
                 if _rec is not None and int(_rec["epoch"]) == int(ep):
                     _cl_pending["rec"] = None
+        # (#302) emit the handoff_readiness row + update the nucleus trigger state — OUTSIDE the lock
+        # (the helper re-acquires _verdict_lock; threading.Lock is non-reentrant). No-op when counts
+        # is None (feature OFF) => byte-identical.
+        _emit_handoff_readiness(_ncounts, ep, seg_form)
 
     def _maybe_preserve_best(d_seg: float, ep: int, shadow_np_proj: dict[str, np.ndarray],
                              softmax_temp: float, hosc_beta: float) -> None:
@@ -4347,6 +4670,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
                           "mlx_active_gib": round(_mm["active"], 2)}), flush=True)
     v0 = realized_verdict()
+    v0.pop("nucleus_counts", None)  # (#302) baseline verdict: drop per-class counts (float-only row;
+    #                                  readiness telemetry begins at the first in-loop verdict, after
+    #                                  _evt_state exists). No-op when the nucleus feature is OFF.
     if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
         _mm = _mlx_mem_gib(mx)
         print(json.dumps({"stage": "mem_probe", "phase": "after_v0_verdict", "n_pairs": P,
@@ -4490,7 +4816,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # start epoch + its within-stage ep_loss history (consumed by _evt_resolve_seg_form). Deterministic
     # in the seeded loss trajectory; NOT the async d_seg verdict.
     _evt_on = bool(getattr(args, "curriculum_event_triggered", False)) and bool(args.curriculum)
-    _evt_state = {"tau": None, "l7": None, "stage_start": int(start_epoch), "losses": []}
+    # (#302) "nucleus_ready" is the MEASURED half of the CE->tau trigger (updated at verdict cadence
+    # by _emit_handoff_readiness when --curriculum-nucleus-guard is on). Default True => a guard-OFF
+    # run never blocks (plateau/cap alone decide) => byte-identical to the pre-#302 event trigger.
+    _evt_state = {"tau": None, "l7": None, "stage_start": int(start_epoch), "losses": [],
+                  "nucleus_ready": True}
     if _evt_on:
         _rc = resume_cfg if resume_cfg is not None else {}
         if "__evt_boundary_tau" in _rc:
@@ -4502,6 +4832,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _evt_state["stage_start"] = int(_rc.get("__evt_stage_start", start_epoch))
             _sl = _rc.get("__evt_stage_losses", [])
             _evt_state["losses"] = [float(x) for x in (_sl if isinstance(_sl, list) else [_sl])]
+            # (#302) restore nucleus-readiness (default True when the sidecar predates the feature).
+            _evt_state["nucleus_ready"] = bool(int(_rc.get("__evt_nucleus_ready", 1)))
             print(json.dumps({"stage": "resume_event_curriculum", "restored_tau": _evt_state["tau"],
                               "restored_l7": _evt_state["l7"], "stage_start": _evt_state["stage_start"],
                               "within_stage_losses": len(_evt_state["losses"])}), flush=True)
@@ -4527,6 +4859,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # sidecar with the __cl_* keys reproduces the SAME bump/stop state + verdict history a continuous
     # run would hold => bit-faithful ON-resume. A pre-feature / OFF-written sidecar lacks the keys =>
     # fresh state, deterministic going forward (the build-2 cap-fallback honesty). OFF => skipped.
+    # (#302 M1) BOUNDARY RE-ANCHOR: map a TAU-RELATIVE wall-clock lever's epoch into the schedule
+    # frame it was calibrated in, so its boundary-relative event tracks the FIRED tau boundary
+    # (persistence-warmup completion, seed-anneal withdrawal, analytic-band engage). Gated on BOTH
+    # --curriculum-reanchor-levers AND event-triggering ON (else there is no fired boundary to track).
+    # Unfired / fired-at-cap => _evt_reanchor_epoch returns ``ep`` unchanged => byte-identical.
+    _reanchor_on = bool(getattr(args, "curriculum_reanchor_levers", False))
+
+    def _lever_epoch(ep: int) -> int:
+        if not (_reanchor_on and _evt_on):
+            return int(ep)
+        return _evt_reanchor_epoch(ep, _evt_state.get("tau"), int(args.tau_softplus_start_epoch))
+
     if _cl_on and resume_cfg is not None:
         _clr = _cl_restore_from_cfg(resume_cfg)
         if _clr is not None:
@@ -4913,7 +5257,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # pushed through the render-target change. Mirrors _bnd_lane exactly (computed BEFORE the band
             # gate flips at the engage block below). Default --lane-render-band OFF => _band_active False
             # => never fires => bit-identical.
-            _bnd_band = (_band_active and (ep >= _band_start) and not band_gate["on"])
+            # (#302 M1) band engage is TAU-RELATIVE (band@350 = tau@300 + 50); re-anchor to the fired
+            # tau via _lever_epoch (byte-identical when re-anchor OFF: _lever_epoch(ep) == ep).
+            _bnd_band = (_band_active and (_lever_epoch(ep) >= _band_start) and not band_gate["on"])
             _stage_boundary_now = (_bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
                                    or _bnd_band or _bnd_subpix or _bnd_chroma)
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
@@ -5056,22 +5402,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # lane/margin/thin gates). No-op when --lane-render-band off (band never applies).
             if _band_active:
                 _band_was = band_gate["on"]
-                band_gate["on"] = _band_start <= ep
+                band_gate["on"] = _band_start <= _lever_epoch(ep)  # (#302 M1) re-anchor to fired tau
                 if band_gate["on"] and not _band_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_render_band_engage", "epoch": ep, "start": _band_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # #224 (4) persistence loss anneal (linear warm-up; coarse->fine). No-op when persist_w=0.
+            # (#302 M1) TAU-RELATIVE re-anchor: the warmup was calibrated to COMPLETE at tau@300, so
+            # under event-triggering it should complete at the FIRED tau (_lever_epoch; ep when OFF).
             if persist_w > 0.0 and persist_classes:
-                persist_gate["w"] = persistence_anneal_weight(ep, persist_w, persist_warmup)
+                persist_gate["w"] = persistence_anneal_weight(_lever_epoch(ep), persist_w, persist_warmup)
             # BUILD #300 (b) island-SEED compose-weight anneal (transfer schedule full->0). Deterministic
             # in ep => RESUME reproduces the same weight (nothing to checkpoint). No spike-guard re-treat:
             # the ramp is SMOOTH (small per-epoch delta), not a discrete engage, so it never trips the
             # jump-detector (unlike the lever-engage boundaries above). No-op unless --seed-anneal-epochs
             # > 0 AND a seed is live => compose_w stays 1.0 => _compose_chain byte-identical.
+            # (#302 M1) TAU-RELATIVE re-anchor: the seed crutch is withdrawn BY the tau onset, so under
+            # event-triggering it should complete at the FIRED tau (_lever_epoch; ep when re-anchor OFF).
             if seed_on and seed_anneal_epochs > 0:
                 seed_state["compose_w"] = seed_compose_weight_at_epoch(
-                    seed_anneal_epochs, seed_anneal_shape, ep)
+                    seed_anneal_epochs, seed_anneal_shape, _lever_epoch(ep))
             # BUILD 1 (FEED-fw): apply stage-transition TREATMENT for an AdamW->AdamW boundary
             # detected above. Skipped during the Muon finisher (muon_switched True; it re-treats
             # itself + freezes the base LR schedule). The spike-guard re-treat already happened in the
@@ -5452,6 +5802,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _schedule_async_verdict(ep, seg_form, ep_loss)
                 else:
                     v = realized_verdict()
+                    # (#302) split per-class counts out of the float-only sync verdict row / history.
+                    _ncounts_sync = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
                     blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
                     s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
                     print(json.dumps({"stage": "verdict", "epoch": ep, "seg_form": seg_form,
@@ -5460,6 +5812,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "ep_loss": round(ep_loss, 3),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     history.append({"epoch": ep, **v, "implied_S": s})
+                    _emit_handoff_readiness(_ncounts_sync, ep, seg_form)  # (#302) readiness row; no-op OFF
                     # (#292 build-3) closed-loop capture on the SYNC verdict path too (already
                     # deterministic — no thread). OFF => appends nothing => byte-identical.
                     if _cl_on:
@@ -5605,12 +5958,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl "
                     "1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED"}),
                     flush=True)
-            if _evt_on:
+            if _evt_on or _nucleus_on:
                 # (#292 build-2) record THIS epoch's synchronous training loss into the current stage's
                 # history, consumed by _evt_resolve_seg_form at the START of the NEXT epoch (so the
                 # controller only ever reads PAST epochs -> no lookahead). ep_loss is the seeded per-epoch
-                # loss sum (NOT the async d_seg verdict) => the fired epochs stay deterministic. OFF =>
-                # this block is skipped entirely => byte-identical.
+                # loss sum (NOT the async d_seg verdict) => the fired epochs stay deterministic. When ONLY
+                # --handoff-readiness-telemetry is on (event trigger OFF), the history still feeds the
+                # readiness row's plateau_ok (passive validation) but no boundary ever fires => training
+                # is byte-identical. Both OFF => skipped entirely => byte-identical (the #205 path).
                 _evt_state["losses"].append(float(ep_loss))
             last_ep = ep
             # (#292 build-3) closed-loop EARLY-STOP: break at the END of the loop body (after
@@ -6021,10 +6376,43 @@ def main(argv: list[str] | None = None) -> int:
                     "--tau-softplus-start-epoch / --l7-start-epoch). Default OFF => byte-identical hardcoded.")
     ap.add_argument("--curriculum-min-stage-epochs", type=int, default=150,
                     help="#292: min COMPLETED epochs in a stage before an event-triggered transition may fire.")
-    ap.add_argument("--curriculum-plateau-rel-eps", type=float, default=1e-3,
-                    help="#292: |relative least-squares slope| threshold (slope/mean over the window) for plateau.")
+    ap.add_argument("--curriculum-plateau-rel-eps", type=float, default=1e-4,
+                    help="#292/#302: |relative least-squares slope| threshold (slope/mean over the window) for "
+                    "plateau. RECALIBRATED 1e-3->1e-4 (T3 symposium 2026-07-05 C1): 1e-3 fired ep151 MID-DESCENT "
+                    "on #205 (rel slope -8.2e-4 while d_seg still falling 0.0055->0.0048) = 15% CE-floor loss; 1e-4 "
+                    "separates ep275+ (true plateau) from ep150. Consumed ONLY on the event-trigger / readiness "
+                    "path (both default OFF) => byte-identical for default runs.")
     ap.add_argument("--curriculum-plateau-windows", type=int, default=4,
                     help="#292: number of trailing within-stage ep_loss values in the plateau slope window.")
+    # (#302 curriculum-derivation) PER-CLASS CRITICAL-NUCLEUS GUARD (the CE->tau hand-off law's
+    # completion) + BOUNDARY RE-ANCHOR + READINESS TELEMETRY. All DEFAULT-OFF (run-3 targets); the
+    # #205 path never engages them => byte-identical.
+    ap.add_argument("--curriculum-nucleus-guard", action=argparse.BooleanOptionalAction, default=False,
+                    help="#302: gate the CE->tau CONVERGENCE fire on the MEASURED per-class critical nucleus "
+                    "(every scored class BORN part_frac>0 AND within-class flip <= --curriculum-nucleus-within-flip), "
+                    "updated at verdict cadence. A plateau alone is NECESSARY-NOT-SUFFICIENT (Allen-Cahn: MCF "
+                    "erodes a below-nucleus class, never grows it). The cap still fires unconditionally (never "
+                    "hangs). Default OFF => nucleus_ready stays True => the trigger is the pure-loss #292 build-2.")
+    ap.add_argument("--curriculum-nucleus-within-flip", type=float, default=0.5,
+                    help="#302: per-class within-flip threshold a class must be AT/BELOW to count as above nucleus "
+                    "(FORMED). Emitted per verdict in the handoff_readiness row so the NEXT run calibrates it "
+                    "empirically (the theoretical knee is pi1=w/sigma~5; this is the operational proxy).")
+    ap.add_argument("--curriculum-nucleus-min-part-frac", type=float, default=0.0,
+                    help="#302: per-class predicted partition-fraction a class must EXCEED to count as BORN "
+                    "(the MCF-cannot-nucleate gate). Default 0.0 = strictly nonzero predicted mass.")
+    ap.add_argument("--handoff-readiness-telemetry", action=argparse.BooleanOptionalAction, default=False,
+                    help="#302: emit the per-class handoff_readiness telemetry row per verdict (part_frac + "
+                    "within_flip + nucleus_ok per class + plateau_ok + ready) WITHOUT gating the trigger. "
+                    "OBSERVABILITY-FIRST: run it on a normal (event-OFF) run to passively yield the per-class "
+                    "validation data the hand-off law needs. Pure telemetry, NEVER read into training => "
+                    "byte-identical. Implied ON when --curriculum-nucleus-guard is set (the guard needs the counts).")
+    ap.add_argument("--curriculum-reanchor-levers", action=argparse.BooleanOptionalAction, default=False,
+                    help="#302 (M1): under event-triggering, re-anchor the TAU-RELATIVE wall-clock levers "
+                    "(persistence-warmup completion, seed-anneal withdrawal, analytic-band engage) to the FIRED "
+                    "tau boundary instead of their calibrated ep300-relative epochs (a shift, not a rescale). "
+                    "Requires --curriculum-event-triggered. Unfired / fired-at-cap / OFF => epochs unchanged => "
+                    "byte-identical. hosc-beta is NOT re-anchored (its beta=4 freeze is Muon-anchored; that "
+                    "re-anchor waits on the Muon-event-trigger build, symposium C.ii item 5).")
     # (#292 build-3) CLOSED-LOOP LEVER CONTROL: at each eval point, JOIN the async verdict (the
     # deterministic d_seg VALUE, never thread timing), classify the within-stage trend with the SAME
     # sustained-erosion-vs-transient math as tools/witness_control_monitor, and on SUSTAINED
@@ -6326,6 +6714,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--eikonal-steik-weight", type=float, default=0.0,
                     help="EIK-STAB build 1a: StEik directional-divergence stabilizer weight "
                     "(additive; 0 = OFF = byte-identical).")
+    ap.add_argument("--eikonal-steik-normalized", action="store_true",
+                    help="V6 #317 EIK-STAB build 1a-N: use the NORMALIZED unit-normal curvature "
+                    "n^T H n = (grad m^T H grad m)/(|grad m|^2+eps) instead of the raw "
+                    "|grad m^T H grad m| (removes the quartic |grad m|^2 self-amplification measured "
+                    "NO-GO at the far-from-SDF resumed state). Requires --eikonal-steik-weight>0.")
+    ap.add_argument("--eikonal-steik-norm-eps", type=float, default=1e-2,
+                    help="V6 #317: normal-direction regularizer eps in n^T H n = dir_div/(|grad m|^2+eps) "
+                    "(default 1e-2: leaves the |grad m|~1 boundary annulus ~intact, suppresses flat "
+                    "argmax-stable interior). Only used when --eikonal-steik-normalized.")
     ap.add_argument("--eikonal-viscosity", type=float, default=0.0,
                     help="EIK-STAB build 1b: ViscoReg viscosity eps (replaces the eikonal residual "
                     "with the viscous form while >0; 0 = OFF = byte-identical).")
@@ -6857,6 +7254,23 @@ def main(argv: list[str] | None = None) -> int:
     # (EIK-STAB build 1/2/4) fail-closed config guards (silent-no-op / silent-drop NO-FAKE class).
     if float(args.eikonal_steik_weight) < 0.0:
         raise ValueError(f"--eikonal-steik-weight ({args.eikonal_steik_weight}) must be >= 0.")
+    if bool(getattr(args, "eikonal_steik_normalized", False)) and float(args.eikonal_steik_weight) <= 0.0:
+        raise ValueError(
+            "--eikonal-steik-normalized set without --eikonal-steik-weight > 0: the normalized "
+            "n^T H n term has no effect = a silent no-op. Set --eikonal-steik-weight too, or drop "
+            "the --eikonal-steik-normalized flag (fail-closed per NO-FAKE).")
+    if float(getattr(args, "eikonal_steik_norm_eps", 1e-2)) <= 0.0:
+        raise ValueError(
+            f"--eikonal-steik-norm-eps ({args.eikonal_steik_norm_eps}) must be > 0 "
+            "(regularizes n = grad m/|grad m| where |grad m|->0; <=0 divides by zero).")
+    if (bool(getattr(args, "eikonal_steik_normalized", False))
+            and int(getattr(args, "micro_batch_pairs", 1)) > 1):
+        raise ValueError(
+            "--eikonal-steik-normalized is NOT wired into the micro-batch twin "
+            "(tac.boundary_math.levelset_micro_batch_loss receives the RAW _eikonal_steik_mlx). "
+            "Combining it with --micro-batch-pairs>1 would SILENTLY use the raw self-amplifying form "
+            "= NO-FAKE silent-drop. Run --eikonal-steik-normalized with --accum-pairs (serial path) "
+            "until the twin threads the normalized fn.")
     if float(args.eikonal_viscosity) < 0.0:
         raise ValueError(f"--eikonal-viscosity ({args.eikonal_viscosity}) must be >= 0.")
     if float(args.eikonal_viscosity) > 0.0 and float(args.eikonal_junction_relax) > 0.0:

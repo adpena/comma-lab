@@ -149,7 +149,12 @@ def test_derived_native_emits_expected_flags():
 def test_derived_native_flags_exist_in_trainer_argparse():
     # never-invent-flags: every emitted flag name appears as an add_argument in the live trainer
     src = _TRAINER.read_text(encoding="utf-8", errors="replace")
-    for flag in ("--seed-anneal-epochs", "--persistence-warmup-epochs", "--ema-decay-finisher"):
+    for flag in ("--seed-anneal-epochs", "--persistence-warmup-epochs", "--ema-decay-finisher",
+                 # (#302 build) HANDOFF_NUCLEUS chart flags
+                 "--curriculum-event-triggered", "--curriculum-plateau-rel-eps",
+                 "--curriculum-plateau-windows", "--curriculum-min-stage-epochs",
+                 "--curriculum-nucleus-guard", "--curriculum-reanchor-levers",
+                 "--handoff-readiness-telemetry"):
         assert f'"{flag}"' in src, f"{flag} missing from trainer argparse"
 
 
@@ -165,4 +170,5 @@ def test_component_registration():
 
 def test_trainer_flags_dict_covers_non_design_charts():
     assert set(CURRICULUM_TRAINER_FLAGS) == {
-        CurriculumGauge.PR95_ECHO, CurriculumGauge.DERIVED_NATIVE}
+        CurriculumGauge.PR95_ECHO, CurriculumGauge.DERIVED_NATIVE,
+        CurriculumGauge.HANDOFF_NUCLEUS}   # (#302 build) the completed CE->tau hand-off chart
