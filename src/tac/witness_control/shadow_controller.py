@@ -36,11 +36,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tac.witness_control.costate_estimator import (
+    BINDING_TERM_STALL,
     MEASURED,
     UNIDENTIFIABLE,
     CostateEstimate,
     analytic_costates,
+    binding_term_stall,
     chain_ds_depoch,
+    per_class_within_flip_costates,
     rollback_gain,
     stage_epoch_costates,
     transition_jump_costate,
@@ -216,7 +219,7 @@ def _classify(inputs: RunInputs) -> dict | None:
         cv = wcm.classify_trajectory(usable)
     except (ValueError, KeyError):
         return None
-    return {
+    out = {
         "classification": cv.classification, "stage": cv.stage,
         "epoch_latest": cv.epoch_latest, "d_seg_latest": cv.d_seg_latest,
         "d_seg_slope_per_ep": cv.d_seg_slope_per_ep,
@@ -225,6 +228,20 @@ def _classify(inputs: RunInputs) -> dict | None:
         "config_diffs": list(cv.config_diffs),
         "source": "tools/witness_control_monitor.classify_trajectory (canonical, unforked)",
     }
+    # (task #315) BINDING-TERM-STALL OVERLAY — the scalar classifier reads d_seg
+    # ALONE, so a FLAT binding term reads as PLATEAU/CONVERGING (advance/early-stop
+    # = "fine"). But if implied_S / ep_loss are still MOVING while d_seg is frozen,
+    # the run is DEADLOCKED on the term that matters (the v5 frozen-descending-S the
+    # scalar monitor missed live). This overlay OVERRIDES the false green.
+    bs = binding_term_stall(inputs.verdicts)
+    out["binding_stall"] = bs.to_dict()
+    if bs.fired():
+        out["scalar_classification"] = cv.classification          # preserve what the scalar said
+        out["classification"] = BINDING_TERM_STALL                # the overlay wins
+        out["recommendation"] = ("BINDING-TERM STALL (task #315): " + bs.reason
+                                 + " [scalar monitor said "
+                                 + f"'{cv.classification}': {cv.recommendation}]")
+    return out
 
 
 def _band_from(cost: CostateEstimate, scale: float) -> tuple[float, list[float] | None]:
@@ -259,7 +276,16 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
             "evidence": list(evidence), "costate": costate_name,
         })
 
-    if cls == "diverging_erasing":
+    if cls == BINDING_TERM_STALL:
+        bs = (classification or {}).get("binding_stall") or {}
+        _cand("INVESTIGATE_BINDING_TERM_DEADLOCK", 0.0, None,
+              "the binding term d_seg is FLAT while a non-binding signal (implied_S / "
+              "ep_loss) still descends — a DEADLOCK, not a converged plateau. Do NOT "
+              "advance the stage or early-stop on the scalar green; check stale-weight "
+              "async verdicts, spike-guard freeze, or LR collapse first",
+              tuple(bs.get("evidence") or ("binding-term-stall detector (task #315)",)),
+              "binding_term_stall")
+    elif cls == "diverging_erasing":
         if rollback is not None and rollback.status == MEASURED and rollback.value:
             _cand("ROLLBACK_TO_BEST_CHECKPOINT", -float(rollback.value), None,
                   "sustained within-stage erosion (d_seg rising while ep_loss falls); "
@@ -348,6 +374,10 @@ def build_shadow_report(inputs: RunInputs,
         ev = (f"verdict rows [stage={st}] ep{int(seg.x_lo)}–{int(seg.x_hi)} "
               f"(n={seg.n}) in {inputs.run_dir}/run.log",)
         costates.append(chain_ds_depoch(fits, d_pose_latest, st, ev))
+        # (task #315) per-class within_flip costate — UNIDENTIFIABLE (honest) until the
+        # trainer `handoff_readiness` telemetry lands per-class rows; identifies the
+        # worst-stalling CLASS surgically once present. Never fabricated from scalar d_seg.
+        costates.append(per_class_within_flip_costates(inputs.verdicts, st))
     for a, b in itertools.pairwise(stages_seen):
         costates.append(transition_jump_costate(inputs.verdicts, a, b))
     costates.append(rollback_gain(inputs.verdicts))
