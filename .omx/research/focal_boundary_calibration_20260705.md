@@ -30,7 +30,9 @@ GT inter-class edge, non-island. Gradient = per-pixel |d seg_loss / d frame| mas
 R + frozen MLX SegNet on the witness-alone render; loss = the live config's CE +
 `1+4·exp(−margin)` GT-margin weight; focal = stop-grad mean-1 `(1−p_y)^γ` (the build's exact
 semantics). Every number below is from an executed computation (probe
-`experiments/probe_focal_gamma_calibration.py`; merged JSONs in the probe sidecars).
+`experiments/probe_focal_gamma_calibration.py`; merged + per-chunk JSONs preserved at
+`experiments/results/focal_calib_20260705/` — local artifact custody, gitignored by design;
+the decision-relevant tables are reproduced in full in this memo).
 
 **ep50 (12 pairs; subset d_seg 0.1412 vs logged n600 0.1217 — first-12-even-pairs sampling, same
 drift class the 2026-07-04 disambiguator validated):**
