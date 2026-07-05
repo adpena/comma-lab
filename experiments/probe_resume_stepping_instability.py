@@ -236,6 +236,59 @@ ARMS: dict[str, dict] = {
     "steik05_rollback": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
                              tau_start=400, band_start=450, persist_warmup=275,
                              guard="rollback", extra=["--eikonal-steik-weight", "0.5"]),
+    # ── (V6 SYMPOSIUM #317) LONGER-HORIZON re-entry arbitration. The FEED-05v arbitration ran only
+    # 120 steps (40 ep) and called visco_03 STABLE; v5 (n600) then re-entered runaway at ~ep109 =
+    # ~600-675 optimizer STEPS (75 steps/epoch at accum 8) — PAST the 120-step arbitration horizon.
+    # The eikonal runaway is anti-diffusive accumulation PER OPTIMIZER STEP (StEik ill-posedness),
+    # so the surrogate must match STEP COUNT: run these at --epochs-past-resume>=200 (>=600 steps).
+    # NOTE (measured from _scheduled_eikonal_weight): the 0.05->0.10 eik-weight ramp STEPS at the
+    # TAU onset (ep400) — so eik_w is FLAT 0.05 through the entire pre-tau re-entry window; candidate
+    # (c) is therefore LOWERING the base weight (a targeted lr-cut on the anti-diffusive term, NOT a
+    # flat-vs-anneal choice which is moot pre-tau).
+    # (v5 faithful) EXACT v5 eikonal config: ANNEALED visco 0.3 over 1000 ep (the arbitration used
+    # CONSTANT 0.3; at 600 steps annealed eps ~= 0.24 vs constant 0.30 — reproduce v5 exactly).
+    "visco_03_anneal": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                            tau_start=400, band_start=450, persist_warmup=275,
+                            extra=["--eikonal-viscosity", "0.3", "--eikonal-viscosity-anneal", "1000"]),
+    # (b) HIGHER fixed viscosity eps=0.5 (constant): eps=0.3 partial-cure, eps=1.0 exploded => probe
+    # the mid-window value for a permanently-dominant fixed viscosity.
+    "visco_05": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                     tau_start=400, band_start=450, persist_warmup=275,
+                     extra=["--eikonal-viscosity", "0.5"]),
+    # (c) LOWER base eikonal weight 0.05->0.02 (targeted anti-diffusive lr-cut) alone, NO viscosity.
+    "eik002": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                   tau_start=400, band_start=450, persist_warmup=275,
+                   extra=["--eikonal-weight", "0.02", "--eikonal-weight-end", "0.02"]),
+    # (b+c COMPOUND) visco 0.3 + lower base eik weight 0.02.
+    "visco_03_eik002": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                            tau_start=400, band_start=450, persist_warmup=275,
+                            extra=["--eikonal-viscosity", "0.3",
+                                   "--eikonal-weight", "0.02", "--eikonal-weight-end", "0.02"]),
+    # (b+c COMPOUND, stronger) visco 0.5 + lower base eik weight 0.02.
+    "visco_05_eik002": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                            tau_start=400, band_start=450, persist_warmup=275,
+                            extra=["--eikonal-viscosity", "0.5",
+                                   "--eikonal-weight", "0.02", "--eikonal-weight-end", "0.02"]),
+    # (a) NORMALIZED StEik n^T H n (V6 #317 build 1a-N): removes the raw |grad m|^2 self-amplification
+    # (measured 575x-1431x NO-GO). Anisotropic: damps ONLY the anti-diffusive normal-direction mode,
+    # tangential (dash) curvature FREE. The DE-DERIVATION sibling (#318) predicts this is the OPTIMAL
+    # cure on the d_seg-drift axis. Weight 0.5 (n^T H n ~ O(1) near-boundary; O(0.01-0.1) mean).
+    "steik_norm_05": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                          tau_start=400, band_start=450, persist_warmup=275,
+                          extra=["--eikonal-steik-weight", "0.5", "--eikonal-steik-normalized"]),
+    # (a COMPOUND with visco) normalized StEik 0.5 (additive normal-damping) + ViscoReg 0.3 (viscous
+    # residual): the two structural cures composed — the principled "belt + braces".
+    "steik_norm_05_visco03": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                                  tau_start=400, band_start=450, persist_warmup=275,
+                                  extra=["--eikonal-steik-weight", "0.5", "--eikonal-steik-normalized",
+                                         "--eikonal-viscosity", "0.3"]),
+    # (a, lighter weight) normalized StEik 0.1 standalone — probe the weight sensitivity.
+    "steik_norm_01": dict(drop_opt=False, bd=0.2, lr=1e-3, lr_end=1e-4, seed_anneal=101,
+                          tau_start=400, band_start=450, persist_warmup=275,
+                          extra=["--eikonal-steik-weight", "0.1", "--eikonal-steik-normalized"]),
+    # NOTE (V6 #317): a DERIVED-CONFIG slot is reserved for the DE-DERIVATION sibling (#318)'s
+    # PREDICTED-optimal arm (e.g. adaptive-eps(t) proportional to local sharpness kappa(t)); added
+    # when its message arrives, tested at the SAME >=250-step horizon against this set.
 }
 
 
