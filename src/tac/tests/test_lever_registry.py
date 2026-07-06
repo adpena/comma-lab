@@ -59,3 +59,34 @@ def test_deterministic():
     assert LR.lever_factories() == LR.lever_factories()
     c1, c2 = LR.completeness(), LR.completeness()
     assert (c1.mapped, c1.unmapped, c1.stale) == (c2.mapped, c2.unmapped, c2.stale)
+
+
+def test_r5_async_def_included_in_func_defs():
+    # r5 fix: an ``async def`` factory returning a Lever must be discoverable (previously
+    # only ast.FunctionDef was scanned). Assert the tuple + behavior on a synthetic module.
+    import ast as _ast
+    assert _ast.AsyncFunctionDef in LR._FUNC_DEFS and _ast.FunctionDef in LR._FUNC_DEFS
+    src = "async def Foo() -> Lever:\n    return Lever('foo', overrides={'--foo': True})\n"
+    tree = _ast.parse(src)
+    node = tree.body[0]
+    assert isinstance(node, _ast.AsyncFunctionDef)
+    assert LR._returns_lever(node) and LR._constructs(node, "Lever")  # both duck-type on async
+
+
+def test_r5_anno_is_lever_handles_stringized_composite():
+    # r5 fix: a FULLY stringized composite annotation must be recognized, not just bare "Lever".
+    import ast as _ast
+    def anno(src):
+        return _ast.parse(f"def f() -> {src!r}: ...").body[0].returns  # stringized (a str Constant)
+    assert LR._anno_is_lever(anno("Lever")) is True
+    assert LR._anno_is_lever(anno("tuple[Lever, Lever]")) is True
+    assert LR._anno_is_lever(anno("dict[str, Lever]")) is False       # still rejected
+    assert LR._anno_is_lever(anno("not valid python {{{")) is False   # bad string → fail closed
+
+
+def test_r5_completeness_bad_path_raises_clear_error():
+    import pytest as _pytest
+    with _pytest.raises(FileNotFoundError, match="not a file"):
+        LR.completeness("/no/such/trainer_file_zzz.py")
+    # the normal default path still works (no raise)
+    assert LR.completeness().trainer_total > 100

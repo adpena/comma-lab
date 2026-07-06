@@ -43,6 +43,9 @@ _FLAG_RE = re.compile(r"^--[a-z0-9][a-z0-9-]*$")
 # The ``--no-`` regex artifact: curriculum_dsl.validate() builds ``--no-<X>`` from a
 # store_true flag to describe an INVALID compile; it is never a real flag.
 _NO_ARTIFACT = re.compile(r"^--no-")
+# Both sync and async ``def`` count as factories/constructors (r5 review: an ``async def``
+# factory returning a ``Lever`` was previously invisible to the AST scan).
+_FUNC_DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
 
 
 def _module_source() -> str:
@@ -72,7 +75,15 @@ def _anno_is_lever(a: ast.AST) -> bool:
     if isinstance(a, ast.Name):
         return a.id == "Lever"
     if isinstance(a, ast.Constant) and isinstance(a.value, str):
-        return a.value.strip() == "Lever"                       # stringized annotation
+        s = a.value.strip()
+        if s == "Lever":
+            return True
+        # A fully-stringized composite, e.g. ``-> "tuple[Lever, Lever]"`` (r5 review): parse the
+        # string as an expression and recurse. Bad/partial strings fail closed (False, no raise).
+        try:
+            return _anno_is_lever(ast.parse(s, mode="eval").body)
+        except (SyntaxError, ValueError):
+            return False
     if isinstance(a, ast.Subscript):
         base = a.value.id if isinstance(a.value, ast.Name) else None
         if base not in ("tuple", "Tuple", "list", "List"):      # dict[..], Optional[..], etc. are NOT
@@ -105,7 +116,7 @@ def lever_factories() -> dict[str, frozenset[str]]:
     own PLUS the flags of any lever factory it delegates to (one level), so a delegating
     factory is never reported as flag-less."""
     tree = ast.parse(_module_source())
-    fdefs = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
+    fdefs = [n for n in tree.body if isinstance(n, _FUNC_DEFS)]   # sync + async (r5)
     direct: dict[str, frozenset[str]] = {}   # factory -> its OWN flags
     calls: dict[str, set[str]] = {}          # factory -> factory names it calls
     for node in fdefs:
@@ -139,7 +150,7 @@ def program_constructors() -> dict[str, frozenset[str]]:
     tree = ast.parse(_module_source())
     return dict(sorted(
         (n.name, _flags_in_node(n)) for n in tree.body
-        if isinstance(n, ast.FunctionDef) and _constructs(n, "WitnessProgram")))
+        if isinstance(n, _FUNC_DEFS) and _constructs(n, "WitnessProgram")))
 
 
 def dsl_referenced_flags() -> frozenset[str]:
@@ -178,10 +189,15 @@ def completeness(trainer_path: str | Path | None = None) -> Completeness:
     """Reconcile the trainer's flags against the DSL. ``unmapped`` = the gap the operator wants
     visible (trainer flags the DSL does not hold); ``stale`` = DSL-EMITTED flags the trainer
     rejects (real drift). Deterministic, sorted."""
+    # A bad explicit trainer_path is a caller error — fail LOUD with a clear typed message
+    # (r5 review) rather than a raw OSError from deep inside real_trainer_flags. The default
+    # (trainer_path=None) path is the normal case and never hits this.
+    tp = Path(trainer_path) if trainer_path else None
+    if tp is not None and not tp.is_file():
+        raise FileNotFoundError(f"completeness(): trainer_path is not a file: {tp}")
     # Drop the ``--no-*`` BooleanOptionalAction negations on BOTH sides symmetrically (round-2
     # LOW-3), so if the trainer ever exposes one it cannot show as a phantom unmapped/stale.
-    trainer = {f for f in real_trainer_flags(Path(trainer_path) if trainer_path else None)
-               if not _NO_ARTIFACT.match(f)}
+    trainer = {f for f in real_trainer_flags(tp) if not _NO_ARTIFACT.match(f)}
     referenced = set(dsl_referenced_flags())
     emitted = set(dsl_emitted_flags())
     return Completeness(

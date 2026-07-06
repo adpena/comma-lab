@@ -74,21 +74,34 @@ SUBSTANTIVE = re.compile(
 #   seed/island (the DAG feed is the RECORDING mechanism, it must not trip the gate). A real
 #   lever commit says "lever"/"wire-in"/"wired"; the residual false-negative is accepted (the
 #   claim is honestly "narrows, not closes").
+#   ``lever(?!ag(?:e|ing))`` excludes "leverage"/"leveraged"/"leveraging" (r4+r6 cosmetic)
+#   while keeping "lever"/"levers"/"lever-D"/"lever-wire".
 DSL_REQUIRING = re.compile(
-    r"\b(?:lever\w*|wire.?in\w*|integrat\w*|curriculum\w*|carrier\w*|gauge\w*)",
+    r"\b(?:lever(?!ag(?:e|ing))\w*|wire.?in\w*|integrat\w*|curriculum\w*|carrier\w*|gauge\w*)",
     re.IGNORECASE,
 )
-#   LAW / measured finding → must register/refine a canonical equation
+#   LAW / measured finding → must register/refine a canonical equation.
 #   DROPPED the over-broad single words "floor"/"law"/"erasure" (fired on "floor division
-#   bug", "outlaw", "erasure coding"); the measured-VALUE detector below catches numeric rows.
+#   bug", "outlaw", "erasure coding") AND the r4-flagged "measur\w*" — the everyday word
+#   "measured/measurement" over-fired on descriptive commits AND on DAG-FEED commits that
+#   merely RECORD a measurement (touching only the DAG). The precise finding signals survive:
+#   the enumerated stems below + the numeric-value detector `_MEASURED_ROW` (a real d_seg/
+#   d_pose row). "exact[\s-]row" catches both the space and hyphenated spelling (r4).
 EQUATION_REQUIRING = re.compile(
-    r"\b(?:measur\w*|byte.?clos\w*|exact.?eval\w*|exact\s+row|verdict\w*|pointer\w*|"
+    r"\b(?:byte.?clos\w*|exact.?eval\w*|exact[\s-]row|verdict\w*|pointer\w*|"
     r"scored|attribution\w*|refut\w*|ratif\w*)",
     re.IGNORECASE,
 )
-#   A MEASURED numeric row (e.g. "d_seg 0.0031 n600 best at ep50") — a finding with a value,
-#   which the enumerated stems alone missed (the MEDIUM-1 false-negative).
-_MEASURED_ROW = re.compile(r"\b(?:d_seg|d_pose)\W{0,4}[0-9]", re.IGNORECASE)
+#   A MEASURED numeric row (e.g. "d_seg 0.0031", "measured d_seg of 0.0031", "d_seg→0.0047")
+#   — a finding with a DECIMAL value. r6: allow a short connector ("of"/"="/"to"/"→", ≤6 chars)
+#   between the metric and the value, but REQUIRE a decimal point so non-findings like
+#   "d_seg curriculum v2" / "d_pose head at ep50" (a version/epoch integer, no decimal) stay
+#   clean. d_seg/d_pose values are always sub-1 decimals, so requiring "." is safe here.
+#   The ``(?<![A-Za-z0-9])`` before the number excludes a version token adjacent to the metric
+#   ("d_seg v2.0" — the r7 cosmetic note) while keeping real measurements ("0.0047", "=0.0047",
+#   "→0.0047", "3.4e-5", ".0047"): a measurement's value starts at a non-alnum boundary, a
+#   version's digit is preceded by "v" (letter) or a digit. Fixed-width lookbehind ⇒ no ReDoS.
+_MEASURED_ROW = re.compile(r"\b(?:d_seg|d_pose)\b[^\n]{0,6}?(?<![A-Za-z0-9])\d*\.\d", re.IGNORECASE)
 
 # In-repo surfaces whose modification means "a triality leg was updated this
 # window" (DAG = trajectory · DSL = control · equations = law · index = memory
@@ -107,13 +120,20 @@ SKIP_TOKEN = re.compile(r"\[(no-triality|skip-drift)\]", re.IGNORECASE)
 
 # ----------------------------- pure logic (tested) -----------------------------
 def is_substantive(subjects: list[str]) -> bool:
-    """True if any commit subject names a score/trajectory/build event."""
-    return any(SUBSTANTIVE.search(s or "") for s in subjects)
+    """True if any commit subject names a score/trajectory/build event. ``str(s or "")``
+    coerces defensively so a non-string subject can never raise (r5 robustness)."""
+    return any(SUBSTANTIVE.search(str(s or "")) for s in subjects)
 
 
 def is_opted_out(subjects: list[str]) -> bool:
-    """True if any commit in the window opts out via [no-triality]/[skip-drift]."""
-    return any(SKIP_TOKEN.search(s or "") for s in subjects)
+    """True if any commit in the window opts out via [no-triality]/[skip-drift].
+
+    NOTE (accepted by-design bound, r4): opt-out is WINDOW-WIDE — one [no-triality] commit
+    suppresses the nudge for a genuinely-drifting sibling in the same turn. This is the
+    fail-SAFE direction (never over-nag), and scoping it per-commit would require the
+    per-commit judging that r2 proved breaks the mandated separate-DAG-FEED workflow. So it
+    is documented, not "fixed" into a worse regression."""
+    return any(SKIP_TOKEN.search(str(s or "")) for s in subjects)
 
 
 def has_triality_touch(files: list[str]) -> bool:
@@ -145,7 +165,7 @@ def missing_legs(subjects: list[str], files: list[str]) -> list[str]:
     the correct grain. The residual is a known LOW: an unrelated leg-touch in the same window
     can satisfy a different commit's requirement — accepted, since the alternative breaks the
     one-change-per-commit discipline. ``main`` calls this on the window union."""
-    joined = " ".join(s or "" for s in subjects)
+    joined = " ".join(str(s or "") for s in subjects)   # str() coerces defensively (r5)
     miss: list[str] = []
     if DSL_REQUIRING.search(joined) and not touched_dsl(files):
         miss.append("DSL")
@@ -183,7 +203,7 @@ _LEG_FIX = {
 
 def build_reason(subjects: list[str], files: list[str] | None = None) -> str:
     """The one firm nudge injected on drift (concise + actionable + leg-specific)."""
-    preview = "; ".join((s or "")[:70] for s in subjects[:3])
+    preview = "; ".join(str(s or "")[:70] for s in subjects[:3])
     miss = missing_legs(subjects, files or [])
     if miss:
         legs = " AND ".join(_LEG_FIX.get(m, m) for m in miss)

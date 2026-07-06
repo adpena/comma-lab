@@ -230,6 +230,67 @@ def test_r2_separate_dag_feed_commit_workflow_is_clean():
     assert D.classify(subjects, files) == "clean"
 
 
+def test_r4_dropped_measur_stem_does_not_overfire_on_dag_feed():
+    # r4 REGRESSION: the everyday word "measured/measurement" over-fired on descriptive
+    # commits AND DAG-FEED commits recording a routine measurement. Dropped from
+    # EQUATION_REQUIRING; a DAG-FEED that RECORDS a measurement (only DAG touched) is clean.
+    for subj in ("DAG FEED-06p: n600 measurement recorded",
+                 "viz: measurement overlay for the descent tab",
+                 "chore: re-measure the memory envelope"):
+        assert D.missing_legs([subj], [".omx/research/sub015_DAG_x.md"]) == [], f"over-fire: {subj!r}"
+
+
+def test_r4_real_finding_still_requires_equations():
+    # The precise finding signals SURVIVE the measur-drop: a numeric d_seg row (_MEASURED_ROW),
+    # a byte-close, a verdict, and the hyphenated "exact-row" spelling all still need equations.
+    dag = [".omx/research/sub015_DAG_x.md"]
+    assert "equations" in D.missing_legs(["measured d_seg 0.0031 n600"], dag)      # numeric row
+    assert "equations" in D.missing_legs(["byte-close of the witness archive"], dag)
+    assert "equations" in D.missing_legs(["verdict: lever-D NO-GO on the flip axis"], dag)
+    assert "equations" in D.missing_legs(["first exact-row for the vehicle"], dag)  # hyphenated (r4)
+    assert "equations" in D.missing_legs(["first exact row for the vehicle"], dag)  # space form
+
+
+def test_r4_leverage_does_not_require_dsl():
+    # r4+r6 cosmetic: "leverage"/"leveraged"/"leveraging" must NOT trip the DSL requirement.
+    for benign in ("docs: leverage the existing cache better",
+                   "perf: leveraged the fused kernel",
+                   "wip: leveraging the atlas for speed"):
+        assert D.missing_legs([benign], ["tools/x.py"]) == [], f"over-fire: {benign!r}"
+    # but real lever words still do:
+    assert "DSL" in D.missing_legs(["new lever wired"], ["tools/x.py"])
+    assert "DSL" in D.missing_legs(["levers refactor in trainer"], ["tools/x.py"])
+    assert "DSL" in D.missing_legs(["lever-D reactivation"], ["tools/x.py"])
+
+
+def test_r6_measured_row_catches_short_connector_but_not_version():
+    # r6: a SHORT connector (of/=/→/at, ≤6 chars) between the metric and a DECIMAL value still
+    # counts as a finding — the intended recall widening over the old tight-adjacency regex.
+    dag = [".omx/research/sub015_DAG_x.md"]
+    for row in ("measured d_seg of 0.0031 n600", "d_pose = 3.4e-5", "d_seg→0.0047 best",
+                "d_seg 0.0047"):
+        assert "equations" in D.missing_legs([row], dag), f"missed finding: {row!r}"
+    # ...but a version/epoch INTEGER near the metric (NO decimal value) is NOT a measured row.
+    # (The window is deliberately ≤6 chars + requires a decimal — widening to catch long
+    #  connectors like "dropped to" would start false-matching "d_seg v2.1"-style versions,
+    #  a worse trade; long-connector phrasings are an accepted, documented miss.)
+    for nonrow in ("d_pose head wired at ep50", "rename d_seg logging field",
+                   "d_seg dashboard tab polish",
+                   "witness d_seg v2.0 rewrite",       # r7: a VERSION token, not a measurement
+                   "d_pose module v3.1 refactor"):
+        assert D.missing_legs([nonrow], dag) == [], f"over-fire: {nonrow!r}"
+
+
+def test_r5_non_string_subject_does_not_raise():
+    # r5 robustness: the pure functions coerce with str() so a non-string subject can never
+    # raise (unreachable from main(), but defensive).
+    assert D.is_substantive([123]) is False
+    assert D.is_opted_out([123]) is False
+    assert D.missing_legs([123], [".omx/research/sub015_DAG_x.md"]) == []
+    assert isinstance(D.build_reason([123], ["tools/x.py"]), str)
+    assert D.classify([123, "witness lever wired"], ["tools/x.py"]) == "drift"  # the real subj still bites
+
+
 def test_build_reason_names_the_missing_leg():
     # LOW-3: the per-leg branch must actually name the leg, not just generic substrings.
     r = D.build_reason(["measured d_seg 0.0031 verdict"], [".omx/research/sub015_DAG_x.md"])
