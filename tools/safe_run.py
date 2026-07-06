@@ -166,10 +166,18 @@ def main(argv: list[str]) -> int:
     rss_limit_kib = ns.rss_mb * 1024
     start = time.monotonic()
 
+    # (#254) stamp the child env as GOVERNED so the heavy entrypoint's admission guard passes —
+    # safe_run IS a governed path (it RSS-caps + shed-cascades the child). Set the marker DIRECTLY
+    # by its stable name (== tac.admission_guard.GOVERNED_MARKER_ENV) so it works even when src/ is
+    # not importable from this tools/ launcher. A raw launch that skips safe_run/launch_witness_run
+    # lacks this marker and is refused when enforce is armed.
+    _child_env = dict(os.environ)
+    _child_env["TAC_GOVERNED_ADMISSION"] = "1"
+
     try:
         # start_new_session=True -> child is a session+group leader (pgid == pid),
         # so we can SIGKILL the whole tree and not just the immediate child.
-        proc = subprocess.Popen(cmd, start_new_session=True)
+        proc = subprocess.Popen(cmd, start_new_session=True, env=_child_env)
     except FileNotFoundError as exc:
         print(
             f"safe_run.py: failed to start {cmd[0]!r}: command not found "

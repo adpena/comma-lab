@@ -354,6 +354,11 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
         # now sets it so every future run feeds the projection ledger's reconcile path. Telemetry
         # only: the gate emits mem_probe log rows; it never touches training numerics.
         "export TAC_MEM_PROBE=1\n"
+        # (#254) launch.sh is a GOVERNED artifact (only the launcher emits it), so stamp the
+        # admission marker so a manual `bash launch.sh` resume passes the trainer's admission
+        # guard. Raw `python train_...py ...` that never went through a governed path lacks this
+        # and is refused when enforce is armed (tac.admission_guard.GOVERNED_MARKER_ENV).
+        "export TAC_GOVERNED_ADMISSION=1\n"
         f"{cmd}\n"
     )
 

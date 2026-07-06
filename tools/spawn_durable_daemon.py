@@ -547,6 +547,12 @@ def _do_start(a: argparse.Namespace) -> int:
     log = open(a.log, "ab", buffering=0)  # noqa: SIM115 — kept open for the child
     devnull = open(os.devnull, "rb")  # noqa: SIM115
     log.write(f"[durable-daemon] launching: {' '.join(cmd)}\n".encode())
+    # (#254) the P0 admission gate above JUST passed => this daemon is GOVERNED. Stamp the child
+    # env (propagates through `bash launch.sh` -> trainer) so the heavy entrypoint's admission
+    # guard passes. Set by stable name (== tac.admission_guard.GOVERNED_MARKER_ENV). A raw launch
+    # that never reached this gate lacks the marker and is refused when enforce is armed.
+    _child_env = dict(os.environ)
+    _child_env["TAC_GOVERNED_ADMISSION"] = "1"
     try:
         proc = subprocess.Popen(
             cmd,
@@ -556,6 +562,7 @@ def _do_start(a: argparse.Namespace) -> int:
             start_new_session=True,  # setsid() -> new session/pgroup -> survives parent
             close_fds=True,
             cwd=os.getcwd(),
+            env=_child_env,
         )
     except (FileNotFoundError, OSError) as exc:
         # NO silent failures: exec itself failed (e.g. cmd[0] is a collapsed
