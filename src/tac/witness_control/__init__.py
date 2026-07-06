@@ -46,6 +46,11 @@ from tac.witness_control.campaign_repl import (  # noqa: F401
     propose_argv,
     write_world_model_row,
 )
+from tac.witness_control.producer_bridge import (  # noqa: F401
+    ProducerSignal,
+    duty_to_measure_as_candidates,
+    read_producer_signals,
+)
 from tac.witness_control.shadow_controller import (  # noqa: F401
     ShadowReport,
     build_shadow_report,

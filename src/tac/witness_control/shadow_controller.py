@@ -216,6 +216,11 @@ class ShadowReport:
     # never-fired lever has no MEASURED costate (NO-FAKE); they enter the ΔS-per-cost ranking ONLY after
     # they fire + are measured. Ordered never-fired-first. Default empty (backward-compatible).
     duty_to_measure: list[dict] = _dc_field(default_factory=list)
+    # #247 de-orphaning: every previously-orphaned producer (sensitivity-map per-axis EV weights,
+    # master-gradient per-byte anchor, cathedral-autopilot ranker) read into the ONE controller's
+    # SENSE. Each row is available-with-real-signal OR available=False with an honest reason — NEVER
+    # a fabricated value (NO-FAKE). Default empty (backward-compatible).
+    producer_signals: list[dict] = _dc_field(default_factory=list)
 
     def to_row(self) -> dict:
         return {
@@ -230,6 +235,7 @@ class ShadowReport:
             "refused": self.refused,
             "probe_queue": self.probe_queue,
             "duty_to_measure": self.duty_to_measure,
+            "producer_signals": self.producer_signals,
             "actuation": ACTUATION,
             "axis": AXIS_TAG,
             "pointer": POINTER_NOTE,
@@ -449,6 +455,22 @@ def _duty_to_measure() -> list[dict]:
         return []
 
 
+def _producer_signals(inputs: RunInputs) -> list[dict]:
+    """The #247 de-orphaning: read EVERY orphaned producer (sensitivity-map axis weights,
+    master-gradient anchor, cathedral-autopilot ranker) into the ONE controller's SENSE. Fail-safe:
+    the producer bridge never breaks a report; each producer contributes a real signal or an honest
+    available=False reason (NO-FAKE). ``archive_sha256`` comes from the run flags if a byte-close has
+    landed one (None during live training → master-gradient honestly reports no-archive)."""
+    try:
+        from tac.witness_control.producer_bridge import read_producer_signals
+        flags = inputs.flags if isinstance(inputs.flags, dict) else {}
+        sha = flags.get("archive_sha256") or flags.get("archive_sha") or None
+        op = flags.get("operating_point") or "pr106_r2"
+        return read_producer_signals(archive_sha256=sha, operating_point=op)
+    except Exception:  # noqa: BLE001 — advisory bridge, never breaks the report
+        return []
+
+
 def build_shadow_report(inputs: RunInputs,
                         horizon_epochs: int = DEFAULT_HORIZON_EPOCHS) -> ShadowReport:
     """The full shadow pass: state → costates → classification → ranked recommendations."""
@@ -482,7 +504,7 @@ def build_shadow_report(inputs: RunInputs,
             epoch_latest=None, state=state, costates=costates, classification=None,
             recommendations=[], refused=[],
             probe_queue=[*_probe_queue(costates), {"costate": "ALL_TRAJECTORY_COSTATES", "why_unidentifiable": "no verdict rows in run.log yet", "evidence_gap": ["wait for the first n600 advisory verdict"]}],
-            duty_to_measure=_duty_to_measure())
+            duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs))
 
     recs, refused = _recommendations(inputs, costates, classification, horizon_epochs)
     return ShadowReport(
@@ -491,7 +513,7 @@ def build_shadow_report(inputs: RunInputs,
                       isinstance(rows[-1].get("epoch"), (int, float)) else None),
         state=state, costates=costates, classification=classification,
         recommendations=recs, refused=refused, probe_queue=_probe_queue(costates),
-        duty_to_measure=_duty_to_measure())
+        duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs))
 
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:
