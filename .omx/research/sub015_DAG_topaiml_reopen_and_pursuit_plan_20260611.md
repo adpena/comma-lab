@@ -8377,3 +8377,18 @@ landed, so this is not a perfectly-matched A/B. ep50 verdict sharpens it. WORKIN
 but non-persisting init edge at a real cost; the mod-32 CAPACITY lever remains the better-looking bet (per the
 operator's original "mod-32 started way better" observation — which was capacity, not seeding). Run alive/healthy
 ep56, mem fine, 2 gnorm transients auto-handled. Pointer 0.19110 UNMOVED (advisory macOS-MLX). [no-triality]
+
+### FEED-06t (2026-07-06) — paint-seed ep50 SHARPENED: d_seg PLATEAUS (seed starves d_seg) → seed NOT worth it
+paintseed-ON (mod-26) d_seg: ep0 0.474 → ep25 0.028 → ep50 **0.027** = PLATEAUED (only −3.6% over ep25→50).
+seed-OFF mod-32 ref: ep25 0.0103 → ep50 0.0078 (−24%, still descending, ~7× faster descent rate). So seed-ON is
+~3.5× worse at ep50 AND stalled. KEY INTERNAL SIGNAL (decouples from the mod-dim confound): the seg TRAINING loss
+keeps DESCENDING (3.7@ep31 → 3.05@ep85) while the scored d_seg VERDICT is FLAT (0.028→0.027) — training-loss↓ /
+d_seg-flat decoupling = the seed-islands co-gradient is optimizing its own objective and STARVING the witness's
+d_seg gradient (the #300 seed-compose starvation mechanism), NOT a pure capacity wall (which would flatten BOTH).
+VERDICT: paint-seed helps the INIT (−36% ep0) but ACTIVELY HARMS the trained d_seg descent (plateaus ~0.027 vs the
+un-seeded run's continuing descent to 0.0078@ep50 / 0.00475@ep300). Seed NOT worth it. RECOMMENDATION (held for
+operator GO, not fired autonomously): pivot the next arm to the mod-32 CAPACITY lever WITHOUT seed — matching the
+operator's original "mod-32 started way better" observation, which FEED-06r/s established was capacity, not seeding.
+Residual caveat: a fully-clean seed A/B would be mod-32 seed-ON vs mod-32 seed-OFF (matched); but the decoupling
+already makes the seed's harm clear. Run alive/healthy ep85, mem fine, 3 gnorm transients auto-handled. Pointer
+0.19110 UNMOVED. [no-triality]
