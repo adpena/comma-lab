@@ -184,6 +184,7 @@ from tac.canonical_equations.adaptive_eps_cfl_edge_tracking_20260705 import (
     populate_adaptive_eps_cfl_edge_tracking_equation,
 )
 from tac.canonical_equations.boundary_distance_calibration_20260705 import (
+    bd_weight_for_ratio,
     build_boundary_distance_weight_calibration_v1,
     populate_boundary_distance_weight_calibration_equation,
 )
@@ -283,6 +284,7 @@ __all__ = [
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_adaptive_eps_cfl_edge_tracking_v1",
     "populate_adaptive_eps_cfl_edge_tracking_equation",
+    "bd_weight_for_ratio",
     "build_boundary_distance_weight_calibration_v1",
     "populate_boundary_distance_weight_calibration_equation",
     "build_costate_lambda_marginal_ds_v1",

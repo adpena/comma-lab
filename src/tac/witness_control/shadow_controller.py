@@ -11,8 +11,9 @@ Every recommendation carries its evidence chain (which measured rows/probes prod
 the costate behind it — Rudin readback, no silent scores) and a predicted-ΔS band
 (ΔS < 0 = improvement). The NEVER-REGRESS guard (POWERPLAY frontier-selection) is
 enforced by construction at the recommendation layer: any candidate whose central
-predicted ΔS is ≥ 0 (would not improve S) is REFUSED into the ``refused`` list with
-the reason — it can never rank.
+predicted ΔS is > 0 (would RAISE S) is REFUSED into the ``refused`` list with the
+reason — it can never rank. (A neutral ΔS == 0 stays ranked but scores 0/cost, so it
+sinks below every real improvement — an advisory "no-op / watch" floor, not a fire.)
 
 CONTAINMENT (structural): this module has NO actuation capability — no subprocess,
 no os.system/exec surfaces, no trainer imports. ``actuation`` is the literal string
@@ -397,7 +398,7 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
         c["predicted_dS_per_cost"] = per_cost_score(c["predicted_dS"], cost)
         if c["predicted_dS"] > 0.0:
             refused.append({**c, "refusal_reason":
-                            "NEVER_REGRESS (POWERPLAY): central predicted ΔS ≥ 0 — a "
+                            "NEVER_REGRESS (POWERPLAY): central predicted ΔS > 0 — a "
                             "recommendation that would raise measured S is refused by "
                             "construction"})
         else:

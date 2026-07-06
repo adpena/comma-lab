@@ -7047,8 +7047,11 @@ def main(argv: list[str] | None = None) -> int:
                     "at the number that DEFINES the goal: best-ckpt selection + ALL d_seg telemetry + "
                     "the closed-loop classifier ran on 24/600). Subsetting stays OPT-IN. ALWAYS fp32 "
                     "one-codepath, never mlx-gpu.")
-    ap.add_argument("--annulus-telemetry", action="store_true", default=False,
-                    help="(SENSE) emit a companion {stage:annulus_convergence} row per verdict: the codim-1 "
+    ap.add_argument("--annulus-telemetry", action=argparse.BooleanOptionalAction, default=True,
+                    help="(SENSE, DEFAULT ON — score-neutral read-only observability per CLAUDE.md \"'Off' is "
+                    "a tracked queue\"; it only reads the already-computed verdict argmax + logs, changing NO "
+                    "weight/byte/d_seg, so there is no safety reason to gate it; --no-annulus-telemetry opts "
+                    "out for a pure byte-identity A/B) emit a companion {stage:annulus_convergence} row per verdict: the codim-1 "
                     "boundary-annulus vs interior d_seg flip split + per-class annulus flip-frac + GT-margin "
                     "p10/p50, computed from the realized argmax + the FIXED GT margin (gt.margins) via "
                     "tac.witness_annulus_metrics. DEFAULT OFF => BYTE-IDENTICAL (no row, no realized-map "
