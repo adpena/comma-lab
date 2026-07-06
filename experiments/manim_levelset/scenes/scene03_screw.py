@@ -127,37 +127,50 @@ class Screw(ThreeDScene):
                   run_time=st.T_FADE)
         self.move_camera(phi=0, theta=-90 * DEGREES, zoom=1.0, run_time=st.T_MORPH)
 
-        # ── beat 3 · the screw-derived motion on the real contest video ─────
+        # ── beat 3 · the screw-derived motion, drawn LIVE on the video ──────
         # (camera is face-on now → normal 2D mobjects render flat)
         _HARD = _K // 2                                    # the hardest frame (Scene 2's)
         ci = ValueTracker(0.0)
+
+        def _idx() -> int:
+            return int(np.clip(ci.get_value(), 0, _K - 1))
+
+        # the clip, the flow field, and the FoE ALL update per displayed frame:
+        # you WATCH the measured motion field stream as the car actually drives.
         clip = always_redraw(
-            lambda: ImageMobject(_EGO[int(np.clip(ci.get_value(), 0, _K - 1))])
-            .set(height=_IMGH).move_to(_CX * RIGHT + _CY * UP)
-        )
+            lambda: ImageMobject(_EGO[_idx()]).set(height=_IMGH).move_to(_CX * RIGHT + _CY * UP))
+        flow_live = always_redraw(lambda: _flow_arrows(_idx()))
+        foe_live = always_redraw(
+            lambda: Dot(_px2scene(float(_FOE[_idx(), 0]), float(_FOE[_idx(), 1])),
+                        radius=0.075, color=st.CORAL))
         self.add(clip)
-        kick = st.top(st.kicker("the ego-motion — the real contest footage"))
+        kick = st.top(st.kicker("the ego-motion, made visible — drawn live on the footage"))
         xi_ro = st.corner_tr(st.mono(r"ξ=(v,ω)∈se(3)", scale=0.4))
-        cap = st.bottom(st.caption("the motion each twist ξ produces — here it plays out"))
+        cap = st.bottom(st.caption(
+            "the optical flow the ego-screw ξ induces — watch it stream from the focus of expansion",
+            color=st.INK))
         self.play(FadeIn(clip), FadeIn(kick, shift=0.1 * DOWN), FadeIn(xi_ro),
                   FadeIn(cap, shift=0.1 * UP), run_time=st.T_FADE)
-        # play the whole run, then RETURN to the hardest frame (continuity w/ Scene 2)
-        self.play(ci.animate.set_value(_K - 1), run_time=st.T_HERO, rate_func=rate_functions.linear)
+        self.add(flow_live, foe_live)
+        self.play(FadeIn(flow_live), FadeIn(foe_live), run_time=st.T_FADE)
+        # THE DYNAMIC PAYOFF: play the run slowly and watch the field move WITH it
+        self.play(ci.animate.set_value(_K - 1), run_time=9.0, rate_func=rate_functions.linear)
         self.play(ci.animate.set_value(_HARD), run_time=st.T_MORPH, rate_func=rate_functions.ease_in_out_sine)
 
-        # ── beat 3b · DRAW THE MEASURED FLOW FIELD ON THE FROZEN FRAME ───────
-        flow = _flow_arrows(_HARD)                          # measured Farneback flow
+        # freeze on the hardest frame: swap the live overlays for static snapshots
+        # so the FoE emphasis + hood beats annotate a stable image (smooth fades)
+        frozen = ImageMobject(_EGO[_HARD]).set(height=_IMGH).move_to(_CX * RIGHT + _CY * UP)
+        flow = _flow_arrows(_HARD)
         foe_pt = _px2scene(float(_FOE[_HARD, 0]), float(_FOE[_HARD, 1]))
         foe_dot = Dot(foe_pt, radius=0.075, color=st.CORAL)
+        self.add(frozen); self.bring_to_back(frozen)
+        self.add(flow, foe_dot); self.remove(clip, flow_live, foe_live)
         foe_ring = Circle(radius=0.30, color=st.CORAL, stroke_width=2.5).move_to(foe_pt).set_opacity(0.7)
-        foe_lbl = st.caption("focus of expansion", color=st.CORAL, scale=0.30).next_to(foe_dot, UP, buff=0.28)
-        cap2 = st.bottom(st.caption("the optical flow the ego-screw ξ induces — expanding from the FoE", color=st.INK))
-        self.play(FadeOut(cap), FadeIn(cap2, shift=0.1 * UP), run_time=st.T_FADE)
-        self.play(Create(flow, lag_ratio=0.02), run_time=st.T_WRITE)
-        self.play(FadeIn(foe_dot), Create(foe_ring), FadeIn(foe_lbl, shift=0.08 * DOWN), run_time=st.T_FADE)
+        foe_lbl = st.caption("focus of expansion", color=st.CORAL, scale=0.30).next_to(foe_pt, UP, buff=0.28)
+        self.play(FadeIn(foe_lbl, shift=0.08 * DOWN), Create(foe_ring), run_time=st.T_FADE)
         self.play(foe_ring.animate.scale(1.35).set_opacity(0.0), rate_func=rate_functions.ease_out_sine,
                   run_time=st.T_MORPH)
-        self.wait(st.HOLD)
+        self.wait(st.BEAT)
 
         # ── beat 3c · the ego-hood NULL — the FIXED POINT of the SAME ξ ──────
         # my_car is rigidly bolted to the camera → zero relative flow. It falls
@@ -169,7 +182,7 @@ class Screw(ThreeDScene):
             f"{_FBC['hood_mycar_px']:.2f}px vs {_FBC['road_px']:.2f}px on the road "
             f"({_FBC['ratio_road_over_hood']:.0f}× stiller)", color=st.INK))
         self.play(FadeIn(hood_ov), FadeOut(kick), FadeIn(kick2, shift=0.1 * DOWN),
-                  FadeOut(cap2), FadeIn(hcap, shift=0.1 * UP), run_time=st.T_MORPH)
+                  FadeOut(cap), FadeIn(hcap, shift=0.1 * UP), run_time=st.T_MORPH)
         self.wait(st.HOLD)
 
         # the honest nuance: the wet hood is a curved MIRROR → its specular
@@ -187,10 +200,7 @@ class Screw(ThreeDScene):
             self.play(FadeOut(hcap), FadeIn(rcap, shift=0.1 * UP), run_time=st.T_WRITE)
         self.wait(st.HOLD)
 
-        # ── beat 4 · the dual-use ───────────────────────────────────────────
-        # swap the live (always_redraw) clip for a static frozen frame so it can dim
-        frozen = ImageMobject(_EGO[_HARD]).set(height=_IMGH).move_to(_CX * RIGHT + _CY * UP)
-        self.add(frozen); self.bring_to_back(frozen); self.remove(clip)
+        # ── beat 4 · the dual-use (frozen backdrop already in place) ────────
         self.play(FadeOut(rcap), FadeOut(kick2), FadeOut(xi_ro), FadeOut(flow),
                   FadeOut(foe_dot), FadeOut(foe_lbl), FadeOut(hood_ov), FadeOut(refl),
                   frozen.animate.set_opacity(0.18), run_time=st.T_FADE)
