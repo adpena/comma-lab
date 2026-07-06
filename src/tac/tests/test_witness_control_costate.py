@@ -383,3 +383,18 @@ def test_backtest_205_l7_muon_unidentifiable():
     assert "l7_softplus" not in stages and "muon" not in stages
     named = {c.name for c in rep.costates}
     assert not any("l7" in n or "muon" in n for n in named if "dS_depoch" in n)
+
+
+# --- #247 SENSE→DECIDE: activation-ledger duty_to_measure surface -----------
+def test_shadow_report_surfaces_duty_to_measure_never_fired_levers():
+    """The controller SURFACES the DSL levers OWED a measurement (the 'off is a tracked queue'
+    apparatus) so the operator never has to remember. NO-FAKE: never-fired levers carry an honest
+    'why' and NO fabricated predicted ΔS (they have no measured costate). Ordered never-fired-first."""
+    from tac.witness_control.shadow_controller import RunInputs
+    rep = build_shadow_report(RunInputs(run_dir="/tmp/duty_smoke", verdicts=[], stage_rows={}, flags={}))
+    dtm = rep.duty_to_measure
+    assert dtm, "empty ledger should honestly surface every registered DSL lever as owed"
+    assert all(r["default"] == "off" for r in dtm)                       # score-affecting levers default off
+    assert all("why" in r and "predicted_dS" not in r for r in dtm)      # NO-FAKE: no invented ΔS
+    assert dtm[0]["state"] in ("never-fired", "fired-unmeasured")        # unmeasured surfaced first
+    assert "duty_to_measure" in rep.to_row()                            # persisted in the JSONL row

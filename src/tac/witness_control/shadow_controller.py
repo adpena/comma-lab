@@ -32,7 +32,7 @@ import importlib
 import itertools
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field as _dc_field
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -211,6 +211,11 @@ class ShadowReport:
     recommendations: list[dict]
     refused: list[dict]
     probe_queue: list[dict]
+    # #247 SENSE→DECIDE: the never-fired DSL levers owed a measurement (the activation-ledger queue
+    # the controller SURFACES so "off" is never a forgotten default). These carry NO predicted ΔS — a
+    # never-fired lever has no MEASURED costate (NO-FAKE); they enter the ΔS-per-cost ranking ONLY after
+    # they fire + are measured. Ordered never-fired-first. Default empty (backward-compatible).
+    duty_to_measure: list[dict] = _dc_field(default_factory=list)
 
     def to_row(self) -> dict:
         return {
@@ -224,6 +229,7 @@ class ShadowReport:
             "recommendations": self.recommendations,
             "refused": self.refused,
             "probe_queue": self.probe_queue,
+            "duty_to_measure": self.duty_to_measure,
             "actuation": ACTUATION,
             "axis": AXIS_TAG,
             "pointer": POINTER_NOTE,
@@ -422,6 +428,27 @@ def _probe_queue(costates: list[CostateEstimate]) -> list[dict]:
             for c in costates if c.status == UNIDENTIFIABLE]
 
 
+def _duty_to_measure() -> list[dict]:
+    """The #247 SENSE→DECIDE queue: DSL levers the activation ledger records as OWED a measurement
+    (never-fired OR fired-but-unmeasured, not retired). Fail-safe: the ledger must NEVER break a
+    shadow report, so any import/read error yields an empty queue (the report degrades to legacy).
+
+    NO-FAKE: each row carries the ledger's activation state ONLY — no predicted ΔS (a never-fired
+    lever has no measured costate). The controller surfaces these so "off" is a tracked queue the
+    operator never has to remember; they enter the ΔS-per-cost DECIDE ranking after they fire+measure.
+    """
+    try:
+        from tac.witness_dsl import activation_ledger as _al
+        owed = set(_al.duty_to_measure())
+        rows = [r for r in _al.activation_report() if r["lever"] in owed]
+        for r in rows:
+            r["why"] = ("registered DSL lever OWED a measurement (default-off is a tracked queue, "
+                        "not a forgotten default); NO predicted ΔS until fired+measured")
+        return rows
+    except Exception:  # noqa: BLE001 — advisory sidecar must never break the report
+        return []
+
+
 def build_shadow_report(inputs: RunInputs,
                         horizon_epochs: int = DEFAULT_HORIZON_EPOCHS) -> ShadowReport:
     """The full shadow pass: state → costates → classification → ranked recommendations."""
@@ -454,7 +481,8 @@ def build_shadow_report(inputs: RunInputs,
             run_dir=str(inputs.run_dir), as_of_epoch=inputs.as_of_epoch,
             epoch_latest=None, state=state, costates=costates, classification=None,
             recommendations=[], refused=[],
-            probe_queue=[*_probe_queue(costates), {"costate": "ALL_TRAJECTORY_COSTATES", "why_unidentifiable": "no verdict rows in run.log yet", "evidence_gap": ["wait for the first n600 advisory verdict"]}])
+            probe_queue=[*_probe_queue(costates), {"costate": "ALL_TRAJECTORY_COSTATES", "why_unidentifiable": "no verdict rows in run.log yet", "evidence_gap": ["wait for the first n600 advisory verdict"]}],
+            duty_to_measure=_duty_to_measure())
 
     recs, refused = _recommendations(inputs, costates, classification, horizon_epochs)
     return ShadowReport(
@@ -462,7 +490,8 @@ def build_shadow_report(inputs: RunInputs,
         epoch_latest=(int(rows[-1]["epoch"]) if rows and
                       isinstance(rows[-1].get("epoch"), (int, float)) else None),
         state=state, costates=costates, classification=classification,
-        recommendations=recs, refused=refused, probe_queue=_probe_queue(costates))
+        recommendations=recs, refused=refused, probe_queue=_probe_queue(costates),
+        duty_to_measure=_duty_to_measure())
 
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:
