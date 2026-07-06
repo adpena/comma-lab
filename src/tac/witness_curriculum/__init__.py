@@ -29,6 +29,17 @@ Two geometries, MEASURED + adversarially reviewed (n600 cached GT, 2026-07-06):
   gaps better than isotropic (the per-dash tangent is too local to span inter-dash gaps);
   its only validated virtue is manifold-preservation (stays thin/on-curve), so it is a
   SECONDARY birth-gradient widener, not a dash-bridger.
+
+  The curve TANGENT is now openpilot-aligned (task #325 world-model mine): a lane marking
+  lies along the forward-road direction, which under perspective converges at the
+  VANISHING POINT, so the default tangent is ``normalize(VP − centroid)`` (VP=(256,174) =
+  ``tac.camera.VANISHING_POINT``, the openpilot ``_neo_config`` road cam — CONFIRMED: the
+  contest clip is 1164×874 = that camera — rescaled to scorer 512×384). Weights-free,
+  rule-118-clean (a generic deterministic prior; supercombo/learned weights are never
+  imported — they would be COUNTED + forbidden). MEASURED n600: agrees with the legacy
+  shape-PCA within 15° for 83.4% of components and fixes the noisy 7.5% tail where a
+  short-dash shape-PCA picks a spurious axis; manifold-preservation is unchanged. Plan:
+  ``.omx/research/openpilot_world_model_lane_alignment_plan_20260706.md``.
 """
 from tac.witness_curriculum.eased_targets import (
     birthability,

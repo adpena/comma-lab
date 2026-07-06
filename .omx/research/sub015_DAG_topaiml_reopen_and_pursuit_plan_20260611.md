@@ -8471,6 +8471,28 @@ STRUCTURALLY IMPOSSIBLE (CONTAINMENT); (3) `action_efficiency` = |ΔS| per paid 
 actions" = the means/ends firewall. 6 tests (incl the governance invariants) + 37/37 witness_control suite
 green. Phase-B actuation stays operator-GO + governed-launcher gated.
 
+### FEED-06v (2026-07-06) — openpilot world-model mine (#325): lane tangent fix DONE + broader cross-surface audit SPAWNED
+
+Mining agent `a7d4cc52b2aabf68d` landed. Verdict: **we already own ~90% of openpilot's usable lane/camera
+math** in MIT-clean reimplementations (in places RD-BETTER than openpilot). CONFIRMED: `upstream/videos/0.mkv`
+is **1164×874 = openpilot `_neo_config` road cam** → contest intrinsics PINNED K=[[910,0,582],[0,910,437],[0,0,1]];
+our `camera.py` already matches. The ONE actionable lane gap was surgical, now DONE: replaced the shape-PCA
+proxy in `oriented_width_eased` with the analytic **VP-tangent** `normalize(VP−centroid)` (VP=(256,174),
+openpilot forward-road-converges-to-VP geometry; weights-free, rule-118-clean — supercombo NEVER imported).
+MEASURED n600: agrees w/ PCA within 15° for 83.4% of 11,805 lane components, FIXES the noisy 7.5% tail (>30°)
+where short-dash PCA picks a spurious axis; manifold-preservation unchanged (21.3 vs 21.1 n_comp at matched
+area). 9/9 tests green, ruff clean. Plan durable: `.omx/research/openpilot_world_model_lane_alignment_plan_20260706.md`.
+Do-NOT-import: supercombo/33-pt lane format/learned weights (COUNTED+forbidden, and unnecessary — geometry is analytic).
+
+### FEED-06w (2026-07-06) — openpilot CROSS-SURFACE consistency audit (operator: "likely MORE to learn/correct/optimize besides the lane thing")
+
+The lane tangent is ONE openpilot-derived surface; the mine already flagged a second concrete correction
+(cam_h **1.2** in `lane_sdf_component`/band vs **d=1.22** in `xi_pose_coder` — a 2cm plane-height mismatch to
+unify) + a missing weights-free tool (`get_calib_from_vp` per-clip pitch/yaw). Operator directive: sweep EVERY
+openpilot-derived constant/convention across our codebase (`camera.py`, `lane_sdf_component.py`, `xi_pose_coder.py`,
+`analytic_lane_render_band.py`, `ego_xi_trajectory.py`, `calibrated_geometry.py`, `lane_mark_pose.py`) and
+cross-check against real openpilot source → ranked corrections + optimizations list. $0/shadow-safe. Agent SPAWNED.
+
 SESSION SO FAR (all shadow-safe $0, NO GPU, live mod32cap UNTOUCHED): LADDER=costate special-case PROVEN
 (#322) · eased_targets module movable-GO/lane-loss-space + adversarial overturn (#323) · costate-REPL surface
-(#324) · openpilot world-model mining agent RUNNING (#325). Pointer 0.19110 UNMOVED. [no-triality]
+(#324) · openpilot lane VP-tangent fix DONE + cross-surface audit SPAWNED (#325/#326). Pointer 0.19110 UNMOVED. [no-triality]

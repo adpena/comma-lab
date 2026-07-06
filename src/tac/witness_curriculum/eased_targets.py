@@ -72,19 +72,37 @@ def sdf_dilation_eased(labels: np.ndarray, cls: int, radius: int) -> np.ndarray:
 
 
 def oriented_width_eased(labels: np.ndarray, cls: int, width: int,
-                         min_component: int = 4) -> np.ndarray:
+                         min_component: int = 4, *,
+                         tangent_mode: str = "vp",
+                         vanishing_point: tuple[float, float] | None = None) -> np.ndarray:
     """CURVE homotopy (SECONDARY birth-gradient widener; manifold-preserving).
 
-    Widens each coherent curve-segment of ``cls`` ALONG its own principal tangent so
-    every eased target stays a (thin) curve — never a blob — keeping it on the class's
-    ~8-dim curve manifold (isotropic dilation would leave it; measured NO-GO). This
-    does NOT bridge inter-dash gaps (adversarially confirmed: the per-component tangent
-    is too local); its validated role is a low-debt, on-manifold widening of the
-    already-coherent dash segments to give CE more birth-gradient. width=0 returns the
-    true target. The PRIMARY lane lever is the per-class-λ loss re-weight, not this.
+    Widens each coherent curve-segment of ``cls`` ALONG its lane tangent so every eased
+    target stays a (thin) curve — never a blob — keeping it on the class's ~8-dim curve
+    manifold (isotropic dilation would leave it; measured NO-GO). This does NOT bridge
+    inter-dash gaps (adversarially confirmed: the tangent is too local); its validated
+    role is a low-debt, on-manifold widening of the already-coherent dash segments to
+    give CE more birth-gradient. width=0 returns the true target. The PRIMARY lane lever
+    is the per-class-λ loss re-weight, not this.
+
+    ``tangent_mode``:
+      "vp" (default, openpilot-aligned) — the direction is the analytic camera geometry:
+        a lane marking lies along the forward road direction, whose image tangent points
+        at the VANISHING POINT, so ``tangent = normalize(VP − centroid)`` (VP=(256,174)
+        in scorer 512×384 coords = openpilot ``_neo_config`` road cam rescaled; task #325
+        openpilot mine). Weights-free, rule-118-clean (a generic deterministic prior, NOT
+        a learned artifact — supercombo is never imported). MEASURED n600: agrees with
+        the legacy shape-PCA within 15° for 83.4% of components (median 3.5°) and FIXES
+        the noisy 7.5% tail (>30°) where a short-dash shape-PCA picks a spurious axis.
+        Degenerate fallback to PCA only when the centroid sits on the VP (dir undefined).
+      "pca" (legacy) — the component's own principal axis (kept for the clean A/B).
     """
     if width <= 0:
         return labels
+    if vanishing_point is None:
+        from tac.camera import VANISHING_POINT
+        vanishing_point = (float(VANISHING_POINT[0]), float(VANISHING_POINT[1]))
+    vpx, vpy = float(vanishing_point[0]), float(vanishing_point[1])
     mask = labels == cls
     lab, n = ndimage.label(mask)
     out = labels.copy()
@@ -95,11 +113,18 @@ def oriented_width_eased(labels: np.ndarray, cls: int, width: int,
         if len(xs) < min_component:
             grown = ndimage.binary_dilation(comp, iterations=1)   # too small to orient
         else:
-            pts = np.c_[xs, ys].astype(np.float64)
-            pts -= pts.mean(axis=0)
-            cov = pts.T @ pts
-            _, vecs = np.linalg.eigh(cov)
-            ax = vecs[:, -1]                                       # principal (x, y) dir
+            cx, cy = float(xs.mean()), float(ys.mean())
+            ax = None
+            if tangent_mode == "vp":
+                v = np.array([vpx - cx, vpy - cy], dtype=np.float64)
+                nrm = float(np.hypot(v[0], v[1]))
+                if nrm > 1.0:                         # well-defined away from the VP
+                    ax = v / nrm
+            if ax is None:                             # "pca" mode, or VP-degenerate
+                pts = np.c_[xs, ys].astype(np.float64)
+                pts -= pts.mean(axis=0)
+                _, vecs = np.linalg.eigh(pts.T @ pts)
+                ax = vecs[:, -1]                       # principal (x, y) dir
             t = np.arange(-W, W + 1)
             lx = np.round(t * ax[0]).astype(int)
             ly = np.round(t * ax[1]).astype(int)
