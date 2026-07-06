@@ -8651,3 +8651,27 @@ by EIG -> fire -> MEASURE -> DECIDE-actuation by ΔS/cost). Future #247 work bui
 the rankers. Pointer 0.19110 UNMOVED (all SENSE/DECIDE/CLOSE apparatus; the movers remain the islands arm
 #323/#331 + the pose byte-close #238/#248, both gated on operator GO for heavy GPU).
 [triality: DAG(this); code ccc161a98+030a23d03 — apparatus/[no-triality] commits, no DSL/eqs leg needed]
+
+## FEED-247deorphan (2026-07-06) — #247 THE de-orphaning: the costate controller is now the ONE canonical consumer
+The remaining bulk of #247 (beyond the SENSE→DECIDE→CLOSE loop of FEED-247loop) was the ACTUAL unification:
+pull the previously-orphaned producers INTO the ONE controller's SENSE. LANDED `372c3ac6b`
+(`src/tac/witness_control/producer_bridge.py` + `ShadowReport.producer_signals` in BOTH build paths +
+to_row + witness_control export + 8 tests). The controller now ENUMERATES + READS every orphaned
+producer each shadow pass:
+- **sensitivity_map.axis_weights** — per-axis EV multipliers (pose/seg/rate/mixed) at the operating
+  point (`pr106_r2` default); a LIVE static prior the DECIDE ranker uses to weight costates by axis;
+  provenance (operating_point_tag+basis) propagated per the evidence-tag discipline.
+- **master_gradient.latest_anchor** — the measured ΔS-per-byte anchor for a BYTE-CLOSED archive;
+  during live training there is no archive → HONESTLY available=False (NO-FAKE, not an invented anchor).
+- **cathedral_autopilot.ranker** — surfaced available (import-verified) + the composition note; NOT
+  invoked per-verdict (it ranks a candidate SET). `duty_to_measure_as_candidates()` exposes the
+  activation-ledger never-fired levers as its candidate label list — the EIG/select bridge (FEED-247loop).
+NO-FAKE discipline held: every producer contributes a REAL live signal OR an honest available=False
+reason; nothing fabricated. Fail-safe: every producer read is try/except-guarded → a producer can never
+break build_shadow_report. Advisory-only: the whole witness_control package still never mutates a run or
+claims a score. The #247 TITLE ("cathedral autopilot + orphaned producers into ONE canonical-consumer
+costate-controller, de-orphan don't rebuild") is now MET at the read/SENSE surface — witness_control is
+the one consumer, imports only these producers' public query APIs, rebuilds nothing. Independent
+senior-engineer adversarial review dispatched for sign-off (the title's final gate); #247 stays IN-PROGRESS
+until that verdict lands. Pointer 0.19110 UNMOVED (apparatus). [triality: DAG(this); code
+372c3ac6b — apparatus/[no-triality]]
