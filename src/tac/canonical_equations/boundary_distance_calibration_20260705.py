@@ -166,6 +166,31 @@ def build_boundary_distance_weight_calibration_v1() -> CanonicalEquation:
     )
 
 
+def populate_boundary_distance_weight_calibration_equation(
+    *,
+    path=None,
+    lock_path=None,
+    agent: str | None = None,
+    subagent_id: str | None = None,
+) -> CanonicalEquation:
+    """Idempotent APPEND-ONLY registration of the boundary-distance weight calibration equation
+    into the canonical registry (mirrors ``populate_adaptive_eps_cfl_edge_tracking_equation``;
+    latest-row-wins query semantics). This is the EQUATIONS leg of the CE-window intervention
+    pre-stage (``ce_window_intervention_package_20260705.md``), anchored by the MEASURED ep100
+    phi-surface calibration (ratio(w)=w*M_bd/(M_ce+w*M_bd); w*=0.2 @9.05%; shares monotone; no
+    island collapse). Was ORPHANED (built + a tools/register_bd_calibration script exists, but
+    never imported into ``__init__`` / wired via a canonical populate_*)."""
+    from tac.canonical_equations.registry import register_canonical_equation
+
+    eq = build_boundary_distance_weight_calibration_v1()
+    register_canonical_equation(
+        eq, path=path, lock_path=lock_path, agent=agent, subagent_id=subagent_id,
+        notes="boundary_distance_calibration_20260705_deorphan_20260706 (equations leg of the "
+              "CE-window intervention pre-stage)",
+    )
+    return eq
+
+
 __all__ = [
     "BD_RAW_MEAN_EP100",
     "BULK_BOUNDARY_GRAD_SHARE_BY_W_EP100",
@@ -176,4 +201,5 @@ __all__ = [
     "bd_share_of_total",
     "bd_weight_for_ratio",
     "build_boundary_distance_weight_calibration_v1",
+    "populate_boundary_distance_weight_calibration_equation",
 ]

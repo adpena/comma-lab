@@ -161,9 +161,35 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
     )
 
 
+def populate_costate_lambda_marginal_ds_equation(
+    *,
+    path=None,
+    lock_path=None,
+    agent: str | None = None,
+    subagent_id: str | None = None,
+) -> CanonicalEquation:
+    """Idempotent APPEND-ONLY registration of the costate λ = marginal-ΔS equation (#303 Phase A)
+    into the canonical registry (mirrors ``populate_adaptive_eps_cfl_edge_tracking_equation``;
+    latest-row-wins query semantics). This is the EQUATIONS leg of the Hamiltonian meta-layer
+    triality (#247): the costate λ COMPLETES {DAG=state · DSL=control · equations=law} with the
+    fourth object λ_i = ∂S/∂x_i (memory
+    ``project_meta_layer_above_triality_hamiltonian_control_costate_20260703``). Was ORPHANED
+    (built + tested but never imported into ``__init__`` / wired via a populate_*)."""
+    from tac.canonical_equations.registry import register_canonical_equation
+
+    eq = build_costate_lambda_marginal_ds_v1()
+    register_canonical_equation(
+        eq, path=path, lock_path=lock_path, agent=agent, subagent_id=subagent_id,
+        notes="costate_lambda_marginal_ds_20260705_deorphan_20260706 (equations leg of the "
+              "Hamiltonian meta-layer triality #247/#303)",
+    )
+    return eq
+
+
 __all__ = [
     "EQUATION_ID",
     "build_costate_lambda_marginal_ds_v1",
     "chained_ds_depoch",
     "costate_vector",
+    "populate_costate_lambda_marginal_ds_equation",
 ]

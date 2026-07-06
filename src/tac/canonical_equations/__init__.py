@@ -183,6 +183,22 @@ from tac.canonical_equations.adaptive_eps_cfl_edge_tracking_20260705 import (
     build_adaptive_eps_cfl_edge_tracking_v1,
     populate_adaptive_eps_cfl_edge_tracking_equation,
 )
+from tac.canonical_equations.boundary_distance_calibration_20260705 import (
+    build_boundary_distance_weight_calibration_v1,
+    populate_boundary_distance_weight_calibration_equation,
+)
+from tac.canonical_equations.costate_lambda_marginal_ds_20260705 import (
+    build_costate_lambda_marginal_ds_v1,
+    chained_ds_depoch,
+    costate_vector,
+    populate_costate_lambda_marginal_ds_equation,
+)
+from tac.canonical_equations.focal_gradient_concentration_20260705 import (
+    build_focal_gradient_concentration_v1,
+    focal_region_share,
+    focal_weight_ratio,
+    populate_focal_gradient_concentration_equation,
+)
 from tac.canonical_equations.curriculum_derivation_laws_20260705 import (
     ALL_CURRICULUM_DERIVATION_BUILDERS,
     build_curriculum_handoff_critical_nucleus_v1,
@@ -267,6 +283,16 @@ __all__ = [
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_adaptive_eps_cfl_edge_tracking_v1",
     "populate_adaptive_eps_cfl_edge_tracking_equation",
+    "build_boundary_distance_weight_calibration_v1",
+    "populate_boundary_distance_weight_calibration_equation",
+    "build_costate_lambda_marginal_ds_v1",
+    "chained_ds_depoch",
+    "costate_vector",
+    "populate_costate_lambda_marginal_ds_equation",
+    "build_focal_gradient_concentration_v1",
+    "focal_region_share",
+    "focal_weight_ratio",
+    "populate_focal_gradient_concentration_equation",
     "ALL_CURRICULUM_DERIVATION_BUILDERS",
     "build_curriculum_handoff_critical_nucleus_v1",
     "build_ema_window_pi_group_v1",

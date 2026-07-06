@@ -166,6 +166,31 @@ def build_focal_gradient_concentration_v1() -> CanonicalEquation:
     )
 
 
+def populate_focal_gradient_concentration_equation(
+    *,
+    path=None,
+    lock_path=None,
+    agent: str | None = None,
+    subagent_id: str | None = None,
+) -> CanonicalEquation:
+    """Idempotent APPEND-ONLY registration of the focal-gamma gradient-budget concentration
+    equation into the canonical registry (mirrors ``populate_adaptive_eps_cfl_edge_tracking_equation``;
+    latest-row-wins query semantics). This is the EQUATIONS leg of the levelset-loss-geometry
+    symposium (``council_grand_symposium_levelset_loss_geometry_20260705.md``), anchored by the
+    MEASURED ep50 calibration (island share NON-monotone in gamma => focal is a weak bulk-boundary
+    reallocator, gamma*=0 HOLD). Was ORPHANED (built + a tools/register_lever_laws script exists,
+    but never imported into ``__init__`` / wired via a canonical populate_*)."""
+    from tac.canonical_equations.registry import register_canonical_equation
+
+    eq = build_focal_gradient_concentration_v1()
+    register_canonical_equation(
+        eq, path=path, lock_path=lock_path, agent=agent, subagent_id=subagent_id,
+        notes="focal_gradient_concentration_20260705_deorphan_20260706 (equations leg of the "
+              "levelset-loss-geometry symposium)",
+    )
+    return eq
+
+
 __all__ = [
     "BULK_BOUNDARY_GRAD_SHARE_EP50",
     "EQUATION_ID",
@@ -176,4 +201,5 @@ __all__ = [
     "build_focal_gradient_concentration_v1",
     "focal_region_share",
     "focal_weight_ratio",
+    "populate_focal_gradient_concentration_equation",
 ]
