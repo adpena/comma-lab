@@ -25,6 +25,13 @@ import _style as st
 
 _ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
+# per-frame separatrix stack — the abstract partition RESOLVES into the real one,
+# then plays LIVE on the moving footage (same stack scenes 2/3 use)
+_EGO = np.load(_ASSETS / "ego_clip.npy")
+_SEP_STACK = np.load(_ASSETS / "ego_sep_stack.npy")
+_KS = len(_EGO)
+_HS = _KS // 2
+
 # ── 5 quadratic logit fields on a fixed grid (computed ONCE) ─────────────────
 _N = 360
 _XS, _YS = np.linspace(-3.2, 3.2, _N), np.linspace(-2.0, 2.0, _N)
@@ -113,21 +120,37 @@ class Separatrix(Scene):
         self.play(glow.animate.set_value(1.0), run_time=st.T_FADE)
         self.wait(st.HOLD)
 
-        # ── beat 5 · resolve into openpilot (the payoff) ────────────────────
-        seg = ImageMobject(str(_ASSETS / "hardest_separatrix.png")).set(height=_FIELD_H).move_to(_FIELD_POS)
-        seg.set_opacity(0.0)
-        self.add(seg)
+        # ── beat 5 · resolve into openpilot — then WATCH IT MOVE ────────────
+        ci_t = ValueTracker(float(_HS))
+
+        def _sidx() -> int:
+            return int(np.clip(ci_t.get_value(), 0, _KS - 1))
+
+        live_seg = always_redraw(
+            lambda: ImageMobject(_SEP_STACK[_sidx()]).set(height=_FIELD_H).move_to(_FIELD_POS))
         kick = st.top(st.kicker("the same partition — on a real road"))
         self.play(FadeOut(eq2), FadeOut(cap2), FadeOut(tau_ro), run_time=st.T_FADE)
-        self.play(field.animate.set_opacity(0.0), seg.animate.set_opacity(1.0),
-                  FadeIn(kick, shift=0.1 * DOWN), run_time=st.T_MORPH,
-                  rate_func=rate_functions.ease_in_out_sine)
+        self.add(live_seg)                                 # opaque — covers the abstract field
+        self.play(FadeIn(live_seg), FadeIn(kick, shift=0.1 * DOWN),
+                  run_time=st.T_MORPH, rate_func=rate_functions.ease_in_out_sine)
+        self.remove(field)
         legend = st.bottom(_legend())
         self.play(FadeIn(legend, lag_ratio=0.12), run_time=st.T_WRITE)
-        self.wait(st.HOLD_LONG)
+        self.wait(st.HOLD)
+        # the abstract idea IS the real partition — and now it MOVES with the scene
+        movecap = st.bottom(st.caption(
+            "the same partition, live — it tracks the road as the scene flows", color=st.INK))
+        self.play(FadeOut(legend), FadeIn(movecap, shift=0.1 * UP), run_time=st.T_FADE)
+        self.play(ci_t.animate.set_value(0.0), run_time=st.T_FADE, rate_func=rate_functions.ease_in_out_sine)
+        self.play(ci_t.animate.set_value(_KS - 1), run_time=8.0, rate_func=rate_functions.linear)
+        self.play(ci_t.animate.set_value(float(_HS)), run_time=st.T_MORPH, rate_func=rate_functions.ease_in_out_sine)
+        self.wait(st.BEAT)
+        # freeze to a static snapshot for the thesis
+        seg = ImageMobject(_SEP_STACK[_HS]).set(height=_FIELD_H).move_to(_FIELD_POS)
+        self.add(seg); self.bring_to_back(seg); self.remove(live_seg)
 
         # ── beat 6 · thesis ─────────────────────────────────────────────────
-        self.play(FadeOut(kick), FadeOut(legend), seg.animate.set_opacity(0.20), run_time=st.T_FADE)
+        self.play(FadeOut(kick), FadeOut(movecap), seg.animate.set_opacity(0.20), run_time=st.T_FADE)
         e = st.eq(r"\tau \;=\; \varepsilon \;=\; \hbar", scale=1.7)
         e_sub = st.caption("softmax temperature = level-set viscosity = semiclassical scale").next_to(e, DOWN, buff=0.3)
         thesis = st.body("a boundary is a curve, not a volume  →  cheap to describe").next_to(e_sub, DOWN, buff=0.55)
