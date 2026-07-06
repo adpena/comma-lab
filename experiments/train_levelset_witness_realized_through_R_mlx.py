@@ -60,10 +60,8 @@ for _p in (REPO, REPO / "src", REPO / "upstream", REPO / "experiments"):
 # ── imports from the RGB-witness trainer (a7660df3 — reuse, do NOT edit) ──
 from train_witness_realized_through_R_mlx import (  # noqa: E402
     MlxEMA,
-    SEG_H,
     SEG_W,
     _build_render_coords,
-    _render_rgb_render_res,
     _seed_muon_momentum_from_adam,
     _torch_R_to_camera_uint8,
     cpu_verdict_d_pose_batch,
@@ -75,7 +73,6 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     make_loss_fn,
     maybe_enable_mx_compile_r,
     precompute_gt,
-    quantize_witness_blob,
     r_isolated_microbench,
     render_through_R_mlx,
     set_fused_r_kernel,
@@ -85,17 +82,14 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
 from tac.boundary_math.lever_b_generator import self_orientation_directional_feats  # noqa: E402
 from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     CurveletBankConfig,
-    LevelSetConfig,
     curvelet_directional_B,
     curvelet_feats,
     film_modulation_participation_ratio,
-    film_rank_floor_penalty,
     int8_dequant_params,
     lane_thin_weight_map,
     levelset_rgb_forward_numpy,
     quantize_levelset_blob,
     rebuild_per_pair_feats_in_place,
-    save_levelset_npz,
 )
 from tac.optimization.muon_finisher_mlx import (  # noqa: E402
     build_muon_finisher_optimizer,

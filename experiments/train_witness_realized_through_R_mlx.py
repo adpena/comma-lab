@@ -1465,9 +1465,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     siren_omega = float(getattr(args, "siren_omega", 30.0))
     finer_first_bias_scale = float(getattr(args, "finer_first_bias_scale", 1.0))
     wire_scale = float(getattr(args, "wire_scale", 1.0))
-    # The periodic frequency THIS activation uses (hosc keeps its own low omega; siren/finer/wire
-    # use siren_omega). Drives BOTH _act and the verdict forward's omega so they never drift.
-    periodic_omega = float(getattr(args, "hosc_omega", 1.0)) if activation == "hosc" else siren_omega
+    # (periodic-omega note) the periodic frequency each activation uses is carried on the MODEL
+    # (`model.periodic_omega`, set in __init__ @447 from hosc_omega for hosc / siren_omega otherwise)
+    # and read at the verdict forward @1830 — no local copy is needed here (a dead local was removed,
+    # confound-fix cleanup 2026-07-05, ruff F841).
     # (bug #8 / BH2) hosc beta-anneal endpoints. A CONSTANT beta=4 tanh(4*sin(.))
     # SATURATES (|arg|<=4 -> tanh ~ +/-0.999 at the sine peaks -> vanishing gradient,
     # the BH2 dead-grad bug). So when the operator selects --activation hosc WITHOUT
@@ -2703,7 +2704,7 @@ def main(argv: list[str] | None = None) -> int:
         "N evals (and the last epoch) for the ema-lag warning + best-EMA selection.",
     )
     ap.add_argument(
-        "--verdict-pairs", type=int, default=120,
+        "--verdict-pairs", type=int, default=0,
         help="(WALL-CLOCK win #3) IN-LOOP monitoring verdict scores a FIXED evenly-spaced subset "
         "of N pairs (same pairs every eval -> comparable d_seg TREND). 0 = all P pairs. Subset "
         "rows are labeled monitor_estimate=true (a TREND, NOT a scored row); the FINAL byte-close "
