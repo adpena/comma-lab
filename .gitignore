@@ -566,3 +566,6 @@ submission_packets/
 # regenerable via generate_golden_vectors.py, and REQUIRED for the Rust↔Python bit-identical
 # parity gate (sibling of the tac-boundary-decode fixture pattern above).
 !runtime-rs/crates/tac-levelset-inflate/golden_vectors/*.bin
+
+# rebuildable manim viz frame-stacks (regenerate from the run; disk-hygiene non-negotiable)
+experiments/manim_levelset/assets/

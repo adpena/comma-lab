@@ -33,9 +33,15 @@ measurement gate while DISAGREEING on a load-bearing premise (which the gate res
 - ⇒ the recall's "birth-vs-total is a Pareto conflict" is a **wrong-support artifact +
   the seed-starvation bug (#300)**, IMPLEMENTATION-falsified, paradigm intact. Recording
   it as a fundamental conflict would be premature-KILL / conservative bias.
-- **Ceiling** = 100·island_share·d_seg: island_share ≈1% → ΔS ≤ **0.005** (noise);
+- **Ceiling** = 100·island_share·d_seg: island_share ≈1% → ΔS ≤ **0.005**;
   island_share ≈19% (lane un-born) → ΔS ≤ **0.094** (nearly sub-0.15 alone). The regime
   is UN-MEASURED — the crux.
+- **CORRECTION (operator 2026-07-06): 0.005 is NOT noise at this frontier.** At S=0.19110
+  → sub-0.15 the gap-to-goal is 0.041; a 0.005 exact drop clears ~12% of it and is a
+  bankable row per "any score sub-0.19 is progress on the way down." The magnitude does
+  NOT justify a DEFER — only the LEVER COST does. So the branch below is reframed:
+  low-lane-share does not mean "don't pursue," it means "pursue via the CHEAPEST lever
+  (analytic render-band #213, zero byte cost), not an expensive hard-costate build."
 - The explicit **hard** costate-gated arm is **DESIGNED-ONLY**: reachability sensor inert
   (msal_uni at chance, #268 exact-S_R owed); per-class-λ actuator intentionally NOT wired
   to descent (costate_estimator is campaign-level, structural-containment); #323
@@ -103,6 +109,23 @@ checkpoints — render → argmax → per-class part_frac + within-flip + big-3 
   are noise; the residual is ~98% BULK (Undrivable + Road). Redirect to bulk-CE deepening
   (tau nucleation #302) + Muon finishing (#270) + the analytic band. Hold all islands
   treatment. This DEFER is then MEASURED-reality, not conservatism.
+
+## #323 LADDER island-birth — PURSUE (operator 2026-07-06), split by the transfer proof
+The symposium flagged #323's along-tangent lane homotopy as "designed-only / not wired."
+Operator directs it be pursued. It is NOT one lever — the LADDER transfer proof splits it:
+- **Movable = SDF-dilation homotopy → PROVEN transfer (1-Lipschitz ⇒ Hausdorff-continuous
+  ⇒ forward-Euler ∂_t u=+|∇u|). GO independent of the probe** — movable island-birth is
+  sound whatever lane-share turns out to be. This is the un-gated pursuit.
+- **Lane = manifold-preserving along-tangent + ξ-phase.** The earlier "isotropic-of-a-curve
+  NO-GO" is a DIFFERENT operator; `eased_targets.oriented_width_eased` (now openpilot
+  VP-tangent grounded, commit d90a64466) widens ALONG the tangent → stays on the lane
+  manifold → not under the NO-GO. Headroom sized by the probe's lane-share.
+- **The wiring gap (NOW CLOSED, commit 705afea84):** `src/tac/witness_curriculum/eased_targets.py`
+  WAS orphan (zero importers). "Pursue #323" wired it: `tac.boundary_math.island_protection.
+  eased_island_masks` now consumes both `sdf_dilation_eased` (movable) + `oriented_width_eased`
+  (lane VP-tangent), selected by the new `--seed-island-eased` flag (default-OFF ⇒ byte-identical
+  when unfired; adversarially verified). It is NOT yet a DSL lever (`SeedIslandEased` factory owed
+  under #332) — that is the remaining wiring, not the trainer binding.
 
 ## Warm-start verdict: FROM-SCRATCH
 Both lenses + the recall agree: a CE-converged basin has ≈0 gradient on islands; birth must

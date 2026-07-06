@@ -68,16 +68,25 @@ SUBSTANTIVE = re.compile(
 # / probe) stay in SUBSTANTIVE (the any-leg fallback) but do NOT force a specific
 # leg; only the control/law signatures below do.
 #   CONTROL change  → must touch the DSL   (the config-generator; a new/changed lever)
+#   Calibrated 2026-07-06 (adversarial review): DROPPED "launch" (launching an existing
+#   config is not a lever change — it false-fired on "launcher: retry flaky ssh"); ADDED the
+#   lever-family stems the reviewer proved slipped through ("SeedIslandEased seg-birth term").
 DSL_REQUIRING = re.compile(
-    r"\b(?:lever\w*|wire.?in\w*|integrat\w*|launch\w*|curriculum\w*|carrier\w*|gauge\w*)",
+    r"\b(?:lever\w*|wire.?in\w*|integrat\w*|curriculum\w*|carrier\w*|gauge\w*|"
+    r"seed\w*|island\w*|activation\w*|birth\w*)",
     re.IGNORECASE,
 )
 #   LAW / measured finding → must register/refine a canonical equation
+#   DROPPED the over-broad single words "floor"/"law"/"erasure" (fired on "floor division
+#   bug", "outlaw", "erasure coding"); the measured-VALUE detector below catches numeric rows.
 EQUATION_REQUIRING = re.compile(
     r"\b(?:measur\w*|byte.?clos\w*|exact.?eval\w*|exact\s+row|verdict\w*|pointer\w*|"
-    r"scored|attribution\w*|erasure\w*|refut\w*|ratif\w*|\bfloor\b|\blaw\b)",
+    r"scored|attribution\w*|refut\w*|ratif\w*)",
     re.IGNORECASE,
 )
+#   A MEASURED numeric row (e.g. "d_seg 0.0031 n600 best at ep50") — a finding with a value,
+#   which the enumerated stems alone missed (the MEDIUM-1 false-negative).
+_MEASURED_ROW = re.compile(r"\b(?:d_seg|d_pose)\W{0,4}[0-9]", re.IGNORECASE)
 
 # In-repo surfaces whose modification means "a triality leg was updated this
 # window" (DAG = trajectory · DSL = control · equations = law · index = memory
@@ -123,17 +132,38 @@ def touched_equations(files: list[str]) -> bool:
 def missing_legs(subjects: list[str], files: list[str]) -> list[str]:
     """The SPECIFIC triality legs a change of this type REQUIRES but did not touch.
 
-    A control change (lever/wire-in/launch/curriculum/carrier/gauge) must touch the
-    DSL; a measured-law change (measure/byte-close/verdict/exact-row/…) must touch the
-    canonical equations. Returns the leg names that are required-but-absent (empty ==
-    every required leg was touched)."""
+    A control change (lever/wire-in/curriculum/carrier/gauge/seed/island/…) must touch the
+    DSL; a measured-law change (measure/byte-close/verdict/exact-row/a numeric d_seg/d_pose
+    row) must touch the canonical equations. Returns the leg names that are required-but-absent
+    (empty == every required leg was touched).
+
+    NOTE (LOW-2, honest bound): ``files`` is the union for whatever window this is called on.
+    ``main`` calls this PER-COMMIT (each commit's own subject + own files) so a same-window but
+    unrelated leg-touch cannot satisfy a different commit's requirement."""
     joined = " ".join(s or "" for s in subjects)
     miss: list[str] = []
     if DSL_REQUIRING.search(joined) and not touched_dsl(files):
         miss.append("DSL")
-    if EQUATION_REQUIRING.search(joined) and not touched_equations(files):
+    if (EQUATION_REQUIRING.search(joined) or _MEASURED_ROW.search(joined)) and not touched_equations(files):
         miss.append("equations")
     return miss
+
+
+def commit_drifts(subject: str, files: list[str]) -> bool:
+    """Per-commit drift: this ONE commit requires a leg its OWN files did not touch, or it is
+    substantive and touched no leg at all. Opt-out ([no-triality]) is honored per-commit."""
+    if is_opted_out([subject]):
+        return False
+    if missing_legs([subject], files):
+        return True
+    return is_substantive([subject]) and not has_triality_touch(files)
+
+
+def window_drifts(commits: list[tuple[str, list[str]]]) -> bool:
+    """The window drifts iff ANY single commit drifts on its OWN (subject, files) — the LOW-2
+    fix. A window-wide [no-triality] on any commit does NOT excuse the others; each commit is
+    judged on its own opt-out."""
+    return any(commit_drifts(subj, files) for subj, files in commits)
 
 
 def classify(subjects: list[str], files: list[str]) -> str:
@@ -175,9 +205,10 @@ def build_reason(subjects: list[str], files: list[str] | None = None) -> str:
             f"Commit(s): {preview}. Update the named leg(s) — plus a DAG FEED "
             "(.omx/research/sub015_DAG_*) and a MEMORY.md line for a durable "
             "finding — then finish. Pure chore/apparatus can opt out with "
-            "[no-triality] in the commit message. This gate now enforces the "
-            "RIGHT leg per change-type, not just any leg — so the DSL + equations "
-            "can no longer silently drift while only the DAG is touched."
+            "[no-triality] in the commit message. This gate enforces the RIGHT "
+            "leg per change-type for the recognised control/measurement "
+            "vocabulary — it NARROWS (does not fully eliminate) silent DSL/"
+            "equation drift, so record the leg proactively regardless."
         )
     return (
         "Triality drift-detector: "
@@ -283,25 +314,40 @@ def main() -> None:
     if last_head == head:
         sys.exit(0)
 
-    # --- gather this-window commits + touched files ---
+    # --- gather this-window commits WITH per-commit files (LOW-2 fix) in ONE git call ---
+    # ``--format=%H\x1f%s --name-only`` emits, per commit, a "<sha>\x1f<subject>" header line
+    # followed by that commit's OWN file list — so each commit is judged on its own leg touches,
+    # not the window union.
     try:
-        rl = _git(root, "log", "--format=%s", f"{last_head}..{head}")
-        subjects = [s for s in rl.stdout.splitlines() if s.strip()] if rl.returncode == 0 else []
-        rd = _git(root, "diff", "--name-only", f"{last_head}..{head}")
-        files = [f for f in rd.stdout.splitlines() if f.strip()] if rd.returncode == 0 else []
+        raw = _git(root, "log", "--format=%H\x1f%s", "--name-only", f"{last_head}..{head}").stdout
+        commits: list[tuple[str, list[str]]] = []
+        cur_subj: str | None = None
+        cur_files: list[str] = []
+        for line in raw.splitlines():
+            if "\x1f" in line:
+                if cur_subj is not None:
+                    commits.append((cur_subj, cur_files))
+                cur_subj = line.split("\x1f", 1)[1]
+                cur_files = []
+            elif line.strip():
+                cur_files.append(line.strip())
+        if cur_subj is not None:
+            commits.append((cur_subj, cur_files))
     except Exception:
-        _advance_and_allow(root, head)  # can't diff → fail open, advance
+        _advance_and_allow(root, head)  # can't read log → fail open, advance
 
-    verdict = classify(subjects, files)
-
-    if verdict == "drift":
+    subjects = [s for s, _ in commits]
+    if window_drifts(commits):
         # Persist last_block_head (do NOT advance last_head — so the fix commit
         # lands inside the next window and clears the drift on re-check).
         marker["last_block_head"] = head
         marker["updated_utc"] = _now()
         _write_marker(root, marker)
-        _log(root, f"BLOCK head={head[:9]} n={len(subjects)} subj={subjects[:3]!r}")
-        print(json.dumps({"decision": "block", "reason": build_reason(subjects, files)}))
+        # Point the nudge at the FIRST drifting commit (its own subject + files).
+        d_subj, d_files = next(((s, f) for s, f in commits if commit_drifts(s, f)),
+                               (subjects[0] if subjects else "", []))
+        _log(root, f"BLOCK head={head[:9]} n={len(subjects)} drift_subj={d_subj[:60]!r}")
+        print(json.dumps({"decision": "block", "reason": build_reason([d_subj], d_files)}))
         sys.exit(0)
 
     _log(root, f"allow(clean) head={head[:9]} n={len(subjects)}")
