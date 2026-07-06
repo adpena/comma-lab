@@ -364,6 +364,50 @@ other unit: automated · world-class · recursively-adversarial-reviewed · deep
 `upstream/evaluate.py` n600 exact row. **Comprehensive deep-math + meta version:
 `docs/triality_dag_dsl_equations_deepmath.md`.**
 
+## "Off" is a tracked queue, never a forgotten default — orphaned-signal reconciliation — NON-NEGOTIABLE
+
+**Source:** operator binding directive 2026-07-06 verbatim *"Default off is a source of orphaned
+signal ... How can we reconcile default off with a smarter apparatus and never orphaned or rediscovery
+or counting on me to remember everything."* Sister of the config-orphan confound
+(`[[config_orphan_confound_permanent_fix_lever_registry_20260706]]`) + velocity-driven orphaning
+(`[[velocity_driven_orphaning_the_deepest_signal_loss_meta_bug]]`) + "Results must become system
+intelligence" + the triality "DSL HOLDS every designed lever" discipline. Only NO-FAKE, THE GOAL, and
+the OPERATOR-PRIORITY anti-forgetfulness backbone outrank it.
+
+**The confound.** A hardcoded `default=off` with no recorded reason is an ORPHAN GENERATOR: the signal
+exists but never emits/fires unless a human remembers to flip it. "Default-off for safety" silently
+becomes "forgotten forever." The reconciliation is NOT "turn everything on" — it splits two cases and
+makes the APPARATUS (not the operator) hold the memory. **Binding principle: "off" must be a TRACKED,
+REASONED, controller-SURFACED state — never a silent default that depends on operator memory.**
+
+1. **Observability (read-only, score-neutral) DEFAULTS ON.** Telemetry that only READS + logs cannot
+   change the trained weights / archive bytes / d_seg / d_pose — byte-identity is preserved BY
+   CONSTRUCTION, so there is NO safety reason to gate it. Default-off for such telemetry is simply the
+   orphan bug, not caution. Gate ONLY on genuine compute cost, and then the CADENCE is a controller
+   decision RECORDED with its reason — never a hardcoded human-remembered switch. (The annulus-row
+   default-off I shipped 2026-07-06 was this exact mistake; corrected to default-on.)
+
+2. **Score-affecting LEVERS default OFF but are REGISTERED with a DUTY-TO-MEASURE.** These must default
+   off (else they silently perturb the sealed config), but "off" becomes a QUEUE STATE the controller
+   works down, not a grave: the lever is a DSL `Lever` factory → `lever_registry` holds it →
+   `completeness().unmapped` surfaces un-held flags (coverage). The MISSING dimension this rule adds is
+   **ACTIVATION**: a lever can be held-by-the-DSL yet NEVER-FIRED. The registry MUST track per lever/
+   signal `{default, derived-reason, ever_fired, last_measured_verdict, state ∈ never-fired | measured
+   | retired-with-reason}`. "Held but never fired" is still orphaned signal until the ledger tracks it.
+
+3. **Defaults are DERIVED + RECORDED, never silently hardcoded.** A resolver computes each on/off from
+   `{score-neutral? → on · cheap? · sealed-config? → off-BUT-record-why}` and stamps the reason into run
+   provenance → every "off" carries its rationale and is QUERYABLE (no rediscovery). The #247 costate
+   controller's SENSE layer READS the activation ledger, RANKS never-fired high-value levers into the
+   DECIDE queue (duty-to-measure), and a Stop-hook NAGS when a high-value lever has been never-fired for
+   N campaign steps. **The controller remembers and surfaces; the operator never has to.**
+
+**Net:** observability is not gate-able at all (default-on when score-neutral); levers stay safely off
+but become a tracked-ranked-nagged queue the controller drains; every "off" has a recorded reason. This
+is APPARATUS (extends `lever_registry` + the costate SENSE layer), NOT a new orchestration layer, and
+NOT chat-prose (a chat answer IS the orphan). Memory:
+`[[default_off_is_orphaned_signal_activation_ledger_reconciliation_20260706]]`.
+
 ## Capstone θ* witness trainer — canonical entry point — NON-NEGOTIABLE
 
 **The LIVE launch-path trainer for ALL capstone θ* / level-set witness work is
