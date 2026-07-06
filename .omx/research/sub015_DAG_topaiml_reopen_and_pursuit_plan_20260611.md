@@ -8403,3 +8403,31 @@ governor ADMIT (92 GiB headroom) → durable spawn council_mod32_capacity pid 97
 levelset_n600_witness_mod32cap_20260706T115614Z. REFERENCE to beat: the old mod-32 (20260703, but w/ eikonal0.01+
 pose+lane-band) hit ep25 0.0103 → ep50 0.0078 → bottom 0.00475@ep300 then tau-eroded to 0.0068@ep500. THIS is the
 cleanest capacity test (mod-32 + confound fixes). Watch ep25 verdict. Pointer 0.19110 UNMOVED (advisory macOS-MLX). [no-triality]
+
+## FEED-06v (2026-07-06) — TUFA Duck-Harness+LADDER research → costate SUBSUMES both · islands DIAGNOSED · winnability smoke (movable GO / lane needs curve-prior)
+
+Operator: research tufalabs.ai/research/duck-harness "all related + OSS, what we adapt." Two parallel agents
+(Tufa body-of-work; duck-harness OSS) + internal inventory. SYNTHESIS memo
+`.omx/research/tufa_duck_harness_ladder_costate_synthesis_20260706.md`. **KEY UNIFICATION:** our θ* costate
+controller (`src/tac/witness_control`, λ=∂S/∂x) is the MORE-PRINCIPLED abstraction that SUBSUMES both external
+systems — λ is the common currency (LADDER "advance only when the verifier confirms" = "step only when λ·Δx
+lowers S"; Duck "fewest actions" = "max |ΔS| per paid dispatch"). ADOPT (shadow-safe): Duck REPL-state
+orchestrator I/O (state-as-python-vars + coding-as-reasoning + governed single `action()` + world-model-CARRY
+NOT eviction; **NO LICENSE → reimplement, don't vendor**) = the missing inspection surface for the costate
+controller. NOT: GRPO/RL (category error), schedule-derive (ours τ=ε=ħ is stronger), self-reward (we have the
+exact verifier).
+
+ISLANDS DIAGNOSED (operator "we had better islands before wtf birth+persistence"): mod32cap part_frac
+lane=movable=0.0 from ep0 because (a) `--structured-init-include-lane` seeds lane_px=**0** (only static sky+hood;
+lane isn't static → the flag is a NO-OP) + (b) ALL rare-class growth losses OFF
+(island_amplify/thin_lane/lane_edge/persistence=0) = DELIBERATE clean baseline (those are TREATMENT arms). Past
+births paid d_seg-starvation (paintseed plateaued 0.026 vs mod32cap 0.0058). Memory
+`why_mod32cap_baseline_has_zero_lane_movable_islands_20260706`.
+
+WINNABILITY SMOKE ($0, n600, `tools/lane_winnability_homotopy_smoke.py`) — the LADDER island-lever GATE.
+prize(raw) lane 0.59% · movable 1.24%. **movable = CLEAN GO** (birthable r=3, coherence 0.80, anneal-debt 0.004,
+CONTINUOUS path). **lane = NO for isotropic dilation** (coherence stays 0.47 — dashes never merge into one
+island, needs r=12 + a CLIFF) → lane homotopy must run ALONG the analytic lane-band CURVE (openpilot poly
+#203/#291), NOT isotropically. So the LADDER island lever SPLITS: **dilation-homotopy for blob classes
+(movable), curve-prior-homotopy for lane.** Deep-LADDER-math research (OSS + their math × ours) spawned per
+operator. Pointer 0.19110 UNMOVED. [no-triality]
