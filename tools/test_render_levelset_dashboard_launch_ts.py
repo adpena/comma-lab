@@ -33,9 +33,54 @@ def test_launch_ts_extracts_trailing_timestamp():
     assert rld._launch_ts(Path("/a/b/levelset_paintseedON_ab_20260706T032057Z.log")) == "20260706T032057Z"
 
 
+def test_launch_ts_reads_stamp_from_DIR_when_filename_is_run_log():
+    """The regression fix: a bare ``run.log`` in a timestamped dir must get its
+    launch stamp from the DIRECTORY (full-path search), else it sorts as '' and
+    loses to any timestamped-filename .log — surfacing an ancient run."""
+    p = Path("experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/run.log")
+    assert rld._launch_ts(p) == "20260706T115554Z"
+
+
+def test_launch_ts_takes_max_when_multiple_stamps_in_path():
+    # resumed run: dir stamp + file stamp -> take the most-recent (max)
+    p = Path("experiments/results/levelset_20260705T100000Z/levelset_20260706T120000Z.log")
+    assert rld._launch_ts(p) == "20260706T120000Z"
+
+
 def test_launch_ts_none_when_no_token():
     assert rld._launch_ts(Path("some_other.log")) is None
     assert rld._launch_ts(Path("levelset_nolabel.log")) is None
+
+
+def test_multi_glob_unions_comma_separated_patterns(tmp_path):
+    d1 = tmp_path / "runs" / "levelset_a_20260706T010000Z"
+    d1.mkdir(parents=True)
+    (d1 / "run.log").write_text("x\n")
+    tmpd = tmp_path / "omxtmp"
+    tmpd.mkdir()
+    (tmpd / "levelset_b_20260706T020000Z.log").write_text("y\n")
+    g = f"{tmp_path}/runs/levelset_*/*.log,{tmpd}/levelset_*.log"
+    got = sorted(Path(p).name for p in rld._multi_glob(g))
+    assert got == ["levelset_b_20260706T020000Z.log", "run.log"]
+
+
+def test_resolvers_pick_live_omxtmp_run_over_stale_rundir(tmp_path):
+    """End-to-end of the fix: an OLDER run-dir run.log vs a NEWER .omx/tmp live
+    daemon log across a comma-glob — the newer LAUNCH (live run) must win even
+    though the run.log has a fresher mtime."""
+    d = tmp_path / "runs" / "levelset_old_20260706T010000Z"
+    d.mkdir(parents=True)
+    rundir_log = d / "run.log"
+    _write(rundir_log, verdict=True)
+    tmpd = tmp_path / "omxtmp"
+    tmpd.mkdir()
+    live = tmpd / "levelset_live_20260706T115614Z.log"
+    _write(live, verdict=True)
+    os.utime(live, (1000.0, 1000.0))
+    os.utime(rundir_log, (2000.0, 2000.0))  # stale run-dir has fresher mtime
+    g = f"{tmp_path}/runs/levelset_*/*.log,{tmpd}/levelset_*.log"
+    assert rld._resolve_watched_log(None, g).name == live.name
+    assert rld._resolve_run_log(None, g).name == live.name
 
 
 def test_swap_boundary_new_warming_run_wins_despite_older_mtime(tmp_path):

@@ -100,7 +100,7 @@ class Config:
     # newest-mtime verdict log win (the live arm). When a new arm starts, the dashboard
     # follows it automatically and resets to show ONLY that run — no repoint, no restart.
     auto_latest: bool = True
-    auto_base_glob: str = "experiments/results/levelset_*/*.log"
+    auto_base_glob: str = "experiments/results/levelset_*/*.log,.omx/tmp/levelset_*.log"
     # WITNESS tab (Tab 2): live comma10k 6-panel + Yousfi/Fridrich tribute rendered FROM the
     # live EMA checkpoint, re-rendered on checkpoint-mtime change (NOT every tick), in the
     # tailer executor (never blocks the loop), broadcast over the SAME WebSocket. Light
@@ -177,7 +177,7 @@ def config_from_env() -> Config:
         training_pid=int(e("DASH_TRAINING_PID", "0")),
         training_sig=e("DASH_TRAINING_SIG", "train_levelset_witness"),
         auto_latest=e("DASH_AUTO_LATEST", "1") not in ("0", "false", "False"),
-        auto_base_glob=e("DASH_AUTO_BASE_GLOB", "experiments/results/levelset_*/*.log"),
+        auto_base_glob=e("DASH_AUTO_BASE_GLOB", "experiments/results/levelset_*/*.log,.omx/tmp/levelset_*.log"),
         witness_enable=e("DASH_WITNESS_ENABLE", "1") not in ("0", "false", "False"),
         witness_gt_cache=e("DASH_WITNESS_GT_CACHE", "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"),
         witness_ema_name=e("DASH_WITNESS_EMA_NAME", "levelset_witness_ema_mlx.npz"),

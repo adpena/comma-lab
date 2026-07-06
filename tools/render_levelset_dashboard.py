@@ -149,22 +149,27 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-_LAUNCH_TS_RE = re.compile(r"(\d{8}T\d{6}Z)(?=\.log$|$)")
+_LAUNCH_TS_RE = re.compile(r"(\d{8}T\d{6}Z)")
 
 
 def _launch_ts(path: Path) -> str | None:
-    """Extract the launch timestamp embedded in a run-log filename.
+    """Extract the launch timestamp from a run-log's FULL PATH.
 
-    Run logs are named ``levelset_<label>_<YYYYMMDDTHHMMSSZ>.log`` where the
-    trailing token is the UTC LAUNCH time. That token is the robust identity of
-    "which run is current" — a strictly-newer launch always supersedes an older
-    run (we run serially, never 2 concurrent), and it is IMMUNE to the mtime race
-    at the run-swap instant (a just-killed run can flush a final write whose mtime
-    briefly beats the fresh run's first write). ISO-8601 basic form sorts
-    chronologically as a plain string. Returns ``None`` when no token is present
-    (caller falls back to mtime ordering)."""
-    m = _LAUNCH_TS_RE.search(path.name)
-    return m.group(1) if m else None
+    Run logs carry a UTC launch stamp ``YYYYMMDDTHHMMSSZ`` either in the filename
+    (``.omx/tmp/levelset_<label>_<TS>.log``) OR in the parent directory
+    (``experiments/results/levelset_<label>_<TS>/run.log`` — where the filename is
+    the bare ``run.log`` and the stamp lives on the dir). We search the WHOLE path
+    and take the MAX match so BOTH layouts order by launch time. This is the robust
+    identity of "which run is current" — a strictly-newer launch supersedes an
+    older run (we run serially), immune to the mtime race at the swap instant.
+    ISO-8601 basic form sorts chronologically as a plain string.
+
+    CRITICAL: searching only ``path.name`` was a bug — a ``run.log`` (no stamp in
+    the name) then sorted as ``""`` and LOST to any timestamped-filename ``.log``,
+    even a much older one, surfacing an ancient run. Full-path fixes that.
+    Returns ``None`` when no token is present (caller falls back to mtime)."""
+    matches = _LAUNCH_TS_RE.findall(str(path))
+    return max(matches) if matches else None
 
 
 def _has_verdict(path: Path) -> bool:
@@ -182,6 +187,24 @@ def _has_verdict(path: Path) -> bool:
     return False
 
 
+def _multi_glob(log_glob: str) -> list[str]:
+    """Expand a COMMA-SEPARATED list of globs into a deduped path list.
+
+    Live runs launched via the governed daemon log to ``.omx/tmp/levelset_*.log``;
+    other launch paths write ``experiments/results/levelset_*/run.log``. A single
+    glob pattern cannot match both, so the default watch glob is a comma list and
+    the resolvers union all matches — so a live run is NEVER invisible to the
+    dashboard just because it logged to the other location."""
+    seen: dict[str, None] = {}
+    for pat in log_glob.split(","):
+        pat = pat.strip()
+        if not pat:
+            continue
+        for p in _glob.glob(pat):
+            seen[p] = None
+    return list(seen)
+
+
 def _resolve_watched_log(log: str | None, log_glob: str | None) -> Path | None:
     """Resolve the log to watch.
 
@@ -196,7 +219,7 @@ def _resolve_watched_log(log: str | None, log_glob: str | None) -> Path | None:
         return Path(log)
     if not log_glob:
         return None
-    verdict_logs = [Path(p) for p in _glob.glob(log_glob) if _has_verdict(Path(p))]
+    verdict_logs = [Path(p) for p in _multi_glob(log_glob) if _has_verdict(Path(p))]
     if not verdict_logs:
         return None
     # Newest LAUNCH wins (robust to the mtime race at the run-swap instant); mtime
@@ -239,7 +262,7 @@ def _resolve_run_log(log: str | None, log_glob: str | None) -> Path | None:
         return Path(log)
     if not log_glob:
         return None
-    run_logs = [Path(p) for p in _glob.glob(log_glob) if _is_run_log(Path(p))]
+    run_logs = [Path(p) for p in _multi_glob(log_glob) if _is_run_log(Path(p))]
     if not run_logs:
         return None
     # Newest LAUNCH is the current run (we run serially, never 2 concurrent); this
