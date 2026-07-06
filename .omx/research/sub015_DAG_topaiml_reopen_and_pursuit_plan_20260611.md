@@ -8458,3 +8458,19 @@ the CORRECT along-tangent is openpilot's actual lane POLYNOMIAL in the calibrate
 model). openpilot OSS holds rich lane-geometry/camera-intrinsics/ground-plane-homography/MDN-lane math to
 MINE + ALIGN to (sisters #145/#203/#291/#138). Research agent spawned to mine it + produce the alignment
 plan. Pointer 0.19110 UNMOVED. [no-triality]
+
+## FEED-06x (2026-07-06) — costate-REPL Duck-pattern surface BUILT (de-orphan #247, shadow-safe) + openpilot-mining agent running
+
+BUILT `tac.witness_control.campaign_repl` (#324) — the Duck-Harness orchestrator I/O pattern reimplemented
+natively (repo NO-LICENSE), thin on the EXISTING shadow controller (DE-ORPHAN per #247, not a rebuild).
+Three genuinely-new pieces: (1) `campaign_world_model` = compact summary-CARRY (crux · ranked open levers ·
+last Δd_seg · ruled-out · frontier) regenerated each cycle — NOT eviction (durable DAG/memory stays SoT per
+anti-forgetting); (2) `propose_argv` = the SINGLE governed action, emits launcher argv tagged
+go_required=True/dispatched=False — GOVERNANCE-AUDITED: zero subprocess/dispatch/launch capability, actuation
+STRUCTURALLY IMPOSSIBLE (CONTAINMENT); (3) `action_efficiency` = |ΔS| per paid dispatch = Duck "fewest
+actions" = the means/ends firewall. 6 tests (incl the governance invariants) + 37/37 witness_control suite
+green. Phase-B actuation stays operator-GO + governed-launcher gated.
+
+SESSION SO FAR (all shadow-safe $0, NO GPU, live mod32cap UNTOUCHED): LADDER=costate special-case PROVEN
+(#322) · eased_targets module movable-GO/lane-loss-space + adversarial overturn (#323) · costate-REPL surface
+(#324) · openpilot world-model mining agent RUNNING (#325). Pointer 0.19110 UNMOVED. [no-triality]
