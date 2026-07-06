@@ -63,6 +63,7 @@ import glob as _glob
 import io
 import json
 import os
+import re
 import signal
 import time
 from datetime import datetime, timezone
@@ -148,6 +149,24 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+_LAUNCH_TS_RE = re.compile(r"(\d{8}T\d{6}Z)(?=\.log$|$)")
+
+
+def _launch_ts(path: Path) -> str | None:
+    """Extract the launch timestamp embedded in a run-log filename.
+
+    Run logs are named ``levelset_<label>_<YYYYMMDDTHHMMSSZ>.log`` where the
+    trailing token is the UTC LAUNCH time. That token is the robust identity of
+    "which run is current" — a strictly-newer launch always supersedes an older
+    run (we run serially, never 2 concurrent), and it is IMMUNE to the mtime race
+    at the run-swap instant (a just-killed run can flush a final write whose mtime
+    briefly beats the fresh run's first write). ISO-8601 basic form sorts
+    chronologically as a plain string. Returns ``None`` when no token is present
+    (caller falls back to mtime ordering)."""
+    m = _LAUNCH_TS_RE.search(path.name)
+    return m.group(1) if m else None
+
+
 def _has_verdict(path: Path) -> bool:
     """True iff the file carries >=1 verdict line. Used so the self-follow
     resolver never latches onto the dashboard's OWN daemon log or any other
@@ -180,7 +199,9 @@ def _resolve_watched_log(log: str | None, log_glob: str | None) -> Path | None:
     verdict_logs = [Path(p) for p in _glob.glob(log_glob) if _has_verdict(Path(p))]
     if not verdict_logs:
         return None
-    verdict_logs.sort(key=lambda p: (p.stat().st_mtime, p.name))
+    # Newest LAUNCH wins (robust to the mtime race at the run-swap instant); mtime
+    # then name break ties among same-launch / un-timestamped logs.
+    verdict_logs.sort(key=lambda p: (_launch_ts(p) or "", p.stat().st_mtime, p.name))
     return verdict_logs[-1]
 
 
@@ -221,7 +242,10 @@ def _resolve_run_log(log: str | None, log_glob: str | None) -> Path | None:
     run_logs = [Path(p) for p in _glob.glob(log_glob) if _is_run_log(Path(p))]
     if not run_logs:
         return None
-    run_logs.sort(key=lambda p: (p.stat().st_mtime, p.name))
+    # Newest LAUNCH is the current run (we run serially, never 2 concurrent); this
+    # is robust to the mtime race at the swap instant where a just-killed run can
+    # flush a final write whose mtime briefly beats the fresh run's first write.
+    run_logs.sort(key=lambda p: (_launch_ts(p) or "", p.stat().st_mtime, p.name))
     return run_logs[-1]
 
 

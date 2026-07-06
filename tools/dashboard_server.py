@@ -715,10 +715,22 @@ class LiveState:
             if verdict_latest is None:
                 warming = True
             else:
-                try:
-                    warming = run_latest.stat().st_mtime >= verdict_latest.stat().st_mtime
-                except OSError:
-                    warming = True
+                # A NEWER-LAUNCH warming run always supersedes an OLDER verdict-bearing
+                # run (serial runs; the old one is stopped/finished). Compare the
+                # filename LAUNCH timestamp first — robust to the mtime race at the swap
+                # instant (a just-killed run's final flush can transiently out-mtime the
+                # fresh run's first write, which used to latch the dashboard onto the
+                # dead run and render it "stale"). mtime is the fallback only when a
+                # launch token is missing.
+                rl_ts = rld._launch_ts(run_latest)
+                vl_ts = rld._launch_ts(verdict_latest)
+                if rl_ts is not None and vl_ts is not None:
+                    warming = rl_ts >= vl_ts
+                else:
+                    try:
+                        warming = run_latest.stat().st_mtime >= verdict_latest.stat().st_mtime
+                    except OSError:
+                        warming = True
         if warming:
             latest = run_latest
             chain = [run_latest]              # its own (0) verdicts — never a foreign trajectory
