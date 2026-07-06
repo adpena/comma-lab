@@ -23,15 +23,22 @@ cd experiments/manim_levelset
 ```
 Output lands in `media/videos/<scene>/<res>/<Class>.mp4` (gitignored — rebuildable).
 
-## Scenes  (intended order: 1 = abstract intro → 2 = grounded on real data)
+## Scenes  (series order: 00 idea → 01 separatrix → 02 real frame → 03 screw)
 
-| # | file | class | shows | status |
-|---|------|-------|-------|--------|
-| 1 | `scene01_separatrix.py` | `Separatrix` | **INTRO** — softmax τ→0 → Laguerre/power-diagram argmax partition → the codim-1 **separatrix** that IS d_seg · `τ = ε = ℏ` | ✅ first cut |
-| 2 | `scene02_hardest_frame.py` | `HardestFrame` | fast-forward the REAL contest video → slam to the hardest frame (196) → real SegNet argmax → separatrix → margin field (= Fisher metric, Pearson 0.978) | ✅ first cut |
+All scenes share `_style.py`: the design system (Space Grotesk / Inter / JetBrains
+Mono, deep-black canvas, comma-coral accent, real LaTeX math) + a **layout grammar**
+(reserved top/stage/bottom bands so nothing overlaps) + a **pacing rhythm**
+(`T_*`/`HOLD*` constants — one idea per beat).
 
-Scene 2 depends on assets from `scenes/_prep_hardest_frame.py` (run once; reads the
-`gt_n600.npz` cache, writes `assets/` — gitignored, rebuildable).
+| # | file | class | shows |
+|---|------|-------|-------|
+| 00 | `scene00_witness.py` | `Witness` | **cold open** — the contest scores what two frozen nets SEE; builds `S = 100·d_seg + √(10·d_pose) + 25·bytes/N`; "code the task, not the picture"; hands off to the series |
+| 01 | `scene01_separatrix.py` | `Separatrix` | softmax τ→0 → Laguerre argmax partition → the codim-1 **separatrix** that IS d_seg → **resolves into the real openpilot/comma10k segmentation** · `τ=ε=ℏ` |
+| 02 | `scene02_hardest_frame.py` | `HardestFrame` | fast-forward the REAL video → hardest frame (196) → openpilot segmentation → separatrix → margin = Fisher metric (Pearson 0.978) |
+| 03 | `scene03_screw.py` | `Screw` | 3D **se(3) screw** — Chasles; the ego-motion is one twist ξ; the SAME ξ is d_pose AND warps the partition (d_seg) — encode it once |
+
+Scenes 00–02 depend on assets from `scenes/_prep_hardest_frame.py` (run once; reads
+the `gt_n600.npz` cache, writes `assets/` — gitignored, rebuildable, real comma10k colors).
 
 ### Roadmap (candidate next scenes — all faithful to measured findings)
 - **The level-set φ** — the signed-distance function whose zero-set is the boundary; the eikonal `‖∇φ‖=1` flow (Osher–Sethian), our viscosity-solution frame.

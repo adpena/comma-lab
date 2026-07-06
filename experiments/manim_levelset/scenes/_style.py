@@ -11,7 +11,7 @@ shouting). ONE coherent system so every scene reads as one film.
 """
 from __future__ import annotations
 
-from manim import Text, MathTex, Line, VGroup, config, LEFT, RIGHT
+from manim import Text, MathTex, Line, VGroup, config, LEFT, RIGHT, UP, DOWN
 
 # ── palette ──────────────────────────────────────────────────────────────────
 BG    = "#0B0B0D"   # canvas — deep, slightly cool near-black
@@ -42,6 +42,50 @@ COMMA10K_RGB = _np.array(
     [[64, 32, 32], [255, 0, 0], [128, 128, 96], [0, 255, 102], [204, 0, 255]],
     dtype=_np.float64,
 )
+
+
+# ── layout grammar — reserved zones so NOTHING overlaps ──────────────────────
+# Manim frame is 8 tall (±4) × ~14.2 wide (±7.11). Three horizontal bands:
+#   TOP band  (equations / kicker)   ~ y ∈ [+2.9, +3.7]
+#   STAGE     (the one visual)       height ≤ 5.0, centered slightly high
+#   BOTTOM band (ONE caption/legend) ~ y ∈ [-3.7, -2.9]
+# The stage is sized + shifted so a real gap sits above the bottom caption.
+STAGE_H = 5.0
+STAGE_UP = 0.2 * UP
+
+
+def stage(m, h: float = STAGE_H):
+    """Place a visual on the stage: fixed height, centered slightly high so the
+    bottom caption band stays clear (this is what kills the overlap jank)."""
+    m.height = h
+    m.move_to(STAGE_UP)
+    return m
+
+
+def top(m, buff: float = 0.5):
+    return m.to_edge(UP, buff=buff)
+
+
+def bottom(m, buff: float = 0.6):
+    return m.to_edge(DOWN, buff=buff)
+
+
+def corner_tr(m, buff: float = 0.55):
+    return m.to_corner(UP + RIGHT, buff=buff)
+
+
+def corner_tl(m, buff: float = 0.55):
+    return m.to_corner(UP + LEFT, buff=buff)
+
+
+# ── pacing — a deliberate, consistent rhythm (seconds) ───────────────────────
+T_FADE = 0.7     # an element in / out
+T_MORPH = 1.25   # a transition / dissolve between visuals
+T_WRITE = 1.3    # writing text or an equation
+T_HERO = 4.6     # the one hero move per scene (the τ anneal)
+BEAT = 0.5       # a small breath
+HOLD = 1.8       # absorb a beat
+HOLD_LONG = 2.6  # a payoff beat — let it land
 
 
 # ── type scale (all in Manim units) ──────────────────────────────────────────
