@@ -23,11 +23,15 @@ cd experiments/manim_levelset
 ```
 Output lands in `media/videos/<scene>/<res>/<Class>.mp4` (gitignored — rebuildable).
 
-## Scenes
+## Scenes  (intended order: 1 = abstract intro → 2 = grounded on real data)
 
-| # | file | shows | status |
-|---|------|-------|--------|
-| 1 | `scene01_separatrix.py` | softmax τ→0 → Laguerre/power-diagram argmax partition → the codim-1 **separatrix** that IS d_seg · `τ = ε = ℏ` | ✅ first cut (Pango typography) |
+| # | file | class | shows | status |
+|---|------|-------|-------|--------|
+| 1 | `scene01_separatrix.py` | `Separatrix` | **INTRO** — softmax τ→0 → Laguerre/power-diagram argmax partition → the codim-1 **separatrix** that IS d_seg · `τ = ε = ℏ` | ✅ first cut |
+| 2 | `scene02_hardest_frame.py` | `HardestFrame` | fast-forward the REAL contest video → slam to the hardest frame (196) → real SegNet argmax → separatrix → margin field (= Fisher metric, Pearson 0.978) | ✅ first cut |
+
+Scene 2 depends on assets from `scenes/_prep_hardest_frame.py` (run once; reads the
+`gt_n600.npz` cache, writes `assets/` — gitignored, rebuildable).
 
 ### Roadmap (candidate next scenes — all faithful to measured findings)
 - **The level-set φ** — the signed-distance function whose zero-set is the boundary; the eikonal `‖∇φ‖=1` flow (Osher–Sethian), our viscosity-solution frame.

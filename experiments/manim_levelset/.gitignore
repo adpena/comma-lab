@@ -1,5 +1,6 @@
 # isolated manim venv + rendered artifacts are rebuildable — do NOT track
 .venv/
 media/
+assets/          # rebuilt from the gt_n600.npz cache via scenes/_prep_hardest_frame.py
 __pycache__/
 *.pyc
