@@ -6976,7 +6976,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--curriculum-plateau-rel-eps", type=float, default=1e-4,
                     help="#292/#302: |relative least-squares slope| threshold (slope/mean over the window) for "
                     "plateau. RECALIBRATED 1e-3->1e-4 (T3 symposium 2026-07-05 C1): 1e-3 fired ep151 MID-DESCENT "
-                    "on #205 (rel slope -8.2e-4 while d_seg still falling 0.0055->0.0048) = 15% CE-floor loss; 1e-4 "
+                    "on #205 (rel slope -8.2e-4 while d_seg still falling 0.0055->0.0048) = 15%% CE-floor loss; 1e-4 "
                     "separates ep275+ (true plateau) from ep150. Consumed ONLY on the event-trigger / readiness "
                     "path (both default OFF) => byte-identical for default runs.")
     ap.add_argument("--curriculum-plateau-windows", type=int, default=4,
