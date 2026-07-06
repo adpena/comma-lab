@@ -39,13 +39,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
-from manim import (
-    Scene, ImageMobject, VGroup, Rectangle, Dot, MathTex, FadeIn, FadeOut, Write,
-    Create, GrowFromCenter, UP, DOWN, LEFT, RIGHT, ORIGIN,
-)
-
 import _style as st
+from manim import (
+    DOWN,
+    LEFT,
+    ORIGIN,
+    UP,
+    Create,
+    Dot,
+    FadeIn,
+    FadeOut,
+    GrowFromCenter,
+    ImageMobject,
+    Scene,
+    VGroup,
+    Write,
+)
 
 _ASSETS = Path(__file__).resolve().parent.parent / "assets"
 _STAGE_H = 4.4
@@ -73,18 +82,6 @@ class Paradigms(Scene):
                 y = cy - h / 2 + h * (j + 0.5) / ny
                 dots.add(Dot([x, y, 0], radius=0.03, color=accent).set_opacity(0.85))
         return dots
-
-    def _band_over(self, img, accent):
-        """A curved boundary band over the image — the codim-1 separatrix where
-        d_seg lives; the interiors stay dark (free)."""
-        cx, cy, _ = img.get_center()
-        w, h = img.width, img.height
-        xs = np.linspace(-0.46, 0.46, 46)
-        ys = 0.18 * np.sin(3.0 * xs + 0.5) + 0.02
-        band = VGroup()
-        for x, y in zip(xs, ys):
-            band.add(Dot([cx + x * w, cy + y * h, 0], radius=0.05, color=accent))
-        return band
 
     def construct(self) -> None:
         # ── beat 1 · title ───────────────────────────────────────────────────
@@ -152,7 +149,7 @@ class Paradigms(Scene):
         self.wait(st.HOLD_LONG)
         self.play(FadeOut(tri_head), FadeOut(rows), FadeOut(cap3), run_time=st.T_FADE)
 
-        # ── beat 5 · the witness — reproduce the SCORER, on the boundary ────
+        # ── beat 5 · the witness — reproduce the SCORER, then the separatrix ─
         seg = self._img("hardest_argmax.png")
         head_r = st.kicker("the witness — reproduce what the scorer SEES", color=st.CYAN).to_edge(UP, buff=0.6)
         capR = st.bottom(st.caption("not the pixels — the SegNet argmax partition.  the flat "
@@ -160,12 +157,14 @@ class Paradigms(Scene):
         self.play(FadeIn(seg), FadeIn(head_r, shift=0.1 * DOWN), run_time=st.T_FADE)
         self.play(FadeIn(capR, shift=0.12 * UP), run_time=st.T_FADE)
         self.wait(st.HOLD)
-        band = self._band_over(seg, st.CYAN)
-        capR2 = st.bottom(st.caption("d_seg lives on the 0.72% boundary band — pour the SAME "
-                                     "bytes THERE", color=st.CYAN))
-        self.play(Create(band), FadeOut(capR), FadeIn(capR2, shift=0.12 * UP), run_time=st.T_MORPH)
+        # crossfade the partition into the REAL measured separatrix (the codim-1 boundary)
+        sep = self._img("hardest_separatrix.png")
+        capR2 = st.bottom(st.caption("d_seg lives on the 0.72% separatrix — the codim-1 boundary.  "
+                                     "pour the SAME bytes THERE", color=st.CYAN))
+        self.play(FadeOut(seg), FadeIn(sep), FadeOut(capR), FadeIn(capR2, shift=0.12 * UP),
+                  run_time=st.T_MORPH)
         self.wait(st.HOLD_LONG)
-        self.play(FadeOut(seg), FadeOut(band), FadeOut(head_r), FadeOut(capR2), run_time=st.T_FADE)
+        self.play(FadeOut(sep), FadeOut(head_r), FadeOut(capR2), run_time=st.T_FADE)
 
         # ── beat 6 · why the reallocation should dominate (predicted, grounded) ─
         why_head = st.heading("same bytes — 139× the density where it counts", scale=0.58).to_edge(UP, buff=0.9)
