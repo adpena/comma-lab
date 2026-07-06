@@ -425,6 +425,11 @@ def _build_resume_state_arrays(
     out["__cfg_witness_alone_island_loss"] = np.asarray(int(bool(getattr(args, "witness_alone_island_loss", False))))
     out["__cfg_seg_focal_gamma"] = np.asarray(float(getattr(args, "seg_focal_gamma", 0.0)))
     out["__cfg_boundary_distance_weight"] = np.asarray(float(getattr(args, "boundary_distance_weight", 0.0)))
+    # (C11 confound fix) persist the stiff eikonal-family weights so a --resume-from that ADDS/raises
+    # them onto an opt state trained WITHOUT them is DETECTABLE (the resume-drift loud row + LR
+    # re-warmup routing). Loss/render-only (no param keys), so the arch guard cannot see them.
+    out["__cfg_eikonal_weight"] = np.asarray(float(getattr(args, "eikonal_weight", 0.0)))
+    out["__cfg_eikonal_viscosity"] = np.asarray(float(getattr(args, "eikonal_viscosity", 0.0)))
     out["__cfg_seed_anneal_epochs"] = np.asarray(int(getattr(args, "seed_anneal_epochs", 0)))
     out["__cfg_seed_anneal_shape"] = np.asarray(str(getattr(args, "seed_anneal_shape", "linear")))
     out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
@@ -1024,7 +1029,21 @@ def _eikonal_visco_mlx(phi_pk, render_h: int, render_w: int, visco_eps: float):
     gmag = mx.sqrt(gx * gx + gy * gy + 1e-8)
     lap = m_xx + m_yy
     resid = gmag - 1.0 - float(visco_eps) * lap
-    return mx.mean(resid * resid)
+    raw = mx.mean(resid * resid)
+    # (C3 CONFOUND FIX 2026-07-05) UNIT/pi-group RECALIBRATION. The `- eps*Lap m` term makes the
+    # viscous residual's raw magnitude O(eps^2 * mean(Lap^2)) which measured ~2490 on a sharpening
+    # field -- ~2490x the LEGACY (|grad m|-1)^2 residual (~O(1)). The SAME `--eikonal-weight` (0.05)
+    # was tuned for the LEGACY residual, so under the viscous form 0.05*2490 = 124.5 => the eik term
+    # DOMINATED the loss at 86-91% (the deepest confound root -- an uncalibrated unit bug, NOT
+    # "physics needs strong eik"). Normalize to an O(1) per-pixel-MEAN scale via a STOP-GRADIENT
+    # self-normalizer floored at 1.0 (the legacy band): when raw >> 1 the term ~= 1.0 (O(1), so
+    # --eikonal-weight has the SAME meaning as for the legacy residual; the descent DIRECTION is
+    # preserved -- only the magnitude is rescaled); when raw <= 1 (constraint well-satisfied) the term
+    # = raw (legacy-like small). This ONLY touches the viscous branch; the legacy residual is
+    # UNCHANGED (byte-identical). The startup regularizer-magnitude log (see _log_regularizer_magnitudes)
+    # records the raw pre-weight scale so the recalibration is auditable.
+    scale = mx.stop_gradient(mx.maximum(raw, mx.array(1.0)))
+    return raw / scale
 
 
 def _visco_eps_for_epoch(ep: int, eps0: float, anneal_epochs: int) -> float:
@@ -1050,17 +1069,35 @@ def _adaptive_visco_eps(c_a: float, eta: float, lam_eik: float, margin_factor: f
         eps(t) = clamp( |c_a(t)| * sqrt(eta * lambda_eik / 8) * (1 + margin_factor), eps_floor, eps_upper )
 
     The DERIVED mechanism cure for the v5 ep110 re-entry: a FIXED eps eventually falls below the
-    RISING lower edge (as progressive sharpening grows |c_a(t)|); this eps TRACKS it, holding
-    pi_eik = eta*lambda_eik*|c_a|^2/(8*eps^2) <= 1 by construction with least isotropic over-damping.
-    eta, lambda_eik clamped at 0 under the sqrt; eps_upper raised to eps_floor if inverted. Pure /
-    unit-tested; BIT-parity with the numpy ``adaptive_visco_eps`` reference
-    (tac.boundary_math.eikonal_sharpness_proxy_reference)."""
-    edge = abs(float(c_a)) * math.sqrt(max(0.0, float(eta) * float(lam_eik) / 8.0))
-    eps = edge * (1.0 + float(margin_factor))
+    RISING lower edge (as progressive sharpening grows |c_a(t)|); this eps TRACKS it.
+
+    (C2 CONFOUND FIX 2026-07-05) The ORIGINAL law `eps = |c_a|*sqrt(eta*lambda_eik/8)*(1+margin)`
+    was measured INERT: with eta~1e-3, lambda_eik~0.05 the sqrt prefactor collapses to ~2.5e-3, so
+    the edge is ~2.5e-3*|c_a| -- to even REACH the floor 0.3 you need |c_a| >= ~80, but the measured
+    |c_a| is O(1) (~0.82). So eps clamped at the floor EVERY epoch (0 change-events; the "adaptive"
+    wrapper never adapted -> the "viscosity NO-GO" verdict rested on a CONSTANT eps=floor). The CFL
+    edge says the RUN is always safe (required eps ~2.5e-3 << floor 0.3); the floor already over-damps.
+
+    REPARAMETERIZATION (keeps the CFL INTENT -- monotone-increasing in |c_a|, saturating -- but makes
+    eps actually RESPOND across [floor,upper] for O(1) |c_a|): map the sharpness proxy through a
+    saturating tanh into the [floor,upper] band. `(1+margin_factor)` tilts the response UP (more
+    viscosity headroom per unit sharpness). At |c_a|~0.82, margin 0.5 => tanh(1.23)~0.84 => eps~0.64
+    (mid-band, RESPONSIVE); |c_a|->large => eps->upper (never exceeds the biharmonic-explosion clamp);
+    |c_a|->0 => eps->floor. eta/lam_eik are retained in the SIGNATURE (the launcher passes them) but
+    are NO LONGER the collapsed prefactor -- they inform only the ADVISORY pi_eik logged by the caller.
+    NOTE (NO-FAKE): this DIVERGES from the numpy `adaptive_visco_eps` reference in
+    tac.boundary_math.eikonal_sharpness_proxy_reference (sibling-owned; that reference is ALSO inert
+    and must be updated to match -- flagged to the launcher/gates owner). eps_upper raised to floor if
+    inverted. Pure / unit-testable."""
     lo = float(eps_floor)
     hi = float(eps_upper)
     if hi < lo:
         hi = lo
+    # saturating map of the O(1) sharpness proxy into [floor, upper]; margin_factor tilts up.
+    frac = math.tanh(abs(float(c_a)) * (1.0 + float(margin_factor)))
+    eps = lo + (hi - lo) * frac
+    # (eta, lam_eik retained for signature/advisory pi_eik; not the collapsed prefactor -- see docstring)
+    _ = (eta, lam_eik)
     return min(max(eps, lo), hi)
 
 
@@ -2052,7 +2089,9 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
 
 def _loss_terms_row(terms: "dict[str, float]", total: float, ep: int, accum_batch: int,
                     *, gnorm: "float | None" = None, skipped: "bool | None" = None,
-                    visco_eps: "float | None" = None, visco_c_a: "float | None" = None) -> dict:
+                    visco_eps: "float | None" = None, visco_c_a: "float | None" = None,
+                    accepted_frac: "float | None" = None, weights_stepped: "bool | None" = None,
+                    hosc_beta: "float | None" = None, softmax_temp: "float | None" = None) -> dict:
     """(#304 item 4) Build the canonical machine-readable per-term loss telemetry row. Pure /
     MLX-free / unit-tested. Every LOSS_TERM_KEYS key is present (missing/inactive terms -> 0.0) so
     the row schema is STABLE across configs; ``sum_terms`` and ``sum_minus_total`` make the
@@ -2068,6 +2107,21 @@ def _loss_terms_row(terms: "dict[str, float]", total: float, ep: int, accum_batc
         row["gnorm"] = round(float(gnorm), 4) if np.isfinite(gnorm) else "nonfinite"
     if skipped is not None:
         row["spike_skipped"] = bool(skipped)
+        # (C6) a loss_terms row recomputed for a spike-SKIPPED chunk carries FROZEN-STATE values (the
+        # weights did NOT step); flag it so a reader never treats the numbers as live progress.
+        if bool(skipped):
+            row["terms_frozen"] = True
+    # (C6) LIVENESS STAMP: accepted-batch fraction this epoch + whether THIS batch stepped the weights.
+    if accepted_frac is not None:
+        row["accepted_frac"] = round(float(accepted_frac), 4)
+    if weights_stepped is not None:
+        row["weights_stepped"] = bool(weights_stepped)
+    # (C6 / H2-F2) record the ANNEAL coefficients so a coefficient-driven eik move (beta-anneal on
+    # FROZEN weights) is visible as a coefficient change, not misread as physics/eikonal runaway.
+    if hosc_beta is not None:
+        row["hosc_beta"] = round(float(hosc_beta), 4)
+    if softmax_temp is not None:
+        row["softmax_temp"] = round(float(softmax_temp), 4)
     # (V6 #320) adaptive-eps control-state observability: top-level fields (NOT in `terms`, so
     # sum_minus_total stays a clean loss-addend check). Emitted only when adaptive is active.
     if visco_eps is not None:
@@ -2375,7 +2429,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     sums[k] += small[msk].sum(0); cnts[k] += int(msk.sum())
         mean = np.where(cnts[:, None] > 0, sums / np.maximum(cnts[:, None], 1), 127.0)
         palette_init = np.log(np.clip(mean / 255.0, 1e-3, 1 - 1e-3) / (1 - np.clip(mean / 255.0, 1e-3, 1 - 1e-3))).astype(np.float32)
-        print(json.dumps({"stage": "palette_anchor", "mean_rgb": mean.round(1).tolist()}), flush=True)
+        # (C10 confound fix) an init lever is OVERWRITTEN by a --resume-from (model.update replaces
+        # every param, incl. palette). Do NOT print active:true silently -> stamp applied:false.
+        _init_applied = not bool(args.resume_from)
+        print(json.dumps({"stage": "palette_anchor", "mean_rgb": mean.round(1).tolist(),
+                          "applied": _init_applied,
+                          **({} if _init_applied else {"reason": "overwritten_by_resume"})}), flush=True)
 
     model = build_levelset_rgb_witness(
         num_pairs=P, in_feat=in_feat, hidden_dim=args.hidden_dim, n_hidden=args.n_hidden,
@@ -2457,9 +2516,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             phi_tgt_hwk = inject_lane_sdf(
                 phi_tgt_hwk, phi1_lane, lane_cls=1, mode=args.lane_prior_phi1_mode,
                 bias_scale=float(args.lane_prior_phi1_bias_scale))
-            print(json.dumps({"stage": "lane_prior_phi1", "active": True, "source_pair": _lp_pair,
+            # (C18 confound fix) after a PAINT-mode inject, the lane class MUST gain partition mass;
+            # if part_frac[lane]==0 the paint did NOT win (a sign/band-side bug -- H4#4 measured 0 even
+            # FRESH). Assert loud so a FAKE "lane painted" lever can never pass silently.
+            _paint_part_frac_lane = None
+            if str(args.lane_prior_phi1_mode) == "paint":
+                _pp = phi_tgt_hwk.argmax(-1).reshape(-1)
+                _paint_part_frac_lane = float(np.count_nonzero(_pp == 1)) / float(_pp.size)
+                if _paint_part_frac_lane <= 0.0:
+                    print(json.dumps({"stage": "lane_prior_phi1_PAINT_FAILED",
+                                      "part_frac_lane": _paint_part_frac_lane, "source_pair": _lp_pair,
+                                      "msg": "(C18) inject_lane_sdf(mode=paint) yielded part_frac[lane]=0 "
+                                      "-- the paint did NOT win the argmax (sign/band-side bug); the "
+                                      "'lane painted by construction' claim is FALSE for this config"}),
+                          flush=True)
+                    raise ValueError(
+                        f"(C18) --lane-prior-phi1-mode paint did NOT paint the lane: "
+                        f"part_frac[lane]={_paint_part_frac_lane} (expected >0). The paint must WIN the "
+                        "argmax by construction; a 0 mass means a sign/band-side bug in inject_lane_sdf "
+                        "(H4#4). Fix the paint or use --lane-prior-phi1-mode replace/bias.")
+            # (C10 confound fix) OVERWRITTEN by --resume-from (this init runs, then model.update replaces it).
+            _lp_applied = not bool(args.resume_from)
+            print(json.dumps({"stage": "lane_prior_phi1", "active": _lp_applied,
+                              "applied": _lp_applied, "source_pair": _lp_pair,
                               "mode": args.lane_prior_phi1_mode,
                               "dash_gate": bool(args.lane_prior_phi1_dash_gate),
+                              **({"part_frac_lane": round(_paint_part_frac_lane, 6)}
+                                 if _paint_part_frac_lane is not None else {}),
+                              **({} if _lp_applied else {"reason": "overwritten_by_resume"}),
                               **{f"lane_{k}": v for k, v in lp_meta.items()},
                               "note": "openpilot deg-3 centerline SDF injected into structured-init "
                               "phi1 target (FEED-fs Road<->Lane separatrix; train-time init, 0 "
@@ -2490,7 +2574,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         sc_phi = np.asarray(model.sdf(mx.array(sc_feats_np), 0))
         sc_disagree = float(np.count_nonzero(sc_phi.argmax(-1) != sc_part)) / sc_part.size
         mx.eval(model.parameters())
+        # (C10 confound fix) structured-init is an INIT-TIME weight shaping lever; a --resume-from
+        # OVERWRITES every param at model.update, discarding it. Stamp applied:false (not active:true).
+        _si_applied = not bool(args.resume_from)
         print(json.dumps({"stage": "structured_init", "roles": sc_roles.as_dict(),
+                          "applied": _si_applied,
+                          **({} if _si_applied else {"reason": "overwritten_by_resume"}),
                           "pretrain_direct_argmax_disagree_vs_part": round(sc_disagree, 5),
                           "steps": int(args.structured_init_steps), "lr": float(args.structured_init_lr),
                           **{k: v for k, v in sc_meta.items() if k != "roles"}}), flush=True)
@@ -4334,13 +4423,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _evt_state["nucleus_ready"] = bool(all_ok)
 
     def _emit_verdict_row(v: dict[str, float], ema_np: dict[str, np.ndarray], ep: int,
-                          seg_form: str, ep_loss: float, *, async_tag: bool) -> None:
+                          seg_form: str, ep_loss: float, *, async_tag: bool,
+                          liveness: "dict[str, Any] | None" = None) -> None:
         # (#302) split per-class counts OUT of ``v`` before it flows to the float-only verdict row /
         # history / closed-loop capture (those consume d_seg/d_pose scalars only), then emit the
         # separate handoff_readiness row. ``v`` has no "nucleus_counts" unless the feature is ON.
         _ncounts = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
         blob = quantize_levelset_blob(ema_np)
         s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
+        # (C6) LIVENESS STAMP captured at SCHEDULE time (the async worker runs later, off a snapshot;
+        # the live _live dict would by then reflect a LATER epoch). None (sync callers not threading
+        # it) => the fields are omitted (the sync path stamps liveness at its own call site).
+        _lv = dict(liveness) if liveness else None
         with _verdict_lock:
             row = {"stage": "verdict", "epoch": ep, "seg_form": seg_form,
                    **{k: round(vv, 6) for k, vv in v.items()},
@@ -4351,6 +4445,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                    # dashboard otherwise self-observes). Purely observational; never read back
                    # into training/resume/parity, not appended to history/result.json.
                    "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
+            if _lv is not None:
+                _fzn = (int(_lv.get("ep_tot", 0)) > 0 and int(_lv.get("acc", 0)) == 0)
+                row["accepted_frac"] = round(float(_lv.get("frac", 1.0)), 4)
+                row["weights_stepped"] = bool(_lv.get("stepped", True))
+                row["accepted_batches"] = int(_lv.get("acc", 0))
+                row["skipped_batches"] = int(_lv.get("skip", 0))
+                row["frozen_epoch"] = bool(_fzn)
+                if _fzn or (float(ep_loss) == 0.0 and int(_lv.get("ep_tot", 0)) > 0):
+                    print(json.dumps({"stage": "confound_alarm", "alarm": "frozen_epoch", "ep": ep,
+                                      "ep_loss": round(float(ep_loss), 6), "accepted_batches": int(_lv.get("acc", 0)),
+                                      "note": "async verdict on a FROZEN-state epoch (all batches skipped "
+                                      "/ ep_loss==0.0): not converged progress"}), flush=True)
             if async_tag:
                 row["async"] = True
             print(json.dumps(row), flush=True)
@@ -4403,6 +4509,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "path": "levelset_witness_ema_BEST.npz"}), flush=True)
 
     def _schedule_async_verdict(ep: int, seg_form: str, ep_loss: float) -> bool:
+        # (C6) capture the CURRENT-epoch liveness snapshot at SCHEDULE time (immutable copy); the
+        # async worker emits its verdict row later, when the live _live dict would already reflect a
+        # LATER epoch. Read _live directly (this fn is called SYNCHRONOUSLY at the epoch end, after
+        # the completed-epoch liveness snapshot is stamped) -- keeping the call signature unchanged so
+        # the M2 decide-on-previous SOURCE-ORDER guard (test_closed_loop_control) stays intact.
+        _lv_snap = dict(_live)
         if _verdict_inflight():
             _verdict_skipped[0] += 1
             with _verdict_lock:
@@ -4435,7 +4547,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             t0 = time.time()
             try:
                 v = _verdict_from_snapshot(snap)
-                _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True)
+                _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True,
+                                  liveness=_lv_snap)
                 # HARDENING: preserve the best EMA shadow from the SAME snapshot the verdict scored
                 # (snap["ema_np"] is the point-in-time Stiefel-projected shadow; cfg from the snap).
                 _maybe_preserve_best(v["d_seg"], ep, snap["ema_np"],
@@ -4494,6 +4607,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         No rows captured yet => no action => False. Never joins/schedules a verdict itself."""
         if not _cl_verdicts:
             return False
+        # (C5 META-CONFOUND FIX 2026-07-05) LIVENESS PRECONDITION FIRST: the controller must NEVER
+        # certify a FROZEN run "converging"/"plateau" (and thus never BUMP the exploding eikonal on a
+        # dead run -- the meta-confound made concrete: v5 ep125/150 "converging" AFTER the ep113
+        # freeze). If the decision window's ep_loss are ALL 0.0 (the frozen tell) OR the run's
+        # accepted-batch fraction is below the liveness floor, classify FROZEN + action STOP and arm
+        # the clean early-stop. This gate runs BEFORE _cl_classify so a frozen run can never be bumped.
+        _win = _cl_verdicts[-max(1, int(args.closed_loop_min_sustained_windows)):]
+        _win_eploss = [float(vv.get("ep_loss", 0.0)) for vv in _win]
+        _frozen = (len(_win_eploss) > 0 and all(e == 0.0 for e in _win_eploss)) or (
+            float(_live["frac"]) < _CL_LIVENESS_MIN_ACCEPTED_FRAC)
+        if _frozen:
+            _cl_state["stop_epoch"] = int(ep)  # arm the clean early-stop (best EMA-shadow ckpt preserved)
+            print(json.dumps({
+                "stage": "closed_loop", "epoch": ep, "classification": "frozen",
+                "action": "stop", "reason": "liveness_precondition_failed",
+                "accepted_frac": round(float(_live["frac"]), 4),
+                "window_ep_loss": [round(e, 6) for e in _win_eploss],
+                "note": "(C5) FROZEN run -- NEVER certified converging; the controller will not bump "
+                "the eikonal on a dead run. Clean early-stop armed (best ckpt preserved)."}), flush=True)
+            _emit_confound_alarm("closed_loop_frozen_stop", ep=ep,
+                                 accepted_frac=round(float(_live["frac"]), 4),
+                                 note="closed-loop refused to classify a frozen run as converging")
+            return True
         _clc = _cl_classify(
             _cl_verdicts,
             min_sustained_windows=int(args.closed_loop_min_sustained_windows))
@@ -4511,6 +4647,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "eikonal_bump": round(float(_cl_state["bump_add"]), 6),
             "bumps_used": int(_cl_state["bumps"]),
             "action": (_cla["action"] if _cla is not None else "none"),
+            # (C6) LIVENESS STAMP on every closed_loop decision row.
+            "accepted_frac": round(float(_live["frac"]), 4),
+            "weights_stepped": bool(_live["stepped"]),
             **({k: v for k, v in (_cla or {}).items() if k != "action"})}), flush=True)
         return _cl_state["stop_epoch"] is not None
 
@@ -4655,6 +4794,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # muon_switched initializes True so the in-loop switch does NOT re-init a fresh (momentum-lost)
     # optimizer. Default False (fresh start / pre-finisher resume) => BIT-IDENTICAL to the prior path.
     _resume_into_finisher = False
+    # (C11) resume-drift LR re-warmup boundary: set to the resume start epoch when a stiff loss term
+    # is ADDED at resume + lever-drift is allowed + a re-warmup window is configured, so the existing
+    # stage-transition LR ramp softens the entry. None (default / no stiff add) => no re-warmup.
+    _resume_lr_rewarmup_boundary: "int | None" = None
     if args.resume_from:
         from mlx.utils import tree_unflatten
         rp = _resolve_resume_path(Path(args.resume_from))
@@ -4722,8 +4865,57 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     + "; ".join(_lever_div)
                     + ". Fix: MATCH the trained run's lever flags, OR pass --resume-allow-lever-drift "
                     "if this is an INTENTIONAL warm-start re-treatment.")
-        model.update(tree_unflatten([(k, mx.array(v)) for k, v in rs["live"].items()]))
+        # (C9 confound fix) load the MODEL from the CLEAN EMA shadow when --resume-model-from ema
+        # (auto for re-treatment resumes; see the post-parse resolution). A crash mid-spike writes
+        # DIVERGING live weights while the EMA shadow in the SAME file stays clean; loading live
+        # re-enters the divergence. Keys missing from the shadow fall back to live so the model has a
+        # FULL param set (the shadow tracks all trained params, but the merge is defensive).
+        if str(getattr(args, "resume_model_from", "live")) == "ema" and rs["ema"]:
+            _model_src = {**rs["live"], **rs["ema"]}
+            _model_src_tag = "ema"
+        else:
+            _model_src = rs["live"]
+            _model_src_tag = "live"
+        model.update(tree_unflatten([(k, mx.array(v)) for k, v in _model_src.items()]))
         mx.eval(model.parameters())
+        print(json.dumps({"stage": "resume_model_source", "resume_model_from": _model_src_tag,
+                          "requested": str(getattr(args, "resume_model_from", "live")),
+                          "ema_available": bool(rs["ema"]),
+                          "note": "C9: which weights loaded into the model (ema=clean shadow, "
+                          "live=possibly-diverging live params)"}), flush=True)
+        # (C11 confound fix) STIFF-TERM RESUME-DRIFT loud row + gentle-entry routing. A stiff loss
+        # term (eikonal weight, ViscoReg viscosity, boundary-distance) ADDED or raised at resume is
+        # attached FULL-WEIGHT onto an optimizer state trained WITHOUT it => a silent loss-composition
+        # / level shift at the resume boundary (H5-F3: the added viscosity is exactly what runs away).
+        # Enumerate the diffs; when any stiff term was added AND lever-drift is allowed, register the
+        # resume epoch as a stage-transition boundary so the EXISTING LR re-warmup ramp softens the
+        # entry (per-term eik/visco weight ramp is NOT applied here -- it needs the base schedule
+        # machinery; the LR ramp + this loud row are the minimal safe treatment. Flagged.).
+        _stiff_checks = [
+            ("eikonal_weight", "__cfg_eikonal_weight", float(getattr(args, "eikonal_weight", 0.0))),
+            ("eikonal_viscosity", "__cfg_eikonal_viscosity", float(getattr(args, "eikonal_viscosity", 0.0))),
+            ("boundary_distance_weight", "__cfg_boundary_distance_weight",
+             float(getattr(args, "boundary_distance_weight", 0.0))),
+        ]
+        _stiff_added = []
+        for _nm, _ck, _cur in _stiff_checks:
+            _ckpt_v = float(resume_cfg.get(_ck, 0.0) or 0.0) if _ck in resume_cfg else None
+            if _ckpt_v is not None and _cur > _ckpt_v + 1e-9:
+                _stiff_added.append({"term": _nm, "ckpt": _ckpt_v, "resume_argv": _cur})
+        _ckpt_git = str(resume_cfg.get("__cfg_git_sha", "unknown")) if "__cfg_git_sha" in resume_cfg else "unknown"
+        _retreatment = bool(getattr(args, "resume_allow_lever_drift", False)
+                            or _ws["allow_lever_drift"]
+                            or getattr(args, "warm_start_weights_only", False))
+        if _stiff_added:
+            print(json.dumps({"stage": "resume_stiff_term_drift", "added": _stiff_added,
+                              "ckpt_git_sha": _ckpt_git, "retreatment": _retreatment,
+                              "rewarmup_epochs": int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0),
+                              "note": "(C11) stiff loss term(s) ADDED/raised at resume onto an opt state "
+                              "trained WITHOUT them (H5-F3 level shift). LR re-warmup routes the entry "
+                              "when --stage-transition-rewarmup-epochs>0; per-term weight ramp NOT applied "
+                              "(needs base-schedule machinery -- see launcher)."}), flush=True)
+            if _retreatment and int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0) > 0:
+                _resume_lr_rewarmup_boundary = int(_ws["start_epoch"])
         ema_src = rs["ema"] if rs["ema"] else rs["live"]
         for k in list(ema.shadow.keys()):
             if k in ema_src:
@@ -4736,6 +4928,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             print(json.dumps({"stage": "warm_start_epoch_override",
                               "from": int(rs["epoch"]) + 1, "to": _ws["start_epoch"]}), flush=True)
         start_epoch = _ws["start_epoch"]
+        # (C16 confound fix) --seed-anneal-epochs is ABSOLUTE; if the resume START epoch is >= the
+        # anneal length the seed compose crutch is fully withdrawn before this run begins. Warn with
+        # the REAL start_epoch (the post-parse warn only saw --warm-start-epoch). NOTE: the compose
+        # math is intentionally NOT reinterpreted relative to start_epoch here -- that would break a
+        # bit-faithful continuation resume; set --seed-anneal-epochs relative to the resume epoch in
+        # the launcher if you want the post-resume crutch. Seed-FORMATION losses are unaffected.
+        if int(getattr(args, "seed_anneal_epochs", 0)) > 0 and int(start_epoch) >= int(args.seed_anneal_epochs):
+            print(json.dumps({"stage": "seed_anneal_epochs_WARN", "seed_anneal_epochs": int(args.seed_anneal_epochs),
+                              "resume_start_epoch": int(start_epoch),
+                              "msg": "(C16) resume start_epoch >= --seed-anneal-epochs: the seed compose "
+                              "crutch is already fully withdrawn (off every post-resume epoch). Make it "
+                              "RELATIVE to the resume epoch in the launcher if intended."}), flush=True)
         # #205 MUON-FINISHER RESUME: if the resumed epoch is INSIDE the finisher window, the saved
         # optimizer state is the Muon MultiOptimizer's -> rebuild it HERE (before the restore below)
         # and mark _resume_into_finisher so (a) the state restore keys match and (b) the loop's in-line
@@ -4821,6 +5025,40 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                       "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
     history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0})
+
+    # (C3 confound fix) STARTUP regularizer-magnitude log: the raw (PRE-weight) scale of each active
+    # level-set regularizer on ONE pair, so the eikonal unit-recalibration is auditable and the
+    # launcher/gates can assert a magnitude band. The viscous raw ~2490 was the unit bug that let eik
+    # dominate the loss (86-91%); the C3-normalized form is O(1). Pure no-grad; advisory; never read back.
+    try:
+        _rp0 = int(vpairs[0]) if len(vpairs) else 0
+        _phi0_lm = model.sdf(_cf_mx(_rp0), 2 * _rp0 + 0)
+        _eik_raw, _len_raw, _ = _eikonal_length_mlx(_phi0_lm, render_h, render_w)
+        mx.eval(_eik_raw, _len_raw)
+        _reg_mags: dict[str, object] = {
+            "eikonal_legacy_raw": round(float(_eik_raw), 6),
+            "length_raw": round(float(_len_raw), 8),
+            "eikonal_weight": float(getattr(args, "eikonal_weight", 0.0)),
+            "length_weight": float(getattr(args, "length_weight", 0.0))}
+        if _eik_stab["visco_eps0"] > 0.0:
+            _ve0 = _eik_stab["visco_eps"] if _eik_stab["visco_eps"] > 0.0 else _eik_stab["visco_eps0"]
+            _gx, _gy, _mxx, _myy, _ = _eikonal_margin_interior_mlx(_phi0_lm, render_h, render_w)
+            _gm = mx.sqrt(_gx * _gx + _gy * _gy + 1e-8)
+            _rv = _gm - 1.0 - float(_ve0) * (_mxx + _myy)
+            _rv_raw = mx.mean(_rv * _rv)
+            _rv_norm = _eikonal_visco_mlx(_phi0_lm, render_h, render_w, _ve0)
+            mx.eval(_rv_raw, _rv_norm)
+            _reg_mags["eikonal_viscous_raw_unnorm"] = round(float(_rv_raw), 4)
+            _reg_mags["eikonal_viscous_normalized"] = round(float(_rv_norm), 6)
+            _reg_mags["visco_eps"] = float(_ve0)
+        print(json.dumps({"stage": "regularizer_magnitudes", "epoch": start_epoch - 1, "pair": _rp0,
+                          **_reg_mags,
+                          "note": "(C3) raw PRE-weight regularizer scales; the C3-normalized viscous "
+                          "form is O(1) so --eikonal-weight means the SAME as for the legacy residual"}),
+              flush=True)
+    except Exception as _regexc:  # advisory only -- a probe failure must never block training.
+        print(json.dumps({"stage": "regularizer_magnitudes_skip",
+                          "err": f"{type(_regexc).__name__}: {_regexc}"}), flush=True)
 
     if lane_w > 0.0:
         print(json.dumps({"stage": "lane_edge", "active": True, "weight": lane_w, "lane_class": lane_cls,
@@ -5088,6 +5326,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # never consumed => BIT-IDENTICAL. NOT persisted across resume (re-derived; None at resume start
     # => no spurious re-warmup until a real boundary).
     last_boundary_epoch: "int | None" = None
+    # (C11) seed the LR re-warmup boundary from a resume stiff-term drift so the added stiff term's
+    # entry is ramped (not full-weight step-in on a foreign optimizer state). None unless the resume
+    # block detected an added stiff term + retreatment + a configured re-warmup window.
+    if _resume_lr_rewarmup_boundary is not None:
+        last_boundary_epoch = int(_resume_lr_rewarmup_boundary)
     # (EIK-STAB build 2; sweep lever #3 + #304) spike-guard MODE dispatch. Default "legacy" =>
     # _sg_guard is None => every guard branch below is skipped and _sg_state["lr_scale"] stays 1.0
     # (never multiplied in) => BYTE-IDENTICAL to the pre-build trainer. "rollback" = the
@@ -5101,6 +5344,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                  if _sg_mode == "rollback" else None)
     _sg_state: dict[str, Any] = {"lr_scale": 1.0, "snap": None, "snap_epoch": None,
                                  "ep_spikes": 0, "ep_batches": 0, "exhausted_warned": False}
+
+    # ── (C5+C6 confound fix 2026-07-05) RUN-LEVEL LIVENESS + typed confound alarms ──────────────────
+    # The #1 self-protect (operator "meta confounds"): stamp a LIVENESS signal (accepted-batch
+    # fraction) onto EVERY verdict / loss_terms / closed_loop / eik_stabilizer row so no reader or
+    # controller can mistake a FROZEN (all-skip) run for a converging one. `ep_acc`/`ep_tot` are the
+    # RUNNING counters for the CURRENT epoch (reset at epoch top); `frac`/`stepped`/`acc`/`skip` snapshot
+    # the LAST COMPLETED epoch (what epoch-top rows read). All default to "alive" so a fresh run's first
+    # rows are not spuriously flagged.
+    _live: dict[str, Any] = {"ep_acc": 0, "ep_tot": 0, "frac": 1.0, "stepped": True, "acc": 0, "skip": 0}
+
+    def _live_running_frac() -> float:
+        """Accepted-batch fraction SO FAR this epoch (for mid-epoch loss_terms rows)."""
+        return float(_live["ep_acc"]) / float(max(int(_live["ep_tot"]), 1))
+
+    # typed confound-alarm streak state (turn the silent confounds LOUD; non-halting unless egregious).
+    _alarm: dict[str, Any] = {"deadlock_streak": 0, "termdom_streak": 0, "gnorm_streak": 0,
+                              "adaptive_inert_since": None, "adaptive_last_eps": None}
+    _CL_LIVENESS_MIN_ACCEPTED_FRAC = 0.10  # (C5) below this accepted-frac the run is FROZEN, never "converging"
+    _TERMDOM_FRAC = 0.40      # (C6) a single reg term > 40% of loss => domination
+    _TERMDOM_MIN_ROWS = 3     # (C6) sustained for >= this many loss_terms rows
+    _GNORM_HIJACK_MULT = 100.0   # (C6) gnorm > 100x grad_clip
+    _GNORM_HIJACK_MIN_BATCHES = 3
+    _ADAPTIVE_INERT_EP = 20   # (C6) visco_eps pinned at floor with 0 change-events for > this many ep
+
+    def _emit_confound_alarm(kind: str, **fields: Any) -> None:
+        """(C6) Emit a typed confound_alarm telemetry row. Advisory (never halts training); the
+        launcher/gates + operator dashboard read these to catch a silent confound going loud."""
+        print(json.dumps({"stage": "confound_alarm", "alarm": str(kind), **fields}), flush=True)
 
     def _sg_take_snapshot(ep: int) -> None:
         """Reference-snapshot of the last-good training state (model + EMA + opt [+ seed]).
@@ -5634,6 +5905,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if _ve != _eik_stab["visco_eps"]:
                     print(json.dumps({"stage": "eik_stabilizer", "epoch": ep,
                                       "visco_eps": round(_ve, 6),
+                                      "accepted_frac": round(float(_live["frac"]), 4),  # (C6) prev-epoch liveness
+                                      "weights_stepped": bool(_live["stepped"]),
                                       "note": "ViscoReg vanishing-viscosity eps annealed (replaces "
                                       "the eikonal residual while eps>0; legacy stencil at eps==0)"}),
                           flush=True)
@@ -5712,10 +5985,31 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "eik_stabilizer_adaptive", "epoch": ep,
                                       "visco_eps": round(_ve, 6), "c_a": round(_ca_t, 6),
                                       "eta": round(_eta_t, 8), "lambda_eik": round(float(eik_w_ep), 6),
-                                      "note": "adaptive-eps tracks the CFL lower edge "
-                                      "|c_a|*sqrt(eta*lambda_eik/8)*(1+margin), clamped [floor,upper]"}),
+                                      "accepted_frac": round(float(_live["frac"]), 4),  # (C6) prev-epoch liveness
+                                      "weights_stepped": bool(_live["stepped"]),
+                                      "note": "adaptive-eps (C2-reparam) tracks sharpness |c_a| into "
+                                      "[floor,upper] via saturating tanh; RESPONSIVE at O(1) |c_a|"}),
                           flush=True)
                 _eik_stab["visco_eps"] = _ve
+                # (C6) adaptive_eps_INERT alarm: visco_eps PINNED at the floor with 0 change-events for
+                # > _ADAPTIVE_INERT_EP epochs = the adaptive wrapper is not adapting (the pre-C2 bug).
+                _floor = float(_eik_stab["visco_eps_floor"])
+                if abs(float(_ve) - _floor) <= 1e-9:
+                    if _alarm["adaptive_last_eps"] is not None and abs(float(_alarm["adaptive_last_eps"]) - _floor) <= 1e-9:
+                        if _alarm["adaptive_inert_since"] is None:
+                            _alarm["adaptive_inert_since"] = int(ep)
+                        elif int(ep) - int(_alarm["adaptive_inert_since"]) == _ADAPTIVE_INERT_EP:
+                            _emit_confound_alarm("adaptive_eps_INERT", ep=ep, visco_eps=round(float(_ve), 6),
+                                                 floor=_floor, pinned_epochs=int(ep) - int(_alarm["adaptive_inert_since"]),
+                                                 c_a=round(float(_ca_t), 6),
+                                                 note="adaptive visco_eps pinned at floor with 0 "
+                                                 "change-events (the pre-C2 INERT bug); the CFL "
+                                                 "reparam should respond at O(1) |c_a| -- investigate")
+                    else:
+                        _alarm["adaptive_inert_since"] = int(ep)
+                else:
+                    _alarm["adaptive_inert_since"] = None
+                _alarm["adaptive_last_eps"] = float(_ve)
             # LEVER-5: base permutation (every pair >=1 step, never starved) + hardness-allocated
             # extras. n_extra=0 (default) => order == permutation(P) => byte-identical to before.
             order = np.random.permutation(P)
@@ -5723,6 +6017,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 extra = hardness_rng.choice(P, size=n_extra, replace=True, p=hardness_prob)
                 order = np.random.permutation(np.concatenate([order, extra]))
             ep_loss = 0.0
+            _live["ep_acc"] = 0  # (C6 liveness) reset the CURRENT-epoch accepted/total batch counters
+            _live["ep_tot"] = 0
             if _prof is not None:
                 _prof["_step0"] = time.perf_counter()  # #252 profile: fwd+bwd+opt+ema step start
             for s in range(0, P, args.accum_pairs):
@@ -5795,6 +6091,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 clipped, total = optim.clip_grad_norm(mean_grads, args.grad_clip if args.grad_clip > 0 else 1e30)
                 mx.eval(total)
                 gnorm = float(total)
+                # (C4 confound fix) PER-GROUP grad clip: when --per-group-grad-clip is ON, re-clip each
+                # top-level parameter GROUP to --grad-clip INDEPENDENTLY, so a volatile regularizer
+                # gradient dominating the GLOBAL norm cannot throttle the seg/pose gradient on OTHER
+                # param groups (film/out_tex) via the shared 1/gnorm scale. `gnorm`/`total` above stay
+                # the GLOBAL norm (spike-guard + telemetry reference). DEFAULT OFF => `clipped` above is
+                # used unchanged => BYTE-IDENTICAL. No-op when grad_clip<=0 or gnorm nonfinite.
+                if (bool(getattr(args, "per_group_grad_clip", False)) and args.grad_clip > 0
+                        and np.isfinite(gnorm) and isinstance(mean_grads, dict)):
+                    _grp_clipped: dict[str, Any] = {}
+                    for _gk, _gsub in mean_grads.items():
+                        _gc, _gt = optim.clip_grad_norm(_gsub, args.grad_clip)
+                        _grp_clipped[_gk] = _gc
+                    clipped = _grp_clipped
+                    mx.eval(clipped)
                 # spike-guard: skip non-finite / >spike_factor x running median.
                 # (EIK-STAB build 2) MODE DISPATCH. legacy (default; _sg_guard None): skip =
                 # nonfinite OR spiked — IDENTICAL semantics to the pre-build expression (with a
@@ -5826,6 +6136,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         skip = _nonfinite or (_sg_act == "rollback")
                 else:
                     skip = _nonfinite or _spiked
+                # (C6 liveness) count THIS accum-batch; ep_acc incremented only on an accepted step
+                # (after opt.update below). Works in ALL modes (legacy + rollback), unlike _sg_state.
+                _live["ep_tot"] += 1
+                # (C6) gnorm_hijack alarm: a global grad-norm >> the clip budget means one (volatile)
+                # gradient is scaling the WHOLE step down (starving the others). Sustained => loud.
+                if np.isfinite(gnorm) and args.grad_clip > 0 and gnorm > _GNORM_HIJACK_MULT * args.grad_clip:
+                    _alarm["gnorm_streak"] += 1
+                    if _alarm["gnorm_streak"] == _GNORM_HIJACK_MIN_BATCHES:
+                        _emit_confound_alarm("gnorm_hijack", ep=ep, gnorm=round(float(gnorm), 2),
+                                             grad_clip=float(args.grad_clip),
+                                             ratio=round(float(gnorm) / float(args.grad_clip), 1),
+                                             sustained_batches=int(_alarm["gnorm_streak"]),
+                                             per_group_grad_clip=bool(getattr(args, "per_group_grad_clip", False)),
+                                             note="global grad-norm >> clip budget: one gradient group "
+                                             "is scaling the whole step down (seg starvation risk); C3 "
+                                             "de-dominates eik, --per-group-grad-clip bounds per group")
+                else:
+                    _alarm["gnorm_streak"] = 0
                 # (#304 item 4) per-term loss telemetry: BEFORE the skip branch so spike-skipped
                 # chunks (the deadlock state) are covered too. Pure no-grad recompute + print.
                 _bidx_lt = s // args.accum_pairs
@@ -5837,7 +6165,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _lt_ca = _eik_stab["visco_c_a"] if _eik_stab["visco_adaptive"] else None
                     print(json.dumps(_loss_terms_row(
                         _t_agg, _t_tot, ep, _bidx_lt, gnorm=gnorm, skipped=skip,
-                        visco_eps=_lt_ve, visco_c_a=_lt_ca)), flush=True)
+                        visco_eps=_lt_ve, visco_c_a=_lt_ca,
+                        accepted_frac=_live_running_frac(), weights_stepped=(not skip),
+                        hosc_beta=float(model.hosc_beta), softmax_temp=float(model.softmax_temp))), flush=True)
+                    # (C6) term_domination alarm: a single reg term > 40% of the (post-weight) total
+                    # for >= N sustained rows. _t_agg values are already post-weight addends.
+                    _reg_keys = ("eikonal", "length", "eik_steik", "boundary_distance")
+                    _tot_abs = abs(float(_t_tot)) + 1e-12
+                    _dom = max(((k, abs(float(_t_agg.get(k, 0.0))) / _tot_abs) for k in _reg_keys),
+                               key=lambda kv: kv[1], default=(None, 0.0))
+                    if _dom[1] > _TERMDOM_FRAC:
+                        _alarm["termdom_streak"] += 1
+                        if _alarm["termdom_streak"] == _TERMDOM_MIN_ROWS:
+                            _emit_confound_alarm("term_domination", ep=ep, term=_dom[0],
+                                                 frac_of_loss=round(float(_dom[1]), 4),
+                                                 sustained_rows=int(_alarm["termdom_streak"]),
+                                                 note="a single regularizer term dominates the loss "
+                                                 "(>40%): the scored seg/pose signal is a passenger "
+                                                 "(C3 recalibrates the viscous eik unit scale)")
+                    else:
+                        _alarm["termdom_streak"] = 0
                 # (EIK-STAB build 2) SUSTAINED-runaway rollback: restore last-good + cut lr +
                 # re-arm, then skip THIS batch's step too (its gradient came from the diverged
                 # state). Legacy mode: _sg_act is None => never fires => byte-identical.
@@ -5859,6 +6206,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     continue
                 opt.update(model, clipped)
                 mx.eval(model.parameters(), opt.state)
+                _live["ep_acc"] += 1  # (C6 liveness) an ACCEPTED (weight-stepping) accum-batch
                 # #224 (5) SEED CONTAINMENT step: shield the seed grad (defend the seeded islands from
                 # the bulk-CE wash) then apply the SEPARATE seed AdamW. The shield touches ONLY the seed
                 # 'residual' leaf; the witness opt.update above + MD-decoupling below + grouped-backward
@@ -5916,6 +6264,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _prof["step_s"] = time.perf_counter() - _prof["_step0"]  # #252 profile: step (fwd+bwd+opt+ema)
             if args.mlx_device == "gpu":
                 mx.clear_cache()
+            # (C6 liveness) SNAPSHOT the just-completed epoch's accepted-batch fraction so the
+            # verdict / closed_loop / next-epoch-top rows read a TRUTHFUL liveness signal. Then the
+            # spike_deadlock alarm: a run frozen (skip-frac > 0.9) for >= 2 consecutive epochs.
+            _live["acc"] = int(_live["ep_acc"])
+            _live["skip"] = int(_live["ep_tot"]) - int(_live["ep_acc"])
+            _live["frac"] = float(_live["ep_acc"]) / float(max(int(_live["ep_tot"]), 1))
+            _live["stepped"] = bool(_live["ep_acc"] > 0)
+            if int(_live["ep_tot"]) > 0 and _live["frac"] < (1.0 - 0.9):  # skip-frac > 0.9
+                _alarm["deadlock_streak"] += 1
+                if _alarm["deadlock_streak"] >= 2:
+                    _emit_confound_alarm("spike_deadlock", ep=ep,
+                                         accepted_frac=round(float(_live["frac"]), 4),
+                                         accepted_batches=int(_live["acc"]),
+                                         skipped_batches=int(_live["skip"]),
+                                         consecutive_epochs=int(_alarm["deadlock_streak"]),
+                                         spike_guard_mode=str(getattr(args, "spike_guard_mode", "rollback")),
+                                         note="spike-guard skip-frac > 0.9 for >=2 ep = the absorbing "
+                                         "median-freeze DEADLOCK (all telemetry is FROZEN-state; use "
+                                         "--spike-guard-mode rollback)")
+            else:
+                _alarm["deadlock_streak"] = 0
             # #224 (5) SEED SURVIVAL telemetry: mean |seed residual| ON the island support. The
             # containment shield should keep this ABOVE ~0 (the seeded islands survive the bulk-CE
             # wash); WITHOUT the shield the bulk wash drives it toward 0 (the failure this defends).
@@ -5971,11 +6340,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _ncounts_sync = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
                     blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
                     s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
+                    # (C6) LIVENESS STAMP on the verdict row + frozen_epoch flag/alarm: a verdict d_seg
+                    # from a FROZEN (all-skip) epoch is a frozen-state sample, NOT converged progress.
+                    _frozen_ep = (int(_live["ep_tot"]) > 0 and int(_live["acc"]) == 0)
                     print(json.dumps({"stage": "verdict", "epoch": ep, "seg_form": seg_form,
                                       **{k: round(vv, 6) for k, vv in v.items()},
                                       "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
                                       "ep_loss": round(ep_loss, 3),
+                                      "accepted_frac": round(float(_live["frac"]), 4),
+                                      "weights_stepped": bool(_live["stepped"]),
+                                      "accepted_batches": int(_live["acc"]), "skipped_batches": int(_live["skip"]),
+                                      "frozen_epoch": bool(_frozen_ep),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
+                    if _frozen_ep or (float(ep_loss) == 0.0 and int(_live["ep_tot"]) > 0):
+                        _emit_confound_alarm("frozen_epoch", ep=ep, ep_loss=round(float(ep_loss), 6),
+                                             accepted_batches=int(_live["acc"]),
+                                             note="ep_loss==0.0 / all batches skipped: this verdict is a "
+                                             "FROZEN-state sample, not converged progress (do not treat "
+                                             "as a plateau or a 'best')")
                     history.append({"epoch": ep, **v, "implied_S": s})
                     _emit_handoff_readiness(_ncounts_sync, ep, seg_form)  # (#302) readiness row; no-op OFF
                     # (#292 build-3) closed-loop capture on the SYNC verdict path too (already
@@ -6292,6 +6674,16 @@ def main(argv: list[str] | None = None) -> int:
                     "(e.g. 126 to continue just past the ep125 BEST verdict when warm-starting from a "
                     "resume_state.npz whose __resume_epoch is the later DEADLOCK epoch). Default -1 => "
                     "use the checkpoint's own epoch + 1 (the deploy-npz path's natural continuation).")
+    ap.add_argument("--resume-model-from", type=str, default=None, choices=("live", "ema"),
+                    help="(C9 confound fix 2026-07-05) on --resume-from, which weights load into the "
+                    "MODEL: 'live' = the checkpoint's live params (the pre-fix behavior); 'ema' = the "
+                    "CLEAN EMA shadow (a crash mid-spike writes DIVERGING live weights while the EMA "
+                    "shadow in the SAME file is clean; loading live re-enters the divergence). DEFAULT "
+                    "resolves to 'live' EXCEPT it auto-defaults to 'ema' for a re-treatment resume "
+                    "(--warm-start-weights-only, OR both --resume-clear-spike-guard AND "
+                    "--resume-allow-lever-drift set) where the clean shadow is the right warm-start "
+                    "source. Explicit value always wins. When 'ema', keys missing from the shadow fall "
+                    "back to live so the model has a full param set.")
     ap.add_argument("--freeze-decoder-fit-codes", type=str, default=None,
                     help="FEED-eo AMORTIZATION (days->hours): load the SHARED decoder from this level-set "
                     "EMA/deploy npz (trained on a SUBSET, e.g. n96/n192), FREEZE it, and fit ONLY the "
@@ -6425,16 +6817,33 @@ def main(argv: list[str] | None = None) -> int:
                     help="(#205 OOM fix) mx.clear_cache() every N accum-batches inside the epoch loop "
                     "(GPU only; score-neutral). 0 disables the in-loop clear (pre-fix behaviour).")
     ap.add_argument("--grad-clip", type=float, default=1.0)
+    ap.add_argument("--per-group-grad-clip", action=argparse.BooleanOptionalAction, default=False,
+                    help="(C4 confound fix 2026-07-05) clip the global grad-norm PER top-level "
+                    "parameter GROUP (in_proj / hidden / out_sdf / out_tex / film / palette / code) "
+                    "independently to --grad-clip, instead of ONE global-norm clip over the whole "
+                    "vector. The single global clip scales the WHOLE gradient by 1/gnorm, so a "
+                    "volatile regularizer (eikonal) gradient that dominates gnorm THROTTLES the "
+                    "seg/pose gradient on OTHER param groups (film/out_tex) 300-900x (measured "
+                    "confound). Per-group clip bounds each group to its own budget so a volatile "
+                    "group cannot hijack the shared clip. DEFAULT OFF => the single global clip = "
+                    "BYTE-IDENTICAL. NOTE: a TRUE per-LOSS-TERM (eik-vs-seg) clip needs a second "
+                    "backward pass (the fused grad sums eik+seg on the shared trunk); C3's viscous "
+                    "normalization removes the eik-domination ROOT, so this per-group clip + the "
+                    "gnorm_hijack alarm are the shipped defense-in-depth.")
     ap.add_argument("--spike-factor", type=float, default=5.0)
     # (EIK-STAB build 2; sweep lever #3 + #304) spike-guard actuator mode. Default legacy =>
     # BYTE-IDENTICAL skip-with-frozen-median. rollback = tolerate bounded oscillation (single
     # finite spikes STEP; EoS self-stabilization is functional) + on SUSTAINED runaway (> frac of
     # a full window) restore the last-good snapshot, cut lr x lr-cut, re-arm a fresh median.
-    ap.add_argument("--spike-guard-mode", type=str, default="legacy",
+    ap.add_argument("--spike-guard-mode", type=str, default="rollback",
                     choices=("legacy", "rollback"),
                     help="EIK-STAB build 2: spike-guard actuator (legacy=skip-with-frozen-median; "
                     "rollback=bounded-oscillation tolerance + rollback-to-last-good + lr cut on "
-                    "sustained runaway). Default legacy (byte-identical).")
+                    "sustained runaway). DEFAULT rollback (C1 confound fix 2026-07-05): the legacy "
+                    "accepted-only median FREEZES on a sustained loss-level shift (75/75 skips/ep "
+                    "forever; #205 froze v5 ep114 / v6 ep103 -> the 'viscosity NO-GO' verdict was a "
+                    "frozen artifact). legacy stays selectable for the A/B but is NO LONGER the "
+                    "default. NOTE: legacy is NO LONGER byte-identical-by-default.")
     ap.add_argument("--spike-rollback-window", type=int, default=20,
                     help="rollback mode: batch window for the sustained-runaway trigger.")
     ap.add_argument("--spike-rollback-frac", type=float, default=0.5,
@@ -6467,8 +6876,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verdict-batch", type=int, default=32,
                     help="(#205 OOM fix) CPU-scorer verdict inference chunk size (pairs per torch "
                     "batch); 0 = single N-wide batch (pre-fix). Score-neutral (eval-mode BN).")
-    ap.add_argument("--verdict-pairs", type=int, default=24,
-                    help="realized fp32-numpy EMA-shadow verdict subset (0=all); ALWAYS fp32 one-codepath, never mlx-gpu.")
+    ap.add_argument("--verdict-pairs", type=int, default=0,
+                    help="realized fp32-numpy EMA-shadow verdict subset (0=all=n600; DEFAULT 0 per "
+                    "C12 confound fix 2026-07-05 -- a 24-pair default violated the n600 non-negotiable "
+                    "at the number that DEFINES the goal: best-ckpt selection + ALL d_seg telemetry + "
+                    "the closed-loop classifier ran on 24/600). Subsetting stays OPT-IN. ALWAYS fp32 "
+                    "one-codepath, never mlx-gpu.")
     ap.add_argument("--async-verdict", action=argparse.BooleanOptionalAction, default=False,
                     help="FEED-em: run the OBSERVATIONAL CPU-torch verdict in a BACKGROUND THREAD off a "
                     "point-in-time snapshot so the MLX-GPU loop never idles (~4.7%% wall-clock reclaim @ "
@@ -7235,6 +7648,67 @@ def main(argv: list[str] | None = None) -> int:
                     help="BUILD #300 (b): island-seed compose-weight anneal shape (full->0). Consulted only "
                     "when --seed-anneal-epochs > 0.")
     args = ap.parse_args(argv)
+
+    # ── CONFOUND-CLEANUP post-parse resolution + fail-closed guards (2026-07-05) ──────────────────
+    # (C9) resolve --resume-model-from default: 'live' EXCEPT auto-'ema' for a re-treatment resume
+    # (warm-start, or the clear-spike-guard + allow-lever-drift palliative pair) where the clean EMA
+    # shadow is the right warm-start source. Explicit value on the CLI always wins (default is None).
+    if getattr(args, "resume_model_from", None) is None:
+        _retreat = bool(getattr(args, "warm_start_weights_only", False)) or (
+            bool(getattr(args, "resume_clear_spike_guard", False))
+            and bool(getattr(args, "resume_allow_lever_drift", False)))
+        args.resume_model_from = "ema" if _retreat else "live"
+        if args.resume_from and args.resume_model_from == "ema":
+            print(json.dumps({"stage": "resume_model_from_resolved", "resume_model_from": "ema",
+                              "reason": ("warm_start_weights_only" if getattr(args, "warm_start_weights_only", False)
+                                         else "clear_spike_guard+allow_lever_drift"),
+                              "note": "C9: re-treatment resume auto-loads the CLEAN EMA shadow (a "
+                              "crash mid-spike wrote diverging LIVE weights; the shadow is clean)"}),
+                  flush=True)
+    # (C1) legacy spike-guard + --resume-clear-spike-guard is FAIL-CLOSED: clearing the frozen median
+    # in LEGACY mode is a ONE-SHOT reset, not a cure -- it re-anchors the median once from the first
+    # accepted batch, then re-enters the sustained spike and RE-FREEZES in 1-13 ep (measured). The
+    # actual cure is rollback mode. Refuse the combination with a clear message rather than silently
+    # delaying the deadlock.
+    if (bool(getattr(args, "resume_clear_spike_guard", False))
+            and str(getattr(args, "spike_guard_mode", "rollback")) == "legacy"
+            and not bool(getattr(args, "warm_start_weights_only", False))):
+        raise ValueError(
+            "(C1) --resume-clear-spike-guard with --spike-guard-mode legacy is FAIL-CLOSED: clearing "
+            "the frozen median in legacy mode only DELAYS the absorbing-median deadlock (re-anchors "
+            "once, then re-freezes in 1-13 ep on the same sustained loss shift; #205 measured). Use "
+            "--spike-guard-mode rollback (the DEFAULT, and the actual cure) OR "
+            "--warm-start-weights-only (a clean fresh-optimizer re-treatment).")
+    # (C14) --eikonal-weight-end must not anneal UP relative to --eikonal-weight without an explicit
+    # rationale: the eikonal weight should DECAY post-SDF (once the interface is a valid unit-gradient
+    # SDF the unit-gradient enforcement is done), not RISE. An end>base ramp is the wrong direction
+    # and was a live confound (it drove the eik term to dominate the loss). Refuse unless the operator
+    # sets TAC_EIKONAL_WEIGHT_END_UP_OK=<rationale> (a non-empty, non-placeholder string).
+    _ewe = getattr(args, "eikonal_weight_end", None)
+    if _ewe is not None and float(_ewe) > float(args.eikonal_weight):
+        _up_ok = os.environ.get("TAC_EIKONAL_WEIGHT_END_UP_OK", "").strip()
+        if _up_ok in ("", "<rationale>", "<reason>"):
+            raise ValueError(
+                f"(C14) --eikonal-weight-end ({_ewe}) > --eikonal-weight ({args.eikonal_weight}) "
+                "anneals the eikonal weight UP -- the WRONG direction (it should DECAY once the SDF is "
+                "valid; an UP-ramp let the eik term dominate the loss, a measured confound). If this is "
+                "intentional, set env TAC_EIKONAL_WEIGHT_END_UP_OK=<real rationale>.")
+        print(json.dumps({"stage": "eikonal_weight_end_up_WAIVED", "base": float(args.eikonal_weight),
+                          "end": float(_ewe), "rationale": _up_ok}), flush=True)
+    # (C16) --seed-anneal-epochs is interpreted in ABSOLUTE epochs; on a --resume-from whose start
+    # epoch is >= the anneal length, the seed compose weight is ALREADY fully withdrawn before the run
+    # begins (the seed crutch never contributes) -- warn loudly (the seed-formation losses may still
+    # be live; this only concerns the compose crutch). Emitted here where args are known; the resume
+    # start_epoch is validated again at load time.
+    if (int(getattr(args, "seed_anneal_epochs", 0)) > 0 and args.resume_from
+            and int(getattr(args, "warm_start_epoch", -1)) >= int(getattr(args, "seed_anneal_epochs", 0))):
+        print(json.dumps({"stage": "seed_anneal_epochs_WARN",
+                          "seed_anneal_epochs": int(args.seed_anneal_epochs),
+                          "warm_start_epoch": int(args.warm_start_epoch),
+                          "msg": "(C16) --seed-anneal-epochs < the resume start epoch: the seed compose "
+                          "crutch is fully withdrawn before this run begins (off every epoch). Make it "
+                          "RELATIVE to the resume start (add the resume epoch) if you want the crutch "
+                          "post-resume. Seed-FORMATION losses are unaffected."}), flush=True)
 
     # (review C2) --anneal-epochs guard: must be >= 1 when set (it is a cosine DENOMINATOR). A value
     # < --epochs means the anneal COMPLETES before the run ends (temp/LR clamp past their end values
