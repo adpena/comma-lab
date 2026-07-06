@@ -8628,3 +8628,26 @@ DSL levers (BoundaryDistance/SegFocalGamma) + costate_lambda is a non-lever meas
 commit (7eb684519) is apparatus-doc. SENSE annulus tool e826f1be9 + live monitor 7d827b0a7.
 Memory: [[default_off_is_orphaned_signal_activation_ledger_reconciliation_20260706]].
 [triality: DAG(this)+DSL(791c76d79)+eqs(1c4665ba1); CLAUDE.md 7eb684519] Pointer 0.19110 UNMOVED (apparatus).
+
+## FEED-247loop (2026-07-06) — #247 costate loop CLOSED end-to-end + the two-rankers are COMPLEMENTARY (do NOT unify)
+The #247 controller cycle is now closed: **SENSE** (analytic+trajectory costates + the activation-ledger
+never-fired `duty_to_measure` queue) -> **DECIDE** (ΔS/cost ranking `predicted_dS/max(cost,ε)`, refuses
+any `predicted_dS>0`) -> **ACT** (advisory recommendations; structural no-auto-actuation invariant intact)
+-> **CLOSE** (byte-close records the `measured` event for the DSL levers a run FIRED, draining
+`duty_to_measure`). Landings: SENSE->DECIDE `ccc161a98` (`ShadowReport.duty_to_measure`, NO fabricated ΔS —
+a never-fired lever has no measured costate, NO-FAKE); CLOSE `030a23d03` (`levers_fired_for_run` +
+`record_measured_for_run` in `tac.witness_dsl.activation_ledger`, wired into `levelset_byte_close_and_eval.py`
+main() gated on a real non-skipped realized-parity verdict, fail-safe).
+**DESIGN CORRECTION (measure-first, prevents a wrong future refactor):** the summary listed "unify the two
+rankers" as a #247 task. On inspection they optimize DIFFERENT objectives and MUST NOT be merged:
+`shadow_controller._recommendations` ranks IN-RUN ACTUATIONS by ΔS/cost (move the score NOW);
+`findings_lagrangian.action_selector.recommend_next_action_via_expected_information_gain` ranks CANDIDATE
+EXPERIMENTS by expected INFORMATION GAIN vs the canonical-equation posterior (reduce campaign uncertainty).
+Merging = conflating control (act-now) with Bayesian experimental design (learn-most) = category error. The
+CORRECT integration is COMPOSITION: the ledger's `duty_to_measure` never-fired levers ARE the candidate set
+the EIG selector should rank to pick WHICH lever to fire next; once fired+measured a lever gets a costate and
+enters the ΔS/cost DECIDE queue. `duty_to_measure` is the bridge between the two layers (SELECT-what-to-measure
+by EIG -> fire -> MEASURE -> DECIDE-actuation by ΔS/cost). Future #247 work builds that bridge, does NOT merge
+the rankers. Pointer 0.19110 UNMOVED (all SENSE/DECIDE/CLOSE apparatus; the movers remain the islands arm
+#323/#331 + the pose byte-close #238/#248, both gated on operator GO for heavy GPU).
+[triality: DAG(this); code ccc161a98+030a23d03 — apparatus/[no-triality] commits, no DSL/eqs leg needed]
