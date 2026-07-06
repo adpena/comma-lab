@@ -8518,7 +8518,20 @@ camera.py geom test to gate behavior-preservation). Report: `.omx/research/openp
 NEXT (highest-EV, $0 n600): reconcile lane-IPM to ONE openpilot-consistent geometry + MEASURE v_h∈{174,188,192}
 through R (turns INFERRED top-lever → MEASURED). For the NEXT run, not the live one.
 
+### FEED-06y (2026-07-06) — v_horizon n600 measurement (#327): audit finding #1 FALSIFIED, 174 is OPTIMAL, no change
+
+Ran `tools/measure_lane_ipm_vhorizon_reconciliation.py` (n600, real GT argmax, band-vs-GT, macOS-CPU
+advisory). The audit's INFERRED top lever (v_h 174→188/192) is **OVERTURNED**: v_h=174 wins ALL metrics —
+recall 0.5475 (vs 0.4966/0.4462), precision 0.6585 (vs 0.4663/0.4300), FP_far 0.00040 (vs 0.00160/0.00128,
+the "far-field FP" was BACKWARDS — 174 has the LEAST), band_err 0.00462 (vs 0.00649/0.00695). The
+near-horizon rows 174–188 hold REAL lane (inferred FPs were true lane); higher v_h cuts them + degrades the
+forward reparam. **VERDICT: leave _V_HORIZON=174, no change.** cam_h 1.2 vs 1.22 = Δband_err 0.00e+00 (exact
+2nd-order, fit↔render cancels) → cosmetic consistency only, NOT a d_seg lever. Finding #3 reframed: 174
+(lane-IPM) and 192 (pose-projection) are TWO correct values for TWO roles, not an inconsistency. Net openpilot
+audit outcome: NO score-moving change + NO upstream contribution — a clean measurement-prevents-regression win
+(inferred lever killed by the n600 row before it became a bad edit). Addendum in the audit report.
+
 SESSION SO FAR (all shadow-safe $0, NO GPU, live mod32cap UNTOUCHED): LADDER=costate special-case PROVEN
-(#322) · eased_targets module movable-GO/lane-loss-space + adversarial overturn (#323) · costate-REPL surface
-(#324) · openpilot lane VP-tangent fix DONE (#325) · cross-surface audit DONE — pose CORRECT, lane-IPM v_h/cam_h
-reconciliation is the score lever, no upstream contribution (#326) · CONTEST CLOSED banner + memory. Pointer 0.19110 UNMOVED. [no-triality]
+(#322) · eased_targets movable-GO/lane-loss-space (#323) · costate-REPL (#324) · openpilot lane VP-tangent fix
+(#325) · cross-surface audit DONE, pose CORRECT (#326) · v_h=174 MEASURED-optimal, audit finding #1 FALSIFIED,
+no lane change + no upstream contribution (#327) · CONTEST CLOSED banner + memory. Pointer 0.19110 UNMOVED. [no-triality]
