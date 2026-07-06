@@ -3279,16 +3279,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     if amplify_w > 0.0:
         from tac.boundary_math.island_protection import (
             build_island_masks,
+            eased_island_masks,
             identify_island_classes,
             island_birth_from_signed_mx,
             island_persistence_weight,
         )
+        _eased_on = bool(getattr(args, "seed_island_eased", False))
+        _mk_masks = eased_island_masks if _eased_on else build_island_masks
         _lst_stack_i = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
         _idet = identify_island_classes(_lst_stack_i, n_classes=5)
         island_weight_mx = {}
         for pi in range(P):
-            _im = build_island_masks(np.asarray(gt.lstars[pi], np.int64), _idet.lane_cls,
-                                     _idet.movable_cls, dilate_px=int(args.island_dilate_px))
+            _im = _mk_masks(np.asarray(gt.lstars[pi], np.int64), _idet.lane_cls,
+                            _idet.movable_cls, dilate_px=int(args.island_dilate_px))
             _iw = island_persistence_weight(_im.any_mask, kind=str(args.amplify_persist))
             island_weight_mx[pi] = mx.array(np.asarray(_iw, np.float32)[None])   # (1,H,W)
         print(json.dumps({"stage": "island_amplify", "island_classes": list(_idet.island_classes),
@@ -3321,17 +3324,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             build_island_masks as _build_isl_masks,
             build_island_seed as _build_isl_seed,
             contain_protected_grad_mx as _contain_grad_mx,
+            eased_island_masks as _eased_isl_masks,
             identify_island_classes as _ident_isl,
         )
         _seed_shield = _contain_grad_mx
+        _mk_seed_masks = _eased_isl_masks if bool(getattr(args, "seed_island_eased", False)) else _build_isl_masks
         _lst_stack_s = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
         _sdet = _ident_isl(_lst_stack_s, n_classes=5)
         _seed_res_np = np.zeros((P, render_h, render_w, 3), np.float32)
         _seed_msk_np = np.zeros((P, render_h, render_w, 1), np.float32)
         _s_supp = []
         for pi in range(P):
-            _im = _build_isl_masks(np.asarray(gt.lstars[pi], np.int64), _sdet.lane_cls,
-                                   _sdet.movable_cls, dilate_px=int(args.island_dilate_px))
+            _im = _mk_seed_masks(np.asarray(gt.lstars[pi], np.int64), _sdet.lane_cls,
+                                 _sdet.movable_cls, dilate_px=int(args.island_dilate_px))
             _gt1 = np.asarray(gt.gt_f1[pi], np.float32)
             if _gt1.shape[:2] != (render_h, render_w):
                 import torch  # noqa: PLC0415
@@ -7606,6 +7611,12 @@ def main(argv: list[str] | None = None) -> int:
                     "into the structured-init phi target (accelerant; ships 0 archive bytes). Requires "
                     "--structured-init. DEFAULT OFF => byte-identical.")
     ap.add_argument("--island-dilate-px", type=int, default=1, help="#224 annulus dilation of the island masks.")
+    ap.add_argument("--seed-island-eased", action=argparse.BooleanOptionalAction, default=False,
+                    help="#323 LADDER per-class island homotopy: replace the isotropic --island-dilate-px "
+                    "annulus (which is off-manifold for a lane curve = measured NO-GO) with class-aware "
+                    "eased masks — movable via SDF forward-Euler dilation (proven-transfer), lane via "
+                    "openpilot VP-tangent oriented widening (stays on the ~8-dim lane manifold). Applies "
+                    "to BOTH the amplify + seed island-mask builders. DEFAULT OFF => byte-identical.")
     ap.add_argument("--seed-blend", type=float, default=1.0,
                     help="#224 island-seed blend (residual = blend*(gt_island_rgb - base) on the island).")
     ap.add_argument("--seed-lr", type=float, default=0.02,

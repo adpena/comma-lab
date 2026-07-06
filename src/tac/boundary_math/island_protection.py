@@ -307,6 +307,51 @@ def build_island_masks(
     return IslandMasks(lane_m, mov_m, any_m, lane_cls, movable_cls, int(dilate_px))
 
 
+def eased_island_masks(
+    lstar: np.ndarray,
+    lane_cls: int | None,
+    movable_cls: int | None,
+    *,
+    dilate_px: int = 1,
+    vanishing_point: tuple[float, float] | None = None,
+) -> IslandMasks:
+    """#323 LADDER per-class island homotopy — the manifold-aware drop-in alternative to
+    ``build_island_masks``' isotropic ``_dilate`` (which grows BOTH classes the same way).
+
+    The LADDER transfer proof splits the birth homotopy by class geometry:
+
+    - **movable (blob class)** → ``sdf_dilation_eased``: the SDF forward-Euler homotopy
+      (1-Lipschitz ⇒ Hausdorff-continuous nested filtration ⇒ bounded step-debt). For a
+      blob its footprint equals isotropic dilation, but it is the PROVEN-transfer object.
+    - **lane (curve class)** → ``oriented_width_eased``: grows each coherent segment ALONG
+      its openpilot VP-tangent (road-forward) via a line structuring element, so the eased
+      target stays a thin CURVE on the ~8-dim lane manifold. Isotropic dilation of a curve
+      leaves the manifold (measured NO-GO for transfer). openpilot-grounded, rule-118-clean.
+
+    Same return type + fields as ``build_island_masks`` so both amplify/seed call sites can
+    switch on it behind a default-OFF flag (byte-identical when unfired). ``dilate_px`` is
+    reused as the growth radius (movable) / along-tangent width (lane)."""
+    from tac.witness_curriculum.eased_targets import (
+        oriented_width_eased as _owe,
+        sdf_dilation_eased as _sde,
+    )
+    a = np.asarray(lstar)
+    if a.ndim != 2:
+        raise ValueError(f"lstar must be (H,W), got {a.shape}")
+    lane_m = None
+    if lane_cls is not None:
+        lane_m = (_owe(a, lane_cls, int(dilate_px), vanishing_point=vanishing_point) == lane_cls)
+    mov_m = None
+    if movable_cls is not None:
+        mov_m = (_sde(a, movable_cls, int(dilate_px)) == movable_cls)
+    any_m = np.zeros(a.shape, bool)
+    if lane_m is not None:
+        any_m |= lane_m
+    if mov_m is not None:
+        any_m |= mov_m
+    return IslandMasks(lane_m, mov_m, any_m, lane_cls, movable_cls, int(dilate_px))
+
+
 # ===========================================================================
 # 3. EARLY-SEED — the sparse protected RGB residual seeded from GT island appearance.
 # ===========================================================================
@@ -807,6 +852,7 @@ __all__ = [
     "identify_island_classes",
     "IslandMasks",
     "build_island_masks",
+    "eased_island_masks",
     "IslandSeed",
     "build_island_seed",
     "compose_seed",
