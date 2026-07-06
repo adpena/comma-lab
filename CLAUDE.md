@@ -2951,6 +2951,24 @@ You must not edit without explicit human approval:
 
 ## Public Disclosure Hygiene
 
+> **CONTEST CLOSED — status update (operator binding 2026-07-06).** The comma video
+> compression contest is CLOSED. Consequences: **(1) our contest IP is open source** —
+> the witness / level-set / task-space / d_seg-d_pose methods, the paper, and the writeup
+> are open-source-destined and may be published, PR'd, and detailed freely; there is NO
+> competitive-timing, hold-before-submit, or leapfrog-avoidance constraint anymore (that
+> was race-window caution; it no longer applies — do NOT re-apply it). **(2) The sub-0.15
+> GOAL continues as the 10-year AUTONOMOUS OPEN RESEARCH PROGRAM**, not a live leaderboard
+> race — every "active contest / deadline / replay window / race-mode" framing elsewhere in
+> this file (e.g. "Frontier target", "Public frontier watch and intake", "Race-mode rigor
+> inversion") is HISTORICAL/DORMANT unless a NEW operator directive reopens a live race.
+> **(3) What STILL binds regardless (operational hygiene, never idea-secrecy):** keep
+> credentials, private infrastructure URLs / Tailscale-fleet IPs, local absolute paths, raw
+> provider logs, unpublished operator state, and account metadata OUT of public surfaces;
+> release is still intentional + sanitized; public PRs stay user-attributed with NO Claude
+> attribution. Scope-discipline for upstream `commaai/openpilot` PRs is now about RELEVANCE
+> to their stack (generic geometry only — they won't merge compression code), not secrecy.
+> Memory: `contest_closed_open_source_freely_operational_hygiene_only_20260706`.
+
 - Public release is intentional, not automatic. Keep credentials, private infrastructure URLs, local absolute paths, raw provider logs, unpublished operator state, and account metadata out of GitHub/docs/site/public supplement surfaces.
 - Detailed OSS/paper writeups are allowed when they are deliberately promoted, but private `.omx/state`, raw experiment directories, and provider transcripts must be sanitized into release manifests or dated research ledgers first.
 - Cloudflare/Lightning/public supplement links belong in sanitized release manifests or approved public docs, not incidental logs or generated state files.
