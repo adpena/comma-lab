@@ -172,7 +172,7 @@ def test_hook_stop_hook_active_short_circuits_to_allow():
     assert '"decision"' not in proc.stdout
 
 
-# --- calibration + per-commit (adversarial review 2026-07-06) ---------------------
+# --- per-leg calibration (window granularity; adversarial review r1+r2 2026-07-06) ----
 def test_both_legs_required_when_neither_touched():
     subj = ["witness: island-birth lever measured d_seg 0.0031 verdict"]
     files = [".omx/research/sub015_DAG_x.md"]
@@ -189,15 +189,15 @@ def test_measured_numeric_row_requires_equations():
     assert D.classify(subj, files) == "drift"
 
 
-def test_added_lever_family_stems_close_the_loophole():
-    # MEDIUM-1 fix: the reviewer's slip-through subject now requires the DSL.
-    subj = ["witness: SeedIslandEased seg-birth term added"]
+def test_lever_stem_requires_dsl_touch():
+    # A lever/wire-in commit that touched only the DAG still requires the DSL leg (the teeth).
+    subj = ["witness: island-birth lever wired into trainer"]
     files = [".omx/research/sub015_DAG_x.md", "experiments/train_levelset_witness_realized_through_R_mlx.py"]
     assert "DSL" in D.missing_legs(subj, files)
 
 
 def test_noisy_stems_do_not_overfire():
-    # LOW-1 fix: dropped launch/floor/law/erasure must not force a leg on unrelated chores.
+    # dropped launch/floor/law/erasure must not force a leg on unrelated chores.
     for subj in ("launcher: retry flaky ssh",
                  "fix floor division bug in rate calc",
                  "erasure coding: bump zfec dep",
@@ -205,22 +205,29 @@ def test_noisy_stems_do_not_overfire():
         assert D.missing_legs([subj], ["tools/x.py"]) == [], f"over-fire on {subj!r}"
 
 
-def test_per_commit_window_drifts_lever_masked_by_unrelated_dsl_touch():
-    # LOW-2 fix: a lever commit whose OWN files miss the DSL drifts even if a DIFFERENT
-    # commit in the same window touched the DSL.
-    commits = [
-        ("witness: new lever wired", ["experiments/train_levelset_witness_realized_through_R_mlx.py"]),
-        ("dsl: unrelated docstring tweak", ["src/tac/witness_dsl/gauge.py"]),
-    ]
-    assert D.window_drifts(commits) is True
-    # and if the lever commit DOES touch the DSL, the window is clean
-    commits2 = [("witness: new lever wired", ["src/tac/witness_dsl/curriculum_dsl.py"])]
-    assert D.window_drifts(commits2) is False
+def test_r2_dropped_broad_stems_do_not_overfire_on_dag_feed():
+    # r2 MEDIUM-3 REGRESSION: the r1-added seed/island/activation/birth stems over-fired on
+    # DAG-FEED / chore commits that merely MENTION a seed/island. Dropped → a DAG-FEED touching
+    # only the DAG (the RECORDING mechanism) must be clean, not "DSL drift".
+    # (subjects deliberately AVOID measure/verdict/lever verbs — this isolates the dropped
+    #  seed/island/activation/birth stems; a subject that ALSO says "measured" SHOULD require
+    #  the equations leg, which is correct and tested elsewhere.)
+    for subj in ("DAG: FEED-06u paint-seed killed, island born early",
+                 "bump random seed to 42",
+                 "activation function refactor"):
+        assert D.missing_legs([subj], [".omx/research/sub015_DAG_x.md"]) == [], f"over-fire: {subj!r}"
 
 
-def test_per_commit_opt_out_is_per_commit():
-    commits = [("witness: new lever wired [no-triality]", ["trainer.py"])]
-    assert D.window_drifts(commits) is False
+def test_r2_separate_dag_feed_commit_workflow_is_clean():
+    # r2 MEDIUM-1 REGRESSION: the project MANDATES one-change-per-commit — a work commit and a
+    # SEPARATE DAG-FEED commit. At window granularity that turn must be CLEAN (the work subject
+    # requires no specific leg; the DAG touch in the same window satisfies the fallback). The
+    # per-commit rewrite wrongly drifted on the work commit alone; window granularity is correct.
+    subjects = ["witness probe n600 frontier: base_ch=32 run",
+                "DAG FEED: record witness n600 probe trajectory point"]
+    files = ["experiments/train_levelset_witness_realized_through_R_mlx.py",
+             ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"]
+    assert D.classify(subjects, files) == "clean"
 
 
 def test_build_reason_names_the_missing_leg():

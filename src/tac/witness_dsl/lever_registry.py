@@ -65,12 +65,30 @@ def _constructs(node: ast.FunctionDef, name: str) -> bool:
     return False
 
 
+def _anno_is_lever(a: ast.AST) -> bool:
+    """STRUCTURAL check that an annotation IS ``Lever`` or a tuple/collection OF ``Lever`` —
+    NOT a mere substring match (which would falsely accept ``dict[str, Lever]``, a non-factory
+    returning a dict; round-2 LOW-1 fix)."""
+    if isinstance(a, ast.Name):
+        return a.id == "Lever"
+    if isinstance(a, ast.Constant) and isinstance(a.value, str):
+        return a.value.strip() == "Lever"                       # stringized annotation
+    if isinstance(a, ast.Subscript):
+        base = a.value.id if isinstance(a.value, ast.Name) else None
+        if base not in ("tuple", "Tuple", "list", "List"):      # dict[..], Optional[..], etc. are NOT
+            return False
+        sl = a.slice
+        elts = sl.elts if isinstance(sl, ast.Tuple) else [sl]
+        # tuple[Lever, ...] / tuple[Lever, Lever] — every non-Ellipsis element must be Lever
+        real = [e for e in elts if not (isinstance(e, ast.Constant) and e.value is Ellipsis)]
+        return bool(real) and all(_anno_is_lever(e) for e in real)
+    return False
+
+
 def _returns_lever(node: ast.FunctionDef) -> bool:
-    """True if the return annotation MENTIONS ``Lever`` (catches ``-> Lever`` AND the composite
-    ``-> tuple[Lever, Lever]`` that delegates to other factories — the M2 fix)."""
-    if node.returns is None:
-        return False
-    return "Lever" in ast.unparse(node.returns)
+    """True if the return annotation IS ``Lever`` or a tuple/list OF ``Lever`` (catches
+    ``-> Lever`` AND the composite ``-> tuple[Lever, Lever]``)."""
+    return node.returns is not None and _anno_is_lever(node.returns)
 
 
 def _called_names(node: ast.FunctionDef) -> set[str]:
@@ -88,22 +106,31 @@ def lever_factories() -> dict[str, frozenset[str]]:
     factory is never reported as flag-less."""
     tree = ast.parse(_module_source())
     fdefs = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
-    direct: dict[str, frozenset[str]] = {}
+    direct: dict[str, frozenset[str]] = {}   # factory -> its OWN flags
+    calls: dict[str, set[str]] = {}          # factory -> factory names it calls
     for node in fdefs:
         if _constructs(node, "WitnessProgram"):
             continue
         if _constructs(node, "Lever") or _returns_lever(node):
             direct[node.name] = _flags_in_node(node)
-    # resolve one level of delegation (composite factories call sub-factories)
+            calls[node.name] = _called_names(node)
+    # TRANSITIVE closure over delegation (a composite calls sub-factories, which may call
+    # more) so a multi-level composite never silently drops a delegated flag (round-2 LOW-2).
     out: dict[str, frozenset[str]] = {}
-    for node in fdefs:
-        if node.name not in direct:
-            continue
-        flags = set(direct[node.name])
-        for called in _called_names(node):
-            if called in direct:
-                flags |= direct[called]
-        out[node.name] = frozenset(flags)
+    for name in direct:
+        seen: set[str] = set()
+        stack = [name]
+        flags: set[str] = set()
+        while stack:
+            cur = stack.pop()
+            if cur in seen:
+                continue
+            seen.add(cur)
+            flags |= direct.get(cur, frozenset())
+            for callee in calls.get(cur, ()):
+                if callee in direct and callee not in seen:
+                    stack.append(callee)
+        out[name] = frozenset(flags)
     return dict(sorted(out.items()))
 
 
@@ -151,7 +178,10 @@ def completeness(trainer_path: str | Path | None = None) -> Completeness:
     """Reconcile the trainer's flags against the DSL. ``unmapped`` = the gap the operator wants
     visible (trainer flags the DSL does not hold); ``stale`` = DSL-EMITTED flags the trainer
     rejects (real drift). Deterministic, sorted."""
-    trainer = set(real_trainer_flags(Path(trainer_path) if trainer_path else None))
+    # Drop the ``--no-*`` BooleanOptionalAction negations on BOTH sides symmetrically (round-2
+    # LOW-3), so if the trainer ever exposes one it cannot show as a phantom unmapped/stale.
+    trainer = {f for f in real_trainer_flags(Path(trainer_path) if trainer_path else None)
+               if not _NO_ARTIFACT.match(f)}
     referenced = set(dsl_referenced_flags())
     emitted = set(dsl_emitted_flags())
     return Completeness(
