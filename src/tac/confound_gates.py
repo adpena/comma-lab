@@ -508,6 +508,63 @@ def check_no_duplicate_long_flags_in_launch(
 
 
 # ===========================================================================
+# Catalog #403 — the base-vs-levelset hosc anneal-default divergence
+# (T3 council 2026-07-05). The base trainer auto-anneals hosc β (1->4) when
+# endpoints are unset, but the LEVELSET trainer's _hosc_beta_for_epoch returns
+# None (CONSTANT β) when --hosc-beta-end is unset -> a fixed β=4 = tanh(β·sin)
+# saturation = vanishing grad (CLAUDE.md Capstone caveat: NEVER fixed β=4). The
+# base's safety default is silently dropped by the levelset launch path;
+# proven_base shipped fixed-β=4 (two council benches traced levelset:1982/2436/5895).
+# ===========================================================================
+def check_levelset_hosc_requires_beta_end(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #403 — an emitted witness ``launch.sh`` using ``--activation hosc``
+    MUST also set ``--hosc-beta-end`` (annealed) OR use ``--activation step_basis``;
+    else the levelset trainer runs a CONSTANT ``--hosc-beta`` (tanh saturation,
+    vanishing gradient — the CLAUDE.md-forbidden fixed-β=4 divergence config).
+
+    Signature refused: a launch.sh with ``--activation hosc`` but NO
+    ``--hosc-beta-end``. Per-file waiver: ``# FIXED_BETA_OK:<rationale>``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for path in _launch_files(root):
+        text = _read(path)
+        if text is None:
+            continue
+        scanned += 1
+        if _waiver_present(text, "FIXED_BETA_OK"):
+            continue
+        code = "\n".join(
+            ln for ln in text.splitlines() if not ln.lstrip().startswith("#")
+        )
+        if "--activation hosc" not in code:
+            continue
+        if "--hosc-beta-end" in code:
+            continue
+        rel = path.relative_to(root).as_posix()
+        violations.append(
+            f"{rel}: --activation hosc WITHOUT --hosc-beta-end -> the levelset "
+            f"trainer runs a CONSTANT --hosc-beta (tanh-saturation / vanishing "
+            f"gradient; CLAUDE.md-forbidden fixed-β=4). Add --hosc-beta-end (anneal) "
+            f"or use --activation step_basis, or a `# FIXED_BETA_OK:<rationale>` waiver."
+        )
+    return _finish(
+        name="check_levelset_hosc_requires_beta_end",
+        tag="levelset-hosc-fixed-beta",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{scanned} launch.sh scanned",
+    )
+
+
+# ===========================================================================
 # Catalog #400 — C8: a launch with resume palliative flags
 # (--resume-clear-spike-guard / --resume-allow-lever-drift) that restores
 # optimizer moments (a resume) but lacks --warm-start-weights-only is refused.
@@ -766,4 +823,5 @@ CONFOUND_GATES = (
     check_resume_palliative_flags_imply_warm_start,
     check_verdict_pairs_default_is_n600,
     check_telemetry_verdict_rows_carry_liveness,
+    check_levelset_hosc_requires_beta_end,
 )
