@@ -2614,6 +2614,22 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
     print(f"[report] wrote {out}  {_AUTHORITY}", flush=True)
+
+    # #247 CLOSE: a byte-closed realized verdict landed -> drain the DSL levers this run FIRED from the
+    # activation ledger's duty_to_measure (fired -> measured). Fail-safe: the ledger must NEVER break the
+    # byte-close. Only when parity actually ran (a real realized d_seg/d_pose verdict, not --skip-parity).
+    if not report.get("parity", {}).get("skipped", False):
+        try:
+            from tac.witness_dsl.activation_ledger import record_measured_for_run
+            rows = record_measured_for_run(
+                str(args.ckpt_dir), verdict_ref=str(out),
+                reason="byte-closed realized-parity verdict landed", agent="levelset_byte_close",
+            )
+            if rows:
+                print(f"[activation-ledger] recorded measured for {len(rows)} fired lever(s): "
+                      f"{[r['lever'] for r in rows]}", flush=True)
+        except Exception as _e:  # noqa: BLE001 — advisory ledger, never blocks the verdict
+            print(f"[activation-ledger] measured-record skipped (non-fatal): {_e}", flush=True)
     return 0
 
 

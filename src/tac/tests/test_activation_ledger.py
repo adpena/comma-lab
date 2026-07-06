@@ -104,6 +104,42 @@ def test_duty_to_measure_includes_fired_unmeasured(ledger):
     assert owed == {"A", "C"} and "B" not in owed
 
 
+# --- CLOSE: levers_fired_for_run / record_measured_for_run ----------------
+def test_levers_fired_for_run_exact_and_containment(ledger):
+    al.record_activation("A", al.EVENT_FIRED, run_ref="/runs/exp_1", path=ledger)
+    al.record_activation("B", al.EVENT_FIRED, run_ref="/runs/exp_1/checkpoints", path=ledger)
+    al.record_activation("C", al.EVENT_FIRED, run_ref="/runs/exp_2", path=ledger)
+    # ckpt-dir == the run dir: matches A (exact) + B (subdir contained by the run dir)
+    got = set(al.levers_fired_for_run("/runs/exp_1", path=ledger))
+    assert got == {"A", "B"} and "C" not in got
+
+
+def test_levers_fired_for_run_no_prefix_false_match(ledger):
+    al.record_activation("A", al.EVENT_FIRED, run_ref="/runs/exp_2", path=ledger)
+    # /runs/exp_20 must NOT match /runs/exp_2 (component-wise, not raw substring)
+    assert al.levers_fired_for_run("/runs/exp_20", path=ledger) == ()
+
+
+def test_record_measured_for_run_drains_duty(ledger):
+    known = ("A", "B", "C")
+    al.record_activation("A", al.EVENT_FIRED, run_ref="/runs/exp_1", path=ledger)
+    al.record_activation("B", al.EVENT_FIRED, run_ref="/runs/exp_1", path=ledger)
+    # C never fired for this run
+    assert set(al.duty_to_measure(known, path=ledger)) == {"A", "B", "C"}
+    rows = al.record_measured_for_run("/runs/exp_1", verdict_ref="v.json", path=ledger)
+    assert {r["lever"] for r in rows} == {"A", "B"}
+    # A, B now measured (drained); C still owed (never fired)
+    assert set(al.duty_to_measure(known, path=ledger)) == {"C"}
+    assert al.activation_status("A", ledger).state == al.STATE_MEASURED
+
+
+def test_record_measured_for_run_idempotent(ledger):
+    al.record_activation("A", al.EVENT_FIRED, run_ref="/runs/exp_1", path=ledger)
+    al.record_measured_for_run("/runs/exp_1", path=ledger)
+    # second call records nothing (A already measured)
+    assert al.record_measured_for_run("/runs/exp_1", path=ledger) == ()
+
+
 # --- report ordering -------------------------------------------------------
 def test_activation_report_surfaces_never_fired_first(ledger):
     known = ("A", "B", "C")

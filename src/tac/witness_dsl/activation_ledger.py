@@ -198,6 +198,57 @@ def duty_to_measure(known: tuple[str, ...] | None = None, path: Path | None = No
     return tuple(out)
 
 
+def _run_ref_matches(fired_ref: str | None, query_ref: str) -> bool:
+    """A fired ``run_ref`` (the launch out-dir) matches a CLOSE ``query_ref`` (a byte-close ckpt-dir)
+    when the two run dirs are the same or one contains the other (ckpt-dir is often ``<out_dir>`` or a
+    subdir of it). Path-component containment, not a raw substring, so ``.../run_2`` never matches
+    ``.../run_20``."""
+    if not fired_ref:
+        return False
+    a = os.path.normpath(os.path.abspath(str(fired_ref)))
+    b = os.path.normpath(os.path.abspath(str(query_ref)))
+    if a == b:
+        return True
+    sep = os.sep
+    return a.startswith(b + sep) or b.startswith(a + sep)
+
+
+def levers_fired_for_run(run_ref: str, path: Path | None = None) -> tuple[str, ...]:
+    """DSL levers that recorded a ``fired`` event for this run (matched by run-dir containment).
+    The CLOSE side reads these back so it records ``measured`` ONLY for levers that genuinely fired
+    for the run (NO-FAKE: never a lever the run did not use)."""
+    fired: list[str] = []
+    seen: set[str] = set()
+    for e in _read_events(path):
+        if e["event"] == EVENT_FIRED and e["lever"] not in seen and _run_ref_matches(e.get("run_ref"), run_ref):
+            fired.append(e["lever"])
+            seen.add(e["lever"])
+    return tuple(fired)
+
+
+def record_measured_for_run(
+    run_ref: str,
+    *,
+    verdict_ref: str | None = None,
+    reason: str = "",
+    agent: str | None = None,
+    path: Path | None = None,
+) -> tuple[dict, ...]:
+    """CLOSE the loop: record a ``measured`` event for every lever that FIRED for ``run_ref`` and is
+    not yet measured (draining it from :func:`duty_to_measure`). Returns the rows written (empty if no
+    fired-unmeasured lever matched). Idempotent-ish: a lever already measured for this run is skipped."""
+    rows: list[dict] = []
+    for lever in levers_fired_for_run(run_ref, path):
+        st = activation_status(lever, path)
+        if st.ever_measured or st.retired:
+            continue
+        rows.append(record_activation(
+            lever, EVENT_MEASURED, run_ref=run_ref, verdict_ref=verdict_ref,
+            reason=reason, agent=agent, path=path,
+        ))
+    return tuple(rows)
+
+
 def activation_report(known: tuple[str, ...] | None = None, path: Path | None = None) -> list[dict]:
     """The operator-facing 'what is registered but never fired?' surface — one row per DSL lever
     (default OFF by construction for score-affecting levers), with its activation state + reason-to-be
@@ -238,6 +289,8 @@ __all__ = [
     "activation_status",
     "duty_to_measure",
     "known_levers",
+    "levers_fired_for_run",
     "never_fired",
     "record_activation",
+    "record_measured_for_run",
 ]
