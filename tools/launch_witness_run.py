@@ -903,6 +903,22 @@ def main(argv: list[str] | None = None) -> int:
               f"detailed debug above and the log: {run_log}", file=sys.stderr)
         return rc
 
+    # (c.1) ACTIVATION LEDGER — record a "fired" event for every DSL lever this real launch used, so
+    # "off" is a TRACKED queue the #247 costate SENSE drains (CLAUDE.md "'Off' is a tracked queue"; the
+    # ledger is the anti-orphan surface). Only reached on a SUCCESSFUL spawn (not --dry-run, not a
+    # refused/failed launch). NON-FATAL: a ledger write must never break a launch that already fired.
+    if args.dsl_lever:
+        try:
+            from tac.witness_dsl.activation_ledger import EVENT_FIRED, record_activation
+            for _lv in args.dsl_lever:
+                record_activation(_lv, EVENT_FIRED, run_ref=out_dir,
+                                  reason="launched via tools/launch_witness_run.py --dsl-lever",
+                                  agent="launch_witness_run")
+            print(f"[launch-witness] activation-ledger: recorded 'fired' for {', '.join(args.dsl_lever)}")
+        except Exception as exc:  # noqa: BLE001 - telemetry must never break a fired launch
+            print(f"[launch-witness] WARNING: activation-ledger record failed "
+                  f"({type(exc).__name__}: {exc}); launch already fired, continuing.", file=sys.stderr)
+
     # (d) VERIFY the perf-env fast path (loud warning on the silent-slow footgun).
     status, line = verify_perf_env(run_log, timeout_s=args.perf_env_timeout_s)
     if status == "active":
