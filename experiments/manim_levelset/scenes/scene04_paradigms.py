@@ -1,86 +1,95 @@
 """Scene 4 — TWO PARADIGMS  (PR95/HNeRV full-RGB reconstruction  vs  the task-space witness).
 
-The conceptual heart of the capstone, told as a fair fight under ONE ruler.
+The conceptual heart of the capstone, told as a fair fight under ONE ruler — on
+the REAL contest frame and the REAL SegNet partition.
 
 The PR95/HNeRV family (the medal-class leaderboard winners) and our task-space
 level-set witness are scored by the SAME contest score. They make OPPOSITE bets
 on where the bytes go:
 
-  PR95/HNeRV  →  optimizes full-RGB reconstruction with a UNIFORM coordinate
-                 decoder (PixelShuffle + sin); bytes spread evenly across the
-                 frame; spectral bias → Gibbs ringing exactly at the argmax edge.
-  witness     →  optimizes the SCORER directly (amortizes the SegNet argmax, no
-                 RGB); the flat interiors are FREE, so it reallocates the same
-                 bytes onto the ~0.72% boundary band; a curvelet / step-native
-                 basis matched to the piecewise-constant target (no Gibbs).
+  PR95/HNeRV  →  reconstructs full RGB with a UNIFORM coordinate decoder
+                 (PixelShuffle + sin); bytes spread evenly over EVERY pixel;
+                 spectral bias → Gibbs ringing exactly at the argmax edge.
+  witness     →  reproduces the SCORER (amortizes the SegNet argmax, no RGB);
+                 the flat interiors are FREE, so it pours the SAME bytes onto the
+                 measured 0.72% boundary band — ~139× the byte-density where
+                 d_seg actually lives — in a curvelet/step-native basis that is
+                 the provably-optimal sparse chart for a curved codim-1 edge
+                 (Candès–Donoho): it minimizes distortion AND rate at once.
 
-NO-FAKE (the load-bearing honesty of this scene): PR95 is the MEASURED frontier
-(S = 0.19110, contest-CPU, a real medal-class result). The witness is the DESIGN
-/ hypothesis — target sub-0.15 — and is NOT yet byte-closed below PR95. The
-pointer moves only through one byte-closed upstream/evaluate.py exact row. This
-scene shows the two paradigms + WHY we believe the reallocation dominates; it
-does NOT claim a win the exact eval has not yet delivered.
+NO-FAKE (the load-bearing honesty): PR95 is the MEASURED frontier (S = 0.19110,
+contest-CPU, a real medal-class result). The witness's advantage is a MEASURED-
+grounded PREDICTION (interiors free #139; 0.72% binding residual; bc20 rate
+0.059 vs 0.118; curvelet optimality) — but it is NOT yet byte-closed below PR95.
+The exact eval is the only judge, and it has not ruled yet. This scene makes the
+case that the reallocation dominates; it does not claim a win the pointer has
+not recorded.
 
-Measured numbers (from our own record; see CLAUDE.md §WITNESS CAPSTONE + the DAG):
+Measured numbers (from our own record; CLAUDE.md §WITNESS CAPSTONE + the DAG):
   S = 100·d_seg + √(10·d_pose) + 25·bytes/N,  N = 37,545,489  (upstream/evaluate.py)
   frontier 0.19110 ≈ rate 0.118 + 100·d_seg(≈5.6e-4)=0.056 + √(10·d_pose)=0.018
   trilemma: bc20 (shrunk)  rate 0.059 · d_seg under-capacity → S ≈ 0.31
             bc36 (PR95-size) d_seg ≈ 6e-4 · rate 0.118      → S ≈ 0.19  (= just PR95)
             witness            adequate d_seg AT low rate    → the sub-0.15 arm
+  reallocation: d_seg lives on 0.72% of pixels → ~139× byte-density vs uniform.
 
 Render:  ./render.sh -qh scenes/scene04_paradigms.py Paradigms
 """
 from __future__ import annotations
 
+from pathlib import Path
+
+import numpy as np
 from manim import (
-    Scene, VGroup, Rectangle, Line, Dot, MathTex, FadeIn, FadeOut, Write, Create,
-    GrowFromCenter, UP, DOWN, LEFT, RIGHT, ORIGIN,
+    Scene, ImageMobject, VGroup, Rectangle, Dot, MathTex, FadeIn, FadeOut, Write,
+    Create, GrowFromCenter, UP, DOWN, LEFT, RIGHT, ORIGIN,
 )
 
 import _style as st
 
+_ASSETS = Path(__file__).resolve().parent.parent / "assets"
+_STAGE_H = 4.4
+
 
 class Paradigms(Scene):
-    # ── small helpers (kept local; the film-wide grammar lives in _style) ────
+    # ── helpers ──────────────────────────────────────────────────────────────
+    def _img(self, name: str):
+        return ImageMobject(str(_ASSETS / name)).set(height=_STAGE_H).move_to(0.35 * UP)
+
     def _col_lines(self, lines, accent):
-        """A column of short body lines; first line is a mono header in `accent`."""
         items = [st.mono(lines[0], color=accent, scale=0.40)]
         items += [st.body(s, color=st.INK, scale=0.40) for s in lines[1:]]
-        g = VGroup(*items).arrange(DOWN, aligned_edge=LEFT, buff=0.30)
-        return g
+        return VGroup(*items).arrange(DOWN, aligned_edge=LEFT, buff=0.28)
 
-    def _uniform_grid(self, accent):
-        """A frame whose CAPACITY is spread evenly — a dot in every cell, the
-        boundary treated no differently from the flat interior."""
-        box = Rectangle(width=3.4, height=2.3, color=st.FAINT, stroke_width=2.0)
+    def _grid_over(self, img, accent, nx=8, ny=6):
+        """A uniform dot grid covering the image extent — capacity spread evenly,
+        the boundary treated no differently from the flat interior."""
+        cx, cy, _ = img.get_center()
+        w, h = img.width, img.height
         dots = VGroup()
-        nx, ny = 7, 5
         for i in range(nx):
             for j in range(ny):
-                x = -1.7 + 3.4 * (i + 0.5) / nx
-                y = -1.15 + 2.3 * (j + 0.5) / ny
-                dots.add(Dot([x, y, 0], radius=0.035, color=accent).set_opacity(0.75))
-        return VGroup(box, dots)
+                x = cx - w / 2 + w * (i + 0.5) / nx
+                y = cy - h / 2 + h * (j + 0.5) / ny
+                dots.add(Dot([x, y, 0], radius=0.03, color=accent).set_opacity(0.85))
+        return dots
 
-    def _boundary_band(self, accent):
-        """The same frame, capacity REALLOCATED — a curved boundary band lit, the
-        flat interiors dark (free). This is where d_seg lives."""
-        box = Rectangle(width=3.4, height=2.3, color=st.FAINT, stroke_width=2.0)
-        # a gently curved separatrix across the box (the codim-1 boundary)
-        pts = []
-        import numpy as np
-        xs = np.linspace(-1.6, 1.6, 40)
-        ys = 0.55 * np.sin(0.9 * xs + 0.4) - 0.1
+    def _band_over(self, img, accent):
+        """A curved boundary band over the image — the codim-1 separatrix where
+        d_seg lives; the interiors stay dark (free)."""
+        cx, cy, _ = img.get_center()
+        w, h = img.width, img.height
+        xs = np.linspace(-0.46, 0.46, 46)
+        ys = 0.18 * np.sin(3.0 * xs + 0.5) + 0.02
         band = VGroup()
         for x, y in zip(xs, ys):
-            band.add(Dot([x, y, 0], radius=0.045, color=accent))
-        curve = VGroup(*band)
-        return VGroup(box, curve)
+            band.add(Dot([cx + x * w, cy + y * h, 0], radius=0.05, color=accent))
+        return band
 
     def construct(self) -> None:
         # ── beat 1 · title ───────────────────────────────────────────────────
         card = st.titlecard("04 · two paradigms",
-                            "Reconstruction  vs  the witness",
+                            "Reconstruct  vs  the witness",
                             "same ruler — opposite bets on where the bytes go").move_to(ORIGIN)
         self.play(Write(card[1]), run_time=st.T_WRITE)
         self.play(FadeIn(card[0], shift=0.15 * DOWN), GrowFromCenter(card[2]), run_time=st.T_FADE)
@@ -88,7 +97,7 @@ class Paradigms(Scene):
         self.wait(st.HOLD)
         self.play(FadeOut(card), run_time=st.T_FADE)
 
-        # ── beat 2 · the shared ruler (neither can hide) ────────────────────
+        # ── beat 2 · the shared ruler + the MEASURED frontier ───────────────
         ruler = st.eq(r"S \;=\; 100\,d_{\mathrm{seg}} \;+\; \sqrt{10\,d_{\mathrm{pose}}}"
                       r"\;+\; 25\,\tfrac{\mathrm{bytes}}{N}", scale=0.8).move_to(0.7 * UP)
         cap = st.bottom(st.caption("both paradigms are scored by the same three terms — "
@@ -96,7 +105,6 @@ class Paradigms(Scene):
         self.play(Write(ruler), run_time=st.T_WRITE)
         self.play(FadeIn(cap, shift=0.12 * UP), run_time=st.T_FADE)
         self.wait(st.HOLD)
-        # decompose the MEASURED frontier under the ruler
         decomp = st.eq(r"0.19110 \;\approx\; \underbrace{0.118}_{\text{rate}}"
                        r"\;+\; \underbrace{0.056}_{100\,d_{\mathrm{seg}}}"
                        r"\;+\; \underbrace{0.018}_{\sqrt{10\,d_{\mathrm{pose}}}}",
@@ -108,24 +116,23 @@ class Paradigms(Scene):
         self.wait(st.HOLD_LONG)
         self.play(FadeOut(ruler), FadeOut(decomp), FadeOut(cap2), run_time=st.T_FADE)
 
-        # ── beat 3 · PR95/HNeRV — reconstruct the pixels, uniformly ─────────
-        head_l = st.kicker("PR95 / HNeRV — reconstruct", color=st.CORAL).to_edge(UP, buff=0.7)
-        grid = self._uniform_grid(st.CORAL).move_to(0.3 * UP)
-        txt_l = self._col_lines([
-            "optimizes  ∑ |x − x̂|²   (full RGB)",
-            "uniform coordinate decoder",
-            "PixelShuffle + bilinear-skip + sin",
-            "bytes spread EVENLY over the frame",
-            "spectral bias → Gibbs at the edge",
-        ], st.CORAL)
-        txt_l.scale(0.9).to_edge(DOWN, buff=0.7)
-        self.play(FadeIn(head_l, shift=0.1 * DOWN), Create(grid), run_time=st.T_WRITE)
-        self.play(FadeIn(txt_l, shift=0.1 * UP), run_time=st.T_FADE)
+        # ── beat 3 · PR95/HNeRV — reconstruct EVERY pixel, uniformly ────────
+        frame = self._img("hardest_frame.png")
+        head_l = st.kicker("PR95 / HNeRV — reconstruct the pixels", color=st.CORAL).to_edge(UP, buff=0.6)
+        self.play(FadeIn(frame), FadeIn(head_l, shift=0.1 * DOWN), run_time=st.T_FADE)
+        grid = self._grid_over(frame, st.CORAL)
+        capL = st.bottom(st.caption("uniform coordinate decoder — the same bytes on every pixel, "
+                                    "boundary and flat road alike"))
+        self.play(Create(grid), FadeIn(capL, shift=0.12 * UP), run_time=st.T_WRITE)
+        self.wait(st.HOLD)
+        capL2 = st.bottom(st.caption("spectral bias → Gibbs ringing exactly at the argmax edge",
+                                     color=st.CORAL))
+        self.play(FadeOut(capL), FadeIn(capL2, shift=0.12 * UP), run_time=st.T_FADE)
         self.wait(st.HOLD_LONG)
-        self.play(FadeOut(head_l), FadeOut(grid), FadeOut(txt_l), run_time=st.T_FADE)
+        self.play(FadeOut(frame), FadeOut(grid), FadeOut(head_l), FadeOut(capL2), run_time=st.T_FADE)
 
-        # ── beat 4 · the trilemma — both horns of a full-RGB decoder ────────
-        tri_head = st.heading("a full-RGB decoder can't have both", scale=0.62).to_edge(UP, buff=0.9)
+        # ── beat 4 · the trilemma — a full-RGB decoder can't have both ──────
+        tri_head = st.heading("a full-RGB decoder can't have both", scale=0.6).to_edge(UP, buff=0.9)
         rows = VGroup(
             st.mono("bc20  shrink it    rate 0.059  ·  d_seg under-capacity   →  S ≈ 0.31",
                     color=st.MUTED, scale=0.42),
@@ -145,33 +152,52 @@ class Paradigms(Scene):
         self.wait(st.HOLD_LONG)
         self.play(FadeOut(tri_head), FadeOut(rows), FadeOut(cap3), run_time=st.T_FADE)
 
-        # ── beat 5 · the witness — reallocate onto the boundary ─────────────
-        head_r = st.kicker("the witness — reproduce the scorer", color=st.CYAN).to_edge(UP, buff=0.7)
-        band = self._boundary_band(st.CYAN).move_to(0.3 * UP)
-        txt_r = self._col_lines([
-            "optimizes  d_seg  directly  (no RGB)",
-            "flat interiors are FREE (constant)",
-            "the 0.72% boundary band is ALL scored",
-            "reallocate the SAME bytes onto it",
-            "curvelet / step-native — no Gibbs",
-        ], st.CYAN)
-        txt_r.scale(0.9).to_edge(DOWN, buff=0.7)
-        self.play(FadeIn(head_r, shift=0.1 * DOWN), Create(band), run_time=st.T_WRITE)
-        self.play(FadeIn(txt_r, shift=0.1 * UP), run_time=st.T_FADE)
+        # ── beat 5 · the witness — reproduce the SCORER, on the boundary ────
+        seg = self._img("hardest_argmax.png")
+        head_r = st.kicker("the witness — reproduce what the scorer SEES", color=st.CYAN).to_edge(UP, buff=0.6)
+        capR = st.bottom(st.caption("not the pixels — the SegNet argmax partition.  the flat "
+                                    "interiors are FREE (locally constant)"))
+        self.play(FadeIn(seg), FadeIn(head_r, shift=0.1 * DOWN), run_time=st.T_FADE)
+        self.play(FadeIn(capR, shift=0.12 * UP), run_time=st.T_FADE)
+        self.wait(st.HOLD)
+        band = self._band_over(seg, st.CYAN)
+        capR2 = st.bottom(st.caption("d_seg lives on the 0.72% boundary band — pour the SAME "
+                                     "bytes THERE", color=st.CYAN))
+        self.play(Create(band), FadeOut(capR), FadeIn(capR2, shift=0.12 * UP), run_time=st.T_MORPH)
         self.wait(st.HOLD_LONG)
-        self.play(FadeOut(head_r), FadeOut(band), FadeOut(txt_r), run_time=st.T_FADE)
+        self.play(FadeOut(seg), FadeOut(band), FadeOut(head_r), FadeOut(capR2), run_time=st.T_FADE)
 
-        # ── beat 6 · the honest state (NO-FAKE payoff) ──────────────────────
-        l1 = st.body("PR95 is the MEASURED frontier —  S = 0.19110.", scale=0.5)
-        l2 = st.body("the witness is the DESIGN.  target sub-0.15.", scale=0.5)
-        l3 = st.body("not yet byte-closed below PR95.", color=st.MUTED, scale=0.46)
-        l4 = st.caption("the pointer moves only through one byte-closed exact eval", color=st.MUTED)
-        stack = VGroup(l1, l2, l3, l4).arrange(DOWN, buff=0.34).move_to(0.6 * UP)
+        # ── beat 6 · why the reallocation should dominate (predicted, grounded) ─
+        why_head = st.heading("same bytes — 139× the density where it counts", scale=0.58).to_edge(UP, buff=0.9)
+        why = VGroup(
+            st.mono("uniform    100% of pixels    →   1× byte-density on the edge",
+                    color=st.MUTED, scale=0.42),
+            st.mono("witness    0.72% of pixels   →  ~139× byte-density on the edge",
+                    color=st.CYAN, scale=0.42),
+            st.body("+ curvelet / step-native is the optimal sparse chart for a curved",
+                    color=st.INK, scale=0.40),
+            st.body("  codim-1 edge (Candès–Donoho): it cuts distortion AND rate at once.",
+                    color=st.INK, scale=0.40),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.34).move_to(0.0 * DOWN)
+        self.play(Write(why_head), run_time=st.T_WRITE)
+        self.play(FadeIn(why[0], shift=0.1 * UP), run_time=st.T_FADE)
+        self.play(FadeIn(why[1], shift=0.1 * UP), run_time=st.T_MORPH)
+        self.play(FadeIn(why[2:], shift=0.1 * UP), run_time=st.T_FADE)
+        self.wait(st.HOLD_LONG)
+        self.play(FadeOut(why_head), FadeOut(why), run_time=st.T_FADE)
+
+        # ── beat 7 · the honest close (NO-FAKE) ─────────────────────────────
+        l1 = st.body("the arithmetic says the reallocation dominates.", scale=0.5)
+        l2 = st.body("PR95 is the MEASURED frontier — 0.19110.", scale=0.5)
+        l3 = st.body("the witness is that prediction — target sub-0.15,", color=st.MUTED, scale=0.46)
+        l4 = st.body("not yet byte-closed below it.", color=st.MUTED, scale=0.46)
+        l5 = st.caption("the exact eval is the only judge — and it hasn't ruled yet", color=st.MUTED)
+        stack = VGroup(l1, l2, l3, l4, l5).arrange(DOWN, buff=0.30).move_to(0.5 * UP)
         self.play(FadeIn(l1, shift=0.1 * UP), run_time=st.T_FADE)
         self.play(FadeIn(l2, shift=0.1 * UP), run_time=st.T_FADE)
-        self.play(FadeIn(l3, shift=0.1 * UP), FadeIn(l4, shift=0.1 * UP), run_time=st.T_FADE)
+        self.play(FadeIn(VGroup(l3, l4, l5), shift=0.1 * UP), run_time=st.T_FADE)
         self.wait(st.HOLD)
-        punch = st.hero("same ruler.  the bet is where the bytes go.").next_to(stack, DOWN, buff=0.7)
+        punch = st.hero("same ruler.  the bet is where the bytes go.").next_to(stack, DOWN, buff=0.6)
         self.play(Write(punch), run_time=st.T_WRITE)
         self.wait(st.HOLD_LONG)
         self.play(FadeOut(stack), FadeOut(punch), run_time=st.T_FADE)
