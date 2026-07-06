@@ -335,6 +335,23 @@ instrument (#216) — it decides + emits argv (**CONTAINMENT: never auto-fires h
 the three legs consistent (as-built maintenance loop #219). Two nested one-objects: the **witness**
 (physics facets = the unified level-set flow, §OPERATOR PRIORITY) + the **campaign** (these three views).
 
+**The DSL HOLDS every designed lever — a lever is not "built" until it is a `Lever` factory
+(operator 2026-07-06, delivered with fury after repeated by-hand orphaning).** The DSL
+(`tac.witness_dsl.curriculum_dsl`) is the config-generating single source of truth: a `WitnessProgram`
++ `Lever` factories `.compile_trainer_argv()` the launch config, `.validate()` fail-closes on any
+invented flag (never-invent-flags). **A new/changed lever MUST land as a `Lever` factory in the DSL —
+NOT a hand-added trainer flag at finalize time** (the config-orphan confound: designed-but-unbuilt /
+built-but-orphaned / default-off-not-set → lost signal + confounded attribution;
+`[[config_orphan_confound_permanent_fix_lever_registry_20260706]]`). This is **STRUCTURALLY ENFORCED**:
+(1) `tools/triality_drift_detector.py` is a PER-LEG Stop-hook — a lever/wire-in/curriculum commit that
+does not touch `src/tac/witness_dsl/` drifts; a measured finding that does not touch
+`src/tac/canonical_equations/` drifts (7-round recursive-review-SEALED, fail-open). (2)
+`tac.witness_dsl.lever_registry.completeness()` is the AUTO-DERIVED coverage query (AST, no hand-typed
+registry): `.unmapped` = trainer flags the DSL does not yet hold — the live "what is missing from the
+DSL?" answer; `emit_stub_lever` is the automated fold path. NEVER hand-grep levers at finalize; NEVER
+build a parallel registry beside the DSL. A generic tuning knob is a lever only WITH a swept
+non-default intent (argparse cannot supply it) — fold per-lever as designed, never N-by-hand.
+
 **Compute is a co-equal facet, held to the SAME bar (operator 2026-07-01).** Our MLX + custom Metal +
 ALL kernels (fused diff-R+stem, AA-SDF line raster, margin map, curvelet — #212) are a first-class,
 continuously leveraged/enhanced/iterated/optimized surface, treated **META** (the kernels are a substrate

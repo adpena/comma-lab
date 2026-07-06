@@ -90,3 +90,30 @@ def test_r5_completeness_bad_path_raises_clear_error():
         LR.completeness("/no/such/trainer_file_zzz.py")
     # the normal default path still works (no raise)
     assert LR.completeness().trainer_total > 100
+
+
+def test_332_deorphaned_levers_discovered_compose_and_validate():
+    # #332 de-orphaning wave: the 7 designed-but-orphaned levers are now DSL factories that
+    # (a) are AST-discovered, (b) reference only REAL trainer flags, (c) compose into a
+    # WitnessProgram that validate()s clean and compiles to argv — the DSL GENERATES the config.
+    from tac.witness_dsl import curriculum_dsl as cd
+    facs = LR.lever_factories()
+    new = ("SeedIslandEased", "EventTriggeredCurriculum", "EikonalViscosity", "AmplifyIsland",
+           "BoundaryDistance", "SegFocalGamma", "AdamBeta2")
+    for n in new:
+        assert n in facs, f"#332 lever {n} not discovered by the registry"
+        assert facs[n], f"#332 lever {n} emits no flags"
+    prog = cd.BASELINE
+    for fac in (cd.SeedIslandEased(), cd.EventTriggeredCurriculum(), cd.EikonalViscosity(),
+                cd.AmplifyIsland(), cd.BoundaryDistance(), cd.SegFocalGamma(), cd.AdamBeta2()):
+        prog = prog.with_lever(fac)
+    assert prog.validate() == [], "composed de-orphaned levers must reference only real flags"
+    argv = prog.compile_trainer_argv()
+    assert "--seed-island-eased" in argv and "--curriculum-nucleus-guard" in argv
+
+
+def test_332_coverage_rose_from_deorphaning():
+    # The de-orphaning wave raised DSL coverage; assert it is meaningfully above the pre-wave 34%.
+    c = LR.completeness()
+    assert c.coverage_frac >= 0.38, f"coverage {c.coverage_frac} below post-#332 floor"
+    assert c.stale == [], "no DSL-emitted flag may be absent from the trainer"

@@ -772,6 +772,91 @@ def openpilot_seeded_opening(  # noqa: N802 — DSL constructor
 # ---------------------------------------------------------------------------
 # flag_dict()-managed flags (emitted via the WitnessProgram fields below, NOT via ``base``,
 # so there is exactly one emitter per flag and no dict-overwrite mismatch).
+# ---------------------------------------------------------------------------------------------
+# #332 DE-ORPHANING WAVE: designed-but-orphaned levers folded into the DSL so the config can
+# TOGGLE them by name instead of hand-adding flags at finalize time (the config-orphan confound,
+# [[config_orphan_confound_permanent_fix_lever_registry_20260706]]). Each carries its DESIGNED
+# intent (the "on" value argparse cannot supply). Flag names are REAL (validate() fail-closes on
+# any invented flag). Generic tuning knobs (--adam-beta2 etc.) are levers WITH a swept param.
+# ---------------------------------------------------------------------------------------------
+def SeedIslandEased(window: int = 100) -> Lever:  # noqa: N802 — #323 LADDER island-birth
+    """#323 LADDER island-birth: use the EASED per-class island targets at the seed/amplify
+    sites — movable via SDF forward-Euler DILATION (proven 1-Lipschitz transfer) + lane via
+    openpilot VP-TANGENT along-tangent widening (manifold-preserving; isotropic-of-a-curve is
+    the NO-GO). Consumes ``tac.boundary_math.island_protection.eased_island_masks`` (wired
+    705afea84). COMPOSES WITH the island-birth path (seed/amplify) — a MODIFIER, not standalone;
+    default-OFF ⇒ byte-identical when unfired. DAG FEED + equation owed on first measured row."""
+    return Lever("island_seed_eased",
+                 overrides={"--seed-island-eased": True},
+                 epochs_delta=window,
+                 notes="#323 eased island targets: movable SDF-dilation + lane VP-tangent")
+
+
+def EventTriggeredCurriculum(window: int = 0) -> Lever:  # noqa: N802 — #315 derived-schedule flagship
+    """#315 event-triggered CE→tau hand-off + per-class critical-nucleus guard: hold tau until
+    every scored class consolidates (boundary re-anchor C1/C2 gate + nucleus predicate π₁≳5 +
+    plateau), so a born-but-nascent island is not taxed by a fixed-epoch tau onset. Byte-identical
+    to the fixed schedule when unfired (cap-ceiling ⇒ never hangs). The PAIR with island-birth is
+    the only config where birth pressure pays (T3 symposium 20260706). Numeric guard params keep
+    their trainer defaults; window=0 = schedule change, no epoch budget of its own."""
+    return Lever("curriculum_event_triggered_nucleus_guard",
+                 overrides={"--curriculum-event-triggered": True,
+                            "--curriculum-nucleus-guard": True},
+                 epochs_delta=window,
+                 notes="#315 nucleus-guarded CE→tau hand-off; protects born islands at 0 d_seg cost")
+
+
+def EikonalViscosity(adaptive: bool = True, window: int = 0) -> Lever:  # noqa: N802 — #316/#320 DE cure
+    """#316/#320 viscous eikonal stabilization: the DE-derived adaptive-ε cure ε(t)=clamp(
+    |c_a(t)|·√(ηλ_eik/8)(1+margin), floor, upper) that floors ε above the rising lower-CFL edge
+    (the measured v5 ep110 re-entry cause). ``adaptive`` toggles the ε(t) law vs a fixed viscous
+    ε; eps-floor/upper keep trainer defaults. Requires --eikonal-weight>0 to have effect."""
+    ov = {"--eikonal-viscosity": True}
+    if adaptive:
+        ov["--eikonal-viscosity-adaptive"] = True
+    return Lever("eikonal_viscosity",
+                 overrides=ov, epochs_delta=window,
+                 notes="#316/#320 DE-derived viscous/adaptive-ε eikonal stabilization")
+
+
+def AmplifyIsland(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 — island-amplify loss
+    """Island-amplify loss: raise the rare-class island logit on the COSTATE/margin-GATED support
+    (amplify only where the big-3 margin is preserved ⇒ n_big3→0 ⇒ net-positive by construction;
+    UNIFORM amplification is the measured net-negative). ``--amplify-form``/``--amplify-margin-
+    target`` keep trainer defaults; a nonzero weight turns the term on."""
+    return Lever("island_amplify",
+                 overrides={"--amplify-weight": weight},
+                 epochs_delta=window,
+                 notes="rare-class island-amplify on margin-gated support (net-positive by construction)")
+
+
+def BoundaryDistance(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 — #301 loss-geometry
+    """#301 loss-geometry: boundary-distance-weighted seg loss (concentrate pressure on the
+    codim-1 separatrix annulus). Default-OFF (weight 0) in the baseline; a nonzero weight engages."""
+    return Lever("boundary_distance",
+                 overrides={"--boundary-distance-weight": weight},
+                 epochs_delta=window,
+                 notes="#301 boundary-distance-weighted seg loss (separatrix-annulus concentration)")
+
+
+def SegFocalGamma(gamma: float = 2.0, window: int = 100) -> Lever:  # noqa: N802 — #301 focal calibration
+    """#301 focal-γ seg loss: down-weight easy (high-margin) pixels, focus on the flip-prone
+    boundary. γ calibrated $0-measured (#301); default 2.0 is the canonical focal exponent."""
+    return Lever("seg_focal_gamma",
+                 overrides={"--seg-focal-gamma": gamma},
+                 epochs_delta=window,
+                 notes="#301 focal-γ seg loss (down-weight easy pixels toward the flip boundary)")
+
+
+def AdamBeta2(beta2: float = 0.99, window: int = 0) -> Lever:  # noqa: N802 — #222 β₂ optimizer lever
+    """#222 Adam β₂ lever (arXiv 2603.02092): sweep β₂ (second-moment decay). The launch-gate
+    guard requires β₁<√β₂; window=0 = optimizer-config change, no epoch budget of its own."""
+    return Lever("adam_beta2",
+                 overrides={"--adam-beta2": beta2},
+                 epochs_delta=window,
+                 notes="#222 Adam β₂ second-moment decay sweep (β₁<√β₂ guard)")
+
+
 _SEALED_205_MANAGED_FLAGS = frozenset({
     "--num-pairs", "--epochs", "--gt-cache", "--out-dir", "--mlx-device",
     "--softmax-temp-start", "--softmax-temp-end",

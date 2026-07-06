@@ -8553,3 +8553,23 @@ SESSION SO FAR (all shadow-safe $0, NO GPU, live mod32cap UNTOUCHED): LADDER=cos
 (#323) · costate-REPL (#324) · openpilot lane VP-tangent fix (#325) · cross-surface audit, pose CORRECT (#326) ·
 v_h=174 MEASURED-optimal, finding #1 FALSIFIED (#327) · canonical clip_profile BUILT, de-orphans per-clip config
 measured-not-hardcoded (#328) · CONTEST CLOSED banner + memory. Pointer 0.19110 UNMOVED. [no-triality]
+
+## FEED-332dsl (2026-07-06): #332 DSL de-orphaning wave — 7 designed levers folded into the DSL SoT
+The triality per-leg gate was hardened + 7-round recursive-review-SEALED (commit 1d3f97946): a
+lever/wire-in commit MUST touch the DSL leg, a measured finding MUST touch the equations leg
+(`_MEASURED_ROW` decimal+alnum-lookbehind excludes version tokens; over-broad `measur`/`seed`/
+`island` stems dropped after they over-fired on DAG-FEEDs). THEN (this FEED) the actual #332
+deliverable: the DSL now HOLDS the designed-but-orphaned levers as `Lever` factories so a config
+TOGGLES them by name instead of hand-adding flags at finalize (the config-orphan confound,
+[[config_orphan_confound_permanent_fix_lever_registry_20260706]]). Folded 7:
+**SeedIslandEased (#323)** movable-SDF-dilation + lane-VP-tangent · **EventTriggeredCurriculum
+(#315)** nucleus-guarded CE→tau · **EikonalViscosity (#316/#320)** DE-adaptive-ε · **AmplifyIsland**
+margin-gated · **BoundaryDistance (#301)** · **SegFocalGamma (#301)** · **AdamBeta2 (#222)**.
+MEASURED: `lever_registry.completeness()` coverage 34.5%→38.3% (81→90 mapped flags), stale=[],
+deterministic; all 7 compose into a WitnessProgram that `validate()==[]` (every flag REAL, never-
+invent-flags fail-closes) and `compile_trainer_argv()` emits them — the DSL GENERATES the config.
+NOT auto-generating the remaining ~135 generic tuning knobs: a lever needs its NON-DEFAULT "on"
+intent, which argparse cannot supply — `emit_stub_lever` + the completeness surface are the
+automated review path for those. Legs: DSL (curriculum_dsl factories) + this DAG + memory. Equation
+leg deferred to SeedIslandEased's first MEASURED n600 island-birth row (no measured ΔS yet). Pointer
+0.19110 UNMOVED (apparatus/means). [no-triality]
