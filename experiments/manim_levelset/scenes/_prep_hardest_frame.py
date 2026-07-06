@@ -122,6 +122,23 @@ def main() -> None:
     for j, fi in enumerate(idxs):
         mont[j] = gt[fi][np.ix_(yy, xx)]
 
+    # ── ego clip: a CONTIGUOUS run of real frames (the actual ego-motion the
+    #    screw twists produce), + their twists ξ = the 6 PoseNet scalars. This
+    #    renders "the screw-derived pose motion itself on the contest video".
+    poses = np.asarray(z["gt_poses"])                     # (600,6) — the twists ξ
+    K = 42
+    start = int(np.clip(hardest - K // 2, 0, n - K))
+    ci = np.arange(start, start + K)
+    ch, cw = 336, 448
+    cyy = np.linspace(0, gt.shape[1] - 1, ch).astype(int)
+    cxx = np.linspace(0, gt.shape[2] - 1, cw).astype(int)
+    ego = np.empty((K, ch, cw, 3), np.uint8)
+    for j, fi in enumerate(ci):
+        ego[j] = gt[fi][np.ix_(cyy, cxx)]
+    np.save(_ASSETS / "ego_clip.npy", ego)
+    np.save(_ASSETS / "ego_poses.npy", poses[ci].astype(np.float32))
+    np.save(_ASSETS / "ego_idx.npy", ci.astype(int))
+
     # ── write assets (PNG via manim-independent tiny writer / npy) ───────────
     from PIL import Image
     Image.fromarray(frame_small).save(_ASSETS / "hardest_frame.png")
