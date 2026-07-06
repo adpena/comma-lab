@@ -31,15 +31,16 @@ _HERE = Path(__file__).resolve().parent
 _ASSETS = _HERE.parent / "assets"
 _CACHE = _HERE.parents[2] / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
 
-# comma10k canonical class order (MEASURED, NON-NEGOTIABLE per CLAUDE.md):
-# 0 Road, 1 Lane, 2 Undrivable(+sky), 3 Movable(cars), 4 MyCar(hood)
+# comma10k canonical class order + REAL mask colors (openpilot look; from
+# src/tac/categorical_candidate_runtime_skeleton.py — NON-NEGOTIABLE):
+# 0 Road #402020, 1 Lane #ff0000, 2 Undrivable #808060, 3 Movable #00ff66, 4 MyCar #cc00ff
 CLASS_RGB = np.array(
     [
-        [ 45,  92, 168],   # 0 road      — deep blue
-        [232, 197,  71],   # 1 lane      — warm gold (fragile rare class)
-        [ 66, 132, 121],   # 2 undrivable— teal
-        [196,  84,  73],   # 3 movable   — clay red
-        [120,  96, 162],   # 4 my-car    — muted violet
+        [ 64,  32,  32],   # 0 road       — comma10k maroon
+        [255,   0,   0],   # 1 lane       — comma10k red (fragile rare class)
+        [128, 128,  96],   # 2 undrivable — comma10k olive
+        [  0, 255, 102],   # 3 movable    — comma10k green
+        [204,   0, 255],   # 4 my-car     — comma10k purple
     ],
     dtype=np.uint8,
 )
