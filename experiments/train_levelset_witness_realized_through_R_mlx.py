@@ -99,6 +99,10 @@ from tac.optimization.md_decoupling import (  # noqa: E402
     stiefel_project_columns,
     stiefel_residual,
 )
+# SENSE (opt-in --annulus-telemetry): REUSE the pure codim-1 boundary-annulus metric math
+# (no reimplementation). Only the low-level pure fns are used (flip split + per-class + GT-margin
+# percentiles); the full-margin/gibbs series lives in tools/witness_annulus_convergence.py.
+from tac import witness_annulus_metrics as _wam  # noqa: E402
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
@@ -130,7 +134,8 @@ def _rss_gib() -> float:
 def _verdict_dseg_dpose_chunked(
     seg_cpu: Any, posenet_cpu: Any,
     f0s: list, f1s: list, lstars: list, poses: list, *, vbatch: int,
-) -> tuple[float, float]:
+    return_realized: bool = False,
+) -> "tuple[float, float] | tuple[float, float, list]":
     """(#205 REAL OOM FIX) mean d_seg / d_pose over N pairs, running SegNet/PoseNet in CHUNKS of
     ``vbatch`` instead of one N-wide torch batch.
 
@@ -144,19 +149,42 @@ def _verdict_dseg_dpose_chunked(
     BIT-IDENTICAL: the scorers run under ``torch.inference_mode()`` in EVAL mode -> BatchNorm uses
     RUNNING stats (batch-size-independent), argmax is per-pixel, MSE is per-pair -> the per-chunk
     concatenation equals the single N-wide batch to the last bit. ``vbatch<=0`` restores the
-    single-batch (pre-fix) path for the A/B parity check."""
+    single-batch (pre-fix) path for the A/B parity check.
+
+    ``return_realized`` (DEFAULT False => BYTE-IDENTICAL to the sealed #205 verdict): when True, ALSO
+    returns the realized SegNet argmax maps (list of (h,w) int64) collected from the SAME forward via
+    ``cpu_verdict_d_seg_argmax_batch`` (whose per-pair d_seg is bit-identical to ``cpu_verdict_d_seg_batch``
+    -- same preprocess -> forward -> argmax(dim=1) -> per-pixel disagreement). This lets the opt-in
+    ``--annulus-telemetry`` row reuse ONE forward instead of a second SegNet pass; the returned scalars
+    are unchanged. The default branch below is left EXACTLY as before so the flag-absent path is
+    byte-identical."""
     n = len(f1s)
-    if vbatch is None or vbatch <= 0 or vbatch >= n:
-        ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, lstars)
-        dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, poses)
-        return float(np.mean(ds)), float(np.mean(dp))
-    ds_all: list[float] = []
-    dp_all: list[float] = []
-    for s in range(0, n, vbatch):
-        e = min(s + vbatch, n)
-        ds_all.extend(cpu_verdict_d_seg_batch(seg_cpu, f1s[s:e], lstars[s:e]))
+    if not return_realized:
+        # ── UNCHANGED default path (byte-identical to the sealed #205 verdict) ──
+        if vbatch is None or vbatch <= 0 or vbatch >= n:
+            ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, lstars)
+            dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, poses)
+            return float(np.mean(ds)), float(np.mean(dp))
+        ds_all: list[float] = []
+        dp_all: list[float] = []
+        for s in range(0, n, vbatch):
+            e = min(s + vbatch, n)
+            ds_all.extend(cpu_verdict_d_seg_batch(seg_cpu, f1s[s:e], lstars[s:e]))
+            dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+        return float(np.mean(ds_all)), float(np.mean(dp_all))
+    # ── return_realized path (annulus telemetry ON only): bit-identical d_seg via the argmax variant,
+    #    plus the realized maps collected from the SAME chunked forward. ──
+    vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
+    ds_all = []
+    dp_all = []
+    realized_all: list = []
+    for s in range(0, n, vb):
+        e = min(s + vb, n)
+        ds_chunk, realized = cpu_verdict_d_seg_argmax_batch(seg_cpu, f1s[s:e], lstars[s:e])
+        ds_all.extend(ds_chunk)
         dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
-    return float(np.mean(ds_all)), float(np.mean(dp_all))
+        realized_all.extend([realized[i] for i in range(e - s)])
+    return float(np.mean(ds_all)), float(np.mean(dp_all)), realized_all
 
 
 def _verdict_dseg_dpose_nucleus_chunked(
@@ -187,6 +215,91 @@ def _verdict_dseg_dpose_nucleus_chunked(
             counts, _evt_nucleus_counts([realized[i] for i in range(e - s)], lstars[s:e]))
     return (float(np.mean(ds_all)), float(np.mean(dp_all)),
             counts if counts is not None else _evt_nucleus_counts([], []))
+
+
+# ---------------------------------------------------------------------------
+# SENSE (opt-in --annulus-telemetry): in-trainer annulus_convergence telemetry. Pure numpy helpers
+# (MLX-free, torch-free), factored out of the verdict closure so they are unit-testable at $0. They
+# REUSE tac.witness_annulus_metrics (no metric reimplementation). OBSERVABILITY-ONLY: the row is a
+# companion to the {stage:verdict} row, NEVER read back into training/parity/resume => flag-absent
+# runs are byte-identical (nothing constructs a row).
+# ---------------------------------------------------------------------------
+def _annulus_realized_maps(seg_cpu: Any, f1s: list, lstars: list, vbatch: int) -> list:
+    """Realized SegNet argmax maps over the frame1's, chunked by ``vbatch`` (reuses
+    ``cpu_verdict_d_seg_argmax_batch``). Used ONLY when the annulus row needs a dedicated forward
+    (the rare nucleus-ON + annulus-ON combo; the common annulus-ON/nucleus-OFF path reuses the
+    verdict's own forward via ``_verdict_dseg_dpose_chunked(return_realized=True)``)."""
+    n = len(f1s)
+    vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
+    out: list = []
+    for s in range(0, n, vb):
+        e = min(s + vb, n)
+        _ds, realized = cpu_verdict_d_seg_argmax_batch(seg_cpu, f1s[s:e], lstars[s:e])
+        out.extend([realized[i] for i in range(e - s)])
+    return out
+
+
+def _annulus_metrics_from_maps(
+    realized_list: list, gt_lstars_list: list, gt_margins_list: list, *,
+    band: float, bottom_k: float,
+) -> dict:
+    """Pure codim-1 boundary-annulus convergence metrics from the realized argmax + GT argmax + GT
+    margin (all SegNet-resolution per-pair (h,w) maps). REUSES the pure fns in
+    ``tac.witness_annulus_metrics`` (flip split, per-class flip-frac, GT-margin percentiles) -- no
+    metric math is reimplemented here.
+
+    DOCUMENTED PARTIAL (NO-FAKE): the verdict scope cheaply carries the realized ARGMAX (one SegNet
+    forward) + the FIXED GT top1-top2 margin field (``gt.margins``), but NOT the witness's own seg
+    LOGITS. So the two witness-margin-dependent metrics -- the realized-margin p10/p50 and the Gibbs
+    ring proxy -- are DELIBERATELY OMITTED here (they would need a second logits forward); the
+    ``annulus_gt_margin`` block reports the GT-margin distribution within the annulus instead
+    (``margin_source="gt"``). The full witness-margin/gibbs series lives in the offline
+    ``tools/witness_annulus_convergence.py`` CLI. Two annulus definitions (fixed |margin|<band +
+    bottom-k fraction) mirror ``witness_annulus_metrics.checkpoint_metrics``."""
+    realized = np.stack([np.asarray(r).astype(np.int64) for r in realized_list], axis=0)
+    gt_arg = np.stack([np.asarray(g).astype(np.int64) for g in gt_lstars_list], axis=0)
+    gt_mar = np.stack([np.asarray(m).astype(np.float32) for m in gt_margins_list], axis=0)
+    flip = _wam.flip_map(realized, gt_arg)
+    total_px = int(flip.size)
+
+    def _block(annulus: np.ndarray) -> dict:
+        interior = ~annulus
+        return {
+            "annulus_area_frac": (float(annulus.mean()) if annulus.size else 0.0),
+            "annulus_flip_frac": _wam.restricted_flip_frac(flip, annulus),
+            "interior_flip_frac": _wam.restricted_flip_frac(flip, interior),
+            "annulus_flip_mass_share": _wam.flip_mass_share(flip, annulus),
+            "annulus_gt_margin": _wam.margin_percentiles(gt_mar, annulus, ps=(10.0, 50.0)),
+            "per_class_annulus_flip_frac": _wam.per_class_annulus_flip_frac(flip, annulus, gt_arg),
+        }
+
+    return {
+        "overall_d_seg": (float(flip.mean()) if total_px else 0.0),
+        "total_px": total_px,
+        "n_flips": int(flip.sum()),
+        "n_pairs": int(realized.shape[0]),
+        "band": float(band),
+        "bottom_k": float(bottom_k),
+        "margin_source": "gt",
+        "threshold": _block(_wam.annulus_mask_threshold(gt_mar, band)),
+        "bottom_k_def": _block(_wam.annulus_mask_bottom_k(gt_mar, bottom_k)),
+    }
+
+
+def _annulus_convergence_row(metrics: dict, epoch: int, seg_form: "str | None") -> dict:
+    """Wrap a ``_annulus_metrics_from_maps`` dict (or the ``{"error": ...}`` fail-safe payload) into
+    the companion ``{"stage": "annulus_convergence", ...}`` JSON row emitted at verdict cadence."""
+    return {
+        "stage": "annulus_convergence",
+        "epoch": int(epoch),
+        "seg_form": (str(seg_form) if seg_form is not None else None),
+        **metrics,
+        "axis": "[macOS-numpy advisory] NON-PROMOTABLE",
+        "note": "OBSERVABILITY-ONLY (never read into training); companion to {stage:verdict}. "
+                "PARTIAL: realized-argmax annulus/interior flip split + per-class + GT-margin "
+                "p10/p50 (no witness-logit margin/gibbs -- see tools/witness_annulus_convergence.py "
+                "for the full offline series).",
+    }
 
 
 def _mlx_mem_gib(mx: Any) -> dict[str, float]:
@@ -4258,6 +4371,49 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _nucleus_within_flip_thresh = float(getattr(args, "curriculum_nucleus_within_flip", 0.5))
     _nucleus_min_part_frac = float(getattr(args, "curriculum_nucleus_min_part_frac", 0.0))
 
+    # (SENSE) opt-in per-verdict annulus_convergence telemetry gate. OFF (default; the #205 path) =>
+    # the verdict uses _verdict_dseg_dpose_chunked UNCHANGED (no realized-map collection, no annulus
+    # dict, no row) => BYTE-IDENTICAL. OBSERVABILITY-ONLY (never read into training/parity/resume).
+    _annulus_on = bool(getattr(args, "annulus_telemetry", False))
+    _annulus_band = float(getattr(args, "annulus_band", 2.0))
+    _annulus_bottom_k = float(getattr(args, "annulus_bottom_k", 0.05))
+
+    def _verdict_v(f0s: list, f1s: list) -> dict[str, float]:
+        """Shared verdict tail: given rendered f0s/f1s over ``vpairs``, return the {d_seg,d_pose} dict.
+
+        Default (nucleus OFF, annulus OFF) => the UNCHANGED _verdict_dseg_dpose_chunked call =>
+        byte-identical to the sealed #205 verdict. Nucleus ON => +per-class counts in the same forward
+        (unchanged). Annulus ON => reuse the realized argmax from the SAME forward (return_realized) and
+        stash the annulus metrics under v['annulus'] in a try/except that can NEVER crash the verdict.
+        The rare nucleus+annulus combo takes one dedicated realized forward (still try/except-guarded).
+        The d_seg/d_pose SCALARS are identical across all branches (argmax-variant d_seg is bit-identical)."""
+        lstars_v = [gt.lstars[pi] for pi in vpairs]
+        poses_v = [gt.gt_poses[pi] for pi in vpairs]
+        _realized: "list | None" = None
+        if _nucleus_on:
+            d_seg, d_pose, _ncounts = _verdict_dseg_dpose_nucleus_chunked(
+                seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch))
+            v: dict[str, float] = {"d_seg": d_seg, "d_pose": d_pose, "nucleus_counts": _ncounts}
+        elif _annulus_on:
+            d_seg, d_pose, _realized = _verdict_dseg_dpose_chunked(
+                seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
+                vbatch=int(args.verdict_batch), return_realized=True)
+            v = {"d_seg": d_seg, "d_pose": d_pose}
+        else:
+            d_seg, d_pose = _verdict_dseg_dpose_chunked(
+                seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch))
+            v = {"d_seg": d_seg, "d_pose": d_pose}
+        if _annulus_on:
+            try:
+                if _realized is None:  # nucleus branch forwarded but discarded maps => dedicated pass
+                    _realized = _annulus_realized_maps(seg_cpu, f1s, lstars_v, int(args.verdict_batch))
+                v["annulus"] = _annulus_metrics_from_maps(
+                    _realized, lstars_v, [gt.margins[pi] for pi in vpairs],
+                    band=_annulus_band, bottom_k=_annulus_bottom_k)
+            except Exception as exc:  # telemetry MUST NEVER crash or corrupt the verdict path.
+                v["annulus"] = {"error": f"{type(exc).__name__}: {exc}"}
+        return v
+
     def realized_verdict() -> dict[str, float]:
         # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
         # (NOT the MLX-GPU reduced-precision forward — the 4th artifact). This IS the deploy render.
@@ -4276,17 +4432,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # never validated on this vehicle; see CLAUDE.md "Pose is SOLVED" caveat + axis-9).
         # (#302) nucleus path: same bit-identical d_seg/d_pose PLUS per-class counts in the SAME
         # SegNet forward (OFF => the original chunked call, byte-identical, no extra cost).
-        if _nucleus_on:
-            d_seg, d_pose, _ncounts = _verdict_dseg_dpose_nucleus_chunked(
-                seg_cpu, posenet_cpu, f0s, f1s,
-                [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
-                vbatch=int(args.verdict_batch))
-            return {"d_seg": d_seg, "d_pose": d_pose, "nucleus_counts": _ncounts}
-        d_seg, d_pose = _verdict_dseg_dpose_chunked(
-            seg_cpu, posenet_cpu, f0s, f1s,
-            [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
-            vbatch=int(args.verdict_batch))
-        return {"d_seg": d_seg, "d_pose": d_pose}
+        # (SENSE) annulus path (opt-in) reuses the realized argmax from the same forward. All routed
+        # through the shared _verdict_v tail; the flag-absent path is byte-identical.
+        return _verdict_v(f0s, f1s)
 
     # ---- ASYNC verdict (FEED-em; ADDITIVE, DEFAULT-OFF via --async-verdict). The realized
     # CPU-torch verdict (render fp32 numpy + SegNet/PoseNet) is PURELY OBSERVATIONAL — the
@@ -4343,18 +4491,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 f0s.append(_torch_R_to_camera_uint8(_r0))
             f1s.append(_torch_R_to_camera_uint8(_r1))
         # (#205 OOM fix) chunk the CPU-scorer inference (bit-identical; eval-mode BN running stats).
-        # (#302) nucleus path in the ASYNC worker: bit-identical d_seg/d_pose + per-class counts.
-        if _nucleus_on:
-            d_seg, d_pose, _ncounts = _verdict_dseg_dpose_nucleus_chunked(
-                seg_cpu, posenet_cpu, f0s, f1s,
-                [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
-                vbatch=int(args.verdict_batch))
-            return {"d_seg": d_seg, "d_pose": d_pose, "nucleus_counts": _ncounts}
-        d_seg, d_pose = _verdict_dseg_dpose_chunked(
-            seg_cpu, posenet_cpu, f0s, f1s,
-            [gt.lstars[pi] for pi in vpairs], [gt.gt_poses[pi] for pi in vpairs],
-            vbatch=int(args.verdict_batch))
-        return {"d_seg": d_seg, "d_pose": d_pose}
+        # (#302) nucleus + (SENSE) annulus routed through the SAME shared _verdict_v tail as the sync
+        # path, so the ASYNC worker's row is bit-identical and the flag-absent path is byte-identical.
+        return _verdict_v(f0s, f1s)
 
     history: list[dict[str, Any]] = []
     _verdict_lock = threading.Lock()
@@ -4428,6 +4567,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # history / closed-loop capture (those consume d_seg/d_pose scalars only), then emit the
         # separate handoff_readiness row. ``v`` has no "nucleus_counts" unless the feature is ON.
         _ncounts = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
+        # (SENSE) pop the annulus metrics BEFORE the float-only ``row`` spread below (else round()
+        # would hit a dict). None unless --annulus-telemetry is ON => byte-identical when absent.
+        _annulus_m = v.pop("annulus", None) if isinstance(v, dict) else None
         blob = quantize_levelset_blob(ema_np)
         s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
         # (C6) LIVENESS STAMP captured at SCHEDULE time (the async worker runs later, off a snapshot;
@@ -4459,6 +4601,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if async_tag:
                 row["async"] = True
             print(json.dumps(row), flush=True)
+            # (SENSE) companion annulus_convergence row (opt-in; under the same lock as the verdict
+            # row). Absent unless --annulus-telemetry => byte-identical. Never raises (json of a plain
+            # metrics/error dict); OBSERVABILITY-ONLY, never appended to history/result.json.
+            if _annulus_m is not None:
+                print(json.dumps(_annulus_convergence_row(_annulus_m, ep, seg_form)), flush=True)
             history.append({"epoch": ep, **v, "implied_S": s})
             # (#292 build-3) deterministic closed-loop capture (ON only; OFF appends nothing =>
             # byte-identical). Under _verdict_lock; (M2 fix) the decision point joins the PREVIOUS
@@ -5011,6 +5158,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     v0.pop("nucleus_counts", None)  # (#302) baseline verdict: drop per-class counts (float-only row;
     #                                  readiness telemetry begins at the first in-loop verdict, after
     #                                  _evt_state exists). No-op when the nucleus feature is OFF.
+    # (SENSE) pop the annulus metrics BEFORE the float-only v0 row spread below. None unless
+    # --annulus-telemetry is ON => byte-identical when absent.
+    _annulus_v0 = v0.pop("annulus", None)
     if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
         _mm = _mlx_mem_gib(mx)
         print(json.dumps({"stage": "mem_probe", "phase": "after_v0_verdict", "n_pairs": P,
@@ -5029,6 +5179,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       "phase": "baseline_v0",
                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                       "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
+    # (SENSE) companion annulus_convergence row for the pre-loop baseline (opt-in; byte-identical when
+    # absent). Pre-loop, single-threaded => no lock needed.
+    if _annulus_v0 is not None:
+        print(json.dumps(_annulus_convergence_row(_annulus_v0, start_epoch - 1, "baseline_v0")), flush=True)
     history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0})
 
     # (C3 confound fix) STARTUP regularizer-magnitude log: the raw (PRE-weight) scale of each active
@@ -6343,6 +6497,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     v = realized_verdict()
                     # (#302) split per-class counts out of the float-only sync verdict row / history.
                     _ncounts_sync = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
+                    # (SENSE) pop annulus BEFORE the float-only row spread. None unless
+                    # --annulus-telemetry is ON => byte-identical when absent.
+                    _annulus_sync = v.pop("annulus", None) if isinstance(v, dict) else None
                     blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
                     s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
                     # (C6) LIVENESS STAMP on the verdict row + frozen_epoch flag/alarm: a verdict d_seg
@@ -6357,6 +6514,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "accepted_batches": int(_live["acc"]), "skipped_batches": int(_live["skip"]),
                                       "frozen_epoch": bool(_frozen_ep),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
+                    # (SENSE) companion annulus_convergence row (opt-in; byte-identical when absent).
+                    if _annulus_sync is not None:
+                        print(json.dumps(_annulus_convergence_row(_annulus_sync, ep, seg_form)), flush=True)
                     if _frozen_ep or (float(ep_loss) == 0.0 and int(_live["ep_tot"]) > 0):
                         _emit_confound_alarm("frozen_epoch", ep=ep, ep_loss=round(float(ep_loss), 6),
                                              accepted_batches=int(_live["acc"]),
@@ -6887,6 +7047,21 @@ def main(argv: list[str] | None = None) -> int:
                     "at the number that DEFINES the goal: best-ckpt selection + ALL d_seg telemetry + "
                     "the closed-loop classifier ran on 24/600). Subsetting stays OPT-IN. ALWAYS fp32 "
                     "one-codepath, never mlx-gpu.")
+    ap.add_argument("--annulus-telemetry", action="store_true", default=False,
+                    help="(SENSE) emit a companion {stage:annulus_convergence} row per verdict: the codim-1 "
+                    "boundary-annulus vs interior d_seg flip split + per-class annulus flip-frac + GT-margin "
+                    "p10/p50, computed from the realized argmax + the FIXED GT margin (gt.margins) via "
+                    "tac.witness_annulus_metrics. DEFAULT OFF => BYTE-IDENTICAL (no row, no realized-map "
+                    "collection, no extra forward). ON reuses ONE SegNet forward for the realized argmax "
+                    "(wrapped in try/except => can never crash/corrupt the verdict). OBSERVABILITY-ONLY "
+                    "(never read into training/parity/resume). PARTIAL: no witness-logit margin/gibbs -- see "
+                    "tools/witness_annulus_convergence.py for the full offline series.")
+    ap.add_argument("--annulus-band", type=float, default=2.0,
+                    help="(SENSE) fixed-threshold annulus = {px: |GT margin| < band} (SegNet-logit units). "
+                    "Used only when --annulus-telemetry is set.")
+    ap.add_argument("--annulus-bottom-k", type=float, default=0.05,
+                    help="(SENSE) bottom-k annulus = smallest-k fraction of |GT margin| pixels (0<k<=1). "
+                    "Used only when --annulus-telemetry is set.")
     ap.add_argument("--async-verdict", action=argparse.BooleanOptionalAction, default=False,
                     help="FEED-em: run the OBSERVATIONAL CPU-torch verdict in a BACKGROUND THREAD off a "
                     "point-in-time snapshot so the MLX-GPU loop never idles (~4.7%% wall-clock reclaim @ "
