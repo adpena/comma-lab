@@ -98,6 +98,126 @@ class Regularizer:
         return {self.flag: self.weight}
 
 
+@dataclass(frozen=True)
+class HoscSchedule:
+    """The hosc activation-slope β anneal (start→end over the run, shape) + ω — the
+    REPRESENTATION-sharpening schedule half of the curriculum (distinct from the render-partition
+    temp Anneal and the seg-surrogate tau). MEASURED (DAG FEED-ly): FIXED β diverges
+    (tanh(β·sin) saturation → vanishing grad → AdamW random-walk → d_seg RISES); the ANNEALED
+    β 1→4 is the stable survivor. Elevated from a raw ``base`` flag to a first-class schedule
+    object so the whole sharpening path is DSL-held + costate-controllable."""
+
+    beta_start: float = 1.0
+    beta_end: float = 4.0
+    shape: str = "linear"
+    omega: float = 1.0
+
+    def flags(self) -> dict:
+        return {
+            "--hosc-beta": self.beta_start,
+            "--hosc-beta-end": self.beta_end,
+            "--hosc-beta-anneal": self.shape,
+            "--hosc-omega": self.omega,
+        }
+
+
+@dataclass(frozen=True)
+class Transition:
+    """The stage-transition REHEAT treatment (FEED-fz BUILD 1 / FEED-bu, "different stages need
+    different treatment"): LR floor→1× rewarmup over a window + optional AdamW 2nd-moment reset,
+    so a curriculum stage boundary is stable BY CONSTRUCTION (not a d_seg spike). Elevated from
+    raw ``--stage-transition-*`` flags to a first-class object the Curriculum owns."""
+
+    rewarmup_epochs: int = 8
+    rewarmup_floor: float = 0.1
+    rewarmup_shape: str = "linear"
+    reset_moments: bool = True
+
+    def flags(self) -> dict:
+        f: dict = {
+            "--stage-transition-rewarmup-epochs": self.rewarmup_epochs,
+            "--stage-transition-rewarmup-floor": self.rewarmup_floor,
+            "--stage-transition-rewarmup-shape": self.rewarmup_shape,
+        }
+        # --stage-transition-reset-moments is store_true → emit ONLY when True (review C2:
+        # a False on a store_true flag compiles to --no-X and crashes argparse at launch).
+        if self.reset_moments:
+            f["--stage-transition-reset-moments"] = True
+        return f
+
+
+@dataclass(frozen=True)
+class Curriculum:
+    """The witness curriculum as a FIRST-CLASS DSL object (operator 2026-07-06 "we need schedule
+    and curriculum in DSL as well"). Bundles the ordered homotopy of relaxations (``stages``) +
+    the per-stage anneal schedules (render-partition ``temp``, ``hosc`` β, ``tau``) + the live PDE
+    ``regularizers`` + the stage-transition ``reheat`` treatment + the stage HAND-OFF mode — what
+    was previously scattered across raw ``base`` flags — into ONE controllable object.
+
+    This is the ACT actuator the #247 costate controller reads/writes: with ``handoff="event"`` the
+    stage boundary is a DECISION VARIABLE (the #315 nucleus-guarded CE→tau hand-off — hold tau until
+    every scored class consolidates), not the hardcoded epoch the CE-didn't-plateau finding indicts.
+
+    * ``handoff="fixed"`` (default): stages fire at their ``Stage.start_epoch`` (the current
+      PR95-echo schedule).
+    * ``handoff="event"``: emit ``--curriculum-event-triggered`` + ``--curriculum-nucleus-guard`` —
+      the costate/plateau-driven hand-off.
+
+    ``.flags()`` is the SINGLE emitter for the whole schedule; ``.validate()`` enforces stage
+    ordering + the hand-off enum (structural, before any launch)."""
+
+    stages: tuple[Stage, ...]
+    temp: Anneal                                       # --softmax-temp-* render-partition anneal
+    regularizers: tuple[Regularizer, ...] = ()
+    hosc: HoscSchedule | None = None
+    tau: float | None = None                           # --tau-softplus-tau (tau_softplus stage T)
+    transition: Transition | None = None
+    handoff: str = "fixed"                             # "fixed" | "event"
+    curriculum_on: bool = True                         # the --curriculum master flag
+
+    def flags(self) -> dict:
+        f: dict = {}
+        if self.curriculum_on:
+            f["--curriculum"] = True
+        f.update(self.temp.flags("--softmax-temp-start", "--softmax-temp-end"))
+        for st in self.stages:
+            f.update(st.flags())
+        for rg in self.regularizers:
+            f.update(rg.flags())
+        if self.hosc is not None:
+            f.update(self.hosc.flags())
+        if self.tau is not None:
+            f["--tau-softplus-tau"] = self.tau
+        if self.transition is not None:
+            f.update(self.transition.flags())
+        if self.handoff == "event":
+            # #315 nucleus-guarded CE→tau hand-off (byte-identical to fixed when the guard never
+            # fires; the schedule boundary becomes costate/plateau-driven, not a fixed epoch).
+            f["--curriculum-event-triggered"] = True
+            f["--curriculum-nucleus-guard"] = True
+        return f
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if self.handoff not in ("fixed", "event"):
+            problems.append(
+                f"Curriculum.handoff must be 'fixed' or 'event', got {self.handoff!r}")
+        # The BINDING order constraint is the trainer's (mirrors WitnessProgram.validate): the
+        # tau_softplus stage must FORM the partition before the l7 sharpening stage → tau_start
+        # < l7_start. We do NOT require all stage epochs monotonic: the Muon finisher may be
+        # placed BEFORE l7 (the trainer allows `muon < l7` with a WARN — "operator freedom"),
+        # and l7 is often PARKED above Muon/epochs (the sealed #205 demotes l7 to a no-op tail).
+        by_flag = {st.start_epoch_flag: st.start_epoch
+                   for st in self.stages if st.start_epoch_flag is not None}
+        tau_s = by_flag.get("--tau-softplus-start-epoch")
+        l7_s = by_flag.get("--l7-start-epoch")
+        if tau_s is not None and l7_s is not None and not (0 < tau_s < l7_s):
+            problems.append(
+                f"Curriculum ordering: need 0 < tau_start ({tau_s}) < l7_start ({l7_s}) "
+                "(the tau stage forms the partition before l7 sharpens it)")
+        return problems
+
+
 # ---------------------------------------------------------------------------
 # Lever (an A/B toggle = a flag override set + optional epoch extension)
 # ---------------------------------------------------------------------------
@@ -175,6 +295,12 @@ class WitnessProgram:
     # curriculum_dsl never imports the gauge module at load time (no import cycle). Does NOT
     # affect flag_dict() — it is the chart-selection meta-layer ABOVE the trainer flags.
     gauge: object | None = None
+    # FIRST-CLASS schedule/curriculum object (operator 2026-07-06). When set, it is the SINGLE
+    # SoT for the schedule flags (temp anneal + stages + regularizers + hosc + tau + reheat +
+    # hand-off); flag_dict() sources them from it and SKIPS the legacy temp/stages/regularizers
+    # emission (no double-emit). None (default) => the legacy path => byte-identical for every
+    # existing program (BASELINE / sealed_205 / openpilot_seeded_opening are unchanged).
+    curriculum: "Curriculum | None" = None
 
     # --- composition ---------------------------------------------------------
     def with_lever(self, *levers: Lever, resume_from=_INHERIT,
@@ -238,11 +364,17 @@ class WitnessProgram:
         f["--gt-cache"] = self.gt_cache
         f["--out-dir"] = self.out_dir
         f["--mlx-device"] = self.mlx_device
-        f.update(self.temp.flags("--softmax-temp-start", "--softmax-temp-end"))
-        for st in self.stages:
-            f.update(st.flags())
-        for rg in self.regularizers:
-            f.update(rg.flags())
+        if self.curriculum is not None:
+            # FIRST-CLASS curriculum object is the SoT for the whole schedule (temp + stages +
+            # regularizers + hosc + tau + reheat + hand-off) — ONE emitter, no legacy double-emit.
+            f.update(self.curriculum.flags())
+        else:
+            # legacy path (unchanged): temp anneal + stages + regularizers emitted directly.
+            f.update(self.temp.flags("--softmax-temp-start", "--softmax-temp-end"))
+            for st in self.stages:
+                f.update(st.flags())
+            for rg in self.regularizers:
+                f.update(rg.flags())
         f.update(self.preserve.flags())
         if self.resume_from is not None:
             f["--resume-from"] = self.resume_from
@@ -309,6 +441,9 @@ class WitnessProgram:
         # AUTHORITY: realized-through-R required for a trustworthy verdict
         if not self.authority.realized_through_R:
             problems.append("AUTHORITY violation: realized_through_R must be True")
+        # FIRST-CLASS curriculum object (when set): stage-ordering + hand-off-enum structural check.
+        if self.curriculum is not None:
+            problems.extend(self.curriculum.validate())
         return problems
 
     # --- compilation ---------------------------------------------------------
@@ -863,6 +998,64 @@ _SEALED_205_MANAGED_FLAGS = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--muon-start-epoch",
     "--eikonal-weight", "--length-weight", "--ckpt-every", "--stage-checkpoints",
 })
+
+# The schedule/curriculum flags a first-class Curriculum object OWNS (operator 2026-07-06 "we
+# need schedule and curriculum in DSL as well"). Pulled OUT of ``base`` in
+# ``sealed_205_program`` when ``as_curriculum=True`` so there is exactly one schedule emitter.
+_SEALED_205_CURRICULUM_FLAGS = frozenset({
+    "--curriculum",
+    "--hosc-beta", "--hosc-beta-end", "--hosc-beta-anneal", "--hosc-omega",
+    "--tau-softplus-tau",
+    "--stage-transition-rewarmup-epochs", "--stage-transition-rewarmup-floor",
+    "--stage-transition-rewarmup-shape", "--stage-transition-reset-moments",
+})
+
+
+def sealed_205_curriculum(cfg, *, handoff: str = "fixed") -> Curriculum:
+    """The #205 SEALED schedule as a FIRST-CLASS :class:`Curriculum` object (operator 2026-07-06).
+
+    Values are pulled from ``tac.witness_autoconfig.derive_sealed_205_config`` (``cfg``, the SAME
+    SoT the byte-exact gate leg uses) so the curriculum leg provably AGREES with the sealed program:
+    the ordered stages (CE→tau→l7-parked→Muon), the render-partition ``temp`` anneal, the ``hosc`` β
+    anneal, the ``tau_softplus`` temperature, the live PDE ``regularizers``, and the stage-transition
+    ``reheat``. ``handoff="event"`` swaps the fixed CE→tau epoch for the #315 nucleus-guarded hand-off
+    (the CE-didn't-plateau fix; byte-identical to fixed until the guard fires).
+
+    Use it via the ``WitnessProgram.curriculum`` field:
+        ``replace(sealed_205_program(out_dir), curriculum=sealed_205_curriculum(cfg))``
+    — ``flag_dict()`` then sources the whole schedule from this ONE object.
+    """
+    # Read the schedule VALUES from the emitted trainer-flag dict — the SAME SoT the sealed program
+    # pulls from (``cfg.to_trainer_flags``), NOT the ``proven_base`` dict (which does not carry
+    # hosc-beta-end / hosc-beta-anneal / the stage-transition flags). out_dir does not affect any
+    # schedule flag, so a placeholder is fine. A store_true flag emits None (bare) → reset=True.
+    tf = dict(cfg.to_trainer_flags("_"))
+    return Curriculum(
+        stages=(
+            Stage("CE", None, None),
+            Stage("tau_softplus", "--tau-softplus-start-epoch", cfg.tau_softplus_start_epoch),
+            Stage("l7_softplus", "--l7-start-epoch", cfg.l7_start_epoch),
+            Stage("muon", "--muon-start-epoch", cfg.muon_start_epoch),
+        ),
+        temp=Anneal(tf["--softmax-temp-start"], tf["--softmax-temp-end"]),
+        regularizers=(
+            Regularizer("--eikonal-weight", tf["--eikonal-weight"]),
+            Regularizer("--length-weight", tf["--length-weight"]),
+        ),
+        hosc=HoscSchedule(
+            beta_start=tf["--hosc-beta"], beta_end=tf["--hosc-beta-end"],
+            shape=tf["--hosc-beta-anneal"], omega=tf["--hosc-omega"],
+        ),
+        tau=tf["--tau-softplus-tau"],
+        transition=Transition(
+            rewarmup_epochs=tf["--stage-transition-rewarmup-epochs"],
+            rewarmup_floor=tf["--stage-transition-rewarmup-floor"],
+            rewarmup_shape=tf["--stage-transition-rewarmup-shape"],
+            # store_true flag: present (value None) ⇒ True; absent ⇒ False.
+            reset_moments=("--stage-transition-reset-moments" in tf),
+        ),
+        handoff=handoff,
+    )
 
 
 def sealed_205_program(  # noqa: N802 — DSL constructor
