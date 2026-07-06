@@ -183,6 +183,14 @@ from tac.canonical_equations.adaptive_eps_cfl_edge_tracking_20260705 import (
     build_adaptive_eps_cfl_edge_tracking_v1,
     populate_adaptive_eps_cfl_edge_tracking_equation,
 )
+from tac.canonical_equations.curriculum_derivation_laws_20260705 import (
+    ALL_CURRICULUM_DERIVATION_BUILDERS,
+    build_curriculum_handoff_critical_nucleus_v1,
+    build_ema_window_pi_group_v1,
+    build_muon_switch_conditioning_criterion_v1,
+    build_rewarmup_beta2_memory_window_v1,
+    populate_curriculum_derivation_laws_equations,
+)
 from tac.canonical_equations.margin_saliency_reachability_and_muon_finisher_20260703 import (
     build_margin_saliency_reachability_replaces_texture_proxy_v1,
     build_muon_finisher_schedule_warmstart_and_lr_anneal_v1,
@@ -259,6 +267,12 @@ __all__ = [
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_adaptive_eps_cfl_edge_tracking_v1",
     "populate_adaptive_eps_cfl_edge_tracking_equation",
+    "ALL_CURRICULUM_DERIVATION_BUILDERS",
+    "build_curriculum_handoff_critical_nucleus_v1",
+    "build_ema_window_pi_group_v1",
+    "build_muon_switch_conditioning_criterion_v1",
+    "build_rewarmup_beta2_memory_window_v1",
+    "populate_curriculum_derivation_laws_equations",
     "build_margin_saliency_reachability_replaces_texture_proxy_v1",
     "build_multiphase_modica_mortola_perimeter_gamma_limit_v1",
     "build_muon_finisher_schedule_warmstart_and_lr_anneal_v1",

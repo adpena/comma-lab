@@ -421,7 +421,43 @@ def build_rewarmup_beta2_memory_window_v1() -> CanonicalEquation:
     )
 
 
+ALL_CURRICULUM_DERIVATION_BUILDERS = (
+    build_curriculum_handoff_critical_nucleus_v1,
+    build_ema_window_pi_group_v1,
+    build_muon_switch_conditioning_criterion_v1,
+    build_rewarmup_beta2_memory_window_v1,
+)
+
+
+def populate_curriculum_derivation_laws_equations(
+    *,
+    path=None,
+    lock_path=None,
+    agent: str | None = None,
+    subagent_id: str | None = None,
+) -> tuple[CanonicalEquation, ...]:
+    """Idempotent APPEND-ONLY registration of the FOUR witness-native curriculum-derivation laws
+    (#302) into the canonical registry (mirrors ``populate_adaptive_eps_cfl_edge_tracking_equation``;
+    latest-row-wins query semantics). These are the EQUATIONS leg of the schedule/curriculum DSL
+    triality (#334): ``curriculum_handoff_critical_nucleus_v1`` ↔ ``Curriculum(handoff="event")``,
+    ``rewarmup_beta2_memory_window_v1`` ↔ ``Transition`` (reheat), ``ema_window_pi_group_v1`` ↔ the
+    EMA decay, ``muon_switch_conditioning_criterion_v1`` ↔ the Muon stage. Was ORPHANED (built +
+    tested but never registered / imported into ``__init__``)."""
+    from tac.canonical_equations.registry import register_canonical_equation
+
+    out: list[CanonicalEquation] = []
+    for builder in ALL_CURRICULUM_DERIVATION_BUILDERS:
+        eq = builder()
+        register_canonical_equation(
+            eq, path=path, lock_path=lock_path, agent=agent, subagent_id=subagent_id,
+            notes="curriculum_derivation_laws_302_20260705 (equations leg of schedule/curriculum DSL #334)",
+        )
+        out.append(eq)
+    return tuple(out)
+
+
 __all__ = [
+    "ALL_CURRICULUM_DERIVATION_BUILDERS",
     "EMA_LAG_FACTOR_EARLY_MEASURED",
     "EMA_STEPS_PER_EPOCH_RUN2",
     "HANDOFF_MIN_STAGE_EP",
@@ -439,4 +475,5 @@ __all__ = [
     "min_rewarmup_epochs",
     "muon_switch_ready",
     "pi_ema",
+    "populate_curriculum_derivation_laws_equations",
 ]
