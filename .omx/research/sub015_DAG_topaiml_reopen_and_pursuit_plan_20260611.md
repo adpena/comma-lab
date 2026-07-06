@@ -8573,3 +8573,38 @@ intent, which argparse cannot supply — `emit_stub_lever` + the completeness su
 automated review path for those. Legs: DSL (curriculum_dsl factories) + this DAG + memory. Equation
 leg deferred to SeedIslandEased's first MEASURED n600 island-birth row (no measured ΔS yet). Pointer
 0.19110 UNMOVED (apparatus/means). [no-triality]
+
+## FEED-334traj (2026-07-06): schedule/curriculum are DSL objects + annulus telemetry closes the costate SENSE→ACT loop
+The triality's three legs now agree for the schedule/curriculum work, and a MEASURED annulus finding
+reframes the residual. **(a) DSL leg — schedule+curriculum first-class (#334, 791c76d79):** the DSL now
+holds `HoscSchedule`/`Transition`/`Curriculum` + a `WitnessProgram.curriculum` field (additive, default
+None=legacy). `Curriculum` bundles stages+temp+regularizers+hosc+tau+reheat+**handoff** into ONE emitter;
+`handoff='event'` swaps in the #315 nucleus-guarded CE→tau hand-off — i.e. the curriculum's stage-transition
+is now a DSL-toggled EVENT, not a hardcoded epoch. `sealed_205_curriculum()` proves flag-equivalence to the
+sealed #205 program (15 new + 139 existing DSL tests green). This makes the SCHEDULE a controllable object,
+which is exactly what the CE-didn't-plateau finding below wants to act on. **(b) equations leg de-orphan
+(1c4665ba1):** the #302 `curriculum_derivation_laws` were built+tested (24 tests) but UNREGISTERED + not
+imported — the equations leg was silently missing for this work (a triality-ran-on-1.5-legs recurrence,
+[[triality_ran_on_one_and_a_half_legs_dsl_equations_never_proactive_20260706]]). Now
+`populate_curriculum_derivation_laws_equations` (mirrors the adaptive_eps pattern) + `__init__` wiring
+register all 4 laws: `handoff_critical_nucleus`↔`Curriculum(handoff=event)` · `rewarmup_beta2_memory_window`↔
+`Transition` · `ema_window_pi_group`↔`EMA` · `muon_switch_conditioning`↔Muon stage. DAG↔DSL↔equations now
+agree for #334. **(c) SENSE finding — annulus telemetry (#333, e826f1be9):** built
+`tools/witness_annulus_convergence.py` + pure `src/tac/witness_annulus_metrics.py` (REUSES the real
+render-through-R + CPU-torch SegNet path from `witness_per_stage_annulus_attribution`, NO reimpl; numpy-fp32
+authority, advisory NON-PROMOTABLE). MEASURED on mod32cap n600 (pairs=16): **~97% of d_seg lives in the
+~4.7%-area codim-1 boundary annulus; interior flips ~1.2e-4 (near-clean); Lane (cls1) the dominant stuck
+boundary.** => the residual is **BOUNDARY JITTER, not a structural region miss** — the witness already gets
+the region topology right; what remains is sub-pixel wobble on the separatrix, concentrated on the lane
+boundary. This is the costate SENSE layer for the #247 Hamiltonian-control loop
+([[project_meta_layer_above_triality_hamiltonian_control_costate_20260703]]). **(d) the CE-didn't-plateau
+finding (the ACT trigger):** mod32cap CE was STILL DESCENDING at the hardcoded `--tau-softplus-start-epoch
+300` cut — d_seg 0.004751@250 → 0.004682@275 → 0.004571@300, ~−1.1e-4 per 25ep, no plateau. The fixed-epoch
+handoff fires while the CE stage still has descent left in it (the last PR95-inherited schedule echo,
+[[curriculum_still_pr95_inherited_never_derived_from_witness_20260705]]). This is precisely what
+`Curriculum(handoff='event')` actuates: replace the hardcoded epoch with the nucleus-guarded event so the
+hand-off fires when CE ACTUALLY saturates, not on a borrowed calendar. **The costate loop is now closed as
+apparatus:** SENSE = annulus-convergence telemetry (where/how-much d_seg is stuck) → DECIDE = witness_control
+per-cost (marginal ΔS/byte, [[project_meta_layer_above_triality_hamiltonian_control_costate_20260703]]) →
+ACT = schedule/curriculum DSL with `handoff=event`. All $0 shadow-safe, live mod32cap (pid 97677) UNTOUCHED.
+Pointer 0.19110 UNMOVED — this is means/apparatus, NOT a score. [triality: DAG(this)+DSL(791c76d79)+eqs(1c4665ba1)]
