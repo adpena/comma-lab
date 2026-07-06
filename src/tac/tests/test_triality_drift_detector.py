@@ -34,9 +34,39 @@ def test_drift_substantive_commit_without_triality_touch():
 
 
 def test_clean_when_dag_touched_same_window():
-    subjects = ["witness: byte-close n600 exact row measured", "triality DAG: FEED"]
-    files = ["tools/levelset_byte_close_and_eval.py",
+    # The general fallback net: a substantive commit that does NOT require a
+    # specific leg (no lever/measure/verdict signature — just island/n600/frontier
+    # trajectory) is cleared by a DAG touch.
+    subjects = ["witness: island n600 frontier trajectory point", "triality DAG: FEED"]
+    files = ["tools/foo.py",
              ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"]
+    assert D.classify(subjects, files) == "clean"
+
+
+def test_drift_measured_finding_touched_only_dag():
+    # PER-LEG teeth (2026-07-06): a MEASURED byte-close / exact-row commit MUST touch
+    # the canonical equations — touching only the DAG is NOT enough anymore.
+    subjects = ["witness: byte-close n600 exact row measured d_seg 0.0031"]
+    files = [".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"]
+    assert D.classify(subjects, files) == "drift"
+    assert "equations" in D.missing_legs(subjects, files)
+
+
+def test_drift_lever_touched_only_dag():
+    # PER-LEG teeth: a LEVER / wire-in commit MUST touch the DSL — the exact loophole
+    # that let the DSL silently drift while only the DAG was recorded.
+    subjects = ["witness: SeedIslandEased lever wired into trainer"]
+    files = [".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+             "experiments/train_levelset_witness_realized_through_R_mlx.py"]
+    assert D.classify(subjects, files) == "drift"
+    assert "DSL" in D.missing_legs(subjects, files)
+
+
+def test_clean_lever_touches_dsl_even_without_dag():
+    # A lever commit that DOES touch the DSL is clean (the required leg was updated).
+    subjects = ["witness: SeedIslandEased lever wired"]
+    files = ["src/tac/witness_dsl/curriculum_dsl.py",
+             "experiments/train_levelset_witness_realized_through_R_mlx.py"]
     assert D.classify(subjects, files) == "clean"
 
 

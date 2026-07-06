@@ -60,6 +60,25 @@ SUBSTANTIVE = re.compile(
     re.IGNORECASE,
 )
 
+# PER-LEG requirement (the strengthening, 2026-07-06): the old gate accepted ANY
+# triality leg, so a lever commit touching ONLY the DAG passed while the DSL +
+# equations silently drifted — the exact failure mode ("you've never touched the
+# DSL or equations unforced"). Now a change of a given TYPE must touch the leg
+# that TYPE lives in. Calibrated firm-not-noisy: broad stems (bare d_seg / witness
+# / probe) stay in SUBSTANTIVE (the any-leg fallback) but do NOT force a specific
+# leg; only the control/law signatures below do.
+#   CONTROL change  → must touch the DSL   (the config-generator; a new/changed lever)
+DSL_REQUIRING = re.compile(
+    r"\b(?:lever\w*|wire.?in\w*|integrat\w*|launch\w*|curriculum\w*|carrier\w*|gauge\w*)",
+    re.IGNORECASE,
+)
+#   LAW / measured finding → must register/refine a canonical equation
+EQUATION_REQUIRING = re.compile(
+    r"\b(?:measur\w*|byte.?clos\w*|exact.?eval\w*|exact\s+row|verdict\w*|pointer\w*|"
+    r"scored|attribution\w*|erasure\w*|refut\w*|ratif\w*|\bfloor\b|\blaw\b)",
+    re.IGNORECASE,
+)
+
 # In-repo surfaces whose modification means "a triality leg was updated this
 # window" (DAG = trajectory · DSL = control · equations = law · index = memory
 # proxy). MEMORY.md lives outside the repo (~/.claude/...) so it cannot be
@@ -91,20 +110,75 @@ def has_triality_touch(files: list[str]) -> bool:
     return any((f or "").startswith(TRIALITY_PREFIXES) for f in files)
 
 
+def touched_dsl(files: list[str]) -> bool:
+    """True if the DSL leg (the config-generator) was updated this window."""
+    return any((f or "").startswith("src/tac/witness_dsl/") for f in files)
+
+
+def touched_equations(files: list[str]) -> bool:
+    """True if the canonical-equations leg (the law) was updated this window."""
+    return any((f or "").startswith("src/tac/canonical_equations") for f in files)
+
+
+def missing_legs(subjects: list[str], files: list[str]) -> list[str]:
+    """The SPECIFIC triality legs a change of this type REQUIRES but did not touch.
+
+    A control change (lever/wire-in/launch/curriculum/carrier/gauge) must touch the
+    DSL; a measured-law change (measure/byte-close/verdict/exact-row/…) must touch the
+    canonical equations. Returns the leg names that are required-but-absent (empty ==
+    every required leg was touched)."""
+    joined = " ".join(s or "" for s in subjects)
+    miss: list[str] = []
+    if DSL_REQUIRING.search(joined) and not touched_dsl(files):
+        miss.append("DSL")
+    if EQUATION_REQUIRING.search(joined) and not touched_equations(files):
+        miss.append("equations")
+    return miss
+
+
 def classify(subjects: list[str], files: list[str]) -> str:
-    """Return ``"drift"`` iff substantive-and-unrecorded-and-not-opted-out, else ``"clean"``."""
+    """Return ``"drift"`` iff a required leg is absent (per-leg) OR a substantive commit
+    touched NO leg at all; else ``"clean"``. Opt-out via [no-triality]/[skip-drift]."""
     if not subjects:
         return "clean"
     if is_opted_out(subjects):
         return "clean"
+    # PER-LEG (the teeth): a control/law change that skipped its own leg is drift even
+    # if it touched a DIFFERENT leg (e.g. a lever commit that touched only the DAG).
+    if missing_legs(subjects, files):
+        return "drift"
+    # FALLBACK (the original any-leg net): substantive but touched no leg at all.
     if is_substantive(subjects) and not has_triality_touch(files):
         return "drift"
     return "clean"
 
 
-def build_reason(subjects: list[str]) -> str:
-    """The one firm nudge injected on drift (concise + actionable)."""
+_LEG_FIX = {
+    "DSL": ("the DSL (src/tac/witness_dsl/) — a lever/launch/curriculum change must "
+            "add or update its Lever/WitnessProgram there (the config-generator), not "
+            "just a trainer flag"),
+    "equations": ("the canonical equations (src/tac/canonical_equations/) — a measured "
+                  "finding/verdict/byte-close/exact-row must register or refine an "
+                  "EmpiricalAnchor there, so it is never re-derived"),
+}
+
+
+def build_reason(subjects: list[str], files: list[str] | None = None) -> str:
+    """The one firm nudge injected on drift (concise + actionable + leg-specific)."""
     preview = "; ".join((s or "")[:70] for s in subjects[:3])
+    miss = missing_legs(subjects, files or [])
+    if miss:
+        legs = " AND ".join(_LEG_FIX.get(m, m) for m in miss)
+        return (
+            "Triality drift-detector (per-leg): "
+            f"{len(subjects)} commit(s) landed this turn that REQUIRE {legs}. "
+            f"Commit(s): {preview}. Update the named leg(s) — plus a DAG FEED "
+            "(.omx/research/sub015_DAG_*) and a MEMORY.md line for a durable "
+            "finding — then finish. Pure chore/apparatus can opt out with "
+            "[no-triality] in the commit message. This gate now enforces the "
+            "RIGHT leg per change-type, not just any leg — so the DSL + equations "
+            "can no longer silently drift while only the DAG is touched."
+        )
     return (
         "Triality drift-detector: "
         f"{len(subjects)} commit(s) landed this turn without touching the "
@@ -227,7 +301,7 @@ def main() -> None:
         marker["updated_utc"] = _now()
         _write_marker(root, marker)
         _log(root, f"BLOCK head={head[:9]} n={len(subjects)} subj={subjects[:3]!r}")
-        print(json.dumps({"decision": "block", "reason": build_reason(subjects)}))
+        print(json.dumps({"decision": "block", "reason": build_reason(subjects, files)}))
         sys.exit(0)
 
     _log(root, f"allow(clean) head={head[:9]} n={len(subjects)}")
