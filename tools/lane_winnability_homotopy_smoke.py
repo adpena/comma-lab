@@ -50,12 +50,33 @@ _BIRTH_COH = 0.35                    # largest-CC must be ≥35% of the class ma
 
 
 def _dilate_eased(lab: np.ndarray, c: int, r: int) -> np.ndarray:
-    """Eased target at radius r: class c claims any pixel within r of a true-c pixel."""
+    """Isotropic homotopy: class c claims any pixel within r of a true-c pixel."""
     if r == 0:
         return lab
     mask = ndimage.binary_dilation(lab == c, iterations=r)
     out = lab.copy()
     out[mask] = c
+    return out
+
+
+def _curve_eased(lab: np.ndarray, c: int, L: int, w: int = 1) -> np.ndarray:
+    """CURVE-PRIOR homotopy (the optimal lane easing): bridge the dash gaps ALONG
+    the lane direction, not isotropically. Lane dashes are near-collinear along the
+    (near-vertical) lane curve toward the vanishing point, so a vertical CLOSING of
+    length L merges the dashes into ONE coherent band while barely widening it — the
+    class stays ON its curve (LADDER: ease toward winnable WITHOUT leaving the target
+    manifold). w = small isotropic width so the birthed band is a few px thick.
+    L=0,w=0 → the true target (dashes)."""
+    if L == 0 and w == 0:
+        return lab
+    m = lab == c
+    if L > 0:
+        vline = np.ones((2 * L + 1, 1), dtype=bool)      # vertical structuring element
+        m = ndimage.binary_closing(m, structure=vline)   # connect dashes along the curve
+    if w > 0:
+        m = ndimage.binary_dilation(m, iterations=w)     # minimal cross-curve width
+    out = lab.copy()
+    out[m] = c
     return out
 
 
@@ -131,6 +152,48 @@ def main() -> int:
                     "the wall is representational, not curricular")
         print(f"  VERDICT[{name}]: {verdict} — {note}")
         results["classes"][name] = {"curve": curve, "verdict": verdict, "note": note}
+
+    # ── CURVE-PRIOR homotopy for LANE (the optimal easing: bridge dash gaps ALONG
+    #    the curve, don't dilate isotropically) ─────────────────────────────────
+    LANE = 1
+    curve_L = [8, 6, 4, 3, 2, 1, 0]                       # easy(connected)→hard(dashes)
+    prev = None
+    curve = []
+    print("\n=== lane (class 1) CURVE-PRIOR homotopy (vertical closing, w=1) ===")
+    print(f"  {'L':>3} {'area':>7} {'coher':>7} {'anneal_debt':>12} {'step_debt':>10}  birthable")
+    for L in curve_L:
+        eased = np.empty_like(lstars)
+        areas = np.empty(n); cohs = np.empty(n); debts = np.empty(n)
+        steps = np.empty(n) if prev is not None else None
+        for i in range(n):
+            e = _curve_eased(lstars[i], LANE, L, w=1)
+            eased[i] = e
+            m = e == LANE
+            areas[i] = m.mean(); cohs[i] = _coherence(m); debts[i] = (e != lstars[i]).mean()
+            if prev is not None:
+                steps[i] = (e != prev[i]).mean()
+        area, coh = float(areas.mean()), float(cohs.mean())
+        debt = float(debts.mean()); step = float(steps.mean()) if steps is not None else 0.0
+        birthable = area >= _BIRTH_AREA and coh >= _BIRTH_COH
+        print(f"  {L:>3} {area:>7.4f} {coh:>7.3f} {debt:>12.4f} {step:>10.4f}  "
+              f"{'YES' if birthable else 'no'}")
+        curve.append({"L": L, "area": area, "coherence": coh,
+                      "anneal_debt": debt, "step_debt": step, "birthable": birthable})
+        prev = eased
+    birth = [row for row in curve if row["birthable"]]
+    cont = all(row["step_debt"] < 0.02 for row in curve[1:])
+    if birth:
+        r0 = birth[0]
+        verdict = "GO" if cont else "GO-BUT-DISCONTINUOUS"
+        note = (f"birthable at L={r0['L']} (area {r0['area']:.3f}, coh {r0['coherence']:.2f}), "
+                f"anneal_debt {r0['anneal_debt']:.3f}, path {'continuous' if cont else 'HAS A CLIFF'}")
+    else:
+        verdict = "NO-GO"
+        note = (f"even curve-closing does not make lane a coherent birthable band "
+                f"(max coh {max(row['coherence'] for row in curve):.2f})")
+    print(f"  VERDICT[lane curve-prior]: {verdict} — {note}")
+    print(f"  (vs isotropic lane verdict: {results['classes']['lane']['verdict']})")
+    results["classes"]["lane_curve_prior"] = {"curve": curve, "verdict": verdict, "note": note}
 
     _OUT.mkdir(parents=True, exist_ok=True)
     (_OUT / "result.json").write_text(json.dumps(results, indent=2))
