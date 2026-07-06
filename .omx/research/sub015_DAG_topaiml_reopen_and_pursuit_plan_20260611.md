@@ -8608,3 +8608,23 @@ apparatus:** SENSE = annulus-convergence telemetry (where/how-much d_seg is stuc
 per-cost (marginal ΔS/byte, [[project_meta_layer_above_triality_hamiltonian_control_costate_20260703]]) →
 ACT = schedule/curriculum DSL with `handoff=event`. All $0 shadow-safe, live mod32cap (pid 97677) UNTOUCHED.
 Pointer 0.19110 UNMOVED — this is means/apparatus, NOT a score. [triality: DAG(this)+DSL(791c76d79)+eqs(1c4665ba1)]
+
+### DAG FEED 2026-07-06osr ("default-off is orphaned signal" reconciliation → CLAUDE.md NON-NEGOTIABLE)
+Operator: *"Default off is a source of orphaned signal ... never orphaned or rediscovery or counting on me
+to remember everything."* Reconciliation (codified CLAUDE.md "'Off' is a tracked queue, never a forgotten
+default"): "off" must be a TRACKED / REASONED / controller-SURFACED state, never a silent default that
+relies on operator memory. **(1)** read-only score-neutral OBSERVABILITY -> DEFAULT ON (byte-identity is
+about weights+archive bytes, NOT stdout -> preserved by construction; the annulus-row default-off I shipped
+THIS turn WAS this exact orphan bug -> owed correction: flip default-ON). **(2)** score-affecting LEVERS
+default OFF but REGISTERED with a DUTY-TO-MEASURE + an ACTIVATION ledger {default, derived-reason,
+ever_fired, last_measured_verdict, state in never-fired|measured|retired} -> "held-by-DSL yet never-fired"
+is still orphan until tracked; "off" = a queue the controller drains, not a grave. **(3)** defaults DERIVED
+(score-neutral?->on / cheap? / sealed?->off-record-why) + stamped into provenance -> queryable, no
+rediscovery. The #247 costate SENSE reads the ledger, ranks never-fired high-value into DECIDE, Stop-hook
+nags long-unfired. Apparatus (extends lever_registry + costate SENSE), NOT a new layer, NOT chat-prose.
+LEG-RECONCILIATION for the drift-hook this turn (all covered): schedule/curriculum DSL leg = 791c76d79;
+equations leg (curriculum_derivation_laws, 4 laws) = 1c4665ba1; the 3 further de-orphaned eqs already have
+DSL levers (BoundaryDistance/SegFocalGamma) + costate_lambda is a non-lever measurement law; the CLAUDE.md
+commit (7eb684519) is apparatus-doc. SENSE annulus tool e826f1be9 + live monitor 7d827b0a7.
+Memory: [[default_off_is_orphaned_signal_activation_ledger_reconciliation_20260706]].
+[triality: DAG(this)+DSL(791c76d79)+eqs(1c4665ba1); CLAUDE.md 7eb684519] Pointer 0.19110 UNMOVED (apparatus).
