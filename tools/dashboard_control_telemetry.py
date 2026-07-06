@@ -158,8 +158,13 @@ def nucleation_gate(structured_init: dict | None, lane_prior: dict | None = None
         (the paint IS in the target as a standing signal), and/or an island_seed row with
         support > 0 (the render-level seed #205 lacked). Birth watch armed: CE verdicts
         must out-descend #205's CE trace by ep50-75.
-      * FAIL — structured_init present and NO mechanism: the true #205 signature
-        (replace-no-op target fit near-perfectly + no seed module).
+      * FAIL — a seeding MECHANISM was CONFIGURED (lane-prior mode set / island_seed row) but
+        is inert: the true #205 signature (replace-no-op target fit near-perfectly, paint band
+        produced no in-target signal). A configured mechanism that does nothing is a real defect.
+      * UNSEEDED_WATCH — structured_init present, part_frac[lane]==0, and NO seeding mechanism
+        configured AT ALL (the council-approved clean baseline deliberately dropped the measured
+        no-op lane-prior). This is NOT a failure: lane birth is deferred to CE TRAINING, not an
+        init seed. Honest watch (neither pass nor fail): verdicts must descend to birth.
       * UNMEASURED — no structured_init row yet.
 
     Pure; never raises. Returns the state + every measured input it judged from."""
@@ -203,6 +208,11 @@ def nucleation_gate(structured_init: dict | None, lane_prior: dict | None = None
     paint_signal = (mode == "paint" and (band_px or 0) > 0
                     and disagree is not None and disagree >= PAINT_SIGNAL_MIN_DISAGREE)
     seed_present = seed_support is not None and seed_support > 0.0
+    # was a seeding MECHANISM even configured? mode set (replace/paint/add/…) OR an island_seed
+    # row exists. Distinguishes the two part_frac[lane]==0 cases the old single FAIL conflated:
+    #   mechanism_configured=True  → #205 signature (replace-no-op fit perfectly / paint inert) = FAIL
+    #   mechanism_configured=False → clean baseline (lane-prior deliberately dropped) = UNSEEDED_WATCH
+    mechanism_configured = mode is not None or seed_support is not None
     if birth_dseg is not None:
         state = "BIRTH_CONFIRMED"
     elif lane_frac is not None and float(lane_frac) > 0.0:
@@ -211,8 +221,10 @@ def nucleation_gate(structured_init: dict | None, lane_prior: dict | None = None
         state = "SEEDED_WATCH"
     elif lane_frac is None:
         state = "UNMEASURED"
-    else:
+    elif mechanism_configured:
         state = "FAIL"
+    else:
+        state = "UNSEEDED_WATCH"
     return {"state": state, **base}
 
 
@@ -472,9 +484,14 @@ def lever_status_rows(flags: dict, control: dict, schedule: dict | None = None,
                                 f"present: {ev} · confirm = d_seg<{LANE_FRAC_BOUND}")})
     elif nuc["state"] == "FAIL":
         rows.append({"lever": "paint-seed", "state": "bad",
-                     "value": "NO seeding mechanism",
-                     "detail": (f"mode={mode} · no paint-signal, no seed support, partition 0 "
-                                f"(measured; the true #205 signature)")})
+                     "value": "mechanism inert",
+                     "detail": (f"mode={mode} · a seeding mechanism WAS configured but produced no "
+                                f"paint-signal / seed support, partition 0 (the #205 replace-no-op signature)")})
+    elif nuc["state"] == "UNSEEDED_WATCH":
+        rows.append({"lever": "paint-seed", "state": "warn",
+                     "value": "unseeded · birth via training",
+                     "detail": (f"mode={mode} · NO init-seed mechanism by design (clean baseline — "
+                                f"lane-prior no-op dropped); birth deferred to CE, watch d_seg<{LANE_FRAC_BOUND}")})
     else:
         rows.append({"lever": "paint-seed", "state": "pending", "value": "awaiting run",
                      "detail": f"mode={mode} · gate = mechanism present at ep0, birth = d_seg<{LANE_FRAC_BOUND}"})
@@ -657,8 +674,9 @@ def render_control_panel_html(control: dict) -> str:
     # is FAIL, and birth is PROVABLE from verdicts (d_seg < the lane pixel fraction).
     st = nuc.get("state", "UNMEASURED")
     nuc_color = {"PASS": _GOOD, "BIRTH_CONFIRMED": _GOOD, "SEEDED_WATCH": _WARN,
-                 "FAIL": _BAD}.get(st, _MUTED)
-    st_label = {"BIRTH_CONFIRMED": "BIRTH ✓", "SEEDED_WATCH": "SEEDED · WATCH"}.get(st, st)
+                 "UNSEEDED_WATCH": _WARN, "FAIL": _BAD}.get(st, _MUTED)
+    st_label = {"BIRTH_CONFIRMED": "BIRTH ✓", "SEEDED_WATCH": "SEEDED · WATCH",
+                "UNSEEDED_WATCH": "UNSEEDED · WATCH"}.get(st, st)
     pf = nuc.get("lane_part_frac")
     pf_s = f"{pf:.4f}" if isinstance(pf, float) else "—"
     dis = nuc.get("pretrain_disagree")
@@ -680,9 +698,14 @@ def render_control_panel_html(control: dict) -> str:
         gate_note = (f'mechanism MEASURED present → birth watch armed: CE verdicts must '
                      f'out-descend #205 by ep50-75; BIRTH confirms at d_seg &lt; {LANE_FRAC_BOUND}')
     elif st == "FAIL":
-        evidence = (f'part_frac[lane] = <b>{pf_s}</b> · NO paint-signal (disagree '
-                    f'{dis if dis is not None else "—"}) · NO seed support — mechanism ABSENT')
-        gate_note = 'the true #205 signature: nothing present that can birth the lane'
+        evidence = (f'part_frac[lane] = <b>{pf_s}</b> · a seeding mechanism WAS configured but is '
+                    f'inert (disagree {dis if dis is not None else "—"}, no seed support)')
+        gate_note = 'the #205 replace-no-op signature: a configured mechanism that births nothing'
+    elif st == "UNSEEDED_WATCH":
+        evidence = (f'init part_frac[lane] = {pf_s} (EXPECTED 0 at init) · NO init-seed mechanism '
+                    f'configured — the clean baseline deliberately dropped the measured no-op lane-prior')
+        gate_note = (f'unseeded BY DESIGN → lane birth deferred to CE TRAINING (not an init seed); '
+                     f'birth watch armed: verdicts must reach d_seg &lt; {LANE_FRAC_BOUND}')
     else:
         evidence = (f'part_frac[lane] = <b>{pf_s}</b> · lane_px {_esc(nuc.get("lane_px", "—"))} · '
                     f'seed mode {_esc(nuc.get("mode") or "—")}')

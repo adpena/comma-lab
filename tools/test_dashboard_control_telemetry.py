@@ -102,10 +102,25 @@ def test_parse_stage_rows_empty_and_garbage():
 
 # ── nucleation gate ──────────────────────────────────────────────────────────
 def test_nucleation_gate_real_205_row_is_FAIL():
+    # #205 CONFIGURED a lane-prior (mode=replace) that is a measured no-op → FAIL (mechanism inert).
     g = dct.nucleation_gate(_205_STRUCTURED_INIT, _205_LANE_PRIOR)
     assert g["state"] == "FAIL"
     assert g["lane_part_frac"] == 0.0
     assert g["lane_px"] == 0 and g["lane_cls"] == 1 and g["mode"] == "replace"
+
+
+def test_nucleation_gate_clean_baseline_is_UNSEEDED_WATCH_not_FAIL():
+    # The council-approved clean baseline DROPS the lane-prior entirely (no seeding mechanism),
+    # so part_frac[lane]==0 at init with NO mechanism configured. This is birth-deferred-to-
+    # training, NOT the #205 replace-no-op FAIL. Regressing this to FAIL is the dashboard bug
+    # the operator flagged 2026-07-05 ("Dashboard is still bugged").
+    g = dct.nucleation_gate(_205_STRUCTURED_INIT, lane_prior=None, island_seed=None, verdicts=[])
+    assert g["state"] == "UNSEEDED_WATCH"
+    assert g["lane_part_frac"] == 0.0 and g["mode"] is None
+    # and the lever-board row must render it as an informational watch, never a red bad-state
+    rows = dct.lever_status_rows(_FRESH_FLAGS, {"nucleation": g}, {})
+    paint = {r["lever"]: r for r in rows}["paint-seed"]
+    assert paint["state"] == "warn" and "training" in paint["value"]
 
 
 def test_nucleation_gate_pass():
