@@ -291,6 +291,20 @@ def test_r5_non_string_subject_does_not_raise():
     assert D.classify([123, "witness lever wired"], ["tools/x.py"]) == "drift"  # the real subj still bites
 
 
+def test_dogfood_pointer_footer_does_not_require_equations():
+    # DOGFOOD 2026-07-06: the ubiquitous provenance FOOTER "pointer 0.19110 UNMOVED (apparatus)"
+    # is boilerplate in ~every commit, NOT a measured finding — dropping "pointer\w*" from
+    # EQUATION_REQUIRING stops it forcing the equations leg on apparatus commits.
+    dag = [".omx/research/sub015_DAG_x.md"]
+    for footer in ("#332 DSL de-orphaning ... pointer 0.19110 UNMOVED (apparatus)",
+                   "kernel: fuse R+stem; pointer 0.19110 unmoved",
+                   "docs: reword; pointer arithmetic cleanup"):
+        assert D.missing_legs([footer], dag) == [], f"pointer-footer over-fire: {footer!r}"
+    # ...but a genuine pointer MOVE states its mechanism (byte-close / exact-row / numeric row):
+    assert "equations" in D.missing_legs(["frontier lowered via byte-close, pointer 0.185"], dag)
+    assert "equations" in D.missing_legs(["first exact-row: pointer 0.185"], dag)
+
+
 def test_build_reason_names_the_missing_leg():
     # LOW-3: the per-leg branch must actually name the leg, not just generic substrings.
     r = D.build_reason(["measured d_seg 0.0031 verdict"], [".omx/research/sub015_DAG_x.md"])

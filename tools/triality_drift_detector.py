@@ -87,8 +87,13 @@ DSL_REQUIRING = re.compile(
 #   merely RECORD a measurement (touching only the DAG). The precise finding signals survive:
 #   the enumerated stems below + the numeric-value detector `_MEASURED_ROW` (a real d_seg/
 #   d_pose row). "exact[\s-]row" catches both the space and hyphenated spelling (r4).
+#   DROPPED "pointer\w*" (dogfood over-fire 2026-07-06): the ubiquitous provenance FOOTER
+#   "pointer 0.19110 UNMOVED (apparatus)" is boilerplate in ~every commit, not a measured
+#   finding — it fired the equations requirement on apparatus commits. A genuine pointer MOVE
+#   always states its mechanism (byte-close/exact-eval/exact-row) or a numeric d_seg/d_pose row
+#   (_MEASURED_ROW), which the surviving stems catch; the bare word is redundant + boilerplate.
 EQUATION_REQUIRING = re.compile(
-    r"\b(?:byte.?clos\w*|exact.?eval\w*|exact[\s-]row|verdict\w*|pointer\w*|"
+    r"\b(?:byte.?clos\w*|exact.?eval\w*|exact[\s-]row|verdict\w*|"
     r"scored|attribution\w*|refut\w*|ratif\w*)",
     re.IGNORECASE,
 )
