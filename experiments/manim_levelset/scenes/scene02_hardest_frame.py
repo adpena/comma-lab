@@ -32,6 +32,13 @@ _MONT = np.load(_ASSETS / "montage.npy")
 _MIDX = np.load(_ASSETS / "montage_idx.npy")
 _HARD, _LANE_PX, _BND_PX = _META["hardest_frame"], _META["lane_px"], _META["boundary_px"]
 
+# per-frame dynamic stacks — the math drawn LIVE on the moving footage
+_EGO = np.load(_ASSETS / "ego_clip.npy")            # (K,H,W,3) real frames
+_SEP_STACK = np.load(_ASSETS / "ego_sep_stack.npy")   # argmax + separatrix per frame
+_MARGIN_STACK = np.load(_ASSETS / "ego_margin_stack.npy")  # margin field per frame
+_KS = len(_EGO)
+_HS = _KS // 2                                       # the hardest frame's clip index
+
 _STAGE_H = 4.9
 _STAGE_POS = 0.15 * UP
 
@@ -113,8 +120,33 @@ class HardestFrame(Scene):
                   FadeIn(fisher, shift=0.12 * DOWN), run_time=st.T_MORPH)
         self.wait(st.HOLD_LONG)
 
+        # ── beat 6b · NOW WATCH IT MOVE — the separatrix live on the video ───
+        # the detailed static breakdown becomes DYNAMIC: the codim-1 boundary
+        # that IS d_seg tracks the moving scene, redrawn per displayed frame.
+        ci_t = ValueTracker(float(_HS))
+
+        def _sidx() -> int:
+            return int(np.clip(ci_t.get_value(), 0, _KS - 1))
+
+        live = always_redraw(
+            lambda: ImageMobject(_SEP_STACK[_sidx()]).set(height=_STAGE_H).move_to(_STAGE_POS))
+        movekick = st.corner_tl(st.kicker("live · the boundary that IS d_seg"))
+        movecap = st.bottom(st.caption(
+            "now watch it move — the separatrix tracks the partition as the scene flows", color=st.INK))
+        self.add(live)
+        self.play(FadeOut(cap3), FadeOut(fisher), FadeOut(kick), margin.animate.set_opacity(0.0),
+                  FadeIn(live), FadeIn(movekick), FadeIn(movecap, shift=0.12 * UP), run_time=st.T_MORPH)
+        self.play(ci_t.animate.set_value(0.0), run_time=st.T_FADE, rate_func=rate_functions.ease_in_out_sine)
+        self.play(ci_t.animate.set_value(_KS - 1), run_time=8.0, rate_func=rate_functions.linear)
+        self.play(ci_t.animate.set_value(float(_HS)), run_time=st.T_MORPH, rate_func=rate_functions.ease_in_out_sine)
+        self.wait(st.BEAT)
+        # freeze: swap the live stack for a static separatrix snapshot for the thesis
+        sep_frozen = ImageMobject(_SEP_STACK[_HS]).set(height=_STAGE_H).move_to(_STAGE_POS)
+        self.add(sep_frozen); self.bring_to_back(sep_frozen); self.remove(live)
+
         # ── beat 7 · thesis ─────────────────────────────────────────────────
-        self.play(FadeOut(cap3), FadeOut(fisher), FadeOut(kick), margin.animate.set_opacity(0.18), run_time=st.T_FADE)
+        self.play(FadeOut(movecap), FadeOut(movekick),
+                  sep_frozen.animate.set_opacity(0.18), run_time=st.T_FADE)
         c1 = st.heading("amortize this partition at low bytes", scale=0.66)
         c2 = st.caption("spend capacity on the boundary, not the volume").next_to(c1, DOWN, buff=0.28)
         c3 = st.hero("the level-set task-space witness", scale=0.58).next_to(c2, DOWN, buff=0.44)
@@ -122,5 +154,5 @@ class HardestFrame(Scene):
         self.play(FadeIn(c2, shift=0.1 * UP), run_time=st.T_FADE)
         self.play(FadeIn(c3, shift=0.1 * UP), run_time=st.T_FADE)
         self.wait(st.HOLD_LONG)
-        self.play(FadeOut(VGroup(c1, c2, c3)), FadeOut(margin), run_time=st.T_MORPH)
+        self.play(FadeOut(VGroup(c1, c2, c3)), FadeOut(sep_frozen), run_time=st.T_MORPH)
         self.wait(st.BEAT)

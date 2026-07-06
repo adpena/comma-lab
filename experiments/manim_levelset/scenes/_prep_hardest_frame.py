@@ -229,6 +229,30 @@ def main() -> None:
           f"{flow_by_class['road_px']:.3f}px ({flow_by_class['ratio_road_over_hood']:.1f}x); "
           f"{len(refl)} reflection spots")
 
+    # ── DYNAMIC per-frame stacks for Scene 2/1 — the math drawn LIVE on the
+    #    moving video: colorized argmax, separatrix overlay, and margin field for
+    #    every clip frame (so the boundary that IS d_seg tracks the moving scene).
+    argmax_stack = np.empty((K, ch, cw, 3), np.uint8)
+    sep_stack = np.empty((K, ch, cw, 3), np.uint8)
+    margin_stack = np.empty((K, ch, cw, 3), np.uint8)
+    for j, fi in enumerate(ci):
+        lab_j = lstars[fi]                                 # (384,512) argmax
+        arg_j = CLASS_RGB[lab_j]
+        edge_j = _boundary_mask(lab_j)
+        sep_j = arg_j.copy()
+        sep_j[edge_j] = np.array([90, 240, 255], np.uint8)
+        mj = margins[fi].astype(np.float32)
+        mj = np.clip(mj / (np.percentile(mj, 99) + 1e-6), 0, 1)
+        invj = 1.0 - mj
+        ramp_j = np.stack([0.10 + 0.35 * invj, 0.12 + 0.80 * invj, 0.20 + 0.80 * invj], -1)
+        mar_j = np.clip(ramp_j * 255, 0, 255).astype(np.uint8)
+        argmax_stack[j] = cv2.resize(arg_j, (cw, ch), interpolation=cv2.INTER_NEAREST)
+        sep_stack[j] = cv2.resize(sep_j, (cw, ch), interpolation=cv2.INTER_NEAREST)
+        margin_stack[j] = cv2.resize(mar_j, (cw, ch), interpolation=cv2.INTER_LINEAR)
+    np.save(_ASSETS / "ego_argmax_stack.npy", argmax_stack)
+    np.save(_ASSETS / "ego_sep_stack.npy", sep_stack)
+    np.save(_ASSETS / "ego_margin_stack.npy", margin_stack)
+
     # ── write assets (PNG via manim-independent tiny writer / npy) ───────────
     from PIL import Image
     Image.fromarray(frame_small).save(_ASSETS / "hardest_frame.png")
