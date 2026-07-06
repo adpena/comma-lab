@@ -8431,3 +8431,30 @@ island, needs r=12 + a CLIFF) → lane homotopy must run ALONG the analytic lane
 #203/#291), NOT isotropically. So the LADDER island lever SPLITS: **dilation-homotopy for blob classes
 (movable), curve-prior-homotopy for lane.** Deep-LADDER-math research (OSS + their math × ours) spawned per
 operator. Pointer 0.19110 UNMOVED. [no-triality]
+
+## FEED-06w (2026-07-06) — LADDER=costate special-case PROVEN + eased-target module BUILT+n600-validated + adversarial overturn (lane bridging) + openpilot-align directive
+
+Deep-LADDER research (arXiv:2503.00735, github.com/Tufalabs/LADDER = **MIT, reusable**): **LADDER ⊂ our θ*
+costate law (PROVEN specialization)** — 1-channel (S=−accuracy) + CONSTANT λ=−1 (analog of our λ_d_seg=100) +
+exact verifier + never-regress-via-GRPO; ours generalizes (multi-channel, NONLINEAR λ_pose=5/√(10 d_pose)).
+LADDER gives the variant-GENERATION operator we lacked (we only SELECT); we give τ=ε=ħ Γ-limit + PERSISTENCE
+(the monotone difficulty metric LADDER admittedly lacks — 8% of its variants harder-than-parent). Memory
+`ladder_costate_optimal_difficulty_gradient_lane_movable`.
+
+BUILT (shadow-safe $0, no GPU): `tac.witness_curriculum.eased_targets` (+7 tests + n600 validation
+`tools/validate_eased_target_homotopy.py`). **movable `sdf_dilation_eased` = GO** — PROVEN nested filtration +
+CONTINUOUS (step_debt<0.003 n600) + birth-majority@r=6 (sharper than the earlier per-class-mean "r=3");
+1-Lipschitz SDF ⇒ Hausdorff-continuous ⇒ transfer proven; = forward-Euler of ∂ₜu=+|∇u|. **lane
+`oriented_width_eased` = manifold-preserving** (reaches coherence at ~half isotropic's area = stays a curve).
+
+ADVERSARIAL OVERTURN (measured, corrects the research): oriented/along-tangent dilation does NOT bridge lane
+dashes better than isotropic — the per-dash PCA tangent is too LOCAL to span inter-dash gaps (bridging needs
+the GLOBAL lane curve). Combined with the measured fact that lane is ALREADY 81.5% coherent → **"bridge the
+dashes" was never lane's mechanism; lane's barrier is AREA/MARGIN ⇒ its PRIMARY lever is loss-space
+per-class-λ (costate #315), NOT spatial easing.** oriented-width is only a SECONDARY on-manifold widener.
+
+OPENPILOT-ALIGN (operator directive 2026-07-06): the oriented-width tangent uses a per-component PCA PROXY;
+the CORRECT along-tangent is openpilot's actual lane POLYNOMIAL in the calibrated camera frame (its world
+model). openpilot OSS holds rich lane-geometry/camera-intrinsics/ground-plane-homography/MDN-lane math to
+MINE + ALIGN to (sisters #145/#203/#291/#138). Research agent spawned to mine it + produce the alignment
+plan. Pointer 0.19110 UNMOVED. [no-triality]
