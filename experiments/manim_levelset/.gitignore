@@ -1,0 +1,5 @@
+# isolated manim venv + rendered artifacts are rebuildable — do NOT track
+.venv/
+media/
+__pycache__/
+*.pyc
