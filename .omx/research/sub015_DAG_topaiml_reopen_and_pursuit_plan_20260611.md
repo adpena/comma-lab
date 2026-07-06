@@ -8531,7 +8531,25 @@ forward reparam. **VERDICT: leave _V_HORIZON=174, no change.** cam_h 1.2 vs 1.22
 audit outcome: NO score-moving change + NO upstream contribution — a clean measurement-prevents-regression win
 (inferred lever killed by the n600 row before it became a bad edit). Addendum in the audit report.
 
-SESSION SO FAR (all shadow-safe $0, NO GPU, live mod32cap UNTOUCHED): LADDER=costate special-case PROVEN
-(#322) · eased_targets movable-GO/lane-loss-space (#323) · costate-REPL (#324) · openpilot lane VP-tangent fix
-(#325) · cross-surface audit DONE, pose CORRECT (#326) · v_h=174 MEASURED-optimal, audit finding #1 FALSIFIED,
-no lane change + no upstream contribution (#327) · CONTEST CLOSED banner + memory. Pointer 0.19110 UNMOVED. [no-triality]
+### FEED-06z (2026-07-06) — canonical `tac.clip_profile` BUILT (#328): de-orphan per-clip configs, measured-not-hardcoded
+
+Operator: "shouldn't we have a system where video-specific configs are MEASURED automatically and set in the
+pipeline itself rather than a bunch of orphaned tools + ad hoc scripts?" (the velocity-orphaning + "results
+must become system intelligence" meta-bug — 60 orphaned `measure_*.py`, NO canonical clip-config surface, and
+hardcoded `_V_HORIZON=174`/`COMMA_INTRINSICS` silently overfit the one clip → NOT drop-in). BUILT
+`src/tac/clip_profile.py` (Phase 1, $0/shadow-safe): the canonical `ClipProfile` — MEASURED auto from the
+video + its frozen SegNet argmax, CACHED (sha256-keyed `.omx/state/clip_profiles/`), PROVENANCE-stamped,
+single-source-of-truth. Fields: v_horizon (road/sky-boundary), intrinsics (resolution→openpilot `_neo_config`
+match), device_height 1.22, SELF-DETECTED class order (spatial/temporal signature — the "never hardcode index"
+non-negotiable), comma2k19-provenance ID. DEMO on 0.mkv reproduces EVERY hardcode with NO regression: v_h=175
+(≈174, #327-optimal), fx 400.3/cx256/cy192 (`_neo_config`), class [Road,Lane,Undrivable,Movable,MyCar]
+canonical, source=comma2k19 RAV4 (37,545,489 B). 6/6 tests incl. the no-regression proof; ruff clean. Overfit
+(0.mkv measures its true values) AND drop-in (any clip self-calibrates) fall out for free. 0.mkv provenance
+CONFIRMED (operator recall correct): = the remuxed comma2k19 RAV4 segment. Phase 2 (gated, next-run): rewire
+lane_sdf/camera/trainer to READ ClipProfile (measured-no-regression first). Phase 3: fold the 60 orphaned
+measure_*.py into the canonical measure pass.
+
+SESSION SO FAR (all shadow-safe $0, NO GPU, live mod32cap UNTOUCHED): LADDER=costate (#322) · eased_targets
+(#323) · costate-REPL (#324) · openpilot lane VP-tangent fix (#325) · cross-surface audit, pose CORRECT (#326) ·
+v_h=174 MEASURED-optimal, finding #1 FALSIFIED (#327) · canonical clip_profile BUILT, de-orphans per-clip config
+measured-not-hardcoded (#328) · CONTEST CLOSED banner + memory. Pointer 0.19110 UNMOVED. [no-triality]
