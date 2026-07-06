@@ -52,6 +52,7 @@ import numpy as np
 __all__ = [
     "sharpness_proxy_c_a",
     "adaptive_visco_eps",
+    "adaptive_visco_eps_tanh",
     "self_test",
 ]
 
@@ -110,6 +111,39 @@ def adaptive_visco_eps(c_a: float, eta: float, lam_eik: float, margin_factor: fl
     hi = float(eps_upper)
     if hi < lo:
         hi = lo
+    return min(max(eps, lo), hi)
+
+
+def adaptive_visco_eps_tanh(c_a: float, margin_factor: float,
+                            eps_floor: float, eps_upper: float) -> float:
+    """The RESPONSIVE reparameterization of the adaptive-eps law (confound-fix C2, 2026-07-05):
+
+        eps = clamp( eps_floor + (eps_upper - eps_floor) * tanh(|c_a| * (1 + margin_factor)),
+                     eps_floor, eps_upper )
+
+    WHY this exists alongside the DE-CFL ``adaptive_visco_eps`` above: the confound hunt PROVED the
+    DE-CFL form is INERT at the measured operating point -- with eta~1e-3, lam_eik~0.05 the sqrt
+    prefactor collapses to ~2.5e-3, so reaching the floor 0.3 needs |c_a| >= ~80 while the measured
+    |c_a| is O(1) (~0.82) => eps clamped at the floor EVERY epoch (0 change-events). That is not a
+    bug in the DE law: the CFL edge genuinely says a small fixed eps (~2.5e-3) already over-damps, so
+    the floor is safe and adaptive-eps provides NO benefit at O(1) |c_a|. The DE-CFL law is retained
+    (derivation of record). This tanh form is the SEPARATE responsive lever the MLX trainer's
+    ``_adaptive_visco_eps`` uses when adaptive-eps is deliberately enabled as a *tunable* actuator
+    (monotone-increasing in |c_a|, saturating into [floor, upper]); it must return THIS to the float
+    for the trainer<->reference byte-parity contract. eta/lam_eik are NOT arguments here (they are no
+    longer the collapsed prefactor; the caller logs them only as the advisory pi_eik). eps_upper
+    raised to floor if inverted. Pure / unit-testable.
+
+    NOTE (NO-FAKE): adaptive-eps being inert under the DE-CFL law is a FEATURE that is now reported
+    LOUDLY via the trainer's ``adaptive_eps_INERT`` alarm -- not papered over. Prefer a small FIXED
+    eps for the eikonal-viscosity term unless an A/B on this responsive lever measures a real benefit.
+    """
+    lo = float(eps_floor)
+    hi = float(eps_upper)
+    if hi < lo:
+        hi = lo
+    frac = math.tanh(abs(float(c_a)) * (1.0 + float(margin_factor)))
+    eps = lo + (hi - lo) * frac
     return min(max(eps, lo), hi)
 
 
