@@ -8493,6 +8493,32 @@ openpilot-derived constant/convention across our codebase (`camera.py`, `lane_sd
 `analytic_lane_render_band.py`, `ego_xi_trajectory.py`, `calibrated_geometry.py`, `lane_mark_pose.py`) and
 cross-check against real openpilot source → ranked corrections + optimizations list. $0/shadow-safe. Agent SPAWNED.
 
+### FEED-06x (2026-07-06) — openpilot cross-surface audit (#326) DONE: pose path CORRECT, lane-IPM diverged (1 root cause), top lever = v_h (needs n600)
+
+Audit vs openpilot @ee54e82. **Pose/ξ/homography path CONFIRMED-CORRECT** (warp height 1.22, f/cx/cy from
+910-native, pitch 0, SE(3)/frame/plane-normal bit-identical — DO NOT TOUCH). **Divergence is entirely the
+lane-IPM path** (`lane_sdf_component`, imported by both witness trainers + `lane_headstart`/`island_protection`/
+`road_horizon_component` → SCORE-LIVE). Findings #1–#4 = ONE root cause (inconsistent horizon/height encoding):
+  1. **v_horizon=174 [TOP d_seg lever, INFERRED size]** — 174 is the SALIENCY-VP row, wrongly used as the
+     lane-IPM horizon; openpilot geometric horizon=192 (437·384/874), module's OWN note says 188 IPM-optimal.
+     174 rasterizes ~14 extra near-horizon rows = far-field FALSE POSITIVES. Δd_seg INFERRED → needs n600
+     v_h∈{174,188,192} through R. (Caveat: band placement is v_h-round-trip-invariant; effect is via raster
+     cutoff + poly-fit reparam + dash scaling — NOT a trivial constant swap.)
+  2. **cam_h 1.2 vs 1.22 [FIX-OURS]** — `lane_sdf._CAM_H=1.2` + `camera.COMMA_EXTRINSICS.height=1.2` are WRONG
+     (openpilot calibrationd HEIGHT_INIT=1.22; our OWN ξ/warp already use 1.22). 1.67% lane↔ego frame mismatch.
+  3. **pitch/horizon split [FIX-OURS]** — pitch −0.02 · VP 174 · warp pitch 0 · v_h 188 = four inconsistent
+     encodings of ONE angle. Pick one.
+  4. fy 399.5 vs 399.82 — cosmetic, round-trip invariant. #5 calibrated_geometry Frankenstein-K — OFF live
+     path, latent. #8 SE(3)/plane conventions CONFIRMED-CORRECT.
+NOTE: my VP-tangent fix (#325) uses VP=(256,174) as a DIRECTION-to-convergence-point — that's the actual image
+VP where lanes converge, a DIFFERENT quantity from the IPM ground-projection horizon (188/192); no conflict.
+**Upstream verdict HONEST: NO compelling contribution** — our "better" (RD-polynomial lane rep, empirical v_h)
+is COMPRESSION-ONLY; openpilot's planner NEEDS its 33-pt MDN+stds. Sole refactor candidate BLOCKED (no
+camera.py geom test to gate behavior-preservation). Report: `.omx/research/openpilot_cross_surface_audit_20260706.md`.
+NEXT (highest-EV, $0 n600): reconcile lane-IPM to ONE openpilot-consistent geometry + MEASURE v_h∈{174,188,192}
+through R (turns INFERRED top-lever → MEASURED). For the NEXT run, not the live one.
+
 SESSION SO FAR (all shadow-safe $0, NO GPU, live mod32cap UNTOUCHED): LADDER=costate special-case PROVEN
 (#322) · eased_targets module movable-GO/lane-loss-space + adversarial overturn (#323) · costate-REPL surface
-(#324) · openpilot lane VP-tangent fix DONE + cross-surface audit SPAWNED (#325/#326). Pointer 0.19110 UNMOVED. [no-triality]
+(#324) · openpilot lane VP-tangent fix DONE (#325) · cross-surface audit DONE — pose CORRECT, lane-IPM v_h/cam_h
+reconciliation is the score lever, no upstream contribution (#326) · CONTEST CLOSED banner + memory. Pointer 0.19110 UNMOVED. [no-triality]
