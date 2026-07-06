@@ -1968,6 +1968,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # losses against restart 0's converged-low median -> the 5x guard trips EVERY batch
             # -> ZERO opt/ema updates for the entire restart (the dead-restart bug, DAG FEED-bf).
             recent = deque(maxlen=recent_maxlen)
+            # (C17 deadlock-free re-arm; DAG FEED confound-hunt 2026-07-05) consecutive-skip
+            # counter for the skip-rate-ceiling ESCAPE HATCH. The legacy spike-guard appends to
+            # `recent` ONLY on an ACCEPTED batch (else-branch below), so a persistent loss-LEVEL
+            # shift (e.g. a stiff term attached at resume, or an eikonal runaway) => batch_loss
+            # sits permanently above `spike_factor * median` => 100% skip forever => the median
+            # never moves => ABSORBING freeze (measured 3x in the levelset sibling: #205 runs
+            # 015247Z/083453Z/095728Z). Same bug class here per "bug classes have 6-7x spread".
+            # This counter lets a SUSTAINED all-skip window force a fresh median re-baseline
+            # instead of freezing; it PERSISTS ACROSS EPOCHS (the freeze spans epochs) and is
+            # reset ONLY by an accepted batch (the else-branch), so every legitimate re-arm site
+            # (restart top / curriculum transition / Muon switch clears `recent` => median None
+            # => next batch accepted => counter reset) self-corrects.
+            consec_skips = 0
             _muon_switched = False  # FEED-bv: per-restart Muon-finisher switch flag
             # (FEED-ca fix 2) per-restart stage scheduler + d_seg history (for plateau-trigger).
             stage_resolver = _StageResolver()
@@ -2276,12 +2289,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     )
                     if skip:
                         n_skips_ep += 1
+                        consec_skips += 1
                         print(json.dumps({
                             "stage": "spike_skip", "restart": restart_i, "ep": ep, "gstep": gstep,
                             "batch_loss": (round(batch_loss, 4) if math.isfinite(batch_loss) else "nonfinite"),
                             "gnorm": (round(gnorm, 4) if math.isfinite(gnorm) else "nonfinite"),
                             "median": (round(median, 4) if median is not None else None),
+                            "consec_skips": consec_skips,
                         }), flush=True)
+                        # (C17 skip-rate-ceiling ESCAPE HATCH) A full window of CONSECUTIVE skips
+                        # == 100% skip-fraction over `recent_maxlen` accum-batches: the classic
+                        # absorbing median-freeze. Turn the SILENT freeze LOUD (spike_deadlock
+                        # ALERT) and BREAK the absorbing state by clearing `recent` -> median
+                        # becomes None -> the next batch is ACCEPTED unconditionally (same
+                        # deadlock-free re-arm semantics as the restart-top / curriculum re-arm)
+                        # -> the median re-baselines at the NEW loss level and training resumes.
+                        # This mirrors the levelset SpikeGuardRollback intent (fresh re-arm on a
+                        # sustained all-skip window) minimally, without needing the base loop to
+                        # carry a last-good snapshot / lr-cut machinery.
+                        if consec_skips >= recent_maxlen:
+                            print(json.dumps({
+                                "stage": "spike_deadlock", "level": "ALERT",
+                                "restart": restart_i, "ep": ep, "gstep": gstep,
+                                "consec_skips": consec_skips, "window": recent_maxlen,
+                                "median": (round(median, 4) if median is not None else None),
+                                "batch_loss": (round(batch_loss, 4) if math.isfinite(batch_loss) else "nonfinite"),
+                                "action": "spike_rebaseline",
+                                "note": "100% skip over a full window (absorbing median-freeze); "
+                                        "clearing recent to force a fresh median re-baseline "
+                                        "(deadlock-free re-arm) instead of freezing forever.",
+                            }), flush=True)
+                            recent.clear()
+                            consec_skips = 0
                     else:
                         opt.update(model, clipped)
                         mx.eval(model.parameters(), opt.state)
@@ -2289,6 +2328,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         mx.eval(list(ema.shadow.values()))
                         recent.append(batch_loss)
                         ep_gnorms.append(gnorm)
+                        consec_skips = 0  # (C17) accepted batch => the run is live; reset the ceiling
                     # (7) per-accum grad-norm logging (throttled), always on clip/skip.
                     clipped_fired = grad_clip > 0 and gnorm > grad_clip
                     if (gstep % grad_log_every == 0) or clipped_fired or skip:
@@ -2313,6 +2353,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     accum_loss_sum = 0.0
                     count = 0
                 n_skips_total += n_skips_ep
+                # (C17 epoch-level LIVENESS alarm) Turn a silent frozen epoch LOUD: if the
+                # accepted-fraction of accum-batch boundaries over the epoch is ~0 (the optimizer
+                # took essentially no steps), emit a spike_deadlock alarm so no downstream reader
+                # (verdict / closed-loop / telemetry) can mistake a FROZEN epoch for a converging
+                # one. len(ep_gnorms) = accepted boundaries; n_skips_ep = skipped boundaries.
+                _ep_boundaries = len(ep_gnorms) + n_skips_ep
+                if _ep_boundaries > 0:
+                    _accepted_frac = len(ep_gnorms) / float(_ep_boundaries)
+                    if _accepted_frac <= 0.02:
+                        print(json.dumps({
+                            "stage": "spike_deadlock", "level": "ALERT", "scope": "epoch",
+                            "restart": restart_i, "ep": ep,
+                            "accepted_frac": round(_accepted_frac, 4),
+                            "accepted_batches": len(ep_gnorms), "skipped_batches": n_skips_ep,
+                            "note": "accepted-fraction ~0 over the epoch: optimizer effectively "
+                                    "FROZEN this epoch; verdict/telemetry rows for this epoch are "
+                                    "measured on non-stepped weights (liveness stamp).",
+                        }), flush=True)
                 # Release reclaimable Metal buffer cache between epochs (defensive vs
                 # the 499000 active-buffer cap when many arms share the GPU).
                 mx.clear_cache()
