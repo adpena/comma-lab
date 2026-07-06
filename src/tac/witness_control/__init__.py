@@ -38,6 +38,14 @@ from tac.witness_control.costate_estimator import (  # noqa: F401
     sweep_finite_difference,
     transition_jump_costate,
 )
+from tac.witness_control.campaign_repl import (  # noqa: F401
+    CampaignWorldModel,
+    ProposedAction,
+    action_efficiency,
+    campaign_world_model,
+    propose_argv,
+    write_world_model_row,
+)
 from tac.witness_control.shadow_controller import (  # noqa: F401
     ShadowReport,
     build_shadow_report,
