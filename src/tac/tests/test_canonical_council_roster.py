@@ -213,7 +213,7 @@ class TestFourCoLeadStructure:
 
 
 class TestGrandCouncilRoster:
-    def test_grand_council_has_27_seats(self) -> None:
+    def test_grand_council_has_28_seats(self) -> None:
         # 11 existing (since 2026-04-29; Schmidhuber listed once) +
         # 8 new (2026-05-15 expansion: Atick/Redlich/Rao/Ballard/Tishby/
         # Zaslavsky/Wyner/TimeTravelerProtege) +
@@ -231,8 +231,12 @@ class TestGrandCouncilRoster:
         # deep-research follow-on: Kang_SNeRV / Bull_HiNeRV, verified principal
         # authors of the two OPERATOR-APPROVED top-priority PHASE-2 carrier
         # candidates — SNeRV stores-LF/generates-HF DWT carrier + HiNeRV
-        # hierarchical-encoding + prune/quant/entropy cheapness engine) = 27.
-        assert len(GRAND_COUNCIL) == 27
+        # hierarchical-encoding + prune/quant/entropy cheapness engine) = 27, +
+        # 1 FrankNielsen information-geometry seat (2026-07-06, operator
+        # directive after his OIST 'Geometric information theory' talk — the
+        # computational-information-geometry voice on the frozen-scorer
+        # Fisher/Bregman/Chernoff geometry our unification is built on) = 28.
+        assert len(GRAND_COUNCIL) == 28
 
     def test_existing_11_seats_present(self) -> None:
         names = frozenset(s.name for s in GRAND_COUNCIL)

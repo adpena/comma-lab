@@ -41,19 +41,23 @@ Canonical surfaces:
         Shannon LEAD + Dykstra CO-LEAD + Rudin CO-LEAD + Daubechies CO-LEAD
         form the 4-co-lead shared-leadership core; sister members provide
         domain-specific perspectives.
-    GRAND_COUNCIL: 22 voices (11 existing per 2026-04-29 + 8 new per 2026-05-15
-        L5 staircase expansion including TimeTravelerProtege + TimeTraveler
-        mentor seat added 2026-05-19 + Rudin_Grand + Daubechies_Grand sister
-        seats added 2026-05-19 ROSTER-MAINTENANCE-V2 per Catalog #110 APPEND-
-        ONLY coexistence discipline so inner-council co-leads remain
-        topical-grand-matchable on their specialty deliberations).
+    GRAND_COUNCIL: 28 voices (the canonical live count; the historical "11
+        existing + 8 new" arithmetic below undercounts because later NeRV /
+        SNeRV / HiNeRV carrier-author seats were appended per Catalog #110
+        APPEND-ONLY). Includes the 2026-05-15 L5 staircase expansion
+        (TimeTravelerProtege + TimeTraveler mentor seat added 2026-05-19 +
+        Rudin_Grand + Daubechies_Grand sister seats added 2026-05-19 ROSTER-
+        MAINTENANCE-V2 so inner-council co-leads remain topical-grand-matchable
+        on their specialty deliberations) + the NeRV/SNeRV/HiNeRV carrier-author
+        seats (2026-06-01) + FrankNielsen information-geometry seat added
+        2026-07-06 per operator directive.
 
 Public API:
     CouncilSeat: frozen dataclass capturing canonical attendee (with
         is_co_lead: bool field per 2026-05-19 4-co-lead structure)
     INNER_COUNCIL: tuple of 14 mandatory inner-council seats (4 co-leads +
         10 sister voices)
-    GRAND_COUNCIL: tuple of 22 advisory grand-council seats (sister-seat
+    GRAND_COUNCIL: tuple of 28 advisory grand-council seats (sister-seat
         coexistence with INNER_COUNCIL co-leads per Catalog #110)
     required_attendees_for_topic: returns canonical mandatory roster
     validate_council_dispatch_roster: refuses incomplete dispatches (BLOCKING
@@ -889,6 +893,55 @@ GRAND_COUNCIL: tuple[CouncilSeat, ...] = (
             "(MIT license) + arXiv:2409.07414 (NVRC, NeurIPS 2024, same "
             "authors); lane research return "
             "lane_inverse_steganalysis_optimal_full_stack_20260601"
+        ),
+    ),
+    CouncilSeat(
+        name="FrankNielsen",
+        role="grand_council",
+        canonical_position_summary=(
+            "Computational information geometry — the ALGORITHMS on statistical "
+            "manifolds behind our frozen-scorer objects. Canonical voice on: "
+            "(1) the Fisher-Rao metric + its computable surrogates (our margin "
+            "field = Fisher surrogate, Pearson 0.978) and CURVED Bregman "
+            "divergences for the anisotropic boundary annulus where the "
+            "flat-interior approximation breaks; (2) Bregman-Voronoi diagrams + "
+            "CHERNOFF INFORMATION as the geometry of the SegNet argmax partition "
+            "(d_seg = disagreement on a Bregman-Voronoi boundary in logit space; "
+            "the Chernoff point/information is the principled bits-per-flip floor "
+            "for Lever-D); (3) dually-flat Legendre/mirror-descent duality — the "
+            "native language for CE = mirror descent = natural gradient (our "
+            "tau=eps=hbar result) and the tau-anneal curriculum as a deformation "
+            "of the logsumexp Bregman generator (tau->0 = tropical/max-plus); "
+            "(4) DUO BREGMAN pseudo-divergences (two different convex generators) "
+            "as a candidate closed-form reason our measured seg-perp-pose "
+            "decoupling is additive; (5) mixture-simplification / k-MLE / Bregman "
+            "k-means for compressing the exponential-family sufficient statistics "
+            "(the task-space quotient codec). Added to the grand council "
+            "permanently per operator 2026-07-06 after his OIST talk 'Geometric "
+            "information theory: A hub to information sciences'. Sits beside "
+            "Shannon (information-theory grounding) + MacKay (IT+inference) as the "
+            "information-geometry seat."
+        ),
+        relevance_tokens=(
+            "information_geometry", "fisher_rao_metric", "fisher_information",
+            "bregman_divergence", "curved_bregman", "dually_flat",
+            "legendre_transform", "mirror_descent", "natural_gradient",
+            "chernoff_information", "bregman_voronoi", "argmax_partition_geometry",
+            "logsumexp_generator", "tropical_limit", "duo_bregman_pseudo_divergence",
+            "seg_perp_pose_decoupling", "mixture_simplification", "k_mle",
+            "exponential_family", "task_space_sufficient_statistic",
+            "margin_field_fisher_surrogate", "statistical_manifold_projection",
+        ),
+        canonical_reference_path=(
+            "Frank Nielsen (Sony CSL / Ecole Polytechnique) — 'Geometric "
+            "information theory: A hub to information sciences' (OIST talk, "
+            "shared by operator 2026-07-06) + 'An Elementary Introduction to "
+            "Information Geometry' (Entropy 2020) + the Bregman-Voronoi / "
+            "Chernoff-information / mixture-simplification corpus; maps to our "
+            "unified level-set flow (project_unified_variational_levelset_flow_"
+            "20260701) + deepmath_amortizing_argmax_maslov_caustic_tau_eps_hbar_"
+            "20260704 (CE=mirror-descent, tau=eps=hbar) + the margin-saliency / "
+            "Lever-D surfaces"
         ),
     ),
 )
