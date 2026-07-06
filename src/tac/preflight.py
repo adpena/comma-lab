@@ -6359,6 +6359,23 @@ def preflight_all(
         check_residual_override_has_coverage_proof(strict=True, verbose=verbose)
         check_axis_solved_claim_has_pipeline_validation(strict=True, verbose=verbose)
 
+        # 2026-07-05 Confound-immune-system L2 gates (Catalog #397-#402): the
+        # 6-hunter confound synthesis (.omx/research/confound_hunt_synthesis_
+        # 20260705.md) found the "viscosity NO-GO" verdict poisoned by
+        # DEFAULT-HARMFUL x SILENT x MEASUREMENT-CORRUPTING confounds. These
+        # gates refuse the CODE anti-patterns (C1 spike-guard-default-deadlock,
+        # C1/C17 accepted-only-median-no-rearm, C13 dup-launch-flags, C8
+        # resume-palliative-without-warm-start, C12 verdict-pairs-subset-default,
+        # C6 telemetry-without-liveness). Landed WARN-ONLY per the "Strict-flip
+        # atomicity rule": the trainer/launcher fixes land in sibling commits, so
+        # live-count 0 across those files cannot be guaranteed by the gate-builder.
+        # Each gate's docstring names its strict-flip condition. Memory /
+        # synthesis: .omx/research/confound_hunt_synthesis_20260705.md.
+        from tac.confound_gates import CONFOUND_GATES as _CONFOUND_GATES
+
+        for _confound_gate in _CONFOUND_GATES:
+            _confound_gate(strict=False, verbose=verbose)
+
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
                 REPO_ROOT,
