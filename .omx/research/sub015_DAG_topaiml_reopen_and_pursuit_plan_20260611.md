@@ -8364,3 +8364,16 @@ now 0 on the served page. [no-triality]
 
 ### FEED-06r (2026-07-06) — openpilot paint-seed A/B: init HELPS ~36% but not near-optimal, 8× slower (operator "fire it")
 CONTEXT: operator asked "are we using openpilot lane/movable prior + seeding to get near-optimal BEFORE training? our former mod-32 run started way better." MEASURED: (1) the current #205 clean baseline (mod-26, seg-only, eikonal-off, confound-fixed) does NOT use openpilot seeding — lane/movable start at part_frac 0, birth from CE only; (2) the former mod-32 run's head-start was CAPACITY not seeding — its lane-prior was `replace`=measured-no-op (ep0 0.746 ≈ no-prior 0.744); it bottomed d_seg 0.00475@ep300 then tau-eroded to 0.0068@ep500 (the CE-floor+erosion finding, not frozen). FIRED (governed: stopped OFF@ep50 preserving ckpts, killpg no-orphan, clean single-var ON config = current+{lane-prior paint, seed-islands}, admission-gated durable spawn, verified ×2): paintseed-ON arm levelset_n600_witness_paintseedON_20260706T032016Z. FIRST RESULT: ep0 init d_seg **0.474 (seed ON) vs 0.744 (OFF) = −36%** — the paint-seed genuinely moves the init (NOT a no-op like `replace`). BUT: (a) still ~100× above the 0.00475 CE-floor → helps, NOT near-optimal; (b) witness part_frac[lane] STILL 0 at init (paint biases the RENDERED frame's seg-agreement, not yet the witness phi-argmax partition); (c) ~11 min/ep = ~8× slower than OFF (1.4 min/ep) from the seed-islands co-gradient (#300 overhead). DECISIVE test still pending: does seed-ON at ep25 beat OFF/mod-32's 0.0103 (does the init edge PERSIST through training or does CE close the gap) — ~4h out at this speed. Pointer 0.19110 UNMOVED (advisory macOS-MLX). [no-triality]
+
+### FEED-06s (2026-07-06) — paint-seed A/B ep25: init edge does NOT persist (leaning seed-not-worth-it)
+paintseed-ON arm (mod-26, seg-only, eikonal-off, + lane-prior paint + seed-islands, seed 0) trained verdicts:
+ep0 d_seg **0.474** (vs seed-OFF 0.744, −36% — the seed helps INIT, real) → ep25 d_seg **0.028**. But the
+seed-OFF **mod-32** reference hit **0.0103** at ep25, and its bottom was 0.00475@ep300. So DESPITE the −36%
+better init, by ep25 the seeded arm is **~2.7× BEHIND** — the init edge is NOT translating into a faster trained
+descent. Directionally consistent with #300 seed-compose island-gradient STARVATION (the seed co-gradient competes
+with / starves the witness's own d_seg gradient). CAVEAT (honest): the reference is cross-config (ON=mod-26 vs
+ref=mod-32+eikonal0.01+pose); the clean same-mod-26 seed-OFF run was stopped at ep50 before its ep25 async verdict
+landed, so this is not a perfectly-matched A/B. ep50 verdict sharpens it. WORKING VERDICT: paint-seed gives a real
+but non-persisting init edge at a real cost; the mod-32 CAPACITY lever remains the better-looking bet (per the
+operator's original "mod-32 started way better" observation — which was capacity, not seeding). Run alive/healthy
+ep56, mem fine, 2 gnorm transients auto-handled. Pointer 0.19110 UNMOVED (advisory macOS-MLX). [no-triality]
