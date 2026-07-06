@@ -58,6 +58,57 @@ ACTUATION = "NONE"   # Phase A invariant — never anything else in this package
 #: default horizon (epochs) over which per-epoch costates are projected into a ΔS band
 DEFAULT_HORIZON_EPOCHS = 25
 
+# ─── ΔS-PER-COST ranking (task #247) — the missing per-cost divisor ───
+# The costate controller ranks recommendations by predicted ΔS. But a big raw ΔS
+# that costs a whole horizon of GPU is NOT the same bang-for-buck as a smaller ΔS
+# from a light $0 control move. #247's costate control law ranks by ΔS / COST, so
+# the cheapest-biggest-drop wins. Costs are ENACTMENT effort (compute/epochs), pure
+# and testable; the never-regress refusal still gates on the RAW ΔS (cost is
+# strictly positive → it can never flip a sign).
+#: default cost (compute/effort units) when a candidate carries no known cost.
+DEFAULT_ACTION_COST = 1.0
+#: unit baseline for a light $0 control move (rollback / stop / watch / investigate).
+_LIGHT_ACTION_COST = 1.0
+#: actions that spend real multi-epoch training to realize their predicted ΔS — their
+#: cost scales with the horizon (many epochs of GPU), so a big raw drop that costs a
+#: whole horizon can be out-ranked per-cost by a cheap light move.
+_HEAVY_MULTI_EPOCH_ACTIONS = frozenset({"CONTINUE_STAGE"})
+#: epsilon guard so the per-cost divisor never divides by ~0.
+COST_EPSILON = 1e-9
+
+
+def per_cost_score(predicted_dS: float, cost: float) -> float:
+    """ΔS-per-cost = ``predicted_dS / max(cost, COST_EPSILON)`` (task #247).
+
+    Most-negative = best bang-for-buck. Cost is strictly positive by construction
+    (see ``candidate_cost``); the epsilon guard is belt-and-suspenders against a
+    caller-supplied ~0 cost (never a divide-by-zero). Sign-preserving: a positive
+    ΔS divided by a positive cost stays positive, so the never-regress refusal is
+    unchanged whether it gates on the raw ΔS or the per-cost score."""
+    return predicted_dS / max(cost, COST_EPSILON)
+
+
+def candidate_cost(candidate: dict, horizon_epochs: int = DEFAULT_HORIZON_EPOCHS) -> float:
+    """Pure, testable ENACTMENT-cost estimate (compute/effort units) for a candidate.
+
+    Falling-priority source (Rudin-style readback, no hidden model): (1) an explicit
+    positive ``candidate["cost"]`` field; (2) the per-action-KIND cost model — a HEAVY
+    multi-epoch action (``CONTINUE_STAGE`` spends ``horizon_epochs`` of real training)
+    costs its horizon, while a light $0 control move (rollback / stop / watch /
+    investigate / widen) costs the unit baseline; (3) ``DEFAULT_ACTION_COST`` when the
+    action is unknown/absent. Always returns a strictly positive value."""
+    c = candidate.get("cost")
+    if isinstance(c, (int, float)) and c > 0.0:
+        return float(c)
+    action = candidate.get("action")
+    if action in _HEAVY_MULTI_EPOCH_ACTIONS:
+        h = candidate.get("horizon_epochs")
+        h = float(h) if isinstance(h, (int, float)) and h > 0.0 else float(horizon_epochs)
+        return max(h, _LIGHT_ACTION_COST)
+    if action:
+        return _LIGHT_ACTION_COST
+    return DEFAULT_ACTION_COST
+
 
 def _load_tools_module(name: str):
     """Import a module from ``tools/`` (the dashboards' own pattern — they sys.path
@@ -259,8 +310,12 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
                      horizon_epochs: int = DEFAULT_HORIZON_EPOCHS
                      ) -> tuple[list[dict], list[dict]]:
     """Build ranked recommendations from IDENTIFIABLE costates only, then apply the
-    NEVER-REGRESS guard: a candidate whose central predicted ΔS ≥ 0 is refused by
-    construction (POWERPLAY: only frontier-improving moves may rank)."""
+    NEVER-REGRESS guard: a candidate whose central predicted ΔS > 0 is refused by
+    construction (POWERPLAY: only frontier-improving moves may rank). Survivors are
+    ranked by ΔS-PER-COST (task #247): ``predicted_dS / max(cost, COST_EPSILON)``,
+    most-negative first, so the cheapest-biggest-drop wins (a light $0 control move
+    can out-rank a heavy multi-epoch move whose raw drop is larger). Every row exposes
+    its ``cost`` + ``predicted_dS_per_cost`` (Rudin-interpretable, no hidden weighting)."""
     by_name = {c.name: c for c in costates}
     stage = (classification or {}).get("stage") or ""
     ds_dep = by_name.get(f"dS_depoch[stage={stage}]")
@@ -335,6 +390,11 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
 
     ranked, refused = [], []
     for c in candidates:
+        # (task #247) attach the enactment cost + the ΔS-per-cost score BEFORE the
+        # refusal branch so BOTH ranked and refused rows carry them (Rudin readback).
+        cost = candidate_cost(c, horizon_epochs)
+        c["cost"] = cost
+        c["predicted_dS_per_cost"] = per_cost_score(c["predicted_dS"], cost)
         if c["predicted_dS"] > 0.0:
             refused.append({**c, "refusal_reason":
                             "NEVER_REGRESS (POWERPLAY): central predicted ΔS ≥ 0 — a "
@@ -342,7 +402,11 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
                             "construction"})
         else:
             ranked.append(c)
-    ranked.sort(key=lambda c: c["predicted_dS"])   # most-negative (best) first
+    # (task #247) rank by ΔS-PER-COST, cheapest-biggest-drop first: a light $0 control
+    # move with a modest drop can now out-rank a heavy multi-epoch move with a larger
+    # raw drop. The never-regress refusal above still gates on the RAW ΔS (cost is
+    # strictly positive, so the divisor never flips a candidate's sign).
+    ranked.sort(key=lambda c: c["predicted_dS_per_cost"])   # most-negative (best bang/buck) first
     if fits_ev:
         for c in ranked:
             c.setdefault("notes", []).append(fits_ev)
