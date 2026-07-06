@@ -8392,3 +8392,14 @@ operator's original "mod-32 started way better" observation, which FEED-06r/s es
 Residual caveat: a fully-clean seed A/B would be mod-32 seed-ON vs mod-32 seed-OFF (matched); but the decoupling
 already makes the seed's harm clear. Run alive/healthy ep85, mem fine, 3 gnorm transients auto-handled. Pointer
 0.19110 UNMOVED. [no-triality]
+
+### FEED-06u (2026-07-06) — PIVOT to mod-32 CAPACITY (operator GO "A"): paint-seed killed, mod-32-clean fired
+paint-seed arm verdict FINAL: d_seg plateaued ~0.026 flat ep25→ep200 (seed helps init −36% but starves trained
+d_seg descent, #300) — seed NOT the lever. Operator chose A: kill + pivot to capacity. EXECUTED (governed):
+preserved paint-seed 3 ckpts → killpg-stopped (council_paintseedON_ab, no orphan) → verified dead ×2 → built
+mod-32 config as PURE single-variable delta off the clean confound-fixed baseline (levelset_n600_witness_20260706T013213Z):
+ONLY --mod-dim 26→32 changed (seg-only, eikonal-off, annealed-hosc, n-dir-freqs 4, NO seed; dup-flag check clean) →
+governor ADMIT (92 GiB headroom) → durable spawn council_mod32_capacity pid 97677, verified alive ×2. Run:
+levelset_n600_witness_mod32cap_20260706T115614Z. REFERENCE to beat: the old mod-32 (20260703, but w/ eikonal0.01+
+pose+lane-band) hit ep25 0.0103 → ep50 0.0078 → bottom 0.00475@ep300 then tau-eroded to 0.0068@ep500. THIS is the
+cleanest capacity test (mod-32 + confound fixes). Watch ep25 verdict. Pointer 0.19110 UNMOVED (advisory macOS-MLX). [no-triality]
