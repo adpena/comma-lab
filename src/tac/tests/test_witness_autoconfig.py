@@ -424,3 +424,31 @@ def test_fresh_seeded_provenance_records_the_deltas():
         assert "2026-07-04" in cfg.provenance[k].provenance or \
                "fresh" in cfg.provenance[k].provenance.lower() or \
                "SEAL review" in cfg.provenance[k].provenance
+
+
+def test_332_dsl_lever_composition_byte_identical_when_empty_and_composes_when_set():
+    """#332: --dsl-lever composes named DSL Lever factories over the base config, delegating to
+    the DSL SoT; byte-identical to the base when empty (every existing gate unchanged)."""
+    import dataclasses as _dc
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, overfit=True, epochs=1000)
+    base = cfg.to_trainer_flags("OUT")
+    assert _dc.replace(cfg, dsl_levers=()).to_trainer_flags("OUT") == base, "empty must be byte-identical"
+    composed = _dc.replace(
+        cfg, dsl_levers=("SeedIslandEased", "EventTriggeredCurriculum", "AmplifyIsland")
+    ).to_trainer_flags("OUT")
+    fd = dict(composed)
+    assert fd.get("--seed-island-eased") is None            # bare boolean rendered as (flag, None)
+    assert fd.get("--curriculum-nucleus-guard") is None
+    assert fd.get("--amplify-weight") == 1.0
+    # every composed flag is a REAL trainer flag (no invented flags)
+    from tac.witness_dsl.curriculum_dsl import real_trainer_flags
+    realf = set(real_trainer_flags(None))
+    assert all(f in realf for f, _ in composed), "composed argv must not invent flags"
+
+
+def test_332_dsl_lever_bad_name_raises():
+    import dataclasses as _dc
+    import pytest as _pytest
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, overfit=True, epochs=1000)
+    with _pytest.raises(ValueError, match="not a curriculum_dsl Lever factory"):
+        _dc.replace(cfg, dsl_levers=("NotARealLever",)).to_trainer_flags("OUT")

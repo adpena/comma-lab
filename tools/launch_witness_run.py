@@ -628,6 +628,13 @@ def main(argv: list[str] | None = None) -> int:
                     "island-birth amplification + annealed hosc 1->4 + l7 DEMOTED + verdict-pairs 0 + "
                     "mod-dim 19 (Whitney floor) + adam-beta2 0.9999999. Default OFF => attribution-clean "
                     "proven_base baseline.")
+    ap.add_argument("--dsl-lever", action="append", default=[], metavar="NAME",
+                    help="(#332) compose a named DSL Lever factory over the base config "
+                    "(repeatable), e.g. --dsl-lever SeedIslandEased --dsl-lever EventTriggeredCurriculum. "
+                    "Resolved from tac.witness_dsl.curriculum_dsl (the config-generating SoT); each "
+                    "lever's overrides are merged over the base, and every emitted flag is argparse-"
+                    "validated. Available: SeedIslandEased EventTriggeredCurriculum EikonalViscosity "
+                    "AmplifyIsland BoundaryDistance SegFocalGamma AdamBeta2 (+ the pre-existing factories).")
     ap.add_argument("--out-dir", default=None,
                     help="run out-dir (default: experiments/results/levelset_n<N>_witness_<utc>)")
     ap.add_argument("--label", default=None, help="daemon label (default: derived from out-dir)")
@@ -700,6 +707,11 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
                               epochs=args.epochs, overfit=overfit)
+    # (#332) compose selected DSL levers over the named base; the config DELEGATES to the DSL SoT.
+    if args.dsl_lever:
+        import dataclasses as _dc
+        cfg = _dc.replace(cfg, dsl_levers=tuple(args.dsl_lever))
+        print(f"[launch-witness] DSL levers composed: {', '.join(args.dsl_lever)}")
 
     out_dir = Path(args.out_dir) if args.out_dir else (
         _REPO / "experiments" / "results" / f"levelset_n{args.num_pairs}_witness_{_utc()}")

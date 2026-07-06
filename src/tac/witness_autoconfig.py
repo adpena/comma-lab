@@ -527,6 +527,12 @@ class WitnessConfig:
     # --muon-warm-start-momentum / --muon-lr-final-frac / --closed-loop-control). Built by
     # ``derive_fresh_seeded_config``. Default False => sealed_205 / store_nothing_205 byte-identical.
     fresh_seeded: bool = False
+    # (#332 DSL de-orphaning) named DSL Lever factories to COMPOSE onto whatever base this config
+    # renders — the launcher selects them by name (``--dsl-lever SeedIslandEased ...``) and
+    # ``to_trainer_flags`` DELEGATES to ``tac.witness_dsl.curriculum_dsl`` (the config-generating
+    # SoT) to resolve each name → its overrides, merging them over the base. Default () ⇒
+    # byte-identical to the pre-#332 output (every existing config/byte-identity gate unchanged).
+    dsl_levers: tuple[str, ...] = ()
     all_levers_base: dict = field(default_factory=dict)
     adam_beta2: float = 0.999  # #222; 0.999 == MLX default (bit-identical); all-levers sets 0.9999999.
 
@@ -540,6 +546,37 @@ class WitnessConfig:
     tag: str = ADVISORY_TAG
 
     def to_trainer_flags(self, out_dir: str) -> list[tuple[str, object]]:
+        """Ordered (flag, value) argv. Renders the base config, then COMPOSES any selected DSL
+        levers over it (#332). Byte-identical to the base when ``dsl_levers`` is empty (default),
+        so every existing config/byte-identity gate is unchanged."""
+        base = self._render_base_flags(out_dir)
+        return self._merge_dsl_levers(base) if self.dsl_levers else base
+
+    def _merge_dsl_levers(self, base: list[tuple[str, object]]) -> list[tuple[str, object]]:
+        """Resolve each named DSL Lever factory (via the DSL SoT) and merge its overrides over
+        ``base``: override an existing flag's value in place, else append. A DSL override value of
+        ``True`` renders as a bare boolean ``(flag, None)`` per the argv convention; ``False`` is
+        skipped (BooleanOptionalAction negations are not emitted)."""
+        from tac.witness_dsl import curriculum_dsl as _cd
+        merged: list[tuple[str, object]] = list(base)
+        index = {f: i for i, (f, _) in enumerate(merged)}
+        for name in self.dsl_levers:
+            fac = getattr(_cd, name, None)
+            if fac is None or not callable(fac):
+                raise ValueError(f"--dsl-lever {name!r} is not a curriculum_dsl Lever factory")
+            lever = fac()
+            for flag, val in lever.overrides.items():
+                if val is False:
+                    continue
+                rendered = None if val is True else val
+                if flag in index:
+                    merged[index[flag]] = (flag, rendered)
+                else:
+                    index[flag] = len(merged)
+                    merged.append((flag, rendered))
+        return merged
+
+    def _render_base_flags(self, out_dir: str) -> list[tuple[str, object]]:
         """Ordered list of (flag, value) — value ``None`` means a bare boolean flag.
 
         Default renders the ATTRIBUTION-CLEAN command (surgical levers + DM1 OFF, byte-identical to the
