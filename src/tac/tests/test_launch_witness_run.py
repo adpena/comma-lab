@@ -170,12 +170,95 @@ def test_parse_extra_trainer_flags_validates_against_argparse():
 
 def test_main_extra_trainer_flags_appended_to_launch_sh(tmp_path, capsys):
     out = tmp_path / "extras"
+    # --seed-islands / --seed-anneal-epochs are NOT emitted by proven_base -> no C13 duplicate;
+    # appended verbatim. (A multi-token value so argparse treats it as a value, not an option.)
     rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out),
-                  "--extra-trainer-flags", "--eikonal-weight 0.07 --seed-islands",
+                  "--extra-trainer-flags", "--seed-islands --seed-anneal-epochs 300",
                   "--dry-run", "--no-dashboard"])
     assert rc == 0
     body = (out / "launch.sh").read_text()
-    assert "--eikonal-weight 0.07 --seed-islands" in body
+    assert "--seed-islands" in body and "--seed-anneal-epochs 300" in body
+
+
+# ───────────────────────── emit-side confound fixes (confound_hunt_synthesis_20260705.md) ─────────
+def test_duplicate_long_flags_pure():
+    assert lw.duplicate_long_flags(["--a", "--b", "--a", "--c", "--b"]) == ["--a", "--b"]
+    assert lw.duplicate_long_flags(["--a", "--b", "--c"]) == []
+
+
+def test_c13_refuses_duplicate_between_config_and_extra(tmp_path, capsys):
+    # proven_base already emits --eikonal-weight; passing it again = the C13 last-wins schedule shift.
+    out = tmp_path / "dup"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out),
+                  "--extra-trainer-flags", "--eikonal-weight 0.07",
+                  "--dry-run", "--no-dashboard"])
+    assert rc == 2
+    assert not (out / "launch.sh").exists()  # refused BEFORE writing
+    err = capsys.readouterr().err
+    assert "DUPLICATE long-flag" in err and "--eikonal-weight" in err
+
+
+def test_fix4_injects_per_group_grad_clip_by_default(tmp_path):
+    out = tmp_path / "pgc"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out),
+                  "--config", "proven_base", "--dry-run", "--no-dashboard"])
+    assert rc == 0
+    assert "--per-group-grad-clip" in (out / "launch.sh").read_text()
+
+
+def test_fix4_opt_out_no_per_group_grad_clip(tmp_path):
+    out = tmp_path / "no_pgc"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--out-dir", str(out),
+                  "--config", "proven_base", "--no-per-group-grad-clip",
+                  "--dry-run", "--no-dashboard"])
+    assert rc == 0
+    assert "per-group-grad-clip" not in (out / "launch.sh").read_text()
+
+
+def test_fix4_respects_user_supplied_polarity():
+    # user already set the flag -> no injection (no C13 dup).
+    ef, note = lw.inject_per_group_grad_clip(["--per-group-grad-clip"], [], enable=True)
+    assert ef == ["--per-group-grad-clip"] and note is None
+    ef, note = lw.inject_per_group_grad_clip(["--no-per-group-grad-clip"], [], enable=True)
+    assert ef == ["--no-per-group-grad-clip"] and note is None
+
+
+def test_c8_palliative_implies_warm_start():
+    ef, note = lw.couple_palliative_warm_start(
+        ["--resume-from", "ck_ep100.npz", "--resume-clear-spike-guard"], [])
+    assert "--warm-start-weights-only" in ef and note is not None
+    # already present -> no double-inject
+    ef2, note2 = lw.couple_palliative_warm_start(
+        ["--resume-allow-lever-drift", "--warm-start-weights-only"], [])
+    assert ef2.count("--warm-start-weights-only") == 1 and note2 is None
+    # no palliative -> untouched
+    ef3, note3 = lw.couple_palliative_warm_start(["--resume-from", "ck.npz"], [])
+    assert ef3 == ["--resume-from", "ck.npz"] and note3 is None
+
+
+def test_c16_seed_anneal_relative_to_resume():
+    # seed-islands from the CONFIG side + resume ep100 (start 101) + N=101 <= 101 -> corrected.
+    ef, note = lw.seed_anneal_relative_to_resume(
+        ["--resume-from", "stage_muon_ep100.npz", "--seed-anneal-epochs", "101"],
+        ["--seed-islands"], anneal_window=200)
+    assert lw._flag_value(ef, "--seed-anneal-epochs") == "301" and note is not None
+    # window already extends past the resume epoch -> untouched.
+    ef2, note2 = lw.seed_anneal_relative_to_resume(
+        ["--resume-from", "stage_muon_ep100.npz", "--seed-anneal-epochs", "350"],
+        ["--seed-islands"], anneal_window=200)
+    assert lw._flag_value(ef2, "--seed-anneal-epochs") == "350" and note2 is None
+    # no --seed-islands anywhere -> untouched (fresh run, no seed crutch).
+    ef3, note3 = lw.seed_anneal_relative_to_resume(
+        ["--resume-from", "ck_ep100.npz", "--seed-anneal-epochs", "50"], [])
+    assert note3 is None and ef3[-1] == "50"
+
+
+def test_apply_emit_side_fixes_end_to_end_dup_detected():
+    # a fresh config that emits --eikonal-weight + a user dup -> reports the dup for refusal.
+    ef, notes, dups = lw.apply_emit_side_confound_fixes(
+        ["--eikonal-weight", "0.07"], ["--eikonal-weight", "--curriculum"],
+        per_group_grad_clip=True)
+    assert dups == ["--eikonal-weight"]
 
 
 def test_main_extra_trainer_flags_invented_refused(tmp_path, capsys):

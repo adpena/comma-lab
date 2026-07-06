@@ -173,6 +173,163 @@ def parse_extra_trainer_flags(text: str | None) -> tuple[list[str], list[str]]:
     return toks, invented
 
 
+# ───────────────────────── emit-side confound fixes (confound_hunt_synthesis_20260705.md) ───────
+# The launcher composes the derived-config argv (cfg.to_trainer_flags) with the passthrough
+# --extra-trainer-flags into ONE launch.sh command. These pure helpers make that composed argv
+# CLEAN for the next launch: no duplicate long-flags (C13), palliative resume flags coupled to a
+# weights-only warm-start (C8), --seed-anneal-epochs relative to the resume epoch (C16), and the
+# per-group grad-clip opted in (C4). Trainer BEHAVIOR is unchanged — only what the launcher EMITS.
+_PALLIATIVE_RESUME_FLAGS = ("--resume-clear-spike-guard", "--resume-allow-lever-drift")
+_SEED_ANNEAL_WINDOW_DEFAULT = 200
+_EPOCH_TOKEN_RE = re.compile(r"ep(?:och)?[_-]?(\d+)")
+
+
+def _extra_flag_names(extra_flags: list[str]) -> list[str]:
+    """The long-flag NAMES (``--foo`` from a bare ``--foo`` or ``--foo=bar`` token) in a token list."""
+    return [t.split("=", 1)[0] for t in extra_flags if t.startswith("--")]
+
+
+def duplicate_long_flags(flag_names: list[str]) -> list[str]:
+    """The distinct long-flag names that appear MORE THAN ONCE (order-preserving), else ``[]``."""
+    seen: set[str] = set()
+    dups: list[str] = []
+    for f in flag_names:
+        if f in seen and f not in dups:
+            dups.append(f)
+        seen.add(f)
+    return dups
+
+
+def _flag_value(tokens: list[str], flag: str) -> str | None:
+    """The value of ``--flag value`` or ``--flag=value`` in a token list (first hit), else ``None``."""
+    for i, t in enumerate(tokens):
+        if t == flag and i + 1 < len(tokens):
+            return tokens[i + 1]
+        if t.startswith(flag + "="):
+            return t.split("=", 1)[1]
+    return None
+
+
+def _replace_flag_value(tokens: list[str], flag: str, new_value: str) -> list[str]:
+    """Return a copy of ``tokens`` with every ``--flag <v>`` / ``--flag=<v>`` value set to
+    ``new_value`` (space or ``=`` form preserved)."""
+    out: list[str] = []
+    i = 0
+    while i < len(tokens):
+        t = tokens[i]
+        if t == flag and i + 1 < len(tokens):
+            out += [t, str(new_value)]
+            i += 2
+            continue
+        if t.startswith(flag + "="):
+            out.append(f"{flag}={new_value}")
+            i += 1
+            continue
+        out.append(t)
+        i += 1
+    return out
+
+
+def inject_per_group_grad_clip(extra_flags: list[str], config_flag_names: list[str],
+                               *, enable: bool = True) -> tuple[list[str], str | None]:
+    """Fix 4 (confound C4): opt IN ``--per-group-grad-clip`` for witness launches. The trainer
+    default is OFF (for byte-identity), so the volatile eikonal gradient can hijack the SHARED
+    grad-clip budget and starve the seg step (measured seg-step throttle ~300-900x). The launcher
+    opts in unless the user already set either polarity (``--per-group-grad-clip`` /
+    ``--no-per-group-grad-clip``) or ``enable=False``. Returns ``(extra_flags, note|None)``."""
+    if not enable:
+        return extra_flags, None
+    names = set(_extra_flag_names(extra_flags)) | set(config_flag_names)
+    if "--per-group-grad-clip" in names or "--no-per-group-grad-clip" in names:
+        return extra_flags, None
+    return extra_flags + ["--per-group-grad-clip"], (
+        "Fix 4 (C4): injected --per-group-grad-clip (trainer default OFF for byte-identity) so the "
+        "eikonal + seg gradients are clipped per-group — the volatile eikonal term can no longer "
+        "hijack the shared clip budget and starve the seg step. Pass --no-per-group-grad-clip to opt out.")
+
+
+def couple_palliative_warm_start(extra_flags: list[str],
+                                 config_flag_names: list[str]) -> tuple[list[str], str | None]:
+    """Fix 2 (confound C8): a resume that carries a PALLIATIVE flag
+    (``--resume-clear-spike-guard`` / ``--resume-allow-lever-drift``) but restores optimizer state
+    keeps the poison (stale ep-N moments restored into a drifted loss geometry) while using only
+    warm-start's cosmetic side-effects. Make the safe coupling structural: if a palliative flag is
+    emitted without ``--warm-start-weights-only``, inject it (the trainer then auto-resolves
+    ``--resume-model-from`` to ``ema``). Returns ``(extra_flags, note|None)``."""
+    names = set(_extra_flag_names(extra_flags)) | set(config_flag_names)
+    if not any(f in names for f in _PALLIATIVE_RESUME_FLAGS):
+        return extra_flags, None
+    if "--warm-start-weights-only" in names:
+        return extra_flags, None
+    return extra_flags + ["--warm-start-weights-only"], (
+        "Fix 2 (C8): a palliative resume flag (--resume-clear-spike-guard / "
+        "--resume-allow-lever-drift) is emitted without --warm-start-weights-only; injected it so "
+        "the trainer auto-resolves --resume-model-from ema and does NOT restore stale ep-N optimizer "
+        "moments into the drifted loss geometry.")
+
+
+def _resume_start_epoch(extra_flags: list[str]) -> int | None:
+    """Best-effort parse of the resume epoch E from ``--resume-from <ckpt>`` — the epoch the run
+    RESUMES at, which is ``ckpt_epoch + 1`` (a ckpt saved after completing epoch N continues at
+    N+1; the confound anchor: an ``ep100`` ckpt resumes at start_epoch 101). Extracts the LAST
+    ``ep<NNN>`` / ``epoch_<NNN>`` integer from the ckpt basename (then the whole path) and adds 1.
+    Returns ``None`` if absent/unparseable. Conservative: if the true off-by-one differs, firing one
+    epoch early only extends the seed window (a safe direction)."""
+    val = _flag_value(extra_flags, "--resume-from")
+    if not val:
+        return None
+    matches = _EPOCH_TOKEN_RE.findall(Path(val).name) or _EPOCH_TOKEN_RE.findall(val)
+    return int(matches[-1]) + 1 if matches else None
+
+
+def seed_anneal_relative_to_resume(extra_flags: list[str], config_flag_names: list[str],
+                                   *, anneal_window: int = _SEED_ANNEAL_WINDOW_DEFAULT
+                                   ) -> tuple[list[str], str | None]:
+    """Fix 3 (confound C16): when the config seeds islands (``--seed-islands``) AND resumes at
+    epoch E (``--resume-from``) with a seed-anneal window ``--seed-anneal-epochs N``, N must be
+    RELATIVE to E. An absolute ``N <= E`` withdraws the seed crutch BEFORE the resumed run even
+    begins (the confound: seed-anneal-epochs 101 with resume start_epoch 101 -> off 899/900 epochs).
+    Auto-correct ``N`` to ``E + anneal_window`` and log. Returns ``(extra_flags, note|None)``."""
+    names = set(_extra_flag_names(extra_flags)) | set(config_flag_names)
+    if "--seed-islands" not in names:
+        return extra_flags, None
+    n_str = _flag_value(extra_flags, "--seed-anneal-epochs")
+    if n_str is None:
+        return extra_flags, None  # no anneal window emitted -> nothing to make relative
+    try:
+        n = int(n_str)
+    except ValueError:
+        return extra_flags, None
+    start = _resume_start_epoch(extra_flags)
+    if start is None or n > start:
+        return extra_flags, None  # fresh run, or the window already extends past the resume epoch
+    corrected = start + int(anneal_window)
+    return _replace_flag_value(extra_flags, "--seed-anneal-epochs", str(corrected)), (
+        f"Fix 3 (C16): --seed-anneal-epochs {n} <= resume start_epoch {start} would withdraw the "
+        f"island seed before the resumed run begins; corrected to {corrected} (E {start} + "
+        f"{anneal_window} anneal window) so the seed crutch persists past resume start.")
+
+
+def apply_emit_side_confound_fixes(extra_flags: list[str], config_flag_names: list[str],
+                                   *, per_group_grad_clip: bool = True
+                                   ) -> tuple[list[str], list[str], list[str]]:
+    """Apply the four emit-side confound fixes to the passthrough ``extra_flags`` given the derived
+    config's flag names, then C13-CHECK the FINAL combined argv for duplicate long-flags. Returns
+    ``(extra_flags, notes, duplicate_long_flags)``; a non-empty duplicate list means the caller
+    MUST refuse the launch (argparse last-wins silently shifts schedules)."""
+    notes: list[str] = []
+    for fn in (
+        lambda ef: inject_per_group_grad_clip(ef, config_flag_names, enable=per_group_grad_clip),
+        lambda ef: couple_palliative_warm_start(ef, config_flag_names),
+        lambda ef: seed_anneal_relative_to_resume(ef, config_flag_names),
+    ):
+        extra_flags, note = fn(extra_flags)
+        if note:
+            notes.append(note)
+    dups = duplicate_long_flags(config_flag_names + _extra_flag_names(extra_flags))
+    return extra_flags, notes, dups
+
+
 # ───────────────────────── launch.sh (no word-split fragility) ─────────────────────────
 def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
                     extra_flags: list[str] | None = None) -> str:
@@ -456,6 +613,12 @@ def main(argv: list[str] | None = None) -> int:
                     "(never-invent-a-flag) and the memory preflight re-parses the final launch.sh, so "
                     "memory-relevant extras (e.g. --bank-n-scales) are gated too. This is the governed "
                     "escape hatch — raw heavy python launches remain FORBIDDEN.")
+    ap.add_argument("--per-group-grad-clip", action=argparse.BooleanOptionalAction, default=True,
+                    help="(Fix 4 / confound C4) EMIT --per-group-grad-clip to the trainer (default "
+                    "ON): clips the eikonal + seg gradients per-group so the volatile eikonal term "
+                    "cannot hijack the SHARED grad-clip budget and starve the seg step. The trainer's "
+                    "own default is OFF (for byte-identity); this launcher opts in. --no-per-group-"
+                    "grad-clip restores the trainer default.")
     ap.add_argument("--all-levers", action="store_true",
                     help="emit the deep-math-OPTIMAL all-levers from-scratch config (#205 artifact); "
                     "equivalent to --config all_levers. "
@@ -568,7 +731,27 @@ def main(argv: list[str] | None = None) -> int:
               f"invented flag(s) not in the trainer argparse: {invented}", file=sys.stderr)
         return 2
     if extra_flags:
-        print(f"# extra trainer flags (validated): {' '.join(extra_flags)}")
+        print(f"# extra trainer flags (requested, validated): {' '.join(extra_flags)}")
+
+    # (a3) EMIT-SIDE CONFOUND FIXES (confound_hunt_synthesis_20260705.md). Compose the derived-config
+    # flag names with the passthrough extras, then: Fix 4 opt-in --per-group-grad-clip (C4), Fix 2
+    # palliative-implies-warm-start (C8), Fix 3 seed-anneal relative to resume epoch (C16), and the
+    # highest-value Fix 1 C13 GUARD — REFUSE any duplicate long-flag across the FINAL emitted argv
+    # (argparse last-wins silently shifts schedules; the v6 launch had 5 dup flags that flattened
+    # eikonal-weight-end and shifted tau/lane-band/persistence by 100 epochs).
+    config_flag_names = [flag for flag, _ in cfg.to_trainer_flags(str(out_dir))]
+    extra_flags, _fix_notes, _dups = apply_emit_side_confound_fixes(
+        extra_flags, config_flag_names, per_group_grad_clip=args.per_group_grad_clip)
+    for _note in _fix_notes:
+        print(f"# {_note}")
+    if _dups:
+        print(f"[launch-witness] ERROR: REFUSING to launch — the emitted argv would contain "
+              f"DUPLICATE long-flag(s) {_dups} (argparse last-wins silently shifts schedules; "
+              f"confound C13). Remove the duplicate from --extra-trainer-flags (the derived config "
+              f"already emits it), or reconcile the config.", file=sys.stderr)
+        return 2
+    if extra_flags:
+        print(f"# extra trainer flags (final, post emit-side fixes): {' '.join(extra_flags)}")
 
     # (b) WRITE launch.sh (script-based command — no word-split fragility).
     launch_sh = write_launch_sh(cfg, out_dir, extra_flags=extra_flags or None)
