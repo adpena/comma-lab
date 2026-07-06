@@ -5022,6 +5022,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
     print(json.dumps({"stage": "verdict", "epoch": start_epoch - 1, **{k: round(v, 6) for k, v in v0.items()},
                       "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s0, 4),
+                      # (C6 confound-fix completeness, review R1) liveness stamp on the PRE-LOOP baseline
+                      # verdict: weights_stepped=False + phase="baseline_v0" DISAMBIGUATES this legitimate
+                      # pre-training baseline from a frozen-mid-training deadlock row (both otherwise read
+                      # as "no training happened"). accepted_frac is not yet defined (no batch ran).
+                      "weights_stepped": False, "accepted_frac": None, "frozen_epoch": False,
+                      "phase": "baseline_v0",
                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                       "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
     history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0})
