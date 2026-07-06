@@ -1379,6 +1379,69 @@ If the fix subagent achieves live count = 0 in the same landing, the strict-flip
 
 Any commit that fixes a codex finding WITHOUT landing the corresponding STRICT preflight check is INCOMPLETE. The reviewer should reject the commit on the grounds that the bug class will re-emerge at a different surface.
 
+## Confound self-protection — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator directive 2026-07-05 verbatim *"You shouldn't have missed that, that confound is
+poison ... Spawn multiple fresh eyes confound hunters"* + *"Can we self protect against such confound
+classes and meta confounds"*. **Empirical anchor (the failure this extincts):** a `--spike-guard-mode`
+default of `legacy` — a median-freeze whose reference window updates only on ACCEPTED batches — silently
+FROZE every witness run at ep103-114 while telemetry kept advancing; a whole session's eikonal/viscosity
+verdicts were drawn from FROZEN-weight artifacts and were NON-LOAD-BEARING. A fresh-eyes hunt then found
+**18 confounds** including the meta-confound: the closed-loop controller (built to CATCH trouble)
+CERTIFIED the frozen run "converging." Map: `.omx/research/confound_hunt_synthesis_20260705.md`. This
+rule lifts the sister "Bugs must be permanently fixed AND self-protected against" from the BUG class to
+the CONFOUND class (a mechanism that corrupts a MEASUREMENT) and the META-CONFOUND class (a mechanism
+that corrupts the instrument that measures). Only NO-FAKE and THE GOAL outrank it.
+
+### The confound signature (what to smell)
+
+A confound is **DEFAULT-HARMFUL × SILENT × MEASUREMENT-CORRUPTING**: (a) a default (on or off) in the
+harmful direction, (b) no error/alert — just degraded/frozen/inert dynamics, (c) it makes a downstream
+conclusion attribute the artifact to the wrong cause. Each leg is independently defensible: you cannot
+always stop a mechanism from being harmful, but you can make it LOUD (kill "silent") and you can refuse
+to draw a VERDICT off a corrupted measurement (kill the payoff of "measurement-corrupting").
+
+### The 3-layer immune system (BINDING — every confound fix lands all three where applicable)
+
+- **L1 runtime alarms** — turn silent artifacts LOUD in-loop. Emit a typed `confound_alarm`
+  (+ optional halt) on: skip-rate over a per-epoch ceiling (`spike_deadlock`); any single regularizer
+  term > ~40% of total loss (`term_domination`); gnorm > ~100× grad-clip (`gnorm_hijack`); a default-on
+  "adaptive" actuator pinned with zero change-events (`adaptive_eps_INERT`); `ep_loss==0.0`
+  (`frozen_epoch`). Stamp a run-level LIVENESS signal (accepted-batch fraction + `weights_stepped`) on
+  EVERY verdict / loss_terms / controller / telemetry row — the single highest-value self-protect, so no
+  reader or controller can mistake a frozen run for a converging one.
+- **L2 STRICT preflight gates** — refuse the code anti-pattern statically (per the sister two-landing
+  rule). Canonical: `check_no_spike_guard_defaults_to_deadlock_mode` (#397),
+  `check_reject_filter_updates_reference_from_accepted_only_has_rearm` (#398 — the GENERALIZED structural
+  gate: any reference-window appended only in the accepted branch needs a re-arm), no-duplicate-launch-
+  flags (#399), resume-palliative-flags-imply-warm-start (#400), verdict-pairs-default-is-n600 (#401),
+  telemetry-rows-carry-liveness (#402). Module `src/tac/confound_gates.py`.
+- **L3 verdict-clearance (the meta-confound layer — the one that would have caught ME).** No
+  load-bearing verdict ("X refuted", "lever doesn't help", "converged", "gold") is admissible without an
+  **apparatus-validity precondition**: assert the run was in a valid measuring state for the interpreted
+  window (liveness `ep_loss>0` / accepted-frac above floor; the lever under test actually ACTIVE not
+  inert; the metric computed on the state the reader assumes — live vs EMA, not frozen). Plus a
+  **positive-control sentinel**: a known-effect signal the apparatus must register each run; if the
+  canary is invisible, the instrument is untrusted and NO verdict is admissible. Plus the **recurring
+  fresh-eyes confound-hunt cadence** (like the META-ASSUMPTION review): periodically spawn report-only
+  hunters over orthogonal surfaces (guards/measurement/resume/lever-efficacy/schedule/loss-scale) to
+  find NEW confounds before they poison a session.
+
+### The honest limit
+
+L1+L2 are near-complete against KNOWN confound classes (once named, never silently recur). L3 is
+defense-in-depth against NOVEL/meta confounds: it makes misattribution require a novel confound AND a
+passing positive-control AND a fresh-eyes miss — three independent failures, not one. The apparatus
+points its skepticism at its own measuring instrument, not just at the measurement.
+
+### Cross-references
+
+Sister of "Bugs must be permanently fixed AND self-protected against" (bug→confound generalization) +
+"ANTI-SIGNAL-LOSS ... measurement-first" (a verdict from a corrupted measurement is a lost measurement) +
+the NO-FAKE "surrogate-optimized-but-not-exact-authority-verified" class (a frozen/inert/stale metric is
+a surrogate) + "META-ASSUMPTION ADVERSARIAL REVIEW" (the recurring-hunt cadence sibling) + memories
+`spike-guard-median-freeze-deadlock-ep-loss-zero-signature` + `confound_hunt_synthesis_20260705`.
+
 ## Subagent coherence-by-default — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator concern (2026-05-09): *"i am concerned we are building intelligent systems but they are not coherent and integrated and maybe duplicate ... the should just work and run in the background for us perhaps as skills or via mcp tools or something i'm not sure how to solve this problem ... or maybe just engineer correctly and then save related knowledge and instructions in claude and agents .md."*
