@@ -8869,3 +8869,30 @@ levers; the operator-stated ~0.026 spare-rate figure flagged derivation-OWED, no
 blocking launch-sizing). Pointer 0.19110
 UNMOVED (means/design). [triality: DAG(this); DSL = existing levers only, none invented; eqs = cites registered
 laws, none added]
+
+## FEED-07e (2026-07-07) — LEG-RECONCILIATION for the council draft (b867a3fb1) + its self-review findings
+
+Triality per-leg gate fired on the draft commit (lever/curriculum vocabulary). RECONCILIATION:
+- DSL leg: SATISFIED by prior commit 779cd0e65 (#335) — every --dsl-lever the draft composes
+  (DirectionalBasisRebalance/AnalyticLaneRenderBand/SeedIslandEased/AmplifyIsland/
+  EventTriggeredCurriculum/MuonWarmStart/SegFocalGamma/…) already exists as a composable,
+  parse-verified factory. The draft ADDS no lever.
+- The draft's Curriculum(handoff="event") schedule SKETCH is DELIBERATELY not landed as code:
+  landing it would preempt the council, which owns design + sign-off (operator directive).
+  The DSL fold happens AFTER the council rules, as part of executing its signed design.
+- Equations leg: the draft cites registered laws only (two-regime basis, curriculum-derivation,
+  costate); no new law claimed.
+
+DURABLE FINDINGS from the draft's own round-1 self-review (correcting the OUTGOING OPERATOR's
+numbers — recorded so they never resurface unlabeled):
+1. The pose term 0.018 used in the break-even arithmetic (break-even d_seg ~0.00118, sub-0.15
+   ~0.00077) was the BORROWED ancestor √(10·3.4e-5) — does NOT transfer to the witness; the seg
+   targets carry error bars until the FiLM read-back (#248) measures real witness d_pose. This
+   STRENGTHENS the pose-ON recommendation (the unknown must be measured, not assumed).
+2. "~0.026 spare rate budget" is OPERATOR-STATED, not uniquely derivable (0.018–0.043 depending
+   on assumed seg landing) — derivation OWED.
+3. Probe-internal contradiction: analytic focal-γ island weight-share RISES with γ (0.506→0.633)
+   while measured realized grad share FALLS (0.1268→0.0973) — council Q4: which surface is the
+   calibration authority. Q7 generalizes: verify every named build's live status before a launch
+   depends on it (the #315 status conflict between the 07-05/07-06 symposia).
+Pointer 0.19110 UNMOVED (means/reconciliation).
