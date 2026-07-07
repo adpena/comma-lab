@@ -8896,3 +8896,45 @@ numbers — recorded so they never resurface unlabeled):
    calibration authority. Q7 generalizes: verify every named build's live status before a launch
    depends on it (the #315 status conflict between the 07-05/07-06 symposia).
 Pointer 0.19110 UNMOVED (means/reconciliation).
+
+## FEED-07contract (2026-07-07) — harvest prompting patterns ENGINEERED as contract module + gates
+Operator: "Save and engineer all those patterns as standard behaviors and gates" → the Fable-5
+harvest (`docs/harvest_fable5_prompting_and_loops_20260707.md`) is now STRUCTURAL, not prose.
+BUILT: (1) `src/tac/subagent_contract.py` — canonical dispatcher contract: verbatim-grade
+constants GROUNDED_PROGRESS (harvest #5, the highest-value adoption) · NO_ENDING_ON_PROMISES
+(#9) · FINAL_MESSAGE_REGROUNDING (#12) · STATE_THE_BOUNDARIES (#6) · ANTI_GOLDPLATING (#3) ·
+FRESH_CONTEXT_VERIFIER (#14) · NEVER_REASONING_ECHO (#14 warning, dispatcher-side only) ·
+OWN_ROUND1_REVIEW + TRIALITY_WIRING (#337 contract) · MANUAL_CITATION; composer
+`standard_contract(review=, triality=)`. (2) `check_no_reasoning_echo_instructions` — warn-only
+preflight over .claude/skills/** + prompts/** + docs/*.md + the contract module; negated lines
+exempt; `# REASONING_ECHO_OK:` waiver; refusal-storm prevention. (3)
+`check_subagent_contract_module_integrity` — anti-rot (import + every constant keeps its
+KEY_PHRASES fragment + composer keeps the grounding phrase; names hardcoded gate-side so the
+registry can't self-waive). Both wired into `preflight_all(strict=False)` beside the
+operating-manual gate; LIVE COUNT 0 strict on the real repo (no pre-existing echo hits). 29
+tests green; ruff F clean. CLAUDE.md gains "### Standard subagent contract" inside §The
+Operating Manual; memory `feedback_harvest_patterns_engineered_as_contract_and_gates_20260707.md`
++ MEMORY.md index line. Pointer 0.19110 UNMOVED (means/apparatus). [triality: DAG(this); DSL/eqs
+untouched by design — prompt-contract surface, no lever/finding; drift-gate `[no-triality]` tag
+on the commit]
+
+## FEED-07f (2026-07-07) — OPERATOR WIN-CONDITION FRAMING: PR95-distortion-at-our-rate = sub-0.15, with derived headroom
+
+Operator: "Assuming we can reach PR95 dseg and dpose numbers, we obviously have rate term wiggle
+room; dpose is relatively easy to solve; how dseg responds to levers/schedules/curriculum/capacity
+are the unknowns." DERIVED arithmetic (from measured components; pose-term caveat per FEED-07e):
+- PR95 distortion = 0.1987 − 0.1188 = 0.0799 (~0.062 seg + 0.018 pose). At OUR rate 0.055:
+  S ≈ 0.135 → sub-0.15 WITH margin. Headroom: rate may grow to ~0.070 (~105 KB, +22 KB over
+  current 82.6 KB) and still clear 0.15 at PR95 distortion; to ~167 KB to merely beat 0.19110.
+  THE WIN CONDITION = reach PR95-level distortion on the witness; rate is a war chest.
+- POSE: mechanism de-risked except ONE link — witness-render FiLM response (#248 read-back probe,
+  bounded, cheap). ξ rate proven; ancestor proves scorer-side reachability.
+- D_SEG measured point-responses: islands 63.9%-of-flips unborn (UB caveat) · basis −48% ·
+  lane band 0.00087 · schedule sensitivity (erosion +38% vs clean descent, config-dependent).
+  GENUINE UNKNOWNS: (a) COMPOSED response (point levers nominally overshoot → overlap/antagonism/
+  remaining floor is THE question), (b) d_seg(capacity) 2-point curve, (c) island SURVIVAL through
+  tau/Muon (birth ≠ staying born), (d) flicker-floor share at the new operating point.
+- The running islands A/B = the FIRST composed-response datapoint; council-designed arms refine
+  the same surface. Council should deliberate AGAINST this win condition (target: PR95 distortion,
+  budget: +22 KB) — it converts "lower d_seg" into a concrete, bounded objective.
+Pointer 0.19110 UNMOVED (framing/derivation).
