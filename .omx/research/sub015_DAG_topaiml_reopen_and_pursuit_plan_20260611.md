@@ -8702,3 +8702,19 @@ ranking is not yet INVOKED (the EIG bridge); master_gradient stays honestly-iner
 feeds an archive_sha back to a run. The dashboard LEVERAGE (visualizing costate_shadow.jsonl +
 duty_to_measure + producer_signals + costate_prior) is task #262 (operator-sequenced next). Pointer
 0.19110 UNMOVED (apparatus). [triality: DAG(this); code — apparatus/[no-triality] commits]
+
+## FEED-262-334 (2026-07-06) — operator-sequenced 247→262→334 closed
+- **#262/#266 WHY/HOW `c5a00d6ac`**: dashboard 3×2→4×2, added Yousfi-arc WHY (residual character from the
+  annulus SENSE narration) + HOW (θ* costate controller's AUTO-FIRED output: top ΔS/cost rec · levers
+  owed-measurement · live producers · cross-run costate prior). Makes the #247 controller VISIBLE on the
+  live dashboard. Verified on the live mod32cap run (HOW: 1 rec/23 owed/3 producers; WHY: 1509-char
+  narration); panels render (51KB PNG); None-run_dir placeholder safe.
+- **#334 `2a41cadd3`**: schedule/curriculum first-class DSL object as VERIFIED source-of-record.
+  `verify_schedule_consistency` + `CURRICULUM_OWNED_FLAGS` bind the Curriculum object's compiled schedule
+  to the autoconfig's EMITTED flags (field↔emission drift gate: sealed config passes []; a forced
+  field≠emission divergence is CAUGHT — real binding, not trivially-true). 18 tests.
+  **Honest scope:** the objects ARE first-class (built/tested/validated-fail-closed/deep-math-derived per
+  #302/#318) + now drift-gated against the config. The DEEPER step — the launcher EMITS the schedule BY
+  CALLING the object (one generative source) — is DEFERRED to protect the sealed byte-identity gates the
+  whole campaign depends on; tracked as #332 "make the DSL the complete auto-generated SoT".
+Pointer 0.19110 UNMOVED (all apparatus). [triality: DAG(this); code — [no-triality] commits]
