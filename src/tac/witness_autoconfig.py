@@ -1152,6 +1152,16 @@ _FRESH_SEEDED_DELTAS: dict = {
     "mod_dim": 19,                       # Whitney floor (mod-19 + film-stiefel well-posed, review L4)
     "l7_start_epoch": 1001,              # L1: TRUE "never" (1000 would run l7_softplus on the final ep)
     "verdict_batch": 64,
+    # (#314 / DAG DRIFT-D2 fix, 2026-07-06) the fresh_seeded lineage's INTENDED pose-carrier frame0
+    # source is the STORE-NOTHING generated render (Track B 18927a1ae; the #205 argv ledger KEEP row
+    # HAD --pose-carrier-source generated). Because derive_fresh_seeded_config inherits from
+    # derive_sealed_205_config (whose field default is "real_keyframe" -> flag NOT emitted), v1->v5
+    # silently reverted to the warp-real-luma table path — a RATE-ACCOUNTING drift: any byte-close /
+    # S-projection from those runs must charge the COUNTED uint8-keyframe rate (697,941 B ds4), NOT
+    # the ~1 KB store-nothing rate. Carrying the delta EXPLICITLY here makes the intent structural:
+    # fresh_seeded now always emits --pose-carrier-source generated (regression-pinned in
+    # test_witness_autoconfig.py::test_fresh_seeded_carries_store_nothing_pose_carrier_source).
+    "pose_carrier_source": "generated",
 }
 
 
@@ -1172,7 +1182,14 @@ def derive_fresh_seeded_config(
       paint / --seed-islands / eikonal 0.05->0.10 / geometric+constant tau=1.0 / mod-dim 19 /
       --film-stiefel / --muon-warm-start-momentum + --muon-lr-final-frac 0.1 / band 350 /
       rewarmup 20-cosine / --closed-loop-control / --l7-start-epoch 1001 / --hosc-beta-end 5.134 /
-      --verdict-batch 64.
+      --verdict-batch 64 / --pose-carrier-source generated (#314 drift fix — see below).
+
+    **#314 pose-carrier-source drift fix (2026-07-06, DAG DRIFT-D2):** the fresh_seeded lineage
+    INTENDED the store-nothing pose carrier (``--pose-carrier-source generated``, the #205 ledger
+    KEEP row), but v1->v5 inherited the sealed default ``real_keyframe`` because the flag is emitted
+    only when != default. The delta is now EXPLICIT in :data:`_FRESH_SEEDED_DELTAS`. Rate-accounting
+    implication for the affected v1->v5 runs is APPENDED (not rewritten) in the DAG: their byte-close
+    rows must charge the counted uint8-keyframe rate, not the ~1 KB store-nothing rate.
 
     Deliberately NOT included (per the review's CRITICAL findings — do not "fix" these back in):
 
@@ -1230,12 +1247,20 @@ def derive_fresh_seeded_config(
         "rewarmup 20-cosine, band 350, muon warm-start+final-frac 0.1, hosc-beta-end 5.134 (M4), "
         "verdict-batch 64, closed-loop control ON; event-triggered curriculum + bank-6 + dilate "
         "changes deliberately EXCLUDED (C1/C2/C3).", Portability.INSTANCE)
+    prov["pose_carrier_source"] = ProvenancedValue(
+        str(d["pose_carrier_source"]), SRC_RECALLED,
+        "#314 / DAG DRIFT-D2 fix (2026-07-06): fresh_seeded's INTENDED frame0 source is the "
+        "STORE-NOTHING generated render (Track B 18927a1ae; #205 ledger KEEP row). v1->v5 silently "
+        "inherited sealed real_keyframe (flag emitted only when != default) — a rate-accounting "
+        "drift (counted uint8-keyframe rate vs ~1 KB store-nothing). Now an explicit delta.",
+        Portability.SCORER_FIXED)
     return replace(
         base,
         fresh_seeded=True,
         mod_dim=int(d["mod_dim"]),
         l7_start_epoch=int(d["l7_start_epoch"]),
         verdict_batch=int(d["verdict_batch"]),
+        pose_carrier_source=str(d["pose_carrier_source"]),
         proven_base=pb,
         all_levers_base=alb,
         provenance=prov,

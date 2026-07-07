@@ -398,7 +398,10 @@ def test_fresh_seeded_inherits_sealed_non_delta_values():
               "--stage-transition-rewarmup-epochs", "--stage-transition-rewarmup-shape",
               "--l7-start-epoch", "--hosc-beta-end", "--verdict-batch"}
     new_only = {"--seed-islands", "--eikonal-weight-end", "--film-stiefel",
-                "--muon-warm-start-momentum", "--muon-lr-final-frac", "--closed-loop-control"}
+                "--muon-warm-start-momentum", "--muon-lr-final-frac", "--closed-loop-control",
+                # #314 / DRIFT-D2 fix: the store-nothing pose source is an EXPLICIT fresh delta now
+                # (sealed keeps the field default real_keyframe => never emits the flag).
+                "--pose-carrier-source"}
     assert set(fresh) - set(sealed) == new_only
     for k in set(sealed) & set(fresh) - deltas:
         assert fresh[k] == sealed[k], f"non-delta knob drifted: {k}: {sealed[k]} -> {fresh[k]}"
@@ -414,6 +417,67 @@ def test_sealed_205_unchanged_by_fresh_seeded_machinery():
     for f in ("--seed-islands", "--eikonal-weight-end", "--film-stiefel",
               "--muon-warm-start-momentum", "--muon-lr-final-frac", "--closed-loop-control"):
         assert f not in fd, f"sealed_205 must not emit the fresh-only flag {f}"
+
+
+def test_fresh_seeded_carries_store_nothing_pose_carrier_source():
+    """#314 / DAG DRIFT-D2 regression pin (2026-07-06): the fresh_seeded family's INTENDED pose
+    frame0 source is the STORE-NOTHING generated render (the #205 argv ledger KEEP row). The v1->v5
+    drift happened because derive_fresh_seeded_config inherited derive_sealed_205_config's field
+    default real_keyframe and the flag is emitted only when != default — so the intent silently
+    vanished from the argv (rate-accounting drift: counted uint8-keyframe vs ~1 KB store-nothing).
+    Pin BOTH sides: fresh emits --pose-carrier-source generated; sealed stays byte-identical
+    (never emits the flag)."""
+    cfg = _fresh_cfg()
+    assert cfg.pose_carrier_source == "generated"
+    fd = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
+    assert fd["--pose-carrier-source"] == "generated", \
+        "#314 regression: fresh_seeded must EXPLICITLY emit the store-nothing pose source"
+    # provenance row records the drift + the fix (queryable, no rediscovery)
+    assert "pose_carrier_source" in cfg.provenance
+    assert "#314" in cfg.provenance["pose_carrier_source"].provenance
+    # sealed_205 byte-identity unchanged: field default real_keyframe => flag not emitted
+    sealed = _parse_flag_dict(
+        wac.derive_sealed_205_config(_GT_N600, num_pairs=600, epochs=1000).to_trainer_flags("OUT"))
+    assert "--pose-carrier-source" not in sealed
+    # store_nothing_205 (the original Track B arm) still emits generated — the two surfaces agree
+    sn = _parse_flag_dict(
+        wac.derive_store_nothing_205_config(
+            _GT_N600, num_pairs=600, epochs=1000).to_trainer_flags("OUT"))
+    assert sn["--pose-carrier-source"] == "generated"
+
+
+def test_fresh_seeded_every_delta_key_materializes_in_argv():
+    """CLASS guard for the #314/D2 drift class (config-orphan confound): a key added to
+    _FRESH_SEEDED_DELTAS but never consumed by derive_fresh_seeded_config silently does nothing —
+    exactly how the v1->v5 pose-source intent vanished. For EVERY delta key, assert the fresh argv
+    actually DIFFERS from the sealed argv at that key's flag; the coverage assertion makes an
+    unmapped new key fail loudly here instead of orphaning."""
+    key_to_flag = {
+        "lane_prior_phi1_mode": "--lane-prior-phi1-mode",
+        "eikonal_weight": "--eikonal-weight",
+        "softmax_temp_end": "--softmax-temp-end",
+        "st_rewarmup_epochs": "--stage-transition-rewarmup-epochs",
+        "st_rewarmup_shape": "--stage-transition-rewarmup-shape",
+        "tau_anneal_shape": "--tau-anneal-shape",
+        "lane_band_start_epoch": "--lane-band-start-epoch",
+        "hosc_beta_end": "--hosc-beta-end",
+        "mod_dim": "--mod-dim",
+        "l7_start_epoch": "--l7-start-epoch",
+        "verdict_batch": "--verdict-batch",
+        "pose_carrier_source": "--pose-carrier-source",
+    }
+    missing_map = set(wac._FRESH_SEEDED_DELTAS) - set(key_to_flag)
+    assert missing_map == set(), \
+        f"new _FRESH_SEEDED_DELTAS key(s) {missing_map} not mapped here — map them AND consume them " \
+        "in derive_fresh_seeded_config, or the intent orphans (the #314/D2 drift class)"
+    sealed = _parse_flag_dict(
+        wac.derive_sealed_205_config(_GT_N600, num_pairs=600, epochs=1000).to_trainer_flags("OUT"))
+    fresh = _parse_flag_dict(_fresh_cfg().to_trainer_flags("OUT"))
+    for key, flag in key_to_flag.items():
+        assert flag in fresh, f"delta {key} did not materialize: {flag} absent from fresh argv"
+        assert fresh.get(flag) != sealed.get(flag), \
+            f"delta {key} is a NO-OP: {flag} identical in sealed and fresh argv " \
+            "(the value was not consumed — #314/D2 drift class)"
 
 
 def test_fresh_seeded_provenance_records_the_deltas():
