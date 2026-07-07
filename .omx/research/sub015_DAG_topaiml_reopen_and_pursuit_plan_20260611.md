@@ -8750,3 +8750,30 @@ bit-alloc #157 / flat-minima #242 / TropNNC #311 / KD). Mod-dim = SECONDARY, 2 p
 ladder. Memory: feedback_basis_match_rule118_are_the_levers_stop_capacity_sweep_reflex_20260707.
 Rate context: current 0.05499 vs PR95 MEASURED 0.1188 (178,417 B) — rate beaten; d_seg the wall.
 pointer 0.19110 UNMOVED (means/design).
+
+## FEED-07b (2026-07-07) — OPERATOR BINDING: the eight danced-around measured levers → DSL + triality + tasks (2nd symposium input)
+
+Operator: "All eight of those must be wired into DSL and made available and triality and DAG and
+canonical equations and tasks updated as appropriate." The filter that produced the eight:
+measured-or-derived signal ALREADY IN HAND, high ΔS/effort, still pending. Dispositions (honest,
+never-invent-flags — wireable vs build-needed):
+
+| # | Lever | Signal in hand | DSL disposition |
+|---|---|---|---|
+| 1 | #220 AA coverage render + grid≥384 | "the gate's #1 MEASURED islands lever" (own gate verdict) | WIRE NOW: `AACoverageRender` Lever (--render-aa supersample --aa-supersample; grid via --render-h/--render-w) — flags exist; note the new AA-compose guards (residual/seed incompatible until compose-after-downsample lands) |
+| 2 | #310 step-native activation (+FINER++ init) | capstone lever #5, in-code UNSWEPT; deep-math L∞-at-edge optimal; FINER++ = published fix for measured hosc saturation | WIRE NOW: `StepNativeActivation` Lever (--activation step_basis; verify argparse). FINER++ bias-init = BUILD (flag likely absent — do NOT invent; task carries it) |
+| 3 | #218 byte-free head (logit-adjust/ETF/clDice) | textbook rare-class cure at ZERO bytes; composes-with/partially-subsumes LADDER | WIRE what exists (persistence/margin-field-head weights if flags exist); logit-adjustment per-class offset = BUILD (small); equations leg: logit-adjustment law registerable NOW |
+| 4 | #308 grid-bulk + INR-annulus | NeurIPS'25 theorem (grids≥INRs dense/smooth; INRs win contours) = FEED-07a logic extended to bulk | BUILD (no flags); DAG+task; theorem citation → equations leg note |
+| 5 | #157-APPLY sensitivity bit-alloc on witness weights | tool COMPLETE, never pointed at our checkpoint; compress-half of train-big-compress-small | POST-PASS (not a trainer lever): task created; byte-closed re-measure is the deliverable |
+| 6 | #307 contour-string flip coding | published 1-1.5 b/contour-px vs our ~8 b/flip = 4-6× gap; b<0.65 GO bar pre-registered | $0 MEASUREMENT (tool, not lever); task exists |
+| 7 | #270 Muon warm-start/anneal | measured +8% cold-Muon transient; flags wired (#272) | VERIFY composable `MuonWarmStart` Lever exists (flags --muon-warm-start-momentum --muon-lr-final-frac); fires ep726 of live #205 (~imminent — do not forget) |
+| 8 | #314 pose-carrier-source drift | score-relevant rate-accounting drift (fresh_seeded dropped store-nothing) | FIX task (autoconfig inheritance), not a lever; pending |
+
+Wireable-now set {1,2,7} + partial {3} → folded into the #335 wire-in (same agent, owns the
+curriculum_dsl.py slot, sequenced behind the DSL class-fix). Build-needed {2b,3b,4} = named tasks,
+NOT stub levers (never-invent-flags). Canonical-equation candidates: two-regime basis law (#335A),
+step-native L∞-at-edge optimality (register with capstone anchors), logit-adjustment class-prior
+law. The costate controller's duty_to_measure MUST surface all wireable levers (auto-derives from
+lever_factories()). META: the eight are the empirical test of the #247 DECIDE queue — if the
+controller doesn't rank them top, that is a controller-calibration finding. Pointer 0.19110
+UNMOVED (means/design). Sister: FEED-07a.
