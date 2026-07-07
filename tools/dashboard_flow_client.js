@@ -104,13 +104,30 @@
       updateStatus();
     }
   }
+  var pollTimer = null;
+  function pollWhileRendering() {
+    // (#343) keep the pair-progress line live while a governed render is in flight; stops as
+    // soon as the sequence lands.
+    if (pollTimer || SEQ) return;
+    pollTimer = setInterval(function () {
+      if (SEQ || !inited) { clearInterval(pollTimer); pollTimer = null; return; }
+      fetchSequence(null);
+    }, 20000);
+  }
   function fetchSequence(meta) {
     if (fetching) return;
     fetching = true;
-    if (inited) showMsg("fetching the n600 video sequence… (one-time)");
+    if (inited && meta && meta.ok) showMsg("fetching the n600 video sequence… (one-time)");
     fetch("/api/flow_sequence" + (location.search || ""), { credentials: "same-origin" })
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (r) { if (!r.ok && r.status !== 202) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function (seq) {
+        if (seq && seq.ok === false) {
+          // 202 readiness meta (idle / rendering-with-progress / error) — informative, not a failure.
+          window.__flow = window.__flow || {}; window.__flow.ready = seq;
+          if (!SEQ && inited) { showMsg(statusMsg(seq)); updateStatus(); }
+          if (seq.status === "rendering") pollWhileRendering();
+          return;
+        }
         if (!seq || !seq.ok || !Array.isArray(seq.frames) || !seq.frames.length) throw new Error("empty sequence");
         onSequence(seq);
       })
@@ -410,7 +427,11 @@
     var el = $("flowstatus"); if (!el) return;
     if (!SEQ) {
       var meta = (window.__flow || {}).ready;
-      el.textContent = meta && meta.status ? meta.status : "no sequence yet";
+      var s = meta && meta.status ? meta.status : "no sequence yet";
+      if (meta && meta.status === "rendering" && typeof meta.pair === "number" && meta.n) {
+        s = "rendering " + meta.pair + "/" + meta.n;
+      }
+      el.textContent = s;
       return;
     }
     var i = curFrame | 0, ds = frameDseg(i), path = (gpuOk && !gpuLost) ? "WebGPU" : "canvas2d";
@@ -504,7 +525,12 @@
       v = $("flowthr_v"); if (v) v.textContent = thr.toFixed(2);
       var meta = (window.__flow || {}).ready;
       if (meta && meta.ok && !SEQ) fetchSequence(meta);
-      else if (!SEQ) showMsg(statusMsg(meta));
+      else if (!SEQ) {
+        showMsg(statusMsg(meta));
+        // (#343) a fresh page load mid-render never receives the WS flow_ready ping (it only
+        // fires on completion) — ask the API directly; a 202 carries live pair-progress.
+        fetchSequence(null);
+      }
       renderNow();
     });
   }
