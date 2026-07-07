@@ -35,9 +35,16 @@ dashboard_server:app``) with argparse overrides when run as ``__main__``:
 ``DASH_GOAL_DSEG`` / ``DASH_GOAL_DSEG_15`` / ``DASH_POLL`` / ``DASH_HOST`` /
 ``DASH_PORT`` / ``DASH_ACCESS_KEY`` / ``DASH_CADENCE_STATE`` / ``DASH_TRAINING_PID``.
 
-    .venv/bin/python tools/dashboard_server.py \
-        --run-dir experiments/results/levelset_openpilot_seeded_n200_DEPLOY \
-        --port 8790 --tau 300 --l7 600
+    .venv/bin/python tools/dashboard_server.py --port 8790
+
+STAGE MAP IS DERIVED, NOT HAND-FED (operator 2026-07-07): the curriculum stage
+boundaries are read back PER RUN from the run's own launch.sh through the trainer's
+REAL argparse + the run's emitted transition evidence, via
+``tac.witness_dsl.schedule_readback`` (the DSL single source of truth). ``--tau`` /
+``--l7`` are explicit OVERRIDES only; when the read-back fails (old run dirs) the
+page shows a visible "schedule: fallback" marker. Disabled stages (e.g.
+``--l7-start-epoch 1001`` on a 1000-epoch run) are OMITTED — the exact mislabel
+class this fixes.
 """
 from __future__ import annotations
 
@@ -49,7 +56,7 @@ import json
 import os
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -58,11 +65,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_levelset_dashboard as rld  # noqa: E402
 import dashboard_trajectory_model as dtm  # noqa: E402  (sophisticated DATA-DERIVED projection)
 
+# ── canonical DSL schedule read-back (operator 2026-07-07: observability consumers
+# DERIVE the stage map from the run's own config via the DSL — never hand-fed
+# constants). Fail-open: a missing/broken tac install must never kill the daemon;
+# refresh() then falls back to the legacy path with a visible "schedule: fallback".
+try:
+    from tac.witness_dsl.schedule_readback import (  # noqa: E402
+        read_schedule as _dsl_read_schedule,
+        resolve_run_dir_for_log as _dsl_resolve_run_dir,
+    )
+except Exception:  # noqa: BLE001 — load-bearing daemon; degrade visibly, never crash
+    _dsl_read_schedule = None
+    _dsl_resolve_run_dir = None
+
 from starlette.applications import Starlette  # noqa: E402
 from starlette.responses import (  # noqa: E402
     HTMLResponse,
     JSONResponse,
-    PlainTextResponse,
 )
 from starlette.routing import Route, WebSocketRoute  # noqa: E402
 from starlette.websockets import WebSocket, WebSocketDisconnect  # noqa: E402
@@ -84,8 +103,12 @@ _ARCHIVE_NORM_BYTES = 37_545_489   # contest rate-term normalizer (25·bytes/N)
 class Config:
     run_dir: str = ""
     log_glob: str = ""
-    tau: int = 300
-    l7: int = 600
+    # Stage boundaries are DERIVED per-run from the run's own config via the DSL
+    # read-back (tac.witness_dsl.schedule_readback) — the class-fix for the
+    # "--l7 600 while the run had l7 disabled at 1001" mislabel incident. None
+    # (the default) = derive; an explicit CLI/env value is an OVERRIDE only.
+    tau: int | None = None
+    l7: int | None = None
     goal_dseg: float = 0.00092  # sub-0.19 d_seg goal line
     goal_dseg_15: float = 0.00032  # sub-0.15 d_seg goal line
     poll: float = 5.0
@@ -160,13 +183,21 @@ class Config:
         return ".omx/tmp/levelset_*.log"
 
 
+def _opt_int_env(v: str | None) -> int | None:
+    """Optional int env: unset/empty/non-int -> None (= derive via the DSL read-back)."""
+    try:
+        return int(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 def config_from_env() -> Config:
     e = os.environ.get
     return Config(
         run_dir=e("DASH_RUN_DIR", ""),
         log_glob=e("DASH_LOG_GLOB", ""),
-        tau=int(e("DASH_TAU", "300")),
-        l7=int(e("DASH_L7", "600")),
+        tau=_opt_int_env(e("DASH_TAU")),
+        l7=_opt_int_env(e("DASH_L7")),
         goal_dseg=float(e("DASH_GOAL_DSEG", "0.00092")),
         goal_dseg_15=float(e("DASH_GOAL_DSEG_15", "0.00032")),
         poll=float(e("DASH_POLL", "5.0")),
@@ -633,6 +664,9 @@ class LiveState:
         self.n_pairs: int | None = None       # N for this run (n200 DOE pilot / n600 scored)
         self.warming_up: bool = False         # live run resolved but no verdict yet (structured-init)
         self.run_config: dict = {}            # parsed launch.sh/run.log config + curriculum schedule
+        # canonical DSL schedule read-back (PLANNED launch.sh-through-real-argparse
+        # + ACTUAL fired-transition evidence). {"ok": False} -> visible fallback.
+        self.schedule_readback: dict = {"ok": False, "reason": "not yet derived"}
         self.run_info: dict = {}              # #205 full run-info dict (rld._collect_run_info)
         self.run_info_html: str = ""          # #205 strip HTML (rld._run_info_html), pre-rendered off-loop
         self.projection: dict = {"ok": False, "reason": "calibrating"}  # DATA-DERIVED trajectory model
@@ -776,16 +810,50 @@ class LiveState:
         except Exception:
             self.run_config = {"source": "none", "flags": {}, "groups": {}, "schedule": {}}
 
-        # Effective curriculum schedule (boundaries the cadence + projection use): the
-        # run's OWN flags, with the Muon boundary from the resume ancestry when present.
+        # CANONICAL DSL SCHEDULE READ-BACK (operator 2026-07-07): derive the stage map
+        # from the run's OWN config through the trainer's REAL argparse + the run's
+        # emitted transition evidence (fired events / stage ckpts / muon switch).
+        # Fail-open: ok=False -> the legacy path below + a visible "schedule: fallback".
+        _rb = None
+        if _dsl_read_schedule is not None:
+            try:
+                # a .omx/tmp tee log's parent is NOT the run dir — resolve the real
+                # out-dir from the log head (the launcher echoes its launch.sh path).
+                _rbd = None
+                if latest is not None and _dsl_resolve_run_dir is not None:
+                    _rbd = _dsl_resolve_run_dir(latest)
+                if _rbd is None and latest is not None:
+                    _rbd = latest.parent
+                _rb = _dsl_read_schedule(_rbd, log_paths=[str(p) for p in chain])
+            except Exception:  # noqa: BLE001 — telemetry must never crash the daemon
+                _rb = None
+        self.schedule_readback = (
+            _rb.to_dict() if _rb is not None
+            else {"ok": False, "reason": "witness_dsl read-back unavailable"})
+
+        # Effective curriculum schedule (boundaries the cadence + projection use):
+        # the DSL read-back when it resolved (disabled stages OMITTED -> a disabled
+        # l7 can never be labeled); else the legacy flag-walk parse, with the Muon
+        # boundary from the resume ancestry when present.
         _sched = (self.run_config or {}).get("schedule", {}) or {}
-        eval_every = _sched.get("eval_every")
-        sched_eff = {
-            "tau_start": _sched.get("tau_start"), "l7_start": _sched.get("l7_start"),
-            "muon_start": (self.muon_start if self.muon_start is not None else _sched.get("muon_start")),
-            "epochs": _sched.get("epochs"), "eval_every": eval_every,
-            "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
-        }
+        if _rb is not None and _rb.ok:
+            _sd = _rb.as_schedule_dict()
+            eval_every = _sd.get("eval_every") or _sched.get("eval_every")
+            sched_eff = {
+                "tau_start": _sd.get("tau_start"), "l7_start": _sd.get("l7_start"),
+                "muon_start": (_sd.get("muon_start") if _sd.get("muon_start") is not None
+                               else self.muon_start),
+                "epochs": _sd.get("epochs"), "eval_every": eval_every,
+                "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
+            }
+        else:
+            eval_every = _sched.get("eval_every")
+            sched_eff = {
+                "tau_start": _sched.get("tau_start"), "l7_start": _sched.get("l7_start"),
+                "muon_start": (self.muon_start if self.muon_start is not None else _sched.get("muon_start")),
+                "epochs": _sched.get("epochs"), "eval_every": eval_every,
+                "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
+            }
 
         # liveness + cadence from the LIVE (latest) arm only (the freshest log).
         now = time.time()
@@ -1270,17 +1338,72 @@ class LiveState:
         return False
 
     # ---- snapshot for client ----
+    def _stage_map_and_source(self) -> tuple[list[dict], str, dict]:
+        """The per-run derived stage map + provenance label + resolved legacy scalars.
+
+        Resolution order (operator 2026-07-07): explicit ``--tau``/``--l7`` CLI/env
+        values OVERRIDE (explicit-override-only; deprecation note in --help); when
+        NOT passed, the map is DERIVED from the run's own config via the DSL
+        read-back; when the read-back fails (old run dirs, missing launch.sh) the
+        legacy flag-walk/constants path is used with a visible "fallback" marker.
+        """
+        cfg = self.cfg
+        sched = (self.run_config or {}).get("schedule", {}) or {}
+        rb = self.schedule_readback or {}
+        rb_ok = bool(rb.get("ok"))
+        overridden = cfg.tau is not None or cfg.l7 is not None
+        if rb_ok and not overridden:
+            stage_map = [dict(s) for s in rb.get("stages", [])]
+            source = f"derived({rb.get('source', 'launch.sh')})"
+        else:
+            # OVERRIDE (explicit CLI values win) or FALLBACK (legacy behavior: run
+            # flags, then the historical 300/600 constants — marked visibly).
+            derived = {s.get("name"): s for s in rb.get("stages", [])} if rb_ok else {}
+            epochs = (rb.get("epochs") if rb_ok else None) or sched.get("epochs")
+
+            def _resolve(name: str, cli_val, sched_key: str, legacy: int):
+                if cli_val is not None:
+                    return int(cli_val)
+                d = derived.get(name)
+                if d is not None:
+                    return d.get("start")
+                v = sched.get(sched_key)
+                if v is not None:
+                    return int(v)
+                return None if rb_ok else legacy
+            tau_v = _resolve("tau", cfg.tau, "tau_start", 300)
+            l7_v = _resolve("l7", cfg.l7, "l7_start", 600)
+            muon_v = (self.muon_start if self.muon_start is not None
+                      else sched.get("muon_start"))
+            if derived.get("Muon") is not None and muon_v is None:
+                muon_v = derived["Muon"].get("start")
+            stage_map = [{"name": "CE", "start": 0, "mode": "fixed",
+                          "status": "scheduled", "source": "override"}]
+            for name, v in (("tau", tau_v), ("l7", l7_v), ("Muon", muon_v)):
+                if v is None:
+                    continue
+                if epochs is not None and int(v) >= int(epochs):
+                    continue  # disabled ("never" form) — conditional rendering omits it
+                stage_map.append({"name": name, "start": int(v), "mode": "fixed",
+                                  "status": "scheduled", "source": "override"})
+            source = "override(cli)" if overridden else "fallback"
+        legacy = {s["name"]: s.get("start") for s in stage_map
+                  if s.get("start") is not None}
+        return stage_map, source, legacy
+
     def meta(self) -> dict:
         cfg = self.cfg
         sched = (self.run_config or {}).get("schedule", {}) or {}
-        # Curriculum boundaries: prefer the run's OWN flags (the actual schedule) over
-        # the dashboard launch defaults; Muon boundary from the resume ancestry OR the
-        # --muon-start-epoch flag (from-scratch curriculum runs have no resume).
-        tau = sched.get("tau_start") if sched.get("tau_start") is not None else cfg.tau
-        l7 = sched.get("l7_start") if sched.get("l7_start") is not None else cfg.l7
-        muon = self.muon_start if self.muon_start is not None else sched.get("muon_start")
+        stage_map, sched_source, _legacy = self._stage_map_and_source()
+        # Legacy scalar fields kept for back-compat consumers; None when the stage
+        # is absent from the derived map (conditional rendering — never a phantom l7).
+        tau = _legacy.get("tau")
+        l7 = _legacy.get("l7")
+        muon = _legacy.get("Muon")
         return {
             "tau": tau, "l7": l7,
+            "stage_map": stage_map,             # derived per-run map (union entries)
+            "schedule_source": sched_source,    # derived(...) | override(cli) | fallback
             "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
             "pointer": POINTER, "watched": self.watched,
             "run_dir": self.watched_dir or cfg.run_dir,  # auto-latest: the live arm dir
@@ -2796,7 +2919,8 @@ function drawPanel(canvas, key, opt){
   // x range — extend to the FULL curriculum horizon (schedule.epochs) so all 4
   // stage bands (incl. the FUTURE Muon band) are visible up front, not just up to l7.
   const schedEnd=(META.schedule&&META.schedule.epochs)||0;
-  let xmin=0, xmax=Math.max(META.l7||BOOT.l7, schedEnd, ...(pts.map(p=>p[0])), 1);
+  const _mapStarts=(stageMap()||[]).map(stageBoundary).filter(v=>v!=null);
+  let xmin=0, xmax=Math.max((META.l7!=null?META.l7:BOOT.l7)||0, schedEnd, ..._mapStarts, ...(pts.map(p=>p[0])), 1);
   if(xmax<=xmin) xmax=xmin+1;
   // y range over data + hlines
   let yvals=pts.map(p=>p[1]);
@@ -2811,12 +2935,27 @@ function drawPanel(canvas, key, opt){
   const sy=v=>{let lv=L(v);return y0+(Lmax-lv)/(Lmax-Lmin)*(y1-y0);};
   // store transform for hit-testing (tooltip + crosshair)
   canvas._tf={x0:x0,x1:x1,y0:y0,y1:y1,xmin:xmin,xmax:xmax};
-  // stage shading (CE / tau / l7 / Muon — Muon band only when the boundary is known)
-  const tau=META.tau||BOOT.tau, l7=META.l7||BOOT.l7;
+  // stage shading — CONDITIONAL RENDERING from the derived per-run map: only stages
+  // the run actually has get a band (a disabled l7 never paints). Legacy constant
+  // spans only when no map is present (old server).
+  const tau=(META.tau!=null)?META.tau:BOOT.tau, l7=(META.l7!=null)?META.l7:BOOT.l7;
   const mu=(META.muon_start!=null)?META.muon_start:null;
-  const l7end=(mu!=null)?mu:xmax;
-  const spans=[[xmin,tau,BANDS.ce],[tau,l7,BANDS.tau],[l7,l7end,BANDS.l7]];
-  if(mu!=null) spans.push([mu,xmax,BANDS.muon]);
+  let spans=[], vls=[];
+  const map=stageMap();
+  if(map){
+    const bands=map.map(s=>[stageBoundary(s),s]).filter(x=>x[0]!=null)
+                   .sort((a,b)=>a[0]-b[0]);
+    for(let i=0;i<bands.length;i++){
+      const a=bands[i][0], b=(i+1<bands.length)?bands[i+1][0]:xmax, s=bands[i][1];
+      spans.push([a,b,BANDS[s.name.toLowerCase()]||"#3a3f4a"]);
+      if(a>xmin)vls.push([a,s.name+((s.mode==="event"&&s.status==="pending")?" (cap)":"")]);
+    }
+  }else if(tau!=null&&l7!=null){
+    const l7end=(mu!=null)?mu:xmax;
+    spans=[[xmin,tau,BANDS.ce],[tau,l7,BANDS.tau],[l7,l7end,BANDS.l7]];
+    if(mu!=null) spans.push([mu,xmax,BANDS.muon]);
+    vls=[[tau,"tau"],[l7,"l7"]]; if(mu!=null)vls.push([mu,"Muon"]);
+  }
   ctx.globalAlpha=0.18;
   spans.forEach(s=>{const a=Math.max(s[0],xmin),b=Math.min(s[1],xmax);
     if(b>a){ctx.fillStyle=s[2];ctx.fillRect(sx(a),y0,sx(b)-sx(a),y1-y0);}});
@@ -2840,8 +2979,7 @@ function drawPanel(canvas, key, opt){
     ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle=h.color||"#46d369";ctx.textAlign="left";ctx.fillText(h.label||"",x0+4,yy-3);
   });
-  // stage vlines + labels (tau / l7 / Muon)
-  const vls=[[tau,"tau"],[l7,"l7"]]; if(mu!=null)vls.push([mu,"Muon"]);
+  // stage vlines + labels (from the derived map when present; legacy otherwise)
   vls.forEach(s=>{
     if(s[0]<=xmin||s[0]>xmax)return;const xx=sx(s[0]);
     ctx.strokeStyle="#8b93a3";ctx.setLineDash([3,3]);ctx.globalAlpha=0.7;ctx.lineWidth=1;
@@ -2935,10 +3073,28 @@ function scheduleDraw(){
     if(!$("tab-live").classList.contains("hide")) drawAll();});
 }
 
+// derived per-run stage map (conditional rendering, DSL read-back). Entries:
+// fixed {name,start} | event-gated {name,trigger,status:pending|fired,fired_epoch,cap}.
+// A pending event stage's cap is a HARD CEILING (trainer fires at cap unconditionally),
+// so it is provably active at ep>=cap even before fired evidence lands.
+const STAGE_RANK={CE:0,tau:1,l7:2,Muon:3};
+function stageMap(){return (META.stage_map&&META.stage_map.length)?META.stage_map:null;}
+function stageBoundary(s){return (s.start!=null)?s.start:((s.mode==="event"&&s.status==="pending")?s.cap:null);}
 function stageWord(ep){if(ep==null)return "starting";
-  const tau=META.tau||BOOT.tau,l7=META.l7||BOOT.l7,mu=META.muon_start;
-  if(ep<tau)return "CE";if(ep<l7)return "tau";
+  const map=stageMap();
+  if(map){
+    let best=null;
+    map.forEach(s=>{const b=stageBoundary(s);
+      if(b==null||ep<b)return;
+      if(best==null||(STAGE_RANK[s.name]||0)>=(STAGE_RANK[best.name]||0))best=s;});
+    return best?best.name:(map[0]?map[0].name:"CE");
+  }
+  // legacy fallback (old server / no map): historical constant-boundary labeling
+  const tau=(META.tau!=null)?META.tau:BOOT.tau,l7=(META.l7!=null)?META.l7:BOOT.l7,mu=META.muon_start;
+  if(tau==null)return "?";
+  if(ep<tau)return "CE";if(l7!=null&&ep<l7)return "tau";
   if(mu!=null&&ep>=mu)return "Muon";
+  if(l7==null)return (mu!=null)?"tau":"tau/Muon";
   return (mu!=null)?"l7":"l7/Muon";}
 
 // ---------- scorer breakdown (implied-S decomposition; HONEST measured terms) ----------
@@ -3008,9 +3164,17 @@ function render(){
     $("s_val").textContent=sig(last.implied_S,4);
   }
   renderScorerBreakdown(last);
-  // stage legend: light up Muon only when the boundary is known
-  const muOn=(META.muon_start!=null);
-  document.querySelectorAll('#slegend .sc[data-st="muon"]').forEach(el=>el.classList.toggle("off",!muOn));
+  // stage legend: CONDITIONAL — only stages present in the derived map light up
+  // (l7 hidden when disabled). Legacy Muon-only toggle when no map is present.
+  const _lmap=stageMap();
+  if(_lmap){
+    const present={}; _lmap.forEach(s=>{present[s.name.toLowerCase()]=true;});
+    document.querySelectorAll('#slegend .sc[data-st]').forEach(el=>{
+      el.classList.toggle("off",!present[el.dataset.st]);});
+  }else{
+    const muOn=(META.muon_start!=null);
+    document.querySelectorAll('#slegend .sc[data-st="muon"]').forEach(el=>el.classList.toggle("off",!muOn));
+  }
   renderProjection(g);
   renderConfig();
   renderRunInfo();
@@ -3019,6 +3183,10 @@ function render(){
   let st=[];
   if(k==="missing"){st=["no run log found"];}
   else{st.push(stageWord(ep)+" stage"); if(ep!=null)st.push("ep"+ep);
+    // event-gated stages not yet fired render as "next: <stage> (…) — pending"
+    (stageMap()||[]).forEach(s=>{
+      if(s.mode==="event"&&s.status==="pending"&&(ep==null||s.cap==null||ep<s.cap))
+        st.push("next: "+s.name+" ("+(s.trigger||"event-gated")+") — pending");});
     if(k==="stale")st.push("no verdict in "+fmtAge(LIVE.verdict_age_s)+" — likely stopped");
     else if(LIVE.next_eta_s!=null)st.push("next verdict ~"+fmtAge(LIVE.next_eta_s));}
   $("status").textContent=st.join(" · ");
@@ -3029,12 +3197,24 @@ function render(){
   if(LIVE.cadence_s)d.push("cadence ~"+(LIVE.cadence_s/60).toFixed(0)+"m ("+(LIVE.calibrating?"calibrating":"measured")+")");
   if(META.uptime_s!=null)d.push("dash up "+fmtAge(META.uptime_s));
   if(META.training_alive!=null)d.push("training "+(META.training_alive?"alive":"gone"));
+  // schedule provenance marker — "fallback" is the visible read-back-failed state
+  if(META.schedule_source)d.push("schedule: "+META.schedule_source);
   $("detail").textContent=d.join(" · ")||" ";
   // foot
   $("foot").textContent="[macOS-MLX advisory · NON-PROMOTABLE] · pointer 0.19110 · stages CE · tau · l7 · Muon"+
     (META.watched?(" · "+META.watched):"")+" · "+TRAJ.length+" verdicts · tap charts for details";
   // boot spans in triality
-  $("b_tau").textContent=META.tau||BOOT.tau; $("b_l7").textContent=META.l7||BOOT.l7;
+  // boundary readouts from the derived map: number when resolved, "event-gated
+  // (pending)" for an unfired event stage, "off" when the run disables the stage.
+  const _bm={}; (stageMap()||[]).forEach(s=>{_bm[s.name]=s;});
+  function _btxt(name,legacy){
+    const s=_bm[name];
+    if(s){if(s.start!=null)return s.start;
+      if(s.mode==="event"&&s.status==="pending")return "event-gated (pending)";}
+    if(stageMap())return "off";
+    return (legacy!=null)?legacy:"?";}
+  $("b_tau").textContent=_btxt("tau",(META.tau!=null)?META.tau:BOOT.tau);
+  $("b_l7").textContent=_btxt("l7",(META.l7!=null)?META.l7:BOOT.l7);
   $("b_goal").textContent=sig(META.goal_dseg||BOOT.goal_dseg,4);
   scheduleDraw();
 }
@@ -3540,8 +3720,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--run-dir", default=cfg.run_dir)
     ap.add_argument("--log-glob", default=cfg.log_glob)
-    ap.add_argument("--tau", type=int, default=cfg.tau)
-    ap.add_argument("--l7", type=int, default=cfg.l7)
+    ap.add_argument("--tau", type=int, default=cfg.tau,
+                    help="OVERRIDE only (deprecated as a required input); default = derived "
+                         "from the run's config via witness_dsl schedule read-back")
+    ap.add_argument("--l7", type=int, default=cfg.l7,
+                    help="OVERRIDE only (deprecated as a required input); default = derived "
+                         "from the run's config via witness_dsl schedule read-back "
+                         "(a disabled l7 — start >= epochs — is omitted, never labeled)")
     ap.add_argument("--goal-dseg", type=float, default=cfg.goal_dseg)
     ap.add_argument("--goal-dseg-15", type=float, default=cfg.goal_dseg_15)
     ap.add_argument("--poll", type=float, default=cfg.poll)

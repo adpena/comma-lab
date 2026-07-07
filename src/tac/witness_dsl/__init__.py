@@ -66,6 +66,13 @@ from tac.witness_dsl.curriculum_dsl import (
     verify_schedule_consistency,
     CURRICULUM_OWNED_FLAGS,
 )
+from tac.witness_dsl.schedule_readback import (
+    ScheduleReadback,
+    StageEntry,
+    event_trigger_description,
+    read_schedule,
+    trainer_argv_from_launch_sh,
+)
 from tac.witness_dsl.lever_registry import (
     LeverCompositionError,
     name_composable_levers,
@@ -180,6 +187,12 @@ __all__ = [
     "real_store_true_flags",
     "real_boolean_flags",
     "build_real_trainer_parser",
+    # schedule read-back (the inverse of the compile path; observability derives from it)
+    "ScheduleReadback",
+    "StageEntry",
+    "event_trigger_description",
+    "read_schedule",
+    "trainer_argv_from_launch_sh",
     "LeverCompositionError",
     "name_composable_levers",
     "resolve_composable_lever",
