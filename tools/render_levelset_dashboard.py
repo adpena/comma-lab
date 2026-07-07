@@ -1090,6 +1090,92 @@ def _render_control_panel(ax, control: dict, tau: int) -> None:
                   labelcolor=_FG, framealpha=0.9)
 
 
+def _latest_costate_shadow(run_dir) -> dict | None:
+    """Read the LAST row of ``<run_dir>/costate_shadow.jsonl`` — the costate controller's
+    now-automatic per-tick output (recommendations · duty_to_measure · producer_signals ·
+    costate_prior). Returns None if absent/unreadable (the panel then shows an honest placeholder)."""
+    if run_dir is None:
+        return None
+    try:
+        p = Path(run_dir) / "costate_shadow.jsonl"
+        if not p.is_file():
+            return None
+        last = None
+        for ln in p.read_text(errors="replace").splitlines():
+            ln = ln.strip()
+            if ln:
+                last = ln
+        return json.loads(last) if last else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _render_why_panel(ax, run_dir) -> None:
+    """PNG panel (Yousfi arc — WHY): the residual's CHARACTER, read from the annulus live narration —
+    is the residual boundary-jitter on the codim-1 separatrix (topology correct, ~1px off) or a
+    structural miss? which class is the dominant stuck boundary? is the annulus tightening? All
+    advisory (macOS-numpy), from the SENSE layer the costate controller consumes."""
+    _style_ax(ax)
+    ax.set_title("WHY — residual character (annulus SENSE)", fontsize=10.5, color=_FG, loc="left")
+    ax.set_xlabel("codim-1 separatrix diagnosis · advisory (macOS-numpy) NON-PROMOTABLE",
+                  fontsize=8, color=_MUTED)
+    ax.set_xticks([]); ax.set_yticks([])
+    narr = None
+    if run_dir is not None:
+        try:
+            np_ = Path(run_dir) / "annulus_live_narration.txt"
+            if np_.is_file():
+                narr = np_.read_text(errors="replace")
+        except Exception:  # noqa: BLE001
+            narr = None
+    if not narr:
+        ax.text(0.5, 0.5, "awaiting annulus SENSE narration", color=_MUTED, fontsize=9,
+                ha="center", va="center", transform=ax.transAxes)
+        return
+    # surface the WHY lines from the narration (the "WHY (...)" prefixed lines are the mechanics)
+    lines = [ln.strip() for ln in narr.splitlines() if ln.strip().startswith("[") or "WHY" in ln]
+    y = 0.94
+    for ln in lines[:8]:
+        ax.text(0.02, y, ln[:120], color=_FG, fontsize=7.2, ha="left", va="top",
+                transform=ax.transAxes, family="monospace")
+        y -= 0.115
+
+
+def _render_how_panel(ax, run_dir) -> None:
+    """PNG panel (Yousfi arc — HOW): how the θ* COSTATE CONTROLLER is responding — its top ΔS-per-cost
+    recommendation, how many DSL levers are owed a measurement (the tracked queue), which producers are
+    live, and the cross-run costate prior size. Advisory-only; actuation is always NONE."""
+    _style_ax(ax)
+    ax.set_title("HOW — θ* costate controller (auto-fired, advisory)", fontsize=10.5, color=_FG, loc="left")
+    ax.set_xlabel("SENSE→DECIDE per tick · actuation=NONE (shadow) · #247", fontsize=8, color=_MUTED)
+    ax.set_xticks([]); ax.set_yticks([])
+    row = _latest_costate_shadow(run_dir)
+    if not row:
+        ax.text(0.5, 0.5, "awaiting costate_shadow.jsonl (auto-fired by the annulus monitor)",
+                color=_MUTED, fontsize=8.5, ha="center", va="center", transform=ax.transAxes)
+        return
+    recs = row.get("recommendations") or []
+    duty = row.get("duty_to_measure") or []
+    prods = row.get("producer_signals") or []
+    prior = row.get("costate_prior") or []
+    lines = []
+    if recs:
+        top = recs[0]
+        lines.append(f"top rec: {top.get('action','?')}  ΔS≈{top.get('predicted_dS','?')}")
+    else:
+        lines.append("top rec: (none identifiable yet — controller REFUSES to guess)")
+    lines.append(f"levers owed measurement: {len(duty)} (the tracked queue the controller surfaces)")
+    live = [p.get("producer") for p in prods if p.get("available")]
+    lines.append(f"producers live: {', '.join(live) if live else '(none)'} of {len(prods)}")
+    lines.append(f"cross-run costate prior: {len(prior)} costate(s) (continual learning)")
+    lines.append(f"actuation: {row.get('actuation','NONE')}  ·  {row.get('pointer','')}")
+    y = 0.90
+    for ln in lines:
+        ax.text(0.03, y, ln[:118], color=_FG, fontsize=8.0, ha="left", va="top",
+                transform=ax.transAxes, family="monospace")
+        y -= 0.15
+
+
 def _render_projection_panel(ax, rows: list[dict], proj: dict | None, tau: int,
                              goal_dseg: float) -> None:
     """PNG panel: PROJECTED TRAJECTORIES — the measured d_seg points + the #205
@@ -1132,13 +1218,14 @@ def _render_projection_panel(ax, rows: list[dict], proj: dict | None, tau: int,
 
 def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float,
                 muon: int | None = None, best_dseg: float | None = None,
-                control: dict | None = None, fresh_proj: dict | None = None) -> bytes:
+                control: dict | None = None, fresh_proj: dict | None = None,
+                run_dir=None) -> bytes:
     # NO figure suptitle — the HTML header already carries the title + epoch; a
     # bold matplotlib suptitle on top of it reads as redundant clutter. Each panel
     # is self-labelled (title + caption), which is where the per-metric meaning
     # belongs (clean > complete). Rows 1-2 = the original 4 metric panels; row 3 =
     # the control-system panel + the fresh-run A/B projection (2026-07-04 pass).
-    fig, axes = plt.subplots(3, 2, figsize=(12, 10.8))
+    fig, axes = plt.subplots(4, 2, figsize=(12, 14.4))
     fig.patch.set_facecolor(_BG)
     ep = [r["epoch"] for r in rows]
     xlo, xhi = (min(ep), max(ep)) if ep else (0, l7)
@@ -1205,6 +1292,10 @@ def _render_png(rows: list[dict], tau: int, l7: int, goal_dseg: float,
     _render_control_panel(axes[2, 0], control or {}, tau)
     axes[2, 0].set_xlim(xlo, xhi)
     _render_projection_panel(axes[2, 1], rows, fresh_proj, tau, goal_dseg)
+    # row 4 (Yousfi arc — WHY/HOW): the residual character (annulus SENSE) + the θ* costate controller
+    # response (auto-fired shadow output). Makes the #247 controller VISIBLE on the live dashboard.
+    _render_why_panel(axes[3, 0], run_dir)
+    _render_how_panel(axes[3, 1], run_dir)
     fig.tight_layout()
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=92, facecolor=_BG)
@@ -1656,7 +1747,7 @@ def _render_once(args, state: dict | None = None) -> dict:
             fresh_proj = None
     png = _render_png(rows, tau_png, l7_png, args.goal_dseg, muon=muon_png,
                       best_dseg=best_dseg, control=run_info.get("control"),
-                      fresh_proj=fresh_proj)
+                      fresh_proj=fresh_proj, run_dir=run_info.get("run_dir"))
     _write_html(Path(args.out), png, rows, args.refresh_seconds, watched, live,
                 state.get("switched_note"), getattr(args, "log_glob", None),
                 tau=tau_png, l7=l7_png, goal_dseg=args.goal_dseg, run_info=run_info)
