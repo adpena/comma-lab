@@ -2145,7 +2145,11 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <div class="tab" data-tab="flow">WITNESS</div>
   <div class="tab" data-tab="witness">RESIDUAL</div>
   <div class="tab" data-tab="whyhow">WHY / HOW</div>
+  <!-- TRIALITY tab HIDDEN per operator 2026-07-07 ("hide the triality tab for now") — the
+       /api/triality endpoint + panel + snapshot machinery stay intact; restore by
+       uncommenting this one line (pending the #267 tab redesign):
   <div class="tab" data-tab="tri">TRIALITY</div>
+  -->
 </div>
 
 <section id="tab-oracle" class="orc hide">
