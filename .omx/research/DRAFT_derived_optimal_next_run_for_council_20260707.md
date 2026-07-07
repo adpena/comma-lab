@@ -1021,3 +1021,26 @@ fly (emit a stage, change an exit-condition threshold, insert a solve step) — 
 triality-consistent, and GO-gated for any heavy actuation (advisory-only autonomous per
 CONTAINMENT). This is levers AND levels AND stages under ONE controller; the crucible should
 rule on how much of it to build for the next run vs. bank as the 10-year control architecture.
+
+**§19 D-3/D-4/D-5 VERDICT (2026-07-07 late; subagent landed — the deep-math axis collapses to ONE
+lever).** The single genuine un-pulled lever across all three is **second-order geometry: the
+Gauss–Newton / Fisher SPECTRUM** as the mechanistic state the costate controller does not yet
+consume (confirmed *white space* — Jacobian spectrum, GN condition number, Morse index, and
+persistence are all un-consumed by the controller). **Correction to D-5's framing (important):**
+the controller is NOT merely "reactive heuristics" — it already has a PREDICTIVE exit,
+`powerlaw_exit.powerlaw_meat_exit` (eq `weak_kam_powerlaw_tail_exit_v1`: fits `a+b·t^−α` and
+`a+b·exp(−t/τ)` to the loss trace, AIC-selects, exits on extrapolated remaining "meat" < 1e-4 over
+a 300-ep horizon, fail-safe to not-exhausted), plus a reactive leg (`witness_control_monitor`,
+window=5). But that predictor is a **phenomenological 1st-order curve-fit on the scalar loss
+history — structurally blind to the geometry.** The GN/Fisher spectrum reads "remaining descent"
+and "quadratic-basin entered" (the `TerminalSolve` in-basin condition #341) and the saddle/stage
+transition **directly from the local Hessian** — the second-order state a scalar `d(t)` fit cannot
+see. So the correct framing of the top lever is **phenomenological-1st-order-forecast →
+mechanistic-2nd-order-STATE**, not reactive→predictive. **Cheapest $0 first test (measurement-first,
+no GO):** an **HVP-Lanczos probe on a saved #205 checkpoint** → top GN/Hessian eigenvalues; no
+training. **Independent corroboration (do-not-re-derive):** λ_bytes ≈ **6.659e-7 S/byte**; the
+honest ep450 λ-backtest miss was LINEAR λ-extrapolation over-predicting under decay — exactly the
+curvature-blindness the GN-spectrum signal fixes (same need the queued λ(t)-decay model approaches
+phenomenologically). **Net for the crucible:** D-2 dead, D-1 corpus-gated; the live deep-math lever
+is the GN/Fisher 2nd-order state feeding the costate DECIDE layer, and the build-decision is the $0
+HVP-Lanczos probe FIRST, then wire only if it pays. §19 is now complete — all five axes verdicted.
