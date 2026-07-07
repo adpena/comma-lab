@@ -613,6 +613,32 @@ def one_tick(args, log) -> dict:
         f.write(json.dumps(row, default=float) + "\n")
     log(f"[emit] appended row to {jsonl_path.name} (epoch={epoch})")
     print(json.dumps(row, indent=2, default=float), flush=True)
+
+    # #247 AUTOMATIC: fire the θ* costate SHADOW controller from the SAME already-parsed verdicts
+    # (no re-read of run.log — this run writes a stdout log, not run.log), writing
+    # <run>/costate_shadow.jsonl. This makes SENSE->DECIDE AUTOMATIC per monitor tick; previously ONLY
+    # the manual CLI (tools/costate_shadow_report.py) fired it. Advisory-only (actuation is always
+    # NONE) + fully fail-safe (a controller error can never break the monitor tick).
+    try:
+        from tac.witness_control.shadow_controller import (
+            RunInputs as _RI,
+            build_shadow_report as _bsr,
+            parse_launch_sh_flags as _plf,
+            write_shadow_row as _wsr,
+        )
+        _flags: dict = {}
+        _launch = run_dir / "launch.sh"
+        if _launch.is_file():
+            _flags = _plf(_launch.read_text(errors="replace"))
+        _rep = _bsr(_RI(run_dir=run_dir, verdicts=verdicts, stage_rows={}, flags=_flags))
+        _wsr(run_dir, _rep)
+        _owed = len(_rep.duty_to_measure)
+        _prods = sum(1 for p in _rep.producer_signals if p.get("available"))
+        log(f"[costate] auto-fired shadow controller -> costate_shadow.jsonl "
+            f"({len(_rep.recommendations)} recs, {_owed} levers owed-measurement, "
+            f"{_prods}/{len(_rep.producer_signals)} producers live, actuation=NONE)")
+    except Exception as _e:  # noqa: BLE001 — advisory controller, never breaks the monitor tick
+        log(f"[costate] auto-fire skipped (non-fatal): {_e}")
     return row
 
 
