@@ -57,6 +57,20 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger in the d
    witness_control wiring, not a unit stub); (3) FAIL-SAFE epoch CAPS so a dead/vacuous trigger
    degrades to the capped schedule, never to an unbounded or truncated run (anti-anchor: the M2
    anneal-truncation defect). A trigger without all three is NOT in the launch config.
+C. **LADDER curriculum techniques (operator-directed).** The curriculum's difficulty axis is a
+   LADDER: easier surrogate targets annealed to real targets under per-class-λ gates — the PROVEN
+   mapping (L56/#322): LADDER ⊂ our costate (LADDER = 1-channel/const-λ special case; ours
+   generalizes to per-class λ). Concretely: island-birth via the #323 per-class-λ-gated homotopy
+   (movable = dilation-GO; lane = curve-prior), composed with the treatment-arm memo's
+   margin-GATED support (net-positive iff n_isl > n_big3). Synthesis verifies S2's derived
+   schedule carries the island-birth/LADDER entry points explicitly (charter item; S2's summary
+   did not surface it — red-team gap-check).
+D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + the crucible's own
+   measurement plan honor the registered `powerplay_variant_ii_cost_isomorphism_v1`
+   (`tac.witness_dsl.powerplay` → `campaign`, BUILT): the next task/probe/stage is the CHEAPEST
+   NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
+   a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
+   (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
 
 ## Recess queue (P4; grows from positions + red-team)
 1. $0 HVP-Lanczos GN/Hessian spectrum on saved #205 checkpoint (pinned §2 first-measurement).
