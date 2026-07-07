@@ -31,7 +31,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 | S2 SCHEDULE+CURRICULUM | witness-native derivation; PR95 cargo-cult audit table; stages/exits/priming | 1 | DONE (f1e3e8b21) | position_S2_schedule_curriculum_20260707.md |
 | S3 CONTROL/COSTATE | SENSE→DECIDE→ACT; GN/Fisher 2nd-order wiring; HVP-Lanczos probe design; trust-region | 1 | LAUNCHED | position_S3_costate_20260707.md |
 | S4 RATE | Shannon — two-regime allocation, weight-entropy, #157 compress-half, derive-H, byte accounting | 2 | LAUNCHED | position_S4_rate_20260707.md |
-| S5 LEVER-LEDGER | Fridrich/Yousfi — 36 never-fired per-lever BUILD/DEFER; annulus geometry; lane-band; islands | 2 | LAUNCHED | position_S5_lever_ledger_20260707.md |
+| S5 LEVER-LEDGER | Fridrich/Yousfi — 36 never-fired per-lever BUILD/DEFER; annulus geometry; lane-band; islands | 2 | DONE (f01c8dea6) | position_S5_lever_ledger_20260707.md |
 | S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | QUEUED | position_S6_pose_byteclose_20260707.md |
 
 ## Rate-limit resilience rules
@@ -119,3 +119,19 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
   --anneal-epochs=Muon-cap is the $0 flag fix; 34-row PR95 cargo table; exits alone save ~35%
   wall-clock at zero score cost. M2 forwarded to S3 (spectrum ckpts are truncated-anneal states;
   ep650 = primary target, ep1000 = cold-quench artifact). S4 RATE launched (concurrency 3).
+- 2026-07-07T~21:0x S5 LEVER-LEDGER DONE (f01c8dea6): ISLANDS NECESSARY for T_3 (63.9% of flips
+  = un-born movable+lane; big-3-only floors ~0.00215 > 0.00092 → island-first ranking).
+  GROUND-TRUTH CORRECTIONS to the packet: ~10 of "36 never-fired" DID raw-flag fire per launch.sh
+  — AnalyticLaneRenderBand fired ep300+ in the FULL-STACK #205 (20260702) run, UNATTRIBUTED, and
+  is NOT near-zero-byte (+0.0206 LBND4 rate MEASURED); did NOT fire in mod32cap (by design).
+  FIRE verdicts: islands-arm core, band trained-with, AACoverageRender, MuonWarmStart,
+  LengthSigma, StepNative+FinerBiasInit, WeightEntropyPenaltyMLX. DEFER: UniWARD(chance),
+  MarginSaliency, GFC(seam), lane_carried regime, SegFocalGamma(γ*=0 conflict), FiLM-family.
+  RETIRE: MicroBatch(no-win), SoftBoundary. Apparatus fix R1: argv→lever reverse-map +
+  engagement-predicate backfill.
+- 2026-07-07T~21:1x OPERATOR DIRECTIVE (comprehensive signal sweep — "design cannot be optimal
+  otherwise"): CONTEXT_COMPENDIUM_20260707.md skeleton written (14-store STANDING CHECKLIST +
+  group-theory first-pass: orbit-coding = THE unifying rate principle, equation candidate
+  rule118_orbit_coding_free_action_counted_coords_v1, 387B permutation slack, NO-equivariant-arch)
+  + dedicated sweep agent LAUNCHED to complete all 14 stores. Compendium = MUST-READ for P2/P5.
+  Class-fix: the STANDING STORE CHECKLIST makes context-completeness a P0 convening step forever.
