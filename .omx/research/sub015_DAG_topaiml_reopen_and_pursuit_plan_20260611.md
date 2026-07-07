@@ -9014,3 +9014,18 @@ Durable deviation already recorded in FEED-07g: --logit-adjust-tau was TAKEN (fa
 target scale) → loss-time lever named --logit-adjust-loss-tau; both facets DSL-held. Owed anchors:
 StepNativeActivation∘FinerBiasInit sweep + LogitAdjust A/B row (activation ledger duty-to-measure).
 Pointer 0.19110 UNMOVED (reconciliation).
+
+## FEED-07i-pre (2026-07-07) — daemon-death incident + relaunch (apparatus trajectory note for 91b4b5db1)
+
+The #307/#336 measurement daemons died SIMULTANEOUSLY ~6 min in (mid-healthy-work, RSS flat
+2.76 GiB, governor exonerated, registry stale-"running"). ROOT CAUSE (measured): macOS SANDBOX
+TEARDOWN kills even setsid'd ppid-1 session leaders launched from a sandboxed agent Bash —
+detach ≠ survival; the sandbox lifetime is a kill scope independent of the process group
+(inverse-#167 class). Fix: relaunch UNSANDBOXED via spawn_durable_daemon (workers 6830/7288,
+detachment PROVEN via ps sess/pgid/ppid + progress past a turn boundary); contour resumed from
+its flips cache (~126 pairs banked — resumability discipline paid); registry --reconcile marked
+5 stale entries DEAD. WARNING docstring landed in the spawner (91b4b5db1); durable memory
+sandboxed_bash_kills_detached_daemons_launch_unsandboxed_20260707 + MEMORY.md line. Also banked
+in the same recovery: #314 autoconfig pose-carrier-source drift FIX (b1dc20a24, regression pin +
+delta-key class guard). Measured rows (#307 contour B/flip vs 0.65 bar · #336 bit-alloc
+advisory) land in FEED-07i on harvest. Pointer 0.19110 UNMOVED (apparatus/measurement-in-flight).
