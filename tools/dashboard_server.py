@@ -2165,28 +2165,31 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 
 <section id="tab-oracle" class="orc hide">
   <div class="orcintro">
-    <h2>The detector I built &mdash; and the world it reads</h2>
-    <p>Before the witness, the <b>oracle</b>: the frozen contest scorer (Yousfi's comma10k
-    EfficientNet-B2 SegNet, whose argmax IS the d_seg authority), the <b>openpilot physical
-    priors</b> that structure the scene, and the scorer's own <b>detectability field</b>. This is
-    the world the witness must survive in. The thesis in one line:
-    <b>openpilot is the unified FREE physical prior for BOTH scored axes</b> &mdash; the lane
-    polynomial &rarr; the analytic lane band (<b>d_seg</b>), and the ego-motion screw &xi; &rarr;
-    the pose (<b>d_pose</b>). Every prior below is a REAL in-tree module, self-detecting its
-    classes (no hardcoded indices), fit to the EXACT frames the scorer's verdict uses.</p>
+    <h2>The oracle Yousfi built &mdash; and the physical structure it reads</h2>
+    <p>The <b>oracle</b> is the frozen contest scorer: Yousfi's comma10k EfficientNet-B2 SegNet,
+    whose per-pixel argmax defines <b>d_seg</b>, and the FastViT-T12 PoseNet, whose first six
+    outputs define <b>d_pose</b>. Both networks are fixed; every quantity on this page is
+    computed against them, on the exact frames their verdict uses. The scene they read carries
+    physical structure that costs no bytes to reproduce: the <b>openpilot lane polynomial</b>
+    generates the analytic lane band (the d_seg prior), and the <b>ego-motion screw &xi;</b>
+    generates the pose (the d_pose prior) &mdash; one SE(3) trajectory feeding both scored terms.
+    The scorer's own sensitivity is shown as the <b>detectability field</b>: the top1&minus;top2
+    argmax margin, which localizes where d_seg can change. Each prior below is an in-tree module,
+    class-assignments detected from the data rather than hardcoded.</p>
     <div class="orchdr" id="orchdr">rendering the physical-prior atlas (governed CPU pass)&hellip;</div>
   </div>
   <div class="orcstats" id="orcstats"></div>
   <div class="orcgrid" id="orcpanels"></div>
   <div class="orcxi">
     <h3>Ego-&xi; &mdash; the SE(3) screw twist across the segment</h3>
-    <p>The lane-optimal per-pair ego trajectory (<code>LaneOptimalEgoEstimator</code> over the
-    openpilot lane fit). The <b>same twist &xi;</b> that warps the partition for d_seg IS the pose
-    for d_pose (Chasles' theorem) &mdash; encode it once, spend it twice.</p>
+    <p>The per-pair ego trajectory, estimated from the openpilot lane fit
+    (<code>LaneOptimalEgoEstimator</code>). By Chasles' theorem every rigid displacement is a
+    screw, so the twist &xi; that transports the partition between frames (d_seg) is the same
+    object PoseNet measures (d_pose): one 6-vector per pair serves both terms.</p>
     <img id="orcxichart" alt="ego-ξ screw twist across the segment" />
   </div>
   <div class="orccredits">
-    <div class="wch">Physical priors wired &mdash; de-orphaned, not rebuilt</div>
+    <div class="wch">The physical priors, as implemented</div>
     <ul>
       <li><b>openpilot lane band</b> (<code>analytic_lane_render_band.build_analytic_lane_band_prior</code>)
       &mdash; deg-3 centerline fit to the GT class-1 argmax + AA-SDF range-dependent dash coverage;
