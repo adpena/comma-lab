@@ -92,7 +92,11 @@ def _tool(name: str) -> str:
 
 def _env_with_tex() -> dict:
     env = dict(os.environ)
-    env["PATH"] = f"{_TEXBIN}:{env.get('PATH', '')}"
+    # Prepend the macOS MacTeX bin ONLY if it actually exists — on other machines
+    # (Linux CI, a Homebrew TeX, a different install) LaTeX is already on PATH and
+    # hard-prepending a missing dir would be pointless (and confusing).
+    if Path(_TEXBIN).is_dir():
+        env["PATH"] = f"{_TEXBIN}:{env.get('PATH', '')}"
     return env
 
 
@@ -232,6 +236,9 @@ def main() -> int:
                     help="comma-separated NN prefixes to include (default: all discovered)")
     ap.add_argument("--no-render", action="store_true",
                     help="skip manim; stitch already-rendered clips only")
+    ap.add_argument("--allow-partial", action="store_true",
+                    help="exit 0 even if a scene rendered but its clip could not be located "
+                         "(otherwise a dropped scene in render mode is a hard failure)")
     ap.add_argument("--force", action="store_true",
                     help="disable manim's frame cache for a clean re-render")
     ap.add_argument("--transition", type=float, default=0.0,
@@ -295,7 +302,7 @@ def main() -> int:
 
     # 3) concatenate
     out = Path(args.output) if args.output else (
-        _HERE / "media" / (f"levelset_witness_film"
+        _HERE / "media" / ("levelset_witness_film"
                            + ("" if args.quality == "h" else f"_{args.quality}") + ".mp4"))
     out.parent.mkdir(parents=True, exist_ok=True)
     if args.transition and args.transition > 0 and len(norm) > 1:
@@ -320,8 +327,17 @@ def main() -> int:
     (out.with_suffix(".json")).write_text(json.dumps(manifest, indent=2))
 
     print(f"\n✓ film: {out}  ({total:.1f}s, {len(usable)} scenes, {args.quality})")
-    if any(e.clip is None for e in scenes):
+    dropped = [e for e in scenes if e.clip is None]
+    if dropped:
         print("  (note: some scenes were missing — see the .json manifest)")
+        # In render mode a dropped scene means manim reported success but its clip
+        # could not be located — a silent-drop that a CI/automated rebuild must SEE.
+        # (--no-render legitimately stitches only what already exists.)
+        if not args.no_render and not args.allow_partial:
+            print(f"error: {len(dropped)} scene(s) dropped after render "
+                  f"({', '.join(f'{e.order}:{e.cls}' for e in dropped)}) — "
+                  f"pass --allow-partial to override", file=sys.stderr)
+            return 2
     return 0
 
 

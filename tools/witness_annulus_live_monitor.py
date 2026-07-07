@@ -67,6 +67,12 @@ SPIKE_SKIP_CEILING = 0.30      # recent spike_skipped fraction above this => spi
 HOSC_BETA_START = 1.0
 HOSC_BETA_END = 4.0
 
+# #247 auto-fire health: the costate shadow controller is advisory + fail-safe, but a
+# PERSISTENT failure (import break, schema drift, disk error) must not degrade silently
+# forever. Track consecutive failures and raise a distinct LOUD alert past this ceiling.
+COSTATE_AUTOFIRE_ALERT_AFTER = 3
+_COSTATE_AUTOFIRE_CONSEC_FAILS = 0
+
 
 def _utc() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -634,11 +640,20 @@ def one_tick(args, log) -> dict:
         _wsr(run_dir, _rep)
         _owed = len(_rep.duty_to_measure)
         _prods = sum(1 for p in _rep.producer_signals if p.get("available"))
+        globals()["_COSTATE_AUTOFIRE_CONSEC_FAILS"] = 0   # success — reset the failure streak
         log(f"[costate] auto-fired shadow controller -> costate_shadow.jsonl "
             f"({len(_rep.recommendations)} recs, {_owed} levers owed-measurement, "
             f"{_prods}/{len(_rep.producer_signals)} producers live, actuation=NONE)")
     except Exception as _e:  # noqa: BLE001 — advisory controller, never breaks the monitor tick
-        log(f"[costate] auto-fire skipped (non-fatal): {_e}")
+        globals()["_COSTATE_AUTOFIRE_CONSEC_FAILS"] = _COSTATE_AUTOFIRE_CONSEC_FAILS + 1
+        _n = _COSTATE_AUTOFIRE_CONSEC_FAILS
+        if _n >= COSTATE_AUTOFIRE_ALERT_AFTER:
+            # LOUD, distinct alert: a real regression, not a one-off transient.
+            log(f"[costate][ALERT] auto-fire FAILED {_n} consecutive ticks — the shadow "
+                f"controller is degraded (not a transient); INVESTIGATE: {_e}")
+        else:
+            log(f"[costate] auto-fire skipped (non-fatal, {_n}/"
+                f"{COSTATE_AUTOFIRE_ALERT_AFTER} consecutive): {_e}")
     return row
 
 

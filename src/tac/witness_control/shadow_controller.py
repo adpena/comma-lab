@@ -564,6 +564,17 @@ def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:
     """Append the report row to ``<run_dir>/costate_shadow.jsonl`` (the ONLY write this
     package performs — an advisory sidecar in the run dir, never a mutation of the run)."""
     out = Path(run_dir) / "costate_shadow.jsonl"
-    with out.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(report.to_row(), sort_keys=True) + "\n")
+    line = json.dumps(report.to_row(), sort_keys=True) + "\n"
+    try:  # align with the sibling stores (costate_posterior.py) — single-writer today,
+        import fcntl  # but flock keeps the append atomic if that ever changes.
+        with out.open("a", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.write(line)
+                f.flush()
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except ImportError:  # pragma: no cover - non-POSIX fallback
+        with out.open("a", encoding="utf-8") as f:
+            f.write(line)
     return out

@@ -157,6 +157,17 @@ def write_world_model_row(run_dir: str | Path, wm: CampaignWorldModel) -> Path:
     """Append the world-model as a trace row (Duck ``traces.py`` machine-readable episode)
     to the run dir, closing the DAG→DSL→run→rows→equations cycle. Never mutates state."""
     out = Path(run_dir) / "campaign_world_model.jsonl"
-    with out.open("a") as fh:
-        fh.write(json.dumps(wm.to_row()) + "\n")
+    line = json.dumps(wm.to_row()) + "\n"
+    try:  # align with the sibling stores (costate_posterior.py) — single-writer today,
+        import fcntl  # but flock keeps the append atomic if that ever changes.
+        with out.open("a") as fh:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+            try:
+                fh.write(line)
+                fh.flush()
+            finally:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    except ImportError:  # pragma: no cover - non-POSIX fallback
+        with out.open("a") as fh:
+            fh.write(line)
     return out

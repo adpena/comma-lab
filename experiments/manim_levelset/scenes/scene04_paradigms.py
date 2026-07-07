@@ -12,15 +12,19 @@ on where the bytes go:
                  spectral bias → Gibbs ringing exactly at the argmax edge.
   witness     →  reproduces the SCORER (amortizes the SegNet argmax, no RGB);
                  the flat interiors are FREE, so it pours the SAME bytes onto the
-                 measured 0.72% boundary band — ~139× the byte-density where
-                 d_seg actually lives — in a curvelet/step-native basis that is
+                 measured all-class boundary band — the UNION of every inter-class
+                 edge, ~2.67% of pixels → ~37× the byte-density where d_seg
+                 actually lives — in a curvelet/step-native basis that is
                  the provably-optimal sparse chart for a curved codim-1 edge
                  (Candès–Donoho): it minimizes distortion AND rate at once.
 
 NO-FAKE (the load-bearing honesty): PR95 is the MEASURED frontier (S = 0.19110,
 contest-CPU, a real medal-class result). The witness's advantage is a MEASURED-
-grounded PREDICTION (interiors free #139; 0.72% binding residual; bc20 rate
-0.059 vs 0.118; curvelet optimality) — but it is NOT yet byte-closed below PR95.
+grounded PREDICTION (interiors free; ~2.67% all-class binding residual → ~37×
+density; bc20 rate 0.059 vs 0.118; curvelet optimality) — but it is NOT yet
+byte-closed below PR95. (CLAUDE.md §WITNESS CAPSTONE supersedes the older
+lane-only "0.72%/139×" framing: the residual is the union of ALL inter-class
+edges, not just the lane band.)
 The exact eval is the only judge, and it has not ruled yet. This scene makes the
 case that the reallocation dominates; it does not claim a win the pointer has
 not recorded.
@@ -31,12 +35,14 @@ Measured numbers (from our own record; CLAUDE.md §WITNESS CAPSTONE + the DAG):
   trilemma: bc20 (shrunk)  rate 0.059 · d_seg under-capacity → S ≈ 0.31
             bc36 (PR95-size) d_seg ≈ 6e-4 · rate 0.118      → S ≈ 0.19  (= just PR95)
             witness            adequate d_seg AT low rate    → the sub-0.15 arm
-  reallocation: d_seg lives on 0.72% of pixels → ~139× byte-density vs uniform.
+  reallocation: d_seg lives on the ~2.67% all-class boundary (union of every
+                inter-class edge) → ~37× byte-density vs uniform.
 
 Render:  ./render.sh -qh scenes/scene04_paradigms.py Paradigms
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import _style as st
@@ -58,6 +64,30 @@ from manim import (
 
 _ASSETS = Path(__file__).resolve().parent.parent / "assets"
 _STAGE_H = 4.4
+
+
+def _all_class_reallocation() -> tuple[float, float]:
+    """The HONEST all-class reallocation stat.
+
+    CLAUDE.md §WITNESS CAPSTONE SUPERSEDES the lane-only "0.72% separatrix": the
+    binding d_seg residual is the UNION of ALL inter-class edges (measured
+    ``boundary_px`` on the hardest frame), not the narrow lane band. Read the
+    measured all-class boundary fraction from the generated asset; fall back to
+    the recorded all-class figures (~2.67% → ~37×) if the asset is absent. We do
+    NOT present the superseded narrower lane-only metric as the separatrix size.
+    """
+    try:
+        meta = json.loads((_ASSETS / "meta.json").read_text())
+        bnd = float(meta["boundary_px"])
+        total = float(sum(int(v) for v in meta["per_class_px"].values()))
+        frac = bnd / total
+        return frac * 100.0, 1.0 / frac
+    except Exception:
+        # recorded all-class boundary ≈ 2.67% of pixels → ~37× (NOT lane-only 0.72%/139×)
+        return 2.67, 37.0
+
+
+_BND_PCT, _DENSITY = _all_class_reallocation()
 
 
 class Paradigms(Scene):
@@ -159,19 +189,19 @@ class Paradigms(Scene):
         self.wait(st.HOLD)
         # crossfade the partition into the REAL measured separatrix (the codim-1 boundary)
         sep = self._img("hardest_separatrix.png")
-        capR2 = st.bottom(st.caption("d_seg lives on the 0.72% separatrix — the codim-1 boundary.  "
-                                     "pour the SAME bytes THERE", color=st.CYAN))
+        capR2 = st.bottom(st.caption(f"d_seg lives on the {_BND_PCT:.1f}% separatrix — every inter-class "
+                                     f"edge (codim-1).  pour the SAME bytes THERE", color=st.CYAN))
         self.play(FadeOut(seg), FadeIn(sep), FadeOut(capR), FadeIn(capR2, shift=0.12 * UP),
                   run_time=st.T_MORPH)
         self.wait(st.HOLD_LONG)
         self.play(FadeOut(sep), FadeOut(head_r), FadeOut(capR2), run_time=st.T_FADE)
 
         # ── beat 6 · why the reallocation should dominate (predicted, grounded) ─
-        why_head = st.heading("same bytes — 139× the density where it counts", scale=0.58).to_edge(UP, buff=0.9)
+        why_head = st.heading(f"same bytes — ~{_DENSITY:.0f}× the density where it counts", scale=0.58).to_edge(UP, buff=0.9)
         why = VGroup(
-            st.mono("uniform    100% of pixels    →   1× byte-density on the edge",
+            st.mono("uniform    100% of pixels     →   1× byte-density on the edge",
                     color=st.MUTED, scale=0.42),
-            st.mono("witness    0.72% of pixels   →  ~139× byte-density on the edge",
+            st.mono(f"witness    {_BND_PCT:.1f}% of pixels   →  ~{_DENSITY:.0f}× byte-density on the edge",
                     color=st.CYAN, scale=0.42),
             st.body("+ curvelet / step-native is the optimal sparse chart for a curved",
                     color=st.INK, scale=0.40),

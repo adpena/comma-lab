@@ -20,7 +20,7 @@ from pathlib import Path
 
 from manim import (
     Scene, ImageMobject, MathTex, VGroup, FadeIn, FadeOut, Write, GrowFromCenter,
-    UP, DOWN, ORIGIN, rate_functions,
+    UP, DOWN, ORIGIN,
 )
 
 import _style as st

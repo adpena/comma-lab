@@ -35,7 +35,6 @@ _HARD, _LANE_PX, _BND_PX = _META["hardest_frame"], _META["lane_px"], _META["boun
 # per-frame dynamic stacks — the math drawn LIVE on the moving footage
 _EGO = np.load(_ASSETS / "ego_clip.npy")            # (K,H,W,3) real frames
 _SEP_STACK = np.load(_ASSETS / "ego_sep_stack.npy")   # argmax + separatrix per frame
-_MARGIN_STACK = np.load(_ASSETS / "ego_margin_stack.npy")  # margin field per frame
 _KS = len(_EGO)
 _HS = _KS // 2                                       # the hardest frame's clip index
 
