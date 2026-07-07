@@ -898,7 +898,17 @@ class LiveState:
                                               async_grace_s=async_grace)
         rld._save_cadence_state(cfg.cadence_state, all_state, log_name, sub)
         self.watched = latest.name if latest is not None else None
-        self.watched_dir = str(latest.parent) if latest is not None else None
+        # (2026-07-07 FLOW/WITNESS idle-forever fix) the watched LOG is the launcher's tee in
+        # .omx/tmp, NOT the run dir — so latest.parent holds no checkpoints and _best_ckpt()
+        # returned None forever (the same log-path-split unknown-known that froze the costate
+        # telemetry, third consumer). Resolve through the canonical DSL resolver; fall back to
+        # latest.parent (in-run-dir logs resolve to themselves; resolver is never-raises).
+        _run_dir = None
+        if latest is not None and _dsl_resolve_run_dir is not None:
+            with contextlib.suppress(Exception):
+                _run_dir = _dsl_resolve_run_dir(latest)
+        self.watched_dir = str(_run_dir) if _run_dir is not None else (
+            str(latest.parent) if latest is not None else None)
 
         # #205 run-info strip: the FULL operational telemetry (stage-progress / best-d_seg
         # deploy / throughput+ETA / checkpoint ledger / resumability-now / MLX fast-path /
@@ -2144,10 +2154,11 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <div class="tab" data-tab="oracle">ORACLE</div>
   <div class="tab" data-tab="flow">WITNESS</div>
   <div class="tab" data-tab="witness">RESIDUAL</div>
+  <!-- WHY/HOW + TRIALITY tabs HIDDEN per operator 2026-07-07 ("hide the triality tab for
+       now" + "hide the why/how as well for now because it needs a lot of work") — all
+       endpoints + panels + machinery stay intact; restore by uncommenting (WHY/HOW pending
+       its rework; TRIALITY pending the #267 redesign):
   <div class="tab" data-tab="whyhow">WHY / HOW</div>
-  <!-- TRIALITY tab HIDDEN per operator 2026-07-07 ("hide the triality tab for now") — the
-       /api/triality endpoint + panel + snapshot machinery stay intact; restore by
-       uncommenting this one line (pending the #267 tab redesign):
   <div class="tab" data-tab="tri">TRIALITY</div>
   -->
 </div>
