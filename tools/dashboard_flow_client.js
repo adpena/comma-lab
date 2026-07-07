@@ -82,7 +82,15 @@
   // ---------- fetch + ingest the n600 sequence ----------
   function statusMsg(meta) {
     if (!meta) return "waiting for the first n600 sequence…";
-    if (meta.status === "rendering") return "rendering the n600 video from the best checkpoint… (~14 min governed pass; auto-appears when done)";
+    if (meta.status === "rendering") {
+      var prog = (typeof meta.pair === "number" && typeof meta.n === "number" && meta.n > 0)
+        ? " — pair " + meta.pair + "/" + meta.n +
+          (typeof meta.secs === "number" && meta.pair > 0
+            ? " (~" + Math.max(1, Math.round((meta.n - meta.pair) * (meta.secs / meta.pair) / 60)) + " min left)"
+            : "")
+        : " (~14 min governed pass)";
+      return "rendering the n600 video from the best checkpoint…" + prog + "; auto-appears when done";
+    }
     if (meta.status === "error") return "sequence render error — " + (meta.err || "see server log");
     return "the n600 video renders on the next best checkpoint…";
   }

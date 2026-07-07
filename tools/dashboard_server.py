@@ -704,6 +704,7 @@ class LiveState:
         self._flowseq_done_mtime: float = 0.0          # ckpt mtime we already have output for
         self._flowseq_last_attempt: float = 0.0
         self._flowseq_err: str = ""
+        self._flowseq_foreign_stem: Path | None = None  # (#343) a detached render owned by a prior instance
         # ORACLE (Tab 1): STATIC physical-prior atlas — depends only on the GT cache. Rendered
         # ONCE by a DETACHED governed safe_run subprocess (tools/oracle_dashboard_panels.py) and
         # cached to disk; served on demand via /api/oracle. Bytes held here after the one ingest.
@@ -1234,8 +1235,12 @@ class LiveState:
             return
         # 1b) another instance/render is already producing this stem (reload/restart mid-render
         # leaves the prior render detached) -> do NOT spawn a duplicate; wait for its .done.
+        # (#343 UX) remember the foreign render's stem so _flow_ready_public reports "rendering"
+        # with live progress instead of a misleading "idle" (restart-mid-render surfaced this).
         if not self._flowseq_running and _flowseq_lock_alive(stem.with_suffix(".lock")):
+            self._flowseq_foreign_stem = stem
             return
+        self._flowseq_foreign_stem = None
         # 2) a subprocess in flight (this instance)?
         if self._flowseq_running:
             rc = self._flowseq_proc.poll() if self._flowseq_proc is not None else 0
@@ -1345,12 +1350,29 @@ class LiveState:
         return False
 
     def _flow_ready_public(self) -> dict:
-        """Lightweight FLOW readiness ping (the client fetches /api/flow_sequence on this)."""
+        """Lightweight FLOW readiness ping (the client fetches /api/flow_sequence on this).
+        (#343 UX) "rendering" also covers a FOREIGN in-flight render (a detached pass surviving a
+        server restart — lock alive, this instance not the owner), with pair-progress parsed from
+        the render's own log tail so the client can show a real progress bar."""
         if self._flow_seq_bytes is not None and self._flow_seq_meta:
             return {"ok": True, **self._flow_seq_meta}
-        status = ("rendering" if self._flowseq_running
+        foreign = getattr(self, "_flowseq_foreign_stem", None)
+        rendering = self._flowseq_running or foreign is not None
+        status = ("rendering" if rendering
                   else ("error" if self._flowseq_err else "idle"))
-        return {"ok": False, "status": status, "err": self._flowseq_err or None}
+        out: dict = {"ok": False, "status": status, "err": self._flowseq_err or None}
+        if rendering:
+            stem = self._flowseq_stem if self._flowseq_running else foreign
+            with contextlib.suppress(Exception):  # progress is best-effort observability
+                tail = stem.with_suffix(".log").read_bytes()[-4096:].decode("utf-8", "replace")
+                for line in reversed(tail.strip().splitlines()):
+                    row = json.loads(line)
+                    if row.get("event") == "progress":
+                        out["pair"] = int(row.get("pair", 0))
+                        out["n"] = int(row.get("n", 0))
+                        out["secs"] = round(float(row.get("secs", 0.0)), 1)
+                        break
+        return out
 
     def flow_ready_msg(self) -> dict:
         return {"type": "flow_ready", "flow_ready": self._flow_ready_public()}
@@ -2154,10 +2176,12 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <div class="tab" data-tab="oracle">ORACLE</div>
   <div class="tab" data-tab="flow">WITNESS</div>
   <div class="tab" data-tab="witness">RESIDUAL</div>
-  <!-- WHY/HOW + TRIALITY tabs HIDDEN per operator 2026-07-07 ("hide the triality tab for
-       now" + "hide the why/how as well for now because it needs a lot of work") — all
-       endpoints + panels + machinery stay intact; restore by uncommenting (WHY/HOW pending
-       its rework; TRIALITY pending the #267 redesign):
+  <!-- TODO(#343): WHY/HOW tab HIDDEN per operator 2026-07-07 ("needs a lot of work") — copy
+       rework required before re-show: break up the big blocks, direct technical register,
+       fix tribute framing (pcap "The tribute's heart", the About/credits panel).
+       TODO(#267): TRIALITY tab HIDDEN per operator 2026-07-07 — redesign (rename, organic
+       evolution, costate integration) before re-show. All endpoints + panels + snapshot
+       machinery stay intact for both; restore = uncomment a line here:
   <div class="tab" data-tab="whyhow">WHY / HOW</div>
   <div class="tab" data-tab="tri">TRIALITY</div>
   -->
@@ -2268,36 +2292,48 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 
 <section id="tab-witness" class="wit hide">
   <div class="witintro">
-    <h2>The scorer's eye &mdash; the hardest &amp; most-diverse pairs</h2>
-    <p>The pairs with the <b>highest realized d_seg</b> across the whole n600 drive, chosen to be
-    <b>spread across the segment</b> (not clustered) and to cover distinct failure modes &mdash; each
-    labelled with its <b>per-pair d_seg + failure-mode tag</b> (adjacent/movable vehicle, lane-marking
-    dash, distant object, or boundary flips, read honestly from the disagreement composition).
-    Selected from the SAME governed 600-pass that builds the FLOW video, refreshed when a new best
-    checkpoint lands. Each pair is the canonical comma multipane: <b>Row A</b> GT &middot; our witness
-    render (through the contest R operator) &middot; pixel error; <b>Row B</b> the SegNet argmax the
-    scorer sees for GT vs our render, and their disagreement (the d_seg pixels); <b>Row C</b> the
-    tribute triptych.</p>
+    <h2>The residual &mdash; the hardest pairs, as the scorer reads them</h2>
+    <p>The pairs with the highest realized d_seg across the n600 drive, spread across the segment
+    and covering distinct failure modes. Computed in the same 600-pair pass that builds the
+    WITNESS video; refreshed when a new best checkpoint lands.</p>
+    <ul class="witkey">
+      <li><b>Per-pair label</b> &mdash; d_seg + a failure-mode tag (movable vehicle &middot;
+      lane dash &middot; distant object &middot; boundary flips), classified from the
+      disagreement composition.</li>
+      <li><b>Row A</b> &mdash; GT frame &middot; witness render through the contest R operator
+      &middot; pixel error.</li>
+      <li><b>Row B</b> &mdash; SegNet argmax of GT vs our render, and their disagreement
+      (exactly the pixels d_seg counts).</li>
+      <li><b>Row C</b> &mdash; three sensitivity fields on the same frame (below).</li>
+    </ul>
     <div class="withdr" id="withdr">selecting the hardest pairs from the n600 pass&hellip;</div>
   </div>
   <div class="witgrid" id="witpanels"></div>
   <div class="wittrip">
-    <h3>Row C &mdash; the tribute triptych</h3>
-    <p><b>&rho;_seg &mdash; SegNet margin field.</b> Top1&minus;top2 logit margin per pixel;
-    <b>bright = small margin = fragile</b>, the codim-1 <i>separatrix</i> where the argmax can flip
-    &mdash; i.e. where d_seg lives. Yassine <b>Yousfi</b>'s comma10k segmentation baseline IS the
-    contest SegNet; this panel is the detector's own sensitivity map.</p>
-    <p><b>&rho;_uniward &mdash; S-UNIWARD cost.</b> The real Holub&ndash;Fridrich&ndash;Denemark 2014
-    universal distortion (directional-Haar wavelet residual reciprocal-energy &mdash; the same
-    approximation Yousfi 2017 uses), computed on our render. High (textured) = <b>undetectable</b> to
-    embed into; smooth regions are where a perturbation would be caught.</p>
-    <p class="witthesis">Read together: <b>UNIWARD undetectability</b> (Fridrich) &rarr;
-    <b>SegNet detection</b> (Yousfi) &rarr; our <b>inverse-steganalysis witness</b> &mdash; a
-    task-space carrier that spends its bytes on the small-margin separatrix the detector is most
-    sensitive to, and nowhere else.</p>
+    <h3>Row C &mdash; two sensitivity fields on the same frame</h3>
+    <p><b>&rho;_seg &mdash; SegNet argmax margin.</b> Per pixel, the top1&minus;top2 logit gap of
+    the frozen SegNet. Bright = small margin: the pixel sits near a decision boundary, where a
+    small input change flips the argmax. d_seg can only change at these pixels, so this field is
+    the scorer's own sensitivity map.</p>
+    <p><b>&rho;_uniward &mdash; S-UNIWARD texture energy.</b> The directional-Haar wavelet residual
+    magnitude of Holub&ndash;Fridrich&ndash;Denemark 2014, computed on our render
+    (<code>tac.uniward_delta</code>). Their embedding cost is the reciprocal,
+    &rho;&nbsp;&#8733;&nbsp;&Sigma;&nbsp;1/(|W|+&sigma;) &mdash; highest where the image is smooth.
+    This panel displays the energy directly, so the reading is: <b>bright = textured = low
+    embedding cost</b>, where a perturbation is least detectable; dark = smooth, where any change
+    is conspicuous.</p>
+    <p class="witthesis">Together the two fields state the byte-allocation rule: distortion budget
+    matters only at small-margin pixels (d_seg cannot change anywhere else), and perturbation is
+    cheapest where texture energy is high. The margin field is also the quantitative surrogate for
+    the scorer's information geometry &mdash; Fisher curvature vs (&minus;margin) correlates at
+    Pearson 0.978 on this SegNet &mdash; so one field drives both the loss weighting and the
+    residual coder.</p>
   </div>
+  <!-- TODO(#343): Credits/lineage section HIDDEN per operator 2026-07-07; the tribute-register
+       header phrase is deleted outright. Rework as a plain References list (paper citations,
+       direct register) before re-showing.
   <div class="witcredits">
-    <div class="wch">Credits &amp; lineage &mdash; a genuine tribute</div>
+    <div class="wch">References</div>
     <ul>
       <li><b>comma10k-baseline</b> (Yassine Yousfi) &mdash; the segmentation baseline whose
       EfficientNet-B2 U-Net is the contest's frozen SegNet; the argmax it produces IS the d_seg
@@ -2308,9 +2344,10 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
       <li>The framing that this contest <b>IS inverse steganalysis</b>: the scorer is the steganalyst;
       the shortest archive whose witness survives the detector wins.</li>
     </ul>
-    <div class="wcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
-    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</div>
   </div>
+  -->
+  <div class="wcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
+  The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</div>
 </section>
 
 <section id="tab-flow" class="flow hide">

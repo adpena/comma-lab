@@ -185,12 +185,13 @@ class WitnessPanelRenderer:
         frag = np.clip(1.0 - mfield / (vmax + 1e-9), 0.0, 1.0)
         _panel(2, 0, "SegNet margin field ρ_seg (bright = fragile separatrix)", "#ffb454").imshow(
             frag, cmap="inferno", vmin=0, vmax=1)
-        # rho_uniward: REAL S-UNIWARD cost on OUR render (Holub-Fridrich 2014). High = textured =
-        # undetectable-to-embed (Fridrich principle #1). log1p + percentile stretch so the
-        # textured regions (lane markings, lights, tree/edge structure) pop against the smooth
-        # (low-texture, high-embedding-cost) background of a night scene.
+        # rho_uniward: S-UNIWARD directional-Haar TEXTURE ENERGY on OUR render (Holub-Fridrich-
+        # Denemark 2014). The paper's embedding cost is the RECIPROCAL (rho ∝ Σ 1/(|W|+σ), high
+        # where SMOOTH); we display the energy directly: bright = textured = low embedding cost.
+        # log1p + percentile stretch so textured structure (lane markings, lights, tree edges)
+        # pops against the smooth low-energy background of a night scene.
         uni_log = np.log1p(uni)
-        _panel(2, 1, "UNIWARD cost ρ_uniward on our render", "#7fe0a0").imshow(
+        _panel(2, 1, "S-UNIWARD texture energy ρ_uniward (bright = low embed cost)", "#7fe0a0").imshow(
             uni_log, cmap="viridis",
             vmin=float(np.percentile(uni_log, 40)), vmax=float(np.percentile(uni_log, 99.5)))
         # class legend (9th cell)
