@@ -406,7 +406,11 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
     if extra_flags:
         cmd += " \\\n  " + " ".join(shlex.quote(t) for t in extra_flags)
     return (
-        "#!/bin/bash\n"
+        # cross-platform-by-default (operator 2026-07-07): env-resolved bash finds
+        # a modern bash on PATH; macOS pins /bin/bash to 3.2. The durable-daemon
+        # invokes this as `bash launch.sh` (shebang unused there), but a bare
+        # `./launch.sh` on any fleet node must resolve portably.
+        "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
         # RUN-IDENTITY header (family always; purpose only when declared) — comments only.
         f"{_identity_header(cfg)}"

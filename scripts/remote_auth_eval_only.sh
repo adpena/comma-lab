@@ -68,7 +68,7 @@ if [ ! -f "$ARCHIVE_INPUT" ]; then
     log "       to $ARCHIVE_INPUT before invoking this script."
     exit 1
 fi
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE_INPUT")
+ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE_INPUT" 2>/dev/null || stat -c '%s' "$ARCHIVE_INPUT")  # BSD (macOS) first, GNU fallback — cross-platform-by-default
 ARCHIVE_SHA=$("$PYBIN" -c "
 import hashlib
 with open('$ARCHIVE_INPUT', 'rb') as f:
