@@ -3244,11 +3244,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "period_m": round(float(_comb_fit.period_m), 4),
                               "duty": round(float(_comb_fit.duty), 4),
                               "ego_scale": round(float(_comb_fit.scale), 6),
-                              "mean_concentration": round(float(_comb_fit.mean_concentration), 4),
+                              "transported_slots": sorted(
+                                  int(_s) for _s, _t in _comb_fit.transported_by_slot.items() if _t),
+                              "anchor_floats": int(_comb_fit.n_anchor_floats()),
+                              "mean_pairwise_concentration": round(
+                                  float(_comb_fit.mean_pairwise_concentration), 4),
                               "concentration_at_zero_scale": round(float(_comb_fit.concentration_at_zero_scale), 4),
                               "n_dashed_fits": int(_comb_fit.n_dashed_fits),
                               "note": "#287 ego-phase comb replaces per-pair fitted dash phase; "
-                              "concentration MEASURES the phase-from-xi transport quality; advisory; "
+                              "per-slot transported-vs-static + anchored/pairwise concentration "
+                              "MEASURE the phase-from-xi transport quality; advisory; "
                               "pointer 0.19110 UNMOVED"}), flush=True)
         else:
             for _pi in range(P):
