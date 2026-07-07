@@ -1,0 +1,243 @@
+{
+  "tool": "levelset_byte_close_and_eval",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "promotion_claim": false,
+  "utc": "2026-07-07T23:49:30Z",
+  "ckpt_dir": "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z",
+  "npz_name": "levelset_witness_ema_BEST.npz",
+  "n_pairs_total": 600,
+  "self_orient": {
+    "self_orient": true,
+    "curvelet_feat_width": 80,
+    "dir_w": 16,
+    "n_dir_freqs": 4,
+    "freq_across": 32.0,
+    "freq_along": 8.0,
+    "tau": 4.0,
+    "iters": 4
+  },
+  "config": {
+    "n_classes": 5,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 32,
+    "activation": "hosc",
+    "softmax_temp": 0.30982047258105083,
+    "chroma": true,
+    "render_h": 384,
+    "render_w": 512,
+    "in_feat": 96,
+    "max_bank_freq": 64.0,
+    "lane_edge_weight": 0.0
+  },
+  "byte_close": {
+    "n_params": 111095,
+    "manifest_bytes": 2297,
+    "base_int8_brotli_bytes": 61842,
+    "code_int8_brotli_bytes": 20355,
+    "pose_sidecar_bytes": 0,
+    "lane_band_counted_bytes": 41562,
+    "pose_carrier_counted_bytes": 0,
+    "magic_and_prefixes_bytes": 26,
+    "total_0bin_bytes": 126082,
+    "canonical_quantize_blob_bytes": 82197,
+    "accounting_matches_canonical": true,
+    "archive_zip_bytes": 125267,
+    "zip_container_overhead_bytes": -815,
+    "rate": 0.0033364061392302017,
+    "rate_term": 0.08341015348075503,
+    "rate_denom_bytes": 37545489,
+    "archive_zip_sha256": "26f3afa645ff484f53412e685064c5d769869887045a9feecfb09cbcdf445310",
+    "free_vs_counted": {
+      "FREE_rule118": "curvelet bank (5 scalars) + self-orient directional feats (decoder-own-argmax fixed point) -- generic algorithm, 0 bytes",
+      "COUNTED": "in_proj/film/hidden.*/out_sdf/out_tex/palette weights + per-frame code (int8+brotli, the learned video-derived payload)"
+    },
+    "pose_sidecar": "off (level-set witness carries pose in per-(pair,frame) codes/texture; train --w-pose>0. A stored sidecar adds COUNTED bytes the scorer never reads -> does NOT lower realized d_pose).",
+    "lane_render_band": {
+      "active": true,
+      "codec": "LBND2_rd",
+      "source_gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "n_pairs_fit": 600,
+      "serialized_raw_bytes": 159311,
+      "counted_brotli_bytes": 41562,
+      "counted_rate_term_contribution": 0.027674429809663687,
+      "fit_stats": {
+        "n_pairs": 600,
+        "n_lines_mean": 4.945,
+        "band_recall_mean": 0.5474557765871068,
+        "total_lines": 2967
+      },
+      "rate_report": {
+        "n_pairs": 600,
+        "K_slots": 6,
+        "total_lines": 2967,
+        "naive_lbnd1_raw_bytes": 356035,
+        "naive_lbnd1_brotli_bytes": 156386,
+        "naive_rate_term": 0.10413101824296389,
+        "rd_lbnd2_raw_bytes": 159311,
+        "rd_lbnd2_brotli_bytes": 41562,
+        "rd_rate_term": 0.027674429809663687,
+        "rd_vs_naive_ratio": 0.2657654777281854,
+        "presence_bitmap_bytes": 450,
+        "delta_stream_shannon_floor_bytes": 26179.13166463085,
+        "delta_floor_bytes_per_dim_type": {
+          "c3": 2761.864686075057,
+          "c2": 3042.2413908455273,
+          "c1": 2966.031831976369,
+          "c0": 2498.206887560922,
+          "hw1": 2821.815714731185,
+          "hw0": 2832.3847868802195,
+          "dash_period": 2125.89253163493,
+          "dash_phase": 2501.888596011192,
+          "dash_duty": 1430.3899722542442,
+          "fwd0": 1393.6452839875533,
+          "fwd1": 1804.7699826736566
+        },
+        "ptc1_range_coded_bytes": 43153,
+        "ptc1_note": "constriction range-coder lower bound (adds a constriction inflate dep; brotli is the default)",
+        "induced_lateral_rms_m": 0.021216932670011755,
+        "base_steps": [
+          7.407407407407407e-07,
+          2.2222222222222223e-05,
+          0.0006666666666666666,
+          0.02,
+          0.0005,
+          0.1,
+          0.1,
+          0.1,
+          0.02,
+          0.5,
+          0.5
+        ],
+        "rate_denom_bytes": 37545489
+      },
+      "u_mask_enabled": true,
+      "rule_118": {
+        "COUNTED (archive.zip)": "per-pair LaneLine manifold coords, QUANTIZED (geometric-tolerance steps) + temporal-delta + zigzag -- the video-derived statistic",
+        "FREE (inflate.py)": "quantize/dequantize + rasterize_lane_coverage_range_dependent (the AA-SDF coverage raster) + the composite -- generic deterministic algorithm, 0 archive bytes",
+        "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship"
+      }
+    },
+    "pose_carrier": {
+      "active": false
+    }
+  },
+  "lane_render_band": {
+    "active": true,
+    "codec": "LBND2_rd",
+    "source_gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "n_pairs_fit": 600,
+    "serialized_raw_bytes": 159311,
+    "counted_brotli_bytes": 41562,
+    "counted_rate_term_contribution": 0.027674429809663687,
+    "fit_stats": {
+      "n_pairs": 600,
+      "n_lines_mean": 4.945,
+      "band_recall_mean": 0.5474557765871068,
+      "total_lines": 2967
+    },
+    "rate_report": {
+      "n_pairs": 600,
+      "K_slots": 6,
+      "total_lines": 2967,
+      "naive_lbnd1_raw_bytes": 356035,
+      "naive_lbnd1_brotli_bytes": 156386,
+      "naive_rate_term": 0.10413101824296389,
+      "rd_lbnd2_raw_bytes": 159311,
+      "rd_lbnd2_brotli_bytes": 41562,
+      "rd_rate_term": 0.027674429809663687,
+      "rd_vs_naive_ratio": 0.2657654777281854,
+      "presence_bitmap_bytes": 450,
+      "delta_stream_shannon_floor_bytes": 26179.13166463085,
+      "delta_floor_bytes_per_dim_type": {
+        "c3": 2761.864686075057,
+        "c2": 3042.2413908455273,
+        "c1": 2966.031831976369,
+        "c0": 2498.206887560922,
+        "hw1": 2821.815714731185,
+        "hw0": 2832.3847868802195,
+        "dash_period": 2125.89253163493,
+        "dash_phase": 2501.888596011192,
+        "dash_duty": 1430.3899722542442,
+        "fwd0": 1393.6452839875533,
+        "fwd1": 1804.7699826736566
+      },
+      "ptc1_range_coded_bytes": 43153,
+      "ptc1_note": "constriction range-coder lower bound (adds a constriction inflate dep; brotli is the default)",
+      "induced_lateral_rms_m": 0.021216932670011755,
+      "base_steps": [
+        7.407407407407407e-07,
+        2.2222222222222223e-05,
+        0.0006666666666666666,
+        0.02,
+        0.0005,
+        0.1,
+        0.1,
+        0.1,
+        0.02,
+        0.5,
+        0.5
+      ],
+      "rate_denom_bytes": 37545489
+    },
+    "u_mask_enabled": true,
+    "rule_118": {
+      "COUNTED (archive.zip)": "per-pair LaneLine manifold coords, QUANTIZED (geometric-tolerance steps) + temporal-delta + zigzag -- the video-derived statistic",
+      "FREE (inflate.py)": "quantize/dequantize + rasterize_lane_coverage_range_dependent (the AA-SDF coverage raster) + the composite -- generic deterministic algorithm, 0 archive bytes",
+      "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship"
+    }
+  },
+  "pose_carrier": {
+    "active": false
+  },
+  "pose_carrier_keyframe_accounting": null,
+  "pose_carrier_confirmation": {
+    "checked": false
+  },
+  "inflate": {
+    "inflate_stdout": "inflated 4 frames (2 pairs) -> /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234906Z/inflated/0.raw [4x874x1164x3 uint8] (2 workers)",
+    "eval_pairs": 2,
+    "n_frames_emitted": 4,
+    "raw_path": "/Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234906Z/inflated/0.raw",
+    "raw_bytes": 12208032,
+    "expected_bytes": 12208032,
+    "full_output_shape_ok": true,
+    "frame_layout": "(4, 874, 1164, 3) uint8 [f0,f1 per pair]"
+  },
+  "bit_exact_roundtrip_gate": {
+    "bit_exact": true,
+    "gate_pairs": 2,
+    "frames_compared": 4,
+    "n_frames_differing": 0,
+    "max_abs_uint8_diff": 0,
+    "reference": "tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy (numpy-fp32 oracle) + canonical FREE-table regen + reference R",
+    "proves": "shipped inflate.py bit-identically implements the canonical generator on the int8-dequantized checkpoint (argmax the score reads is byte-determined)",
+    "checked": true
+  },
+  "parity_on_inflated_frames": {
+    "skipped": true
+  },
+  "exact_eval_upstream_evaluate": {
+    "ran": false
+  },
+  "contest_cpu_eval_cmd": ".venv/bin/python experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234906Z/archive.zip --inflate-sh /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234906Z/inflate.sh --device cpu  # [contest-CPU] authoritative ONLY on Linux x86_64 (Modal CPU); macOS-local = advisory",
+  "packet_dir": "(deleted; pass --keep-packet to retain archive+inflate for the exact-eval row)",
+  "self_orient_parity_caveat": "self-orient deploy dir feats are a FIXED-POINT on the FINAL weights; the trainer's implied_S used dir feats accumulated along the training trajectory -> close but not bit-identical; realized d_seg on the inflated frames is the TRUTH.",
+  "checkpoint_trained_n600": true,
+  "this_run_scored_full_600": false,
+  "contest_ready_note": "checkpoint n_pairs==600 -> full 1200-frame .raw is producible (checkpoint-level); this_run_scored_full_600 says whether THIS invocation's parity scored all 600 pairs (skip-parity/max-pairs runs did NOT)",
+  "decode_memory_tier": {
+    "name": "decode_cpu_16gb",
+    "contest": true,
+    "bit_exact_contract": true,
+    "eval_device": "cpu",
+    "inflate_env": {
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "note": "contest 4-core/16GB CPU eval runner; bit-exact (fp64/CPU-torch-R/1-thread BLAS); all host cores (bit-identical regardless of count); ~10-15min n600 g384."
+  }
+}

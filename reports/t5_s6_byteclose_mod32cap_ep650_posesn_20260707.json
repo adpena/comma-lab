@@ -1,0 +1,196 @@
+{
+  "tool": "levelset_byte_close_and_eval",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "promotion_claim": false,
+  "utc": "2026-07-07T23:50:04Z",
+  "ckpt_dir": "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z",
+  "npz_name": "levelset_witness_ema_BEST.npz",
+  "n_pairs_total": 600,
+  "self_orient": {
+    "self_orient": true,
+    "curvelet_feat_width": 80,
+    "dir_w": 16,
+    "n_dir_freqs": 4,
+    "freq_across": 32.0,
+    "freq_along": 8.0,
+    "tau": 4.0,
+    "iters": 4
+  },
+  "config": {
+    "n_classes": 5,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 32,
+    "activation": "hosc",
+    "softmax_temp": 0.30982047258105083,
+    "chroma": true,
+    "render_h": 384,
+    "render_w": 512,
+    "in_feat": 96,
+    "max_bank_freq": 64.0,
+    "lane_edge_weight": 0.0
+  },
+  "byte_close": {
+    "n_params": 111095,
+    "manifest_bytes": 2089,
+    "base_int8_brotli_bytes": 61842,
+    "code_int8_brotli_bytes": 20355,
+    "pose_sidecar_bytes": 0,
+    "lane_band_counted_bytes": 0,
+    "pose_carrier_counted_bytes": 6929,
+    "magic_and_prefixes_bytes": 26,
+    "total_0bin_bytes": 91241,
+    "canonical_quantize_blob_bytes": 82197,
+    "accounting_matches_canonical": true,
+    "archive_zip_bytes": 90393,
+    "zip_container_overhead_bytes": -848,
+    "rate": 0.0024075595339828975,
+    "rate_term": 0.06018898834957243,
+    "rate_denom_bytes": 37545489,
+    "archive_zip_sha256": "64b9d153679a705aa07b9763581f727c9781f2afc24672521ad46aca28bd22d7",
+    "free_vs_counted": {
+      "FREE_rule118": "curvelet bank (5 scalars) + self-orient directional feats (decoder-own-argmax fixed point) -- generic algorithm, 0 bytes",
+      "COUNTED": "in_proj/film/hidden.*/out_sdf/out_tex/palette weights + per-frame code (int8+brotli, the learned video-derived payload)"
+    },
+    "pose_sidecar": "STORE-NOTHING (xi-only) carrier ACTIVE: NO stored keyframe (0 B) -- frame0 = warp(the witness's OWN frame0 render, per-pair H). Section=6929 B (xi/H only; ~0 marginal keyframe rate). Track B store-nothing-but-xi (18927a1ae).",
+    "lane_render_band": {
+      "active": false
+    },
+    "pose_carrier": {
+      "active": true,
+      "mode": "store_nothing",
+      "generator": "witness_render_frame0",
+      "source_gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "n_pairs": 600,
+      "n_keyframes": 0,
+      "stride": 1,
+      "keyframe_store_hw": [
+        874,
+        1164
+      ],
+      "keyframe_lossless_native": true,
+      "pose_carrier_section_bytes": 6929,
+      "keyframe_blob_bytes_total": 0,
+      "H_bytes": 0,
+      "xi_bytes": 6367,
+      "xi_coder": "delta_ar",
+      "xi_q_levels": 4096,
+      "xi_raw_bytes_ref": 7232,
+      "calibration": {
+        "s_t": 0.16,
+        "s_r": 1.0,
+        "pitch": 0.02
+      },
+      "stride_note": "store_nothing v2 (#257): no stored keyframe AND no stored H -> frame0 = warp(witness's OWN frame0 render, DERIVED per-pair H); stride unused (only the coded \u03be is stored).",
+      "rule_118": {
+        "COUNTED (archive.zip)": "ONLY the per-pair ego twist \u03be (quantized + entropy-coded) + 6 per-channel scales + the scalar pitch; NO stored H (43,200 B redundancy DROPPED -> derived FREE), NO keyframe luma",
+        "FREE (inflate.py)": "the witness INR frame0 render + exp_se3 + H=K(R-t nT/d)K^-1 (DERIVE-H) + the \u03be arithmetic decoder + inverse-warp bilinear + R -- all generic algorithm, 0 archive bytes (rule-118)",
+        "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship"
+      },
+      "byte_optimal_note": "STORE-NOTHING v2 (#257): stores ONLY the coded \u03be (6367 B, coder=delta_ar, q_levels=4096; raw-\u03be ref 7232 B). The redundant per-pair fp64 H (43,200 B = 83% of the pre-#257 section, FINDING-1) is DROPPED and DERIVED FREE at decode (exp_se3 + plane homography, rule-118); the kf_of_pair junk list is DROPPED. ZERO keyframe bytes. d_pose is measured through the REAL byte-closed decode (the derived H reproduces the fp64-H warp; the trained rank-6 d\u03be residual (#205 w_pose>0) closes d_pose -- UNMEASURED here; NO borrowed number)."
+    }
+  },
+  "lane_render_band": {
+    "active": false
+  },
+  "pose_carrier": {
+    "active": true,
+    "mode": "store_nothing",
+    "generator": "witness_render_frame0",
+    "source_gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "n_pairs": 600,
+    "n_keyframes": 0,
+    "stride": 1,
+    "keyframe_store_hw": [
+      874,
+      1164
+    ],
+    "keyframe_lossless_native": true,
+    "pose_carrier_section_bytes": 6929,
+    "keyframe_blob_bytes_total": 0,
+    "H_bytes": 0,
+    "xi_bytes": 6367,
+    "xi_coder": "delta_ar",
+    "xi_q_levels": 4096,
+    "xi_raw_bytes_ref": 7232,
+    "calibration": {
+      "s_t": 0.16,
+      "s_r": 1.0,
+      "pitch": 0.02
+    },
+    "stride_note": "store_nothing v2 (#257): no stored keyframe AND no stored H -> frame0 = warp(witness's OWN frame0 render, DERIVED per-pair H); stride unused (only the coded \u03be is stored).",
+    "rule_118": {
+      "COUNTED (archive.zip)": "ONLY the per-pair ego twist \u03be (quantized + entropy-coded) + 6 per-channel scales + the scalar pitch; NO stored H (43,200 B redundancy DROPPED -> derived FREE), NO keyframe luma",
+      "FREE (inflate.py)": "the witness INR frame0 render + exp_se3 + H=K(R-t nT/d)K^-1 (DERIVE-H) + the \u03be arithmetic decoder + inverse-warp bilinear + R -- all generic algorithm, 0 archive bytes (rule-118)",
+      "no_gt_no_scorer": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship"
+    },
+    "byte_optimal_note": "STORE-NOTHING v2 (#257): stores ONLY the coded \u03be (6367 B, coder=delta_ar, q_levels=4096; raw-\u03be ref 7232 B). The redundant per-pair fp64 H (43,200 B = 83% of the pre-#257 section, FINDING-1) is DROPPED and DERIVED FREE at decode (exp_se3 + plane homography, rule-118); the kf_of_pair junk list is DROPPED. ZERO keyframe bytes. d_pose is measured through the REAL byte-closed decode (the derived H reproduces the fp64-H warp; the trained rank-6 d\u03be residual (#205 w_pose>0) closes d_pose -- UNMEASURED here; NO borrowed number)."
+  },
+  "pose_carrier_keyframe_accounting": {
+    "keyframe_blob_bytes": 0,
+    "keyframe_blob_rate": 0.0,
+    "source": "none",
+    "payload_path": null,
+    "keyframe_count_hint": 0,
+    "rule_118": {
+      "COUNTED (archive.zip)": "stored real keyframe luma (video-derived); warped at decode by the per-pair ego twist to synthesize frame0",
+      "FREE (inflate.py)": "plane homography + exp_se3 + inverse-warp bilinear + R (generic algorithm) + the DUAL-USE twist (already counted in the pose sidecar)"
+    },
+    "note": "NO real-luma pose-carrier keyframes counted (0 B). Pose path = the stored screw/twist sidecar, which the scorer never reads as frames -> does NOT lower realized d_pose. A real-luma --pose-carrier ROW (the #205 sealed config) REQUIRES a keyframe payload > 0 here; pass --keyframe-payload-bytes (measured codec, memo warp_keyframe_payload_rate_minimization_20260702 \u00a72) or --keyframe-payload-path <blob>.",
+    "verified_against_archive": {
+      "pose_carrier_section_bytes_in_0bin": 6929,
+      "section_bytes_match_report": true,
+      "keyframe_bytes_le_section": true,
+      "note": "keyframe payload is COUNTED inside archive.zip (0.bin 6th block -> the measured rate term already includes it); the accounting is cross-checked against the real section st_size (not an estimate)."
+    }
+  },
+  "pose_carrier_confirmation": {
+    "checked": false
+  },
+  "inflate": {
+    "inflate_stdout": "inflated 4 frames (2 pairs) -> /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234940Z/inflated/0.raw [4x874x1164x3 uint8] (2 workers)",
+    "eval_pairs": 2,
+    "n_frames_emitted": 4,
+    "raw_path": "/Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234940Z/inflated/0.raw",
+    "raw_bytes": 12208032,
+    "expected_bytes": 12208032,
+    "full_output_shape_ok": true,
+    "frame_layout": "(4, 874, 1164, 3) uint8 [f0,f1 per pair]"
+  },
+  "bit_exact_roundtrip_gate": {
+    "bit_exact": true,
+    "gate_pairs": 2,
+    "frames_compared": 4,
+    "n_frames_differing": 0,
+    "max_abs_uint8_diff": 0,
+    "reference": "tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy (numpy-fp32 oracle) + canonical FREE-table regen + reference R",
+    "proves": "shipped inflate.py bit-identically implements the canonical generator on the int8-dequantized checkpoint (argmax the score reads is byte-determined)",
+    "checked": true
+  },
+  "parity_on_inflated_frames": {
+    "skipped": true
+  },
+  "exact_eval_upstream_evaluate": {
+    "ran": false
+  },
+  "contest_cpu_eval_cmd": ".venv/bin/python experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234940Z/archive.zip --inflate-sh /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260707T234940Z/inflate.sh --device cpu  # [contest-CPU] authoritative ONLY on Linux x86_64 (Modal CPU); macOS-local = advisory",
+  "packet_dir": "(deleted; pass --keep-packet to retain archive+inflate for the exact-eval row)",
+  "self_orient_parity_caveat": "self-orient deploy dir feats are a FIXED-POINT on the FINAL weights; the trainer's implied_S used dir feats accumulated along the training trajectory -> close but not bit-identical; realized d_seg on the inflated frames is the TRUTH.",
+  "checkpoint_trained_n600": true,
+  "this_run_scored_full_600": false,
+  "contest_ready_note": "checkpoint n_pairs==600 -> full 1200-frame .raw is producible (checkpoint-level); this_run_scored_full_600 says whether THIS invocation's parity scored all 600 pairs (skip-parity/max-pairs runs did NOT)",
+  "decode_memory_tier": {
+    "name": "decode_cpu_16gb",
+    "contest": true,
+    "bit_exact_contract": true,
+    "eval_device": "cpu",
+    "inflate_env": {
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "note": "contest 4-core/16GB CPU eval runner; bit-exact (fp64/CPU-torch-R/1-thread BLAS); all host cores (bit-identical regardless of count); ~10-15min n600 g384."
+  }
+}
