@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane WC: Cosmos Curator soft-DTW outlier weighting.
 #
 # Replaces Lane W's circular loss-based hard-pair signal with independent

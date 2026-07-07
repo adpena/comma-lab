@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # track1_phase_a1_score_gradient — full-chain remote driver.
 #
 # Stages on remote (Lightning T4 g4dn.2xlarge or equivalent CUDA host):

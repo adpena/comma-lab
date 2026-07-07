@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Canonical bootstrap for POSE-TTO-ONLY (no QAT, no retrain) on an existing
 # FP4 .bin renderer. Use this when the renderer is already trained + QAT'd
 # and we want to ONLY iterate on poses. Pattern matches remote_train_bootstrap.sh

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Canonical remote setup for ANY Vast.ai 4090 experiment lane.
 # Captures every trap documented in memory:
 #   - feedback_zip_dep_bootstrap_trap (no zip in PyTorch container)

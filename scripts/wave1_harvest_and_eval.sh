@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Wave-1 Harvest + Eval Orchestrator (Q-FAITHFUL training, Vast 35959478)
 # ─────────────────────────────────────────────────────────────────────────
 # Purpose: After Q-FAITHFUL training completes on Vast 35959478, automate

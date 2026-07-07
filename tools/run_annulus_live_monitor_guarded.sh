@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Guarded LIVE annulus-convergence monitor. Mirrors run_probe_guarded.sh: a memory
 # watchdog kills ONLY the monitor (and its render child via the process group) if free
 # RAM drops below the floor -- it can NEVER push the box over the P0 machine-crash edge,

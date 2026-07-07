@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Canonical remote training bootstrap. Reusable for ANY profile via $1.
 # Two-mode operation:
 #   - default mode: launch tmux session that re-invokes this script with --inner

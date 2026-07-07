@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Fetch latest competition PR scores from GitHub
 # Output: JSON array of {name, score, date}
 # Cache: only fetches if cache is older than 10 minutes

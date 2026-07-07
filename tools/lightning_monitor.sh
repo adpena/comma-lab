@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lightning AI training monitor through SSH.
 # Usage: bash tools/lightning_monitor.sh [check|log|download|status]
 set -euo pipefail

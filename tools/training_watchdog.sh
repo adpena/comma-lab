@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Training watchdog — keeps experiments alive by restarting on crash
 #
 # Usage:

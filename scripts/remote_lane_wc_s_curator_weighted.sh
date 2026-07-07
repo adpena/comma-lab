@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane WC-S — SegMap (SC++ training) + Cosmos Curator soft-DTW outlier
 #             pair weighting (Lane WC concept ported into the SegMap paradigm).
 #

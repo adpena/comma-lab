@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane W-V2: LEARNABLE per-pair loss weights via Lagrangian dual ascent.
 #
 # Council 2026-04-27: Lane W-V1 used a hard top-K + uniform weight
@@ -122,9 +122,9 @@ for f in "$ANCHOR_RENDERER" "$ANCHOR_POSES" "$ANCHOR_MASKS" "$GT_VIDEO" \
          upstream/models/posenet.safetensors upstream/models/segnet.safetensors; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
-log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -c '%s' "$ANCHOR_RENDERER") bytes)"
-log "  anchor_poses:    $ANCHOR_POSES   ($(stat -c '%s' "$ANCHOR_POSES") bytes)"
-log "  anchor_masks:    $ANCHOR_MASKS   ($(stat -c '%s' "$ANCHOR_MASKS") bytes)"
+log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -f%z "$ANCHOR_RENDERER" 2>/dev/null || stat -c%s "$ANCHOR_RENDERER") bytes)"
+log "  anchor_poses:    $ANCHOR_POSES   ($(stat -f%z "$ANCHOR_POSES" 2>/dev/null || stat -c%s "$ANCHOR_POSES") bytes)"
+log "  anchor_masks:    $ANCHOR_MASKS   ($(stat -f%z "$ANCHOR_MASKS" 2>/dev/null || stat -c%s "$ANCHOR_MASKS") bytes)"
 
 # ── Stage 1: per-pair sensitivity profile in CONTINUOUS mode ──
 log "=== Stage 1: profile_pair_sensitivity --mode continuous (Lane W-V2) ==="
@@ -147,7 +147,7 @@ set -e
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 [ -f "$PAIR_WEIGHTS" ] || { echo "FATAL: profile_pair_sensitivity didn't produce $PAIR_WEIGHTS"; exit 2; }
-log "  pair_weights: $PAIR_WEIGHTS ($(stat -c '%s' "$PAIR_WEIGHTS") bytes)"
+log "  pair_weights: $PAIR_WEIGHTS ($(stat -f%z "$PAIR_WEIGHTS" 2>/dev/null || stat -c%s "$PAIR_WEIGHTS") bytes)"
 
 # ── Stage 2: SC training + --learnable-pair-weights (Lane W-V2 core) ──
 log "=== Stage 2: train_renderer.py SC + LearnablePairWeights ==="
@@ -179,7 +179,7 @@ BEST_FP32=$(ls -t "$TRAIN_OUT"/renderer_*_best_fp32.pt 2>/dev/null | head -1)
     ls -la "$TRAIN_OUT/" || true
     exit 2
 }
-log "  best fp32 checkpoint: $BEST_FP32 ($(stat -c '%s' "$BEST_FP32") bytes)"
+log "  best fp32 checkpoint: $BEST_FP32 ($(stat -f%z "$BEST_FP32" 2>/dev/null || stat -c%s "$BEST_FP32") bytes)"
 
 # ── Stage 3: SCv1 export of best checkpoint ──
 log "=== Stage 3: SCv1 export ==="
@@ -227,7 +227,7 @@ if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
 [ -f "$SCV1_BIN" ] || { echo "FATAL: SCv1 export produced no $SCV1_BIN"; exit 2; }
-log "  SCv1 binary: $SCV1_BIN ($(stat -c '%s' "$SCV1_BIN") bytes)"
+log "  SCv1 binary: $SCV1_BIN ($(stat -f%z "$SCV1_BIN" 2>/dev/null || stat -c%s "$SCV1_BIN") bytes)"
 
 # ── Stage 4: build archive (V2 renderer + Lane A masks + Lane A poses) ──
 log "=== Stage 4: build archive ==="
@@ -245,7 +245,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(p, arcname=n)
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE")
+ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 [ -n "$ARCHIVE_BYTES" ] && [ "$ARCHIVE_BYTES" -gt 0 ] || {
     echo "FATAL: archive build failed (zero bytes)"
     exit 2

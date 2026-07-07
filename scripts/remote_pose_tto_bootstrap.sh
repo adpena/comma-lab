@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Canonical remote bootstrap for FULL post-training stack on an existing
 # float checkpoint (.pt). Runs pipeline.py compress which chains:
 #   step_export    — FP4 + self-compression (RESIDUAL codebook + robust_scale)

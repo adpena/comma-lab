@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Wave-Ω-2 NeRV mask codec FULL CUDA training dispatcher (PRE-STAGED, DO NOT
 # EXECUTE until Wave-1 anchor lands). Wraps scripts/remote_lane_nerv.sh with
 # full-CUDA-training params (60,000 SGD steps target per Phase F empirical

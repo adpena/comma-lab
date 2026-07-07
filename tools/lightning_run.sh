@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Run a command on Lightning AI Studio through SSH.
 #
 # Export LIGHTNING_SSH_TARGET to a user-qualified Studio SSH target or SSH alias.

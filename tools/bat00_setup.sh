@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # bat00 WSL permanent setup script
 # Run this INSIDE WSL on bat00 (not PowerShell)
 #
