@@ -510,6 +510,19 @@ def _maybe_wrap_safe_run(cmd: list[str], a: argparse.Namespace) -> list[str]:
     wrapped = [sys.executable, str(_SAFE_RUN)]
     if rss_mb:
         wrapped += ["--rss-mb", str(int(rss_mb))]
+    # (review-fix CRITICAL) The durable-daemon runs the AUTHORITATIVE system admission gate
+    # (_system_admission_gate, with the ACCURATE a.projected_peak_gib) right after this wrap and
+    # before Popen. Without this, safe_run's OWN gate would re-litigate the SUM-over-RAM decision a
+    # SECOND time from --rss-mb/1024 — the conservative RSS *cap* (deliberately set high, e.g.
+    # 90000MB -> 87.9GiB) rather than the real projection (~68-72GiB) the daemon just validated. On
+    # an armed-enforce box that inflated number can FALSE-REFUSE an already-admitted governed
+    # #205/witness launch (the wrapper killing the thing it protects). The daemon is the single
+    # gate point, so tell the inner safe_run to SKIP its gate; forward the accurate projection too
+    # as defense-in-depth (correct number if this ordering ever changes).
+    wrapped += ["--skip-admission-gate"]
+    _proj = getattr(a, "projected_peak_gib", None)
+    if isinstance(_proj, (int, float)) and _proj > 0:
+        wrapped += ["--projected-gib", str(float(_proj))]
     wrapped += ["--timeout", str(float(timeout_s)), "--label", a.label or "training_arm", "--", *cmd]
     print(
         f"[durable-daemon] per-arm cap ACTIVE (safe_run): rss-mb={rss_mb or 'none'} "
