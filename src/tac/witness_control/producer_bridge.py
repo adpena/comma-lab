@@ -13,7 +13,7 @@ either a REAL live signal or an honest ``available=False`` with a recorded ``rea
 "'off' is a tracked queue, never a forgotten default" discipline — a producer with no live input is
 SURFACED as awaiting-its-input, not silently dropped and not invented).
 
-The three producers + what each contributes to the controller's SENSE:
+The four producers + what each contributes to the controller's SENSE:
 
 * ``sensitivity_map.axis_weights_for_named_operating_point`` — per-axis EV multipliers
   (pose/seg/rate/mixed) at the operating point. A LIVE, always-available prior the DECIDE ranker
@@ -27,6 +27,10 @@ The three producers + what each contributes to the controller's SENSE:
   candidate set); instead the bridge surfaces it as available and names the composition: the
   activation ledger's ``duty_to_measure`` never-fired levers ARE its candidate set (the EIG/select
   bridge documented in DAG FEED-247loop). ``duty_to_measure_as_candidates`` exposes that label list.
+* ``tac.harness_failure_ledger.sense_rows`` — ranked open/recurrent harness-failure classes (the
+  Weng weakness-mining harvest 2026-07-07, ``docs/harvest_weng_harness_20260707.md``): the
+  controller can weight recommendations by known-unreliable surfaces; honest ``available=False``
+  when the ledger is empty.
 
 Everything here is READ-ONLY + advisory (like the whole ``witness_control`` package): it never
 mutates a run, never claims a score, never auto-actuates.
@@ -135,6 +139,34 @@ def _cathedral_autopilot_signal() -> ProducerSignal:
         )
 
 
+def _harness_failure_signal() -> ProducerSignal:
+    """The Weng weakness-mining failure ledger (``tac.harness_failure_ledger``, harvest
+    2026-07-07): ranked open/recurrent harness-failure classes as a SENSE input. Read-only;
+    the controller may weight its recommendations by known-unreliable surfaces (e.g. refuse to
+    recommend a spawned-daemon measurement while the daemon-kill class is open). Honest when
+    empty: no ledger rows => available=False, never a fabricated failure."""
+    try:
+        from tac.harness_failure_ledger import sense_rows
+        rows = sense_rows(limit=10)
+        if not rows:
+            return ProducerSignal(
+                name="harness_failure_ledger.sense_rows", available=False, signal=None,
+                reason="ledger empty or absent (no recorded harness-failure classes)",
+            )
+        return ProducerSignal(
+            name="harness_failure_ledger.sense_rows", available=True,
+            signal={"ranked_failures": rows},
+            reason="ranked harness-failure classes (unresolved first, recurrence desc) — "
+                   "the Weng 'recurrent, addressable patterns' preference as SENSE",
+            provenance={"ledger": ".omx/state/harness_failure_ledger.jsonl"},
+        )
+    except Exception as e:  # noqa: BLE001 — advisory bridge, never breaks the report
+        return ProducerSignal(
+            name="harness_failure_ledger.sense_rows", available=False, signal=None,
+            reason=f"unavailable ({type(e).__name__}: {e})",
+        )
+
+
 def read_producer_signals(
     *,
     archive_sha256: str | None = None,
@@ -150,6 +182,7 @@ def read_producer_signals(
         _sensitivity_map_signal(operating_point).to_dict(),
         _master_gradient_signal(archive_sha256).to_dict(),
         _cathedral_autopilot_signal().to_dict(),
+        _harness_failure_signal().to_dict(),
     ]
 
 

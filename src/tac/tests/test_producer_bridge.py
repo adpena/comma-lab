@@ -6,13 +6,14 @@ from __future__ import annotations
 from tac.witness_control import producer_bridge as pb
 
 
-def test_read_producer_signals_enumerates_all_three():
+def test_read_producer_signals_enumerates_all_four():
     rows = pb.read_producer_signals()
     names = {r["producer"] for r in rows}
     assert names == {
         "sensitivity_map.axis_weights",
         "master_gradient.latest_anchor",
         "cathedral_autopilot.ranker",
+        "harness_failure_ledger.sense_rows",
     }
     # every row is a well-formed ProducerSignal dict (NO-FAKE shape)
     for r in rows:
@@ -68,7 +69,8 @@ def test_shadow_report_surfaces_producer_signals():
     rep = build_shadow_report(RunInputs(run_dir="/tmp/prod_smoke", verdicts=[], stage_rows={}, flags={}))
     ps = rep.producer_signals
     assert {r["producer"] for r in ps} == {
-        "sensitivity_map.axis_weights", "master_gradient.latest_anchor", "cathedral_autopilot.ranker"}
+        "sensitivity_map.axis_weights", "master_gradient.latest_anchor",
+        "cathedral_autopilot.ranker", "harness_failure_ledger.sense_rows"}
     assert "producer_signals" in rep.to_row()
 
 
