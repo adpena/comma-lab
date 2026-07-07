@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # B1-R3 DESCENT-PROOF SMOKE (detached). [macOS-MLX research-signal] — NOT a contest score.
 #
 # Council T4 verdict (feedback_grand_council_symposium_all_results_roadmap_20260609): build the

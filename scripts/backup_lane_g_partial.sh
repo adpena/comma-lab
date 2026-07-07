@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Periodic backup of Lane A's partial pose checkpoint from a Vast.ai instance
 # to a local persistent path. Runs every 60s. If the remote instance dies,
 # the latest partial is preserved locally and a future Lane A run can resume.

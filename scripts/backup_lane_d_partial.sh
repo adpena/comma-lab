@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Periodic backup of Lane D's partial training artifacts from a Vast.ai instance
 # to a local persistent path. Per CLAUDE.md "Vast.ai launch protocol" rule 4:
 # spot interruptions happen, save partial results to a persistent location.

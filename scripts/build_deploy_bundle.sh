@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Build a lean deployment bundle for Vast.ai
 # Includes ALL necessary source files, excludes large/unnecessary files
 #

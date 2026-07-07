@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane J-IMP — 10-cycle Iterative Magnitude Pruning (Frankle-Carbin LTH +
 # Frankle-2019 weight-rewinding-to-early-epoch stabilization).
 #
@@ -435,7 +435,7 @@ if [ "${PIPE_RC[0]}" -ne 0 ]; then
 fi
 
 [ -f "$LOG_DIR/renderer.bin" ] || { log "FATAL: re-export didn't produce renderer.bin"; exit 6; }
-RENDERER_SIZE=$(stat -c '%s' "$LOG_DIR/renderer.bin")
+RENDERER_SIZE=$(stat -f%z "$LOG_DIR/renderer.bin" 2>/dev/null || stat -c%s "$LOG_DIR/renderer.bin")
 log "  Lane J-IMP renderer.bin = $RENDERER_SIZE bytes"
 
 log "=== Stage 3: build contest archive (IMP renderer + Lane G v3 masks + poses) ==="

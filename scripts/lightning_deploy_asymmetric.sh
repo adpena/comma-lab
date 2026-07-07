@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lightning T4 deployment for asymmetric warp renderer training.
 #
 # Pre-requisites on Lightning:

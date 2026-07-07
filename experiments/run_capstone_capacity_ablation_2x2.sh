@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # 2x2 capacity-confirm ablation (capstone spec section 6 step 6): the decisive
 # capacity-vs-data read BEFORE the multi-day 600-pair bet.

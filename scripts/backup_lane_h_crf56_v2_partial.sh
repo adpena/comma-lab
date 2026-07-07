@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Periodic backup of Lane H v2 partial artifacts from a Vast.ai instance to
 # a local persistent path. Lane H has no pose TTO, so the only "partial"
 # state worth backing up is the build.log + auth_eval.log streams.

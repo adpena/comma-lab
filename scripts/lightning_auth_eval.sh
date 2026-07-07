@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Auth-quality scorer eval on Lightning T4 with DALI.
 # Run from local machine:
 #   LIGHTNING_SSH_TARGET=lightning-pact bash scripts/lightning_auth_eval.sh [archive.zip]

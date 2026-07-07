@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # F1 recon-fit CAPACITY ablation — does the PR95 bilinear-skip + terminal HF-refine
 # break the skip-free 21.74 dB PSNR plateau? (deep_hinerv_snerv_fidelity_review H1/H4)
 #

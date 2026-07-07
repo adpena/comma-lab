@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # B1 229K CLEAN + STABILIZED PR95-faithful baseline (detached).
 # [macOS-MLX research-signal] — NOT a contest score. Score = B2 bridge exact eval.
 #

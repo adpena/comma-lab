@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Auth scorer setup for bat00 WSL2 (RTX 2070 Super, 8GB VRAM, 11GB RAM)
 #
 # Prerequisites: upload these to C:\Users\adpena\pact_eval\submission\
@@ -127,7 +127,7 @@ else
 fi
 
 # Verify models are real files (not LFS stubs)
-MODEL_SIZE=$(stat -c%s "$UPSTREAM_DIR/models/posenet.safetensors" 2>/dev/null || echo 0)
+MODEL_SIZE=$(stat -f%z "$UPSTREAM_DIR/models/posenet.safetensors" 2>/dev/null || stat -c%s "$UPSTREAM_DIR/models/posenet.safetensors" 2>/dev/null || echo 0)
 if [ "$MODEL_SIZE" -lt 1000000 ]; then
     echo "  Models are LFS stubs — pulling..."
     cd "$UPSTREAM_DIR" && git lfs pull && cd "$WORK_DIR"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # B1 CLEAN PR95-FAITHFUL BASELINE (zero novelty). [macOS-MLX research-signal].
 #
 # THE REFRAME (2026-06-09): R1/R2/R3 were NOT the PR95 recipe — they were OFF-SPEC

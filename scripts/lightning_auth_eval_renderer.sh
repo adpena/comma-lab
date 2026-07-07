@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Authoritative renderer evaluation on Lightning T4.
 #
 # Mirrors the Modal auth_eval function from modal_asymmetric_warp_deploy.py

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Canonical fresh-host pip bootstrap for remote runners.
 #
 # Bug class permanently extincted (2026-05-01):

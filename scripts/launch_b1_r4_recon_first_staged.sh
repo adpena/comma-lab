@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # B1-R4 RECON-FIRST STAGED CURRICULUM (the DERIVED production fix). [macOS-MLX research-signal].
 #
 # THE DISCOVERY (2026-06-09): the recon-first annealed curriculum ALREADY EXISTS as
