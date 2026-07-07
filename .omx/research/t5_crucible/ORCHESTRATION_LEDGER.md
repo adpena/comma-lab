@@ -7,7 +7,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 
 ## Protocol phases
 - [x] P0 grounding (never-fired 36 enumerated; 113 unmapped DSL flags; ledger-semantics caveat)
-- [ ] P1 independent positions (6 seats, anti-anchored, STAGGERED 2 waves of 3 for rate limits)
+- [x] P1 independent positions (6 seats DONE) + 20-store compendium DONE + pursuit-chain-A in flight
 - [ ] P2 **POSITIVE SYNTHESIS DRAFT — reordered per operator 2026-07-07 ("agents finding the
       obvious but not doing the positive work of proposing optimal")**: a CHIEF-DESIGNER pass
       that DRAFTS THE OPTIMAL FULL STACK from all six positions + the compendium. Contract
@@ -22,7 +22,15 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
       margin-gated support, partial weights — the gate law specified). Each law carries its
       derivation (or anchor, or default-with-named-recess), its parameters pinned, and its
       stability/completion argument. "TBD", "gated with no default", and a bare constant where
-      the physics demands a law are ALL forbidden in the draft. Output = the exact
+      the physics demands a law are ALL forbidden in the draft. **EXTENSION (operator
+      2026-07-07): the SCHEDULE and CURRICULUM as wholes obey the same contract** — stage
+      sequence as a costate-choosable POLICY (stage DAG, #334/#339 levels-as-paths, D-5) with the
+      fixed sequence only as the fail-safe default path; FRACTIONAL/BLENDED stage transitions
+      (ramp-in/out laws with completion guarantees) where derivable, binary switches only where
+      blending is measured harmful; PER-CLASS SUB-CURRICULA (lane/movable LADDER homotopies on
+      their own laws, coupling guards specified); SELF-DERIVING schedule parameters (caps as laws
+      of measured constants, e.g. finisher budget ≥ k·τ_e with τ_e re-estimated online). No bare
+      fixed clock where an event/law is derivable. Output = the exact
       WitnessProgram + schedule + curriculum + costate config + rate plan + measurement plan,
       launchable as written. Proposing-optimal-with-tags is NOT a NO-FAKE violation — asserting
       it as MEASURED would be; the draft states its epistemic status per knob and pre-registers
@@ -51,7 +59,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 | S3 CONTROL/COSTATE | SENSE→DECIDE→ACT; GN/Fisher 2nd-order wiring; HVP-Lanczos probe design; trust-region | 1 | DONE (17843a820) | position_S3_costate_20260707.md |
 | S4 RATE | Shannon — two-regime allocation, weight-entropy, #157 compress-half, derive-H, byte accounting | 2 | DONE (e4819f0eb) | position_S4_rate_20260707.md |
 | S5 LEVER-LEDGER | Fridrich/Yousfi — 36 never-fired per-lever BUILD/DEFER; annulus geometry; lane-band; islands | 2 | DONE (f01c8dea6) | position_S5_lever_ledger_20260707.md |
-| S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | LAUNCHED | position_S6_pose_byteclose_20260707.md |
+| S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | DONE | position_S6_pose_byteclose_20260707.md |
 
 ## Rate-limit resilience rules
 - Waves of ≤3 concurrent seats; wave 2 launches when wave 1 returns (or one at a time if limits bite).
@@ -202,3 +210,14 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   not treat as measured. Chain-A pursuit notified of item (4).
 - P2 chief-designer contract REFINED: knob → CONTROL LAW (constant | ramp+completion-guarantee |
   self-deriving/DE | event-conditioned | fractional/partial), per operator.
+- 2026-07-07T~23:0x S6 DONE — §5B: pose ON two-track (diagnostics seg-only; pointer run
+  w_pose>0 + FiLM + store-nothing ξ staged at tau boundary). POSE = THE SECOND WALL: pose-blind
+  term ≈35.5 (measured 125.833 raw) unsubmittable; R1 floor 0.0011 → term 0.105 misses T_1-feasible
+  d_pose ≤ 1.51e-4 by ~7× — perfect d_seg CANNOT cross 0.19110 unless the unfired L3 mechanism
+  beats it. Kill: converged d_pose > 1.5e-4 → L1 Jacobian fallback. FIRST byte-close rows (bit-exact
+  ×3): weights 83,430 B / 0.0556 (cross-checks S4's 83,406 within 24 B); band LBND2 +41,562 B /
+  +0.02767 (CONFLICT vs S4 LBND4 24-31KB — designer decides); pose +6,929 B / +0.00464 (derive-H
+  live, H_bytes=0). Gaps G1-G5 incl. G1 silent freq_along tool confound + G3 AA-decode shipping
+  blocker + G4 exact-eval never fired e2e. Inflate budget: 13.9 min measured, 15-18 projected.
+  **P1 COMPLETE. P2 CHIEF-DESIGNER LAUNCHED** (control-law contract + schedule/curriculum-as-laws
+  extension delivered mid-flight). In flight: designer + pursuit-chain-A.
