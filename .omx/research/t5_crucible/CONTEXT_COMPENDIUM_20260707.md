@@ -8,8 +8,9 @@ lesson, solve-inventory, LADDER, PowerPlay, group theory). This compendium is th
 sweep of EVERY durable signal store, and the STANDING STORE CHECKLIST below is reusable at every
 future convening so context-completeness is a P0 step, never reactive.
 
-**Status: SKELETON + first-pass entries (main loop) — sweep agent completing the per-store
-extractions. MUST-READ for P2 red-team + P5 synthesis.**
+**Status: COMPLETE (sweep agent, 2026-07-07) — all 20 stores swept (store 9 by main loop; stores
+1-8, 10-20 below; stores 1/2/3/4 via parallel read-only sub-sweeps). MUST-READ for P2 red-team +
+P5 synthesis. The ranked "TOP GAPS THE PACKET DID NOT CARRY" list is at the end.**
 
 ## STANDING STORE CHECKLIST (sweep ALL of these at any convening)
 1. `.omx/research/CANONICAL_RESEARCH_INDEX_20260629.md` (46 KB, the anti-signal-loss index) —
@@ -68,7 +69,9 @@ extractions. MUST-READ for P2 red-team + P5 synthesis.**
   not orbits — no group acts on witness space with those orbits). Honest boundary for any
   orbit-coding claim.
 - **Weight-space permutation symmetry = REAL orbit degeneracy, measured 387 B slack** (§C) —
-  a small counted-bytes lever for S4.
+  a small counted-bytes lever for S4. **[SWEEP CORRECTION: §C's own header is "MEASURED NO" —
+  387 B is the THEORETICAL slack; every canonicalization arm measured ≤ −8 B and most HURT
+  (+72/+251/+339 B); matches FEED-08k. NOT a live S4 lever — see STORE 8 + gap #1.]**
 - **NO-with-reason: steerable/equivariant architectures** (citation set exists in the memo).
 - **#287 dash-comb = max-plus translation comb, phase=ego-ξ**: mechanism removes 86% of
   solid-band dash-gap FP at frozen ep650; render-composite net-negative → in-training A/B owed
@@ -559,7 +562,194 @@ crucible's landing must stay consistent with. [DERIVED]
   openpilot = unified physical prior for BOTH axes (prior/init/regularizer, never target;
   equation `openpilot_unified_physical_prior_both_scored_axes_v1` still ASSUMED). [DESIGNED]
 
-### (remaining stores appended below)
+## STORE 5 — MEMORY (MEMORY.md L-lines adding design signal beyond the packet + papers-checked)
+
+- **L65:** dash-erasure law refinements — TRAINFLOW H-probe OVERTURNED-AS-INSTRUMENTED (GT-H 0.70 =
+  witness H, zero index range) → τ dash-role UNMEASURED; comb 86% stands but **owed a
+  comb-REGISTRATION audit before firing (mis-phase risks REAL lane)**. [VERDICTED/OPEN]
+- **L69:** pose mover = store-nothing ξ carrier (derive-H #257 PROVEN); **break-even seg carries
+  ERROR BARS: 0.018 pose contribution = BORROWED ancestor; 0.026 spare = OPERATOR-STATED** — do not
+  treat either as measured. [OPEN]
+- **L70:** MLX-GPU NOT bit-identical CROSS-PROCESS (28/28) → **bit-exact proofs CPU-LOCKED; GPU =
+  gradient throughput only** (binds the byte-close + any TerminalSolve claim). [MEASURED]
+- **L73:** dash-gap FP is RANGE-DEPENDENT — a uniform dash gate is WRONG; dash PHASE = ego-dist =
+  screw ξ → near-free. [MEASURED]
+- **L77:** quadratic head chart CONFIRMED + subset-solve gap (LM ρ 0.847/0.868; K=8 subset overfits
+  +5.1%) → only full-P in-trainer GPU solve (eq `quadratic_head_chart_subset_solve_gap_v1`). [MEASURED]
+- **L9:** adaptive per-video overfit-XOR-generalize — amortized-init (#211) + adaptive refine;
+  meta-controller sets budget b(V). [DERIVED — campaign framing]
+- **L39:** n24 DISPROVEN as eikonal cure-proxy → straight to bounded n600. **L58:** different
+  stages need different treatment; transitions RE-TREAT (spike-skip). **L59:** training-time =
+  LEXICOGRAPHIC secondary. **L51:** memory policy sole-workload safe-frac 0.85 (0.70 concurrent),
+  ≥10 GiB floor. **L22:** clip → `tac.clip_profile`; stage → `schedule_readback`. [VERDICTED]
+- **L80:** comma10k same rig, 0 exact contest frames → SegNet didn't memorize; the 4.67% lane-edge
+  residual is GENUINE. [MEASURED]
+- **Papers-checked ledger** (`memory/reference_papers_checked_not_relevant_or_watch_item_ledger_20260701.md`,
+  68 KB — anti-re-research; cite, don't re-fetch): TRM tiny-recursive NOT-RELEVANT (contradicts
+  measured bc20 under-capacity — do NOT cite as capacity support) · RR-vs-SGD CONFIRMS existing
+  per-epoch reshuffle (GraB low-EV) · 2606.09077 Legendre-Fenchel Hessian-preconditioning
+  WATCH-PLUS · LLM-as-a-Verifier WATCH harness-only · FlowWM framing precedent NOT transferable ·
+  Mallat/Ballé second-pass = the 0707 memo · PHAST/LA-Pose/Telescope/GaussianQuant/EdgeBench
+  dispositions per L55. [VERDICTED]
+
+## STORE 10 — ORPHAN/DEFERRAL LEDGERS
+
+- `deferral_recovery_ledger_20260610T130200Z.md` (#60) — PRE-WITNESS-PIVOT era (typed kinds A-E:
+  live-lever chain / ready exact-axis wins / pending tasks / defensive bank / correctly-dormant);
+  mostly superseded by the capstone pivot, but its "correctly-dormant with reasons" discipline +
+  premature-kill audit (none found) remain the template. [HISTORICAL]
+- `sweep_C_task_research_orphan_lever_ledger_20260704.md` §2 — **READY ∧ high-EV BUT UN-INCLUDED
+  (DEFER FORBIDDEN):** (1) `--n-dir-freqs 4 --freq-across 8` (was the "#1 paranoia"); (2)
+  dilate+separatrix-SDF seed; (3) MCF-erosion inversion trio (eikonal 0.05 + area-hold + small
+  length); (4) Muon warm-start/final-frac; (5) chroma verdict-BLOCKING; (6) #268 S_R (needs sR
+  cache); (7) #288 OT head-offset b* built-unrun; (8) #274 spike-downweight; (9) mod-dim 19.
+  **DESIGN TENSION for the crucible:** §7 paranoia #1 (raise along-frequency) is now TEMPERED by
+  FEED-08l (oracle-form ladder FLAT; comb favored) — the two are different forms (training basis vs
+  oracle capacity); the in-training comb A/B arbitrates. [VERDICTED/OPEN]
+- `costate_controller_deorphan_inventory_20260705.md` (#303 Phase A) — every observer/control
+  surface inventoried; the controller (`src/tac/witness_control/`) is THE one canonical consumer
+  for witness-campaign control signal (consume/wrap/supersede decided per surface). [BUILT]
+- `orphaned_measured_win_bug_class_selfprotect_and_sweep_20260702T224934Z.md` (#225) — orphan-status
+  classifier ran; sig-proc levers confirmed NOT-A-WIN; no live orphaned measured wins at that date. [MEASURED-audit]
+
+## STORE 15 — CLAUDE.md-EMBEDDED MEASURED FACTS (beyond the packet's pins)
+
+- **SegNet exact:** smp.Unet tu-efficientnet_b2, 5 classes, LAST frame only, resize (512,384);
+  stride-2 stem → artifacts below (256,192) INVISIBLE (a blind-spot the basis can exploit); ONLY
+  argmax matters. Class order (MEASURED, non-negotiable): 0=Road/1=Lane/2=Undrivable/3=Movable/
+  4=MyCar; luma-sort re-derivation FORBIDDEN (bit us 3×); components must SELF-DETECT class; flip
+  mass ~50% Road / 19% Lane / 13% Undrivable. [MEASURED]
+- **PoseNet exact:** FastViT-T12, 12-ch (2×YUV6), Hydra head, MSE on first 6 dims. Marginal
+  seg-vs-pose importance is OPERATING-POINT dependent: crossover at pose_avg ≈ 2.5e-4 (below it,
+  pose marginal exceeds seg's — matters once the pose carrier lands). [DERIVED]
+- **Curriculum caveats (binding):** fixed-β hosc DIVERGES (use step_basis or annealed-hosc β1→4);
+  l7 = measured DEFECT (demote); Muon = THE drop; smooth-stage RAISES d_seg. Levelset trainer
+  (`experiments/train_levelset_witness_realized_through_R_mlx.py`) is the ONLY launch-path entry
+  point — auditing the base trainer alone MISSES the live levers. [MEASURED/VERDICTED]
+- **Hard training laws:** EMA decay 0.997 + shadow-at-inference (snapshot+restore at eval);
+  eval_roundtrip mandatory + differentiable yuv6; full-P batched verdict FORBIDDEN
+  (`--verdict-batch` chunking, bit-identical); per-stage checkpoints + resumable mandatory;
+  recursive-review axis 9 = measured-runnability at REAL scale + EVERY scored quantity through the
+  real byte-closed decode (the #205 OOM + naive-pose lesson). [VERDICTED]
+- **Rate-face L14-L32 lessons (the compress-half menu for S4):** Muon final-stage-only (77% of
+  params); sigma noise 0.2→0.1; C1a coder-aware λ 0.01→0.02 (brotli-friendly weights); per-PAIR
+  latents; per-tensor byte-maps (zig/negzig/twos/off); CONV4 storage perms; split brotli streams;
+  raw-LZMA latents; canonical-Huffman rank sidecar; per-pair single-dim correction sidecar
+  (−0.001..−0.003 measured on ancestor); brotli q11. All PR95-family — cargo-cult-audit before
+  adoption, but they are MEASURED rate mechanics on this scorer. [MEASURED-ancestor]
+- **Rule-118 boundary table + hide-data-in-code prohibition** (the S4 legal frame). [VERDICTED]
+
+## STORE 16 — DURABLE STATE FILES (freshness audit — mostly STALE, one LIVE)
+
+- `.omx/state/current_focus.md` (2026-06-10) · `next_experiments.md` (2026-06-07) ·
+  `reports/latest.md` (generated 2026-05-23) · `.omx/research/findings.md` (pre-witness KL-distill
+  era) — **ALL STALE; NOT authoritative for the crucible; do not cite as current state.** [STALE]
+- `.omx/state/harness_failure_ledger.jsonl` — **LIVE**, 2026-07-07 rows:
+  `serializer_whole_file_staging_absorbs_sibling_hunks` recurred DURING today's crucible landings
+  (measured diagnosis: every committer passed --expected-content-sha256 yet absorption still
+  occurred; **resolution 56fc64e19: `--base-content-sha256 <file>=<pre-edit sha>`** — crucible
+  committers should use it); `dashboard_false_FAIL_at_init` class (4 recurrences — log-path-split
+  consumers). [MEASURED — binds crucible commit/apparatus discipline]
+
+## STORE 17 — docs/
+
+- `operating_manual_craft_handoff.md` — binding craft discipline (already MUST-READ). ·
+  `triality_dag_dsl_equations_deepmath.md` — the meta-layer frame (store 8). ·
+  `vehicle_operating_system.md` — L0-L7 maturity ladder + "no named vehicle until fidelity
+  manifest verify() passes" — applies to any NEW component the crucible builds (comb, lane band). ·
+  `meta_bug_class_catalog.md` (790 KB) — the strict-gate catalog (consult before landing new gates). ·
+  `writeup_draft.md` (111 KB) + `writeup_playbook.md` + `pr_writeups/` — the open-source writeup
+  surface; HONEST-ATTRIBUTION constraint (memory L21: our separatrix/Morse-Smale = the star;
+  UNIWARD = on-ramp only) binds any crucible-produced public text. ·
+  `cross_platform_scripting.md` — POSIX/BSD-first (all launch.sh generation now env-bash, BSD stat
+  per the 07-07 sweep commits). [VERDICTED/apparatus]
+
+## STORE 18 — GIT LOG (last ~100; measured rows living only in commit messages)
+
+Crucible-thread rows (from commit MESSAGES only — position files unread per anti-anchoring; these
+are for P2/P5 who read positions anyway):
+- `17843a820`/`bb007a600` — S3 RAN the HVP-Lanczos on ep650 clean-baseline EMA (K=8 Ritz):
+  **spectrum STRONGLY INDEFINITE — the best point is NOT in a quadratic basin** (refines
+  FEED-08d's head-subset "near-quadratic" reading: head-affine subset quadratic, full spectrum
+  indefinite). [MEASURED]
+- `ec7d75aa3` — S2 measured **ANNEAL-TRUNCATION DEFECT: the control's best (ep650) sat on an
+  INCOMPLETE anneal** (5 measured rows in the position). [MEASURED]
+- `e4819f0eb`/`554ed7044` — S4 measured the first clean-baseline ARCHIVE row: mod32cap ep650 blob
+  82,193 B / archive 83,406 B → **rate 0.05553; base stream at entropy**. [MEASURED]
+- `dd3625c52` — S4 complete rate-lever taxonomy (7 mechanism classes; operator catch: flat-minima
+  + full arsenal). `f01c8dea6` — S5 36/36 never-fired ground-truth resolution (ledger ≠ run truth).
+- `3f4af5c51`/`2e1671412` — operator SYNTHESIS HARD REQUIREMENTS: A) solve-where-solvable from
+  basin (TerminalSolve gated); C) LADDER curriculum island-birth per-class-λ homotopy; D) (see
+  ledger). `2299413a2` — P2 red-team gains MANDATORY PROVENANCE AUDIT. [VERDICTED]
+- Non-crucible measured rows: `a44a06fb8` ξ delta_res coder 2714 B REAL bytes (winner) ·
+  `3571e5b65` junction σ_RL=0.377 (19.3% junctions non-equilibrium; excludes all-ones) ·
+  `d55eccd1f` dash-comb n600 measured · `42dee9c6c` basin-finisher NEGATIVE (546/600 noted) ·
+  `1d6704e5b` per-class d_seg + flip-share telemetry per verdict row (FEED-07y — the next run's
+  per-class observability EXISTS). [MEASURED]
+- DSL-face commits: `5a9c543a0` §14 schedule primitives (LevelPath λ(t), StageSpec{repeat_until,
+  priming, exit_event}) · `82cca824b` ExitEvent criterion='powerlaw_meat' · `c5d997f29`
+  TerminalSolve primitive (19th kind, designed-not-built) · `d10de0a64` WitnessProgram.purpose
+  field · `049aa0d9f` GroundFrameChart Lever (5 real flags). [BUILT]
+- Recovery discipline: 4 credit-killed agents' complete signal RECOVERED (`4a6031279` freq_along ·
+  `73b12d574` group-theory · `e8b4f9773` MLX weight-entropy · `ce105b2c7` dashboard). [apparatus]
+
+## STORE 19 — PROBE-RESULT DATA ON DISK (the raw rows behind the verdicts)
+
+- `experiments/results/freq_along_ladder_probe_20260707/{freq_along_ladder_n600_20260707.json,
+  probe_state.ckpt.npz}` — the ladder rows (recovered post-credit-death). ·
+  `experiments/results/dash_comb_probe_20260707/dash_comb_probe_n600_20260707.json` ·
+  `experiments/results/basin_finisher_probe_20260707/` (ema_best_snapshot, feats_state_*,
+  solve_log_head.jsonl, solved_theta_head.npz, verdict_base JSONs) + machine-readable
+  `reports/basin_finisher_probe_20260707.json` (costate SENSE consumable) ·
+  `experiments/results/solver_pack_20260707/{junction_sigma/junction_sigma_fit.json,
+  powerlaw_detector/powerlaw_fits.json}` ·
+  `experiments/results/group_symmetry_canonicalization_probe_20260707/` (the −8 B arms) ·
+  `experiments/results/chernoff_probe_20260706T125835Z/` (Chernoff-vs-margin) ·
+  `experiments/results/l28_witness_probe_n600/` (L28 negative) ·
+  `experiments/results/witness_hosc_basis_probe_n96/` + `levelset_gpu_reorient_parity_probe/`.
+  All gitignored-durable; cite the JSONs, don't re-run. [MEASURED artifacts]
+- mod32cap run dir carries the 600/600 probe rows + every per-stage checkpoint (the crucible's
+  free measurement substrate — ep650 EMA-best is the standard frozen state). [MEASURED]
+
+## STORE 20 — CROSS-AGENT CHANNELS
+
+- `.omx/state/subagent_progress.jsonl` (tail): `central-fixer-levelset` COMPLETE (epoch-loop fixes
+  C2 adaptive-eps reparam / C3 viscous normalize / C4 grad clip / C5-C6 closed-loop liveness —
+  the trainer the crucible compiles to has these landed); `confound-gates-builder` COMPLETE. No
+  in-flight crashed work holding unlanded signal EXCEPT the warp-vs-noise probe (pre-registered,
+  unmeasured — store 1b). [BUILT/OPEN]
+- Codex channel memos: latest are 2026-05-2x era (zipper/source-map audits) — no live codex
+  in-flight work relevant to the five faces. [HISTORICAL]
+
+---
+
+# SWEEP COMPLETE — TOP GAPS THE PACKET DID NOT CARRY (ranked by design impact)
+
+1. **Group-theory §C is MEASURED NO** (387 B = theoretical slack; best arm −8 B, most arms HURT) —
+   the pinned first-pass entry above mischaracterizes it as a live S4 lever. Corrected here.
+2. **FEED-08g adversarial overturn**: the τ-crossover FLAT-H "negative" is INSTRUMENTED-BLIND →
+   INDETERMINATE; and the freq_along ladder (FEED-08l) tempers sweep-C's "#1 paranoia" — the
+   along-frequency-vs-comb dispute is UNRESOLVED pending the in-training comb A/B (with L65's
+   comb-REGISTRATION audit owed BEFORE firing).
+3. **The launch.sh ground-truth table (store 11)**: per-group-grad-clip present in mod32cap but
+   absent in every stacked run (baseline confound); AnalyticLaneRenderBand/AdamBeta2 raw-fired in
+   all #205-family runs (ledger ≠ truth).
+4. **Basin picture refined**: head-subset quadratic (ρ~0.85) BUT full ep650 spectrum STRONGLY
+   INDEFINITE (S3 Lanczos) + the control's best sat on an INCOMPLETE anneal (S2) + self-orient
+   state NOT persisted in checkpoints (+4.3% reconstruction gap) — three checkpoint/finishing
+   facts that reshape the finisher design.
+5. **Never-reset-moments law + GradNorm-canary warning + guard-redesign ranked action** (litsweep
+   store 7) — binding on the costate ACT layer and the spike-guard replacement.
+6. **The 15-equation ASSUMED_AWAITING_VERIFICATION cluster** (store 2) — any design relying on one
+   of them is PROVISIONAL per #363 unless the crucible measures it.
+7. **v_h=174 MEASURED-OPTIMAL** (#327 falsified the audit's own finding #1) — the "geometry
+   left-on-table" story is closed; only MUTCD-period-prior + per-clip VP remain (small).
+8. **Serializer absorption LIVE recurrence + the `--base-content-sha256` fix** (store 16) — the
+   crucible's own landings are exposed without it.
+9. **Stale-state warning**: current_focus/next_experiments/findings/reports-latest are 3-8 weeks
+   stale — any seat citing them cites pre-pivot state.
+10. **Pose error bars are soft** (L69): 0.018 = borrowed ancestor, 0.026 spare = operator-stated —
+    the §5B pose ON/OFF decision must not treat them as measured.
 
 ## COMPLETE RATE-LEVER TAXONOMY (operator catch 2026-07-07: "flat-minima and all the other rate
 levers — we have a ton of related techniques"; S4's summary under-surfaced the arsenal)
