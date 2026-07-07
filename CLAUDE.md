@@ -408,6 +408,13 @@ is APPARATUS (extends `lever_registry` + the costate SENSE layer), NOT a new orc
 NOT chat-prose (a chat answer IS the orphan). Memory:
 `[[default_off_is_orphaned_signal_activation_ledger_reconciliation_20260706]]`.
 
+**The #247 costate controller is a CORE SENSE ORGAN, agent-native (operator 2026-07-07 verbatim:
+"does not require human or manual activation ... a core sense organ and actuator the agent always
+knows about and uses").** It is AUTO-SURFACED: `tools/costate_digest.py` runs at every SessionStart
+(hook) + in the witness-status check-in skill (pointer-first, live run, shadow recs, duty-to-measure
+queue); every governed launch AUTO-STARTS the score-neutral shadow observer. Actuation boundary
+unchanged: advisory-only autonomous; heavy/paid/stop/config = operator-GO (CONTAINMENT).
+
 ## Capstone θ* witness trainer — canonical entry point — NON-NEGOTIABLE
 
 **The LIVE launch-path trainer for ALL capstone θ* / level-set witness work is
