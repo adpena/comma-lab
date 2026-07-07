@@ -8777,3 +8777,32 @@ law. The costate controller's duty_to_measure MUST surface all wireable levers (
 lever_factories()). META: the eight are the empirical test of the #247 DECIDE queue — if the
 controller doesn't rank them top, that is a controller-calibration finding. Pointer 0.19110
 UNMOVED (means/design). Sister: FEED-07a.
+
+## FEED-07c (2026-07-07) — PROBE VERDICT: the $0 lane-share gate LANDS PROCEED-class; islands = ~64% of flips, UN-BORN
+
+The #331 symposium's $0 checkpoint probe (lane_share_probe_ep225_n600, 6.2h, n600, ep225 EMA-BEST,
+[macOS advisory NON-PROMOTABLE]) is DONE. MEASURED branch quantities:
+- Movable(3): within-flip 93.1% UN-BORN, share_of_d_seg 44.8% (the single biggest contributor).
+- Lane(1): within-flip 83.9% UN-BORN, share_of_d_seg 19.1%.
+- Islands region = 63.9% of ALL flips on 1.8% of px (flip-frac within 90.2%); bulk interior = 9.3%
+  of flips on 93.4% of px. Road 20.3% / Undriv 12.7% / MyCar 3.1%.
+- The symposium's ASSUMED premise ("does plain CE birth islands?") RESOLVED: NO — both rare classes
+  essentially unborn (confirms the deliberate-baseline design + refutes the DEFER "98% bulk" branch).
+- Focal-γ analytic island-weight share: γ=1 → 0.506, γ=2 → 0.599, γ=3 → 0.633 (the #301 calibration
+  now has its measured target surface).
+- BRANCH: PROCEED-class (lane ≥10% un-born ✓, movable 2× lane). Erosion condition ABSENT in
+  mod32cap (d_seg descends cleanly through tau) — but no born islands exist to erode, so the
+  nucleus-guard remains INSURANCE for the treatment arm, not refuted.
+- CAVEAT (binding on any ΔS claim): shares measured on the WITNESS-ALONE surface (d_seg_subset
+  0.0257; seeds not persisted in ckpts → composed surface unreconstructable; probe self-flags
+  shares as an UPPER BOUND on composed-surface share). Live composed verdict at ep225 = 0.0049.
+  Within-class un-born fractions (84%/93%) transfer (live part_frac lane=movable=0 independently
+  confirms) but the exact composed-surface ceiling is SYMPOSIUM arithmetic, owed before launch.
+- IF it holds: full island birth ⇒ d_seg 0.0037 → ~0.0013, seg term 0.37 → 0.13 ≈ the break-even
+  band. The islands arm is now THE measured d_seg target (composes with FEED-07a arms: movable →
+  LADDER SDF-dilation homotopy + logit-adjust #218; lane → analytic band rule-118 FIRST, training
+  birth only for what the band doesn't cover).
+- Launch remains GO-gated: memory-safety CRITICAL fixes (fleet bypass/TOCTOU/zero-growth) mid-flight
+  = prerequisite for any concurrent arm; #335 lever wire-in mid-flight. Artifact:
+  experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/lane_share_probe_ep225_n600.json
+Pointer 0.19110 UNMOVED (advisory measurement; the pointer moves only through byte-closed exact rows).
