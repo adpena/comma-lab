@@ -9882,3 +9882,60 @@ full verdict-trajectory extraction. **Owed (named, not launched):** GT-condition
 Triality: DAG (this FEED) ↔ DSL (no gauge change — instrument correction, not a lever) ↔ equations
 (supersession-anchor spec written, not yet registered — op-routable). CONTAINMENT: report-only; no
 trainer/config/run edits, no paid GPU. **HARD GATE: pointer 0.19110 UNMOVED.**
+
+## FEED-08h (2026-07-07, Mallat/Ballé BUILD agent) — LBND4 lane-coeff ENTROPY STAGE MEASURED −10,634 B (−25.6%) at a bit-identical statistic; −19.6% rate-in-loss lever = TORCH-VEHICLE-ONLY (not DSL-holdable yet); σ∧STE audit: STE live/un-disableable, σ-noise NEVER BUILT [$0 CPU, advisory; pointer 0.19110 UNMOVED — build+measurement/means]
+
+Operator GO ("All approved and expected to be built") on the FEED-08f review's BUILD rows.
+
+**BUILD 1 (row 7) — LANDED + MEASURED.** New LBND4 section codec: the LBND2 L3/L4 quantization
+grid UNCHANGED + the ξ delta/context residual entropy stage (`xi_spline_residual_coder`
+best-of-three {varint,zlib9,rice}, self-describing, post-brotli pick) replacing LBND2's raw
+uint32 zigzag words. MEASURED n600 (real gt_n600 lane fit = the byte-close tool's own
+`build_lane_band_section` path; ep650 mod32cap context READ-ONLY — the lane payload is
+GT-cache-derived, checkpoint-independent): **LBND2 41,526 B → LBND4 varint 30,892 B =
+−10,634 B (−25.6%), rate_term 0.02765 → 0.02057 (−0.00708)**; rice 33,229 / zlib9 34,701;
+decode-reencode BYTE-IDENTICAL all 3 schemes; dequantized LaneLines BIT-IDENTICAL to LBND2
+(pure-rate lever; d_seg/d_pose invariant by construction); order-0 floor 26,179 B respected
+(30,892 > 26,179 — the "residual is INFORMATION-bound" verdict of
+`lane_band_camera_frame_rd_rate_v1` stands; the coding gap ABOVE the floor is what LBND4
+closes). NOTE the pick inversion: raw-smallest is zlib9 (35,139 raw) but post-brotli winner is
+varint — the pick objective must be COUNTED (post-brotli) bytes, which the auto-pick implements.
+Selectable `--lane-band-res` on the byte-close tool, DEFAULT OFF (sealed-config); shipped
+selection is GATED on inlining the LBND4 decode into _INFLATE_PY (parity fails CLOSED on the
+unknown magic until then — honest fail). Evidence (gitignored-durable):
+`experiments/results/lane_band_res_coder_20260707/lane_band_res_coder_n600_measured.json`
+(+ measurement script beside it; peak RSS 0.95 GiB, 20 s).
+Triality: DAG (this FEED) ↔ DSL (`gauge.LaneBandCoderGauge` {RD,RES,NAIVE} +
+`lane_band_coder_byte_close_flags` — a BYTE-CLOSE-side chart kept OUT of trainer argv per
+never-invent-flags + the lever_registry `stale==[]` invariant; activation ledger
+`LaneBandResCoder` fired+measured) ↔ equations (`lane_band_res_entropy_stage_v1` REGISTERED,
+2 anchors; sister of `lane_band_camera_frame_rd_rate_v1` + the FEED-08b ξ delta_res coder —
+ONE shared residual entropy stage, no duplicated copy). 20 new tests
+(`src/tac/tests/test_lane_band_res_coder.py`).
+
+**BUILD 2 (row 3) — VERIFIED, honest blocker.** `--weight-entropy-penalty-lambda` (−19.6%
+archive bytes, byte-closed 2026-06-20) lives ONLY on the torch vehicle
+(`launch_split_by_head_basin.py` + `tac.torch_vehicle.driver`); NOT a levelset-trainer flag →
+`completeness()` shows it in NEITHER unmapped NOR stale, and a DSL `Lever` factory CANNOT hold
+it today (it would emit a flag the capstone trainer rejects → never-invent-flags + the
+`stale==[]` test invariant). Config-orphan class = built-and-measured-on-ANCESTOR, unported;
+fold path = MLX-trainer port OR run the counted-weights arm on the torch vehicle. Activation
+ledger backfilled (`WeightEntropyPenalty` fired+measured 2026-06-20) with the caveats WELDED ON:
+−19.6% is the LIVE-decoder cut; the SHIPPED EMA shadow at 0.999 did NOT shrink in short runs
+(EMA-lag, +72–87 B); ema0.9 A/B proved translation; C1a stacking net-negative
+(`supersedes_c1a=True`); λ* open in {5,15,30}; net-S n600 A/B OWED. Staged in the council draft
+§22(2).
+
+**BUILD 3 ($0 audit, the FEED-08f §20(3) owed item) — RESOLVED.** σ-noise ∧ uint8-STE cannot
+shadow each other in the sealed #205/mod32cap config because only ONE exists: uint8-STE is
+code-wired `ste_round=True` in EVERY R path (reference/fused/compiled; no gating flag; the
+sealed launch.sh uses the default reference R and the loss render goes through it
+unconditionally); σ-noise injection is NEVER BUILT on the witness (zero noise/dither/jitter
+flags in both MLX trainers; the trainer documents "render is deterministic … no training
+noise"; PR95-L17 σ-schedule and Ballé uniform-noise have NO witness analog). Filed to the
+council draft §22(3) as designed-in-ancestor / never-built-on-witness (a next-run DESIGN
+question needing a trainer build + DSL Lever, not a config flip) — NOT an orphaned default-off.
+
+Consistency: register↔DAG↔draft agree; no config change to any live/sealed run dir (READ-ONLY
+honored). Pointer contest-CPU 0.19110 UNMOVED (all rows are rate/coding + source-inspection
+means; the exact row remains the gate).

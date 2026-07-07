@@ -822,3 +822,69 @@ scoped carrier-level and this draft contains no wrong-object citation (store-not
 separately MEASURED at 1.095@ep2, descending, pose remains OPEN).
 
 Pointer contest-CPU 0.19110 UNMOVED; all §21 rows advisory.
+
+## §22 ADDENDUM (2026-07-07, append-only) — Mallat/Ballé BUILD items landed: LBND4 lane-coeff entropy stage MEASURED −10,634 B; the −19.6% rate-in-the-loss lever's TRUE held-state; σ-noise ∧ uint8-STE co-activation audit (the §20(3) owed item)
+
+Source: operator GO "All approved and expected to be built" on the §20 review's BUILD items
+(`.omx/research/mallat_balle_deepmath_review_20260707.md`); build agent
+`mallat_balle_codec_dsl_build_agent_20260707`. DAG FEED-08h. All rows advisory
+([macOS-CPU advisory] / source-inspection); pointer contest-CPU 0.19110 UNMOVED.
+
+**(1) BUILD 1 LANDED + MEASURED — the lane-coeff payload delta/context-coded like ξ (LBND4).**
+The LBND2 5th-block payload re-coded through the SAME ξ residual entropy stage
+(`xi_spline_residual_coder`, best-of-three {varint, zlib9, rice}, post-brotli pick):
+MEASURED n600 (real gt_n600 fit, the byte-close tool's own build path, brotli-counted):
+**LBND2 41,526 B → LBND4 varint 30,892 B = −10,634 B (−25.6%; rate_term 0.02765 → 0.02057,
+−0.00708)**; decode-reencode BYTE-IDENTICAL (all 3 schemes); dequantized statistic
+BIT-IDENTICAL to LBND2 (pure-rate lever — d_seg/d_pose invariant by construction); Shannon
+floor 26,179 B still respected. Post-brotli winner is varint, NOT the raw-smallest zlib9
+(brotli finds context in the varint stream) — the pick objective must be counted bytes.
+Selectable `--lane-band-res` (byte-close tool), DEFAULT OFF; DSL leg `gauge.LaneBandCoderGauge`
+(+ `lane_band_coder_byte_close_flags`; kept OUT of trainer argv per never-invent-flags);
+equations leg `lane_band_res_entropy_stage_v1` (registered); activation ledger
+`LaneBandResCoder` = measured. **Ship-gate owed:** inline the LBND4 decode half into
+_INFLATE_PY before any shipped selection (parity gate fails CLOSED on the unknown magic until
+then). Evidence: `experiments/results/lane_band_res_coder_20260707/`.
+**For the next-run arm composition:** if the lane-offload arm (rule-118 band) fires, its
+counted cost line should be quoted at the LBND4 number (30,892 B ≈ 0.0206), not LBND2's 0.0277.
+
+**(2) BUILD 2 VERIFIED — `--weight-entropy-penalty-lambda` (−19.6%) TRUE held-state, caveats
+welded on.** The flag lives on the TORCH VEHICLE ONLY (`experiments/launch_split_by_head_basin.py`
+argparse + `tac.torch_vehicle.driver`); it does NOT exist on the levelset MLX trainer →
+`completeness()` confirms it is neither mapped, unmapped, nor stale (the lever_registry scans
+the levelset trainer argparse), and it is NOT DSL-holdable as a `Lever` factory today: folding
+it would emit a flag the capstone trainer rejects (never-invent-flags + the `stale == []`
+test invariant). **This is a config-orphan of a DIFFERENT class than §"off is a tracked
+queue":** built-and-measured on the ANCESTOR vehicle, unported to the capstone. The fold path
+is (a) port the rate-in-the-loss term to the MLX levelset trainer (then the Lever factory is
+legal), OR (b) run the counted-weights / train-big-compress-small arm (arm E/D) on the torch
+vehicle where the lever is real. Activation ledger now carries the accurate historical state
+(`WeightEntropyPenalty` fired+measured 2026-06-20, backfilled with caveats). The −19.6% number's
+caveats (from `weight_entropy_penalty_balle_adversarial_review_byteclose_20260620.md`): it is
+the **LIVE-decoder** archive cut (−16,007 B at λ50); the **SHIPPED EMA shadow at decay 0.999 did
+NOT shrink in short runs** (+72–87 B, EMA-lag); the ema0.9 A/B PROVED translation to shipped
+bytes; C1a stacking is NET-NEGATIVE (`supersedes_c1a=True` landed); λ* is open in {5,15,30}
+(λ50/ema0.9 overshoots into d_seg harm); the net-S n600 A/B is still OWED (duty-to-measure).
+
+**(3) BUILD 3 AUDIT (the §20(3) owed item) — σ-noise ∧ uint8-STE are NOT co-active because only
+ONE exists.** Source-inspected on the ACTUAL sealed mod32cap launch config
+(`experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/launch.sh`, READ-ONLY) +
+both MLX trainers: **uint8-STE is LIVE, code-wired, and un-disableable** — every R path
+(`_reference_R`, the fused Metal kernel, the mx.compile gate) hardcodes `ste_round=True`
+(4 sites in the base trainer, 2 in the levelset trainer; zero `ste_round=False` anywhere; no
+flag gates it); the sealed run uses the default reference R (no `--fused-r-kernel` /
+`--mx-compile` in launch.sh) and the loss render `_render_R` goes through it unconditionally.
+**σ-noise injection is ABSENT — not a dead flag but NEVER BUILT on the witness:** zero
+noise/dither/jitter argparse flags in either MLX trainer (the only σ-named flags are
+`--length-sigma-matrix` [Young's-law length weighting] and `--hosc-beta*` [activation anneal] —
+different levers); the levelset trainer itself documents "render is deterministic (uint8-STE
+round; no training noise)". PR95's L17 σ-schedule (0.2→0.1) and Ballé's uniform-noise
+quantization relaxation have NO witness analog. **Consequence for the council:** the two halves
+of the quantization relaxation cannot shadow each other in the sealed run (STE alone is live);
+whether a Ballé-style noise term should EXIST on the witness is a design question for the
+next-run arm (it would need a trainer build + DSL Lever, not a config flip), and it interacts
+with the counted-weights arm's quantization story — flag it to the symposium as
+designed-in-ancestor / never-built-on-witness, NOT as an orphaned default-off.
+
+Pointer contest-CPU 0.19110 UNMOVED; every number above is a rate/coding or source-inspection
+row, never a score claim.
