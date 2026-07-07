@@ -9266,3 +9266,39 @@ primitive carrying describe() still renders as generic data) + real-Curriculum e
 (Anneal/HoscSchedule/Transition/Regularizer all enumerated, none dropped) + to_display_dict-over-
 describe preference. Triality: DSL leg + DAG same batch; equations N/A (observability apparatus).
 **HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
+
+## FEED-07p (2026-07-07) — #340 "anything hardcoded related to a run should be DSL": consumer hardcode sweep + top-3 routed + warn-gate
+*(numbering note: FEED-07m exists TWICE — two absorbed sibling hunks landed under the same
+id at lines ~9078 and ~9124; this entry takes 07p, skipping 07o to stay clear; a future
+reconciliation pass should re-key the second 07m.)*
+
+**SIGNAL (the class, measured in the tree):** run CONSUMERS hardcoding run properties. The
+live signature: `dashboard_reload.py` defaulted `--l7 600`, `render_levelset_dashboard.py`
+defaulted `--l7 900`, and the live mod32cap run has NO l7 stage — three descriptions of one
+run. Worse: reload/supervisor FORWARDED their stale defaults unconditionally into the
+DSL-deriving dashboard_server (bd8def976), so every hot-reload/self-heal respawn silently
+RE-POISONED the derived stage map (explicit --tau/--l7 are overrides that defeat the
+read-back). Full ranked inventory (10 rows, blast×silence) + honest TRAINER-DEFAULT vs
+CONSUMER-HARDCODE vs PROVENANCE-PIN split:
+`.omx/research/hardcoded_run_constants_sweep_20260707.md`.
+
+**RESPONSE (routed, derive-by-default / override-only / visible-fallback):**
+1. `tools/dashboard_reload.py` — --tau/--l7 default None; flags emitted only when explicit.
+2. `tools/dashboard_supervisor.py` — default None + conditional at ALL THREE forwarding
+   surfaces (DASH_TAU/DASH_L7 env, _spawn_server argv, self-relaunch argv).
+3. `tools/launch_witness_run.py` — the printed dashboard hint no longer hands the operator
+   the poisoning `--tau 300 --l7 600` command.
+
+**GATE:** `tac.run_constant_gates.check_no_hardcoded_run_constants_in_consumers` (WARN-ONLY,
+strict=False): P1 stage-flag int argparse defaults · P2 literal `--tau/--l7 <int>` in strings ·
+P3 874/1164 in display tools (clip_profile is the home) · P4 `tau_start|l7_start|muon_start =
+<int>`. Waiver `# RUN_CONSTANT_OK:<rationale>` (placeholder rejected). 20 tests. **Live count
+at landing = 9** (dashboard_up ×2, render_levelset_dashboard ×3, trajectory_dynamics ×2, two
+viz clip-constant hits) — the tracked queue, not a silent default (per the default-off/
+activation-ledger non-negotiable). Wiring into preflight_all() DEFERRED with a NAMED blocker:
+sibling review-counter agent held ~200 uncommitted lines in src/tac/preflight.py (absorbed-
+hunks class, recurrence 3+); standalone entry `python -m tac.run_constant_gates --strict`.
+
+**Triality home:** DSL leg = consumers now READ the DSL (schedule_readback) instead of
+duplicating it; equations leg N/A (observability apparatus, no measured physics row).
+**HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
