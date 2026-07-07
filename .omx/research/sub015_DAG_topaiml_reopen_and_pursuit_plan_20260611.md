@@ -8938,3 +8938,52 @@ are the unknowns." DERIVED arithmetic (from measured components; pose-term cavea
   the same surface. Council should deliberate AGAINST this win condition (target: PR95 distortion,
   budget: +22 KB) — it converts "lower d_seg" into a concrete, bounded objective.
 Pointer 0.19110 UNMOVED (framing/derivation).
+
+## FEED-07d (2026-07-07) — islands PROCEED arm: composed ceiling MEASURED (gate PASSES) · config assembled in the DSL · governed launch REFUSED by the enforcing admission gate (honored)
+
+**STEP 1 — the OWED composed-surface ceiling arithmetic ($0, offline; memo
+`.omx/research/islands_composed_ceiling_arithmetic_20260707.md`).** The composed/live surface IS
+reconstructable (contra the probe's caveat): the annulus renderer's `maps_BEST_ep300.npz` (REAL
+render-through-R + frozen CPU-torch SegNet, self-orient fixed point) reproduces the trainer verdict
+(subset d_seg 0.004785 vs n600 0.004571, +4.7%). MEASURED composed per-class (ep300, 16-pair strided
+advisory): **islands = 0.5622 of composed d_seg** (Lane 0.4396 · Movable 0.1226) — the probe's
+witness-alone 0.639 confirmed as an UPPER bound with small transfer loss. SHARPENED: the "rare classes
+fully unborn on the composed surface" premise is FALSE at ep300 (part_frac = 77%/98% of GT mass;
+part_frac=0 was ep0/witness-alone — and part_frac=0 was arithmetically impossible given composed
+d_seg 0.0046 < rare-class area 0.0182). The residual = **lane dash birth/placement (22.5% pred-mass
+deficit, 36.5% within-flip) + movable largely solved (5.3%)**. Ceiling band ΔS ≈ **[0.02 conservative,
+0.26 upper]** (100·share·d_seg; ~0 bytes; w_pose=0 both arms). LOWER edge ≥ 4× the 0.005 gate →
+**PROCEED**. Equations-leg note: composed-share decomposition is a measured finding with no registered
+equation yet (non-blocking gap, flagged per the D6/E5 precedent).
+
+**STEP 2 — config assembled in the DSL (the SoT), commit this batch.** Two new composable Lever
+factories (auto-surface in lever_registry + activation ledger; pass the parse-every-lever class test):
+`Mod32SegOnlyControlBase` (the mod32cap control launch.sh expressed as proven_base deltas — 8 measured
+diffs incl. `--lane-prior-phi1 False` → `--no-lane-prior-phi1`) + `SeedIslandBirth` (the #224 seed +
+#300 witness-alone-island-loss anti-starvation PAIR, held together because the trainer fail-closes the
+loss without the seed). CLASS-FIX in `tools/launch_witness_run.py::real_trainer_flags`: the validator
+now accepts the `--no-<flag>` negations argparse auto-generates for BooleanOptionalAction flags (the
+DSL merge emits them by design; store_true flags still gain NO negation) + 2 new tests. Composition:
+`--config proven_base --dsl-lever Mod32SegOnlyControlBase,SeedIslandBirth,SeedIslandEased,
+AmplifyIsland,EventTriggeredCurriculum,MuonWarmStart,SegFocalGamma` → validate 66/66 → **PROVEN via
+real-argparse namespace diff: EXACTLY 9 treatment values + out_dir differ from the live control**
+(amplify 1.0 · event-triggered+nucleus-guard · muon warm-start + lr-final-frac 0.1 · seed-islands +
+eased + witness-alone-loss · seg-focal-gamma 2.0). γ=2 justified: probe analytic island weight-share
+0.599 ≈ the measured island flip share (0.562 composed / 0.639 wa); γ=3 adds only +0.034 share.
+FROM-SCRATCH (no resume; seed 0 matched to control for attribution). Analytic lane render-band
+DELIBERATELY EXCLUDED from this arm (clean island-birth A/B attribution per the launch directive; the
+band remains the preferred lane REPRESENTATION lever for a separate arm). Epochs 1000 matched.
+
+**STEP 3 — governed launch attempted, REFUSED, honored (no override).** rc=4, verbatim: "SYSTEM
+admission [ENFORCE]: projected system-used 192.0 GiB EXCEEDS adaptive ceiling 92.2 GiB by 99.8 GiB —
+launching would risk a SYSTEM OOM/jetsam cascade (current used 67.5 + active-growth 53.0 + new 71.5).
+REFUSE." Driver: this arm projects 71.54 GiB (mod-32 cf_mx_cache 47.13) while the live mod32cap
+control (pid 97677, ep~375+, RSS ~10 GiB) holds its own ~large projected-peak reservation
+(active-growth 53.0 across 3 tracked jobs) — the hardened SUM-over-RAM crash gate (P0) is doing
+exactly its job; the earlier "47 GB free" reading predates the reservation accounting. launch.sh +
+projection ledger row preserved at
+`experiments/results/levelset_n600_witness_islands_treatment_20260707T000000Z/`. NO trainer spawned ⇒
+NO lever `fired` events (correct — the ledger fires on spawn). **NEXT:** re-run the SAME launcher
+command when the control finishes (or its reservation reconciles down); admission decides; never
+bypass. Pointer 0.19110 UNMOVED (means/apparatus/measurement — the pointer moves only through a
+byte-closed exact row).
