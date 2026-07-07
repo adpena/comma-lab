@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Fast-chip diagnostic exact CUDA eval for the C-059 mixed-local MQZ1 renderer.
 # All bootstrap/eval custody lives in remote_archive_only_eval.sh.
 # Provenance: provenance.json + heartbeat + run_record are written by

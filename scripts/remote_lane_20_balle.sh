@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane 20: Ballé hyperprior codec — train on real renderer.bin qint stream
 # and (conditionally) build + auth-eval an archive that uses Lane 20.
 #

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Generic archive-only contest_auth_eval wrapper.
 #
 # Use case: a pre-built archive.zip exists locally (e.g., from local OWV3 byte-plan
@@ -156,7 +156,7 @@ require_uv_and_ffmpeg_contract() {
         for i in 1 2 3; do
             curl -fL --retry 5 --retry-delay 3 -o /tmp/ffmpeg-btbn.tar.xz "$btbn_url" 2>&1 | tail -3
             local actual
-            actual="$(stat -c%s /tmp/ffmpeg-btbn.tar.xz 2>/dev/null || echo 0)"
+            actual="$(stat -f%z /tmp/ffmpeg-btbn.tar.xz 2>/dev/null || stat -c%s /tmp/ffmpeg-btbn.tar.xz 2>/dev/null || echo 0)"
             if [ "$actual" -gt 50000000 ]; then
                 log "BOOTSTRAP: BtbN download OK ($actual bytes) on attempt $i"
                 break

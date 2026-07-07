@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the Z3-G1 scorer-class-conditional gating substrate.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch.yaml``

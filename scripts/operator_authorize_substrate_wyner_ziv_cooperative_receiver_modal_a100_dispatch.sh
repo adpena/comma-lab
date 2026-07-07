@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the Wyner-Ziv cooperative-receiver substrate.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_wyner_ziv_cooperative_receiver_modal_a100_dispatch.yaml``

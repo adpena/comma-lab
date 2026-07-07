@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane 19 score-snapshot dispatch — score the partial-training snapshot from
 # instance 35899850 (destroyed 2026-04-30 at epoch 1340/1980) AS-IS, without
 # resuming training. Path B from

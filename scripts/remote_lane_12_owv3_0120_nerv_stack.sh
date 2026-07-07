@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane 12 OWv3 0120 NeRV stack: replace owv3_0120 (1.0024) masks.mkv (421KB)
 # with jsonfix40 NeRV (23KB), regenerate poses against the new mask stream
 # under the owv3_0120 pruned renderer, then run CUDA contest auth eval.

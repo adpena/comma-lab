@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane 12 Alpha-Geo-0: stale-pose isolation for the measured jsonfix40 NeRV
 # mask payload. This is not new NeRV retraining. It keeps the exact measured
 # masks.nrv and renderer, regenerates optimized poses against the decoded

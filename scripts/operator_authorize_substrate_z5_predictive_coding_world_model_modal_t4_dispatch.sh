@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the Z5 predictive-coding world-model
 # substrate (Time-Traveler L5 staircase Step 3).
 #

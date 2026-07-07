@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane A-Sweep: Bayesian sweep over Lane A pose TTO hyperparameters.
 #
 # Replaces the hand-tuned Lane A schedule (steps=500, batch-pairs=8,

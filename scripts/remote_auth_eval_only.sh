@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Single-purpose remote bootstrap: AUTH EVAL ONLY for a pre-built archive.
 #
 # Use case (2026-04-27): Lane A's Texas instance (35691284) ran 3.4h of pose

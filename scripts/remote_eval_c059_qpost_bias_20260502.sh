@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Fast-chip diagnostic exact CUDA eval for the C-059 + charged PR65 bias atom.
 # This script is intentionally thin: all bootstrap, CUDA, ffmpeg, torch, scorer,
 # custody, and eval semantics are owned by remote_archive_only_eval.sh.

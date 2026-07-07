@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the Z4 cooperative-receiver loss substrate
 # (Time-Traveler L5 staircase Step 2).
 #

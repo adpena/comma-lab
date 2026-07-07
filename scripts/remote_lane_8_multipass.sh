@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane 8 — Multi-pass compress with score-feedback on Lane G v3 anchor.
 #
 # Council 2026-04-30 design memo:

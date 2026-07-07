@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # probe_nvdec.sh — single-purpose NVDEC exposure probe for Vast.ai instances.
 #
 # Per memory feedback_vastai_nvdec_host_variation: Vast.ai 4090 instances on
