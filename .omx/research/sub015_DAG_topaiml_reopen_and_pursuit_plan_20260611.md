@@ -9529,3 +9529,11 @@ try/except so telemetry can NEVER crash the verdict; the sealed score path byte-
 construction. Applies from the NEXT process (islands arm / any resume) — the live #205 process
 already holds its imported code. 9 new tests; consumers read rows by key (additive-safe).
 Pointer 0.19110 UNMOVED (apparatus/means).
+
+### FEED-07y addendum — triality classification [no-triality apparatus]
+FEED-07y is APPARATUS (telemetry plumbing), not a measured finding: no new number was measured,
+no verdict rendered, no byte-close — so there is NOTHING to register in canonical_equations
+(registering would fabricate an anchor). The equations leg fires when the FIRST per-class rows
+are MEASURED: the α_lane<α_road check will land as an EmpiricalAnchor REFINING the
+already-registered `weak_kam_powerlaw_tail_exit_v1` (Agent D, 3571e5b65), and any per-class
+memory-envelope law anchors the #295 program. Recorded proactively per the per-leg discipline.
