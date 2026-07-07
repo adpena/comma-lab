@@ -242,6 +242,33 @@ def test_exit_event_marginal_kind_requires_floor():
     assert any("floor" in p for p in cd.ExitEvent("lever_exhaustion").validate())
 
 
+def test_exit_event_powerlaw_meat_is_gap_kind_no_argv():
+    """The weak-KAM tail exit (solver-pack memo 2026-07-07): GAP-kind criterion — the trainer's
+    #315 event controller has no pluggable exit-criterion registry, so compile = NO argv + a
+    TrainerSupportGap naming the powerlaw_meat_exit-consuming trainer build."""
+    ev = cd.ExitEvent("powerlaw_meat", floor=1e-4, cap_epoch=1500, min_points=8, per_class=True)
+    assert ev.validate() == []
+    assert ev.flags() == {}  # conservative compile: the fixed boundary IS the exit
+    sp = cd.StageSpec("tau_softplus", "--tau-softplus-start-epoch", 300, exit_event=ev)
+    (gap,) = sp.support_gaps()
+    assert gap.axis == "exit_events"
+    assert "powerlaw_meat" in gap.requirement
+    assert "min_points=8" in gap.requirement and "per_class=True" in gap.requirement
+    assert "cap_epoch=1500" in gap.nearest_real_compilation
+    assert "powerlaw_meat_exit" in gap.flag_proposal  # names the real callable to wire
+    assert "--stage-exit-powerlaw-meat-floor" in gap.flag_proposal
+
+
+def test_exit_event_powerlaw_meat_validation_rigor():
+    # floor is REQUIRED (pre-registered remaining-meat floor)
+    assert any("floor" in p for p in cd.ExitEvent("powerlaw_meat").validate())
+    # min_points must support the two 3-parameter tail fits
+    bad = cd.ExitEvent("powerlaw_meat", floor=1e-4, min_points=3)
+    assert any("min_points" in p for p in bad.validate())
+    # a valid config validates clean without per_class telemetry (falls back to total)
+    assert cd.ExitEvent("powerlaw_meat", floor=1e-4).validate() == []
+
+
 def test_repeat_until_fires_gap_with_deterministic_bound():
     ru = cd.RepeatUntil("marginal_dseg_floor", ("muon", "muon_leap"),
                         block_epochs=100, max_repeats=4, floor=1e-5)

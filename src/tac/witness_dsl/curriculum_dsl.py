@@ -624,6 +624,18 @@ class ExitEvent(ScheduleDisplay):
       left" exits (per active lever, marginal Δd_seg/epoch below ``floor``) —
       NO trainer support; conservative compile = the fixed stage/run boundary
       (``cap_epoch`` documents the deterministic ceiling) + TrainerSupportGap.
+    * ``powerlaw_meat``: the weak-KAM tail exit (solver-pack memo 2026-07-07) —
+      exit on the AIC-preferred power-law/exponential fit's EXTRAPOLATED
+      remaining meat below ``floor`` (``tac.witness_control.powerlaw_exit:
+      powerlaw_meat_exit``; fail-safe: unfittable ⇒ NOT exhausted). An
+      exponential-window plateau detector fires EARLY on the binding lane class
+      (power-law O(1/t) descent — "meat left on the bone"); this criterion is
+      the fix. GAP kind: the trainer's #315 event controller has NO pluggable
+      exit-criterion registry (plateau params only, VERIFIED in the trainer
+      argparse), so the compile is NO argv (the fixed stage/run boundary via
+      ``cap_epoch``) + a TrainerSupportGap naming the build. ``min_points`` /
+      ``per_class`` mirror the callable's contract (per-class fits need the
+      per-class d_seg verdict-row telemetry, itself a recorded gap).
     """
 
     criterion: str
@@ -632,8 +644,10 @@ class ExitEvent(ScheduleDisplay):
     windows: int = 4                  # --curriculum-plateau-windows
     within_flip: float = 0.5          # --curriculum-nucleus-within-flip (nucleus kind)
     min_part_frac: float = 0.0        # --curriculum-nucleus-min-part-frac (nucleus kind)
-    floor: float | None = None        # marginal-Δd_seg/epoch floor (gap kinds)
+    floor: float | None = None        # marginal-Δd_seg/epoch OR remaining-meat floor (gap kinds)
     cap_epoch: int | None = None      # deterministic hard ceiling (gap kinds' compile)
+    min_points: int = 8               # powerlaw_meat: min verdict points per fittable class
+    per_class: bool = False           # powerlaw_meat: per-class fits (needs per-class telemetry)
 
     def validate(self) -> list[str]:
         problems: list[str] = []
@@ -644,6 +658,15 @@ class ExitEvent(ScheduleDisplay):
             problems.append(
                 f"ExitEvent[{self.criterion}]: needs an explicit ``floor`` (the pre-registered "
                 "marginal-Δd_seg/epoch floor — §14 axis 5)")
+        if self.criterion == "powerlaw_meat":
+            if self.floor is None:
+                problems.append(
+                    "ExitEvent[powerlaw_meat]: needs an explicit ``floor`` (the pre-registered "
+                    "remaining-meat floor the extrapolated tail must fall below — weak-KAM exit)")
+            if self.min_points < 4:
+                problems.append(
+                    f"ExitEvent[powerlaw_meat]: min_points must be >= 4 (two 3-parameter tail "
+                    f"models cannot fit fewer points), got {self.min_points}")
         if self.criterion in ("plateau", "nucleus_guarded_plateau"):
             if self.min_stage_epochs <= 0 or self.windows <= 0 or self.rel_eps <= 0:
                 problems.append(
@@ -680,6 +703,23 @@ class ExitEvent(ScheduleDisplay):
                 flag_proposal=("--stage-exit-marginal-dseg-floor <float> + per-lever "
                                "marginal-Δd_seg telemetry exit (trainer build)"),
                 notes="§14 axis 5: 'no meat left' = every stage exits on evidence"))
+        elif self.criterion == "powerlaw_meat":
+            gaps.append(TrainerSupportGap(
+                axis="exit_events",
+                requirement=("powerlaw_meat exit"
+                             + (f" on stage {stage!r}" if stage else "")
+                             + f" (floor={self.floor}, min_points={self.min_points}, "
+                             + f"per_class={self.per_class})"),
+                nearest_real_compilation=(
+                    f"fixed boundary (deterministic cap_epoch={self.cap_epoch})"),
+                flag_proposal=("--stage-exit-powerlaw-meat-floor <float> + "
+                               "--stage-exit-powerlaw-horizon <int> (trainer build; calls "
+                               "tac.witness_control.powerlaw_exit:powerlaw_meat_exit on the "
+                               "stage's verdict window)"),
+                notes=("weak-KAM tail exit: exponential-window plateau detectors fire EARLY on "
+                       "the power-law binding class ('meat left on the bone'); exit on the "
+                       "AIC-preferred fit's extrapolated remaining meat, fail-safe on "
+                       "unfittable data; per-class fits gated on per-class d_seg verdict rows")))
         elif stage is not None and "muon" in stage.lower():
             gaps.append(TrainerSupportGap(
                 axis="activation_timing",
