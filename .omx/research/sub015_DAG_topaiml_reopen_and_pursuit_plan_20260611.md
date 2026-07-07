@@ -9371,3 +9371,17 @@ tac.witness_dsl.curriculum_dsl directly — export fold-in owed when their commi
 this FEED; equations leg N/A (schedule-expressiveness apparatus — no measured physics
 row; the council's derived schedule VALUES will carry the equation anchors when measured).
 **HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
+
+## FEED-07r (2026-07-07) — LEG-RECONCILIATION for #339 (5a9c543a0), both flagged legs
+
+Per-leg gate fired twice on 5a9c543a0. (1) EQUATIONS leg: N/A — #339 is schedule-EXPRESSIVENESS
+apparatus (no measured finding/physics row; the gate's vocabulary matcher caught measurement-ish
+words in the commit message); already declared N/A in FEED-07q. (2) CONSUMER leg (first real
+firing of the new leg — the hook works): the new public surface IS covered by the generic
+introspection path — VERIFIED live: schedule_primitive_kinds() auto-registry includes the new
+primitives, LevelPath exposes the uniform display surface, and the dashboard's generic renderer
+(907dad11c) displays unknown kinds as declared data; the [consumers-generic] assertion token
+postdates the agent's brief, hence its absence from the commit message — this FEED carries the
+assertion instead (append-only; commit messages are immutable). Owed and already ledgered:
+__init__ export fold-in + costate-side wiring of schedule_primitive_kinds() (the costate owner's
+leg). Pointer 0.19110 UNMOVED (reconciliation).
