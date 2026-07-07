@@ -949,3 +949,62 @@ number remains attributed to the torch learned-prior term; the MLX surrogate is 
 (memoryless, deterministic) estimator — its effect size is UNKNOWN until measured. λ default
 in the DSL factory = 15.0 (torch open-range center; a starting arm value, not a tuned
 optimum). The A/B remains OWED (duty-to-measure); nothing here moves the pointer.
+
+## §19 ADDENDUM (2026-07-07 evening, append-only) — DEEP-MATH EXPLORATION DIRECTIONS the crucible must adjudicate (candidate menu)
+
+Operator opened four axes this evening and asked they be MARKED here for the T5 crucible to
+prioritize what to BUILD. Each carries an honest status; the crucible decides build-order, none
+moves the pointer as prose. **The unifying frame (operator "it all falls out"): the Jacobian
+spectrum = the Fisher metric (JᵀJ) = the local Morse/Hessian index at a level-set critical point
+= the Gauss–Newton conditioning that decides hit→solve = the costate sensitivity. One object,
+many lenses — so these axes CONVERGE on the costate controller as a dynamic-programming
+controller of the DSL schedule/curriculum.**
+
+**D-1 · Linear-NCDE trajectory model → hit→solve threshold detector (VERDICT IN — task #344).**
+arXiv 2607.05280 (Walker, rough-path/DataSig). `--` "Controlled" is rough-path (dz=f(z)dX),
+NOT optimal control — ORTHOGONAL to our costate/Pontryagin (confirmed by full-read). The Linear
+NCDE core is a portable ~50-LOC matrix-exp associative scan (MIT; JAX orig). REAL use =
+closed-form deterministic model of the irregular training trajectory to set PRINCIPLED
+fire-thresholds for the DSL event transitions (CE→tau #315, quadratic-basin-finisher entry
+#341, solve-don't-train handoff #342) instead of heuristic "slope-flattens"/"π₁≳5". **VERDICT:
+NO-GO now, SMALL-PROBE gated on ≥10 logged trajectories; kill-criterion = must beat
+persistence + slope-extrapolation on held-out-BY-RUN, else the toy is falsified.** It is the
+OBSERVER feeding our existing costate actuator, never a control-theory replacement.
+
+**D-2 · Modular theory (VERDICT PENDING — subagent running).** Door A Tomita–Takesaki:
+modular Hamiltonian K=−log ρ / modular flow / KMS-temperature / Araki relative-entropy; the
+adversarial question = does it give a CONCRETE lever (a relative-entropy data-processing bound
+on d_seg through R; a KMS-derived annealing law; costate λ ≡ finite-dim modular Hamiltonian) or
+just re-describe the entropy→Fisher→costate chain we already ride — with the brutal finite-dim
+(Type-I) caveat that Tomita–Takesaki largely collapses to spectral calculus of ρ. Door B
+modular REPRESENTATION theory (char-p, blocks): a possible RATE lever on the FEED-08k
+group-decomposition code-stream coder (arithmetic coding over GF(p)). Attach to
+canonical_equations / group_theory_deepmath_review.
+
+**D-3 · Jacobian unexploited levers (VERDICT PENDING — subagent running).** (a) null-space
+absorption: SVD of J_scorer → push the irreducible video-derived payload into scorer-invisible
+directions → fewer COUNTED bytes at equal score (extends the null-space compiler #47); (b)
+top-singular-direction capacity routing: largest SVs of J_scorer·J_renderer = cheapest
+Δd_seg/byte (exactifies the repair toolbox); (c) analytic SE(3) left/right Jacobian for pose
+gradients (`tac.lie`, exactness/speed); (d) Gauss–Newton (JᵀJ) conditioning = the exact
+hit→solve threshold (the mechanistic quantity D-1 would learn to predict).
+
+**D-4 · Morse–Smale exploitation (VERDICT PENDING — subagent running; extends §16.2).**
+discrete Morse (Forman) combinatorial-gradient codec of the argmax partition (critical cells +
+separatrix arcs = a skeleton, possibly cheaper than pixel/contour bytes); persistence-ordered
+RD ladder that OPERATIONALIZES the measured dash-erasure law (code high-persistence first,
+spend residual bytes on low-persistence dashes only if they pay).
+
+**D-5 · THE UNIFYING AXIS — dynamic programmatic control of schedule/curriculum by the costate
+controller (VERDICT PENDING; the operator's headline).** Don't limit to levers: treat the
+costate controller as a closed-loop SENSE→DECIDE→ACT programmatic controller over the DSL
+Schedule/Curriculum objects (`tac.witness_dsl`, #334/#339; costate #247/#303). **SENSE** =
+D-1/D-3/D-4 signals (trajectory state, Jacobian/GN spectrum, Morse index, persistence) →
+*where in the curriculum are we, is a stage transition imminent, is the basin quadratic→solve*.
+**DECIDE** = costate λ = marginal-ΔS value of each schedule/stage/level/lever choice
+(advance/repeat/exit a stage, change a level, fire a lever, trigger a closed-form solve,
+re-anchor CE→tau, adjust τ-anneal). **ACT** = rewrite/parameterize the DSL curriculum on the
+fly (emit a stage, change an exit-condition threshold, insert a solve step) — deterministic,
+triality-consistent, and GO-gated for any heavy actuation (advisory-only autonomous per
+CONTAINMENT). This is levers AND levels AND stages under ONE controller; the crucible should
+rule on how much of it to build for the next run vs. bank as the 10-year control architecture.
