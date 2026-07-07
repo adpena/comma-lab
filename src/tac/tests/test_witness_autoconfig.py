@@ -452,3 +452,45 @@ def test_332_dsl_lever_bad_name_raises():
     cfg = wac.derive_config(_GT_N600, num_pairs=600, overfit=True, epochs=1000)
     with _pytest.raises(ValueError, match="not a curriculum_dsl Lever factory"):
         _dc.replace(cfg, dsl_levers=("NotARealLever",)).to_trainer_flags("OUT")
+
+
+def test_332_merge_dsl_levers_false_override_agrees_with_compile_trainer_argv():
+    """#334 review MED: the two 'one emitter' surfaces — witness_autoconfig._merge_dsl_levers and
+    curriculum_dsl.WitnessProgram.compile_trainer_argv — MUST agree that a ``False`` override emits
+    the BooleanOptionalAction negation ``--no-<flag>`` (previously _merge silently skipped it, a
+    latent divergence). This asserts both surfaces negate identically."""
+    import dataclasses as _dc
+
+    from tac.witness_dsl.curriculum_dsl import BASELINE, Lever
+
+    # (a) compile_trainer_argv (the DSL emitter): a False value -> --no-<flag> bare token.
+    prog = _dc.replace(BASELINE, base={**BASELINE.base, "--chroma": False})
+    argv = prog.compile_trainer_argv()
+    assert "--no-chroma" in argv, "DSL emitter must negate a False flag to --no-<flag>"
+    assert "--chroma" not in argv, "the positive form must not co-occur with the negation"
+
+    # (b) _merge_dsl_levers: a lever whose override sets an existing base flag to False must
+    #     replace that flag IN-PLACE with (--no-<flag>, None) — matching the emitter's negation.
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, overfit=True, epochs=1000)
+    base = cfg.to_trainer_flags("OUT")
+    # pick a real bare-boolean flag present in the base to negate.
+    bare_flags = [f for f, v in base if v is None]
+    assert bare_flags, "base must carry at least one bare-boolean flag to negate"
+    target = bare_flags[0]
+
+    # inject a synthetic lever factory carrying a False override on that flag.
+    import tac.witness_dsl.curriculum_dsl as _cd
+
+    factory_name = "_TestFalseOverrideLever"
+    setattr(_cd, factory_name, lambda: Lever(name="_test_false", overrides={target: False}))
+    try:
+        merged = _dc.replace(cfg, dsl_levers=(factory_name,)).to_trainer_flags("OUT")
+    finally:
+        delattr(_cd, factory_name)
+
+    md = dict(merged)
+    negated = target.replace("--", "--no-", 1)
+    assert negated in md and md[negated] is None, f"{target} must be negated to {negated} in-place"
+    assert target not in md, f"the positive {target} must be replaced (not left alongside {negated})"
+    # in-place: no net length change (replacement, not append).
+    assert len(merged) == len(base), "False override must replace in-place, not append"

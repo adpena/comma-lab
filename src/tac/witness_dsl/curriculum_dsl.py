@@ -1079,15 +1079,27 @@ CURRICULUM_OWNED_FLAGS = frozenset({
 
 
 def verify_schedule_consistency(cfg, *, handoff: str = "fixed") -> list[str]:
-    """#334 consistency gate: the first-class :class:`Curriculum` object is the schedule's
-    SOURCE-OF-RECORD — its compiled schedule flags MUST equal what the autoconfig emits for the
-    curriculum-owned flags. Returns a list of disagreements (empty == consistent).
+    """#334 consistency gate: the first-class :class:`Curriculum` object's compiled schedule flags
+    are compared against what the autoconfig emits for the curriculum-owned flags. Returns a list of
+    disagreements (empty == consistent).
 
-    This BINDS the DSL object to the launcher's flat schedule flags: if a future edit changes the
-    autoconfig's schedule (or the object's reading of it) so they diverge, this gate fails — closing
-    the config-orphan confound where the schedule could be set in two places that silently drift.
-    (The deeper refactor — the launcher EMITTING the schedule by calling the object — is deferred to
-    protect the sealed byte-identity gates; this gate makes the object the verified SoT-of-record now.)
+    HONEST COVERAGE (do NOT over-read this gate). The genuine second-source binding is exactly the
+    THREE stage-epoch fields — ``--tau-softplus-start-epoch`` / ``--l7-start-epoch`` /
+    ``--muon-start-epoch``. For those, :func:`sealed_205_curriculum` reads ``cfg.<attr>`` directly
+    (``cfg.tau_softplus_start_epoch`` etc.) while the emission leg reads ``cfg.to_trainer_flags`` — two
+    independent reads of ``cfg``, so if they drift this gate catches it. That is a REAL config-orphan
+    check for the stage boundaries.
+
+    The OTHER ~12 curriculum-owned flags (``--softmax-temp-*``, ``--hosc-*``, ``--eikonal-weight``,
+    ``--length-weight``, ``--tau-softplus-tau``, ``--stage-transition-*``, ``--curriculum``) are a
+    STRUCTURAL ECHO, not a second source: :func:`sealed_205_curriculum` builds the object FROM the
+    same ``cfg.to_trainer_flags("_")`` dict that the emission leg reads, so both legs share one source
+    and this gate CANNOT detect drift in them (it is tautological for those flags — they compare a
+    value against itself). Do not treat a green result as proof those flags are set in only one place.
+
+    The deeper refactor — the launcher EMITTING the whole schedule by calling the object, which would
+    make ALL curriculum-owned flags a genuine single-source — is deferred to protect the sealed
+    byte-identity gates. Until then, only the 3 stage-epoch fields are truly bound here.
 
     ``cfg`` is a ``tac.witness_autoconfig`` config with ``.to_trainer_flags`` +
     ``.tau_softplus_start_epoch`` etc. Bare-boolean flags (emitted as value ``None`` in the argv tuple

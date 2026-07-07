@@ -555,8 +555,11 @@ class WitnessConfig:
     def _merge_dsl_levers(self, base: list[tuple[str, object]]) -> list[tuple[str, object]]:
         """Resolve each named DSL Lever factory (via the DSL SoT) and merge its overrides over
         ``base``: override an existing flag's value in place, else append. A DSL override value of
-        ``True`` renders as a bare boolean ``(flag, None)`` per the argv convention; ``False`` is
-        skipped (BooleanOptionalAction negations are not emitted)."""
+        ``True`` renders as a bare boolean ``(flag, None)`` per the argv convention. A ``False``
+        override renders as the BooleanOptionalAction negation ``(--no-<flag>, None)``, in-place —
+        matching the single DSL emitter ``curriculum_dsl.WitnessProgram.compile_trainer_argv`` (which
+        emits ``flag.replace("--", "--no-", 1)`` for ``False``). The two "one emitter" surfaces must
+        agree on ``False`` (regression-guarded in test_witness_autoconfig)."""
         from tac.witness_dsl import curriculum_dsl as _cd
         merged: list[tuple[str, object]] = list(base)
         index = {f: i for i, (f, _) in enumerate(merged)}
@@ -567,6 +570,15 @@ class WitnessConfig:
             lever = fac()
             for flag, val in lever.overrides.items():
                 if val is False:
+                    # BooleanOptionalAction negation, aligned to the DSL emitter: emit --no-<flag>
+                    # in-place (matches compile_trainer_argv), NOT a silent skip (the prior latent
+                    # divergence where the base flag was left untouched).
+                    negated = (flag.replace("--", "--no-", 1), None)
+                    if flag in index:
+                        merged[index[flag]] = negated
+                    else:
+                        index[flag] = len(merged)
+                        merged.append(negated)
                     continue
                 rendered = None if val is True else val
                 if flag in index:
