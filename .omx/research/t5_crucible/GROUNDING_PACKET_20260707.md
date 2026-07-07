@@ -28,8 +28,19 @@ sub-0.15 (d_seg → ~0.00092). Score first; wall-clock strictly lexicographicall
 - #205 mod32cap control run COMPLETE: best d_seg **0.0033662 @ep650** (τ-stage EMA), final ep1000
   d_seg ≈ 0.0036 (600/600 probe rows in
   `experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/`). Every per-stage
-  checkpoint preserved. This is the CONTROL baseline (islands deliberately unborn, T3-designed).
-- Need: d_seg ~0.00092 for T_3. Gap from control: ~3.7×.
+  checkpoint preserved.
+- **mod32cap = the COUNCIL-DESIGNED CLEAN BASELINE (operator-confirmed 2026-07-07).** Its design
+  + reasoning memo is `council_symposium_clean_config_20260705.md` (T3): it EXPLICITLY EXCLUDED
+  seeding, lane prior, analytic lane band, island birth — anything outside what the schedule and
+  curriculum themselves created. Also by design: eikonal-weight 0 for the baseline (scorer reads
+  only the zero level set; eik = separate A/B arm), verdict-pairs = all 600, FRESH-from-scratch
+  (resume would have inerted the init levers), length-weight 0.001 kept. Its sister memo
+  `council_t3_symposium_islands_treatment_arm_20260706.md` (T3, REVISE) designed the islands-ON
+  TREATMENT arm — costate/margin-GATED island support (net-positive iff n_isl > n_big3; UNIFORM
+  amplification measured net-negative), gated on a $0 checkpoint probe. Read BOTH before judging
+  the baseline "missing" anything or designing the treatment stack — the exclusions were
+  deliberate design, not gaps.
+- Need: d_seg ~0.00092 for T_3. Gap from clean control: ~3.7×.
 
 ### The full NEVER-FIRED ledger (36/36 owed are never-fired *in the activation ledger*)
 AACoverageRender · AdamBeta2 · AmplifyIsland · AnalyticLaneRenderBand · BoundaryDistance ·
