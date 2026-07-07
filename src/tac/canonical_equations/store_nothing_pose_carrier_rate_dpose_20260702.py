@@ -141,6 +141,39 @@ def build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1() -> CanonicalEqu
             hardware_substrate="m5_max_cpu",
         ),
     )
+    anchor_bspline = EmpiricalAnchor(
+        anchor_id="se3_bspline_xi_rate_error_curve_first_firing_n600_20260707",
+        measurement_utc="2026-07-07T00:00:00Z",
+        inputs={"n_pairs": 600, "xi_source": "xi_from_pose_calibration(gt_poses, s_t=0.044, s_r=0, pitch=0)",
+                "q_levels": 4096, "fit": "sampled-control cumulative SE(3) cubic B-spline (Sommer 2020)",
+                "tool": "experiments/results/ground_frame_chart_20260707/fire_se3_bspline_n600.py"},
+        predicted_output={"hoped": "knot payload (hundreds of B) replaces the coded xi table (~3.2KB)"},
+        empirical_output={
+            "baseline_xi_table_bytes_delta_ar": 3200,
+            "baseline_quantization_geometry_err_px": {"max": 0.3127, "mean": 0.1282},
+            "spline_direct_replacement": ("DEAD at every knot count 4..601: derive-H probe-point error "
+                                          "53-703 px MEAN (300-1000x the 0.13 px quantization floor) — "
+                                          "the xi sequence carries essential per-pair high-frequency "
+                                          "content the sampled-fit spline destroys"),
+            "spline_as_predictor_residual_floor": ("VIABLE headroom: knots(M=16) 224 B + order-0 "
+                                                   "residual entropy 1958 B = 2182 B floor vs 3200 B "
+                                                   "table (~1 KB / ~0.0007 rate), lossless on the "
+                                                   "quantized grid; PENDING a real residual coder + "
+                                                   "model overhead"),
+        },
+        residual=0.0,
+        source_artifact="experiments/results/ground_frame_chart_20260707/se3_bspline_rate_error_curve.json",
+        measurement_method="numpy_fp64_derive_h_probe_point_displacement_plus_order0_entropy",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path="experiments/results/ground_frame_chart_20260707/se3_bspline_rate_error_curve.json",
+            reactivation_criteria=("build the residual coder (spline-predictive + static-PMF residual) "
+                                   "and measure REAL coded bytes vs the 3200 B table; or LSQ spline fit "
+                                   "(the sampled-control fit is the falsified implementation, not the "
+                                   "spline paradigm — Catalog #307)"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("STORE-NOTHING-but-xi pose carrier: keyframe-payload rate collapses to ~0 (byte-close "
@@ -170,7 +203,7 @@ def build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1() -> CanonicalEqu
         },
         units_in={"n_pairs": "count"},
         units_out={"store_nothing_rate_term": "contest_score_rate_term"},
-        empirical_anchors=(anchor_rate, anchor_dpose),
+        empirical_anchors=(anchor_rate, anchor_dpose, anchor_bspline),
         predicted_vs_empirical_residual={
             "byte_close_bit_exact_n6_frozen_cpu_torch": 0.0,
             "n600_frozen_cpu_torch_posenet_classmean_proxy_preresidual": 0.0,

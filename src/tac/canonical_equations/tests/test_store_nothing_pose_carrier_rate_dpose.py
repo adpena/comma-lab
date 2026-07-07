@@ -15,7 +15,11 @@ from tac.canonical_equations.store_nothing_pose_carrier_rate_dpose_20260702 impo
 def test_equation_builds_and_validates() -> None:
     eq = build_eq()
     assert eq.equation_id == EQUATION_ID == eq.equation_id.lower()
-    assert len(eq.empirical_anchors) == 2
+    # 3rd anchor appended 2026-07-07: the se3_bspline first-firing rate-vs-error curve
+    # (spline direct replacement DEAD; spline-predictive residual floor 2182 B vs 3200 B table).
+    assert len(eq.empirical_anchors) == 3
+    assert eq.empirical_anchors[2].anchor_id == (
+        "se3_bspline_xi_rate_error_curve_first_firing_n600_20260707")
     # non-orphan contract: producers AND consumers present
     assert eq.canonical_producers and eq.canonical_consumers
     assert "tools/levelset_byte_close_and_eval.py" in eq.canonical_producers
