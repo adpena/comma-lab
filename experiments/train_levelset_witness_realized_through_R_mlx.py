@@ -241,12 +241,22 @@ def _annulus_realized_maps(seg_cpu: Any, f1s: list, lstars: list, vbatch: int) -
 
 def _annulus_metrics_from_maps(
     realized_list: list, gt_lstars_list: list, gt_margins_list: list, *,
-    band: float, bottom_k: float,
+    band: float, bottom_k: float, chunk: int = 32,
 ) -> dict:
-    """Pure codim-1 boundary-annulus convergence metrics from the realized argmax + GT argmax + GT
-    margin (all SegNet-resolution per-pair (h,w) maps). REUSES the pure fns in
-    ``tac.witness_annulus_metrics`` (flip split, per-class flip-frac, GT-margin percentiles) -- no
-    metric math is reimplemented here.
+    """Codim-1 boundary-annulus convergence metrics from the realized argmax + GT argmax + GT margin
+    (all SegNet-resolution per-pair (h,w) maps). REUSES the mask fns + ``flip_map`` in
+    ``tac.witness_annulus_metrics`` and ACCUMULATES the SAME per-region counts + collects the SAME
+    annulus GT-margin values the pure ``checkpoint_metrics`` fns compute -- the emitted VALUES are
+    NUMERICALLY IDENTICAL to the pre-fix all-at-once computation (integer counts add exactly; the
+    percentiles are ``np.percentile`` over the identical value multiset).
+
+    MEMORY (default-ON telemetry per CLAUDE.md "'Off' is a tracked queue"): the pre-fix path
+    ``np.stack``-ed ALL n_pairs realized-argmax + GT-argmax (int64) + GT-margin (float32) into three
+    (N,h,w) arrays => ~2.25 GiB transient at n600 EVERY --eval-every epoch. This streams in CHUNKS of
+    ``chunk`` pairs (like ``_verdict_dseg_dpose_chunked``): the two int64 argmax stacks (~1.9 GiB) are
+    NEVER materialized full; the only O(N) buffer is a SINGLE flat ``|GT margin|`` float32 plane
+    (~471 MiB) that an EXACT ``np.quantile`` (the bottom-k global threshold) fundamentally requires
+    (two-pass), freed before the streaming pass. Peak transient ~= that one plane + O(chunk), a >3x cut.
 
     DOCUMENTED PARTIAL (NO-FAKE): the verdict scope cheaply carries the realized ARGMAX (one SegNet
     forward) + the FIXED GT top1-top2 margin field (``gt.margins``), but NOT the witness's own seg
@@ -256,33 +266,91 @@ def _annulus_metrics_from_maps(
     (``margin_source="gt"``). The full witness-margin/gibbs series lives in the offline
     ``tools/witness_annulus_convergence.py`` CLI. Two annulus definitions (fixed |margin|<band +
     bottom-k fraction) mirror ``witness_annulus_metrics.checkpoint_metrics``."""
-    realized = np.stack([np.asarray(r).astype(np.int64) for r in realized_list], axis=0)
-    gt_arg = np.stack([np.asarray(g).astype(np.int64) for g in gt_lstars_list], axis=0)
-    gt_mar = np.stack([np.asarray(m).astype(np.float32) for m in gt_margins_list], axis=0)
-    flip = _wam.flip_map(realized, gt_arg)
-    total_px = int(flip.size)
+    n = len(realized_list)
+    cs = n if (chunk is None or chunk <= 0 or chunk >= n) else int(chunk)
+    n_cls = _wam.N_CLASSES
 
-    def _block(annulus: np.ndarray) -> dict:
-        interior = ~annulus
+    # ── Pass 1 (two-pass exact): global bottom-k threshold on |GT margin| over ALL pixels. Build ONLY
+    #    the flat |margin| float32 plane (NOT the triple int64+float stack); ``annulus_mask_bottom_k``
+    #    is thr=quantile(|gt_margin|, k) over the full pixel population -> exact np.quantile needs the
+    #    materialized values. overwrite_input=True avoids np.quantile's internal copy (value identical;
+    #    it only permits an in-place partition). We free the plane before the streaming pass. ──
+    total_px = int(sum(int(np.asarray(m).size) for m in gt_margins_list))
+    _abs_flat = np.empty(total_px, np.float32)
+    _off = 0
+    for _m in gt_margins_list:
+        _a = np.abs(np.asarray(_m, np.float32)).ravel()
+        _abs_flat[_off:_off + _a.size] = _a
+        _off += _a.size
+    thr_bk = float(np.quantile(_abs_flat, float(bottom_k), overwrite_input=True)) if total_px else 0.0
+    del _abs_flat
+
+    # ── Pass 2: stream chunks; accumulate integer region counts (exact) + collect ONLY the annulus
+    #    GT-margin values needed for the p10/p50 percentiles (the "needed reservoir"). ──
+    _defs = ("threshold", "bottom_k_def")
+    ann_px = {d: 0 for d in _defs}
+    ann_flip = {d: 0 for d in _defs}
+    int_px = {d: 0 for d in _defs}
+    int_flip = {d: 0 for d in _defs}
+    cls_px = {d: [0] * n_cls for d in _defs}
+    cls_flip = {d: [0] * n_cls for d in _defs}
+    margin_vals: dict[str, list] = {d: [] for d in _defs}
+    total_flip = 0
+
+    for s in range(0, n, cs):
+        e = min(s + cs, n)
+        realized_c = np.stack([np.asarray(r).astype(np.int64) for r in realized_list[s:e]], axis=0)
+        gt_arg_c = np.stack([np.asarray(g).astype(np.int64) for g in gt_lstars_list[s:e]], axis=0)
+        gt_mar_c = np.stack([np.asarray(m).astype(np.float32) for m in gt_margins_list[s:e]], axis=0)
+        flip_c = _wam.flip_map(realized_c, gt_arg_c)
+        total_flip += int(flip_c.sum())
+        for d in _defs:
+            if d == "threshold":
+                ann_c = _wam.annulus_mask_threshold(gt_mar_c, band)
+            else:
+                # SAME per-pixel rule as annulus_mask_bottom_k (|gt_margin| <= global thr), applied
+                # per chunk with the ONE global threshold -> identical mask to the whole-array call.
+                ann_c = np.abs(np.asarray(gt_mar_c, np.float32)) <= thr_bk
+            int_c = ~ann_c
+            ann_px[d] += int(ann_c.sum())
+            ann_flip[d] += int((flip_c & ann_c).sum())
+            int_px[d] += int(int_c.sum())
+            int_flip[d] += int((flip_c & int_c).sum())
+            for c in range(n_cls):
+                region = ann_c & (gt_arg_c == c)
+                cls_px[d][c] += int(region.sum())
+                cls_flip[d][c] += int((flip_c & region).sum())
+            # collect raw (not abs) GT-margin within the annulus, in pair order -> concat == full set.
+            margin_vals[d].append(np.asarray(gt_mar_c, np.float32)[ann_c])
+
+    def _frac(num: int, den: int) -> float:
+        return (float(num) / den) if den else 0.0
+
+    def _pct(vals_list: list) -> dict:
+        vals = np.concatenate(vals_list) if vals_list else np.empty(0, np.float32)
+        return {f"p{int(p)}": (float(np.percentile(vals, p)) if vals.size else float("nan"))
+                for p in (10.0, 50.0)}
+
+    def _block(d: str) -> dict:
         return {
-            "annulus_area_frac": (float(annulus.mean()) if annulus.size else 0.0),
-            "annulus_flip_frac": _wam.restricted_flip_frac(flip, annulus),
-            "interior_flip_frac": _wam.restricted_flip_frac(flip, interior),
-            "annulus_flip_mass_share": _wam.flip_mass_share(flip, annulus),
-            "annulus_gt_margin": _wam.margin_percentiles(gt_mar, annulus, ps=(10.0, 50.0)),
-            "per_class_annulus_flip_frac": _wam.per_class_annulus_flip_frac(flip, annulus, gt_arg),
+            "annulus_area_frac": _frac(ann_px[d], total_px),
+            "annulus_flip_frac": _frac(ann_flip[d], ann_px[d]),
+            "interior_flip_frac": _frac(int_flip[d], int_px[d]),
+            "annulus_flip_mass_share": _frac(ann_flip[d], total_flip),
+            "annulus_gt_margin": _pct(margin_vals[d]),
+            "per_class_annulus_flip_frac": {c: _frac(cls_flip[d][c], cls_px[d][c]) for c in range(n_cls)},
         }
 
     return {
-        "overall_d_seg": (float(flip.mean()) if total_px else 0.0),
+        "overall_d_seg": _frac(total_flip, total_px),
         "total_px": total_px,
-        "n_flips": int(flip.sum()),
-        "n_pairs": int(realized.shape[0]),
+        "n_flips": int(total_flip),
+        "n_pairs": int(n),
         "band": float(band),
         "bottom_k": float(bottom_k),
         "margin_source": "gt",
-        "threshold": _block(_wam.annulus_mask_threshold(gt_mar, band)),
-        "bottom_k_def": _block(_wam.annulus_mask_bottom_k(gt_mar, bottom_k)),
+        "threshold": _block("threshold"),
+        "bottom_k_def": _block("bottom_k_def"),
     }
 
 
@@ -4409,7 +4477,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _realized = _annulus_realized_maps(seg_cpu, f1s, lstars_v, int(args.verdict_batch))
                 v["annulus"] = _annulus_metrics_from_maps(
                     _realized, lstars_v, [gt.margins[pi] for pi in vpairs],
-                    band=_annulus_band, bottom_k=_annulus_bottom_k)
+                    band=_annulus_band, bottom_k=_annulus_bottom_k,
+                    chunk=int(args.verdict_batch))
             except Exception as exc:  # telemetry MUST NEVER crash or corrupt the verdict path.
                 v["annulus"] = {"error": f"{type(exc).__name__}: {exc}"}
         return v
@@ -7054,8 +7123,8 @@ def main(argv: list[str] | None = None) -> int:
                     "out for a pure byte-identity A/B) emit a companion {stage:annulus_convergence} row per verdict: the codim-1 "
                     "boundary-annulus vs interior d_seg flip split + per-class annulus flip-frac + GT-margin "
                     "p10/p50, computed from the realized argmax + the FIXED GT margin (gt.margins) via "
-                    "tac.witness_annulus_metrics. DEFAULT OFF => BYTE-IDENTICAL (no row, no realized-map "
-                    "collection, no extra forward). ON reuses ONE SegNet forward for the realized argmax "
+                    "tac.witness_annulus_metrics. --no-annulus-telemetry opts OUT => BYTE-IDENTICAL (no "
+                    "row, no realized-map collection, no extra forward). ON reuses ONE SegNet forward for the realized argmax "
                     "(wrapped in try/except => can never crash/corrupt the verdict). OBSERVABILITY-ONLY "
                     "(never read into training/parity/resume). PARTIAL: no witness-logit margin/gibbs -- see "
                     "tools/witness_annulus_convergence.py for the full offline series.")
@@ -7786,8 +7855,10 @@ def main(argv: list[str] | None = None) -> int:
     # -------- (5) island seed/containment/amplification (island_protection; IslandProtectionGauge) ---
     ap.add_argument("--seed-islands", action=argparse.BooleanOptionalAction, default=False,
                     help="#224/#208: EARLY-SEED the finest-scale islands (self-detected lane+movable) "
-                    "into the structured-init phi target (accelerant; ships 0 archive bytes). Requires "
-                    "--structured-init. DEFAULT OFF => byte-identical.")
+                    "as an RGB residual (from GT frame1 appearance) composited into the SegNet-scored "
+                    "frame1 (accelerant; ships 0 archive bytes; SEPARATE module, absent from "
+                    "EMA/blob/deploy). Independent of --structured-init; requires --w-seg > 0 (the seed "
+                    "helps only through the realized seg loss). DEFAULT OFF => byte-identical.")
     ap.add_argument("--island-dilate-px", type=int, default=1, help="#224 annulus dilation of the island masks.")
     ap.add_argument("--seed-island-eased", action=argparse.BooleanOptionalAction, default=False,
                     help="#323 LADDER per-class island homotopy: replace the isotropic --island-dilate-px "

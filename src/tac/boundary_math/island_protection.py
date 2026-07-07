@@ -72,7 +72,7 @@ through a byte-closed ``upstream/evaluate.py`` exact row.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -85,7 +85,7 @@ import numpy as np
 # ``train_witness_realized_through_R_mlx.py``). All hooks ADDITIVE / opt-in
 # (defaults OFF => byte-identical baseline):
 #
-#   (0) argparse: add the 8 flags in ISLAND_TRAINER_FLAG_DEFAULTS (booleans as
+#   (0) argparse: add the 9 flags in ISLAND_TRAINER_FLAG_DEFAULTS (booleans as
 #       argparse.BooleanOptionalAction; --containment-mode / --amplify-form choices;
 #       floats/ints). Defaults = the OFF values (opt-in like --structured-init / --lane-prior-phi1).
 #
@@ -705,6 +705,7 @@ def island_recall(pred_argmax: np.ndarray, lstar: np.ndarray, island_cls: int) -
 # argparse defaults (OFF); island_protection_flags() = the lever that turns it ON.
 ISLAND_TRAINER_FLAG_DEFAULTS: dict[str, Any] = {
     "--seed-islands": False,          # BooleanOptionalAction: seed the protected island residual at ep0
+    "--seed-island-eased": False,     # BooleanOptionalAction (#323 LADDER): class-aware eased masks (SDF movable / VP-tangent lane) instead of isotropic dilation
     "--island-dilate-px": 1,          # int: annulus dilation of the island masks
     "--containment-mode": "shield",   # choices freeze|damp|shield: how the seed grad is protected
     "--containment-damp": 0.1,        # float: damp factor for --containment-mode damp
@@ -718,6 +719,7 @@ ISLAND_TRAINER_FLAG_DEFAULTS: dict[str, Any] = {
 def island_protection_flags(
     *,
     seed_islands: bool = True,
+    seed_island_eased: bool = False,
     dilate_px: int = 1,
     containment_mode: str = "shield",
     containment_damp: float = 0.1,
@@ -738,6 +740,7 @@ def island_protection_flags(
         raise ValueError(f"amplify_persist must be uniform|inverse_thickness, got {amplify_persist!r}")
     return {
         "--seed-islands": bool(seed_islands),
+        "--seed-island-eased": bool(seed_island_eased),
         "--island-dilate-px": int(dilate_px),
         "--containment-mode": str(containment_mode),
         "--containment-damp": float(containment_damp),

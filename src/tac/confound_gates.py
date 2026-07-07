@@ -231,10 +231,11 @@ def check_no_spike_guard_defaults_to_deadlock_mode(
     Same-line / in-call waiver: ``# SPIKE_GUARD_DEFAULT_OK:<rationale>`` (a real
     rationale — e.g. a byte-identity A/B baseline that autoconfig overrides).
 
-    STRICT-FLIP CONDITION: flip to ``strict=True`` once the trainer sibling flips
-    ``--spike-guard-mode`` default -> ``rollback`` (or autoconfig injects it), i.e.
-    live-count reaches 0. Warn-only until then because the trainer file is owned
-    by a sibling commit.
+    STRICT-FLIP: DONE (2026-07-06). The levelset trainer now defaults
+    ``--spike-guard-mode="rollback"`` (train_levelset...:7003), so live-count is 0
+    -> ``preflight_all`` now calls this gate ``strict=True`` per the Strict-flip
+    atomicity rule (the function default stays ``strict=False`` so direct/test calls
+    remain warn-only).
     """
     root = Path(repo_root or REPO_ROOT)
     violations: list[str] = []
@@ -289,10 +290,15 @@ def check_no_spike_guard_defaults_to_deadlock_mode(
 _REFERENCE_WINDOW_NAME_TOKENS = ("recent", "median_window", "ref_window", "refwindow")
 # Tokens in an ``if`` TEST that mark it as the spike/skip discriminator.
 _SKIP_TEST_TOKENS = ("spike", "spiked", "skip", "nonfinite", "non_finite")
-# Re-arm escape-hatch tokens: any presence in the enclosing function clears the
-# gate (the filter can recover from a sustained all-skip freeze).
-_REARM_TOKENS = (
-    ".clear(",
+# Re-arm escape-hatch tokens, split by SPECIFICITY to shrink the false-negative (MISS) surface:
+#  * SPECIFIC tokens are unambiguous re-arm intent (a median re-anchor, a spike-guard rollback mode,
+#    an explicit clear/decay of the reference window) -> any presence in the enclosing function clears
+#    the gate.
+#  * GENERIC tokens (``.clear(`` / ``reset(`` / ``rollback``) are ambiguous -- an unrelated
+#    ``some_other_list.clear()`` / ``optimizer.reset()`` / a ``rollback`` mentioned far away would
+#    FALSELY clear the gate (a miss of the real absorbing-median deadlock). They count as a re-arm ONLY
+#    when they appear NEAR an accepted-only append (same block / within ``_REARM_PROXIMITY_LINES``).
+_REARM_TOKENS_SPECIFIC = (
     "rearm",
     "re-arm",
     "re_arm",
@@ -300,8 +306,6 @@ _REARM_TOKENS = (
     "re-anchor",
     "re_anchor",
     "reset_median",
-    "reset(",
-    "rollback",
     "spike_guard_mode",
     "resume_clear_spike_guard",
     "clear_spike_guard",
@@ -310,6 +314,11 @@ _REARM_TOKENS = (
     "decay_median",
     "re_arm_median",
 )
+_REARM_TOKENS_GENERIC = (".clear(", "reset(", "rollback")
+# How close (lines, either side) a GENERIC re-arm token must sit to an accepted-only append to count.
+_REARM_PROXIMITY_LINES = 10
+# Full union preserved for callers/tests that enumerate every recognised re-arm token.
+_REARM_TOKENS = _REARM_TOKENS_SPECIFIC + _REARM_TOKENS_GENERIC
 
 
 def _name_is_reference_window(target: ast.AST) -> bool:
@@ -408,11 +417,22 @@ def check_reject_filter_updates_reference_from_accepted_only_has_rearm(
                         )
             if not accepted_only:
                 continue
-            # Escape hatch present anywhere in the function? Scan CODE only
+            # SPECIFIC escape hatch present anywhere in the function? Scan CODE only
             # (comments stripped) so the waiver-marker name (which contains
             # "rearm") cannot self-satisfy the re-arm requirement.
             fn_code_l = _strip_comments(fn_src).lower()
-            if any(tok in fn_code_l for tok in _REARM_TOKENS):
+            if any(tok in fn_code_l for tok in _REARM_TOKENS_SPECIFIC):
+                continue
+            # GENERIC escape hatch (.clear( / reset( / rollback) counts ONLY when it is NEAR an
+            # accepted-only append (within _REARM_PROXIMITY_LINES) -- an unrelated clear/reset/rollback
+            # elsewhere in the function must NOT falsely clear the median-freeze deadlock (MISS surface).
+            near_parts: list[str] = []
+            for _ap in accepted_only:
+                lo = max(0, _ap.lineno - 1 - _REARM_PROXIMITY_LINES)
+                hi = min(len(lines), _ap.lineno + _REARM_PROXIMITY_LINES)
+                near_parts.append("\n".join(lines[lo:hi]))
+            near_code_l = _strip_comments("\n".join(near_parts)).lower()
+            if any(tok in near_code_l for tok in _REARM_TOKENS_GENERIC):
                 continue
             # Waiver in the function scope?
             if _waiver_present(fn_src, "REJECT_FILTER_REARM_OK"):
@@ -667,8 +687,11 @@ def check_verdict_pairs_default_is_n600(
 
     Same-line / in-call waiver: ``# VERDICT_PAIRS_DEFAULT_OK:<rationale>``.
 
-    STRICT-FLIP CONDITION: flip to ``strict=True`` once the trainer sibling flips
-    the default -> 0 (live-count 0). Warn-only until then.
+    STRICT-FLIP: DONE (2026-07-06). The levelset trainer now defaults
+    ``--verdict-pairs 0`` (train_levelset...:7044), so live-count is 0 ->
+    ``preflight_all`` now calls this gate ``strict=True`` per the Strict-flip
+    atomicity rule (the function default stays ``strict=False`` so direct/test calls
+    remain warn-only).
     """
     root = Path(repo_root or REPO_ROOT)
     violations: list[str] = []

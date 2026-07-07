@@ -65,7 +65,7 @@ import json
 import math
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -653,6 +653,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--train-device", choices=["mps", "cuda", "cpu"], default="mps")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)
+
+    # (#254) P0 admission guard: refuse a RAW heavy launch that skipped the governed admission gate
+    # (a concurrent >128 GB run CRASHED the box). ADVISORY (warn only) until enforce is armed; when
+    # armed, REFUSES (exit 7) unless launched via a governed path. Runs AFTER argparse (--help stays
+    # free); before any heavy allocation.
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_witness_realized_through_R")
 
     result = run_train(args)
     print("\n=== THROUGH-R WITNESS RESULT (realized axis) ===")

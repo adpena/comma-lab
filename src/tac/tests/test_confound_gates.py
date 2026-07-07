@@ -226,6 +226,39 @@ class TestRejectFilterRearm:
         )
         assert v == []
 
+    def test_generic_token_far_from_append_does_not_clear(self, tmp_path):
+        # A generic re-arm token (.clear()) on an UNRELATED list, far (>proximity) from the
+        # accepted-only append, must NOT falsely clear the gate (the tightened miss surface).
+        pad = "".join(f"    _x{i} = {i}\n" for i in range(cg._REARM_PROXIMITY_LINES + 5))
+        body = _REJECT_NO_REARM + pad + "    unrelated.clear()\n"
+        _trainer(tmp_path, body)
+        v = cg.check_reject_filter_updates_reference_from_accepted_only_has_rearm(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+        assert len(v) == 1, v
+
+    def test_generic_token_near_append_clears(self, tmp_path):
+        # The SAME generic token, but within proximity of the accepted-only append, DOES clear it.
+        body = _REJECT_NO_REARM + (
+            "        if n_skips > 20:\n"
+            "            recent.clear()\n"  # near the append -> genuine re-arm
+        )
+        _trainer(tmp_path, body)
+        v = cg.check_reject_filter_updates_reference_from_accepted_only_has_rearm(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+        assert v == []
+
+    def test_specific_token_far_still_clears(self, tmp_path):
+        # A SPECIFIC token (reanchor) far from the append still clears (unambiguous re-arm intent).
+        pad = "".join(f"    _x{i} = {i}\n" for i in range(cg._REARM_PROXIMITY_LINES + 5))
+        body = _REJECT_NO_REARM + pad + "    reanchor_median()\n"
+        _trainer(tmp_path, body)
+        v = cg.check_reject_filter_updates_reference_from_accepted_only_has_rearm(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+        assert v == []
+
     def test_negation_shape_accepted_only(self, tmp_path):
         body = (
             "def run_train():\n"
@@ -684,8 +717,8 @@ class TestTelemetryLiveness:
 
 
 class TestModule:
-    def test_all_six_gates_registered(self):
-        assert len(cg.CONFOUND_GATES) == 6
+    def test_all_gates_registered(self):
+        assert len(cg.CONFOUND_GATES) == 7
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -694,6 +727,7 @@ class TestModule:
             "check_resume_palliative_flags_imply_warm_start",
             "check_verdict_pairs_default_is_n600",
             "check_telemetry_verdict_rows_carry_liveness",
+            "check_levelset_hosc_requires_beta_end",
         }
 
     @pytest.mark.parametrize("fn", cg.CONFOUND_GATES, ids=lambda f: f.__name__)
@@ -709,12 +743,14 @@ class TestModule:
         # caught. Bounds reflect the sibling-owned trainer/launcher fix state at
         # landing (warn-only); tighten as strict-flips land.
         bounds = {
-            "check_no_spike_guard_defaults_to_deadlock_mode": 1,
+            # #397 / #401 STRICT-FLIPPED 2026-07-06: live-count 0 (trainer defaults fixed).
+            "check_no_spike_guard_defaults_to_deadlock_mode": 0,
             "check_reject_filter_updates_reference_from_accepted_only_has_rearm": 0,
             "check_no_duplicate_long_flags_in_launch": 40,
             "check_resume_palliative_flags_imply_warm_start": 40,
-            "check_verdict_pairs_default_is_n600": 2,
+            "check_verdict_pairs_default_is_n600": 0,
             "check_telemetry_verdict_rows_carry_liveness": 12,
+            "check_levelset_hosc_requires_beta_end": 8,  # historical launch.sh artifacts (append-only)
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

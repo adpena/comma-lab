@@ -178,3 +178,54 @@ def test_zero_flip_case_is_all_zero_shares():
     assert m["threshold"]["annulus_flip_frac"] == 0.0
     assert m["threshold"]["interior_flip_frac"] == 0.0
     assert m["threshold"]["annulus_flip_mass_share"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# 9: chunking is NUMERICALLY IDENTICAL (the #205-class memory fix must not move VALUES).
+# ---------------------------------------------------------------------------
+def _varied_fixture(n_pairs: int = 7, h: int = 12, w: int = 12, seed: int = 0):
+    """A multi-pair fixture with per-pair-varied argmax + a NON-uniform GT-margin distribution so the
+    bottom-k global quantile threshold is non-trivial (exercises the two-pass path)."""
+    rng = np.random.default_rng(seed)
+    realized, gt, margin = [], [], []
+    for _ in range(n_pairs):
+        g = rng.integers(0, 5, size=(h, w)).astype(np.int64)
+        r = g.copy()
+        # flip a random ~15% of pixels to a different class.
+        fm = rng.random((h, w)) < 0.15
+        r[fm] = (g[fm] + 1 + rng.integers(0, 4, size=int(fm.sum()))) % 5
+        m = rng.random((h, w)).astype(np.float32) * 6.0  # margins spread across [0,6) => bottom-k bites
+        realized.append(r)
+        gt.append(g)
+        margin.append(m)
+    return realized, gt, margin
+
+
+def _assert_deep_equal(a, b, path=""):
+    if isinstance(a, dict):
+        assert set(a) == set(b), f"{path}: keys differ"
+        for k in a:
+            _assert_deep_equal(a[k], b[k], f"{path}.{k}")
+    elif isinstance(a, float):
+        if np.isnan(a):
+            assert isinstance(b, float) and np.isnan(b), f"{path}: {a!r} != {b!r}"
+        else:
+            assert a == b, f"{path}: {a!r} != {b!r}"  # exact (integer counts / same np.percentile)
+    else:
+        assert a == b, f"{path}: {a!r} != {b!r}"
+
+
+@pytest.mark.parametrize("chunk", [1, 2, 3, 5, 4])
+def test_chunked_is_numerically_identical_to_single_batch(chunk):
+    realized, gt, margin = _varied_fixture()
+    ref = _M._annulus_metrics_from_maps(realized, gt, margin, band=2.0, bottom_k=0.05, chunk=0)  # single-batch
+    got = _M._annulus_metrics_from_maps(realized, gt, margin, band=2.0, bottom_k=0.05, chunk=chunk)
+    _assert_deep_equal(got, ref)
+
+
+def test_chunk_default_is_bounded_not_full_stack():
+    # default chunk (32) must produce identical values to the explicit single-batch path too.
+    realized, gt, margin = _varied_fixture(n_pairs=9)
+    ref = _M._annulus_metrics_from_maps(realized, gt, margin, band=2.0, bottom_k=0.05, chunk=0)
+    got = _M._annulus_metrics_from_maps(realized, gt, margin, band=2.0, bottom_k=0.05)  # default chunk=32
+    _assert_deep_equal(got, ref)

@@ -6373,8 +6373,25 @@ def preflight_all(
         # synthesis: .omx/research/confound_hunt_synthesis_20260705.md.
         from tac.confound_gates import CONFOUND_GATES as _CONFOUND_GATES
 
+        # STRICT-FLIP (2026-07-06 recursive-review fix-all): #397 (spike-guard mode
+        # default now "rollback") and #401 (--verdict-pairs default now 0) have both
+        # reached live-count 0 across the repo, so per the "Strict-flip atomicity
+        # rule" they flip to strict here. The rest stay warn-only (sibling-owned
+        # trainer/launcher fixes not yet at live-count 0; each docstring names its
+        # own strict-flip condition).
+        _CONFOUND_STRICT = {
+            "check_no_spike_guard_defaults_to_deadlock_mode",
+            "check_verdict_pairs_default_is_n600",
+        }
         for _confound_gate in _CONFOUND_GATES:
-            _confound_gate(strict=False, verbose=verbose)
+            _confound_gate(
+                strict=(_confound_gate.__name__ in _CONFOUND_STRICT), verbose=verbose
+            )
+
+        # #254 self-protect: every heavy witness trainer main() must call the P0 admission
+        # guard (a raw >128 GB launch CRASHED the box). WARN-ONLY per the "Strict-flip
+        # atomicity rule" (a sibling witness trainer may not yet be wired).
+        check_heavy_witness_trainers_call_admission_guard(strict=False, verbose=verbose)
 
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
@@ -86107,6 +86124,59 @@ def check_axis_solved_claim_has_pipeline_validation(
         raise PreflightError(
             "check_axis_solved_claim_has_pipeline_validation found "
             f"{len(violations)} violation(s) (B3 / NO-FAKE #8; Catalog #395):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+def check_heavy_witness_trainers_call_admission_guard(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """#254 self-protect — every HEAVY witness trainer main() must call
+    ``tac.admission_guard.assert_governed_admission`` so a RAW launch that skipped the governed
+    admission path (the P0 machine-crash gate: a concurrent >128 GB run CRASHED the box) fails
+    CLOSED when enforce is armed.
+
+    Scans ``experiments/train_*witness*realized_through_R*.py`` (the witness trainers ONLY — the
+    ``train_substrate_*.py`` family is out of scope) and warns for any file whose source lacks an
+    ``assert_governed_admission`` call. WARN-ONLY (live count may be >0 for an un-wired sibling
+    trainer). Same-line waiver: ``# ADMISSION_GUARD_WAIVED:<rationale>`` (for a genuinely-light
+    entrypoint that never allocates heavy)."""
+    root = Path(repo_root or REPO_ROOT)
+    exp = root / "experiments"
+    violations: list[str] = []
+    scanned = 0
+    if exp.is_dir():
+        for entry in sorted(exp.glob("train_*witness*realized_through_R*.py")):
+            if not entry.is_file():
+                continue
+            rel = entry.relative_to(root).as_posix()
+            try:
+                text = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned += 1
+            if "assert_governed_admission" in text:
+                continue
+            if any("ADMISSION_GUARD_WAIVED:" in ln for ln in text.splitlines()):
+                continue
+            violations.append(
+                f"{rel}: heavy witness trainer does not call assert_governed_admission() in its "
+                "main() -> a RAW launch bypasses the P0 memory admission gate (a concurrent "
+                ">128 GB run CRASHED the box). Add `from tac.admission_guard import "
+                "assert_governed_admission; assert_governed_admission(<label>)` at the top of "
+                "main() (after argparse), or a same-line `# ADMISSION_GUARD_WAIVED:<rationale>`.")
+
+    if verbose:
+        print(
+            f"  [catalog-254] check_heavy_witness_trainers_call_admission_guard: "
+            f"{len(violations)} violation(s) ({scanned} witness trainer(s) scanned)"
+            if violations else
+            f"  [catalog-254] check_heavy_witness_trainers_call_admission_guard: OK "
+            f"({scanned} witness trainer(s) scanned)")
+    if strict and violations:
+        raise PreflightError(
+            "check_heavy_witness_trainers_call_admission_guard found "
+            f"{len(violations)} violation(s) (#254 P0 admission self-protect):\n  "
             + "\n  ".join(violations))
     return violations
 

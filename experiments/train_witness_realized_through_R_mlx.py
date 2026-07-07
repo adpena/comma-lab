@@ -2996,6 +2996,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
+    # (#254) P0 admission guard: refuse a RAW heavy launch that skipped the governed admission gate
+    # (tools/launch_witness_run.py / tools/safe_run.py / spawn_durable_daemon register the footprint
+    # with the system memory governor BEFORE spawning — a concurrent >128 GB run CRASHED the box).
+    # ADVISORY (warn only) until enforce is armed; when armed, REFUSES (exit 7) unless launched via a
+    # governed path (marker set) or carrying TAC_ADMISSION_BYPASS_OK=<reason>. Runs AFTER argparse so
+    # --help stays free; before any heavy MLX/scorer allocation.
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_witness_realized_through_R_mlx")
+
     result = run_train(args)
     print("\n=== THROUGH-R WITNESS RESULT (MLX, realized axis) ===")
     print(json.dumps({k: v for k, v in result.items() if k != "history"}, indent=2))
