@@ -75,6 +75,64 @@ def smoothing_crossover_ok(
     return s_min < margin * dash_period_px
 
 
+def _gt_h_supersession_anchor() -> EmpiricalAnchor:
+    """The 2026-07-07 adversarial-review supersession of the trainflow FLAT-H anchor.
+
+    OVERTURNED-AS-INSTRUMENTED: the trainflow probe's amplitude-normalized H index
+    was recomputed on the GT labels THEMSELVES through the probe's exact machinery
+    (n600) and read GT-H 0.7015 aggregate — statistically identical to the witness's
+    "flat" 0.666–0.677. The index has ~zero dynamic range at this resolution: a
+    PERFECT dash-resolving field also reads "flat", so the trainflow anchor's
+    "no crossover / τ-anneal buys zero dash resolution" claim is VOID-as-evidenced
+    and τ's dash-role is UNMEASURED (the probe's own pre-registered fallback verdict
+    INDETERMINATE-at-this-resolution was the correct one). The law's five HELD
+    anchors + the comb's 86% gap-FP removal are DIFFERENT measurements and STAND.
+    NEW OWED GATE encoded here: GT-conditioned comb-REGISTRATION audit before
+    n287_dash_comb ever fires (the comb separates GT marks/gaps only 0.63-vs-0.42
+    in band0 — a mis-phased comb risks suppressing REAL lane). Kept in the module
+    so a fresh registry rebuild cannot silently drop the overturn (module↔registry
+    drift); the runtime registry carries the same anchor via anchor_appended row.
+    Source: adversarial_review_all_negative_findings_20260707.md §1 (commit
+    4db610af2); artifact experiments/results/tau_crossover_trainflow_20260707/
+    gt_h_control_n600.json.
+    """
+    return EmpiricalAnchor(
+        anchor_id="tau_crossover_trainflow_OVERTURNED_as_instrumented_gt_h_control_20260707",
+        measurement_utc="2026-07-07T21:30:00Z",
+        inputs={
+            "supersedes_anchor": "tau_crossover_trainflow_n600_20260707",
+            "control": ("GT-conditioned validity control: H computed on GT labels through "
+                        "the trainflow probe's exact machinery (n600)"),
+            "mechanism": "H amplitude-normalization has ~zero dynamic range at this resolution",
+        },
+        predicted_output={
+            "if_index_valid": ("GT-H should read far from witness H "
+                               "(a perfect field = strong dash contrast)"),
+        },
+        empirical_output={
+            "gt_h_aggregate": 0.7015,
+            "gt_h_per_band": [0.669, 0.593, 0.994, 1.040],
+            "witness_h_range": [0.666, 0.677],
+            "verdict": "OVERTURNED-AS-INSTRUMENTED; tau dash-role UNMEASURED",
+            "new_owed_gate": "GT-conditioned comb-registration audit before n287_dash_comb fires",
+        },
+        residual=0.0345,  # |GT-H − witness-H midpoint| — the (absent) discrimination gap
+        source_artifact="experiments/results/tau_crossover_trainflow_20260707/gt_h_control_n600.json",
+        measurement_method=("adversarial-review positive control: recompute the probe's index on "
+                            "GT through identical machinery; append-only supersession per "
+                            "Catalog #110/#113"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/adversarial_review_all_negative_findings_20260707.md",
+            reactivation_criteria=("re-assert a trainflow-H claim ONLY from a re-instrumented index "
+                                   "with MEASURED dynamic range (GT vs degraded-reference separation) "
+                                   "OR the fixed-tau control arm"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu_mlx",
+        ),
+    )
+
+
 def build_dash_erasure_homogenization_v1() -> CanonicalEquation:
     """Build the dash-erasure homogenization law with the five HELD measured anchors."""
 
@@ -148,7 +206,7 @@ def build_dash_erasure_homogenization_v1() -> CanonicalEquation:
         units_in={"tau_scale_px": "px", "eps_viscous_px": "px", "r_nyquist_px": "px",
                   "dash_period_px": "px", "margin": "dimensionless"},
         units_out={"crossover_ok": "bool (True = dashes still resolvable without corrector)"},
-        empirical_anchors=(anchor,),
+        empirical_anchors=(anchor, _gt_h_supersession_anchor()),
         predicted_vs_empirical_residual={
             # the law's headline check: dash-gap FP sits AT the band value (share 0.90 vs 1.0
             # ideal homogenized limit; the 0.10 gap = residual partial dash rendering):
