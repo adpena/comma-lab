@@ -31,6 +31,7 @@ from __future__ import annotations
 import importlib
 import itertools
 import json
+import math
 import sys
 from dataclasses import dataclass, field as _dc_field
 from datetime import UTC, datetime
@@ -418,7 +419,17 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
         cost = candidate_cost(c, horizon_epochs)
         c["cost"] = cost
         c["predicted_dS_per_cost"] = per_cost_score(c["predicted_dS"], cost)
-        if c["predicted_dS"] > 0.0:
+        pds = c["predicted_dS"]
+        # (review-fix) a NON-FINITE predicted ΔS (NaN/inf from a corrupted verdict-row input
+        # propagating through the slope fit) passes `pds > 0.0` as False in Python and would
+        # silently enter `ranked`, then destabilize the sort (NaN keys → undefined order).
+        # Treat non-finite as UNIDENTIFIABLE → refused, never ranked (NO-FAKE: an unknowable ΔS
+        # is not a negative-ΔS recommendation).
+        if not (isinstance(pds, (int, float)) and math.isfinite(pds)):
+            refused.append({**c, "refusal_reason":
+                            "NON_FINITE predicted ΔS (NaN/inf from a corrupted verdict input) — "
+                            "treated as UNIDENTIFIABLE and refused, never ranked"})
+        elif pds > 0.0:
             refused.append({**c, "refusal_reason":
                             "NEVER_REGRESS (POWERPLAY): central predicted ΔS > 0 — a "
                             "recommendation that would raise measured S is refused by "

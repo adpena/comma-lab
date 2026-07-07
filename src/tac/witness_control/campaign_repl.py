@@ -84,7 +84,11 @@ def campaign_world_model(run_dir: str | Path, as_of_epoch: int | None = None,
     ds = [v.get("d_seg") for v in verdicts if isinstance(v.get("d_seg"), (int, float))]
     if len(ds) >= 2:
         last_delta = float(ds[-1] - ds[-2])
-    crux = (report.classification or {}).get("label") if report.classification else None
+    # (review-fix) the classification dict's key is "classification" (see shadow_controller
+    # _classify), NOT "label" — the old .get("label") ALWAYS returned None, so crux silently
+    # fell through to "no-classification" even on a well-identified trajectory. Same shape as the
+    # CLOSE-gate wrong-key bug: a wrong dict key fabricating a false "nothing happening" narrative.
+    crux = (report.classification or {}).get("classification") if report.classification else None
     return CampaignWorldModel(
         run_dir=str(Path(run_dir)),
         epoch_latest=report.epoch_latest,

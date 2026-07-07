@@ -229,8 +229,13 @@ def measure(video_path: str | Path, lstars: np.ndarray, *, git_sha: str | None =
     sha, nbytes = _sha256_and_size(p)
     w, h = _video_resolution(p)
     cam = camera_for_resolution(w, h)
-    vh, vh10, vh90 = measure_v_horizon(lstars)
+    # (review-fix HIGH) SELF-DETECT the class order FIRST, then feed the DETECTED road/lane
+    # indices into the horizon measurement. The prior order (measure_v_horizon before
+    # detect_class_order) used the hardcoded road_cls=0/lane_cls=1 defaults — silently inert on
+    # 0.mkv (detected==default) but a wrong horizon on any clip whose SegNet channel assignment
+    # differs, violating this module's own "never hardcode the index, self-detect" contract.
     order, idx = detect_class_order(lstars)
+    vh, vh10, vh90 = measure_v_horizon(lstars, road_cls=idx["Road"], lane_cls=idx["Lane"])
     is_canon = order == CANONICAL_CLASS_ORDER
     is_comma2k19_rav4 = nbytes == 37_545_489
     prov = {

@@ -941,12 +941,19 @@ def EventTriggeredCurriculum(window: int = 0) -> Lever:  # noqa: N802 — #315 d
                  notes="#315 nucleus-guarded CE→tau hand-off; protects born islands at 0 d_seg cost")
 
 
-def EikonalViscosity(adaptive: bool = True, window: int = 0) -> Lever:  # noqa: N802 — #316/#320 DE cure
+def EikonalViscosity(eps: float = 0.05, adaptive: bool = True, window: int = 0) -> Lever:  # noqa: N802 — #316/#320 DE cure
     """#316/#320 viscous eikonal stabilization: the DE-derived adaptive-ε cure ε(t)=clamp(
     |c_a(t)|·√(ηλ_eik/8)(1+margin), floor, upper) that floors ε above the rising lower-CFL edge
     (the measured v5 ep110 re-entry cause). ``adaptive`` toggles the ε(t) law vs a fixed viscous
-    ε; eps-floor/upper keep trainer defaults. Requires --eikonal-weight>0 to have effect."""
-    ov = {"--eikonal-viscosity": True}
+    ε; ``eps`` is the base/floor viscous ε (the adaptive law scales from it). Requires
+    --eikonal-weight>0 to have effect.
+
+    (review-fix CRITICAL) ``--eikonal-viscosity`` is ``type=float`` in the trainer argparse — a
+    numeric ε, NOT a boolean. The prior ``{"--eikonal-viscosity": True}`` compiled to a BARE flag
+    with no value, so ``--dsl-lever EikonalViscosity`` crashed the trainer at argparse
+    (``expected one argument``) AFTER passing every launcher gate + spawning the daemon. Emit the
+    float. (``--eikonal-viscosity-adaptive`` IS a store_true → True is correct there.)"""
+    ov = {"--eikonal-viscosity": float(eps)}
     if adaptive:
         ov["--eikonal-viscosity-adaptive"] = True
     return Lever("eikonal_viscosity",

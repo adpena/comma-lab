@@ -93,6 +93,18 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     p.add_argument("--label", default=None)
     p.add_argument("--quiet", action="store_true")
     p.add_argument("--json", action="store_true")
+    # (review-fix CRITICAL) safe_run stamps the child TAC_GOVERNED_ADMISSION so the heavy
+    # entrypoint's admission guard passes — but the per-process --rss-mb cap is exactly the
+    # SYSTEM-BLIND mechanism that FAILED to prevent the 2026-07-02 >128GB crash. So before
+    # stamping governed, safe_run now runs the SAME system-total admission gate the durable-daemon
+    # path runs. These flags parameterize it (parity with spawn_durable_daemon).
+    p.add_argument("--projected-gib", type=float, default=None,
+                   help="projected peak footprint (GiB) for the system admission gate; "
+                        "defaults to --rss-mb/1024.")
+    p.add_argument("--admission-override-rationale", default=None,
+                   help="operator-verbatim rationale to override a system-admission REFUSE.")
+    p.add_argument("--skip-admission-gate", action="store_true",
+                   help="skip the system admission gate (infra/protection commands only).")
     ns = p.parse_args(ours)
     return ns, cmd
 
@@ -152,6 +164,51 @@ def _spawn_debug(cmd: list[str]) -> str:
     return detail
 
 
+def _rationale_is_real(s: str | None) -> bool:
+    """A real operator override rationale: non-placeholder, >= 8 chars."""
+    if not s or not isinstance(s, str):
+        return False
+    low = s.strip().lower()
+    return len(low) >= 8 and low not in ("<reason>", "<rationale>", "placeholder", "tbd", "n/a")
+
+
+def _system_admission_gate(ns: argparse.Namespace, cmd: list[str]) -> int | None:
+    """(review-fix CRITICAL) The SAME system-total admission gate the durable-daemon path runs, so
+    that stamping the child as GOVERNED is TRUTHFUL (a real SUM-over-RAM check ran), not a per-
+    process-cap fiction. Returns an exit code to ABORT with (refuse), or None to proceed.
+
+    Parity with spawn_durable_daemon._system_admission_gate: REFUSE (rc=5) only when ENFORCE is
+    armed AND the live system decision denies AND no real operator override; ADVISORY/unavailable/
+    admit all proceed. Fail-safe: a governor import/read hiccup proceeds (the daemon path does the
+    same) — never silently BLOCK, and never falsely refuse."""
+    if ns.skip_admission_gate:
+        return None
+    try:
+        import system_memory_governor as gov  # tools/ is sys.path[0] for this script
+    except Exception as exc:  # noqa: BLE001 — never let a governor hiccup block a launch
+        print(f"safe_run.py: WARNING system admission gate unavailable ({exc!r}); proceeding "
+              f"(per-process --rss-mb cap remains).", file=sys.stderr)
+        return None
+    projected = ns.projected_gib if ns.projected_gib is not None else float(ns.rss_mb) / 1024.0
+    try:
+        ctx = gov.live_admission_decision(projected_new_gib=float(projected))
+    except Exception as exc:  # noqa: BLE001
+        print(f"safe_run.py: WARNING admission read failed ({exc!r}); proceeding.", file=sys.stderr)
+        return None
+    d = ctx.decision
+    if d.admit:
+        return None
+    if _rationale_is_real(ns.admission_override_rationale):
+        print(f"safe_run.py: ADMISSION OVERRIDE (operator rationale): "
+              f"{ns.admission_override_rationale!r} — proceeding despite: {d.reason}", file=sys.stderr)
+        return None
+    enforcing = gov.admission_enforcing()
+    print(f"safe_run.py: {'REFUSED' if enforcing else 'WOULD-REFUSE (ADVISORY)'} "
+          f"(system admission gate — SUM-over-RAM crash guard): {d.reason} "
+          f"[projected={projected:.1f}GiB]", file=sys.stderr)
+    return 5 if enforcing else None
+
+
 def main(argv: list[str]) -> int:
     ns, cmd = _parse_args(argv)
     if not cmd:
@@ -166,11 +223,20 @@ def main(argv: list[str]) -> int:
     rss_limit_kib = ns.rss_mb * 1024
     start = time.monotonic()
 
+    # (review-fix CRITICAL) run the SYSTEM-TOTAL admission gate BEFORE stamping governed. The old
+    # code stamped governed off the per-process --rss-mb cap alone — the exact SYSTEM-BLIND
+    # mechanism that failed to stop the 2026-07-02 >128GB crash. Now the stamp is truthful: a real
+    # SUM-over-RAM decision ran. REFUSE (rc=5) aborts before spawn when enforce is armed.
+    _adm_rc = _system_admission_gate(ns, cmd)
+    if _adm_rc is not None:
+        return _adm_rc
+
     # (#254) stamp the child env as GOVERNED so the heavy entrypoint's admission guard passes —
-    # safe_run IS a governed path (it RSS-caps + shed-cascades the child). Set the marker DIRECTLY
-    # by its stable name (== tac.admission_guard.GOVERNED_MARKER_ENV) so it works even when src/ is
-    # not importable from this tools/ launcher. A raw launch that skips safe_run/launch_witness_run
-    # lacks this marker and is refused when enforce is armed.
+    # safe_run IS a governed path (it now runs the system admission gate above + RSS-caps +
+    # shed-cascades the child). Set the marker DIRECTLY by its stable name (==
+    # tac.admission_guard.GOVERNED_MARKER_ENV) so it works even when src/ is not importable from
+    # this tools/ launcher. A raw launch that skips safe_run/launch_witness_run lacks this marker
+    # and is refused when enforce is armed.
     _child_env = dict(os.environ)
     _child_env["TAC_GOVERNED_ADMISSION"] = "1"
 

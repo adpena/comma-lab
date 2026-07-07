@@ -237,10 +237,18 @@ def record_measured_for_run(
     """CLOSE the loop: record a ``measured`` event for every lever that FIRED for ``run_ref`` and is
     not yet measured (draining it from :func:`duty_to_measure`). Returns the rows written (empty if no
     fired-unmeasured lever matched). Idempotent-ish: a lever already measured for this run is skipped."""
+    # (review-fix HIGH) the skip must be PER-RUN, not global. The prior `st.ever_measured` is the
+    # all-runs status, so a lever measured in run A would silently drop its GENUINE, distinct
+    # measurement in run B (a later A/B arm) — a real event lost + duty_to_measure permanently
+    # considering it satisfied. Filter by THIS run's own `measured` events (retired stays terminal-global).
     rows: list[dict] = []
+    measured_this_run: set[str] = {
+        e["lever"] for e in _read_events(path)
+        if e["event"] == EVENT_MEASURED and _run_ref_matches(e.get("run_ref"), run_ref)
+    }
     for lever in levers_fired_for_run(run_ref, path):
         st = activation_status(lever, path)
-        if st.ever_measured or st.retired:
+        if lever in measured_this_run or st.retired:
             continue
         rows.append(record_activation(
             lever, EVENT_MEASURED, run_ref=run_ref, verdict_ref=verdict_ref,
