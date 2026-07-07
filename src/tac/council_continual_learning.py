@@ -165,15 +165,48 @@ class CouncilTier:
       affected paradigm; required for kill-and-replace decisions /
       multi-month directional shifts / operator-pre-attention escalation;
       operator-resolves on tie).
+    * **T5** — CRUCIBLE (operator-added 2026-07-07; OPERATOR-CONVENED ONLY,
+      never agent-initiated — the agent may RECOMMEND convening, the
+      operator's explicit call is the sole trigger). Reserved for
+      absolutely mission-critical junction points. Full attendance
+      (6-of-6 sextet + ALL 20 grand-council seats + per-topic specialists;
+      recusals are REPLACED by named alternates, never quorum-reduced).
+      Multi-phase: evidence dossier (pre-registered, every claim tagged
+      MEASURED/DERIVED/INFERRED/ASSUMED, all load-bearing negatives
+      adversarially cleared) → INDEPENDENT written positions (before
+      seeing others' — anti-anchoring) → red-team pre-mortem (Contrarian
+      + Assumption-Adversary + 2 drafted seats attack the emerging
+      consensus) → ≥2 structured debate rounds (dissent verbatim; no
+      silent position flips) → EMPIRICAL RECESS (the crucible SUSPENDS
+      to measure any measurable disagreement and resumes with the number
+      — deliberation may not proceed past a measurable dispute) →
+      synthesis + verdict (PROCEED must survive the red team's strongest
+      attack, stated as such; pre-registered success/failure criteria +
+      30-day retrospective trigger) → recursive self-reflection seal
+      (Catalog #363, 3 clean rounds). FULL EXECUTE AUTHORITY (operator
+      2026-07-07 verbatim "with full deep math and research and building
+      and measuring and testing and OSS and everything authority, all
+      authority"): within the AUTHORITY ENVELOPE the convening operator
+      call declares (compute budget, paid budget, launch classes), the
+      crucible builds/measures/tests/researches WITHOUT per-action GO;
+      outside the declared envelope, standing CONTAINMENT applies
+      unchanged. No provisional verdicts on the primary decision — the
+      empirical recess exists to convert INFERRED/ASSUMED into MEASURED.
+      Output MUST be launchable config(s) + a pre-registered measurement
+      plan, never prose alone. Cadence: operator-called (no fixed
+      budget; exempt from over-cadence alerts).
     """
 
     T1 = "T1"
     T2 = "T2"
     T3 = "T3"
     T4 = "T4"
+    T5 = "T5"
 
 
-VALID_TIERS = frozenset({CouncilTier.T1, CouncilTier.T2, CouncilTier.T3, CouncilTier.T4})
+VALID_TIERS = frozenset(
+    {CouncilTier.T1, CouncilTier.T2, CouncilTier.T3, CouncilTier.T4, CouncilTier.T5}
+)
 
 
 # Verdict enum-like; deliberation outcomes that the autopilot ranker /
@@ -591,7 +624,7 @@ class CouncilDeliberationRecord:
                     f"{sorted(VALID_MISSION_CONTRIBUTIONS)} (per CLAUDE.md "
                     "'Mission alignment — non-negotiable' subsection)"
                 )
-        if self.council_tier in (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4):
+        if self.council_tier in (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4, CouncilTier.T5):
             if self.predicted_mission_contribution is None:
                 raise CouncilRecordValidationError(
                     f"council_tier={self.council_tier} requires "
@@ -651,7 +684,7 @@ def _validate_record(record: CouncilDeliberationRecord) -> None:
         )
     # T2+ deliberations MUST have at least one assumption-adversary verdict
     # entry per CLAUDE.md Catalog #292 + "Council conduct" Fix-7 amendment.
-    if record.council_tier in (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4):
+    if record.council_tier in (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4, CouncilTier.T5):
         if len(record.council_assumption_adversary_verdict) == 0:
             raise ValueError(
                 f"council_tier={record.council_tier} requires at least one "
@@ -1018,7 +1051,7 @@ def query_mission_contribution_distribution(
     *,
     since_utc: str | None = None,
     posterior_path: Path | None = None,
-    tier_filter: tuple[str, ...] = (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4),
+    tier_filter: tuple[str, ...] = (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4, CouncilTier.T5),
 ) -> dict[str, int]:
     """Count anchors per ``predicted_mission_contribution`` category.
 

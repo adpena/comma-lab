@@ -72350,7 +72350,7 @@ _CHECK_300_VALID_MISSION_CONTRIBUTIONS: frozenset[str] = frozenset({
 })
 
 # Recognized tier values for `council_tier:`.
-_CHECK_300_VALID_TIERS: frozenset[str] = frozenset({"T1", "T2", "T3", "T4"})
+_CHECK_300_VALID_TIERS: frozenset[str] = frozenset({"T1", "T2", "T3", "T4", "T5"})  # T5 CRUCIBLE operator-added 2026-07-07
 
 _CHECK_300_WAIVER_PATTERN = re.compile(
     r"#\s*COUNCIL_TIER_FRONTMATTER_WAIVED\s*:\s*([^\s][^\n#]{0,200})"

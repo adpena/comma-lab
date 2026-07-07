@@ -104,6 +104,15 @@ SUSTAINABLE_CADENCE: dict[str, dict[str, Any]] = {
         "per_month": 2,
         "window_30d_budget": 2,
     },
+    CouncilTier.T5: {
+        # T5 CRUCIBLE is OPERATOR-CONVENED ONLY (operator 2026-07-07); there is
+        # no sustainable-cadence budget because the operator call IS the budget.
+        # None sentinel = always WITHIN_BUDGET / exempt from over-cadence alerts.
+        "per_day": None,
+        "per_week": None,
+        "per_month": None,
+        "window_30d_budget": None,
+    },
 }
 
 

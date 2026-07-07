@@ -98,7 +98,7 @@ def test_schema_version_canonical():
 
 
 def test_valid_tiers_canonical_set():
-    assert VALID_TIERS == frozenset({"T1", "T2", "T3", "T4"})
+    assert VALID_TIERS == frozenset({"T1", "T2", "T3", "T4", "T5"})
 
 
 def test_valid_verdicts_includes_canonical_outcomes():
@@ -161,7 +161,7 @@ def test_append_rejects_newline_in_deliberation_id(tmp_path: Path):
 def test_append_rejects_invalid_tier(tmp_path: Path):
     with pytest.raises(ValueError, match="council_tier"):
         append_council_anchor(
-            _record(tier="T5"),
+            _record(tier="T9"),  # T5 became VALID (CRUCIBLE, operator 2026-07-07)
             posterior_path=tmp_path / "c.jsonl",
             lock_path=tmp_path / ".c.lock",
         )
