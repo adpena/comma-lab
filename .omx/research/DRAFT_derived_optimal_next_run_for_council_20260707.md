@@ -466,3 +466,53 @@ initially reported one-sided (analytic only) — now both, promoted to Q4; (d) i
 operator-directed §5A, the "~0.026 spare rate budget" could not be uniquely re-derived from
 the score-law arithmetic — labeled OPERATOR-STATED with the derivation explicitly OWED
 (Q9-adjacent) rather than silently laundered into a DERIVED number.*
+
+## §14 OPERATOR DIRECTIVE (2026-07-07, BINDING on this symposium) — design the SCHEDULE, not just the lever set
+
+Operator verbatim: *"It will be very important for the grand council symposium to consider this
+naive inherited stack when designing the next run, not just which levers are active but when they
+are activated at which levels and how the levels should change over time and which stages when
+and which should be repeated and what needs priming and how to drive max convergence across the
+run in shortest wall clock prioritizing leaving no meat left in the bone even if the run takes
+long."*
+
+Objective ordering this fixes: **completeness-of-convergence DOMINATES wall-clock** (leave no
+meat, even if long); wall-clock is minimized SUBJECT TO that (consistent with the lexicographic
+training-time law, sharpened). The design space the council must cover explicitly, with the
+naive-inheritance item each replaces:
+
+1. **ACTIVATION TIMING per lever** (naive: on-at-ep0 or off): when each lever ENTERS — epoch vs
+   EVENT (#315 machinery is built). Evidence to consult: basis-match is prior-to-capacity (from
+   ep0); island seeding wants CE-stage nucleation (#300, paint-then-SDF #291); focal-γ has a
+   pre-registered fire criterion (ep50-100 slope flattens, #301); Muon-from-CONDITIONING (#302:
+   enter when tau's conditioning stalls, not at inherited ep726 — the live control just measured
+   tau saturating ~70 epochs BEFORE the fixed boundary, i.e. the naive schedule left ~70 wasted
+   epochs on the table).
+2. **LEVELS AS PATHS λ(t), not constants** (naive: fixed weights): per-class-λ homotopy (LADDER),
+   eikonal ramp/adaptive-ε (#320 DE law), Γ-optimal geometric τ-anneal (#286), amplify-island
+   anneal, EMA decay per stage (the .997 constant is itself PR95-inherited; #302 flags the
+   π-group). Per the different-stages-different-treatment law, every level should have a declared
+   path per stage, even if the path is constant — constancy must be a DECISION, not a default.
+3. **STAGE SET, ORDER, REPETITION** (naive: one-shot CE→tau→Muon at 300/726/1000): the deep-math
+   frame (curriculum = coarse-to-fine persistence/annealing, #284) admits CYCLES — e.g. re-enter
+   tau after Muon flattens, or repeat a Muon+leap-residual (#217) finishing block until measured
+   exhaustion. PR95's one-shot ladder is the inheritance; repetition-until-dry is the no-meat
+   version. Council: rule per stage.
+4. **PRIMING** (naive: cold everything): Muon warm-start momentum (#269 — the control is paying
+   the cold-start cost live right now via 8-ep rewarmup); structured/seeded init; FINER++
+   bias-init (activation priming); warm-start-from-mod32cap-ckpt vs from-scratch (the islands
+   symposium's warm-start verdict); the amortized pre-seeding question (#211) as the long-horizon
+   version.
+5. **MAX-CONVERGENCE TERMINATION** (naive: fixed 1000 epochs): per-stage EVENT exits (plateau
+   classifiers exist: SC1'/#315; the costate shadow's slope detectors) + a run-end criterion of
+   MEASURED exhaustion of every active lever (each lever's marginal Δd_seg/epoch below a
+   pre-registered floor) rather than an epoch count. "No meat left" = every stage exits on
+   evidence, not on schedule.
+6. **WALL-CLOCK, SUBJECT TO 1-5**: per-lever s/ep costs are MEASURED (#306 audit; new datapoint:
+   Muon NS-5 adds ~0 s/ep — 107.3 vs ~106 tau baseline, mtime-measured on the live control), so
+   the shortest-wall-clock composition under completeness is a solvable allocation, not a guess.
+   Verdict cadence (+16 s/ep every other block) is itself a schedulable knob.
+
+Q14 for the council: which of 1-6 rides the DSL's EventTriggeredCurriculum now vs which needs a
+new Schedule primitive (the DSL holds Curriculum/Schedule as first-class objects, #334 — the
+council's design should compile through them, not through hand-set epochs).
