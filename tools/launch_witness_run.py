@@ -59,6 +59,19 @@ from tac import witness_autoconfig as wac  # noqa: E402
 _TRAINER = _REPO / "experiments/train_levelset_witness_realized_through_R_mlx.py"
 
 
+def _composable_lever_names() -> tuple[str, ...]:
+    """The --dsl-lever help-text enumeration, derived from the DSL's own composability
+    predicate (tac.witness_dsl.lever_registry.name_composable_levers) — never a hand-typed
+    list (the hand-typed list is how Muon/DM1Minimal ended up advertised-but-crashing).
+    A registry failure degrades the HELP TEXT only (loud placeholder, not a launcher crash);
+    actual --dsl-lever resolution still refuses via the typed error in main()."""
+    try:
+        from tac.witness_dsl.lever_registry import name_composable_levers
+        return name_composable_levers()
+    except Exception as exc:  # degraded help, loud — composition itself still fail-closes
+        return (f"<composable-lever list unavailable: {type(exc).__name__}: {exc}>",)
+
+
 def _admission_override_ok(text: str | None) -> bool:
     """Reject empty / placeholder admission-override rationales (per Catalog #287 discipline)."""
     if not text or not text.strip():
@@ -638,8 +651,10 @@ def main(argv: list[str] | None = None) -> int:
                     "(repeatable), e.g. --dsl-lever SeedIslandEased --dsl-lever EventTriggeredCurriculum. "
                     "Resolved from tac.witness_dsl.curriculum_dsl (the config-generating SoT); each "
                     "lever's overrides are merged over the base, and every emitted flag is argparse-"
-                    "validated. Available: SeedIslandEased EventTriggeredCurriculum EikonalViscosity "
-                    "AmplifyIsland BoundaryDistance SegFocalGamma AdamBeta2 (+ the pre-existing factories).")
+                    "validated. Composable (zero-arg, single-Lever — derived from the DSL predicate, "
+                    "never hand-typed): " + " ".join(_composable_lever_names()) + ". "
+                    "Factories needing explicit args (Muon) or returning composites (DM1Minimal) are "
+                    "refused with a clear error before any gate/spawn work.")
     ap.add_argument("--out-dir", default=None,
                     help="run out-dir (default: experiments/results/levelset_n<N>_witness_<utc>)")
     ap.add_argument("--label", default=None, help="daemon label (default: derived from out-dir)")
@@ -713,8 +728,23 @@ def main(argv: list[str] | None = None) -> int:
     cfg = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
                               epochs=args.epochs, overfit=overfit)
     # (#332) compose selected DSL levers over the named base; the config DELEGATES to the DSL SoT.
+    # Each name is EAGERLY resolved through the DSL composability predicate HERE — BEFORE any
+    # gate/spawn work — so a non-composable name (Muon needs explicit args; DM1Minimal returns a
+    # composite) is a clean one-line refusal, never a raw traceback mid-launch (CLASS-fix,
+    # review 2026-07-06).
     if args.dsl_lever:
         import dataclasses as _dc
+
+        from tac.witness_dsl.lever_registry import (
+            LeverCompositionError,
+            resolve_composable_lever,
+        )
+        try:
+            for _lv in args.dsl_lever:
+                resolve_composable_lever(_lv)
+        except LeverCompositionError as exc:
+            print(f"[launch-witness] ERROR: {exc}", file=sys.stderr)
+            return 2
         cfg = _dc.replace(cfg, dsl_levers=tuple(args.dsl_lever))
         print(f"[launch-witness] DSL levers composed: {', '.join(args.dsl_lever)}")
 
@@ -731,7 +761,14 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
 
     # (a) FLAG-VALIDATE (never-invent-a-flag, NO-FAKE) — refuse before writing anything.
-    all_pass, results = validate_emitted_flags(cfg, str(out_dir))
+    # Any residual LeverCompositionError from the DSL merge (e.g. a lever override setting
+    # False on a plain store_true flag) is the same clean one-line refusal, never a traceback.
+    from tac.witness_dsl.lever_registry import LeverCompositionError as _LCE
+    try:
+        all_pass, results = validate_emitted_flags(cfg, str(out_dir))
+    except _LCE as exc:
+        print(f"[launch-witness] ERROR: {exc}", file=sys.stderr)
+        return 2
     n = len(results)
     n_ok = sum(1 for _, ok in results if ok)
     print(f"# flag validation: {n_ok}/{n} flags exist in the trainer argparse")

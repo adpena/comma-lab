@@ -28,6 +28,8 @@ from tac.witness_dsl.curriculum_dsl import (
     WitnessProgram,
     real_trainer_flags,
     real_store_true_flags,
+    real_boolean_flags,
+    build_real_trainer_parser,
     BASELINE,
     PoseDecouple,
     Muon,
@@ -57,6 +59,11 @@ from tac.witness_dsl.curriculum_dsl import (
     sealed_205_curriculum,
     verify_schedule_consistency,
     CURRICULUM_OWNED_FLAGS,
+)
+from tac.witness_dsl.lever_registry import (
+    LeverCompositionError,
+    name_composable_levers,
+    resolve_composable_lever,
 )
 from tac.witness_dsl.campaign import (
     Arm,
@@ -165,6 +172,11 @@ __all__ = [
     "WitnessProgram",
     "real_trainer_flags",
     "real_store_true_flags",
+    "real_boolean_flags",
+    "build_real_trainer_parser",
+    "LeverCompositionError",
+    "name_composable_levers",
+    "resolve_composable_lever",
     "BASELINE",
     "PoseDecouple",
     "Muon",

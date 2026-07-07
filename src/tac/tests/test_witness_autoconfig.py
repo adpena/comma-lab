@@ -473,9 +473,13 @@ def test_332_merge_dsl_levers_false_override_agrees_with_compile_trainer_argv():
     #     replace that flag IN-PLACE with (--no-<flag>, None) — matching the emitter's negation.
     cfg = wac.derive_config(_GT_N600, num_pairs=600, overfit=True, epochs=1000)
     base = cfg.to_trainer_flags("OUT")
-    # pick a real bare-boolean flag present in the base to negate.
-    bare_flags = [f for f, v in base if v is None]
-    assert bare_flags, "base must carry at least one bare-boolean flag to negate"
+    # pick a real bare-boolean flag present in the base to negate — one with a legal --no- form
+    # (BooleanOptionalAction, NOT store_true: a False on store_true is now REFUSED, see
+    # test_merge_dsl_levers_false_on_store_true_refused).
+    from tac.witness_dsl.curriculum_dsl import real_store_true_flags
+    _st = real_store_true_flags(None)
+    bare_flags = [f for f, v in base if v is None and f not in _st]
+    assert bare_flags, "base must carry at least one negatable (non-store_true) bare-boolean flag"
     target = bare_flags[0]
 
     # inject a synthetic lever factory carrying a False override on that flag.
@@ -494,3 +498,50 @@ def test_332_merge_dsl_levers_false_override_agrees_with_compile_trainer_argv():
     assert target not in md, f"the positive {target} must be replaced (not left alongside {negated})"
     # in-place: no net length change (replacement, not append).
     assert len(merged) == len(base), "False override must replace in-place, not append"
+
+
+def test_dsl_lever_muon_and_dm1minimal_refused_with_typed_error():
+    """CLASS-FIX (review 2026-07-06): --dsl-lever Muon previously crashed the config generator
+    with a raw TypeError (required start_epoch arg) and --dsl-lever DM1Minimal with an
+    AttributeError (tuple has no .overrides). Both must now raise the CLEAR typed
+    LeverCompositionError naming the reason + the composable set — never a raw traceback."""
+    import dataclasses as _dc
+
+    import pytest as _pytest
+
+    from tac.witness_dsl.lever_registry import LeverCompositionError
+
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, overfit=True, epochs=1000)
+    with _pytest.raises(LeverCompositionError, match="requires explicit args"):
+        _dc.replace(cfg, dsl_levers=("Muon",)).to_trainer_flags("OUT")
+    with _pytest.raises(LeverCompositionError, match="returns tuple"):
+        _dc.replace(cfg, dsl_levers=("DM1Minimal",)).to_trainer_flags("OUT")
+    # the message is operator-actionable (lists what IS composable)
+    try:
+        _dc.replace(cfg, dsl_levers=("Muon",)).to_trainer_flags("OUT")
+    except LeverCompositionError as exc:
+        assert "composable" in str(exc) and "SeedIslandEased" in str(exc)
+
+
+def test_merge_dsl_levers_false_on_store_true_refused():
+    """C2 mirror at the merge surface: a lever override setting False on a plain store_true
+    flag (no --no- form) must be REFUSED with the typed error — the negation --no-<flag>
+    would crash the trainer argparse at launch (curriculum_dsl validate() C2)."""
+    import dataclasses as _dc
+
+    import pytest as _pytest
+
+    import tac.witness_dsl.curriculum_dsl as _cd
+    from tac.witness_dsl.curriculum_dsl import Lever, real_store_true_flags
+    from tac.witness_dsl.lever_registry import LeverCompositionError
+
+    target = "--stage-transition-reset-moments"          # store_true in the trainer argparse
+    assert target in real_store_true_flags(None), "test premise: target must be store_true"
+    cfg = wac.derive_config(_GT_N600, num_pairs=600, overfit=True, epochs=1000)
+    factory_name = "_TestFalseOnStoreTrueLever"
+    setattr(_cd, factory_name, lambda: Lever(name="_test_st_false", overrides={target: False}))
+    try:
+        with _pytest.raises(LeverCompositionError, match="store_true"):
+            _dc.replace(cfg, dsl_levers=(factory_name,)).to_trainer_flags("OUT")
+    finally:
+        delattr(_cd, factory_name)

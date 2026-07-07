@@ -13,7 +13,6 @@ from tac.witness_dsl import (
     Contain,
     Freeze,
     Preserve,
-    WitnessProgram,
     real_trainer_flags,
     real_store_true_flags,
     BASELINE,
@@ -178,6 +177,31 @@ def test_review_C2_validate_refuses_false_on_store_true():
     assert any("store_true" in p for p in bad.validate())
 
 
+def test_type_compat_refuses_bool_override_on_value_flag():
+    # TYPE-COMPAT (review 2026-07-06, the EikonalViscosity-class static guard): a True on a
+    # type=float flag compiles to a BARE token → trainer argparse "expected one argument"
+    # crash AFTER every launcher gate. validate() must refuse it statically.
+    from dataclasses import replace
+    bad = replace(BASELINE, base={**BASELINE.base, "--eikonal-viscosity": True})
+    assert any("TYPE-INCOMPATIBLE" in p and "--eikonal-viscosity" in p for p in bad.validate())
+
+
+def test_type_compat_refuses_value_override_on_boolean_flag():
+    # the mirror direction: a numeric value on a store_true / BooleanOptionalAction flag
+    # compiles to '--flag 1.0' → "unrecognized arguments" at launch.
+    from dataclasses import replace
+    bad = replace(BASELINE, base={**BASELINE.base, "--film-stiefel": 1.0})
+    assert any("TYPE-INCOMPATIBLE" in p and "--film-stiefel" in p for p in bad.validate())
+
+
+def test_type_compat_bools_on_boolean_flags_stay_clean():
+    # True on boolean-action flags (BASELINE's --curriculum/--chroma/... + a False on a
+    # BooleanOptionalAction flag) is legal — no TYPE-INCOMPATIBLE noise on valid programs.
+    from dataclasses import replace
+    ok = replace(BASELINE, base={**BASELINE.base, "--async-verdict": False})  # BooleanOptionalAction
+    assert not any("TYPE-INCOMPATIBLE" in p for p in ok.validate())
+
+
 def test_review_M2_with_lever_can_clear_resume_from():
     fresh = BASELINE.with_lever(SoftBoundary(), resume_from=None)
     assert fresh.resume_from is None
@@ -314,7 +338,6 @@ def test_dm1_levers_default_off_in_baseline_byte_identity_guard():
 # ===========================================================================
 from tac.witness_dsl import (  # noqa: E402
     openpilot_seeded_opening,
-    StageDecision,
     StagePolicy,
     advance_to_l7,
     advance_to_muon,
@@ -388,15 +411,32 @@ def test_opening_skips_smooth_and_rate_stages_structurally():
 
 
 def test_curriculum_ordering_violation_is_refused():
-    # a doomed config (l7_start > epochs) is refused at DSL-validate time (trainer assert surfaced)
+    # a doomed config (tau stage never runs: tau_start >= l7_start) is refused at DSL-validate
+    # time (the trainer's REAL assert surfaced: 0 < tau_start < l7_start).
     from dataclasses import replace
     from tac.witness_dsl import Stage
     bad = replace(_opening(), stages=(
         _opening().stages[0],
-        Stage("tau_softplus", "--tau-softplus-start-epoch", 300),
-        Stage("l7_softplus", "--l7-start-epoch", 9999),  # > epochs(600)
+        Stage("tau_softplus", "--tau-softplus-start-epoch", 500),
+        Stage("l7_softplus", "--l7-start-epoch", 300),  # tau >= l7 → tau never forms the partition
     ))
     assert any("CURRICULUM ORDERING" in p for p in bad.validate())
+
+
+def test_l7_start_beyond_epochs_is_the_legitimate_parked_form():
+    # ALIGNED TO THE TRAINER (L1 SEAL-review relax, 4bf533cab) + Curriculum.validate():
+    # l7_start > epochs is the LEGITIMATE "l7 NEVER runs" form (l7 is a measured defect demoted
+    # from the default curriculum; fresh_seeded parks l7 at epochs+1). The prior WitnessProgram
+    # "<= epochs" clause was stale and refused this form — it must validate CLEAN now.
+    from dataclasses import replace
+    from tac.witness_dsl import Stage
+    parked = replace(_opening(), stages=(
+        _opening().stages[0],
+        Stage("tau_softplus", "--tau-softplus-start-epoch", 300),
+        Stage("l7_softplus", "--l7-start-epoch", _opening().epochs + 1),  # parked: never runs
+    ))
+    probs = parked.validate()
+    assert not any("CURRICULUM ORDERING" in p for p in probs), probs
 
 
 # --- the deterministic reactive decision policy ---
@@ -550,7 +590,6 @@ from tac.witness_dsl import (  # noqa: E402
     Cycle,
     PrimingContext,
     ScalePass,
-    SynergyResult,
     ArmResult,
     curvelet_scale_passes,
     expand_cycles,
@@ -620,7 +659,6 @@ def test_rerun_stage_new_config_sharper_tau_validates():
 
 
 def test_rerun_stage_refuses_shape_changing_override():
-    import pytest
     with pytest.raises(ValueError, match="shape-changing"):
         rerun_stage_new_config(_opening(), resume_from="x.npz", out_dir="O",
                                window=100, config_overrides={"--hidden-dim": 128})
@@ -632,7 +670,6 @@ def test_stack_next_program_rerun_dispatch():
     nxt = stack_next_program(op, dec, advance_to="l7", out_dir="OUT", policy=_POLICY_RERUN,
                              rerun_config={"--tau-softplus-tau": 0.2})
     assert nxt.flag_dict()["--tau-softplus-tau"] == 0.2
-    import pytest
     with pytest.raises(ValueError, match="requires a rerun_config"):
         stack_next_program(op, dec, advance_to="l7", out_dir="OUT", policy=_POLICY_RERUN)
 

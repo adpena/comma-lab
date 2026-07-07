@@ -117,3 +117,92 @@ def test_332_coverage_rose_from_deorphaning():
     c = LR.completeness()
     assert c.coverage_frac >= 0.38, f"coverage {c.coverage_frac} below post-#332 floor"
     assert c.stale == [], "no DSL-emitted flag may be absent from the trainer"
+
+
+# ---------------------------------------------------------------------------------------------
+# --dsl-lever composability predicate + typed refusal (CLASS-fix, review 2026-07-06:
+# Muon(start_epoch) crashed the config generator with TypeError; DM1Minimal with
+# AttributeError on .overrides — both raw tracebacks after passing the launcher surface).
+# ---------------------------------------------------------------------------------------------
+def test_composability_predicate_partitions_factories():
+    from tac.witness_dsl.curriculum_dsl import Lever
+    comp = LR.name_composable_levers()
+    assert comp == tuple(sorted(comp)), "deterministic sorted enumeration"
+    # the two known non-composables are EXCLUDED (the crash family)
+    assert "Muon" not in comp, "Muon requires explicit args — must not be name-composable"
+    assert "DM1Minimal" not in comp, "DM1Minimal returns tuple[Lever, Lever] — must not be name-composable"
+    # known composables are INCLUDED
+    for name in ("SeedIslandEased", "EventTriggeredCurriculum", "EikonalViscosity",
+                 "StiefelW", "CodeSpectralEntropy", "UniWARD", "MicroBatch"):
+        assert name in comp, f"{name} should be name-composable"
+    # every enumerated name actually resolves to a single Lever (the predicate is honest)
+    for name in comp:
+        assert isinstance(LR.resolve_composable_lever(name), Lever)
+
+
+def test_resolve_composable_lever_typed_refusals():
+    import pytest as _pytest
+    with _pytest.raises(LR.LeverCompositionError, match="requires explicit args"):
+        LR.resolve_composable_lever("Muon")
+    with _pytest.raises(LR.LeverCompositionError, match="returns tuple"):
+        LR.resolve_composable_lever("DM1Minimal")
+    with _pytest.raises(LR.LeverCompositionError, match="not a curriculum_dsl Lever factory"):
+        LR.resolve_composable_lever("NotARealLever")
+    # the refusal message is operator-actionable: it lists the composable set
+    try:
+        LR.resolve_composable_lever("Muon")
+    except LR.LeverCompositionError as exc:
+        assert "SeedIslandEased" in str(exc) and "composable" in str(exc)
+    # LeverCompositionError subclasses ValueError (pre-existing except-ValueError callers keep working)
+    assert issubclass(LR.LeverCompositionError, ValueError)
+
+
+def _render_argv(pairs) -> list[str]:
+    """Render (flag, value) pairs the way the launcher does: bare flag when value is None."""
+    argv: list[str] = []
+    for flag, val in pairs:
+        argv.append(flag)
+        if val is not None:
+            argv.append(str(val))
+    return argv
+
+
+def test_every_composable_lever_parses_through_real_trainer_argparse():
+    """THE CLASS TEST (round-2 review demand): compose EVERY composable lever onto the sealed
+    config and PARSE the resulting argv through the trainer's REAL argparse (the trainer's own
+    add_argument statements, executed — build_real_trainer_parser). Any lever emitting a
+    wrong-typed value (the EikonalViscosity bare-True-on-type=float family) or an invented flag
+    fails HERE at CI time, not after daemon spawn."""
+    import dataclasses as dc
+
+    from tac import witness_autoconfig as wac
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+
+    ap = build_real_trainer_parser()
+    cfg = wac.derive_sealed_205_config(
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz", num_pairs=600, epochs=1000)
+    # control: the un-levered sealed base itself must parse
+    base_argv = _render_argv(cfg.to_trainer_flags("OUT"))
+    try:
+        ap.parse_args(base_argv)
+    except SystemExit as exc:  # pragma: no cover - diagnostic path
+        raise AssertionError(f"sealed base argv failed the real trainer argparse: rc={exc.code}") from exc
+    # every composable lever, one at a time (per-lever attribution of any failure)
+    for name in LR.name_composable_levers():
+        argv = _render_argv(dc.replace(cfg, dsl_levers=(name,)).to_trainer_flags("OUT"))
+        try:
+            ap.parse_args(argv)
+        except SystemExit as exc:
+            raise AssertionError(
+                f"--dsl-lever {name} emitted an argv the REAL trainer argparse rejects "
+                f"(rc={exc.code}) — the EikonalViscosity/Muon crash class") from exc
+
+
+def test_build_real_trainer_parser_matches_regex_flag_surface():
+    # the built parser and the regex helper must agree on the flag universe (extraction-drift guard)
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser, real_trainer_flags
+    ap = build_real_trainer_parser()
+    built = {opt for a in ap._actions for opt in a.option_strings if opt.startswith("--")
+             and not opt.startswith("--no-")}
+    regex = set(real_trainer_flags())
+    assert regex <= built, f"parser missing regex-visible flags: {sorted(regex - built)[:10]}"

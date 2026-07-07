@@ -24,6 +24,12 @@ Functions, all derived, none remembered:
   3. ``dsl_referenced_flags()`` — every ``--flag`` the DSL mentions ANYWHERE (its coverage).
   4. ``completeness(trainer_path)`` — trainer ∩/∖ DSL → the UNMAPPED gaps (trainer flags the
      DSL does not hold) + STALE (DSL-EMITTED flags absent from the trainer = real dead/typo).
+  5. ``name_composable_levers()`` / ``resolve_composable_lever(name)`` — the ``--dsl-lever``
+     composability predicate + typed resolution (CLASS-fix, review 2026-07-06: Muon requires
+     args → TypeError; DM1Minimal returns a tuple → AttributeError; both previously crashed the
+     config generator with a raw traceback). NOTE: unlike the coverage scan, the predicate
+     deliberately DOES execute nilary factories (cheap pure dataclass construction) — calling
+     and isinstance-checking is the honest, deterministic composability decision.
 
 Deterministic (sorted); no RNG, no clock. Consumed by ``test_lever_registry`` (kept honest).
 Memory: [[triality_ran_on_one_and_a_half_legs_dsl_equations_never_proactive_20260706]] +
@@ -209,6 +215,83 @@ def completeness(trainer_path: str | Path | None = None) -> Completeness:
     )
 
 
+class LeverCompositionError(ValueError):
+    """A ``--dsl-lever NAME`` that cannot be composed by bare name.
+
+    Raised (with a clear operator-actionable message, never a raw traceback) when a
+    requested lever name is unknown, requires explicit args (e.g. ``Muon(start_epoch)``),
+    returns a composite (e.g. ``DM1Minimal`` → ``tuple[Lever, Lever]``), or fails to
+    construct. Subclasses ``ValueError`` so pre-existing ``except ValueError`` callers
+    keep working. CLASS-fix for the Muon/DM1Minimal ``--dsl-lever`` crash family
+    (review 2026-07-06)."""
+
+
+def _composability_check(name: str) -> tuple[object | None, str | None]:
+    """Internal honest check: ``(lever, None)`` when ``name`` is composable by bare name,
+    else ``(None, why_not)``. A name is composable iff its factory is callable with ZERO
+    required args (every parameter has a default — checked via ``inspect.signature``, so
+    ``Muon(start_epoch)`` is refused up front) AND actually returns a single ``Lever``
+    (the nilary factory IS called — cheap pure dataclass construction — and the result
+    isinstance-checked; deterministic and honest, so the ``tuple[Lever, Lever]`` composite
+    ``DM1Minimal`` is refused too). Resolves via ``getattr`` so runtime-registered
+    factories (tests) behave identically to source-defined ones."""
+    import inspect
+
+    from tac.witness_dsl.curriculum_dsl import Lever
+
+    fac = getattr(_cd, name, None)
+    if fac is None or not callable(fac):
+        # keep the historical phrase so pre-existing matchers still recognize the class
+        return None, "is not a curriculum_dsl Lever factory"
+    try:
+        sig = inspect.signature(fac)
+    except (TypeError, ValueError):
+        return None, "has an uninspectable signature — not composable via --dsl-lever"
+    required = [
+        p.name for p in sig.parameters.values()
+        if p.default is inspect.Parameter.empty
+        and p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)
+    ]
+    if required:
+        return None, f"requires explicit args {required} — not composable via --dsl-lever"
+    try:
+        lever = fac()
+    except Exception as exc:  # residual construction failure → the same clear typed error
+        return None, f"failed to construct ({type(exc).__name__}: {exc})"
+    if not isinstance(lever, Lever):
+        return None, (
+            f"returns {type(lever).__name__} (a composite / non-Lever) — not composable "
+            "via --dsl-lever (compose its parts individually, e.g. StiefelW + "
+            "CodeSpectralEntropy instead of DM1Minimal)")
+    return lever, None
+
+
+def name_composable_levers() -> tuple[str, ...]:
+    """Sorted names of the lever factories composable by bare name (``--dsl-lever NAME``):
+    the subset of :func:`lever_factories` that are BOTH zero-required-arg AND return a
+    single ``Lever`` — decided by the SAME honest check as :func:`resolve_composable_lever`
+    (nilary factories are actually called and isinstance-checked; a factory whose emitted
+    value later fails the trainer argparse is caught by the parse-test in
+    ``test_lever_registry``). This is the SoT the launcher's ``--dsl-lever`` help text and
+    the CI parse-test enumerate — never a hand-typed list."""
+    return tuple(sorted(
+        fname for fname in lever_factories() if _composability_check(fname)[1] is None))
+
+
+def resolve_composable_lever(name: str):
+    """Resolve ``name`` → a single ``Lever`` instance, or raise :class:`LeverCompositionError`
+    whose message names the reason AND the full composable set (operator-actionable, never a
+    raw traceback). THE single runtime resolution path for ``--dsl-lever NAME`` — consumed by
+    ``tac.witness_autoconfig._merge_dsl_levers`` and eagerly by the launcher, so a
+    non-composable name is refused BEFORE any gate/spawn work."""
+    lever, why = _composability_check(name)
+    if why is not None:
+        raise LeverCompositionError(
+            f"--dsl-lever {name!r} {why}; composable (zero-required-arg, single-Lever) "
+            f"factories: {', '.join(name_composable_levers())}")
+    return lever
+
+
 def emit_stub_lever(flag: str) -> str:
     """Candidate DSL lever factory source for an unmapped flag — so completing the DSL is a
     review-and-accept, never hand-typed from scratch. The human fills the relevance note + the
@@ -230,4 +313,5 @@ def emit_stub_lever(flag: str) -> str:
 __all__ = [
     "lever_factories", "program_constructors", "dsl_referenced_flags", "dsl_emitted_flags",
     "Completeness", "completeness", "emit_stub_lever", "BASELINE",
+    "LeverCompositionError", "name_composable_levers", "resolve_composable_lever",
 ]

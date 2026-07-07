@@ -559,17 +559,37 @@ class WitnessConfig:
         override renders as the BooleanOptionalAction negation ``(--no-<flag>, None)``, in-place —
         matching the single DSL emitter ``curriculum_dsl.WitnessProgram.compile_trainer_argv`` (which
         emits ``flag.replace("--", "--no-", 1)`` for ``False``). The two "one emitter" surfaces must
-        agree on ``False`` (regression-guarded in test_witness_autoconfig)."""
-        from tac.witness_dsl import curriculum_dsl as _cd
+        agree on ``False`` (regression-guarded in test_witness_autoconfig).
+
+        Name resolution goes through the DSL's composability predicate
+        (``lever_registry.resolve_composable_lever`` — CLASS-fix, review 2026-07-06): a name that
+        requires explicit args (``Muon(start_epoch)``) or returns a composite (``DM1Minimal`` →
+        ``tuple[Lever, Lever]``) raises a CLEAR typed :class:`LeverCompositionError` listing the
+        composable set, never a raw ``TypeError``/``AttributeError``. A ``False`` override on a
+        plain ``store_true`` flag (no ``--no-`` form) is likewise refused — mirroring
+        ``curriculum_dsl.WitnessProgram.validate``'s C2 — instead of emitting an argv the trainer
+        argparse would crash on."""
+        from tac.witness_dsl.curriculum_dsl import real_store_true_flags
+        from tac.witness_dsl.lever_registry import (
+            LeverCompositionError,
+            resolve_composable_lever,
+        )
         merged: list[tuple[str, object]] = list(base)
         index = {f: i for i, (f, _) in enumerate(merged)}
+        store_true: frozenset[str] | None = None  # lazy — only read the trainer on a False override
         for name in self.dsl_levers:
-            fac = getattr(_cd, name, None)
-            if fac is None or not callable(fac):
-                raise ValueError(f"--dsl-lever {name!r} is not a curriculum_dsl Lever factory")
-            lever = fac()
+            lever = resolve_composable_lever(name)
             for flag, val in lever.overrides.items():
                 if val is False:
+                    # C2 mirror: a plain store_true flag has NO --no- form; negating it would
+                    # crash the trainer argparse at launch. Refuse with the typed error.
+                    if store_true is None:
+                        store_true = real_store_true_flags(None)
+                    if flag in store_true:
+                        raise LeverCompositionError(
+                            f"--dsl-lever {name!r} sets {flag}=False, but {flag} is store_true "
+                            f"(no --no-{flag[2:]} form) — the negation would crash the trainer "
+                            "argparse at launch (curriculum_dsl validate() C2)")
                     # BooleanOptionalAction negation, aligned to the DSL emitter: emit --no-<flag>
                     # in-place (matches compile_trainer_argv), NOT a silent skip (the prior latent
                     # divergence where the base flag was left untouched).

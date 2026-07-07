@@ -137,6 +137,54 @@ def test_main_refuses_invented_flag(tmp_path, monkeypatch, capsys):
     assert "invented flag" in err
 
 
+# ───────────────────────── --dsl-lever composability (CLASS-fix, review 2026-07-06) ─────────────
+def test_main_dsl_lever_muon_clean_typed_refusal(tmp_path, capsys):
+    # --dsl-lever Muon previously crashed the config generator with a raw TypeError AFTER the
+    # launcher surface accepted it; now it is a clean one-line refusal BEFORE any gate/spawn work.
+    out = tmp_path / "muon"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--epochs", "1000",
+                  "--out-dir", str(out), "--dry-run", "--no-dashboard",
+                  "--dsl-lever", "Muon"])
+    assert rc == 2
+    assert not (out / "launch.sh").exists()  # refused BEFORE writing anything
+    err = capsys.readouterr().err
+    assert "requires explicit args" in err and "composable" in err
+    assert "Traceback" not in err
+
+
+def test_main_dsl_lever_dm1minimal_clean_typed_refusal(tmp_path, capsys):
+    # the composite half of the crash family (tuple[Lever, Lever] → AttributeError on .overrides)
+    out = tmp_path / "dm1"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--epochs", "1000",
+                  "--out-dir", str(out), "--dry-run", "--no-dashboard",
+                  "--dsl-lever", "DM1Minimal"])
+    assert rc == 2
+    assert not (out / "launch.sh").exists()
+    err = capsys.readouterr().err
+    assert "returns tuple" in err and "composable" in err
+
+
+def test_main_dsl_lever_composable_still_works_dry_run(tmp_path, capsys):
+    # a genuinely composable lever still flows through the full dry-run path
+    out = tmp_path / "seeded"
+    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--epochs", "1000",
+                  "--out-dir", str(out), "--dry-run", "--no-dashboard",
+                  "--dsl-lever", "SeedIslandEased"])
+    assert rc == 0
+    body = (out / "launch.sh").read_text()
+    assert "--seed-island-eased" in body
+    assert "DSL levers composed: SeedIslandEased" in capsys.readouterr().out
+
+
+def test_dsl_lever_help_enumeration_derived_from_predicate():
+    # the --dsl-lever help text enumerates the DSL predicate's composable set (never hand-typed);
+    # the crash-family names must NOT be advertised.
+    from tac.witness_dsl.lever_registry import name_composable_levers
+    names = lw._composable_lever_names()
+    assert names == name_composable_levers()
+    assert "Muon" not in names and "DM1Minimal" not in names
+
+
 # ───────────────────────── C5 (SEAL review 2026-07-04): fresh_seeded + passthrough ─────────────
 def test_main_dry_run_fresh_seeded_emits_the_review_deltas(tmp_path, capsys):
     out = tmp_path / "fresh"

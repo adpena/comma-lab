@@ -47,6 +47,73 @@ def real_store_true_flags(trainer_path: Path | None = None) -> frozenset[str]:
         r'add_argument\(\s*"(--[a-z0-9-]+)"[^)]*action\s*=\s*["\']store_true["\']', text))
 
 
+def real_boolean_flags(trainer_path: Path | None = None) -> frozenset[str]:
+    """Flags whose trainer argparse action is boolean-valued — ``store_true`` OR
+    ``argparse.BooleanOptionalAction``. These are the ONLY flags on which a True/False
+    override is legal (they take NO value token); conversely a non-boolean flag's override
+    must be a non-bool value (compiling ``True`` to a bare token on a ``type=float`` flag
+    is the EikonalViscosity-class crash: argparse "expected one argument" AFTER every
+    launcher gate passed). Static half of the type-compat CLASS-fix (review 2026-07-06);
+    the dynamic half is the real-argparse parse test in ``test_lever_registry``."""
+    path = Path(trainer_path) if trainer_path is not None else TRAINER_PATH
+    text = path.read_text()
+    return real_store_true_flags(path) | frozenset(re.findall(
+        r'add_argument\(\s*"(--[a-z0-9-]+)"[^)]*action\s*=\s*argparse\.BooleanOptionalAction',
+        text))
+
+
+def build_real_trainer_parser(trainer_path: Path | None = None):
+    """Build the trainer's REAL ``argparse.ArgumentParser`` — the dynamic never-invent-flags
+    / type-compat authority (``parser.parse_args(argv)`` on an emitted argv catches wrong
+    flag names AND wrong-typed values, the whole EikonalViscosity/Muon crash family, at CI
+    time instead of after daemon spawn).
+
+    The trainer has no separate parser-builder function (the parser is built inline in
+    ``main()``) and importing the module pulls mlx/heavy deps — so this extracts, by AST,
+    the trainer's OWN ``ap = argparse.ArgumentParser(...)`` assignment plus every
+    ``ap.add_argument(...)`` statement from ``main()`` and executes exactly those statements
+    (they reference only ``argparse``/``Path``/builtins — asserted below). The executed code
+    IS the trainer's source, so defaults/types/actions/choices are the trainer's own, not a
+    regex approximation. Deterministic; cross-checked against :func:`real_trainer_flags`
+    (fail-LOUD on extraction drift, never a silently stale parser)."""
+    import argparse as _argparse
+    import ast as _ast
+
+    path = Path(trainer_path) if trainer_path is not None else TRAINER_PATH
+    tree = _ast.parse(path.read_text())
+    main_fn = next(
+        (n for n in tree.body if isinstance(n, _ast.FunctionDef) and n.name == "main"), None)
+    if main_fn is None:
+        raise LookupError(f"build_real_trainer_parser: no main() found in {path}")
+    stmts: list[_ast.stmt] = []
+    for node in _ast.walk(main_fn):
+        if isinstance(node, _ast.Assign) and any(
+                isinstance(t, _ast.Name) and t.id == "ap" for t in node.targets):
+            stmts.append(node)
+        elif (isinstance(node, _ast.Expr) and isinstance(node.value, _ast.Call)
+              and isinstance(node.value.func, _ast.Attribute)
+              and node.value.func.attr == "add_argument"
+              and isinstance(node.value.func.value, _ast.Name)
+              and node.value.func.value.id == "ap"):
+            stmts.append(node)
+    stmts.sort(key=lambda n: n.lineno)  # ast.walk order is not source order
+    ns: dict = {"argparse": _argparse, "Path": Path}
+    exec(compile(_ast.Module(body=stmts, type_ignores=[]), str(path), "exec"), ns)  # noqa: S102
+    ap = ns.get("ap")
+    if not isinstance(ap, _argparse.ArgumentParser):
+        raise LookupError(
+            f"build_real_trainer_parser: extraction did not yield an ArgumentParser from {path} "
+            "(trainer main()/parser shape changed — update the extractor)")
+    # fail-LOUD cross-check: every regex-visible flag must exist on the built parser.
+    built = {opt for a in ap._actions for opt in a.option_strings}
+    missing = real_trainer_flags(path) - built
+    if missing:
+        raise LookupError(
+            "build_real_trainer_parser: extracted parser is missing flags the trainer source "
+            f"declares (extraction drift): {sorted(missing)[:10]}")
+    return ap
+
+
 # sentinel so with_lever() can explicitly CLEAR resume_from (fresh run) vs inherit it
 _INHERIT = object()
 
@@ -399,6 +466,27 @@ class WitnessProgram:
                 problems.append(
                     f"INVALID --no-{flag[2:]}: {flag} is store_true (no --no- form); "
                     "False would crash argparse at launch")
+        # TYPE-COMPAT (review 2026-07-06, the EikonalViscosity-class static guard): a True/False
+        # override is only legal on a boolean-action flag (store_true / BooleanOptionalAction —
+        # these take NO value token); a non-boolean flag's override must be a non-bool value.
+        # Either mismatch compiles to an argv the trainer argparse rejects AT LAUNCH (bare token
+        # on a type=float flag → "expected one argument"; a value token after a boolean flag →
+        # "unrecognized arguments"). Static half of the class-fix; the dynamic half is the
+        # real-argparse parse test over every composable lever (test_lever_registry).
+        boolean_flags = real_boolean_flags(trainer_path)
+        for flag, val in fd.items():
+            if flag not in real:
+                continue  # already reported as INVENTED above
+            if isinstance(val, bool) and flag not in boolean_flags:
+                problems.append(
+                    f"TYPE-INCOMPATIBLE OVERRIDE: {flag} is a value flag (not store_true/"
+                    f"BooleanOptionalAction) but the override is {val!r}; compile would emit a "
+                    "bare/negated token the trainer argparse rejects (expected one argument)")
+            elif not isinstance(val, bool) and flag in boolean_flags:
+                problems.append(
+                    f"TYPE-INCOMPATIBLE OVERRIDE: {flag} is boolean-action (takes no value) but "
+                    f"the override is {val!r}; compile would emit '{flag} {val}' which the "
+                    "trainer argparse rejects (unrecognized arguments)")
         # C1 (review): DEAD ARM — resuming from a ckpt at/after epochs == zero gradient steps
         if self.resume_from is not None:
             try:
@@ -418,16 +506,21 @@ class WitnessProgram:
             except Exception:
                 pass  # validation must not hard-fail on a missing/odd ckpt
         # CURRICULUM ORDERING — surface the trainer's runtime assert at DSL-validate time so a
-        # doomed config (tau/l7 stages that silently never run) is refused BEFORE any launch.
+        # doomed config (a tau stage that silently never runs) is refused BEFORE any launch.
+        # Aligned to the trainer's ACTUAL rule (L1 SEAL-review relax, 4bf533cab) and to
+        # Curriculum.validate(): only 0 < tau_start < l7_start is required; l7_start > epochs is
+        # the LEGITIMATE "l7 NEVER runs" form (l7 is a measured defect demoted from the default
+        # curriculum — e.g. fresh_seeded parks l7 at epochs+1). The prior "<= epochs" clause here
+        # was stale and refused that legitimate form.
         _curr = fd.get("--curriculum")
         if _curr is True or _curr == 1:
             _tau_s = fd.get("--tau-softplus-start-epoch")
             _l7_s = fd.get("--l7-start-epoch")
-            _ep = fd.get("--epochs")
-            if None not in (_tau_s, _l7_s, _ep) and not (0 < _tau_s < _l7_s <= _ep):
+            if None not in (_tau_s, _l7_s) and not (0 < _tau_s < _l7_s):
                 problems.append(
                     f"CURRICULUM ORDERING: need 0 < tau_start ({_tau_s}) < l7_start ({_l7_s}) "
-                    f"<= epochs ({_ep}) (trainer asserts this; else tau/l7 stages never run)")
+                    "(the tau stage forms the partition before l7 sharpens it; trainer asserts "
+                    "this — l7_start > epochs is allowed and means l7 NEVER runs)")
         # PRESERVE: ckpt cadence binding (<=25)
         if self.preserve.ckpt_every <= 0 or self.preserve.ckpt_every > 25:
             problems.append(
@@ -650,8 +743,8 @@ def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
     band active (the witness re-adapts its boundaries; sizing VERDICT).
 
     PAIRED WITH the trainer wire-in (docs/analytic_lane_render_band_wire_in_spec.md): the
-    ``--lane-band-*`` flags LAND WITH the compose wire-in; until then this Lever will be
-    REFUSED by the never-invent-flags validator (fail-closed = correct)."""
+    8 ``--lane-band-*`` / ``--lane-render-band`` flags are LANDED in the trainer argparse
+    and consumed by the compose wire-in (the #224 Option-B lane-band path)."""
     return Lever("FEED_dv_analytic_lane_render_band",
                  overrides={"--lane-render-band": True,
                             "--lane-band-softness": softness,
