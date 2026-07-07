@@ -8,7 +8,17 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 ## Protocol phases
 - [x] P0 grounding (never-fired 36 enumerated; 113 unmapped DSL flags; ledger-semantics caveat)
 - [ ] P1 independent positions (6 seats, anti-anchored, STAGGERED 2 waves of 3 for rate limits)
-- [ ] P2 red-team pre-mortem (reads all positions; "how this fails to move the pointer") —
+- [ ] P2 **POSITIVE SYNTHESIS DRAFT — reordered per operator 2026-07-07 ("agents finding the
+      obvious but not doing the positive work of proposing optimal")**: a CHIEF-DESIGNER pass
+      that DRAFTS THE OPTIMAL FULL STACK from all six positions + the compendium. Contract:
+      **every knob gets a VALUE** — derived (with the derivation), measured (with the anchor), or
+      defaulted-with-named-recess (an explicit interim value + the scheduled measurement that
+      revises it). "TBD" and "gated, no default" are FORBIDDEN in the draft. Output = the exact
+      WitnessProgram + schedule + curriculum + costate config + rate plan + measurement plan,
+      launchable as written. Proposing-optimal-with-tags is NOT a NO-FAKE violation — asserting
+      it as MEASURED would be; the draft states its epistemic status per knob and pre-registers
+      falsification. THEN:
+- [ ] P3 red-team attacks THE DRAFT (not an abstraction) + MANDATORY PROVENANCE AUDIT —
       **MANDATORY FIRST PASS: PROVENANCE AUDIT** (operator directive 2026-07-07 "I shouldn't have
       had to catch that"): for EVERY load-bearing measured claim in EVERY position, verify
       {anchor path · review_status (pre-registered-only / recovery-written-UNREVIEWED /
@@ -17,9 +27,9 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
       unreviewed verdict → PROVISIONAL until its review clears. Run-config claims must cite
       launch.sh or the council design memo, never the activation ledger. Memory:
       verdict_review_status_metadata_operator_should_never_catch_provenance_20260707.
-- [ ] P3 debate round(s) (≥2; disagreements enumerated)
+- [ ] P3b debate round(s) (≥2; designer defends/revises the draft against the attacks)
 - [ ] P4 EMPIRICAL RECESS (measurable disputes → n600-real data; HVP-Lanczos first; serial, governed)
-- [ ] P5 synthesis (one stack; survives second red-team pass)
+- [ ] P5 revised synthesis (the draft, amended by recess results; survives second red-team pass)
 - [ ] P6 #363 self-reflection seal (assumption tags; PROVISIONAL where unmeasured)
 - [ ] P7 deliverables 1-7 assembled (DSL WitnessProgram · ledger resolution · schedule ·
       costate · curriculum · measurement plan · wall-clock plan) — triality-consistent landing
