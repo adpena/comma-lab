@@ -9836,3 +9836,49 @@ What this adds to the pursuit plan:
 Costate/duty: adds probe row-2 (freq_along ladder) to the duty queue; comb in-training arm
 STILL never-fired (unchanged). means ≠ ends: pointer 0.19110 moves only via
 `upstream/evaluate.py` on exact archive bytes.
+
+---
+
+## FEED-08g (2026-07-07, fresh-eyes adversarial reviewer, report-only) — ADVERSARIAL REVIEW of ALL load-bearing negatives: τ-crossover FLAT-H **OVERTURNED-AS-INSTRUMENTED** (GT-H control: index has ≈zero headroom); #341/#280/msal_uni/pose-PCAR/Muon-shortfall CONFIRMED (two with narrowed scope) [$0, advisory; pointer 0.19110 UNMOVED — means]
+
+(operator verbatim: "Need adversarial review against all negative findings"; memo
+`.omx/research/adversarial_review_all_negative_findings_20260707.md`; live #205 READ-ONLY, alive throughout.)
+
+**HEADLINE — negative 1 OVERTURNED-AS-INSTRUMENTED.** The training-flow τ-crossover probe's H index
+(mark/gap regions = analytic line-fits × global ego-phase comb, never GT-conditioned) was missing its
+validity control. $0 GT-H control (n600, identical machinery;
+`experiments/results/tau_crossover_trainflow_20260707/gt_h_control_n600.json`): **GT-H = 0.7015 agg /
+0.669 / 0.593 / 0.994 / 1.040 per band ≈ the witness's "flat" 0.666–0.677 (0.66/0.55/1.0/0.9)** — a
+PERFECT render reads the same values; near bands: witness ALREADY at GT-level dash contrast; bands 2/3:
+zero instrument range. FLAT-H carries no τ information → correct verdict = the pre-registered
+**INDETERMINATE-at-this-resolution**; "no reachable τ-anneal buys dash resolution" is VOID as evidenced;
+the `dash_erasure_homogenization_v1` τ-crossover anchor → append-only supersession to
+INDETERMINATE-instrument-bounded (5 HELD anchors untouched; law intact). Fixed-τ control arm (§19 c3)
+SURVIVES as the primary discriminator, now paired with a GT-conditioned dash index (H_witness − H_GT).
+**NEW owed gate:** GT-conditioned comb-registration audit BEFORE `n287_dash_comb` fires (comb separates
+GT marks/gaps only 0.63-vs-0.42 in band0 — mis-phased gating risks suppressing GT lane). Council draft
+§21 addendum appended.
+
+**CONFIRMED (attacks failed):** (a) **Muon cold-start shortfall** — re-derived trajectory: best ep650
+0.003366; ep750 0.004351 (+29% at the switch; τ/β FROZEN by design during the finisher → optimizer is
+the only change; EMA-lag 4.4 ep excluded); ep950 0.003818 decelerating ⇒ will not beat ep650 by ep1000.
+BORROWED-NUMBER fix: draft's "+8% cold-Muon transient" rationale rows should cite the LIVE ≈+29%.
+(b) **Lever-D #280/#307** — four coders measured (best 0.820 B/flip n600 at the CURRENT ep425 residual),
+recovery de-conflated (r_admit 0.198 « break-even 0.688), 0.65 bar re-derived (=0.51×1.273 measured
+σ_eff×waterline); residual is confetti (mean comp 3.1 px) — NO-GO stands, correctly implementation-level.
+(c) **msal_uni INERT** — inversion attack fails (|r|≈0.04 either sign); sharper mechanism: the sal-weighted
+MEAN is scale-free ⇒ smooth within-band multipliers cancel by construction ⇒ better texture norms
+predicted inert too; sR (3.02× within-band variation) is the acting form. (d) **pose PCAR negative** —
+carrier-level as scoped; council draft citation audit CLEAN; store-nothing start separately MEASURED
+(1.887→1.095 @ep2 descending, axis-9); pose stays OPEN. **SCOPE-NARROWED:** (e) **#341 subset-solve
+NO-GO** — transfer arithmetic verified (+5.06% ✓); Levenberg damps the STEP not the displacement; ridge-
+to-θ0 / K-sweep / early-stop untried ⇒ implementation-level for the un-regularized K=8 tool form; the
+equation's reactivation clause ("measured-generalizing K") is the correct scope, the "only full-P" prose
+is stricter than the evidence. Cheap named follow-up: ridge K∈{32,128} ladder (not owed for the council).
+
+**$0 probes run:** GT-H control n600 (<3 GiB RSS) · transfer-law + H + 0.65-bar re-derivations ·
+full verdict-trajectory extraction. **Owed (named, not launched):** GT-conditioned H re-instrument on the
+4 frozen snapshots · comb-registration audit · fixed-τ arm (operator-GO) · ep1000 final read-back.
+Triality: DAG (this FEED) ↔ DSL (no gauge change — instrument correction, not a lever) ↔ equations
+(supersession-anchor spec written, not yet registered — op-routable). CONTAINMENT: report-only; no
+trainer/config/run edits, no paid GPU. **HARD GATE: pointer 0.19110 UNMOVED.**

@@ -765,3 +765,60 @@ run: rule 118 inverts NTC's model-size economics (ours); the τ-crossover law is
 soft-to-hard quantization literature lacks (ours); self-orient is bandlet-class with the flow-bits
 tax zeroed by rule 118 (cite Le Pennec-Mallat); WCRG only rhymes with the crossover law — do not
 cite it as the source.
+
+## §21 ADDENDUM (2026-07-07, append-only) — ADVERSARIAL REVIEW CORRECTION: the §19 τ-crossover FLAT-H verdict is OVERTURNED-AS-INSTRUMENTED (GT-H control); τ's dash-role is INDETERMINATE, not refuted
+
+Source: `.omx/research/adversarial_review_all_negative_findings_20260707.md` (fresh-eyes
+report-only reviewer; $0 GT-H control probe,
+`experiments/results/tau_crossover_trainflow_20260707/gt_h_control_n600.json`).
+
+**The correction.** The §19 probe's homogenization index H was never calibrated against GT: its
+mark/gap regions are analytic (line-fits × global ego-phase comb), never GT-conditioned. Computing
+H on the GT LABELS themselves (n600, identical machinery) gives **GT-H = 0.7015 aggregate;
+0.669 / 0.593 / 0.994 / 1.040 per band** — statistically indistinguishable from the witness's
+"flat" 0.666–0.677 (0.66/0.55/1.0/0.9). A PERFECT dash-resolving render reads the same values:
+the index has ≈zero dynamic range (witness sits at the GT end in near bands; zero instrument
+range in bands 2/3). The FLAT-H trajectory therefore carries NO information about τ in either
+direction; the probe's own pre-registered vocabulary had the right verdict:
+**INDETERMINATE-at-this-resolution**.
+
+**What this changes in §19's consequences:**
+1. Consequence 1 ("annealing τ deeper buys ZERO dash resolution") — **loses its anchor**; τ's
+   dash-role is UNMEASURED on this vehicle. τ_end selection should not cite §19's probe either
+   for or against dash recovery.
+2. Consequence 2 ("dash budget must go to the corrector-class lever") — the comb remains
+   theory-ranked (§20) and mechanism-measured (86% of the band's ADDED gap-FP removed — a
+   GT-conditioned statistic, NOT overturned), but §19's probe no longer adds independent weight.
+   **NEW owed gate:** a GT-conditioned comb-registration audit before `n287_dash_comb` fires —
+   the same GT-H numbers show the ego-phase comb separates GT marks from gaps only weakly
+   (0.63 vs 0.42 lane-rate in band0); a mis-phased train/decode-time gate risks suppressing lane
+   where GT has it.
+3. Consequence 3 (fixed-τ control arm) — **SURVIVES, now primary**: with H uninformative, the
+   fixed-τ arm (plus a GT-conditioned dash index: mark/gap masks from GT lane runs along the
+   fitted centerline, reporting H_witness − H_GT) is the discriminator for the
+   `dash_erasure_homogenization_v1` τ-crossover leg, which returns to OWED.
+
+**Registry action spec (append-only, Catalog #110/#113):** append a supersession anchor to
+`dash_erasure_homogenization_v1` re-classifying the 2026-07-07 tau-crossover anchor as
+INDETERMINATE-instrument-bounded (spec text in the review memo §1). The law's five HELD anchors
+are untouched.
+
+**Second correction (borrowed number, §8.5-class):** the `MuonWarmStart` rationale rows (§ lines
+citing "MEASURED +8% cold-Muon transient") should cite the LIVE run's measured transient
+**≈+29%** (0.003366→0.004351 at the ep726 switch, already correctly quoted in §15.6). The
+warm-start case is ~3.6× stronger than the +8% text implies. The review CONFIRMED the Muon
+shortfall projection itself (ep950 verdict 0.003818, decelerating; will not beat ep650 0.003366
+by ep1000) with schedule confounds excluded by design (τ/β frozen during the finisher) and
+EMA-lag excluded (window ≈4.4 ep).
+
+**Also verified for the council (no change needed):** #341 subset-solve NO-GO holds at the
+measured point but is implementation-level for the un-regularized K=8 tool form (the registered
+equation's reactivation clause already allows "a measured-generalizing K" — the "only full-P"
+prose is the stricter statement); Lever-D #280/#307 NO-GO survives all attack surfaces
+(re-measured at the current residual, four coders, recovery de-conflated); msal_uni inertness
+CONFIRMED and strengthened (scale-free normalization cancels smooth within-band reweightings —
+"better texture normalizations" are predicted inert too); the pose PCAR negative is correctly
+scoped carrier-level and this draft contains no wrong-object citation (store-nothing start is
+separately MEASURED at 1.095@ep2, descending, pose remains OPEN).
+
+Pointer contest-CPU 0.19110 UNMOVED; all §21 rows advisory.
