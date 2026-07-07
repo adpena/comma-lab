@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane #04 generic intN — PR106 HNeRV decoder repacked via signed intN block-FP
 #
 # DALI/NVDEC IS REQUIRED at Stage 3: contest_auth_eval delegates to upstream/evaluate.py

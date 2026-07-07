@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane EC: Engineered Corrections deployment.
 #
 # WHAT: per-pixel SegNet corrections precomputed at COMPRESS TIME by

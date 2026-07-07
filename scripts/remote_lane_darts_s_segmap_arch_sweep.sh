@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane DARTS-S — SegMap architecture sweep (Karpathy eureka: Selfcomp
 #                explicitly skipped this; the published 0.38 used a single
 #                hard-coded (24, 24, 8) config and never benchmarked alt configs).

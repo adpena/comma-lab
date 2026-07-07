@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane D-V3: dilated-h64 half-frame retrain — full engineering stack.
 #
 # V1 (scripts/remote_lane_d_halfframe_retrain.sh, killed 2026-04-27): proxy
@@ -240,7 +240,7 @@ BEST_FP32="$LOG_DIR/train/renderer_${TAG}_best_fp32.pt"
     ls -la "$LOG_DIR/train/" >&2
     exit 2
 }
-log "  best fp32 checkpoint: $BEST_FP32 ($(stat -c '%s' "$BEST_FP32") bytes)"
+log "  best fp32 checkpoint: $BEST_FP32 ($(stat -f%z "$BEST_FP32" 2>/dev/null || stat -c%s "$BEST_FP32") bytes)"
 
 log "=== Stage 1b: export FP4A renderer.bin from fp32 best ==="
 mkdir -p "$LOG_DIR/iter_0"
@@ -341,7 +341,7 @@ cp "$LOG_DIR/optimized_poses.pt" "$LOG_DIR/iter_0/optimized_poses.pt"
 ZOOM_SCALARS=$(find "$LOG_DIR/train" -name "zoom_scalars.pt" 2>/dev/null | head -1)
 if [ -n "$ZOOM_SCALARS" ] && [ -f "$ZOOM_SCALARS" ]; then
     cp "$ZOOM_SCALARS" "$LOG_DIR/iter_0/zoom_scalars.pt"
-    log "  bundling zoom_scalars.pt ($(stat -c '%s' "$ZOOM_SCALARS") bytes)"
+    log "  bundling zoom_scalars.pt ($(stat -f%z "$ZOOM_SCALARS" 2>/dev/null || stat -c%s "$ZOOM_SCALARS") bytes)"
 else
     log "  WARN: no zoom_scalars.pt produced by training — inflate will use identity zoom (degraded)"
 fi

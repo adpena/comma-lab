@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane AL — Analog Latent canvas optimization.
 #
 # EUREKA insight (gpt-5.5 grand council 2026-04-29 11am):

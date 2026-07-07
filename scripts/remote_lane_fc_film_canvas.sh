@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane FC — FiLM-Canvas hybrid (EUREKA #5, grand council 2026-04-29).
 #
 # Strategy: train tac.segmap_film_canvas_renderer.SegMapFilmCanvas — a SegMap

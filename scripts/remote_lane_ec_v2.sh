@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane EC-V2: greedy water-fill SegNet correction deployment.
 set -euo pipefail
 

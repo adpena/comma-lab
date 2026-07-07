@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane F-V2 (formerly Lane B retry): FP4 QAT of Lane A's renderer.
 # Anchored on Lane A 1.15 [contest-CUDA] (NOT baseline 2.29) per
 # findings.md "Lane F regression — bugged or dead?" (2026-04-27).
@@ -84,7 +84,7 @@ log "  anchor_masks:    $ANCHOR_MASKS"
 log "=== Stage 1: stage Lane A masks (no rebuild — we anchor on Lane A's exact bytes) ==="
 mkdir -p "$LOG_DIR/extracted"
 cp "$ANCHOR_MASKS" "$LOG_DIR/extracted/masks.mkv"
-log "  staged $(stat -c '%s' "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
+log "  staged $(stat -f%z "$LOG_DIR/extracted/masks.mkv" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
 
 log "=== Stage 2: FP4 QAT fine-tune on Lane A renderer ==="
 log "  input: $ANCHOR_RENDERER (FP32 ASYM, 290KB)"
@@ -113,7 +113,7 @@ set -e
 # qat_finetune saves renderer_fp4.bin in output-dir per its convention
 FP4_BIN=$(find "$LOG_DIR/qat" -name "renderer_fp4.bin" -o -name "*_fp4*.bin" 2>/dev/null | head -1)
 [ -n "$FP4_BIN" ] && [ -f "$FP4_BIN" ] || { echo "FATAL: qat_finetune didn't produce FP4 binary"; ls -la "$LOG_DIR/qat/"; exit 2; }
-FP4_SIZE=$(stat -c '%s' "$FP4_BIN")
+FP4_SIZE=$(stat -f%z "$FP4_BIN" 2>/dev/null || stat -c%s "$FP4_BIN")
 log "  FP4 binary: $FP4_BIN ($FP4_SIZE bytes vs FP32 290KB original)"
 
 log "=== Stage 3: build NEW archive (FP4 renderer + Lane A masks + Lane A poses) ==="

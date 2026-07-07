@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane F-V5: Hardware FP8 (e4m3fn) on dilated-h64, anchored on Lane G v3 1.05.
 #
 # Background:

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane α-wavelet-mask (PARADIGM-α HNeRV-wavelet mask encoder).
 #
 # Module: src/tac/wavelet_mask_codec.py + hnerv_wavelet_apply_transform.py +

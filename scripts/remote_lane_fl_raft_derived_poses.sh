@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane FL — RAFT-derived poses (Faster Lane: Cosmos research synthesis).
 #
 # Strategic premise (memory project_posenet_rank1_discovery): PoseNet's

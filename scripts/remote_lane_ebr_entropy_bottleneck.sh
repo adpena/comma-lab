@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane EBR: Ballé-2018 Entropy Bottleneck deployment.
 #
 # WHAT: replaces the renderer's hand-tuned latent compression with a learned
