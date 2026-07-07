@@ -2030,7 +2030,10 @@ padding:8px;overflow-x:auto;min-width:0}
 .witcredits .wch{font-size:11px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-bottom:8px}
 .witcredits ul{padding-left:20px;margin:0 0 10px}
 .witcredits li{font-size:12.5px;margin-bottom:7px}
-.witcredits .wcnote{font-size:11px;color:#b89a4a;line-height:1.55;border-top:1px solid var(--grid);padding-top:9px}
+.witcredits .wcnote,.wcnote{font-size:11px;color:#b89a4a;line-height:1.55;border-top:1px solid var(--grid);padding-top:9px;margin-top:10px}
+/* (#343) structured key lists in tab intros — replaces the former wall-of-text paragraphs */
+ul.witkey{padding-left:20px;margin:8px 0 10px}
+ul.witkey li{font-size:12.5px;line-height:1.6;margin-bottom:6px}
 
 /* flow tab (Tab 3) — client-side WebGPU interactive level-set field renderer */
 .flow h2{font-size:clamp(13px,3.4vw,15px);color:var(--acc);letter-spacing:.4px;margin:20px 0 8px}
@@ -2192,14 +2195,18 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <h2>The oracle Yousfi built &mdash; and the physical structure it reads</h2>
     <p>The <b>oracle</b> is the frozen contest scorer: Yousfi's comma10k EfficientNet-B2 SegNet,
     whose per-pixel argmax defines <b>d_seg</b>, and the FastViT-T12 PoseNet, whose first six
-    outputs define <b>d_pose</b>. Both networks are fixed; every quantity on this page is
-    computed against them, on the exact frames their verdict uses. The scene they read carries
-    physical structure that costs no bytes to reproduce: the <b>openpilot lane polynomial</b>
-    generates the analytic lane band (the d_seg prior), and the <b>ego-motion screw &xi;</b>
-    generates the pose (the d_pose prior) &mdash; one SE(3) trajectory feeding both scored terms.
-    The scorer's own sensitivity is shown as the <b>detectability field</b>: the top1&minus;top2
-    argmax margin, which localizes where d_seg can change. Each prior below is an in-tree module,
-    class-assignments detected from the data rather than hardcoded.</p>
+    outputs define <b>d_pose</b>. Both networks are fixed; everything on this page is computed
+    against them, on the exact frames their verdict uses.</p>
+    <ul class="witkey">
+      <li><b>Lane polynomial &rarr; d_seg prior.</b> The openpilot lane fit generates the
+      analytic lane band at decode time, for zero stored bytes.</li>
+      <li><b>Ego-motion screw &xi; &rarr; d_pose prior.</b> One SE(3) trajectory per pair; the
+      same &xi; that transports the partition is the pose PoseNet measures.</li>
+      <li><b>Detectability field.</b> The SegNet top1&minus;top2 argmax margin &mdash; the
+      scorer's own sensitivity map, localizing where d_seg can change.</li>
+    </ul>
+    <p>Each prior below is an in-tree module; class assignments are detected from the data,
+    not hardcoded.</p>
     <div class="orchdr" id="orchdr">rendering the physical-prior atlas (governed CPU pass)&hellip;</div>
   </div>
   <div class="orcstats" id="orcstats"></div>
@@ -2319,19 +2326,25 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     magnitude of Holub&ndash;Fridrich&ndash;Denemark 2014, computed on our render
     (<code>tac.uniward_delta</code>). Their embedding cost is the reciprocal,
     &rho;&nbsp;&#8733;&nbsp;&Sigma;&nbsp;1/(|W|+&sigma;) &mdash; highest where the image is smooth.
-    This panel displays the energy directly, so the reading is: <b>bright = textured = low
-    embedding cost</b>, where a perturbation is least detectable; dark = smooth, where any change
-    is conspicuous.</p>
-    <p class="witthesis">Together the two fields state the byte-allocation rule: distortion budget
-    matters only at small-margin pixels (d_seg cannot change anywhere else), and perturbation is
-    cheapest where texture energy is high. The margin field is also the quantitative surrogate for
-    the scorer's information geometry &mdash; Fisher curvature vs (&minus;margin) correlates at
-    Pearson 0.978 on this SegNet &mdash; so one field drives both the loss weighting and the
-    residual coder.</p>
+    This panel displays the energy directly: bright = textured = low embedding cost in the
+    steganographic model. Shown for lineage &mdash; this framing led us to the right model &mdash;
+    with one measured caveat: as a predictor of where the SegNet argmax actually flips through the
+    contest R operator, the texture proxy measured at chance (LEVER-4). The margin field is what
+    carries the signal.</p>
+    <p class="witthesis">The problem this page instruments is task-aware compression &mdash; code
+    the video for the machine that scores it, not for a human viewer. The steganographic lens
+    supplied the shape of the question (allocate distortion where the detector tolerates it); the
+    answer came from the task-space level set itself: d_seg moves only on the codim-1 argmax
+    boundary, the margin field localizes that boundary, and it doubles as the scorer's
+    information geometry (Fisher curvature vs &minus;margin: Pearson 0.978, measured). One
+    measured field drives the loss weighting and the residual coder.</p>
   </div>
   <!-- TODO(#343): Credits/lineage section HIDDEN per operator 2026-07-07; the tribute-register
        header phrase is deleted outright. Rework as a plain References list (paper citations,
-       direct register) before re-showing.
+       direct register) before re-showing, with the HONEST ATTRIBUTION hierarchy (operator
+       2026-07-07): task-aware compression / VCM at the heart; inverse-steganalysis as the
+       intellectual on-ramp only (no over-attribution); our task-space level-set
+       separatrix/Morse-Smale math as the original contribution.
   <div class="witcredits">
     <div class="wch">References</div>
     <ul>
