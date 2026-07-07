@@ -11,6 +11,24 @@ This uses ``subprocess.Popen(start_new_session=True)`` so the child calls
 launcher. The worker IS its own session+process-group leader (worker pid ==
 pgid), with NO bash wrapper in the middle.
 
+WARNING — SANDBOXED-LAUNCH NON-DURABILITY (the inverse of the orphan class;
+EMPIRICAL ANCHOR 2026-07-07): invoking THIS spawner from a SANDBOXED agent
+Bash tool call does NOT produce a durable daemon. setsid/start_new_session
+detaches from the launcher's process group, but the macOS sandbox lifetime is
+a SEPARATE kill scope: every process created inside the sandbox — including a
+setsid'd session leader with ppid 1 — is terminated when the sandbox session
+is torn down (~the agent's turn boundary). Signature: N unrelated daemons die
+SIMULTANEOUSLY, silently (no traceback / no safe_run kill line / no governor
+event; registry still says "running"), each mid-healthy-work; the #307/#336
+measurement daemons died this way TWICE (~6 min lifetime each) before the
+cause was isolated. THE FIX: launch the spawner from an UNSANDBOXED shell
+(operator terminal, or an agent Bash call with the sandbox explicitly
+disabled). PROOF OF DETACHMENT after launch: ``ps -o pid,pgid,ppid -p <pid>``
+must show pid==pgid AND ppid==1. Related registry gap: exits are reconciled
+only by an explicit ``--reconcile`` run (no automatic exit reconciliation), so
+a killed daemon reads "running" until someone reconciles — do not trust the
+registry status without the live-check column.
+
 WHY (stop): the ORPHAN bug class. A daemon launched as
 ``nohup bash -c '... | tee LOG > /dev/null' & disown`` has a process tree
 ``bash-wrapper -> {python worker, tee}``. The wrapper PID != the worker PID;
