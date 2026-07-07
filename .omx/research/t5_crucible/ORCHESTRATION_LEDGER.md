@@ -8,7 +8,15 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 ## Protocol phases
 - [x] P0 grounding (never-fired 36 enumerated; 113 unmapped DSL flags; ledger-semantics caveat)
 - [ ] P1 independent positions (6 seats, anti-anchored, STAGGERED 2 waves of 3 for rate limits)
-- [ ] P2 red-team pre-mortem (reads all positions; "how this fails to move the pointer")
+- [ ] P2 red-team pre-mortem (reads all positions; "how this fails to move the pointer") —
+      **MANDATORY FIRST PASS: PROVENANCE AUDIT** (operator directive 2026-07-07 "I shouldn't have
+      had to catch that"): for EVERY load-bearing measured claim in EVERY position, verify
+      {anchor path · review_status (pre-registered-only / recovery-written-UNREVIEWED /
+      fresh-eyes-reviewed(N)) · form-limitations (oracle-vs-retrain, scoreable-rung count,
+      truncated-anneal state, subset-vs-n600)}. Any claim resting on a recovery-written or
+      unreviewed verdict → PROVISIONAL until its review clears. Run-config claims must cite
+      launch.sh or the council design memo, never the activation ledger. Memory:
+      verdict_review_status_metadata_operator_should_never_catch_provenance_20260707.
 - [ ] P3 debate round(s) (≥2; disagreements enumerated)
 - [ ] P4 EMPIRICAL RECESS (measurable disputes → n600-real data; HVP-Lanczos first; serial, governed)
 - [ ] P5 synthesis (one stack; survives second red-team pass)
