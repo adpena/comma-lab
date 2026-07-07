@@ -6393,6 +6393,12 @@ def preflight_all(
         # atomicity rule" (a sibling witness trainer may not yet be wired).
         check_heavy_witness_trainers_call_admission_guard(strict=False, verbose=verbose)
 
+        # 2026-07-07 operating-manual anti-rot (FEED-07b wiring): the craft-handoff manual
+        # (docs/operating_manual_craft_handoff.md), its CLAUDE.md pointer section, and its
+        # 8 numbered sections must not silently drift apart. WARN-ONLY by design (a docs
+        # break surfaces loudly but never blocks an unrelated pipeline).
+        check_operating_manual_pointer_integrity(strict=False, verbose=verbose)
+
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
                 REPO_ROOT,
@@ -86187,6 +86193,85 @@ def check_heavy_witness_trainers_call_admission_guard(
         raise PreflightError(
             "check_heavy_witness_trainers_call_admission_guard found "
             f"{len(violations)} violation(s) (#254 P0 admission self-protect):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+_OPERATING_MANUAL_REL = "docs/operating_manual_craft_handoff.md"
+_OPERATING_MANUAL_POINTER_HEADER = "The Operating Manual"
+_OPERATING_MANUAL_SECTION_COUNT = 8
+
+
+def check_operating_manual_pointer_integrity(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """WARN-ONLY anti-rot gate for the operating-manual craft handoff (FEED-07b wiring).
+
+    The manual (``docs/operating_manual_craft_handoff.md``) is a binding way-of-working
+    document pointed to from CLAUDE.md ("## The Operating Manual — craft handoff"). This
+    gate refuses silent rot in either direction:
+      1. the manual file must exist;
+      2. CLAUDE.md must still contain the pointer section header ("The Operating Manual");
+      3. the manual must still contain all 8 numbered sections (``## 1.`` .. ``## 8.``)
+         — a truncated/rewritten manual that drops a section is a pointer-integrity break.
+
+    WARN-ONLY by design: a docs-integrity break should surface loudly but must never block
+    an unrelated pipeline. No waiver token (there is no legitimate reason for the pointer
+    and the manual to drift apart; fix the drift instead)."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    manual = root / _OPERATING_MANUAL_REL
+    manual_text = ""
+    if not manual.is_file():
+        violations.append(
+            f"{_OPERATING_MANUAL_REL}: MISSING — CLAUDE.md's 'The Operating Manual' section "
+            "points at this file. Restore it (git) or update the pointer in the same commit.")
+    else:
+        try:
+            manual_text = manual.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{_OPERATING_MANUAL_REL}: unreadable ({exc}).")
+
+    if manual_text:
+        missing_sections = [
+            n for n in range(1, _OPERATING_MANUAL_SECTION_COUNT + 1)
+            if f"## {n}." not in manual_text
+        ]
+        if missing_sections:
+            violations.append(
+                f"{_OPERATING_MANUAL_REL}: missing numbered section header(s) "
+                f"{missing_sections} — the manual carries {_OPERATING_MANUAL_SECTION_COUNT} "
+                "numbered sections ('## <n>. ...'); a drop/renumber is manual rot. Restore the "
+                "section(s) or update this gate + the CLAUDE.md pointer in the same commit.")
+
+    claude_md = root / "CLAUDE.md"
+    if not claude_md.is_file():
+        violations.append(
+            "CLAUDE.md: MISSING — cannot verify the operating-manual pointer section.")
+    else:
+        try:
+            claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            claude_text = ""
+            violations.append(f"CLAUDE.md: unreadable ({exc}).")
+        if claude_text and _OPERATING_MANUAL_POINTER_HEADER not in claude_text:
+            violations.append(
+                "CLAUDE.md: pointer section header 'The Operating Manual' not found — the "
+                f"manual at {_OPERATING_MANUAL_REL} is orphaned from the always-loaded context. "
+                "Restore the pointer section (or land the removal + this gate's update "
+                "together, deliberately).")
+
+    if verbose:
+        print(
+            f"  [manual-pointer] check_operating_manual_pointer_integrity: "
+            f"{len(violations)} violation(s)"
+            if violations else
+            "  [manual-pointer] check_operating_manual_pointer_integrity: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_operating_manual_pointer_integrity found "
+            f"{len(violations)} violation(s) (operating-manual anti-rot):\n  "
             + "\n  ".join(violations))
     return violations
 

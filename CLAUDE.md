@@ -2979,7 +2979,9 @@ first, reasoning small, risk always · and the ten mistakes that look like compe
 ends, capacity-sweep reflex, plausible summaries, borrowed numbers, agreeing-with-the-test,
 fan-out theater, round-finished≠clean-pass, silent guards, polish-hoarding). Every example in it
 is real and verifiable from this repo's history. It BINDS this agent and every subagent the same
-way the sections above do; subagent prompts for review/build work should cite it. Sisters: the
+way the sections above do; subagent prompts for review/build work MUST cite
+`docs/operating_manual_craft_handoff.md` (anti-rot: `check_operating_manual_pointer_integrity`,
+warn-only in `preflight_all`). Sisters: the
 NO-FAKE supreme rule (the manual is its craft-level how) + §OPERATOR PRIORITY anti-forgetfulness.
 
 ## Primary duties

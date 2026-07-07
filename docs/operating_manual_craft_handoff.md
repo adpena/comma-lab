@@ -23,8 +23,9 @@ below is a technique for that.
    silently overrides them. If it seems to override, that is a flag to surface, not a license.
 4. When the literal ask and the standing context conflict, do the thing that serves BOTH, and
    say explicitly how you resolved it.
-5. When the operator corrects you sharply ("you're a dumbass, that memory is stale"), the
-   correction is almost never only about the instance — find the CLASS and fix that.
+5. When the operator corrects you sharply (a stale task cited as live — "we've moved on to the
+   new store nothing pose which is proven and optimizes"), the correction is almost never only
+   about the instance — find the CLASS and fix that.
 
 **Example (real):** operator said "Fire concurrent now (GO)" for the islands arm. The literal
 read: launch immediately. But the standing T3 symposium verdict said "neither arm launches
@@ -55,8 +56,9 @@ meant, then discovering the operator meant the composed thing all along.
 **Example (real):** the fix-all wave was split into 4 agents over disjoint file groups
 (memory-safety chain / DSL / byte-close / trainer), each with its own tests and serializer
 commit; the #335 wire-in agent was explicitly sequenced behind the DSL class-fix commit with a
-poll-for-commit guard. All five landed without a single collision, and a consolidated 293-test
-cross-verify ran after.
+poll-for-commit guard. All five landed without a single collision (serializer commits
+4ed373e96 / b679c4494 / 4313115b0 / 64dfb65c8 / 779cd0e65), and a consolidated cross-piece
+test verify ran after the wave.
 
 **Failure prevented:** the monolith where one late-discovered error forces re-review of
 everything — and the merge-collision where two workers silently overwrite each other.
@@ -79,8 +81,8 @@ everything — and the merge-collision where two workers silently overwrite each
 **Example (real):** in the whole-apparatus review, the byte-close/exact-eval path got the most
 adversarial reviewer despite being "done and trusted" — and it held a CRITICAL (CUDA rows would
 mislabel as `[contest-CPU]` because the axis came from host platform, not `--device`). Meanwhile
-`safe_run` — 74 lines — carried the P0 crash-class hole (stamping "governed" off a per-process
-cap). The viz scenes got a light pass and yielded only an accuracy nit. Effort matched risk;
+`safe_run` — a small per-arm caps-wrapper — carried the P0 crash-class hole (stamping
+"governed" off a per-process cap with no system-wide SUM-over-RAM admission gate; 48daeef69). The viz scenes got a light pass and yielded only an accuracy nit. Effort matched risk;
 findings matched effort.
 
 **Failure prevented:** polishing the safe 90% while the load-bearing 10% ships a silent fake.
@@ -119,8 +121,10 @@ recomputed it from the live asset (true value ~37×).
 **Procedure:**
 1. Every claim you hand over carries one of these labels, explicitly: MEASURED (artifact
    attached), DERIVED (derivation shown), INFERRED (from literature/analogy), ASSUMED
-   (awaiting verification), UNKNOWN. This project's canonical-equations registry encodes
-   exactly these tiers — use its vocabulary.
+   (awaiting verification), UNKNOWN. This project's canonical-equations registry encodes the
+   same discipline as `empirical_verification_status` (VERIFIED_VIA_EMPIRICAL_ANCHOR /
+   VERIFIED_VIA_SOURCE_INSPECTION / INFERRED_FROM_DOMAIN_LITERATURE /
+   ASSUMED_AWAITING_VERIFICATION) — use its vocabulary when writing equations-leg rows.
 2. When a measured number has a caveat that bounds its meaning, the caveat travels WITH the
    number every time it is repeated. A number stripped of its caveat becomes a lie by transit.
 3. Upper/lower bound status matters as much as the value. Say which it is.
@@ -206,8 +210,8 @@ Each of these FEELS like good work while it happens. That is what makes them dan
 3. **The point-fix.** Patching the instance (one lever's flag type) while the class (every
    lever's flag type) stays live. *Procedure: every fix names its class and lands the guard.*
 4. **The plausible summary.** Describing a file/run from memory instead of reading it. (The
-   stale "#205 run.log" path and the ~54 GB RSS figure both persisted in summaries after
-   reality had moved; the operator had to correct it — "the task is stale, we've moved on.")
+   stale "#205 run.log" path and a superseded RSS figure both persisted in summaries after
+   reality had moved; the operator had to correct the stale citation — "we've moved on.")
    *Procedure: resolve live state from the process/artifact, not from your notes.*
 5. **The borrowed number.** Citing an ancestor vehicle's measurement as if it transfers (the
    d_pose 3.4e-5 was the RGB ancestor's, not the witness's). *Procedure: numbers carry their

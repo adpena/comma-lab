@@ -8818,3 +8818,49 @@ Pointer 0.19110 UNMOVED (advisory measurement; the pointer moves only through by
 **Council-ready composition PROVEN (test_feed07_dsl_wirein.py):** sealed base + DirectionalBasisRebalance + AnalyticLaneRenderBand + SeedIslandEased + MuonWarmStart → validate()==[] → parses through the REAL trainer argparse; AACoverageRender arm composes separately and the AA×seed/band conflict raises CLEANLY via `_validate_aa_compose_compat`. All 6 new levers pass the b679c4494 parse-every-composable-lever class test automatically.
 **Build-needed ledger (honest split):** step_basis activation choice · FINER++ bias-init · #218 logit-adjustment per-class offset · #308 grid-bulk+INR-annulus (no flags) — named tasks, NOT stub levers.
 Pointer 0.19110 UNMOVED (means: DSL+equations legs of FEED-07a/07b closed; the pointer moves only through a byte-closed exact row).
+
+## FEED-07d (2026-07-07) — OPERATING MANUAL landed + recursive adversarial review + apparatus wiring
+
+**LANDED:** `docs/operating_manual_craft_handoff.md` (pointer commit 5e73cbd81; CLAUDE.md §"The
+Operating Manual" pointer verified present) — the operator-commissioned craft handoff, 8 sections.
+
+**REVIEW VERDICT (round-1 adversarial, per the FEED-07b dispatch contract):** every load-bearing
+"real example" was verified against the artifacts. CHECKED-OUT EXACTLY: GO+probe composition (T3
+symposium memo verbatim "Neither arm launches today. The next action is a $0 checkpoint probe") ·
+4-agent fix-all split + #335 sequencing (4ed373e96/b679c4494/4313115b0/64dfb65c8 → 779cd0e65) ·
+byte-close axis CRITICAL (4313115b0: axis from --device not host platform) · PR95 rate
+(archive.zip stat 178,417 B → 25·178417/37545489 = 0.11880; ≥2 independent intake copies; PR-body
+0.1987 documented) · safe_run double-gate round-2 catch (e73c3e898: 87.9 GiB cap vs ~70 GiB
+projection) · EikonalViscosity point-fix (48daeef69) → class-fix (b679c4494) · probe 63.9% + welded
+upper-bound caveat (FEED-07c) · 139×→37× viz correction (bad485222) · FEED-07a capacity-sweep
+unstick. **5 CORRECTIONS applied** (a craft manual with an unverifiable example is a meta-level
+NO-FAKE): §1.5 + §8.4 operator quotes aligned to the DOCUMENTED verbatim ("we've moved on to the
+new store nothing pose…", per [[pose_mover_is_store_nothing_xi_derive_h_not_warp_real_luma_20260706]])
+· §2 "293-test" precise count unverifiable in any artifact → softened to cross-piece verify +
+the five serializer hashes added · §3 "safe_run — 74 lines" false precision (pre-fix file = 278
+lines) → "small per-arm caps-wrapper" + 48daeef69 cite · §5.1 canonical-equations tier vocabulary
+aligned to the REAL `empirical_verification_status` enum (equation.py:77-80). Pass count: 2
+(pass-1 = 5 corrections; pass-2 on own edits = CLEAN).
+
+**WIRING:** (1) `check_operating_manual_pointer_integrity` WARN-ONLY anti-rot gate in
+`src/tac/preflight.py` (manual exists ∧ CLAUDE.md pointer header ∧ all 8 numbered sections),
+wired into `preflight_all(strict=False)`, 7 tests green, live count 0. (2)
+`shadow_controller.py` module docstring cross-refs manual §5 (MEASURED/DERIVED labeling = the
+costate tiers) + §8.8 (round-finished ≠ clean pass) — documentation-only, zero behavior change.
+(3) CLAUDE.md subagent contract strengthened: review/build subagent prompts MUST cite the manual
+(AGENTS.md not in the mutation frontier → the sentence lives in the CLAUDE.md manual section).
+Pointer 0.19110 UNMOVED (means/apparatus; the pointer moves only through a byte-closed exact row).
+
+## FEED-07draft (2026-07-07) — DRAFT next-run proposal WRITTEN; the COUNCIL owns the design
+`.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md` now exists as the assembled-evidence
+INPUT to the derived-optimal-next-run grand-council symposium (operator: the council "will be the one to
+ultimately design and sign off" — the draft binds NOTHING). It composes the full information space: FEED-07a/b/c
++ islands T3 + #302 curriculum T3 + the ep225 n600 probe (UPPER-BOUND caveat welded on) + live mod32cap telemetry
+(BEST d_seg 0.0036364@ep425, `[macOS-MLX research-signal]`) + all 27 composable DSL levers (per-lever
+include/exclude with signal-in-hand) + derived/measured knobs only (pose term p=0.018 in the break-even
+arithmetic explicitly ASSUMED/borrowed — witness d_pose OPEN). Primary arms drafted: basis-rebalance regimes ·
+rule-118 lane band · LADDER islands PAIR (from-scratch, seg-only) · byte-free head · train-big-compress-small
+post-pass; schedule = event-triggered handoff + nucleus guard + Muon warm-start/anneal per the #302 laws. Eight
+open questions routed to the council (composed-surface ceiling FIRST, blocking launch-sizing). Pointer 0.19110
+UNMOVED (means/design). [triality: DAG(this); DSL = existing levers only, none invented; eqs = cites registered
+laws, none added]

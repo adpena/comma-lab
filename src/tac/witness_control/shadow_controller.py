@@ -25,6 +25,13 @@ Reuse, not duplication: verdict/stage-row parsing is delegated to the existing
 verbatim contract of ``tools/render_levelset_dashboard._parse_launch_sh_flags``
 (that module imports matplotlib at import time, so it cannot be imported from here;
 parity is regression-guarded in ``src/tac/tests/test_witness_control_costate.py``).
+
+Craft discipline (``docs/operating_manual_craft_handoff.md``): the controller's costate
+tiers (MEASURED / DERIVED-analytic / UNIDENTIFIABLE) implement the manual's §5
+known-vs-guessed labeling — every recommendation states HOW its costate was obtained,
+and a caveat travels with the number. Its review cadence is bound by §8.8
+(round-finished ≠ clean pass: a fix round resets the counter; SEAL only on consecutive
+clean rounds).
 """
 from __future__ import annotations
 
