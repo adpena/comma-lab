@@ -8860,7 +8860,12 @@ ultimately design and sign off" — the draft binds NOTHING). It composes the fu
 include/exclude with signal-in-hand) + derived/measured knobs only (pose term p=0.018 in the break-even
 arithmetic explicitly ASSUMED/borrowed — witness d_pose OPEN). Primary arms drafted: basis-rebalance regimes ·
 rule-118 lane band · LADDER islands PAIR (from-scratch, seg-only) · byte-free head · train-big-compress-small
-post-pass; schedule = event-triggered handoff + nucleus guard + Muon warm-start/anneal per the #302 laws. Eight
-open questions routed to the council (composed-surface ceiling FIRST, blocking launch-sizing). Pointer 0.19110
+post-pass; schedule = event-triggered handoff + nucleus guard + Muon warm-start/anneal per the #302 laws.
+SCOPE-EXTENDED per operator directive with two adjudication sections: §5A rate/mod-dim scaling (decoupling
+HYPOTHESIS labeled UNMEASURED + Whitney-vs-frequency-resolution framing + the four carry-big-signal-at-small-bytes
+levers; the operator-stated ~0.026 spare-rate figure flagged derivation-OWED, not laundered) and §5B pose ON/OFF
+(TWO-TRACK recommendation: seg-only diagnostics, pose-ON w_pose>0+FiLM+store-nothing-ξ for the pointer-moving run;
+#227/#248 gating sub-questions). Thirteen open questions routed to the council (composed-surface ceiling FIRST,
+blocking launch-sizing). Pointer 0.19110
 UNMOVED (means/design). [triality: DAG(this); DSL = existing levers only, none invented; eqs = cites registered
 laws, none added]
