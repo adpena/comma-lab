@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate pact_nerv_neural_codec_e2e L0 SCAFFOLD smoke.
 #
 # Trainer: experiments/train_substrate_pact_nerv_neural_codec_e2e.py

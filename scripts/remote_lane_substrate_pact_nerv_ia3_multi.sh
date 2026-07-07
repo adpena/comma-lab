@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane: pact_nerv_ia3_multi L0 SCAFFOLD smoke (multi-block IA3 + difficulty).
 # WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20.
 # Trainer _full_main raises NotImplementedError per Catalog #240.

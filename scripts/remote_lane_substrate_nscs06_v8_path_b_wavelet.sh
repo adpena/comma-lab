@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate nscs06 v8 Path B wavelet-residual first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_nscs06_v8_path_b_wavelet.py

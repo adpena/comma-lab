@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane: pact_nerv_asymmetric_boundary L0 SCAFFOLD smoke (per-class FiLM).
 # WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20.
 # Trainer _full_main raises NotImplementedError per Catalog #240.

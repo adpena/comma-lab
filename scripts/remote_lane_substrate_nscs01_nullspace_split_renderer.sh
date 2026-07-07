@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: NSCS01 nullspace-split-renderer L1 SCAFFOLD smoke dispatch.
 #
 # Trainer: experiments/train_substrate_nscs01_nullspace_split_renderer.py

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate NSCS02 downsampled-renderer + inflate-upsample.
 #
 # Trainer: experiments/train_substrate_nscs02_downsampled_renderer.py

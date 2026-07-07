@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate pact_nerv_multi_modal L0 SCAFFOLD smoke.
 set -euo pipefail
 

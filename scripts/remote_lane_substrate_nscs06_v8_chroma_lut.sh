@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate nscs06_v8_chroma_lut L0 SCAFFOLD dispatch.
 #
 # Trainer: experiments/train_substrate_nscs06_v8_chroma_lut.py

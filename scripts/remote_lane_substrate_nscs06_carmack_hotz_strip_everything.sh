@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate nscs06_carmack_hotz_strip_everything first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py

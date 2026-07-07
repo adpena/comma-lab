@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate NSCS03 end-to-end Ballé joint codec.
 #
 # Trainer: experiments/train_substrate_nscs03_end_to_end_balle_joint_codec.py
