@@ -71,6 +71,14 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arsenal considered —
+   in-training (flat-minima #242, WeightEntropyPenaltyMLX, entropy-penalty, latent-structure,
+   variable-grid QAT — ⚠ LAUNCH-BLOCKING run-1 decisions) · bit-depth (waterfill) · structural
+   (low-rank/prune/TropNNC/KD) · invariance/orbit (permutation canonicalization, orbit coding) ·
+   post-hoc coding (receipts required; base AT floor) · payload-specific (flip/band/pose/latent) ·
+   scorer-invariance (#153 P-SUFF). Full taxonomy in the compendium. Per lever: FOLD /
+   DEFER-with-reason / DEAD-with-receipt. Named RECESS: Class-D×Class-B interaction (waterfill an
+   entropy-shaped ckpt vs unshaped ep650, $0).
 
 ## Recess queue (P4; grows from positions + red-team)
 1. $0 HVP-Lanczos GN/Hessian spectrum on saved #205 checkpoint (pinned §2 first-measurement).
