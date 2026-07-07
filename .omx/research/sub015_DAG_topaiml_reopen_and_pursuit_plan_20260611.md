@@ -9385,3 +9385,41 @@ postdates the agent's brief, hence its absence from the commit message — this 
 assertion instead (append-only; commit messages are immutable). Owed and already ledgered:
 __init__ export fold-in + costate-side wiring of schedule_primitive_kinds() (the costate owner's
 leg). Pointer 0.19110 UNMOVED (reconciliation).
+
+## FEED-07s (2026-07-07) — VISCOSITY-THEORY ALIGNMENT HUNT: dash erasure = HOMOGENIZATION (comb = the cell-problem corrector) · BS non-monotone artifact match · junction σ_ij is a fittable free parameter
+
+Operator-directed online research pass (#284/#318 lineage) checking our measured anchors against
+viscosity-solution theory. Memo: `.omx/research/viscosity_theory_alignment_hunt_20260707.md`
+(7 directions, cited, each with verdict + engineering bridge; §9 = registration-candidate SPECS,
+NOT registered — anchors owed). Council addendum: DRAFT §15. Top verdicts:
+
+1. **EUREKA-candidate #1 — dash erasure IS homogenization; the #287 tropical dash-comb IS the
+   LPV cell-problem corrector.** Lane dashes = δ-periodic along-tangent microstructure; when
+   min(τ, ε-cutoff, R-Nyquist) ≳ δ_along the flow sees only the Γ-homogenized SOLID anisotropic
+   band (Braides/Ansini–Braides–Chiadò Piat) with ZERO effective lane-interface mobility
+   (pinning; Dirr–Yip, arXiv 2108.00558). Four predictions ALREADY-MEASURED-✔: dash-gap FP
+   0.00396 = 90% band recon · erasure ∝ 1/persistence (MBO 95.7% Lane) · lane cls-1 STUCK (#333)
+   · capacity-alone NO-GO (the coarse chart cannot hold the corrector; two-scale u ≈ ū + δ·v).
+   Corrector = max-plus comb, phase transported by ego-ξ (phase=ego-dist MEASURED), rule-118
+   free. OWED before registering `dash_erasure_homogenization_corrector_v1`: corrector A/B n600
+   through R + the $0 τ-crossover probe (dash-gap FP vs τ/δ_along). NEW RULE surfaced: do not
+   anneal τ below the dash period unless the comb is active.
+2. **Barles–Souganidis: INR+SGD = non-monotone scheme; predicted artifacts MATCH measured**
+   (UV/checkerboard ep110 mode · 97%-annulus jitter · 44.6%-singleton confetti · junction
+   mis-selection). The ca-band/per-pixel-gated ε IS a Froese–Oberman FILTERED scheme →
+   `--eikonal-visco-ca-band 0.5` promoted from #320-escalation to theory-preferred first-line.
+3. **EUREKA-candidate #2 — junction condition is a FREE parameter** (Imbert–Monneau flux
+   limiter / σ_ij): our all-ones length weight imposes Herring 120° the frozen scorer does not
+   satisfy → measured triple-junction weakness. $0 fit: junction-angle histogram → Young's-law
+   σ_ij → per-class-PAIR length weights (DSL length-Lever matrix arg; default all-ones
+   byte-identical).
+4. CONFIRMS: WD = the DFIZ vanishing-discount selection term (keep WD late — uniqueness/repro);
+   τ_end = the τ·ln5 selection resolution; lane long-tail = Aubry-set analog ⇒ late descent is
+   POWER-LAW not exponential → plateau/exit detectors should fit a+b·t^(−α) per-class ($0
+   retro-fit on long900 + live control). REFUTES: Hajek-log τ-schedule import (τ = GNC homotopy,
+   NOT temperature; LR is the Hajek variable; Γ-geometric #286 + rewarmup #269/#270 stand;
+   Muon-switch transient 0.003366→0.004351 = quench/adiabaticity signature, matches).
+
+Triality: DSL = 3 lever surfaces SPEC'd (comb Lever · EikonalViscoStabGauge per-pixel extension ·
+σ_ij matrix) — DSL-first when built, none hand-flagged here. Equations = specs only (§9).
+Pointer 0.19110 UNMOVED (means/theory-alignment).

@@ -516,3 +516,51 @@ naive-inheritance item each replaces:
 Q14 for the council: which of 1-6 rides the DSL's EventTriggeredCurriculum now vs which needs a
 new Schedule primitive (the DSL holds Curriculum/Schedule as first-class objects, #334 — the
 council's design should compile through them, not through hand-set epochs).
+
+## §15 ADDENDUM (2026-07-07, append-only) — viscosity-theory alignment hunt: items the council should see
+
+Source: `.omx/research/viscosity_theory_alignment_hunt_20260707.md` (operator-directed online
+research pass; 7 directions, cited; verdict table §8; registration-candidate specs §9 — specs
+only, anchors owed). DAG FEED-07s. Items ranked by EV for THIS run design:
+
+1. **Dash erasure = homogenization; the #287 dash-comb = the cell-problem corrector (EUREKA
+   candidate #1).** Two-scale law: below the homogenization crossover (min of τ, viscous cutoff,
+   R-Nyquist vs the dash period δ_along) the flow provably converges to the solid homogenized
+   band with PINNED (zero-mobility) lane interface — training cannot recover dashes there, at
+   ANY capacity/epoch budget (matches the measured capacity NO-GO + lane-stuck + dash-gap FP =
+   90% of band recon). Consequences for the schedule design (§14): (a) the comb corrector
+   (render-time max-plus, phase from ego-ξ, rule-118 free) rises in the lever ranking with a
+   law-shaped justification — it is the UNIQUE repair class for the dash residual, not one lever
+   among many; (b) NEW coupling rule: **do not anneal τ below the dash period unless the comb is
+   active** (τ_end gets a second, homogenization meaning beyond the pixel-pitch floor);
+   (c) pre-registerable $0 probe: dash-gap FP vs τ/δ_along sweep on a fixed checkpoint.
+2. **ca-band viscosity is a Froese–Oberman filtered scheme — promote to first-line.** The
+   INR+SGD discretization is non-monotone (Barles–Souganidis class); its predicted artifacts
+   (checkerboard ep110 mode, annulus jitter, 44.6%-singleton confetti, junction mis-selection)
+   all match measurement. `--eikonal-visco-ca-band 0.5` (built, #320) is the filtered-scheme
+   construction (monotone envelope only where the backward-heat indicator fires) — theory
+   prefers it over the global floor; council should consider it in the eikonal arm rather than
+   as an abort-escalation only.
+3. **Junction σ_ij fit (EUREKA candidate #2, $0 probe first).** The all-ones length weight
+   imposes Herring 120° junction angles the frozen scorer does not satisfy (Imbert–Monneau: the
+   junction condition is a free parameter). $0: junction-angle histogram from cached GT argmax →
+   Young's-law σ_ij → per-class-PAIR length weights (DSL length-Lever matrix argument; all-ones
+   default byte-identical). Treatment arm, NOT clean baseline.
+4. **Exit/plateau detectors: fit power-law, not exponential (weak-KAM rate).** The lane
+   long-tail is an Aubry-set-analog obstruction ⇒ late descent is O(1/t)-class on the binding
+   class; exponential-window plateau detectors fire EARLY (declare exhaustion while a 1/t tail
+   still pays — "meat left on the bone" risk for §14 item 5). Change: per-class `a + b·t^(−α)`
+   fit + exit on extrapolated remaining meat; $0 retro-fit available on long900 + the live
+   control trajectories.
+5. **Keep weight decay late (selection/uniqueness).** WD is the vanishing-discount (DFIZ)
+   selection term: finite WD ⇒ canonical unique limit partition (deterministic-repro at the PDE
+   level). Confirms the measured keep-WD Muon verdict; council should treat "WD→0 late" as a
+   selection-regime risk, not a neutral simplification.
+6. **τ vs LR annealing split (refutation worth recording).** Hajek's log-schedule does NOT
+   apply to τ (τ = GNC homotopy; requirement = adiabatic tracking → Γ-geometric #286 + rewarmup
+   #269/#270 stand; the measured Muon-switch transient 0.003366→0.004351 is a quench signature).
+   LR is the actual temperature: spend escape budget BEFORE the freeze; never re-raise LR in the
+   selection regime without re-raising τ.
+
+Pointer contest-CPU 0.19110 UNMOVED; all of §15 is design input, gated on the council + measured
+anchors named in the memo.
