@@ -198,6 +198,11 @@ from tac.canonical_equations.logit_adjustment_class_prior_20260707 import (
     logit_adjust_offsets,
     populate_logit_adjustment_class_prior_equation,
 )
+from tac.canonical_equations.dash_erasure_homogenization_20260707 import (
+    build_dash_erasure_homogenization_v1,
+    populate_dash_erasure_homogenization_equation,
+    smoothing_crossover_ok,
+)
 from tac.canonical_equations.boundary_distance_calibration_20260705 import (
     bd_weight_for_ratio,
     build_boundary_distance_weight_calibration_v1,
@@ -310,6 +315,9 @@ __all__ = [
     "logit_adjust_offsets",
     "populate_logit_adjustment_class_prior_equation",
     "populate_step_native_activation_edge_optimality_equation",
+    "build_dash_erasure_homogenization_v1",
+    "populate_dash_erasure_homogenization_equation",
+    "smoothing_crossover_ok",
     "bd_weight_for_ratio",
     "build_boundary_distance_weight_calibration_v1",
     "populate_boundary_distance_weight_calibration_equation",
