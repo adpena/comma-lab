@@ -102,3 +102,29 @@ tool calling, context editing, compaction. 30-day retention, no ZDR.
 Owed (not fetched, links recorded): migration-guide (Opus 4.8→Fable 5), effort docs, adaptive-
 thinking, refusals-and-fallback, fallback-credit, task-budgets, the fallback/billing cookbook,
 anthropic.com/news/redeploying-fable-5-mythos-5, + the persisted 55KB best-practices full text.
+
+## Addendum (2026-07-07): "A field guide to Claude Fable 5: Finding your unknowns" (claude.com blog)
+
+Framework: map-vs-territory (prompts/skills = map; codebase = territory) + the four unknowns
+quadrants. Patterns: blind-spot pass · brainstorms/prototypes · interviews · references ·
+implementation plans · implementation notes · pitches/explainers · quizzes. Principle: over-
+specification sends Claude down unsuitable paths; under-specification breeds misaligned
+assumptions — accounting for unknowns navigates both.
+
+CONVERGED (our existing surface): references-over-descriptions = vendor-the-real-source /
+read-the-real-argparse (never-invent-flags); implementation-plans-reviewed = council design
+authority + symposium gates; implementation notes = the DAG FEED discipline (deviations +
+reasoning, exactly); interviews = AskUserQuestion GO flows + the council draft's 13 open
+questions; quizzes ≈ fresh-context verifier subagents; map-vs-territory = EXECUTE_DONT_READ.
+
+ADOPTED INSIGHT — **unknown-knowns are our incident class**: "information so implicit it goes
+undocumented, yet recognizable when encountered" is precisely what produced the log-lives-in-
+.omx/tmp split (launcher knew; nothing documented it; froze telemetry 12h + forced the
+dashboard's hardcoded constants), the comma10k class-order luma-sort trap, and the
+--logit-adjust-tau flag collision. The failure ledger captures these POST-hoc; the field guide's
+delta is PRE-hoc surfacing. PRACTICE (dispatcher-level, no new gate): when dispatching into an
+UNFAMILIAR surface, include a blind-spot ask in the prompt — "before building, list the
+unknown-knowns of this surface: implicit conventions, path/layout facts, naming traps a
+newcomer would trip on; check them against the failure ledger first." Cheap, targets our
+measured top incident class. Not added as a contract constant (gate-locked module; marginal
+value below the review cost) — documented here as standing dispatcher practice.
