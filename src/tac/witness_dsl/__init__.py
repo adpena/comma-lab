@@ -69,8 +69,12 @@ from tac.witness_dsl.curriculum_dsl import (
 from tac.witness_dsl.schedule_readback import (
     ScheduleReadback,
     StageEntry,
+    describe_primitive,
+    display_entry,
     event_trigger_description,
     read_schedule,
+    resolve_run_dir_for_log,
+    stage_map_from_curriculum,
     trainer_argv_from_launch_sh,
 )
 from tac.witness_dsl.lever_registry import (
@@ -190,8 +194,12 @@ __all__ = [
     # schedule read-back (the inverse of the compile path; observability derives from it)
     "ScheduleReadback",
     "StageEntry",
+    "describe_primitive",
+    "display_entry",
     "event_trigger_description",
     "read_schedule",
+    "resolve_run_dir_for_log",
+    "stage_map_from_curriculum",
     "trainer_argv_from_launch_sh",
     "LeverCompositionError",
     "name_composable_levers",

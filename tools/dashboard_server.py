@@ -582,6 +582,20 @@ def _dsl_summary() -> dict:
         import tac.witness_dsl as w
         prog = w.BASELINE
         stages = [getattr(s, "name", str(s)) for s in getattr(prog, "stages", ())]
+        # GENERIC-over-the-DSL (operator amendment 2026-07-07): enumerate whatever the
+        # DSL declares via the uniform describe surface (soft-detected per primitive;
+        # generic fallback otherwise) so a NEW stage kind / level-path / cadence
+        # primitive renders here with ZERO dashboard code change — never dropped.
+        try:
+            from tac.witness_dsl.schedule_readback import display_entry as _de
+            stage_details = [_de(s) for s in getattr(prog, "stages", ())]
+            cur = getattr(prog, "curriculum", None)
+            if cur is not None:
+                from tac.witness_dsl.schedule_readback import stage_map_from_curriculum
+                stage_details += [e for e in stage_map_from_curriculum(
+                    cur, getattr(prog, "epochs", None)) if e.get("mode") == "declared"]
+        except Exception:
+            stage_details = []
         gauge = w.CANONICAL_GAUGE
         gsum = {}
         for f in ("warp", "carrier", "residual"):
@@ -590,7 +604,8 @@ def _dsl_summary() -> dict:
         return {"ok": True,
                 "program": {"epochs": getattr(prog, "epochs", None),
                             "num_pairs": getattr(prog, "num_pairs", None),
-                            "stages": stages},
+                            "stages": stages,
+                            "stage_details": stage_details},
                 "gauge": gsum}
     except Exception as exc:
         return {"ok": False, "reason": f"witness_dsl introspection error: {exc}"}
@@ -3183,10 +3198,17 @@ function render(){
   let st=[];
   if(k==="missing"){st=["no run log found"];}
   else{st.push(stageWord(ep)+" stage"); if(ep!=null)st.push("ep"+ep);
-    // event-gated stages not yet fired render as "next: <stage> (…) — pending"
+    // event-gated stages not yet fired render as "next: <stage> (…) — pending";
+    // GENERIC over the DSL: a declared/unknown-kind schedule element (no epoch
+    // boundary) renders as its describe() data — NEVER silently omitted.
     (stageMap()||[]).forEach(s=>{
       if(s.mode==="event"&&s.status==="pending"&&(ep==null||s.cap==null||ep<s.cap))
-        st.push("next: "+s.name+" ("+(s.trigger||"event-gated")+") — pending");});
+        st.push("next: "+s.name+" ("+(s.trigger||"event-gated")+") — pending");
+      else if(s.mode!=="event"&&stageBoundary(s)==null){
+        const extra=Object.keys(s).filter(k=>!["name","kind","mode","status","start","source"].includes(k))
+          .map(k=>k+": "+s[k]).join(", ");
+        st.push(s.name+(s.kind&&s.kind!==s.name?" ["+s.kind+"]":"")+(extra?" ("+extra+")":""));
+      }});
     if(k==="stale")st.push("no verdict in "+fmtAge(LIVE.verdict_age_s)+" — likely stopped");
     else if(LIVE.next_eta_s!=null)st.push("next verdict ~"+fmtAge(LIVE.next_eta_s));}
   $("status").textContent=st.join(" · ");
@@ -3531,9 +3553,18 @@ function renderTriality(d){
     const S=d.dsl||{};
     if(S.ok){
       const p=S.program||{}, g=S.gauge||{};
+      // GENERIC over the DSL: render whatever the DSL declares (stage_details =
+      // uniform describe-surface entries; unknown kinds show their data, never dropped).
+      const sd=(p.stage_details&&p.stage_details.length)?p.stage_details:null;
+      const stagesStr = sd ? sd.map(e=>{
+          const label=e.name||e.text||e.kind||"?";
+          const extra=Object.keys(e).filter(k=>!["name","kind","text","mode","status","start"].includes(k)&&e[k]!=null&&e[k]!=="")
+            .map(k=>k+"="+e[k]).join(" ");
+          return label+(extra?" ("+extra+")":"");
+        }).join(" → ") : (p.stages||[]).join(" → ");
       dsl.innerHTML=
         "<div class='trirow'><span class='tk'>program</span>"+(p.epochs||"?")+" ep · "+
-          (p.num_pairs||"?")+" pairs · stages "+_esc((p.stages||[]).join(" → "))+"</div>"+
+          (p.num_pairs||"?")+" pairs · stages "+_esc(stagesStr)+"</div>"+
         "<div class='trirow'><span class='tk'>gauge</span>warp="+_esc(g.warp)+" · carrier="+
           _esc(g.carrier)+" · residual="+_esc(g.residual)+"</div>"+
         "<div class='trimeta'>tac.witness_dsl → validated trainer CLI (never-invent-flags)</div>";

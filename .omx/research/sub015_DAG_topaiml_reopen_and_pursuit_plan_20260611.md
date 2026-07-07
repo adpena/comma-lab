@@ -9243,3 +9243,26 @@ Advisory + fail-open at three layers (safe wrapper, git-call try, last-resort); 
 unchanged (42/42 tests, 10 new). Triality: DAG = this FEED; DSL leg N/A (no lever/config change — this is
 the apparatus that GUARDS the DSL leg); equations leg N/A (no measured law). Sibling half: describe()/registry
 generic rendering. **Pointer 0.19110 UNMOVED (apparatus/means).**
+
+### DAG FEED 2026-07-07dsr2 (amendment: dashboard rendering GENERIC over the DSL — describe surface soft-detected, unknown kinds never dropped)
+
+**Operator amendment (verbatim class):** "As the DSL evolves, update the costate controller and
+dashboard accordingly" → dashboard rendering is now GENERIC over the DSL, not per-stage-name code.
+**BUILT:** `schedule_readback.describe_primitive` (soft-detects the sibling's uniform
+`to_display_dict()`/`describe()` surface — which LANDED mid-session as
+`curriculum_dsl.ScheduleDisplay`; verified preferred when present, generic fallback otherwise) +
+`display_entry` (never returns None — a declared element cannot be silently omitted) +
+`stage_map_from_curriculum` (enumerates WHATEVER a Curriculum-like object declares via dataclass
+fields incl. FUTURE ones; epoch-boundary Stages become `{name,start}` with the disabled-omission
+semantics; every other/unknown kind becomes a `mode="declared"` entry carrying its describe data →
+a new DSL stage kind / level-path / cadence primitive renders with ZERO dashboard code change).
+**WIRED:** dashboard `_dsl_summary` (TRIALITY control leg) emits generic `stage_details` (sibling
+surface data confirmed flowing: `{"kind":"Stage","name":"CE",...,"flags":{}}`); client renders
+declared/unknown entries as their data in the stages line + status chips; `event_trigger_description`
+soft-prefers explicit `trigger`/`*_description` fields only (round-1 catch: the uniform surface's
+generic field dump — `handoff='event'` — is data, not a description; caught by tests, fixed).
+**Tests:** 22 passed — incl. the amendment fixture (synthetic schedule with an UNKNOWN-kind
+primitive carrying describe() still renders as generic data) + real-Curriculum enumeration
+(Anneal/HoscSchedule/Transition/Regularizer all enumerated, none dropped) + to_display_dict-over-
+describe preference. Triality: DSL leg + DAG same batch; equations N/A (observability apparatus).
+**HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**

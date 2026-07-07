@@ -52,9 +52,12 @@ __all__ = [
     "STAGE_ORDER",
     "ScheduleReadback",
     "StageEntry",
+    "describe_primitive",
+    "display_entry",
     "event_trigger_description",
     "read_schedule",
     "resolve_run_dir_for_log",
+    "stage_map_from_curriculum",
     "trainer_argv_from_launch_sh",
 ]
 
@@ -156,14 +159,115 @@ class ScheduleReadback:
 
 
 # ---------------------------------------------------------------------------
+# GENERIC-over-the-DSL rendering (operator amendment 2026-07-07: "As the DSL
+# evolves, update the costate controller and dashboard accordingly"). Consumers
+# enumerate WHATEVER the DSL declares: a uniform ``to_display_dict()`` /
+# ``describe()`` surface is SOFT-DETECTED and preferred when a primitive
+# declares it (a sibling is adding it uniformly); otherwise the flag-parsing
+# fallback below stands. Unknown kinds render as their describe data — a
+# declared schedule element is NEVER silently omitted, so a NEW DSL stage kind /
+# level-path / operational-cadence primitive renders with ZERO dashboard change.
+# ---------------------------------------------------------------------------
+def describe_primitive(obj) -> dict | None:
+    """The uniform display surface of a DSL primitive, soft-detected:
+    ``to_display_dict()`` preferred, then ``describe()``. A dict result passes
+    through; a non-dict result becomes ``{"text": str(result)}``. None when the
+    object declares neither (callers then use a generic fallback). Never raises."""
+    for attr in ("to_display_dict", "describe"):
+        fn = getattr(obj, attr, None)
+        if not callable(fn):
+            continue
+        try:
+            d = fn()
+        except Exception:  # noqa: BLE001 — a broken surface must not drop the element
+            continue
+        if isinstance(d, dict):
+            return dict(d)
+        if d is not None:
+            return {"text": str(d)}
+    return None
+
+
+def display_entry(obj) -> dict:
+    """A JSON-able display entry for ANY DSL schedule primitive: its uniform
+    describe surface when declared, else a minimal ``{kind, text}`` fallback.
+    Always returns a dict (never None) — a declared element cannot be dropped."""
+    d = describe_primitive(obj)
+    if d is None:
+        d = {"text": str(getattr(obj, "name", None) or repr(obj))}
+    out = {"kind": type(obj).__name__}
+    out.update(d)
+    return out
+
+
+def stage_map_from_curriculum(curriculum, epochs: int | None = None) -> list[dict]:
+    """GENERIC stage-map entries from a DSL Curriculum-like object.
+
+    Enumerates whatever the object DECLARES — its dataclass fields (including
+    future ones the DSL gains) and their tuple/list elements; duck-typed
+    fallback = ``.stages``. Epoch-boundary ``Stage`` primitives (they carry
+    ``start_epoch_flag``) become ``{name, start}`` entries — a boundary with
+    ``start >= epochs`` is omitted, matching the flag-derived path's disabled
+    semantics. EVERY other declared primitive — temp anneal, hosc schedule,
+    transition, regularizers, and ANY unknown future kind — becomes a
+    ``mode="declared"`` entry carrying its describe data (never dropped)."""
+    import dataclasses
+
+    entries: list[dict] = []
+
+    def _one(obj) -> None:
+        if obj is None or isinstance(obj, (str, int, float, bool)):
+            return  # scalar config fields (handoff enum, tau float) are not elements
+        e = display_entry(obj)
+        name = getattr(obj, "name", None)
+        if name is not None and hasattr(obj, "start_epoch_flag"):
+            start = getattr(obj, "start_epoch", None)
+            e.setdefault("name", str(name))
+            e["start"] = 0 if start is None else int(start)
+            e.setdefault("mode", "fixed")
+            e.setdefault("status", "scheduled")
+            if epochs is not None and e["start"] >= int(epochs):
+                return  # disabled boundary ("never" form) — intentional omission
+        else:
+            e.setdefault("name", str(name) if name is not None else e["kind"])
+            e.setdefault("start", None)
+            e.setdefault("mode", "declared")
+            e.setdefault("status", "declared")
+        entries.append(e)
+
+    if hasattr(type(curriculum), "__dataclass_fields__"):
+        for f in dataclasses.fields(curriculum):
+            v = getattr(curriculum, f.name, None)
+            if isinstance(v, (tuple, list)):
+                for item in v:
+                    _one(item)
+            else:
+                _one(v)
+    else:
+        for item in getattr(curriculum, "stages", ()) or ():
+            _one(item)
+    return entries
+
+
+# ---------------------------------------------------------------------------
 # trigger description — read from the DSL Curriculum object, never hand-prose
 # ---------------------------------------------------------------------------
 def event_trigger_description(nucleus_guard: bool = True) -> str:
     """The event hand-off condition description, DERIVED from the DSL
-    :class:`~tac.witness_dsl.curriculum_dsl.Curriculum` object: instantiate
-    ``Curriculum(handoff="event")`` and read the hand-off flags it EMITS (the #334
-    single emitter), so the description tracks the DSL — not a hand-typed copy."""
+    :class:`~tac.witness_dsl.curriculum_dsl.Curriculum` object: prefer its
+    uniform describe surface when it declares one (soft-detected; the sibling
+    uniform-display landing), else read the hand-off flags it EMITS (the #334
+    single emitter) — either way the description tracks the DSL, never a
+    hand-typed copy."""
     cur = Curriculum(stages=(Stage("CE", None),), temp=Anneal(1.0, 0.05), handoff="event")
+    d = describe_primitive(cur)
+    if d is not None:
+        # only EXPLICIT description fields qualify (the uniform surface's generic
+        # field dump — e.g. handoff='event' — is data, not a trigger description).
+        for key in ("trigger", "trigger_description", "handoff_description"):
+            v = d.get(key)
+            if isinstance(v, str) and v:
+                return v
     evt_flags = sorted(k for k in cur.flags() if k.startswith("--curriculum-"))
     if not nucleus_guard:
         evt_flags = [f for f in evt_flags if "nucleus" not in f]

@@ -240,3 +240,80 @@ def test_as_schedule_dict_feeds_stage_at_epoch_consistently(tmp_path):
     assert dtm.stage_at_epoch(500, sd) == "tau"    # never "l7": l7_start is None
     assert dtm.stage_at_epoch(800, sd) == "Muon"
     assert all(dtm.stage_at_epoch(ep, sd) != "l7" for ep in range(0, 1000, 25))
+
+
+# ── GENERIC-over-the-DSL rendering (operator amendment 2026-07-07) ───────────────
+def test_generic_stage_map_renders_unknown_kind_primitive():
+    """A synthetic schedule containing an UNKNOWN-kind primitive with a describe
+    surface still renders — as generic data, never silently omitted (the
+    zero-dashboard-code-change contract for future DSL primitives)."""
+    import dataclasses
+
+    from tac.witness_dsl.curriculum_dsl import Stage
+    from tac.witness_dsl.schedule_readback import stage_map_from_curriculum
+
+    class LevelPathCadence:  # a FUTURE DSL kind this module has never heard of
+        def describe(self):
+            return {"name": "level-path", "cadence": "every 50 ep",
+                    "text": "L0->L7 ladder"}
+
+    @dataclasses.dataclass(frozen=True)
+    class FutureCurriculum:  # a Curriculum that grew a new field
+        stages: tuple
+        level_path: object = None
+
+    cur = FutureCurriculum(
+        stages=(Stage("CE", None),
+                Stage("tau", "--tau-softplus-start-epoch", 300),
+                Stage("l7", "--l7-start-epoch", 1001)),
+        level_path=LevelPathCadence())
+    entries = stage_map_from_curriculum(cur, epochs=1000)
+    kinds = {e["kind"] for e in entries}
+    assert "LevelPathCadence" in kinds            # unknown kind NOT dropped
+    lp = next(e for e in entries if e["kind"] == "LevelPathCadence")
+    assert lp["mode"] == "declared" and lp["status"] == "declared"
+    assert lp["cadence"] == "every 50 ep"         # its describe() data rendered
+    assert lp["name"] == "level-path"
+    tau = next(e for e in entries if e.get("name") == "tau")
+    assert tau["start"] == 300 and tau["mode"] == "fixed"
+    assert not any(e.get("name") == "l7" for e in entries)  # disabled boundary omitted
+
+
+def test_generic_stage_map_enumerates_real_curriculum_declared_primitives():
+    from tac.witness_dsl.curriculum_dsl import (
+        Anneal, Curriculum, HoscSchedule, Regularizer, Stage, Transition,
+    )
+    from tac.witness_dsl.schedule_readback import stage_map_from_curriculum
+
+    cur = Curriculum(
+        stages=(Stage("CE", None), Stage("tau", "--tau-softplus-start-epoch", 300)),
+        temp=Anneal(1.0, 0.05),
+        regularizers=(Regularizer("--length-weight", 0.001),),
+        hosc=HoscSchedule(),
+        transition=Transition())
+    entries = stage_map_from_curriculum(cur, epochs=1000)
+    kinds = [e["kind"] for e in entries]
+    # every declared non-scalar primitive is enumerated (no silent omission)
+    for k in ("Stage", "Anneal", "Regularizer", "HoscSchedule", "Transition"):
+        assert k in kinds, f"declared {k} missing from generic enumeration"
+    assert all(e.get("mode") == "declared"
+               for e in entries if e["kind"] not in ("Stage",))
+
+
+def test_describe_surface_prefers_to_display_dict_then_describe():
+    from tac.witness_dsl.schedule_readback import describe_primitive, display_entry
+
+    class Both:
+        def describe(self):
+            return {"text": "from describe"}
+
+        def to_display_dict(self):
+            return {"text": "from display dict"}
+
+    class Neither:
+        name = "plain"
+
+    assert describe_primitive(Both())["text"] == "from display dict"
+    assert describe_primitive(Neither()) is None
+    e = display_entry(Neither())                  # generic fallback, never None
+    assert e["kind"] == "Neither" and e["text"] == "plain"
