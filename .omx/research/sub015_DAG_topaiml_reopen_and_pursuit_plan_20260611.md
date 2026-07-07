@@ -9029,3 +9029,18 @@ sandboxed_bash_kills_detached_daemons_launch_unsandboxed_20260707 + MEMORY.md li
 in the same recovery: #314 autoconfig pose-carrier-source drift FIX (b1dc20a24, regression pin +
 delta-key class guard). Measured rows (#307 contour B/flip vs 0.65 bar · #336 bit-alloc
 advisory) land in FEED-07i on harvest. Pointer 0.19110 UNMOVED (apparatus/measurement-in-flight).
+
+## FEED-07j (2026-07-07) — round-2 fix batch trajectory note (ac157eda9) + the F1 parity MEASUREMENT
+
+MEASURED finding worth the row: **the #336 bitalloc tool's re-typed blob grammar is byte-IDENTICAL
+to the canonical #202 build_levelset_blob** on the real mod32cap ep425 snapshot — base int8 concat
+72,695 B sha-equal, code 38,400 B sha-equal, brotli-11 streams byte-equal (61,953/21,145 B),
+tensor order identical. Certifies the tool's byte authority (its numbers are the real archive
+grammar's numbers, advisory/n96 axis) — pinned by test_bitalloc_witness_blob_parity.py so drift
+fails loudly. Rest of ac157eda9 = review-hardening apparatus: both harvest gates strict-flipped
+(atomicity honored, 0 findings at flip), F4 telemetry now reads the SAME adjusted adapter as the
+loss (misattribution seam closed), F6 hook loud-escalation (fail-open preserved), F7 fail-closed
+durable skeleton for the bitalloc evidence. Round-3 fresh-context review of this commit in flight
+(fixes are unreviewed new code; wave-seal counter at 0 until it passes). Measurement supervisor
+g5 (durable daemon, caps sized to measured need, stderr captured) grinding toward the #307/#336
+rows for FEED-07i. Pointer 0.19110 UNMOVED (apparatus/measurement-in-flight).
