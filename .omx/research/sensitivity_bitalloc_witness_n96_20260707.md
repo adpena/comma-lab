@@ -78,3 +78,13 @@ regardless of rss caps 10/12/16/20 GiB. Instrumented RSS across ~2,000 renders: 
 (peak 3.9 GiB during the lane-band fit)** — the tools have NO memory spike; the kills correlate
 with the agent-harness long-call sweep, not with tool memory. Chunked-foreground + per-unit state
 is the robust drive mode; the durable note lives in `tools/spawn_durable_daemon.py`'s docstring.
+
+## Checkpoint custody addendum (2026-07-07, clean-pass-#2 F1 remediation — APPEND-ONLY)
+
+The evidence JSON's `ckpt.dir` cites a session-scratchpad path (transient). The exact ep425
+EMA-BEST snapshot the measurement ran against (sha256
+`9f123bac950af1ec8eecc938c042f6d0e0662d0a427a16d5ba147e3f1fc62d93`) has been copied into this
+memo's durable results directory as `snapshot_ema_BEST.npz` alongside a `CHECKPOINT_CUSTODY.md`
+note (sha verified equal post-copy). The sha-pinned evidence JSON is untouched; bit-exact
+re-runnability is restored independent of scratchpad GC. Source run:
+levelset_n600_witness_mod32cap_20260706T115554Z (snapshot 2026-07-07T02:37Z).
