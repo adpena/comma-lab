@@ -120,7 +120,6 @@ from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402  (#224 W
     LaneBandRenderConfig,
     build_lane_band_pairs_from_lstars,
     composite_band_on_render,
-    deserialize_lane_band,
     deserialize_lane_band_any,  # Wave-F: LBND1/LBND2 magic dispatch
     lane_band_rd_rate_report,   # Wave-F: measured per-lever byte accounting
     rasterize_lane_coverage_range_dependent,
@@ -130,6 +129,7 @@ from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402  (#224 W
     serialize_lane_band_rd,     # Wave-F: LBND2 optimal RD serializer
     witness_uncertainty_mask,
 )
+from tac import contest_score as _cscore  # noqa: E402  (canonical S = 100*d_seg + sqrt(10*d_pose) + 25*rate helpers)
 from tac.local_acceleration import torch_levelset_inflate as _tli  # noqa: E402  (canonical FREE-table regen)
 from tac.boundary_math import warp_real_luma_frame0 as _wrl  # noqa: E402  (#205 pose carrier: warp-real-luma frame0)
 from tac.boundary_math import xi_pose_coder as _xip  # noqa: E402  (#257 store-nothing derive-H + ξ entropy coder)
@@ -148,18 +148,65 @@ _PCAR_MAGIC = b"PCAR1\x00"  # #205 pose carrier: warp-real-luma frame0 (stored k
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
 
-def _advisory_axis_label() -> str:
-    """Device-truthful advisory authority. macOS CPU-torch is NOT 1:1 with the contest Linux
-    x86_64 CPU runner -> [macOS-CPU advisory]; only a real Linux x86_64 host earns [contest-CPU
-    advisory]. Always NON-PROMOTABLE here (no MPS/CUDA/paid axis)."""
+def _is_linux_x86_64() -> bool:
+    """True iff the host is the contest 1:1 CPU/CUDA substrate family (Linux x86_64)."""
     import platform
 
-    if platform.system() == "Linux" and platform.machine().lower() in ("x86_64", "amd64"):
+    return platform.system() == "Linux" and platform.machine().lower() in ("x86_64", "amd64")
+
+
+def _advisory_axis_label() -> str:
+    """Host-truthful advisory authority for the LOCAL (non-exact, genuinely-CPU) print paths.
+    macOS CPU-torch is NOT 1:1 with the contest Linux x86_64 CPU runner -> [macOS-CPU advisory];
+    a Linux non-x86_64 host (e.g. aarch64) is NOT macOS and NOT contest-1:1 -> its own label
+    (2026-07-06 pointer-authority review LOW: never call a Linux ARM box "macOS"); only a real
+    Linux x86_64 host earns [contest-CPU advisory]. Always NON-PROMOTABLE here (no MPS/CUDA/paid
+    axis on these paths)."""
+    import platform
+
+    if _is_linux_x86_64():
         return "[contest-CPU advisory] NON-PROMOTABLE"
-    return "[macOS-CPU advisory] NON-PROMOTABLE"
+    if platform.system() == "Linux":
+        return "[Linux-non-x86_64-CPU advisory] NON-PROMOTABLE"
+    if platform.system() == "Darwin":
+        return "[macOS-CPU advisory] NON-PROMOTABLE"
+    return "[non-contest-CPU advisory] NON-PROMOTABLE"
 
 
 _AUTHORITY = _advisory_axis_label()
+
+
+def _axis_and_authority(device: str) -> tuple[str, str]:
+    """(score_axis, authority) for an EXACT upstream/evaluate.py row, computed from the ACTUAL
+    ``--device`` passed to evaluate.py FIRST, then the host platform.
+
+    CPU and CUDA are SEPARATE evidence spaces, never inferred from each other (CLAUDE.md
+    "Apples-to-apples evidence discipline"). The pre-fix code derived the axis purely from the
+    host platform (``_AUTHORITY``), so a real ``--eval-device cuda`` run on Linux x86_64 (the
+    documented decode_t4_16gb tier) persisted score_axis "[contest-CPU]" — a mislabeled-axis
+    provenance corruption (2026-07-06 pointer-authority review CRITICAL).
+
+    Mapping (axis labels are load-bearing provenance):
+      cuda + Linux x86_64  -> ("[contest-CUDA]", "[contest-CUDA]")
+      cuda + other host    -> ("[non-contest-CUDA advisory] NON-PROMOTABLE", same)
+      cpu  + Linux x86_64  -> ("[contest-CPU]", "[contest-CPU advisory] NON-PROMOTABLE")
+      cpu  + Darwin        -> ("[macOS-CPU advisory] NON-PROMOTABLE", same)
+      cpu  + Linux other   -> ("[Linux-non-x86_64-CPU advisory] NON-PROMOTABLE", same)
+    MPS is refused upstream of this function (never a score authority)."""
+    dev = str(device).strip().lower()
+    if dev == "mps":
+        raise ValueError("MPS is NEVER a score authority (CLAUDE.md).")
+    if dev.startswith("cuda"):
+        if _is_linux_x86_64():
+            return "[contest-CUDA]", "[contest-CUDA]"
+        label = "[non-contest-CUDA advisory] NON-PROMOTABLE"
+        return label, label
+    if dev == "cpu":
+        label = _advisory_axis_label()
+        if _is_linux_x86_64():
+            return "[contest-CPU]", label
+        return label, label
+    raise ValueError(f"_axis_and_authority: unknown device {device!r} (expected cpu/cuda).")
 
 
 def _refuse_tmp(path: Path, field: str) -> None:
@@ -2026,6 +2073,18 @@ def _parse_evaluate_report(text: str) -> dict[str, Any]:
     return out
 
 
+def _require_full_600_samples(n_samples: Any, report_path: Path) -> None:
+    """n600 or it is NOT evidence (CLAUDE.md): an exact row with a partial sample count must fail
+    CLOSED, never land silently. A report format that omits the "Evaluation results over N samples"
+    line parses ``n_samples=None`` and proceeds (documented; None is absence-of-field, not a
+    partial-sample claim)."""
+    if n_samples is not None and int(n_samples) != 600:
+        raise RuntimeError(
+            f"run_upstream_evaluate: evaluate.py report says n_samples={int(n_samples)} != 600 -- "
+            "refusing to record a partial-sample count as an exact row (NO-FAKE / n600-or-not-"
+            f"evidence). Report: {report_path}")
+
+
 def run_upstream_evaluate(
     packet_dir: Path, *, device: str, uncompressed_dir: Path, video_names_file: Path,
     archive_bytes: int, timeout: int,
@@ -2037,6 +2096,10 @@ def run_upstream_evaluate(
     if device == "mps":
         raise ValueError("MPS is NEVER a score authority (CLAUDE.md). Use --eval-device cpu (or cuda).")
     from tac.contest_score import compute_contest_score
+
+    # Axis + authority from the ACTUAL device FIRST (CPU/CUDA = separate evidence spaces;
+    # the host-platform-only _AUTHORITY mislabeled real CUDA rows as [contest-CPU]).
+    axis, authority = _axis_and_authority(device)
 
     submission_dir = packet_dir  # has archive.zip AND inflated/0.raw (== upstream/evaluate.py layout)
     inflated = submission_dir / "inflated"
@@ -2071,7 +2134,7 @@ def run_upstream_evaluate(
     if device == "cpu":
         env["CUDA_VISIBLE_DEVICES"] = ""  # force CPU (defensive: never let it pick an MPS/CUDA path)
     print(f"[exact-eval] running upstream/evaluate.py --device {device} on {submission_dir.name} "
-          f"(this is the REAL contest scorer; CPU 600-pair ~1-2h)  {_AUTHORITY}", flush=True)
+          f"(this is the REAL contest scorer; CPU 600-pair ~1-2h)  {authority}", flush=True)
     proc = subprocess.run(cmd, cwd=up, env=env, capture_output=True, text=True, timeout=timeout)
     combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
     if proc.returncode != 0:
@@ -2079,10 +2142,11 @@ def run_upstream_evaluate(
 
     src_text = report_path.read_text() if report_path.exists() else combined
     parsed = _parse_evaluate_report(src_text)
+    n_samples = parsed.get("n_samples")
+    _require_full_600_samples(n_samples, report_path)
     d_seg = float(parsed["d_seg"])
     d_pose = float(parsed["d_pose"])
     recomputed_S = compute_contest_score(d_seg, d_pose, archive_bytes)
-    axis = "[contest-CPU]" if (_AUTHORITY.startswith("[contest-CPU")) else "[macOS-CPU advisory]"
     return {
         "ran": True,
         "device": device,
@@ -2090,13 +2154,13 @@ def run_upstream_evaluate(
         "d_seg": d_seg,
         "d_pose": d_pose,
         "rate_from_evaluate": float(parsed["rate"]),
-        "n_samples": parsed.get("n_samples"),
+        "n_samples": n_samples,
         "recomputed_S_compute_contest_score": recomputed_S,
         "recomputed_vs_evaluate_delta": abs(recomputed_S - float(parsed["final_score"])),
         "archive_bytes_scored": int(archive_bytes),
         "report_path": str(report_path),
         "score_axis": axis,
-        "authority": _AUTHORITY,
+        "authority": authority,
         "promotion_claim": False,
     }
 
@@ -2298,7 +2362,7 @@ def run(
     _refuse_tmp(packet_dir, "packet_dir")
     zip_path, zip_bytes = assemble_packet(blob, packet_dir)
     rate = zip_bytes / RATE_DENOM
-    rate_term = 25.0 * rate
+    rate_term = _cscore.rate_term(zip_bytes)  # canonical 25 * bytes / 37_545_489 (tac.contest_score)
 
     print(f"[ckpt] {ckpt_dir}/{cfg['npz_name']}  n_pairs={n_pairs}  params={breakdown['n_params']}  "
           f"self_orient={so['self_orient']}  {_AUTHORITY}", flush=True)
@@ -2319,9 +2383,11 @@ def run(
         parity = parity_on_inflated(Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, n_pairs)
         d_seg = parity["d_seg_realized_on_inflated"]
         d_pose = parity["d_pose_realized_on_inflated"]
-        seg_term = 100.0 * d_seg
-        pose_term = (10.0 * d_pose + 1e-12) ** 0.5
-        score = seg_term + pose_term + rate_term
+        # canonical tac.contest_score helpers (no hand-rolled formula; the old path carried a
+        # +1e-12 epsilon inside sqrt that the canonical pose_term does not -- authority wins).
+        seg_term = _cscore.seg_term(d_seg)
+        pose_term = _cscore.pose_term(d_pose)
+        score = _cscore.compute_contest_score(d_seg, d_pose, zip_bytes)
         parity.update({"seg_term": seg_term, "pose_term": pose_term, "rate_term": rate_term,
                        "implied_S_advisory": score})
         pose_blind = d_pose > 1.0
@@ -2432,18 +2498,35 @@ def run(
             "implied_S used dir feats accumulated along the training trajectory -> close but not "
             "bit-identical; realized d_seg on the inflated frames is the TRUTH."
             if so["self_orient"] else "n/a (no self-orient)"),
-        "contest_ready_full_600": bool(n_pairs == 600),
+        # checkpoint_trained_n600 = the CHECKPOINT encodes all 600 pair codes (a property of the
+        # ckpt, NOT of this invocation). this_run_scored_full_600 = THIS run's realized parity
+        # actually scored 600 pairs (False when --skip-parity or --max-pairs capped the decode).
+        # The old single field "contest_ready_full_600" conflated the two (2026-07-06 review MED).
+        "checkpoint_trained_n600": bool(n_pairs == 600),
+        "this_run_scored_full_600": _this_run_scored_full_600(parity),
         "contest_ready_note": (
-            "n_pairs==600 -> full 1200-frame .raw, contest-ready"
+            (
+                "checkpoint n_pairs==600 -> full 1200-frame .raw is producible (checkpoint-level); "
+                "this_run_scored_full_600 says whether THIS invocation's parity scored all 600 "
+                "pairs (skip-parity/max-pairs runs did NOT)"
+            )
             if n_pairs == 600 else
-            f"n_pairs={n_pairs} != 600 -> inflate emits {2 * n_pairs} frames; a 600-pair witness is "
-            "required for the 1200-frame contest .raw (this checkpoint is test-only)"),
+            f"checkpoint n_pairs={n_pairs} != 600 -> inflate emits {2 * n_pairs} frames; a 600-pair "
+            "witness is required for the 1200-frame contest .raw (this checkpoint is test-only)"),
     }
     if not keep_packet:
         import shutil
         shutil.rmtree(packet_dir, ignore_errors=True)  # disk-hygiene: the .raw is GBs (certify: rebuildable from archive.zip + inflate.py)
         report["packet_dir"] = "(deleted; pass --keep-packet to retain archive+inflate for the exact-eval row)"
     return report
+
+
+def _this_run_scored_full_600(parity: Any) -> bool:
+    """True iff THIS invocation's realized parity scored all 600 pairs. Fail-safe False when
+    parity is absent / non-dict / skipped / capped (--skip-parity and --max-pairs runs are NOT
+    full-600 rows). Distinct from ``checkpoint_trained_n600`` which is a property of the
+    CHECKPOINT (n_pairs it encodes), not of what this invocation scored (2026-07-06 review MED)."""
+    return bool(isinstance(parity, dict) and parity.get("pairs_scored") == 600)
 
 
 def byte_close_verdict_landed(report: dict) -> bool:
