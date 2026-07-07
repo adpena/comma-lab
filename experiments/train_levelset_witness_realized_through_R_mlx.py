@@ -1189,7 +1189,8 @@ def build_levelset_rgb_witness(
 # the driver — the realized seg loss drives d_seg).
 # ---------------------------------------------------------------------------
 def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1.0,
-                        junction_relax: float = 0.0, junction_tau: float = 0.5):
+                        junction_relax: float = 0.0, junction_tau: float = 0.5,
+                        sigma_matrix=None):
     """(fix h) Eikonal + Chan-Vese length on the DECISION MARGIN m = phi_top1 - phi_top2 (the
     quantity the argmax boundary lives on), NOT each field's own zero-set. Eikonal drives
     |grad m|->1 (the 1-Lipschitz margin = the R-survival quantity); the length term
@@ -1202,7 +1203,19 @@ def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1
     sort(phi)[-2]-sort(phi)[-3] (small => near a 3-way meet; needs >=3 classes). The per-pixel weight
     w = 1 - junction_relax*exp(-g3/junction_tau) in [1-relax, 1] multiplies the SQUARED Eikonal residual
     BEFORE the mean. junction_relax=0 => w==1.0 exactly => mean is BIT-IDENTICAL (x*1.0==x for finite
-    IEEE floats). The LENGTH term is unchanged (delta_eps already localizes it to the {m=0} boundary)."""
+    IEEE floats). The LENGTH term is unchanged (delta_eps already localizes it to the {m=0} boundary).
+
+    (--length-sigma-matrix, junction_young_angle_sigma_fit_v1 consumption path 2026-07-07)
+    ``sigma_matrix`` (default None = OFF = BYTE-IDENTICAL BY CODE PATH) weights the length integrand
+    per class-PAIR: at each pixel the interface present at {m=0} is exactly the (argmax-top1,
+    argmax-top2) pair, so the pairwise surface tension gathers as sigma[top1, top2] — a FAITHFUL
+    per-interface decomposition (no per-class projection needed; the margin field IS per-interface).
+    The gather is a theta-piecewise-constant discrete weight (argsort indices carry no gradient) =
+    a data-dependent constant multiplier, same class as the spike-reweight lever. MEASURED fit
+    (n600 GT argmax, Young's law): sigma[Road-Lane]=0.377 — the uniform weight over-penalizes lane
+    boundary length ~2.7x (a named lane-erasure mechanism). Resolution/validation:
+    tac.boundary_math.length_sigma. The EIKONAL term is unchanged (the SDF property is per-field
+    geometry, not per-interface tension)."""
     import mlx.core as mx
 
     phi = mx.reshape(phi_pk, (render_h, render_w, -1))
@@ -1222,7 +1235,21 @@ def _eikonal_length_mlx(phi_pk, render_h: int, render_w: int, len_eps: float = 1
         eik = mx.mean(eik_resid)  # DEFAULT: BIT-IDENTICAL to the pre-theta* `mx.mean((gmag-1.0)**2)`.
     mc = m[:-1, :-1]
     delta = (len_eps / np.pi) / (len_eps * len_eps + mc * mc)  # delta_eps at the {m=0} boundary
-    length = mx.mean(delta * gmag)
+    if sigma_matrix is not None:
+        # (--length-sigma-matrix) per-pixel class-PAIR tension sigma[top1, top2] on the same
+        # (H-1,W-1) grid as gmag. argsort gives distinct top1/top2 positions always (a permutation),
+        # so the diagonal is never gathered; the matrix is symmetric so pair order is free.
+        k = phi.shape[-1]
+        if sigma_matrix.shape != (k, k):
+            raise ValueError(
+                f"--length-sigma-matrix shape {tuple(sigma_matrix.shape)} != (K,K)=({k},{k})")
+        idx = mx.argsort(phi, axis=-1)
+        i1 = idx[..., -1][:-1, :-1]
+        i2 = idx[..., -2][:-1, :-1]
+        sig_px = mx.take(mx.reshape(sigma_matrix, (-1,)), i1 * k + i2)
+        length = mx.mean(sig_px * (delta * gmag))
+    else:
+        length = mx.mean(delta * gmag)  # DEFAULT: byte-identical pre-lever branch.
     return eik, length, mx.mean(gx * gx) + mx.mean(gy * gy)
 
 
@@ -3581,6 +3608,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (DEFAULT) => _eikonal_length_mlx takes its BIT-IDENTICAL branch (w==1.0) => unchanged.
     eik_jrelax = float(getattr(args, "eikonal_junction_relax", 0.0))
     eik_jtau = float(getattr(args, "eikonal_junction_tau", 0.5))
+    # (--length-sigma-matrix, sigma_ij lever 2026-07-07) per-class-pair length-weight closure
+    # constant. "all-ones" (DEFAULT) resolves to None => _eikonal_length_mlx takes its pre-existing
+    # unweighted branch => BYTE-IDENTICAL BY CODE PATH. Resolution+validation are canonical in
+    # tac.boundary_math.length_sigma (fitted-20260707 preset = junction_young_angle_sigma_fit_v1).
+    from tac.boundary_math.length_sigma import resolve_length_sigma_matrix as _resolve_len_sigma
+
+    _len_sigma_np = _resolve_len_sigma(getattr(args, "length_sigma_matrix", "all-ones"))
+    _len_sigma = mx.array(_len_sigma_np.astype(np.float32)) if _len_sigma_np is not None else None
     # (EIK-STAB build 1) eikonal-stabilizer closure CELL (mutable dict, read LIVE inside
     # total_loss_fn each value_and_grad call — the same pattern as the lever gate dicts; the epoch
     # loop mutates "visco_eps" per the vanishing-viscosity anneal). BOTH default 0.0 => both
@@ -3833,8 +3868,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form, seg_pixel_w=_seg_px_w, terms_out=terms_out)
         phi0 = model.sdf(cf, c0)
         # (THETA* TIER-2 STRETCH-1) junction relax threaded; eik_jrelax=0.0 (default) => BIT-IDENTICAL.
+        # (--length-sigma-matrix) sigma threaded; _len_sigma None (default) => BYTE-IDENTICAL path.
         eik, length, _ = _eikonal_length_mlx(phi0, render_h, render_w,
-                                             junction_relax=eik_jrelax, junction_tau=eik_jtau)
+                                             junction_relax=eik_jrelax, junction_tau=eik_jtau,
+                                             sigma_matrix=_len_sigma)
         # (EIK-STAB build 1b) ViscoReg vanishing-viscosity residual REPLACES the eikonal residual
         # while eps > 0 (same constraint, viscous form — the stable object; adding both would
         # double-count). eps==0.0 (default, or the anneal's end) => branch skipped => the legacy
@@ -4203,12 +4240,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         batched_realized_loss as _micro_batched_realized_loss,
     )
 
+    # (--length-sigma-matrix) the micro-batch twin calls lc.eikonal_length(phi, rh, rw,
+    # junction_relax=..., junction_tau=...) — thread sigma through a keyword-binding wrapper so
+    # BOTH paths (serial total_loss_fn + batched twin) weight the length term identically.
+    # _len_sigma None (default) => the wrapper is argument-for-argument the bare function.
+    def _eikonal_length_with_sigma(phi_pk, rh, rw, **kw):
+        return _eikonal_length_mlx(phi_pk, rh, rw, sigma_matrix=_len_sigma, **kw)
+
     _micro_batch_lc = _MicroBatchLeverConfig(
         seg_loss_default=args.seg_loss, tau_use=float(args.tau_softplus_tau),
         l7_thr_use=float(args.l7_threshold), l7_mult=float(args.l7_mult),
         score_domain=bool(args.score_domain_loss), pose_eps=float(args.pose_eps),
         eik_jrelax=eik_jrelax, eik_jtau=eik_jtau,
-        eikonal_length=_eikonal_length_mlx, nuclear_norm_smooth=_nuclear_norm_smooth_mlx,
+        eikonal_length=_eikonal_length_with_sigma, nuclear_norm_smooth=_nuclear_norm_smooth_mlx,
         lane_w=lane_w, lane_gate=lane_gate, lane_cls=lane_cls, lane_tgt=lane_tgt,
         msal_w=msal_w, msal_gate=msal_gate, msal_tau=msal_tau, msal_tgt=msal_tgt,
         msal_uni=msal_uni, msal_uni_beta=msal_uni_beta,
@@ -5561,13 +5605,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     try:
         _rp0 = int(vpairs[0]) if len(vpairs) else 0
         _phi0_lm = model.sdf(_cf_mx(_rp0), 2 * _rp0 + 0)
-        _eik_raw, _len_raw, _ = _eikonal_length_mlx(_phi0_lm, render_h, render_w)
+        # (--length-sigma-matrix) sigma threaded so the logged length magnitude is the ACTUAL
+        # trained term (sigma-weighted when the lever is on); None (default) => unchanged.
+        _eik_raw, _len_raw, _ = _eikonal_length_mlx(_phi0_lm, render_h, render_w,
+                                                    sigma_matrix=_len_sigma)
         mx.eval(_eik_raw, _len_raw)
         _reg_mags: dict[str, object] = {
             "eikonal_legacy_raw": round(float(_eik_raw), 6),
             "length_raw": round(float(_len_raw), 8),
             "eikonal_weight": float(getattr(args, "eikonal_weight", 0.0)),
-            "length_weight": float(getattr(args, "length_weight", 0.0))}
+            "length_weight": float(getattr(args, "length_weight", 0.0)),
+            "length_sigma_matrix": str(getattr(args, "length_sigma_matrix", "all-ones"))}
         if _eik_stab["visco_eps0"] > 0.0:
             _ve0 = _eik_stab["visco_eps"] if _eik_stab["visco_eps"] > 0.0 else _eik_stab["visco_eps0"]
             _gx, _gy, _mxx, _myy, _ = _eikonal_margin_interior_mlx(_phi0_lm, render_h, render_w)
@@ -7136,6 +7184,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                            if getattr(args, "ema_decay_finisher_start_epoch", None) is not None else None),
         "eikonal_junction_relax": float(getattr(args, "eikonal_junction_relax", 0.0)),
         "eikonal_junction_tau": float(getattr(args, "eikonal_junction_tau", 0.5)),
+        # (sigma_ij lever) default "all-ones" = the byte-identical uniform-length path, RECORDED
+        # (defaults are derived + recorded, never silent).
+        "length_sigma_matrix": str(getattr(args, "length_sigma_matrix", "all-ones")),
         # LEVER-A / LEVER-B provenance (deterministic-reproducibility; all default-OFF => the
         # bit-identical path is recorded as off).
         "film_per_layer": bool(getattr(args, "film_per_layer", False)),
@@ -7970,6 +8021,17 @@ def main(argv: list[str] | None = None) -> int:
                     "Fresh run: base 0.05 -> end 0.10 (the MEASURED survival knee; holds the thin lane "
                     "at sigma0.8/93%% vs sigma1.5/49%% as MCF narrows the interface).")
     ap.add_argument("--length-weight", type=float, default=0.001, help="Chan-Vese boundary-length (short smooth boundaries).")
+    # (sigma_ij lever 2026-07-07) per-class-PAIR length weighting — the consumption path for the
+    # MEASURED Young's-law junction fit (junction_young_angle_sigma_fit_v1; fit JSON
+    # experiments/results/solver_pack_20260707/junction_sigma/junction_sigma_fit.json, commit
+    # 3571e5b65). Default "all-ones" == the uniform weight == BYTE-IDENTICAL code path.
+    ap.add_argument("--length-sigma-matrix", type=str, default="all-ones",
+                    help="Per-class-pair surface-tension weighting of the Chan-Vese length term: "
+                    "'all-ones' (default, byte-identical uniform), 'fitted-20260707' (the MEASURED "
+                    "Young's-law fit: sigma[Road-Lane]=0.377 — the uniform weight over-penalizes "
+                    "lane boundary ~2.7x), or a path to a 5x5 JSON (raw list or the fit tool's "
+                    "JSON; NaN pairs filled with 1.0). Canonical class order "
+                    "Road0/Lane1/Undrivable2/Movable3/MyCar4. Validated fail-closed at startup.")
     # (THETA* TIER-2 MUST-2) nuclear-norm low-rank code penalty (additive; default 0.0 == OFF ==
     # bit-identical loss). Drives the per-pair FiLM codes toward a low-rank subspace (rate). Computed
     # as a DIFFERENTIABLE smoothed nuclear norm via Newton-Schulz matrix-sqrt trace (MLX has no svd/
@@ -8569,6 +8631,14 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError(
             f"--eikonal-junction-tau ({args.eikonal_junction_tau}) must be > 0 (the top2-top3 SDF-gap "
             "scale in exp(-g3/tau)).")
+
+    # (--length-sigma-matrix) fail-closed at startup: resolve the spec NOW so a malformed preset
+    # name / missing file / non-symmetric / non-positive matrix refuses BEFORE any heavy setup
+    # (the training closure re-resolves the same validated spec). Canonical resolver:
+    # tac.boundary_math.length_sigma.
+    from tac.boundary_math.length_sigma import resolve_length_sigma_matrix as _rls_check
+
+    _rls_check(getattr(args, "length_sigma_matrix", "all-ones"))
 
     # (EIK-STAB build 1/2/4) fail-closed config guards (silent-no-op / silent-drop NO-FAKE class).
     if float(args.eikonal_steik_weight) < 0.0:

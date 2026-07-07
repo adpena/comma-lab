@@ -609,7 +609,7 @@ class Priming(ScheduleDisplay):
 
 
 _EXIT_EVENT_CRITERIA = ("plateau", "nucleus_guarded_plateau",
-                     "marginal_dseg_floor", "lever_exhaustion")
+                     "marginal_dseg_floor", "lever_exhaustion", "powerlaw_meat")
 
 
 @dataclass(frozen=True)
@@ -2211,6 +2211,49 @@ def MuonWarmStart(lr_final_frac: float = 0.1, window: int = 0) -> Lever:  # noqa
         epochs_delta=window,
         notes=("#270/#272 Muon warm-start momentum + lr-final-frac anneal (measured +8% "
                "cold-Muon transient; fires at the l7->Muon switch)"),
+    )
+
+
+def LengthSigma(spec: str = "fitted-20260707", window: int = 0) -> Lever:  # noqa: N802 — sigma_ij
+    """Per-class-PAIR sigma_ij weighting of the Chan-Vese length term — the consumption path for
+    the MEASURED Young's-law junction fit (``junction_young_angle_sigma_fit_v1``; fit JSON
+    ``experiments/results/solver_pack_20260707/junction_sigma/junction_sigma_fit.json``, commit
+    3571e5b65). The trainer default ``--length-sigma-matrix all-ones`` is the uniform weight =
+    the BYTE-IDENTICAL control (default-off); this lever's ``fitted-20260707`` preset is the
+    TREATMENT: sigma[Road-Lane]=0.377 [0.317, 0.441] — the uniform length weight over-penalizes
+    lane boundary length ~2.7x vs the frozen scorer's own junction geometry (a named lane-erasure
+    mechanism; the sigma_ij IS the Imbert-Monneau flux-limiter DOF, hunt §7).
+
+    WINDOW/STAGE SEMANTICS: the sigma weighting is a reparametrization of the length regularizer
+    itself — active whenever the length term is (every epoch at constant ``--length-weight``;
+    there is no start-epoch gate), across ALL curriculum stages. ``window=0`` (default) = a
+    loss-geometry config change with no epoch budget of its own (same convention as
+    :func:`MuonWarmStart`). ``spec`` may be ``"fitted-20260707"`` or a path to a 5x5 JSON (raw
+    list or the fit tool's own JSON; NaN unobserved pairs filled with 1.0); it is VALIDATED here
+    fail-closed (non-symmetric / wrong shape / non-positive off-diagonal refused) via the
+    canonical resolver ``tac.boundary_math.length_sigma``. ``"all-ones"`` is REFUSED: emitting
+    the trainer default is a silent no-op lever — the control arm is the lever's ABSENCE.
+    A/B (sigma-weighted vs uniform, n600 through R, junction-local d_seg attribution) = the
+    registered OWED anchor / duty-to-measure."""
+    from tac.boundary_math.length_sigma import PRESET_ALL_ONES, resolve_length_sigma_matrix
+
+    s = str(spec).strip()
+    if s == PRESET_ALL_ONES:
+        raise ValueError(
+            "LengthSigma: 'all-ones' is the trainer DEFAULT (byte-identical control) — emitting "
+            "it is a silent no-op lever. The control arm is the lever's absence; use "
+            "'fitted-20260707' or a 5x5 JSON path for a treatment.")
+    try:
+        resolve_length_sigma_matrix(s)  # fail-closed content validation (shape/symmetry/positive)
+    except ValueError as exc:
+        raise ValueError(f"LengthSigma: {exc}") from exc
+    return Lever(
+        "FEED_08a_length_sigma",
+        overrides={"--length-sigma-matrix": s},
+        epochs_delta=window,
+        notes=("sigma_ij per-class-pair length weight (junction_young_angle_sigma_fit_v1: "
+               "sigma[Road-Lane]=0.377 — uniform over-penalizes lane boundary ~2.7x); "
+               "faithful per-interface gather sigma[top1,top2] at {m=0}; A/B owed"),
     )
 
 
