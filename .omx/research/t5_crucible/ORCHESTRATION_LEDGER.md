@@ -30,7 +30,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 | S1 BASIS | Daubechies/Mallat — Arm A basis design (along-tangent bandwidth, bank ladder, activation, chroma) | 1 | DONE (7a052eed0) | position_S1_basis_20260707.md |
 | S2 SCHEDULE+CURRICULUM | witness-native derivation; PR95 cargo-cult audit table; stages/exits/priming | 1 | DONE (f1e3e8b21) | position_S2_schedule_curriculum_20260707.md |
 | S3 CONTROL/COSTATE | SENSE→DECIDE→ACT; GN/Fisher 2nd-order wiring; HVP-Lanczos probe design; trust-region | 1 | DONE (17843a820) | position_S3_costate_20260707.md |
-| S4 RATE | Shannon — two-regime allocation, weight-entropy, #157 compress-half, derive-H, byte accounting | 2 | LAUNCHED | position_S4_rate_20260707.md |
+| S4 RATE | Shannon — two-regime allocation, weight-entropy, #157 compress-half, derive-H, byte accounting | 2 | DONE (e4819f0eb) | position_S4_rate_20260707.md |
 | S5 LEVER-LEDGER | Fridrich/Yousfi — 36 never-fired per-lever BUILD/DEFER; annulus geometry; lane-band; islands | 2 | DONE (f01c8dea6) | position_S5_lever_ledger_20260707.md |
 | S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | LAUNCHED | position_S6_pose_byteclose_20260707.md |
 
@@ -147,3 +147,15 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
   quadratic_basin ExitEvent (warm-Muon fire predicate) + margin-gated island support; advisory-
   only, CONTAINMENT unchanged. Harness landed: experiments/t5_s3_hvp_lanczos_probe.py.
   S6 POSE+BYTE-CLOSE launched (last seat; concurrency 3 with S4 + context-sweep).
+- 2026-07-07T~22:1x S4 RATE DONE (e4819f0eb) — FIRST measured archive row for the clean
+  baseline: 83,406 B → rate 0.05553 (ep650 EMA-best, real byte-close accounting). Base weights AT
+  order-0 entropy floor (brotli 100.9% of H0 — zero coder slack; only bit-depth/waterfill or
+  in-training entropy shaping move base rate; code stream 36% below H0 = structure remains). Lane
+  band +24.1-30.9 KB (+0.016-0.021 rate — corroborates S5: NOT near-zero; net-ΔS positive
+  mid/upper of FEED-07d ceiling, NOT guaranteed at conservative edge). Pose ξ +2.7 KB ≈ 1e-2
+  S/byte = best buy (gated #248). mod32→48 = +20.2 KB. Uniform int6/5/4 = 54.2/41.3/29.0 KB;
+  waterfill pre-registered [52,68] KB at Δd_seg ≤ +5e-5 (RECESS R1 = $0 probe). Free grammar rev2
+  = −2.8 KB measured; PR95-L25 temporal-delta on code MEASURED NEGATIVE (+64%) = cargo-cult DROP
+  with receipt. BUDGET TENSION: mod32+band+ξ = 110-117 KB > 105 KB sub-0.15 headroom → the
+  compress-half is NOT optional if band+pose+capacity all compose. Board: 5/6 seats done; S6 +
+  20-store sweep in flight.
