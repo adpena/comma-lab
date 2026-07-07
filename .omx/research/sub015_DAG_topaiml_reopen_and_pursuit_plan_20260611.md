@@ -9074,3 +9074,121 @@ MEMORY.md line intentionally omitted: both verdicts (#307 NO-GO 0.820>0.65 B/fli
 a training outcome, not a coder trick" · #336 allocator-transfers/operating-point-doesn't-pay)
 are repo-recorded in FEED-07k + memos + anchors, and the existing lever-D CURRENT-STATE memory
 line is already consistent with the n600 confirmation. Pointer 0.19110 UNMOVED (reconciliation).
+
+## FEED-07m (2026-07-07) — WENG HARNESS HARVEST: failure ledger (new canonical SENSE surface) + costate design invariants
+
+**Harvest of Lilian Weng "Harness Engineering for Self-Improvement" (2026-07-04) →
+`docs/harvest_weng_harness_20260707.md`.** Mapping verified against real surfaces (not recalled):
+8 patterns CONVERGED (file-system-memory↔.omx/DAG/MEMORY.md spine · inspectable-parallelism↔wave
+dispatch+checkpoints · weakness-mining↔confound-hunt+review protocol · ACE↔<17KB-budget curation ·
+reward-hacking-defense↔frozen evaluator+operator-GO+NO-FAKE · negatives-preservation↔NO-GO-rows-
+with-mechanism+papers ledger · diversity-collapse↔activation-ledger duty-to-measure · STOP-core-
+intelligence↔operating-manual/partnership memory). ADOPTED NOW:
+
+1. **Harness FAILURE LEDGER** (the post's "rich failure records" formalized):
+   `src/tac/harness_failure_ledger.py` (+16 tests) → `.omx/state/harness_failure_ledger.jsonl`
+   (append-only fcntl JSONL, committed; gitignore exception). Schema {failure_id, ts, surface,
+   terminal_cause, causal_status hypothesized|measured|falsified WITH preserved history,
+   mechanism_exposed, recurrence_count, related_ref, resolution open|worked-around|class-fixed|
+   gate-landed}. SEEDED 4 real classes: daemon-5min-kill (4 falsified diagnoses then measured
+   harness-sweep cause; worked-around=chunked-resumable-foreground) · SIGURG-144 (2026-05-14
+   misattribution recorded+falsified; class-fixed Pattern A; recurrence 2026-07-07 sampler) ·
+   serializer-absorbed-hunks (measured whole-file-staging mechanism; recurrence 14c4ae929/FEED-07h;
+   class open-by-design, worked-around) · dashboard-false-FAIL-at-init (hardcoded boundary outside
+   validity regime; class-fixed f35a0281e falling-rule states). Boundary vs memory_blackbox/
+   subagent_progress/council-posterior/probe-outcomes EXPLAINED in the module docstring + doc §b1
+   (not a parallel registry: countable+rankable+causal-status-tracked failure classes, prose stays
+   in memory files via related_ref).
+2. **SENSE wiring (#247):** `producer_bridge._harness_failure_signal` — 4th producer signal;
+   ranking = unresolved-first + recurrence-desc (the post's "recurrent, addressable patterns"
+   preference). 56 tests green (producer_bridge + costate + ledger).
+3. **Costate design invariants** (APPEND-ONLY appendix in costate_controller_design_20260705.md):
+   (i) AUTHORITY-OUTSIDE-THE-LOOP — controller never proposes edits to evaluator/byte-close/
+   permission surfaces (reward-hacking bottleneck as structural invariant); (ii) DIVERSITY-FLOOR —
+   fixed exploration share of each measurement batch to never-fired activation-ledger levers
+   (activation ledger = our anti-diversity-collapse, now binding); (iii) D_in/D_out held-in/
+   held-out acceptance template for human-gated harness self-edits, rejected proposals logged as
+   ledger rows (never silent).
+
+ADOPT-LATER with named triggers (doc §d): MCE bi-level skills (skill count + per-skill metric) ·
+AFlow MCTS (fast campaign objective) · EVOLVE-BLOCK markers (only if auto-editing trainer code
+ever allowed) · SIA joint harness+weights (post itself calls evidence provisional). NOT adopted:
+auto-editing harness loop (human gates stay), no new orchestration layer.
+
+**Triality honesty:** DAG leg = this FEED. DSL leg = N/A-honest (no trainer lever/curriculum
+object; the ledger is apparatus/SENSE, outside the DSL's config-generation domain). Equations leg
+= N/A-honest (no measured n600/score finding — the harvest is engineering doctrine; the seeded
+rows are incident records, not score laws). Research-index: harvest doc is the durable artifact.
+**Pointer 0.19110 UNMOVED (apparatus/means — no exact row).**
+
+## FEED-07m (2026-07-07) — #247 COSTATE CONTROLLER made AGENT-NATIVE (core sense organ; operator NON-NEGOTIABLE) + auto-observer catches live ep725 BINDING_TERM_STALL
+
+**Operator verbatim:** *"We must ensure the costate controller does not require human or manual
+activation or use and that it is agent native and a core sense organ and actuator the agent always
+knows about and uses where and how optimal and appropriate."* Landed structural (never
+memory-dependent): (1) `tools/costate_digest.py` — one read-only <5s (measured 0.13s) fail-open
+digest: POINTER-first (0.19110 [contest-CPU] since 2026-06-10 — means-as-ends firewall line 1),
+live-run line (witness_checkin imported), annulus headline (#333), latest shadow classification +
+pending recs + refresh cmd, duty-to-measure queue (activation ledger: 33 owed, all never-fired),
+harness failure ledger (sibling SENSE input, glob-matched), planned-vs-actual schedule
+(soft-import, sibling pending), resume spine (MEMORY.md ⭐CURRENT-STATE → newest FEED), ACTUATION
+BOUNDARY footer. (2) AUTO-SURFACED: SessionStart hook (.claude/settings.json; --session-start
+always rc 0) + witness-status skill extension + design-doc pointer in the footer. (3) OBSERVER
+AUTO-START ("observability defaults ON"): `tools/costate_observer_loop.py` (periodic SHORT-LIVED
+shadow-report subprocess ticks; self-terminates with the trainer; heals missing run.log via
+score-neutral symlink to the daemon-registry log — the mod32cap resume logged to .omx/tmp/, which
+froze SENSE at ep350 for 12.6h) wired into `launch_witness_run.py` step (c.2), idempotent +
+non-fatal; started live for mod32cap (`costate_obs_mod32cap_20260706T115554Z`). **Immediate
+signal: the first fresh tick surfaced ep725 class=BINDING_TERM_STALL →
+INVESTIGATE_BINDING_TERM_DEADLOCK on the live mod32cap run** (advisory [macOS] — stale SENSE had
+been hiding 375 epochs). (4) BOUNDARY stated where agents read it (digest header/footer +
+CLAUDE.md §"Off is a tracked queue" append): autonomous = advisory recs · duty-to-measure ranking
+· curriculum condition inputs · digest; operator-GO = heavy/paid launches · run stops ·
+live-config changes (CONTAINMENT unchanged).
+
+Triality: DAG (this FEED) ↔ DSL leg N/A (apparatus/observability wave — no trainer lever,
+curriculum object, or config-generation change; the digest CONSUMES the DSL's activation ledger)
+↔ equations leg N/A (no new measured law). Sibling coordination: invariants + failure-ledger
+append (same design doc, separate section) referenced not duplicated; schedule read-back
+soft-imported for when it lands. **HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
+
+## FEED-07n (2026-07-07) — OPERATING-MANUAL REVIEW METHOD MADE STRUCTURAL: review_contract() + derived clean-pass counter ledger + §5 evidence-tag warn gate
+
+Apparatus wave (operator: "build and wire and integrate and make inevitable" — the manual's
+prose-only review disciplines become code). Three pieces, all landed + tested (74 tests green,
+ruff F clean, strict contract gates green):
+
+1. **`tac.subagent_contract.review_contract()`** — six new verbatim-grade constants
+   (RISK_RANKING §3 probability×blast-radius×SILENCE · CONFIRMED_VS_PLAUSIBLE §5 ·
+   EXECUTE_DONT_READ §4.3 · FIXES_ARE_UNREVIEWED §6.3/§8.8 counter-reset semantics ·
+   NO_MANUFACTURED_FINDINGS §7.4 · SECTION8_CHECKLIST, the ten competence-lookalike mistakes
+   as a per-commit checklist) + composer taking `counter_context`. Gate-side:
+   `check_subagent_contract_module_integrity` extended with the 6 names hardcoded (anti-self-
+   waive) + a review_contract() risk-ranking-phrase check; stays STRICT-green.
+   `tools/dispatch_prompt.py --review` composes task + review_contract(); REPORT-ONLY by
+   default (serializer block only with --allow-commits).
+
+2. **Review-counter ledger** — `.omx/state/review_counter.jsonl` (fcntl-locked append-only,
+   committed; lock local) + `tac.review_counter`: `record_round()` (refuses CLEAN-with-
+   findings, NOT_CLEAN-without, empty reviewed_commits — the anti-gaming floor) +
+   `current_state()` DERIVES consecutive-CLEAN/seal-at-3, latest-row-wins; the counter is
+   computed, never hand-set (extincts §8.8 "never declare SEAL from fatigue"). Honest
+   boundary stated in the module docstring: the ledger records CLAIMS that reviews happened;
+   reviewed_commits shas are the audit trail, no gate verifies the review occurred. SEEDED
+   with this session's real history: build_wave_337 = round1 CLEAN (ac157eda9) → round2
+   NOT_CLEAN F1 (6c5d63d6a, d07b3875a) → round3 NOT_CLEAN F-A (60d4d6a71); derived counter
+   0/3 (MEASURED via current_state()).
+
+3. **`check_new_memos_have_evidence_tags`** (preflight, WARN-ONLY BY DESIGN, never
+   strict-flip without redesign — acknowledged regex false-positive rate): new
+   .omx/research/*.md memos (dated ≥ 2026-07-08; filename-date, mtime fallback; top-level
+   only — equations registry/docs/code out of scope) with score-like claims (d_seg/d_pose/
+   S/ΔS = float, "saves N%", "beats") need §5 evidence vocabulary in the same paragraph or
+   a same-line `# EVIDENCE_TAG_OK:<rationale>` waiver (placeholder rejected). Live count 0
+   (zero retroactive noise by construction).
+
+Triality: DAG (this FEED) ↔ DSL leg N/A (apparatus/review-method wave — no trainer lever,
+curriculum object, or config-generation change) ↔ equations leg N/A (no new measured law).
+Sibling coordination: failure-ledger + costate-digest surfaces untouched; gitignore negation
+follows the harness_failure_ledger pattern. **HARD GATE: pointer 0.19110 UNMOVED
+(apparatus/means, not goal progress).**
