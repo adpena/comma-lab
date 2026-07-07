@@ -9651,3 +9651,46 @@ verified via trainer argparse) · equations=`junction_young_angle_sigma_fit_v1` 
 (canonical_consumers now name the trainer flag + resolver + DSL factory; domain lever text
 PROPOSED→LANDED; registry refinement row appended, same equation_id). Memo:
 `.omx/research/length_sigma_lever_build_20260707.md`. Pointer 0.19110 UNMOVED (build/means).
+
+## FEED-08b (2026-07-07, BUILD-WAVE-2 agent G) — ξ RESIDUAL CODER REAL BYTES: delta_res 2714 B beats the 3200 B table (−486 B, bit-identical); SPLINE PREDICTOR MEASURED DEAD + powerlaw_meat ExitEvent bound [$0 CPU, advisory; pointer 0.19110 UNMOVED — build/means]
+
+**(1) The FEED-07z "2182 B floor pending a real coder" is CLOSED with a MEASURED, sharper verdict.**
+Built `tac.boundary_math.xi_spline_residual_coder` (a44a06fb8): spline-as-PREDICTOR + lossless
+integer residual, decode numpy+stdlib-only (inflate-portable; spline eval inlined, bit-parity-PINNED
+by test against `se3_bspline_eval_numpy` + `fit_se3_bspline_controls`), ALL THREE residual schemes
+{raw varint, zlib-9, Rice/Golomb} implemented + MEASURED per encode, NO-FAKE encode-time full-decode
+bit-identity self-check, selectable via `xi_pose_coder.serialize_xi_payload` (cid=2 spline_residual,
+cid=3 delta_res; DEFAULT delta_ar byte-identical, pinned by test). 21 new tests (51 green with the
+existing coder suite). MEASURED on the REAL n600 ξ (same run-provenance table as FEED-07z, s_t=0.044,
+q_levels=4096; `experiments/results/xi_residual_coder_20260707/xi_residual_coder_curve.json`,
+script beside it, chunked-resumable):
+- **Spline arms (M∈{4..128} sweep): best 3120 B at M=48 (rice)** — in the predicted [2182, 3200] band
+  but marginal (−80 B).
+- **CONTROL (no spline): delta predictor + rice = 2714 B total, bit-identical → the WINNER (−486 B /
+  ~0.00032 rate vs the shipped 3200 B delta_ar table).** Attribution is decisive: post-spline residual
+  rice 2664 B ≈ plain q-delta rice 2665 B — the ξ innovation is WHITE ego jitter; ANY smooth-trend
+  predictor removes only what a trivial delta removes, while knots cost 224–349 B for nothing.
+  **Spline predictor: DEAD as a rate lever** (extends FEED-07z's direct-replacement DEAD; #307: the
+  paradigm-remnant "LSQ fit might save it" is now bounded — the innovation is white, no trend fit can
+  beat delta). **The REAL win is the ENTROPY STAGE** (rice vs the delta_ar arithmetic coder on the
+  SAME deltas). The 2182 B order-0 floor is mostly UNREALIZABLE mirage: active residual channels have
+  ~9-bit entropy with near-unique support (~530 distinct / 600 samples) — no transmitted-PMF coder
+  approaches the empirical order-0 number. Adoption path (shadow rec, operator/council-gated): flip
+  the store-nothing payload to `coder="delta_res"` at the next byte-close (+ inline the decode half
+  in inflate per the bit-exact gate) to bank −486 B.
+**(2) powerlaw_meat ExitEvent BOUND (82cca824b):** `ExitEvent(criterion="powerlaw_meat", floor,
+min_points, per_class, cap_epoch)` added to the DSL exactly per the solver-pack memo binding shape —
+GAP kind: `validate()` requires floor + min_points≥4; `flags()`={} (NO argv; VERIFIED the trainer's
+#315 controller has NO pluggable exit-criterion registry — plateau params only); `support_gaps()`
+emits a typed TrainerSupportGap with flag_proposal `--stage-exit-powerlaw-meat-floor <float> +
+--stage-exit-powerlaw-horizon <int>` naming `powerlaw_exit:powerlaw_meat_exit`. No _SAMPLES entry
+needed (no new primitive class); +2 sec14 tests (38 green; 160 across the DSL surface);
+`costate_digest.py` unregressed (rc=0).
+TRIALITY: DAG=this row; DSL=powerlaw_meat criterion + the coder is codec-substrate (selectable mode,
+default-off byte-identical — the gauge-level `coder=` choice remains a byte-close decision, not a
+trainer flag); equations=4th anchor `xi_spline_residual_real_coder_delta_res_wins_n600_20260707`
+APPENDED to `store_nothing_pose_carrier_rate_collapse_vs_dpose_v1` (8d77728fe, refine-not-duplicate,
+reactivation=adopt delta_res at byte-close). Commits: a44a06fb8 (coder+tests) · 8d77728fe (equations)
+· 82cca824b (DSL binding). Note: sibling-coordination worked as designed — σ_ij lever's uncommitted
+LengthSigma hunk was detected mid-edit; my commit waited until it landed (364cd6544), no absorption.
+Pointer 0.19110 UNMOVED (means: rate headroom is real but banks only at a byte-closed exact row).
