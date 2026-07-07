@@ -355,6 +355,7 @@ _SAMPLES = {
     "Stage": lambda: cd.Stage("CE", None, None),
     "StageSpec": lambda: cd.StageSpec("muon", "--muon-start-epoch", 726),
     "TelemetryCadence": lambda: cd.TelemetryCadence(),
+    "TerminalSolve": lambda: cd.TerminalSolve(),
     "TrainerSupportGap": lambda: cd.TrainerSupportGap("a", "r", "n", "p"),
     "Transition": lambda: cd.Transition(),
     "VerdictCadence": lambda: cd.VerdictCadence(),

@@ -919,6 +919,52 @@ class OperationalSchedule(ScheduleDisplay):
 
 
 @dataclass(frozen=True)
+class TerminalSolve(ScheduleDisplay):
+    """§16.1 (council draft 2026-07-07): the QUADRATIC BASIN FINISHER as a schedule primitive —
+    once training enters the terminal basin, STOP iterating and SOLVE the local Gauss-Newton/
+    Fisher quadratic of the through-R scorer loss (CG with HVPs; Morse lemma: exact in-chart).
+    Replaces the measured quadratic-regime crawl (tau ~0.2%/25ep over ~400ep; slow cold-Muon
+    recovery) with an explicit solve, verified at full n600 through the real verdict.
+
+    STATUS: DESIGNED, NOT BUILT — a PREDICTION until the $0 probe measures (GN/CG from the
+    mod32cap ep650-best vs the live run's own remaining crawl; owed per DAG FEED-07t/07u).
+    Validity conditions (all three, checked at fire time): (a) local quadratic regime entered
+    (power-law tail / gradient-norm plateau per §15.4 detectors); (b) partition topology STABLE
+    (no island births pending — persistence diagram unchanged over the detector window);
+    (c) frozen scorer + fixed levers (no schedule transitions remaining). Never fires mid-homotopy.
+
+    Compiles to NO argv (never-invent-flags): the trainer has no solve stage; the nearest real
+    compilation is "run --epochs to the end" and the solve runs as a post-run tool against the
+    final checkpoint. The typed gap below is the council-visible trainer-build request."""
+
+    method: str = "gn_cg"          # gauss-newton via CG on HVPs (the only designed method)
+    verify_pairs: int = 600        # n600 verdict verification is MANDATORY (allergic-to-toys)
+
+    def flags(self) -> dict:
+        return {}  # no trainer support yet; real flags only
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if self.method != "gn_cg":
+            problems.append(f"TerminalSolve: unknown method {self.method!r} (designed: 'gn_cg')")
+        if self.verify_pairs != 600:
+            problems.append(
+                f"TerminalSolve: verify_pairs must be 600 (n600-or-not-evidence), got {self.verify_pairs}")
+        return problems
+
+    def support_gaps(self) -> tuple[TrainerSupportGap, ...]:
+        return (TrainerSupportGap(
+            axis="terminal_solve",
+            requirement=(f"quadratic basin finisher: GN/CG solve ({self.method}) at run end, "
+                         f"verified at n{self.verify_pairs} through the real verdict"),
+            nearest_real_compilation=("run --epochs to the scheduled end; the solve runs as a "
+                                      "post-run tool against the final checkpoint (no argv)"),
+            flag_proposal="--terminal-solve gn_cg (trainer build; gate on the $0 ep650 probe)",
+            notes=("§16.1 PREDICTION until measured; Morse-lemma chart; conditions: in-basin + "
+                   "topology-stable + no transitions remaining")),)
+
+
+@dataclass(frozen=True)
 class Curriculum(ScheduleDisplay):
     """The witness curriculum as a FIRST-CLASS DSL object (operator 2026-07-06 "we need schedule
     and curriculum in DSL as well"). Bundles the ordered homotopy of relaxations (``stages``) +
@@ -949,6 +995,9 @@ class Curriculum(ScheduleDisplay):
     # §14 additions (task #339): levels-as-paths λ(t) + the operational schedule.
     level_paths: tuple[LevelPath, ...] = ()
     operational: OperationalSchedule | None = None
+    # §16.1 addition: the quadratic basin finisher (DESIGNED-not-built; compiles to no argv;
+    # always surfaces as a TrainerSupportGap until the $0 probe measures + the trainer build lands).
+    terminal_solve: TerminalSolve | None = None
 
     # --- the per-owner flag sets (shared by flags() + the duplicate-emitter check) ---
     def _flag_owners(self) -> list[tuple[str, dict]]:
@@ -995,6 +1044,8 @@ class Curriculum(ScheduleDisplay):
             gaps.extend(lp.support_gaps())
         if self.operational is not None:
             gaps.extend(self.operational.support_gaps())
+        if self.terminal_solve is not None:
+            gaps.extend(self.terminal_solve.support_gaps())
         return tuple(gaps)
 
     def validate(self, surface_gaps: bool = False) -> list[str]:

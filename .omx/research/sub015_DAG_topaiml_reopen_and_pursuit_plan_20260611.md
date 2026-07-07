@@ -9443,3 +9443,22 @@ dash-comb corrector — law-shaped, unique repair class for the dash residual. T
 row; DSL=persistence_topology lever already held (never-fired state tracked); equations=finisher
 law registration owed AFTER the $0 probe measures (no premature registration). Pointer 0.19110
 UNMOVED (design/means).
+
+## FEED-07u (2026-07-07) — §16 TRIALITY CLOSURE: TerminalSolve DSL primitive + tasks #341/#342 (operator: "update the triality + new task")
+
+Operator directive: §16 must live in the triality, not just the draft. All three legs now hold it:
+- **DSL leg (built this feed):** `TerminalSolve` schedule primitive in `tac.witness_dsl.curriculum_dsl`
+  (19th auto-registered kind; `Curriculum.terminal_solve` field). DESIGNED-not-built by declaration:
+  compiles to NO argv (never-invent-flags), always surfaces a typed `TrainerSupportGap`
+  (axis=terminal_solve, flag_proposal `--terminal-solve gn_cg`, gated on the $0 probe); validate()
+  refuses non-gn_cg methods + verify_pairs≠600 (allergic-to-toys structural). _SAMPLES display-spec
+  entry added (the #339 gate caught the omission — worked as designed). 51 DSL tests pass;
+  3 other test failures verified PRE-EXISTING on HEAD (l5_v2 ×2, dashboard_liveobs ×1 — not mine).
+- **DAG leg:** FEED-07t (§16 registration) + this row.
+- **equations leg:** deliberately DEFERRED for the finisher (PREDICTION until the ep650 probe
+  measures); the measured-anchored half of the same wave landed as `dash_erasure_homogenization_v1`
+  (f226ff20c).
+- **Tasks:** #341 (basin-finisher $0 probe → gated trainer build) + #342 (SOLVE-DON'T-TRAIN
+  inventory: the operator's "what else can be solved, where/when/conditions" — 10 candidate blocks,
+  three-condition solvability check per block: in-chart convexity × weak coupling × fixed topology).
+Pointer 0.19110 UNMOVED (design/apparatus/means).
