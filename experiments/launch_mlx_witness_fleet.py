@@ -11,10 +11,22 @@ So the idle 98GB+GPU DOES support a fleet: run ~4 concurrent arms ON TOP OF the
 
 This launcher enumerates a focused config grid (the trade-resolution levers that
 matter: capacity hidden_dim x the w_seg/w_pose balance x render-res), then spawns
-each as a DURABLE detached daemon (tools/spawn_durable_daemon.py -- no orphan),
-gated by a fail-closed memory check (skip launch if available < --min-free-gb).
+each as a DURABLE detached daemon (tools/spawn_durable_daemon.py -- no orphan).
 It launches at most --max-concurrent NEW arms; the rest are recorded as a queued
 plan (a follow-on wave launches them as the first wave's arms finish).
+
+MEMORY GOVERNANCE (review-fix CRITICAL A -- this launcher used to BYPASS the
+governed-admission apparatus): every arm's spawn now passes
+``--projected-peak-gib`` (from --per-arm-est-gb) AND ``--rss-cap-mb``
+(projection x 1.3 safety factor) to spawn_durable_daemon, so each arm (a) is
+admission-gated by the AUTHORITATIVE system memory governor (the P0 SUM-over-RAM
+crash gate + TOCTOU-locked pending reservation), (b) lands in the registry with
+a REAL projected_peak_gib (the governor's growth accounting no longer assumes
+zero future growth for fleet arms), and (c) carries a per-arm safe_run RSS cap
+(defense-in-depth layer 3). The old hand-rolled vm_stat available-vs-flat-est
+check is DEMOTED TO ADVISORY (printed, never gating): the daemon's
+_system_admission_gate is the single authority; a daemon REFUSAL (nonzero rc)
+queues the arm for the next wave exactly like any other launch failure.
 
 NO score claim: each arm's realized d_seg/d_pose VERDICT is the FROZEN CPU-torch
 authority (in the trainer). The fleet EXPLORES; the verdict per arm is advisory
@@ -27,7 +39,6 @@ import itertools
 import json
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,8 +46,15 @@ REPO = Path(__file__).resolve().parents[1]
 TRAINER = "experiments/train_witness_realized_through_R_mlx.py"
 SPAWN = "tools/spawn_durable_daemon.py"
 
+# Per-arm RSS cap = projected peak x this factor (headroom above the projection so the cap is a
+# runaway backstop, not a scheduler): a fleet arm that balloons past 1.3x its own projection is a
+# bug and safe_run SIGKILLs its group before it can threaten the machine.
+RSS_CAP_SAFETY_FACTOR = 1.3
+
 
 def _available_gb() -> float:
+    """ADVISORY-ONLY vm_stat read (review-fix CRITICAL A: this hand-rolled check used to be the
+    fleet's ONLY memory gate; the daemon's _system_admission_gate is now the authority)."""
     out = subprocess.run(["vm_stat"], capture_output=True, text=True).stdout
     m = re.search(r"page size of (\d+) bytes", out)
     pg = int(m.group(1)) if m else 16384
@@ -114,8 +132,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--epochs", type=int, default=400)
     ap.add_argument("--eval-every", type=int, default=50)
     ap.add_argument("--max-concurrent", type=int, default=4, help="N* from the scaling probe")
-    ap.add_argument("--min-free-gb", type=float, default=18.0, help="fail-closed: skip launch below this")
-    ap.add_argument("--per-arm-est-gb", type=float, default=8.0, help="conservative per-arm memory estimate")
+    ap.add_argument("--min-free-gb", type=float, default=18.0,
+                    help="ADVISORY low-memory warning threshold (the daemon's system admission "
+                         "gate is the authority and can REFUSE an arm regardless)")
+    ap.add_argument("--per-arm-est-gb", type=float, default=8.0,
+                    help="per-arm projected PEAK RSS (GiB) — registered with the governor via "
+                         "spawn_durable_daemon --projected-peak-gib and used to derive the "
+                         "per-arm safe_run RSS cap (x%.1f). For launch.sh-based runs prefer "
+                         "tools/witness_memory_preflight.project_from_launch_sh; the fleet builds "
+                         "trainer argv directly, so this explicit estimate is the projection "
+                         "source." % RSS_CAP_SAFETY_FACTOR)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
@@ -130,17 +156,25 @@ def main(argv: list[str] | None = None) -> int:
                       "grid_size": len(grid), "max_concurrent": args.max_concurrent,
                       "num_pairs": args.num_pairs, "epochs": args.epochs}), flush=True)
 
+    # Per-arm governance numbers (review-fix CRITICAL A): the projection registers with the
+    # governor (growth accounting + admission), the cap bounds the arm's own process group.
+    per_arm_proj_gib = float(args.per_arm_est_gb)
+    per_arm_rss_cap_mb = int(round(per_arm_proj_gib * RSS_CAP_SAFETY_FACTOR * 1024.0))
+
     n_active = 0
     for cfg in grid:
         avail = _available_gb()
         if n_active >= args.max_concurrent:
             queued.append(cfg.label)
             continue
-        if avail - args.per_arm_est_gb < args.min_free_gb:
-            print(json.dumps({"fail_closed": cfg.label, "available_gb": round(avail, 1),
-                              "would_drop_below": args.min_free_gb}), flush=True)
-            queued.append(cfg.label)
-            continue
+        if avail - per_arm_proj_gib < args.min_free_gb:
+            # ADVISORY only (review-fix CRITICAL A): the daemon's _system_admission_gate is the
+            # authority — it sums REAL used RAM + all tracked jobs' growth-to-peak and REFUSES
+            # (rc!=0 -> the arm is queued below) when this arm's projection would not fit.
+            print(json.dumps({"advisory_low_memory": cfg.label, "available_gb": round(avail, 1),
+                              "advisory_floor_gb": args.min_free_gb,
+                              "note": "proceeding — daemon admission gate is the authority"}),
+                  flush=True)
         cmd = cfg.cmd(args.num_pairs, args.epochs, args.eval_every, args.gt_cache)
         out_dir = REPO / cfg.out_dir()
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -148,6 +182,12 @@ def main(argv: list[str] | None = None) -> int:
             ".venv/bin/python", SPAWN,
             "--log", f"{cfg.out_dir()}/daemon.log",
             "--label", f"fleet_{cfg.label}",
+            # governed admission: real projection registered with the governor (admission gate +
+            # growth accounting) + the legacy free-floor preflight gets the same accurate number.
+            "--projected-peak-gib", str(per_arm_proj_gib),
+            "--projected-gb", str(per_arm_proj_gib),
+            # defense-in-depth layer 3: per-arm safe_run RSS cap (projection x safety factor).
+            "--rss-cap-mb", str(per_arm_rss_cap_mb),
             "--", "env", "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1", *cmd,
         ]
         if args.dry_run:

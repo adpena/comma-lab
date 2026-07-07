@@ -29,8 +29,6 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
-
 _REPO = Path(__file__).resolve().parents[3]
 
 
@@ -58,6 +56,12 @@ def _start_args(**kw):
         rss_cap_mb=None,
         walltime_cap_s=None,
         verify_s=kw.pop("verify_s", 2.0),
+        # HERMETIC vs live machine pressure: these tests exercise the exec-failure verification
+        # path, NOT admission. Without this skip they run the LIVE system admission gate, which
+        # (correctly) REFUSES on a loaded box with enforce armed (e.g. while the #205 run holds
+        # ~54 GiB of growth headroom) — an environmental flake, not a launch-hardening signal.
+        # Admission/reservation behavior is covered by test_admission_reservation_toctou.py.
+        skip_admission_gate=True,
     )
     base.update(kw)
     return SimpleNamespace(**base)
@@ -247,7 +251,9 @@ def test_safe_run_spawn_debug_no_hint_for_normal_argv():
 
 
 def test_safe_run_command_not_found_detailed(capsys):
-    rc = sr.main(["--", "this is one collapsed command --with --flags"])
+    # --skip-admission-gate: hermetic vs live machine pressure (this tests spawn-failure
+    # messaging, not admission — see the _start_args note above).
+    rc = sr.main(["--skip-admission-gate", "--", "this is one collapsed command --with --flags"])
     assert rc == sr.EXIT_SPAWN
     err = capsys.readouterr().err
     assert "failed to start" in err
@@ -265,5 +271,6 @@ def test_safe_run_no_command_detailed(capsys):
 
 
 def test_safe_run_valid_quick_command_succeeds(capsys):
-    rc = sr.main(["--quiet", "--", "/usr/bin/true"])
+    # --skip-admission-gate: hermetic vs live machine pressure (see the _start_args note above).
+    rc = sr.main(["--quiet", "--skip-admission-gate", "--", "/usr/bin/true"])
     assert rc == 0

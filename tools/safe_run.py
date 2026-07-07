@@ -64,8 +64,9 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         ours, cmd = argv[:sep], argv[sep + 1 :]
     else:
         ours, cmd = [], []
-        known_val = {"--rss-mb", "--timeout", "--poll", "--label"}
-        known_flag = {"--quiet", "--json"}
+        known_val = {"--rss-mb", "--timeout", "--poll", "--label",
+                     "--projected-gib", "--admission-override-rationale"}
+        known_flag = {"--quiet", "--json", "--skip-admission-gate"}
         i = 0
         while i < len(argv):
             tok = argv[i]
@@ -209,6 +210,95 @@ def _system_admission_gate(ns: argparse.Namespace, cmd: list[str]) -> int | None
     return 5 if enforcing else None
 
 
+# ── governed-admission registry visibility (review-fix HIGH: bare safe_run was invisible) ────────
+# A BARE safe_run job (not wrapped by spawn_durable_daemon) never appeared in the durable-daemon
+# registry: the governor's only view of it was the OUR_JOBS_PATTERN ps regex, with NO projected
+# peak — so its remaining growth-to-peak was invisible to every other launch's admission decision.
+# Fix: after safe_run's OWN admission gate admits, write the SAME pending-reservation row the
+# daemon path writes (inside the SAME fcntl registry lock, closing the same TOCTOU), promote it to
+# a running row (with the real child pid + projected peak) after Popen, and mark it stopped on
+# exit. The helpers are the daemon's own (lazy same-dir import: single implementation of the
+# locked/atomic registry mutation); registration is best-effort VISIBILITY — a registry hiccup
+# never blocks or kills the run (the admission decision itself already stood).
+
+
+def _sdd_module():
+    """Lazy import of tools/spawn_durable_daemon (same directory) for the shared registry helpers.
+    Returns the module or None — safe_run stays dependency-light and never fails on a missing
+    sibling (the gate still ran; only the growth-accounting visibility degrades to the ps regex)."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import spawn_durable_daemon as sdd  # noqa: PLC0415
+        return sdd
+    except Exception:
+        return None
+
+
+def _gate_and_reserve(ns: argparse.Namespace, cmd: list[str]):
+    """Admission gate + (on ADMIT) pending-reservation write, in ONE locked critical section —
+    mirrors spawn_durable_daemon._do_start's TOCTOU fix for the bare-safe_run path.
+
+    Returns ``(abort_rc | None, reservation | None)``; ``reservation = (sdd, label, projected)``
+    is later promoted by ``_activate_reservation`` / released by ``_release_reservation``.
+    Skipped entirely when ``--skip-admission-gate`` (the daemon-wrapped path: the daemon already
+    gated AND registered this job) and under pytest (hermetic — never write the LIVE registry
+    from a test; the reservation helpers are unit-tested directly with tmp paths)."""
+    if ns.skip_admission_gate:
+        return None, None
+    sdd = _sdd_module()
+    if sdd is None or os.environ.get("PYTEST_CURRENT_TEST"):
+        return _system_admission_gate(ns, cmd), None
+    projected = ns.projected_gib if ns.projected_gib is not None else float(ns.rss_mb) / 1024.0
+    label = f"saferun_{ns.label or os.path.basename(cmd[0])}_pid{os.getpid()}"
+    try:
+        with sdd._registry_lock():
+            sdd._update_registry_locked(sdd._sweep_stale_pending_rows)
+            rc = _system_admission_gate(ns, cmd)
+            if rc is not None:
+                return rc, None
+            sdd._write_pending_reservation(label, projected)
+            return None, (sdd, label, float(projected))
+    except Exception as exc:  # noqa: BLE001 — visibility is best-effort, never blocks the run
+        print(f"safe_run.py: WARNING registry reservation failed ({exc!r}); proceeding with the "
+              f"un-reserved gate (growth accounting falls back to the ps-pattern view).",
+              file=sys.stderr)
+        return _system_admission_gate(ns, cmd), None
+
+
+def _activate_reservation(reservation, pid: int, pgid: int, cmd: list[str]) -> None:
+    """Promote the pending reservation to a live 'running' registry row carrying the real child
+    pid + projected peak, so other launches' admission decisions count this job's remaining
+    growth-to-peak (not just its ps-visible current RSS). Best-effort."""
+    if not reservation:
+        return
+    sdd, label, projected = reservation
+    try:
+        import datetime as _dt
+        sdd._register_daemon({
+            "label": label, "pid": int(pid), "pgid": int(pgid), "cmd": list(cmd), "log": "",
+            "started_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+            "cwd": os.getcwd(), "status": "running", "projected_peak_gib": float(projected),
+        })
+    except Exception as exc:  # noqa: BLE001
+        print(f"safe_run.py: WARNING registry promote failed ({exc!r}); job runs unregistered "
+              f"(ps-pattern fallback covers it).", file=sys.stderr)
+
+
+def _release_reservation(reservation, *, reason: str) -> None:
+    """Release the registry footprint on exit: drop a still-pending reservation (spawn failed) or
+    mark the promoted running row stopped. Best-effort. NOTE: a hard SIGKILL of safe_run itself
+    skips this — the leaked 'running' row is harmless (its dead pid drops out of the governor's
+    live join) and spawn_durable_daemon --reconcile cleans it up."""
+    if not reservation:
+        return
+    sdd, label, _projected = reservation
+    try:
+        sdd._clear_pending_reservation(label)
+        sdd._mark_stopped(label, reason=reason)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def main(argv: list[str]) -> int:
     ns, cmd = _parse_args(argv)
     if not cmd:
@@ -227,7 +317,9 @@ def main(argv: list[str]) -> int:
     # code stamped governed off the per-process --rss-mb cap alone — the exact SYSTEM-BLIND
     # mechanism that failed to stop the 2026-07-02 >128GB crash. Now the stamp is truthful: a real
     # SUM-over-RAM decision ran. REFUSE (rc=5) aborts before spawn when enforce is armed.
-    _adm_rc = _system_admission_gate(ns, cmd)
+    # (review-fix HIGH) gate + pending-reservation in ONE locked section (bare-safe_run visibility
+    # + the same TOCTOU close as the daemon path); no-op for --skip-admission-gate (daemon-wrapped).
+    _adm_rc, _reservation = _gate_and_reserve(ns, cmd)
     if _adm_rc is not None:
         return _adm_rc
 
@@ -250,15 +342,19 @@ def main(argv: list[str]) -> int:
             f"({exc}) [{_spawn_debug(cmd)}]",
             file=sys.stderr,
         )
+        _release_reservation(_reservation, reason="safe_run_spawn_failed")
         return EXIT_SPAWN
     except Exception as exc:  # noqa: BLE001
         print(
             f"safe_run.py: failed to start {cmd[0]!r}: {exc!r} [{_spawn_debug(cmd)}]",
             file=sys.stderr,
         )
+        _release_reservation(_reservation, reason="safe_run_spawn_failed")
         return EXIT_SPAWN
 
     pgid = proc.pid  # equals the new session/group id
+    # promote the pending reservation to a live running row (real pid + projected peak).
+    _activate_reservation(_reservation, proc.pid, pgid, cmd)
     peak_kib = 0
     status = "ok"
     rc = 0
@@ -337,6 +433,7 @@ def main(argv: list[str]) -> int:
     elif not (ns.quiet and status == "ok"):
         print(f"SAFE_RUN [{label}] {detail}", file=sys.stderr)
 
+    _release_reservation(_reservation, reason=f"safe_run_exit_{status}")
     return rc
 
 

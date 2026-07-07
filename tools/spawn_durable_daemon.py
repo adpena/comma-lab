@@ -197,6 +197,88 @@ def _mark_stopped(label: str, *, path=None, lock_path=None, reason: str | None =
 
 
 # --------------------------------------------------------------------------
+# PENDING admission reservations (review-fix CRITICAL — the launch TOCTOU).
+# The old flow read the registry in _system_admission_gate with no lock and
+# reserved (via _register_daemon) only AFTER Popen — so two near-simultaneous
+# governed launches could BOTH pass admission before either was visible to the
+# other's accounting (each individually under the ceiling, their SUM over it =
+# the exact 2026-07-02 crash shape). _do_start now holds _registry_lock across
+# {stale-pending sweep -> admission decision -> PENDING reservation write}, so
+# a second launcher blocks on the lock and then SEES the first's reservation
+# (the governor's list_tracked_jobs counts fresh "admitting" rows' projected
+# peaks as growth headroom). The reservation is promoted to the real running
+# row right after Popen (upsert by label) or removed on spawn failure; a stale
+# pending row (crashed launcher, > _PENDING_MAX_AGE_S, no pid) is swept at the
+# next launch so a phantom reservation can never permanently block admission.
+# Sister read-side: system_memory_governor.pending_reservation_rows.
+# --------------------------------------------------------------------------
+_PENDING_STATUS = "admitting"
+_PENDING_MAX_AGE_S = 120.0
+
+
+def _sweep_stale_pending_rows(
+    rows: list[dict], *, now_ts: float | None = None, max_age_s: float = _PENDING_MAX_AGE_S
+) -> list[dict]:
+    """Drop STALE pending reservations: status=="admitting", no pid, and either older than
+    ``max_age_s`` or carrying a missing/unparsable ``reserved_ts`` (a crashed/killed launcher must
+    not leak a phantom reservation that blocks future admissions). Pure list-in/list-out — used as
+    the mutate_fn of ``_update_registry_locked``."""
+    now = time.time() if now_ts is None else float(now_ts)
+    kept: list[dict] = []
+    for r in rows:
+        if isinstance(r, dict) and r.get("status") == _PENDING_STATUS and not r.get("pid"):
+            try:
+                fresh = (now - float(r["reserved_ts"])) <= float(max_age_s)
+            except (KeyError, TypeError, ValueError):
+                fresh = False  # malformed timestamp -> stale by definition
+            if not fresh:
+                continue
+        kept.append(r)
+    return kept
+
+
+def _write_pending_reservation(
+    label: str, projected_peak_gib: float | None, *, path=None, lock_path=None
+) -> dict:
+    """Upsert a PENDING admission reservation row for ``label`` (called INSIDE the admission
+    critical section, right after an ADMIT decision, before Popen). The row shape matches the
+    daemon record so the same registry/read paths handle it; ``pid=None`` + status "admitting"
+    mark it as a reservation, ``reserved_ts`` ages it for the stale sweep."""
+    record = {
+        "label": label,
+        "pid": None,
+        "pgid": None,
+        "cmd": [],
+        "log": "",
+        "started_utc": _utc_now_iso(),
+        "reserved_ts": time.time(),
+        "cwd": os.getcwd(),
+        "status": _PENDING_STATUS,
+    }
+    if projected_peak_gib is not None:
+        record["projected_peak_gib"] = float(projected_peak_gib)
+
+    def _upsert(rows: list[dict]) -> list[dict]:
+        kept = [r for r in rows if r.get("label") != label]
+        kept.append(record)
+        return kept
+
+    _update_registry_locked(_upsert, path=path, lock_path=lock_path)
+    return record
+
+
+def _clear_pending_reservation(label: str, *, path=None, lock_path=None) -> None:
+    """Remove ``label``'s PENDING reservation (spawn failed / final label differs). Only rows still
+    in status "admitting" are dropped — a promoted running row is never touched."""
+
+    def _drop(rows: list[dict]) -> list[dict]:
+        return [r for r in rows
+                if not (r.get("label") == label and r.get("status") == _PENDING_STATUS)]
+
+    _update_registry_locked(_drop, path=path, lock_path=lock_path)
+
+
+# --------------------------------------------------------------------------
 # Liveness helpers
 # --------------------------------------------------------------------------
 def _try_reap(pid: int) -> bool:
@@ -549,13 +631,39 @@ def _do_start(a: argparse.Namespace) -> int:
 
     # Auto-start the always-on memory black-box recorder BEFORE any heavy job, so the trajectory into a
     # future crash is captured (idempotent singleton; skipped for infra + the black box itself).
+    # MUST stay OUTSIDE the admission critical section below: it re-enters this module's main() via
+    # a SEPARATE module instance (memory_blackbox imports spawn_durable_daemon), whose registration
+    # flock on the same lock file would DEADLOCK against a lock we already hold in this process.
     _maybe_autostart_blackbox(a, cmd)
 
     # SYSTEM admission HARD gate (P0 crash prevention): REFUSE if launching this job would push the
     # SUM over the adaptive ceiling. Runs BEFORE any Popen so a refused launch starts nothing.
-    refusal = _system_admission_gate(a, cmd)
-    if refusal is not None:
-        return refusal
+    #
+    # (review-fix CRITICAL — TOCTOU) The {decision -> reservation} pair is one fcntl-locked
+    # critical section: sweep stale pending rows, decide, and (on ADMIT) write a PENDING
+    # reservation carrying this job's projected peak — all under _registry_lock, so a second
+    # near-simultaneous governed launch blocks on the lock and then SEES this reservation in its
+    # own admission arithmetic (list_tracked_jobs counts fresh "admitting" rows). The reservation
+    # is promoted to the real running row right after Popen, or removed on spawn failure.
+    pending_label = a.label or f"__admitting__{uuid.uuid4().hex[:10]}"
+    pending_written = False
+    with _registry_lock():
+        # A crashed launcher's stale pending row (> _PENDING_MAX_AGE_S, no pid) must not leak a
+        # phantom reservation into this (or any future) admission decision.
+        _update_registry_locked(_sweep_stale_pending_rows)
+        refusal = _system_admission_gate(a, cmd)
+        if refusal is not None:
+            return refusal
+        if not (getattr(a, "skip_admission_gate", False) or _is_protection_infra_cmd(cmd)):
+            _reserve_proj = getattr(a, "projected_peak_gib", None)
+            if _reserve_proj is None:
+                _reserve_proj = float(getattr(a, "projected_gb", 25.0))
+            try:
+                _write_pending_reservation(pending_label, _reserve_proj)
+                pending_written = True
+            except Exception as exc:  # a reservation hiccup must never block an admitted launch
+                print(f"[durable-daemon] WARNING: pending-reservation write failed ({exc!r}); "
+                      "proceeding (admission decision stands).", file=sys.stderr)
 
     log = open(a.log, "ab", buffering=0)  # noqa: SIM115 — kept open for the child
     devnull = open(os.devnull, "rb")  # noqa: SIM115
@@ -600,6 +708,10 @@ def _do_start(a: argparse.Namespace) -> int:
         with contextlib.suppress(Exception):
             log.close()
             devnull.close()
+        # spawn failed -> release the pending admission reservation (nothing will grow to its peak).
+        if pending_written:
+            with contextlib.suppress(Exception):
+                _clear_pending_reservation(pending_label)
         return 4
 
     label = a.label
@@ -639,6 +751,12 @@ def _do_start(a: argparse.Namespace) -> int:
         record["priority"] = int(_prio)
     try:
         _register_daemon(record)
+        # Promote/replace semantics: _register_daemon upserts by label, so when the final label
+        # equals the reservation label the pending row is REPLACED by the running row. A
+        # synthesized final label (no --label) leaves the provisional reservation behind — clear it.
+        if pending_written and label != pending_label:
+            with contextlib.suppress(Exception):
+                _clear_pending_reservation(pending_label)
     except Exception as exc:  # never let a registry hiccup orphan a live daemon
         print(
             f"[durable-daemon] WARNING: registry write failed ({exc}); daemon "
@@ -646,6 +764,11 @@ def _do_start(a: argparse.Namespace) -> int:
             f"manually with: kill -TERM -{pgid}",
             file=sys.stderr,
         )
+        # Best-effort: don't leave a pending reservation behind for a job we could not register
+        # (the stale sweep would drop it in <=120s anyway; this just tightens the window).
+        if pending_written:
+            with contextlib.suppress(Exception):
+                _clear_pending_reservation(pending_label)
 
     # NO silent failures: VERIFY the child actually survived exec before we report
     # a healthy detached daemon. A dead launch EXITS NONZERO with detailed debug.

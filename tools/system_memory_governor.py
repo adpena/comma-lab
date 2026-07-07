@@ -64,6 +64,7 @@ import re
 import signal
 import subprocess
 import sys
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -216,6 +217,98 @@ OUR_JOBS_PATTERN = (
     r"|descent_probe"
     r"|scorer_response"
 )
+
+# ── unknown-peak growth default (review-fix CRITICAL B: zero-growth assumption was BACKWARDS) ────
+# A tracked job with NO recorded projected_peak_gib used to fall back to proj_peak = current_rss —
+# i.e. the safety gate assumed an unknown-peak job would grow by ZERO GiB. For an admission gate
+# that direction is inverted: unknown MUST mean "assume it can still grow substantially". The
+# conservative default is current_rss + UNKNOWN_GROWTH_HEADROOM_GIB, matching the launch paths' own
+# unknown-projection fallback (spawn_durable_daemon --projected-gb default 25.0 / the governor CLI
+# --projected-gib default 25.0) so a job that slipped past registration is charged the same
+# projection it would have been charged at admission time.
+# Two DELIBERATE exemptions keep the default from manufacturing phantom refusals:
+#   * protection infra (black-box / guard / governor): tiny always-on daemons, deliberately
+#     unprojected; +25 GiB each forever would permanently poison every admission decision.
+#   * governed DESCENDANTS: a ps-pattern-matched process whose ancestor chain reaches a REGISTERED
+#     running job (e.g. the trainer inside a spawn_durable_daemon -> safe_run tree, which sits in
+#     its OWN session so it surfaces as a separate ps candidate). Its growth is already projected
+#     by the parent's registry row; charging +25 GiB again would double-count (and could
+#     false-refuse small jobs while the live #205 runs).
+UNKNOWN_GROWTH_HEADROOM_GIB = 25.0
+_PROTECTION_INFRA_TOKENS = ("memory_blackbox.py", "memory_guard.py", "system_memory_governor.py")
+
+# ── PENDING admission reservations (review-fix CRITICAL C: launch TOCTOU) ────────────────────────
+# Two near-simultaneous governed launches could BOTH pass the admission gate before either wrote
+# its registry row (decision read -> Popen -> reservation write). The launchers now write a PENDING
+# reservation row {label, projected_peak_gib, reserved_ts, pid=None, status="admitting"} inside the
+# registry fcntl lock IMMEDIATELY after an ADMIT decision (see spawn_durable_daemon / safe_run);
+# ``list_tracked_jobs`` counts fresh pending rows' projected peaks as growth headroom so the second
+# launcher's admission sees the first's reservation. A pending row older than the max age with no
+# pid is STALE (a crashed launcher) and is ignored here + swept by the launchers — a phantom
+# reservation must never permanently block admission.
+PENDING_RESERVATION_STATUS = "admitting"
+PENDING_RESERVATION_MAX_AGE_S = 120.0
+
+
+def is_protection_infra_cmd(cmd: str) -> bool:
+    """True iff ``cmd`` is control-plane protection infra (black-box / memory guard / governor) —
+    mirrors ``spawn_durable_daemon._is_protection_infra_cmd`` (never admission-gated, tiny)."""
+    return any(tok in str(cmd) for tok in _PROTECTION_INFRA_TOKENS)
+
+
+def resolve_projected_peak_gib(
+    recorded_peak,
+    current_rss_gib: float,
+    *,
+    cmd: str = "",
+    governed_descendant: bool = False,
+    unknown_growth_headroom_gib: float = UNKNOWN_GROWTH_HEADROOM_GIB,
+) -> float:
+    """CONSERVATIVE projected-peak resolution for one tracked job (review-fix CRITICAL B). PURE.
+
+    * A valid recorded projection wins (floored at current RSS — a job can never "un-use" memory).
+    * Protection infra + governed descendants: zero-growth default (current RSS) — see the
+      exemption rationale on the constants block above.
+    * Everything else with an unknown peak: ``current_rss + UNKNOWN_GROWTH_HEADROOM_GIB`` — an
+      unknown-peak job is assumed to still be able to grow by the same 25 GiB the launch paths
+      project by default, NEVER by zero (the old backwards fallback).
+    """
+    current = max(0.0, float(current_rss_gib))
+    if recorded_peak is not None:
+        try:
+            return max(float(recorded_peak), current)
+        except (TypeError, ValueError):
+            pass  # malformed recorded value -> treat as unknown (conservative path below)
+    if governed_descendant or is_protection_infra_cmd(cmd):
+        return current
+    return current + float(unknown_growth_headroom_gib)
+
+
+def pending_reservation_rows(
+    rows: Sequence[dict],
+    *,
+    now_ts: float | None = None,
+    max_age_s: float = PENDING_RESERVATION_MAX_AGE_S,
+) -> list[dict]:
+    """FRESH pending admission reservations from the registry: status=="admitting", no pid yet,
+    ``reserved_ts`` within ``max_age_s``. A row with a missing/unparsable ``reserved_ts`` is
+    treated as STALE (never counted) — a malformed row must not permanently block admission (the
+    launch-side sweep drops it; the write path always stamps ``reserved_ts``). PURE."""
+    now = time.time() if now_ts is None else float(now_ts)
+    fresh: list[dict] = []
+    for r in rows:
+        if not isinstance(r, dict) or r.get("status") != PENDING_RESERVATION_STATUS:
+            continue
+        if r.get("pid"):
+            continue  # the launcher already promoted it (or a malformed row) -> not a reservation
+        try:
+            age = now - float(r["reserved_ts"])
+        except (KeyError, TypeError, ValueError):
+            continue  # missing/unparsable timestamp -> stale by definition
+        if age <= float(max_age_s):
+            # (a negative age — slightly-future ts from clock skew — still counts: conservative)
+            fresh.append(r)
+    return fresh
 
 
 # ─────────────────────────── system memory snapshot ───────────────────────────
@@ -1037,13 +1130,22 @@ def list_tracked_jobs(
         # band comparison, blackbox rows) is true GiB. Pre-fix the admission path under-counted
         # remaining growth by a measured 2.63 GiB (anti-conservative mixed-unit arithmetic).
         current_rss = _mg.group_rss_gb(samples, pid) * TRACKED_RSS_UNITS_TO_GIB
-        # projected peak: explicit registry field wins; else fall back to current RSS (a floor).
-        proj = rec.get("projected_peak_gib")
-        try:
-            proj_peak = float(proj) if proj is not None else current_rss
-        except (TypeError, ValueError):
-            proj_peak = current_rss
-        proj_peak = max(proj_peak, current_rss)
+        # Projected peak (review-fix CRITICAL B): explicit registry field wins; an UNKNOWN peak
+        # gets the CONSERVATIVE +UNKNOWN_GROWTH_HEADROOM_GIB default (never the old zero-growth
+        # fallback), except protection infra + governed descendants (see resolve_projected_peak_gib
+        # + the constants-block rationale). A ps-only candidate whose ancestor chain reaches a
+        # REGISTERED running pid is a governed descendant (its growth is projected by the parent
+        # row — e.g. the trainer inside a daemon->safe_run tree sits in its own session).
+        governed_desc = False
+        if not rec:
+            try:
+                governed_desc = bool(_mg._ancestor_pids(samples, pid) & owned_pids)
+            except Exception:
+                governed_desc = False
+        proj_peak = resolve_projected_peak_gib(
+            rec.get("projected_peak_gib"), current_rss, cmd=cmd,
+            governed_descendant=governed_desc,
+        )
         prio_field = rec.get("priority")
         try:
             priority = int(prio_field) if prio_field is not None else classify_run_priority(label, cmd)
@@ -1054,6 +1156,28 @@ def list_tracked_jobs(
             label=label, pid=pid, pgid=_mg._sample_pgid(s), cmd=cmd, priority=priority,
             projected_peak_gib=proj_peak, current_rss_gib=current_rss, paused=paused,
             throttle_eligible=eligible, own_group_leader=own_leader,
+        ))
+
+    # (review-fix CRITICAL C, read side) Count FRESH pending admission reservations as tracked
+    # jobs with zero current RSS and their reserved projected peak as growth headroom — so a second
+    # launcher's admission decision sees a first launcher's just-admitted-but-not-yet-spawned job.
+    # Synthetic rows are NEVER throttle-eligible (pid 0 — nothing to pause). A transient overlap
+    # (reservation still pending while the freshly-spawned process already shows up via the ps
+    # pattern) double-counts CONSERVATIVELY for the ~100 ms between Popen and row promotion.
+    for r in pending_reservation_rows(registry_rows):
+        p_label = str(r.get("label", "")) or "pending_reservation"
+        p_cmd = r.get("cmd", "")
+        p_cmd_str = " ".join(p_cmd) if isinstance(p_cmd, list) else str(p_cmd)
+        p_proj = r.get("projected_peak_gib")
+        try:
+            p_peak = float(p_proj) if p_proj is not None else UNKNOWN_GROWTH_HEADROOM_GIB
+        except (TypeError, ValueError):
+            p_peak = UNKNOWN_GROWTH_HEADROOM_GIB
+        jobs.append(TrackedJob(
+            label=p_label, pid=0, pgid=0, cmd=p_cmd_str,
+            priority=classify_run_priority(p_label, p_cmd_str),
+            projected_peak_gib=max(0.0, p_peak), current_rss_gib=0.0, paused=False,
+            throttle_eligible=False, own_group_leader=False,
         ))
     return jobs
 

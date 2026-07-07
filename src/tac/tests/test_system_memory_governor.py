@@ -285,7 +285,10 @@ def test_decide_action_normal_no_paused_is_none():
 
 
 # ── enforce-mode + misc ─────────────────────────────────────────────────────────────────────────
-def test_admission_enforcing_defaults_advisory(monkeypatch):
+def test_admission_enforcing_defaults_advisory(monkeypatch, tmp_path):
+    # hermetic vs the DURABLE enforce flag (this machine has the real flag ARMED; the env-var
+    # semantics under test must be isolated from it — same pattern as the sister flag tests below).
+    monkeypatch.setattr(gov, "_ADMISSION_ENFORCE_FLAG", tmp_path / "absent.flag")
     monkeypatch.delenv(gov.ADMISSION_ENFORCE_ENV, raising=False)
     assert gov.admission_enforcing() is False
     monkeypatch.setenv(gov.ADMISSION_ENFORCE_ENV, "1")
@@ -348,3 +351,92 @@ def test_admission_enforcing_flag_read_error_fails_advisory(monkeypatch, tmp_pat
     d.mkdir()
     monkeypatch.setattr(gov, "_ADMISSION_ENFORCE_FLAG", d)
     assert gov.admission_enforcing() is False
+
+
+# ── conservative unknown-peak growth default (review-fix CRITICAL B) ─────────────────────────────
+def test_resolve_projected_peak_recorded_projection_wins():
+    # a valid recorded projection is authoritative (floored at current RSS)
+    assert gov.resolve_projected_peak_gib(72.0, 60.0) == 72.0
+    assert gov.resolve_projected_peak_gib(50.0, 60.0) == 60.0   # never below current RSS
+
+
+def test_resolve_projected_peak_unknown_defaults_conservative_not_zero_growth():
+    """The OLD backwards fallback assumed an unknown-peak job grows by ZERO; the fix charges it
+    current + UNKNOWN_GROWTH_HEADROOM_GIB (matching the launch paths' 25 GiB default)."""
+    assert gov.UNKNOWN_GROWTH_HEADROOM_GIB == 25.0
+    assert gov.resolve_projected_peak_gib(None, 60.0) == 85.0
+    assert gov.resolve_projected_peak_gib(None, 0.0) == 25.0
+    # malformed recorded value -> treated as unknown -> conservative
+    assert gov.resolve_projected_peak_gib("not-a-number", 10.0) == 35.0
+
+
+def test_resolve_projected_peak_protection_infra_zero_growth():
+    """Protection infra (blackbox/guard/governor) is deliberately unprojected + tiny: a permanent
+    +25 GiB phantom would poison every admission decision."""
+    for tok in ("memory_blackbox.py", "memory_guard.py", "system_memory_governor.py"):
+        assert gov.resolve_projected_peak_gib(None, 0.5, cmd=f"python tools/{tok} --daemon") == 0.5
+    # ...but a recorded projection on infra still wins
+    assert gov.resolve_projected_peak_gib(2.0, 0.5, cmd="python tools/memory_blackbox.py") == 2.0
+
+
+def test_resolve_projected_peak_governed_descendant_zero_growth():
+    """The trainer INSIDE a registered daemon->safe_run tree (own session -> separate ps candidate)
+    is already projected by its parent's registry row — charging +25 GiB again would double-count
+    and could false-refuse small jobs while the live #205 runs."""
+    assert gov.resolve_projected_peak_gib(None, 60.0, governed_descendant=True) == 60.0
+
+
+def test_unknown_growth_headroom_matches_launch_path_default():
+    """The conservative default MUST match the admission gate's own unknown-projection fallback
+    (spawn_durable_daemon --projected-gb default 25.0 / governor CLI --projected-gib default 25.0)
+    so an unregistered job is charged the same projection it would have declared at launch."""
+    assert gov.UNKNOWN_GROWTH_HEADROOM_GIB == 25.0
+
+
+# ── PENDING admission reservations (review-fix CRITICAL C, read side) ────────────────────────────
+def _pending_row(label="pending_a", proj=50.0, age_s=1.0, now=1_000_000.0, pid=None):
+    return {"label": label, "pid": pid, "status": gov.PENDING_RESERVATION_STATUS,
+            "projected_peak_gib": proj, "reserved_ts": now - age_s, "cmd": []}
+
+
+def test_pending_reservation_rows_fresh_vs_stale():
+    now = 1_000_000.0
+    rows = [
+        _pending_row("fresh", age_s=5.0, now=now),
+        _pending_row("stale", age_s=999.0, now=now),
+        {"label": "no_ts", "pid": None, "status": gov.PENDING_RESERVATION_STATUS},  # malformed
+        _pending_row("promoted", age_s=5.0, now=now, pid=1234),  # pid set -> not a reservation
+        {"label": "running", "pid": 42, "status": "running"},
+    ]
+    fresh = gov.pending_reservation_rows(rows, now_ts=now)
+    assert [r["label"] for r in fresh] == ["fresh"]
+
+
+@pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
+def test_pending_reservation_counted_as_growth_headroom():
+    """A fresh pending reservation surfaces as a zero-RSS tracked job whose growth headroom equals
+    its reserved projection — so a SECOND launcher's admission arithmetic sees the first's
+    just-admitted job (the TOCTOU close, read side)."""
+    rows = [_pending_row("job_a", proj=50.0, age_s=1.0, now=gov.time.time())]
+    jobs = gov.list_tracked_jobs(samples={}, registry_rows=rows)
+    pend = [j for j in jobs if j.label == "job_a"]
+    assert len(pend) == 1
+    assert pend[0].current_rss_gib == 0.0
+    assert pend[0].projected_peak_gib == 50.0
+    assert pend[0].growth_headroom_gib == 50.0
+    assert pend[0].throttle_eligible is False       # pid 0 — nothing to pause
+    assert gov.sum_active_growth_headroom_gib(jobs) >= 50.0
+    # and the admission math flips on it: fits without the reservation, refuses with it.
+    ceiling = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=20.0, tracked_current_gib=0.0)
+    without = gov.admission_decision(projected_new_gib=60.0, system_used_gib=20.0,
+                                     active_growth_headroom_gib=0.0, ceiling=ceiling)
+    with_res = gov.admission_decision(projected_new_gib=60.0, system_used_gib=20.0,
+                                      active_growth_headroom_gib=50.0, ceiling=ceiling)
+    assert without.admit and not with_res.admit
+
+
+@pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
+def test_stale_pending_reservation_not_counted():
+    rows = [_pending_row("crashed_launcher", proj=50.0, age_s=9999.0, now=gov.time.time())]
+    jobs = gov.list_tracked_jobs(samples={}, registry_rows=rows)
+    assert [j for j in jobs if j.label == "crashed_launcher"] == []

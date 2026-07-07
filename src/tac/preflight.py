@@ -86136,17 +86136,26 @@ def check_heavy_witness_trainers_call_admission_guard(
     admission path (the P0 machine-crash gate: a concurrent >128 GB run CRASHED the box) fails
     CLOSED when enforce is armed.
 
-    Scans ``experiments/train_*witness*realized_through_R*.py`` (the witness trainers ONLY — the
-    ``train_substrate_*.py`` family is out of scope) and warns for any file whose source lacks an
-    ``assert_governed_admission`` call. WARN-ONLY (live count may be >0 for an un-wired sibling
-    trainer). Same-line waiver: ``# ADMISSION_GUARD_WAIVED:<rationale>`` (for a genuinely-light
+    Scans ``experiments/train_*witness*realized_through_R*.py`` (the witness trainers) AND — as of
+    the 2026-07-06 memory-safety whole-subsystem review — the ``experiments/train_substrate_*.py``
+    family, which is now IN scope: substrate trainers are paid-dispatch-class heavy entrypoints
+    and were a carved-out blind spot in the admission-guard coverage. WARN-ONLY: the substrate
+    family's live warn count (~104 at in-scoping) is the VISIBLE backlog for a follow-up wiring
+    campaign, not a carve-out — per CLAUDE.md "'Off' is a tracked queue, never a forgotten
+    default". Same-line waiver: ``# ADMISSION_GUARD_WAIVED:<rationale>`` (for a genuinely-light
     entrypoint that never allocates heavy)."""
     root = Path(repo_root or REPO_ROOT)
     exp = root / "experiments"
     violations: list[str] = []
     scanned = 0
+    scan_paths: list[Path] = []
     if exp.is_dir():
-        for entry in sorted(exp.glob("train_*witness*realized_through_R*.py")):
+        scan_paths = sorted(
+            set(exp.glob("train_*witness*realized_through_R*.py"))
+            | set(exp.glob("train_substrate_*.py"))
+        )
+    if scan_paths:
+        for entry in scan_paths:
             if not entry.is_file():
                 continue
             rel = entry.relative_to(root).as_posix()
@@ -86160,8 +86169,8 @@ def check_heavy_witness_trainers_call_admission_guard(
             if any("ADMISSION_GUARD_WAIVED:" in ln for ln in text.splitlines()):
                 continue
             violations.append(
-                f"{rel}: heavy witness trainer does not call assert_governed_admission() in its "
-                "main() -> a RAW launch bypasses the P0 memory admission gate (a concurrent "
+                f"{rel}: heavy trainer entrypoint does not call assert_governed_admission() in "
+                "its main() -> a RAW launch bypasses the P0 memory admission gate (a concurrent "
                 ">128 GB run CRASHED the box). Add `from tac.admission_guard import "
                 "assert_governed_admission; assert_governed_admission(<label>)` at the top of "
                 "main() (after argparse), or a same-line `# ADMISSION_GUARD_WAIVED:<rationale>`.")
@@ -86169,10 +86178,11 @@ def check_heavy_witness_trainers_call_admission_guard(
     if verbose:
         print(
             f"  [catalog-254] check_heavy_witness_trainers_call_admission_guard: "
-            f"{len(violations)} violation(s) ({scanned} witness trainer(s) scanned)"
+            f"{len(violations)} violation(s) ({scanned} heavy trainer(s) scanned; "
+            f"witness + substrate families)"
             if violations else
             f"  [catalog-254] check_heavy_witness_trainers_call_admission_guard: OK "
-            f"({scanned} witness trainer(s) scanned)")
+            f"({scanned} heavy trainer(s) scanned; witness + substrate families)")
     if strict and violations:
         raise PreflightError(
             "check_heavy_witness_trainers_call_admission_guard found "
