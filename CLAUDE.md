@@ -2993,7 +2993,8 @@ manual citation) — the verbatim Fable-5 harvest patterns
 (`docs/harvest_fable5_prompting_and_loops_20260707.md`) as code, not re-typed per prompt.
 Reasoning-echo instructions ("show your thinking"-class directives) are FORBIDDEN in any
 prompt/skill surface — they trip reasoning-extraction classifiers on Fable-class models and
-cause refusal storms. Gated (warn-only): `check_no_reasoning_echo_instructions` (scans
+cause refusal storms. Gated (STRICT since the 2026-07-07 round-2 flip; landed warn-only):
+`check_no_reasoning_echo_instructions` (scans
 .claude/skills/** + prompts/** + docs/*.md + the contract module; negated mentions exempt;
 same-line `# REASONING_ECHO_OK:<rationale>` waiver) + `check_subagent_contract_module_integrity`
 (module exists, imports, every constant keeps its key phrase, composer keeps the grounding

@@ -195,6 +195,20 @@ def test_logit_adjust_adapter_offsets_segnet_only_and_tau0_is_same_object():
         in _TRAINER_SRC
 
 
+def test_focal_telemetry_reads_loss_adapter_not_raw_adapter():
+    # Round-2 review F4: the per-epoch island-gradient-share telemetry (_fo_loss) must read the
+    # SAME loss surface base_loss reads — the wrapped _LogitAdjustSegAdapter when
+    # --logit-adjust-loss-tau != 0 (raw adapter.segnet would misattribute the share in exactly
+    # the runs the lever targets). tau == 0.0 keeps ``_loss_adapter is adapter`` (the SAME
+    # object, gated by the source-level assertions above), so default-run telemetry is
+    # byte-identical by construction.
+    assert "def _fo_loss" in _TRAINER_SRC
+    fo_block = _TRAINER_SRC.split("def _fo_loss", 1)[1][:600]
+    assert "_loss_adapter.segnet(fv)" in fo_block
+    # no bare raw-adapter read remains inside the telemetry closure (the F4 bug)
+    assert "adapter.segnet(fv)" not in fo_block.replace("_loss_adapter.segnet(fv)", "")
+
+
 def test_constant_shift_invariance_documents_center_equivalence():
     # A GLOBAL constant on every logit changes neither softmax-CE nor the top1-top2 margin —
     # the documented equivalence between the un-centered train-time offsets here and the

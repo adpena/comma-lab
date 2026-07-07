@@ -178,6 +178,53 @@ def test_hook_fails_open_on_malformed_stdin():
     assert proc.stdout.strip() == ""
 
 
+# --- F6 loud-escalation of the fail-open error log (round-2 review) ---------------------
+# >= 3 errors within 24h ⇒ ONE stderr warning line; the hook STILL allows (fail-open).
+
+
+def _patch_error_log(tmp_path, monkeypatch):
+    log = tmp_path / "launch_guard_hook_errors.log"
+    monkeypatch.setattr(hook, "_ERROR_LOG", log)
+    return log
+
+
+def test_escalation_does_not_fire_below_threshold(tmp_path, monkeypatch, capsys):
+    _patch_error_log(tmp_path, monkeypatch)
+    hook._log_error(ValueError("one"))
+    hook._log_error(ValueError("two"))
+    assert "WARNING" not in capsys.readouterr().err  # 2 < 3: silent append only
+
+
+def test_escalation_fires_at_three_within_window_and_still_allows(tmp_path, monkeypatch, capsys):
+    log = _patch_error_log(tmp_path, monkeypatch)
+    for i in range(3):
+        hook._log_error(ValueError(f"e{i}"))
+    err = capsys.readouterr().err
+    assert "WARNING" in err and str(log) in err
+    # fail-open preserved: escalation is observability only — decide() still allows
+    assert _decide("git status")[0] is True
+    assert len(log.read_text().splitlines()) == 3  # all three errors durably appended
+
+
+def test_escalation_ignores_stale_and_legacy_untimestamped_lines(tmp_path, monkeypatch, capsys):
+    log = _patch_error_log(tmp_path, monkeypatch)
+    log.parent.mkdir(parents=True, exist_ok=True)
+    stale = time.time() - 25 * 3600
+    log.write_text(f"{stale:.3f}\tValueError: old-beyond-24h\n"
+                   "ValueError: legacy-line-without-timestamp\n")
+    hook._log_error(ValueError("x"))
+    hook._log_error(ValueError("y"))
+    # 2 recent + 1 stale + 1 legacy => below threshold => no warning
+    assert "WARNING" not in capsys.readouterr().err
+    hook._log_error(ValueError("z"))  # third RECENT error => fires
+    assert "WARNING" in capsys.readouterr().err
+
+
+def test_recent_error_count_unreadable_log_returns_zero(tmp_path, monkeypatch):
+    _patch_error_log(tmp_path, monkeypatch)  # file never created
+    assert hook._recent_error_count(time.time()) == 0
+
+
 # --- witness_checkin autodiscovery -----------------------------------------------------
 
 

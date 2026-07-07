@@ -6403,10 +6403,12 @@ def preflight_all(
         # engineer all those patterns as standard behaviors and gates").
         # (1) reasoning-echo refusal-storm prevention across prompt surfaces
         # (harvest pattern 14); (2) anti-rot for the canonical subagent
-        # contract module dispatchers compose prompts from. Both WARN-ONLY at
-        # landing per the "Strict-flip atomicity rule"; live count 0 at wiring.
-        check_no_reasoning_echo_instructions(strict=False, verbose=verbose)
-        check_subagent_contract_module_integrity(strict=False, verbose=verbose)
+        # contract module dispatchers compose prompts from. STRICT (round-2
+        # review F2, 2026-07-07): both verified strict-clean at flip time (live
+        # count 0) per the "Strict-flip atomicity rule" — the warn-only landing
+        # should have flipped in the original batch.
+        check_no_reasoning_echo_instructions(strict=True, verbose=verbose)
+        check_subagent_contract_module_integrity(strict=True, verbose=verbose)
 
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(

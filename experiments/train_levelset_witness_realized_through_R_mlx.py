@@ -6856,8 +6856,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _fo_f1 = mx.stop_gradient(_fo_render(model, _cf_mx(_fo_pi), _fo_c1, render_h, render_w))
                 _fo_oh, _fo_mg = lstar_cache[_fo_pi]
 
+                # (round-2 review F4) read through the SAME loss adapter the base loss uses:
+                # when --logit-adjust-loss-tau != 0 the loss surface is the WRAPPED
+                # _LogitAdjustSegAdapter — raw adapter.segnet here would misattribute the
+                # island-gradient share in exactly the runs the lever targets. tau == 0.0 =>
+                # ``_loss_adapter is adapter`` (same object) => byte-identical telemetry.
                 def _fo_loss(fv, _oh=_fo_oh, _mg=_fo_mg):
-                    logits = adapter.segnet(fv)
+                    logits = _loss_adapter.segnet(fv)
                     ce = mx.logsumexp(logits, axis=-1) - mx.sum(logits * _oh, axis=-1)
                     pw = ce * (1.0 + args.hinge_weight * mx.exp(-mx.clip(_mg, 0.0, 1e9)))
                     return mx.mean(pw * focal_pixel_weight_mlx(logits, _oh, focal_gamma))
