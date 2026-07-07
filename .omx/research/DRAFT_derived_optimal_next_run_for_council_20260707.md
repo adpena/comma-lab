@@ -626,3 +626,40 @@ the strongest evidence class short of a measured row; #287 is law-shaped, not on
 
 Pointer contest-CPU 0.19110 UNMOVED; §16 is design input (DERIVED + measured-anchor citations;
 the finisher claim is a PREDICTION until the $0 ep650 probe runs).
+
+## §17 ADDENDUM (2026-07-07, append-only) — Lie/SE(3) exploitation audit (operator: "I don't think we're using our Lie groups stuff yet")
+
+Grounded inventory (grep of tac.lie consumers, this turn):
+- **USED (pose axis):** SE(3)/se(3) exp/log → store-nothing ξ carrier (`xi_pose_coder`, derive-H
+  #257), ego-ξ trajectory, lane-band ego-factorization (registered equation), warp-parity tests.
+- **BUILT-NEVER-FIRED:** `se3_bspline.py` (ξ-trajectory spline: pose table ~7KB → ~hundreds of
+  bytes of knots + smooth comb phase) · `screw_blend.py` (dual-quat per-class blend). Same
+  never-fired class as persistence_topology_loss (§16.2).
+- **DESIGNED-NOT-DONE:** #194 (canonicalize-to-ground-frame + per-class warp), in_progress since
+  late June.
+
+MEASURED constraint the council must respect (FEED-ll / #190, n96 advisory): warping a RAW
+partition keyframe was GREEN on rate (persist 47+ pairs) but the DETERMINISTIC-render d_seg floor
+(~0.0185 bulk) is 30-40× over budget and the bulk-optimal warp was near-identity — the
+deterministic warp MATERIALIZER is dead. That measurement does NOT cover the object below.
+
+### 17.1 The unmeasured arm: GROUND-FRAME CHART for the TRAINED witness
+Define the witness field ONCE in the ground frame; per-frame evaluation pre-composes input
+coordinates with the ξ-homography (chart change, NOT pixel warp; still trained through R+scorer
+⇒ does not inherit the #190 deterministic floor). One ξ — already stored/derived for pose —
+buys three measured residuals:
+1. temporal flicker (44% lane spikes) structurally impossible for static geometry (one canonical
+   field cannot disagree with itself across frames);
+2. the §15/§16 dash-comb corrector's natural home (dashes STATIC in ground frame; phase
+   transport = the chart change — comb + ground frame are ONE build);
+3. §15 pinning/zero-mobility dissolves by construction (per-frame-chart pathology; ground-frame
+   lane interface never has to move).
+Morse-lemma pattern on the temporal axis: ego-motion = the group action; quotient it out and the
+learnable remainder is the truly static structure. Rate: per-frame conditioning shrinks (frames
+share the canonical field).
+$0-adjacent A/B spec (feeds #194 as its completion criterion): same witness architecture, input
+chart pre-composed with per-frame ξ-homography (ground-plane classes; Undriv=rot-only KRK⁻¹ per
+the FEED-ll stratification), n600 d_seg + flicker-rate vs the standard chart. PREDICTION until
+measured. Caveats: movable objects violate the static assumption (route via per-class blend =
+`screw_blend`, its first consumer); ξ noise couples into d_seg (bound with the stored-ξ table).
+2nd item: fire `se3_bspline` on the existing ξ table (rate-only, byte-measured, independent).

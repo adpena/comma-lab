@@ -9472,3 +9472,16 @@ consume schedule primitives through exactly these generic describe()/registry su
 2026-07-07 dsl-generic dashboard build) — no consumer-specific rendering exists to update for a
 no-argv designed-not-built primitive. Consumer-specific work (rendering the solve stage's
 fired-evidence) is owed WITH the #341 Phase-2 trainer build, not before.
+
+## FEED-07v (2026-07-07) — Lie/SE(3) exploitation audit → council draft §17 (operator prompt)
+
+Operator: "I don't think we're using our Lie groups stuff yet either." Audit CONFIRMS with nuance:
+pose axis USES tac.lie (ξ carrier/derive-H/ego-trajectory/lane-factorization); `se3_bspline` +
+`screw_blend` BUILT-never-fired; #194 ground-frame integration designed-not-done. FEED-ll (#190)
+constraint honored: deterministic warp MATERIALIZER measured dead (render floor 0.0185); the
+UNMEASURED arm is the ground-frame CHART for the TRAINED witness (coordinate pre-composition with
+ξ-homography, still trained through R+scorer). One ξ → three measured residuals (flicker-44% /
+dash-comb-phase / pinning) + rate. §17 spec'd the n600 A/B as #194's completion criterion +
+se3_bspline byte-measure as an independent rate item. Triality: DAG=this row; DSL=lever factories
+owed WITH the #194 build (not before); equations=owed on the A/B measurement. Pointer 0.19110
+UNMOVED (design/means).
