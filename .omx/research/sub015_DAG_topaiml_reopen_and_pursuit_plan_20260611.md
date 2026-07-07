@@ -9799,7 +9799,7 @@ Costate/duty: DashComb `measured` event #2 (mechanism level; the in-training arm
 never fired — stays on the duty queue). means ≠ ends: pointer 0.19110 moves only via
 `upstream/evaluate.py` on exact archive bytes.
 
-## FEED-08e (2026-07-07, deep-math research agent) — MALLAT + BALLÉ TARGETED SECOND PASS vs the MEASURED anchors: comb theory-ranked over freq-along; parabolic ceiling 8=√64 explains the 3.2× deficit; hyperprior calculus INVERTS at our byte scale [$0 report-only, advisory; pointer 0.19110 UNMOVED — means]
+## FEED-08f (2026-07-07, deep-math research agent) — MALLAT + BALLÉ TARGETED SECOND PASS vs the MEASURED anchors: comb theory-ranked over freq-along; parabolic ceiling 8=√64 explains the 3.2× deficit; hyperprior calculus INVERTS at our byte scale [$0 report-only, advisory; pointer 0.19110 UNMOVED — means]
 
 Memo: `.omx/research/mallat_balle_deepmath_review_20260707.md` (per-theorem adjudication,
 MEASURED/THEIRS/INFERRED/SPECULATIVE discipline; ledger entries appended for 10 papers).
