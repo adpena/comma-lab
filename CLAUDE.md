@@ -2984,6 +2984,21 @@ way the sections above do; subagent prompts for review/build work MUST cite
 warn-only in `preflight_all`). Sisters: the
 NO-FAKE supreme rule (the manual is its craft-level how) + §OPERATOR PRIORITY anti-forgetfulness.
 
+### Standard subagent contract (harvest-engineered, gated — 2026-07-07)
+
+Dispatchers compose subagent prompts from **`tac.subagent_contract.standard_contract()`**
+(grounded-progress + no-ending-on-promises + final-message re-grounding + state-the-boundaries
++ anti-goldplating + fresh-context verifier + own-round-1-review + triality wiring + operating-
+manual citation) — the verbatim Fable-5 harvest patterns
+(`docs/harvest_fable5_prompting_and_loops_20260707.md`) as code, not re-typed per prompt.
+Reasoning-echo instructions ("show your thinking"-class directives) are FORBIDDEN in any
+prompt/skill surface — they trip reasoning-extraction classifiers on Fable-class models and
+cause refusal storms. Gated (warn-only): `check_no_reasoning_echo_instructions` (scans
+.claude/skills/** + prompts/** + docs/*.md + the contract module; negated mentions exempt;
+same-line `# REASONING_ECHO_OK:<rationale>` waiver) + `check_subagent_contract_module_integrity`
+(module exists, imports, every constant keeps its key phrase, composer keeps the grounding
+block). Memory: `feedback_harvest_patterns_engineered_as_contract_and_gates_20260707.md`.
+
 ## Primary duties
 
 1. Keep `submissions/exact_current` runnable under the current published workflow.

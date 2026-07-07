@@ -6399,6 +6399,15 @@ def preflight_all(
         # break surfaces loudly but never blocks an unrelated pipeline).
         check_operating_manual_pointer_integrity(strict=False, verbose=verbose)
 
+        # 2026-07-07 harvest-engineered prompting gates (operator: "Save and
+        # engineer all those patterns as standard behaviors and gates").
+        # (1) reasoning-echo refusal-storm prevention across prompt surfaces
+        # (harvest pattern 14); (2) anti-rot for the canonical subagent
+        # contract module dispatchers compose prompts from. Both WARN-ONLY at
+        # landing per the "Strict-flip atomicity rule"; live count 0 at wiring.
+        check_no_reasoning_echo_instructions(strict=False, verbose=verbose)
+        check_subagent_contract_module_integrity(strict=False, verbose=verbose)
+
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
                 REPO_ROOT,
@@ -86272,6 +86281,263 @@ def check_operating_manual_pointer_integrity(
         raise PreflightError(
             "check_operating_manual_pointer_integrity found "
             f"{len(violations)} violation(s) (operating-manual anti-rot):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Harvest-engineered prompting gates (2026-07-07 operator directive: "Save and
+# engineer all those patterns as standard behaviors and gates").
+#
+# Sources: docs/harvest_fable5_prompting_and_loops_20260707.md (pattern 14:
+# reasoning-echo instructions trigger reasoning-extraction refusals -> fallback
+# storms on Fable-class models) + docs/operating_manual_craft_handoff.md.
+# Canonical contract module: src/tac/subagent_contract.py (dispatchers compose
+# subagent prompts from tac.subagent_contract.standard_contract()).
+#
+# Two gates, both WARN-ONLY at landing per the "Strict-flip atomicity rule":
+#   1. check_no_reasoning_echo_instructions — refusal-storm prevention: no
+#      prompt/skill surface may instruct a model to echo/transcribe internal
+#      reasoning (negated mentions exempt; same-line REASONING_ECHO_OK waiver).
+#   2. check_subagent_contract_module_integrity — anti-rot: the contract module
+#      exists, imports, carries every named constant, and its composer output
+#      still contains the grounded-progress phrase (the single highest-value
+#      harvest adoption).
+# ----------------------------------------------------------------------------
+
+# Instruction phrases that read as "echo your internal reasoning" directives.
+# Matching is per-line, case-insensitive, and exempts negated contexts.
+_REASONING_ECHO_PHRASES: tuple[str, ...] = (
+    "show your thinking",
+    "transcribe your reasoning",
+    "reproduce your chain of thought",
+    "echo your internal reasoning",
+)
+
+# A line mentioning a phrase in a NEGATED context ("never ...", "don't ...",
+# "avoid ...") is guidance AGAINST the anti-pattern, not an instance of it.
+_REASONING_ECHO_NEGATION_TOKENS: tuple[str, ...] = (
+    "never",
+    "don't",
+    "do not",
+    "avoid",
+    "forbidden",
+)
+
+# Same-line waiver. Placeholder "<rationale>" / "<reason>" literals are rejected
+# so this gate's own documentation cannot self-waive (Catalog #287 sister discipline).
+_REASONING_ECHO_WAIVER_RE = re.compile(
+    r"#\s*REASONING_ECHO_OK:\s*(?!<(?:rationale|reason)>)\S+"
+)
+
+# Text suffixes worth scanning on the prompt surfaces (skip binaries).
+_REASONING_ECHO_TEXT_SUFFIXES = frozenset(
+    {".md", ".txt", ".py", ".yaml", ".yml", ".json", ".toml"}
+)
+
+
+def _reasoning_echo_iter_in_scope_files(root: Path):
+    """Yield prompt-surface files: .claude/skills/**, prompts/**, docs/*.md,
+    and the subagent-contract module (+ any src/tac/*prompt*.py siblings)."""
+    skills_dir = root / ".claude" / "skills"
+    if skills_dir.is_dir():
+        yield from (
+            p for p in sorted(skills_dir.rglob("*"))
+            if p.is_file() and p.suffix.lower() in _REASONING_ECHO_TEXT_SUFFIXES
+        )
+    prompts_dir = root / "prompts"
+    if prompts_dir.is_dir():
+        yield from (
+            p for p in sorted(prompts_dir.rglob("*"))
+            if p.is_file() and p.suffix.lower() in _REASONING_ECHO_TEXT_SUFFIXES
+        )
+    docs_dir = root / "docs"
+    if docs_dir.is_dir():
+        yield from sorted(docs_dir.glob("*.md"))
+    contract = root / "src" / "tac" / "subagent_contract.py"
+    if contract.is_file():
+        yield contract
+    tac_dir = root / "src" / "tac"
+    if tac_dir.is_dir():
+        yield from (
+            p for p in sorted(tac_dir.glob("*prompt*.py"))
+            if p.is_file() and p != contract
+        )
+
+
+def check_no_reasoning_echo_instructions(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Refuse reasoning-echo instructions in prompt/skill surfaces (refusal-storm risk).
+
+    Per the Fable-5 harvest (docs/harvest_fable5_prompting_and_loops_20260707.md
+    pattern 14): instructing a model to echo/transcribe its internal reasoning
+    ("show your thinking" class) trips reasoning-extraction safety classifiers on
+    Fable-class models and causes refusal storms with fallback cascades. Read
+    thinking blocks instead — never instruct their transcription.
+
+    Scope: .claude/skills/**, prompts/**, docs/*.md, src/tac/subagent_contract.py
+    (+ src/tac/*prompt*.py siblings). Negated mentions (line contains never /
+    don't / do not / avoid / forbidden) are exempt — those are guidance AGAINST
+    the anti-pattern. Same-line waiver: ``# REASONING_ECHO_OK:<rationale>``
+    (placeholder literal rejected).
+
+    Sister of check_subagent_contract_module_integrity (the contract module this
+    gate keeps echo-free) + the CLAUDE.md "The Operating Manual" subagent-contract
+    subsection. WARN-ONLY at landing; live count 0 (strict-flip candidate).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for path in _reasoning_echo_iter_in_scope_files(root):
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        rel = path.relative_to(root).as_posix()
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            lowered = line.lower()
+            hit = next((p for p in _REASONING_ECHO_PHRASES if p in lowered), None)
+            if hit is None:
+                continue
+            if any(tok in lowered for tok in _REASONING_ECHO_NEGATION_TOKENS):
+                continue
+            if _REASONING_ECHO_WAIVER_RE.search(line):
+                continue
+            violations.append(
+                f"{rel}:{lineno}: reasoning-echo instruction phrase '{hit}' — "
+                "instructing a model to echo/transcribe internal reasoning trips "
+                "reasoning-extraction classifiers (refusal storms). Rephrase, negate, "
+                "or add a same-line `# REASONING_ECHO_OK:<rationale>` waiver."
+            )
+
+    if verbose:
+        print(
+            f"  [reasoning-echo] check_no_reasoning_echo_instructions: "
+            f"{len(violations)} violation(s) ({scanned} prompt-surface file(s) scanned)"
+            if violations else
+            f"  [reasoning-echo] check_no_reasoning_echo_instructions: OK "
+            f"({scanned} prompt-surface file(s) scanned)")
+    if strict and violations:
+        raise PreflightError(
+            "check_no_reasoning_echo_instructions found "
+            f"{len(violations)} violation(s) (reasoning-echo refusal-storm prevention):\n  "
+            + "\n  ".join(violations[:10]))
+    return violations
+
+
+# Hardcoded here (NOT read from the module's own registry) so emptying the
+# module registry cannot self-waive the integrity gate.
+_SUBAGENT_CONTRACT_REL = "src/tac/subagent_contract.py"
+_SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
+    "GROUNDED_PROGRESS",
+    "NO_ENDING_ON_PROMISES",
+    "FINAL_MESSAGE_REGROUNDING",
+    "STATE_THE_BOUNDARIES",
+    "ANTI_GOLDPLATING",
+    "FRESH_CONTEXT_VERIFIER",
+    "NEVER_REASONING_ECHO",
+    "OWN_ROUND1_REVIEW",
+    "TRIALITY_WIRING",
+    "MANUAL_CITATION",
+)
+_SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
+    "Before reporting progress, audit each claim against a tool result"
+)
+
+
+def check_subagent_contract_module_integrity(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+    _module=None,
+) -> list[str]:
+    """Anti-rot gate for the canonical subagent contract module.
+
+    ``tac.subagent_contract`` is the single source of truth dispatchers compose
+    subagent prompts from (per the 2026-07-07 harvest engineering directive).
+    This gate refuses silent rot: the module file must exist, must import, must
+    carry every named contract constant as a non-empty string containing its
+    declared key phrase, and ``standard_contract()`` must still emit the
+    grounded-progress phrase (harvest pattern 5 — the single highest-value
+    adoption; Anthropic: "nearly eliminated fabricated status reports").
+
+    ``_module`` is a test-injection seam only. WARN-ONLY at landing per the
+    "Strict-flip atomicity rule"; no waiver token (fix the rot instead).
+    Sister of check_no_reasoning_echo_instructions +
+    check_operating_manual_pointer_integrity (same anti-rot family).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    module_path = root / _SUBAGENT_CONTRACT_REL
+    if not module_path.is_file():
+        violations.append(
+            f"{_SUBAGENT_CONTRACT_REL}: MISSING — dispatchers compose subagent "
+            "prompts from tac.subagent_contract.standard_contract(). Restore it "
+            "(git) or land the removal + this gate's update together, deliberately.")
+
+    module = _module
+    if module is None and not violations:
+        try:
+            import tac.subagent_contract as module  # noqa: PLC0415 — lazy by design
+        except Exception as exc:  # pragma: no cover - import machinery
+            module = None
+            violations.append(
+                f"{_SUBAGENT_CONTRACT_REL}: import failed ({type(exc).__name__}: {exc}).")
+
+    if module is not None:
+        key_phrases = getattr(module, "KEY_PHRASES", {})
+        if not isinstance(key_phrases, dict):
+            key_phrases = {}
+            violations.append(
+                f"{_SUBAGENT_CONTRACT_REL}: KEY_PHRASES registry missing or not a dict.")
+        for name in _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS:
+            value = getattr(module, name, None)
+            if not isinstance(value, str) or not value.strip():
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: constant {name} missing or empty — "
+                    "every named contract block must survive verbatim-grade.")
+                continue
+            phrase = key_phrases.get(name)
+            if isinstance(phrase, str) and phrase and phrase not in value:
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: constant {name} no longer contains its "
+                    f"key phrase ({phrase!r}) — the load-bearing fragment drifted.")
+
+        composer = getattr(module, "standard_contract", None)
+        if not callable(composer):
+            violations.append(
+                f"{_SUBAGENT_CONTRACT_REL}: standard_contract composer missing/not callable.")
+        else:
+            try:
+                composed = composer()
+            except Exception as exc:  # pragma: no cover - defensive
+                composed = ""
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: standard_contract() raised "
+                    f"{type(exc).__name__}: {exc}.")
+            if composed and _SUBAGENT_CONTRACT_GROUNDING_PHRASE not in composed:
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: standard_contract() output lost the "
+                    f"grounded-progress phrase ({_SUBAGENT_CONTRACT_GROUNDING_PHRASE!r}) — "
+                    "the highest-value harvest adoption must always be composed in.")
+
+    if verbose:
+        print(
+            f"  [subagent-contract] check_subagent_contract_module_integrity: "
+            f"{len(violations)} violation(s)"
+            if violations else
+            "  [subagent-contract] check_subagent_contract_module_integrity: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_subagent_contract_module_integrity found "
+            f"{len(violations)} violation(s) (subagent-contract anti-rot):\n  "
             + "\n  ".join(violations))
     return violations
 
