@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical operator-authorize entry point.
 #
 # Per simplification audit `a2a901c4f43d66a74` (operator approved 2026-05-12),

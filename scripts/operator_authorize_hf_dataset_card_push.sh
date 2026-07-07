@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical operator-authorize entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/hf_dataset_card_push.yaml``

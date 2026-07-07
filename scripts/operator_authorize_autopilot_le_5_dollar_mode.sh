@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical operator-authorize entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/autopilot_le_5_dollar_mode.yaml``

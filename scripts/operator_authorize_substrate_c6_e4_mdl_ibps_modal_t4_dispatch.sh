@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the C6 MDL-IBPS substrate.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml``

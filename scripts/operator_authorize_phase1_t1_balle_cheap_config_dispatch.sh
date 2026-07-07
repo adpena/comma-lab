@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical operator-authorize entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/phase1_t1_balle_cheap_config_dispatch.yaml``

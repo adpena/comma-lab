@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical operator-authorize entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/scpp_stage1_modal_a100_dispatch.yaml``

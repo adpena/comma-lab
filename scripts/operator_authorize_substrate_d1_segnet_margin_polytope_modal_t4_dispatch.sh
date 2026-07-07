@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the D1 SegNet margin polytope encoder.
 #
 # Recipe:  .omx/operator_authorize_recipes/substrate_d1_segnet_margin_polytope_modal_t4_dispatch.yaml

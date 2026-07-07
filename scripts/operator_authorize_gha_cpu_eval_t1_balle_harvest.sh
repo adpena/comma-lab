@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical operator-authorize entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/gha_cpu_eval_t1_balle_harvest.yaml``

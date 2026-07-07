@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the A1 + wavelet residual sidecar retarget substrate.
 #
 # Recipe:  .omx/operator_authorize_recipes/substrate_a1_plus_wavelet_residual_modal_t4_dispatch.yaml

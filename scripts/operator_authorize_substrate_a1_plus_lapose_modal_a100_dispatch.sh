@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the A1 + LAPose D1.D HIERARCHICAL composition substrate.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_a1_plus_lapose_modal_a100_dispatch.yaml``
