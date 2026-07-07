@@ -9939,3 +9939,25 @@ question needing a trainer build + DSL Lever, not a config flip) — NOT an orph
 Consistency: register↔DAG↔draft agree; no config change to any live/sealed run dir (READ-ONLY
 honored). Pointer contest-CPU 0.19110 UNMOVED (all rows are rate/coding + source-inspection
 means; the exact row remains the gate).
+
+## FEED-08i (2026-07-07, main session) — T5 "CRUCIBLE" COUNCIL TIER CREATED (operator-called, apparatus)
+**Operator verbatim:** "a new tier of grand council convening with higher rigor and effort passion and
+curiosity and debate and adversariality than ever... only... at absolutely mission critical junction
+points when the operator calls for it... more aggressive and bold and visionary and longer and more
+intensive than symposium even" + "With full deep math and research and building and measuring and
+testing and OSS and everything authority, all authority."
+**What landed:** `CouncilTier.T5` in tac.council_continual_learning + cadence-exempt in
+audit_council_tier_cadence (operator call IS the budget) + check-300 valid-tiers + T2+ validation.
+**The tier's structure (canonical in the CouncilTier docstring):** OPERATOR-CONVENED ONLY (agent may
+recommend, never convene) · full attendance, recusals REPLACED not quorum-reduced · multi-phase:
+pre-registered evidence dossier (MEASURED/DERIVED/INFERRED/ASSUMED tags; negatives adversarially
+cleared) → INDEPENDENT written positions (anti-anchoring) → red-team pre-mortem → ≥2 debate rounds
+(dissent verbatim) → **EMPIRICAL RECESS** (deliberation SUSPENDS to measure any measurable dispute —
+may not proceed past a measurable disagreement) → synthesis surviving the red team's strongest attack
+→ #363 recursive self-reflection seal · FULL EXECUTE AUTHORITY within the operator-declared envelope
+(build/measure/test/research/OSS without per-action GO; outside envelope CONTAINMENT unchanged) ·
+output = launchable config(s) + pre-registered measurement plan, never prose.
+**Binding:** the upcoming #205-endgame grand council convening = T5 instance #1 per the operator call.
+The empirical-recess phase is the tier's signature: it structurally extincts verdicts-by-argument on
+measurable questions (the GT-H overturn class). Commit: the T5 wiring commit this turn.
+[apparatus; pointer 0.19110 UNMOVED — means]
