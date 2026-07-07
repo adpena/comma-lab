@@ -2446,6 +2446,21 @@ def run(
     return report
 
 
+def byte_close_verdict_landed(report: dict) -> bool:
+    """True iff a REAL realized-parity verdict landed in ``report`` (the gate for recording a #247
+    ``measured`` activation event). The realized d_seg/d_pose lives under ``parity_on_inflated_frames``;
+    a ``--skip-parity`` run stores ``{"skipped": True}`` there and NO verdict was computed.
+
+    Fail-safe by construction: a MISSING key defaults to ``skipped=True`` (=> returns False => NO
+    measured event). Recording a ``measured`` event when no verdict landed is a NO-FAKE violation that
+    silently drains the duty_to_measure queue (the 2026-07-06 review-caught key-name bug — the gate
+    read the wrong key ``"parity"`` and fired unconditionally, including on --skip-parity runs)."""
+    parity = report.get("parity_on_inflated_frames")
+    if not isinstance(parity, dict):
+        return False
+    return not parity.get("skipped", True)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ckpt-dir", type=Path, required=True,
@@ -2618,7 +2633,7 @@ def main(argv: list[str] | None = None) -> int:
     # #247 CLOSE: a byte-closed realized verdict landed -> drain the DSL levers this run FIRED from the
     # activation ledger's duty_to_measure (fired -> measured). Fail-safe: the ledger must NEVER break the
     # byte-close. Only when parity actually ran (a real realized d_seg/d_pose verdict, not --skip-parity).
-    if not report.get("parity", {}).get("skipped", False):
+    if byte_close_verdict_landed(report):
         try:
             from tac.witness_dsl.activation_ledger import record_measured_for_run
             rows = record_measured_for_run(
