@@ -20,9 +20,9 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 | Seat | Charter | Wave | Status | Output |
 |---|---|---|---|---|
 | S1 BASIS | Daubechies/Mallat — Arm A basis design (along-tangent bandwidth, bank ladder, activation, chroma) | 1 | DONE (7a052eed0) | position_S1_basis_20260707.md |
-| S2 SCHEDULE+CURRICULUM | witness-native derivation; PR95 cargo-cult audit table; stages/exits/priming | 1 | LAUNCHED | position_S2_schedule_curriculum_20260707.md |
+| S2 SCHEDULE+CURRICULUM | witness-native derivation; PR95 cargo-cult audit table; stages/exits/priming | 1 | DONE (f1e3e8b21) | position_S2_schedule_curriculum_20260707.md |
 | S3 CONTROL/COSTATE | SENSE→DECIDE→ACT; GN/Fisher 2nd-order wiring; HVP-Lanczos probe design; trust-region | 1 | LAUNCHED | position_S3_costate_20260707.md |
-| S4 RATE | Shannon — two-regime allocation, weight-entropy, #157 compress-half, derive-H, byte accounting | 2 | QUEUED | position_S4_rate_20260707.md |
+| S4 RATE | Shannon — two-regime allocation, weight-entropy, #157 compress-half, derive-H, byte accounting | 2 | LAUNCHED | position_S4_rate_20260707.md |
 | S5 LEVER-LEDGER | Fridrich/Yousfi — 36 never-fired per-lever BUILD/DEFER; annulus geometry; lane-band; islands | 2 | LAUNCHED | position_S5_lever_ledger_20260707.md |
 | S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | QUEUED | position_S6_pose_byteclose_20260707.md |
 
@@ -70,3 +70,13 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
   Nyquist-clean across=8 arm; hosc anneal kept; ChromaBoundarySharpen stub-fold; R1-R6 recess items;
   seam conflicts declared (GFC×self-orient fail-close, AA×band/seed incompatible). S5 LEVER-LEDGER
   launched (keeps concurrency at 3).
+- 2026-07-07T~20:3x S2 SCHEDULE+CURRICULUM DONE (f1e3e8b21) — 5 NEW $0 MEASURED rows on the clean
+  baseline: M1 Muon fired COLD ep726 → +27.5% quench, never re-beat ep650; M2 **ANNEAL-TRUNCATION
+  DEFECT** — Muon freeze truncated β at 3.177/4.00 + τ at 0.216/0.05 (denominators ep1000 vs freeze
+  ep726) → the control's 0.0033662 best sat on an INCOMPLETE anneal; M3 #315 plateau trigger
+  backtests near-vacuous on ep_loss (reorient-50 confound); M4 τ-stage ran 76-125ep past meat
+  exhaustion; M5 finisher failure = TRANSIENT×BUDGET not paradigm (τ_e=305ep > 274ep budget).
+  Derived: event exits w/ epoch CAPS; anneal-complete = finisher-fire PRECONDITION;
+  --anneal-epochs=Muon-cap is the $0 flag fix; 34-row PR95 cargo table; exits alone save ~35%
+  wall-clock at zero score cost. M2 forwarded to S3 (spectrum ckpts are truncated-anneal states;
+  ep650 = primary target, ep1000 = cold-quench artifact). S4 RATE launched (concurrency 3).
