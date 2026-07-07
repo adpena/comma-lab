@@ -971,15 +971,28 @@ NO-GO now, SMALL-PROBE gated on ≥10 logged trajectories; kill-criterion = must
 persistence + slope-extrapolation on held-out-BY-RUN, else the toy is falsified.** It is the
 OBSERVER feeding our existing costate actuator, never a control-theory replacement.
 
-**D-2 · Modular theory (VERDICT PENDING — subagent running).** Door A Tomita–Takesaki:
-modular Hamiltonian K=−log ρ / modular flow / KMS-temperature / Araki relative-entropy; the
-adversarial question = does it give a CONCRETE lever (a relative-entropy data-processing bound
-on d_seg through R; a KMS-derived annealing law; costate λ ≡ finite-dim modular Hamiltonian) or
-just re-describe the entropy→Fisher→costate chain we already ride — with the brutal finite-dim
-(Type-I) caveat that Tomita–Takesaki largely collapses to spectral calculus of ρ. Door B
-modular REPRESENTATION theory (char-p, blocks): a possible RATE lever on the FEED-08k
-group-decomposition code-stream coder (arithmetic coding over GF(p)). Attach to
-canonical_equations / group_theory_deepmath_review.
+**D-2 · Modular theory (VERDICT IN — DECISIVE-NEGATIVE, both doors; durable review
+`.omx/research/modular_theory_deepmath_review_20260707.md`).** NOT a new axis — an elegant lens
+that does not move the score. **Door A Tomita–Takesaki = DECISIVE-NEGATIVE by theorem, not
+measurement:** our states are classical/commutative (per-pixel 5-class softmax = probability
+vector = diagonal state on an abelian algebra); every state on an abelian algebra is tracial ⇒
+Δ=1, modular flow σ_t ≡ identity, K ≡ 0 — Tomita–Takesaki says *literally nothing* for classical
+probability (its richness needs Type-III/continuum we don't have). The chain
+relative-entropy→Fisher→modular-Hamiltonian→KMS is real general math but every link degenerates
+to something we already hold under a clearer name: costate λ=∂S/∂cost is a Pontryagin shadow
+price that CHANGES the state (≠ K=−log ρ which PRESERVES it — false friend); KMS-β is our
+`τ=ε=ħ` Gibbs view (static equilibrium, predicts no cooling law — the anneal comes from our
+Γ-convergence/critical-slowing analysis); Araki relative entropy = the classical KL we already
+use (and d_seg is argmax-Hamming, not a relative entropy). Only registerable byproduct: the
+relative-entropy DPI-through-R *ceiling* — real, but the classical data-processing inequality we
+already respect, not a lever. **Door B modular REPRESENTATION theory = DECISIVE-NEGATIVE by
+characteristic:** the subject needs char p | |G|; our weights are char 0 (fp32→int8), and the
+winning FEED-08k Z₂ parity split is the ORDINARY char-0 irrep decomposition where Maschke HOLDS
+(that is *why* it worked) — no non-semisimple structure to exploit; weight-symmetry orbit coding
+already MEASURED NO (387 B cap / −8 B realized). **No $0 test warranted (both negatives are
+theorem-level, not empirical).** Consistent with the group-theory pass: the value was char-0
+ordinary orbit-coding + rule-118 economics; modular theory is the char-p/continuum extension our
+finite classical setup does not occupy.
 
 **D-3 · Jacobian unexploited levers (VERDICT PENDING — subagent running).** (a) null-space
 absorption: SVD of J_scorer → push the irreducible video-derived payload into scorer-invisible
