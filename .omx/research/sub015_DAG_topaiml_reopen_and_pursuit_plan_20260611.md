@@ -8675,3 +8675,30 @@ the one consumer, imports only these producers' public query APIs, rebuilds noth
 senior-engineer adversarial review dispatched for sign-off (the title's final gate); #247 stays IN-PROGRESS
 until that verdict lands. Pointer 0.19110 UNMOVED (apparatus). [triality: DAG(this); code
 372c3ac6b — apparatus/[no-triality]]
+
+## FEED-247finish (2026-07-06) — #247 costate controller is now AUTOMATIC + CANONICAL + CONTINUAL-LEARNING (+ a review-caught CRITICAL fixed)
+Operator bar ("useful, automatic, canonical, fully-leveraged, continual-learning") — the de-orphaned
+read surface (FEED-247deorphan) was NOT the finish. This closes the controller's own substance:
+- **CRITICAL FIX `607fce1c2`** (independent review caught it): the CLOSE gate read the WRONG report key
+  (`"parity"` vs `"parity_on_inflated_frames"`), so `record_measured_for_run` fired UNCONDITIONALLY
+  incl `--skip-parity` — fabricating `measured` events that silently drain `duty_to_measure` (the exact
+  orphan the apparatus exists to prevent; a NO-FAKE class-1 violation on an EVENT). Extracted
+  `byte_close_verdict_landed(report)` (fail-safe default skipped=True) + 5 regression tests.
+- **AUTOMATIC `c97210c5f`**: the annulus live monitor now auto-fires the costate shadow controller
+  EVERY tick from the already-parsed verdicts -> `costate_shadow.jsonl`. Previously ONLY the manual CLI
+  fired it. Advisory-only (actuation=NONE) + fail-safe. Verified on the LIVE mod32cap run's real 15
+  verdicts (1 rec, 23 levers owed, producers live/honest).
+- **CONTINUAL-LEARNING `ae3c01373`**: `tac.witness_control.costate_posterior` — cross-run posterior,
+  inverse-variance (precision-weighted) combination of every PAST run's MEASURED costates;
+  UNIDENTIFIABLE is NEVER recorded (NO-FAKE). Wired READ (`ShadowReport.costate_prior` — the live
+  controller SEES what past runs measured) + WRITE (byte-close records this run's identifiable costates).
+  The compounding loop (session N+1 smarter than N) is closed.
+- **CANONICAL**: the controller is the ONE consumer (producer_bridge), reads every orphaned producer,
+  rebuilds nothing.
+Total #247 loop: launch->FIRED · monitor->SENSE/DECIDE auto per tick · producers+prior in SENSE ·
+byte-close->MEASURED+costate-posterior. 67 witness_control tests pass, F821 clean, all review-gated.
+Remaining (follow-ups, reviewer said non-blocking): cathedral_autopilot is import-verified but its
+ranking is not yet INVOKED (the EIG bridge); master_gradient stays honestly-inert until a byte-close
+feeds an archive_sha back to a run. The dashboard LEVERAGE (visualizing costate_shadow.jsonl +
+duty_to_measure + producer_signals + costate_prior) is task #262 (operator-sequenced next). Pointer
+0.19110 UNMOVED (apparatus). [triality: DAG(this); code — apparatus/[no-triality] commits]
