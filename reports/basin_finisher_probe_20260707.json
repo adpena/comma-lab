@@ -1,0 +1,64 @@
+{
+  "probe": "quadratic_basin_finisher_head_solve",
+  "task": "#341 (council draft §16.1; DAG FEED-07t/07u owed measurement)",
+  "date_utc": "2026-07-07",
+  "axis": "[macOS-CPU advisory] NON-PROMOTABLE — numpy-fp32 deploy fwd + frozen CPU-torch SegNet; pointer contest-CPU 0.19110 UNMOVED",
+  "checkpoint": "mod32cap ep650 EMA-best (levelset_n600_witness_mod32cap_20260706T115554Z)",
+  "checkpoint_logged_d_seg_n600": 0.0033661905924479165,
+  "live_run_best_at_probe_time": {"epoch": 650, "d_seg": 0.0033661905924479165, "note": "Muon era (ep726→930+) has not improved on the tau-era best — the crawl §16.1 targets"},
+  "probe_baseline_n600_d_seg": 0.00351027594672309,
+  "self_orient_reconstruction_gap_pct": 4.28,
+  "reconstruction_convergence_24pair": {"gt_iter0": 0.003522449069552951, "gt_iter1": 0.003394868638780382, "gt_iter2": 0.00341139899359809, "zero_iter2": 0.003418604532877604, "note": "fixed-point self-orient reconstruction converges within ~0.7% by 1-2 iters from either GT or zero seed"},
+  "stage0_head_solve": {
+    "mask_keys": ["out_sdf.weight", "out_sdf.bias", "out_tex.weight", "out_tex.bias", "palette"],
+    "head_params_approx": 791,
+    "solve_loss": "100*mean(tau*softplus(-signed/tau)) tau=0.3 + 0.001*length (the live run's tau-stage loss; w_pose=0, eikonal=0)",
+    "k_pairs": 8,
+    "subset_seed": 0,
+    "subset_pairs": [9, 24, 45, 160, 183, 304, 378, 504],
+    "method": "damped Newton-CG (Levenberg), HVP via mx.vjp of mx.grad, MLX-CPU fp32",
+    "cg_iters_total": 16,
+    "cg_cap_per_round": 8,
+    "lm_rounds": 2,
+    "damping_schedule": [0.1, 0.03333333333333333, 0.011111111111111112],
+    "rho_per_round": [0.8473433464936315, 0.8680801846819985],
+    "rounds_accepted": 2,
+    "gnorm_masked": [0.24916908144950867, 0.16145013272762299],
+    "subset_proxy_loss": {"L_start": 0.22836575470864773, "L_final": 0.22078447230160236, "delta_pct": -3.32},
+    "solved_theta": "experiments/results/basin_finisher_probe_20260707/solved_theta_head.npz"
+  },
+  "stage0_verdict_n600": {
+    "baseline_d_seg": 0.00351027594672309,
+    "solved_d_seg": 0.0036878119574652777,
+    "delta_pct": 5.06,
+    "verdict": "WORSE — negative through the real verdict",
+    "attribution": {
+      "subset8_verdict_baseline": 0.003344853719075521,
+      "subset8_verdict_solved": 0.003232320149739583,
+      "subset8_delta_pct": -3.36,
+      "heldout592_verdict_baseline": 0.003512511382231841,
+      "heldout592_verdict_solved": 0.0036939672521642737,
+      "heldout592_delta_pct": 5.17,
+      "pairs_worse": 546,
+      "pairs_better": 54,
+      "mechanism": "k=8 SUBSET OVERFIT of the ~791-param affine head. NOT proxy mismatch (in-subset verdict −3.4% matches proxy −3.3% 1:1 through int8 deploy + argmax), NOT quantization, NOT a basin-radius bound (rho≈0.85-0.87 = chart is genuinely near-quadratic)."
+    }
+  },
+  "stage1_full_mask": {
+    "status": "REFUSED with measured reason (not attempted)",
+    "reason": "full-mask (~300K+ params) at the same K=8 is strictly dominated: the measured failure mode is subset overfit, which worsens with parameter count at fixed K. Running it reproduces a predictable negative at ~40x the cost."
+  },
+  "measured_costs_cpu_mlx_coresident_with_live_run": {
+    "hvp_seconds_per_pair": 19,
+    "grad_seconds_per_pair": 10,
+    "verdict_seconds_per_pair": 1.4,
+    "full_P_cg_iter_cpu_hours": 3.2,
+    "full_P_cg_iter_gpu_est_minutes": 11,
+    "gpu_note": "17x TAC_MLX_CUSTOM_GROUPED_BACKWARD estimate; GPU is gradient-throughput only, never verdict authority"
+  },
+  "schedule_consequences": {
+    "priming_s14": "subset-K head-solve REFUSED for stage-boundary priming: it injects +5.2% held-out d_seg damage. Only a full-P (n600-accumulated) head-solve is admissible; at full-P the grad phase equals one epoch-equivalent of the trainer's existing accum loop, so priming = in-trainer GPU stage, not a CPU post-run tool.",
+    "terminal_solve_phase2": "NO-GO for the post-run CPU subset-solve tool form. Conditionally open for a full-P GPU in-trainer form only. Fire conditions vs this probe's data: (a) quadratic-regime CONFIRMED at the ep650 head chart (rho 0.847/0.868); (b) topology stability NOT measured here (persistence-diagram detector still required); (c) transitions-remaining FAILS at ep650 (Muon ep726 was pending) — this probe is the §14 PRIMING context, not the terminal basin.",
+    "equation_registration": "NONE beyond this honest anchor (negative verdict rule); FEED-07t registration stays deferred"
+  }
+}

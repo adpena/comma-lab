@@ -9731,3 +9731,27 @@ in-training A/B + training-flow τ-crossover). Memo:
 `experiments/results/dash_comb_probe_20260707/dash_comb_probe_n600_20260707.json` (gitignored,
 rebuildable via the committed tool). Pointer 0.19110 UNMOVED (means: mechanism measurement;
 a lower row needs the in-training arm + byte-close + exact eval).
+
+## FEED-08d (2026-07-07, #341 B-RESUME) — QUADRATIC BASIN FINISHER Stage-0 head-solve MEASURED: NEGATIVE through the verdict, mechanism = SUBSET OVERFIT; Morse-lemma premise CONFIRMED [$0 CPU advisory; pointer 0.19110 UNMOVED — measurement/means]
+
+The FEED-07t/07u-owed §16.1 probe landed (tool `tools/quadratic_basin_finisher_probe.py` @f307b5dcf;
+row `reports/basin_finisher_probe_20260707.json`; memo
+`.omx/research/basin_finisher_head_solve_probe_measured_20260707.md`). On mod32cap ep650 EMA-best
+(logged n600 0.0033662; the live Muon era ep726→930+ still hasn't beaten it): damped Newton-CG on the
+affine head (~791 params; τ=0.3 softplus tau-stage loss, k=8 seeded subset) — 2 LM rounds BOTH
+accepted, **ρ=0.847/0.868** (the basin IS near-quadratic), subset proxy −3.3%; but n600 verdict on
+solved θ = **0.0036878 vs 0.0035103 probe baseline = +5.1% WORSE** (546/600 pairs worse). Decisive
+per-pair attribution: in-subset verdict **−3.4%** (1:1 with the proxy — the τ-softplus surrogate
+transfers exactly through int8 deploy + argmax); held-out **+5.2%** → mechanism = **k=8 subset
+overfit**, NOT proxy mismatch/quantization/basin-radius. Stage-1 full-mask at K=8 REFUSED (measured
+reason: overfit worsens with params at fixed K — predictable negative at 40× cost). Measured costs:
+HVP 19 s/pair, grad 10 s/pair CPU-MLX → full-P CG iter ≈ 3.2 h CPU / ~11 min GPU-grouped-backward.
+**Consequences:** §14 PRIMING via subset-K solve REFUSED (injects held-out damage at boundaries);
+only full-P (= in-trainer GPU stage) admissible. **TerminalSolve Phase-2: NO-GO** as post-run CPU
+subset tool; conditionally open only full-P-GPU-in-trainer; fire conditions vs data: (a) quadratic
+CONFIRMED, (b) topology-stability unmeasured (detector still required), (c) transitions-remaining
+FAILS at ep650 (Muon was pending). Sub-findings as PRIORS: self-orient state reconstructible to
+~0.7% by 1–2 fixed-point iters (probe baseline +4.3% vs in-run verdict, gap measured+attributed).
+**Triality:** DAG=this row · DSL=`TerminalSolve` support-gap text now has its measured verdict (no
+flag emitted; never-invent-flags upheld; DSL edit deferred to the curriculum_dsl-owning sibling per
+wave file-ownership) · equations=NO registration (negative-verdict rule; FEED-07t deferral stands).
