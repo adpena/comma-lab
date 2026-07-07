@@ -17,7 +17,9 @@ dashboards never disagree.
 
 AUTHORITY: everything here is ``[macOS-MLX training] advisory, NON-PROMOTABLE``.
 The contest score is byte-closed on contest-CPU/CUDA; the frontier pointer is
-0.19110 and UNMOVED — a dashboard is a MEANS, not the score.
+READ from ``.omx/state/canonical_frontier_pointer.json`` (the SoT per CLAUDE.md
+"Frontier scores are pointer-only" — never a hardcoded literal here) — a
+dashboard is a MEANS, not the score.
 
 DISCLOSURE HYGIENE (CLAUDE.md "Public Disclosure Hygiene", NON-NEGOTIABLE): the
 TRIALITY/PLAN tab describes OUR METHOD. When an access key is configured
@@ -86,7 +88,55 @@ from starlette.responses import (  # noqa: E402
 from starlette.routing import Route, WebSocketRoute  # noqa: E402
 from starlette.websockets import WebSocket, WebSocketDisconnect  # noqa: E402
 
-POINTER = 0.19110  # frontier pointer (contest-CPU), UNMOVED — advisory only here
+# ── canonical frontier pointer (SoT: .omx/state/canonical_frontier_pointer.json) ──
+# CLAUDE.md "Frontier scores are pointer-only" (NON-NEGOTIABLE): NO hardcoded score
+# literal anywhere on this surface. The pointer is READ from the canonical file,
+# mtime-cached, and re-checked on the server's poll cadence. Unreadable/missing ->
+# {"ok": False} and every consumer renders an explicit "pointer unavailable" state —
+# NEVER a baked number dressed as data.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_POINTER_JSON = _REPO_ROOT / ".omx" / "state" / "canonical_frontier_pointer.json"
+_PTR_STATE: dict = {"checked": 0.0, "sig": None,
+                    "data": {"ok": False, "reason": "not yet read"}}
+
+
+def frontier_pointer() -> dict:
+    """Current contest-CPU frontier from the canonical pointer file (fail-open).
+
+    Returns ``{"ok": True, "score", "axis", "since", "source"}`` or
+    ``{"ok": False, "reason"}``. Re-stats at most every 5 s; re-parses only on
+    mtime/size change, so it refreshes on the poll cadence for free."""
+    now = time.time()
+    if now - _PTR_STATE["checked"] < 5.0:
+        return _PTR_STATE["data"]
+    _PTR_STATE["checked"] = now
+    try:
+        st = _POINTER_JSON.stat()
+        sig = (st.st_mtime, st.st_size)
+        if sig == _PTR_STATE["sig"] and _PTR_STATE["data"].get("ok"):
+            return _PTR_STATE["data"]
+        d = json.loads(_POINTER_JSON.read_text())
+        cpu = d.get("our_local_frontier_contest_cpu") or {}
+        score = float(cpu["score"])
+        _PTR_STATE["sig"] = sig
+        _PTR_STATE["data"] = {
+            "ok": True, "score": score, "axis": "contest-CPU",
+            "since": str(cpu.get("measured_at_utc", ""))[:10] or None,
+            "source": ".omx/state/canonical_frontier_pointer.json",
+        }
+    except Exception as exc:  # noqa: BLE001 — telemetry must never crash the daemon
+        _PTR_STATE["sig"] = None
+        _PTR_STATE["data"] = {"ok": False,
+                              "reason": f"{type(exc).__name__}: {exc}"}
+    return _PTR_STATE["data"]
+
+
+# THE GOAL ladder targets (provenance: CLAUDE.md "THE GOAL — SUB-0.15": T_1 = sub-0.19
+# floor of acceptable, T_3 = sub-0.15 the target). These are MISSION constants, not run
+# config; the d_seg goal LINES are DERIVED per run from these targets + the run's OWN
+# measured pose+rate (see _derive_goal_info) unless an explicit env/CLI override is set.
+_TARGET_S_T1 = 0.19
+_TARGET_S_T3 = 0.15
 
 # Telemetry accuracy (operator 2026-07-03, "confident-wrong is the worst failure"):
 # #205 runs the MODERN store-nothing screw pose carrier (``--pose-carrier
@@ -109,8 +159,12 @@ class Config:
     # (the default) = derive; an explicit CLI/env value is an OVERRIDE only.
     tau: int | None = None
     l7: int | None = None
-    goal_dseg: float = 0.00092  # sub-0.19 d_seg goal line
-    goal_dseg_15: float = 0.00032  # sub-0.15 d_seg goal line
+    # d_seg goal lines are DERIVED per run (target_S − the run's own measured pose −
+    # measured rate)/100 via _derive_goal_info — the "no hardcoded run constants in
+    # consumers" class-fix (operator 2026-07-07). None (the default) = derive; an
+    # explicit env/CLI value is an OVERRIDE only and renders with source "override".
+    goal_dseg: float | None = None   # sub-0.19 d_seg goal line (override only)
+    goal_dseg_15: float | None = None  # sub-0.15 d_seg goal line (override only)
     poll: float = 5.0
     host: str = "127.0.0.1"
     port: int = 8790
@@ -191,6 +245,14 @@ def _opt_int_env(v: str | None) -> int | None:
         return None
 
 
+def _opt_float_env(v: str | None) -> float | None:
+    """Optional float env: unset/empty/non-float -> None (= derive from measured data)."""
+    try:
+        return float(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 def config_from_env() -> Config:
     e = os.environ.get
     return Config(
@@ -198,8 +260,8 @@ def config_from_env() -> Config:
         log_glob=e("DASH_LOG_GLOB", ""),
         tau=_opt_int_env(e("DASH_TAU")),
         l7=_opt_int_env(e("DASH_L7")),
-        goal_dseg=float(e("DASH_GOAL_DSEG", "0.00092")),
-        goal_dseg_15=float(e("DASH_GOAL_DSEG_15", "0.00032")),
+        goal_dseg=_opt_float_env(e("DASH_GOAL_DSEG")),
+        goal_dseg_15=_opt_float_env(e("DASH_GOAL_DSEG_15")),
         poll=float(e("DASH_POLL", "5.0")),
         host=e("DASH_HOST", "127.0.0.1"),
         port=int(e("DASH_PORT", "8790")),
@@ -260,6 +322,115 @@ def _last_measured_dpose(rows):
     return None
 
 
+def _last_measured_row(rows):
+    """Most-recent row carrying finite blob_bytes (and d_pose where present) — the
+    measured basis the derived goal lines are computed from. None if nothing measured."""
+    for row in reversed(rows or []):
+        if not isinstance(row, dict):
+            continue
+        by = row.get("blob_bytes")
+        if isinstance(by, (int, float)) and by > 0:
+            return row
+    return None
+
+
+def _derive_goal_info(rows, pose_blind, explicit: float | None,
+                      target_s: float, archive_norm: float) -> dict:
+    """One d_seg goal line, CONDITIONALLY CALCULATED — never a baked default.
+
+    Sources, in order:
+      * explicit env/CLI value      -> {"value", "source": "override(env/cli)"}
+      * derived from the run's OWN measured terms:
+        goal_dseg = (target_S − pose_term − 25·bytes/N) / 100, where pose_term is the
+        run's measured √(10·d_pose) — or 0 for a pose-blind arm (w_pose=0: pose is
+        UNHELD BY DESIGN, so the arm's d_seg goal is judged against target − rate).
+      * nothing measured yet        -> {"value": None, "source": None} (rendered "—").
+    A non-positive derived value means the target is unreachable at the measured
+    pose+rate; the value is withheld (None) with an explicit source note."""
+    if explicit is not None:
+        return {"value": float(explicit), "source": "override(env/cli)"}
+    row = _last_measured_row(rows)
+    if row is None:
+        return {"value": None, "source": None}
+    try:
+        rate = 25.0 * float(row["blob_bytes"]) / float(archive_norm)
+        dp = row.get("d_pose")
+        if pose_blind:
+            pose_term, pose_note = 0.0, "pose unheld in this arm (w_pose=0)"
+        elif isinstance(dp, (int, float)) and dp >= 0:
+            pose_term, pose_note = (10.0 * float(dp)) ** 0.5, "measured pose"
+        else:
+            return {"value": None, "source": "no measured pose yet"}
+        value = (float(target_s) - pose_term - rate) / 100.0
+        if value <= 0:
+            return {"value": None,
+                    "source": f"target {target_s:g} unreachable at measured pose+rate"}
+        return {"value": value,
+                "source": f"derived: (target {target_s:g} − {pose_note} − measured rate)/100"}
+    except Exception:  # noqa: BLE001 — a goal line must never crash telemetry
+        return {"value": None, "source": None}
+
+
+def _last_jsonl_row_tail(path: Path, tail_bytes: int = 262144) -> dict | None:
+    """Last parseable JSON object of a JSONL file, reading only the tail block
+    (the costate shadow file grows to ~1 MB; a 5 s tick must not re-read it all).
+    None on any failure (fail-open)."""
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as fh:
+            if size > tail_bytes:
+                fh.seek(size - tail_bytes)
+                fh.readline()  # drop the (possibly clipped) partial first line
+            last = None
+            for raw in fh:
+                if raw.strip():
+                    last = raw
+        row = json.loads(last) if last else None
+        return row if isinstance(row, dict) else None
+    except Exception:
+        return None
+
+
+def _read_costate(run_dir: str | None) -> dict | None:
+    """SENSE-only source for the LIVE-tab costate panel: the last row of the run's
+    ``costate_shadow.jsonl`` (written by the score-neutral shadow observer,
+    tools/costate_observer_loop.py -> tac.witness_control) — the same row schema
+    tools/costate_digest.py reads. READ-ONLY; the dashboard NEVER actuates
+    (CONTAINMENT). No shadow file -> None -> the panel is absent (conditional)."""
+    if not run_dir:
+        return None
+    path = Path(run_dir) / "costate_shadow.jsonl"
+    if not path.is_file():
+        return None
+    row = _last_jsonl_row_tail(path)
+    if not row:
+        return None
+    try:
+        age_s = max(0.0, time.time() - path.stat().st_mtime)
+        cls = (row.get("classification") or {}).get("classification")
+        recs = row.get("recommendations") or []
+        rec = None
+        if recs and isinstance(recs[0], dict):
+            r0 = recs[0]
+            rec = {"action": r0.get("action"),
+                   "predicted_dS": r0.get("predicted_dS"),
+                   "horizon_epochs": r0.get("horizon_epochs")}
+        # duty-to-measure queue — the digest's mechanism (tac activation ledger),
+        # already materialized into the shadow row by tac.witness_control (REUSE,
+        # never reimplemented here).
+        duty = row.get("duty_to_measure")
+        duty_owed = len(duty) if isinstance(duty, list) else None
+        duty_nf = (sum(1 for d in duty if isinstance(d, dict)
+                       and d.get("state") == "never-fired")
+                   if isinstance(duty, list) else None)
+        return {"ok": True, "epoch": row.get("epoch"),
+                "classification": (str(cls).upper() if cls else None),
+                "rec": rec, "age_s": age_s,
+                "duty_owed": duty_owed, "duty_never_fired": duty_nf}
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _stage_windows(sched: dict) -> list[tuple[str, int, int]]:
     """Ordered, NON-overlapping ``[(stage, start, end)]`` epoch windows covering
     ``[0, epochs)`` — delegates to the canonical ``dtm._stage_segments``.
@@ -278,7 +449,8 @@ def _stage_windows(sched: dict) -> list[tuple[str, int, int]]:
 
 
 def _build_stage_aware_projection(rows, sched: dict, *, sidecar_pose: float,
-                                  archive_norm: float) -> dict:
+                                  archive_norm: float,
+                                  pose_blind: bool = False) -> dict:
     """STAGE-AWARE d_seg / implied_S projection (ADVISORY; ``[macOS-MLX]`` non-promotable).
 
     Operator-approved 2026-07-03. The prior GLOBAL critical-slowing power-law (in
@@ -293,7 +465,7 @@ def _build_stage_aware_projection(rows, sched: dict, *, sidecar_pose: float,
 
     NO-FAKE: no fabricated stage-boundary drop is invented. A stage with fewer than
     ``dtm._MIN_FIT_POINTS`` verdicts reports 'insufficient' (never a borrowed CE number);
-    an un-entered stage reports 'not entered'. The frontier pointer (0.19110) moves ONLY
+    an un-entered stage reports 'not entered'. The frontier pointer moves ONLY
     through a byte-closed exact eval — this is a MEANS. Pure; never raises."""
     try:
         verdicts = [v for v in (rows or []) if isinstance(v, dict)
@@ -323,6 +495,32 @@ def _build_stage_aware_projection(rows, sched: dict, *, sidecar_pose: float,
                                f"unmodeled until measured @{int(a)}")
                 if n:
                     rec["observed_min"] = float(min(v["d_seg"] for v in svs))
+                    # OBSERVED quantitative trend (operator scope 2026-07-07): Muon still
+                    # refuses the power-law FORM, but its MEASURED verdicts carry a real
+                    # read — recent slope over the last k verdicts + a linear read-through
+                    # to stage end, LABELLED "observed trend, not a fit" (no asymptote
+                    # claim is ever made from it).
+                    recent = svs[-min(n, 6):]
+                    if len(recent) >= 2 and recent[-1]["epoch"] > recent[0]["epoch"]:
+                        xs = [float(v["epoch"]) for v in recent]
+                        ys = [float(v["d_seg"]) for v in recent]
+                        nk = float(len(recent))
+                        sx_, sy_ = sum(xs), sum(ys)
+                        sxx = sum(x * x for x in xs)
+                        sxy = sum(x * y for x, y in zip(xs, ys))
+                        den = nk * sxx - sx_ * sx_
+                        if den > 0:
+                            m = (nk * sxy - sx_ * sy_) / den
+                            end_ep = float(b) if b else xs[-1]
+                            last_val = float(svs[-1]["d_seg"])
+                            rec["trend"] = {
+                                "n_recent": len(recent),
+                                "slope_per_25ep": m * 25.0,
+                                "readthrough_epoch": int(end_ep),
+                                "readthrough_dseg": max(
+                                    last_val + m * (end_ep - xs[-1]), 0.0),
+                                "label": "observed trend, not a fit",
+                            }
                 stages.append(rec)
                 continue
             if n == 0:
@@ -364,7 +562,15 @@ def _build_stage_aware_projection(rows, sched: dict, *, sidecar_pose: float,
             modeled_floor = {"stage": modeled["name"], "asymptote": asym,
                              "observed_min": modeled.get("observed_min"),
                              "is_current_stage": (modeled["name"] == cur_stage),
-                             "implied_s": s_proj}
+                             "implied_s": s_proj,
+                             # pose-blind arms (w_pose=0, from the RUN'S OWN config):
+                             # the unheld pose term would swamp the composite, so the
+                             # renderer leads with the d_seg TERM contribution and
+                             # demotes/labels the composite — never the bare number.
+                             "pose_blind": bool(pose_blind),
+                             "seg_term": 100.0 * asym,
+                             "seg_term_lo": 100.0 * band[0],
+                             "seg_term_hi": 100.0 * band[1]}
 
         # expected-breakthrough boundaries the current fit does NOT model
         tau = sched.get("tau_start")
@@ -618,10 +824,11 @@ def triality_snapshot() -> dict:
     now = time.time()
     if _TRIALITY_CACHE["data"] is not None and (now - _TRIALITY_CACHE["ts"]) < _TRIALITY_TTL_S:
         return _TRIALITY_CACHE["data"]
+    _ptr = frontier_pointer()
     data = {
         "ok": True,
         "built_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "pointer": POINTER,
+        "pointer": (_ptr.get("score") if _ptr.get("ok") else None),
         "dag": _latest_dag_feeds(),
         "dsl": _dsl_summary(),
         "equations": _latest_equations(),
@@ -679,6 +886,14 @@ class LiveState:
         self.n_pairs: int | None = None       # N for this run (n200 DOE pilot / n600 scored)
         self.warming_up: bool = False         # live run resolved but no verdict yet (structured-init)
         self.run_config: dict = {}            # parsed launch.sh/run.log config + curriculum schedule
+        self.pose_blind: bool | None = None   # w_pose==0 in the RUN'S OWN config (None = unknown)
+        # d_seg goal lines: {"dseg": {value, source}, "dseg15": {...}} — DERIVED per run
+        # (or env/CLI override); value None -> the goal line is NOT rendered (conditional).
+        self.goal_info: dict = {"dseg": {"value": None, "source": None},
+                                "dseg15": {"value": None, "source": None}}
+        # costate controller SENSE/DECIDE panel source (run_dir/costate_shadow.jsonl;
+        # read-only, advisory). None -> the panel is absent (conditional rendering).
+        self.costate: dict | None = None
         # canonical DSL schedule read-back (PLANNED launch.sh-through-real-argparse
         # + ACTUAL fired-transition evidence). {"ok": False} -> visible fallback.
         self.schedule_readback: dict = {"ok": False, "reason": "not yet derived"}
@@ -817,14 +1032,44 @@ class LiveState:
         if n_pairs is None and chain:
             n_pairs = _n_pairs_from_log(chain[0])
         self.n_pairs = n_pairs
+        # Resolve the REAL run dir FIRST (the watched log is often the launcher's tee in
+        # .omx/tmp whose parent holds no launch.sh — the log-path-split class; fourth
+        # consumer). The canonical DSL resolver is the single source of truth; fall back
+        # to the log's parent (in-run-dir logs resolve to themselves).
+        _run_dir = None
+        if latest is not None and _dsl_resolve_run_dir is not None:
+            with contextlib.suppress(Exception):
+                _run_dir = _dsl_resolve_run_dir(latest)
+        _cfg_dir = _run_dir if _run_dir is not None else (
+            latest.parent if latest is not None else None)
+
         # CONFIG + CURRICULUM SCHEDULE (full observability): parse the live run's OWN
         # artifacts (launch.sh primary, run.log stages fallback) — generalizable to
         # ANY future run with zero hand-config (operator "automatically in the future").
         # Parsed BEFORE liveness so the stage-aware cadence/ETA can use the real schedule.
         try:
-            self.run_config = rld.parse_run_config(latest.parent if latest is not None else None)
+            self.run_config = rld.parse_run_config(_cfg_dir)
         except Exception:
             self.run_config = {"source": "none", "flags": {}, "groups": {}, "schedule": {}}
+
+        # pose-blind detection from the RUN'S OWN launched config (--w-pose 0): the
+        # arm's pose term is UNHELD BY DESIGN, so composite displays are demoted and
+        # the goal-line derivation drops the pose term. None = config unknown.
+        _wp = (self.run_config.get("flags") or {}).get("w-pose")
+        try:
+            self.pose_blind = (float(_wp) == 0.0) if _wp is not None else None
+        except (TypeError, ValueError):
+            self.pose_blind = None
+
+        # d_seg goal lines — DERIVED per run from THE GOAL ladder targets + the run's
+        # own measured pose+rate (env/CLI value = explicit override). Conditional:
+        # value None -> the line/badge is simply not rendered.
+        self.goal_info = {
+            "dseg": _derive_goal_info(rows_full, self.pose_blind, cfg.goal_dseg,
+                                      _TARGET_S_T1, _ARCHIVE_NORM_BYTES),
+            "dseg15": _derive_goal_info(rows_full, self.pose_blind, cfg.goal_dseg_15,
+                                        _TARGET_S_T3, _ARCHIVE_NORM_BYTES),
+        }
 
         # CANONICAL DSL SCHEDULE READ-BACK (operator 2026-07-07): derive the stage map
         # from the run's OWN config through the trainer's REAL argparse + the run's
@@ -860,7 +1105,8 @@ class LiveState:
                 "muon_start": (_sd.get("muon_start") if _sd.get("muon_start") is not None
                                else self.muon_start),
                 "epochs": _sd.get("epochs"), "eval_every": eval_every,
-                "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
+                "goal_dseg": self.goal_info["dseg"]["value"],
+                "goal_dseg_15": self.goal_info["dseg15"]["value"],
             }
         else:
             eval_every = _sched.get("eval_every")
@@ -868,7 +1114,8 @@ class LiveState:
                 "tau_start": _sched.get("tau_start"), "l7_start": _sched.get("l7_start"),
                 "muon_start": (self.muon_start if self.muon_start is not None else _sched.get("muon_start")),
                 "epochs": _sched.get("epochs"), "eval_every": eval_every,
-                "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
+                "goal_dseg": self.goal_info["dseg"]["value"],
+                "goal_dseg_15": self.goal_info["dseg15"]["value"],
             }
 
         # liveness + cadence from the LIVE (latest) arm only (the freshest log).
@@ -902,14 +1149,17 @@ class LiveState:
         # (2026-07-07 FLOW/WITNESS idle-forever fix) the watched LOG is the launcher's tee in
         # .omx/tmp, NOT the run dir — so latest.parent holds no checkpoints and _best_ckpt()
         # returned None forever (the same log-path-split unknown-known that froze the costate
-        # telemetry, third consumer). Resolve through the canonical DSL resolver; fall back to
-        # latest.parent (in-run-dir logs resolve to themselves; resolver is never-raises).
-        _run_dir = None
-        if latest is not None and _dsl_resolve_run_dir is not None:
-            with contextlib.suppress(Exception):
-                _run_dir = _dsl_resolve_run_dir(latest)
+        # telemetry, third consumer). ``_run_dir`` was resolved above (before the config
+        # parse) through the canonical DSL resolver; latest.parent is the fallback.
         self.watched_dir = str(_run_dir) if _run_dir is not None else (
             str(latest.parent) if latest is not None else None)
+
+        # costate controller SENSE/DECIDE panel (read-only, advisory, conditional):
+        # last shadow-observer row from <run_dir>/costate_shadow.jsonl. Fail-open None.
+        try:
+            self.costate = _read_costate(self.watched_dir)
+        except Exception:  # noqa: BLE001 — telemetry must never crash the daemon
+            self.costate = None
 
         # #205 run-info strip: the FULL operational telemetry (stage-progress / best-d_seg
         # deploy / throughput+ETA / checkpoint ledger / resumability-now / MLX fast-path /
@@ -942,13 +1192,14 @@ class LiveState:
         # power-law above fits the CE flicker plateau and mis-declares "sub-0.19 won't reach".
         # Attach a PER-STAGE projection so the dashboard shows each stage's OWN floor + marks the
         # tau (lane-band birth) / Muon (finishing) EXPECTED-BREAKTHROUGH boundaries the CE fit does
-        # NOT model. ADVISORY; the pointer (0.19110) moves ONLY through a byte-closed exact eval.
+        # NOT model. ADVISORY; the pointer moves ONLY through a byte-closed exact eval.
         if isinstance(self.projection, dict):
             try:
                 self.projection["stage_proj"] = _build_stage_aware_projection(
                     rows_full, sched_eff,
                     sidecar_pose=(_last_measured_dpose(rows_full) or 0.0),
-                    archive_norm=_ARCHIVE_NORM_BYTES)
+                    archive_norm=_ARCHIVE_NORM_BYTES,
+                    pose_blind=bool(self.pose_blind))
             except Exception as exc:
                 self.projection["stage_proj"] = {"ok": False, "reason": f"stage projection error: {exc}"}
 
@@ -1447,12 +1698,23 @@ class LiveState:
         tau = _legacy.get("tau")
         l7 = _legacy.get("l7")
         muon = _legacy.get("Muon")
+        gi = self.goal_info or {}
+        gd = gi.get("dseg") or {}
+        gd15 = gi.get("dseg15") or {}
+        ptr = frontier_pointer()
         return {
             "tau": tau, "l7": l7,
             "stage_map": stage_map,             # derived per-run map (union entries)
             "schedule_source": sched_source,    # derived(...) | override(cli) | fallback
-            "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
-            "pointer": POINTER, "watched": self.watched,
+            # goal lines: DERIVED per run (or explicit override); None -> not rendered.
+            "goal_dseg": gd.get("value"), "goal_dseg_15": gd15.get("value"),
+            "goal_src": {"dseg": gd.get("source"), "dseg15": gd15.get("source")},
+            # frontier pointer: READ from the canonical file; None -> "unavailable".
+            "pointer": (ptr.get("score") if ptr.get("ok") else None),
+            "pointer_info": ptr,
+            "pose_blind": self.pose_blind,      # w_pose==0 in the run's own config
+            "costate": self.costate,            # SENSE/DECIDE panel (None -> absent)
+            "watched": self.watched,
             "run_dir": self.watched_dir or cfg.run_dir,  # auto-latest: the live arm dir
             "uptime_s": time.time() - self.started_at,
             "training_alive": _training_alive(cfg.training_pid, cfg.training_sig),
@@ -1718,10 +1980,15 @@ def _whyhow_client_js() -> str:
 
 
 def _page_html(cfg: Config) -> str:
+    # BOOT carries ONLY real sources: explicit overrides (may be null) + the pointer
+    # READ from the canonical file at page-serve time (null when unavailable — the
+    # client then renders "unavailable", never a baked number).
+    _ptr = frontier_pointer()
     boot = json.dumps({
         "tau": cfg.tau, "l7": cfg.l7,
         "goal_dseg": cfg.goal_dseg, "goal_dseg_15": cfg.goal_dseg_15,
-        "pointer": POINTER, "poll": cfg.poll,
+        "pointer": (_ptr.get("score") if _ptr.get("ok") else None),
+        "poll": cfg.poll,
     })
     return (_PAGE_TEMPLATE
             .replace("__BOOT__", boot)
@@ -2118,6 +2385,15 @@ padding:2px 6px;border-radius:6px}
 .proj{font-size:11.5px;color:var(--muted);margin:0 2px 16px;line-height:1.6;min-height:34px}
 .proj .proj2{color:var(--faint2);font-size:11px}
 .proj b{color:var(--fg2);font-weight:600;font-variant-numeric:tabular-nums}
+/* costate controller SENSE/DECIDE panel (conditional; hidden when no shadow file) */
+.costate{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 14px;margin:0 0 16px}
+.costate .csh{font-size:11px;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;
+font-weight:600;margin-bottom:5px}
+.costate .cstag{font-size:10px;font-weight:600;color:#7fe0a0;background:#173d22;
+padding:1px 7px;border-radius:999px;margin-left:6px;text-transform:none;letter-spacing:0}
+.costate .csbody{font-size:11.5px;color:var(--muted);line-height:1.6}
+.costate .csbody b{color:var(--fg2);font-weight:600;font-variant-numeric:tabular-nums}
 
 /* live verdict pulse on the liveness pill */
 .pill.beat{animation:beatpulse 1s ease-out 1}
@@ -2171,7 +2447,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 .hide{display:none}
 </style></head>
 <body><div class="wrap">
-<div class="auth">[macOS-MLX training] advisory &middot; <b>NON-PROMOTABLE</b> &mdash; the exact contest row is byte-closed on contest-CPU/CUDA &middot; frontier pointer <b>0.19110</b> (UNMOVED). A dashboard is a MEANS, not the score.</div>
+<div class="auth">[macOS-MLX training] advisory &middot; <b>NON-PROMOTABLE</b> &mdash; the exact contest row is byte-closed on contest-CPU/CUDA &middot; frontier pointer <b class="ptrv">&hellip;</b> (UNMOVED). A dashboard is a MEANS, not the score.</div>
 <div class="head">
   <span class="title">Level-Set Witness</span>
   <span class="pills">
@@ -2253,7 +2529,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
       where the argmax can flip = where d_seg lives = where the detector is most sensitive.</li>
     </ul>
     <div class="wcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
-    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</div>
+    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is <span class="ptrv">&hellip;</span> and UNMOVED.</div>
   </div>
 </section>
 
@@ -2294,12 +2570,12 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <div class="stat">
       <span class="slabel">implied_S <span class="trend fl" id="s_trend">&middot;</span></span>
       <span class="sval2" id="s_val">&mdash;</span>
-      <span class="ssub adv">advisory &middot; measured d_seg + store-nothing-carrier d_pose + rate &middot; NOT the 0.19110 pointer</span>
+      <span class="ssub adv" id="s_sub">advisory &middot; measured d_seg + store-nothing-carrier d_pose + rate &middot; NOT the exact pointer</span>
     </div>
   </div>
   <div class="sbreak" id="sbreak">
     <div class="sbh">Scorer breakdown <span class="sbtag">honest &middot; measured pose</span></div>
-    <div class="sbformula">S = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;(bytes / 37,545,489)</div>
+    <div class="sbformula">S = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;(bytes / <span id="sb_norm">&hellip;</span>)</div>
     <div class="sbsubst" id="sb_subst">&nbsp;</div>
     <div class="sbterms" id="sb_terms"></div>
     <div class="sbdeploy" id="sb_deploy">&nbsp;</div>
@@ -2307,6 +2583,13 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <div class="status" id="status">connecting&hellip;</div>
   <div class="detail" id="detail">&nbsp;</div>
   <div class="proj" id="proj"><div id="proj_seg">&nbsp;</div><div class="proj2" id="proj_s">&nbsp;</div></div>
+  <!-- costate controller SENSE/DECIDE panel — CONDITIONAL: rendered only when the run's
+       costate_shadow.jsonl exists (score-neutral shadow observer). Observability ONLY;
+       the dashboard NEVER actuates (CONTAINMENT). -->
+  <div class="costate hide" id="costate">
+    <div class="csh">costate controller &middot; SENSE/DECIDE <span class="cstag">shadow observer &middot; read-only &middot; advisory</span></div>
+    <div class="csbody" id="cs_body">&nbsp;</div>
+  </div>
   <details class="cfg" id="cfgpanel" open>
     <summary id="cfgsum">setup &middot; config &middot; schedule &middot; curriculum</summary>
     <div class="cfgbody" id="cfgbody"><div class="cfgmeta">parsing run config&hellip;</div></div>
@@ -2378,7 +2661,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   </div>
   -->
   <div class="wcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
-  The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</div>
+  The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is <span class="ptrv">&hellip;</span> and UNMOVED.</div>
 </section>
 
 <section id="tab-flow" class="flow hide">
@@ -2438,7 +2721,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     the argmax can flip (where d_seg lives). Playing the timeline is the dynamical-system view &mdash;
     the witness partition flowing toward the SegNet argmax across the whole drive.</p>
     <p class="fcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
-    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</p>
+    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is <span class="ptrv">&hellip;</span> and UNMOVED.</p>
   </div>
 </section>
 
@@ -2450,7 +2733,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     <b>HOW</b> &mdash; the dynamics that flow to it. Pass&nbsp;1 opens the museum with the two highest-ROI
     plates (the live field &amp; the Unity); the five-scale spine, the screw, and the finale are seamed
     below. Every plate is a MEASURED fact &mdash; <b>[macOS-CPU advisory &middot; NON-PROMOTABLE]</b>,
-    a viz moves no pointer (0.19110, UNMOVED).</p>
+    a viz moves no pointer (<span class="ptrv">&hellip;</span>, UNMOVED).</p>
   </div>
 
   <div class="mvrail" id="whymvrail">
@@ -2680,7 +2963,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     </div>
     <p class="pcite"><b>Honest:</b> the finale is the interpretive / aesthetic capstone &mdash; the five little fronts
       are the same curves shown above (two hard-data, three schematic), phase-locked for the eye. It asserts no new
-      measurement; the pointer is <b>0.19110, UNMOVED</b> &mdash; a museum moves no pointer.</p>
+      measurement; the pointer is <b><span class="ptrv">&hellip;</span>, UNMOVED</b> &mdash; a museum moves no pointer.</p>
   </div>
 
   <!-- About plate seamed for Pass 5 -->
@@ -2695,7 +2978,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 
   <p class="wcnote2">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer. Every field
   is a real cached computation (SegNet argmax/margin + real S-UNIWARD); the exact row is byte-closed on
-  contest-CPU/CUDA; the frontier pointer is 0.19110 and UNMOVED.</p>
+  contest-CPU/CUDA; the frontier pointer is <span class="ptrv">&hellip;</span> and UNMOVED.</p>
 </section>
 
 <section id="tab-tri" class="tri hide">
@@ -2894,7 +3177,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   </div>
 
   <p class="m">Authority: <code>[macOS-MLX training advisory]</code> NON-PROMOTABLE. The exact score is the only
-  score; the pointer is 0.19110 and UNMOVED. Everything on this page is a MEANS.</p>
+  score; the pointer is <span class="ptrv">&hellip;</span> and UNMOVED. Everything on this page is a MEANS.</p>
 </section>
 
 </div>
@@ -2913,6 +3196,26 @@ try{reduceMotion=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motio
 const BANDS={ce:"#1f3b5f",tau:"#3a2a5f",l7:"#5f3320",muon:"#1f4f43"};
 
 function $(id){return document.getElementById(id);}
+
+// ---- frontier pointer + derived goal lines (conditional-rendering rule) ----
+// The pointer is READ server-side from .omx/state/canonical_frontier_pointer.json and
+// shipped in META/BOOT; null = unavailable -> every consumer renders "unavailable",
+// NEVER a baked number. Goal lines are DERIVED per run (or explicit override); null ->
+// the line/badge is simply not rendered.
+function ptrVal(){const v=(META&&META.pointer!=null)?META.pointer:BOOT.pointer;
+  return (v!=null&&isFinite(v))?v:null;}
+function ptrTxt(){const v=ptrVal();return (v!=null)?sig(v,5):"unavailable";}
+function fillPtrSpans(){
+  const t=ptrTxt();
+  document.querySelectorAll(".ptrv").forEach(el=>{el.textContent=t;});
+}
+function goalVal(){const v=(META&&META.goal_dseg!=null)?META.goal_dseg:BOOT.goal_dseg;
+  return (v!=null&&isFinite(v))?v:null;}
+function goal15Val(){const v=(META&&META.goal_dseg_15!=null)?META.goal_dseg_15:BOOT.goal_dseg_15;
+  return (v!=null&&isFinite(v))?v:null;}
+// short provenance tag for a goal source string ("derived: ..." / "override(env/cli)")
+function goalSrcTag(s){if(!s)return null;return s.indexOf("derived")===0?"derived":(s.indexOf("override")===0?"override":s);}
+fillPtrSpans();  // BOOT is available at parse time; META refines it on each update
 
 // ---- FLOW (Tab 3) data bridge: the injected client (dashboard_flow_client.js) reads
 // window.__flow.ready (the lightweight readiness ping) and registers window.__flowActivate /
@@ -3151,21 +3454,31 @@ function drawPanel(canvas, key, opt){
 }
 
 function drawAll(){
-  const g=META.goal_dseg||BOOT.goal_dseg, g15=META.goal_dseg_15||BOOT.goal_dseg_15;
+  // goal lines + pointer hline are CONDITIONAL: rendered only when a real source
+  // exists (derived-from-measured / explicit override / the pointer file).
+  const g=goalVal(), g15=goal15Val(), pv=ptrVal();
   const fS=v=>sig(v,5), fP=v=>sig(v,4), fI=v=>fmtInt(v), fSv=v=>sig(v,4);
   const star=(bestEpoch!=null&&bestVal!=null)?{epoch:bestEpoch,val:bestVal}:null;
+  const segH=[];
+  if(g!=null)segH.push({y:g,label:"sub-0.19  "+sig(g,4),color:"#46d369"});
+  if(g15!=null)segH.push({y:g15,label:"sub-0.15  "+sig(g15,4),color:"#ffb454"});
   drawPanel($("c_dseg"),"d_seg",{title:"d_seg — realized SegNet-argmax disagreement (lower better)",
-    sub:"epoch · log scale · ★ best · goal lines = sub-0.19 / sub-0.15",color:"#5ab0ff",log:true,fmt:fS,
+    sub:"epoch · log scale · ★ best"+(segH.length
+      ?" · goal lines = sub-0.19 / sub-0.15 ("+(goalSrcTag(META.goal_src&&META.goal_src.dseg)||"derived")+")"
+      :" · goal lines: "+((META.goal_src&&META.goal_src.dseg)||"pending a measured source")),
+    color:"#5ab0ff",log:true,fmt:fS,
     star:star,starGlow:_celebrating,
-    hlines:[{y:g,label:"sub-0.19  "+sig(g,4),color:"#46d369"},{y:g15,label:"sub-0.15  "+sig(g15,4),color:"#ffb454"}]});
-  drawPanel($("c_dpose"),"d_pose",{title:"d_pose — store-nothing screw carrier · in-run measured (byte-closed confirm pending #238)",
-    sub:"epoch · log · the carrier's own measured pose",color:"#ffb454",log:true,fmt:fP,
+    hlines:segH});
+  drawPanel($("c_dpose"),"d_pose",{title:"d_pose — store-nothing screw carrier · in-run measured (byte-closed confirm pending #238)"+(META.pose_blind?" · UNHELD in this arm (w_pose=0)":""),
+    sub:"epoch · log · the carrier's own measured pose"+(META.pose_blind?" · pose unheld by design in this arm":""),
+    color:"#ffb454",log:true,fmt:fP,
     hlines:[]});
   drawPanel($("c_bytes"),"blob_bytes",{title:"blob_bytes — LEARNED payload (counted in archive)",
     sub:"epoch · smaller payload = lower rate term",color:"#c08cff",log:false,fmt:fI,hlines:[]});
   drawPanel($("c_s"),"implied_S",{title:"implied_S — advisory (measured d_seg + store-nothing-carrier d_pose + rate)",
-    sub:"epoch · log · run's own measured composite · NOT the exact 0.19110 pointer",color:"#ff6b6b",log:true,fmt:fSv,
-    hlines:[{y:META.pointer||BOOT.pointer,label:"pointer 0.19110",color:"#46d369"}]});
+    sub:"epoch · log · run's own measured composite · NOT the exact pointer ("+ptrTxt()+")"+(META.pose_blind?" · pose UNHELD in this arm (w_pose=0)":""),
+    color:"#ff6b6b",log:true,fmt:fSv,
+    hlines:(pv!=null)?[{y:pv,label:"pointer "+sig(pv,5),color:"#46d369"}]:[]});
   updateAria();
 }
 function updateAria(){
@@ -3176,7 +3489,7 @@ function updateAria(){
   set("c_dseg","d_seg over epochs, latest "+sig(last.d_seg,5)+" at epoch "+last.epoch+bestTxt);
   set("c_dpose","d_pose over epochs, latest "+sig(last.d_pose,4)+" at epoch "+last.epoch);
   set("c_bytes","blob bytes over epochs, latest "+fmtInt(last.blob_bytes)+" at epoch "+last.epoch);
-  set("c_s","implied S advisory over epochs, latest "+sig(last.implied_S,4)+" at epoch "+last.epoch+", pointer 0.19110");
+  set("c_s","implied S advisory over epochs, latest "+sig(last.implied_S,4)+" at epoch "+last.epoch+", pointer "+ptrTxt());
 }
 let _drawQueued=false;
 function scheduleDraw(){
@@ -3227,7 +3540,7 @@ function stageWord(ep){if(ep==null)return "starting";
 // ---------- scorer breakdown (implied-S decomposition; HONEST measured terms) ----------
 // S = 100·d_seg + √(10·d_pose) + 25·(bytes/N), all three from the last measured row.
 // d_pose is the store-nothing screw carrier's OWN measured pose — the honest composite.
-// This is advisory (NOT the exact 0.19110 pointer); byte-closed pose confirmation is #238.
+// This is advisory (NOT the exact pointer); byte-closed pose confirmation is #238.
 function renderScorerBreakdown(last){
   const subEl=$("sb_subst"), termsEl=$("sb_terms"), depEl=$("sb_deploy");
   if(!subEl||!termsEl||!depEl)return;
@@ -3235,6 +3548,8 @@ function renderScorerBreakdown(last){
      !isFinite(last.d_seg)||!isFinite(last.d_pose)||!isFinite(last.blob_bytes)){
     subEl.innerHTML="&nbsp;"; termsEl.innerHTML=""; depEl.innerHTML="&nbsp;"; return;
   }
+  // N is the CONTEST rate normalizer (upstream/evaluate.py), shipped in META — the
+  // inline value is that fixed contest constant (provenance-labeled), NOT run config.
   const N=META.archive_norm_bytes||37545489, Nstr=N.toLocaleString("en-US");
   const ds=last.d_seg, dp=last.d_pose, by=last.blob_bytes;
   const t1=100.0*ds, t2=Math.sqrt(10.0*dp), t3=25.0*by/N;
@@ -3253,13 +3568,41 @@ function renderScorerBreakdown(last){
   termsEl.innerHTML=html;
   // (4) one-line advisory note — this is the run's own measured composite, not the pointer
   depEl.innerHTML="advisory &mdash; the run's own measured composite (store-nothing-carrier d_pose), "+
-    "NOT the exact 0.19110 pointer &middot; byte-closed pose confirmation is #238.";
+    "NOT the exact pointer ("+ptrTxt()+") &middot; byte-closed pose confirmation is #238."+
+    (META.pose_blind?" &middot; <b>pose UNHELD by design in this arm (w_pose=0)</b> &mdash; the pose "+
+     "term above is measured-but-untrained, so the composite is dominated by it by construction.":"");
+}
+
+// ---------- costate controller panel (SENSE/DECIDE; CONDITIONAL; observability ONLY) ----------
+// Source: the run's costate_shadow.jsonl last row (score-neutral shadow observer),
+// shipped as META.costate. Absent -> the panel is hidden. The dashboard NEVER actuates.
+function renderCostate(){
+  const box=$("costate"), body=$("cs_body"); if(!box||!body)return;
+  const C=META.costate;
+  if(!C||!C.ok){box.classList.add("hide");return;}
+  box.classList.remove("hide");
+  const bits=[];
+  if(C.classification)bits.push("class <b>"+escHtml(C.classification)+"</b>");
+  if(C.rec&&C.rec.action){
+    let r="rec <b>"+escHtml(C.rec.action)+"</b>";
+    if(C.rec.predicted_dS!=null&&isFinite(C.rec.predicted_dS))
+      r+=" &Delta;S "+(C.rec.predicted_dS>0?"+":"")+sig(C.rec.predicted_dS,4)+
+        (C.rec.horizon_epochs!=null?"/"+C.rec.horizon_epochs+"ep":"");
+    bits.push(r);
+  }
+  if(C.epoch!=null)bits.push("row ep"+C.epoch+(C.age_s!=null?" &middot; "+fmtAge(C.age_s)+" old":""));
+  if(C.duty_owed!=null)bits.push("duty-to-measure <b>"+C.duty_owed+"</b> owed"+
+    (C.duty_never_fired!=null?" ("+C.duty_never_fired+" never-fired)":""));
+  body.innerHTML=bits.join(" &middot; ")||"no shadow rows yet";
 }
 
 function render(){
   recomputeBest();
   const last=TRAJ.length?TRAJ[TRAJ.length-1]:null;
-  const g=META.goal_dseg||BOOT.goal_dseg;
+  const g=goalVal();
+  fillPtrSpans();  // pointer prose spans — data-driven from the canonical pointer file
+  const _nrm=$("sb_norm");
+  if(_nrm&&META.archive_norm_bytes)_nrm.textContent=META.archive_norm_bytes.toLocaleString("en-US");
   // liveness pill
   const k=LIVE.kind, p=$("pill");
   if(k==="live"&&!LIVE.calibrating){p.className="pill live";p.textContent="● live";}
@@ -3284,8 +3627,20 @@ function render(){
     $("d_seg_val").textContent=sig(last.d_seg,5);
     const setArr=(id,key)=>{const a=arrowFor(key),el=$(id);if(el){el.className="trend "+a.cls;el.textContent=a.ar;}};
     setArr("m_trend","d_seg");setArr("p_trend","d_pose");setArr("b_trend","blob_bytes");setArr("s_trend","implied_S");
-    $("m_goal").textContent="goal < "+sig(g,4);
+    // goal badge: CONDITIONAL — a value renders only with a real source (derived /
+    // override); otherwise an explicit "—" with the provenance hint, never a baked default.
+    const _mg=$("m_goal");
+    if(_mg){
+      const _gsrc=(META.goal_src&&META.goal_src.dseg)||null;
+      if(g!=null){_mg.textContent="goal < "+sig(g,4)+(goalSrcTag(_gsrc)?" · "+goalSrcTag(_gsrc):"");_mg.title=_gsrc||"";}
+      else{_mg.textContent="goal — ("+(_gsrc||"no measured source yet")+")";_mg.title=_gsrc||"";}
+    }
     $("m_best").textContent=(bestVal!=null)?("best "+sig(bestVal,5)+" @ ep"+bestEpoch):" ";
+    // implied_S sublabel: pose-blind arms carry the honest "unheld by design" note
+    const _ss=$("s_sub");
+    if(_ss)_ss.textContent=META.pose_blind
+      ?"advisory · pose UNHELD by design in this arm (w_pose=0) — composite includes the unheld pose term"
+      :"advisory · measured d_seg + store-nothing-carrier d_pose + rate · NOT the exact pointer";
     $("d_pose_val").textContent=sig(last.d_pose,4);
     $("bytes_val").textContent=fmtInt(last.blob_bytes);
     $("s_val").textContent=sig(last.implied_S,4);
@@ -3303,6 +3658,7 @@ function render(){
     document.querySelectorAll('#slegend .sc[data-st="muon"]').forEach(el=>el.classList.toggle("off",!muOn));
   }
   renderProjection(g);
+  renderCostate();
   renderConfig();
   renderRunInfo();
   // status
@@ -3335,7 +3691,7 @@ function render(){
   if(META.schedule_source)d.push("schedule: "+META.schedule_source);
   $("detail").textContent=d.join(" · ")||" ";
   // foot
-  $("foot").textContent="[macOS-MLX advisory · NON-PROMOTABLE] · pointer 0.19110 · stages CE · tau · l7 · Muon"+
+  $("foot").textContent="[macOS-MLX advisory · NON-PROMOTABLE] · pointer "+ptrTxt()+" · stages CE · tau · l7 · Muon"+
     (META.watched?(" · "+META.watched):"")+" · "+TRAJ.length+" verdicts · tap charts for details";
   // boot spans in triality
   // boundary readouts from the derived map: number when resolved, "event-gated
@@ -3353,30 +3709,18 @@ function render(){
   // it, so charts only repainted via the hover handlers' direct scheduleDraw. Null-guard.
   const _bt=$("b_tau");if(_bt)_bt.textContent=_btxt("tau",(META.tau!=null)?META.tau:BOOT.tau);
   const _bl=$("b_l7");if(_bl)_bl.textContent=_btxt("l7",(META.l7!=null)?META.l7:BOOT.l7);
-  const _bg=$("b_goal");if(_bg)_bg.textContent=sig(META.goal_dseg||BOOT.goal_dseg,4);
+  const _bg=$("b_goal");if(_bg)_bg.textContent=sig(goalVal(),4);
   scheduleDraw();
 }
 
 // ---------- projection (rendered from the SERVER-computed critical-slowing model) ----------
 // The fit MATH lives server-side in tools/dashboard_trajectory_model.py (pure numpy);
 // the client only RENDERS the returned numbers + their flags. Never a client-side fit.
-function fmtEps(n){return (n==null||!isFinite(n))?"?":fmtInt(n)+" ep";}
-function goalEtaStr(ge){
-  if(!ge||ge.state==="calibrating")return "calibrating";
-  if(ge.state==="reached")return "reached ✓";
-  if(ge.state==="not_descending")return "not descending";
-  if(ge.state==="asymptote_above")return "won't reach — asymptote "+sig(ge.asymptote,3)+" &gt; target";
-  if(ge.state==="eta"){
-    let s="~"+fmtEps(ge.eta_epochs);
-    if(ge.epoch_lo!=null||ge.epoch_hi!=null){
-      const lo=(ge.epoch_lo!=null)?fmtInt(ge.epoch_lo):"?";
-      const hi=(ge.epoch_hi!=null)?fmtInt(ge.epoch_hi):"≳";  // open upper band = may not reach in 1σ
-      s+=" (ep "+lo+"–"+hi+")";
-    }
-    return s;
-  }
-  return "?";
-}
+// (goalEtaStr/fmtEps DELETED 2026-07-07: dead since the stage-aware reframe; deleting
+// them is the structural guarantee that the GLOBAL fit's "asymptote_above / won't
+// reach" verdict can never render — the stage-aware model exists to override exactly
+// that mis-declaration, and the fallback branch below renders the global fit WITHOUT
+// a verdict by design.)
 function renderProjection(g){
   const segEl=$("proj_seg"), sEl=$("proj_s"); if(!segEl||!sEl)return;
   const P=PROJ||{};
@@ -3399,7 +3743,19 @@ function renderProjection(g){
     (SP.stages||[]).forEach(st=>{
       const cur=(st.name===SP.current_stage)?" <b>◀ current</b>":"";
       if(st.name==="Muon"){
-        parts.push("<b>Muon</b> ep"+fmtInt(st.start)+"+ · "+escHtml(st.note||"saddle staircase — not power-law")+cur);
+        // Muon refuses the power-law FORM, but MEASURED verdicts still get a
+        // quantitative read: observed floor + recent slope + linear read-through,
+        // all labelled "observed trend, not a fit" (server-computed).
+        let ms_="<b>Muon</b> ep"+fmtInt(st.start)+"+ · "+escHtml(st.note||"saddle staircase — not power-law");
+        if(st.observed_min!=null)
+          ms_+=" · observed floor "+sig(st.observed_min,4)+" over "+(st.n||0)+" verdict"+((st.n===1)?"":"s");
+        if(st.trend&&st.trend.slope_per_25ep!=null){
+          ms_+=" · recent "+(st.trend.slope_per_25ep>0?"+":"")+sig(st.trend.slope_per_25ep,3)+"/25ep";
+          if(st.trend.readthrough_dseg!=null)
+            ms_+=" → ep"+fmtInt(st.trend.readthrough_epoch)+" read-through ~"+sig(st.trend.readthrough_dseg,4);
+          ms_+=" ("+escHtml(st.trend.label||"observed trend, not a fit")+")";
+        }
+        parts.push(ms_+cur);
       } else if(!st.entered){
         parts.push("<b>"+escHtml(st.name)+"</b> ep"+fmtInt(st.start)+"–"+fmtInt(st.end)+" · not entered yet"+cur);
       } else if(st.fit_state==="ok"){
@@ -3427,11 +3783,23 @@ function renderProjection(g){
     const mf=SP.modeled_floor, is=(mf&&mf.implied_s)||{};
     if(mf&&is.ok&&is.value!=null){
       const gap=mf.is_current_stage?"":" (latest modeled; current "+escHtml(SP.current_stage||"?")+" still calibrating)";
-      let s=escHtml(mf.stage)+"-stage floor"+gap+" → implied_S <b>"+sig(is.value,4)+"</b>";
-      if(is.value_lo!=null||is.value_hi!=null)
-        s+=" ("+sig(is.value_lo,4)+"–"+(is.value_hi!=null?sig(is.value_hi,4):"≳")+")";
+      let s;
+      if(mf.pose_blind&&mf.seg_term!=null){
+        // pose-blind arm (w_pose=0 in the RUN'S OWN config): lead with the d_seg TERM
+        // contribution; the composite (swamped by the unheld pose) is demoted+labelled,
+        // never rendered bare.
+        s=escHtml(mf.stage)+"-stage floor"+gap+" → d_seg term 100·d_seg<sub>∞</sub> = <b>"+sig(mf.seg_term,4)+"</b>";
+        if(mf.seg_term_lo!=null&&mf.seg_term_hi!=null)
+          s+=" ("+sig(mf.seg_term_lo,4)+"–"+sig(mf.seg_term_hi,4)+")";
+        s+=" · pose UNHELD by design in this arm (w_pose=0) — composite incl. the unheld pose term "+
+          sig(is.value,4)+", demoted";
+      } else {
+        s=escHtml(mf.stage)+"-stage floor"+gap+" → implied_S <b>"+sig(is.value,4)+"</b>";
+        if(is.value_lo!=null||is.value_hi!=null)
+          s+=" ("+sig(is.value_lo,4)+"–"+(is.value_hi!=null?sig(is.value_hi,4):"≳")+")";
+      }
       const ts=(SP.tau_start!=null)?fmtInt(SP.tau_start):"?", ms=(SP.muon_start!=null)?fmtInt(SP.muon_start):"?";
-      s+=" — CURRENT-STAGE extrapolation ONLY, EXCLUDES the ep"+ts+"/ep"+ms+" breakthroughs · vs pointer 0.19110";
+      s+=" — CURRENT-STAGE extrapolation ONLY, EXCLUDES the ep"+ts+"/ep"+ms+" breakthroughs · vs pointer "+ptrTxt();
       bits.push(s);
     }
   } else {
@@ -3451,7 +3819,13 @@ function renderProjection(g){
   const tot=(META.schedule&&META.schedule.epochs)||null;
   if(ce.ok&&ce.total_s!=null){
     let c="ETA to ep"+(tot!=null?tot:"end")+" ~"+fmtAge(ce.total_s);
-    if(ce.has_estimate)c+=" (Muon estimated — refines at ep726)";
+    if(ce.has_estimate){
+      // the refine boundary is the run's OWN derived Muon start (never a literal)
+      const _mb=(META.muon_start!=null)?META.muon_start
+        :((stageMap()||[]).filter(s=>s.name==="Muon").map(stageBoundary).find(v=>v!=null));
+      c+=(_mb!=null)?" (Muon estimated — refines at ep"+fmtInt(_mb)+")"
+                    :" (Muon estimated — refines when Muon engages)";
+    }
     else c+=" (measured)";
     bits.push(c);
   }
@@ -3653,7 +4027,7 @@ function renderTriality(d){
     const ok=d.dag&&d.dag.ok, ok2=d.dsl&&d.dsl.ok, ok3=d.equations&&d.equations.ok;
     b.innerHTML="live · built "+_esc(d.built_at_utc||"?")+
       " · legs: DAG "+(ok?"✓":"—")+" · DSL "+(ok2?"✓":"—")+" · equations "+(ok3?"✓":"—")+
-      " · pointer "+(d.pointer!=null?d.pointer:"0.19110")+" (UNMOVED)";
+      (d.pointer!=null?(" · pointer "+d.pointer+" (UNMOVED)"):" · pointer unavailable");
   }
   const dag=$("tri_dag");
   if(dag){
@@ -3875,8 +4249,11 @@ def main() -> None:
                     help="OVERRIDE only (deprecated as a required input); default = derived "
                          "from the run's config via witness_dsl schedule read-back "
                          "(a disabled l7 — start >= epochs — is omitted, never labeled)")
-    ap.add_argument("--goal-dseg", type=float, default=cfg.goal_dseg)
-    ap.add_argument("--goal-dseg-15", type=float, default=cfg.goal_dseg_15)
+    ap.add_argument("--goal-dseg", type=float, default=cfg.goal_dseg,
+                    help="OVERRIDE only; default = derived per run as "
+                         "(0.19 − measured pose − measured rate)/100 from the run's own verdicts")
+    ap.add_argument("--goal-dseg-15", type=float, default=cfg.goal_dseg_15,
+                    help="OVERRIDE only; default = derived per run against the sub-0.15 target")
     ap.add_argument("--poll", type=float, default=cfg.poll)
     ap.add_argument("--host", default=cfg.host)
     ap.add_argument("--port", type=int, default=cfg.port)

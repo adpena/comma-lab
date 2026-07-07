@@ -17,11 +17,9 @@ Pure/unit; no network, no GPU, no uvicorn, no live-run interference (all tmp dir
 from __future__ import annotations
 
 import json
-import math
 import os
 import sys
 import time
-from pathlib import Path
 
 import pytest
 
@@ -184,31 +182,25 @@ def test_parse_run_config_none_dir():
     assert out["source"] == "none" and out["flags"] == {}
 
 
-# ───────────────────────── implied_S deploy recompute ─────────────────────────
-def test_implied_s_deploy_formula():
-    d_seg, blob = 0.285409, 58435
-    got = ds._implied_s_deploy(d_seg, blob)
-    want = (100.0 * d_seg + math.sqrt(10.0 * ds.DEPLOY_SIDECAR_D_POSE)
-            + 25.0 * blob / ds._ARCHIVE_NORM_BYTES)
-    assert got == pytest.approx(want)
-    # must be far below the misleading monitoring-pose value (~69)
-    assert got < 30.0
+# ───────────────────────── implied_S: measured-only (no borrowed sidecar) ─────────────────────────
+def test_ancestor_deploy_sidecar_surface_removed():
+    """The deploy-override implied_S (ancestor RGB-vehicle sidecar d_pose 3.4e-5 — a
+    BORROWED number, never witness-validated) was removed 2026-07-03: the displayed
+    implied_S is the run's OWN measured composite, never a substituted constant.
+    Structural guard against reintroducing the borrowed-constant class."""
+    assert not hasattr(ds, "_implied_s_deploy")
+    assert not hasattr(ds, "DEPLOY_SIDECAR_D_POSE")
 
 
-def test_implied_s_deploy_missing_inputs():
-    assert ds._implied_s_deploy(None, 100) is None
-    assert ds._implied_s_deploy(0.1, None) is None
-
-
-def test_slim_recomputes_implied_s_keeps_monitoring():
+def test_slim_keeps_measured_implied_s_and_aliases_monitoring():
     row = {"stage": "verdict", "epoch": 0, "d_seg": 0.285409, "d_pose": 163.3,
            "blob_bytes": 58435, "implied_S": 68.99, "ts": "t", "secret": "x"}
     out = ds._slim(row)
     assert set(out.keys()) == set(ds._TRAJ_KEYS)
     assert "secret" not in out
+    # the run's OWN measured composite, passed through unchanged; monitoring aliases it
+    assert out["implied_S"] == 68.99
     assert out["implied_S_monitoring"] == 68.99
-    assert out["implied_S"] == pytest.approx(ds._implied_s_deploy(0.285409, 58435))
-    assert out["implied_S"] < 30.0  # deploy estimate, not the misleading 69
 
 
 # ───────────────────────── refresh(): warming-up + normal ─────────────────────────
@@ -251,9 +243,10 @@ def test_refresh_normal_run_with_verdicts_parses_schedule(tmp_path):
     assert m["run_dir"].endswith("run1")
     assert len(snap["trajectory"]) == 2
     assert m["muon_start"] == 726 and m["schedule"]["epochs"] == 1000
-    assert m["deploy_sidecar_d_pose"] == ds.DEPLOY_SIDECAR_D_POSE
-    # implied_S in the trajectory is the DEPLOY recompute, not the monitoring 68.99
-    assert snap["trajectory"][0]["implied_S"] < 30.0
+    # the ancestor deploy-sidecar surface is REMOVED (borrowed 3.4e-5, never
+    # witness-validated): implied_S is the run's own measured composite.
+    assert "deploy_sidecar_d_pose" not in m
+    assert snap["trajectory"][0]["implied_S"] == 68.99
     assert snap["trajectory"][0]["implied_S_monitoring"] == 68.99
 
 

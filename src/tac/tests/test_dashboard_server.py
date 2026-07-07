@@ -119,7 +119,14 @@ def test_snapshot_and_meta_shape():
         assert snap["type"] == "snapshot"
         assert len(snap["trajectory"]) == 1
         assert snap["meta"]["tau"] == 300 and snap["meta"]["l7"] == 600
-        assert snap["meta"]["pointer"] == ds.POINTER
+        # pointer is READ from the canonical file (never a module constant):
+        # score when the file resolves, None otherwise — both honest states.
+        ptr = ds.frontier_pointer()
+        assert snap["meta"]["pointer"] == (ptr.get("score") if ptr.get("ok") else None)
+        assert "pointer_info" in snap["meta"]
+        # conditional-rendering payloads always present (values may be None)
+        assert "goal_src" in snap["meta"] and "costate" in snap["meta"]
+        assert "pose_blind" in snap["meta"]
         assert "kind" in snap["liveness"]
 
 
@@ -135,9 +142,57 @@ def test_page_html_has_ws_and_tabs_and_authority():
     html = ds._page_html(ds.Config())
     assert "new WebSocket" in html
     assert 'data-tab="tri"' in html and 'data-tab="live"' in html
-    assert "NON-PROMOTABLE" in html and "0.19110" in html
+    assert "NON-PROMOTABLE" in html
+    # CLAUDE.md "Frontier scores are pointer-only": the page carries NO baked
+    # pointer literal — prose spans (.ptrv) are filled from the pointer file.
+    assert "0.19110" not in html
+    assert 'class="ptrv"' in html
     assert "/api/state" in html  # polling fallback present
     assert "__BOOT__" not in html  # template fully rendered
+
+
+# ───────────────────────── pointer / goals / costate (conditional rendering) ─────────────────────────
+def test_frontier_pointer_reads_canonical_file_or_fails_open():
+    ptr = ds.frontier_pointer()
+    assert isinstance(ptr, dict) and "ok" in ptr
+    if ptr["ok"]:
+        assert isinstance(ptr["score"], float) and ptr["axis"] == "contest-CPU"
+    else:
+        assert "reason" in ptr
+
+
+def test_derive_goal_info_conditional_sources():
+    rows = [{"epoch": 1, "d_seg": 0.004, "d_pose": 114.0, "blob_bytes": 82859}]
+    # explicit override wins, labelled as such
+    g = ds._derive_goal_info(rows, False, 0.00092, ds._TARGET_S_T1, ds._ARCHIVE_NORM_BYTES)
+    assert g == {"value": 0.00092, "source": "override(env/cli)"}
+    # pose-blind arm: pose term dropped, value derived from measured rate
+    g = ds._derive_goal_info(rows, True, None, ds._TARGET_S_T1, ds._ARCHIVE_NORM_BYTES)
+    assert g["value"] is not None and g["value"] > 0 and "derived" in g["source"]
+    # pose held but hugely off-target: value withheld with an explicit reason
+    g = ds._derive_goal_info(rows, False, None, ds._TARGET_S_T1, ds._ARCHIVE_NORM_BYTES)
+    assert g["value"] is None and "unreachable" in g["source"]
+    # nothing measured -> no source at all (rendered "—")
+    g = ds._derive_goal_info([], None, None, ds._TARGET_S_T1, ds._ARCHIVE_NORM_BYTES)
+    assert g == {"value": None, "source": None}
+
+
+def test_read_costate_absent_and_present():
+    with tempfile.TemporaryDirectory() as d:
+        # no shadow file -> None -> the panel is conditionally ABSENT
+        assert ds._read_costate(d) is None
+        assert ds._read_costate(None) is None
+        row = {"epoch": 925,
+               "classification": {"classification": "converging"},
+               "recommendations": [{"action": "CONTINUE_STAGE",
+                                    "predicted_dS": -0.25, "horizon_epochs": 25}],
+               "duty_to_measure": [{"lever": "A", "state": "never-fired"},
+                                   {"lever": "B", "state": "measured"}]}
+        (Path(d) / "costate_shadow.jsonl").write_text(json.dumps(row) + "\n")
+        c = ds._read_costate(d)
+        assert c["ok"] and c["classification"] == "CONVERGING"
+        assert c["rec"]["action"] == "CONTINUE_STAGE"
+        assert c["duty_owed"] == 2 and c["duty_never_fired"] == 1
 
 
 def test_login_html_is_401_body():

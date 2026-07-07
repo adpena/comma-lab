@@ -18,7 +18,7 @@
  * CANONICAL comma10k / openpilot segmentation palette (from sequence.classes) — the colors Yousfi +
  * comma read instantly; only the margin-heat layer uses an inferno colormap.
  *
- * AUTHORITY: [macOS-CPU advisory · NON-PROMOTABLE] imagery. A viz moves no pointer (0.19110).
+ * AUTHORITY: [macOS-CPU advisory · NON-PROMOTABLE] imagery. A viz moves no pointer.
  */
 (function () {
   "use strict";

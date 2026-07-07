@@ -22,7 +22,7 @@
  *   steganographic reading (honestly weaker pixelwise — shown truthfully). Canonical Fisher<->margin
  *   0.978 anchors the deep unity.
  *
- * AUTHORITY: [macOS-CPU advisory · NON-PROMOTABLE] imagery. A viz moves no pointer (0.19110).
+ * AUTHORITY: [macOS-CPU advisory · NON-PROMOTABLE] imagery. A viz moves no pointer.
  */
 (function () {
   "use strict";
@@ -482,7 +482,7 @@
  * CONJECTURE (labelled in-UI), NOT a measured cross-scale identity. The left canvas integrates the
  * REAL Fisher–KPP PDE ∂ₜx=βx(1−x)+∇²x forward (explicit finite-difference, stepped every frame) —
  * that is真: it really integrates the equation. WebGPU render where present, canvas2d fallback +
- * honest badge (mirrors Pass 1). A viz moves NO pointer (0.19110, UNMOVED).
+ * honest badge (mirrors Pass 1). A viz moves NO pointer (the pointer is file-sourced, UNMOVED).
  * ===================================================================================== */
 (function () {
   "use strict";
@@ -883,7 +883,10 @@
         if (!kgpuOk) kppInitFallback();
         setSpineBadge();
         var st = $("whyspine_status");
-        if (st) st.textContent = (kgpuOk ? "WebGPU" : "canvas2d") + " · front live · pointer 0.19110 UNMOVED";
+        // pointer text is data-driven via the host page's ptrTxt() (canonical pointer
+        // file) — never a baked literal (CLAUDE.md "Frontier scores are pointer-only").
+        if (st) st.textContent = (kgpuOk ? "WebGPU" : "canvas2d") + " · front live" +
+          (window.ptrTxt ? " · pointer " + window.ptrTxt() + " UNMOVED" : "");
         schedule();
       });
     } else {
