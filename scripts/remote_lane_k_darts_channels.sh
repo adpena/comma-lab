@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane K-DARTS: differentiable architecture search over DSConv channel
 # dims (base_ch × mid_ch). Discovers the optimal (base_ch, mid_ch)
 # from a 16-candidate grid via first-order DARTS (Liu et al. ICLR 2019)

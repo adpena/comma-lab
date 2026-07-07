@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane M + Lane N (combined) — radial-zoom 1-DOF poses + Fridrich L∞ pose penalty.
 #
 # Lane M (--pose-mode radial-zoom): per memory project_posenet_rank1_discovery,
@@ -133,7 +133,7 @@ set -e
 
 # Validate: did optimize_poses produce the file?
 [ -f "$LOG_DIR/optimized_poses.bin" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.bin"; exit 2; }
-log "  produced optimized_poses.bin ($(stat -c '%s' "$LOG_DIR/optimized_poses.bin") bytes)"
+log "  produced optimized_poses.bin ($(stat -f%z "$LOG_DIR/optimized_poses.bin" 2>/dev/null || stat -c%s "$LOG_DIR/optimized_poses.bin") bytes)"
 
 log "=== Stage 3: build NEW archive (renderer + masks + NEW poses) ==="
 mkdir -p "$LOG_DIR/iter_0"

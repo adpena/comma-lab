@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Joint-Codec-Stack (PARADIGM-gamma).
 #
 # Module: src/tac/joint_codec_stack_orchestrator.py — JCSP wire format +

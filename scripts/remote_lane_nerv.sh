@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane 12: NeRV mask codec (Phase 2 ACCELERATE).
 # predicted_band=[0.95, 1.30] [contest-CUDA]
 # Replaces Lane G v3 masks.mkv (AV1, 421 KB) with masks.nrv (NeRV, ~12-23 KB).

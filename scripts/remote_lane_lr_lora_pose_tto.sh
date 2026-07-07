@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane LR — Low-Rank pose adaptation TTO anchored on Lane A's 1.15
 # [contest-CUDA] floor.
 #

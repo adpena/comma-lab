@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane NWCS-sensitivity-weighted (PARADIGM-β β-variant of Lane J-NWC).
 #
 # Module: src/tac/neural_weight_codec_sensitivity.py — per-block sensitivity

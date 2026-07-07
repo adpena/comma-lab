@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Ω: per-weight Hessian-aware bit-budget quantization anchored on Lane A.
 #
 # Council 2026-04-27: Lane A landed at 1.15 [contest-CUDA] (rate = 60% of
@@ -119,9 +119,9 @@ for f in "$ANCHOR_RENDERER" \
          upstream/models/posenet.safetensors; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
-log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -c '%s' "$ANCHOR_RENDERER") bytes, ASYM FP32)"
+log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -f%z "$ANCHOR_RENDERER" 2>/dev/null || stat -c%s "$ANCHOR_RENDERER") bytes, ASYM FP32)"
 log "  anchor_poses:    $ANCHOR_POSES"
-log "  anchor_masks:    $ANCHOR_MASKS ($(stat -c '%s' "$ANCHOR_MASKS") bytes)"
+log "  anchor_masks:    $ANCHOR_MASKS ($(stat -f%z "$ANCHOR_MASKS" 2>/dev/null || stat -c%s "$ANCHOR_MASKS") bytes)"
 
 # Pre-flight: dead-flag scan (CLAUDE.md non-negotiable: NEVER invent CLI flags).
 log "=== Pre-flight: argparse dead-flag scan ==="
@@ -165,7 +165,7 @@ set -e
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 [ -f "$HESSIAN_PT" ] || { echo "FATAL: profiler didn't produce $HESSIAN_PT"; exit 2; }
-log "  hessian profile: $HESSIAN_PT ($(stat -c '%s' "$HESSIAN_PT") bytes)"
+log "  hessian profile: $HESSIAN_PT ($(stat -f%z "$HESSIAN_PT" 2>/dev/null || stat -c%s "$HESSIAN_PT") bytes)"
 
 # Stage 2 — water-fill bit allocation + Ωv1 export of un-fine-tuned weights.
 # This is the "no-QAT" Lane Ω lower bound — the QAT step (Stage 3 below)
@@ -212,7 +212,7 @@ n_bytes = export_omega_renderer(model, bits, '$OMEGA_BIN', use_lzma=True)
 print(f'[stage2] WROTE $OMEGA_BIN: {n_bytes} bytes (vs Lane A 290KB)')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 [ -f "$OMEGA_BIN" ] || { echo "FATAL: Ωv1 export failed"; exit 2; }
-OMEGA_SIZE=$(stat -c '%s' "$OMEGA_BIN")
+OMEGA_SIZE=$(stat -f%z "$OMEGA_BIN" 2>/dev/null || stat -c%s "$OMEGA_BIN")
 log "  Ωv1 binary: $OMEGA_BIN ($OMEGA_SIZE bytes)"
 
 # Stage 3 — TODO: constrained QAT for Lane Ω.
@@ -242,7 +242,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(p, arcname=n)
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE")
+ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 [ "$ARCHIVE_BYTES" -gt 0 ] || { echo "FATAL: archive empty" >&2; exit 2; }
 log "  archive: $ARCHIVE ($ARCHIVE_BYTES bytes)"
 

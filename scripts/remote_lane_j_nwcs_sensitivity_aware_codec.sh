@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane J-NWCS: Sensitivity-aware Neural Weight Compression for renderer.bin.
 #
 # Composition lane (per docs/stacking_architecture.md):

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane MAE-V: Masked Autoencoder Variant — random patch masking on input
 # masks during training with a learnable Gumbel-softmax categorical mask
 # token. Anchored on Lane G v3 1.05 [contest-CUDA].
@@ -145,9 +145,9 @@ with zipfile.ZipFile(src) as zf:
         zf.extract(name, dst)
 print(f"extracted {sorted(required)} from {src} to {dst}")
 PY
-log "  anchor renderer.bin: $(stat -c '%s' "$EXTRACT_DIR/renderer.bin") bytes"
-log "  anchor masks.mkv: $(stat -c '%s' "$EXTRACT_DIR/masks.mkv") bytes"
-log "  anchor optimized_poses.pt: $(stat -c '%s' "$EXTRACT_DIR/optimized_poses.pt") bytes"
+log "  anchor renderer.bin: $(stat -f%z "$EXTRACT_DIR/renderer.bin" 2>/dev/null || stat -c%s "$EXTRACT_DIR/renderer.bin") bytes"
+log "  anchor masks.mkv: $(stat -f%z "$EXTRACT_DIR/masks.mkv" 2>/dev/null || stat -c%s "$EXTRACT_DIR/masks.mkv") bytes"
+log "  anchor optimized_poses.pt: $(stat -f%z "$EXTRACT_DIR/optimized_poses.pt" 2>/dev/null || stat -c%s "$EXTRACT_DIR/optimized_poses.pt") bytes"
 
 log "=== Stage 2: train_renderer.py --profile mae_v_dilated_h64 --use-mae-mask-aug ==="
 # --precomputed only when the cache exists locally; otherwise skip the flag
@@ -261,7 +261,7 @@ PY
 
 # ARCHIVE_BYTES guard — fail loud if the archive landed empty or absurdly
 # large (catches the LANE-B trap where empty ARCHIVE_BYTES crashed eval).
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE")
+ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 if [ -z "$ARCHIVE_BYTES" ] || [ "$ARCHIVE_BYTES" -lt 50000 ] || [ "$ARCHIVE_BYTES" -gt 2000000 ]; then
     log "FATAL: ARCHIVE_BYTES=$ARCHIVE_BYTES out of plausible range [50k, 2M]"
     exit 4

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane LM-A — zero-archive-cost poses computed at inflate from lane-mark
 # mask displacement. Anchored on Lane A (1.15 [contest-CUDA]).
 #
@@ -96,7 +96,7 @@ for f in "$ANCHOR_ARCHIVE" \
          upstream/models/posenet.safetensors; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
-log "  anchor_archive: $ANCHOR_ARCHIVE ($(stat -c '%s' "$ANCHOR_ARCHIVE") bytes)"
+log "  anchor_archive: $ANCHOR_ARCHIVE ($(stat -f%z "$ANCHOR_ARCHIVE" 2>/dev/null || stat -c%s "$ANCHOR_ARCHIVE") bytes)"
 
 log "=== Stage 1: extract masks from Lane A archive (sanity check + cache) ==="
 mkdir -p "$LOG_DIR/extracted"
@@ -115,9 +115,9 @@ with zipfile.ZipFile(src) as z:
         z.extract(n, dst)
     print(f'extracted {sorted(required)} from {src}')
 "
-log "  staged renderer.bin: $(stat -c '%s' "$LOG_DIR/extracted/renderer.bin") bytes"
-log "  staged masks.mkv:    $(stat -c '%s' "$LOG_DIR/extracted/masks.mkv") bytes"
-log "  staged optimized_poses.pt: $(stat -c '%s' "$LOG_DIR/extracted/optimized_poses.pt") bytes (sanity-check only; will NOT be in output archive)"
+log "  staged renderer.bin: $(stat -f%z "$LOG_DIR/extracted/renderer.bin" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/renderer.bin") bytes"
+log "  staged masks.mkv:    $(stat -f%z "$LOG_DIR/extracted/masks.mkv" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/masks.mkv") bytes"
+log "  staged optimized_poses.pt: $(stat -f%z "$LOG_DIR/extracted/optimized_poses.pt" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/optimized_poses.pt") bytes (sanity-check only; will NOT be in output archive)"
 
 log "=== Stage 2: compute zero-cost poses + verify correlation vs Lane A baseline ==="
 # Sanity-check: lane-mark-derived dim 0 must correlate with Lane A's
@@ -140,7 +140,7 @@ set -e
 # Validate: did the builder produce the file?
 [ -f "$ARCHIVE" ] || { echo "FATAL: build_zero_cost_pose_archive didn't produce $ARCHIVE"; exit 2; }
 [ -f "$ARCHIVE.provenance.json" ] || { echo "FATAL: build_zero_cost_pose_archive didn't produce $ARCHIVE.provenance.json"; exit 2; }
-log "  produced $ARCHIVE ($(stat -c '%s' "$ARCHIVE") bytes)"
+log "  produced $ARCHIVE ($(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE") bytes)"
 
 # Critical sanity: the output archive MUST contain zero_cost_poses_v1
 # sentinel and MUST NOT contain optimized_poses.pt. If those invariants

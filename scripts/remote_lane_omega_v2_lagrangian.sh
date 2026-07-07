@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Ω-V2: Lagrangian per-WEIGHT learnable bit-depth on Lane A.
 #
 # Council 2026-04-27: Lane Ω-V1 (water-fill heuristic, α=0.5 hard-coded)
@@ -130,9 +130,9 @@ for f in "$ANCHOR_RENDERER" \
          upstream/models/posenet.safetensors; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
-log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -c '%s' "$ANCHOR_RENDERER") bytes, ASYM FP32)"
+log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -f%z "$ANCHOR_RENDERER" 2>/dev/null || stat -c%s "$ANCHOR_RENDERER") bytes, ASYM FP32)"
 log "  anchor_poses:    $ANCHOR_POSES"
-log "  anchor_masks:    $ANCHOR_MASKS ($(stat -c '%s' "$ANCHOR_MASKS") bytes)"
+log "  anchor_masks:    $ANCHOR_MASKS ($(stat -f%z "$ANCHOR_MASKS" 2>/dev/null || stat -c%s "$ANCHOR_MASKS") bytes)"
 
 # Pre-flight: dead-flag scan (CLAUDE.md non-negotiable: NEVER invent CLI flags).
 # Scans both qat_omega_lagrangian.py and (optionally)
@@ -193,7 +193,7 @@ if [ "${LANE_OMEGA_V2_HESSIAN_INIT:-0}" = "1" ]; then
             echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
         fi
     [ -f "$HESSIAN_PT" ] || { echo "FATAL: profiler didn't produce $HESSIAN_PT"; exit 2; }
-    log "  hessian profile: $HESSIAN_PT ($(stat -c '%s' "$HESSIAN_PT") bytes)"
+    log "  hessian profile: $HESSIAN_PT ($(stat -f%z "$HESSIAN_PT" 2>/dev/null || stat -c%s "$HESSIAN_PT") bytes)"
 else
     log "  Hessian warm-start DISABLED (set LANE_OMEGA_V2_HESSIAN_INIT=1 to enable)"
 fi
@@ -241,7 +241,7 @@ set -e
 log "=== Stage 3: OMG1 export verification ==="
 OMEGA_BIN="$QAT_DIR/renderer.bin"
 [ -f "$OMEGA_BIN" ] || { echo "FATAL: QAT didn't produce $OMEGA_BIN"; exit 2; }
-OMEGA_SIZE=$(stat -c '%s' "$OMEGA_BIN")
+OMEGA_SIZE=$(stat -f%z "$OMEGA_BIN" 2>/dev/null || stat -c%s "$OMEGA_BIN")
 log "  Ω-V2 renderer: $OMEGA_BIN ($OMEGA_SIZE bytes)"
 
 # Stage 4 — Build archive (Ω-V2 renderer + Lane A masks + Lane A poses).
@@ -264,7 +264,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(p, arcname=n)
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE")
+ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 [ "$ARCHIVE_BYTES" -gt 0 ] || { echo "FATAL: archive empty" >&2; exit 2; }
 log "  archive: $ARCHIVE ($ARCHIVE_BYTES bytes)"
 

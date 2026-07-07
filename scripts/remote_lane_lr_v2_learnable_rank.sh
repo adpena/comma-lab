@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane LR-V2 — LEARNABLE-rank LoRA pose adaptation TTO. Anchored on Lane A's
 # 1.15 [contest-CUDA] floor.
 #

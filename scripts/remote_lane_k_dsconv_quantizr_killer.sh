@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane K: DSConv Quantizr-killer (88K params from-scratch retrain, FULL-frame).
 # Council brief 2026-04-27. Predicted band [0.85, 1.10].
 #
@@ -257,7 +257,7 @@ BEST_FP32="$LOG_DIR/train/renderer_${TAG}_best_fp32.pt"
     ls -la "$LOG_DIR/train/" >&2
     exit 2
 }
-log "  best fp32 checkpoint: $BEST_FP32 ($(stat -c '%s' "$BEST_FP32") bytes)"
+log "  best fp32 checkpoint: $BEST_FP32 ($(stat -f%z "$BEST_FP32" 2>/dev/null || stat -c%s "$BEST_FP32") bytes)"
 
 log "=== Stage 1b: export FP4A renderer.bin from fp32 best ==="
 mkdir -p "$LOG_DIR/iter_0"
@@ -309,9 +309,9 @@ cp experiments/results/lane_a_landed/iter_0/masks.mkv \
    "$LOG_DIR/iter_0/masks.mkv"
 cp experiments/results/lane_a_landed/iter_0/optimized_poses.pt \
    "$LOG_DIR/iter_0/optimized_poses.pt"
-log "  bundled masks.mkv ($(stat -c '%s' "$LOG_DIR/iter_0/masks.mkv") bytes)"
-log "  bundled optimized_poses.pt ($(stat -c '%s' "$LOG_DIR/iter_0/optimized_poses.pt") bytes)"
-log "  renderer.bin ($(stat -c '%s' "$LOG_DIR/iter_0/renderer.bin") bytes)"
+log "  bundled masks.mkv ($(stat -f%z "$LOG_DIR/iter_0/masks.mkv" 2>/dev/null || stat -c%s "$LOG_DIR/iter_0/masks.mkv") bytes)"
+log "  bundled optimized_poses.pt ($(stat -f%z "$LOG_DIR/iter_0/optimized_poses.pt" 2>/dev/null || stat -c%s "$LOG_DIR/iter_0/optimized_poses.pt") bytes)"
+log "  renderer.bin ($(stat -f%z "$LOG_DIR/iter_0/renderer.bin" 2>/dev/null || stat -c%s "$LOG_DIR/iter_0/renderer.bin") bytes)"
 
 log "=== Stage 3: build Lane K archive (Python zipfile, deterministic) ==="
 # Python zipfile (NOT shell `zip`) — PyTorch container has no `zip` binary.

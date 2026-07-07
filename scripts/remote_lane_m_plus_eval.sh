@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane M+: Zero-cost poses computed at inflate from lane-mark mask
 # displacement (per src/tac/lane_mark_pose.py + commit c7f0b690).
 #

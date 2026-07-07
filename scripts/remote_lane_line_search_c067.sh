@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane LS-C067: PR67-style R(D)-joint coordinate-descent pose refinement on C-067 anchor.
 #
 # WHAT: greedy coordinate descent on QP1 col0 (length 600) for the C-067 anchor

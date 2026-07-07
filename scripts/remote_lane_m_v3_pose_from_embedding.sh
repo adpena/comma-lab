@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane M-V3 (Path A) — pose-from-embedding distillation. Anchored on Lane A
 # (1.15 [contest-CUDA]). Replaces the ~15 KB optimized_poses.pt with a
 # distilled MLP (~1-2 KB FP16) + 0-byte sentinel that predicts per-pair
@@ -110,7 +110,7 @@ log "  anchor_masks:         $ANCHOR_MASKS"
 log "=== Stage 1: stage Lane A masks (no rebuild — anchor on Lane A's exact bytes) ==="
 mkdir -p "$LOG_DIR/extracted"
 cp "$ANCHOR_MASKS" "$LOG_DIR/extracted/masks.mkv"
-log "  staged $(stat -c '%s' "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
+log "  staged $(stat -f%z "$LOG_DIR/extracted/masks.mkv" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
 
 log "=== Stage 2: distill pose-from-embedding MLP (compress-time PoseNet load) ==="
 set +e
@@ -142,7 +142,7 @@ set -e
     echo "FATAL: distill did not produce sentinel pose_from_embedding_v1"
     exit 2
 }
-WEIGHTS_BYTES=$(stat -c '%s' "$LOG_DIR/pose_from_embedding_v1.pt")
+WEIGHTS_BYTES=$(stat -f%z "$LOG_DIR/pose_from_embedding_v1.pt" 2>/dev/null || stat -c%s "$LOG_DIR/pose_from_embedding_v1.pt")
 log "  produced MLP weights: $WEIGHTS_BYTES bytes"
 log "  produced sentinel:    0 bytes (verified)"
 

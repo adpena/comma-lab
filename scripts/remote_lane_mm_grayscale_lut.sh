@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane MM — Selfcomp grayscale-LUT mask re-encoding (encoder-only quick win).
 #
 # Hypothesis: replace Lane A's masks.mkv (legacy [0,63,127,191,255] linear

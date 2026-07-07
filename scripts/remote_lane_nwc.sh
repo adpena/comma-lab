@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane J-NWC: Neural Weight Compression — full end-to-end producer/consumer
 # pipeline (codec train → renderer compress → archive build → CUDA auth eval).
 #
