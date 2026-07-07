@@ -9192,3 +9192,42 @@ curriculum object, or config-generation change) ↔ equations leg N/A (no new me
 Sibling coordination: failure-ledger + costate-digest surfaces untouched; gitignore negation
 follows the harness_failure_ledger pattern. **HARD GATE: pointer 0.19110 UNMOVED
 (apparatus/means, not goal progress).**
+
+### DAG FEED 2026-07-07dsr (dashboard stage map DERIVED FROM DSL — schedule read-back LANDS; hand-fed --tau/--l7 constants retired)
+
+**Operator directive (verbatim class):** the dashboard "should not have hardcoded parameters like
+that but should use conditional rendering integrated with DSL." **Measured incident:** a running
+`tools/dashboard_server.py` carried `--l7 600` while the live run (mod32cap) had l7 DISABLED
+(`--l7-start-epoch 1001` @ epochs 1000) → epochs ≥600 were mislabeled "l7" during tau. **The
+CLASS bug:** observability consumers must DERIVE the stage map from the run's OWN config via the
+DSL (single source of truth), never from hand-fed constants.
+
+**BUILT (DSL leg):** `src/tac/witness_dsl/schedule_readback.py` — the INVERSE direction of the
+DSL compile path. Given a RUN DIR it derives the stage map the run ACTUALLY has, TWO-LAYERED
+(operator amendment same day): (1) **PLANNED** — launch.sh argv parsed through the trainer's REAL
+argparse (`build_real_trainer_parser`, never-invent-flags; backslash continuations + env-prefix
+handled; disabled `start>=epochs` stages OMITTED; precedence-shadowed windows collapse); (2)
+**ACTUAL** — fired-transition evidence from the run's emissions (`curriculum_transition_fired` /
+`muon_finisher_switch` log rows; `levelset_ckpt_stage<TAG>_ep<N>.npz` filenames with the
+fixed-vs-event tag semantics verified against trainer source) — ACTUAL overrides PLANNED.
+Event-gated stages (#315/#334 `Curriculum(handoff="event")`) are a UNION entry
+`{name, trigger, status: pending|fired, fired_epoch, cap}` with the trigger description DERIVED
+from the DSL Curriculum object's own emitted hand-off flags; a pending stage's cap is honored as
+the trainer's HARD CEILING (provably active at ep≥cap). Plus `resolve_run_dir_for_log` — a
+`.omx/tmp` tee-log's parent is NOT the run dir (the exact gap that forced the hand-fed constants);
+the launcher's `launching: bash <run_dir>/launch.sh` echo resolves it.
+
+**WIRED (consumer):** `tools/dashboard_server.py` derives per-run (`schedule_source:
+derived(launch.sh)`); `--tau/--l7` demoted to explicit-override-only (deprecation note in --help);
+fail-open fallback for old run dirs with a VISIBLE "schedule: fallback" marker; client JS renders
+CONDITIONALLY from the derived `stage_map` (only present stages get bands/legend/vlines; pending
+event stages render "next: <stage> (event-gated …) — pending"). Verified derived map for the LIVE
+mod32cap run: `CE@0 (launch.sh) · tau@300 (checkpoint-corroborated) · Muon@726 (log:
+muon_finisher_switch) · NO l7` → ep500=tau, ep800=Muon, never l7. Tests: 19 passed
+(`src/tac/tests/test_schedule_readback.py`) incl. the real live run dir, synthetic fixtures,
+event-fired via log row AND via fake stage-ckpt file, fallback, dtm label-consistency.
+
+Triality: DAG (this FEED) ↔ DSL leg = THIS LANDING (`witness_dsl.schedule_readback`, exported from
+the package; the 2026-07-06 costate-digest FEED's "schedule read-back soft-imported for when it
+lands" now lands) ↔ equations leg N/A (observability apparatus; no new measured law). Authority:
+score-neutral read-only observability. **HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
