@@ -49,6 +49,38 @@ def test_real_trainer_flags_nonempty_and_has_known():
     assert len(flags) > 30
 
 
+def test_real_trainer_flags_includes_boolean_optional_negations_only():
+    """(CLASS-fix 2026-07-07) the DSL merge renders a False override as --no-<flag>; the
+    validator must accept the negation for BooleanOptionalAction flags and STILL refuse it
+    for store_true flags (whose --no- form is a genuine invention)."""
+    flags = lw.real_trainer_flags()
+    # BooleanOptionalAction => negation is a REAL argparse token
+    assert "--lane-prior-phi1" in flags and "--no-lane-prior-phi1" in flags
+    assert "--no-seed-islands" in flags
+    # store_true flags gain NO negation (e.g. --chroma / --siren-init are store_true)
+    from tac.witness_dsl.curriculum_dsl import real_store_true_flags
+    st = real_store_true_flags()
+    assert st, "expected at least one store_true flag in the trainer"
+    for f in sorted(st)[:5]:
+        assert f.replace("--", "--no-", 1) not in flags, f"store_true {f} must not gain --no- form"
+
+
+def test_mod32_control_base_plus_islands_treatment_validates(tmp_path):
+    """The islands PROCEED-class treatment arm (FEED-07c/07d): proven_base +
+    Mod32SegOnlyControlBase + the treatment levers validates clean through the launcher's
+    never-invent-a-flag guard (including the --no-lane-prior-phi1 negation)."""
+    import dataclasses as dc
+    cfg = dc.replace(_cfg(), dsl_levers=(
+        "Mod32SegOnlyControlBase", "SeedIslandBirth", "SeedIslandEased", "AmplifyIsland",
+        "EventTriggeredCurriculum", "MuonWarmStart", "SegFocalGamma"))
+    ok, results = lw.validate_emitted_flags(cfg, "out")
+    assert ok is True, [f for f, passed in results if not passed]
+    d = dict(cfg.to_trainer_flags("out"))
+    assert d["--mod-dim"] == 32 and d["--verdict-pairs"] == 0 and d["--eikonal-weight"] == 0.0
+    assert d["--seg-focal-gamma"] == 2.0 and d["--amplify-weight"] == 1.0
+    assert "--no-lane-prior-phi1" in d and "--lane-prior-phi1" not in d
+
+
 def test_validate_emitted_flags_all_pass():
     ok, results = lw.validate_emitted_flags(_cfg(), "out")
     assert ok is True

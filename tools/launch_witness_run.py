@@ -158,8 +158,24 @@ def derive_safe_frac(explicit: float | None) -> tuple[float, str, str]:
 
 # ───────────────────────── never-invent-a-flag guard ─────────────────────────
 def real_trainer_flags() -> frozenset[str]:
-    """The SET of real ``--flag`` names parsed from the trainer's argparse."""
-    return frozenset(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', _TRAINER.read_text()))
+    """The SET of real ``--flag`` names parsed from the trainer's argparse, INCLUDING the
+    ``--no-<flag>`` negation forms argparse auto-generates for ``BooleanOptionalAction`` flags.
+
+    (CLASS-fix 2026-07-07, islands-arm launch): the DSL merge deliberately renders a ``False``
+    override as ``--no-<flag>`` (``witness_autoconfig._merge_dsl_levers`` mirroring
+    ``curriculum_dsl.WitnessProgram.compile_trainer_argv``), so a lever that turns a
+    BooleanOptionalAction base flag OFF (e.g. ``Mod32SegOnlyControlBase`` negating
+    ``--lane-prior-phi1``) emits a REAL argparse token this validator previously mis-refused as
+    invented. Only BooleanOptionalAction flags gain the negation; ``store_true`` flags do NOT
+    (their ``--no-`` form would be a genuine invention — the DSL's C2 guard refuses those
+    upstream, and this validator still refuses them here)."""
+    text = _TRAINER.read_text()
+    flags = set(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', text))
+    bool_opt = re.findall(
+        r'add_argument\(\s*"(--[a-z0-9-]+)"[^)]*action\s*=\s*argparse\.BooleanOptionalAction',
+        text)
+    flags.update(f.replace("--", "--no-", 1) for f in bool_opt)
+    return frozenset(flags)
 
 
 def validate_emitted_flags(cfg, out_dir: str) -> tuple[bool, list[tuple[str, bool]]]:

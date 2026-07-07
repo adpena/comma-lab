@@ -1025,6 +1025,59 @@ def SeedIslandEased(window: int = 100) -> Lever:  # noqa: N802 — #323 LADDER i
                  notes="#323 eased island targets: movable SDF-dilation + lane VP-tangent")
 
 
+def SeedIslandBirth(window: int = 100) -> Lever:  # noqa: N802 — #224/#300 island-birth seed PAIR
+    """#224 island seed + the #300 seed-absorption FIX, emitted as a PAIR (the trainer fail-closes
+    ``--witness-alone-island-loss`` without ``--seed-islands``, so the DSL holds them together):
+    early-seed the self-detected lane+movable islands into the SegNet-scored frame1 (accelerant,
+    0 archive bytes, absent from EMA/blob/deploy) AND score the island-FORMATION levers
+    (``--amplify-weight`` birth + persistence recall) on the WITNESS-ALONE render so the seed
+    cannot starve the witness's own island gradient (the MEASURED #300 starvation: 71% of the
+    paint-seed plateau = the 2 seeded classes at ~100% within-flip). SERIAL-accum only (fails
+    closed under ``--micro-batch-pairs``); requires ``--w-seg > 0``. Compose modifiers over it:
+    :func:`SeedIslandEased` (#323 eased per-class targets) + :func:`AmplifyIsland` (the birth
+    term itself). DEFAULT-OFF trainer flags ⇒ byte-identical when unfired."""
+    return Lever("island_seed_birth",
+                 overrides={"--seed-islands": True,
+                            "--witness-alone-island-loss": True},
+                 epochs_delta=window,
+                 notes="#224 island seed + #300 witness-alone island loss (the anti-starvation PAIR)")
+
+
+def Mod32SegOnlyControlBase(window: int = 0) -> Lever:  # noqa: N802 — mod32cap control-base reproduction
+    """The mod32cap CLEAN-BASELINE control config (run
+    ``levelset_n600_witness_mod32cap_20260706T115554Z``, FEED-06u: the confound-fixed seg-only
+    mod-32 council baseline) expressed as the DELTA over the launcher's ``proven_base`` — so a
+    TREATMENT arm launched as ``--config proven_base --dsl-lever Mod32SegOnlyControlBase
+    --dsl-lever <treatments...>`` matches the live control argv EXACTLY except the treatment
+    levers (clean matched-epoch A/B attribution; the config generator stays the SoT instead of a
+    hand-edited launch.sh).
+
+    The 8 measured deltas (diff of the control launch.sh vs the proven_base emission, 2026-07-07):
+    eikonal OFF (seg-only control) · freq-along 8 · annealed hosc 1→4 (fixed-high-β diverges,
+    MEASURED) · l7 parked at 1001 (TRUE never) · lane paint-prior OFF (treatment arm, lever_ledger)
+    · mod-dim 32 (the capacity GO-A) · n-dir-freqs 4 · verdict-pairs 0 (ALL 600, n600-scale rule).
+    ``--lane-prior-phi1`` is BooleanOptionalAction ⇒ the ``False`` override renders
+    ``--no-lane-prior-phi1`` (argparse-equal to the control's omission; the inert
+    ``--lane-prior-phi1-mode/-dash-gate`` companions keep their defaults). window=0 = base-config
+    reproduction, no epoch budget of its own."""
+    return Lever(
+        "mod32_seg_only_control_base",
+        overrides={"--eikonal-weight": 0.0,
+                   "--freq-along": 8.0,
+                   "--hosc-beta": 1.0,
+                   "--hosc-beta-end": 4.0,
+                   "--hosc-beta-anneal": "linear",
+                   "--l7-start-epoch": 1001,
+                   "--lane-prior-phi1": False,
+                   "--mod-dim": 32,
+                   "--n-dir-freqs": 4,
+                   "--verdict-pairs": 0},
+        epochs_delta=window,
+        notes=("mod32cap control base (FEED-06u) as proven_base deltas — treatment arms compose "
+               "over it for clean A/B vs the live control"),
+    )
+
+
 def EventTriggeredCurriculum(window: int = 0) -> Lever:  # noqa: N802 — #315 derived-schedule flagship
     """#315 event-triggered CE→tau hand-off + per-class critical-nucleus guard: hold tau until
     every scored class consolidates (boundary re-anchor C1/C2 gate + nucleus predicate π₁≳5 +
@@ -1149,12 +1202,15 @@ def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa:
     lever" (own gate verdict). Supersampled anti-aliased rendering resolves the sub-pixel island
     coverage the base-grid point-sample misses.
 
-    COMPOSE GUARD (#224 / review MED-3, ``_validate_aa_compose_compat`` in the levelset trainer):
-    ``--render-aa supersample`` is INCOMPATIBLE with the BASE-grid compose levers
-    ``--residual-mode`` / ``--seed-islands`` / ``--lane-render-band`` until compose-after-downsample
-    lands — the trainer fail-closes at launch with an actionable message (use ``--render-aa ipe``
-    with those, or run separately). So this lever composes with DirectionalBasisRebalance /
-    MuonWarmStart etc., but NOT with SeedIslandEased(+seed path) or AnalyticLaneRenderBand."""
+    COMPOSE GUARD RESOLVED (#220 unblock, 2026-07-07): ``aa_sdf_observation_render`` now invokes
+    ``compose_fn`` AFTER the box-downsample (at the BASE grid), so ``--render-aa supersample``
+    COMPOSES with the base-grid compose levers ``--residual-mode`` / ``--seed-islands`` /
+    ``--lane-render-band`` by construction (the trainer's ``_validate_aa_compose_compat`` guard is
+    retained but currently accepts every tracked combination; ss=1 stays byte-identical). This
+    lever therefore composes with SeedIslandEased(+seed path) / AnalyticLaneRenderBand as well as
+    DirectionalBasisRebalance / MuonWarmStart. CAVEAT unchanged: the ORTHOGONAL --self-orient x
+    supersample fine-dir-feats memory/wall-clock gate (``--aa-self-orient-fine-mode`` refuse
+    default) still applies when composing over a --self-orient base."""
     if int(ss) < 1:
         raise ValueError(f"AACoverageRender: ss must be >= 1, got {ss!r}")
     return Lever(
@@ -1165,7 +1221,8 @@ def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa:
                    "--render-w": int(grid_w)},
         epochs_delta=window,
         notes=("#220 AA coverage render (supersample) + grid>=384 — #1 measured islands lever; "
-               "incompatible with residual-mode/seed-islands/lane-render-band (AA compose guard)"),
+               "composes with residual-mode/seed-islands/lane-render-band (compose-after-"
+               "downsample landed 2026-07-07); self-orient fine-mode gate still applies"),
     )
 
 
@@ -1181,8 +1238,10 @@ def StepNativeActivation(beta_start: float = 4.0, beta_end: float = 8.0,  # noqa
     step limit; ``--hosc-beta-end > --hosc-beta`` step-sharpens as the SDF partition forms.
     CAVEAT (MEASURED, DAG FEED 2026-06-25a + FEED-ly): FIXED high beta from scratch DIVERGES
     (tanh saturation → vanishing grad) — approach the step limit by ANNEAL, never start at it.
-    A discrete ``step_basis`` activation choice + the FINER++ bias-init (published fix for the
-    measured hosc saturation) are BUILD-NEEDED sisters — no flag exists; do NOT emit one.
+    A discrete ``step_basis`` activation choice remains a BUILD-NEEDED sister (no flag; do NOT
+    emit one). The FINER++ bias-init sister is now BUILT (2026-07-07, #310 build half): compose
+    :func:`FinerBiasInit` with this lever — the wide first-layer bias is the published fix for
+    the measured fixed-β saturation-death this anneal works around.
     Equations leg: ``step_native_activation_edge_optimality_v1`` (#310 sweep = the owed anchor)."""
     if not (0.0 < float(beta_start) <= float(beta_end)):
         raise ValueError(
@@ -1230,8 +1289,8 @@ def PersistenceTopology(weight: float = 1.0, warmup_epochs: int = 0,  # noqa: N8
     erasure tail (lane dashes / movable specks) the plain CE drops (error ∝ 1/persistence).
     ``--persistence-loss-weight`` 0 (trainer default) = branch skipped = byte-identical; a nonzero
     weight engages. ``--persistence-classes auto`` (trainer default kept) self-detects the
-    thin/small erasure-tail classes from the cached GT argmax. The #218 logit-adjustment per-class
-    offset is the BUILD-NEEDED sister (no flag exists — do NOT emit one)."""
+    thin/small erasure-tail classes from the cached GT argmax. The #218 LOSS-time logit-adjustment
+    sister is now BUILT (2026-07-07): compose :func:`LogitAdjust` (``--logit-adjust-loss-tau``)."""
     ov: dict = {"--persistence-loss-weight": float(weight)}
     if int(warmup_epochs) > 0:
         ov["--persistence-warmup-epochs"] = int(warmup_epochs)
@@ -1239,19 +1298,95 @@ def PersistenceTopology(weight: float = 1.0, warmup_epochs: int = 0,  # noqa: N8
         "FEED_07b_persistence_topology",
         overrides=ov, epochs_delta=window,
         notes=("#218/#224 soft-clDice + persistence island-recall (births the finest-scale "
-               "erasure tail CE drops); logit-adjustment sister = build-needed"),
+               "erasure tail CE drops); loss-time logit-adjust sister = LogitAdjust (built)"),
     )
 
 
-def MarginFieldHead(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: N802
+def MarginFieldHead(weight: float = 1.0, window: int = 100,  # noqa: N802
+                    logit_adjust_per_class: bool = False,
+                    logit_adjust_tau: float = 1.0) -> Lever:
     """FEED-07b lever #3 (partial, #218 facets 1b/3): realized through-R per-class margin-hinge
     head weight (``--margin-field-head-weight``; trainer default 0.0 = off = byte-identical).
-    Composes with LEVER-3/4/B on the shared ``_signed`` margin field."""
+    Composes with LEVER-3/4/B on the shared ``_signed`` margin field.
+
+    ``logit_adjust_per_class=True`` additionally emits the #218 facet-3 pair
+    ``--logit-adjust-per-class`` (+ ``--logit-adjust-tau``, its scale): the Menon DECODE-form
+    offsets boost this head's per-class margin TARGET for the rare classes (fires only with this
+    head's weight > 0 — the trainer reads the pair inside the mfh-target build). SISTER of the
+    LOSS-time :func:`LogitAdjust` (``--logit-adjust-loss-tau``, a different surface); the two
+    compose. store_true flag emitted True ONLY (review C2)."""
+    ov: dict = {"--margin-field-head-weight": float(weight)}
+    if logit_adjust_per_class:
+        ov["--logit-adjust-per-class"] = True
+        ov["--logit-adjust-tau"] = float(logit_adjust_tau)
     return Lever(
         "FEED_07b_margin_field_head",
-        overrides={"--margin-field-head-weight": float(weight)},
+        overrides=ov,
         epochs_delta=window,
-        notes="#218 per-class realized-margin hinge head (shared _signed; byte-free head facet)",
+        notes="#218 per-class realized-margin hinge head (shared _signed; byte-free head facet; "
+              "optional facet-3 Menon margin-target boost)",
+    )
+
+
+def FinerBiasInit(k: float = 10.0, window: int = 0) -> Lever:  # noqa: N802 — #310 build half
+    """FEED-07b lever #2's BUILD half (#310, 2026-07-07): FINER++ variable-periodic FIRST-LAYER
+    bias init (FINER arXiv 2312.02434 / FINER++ arXiv 2407.19434) — ``in_proj.bias ~ U(-k, k)``
+    over a WIDE range so each first-layer neuron selects its OWN frequency/phase of the periodic
+    (hosc/wire) activation: the published fix for the MEASURED fixed-β hosc saturation-death
+    (DAG FEED 2026-06-25a + FEED-ly — with all biases ~0 every neuron sits at the SAME point of
+    ``tanh(β·sin)`` and saturates together as β rises).
+
+    Trainer leg: ``--finer-bias-init`` (BooleanOptionalAction, default OFF = byte-identical:
+    the ON path draws from a DEDICATED ``np.random.default_rng(seed+salt)`` stream, never the
+    shared ``np.random``/``mx.random`` streams, so OFF makes ZERO draws and ON shifts no other
+    seeded draw) + ``--finer-bias-k`` (the range; paper-range default 10.0). FROM-SCRATCH init
+    lever (applied after siren-init, before structured-init; a ``--resume-from`` overwrites it —
+    the trainer stamps ``applied:false``); fails closed on ``--activation relu`` (no period).
+    COMPOSES with :func:`StepNativeActivation` (the β-anneal this init de-fragilizes) — the
+    natural pair for the #310 sweep. ``window=0`` = init-config change, no epoch budget of its
+    own. Equations leg: ``step_native_activation_edge_optimality_v1`` (the #310 sweep is the
+    owed anchor for BOTH halves)."""
+    if not (float(k) > 0.0):
+        raise ValueError(f"FinerBiasInit: k must be > 0, got {k!r}")
+    return Lever(
+        "FEED_07b_finer_bias_init",
+        overrides={"--finer-bias-init": True,
+                   "--finer-bias-k": float(k)},
+        epochs_delta=window,
+        notes=("#310 FINER++ wide first-layer bias init (dedicated rng; fix for the measured "
+               "fixed-beta hosc saturation-death); pairs with StepNativeActivation; #310 sweep owed"),
+    )
+
+
+def LogitAdjust(tau: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 — #218 build half
+    """FEED-07b lever #3's BUILD half (#218, 2026-07-07): class-prior LOGIT ADJUSTMENT on the
+    TRAINING seg loss (Menon et al. 2021, arXiv 2007.07314 — the textbook ZERO-BYTE rare-class
+    cure): the frozen-SegNet logits ``base_loss`` reads get ``logits_c += tau*log(prior_c)`` with
+    priors = the GT class-area fractions from the cached L* (measured n600
+    ~[0.232, 0.0059, 0.495, 0.0124, 0.254] — Lane/Movable log-priors −5.13/−4.39 vs Road −1.46,
+    so under-predicting the two MEASURED un-born island classes costs more gradient; FEED-07c:
+    lane 83.9% / movable 93.1% un-born). ``tau=1.0`` is the canonical Menon setting.
+
+    BYTE-IDENTITY BOUNDARY (binding, documented at the trainer's ``_LogitAdjustSegAdapter``): the
+    adjustment lives ONLY inside the training-loss adapter — the deployed/rendered argmax path
+    (verdict CPU-torch SegNet, byte-close decode, inflate) reads RAW logits and is UNCHANGED; the
+    witness WEIGHTS absorb the pressure. Trainer leg: ``--logit-adjust-loss-tau`` (default 0.0 =
+    the loss adapter is the SAME object = byte-identical); fails closed with
+    ``--micro-batch-pairs>1`` (not routed into the batched twin). SISTER (do not confuse): the
+    #218 facet-3 pair ``--logit-adjust-per-class`` + ``--logit-adjust-tau`` boost the
+    MARGIN-FIELD-HEAD per-class TARGET (see :func:`MarginFieldHead`); the two compose. Composes
+    with :func:`SegFocalGamma` (logit-adjusted-focal) + :func:`PersistenceTopology`. Carries a
+    warm-start ``window`` (else dead-arm on resume, DSL review C1). Equations leg:
+    ``logit_adjustment_class_prior_law_v1`` (#218 A/B = the owed anchor)."""
+    _t = float(tau)
+    if _t == 0.0 or _t != _t or _t in (float("inf"), float("-inf")):
+        raise ValueError(f"LogitAdjust: tau must be a nonzero finite float (0.0 = OFF), got {tau!r}")
+    return Lever(
+        "FEED_07b_logit_adjust_loss",
+        overrides={"--logit-adjust-loss-tau": float(tau)},
+        epochs_delta=window,
+        notes=("#218 Menon loss-time logit adjustment (zero-byte rare-class cure; training-loss "
+               "surface only, deployed argmax unchanged); #218 A/B owed"),
     )
 
 
