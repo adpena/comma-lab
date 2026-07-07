@@ -600,6 +600,10 @@ def _build_resume_state_arrays(
     out["__cfg_witness_alone_island_loss"] = np.asarray(int(bool(getattr(args, "witness_alone_island_loss", False))))
     out["__cfg_seg_focal_gamma"] = np.asarray(float(getattr(args, "seg_focal_gamma", 0.0)))
     out["__cfg_boundary_distance_weight"] = np.asarray(float(getattr(args, "boundary_distance_weight", 0.0)))
+    # (#218) logit-adjustment is loss-only + trajectory-affecting (no param keys) — same class as
+    # focal/boundary-distance above: persist so a --resume-from that silently drops/changes it
+    # fails closed via _resume_lever_divergences (deterministic-repro).
+    out["__cfg_logit_adjust_loss_tau"] = np.asarray(float(getattr(args, "logit_adjust_loss_tau", 0.0)))
     # (C11 confound fix) persist the stiff eikonal-family weights so a --resume-from that ADDS/raises
     # them onto an opt state trained WITHOUT them is DETECTABLE (the resume-drift loud row + LR
     # re-warmup routing). Loss/render-only (no param keys), so the arch guard cannot see them.
@@ -744,6 +748,8 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # 2026-07-05; loss-only, trajectory-affecting, no param keys — same class as the #300 levers).
         ("__cfg_seg_focal_gamma", float(getattr(args, "seg_focal_gamma", 0.0)), True),
         ("__cfg_boundary_distance_weight", float(getattr(args, "boundary_distance_weight", 0.0)), True),
+        # (#218) logit-adjustment per-class offset (loss-only, trajectory-affecting, no param keys).
+        ("__cfg_logit_adjust_loss_tau", float(getattr(args, "logit_adjust_loss_tau", 0.0)), True),
         # (review MED-1) film_stiefel constrains the EXISTING film.weight (training-dynamics only,
         # NO new param keys -> the film-arch/param-key guard cannot see it; the sidecar persists
         # __cfg_film_stiefel [R2a-MED-1 note there] precisely so THIS guard can fail-closed on a
@@ -787,29 +793,117 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
 def _validate_aa_compose_compat(
     aa_on: bool, band_active: bool, residual_mode: bool, seed_on: bool,
 ) -> None:
-    """(#224 / review MED-3) Fail-closed compatibility gate: --render-aa supersample vs the
-    BASE-grid compose levers. The AA-supersample compose runs at the ss*grid (fine grid) while the
-    lane-band coverage, the residual-bulk composition mask, and the island-seed residual are all
-    BASE-grid (H,W) tensors — composing any of them under supersample would surface as an opaque
-    MLX broadcast error at the fine grid deep inside training. Raise HERE with an actionable
-    message instead. Pure / MLX-free -> unit-tested. aa_on False => always compatible (no-op)."""
-    if not aa_on:
-        return
-    if band_active:
+    """(#224 / review MED-3 -> #220 UNBLOCK 2026-07-07) Compatibility gate: --render-aa supersample
+    vs the BASE-grid compose levers. RESOLVED: ``tac.boundary_math.aa_sdf_observation_render`` now
+    invokes ``compose_fn`` AFTER ``box_downsample_mlx`` (i.e. at the BASE (H,W) grid), so the
+    lane-band coverage, the residual-bulk composition mask, and the island-seed residual — all
+    base-grid (H,W) tensors — compose with AA supersample BY CONSTRUCTION (footprint integration
+    first, then the base-grid composers, then R; ss=1 remains byte-identical because the identity
+    downsample makes compose-before == compose-after bit-for-bit). NO genuinely-incompatible combo
+    remains among the three tracked composers, so this guard currently accepts every combination;
+    the function + signature + call site are KEPT as the fail-closed home for any FUTURE composer
+    that genuinely requires the fine (ss*grid) surface. Pure / MLX-free -> unit-tested.
+    NOTE the ORTHOGONAL --self-orient x supersample fine-dir-feats guard (memory/wall-clock, the
+    --aa-self-orient-fine-mode refuse default) is a DIFFERENT gate and is unchanged."""
+    return None
+
+
+# ---------------------------------------------------------------------------
+# (#310 BUILD, FEED-07b lever #2 sister) FINER/FINER++ variable-periodic FIRST-LAYER bias init.
+# ---------------------------------------------------------------------------
+# Dedicated-RNG salt: the FINER draw NEVER touches the shared np.random / mx.random streams, so
+# --finer-bias-init OFF draws NOTHING (byte-identical) and ON perturbs NO other seeded draw.
+_FINER_RNG_SALT = 20260707
+
+
+def _finer_bias_init_values(seed: int, k: float, n: int) -> np.ndarray:
+    """(#310) FINER/FINER++ variable-periodic FIRST-LAYER bias init values (pure numpy).
+
+    ``bias ~ U(-k, k)`` over a WIDE range so each first-layer neuron selects its OWN effective
+    frequency/phase of the periodic activation (FINER arXiv 2312.02434 / FINER++ arXiv 2407.19434
+    — the published fix for the MEASURED fixed-beta hosc saturation-death, DAG FEED 2026-06-25a +
+    FEED-ly: with all first-layer biases ~0 every neuron sits at the SAME point of tanh(beta*sin)
+    and saturates TOGETHER as beta rises; the wide bias spreads the ensemble across the period so
+    some neurons always live on a high-gradient stretch). DEDICATED
+    ``np.random.default_rng(seed + _FINER_RNG_SALT)`` stream: NEVER the shared ``np.random`` /
+    ``mx.random`` streams (byte-identity discipline — the OFF path draws nothing; the ON path
+    shifts no other seeded draw). Deterministic in (seed, k, n). Fail-closed on k<=0 / n<=0."""
+    if not (float(k) > 0.0):
+        raise ValueError(f"--finer-bias-k must be > 0, got {k!r}")
+    if int(n) <= 0:
+        raise ValueError(f"finer bias init needs n > 0 neurons, got {n!r}")
+    rng = np.random.default_rng(int(seed) + _FINER_RNG_SALT)
+    return rng.uniform(-float(k), float(k), size=int(n)).astype(np.float32)
+
+
+# ---------------------------------------------------------------------------
+# (#218 BUILD, FEED-07b lever #3) class-prior LOGIT ADJUSTMENT (Menon et al. 2021,
+# arXiv 2007.07314) — the textbook ZERO-BYTE rare-class cure, at the TRAINING-LOSS surface only.
+# ---------------------------------------------------------------------------
+def _logit_adjust_offsets_np(
+    lstars: "list[np.ndarray]", tau: float, n_classes: int = 5,
+) -> "tuple[np.ndarray, np.ndarray]":
+    """(#218) Per-class logit-adjustment offsets from the cached GT argmax class areas.
+
+    Returns ``(offsets, priors)``: ``priors_c`` = the GT class-area fraction over ALL given L*
+    maps (floored at the canonical equation's prior floor, so an absent class never yields
+    log(0) = -inf), ``offsets_c = tau * log(priors_c)`` per the registered law
+    ``logit_adjustment_class_prior_law_v1`` (``tac.canonical_equations.
+    logit_adjustment_class_prior_20260707:logit_adjust_offsets`` — the equations leg IS the
+    callable this delegates to; measured n600 priors anchor ~[0.232, 0.0059, 0.495, 0.0124,
+    0.254]). Pure numpy -> unit-tested."""
+    from tac.canonical_equations.logit_adjustment_class_prior_20260707 import (
+        logit_adjust_offsets,
+    )
+
+    counts = np.zeros(int(n_classes), np.float64)
+    for ls in lstars:
+        counts += np.bincount(
+            np.asarray(ls, np.int64).ravel(), minlength=int(n_classes))[: int(n_classes)]
+    total = float(counts.sum())
+    if total <= 0.0:
+        raise ValueError("--logit-adjust-loss-tau: empty GT L* maps (no pixels) — cannot derive priors")
+    priors = counts / total
+    return logit_adjust_offsets(priors, float(tau)), priors.astype(np.float64)
+
+
+def _validate_logit_adjust_compat(tau: float, micro_batch_pairs: int) -> None:
+    """(#218) Fail-closed: --logit-adjust-loss-tau is wired into the SERIAL base_loss adapter only —
+    NOT into the --micro-batch-pairs>1 batched twin (``tac.boundary_math.
+    levelset_micro_batch_loss`` receives the UNWRAPPED adapter). Refuse the combination with an
+    actionable message instead of silently training the batched arm WITHOUT the adjustment (the
+    same not-yet-routed class as --seg-spike-reweight / --margin-saliency-reachability). Pure /
+    MLX-free -> unit-tested. tau == 0.0 (OFF) is always compatible."""
+    if float(tau) != 0.0 and int(micro_batch_pairs) > 1:
         raise ValueError(
-            "--lane-render-band + --render-aa supersample are not wired together: the band coverage is "
-            "base-grid (H,W) but the AA compose happens at the ss*grid. Use --render-aa ipe (base grid) "
-            "with the band, or run them separately.")
-    if residual_mode:
-        raise ValueError(
-            "--residual-mode + --render-aa supersample are not wired together: the residual-bulk "
-            "composition mask is base-grid (H,W) but the AA compose happens at the ss*grid. Use "
-            "--render-aa ipe (base grid) with residual mode, or run them separately.")
-    if seed_on:
-        raise ValueError(
-            "--seed-islands + --render-aa supersample are not wired together: the island-seed residual "
-            "is base-grid (H,W) but the AA compose happens at the ss*grid. Use --render-aa ipe (base "
-            "grid) with the seed, or run them separately.")
+            "--logit-adjust-loss-tau is not wired into the --micro-batch-pairs>1 batched twin "
+            "(the batched loss reads the UNWRAPPED scorer adapter); run with "
+            "--micro-batch-pairs 1 (the serial path) or leave --logit-adjust-loss-tau 0.")
+
+
+class _LogitAdjustSegAdapter:
+    """(#218) Class-prior logit-adjustment wrapper around the frozen MLX scorer adapter, applied
+    ONLY on the training-LOSS surface (the ``adapter`` closed over by ``make_loss_fn``).
+
+    ``segnet(frames)`` returns ``inner.segnet(frames) + offset`` with ``offset_c =
+    tau * log(prior_c)`` (a (K,) constant broadcast over (1,H,W,K)); inside the CE form this IS
+    the Menon et al. logit-adjusted CE (rare classes get strongly negative log-priors, so
+    under-predicting them costs more), and inside the margin forms (tau_softplus / l7 /
+    margin_hinge) it is the additive per-class margin generalization (LDAM-style) of the same
+    prior. The focal reweight (--seg-focal-gamma), when active, reads the SAME adjusted logits —
+    the standard logit-adjusted-focal composition. ``posenet`` passes through UNTOUCHED (the pose
+    term is class-free). BYTE-IDENTITY BOUNDARY (binding): this wrapper exists ONLY inside
+    base_loss — the deployed/rendered argmax path (the verdict CPU-torch SegNet, the byte-close
+    decode, inflate) reads RAW logits and is UNCHANGED; the witness WEIGHTS absorb the pressure
+    through training, the shipped forward stays the plain argmax."""
+
+    def __init__(self, inner: Any, offset: Any) -> None:
+        self._inner = inner
+        self._offset = offset            # (K,) mx.array = tau * log(prior)
+        self.posenet = inner.posenet     # pass-through (pose term unadjusted)
+
+    def segnet(self, frames_nhwc: Any):
+        return self._inner.segnet(frames_nhwc) + self._offset
 
 
 def boundary_distance_band_map(lstar_hw: np.ndarray, band_px: float = 2.0) -> np.ndarray:
@@ -2675,6 +2769,32 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         omega_init = args.hosc_omega if args.activation == "hosc" else args.wire_w0
         apply_siren_init(model, omega=omega_init)
         mx.eval(model.parameters())
+    # (#310 BUILD, FEED-07b lever #2 sister) FINER++ variable-periodic FIRST-LAYER bias init
+    # (arXiv 2407.19434; the published fix for the MEASURED fixed-beta hosc saturation-death):
+    # overwrite in_proj.bias with U(-k, k) from a DEDICATED np.random.default_rng(seed+salt)
+    # stream so each first-layer neuron selects its OWN frequency/phase of the periodic
+    # activation. Runs AFTER siren_init (which zeroes the bias) and BEFORE structured-init (the
+    # FINER bias is the pretrain's starting point). DEFAULT OFF => this branch never runs => NO
+    # RNG draw anywhere => byte-identical (the ON path also perturbs no shared stream — the rng
+    # is dedicated). Fail-closed on non-periodic activations (relu has no period to phase into).
+    if bool(getattr(args, "finer_bias_init", False)):
+        if args.activation not in {"hosc", "wire"}:
+            raise ValueError(
+                "--finer-bias-init requires a periodic activation (hosc/wire): the wide "
+                "first-layer bias selects each neuron's phase of the periodic nonlinearity; "
+                f"--activation {args.activation} has no period. Drop the flag or switch activation.")
+        model.in_proj.bias = mx.array(_finer_bias_init_values(
+            int(args.seed), float(args.finer_bias_k), int(model.in_proj.bias.shape[0])))
+        mx.eval(model.parameters())
+        _fb_applied = not bool(args.resume_from)  # (C10) an init lever is OVERWRITTEN by --resume-from
+        print(json.dumps({"stage": "finer_bias_init", "k": float(args.finer_bias_k),
+                          "n": int(model.in_proj.bias.shape[0]),
+                          "rng": f"np.random.default_rng(seed+{_FINER_RNG_SALT}) [dedicated stream]",
+                          "applied": _fb_applied,
+                          **({} if _fb_applied else {"reason": "overwritten_by_resume"}),
+                          "note": "FINER++ 2407.19434 wide first-layer bias (fix for fixed-beta "
+                                  "hosc saturation-death); OFF => zero RNG draws => byte-identical"}),
+              flush=True)
     # STRUCTURED-PRIOR phi INIT (FEED-ef, ADDITIVE, default-off). PRETRAIN phi so argmax(phi) ~= the
     # validated self-detected static-core partition (hood+sky+road[+lane] deep SDFs; FEED-dm/du/dw/dx).
     # The one-shot linear-readout init is broken (the random INR trunk's linear span ~= majority class,
@@ -2983,8 +3103,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             return _bulk_rgb_mx[pair][None] * (1.0 - m) + rgb_nhwc * m
 
         # (#224) the per-frame _render_R that chains _compose_mx is built in the UNIFIED RENDER
-        # PATH block below (so residual bulk composes with the analytic-lane band; AA SUPERSAMPLE is
-        # NOT composable with the base-grid residual mask — fail-closed by _validate_aa_compose_compat).
+        # PATH block below (so residual bulk composes with the analytic-lane band; AA SUPERSAMPLE
+        # now ALSO composes — #220 unblock: the AA render invokes compose_fn AFTER box-downsample,
+        # at the base grid, so the (H,W) residual mask composes by construction).
         def _compose_np(rgb_hw3, pi):  # noqa: F811 (residual override)
             m = _resid_mask_np[pi][..., None]             # (H,W,1)
             return np.where(m, np.asarray(rgb_hw3, np.float32), _bulk_rgb_np[pi])
@@ -3006,9 +3127,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # -------------------------------------------------------------------------------------
     _aa_on = (render_aa == "supersample" and aa_ss > 1)
     _band_active = bool(getattr(args, "lane_render_band", False))
-    # (review MED-3) fail-closed: EVERY base-grid composer (band / residual bulk / island seed) is
-    # incompatible with the ss*grid AA compose — raise with an actionable message here instead of an
-    # opaque MLX broadcast error at the fine grid. Pure fn -> unit-tested.
+    # (review MED-3 -> #220 UNBLOCK) the base-grid composers (band / residual bulk / island seed)
+    # now COMPOSE with the ss*grid AA render (compose_fn runs AFTER box-downsample, at the base
+    # grid). The guard is KEPT (currently accepts everything) as the fail-closed home for any
+    # future fine-grid-only composer. Pure fn -> unit-tested.
     _validate_aa_compose_compat(
         _aa_on, _band_active, residual_mode, bool(getattr(args, "seed_islands", False)))
     # (2) analytic-lane render-band compose_fn (FEED-dv #203/#213/#215). Precompute the per-code
@@ -3232,8 +3354,33 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # #300 routing below is UNTOUCHED). Calibrated gamma* comes from
     # experiments/probe_focal_gamma_calibration.py (measured, never guessed).
     focal_gamma = float(getattr(args, "seg_focal_gamma", 0.0))
+    # (#218 BUILD, FEED-07b lever #3) LOGIT-ADJUSTMENT per-class offset (Menon et al. 2021,
+    # arXiv 2007.07314 — the textbook ZERO-BYTE rare-class cure). TRAINING-time LOSS surface ONLY:
+    # the frozen-SegNet logits base_loss reads get ``logits_c += tau * log(prior_c)`` with priors
+    # = the GT class-area fractions from the cached L* (measured n600 ~[0.232, 0.0059, 0.495,
+    # 0.0124, 0.254] — Lane/Movable get strongly negative log-priors, so under-predicting them
+    # costs more gradient). BYTE-IDENTITY BOUNDARY (binding, documented on _LogitAdjustSegAdapter):
+    # the DEPLOYED/rendered argmax path is UNCHANGED — no offset at the verdict CPU-torch SegNet,
+    # the byte-close decode, or inflate; the adjustment lives ONLY inside the wrapped loss adapter.
+    # tau == 0.0 (DEFAULT) => ``_loss_adapter is adapter`` (the SAME object) => the make_loss_fn
+    # closure + graph are BYTE-IDENTICAL. Fails closed with --micro-batch-pairs>1 (not routed into
+    # the batched twin — same class as --seg-spike-reweight / --margin-saliency-reachability).
+    # Equations leg: ``logit_adjustment_class_prior_law_v1``; DSL leg: ``LogitAdjust``.
+    la_tau = float(getattr(args, "logit_adjust_loss_tau", 0.0))
+    _validate_logit_adjust_compat(la_tau, int(getattr(args, "micro_batch_pairs", 1)))
+    _loss_adapter = adapter
+    if la_tau != 0.0:
+        _la_off, _la_priors = _logit_adjust_offsets_np(
+            [np.asarray(gt.lstars[_pi]) for _pi in range(P)], la_tau, n_classes=5)
+        _loss_adapter = _LogitAdjustSegAdapter(adapter, mx.array(_la_off))
+        print(json.dumps({"stage": "logit_adjust", "tau": la_tau,
+                          "priors": [round(float(x), 5) for x in _la_priors],
+                          "offsets": [round(float(x), 4) for x in _la_off],
+                          "note": "Menon logit-adjusted seg loss (training-LOSS surface only; "
+                                  "deployed argmax/verdict/byte-close read RAW logits); "
+                                  "advisory; pointer 0.19110 UNMOVED"}), flush=True)
     base_loss = make_loss_fn(
-        adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
+        _loss_adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
         seg_loss=args.seg_loss, tau_softplus_tau=args.tau_softplus_tau, l7_mult=args.l7_mult,
         l7_threshold=args.l7_threshold,
         render_fn=render_fn,
@@ -7246,6 +7393,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--hosc-omega", type=float, default=1.0)
     ap.add_argument("--siren-init", action=argparse.BooleanOptionalAction, default=True,
                     help="SIREN init (Sitzmann 2020) for hosc/wire periodic layers (from-scratch trainability fix).")
+    # (#310 BUILD, FEED-07b lever #2 sister) FINER++ variable-periodic FIRST-LAYER bias init.
+    ap.add_argument("--finer-bias-init", action=argparse.BooleanOptionalAction, default=False,
+                    help="#310/FEED-07b: FINER++ (arXiv 2407.19434) variable-periodic FIRST-LAYER bias "
+                    "init — in_proj.bias ~ U(-k, k) from a DEDICATED rng stream (seed+salt) so each "
+                    "neuron selects its own frequency/phase of the periodic (hosc/wire) activation; "
+                    "the published fix for the measured fixed-beta hosc saturation-death. Applied "
+                    "AFTER siren-init, from-scratch only (a --resume-from overwrites it; stamped "
+                    "applied:false). DEFAULT OFF => zero RNG draws => byte-identical. Fails closed "
+                    "on --activation relu (no period).")
+    ap.add_argument("--finer-bias-k", type=float, default=10.0,
+                    help="#310: FINER++ first-layer bias range k (bias ~ U(-k, k)); wide k spreads "
+                    "the neuron ensemble across the activation period (paper-range default 10.0). "
+                    "Only read when --finer-bias-init is on; must be > 0.")
     # SEG LOSS / CURRICULUM
     ap.add_argument("--seg-loss", choices=["ce", "tau_softplus", "l7_softplus", "margin_hinge"], default="ce")
     ap.add_argument("--curriculum", action=argparse.BooleanOptionalAction, default=False)
@@ -7555,6 +7715,21 @@ def main(argv: list[str] | None = None) -> int:
                     "0.0 (DEFAULT) => branch never built => byte-identical. Emits a per-epoch "
                     "{'stage':'focal','island_grad_share':...} observability row when >0. "
                     "NOT supported with --micro-batch-pairs>1 (fails closed).")
+    # (#218 BUILD, FEED-07b lever #3) class-prior LOGIT ADJUSTMENT (Menon et al. 2021).
+    ap.add_argument("--logit-adjust-loss-tau", type=float, default=0.0,
+                    help="#218/FEED-07b: class-prior logit adjustment (Menon et al. 2021, arXiv "
+                    "2007.07314) on the TRAINING seg loss — the frozen-SegNet logits base_loss "
+                    "reads get logits_c += tau*log(prior_c), priors = GT class-area fractions from "
+                    "the cached L* (measured n600 ~[0.232, 0.0059, 0.495, 0.0124, 0.254]); the "
+                    "textbook ZERO-BYTE rare-class (Lane/Movable) cure. TRAINING-time LOSS surface "
+                    "ONLY: the deployed/rendered argmax path (verdict CPU-torch SegNet, byte-close "
+                    "decode, inflate) is UNCHANGED (raw logits). 0.0 (DEFAULT) => the loss adapter "
+                    "is the SAME object => byte-identical. tau=1.0 is the canonical Menon setting. "
+                    "NOT supported with --micro-batch-pairs>1 (fails closed). SISTER of (do not "
+                    "confuse with) the #218 facet-3 pair --logit-adjust-per-class + "
+                    "--logit-adjust-tau, which boost the MARGIN-FIELD-HEAD per-class TARGET "
+                    "(fires only with --margin-field-head-weight>0); THIS flag adjusts the BASE "
+                    "seg-LOSS logits themselves. The two compose.")
     ap.add_argument("--boundary-distance-weight", type=float, default=0.0,
                     help="SDF-native Kervadec-style boundary-placement loss: band-weighted mean "
                     "|phi_GT - phi_runner| on the GT inter-class boundary band (distance transform "

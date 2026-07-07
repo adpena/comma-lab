@@ -15,7 +15,10 @@ In the LIVE levelset trainer the step-native route is the hosc BETA-ANNEAL (FEED
 2026-06-25a + FEED-ly): FIXED high beta (beta=4 constant from scratch) DIVERGES (tanh saturation ->
 vanishing grad); the step limit must be APPROACHED by anneal, never started at. A true
 ``--activation step_basis`` choice does NOT exist in this trainer's argparse (choices are
-wire/hosc/relu) — the discrete step_basis chart + FINER++ bias-init are BUILD-NEEDED (#310 sisters).
+wire/hosc/relu) — the discrete step_basis chart remains BUILD-NEEDED. The FINER++ bias-init
+sister is now BUILT (``--finer-bias-init`` / ``--finer-bias-k``, 2026-07-07 #310 build half:
+wide first-layer bias U(-k,k) from a DEDICATED rng stream — the published fix for the measured
+fixed-beta saturation-death; DSL lever ``FinerBiasInit``).
 
 Anchors (honest tiers): the deep-math L-infinity-at-edge optimality is
 INFERRED_FROM_DOMAIN_LITERATURE (piecewise-constant approximation theory; deep-math ch.1-6
@@ -147,8 +150,10 @@ def build_step_native_activation_edge_optimality_v1() -> CanonicalEquation:
                       "(--hosc-beta/--hosc-beta-end/--hosc-beta-anneal)"),
             "measurement_axis": ["macOS-MLX research-signal", "predicted"],
             "note": ("approach the step limit by ANNEAL only (fixed high beta diverges, measured); "
-                     "a discrete --activation step_basis choice + FINER++ bias-init are BUILD-NEEDED "
-                     "(#310) — this trainer's argparse offers wire/hosc/relu only"),
+                     "a discrete --activation step_basis choice is BUILD-NEEDED (#310) — this "
+                     "trainer's argparse offers wire/hosc/relu only; the FINER++ bias-init sister "
+                     "is BUILT (--finer-bias-init/--finer-bias-k, DSL lever FinerBiasInit, "
+                     "2026-07-07)"),
         },
         units_in={"beta_start": "dimensionless", "beta_end": "dimensionless"},
         units_out={"ratio": "dimensionless_gt_1_for_anneal"},

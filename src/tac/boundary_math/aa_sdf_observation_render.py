@@ -14,7 +14,12 @@ it for free within the 30-min budget per CLAUDE.md rule 118); the witness weight
 ``archive.zip`` are UNCHANGED. So AA moves d_seg without moving the rate term.
 
 Two AA modes over the WHOLE softmax-of-SDF partition (the LevelSetRGBWitness ``_compose_rgb``
-output), composited BEFORE R:
+output), composited BEFORE R. The optional ``compose_fn`` (lane band / residual bulk / island
+seed) is invoked at the BASE ``(H, W)`` grid AFTER the box-downsample (#220 unblock, 2026-07-07):
+the tracked composers are all base-grid ``(H, W)`` tensors, so composing after footprint
+integration lets AA supersample COMPOSE with them (previously fail-closed via the trainer's
+``_validate_aa_compose_compat``); ``ss == 1`` remains byte-identical (downsample is the identity,
+so compose-before == compose-after bit-for-bit):
 
   1. **SUPERSAMPLE -> BOX** (ground-truth pixel-footprint integration). Render the witness at
      ``(ss*H, ss*W)`` then AREA/box-downsample to ``(H, W)``. For an INTEGER factor ``ss`` the
@@ -241,10 +246,14 @@ def render_aa_batch_through_R_mlx(
     plus any per-pair directional augmentation, exactly as the trainer builds ``coord_feats_mx``
     but at the fine grid). ``(render_h, render_w)`` is the BASE grid R sees after box-downsample.
 
-    Pipeline: witness.call_batch (fine grid) -> reshape (M, ss*H, ss*W, 3) -> optional
-    ``compose_fn`` (residual bulk compose, BEFORE downsample) -> box-downsample ss -> (M, H, W, 3)
-    -> ``apply_contest_faithful_roundtrip_nhwc`` (bicubic^ to camera -> uint8 @ camera -> bilinear
-    down to scorer). ``ss == 1`` is byte-identical to ``render_batch_through_R_mlx`` (no downsample).
+    Pipeline: witness.call_batch (fine grid) -> reshape (M, ss*H, ss*W, 3) -> box-downsample ss ->
+    (M, H, W, 3) -> optional ``compose_fn`` at the BASE grid (#220 unblock: the lane-band /
+    residual-bulk / island-seed composers are base-grid ``(H, W)`` tensors, so composing AFTER the
+    footprint integration makes AA+composer combos work by construction) ->
+    ``apply_contest_faithful_roundtrip_nhwc`` (bicubic^ to camera -> uint8 @ camera -> bilinear
+    down to scorer). ``ss == 1`` is byte-identical to ``render_batch_through_R_mlx`` (no
+    downsample; compose ordering is unchanged bit-for-bit since the ss=1 downsample is the
+    identity pass-through of the SAME tensor object).
     """
     import mlx.core as mx
 
@@ -256,9 +265,9 @@ def render_aa_batch_through_R_mlx(
     fh, fw = render_h * ss, render_w * ss
     rgb_flat = witness.call_batch(coord_feats_fine, code_indices)  # (M, fh*fw, 3)
     rgb = mx.reshape(rgb_flat, (-1, fh, fw, 3))  # (M, ss*H, ss*W, 3) NHWC
-    if compose_fn is not None:
-        rgb = compose_fn(rgb, code_indices)  # residual bulk compose at the fine grid
     rgb = box_downsample_mlx(rgb, ss)  # (M, H, W, 3) footprint-integrated
+    if compose_fn is not None:
+        rgb = compose_fn(rgb, code_indices)  # BASE-grid compose (#220: band/residual/seed are (H,W))
     return apply_contest_faithful_roundtrip_nhwc(rgb, output_hw=output_hw, ste_round=True)
 
 
@@ -275,7 +284,9 @@ def render_aa_through_R_mlx(
 ) -> Any:
     """Per-frame SUPERSAMPLE->BOX AA render-through-R -> ``(1, SEG_H, SEG_W, 3)``.
 
-    Single-code twin of :func:`render_aa_batch_through_R_mlx` (drop-in for ``render_through_R_mlx``).
+    Single-code twin of :func:`render_aa_batch_through_R_mlx` (drop-in for ``render_through_R_mlx``);
+    ``compose_fn`` composes at the BASE ``(H, W)`` grid AFTER the box-downsample (#220 unblock), the
+    SAME base-grid contract ``render_through_R_mlx``'s compose hook has always had.
     """
     import mlx.core as mx
 
@@ -287,9 +298,9 @@ def render_aa_through_R_mlx(
     fh, fw = render_h * ss, render_w * ss
     rgb_flat = witness(coord_feats_fine, code_idx)  # (fh*fw, 3)
     rgb = mx.reshape(rgb_flat, (1, fh, fw, 3))
-    if compose_fn is not None:
-        rgb = compose_fn(rgb, code_idx)
     rgb = box_downsample_mlx(rgb, ss)  # (1, H, W, 3)
+    if compose_fn is not None:
+        rgb = compose_fn(rgb, code_idx)  # BASE-grid compose (#220: band/residual/seed are (H,W))
     return apply_contest_faithful_roundtrip_nhwc(rgb, output_hw=output_hw, ste_round=True)
 
 

@@ -193,6 +193,11 @@ from tac.canonical_equations.step_native_activation_edge_optimality_20260707 imp
     hosc_step_limit_beta_ratio,
     populate_step_native_activation_edge_optimality_equation,
 )
+from tac.canonical_equations.logit_adjustment_class_prior_20260707 import (
+    build_logit_adjustment_class_prior_law_v1,
+    logit_adjust_offsets,
+    populate_logit_adjustment_class_prior_equation,
+)
 from tac.canonical_equations.boundary_distance_calibration_20260705 import (
     bd_weight_for_ratio,
     build_boundary_distance_weight_calibration_v1,
@@ -299,8 +304,11 @@ __all__ = [
     "build_anisotropic_basis_two_regime_allocation_v1",
     "freq_along_for_regime",
     "populate_anisotropic_basis_two_regime_allocation_equation",
+    "build_logit_adjustment_class_prior_law_v1",
     "build_step_native_activation_edge_optimality_v1",
     "hosc_step_limit_beta_ratio",
+    "logit_adjust_offsets",
+    "populate_logit_adjustment_class_prior_equation",
     "populate_step_native_activation_edge_optimality_equation",
     "bd_weight_for_ratio",
     "build_boundary_distance_weight_calibration_v1",

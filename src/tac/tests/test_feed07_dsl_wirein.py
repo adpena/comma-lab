@@ -3,9 +3,10 @@
 The artifact the derived-optimal-next-run symposium picks up: the FEED-07a PRIMARY-arm
 composition (rebalanced anisotropic basis + rule-118 analytic lane band + LADDER eased island
 birth + Muon warm-start) COMPOSES end-to-end — validate() clean AND the compiled argv parses
-through the trainer's REAL argparse. AACoverageRender is composed SEPARATELY (the #224 AA
-compose guard makes it incompatible with the base-grid composers seed/band/residual) and the
-conflict itself is asserted to raise cleanly via the trainer's own pure guard.
+through the trainer's REAL argparse. #220 UNBLOCK (2026-07-07): compose-after-downsample landed
+in aa_sdf_observation_render, so AACoverageRender now ALSO composes with the base-grid composers
+(seed/band/residual) — the trainer's pure guard is asserted to ACCEPT the combinations it used
+to refuse. The FEED-07b BUILD levers (FinerBiasInit / LogitAdjust) ride the same class tests.
 
 Triality: DSL leg (the levers) + equations leg (anisotropic_basis_two_regime_allocation_v1 /
 step_native_activation_edge_optimality_v1) of DAG FEED-07a/07b. means != ends: composition
@@ -37,6 +38,8 @@ _AA_ARM = ("AACoverageRender", "DirectionalBasisRebalance", "MuonWarmStart")
 _NEW_LEVERS = (
     "DirectionalBasisRebalance", "AACoverageRender", "StepNativeActivation", "MuonWarmStart",
     "PersistenceTopology", "MarginFieldHead",
+    # FEED-07b BUILD halves (2026-07-07): #310 FINER++ bias-init + #218 loss-time logit adjust.
+    "FinerBiasInit", "LogitAdjust",
 )
 
 
@@ -77,10 +80,11 @@ def test_feed07a_primary_arm_composition_parses_end_to_end():
     assert fd["--muon-lr-final-frac"] == 0.1
 
 
-def test_feed07b_aa_arm_composes_separately_and_conflict_raises_cleanly():
-    """(C) AACoverageRender rides a SEPARATE arm (AA supersample is incompatible with the
-    base-grid composers); the incompatibility itself must raise CLEANLY (actionable ValueError
-    from the trainer's pure guard), never an opaque MLX broadcast crash mid-training."""
+def test_feed07b_aa_arm_parses_and_now_composes_with_base_grid_composers():
+    """(C) #220 UNBLOCK: the AA arm parses through the REAL argparse AND the trainer's pure
+    compose guard now ACCEPTS AA x seed/band/residual (compose_fn runs AFTER box_downsample at
+    the base grid — the combinations it used to refuse compose by construction). The guard is
+    kept (same signature) as the fail-closed home for future fine-grid-only composers."""
     ap = cd.build_real_trainer_parser()
     cfg = wac.derive_sealed_205_config(_GT, num_pairs=600, epochs=1000)
     argv = _render_argv(dc.replace(cfg, dsl_levers=_AA_ARM).to_trainer_flags("OUT"))
@@ -88,17 +92,20 @@ def test_feed07b_aa_arm_composes_separately_and_conflict_raises_cleanly():
         ap.parse_args(argv)
     except SystemExit as exc:  # pragma: no cover - diagnostic path
         raise AssertionError(f"AA arm argv rejected by the real trainer argparse (rc={exc.code})") from exc
-    # the conflict (AA supersample x island seed / lane band) raises cleanly in the trainer's
-    # own pure fail-closed guard — the reason AACoverageRender is a separate arm here.
     spec = importlib.util.spec_from_file_location("tl_feed07_guard", str(_TRAINER_PATH))
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    with pytest.raises(ValueError, match="--seed-islands"):
-        mod._validate_aa_compose_compat(True, False, False, True)
-    with pytest.raises(ValueError, match="--lane-render-band"):
-        mod._validate_aa_compose_compat(True, True, False, False)
+    # formerly-refused combinations must now be ACCEPTED (no raise)
+    mod._validate_aa_compose_compat(True, False, False, True)   # AA x island seed
+    mod._validate_aa_compose_compat(True, True, False, False)   # AA x lane band
+    mod._validate_aa_compose_compat(True, True, True, True)     # AA x all three
+    # and the AA arm composes IN THE SAME PROGRAM as the base-grid composers now
+    prog = cd.BASELINE
+    for name in ("AACoverageRender", "SeedIslandEased", "AnalyticLaneRenderBand", "MuonWarmStart"):
+        prog = prog.with_lever(LR.resolve_composable_lever(name))
+    assert prog.validate() == [], "post-#220 the AA arm must compose with seed/band cleanly"
 
 
 def test_new_levers_composable_and_regime_law_agrees_with_equation():

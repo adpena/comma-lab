@@ -163,7 +163,11 @@ def test_resume_film_stiefel_matching_and_pre_fix_sidecar_no_divergence():
 
 
 # --------------------------------------------------------------------------
-# review MED-3: _validate_aa_compose_compat fail-closed pure fn + wired call site
+# review MED-3 -> #220 UNBLOCK (2026-07-07): _validate_aa_compose_compat pure fn + wired call site.
+# compose-after-downsample landed in aa_sdf_observation_render (compose_fn now runs at the BASE
+# grid, after box_downsample), so the three tracked base-grid composers COMPOSE with AA
+# supersample — the guard accepts every tracked combination (kept, same signature/call site, as
+# the fail-closed home for any future fine-grid-only composer).
 # --------------------------------------------------------------------------
 def test_aa_compose_compat_noop_when_aa_off():
     tl = _load_trainer()
@@ -176,17 +180,17 @@ def test_aa_compose_compat_ok_when_aa_on_no_composers():
     tl._validate_aa_compose_compat(True, False, False, False)
 
 
-@pytest.mark.parametrize("band,residual,seed,token", [
-    (True, False, False, "--lane-render-band"),
-    (False, True, False, "--residual-mode"),
-    (False, False, True, "--seed-islands"),
+@pytest.mark.parametrize("band,residual,seed", [
+    (True, False, False),
+    (False, True, False),
+    (False, False, True),
+    (True, True, True),
 ])
-def test_aa_compose_compat_raises_per_base_grid_composer(band, residual, seed, token):
+def test_aa_compose_compat_accepts_base_grid_composers_post_220_unblock(band, residual, seed):
+    # #220 unblock: compose_fn runs AFTER box_downsample (base grid) inside
+    # render_aa_{batch_,}through_R_mlx, so band/residual/seed compose with AA by construction.
     tl = _load_trainer()
-    with pytest.raises(ValueError) as ei:
-        tl._validate_aa_compose_compat(True, band, residual, seed)
-    msg = str(ei.value)
-    assert token in msg and "supersample" in msg and "base" in msg, msg
+    tl._validate_aa_compose_compat(True, band, residual, seed)  # must NOT raise
 
 
 def test_aa_compose_compat_wired_at_render_path():
