@@ -1628,6 +1628,35 @@ def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
                        "witness-uncertainty); FP-killed non-naive form; realized THROUGH R")
 
 
+def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N802 — #287
+    """#287 EGO-PHASE DASH COMB — the cell-problem corrector of the dash-erasure
+    homogenization law (``tac.canonical_equations.dash_erasure_homogenization_20260707``):
+    replace the band's per-pair FITTED dash phase with a world-static max-plus comb —
+    global (period T, duty, ego-scale) + per-slot world phase, transported by cumulative
+    ego forward distance (phase-from-ξ, #215) — so sub-δ dash structure the coarse flow
+    provably erases is supplied analytically, rule-118 FREE at decode (counted payload
+    ~2-6 floats vs 1 fitted phase float per line per pair).
+
+    §14 STAGE PLACEMENT: render-time corrector with NO curriculum stage of its own — when
+    ON it is active from epoch 0 of the band's engagement window (it rewrites the
+    precomputed band coverage priors at build time and takes effect the moment
+    ``--lane-band-start-epoch`` opens the band gate). It also DISCHARGES the τ_end
+    coupling rule ("do not anneal τ below the dash period unless a corrector is active").
+    COMPOSES WITH (does not replace) ``AnalyticLaneRenderBand`` — it only modulates that
+    lever's coverage; alone it is inert (``--lane-render-band`` off => no band to comb).
+
+    Impl: ``tac.boundary_math.dash_comb.build_combed_lane_band_priors`` consumed by the
+    levelset trainer's ``--lane-band-dash-comb`` wire-in (the #224 lane-band path)."""
+    return Lever("n287_dash_comb",
+                 overrides={"--lane-band-dash-comb": True,
+                            "--lane-band-comb-softness-m": comb_softness_m},
+                 epochs_delta=window,
+                 notes="#287 ego-phase dash comb (homogenization corrector; world-static "
+                       "period/duty/phase-from-xi replaces per-pair fitted dash phase; "
+                       "render-time, active-from-ep0 of the band window, composes with "
+                       "AnalyticLaneRenderBand)")
+
+
 def StiefelW(window: int = 100) -> Lever:  # noqa: N802 — DM1a
     """DM1a (Stiefel-W): per-step project film.weight onto orthonormal columns (WᵀW=I) so W is an
     ISOMETRY => PR(M)=PR(cov(code)) to the projection's ~1e-2 residual (the byte-free root half-1 of the
@@ -1727,6 +1756,45 @@ def WarpRealLumaFrame0(  # noqa: N802 — DSL constructor
                  notes=("pose carrier B: warp-real-luma frame0 (SE(3)-twist ground-homography, seg-free); "
                         "render_fn code wire-in via make_pair_render_dispatch; --w-pose>0 trains the "
                         "rank-6 twist residual to d_pose~3.4e-5 (FEED-lj/W7; advisory pointer 0.19110)"))
+
+
+def GroundFrameChart(  # noqa: N802 — DSL constructor
+    ref_pair: int = 0,
+    s_t: float = -0.003224707899359239,
+    s_r: float = 0.0,
+    pitch: float = -0.01,
+) -> Lever:
+    """GROUND-FRAME CHART (#194 / council draft §17.1) — evaluate the witness in ONE canonical frame.
+
+    Pre-composes the per-pair witness INPUT coords with the cumulative ξ-homography
+    (``tac.boundary_math.ground_frame_chart``; the FEED-ll stratified-warp math, bit-parity-pinned
+    to the measured reach tool). A CHART CHANGE on the input coords, NOT a pixel warp: the field is
+    still trained through R + the frozen scorer, so it does NOT inherit the #190 deterministic-render
+    d_seg floor. One ξ (dual-use with the stored pose sidecar — rule-118 FREE, 0 new archive bytes)
+    targets three measured residuals: temporal flicker (44 % lane spikes), the dash-comb phase home,
+    and §15 pinning/zero-mobility.
+
+    SCHEDULE (§14): STRUCTURAL — active from ep0 BY CONSTRUCTION when on (it is the input coordinate
+    SYSTEM, not a weighted loss term; there is no level path λ(t) to anneal — constancy is the
+    decision, declared here, not a silent default). INTERACTIONS (treatment-arm design notes, NOT
+    silently inherited): (a) the chart changes the input coordinate DISTRIBUTION, so Fourier/
+    Nyquist-derived bank constants (``--bank-*`` / ``--max-bank-freq``) may need re-derivation under
+    the chart; (b) v0 is GROUND-plane-only and the trainer FAIL-CLOSES with ``--self-orient`` and
+    ``--render-aa != none`` (coordinate-system consistency; the self-orient-in-chart-coords
+    composition and per-class stratified routing via ``screw_blend`` are designed follow-ups);
+    (c) byte-close/inflate must apply the same chart at decode (owed WITH the GO-gated A/B).
+    Defaults = the MEASURED FEED-ll reach calibration (reach_n96.json fit). NEVER-FIRED until the
+    operator-GO-gated n600 training A/B (§17.1 completion criterion for #194)."""
+    return Lever("ground_frame_chart",
+                 overrides={"--ground-frame-chart": True,
+                            "--gfc-ref-pair": int(ref_pair),
+                            "--gfc-s-t": float(s_t),
+                            "--gfc-s-r": float(s_r),
+                            "--gfc-pitch": float(pitch)},
+                 notes=("#194/§17.1 ground-frame chart: witness input coords pre-composed with the "
+                        "cumulative ξ-homography (FEED-ll math, chart change; trained through R => "
+                        "no #190 floor); structural-from-ep0; rule-118 FREE from the stored pose "
+                        "table; fail-closed with self-orient/render-aa in v0"))
 
 
 # ---------------------------------------------------------------------------
