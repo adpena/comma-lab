@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate cool_chic first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_cool_chic.py (PHASE-B2-BUILD).

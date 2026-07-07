@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate C1 world-model + foveation (C1WMFV1) smoke dispatch.
 #
 # Trainer: experiments/train_substrate_c1_world_model_foveation.py

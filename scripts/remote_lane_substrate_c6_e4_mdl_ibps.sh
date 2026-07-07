@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate C6 MDL-IBPS (IBPS1) first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_c6_e4_mdl_ibps.py

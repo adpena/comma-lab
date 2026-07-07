@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate hybrid_renderer_residual first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_hybrid_renderer_residual.py (WAVE-1-C 2026-05-12).

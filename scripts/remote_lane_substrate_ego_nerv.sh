@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate ego_nerv first-anchor dispatch (TRADITION 2).
 #
 # Trainer: experiments/train_ego_nerv_as_renderer.py.

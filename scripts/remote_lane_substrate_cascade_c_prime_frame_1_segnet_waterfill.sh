@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate cascade_c_prime_frame_1_segnet_waterfill smoke-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py

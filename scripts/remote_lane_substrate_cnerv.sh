@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate cnerv first-anchor dispatch (TRADITION 2).
 #
 # Trainer: experiments/train_cnerv_as_renderer.py.

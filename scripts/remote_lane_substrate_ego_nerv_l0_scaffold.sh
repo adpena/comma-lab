@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate ego_nerv L0 SCAFFOLD smoke dispatch.
 #
 # Trainer: experiments/train_substrate_ego_nerv.py (BUILD-1 2026-05-20).

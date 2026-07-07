@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate coin_plus_plus L0 SCAFFOLD smoke dispatch.
 #
 # Trainer: experiments/train_substrate_coin_plus_plus.py

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate grayscale_lut first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_grayscale_lut.py (WAVE-4-GRAYSCALE-LUT).

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate D4 Wyner-Ziv frame-0 (WZF01) first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_d4_wyner_ziv_frame_0.py
