@@ -564,3 +564,65 @@ only, anchors owed). DAG FEED-07s. Items ranked by EV for THIS run design:
 
 Pointer contest-CPU 0.19110 UNMOVED; all of §15 is design input, gated on the council + measured
 anchors named in the memo.
+
+## §16 ADDENDUM (2026-07-07, append-only) — quadratic-by-cell representation + Morse-Smale full-exploitation audit (operator prompts ×2)
+
+Operator prompts (verbatim): *"We have a complex system but I wonder if it can be represented in
+such a manner like quadratics to simplify and if that would reduce training time to convergence
+without losing signal or touching score"* + *"makes me wonder if we are fully exploiting and
+realizing the power and beauty of Morse-Smale and our task space level set."* These are ONE
+question by the Morse lemma: near any nondegenerate critical point the function is EXACTLY
+quadratic in the right chart; where quadratics fail (separatrices, saddles, births) the complex
+supplies the combinatorial structure instead. The complete decomposition: **quadratic where
+possible, combinatorial where not** — the un-losable signal lives entirely in the combinatorial
+skeleton (cell labels + adjacency + persistence order); everything else is quadratic and
+therefore SOLVABLE rather than trainable.
+
+### 16.1 Quadratic basin FINISHER (parameter space; the training-time item)
+Near run-end the loss is locally quadratic (the measured tau crawl ~0.2%/25ep over ~400ep and
+the slow Muon recovery are quadratic-regime grinding; Muon itself = implicit spectral
+preconditioning of that quadratic — NS-5 polynomial iteration, measured ~0 wall-clock cost).
+The full move: once in-basin, STOP iterating and SOLVE — extract the Gauss-Newton/Fisher
+quadratic of the through-R scorer loss (the margin field IS the Fisher surrogate, Pearson
+0.978; #336 was already a per-tensor quadratic response model) and CG-solve to the basin
+optimum. HVPs ≈ 2 forwards each; a few hundred CG iterations on subsampled pairs; VERIFY at
+full n600 through the real verdict (score-safety by construction — if the quadratic is bad, the
+verdict says so). **$0 natural A/B available NOW:** mod32cap ep650 best (tau-saturated,
+mid-crawl) → GN/CG-solve → compare against what the live run's remaining epochs of iteration
+actually achieved. Composes with §14: event-exits handle the non-quadratic transitions;
+"enter basin → solve" is the terminal stage — the exact (not asymptotic) "no meat left" mechanism.
+Council question: adopt as run-terminal stage, or run as post-hoc probe on this run's
+checkpoints first? (Recommend: probe first, $0.)
+
+### 16.2 Morse-Smale exploitation audit (honest inventory, grounded in-tree)
+EXPLOITED (measured/built): annulus telemetry (97% d_seg in 4.7% area = separatrix
+neighborhood) · persistence-of-erasure law (dash flip 92% small vs 19% large; movable 36×) ·
+island-birth detection + structured init · #180 partition codec · MS viz tool.
+HALF-EXPLOITED (built, NEVER FIRED — duty-to-measure queue):
+`boundary_math/persistence_topology_loss.py` (soft-clDice + Betti, DSL lever, tests passing) —
+the one loss that can SEE the topology CE is blind to has never run at n600.
+UNEXPLOITED (four theorems, EV-ranked for the council):
+1. **Persistence-diagram EVENT EXITS (§14 language)** — stage exits when the witness's
+   persistence diagram matches the target's down to level k, computed per verdict with the
+   existing flood-fill machinery. Converts "tau saturated ~70ep before its fixed boundary" from
+   post-hoc observation into an exit criterion. CHEAP; directly serves the schedule design.
+2. **Structural-stability margin = anti-flicker objective** — flicker (measured CE-residual,
+   44% lane spikes) = separatrix crossing under perturbation; MS stability theorem ⇒ a
+   min-separatrix-depth term on the annulus (margin field exists) is the theorem-backed version
+   of the ad-hoc flicker down-weight. Treatment arm.
+3. **Complex-as-ARCHITECTURE (capacity on separatrices only)** — MDL-optimal piecewise-constant
+   code: cell labels ~free + adjacency ~free + ALL bytes on separatrix geometry. The −48%
+   directional basis is step one; chart-per-cell capacity allocation is the completion (and the
+   principled form of "basis-match before capacity"). Larger build; next-next run.
+4. **Fire the persistence-topology loss** — zero build cost, it exists; A/B slot in the
+   treatment arm. (Also the canonical activation-ledger duty-to-measure case.)
+
+### 16.3 Convergence with §15 (two frames, one lever)
+Morse-Smale ("dashes = lowest-persistence cells, error ∝ 1/persistence") and homogenization
+(§15.1: "dashes = microstructure below the crossover, unrecoverable by the coarse flow at ANY
+capacity") independently name the same object and demand the same repair: the #287 dash-comb
+corrector (phase = ego-ξ, rule-118 free). Two unrelated theory frames converging on one lever is
+the strongest evidence class short of a measured row; #287 is law-shaped, not one-of-many.
+
+Pointer contest-CPU 0.19110 UNMOVED; §16 is design input (DERIVED + measured-anchor citations;
+the finisher claim is a PREDICTION until the $0 ep650 probe runs).

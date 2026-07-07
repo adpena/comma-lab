@@ -9423,3 +9423,23 @@ NOT registered — anchors owed). Council addendum: DRAFT §15. Top verdicts:
 Triality: DSL = 3 lever surfaces SPEC'd (comb Lever · EikonalViscoStabGauge per-pixel extension ·
 σ_ij matrix) — DSL-first when built, none hand-flagged here. Equations = specs only (§9).
 Pointer 0.19110 UNMOVED (means/theory-alignment).
+
+## FEED-07t (2026-07-07) — §16: quadratic-by-cell (Morse lemma) + Morse-Smale exploitation audit → council draft
+
+Operator prompts (2): quadratic-representation-to-cut-training-time + are-we-fully-exploiting-
+Morse-Smale. Unified answer appended as §16 of
+`DRAFT_derived_optimal_next_run_for_council_20260707.md`: the two are ONE question via the Morse
+lemma — quadratic-in-chart within cells, combinatorial at separatrices; un-losable signal =
+combinatorial skeleton only. Items registered for the council: (16.1) quadratic basin FINISHER —
+GN/CG-solve the through-R Fisher quadratic once in-basin instead of iterating (Fisher=margin
+0.978; #336 was already a quadratic response model); $0 natural A/B on mod32cap ep650-best vs
+the live run's own remaining crawl; PREDICTION until probed. (16.2) exploitation audit —
+EXPLOITED: annulus/persistence/island diagnostics, #180 codec; HALF: persistence_topology_loss
+BUILT-NEVER-FIRED (duty-to-measure); UNEXPLOITED ranked: persistence-diagram event exits (§14
+language) · structural-stability anti-flicker margin · complex-as-architecture
+(capacity-on-separatrices, completion of the −48% basis lever) · fire the topology loss.
+(16.3) §15-homogenization × Morse-Smale convergence: both frames independently require the #287
+dash-comb corrector — law-shaped, unique repair class for the dash residual. Triality: DAG=this
+row; DSL=persistence_topology lever already held (never-fired state tracked); equations=finisher
+law registration owed AFTER the $0 probe measures (no premature registration). Pointer 0.19110
+UNMOVED (design/means).
