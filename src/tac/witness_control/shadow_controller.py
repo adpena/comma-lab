@@ -221,6 +221,10 @@ class ShadowReport:
     # SENSE. Each row is available-with-real-signal OR available=False with an honest reason — NEVER
     # a fabricated value (NO-FAKE). Default empty (backward-compatible).
     producer_signals: list[dict] = _dc_field(default_factory=list)
+    # #247 continual-learning: the cross-run costate POSTERIOR (inverse-variance combination of every
+    # PAST run's MEASURED costates). This is what makes session N+1 smarter than N — the live controller
+    # SEES what earlier runs measured for each lever. READ-only + advisory; default empty.
+    costate_prior: list[dict] = _dc_field(default_factory=list)
 
     def to_row(self) -> dict:
         return {
@@ -236,6 +240,7 @@ class ShadowReport:
             "probe_queue": self.probe_queue,
             "duty_to_measure": self.duty_to_measure,
             "producer_signals": self.producer_signals,
+            "costate_prior": self.costate_prior,
             "actuation": ACTUATION,
             "axis": AXIS_TAG,
             "pointer": POINTER_NOTE,
@@ -471,6 +476,17 @@ def _producer_signals(inputs: RunInputs) -> list[dict]:
         return []
 
 
+def _costate_prior() -> list[dict]:
+    """The #247 continual-learning READ: the cross-run costate posterior (what past runs MEASURED per
+    lever). Fail-safe: never breaks a report. Empty until at least one run's byte-close records its
+    measured costates into the posterior."""
+    try:
+        from tac.witness_control.costate_posterior import all_posteriors
+        return all_posteriors()
+    except Exception:  # noqa: BLE001 — advisory memory, never breaks the report
+        return []
+
+
 def build_shadow_report(inputs: RunInputs,
                         horizon_epochs: int = DEFAULT_HORIZON_EPOCHS) -> ShadowReport:
     """The full shadow pass: state → costates → classification → ranked recommendations."""
@@ -504,7 +520,8 @@ def build_shadow_report(inputs: RunInputs,
             epoch_latest=None, state=state, costates=costates, classification=None,
             recommendations=[], refused=[],
             probe_queue=[*_probe_queue(costates), {"costate": "ALL_TRAJECTORY_COSTATES", "why_unidentifiable": "no verdict rows in run.log yet", "evidence_gap": ["wait for the first n600 advisory verdict"]}],
-            duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs))
+            duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
+            costate_prior=_costate_prior())
 
     recs, refused = _recommendations(inputs, costates, classification, horizon_epochs)
     return ShadowReport(
@@ -513,7 +530,8 @@ def build_shadow_report(inputs: RunInputs,
                       isinstance(rows[-1].get("epoch"), (int, float)) else None),
         state=state, costates=costates, classification=classification,
         recommendations=recs, refused=refused, probe_queue=_probe_queue(costates),
-        duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs))
+        duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
+        costate_prior=_costate_prior())
 
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:

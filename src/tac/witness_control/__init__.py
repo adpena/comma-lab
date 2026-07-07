@@ -46,6 +46,13 @@ from tac.witness_control.campaign_repl import (  # noqa: F401
     propose_argv,
     write_world_model_row,
 )
+from tac.witness_control.costate_posterior import (  # noqa: F401
+    CostatePosterior,
+    all_posteriors,
+    posterior_for,
+    record_costate_observation,
+    record_run_costates,
+)
 from tac.witness_control.producer_bridge import (  # noqa: F401
     ProducerSignal,
     duty_to_measure_as_candidates,

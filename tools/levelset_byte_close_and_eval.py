@@ -2645,6 +2645,18 @@ def main(argv: list[str] | None = None) -> int:
                       f"{[r['lever'] for r in rows]}", flush=True)
         except Exception as _e:  # noqa: BLE001 — advisory ledger, never blocks the verdict
             print(f"[activation-ledger] measured-record skipped (non-fatal): {_e}", flush=True)
+        # #247 continual-learning: also record THIS run's identifiable costates into the cross-run
+        # posterior (the compounding memory that sharpens the next run's DECIDE). Fail-safe.
+        try:
+            from tac.witness_control.costate_posterior import record_run_costates
+            from tac.witness_control.shadow_controller import build_shadow_report, load_run_inputs
+            _crep = build_shadow_report(load_run_inputs(args.ckpt_dir))
+            _crows = record_run_costates(_crep.costates, str(args.ckpt_dir))
+            if _crows:
+                print(f"[costate-posterior] recorded {len(_crows)} identifiable costate(s) from this run "
+                      f"into the cross-run posterior", flush=True)
+        except Exception as _e:  # noqa: BLE001 — advisory memory, never blocks the verdict
+            print(f"[costate-posterior] record skipped (non-fatal): {_e}", flush=True)
     return 0
 
 
