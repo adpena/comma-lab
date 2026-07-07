@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane: pact_nerv_neural_codec_e2e_cross L0 SCAFFOLD smoke (end-to-end neural-codec composition).
 # WAVE-3-PACT-NERV-G4-CROSS-CODEC-L0-BUILD 2026-05-20.
 # Trainer _full_main raises NotImplementedError per Catalog #240.

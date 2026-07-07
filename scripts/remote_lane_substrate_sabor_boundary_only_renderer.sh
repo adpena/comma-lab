@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: SABOR boundary-only renderer first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_sabor_boundary_only_renderer.py

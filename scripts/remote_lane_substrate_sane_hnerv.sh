@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate sane_hnerv first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_sane_hnerv.py (commit c9d5aae7+).

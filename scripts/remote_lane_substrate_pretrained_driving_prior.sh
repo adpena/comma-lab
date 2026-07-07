@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate pretrained_driving_prior first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_pretrained_driving_prior.py (L0 scaffold)

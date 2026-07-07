@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: S2SBS stride-2-stem byte-stuffing substrate.
 #
 # Trainer: experiments/train_substrate_s2sbs_byte_stuffing.py

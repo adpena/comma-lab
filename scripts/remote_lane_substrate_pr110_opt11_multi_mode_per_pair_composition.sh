@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Remote lane script: PR110-OPT-11 multi-mode-per-pair composition L0 SCAFFOLD.
 #

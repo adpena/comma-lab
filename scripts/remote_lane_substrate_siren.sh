@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate siren first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_siren.py (PHASE-B2-BUILD).

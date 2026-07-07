@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate sar_coherent_pose_pairs (SARC) first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_sar_coherent_pose_pairs.py

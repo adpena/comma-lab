@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate pact_nerv_selector_v2 L0 SCAFFOLD smoke dispatch.
 #
 # Trainer: experiments/train_substrate_pact_nerv_selector_v2.py

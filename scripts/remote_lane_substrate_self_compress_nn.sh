@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate self_compress_nn (delta) HIGH-target dispatch.
 #
 # Trainer: experiments/train_substrate_self_compress_nn.py (WAVE-1-B 2026-05-12).

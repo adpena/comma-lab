@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: Time-Traveler L5 Autonomy first-anchor dispatch (PAIR T).
 #
 # Trainer: experiments/train_substrate_time_traveler_l5_autonomy.py

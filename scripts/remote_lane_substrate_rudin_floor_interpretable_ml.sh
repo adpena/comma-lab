@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate rudin_floor interpretable-ML L1 SCAFFOLD dispatch.
 #
 # Trainer: experiments/train_substrate_rudin_floor_interpretable_ml.py

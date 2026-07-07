@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate stc_v2 CUDA disambiguator dispatch.
 #
 # Trainer: experiments/train_substrate_stc_v2.py

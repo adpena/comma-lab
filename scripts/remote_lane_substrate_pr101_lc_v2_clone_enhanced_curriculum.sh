@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: PR95++ enhanced-curriculum smoke-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py

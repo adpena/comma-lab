@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate TT5L V2 Time-Traveler L5 redesign scaffold.
 #
 # Trainer: experiments/train_substrate_time_traveler_l5_tt5l_v2.py
