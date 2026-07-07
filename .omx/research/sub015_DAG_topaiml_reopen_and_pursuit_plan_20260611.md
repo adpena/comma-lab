@@ -10026,3 +10026,15 @@ the S₉₆ gauge (no hidden gauge-fix lever); shearlet dilation-group fixes alo
 ceiling (WATCH, sharpens the pending ladder probe). OWED (deferred to avoid colliding with the MLX
 sibling's mid-edit of the registry, now clear): register the C1 coder saving + the weight-symmetry
 negative as canonical equations (C4). [$0 CPU, advisory; pointer 0.19110 UNMOVED — build/measurement/means]
+
+## FEED-08l (2026-07-07, freq_along ladder probe — RECOVERED post-credit-death) — parabolic-ceiling "raise freq_along" NOT CONFIRMED; comb favored
+n600 ORACLE-CAPACITY ladder (freq_along 0/8/16/25/32; form a re-render UNSUPPORTED). MEASURED d_seg
+FLAT across the ladder (0.00731→0.00714, last 3 rungs NOT GT-separable) — NO monotone collapse. The
+GT-conditioned validity control (4db610af2 lesson) APPLIED: freq_along≥16 gt_sep<0.05 floor →
+INDETERMINATE-at-resolution, not evidence. cCOMB best (0.00695 < every rung) → consistent with Mallat
+2nd-order-scattering + group-theory orbit-coding: the dash wants the modulation CARRIER (comb), not a
+higher linear along-frequency budget. Council: the freq_along basis lever is NOT a confirmed simple
+win; in-training comb A/B (FEED-08c) stays THE lane arbiter; 8=√64 = config observation not
+demonstrated ceiling. form-a (retrain at higher freq_along) + warp-vs-noise = T5 candidates (agent died
+mid-2nd-probe). Memo `.omx/research/freq_along_ladder_probe_verdict_20260707.md`; data durable-on-disk.
+[$0 CPU advisory NON-PROMOTABLE; pointer 0.19110 UNMOVED — measurement/means]
