@@ -14,6 +14,19 @@ Design (recursion+math+enforced-behaviors, operator riff 2026-06-28):
     ``compile_*`` bakes them into the emitted commands.
   * never-invent-flags is STRUCTURAL: ``validate()`` checks every emitted flag
     against the trainer's real argparse flag set (``real_trainer_flags``).
+
+§14 schedule-design layer (task #339, operator directive 2026-07-07 "design the
+SCHEDULE, not just the lever set" + "Schedule should be DSL too" + "consumers
+must track DSL evolution"): the full GAP ANALYSIS of §14's six axes vs the #334
+objects lives in the "§14 SCHEDULE-DESIGN PRIMITIVES" section below (LevelPath /
+StageSpec{repeat_until, priming, exit_event} / OperationalSchedule /
+TrainerSupportGap). Un-compilable schedule intent NEVER becomes an invented flag
+— it compiles to the nearest REAL flags and surfaces as a typed
+``TrainerSupportGap`` (``Curriculum.support_gaps()`` /
+``validate(surface_gaps=True)``). Every schedule primitive exposes the uniform
+``to_display_dict()``/``describe()`` consumer surface and auto-registers in
+``schedule_primitive_kinds()`` (no hand-typed registry) so the dashboard
+read-back + costate digest read the DSL live instead of drifting behind it.
 """
 from __future__ import annotations
 
@@ -119,10 +132,104 @@ _INHERIT = object()
 
 
 # ---------------------------------------------------------------------------
+# Consumer-introspection surface (operator amendment 2026-07-07: "As the DSL
+# evolves, update the costate controller and dashboard accordingly") — every
+# schedule/curriculum primitive exposes ONE uniform display contract so generic
+# consumers (dashboard schedule read-back, costate digest) enumerate primitives
+# as plain data instead of per-primitive code. New primitives inherit this and
+# are AUTO-registered by :func:`schedule_primitive_kinds` (no hand-typed list).
+# ---------------------------------------------------------------------------
+def _display_plain(v):
+    """Recursively convert a primitive's field value to plain JSON-able data."""
+    from dataclasses import fields as _fields, is_dataclass as _is_dc
+    if _is_dc(v) and not isinstance(v, type):
+        td = getattr(v, "to_display_dict", None)
+        if callable(td):
+            return td()
+        return {f.name: _display_plain(getattr(v, f.name)) for f in _fields(v)}
+    if isinstance(v, (tuple, list)):
+        return [_display_plain(x) for x in v]
+    if isinstance(v, dict):
+        return {str(k): _display_plain(x) for k, x in v.items()}
+    if isinstance(v, Path):
+        return str(v)
+    return v
+
+
+class ScheduleDisplay:
+    """Uniform describe()/to_display_dict() surface for schedule primitives.
+
+    ``to_display_dict()`` returns ``{"kind": <ClassName>, <field>: <plain data>...}``
+    plus, when the primitive compiles with a no-arg ``flags()``, the compiled
+    ``"flags"``, and when it carries a no-arg ``support_gaps()``, the ``"gaps"``
+    (each gap as plain data). A generic renderer needs NO type knowledge.
+    """
+
+    def to_display_dict(self) -> dict:
+        import inspect as _inspect
+        from dataclasses import fields as _fields
+        d: dict = {"kind": type(self).__name__}
+        for fld in _fields(self):  # type: ignore[arg-type]
+            d[fld.name] = _display_plain(getattr(self, fld.name))
+        for meth, key in (("flags", "flags"), ("support_gaps", "gaps")):
+            fn = getattr(self, meth, None)
+            if not callable(fn):
+                continue
+            try:
+                sig = _inspect.signature(fn)
+            except (TypeError, ValueError):
+                continue
+            required = [p for p in sig.parameters.values()
+                        if p.default is p.empty
+                        and p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
+            if required:
+                continue  # e.g. Anneal.flags(start_flag, end_flag) — fields already shown
+            try:
+                d[key] = _display_plain(fn())
+            except Exception as exc:  # noqa: BLE001 — display is FAIL-OPEN by contract:
+                # the consumer is a load-bearing multi-day dashboard/costate daemon
+                # (mirrors schedule_readback); an invalid in-flight object must render
+                # its error, never crash the tick. validate() is the fail-CLOSED gate.
+                d[key] = {"error": f"{type(exc).__name__}: {exc}"}
+        return d
+
+    def describe(self) -> str:
+        d = self.to_display_dict()
+        kind = d.pop("kind")
+        parts = ", ".join(
+            f"{k}={v!r}" for k, v in d.items()
+            if v is not None and not isinstance(v, (dict, list)))
+        return f"{kind}({parts})"
+
+
+@dataclass(frozen=True)
+class TrainerSupportGap(ScheduleDisplay):
+    """A NAMED, TYPED expressiveness gap: schedule intent the council can EXPRESS
+    in the DSL but the trainer cannot yet CONSUME. This is a FEATURE, not an error
+    channel — it tells the council exactly which schedule ideas need trainer builds.
+
+    never-invent-flags is preserved STRUCTURALLY: ``flag_proposal`` is a PROPOSAL
+    for a trainer build and is NEVER emitted into argv; ``nearest_real_compilation``
+    documents the conservative compile (real flags only) actually emitted."""
+
+    axis: str                      # §14 axis, e.g. "stage_repetition" | "levels_as_paths"
+    requirement: str               # what the council asked for
+    nearest_real_compilation: str  # what compile_trainer_argv() emits instead (REAL flags)
+    flag_proposal: str             # the trainer build this needs (NOT emitted, ever)
+    notes: str = ""
+
+    def describe(self) -> str:
+        return (f"TRAINER-SUPPORT GAP [{self.axis}]: {self.requirement}"
+                f" | compiled-nearest: {self.nearest_real_compilation}"
+                f" | requires trainer support: {self.flag_proposal}"
+                + (f" | {self.notes}" if self.notes else ""))
+
+
+# ---------------------------------------------------------------------------
 # Schedule primitives (the homotopy / anneal math)
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
-class Anneal:
+class Anneal(ScheduleDisplay):
     """A cosine-annealed schedule start->end (e.g. softmax temperature tau)."""
 
     start: float
@@ -141,7 +248,7 @@ def Freeze(value: float) -> Anneal:  # noqa: N802 (DSL keyword)
 # Curriculum stage (a relaxation of S) + regularizers (live PDE constraints)
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
-class Stage:
+class Stage(ScheduleDisplay):
     """A curriculum relaxation. ``start_epoch`` maps to the trainer's stage gate."""
 
     name: str
@@ -155,7 +262,7 @@ class Stage:
 
 
 @dataclass(frozen=True)
-class Regularizer:
+class Regularizer(ScheduleDisplay):
     """A live derivative/integral regularizer (eikonal |grad phi|=1, length INT ds)."""
 
     flag: str
@@ -166,7 +273,7 @@ class Regularizer:
 
 
 @dataclass(frozen=True)
-class HoscSchedule:
+class HoscSchedule(ScheduleDisplay):
     """The hosc activation-slope β anneal (start→end over the run, shape) + ω — the
     REPRESENTATION-sharpening schedule half of the curriculum (distinct from the render-partition
     temp Anneal and the seg-surrogate tau). MEASURED (DAG FEED-ly): FIXED β diverges
@@ -189,7 +296,7 @@ class HoscSchedule:
 
 
 @dataclass(frozen=True)
-class Transition:
+class Transition(ScheduleDisplay):
     """The stage-transition REHEAT treatment (FEED-fz BUILD 1 / FEED-bu, "different stages need
     different treatment"): LR floor→1× rewarmup over a window + optional AdamW 2nd-moment reset,
     so a curriculum stage boundary is stable BY CONSTRUCTION (not a d_seg spike). Elevated from
@@ -213,8 +320,606 @@ class Transition:
         return f
 
 
+# ---------------------------------------------------------------------------
+# §14 SCHEDULE-DESIGN PRIMITIVES (task #339; operator directive 2026-07-07,
+# DRAFT_derived_optimal_next_run_for_council_20260707.md §14 — "design the
+# SCHEDULE, not just the lever set" + amendment "Schedule should be DSL too").
+#
+# GAP ANALYSIS — §14's six axes mapped onto the #334 objects (what could already
+# be expressed / what THIS block adds / what needs a trainer build):
+#
+#  axis 1 ACTIVATION TIMING: ALREADY — fixed entry via Stage.start_epoch; the
+#    CE→tau EVENT hand-off via Curriculum(handoff="event") (#315 machinery,
+#    EventTriggeredCurriculum lever). ADDED — ExitEvent carries the plateau/
+#    nucleus-guard PARAMETERS (--curriculum-min-stage-epochs / -plateau-rel-eps /
+#    -plateau-windows / -nucleus-within-flip / -nucleus-min-part-frac) as typed
+#    fields. GAP — a Muon ENTRY event ("enter when tau's conditioning stalls",
+#    #302): the trainer's event controller governs the CE→tau(→l7) seg-form
+#    hand-offs only; --muon-start-epoch is fixed-epoch. TrainerSupportGap.
+#  axis 2 LEVELS AS PATHS λ(t): ALREADY — single cosine temp Anneal, hosc β
+#    linear/cosine anneal, Transition reheat. ADDED — LevelPath: per-quantity
+#    typed paths compiling to the trainer's REAL path mechanisms: softmax_temp
+#    {constant|cosine|geometric|cosine_hold (+--tau-hold-frac), span
+#    --anneal-epochs}; hosc_beta {constant|linear|cosine}; lr {constant|cosine
+#    (--lr/--lr-end/--lr-schedule/--warmup-epochs)}; eikonal_weight {constant|
+#    step-at-tau-onset (--eikonal-weight-end, cosine-eased over the rewarmup
+#    window)}; ema_decay {2-segment piecewise-constant (--ema-decay-finisher[-
+#    start-epoch]) — the §14 "EMA per stage" π-group}; muon_lr_frac {cosine
+#    (--muon-lr-final-frac)}. GAP — shapes/segment-counts beyond those (e.g.
+#    geometric LR, linear temp, 3+ segments, per-class λ homotopy paths):
+#    conservative compile = nearest supported shape + TrainerSupportGap.
+#  axis 3 STAGE SET/ORDER/REPETITION: ALREADY — one-shot ordered stages.
+#    ADDED — StageSpec.repeat_until (RepeatUntil): repeat-a-block-until-EVENT
+#    cycles (tau→Muon→(Muon+leap)×until-dry). GAP — the trainer's stage ladder
+#    is single-pass monotone (seg_form step function); NO repeat support:
+#    conservative compile = the DETERMINISTIC bound block_epochs×max_repeats
+#    (council sets --epochs to cover it) + TrainerSupportGap w/ flag proposal.
+#  axis 4 PRIMING: ALREADY — loose flags only (--muon-warm-start-momentum via
+#    the MuonWarmStart lever, --structured-init/--siren-init/--finer-bias-init
+#    in base dicts, --stage-transition-reset-moments via Transition). ADDED —
+#    StageSpec.priming (Priming): per-stage entry actions as first-class typed
+#    fields. GAP — per-stage SCOPING of reset_moments (trainer flag is global,
+#    fires at ALL transitions) and mid-run re-init (init primings apply at run
+#    entry only): compiled globally + TrainerSupportGap notes the approximation.
+#  axis 5 MAX-CONVERGENCE TERMINATION: ADDED — ExitEvent criteria
+#    "marginal_dseg_floor"/"lever_exhaustion" (per-lever marginal-Δd_seg floors)
+#    are EXPRESSIBLE but the trainer has NO such run-end criterion (fixed
+#    --epochs): conservative compile = the fixed stage/run bound +
+#    TrainerSupportGap (this is the "no meat left" trainer build the council
+#    should commission).
+#  axis 6 OPERATIONAL SCHEDULE / WALL-CLOCK (amendment "Schedule should be DSL
+#    too"): ALREADY — Preserve holds the checkpoint cadence (--ckpt-every /
+#    --stage-checkpoints; COMPOSE, don't duplicate — OperationalSchedule does
+#    NOT re-own checkpoint flags). ADDED — OperationalSchedule: verdict cadence
+#    (--eval-every; +16 s/ep every other 25-ep block MEASURED, a real wall-clock
+#    knob) + verdict scope/chunk (--verdict-pairs/--verdict-batch) + async
+#    verdict (--async-verdict) + telemetry cadences (--annulus-telemetry/-band/
+#    -bottom-k, --loss-term-log-every, --handoff-readiness-telemetry,
+#    --dm1-telemetry) + self-orient re-orientation cadence (--reorient-every).
+#    GAP — PER-STAGE verdict-cadence overrides (dense in the Muon finisher,
+#    sparse in bulk descent): every trainer cadence flag is GLOBAL; conservative
+#    compile = the DENSEST requested cadence globally (no verdict evidence lost,
+#    costs wall-clock) + TrainerSupportGap.
+#
+# Un-compilable expressiveness ALWAYS surfaces as a typed TrainerSupportGap
+# (never an invented flag); collect via Curriculum.support_gaps() or
+# Curriculum.validate(surface_gaps=True).
+# ---------------------------------------------------------------------------
+_PATH_SHAPES = ("constant", "linear", "geometric", "cosine", "cosine_hold", "step")
+
+#: LevelPath quantities → the trainer-supported shape set for that quantity
+#: (consumed by LevelPath._compile; adding a quantity = one entry + one branch).
+_LEVEL_PATH_QUANTITIES: dict[str, frozenset[str]] = {
+    "softmax_temp": frozenset({"constant", "cosine", "geometric", "cosine_hold"}),
+    "hosc_beta": frozenset({"constant", "linear", "cosine"}),
+    "lr": frozenset({"constant", "cosine"}),
+    "eikonal_weight": frozenset({"constant", "step"}),
+    "ema_decay": frozenset({"constant"}),   # 2-segment piecewise-constant supported
+    "muon_lr_frac": frozenset({"cosine"}),
+}
+
+#: quantities whose trainer mechanism is inherently STAGE-ANCHORED (a per-stage
+#: LevelPath on one of these is genuinely per-stage; any other quantity's
+#: ``stage=`` scoping is a TrainerSupportGap).
+_STAGE_ANCHORED_QUANTITIES = frozenset({"ema_decay", "eikonal_weight", "muon_lr_frac"})
+
+
 @dataclass(frozen=True)
-class Curriculum:
+class PathSegment(ScheduleDisplay):
+    """One segment of a λ(t) LevelPath. ``end=None`` == constant at ``start``.
+
+    ``epochs`` is the segment span; for ``ema_decay`` (the 2-segment piecewise-
+    constant path) segment-0's ``epochs`` is the ABSOLUTE epoch at which segment
+    1 engages (--ema-decay-finisher-start-epoch). ``hold_frac`` is cosine_hold
+    only (the (0,1] fraction of the anneal window at which the floor is reached)."""
+
+    shape: str
+    start: float
+    end: float | None = None
+    epochs: int | None = None
+    hold_frac: float | None = None
+
+    def resolved_end(self) -> float:
+        return self.start if self.end is None else self.end
+
+
+@dataclass(frozen=True)
+class LevelPath(ScheduleDisplay):
+    """§14 axis 2 — a LEVEL AS A PATH λ(t) for one schedule quantity.
+
+    COMPOSE, DON'T DUPLICATE (review attack surface): for ``softmax_temp`` /
+    ``hosc_beta`` the endpoint flags are ALSO owned by ``Curriculum.temp`` /
+    ``Curriculum.hosc`` — a LevelPath on those quantities must AGREE with the
+    endpoint object (Curriculum.validate()'s duplicate-emitter check refuses
+    unequal values); the path adds ONLY the shape flags (--tau-anneal-shape /
+    --hosc-beta-anneal etc.) the endpoint objects do not hold. Constancy is a
+    DECISION, not a default (§14 axis 2): a constant path emits start==end
+    explicitly.
+
+    ``stage``: optional per-stage scoping declaration. Genuinely per-stage only
+    for the stage-anchored quantities (ema_decay / eikonal_weight /
+    muon_lr_frac); otherwise a TrainerSupportGap (the trainer holds ONE global
+    anneal per quantity)."""
+
+    quantity: str
+    segments: tuple[PathSegment, ...]
+    stage: str | None = None
+    anneal_epochs: int | None = None   # --anneal-epochs (softmax_temp schedule denominator)
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if self.quantity not in _LEVEL_PATH_QUANTITIES:
+            problems.append(
+                f"LevelPath: unknown quantity {self.quantity!r} "
+                f"(known: {sorted(_LEVEL_PATH_QUANTITIES)})")
+        if not self.segments:
+            problems.append(f"LevelPath[{self.quantity}]: needs >=1 segment")
+        for i, seg in enumerate(self.segments):
+            if seg.shape not in _PATH_SHAPES:
+                problems.append(
+                    f"LevelPath[{self.quantity}] segment {i}: unknown shape {seg.shape!r} "
+                    f"(known: {_PATH_SHAPES})")
+            if seg.shape == "geometric" and (seg.start <= 0 or seg.resolved_end() <= 0):
+                problems.append(
+                    f"LevelPath[{self.quantity}] segment {i}: geometric needs positive "
+                    f"endpoints, got start={seg.start} end={seg.resolved_end()}")
+            if seg.shape == "cosine_hold" and not (
+                    seg.hold_frac is not None and 0.0 < seg.hold_frac <= 1.0):
+                problems.append(
+                    f"LevelPath[{self.quantity}] segment {i}: cosine_hold needs "
+                    f"hold_frac in (0,1], got {seg.hold_frac!r}")
+        return problems
+
+    # --- compile: nearest REAL flags + typed gaps for the rest ---------------
+    def _compile(self) -> tuple[dict, tuple[TrainerSupportGap, ...]]:
+        if self.quantity not in _LEVEL_PATH_QUANTITIES or not self.segments:
+            raise ValueError(
+                f"LevelPath[{self.quantity!r}]: not compilable — run .validate() "
+                "(unknown quantity or empty segments)")
+        gaps: list[TrainerSupportGap] = []
+        f: dict = {}
+        q = self.quantity
+        segs = self.segments
+        first = segs[0]
+        supported = _LEVEL_PATH_QUANTITIES[q]
+        shape = first.shape
+
+        # multi-segment: only ema_decay's 2-constant-segment form has trainer support.
+        multi_ok = (q == "ema_decay" and len(segs) == 2
+                    and all(s.shape == "constant" for s in segs))
+        if len(segs) > 1 and not multi_ok:
+            gaps.append(TrainerSupportGap(
+                axis="levels_as_paths",
+                requirement=(f"{q}: {len(segs)}-segment path "
+                             f"[{', '.join(s.shape for s in segs)}]"),
+                nearest_real_compilation=(
+                    f"first segment only ({shape} {first.start}->{first.resolved_end()})"),
+                flag_proposal=f"--{q.replace('_', '-')}-schedule <piecewise spec> (trainer build)",
+                notes="trainer holds ONE anneal per quantity (ema_decay: 2 constants)"))
+            segs = (first,)
+
+        if shape not in supported and not multi_ok:
+            nearest = ("cosine" if "cosine" in supported
+                       else "step" if "step" in supported
+                       else "constant")
+            gaps.append(TrainerSupportGap(
+                axis="levels_as_paths",
+                requirement=f"{q}: shape {shape!r} {first.start}->{first.resolved_end()}",
+                nearest_real_compilation=(
+                    f"{nearest} {first.start}->{first.resolved_end()} (same endpoints)"),
+                flag_proposal=f"extend the trainer's {q} anneal choices with {shape!r}",
+                notes=f"trainer-supported shapes for {q}: {sorted(supported)}"))
+            shape = nearest
+
+        if q == "softmax_temp":
+            f["--softmax-temp-start"] = float(first.start)
+            f["--softmax-temp-end"] = float(first.resolved_end())
+            if shape in ("cosine", "geometric", "cosine_hold"):
+                f["--tau-anneal-shape"] = shape
+            if shape == "cosine_hold" and first.hold_frac is not None:
+                f["--tau-hold-frac"] = float(first.hold_frac)
+            if self.anneal_epochs is not None:
+                f["--anneal-epochs"] = int(self.anneal_epochs)
+        elif q == "hosc_beta":
+            f["--hosc-beta"] = float(first.start)
+            f["--hosc-beta-end"] = float(first.resolved_end())
+            if shape in ("linear", "cosine"):
+                f["--hosc-beta-anneal"] = shape
+        elif q == "lr":
+            f["--lr"] = float(first.start)
+            if shape == "constant":
+                f["--lr-schedule"] = False
+            else:
+                f["--lr-end"] = float(first.resolved_end())
+                f["--lr-schedule"] = True
+        elif q == "eikonal_weight":
+            f["--eikonal-weight"] = float(first.start)
+            if shape == "step":
+                f["--eikonal-weight-end"] = float(first.resolved_end())
+        elif q == "ema_decay":
+            f["--ema-decay"] = float(first.start)
+            if multi_ok:
+                f["--ema-decay-finisher"] = float(self.segments[1].start)
+                if first.epochs is not None:
+                    f["--ema-decay-finisher-start-epoch"] = int(first.epochs)
+        elif q == "muon_lr_frac":
+            f["--muon-lr-final-frac"] = float(first.resolved_end())
+
+        if self.stage is not None and q not in _STAGE_ANCHORED_QUANTITIES:
+            gaps.append(TrainerSupportGap(
+                axis="levels_as_paths",
+                requirement=f"{q}: path scoped to stage {self.stage!r}",
+                nearest_real_compilation="the path applies GLOBALLY (whole-run anneal)",
+                flag_proposal=f"per-stage {q} path table (trainer build)",
+                notes=f"stage-anchored quantities: {sorted(_STAGE_ANCHORED_QUANTITIES)}"))
+        return f, tuple(gaps)
+
+    def flags(self) -> dict:
+        return self._compile()[0]
+
+    def support_gaps(self) -> tuple[TrainerSupportGap, ...]:
+        return self._compile()[1]
+
+
+@dataclass(frozen=True)
+class Priming(ScheduleDisplay):
+    """§14 axis 4 — per-stage ENTRY actions as first-class fields (not loose flags).
+
+    * ``warm_start_momentum`` → ``--muon-warm-start-momentum`` (#269/#270: seeds
+      fresh Muon momentum from the outgoing AdamW first moment; valid on the
+      muon stage — the trainer fires it at the AdamW→Muon switch).
+    * ``reset_moments`` → ``--stage-transition-reset-moments`` (store_true;
+      GLOBAL — fires at ALL stage transitions; per-stage scoping is a gap).
+    * ``structured_init`` / ``lane_prior_phi1`` / ``siren_init`` /
+      ``finer_bias_k`` → the run-ENTRY seeded/bias init primings
+      (``--structured-init`` / ``--lane-prior-phi1`` / ``--siren-init`` /
+      ``--finer-bias-init``+``--finer-bias-k``); on a non-entry stage they are
+      a gap (the trainer applies init once, at run entry).
+
+    Warm-start-from-checkpoint priming stays PROGRAM-level (``resume_from`` +
+    ``--anneal-epochs``), not per-stage — see WitnessProgram."""
+
+    warm_start_momentum: bool = False
+    reset_moments: bool = False
+    structured_init: bool = False
+    lane_prior_phi1: bool = False
+    siren_init: bool = False
+    finer_bias_k: float | None = None
+
+    def flags(self) -> dict:
+        f: dict = {}
+        if self.warm_start_momentum:
+            f["--muon-warm-start-momentum"] = True
+        if self.reset_moments:
+            f["--stage-transition-reset-moments"] = True  # store_true: True only (C2)
+        if self.structured_init:
+            f["--structured-init"] = True
+        if self.lane_prior_phi1:
+            f["--lane-prior-phi1"] = True
+        if self.siren_init:
+            f["--siren-init"] = True
+        if self.finer_bias_k is not None:
+            f["--finer-bias-init"] = True
+            f["--finer-bias-k"] = float(self.finer_bias_k)
+        return f
+
+    def _has_entry_init(self) -> bool:
+        return bool(self.structured_init or self.lane_prior_phi1
+                    or self.siren_init or self.finer_bias_k is not None)
+
+
+_EXIT_EVENT_CRITERIA = ("plateau", "nucleus_guarded_plateau",
+                     "marginal_dseg_floor", "lever_exhaustion")
+
+
+@dataclass(frozen=True)
+class ExitEvent(ScheduleDisplay):
+    """§14 axes 1+5 — a per-stage EXIT criterion (distinct from entry triggers).
+
+    * ``plateau`` / ``nucleus_guarded_plateau``: COMPILABLE — the trainer's #315
+      event controller (--curriculum-event-triggered + plateau params; nucleus
+      kind adds --curriculum-nucleus-guard + its params). Governs the CE→tau(→l7)
+      seg-form hand-offs; on a Muon stage it is a gap (Muon event not built).
+    * ``marginal_dseg_floor`` / ``lever_exhaustion``: the §14 axis-5 "no meat
+      left" exits (per active lever, marginal Δd_seg/epoch below ``floor``) —
+      NO trainer support; conservative compile = the fixed stage/run boundary
+      (``cap_epoch`` documents the deterministic ceiling) + TrainerSupportGap.
+    """
+
+    criterion: str
+    min_stage_epochs: int = 150       # --curriculum-min-stage-epochs
+    rel_eps: float = 1e-4             # --curriculum-plateau-rel-eps
+    windows: int = 4                  # --curriculum-plateau-windows
+    within_flip: float = 0.5          # --curriculum-nucleus-within-flip (nucleus kind)
+    min_part_frac: float = 0.0        # --curriculum-nucleus-min-part-frac (nucleus kind)
+    floor: float | None = None        # marginal-Δd_seg/epoch floor (gap kinds)
+    cap_epoch: int | None = None      # deterministic hard ceiling (gap kinds' compile)
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if self.criterion not in _EXIT_EVENT_CRITERIA:
+            problems.append(
+                f"ExitEvent: unknown criterion {self.criterion!r} (known: {_EXIT_EVENT_CRITERIA})")
+        if self.criterion in ("marginal_dseg_floor", "lever_exhaustion") and self.floor is None:
+            problems.append(
+                f"ExitEvent[{self.criterion}]: needs an explicit ``floor`` (the pre-registered "
+                "marginal-Δd_seg/epoch floor — §14 axis 5)")
+        if self.criterion in ("plateau", "nucleus_guarded_plateau"):
+            if self.min_stage_epochs <= 0 or self.windows <= 0 or self.rel_eps <= 0:
+                problems.append(
+                    f"ExitEvent[{self.criterion}]: plateau params must be positive "
+                    f"(min_stage_epochs={self.min_stage_epochs}, windows={self.windows}, "
+                    f"rel_eps={self.rel_eps})")
+        return problems
+
+    def flags(self) -> dict:
+        if self.criterion not in ("plateau", "nucleus_guarded_plateau"):
+            return {}  # conservative compile: the fixed stage boundary IS the exit
+        f: dict = {
+            "--curriculum-event-triggered": True,
+            "--curriculum-min-stage-epochs": int(self.min_stage_epochs),
+            "--curriculum-plateau-rel-eps": float(self.rel_eps),
+            "--curriculum-plateau-windows": int(self.windows),
+        }
+        if self.criterion == "nucleus_guarded_plateau":
+            f["--curriculum-nucleus-guard"] = True
+            f["--curriculum-nucleus-within-flip"] = float(self.within_flip)
+            f["--curriculum-nucleus-min-part-frac"] = float(self.min_part_frac)
+        return f
+
+    def support_gaps(self, stage: str | None = None) -> tuple[TrainerSupportGap, ...]:
+        gaps: list[TrainerSupportGap] = []
+        if self.criterion in ("marginal_dseg_floor", "lever_exhaustion"):
+            gaps.append(TrainerSupportGap(
+                axis="exit_events",
+                requirement=(f"{self.criterion} exit"
+                             + (f" on stage {stage!r}" if stage else "")
+                             + f" (floor={self.floor})"),
+                nearest_real_compilation=(
+                    f"fixed boundary (deterministic cap_epoch={self.cap_epoch})"),
+                flag_proposal=("--stage-exit-marginal-dseg-floor <float> + per-lever "
+                               "marginal-Δd_seg telemetry exit (trainer build)"),
+                notes="§14 axis 5: 'no meat left' = every stage exits on evidence"))
+        elif stage is not None and "muon" in stage.lower():
+            gaps.append(TrainerSupportGap(
+                axis="activation_timing",
+                requirement=f"event exit on the Muon stage ({self.criterion})",
+                nearest_real_compilation="fixed --muon-start-epoch boundary",
+                flag_proposal="Muon entry/exit event in the trainer's event controller "
+                              "(#302 Muon-from-conditioning; trainer build)",
+                notes="the #315 controller governs the CE→tau(→l7) seg-form hand-offs only"))
+        return tuple(gaps)
+
+
+_REPEAT_CRITERIA = ("plateau", "exhaustion", "marginal_dseg_floor")
+
+
+@dataclass(frozen=True)
+class RepeatUntil(ScheduleDisplay):
+    """§14 axis 3 — repeat a stage/block until a MEASURED criterion (cycles).
+
+    NO trainer support (the stage ladder is single-pass monotone): compiles to a
+    conservative DETERMINISTIC bound ``block_epochs * max_repeats`` (the council
+    sets ``--epochs`` to cover it) + a TrainerSupportGap naming the build.
+
+    DETERMINISTIC-REPRODUCIBILITY SPINE (review attack, documented): the bounds
+    are explicit ints; when trainer support lands, the repeat decision MUST be a
+    deterministic function of the recorded telemetry stream (same seed + config
+    + inputs → same telemetry → same repeat count), never wall-clock/host state."""
+
+    criterion: str                 # plateau | exhaustion | marginal_dseg_floor
+    block: tuple[str, ...]         # stage names cycled, e.g. ("muon", "muon_leap")
+    block_epochs: int              # one repetition window (explicit, deterministic)
+    max_repeats: int               # REQUIRED bound (never unbounded)
+    floor: float | None = None     # the "dry" floor for marginal_dseg_floor/exhaustion
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if self.criterion not in _REPEAT_CRITERIA:
+            problems.append(
+                f"RepeatUntil: unknown criterion {self.criterion!r} (known: {_REPEAT_CRITERIA})")
+        if not self.block:
+            problems.append("RepeatUntil: block must name >=1 stage")
+        if self.block_epochs <= 0:
+            problems.append(f"RepeatUntil: block_epochs must be > 0, got {self.block_epochs}")
+        if self.max_repeats < 1:
+            problems.append(
+                f"RepeatUntil: max_repeats must be >= 1 (the DETERMINISTIC bound; "
+                f"unbounded repetition breaks the reproducibility spine), got {self.max_repeats}")
+        return problems
+
+    def conservative_epoch_bound(self) -> int:
+        return int(self.block_epochs) * int(self.max_repeats)
+
+
+@dataclass(frozen=True)
+class StageSpec(Stage):
+    """A Stage with §14 schedule semantics: ``repeat_until`` (axis 3) +
+    ``priming`` (axis 4) + ``exit_event`` (axes 1+5). Drop-in wherever a Stage
+    goes (``Curriculum.stages``): ``flags()`` emits the entry flag plus the
+    priming/exit-event flags; un-compilable intent surfaces via
+    ``support_gaps()`` (collected by ``Curriculum.support_gaps()``)."""
+
+    repeat_until: RepeatUntil | None = None
+    priming: Priming | None = None
+    exit_event: ExitEvent | None = None
+
+    def flags(self) -> dict:
+        f = super().flags()
+        if self.priming is not None:
+            f.update(self.priming.flags())
+        if self.exit_event is not None:
+            f.update(self.exit_event.flags())
+        return f
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if (self.priming is not None and self.priming.warm_start_momentum
+                and "muon" not in self.name.lower()):
+            problems.append(
+                f"StageSpec[{self.name}]: warm_start_momentum priming fires only at the "
+                "AdamW->Muon switch — put it on the muon stage")
+        if self.repeat_until is not None:
+            problems.extend(self.repeat_until.validate())
+        if self.exit_event is not None:
+            problems.extend(self.exit_event.validate())
+        return problems
+
+    def support_gaps(self) -> tuple[TrainerSupportGap, ...]:
+        gaps: list[TrainerSupportGap] = []
+        if self.repeat_until is not None:
+            ru = self.repeat_until
+            gaps.append(TrainerSupportGap(
+                axis="stage_repetition",
+                requirement=(f"repeat block {list(ru.block)} until {ru.criterion}"
+                             + (f" (floor={ru.floor})" if ru.floor is not None else "")),
+                nearest_real_compilation=(
+                    f"fixed bound {ru.conservative_epoch_bound()} epochs "
+                    f"({ru.block_epochs}x{ru.max_repeats}) — set --epochs to cover it"),
+                flag_proposal=("--stage-repeat-block <names> --stage-repeat-until "
+                               f"<{ru.criterion}> --stage-repeat-max <int> (trainer build)"),
+                notes="repeat decision must be deterministic given the telemetry stream"))
+        if self.exit_event is not None:
+            gaps.extend(self.exit_event.support_gaps(stage=self.name))
+        if self.priming is not None:
+            is_entry = self.start_epoch_flag is None  # the CE/base stage
+            if self.priming.reset_moments:
+                gaps.append(TrainerSupportGap(
+                    axis="priming",
+                    requirement=f"reset_moments scoped to stage {self.name!r}",
+                    nearest_real_compilation=("--stage-transition-reset-moments "
+                                              "(GLOBAL: fires at ALL stage transitions)"),
+                    flag_proposal="per-transition moment-reset selector (trainer build)"))
+            if self.priming._has_entry_init() and not is_entry:
+                gaps.append(TrainerSupportGap(
+                    axis="priming",
+                    requirement=f"seeded/bias init priming at MID-RUN stage {self.name!r}",
+                    nearest_real_compilation="init flags apply at RUN ENTRY only",
+                    flag_proposal="per-stage re-init hook (trainer build)",
+                    notes="structured/siren/FINER-bias init are run-entry primings"))
+        return tuple(gaps)
+
+
+# ---------------------------------------------------------------------------
+# The OPERATIONAL schedule (operator amendment 2026-07-07 "Schedule should be
+# DSL too"): verdict / telemetry / re-orientation cadences as first-class,
+# round-trip-validated objects. Checkpoint cadence stays with Preserve (the
+# existing first-class owner — COMPOSE, don't duplicate).
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class VerdictCadence(ScheduleDisplay):
+    """Verdict cadence + scope + chunking (--eval-every / --verdict-pairs /
+    --verdict-batch / --async-verdict). MEASURED wall-clock knob: +16 s/ep every
+    other 25-ep block (§14 axis 6). ``verdict_pairs=0`` = ALL 600 (the n600
+    non-negotiable default; subsetting stays OPT-IN)."""
+
+    eval_every: int = 25
+    verdict_pairs: int = 0
+    verdict_batch: int = 32
+    async_verdict: bool = False
+
+    def flags(self) -> dict:
+        return {
+            "--eval-every": int(self.eval_every),
+            "--verdict-pairs": int(self.verdict_pairs),
+            "--verdict-batch": int(self.verdict_batch),
+            "--async-verdict": bool(self.async_verdict),
+        }
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if self.eval_every <= 0:
+            problems.append(f"VerdictCadence: eval_every must be > 0, got {self.eval_every}")
+        if self.verdict_pairs < 0 or self.verdict_batch < 0:
+            problems.append(
+                f"VerdictCadence: verdict_pairs/verdict_batch must be >= 0, got "
+                f"{self.verdict_pairs}/{self.verdict_batch}")
+        return problems
+
+
+@dataclass(frozen=True)
+class TelemetryCadence(ScheduleDisplay):
+    """Telemetry/observer cadences. Score-neutral read-only observability
+    DEFAULTS ON per the 'off is a tracked queue' law (annulus rides the verdict
+    cadence; --loss-term-log-every 0 = per-epoch summary, -1 = fully off)."""
+
+    annulus: bool = True
+    annulus_band: float = 2.0
+    annulus_bottom_k: float = 0.05
+    loss_term_log_every: int = 0
+    handoff_readiness: bool = False
+    dm1: bool = False
+
+    def flags(self) -> dict:
+        f: dict = {
+            "--annulus-telemetry": bool(self.annulus),
+            "--loss-term-log-every": int(self.loss_term_log_every),
+            "--handoff-readiness-telemetry": bool(self.handoff_readiness),
+        }
+        if self.annulus:
+            f["--annulus-band"] = float(self.annulus_band)
+            f["--annulus-bottom-k"] = float(self.annulus_bottom_k)
+        if self.dm1:
+            f["--dm1-telemetry"] = True  # store_true: True only (C2)
+        return f
+
+
+@dataclass(frozen=True)
+class OperationalSchedule(ScheduleDisplay):
+    """§14 axis 6 — the run's OPERATIONAL schedule as one first-class object.
+
+    ``per_stage_verdict`` ({stage_name: eval_every}) expresses the council's
+    "verdict sparse in CE/tau, dense in the Muon finisher" — NO trainer support
+    (every cadence flag is global): the conservative compile is the DENSEST
+    requested cadence GLOBALLY (no verdict evidence lost; costs wall-clock) +
+    a TrainerSupportGap. ``reorient_every`` = the self-orient re-orientation
+    cadence (None = leave the trainer default)."""
+
+    verdict: VerdictCadence = VerdictCadence()
+    telemetry: TelemetryCadence = TelemetryCadence()
+    reorient_every: int | None = None
+    per_stage_verdict: dict = field(default_factory=dict)
+
+    def _effective_eval_every(self) -> int:
+        cands = [int(self.verdict.eval_every)]
+        cands += [int(v) for v in self.per_stage_verdict.values()]
+        return min(cands)
+
+    def flags(self) -> dict:
+        f = self.verdict.flags()
+        if self.per_stage_verdict:
+            f["--eval-every"] = self._effective_eval_every()  # densest = conservative
+        f.update(self.telemetry.flags())
+        if self.reorient_every is not None:
+            f["--reorient-every"] = int(self.reorient_every)
+        return f
+
+    def validate(self) -> list[str]:
+        problems = list(self.verdict.validate())
+        for k, v in self.per_stage_verdict.items():
+            if int(v) <= 0:
+                problems.append(
+                    f"OperationalSchedule: per_stage_verdict[{k!r}] must be > 0, got {v}")
+        if self.reorient_every is not None and self.reorient_every <= 0:
+            problems.append(
+                f"OperationalSchedule: reorient_every must be > 0, got {self.reorient_every}")
+        return problems
+
+    def support_gaps(self) -> tuple[TrainerSupportGap, ...]:
+        if not self.per_stage_verdict:
+            return ()
+        return (TrainerSupportGap(
+            axis="operational_schedule",
+            requirement=f"per-stage verdict cadence {dict(self.per_stage_verdict)!r}",
+            nearest_real_compilation=(
+                f"--eval-every {self._effective_eval_every()} (densest requested cadence, "
+                "globally — no verdict evidence lost; costs wall-clock)"),
+            flag_proposal="--eval-every-per-stage <stage>:<N> (trainer build)",
+            notes="verdict cost MEASURED +16 s/ep every other 25-ep block (§14 axis 6)"),)
+
+
+@dataclass(frozen=True)
+class Curriculum(ScheduleDisplay):
     """The witness curriculum as a FIRST-CLASS DSL object (operator 2026-07-06 "we need schedule
     and curriculum in DSL as well"). Bundles the ordered homotopy of relaxations (``stages``) +
     the per-stage anneal schedules (render-partition ``temp``, ``hosc`` β, ``tau``) + the live PDE
@@ -241,30 +946,62 @@ class Curriculum:
     transition: Transition | None = None
     handoff: str = "fixed"                             # "fixed" | "event"
     curriculum_on: bool = True                         # the --curriculum master flag
+    # §14 additions (task #339): levels-as-paths λ(t) + the operational schedule.
+    level_paths: tuple[LevelPath, ...] = ()
+    operational: OperationalSchedule | None = None
 
-    def flags(self) -> dict:
-        f: dict = {}
+    # --- the per-owner flag sets (shared by flags() + the duplicate-emitter check) ---
+    def _flag_owners(self) -> list[tuple[str, dict]]:
+        owners: list[tuple[str, dict]] = []
         if self.curriculum_on:
-            f["--curriculum"] = True
-        f.update(self.temp.flags("--softmax-temp-start", "--softmax-temp-end"))
+            owners.append(("curriculum_on", {"--curriculum": True}))
+        owners.append(("temp", self.temp.flags("--softmax-temp-start", "--softmax-temp-end")))
         for st in self.stages:
-            f.update(st.flags())
+            owners.append((f"stage:{st.name}", st.flags()))
         for rg in self.regularizers:
-            f.update(rg.flags())
+            owners.append((f"regularizer:{rg.flag}", rg.flags()))
         if self.hosc is not None:
-            f.update(self.hosc.flags())
+            owners.append(("hosc", self.hosc.flags()))
         if self.tau is not None:
-            f["--tau-softplus-tau"] = self.tau
+            owners.append(("tau", {"--tau-softplus-tau": self.tau}))
         if self.transition is not None:
-            f.update(self.transition.flags())
+            owners.append(("transition", self.transition.flags()))
+        for lp in self.level_paths:
+            owners.append((f"level_path:{lp.quantity}", lp.flags()))
+        if self.operational is not None:
+            owners.append(("operational", self.operational.flags()))
         if self.handoff == "event":
             # #315 nucleus-guarded CE→tau hand-off (byte-identical to fixed when the guard never
             # fires; the schedule boundary becomes costate/plateau-driven, not a fixed epoch).
-            f["--curriculum-event-triggered"] = True
-            f["--curriculum-nucleus-guard"] = True
+            owners.append(("handoff", {"--curriculum-event-triggered": True,
+                                       "--curriculum-nucleus-guard": True}))
+        return owners
+
+    def flags(self) -> dict:
+        f: dict = {}
+        for _owner, fl in self._flag_owners():
+            f.update(fl)
         return f
 
-    def validate(self) -> list[str]:
+    def support_gaps(self) -> tuple[TrainerSupportGap, ...]:
+        """Every typed TrainerSupportGap this schedule's un-compilable intent produced
+        (§14: the council reads THIS to see which schedule ideas need trainer builds)."""
+        gaps: list[TrainerSupportGap] = []
+        for st in self.stages:
+            sg = getattr(st, "support_gaps", None)
+            if callable(sg):
+                gaps.extend(sg())
+        for lp in self.level_paths:
+            gaps.extend(lp.support_gaps())
+        if self.operational is not None:
+            gaps.extend(self.operational.support_gaps())
+        return tuple(gaps)
+
+    def validate(self, surface_gaps: bool = False) -> list[str]:
+        """Violations (empty == valid/launchable). ``surface_gaps=True`` ADDITIONALLY
+        appends each TrainerSupportGap's describe() line — for council review surfaces;
+        the default False keeps gaps NON-BLOCKING (the conservative compile emits real
+        flags and is legal to launch)."""
         problems: list[str] = []
         if self.handoff not in ("fixed", "event"):
             problems.append(
@@ -282,7 +1019,65 @@ class Curriculum:
             problems.append(
                 f"Curriculum ordering: need 0 < tau_start ({tau_s}) < l7_start ({l7_s}) "
                 "(the tau stage forms the partition before l7 sharpens it)")
+        # §14 sub-object validation (fail-closed BEFORE compile).
+        for st in self.stages:
+            v = getattr(st, "validate", None)
+            if callable(v):
+                problems.extend(v())
+        for lp in self.level_paths:
+            problems.extend(lp.validate())
+        if self.operational is not None:
+            problems.extend(self.operational.validate())
+        # DUPLICATE-EMITTER check (compose, don't duplicate — review attack surface): a flag
+        # emitted by 2+ owners with UNEQUAL values is ambiguous (dict merge order would silently
+        # pick a winner). Equal values are legal (e.g. a LevelPath agreeing with the temp Anneal
+        # endpoints, or two stages both requesting the event controller).
+        seen: dict[str, tuple[str, object]] = {}
+        try:
+            owners = self._flag_owners()
+        except ValueError as exc:  # an uncompilable LevelPath — already reported above
+            owners = []
+            if not any("LevelPath" in p for p in problems):
+                problems.append(str(exc))
+        for owner, fl in owners:
+            for k, v in fl.items():
+                if k in seen and seen[k][1] != v:
+                    problems.append(
+                        f"DUPLICATE EMITTER: {k} from {seen[k][0]}={seen[k][1]!r} AND "
+                        f"{owner}={v!r} — compose, don't duplicate (one owner per flag, "
+                        "or equal values)")
+                else:
+                    seen.setdefault(k, (owner, v))
+        if surface_gaps:
+            problems.extend(g.describe() for g in self.support_gaps())
         return problems
+
+
+# ---------------------------------------------------------------------------
+# AUTO-DERIVED schedule-primitive registry (operator amendment 2026-07-07:
+# consumers must track DSL evolution automatically). Mirrors lever_registry's
+# auto-derivation — NO hand-typed list: membership = "a public dataclass in
+# THIS module carrying the schedule surface" (ScheduleDisplay mixin, and/or a
+# flags()/support_gaps() compiler). A new primitive added anywhere in this
+# module auto-registers; the dashboard/costate consumers enumerate THIS.
+# ---------------------------------------------------------------------------
+def schedule_primitive_kinds() -> dict[str, type]:
+    """{class_name: class} for every schedule/curriculum primitive in this module."""
+    import dataclasses as _dc
+    import inspect as _inspect
+    import sys as _sys
+    mod = _sys.modules[__name__]
+    out: dict[str, type] = {}
+    for name, obj in vars(mod).items():
+        if name.startswith("_") or not _inspect.isclass(obj):
+            continue
+        if not _dc.is_dataclass(obj) or obj.__module__ != __name__:
+            continue
+        if (issubclass(obj, ScheduleDisplay)
+                or callable(getattr(obj, "flags", None))
+                or callable(getattr(obj, "support_gaps", None))):
+            out[name] = obj
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +1101,7 @@ class Lever:
 # Enforced-behavior clauses (preserve / contain / authority)
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
-class Preserve:
+class Preserve(ScheduleDisplay):
     """PRESERVE: per-stage boundary ckpts + intra-stage cadence (<=25, binding)."""
 
     stage_boundaries: bool = True
@@ -343,7 +1138,7 @@ class Authority:
 # The program
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
-class WitnessProgram:
+class WitnessProgram(ScheduleDisplay):
     out_dir: str
     gt_cache: str
     epochs: int
@@ -537,7 +1332,25 @@ class WitnessProgram:
         # FIRST-CLASS curriculum object (when set): stage-ordering + hand-off-enum structural check.
         if self.curriculum is not None:
             problems.extend(self.curriculum.validate())
+            # §14 double-emitter check across the program: a schedule flag set BOTH in ``base``
+            # AND by the curriculum object with different values is ambiguous (flag_dict emits
+            # curriculum AFTER base, silently winning) — the curriculum object is the schedule
+            # SoT; remove the flag from base or make the values agree.
+            cur_flags = self.curriculum.flags()
+            for k, v in cur_flags.items():
+                if k in self.base and self.base[k] != v:
+                    problems.append(
+                        f"DOUBLE EMITTER: {k} set in base={self.base[k]!r} AND by the "
+                        f"curriculum object={v!r} — the curriculum object is the schedule "
+                        "SoT; remove it from base (or make the values agree)")
         return problems
+
+    def support_gaps(self) -> tuple["TrainerSupportGap", ...]:
+        """The program's typed TrainerSupportGaps (§14): delegated to the first-class
+        curriculum object; () when the legacy (curriculum=None) path is in use."""
+        if self.curriculum is None:
+            return ()
+        return self.curriculum.support_gaps()
 
     # --- compilation ---------------------------------------------------------
     def compile_trainer_argv(self, python: str = ".venv/bin/python") -> list[str]:

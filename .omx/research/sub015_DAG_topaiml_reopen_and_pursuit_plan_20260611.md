@@ -9302,3 +9302,72 @@ hunks class, recurrence 3+); standalone entry `python -m tac.run_constant_gates 
 **Triality home:** DSL leg = consumers now READ the DSL (schedule_readback) instead of
 duplicating it; equations leg N/A (observability apparatus, no measured physics row).
 **HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
+
+## FEED-07q (2026-07-07) — #339 §14 schedule-design DSL primitives: the council can now EXPRESS its derived-optimal run design entirely through the DSL
+
+**SIGNAL (the §14 directive, operator verbatim in DRAFT_derived_optimal_next_run_for_council
+§14):** "design the SCHEDULE, not just the lever set" — activation timing, levels-as-paths
+λ(t), stage repetition, priming, max-convergence termination, wall-clock — plus amendments
+"Schedule should be DSL too" (the OPERATIONAL schedule: verdict/telemetry/ckpt cadences) and
+"consumers must track DSL evolution" (uniform introspection surface).
+
+**GAP-ANALYSIS VERDICT (§14 six axes vs the #334 objects; full table in the curriculum_dsl
+"§14 SCHEDULE-DESIGN PRIMITIVES" module section):**
+- axis 1 activation timing: ALREADY (Stage.start_epoch + handoff="event" #315); ADDED
+  ExitEvent carrying the plateau/nucleus params as typed fields; GAP Muon ENTRY event
+  (#302 Muon-from-conditioning — controller governs CE→tau(→l7) only).
+- axis 2 levels-as-paths: ALREADY (single cosine Anneal, hosc β anneal); ADDED LevelPath
+  compiling to the trainer's REAL path mechanisms (softmax_temp cosine/geometric/
+  cosine_hold+--tau-hold-frac+--anneal-epochs · hosc_beta linear/cosine · lr cosine ·
+  eikonal_weight step-at-tau-onset · ema_decay 2-seg piecewise ((.997→.9995@ep) = the §14
+  EMA π-group) · muon_lr_frac cosine); GAP other shapes/segments (e.g. geometric LR) →
+  nearest-real compile + typed gap.
+- axis 3 repetition: ADDED StageSpec.repeat_until (RepeatUntil) — GAP (trainer ladder is
+  single-pass monotone): conservative DETERMINISTIC bound block_epochs×max_repeats + gap
+  w/ flag proposal; unbounded repetition REFUSED (reproducibility spine).
+- axis 4 priming: ADDED StageSpec.priming (Priming: warm-start momentum / moment reset /
+  structured+lane+siren+FINER-bias init) — GAP per-stage scoping of reset_moments (global
+  flag) + mid-run re-init (entry-only).
+- axis 5 termination: ADDED ExitEvent criteria marginal_dseg_floor / lever_exhaustion
+  (EXPRESSIBLE) — GAP: no trainer run-end-on-evidence criterion (the "no meat left" build
+  the council should commission).
+- axis 6 operational: ALREADY Preserve owns ckpt cadence (compose-don't-duplicate); ADDED
+  OperationalSchedule (VerdictCadence --eval-every/--verdict-pairs/--verdict-batch/
+  --async-verdict + TelemetryCadence annulus/loss-term/handoff-readiness/dm1 +
+  --reorient-every) — GAP per-stage verdict cadence (dense-in-Muon/sparse-in-CE): every
+  trainer cadence flag is GLOBAL; conservative compile = DENSEST cadence globally (no
+  verdict evidence lost, costs wall-clock) + gap.
+
+**RESPONSE (built, src/tac/witness_dsl/curriculum_dsl.py):** TrainerSupportGap (typed,
+NEVER an emitted flag — flag_proposal is a proposal) · PathSegment/LevelPath ·
+Priming/ExitEvent/RepeatUntil/StageSpec(Stage) · VerdictCadence/TelemetryCadence/
+OperationalSchedule · Curriculum gains level_paths + operational + duplicate-emitter
+refusal (compose-don't-duplicate: a LevelPath must AGREE with the temp/hosc endpoint
+objects) + support_gaps() + validate(surface_gaps=True) · WitnessProgram gains
+support_gaps() + base-vs-curriculum DOUBLE-EMITTER refusal · uniform
+describe()/to_display_dict() (ScheduleDisplay mixin, FAIL-OPEN for the dashboard/costate
+daemon) on EVERY schedule primitive · AUTO-DERIVED schedule_primitive_kinds() registry
+(module-scan, no hand-typed list — mirrors lever_registry). Round-trip enforced: every
+emitted flag parses through build_real_trainer_parser (never-invent-flags, static+dynamic).
+
+**EXECUTABLE COUNCIL SPEC (src/tac/tests/test_schedule_dsl_sec14.py):** CE(seeded-init
+priming) → tau(nucleus-guarded plateau EXIT) → Muon(warm-start priming, τ geometric path,
+LR geometric→nearest-cosine+GAP, EMA π-group path, eikonal step, muon-lr cosine) →
+repeat-finishing-block-until-dry(GAP) + operational block (verdict sparse CE/tau=50,
+dense Muon=10 → GAP, compiles --eval-every 10 conservative) — constructs, validates [],
+compiles through the REAL argparse, and reports EXACTLY 4 named gaps {exit_events,
+levels_as_paths, operational_schedule, stage_repetition}. 36 new tests; 335 dependent
+witness_dsl tests + sibling's 22 schedule_readback tests green; existing programs
+(BASELINE/sealed_205) byte-identical (flags-emission order preserved).
+
+**SEAM (siblings):** schedule_readback's StageEntry union ({mode fixed|event, status,
+cap, trigger}) untouched and consistent; the read-back + costate digest can now enumerate
+schedule_primitive_kinds() + to_display_dict() instead of per-primitive code — that
+consumer wiring is the sibling's leg. src/tac/witness_dsl/__init__.py NOT touched
+(sibling holds uncommitted edits there; new primitives import via
+tac.witness_dsl.curriculum_dsl directly — export fold-in owed when their commit lands).
+
+**Triality home:** DSL leg = this build (schedule now DSL-held first-class); DAG leg =
+this FEED; equations leg N/A (schedule-expressiveness apparatus — no measured physics
+row; the council's derived schedule VALUES will carry the equation anchors when measured).
+**HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
