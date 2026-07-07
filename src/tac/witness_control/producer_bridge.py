@@ -13,7 +13,7 @@ either a REAL live signal or an honest ``available=False`` with a recorded ``rea
 "'off' is a tracked queue, never a forgotten default" discipline — a producer with no live input is
 SURFACED as awaiting-its-input, not silently dropped and not invented).
 
-The four producers + what each contributes to the controller's SENSE:
+The producers + what each contributes to the controller's SENSE:
 
 * ``sensitivity_map.axis_weights_for_named_operating_point`` — per-axis EV multipliers
   (pose/seg/rate/mixed) at the operating point. A LIVE, always-available prior the DECIDE ranker
@@ -31,6 +31,10 @@ The four producers + what each contributes to the controller's SENSE:
   Weng weakness-mining harvest 2026-07-07, ``docs/harvest_weng_harness_20260707.md``): the
   controller can weight recommendations by known-unreliable surfaces; honest ``available=False``
   when the ledger is empty.
+* ``tac.witness_control.powerlaw_exit`` — the weak-KAM power-law plateau/exit detector (solver
+  pack 2026-07-07; equation ``weak_kam_powerlaw_tail_exit_v1``): tail fit + extrapolated-
+  remaining-meat exit verdict on the live run's trailing verdict window; honest
+  ``available=False`` without a ``run_log_path`` or with too few verdict rows.
 
 Everything here is READ-ONLY + advisory (like the whole ``witness_control`` package): it never
 mutates a run, never claims a score, never auto-actuates.
@@ -167,22 +171,95 @@ def _harness_failure_signal() -> ProducerSignal:
         )
 
 
+def _powerlaw_exit_signal(run_log_path=None) -> ProducerSignal:
+    """The weak-KAM power-law plateau/exit detector (``tac.witness_control.powerlaw_exit``,
+    solver pack 2026-07-07; equation ``weak_kam_powerlaw_tail_exit_v1``): per-class (total-d_seg
+    fallback while per-class telemetry is an apparatus gap) tail fits a+b*t^-alpha vs exponential
+    on the CURRENT stage window of a run's verdict telemetry, plus the extrapolated-remaining-meat
+    exit verdict — so the DECIDE queue can see whether the running stage still pays under the
+    AIC-preferred tail model instead of an early-firing exponential window slope. Honest when no
+    run log is provided or the window is too short: available=False with the reason, never a
+    fabricated fit."""
+    if not run_log_path:
+        return ProducerSignal(
+            name="powerlaw_exit.stage_tail_fit", available=False, signal=None,
+            reason="no run_log_path provided (pass the live run's telemetry log to fit the "
+                   "current stage window); the $0 retro-fit CLI is "
+                   "tools/fit_powerlaw_plateau_detector.py",
+        )
+    try:
+        import json as _json
+
+        from tac.witness_control.powerlaw_exit import powerlaw_meat_exit
+        rows = []
+        with open(run_log_path) as fh:
+            for line in fh:
+                line = line.strip()
+                if not line.startswith("{"):
+                    continue
+                try:
+                    r = _json.loads(line)
+                except _json.JSONDecodeError:
+                    continue
+                if r.get("stage") == "verdict" and float(r.get("epoch", 0)) > 0:
+                    rows.append((float(r["epoch"]), float(r["d_seg"])))
+        if len(rows) < 8:
+            return ProducerSignal(
+                name="powerlaw_exit.stage_tail_fit", available=False, signal=None,
+                reason=f"only {len(rows)} verdict rows in {run_log_path} (need >= 8 for a "
+                       "credible 3-parameter tail fit)",
+                provenance={"run_log_path": str(run_log_path)},
+            )
+        # fit the TRAILING HALF of the verdict rows. Honest limitation (advisory signal): this
+        # window MAY span a stage/optimizer transition (e.g. the tau->Muon switch) — the fitted
+        # alpha then mixes regimes; window_epochs is surfaced so the consumer can see the span,
+        # and the $0 CLI (tools/fit_powerlaw_plateau_detector.py) does the per-stage-window cut.
+        tail = rows[len(rows) // 2:]
+        verdict = powerlaw_meat_exit({"total": tail}, min_points=8)
+        return ProducerSignal(
+            name="powerlaw_exit.stage_tail_fit", available=True,
+            signal={"exhausted": verdict["exhausted"],
+                    "remaining_meat_estimate": verdict["remaining_meat_estimate"],
+                    "alpha": verdict["alpha"], "ci": verdict["ci"],
+                    "binding_class": verdict["binding_class"],
+                    "reason": verdict["reason"],
+                    "window_epochs": [tail[0][0], tail[-1][0]],
+                    "per_class_available": False},
+            reason="trailing-window tail fit + extrapolated-remaining-meat exit verdict "
+                   "(weak_kam_powerlaw_tail_exit_v1); total-d_seg fallback — per-class d_seg "
+                   "verdict telemetry is an OWED apparatus gap (duty-to-measure)",
+            provenance={"run_log_path": str(run_log_path),
+                        "equation": "weak_kam_powerlaw_tail_exit_v1",
+                        "axis": "[macOS advisory] NON-PROMOTABLE"},
+        )
+    except Exception as e:  # noqa: BLE001 — advisory bridge, never breaks the report
+        return ProducerSignal(
+            name="powerlaw_exit.stage_tail_fit", available=False, signal=None,
+            reason=f"unavailable ({type(e).__name__}: {e})",
+            provenance={"run_log_path": str(run_log_path)},
+        )
+
+
 def read_producer_signals(
     *,
     archive_sha256: str | None = None,
     operating_point: str = "pr106_r2",
+    run_log_path=None,
 ) -> list[dict]:
     """Read EVERY orphaned producer into the controller SENSE (the #247 de-orphaning).
 
     Returns one row per producer (as a plain dict for JSONL persistence). Fully fail-safe: any
     producer that errors yields an ``available=False`` row with the reason — the controller SENSE is
-    never broken by a producer, and no signal is ever fabricated.
+    never broken by a producer, and no signal is ever fabricated. ``run_log_path`` (optional) feeds
+    the power-law exit detector the live run's verdict telemetry; callers that do not pass it get an
+    honest available=False row (same contract as the no-archive master-gradient row).
     """
     return [
         _sensitivity_map_signal(operating_point).to_dict(),
         _master_gradient_signal(archive_sha256).to_dict(),
         _cathedral_autopilot_signal().to_dict(),
         _harness_failure_signal().to_dict(),
+        _powerlaw_exit_signal(run_log_path).to_dict(),
     ]
 
 

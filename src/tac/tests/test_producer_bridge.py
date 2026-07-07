@@ -6,7 +6,7 @@ from __future__ import annotations
 from tac.witness_control import producer_bridge as pb
 
 
-def test_read_producer_signals_enumerates_all_four():
+def test_read_producer_signals_enumerates_all_five():
     rows = pb.read_producer_signals()
     names = {r["producer"] for r in rows}
     assert names == {
@@ -14,6 +14,7 @@ def test_read_producer_signals_enumerates_all_four():
         "master_gradient.latest_anchor",
         "cathedral_autopilot.ranker",
         "harness_failure_ledger.sense_rows",
+        "powerlaw_exit.stage_tail_fit",
     }
     # every row is a well-formed ProducerSignal dict (NO-FAKE shape)
     for r in rows:
@@ -70,8 +71,48 @@ def test_shadow_report_surfaces_producer_signals():
     ps = rep.producer_signals
     assert {r["producer"] for r in ps} == {
         "sensitivity_map.axis_weights", "master_gradient.latest_anchor",
-        "cathedral_autopilot.ranker", "harness_failure_ledger.sense_rows"}
+        "cathedral_autopilot.ranker", "harness_failure_ledger.sense_rows",
+        "powerlaw_exit.stage_tail_fit"}
     assert "producer_signals" in rep.to_row()
+
+
+def test_powerlaw_exit_no_run_log_is_honestly_unavailable():
+    """NO-FAKE: without a run_log_path the tail-fit producer reports available=False with the honest
+    reason, never a fabricated fit."""
+    rows = {r["producer"]: r for r in pb.read_producer_signals()}
+    pe = rows["powerlaw_exit.stage_tail_fit"]
+    assert pe["available"] is False and pe["signal"] is None
+    assert "run_log_path" in pe["reason"]
+
+
+def test_powerlaw_exit_fits_a_real_verdict_log(tmp_path):
+    """A synthetic verdict log with a power-law-shaped d_seg trajectory yields a REAL fit signal:
+    alpha recovered, remaining meat positive, exhausted False while the tail still pays. Would FAIL
+    if the producer fabricated a constant or dropped the fit."""
+    import json as _json
+    log = tmp_path / "run.log"
+    with open(log, "w") as fh:
+        for ep in range(25, 25 * 25, 25):
+            d = 0.002 + 0.02 * (ep ** -0.5)
+            fh.write(_json.dumps({"stage": "verdict", "epoch": ep, "d_seg": d}) + "\n")
+    rows = {r["producer"]: r for r in pb.read_producer_signals(run_log_path=str(log))}
+    pe = rows["powerlaw_exit.stage_tail_fit"]
+    assert pe["available"] is True
+    sig = pe["signal"]
+    assert sig["exhausted"] in (True, False) and sig["alpha"] > 0
+    assert sig["remaining_meat_estimate"] > 0  # a decaying tail has positive meat
+    assert pe["provenance"]["equation"] == "weak_kam_powerlaw_tail_exit_v1"
+
+
+def test_powerlaw_exit_too_few_rows_is_honestly_unavailable(tmp_path):
+    import json as _json
+    log = tmp_path / "short.log"
+    with open(log, "w") as fh:
+        for ep in (25, 50, 75):
+            fh.write(_json.dumps({"stage": "verdict", "epoch": ep, "d_seg": 0.01}) + "\n")
+    rows = {r["producer"]: r for r in pb.read_producer_signals(run_log_path=str(log))}
+    pe = rows["powerlaw_exit.stage_tail_fit"]
+    assert pe["available"] is False and "verdict rows" in pe["reason"]
 
 
 if __name__ == "__main__":
