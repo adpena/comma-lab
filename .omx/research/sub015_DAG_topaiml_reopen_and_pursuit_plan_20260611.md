@@ -9694,3 +9694,40 @@ reactivation=adopt delta_res at byte-close). Commits: a44a06fb8 (coder+tests) ·
 · 82cca824b (DSL binding). Note: sibling-coordination worked as designed — σ_ij lever's uncommitted
 LengthSigma hunk was detected mid-edit; my commit waited until it landed (364cd6544), no absorption.
 Pointer 0.19110 UNMOVED (means: rate headroom is real but banks only at a byte-closed exact row).
+
+## FEED-08c (2026-07-07, BUILD-WAVE agent A-RESUME) — #287 DASH-COMB OWED PROBES MEASURED (n600, frozen ep650): comb MECHANISM CONFIRMED (removes 86% of solid-band added dash-gap FP; ≡ per-pair fitted gate at ~186 floats) BUT render-composite NET-NEGATIVE (+0.0038 d_seg) → corrector must be IN-TRAINING; τ-crossover render probe REFUTED-AS-IMPLEMENTED (amplitude confound) [$0 CPU, advisory; pointer 0.19110 UNMOVED — means]
+
+**(1) Probe 1 (corrector A/B, owed anchor i of `dash_erasure_homogenization_v1`) — MEASURED, ALL 600
+pairs through exact R + frozen CPU SegNet on the frozen mod32cap EMA-best ep650
+(`tools/dash_comb_probe_n600.py`, resumable: two harness kills at ~5 min became progress via the
+per-24-pair checkpoint; peak RSS 5.7 GiB; live run untouched, read-only snapshot):**
+c1 witness 0.00315 (reproduces the trained level = positive control) · c2 +SOLID band 0.01356
+(+0.01042; dash-gap FP 0.00174 = the homogenized band the law predicts) · **c3 +ego-phase COMB
+0.00695 (+0.00380; gap-FP 0.00036)** · c4 +per-pair FITTED gate 0.00698 (+0.00383; gap-FP 0.00062).
+THREE verdicts: (a) the comb removes **86.0%** of the added dash-gap FP and 63.5% of the added
+d_seg — the `u ≈ ū + δ·v(x/δ)` corrector class REGISTERS on the R+SegNet leg; (b) the GLOBAL comb
+(~186 floats; phase from ξ) **matches the per-pair fitted gate on d_seg and beats it −42% on
+gap-FP** — dash phase IS ego-transported, per-pair phase storage is redundant with ξ (the byte
+half of the owed anchor); (c) **every band composite is NET-NEGATIVE vs the ep650 witness**
+(recall drops 0.780→0.729) — the witness already renders lanes; post-hoc compositing is a d_seg
+LOSER, so **`_corrector_v1` upgrade NOT taken**; the live path is the IN-TRAINING lever
+`n287_dash_comb` (`--lane-band-dash-comb`, already wired trainer+DSL).
+**(2) Probe 2 (τ-crossover, owed anchor ii) — REFUTED-AS-IMPLEMENTED:** blur-σ sweep on the comb
+alpha is amplitude-confounded (thin band, softness 1 px → blur collapses peak α toward no-op):
+d_seg falls 0.00695→0.00340 and gap-FP falls toward c1, NOT toward the solid level. The render
+leg cannot resolve the crossover with this design; the training-flow τ-crossover (per-stage
+ckpts across a τ-anneal) remains OWED. Weak directional signal: comb/solid per-band FP ratio
+0.48/0.57/0.46/0.43/0.80 across δ_along 110/19.8/5.4/1.9/0.39 px — advantage largest where
+δ_along ≫ smoothing, gone in the below-crossover far band (gate-off >55 m by design).
+**(3) FIRST FIRING (duty-to-measure):** DashComb was in the never-fired queue (36 owed);
+recorded `fired`+`measured` in the activation ledger with the honest scope note (mechanism-level
+firing; in-training arm still never run) → 35 owed.
+TRIALITY: DAG=this row; DSL=`n287_dash_comb` Lever intact (curriculum_dsl.py:1631, verified in
+HEAD post-absorption into 1d6704e5b/049aa0d9f); equations=anchor
+`dash_comb_corrector_ab_and_tau_crossover_n600_20260707` APPENDED to
+`dash_erasure_homogenization_v1` (residual 0.1403 vs ideal-corrector limit; reactivation=
+in-training A/B + training-flow τ-crossover). Memo:
+`.omx/research/dash_comb_probe_verdict_20260707.md`. Results JSON:
+`experiments/results/dash_comb_probe_20260707/dash_comb_probe_n600_20260707.json` (gitignored,
+rebuildable via the committed tool). Pointer 0.19110 UNMOVED (means: mechanism measurement;
+a lower row needs the in-training arm + byte-close + exact eval).
