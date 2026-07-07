@@ -9606,3 +9606,48 @@ resolution appended (prior narrower theories preserved). Residual: flag is opt-i
 mandate (GAP-5 extension) + `tac.subagent_contract` fold-in are named follow-ons. Memo:
 `.omx/research/serializer_absorption_classfix_base_sha_20260707.md`. Pointer 0.19110 UNMOVED
 (means/apparatus).
+
+## FEED-08a (2026-07-07) — σ_ij LENGTH-WEIGHT LEVER BUILT: the FEED-07x junction fit's consumption path CLOSED [$0 CPU, advisory; pointer 0.19110 UNMOVED — build/means]
+
+**BUILD-WAVE-2 agent F. The FEED-07x TrainerSupportGap (`--length-sigma-matrix`) is now a REAL,
+DSL-held, duty-to-measure-registered lever; default all-ones BYTE-IDENTICAL (bitwise-asserted).**
+
+**Faithfulness finding (stronger than proposed):** the trainer's Chan-Vese length term lives on
+the DECISION MARGIN m = φ_top1−φ_top2 and localizes at {m=0} via δ_eps(m)·|∇m| — at each pixel
+the interface present is exactly the (argmax-top1, argmax-top2) class PAIR, so σ_ij is
+FAITHFULLY expressible as a per-pixel gather σ[top1,top2] (mx.argsort + mx.take; a
+θ-piecewise-constant discrete weight, same class as spike-reweight). NO per-class projection /
+approximation was needed — the per-interface decomposition the FEED-07x memo worried the loss
+might lack is exactly what the margin formulation already has. The eikonal term is untouched
+(SDF geometry is per-field, not per-interface tension).
+
+**Landed:** (1) trainer `--length-sigma-matrix {all-ones|fitted-20260707|path.json}` —
+"all-ones" (default) resolves to None ⇒ the PRE-EXISTING unweighted branch (byte-identical BY
+CODE PATH; explicit all-ones matrix additionally proven BITWISE identical on MLX CPU, 3
+seeds/shapes); fail-closed startup validation (shape/symmetry/positivity); threaded through
+BOTH the serial `total_loss_fn` AND the micro-batch twin (keyword-binding wrapper into
+LeverConfig.eikonal_length); provenance recorded (config dict + startup regularizer-magnitude
+log now σ-aware). (2) canonical resolver `tac.boundary_math.length_sigma` — fitted-20260707
+preset = the FULL-precision 7 fitted values from the fit JSON (commit 3571e5b65; NaN-unobserved
+pairs = 1.0 null; geomean-1 gauge); accepts the fit tool's own JSON directly. (3) DSL
+`LengthSigma()` Lever factory (curriculum_dsl, exported; lever_registry auto-discovers) —
+default spec = the fitted TREATMENT; "all-ones" REFUSED (silent-no-op lever; the control arm is
+the lever's absence); malformed specs refused at factory time; window=0 semantics documented
+(the σ weighting is active whenever the length regularizer is — all stages, no epoch budget).
+(4) activation ledger: LengthSigma = never-fired ⇒ IN the costate duty-to-measure queue
+(verified live: 36 owed, LengthSigma present). (5) 22 tests (bitwise identity LOAD-BEARING ·
+preset exactness + equation cross-consistency · JSON round-trip incl. the real fit artifact ·
+all refusal paths · grad-flow); micro-batch/feed07b/telemetry/campaign/autoconfig regressions
+green (79+54).
+
+**NO frozen-ckpt probe exists for this lever** — the length term shapes GRADIENTS during
+training, not renders; there is nothing to evaluate on a frozen checkpoint. The σ-weighted vs
+uniform A/B (n600 through R, junction-local d_seg attribution) is the registered OWED anchor =
+the equation's reactivation criterion = the duty-to-measure entry. Training launches are
+operator-GO-gated; none launched.
+
+**Triality:** DAG=this row · DSL=`LengthSigma` Lever factory (flag REAL, never-invent-flags
+verified via trainer argparse) · equations=`junction_young_angle_sigma_fit_v1` REFINED
+(canonical_consumers now name the trainer flag + resolver + DSL factory; domain lever text
+PROPOSED→LANDED; registry refinement row appended, same equation_id). Memo:
+`.omx/research/length_sigma_lever_build_20260707.md`. Pointer 0.19110 UNMOVED (build/means).

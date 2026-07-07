@@ -161,9 +161,11 @@ def build_junction_young_angle_sigma_fit_v1() -> CanonicalEquation:
         ),
         domain_of_validity={
             "vehicle": ["softmax_of_sdf_levelset_witness"],
-            "lever": ("PROPOSED --length-sigma-matrix (TrainerSupportGap; future holder = the DSL "
-                      "Regularizer('--length-weight') Lever factory extended with a sigma_matrix "
-                      "arg, default all-ones = byte-identical OFF)"),
+            "lever": ("LANDED 2026-07-07: --length-sigma-matrix (trainer flag, default all-ones = "
+                      "byte-identical code path; faithful per-interface gather sigma[top1,top2] on "
+                      "the decision-margin length term) held by the DSL LengthSigma Lever factory "
+                      "(tac.witness_dsl.curriculum_dsl; fitted-20260707 preset = this fit); "
+                      "resolver tac.boundary_math.length_sigma; A/B still the OWED anchor"),
             "measurement_axis": ["macOS-CPU advisory"],
             "note": ("sigma fitted on the FROZEN scorer's GT partition (target geometry), gauge "
                      "geometric-mean 1; 3 pairs unobserved (Lane-Movable, Movable-MyCar, "
@@ -179,7 +181,12 @@ def build_junction_young_angle_sigma_fit_v1() -> CanonicalEquation:
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
-        canonical_consumers=("tac.witness_dsl.curriculum_dsl",),
+        canonical_consumers=(
+            # (refined 2026-07-07, sigma lever landed) the consumption path is CLOSED:
+            "tac.witness_dsl.curriculum_dsl:LengthSigma",
+            "tac.boundary_math.length_sigma",
+            "experiments/train_levelset_witness_realized_through_R_mlx.py:--length-sigma-matrix",
+        ),
         canonical_producers=("tools/fit_junction_sigma_youngs_law.py",),
         provenance=build_provenance_for_predicted(
             model_id="junction_young_angle_sigma_fit.v1",
