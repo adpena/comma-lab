@@ -10,10 +10,19 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 - [ ] P1 independent positions (6 seats, anti-anchored, STAGGERED 2 waves of 3 for rate limits)
 - [ ] P2 **POSITIVE SYNTHESIS DRAFT — reordered per operator 2026-07-07 ("agents finding the
       obvious but not doing the positive work of proposing optimal")**: a CHIEF-DESIGNER pass
-      that DRAFTS THE OPTIMAL FULL STACK from all six positions + the compendium. Contract:
-      **every knob gets a VALUE** — derived (with the derivation), measured (with the anchor), or
-      defaulted-with-named-recess (an explicit interim value + the scheduled measurement that
-      revises it). "TBD" and "gated, no default" are FORBIDDEN in the draft. Output = the exact
+      that DRAFTS THE OPTIMAL FULL STACK from all six positions + the compendium. Contract
+      (REFINED per operator 2026-07-07 "a value is not enough … ramp up or down or self deriving
+      or dynamic or DE or fractional or partial"): **every knob gets a fully-specified CONTROL
+      LAW**, one of — (a) a CONSTANT; (b) a RAMP/ANNEAL with derived shape + endpoints + a
+      COMPLETION GUARANTEE (anti-M2: every anneal provably completes before its consumer fires,
+      or its truncation is event-safe — denominators bound to events, never to a fixed clock);
+      (c) a SELF-DERIVING/ADAPTIVE law (e.g. the DE-derived adaptive-ε #318/#320: the formula +
+      its clamps, not a number); (d) an EVENT-CONDITIONED dynamic (costate-driven predicate +
+      response, tested per requirement B); (e) a FRACTIONAL/PARTIAL application (per-class λ,
+      margin-gated support, partial weights — the gate law specified). Each law carries its
+      derivation (or anchor, or default-with-named-recess), its parameters pinned, and its
+      stability/completion argument. "TBD", "gated with no default", and a bare constant where
+      the physics demands a law are ALL forbidden in the draft. Output = the exact
       WitnessProgram + schedule + curriculum + costate config + rate plan + measurement plan,
       launchable as written. Proposing-optimal-with-tags is NOT a NO-FAKE violation — asserting
       it as MEASURED would be; the draft states its epistemic status per knob and pre-registers
@@ -177,3 +186,19 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   with receipt. BUDGET TENSION: mod32+band+ξ = 110-117 KB > 105 KB sub-0.15 headroom → the
   compress-half is NOT optional if band+pose+capacity all compose. Board: 5/6 seats done; S6 +
   20-store sweep in flight.
+- 2026-07-07T~22:4x CONTEXT SWEEP DONE (506a301bd; compendium 803 lines, all 20 stores). Top
+  unpinned items now in: (1) CORRECTION to my group-theory first-pass — §C permutation slack is
+  MEASURED NO (387 B was theoretical; best arm −8 B, most arms HURT +72/+251/+339 B) — the
+  provenance machine caught MY error this time; (2) per-group-grad-clip ON in mod32cap but ABSENT
+  in every stacked run = baseline confound for any stacked-vs-clean comparison; (3) 15 witness
+  equations sit ASSUMED_AWAITING_VERIFICATION (both anisotropic-basis laws, step-native, adaptive-
+  eps, Muon-finisher, S_R, chroma-at-annulus…) → reliance is PROVISIONAL per #363; (4) self-orient
+  state NOT persisted in ckpts (+4.3% reconstruction gap — affects every ckpt-probe incl. chain-A);
+  (5) never-reset-moments law + GradNorm-canary warning bound to costate ACT; (6) v_h=174
+  MEASURED-OPTIMAL (lane-geometry closed); (7) durable-state files 3-8 weeks STALE (do not cite);
+  (8) serializer absorption recurred TODAY — crucible committers must use --base-content-sha256
+  (56fc4e19 resolution); (9) FEED-08g overturn: τ-crossover FLAT-H = instrumented-blind; (10)
+  pose break-even error bars soft (0.018 borrowed-ancestor / 0.026 operator-stated) → §5B must
+  not treat as measured. Chain-A pursuit notified of item (4).
+- P2 chief-designer contract REFINED: knob → CONTROL LAW (constant | ramp+completion-guarantee |
+  self-deriving/DE | event-conditioned | fractional/partial), per operator.
