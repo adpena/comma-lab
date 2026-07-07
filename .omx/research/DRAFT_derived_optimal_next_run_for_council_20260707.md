@@ -715,3 +715,30 @@ the residual no other layer can carry:
    measurement shows the residual is real (the trained-generator finding stands).
 This section BINDS the symposium's §5A rate/mod-dim adjudication and composes §14 (schedule) +
 §15 (viscosity laws) + §16 (solve/architecture) + §17 (ground frame) into one design objective.
+
+## §19 ADDENDUM (2026-07-07, append-only) — training-flow τ-crossover MEASURED: dash contrast is τ-insensitive; fixed-τ control arm is a next-run design item
+
+Result (n600 × 4 checkpoints of the live mod32cap run, witness-alone through exact R + frozen
+CPU SegNet; pre-registered; `.omx/research/tau_crossover_trainflow_probe_20260707.md`;
+[macOS-CPU advisory] NON-PROMOTABLE): the amplitude-normalized homogenization index
+H = P(lane|dash-gap)/P(lane|dash-mark) is **FLAT at 0.666–0.677 across the entire reached
+τ-anneal (0.806→0.216)**, in aggregate and in every forward band (near bands frozen at H
+0.66/0.55 from CE-stage; δ_along ≤ 5.4 px bands fully homogenized H ≈ 0.9–1.0 at all τ).
+Only amplitude moves (r_mark 0.411→0.471 in lockstep with r_gap 0.274→0.317). VERDICT:
+SUPPORTS-R-Nyquist-bound + pinned-interface; NO τ-crossover in τ ∈ [0.216, 0.806].
+
+Consequences for the next-run design this draft is deriving:
+1. **Annealing τ deeper buys ZERO dash resolution** on this vehicle within the reached range —
+   τ_end should be chosen for its OTHER roles (margin sharpening, pixel-pitch floor), not for
+   dash recovery. The §15 viscosity-laws coupling rule stands, refined: within [0.216, 0.806]
+   there is no dash crossover to protect.
+2. **The dash budget must go to the corrector-class lever** — the in-training `n287_dash_comb`
+   arm (FEED-08c reactivation path; STILL never fired) — not to schedule shape. This composes
+   with §14/§18: dash repair is a LAYER/prior question, not a train-longer/anneal-deeper one.
+3. **Fixed-τ control arm (design item, operator-GO required):** identical seed/config to the
+   annealed base, τ FROZEN at 0.8 for the full schedule. Purpose: the definitive epoch-vs-τ
+   deconfound the single-trajectory probe cannot provide (pre-registered limit). Cheap read:
+   d_seg + H at matched epochs vs the base run's per-stage checkpoints. If H and d_seg match
+   the annealed run at matched epochs, the anneal's dash-role is empirically nil and τ can be
+   re-purposed (or simplified) in the derived schedule; if they diverge, the crossover lives
+   above 0.216 after all and the coupling rule re-arms with a measured τ_c.

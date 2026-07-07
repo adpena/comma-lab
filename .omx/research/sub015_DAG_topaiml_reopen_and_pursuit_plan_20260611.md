@@ -9755,3 +9755,46 @@ FAILS at ep650 (Muon was pending). Sub-findings as PRIORS: self-orient state rec
 **Triality:** DAG=this row · DSL=`TerminalSolve` support-gap text now has its measured verdict (no
 flag emitted; never-invent-flags upheld; DSL edit deferred to the curriculum_dsl-owning sibling per
 wave file-ownership) · equations=NO registration (negative-verdict rule; FEED-07t deferral stands).
+
+## FEED-08e (2026-07-07, τ-CROSSOVER TRAINFLOW agent) — TRAINING-FLOW τ-CROSSOVER MEASURED (n600 × 4 ckpts, the owed anchor of `dash_erasure_homogenization_v1`): dash contrast is τ-INSENSITIVE across the whole reached anneal — NO crossover in τ∈[0.216,0.806]; R-Nyquist branch CONFIRMED at range; corrector-class lever = the only live repair [$0 CPU, advisory; pointer 0.19110 UNMOVED — measurement/means]
+
+SIGNAL. The render-side τ-crossover probe (FEED-08c probe 2) was REFUTED-AS-IMPLEMENTED
+(amplitude confound); the training-flow leg stayed OWED. Operator: "Do the training-flow version
+of the probe or as much as you can and update the tracking." Measured it on the live #205
+mod32cap run's OWN per-stage checkpoints (each carrying its annealed `__cfg_softmax_temp`,
+cross-checked vs run.log telemetry: ep925–929 log 0.2157 = ema_mlx cfg 0.21569), witness-alone
+renders through the exact contest R + frozen CPU SegNet, ALL 600 pairs per checkpoint, with a
+pre-registered amplitude-NORMALIZED homogenization index H = P(lane|dash-GAP)/P(lane|dash-MARK)
+(mark/gap regions from the FEED-08c cached GT line fits + global ego-phase comb — deterministic,
+checkpoint-independent). Pre-registration WRITTEN BEFORE measurement:
+`.omx/research/tau_crossover_trainflow_probe_20260707.md`.
+
+DIAGNOSTIC (n600 each; [macOS-CPU advisory] NON-PROMOTABLE). (ep, τ, gap_FP, recall, d_seg, H):
+(299, 0.806, 0.000191, 0.633, 0.00459, 0.666) · (650, 0.310, 0.000135, 0.780, 0.00315, 0.673) ·
+(726, 0.217, 0.000124, 0.785, 0.00303, 0.672) · (925, 0.216, 0.000190, 0.749, 0.00387, 0.677).
+Positive control REGISTERED: ep650 reproduces the FEED-08c c1 arm exactly (0.00315/0.7795/
+0.000135). THE READING: **H is FLAT (0.666–0.677) across a 3.7× τ-anneal — in aggregate and in
+every forward band** (band0/1 δ_along 110/19.8 px: H 0.66/0.55 frozen from CE-stage; band2/3
+δ_along 5.4/1.9 px: H ≈ 1.0/0.9 = FULLY homogenized at all τ — the pure R/pixel-pitch bound).
+What moves is AMPLITUDE only: r_mark 0.411→0.471 with recall, r_gap in lockstep 0.274→0.317;
+raw gap_FP tracks amplitude (falls then RE-rises at the regressed ep925 mid-Muon EMA), which is
+exactly the confound H removes. ep925 live-EMA is worse than ep650-BEST on d_seg (0.00387 vs
+0.00315) — amplitude-level Muon-stage state, H unaffected (0.677).
+
+RESPONSE. VERDICT **SUPPORTS-R-Nyquist-bound (mid/far) + pinned-interface (near); NO τ-crossover
+anywhere in the reached range** — the τ-anneal buys ZERO dash resolution at any scale; the law's
+repair claim holds in strong form: the #287 corrector-class lever (IN-TRAINING `n287_dash_comb`)
+is the ONLY live dash-repair path (composes FEED-08c: render-composite NO-GO → in-training arm).
+τ_end coupling rule refined: within [0.216, 0.806] there is no crossover to couple against; a
+crossover outside that range is NOT excluded. HONEST LIMITS (named, not hidden): single
+trajectory (epoch/τ co-vary — less corrosive for a FLAT result, but a masked crossover is not
+excluded); definitive deconfound = FIXED-τ CONTROL ARM next run (council draft §19 design item);
+no final/ep1000 point (run still training; probe state resumable `--add-final`). Equations leg:
+EmpiricalAnchor `tau_crossover_trainflow_n600_20260707` appended to
+`dash_erasure_homogenization_v1` (status: owed/refuted-as-implemented → MEASURED-with-named-
+limits). Apparatus: `tools/tau_crossover_trainflow_probe_n600.py` (thin wrapper over the
+FEED-08c probe's Renderer/verdict path — no duplicated render code; chunked resumable
+foreground, 12 invocations, one exit-144 absorbed, peak RSS 5.7 GiB, live run READ-ONLY).
+Costate/duty: DashComb `measured` event #2 (mechanism level; the in-training arm has STILL
+never fired — stays on the duty queue). means ≠ ends: pointer 0.19110 moves only via
+`upstream/evaluate.py` on exact archive bytes.
