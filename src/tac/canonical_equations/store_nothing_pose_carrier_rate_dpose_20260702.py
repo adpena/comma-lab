@@ -174,6 +174,46 @@ def build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1() -> CanonicalEqu
             hardware_substrate="m5_max_cpu",
         ),
     )
+    anchor_coder = EmpiricalAnchor(
+        anchor_id="xi_spline_residual_real_coder_delta_res_wins_n600_20260707",
+        measurement_utc="2026-07-07T20:00:00Z",
+        inputs={"n_pairs": 600, "xi_source": "xi_from_pose_calibration(gt_poses, s_t=0.044, s_r=0, pitch=0)",
+                "q_levels": 4096,
+                "coder": "tac.boundary_math.xi_spline_residual_coder (spline_residual cid=2 + delta_res cid=3)",
+                "tool": "experiments/results/xi_residual_coder_20260707/measure_xi_residual_coder.py"},
+        predicted_output={"floor_from_firing": "2182 B (M=16 knots 224 B + order-0 residual entropy 1958 B)",
+                          "band": "real coder lands in [2182, 3200] B"},
+        empirical_output={
+            "best_spline_arm_bytes": 3120,  # M=48, rice; knot sweep M in {4..128}
+            "delta_res_no_spline_bytes": 2714,  # delta predictor + rice — the MEASURED WINNER
+            "baseline_delta_ar_bytes": 3200,
+            "saving_vs_delta_ar_bytes": 486,
+            "saving_vs_delta_ar_rate": 0.00032,
+            "residual_schemes_measured_bytes": {"varint": 5043, "zlib9": 2939, "rice": 2665},
+            "bit_identical_to_shipped_table": True,
+            "verdict": ("SPLINE PREDICTOR DEAD as a rate lever too: post-spline residual == plain "
+                        "q-delta innovation statistically (rice 2664 vs 2665 B — the xi innovation "
+                        "is WHITE ego jitter; knots pay 224-349 B for nothing). The REAL win is the "
+                        "ENTROPY STAGE: rice on the same deltas the delta_ar arithmetic coder spends "
+                        "3200 B on costs 2714 B total (delta_res mode, bit-identical, -486 B / "
+                        "~0.00032 rate). The 2182 B order-0 floor is mostly UNREALIZABLE "
+                        "model-overhead mirage: active residual channels have ~9-bit entropy with "
+                        "near-unique support (~530 distinct / 600 samples) so no transmitted-PMF "
+                        "coder approaches the empirical order-0 number."),
+        },
+        residual=0.0,
+        source_artifact="experiments/results/xi_residual_coder_20260707/xi_residual_coder_curve.json",
+        measurement_method="real_coded_bytes_bit_identity_asserted_numpy_fp64_cpu",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path="experiments/results/xi_residual_coder_20260707/xi_residual_coder_curve.json",
+            reactivation_criteria=("adopt coder='delta_res' in the shipped store-nothing payload "
+                                   "(byte-close + inflate inline of the decode half) to bank the "
+                                   "-486 B; or an adaptive/parametric-model entropy stage if the "
+                                   "~530 B gap to the (partly mirage) floor ever matters"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("STORE-NOTHING-but-xi pose carrier: keyframe-payload rate collapses to ~0 (byte-close "
@@ -203,7 +243,7 @@ def build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1() -> CanonicalEqu
         },
         units_in={"n_pairs": "count"},
         units_out={"store_nothing_rate_term": "contest_score_rate_term"},
-        empirical_anchors=(anchor_rate, anchor_dpose, anchor_bspline),
+        empirical_anchors=(anchor_rate, anchor_dpose, anchor_bspline, anchor_coder),
         predicted_vs_empirical_residual={
             "byte_close_bit_exact_n6_frozen_cpu_torch": 0.0,
             "n600_frozen_cpu_torch_posenet_classmean_proxy_preresidual": 0.0,

@@ -17,9 +17,17 @@ def test_equation_builds_and_validates() -> None:
     assert eq.equation_id == EQUATION_ID == eq.equation_id.lower()
     # 3rd anchor appended 2026-07-07: the se3_bspline first-firing rate-vs-error curve
     # (spline direct replacement DEAD; spline-predictive residual floor 2182 B vs 3200 B table).
-    assert len(eq.empirical_anchors) == 3
+    # 4th anchor appended 2026-07-07: the REAL residual coder — delta_res (no spline) wins at
+    # 2714 B vs 3200 B (-486 B, bit-identical); spline predictor MEASURED DEAD as a rate lever.
+    assert len(eq.empirical_anchors) == 4
     assert eq.empirical_anchors[2].anchor_id == (
         "se3_bspline_xi_rate_error_curve_first_firing_n600_20260707")
+    assert eq.empirical_anchors[3].anchor_id == (
+        "xi_spline_residual_real_coder_delta_res_wins_n600_20260707")
+    coder_emp = eq.empirical_anchors[3].empirical_output
+    assert coder_emp["delta_res_no_spline_bytes"] == 2714
+    assert coder_emp["bit_identical_to_shipped_table"] is True
+    assert coder_emp["delta_res_no_spline_bytes"] < coder_emp["baseline_delta_ar_bytes"]
     # non-orphan contract: producers AND consumers present
     assert eq.canonical_producers and eq.canonical_consumers
     assert "tools/levelset_byte_close_and_eval.py" in eq.canonical_producers
