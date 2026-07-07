@@ -17,7 +17,7 @@ edge tier is the second point after the 128 GB primary row (the family IS the pr
   available **1.94 GiB**, swap already 1.70 GiB, `pressure_level=1` (blackbox string: "critical").
   The 8 GB box idles HEAVY — the OS working set is compressible but real.
 - Repo `~/Projects/pact` @ **55526e9be** = primary HEAD at sync time (parity gate PASSED; fetched via
-  the new `primary` remote `ssh://adpena@100.81.85.28/Users/adpena/Projects/pact` — origin lacks ~280
+  the new `primary` remote `ssh://adpena@<primary-tailscale-ip>/Users/adpena/Projects/pact` — origin lacks ~280
   local commits and we do NOT push to origin; tertiary syncs FROM primary over Tailscale).
 - Env: uv 0.11.26, venv Python 3.13 matching primary — torch 2.12.1 / mlx 0.31.2 / numpy 1.26.4 /
   scipy 1.17.1 / timm 1.0.27 / smp 0.5.0 / einops / safetensors / psutil; `.venv` = 859 MB.
@@ -102,7 +102,7 @@ in-tree on tertiary via parity) tracked rows are true GiB — no ×0.9537 correc
 **Launch command template (staggered GO only — DO NOT run before the primary ep0 gate):**
 
 ```bash
-ssh adpena@100.65.24.39 'cd ~/Projects/pact && OUT=experiments/results/tertiary_edge_sweep_<ARM>_$(date -u +%Y%m%dT%H%M%SZ) && mkdir -p $OUT && \
+ssh adpena@<tertiary-tailscale-ip> 'cd ~/Projects/pact && OUT=experiments/results/tertiary_edge_sweep_<ARM>_$(date -u +%Y%m%dT%H%M%SZ) && mkdir -p $OUT && \
   TAC_MEM_PROBE=1 nohup .venv/bin/python tools/safe_run.py --rss-mb 4000 --timeout 14400 --label edge_<ARM> \
   .venv/bin/python experiments/train_levelset_witness_realized_through_R_mlx.py \
   --out-dir $OUT --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n24.npz --num-pairs 24 \
