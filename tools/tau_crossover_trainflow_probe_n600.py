@@ -62,10 +62,32 @@ DEFAULT_CKPTS = [
     ("ep726_MuonStart", "levelset_ckpt_stageMuonStart_ep726.npz"),
     ("ep650_tauBest", "levelset_witness_ema_BEST.npz"),
 ]
-FINAL_CANDIDATES = [
-    "levelset_witness_ema_FINAL.npz",
-    "levelset_ckpt_stageFinal_ep1000.npz",
-]
+# NOTE: there is no literal "stageFinal"/"ema_FINAL" checkpoint — the trainer
+# preserves the FINAL checkpoint under its final *stage* name (e.g.
+# levelset_ckpt_stageTau_muon_ep1000.npz), per the per-stage-checkpoint rule.
+# --add-final therefore DISCOVERS the real final checkpoint (highest-epoch
+# preserved stage ckpt; fallback = rolling EMA latest) rather than inventing a
+# filename. (Prior FINAL_CANDIDATES = ema_FINAL/stageFinal_ep1000 were names no
+# run ever emits → --add-final was a dead no-op. Fixed 2026-07-07.)
+
+
+def _final_ckpt_epoch(p: Path) -> int:
+    tail = p.stem.rsplit("_ep", 1)[-1]
+    return int(tail) if tail.isdigit() else -1
+
+
+def _resolve_final_ckpt(run_dir: Path) -> Path | None:
+    """The ACTUAL final checkpoint file in run_dir — highest-epoch preserved stage
+    ckpt (``levelset_ckpt_stage*_ep*.npz``), fallback = rolling EMA latest
+    (``levelset_witness_ema_mlx.npz``). Returns None ONLY when the run has
+    neither, which is a genuine anomaly the caller MUST surface loudly (never a
+    silent skip)."""
+    stage_ckpts = sorted(run_dir.glob("levelset_ckpt_stage*_ep*.npz"),
+                         key=_final_ckpt_epoch)
+    if stage_ckpts:
+        return stage_ckpts[-1]
+    ema = run_dir / "levelset_witness_ema_mlx.npz"
+    return ema if ema.exists() else None
 
 VBATCH = int(dcp.os.environ.get("TAUXOVER_VBATCH", "6"))
 SAVE_EVERY = int(dcp.os.environ.get("TAUXOVER_SAVE_EVERY", "24"))
@@ -110,10 +132,25 @@ def _snapshot_ckpts(include_final: bool) -> list[dict]:
     listed = {r["src"] for r in rows}
     wanted = [(lbl, name) for lbl, name in DEFAULT_CKPTS]
     if include_final:
-        for name in FINAL_CANDIDATES:
-            if (RUN_DIR / name).exists():
-                wanted.append(("final_" + name.replace(".npz", ""), name))
-                break
+        final_src = _resolve_final_ckpt(RUN_DIR)
+        already = {name for _, name in wanted}
+        if final_src is None:
+            # NO SILENT ERROR: neither a preserved stage ckpt nor a rolling EMA
+            # exists — say exactly why, loudly (main() also exits non-zero).
+            print(f"[add-final] ERROR: no final checkpoint in {RUN_DIR} — expected the "
+                  "highest-epoch levelset_ckpt_stage*_ep*.npz or "
+                  "levelset_witness_ema_mlx.npz. Run incomplete or RUN_DIR wrong; the "
+                  "fifth point cannot be added.", flush=True)
+        elif final_src.name in already:
+            print(f"[add-final] final checkpoint {final_src.name} already coincides with "
+                  "a measured point (the rolling EMA IS the final) — no distinct fifth "
+                  "point to add.", flush=True)
+        else:
+            ep = _final_ckpt_epoch(final_src)
+            label = f"final_ep{ep}" if ep >= 0 else "final_emaLatest"
+            wanted.append((label, final_src.name))
+            print(f"[add-final] final checkpoint discovered: {final_src.name} -> {label} "
+                  f"(ep{ep})", flush=True)
     for label, name in wanted:
         src = RUN_DIR / name
         if str(src) in listed:
@@ -150,6 +187,17 @@ def main():
     t0 = time.time()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     ck_rows = _snapshot_ckpts(args.add_final)
+    # World-class DX: --add-final must not silently look like success. If it was
+    # requested but produced no distinct final row AND the final is genuinely
+    # absent (not merely coincident with an existing point), exit non-zero.
+    if args.add_final and not any(str(r["label"]).startswith("final") for r in ck_rows):
+        if _resolve_final_ckpt(RUN_DIR) is None:
+            print("[add-final] FAILED: the fifth (final) point was requested but no final "
+                  "checkpoint exists in the run dir (see ERROR above). Exiting rc=4 so this "
+                  "is never mistaken for success.", flush=True)
+            sys.exit(4)
+        print("[add-final] note: the final checkpoint coincides with an already-measured "
+              "point — this is legitimate (rolling EMA == final); 4 rows stand.", flush=True)
     labels = [r["label"] for r in ck_rows]
 
     seg = dcp.load_real_segnet("cpu")
