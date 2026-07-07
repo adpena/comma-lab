@@ -9511,3 +9511,21 @@ the imminent measured rows).
 **(B) power-law exit (hunt §4 "fit owed" — now run):** long900 (19 pts) prefers **power law by ΔAIC +45.4** (α=0.51 [0.053,0.554]); the exponential fit's asymptote 0.002464 was **BROKEN by the measured trajectory** (0.002017@ep900, 22% below the exp floor) — the quantified "exp detectors fire early / meat left on the bone". mod32cap early windows exponential-preferred (CE ΔAIC −20.4, tau −46.9) = §4's regime split, measured. Pre-registered α_lane<α_road: **UNRESOLVED APPARATUS GAP** (no run logs per-class d_seg trajectories; duty-to-measure = per-class d_seg verdict rows, score-neutral ⇒ default-ON). Exit rule callable `tac.witness_control.powerlaw_exit:powerlaw_meat_exit` (per-class in → {exhausted, remaining_meat_estimate, alpha, ci} out; fail-safe: unfittable ⇒ NOT exhausted) + REQUIRED costate wiring landed: `producer_bridge._powerlaw_exit_signal` (5th SENSE producer, fail-open, mirrors _harness_failure_signal). ExitEvent binding: future `criterion="powerlaw_meat"` = gap-kind like marginal_dseg_floor (TrainerSupportGap note in memo; curriculum_dsl NOT touched — sibling-owned).
 
 **Triality:** DAG=this row · DSL=2 named TrainerSupportGaps + 1 telemetry gap, no invented flags · equations=`junction_young_angle_sigma_fit_v1` + `weak_kam_powerlaw_tail_exit_v1` REGISTERED with measured anchors (`tac.canonical_equations.junction_young_sigma_and_powerlaw_exit_20260707`). Memo: `.omx/research/solver_pack_junction_sigma_powerlaw_20260707.md`. Tests: 10 (powerlaw_exit) + 11 (producer_bridge, extended). Consumers: council draft §15 treatment-arm ranking + the costate DECIDE queue.
+
+## FEED-07y (2026-07-07) — telemetry enhancement (operator: "enhance all necessary telemetry and observability now")
+
+Closes the two NAMED observability gaps, default-ON per the orphaned-signal law (score-neutral
+read-only): (1) **PER-CLASS d_seg per verdict row** — `tac.witness_control.perclass_verdict`
+(`per_class_flip_stats` + `per_class_dseg_fields`; NO-FAKE self-check: sum(flips)/sum(pixels) ==
+total d_seg, tested) wired into the trainer's `_verdict_v` annulus branch — reuses the SAME
+realized argmax forward (zero extra scorer cost); row fields `d_seg_by_class` +
+`flip_share_by_class` (canonical class order, never luma-sort). Un-starves: α_lane<α_road
+weak-KAM check (the §15 agent's measured apparatus gap), powerlaw_meat_exit per-class input,
+#315 per-class λ sensors, §14 per-class exit criteria. (2) **CONTINUOUS MEMORY TELEMETRY (#329)**
+— `memory_telemetry_fields()` (psutil rss/sys-avail + mx active/cache/peak, fail-open) on EVERY
+verdict row → the live RSS curve becomes data (leak-vs-plateau decidable without ps snapshots).
+Both observability-only: popped before history/result.json (mirrors the annulus pattern),
+try/except so telemetry can NEVER crash the verdict; the sealed score path byte-identical by
+construction. Applies from the NEXT process (islands arm / any resume) — the live #205 process
+already holds its imported code. 9 new tests; consumers read rows by key (additive-safe).
+Pointer 0.19110 UNMOVED (apparatus/means).

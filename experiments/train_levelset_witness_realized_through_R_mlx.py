@@ -593,6 +593,8 @@ def _build_resume_state_arrays(
     # byte-closed). hosc_beta_end None -> -1.0 sentinel (matches the current-arg encoding in the guard).
     out["__cfg_lane_render_band"] = np.asarray(int(bool(getattr(args, "lane_render_band", False))))
     out["__cfg_lane_band_start_epoch"] = np.asarray(int(getattr(args, "lane_band_start_epoch", 300)))
+    # #287 dash comb: render-only lever (changes the band coverage, no param KEYS) -> persist for F2.
+    out["__cfg_lane_band_dash_comb"] = np.asarray(int(bool(getattr(args, "lane_band_dash_comb", False))))
     out["__cfg_persistence_loss_weight"] = np.asarray(float(getattr(args, "persistence_loss_weight", 0.0)))
     out["__cfg_amplify_weight"] = np.asarray(float(getattr(args, "amplify_weight", 0.0)))
     # BUILD #300: the seed-absorption levers are loss/render-only (trajectory-affecting, no param KEYS) ->
@@ -737,6 +739,8 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     checks: list[tuple[str, object, bool]] = [
         ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
         ("__cfg_lane_render_band", cur_band, False),
+        # #287 dash comb (render-only, trajectory-affecting when the band is on, no param keys).
+        ("__cfg_lane_band_dash_comb", int(bool(getattr(args, "lane_band_dash_comb", False))), False),
         ("__cfg_persistence_loss_weight", float(getattr(args, "persistence_loss_weight", 0.0)), True),
         ("__cfg_amplify_weight", float(getattr(args, "amplify_weight", 0.0)), True),
         # BUILD #300 seed-absorption levers (material, trajectory-affecting).
@@ -2576,7 +2580,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _aa_fine_dir_full: list = [None] * P      # full mode: per-pair fine dir-feats (mx), rebuilt @ reorient
     _aa_fine_lru: dict = {}                    # batch mode: bounded FIFO cache of per-pair fine dir-feats
 
+    # ── GROUND-FRAME CHART (#194 / §17.1) placeholders: _gfc_chart is BUILT below (after the
+    # render_aa block, where the fail-closed combination guards can see render_aa); the closure
+    # here late-binds it. use_gfc=False (the default) leaves every path byte-identical.
+    use_gfc = bool(getattr(args, "ground_frame_chart", False))
+    _gfc_chart = None
+
     def _feats_np_for_pair(pi: int) -> np.ndarray:
+        if use_gfc:
+            # per-pair chart coords -> curvelet feats, recomputed on demand (numpy side; the MLX
+            # side caches ONCE via cf_mx_cache — the chart is static, unlike the reorient loop).
+            return curvelet_feats(_gfc_chart.coords_for_pair_numpy(coords_np, pi), B).astype(np.float32)
         if not use_self_orient:
             return curv_feats_np
         return np.concatenate([curv_feats_np, dir_feats_per_pair[pi]], axis=-1).astype(np.float32)
@@ -2710,6 +2724,48 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "self_orient_fine_mode": (_aa_fine_mode if use_self_orient else "n/a"),
                           "note": "separate fine-grid render feats; base-grid eikonal/sdf unaffected"}), flush=True)
     coord_feats_mx = mx.array(curv_feats_np)
+
+    # ── GROUND-FRAME CHART (#194 / §17.1) build — tac.boundary_math.ground_frame_chart. ──
+    # v0 fail-closed combinations (coordinate-system consistency; NO-FAKE: refuse a silent hybrid):
+    #   * --self-orient: the directional feats are computed at FRAME coords (EDT tangent on the
+    #     render grid); concatenating them to GROUND-chart curvelet feats mixes two coordinate
+    #     systems in one feature vector — a designable composition (reorient in chart coords), not v0.
+    #   * --render-aa != none: ipe attenuates the SHARED curv_feats_np (the chart recomputes fresh,
+    #     un-attenuated feats) and supersample builds a SHARED un-charted fine grid.
+    #   * --structured-init with --gfc-ref-pair != 0: the pretrain uses pair-0 feats; chart[ref] is
+    #     the exact-identity chart, so ref must be 0 for the pretrain grid to match the static core.
+    # When ON: one chart per pair from the STORED pose table (dual-use with the pose sidecar —
+    # rule-118 FREE, 0 new archive bytes); MLX per-pair feats cached ONCE (static; no reorient churn).
+    if use_gfc:
+        if use_self_orient:
+            raise ValueError(
+                "--ground-frame-chart + --self-orient is fail-closed (v0): the self-orient "
+                "directional feats live in FRAME coords while the chart moves the curvelet feats to "
+                "GROUND coords — one feature vector, two coordinate systems. The composition "
+                "(reorient computed in chart coords) is designed but unbuilt; run the chart arm "
+                "with --no-self-orient.")
+        if render_aa != "none":
+            raise ValueError(
+                "--ground-frame-chart + --render-aa != none is fail-closed (v0): ipe attenuates the "
+                "shared curvelet feats (the chart recomputes per-pair, un-attenuated) and supersample "
+                "uses a shared un-charted fine grid. Run the chart arm with --render-aa none.")
+        if bool(args.structured_init) and int(args.gfc_ref_pair) != 0:
+            raise ValueError(
+                "--ground-frame-chart + --structured-init requires --gfc-ref-pair 0 (the pretrain "
+                "uses pair-0 feats; only chart[ref] is the exact identity).")
+        from tac.boundary_math.ground_frame_chart import ChartCalibration, GroundFrameChart
+        _gfc_chart = GroundFrameChart.build(
+            np.stack([np.asarray(gt.gt_poses[pi], np.float64) for pi in range(P)]),
+            ref_pair=int(args.gfc_ref_pair),
+            calib=ChartCalibration(s_t=float(args.gfc_s_t), s_r=float(args.gfc_s_r),
+                                   pitch=float(args.gfc_pitch)),
+            grid_hw=(render_h, render_w),
+        )
+        print(json.dumps({"stage": "ground_frame_chart", "ref_pair": int(args.gfc_ref_pair),
+                          "regime": "ground", "s_t": float(args.gfc_s_t), "s_r": float(args.gfc_s_r),
+                          "pitch": float(args.gfc_pitch), "n_pairs": P,
+                          "note": "#194/§17.1 witness input chart pre-composition (FEED-ll math; "
+                          "rule-118 FREE from the stored pose table; STRUCTURAL from ep0)"}), flush=True)
 
     # (DIAGNOSED FIX) natural per-class palette = mean GT RGB per L* class (the transfer-probe's
     # winning ingredient; logit space). Anchors the learned palette inside SegNet's distribution so
@@ -3168,12 +3224,39 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             make_lane_band_compose_fn,
         )
         _lane_priors: dict[int, Any] = {}
-        for _pi in range(P):
-            _prior = build_analytic_lane_band_prior(
-                np.asarray(gt.lstars[_pi]), lane_cls=1, softness=float(args.lane_band_softness),
-                dash_gate=True, dash_forward_max_m=float(args.lane_band_dash_forward_max_m))
-            _lane_priors[2 * _pi + 1] = _prior   # frame1 (the SegNet-scored frame)
-            _lane_priors[2 * _pi] = _prior       # frame0 seg-free; keep symmetric
+        if bool(getattr(args, "lane_band_dash_comb", False)):
+            # #287 EGO-PHASE DASH COMB (dash_erasure_homogenization_v1 corrector): the per-pair
+            # FITTED dash phase (1 float/line/pair) is replaced by the world-static comb — global
+            # (period, duty, ego-scale) + per-slot world phase, transported to each pair by the
+            # cumulative ego forward distance from gt_poses[:,0] (phase-from-ξ, #215). Render-time
+            # only; the comb MODULATES the band coverage, geometry/appearance/margin unchanged.
+            from tac.boundary_math.dash_comb import build_combed_lane_band_priors
+            _comb_priors, _comb_fit = build_combed_lane_band_priors(
+                np.stack([np.asarray(gt.lstars[_pi]) for _pi in range(P)]),
+                np.stack([np.asarray(gt.gt_poses[_pi], np.float64) for _pi in range(P)]),
+                lane_cls=1, softness=float(args.lane_band_softness),
+                dash_forward_max_m=float(args.lane_band_dash_forward_max_m),
+                comb_softness_m=float(args.lane_band_comb_softness_m))
+            for _pi in range(P):
+                _lane_priors[2 * _pi + 1] = _comb_priors[_pi]  # frame1 (SegNet-scored)
+                _lane_priors[2 * _pi] = _comb_priors[_pi]      # frame0 seg-free; symmetric
+            print(json.dumps({"stage": "lane_band_dash_comb", "n_pairs": P,
+                              "period_m": round(float(_comb_fit.period_m), 4),
+                              "duty": round(float(_comb_fit.duty), 4),
+                              "ego_scale": round(float(_comb_fit.scale), 6),
+                              "mean_concentration": round(float(_comb_fit.mean_concentration), 4),
+                              "concentration_at_zero_scale": round(float(_comb_fit.concentration_at_zero_scale), 4),
+                              "n_dashed_fits": int(_comb_fit.n_dashed_fits),
+                              "note": "#287 ego-phase comb replaces per-pair fitted dash phase; "
+                              "concentration MEASURES the phase-from-xi transport quality; advisory; "
+                              "pointer 0.19110 UNMOVED"}), flush=True)
+        else:
+            for _pi in range(P):
+                _prior = build_analytic_lane_band_prior(
+                    np.asarray(gt.lstars[_pi]), lane_cls=1, softness=float(args.lane_band_softness),
+                    dash_gate=True, dash_forward_max_m=float(args.lane_band_dash_forward_max_m))
+                _lane_priors[2 * _pi + 1] = _prior   # frame1 (the SegNet-scored frame)
+                _lane_priors[2 * _pi] = _prior       # frame0 seg-free; keep symmetric
         _u_src = str(args.lane_band_uncertainty_source)
         if _u_src == "witness":
             def _band_margin_provider(code_idx):
@@ -4663,6 +4746,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     chunk=int(args.verdict_batch))
             except Exception as exc:  # telemetry MUST NEVER crash or corrupt the verdict path.
                 v["annulus"] = {"error": f"{type(exc).__name__}: {exc}"}
+            # (2026-07-07 telemetry enhancement) PER-CLASS d_seg decomposition from the SAME realized
+            # maps (zero extra scorer cost). Closes the §15 apparatus gap: per-class trajectories for
+            # the α_lane<α_road weak-KAM check + powerlaw_meat_exit + per-class λ sensors. Score-
+            # neutral OBSERVABILITY-ONLY (popped before history in _emit_verdict_row); fail-open.
+            try:
+                if _realized is not None:
+                    from tac.witness_control.perclass_verdict import (
+                        per_class_dseg_fields, per_class_flip_stats)
+                    _fl, _px = per_class_flip_stats(_realized, lstars_v)
+                    v["per_class"] = per_class_dseg_fields(_fl, _px)
+            except Exception as exc:
+                v["per_class"] = {"error": f"{type(exc).__name__}: {exc}"}
         return v
 
     def realized_verdict() -> dict[str, float]:
@@ -4821,6 +4916,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (SENSE) pop the annulus metrics BEFORE the float-only ``row`` spread below (else round()
         # would hit a dict). None unless --annulus-telemetry is ON => byte-identical when absent.
         _annulus_m = v.pop("annulus", None) if isinstance(v, dict) else None
+        # (2026-07-07) pop the per-class decomposition the same way (dict of lists — must not hit
+        # the float spread, and must NOT reach history/result.json: observability-only).
+        _per_class = v.pop("per_class", None) if isinstance(v, dict) else None
         blob = quantize_levelset_blob(ema_np)
         s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
         # (C6) LIVENESS STAMP captured at SCHEDULE time (the async worker runs later, off a snapshot;
@@ -4837,6 +4935,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                    # dashboard otherwise self-observes). Purely observational; never read back
                    # into training/resume/parity, not appended to history/result.json.
                    "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
+            # (2026-07-07) ADDITIVE observability fields — per-class d_seg (when the annulus branch
+            # collected realized maps) + process/MLX memory (#329, every verdict row). Both fail-open
+            # + row-only (never history/result.json); consumers read rows by key => additive-safe.
+            if isinstance(_per_class, dict) and "error" not in _per_class:
+                row["d_seg_by_class"] = _per_class.get("d_seg_by_class")
+                row["flip_share_by_class"] = _per_class.get("flip_share_by_class")
+            try:
+                from tac.witness_control.perclass_verdict import memory_telemetry_fields
+                row.update(memory_telemetry_fields())
+            except Exception:
+                pass
             if _lv is not None:
                 _fzn = (int(_lv.get("ep_tot", 0)) > 0 and int(_lv.get("acc", 0)) == 0)
                 row["accepted_frac"] = round(float(_lv.get("frac", 1.0)), 4)
@@ -5064,7 +5173,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             cf_mx_cache, P, _feats_np_for_pair, mx_array=mx.array, mx_eval=mx.eval)
 
     def _cf_mx(pi: int):
-        return coord_feats_mx if not use_self_orient else cf_mx_cache[pi]
+        # per-pair cache path when self-orient OR the ground-frame chart (#194) is on; the shared
+        # tensor otherwise (byte-identical default).
+        return coord_feats_mx if not (use_self_orient or use_gfc) else cf_mx_cache[pi]
 
     # #224 (Wave B) FINE self-orient dir-feats (AA-supersample + --self-orient). Recompute from the
     # snapshotted base argmax: NN-upsample to the ss*grid -> fine EDT-tangent -> directional Fourier
@@ -5109,7 +5220,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _aa_fine_lru.pop(next(iter(_aa_fine_lru)))
         return mx.concatenate([coord_feats_fine_mx, df], axis=-1)
 
-    if use_self_orient:
+    if use_self_orient or use_gfc:
+        # self-orient: rebuilt at every reorient. ground-frame chart (#194): built ONCE (static —
+        # the chart is a fixed function of the stored pose table; no epoch churn).
         _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
         _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
         if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
@@ -7377,6 +7490,28 @@ def main(argv: list[str] | None = None) -> int:
                     "d_seg A/B. DEFAULT OFF = the bit-faithful numpy reorient (current behavior).")
     ap.add_argument("--freq-across", type=float, default=32.0, help="self-orient: HIGH freq across the edge (normal).")
     ap.add_argument("--freq-along", type=float, default=4.0, help="self-orient: LOW freq along the edge (tangent).")
+    # ── GROUND-FRAME CHART (#194 / council draft §17.1; tac.boundary_math.ground_frame_chart) ──
+    # Define the witness field ONCE in the reference pair's chart; per-pair evaluation PRE-COMPOSES
+    # the input coords with the ξ-homography (chart change on INPUT coords, NOT a pixel warp; still
+    # trained through R+scorer => does NOT inherit the FEED-ll #190 deterministic-render floor).
+    # STRUCTURAL lever: active from ep0 by construction when on. v0 = single GROUND-plane chart
+    # (per-class stratified routing = screw_blend's future consumer). DEFAULT OFF = byte-identical.
+    ap.add_argument("--ground-frame-chart", action=argparse.BooleanOptionalAction, default=False,
+                    help="(#194/§17.1) evaluate the witness in the GROUND frame: pre-compose per-pair "
+                    "input coords with the cumulative ξ-homography (FEED-ll math, chart change only; "
+                    "rule-118 FREE — derived from the stored pose table, 0 new archive bytes). v0 is "
+                    "GROUND-plane-only and fail-closes with --self-orient / --render-aa != none "
+                    "(coordinate-system consistency; see the wire-in block). DEFAULT OFF.")
+    ap.add_argument("--gfc-ref-pair", type=int, default=0,
+                    help="ground-frame-chart reference pair (the canonical chart; chart[ref]==identity "
+                    "exactly). Must be 0 when --structured-init is on (the pretrain uses pair-0 feats).")
+    ap.add_argument("--gfc-s-t", type=float, default=-0.003224707899359239,
+                    help="ground-frame-chart translation scale s_t (default: the MEASURED FEED-ll "
+                    "d_seg-optimal reach calibration, experiments/results/screw_reach/reach_n96.json).")
+    ap.add_argument("--gfc-s-r", type=float, default=0.0,
+                    help="ground-frame-chart rotation scale s_r (FEED-ll fit default 0.0).")
+    ap.add_argument("--gfc-pitch", type=float, default=-0.01,
+                    help="ground-frame-chart ground-plane pitch (rad; FEED-ll fit default -0.01).")
     # ACTIVATION
     # (config-review #3) HOSC is the ONLY descent evidence (probe 0.0066; A/B 0.221 hosc vs 0.265
     # wire). WIRE was a paper-default guess; default HOSC, run wire as a sweep arm.
@@ -8023,6 +8158,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lane-band-eps", type=float, default=0.35, help="#224 uncertainty ramp width.")
     ap.add_argument("--lane-band-weight", type=float, default=1.0, help="#224 band strength (curriculum ramp).")
     ap.add_argument("--lane-band-start-epoch", type=int, default=300, help="#224 engage the band at this epoch.")
+    ap.add_argument("--lane-band-dash-comb", action=argparse.BooleanOptionalAction, default=False,
+                    help="#287: replace the band's per-pair FITTED dash phase with the EGO-PHASE dash "
+                    "comb (tac.boundary_math.dash_comb) — global (period, duty, ego-scale) + per-slot "
+                    "world phase transported by cumulative ego forward distance (the "
+                    "dash_erasure_homogenization_v1 cell-problem corrector, rule-118 FREE at decode). "
+                    "Only meaningful with --lane-render-band. DEFAULT OFF => byte-identical.")
+    ap.add_argument("--lane-band-comb-softness-m", type=float, default=0.3,
+                    help="#287 comb AA ramp width (ground meters) on the dash on/off edge; 0 = hard gate.")
     # -------- (3) warp-real-luma frame0 pose carrier (warp_real_luma_frame0; PoseGauge.WARP_REAL_LUMA) --
     ap.add_argument("--pose-carrier", action=argparse.BooleanOptionalAction, default=False,
                     help="#224: render frame0 THROUGH the SE(3) ground-homography warp of the REAL "
