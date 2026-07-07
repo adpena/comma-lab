@@ -9231,3 +9231,15 @@ Triality: DAG (this FEED) ↔ DSL leg = THIS LANDING (`witness_dsl.schedule_read
 the package; the 2026-07-06 costate-digest FEED's "schedule read-back soft-imported for when it
 lands" now lands) ↔ equations leg N/A (observability apparatus; no new measured law). Authority:
 score-neutral read-only observability. **HARD GATE: pointer 0.19110 UNMOVED (apparatus/means).**
+
+## FEED-07q (2026-07-07) — drift-detector CONSUMER LEG: DSL evolution cannot outgrow the generic surfaces silently
+
+Per the operator standing requirement ("As the DSL evolves, update the costate controller and dashboard
+accordingly"): `tools/triality_drift_detector.py` gains an ADD-ONLY consumer leg — a window that GROWS the
+DSL's public surface (new Uppercase factory `def` / public `class` / `__init__` export, diff-based) now
+nudges unless the same window also touched a consumer surface (schedule_readback / dashboard_server /
+costate_digest / producer_bridge) or a commit asserts generic-introspection coverage via `[consumers-generic]`.
+Advisory + fail-open at three layers (safe wrapper, git-call try, last-resort); existing legs' behavior
+unchanged (42/42 tests, 10 new). Triality: DAG = this FEED; DSL leg N/A (no lever/config change — this is
+the apparatus that GUARDS the DSL leg); equations leg N/A (no measured law). Sibling half: describe()/registry
+generic rendering. **Pointer 0.19110 UNMOVED (apparatus/means).**

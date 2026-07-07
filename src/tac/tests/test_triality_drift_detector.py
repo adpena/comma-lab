@@ -311,3 +311,114 @@ def test_build_reason_names_the_missing_leg():
     assert "canonical equations" in r and "src/tac/canonical_equations" in r
     r2 = D.build_reason(["new lever wired"], ["trainer.py"])
     assert "src/tac/witness_dsl" in r2
+
+
+# --- CONSUMER LEG (2026-07-07: DSL public-surface growth must reach the consumers) ---
+_DSL_DIFF_PUBLIC_DEF = """\
+diff --git a/src/tac/witness_dsl/curriculum_dsl.py b/src/tac/witness_dsl/curriculum_dsl.py
+--- a/src/tac/witness_dsl/curriculum_dsl.py
++++ b/src/tac/witness_dsl/curriculum_dsl.py
+@@ -10,0 +11,3 @@
++def EikonalAnnealLever(strength: float) -> "Lever":
++    return Lever(name="eikonal_anneal", strength=strength)
++
+"""
+
+_DSL_DIFF_DOCSTRING_AND_PRIVATE = """\
+diff --git a/src/tac/witness_dsl/curriculum_dsl.py b/src/tac/witness_dsl/curriculum_dsl.py
+--- a/src/tac/witness_dsl/curriculum_dsl.py
++++ b/src/tac/witness_dsl/curriculum_dsl.py
+@@ -1,2 +1,4 @@
++    Reworded docstring line about levers and def conventions.
++def _private_helper(x):
++class _PrivateThing:
++    tau = 0.5  # tuned comment
+"""
+
+_DSL_DIFF_INIT_EXPORT = """\
+diff --git a/src/tac/witness_dsl/__init__.py b/src/tac/witness_dsl/__init__.py
+--- a/src/tac/witness_dsl/__init__.py
++++ b/src/tac/witness_dsl/__init__.py
+@@ -5,0 +6,1 @@
++from .schedule_readback import ScheduleReadback
+"""
+
+_DSL_FILES = ["src/tac/witness_dsl/curriculum_dsl.py"]
+_DSL_SUBJ = ["witness_dsl: add EikonalAnnealLever factory"]
+
+
+def test_consumer_leg_fires_on_new_public_def_without_consumer_touch():
+    # (1) new public DSL factory + no consumer surface touched → nudge fires.
+    assert D.consumer_leg_missing(_DSL_SUBJ, _DSL_FILES, _DSL_DIFF_PUBLIC_DEF) is True
+    assert D.consumer_leg_missing_safe(_DSL_SUBJ, _DSL_FILES, _DSL_DIFF_PUBLIC_DEF) is True
+
+
+def test_consumer_leg_silent_when_consumer_touched():
+    # (2) same growth, but a consumer surface was updated in the window → silent.
+    for consumer in ("src/tac/witness_dsl/schedule_readback.py",
+                     "tools/dashboard_server.py",
+                     "tools/costate_digest.py",
+                     "src/tac/witness_control/producer_bridge.py"):
+        files = _DSL_FILES + [consumer]
+        assert D.consumer_leg_missing(_DSL_SUBJ, files, _DSL_DIFF_PUBLIC_DEF) is False, consumer
+
+
+def test_consumer_leg_silent_with_consumers_generic_token():
+    # (3) [consumers-generic] = the author's assertion that describe()/registry
+    # introspection (generic rendering) covers the change → silent.
+    subj = ["witness_dsl: add EikonalAnnealLever factory [consumers-generic]"]
+    assert D.is_consumers_generic(subj)
+    assert D.consumer_leg_missing(subj, _DSL_FILES, _DSL_DIFF_PUBLIC_DEF) is False
+
+
+def test_consumer_leg_silent_on_non_public_change():
+    # (4) docstring / private def / private class / field tweak → NOT public surface → silent.
+    assert D.dsl_public_surface_added(_DSL_DIFF_DOCSTRING_AND_PRIVATE) is False
+    assert D.consumer_leg_missing(
+        _DSL_SUBJ, _DSL_FILES, _DSL_DIFF_DOCSTRING_AND_PRIVATE
+    ) is False
+
+
+def test_consumer_leg_fails_open_on_exception():
+    # (5) an exception inside the new leg (here: a non-string diff object whose
+    # .splitlines() access raises past the str-coercion via a hostile __str__) must
+    # fail open — the safe wrapper returns False, never raises.
+    class Hostile:
+        def __str__(self):
+            raise RuntimeError("boom")
+    assert D.consumer_leg_missing_safe(_DSL_SUBJ, _DSL_FILES, Hostile()) is False
+
+
+def test_consumer_leg_init_export_counts_as_public_surface():
+    # __init__ export growth is public surface (a rename/re-export changes the API).
+    files = ["src/tac/witness_dsl/__init__.py"]
+    assert D.dsl_public_surface_added(_DSL_DIFF_INIT_EXPORT) is True
+    assert D.consumer_leg_missing(["witness_dsl: re-export ScheduleReadback"],
+                                  files, _DSL_DIFF_INIT_EXPORT) is True
+
+
+def test_consumer_leg_respects_window_wide_opt_out():
+    # [no-triality]/[skip-drift] (the existing escape valve) also silences the new leg.
+    subj = ["witness_dsl: add factory scaffolding [no-triality]"]
+    assert D.consumer_leg_missing(subj, _DSL_FILES, _DSL_DIFF_PUBLIC_DEF) is False
+
+
+def test_consumer_leg_silent_when_dsl_not_touched():
+    # No witness_dsl file in the window → the leg never evaluates the diff.
+    assert D.consumer_leg_missing(_DSL_SUBJ, ["tools/x.py"], _DSL_DIFF_PUBLIC_DEF) is False
+
+
+def test_consumer_nudge_text_is_advisory_and_documents_token():
+    r = D.CONSUMER_NUDGE
+    assert "[consumers-generic]" in r
+    assert "describe()" in r
+    assert "costate" in r and "dashboard" in r
+    assert "Advisory" in r
+    assert len(r) < 1000  # one firm nudge, not an essay
+
+
+def test_existing_legs_unchanged_by_consumer_leg():
+    # The consumer leg is ADDITIVE: classify() (the existing legs) is untouched — a
+    # DSL-touching lever commit is still "clean" for classify() even when the new
+    # leg would nudge (main() ORs them; the pure surfaces stay independent).
+    assert D.classify(_DSL_SUBJ, _DSL_FILES) == "clean"

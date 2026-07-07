@@ -122,6 +122,29 @@ TRIALITY_PREFIXES = (
 
 SKIP_TOKEN = re.compile(r"\[(no-triality|skip-drift)\]", re.IGNORECASE)
 
+# --- CONSUMER LEG (2026-07-07; operator standing requirement "As the DSL evolves,
+# update the costate controller and dashboard accordingly") ---
+# When a window GROWS the DSL's PUBLIC surface (a new Uppercase factory / public
+# class / __init__ export), the generic describe()/registry introspection surfaces
+# usually absorb it — but a change that OUTGROWS them must not land silently. So:
+# public-DSL-surface growth nudges unless the same window ALSO touched a consumer
+# surface, or a commit asserts generic coverage via the [consumers-generic] token.
+DSL_CONSUMER_SURFACES = (
+    "src/tac/witness_dsl/schedule_readback.py",
+    "tools/dashboard_server.py",
+    "tools/costate_digest.py",
+    "src/tac/witness_control/producer_bridge.py",
+)
+CONSUMERS_GENERIC_TOKEN = re.compile(r"\[consumers-generic\]", re.IGNORECASE)
+# A PUBLIC surface addition on an added diff line (leading "+" already stripped):
+# an Uppercase-named def (the DSL's Lever/WitnessProgram factory convention) or a
+# public (non-underscore) class. Lowercase defs are ordinary helpers; _private
+# defs/classes and docstring/comment edits stay silent by construction.
+_DSL_PUBLIC_SURFACE = re.compile(r"^\s*(?:def\s+[A-Z]\w*\s*\(|class\s+[A-Za-z]\w*)")
+# An export change on an added line inside witness_dsl/__init__.py: a (re-)export
+# import or an __all__ mutation. Docstring-only __init__ edits stay silent.
+_DSL_INIT_EXPORT = re.compile(r"^\s*(?:from\s+\S+\s+import\b|import\s+\w|__all__)")
+
 
 # ----------------------------- pure logic (tested) -----------------------------
 def is_substantive(subjects: list[str]) -> bool:
@@ -154,6 +177,68 @@ def touched_dsl(files: list[str]) -> bool:
 def touched_equations(files: list[str]) -> bool:
     """True if the canonical-equations leg (the law) was updated this window."""
     return any((f or "").startswith("src/tac/canonical_equations") for f in files)
+
+
+def touched_dsl_consumer(files: list[str]) -> bool:
+    """True if any changed file is a known DSL-consumer surface (readback/dashboard/
+    costate-digest/producer-bridge)."""
+    return any((f or "") in DSL_CONSUMER_SURFACES for f in files)
+
+
+def is_consumers_generic(subjects: list[str]) -> bool:
+    """True if any commit in the window carries the [consumers-generic] token — the
+    author's assertion that the DSL change is fully covered by the describe()/registry
+    introspection surfaces (generic rendering), so no consumer edit is needed."""
+    return any(CONSUMERS_GENERIC_TOKEN.search(str(s or "")) for s in subjects)
+
+
+def dsl_public_surface_added(diff_text: str) -> bool:
+    """True if the unified diff ADDS public DSL surface under src/tac/witness_dsl/:
+    a new/renamed Uppercase factory ``def``, a public ``class``, or an ``__init__.py``
+    export change. Diff-based (added lines only), so docstring/comment/private edits
+    and pure deletions stay silent. Defensive ``str(... or "")`` — never raises on
+    odd input (mirrors the r5 coercion discipline)."""
+    current_path = ""
+    for line in str(diff_text or "").splitlines():
+        if line.startswith("+++ "):
+            current_path = line[4:].strip()
+            if current_path.startswith("b/"):
+                current_path = current_path[2:]
+            continue
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        if not current_path.startswith("src/tac/witness_dsl/"):
+            continue
+        added = line[1:]
+        if current_path.endswith("/__init__.py"):
+            if _DSL_INIT_EXPORT.search(added):
+                return True
+        elif _DSL_PUBLIC_SURFACE.search(added):
+            return True
+    return False
+
+
+def consumer_leg_missing(subjects: list[str], files: list[str], dsl_diff_text: str) -> bool:
+    """CONSUMER LEG: True iff this window GREW the DSL's public surface but touched
+    NO consumer surface and carries neither the [consumers-generic] assertion nor the
+    window-wide [no-triality]/[skip-drift] opt-out. Window granularity (same grain as
+    ``missing_legs``); advisory-nudge semantics, same voice as the other legs."""
+    if not touched_dsl(files):
+        return False
+    if is_opted_out(subjects) or is_consumers_generic(subjects):
+        return False
+    if touched_dsl_consumer(files):
+        return False
+    return dsl_public_surface_added(dsl_diff_text)
+
+
+def consumer_leg_missing_safe(subjects: list[str], files: list[str], dsl_diff_text: str) -> bool:
+    """Fail-open wrapper for the consumer leg: any exception in the NEW leg ⇒ False
+    (silent), so a bug here can never block a session or perturb the existing legs."""
+    try:
+        return consumer_leg_missing(subjects, files, dsl_diff_text)
+    except Exception:
+        return False
 
 
 def missing_legs(subjects: list[str], files: list[str]) -> list[str]:
@@ -204,6 +289,22 @@ _LEG_FIX = {
                   "finding/verdict/byte-close/exact-row must register or refine an "
                   "EmpiricalAnchor there, so it is never re-derived"),
 }
+
+
+CONSUMER_NUDGE = (
+    "Triality drift-detector (consumer leg): this turn ADDED/renamed PUBLIC DSL "
+    "surface (src/tac/witness_dsl/ — a new factory/class or an __init__ export) "
+    "without touching any consumer surface "
+    "(src/tac/witness_dsl/schedule_readback.py, tools/dashboard_server.py, "
+    "tools/costate_digest.py, src/tac/witness_control/producer_bridge.py). "
+    "Per the standing operator requirement ('As the DSL evolves, update the "
+    "costate controller and dashboard accordingly'), record the consumer leg "
+    "proactively: update the consumer(s) that render/consume this surface, OR — "
+    "if the change is fully covered by the describe()/registry introspection "
+    "surfaces (generic rendering) — add [consumers-generic] to the commit "
+    "message to assert that. Advisory: this NARROWS (does not eliminate) silent "
+    "DSL-evolution drift past the generic surfaces."
+)
 
 
 def build_reason(subjects: list[str], files: list[str] | None = None) -> str:
@@ -344,15 +445,37 @@ def main() -> None:
     except Exception:
         _advance_and_allow(root, head)  # can't read log → fail open, advance
 
-    if classify(subjects, files) == "drift":
+    # --- CONSUMER LEG (fail-open independently: a bug in the NEW leg can neither
+    # block the session nor perturb the existing legs' verdict) ---
+    consumer_missing = False
+    try:
+        if touched_dsl(files):
+            dsl_diff = _git(
+                root, "diff", f"{last_head}..{head}", "--", "src/tac/witness_dsl/"
+            ).stdout
+            consumer_missing = consumer_leg_missing_safe(subjects, files, dsl_diff)
+    except Exception:
+        consumer_missing = False
+
+    if classify(subjects, files) == "drift" or consumer_missing:
         # Persist last_block_head (do NOT advance last_head — so the fix/DAG-FEED commit lands
         # inside the next window's UNION and clears the drift on re-check; the last_block_head
         # backstop clears the block once head is unchanged, so it cannot loop).
         marker["last_block_head"] = head
         marker["updated_utc"] = _now()
         _write_marker(root, marker)
-        _log(root, f"BLOCK head={head[:9]} n={len(subjects)} miss={missing_legs(subjects, files)}")
-        print(json.dumps({"decision": "block", "reason": build_reason(subjects, files)}))
+        _log(
+            root,
+            f"BLOCK head={head[:9]} n={len(subjects)} miss={missing_legs(subjects, files)}"
+            f" consumer_leg={consumer_missing}",
+        )
+        if classify(subjects, files) == "drift":
+            reason = build_reason(subjects, files)
+            if consumer_missing:
+                reason = reason + " ALSO — " + CONSUMER_NUDGE
+        else:
+            reason = CONSUMER_NUDGE
+        print(json.dumps({"decision": "block", "reason": reason}))
         sys.exit(0)
 
     _log(root, f"allow(clean) head={head[:9]} n={len(subjects)}")
