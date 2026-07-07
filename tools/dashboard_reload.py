@@ -46,7 +46,7 @@ def _pids_on_port(port: int) -> list[int]:
     """uvicorn child pids running dashboard_server.py --port <port> (the OLD generation)."""
     out = subprocess.run(["ps", "-axww", "-o", "pid=,command="], capture_output=True, text=True).stdout
     pids = []
-    needle = f"dashboard_server.py"
+    needle = "dashboard_server.py"
     for line in out.splitlines():
         if needle in line and f"--port {port}" in line and "safe_run.py" not in line and "dashboard_reload.py" not in line:
             try:
@@ -79,8 +79,15 @@ def _healthz(port: int, timeout: float = 2.0) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--port", type=int, default=8790)
-    ap.add_argument("--tau", type=int, default=300)
-    ap.add_argument("--l7", type=int, default=600)
+    # Stage boundaries are DERIVED per-run by dashboard_server via the DSL schedule
+    # read-back (tac.witness_dsl.schedule_readback). None (the default) = do not pass
+    # the flag at all, so the server derives; an explicit value is an OVERRIDE only.
+    # The old hardcoded defaults (300/600) silently re-poisoned the derived stage map
+    # on every hot reload — the exact --tau/--l7 mislabel class the read-back fixed.
+    ap.add_argument("--tau", type=int, default=None,
+                    help="OVERRIDE only; default = server derives from the run's own config")
+    ap.add_argument("--l7", type=int, default=None,
+                    help="OVERRIDE only; default = server derives from the run's own config")
     ap.add_argument("--rss-mb", type=int, default=2500)
     ap.add_argument("--timeout-sec", type=float, default=1209600.0)
     ap.add_argument("--ready-timeout", type=float, default=30.0)
@@ -102,8 +109,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # 1) launch NEW (new-code) instance, detached + durable, on the SAME port (SO_REUSEPORT overlap).
     label = f"levelset_dash_server_{_utc()}"
+    stage_overrides = ""
+    if args.tau is not None:
+        stage_overrides += f"--tau {args.tau} "
+    if args.l7 is not None:
+        stage_overrides += f"--l7 {args.l7} "
     dash_cmd = (f".venv/bin/python tools/dashboard_server.py --port {args.port} "
-                f"--tau {args.tau} --l7 {args.l7} --reuse-port {args.extra}").strip()
+                f"{stage_overrides}--reuse-port {args.extra}").strip()
     launch = (f".venv/bin/python tools/safe_run.py --rss-mb {args.rss_mb} "
               f"--timeout {args.timeout_sec} --label {label} -- {dash_cmd}")
     with open(new_log, "wb") as lf:

@@ -445,9 +445,12 @@ def ensure_dashboard(port: int) -> bool:
         print(f"[launch-witness] dashboard :{port} is UP (healthz 200) — it AUTO-TRACKS "
               f"this run every refresh tick (no manual repoint/reload needed).")
         return True
+    # NOTE: no --tau/--l7 in the hint — the dashboard DERIVES stage boundaries from
+    # the run's own config via the DSL schedule read-back; hardcoded hint constants
+    # (the old "--tau 300 --l7 600") were the exact mislabel class that fix extincted.
     print(f"[launch-witness] WARNING: dashboard :{port} NOT serving (healthz={code}). "
           f"This run is launched + durable regardless; to observe it, start/reload the "
-          f"dashboard:\n    .venv/bin/python tools/dashboard_reload.py --port {port} --tau 300 --l7 600",
+          f"dashboard:\n    .venv/bin/python tools/dashboard_reload.py --port {port}",
           file=sys.stderr)
     return False
 

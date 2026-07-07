@@ -299,14 +299,24 @@ class DashboardSession:
     # ---- reusable bring-up (shared by __enter__ + monitor self-heal) ----
     def _server_env(self) -> dict:
         a = self.a
-        return {
-            "DASH_RUN_DIR": a.run_dir, "DASH_TAU": str(a.tau), "DASH_L7": str(a.l7),
+        env = {
+            "DASH_RUN_DIR": a.run_dir,
             "DASH_PORT": str(a.port), "DASH_HOST": "127.0.0.1",
             "DASH_ACCESS_KEY": self.access_key, "DASH_TRAINING_PID": str(a.training_pid),
             "DASH_TRAINING_SIG": a.training_sig,
             "DASH_CADENCE_STATE": os.path.join(a.dash_dir, "cadence.json"),
             "DASH_GOAL_DSEG": str(a.goal_dseg), "DASH_GOAL_DSEG_15": str(a.goal_dseg_15),
         }
+        # Stage boundaries: the server DERIVES them per-run via the DSL schedule
+        # read-back (tac.witness_dsl.schedule_readback). Only forward DASH_TAU/DASH_L7
+        # when the operator explicitly overrode them — the old unconditional
+        # str(a.tau)/str(a.l7) (hardcoded 300/600) silently re-poisoned the derived
+        # stage map on every supervisor respawn/self-heal.
+        if a.tau is not None:
+            env["DASH_TAU"] = str(a.tau)
+        if a.l7 is not None:
+            env["DASH_L7"] = str(a.l7)
+        return env
 
     def _tunnel_alive(self) -> bool:
         """The cloudflared connector process is up. Resolver-independent liveness
@@ -317,12 +327,17 @@ class DashboardSession:
     def _spawn_server(self) -> int:
         a = self.a
         _stop_daemon(SERVER_LABEL)
+        cmd = [sys.executable, os.path.join(HERE, "dashboard_server.py"),
+               "--run-dir", a.run_dir, "--port", str(a.port),
+               "--training-pid", str(a.training_pid)]
+        # OVERRIDE-only stage flags (default None = server derives via the DSL
+        # read-back; see _server_env for the class this extincts).
+        if a.tau is not None:
+            cmd += ["--tau", str(a.tau)]
+        if a.l7 is not None:
+            cmd += ["--l7", str(a.l7)]
         return _spawn_daemon(SERVER_LABEL, os.path.join(a.dash_dir, "server.log"),
-                             [sys.executable, os.path.join(HERE, "dashboard_server.py"),
-                              "--run-dir", a.run_dir, "--port", str(a.port),
-                              "--tau", str(a.tau), "--l7", str(a.l7),
-                              "--training-pid", str(a.training_pid)],
-                             env=self._server_env(), projected_gb=1.5, rss_mb=2500)
+                             cmd, env=self._server_env(), projected_gb=1.5, rss_mb=2500)
 
     def _bring_up_tunnel(self) -> int:
         """Idempotently bring up the tunnel: named (stable) when the API token
@@ -448,8 +463,13 @@ def _add_common_args(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("--tunnel-name", default="comma-lab")
     ap.add_argument("--allow-email", default="batdurston@gmail.com")
     ap.add_argument("--port", type=int, default=8790)
-    ap.add_argument("--tau", type=int, default=300)
-    ap.add_argument("--l7", type=int, default=600)
+    # Stage boundaries: OVERRIDE only (default None = dashboard_server derives them
+    # per-run via tac.witness_dsl.schedule_readback; the old hardcoded 300/600 were
+    # the --tau/--l7 mislabel class — they silently defeated the derivation).
+    ap.add_argument("--tau", type=int, default=None,
+                    help="OVERRIDE only; default = server derives from the run's own config")
+    ap.add_argument("--l7", type=int, default=None,
+                    help="OVERRIDE only; default = server derives from the run's own config")
     ap.add_argument("--goal-dseg", type=float, default=0.00092)
     ap.add_argument("--goal-dseg-15", type=float, default=0.00032)
     ap.add_argument("--training-pid", type=int, default=26124,
@@ -514,11 +534,16 @@ def cmd_launch(a) -> int:
     cmd = [sys.executable, os.path.join(HERE, "dashboard_supervisor.py"), "--run",
            "--run-dir", a.run_dir, "--dash-dir", a.dash_dir, "--hostname", a.hostname,
            "--tunnel-name", a.tunnel_name, "--allow-email", a.allow_email,
-           "--port", str(a.port), "--tau", str(a.tau), "--l7", str(a.l7),
+           "--port", str(a.port),
            "--goal-dseg", str(a.goal_dseg), "--goal-dseg-15", str(a.goal_dseg_15),
            "--training-pid", str(a.training_pid), "--training-sig", a.training_sig,
            "--inactivity-min", str(a.inactivity_min),
            "--check-interval", str(a.check_interval)]
+    # OVERRIDE-only stage flags (default None = derive via the DSL read-back).
+    if a.tau is not None:
+        cmd += ["--tau", str(a.tau)]
+    if a.l7 is not None:
+        cmd += ["--l7", str(a.l7)]
     if a.no_tunnel:
         cmd.append("--no-tunnel")
     rc = _spawn_daemon(SUPERVISOR_LABEL, os.path.join(a.dash_dir, "supervisor.log"),
