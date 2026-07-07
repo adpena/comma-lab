@@ -29,10 +29,10 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 |---|---|---|---|---|
 | S1 BASIS | Daubechies/Mallat — Arm A basis design (along-tangent bandwidth, bank ladder, activation, chroma) | 1 | DONE (7a052eed0) | position_S1_basis_20260707.md |
 | S2 SCHEDULE+CURRICULUM | witness-native derivation; PR95 cargo-cult audit table; stages/exits/priming | 1 | DONE (f1e3e8b21) | position_S2_schedule_curriculum_20260707.md |
-| S3 CONTROL/COSTATE | SENSE→DECIDE→ACT; GN/Fisher 2nd-order wiring; HVP-Lanczos probe design; trust-region | 1 | LAUNCHED | position_S3_costate_20260707.md |
+| S3 CONTROL/COSTATE | SENSE→DECIDE→ACT; GN/Fisher 2nd-order wiring; HVP-Lanczos probe design; trust-region | 1 | DONE (17843a820) | position_S3_costate_20260707.md |
 | S4 RATE | Shannon — two-regime allocation, weight-entropy, #157 compress-half, derive-H, byte accounting | 2 | LAUNCHED | position_S4_rate_20260707.md |
 | S5 LEVER-LEDGER | Fridrich/Yousfi — 36 never-fired per-lever BUILD/DEFER; annulus geometry; lane-band; islands | 2 | DONE (f01c8dea6) | position_S5_lever_ledger_20260707.md |
-| S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | QUEUED | position_S6_pose_byteclose_20260707.md |
+| S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | LAUNCHED | position_S6_pose_byteclose_20260707.md |
 
 ## Rate-limit resilience rules
 - Waves of ≤3 concurrent seats; wave 2 launches when wave 1 returns (or one at a time if limits bite).
@@ -135,3 +135,15 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
   rule118_orbit_coding_free_action_counted_coords_v1, 387B permutation slack, NO-equivariant-arch)
   + dedicated sweep agent LAUNCHED to complete all 14 stores. Compendium = MUST-READ for P2/P5.
   Class-fix: the STANDING STORE CHECKLIST makes context-completeness a P0 convening step forever.
+- 2026-07-07T~21:3x S3 COSTATE DONE (17843a820) — RAN the pinned D-3/4/5 first measurement ($0
+  inline, de-orphaned #341 SolveCtx.hvp_pair): ep650 EMA-best Ritz spectrum K=8 = [-369.7 ...
+  +139.3], STRONGLY INDEFINITE (|λ₋|=2.65×λ_max, grad_norm 0.787) [macOS-CPU advisory,
+  PROVISIONAL-K=8, honors truncated-anneal state]. Reading: best point NOT 2nd-order exhausted;
+  TerminalSolve in-basin NOT met; cold Muon fire was curvature-blind. Full-P RECESS-R1
+  pre-registered (kill band |λ₋|/λ_max<0.1 @K=128 → capacity/basis wall → strengthens Arm A
+  either way). SENSE: +gn_spectrum.checkpoint_lanczos producer; DECIDE: curvature-aware
+  exhaustion (1st-order meat ∧ PD-decrement ∧ no-usable-λ₋) + spectrum-rate mixture replaces
+  linear-λ (the ep450-miss fix) + λ_max-sized trust region + POWERPLAY never-regress; ACT: NEW
+  quadratic_basin ExitEvent (warm-Muon fire predicate) + margin-gated island support; advisory-
+  only, CONTAINMENT unchanged. Harness landed: experiments/t5_s3_hvp_lanczos_probe.py.
+  S6 POSE+BYTE-CLOSE launched (last seat; concurrency 3 with S4 + context-sweep).
