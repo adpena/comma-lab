@@ -744,6 +744,11 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # 2026-07-05; loss-only, trajectory-affecting, no param keys — same class as the #300 levers).
         ("__cfg_seg_focal_gamma", float(getattr(args, "seg_focal_gamma", 0.0)), True),
         ("__cfg_boundary_distance_weight", float(getattr(args, "boundary_distance_weight", 0.0)), True),
+        # (review MED-1) film_stiefel constrains the EXISTING film.weight (training-dynamics only,
+        # NO new param keys -> the film-arch/param-key guard cannot see it; the sidecar persists
+        # __cfg_film_stiefel [R2a-MED-1 note there] precisely so THIS guard can fail-closed on a
+        # resume that silently drops/adds the Stiefel constraint).
+        ("__cfg_film_stiefel", int(bool(getattr(args, "film_stiefel", False))), False),
     ]
     for key, cur, is_float in checks:
         if key not in resume_cfg:
@@ -777,6 +782,34 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
             if ckpt_shape != cur_shape:
                 div.append(f"seed_anneal_shape: ckpt={ckpt_shape!r} != resume-argv={cur_shape!r}")
     return div
+
+
+def _validate_aa_compose_compat(
+    aa_on: bool, band_active: bool, residual_mode: bool, seed_on: bool,
+) -> None:
+    """(#224 / review MED-3) Fail-closed compatibility gate: --render-aa supersample vs the
+    BASE-grid compose levers. The AA-supersample compose runs at the ss*grid (fine grid) while the
+    lane-band coverage, the residual-bulk composition mask, and the island-seed residual are all
+    BASE-grid (H,W) tensors — composing any of them under supersample would surface as an opaque
+    MLX broadcast error at the fine grid deep inside training. Raise HERE with an actionable
+    message instead. Pure / MLX-free -> unit-tested. aa_on False => always compatible (no-op)."""
+    if not aa_on:
+        return
+    if band_active:
+        raise ValueError(
+            "--lane-render-band + --render-aa supersample are not wired together: the band coverage is "
+            "base-grid (H,W) but the AA compose happens at the ss*grid. Use --render-aa ipe (base grid) "
+            "with the band, or run them separately.")
+    if residual_mode:
+        raise ValueError(
+            "--residual-mode + --render-aa supersample are not wired together: the residual-bulk "
+            "composition mask is base-grid (H,W) but the AA compose happens at the ss*grid. Use "
+            "--render-aa ipe (base grid) with residual mode, or run them separately.")
+    if seed_on:
+        raise ValueError(
+            "--seed-islands + --render-aa supersample are not wired together: the island-seed residual "
+            "is base-grid (H,W) but the AA compose happens at the ss*grid. Use --render-aa ipe (base "
+            "grid) with the seed, or run them separately.")
 
 
 def boundary_distance_band_map(lstar_hw: np.ndarray, band_px: float = 2.0) -> np.ndarray:
@@ -2950,7 +2983,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             return _bulk_rgb_mx[pair][None] * (1.0 - m) + rgb_nhwc * m
 
         # (#224) the per-frame _render_R that chains _compose_mx is built in the UNIFIED RENDER
-        # PATH block below (so residual bulk composes with the analytic-lane band + AA supersample).
+        # PATH block below (so residual bulk composes with the analytic-lane band; AA SUPERSAMPLE is
+        # NOT composable with the base-grid residual mask — fail-closed by _validate_aa_compose_compat).
         def _compose_np(rgb_hw3, pi):  # noqa: F811 (residual override)
             m = _resid_mask_np[pi][..., None]             # (H,W,1)
             return np.where(m, np.asarray(rgb_hw3, np.float32), _bulk_rgb_np[pi])
@@ -2972,11 +3006,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # -------------------------------------------------------------------------------------
     _aa_on = (render_aa == "supersample" and aa_ss > 1)
     _band_active = bool(getattr(args, "lane_render_band", False))
-    if _band_active and _aa_on:
-        raise ValueError(
-            "--lane-render-band + --render-aa supersample are not wired together: the band coverage is "
-            "base-grid (H,W) but the AA compose happens at the ss*grid. Use --render-aa ipe (base grid) "
-            "with the band, or run them separately.")
+    # (review MED-3) fail-closed: EVERY base-grid composer (band / residual bulk / island seed) is
+    # incompatible with the ss*grid AA compose — raise with an actionable message here instead of an
+    # opaque MLX broadcast error at the fine grid. Pure fn -> unit-tested.
+    _validate_aa_compose_compat(
+        _aa_on, _band_active, residual_mode, bool(getattr(args, "seed_islands", False)))
     # (2) analytic-lane render-band compose_fn (FEED-dv #203/#213/#215). Precompute the per-code
     # LaneBandPrior ONCE from the frozen GT class-1 mask; ride the witness margin (#141) as the
     # FP-killer uncertainty gate. compose_fn coverage/u_mask are stop-grad constants; the gradient
@@ -4449,10 +4483,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     def _verdict_v(f0s: list, f1s: list) -> dict[str, float]:
         """Shared verdict tail: given rendered f0s/f1s over ``vpairs``, return the {d_seg,d_pose} dict.
 
-        Default (nucleus OFF, annulus OFF) => the UNCHANGED _verdict_dseg_dpose_chunked call =>
-        byte-identical to the sealed #205 verdict. Nucleus ON => +per-class counts in the same forward
-        (unchanged). Annulus ON => reuse the realized argmax from the SAME forward (return_realized) and
-        stash the annulus metrics under v['annulus'] in a try/except that can NEVER crash the verdict.
+        Nucleus OFF + --no-annulus-telemetry => the UNCHANGED _verdict_dseg_dpose_chunked call =>
+        byte-identical to the sealed #205 verdict. Annulus ON (the argparse DEFAULT — score-neutral
+        observability defaults ON per the orphaned-signal rule) => reuse the realized argmax from the
+        SAME forward (return_realized) and stash the annulus metrics under v['annulus'] in a try/except
+        that can NEVER crash the verdict. Nucleus ON => +per-class counts in the same forward (unchanged).
         The rare nucleus+annulus combo takes one dedicated realized forward (still try/except-guarded).
         The d_seg/d_pose SCALARS are identical across all branches (argmax-variant d_seg is bit-identical)."""
         lstars_v = [gt.lstars[pi] for pi in vpairs]
@@ -5559,13 +5594,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # block detected an added stiff term + retreatment + a configured re-warmup window.
     if _resume_lr_rewarmup_boundary is not None:
         last_boundary_epoch = int(_resume_lr_rewarmup_boundary)
-    # (EIK-STAB build 2; sweep lever #3 + #304) spike-guard MODE dispatch. Default "legacy" =>
+    # (EIK-STAB build 2; sweep lever #3 + #304) spike-guard MODE dispatch. "legacy" =>
     # _sg_guard is None => every guard branch below is skipped and _sg_state["lr_scale"] stays 1.0
-    # (never multiplied in) => BYTE-IDENTICAL to the pre-build trainer. "rollback" = the
-    # physics-informed actuator: tolerate bounded oscillation (EoS self-stabilization is
+    # (never multiplied in) => BYTE-IDENTICAL to the pre-build trainer (selectable for the A/B but
+    # NO LONGER the default — the C1 confound fix made "rollback" the argparse default AND the
+    # getattr fallback below, so the deadlock mode can never re-enter via a missing attr). "rollback"
+    # = the physics-informed actuator: tolerate bounded oscillation (EoS self-stabilization is
     # FUNCTIONAL — litsweep contradiction row 3), and on SUSTAINED runaway restore the last-good
     # snapshot + cut lr + re-arm a fresh median (fight the disease, don't freeze).
-    _sg_mode = str(getattr(args, "spike_guard_mode", "legacy"))
+    _sg_mode = str(getattr(args, "spike_guard_mode", "rollback"))
     _sg_guard = (SpikeGuardRollback(int(args.spike_rollback_window),
                                     float(args.spike_rollback_frac),
                                     int(args.spike_rollback_max))

@@ -7,6 +7,10 @@ Covers:
   * F4 (#222): the --adam-beta2 flag exists, is threaded into the MLX AdamW construction(s), and the
     default is byte-identical (0.999 == MLX default); + a small MLX AdamW betas smoke (finite update).
   * F3: _bnd_band is OR'd into _stage_boundary_now (band engagement gets the stage-transition treatment).
+  * review MED-1: ``__cfg_film_stiefel`` is in the resume-lever-drift checks (the param-key guard
+    cannot see it — film_stiefel constrains the EXISTING film.weight, no new keys).
+  * review MED-3: ``_validate_aa_compose_compat`` fail-closed pure fn (AA supersample vs the
+    base-grid composers: lane band / residual bulk / island seed) + its wired call site.
 
 Pure-CPU: the trainer module imports fast (no GPU); the MLX smoke is a 2-element one-step AdamW update.
 """
@@ -136,6 +140,66 @@ def test_resume_guard_wired_fail_closed_with_escape():
 
 
 # --------------------------------------------------------------------------
+# review MED-1: __cfg_film_stiefel resume-drift guard (no param keys -> lever check must catch it)
+# --------------------------------------------------------------------------
+def test_resume_film_stiefel_drop_flagged():
+    tl = _load_trainer()
+    # trained WITH --film-stiefel, resume argv drops it -> flagged
+    div = tl._resume_lever_divergences(_cfg(__cfg_film_stiefel=1), _args(film_stiefel=False))
+    assert any("film_stiefel" in d for d in div), f"film_stiefel drop not flagged: {div}"
+    # trained WITHOUT, resume argv adds it -> flagged (constraint added onto a foreign trajectory)
+    div = tl._resume_lever_divergences(_cfg(__cfg_film_stiefel=0), _args(film_stiefel=True))
+    assert any("film_stiefel" in d for d in div), f"film_stiefel add not flagged: {div}"
+
+
+def test_resume_film_stiefel_matching_and_pre_fix_sidecar_no_divergence():
+    tl = _load_trainer()
+    # both ON -> no divergence
+    assert tl._resume_lever_divergences(_cfg(__cfg_film_stiefel=1), _args(film_stiefel=True)) == []
+    # pre-fix sidecar lacks the key -> NO spurious divergence (only present keys are checked)
+    assert tl._resume_lever_divergences(_cfg(), _args(film_stiefel=True)) == []
+    # sidecar persists the key (source-level; the R2a-MED-1 persistence this check reads)
+    assert 'out["__cfg_film_stiefel"]' in _TRAINER_SRC
+
+
+# --------------------------------------------------------------------------
+# review MED-3: _validate_aa_compose_compat fail-closed pure fn + wired call site
+# --------------------------------------------------------------------------
+def test_aa_compose_compat_noop_when_aa_off():
+    tl = _load_trainer()
+    # AA off => always compatible, even with every base-grid composer engaged
+    tl._validate_aa_compose_compat(False, True, True, True)
+
+
+def test_aa_compose_compat_ok_when_aa_on_no_composers():
+    tl = _load_trainer()
+    tl._validate_aa_compose_compat(True, False, False, False)
+
+
+@pytest.mark.parametrize("band,residual,seed,token", [
+    (True, False, False, "--lane-render-band"),
+    (False, True, False, "--residual-mode"),
+    (False, False, True, "--seed-islands"),
+])
+def test_aa_compose_compat_raises_per_base_grid_composer(band, residual, seed, token):
+    tl = _load_trainer()
+    with pytest.raises(ValueError) as ei:
+        tl._validate_aa_compose_compat(True, band, residual, seed)
+    msg = str(ei.value)
+    assert token in msg and "supersample" in msg and "base" in msg, msg
+
+
+def test_aa_compose_compat_wired_at_render_path():
+    # source-level: the pure validator is actually CALLED at the unified-render-path site with all
+    # three base-grid composers threaded (band + residual + seed).
+    # the indented occurrence is the CALL (the def is at column 0 with a "def " prefix)
+    call = _TRAINER_SRC[_TRAINER_SRC.index("\n    _validate_aa_compose_compat("):]
+    head = call[:300]
+    assert "_aa_on" in head and "_band_active" in head and "residual_mode" in head \
+        and "seed_islands" in head, head
+
+
+# --------------------------------------------------------------------------
 # F4 (#222): --adam-beta2 flag + threading + byte-identical default
 # --------------------------------------------------------------------------
 def test_adam_beta2_flag_declared_default_bit_identical():
@@ -171,7 +235,9 @@ def test_mlx_adamw_betas_smoke_finite_step():
 # F3: _bnd_band OR'd into _stage_boundary_now
 # --------------------------------------------------------------------------
 def test_bnd_band_in_stage_boundary():
-    assert "_bnd_band = (_band_active and (ep >= _band_start) and not band_gate[" in _TRAINER_SRC
+    # (updated for the _lever_epoch remap: band engagement keys off the LEVER epoch, not raw ep)
+    assert "_bnd_band = (_band_active and (_lever_epoch(ep) >= _band_start) and not band_gate[" \
+        in _TRAINER_SRC
     m = re.search(r"_stage_boundary_now = \((.*?)\)", _TRAINER_SRC, re.S)
     assert m and "_bnd_band" in m.group(1), "_bnd_band must be OR'd into _stage_boundary_now"
     # the moment-reset telemetry records the band-engage cause
