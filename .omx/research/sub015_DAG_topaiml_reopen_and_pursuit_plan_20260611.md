@@ -9573,3 +9573,13 @@ were ABSORBED into sibling commit 1d6704e5b (telemetry) via the concurrent-stagi
 (failure-ledger `serializer_whole_file_staging_absorbs_sibling_hunks`); content verified intact in
 HEAD. Memo: `.omx/research/ground_frame_chart_build_and_se3_bspline_firing_20260707.md`. Commits:
 c3f4a50a2 (module+tests) · 049aa0d9f (DSL) · c6b83b1b7 (equations). Pointer 0.19110 UNMOVED.
+
+### Triality classification addendum (coordinator, 2026-07-07) — basin-finisher TOOL commit [no-triality apparatus]
+The drift-detector flagged agent B-RESUME's first-action commit (the predecessor's orphaned
+quadratic_basin_finisher_probe tool + tests, recovered per the session-limit protocol). It is
+APPARATUS: the probe tool itself, committed BEFORE its measurement completes — no verdict, no
+anchor to register (registering would fabricate). The equations leg fires on the probe's
+MEASURED stage-0/stage-1 verdicts, which B-RESUME's own contract already owes (positive →
+register the basin-finisher law citing the probe artifact; negative → honest anchor + basin-
+radius bound in its FEED). Classified proactively per the per-leg discipline; same true-negative
+pattern as the FEED-07y addendum.
