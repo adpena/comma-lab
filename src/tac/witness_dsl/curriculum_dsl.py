@@ -2413,6 +2413,40 @@ def LogitAdjust(tau: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 —
     )
 
 
+def WeightEntropyPenaltyMLX(lam: float = 15.0, window: int = 0) -> Lever:  # noqa: N802 — §22(2) fold
+    """Ballé rate-in-the-loss WEIGHT-ENTROPY penalty — the council-draft-20260707 §22(2) fold:
+    the torch vehicle's ``--weight-entropy-penalty-lambda`` PORTED to the levelset trainer as a
+    DETERMINISTIC soft-histogram symbol-entropy surrogate over the COUNTED witness weights
+    (``tac.boundary_math.weight_entropy_penalty_mlx``; free bank ``B``/``*_B`` excluded, rule
+    118; the exact ``quantize_levelset_blob`` int8 grid). Adds ``λ·rate_term`` (contest rate
+    scale, 25·bits/8/N) ONCE per opt step (per-MODEL, the code_nuc pattern; routed into BOTH the
+    serial ``total_loss_fn`` and the ``--micro-batch-pairs`` batched twin's ``_once_terms``).
+    State-free + no RNG => resume-safe; ``λ=0`` (trainer default) is a true no-op branch.
+
+    BORROWED-NUMBER FIREWALL (NO-FAKE #8): the −19.6% live-decoder byte cut was MEASURED on the
+    TORCH vehicle's LEARNED-prior term (2026-06-20; EMA-lag caveat; ema0.9 translation proof) —
+    it does NOT transfer to this lever. This MLX lever is NEVER-FIRED (activation ledger) until
+    its own byte-closed n600 A/B lands (λ-on vs λ=0 at equal d_seg/d_pose, real
+    ``quantize_levelset_blob`` bytes). The torch λ* is open in {5,15,30} (λ50 overshoots into
+    d_seg harm) — default 15.0 = the open-range center, a STARTING arm value, not a tuned
+    optimum. NO-FAKE headline metric for the A/B:
+    ``weight_entropy_penalty_mlx.measured_symbol_entropy_bits_numpy`` (hard codec-grid entropy),
+    plus the real archive bytes. Equations leg: ``weight_entropy_rate_in_loss_lever_v1``."""
+    _l = float(lam)
+    if not (_l > 0.0) or _l != _l or _l in (float("inf"), float("-inf")):
+        raise ValueError(
+            f"WeightEntropyPenaltyMLX: lam must be a positive finite float (trainer default 0.0 "
+            f"= OFF; construct the lever only to turn the penalty ON), got {lam!r}")
+    return Lever(
+        "WeightEntropyPenaltyMLX",
+        overrides={"--weight-entropy-penalty-lambda": _l},
+        epochs_delta=window,
+        notes=("Ballé rate-in-the-loss weight-entropy penalty (MLX port of the torch-vehicle "
+               "lever; deterministic soft-histogram surrogate, counted weights only); torch "
+               "-19.6% does NOT transfer — n600 A/B owed (duty-to-measure)"),
+    )
+
+
 _SEALED_205_MANAGED_FLAGS = frozenset({
     "--num-pairs", "--epochs", "--gt-cache", "--out-dir", "--mlx-device",
     "--softmax-temp-start", "--softmax-temp-end",

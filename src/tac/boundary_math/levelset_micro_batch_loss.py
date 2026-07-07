@@ -21,8 +21,8 @@ Design contract (see the trainer's ``total_loss_fn_batch`` docstring for the ful
 * The realized ``segnet(f1)`` forward is computed ONCE and shared by the base seg-form AND
   the lever ``_signed`` (bit-identical to the trainer's two deterministic-render forwards:
   ``(f'+g')·dS == f'·dS + g'·dS``).
-* Per-MODEL code penalties (rankfloor / code-spec / code-nuc) are added ONCE (matching the
-  serial mean-over-chunk of an identical-per-pair term).
+* Per-MODEL penalties (rankfloor / code-spec / code-nuc / weight-entropy rate) are added ONCE
+  (matching the serial mean-over-chunk of an identical-per-pair term).
 
 The math here MIRRORS the trainer's ``total_loss_fn`` op-for-op. ``single_realized_loss`` is
 the per-pair reference (renders + scores ONE pair, no batching) used by the test as the
@@ -126,6 +126,12 @@ class LeverConfig:
     code_nuc_w: float = 0.0
     code_nuc_eps: float = 1e-3
     code_nuc_iters: int = 25
+    # ── weight-entropy rate penalty (per-MODEL, once; the Ballé rate-in-the-loss MLX port) ──
+    # λ·rate_term of the COUNTED witness weights under the deterministic soft-histogram
+    # surrogate (tac.boundary_math.weight_entropy_penalty_mlx). Default 0.0 => branch never
+    # taken => byte-identical (mirrors the serial total_loss_fn guard exactly).
+    we_lambda: float = 0.0
+    we_sigma: float = 0.2
 
 
 def _pair_loss_from_scored(model, sl, pose_row, cf, c0: int, c1: int, oh, mg, pose_tgt,
@@ -248,8 +254,8 @@ def _pair_loss_from_scored(model, sl, pose_row, cf, c0: int, c1: int, oh, mg, po
 
 
 def _once_terms(model, lc: LeverConfig):
-    """Per-MODEL code-matrix penalties (rankfloor / code-spec / code-nuc). Returns a scalar mx
-    array (0.0 when all off). Added ONCE per step (matches the serial mean-over-chunk)."""
+    """Per-MODEL penalties (rankfloor / code-spec / code-nuc / weight-entropy rate). Returns a
+    scalar mx array (0.0 when all off). Added ONCE per step (matches the serial mean-over-chunk)."""
     import mlx.core as mx
 
     L = mx.zeros(())
@@ -272,6 +278,12 @@ def _once_terms(model, lc: LeverConfig):
     if lc.code_nuc_w > 0.0:
         L = L + lc.code_nuc_w * lc.nuclear_norm_smooth(
             model.code, rel_eps=float(lc.code_nuc_eps), ns_iters=int(lc.code_nuc_iters))
+    # Weight-entropy rate penalty (the Ballé rate-in-the-loss MLX port): identical per pair =>
+    # added ONCE per step, exactly like the code penalties above. Default 0.0 => never built.
+    if lc.we_lambda > 0.0:
+        from tac.boundary_math.weight_entropy_penalty_mlx import weight_entropy_rate_term_mlx
+        _we_bits, _we_rate = weight_entropy_rate_term_mlx(model, sigma=float(lc.we_sigma))
+        L = L + lc.we_lambda * _we_rate
     return L
 
 

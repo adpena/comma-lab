@@ -914,3 +914,38 @@ to prioritize building."
 follow-up BUILDS are decided BY T5 — the crucible owns build prioritization with full execute
 authority inside the operator-declared envelope. The agent assembles the dossier; the operator's
 call convenes.
+
+## §24 ADDENDUM (2026-07-07, append-only) — §22(2) FOLD-BLOCKER CLOSED: `--weight-entropy-penalty-lambda` PORTED to the levelset MLX trainer; DSL-holdable NOW; the lever's own n600 A/B is the OWED gate
+
+Source: operator GO "Do the MLX port too" on §22(2)'s fold path (a); port agent
+`mlx_weight_entropy_port_20260707`; DAG FEED-08j. All rows source-inspection / $0 CPU test
+rows; pointer contest-CPU 0.19110 UNMOVED.
+
+**What changed since §22(2).** The Ballé rate-in-the-loss lever is no longer torch-vehicle-only:
+`--weight-entropy-penalty-lambda` now exists on the capstone trainer
+(`experiments/train_levelset_witness_realized_through_R_mlx.py`), implemented as a
+DETERMINISTIC soft-histogram symbol-entropy surrogate over the COUNTED witness weights
+(`tac.boundary_math.weight_entropy_penalty_mlx`; exact `quantize_levelset_blob` int8 grid;
+free bank excluded per rule 118; state-free + no RNG — deliberately NOT the torch learned
+prior, which carries checkpoint state + STE noise the witness repro spine forbids). Routed
+into BOTH loss paths (serial `total_loss_fn` + the `--micro-batch-pairs` twin's
+`_once_terms`), once-per-opt-step semantics matching the torch driver. λ=0 (default) is a
+PROVEN bitwise no-op (loss + every grad array identical to a no-penalty closure) — the
+sealed/finished #205 config family compiles byte-identical argv (suite green, run dir
+READ-ONLY honored).
+
+**Triality state:** DSL `curriculum_dsl.WeightEntropyPenaltyMLX` (holds the flag;
+`completeness()` mapped, stale==[]) · equations `weight_entropy_rate_in_loss_lever_v1`
+(torch anchors + borrowed-number firewall + never-fired port anchor) · DAG FEED-08j ·
+activation ledger: `WeightEntropyPenaltyMLX` NEVER-FIRED (distinct from the torch
+`WeightEntropyPenalty` history — no number transfers).
+
+**For the counted-weights / train-big-compress-small arm (arm E/D):** the arm can now run on
+EITHER vehicle. On the witness: λ∈{5,15,30} vs λ=0 at equal d_seg/d_pose, real
+`quantize_levelset_blob` bytes + `measured_symbol_entropy_bits_numpy` (hard codec-grid
+entropy) as the NO-FAKE pair, with the EMA-shadow bytes checked explicitly (the torch
+EMA-0.999-lag caveat is a mechanism risk here too, decay-policy-dependent). The −19.6% torch
+number remains attributed to the torch learned-prior term; the MLX surrogate is a WEAKER
+(memoryless, deterministic) estimator — its effect size is UNKNOWN until measured. λ default
+in the DSL factory = 15.0 (torch open-range center; a starting arm value, not a tuned
+optimum). The A/B remains OWED (duty-to-measure); nothing here moves the pointer.

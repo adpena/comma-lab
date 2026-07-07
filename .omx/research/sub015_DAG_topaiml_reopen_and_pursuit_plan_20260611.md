@@ -9961,3 +9961,50 @@ output = launchable config(s) + pre-registered measurement plan, never prose.
 The empirical-recess phase is the tier's signature: it structurally extincts verdicts-by-argument on
 measurable questions (the GT-H overturn class). Commit: the T5 wiring commit this turn.
 [apparatus; pointer 0.19110 UNMOVED — means]
+
+## FEED-08j (2026-07-07, MLX weight-entropy port agent) — §22(2) FOLD-BLOCKER CLOSED: the Ballé rate-in-the-loss lever PORTED to the levelset MLX trainer (deterministic surrogate, counted-weights-only, both loss paths); DSL-held + never-fired; n600 A/B OWED [$0 CPU build, advisory; pointer 0.19110 UNMOVED — build/means]
+
+Operator GO ("Do the MLX port too") on the FEED-08h/§22(2) fold path (a): the torch vehicle's
+`--weight-entropy-penalty-lambda` (−19.6% live-decoder bytes MEASURED THERE, 2026-06-20 —
+NOT transferable) now EXISTS on the capstone trainer, so the DSL can legally hold it.
+
+**What landed (all default-off, λ=0 = TRUE no-op — branch never constructed):**
+1. **Trainer leg** — `--weight-entropy-penalty-lambda` on
+   `experiments/train_levelset_witness_realized_through_R_mlx.py`: adds `λ·rate_term`
+   (contest scale 25·bits/8/N) ONCE per opt step (the code_nuc per-MODEL pattern) in BOTH the
+   serial `total_loss_fn` AND the `--micro-batch-pairs` batched twin
+   (`levelset_micro_batch_loss._once_terms`; `LeverConfig.we_lambda`). Telemetry key
+   `weight_entropy` in LOSS_TERM_KEYS; `__cfg_weight_entropy_penalty_lambda` persisted +
+   F2 resume-divergence-guarded; negative-λ fails closed at startup.
+2. **The term** — `tac.boundary_math.weight_entropy_penalty_mlx`: DETERMINISTIC soft-histogram
+   symbol entropy (cat_entropy_v2 kernel, σ=0.2, bins ±127) on the EXACT
+   `quantize_levelset_blob` int8 grid (`q=round(w/(max|w|+1e-8)·127)`), COUNTED weights only
+   (free bank `B`/`*_B` excluded, rule 118; refuse — not silently skip — on an all-free model).
+   State-free + no RNG ⇒ resume-safe by construction (deliberately NOT the torch learned prior,
+   which carries optimizer/checkpoint state + STE noise the repro spine forbids). numpy twins:
+   soft parity reference + `measured_symbol_entropy_bits_numpy` (the HARD codec-grid NO-FAKE
+   metric a λ>0 arm must lower).
+3. **DSL leg** — `curriculum_dsl.WeightEntropyPenaltyMLX(lam=15.0)` (λ default = the torch
+   open-range {5,15,30} CENTER, a starting arm value not a tuned optimum);
+   `lever_registry.completeness()`: flag mapped, stale==[] holds.
+4. **Equations leg** — `weight_entropy_rate_in_loss_lever_v1` REGISTERED
+   (`tac.canonical_equations.weight_entropy_rate_in_loss_20260707`): torch anchors welded WITH
+   the borrowed-number firewall (λ50 −16,007 B live / EMA-0.999 lag +72..87 B / ema0.9
+   translation proof / C1a stacking net-negative) + the MLX-port never-fired anchor whose
+   reactivation IS the owed byte-closed n600 A/B.
+5. **Activation ledger** — `WeightEntropyPenaltyMLX` = NEVER-FIRED (duty-to-measure queue,
+   auto-derived from the factory name; the torch history stays on the DISTINCT
+   `WeightEntropyPenalty` name — no conflation).
+
+**Verified ($0 CPU):** 22 new tests (`test_weight_entropy_penalty_mlx.py`) + micro-batch/
+lever-registry/sealed-205 suites (70) all pass; λ=0 bitwise no-op proven on forward AND
+backward (loss + every grad array `np.array_equal` vs a closure with NO penalty code);
+gradient flows to every counted tensor; a 30-step CPU loss-path smoke strictly descends the
+surrogate; ruff F clean. Sealed/finished #205 run dir READ-ONLY honored (no config touched;
+the default-0 flag leaves the sealed_205 argv byte-identical — suite green).
+
+**Owed (duty-to-measure):** the lever's OWN n600 A/B (λ∈{5,15,30} vs λ=0 at equal
+d_seg/d_pose; real `quantize_levelset_blob` bytes + the hard entropy metric; EMA-shadow bytes
+checked explicitly per the torch EMA-lag caveat). Consistency: DAG↔DSL↔equations agree;
+council draft §23 records the §22(2) closure. Pointer contest-CPU 0.19110 UNMOVED (build =
+means; the exact row remains the gate).

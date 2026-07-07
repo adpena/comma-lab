@@ -606,6 +606,10 @@ def _build_resume_state_arrays(
     # focal/boundary-distance above: persist so a --resume-from that silently drops/changes it
     # fails closed via _resume_lever_divergences (deterministic-repro).
     out["__cfg_logit_adjust_loss_tau"] = np.asarray(float(getattr(args, "logit_adjust_loss_tau", 0.0)))
+    # (§22(2) fold) weight-entropy rate penalty is loss-only + trajectory-affecting (no param
+    # keys — the surrogate is state-free) — same class: persist for the F2 divergence guard.
+    out["__cfg_weight_entropy_penalty_lambda"] = np.asarray(
+        float(getattr(args, "weight_entropy_penalty_lambda", 0.0)))
     # (C11 confound fix) persist the stiff eikonal-family weights so a --resume-from that ADDS/raises
     # them onto an opt state trained WITHOUT them is DETECTABLE (the resume-drift loud row + LR
     # re-warmup routing). Loss/render-only (no param keys), so the arch guard cannot see them.
@@ -754,6 +758,9 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_boundary_distance_weight", float(getattr(args, "boundary_distance_weight", 0.0)), True),
         # (#218) logit-adjustment per-class offset (loss-only, trajectory-affecting, no param keys).
         ("__cfg_logit_adjust_loss_tau", float(getattr(args, "logit_adjust_loss_tau", 0.0)), True),
+        # (§22(2) fold) weight-entropy rate penalty (loss-only, trajectory-affecting, no param keys).
+        ("__cfg_weight_entropy_penalty_lambda",
+         float(getattr(args, "weight_entropy_penalty_lambda", 0.0)), True),
         # (review MED-1) film_stiefel constrains the EXISTING film.weight (training-dynamics only,
         # NO new param keys -> the film-arch/param-key guard cannot see it; the sidecar persists
         # __cfg_film_stiefel [R2a-MED-1 note there] precisely so THIS guard can fail-closed on a
@@ -2412,7 +2419,7 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
     "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
     "margin_saliency", "subpix", "chroma_boundary", "island_amplify", "persistence", "rankfloor",
-    "code_spectral", "thin_lane", "margin_field_head", "code_nuclear",
+    "code_spectral", "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
     # "eik_steik" (EIK-STAB build 1a): the additive StEik directional-divergence stabilizer; 0.0
     # unless --eikonal-steik-weight > 0. NOTE: when --eikonal-viscosity > 0 the "eikonal" key holds
     # the VISCOUS residual contribution (ViscoReg replaces the residual; same constraint, viscous
@@ -3604,6 +3611,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     code_nuc_w = float(getattr(args, "code_nuclear_weight", 0.0))
     code_nuc_eps = float(getattr(args, "code_nuclear_eps", 1e-3))
     code_nuc_iters = int(getattr(args, "code_nuclear_ns_iters", 25))
+    # (--weight-entropy-penalty-lambda; council draft 20260707 §22(2) fold: the Ballé
+    # rate-in-the-loss lever PORTED from the torch vehicle) closure constant. we_lambda=0.0
+    # (DEFAULT) => the branch in total_loss_fn is skipped (the term is NEVER constructed — no
+    # graph/memory change) => L is byte-identical (fully additive; the code_nuc guard pattern).
+    # When > 0: λ·rate_term of the COUNTED witness weights (free bank B/*_B excluded, rule 118)
+    # under the DETERMINISTIC soft-histogram surrogate (state-free, no RNG — resume-safe by
+    # construction; NOT the torch learned prior). Identical per pair => the mean-over-chunk grad
+    # applies it ONCE per opt step (matches the torch driver's once-per-loss λ semantics AND the
+    # batched twin's _once_terms). Borrowed-number firewall: the torch −19.6% does NOT transfer;
+    # this lever's own n600 A/B is OWED (never-fired in the activation ledger).
+    we_lambda = float(getattr(args, "weight_entropy_penalty_lambda", 0.0))
+    from tac.boundary_math.weight_entropy_penalty_mlx import (
+        DEFAULT_SIGMA as _we_sigma,
+        weight_entropy_rate_term_mlx as _we_rate_term_mlx,
+    )
     # (THETA* TIER-2 STRETCH-1) junction-aware Eikonal relax closure constants. eik_jrelax=0.0
     # (DEFAULT) => _eikonal_length_mlx takes its BIT-IDENTICAL branch (w==1.0) => unchanged.
     eik_jrelax = float(getattr(args, "eikonal_junction_relax", 0.0))
@@ -4188,6 +4210,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             L = L + _cn_contrib
             if terms_out is not None:
                 terms_out["code_nuclear"] = _cn_contrib
+        # (--weight-entropy-penalty-lambda) Ballé rate-in-the-loss WEIGHT-ENTROPY penalty (the
+        # torch-vehicle −19.6% lever's MLX port; council draft §22(2) fold). DEFAULT-OFF:
+        # we_lambda=0.0 => this branch NEVER runs => L is byte-identical (the term is never
+        # constructed — a true no-op, not a computed-then-zeroed term). When >0 it adds
+        # λ · rate_term where rate_term is the differentiable soft-histogram symbol entropy of
+        # the COUNTED witness weights on the EXACT codec grid (q = round(w/(max|w|+1e-8)·127)),
+        # mapped onto the contest rate scale (25·bits/8/N) — pulling the weight-symbol
+        # distribution toward low entropy => a lower deployed byte floor. The term is a pure
+        # function of the model weights (identical for every pair), so the per-pair
+        # value_and_grad sees the same term and the mean-over-chunk grad applies it ONCE per opt
+        # step (NOT P-scaled) — the code_nuc/rankfloor per-MODEL pattern; the batched twin adds
+        # it once in _once_terms (same semantics). Deterministic + state-free (no RNG, no prior
+        # params, nothing new to checkpoint) => resume-safe by construction.
+        if we_lambda > 0.0:
+            _we_bits, _we_rate = _we_rate_term_mlx(model, sigma=_we_sigma)
+            _we_contrib = we_lambda * _we_rate
+            L = L + _we_contrib
+            if terms_out is not None:
+                terms_out["weight_entropy"] = _we_contrib
         return L
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
@@ -4266,6 +4307,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         rankfloor_w=rankfloor_w, rankfloor_idx=rankfloor_idx, rankfloor_tgt=rankfloor_tgt,
         code_spec_w=code_spec_w, code_spec_idx=code_spec_idx,
         code_nuc_w=code_nuc_w, code_nuc_eps=code_nuc_eps, code_nuc_iters=code_nuc_iters,
+        # (--weight-entropy-penalty-lambda) the Ballé rate-in-the-loss MLX port: per-MODEL,
+        # added ONCE in _once_terms (same semantics as the serial branch). Default 0.0 => the
+        # batched twin's branch is never taken => byte-identical.
+        we_lambda=we_lambda, we_sigma=float(_we_sigma),
         # (MB-TWIN #313) newly-ROUTED legs (were fail-closed): focal / boundary-distance /
         # eik-stab (ViscoReg+StEik) / witness-alone-island routing. Callables passed to stay
         # bit-identical to the canonical helpers (avoids a tac<-trainer import cycle). _eik_stab
@@ -8036,6 +8081,17 @@ def main(argv: list[str] | None = None) -> int:
     # bit-identical loss). Drives the per-pair FiLM codes toward a low-rank subspace (rate). Computed
     # as a DIFFERENTIABLE smoothed nuclear norm via Newton-Schulz matrix-sqrt trace (MLX has no svd/
     # eigvalsh vjp); see _nuclear_norm_smooth_mlx.
+    # (council draft 20260707 §22(2) fold) Ballé rate-in-the-loss WEIGHT-ENTROPY penalty — the
+    # torch vehicle's --weight-entropy-penalty-lambda (measured −19.6% LIVE-decoder bytes THERE;
+    # borrowed-number firewall: does NOT transfer) PORTED as a DETERMINISTIC soft-histogram
+    # surrogate over the COUNTED witness weights (free bank excluded, rule 118). Additive;
+    # default 0.0 == OFF == bit-identical loss (the branch is never entered). State-free + no
+    # RNG => resume-safe; its own n600 A/B is OWED before any byte claim.
+    ap.add_argument("--weight-entropy-penalty-lambda", type=float, default=0.0,
+                    help="Ballé rate-in-the-loss lever (MLX port): weight on the differentiable "
+                    "soft-histogram symbol entropy of the counted witness weights, mapped onto "
+                    "the contest rate scale (25*bits/8/N). 0.0 (default) = OFF = bit-identical "
+                    "loss. Torch-vehicle measurements do NOT transfer; n600 A/B owed.")
     ap.add_argument("--code-nuclear-weight", type=float, default=0.0,
                     help="THETA* MUST-2: weight on the smoothed nuclear norm of the per-pair code "
                     "matrix (low-rank -> rate). 0.0 (default) = OFF = bit-identical loss.")
@@ -8589,6 +8645,10 @@ def main(argv: list[str] | None = None) -> int:
     # (THETA* TIER-2 MUST-2) nuclear-norm penalty fail-closed guards.
     if args.code_nuclear_weight < 0.0:
         raise ValueError(f"--code-nuclear-weight ({args.code_nuclear_weight}) must be >= 0 (0 = OFF).")
+    if args.weight_entropy_penalty_lambda < 0.0:
+        raise ValueError(
+            f"--weight-entropy-penalty-lambda ({args.weight_entropy_penalty_lambda}) must be >= 0 "
+            "(0 = OFF / bit-identical loss; mirrors the torch-vehicle cfg validator).")
     if args.code_nuclear_weight > 0.0:
         if args.code_nuclear_eps <= 0.0:
             raise ValueError(
