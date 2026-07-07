@@ -742,3 +742,26 @@ Consequences for the next-run design this draft is deriving:
    the annealed run at matched epochs, the anneal's dash-role is empirically nil and τ can be
    re-purposed (or simplified) in the derived schedule; if they diverge, the crossover lives
    above 0.216 after all and the coupling rule re-arms with a measured τ_c.
+
+## §20 ADDENDUM (2026-07-07, append-only) — Mallat/Ballé second-pass review: items the symposium should see
+
+Source: `.omx/research/mallat_balle_deepmath_review_20260707.md` (deep-math research agent,
+report-only; DAG FEED-08e). One paragraph for the council: **(1)** the lane arm's comb-vs-basis
+ranking now has external theorem support — second-order scattering algebra (Andén-Mallat) says
+dashes are along-ridge amplitude modulation that NO first-order oriented basis carries after
+averaging, and Candès-Donoho parabolic scaling predicts our measured freq_along ceiling exactly
+(8 = √64; 25/8 ≈ the measured 3.2× deficit) — so the in-training #287 comb (the second-order
+carrier×envelope term, O(1) params, phase=ξ) is the theory-ranked lane repair and within-frame
+freq-along rebalance should be scoped to the SOLID all-class edges only (the −48% lever's home);
+a $0 frozen-ckpt freq_along ladder probe ({8,16,25,32} @ across=64, n600 through-R) is named to
+discriminate before the run is sealed. **(2)** Rate arm: the Ballé-style weight-entropy penalty is
+already byte-close-measured at −19.6% archive bytes — it belongs in the counted-weights /
+train-big-compress-small arm; hyperprior-class entropy models are twice-ruled-out at our
+hundreds-of-bytes payload scale (measured no-2D-locality + derived side-info inversion), while
+predictive-context coding (the measured ξ delta coder) extends to the lane-coeff payload for free.
+**(3)** Config audit owed before seal: σ-noise schedule ∧ uint8-STE co-active (the two halves of
+the quantization relaxation must not shadow each other). **(4)** Framing for the paper, not the
+run: rule 118 inverts NTC's model-size economics (ours); the τ-crossover law is a contribution the
+soft-to-hard quantization literature lacks (ours); self-orient is bandlet-class with the flow-bits
+tax zeroed by rule 118 (cite Le Pennec-Mallat); WCRG only rhymes with the crossover law — do not
+cite it as the source.

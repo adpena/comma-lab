@@ -9798,3 +9798,41 @@ foreground, 12 invocations, one exit-144 absorbed, peak RSS 5.7 GiB, live run RE
 Costate/duty: DashComb `measured` event #2 (mechanism level; the in-training arm has STILL
 never fired — stays on the duty queue). means ≠ ends: pointer 0.19110 moves only via
 `upstream/evaluate.py` on exact archive bytes.
+
+## FEED-08e (2026-07-07, deep-math research agent) — MALLAT + BALLÉ TARGETED SECOND PASS vs the MEASURED anchors: comb theory-ranked over freq-along; parabolic ceiling 8=√64 explains the 3.2× deficit; hyperprior calculus INVERTS at our byte scale [$0 report-only, advisory; pointer 0.19110 UNMOVED — means]
+
+Memo: `.omx/research/mallat_balle_deepmath_review_20260707.md` (per-theorem adjudication,
+MEASURED/THEIRS/INFERRED/SPECULATIVE discipline; ledger entries appended for 10 papers).
+What this adds to the pursuit plan:
+1. **Comb ≻ freq-along for the lane class, now with a theorem-shaped reason** (Andén-Mallat
+   second-order scattering: dashes = along-ridge amplitude modulation, first-order oriented
+   bases provably blind after averaging; the #287 max-plus comb IS the second-order
+   carrier×envelope term at O(1) params, phase=ξ). The owed in-training comb A/B (FEED-08c)
+   is now theory-ranked ABOVE any next-run freq-along spend for lane.
+2. **The measured 3.2× deficit is parabolic-scaling-shaped**: along ∝ √across (Candès-Donoho)
+   predicts our freq_along ceiling 8 = √64 exactly; dash needs 25; 25/8 ≈ 3.1 ≈ measured 3.2×.
+   Dashed edges are wave-atom-class, not cartoon-class → within-frame rebalance is
+   theorem-limited for dashes (keep parabolic rebalance for the SOLID all-class edges = the
+   −48% lever's home). **NEW $0 probe named (highest-EV NOW)**: frozen-ep650 render ladder
+   freq_along ∈ {8,16,25,32} @ across=64, n600 through-R (FEED-08c apparatus) — discriminates
+   first-order-fixable / wave-atom / homogenization-blocked; promotes candidate eq
+   `parabolic_scaling_along_tangent_ceiling_v1` (FORMALIZATION_PENDING).
+3. **Ballé rate leg**: NTC transmit-only-latent = rule-118 compile discipline, with the
+   INVERSION (generic decoder free, learned weights counted) as ours; weight-entropy penalty
+   already MEASURED −19.6% archive bytes → carry in next-run counted-weights arm; hyperprior
+   NO at O(10²-10³) B payloads (side-info fixed cost order-100% vs ~1-5% at image scale —
+   calculus inverts; + the 2026-05-07 no-2D-locality falsification stands); predictive-context
+   coding (FEED-08b ξ delta) is the transferable end — extend to lane coeffs ($0 byte-close).
+4. **Relaxation-vs-relaxation (operator correction integrated)**: his quantizer relaxations vs
+   our argmax-τ are the same move; soft-to-hard = our τ-anneal minus theory; universal/dithered
+   quantization does NOT transfer (cannot dither the frozen scorer's argmax — recorded
+   negative); ours→his: the τ-crossover/homogenization law is a paper contribution the
+   soft-to-hard line lacks. $0 DSL audit owed: σ-noise ∧ uint8-STE co-active in next config.
+5. **Negatives recorded**: WCRG rhymes-only (our crossover is Γ-convergence, not RG fixed
+   point); GDN no reading survives; RDP triangle degenerates (D already machine-metric);
+   bandlets = the right citation for self-orient (adaptive flow, flow bits FREE under
+   rule 118) — framing only. GIS deformation-stability → WATCH probe (warp-vs-noise flip-rate,
+   informs S_R #268 weighting).
+Costate/duty: adds probe row-2 (freq_along ladder) to the duty queue; comb in-training arm
+STILL never-fired (unchanged). means ≠ ends: pointer 0.19110 moves only via
+`upstream/evaluate.py` on exact archive bytes.
