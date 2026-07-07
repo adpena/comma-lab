@@ -10008,3 +10008,21 @@ d_seg/d_pose; real `quantize_levelset_blob` bytes + the hard entropy metric; EMA
 checked explicitly per the torch EMA-lag caveat). Consistency: DAG↔DSL↔equations agree;
 council draft §23 records the §22(2) closure. Pointer contest-CPU 0.19110 UNMOVED (build =
 means; the exact row remains the gate).
+
+## FEED-08k (2026-07-07, group-theory deep-math agent — RECOVERED post-credit-death) — GROUP THEORY vs the measured anchors: one MEASURED rate win + one MEASURED negative
+Full memo `.omx/research/group_theory_deepmath_review_20260707.md` (10-row ranked table; probes in
+gitignored `experiments/results/group_symmetry_canonicalization_probe_20260707/`, JSON durable-on-disk).
+**HIGHEST-EV NOW (row 1) — MEASURED:** the code stream decomposes under the ego one-parameter subgroup
+× frame-parity Z₂; frame0-code chain is ≈ ONE vector (cosine 0.99979); a parity-deinterleave +
+per-dim time-delta + column-major coder saves **−3,108 B (−15.3% of the 20,355 B code stream),
+decode bit-identical** → rate term **−0.00207** on the mod32cap ep650 ckpt. Pure-rate (d_seg/d_pose
+invariant by construction). = T5 crucible candidate C1; design sister C2 (shared-frame0 / asymmetric
+mod-dim, raw ceiling −9.6 KB code) carries a duty-to-measure (w_pose=0 lever-light ckpt is the only one
+measured — does frame0 near-constancy survive pose-ON?). **MEASURED NEGATIVE (row 7):** weight-space
+permutation-symmetry slack (S₉₆⁵×S₃₂×Z₂⁴⁸⁰×S₅) canonicalization = 387 B theoretical cap (0.47%), −8 B
+realized post-brotli → NO (recorded so nobody re-opens it). **Framing wins:** rule-118 orbit coding
+(free ACTION / counted COORDINATES) unifies ξ-quotient + comb + #155; Muon (Newton-Schulz) COMMUTES with
+the S₉₆ gauge (no hidden gauge-fix lever); shearlet dilation-group fixes along∝√across = the 8=√64
+ceiling (WATCH, sharpens the pending ladder probe). OWED (deferred to avoid colliding with the MLX
+sibling's mid-edit of the registry, now clear): register the C1 coder saving + the weight-symmetry
+negative as canonical equations (C4). [$0 CPU, advisory; pointer 0.19110 UNMOVED — build/measurement/means]
