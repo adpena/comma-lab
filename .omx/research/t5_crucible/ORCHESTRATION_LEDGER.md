@@ -41,6 +41,23 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
   "continue position_S<N> from its current on-disk state".
 - Every phase output committed immediately (serializer, [no-triality]).
 
+## SYNTHESIS HARD REQUIREMENTS (operator-directed 2026-07-07; the stack fails synthesis without these)
+A. **SOLVE-WHERE-SOLVABLE, from the basin.** The final stack includes a per-block solve schedule:
+   (i) TerminalSolve from the quadratic basin — GN/CG solve replacing late-stage training, gated on
+   the S2 recess GN/CG-from-ep650 probe (bar: beat 0.0033662) + the S3 in-basin spectrum detector;
+   (ii) the FULL #342 solve-don't-train inventory folded — every block solvable by
+   linear/quadratic/KKT/closed-form is SOLVED not trained, with where/when/conditions stated.
+   Training is reserved for what is provably not solvable.
+B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger in the derived schedule
+   (CE→tau hand-off, per-class meat exits, plateau, anneal-complete precondition, finisher
+   regression guard) ships ONLY with all three: (1) BACKTEST against the real mod32cap log
+   (anti-anchor: the #315 trigger that backtested near-vacuous — fires ep251 mid-descent,
+   reorient-50 confound); (2) INJECTION TEST through the LIVE trainer code path (synthetic
+   scenarios: fires-when-it-should + stays-silent-when-it-shouldn't, exercising the actual
+   witness_control wiring, not a unit stub); (3) FAIL-SAFE epoch CAPS so a dead/vacuous trigger
+   degrades to the capped schedule, never to an unbounded or truncated run (anti-anchor: the M2
+   anneal-truncation defect). A trigger without all three is NOT in the launch config.
+
 ## Recess queue (P4; grows from positions + red-team)
 1. $0 HVP-Lanczos GN/Hessian spectrum on saved #205 checkpoint (pinned §2 first-measurement).
 2. **FEED-08l FRESH-EYES ADVERSARIAL REVIEW (operator-flagged 2026-07-07).** The freq_along ladder
