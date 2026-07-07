@@ -373,6 +373,10 @@ src/tac.egg-info/
 # keep the lock local.
 !.omx/state/harness_failure_ledger.jsonl
 .omx/state/.harness_failure_ledger.jsonl.lock
+# Review-counter ledger (operating-manual §6/§8 clean-pass counter as derived
+# state; 2026-07-07) — commit the append-only JSONL, keep the lock local.
+!.omx/state/review_counter.jsonl
+.omx/state/.review_counter.jsonl.lock
 # Catalog #344 — canonical equations + models registry (HISTORICAL_PROVENANCE per
 # operator NON-NEGOTIABLE 2026-05-19; extincts tribal-knowledge bug class).
 !.omx/state/canonical_equations_registry.jsonl

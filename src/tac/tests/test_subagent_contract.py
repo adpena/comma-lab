@@ -29,6 +29,8 @@ def test_standard_contract_default_includes_all_blocks() -> None:
     for name in sc.CONTRACT_CONSTANT_NAMES:
         if name == "NEVER_REASONING_ECHO":
             continue  # dispatcher-side warning, never composed into model instructions
+        if name in sc.REVIEW_ONLY_CONSTANT_NAMES:
+            continue  # review-dispatch blocks compose via review_contract() only
         assert getattr(sc, name) in composed, f"default contract must include {name}"
 
 
@@ -78,6 +80,42 @@ def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
     # 9 blocks by default -> 8 separators.
     assert composed.count("\n\n") == 8
+
+
+def test_review_only_names_are_subset_of_contract_names() -> None:
+    assert set(sc.REVIEW_ONLY_CONSTANT_NAMES) <= set(sc.CONTRACT_CONSTANT_NAMES)
+
+
+def test_review_contract_includes_all_review_blocks() -> None:
+    composed = sc.review_contract()
+    for name in sc.REVIEW_ONLY_CONSTANT_NAMES:
+        assert getattr(sc, name) in composed, f"review contract must include {name}"
+    # Grounding + re-grounding + manual citation ride along on review dispatches too.
+    assert sc.GROUNDED_PROGRESS in composed
+    assert sc.FINAL_MESSAGE_REGROUNDING in composed
+    assert sc.MANUAL_CITATION in composed
+
+
+def test_review_contract_excludes_build_only_blocks() -> None:
+    composed = sc.review_contract()
+    assert sc.TRIALITY_WIRING not in composed  # reviewers report; builders wire triality
+    assert sc.NEVER_REASONING_ECHO not in composed
+    assert "refusal storms" not in composed
+
+
+def test_review_contract_counter_context_prepended() -> None:
+    composed = sc.review_contract(counter_context="surface X: 2 consecutive CLEAN rounds")
+    assert composed.startswith(
+        "REVIEW-COUNTER CONTEXT: surface X: 2 consecutive CLEAN rounds"
+    )
+    # Empty/whitespace context adds no block.
+    assert "REVIEW-COUNTER CONTEXT" not in sc.review_contract(counter_context="   ")
+
+
+def test_review_contract_counter_reset_semantics_verbatim() -> None:
+    composed = sc.review_contract()
+    assert "the clean-pass counter resets on ANY finding" in composed
+    assert "round-finished ≠ clean-pass" in composed
 
 
 def test_never_reasoning_echo_phrases_only_in_negated_lines() -> None:

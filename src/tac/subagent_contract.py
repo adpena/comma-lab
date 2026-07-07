@@ -25,17 +25,25 @@ from __future__ import annotations
 
 __all__ = [
     "ANTI_GOLDPLATING",
+    "CONFIRMED_VS_PLAUSIBLE",
     "CONTRACT_CONSTANT_NAMES",
+    "EXECUTE_DONT_READ",
     "FINAL_MESSAGE_REGROUNDING",
+    "FIXES_ARE_UNREVIEWED",
     "FRESH_CONTEXT_VERIFIER",
     "GROUNDED_PROGRESS",
     "KEY_PHRASES",
     "MANUAL_CITATION",
     "NEVER_REASONING_ECHO",
     "NO_ENDING_ON_PROMISES",
+    "NO_MANUFACTURED_FINDINGS",
     "OWN_ROUND1_REVIEW",
+    "REVIEW_ONLY_CONSTANT_NAMES",
+    "RISK_RANKING",
+    "SECTION8_CHECKLIST",
     "STATE_THE_BOUNDARIES",
     "TRIALITY_WIRING",
+    "review_contract",
     "standard_contract",
 ]
 
@@ -120,6 +128,62 @@ MANUAL_CITATION = (
     "risk always."
 )
 
+# --- Review-dispatch blocks (operating manual §3 / §5 / §6 / §8 as verbatim-grade code) ------
+#
+# These make the manual's REVIEW method structural: a review dispatcher composes them via
+# ``review_contract()`` instead of re-typing (re-typed review prompts drift and silently lose
+# the risk-ranking / counter-reset protections). They are NOT part of ``standard_contract()``
+# — see ``REVIEW_ONLY_CONSTANT_NAMES``.
+
+#: Manual §3 — effort follows probability × blast-radius × SILENCE, not line count.
+RISK_RANKING = (
+    "RISK RANKING (manual §3): rank findings by probability × blast-radius × SILENCE; a "
+    "quiet byte-identity break outranks a loud viz nit. Blast radius is not line count — a "
+    "3-line change to the score-authority path outranks a 500-line presentation change. "
+    "Spend reviewer depth on (a) whatever produces the authoritative number, (b) whatever "
+    "claims safety, (c) any default that changed, (d) any 'identical/equivalent' claim."
+)
+
+#: Manual §5 — findings are labeled by how they were obtained; the labels never blur.
+CONFIRMED_VS_PLAUSIBLE = (
+    "CONFIRMED vs PLAUSIBLE (manual §5): label every finding CONFIRMED (you reproduced/"
+    "verified it by execution) or PLAUSIBLE (needs author confirmation); never blur them. "
+    "A caveat travels WITH the finding every time it is repeated."
+)
+
+#: Manual §6.3 / §8.8 — the clean-pass counter semantics, verbatim-grade.
+FIXES_ARE_UNREVIEWED = (
+    "FIXES ARE UNREVIEWED NEW CODE (manual §6): fixes made in response to review are "
+    "unreviewed new code; the clean-pass counter resets on ANY finding; round-finished ≠ "
+    "clean-pass. Review fix rounds with the same hostility as the original code."
+)
+
+#: Manual §7.4 — honest negatives are deliverables; manufactured findings are fakes.
+NO_MANUFACTURED_FINDINGS = (
+    "NO MANUFACTURED FINDINGS: if nothing severe survives verification, say so plainly; "
+    "honest limits ≠ defects. Do not pad a clean pass into fake findings, and do not "
+    "promote a nit to justify the dispatch."
+)
+
+#: Manual §8 — the ten competence-lookalike mistakes as a per-commit review checklist.
+SECTION8_CHECKLIST = (
+    "SECTION-8 CHECKLIST (manual §8, per reviewed commit): check each of the ten "
+    "competence-lookalike mistakes — (1) means narrated as ends (pointer unmoved but "
+    "'progress' claimed); (2) capacity-sweep reflex displacing an already-measured lever; "
+    "(3) point-fix with the CLASS still live; (4) plausible summary written from memory "
+    "instead of the live artifact; (5) borrowed number cited without its vehicle+surface; "
+    "(6) agreeing with the test instead of stating the epistemic state; (7) fan-out as "
+    "theater where one measurement decides; (8) round-finished treated as clean-pass; "
+    "(9) silent fail-open guard; (10) polish-hoarding over the highest-risk open item."
+)
+
+#: Manual §4.3 — testimony is not evidence; execute the claim.
+EXECUTE_DONT_READ = (
+    "EXECUTE, DON'T READ: verify claims by running tests/code, not by reading commit "
+    "messages or docstrings. A docstring is testimony, not evidence — trace the call site "
+    "or execute the two paths and diff the outputs."
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -135,6 +199,23 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "OWN_ROUND1_REVIEW",
     "TRIALITY_WIRING",
     "MANUAL_CITATION",
+    "RISK_RANKING",
+    "CONFIRMED_VS_PLAUSIBLE",
+    "FIXES_ARE_UNREVIEWED",
+    "NO_MANUFACTURED_FINDINGS",
+    "SECTION8_CHECKLIST",
+    "EXECUTE_DONT_READ",
+)
+
+#: Review-dispatch-only constants: composed by ``review_contract()``, deliberately NOT
+#: composed by ``standard_contract()`` (a build dispatch is not a review dispatch).
+REVIEW_ONLY_CONSTANT_NAMES: tuple[str, ...] = (
+    "RISK_RANKING",
+    "CONFIRMED_VS_PLAUSIBLE",
+    "FIXES_ARE_UNREVIEWED",
+    "NO_MANUFACTURED_FINDINGS",
+    "SECTION8_CHECKLIST",
+    "EXECUTE_DONT_READ",
 )
 
 #: Per-constant key phrase — the load-bearing fragment each constant must keep verbatim.
@@ -149,6 +230,12 @@ KEY_PHRASES: dict[str, str] = {
     "OWN_ROUND1_REVIEW": "resets the clean-pass counter",
     "TRIALITY_WIRING": "SAME commit batch",
     "MANUAL_CITATION": "docs/operating_manual_craft_handoff.md",
+    "RISK_RANKING": "probability × blast-radius × SILENCE",
+    "CONFIRMED_VS_PLAUSIBLE": "never blur them",
+    "FIXES_ARE_UNREVIEWED": "round-finished ≠ clean-pass",
+    "NO_MANUFACTURED_FINDINGS": "honest limits ≠ defects",
+    "SECTION8_CHECKLIST": "competence-lookalike mistakes",
+    "EXECUTE_DONT_READ": "not by reading commit messages",
 }
 
 
@@ -181,4 +268,38 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
     if triality:
         blocks.append(TRIALITY_WIRING)
     blocks.append(MANUAL_CITATION)
+    return "\n\n".join(blocks)
+
+
+def review_contract(*, counter_context: str = "") -> str:
+    """Compose the review-dispatch addendum (the manual's review method as structure).
+
+    Composes the six review-only blocks (risk ranking, CONFIRMED-vs-PLAUSIBLE labeling,
+    execute-don't-read, fixes-are-unreviewed counter semantics, no manufactured findings,
+    the §8 ten-mistake checklist) plus grounded-progress, the final-message re-grounding,
+    and the operating-manual citation. Use for REVIEW dispatches; build dispatches use
+    :func:`standard_contract`.
+
+    Args:
+        counter_context: optional current clean-pass counter state for the surface under
+            review (e.g. the output of ``tac.review_counter.current_state(...).describe()``)
+            — prepended so the reviewer knows whether it is reviewing original code or an
+            unreviewed fix round.
+    """
+    blocks: list[str] = []
+    if counter_context.strip():
+        blocks.append(f"REVIEW-COUNTER CONTEXT: {counter_context.strip()}")
+    blocks.extend(
+        [
+            RISK_RANKING,
+            CONFIRMED_VS_PLAUSIBLE,
+            EXECUTE_DONT_READ,
+            FIXES_ARE_UNREVIEWED,
+            NO_MANUFACTURED_FINDINGS,
+            SECTION8_CHECKLIST,
+            GROUNDED_PROGRESS,
+            FINAL_MESSAGE_REGROUNDING,
+            MANUAL_CITATION,
+        ]
+    )
     return "\n\n".join(blocks)

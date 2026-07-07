@@ -6410,6 +6410,12 @@ def preflight_all(
         check_no_reasoning_echo_instructions(strict=True, verbose=verbose)
         check_subagent_contract_module_integrity(strict=True, verbose=verbose)
 
+        # 2026-07-07 operating-manual §5 evidence-tag discipline for NEW research
+        # memos (dated >= 2026-07-08; zero retroactive noise). WARN-ONLY BY DESIGN
+        # — the score-claim regex has an acknowledged false-positive rate on prose;
+        # do NOT strict-flip without a re-design (see the gate docstring).
+        check_new_memos_have_evidence_tags(strict=False, verbose=verbose)
+
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
                 REPO_ROOT,
@@ -86446,10 +86452,22 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     "OWN_ROUND1_REVIEW",
     "TRIALITY_WIRING",
     "MANUAL_CITATION",
+    # Review-dispatch blocks (2026-07-07 review_contract() extension — operating
+    # manual §3/§5/§6/§8 as structure). Hardcoded here per the same anti-self-waive
+    # design: emptying the module registry cannot drop these from the gate.
+    "RISK_RANKING",
+    "CONFIRMED_VS_PLAUSIBLE",
+    "FIXES_ARE_UNREVIEWED",
+    "NO_MANUFACTURED_FINDINGS",
+    "SECTION8_CHECKLIST",
+    "EXECUTE_DONT_READ",
 )
 _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
     "Before reporting progress, audit each claim against a tool result"
 )
+# review_contract() must keep the manual-§3 risk-ranking phrase (the load-bearing
+# fragment of the review method) — hardcoded gate-side, same anti-self-waive design.
+_SUBAGENT_CONTRACT_RISK_RANKING_PHRASE = "probability × blast-radius × SILENCE"
 
 
 def check_subagent_contract_module_integrity(
@@ -86530,6 +86548,27 @@ def check_subagent_contract_module_integrity(
                     f"grounded-progress phrase ({_SUBAGENT_CONTRACT_GROUNDING_PHRASE!r}) — "
                     "the highest-value harvest adoption must always be composed in.")
 
+        review_composer = getattr(module, "review_contract", None)
+        if not callable(review_composer):
+            violations.append(
+                f"{_SUBAGENT_CONTRACT_REL}: review_contract composer missing/not callable "
+                "(the review-dispatch method of the operating manual must stay structural).")
+        else:
+            try:
+                review_composed = review_composer()
+            except Exception as exc:  # pragma: no cover - defensive
+                review_composed = ""
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: review_contract() raised "
+                    f"{type(exc).__name__}: {exc}.")
+            if review_composed and (
+                _SUBAGENT_CONTRACT_RISK_RANKING_PHRASE not in review_composed
+            ):
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: review_contract() output lost the "
+                    f"risk-ranking phrase ({_SUBAGENT_CONTRACT_RISK_RANKING_PHRASE!r}) — "
+                    "manual §3 must always be composed into review dispatches.")
+
     if verbose:
         print(
             f"  [subagent-contract] check_subagent_contract_module_integrity: "
@@ -86541,6 +86580,165 @@ def check_subagent_contract_module_integrity(
             "check_subagent_contract_module_integrity found "
             f"{len(violations)} violation(s) (subagent-contract anti-rot):\n  "
             + "\n  ".join(violations))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Evidence-tag discipline for NEW research memos (2026-07-07 operating-manual
+# apparatus wave). Manual §5: "every claim you hand over carries one of these
+# labels, explicitly: MEASURED / DERIVED / INFERRED / ASSUMED / UNKNOWN" +
+# the CLAUDE.md forbidden pattern "empirical-claim-without-evidence-tag"
+# (docstring-overstatement trap: '49% savings' was a derivation reported as a
+# measurement; the empirical value was 18.5%).
+#
+# WARN-ONLY BY DESIGN — do NOT strict-flip: score-claim detection by regex has
+# a real false-positive rate (prose mentioning a metric near a number is not
+# always a claim). The gate nudges; the manual + review dispatches enforce.
+# Scope: .omx/research/*.md ONLY (top level, non-recursive) — deliberately NOT
+# the equations registry, code, or docs, where metric+number lines are data,
+# not claims. Cutoff: only memos dated on/after 2026-07-08 (zero retroactive
+# noise; the discipline binds future writing, not history per Catalog #110).
+# ----------------------------------------------------------------------------
+
+# Memos dated (filename YYYYMMDD token; mtime fallback) before this are exempt.
+_EVIDENCE_TAG_CUTOFF_YYYYMMDD = 20260708
+
+# Score-like numeric claims (manual §5 / CLAUDE.md forbidden-pattern vocabulary).
+_EVIDENCE_CLAIM_RES: tuple[re.Pattern[str], ...] = (
+    # d_seg / d_pose / ΔS / S followed by =/≈/~/: and a number.
+    re.compile(
+        r"\b(?:d_?seg|d_?pose|ΔS|delta_S|S)\s*[=≈~:]\s*[-+]?\d+(?:\.\d+)?(?:[eE]-?\d+)?"
+    ),
+    # "saves 49%" / "saves ~18.5 %"
+    re.compile(r"\bsaves?\s+~?\d+(?:\.\d+)?\s*%", re.IGNORECASE),
+    # "beats baseline" / "beats PR95" — a comparative score claim.
+    re.compile(r"\bbeats?\b\s+\S", re.IGNORECASE),
+)
+
+# Evidence vocabulary that legitimizes a claim (paragraph-level; case-insensitive).
+_EVIDENCE_TAG_TOKENS: tuple[str, ...] = (
+    "measured",
+    "derived",
+    "inferred",
+    "assumed",
+    "unknown",
+    "[empirical:",
+    "[prediction]",
+    "[advisory",
+    "operator-stated",
+    "estimated",
+    "nominal",
+)
+
+# Same-line waiver; placeholder literals rejected (Catalog #287 sister discipline).
+_EVIDENCE_TAG_WAIVER_RE = re.compile(
+    r"#\s*EVIDENCE_TAG_OK:\s*(?!<(?:rationale|reason)>)\S+"
+)
+
+_FILENAME_DATE_RE = re.compile(r"(20\d{6})")
+
+
+def _evidence_tag_memo_in_scope(path: Path) -> bool:
+    """A memo is in scope iff dated on/after the cutoff (filename date; mtime fallback)."""
+    dates = _FILENAME_DATE_RE.findall(path.name)
+    if dates:
+        return int(dates[-1]) >= _EVIDENCE_TAG_CUTOFF_YYYYMMDD
+    try:
+        mtime = _dt.datetime.fromtimestamp(path.stat().st_mtime, tz=_dt.timezone.utc)
+    except OSError:
+        return False
+    return int(mtime.strftime("%Y%m%d")) >= _EVIDENCE_TAG_CUTOFF_YYYYMMDD
+
+
+def _evidence_tag_iter_paragraphs(text: str):
+    """Yield (start_lineno, paragraph_lines) for blank-line-separated paragraphs."""
+    lines = text.splitlines()
+    start = None
+    buf: list[str] = []
+    for idx, line in enumerate(lines, start=1):
+        if line.strip():
+            if start is None:
+                start = idx
+            buf.append(line)
+        elif buf:
+            yield start, buf
+            start, buf = None, []
+    if buf:
+        yield start, buf
+
+
+def check_new_memos_have_evidence_tags(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """WARN-ONLY: new .omx/research memos with score-like claims need evidence vocabulary.
+
+    Per the operating manual §5 + the CLAUDE.md "Forbidden empirical-claim-without-
+    evidence-tag" pattern: a paragraph in a NEW memo (dated >= 2026-07-08) containing a
+    score-like numeric claim (``d_seg = 0.0047``, ``S ≈ 0.19``, ``saves 18%``, ``beats``,
+    ``ΔS``) must also contain evidence vocabulary (MEASURED / DERIVED / INFERRED /
+    ASSUMED / UNKNOWN / ``[empirical:<path>]`` / ``[prediction]`` / ``[advisory]`` /
+    OPERATOR-STATED / estimated / nominal) somewhere in the same paragraph, OR carry a
+    same-line ``# EVIDENCE_TAG_OK:<rationale>`` waiver (placeholder rejected).
+
+    DELIBERATELY warn-only (never strict-flip without re-design): the claim regex has an
+    acknowledged false-positive rate on prose. Scope is .omx/research/*.md top level
+    only — equation-registry JSONLs, docs, and code are data surfaces, not claim memos.
+    Sister of the manual §5 labeling discipline + ``tac.subagent_contract`` CONFIRMED-
+    vs-PLAUSIBLE review block.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    research = root / ".omx" / "research"
+    violations: list[str] = []
+    scanned = 0
+    if research.is_dir():
+        for path in sorted(research.glob("*.md")):
+            if not _evidence_tag_memo_in_scope(path):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned += 1
+            rel = path.relative_to(root).as_posix()
+            for start_lineno, para_lines in _evidence_tag_iter_paragraphs(text):
+                para = "\n".join(para_lines)
+                para_lower = para.lower()
+                if any(tok in para_lower for tok in _EVIDENCE_TAG_TOKENS):
+                    continue
+                for offset, line in enumerate(para_lines):
+                    hit = next(
+                        (m for cre in _EVIDENCE_CLAIM_RES if (m := cre.search(line))),
+                        None,
+                    )
+                    if hit is None:
+                        continue
+                    if _EVIDENCE_TAG_WAIVER_RE.search(line):
+                        continue
+                    violations.append(
+                        f"{rel}:{start_lineno + offset}: score-like claim "
+                        f"({hit.group(0).strip()!r}) in a paragraph with no evidence "
+                        "vocabulary (MEASURED/DERIVED/INFERRED/ASSUMED/[empirical:...]/"
+                        "[prediction]/[advisory]/OPERATOR-STATED/estimated/nominal). "
+                        "Label the claim by how it was obtained, or add a same-line "
+                        "`# EVIDENCE_TAG_OK:<rationale>` waiver."
+                    )
+                    break  # one violation per paragraph is enough signal
+
+    if verbose:
+        print(
+            f"  [evidence-tag] check_new_memos_have_evidence_tags: "
+            f"{len(violations)} violation(s) ({scanned} new memo(s) scanned)"
+            if violations else
+            f"  [evidence-tag] check_new_memos_have_evidence_tags: OK "
+            f"({scanned} new memo(s) scanned)")
+    if strict and violations:
+        raise PreflightError(
+            "check_new_memos_have_evidence_tags found "
+            f"{len(violations)} violation(s) (manual §5 evidence-tag discipline):\n  "
+            + "\n  ".join(violations[:10]))
     return violations
 
 

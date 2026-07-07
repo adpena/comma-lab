@@ -123,3 +123,29 @@ def test_contract_integrity_broken_module_flagged_and_strict_raises() -> None:
     assert any("grounded-progress phrase" in v for v in violations)
     with pytest.raises(PreflightError):
         check_subagent_contract_module_integrity(_module=broken, strict=True)
+
+
+def test_contract_integrity_requires_review_constants_and_composer() -> None:
+    # A module missing the review_contract composer + review constants is flagged
+    # (2026-07-07 extension: the review method must stay structural).
+    broken = SimpleNamespace(
+        KEY_PHRASES={},
+        standard_contract=lambda **kw: "x",
+    )
+    violations = check_subagent_contract_module_integrity(_module=broken)
+    assert any("RISK_RANKING" in v for v in violations)
+    assert any("SECTION8_CHECKLIST" in v for v in violations)
+    assert any("review_contract composer missing" in v for v in violations)
+
+
+def test_contract_integrity_review_composer_lost_risk_phrase_flagged() -> None:
+    import tac.subagent_contract as real
+
+    drifted = SimpleNamespace(
+        KEY_PHRASES=real.KEY_PHRASES,
+        standard_contract=real.standard_contract,
+        review_contract=lambda **kw: "a review addendum without the ranking rule",
+        **{name: getattr(real, name) for name in real.CONTRACT_CONSTANT_NAMES},
+    )
+    violations = check_subagent_contract_module_integrity(_module=drifted)
+    assert any("risk-ranking phrase" in v for v in violations)
