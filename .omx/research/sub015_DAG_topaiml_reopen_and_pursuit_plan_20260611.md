@@ -8718,3 +8718,35 @@ duty_to_measure + producer_signals + costate_prior) is task #262 (operator-seque
   CALLING the object (one generative source) — is DEFERRED to protect the sealed byte-identity gates the
   whole campaign depends on; tracked as #332 "make the DSL the complete auto-generated SoT".
 Pointer 0.19110 UNMOVED (all apparatus). [triality: DAG(this); code — [no-triality] commits]
+
+## FEED-07a (2026-07-07) — OPERATOR REFRAME: basis-match + rule-118 = the next-run PRIMARY arms; capacity ladder = PR95-echo local minimum
+
+Operator (verbatim): "maybe isotropic is wrong, for example we've learned lane is anisotropic;
+we've been dancing around basis match forever but I've struggled to get you unstuck from local
+minima, also dancing around rule 118. Train big compress small is also very promising."
+
+RECALL-FAILURE acknowledged — the receipts were already in this DAG:
+- All-class DIRECTIONAL basis −48% d_seg @ ~0 bytes (FEED 2026-06-25, "THE decisive lever,
+  basis-match PRIOR to capacity") — yet next-run designs kept reaching for the mod-dim ladder.
+- Along-tangent 3.2× freq deficit = measured lane-dash root cause (4-lens) — yet live mod32cap
+  spends --freq-across 32 / --freq-along 8 (BACKWARDS vs the deficit). Derived rebalance exists:
+  Candès–Donoho parabolic scaling (along ∝ √across), a derivation not a sweep.
+- Rule-118 analytic lane band BUILT+WIRED (AnalyticLaneRenderBand, 8 flags confirmed consumed by
+  the 2026-07-07 DSL whole-module review; its own stale docstring still said "will be refused" —
+  the dance made visible) with MEASURED lane d_seg 0.00087 at ~0 counted bytes.
+
+THE COMPOSITION (dissolves the capacity question): lane (~19% of flips, the anisotropic
+long-tail) → FREE generator (rule-118 band, 0.00087) → witness no longer carries the one class
+demanding high along-tangent frequency → REBALANCED anisotropic basis covers remaining all-class
+edges (−48%) → smooth-class remainder = a SMALL mod-dim suffices. LADDER movable=SDF-dilation
+homotopy = the same move on the difficulty axis. Mod-19-scale bytes may suffice because the hard
+class LEFT, not because capacity grew.
+
+BINDING for the derived-optimal-next-run symposium (inputs: probe verdict + #205 baseline +
+islands arm): PRIMARY arms = (A) anisotropy-REBALANCED basis (derived parabolic freq-along law),
+(B) analytic lane band ON (rule-118), (C) LADDER movable homotopy, (D) train-big-compress-small
+post-pass (train mod-48/64 → compress counted weights at Δd_seg=0 through R: sensitivity
+bit-alloc #157 / flat-minima #242 / TropNNC #311 / KD). Mod-dim = SECONDARY, 2 points, NOT a
+ladder. Memory: feedback_basis_match_rule118_are_the_levers_stop_capacity_sweep_reflex_20260707.
+Rate context: current 0.05499 vs PR95 MEASURED 0.1188 (178,417 B) — rate beaten; d_seg the wall.
+pointer 0.19110 UNMOVED (means/design).
