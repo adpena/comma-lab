@@ -9583,3 +9583,26 @@ MEASURED stage-0/stage-1 verdicts, which B-RESUME's own contract already owes (p
 register the basin-finisher law citing the probe artifact; negative → honest anchor + basin-
 radius bound in its FEED). Classified proactively per the per-leg discipline; same true-negative
 pattern as the FEED-07y addendum.
+
+## FEED-08a (2026-07-07, BUILD-WAVE-2 agent E) — serializer absorption CLASS-FIXED: `--base-content-sha256` edit-BASE vs HEAD-blob (rc=6) [no-triality, apparatus]
+
+**SIGNAL (measured):** the `serializer_whole_file_staging_absorbs_sibling_hunks` class fired
+twice in one build-wave window (git-show verified): 1d6704e5b absorbed the dash-comb agent's
+`--lane-band-dash-comb` trainer wire-in; 049aa0d9f absorbed its `DashComb` DSL Lever; a
+16:06:31Z `commit_failed` (nothing-to-commit) row shows a third agent discovering its hunks
+already landed. Every committer had `expected_content_sha256_present=True` and every check
+PASSED. **DIAGNOSTIC (hypothesis CONFIRMED):** the documented post-edit-sha discipline computes
+the sha on the already-merged working tree, so Catalog #157 (rc=4) + #216 (rc=5) are
+TAUTOLOGICAL against content co-mingled before the caller's snapshot; temp-index isolation is
+irrelevant (git add reads the shared WORKING TREE). Missing information = the caller's edit
+BASE. **RESPONSE (landed, 56fc64e19):** opt-in `--base-content-sha256 <file>=<pre-edit
+sha|new>`; serializer compares vs HEAD blob pre-lock AND post-lock; mismatch = rc=6 fail-loud
+(absorption at edit-start, or reversion when HEAD moved during lock-wait — a previously
+uncaught reverse hazard); WAIT_AND_RETRY resolves naturally once the sibling lands (HEAD==base,
+proven attribution-clean retry). 10 tmp_path scratch-repo concurrency tests incl. legacy-flag
+reproduction of the absorption; 54 sister serializer/gate tests + 4-proc stress green; dogfood:
+the fix's own commit ran the new check live. Ledger: measured diagnosis + class-fixed
+resolution appended (prior narrower theories preserved). Residual: flag is opt-in — hot-file
+mandate (GAP-5 extension) + `tac.subagent_contract` fold-in are named follow-ons. Memo:
+`.omx/research/serializer_absorption_classfix_base_sha_20260707.md`. Pointer 0.19110 UNMOVED
+(means/apparatus).
