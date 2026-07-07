@@ -2968,6 +2968,20 @@ When the codex session needs to be orchestrated through multiple stages (read co
 
 Memory: `feedback_bash_harness_kills_long_running_tasks_20260428.md`, `feedback_persistent_codex_review_protocol_20260429.md`, `feedback_codex_detach_pattern_works_20260429` (the verified detach test).
 
+## The Operating Manual — craft handoff — NON-NEGOTIABLE READ
+
+**`docs/operating_manual_craft_handoff.md`** is the operator-commissioned (2026-07-07) craft
+handoff from the outgoing senior model to every successor session: how to read the real ask ·
+decompose into independently checkable pieces · rank by probability×blast-radius×SILENCE ·
+verify by RE-DERIVING from primary artifacts · label MEASURED/DERIVED/INFERRED/ASSUMED out loud
+· attack your own conclusion (fixes are unreviewed new code; point-fix ≠ class-fix) · answer
+first, reasoning small, risk always · and the ten mistakes that look like competence (means-as-
+ends, capacity-sweep reflex, plausible summaries, borrowed numbers, agreeing-with-the-test,
+fan-out theater, round-finished≠clean-pass, silent guards, polish-hoarding). Every example in it
+is real and verifiable from this repo's history. It BINDS this agent and every subagent the same
+way the sections above do; subagent prompts for review/build work should cite it. Sisters: the
+NO-FAKE supreme rule (the manual is its craft-level how) + §OPERATOR PRIORITY anti-forgetfulness.
+
 ## Primary duties
 
 1. Keep `submissions/exact_current` runnable under the current published workflow.
