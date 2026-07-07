@@ -17,6 +17,14 @@ For machine-readable output (or when you need field-level detail):
 .venv/bin/python tools/witness_checkin.py --json
 ```
 
+Then ALSO run the #247 costate-controller digest (a core sense organ, part of
+the canonical check-in: pointer state, annulus headline, shadow-observer
+recommendations, duty-to-measure lever queue — advisory SENSE+DECIDE only):
+
+```bash
+.venv/bin/python tools/costate_digest.py
+```
+
 ## Reporting protocol (grounded — no over-promising)
 
 1. Lead with the tool's single output line, verbatim. It is the evidence;
