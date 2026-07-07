@@ -127,6 +127,7 @@ from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402  (#224 W
     serialize_lane_band,
     serialize_lane_band_any,    # Wave-F: format-preserving re-serialize (capped inflate)
     serialize_lane_band_rd,     # Wave-F: LBND2 optimal RD serializer
+    serialize_lane_band_res,    # LBND4: RD grid + ξ delta/context residual entropy stage (default OFF)
     witness_uncertainty_mask,
 )
 from tac import contest_score as _cscore  # noqa: E402  (canonical S = 100*d_seg + sqrt(10*d_pose) + 25*rate helpers)
@@ -2187,6 +2188,7 @@ def _lane_manifest_from_cfg(cfg: LaneBandRenderConfig, fit_stats: dict[str, Any]
 
 def build_lane_band_section(
     gt_cache: str | None, n_pairs: int, cfg: LaneBandRenderConfig, *, rd: bool = True,
+    res: bool = False,
 ) -> tuple[bytes, dict[str, Any], dict[str, Any]]:
     """Fit the per-pair lane manifold coords from the GT SegNet argmax cache (compress-time; the
     source is fully available), serialize + brotli them (COUNTED), and build the manifest cfg.
@@ -2195,7 +2197,14 @@ def build_lane_band_section(
     ``rd=True`` (Wave-F default) uses the OPTIMAL LBND2 rate-distortion codec
     (quantize->temporal-delta->L4-slots->zigzag, brotli entropy backend). ``rd=False`` uses
     the naive LBND1 float64 serializer (kept for the default-off byte-identical gate + the
-    naive-vs-RD rate comparison). The report carries the MEASURED per-lever byte accounting."""
+    naive-vs-RD rate comparison). ``res=True`` (--lane-band-res, DEFAULT OFF per the
+    sealed-config discipline) selects LBND4: the SAME LBND2 quantization grid (dequantized
+    statistic bit-identical, asserted at encode) with the ξ delta/context residual entropy
+    stage (best-of-three {varint,zlib9,rice}, MEASURED n600 −10,634 B / −25.6% vs LBND2;
+    experiments/results/lane_band_res_coder_20260707/). NOTE: the inline _INFLATE_PY does
+    NOT yet inline the LBND4 decode — a shipped LBND4 packet FAILS CLOSED at the parity
+    gate (unknown magic) until that decode half is inlined; measurement lever first.
+    The report carries the MEASURED per-lever byte accounting."""
     import brotli
 
     if not gt_cache:
@@ -2213,12 +2222,19 @@ def build_lane_band_section(
     pairs_lines, fit_stats = build_lane_band_pairs_from_lstars(lst_list, cfg)
     # Wave-F: measured per-lever rate accounting (naive LBND1 vs optimal LBND2 RD).
     rate_report = lane_band_rd_rate_report(pairs_lines, cfg)
-    raw = serialize_lane_band_rd(pairs_lines, cfg) if rd else serialize_lane_band(pairs_lines, cfg)
+    if res and not rd:
+        raise ValueError("--lane-band-res and --lane-band-naive are mutually exclusive "
+                         "(LBND4 is the RD grid + a different entropy stage; NO-FAKE: refusing "
+                         "an ambiguous codec selection).")
+    if res:
+        raw = serialize_lane_band_res(pairs_lines, cfg)
+    else:
+        raw = serialize_lane_band_rd(pairs_lines, cfg) if rd else serialize_lane_band(pairs_lines, cfg)
     lane_bytes = brotli.compress(raw, quality=11)
     lane_manifest = _lane_manifest_from_cfg(cfg, fit_stats)
     report = {
         "active": True,
-        "codec": ("LBND2_rd" if rd else "LBND1_naive"),
+        "codec": ("LBND4_res" if res else ("LBND2_rd" if rd else "LBND1_naive")),
         "source_gt_cache": str(p),
         "n_pairs_fit": ncap,
         "serialized_raw_bytes": len(raw),
@@ -2258,6 +2274,7 @@ def run(
     lane_render_band: bool = False,
     lane_band_cfg: LaneBandRenderConfig | None = None,
     lane_rd: bool = True,  # Wave-F: LBND2 optimal RD codec (default); False -> naive LBND1
+    lane_res: bool = False,  # LBND4: RD grid + ξ residual entropy stage (default OFF, measurement lever)
     pose_carrier: bool = False,  # #205 warp-real-luma frame0 pose carrier
     pose_carrier_cfg: dict[str, Any] | None = None,
     verify_bit_exact: bool = False,
@@ -2301,7 +2318,7 @@ def run(
     if lane_render_band:
         lane_cfg = lane_band_cfg or LaneBandRenderConfig()
         lane_band_bytes, lane_manifest, lane_report = build_lane_band_section(
-            gt_cache, n_pairs, lane_cfg, rd=lane_rd)
+            gt_cache, n_pairs, lane_cfg, rd=lane_rd, res=lane_res)
         _rr = lane_report.get("rate_report", {})
         print(f"[lane-band] active ({lane_report['codec']}): {lane_report['n_pairs_fit']} pairs fit, "
               f"COUNTED brotli={lane_report['counted_brotli_bytes']} B "
@@ -2617,6 +2634,15 @@ def main(argv: list[str] | None = None) -> int:
                     help="Wave-F: use the NAIVE LBND1 float64 serializer instead of the OPTIMAL LBND2 RD "
                          "codec (quantize+temporal-delta+zigzag). Default = LBND2 RD (rate-viable). The "
                          "naive path is kept for the naive-vs-RD rate comparison + the default-off gate.")
+    ap.add_argument("--lane-band-res", action="store_true",
+                    help="LBND4 (DEFAULT OFF, sealed-config discipline): serialize the lane-coeff payload "
+                         "on the SAME LBND2 quantization grid but with the ξ delta/context residual "
+                         "entropy stage (best-of-three varint/zlib9/rice; MEASURED n600 −10,634 B / "
+                         "−25.6%% vs LBND2, decode-reencode bit-identical — "
+                         "experiments/results/lane_band_res_coder_20260707/). Mutually exclusive with "
+                         "--lane-band-naive. NOTE: the inline _INFLATE_PY does not yet carry the LBND4 "
+                         "decode; a SHIPPED LBND4 packet fails CLOSED at the parity gate until that "
+                         "decode half is inlined (measurement lever first; NO-FAKE).")
     # self-orient params the trainer does NOT persist (a trainer gap, flagged) -> trainer defaults.
     ap.add_argument("--so-freq-across", type=float, default=32.0, help="self-orient HIGH freq across the edge (trainer default 32).")
     ap.add_argument("--so-freq-along", type=float, default=4.0, help="self-orient LOW freq along the edge (trainer default 4).")
@@ -2686,6 +2712,7 @@ def main(argv: list[str] | None = None) -> int:
             u_mask_tau=args.lane_band_tau, u_mask_eps=args.lane_band_eps,
         ),
         lane_rd=not args.lane_band_naive,
+        lane_res=args.lane_band_res,
         pose_carrier=args.pose_carrier,
         pose_carrier_cfg={
             "s_t": args.pc_s_t, "s_r": args.pc_s_r, "pitch": args.pc_pitch,

@@ -97,6 +97,10 @@ class GaugeComponent(Enum):
     # #302 curriculum-derivation symposium (FEED-05i, APPEND-ONLY; train-time schedule facet, 0
     # archive bytes; NOT a GaugeChoice STORE field — like CONTROL_SYSTEM / STAGE_TRANSITION_EASING).
     CURRICULUM = "curriculum"                            # #302: clock-vs-trigger schedule provenance
+    # Mallat/Ballé review row 7 BUILD 1 (FEED-08h, APPEND-ONLY; BYTE-CLOSE-side section-codec
+    # facet, ships in the counted 5th block; NOT a GaugeChoice STORE field and NOT a trainer flag —
+    # the flag lives on tools/levelset_byte_close_and_eval.py, like LaneGauge's --lane-band-naive).
+    LANE_BAND_CODER = "lane_band_coder"                  # LBND2 raw-zigzag vs LBND4 ξ-residual entropy stage
 
 
 class WarpGauge(Enum):
@@ -253,6 +257,35 @@ class LaneGauge(Enum):
 
     NONE = "none"                              # witness authors lane (byte-identical baseline)
     BAND_RENDER_AUTHORITY = "band_render_authority"  # --lane-render-band analytic class-1 authority
+
+
+class LaneBandCoderGauge(Enum):
+    """How the COUNTED lane-coeff payload (the LaneGauge BAND_RENDER_AUTHORITY statistic) is
+    entropy-coded in the byte-close 5th block (Mallat/Ballé review row 7 BUILD 1, FEED-08h).
+
+    A BYTE-CLOSE-side section-codec chart, NOT a trainer flag (never-invent-flags: these flags
+    live on ``tools/levelset_byte_close_and_eval.py``, exactly like LaneGauge's documented
+    ``--lane-band-naive`` opt-out — the accessor is ``lane_band_coder_byte_close_flags``, kept
+    OUT of the trainer-argv surface so the lever_registry stale-drift check stays clean).
+    Every chart decodes to the BIT-IDENTICAL dequantized LaneLine statistic (same L3/L4 grid);
+    only the entropy stage differs, so the choice is pure rate (d_seg/d_pose invariant).
+
+    MEASURED n600 (real gt_n600 fit, the byte-close tool's own build path; brotli-counted,
+    ``experiments/results/lane_band_res_coder_20260707/lane_band_res_coder_n600_measured.json``,
+    [macOS-CPU advisory]): LBND2 41,526 B (0.02765) -> LBND4 varint 30,892 B (0.02057) =
+    **−10,634 B / −25.6%**, decode-reencode byte-identical for all three residual schemes
+    (varint 30,892 < rice 33,229 < zlib9 34,701 post-brotli). Sister of the ξ delta_res coder
+    (−486 B, commit a44a06fb8) — ONE shared residual entropy stage
+    (``tac.boundary_math.xi_spline_residual_coder``), never a duplicated copy.
+
+    DEFAULT = RD (LBND2, the sealed-config shipping default; RES is default-OFF, REGISTERED with
+    duty-to-measure in the activation ledger — the "off is a tracked queue" discipline). SHIPPING
+    RES requires inlining the LBND4 decode half into _INFLATE_PY first (parity gate fails closed
+    on the unknown magic until then)."""
+
+    RD = "rd"        # LBND2: raw uint32 zigzag words + outer brotli (shipping default)
+    RES = "res"      # LBND4: ξ delta/context residual stage (best-of-three) + outer brotli
+    NAIVE = "naive"  # LBND1: per-pair float64 (kept for the naive-vs-RD comparison gate)
 
 
 class HeadGeometryGauge(Enum):
@@ -730,6 +763,10 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     # #302 curriculum-derivation symposium (FEED-05i, APPEND-ONLY; train-time schedule facet, NOT
     # a GaugeChoice STORE field — like CONTROL_SYSTEM / STAGE_TRANSITION_EASING).
     GaugeComponent.CURRICULUM: CurriculumGauge,
+    # Mallat/Ballé review row 7 BUILD 1 (FEED-08h, APPEND-ONLY; byte-close 5th-block section
+    # codec — a RATE-only chart over the identical dequantized statistic; NOT a GaugeChoice
+    # STORE field and NOT a trainer flag; accessor = lane_band_coder_byte_close_flags).
+    GaugeComponent.LANE_BAND_CODER: LaneBandCoderGauge,
 }
 
 
@@ -745,6 +782,15 @@ RENDER_AA_TRAINER_FLAGS: dict[RenderAAGauge, tuple[str, ...]] = {
 LANE_BAND_TRAINER_FLAGS: dict[LaneGauge, tuple[str, ...]] = {
     LaneGauge.NONE: (),
     LaneGauge.BAND_RENDER_AUTHORITY: ("--lane-render-band",),
+}
+# BYTE-CLOSE TOOL argv (tools/levelset_byte_close_and_eval.py), NOT trainer argv — deliberately a
+# separate map + accessor so these flags never enter the DSL's trainer-emitted surface (the
+# lever_registry ``stale == []`` invariant + never-invent-flags stay intact). RD = () because
+# LBND2 IS the tool's default; the active charts emit the tool's real opt-in flags.
+LANE_BAND_CODER_BYTE_CLOSE_FLAGS: dict[LaneBandCoderGauge, tuple[str, ...]] = {
+    LaneBandCoderGauge.RD: (),
+    LaneBandCoderGauge.RES: ("--lane-band-res",),
+    LaneBandCoderGauge.NAIVE: ("--lane-band-naive",),
 }
 # AM-softmax margin default (CosFace-family m~0.35-0.5, adapted to the realized-margin-hinge target).
 # The fixed ADDITIVE_MARGIN chart cannot carry a per-instance value, so this is the default the static
@@ -770,6 +816,13 @@ def render_aa_trainer_flags(chart: RenderAAGauge) -> tuple[str, ...]:
 def lane_band_trainer_flags(chart: LaneGauge) -> tuple[str, ...]:
     """The levelset-trainer argv flags for a LaneGauge chart (NONE => () byte-identical)."""
     return LANE_BAND_TRAINER_FLAGS[chart]
+
+
+def lane_band_coder_byte_close_flags(chart: LaneBandCoderGauge) -> tuple[str, ...]:
+    """The BYTE-CLOSE-TOOL argv flags for a LaneBandCoderGauge chart (RD => () — LBND2 is the
+    tool default). These are ``tools/levelset_byte_close_and_eval.py`` flags, NEVER trainer
+    argv (kept out of the DSL trainer-emitted surface by design; see the chart docstring)."""
+    return LANE_BAND_CODER_BYTE_CLOSE_FLAGS[chart]
 
 
 def head_geometry_trainer_flags(chart: HeadGeometryGauge,

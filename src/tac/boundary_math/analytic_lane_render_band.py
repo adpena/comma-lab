@@ -332,8 +332,6 @@ def composite_lane_band_mlx(
 ) -> Any:
     """MLX twin of ``composite_lane_band`` (elementwise; differentiable; mx.compile)."""
 
-    import mlx.core as mx
-
     a = coverage
     if u_mask is not None:
         a = a * u_mask
@@ -1014,8 +1012,11 @@ def roundtrip_lines_through_rd(
 
 # --- magic-dispatching helpers (so the byte-close tool + tests are format-agnostic) --
 def deserialize_lane_band_any(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
-    """Dispatch on magic: LBND1 -> naive, LBND2 -> temporal-delta RD, LBND3 -> ego-predictive."""
+    """Dispatch on magic: LBND1 -> naive, LBND2 -> temporal-delta RD, LBND3 -> ego-predictive,
+    LBND4 -> LBND2 grid + ξ delta/context residual entropy stage."""
 
+    if blob[:len(LANE_BAND_RES_MAGIC)] == LANE_BAND_RES_MAGIC:
+        return deserialize_lane_band_res(blob)
     if blob[:len(LANE_BAND_RD3_MAGIC)] == LANE_BAND_RD3_MAGIC:
         return deserialize_lane_band_rd3(blob)
     if blob[:len(LANE_BAND_RD_MAGIC)] == LANE_BAND_RD_MAGIC:
@@ -1026,11 +1027,18 @@ def deserialize_lane_band_any(blob: bytes) -> tuple[list[list[LaneLine]], dict[s
 def serialize_lane_band_any(
     pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, orig_header: dict[str, Any],
 ) -> bytes:
-    """Re-serialize preserving the input format (detected from ``orig_header``). For LBND2
-    it reuses the header's ``base_steps`` + ``f_near`` so a re-serialized subset lands on
-    the EXACT SAME quantization grid (bit-exact for the capped-inflate gate)."""
+    """Re-serialize preserving the input format (detected from ``orig_header``). For LBND2 /
+    LBND4 it reuses the header's ``base_steps`` + ``f_near`` (and, for LBND4, the pinned
+    residual scheme) so a re-serialized subset lands on the EXACT SAME quantization grid
+    (bit-exact for the capped-inflate gate)."""
 
     rd = orig_header.get("rd")
+    res = orig_header.get("res")
+    if rd is not None and res is not None:
+        return serialize_lane_band_res(
+            pairs_lines, cfg,
+            base_steps=np.asarray(rd["base_steps"], np.float64),
+            f_near=float(rd.get("f_near", _RD_F_NEAR)), scheme=str(res["scheme"]))
     if rd is not None:
         return serialize_lane_band_rd(
             pairs_lines, cfg,
@@ -1281,7 +1289,6 @@ def temporal_smooth_pairs_lines(
     M, presence, K = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
     if K == 0:
         return [list(ls) for ls in pairs_lines]
-    P = int(M.shape[0])
     w = int(win) | 1
     h = w // 2
     # which slot-local dims to smooth: centerline [0:4], halfwidth [4:6], forward_range [9:11]
@@ -1725,3 +1732,249 @@ def _induced_lateral_rms_vs_raw(
             oo = np.polyval(np.asarray(o.centerline_coeffs, np.float64), fwd)
             errs.append(float(np.sqrt(np.mean((ro - oo) ** 2))))
     return float(np.mean(errs)) if errs else float("nan")
+
+
+# ===========================================================================
+# LBND4 (2026-07-07, Mallat/Ballé review row 7 BUILD 1): the ENTROPY STAGE of the
+# LBND2 lane-coeff payload, re-coded with the SAME delta/context residual discipline
+# the ξ carrier already uses (``xi_spline_residual_coder``: best-of-three
+# {varint, zlib9, rice} per encode, self-describing scheme id, NO-FAKE full-decode
+# bit-identity self-check — the coder that MEASURED −486 B on the ξ table,
+# commit a44a06fb8).
+#
+# WHAT CHANGES vs LBND2: NOTHING upstream of the entropy stage. The L4 slot packing,
+# the L3 geometric-tolerance quantization grid, the L2 temporal delta (row0 seed),
+# and the presence bitmap are BYTE-FOR-BYTE the same (same ``_pack_pairs_to_matrix``
+# / ``derive_rd_base_steps`` / ``_quantize_matrix``), so the DEQUANTIZED LaneLines —
+# the shipped video-derived statistic — are BIT-IDENTICAL to LBND2's (asserted at
+# encode). Only the delta-stream SERIALIZATION differs: LBND2 emits raw uint32
+# zigzag words (entropy-coded solely by the outer brotli of the byte-close 5th
+# block); LBND4 codes the SAME int64 delta matrix through the ξ residual entropy
+# stage before the outer brotli. The scheme is picked by MEASURED post-brotli bytes
+# (the counted objective) when brotli is importable, else raw bytes — deterministic
+# either way, recorded in the header (self-describing).
+#
+# DEFAULT OFF (sealed-config discipline): the byte-close tool ships LBND2 unless
+# ``--lane-band-res`` is passed. If LBND4 is ever SELECTED for a SHIPPED archive,
+# the inline inflate (``_lane_parse_any`` in tools/levelset_byte_close_and_eval.py's
+# _INFLATE_PY) must inline this decode half (varint/zlib9/rice readers) alongside
+# the existing verbatim copies — until then the packet parity gate FAILS CLOSED on
+# the unknown magic (never wrong bytes silently). rule-118: COUNTED = the coded
+# delta stream + presence bitmap (same statistic as LBND2); FREE = every decode
+# algorithm. NEVER a score claim; the pointer moves only via upstream/evaluate.py.
+# ===========================================================================
+
+LANE_BAND_RES_MAGIC = b"LBND4\x00"
+
+
+def _lbnd4_pack(
+    M: np.ndarray, presence: np.ndarray, K: int, cfg: LaneBandRenderConfig,
+    steps: np.ndarray, *, f_near: float, scheme: str | None,
+) -> bytes:
+    """LBND4 wire-format serialization of an ALREADY-PACKED (M, presence, K) matrix.
+
+    Layout::
+
+        LANE_BAND_RES_MAGIC | u32 hlen | header_json | u32 plen | presence_bytes
+                            | u8 scheme_id | u32 rlen | residual_blob
+
+    ``header_json`` carries the SAME render-scalar + ``"rd"`` keys as LBND2 (so
+    ``render_config_from_header`` and the grid-preserving re-serialize work
+    unchanged) plus a ``"res"`` provenance block ``{"scheme": <name>}``.
+    ``scheme=None`` MEASURES all three residual schemes and ships the one with the
+    smallest POST-BROTLI blob (the counted objective; raw-bytes fallback without
+    brotli). NO-FAKE: the caller (``serialize_lane_band_res``) runs the full decode
+    and refuses unless the dequantized lines are bit-identical to LBND2's."""
+
+    from tac.boundary_math.xi_spline_residual_coder import (
+        RESIDUAL_SCHEMES,
+        encode_residual_matrix,
+        residual_scheme_id,
+    )
+
+    steps = np.asarray(steps, np.float64)
+    if steps.shape != (_RD_D_SLOT,):
+        raise ValueError(f"base_steps must be ({_RD_D_SLOT},); got {steps.shape}")
+    P = int(M.shape[0])
+    D = K * _RD_D_SLOT
+    steps_full = np.tile(steps, K) if K else np.zeros(0, np.float64)
+    Q = _quantize_matrix(M, steps_full)                       # (P, D) int64
+    dq = Q.copy()
+    if P > 1 and D:
+        dq[1:] = Q[1:] - Q[:-1]                                # row0 = seed, rows>0 = temporal delta
+
+    presence_bytes = np.packbits(presence.reshape(-1)).tobytes() if presence.size else b""
+
+    def _assemble(name: str) -> bytes:
+        rblob = encode_residual_matrix(dq, name) if dq.size else b""
+        rd_block: dict[str, Any] = {
+            "K": int(K), "d_slot": int(_RD_D_SLOT), "n_pairs": int(P),
+            "base_steps": [float(s) for s in steps.tolist()], "f_near": float(f_near),
+        }
+        header: dict[str, Any] = {
+            "format": 4,
+            "softness": float(cfg.softness),
+            "dash_gate": bool(cfg.dash_gate),
+            "dash_forward_max_m": float(cfg.dash_forward_max_m),
+            "v_h": float(cfg.v_h),
+            "cx": (None if cfg.cx is None else float(cfg.cx)),
+            "weight": float(cfg.weight),
+            "lane_cls": int(cfg.lane_cls),
+            "lane_rgb_mode": str(cfg.lane_rgb_mode),
+            "u_mask": (
+                {"source": "witness_margin", "tau": float(cfg.u_mask_tau), "eps": float(cfg.u_mask_eps)}
+                if cfg.u_mask_enabled else None
+            ),
+            "geom": {"cam_h": _CAM_H, "fx": _FX, "fy": _FY, "seg_h": _SEG_H, "seg_w": _SEG_W},
+            "rd": rd_block,
+            "res": {"scheme": name},
+        }
+        mj = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        return (LANE_BAND_RES_MAGIC + struct.pack("<I", len(mj)) + mj
+                + struct.pack("<I", len(presence_bytes)) + presence_bytes
+                + struct.pack("<B", residual_scheme_id(name))
+                + struct.pack("<I", len(rblob)) + rblob)
+
+    if scheme is not None:
+        if scheme not in RESIDUAL_SCHEMES:
+            raise ValueError(f"unknown LBND4 residual scheme {scheme!r} (known: {RESIDUAL_SCHEMES})")
+        return _assemble(scheme)
+    # scheme=None: MEASURE all three and pick by the COUNTED objective (post-brotli bytes);
+    # deterministic tie-break by (size, name). Raw-bytes fallback when brotli is unavailable.
+    blobs = {name: _assemble(name) for name in RESIDUAL_SCHEMES}
+    try:
+        import brotli  # the byte-close counted-bytes backend (an existing inflate dep)
+
+        sizes = {name: len(brotli.compress(b, quality=11)) for name, b in blobs.items()}
+    except ImportError:  # pragma: no cover - brotli is an installed dep in this repo
+        sizes = {name: len(b) for name, b in blobs.items()}
+    best = min(sorted(sizes), key=lambda name: sizes[name])
+    return blobs[best]
+
+
+def serialize_lane_band_res(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None,
+    base_steps: np.ndarray | None = None,
+    f_near: float = _RD_F_NEAR,
+    scheme: str | None = None,
+) -> bytes:
+    """LBND4 serialization of the per-pair lane manifold: the LBND2 pipeline with the
+    ξ delta/context residual entropy stage (best-of-three, self-describing) replacing
+    the raw uint32 zigzag words. Same quantization grid as LBND2 (``base_steps``
+    overrides the derived steps exactly as in ``serialize_lane_band_rd``), so the
+    shipped dequantized statistic is BIT-IDENTICAL — asserted here through the REAL
+    decode (NO-FAKE refuse on any mismatch)."""
+
+    steps = np.asarray(base_steps, np.float64) if base_steps is not None else derive_rd_base_steps(tol)
+    M, presence, K = _pack_pairs_to_matrix(pairs_lines, f_near=f_near)
+    blob = _lbnd4_pack(M, presence, K, cfg, steps, f_near=f_near, scheme=scheme)
+    # NO-FAKE bit-identity self-check: decode through the REAL LBND4 path and compare the
+    # dequantized lines against the LBND2-equivalent reconstruction of the SAME (Q, presence).
+    dec_lines, _hdr = deserialize_lane_band_res(blob)
+    steps_full = np.tile(steps, K) if K else np.zeros(0, np.float64)
+    Q = _quantize_matrix(M, steps_full)
+    ref_lines = _unpack_matrix_to_pairs(Q.astype(np.float64) * steps_full, presence, K)
+    if len(dec_lines) != len(ref_lines):
+        raise ValueError("LBND4 decode pair-count mismatch (NO-FAKE refuse)")
+    for dl, rl in zip(dec_lines, ref_lines):
+        if len(dl) != len(rl):
+            raise ValueError("LBND4 decode per-pair line-count mismatch (NO-FAKE refuse)")
+        for a, b in zip(dl, rl):
+            if not np.array_equal(_line_to_slot_vec(a), _line_to_slot_vec(b)):
+                raise ValueError(
+                    "LBND4 decode is NOT bit-identical to the LBND2-grid statistic (NO-FAKE refuse)")
+    return blob
+
+
+def deserialize_lane_band_res(blob: bytes) -> tuple[list[list[LaneLine]], dict[str, Any]]:
+    """Bit-exact inverse of :func:`serialize_lane_band_res` (numpy+stdlib+the ξ residual
+    decoders). Returns (per-pair DEQUANTIZED LaneLines, header) — the same surface as
+    ``deserialize_lane_band_rd``, so every downstream consumer is format-agnostic."""
+
+    from tac.boundary_math.xi_spline_residual_coder import decode_residual_matrix
+
+    if blob[:len(LANE_BAND_RES_MAGIC)] != LANE_BAND_RES_MAGIC:
+        raise ValueError("bad LBND4 magic (NO-FAKE: refusing to guess).")
+    off = len(LANE_BAND_RES_MAGIC)
+    (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    header = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    (plen,) = struct.unpack_from("<I", blob, off); off += 4
+    presence_bytes = blob[off:off + plen]; off += plen
+    (scheme_id,) = struct.unpack_from("<B", blob, off); off += 1
+    (rlen,) = struct.unpack_from("<I", blob, off); off += 4
+    rblob = blob[off:off + rlen]; off += rlen
+    if off != len(blob):
+        raise ValueError("LBND4 payload has trailing bytes (corrupt payload)")
+    rd = header["rd"]
+    K = int(rd["K"]); P = int(rd["n_pairs"]); d_slot = int(rd["d_slot"])
+    steps = np.asarray(rd["base_steps"], np.float64)
+    D = K * d_slot
+    if K:
+        presence = np.unpackbits(np.frombuffer(presence_bytes, dtype=np.uint8))[:P * K].reshape(P, K).astype(bool)
+        dq = decode_residual_matrix(rblob, scheme_id, P, D)
+        Q = np.cumsum(dq, axis=0)                               # row0=seed; cumsum undoes temporal delta
+        steps_full = np.tile(steps, K)
+        M = Q.astype(np.float64) * steps_full
+    else:
+        presence = np.zeros((P, 0), dtype=bool)
+        M = np.zeros((P, 0), np.float64)
+    pairs_lines = _unpack_matrix_to_pairs(M, presence, K)
+    return pairs_lines, header
+
+
+def lane_band_res_rate_report(
+    pairs_lines: list[list[LaneLine]], cfg: LaneBandRenderConfig, *,
+    tol: LaneBandRDTolerance | None = None, f_near: float = _RD_F_NEAR,
+) -> dict[str, Any]:
+    """MEASURED (never asserted) counted-bytes comparison of the lane-coeff entropy
+    stage: LBND2 (raw uint32 zigzag + outer brotli, the shipping default) vs LBND4
+    under each of the three ξ residual schemes (+ outer brotli). All byte counts are
+    REAL ``len(brotli(blob, q11))`` — the exact quantity the byte-close 5th block
+    counts. Includes the decode-reencode identity verdicts. ``[macOS-CPU advisory]``;
+    NEVER a score claim; the pointer moves only via upstream/evaluate.py."""
+
+    import brotli
+
+    from tac.boundary_math.xi_spline_residual_coder import RESIDUAL_SCHEMES
+
+    steps = derive_rd_base_steps(tol)
+    lbnd2 = serialize_lane_band_rd(pairs_lines, cfg, tol=tol, f_near=f_near)
+    b2 = len(brotli.compress(lbnd2, quality=11))
+    rows: dict[str, dict[str, Any]] = {}
+    for name in RESIDUAL_SCHEMES:
+        blob = serialize_lane_band_res(pairs_lines, cfg, tol=tol, f_near=f_near, scheme=name)
+        cb = len(brotli.compress(blob, quality=11))
+        # decode -> re-encode identity (same steps grid + pinned scheme => byte-identical)
+        dec_lines, hdr = deserialize_lane_band_res(blob)
+        re_blob = serialize_lane_band_res(
+            dec_lines, render_config_from_header(hdr),
+            base_steps=np.asarray(hdr["rd"]["base_steps"], np.float64),
+            f_near=float(hdr["rd"].get("f_near", _RD_F_NEAR)),
+            scheme=str(hdr["res"]["scheme"]))
+        rows[name] = {
+            "raw_bytes": len(blob),
+            "counted_brotli_bytes": cb,
+            "rate_term": 25.0 * cb / 37_545_489.0,
+            "delta_vs_lbnd2_brotli_bytes": cb - b2,
+            "decode_reencode_byte_identical": bool(re_blob == blob),
+        }
+    auto = serialize_lane_band_res(pairs_lines, cfg, tol=tol, f_near=f_near, scheme=None)
+    auto_hdr = json.loads(auto[len(LANE_BAND_RES_MAGIC) + 4:
+                               len(LANE_BAND_RES_MAGIC) + 4
+                               + struct.unpack_from("<I", auto, len(LANE_BAND_RES_MAGIC))[0]].decode("utf-8"))
+    picked = str(auto_hdr["res"]["scheme"])
+    best = min(sorted(rows), key=lambda n: rows[n]["counted_brotli_bytes"])
+    return {
+        "n_pairs": int(len(pairs_lines)),
+        "lbnd2_raw_bytes": len(lbnd2),
+        "lbnd2_counted_brotli_bytes": b2,
+        "lbnd2_rate_term": 25.0 * b2 / 37_545_489.0,
+        "lbnd4_schemes": rows,
+        "lbnd4_auto_picked_scheme": picked,
+        "lbnd4_best_scheme": best,
+        "lbnd4_best_counted_brotli_bytes": rows[best]["counted_brotli_bytes"],
+        "measured_byte_delta_best_vs_lbnd2": rows[best]["counted_brotli_bytes"] - b2,
+        "base_steps": [float(s) for s in steps.tolist()],
+        "axis_labels": "[macOS-CPU advisory] MEASURED brotli byte counts; NOT a score claim; pointer 0.19110 UNMOVED",
+    }

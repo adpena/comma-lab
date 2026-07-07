@@ -188,6 +188,11 @@ from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 im
     freq_along_for_regime,
     populate_anisotropic_basis_two_regime_allocation_equation,
 )
+from tac.canonical_equations.lane_band_res_entropy_stage_20260707 import (
+    build_lane_band_res_entropy_stage_v1,
+    measured_entropy_stage_delta_bytes,
+    populate_lane_band_res_entropy_stage_equation,
+)
 from tac.canonical_equations.step_native_activation_edge_optimality_20260707 import (
     build_step_native_activation_edge_optimality_v1,
     hosc_step_limit_beta_ratio,
@@ -314,6 +319,9 @@ __all__ = [
     "build_anisotropic_basis_two_regime_allocation_v1",
     "freq_along_for_regime",
     "populate_anisotropic_basis_two_regime_allocation_equation",
+    "build_lane_band_res_entropy_stage_v1",
+    "measured_entropy_stage_delta_bytes",
+    "populate_lane_band_res_entropy_stage_equation",
     "build_logit_adjustment_class_prior_law_v1",
     "build_quadratic_head_chart_subset_solve_gap_v1",
     "build_step_native_activation_edge_optimality_v1",

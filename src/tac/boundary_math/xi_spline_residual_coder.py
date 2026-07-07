@@ -355,6 +355,34 @@ def measure_residual_schemes(res: np.ndarray) -> dict[str, int]:
     return {s: len(_encode_residual(res, s)) for s in RESIDUAL_SCHEMES}
 
 
+# --- public single-source residual-matrix coder surface (consumed by the LBND4 lane-coeff
+# section codec in analytic_lane_render_band; delta/context discipline shared with the xi
+# carrier so there is ONE residual entropy stage in the repo, never a duplicated copy) ------
+def encode_residual_matrix(res: np.ndarray, scheme: str) -> bytes:
+    """Losslessly encode an integer residual matrix ``(P, D) int64`` under ``scheme``
+    (one of :data:`RESIDUAL_SCHEMES`). Public wrapper over the xi residual entropy stage."""
+    return _encode_residual(np.asarray(res, dtype=np.int64), scheme)
+
+
+def decode_residual_matrix(blob: bytes, scheme_id: int, P: int, D: int) -> np.ndarray:
+    """Inverse of :func:`encode_residual_matrix` → ``(P, D) int64`` (numpy+stdlib only)."""
+    return _decode_residual(blob, int(scheme_id), int(P), int(D))
+
+
+def residual_scheme_id(name: str) -> int:
+    """The self-describing payload id of a residual scheme name (fail-closed on unknown)."""
+    if name not in _SCHEME_IDS:
+        raise XiSplineResidualError(f"unknown residual scheme {name!r} (known: {RESIDUAL_SCHEMES})")
+    return _SCHEME_IDS[name]
+
+
+def residual_scheme_name(scheme_id: int) -> str:
+    """Inverse of :func:`residual_scheme_id` (fail-closed on unknown)."""
+    if scheme_id not in _SCHEME_NAMES:
+        raise XiSplineResidualError(f"unknown residual scheme id {scheme_id}")
+    return _SCHEME_NAMES[scheme_id]
+
+
 # --------------------------------------------------------------------------- #
 # the spline_residual payload BODY (nested inside the XIP2 container, coder id 2)
 # --------------------------------------------------------------------------- #
@@ -541,11 +569,15 @@ def spline_residual_rate_report(
 __all__ = [
     "RESIDUAL_SCHEMES",
     "XiSplineResidualError",
-    "encode_delta_res_body",
     "decode_delta_res_body",
-    "encode_spline_residual_body",
+    "decode_residual_matrix",
     "decode_spline_residual_body",
+    "encode_delta_res_body",
+    "encode_residual_matrix",
+    "encode_spline_residual_body",
     "measure_residual_schemes",
     "predict_q_from_knots",
+    "residual_scheme_id",
+    "residual_scheme_name",
     "spline_residual_rate_report",
 ]
