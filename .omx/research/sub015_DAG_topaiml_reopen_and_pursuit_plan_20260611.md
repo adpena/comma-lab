@@ -9537,3 +9537,39 @@ no verdict rendered, no byte-close — so there is NOTHING to register in canoni
 are MEASURED: the α_lane<α_road check will land as an EmpiricalAnchor REFINING the
 already-registered `weak_kam_powerlaw_tail_exit_v1` (Agent D, 3571e5b65), and any per-class
 memory-envelope law anchors the #295 program. Recorded proactively per the per-leg discipline.
+
+## FEED-07z (2026-07-07) — GROUND-FRAME CHART (#194/§17.1) BUILT + $0-VERIFIED + se3_bspline FIRST-FIRED [$0 CPU, advisory; pointer 0.19110 UNMOVED — build/means]
+
+BUILD-wave agent C. **(1) CHART BUILT:** `tac.boundary_math.ground_frame_chart` — witness INPUT
+coords pre-composed per pair with the cumulative ξ-homography (chart change, NOT a pixel warp;
+trained through R ⇒ does NOT inherit the #190 deterministic-render floor). v0 = GROUND-plane single
+chart (per-class stratified routing = screw_blend's future consumer; module implements all 3
+FEED-ll regimes). Math REUSED from the reach tool, bit-parity-PINNED by test (exact equality).
+numpy-fp32 reference + MLX twin (CPU bit-exact); chart[ref]==identity exact; clip_profile
+intrinsics. 25/25 tests. **$0 VERIFIED end-to-end:** chart homographies reproduce the FEED-ll
+stratified reach EXACTLY through R + frozen CPU SegNet (n96, k0 strat_bulk 0.006036 |Δ|=0, k47
+0.021857 |Δ|=0; NO-FAKE SegNet(gt_f1)==lstars PASS). Trainer wire-in `--ground-frame-chart`
+(default-OFF byte-identical; per-pair feats via the two canonical accessors; fail-closed v0 with
+--self-orient/--render-aa≠none/structured-init+ref≠0; n1 OFF + n1/n6 ON CPU smokes green).
+**(2) se3_bspline FIRST-FIRED on the real n600 ξ** (s_t=0.044 from the live #205 run's own
+provenance): direct spline replacement of the ξ payload = MEASURED DEAD (derive-H probe error
+53–703 px mean at EVERY M∈{4..601} vs the 0.13 px quantization floor — sampled-control-fit
+implementation falsified per #307, paradigm intact); spline-as-PREDICTOR + lossless residual =
+MEASURED VIABLE floor (M=16: 224 B + 1958 B order-0 residual entropy = 2182 B vs the 3200 B
+delta_ar table → ~1 KB / ~0.0007 rate headroom pending a real residual coder). Machine-readable:
+`experiments/results/ground_frame_chart_20260707/se3_bspline_rate_error_curve.json`.
+**(3) A/B PREPARED, NOT LAUNCHED (operator-GO-gated):** loadable config
+`experiments/results/ground_frame_chart_20260707/treatment_arm_config.json` — both arms DSL-compiled
++ validated from sealed_205+store-nothing, self-orient OFF in BOTH, single-variable delta = the 5
+chart flags; governed launcher commands in the memo. TRIALITY: DAG=this row; DSL=`GroundFrameChart`
+Lever (049aa0d9f, [consumers-generic]; activation ledger VERIFIED `state='never-fired'` in the
+35-row duty-to-measure queue — the §14 schedule semantics STRUCTURAL-from-ep0 declared in the
+docstring); equations=se3_bspline anchor APPENDED to `store_nothing_pose_carrier_rate_collapse_vs_
+dpose_v1` (c6b83b1b7, refine-not-duplicate) — **the chart LAW itself is owed on the FUTURE GO-gated
+n600 training A/B, not before** (stated per the leg-reconciliation discipline). Nyquist caveat
+flagged for the council: the chart changes the input coordinate distribution → bank/--max-bank-freq
+constants may need re-derivation under the chart (not silently inherited). NOTE: the trainer edits
+were ABSORBED into sibling commit 1d6704e5b (telemetry) via the concurrent-staging pattern
+(failure-ledger `serializer_whole_file_staging_absorbs_sibling_hunks`); content verified intact in
+HEAD. Memo: `.omx/research/ground_frame_chart_build_and_se3_bspline_firing_20260707.md`. Commits:
+c3f4a50a2 (module+tests) · 049aa0d9f (DSL) · c6b83b1b7 (equations). Pointer 0.19110 UNMOVED.
