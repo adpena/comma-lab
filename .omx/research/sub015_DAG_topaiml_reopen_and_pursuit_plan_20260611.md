@@ -9485,3 +9485,19 @@ dash-comb-phase / pinning) + rate. §17 spec'd the n600 A/B as #194's completion
 se3_bspline byte-measure as an independent rate item. Triality: DAG=this row; DSL=lever factories
 owed WITH the #194 build (not before); equations=owed on the A/B measurement. Pointer 0.19110
 UNMOVED (design/means).
+
+## FEED-07w (2026-07-07) — §18 operator design principle (layered holographic optimum) + build-wave anti-orphan tightening
+
+Operator (verbatim in §18): training-too-much is the diagnosis; the cure is NOT abandonment ("never
+extremes") but a layered optimum. Captured as council draft §18: L0 priors → L1 deterministic
+render ops → L2 solved components → L3 THIN trained residual (the only epochs) → L4 terminal
+solve; "holographic" grounded in two measured senses (annulus boundary-encodes-bulk 97%/4.7%; one
+ξ shared across pose/comb/chart/lane-band). Binds §5A mod-dim adjudication: size the capacity for
+L3's residual, not the scene. Never-extremes guard: L1/L2 trusted only through-R measured
+(FEED-ll floor standing warning); L3 stays wherever residual is real.
+ALSO: all four build-wave agents received mid-flight anti-orphan tightening (operator directive):
+verify duty-to-measure surfacing via costate_digest (paste-line evidence), schedule/window
+semantics on every new Lever, machine-readable JSON results (costate SENSE consumes data not
+prose), powerlaw_exit producer_bridge wiring upgraded optional→REQUIRED, prepared configs must be
+loadable artifacts with named paths. Pointer 0.19110 UNMOVED (design/means; the wave's probes are
+the imminent measured rows).

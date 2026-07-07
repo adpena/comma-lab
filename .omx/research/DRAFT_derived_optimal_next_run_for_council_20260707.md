@@ -663,3 +663,55 @@ the FEED-ll stratification), n600 d_seg + flicker-rate vs the standard chart. PR
 measured. Caveats: movable objects violate the static assumption (route via per-class blend =
 `screw_blend`, its first consumer); ξ noise couples into d_seg (bound with the stored-ξ table).
 2nd item: fire `se3_bspline` on the existing ξ table (rate-only, byte-measured, independent).
+
+## §18 OPERATOR DESIGN PRINCIPLE (2026-07-07, BINDING on this symposium) — the layered holographic optimum: train less, layer more
+
+Operator verbatim: *"We are training way too much and it's not super effective and it's super slow and
+doesn't get us where we want and need alone without grueling engineering and the answer is not to
+abandon, never extremes, but some beautiful holographic layered optimum somewhere in between that
+bridges dimensions and laterally and layers and all."*
+
+### The principle, made precise
+Neither extreme survives the evidence: pure training walls (measured: capacity NO-GO, tau crawl,
+homogenization says dashes are UNRECOVERABLE by training below the crossover) and pure determinism
+walls (measured: FEED-ll deterministic-render d_seg floor 0.0185 ≈ 30-40× budget). The optimum is a
+LAYERED stack where each layer does what it is provably best at, and TRAINED MASS is minimized to
+the residual no other layer can carry:
+
+  L0  PHYSICS/GEOMETRY PRIORS (free, rule-118): openpilot lane polynomial · ground-plane
+      homography · ego-screw ξ · camera intrinsics (clip_profile).
+  L1  DETERMINISTIC RENDER OPERATORS (free at decode, render-time): analytic lane band (measured
+      authority 0.00087) · dash-comb corrector (law-shaped, agent A measuring) · hood static clamp ·
+      ground-frame chart (agent C building — ONE ξ shared with pose).
+  L2  SOLVED COMPONENTS (closed-form/KKT, no epochs): head IRLS re-solve at stage boundaries
+      (agent B stage-0) · σ_ij junction weights (agent D) · bit allocation (#157) · derive-H pose ·
+      se3-bspline ξ compression (agent C).
+  L3  THIN TRAINED RESIDUAL (the ONLY epochs spent): the witness INR restricted to what provably
+      cannot be solved or rendered — the moving separatrix / genuinely nonparametric texture-margin
+      coupling. Schedule: event-exits (§14) + persistence-diagram criteria (§16.2) so no epoch is
+      spent past exhaustion (power-law meat detector, agent D).
+  L4  TERMINAL SOLVE (agent B stage-1): exhaust the final basin exactly, not asymptotically.
+
+### Why "holographic" is the right word (two measured senses)
+1. Boundary-encodes-bulk: ~97% of d_seg lives in the ~4.7%-area annulus (measured #333) — the
+   codim-1 boundary determines the scored content of the bulk; capacity/bytes on the boundary,
+   cells nearly free (§16.2 complex-as-architecture is this principle's rate half).
+2. One statistic, many views: the SAME ξ drives pose (stored twist), the comb phase (L1), the
+   ground-frame chart (L1), and the lane-band ego-factorization — each layer is a different
+   projection of one shared low-dim object. Laterally, the campaign's own triality
+   (DAG/DSL/equations) is the same holography at the representational layer.
+
+### Binding consequences for the next-run design
+1. The council's config question is no longer "which levers on" but "what is the MINIMUM trained
+   residual after L0-L2 are composed" — size/mod-dim chosen for L3's residual, not the whole scene.
+2. Every epoch must justify itself against a layer alternative: if a component CAN be rendered
+   (L1) or solved (L2), training it is the anti-pattern. #342's three-condition solvability test
+   is the router.
+3. Wall-clock follows automatically: fewer trained DOF + event exits + terminal solve = the "max
+   convergence, shortest wall clock, no meat left" §14 objective realized structurally, not by
+   grinding.
+4. NEVER-EXTREMES guard: L1/L2 layers must be MEASURED through R+scorer before trust (the FEED-ll
+   floor is the standing warning that determinism alone dies); L3 must remain present wherever
+   measurement shows the residual is real (the trained-generator finding stands).
+This section BINDS the symposium's §5A rate/mod-dim adjudication and composes §14 (schedule) +
+§15 (viscosity laws) + §16 (solve/architecture) + §17 (ground frame) into one design objective.
