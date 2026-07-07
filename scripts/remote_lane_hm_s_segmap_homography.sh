@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane HM-S — SegMap with 8-DOF perspective homography frame embeddings
 #             (vs 6-DOF affine in the canonical Lane SA / SC++).
 #

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane FR-MM — Variable-σ Gaussian-LUT sigma sweep over the Lane MM
 #              encoder + LUT-decoder pipeline.
 #

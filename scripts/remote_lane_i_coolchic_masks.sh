@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane I: Cool-Chic renderer (Orange/CNES, b"CCh1" magic) anchored on Lane A.
 #
 # 2026-04-27 prompt note: the operator framing was "Lane I-A = Cool-Chic the
@@ -127,9 +127,9 @@ for f in "$ANCHOR_RENDERER" \
          upstream/models/posenet.safetensors; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
-log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -c '%s' "$ANCHOR_RENDERER") bytes, ASYM FP32 — REPLACED by CCh1)"
+log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -f%z "$ANCHOR_RENDERER" 2>/dev/null || stat -c%s "$ANCHOR_RENDERER") bytes, ASYM FP32 — REPLACED by CCh1)"
 log "  anchor_poses:    $ANCHOR_POSES (REUSED unchanged)"
-log "  anchor_masks:    $ANCHOR_MASKS ($(stat -c '%s' "$ANCHOR_MASKS") bytes, REUSED unchanged)"
+log "  anchor_masks:    $ANCHOR_MASKS ($(stat -f%z "$ANCHOR_MASKS" 2>/dev/null || stat -c%s "$ANCHOR_MASKS") bytes, REUSED unchanged)"
 
 # Pre-flight: profile validation (catches missing keys BEFORE GPU burn).
 log "=== Pre-flight: profile validation ==="
@@ -174,8 +174,8 @@ log "=== Stage 1: stage Lane A masks + poses (reused unchanged) ==="
 mkdir -p "$LOG_DIR/extracted"
 cp "$ANCHOR_MASKS" "$LOG_DIR/extracted/masks.mkv"
 cp "$ANCHOR_POSES" "$LOG_DIR/extracted/optimized_poses.pt"
-log "  staged masks.mkv: $(stat -c '%s' "$LOG_DIR/extracted/masks.mkv") bytes"
-log "  staged poses:     $(stat -c '%s' "$LOG_DIR/extracted/optimized_poses.pt") bytes"
+log "  staged masks.mkv: $(stat -f%z "$LOG_DIR/extracted/masks.mkv" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/masks.mkv") bytes"
+log "  staged poses:     $(stat -f%z "$LOG_DIR/extracted/optimized_poses.pt" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/optimized_poses.pt") bytes"
 
 log "=== Stage 2: train coolchic_renderer (1000ep cap) ==="
 log "  profile:  coolchic_renderer_full"
@@ -222,7 +222,7 @@ BEST_FP32="$LOG_DIR/train/renderer_${TAG}_best_fp32.pt"
     ls -la "$LOG_DIR/train/" >&2
     exit 2
 }
-log "  best fp32 checkpoint: $BEST_FP32 ($(stat -c '%s' "$BEST_FP32") bytes)"
+log "  best fp32 checkpoint: $BEST_FP32 ($(stat -f%z "$BEST_FP32" 2>/dev/null || stat -c%s "$BEST_FP32") bytes)"
 
 log "=== Stage 3: CCh1 export of best fp32 → renderer_coolchic.bin ==="
 mkdir -p "$LOG_DIR/qat"
@@ -292,7 +292,7 @@ n_bytes = export_coolchic_renderer(model, out_bin)
 print(f'[stage3] WROTE {out_bin}: {n_bytes} bytes (vs Lane A 290KB)')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 [ -f "$CCH1_BIN" ] || { echo "FATAL: CCh1 export failed — no $CCH1_BIN" >&2; exit 2; }
-CCH1_SIZE=$(stat -c '%s' "$CCH1_BIN")
+CCH1_SIZE=$(stat -f%z "$CCH1_BIN" 2>/dev/null || stat -c%s "$CCH1_BIN")
 log "  CCh1 binary: $CCH1_BIN ($CCH1_SIZE bytes)"
 
 log "=== Stage 4: build NEW archive (CCh1 renderer + Lane A masks + Lane A poses) ==="
@@ -312,7 +312,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(p, arcname=n)
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE")
+ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 [ "$ARCHIVE_BYTES" -gt 0 ] || { echo "FATAL: archive empty" >&2; exit 2; }
 log "  archive: $ARCHIVE ($ARCHIVE_BYTES bytes vs Lane A 678KB)"
 

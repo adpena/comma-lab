@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane H CRF56 v2: rebuild masks at CRF=56 ON CUDA HOST (not local CPU),
 # reuse Lane A's optimized poses (the baseline poses that scored 2.29),
 # reuse the baseline renderer, then auth-eval the resulting archive.
@@ -102,7 +102,7 @@ set -e
 
 # Validate: archive built and reasonable size
 [ -f "$LOG_DIR/archive_crf56.zip" ] || { echo "FATAL: build_baseline_archive didn't produce archive_crf56.zip"; exit 2; }
-ARCH_BYTES=$(stat -c '%s' "$LOG_DIR/archive_crf56.zip")
+ARCH_BYTES=$(stat -f%z "$LOG_DIR/archive_crf56.zip" 2>/dev/null || stat -c%s "$LOG_DIR/archive_crf56.zip")
 log "  archive_crf56.zip = ${ARCH_BYTES} bytes"
 if [ "$ARCH_BYTES" -lt 100000 ] || [ "$ARCH_BYTES" -gt 1000000 ]; then
     log "FATAL: archive size $ARCH_BYTES bytes outside sanity range [100KB, 1MB]"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane GH-DARTS: differentiable architecture search over Ghost convolution
 # RATIO. Discovers the optimal ghost ratio on the Lane GH 5-candidate grid
 # {1.5, 2.0, 2.5, 3.0, 4.0} via first-order DARTS (Liu, Simonyan, Yang

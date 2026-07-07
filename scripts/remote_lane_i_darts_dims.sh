@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane I-DARTS: differentiable architecture search over Cool-Chic
 # (hidden_dim × latent_grid_res). Discovers the optimal pair from a
 # 16-candidate joint grid via first-order DARTS (Liu et al. ICLR 2019).

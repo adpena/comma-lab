@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane GE: Chebyshev geodesic pose compression (rank-1 measurement).
 # UNIWARD-NO-OP-WAIVED: research-only lane — encodes meta-payload + ships Lane A anchor bytes intentionally (preflight Check 89 waiver).
 #

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane J-NWC: Neural Weight Compression for renderer.bin.
 #
 # arXiv 2510.11234 — "Neural Weight Compression for Language Models" (late 2025).

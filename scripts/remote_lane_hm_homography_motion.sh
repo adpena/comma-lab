@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane HM: analytical road-plane homography motion module.
 #
 # Replaces the renderer's learned-CNN motion submodule with the orphan
@@ -138,9 +138,9 @@ with zipfile.ZipFile(src) as zf:
         zf.extract(name, dst)
 print(f"extracted {sorted(required)} from {src} to {dst}")
 PY
-log "  anchor renderer.bin: $(stat -c '%s' "$EXTRACT_DIR/renderer.bin") bytes"
-log "  anchor masks.mkv: $(stat -c '%s' "$EXTRACT_DIR/masks.mkv") bytes"
-log "  anchor optimized_poses.pt: $(stat -c '%s' "$EXTRACT_DIR/optimized_poses.pt") bytes"
+log "  anchor renderer.bin: $(stat -f%z "$EXTRACT_DIR/renderer.bin" 2>/dev/null || stat -c%s "$EXTRACT_DIR/renderer.bin") bytes"
+log "  anchor masks.mkv: $(stat -f%z "$EXTRACT_DIR/masks.mkv" 2>/dev/null || stat -c%s "$EXTRACT_DIR/masks.mkv") bytes"
+log "  anchor optimized_poses.pt: $(stat -f%z "$EXTRACT_DIR/optimized_poses.pt" 2>/dev/null || stat -c%s "$EXTRACT_DIR/optimized_poses.pt") bytes"
 
 log "=== Stage 2: train_renderer.py --profile hm_dilated_h64 (motion_type=homography_analytical) ==="
 set +e

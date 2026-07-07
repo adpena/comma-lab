@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane G V3-V2: Lagrangian-controlled SNR for the KL-distill auxiliary
 # weight on Lane A pose TTO. Replaces the hand-derived
 # `--kl-distill-weight 0.002` constant from Lane G V3 with the
@@ -182,7 +182,7 @@ set -e
 
 # Validate: did optimize_poses produce the file?
 [ -f "$LOG_DIR/optimized_poses.bin" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.bin"; exit 2; }
-log "  produced optimized_poses.bin ($(stat -c '%s' "$LOG_DIR/optimized_poses.bin") bytes)"
+log "  produced optimized_poses.bin ($(stat -f%z "$LOG_DIR/optimized_poses.bin" 2>/dev/null || stat -c%s "$LOG_DIR/optimized_poses.bin") bytes)"
 
 log "=== Stage 3: build NEW archive (Lane A renderer + masks + NEW poses) ==="
 mkdir -p "$LOG_DIR/iter_0"

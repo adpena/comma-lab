@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane J-JBL — Jaccard Metric Loss + Boundary Label Smoothing distillation.
 #
 # Jack-from-skunkworks Cycle 1 TOP-1 SegNet attack (research file

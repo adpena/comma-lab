@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane GP — Gaussian-process pose compression (Cosmos research synthesis).
 #
 # Strategic premise (memory project_lane_taxonomy_stacking_strategy +

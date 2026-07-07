@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane J-NWCS × Lane EC: Stacked sensitivity-aware NWC weight codec
 #                         + engineered pixel corrections sidecar.
 #

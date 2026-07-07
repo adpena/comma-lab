@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane FR-Ω — SegMap (SC++ training) + Fridrich-cost-driven per-channel
 #             block-FP exponent precision allocation at export time.
 #
