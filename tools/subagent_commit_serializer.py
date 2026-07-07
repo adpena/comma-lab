@@ -51,6 +51,28 @@ Or with stdin for message + files-from-stdin:
     src/tac/tests/test_foo.py
     EOF
 
+Canonical sha discipline (FIX-ABSORPTION 2026-07-07)
+────────────────────────────────────────────────────
+For any file that a sibling agent may also be editing (shared hot files:
+the levelset trainer, curriculum_dsl.py, the DAG, preflight.py, CLAUDE.md),
+declare BOTH shas:
+
+    BASE=$(shasum -a 256 <file> | awk '{print $1}')   # BEFORE your first edit
+    # ... your edits ...
+    POST=$(shasum -a 256 <file> | awk '{print $1}')   # AFTER all edits
+    python tools/subagent_commit_serializer.py \\
+        --message "..." --files <file> \\
+        --base-content-sha256 <file>=$BASE \\
+        --expected-content-sha256 <file>=$POST
+
+The POST sha (Catalog #157/#216) guards the edit-to-commit window; the BASE
+sha guards the edit-START surface — it is compared against HEAD's blob, and
+a mismatch means the file already contained a sibling's uncommitted hunks
+when you began (whole-file `git add` would absorb them under your commit
+body — the serializer_whole_file_staging_absorbs_sibling_hunks class,
+incident commits 1d6704e5b/049aa0d9f). rc=6 refusal; retry after the
+sibling lands (HEAD then matches your base and the check passes).
+
 Behaviour
 ─────────
 1. Acquires fcntl.flock(LOCK_EX) on .omx/state/.commit-lock (blocking; with
@@ -180,6 +202,114 @@ def _parse_expected_content_sha256(arg_values: list[str]) -> dict[str, str]:
             )
         out[path] = sha
     return out
+
+
+_BASE_NEW_FILE_TOKEN = "new"
+
+
+def _parse_base_content_sha256(arg_values: list[str]) -> dict[str, str]:
+    """Parse ``--base-content-sha256 <file>=<sha|new>`` flag values.
+
+    Each value must be ``<relpath>=<64-hex>`` OR ``<relpath>=new`` (the file
+    did not exist when the caller began editing — a caller-created file).
+    Returns a dict mapping relpath -> declared base (hex sha or ``new``).
+
+    Raises ValueError on malformed input.
+    """
+    out: dict[str, str] = {}
+    for v in arg_values or []:
+        if "=" not in v:
+            raise ValueError(
+                f"--base-content-sha256 must be '<relpath>=<sha256|new>'; "
+                f"got {v!r}"
+            )
+        path, _, sha = v.partition("=")
+        path = path.strip()
+        sha = sha.strip().lower()
+        if not path or not sha:
+            raise ValueError(
+                f"--base-content-sha256 has empty path or sha in {v!r}"
+            )
+        if sha != _BASE_NEW_FILE_TOKEN and (
+            len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha)
+        ):
+            raise ValueError(
+                f"--base-content-sha256 sha must be 64 hex chars or 'new'; "
+                f"got {sha!r} for path {path!r}"
+            )
+        out[path] = sha
+    return out
+
+
+def _hash_head_blob_files(files: list[str]) -> dict[str, str]:
+    """SHA-256 each file's content AT HEAD (the committed blob, not the
+    working tree, not any index). Returns ``MISSING`` for paths not present
+    at HEAD. Used by the FIX-ABSORPTION base-content check below.
+    """
+    out: dict[str, str] = {}
+    for f in files:
+        try:
+            proc = subprocess.run(
+                ["git", "cat-file", "blob", f"HEAD:{f}"],
+                cwd=REPO_ROOT, capture_output=True, check=False,
+            )
+        except OSError as exc:
+            out[f] = f"ERROR_CAT_FILE:{type(exc).__name__}"
+            continue
+        if proc.returncode != 0:
+            out[f] = "MISSING"
+            continue
+        out[f] = hashlib.sha256(proc.stdout).hexdigest()
+    return out
+
+
+def _base_content_check(
+    base: dict[str, str],
+) -> dict[str, tuple[str, str]]:
+    """FIX-ABSORPTION (2026-07-07): declared-edit-BASE vs HEAD-blob check.
+
+    The 2026-07-07 build-wave absorption incident (commits 1d6704e5b +
+    049aa0d9f; harness-failure-ledger id
+    ``serializer_whole_file_staging_absorbs_sibling_hunks``, 5th+ firing)
+    showed that Catalog #157 (rc=4) + #216 (rc=5) are TAUTOLOGICAL against
+    co-mingled content: the caller computes ``--expected-content-sha256``
+    on its post-edit WORKING TREE, which already contains any sibling's
+    uncommitted hunks, so both checks pass by construction and the
+    whole-file ``git add`` stages the sibling's hunks under the caller's
+    commit body.
+
+    The missing information is the caller's edit BASE — what the file
+    looked like BEFORE the caller's own edits. Callers pass
+    ``--base-content-sha256 <file>=<sha>`` (sha computed BEFORE editing;
+    the literal ``new`` for a file the caller created). The serializer
+    compares the declared base against the file's content AT HEAD:
+
+    - base == HEAD blob → the working-tree delta on this file is exactly
+      the caller's own edits; whole-file staging is attribution-safe.
+    - base != HEAD blob → the file contained uncommitted foreign hunks
+      when the caller began editing (absorption imminent), OR HEAD has
+      since moved past content the caller never based on (whole-file
+      staging would REVERT the sibling's landed hunks). Refuse (rc=6).
+
+    Natural resolution: once the sibling lands exactly the hunks that were
+    in the caller's base, ``HEAD:<file>`` equals the declared base and the
+    check passes on retry — WAIT_AND_RETRY semantics, no override needed.
+
+    Returns mismatches ``{relpath: (declared_base, head_sha)}``; empty
+    dict when every declared base matches (or nothing was declared).
+    """
+    if not base:
+        return {}
+    head = _hash_head_blob_files(list(base.keys()))
+    diffs: dict[str, tuple[str, str]] = {}
+    for path, want in base.items():
+        got = head.get(path, "MISSING")
+        if want == _BASE_NEW_FILE_TOKEN:
+            if got != "MISSING":
+                diffs[path] = (want, got)
+        elif got != want:
+            diffs[path] = (want, got)
+    return diffs
 
 
 def _expected_content_sha256_check(
@@ -323,7 +453,7 @@ def _cleanup_temp_index(temp_index_path: str) -> None:
         pass
 
 
-def _refresh_real_index_after_temp_commit(files: list[str], repo_root: Path = REPO_ROOT) -> None:
+def _refresh_real_index_after_temp_commit(files: list[str], repo_root: Path | None = None) -> None:
     """Refresh the caller-visible index for files committed via a temp index.
 
     Alternate-index commits move ``HEAD`` but intentionally do not update the
@@ -335,6 +465,12 @@ def _refresh_real_index_after_temp_commit(files: list[str], repo_root: Path = RE
     """
     if not files:
         return
+    if repo_root is None:
+        # Resolve at CALL time (not def time) so tests that patch the
+        # module-level REPO_ROOT to a throwaway repo stay hermetic — a
+        # def-time default froze the real repo root and made test commits
+        # run `git reset` against the real index (2026-07-07 hermeticity fix).
+        repo_root = REPO_ROOT
     proc = subprocess.run(
         ["git", "reset", "-q", "HEAD", "--", *files],
         cwd=repo_root,
@@ -543,6 +679,27 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--base-content-sha256",
+        action="append",
+        default=None,
+        help=(
+            "FIX-ABSORPTION (2026-07-07): declare the SHA-256 of a file's "
+            "content BEFORE your own edits began ('<relpath>=<sha256>'; the "
+            "literal '<relpath>=new' for a file you created). Repeatable "
+            "per-file. The serializer refuses (rc=6) when the declared base "
+            "differs from the file's content at HEAD — that means the file "
+            "contained a sibling's uncommitted hunks when you began editing "
+            "(whole-file staging would ABSORB them under your commit body: "
+            "the serializer_whole_file_staging_absorbs_sibling_hunks class, "
+            "incident commits 1d6704e5b/049aa0d9f), or HEAD moved past your "
+            "base (staging would REVERT the sibling's landed hunks). "
+            "Retry after the sibling lands: once HEAD matches your base the "
+            "check passes. Pair with --expected-content-sha256 (post-edit "
+            "sha) — base guards the edit-start surface, expected guards the "
+            "edit-to-lock window."
+        ),
+    )
+    parser.add_argument(
         "--no-sister-checkpoint-check",
         action="store_true",
         help=(
@@ -592,6 +749,13 @@ def main() -> int:
         "expected_content_sha256_file_count": (
             len(args.expected_content_sha256) if args.expected_content_sha256 else 0
         ),
+        # FIX-ABSORPTION (2026-07-07): log whether the caller declared its
+        # edit BASE so forensics can distinguish base-guarded commits from
+        # legacy sha-only commits when the absorption class fires again.
+        "base_content_sha256_present": bool(args.base_content_sha256),
+        "base_content_sha256_file_count": (
+            len(args.base_content_sha256) if args.base_content_sha256 else 0
+        ),
     }
 
     # FIX-92aba3ca (2026-05-12 Catalog #157): pre-lock-vs-EXPECTED check.
@@ -605,9 +769,54 @@ def main() -> int:
         expected_content_shas = _parse_expected_content_sha256(
             args.expected_content_sha256 or []
         )
+        base_content_shas = _parse_base_content_sha256(
+            args.base_content_sha256 or []
+        )
     except ValueError as exc:
         print(f"[subagent-commit-serializer] FATAL: {exc!s}", file=sys.stderr)
         return 2
+
+    # FIX-ABSORPTION (2026-07-07) pre-lock check: declared edit BASE vs the
+    # file's content at HEAD. See _base_content_check docstring — this is the
+    # check that would have refused incident commits 1d6704e5b / 049aa0d9f
+    # (whole-file staging absorbed a sibling's uncommitted trainer + DSL
+    # hunks; Catalog #157/#216 passed by construction because the caller's
+    # expected sha was computed on the already-merged working tree).
+    if base_content_shas:
+        if not expected_content_shas:
+            print(
+                "[subagent-commit-serializer] NOTE: --base-content-sha256 "
+                "without --expected-content-sha256 — the base guards the "
+                "edit-START surface only; pair it with the post-edit sha so "
+                "the edit-to-lock window is guarded too.",
+                file=sys.stderr,
+            )
+        base_diffs = _base_content_check(base_content_shas)
+        if base_diffs:
+            _append_log({
+                **base_record,
+                "outcome": "base_content_sha_mismatch_pre_lock",
+                "base_content_sha_diffs": {
+                    f: {"declared_base": want, "head_blob": got}
+                    for f, (want, got) in base_diffs.items()
+                },
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED (rc=6): "
+                "--base-content-sha256 mismatch vs HEAD. Your declared "
+                "edit base is NOT what these files look like at HEAD — the "
+                "file contained a sibling's uncommitted hunks when you began "
+                "editing (whole-file staging would ABSORB them under your "
+                "commit body), or HEAD has moved past your base (staging "
+                "would REVERT the sibling's landed hunks). The "
+                "serializer_whole_file_staging_absorbs_sibling_hunks class "
+                "(incident 1d6704e5b/049aa0d9f 2026-07-07). Wait for the "
+                "sibling to land, then retry — once HEAD matches your base "
+                "this check passes. Files affected: "
+                f"{list(base_diffs.keys())!r}",
+                file=sys.stderr,
+            )
+            return 6
 
     # OMNIBUS GAP-5 (Catalog #289): high-risk files MUST carry
     # --expected-content-sha256. Per WAVE-D 2c957c31e forensic analysis: the
@@ -841,6 +1050,35 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 3
+
+    # FIX-ABSORPTION post-lock re-check: HEAD may have moved during the
+    # lock-wait window (a sibling committed). If the sibling landed exactly
+    # the hunks that were in our declared base, HEAD now matches and we
+    # proceed; if the sibling landed content we never based on, whole-file
+    # staging would silently REVERT it — refuse instead.
+    if base_content_shas:
+        base_diffs = _base_content_check(base_content_shas)
+        if base_diffs:
+            _release_lock(lock_fh)
+            _append_log({
+                **base_record,
+                "outcome": "base_content_sha_mismatch_post_lock",
+                "wait_seconds": wait_seconds,
+                "base_content_sha_diffs": {
+                    f: {"declared_base": want, "head_blob": got}
+                    for f, (want, got) in base_diffs.items()
+                },
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED (rc=6): "
+                "--base-content-sha256 mismatch vs HEAD *after* acquiring "
+                "the lock — a sibling's commit landed during the lock-wait "
+                "and your whole-file stage would revert or mis-attribute "
+                "it. Re-base on HEAD and retry. Files affected: "
+                f"{list(base_diffs.keys())!r}",
+                file=sys.stderr,
+            )
+            return 6
 
     temp_index_path: str | None = None
     try:
