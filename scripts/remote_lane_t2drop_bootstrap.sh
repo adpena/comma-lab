@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane T2-DROP: encoder-free renderer ablation.
 #
 # Informational-only ablation, not a stacking candidate.

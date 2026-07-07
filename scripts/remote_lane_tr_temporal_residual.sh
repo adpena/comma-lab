@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane TR — Temporal Residual coding (Toderici eureka, 2026-04-29).
 #
 # Strategy: encoder-only. Selfcomp encodes grayscale.mkv with crf=50 and

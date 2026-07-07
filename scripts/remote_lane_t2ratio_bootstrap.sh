@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane T2-RATIO: SegNet-loss-weight sweep above the historical cap.
 #
 # Predicted band: [1.00, 1.15] [advisory only].

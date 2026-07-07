@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: Z7-Mamba-2 selective-state-space substrate trainer.
 #
 # Trainer: experiments/train_substrate_time_traveler_l5_z7_mamba2.py

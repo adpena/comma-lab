@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: UNIWARD per-instance + multi-scale wavelet SegNet-loss
 # substrate Tier-2 paid dispatch (Probe 9 BREAKTHROUGH).
 #

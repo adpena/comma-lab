@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: Z7 GRU recurrent predictive-coding timing/full smoke.
 #
 # Trainer: experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py

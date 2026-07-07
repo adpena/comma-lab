@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate vq_vae first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_vq_vae.py (WAVE-1-A).

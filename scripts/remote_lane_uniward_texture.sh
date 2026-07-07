@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane UNIWARD: Fridrich-canonical texture-region weighted compression.
 # UNIWARD-NO-OP-WAIVED: Lane UNIWARD v8 NO-OP finding documented in memory project_lane_uniward_v8_NO_OP_finding_20260429.md — script ships Lane A baseline bytes (research-only, scorer evidence preserved in meta).
 #

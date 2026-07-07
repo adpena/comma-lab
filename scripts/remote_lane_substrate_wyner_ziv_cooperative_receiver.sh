@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate wyner_ziv_cooperative_receiver (WZ1) first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_wyner_ziv_cooperative_receiver.py

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate Tishby IB-pure (PRIMARY variational
 # Information Bottleneck) dispatch.
 #

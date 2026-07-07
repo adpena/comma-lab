@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: Z4 Atick-Redlich L1 SCAFFOLD research-only driver.
 #
 # Lane: lane_z4_atick_redlich_l1_scaffold_resume_20260530

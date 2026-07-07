@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script for T1 — Ballé hyperprior + 128K decoder end-to-end.
 #
 # Per CLAUDE.md "Forbidden re-implementing remote bootstrap inline", this

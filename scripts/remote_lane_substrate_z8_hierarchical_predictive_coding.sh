@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate Z8 hierarchical predictive coding M12a Modal T4
 # L2 long-training canonical dispatch per Catalog #325 symposium 4bcc84fc0
 # PROCEED_WITH_REVISIONS unanimous 23-of-23 T3 grand council (2026-05-30).

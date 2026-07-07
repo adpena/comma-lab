@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate wavelet first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_wavelet.py (PHASE-B2-BUILD).

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane SZ Phase 2 — szabolcs no-masks paradigm full pipeline.
 #
 # Reproduces szabolcs-cs PR#56 (auth 0.36 [contest-CUDA]) with our codebase:

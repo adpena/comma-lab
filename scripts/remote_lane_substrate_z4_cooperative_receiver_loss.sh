@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate Z4 cooperative-receiver loss smoke + full dispatch.
 #
 # Trainer: experiments/train_substrate_z4_cooperative_receiver_loss.py

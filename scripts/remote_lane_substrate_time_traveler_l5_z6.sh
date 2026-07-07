@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate Z6 Time-Traveler L5 predictive-coding smoke + full dispatch.
 #
 # Trainer: experiments/train_substrate_time_traveler_l5_z6.py

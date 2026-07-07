@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate Z3-G1 scorer-class-conditional gating dispatch.
 #
 # Trainer: experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py

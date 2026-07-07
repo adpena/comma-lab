@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate Z5 predictive-coding world-model smoke + full dispatch.
 #
 # Trainer: experiments/train_substrate_z5_predictive_coding_world_model.py

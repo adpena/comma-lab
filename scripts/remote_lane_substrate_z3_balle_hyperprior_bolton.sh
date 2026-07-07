@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate Z3 Ballé hyperprior bolt-on smoke dispatch.
 #
 # Trainer: experiments/train_substrate_z3_balle_hyperprior_bolton.py
