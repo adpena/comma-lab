@@ -1254,6 +1254,14 @@ class WitnessProgram(ScheduleDisplay):
     # emission (no double-emit). None (default) => the legacy path => byte-identical for every
     # existing program (BASELINE / sealed_205 / openpilot_seeded_opening are unchanged).
     curriculum: "Curriculum | None" = None
+    # DECLARED RUN INTENT (operator 2026-07-07: "clean baseline or frontier score lowering?
+    # a/b probe?"). One human line stating WHY this program's run exists. Metadata ONLY —
+    # never emitted into flag_dict()/trainer argv (argv-inert by construction); the launch
+    # path threads it to WitnessConfig.purpose / launch_witness_run --purpose, which stamps
+    # the run dir's config record so the dashboard renders it VERBATIM as "declared" intent
+    # (else it falls back to the labelled derived heuristic). A DSL-generated launch without
+    # this is orphaned-intent — declare it at program construction.
+    purpose: str | None = None
 
     # --- composition ---------------------------------------------------------
     def with_lever(self, *levers: Lever, resume_from=_INHERIT,
