@@ -41,6 +41,20 @@ extractions. MUST-READ for P2 red-team + P5 synthesis.**
     curriculum-derivation + loss-geometry + eikonal-cure + pose-carrier-optimal-form.
 14. DSL surface: `tac.witness_dsl.*` modules (curriculum_dsl, schedule, campaign, powerplay,
     gauge, lever_registry, activation_ledger) — what the program can already express.
+15. CLAUDE.md-EMBEDDED measured facts (operator-extended: "all sources of signal everywhere"):
+    the §WITNESS-CAPSTONE measured-lever ranking, SegNet canonical class order, L14-L32
+    leaderboard lessons, the FORBIDDEN-patterns measured anchors.
+16. Required durable state files: `.omx/state/current_focus.md` · `next_experiments.md` ·
+    `.omx/research/findings.md` · `.ralph/run_log.md` · `reports/latest.md` ·
+    `.omx/state/harness_failure_ledger.jsonl` (5 classes, 2 unresolved) · costate digest live.
+17. docs/: `operating_manual_craft_handoff.md` · novel-contributions doc · the writeup ·
+    `meta_bug_class_catalog.md` · `vehicle_operating_system.md`.
+18. Git history: `git log --oneline -100` — commit messages are a signal ledger (measured rows
+    land in messages that never became memos).
+19. Probe-result data on disk: `experiments/results/*probe*/*.json` + gitignored durable
+    measurement JSONs cited by DAG FEEDs (the raw rows behind the verdicts).
+20. Cross-agent channels: codex inbox/outbox memos + `.omx/state/subagent_progress.jsonl`
+    (in-flight or crashed work whose signal never landed in a memo).
 
 ## PINNED FIRST-PASS EXTRACTIONS (main loop, 2026-07-07)
 
@@ -69,3 +83,46 @@ extractions. MUST-READ for P2 red-team + P5 synthesis.**
   classes (FEED-07c) → big-3-only floors at ~0.00215 > 0.00092.
 
 ### (sweep agent fills the remaining per-store extractions below)
+
+
+## TASK-BACKLOG SWEEP (store 9, COMPLETE — main loop, from the live task list 2026-07-07)
+Every pending/in-progress task bearing on the five faces. The crucible must FOLD / SUPERSEDE /
+DEFER-with-reason each (a task it silently ignores is orphaned signal).
+
+**BASIS/VEHICLE face:** #78 (the capstone umbrella — the crucible IS its execution) · #308
+grid+INR hybrid at matched bytes · #309 IGA targeted-NTK along-tangent · #310 FINER++ bias-init
+on unswept activations · #220 AA coverage render + grid≥384 · #299 mod-dim A/B (gated) · #200
+topology-native conditional-additive residual · #211 amortized meta-learned pre-seeding · #195
+MD-Decoupling A/B · #94 futuristic-basis tail (deprioritized) · #223 Tier-0 derive parametrization
+optima (IN-PROGRESS — feeds S1 directly).
+**SCHEDULE/CURRICULUM face:** #186 l7 maturation (stage-diff gate) · #188 trajectory-dynamics
+instrument + A11 early-stop · #191 openpilot-seeded curriculum DSL · #189 behavior/curriculum DSL
+(IN-PROGRESS) · #270 improved-Muon warm-start A/B (S2's ep650-resume recess = this task) · #319
+SimpleTES K>1 (gated #315) · #344 NCDE (corpus-gated) · #316 v6 eikonal cure (OPERATOR-GO) · #134
+final fine-tune stage · #217 post-Muon leap-residual (gated #216) · #216 trajectory multi-dim.
+**LEVERS/ISLANDS:** #323 LADDER island-birth (IN-PROGRESS — requirement C) · #221 fine-tune
+baseline w/ islands levers (IN-PROGRESS — the A/B-vs-from-scratch decision the crucible must make)
+· #114 boundary-flip→lever-5 feed · #137 road↔lane sidecar closing · #144 polynomial-fill survival
+· #218 θ* HEAD margin-field (byte-free family) · #169 horizon-band (WEAK) · #121 taper (WEAK) ·
+#183 θ* per-lever A/B campaign (the crucible's A/B plan subsumes) · #287 dash-comb (IN-PROGRESS —
+the S1 comb dependency).
+**RATE face (S4):** #154 VCM rate-probe QUEUE (weight-entropy · latent-AR · sensitivity-bit-alloc
+· entropy-penalized) · #336 #157-APPLY compress-half · #242 flat-minima/MDL regularizer · #110
+latent-structure regularizer · #111 variable-grid QAT · #99 B1-PACK · #311 TropNNC tropical-
+skeleton (post-run) · #307 contour-string flip coding (0.65 B/flip bar) · #160 prune-identified
+size (HELD).
+**POSE face (S6):** #248 pose-carrier ladder (P-A..D) · #238 real pose MEASURED through byte-close
+· #130 bc20 pose-trains-trunk arm · #227 pose-decoupling MLX-port orphan · #194 screw/twist
+integration (IN-PROGRESS) · #314 DRIFT-D2 pose-carrier-source inheritance bug (SCORE-RELEVANT —
+byte-close rate accounting correction owed) · #226 margin_conditional_residual orphan.
+**COSTATE/CONTROL (S3):** #342 solve-don't-train inventory (requirement A) · #255 attribution-tool
+consolidation · #243 #205 risk watch · #188 (dual-listed).
+**APPARATUS/EXECUTION:** #337 BUILD-WAVE (IN-PROGRESS — overlaps crucible builds; reconcile, no
+duplicate work) · #332 DSL complete-SoT · #328 clip_profile phase 2/3 · #295 memory telemetry ·
+#296 fp16 cf-feats bank-6 · #330 async-verdict reclaim · #173 fleet-scaling blockers (gates any
+2nd concurrent arm) · #228 memory-config training (deferred) · #252 MLX/Metal standing · #65
+campaign actuator · #90 paid n600 de-risk · #170 response surfaces + joint solver · #273
+multi-lens visual pass · #288 OT head-offset gate · #312 gradient-share checkpoint probe.
+**Superseded-by-crucible candidates (synthesis marks explicitly):** #183 (per-lever A/B → the
+crucible measurement plan), #124 REORDER DAG (older sequencing), #285 (converged next-run config →
+superseded by crucible output), #290 master-ledger gate (input, consumed).
