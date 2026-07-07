@@ -360,6 +360,37 @@ def apply_emit_side_confound_fixes(extra_flags: list[str], config_flag_names: li
 
 
 # ───────────────────────── launch.sh (no word-split fragility) ─────────────────────────
+def config_family(cfg) -> str:
+    """The canonical named-config FAMILY this cfg renders, derived from the cfg's own
+    selector fields (factual — never a guess). Stamped into the launch.sh RUN-IDENTITY
+    header so run-identity consumers (dashboard) can cite it as evidence."""
+    if getattr(cfg, "fresh_seeded", False):
+        return "fresh_seeded"
+    if getattr(cfg, "sealed_205", False):
+        return ("store_nothing_205"
+                if getattr(cfg, "pose_carrier_source", "real_keyframe") == "generated"
+                else "sealed_205")
+    if getattr(cfg, "all_levers", False):
+        return "all_levers"
+    return "proven_base"
+
+
+def _identity_header(cfg) -> str:
+    """Machine-readable RUN-IDENTITY header lines for launch.sh (the run dir's config
+    record; operator 2026-07-07 run-identity row). ``# tac-config-family:`` is always
+    stamped (factual, derived from the cfg itself); ``# tac-run-purpose:`` only when a
+    purpose was DECLARED (--purpose -> WitnessConfig.purpose) — dashboards render that
+    verbatim with provenance "declared". Comment lines only: every launch.sh consumer
+    (trainer argv extraction, flag parsers, memory preflight, DSL schedule read-back,
+    the sealed_205 argv byte-identity gate) skips ``#`` lines, so the header is
+    provenance-neutral to training + argv byte-identity."""
+    lines = [f"# tac-config-family: {config_family(cfg)}\n"]
+    purpose = getattr(cfg, "purpose", None)
+    if purpose:
+        lines.append(f"# tac-run-purpose: {' '.join(str(purpose).split())}\n")
+    return "".join(lines)
+
+
 def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
                     extra_flags: list[str] | None = None) -> str:
     """Render the launch.sh body. The trainer command goes into a SCRIPT so the
@@ -377,6 +408,8 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
     return (
         "#!/bin/bash\n"
         "set -euo pipefail\n"
+        # RUN-IDENTITY header (family always; purpose only when declared) — comments only.
+        f"{_identity_header(cfg)}"
         f"cd {repo}\n"
         # Trainer memory telemetry (mem_probe rows). The #205 run was SILENT because this env-gated
         # default-off flag was never set in launch.sh (memory mine 2026-07-04 §1/§6) — the launcher
@@ -733,6 +766,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", default=None,
                     help="run out-dir (default: experiments/results/levelset_n<N>_witness_<utc>)")
     ap.add_argument("--label", default=None, help="daemon label (default: derived from out-dir)")
+    ap.add_argument("--purpose", default=None,
+                    help="DECLARED one-line intent of THIS run (e.g. 'clean baseline / control', "
+                         "'A/B arm: eikonal 0.07 vs mod32cap parent', 'frontier candidate'). "
+                         "Stamped into launch.sh as '# tac-run-purpose:' (the run dir's config "
+                         "record) so dashboards render it with provenance 'declared'; unset -> "
+                         "consumers show a LABELLED derived heuristic. Metadata only — never a "
+                         "trainer flag, zero effect on training or argv byte-identity.")
     ap.add_argument("--rss-cap-mb", type=int, default=90000,
                     help="per-arm RSS cap (MiB) for safe_run layer-3 (default 90000)")
     ap.add_argument("--min-free-gb", type=float, default=10.0,
@@ -823,11 +863,20 @@ def main(argv: list[str] | None = None) -> int:
         cfg = _dc.replace(cfg, dsl_levers=tuple(args.dsl_lever))
         print(f"[launch-witness] DSL levers composed: {', '.join(args.dsl_lever)}")
 
+    # RUN-IDENTITY: thread the DECLARED purpose into the config (metadata only; the
+    # identity header in launch.sh renders it; the argv is untouched by construction).
+    if args.purpose:
+        import dataclasses as _dcp
+        cfg = _dcp.replace(cfg, purpose=" ".join(str(args.purpose).split()))
+        print(f"# declared run purpose: {cfg.purpose}")
+
     out_dir = Path(args.out_dir) if args.out_dir else (
         _REPO / "experiments" / "results" / f"levelset_n{args.num_pairs}_witness_{_utc()}")
     label = args.label or f"levelset_witness_{out_dir.name}"
 
-    print(f"# launch_witness_run {wac.ADVISORY_TAG}  pointer 0.19110 UNMOVED")
+    # (pointer-only discipline: the exact pointer lives in
+    # .omx/state/canonical_frontier_pointer.json — never a hardcoded literal here)
+    print(f"# launch_witness_run {wac.ADVISORY_TAG}  pointer UNMOVED (SoT: canonical_frontier_pointer.json)")
     print(f"# clip={args.gt_cache} num_pairs={args.num_pairs} epochs={args.epochs} "
           f"overfit={overfit} config={config}")
     print(f"# out_dir={out_dir}")

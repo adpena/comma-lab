@@ -99,10 +99,27 @@ def test_validate_detects_invented_flag(monkeypatch):
 # ───────────────────────── launch.sh (no word-split fragility) ─────────────────────────
 def test_build_launch_sh_structure():
     body = lw.build_launch_sh(_cfg(), "out", repo_root=Path("/repo"))
-    assert body.startswith("#!/bin/bash\nset -euo pipefail\ncd /repo\n")
+    # RUN-IDENTITY header (comment lines only) sits between the shebang/pipefail
+    # prologue and the cd — family always stamped; purpose only when declared.
+    assert body.startswith("#!/bin/bash\nset -euo pipefail\n# tac-config-family: ")
+    assert "\ncd /repo\n" in body
+    assert "# tac-run-purpose:" not in body  # purpose undeclared -> no line (never a guess)
     assert "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1" in body  # perf-env prefix present
     assert "train_levelset_witness_realized_through_R_mlx.py" in body
     assert "--curriculum" in body and "--stage-checkpoints" in body  # resumable
+
+
+def test_build_launch_sh_stamps_declared_purpose():
+    import dataclasses
+    cfg = dataclasses.replace(_cfg(), purpose="A/B arm: eikonal 0.07 vs\nmod32cap parent")
+    body = lw.build_launch_sh(cfg, "out", repo_root=Path("/repo"))
+    # declared purpose is one-lined + stamped verbatim (dashboards render it as "declared")
+    assert "# tac-run-purpose: A/B arm: eikonal 0.07 vs mod32cap parent\n" in body
+    assert "# tac-config-family: " in body
+    # metadata only: the trainer argv is untouched by the purpose field
+    base = lw.build_launch_sh(_cfg(), "out", repo_root=Path("/repo"))
+    strip = lambda b: [ln for ln in b.splitlines() if not ln.startswith("#")]  # noqa: E731
+    assert strip(base) == strip(body)
 
 
 def test_write_launch_sh_roundtrips_through_schedule_parser(tmp_path):

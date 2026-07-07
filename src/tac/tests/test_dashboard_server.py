@@ -195,6 +195,43 @@ def test_read_costate_absent_and_present():
         assert c["duty_owed"] == 2 and c["duty_never_fired"] == 1
 
 
+def test_run_identity_conditional_and_provenance():
+    # no run dir -> None -> the header row is conditionally ABSENT
+    assert ds._derive_run_identity(None, {}, None, None) is None
+    with tempfile.TemporaryDirectory() as d:
+        # DECLARED: launch.sh identity header wins, verbatim, provenance "declared"
+        (Path(d) / "launch.sh").write_text(
+            "#!/bin/bash\nset -euo pipefail\n"
+            "# tac-config-family: sealed_205\n"
+            "# tac-run-purpose: A/B arm: eikonal 0.07 vs mod32cap parent\ncd /repo\n")
+        r = ds._derive_run_identity(d, {"w-pose": "1.0"}, False, None)
+        assert r["purpose"]["provenance"] == "declared"
+        assert r["purpose"]["label"] == "A/B arm: eikonal 0.07 vs mod32cap parent"
+        assert r["scope"]["label"] == "seg+pose (w_pose=1.0)"
+    with tempfile.TemporaryDirectory() as d:
+        # DERIVED clean baseline: islands off + capacity-cap name; labelled "derived"
+        d2 = Path(d) / "levelset_n600_witness_mod32cap_x"
+        d2.mkdir()
+        r = ds._derive_run_identity(str(d2), {"w-pose": "0", "mod-dim": "32",
+                                              "eikonal-weight": "0"}, True, None)
+        assert r["purpose"]["label"] == "clean baseline / control"
+        # a guess is never rendered as a declaration
+        assert r["purpose"]["provenance"] == "derived"
+        assert any("mod32cap" in e for e in r["purpose"]["evidence"])
+        assert r["scope"]["label"].startswith("seg-only")
+    # DERIVED A/B arm: FOREIGN stage-checkpoint resume; same-dir resume is NOT an A/B arm
+    r = ds._derive_run_identity("/x/runB", {"w-pose": "0"}, True,
+                                "/x/runA/levelset_ckpt_stageCE_ep299.npz")
+    assert r["purpose"]["label"].startswith("A/B arm")
+    r = ds._derive_run_identity("/x/runB", {"w-pose": "0"}, True,
+                                "/x/runB/levelset_resume_state.npz")
+    assert r["purpose"]["label"] == "clean baseline / control"
+    # DERIVED frontier candidate: island levers on
+    r = ds._derive_run_identity("/x/runC", {"seed-islands": True, "eikonal-weight": "0.07"},
+                                False, None)
+    assert r["purpose"]["label"] == "frontier candidate"
+
+
 def test_login_html_is_401_body():
     body = ds._login_html()
     assert "Access key required" in body

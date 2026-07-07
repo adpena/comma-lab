@@ -535,6 +535,16 @@ class WitnessConfig:
     dsl_levers: tuple[str, ...] = ()
     all_levers_base: dict = field(default_factory=dict)
     adam_beta2: float = 0.999  # #222; 0.999 == MLX default (bit-identical); all-levers sets 0.9999999.
+    # (run-identity, operator 2026-07-07 "add a label ... run name and possibly a description of
+    # its intended purpose; clean baseline or frontier score lowering? a/b probe?") DECLARED
+    # one-line intent of THIS run — the first-class, per-run machine-answerable purpose. Set by
+    # the launcher (--purpose) and stamped into the run dir's config record (the launch.sh
+    # ``# tac-run-purpose:`` header) so dashboards render it with provenance "declared" instead
+    # of a derived heuristic. PROVENANCE METADATA ONLY: never emitted as a trainer flag, zero
+    # effect on training numerics or the emitted argv (the sealed_205 argv byte-identity gate is
+    # unchanged). Default None => consumers fall back to their LABELLED derived-heuristic
+    # classification (a guess is never rendered as a declaration).
+    purpose: str | None = None
 
     # rich design fields
     lever_priors: dict = field(default_factory=dict)

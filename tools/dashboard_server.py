@@ -56,6 +56,7 @@ import contextlib
 import hmac
 import json
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -429,6 +430,97 @@ def _read_costate(run_dir: str | None) -> dict | None:
                 "duty_owed": duty_owed, "duty_never_fired": duty_nf}
     except Exception:  # noqa: BLE001
         return None
+
+
+def _read_identity_header(run_dir) -> dict:
+    """The RUN-IDENTITY header the launcher stamps into the run dir's config record
+    (launch.sh ``# tac-run-purpose:`` / ``# tac-config-family:`` comment lines,
+    tools/launch_witness_run.py::_identity_header). Fail-open {} (old run dirs)."""
+    out: dict = {}
+    try:
+        for line in (Path(run_dir) / "launch.sh").read_text(errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("# tac-run-purpose:"):
+                out["purpose"] = s.split(":", 1)[1].strip()
+            elif s.startswith("# tac-config-family:"):
+                out["family"] = s.split(":", 1)[1].strip()
+    except Exception:
+        return out
+    return out
+
+
+def _derive_run_identity(run_dir, flags, pose_blind, resumed_from) -> dict | None:
+    """RUN-IDENTITY row payload (operator 2026-07-07: "add a label to the top with
+    the run name and possibly a description of its intended purpose; clean baseline
+    or frontier score lowering? a/b probe? Is pose included or just seg?").
+
+    Conditional-rendering discipline: name = the resolved run dir's basename; the
+    SCOPE chip derives from the run's OWN launched --w-pose; the PURPOSE chip is the
+    launch.sh ``# tac-run-purpose`` header VERBATIM with provenance "declared" when
+    present, else a best-effort classification LABELLED "derived" with its evidence
+    (a guess is never rendered as a declaration). No run dir -> None -> no row."""
+    if not run_dir:
+        return None
+    name = Path(run_dir).name
+    ident: dict = {"name": name}
+    flags = flags or {}
+
+    # ── scope chip: pose-held vs seg-only, from the run's own config ──
+    wp = flags.get("w-pose")
+    if pose_blind is True:
+        ident["scope"] = {"label": "seg-only · pose unheld by design (w_pose=0)",
+                          "evidence": "launch.sh: --w-pose 0"}
+    elif pose_blind is False and wp is not None:
+        ident["scope"] = {"label": f"seg+pose (w_pose={wp})",
+                          "evidence": f"launch.sh: --w-pose {wp}"}
+    # pose_blind None (config unknown) -> no scope chip (conditional)
+
+    # ── purpose chip: DECLARED header wins; else the LABELLED derived heuristic ──
+    hdr = _read_identity_header(run_dir)
+    if hdr.get("purpose"):
+        ident["purpose"] = {"label": hdr["purpose"], "provenance": "declared",
+                            "evidence": ["# tac-run-purpose header in launch.sh"]}
+        return ident
+    evidence: list[str] = []
+    if hdr.get("family"):
+        evidence.append(f"config family '{hdr['family']}' (launch.sh header)")
+    islands_on = "seed-islands" in flags
+    try:
+        eik = float(flags.get("eikonal-weight", 0) or 0)
+    except (TypeError, ValueError):
+        eik = 0.0
+    # a FOREIGN resume (stage checkpoint from another run dir) signals a treatment
+    # arm; a same-dir resume is crash recovery and classifies by its levers instead.
+    foreign_resume = None
+    if resumed_from:
+        try:
+            if Path(resumed_from).resolve().parent != Path(run_dir).resolve():
+                foreign_resume = str(resumed_from)
+        except Exception:
+            foreign_resume = str(resumed_from)
+    cap = re.search(r"mod(\d+)cap", name)
+    if foreign_resume:
+        label = "A/B arm (resumed treatment)"
+        evidence.append(f"resumes from a foreign stage checkpoint: {foreign_resume}")
+    elif not islands_on and eik == 0.0 and flags:
+        label = "clean baseline / control"
+        evidence.append("islands levers off (no --seed-islands; eikonal-weight 0)")
+        if cap:
+            evidence.append(f"capacity-capped family name '{cap.group(0)}'")
+        if flags.get("mod-dim") is not None:
+            evidence.append(f"--mod-dim {flags['mod-dim']}")
+    elif flags:
+        label = "frontier candidate"
+        if islands_on:
+            evidence.append("--seed-islands present (island levers ON)")
+        if eik:
+            evidence.append(f"eikonal-weight {eik:g} active")
+        evidence.append("fresh full-stack with levers on")
+    else:
+        # no parsed flags at all (no launch.sh, no run.log config) -> no honest basis
+        label = "unclassified (no config record)"
+    ident["purpose"] = {"label": label, "provenance": "derived", "evidence": evidence}
+    return ident
 
 
 def _stage_windows(sched: dict) -> list[tuple[str, int, int]]:
@@ -894,6 +986,8 @@ class LiveState:
         # costate controller SENSE/DECIDE panel source (run_dir/costate_shadow.jsonl;
         # read-only, advisory). None -> the panel is absent (conditional rendering).
         self.costate: dict | None = None
+        # RUN-IDENTITY header row (name + purpose chip + scope chip); None -> row absent.
+        self.run_identity: dict | None = None
         # canonical DSL schedule read-back (PLANNED launch.sh-through-real-argparse
         # + ACTUAL fired-transition evidence). {"ok": False} -> visible fallback.
         self.schedule_readback: dict = {"ok": False, "reason": "not yet derived"}
@@ -1160,6 +1254,16 @@ class LiveState:
             self.costate = _read_costate(self.watched_dir)
         except Exception:  # noqa: BLE001 — telemetry must never crash the daemon
             self.costate = None
+
+        # RUN-IDENTITY row (name + purpose + scope; operator 2026-07-07): declared
+        # launch.sh header when present, labelled derived heuristic otherwise.
+        try:
+            self.run_identity = _derive_run_identity(
+                self.watched_dir, (self.run_config or {}).get("flags") or {},
+                self.pose_blind,
+                _resume_from_path(latest) if latest is not None else None)
+        except Exception:  # noqa: BLE001 — telemetry must never crash the daemon
+            self.run_identity = None
 
         # #205 run-info strip: the FULL operational telemetry (stage-progress / best-d_seg
         # deploy / throughput+ETA / checkpoint ledger / resumability-now / MLX fast-path /
@@ -1714,6 +1818,7 @@ class LiveState:
             "pointer_info": ptr,
             "pose_blind": self.pose_blind,      # w_pose==0 in the run's own config
             "costate": self.costate,            # SENSE/DECIDE panel (None -> absent)
+            "run_identity": self.run_identity,  # header row (None -> row absent)
             "watched": self.watched,
             "run_dir": self.watched_dir or cfg.run_dir,  # auto-latest: the live arm dir
             "uptime_s": time.time() - self.started_at,
@@ -2385,6 +2490,16 @@ padding:2px 6px;border-radius:6px}
 .proj{font-size:11.5px;color:var(--muted);margin:0 2px 16px;line-height:1.6;min-height:34px}
 .proj .proj2{color:var(--faint2);font-size:11px}
 .proj b{color:var(--fg2);font-weight:600;font-variant-numeric:tabular-nums}
+/* RUN-IDENTITY row: name + purpose/scope chips (conditional; mobile: wraps, never
+   overflows — mono run name breaks anywhere, chips wrap whole) */
+.runid{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:2px 0 10px;min-width:0}
+.runid .rname{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+font-size:11.5px;color:var(--muted);word-break:break-all;min-width:0}
+.runid .ridchip{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;
+border:1px solid var(--grid);color:var(--fg2);background:var(--panel2);max-width:100%;
+overflow-wrap:anywhere}
+.runid .ridchip .prov{color:var(--faint2);font-weight:500}
+
 /* costate controller SENSE/DECIDE panel (conditional; hidden when no shadow file) */
 .costate{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
 padding:10px 14px;margin:0 0 16px}
@@ -2468,6 +2583,12 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
     </svg>
   </a>
 </div>
+<!-- RUN-IDENTITY row (operator 2026-07-07): run name + purpose chip + scope chip,
+     directly under the pills row, above the tab bar. CONDITIONAL: hidden until a
+     run resolves; chips render only with a real source (declared header / derived
+     heuristic, provenance-labelled). Flex-wrap + break-all keep ~390px viewports
+     free of horizontal scroll. -->
+<div class="runid hide" id="runid" aria-label="run identity">&nbsp;</div>
 <div class="tabs">
   <div class="tab on" data-tab="live">LIVE</div>
   <div class="tab" data-tab="oracle">ORACLE</div>
@@ -3573,6 +3694,29 @@ function renderScorerBreakdown(last){
      "term above is measured-but-untrained, so the composite is dominated by it by construction.":"");
 }
 
+// ---------- RUN-IDENTITY row (name + purpose chip + scope chip; CONDITIONAL) ----------
+// Source: META.run_identity (server-derived: launch.sh declared header OR labelled
+// heuristic). Absent -> the row is hidden. Evidence rides the chip's title tooltip.
+function renderRunIdentity(){
+  const box=$("runid"); if(!box)return;
+  const R=META.run_identity;
+  if(!R||!R.name){box.classList.add("hide");return;}
+  box.classList.remove("hide");
+  // title attributes are DOUBLE-quoted: escHtml escapes `"` but not `'`, and the
+  // evidence strings legitimately contain apostrophes (e.g. family name 'mod32cap').
+  let h="<span class='rname'>"+escHtml(R.name)+"</span>";
+  if(R.purpose&&R.purpose.label){
+    h+="<span class='ridchip' title=\""+escHtml((R.purpose.evidence||[]).join(" · "))+"\">"+
+      escHtml(R.purpose.label)+
+      " <span class='prov'>("+escHtml(R.purpose.provenance||"?")+")</span></span>";
+  }
+  if(R.scope&&R.scope.label){
+    h+="<span class='ridchip' title=\""+escHtml(R.scope.evidence||"")+"\">"+
+      escHtml(R.scope.label)+"</span>";
+  }
+  box.innerHTML=h;
+}
+
 // ---------- costate controller panel (SENSE/DECIDE; CONDITIONAL; observability ONLY) ----------
 // Source: the run's costate_shadow.jsonl last row (score-neutral shadow observer),
 // shipped as META.costate. Absent -> the panel is hidden. The dashboard NEVER actuates.
@@ -3658,6 +3802,7 @@ function render(){
     document.querySelectorAll('#slegend .sc[data-st="muon"]').forEach(el=>el.classList.toggle("off",!muOn));
   }
   renderProjection(g);
+  renderRunIdentity();
   renderCostate();
   renderConfig();
   renderRunInfo();
