@@ -183,6 +183,16 @@ from tac.canonical_equations.adaptive_eps_cfl_edge_tracking_20260705 import (
     build_adaptive_eps_cfl_edge_tracking_v1,
     populate_adaptive_eps_cfl_edge_tracking_equation,
 )
+from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 import (
+    build_anisotropic_basis_two_regime_allocation_v1,
+    freq_along_for_regime,
+    populate_anisotropic_basis_two_regime_allocation_equation,
+)
+from tac.canonical_equations.step_native_activation_edge_optimality_20260707 import (
+    build_step_native_activation_edge_optimality_v1,
+    hosc_step_limit_beta_ratio,
+    populate_step_native_activation_edge_optimality_equation,
+)
 from tac.canonical_equations.boundary_distance_calibration_20260705 import (
     bd_weight_for_ratio,
     build_boundary_distance_weight_calibration_v1,
@@ -264,6 +274,8 @@ __all__ = [
     "auto_recalibrate_from_continual_learning_posterior",
     "bootstrap_posterior_from_anchor_residuals",
     "boundary_asymmetry_t",
+    "adaptive_ceiling_gib",
+    "admits",
     "build_adaptive_ceiling_admission_control_v1",
     "build_all_initial_equations",
     "build_all_witness_measured_findings_20260701",
@@ -284,6 +296,12 @@ __all__ = [
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_adaptive_eps_cfl_edge_tracking_v1",
     "populate_adaptive_eps_cfl_edge_tracking_equation",
+    "build_anisotropic_basis_two_regime_allocation_v1",
+    "freq_along_for_regime",
+    "populate_anisotropic_basis_two_regime_allocation_equation",
+    "build_step_native_activation_edge_optimality_v1",
+    "hosc_step_limit_beta_ratio",
+    "populate_step_native_activation_edge_optimality_equation",
     "bd_weight_for_ratio",
     "build_boundary_distance_weight_calibration_v1",
     "populate_boundary_distance_weight_calibration_equation",

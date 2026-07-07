@@ -646,7 +646,12 @@ def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,  # noqa: N802
                      window: int = 100) -> Lever:
     """Turn the lane-edge directional term ON (the completed run had weight 0).
     The all-class directional/tangent basis measured -48% d_seg earlier.
-    Carries a warm-start window (else dead-arm, review C1)."""
+    Carries a warm-start window (else dead-arm, review C1).
+
+    SISTER (FEED-07a): this is the directional LOSS-term lever (``--lane-edge-*``); the
+    directional BASIS-frequency allocation lever (``--freq-across``/``--freq-along``/
+    ``--n-dir-freqs``/``--self-orient``, the derived two-regime along-tangent law) is
+    :func:`DirectionalBasisRebalance` — different flags, different mechanism, composable."""
     return Lever("directional_basis",
                  overrides={"--lane-edge-weight": weight,
                             "--lane-edge-start-epoch": start_epoch},
@@ -1090,6 +1095,164 @@ def AdamBeta2(beta2: float = 0.99, window: int = 0) -> Lever:  # noqa: N802 — 
                  overrides={"--adam-beta2": beta2},
                  epochs_delta=window,
                  notes="#222 Adam β₂ second-moment decay sweep (β₁<√β₂ guard)")
+
+
+def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offloaded",  # noqa: N802
+                              window: int = 0) -> Lever:
+    """FEED-07a arm-(A): DERIVED two-regime along-tangent frequency rebalance of the directional
+    (anisotropic/curvelet) self-orient basis — a derivation, not a sweep (equations leg:
+    ``tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707``, the imported
+    ``freq_along_for_regime`` law).
+
+    SISTER of :func:`DirectionalBasis` (the ``--lane-edge-*`` directional LOSS-term lever):
+    different flags, different mechanism — this lever reallocates the BASIS frequencies the
+    self-orient front-end spends; the two compose.
+
+    * ``regime="lane_offloaded"`` (lane → the FREE rule-118 analytic band, MEASURED lane d_seg
+      0.00087): the boundaries the witness still carries are C²-cartoon edges → Candès–Donoho
+      parabolic scaling → ``freq_along = max(4, round(sqrt(freq_across)))`` (across=32 → along≈6).
+    * ``regime="lane_carried"`` (the witness carries the dash comb): the dashes are ~25 cyc/unit
+      along-edge TEXTURE violating the cartoon model; MEASURED 3.2× deficit at along=8 →
+      ``freq_along = min(freq_across, round(8*3.2)) = 26``.
+
+    Anchors: all-class directional basis −48% d_seg (~0 byte; DAG FEED 2026-06-25t) + the 3.2×
+    along-tangent deficit (4-lens, FEED 2026-07-03); the regime-1 √-optimum is OWED to the
+    next-run A/B (ASSUMED_AWAITING_VERIFICATION in the registered equation). The live mod32cap
+    spends across=32/along=8 — BACKWARDS vs the measured deficit in the lane-carried regime.
+
+    Emits REAL trainer flags only: ``--freq-across``/``--freq-along`` are ``type=float`` in the
+    trainer argparse, ``--n-dir-freqs`` is ``type=int``, ``--self-orient`` is
+    BooleanOptionalAction (default False; emitting True is a no-op override if a base already
+    enables it). window=0 = basis-config change, no epoch budget of its own."""
+    from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 import (
+        freq_along_for_regime,
+    )
+    fa = int(freq_across)
+    if fa <= 0:
+        raise ValueError(f"DirectionalBasisRebalance: freq_across must be > 0, got {freq_across!r}")
+    freq_along = freq_along_for_regime(fa, regime)  # fail-closed on an unknown regime
+    return Lever(
+        "FEED_07a_directional_basis_rebalance",
+        overrides={"--self-orient": True,
+                   "--n-dir-freqs": 4,
+                   "--freq-across": float(fa),
+                   "--freq-along": float(freq_along)},
+        epochs_delta=window,
+        notes=(f"FEED-07a derived two-regime along-tangent rebalance ({regime}: "
+               f"across={fa} -> along={freq_along}; -48%/3.2x anchors; sqrt-optimum owed to A/B)"),
+    )
+
+
+def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa: N802
+                     window: int = 100) -> Lever:
+    """FEED-07b lever #1 (#220): AA coverage render + grid≥384 — the gate's "#1 MEASURED islands
+    lever" (own gate verdict). Supersampled anti-aliased rendering resolves the sub-pixel island
+    coverage the base-grid point-sample misses.
+
+    COMPOSE GUARD (#224 / review MED-3, ``_validate_aa_compose_compat`` in the levelset trainer):
+    ``--render-aa supersample`` is INCOMPATIBLE with the BASE-grid compose levers
+    ``--residual-mode`` / ``--seed-islands`` / ``--lane-render-band`` until compose-after-downsample
+    lands — the trainer fail-closes at launch with an actionable message (use ``--render-aa ipe``
+    with those, or run separately). So this lever composes with DirectionalBasisRebalance /
+    MuonWarmStart etc., but NOT with SeedIslandEased(+seed path) or AnalyticLaneRenderBand."""
+    if int(ss) < 1:
+        raise ValueError(f"AACoverageRender: ss must be >= 1, got {ss!r}")
+    return Lever(
+        "FEED_07b_aa_coverage_render",
+        overrides={"--render-aa": "supersample",
+                   "--aa-supersample": int(ss),
+                   "--render-h": int(grid_h),
+                   "--render-w": int(grid_w)},
+        epochs_delta=window,
+        notes=("#220 AA coverage render (supersample) + grid>=384 — #1 measured islands lever; "
+               "incompatible with residual-mode/seed-islands/lane-render-band (AA compose guard)"),
+    )
+
+
+def StepNativeActivation(beta_start: float = 4.0, beta_end: float = 8.0,  # noqa: N802
+                         anneal: str = "linear", window: int = 100) -> Lever:
+    """FEED-07b lever #2 (#310, capstone lever #5 — in-code UNSWEPT): the step-native activation
+    chart, deep-math L∞-at-edge optimal for the piecewise-constant argmax target (error confined
+    to the flip band, O(1) params/edge, no Gibbs).
+
+    REAL-FLAG ROUTE (never-invent-flags): this trainer's ``--activation`` choices are
+    ``wire|hosc|relu`` — there is NO ``step_basis`` token — so the trainer's own named step-native
+    lever is the hosc BETA-ANNEAL (FEED-fb): hosc = ``tanh(beta*sin(omega*u))`` and beta→∞ IS the
+    step limit; ``--hosc-beta-end > --hosc-beta`` step-sharpens as the SDF partition forms.
+    CAVEAT (MEASURED, DAG FEED 2026-06-25a + FEED-ly): FIXED high beta from scratch DIVERGES
+    (tanh saturation → vanishing grad) — approach the step limit by ANNEAL, never start at it.
+    A discrete ``step_basis`` activation choice + the FINER++ bias-init (published fix for the
+    measured hosc saturation) are BUILD-NEEDED sisters — no flag exists; do NOT emit one.
+    Equations leg: ``step_native_activation_edge_optimality_v1`` (#310 sweep = the owed anchor)."""
+    if not (0.0 < float(beta_start) <= float(beta_end)):
+        raise ValueError(
+            f"StepNativeActivation: need 0 < beta_start <= beta_end (anneal TOWARD the step "
+            f"limit), got start={beta_start!r} end={beta_end!r}")
+    if anneal not in ("linear", "cosine"):
+        raise ValueError(f"StepNativeActivation: anneal must be linear|cosine, got {anneal!r}")
+    return Lever(
+        "FEED_07b_step_native_activation",
+        overrides={"--activation": "hosc",
+                   "--hosc-beta": float(beta_start),
+                   "--hosc-beta-end": float(beta_end),
+                   "--hosc-beta-anneal": anneal},
+        epochs_delta=window,
+        notes=("#310 step-native chart via hosc beta-anneal (beta->inf = step limit; fixed high "
+               "beta diverges — anneal only); L-inf-at-edge optimality; #310 sweep owed"),
+    )
+
+
+def MuonWarmStart(lr_final_frac: float = 0.1, window: int = 0) -> Lever:  # noqa: N802
+    """FEED-07b lever #7 (#270/#272): Muon finisher warm-start + LR anneal — kills the MEASURED
+    +8% cold-Muon transition spike. ``--muon-warm-start-momentum`` seeds the fresh Muon momentum
+    from the outgoing AdamW first moment (direction transfer; Newton–Schulz re-normalizes);
+    ``--muon-lr-final-frac`` cosine-decays the Muon-group LR to this fraction across the finisher
+    span (a flat LR cannot self-reduce near the minimum — river-valley Muon 2606.21514). Both
+    default-off trainer flags (byte-identical when unfired); fires at the l7→Muon switch (ep726
+    of the live #205). window=0 = optimizer-config change, no epoch budget of its own."""
+    f = float(lr_final_frac)
+    if not (0.0 < f <= 1.0):
+        raise ValueError(f"MuonWarmStart: lr_final_frac must be in (0, 1], got {lr_final_frac!r}")
+    return Lever(
+        "FEED_07b_muon_warm_start",
+        overrides={"--muon-warm-start-momentum": True,
+                   "--muon-lr-final-frac": f},
+        epochs_delta=window,
+        notes=("#270/#272 Muon warm-start momentum + lr-final-frac anneal (measured +8% "
+               "cold-Muon transient; fires at the l7->Muon switch)"),
+    )
+
+
+def PersistenceTopology(weight: float = 1.0, warmup_epochs: int = 0,  # noqa: N802
+                        window: int = 100) -> Lever:
+    """FEED-07b lever #3 (partial, #218/#224 byte-free head): soft-clDice + persistence-weighted
+    island-RECALL term on the SHARED realized-through-R seg forward — births the finest-scale
+    erasure tail (lane dashes / movable specks) the plain CE drops (error ∝ 1/persistence).
+    ``--persistence-loss-weight`` 0 (trainer default) = branch skipped = byte-identical; a nonzero
+    weight engages. ``--persistence-classes auto`` (trainer default kept) self-detects the
+    thin/small erasure-tail classes from the cached GT argmax. The #218 logit-adjustment per-class
+    offset is the BUILD-NEEDED sister (no flag exists — do NOT emit one)."""
+    ov: dict = {"--persistence-loss-weight": float(weight)}
+    if int(warmup_epochs) > 0:
+        ov["--persistence-warmup-epochs"] = int(warmup_epochs)
+    return Lever(
+        "FEED_07b_persistence_topology",
+        overrides=ov, epochs_delta=window,
+        notes=("#218/#224 soft-clDice + persistence island-recall (births the finest-scale "
+               "erasure tail CE drops); logit-adjustment sister = build-needed"),
+    )
+
+
+def MarginFieldHead(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: N802
+    """FEED-07b lever #3 (partial, #218 facets 1b/3): realized through-R per-class margin-hinge
+    head weight (``--margin-field-head-weight``; trainer default 0.0 = off = byte-identical).
+    Composes with LEVER-3/4/B on the shared ``_signed`` margin field."""
+    return Lever(
+        "FEED_07b_margin_field_head",
+        overrides={"--margin-field-head-weight": float(weight)},
+        epochs_delta=window,
+        notes="#218 per-class realized-margin hinge head (shared _signed; byte-free head facet)",
+    )
 
 
 _SEALED_205_MANAGED_FLAGS = frozenset({
