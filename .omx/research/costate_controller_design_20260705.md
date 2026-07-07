@@ -186,3 +186,106 @@ Cross-refs: inventory memo (same date) · canonical equation `costate_lambda_mar
 focal calibration memo. Axis: all numbers [macOS advisory] NON-PROMOTABLE, implied-S
 units from n600 advisory verdicts; **pointer 0.19110 UNMOVED — this is MEANS; it moves
 only when the controller's picks land a lower exact byte-closed row.**
+
+## APPENDIX 2026-07-07 — Weng-harvest design invariants (APPEND-ONLY; source: docs/harvest_weng_harness_20260707.md)
+
+Three invariants adopted from the 2026-07-04 Lilian Weng "Harness Engineering for
+Self-Improvement" harvest. They BIND Phase B (and any future controller phase); Phase A already
+satisfies them structurally.
+
+### (i) AUTHORITY-OUTSIDE-THE-LOOP — the controller never proposes edits to authority surfaces
+
+The controller may propose lever/schedule/config actions (DSL argv emission, rollback-to-best,
+stage triggers, lever gates) but may NEVER propose — in any emitted recommendation, config, or
+argv — edits to the surfaces that MEASURE or PERMIT: `upstream/evaluate.py` + the pinned upstream
+snapshot, the byte-close scoring paths (`tac.contest_score`, exact-eval harnesses), permission/
+operator-GO gates (`launch_witness_run` admission, `system_memory_governor`, operator_authorize),
+and the NO-FAKE preflight gates. Rationale (post, verbatim): "A self-improvement loop optimizes
+whatever signal it is given" and "The evaluator and permission control should likely sit outside
+the loop that evolves harness, with held-out tests, trace audits, and human review at decision
+points that matter." This is the reward-hacking bottleneck named as a structural invariant: a
+controller that can touch its own evaluator will Goodhart it. Sisters: the pinned-upstream
+non-negotiable (never edit/monkeypatch upstream) + NO-FAKE class #8 (surrogate-optimized-but-not-
+exact-authority-verified). Enforcement today: the containment source-scan
+(`test_no_actuation_capability`) already denies process control; Phase B's argv-emission surface
+must additionally refuse any recommendation whose target path is an authority surface (the
+compile-through-DSL path satisfies this by construction — the DSL vocabulary contains no
+evaluator/permission flags; keep it that way).
+
+### (ii) DIVERSITY-FLOOR — a fixed exploration share for never-fired levers
+
+When the DECIDE ranker orders levers by measured ΔS-per-cost, a FIXED exploration share of each
+measurement budget goes to never-fired activation-ledger entries (`duty_to_measure`), regardless
+of how attractive the exploit queue looks. Rationale (post): "Evolutionary and RL loops tend to
+exploit known high-reward patterns," collapsing diversity exactly where open-ended research needs
+it — "the best path may initially look worse under the current evaluator." The activation ledger
+IS our anti-diversity-collapse mechanism (CLAUDE.md "'Off' is a tracked queue, never a forgotten
+default"); this invariant makes the link explicit and binding: the ledger's owed queue is not a
+backlog the exploit ranker may starve — it holds a floor share. The `rank_duty_to_measure`
+EIG-bridge (cheapest-owed-first under an uninformative prior) is the ordering WITHIN the floor
+share; the floor itself is the new commitment. Concrete Phase-B form: every emitted
+RECOMMENDED-CONFIG batch of N measurement runs reserves ceil(N·f) slots for owed levers (f
+operator-set, default suggestion 1/4), and a batch that cannot name its owed slot records WHY
+(the default-off reconciliation discipline).
+
+### (iii) D_in/D_out regression discipline — the acceptance template for harness self-edits
+
+Adopted as the acceptance TEMPLATE for any future self-edit to controller/harness code proposed
+from mined weaknesses (failure-ledger rows): a candidate edit is accepted only when it (a)
+resolves the mined weakness on held-in evidence D_in (the incident class it targets — e.g. a
+backtest replay of the failure), AND (b) introduces no regression on held-out evidence D_out (the
+existing suite + backtest scorecard + gates), AND (c) rejected candidates are LOGGED without
+changing the active harness (post, verbatim: "rejected candidates are logged without changing the
+active harness"). Mapping onto our existing protocol: D_in = the failure-ledger row's reproduction
+(its `related_ref` incident), D_out = the review-gate ×2 + regression suite + 3-clean-pass
+counter (a fix round resets the counter — our stricter form of "no regression"), rejected
+proposals = failure-ledger rows kept at `resolution=open` with the rejected-candidate note (never
+silent discards). This does NOT authorize an automated propose→deploy loop: proposals remain
+human-gated (review-gate + serializer + operator GO); the template governs what "accepted" means
+when a human does gate one through.
+
+**SENSE wiring note (same harvest):** the controller SENSE now reads the harness failure ledger
+(`tac.harness_failure_ledger.sense_rows` via `producer_bridge._harness_failure_signal`) — ranked
+open/recurrent failure classes (recurrence descending = the post's "preference for recurrent,
+addressable patterns"), so recommendations can be weighted by known-unreliable surfaces (e.g.
+refuse to recommend a spawned-daemon measurement while `daemon_5min_harness_long_call_sweep_kill`
+is open). Pointer 0.19110 UNMOVED (apparatus/means).
+
+## 2026-07-07 APPEND — AGENT-NATIVE SURFACING: the controller as a core sense organ (operator NON-NEGOTIABLE)
+
+**Operator verbatim (2026-07-07):** *"We must ensure the costate controller does not require human
+or manual activation or use and that it is agent native and a core sense organ and actuator the
+agent always knows about and uses where and how optimal and appropriate."* This append lands the
+STRUCTURAL guarantee (separate from the sibling invariants/failure-ledger append above — no overlap):
+
+1. **`tools/costate_digest.py`** — ONE read-only, fail-open-per-section, <5s command rendering
+   SENSE+DECIDE: (line 1, never dropped) the canonical frontier POINTER (means-as-ends firewall —
+   the END before the means), (line 2, never dropped) live-run state via `witness_checkin`
+   (imported, not duplicated), then annulus headline (#333), latest shadow row (classification +
+   pending recommendations + staleness-refresh command), the top-N duty-to-measure levers
+   (activation ledger), the harness failure ledger (glob-matched sibling SENSE input),
+   planned-vs-actual schedule (soft-import, sibling module pending), the resume spine
+   (MEMORY.md ⭐CURRENT-STATE → newest DAG FEED id), and the ACTUATION BOUNDARY footer.
+   Measured wall-clock 0.13s.
+2. **Auto-surfacing (the "always knows about" guarantee):** a `SessionStart` hook in
+   `.claude/settings.json` injects the digest into every session's context (`--session-start`
+   always exits 0 — a broken digest can never block a session); the `witness-status` skill now
+   runs the digest as part of the canonical check-in; the digest footer points here.
+3. **Observer auto-start (observability-defaults-ON):** `tools/costate_observer_loop.py` — each
+   tick is a SHORT-LIVED `costate_shadow_report --write` subprocess (bounded timeout); the loop
+   self-terminates when the trainer exits; run.log-missing runs are healed by a score-neutral
+   symlink to the daemon-registry log (the mod32cap resume logged to `.omx/tmp/`, which is why
+   telemetry froze at ep350 for 12.6h). Wired into `tools/launch_witness_run.py` step (c.2)
+   (idempotent via registry-label + pid-liveness check; NON-FATAL) so every governed launch gets
+   its observer automatically. Started live for mod32cap (label
+   `costate_obs_mod32cap_20260706T115554Z`); the FIRST fresh tick immediately surfaced
+   ep725 `BINDING_TERM_STALL` → `INVESTIGATE_BINDING_TERM_DEADLOCK` (stale-SENSE was hiding it).
+4. **THE ACTUATION BOUNDARY (crisp, stated where agents read it — digest header + footer +
+   CLAUDE.md pointer):** AUTONOMOUS = advisory recommendations, duty-to-measure/lever-queue
+   ranking, event-curriculum CONDITION INPUTS, digest surfacing. OPERATOR-GO = heavy/paid
+   launches, run stops, config changes to live runs. CONTAINMENT unchanged; "agent-native" is
+   NOT "autonomous heavy actuation"; the shadow package still has no process-control surface.
+
+Triality: DAG leg = FEED-07m; DSL leg = N/A (apparatus/observability — no trainer lever or
+curriculum object touched); equations leg = N/A (no new measured law; the digest CONSUMES
+registered surfaces). Pointer 0.19110 UNMOVED (apparatus/means).
