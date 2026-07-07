@@ -39,7 +39,8 @@ classifier); live ``closed_loop`` rows win when present (the trainer's in-run re
 is parity-regression-guarded against the same monitor).
 
 AUTHORITY: everything rendered is [macOS-MLX advisory · NON-PROMOTABLE]; the frontier
-pointer is contest-CPU 0.19110 and UNMOVED — no panel here is a score claim.
+pointer (SoT: .omx/state/canonical_frontier_pointer.json) moves only through a
+byte-closed exact eval — no panel here is a score claim.
 """
 from __future__ import annotations
 
@@ -72,7 +73,9 @@ CLASS_COLORS: dict[str, str] = {
     wcm.VOLATILE: _VOLA,
 }
 
-_ADVISORY = "[macOS-MLX advisory · NON-PROMOTABLE] · pointer 0.19110 UNMOVED"
+# (pointer-only discipline: no hardcoded score literal — the exact pointer lives in
+# .omx/state/canonical_frontier_pointer.json; panels here are advisory, never a score)
+_ADVISORY = "[macOS-MLX advisory · NON-PROMOTABLE]"
 
 
 # ─────────────────────────── parsing (pure) ───────────────────────────
@@ -107,6 +110,13 @@ def parse_stage_rows(lines) -> dict:
         elif st == "curriculum_transition":  # legacy hardcoded boundary (#205 path)
             transitions.append({"epoch": d.get("epoch"), "from": d.get("from_seg_form"),
                                 "to": d.get("to_seg_form"), "trigger": "hardcoded"})
+        elif st == "muon_finisher_switch":
+            # the OPTIMIZER-axis boundary (AdamW->Muon) — the trainer emits it under its
+            # own stage name, which this parser previously missed, so the stage timeline
+            # silently STOPPED at ce->tau (the private-parser/stale-format class).
+            transitions.append({"epoch": d.get("epoch", d.get("muon_start_epoch")),
+                                "from": "AdamW", "to": "Muon",
+                                "trigger": "optimizer_switch"})
         elif st == "closed_loop":
             closed_loop.append(d)
         elif st == "structured_init":
@@ -267,7 +277,13 @@ def effective_eikonal_series(max_epoch: int, flags: dict, transitions: list[dict
         except (TypeError, ValueError):
             return default
 
-    base = _f("eikonal-weight", 0.01)
+    # NO value-shaped default: an absent --eikonal-weight means the run's config was
+    # not parsed (or the flag truly isn't set) — fabricating base 0.01 here made the
+    # eikonal card LIE ("base 0.01 -> now 0.01") against a launch.sh that says 0 and
+    # loss_terms rows that log eikonal 0.0. Missing flag -> no series (honest absence).
+    base = _f("eikonal-weight", None)
+    if base is None:
+        return []
     end = _f("eikonal-weight-end", None)
     ease = int(_f("stage-transition-rewarmup-epochs", 0) or 0)
     curriculum = "curriculum" in flags
@@ -434,12 +450,14 @@ LEVER_LEDGER: tuple[tuple[str, tuple[str, ...], str, str, str], ...] = (
 
 
 def lever_run_value(flags: dict, keys: tuple[str, ...]) -> str:
-    """The run's OWN value for a lever: join the parsed launch.sh values for ``keys``
-    (boolean flags render ON; absent flags render OFF for boolean-style keys, else —)."""
+    """The run's OWN value for a lever: join the parsed launch.sh values for ``keys``.
+    Boolean flags render ON; an ABSENT flag renders "not set" (= the trainer default
+    applies) — never a value-shaped "—" that reads as unknown (the truth IS known:
+    the flag was not launched)."""
     parts: list[str] = []
     for k in keys:
         if k not in flags:
-            parts.append("—")
+            parts.append("not set")
             continue
         v = flags[k]
         parts.append("ON" if v is True else str(v))
@@ -461,7 +479,9 @@ def lever_status_rows(flags: dict, control: dict, schedule: dict | None = None,
     rows: list[dict] = []
 
     # 1) paint-seed (the CORRECTED gate, FEED-04x: mechanism + birth, not init-part_frac alone)
-    mode = nuc.get("mode") or flags.get("lane-prior-phi1-mode") or "?"
+    # honest absence: no seed-mechanism flag + no lane_prior_phi1 log row = NO mechanism
+    # configured ("none"), never a value-shaped "?"
+    mode = nuc.get("mode") or flags.get("lane-prior-phi1-mode") or "none"
     if nuc["state"] == "BIRTH_CONFIRMED":
         rows.append({"lever": "paint-seed", "state": "ok",
                      "value": f"BIRTH d_seg={nuc['birth_d_seg']:.4f}@ep{nuc.get('birth_epoch')}",
@@ -745,7 +765,9 @@ def render_control_panel_html(control: dict) -> str:
                         f'style="color:{c};font-size:12px">{mark}</span>')
         last = lane[-1]
         lc = CLASS_COLORS.get(last.get("classification"), _MUTED)
-        lane_html = ('<div style="letter-spacing:2px">' + "".join(dots) + "</div>"
+        # flex-wrap: the dot spans are whitespace-free inline runs that otherwise form ONE
+        # unbreakable line box -> body h-scroll at mobile widths (390px arbiter)
+        lane_html = ('<div style="letter-spacing:2px;display:flex;flex-wrap:wrap">' + "".join(dots) + "</div>"
                      f'<div style="font-size:11px;margin-top:3px">latest: '
                      f'<b style="color:{lc}">{_esc(last.get("classification", "?")).upper()}</b> '
                      f'@ep{_esc(last.get("epoch"))} · source {_esc(src)}'
@@ -776,11 +798,12 @@ def render_control_panel_html(control: dict) -> str:
                           f'<td style="{_TD};color:{dcol}">{s["d_seg_slope"]:+.2e}/ep</td>'
                           f'<td style="{_TD}">{s["ep_loss_slope"]:+.3g}/ep</td>'
                           f'<td style="{_TD}">{flag}</td></tr>')
-        slope_html = (f'<table style="border-collapse:collapse;width:100%"><tr>'
+        slope_html = (f'<div style="overflow-x:auto;max-width:100%">'  # own scroll container (mobile: body never h-scrolls)
+             f'<table style="border-collapse:collapse;width:100%;min-width:560px"><tr>'
                       f'<th style="{_TH}">stage</th><th style="{_TH}">window</th>'
                       f'<th style="{_TH}">d_seg slope (dV/dt)</th>'
                       f'<th style="{_TH}">ep_loss slope</th><th style="{_TH}">surrogate↔verdict</th>'
-                      f'</tr>{rows_html}</table>'
+                      f'</tr>{rows_html}</table></div>'
                       f'<div style="font-size:10px;color:{_MUTED};margin-top:3px">DECOUPLED = '
                       f'd_seg RISING while ep_loss FALLS — the #205 erosion signature (a minority '
                       f'class eroded by the flow while the surrogate still improves)</div>')
@@ -811,9 +834,10 @@ def render_lever_board_html(lever_rows: list[dict]) -> str:
         rows_html += (f'<tr><td style="{_TD}">{_esc(r["lever"])}</td>'
                       f'<td style="{_TD};color:{c};font-weight:600">{_esc(r["value"])}</td>'
                       f'<td style="{_TD};color:{_MUTED}">{_esc(r["detail"])}</td></tr>')
-    table = (f'<table style="border-collapse:collapse;width:100%"><tr>'
+    table = (f'<div style="overflow-x:auto;max-width:100%">'  # own scroll container (mobile: body never h-scrolls)
+             f'<table style="border-collapse:collapse;width:100%;min-width:560px"><tr>'
              f'<th style="{_TH}">lever</th><th style="{_TH}">status</th>'
-             f'<th style="{_TH}">detail</th></tr>{rows_html}</table>')
+             f'<th style="{_TH}">detail</th></tr>{rows_html}</table></div>')
     return ('<div style="max-width:1000px;margin:14px auto 0;text-align:left">'
             + _sec("lever status board", table,
                    sub="live per-lever state from run.log + launch.sh (pre-launch levers "
@@ -831,10 +855,11 @@ def render_config_lever_table_html(flags: dict, role: dict | None = None) -> str
                       f'<td style="{_TD};color:{_GOOD}">{_esc(vfresh)}</td>'
                       f'<td style="{_TD}">{_esc(run_v)}</td>'
                       f'<td style="{_TD};color:{_MUTED}">{_esc(grounding)}</td></tr>')
-    table = (f'<table style="border-collapse:collapse;width:100%"><tr>'
+    table = (f'<div style="overflow-x:auto;max-width:100%">'  # own scroll container (mobile: body never h-scrolls)
+             f'<table style="border-collapse:collapse;width:100%;min-width:560px"><tr>'
              f'<th style="{_TH}">lever</th><th style="{_TH}">#205</th>'
              f'<th style="{_TH}">fresh</th><th style="{_TH}">this run</th>'
-             f'<th style="{_TH}">measured grounding</th></tr>{rows_html}</table>')
+             f'<th style="{_TH}">measured grounding</th></tr>{rows_html}</table></div>')
     role_note = ""
     if role and role.get("role") in ("205", "fresh"):
         rc = _BAD if role["role"] == "205" else _GOOD

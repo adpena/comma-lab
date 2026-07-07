@@ -89,6 +89,15 @@ try:
     import dashboard_trajectory_model as _dtm  # noqa: E402
 except Exception:  # pragma: no cover - degraded-but-alive path
     _dtm = None
+# canonical run-dir resolver (tac.witness_dsl): a watched log is often the launcher's
+# TEE in .omx/tmp whose parent holds NO run artifacts (launch.sh / npzs / best.json) —
+# the log-path-split class. Every run-dir consumer below resolves through this first.
+try:
+    from tac.witness_dsl.schedule_readback import (  # noqa: E402
+        resolve_run_dir_for_log as _resolve_run_dir_canonical,
+    )
+except Exception:  # pragma: no cover - degraded-but-alive path
+    _resolve_run_dir_canonical = None
 
 # ── self-calibration: ALL time-telemetry DERIVED FROM THE RUN'S OWN DATA ──
 # (operator "Telemetry accuracy vital" 2026-06-30: confident-wrong is the worst failure.)
@@ -467,12 +476,22 @@ def _fmt_bytes(n: float | int | None) -> str:
 def _run_dir_for(watched: Path | None, log_glob: str | None, run_dir_arg: str | None) -> Path | None:
     """Resolve the RUN DIR (where launch.sh + the npz/json artifacts live).
 
-    Explicit ``--run-dir`` wins; else the watched log's PARENT (the trainer writes
-    run.log + all artifacts into out_dir); else the dir component of ``--log-glob``.
-    Returns None when none is resolvable (readers then no-op)."""
+    Explicit ``--run-dir`` wins; else the CANONICAL DSL resolver on the watched log
+    (the watched log is often the launcher's tee in .omx/tmp whose parent holds NO
+    artifacts — the log-path-split class that silently degraded the run-info cards to
+    '?'/'not yet'/'calibrating', 6th consumer); else the watched log's parent (in-run-dir
+    logs resolve to themselves); else the dir component of ``--log-glob``. Returns None
+    when none is resolvable (readers then no-op)."""
     if run_dir_arg:
         return Path(run_dir_arg)
     if watched is not None:
+        if _resolve_run_dir_canonical is not None:
+            try:
+                rd = _resolve_run_dir_canonical(Path(watched))
+                if rd is not None:
+                    return Path(rd)
+            except Exception:
+                pass
         return Path(watched).parent
     if log_glob:
         d = os.path.dirname(log_glob)
@@ -650,9 +669,12 @@ def _stage_progress(last_epoch: int | None, last_seg_form: str | None, schedule:
     # Stage name: trust the verdict's seg_form when present; else derive from boundaries.
     _seg_name = {"ce": "CE", "tau_softplus": "tau", "l7_softplus": "l7"}
     stage = _seg_name.get(str(last_seg_form)) if last_seg_form else None
-    # boundaries (may be partially None; treat missing future stages as absent)
+    # boundaries (may be partially None; treat missing future stages as absent).
+    # A DEMOTED l7 (start >= epochs, the "never" form — e.g. 1001 @ epochs=1000) is
+    # treated as ABSENT so the tau stage spans to end-of-run (else stage_pct/next
+    # would be computed against a boundary that never fires).
     b_tau = tau if tau is not None else None
-    b_l7 = l7 if l7 is not None else None
+    b_l7 = l7 if (l7 is not None and (epochs is None or l7 < epochs)) else None
     if stage is None:
         if b_tau is not None and last_epoch < b_tau:
             stage = "CE"
@@ -660,8 +682,9 @@ def _stage_progress(last_epoch: int | None, last_seg_form: str | None, schedule:
             stage = "tau"
         elif b_l7 is not None and last_epoch >= b_l7:
             stage = "l7"
-    # stage span from the ordered boundaries
-    span = {"CE": (0, b_tau), "tau": (b_tau, b_l7), "l7": (b_l7, epochs)}.get(stage, (None, None))
+    # stage span from the ordered boundaries (a demoted l7 -> tau runs to end-of-run)
+    span = {"CE": (0, b_tau), "tau": (b_tau, b_l7 if b_l7 is not None else epochs),
+            "l7": (b_l7, epochs)}.get(stage, (None, None))
     s0, s1 = span
     out["stage"] = stage
     out["stage_start"], out["stage_end"] = s0, s1

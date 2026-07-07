@@ -302,7 +302,8 @@ def test_lever_status_rows_fresh_live_fired():
 
 def test_lever_run_value_booleans_and_absent():
     assert dct.lever_run_value({"film-stiefel": True}, ("film-stiefel",)) == "ON"
-    assert dct.lever_run_value({}, ("film-stiefel",)) == "—"
+    # absent flag == "not set" (trainer default applies) — never a value-shaped "—"
+    assert dct.lever_run_value({}, ("film-stiefel",)) == "not set"
     assert dct.lever_run_value({"mod-dim": "19"}, ("mod-dim",)) == "19"
 
 
@@ -319,7 +320,9 @@ def test_html_renderers_carry_key_tokens_and_advisory():
     h = dct.render_control_panel_html(ctl)
     # #205 fixture renders BIRTH (its verdicts prove partial lane) + DECOUPLED (the erosion story)
     assert "nucleation gate" in h and "BIRTH" in h and "DECOUPLED" in h
-    assert "NON-PROMOTABLE" in h and "0.19110" in h
+    # pointer-only discipline (CLAUDE.md "Frontier scores are pointer-only"): the
+    # advisory tag renders WITHOUT a hardcoded score literal.
+    assert "NON-PROMOTABLE" in h and "0.19110" not in h
     hb = dct.render_lever_board_html(ctl["levers"])
     assert "lever status board" in hb and "paint-seed" in hb
     hc = dct.render_config_lever_table_html(_205_FLAGS, dct.run_role(_205_FLAGS))

@@ -1104,8 +1104,13 @@ class LiveState:
             for r in rld._parse_verdicts(lg):
                 ep = r.get("epoch")
                 if isinstance(ep, int):
-                    merged[ep] = _slim(r)
-        rows_full = [merged[e] for e in sorted(merged)]
+                    merged[ep] = r          # FULL verdict rows (seg_form etc.)
+        # RAW rows feed the run-info collectors (per-stage slopes + the monitor-replay
+        # closed-loop lane both need seg_form, which _slim drops — passing slimmed rows
+        # silently degraded those cards to "no staged verdicts yet" / "no classified
+        # eval yet"); the CLIENT trajectory ships the slimmed projection only.
+        rows_raw = [merged[e] for e in sorted(merged)]
+        rows_full = [_slim(r) for r in rows_raw]
         # Muon boundary (ADDITIVE meta only): the Muon stage is an OPTIMIZER switch,
         # not a loss-form switch, so it is NOT in the verdict seg_form — infer it from
         # the resume ancestry. The first arm in the chain whose dir/name signals "muon"
@@ -1272,8 +1277,11 @@ class LiveState:
         # never formats it. No run resolved -> "" (strip hidden; page unchanged = back-compat).
         if latest is not None:
             try:
+                # RESOLVED run dir (the tee-log parent holds no artifacts — the
+                # log-path-split class) + RAW rows (seg_form-bearing; see merge above).
                 self.run_info = rld._collect_run_info(
-                    latest, glob, cfg.run_dir, rows_full, self.liveness, now)
+                    latest, glob, (self.watched_dir or cfg.run_dir), rows_raw,
+                    self.liveness, now)
                 self.run_info_html = rld._run_info_html(self.run_info)
             except Exception:
                 self.run_info, self.run_info_html = {}, ""
