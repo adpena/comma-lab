@@ -48,6 +48,14 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
    Audit before any comb verdict is load-bearing.
 4. **form-a retrain arm decision** (freq_along raised AT TRAINING, not oracle-injected) — the
    in-training question FEED-08l could not answer; fold into the S1 basis A/B design (R2).
+5. **SYNTHESIS ORDERING GUARD (operator-flagged, the wrong-dimension lesson).** S1's primary arm
+   drops freq_along 8→6 on the premise that band+comb carry the along-tangent dash energy. That
+   premise is UNPROVEN until (a) the comb-registration audit passes (item 3) and (b) the band
+   survives through-R at n600. **Constraint: no along<8 arm may be the launch primary until BOTH
+   clear; else arm (a) (control along=8) is primary.** The along-tangent axis is the measured
+   starved dimension (FEED-03t, 3.2×) — never re-starve it on an ungated premise. Also: the
+   √-at-base-only anisotropy approximation is "acceptable per FEED-08l" and therefore inherits
+   item 2's review dependency.
 (…seats append here via their RECESS proposals…)
 
 ## Log
