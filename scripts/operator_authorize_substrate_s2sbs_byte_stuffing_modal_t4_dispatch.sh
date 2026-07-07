@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the S2SBS stride-2-stem byte-stuffing substrate.
 #
 # Recipe:  .omx/operator_authorize_recipes/substrate_s2sbs_byte_stuffing_modal_t4_dispatch.yaml

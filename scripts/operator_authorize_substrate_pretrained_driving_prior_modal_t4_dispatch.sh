@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical smoke-before-full entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_pretrained_driving_prior_modal_t4_dispatch.yaml``

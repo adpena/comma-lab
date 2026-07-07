@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical smoke-before-full entry point.
 #
 # Recipe: .omx/operator_authorize_recipes/substrate_nscs03_end_to_end_balle_joint_codec_modal_a100_dispatch.yaml

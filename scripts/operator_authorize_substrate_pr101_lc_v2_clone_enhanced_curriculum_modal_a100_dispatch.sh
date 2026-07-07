@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the PR95++ meta-stack-of-stacks enhanced
 # curriculum substrate (11 enhancements over PR95's 8-stage protocol).
 #

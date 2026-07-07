@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical smoke-before-full entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_time_traveler_l5_autonomy_modal_a100_dispatch.yaml``

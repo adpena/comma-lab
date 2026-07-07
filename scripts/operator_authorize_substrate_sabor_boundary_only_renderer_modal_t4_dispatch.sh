@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the SABOR boundary-only renderer substrate.
 #
 # Recipe:  .omx/operator_authorize_recipes/substrate_sabor_boundary_only_renderer_modal_t4_dispatch.yaml

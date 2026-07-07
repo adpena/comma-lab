@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Operator-authorize wrapper for the L2 SAR coherent pose-pair substrate.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_sar_coherent_pose_pairs_modal_t4_dispatch.yaml``

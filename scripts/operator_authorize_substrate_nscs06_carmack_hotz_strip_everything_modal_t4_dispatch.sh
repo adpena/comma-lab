@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Thin shim: delegates to the canonical smoke-before-full entry point.
 #
 # Recipe: .omx/operator_authorize_recipes/substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch.yaml
