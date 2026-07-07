@@ -8996,3 +8996,21 @@ byte-closed exact row).
 **DSL leg (landed at HEAD via 14c4ae929 — the sibling's serializer commit ABSORBED the uncommitted DSL hunks; a2f4acee7 closed the resulting broken-window):** `FinerBiasInit()` + `LogitAdjust(tau=1.0)` composable levers (b679c4494 predicate; auto-surface in never_fired()/duty_to_measure() for the #247 SENSE); `AACoverageRender`/`StepNativeActivation`/`PersistenceTopology` docstrings updated (guard resolved / built-sister cross-refs); `MarginFieldHead` extended to hold the facet-3 pair. `completeness().stale == []`.
 **Equations leg:** `logit_adjustment_class_prior_law_v1` REGISTERED (measured-priors anchor VERIFIED; loss-time d_seg delta ASSUMED_AWAITING the #218 A/B) + `step_native_activation_edge_optimality_v1` row REFRESHED (FINER++ sister now BUILT; step_basis still build-needed). Trainer helper `_logit_adjust_offsets_np` DELEGATES to the registered callable (the law is the code path, not prose).
 **Tests:** 16 new (`test_feed07b_build_levers.py`) + the two old fail-closed guard tests INVERTED to pin the new accept behavior; 179 green across the affected suites. **OWED (honest ledger):** #308 grid-bulk+INR-annulus SKIPPED (needs its own design pass — named task, not a stub); #310 step-native sweep (now runnable: StepNativeActivation ∘ FinerBiasInit); #218 loss-time A/B row; AA×composer decode-side parity remains the byte-close tool's contract if a composed-AA config is ever byte-closed. Pointer 0.19110 UNMOVED (means/apparatus — the pointer moves only through a byte-closed exact row).
+
+## FEED-07h (2026-07-07) — LEG-RECONCILIATION for the #337 trainer-surface commits (a2f4acee7)
+
+Per-leg gate fired on a2f4acee7 (trainer flags, no witness_dsl touch). RECONCILIATION — all three
+legs are SATISFIED, split across two commits by the absorbed-hunks event:
+- DSL leg: FinerBiasInit (curriculum_dsl.py:1331), LogitAdjust, MarginFieldHead factories landed
+  at HEAD under the SIBLING's 14c4ae929 (serializer whole-file staging absorbed the build agent's
+  uncommitted DSL hunks); a2f4acee7 then landed the trainer half + tests, closing the dangling-flag
+  window. VERIFIED at HEAD via grep -E (first check false-negatived on BSD-grep BRE \| alternation
+  — the tool, not the repo; use -E).
+- equations leg: a2f4acee7 ADDED src/tac/canonical_equations/logit_adjustment_class_prior_20260707.py
+  + registry row logit_adjustment_class_prior_law_v1 (trainer helper delegates to the registered
+  callable) + refreshed step_native_activation_edge_optimality.
+- DAG leg: FEED-07g (32de3ce44, by the build agent).
+Durable deviation already recorded in FEED-07g: --logit-adjust-tau was TAKEN (facet-3 margin-head
+target scale) → loss-time lever named --logit-adjust-loss-tau; both facets DSL-held. Owed anchors:
+StepNativeActivation∘FinerBiasInit sweep + LogitAdjust A/B row (activation ledger duty-to-measure).
+Pointer 0.19110 UNMOVED (reconciliation).
