@@ -2490,6 +2490,18 @@ padding:2px 6px;border-radius:6px}
 .proj{font-size:11.5px;color:var(--muted);margin:0 2px 16px;line-height:1.6;min-height:34px}
 .proj .proj2{color:var(--faint2);font-size:11px}
 .proj b{color:var(--fg2);font-weight:600;font-variant-numeric:tabular-nums}
+/* projection block as LABELED ROWS (operator 2026-07-07 mobile-clutter fix): reuses
+   the SETUP panel's cfgrow/cfgk/cfgv system, scoped so VALUES WRAP (the SETUP panel's
+   nowrap values are short; projection values are sentences — right-aligned, wrapping) */
+.proj .cfgrows{margin-top:2px;gap:4px}
+.proj .cfgrow{font-size:11.5px;align-items:baseline}
+.proj .cfgk{flex:0 0 auto}
+.proj .cfgv{white-space:normal;text-align:right;overflow-wrap:anywhere;font-weight:500;
+min-width:0;flex:1;color:var(--muted)}
+.proj .cfgv b{color:var(--fg2)}
+.proj .cfgmeta{margin-top:7px}
+.curchip{font-size:9px;font-weight:700;color:#7fe0a0;background:#173d22;border-radius:999px;
+padding:1px 6px;letter-spacing:.3px;flex:0 0 auto;vertical-align:middle}
 /* RUN-IDENTITY row: name + purpose/scope chips (conditional; mobile: wraps, never
    overflows — mono run name breaks anywhere, chips wrap whole) */
 .runid{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:2px 0 10px;min-width:0}
@@ -3866,6 +3878,18 @@ function render(){
 // reach" verdict can never render — the stage-aware model exists to override exactly
 // that mis-declaration, and the fallback branch below renders the global fit WITHOUT
 // a verdict by design.)
+// stage dot colors — same palette as the SETUP panel's schedule rows (visual unity)
+const STAGE_DOT={CE:"#5ab0ff",tau:"#b08cff",l7:"#ffa454",Muon:"#46d3a0"};
+// one projection row — REUSES the SETUP panel's cfgrow/cfgk/cfgv system (operator
+// 2026-07-07 "needs better visual structure, on mobile ... too cluttered"). Long
+// explanatory clauses ride the value's title tooltip (double-quoted: escHtml escapes
+// `"` not `'`); the visible line stays one short value. Values wrap (scoped CSS).
+function projRow(dot,key,valHtml,tip,cur){
+  return "<div class='cfgrow'><span class='cfgk'>"+
+    (dot?("<span class='cdot' style='background:"+dot+"'></span>"):"")+escHtml(key)+
+    (cur?" <span class='curchip'>◀ current</span>":"")+"</span>"+
+    "<span class='cfgv'"+(tip?(" title=\""+escHtml(tip)+"\""):"")+">"+valHtml+"</span></div>";
+}
 function renderProjection(g){
   const segEl=$("proj_seg"), sEl=$("proj_s"); if(!segEl||!sEl)return;
   const P=PROJ||{};
@@ -3877,93 +3901,104 @@ function renderProjection(g){
   }
   // ---- STAGE-AWARE d_seg model (per-curriculum-stage critical-slowing fits) ----
   // The GLOBAL fit (P.dseg_model) collapses the 3-stage curriculum into ONE power-law and,
-  // from the CE flicker plateau, mis-declares "won't reach". We render P.stage_proj instead:
-  // each stage's OWN asymptote/floor + the ep-tau (lane-band birth) / ep-Muon (finishing)
-  // EXPECTED-BREAKTHROUGH boundaries the CE fit does NOT model. Muon = saddle-to-saddle
-  // staircase (polynomial escape), NEVER power-law-extrapolated. Advisory.
-  const bits=[];
+  // from the CE flicker plateau, mis-declares "won't reach". We render P.stage_proj instead,
+  // one LABELED ROW per stage (cfgrow pattern) — nothing dropped: what leaves the visible
+  // line moves into the row's tooltip. Muon = saddle staircase, NEVER power-law-extrapolated.
+  let rows="";
+  let caveat="";
   const SP=P.stage_proj||{};
   if(SP.ok){
-    const parts=[];
     (SP.stages||[]).forEach(st=>{
-      const cur=(st.name===SP.current_stage)?" <b>◀ current</b>":"";
+      const cur=(st.name===SP.current_stage);
+      const dot=STAGE_DOT[st.name]||"#888";
       if(st.name==="Muon"){
-        // Muon refuses the power-law FORM, but MEASURED verdicts still get a
-        // quantitative read: observed floor + recent slope + linear read-through,
-        // all labelled "observed trend, not a fit" (server-computed).
-        let ms_="<b>Muon</b> ep"+fmtInt(st.start)+"+ · "+escHtml(st.note||"saddle staircase — not power-law");
-        if(st.observed_min!=null)
-          ms_+=" · observed floor "+sig(st.observed_min,4)+" over "+(st.n||0)+" verdict"+((st.n===1)?"":"s");
-        if(st.trend&&st.trend.slope_per_25ep!=null){
-          ms_+=" · recent "+(st.trend.slope_per_25ep>0?"+":"")+sig(st.trend.slope_per_25ep,3)+"/25ep";
-          if(st.trend.readthrough_dseg!=null)
-            ms_+=" → ep"+fmtInt(st.trend.readthrough_epoch)+" read-through ~"+sig(st.trend.readthrough_dseg,4);
-          ms_+=" ("+escHtml(st.trend.label||"observed trend, not a fit")+")";
+        let v, tip="saddle-to-saddle staircase (polynomial escape) — not power-law; never extrapolated as a fit";
+        if(st.note) tip=escNothing(st.note)+" · "+tip;
+        if(st.observed_min!=null){
+          v="floor <b>"+sig(st.observed_min,4)+"</b> over "+(st.n||0)+" verdict"+((st.n===1)?"":"s");
+          if(st.trend&&st.trend.slope_per_25ep!=null){
+            v+=" · "+(st.trend.slope_per_25ep>0?"+":"")+sig(st.trend.slope_per_25ep,3)+"/25ep";
+            if(st.trend.readthrough_dseg!=null)
+              v+=" → ep"+fmtInt(st.trend.readthrough_epoch)+" ~"+sig(st.trend.readthrough_dseg,4);
+            v+=" (observed, not a fit)";
+            tip+=" · linear read-through of the recent slope ("+(st.trend.label||"observed trend, not a fit")+")";
+          }
+        } else {
+          v="ep"+fmtInt(st.start)+"+ · saddle staircase (unmodeled until measured)";
         }
-        parts.push(ms_+cur);
+        rows+=projRow(dot,"Muon",v,tip,cur);
       } else if(!st.entered){
-        parts.push("<b>"+escHtml(st.name)+"</b> ep"+fmtInt(st.start)+"–"+fmtInt(st.end)+" · not entered yet"+cur);
+        rows+=projRow(dot,st.name,"ep"+fmtInt(st.start)+"–"+fmtInt(st.end)+" · not entered yet",null,cur);
       } else if(st.fit_state==="ok"){
-        const cflag=(st.confidence==="low")?" ⚠low-conf":"";
-        let s="<b>"+escHtml(st.name)+"</b> asymptote d_seg<sub>∞</sub> "+sig(st.asymptote,4)+
-          " (α "+sig(st.alpha,2)+" · R² "+sig(st.r2,3)+" · "+(st.confidence||"?")+cflag+")";
-        if(st.observed_min!=null) s+=" ≈ observed floor "+sig(st.observed_min,4);
-        if(st.name==="CE") s+=" — the CE plateau, NOT the final floor (as expected)";
-        parts.push(s+cur);
+        const cflag=(st.confidence==="low")?" ⚠":"";
+        let v="d_seg<sub>∞</sub> <b>"+sig(st.asymptote,4)+"</b>";
+        if(st.observed_min!=null) v+=" ≈ floor "+sig(st.observed_min,4);
+        v+=" · α "+sig(st.alpha,2)+" · R² "+sig(st.r2,3)+" · "+(st.confidence||"?")+cflag;
+        let tip="critical-slowing power-law fit over this stage's own verdicts";
+        if(st.name==="CE"){v+=" (plateau, not final)";
+          tip+=" · the CE plateau is NOT the final floor (as expected)";}
+        rows+=projRow(dot,st.name,v,tip,cur);
       } else if(st.fit_state==="insufficient"){
-        parts.push("<b>"+escHtml(st.name)+"</b> "+(st.n||0)+" verdict"+((st.n===1)?"":"s")+
-          " — insufficient for a stage fit yet"+cur);
+        rows+=projRow(dot,st.name,(st.n||0)+" verdict"+((st.n===1)?"":"s")+
+          " — insufficient for a stage fit yet",null,cur);
       } else {
-        parts.push("<b>"+escHtml(st.name)+"</b> "+escHtml(st.note||"no fit")+cur);
+        rows+=projRow(dot,st.name,escHtml(st.note||"no fit"),null,cur);
       }
     });
-    segEl.innerHTML="d_seg per-stage critical-slowing model · "+parts.join(" &nbsp;&middot;&nbsp; ");
-    // downstream EXPECTED-BREAKTHROUGH boundaries (the CE fit does NOT model these)
+    // breakthroughs row — the boundaries the per-stage fits do NOT model. Display
+    // uses the SHORT label (server parenthetical -> tooltip) so the row stays compact.
     if((SP.downstream||[]).length){
-      const dlab=SP.downstream.map(d=>"ep"+fmtInt(d.epoch)+" "+escHtml(d.label)+
+      const dlab=SP.downstream.map(d=>"ep"+fmtInt(d.epoch)+" "+
+        escHtml(String(d.label||"").replace(/\s*\(.*\)\s*$/,""))+
         (d.status==="engaged"?" (engaged)":" (expected)")).join(" · ");
-      bits.push("EXPECTED-BREAKTHROUGH boundaries the CE fit does NOT model: "+dlab);
+      const dtip=SP.downstream.map(d=>"ep"+fmtInt(d.epoch)+" "+d.label+" — "+d.status).join(" · ");
+      rows+=projRow(null,"breakthroughs",dlab,
+        "expected-breakthrough boundaries the per-stage critical-slowing fits do NOT model · "+dtip);
     }
-    // implied_S from the best-modeled stage floor — LABELLED current-stage-only (excludes breakthroughs)
+    // floor -> score row (+ its OWN quiet pose row on pose-blind arms)
     const mf=SP.modeled_floor, is=(mf&&mf.implied_s)||{};
     if(mf&&is.ok&&is.value!=null){
-      const gap=mf.is_current_stage?"":" (latest modeled; current "+escHtml(SP.current_stage||"?")+" still calibrating)";
-      let s;
+      const gapTip=mf.is_current_stage?"":"latest modeled stage; current "+
+        (SP.current_stage||"?")+" is still calibrating · ";
+      const baseTip=gapTip+"CURRENT-STAGE extrapolation only — excludes the downstream breakthroughs";
       if(mf.pose_blind&&mf.seg_term!=null){
-        // pose-blind arm (w_pose=0 in the RUN'S OWN config): lead with the d_seg TERM
-        // contribution; the composite (swamped by the unheld pose) is demoted+labelled,
-        // never rendered bare.
-        s=escHtml(mf.stage)+"-stage floor"+gap+" → d_seg term 100·d_seg<sub>∞</sub> = <b>"+sig(mf.seg_term,4)+"</b>";
+        let v="100·d_seg<sub>∞</sub> = <b>"+sig(mf.seg_term,4)+"</b>";
         if(mf.seg_term_lo!=null&&mf.seg_term_hi!=null)
-          s+=" ("+sig(mf.seg_term_lo,4)+"–"+sig(mf.seg_term_hi,4)+")";
-        s+=" · pose UNHELD by design in this arm (w_pose=0) — composite incl. the unheld pose term "+
-          sig(is.value,4)+", demoted";
+          v+=" ("+sig(mf.seg_term_lo,4)+"–"+sig(mf.seg_term_hi,4)+")";
+        if(!mf.is_current_stage) v+=" (latest modeled)";
+        rows+=projRow(null,"d_seg term ("+(mf.stage||"?")+" floor)",v,baseTip);
+        rows+=projRow(null,"pose","unheld by design (w_pose=0) — composite "+
+          sig(is.value,4)+", demoted",
+          "the pose term is measured-but-untrained in this arm, so the composite implied_S is dominated by it by construction");
       } else {
-        s=escHtml(mf.stage)+"-stage floor"+gap+" → implied_S <b>"+sig(is.value,4)+"</b>";
+        let v="<b>"+sig(is.value,4)+"</b>";
         if(is.value_lo!=null||is.value_hi!=null)
-          s+=" ("+sig(is.value_lo,4)+"–"+(is.value_hi!=null?sig(is.value_hi,4):"≳")+")";
+          v+=" ("+sig(is.value_lo,4)+"–"+(is.value_hi!=null?sig(is.value_hi,4):"≳")+")";
+        if(!mf.is_current_stage) v+=" (latest modeled)";
+        rows+=projRow(null,"implied_S ("+(mf.stage||"?")+" floor)",v,baseTip);
       }
       const ts=(SP.tau_start!=null)?fmtInt(SP.tau_start):"?", ms=(SP.muon_start!=null)?fmtInt(SP.muon_start):"?";
-      s+=" — CURRENT-STAGE extrapolation ONLY, EXCLUDES the ep"+ts+"/ep"+ms+" breakthroughs · vs pointer "+ptrTxt();
-      bits.push(s);
+      caveat="advisory · current-stage extrapolation ONLY — excludes the ep"+ts+"/ep"+ms+
+        " breakthroughs · vs pointer "+ptrTxt();
     }
   } else {
     // stage projection unavailable -> fall back to the global fit, but WITHOUT a "won't reach" verdict
     const fit=P.dseg_model||{};
     if(fit.ok){
-      const cflag=(fit.confidence==="low")?" ⚠low-confidence":"";
-      segEl.innerHTML="d_seg critical-slowing model (global) · asymptote d_seg<sub>∞</sub> <b>"+sig(fit.asymptote,4)+
-        "</b> · α "+sig(fit.alpha,2)+" · R² "+sig(fit.r2,3)+" · "+(fit.confidence||"low")+cflag+
-        " — current-trajectory floor; stage breakthroughs (tau/Muon) unmodeled";
+      const cflag=(fit.confidence==="low")?" ⚠":"";
+      rows+=projRow(null,"global fit","d_seg<sub>∞</sub> <b>"+sig(fit.asymptote,4)+
+        "</b> · α "+sig(fit.alpha,2)+" · R² "+sig(fit.r2,3)+" · "+(fit.confidence||"low")+cflag,
+        "single global critical-slowing fit — current-trajectory floor; stage breakthroughs (tau/Muon) unmodeled");
     } else {
-      segEl.innerHTML="d_seg model · <b>calibrating</b> — "+escHtml(fit.reason||"need more points");
+      rows+=projRow(null,"d_seg model","<b>calibrating</b> — "+escHtml(fit.reason||"need more points"),null);
     }
   }
-  // ---- keep the good parts: MEASURED completion ETA + current-stage cadence ----
+  // ---- ETA / cadence row: MEASURED completion ETA + current-stage cadence ----
+  const etaBits=[];
   const ce=P.completion_eta||{};
   const tot=(META.schedule&&META.schedule.epochs)||null;
   if(ce.ok&&ce.total_s!=null){
-    let c="ETA to ep"+(tot!=null?tot:"end")+" ~"+fmtAge(ce.total_s);
+    let c="ep"+(tot!=null?tot:"end")+" ~"+fmtAge(ce.total_s);
     if(ce.has_estimate){
       // the refine boundary is the run's OWN derived Muon start (never a literal)
       const _mb=(META.muon_start!=null)?META.muon_start
@@ -3972,14 +4007,22 @@ function renderProjection(g){
                     :" (Muon estimated — refines when Muon engages)";
     }
     else c+=" (measured)";
-    bits.push(c);
+    etaBits.push(c);
   }
   if(P.next_verdict_cadence_s!=null){
     const src=P.next_verdict_cadence_source||"measured";
-    bits.push((P.stage||"")+"-stage cadence ~"+(P.next_verdict_cadence_s/60).toFixed(0)+"m ("+src+")");
+    etaBits.push("cadence ~"+(P.next_verdict_cadence_s/60).toFixed(0)+"m ("+src+")");
   }
-  sEl.innerHTML=bits.join(" · ")||" ";
+  if(etaBits.length)
+    rows+=projRow(null,"ETA / cadence",escHtml(etaBits.join(" · ")),
+      "measured completion ETA to end-of-run + the current stage's verdict cadence");
+  segEl.innerHTML="<div class='cfgsubh'>d_seg per-stage critical-slowing model</div>"+
+    "<div class='cfgrows'>"+rows+"</div>";
+  sEl.innerHTML=caveat?("<div class='cfgmeta'>"+caveat+"</div>"):" ";
 }
+// tooltip fragments come from server strings that are PLAIN TEXT already; alias kept
+// explicit so a future reader doesn't double-escape (escHtml runs once, in projRow).
+function escNothing(s){return String(s==null?"":s);}
 
 // setup / config / schedule / curriculum panel — rendered from META.config + META.schedule
 // (parsed server-side from the run's OWN launch.sh / run.log; generalizable to any run)
