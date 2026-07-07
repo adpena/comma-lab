@@ -2969,7 +2969,18 @@ function activateTab(t){
   if(which==="oracle") activateOracle();
   if(which==="whyhow"&&window.__whyhowActivate){try{window.__whyhowActivate();}catch(e){}}
   if(which==="tri") activateTriality();
+  // (2026-07-07) remember the selection so a refresh returns to the same tab.
+  try{localStorage.setItem("dash_tab",which);}catch(e){}
 }
+// restore the last-selected tab on load (operator 2026-07-07: "stay on their selected tab").
+// Only restores a tab that still EXISTS as a button (hidden tabs fall back to LIVE).
+(function(){
+  let saved=null; try{saved=localStorage.getItem("dash_tab");}catch(e){}
+  if(saved&&saved!=="live"){
+    const t=document.querySelector('.tab[data-tab="'+saved+'"]');
+    if(t)setTimeout(()=>activateTab(t),0);
+  }
+})();
 document.querySelectorAll(".tab").forEach(t=>{
   t.setAttribute("role","tab");t.setAttribute("tabindex","0");
   t.addEventListener("click",()=>activateTab(t));
@@ -3151,10 +3162,25 @@ function updateAria(){
 }
 let _drawQueued=false;
 function scheduleDraw(){
+  // Browsers PAUSE requestAnimationFrame in backgrounded/occluded windows, so a WS update
+  // arriving then would leave _drawQueued stuck true and every later update short-circuit —
+  // charts froze until a mouse hover happened to re-enter scheduleDraw after the stale rAF
+  // finally fired (the "graphs only update on mouse event" bug, operator 2026-07-07).
+  // Dual-path: rAF for smoothness when visible, a timeout fallback that ALWAYS fires;
+  // whichever runs first does the draw, the other no-ops on the cleared flag.
   if(_drawQueued)return; _drawQueued=true;
-  requestAnimationFrame(()=>{_drawQueued=false;
-    if(!$("tab-live").classList.contains("hide")) drawAll();});
+  const run=()=>{
+    if(!_drawQueued)return; _drawQueued=false;
+    if(!$("tab-live").classList.contains("hide")) drawAll();
+  };
+  requestAnimationFrame(run);
+  setTimeout(run,300);
 }
+document.addEventListener("visibilitychange",()=>{
+  // returning to the page: drop any stale queue state and repaint with the latest data.
+  if(!document.hidden){_drawQueued=false;scheduleDraw();}
+});
+window.addEventListener("pageshow",()=>{_drawQueued=false;scheduleDraw();});
 
 // derived per-run stage map (conditional rendering, DSL read-back). Entries:
 // fixed {name,start} | event-gated {name,trigger,status:pending|fired,fired_epoch,cap}.
@@ -3303,9 +3329,13 @@ function render(){
       if(s.mode==="event"&&s.status==="pending")return "event-gated (pending)";}
     if(stageMap())return "off";
     return (legacy!=null)?legacy:"?";}
-  $("b_tau").textContent=_btxt("tau",(META.tau!=null)?META.tau:BOOT.tau);
-  $("b_l7").textContent=_btxt("l7",(META.l7!=null)?META.l7:BOOT.l7);
-  $("b_goal").textContent=sig(META.goal_dseg||BOOT.goal_dseg,4);
+  // (2026-07-07 charts-frozen-until-hover ROOT CAUSE) the b_tau/b_l7/b_goal badge markup was
+  // removed in the detection-game reorg (c51385066) but these writes survived — every render()
+  // since threw here, the trailing scheduleDraw() never ran, and ws.onmessage's catch swallowed
+  // it, so charts only repainted via the hover handlers' direct scheduleDraw. Null-guard.
+  const _bt=$("b_tau");if(_bt)_bt.textContent=_btxt("tau",(META.tau!=null)?META.tau:BOOT.tau);
+  const _bl=$("b_l7");if(_bl)_bl.textContent=_btxt("l7",(META.l7!=null)?META.l7:BOOT.l7);
+  const _bg=$("b_goal");if(_bg)_bg.textContent=sig(META.goal_dseg||BOOT.goal_dseg,4);
   scheduleDraw();
 }
 
@@ -3732,7 +3762,8 @@ function connectWS(){
     if(m.type==="snapshot")applySnapshot(m);
     else if(m.type==="witness"){WITNESS=m.witness||{};renderWitness();}
     else if(m.type==="flow_ready"){_onFlowReady(m.flow_ready||{});}
-    else applyUpdate(m);}catch(e){}};
+    else applyUpdate(m);}
+    catch(e){console.error("dashboard: ws message handling failed",e);}};
   ws.onclose=()=>{wsOpen=false;setWsPill(false);wsTries++;startPoll();
     setTimeout(connectWS,Math.min(15000,1000*Math.pow(1.6,Math.min(wsTries,8))));};
   ws.onerror=()=>{try{ws.close();}catch(e){}};
