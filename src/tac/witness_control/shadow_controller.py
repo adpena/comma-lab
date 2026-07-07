@@ -225,6 +225,10 @@ class ShadowReport:
     # PAST run's MEASURED costates). This is what makes session N+1 smarter than N — the live controller
     # SEES what earlier runs measured for each lever. READ-only + advisory; default empty.
     costate_prior: list[dict] = _dc_field(default_factory=list)
+    # #247 EIG-bridge: the owed (never-fired) levers RANKED by measurement cost ascending — the honest
+    # EIG-per-cost ordering under an uninformative prior (cheapest owed lever first). This is the DECIDE
+    # ordering of the duty-to-measure queue (invoked, not just listed). NO fabricated ΔS.
+    duty_ranked: list[dict] = _dc_field(default_factory=list)
 
     def to_row(self) -> dict:
         return {
@@ -241,6 +245,7 @@ class ShadowReport:
             "duty_to_measure": self.duty_to_measure,
             "producer_signals": self.producer_signals,
             "costate_prior": self.costate_prior,
+            "duty_ranked": self.duty_ranked,
             "actuation": ACTUATION,
             "axis": AXIS_TAG,
             "pointer": POINTER_NOTE,
@@ -487,6 +492,16 @@ def _costate_prior() -> list[dict]:
         return []
 
 
+def _duty_ranked() -> list[dict]:
+    """The #247 EIG-bridge: the owed levers RANKED by measurement cost ascending (invoked, not just
+    listed). Fail-safe."""
+    try:
+        from tac.witness_control.producer_bridge import rank_duty_to_measure
+        return rank_duty_to_measure()
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def build_shadow_report(inputs: RunInputs,
                         horizon_epochs: int = DEFAULT_HORIZON_EPOCHS) -> ShadowReport:
     """The full shadow pass: state → costates → classification → ranked recommendations."""
@@ -521,7 +536,7 @@ def build_shadow_report(inputs: RunInputs,
             recommendations=[], refused=[],
             probe_queue=[*_probe_queue(costates), {"costate": "ALL_TRAJECTORY_COSTATES", "why_unidentifiable": "no verdict rows in run.log yet", "evidence_gap": ["wait for the first n600 advisory verdict"]}],
             duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
-            costate_prior=_costate_prior())
+            costate_prior=_costate_prior(), duty_ranked=_duty_ranked())
 
     recs, refused = _recommendations(inputs, costates, classification, horizon_epochs)
     return ShadowReport(
@@ -531,7 +546,7 @@ def build_shadow_report(inputs: RunInputs,
         state=state, costates=costates, classification=classification,
         recommendations=recs, refused=refused, probe_queue=_probe_queue(costates),
         duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
-        costate_prior=_costate_prior())
+        costate_prior=_costate_prior(), duty_ranked=_duty_ranked())
 
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:

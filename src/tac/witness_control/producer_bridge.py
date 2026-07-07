@@ -153,6 +153,56 @@ def read_producer_signals(
     ]
 
 
+def _lever_measurement_cost(name: str):
+    """Measurement COST of firing a never-fired lever = the extra training epochs its DSL factory
+    adds (``epochs_delta``, summed if the factory returns a tuple of Levers). Fail-safe: returns None
+    if the factory can't be called (the ranker sinks None-cost levers last). NO fabrication."""
+    try:
+        from tac.witness_dsl import curriculum_dsl as _cd
+        fac = getattr(_cd, name, None)
+        if fac is None or not callable(fac):
+            return None
+        lev = fac()
+        levs = lev if isinstance(lev, (list, tuple)) else [lev]
+        return sum(int(getattr(x, "epochs_delta", 0) or 0) for x in levs)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def rank_duty_to_measure(path=None) -> list[dict]:
+    """The #247 EIG-bridge (the DECIDE ordering of the owed queue): RANK the activation-ledger's
+    never-fired ``duty_to_measure`` levers by measurement COST ascending — the cheapest-to-measure
+    lever first. This is the honest expected-information-gain-per-cost ordering UNDER AN UNINFORMATIVE
+    PRIOR: a never-fired lever has NO measured costate (that is why it is owed), so every owed lever
+    carries equal expected information about its own effect; dividing that equal information by the
+    real per-lever cost ⇒ rank by ``1/cost`` ⇒ cheapest first. NO fabricated ΔS (a never-fired lever's
+    ΔS is unknown by construction); the only real per-lever signal used is the DSL factory's
+    ``epochs_delta`` cost. Levers whose cost cannot be computed sink to the end (unknown-cost tier).
+
+    This is what the reviewer's noted composition needs: the controller does not merely LIST the owed
+    levers, it RANKS which to fire next — feeding the DECIDE queue. Fail-safe (empty on any error)."""
+    try:
+        from tac.witness_dsl import activation_ledger as _al
+        owed = _al.duty_to_measure()
+    except Exception:  # noqa: BLE001
+        return []
+    rows = []
+    for lever in owed:
+        cost = _lever_measurement_cost(lever)
+        rows.append({
+            "candidate_lever": lever,
+            "measurement_cost_epochs": cost,
+            "eig_per_cost_rank_basis": ("1/cost (uninformative prior; cheapest owed lever first)"
+                                        if cost is not None else "unknown-cost (sinks last)"),
+            "note": "never-fired/owed; NO predicted ΔS (unmeasured by construction)",
+        })
+    # rank by cost ascending; unknown cost (None) sinks to the end; ties broken by lever name
+    rows.sort(key=lambda r: (r["measurement_cost_epochs"] is None,
+                             r["measurement_cost_epochs"] if r["measurement_cost_epochs"] is not None else 0,
+                             r["candidate_lever"]))
+    return rows
+
+
 def duty_to_measure_as_candidates(path=None) -> list[dict]:
     """The EIG/select composition bridge (DAG FEED-247loop): expose the activation ledger's
     never-fired ``duty_to_measure`` levers as the candidate label set the cathedral autopilot ranker
@@ -176,5 +226,6 @@ def duty_to_measure_as_candidates(path=None) -> list[dict]:
 __all__ = [
     "ProducerSignal",
     "duty_to_measure_as_candidates",
+    "rank_duty_to_measure",
     "read_producer_signals",
 ]

@@ -75,3 +75,18 @@ def test_shadow_report_surfaces_producer_signals():
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_rank_duty_to_measure_is_cost_ascending_no_fabricated_ds():
+    """#247 EIG-bridge: owed levers ranked by measurement cost ascending (cheapest owed first), NO
+    fabricated ΔS (a never-fired lever's ΔS is unknown). Unknown-cost levers sink last."""
+    rows = pb.rank_duty_to_measure()
+    assert isinstance(rows, list) and rows  # the DSL has registered levers, all never-fired => owed
+    costs = [r["measurement_cost_epochs"] for r in rows if r["measurement_cost_epochs"] is not None]
+    assert costs == sorted(costs)                          # cost-ascending
+    assert all("predicted_dS" not in r for r in rows)      # NO-FAKE: no invented ΔS
+    assert all("candidate_lever" in r for r in rows)
+    # unknown-cost (None) sinks last
+    nones = [i for i, r in enumerate(rows) if r["measurement_cost_epochs"] is None]
+    if nones:
+        assert min(nones) >= len([r for r in rows if r["measurement_cost_epochs"] is not None])
