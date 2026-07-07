@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Riemannian-pose-TTO (PARADIGM-la-pose, SE(3) Riemannian SGD).
 #
 # Wired in experiments/pipeline.py step_pose_tto via cfg.use_riemannian_tto=True

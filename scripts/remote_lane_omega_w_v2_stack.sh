@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Ω-W-V2 Stack — Lane G v3 + OWV2 renderer.bin re-encoding
 #
 # Highest-EV alternative dispatch from .omx/research/council_chain_integrity_audit_20260430.md

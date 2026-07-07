@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # NVDEC_REQUIRED — Stage 4 contest_auth_eval delegates to upstream/evaluate.py
 # for video decode; this wrapper is historical/local-smoke until strict
 # readiness supplies a real CUDA sensitivity map and current predispatch GO.

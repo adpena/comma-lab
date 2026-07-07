@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CUDA scorer/eval lane. Non-zero modes require CUDA and DALI/NVDEC because the
 # score-table producer and contest auth eval both use the official video path.
 # Lane #pr106_yshift_sidechannel — PR106 + per-frame Y-shift sidechannel

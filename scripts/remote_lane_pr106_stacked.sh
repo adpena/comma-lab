@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # NO_NVDEC_NEEDED — pure tensor-side codec + scorer-forward; no DALI/NVDEC video pipeline.
 # Lane #pr106_stacked — META-COMPOSITION of all 3 score-aware sidechannels
 # (latent + yshift + lrl1) layered into a single archive.

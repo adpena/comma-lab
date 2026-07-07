@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Ω-V3: explicit rate-distortion FRONTIER sweep over Lagrangian
 # bits-per-weight targets. Replaces the V1/V2 single-target heuristic
 # (`--target-bits 2.5`, equivalent to ~600,000 total bits for the
@@ -121,7 +121,7 @@ for f in "$ANCHOR_RENDERER" \
          upstream/models/posenet.safetensors; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
-log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -c '%s' "$ANCHOR_RENDERER") bytes, ASYM FP32)"
+log "  anchor_renderer: $ANCHOR_RENDERER ($(stat -f%z "$ANCHOR_RENDERER" 2>/dev/null || stat -c%s "$ANCHOR_RENDERER") bytes, ASYM FP32)"
 
 # Pre-flight: dead-flag scan for the orchestrator AND the embedded QAT
 # invocation. CLAUDE.md non-negotiable: NEVER invent CLI flags.
@@ -189,7 +189,7 @@ for SUBDIR in "$LOG_DIR"/sweep/budget_bpw_*/; do
         echo "$BPW,,,SKIP_NO_RENDERER" >> "$SCORES_CSV"
         continue
     fi
-    OMEGA_SIZE=$(stat -c '%s' "$OMEGA_BIN")
+    OMEGA_SIZE=$(stat -f%z "$OMEGA_BIN" 2>/dev/null || stat -c%s "$OMEGA_BIN")
     mkdir -p "$SUBDIR/iter_0"
     cp "$OMEGA_BIN" "$SUBDIR/iter_0/renderer.bin"
     cp "$ANCHOR_MASKS" "$SUBDIR/iter_0/masks.mkv"
@@ -206,7 +206,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(p, arcname=n)
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
-    ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE")
+    ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
     rm -rf "$SUBDIR/eval_work"
     "$PYBIN" -u experiments/contest_auth_eval.py \
         --archive "$ARCHIVE" \

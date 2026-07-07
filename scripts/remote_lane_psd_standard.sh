@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane PSD-STANDARD: Pixel-Shuffle-Downscale architecture controlled training run.
 #
 # PSD inherits PROVEN_BASELINE + 6 PSD-specific overrides:

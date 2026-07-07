@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane PFP16 Stack — Lane G v3 + pose fp16 cast
 #
 # Lane GP v4 scoped smooth-basis retirement review

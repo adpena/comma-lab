@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane PA — Pose-as-Affine init (EUREKA #1, grand council 2026-04-29).
 #
 # Strategy: skip pose-space TTO entirely. The PoseNet output (6 numbers per

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane QAT-Sweep: Bayesian sweep over Lane F-V3 FP4 QAT hyperparameters.
 #
 # Replaces the hand-tuned Lane F-V3 schedule (int8_warmup=50, fp4_epochs=500,

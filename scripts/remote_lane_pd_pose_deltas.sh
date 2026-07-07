@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane PD — Pose Deltas (Schmidhuber eureka, 2026-04-29).
 #
 # Strategy: encoder-only. Take a SegMap-paradigm OR renderer-paradigm archive,

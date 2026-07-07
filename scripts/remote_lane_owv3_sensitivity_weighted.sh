@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane OWV3-sensitivity-weighted (PARADIGM-β β-variant of Lane Ω-W).
 #
 # Wired in experiments/pipeline.py step_compress_weights via

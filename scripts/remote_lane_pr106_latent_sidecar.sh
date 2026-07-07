@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CUDA_REQUIRED — tensor-side codec build plus contest auth eval.
 # Lane PR106 + latent sidecar — 28-dim x 600-pair latents corrected via per-pair (dim, delta_q)
 #

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane RAFT-pose-init (PARADIGM-la-pose, RAFT-Large flow → pose warm-start).
 #
 # Module: src/tac/raft_pose.py + experiments/derive_poses_from_raft.py.

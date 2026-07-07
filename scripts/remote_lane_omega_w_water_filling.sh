@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Ω-W — Water-filling Lagrangian bit-budget allocator.
 #
 # POST-COMPRESS export-time technique. Loads the SC++ inference checkpoint

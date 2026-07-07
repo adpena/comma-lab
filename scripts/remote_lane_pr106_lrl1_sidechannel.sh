@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # NO_NVDEC_NEEDED — pure tensor-side codec + scorer-forward; no DALI/NVDEC video pipeline.
 # Lane #pr106_lrl1_sidechannel — PR106 + per-frame LRL1 luma low-rank correction
 # (codex_metric LRL1 mode-8 pattern, score_aware_sidechannel paradigm variant #6)

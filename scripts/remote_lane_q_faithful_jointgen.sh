@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane Q-FAITHFUL: TRUE 1:1 Quantizr PR #55 architecture replica.
 #
 # Background:

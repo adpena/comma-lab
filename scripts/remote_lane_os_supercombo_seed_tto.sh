@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane OS-A: openpilot supercombo seeded pose TTO.
 #
 # Mirrors scripts/remote_lane_a_pose_tto.sh exactly with one delta:
@@ -143,7 +143,7 @@ set -e
     fi
 
 [ -f "$SEED_POSES" ] || { echo "FATAL: seed_poses.pt not produced" >&2; exit 2; }
-log "  produced $SEED_POSES ($(stat -c '%s' "$SEED_POSES") bytes)"
+log "  produced $SEED_POSES ($(stat -f%z "$SEED_POSES" 2>/dev/null || stat -c%s "$SEED_POSES") bytes)"
 
 log "=== Stage 2: pose TTO with WARM-START from openpilot seed ==="
 log "   --seed-poses-path=$SEED_POSES"
@@ -169,7 +169,7 @@ set -e
 
 # Validate: did optimize_poses produce the file?
 [ -f "$LOG_DIR/optimized_poses.bin" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.bin"; exit 2; }
-log "  produced optimized_poses.bin ($(stat -c '%s' "$LOG_DIR/optimized_poses.bin") bytes)"
+log "  produced optimized_poses.bin ($(stat -f%z "$LOG_DIR/optimized_poses.bin" 2>/dev/null || stat -c%s "$LOG_DIR/optimized_poses.bin") bytes)"
 
 log "=== Stage 3: build NEW archive (renderer + masks + NEW poses) ==="
 mkdir -p "$LOG_DIR/iter_0"

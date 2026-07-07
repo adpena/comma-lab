@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane PS — per-class SegNet weighting on auxiliary KL distill loss.
 # Anchored on Lane A (1.15 [contest-CUDA]). The hypothesis is that
 # Lane A's averaged SegNet distortion (0.0046) hides per-class
@@ -108,7 +108,7 @@ log "  anchor_masks:    $ANCHOR_MASKS"
 log "=== Stage 1: stage Lane A masks (no rebuild — anchor on Lane A's exact bytes) ==="
 mkdir -p "$LOG_DIR/extracted"
 cp "$ANCHOR_MASKS" "$LOG_DIR/extracted/masks.mkv"
-log "  staged $(stat -c '%s' "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
+log "  staged $(stat -f%z "$LOG_DIR/extracted/masks.mkv" 2>/dev/null || stat -c%s "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
 
 log "=== Stage 2: pose TTO with --segnet-class-weights '1,5,5,1,1' (Lane PS) ==="
 log "   --gt-poses-path = $ANCHOR_POSES (warm-start)"
@@ -138,7 +138,7 @@ set -e
 
 # Validate: did optimize_poses produce the file?
 [ -f "$LOG_DIR/optimized_poses.bin" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.bin"; exit 2; }
-log "  produced optimized_poses.bin ($(stat -c '%s' "$LOG_DIR/optimized_poses.bin") bytes)"
+log "  produced optimized_poses.bin ($(stat -f%z "$LOG_DIR/optimized_poses.bin" 2>/dev/null || stat -c%s "$LOG_DIR/optimized_poses.bin") bytes)"
 [ -f "$LOG_DIR/optimized_poses.pt" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.pt"; exit 2; }
 
 # Sanity check: the lane-ps banner must have appeared in the log,
