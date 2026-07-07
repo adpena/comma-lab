@@ -9058,3 +9058,19 @@ rows for FEED-07i. Pointer 0.19110 UNMOVED (apparatus/measurement-in-flight).
 **4. Daemon-kill incident: tools MEASURED-exonerated; chunked-foreground = the drive mode.** Four detached generations (nohup/disown · sandboxed spawner ×2 · UNSANDBOXED spawner) died silently+simultaneously at ~5–6 min under rss caps 10/12/16/20 GiB, always at the same step count. Instrumented (per-block RSS prints, tools hardened) + reproduced bounded-foreground PAST the death points: **RSS flat 2.4–2.7 GiB across ~2,000 renders (peak 3.9 GiB in the lane fit) — no spike, no ratchet; the sandbox-teardown theory ALSO dead (unsandboxed gen died identically).** The kills correlate with the agent-harness long-call sweep (my own foreground sampler took SIGURG in the same window), i.e. environmental, not tool or infra memory. Response landed IN the tools (the class fix, not a workaround note): `--stop-after-new` (contour) + per-unit/per-8-render resumable state + `--chunk-seconds` mid-unit budget (bitalloc) + lane-fit cache ⇒ any future agent drives these in ≤4.5-min foreground chunks, value-identical to one long run (order-independent means). Sister durable note: spawn_durable_daemon docstring (91b4b5db1) + registry stale-"running" gap.
 
 Triality: DAG (this FEED) ↔ DSL (no gauge change — both verdicts are measurement rows on default-off levers; #314 is a config-field fix with autoconfig-side regression+class pins) ↔ equations (two MEASURED anchors appended, IDs above). Tasks: #307 CLOSED (NO-GO measured) · #336 CLOSED (apply measured; reactivation criterion recorded) · #314 code-fix CLOSED (launch-gate class check still owed at the launcher surface). **HARD GATE: pointer 0.19110 UNMOVED.**
+
+## FEED-07l (2026-07-07) — LEG-RECONCILIATION for the measurement-wave commits (d07b3875a, 6c5d63d6a, b1dc20a24)
+
+Per-leg gate fired (DSL leg named) on the #337 measurement commits. RECONCILIATION — the DSL leg
+is NOT owed by these commits: (a) no trainer lever/curriculum object was added or changed —
+--stop-after-new/--chunk-seconds are MEASUREMENT-TOOL execution flags (tools/measure_*,
+tools/apply_*), outside the DSL's domain (the DSL holds trainer config-generation); (b) the #314
+fix corrected witness_autoconfig CONFIG-GENERATION to honor the ALREADY-DSL-held pose-carrier
+selection (store-nothing mode, #241) — a fidelity fix to the existing leg, pinned by the
+delta-key class guard; (c) the equations leg WAS updated in-commit (anchors
+contour_string_flip_coding_n600_ep425 + witness_weights_waterfill_apply_n96_ep425 on their
+registered laws) and the DAG leg via FEED-07k. All three legs consistent; nothing dangling.
+MEMORY.md line intentionally omitted: both verdicts (#307 NO-GO 0.820>0.65 B/flip "coherence is
+a training outcome, not a coder trick" · #336 allocator-transfers/operating-point-doesn't-pay)
+are repo-recorded in FEED-07k + memos + anchors, and the existing lever-D CURRENT-STATE memory
+line is already consistent with the n600 confirmation. Pointer 0.19110 UNMOVED (reconciliation).
