@@ -58,6 +58,8 @@ _XI_MAGIC = b"XIP2"
 _XI_QMAX = 32767  # symmetric int16 quantization max (per-channel 15-bit precision)
 _CODER_RAW = 0
 _CODER_DELTA_AR = 1
+_CODER_SPLINE_RESIDUAL = 2  # SE(3)-spline predictor + lossless residual (xi_spline_residual_coder)
+_CODER_DELTA_RES = 3  # delta predictor + best-of-{varint,zlib9,rice} residual (MEASURED winner)
 
 # Plane-induced ground-homography geometry constants (EON / comma2k19 road camera,
 # native 1164x874). MUST match tac.boundary_math.warp_real_luma_frame0 exactly so the
@@ -230,12 +232,24 @@ def _channel_delta_decode(blob: bytes, off: int, P: int) -> tuple[np.ndarray, in
 # --------------------------------------------------------------------------- #
 # unified self-describing ξ payload
 # --------------------------------------------------------------------------- #
-def serialize_xi_payload(q: np.ndarray, scales: np.ndarray, *, coder: str = "delta_ar") -> bytes:
+def serialize_xi_payload(
+    q: np.ndarray,
+    scales: np.ndarray,
+    *,
+    coder: str = "delta_ar",
+    spline_knots: int = 16,
+    spline_q_levels_knots: int = _XI_QLEVELS_DEFAULT,
+) -> bytes:
     """Serialize the quantized ξ payload.
 
     Layout: ``XIP2 | <B coder> <H P> <B D> | scales(D fp32) | body``.
     body(coder=none)     = q int16 (P,D) tobytes  (the raw ~0.005-rate fallback).
     body(coder=delta_ar) = per-channel :func:`_channel_delta_encode` (the ~0.0007 target).
+    body(coder=spline_residual) = SE(3)-spline predictor knots + lossless integer residual
+    (``xi_spline_residual_coder``; ``spline_knots``/``spline_q_levels_knots`` apply ONLY here).
+    body(coder=delta_res) = delta predictor + best-of-{varint,zlib9,rice} residual (the MEASURED
+    n600 winner: ~2.7 KB vs delta_ar's 3.2 KB on the same table, bit-identical).
+    DEFAULT stays ``delta_ar`` — byte-identical to the pre-spline coder (pinned by test).
     """
     q = np.asarray(q, dtype=np.int16)
     if q.ndim != 2:
@@ -249,8 +263,20 @@ def serialize_xi_payload(q: np.ndarray, scales: np.ndarray, *, coder: str = "del
     elif coder == "delta_ar":
         cid = _CODER_DELTA_AR
         body = b"".join(_channel_delta_encode(q[:, k]) for k in range(D))
+    elif coder == "spline_residual":
+        from tac.boundary_math.xi_spline_residual_coder import encode_spline_residual_body
+
+        cid = _CODER_SPLINE_RESIDUAL
+        body = encode_spline_residual_body(
+            q, scales, knots=spline_knots, q_levels_knots=spline_q_levels_knots)
+    elif coder == "delta_res":
+        from tac.boundary_math.xi_spline_residual_coder import encode_delta_res_body
+
+        cid = _CODER_DELTA_RES
+        body = encode_delta_res_body(q)
     else:
-        raise XiPoseCoderError(f"unknown coder {coder!r} (none|delta_ar)")
+        raise XiPoseCoderError(
+            f"unknown coder {coder!r} (none|delta_ar|spline_residual|delta_res)")
     return _XI_MAGIC + struct.pack("<BHB", cid, P, D) + scales.tobytes() + body
 
 
@@ -274,6 +300,14 @@ def parse_xi_payload(blob: bytes) -> tuple[np.ndarray, np.ndarray]:
             col, off = _channel_delta_decode(blob, off, P)
             cols.append(col)
         q = np.stack(cols, axis=1).astype(np.int16)
+    elif cid == _CODER_SPLINE_RESIDUAL:
+        from tac.boundary_math.xi_spline_residual_coder import decode_spline_residual_body
+
+        q, off = decode_spline_residual_body(blob, off, P, D, scales)
+    elif cid == _CODER_DELTA_RES:
+        from tac.boundary_math.xi_spline_residual_coder import decode_delta_res_body
+
+        q, off = decode_delta_res_body(blob, off, P, D)
     else:
         raise XiPoseCoderError(f"unknown coder id {cid}")
     return q, scales
