@@ -888,3 +888,29 @@ designed-in-ancestor / never-built-on-witness, NOT as an orphaned default-off.
 
 Pointer contest-CPU 0.19110 UNMOVED; every number above is a rate/coding or source-inspection
 row, never a score claim.
+
+## §23 ADDENDUM (2026-07-07, append-only) — T5 CRUCIBLE CONVENING GATE (operator sequencing directive)
+Operator verbatim: "I would like to ensure all of this is finished prior to T5 crucible; the group
+theory deep math and probe are likely to require follow-up but the t5 can make decisions about what
+to prioritize building."
+**BINDING SEQUENCE — the T5 crucible (instance #1, FEED-08i) convenes ONLY after ALL of:**
+1. ☐ #205 FINAL ep1000 verdict landed (async join in progress at gate-write time) + trainer exited
+   cleanly + all per-stage checkpoints verified preserved.
+2. ☐ τ-probe fifth point (--add-final on the ep1000 checkpoint) measured.
+3. ☐ Byte-close of the finished mod32cap baseline (rate + d_seg through the real decode; the run's
+   FIRST honest S-composition row) — heavy steps GO-gated as always.
+4. ☐ Dashboard liveobs re-sourcing landed (operator-facing truth surfaces correct for the dossier).
+5. ☐ MLX weight-entropy port landed (λ=0 no-op proven; lever DSL-held, never-fired).
+6. ☐ Group-theory deep-math review COMPLETE (memo + ranked table + the $0 canonicalization byte
+   probe MEASURED) — follow-up BUILDS are NOT gate items; they are enumerated as crucible
+   candidates with {evidence, predicted value, cost}.
+7. ☐ freq_along ladder probe COMPLETE (GT-validity-controlled, authority-labeled) — same rule:
+   the discrimination verdict is the gate item, any follow-up basis build is a crucible candidate.
+8. ☐ Dossier consolidation: fold ALL of today's measured rows (GT-H overturn + comb-registration
+   gate, +29% warm-start case, LBND4 −25.6%, ladder verdict, canonicalization bytes, τ 5th point,
+   final baseline S) into THIS draft as the pre-registered T5 evidence dossier, every claim tagged
+   MEASURED/DERIVED/INFERRED/ASSUMED per the T5 contract.
+**Division of labor (the operator's clarification):** measurements + reviews COMPLETE before T5;
+follow-up BUILDS are decided BY T5 — the crucible owns build prioritization with full execute
+authority inside the operator-declared envelope. The agent assembles the dossier; the operator's
+call convenes.
