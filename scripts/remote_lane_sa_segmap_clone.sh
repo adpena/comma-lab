@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane SA — SegMap clone of Selfcomp 0.38 paradigm (Quantizr-style mask renderer).
 #
 # Architecture: tac.segmap_renderer.SegMap(hidden=24, block_hidden=24,

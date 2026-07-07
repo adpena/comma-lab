@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate ATW codec V2 full-stack cooperative-receiver
 # dispatch (Atick-Tishby-Wyner; V2 design memo 2026-05-16).
 #

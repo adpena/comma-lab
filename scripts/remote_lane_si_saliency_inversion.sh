@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane SI: Saliency-Inversion compression weighting (Fridrich UNIWARD).
 #
 # Premise (project_council_shower_thoughts: "saliency inversion"):
@@ -125,7 +125,7 @@ set -e
     fi
 
 [ -f "$SAL_OUT" ] || { log "FATAL: profile_scorer_saliency.py did not produce $SAL_OUT"; exit 2; }
-log "  produced $SAL_OUT ($(stat -c '%s' "$SAL_OUT" 2>/dev/null || echo '?') bytes)"
+log "  produced $SAL_OUT ($(stat -f%z "$SAL_OUT" 2>/dev/null || stat -c%s "$SAL_OUT" 2>/dev/null || echo '?') bytes)"
 
 # ─── Stage 2: experimental saliency-weighted mask encoding ───────────────
 log "=== Stage 2: encode saliency-weighted mask payload (research artifact) ==="

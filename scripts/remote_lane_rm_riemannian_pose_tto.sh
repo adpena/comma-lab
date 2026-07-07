@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane RM — Riemannian SE(3) geometric pose optimization, anchored on
 # Lane A's 1.15 [contest-CUDA] floor.
 #

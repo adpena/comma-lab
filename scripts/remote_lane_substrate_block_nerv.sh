@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate block_nerv first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_block_nerv.py (WAVE-3-B).

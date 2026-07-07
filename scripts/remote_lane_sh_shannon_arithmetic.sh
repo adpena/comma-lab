@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane SH — Shannon arithmetic coding of qint streams (EUREKA #4, 2026-04-29).
 #
 # Strategy: encoder-only. Take a SegMap-paradigm archive (Lane SA / FC / PA /

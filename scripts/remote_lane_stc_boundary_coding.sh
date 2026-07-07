@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane STC — Filer/Pevny/Fridrich-inspired boundary-mask coding.
 #
 # Replace Lane A's masks.mkv (~411KB AV1 monochrome) with masks.stcb,

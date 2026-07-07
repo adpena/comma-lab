@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane S V2: Self-Compressing renderer with AUTO-WARMUP for the
 # Lagrangian rate ramp. Replaces the V1 hand-coded
 # `--self-compress-lambda-ramp-start-frac=0.3` constant with a SAGA-
@@ -243,7 +243,7 @@ BEST_FP32="$LOG_DIR/train/renderer_${TAG}_best_fp32.pt"
     ls -la "$LOG_DIR/train/" >&2
     exit 2
 }
-log "  best fp32 checkpoint: $BEST_FP32 ($(stat -c '%s' "$BEST_FP32") bytes)"
+log "  best fp32 checkpoint: $BEST_FP32 ($(stat -f%z "$BEST_FP32" 2>/dev/null || stat -c%s "$BEST_FP32") bytes)"
 
 log "=== Stage 3: SCv1 export of best fp32 → renderer_sc.bin ==="
 mkdir -p "$LOG_DIR/qat"
@@ -293,7 +293,7 @@ n_bytes = export_self_compressed_renderer(model, out_bin, use_lzma=True)
 print(f'[stage3] WROTE {out_bin}: {n_bytes} bytes')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 [ -f "$SC_BIN" ] || { echo "FATAL: SCv1 export failed — no $SC_BIN" >&2; exit 2; }
-SC_SIZE=$(stat -c '%s' "$SC_BIN")
+SC_SIZE=$(stat -f%z "$SC_BIN" 2>/dev/null || stat -c%s "$SC_BIN")
 log "  SCv1 binary: $SC_BIN ($SC_SIZE bytes)"
 
 log "=== Stage 4: build NEW archive (SCv1 renderer + Lane A masks + Lane A poses) ==="
@@ -313,7 +313,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(p, arcname=n)
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE")
+ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 [ "$ARCHIVE_BYTES" -gt 0 ] || { echo "FATAL: archive empty" >&2; exit 2; }
 log "  archive: $ARCHIVE ($ARCHIVE_BYTES bytes)"
 

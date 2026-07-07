@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane SI-V2: LEARNABLE saliency threshold via Lagrangian on TARGET BIT BUDGET.
 #
 # Council 2026-04-27: Lane SI-V1 hard-coded threshold_quantile=0.5 (the
@@ -137,7 +137,7 @@ set -e
     fi
 
 [ -f "$SAL_OUT" ] || { log "FATAL: profile_scorer_saliency.py did not produce $SAL_OUT"; exit 2; }
-log "  produced $SAL_OUT ($(stat -c '%s' "$SAL_OUT" 2>/dev/null || echo '?') bytes)"
+log "  produced $SAL_OUT ($(stat -f%z "$SAL_OUT" 2>/dev/null || stat -c%s "$SAL_OUT" 2>/dev/null || echo '?') bytes)"
 
 # ─── Stage 2: V2 encoding with LEARNABLE threshold (Lagrangian) ─────────
 log "=== Stage 2: encode saliency-weighted mask payload (Lane SI-V2: learnable threshold) ==="

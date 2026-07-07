@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate boost_nerv L0 SCAFFOLD smoke dispatch.
 #
 # Trainer: experiments/train_substrate_boost_nerv.py (WAVE-3-NERV-LITERATURE-L0-RESCOPED

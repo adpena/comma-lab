@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script for SC++ Stage 1 anchor smoke dispatch.
 #
 # Per CLAUDE.md "Forbidden re-implementing remote bootstrap inline", this

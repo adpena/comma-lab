@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane SO — Lane SC++ training + Hessian-aware block-FP exponent picker
 #           applied at export time only.
 #

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane SC++ — Lane SA + Quantizr SegNet KL-distill auxiliary at T=2.0.
 #
 # Same SegMap arch as Lane SA (hidden=24, block_hidden=24, num_blocks=8) but

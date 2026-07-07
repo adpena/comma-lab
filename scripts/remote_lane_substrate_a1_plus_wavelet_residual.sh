@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: A1 + wavelet residual sidecar retarget dispatch.
 #
 # Trainer: experiments/train_substrate_a1_plus_wavelet_residual.py

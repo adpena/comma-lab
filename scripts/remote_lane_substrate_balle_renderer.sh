@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remote lane script: substrate balle_renderer (β) first-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_balle_renderer.py (commit d5b69eff+).

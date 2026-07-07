@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lane STC CLEAN-SOURCE — boundary-mask coding on raw SegNet argmax (NO AV1).
 #
 # Replace Lane A's masks.mkv (~411KB AV1 monochrome) with masks.stcb produced
