@@ -144,6 +144,14 @@ def test_render_authority_coupling_signatures(bc, mc, ab):
     assert list(inspect.signature(bc._torch_R_reference).parameters) == \
         ["rgb", "rh", "rw", "ch", "cw"]
     assert list(inspect.signature(bc.detect_self_orient).parameters) == ["cfg", "so_overrides"]
-    # the #336 tool's measure_d_seg surface takes the exact 7-arg shape its callers use
-    assert list(inspect.signature(ab.measure_d_seg).parameters) == \
-        ["bc", "ctx", "seg_cpu", "lstars_all", "pair_ids", "params_dq", "code_dq"]
+    # the #336 tool's measure_d_seg surface: the 7 positional args its callers use + the
+    # keyword-only chunked-foreground resume trio (2026-07-07 daemon-kill workaround: per-pair
+    # cache + wall-clock deadline + persist callback; all optional, defaults preserve the
+    # original 7-arg behavior value-identically).
+    sig = inspect.signature(ab.measure_d_seg)
+    assert list(sig.parameters) == \
+        ["bc", "ctx", "seg_cpu", "lstars_all", "pair_ids", "params_dq", "code_dq",
+         "pair_cache", "deadline", "persist"]
+    for kw in ("pair_cache", "deadline", "persist"):
+        p = sig.parameters[kw]
+        assert p.kind == inspect.Parameter.KEYWORD_ONLY and p.default is None

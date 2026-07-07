@@ -58,6 +58,19 @@ N_CLASSES = 5
 RATE_DENOM = 37_545_489.0
 GO_BAR_B = 0.65  # pre-registered (#280 / FEED-07b row 6)
 
+
+def _rss_str() -> str:
+    """Instrumentation (2026-07-07 daemon-death diagnosis): current + peak RSS of THIS process.
+    The #307/#336 daemons were safe_run rc=137 SIGKILLed on the group --rss-mb cap at a fixed
+    step count under 10 AND 16/20 GiB caps — the spike must be MEASURED, not guessed. Printed
+    per progress block so the last log line before any kill localizes the growth."""
+    import resource
+
+    import psutil
+    cur = psutil.Process().memory_info().rss / 2**30
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2**30  # bytes on macOS
+    return f"rss_cur={cur:.2f}GiB rss_peak={peak:.2f}GiB"
+
 # 8-dir chain code, fixed canonical indexing (E,SE,S,SW,W,NW,N,NE)
 _DIRS = ((0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1))
 _SYM_BACKTRACK = 8
@@ -492,8 +505,21 @@ def extract_flips(args) -> tuple[Path, dict]:
     lane_cfg = LaneBandRenderConfig(
         softness=1.0, dash_gate=True, dash_forward_max_m=55.0, weight=1.0, lane_cls=1,
         u_mask_enabled=True, u_mask_tau=0.85, u_mask_eps=0.35)
-    lane_bytes, lane_manifest, lane_report = bc.build_lane_band_section(
-        args.gt_cache, N, lane_cfg, rd=True)
+    # lane-fit cache: the RD fit over N pairs is deterministic in (gt_cache, N, cfg) and costs
+    # ~40 s — cache the SERIALIZED (counted) bytes in the flips cache dir so chunked-foreground
+    # resume calls skip the refit. Decode path unchanged (same deserialize as the fresh fit).
+    lane_cache_f = cache / f"lane_band_n{N}.bin"
+    lane_report_f = cache / f"lane_band_n{N}.report.json"
+    if lane_cache_f.exists() and lane_report_f.exists():
+        lane_bytes = lane_cache_f.read_bytes()
+        lane_report = json.loads(lane_report_f.read_text())
+        lane_manifest = lane_report["_manifest_cache"]
+    else:
+        lane_bytes, lane_manifest, lane_report = bc.build_lane_band_section(
+            args.gt_cache, N, lane_cfg, rd=True)
+        lane_cache_f.write_bytes(lane_bytes)
+        lane_report_f.write_text(json.dumps(
+            {**lane_report, "_manifest_cache": lane_manifest}, default=str))
     lane_pairs, _hdr = deserialize_lane_band_any(brotli.decompress(lane_bytes))
     print(f"[#307] lane-band: {lane_report['n_pairs_fit']} pairs fit, "
           f"COUNTED={lane_report['counted_brotli_bytes']}B", flush=True)
@@ -549,7 +575,12 @@ def extract_flips(args) -> tuple[Path, dict]:
         if n_done % 10 == 1 or pi == N - 1:
             el = time.time() - t0
             print(f"  [pair {pi}] d_seg_alone={fa.mean():.6f} d_seg_comp={fc.mean():.6f} "
-                  f"({n_done} new, {el:.0f}s, {el / max(1, n_done):.1f}s/pair)", flush=True)
+                  f"({n_done} new, {el:.0f}s, {el / max(1, n_done):.1f}s/pair) {_rss_str()}",
+                  flush=True)
+        if int(getattr(args, "stop_after_new", 0)) and n_done >= int(args.stop_after_new):
+            print(f"[#307] BOUNDED-VERIFY: banked {n_done} new pairs — exiting resumable "
+                  f"(rc=7). {_rss_str()}", flush=True)
+            sys.exit(7)
     return cache, {"lane_report_counted_bytes": int(lane_report["counted_brotli_bytes"]),
                    "manifest_self_orient": {k: manifest[k] for k in
                                             ("self_orient", "n_dir_freqs", "so_freq_across",
@@ -566,6 +597,10 @@ def main():
     ap.add_argument("--n", type=int, default=600, help="pairs (600 = the evidence bar; smaller "
                     "values are smoke-only and the report is labeled accordingly).")
     ap.add_argument("--flips-cache-dir", required=True, help="stage-A per-pair cache (resume).")
+    ap.add_argument("--stop-after-new", type=int, default=0,
+                    help="bounded verification: exit rc=7 (resumable) after banking this many NEW "
+                    "pairs (0 = no bound). Used to reproduce/verify the rc=137 death point in a "
+                    "watched foreground run without committing to the full extraction.")
     ap.add_argument("--out", required=True)
     ap.add_argument("--so-freq-across", type=float, default=32.0)
     ap.add_argument("--so-freq-along", type=float, default=8.0,

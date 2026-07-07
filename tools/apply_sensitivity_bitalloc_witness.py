@@ -112,22 +112,46 @@ def _brotli_bytes(base_b: bytes, code_b: bytes) -> dict[str, int]:
     return {"base_brotli": nb, "code_brotli": nc, "weights_total": nb + nc}
 
 
-def measure_d_seg(bc, ctx, seg_cpu, lstars_all, pair_ids, params_dq, code_dq) -> float:
+def measure_d_seg(bc, ctx, seg_cpu, lstars_all, pair_ids, params_dq, code_dq,
+                  *, pair_cache: dict | None = None, deadline: float | None = None,
+                  persist=None) -> float:
     """Mean d_seg over ``pair_ids`` through the contest R + frozen CPU SegNet (witness-alone
     surface: quantization attribution is clean of the lane-band composite, which is
     weight-independent). REUSES the #307 tool's render path (tools/measure_contour_string_
-    flip_coding.py) — one render authority, not a re-type."""
-    from measure_contour_string_flip_coding import render_frame1_both, segnet_argmax
+    flip_coding.py) — one render authority, not a re-type.
+
+    Chunked-foreground drive support (2026-07-07): ``pair_cache`` (a state-dict sub-map, str(pi)
+    -> per-pair d_seg) makes the unit resumable MID-way; when ``deadline`` (epoch seconds) passes
+    at a pair boundary, ``persist()`` is called and the process exits rc=7 (resumable). The mean
+    over per-pair values is order-independent, so a resumed unit is value-identical."""
+    from measure_contour_string_flip_coding import _rss_str, render_frame1_both, segnet_argmax
     c = dict(ctx)
     c["params"] = params_dq
     c["code"] = code_dq
     rh, rw, ch, cw = c["rh"], c["rw"], c["ch"], c["cw"]
     vals = []
-    for pi in pair_ids:
+    for j, pi in enumerate(pair_ids):
+        key = str(pi)
+        if pair_cache is not None and key in pair_cache:
+            vals.append(float(pair_cache[key]))
+            continue
+        if deadline is not None and time.time() > deadline:
+            if persist is not None:
+                persist()
+            print(f"[#336] CHUNK-BUDGET reached mid-unit ({j}/{len(pair_ids)} pair-values done) "
+                  f"— exiting resumable (rc=7). {_rss_str()}", flush=True)
+            sys.exit(7)
         rgb, _ = render_frame1_both(bc, c, pi)
         realized = segnet_argmax(seg_cpu, bc._torch_R_reference(rgb, rh, rw, ch, cw))
         gt = np.asarray(lstars_all[pi], np.int64)
-        vals.append(float((realized != gt).mean()))
+        v = float((realized != gt).mean())
+        vals.append(v)
+        if pair_cache is not None:
+            pair_cache[key] = v
+        if (j + 1) % 8 == 0:  # spike localization (2026-07-07 rc=137 diagnosis)
+            print(f"    [render {j + 1}/{len(pair_ids)}] {_rss_str()}", flush=True)
+            if persist is not None:
+                persist()  # survive an external SIGKILL mid-unit (lose <=8 pair-values)
     return float(np.mean(vals))
 
 
@@ -153,6 +177,19 @@ def main():
     ap.add_argument("--so-iters", type=int, default=4)
     ap.add_argument("--ckpt-provenance", default="")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--state-json", default="",
+                    help="resumable per-unit state file (default: <out>.state.json). Every "
+                    "completed measurement unit (baseline probe / per-tensor probe / baseline "
+                    "eval / per-operating-point eval) is persisted atomically so the run can be "
+                    "driven in bounded foreground chunks — the 2026-07-07 daemon-context kill "
+                    "(silent SIGKILL of detached trees at ~5 min, tool RSS MEASURED flat 2.4 GiB) "
+                    "makes chunked-foreground the robust drive mode.")
+    ap.add_argument("--max-units", type=int, default=0,
+                    help="exit rc=7 (resumable) after completing this many NEW units (0 = all).")
+    ap.add_argument("--chunk-seconds", type=float, default=0.0,
+                    help="wall-clock chunk budget: exit rc=7 (resumable, mid-unit safe via the "
+                    "per-pair cache) once elapsed exceeds this (0 = no budget). Drive mode for "
+                    "bounded foreground calls.")
     args = ap.parse_args()
 
     import levelset_byte_close_and_eval as bc
@@ -224,13 +261,47 @@ def main():
                        for i in range(args.eval_pairs)})
     seg_cpu = load_real_segnet("cpu")
 
+    # ---- resumable per-unit state (chunked-foreground drive mode) ---------------------------
+    state_path = Path(args.state_json) if args.state_json else Path(str(args.out) + ".state.json")
+    state: dict = (json.loads(state_path.read_text())
+                   if state_path.exists() else {"probes": {}, "ops": {}})
+    state.setdefault("pair_vals", {})
+    units_done = 0
+    deadline = (t_start + float(args.chunk_seconds)) if float(args.chunk_seconds) > 0 else None
+
+    def _save_state():
+        tmp = state_path.with_suffix(state_path.suffix + ".tmp")
+        tmp.write_text(json.dumps(state, indent=1))
+        tmp.replace(state_path)
+
+    def _measure_unit(unit_key: str, pair_ids, params_dq_u, code_dq_u) -> float:
+        return measure_d_seg(
+            bc, ctx, seg_cpu, lstars_all, pair_ids, params_dq_u, code_dq_u,
+            pair_cache=state["pair_vals"].setdefault(unit_key, {}),
+            deadline=deadline, persist=_save_state)
+
+    def _unit_done():
+        nonlocal units_done
+        _save_state()
+        units_done += 1
+        if int(args.max_units) and units_done >= int(args.max_units):
+            print(f"[#336] BOUNDED-CHUNK: completed {units_done} new units — exiting resumable "
+                  f"(rc=7); state={state_path}", flush=True)
+            sys.exit(7)
+
     # ---- baseline (the shipped int8 realization) --------------------------------------------
     _mem_guard()
     dq0, code_dq0, base_b0, code_b0, distinct0 = _realize_alloc(params_fp, code_fp, {})
     bytes0 = _brotli_bytes(base_b0, code_b0)
-    d0_probe = measure_d_seg(bc, ctx, seg_cpu, lstars_all, probe_ids, dq0, code_dq0)
+    from measure_contour_string_flip_coding import _rss_str
+    if "d0_probe" in state:
+        d0_probe = float(state["d0_probe"])
+    else:
+        d0_probe = _measure_unit("d0_probe", probe_ids, dq0, code_dq0)
+        state["d0_probe"] = d0_probe
+        _unit_done()
     print(f"[#336] baseline int8: weights_total={bytes0['weights_total']}B "
-          f"d_seg(probe n{len(probe_ids)})={d0_probe:.6f}", flush=True)
+          f"d_seg(probe n{len(probe_ids)})={d0_probe:.6f} {_rss_str()}", flush=True)
 
     # ---- per-tensor MEASURED sensitivity probe ----------------------------------------------
     pb = int(args.probe_bits)
@@ -238,10 +309,15 @@ def main():
     sens_rows = {}
     per_tensor_s = {}
     for name in alloc_names:
-        _mem_guard()
-        nb = {name: pb}
-        dq, code_dq, _, _, _ = _realize_alloc(params_fp, code_fp, nb)
-        d_t = measure_d_seg(bc, ctx, seg_cpu, lstars_all, probe_ids, dq, code_dq)
+        if name in state["probes"]:
+            row = state["probes"][name]
+            d_t = float(row[f"d_seg_probe_at_int{pb}"])
+        else:
+            _mem_guard()
+            nb = {name: pb}
+            dq, code_dq, _, _, _ = _realize_alloc(params_fp, code_fp, nb)
+            d_t = _measure_unit(f"probe:{name}", probe_ids, dq, code_dq)
+            row = None
         delta = d_t - d0_probe
         c_t = max(0.0, delta) / delta_scale
         s_t = (c_t / (absmax[name] * np.sqrt(numel[name]))
@@ -250,8 +326,11 @@ def main():
         sens_rows[name] = {f"d_seg_probe_at_int{pb}": float(d_t),
                            "delta_d_seg": float(delta), "c_t": float(c_t),
                            "numel": numel[name], "absmax": absmax[name]}
-        print(f"  [probe] {name:16s} int{pb}: d_seg={d_t:.6f} (Δ={delta:+.6f}) c_t={c_t:.5f}",
-              flush=True)
+        print(f"  [probe] {name:16s} int{pb}: d_seg={d_t:.6f} (Δ={delta:+.6f}) c_t={c_t:.5f} "
+              f"{_rss_str()}", flush=True)
+        if row is None:
+            state["probes"][name] = sens_rows[name]
+            _unit_done()
 
     sens = CombinedTensorSensitivity(
         per_tensor=per_tensor_s, g_seg=dict(per_tensor_s),
@@ -261,22 +340,33 @@ def main():
         w_seg=1.0, w_pose=0.0)
 
     # ---- allocate + realize + re-measure at each operating point ----------------------------
-    d0_eval = measure_d_seg(bc, ctx, seg_cpu, lstars_all, eval_ids, dq0, code_dq0)
-    print(f"[#336] baseline int8 d_seg(eval n{len(eval_ids)})={d0_eval:.6f}", flush=True)
+    if "d0_eval" in state:
+        d0_eval = float(state["d0_eval"])
+    else:
+        _mem_guard()
+        d0_eval = _measure_unit("d0_eval", eval_ids, dq0, code_dq0)
+        state["d0_eval"] = d0_eval
+        _unit_done()
+    print(f"[#336] baseline int8 d_seg(eval n{len(eval_ids)})={d0_eval:.6f} {_rss_str()}",
+          flush=True)
     operating_points = []
     for mb in args.mean_bits:
+        op_key = f"mb{mb}"
+        if op_key in state["ops"]:
+            operating_points.append(state["ops"][op_key])
+            continue
         _mem_guard()
         lam = lam_for_target_mean_bits(sens, float(mb), b_min=2, b_max=8)
         alloc = waterfill_bit_allocation(sens, lam, b_min=2, b_max=8)
         dq, code_dq, base_b, code_b, distinct = _realize_alloc(params_fp, code_fp, alloc.nbits)
         by = _brotli_bytes(base_b, code_b)
-        d_w = measure_d_seg(bc, ctx, seg_cpu, lstars_all, eval_ids, dq, code_dq)
+        d_w = _measure_unit(f"mb{mb}:wf", eval_ids, dq, code_dq)
         # uniform control at the same nominal budget
         u = round(mb)
         nb_u = dict.fromkeys(alloc_names, u)
         dqu, code_dqu, base_bu, code_bu, _ = _realize_alloc(params_fp, code_fp, nb_u)
         by_u = _brotli_bytes(base_bu, code_bu)
-        d_u = measure_d_seg(bc, ctx, seg_cpu, lstars_all, eval_ids, dqu, code_dqu)
+        d_u = _measure_unit(f"mb{mb}:u", eval_ids, dqu, code_dqu)
         row = {
             "target_mean_bits": float(mb), "lam": float(alloc.lam),
             "nbits": dict(alloc.nbits),
@@ -297,8 +387,10 @@ def main():
         print(f"[#336] mean_bits={mb}: waterfill {by['weights_total']}B d_seg={d_w:.6f} "
               f"(Δd={d_w - d0_eval:+.6f}, Δbytes={row['waterfill']['delta_bytes_vs_int8']:+d}, "
               f"netΔS_adv={row['waterfill']['net_delta_S_advisory']:+.5f}) | uniform int{u} "
-              f"{by_u['weights_total']}B d_seg={d_u:.6f}", flush=True)
+              f"{by_u['weights_total']}B d_seg={d_u:.6f} {_rss_str()}", flush=True)
         print(f"        nbits={alloc.nbits}", flush=True)
+        state["ops"][op_key] = row
+        _unit_done()
 
     result = {
         "task": "#336 / FEED-07b row 5 — #157-APPLY sensitivity bit-alloc on witness weights",
