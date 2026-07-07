@@ -610,6 +610,62 @@ def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label:
     return 0
 
 
+# ───────────────────── shadow observer auto-start (#247 agent-native) ─────────────────────
+def _observer_label(out_dir: Path) -> str:
+    return f"costate_obs_{out_dir.name}"
+
+
+def _observer_already_running(label: str) -> bool:
+    """Idempotency: True iff the durable-daemon registry has a RUNNING row with this
+    label AND its pid is alive (stale rows for dead pids do NOT count)."""
+    try:
+        reg = json.loads((_REPO / ".omx" / "state" / "durable_daemons.json").read_text())
+        rows = reg if isinstance(reg, list) else list(reg.values()) if isinstance(reg, dict) else []
+        for r in rows:
+            if not (isinstance(r, dict) and r.get("label") == label and r.get("status") == "running"):
+                continue
+            try:
+                os.kill(int(r.get("pid", 0)), 0)
+                return True
+            except (ProcessLookupError, ValueError, TypeError):
+                continue
+            except PermissionError:
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def ensure_shadow_observer(out_dir: Path) -> None:
+    """AUTO-START the score-neutral #247 shadow observer for this run (CLAUDE.md
+    "'Off' is a tracked queue": read-only observability DEFAULTS ON — it must never
+    depend on a human remembering to start it). The observer is SENSE-only: each tick
+    is a short-lived ``costate_shadow_report --write`` subprocess (reads run.log +
+    launch.sh; writes ONLY the advisory ``costate_shadow.jsonl`` sidecar the trainer
+    never reads -> training byte-identity preserved by construction; the package has
+    no actuation capability, source-scan-tested). Self-terminates when the trainer
+    exits. Idempotent: skipped when a live observer with this label already exists."""
+    label = _observer_label(out_dir)
+    if _observer_already_running(label):
+        print(f"[launch-witness] shadow observer already running (label={label}); not double-starting.")
+        return
+    import spawn_durable_daemon as sdd
+    rc = sdd.main([
+        "--log", str(out_dir / "observer.log"), "--label", label,
+        "--projected-gb", "0.2", "--projected-peak-gib", "0.1",
+        "--min-free-gb", "2", "--rss-cap-mb", "2048",
+        "--", sys.executable, str(_REPO / "tools" / "costate_observer_loop.py"),
+        "--run-dir", str(out_dir),
+    ])
+    if rc == 0:
+        print(f"[launch-witness] shadow observer STARTED (label={label}; SENSE-only, "
+              f"score-neutral; log={out_dir / 'observer.log'}).")
+    else:
+        print(f"[launch-witness] WARNING: shadow observer failed to start (rc={rc}); the run "
+              f"is unaffected — observe manually via tools/costate_shadow_report.py.",
+              file=sys.stderr)
+
+
 # ───────────────────────── main ─────────────────────────
 def _utc() -> str:
     return _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -971,6 +1027,16 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # noqa: BLE001 - telemetry must never break a fired launch
             print(f"[launch-witness] WARNING: activation-ledger record failed "
                   f"({type(exc).__name__}: {exc}); launch already fired, continuing.", file=sys.stderr)
+
+    # (c.2) SHADOW OBSERVER AUTO-START (#247 agent-native core sense organ; operator
+    # NON-NEGOTIABLE 2026-07-07 "does not require human or manual activation"). Score-neutral
+    # SENSE-only telemetry — read-only observability DEFAULTS ON per the "'Off' is a tracked
+    # queue" rule. NON-FATAL: an observer failure must never break a launch that already fired.
+    try:
+        ensure_shadow_observer(out_dir)
+    except Exception as exc:  # noqa: BLE001 - telemetry must never break a fired launch
+        print(f"[launch-witness] WARNING: shadow-observer auto-start failed "
+              f"({type(exc).__name__}: {exc}); launch already fired, continuing.", file=sys.stderr)
 
     # (d) VERIFY the perf-env fast path (loud warning on the silent-slow footgun).
     status, line = verify_perf_env(run_log, timeout_s=args.perf_env_timeout_s)
