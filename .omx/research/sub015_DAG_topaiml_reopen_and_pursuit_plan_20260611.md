@@ -9462,3 +9462,13 @@ Operator directive: §16 must live in the triality, not just the draft. All thre
   inventory: the operator's "what else can be solved, where/when/conditions" — 10 candidate blocks,
   three-condition solvability check per block: in-chart convexity × weak coupling × fixed topology).
 Pointer 0.19110 UNMOVED (design/apparatus/means).
+
+### FEED-07u addendum — consumer-leg assertion for TerminalSolve [consumers-generic]
+Executably VERIFIED (this turn): `TerminalSolve().to_display_dict()` emits {kind, method,
+verify_pairs, flags:{}, gaps:[TrainerSupportGap …]}; `Curriculum.to_display_dict()` includes the
+`terminal_solve` field; `schedule_primitive_kinds()` auto-registers it (19 kinds); zero argv
+emitted ⇒ the schedule_readback PLANNED layer is unaffected by construction. Dashboard/costate
+consume schedule primitives through exactly these generic describe()/registry surfaces (the
+2026-07-07 dsl-generic dashboard build) — no consumer-specific rendering exists to update for a
+no-argv designed-not-built primitive. Consumer-specific work (rendering the solve stage's
+fired-evidence) is owed WITH the #341 Phase-2 trainer build, not before.
