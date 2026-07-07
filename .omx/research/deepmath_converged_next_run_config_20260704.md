@@ -68,10 +68,19 @@ M2 NTK/multiscale band-pass whitening (per-scale amplitude ∝ 1/√λ) is the m
 (dominant SPEED lever ~3-10×) — **UNBUILT flag** (#204/#207 sig-proc lineage). Equation:
 `shearlet_nterm_upper_bounds_task_rate_v1`.
 
-**(5) Ch.1 dash-comb [#287 UNBUILT] + AHA logit-offset [#218] :** the tropical max-plus dash comb
-(phase=ego-ξ) closes the 3.2× along-tangent deficit at rate-cheap COUNTED bytes; the AHA mass-matched
-Laguerre logit-offset head (byte-free, principled LDAM) counters Lane/Movable collapse. Both need
-builds (#287, #218).
+**(5) Ch.1 dash-comb + AHA logit-offset — CORRECTION 2026-07-04: BOTH ALREADY BUILT (NO-FAKE fix).**
+The proactive-recall sweep for the "design and build" directive found the tropical max-plus dash comb
+is FULLY BUILT (`analytic_lane_render_band._line_row_params:174-180` = the periodic mod-period/duty comb;
+`fit_lane_line:262` fits period/phase/duty to real GT dashes; `serialize_lane_band_rd` LBND2 COUNTS the
+3 comb params per line with quantization tolerances — Wave-F #229/#234). The Laguerre logit-offset head
+is BUILT too (`src/tac/boundary_math/laguerre_logit_offset.py`: `--head etf`, `--head additive-margin`,
+`--logit-adjust-per-class` Menon; #218). The earlier "#287/#218 UNBUILT" was WRONG — corrected. The
+deep-math Ch.1 value was CONFIRMING these are theory-optimal (the basis IS a shearlet, the comb IS the
+max-plus tropical comb, the head IS the Laguerre power-diagram cure), NOT new buildable levers.
+**The genuinely-UNBUILT seam = the geometry-native SOLVERS (not representations):** damped-Newton
+semi-discrete OT head-offset (replaces the Menon heuristic; the asymmetry cure) · auction-MBO
+volume-preserving flow (the proven-erasure cure as a solver) · Airy caustic asymmetry profile · RKMK
+Lie-group ξ-transport (dash phase = on-manifold exp(ξ), near-free). Each $0-gated before wiring.
 
 ## Sequencing verdict
 Next fresh run: **Tier-1 arms (1)+(2) as isolated A/Bs vs baseline**, layered on the current #205 optimal-form

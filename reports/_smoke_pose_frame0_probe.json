@@ -1,0 +1,231 @@
+{
+  "tool": "tools/pose_frame0_inverse_solve_probe.py",
+  "gate": "#249 $0 deep-math pose frame0 inverse-solve probe (P-E / P-F)",
+  "utc": "2026-07-03T07:54:49Z",
+  "authority": "[macOS-CPU advisory / CPU-torch research-signal] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "promotable": false,
+  "frontier_pointer": "UNMOVED 0.19110 (advisory diagnostic; not a contest score)",
+  "ckpt_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_R1_storenothing_descent_ev1_20260703T004906Z",
+  "npz_name": "levelset_witness_ema_BEST.npz",
+  "config": {
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 26,
+    "activation": "hosc",
+    "render_h": 384,
+    "render_w": 512,
+    "chroma": true
+  },
+  "n_pairs": 3,
+  "work_resolution": [
+    384,
+    512
+  ],
+  "self_orient": true,
+  "no_fake_selfcheck": 2.6470928202138673,
+  "0_affine_calibration": {
+    "A_6x6": [
+      [
+        -1.1870589551575688,
+        -28.360243127980368,
+        24.6774945237221,
+        1.7973878241460244,
+        -0.30262839356693755,
+        13.635571670094759
+      ],
+      [
+        0.14966882662762193,
+        -0.28337586004662957,
+        0.03770086145318978,
+        1.0175387776636204,
+        0.5265386552985655,
+        2.986529852272173
+      ],
+      [
+        0.05634570955683332,
+        0.3501015997261083,
+        0.03105833733437259,
+        0.03429628020032831,
+        0.11261417145986077,
+        0.37019473047704854
+      ],
+      [
+        -0.04262917529825771,
+        -0.0032956857200062617,
+        0.0013208597761775378,
+        -0.08450658530543703,
+        -0.030690282925006446,
+        0.35391533747315396
+      ],
+      [
+        0.010285799929855064,
+        0.10841208757883913,
+        0.02057414775321243,
+        0.36798263088278815,
+        0.16418067960564153,
+        -0.13077331006253531
+      ],
+      [
+        0.14989892482210734,
+        -0.03383520546309445,
+        0.010494894664221975,
+        0.5933838939174599,
+        0.40309794178796504,
+        1.3870922558077976
+      ]
+    ],
+    "A_singular_values": [
+      40.07361755404573,
+      3.331898736538709,
+      0.4995576723102626,
+      0.2985546232076849,
+      0.09622615916301569,
+      0.029980473476508347
+    ],
+    "A_condition_number": 1336.6572607816224,
+    "affine_fit_R2": -0.21514991471783218,
+    "n_cal_pairs": 2,
+    "n_samples": 48,
+    "note": "PoseNet6(warp(f1,xi),f1)-PoseNet6(f1,f1) ~= A.xi ; A=dPose/dxi (LDM affine, per-pair b = PoseNet6(f1,f1)). High R^2 => the physical-xi<->PoseNet-6 map is affine as assumed."
+  },
+  "1_P_E_free_frame0_solve": {
+    "d_pose_zero_motion": {
+      "mean": 187.97629854673025,
+      "median": 194.30700732881442,
+      "min": 170.3305836325042,
+      "max": 199.29130467887214,
+      "n": 3
+    },
+    "contrib_zero": 44.08026852559027,
+    "d_pose_warp_base_P_A": {
+      "mean": 4.076109832208327,
+      "median": 4.676767174849673,
+      "min": 1.1960017823880607,
+      "max": 6.355560539387246,
+      "n": 3
+    },
+    "contrib_warp": 6.838689329725158,
+    "d_pose_free_gradient_space": {
+      "mean": 8.870796087199886e-05,
+      "median": 2.7061554839595087e-07,
+      "min": 1.272465870820009e-07,
+      "max": 0.0002657260204805186,
+      "n": 3
+    },
+    "contrib_free_grad": 0.001645039660299869,
+    "d_pose_free_FROZEN_AUTHORITY": {
+      "mean": 8.870796087199886e-05,
+      "median": 2.7061554839595087e-07,
+      "min": 1.272465870820009e-07,
+      "max": 0.0002657260204805186,
+      "n": 3
+    },
+    "contrib_free_frozen": 0.001645039660299869,
+    "delta_rms_grey_levels": {
+      "mean": 0.19780549903710684,
+      "median": 0.2472129464149475,
+      "min": 0.08513255417346954,
+      "max": 0.26107099652290344,
+      "n": 3
+    },
+    "oob_frac": {
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "n": 3
+    },
+    "R1_rigid_warp_floor_anchor": 0.0011,
+    "ancestor_rgb_anchor": 3.4e-05,
+    "BEATS_R1_0.0011": true,
+    "grad_vs_frozen_gap": 0.0
+  },
+  "warp_s_t_median": 0.06,
+  "2_3_P_F_rate_pareto": {
+    "coarse_free_solve_SMOOTH_cheaply_counted": {
+      "24x32": {
+        "d_pose_median": 6.351047061143457,
+        "contrib_median": 7.969345682766846,
+        "bytes_median": 1849.0,
+        "dof": 2304,
+        "n": 3
+      },
+      "48x64": {
+        "d_pose_median": 0.0467088819843714,
+        "contrib_median": 0.6834389657048492,
+        "bytes_median": 6774.0,
+        "dof": 9216,
+        "n": 3
+      },
+      "96x128": {
+        "d_pose_median": 5.2136788012163704e-05,
+        "contrib_median": 0.022833481559360085,
+        "bytes_median": 21436.0,
+        "dof": 36864,
+        "n": 3
+      }
+    },
+    "over_warp_base_GENERIC_free_smooth_plus_counted_delta": {},
+    "over_f1_init_CONSERVATIVE_whole_motion_counted": {},
+    "cheap_vs_adversarial_verdict": {
+      "free_solve_floor_median_dpose": 2.7061554839595087e-07,
+      "free_solve_floor_contrib": 0.001645039660299869,
+      "warp_base_floor_median_dpose": 4.676767174849673,
+      "R1_cheap_pose_floor_contrib": 0.10488088481701516,
+      "note_free_solve_is_adversarial": "the full-res free-frame0 floor (~2.71e-07) is reached by a tiny (sub-grey) but SPATIALLY-PRECISE high-frequency delta; it is NOT decoder-reproducible and per-pair image storage is rate-prohibitive.",
+      "coarse_carrier_NET_S_at_n3_scale": {
+        "24x32": {
+          "pose_contrib": 7.969345682766846,
+          "rate_contrib_at_n600_scale": 0.0036935196129686846,
+          "net_S": 7.973039202379815,
+          "bytes_per_pair": 1849.0,
+          "d_pose": 6.351047061143457
+        },
+        "48x64": {
+          "pose_contrib": 0.6834389657048492,
+          "rate_contrib_at_n600_scale": 0.013531585645348766,
+          "net_S": 0.6969705513501979,
+          "bytes_per_pair": 6774.0,
+          "d_pose": 0.0467088819843714
+        },
+        "96x128": {
+          "pose_contrib": 0.022833481559360085,
+          "rate_contrib_at_n600_scale": 0.042820057557380595,
+          "net_S": 0.06565353911674068,
+          "bytes_per_pair": 21436.0,
+          "d_pose": 5.2136788012163704e-05
+        }
+      },
+      "cheapest_NET_coarse_carrier": {
+        "grid": "96x128",
+        "net_S": 0.06565353911674068,
+        "pose_contrib": 0.022833481559360085,
+        "rate_contrib": 0.042820057557380595
+      },
+      "generic_basis_curves_if_run": {},
+      "CHEAPLY_COUNTED_REALIZABLE": true,
+      "interpretation": "CHEAPLY COUNTED: a smooth low-DOF (coarse) free frame0 carrier BEATS R1's cheap pose floor NET of its per-pair rate cost -> a legal image-space pose carrier improves S."
+    }
+  },
+  "verdicts": {
+    "free_frame0_beats_R1_rigid_warp": true,
+    "free_frozen_d_pose_median": 2.7061554839595087e-07,
+    "free_frozen_contrib_median": 0.001645039660299869,
+    "warp_base_d_pose_median": 4.676767174849673,
+    "affine_map_R2": -0.21514991471783218,
+    "delta_survives_uint8_roundtrip": true,
+    "cheaply_counted_realizable": true
+  },
+  "caveats": [
+    "SAMPLE: n=3 pairs (contiguous). THROUGH-R witness render f1 (self-orient shippable render); frame0 solved at work res 384x512, verdict at camera 874x1164 uint8 (eval-roundtrip).",
+    "GRADIENT vs FROZEN: the LM-GN minimizes the work-res float d_pose; the FROZEN AUTHORITY d_pose re-measures at camera-res uint8 (inference_mode cpu_verdict_d_pose). The gap is the eval-roundtrip cost of the solved frame0 (small gap = robust, not knife-edge adversarial).",
+    "FIREWALL: P-E is the ACHIEVABLE floor (per-pair adversarial-capable free frame0). P-F measures whether a DECODER-REPRODUCIBLE generic-basis (DCT / low-rank) counted delta over the FREE generic warp base reaches that floor cheaply. A per-pair optimized frame0 stored as a table is the eval-hack fake (NO-FAKE #6/#8); only the counted generic-basis delta + generic warp is legal.",
+    "WARP BASE: per-pair s_t-fit ground-homography warp of the witness render f1 (rule-118 FREE, reuses the proven regime_homography+warp_rgb). This is the P-A/R1-class rigid floor MEASURED in-harness on the NON-photoreal render; R1's trained store-nothing 0.0011 is a different (trained per-pair residual) mechanism. The AFFINE A,b calibration is REPORTED as a characterization of how affine the render-warp xi->PoseNet map is (low R^2 => weakly affine).",
+    "AUTHORITY: frozen CPU-torch PoseNet + differentiable yuv6 patch (NO-FAKE self-check PoseNet(GT)==gt_poses <1e-4). NEVER MPS. This DIAGNOSTIC does NOT move the pointer."
+  ],
+  "elapsed_secs": 59.9
+}

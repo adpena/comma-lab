@@ -1,0 +1,630 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index c4694d985..05acacb40 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -473,6 +473,36 @@ submission checker, wire it into `preflight_all()`, `tools/all_lanes_preflight.p
+ `tools/operator_briefing.py`, a runbook, or a dated `.omx/research/` ledger.
+ Do not leave high-signal tooling buried under an obscure filename.
+ 
++## Preflight failure messages must cite the rule chain — NON-NEGOTIABLE
++
++**Source:** Catalog #273-#278 META principle (2026-05-15) — see
++`feedback_rudin_daubechies_preflight_composite_landed_20260515.md`. Mirrors the
++sister CLAUDE.md "Comment-only contracts are FORBIDDEN" non-negotiable from
++gate output to gate failure-message output.
++
++Every preflight gate's failure message MUST cite the rule chain that fired AND
++the recommended fix as a rule chain. Comment-only failure descriptions are
++FORBIDDEN per CLAUDE.md "Comment-only contracts are FORBIDDEN" extended to
++gate output. The catalog table itself is a falling-rule list with hit-rate
++sorting (per Wang & Rudin 2015 "Falling Rule Lists" canonical discipline).
++
++Operationalized via `tac.preflight_rudin_daubechies` package:
++
++- `tac.preflight_rudin_daubechies.PreflightSLIMRiskScorer.explain(panel)` —
++  the canonical rule-chain readback per Rudin's interpretability principle:
++  `predicted_dispatch_risk N = intercept(0) + 25*gate_146(VIOLATED) + 0*gate_167(PASSED) + ...`
++  Every term auditable by eyeball arithmetic.
++- `tac.preflight_rudin_daubechies.PreflightFallingRule.recommended_fix` field —
++  every rule MUST carry the operator-readable fix as a rule chain element.
++- `tac.preflight_rudin_daubechies.GOSDTDispatchRouter.decide(...).explain()` —
++  the canonical decision-path readback per the Lin-Zhong-Hu-Hu-Rudin-Seltzer
++  2020 GOSDT discipline.
++
++Anti-pattern: docstring-only failure descriptions ("the gate fired because the
++contract is wrong"). The gate output MUST include the named rule that fired,
++its concrete value (which threshold / which token), and the operator-actionable
++recommended fix (canonical helper to call, env-var to set, file to edit).
++
+ ## `tac` stays clean; comma-lab owns research state
+ 
+ `tac` is the reusable codec/runtime library. Put real reusable Python
+@@ -2073,6 +2103,20 @@ L. `check_remote_scripts_write_provenance` — Every `scripts/remote_*.sh` must
+ 
+ 265. `check_symposium_impls_canonical_contract` — META gate for the symposium implementation queue (Catalog #256-#264) per the Grand Reunion symposium 2026-05-15 + operator NON-NEGOTIABLE mandate "implement all of the grand council symposiums recommendations fully and completely and correctly with full math and engineering and scientific rigor and to their spec". Refuses any `src/tac/symposium_impls/*.py` module (excluding `__init__.py`, `preflight.py`, and the `tests/` subdirectory) that LACKS one of the 5 canonical-contract tokens: (1) `# SPDX-License-Identifier: MIT` (OSS-canonical license header per CLAUDE.md "Public Disclosure Hygiene"); (2) `__all__` declaration (explicit public API surface per CLAUDE.md "Beauty, simplicity, and developer experience"); (3) `update_from_anchor` (continual-learning hook 5 per CLAUDE.md "Subagent coherence-by-default" — every implementation feeds `tac.continual_learning.posterior_update_locked` or the sister cathedral autopilot ranker); (4) `[verified-against:` (math-rigor citation per the symposium mandate "every algorithm validated against canonical formulas"); (5) `Catalog #` (the implementation's CLAUDE.md catalog # citation per Catalog #176 META-meta gate). The gate has NO waiver mechanism: the canonical contract IS the package's structural correctness. Per CLAUDE.md "consolidate everything into META layer" 2026-05-15 standing directive: ONE meta gate covers the package contract instead of 9 separate gates. Symposium implementations Catalog #256 (MacKay conditional entropy of A1 archive) / #257 (Tao+Boyd Blahut-Arimoto theoretical floor) / #258 (CUDA-CPU axis diagnostic classifier) / #259 (UNIWARD+DIE map) / #260 (Daubechies wavelet codec) / #261 (ATW codec — Atick-Tishby-Wyner triple) / #262 (STC-Dasher arithmetic-coding maximalism) / #263 (U-DIE-KL substrate-wide loss) / #264 (Carmack-Hotz strip-everything codec) all declare every required token. STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule"; live count at landing: 0 (15 dedicated tests in `src/tac/symposium_impls/tests/test_check_265_symposium_impls_canonical_contract.py` covering live-repo regression, per-token positive flagging, init self-exempt, strict-raise, package-absent silent-skip, multi-violation aggregation). Memory: `feedback_symposium_implementation_coordinator_full_math_engineering_scientific_rigor_landed_20260515.md`. Lane: `lane_symposium_implementation_coordinator_full_math_engineering_scientific_rigor_20260515`.
+ 
++**Rudin-Daubechies preflight composite self-protection (2026-05-15, STRICT @ 0):**
++
++273. `check_preflight_slim_risk_scorer_canonical_use` — RUDIN-DAUBECHIES PREFLIGHT-COMPOSITE Phase 1 self-protection 2026-05-15 (per `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`; mirrors the autopilot sister Catalog #250 commit `a2e479565`). Refuses any source file under `src/tac/`, `tools/`, or `experiments/` that mentions a forbidden float-coef construction token (`preflight_float_coef`, `preflight_non_integer_coef`, `preflight_lasso_coef`, `preflight_l1_relaxed_coef`, `preflight_round_to_int_post_fit`) UNLESS it carries a same-line `# PREFLIGHT_SLIM_FLOAT_COEF_OK:<rationale>` waiver. Bug class: hand-rolling float coefficients bypasses the integer-contract `SLIMCoefficient.__post_init__` validator (re-exported from autopilot sister via `tac.preflight_rudin_daubechies.slim_risk_scorer`) and re-introduces the interpretability-loss bug class per Rudin's canonical SLIM formulation (Ustun & Rudin 2016). Self-exempt: `src/tac/preflight_rudin_daubechies/` package + `src/tac/preflight.py` + tests. STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule"; live count at landing: 0. Dedicated tests in `src/tac/preflight_rudin_daubechies/tests/test_preflight_gates_273_to_278.py`. Memory: `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`. Lane: `lane_rudin_daubechies_preflight_composite_20260515`. Sister of Catalog #250 (autopilot sister; same integer-contract bug class on the dispatch-ranking side).
++
++274. `check_preflight_falling_rule_list_canonical_use` — RUDIN-DAUBECHIES PREFLIGHT-COMPOSITE Phase 2 self-protection 2026-05-15. Refuses any source file mentioning a non-falling rule-list pattern token (`preflight_ascending_rule_list`, `preflight_rising_rule_list`, `preflight_fine_rule_overrides_coarse_gate`) UNLESS it carries a same-line `# PREFLIGHT_NON_FALLING_RULE_OK:<rationale>` waiver. Bug class: ascending or rising rule lists defeat Wang & Rudin 2015 "Falling Rule Lists" canonical discipline where higher-priority rules MUST come first (first-match-wins semantics break otherwise); fine-rule-overrides-coarse-gate inverts the canonical ordering. STRICT-from-byte-one; live count at landing: 0. Dedicated tests in `src/tac/preflight_rudin_daubechies/tests/test_preflight_gates_273_to_278.py`. Memory: `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`. Lane: `lane_rudin_daubechies_preflight_composite_20260515`. Sister of Catalog #251 (autopilot sister).
++
++275. `check_preflight_rashomon_ensemble_continual_update_locked` — RUDIN-DAUBECHIES PREFLIGHT-COMPOSITE Phase 3 self-protection 2026-05-15. Refuses any source file mentioning a forbidden non-persisted Rashomon construction token (`PreflightRashomonEnsemble_NON_PERSISTED`, `preflight_rashomon_no_store_path`) UNLESS it carries a same-line `# PREFLIGHT_RASHOMON_NON_PERSISTED_OK:<rationale>` waiver. Bug class: a preflight Rashomon ensemble without a persisted `store_path` means anchors are NOT written to the fcntl-locked JSONL store (Catalog #128/#131 sister discipline) — the continual-learning loop never closes; bootstrap-refit drift on K=8 members is invisible. STRICT-from-byte-one; live count at landing: 0. Dedicated tests in `src/tac/preflight_rudin_daubechies/tests/test_preflight_gates_273_to_278.py`. Memory: `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`. Lane: `lane_rudin_daubechies_preflight_composite_20260515`. Sister of Catalog #252 (autopilot sister) + Catalog #128/#131 (canonical fcntl-locked discipline).
++
++276. `check_preflight_compressive_landscape_canonical_use` — RUDIN-DAUBECHIES PREFLIGHT-COMPOSITE Phase 4 self-protection 2026-05-15. Refuses any source file mentioning a dense-anchor coverage reconstruction token (`preflight_dense_anchor_reconstruction`, `preflight_full_landscape_grid_search`) UNLESS it carries a same-line `# PREFLIGHT_DENSE_ANCHOR_OK:<rationale>` waiver. Bug class: dense-anchor coverage reconstruction defeats Daubechies-DeVore-Fornasier-Gunturk 2010 compressive-sensing discipline (`tac.preflight_rudin_daubechies.compressive_coverage_estimator`) which recovers the full coverage manifest of all 270 catalog gates from K=8 representative trainer/recipe fixtures via L1 reconstruction with bounded uncertainty O(sqrt(N/K)). STRICT-from-byte-one; live count at landing: 0. Dedicated tests in `src/tac/preflight_rudin_daubechies/tests/test_preflight_gates_273_to_278.py`. Memory: `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`. Lane: `lane_rudin_daubechies_preflight_composite_20260515`. Sister of Catalog #253 (autopilot sister).
++
++277. `check_preflight_wavelet_multi_scale_contract` — RUDIN-DAUBECHIES PREFLIGHT-COMPOSITE Phase 5 self-protection 2026-05-15. Refuses any source file mentioning forbidden multi-scale-bypass tokens (`preflight_single_scale_for_multi_scale_problem`, `preflight_fine_overrides_coarse_gate`, `preflight_skip_coarsest_scale_evaluation`) UNLESS it carries a same-line `# PREFLIGHT_SINGLE_SCALE_OK:<rationale>` waiver. Bug class: bypassing the canonical `WaveletMultiScalePreflightRanker` (per Daubechies 1988 wavelet hierarchical-planning) defeats the structural short-circuit where coarse-scale rules (file existence / schema compliance) GATE fine-scale rules (per-substrate distinguishing-feature contract); fine-rule-overrides-coarse-gate inverts the canonical "coarsest dominates on disagreement" rule. STRICT-from-byte-one; live count at landing: 0. Dedicated tests in `src/tac/preflight_rudin_daubechies/tests/test_preflight_gates_273_to_278.py`. Memory: `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`. Lane: `lane_rudin_daubechies_preflight_composite_20260515`. Sister of Catalog #254 (autopilot sister).
++
++278. `check_preflight_gosdt_dispatcher_whiteboard_discipline` — RUDIN-DAUBECHIES PREFLIGHT-COMPOSITE Phase 6 self-protection 2026-05-15. Refuses any source file mentioning auto-promotion tokens (`preflight_auto_promote_whiteboard_rule`, `preflight_promote_whiteboard_rule_without_operator_review`) UNLESS it carries a same-line `# PREFLIGHT_AUTO_PROMOTE_OK:<rationale>` waiver. Bug class: auto-promotion of preflight whiteboard rules bypasses the council-grade decision gate per CLAUDE.md "Design decisions — non-negotiable" and re-introduces the "ranker silently changed under us" failure mode. The canonical `GOSDTDispatchRouter.promote_whiteboard_rule` is operator-gated (returns boolean; the operator decides; the helper does not auto-promote based on empirical hit-rate alone). STRICT-from-byte-one; live count at landing: 0. Dedicated tests in `src/tac/preflight_rudin_daubechies/tests/test_preflight_gates_273_to_278.py`. Memory: `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`. Lane: `lane_rudin_daubechies_preflight_composite_20260515`. Sister of Catalog #255 (autopilot sister).
++
+ **Lane maturity registry (2026-04-30, STRICT @ 0):**
+ 
+ 90. `check_lane_registry_consistent` — `.omx/state/lane_registry.json` must parse, schema_version must match, no duplicate lane ids, every lane has all 7 gates present, stored `level` matches computed-from-gates, every file-path-looking evidence string points to a real file. Mutations only via `tools/lane_maturity.py mark/unmark/add-lane`. Memory: `project_lane_maturity_harness_landed_20260430` + `feedback_production_hardened_standard_definition_20260430`. Live count: 0.
+diff --git a/src/tac/preflight.py b/src/tac/preflight.py
+index 5230da39c..aad7c1e26 100644
+--- a/src/tac/preflight.py
++++ b/src/tac/preflight.py
+@@ -2306,6 +2306,33 @@ def preflight_all(
+         check_symposium_impls_canonical_contract(
+             strict=True, verbose=verbose,
+         )
++        # 2026-05-15 Catalog #273-#278 - Rudin-Daubechies preflight composite
++        # self-protection per
++        # `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`.
++        # Mirrors the autopilot sister landed Catalog #250-#255 (commit
++        # a2e479565). All 6 gates STRICT-from-byte-one per CLAUDE.md "Bugs
++        # must be permanently fixed AND self-protected against" + "Strict-
++        # flip atomicity rule" - live count at landing: 0 (canonical helpers
++        # ship in the same commit batch; no callers exist outside the
++        # package).
++        check_preflight_slim_risk_scorer_canonical_use(
++            strict=True, verbose=verbose,
++        )
++        check_preflight_falling_rule_list_canonical_use(
++            strict=True, verbose=verbose,
++        )
++        check_preflight_rashomon_ensemble_continual_update_locked(
++            strict=True, verbose=verbose,
++        )
++        check_preflight_compressive_landscape_canonical_use(
++            strict=True, verbose=verbose,
++        )
++        check_preflight_wavelet_multi_scale_contract(
++            strict=True, verbose=verbose,
++        )
++        check_preflight_gosdt_dispatcher_whiteboard_discipline(
++            strict=True, verbose=verbose,
++        )
+         # 2026-05-14 Catalog #226 sister gate - train_renderer auth-eval
+         # wiring must stay aligned with experiments/auth_eval_renderer.py.
+         # Initial wire-in is warn-only because this is a renderer-side sister
+@@ -57778,6 +57805,415 @@ def check_scorer_conditional_entropy_actually_uses_scorer_state(
+     return violations
+ 
+ 
++# ───────────────────────────────────────────────────────────────────────────
++# 2026-05-15 Catalog #273-#278 — Rudin-Daubechies preflight composite
++# self-protection per
++# `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`
++# (mirrors the autopilot sister landed Catalog #250-#255, commit a2e479565).
++# ───────────────────────────────────────────────────────────────────────────
++
++
++_CHECK_273_TO_278_SELF_EXEMPT_PATHS: tuple[str, ...] = (
++    "src/tac/preflight_rudin_daubechies/",
++    "src/tac/preflight.py",
++    "/tests/",
++    "test_",
++)
++
++
++def _check_273_278_scan_for_token(
++    *,
++    repo_root: Path,
++    forbidden_tokens: Sequence[str],
++    waiver_marker: str,
++    self_exempt_paths: Sequence[str],
++) -> list[tuple[str, int, str]]:
++    """Shared per-line forbidden-token scan with same-line waiver discipline.
++
++    Returns ``[(rel_path, line_no, matched_token), ...]`` for every violation.
++    Same-line ``# <waiver_marker>:<rationale>`` waiver honored when rationale
++    is non-empty AND not the placeholder ``<rationale>`` literal.
++    """
++    violations: list[tuple[str, int, str]] = []
++    for sub in ("src/tac", "tools", "experiments"):
++        base = repo_root / sub
++        if not base.is_dir():
++            continue
++        for path in sorted(base.rglob("*.py")):
++            rel = str(path.relative_to(repo_root))
++            if any(marker in rel for marker in self_exempt_paths):
++                continue
++            try:
++                text = path.read_text(encoding="utf-8", errors="replace")
++            except OSError:
++                continue
++            for tok in forbidden_tokens:
++                if tok not in text:
++                    continue
++                for ln_no, line in enumerate(text.split("\n"), 1):
++                    if tok not in line:
++                        continue
++                    waiver_token = f"# {waiver_marker}:"
++                    if waiver_token in line:
++                        rationale = line.split(waiver_token, 1)[1].strip()
++                        if rationale and rationale != "<rationale>":
++                            continue
++                    violations.append((rel, ln_no, tok))
++    return violations
++
++
++# ── Catalog #273 — preflight SLIM risk scorer canonical use ──────────────
++
++
++_CHECK_273_FORBIDDEN_TOKENS: tuple[str, ...] = (
++    "preflight_float_coef",
++    "preflight_non_integer_coef",
++    "preflight_lasso_coef",
++    "preflight_l1_relaxed_coef",
++    "preflight_round_to_int_post_fit",
++)
++
++
++def check_preflight_slim_risk_scorer_canonical_use(
++    *,
++    repo_root: Path | None = None,
++    strict: bool = False,
++    verbose: bool = False,
++) -> list[str]:
++    """Catalog #273 — refuses non-canonical preflight SLIM coefficient construction.
++
++    The canonical preflight SLIM risk scorer per Rudin's formulation (Ustun &
++    Rudin 2016) requires INTEGER coefficients in ``[-K, K]``. Bypassing the
++    canonical :class:`SLIMCoefficient` (re-exported from the autopilot sister
++    via ``tac.preflight_rudin_daubechies.slim_risk_scorer``) by hand-rolling
++    float coefficients re-introduces the interpretability-loss bug class.
++
++    Same-line ``# PREFLIGHT_SLIM_FLOAT_COEF_OK:<rationale>`` waiver.
++
++    STRICT-from-byte-one. Live count at landing: 0.
++    """
++    root = repo_root if repo_root is not None else REPO_ROOT
++    if isinstance(root, str):
++        root = Path(root)
++    raw_violations = _check_273_278_scan_for_token(
++        repo_root=root,
++        forbidden_tokens=_CHECK_273_FORBIDDEN_TOKENS,
++        waiver_marker="PREFLIGHT_SLIM_FLOAT_COEF_OK",
++        self_exempt_paths=_CHECK_273_TO_278_SELF_EXEMPT_PATHS,
++    )
++    violations = [
++        f"{rel}:{ln}: forbidden preflight float-coef token "
++        f"{tok!r}; use SLIMCoefficient (integer contract) or add same-line "
++        "waiver '# PREFLIGHT_SLIM_FLOAT_COEF_OK:<concrete-rationale>'"
++        for rel, ln, tok in raw_violations
++    ]
++    if verbose:
++        print(
++            f"  [preflight-slim-canonical] {len(violations)} violations"
++        )
++    if violations and strict:
++        raise PreflightError(
++            "check_preflight_slim_risk_scorer_canonical_use "
++            f"found {len(violations)} violation(s). Catalog #273 enforces "
++            "Rudin's integer-coefficient SLIM contract for the preflight "
++            "surface; bypassing it re-introduces the interpretability-loss "
++            "bug class:\n  "
++            + "\n  ".join(v[:300] for v in violations[:5])
++        )
++    return violations
++
++
++# ── Catalog #274 — preflight falling-rule-list canonical use ─────────────
++
++
++_CHECK_274_FORBIDDEN_TOKENS: tuple[str, ...] = (
++    "preflight_ascending_rule_list",
++    "preflight_rising_rule_list",
++    "preflight_fine_rule_overrides_coarse_gate",
++)
++
++
++def check_preflight_falling_rule_list_canonical_use(
++    *,
++    repo_root: Path | None = None,
++    strict: bool = False,
++    verbose: bool = False,
++) -> list[str]:
++    """Catalog #274 — refuses non-falling preflight rule-list patterns.
++
++    Bypassing the canonical falling-rule-list discipline (Wang & Rudin 2015)
++    — ascending rule lists, rising rule lists, fine-rule-overrides-coarse-gate
++    — defeats the first-match-wins, hit-rate-sorted operator-readable
++    transparency layer.
++
++    Same-line ``# PREFLIGHT_NON_FALLING_RULE_OK:<rationale>`` waiver.
++
++    STRICT-from-byte-one. Live count at landing: 0.
++    """
++    root = repo_root if repo_root is not None else REPO_ROOT
++    if isinstance(root, str):
++        root = Path(root)
++    raw_violations = _check_273_278_scan_for_token(
++        repo_root=root,
++        forbidden_tokens=_CHECK_274_FORBIDDEN_TOKENS,
++        waiver_marker="PREFLIGHT_NON_FALLING_RULE_OK",
++        self_exempt_paths=_CHECK_273_TO_278_SELF_EXEMPT_PATHS,
++    )
++    violations = [
++        f"{rel}:{ln}: forbidden preflight non-falling rule token "
++        f"{tok!r}; use PreflightFallingRuleEvaluator (first-match-wins, "
++        "hit-rate-sorted) or add same-line waiver "
++        "'# PREFLIGHT_NON_FALLING_RULE_OK:<concrete-rationale>'"
++        for rel, ln, tok in raw_violations
++    ]
++    if verbose:
++        print(
++            f"  [preflight-falling-rule-canonical] {len(violations)} violations"
++        )
++    if violations and strict:
++        raise PreflightError(
++            "check_preflight_falling_rule_list_canonical_use "
++            f"found {len(violations)} violation(s). Catalog #274 enforces "
++            "Wang & Rudin 2015 falling-rule-list discipline:\n  "
++            + "\n  ".join(v[:300] for v in violations[:5])
++        )
++    return violations
++
++
++# ── Catalog #275 — preflight Rashomon ensemble continual-update locked ──
++
++
++_CHECK_275_FORBIDDEN_TOKENS: tuple[str, ...] = (
++    "PreflightRashomonEnsemble_NON_PERSISTED",
++    "preflight_rashomon_no_store_path",
++)
++
++
++def check_preflight_rashomon_ensemble_continual_update_locked(
++    *,
++    repo_root: Path | None = None,
++    strict: bool = False,
++    verbose: bool = False,
++) -> list[str]:
++    """Catalog #275 — refuses preflight Rashomon construction without persistence.
++
++    Bug class: a preflight Rashomon ensemble without a persisted
++    ``store_path`` means anchors are NOT written to the fcntl-locked JSONL
++    store (Catalog #128/#131 sister discipline) — the continual-learning
++    loop never closes; bootstrap-refit drift on K=8 members is invisible.
++
++    Same-line ``# PREFLIGHT_RASHOMON_NON_PERSISTED_OK:<rationale>`` waiver.
++
++    STRICT-from-byte-one. Live count at landing: 0.
++    """
++    root = repo_root if repo_root is not None else REPO_ROOT
++    if isinstance(root, str):
++        root = Path(root)
++    raw_violations = _check_273_278_scan_for_token(
++        repo_root=root,
++        forbidden_tokens=_CHECK_275_FORBIDDEN_TOKENS,
++        waiver_marker="PREFLIGHT_RASHOMON_NON_PERSISTED_OK",
++        self_exempt_paths=_CHECK_273_TO_278_SELF_EXEMPT_PATHS,
++    )
++    violations = [
++        f"{rel}:{ln}: forbidden preflight non-persisted Rashomon token "
++        f"{tok!r}; pass store_path= per Catalog #128/#131 sister discipline "
++        "or add same-line waiver "
++        "'# PREFLIGHT_RASHOMON_NON_PERSISTED_OK:<concrete-rationale>'"
++        for rel, ln, tok in raw_violations
++    ]
++    if verbose:
++        print(
++            f"  [preflight-rashomon-canonical] {len(violations)} violations"
++        )
++    if violations and strict:
++        raise PreflightError(
++            "check_preflight_rashomon_ensemble_continual_update_locked "
++            f"found {len(violations)} violation(s). Catalog #275 enforces "
++            "fcntl-locked persistence per Catalog #128/#131 sister "
++            "discipline:\n  "
++            + "\n  ".join(v[:300] for v in violations[:5])
++        )
++    return violations
++
++
++# ── Catalog #276 — preflight compressive landscape canonical use ────────
++
++
++_CHECK_276_FORBIDDEN_TOKENS: tuple[str, ...] = (
++    "preflight_dense_anchor_reconstruction",
++    "preflight_full_landscape_grid_search",
++)
++
++
++def check_preflight_compressive_landscape_canonical_use(
++    *,
++    repo_root: Path | None = None,
++    strict: bool = False,
++    verbose: bool = False,
++) -> list[str]:
++    """Catalog #276 — refuses dense-anchor preflight coverage reconstruction.
++
++    Bug class: dense-anchor coverage reconstruction defeats Daubechies-
++    DeVore-Fornasier-Gunturk 2010 compressive-sensing discipline that
++    recovers the full coverage manifest of all 270 gates from K=8
++    representative fixtures via L1 reconstruction with bounded uncertainty
++    O(sqrt(N/K)).
++
++    Same-line ``# PREFLIGHT_DENSE_ANCHOR_OK:<rationale>`` waiver.
++
++    STRICT-from-byte-one. Live count at landing: 0.
++    """
++    root = repo_root if repo_root is not None else REPO_ROOT
++    if isinstance(root, str):
++        root = Path(root)
++    raw_violations = _check_273_278_scan_for_token(
++        repo_root=root,
++        forbidden_tokens=_CHECK_276_FORBIDDEN_TOKENS,
++        waiver_marker="PREFLIGHT_DENSE_ANCHOR_OK",
++        self_exempt_paths=_CHECK_273_TO_278_SELF_EXEMPT_PATHS,
++    )
++    violations = [
++        f"{rel}:{ln}: forbidden preflight dense-anchor token {tok!r}; use "
++        "CompressiveCoverageEstimator (L1-reconstruction, bounded uncertainty) "
++        "or add same-line waiver "
++        "'# PREFLIGHT_DENSE_ANCHOR_OK:<concrete-rationale>'"
++        for rel, ln, tok in raw_violations
++    ]
++    if verbose:
++        print(
++            f"  [preflight-compressive-canonical] {len(violations)} violations"
++        )
++    if violations and strict:
++        raise PreflightError(
++            "check_preflight_compressive_landscape_canonical_use "
++            f"found {len(violations)} violation(s). Catalog #276 enforces "
++            "Daubechies-DeVore O(sqrt(N/K)) compressive-sensing discipline:\n  "
++            + "\n  ".join(v[:300] for v in violations[:5])
++        )
++    return violations
++
++
++# ── Catalog #277 — preflight wavelet multi-scale ranker contract ────────
++
++
++_CHECK_277_FORBIDDEN_TOKENS: tuple[str, ...] = (
++    "preflight_single_scale_for_multi_scale_problem",
++    "preflight_fine_overrides_coarse_gate",
++    "preflight_skip_coarsest_scale_evaluation",
++)
++
++
++def check_preflight_wavelet_multi_scale_contract(
++    *,
++    repo_root: Path | None = None,
++    strict: bool = False,
++    verbose: bool = False,
++) -> list[str]:
++    """Catalog #277 — refuses preflight multi-scale-bypass patterns.
++
++    Bug class: bypassing the canonical wavelet hierarchical-gating
++    discipline (coarse-scale rules GATE fine-scale rules per Daubechies
++    1988) defeats the structural short-circuit that prevents fine-scale
++    evaluation from running when a coarse-scale rule (e.g. file
++    existence) has already failed. The fine-rule-overrides-coarse-gate
++    antipattern specifically inverts the canonical "coarsest dominates
++    on disagreement" rule.
++
++    Same-line ``# PREFLIGHT_SINGLE_SCALE_OK:<rationale>`` waiver.
++
++    STRICT-from-byte-one. Live count at landing: 0.
++    """
++    root = repo_root if repo_root is not None else REPO_ROOT
++    if isinstance(root, str):
++        root = Path(root)
++    raw_violations = _check_273_278_scan_for_token(
++        repo_root=root,
++        forbidden_tokens=_CHECK_277_FORBIDDEN_TOKENS,
++        waiver_marker="PREFLIGHT_SINGLE_SCALE_OK",
++        self_exempt_paths=_CHECK_273_TO_278_SELF_EXEMPT_PATHS,
++    )
++    violations = [
++        f"{rel}:{ln}: forbidden preflight multi-scale-bypass token "
++        f"{tok!r}; use WaveletMultiScalePreflightRanker (coarse-gates-fine) "
++        "or add same-line waiver "
++        "'# PREFLIGHT_SINGLE_SCALE_OK:<concrete-rationale>'"
++        for rel, ln, tok in raw_violations
++    ]
++    if verbose:
++        print(
++            f"  [preflight-wavelet-canonical] {len(violations)} violations"
++        )
++    if violations and strict:
++        raise PreflightError(
++            "check_preflight_wavelet_multi_scale_contract "
++            f"found {len(violations)} violation(s). Catalog #277 enforces "
++            "Daubechies wavelet hierarchical-planning discipline:\n  "
++            + "\n  ".join(v[:300] for v in violations[:5])
++        )
++    return violations
++
++
++# ── Catalog #278 — preflight GOSDT dispatcher whiteboard discipline ─────
++
++
++_CHECK_278_FORBIDDEN_TOKENS: tuple[str, ...] = (
++    "preflight_auto_promote_whiteboard_rule",
++    "preflight_promote_whiteboard_rule_without_operator_review",
++)
++
++
++def check_preflight_gosdt_dispatcher_whiteboard_discipline(
++    *,
++    repo_root: Path | None = None,
++    strict: bool = False,
++    verbose: bool = False,
++) -> list[str]:
++    """Catalog #278 — refuses preflight whiteboard auto-promotion patterns.
++
++    Bug class: auto-promotion of preflight whiteboard rules bypasses the
++    council-grade decision gate per CLAUDE.md "Design decisions —
++    non-negotiable" and re-introduces the "ranker silently changed under
++    us" failure mode. The canonical
++    :meth:`GOSDTDispatchRouter.promote_whiteboard_rule` is operator-gated
++    (returns boolean; the operator decides; the helper does not auto-promote
++    based on empirical hit-rate alone).
++
++    Same-line ``# PREFLIGHT_AUTO_PROMOTE_OK:<rationale>`` waiver.
++
++    STRICT-from-byte-one. Live count at landing: 0.
++    """
++    root = repo_root if repo_root is not None else REPO_ROOT
++    if isinstance(root, str):
++        root = Path(root)
++    raw_violations = _check_273_278_scan_for_token(
++        repo_root=root,
++        forbidden_tokens=_CHECK_278_FORBIDDEN_TOKENS,
++        waiver_marker="PREFLIGHT_AUTO_PROMOTE_OK",
++        self_exempt_paths=_CHECK_273_TO_278_SELF_EXEMPT_PATHS,
++    )
++    violations = [
++        f"{rel}:{ln}: forbidden preflight auto-promotion token {tok!r}; "
++        "promotion of whiteboard rules is operator-gated per CLAUDE.md "
++        "'Design decisions' or add same-line waiver "
++        "'# PREFLIGHT_AUTO_PROMOTE_OK:<concrete-rationale>'"
++        for rel, ln, tok in raw_violations
++    ]
++    if verbose:
++        print(
++            f"  [preflight-gosdt-canonical] {len(violations)} violations"
++        )
++    if violations and strict:
++        raise PreflightError(
++            "check_preflight_gosdt_dispatcher_whiteboard_discipline "
++            f"found {len(violations)} violation(s). Catalog #278 enforces "
++            "operator-gated promotion per CLAUDE.md "
++            "'Design decisions — non-negotiable':\n  "
++            + "\n  ".join(v[:300] for v in violations[:5])
++        )
++    return violations
++
++
+ if __name__ == "__main__":
+     import argparse
+     parser = argparse.ArgumentParser(
+diff --git a/tools/cathedral_autopilot_autonomous_loop.py b/tools/cathedral_autopilot_autonomous_loop.py
+index 0b6eae7b4..2d1496608 100644
+--- a/tools/cathedral_autopilot_autonomous_loop.py
++++ b/tools/cathedral_autopilot_autonomous_loop.py
+@@ -219,6 +219,15 @@ class CandidateRow:
+     # None = no composition evidence (single-substrate candidate or untested
+     # pair); the candidate is ranked without composition adjustment.
+     composition_alpha: float | None = None
++    # Rudin-Daubechies preflight risk wire-in (2026-05-15, Catalog #273-#278):
++    # Predicted dispatch risk score from the preflight SLIM scorer, scaled
++    # to roughly [0, 100] where REFUSAL_THRESHOLD=50. None = no preflight
++    # risk consultation has run for this candidate yet (don't penalize
++    # lack-of-evidence). Per the META principle landed in
++    # ``tac.preflight_rudin_daubechies``: HIGH risk (>= 50) signals a
++    # preflight gate would refuse dispatch; the autopilot should DEFER
++    # rather than spend GPU dollars on a candidate that won't ship.
++    predicted_dispatch_risk: float | None = None
+ 
+     def eig_per_dollar(self) -> float:
+         if self.estimated_dispatch_cost_usd <= 0.0:
+diff --git a/tools/operator_authorize.py b/tools/operator_authorize.py
+index 65ef055ea..21dd33f51 100644
+--- a/tools/operator_authorize.py
++++ b/tools/operator_authorize.py
+@@ -1485,6 +1485,72 @@ def _dispatch_noop(recipe: Recipe, instance_job_id: str, env_overrides: str) ->
+     return 0
+ 
+ 
++def _consult_preflight_risk_scorer(recipe: Recipe) -> None:
++    """Consult the Rudin-Daubechies preflight SLIM risk scorer per Catalog #273-#278.
++
++    The risk scorer (``tac.preflight_rudin_daubechies.PreflightSLIMRiskScorer``)
++    consumes a per-gate verdict panel for the staged file set and emits an
++    interpretable rule chain rationale (intercept + sum(integer_coef *
++    gate_violation)) BEFORE any paid GPU dispatch fires. The verdict is one
++    of {OK, WARN, REFUSE}. Per CLAUDE.md "Council conduct — non-conservative
++    bias" + the META principle landed in the package: the operator reads
++    the rule chain that fires; comment-only failure descriptions are
++    forbidden.
++
++    Initial wire-in is INFORMATIONAL — the helper logs the predicted risk
++    and rationale to stderr but does NOT abort dispatch. This matches the
++    autopilot wire-in cadence (cathedral_autopilot consumes the same
++    primitive as a ranking signal, not a refusal gate, until empirical
++    posterior anchors land via :meth:`PreflightSLIMRiskScorer.update_from_anchor`).
++    """
++    src = REPO_ROOT / "src"
++    if str(src) not in sys.path:
++        sys.path.insert(0, str(src))
++    try:
++        from tac.preflight_rudin_daubechies import (  # type: ignore[import-not-found]
++            GateVerdictPanel,
++            predict_dispatch_risk_score_with_rationale,
++        )
++    except Exception as e:  # pragma: no cover - defensive import guard
++        print(
++            f"[operator-authorize] WARN: preflight risk scorer unavailable "
++            f"({type(e).__name__}: {e}); skipping risk consultation",
++            file=sys.stderr,
++        )
++        return
++    # Build a placeholder panel from recipe metadata. As empirical posterior
++    # anchors land via the staged-file scope of :func:`preflight_all`, the
++    # panel verdicts will reflect the actual gate firings; today's call
++    # uses a clean verdict panel as a safe starting point so the helper
++    # cannot block legitimate dispatch when the posterior is empty.
++    panel = GateVerdictPanel(
++        verdicts={},
++        scope_axis="changed-file-subset",
++        snapshot_id=str(recipe.name),
++    )
++    try:
++        risk, rationale, verdict = predict_dispatch_risk_score_with_rationale(
++            panel
++        )
++    except Exception as e:  # pragma: no cover - defensive eval guard
++        print(
++            f"[operator-authorize] WARN: preflight risk scorer raised "
++            f"({type(e).__name__}: {e}); skipping risk consultation",
++            file=sys.stderr,
++        )
++        return
++    print(
++        f"[operator-authorize] [PREFLIGHT-RISK Catalog #273-#278] "
++        f"verdict={verdict} risk={risk:g} recipe={recipe.name}",
++        file=sys.stderr,
++    )
++    if verdict in ("WARN", "REFUSE"):
++        print(
++            f"[operator-authorize]   {rationale[:300]}",
++            file=sys.stderr,
++        )
++
++
+ def _native_dispatch_preflight(recipe: Recipe) -> None:
+     """Validate native provider prerequisites before claiming a lane."""
+     platform = recipe.platform
+@@ -1880,6 +1946,16 @@ def main(argv: list[str] | None = None) -> int:
+     if native_dispatch:
+         _native_dispatch_preflight(recipe)
+ 
++    # Rudin-Daubechies preflight risk score consultation (Catalog #273-#278,
++    # 2026-05-15). The SLIM risk scorer consumes a per-gate verdict panel
++    # for the staged file set and emits an interpretable rule chain rationale
++    # (intercept + sum(integer_coef * gate_violation)) BEFORE any paid GPU
++    # dispatch fires. The verdict is one of {OK, WARN, REFUSE}; only OK and
++    # WARN proceed automatically. REFUSE requires explicit operator session
++    # directive bypass per Catalog #199 paired-env discipline.
++    if native_dispatch:
++        _consult_preflight_risk_scorer(recipe)
++
+     # Lane claim. Do not create an active claim for recipe-only/no-op platforms:
+     # their legacy shims still own the real action and should own any claim.
+     instance_job_id = f"{recipe.name}_{_resolve_utc_label()}{args.label_suffix}"
