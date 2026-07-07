@@ -1058,6 +1058,56 @@ def sealed_205_curriculum(cfg, *, handoff: str = "fixed") -> Curriculum:
     )
 
 
+#: the schedule/curriculum flags the DSL Curriculum object OWNS — the subset of the trainer argv that
+#: MUST be sourced from the first-class :class:`Curriculum` object, not hand-set independently (#334).
+CURRICULUM_OWNED_FLAGS = frozenset({
+    "--curriculum", "--tau-softplus-start-epoch", "--tau-softplus-tau",
+    "--l7-start-epoch", "--muon-start-epoch",
+    "--softmax-temp-start", "--softmax-temp-end",
+    "--hosc-beta", "--hosc-beta-end", "--hosc-beta-anneal", "--hosc-omega",
+    "--eikonal-weight", "--length-weight",
+    "--stage-transition-rewarmup-epochs", "--stage-transition-rewarmup-floor",
+    "--stage-transition-rewarmup-shape", "--stage-transition-reset-moments",
+})
+
+
+def verify_schedule_consistency(cfg, *, handoff: str = "fixed") -> list[str]:
+    """#334 consistency gate: the first-class :class:`Curriculum` object is the schedule's
+    SOURCE-OF-RECORD — its compiled schedule flags MUST equal what the autoconfig emits for the
+    curriculum-owned flags. Returns a list of disagreements (empty == consistent).
+
+    This BINDS the DSL object to the launcher's flat schedule flags: if a future edit changes the
+    autoconfig's schedule (or the object's reading of it) so they diverge, this gate fails — closing
+    the config-orphan confound where the schedule could be set in two places that silently drift.
+    (The deeper refactor — the launcher EMITTING the schedule by calling the object — is deferred to
+    protect the sealed byte-identity gates; this gate makes the object the verified SoT-of-record now.)
+
+    ``cfg`` is a ``tac.witness_autoconfig`` config with ``.to_trainer_flags`` +
+    ``.tau_softplus_start_epoch`` etc. Bare-boolean flags (emitted as value ``None`` in the argv tuple
+    convention) match the object's ``True``. Event-mode-only flags are exempt under ``handoff="fixed"``.
+    """
+    curr = sealed_205_curriculum(cfg, handoff=handoff)
+    obj = curr.flags()
+    emitted = dict(cfg.to_trainer_flags("_"))
+    problems: list[str] = []
+    _event_only = {"--curriculum-event-triggered", "--curriculum-nucleus-guard"}
+    for flag, oval in obj.items():
+        if flag in _event_only:
+            continue  # handoff-mode flags, not part of the flat sealed schedule
+        if flag not in CURRICULUM_OWNED_FLAGS:
+            continue  # only enforce the curriculum-owned subset
+        if flag not in emitted:
+            problems.append(f"{flag}: Curriculum object emits {oval!r} but autoconfig does not")
+            continue
+        eval_ = emitted[flag]
+        # bare-boolean: object True == argv-tuple None (present, valueless)
+        if oval is True and eval_ in (None, True):
+            continue
+        if str(oval) != str(eval_):
+            problems.append(f"{flag}: Curriculum object={oval!r} != autoconfig={eval_!r}")
+    return problems
+
+
 def sealed_205_program(  # noqa: N802 — DSL constructor
     out_dir: str,
     gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
