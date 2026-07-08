@@ -45,9 +45,10 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
       launch.sh or the council design memo, never the activation ledger. Memory:
       verdict_review_status_metadata_operator_should_never_catch_provenance_20260707.
 - [x] P3b debate round(s) — v2 REVISION landed (305d884ce); second red-team verify pass launched
-- [ ] P4 EMPIRICAL RECESS (measurable disputes → n600-real data; HVP-Lanczos first; serial, governed)
+- [x] P4 EMPIRICAL RECESS — satisfied by the 2026-07-08 probe wave (road_anomaly b9da25aa6 · P-A bf1ee1fa8 n600 · δ_R f7209667a · GPU bit-cert · batch-dep law), all $0/governed
 - [~] P5 second red-team DONE: SEAL-TO-RECESS (3c707e2f5) — zero FAILS, 6 amendment-grade PARTIALs bind at recess close; revised synthesis follows recess
-- [ ] P6 **RECURSIVE SEAL (operator 2026-07-07: "recursive adversarial review and deep math pass
+- [~] P6 RECURSIVE SEAL — LIVE as the v7.x seal rounds: r1-r3 findings all FIXED (fix-all), r4 CLEAN = counter 1/3; rounds continue on the ramp+P0 delta to 3 clean
+      **(superseded framing below preserved for provenance)** — (operator 2026-07-07: "recursive adversarial review and deep math pass
       like normal")**: TWO LENSES per round — (i) the finding-disposition VERIFY pass + (ii) the
       DEEP-MATH MEAT HUNT (re-derive every law · hunt unconsumed levers vs the compendium · bug
       hunt the config-as-written · fresh-math sweep). Findings at either lens → revision → NEW
@@ -57,8 +58,16 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
       flight on v2. Also pinned to both: the lane-anisotropy scope guard (u_min-isotropic is
       lane-BLIND — measured at a lane-less checkpoint; must not be cited against anisotropic
       allocation levers).
-- [ ] P7 deliverables 1-7 assembled (DSL WitnessProgram · ledger resolution · schedule ·
+- [~] P7 deliverables — CONSOLIDATED into the two SPECs (SPEC_v75 = config/schedule/measurement/wall-clock/watch-list · SPEC_v8 = next vehicle); remaining assembly rides P8
+      (original enumeration) (DSL WitnessProgram · ledger resolution · schedule ·
       costate · curriculum · measurement plan · wall-clock plan) — triality-consistent landing
+- [ ] P8-LAUNCH CHAIN (SPEC_v75 §4, IN ORDER): (1) #361 ramp actuation lands [LAUNCH-BLOCKING,
+      builder in flight — respawn from the v7.5 memo HONEST SCOPE if stranded] → (2) #360 P0
+      phase-2 (mechanical from p0_forces_derivation) → (3) seal round 5+ on the composed delta
+      to 3 clean (counter 1/3) → (4) knee re-derive D2 → (5) 30-min decode re-measure → (6)
+      governed STOP of run-1 [operator standing GO; preserve all checkpoints] → (7) EVENT-mode
+      v7.5 LAUNCH via tools/launch_witness_run.py → (8) full-facet watch + byte-close 3-arm →
+      exact eval row. THEN v8 per SPEC_v8 gates if needed.
 
 ## Seats (P1)
 | Seat | Charter | Wave | Status | Output |
@@ -2157,3 +2166,12 @@ consumer update required — asserted [consumers-generic]. ---
   apparatus-respecting-and-enhancing · holistic facet reads · children inherit the contract).
   Gate follow-up = task #362 (warn-only spec pointer-integrity, idle-slot only — must not
   displace #361→#360→seal). Every future session loads the vehicle line + contract at byte one.
+- **AUTOMATION/DYNAMICAL FINAL PASS**: costate digest's session-start NEXT line now surfaces the
+  REAL chain (P4 marked done w/ probe receipts; P6 mapped to the live seal counter; P7 →
+  the SPECs; P8-LAUNCH CHAIN = first unchecked item ⇒ every future session boots aimed at #361).
+  Task graph encodes the order STRUCTURALLY: #360 blockedBy #361; #359 blockedBy #345. The
+  self-steering stack, layered: SessionStart costate digest (SENSE: pointer + checkin + NEXT +
+  duty-to-measure) → CLAUDE.md/AGENTS.md vehicle-line contract (loaded byte one) → the SPECs
+  (canonical detail) → Stop hooks (triality/verdict-scope/recall enforcement, involuntary) →
+  task dependencies (order) → resume registry + governed launcher (execution). The harness
+  leads; no step depends on anyone remembering.
