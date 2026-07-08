@@ -171,3 +171,243 @@ already-safe high-persistence blobs. The per-island form is gated on the $0 orac
 (ep300 composed surface); if unrun at GO, ship per-CLASS weights only (still MAJOR-5-compliant)
 and route per-island to run-2. LogitAdjust τ stays global in run-1 (per-class τ_c is a run-2
 build — trainer lacks it; meat §C2-4 disposition).
+
+---
+
+## §1 — THE EXACT WitnessProgram (v3 deltas from v2 marked ★★; v2's ★ deltas inherited)
+
+All v2 flag verifications stand (18/18 law-carrying flags re-verified by P5 by re-execution).
+
+### 1.1 Program sketch (★★ = changed vs v2)
+
+```python
+prog = WitnessProgram(
+    purpose="T5 crucible ARM-PRIMARY v3: lane-first islands + AA + band + hybrid-orientation + pose",
+    base=Mod32SegOnlyControlBase(),
+    curriculum=sealed_205_curriculum(cfg, handoff="event"),   # anneal-epochs 600; tau-end 0.062 ★★
+    levers=[
+        # ISLANDS core — LANE-FIRST priorities (BLOCKER-1) + per-class weights (MAJOR-5) ★★
+        SeedIslandBirth(), SeedIslandEased(), EventTriggeredCurriculum(),
+        LogitAdjust(tau=1.0),                                  # priors pinned per §1.2 (MINOR-6)
+        AmplifyIsland(form="hinge", weight={"lane": 1.0, "movable": 0.28}, gated="witness_alone"),  # ★★
+        PersistenceTopology(weight="1/pers clamped [0.25,4] (R13-gated; else per-class)", warmup=275),  # ★★
+        CacheGtSkeleton(), LengthSigma("fitted-20260707"),
+        # RENDER SUBSTRATE
+        AACoverageRender(ss=2),                                # P11' AA-aware gate (in-tree fix)
+        # BAND + ORIENTATION (geometry-sharing: ONE polynomial → band + comb phase + lane orientation) ★★
+        AnalyticLaneRenderBand(start=350, boundary_relative=True, v_h=174),   # v_h PINNED ★★
+        # hybrid lane-annulus orientation: deterministic tangent from the SAME polynomial (R12-gated) ★★
+        # SCORE-AFFECTING LOSS LEVERS
+        ChromaBoundarySharpen(weight=0.1, margin_band=1.0, start="tau_fire"),  # DPR-tagged §1.2
+        # FINISHER
+        MuonWarmStart(lr_final_frac=0.1),                      # entry = TAU-window EMA-best ★★ (MAJOR-2)
+        # RATE Class-D
+        WeightEntropyPenaltyMLX(lam=15),                       # twin lam=0, mirror-schedule ★★ (P5-4)
+        # OBSERVABILITY (score-neutral, default-ON)
+        GNSpectrumProbe(k_pairs=">=32 + K-trend row"),         # chain-A discipline ★★
+    ],
+)
+prog.validate()
+```
+
+### 1.2 Knob → control-law table (v3 DELTA rows; all unlisted v2/v1 rows inherited unchanged)
+
+| knob | value/law | class | tag |
+|---|---|---|---|
+| ★★ `--tau-anneal-end` (τ_end) | **0.062** — the semiclassical law **τ_end* = m_q / ln5** computed §2.2d from the MEASURED flip-annulus support (GT-margin < 0.10 holds all flip mass); replaces v2's DPR 0.2. Completion at ep600 per the anneal-epochs-600 law (unchanged). Stability caveats + the β-isolating cosine_hold twin-arm in §2.2d | b (derived endpoint) | **D** (birth_death memo 0630 flip-support + Maslov τ·ln5) |
+| ★★ TAU→FIN boundary | **transition-from-stage-best law (MAJOR-2):** on fire at ep_e, restore the TAU-stage-window EMA-best checkpoint (consistent with the per-stage-ckpt mandate), THEN Muon warm-start; momentum warm-started per never-reset-moments (`--muon-warm-start-momentum`). Forfeit table §2.2c | d | D (backtest arithmetic) |
+| ★★ ALL byte-parameterized sections | **ONE joint marginal law (MAJOR-1), §5.0:** admit/shed at byte-close by `argmin [Δ(distortion terms) + λ_bytes·bytes]`, λ_bytes = 6.6586e-7 S/B — pose q*, band umask/giveback, waterfill depth, hood clamp, grammar all under the SAME test. The fixed 0.002 pose threshold is DELETED (it could accept a net-negative move larger than the whole crossing margin — meat arithmetic: 0.002 S ≈ 3,004 B; saving 2-2.5 KB ≈ 0.0013-0.0017 S) | c | D (score-law) |
+| ★★ lane-annulus orientation | **HYBRID deterministic law (MAJOR-4):** lane annulus = tangent field of the stored openpilot polynomial (measured median \|cos\| **0.966** vs boundary normals; learned self-orient transfer 0.893-0.909 — coordinator-supplied, VERIFY the DAG ~3440 row at probe time); hood/horizon = static rows; movable/road residual = self-orient. Comb phase = ego-distance from ξ (L73). **Gate: R12 $0 oracle probe** (swap the lane-annulus orientation field on the ep650 ckpt through the frozen scorer). **Fallback law:** R12 Δd_seg ≥ 0 OR per-pair poly-fit residual > the band-fit threshold ⇒ self-orient retained on the lane annulus (config reverts; hybrid ships only on measured GREEN). Scope honesty: the −48% anchor is ALL-CLASS directional — the polynomial gives the LANE field only; this is a hybrid, not a replacement | d | V-A (0.966 vs 0.893-0.909) + gate |
+| ★★ `--lane-band-dash-comb` | v2's P1-conditional law + two additions: **period = MUTCD-standard dash/gap geometry** (set once at compress time — the P1 audit's null hypothesis; shrinks the L65 mis-phase risk P1 exists for) and **engage = 20-ep cosine ramp on the comb weight** at band-fire+25 (MINOR-13; the measured 3.4× hard-engage collision law, same physics as the band's own ramp). Archive bytes: **0** (§5.1 receipt) | d | V-A gate + measured ramp law |
+| ★★ LogitAdjust priors | **Pinned to ONE artifact (MINOR-6):** class priors from `gt_n600.npz['lstars']` (full 600) recomputed at launch by P12 and stamped into provenance; interim constants from the Surface-B table: lane ln(0.00577) = **−5.155**, movable ln(0.01109) = **−4.50** (v2's −5.13/−4.39 mixed two prior measurements) | a | D (Menon log-prior; pinned source) |
+| ★★ adaptive-ε (eikonal) | **The law, PRINTED (MINOR-10):** ε(t) = clamp( \|c_a(t)\| · √(η(t)·λ_eik(t)/8) · (1+m), **floor 0.3, upper 0.7** ), margin factor m = 0.5, c_a from the 16-pair CFL edge-tracker (`--eikonal-visco-ca-pairs 16`) — registry row `adaptive_eps_cfl_edge_tracking_v1` (#318/#320). Known behavior: with \|c_a\| ~ 10 the clamp binds (adaptive rarely fires) — shipped for the FORM + byte-identity proof. Trainer surfaces verified this session (L3657-3660 defaults; `_visco_eps_for_epoch` linear-decay is the separate legacy path) | c | D (registered; clamps printed) |
+| ★★ ChromaBoundarySharpen | weight 0.1 / margin_band 1.0 = **DPR** (bare constants; cite the LEVER-4c measured-GREEN chroma-at-annulus config as the anchor at probe time); **pose-side guard (MINOR-12):** F11 pose watch stamps the chroma-engage epoch so any d_pose move at engage is attributable (sharpened chroma feeds PoseNet's YUV6 on scored pairs) | a | DPR + telemetry guard |
+| ★★ anneal-wait bound | v2's "waste bounded ≤ ~50 ep" restated honestly (MINOR-7): the true bound is 600 − (earliest arm co-predicate fire); ~50 ep is an EXPECTATION anchored on "the arm engages more mid-TAU levers ⇒ exhaustion shifts later", not a bound. F12 epochs-past-meat alarms it | — | honesty tag |
+| determinism row | inherited + RESTORED sentence (P5-6): **GPU-reorient only if its parity probe passes** (MLX-GPU never bit-exact cross-process, L70) | a | V-S |
+
+All other v2 §1.2 rows (AA gates, q-law direction, λ=15, anneal-epochs 600, pose thresholds) and
+v1 rows inherited unchanged.
+
+---
+
+## §2 — THE DERIVED SCHEDULE (v3: stage-best transitions; τ_end derived; TerminalSolve REMOVED)
+
+### 2.1 Stage graph ★★ (SOLVE removed from run-1 — chain-A terminal verdict)
+
+```
+P(prime, ep0) → CE → TAU → FIN(warm-Muon, entry = TAU-window EMA-best) → END
+   FIN --regression-guard-trip--> RESTORE-BEST --DECIDE--> { TAU-continue | END }
+   TAU/FIN --per-class-meat-exhausted (all classes)--> END   (build B5)
+```
+
+SOLVE appears ONLY in the run-2 spec (§2.3) at a NEW basin under the chain-A acceptance template.
+v2's `↘ SOLVE` branch from TAU is deleted: there is nothing to solve at this basin class
+(measured), and a dead branch in the launch graph is exactly the vacuous-trigger disease req-B
+exists to kill.
+
+### 2.2 Event exits (req B; v3 additions)
+
+Inherited from v2 (CE→TAU cap-fires in practice, stated; TAU→FIN backtested ep625; caps 300/726;
+B1 owed) with three v3 changes:
+
+1. **Per-class veto clause (P5 §2 interaction, one clause):** the TAU→FIN co-predicate does NOT
+   fire while ANY class's own rel slope < −eps_c with stable shares (pooled-slope cancellation
+   guard — lane descending while big-3 regresses must not read as exhaustion). Inputs: the
+   per-class F-rows already LB. eps_c = the pooled eps_rel until per-class calibration data exists
+   (first run measures it — fractional law class (e)).
+2. **Per-epoch slope normalization (MINOR-9):** B1 normalizes the co-predicate slope PER-EPOCH
+   (eps_rel = 2e-4/ep ≡ 5e-3 per 25-ep cadence) so a cadence change cannot silently recalibrate
+   the trigger.
+3. **B9 (anneal re-anchor law) upgraded optional → PREFERRED (P5-2):** ~30 LOC + injection test;
+   removes the residual wait branch AND de-risks the fire-before-complete corner under the faster
+   v3 anneal geometry.
+
+### 2.2b Co-predicate backtest — inherited from v2 verbatim (P5 re-executed it BIT-FOR-BIT:
+ep625/−1.37e-3/n=8 at the shipped 5e-3/V=4). Transfer caveat now sharpened by §2.2d: the backtest
+ran on the control's SLOW anneal (denominator 1000); v3's 600-denominator paths are 1.67× faster —
+the fire epochs are evidence of the PREDICATE's behavior, not of the arm's exhaustion epoch.
+
+### 2.2c ★★ THE TRANSITION LAW + THE HONEST FORFEIT TABLE (MAJOR-2)
+
+**Law:** TAU→FIN fires at ep_e ⇒ restore the TAU-stage-window EMA-best checkpoint θ*_TAU (per-stage
+ckpts are on disk by mandate), THEN Muon warm-start with momentum warm-started from the optimizer
+state (never-reset-moments). The regression guard's restore-best remains FIN-internal and separate.
+
+**What the ep625 backtest actually costs (re-read from the on-disk trace this round):**
+
+| path | θ entering FIN | d_seg | Δ vs cap-path best (ep650, 0.0033662) | ΔS |
+|---|---|---|---|---|
+| v2 as written (fire ep625, warm-start from CURRENT θ) | ep625 | 0.0033929 | +2.67e-5 | **+2.7e-3 (1.5× the crossing margin)** — the un-specified worst case |
+| **v3 law (restore TAU-window EMA-best at fire)** | ep600 | 0.0033716 | +5.4e-6 | **+5.4e-4** |
+| cap path (no event; FIN at 726) | ep650 | 0.0033662 | 0 | 0 (but +101 ep wall-clock) |
+
+The event path buys ~101 ep of wall-clock at a **printed** cost of +5.4e-4 S in never-trained
+d_seg — the BET (stated as a bet) is that warm-Muon on a completed anneal recovers ≥ that from
+θ*_TAU. This cost is folded into §9.1's event-path leg. v2's "one cadence before the actual best"
+framing presented this cost as a validation; corrected. (The forfeit is partly a 25-ep cadence
+artifact — the event-adaptive cadence design, cadence ∝ 1/|slope| with a floor, is named in §9.4
+as a recess item; it costs n600-verdict wall-clock.)
+
+### 2.2d ★★ τ_end DERIVED + THE RECOVERY STORY SPLIT HONESTLY (MAJOR-3, P5-2)
+
+**The semiclassical law (meat §D-3; τ=ε=ħ, Maslov):** the smoothed-partition-vs-argmax error is
+bounded by τ·ln5 in logit units; a pixel whose |margin| > τ·ln5 is decided identically by the
+smoothed and hard partitions. Safety/efficacy at quantile q: **τ_end* = m_q / ln5**, m_q = the
+q-th percentile of the |margin| field on the flip annulus. ln5 = 1.60944.
+
+**Measured margin anchors (corpus, re-read this session):**
+- Flip SUPPORT: per-pixel flip-rate 0.764 for GT-margin < 0.10 and ~0.000 above ⇒ the flip
+  annulus lives at m < 0.10 (`birth_death_persistence_dseg_20260630`).
+- Median flip margin 0.416 (CE surface, lensA 0619); witness-hard pixels 0.42 (feed_bs 0626).
+
+**The arithmetic:**
+- τ_safe(median flip pixel) = 0.416/1.60944 = **0.258** — v2's 0.2 was SAFE at the median
+  (ratifying the DPR's direction) but…
+- τ*(flip core, m_q = 0.10 support edge) = 0.10/1.60944 = **0.0621** — v2's 0.2 was **3.2×
+  above** the value that lets the smoothed field decide the actual flip population. Sharpening was
+  being left on the table exactly where the recovery story is thinnest.
+- **v3 adopts τ_end = 0.062** (tag D). Pre-GO $0 confirm: recompute m_q from THIS vehicle's cached
+  annulus margin field (the #333 rows) — if the witness-margin support edge differs materially
+  from the GT-margin 0.10 anchor, re-derive (the law, not the number, is the commitment).
+
+**The recovery estimate, split into its legs (each with honest status):**
+
+| leg | Δ | evidence status |
+|---|---|---|
+| τ-path completion (control truncated at τ=0.216 → v3 end 0.062) | a REAL Δ now (v2's 0.2 gave Δτ=0.016 ≈ nil — the meat hunt's inconsistency) | UNMEASURED; semiclassically motivated (above); instrumented per-class in-flight (F-rows + anneal-state row) |
+| β completion (3.177 → 4.0) | the other truncation leg | UNMEASURED; first-order anchor = the trace's late-TAU slope (~−1.4e-3 rel/25ep) gives order-1e-5/25ep absolute near ep650 — the old "~4-9e-4 recovery" band is hereby DEMOTED TO DPR (no source derives it) |
+| **confounds, NAMED (P5-2):** | (i) anneal-SPEED: the 600-denominator makes the τ/β geometric paths 1.67× faster than the control trace the backtest ran on (1.15× vs v1's 726); the co-pred fire epochs were measured under the SLOW anneal; (ii) path-shape: τ(ep300) = 0.805 (control) → 0.601 (v2) → **0.532 (v3)** — the arm trains the whole TAU stage at materially sharper τ; (iii) the in-flight instrument therefore measures completion ∧ compression ∧ path-shape ∧ endpoint JOINTLY | the honest statement. De-risks: B9 (now PREFERRED) + spike/liveness guards + the β-isolating **cosine_hold twin-arm** (hold τ at 0.2 matching the control's early path, complete β only) named as the clean decomposition arm if a branch slot opens (§9.4 branch protocol) |
+
+### 2.3 ★★ SOLVE / chain-A — THE TERMINAL FOLD (TerminalSolve OUT; sensor kept, disciplined)
+
+**The recovered chain-A TERMINAL VERDICT (pursuit_chainA LINK 5; recovered post-credit-death,
+committed; review_status: pre-registered protocol, self-executed, fresh-eyes-unreviewed):**
+
+1. **TerminalSolve / GN-CG-from-ep650 = measured NO-GO.** Every solve step (Krylov-TR ladder,
+   ±negative-curvature, cross-subset gradient at every η) WORSENS the loss on independent
+   holdouts, fp32 AND int8-deploy; any conceivable residual gain is bounded by the Krylov Newton
+   decrement (~1e-3 surrogate units) — below the +4.3% reconstruction gap, hence unattributable
+   even if it appeared. **REMOVED from the run-1 stack** (stage graph §2.1). Revisit only at a
+   future checkpoint whose K≥32 spectrum shows K-STABLE coherent negative curvature or a large PD
+   decrement — both $0-measurable with the landed harness.
+2. **S3's indefinite-spectrum headline is KILLED at the full-loss level** (K=128 ratio 0.011 ≪
+   the 0.1 kill band; pre-registered [0.04, 0.14] — actual even more collapsed). Implementation-
+   level per #307: the K=8 measurement was correct FOR ITS SUBSET OPERATOR; "ep650 not 2nd-order
+   exhausted" does not survive K-averaging. **ep650-EMA is exhausted to BOTH orders** at the
+   frozen schedule point (near-stationary g_true ≈ 0.08 vs per-pair σ ≈ 2.0; weakly-convex-flat).
+3. **The wall is REPRESENTATION/BASIS — Arm A + the analytic lane render-band + basis levers
+   carry the entire burden.** Mechanistically complementary to the measured −48% basis anchor:
+   basis-match is PRIOR to capacity; the Hessian at the optimum contains no basis shortcut — the
+   basis must be CHANGED, not re-mixed.
+4. **quadratic_basin ExitEvent survives as a SENSOR with new discipline:** inputs MUST be K≥32
+   spectra WITH a K-trend row (a K≤8 row is NOISE for DECIDE); `HOLD_STAGE_NEGATIVE_CURVATURE`
+   is **DISARMED** (the indefiniteness it would hold on is subset noise). Correctly K-disciplined,
+   the basin-entered predicate at ep650 says "fire the finisher / stop" — consistent with S2's
+   meat exit (M-S2-4). The GNSpectrumProbe SENSE row (§4) carries this discipline at birth.
+5. **Instrument bounds (durable):** analytic HVP ≠ true local curvature by ~35% through the
+   un-disableable uint8-STE ⇒ quadratic-model acceptance FORBIDDEN, measured-loss acceptance
+   only; extreme Ritz MAGNITUDES at small K are fp32-path-fragile (CPU −370 vs GPU −175);
+   MLX-GPU admissible as 4.7× HVP throughput, never bit-exact (L70); int8-dequant round-trip
+   costs +5.2% surrogate loss ⇒ every rung screened at deploy params.
+6. **Lane-anisotropy scope sentence (P5-5, operator pin):** the u_min-isotropy negative was
+   measured at a LANE-DILUTE checkpoint — mod32cap's loss is area-weighted with no lane
+   up-weighting (lane ≈ 0.58% of pixels), so the ep650 Hessian is structurally near-blind to the
+   lane-anisotropy axis. It must NOT be cited against anisotropic-allocation levers
+   (AA/band/comb/along=8/Rebalance); at a lane-bearing run-1 checkpoint the spectrum is a NEW
+   measurement and the question re-opens (the F5 telemetry row notes this).
+7. **Registry (tranche 2):** `gn_hessian_spectrum_indefinite_at_ema_best_v1` gets the KILL
+   update (K=128 ratio 0.011; subset-artifact) + the lane-blind domain_of_validity caveat; the
+   new `hessian_negative_curvature_subset_artifact_v1` row carries both at birth.
+
+**Run-2 SOLVE spec (retained, not launched):** at a NEW basin only, full-P in-trainer GPU solve
+(subset solves NO-GO, #341 +5.1%), measured-acceptance HARD (holdout screen → second-holdout
+rescreen → deploy-params screen → n600 chunked verdict < entry best), and ★★ the trust region in
+the **GN/Fisher pullback metric** (meat §D-1: the natural metric for a frozen-scorer argmax
+objective — margin field = Fisher surrogate, 0.978; same Lanczos machinery on the
+GN-preconditioned operator; changes WHICH directions the radius admits).
+
+### 2.4 — inherited from v2 (finisher budget cap_fin = clamp(1.5·τ̂_e, 150, 350); τ_e=305 INFERRED;
+guard carries the weight; interim 274).
+
+---
+
+## §3 — THE CURRICULUM (v3: §3.2 REBUILT on Surface B — the BLOCKER-1 consequence)
+
+### 3.1 Priming (ep0) — inherited from v2 (F9-fixed gate + P12 pre-GO probe) + one addition:
+P12's config-consistency checklist gains the **LogitAdjust×micro-batch fail-close pair**
+(MINOR-11: trainer L890 refuses `--logit-adjust-loss-tau` with `--micro-batch-pairs>1`;
+ARM-PRIMARY is serial — the checklist keeps any future throughput fix from re-introducing it).
+
+### 3.2 ★★ Per-class sub-curricula — REBUILT on the composed-surface shares (lane-FIRST)
+
+The LADDER (easier-surrogate → real-target under per-class-λ gates; L56: LADDER ⊂ our costate).
+Shares from Surface B (§0.0); every mechanism from v1 is KEPT — the priorities, weights, and
+telemetry emphasis are re-founded:
+
+| class (Surface-B share of d_seg) | birth law | homotopy (surrogate→real) | λ gate law (fractional) | interference guard |
+|---|---|---|---|---|
+| **Lane (0.4396 — THE priority class)** | render-side authority = the analytic band (trained-with, v_h=174); training birth = curve-prior VP-tangent eased seed; residual = dash birth/placement (36.5% of GT lane px flip; 22.5% mass deficit ≈ missing dashes) | band engages as ramped follower (20-ep cosine — the measured deconflict law); comb (P1-cond.) inherits the SAME 20-ep cosine engage at band-fire+25; hybrid deterministic orientation (R12-gated) | logit-adjust −5.155 (pinned) + LengthSigma σ[Road-Lane]=0.377 + **amplify w_lane=1.0** + persistence w_i ∝ 1/pers_i (dash-erasure law; R13) + witness-alone soft-gate | dash-comb OFF until P1; chroma joins at tau-fire (annulus-gated); ep150 ALARM milestone (part_frac[lane] ≥ 0.003) |
+| **Movable (0.1226 — maintenance; largely solved composed: within_flip 5.3%)** | seed at ep0, eased SDF-dilation r(t) 1-Lipschitz over 275 ep (completion gates CE exit) | dilation-GO (the PROVEN transfer mechanism — kept verbatim) | logit-adjust −4.50 (pinned) + **amplify w_movable=0.28** (MAJOR-5 — the pooled 1.0 over-spent here) + hinge gated on witness-alone support | nucleus guard holds TAU until π₁≳5; persistence loss protects births from MCF; ABORT-class ep0 check (part_frac[movable] > 0) |
+| **Big-3 (0.4378 — jitter, incl. hood)** | no birth — boundary-position curriculum | τ geometric anneal to the DERIVED τ_end=0.062 (§2.2d) = the jitter curriculum; eikonal ramp 0.05→0.10 at tau-fire | uniform (λ=1); chroma-at-annulus | LengthSigma prevents over-penalizing lane while big-3 smooth; **hood now has its OWN law**: the 8-byte static clamp at byte-close (§5.1) + a per-class hood F-row (req-H: no longer pooled silently) |
+
+**Coupling guards** inherited from v1 (stagger 275/275/boundary+50; ≤2 new loss-geometry levers;
+fractional island support; per-class λ telemetry watches lane share collapse after band engage).
+The stagger's mechanism-proven ORDER is kept; the Morse-Smale persistence-ORDER refinement (births
+by feature persistence) is a named fractal refinement in §9.4, not a run-1 change (meat §C).
+
+### 3.3 Levels — inherited from v2/v1 (every path denominator an EVENT or cap; τ path now ends at
+0.062 per §2.2d).
+
+---
+
+## §4 — COSTATE + TELEMETRY (v3 deltas)
+
+Inherited from v2 (LB set F1-F4, F9, F10, F11) with:
+- **GNSpectrumProbe (I-5) spec updated (chain-A discipline):** per stage-boundary checkpoint,
+  K≥32 pairs MINIMUM with a K-trend row (e.g. K=8/32 pair for the trend; a K≤8 row alone is
+  NOISE for DECIDE); emits {λ_max, λ₋, n_neg, Newton decrement, grad_norm, k_pairs, K-trend};
+  HOLD_STAGE_NEGATIVE_CURVATURE DISARMED; lane-bearing-checkpoint note attached (§2.3(6)).
+- **Per-class co-predicate veto** (§2.2(1)) consumes the per-class F-rows.
+- **F11 pose watch** additionally stamps the chroma-engage epoch (MINOR-12).
+- **Hood F-row** added (per-class d_seg share for MyCar — req-H; feeds the §5.1 clamp's paired
+  verdict).
