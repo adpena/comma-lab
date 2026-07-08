@@ -2071,3 +2071,8 @@ consumer update required — asserted [consumers-generic]. ---
   blocks sub-0.19 at any d_seg (the open L68 facet, first-class v7 watch)** · rate ~89KB. Fixer's
   LAUNCH_PACKAGE watch-list extended to the FULL facet set (message sent). Memory saved:
   watch-items-are-facets-never-lineage-scoped-holistic-checkin.
+- **ROAD ANOMALY SOLVED (probe b9da25aa6)**: birth-stack recall-without-precision = the
+  actuator (Lane 13.8×/Movable 4.6× over-paint, EXACT mass conservation with Road deficit;
+  band FALSIFIED 3 ways). Run-1 = valid birth-arm measurement, d_seg floored ~0.10-0.13, NOT
+  a floor attempt. v7 LAUNCH-CRITICAL: inherits Movable pressure + logit-adjust ⇒
+  counter-force design/build FIRED (parallel with round 4) → v7.5. Candidate floor-law → council.

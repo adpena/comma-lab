@@ -10238,3 +10238,21 @@ recorded (verdict_scope: instance). LAUNCH_PACKAGE watch-list = FULL FACET SET p
 holistic directive (Road 0.398 binding d_seg facet · pose 4.35/17.4 THE blocker · islands
 born · rate). Road-anomaly flip-destination probe IN FLIGHT (H1 band-over-paint arithmetic
 falsifier first). Round 4 next on the fixer micro-diff. Pointer 0.19110 UNMOVED (means).
+
+## FEED-roadfloor (2026-07-08) — Road anomaly SOLVED: birth-stack recall-without-precision imposes a majority-class floor (probe b9da25aa6)
+SIGNAL: run-1 Road d_seg 0.398 flat while siblings converge (operator question). DIAGNOSTIC
+($0, n600 telemetry + arithmetic): witness paints Lane 13.8×/Movable 4.6× GT area; EXACT mass
+conservation (rare excess 0.1191 ≈ majority deficit 0.1189); 71% flip mass GT-Road, 79%
+INTERIOR (area-theft not jitter). H1-mechanism (analytic band) FALSIFIED 3 ways (band gated
+to ep350 · init lane_px=0 · 1-4K px ≪ 18K needed); H2 boundary/H3 EMA out. ACTUATOR = the
+island-birth loss stack (logit_adjust −5.14/−4.39 + persistence-recall + island-amplify:
+recall-only, NO precision counter-force, NO post-birth completion/retraction event). Road
+asymptotes to a LOSS-IMPOSED floor ~0.40 ⇒ run-1 converged d_seg floored ~0.10-0.13 (valid as
+the birth-arm measurement, NOT comparable to bulk-only floors like #205 CE 0.005). CANDIDATE
+LAW (council, not yet registered): rare-class-birth recall pressure without a precision cap
+imposes a majority-class d_seg floor = the conserved over-paint area. RESPONSE: v7 inherits
+the MOVABLE half + logit-adjust (band/regime fixes only the lane half) ⇒ counter-force
+design/build fired (FP-area penalty on birthed classes · post-birth completion event ·
+logit-adjust softening/regime-gating · birth-stack ramp-after-bulk) → v7.5 compile → seal
+continues. verdict_scope: formulation — THIS birth-stack composition; island-birth as a
+paradigm is CONFIRMED working (islands born: Lane 1.0→0.039, Movable 1.0→0.0069).
