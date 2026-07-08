@@ -2076,3 +2076,11 @@ consumer update required — asserted [consumers-generic]. ---
   band FALSIFIED 3 ways). Run-1 = valid birth-arm measurement, d_seg floored ~0.10-0.13, NOT
   a floor attempt. v7 LAUNCH-CRITICAL: inherits Movable pressure + logit-adjust ⇒
   counter-force design/build FIRED (parallel with round 4) → v7.5. Candidate floor-law → council.
+- **ROUND 4: CLEAN — clean pass #1 (2fb876c43)**: all 5 r3-MINOR fixes independently re-derived
+  correct (F-1 affine-shift cancellation holds on EVERY re-anchor path — piecewise on tau state
+  not input epoch; F-3 assert covers both entry paths, no lever removes the band; budget
+  3.4537→3.47/8.314d reproduced from raw ts; no stale pins; watch-list faithful to measured).
+  2 INSTANCE observations: O-1 cosmetic rounding (4.35 correct for true d_pose) · O-2 surface-3
+  window is run-1's clock value — v7's is event-determined ≤500 (folded into launch package).
+  Counter 1/3. NEXT: counter-force levers land → v7.5 compile → rounds continue on that delta
+  (r4-verified surfaces stay verified; only the v7.5 diff reviews).
