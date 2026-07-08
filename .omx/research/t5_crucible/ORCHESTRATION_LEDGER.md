@@ -265,6 +265,25 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ⛔ REQUIREMENT V BOUND (operator 2026-07-08 verbatim: "The config must be defined in the
+DSL no ad hoc or hand crafting... pydantic and possibly verification and validation tools as
+well and type checking and formalization and integrate all with apparatus to prevent more
+dumbass bullshit") ---
+- LAW: the ONLY legal launch-config authoring surface is a DSL WitnessProgram through a typed
+  pydantic-v2 schema (types/ranges/units/provenance-class per the value ladder; extra=forbid;
+  HARDCODED fields require waiver rationale), compiled with LawRef constants, .validate()d.
+  `witness_autoconfig.derive_crucible_v6_config`-style parallel argv assembly = the banned
+  ad-hoc path (it is where PR95 skeleton + hardcoded epochs + bare constants re-entered).
+- ENFORCEMENT (Opus builder FIRED, task #353): typed_config schema (adapter → WitnessProgram,
+  no rewrite of DSL internals) · v6 re-expressed under the BYTE-IDENTITY migration law ·
+  program manifest (typed-config hash + argv sha256) REQUIRED by the launcher (hand argv =
+  REFUSE; loud stamped escape hatch only) · drift-detector leg + STRICT preflight gate for
+  bypass paths · mypy target on witness_dsl.
+- COMPOSITION: schedule-provenance gate (in flight) = WHAT schedule values may be
+  (event/derived/cap); requirement V = WHERE a config may be authored (DSL only). The v7
+  restart config MUST be authored through this path. Memory:
+  config_must_be_dsl_defined_typed_validated_no_adhoc_20260708. Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: BLINDED WITNESS-NATIVE SCHEDULE DERIVATION (Phase-1 37a974742 pre-comparison,
 Phase-2/3 fa6b67edc; .omx/research/witness_native_schedule_derivation_20260709.md) ---
 - VERDICT: **CONTINUOUS.** One variational flow in ONE parameter τ (τ=ε=ħ, Modica-Mortola/Baldo
