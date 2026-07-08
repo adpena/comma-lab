@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ⛔ OPERATOR DIRECTIVE: BUILD ALL UNBUILT + COUNCIL DECIDES INCLUSION (2026-07-08
+verbatim: "build all unbuilt items and wire and integrate and DSL and triality and make sure
+the grand council considers whether to include or not") ---
+- LAW: every item reaches BUILT+WIRED+DSL+TRIALITY selectable form; inclusion classes =
+  {IN-v7 · v7.1-ARM · REGISTERED-duty-to-measure}; "not built" is no longer a legal class.
+- BUILD-WAVE-1 FIRED (trainer-independent, 3 Opus): D16 Metal kernels (persistence-pool
+  first, stop-if-<10%) · #330 verdict memory reclaim (malloc_trim-vs-subprocess measured) ·
+  D15 micro-batch routing (logit-adjust + L_τ equivalence — unblocks the 2-4× lever).
+- BUILD-WAVE-2 QUEUED behind the 3 seal fixers (same seams): R-7 finishers (β2-window LR
+  rewarmup + Polyak finisher EMA) · event-gates fired-state persistence generalization ·
+  adaptive-ε selectable wiring + #320 A/B verdict check.
+- T3 INCLUSION SYMPOSIUM PRE-STAGED (CONVENING_T3_v7_inclusion_symposium_20260708.md):
+  11-item docket incl. the basis raise (R-1) + fp16-feats (they COMPETE for the memory
+  envelope — S2 certifies the COMPOSED set, not items in isolation); fires on build-wave
+  landing; verdict → v7.3 compile → round-2 seal covers the included set. Pointer UNMOVED.
+
 --- ✅ LANDED: SELF-PACED τ-ADVANCE (105d83ad2/d0ed0f58b/5493f225d + absorbed hunks verified
 at HEAD; 23 new tests; V7 BUILD SET COMPLETE — 144/144 across all 6 feature suites at HEAD) ---
 - --tau-advance-mode {clock,event}: SAME geometric octave ladder values (verified vs
