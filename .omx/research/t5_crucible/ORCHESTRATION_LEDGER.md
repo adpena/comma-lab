@@ -120,8 +120,15 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
-L. **SCALING: COARSE → FINE → EXTREMELY FINE → ASYMPTOTE, under INFINITE COMPUTE (operator
-   2026-07-07).** Every "exhausted/flat/NO-GO" verdict is SCHEDULE-RELATIVE unless proven
+L. **SCALING: COARSE → FINE → EXTREMELY FINE → ASYMPTOTE, under INFINITE COMPUTE + SEPARATRIX
+   ASYMMETRY (operator 2026-07-07).** ASYMMETRY ADDENDUM: the separatrix is NOT symmetric —
+   flip costs and responses are one-sided per class-pair (Road→Lane FP ≠ Lane→Road erasure;
+   winner-vs-runner-up logit perturbations act asymmetrically on the decision surface; the two
+   sides of the margin field carry different measured flip masses and UNIWARD costs). Any
+   negative that measured a SYMMETRIC perturbation/response and concluded "inert/flat/at-chance"
+   may have AVERAGED AWAY a one-sided effect — re-review such negatives per-side. Design
+   consequence: losses/gates/amplifiers on the boundary may be SIGNED (one-sided hinge per
+   class-pair direction), not symmetric bands.** Every "exhausted/flat/NO-GO" verdict is SCHEDULE-RELATIVE unless proven
    scale-robust: exhaustion at a coarse point of the anneal ladder (τ=0.216 truncated, β=3.177,
    1000-ep budget) does NOT bound the asymptote (τ→τ*→0, β→∞ effective, PR95's 29,650-ep /
    8-stage existence proof — each stage exhausts before the next reopens descent; that IS
@@ -581,3 +588,12 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   wall = BASIS, Arm A carries the burden. TRANCHE-2 NOTE: the PROVISIONAL spectrum equation's
   kill-update must cite the FINAL numbers (0.163/extrap-0.08/transfer-150×), not the recovered
   draft's 0.011.
+- 2026-07-08T~00:4x REQUIREMENTS J/K/L BOUND (precision+margin-denominated significance ·
+  native-format+capacity per technique · scaling-to-asymptote under infinite compute + separatrix
+  asymmetry). **NEGATIVES SCALE-VALIDITY RE-REVIEW LAUNCHED** (12-item inventory: chain-A
+  exhaustion verdicts, meat-exit, FEED-08l, #207, viscosity, LEVER-4/UniWARD symmetric-measurement
+  suspects, hosc, subset-solve, basin-scoped wall + v3's asymptotic-tail check). Rationale: every
+  negative was measured at ONE coarse schedule point (τ 0.216-frozen, 1000-ep) vs the PR95
+  29,650-ep/8-stage reference — exhaustion is schedule-relative; exits should refine, not
+  terminate; symmetric probes may average away one-sided separatrix effects. 3 in flight:
+  seal-round-2 (J+K pins) · wave-1 finisher · negatives re-review.
