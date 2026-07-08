@@ -2216,3 +2216,10 @@ consumer update required — asserted [consumers-generic]. ---
   self-protection covers birth_completion. HARDENING NOTE (low, → #364): birth_completion is on
   the direct register() path, not GATE_KEY_PREFIXES static set — runtime-protected but not in the
   static coverage dict; add for belt-and-suspenders. NOT a launch blocker.
+- **#364 HARDENING COMPLETE (5370dbc77) — no orphan debt**: corrected semantics (birth_completion
+  is a DIRECT FnResumable, NOT a build_gate gate — GATE_KEY_PREFIXES was wrong). Added
+  DIRECT_CONTROLLER_NAMES canonical frozenset + static coverage test asserting the trainer's
+  register("NAME",...) set == canonical. Closes birth_completion's gap AND retroactively gates the
+  5 #358 direct controllers (rng/closed_loop/tau_advance/evt_curriculum/polyak) that #358 wired as
+  resumables but never STATICALLY asserted as a complete set. Resumability of ALL new stuff now
+  BOTH runtime-manifest AND static-coverage protected. 26 tests green. Resumability P0 satisfied.
