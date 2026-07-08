@@ -204,6 +204,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~12:0x: HARDENING SWEEP COMPLETE (all 6 items, tree clean) ---
+- LAUNCHER (run-1 gate) FIXED+GUARDED (e28ff371e): root cause MEASURED — launch.sh was rewritten
+  IN-PLACE (same inode) ~5.5h into the live mod32cap run; bash reads scripts LAZILY and resumed
+  at a shifted byte offset at trainer exit → the orphaned `--ckpt-every` executed. Fix = atomic
+  tmp+os.replace in write_launch_sh; guards = bash -n + no-orphaned-continuations + inode-replace
+  test (41/41). The failing test was STALE (builder was right; test never updated for the
+  deliberate #!/usr/bin/env bash move) — aligned, not weakened. NEW failure class recorded:
+  launch_sh_inplace_rewrite_under_live_bash (opened/measured + gate-landed).
+- #265 already folded (FEED-09b; task completed).
+- LEDGER CLOSURES DONE: all log→dir consumers through resolve_run_dir_for_log; 9 bare JS catches
+  now log + null-guarded setTxt on 8 DOM writes + fd-leak fix at 3 spawn sites; 2 resolution
+  rows appended; dashboard SANDBOX diff triaged+committed.
+- v5.1 errata correctly LEFT (v6 superseded mid-window; v5 pinned append-only — verified).
+- Orphans recovery-committed with review_status flags. Suite: 205/205 mandated subsets;
+  pre-existing repo lint debt noted out-of-scope.
+
 --- LANDING FOLDED 2026-07-08T~11:0x: V6 (feec6e7af+b5771b531) — THE LAUNCH CANDIDATE ---
 - Crossing re-executed unrounded, UNMOVED: central 0.1897336 (margin 0.0013664) · win9
   0.1817034 (0.0093966) · bars 0.0010137/0.0010940 · ILC 9.9573e-4. Central run-1 ≈ 0.26 does
