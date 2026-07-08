@@ -10633,7 +10633,11 @@ direction-only, real byte-close, positive control valid): the ~2.5 cap is **PAIR
 source-dependent** — PoseNet reads the flow BETWEEN frames, indifferent to photorealism. store-nothing
 GENERATED pair (warped witness-f0 + witness-f1) = **d_pose 1.995** (≈run-1 1.79, the BEST); real f0 +
 cartoon witness-f1 = **10.42** WORSE + rate_term ≈573 (860 MB keyframes) ⇒ **Option B (store real frame)
-DOUBLY DOMINATED = DEAD.** Binding wall = the rank-6 HOMOGRAPHY FLOW MODEL (trained dxi only ~11% over
+DOUBLY DOMINATED = DEAD** (verdict_scope: FORMULATION — the "store-real-photometric-f0-as-pose-carrier"
+formulation; dominated on BOTH axes by orders of magnitude so NOT n-fragile — rate 573 is a hard measured
+byte fact (1.43 MB/keyframe × 600), d_pose 10.42-vs-1.995 is a robust same-pairs contrast; does NOT kill
+the store-information-for-pose FAMILY: store-nothing generated (1.995) + the flow-model-upgrade path both
+remain alive). Binding wall = the rank-6 HOMOGRAPHY FLOW MODEL (trained dxi only ~11% over
 deterministic 1.995). FORK COLLAPSES to ONE path: KEEP the store-nothing generated pair, UPGRADE the
 flow model rank-6-homography → depth-stratified per-region flow = #365 (the task-space-native design).
 REUSE (f8f8f4479): no public pose blob liftable — Quantizr/qpose/fp4_mask_gen low-pose is WELDED to
