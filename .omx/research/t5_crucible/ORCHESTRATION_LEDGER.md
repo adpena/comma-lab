@@ -355,3 +355,19 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   knows:" at SessionStart when a convening is live). The L83 root cause (writes-better-than-reads)
   now has its structural cure: retrieval is a 1-second query + an auto-packet + a contract clause
   + a push — no longer volitional, no longer the operator's memory. Task #346 CLOSED.
+- 2026-07-08T~00:5x **P3b DRAFT v2 LANDED** (`DRAFT_OPTIMAL_STACK_v2_20260707.md`, supersedes v1
+  append-only; all F1-F17 dispositioned §0.1). Headline: crossing arithmetic recomputed — verified
+  triple d_seg ≤0.0011 ∧ d_pose ≤3e-5 ∧ rate ≤0.062 → S 0.1893 < 0.19110 (pose SUCCESS bar 3e-5;
+  1.5e-4 demoted to milestone/hard-kill); AA IN ARM-PRIMARY ep0 (P11 $0 memory+throughput gate +
+  BA decode LB-at-byte-close; byte-close-selectable repair); comb P1-pass conditional inclusion
+  law; `--anneal-epochs 600` event-margin law makes TAU→FIN REAL — **$0 co-predicate BACKTEST RUN
+  this session on the mod32cap 41-row trace: first sustained fire ep625 (one cadence before the
+  ep650 best); CE cap-fires, stated**; twin re-purposed to λ=0 (single-dim entropy attribution +
+  clean Class-D×B recess; per-stage kills STACK-level); chain-A folded (λ₋ collapses ~1/K, u_min
+  ISOTROPIC — no basis-mechanism shortcut, no cheap descent at ep650 ⇒ TerminalSolve-from-ep650
+  measured NO-GO; SOLVE acceptance = measured-verdict HARD, K=128 branch carried); S5-R5 composed
+  ceiling folded (island share 0.562; **big-3 anneal-completion recovery = the named binding
+  constraint**); #342 solve inventory produced (§11, 15 blocks); dual probability model printed
+  (independent 2-6% / with-repair 8-15%); central ≈0.26 does NOT cross (stated per NO-FAKE);
+  wall-clock corrected 35%→5-27%. NEW pre-GO probes: P11 (AA gate) + P12 (ep0 init probe, F9).
+  Next per queue: second red-team pass on v2 → P4 empirical recess (P5/P7 first per PowerPlay).
