@@ -10603,3 +10603,26 @@ depth+pose) — CONVERGES with FEED-poseresearch. Does NOT reshape v8 seg archit
 frame0/luma, seg frame1/chroma = good frozen-scorer match). Eqs `softmax_tau_maslov_tropical_limit_v1`,
 `cartoon_directional_annulus_grid_bulk_rate_law_v1`, `indirect_task_rd_sufficient_statistic_floor_v1`
 COUNCIL-FLAGGED (anchors owed). Pointer 0.19110 UNMOVED — MEANS.
+
+## FEED-posetaskspace (2026-07-08) — TASK-SPACE-NATIVE POSE: Morse-Smale-stratified parallax warp (operator riff → design)
+Operator: "there is likely a way native to our SDF-level-set-witness + Morse-Smale that falls out and
+is BETTER than Quantizr/HNeRV, informed by openpilot parallax/depth." WORKED THROUGH (design
+pose_taskspace_native_morse_smale_depth_warp_design_20260708). THE UNIFICATION: the store-nothing screw
+(`xi_pose_coder.py` = ground homography H=K(R−t nᵀ/d)K⁻¹, d=1.22) is a PLANE-ONLY warp — EXACT for
+ground pixels (road+lane, coplanar) AND for sky (parallax→0 at ∞), WRONG only OFF-plane (movable +
+vertical structure) where it sets depth-parallax γ(p)≡0. The defect is spatially CONCENTRATED in
+exactly the regions the argmax partition already isolates. RIGOROUS (not decorative): depth is smooth
+WITHIN a Morse cell, jumps ONLY at OCCLUSION separatrices (a labeled SUBSET of RAG edges; coplanar
+road↔lane = no jump). So depth is a PER-CELL model and the cells are FREE (paid for d_seg). PER-REGION
+WARP LAW: ground=H(ξ) closed-form-from-openpilot-calibration (0 params, dominant area) · sky=R(ξ)
+rotation-only (0) · hood=id (0, #139) · movable islands=1 stored inverse-depth each (openpilot lead
+dist / comma2k19 #158, ~few B) · structure=coarse depth (handful). SAME twist ξ = dual-use (warps
+partition for d_seg, IS pose for d_pose). BYTES ~1–2 KB (ξ store-nothing + occlusion bits + sparse
+off-plane depths) vs Quantizr ~270 KB full-RGB-recon ⇒ DOMINATES on rate ~100× at equal pose IF d_pose
+collapses. = Option A made TASK-SPACE-NATIVE (depth free-per-region, not learned-dense). DECISIVE $0
+LADDER (read-only, frozen CPU-torch PoseNet): M1 ground-only warp real_f0 → reproduce ~2.5 cap
+(control) · M2 per-region warp real_f0 → does d_pose collapse ≪2.5? (the test) · M3 per-region warp
+TASK-SPACE f0 → does PoseNet need real appearance or just correct motion? (store-nothing viability) ·
+free companion: d_pose-vs-|t_forward| scatter + off-plane parallax mass. COMPLETES #194, consumes
+#325–327/#158/tac.lie/warp_real_luma_frame0/depth_motion. Eq `morse_smale_stratified_parallax_dpose_v1`
+COUNCIL-FLAGGED (anchor owed M2/M3+byte-close). Task #365. HELD for GO + a131065f. Pointer 0.19110 UNMOVED.
