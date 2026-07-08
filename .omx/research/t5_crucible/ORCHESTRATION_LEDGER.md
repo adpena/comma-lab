@@ -265,6 +265,23 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: SELF-PACED τ-ADVANCE (105d83ad2/d0ed0f58b/5493f225d + absorbed hunks verified
+at HEAD; 23 new tests; V7 BUILD SET COMPLETE — 144/144 across all 6 feature suites at HEAD) ---
+- --tau-advance-mode {clock,event}: SAME geometric octave ladder values (verified vs
+  _softmax_temp_for_epoch), dwell EVENT-driven (powerlaw_meat per-band, dwell-gated,
+  thin-data fail-safe) + per-octave MAX-DWELL loud backstop; N/caps/min-dwell DERIVED from
+  anneal-epochs + min-stage (no bare literals). β co-anneals on octave fraction; LR
+  RE-CLOCKED to octave fraction (fixed-epoch LR would smuggle the hardcoding back). Ladder
+  FREEZES at Muon; no-double-driver enforced 3 ways.
+- RESUME DETERMINISM SOLVED: __ta_* sidecar keys persist rung/history/fire-log per ckpt;
+  mid-octave crash-resume reproduces the IDENTICAL τ sequence (tested). Generalizing to the
+  3 transition-gates' fired-state = cheap same-store follow-up (documented).
+- OPEN KNOB → SEAL + OPERATOR: config emits event (the directive); builder memo recommends
+  CLOCK for the FIRST unified-L_τ run (one unproven variable at a time; event couples 3
+  schedules to a never-run sensor), one-token flip to event for run-2. The confound lens
+  arbitrates; decision surfaced pre-launch. SEAL ROUND 1 FIRING (3 lenses + structure).
+  Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: SAFE-COMPILE (2950e6133; 22 tests; D17→v7.1-ARM; memo mlx_safe_compile) ---
 - OUR deterministic mx.compile: partitioner + 3-certificate harness (bit-equality max|Δ|=0 ·
   N=5 cross-process · wall-clock) + fail-closed manifest activation. 4/4 regions CERTIFIED
