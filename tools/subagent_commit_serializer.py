@@ -73,6 +73,43 @@ body — the serializer_whole_file_staging_absorbs_sibling_hunks class,
 incident commits 1d6704e5b/049aa0d9f). rc=6 refusal; retry after the
 sibling lands (HEAD then matches your base and the check passes).
 
+Post-commit verification + shared-file discipline (FIX-CLOBBER 2026-07-08)
+─────────────────────────────────────────────────────────────────────────
+Two 2026-07-08 incidents showed the pre-commit sha guards are blind to
+clobbers that PRECEDE the caller's snapshot:
+
+  (1) A sibling's file REVERT landed in the working tree BEFORE a builder
+      snapshotted its --expected-content-sha256, so the builder declared
+      (and every pre-commit check verified) the CLOBBERED content. rc=0
+      committed the sibling's copy under the builder's body — caught only
+      by a post-commit `git show`.
+  (2) A whole-file `git add` swept a DIFFERENT sibling's uncommitted hunks
+      into the wrong commit body (mis-attribution).
+
+Two structural additions close/mitigate these:
+
+* POST-COMMIT VERIFICATION (rc=7, automatic when --expected-content-sha256
+  is passed): after the commit lands, the serializer re-reads each declared
+  file AT HEAD (`git cat-file blob HEAD:<file>`) and compares to the
+  declared sha. This is the ONLY check that reads HEAD after the ref moved,
+  so it catches the pre-snapshot-clobber gap. The commit is KEPT (not
+  auto-reverted — it may be a sibling's newer legitimate landing); the
+  serializer prints reconcile guidance (`git show`, re-apply via
+  --patch-file, or `git revert --no-commit <sha>`) and returns rc=7.
+
+* --patch-file INTENT-MANIFEST MODE (the real fix for shared hot files):
+  supply a patch of EXACTLY your hunks; the serializer applies it with
+  `git apply --cached` to a temp index seeded from HEAD, IGNORING the
+  working tree, so no sibling hunk can leak in. --expected-diff-lines
+  <file>=<N> is a warn-only heuristic that flags a grossly larger staged
+  diff for callers still using whole-file `git add` on shared files.
+
+Return-code map: 0 ok · 2 fatal/malformed/timeout · 3 concurrent-edit
+(lock-wait) · 4 pre-lock expected-sha mismatch · 5 staged-sha mismatch /
+high-risk-file-missing-sha · 6 base-sha mismatch (absorption) · 7 POST-COMMIT
+HEAD mismatch (clobber) · 8/9 sister-checkpoint ABORT/WAIT · 10 bare-override ·
+11 corrupt-checkpoint.
+
 Behaviour
 ─────────
 1. Acquires fcntl.flock(LOCK_EX) on .omx/state/.commit-lock (blocking; with
@@ -586,6 +623,167 @@ def _staged_content_check(
     return diffs
 
 
+def _post_commit_content_check(
+    expected: dict[str, str],
+) -> dict[str, tuple[str, str]]:
+    """FIX-CLOBBER (2026-07-08 Catalog #405): POST-commit HEAD-blob verification.
+
+    Closes the pre-snapshot-clobber gap (incident 1, 2026-07-08): a sibling's
+    file REVERT landed in the working tree BEFORE the builder computed its
+    ``--expected-content-sha256`` snapshot, so every PRE-commit working-tree
+    check (rc=4 pre-lock, rc=5 staged) compared the declared sha against the
+    already-clobbered content and PASSED by construction — the serializer
+    committed the sibling's copy under the builder's body at rc=0. The gap is
+    structural: all prior checks read the WORKING TREE / INDEX, never HEAD
+    after the ref moved.
+
+    This check is the ground-truth "did what I declared actually land in HEAD?"
+    verification. It re-reads each declared file's content AT HEAD via
+    ``git cat-file blob HEAD:<file>`` (the just-committed blob) and compares
+    its SHA-256 to the caller's declared ``--expected-content-sha256`` (the
+    content the caller intended to commit, observed at the START of its work).
+    A mismatch means the committed content is NOT what the caller declared —
+    a clobber (or any TOCTOU divergence between intent and reality) slipped
+    through the working-tree-based checks.
+
+    Returns ``{relpath: (declared_sha, committed_head_sha)}`` for every
+    mismatch; empty dict when every declared file's HEAD blob matches (or
+    nothing was declared → backward-compatible no-op).
+    """
+    if not expected:
+        return {}
+    head = _hash_head_blob_files(list(expected.keys()))
+    diffs: dict[str, tuple[str, str]] = {}
+    for path, want in expected.items():
+        got = head.get(path, "MISSING")
+        if got != want:
+            diffs[path] = (want, got)
+    return diffs
+
+
+def _parse_expected_diff_lines(arg_values: list[str]) -> dict[str, int]:
+    """Parse ``--expected-diff-lines <file>=<int>`` flag values (Catalog #405).
+
+    Each value must be ``<relpath>=<non-negative-int>`` — the caller's hint for
+    how many added+deleted lines its OWN edits to the file comprise. Used by
+    the warn-only hunk-attribution heuristic to flag a grossly larger staged
+    diff (a whole-file ``git add`` that swept a sibling's hunks in — incident 2,
+    2026-07-08). Empty list -> empty dict. Raises ValueError on malformed input.
+    """
+    out: dict[str, int] = {}
+    for v in arg_values or []:
+        if "=" not in v:
+            raise ValueError(
+                f"--expected-diff-lines must be '<relpath>=<int>'; got {v!r}"
+            )
+        path, _, n = v.partition("=")
+        path = path.strip()
+        n = n.strip()
+        if not path or not n:
+            raise ValueError(
+                f"--expected-diff-lines has empty path or count in {v!r}"
+            )
+        try:
+            count = int(n)
+        except ValueError:
+            raise ValueError(
+                f"--expected-diff-lines count must be an integer; got {n!r} "
+                f"for path {path!r}"
+            ) from None
+        if count < 0:
+            raise ValueError(
+                f"--expected-diff-lines count must be >= 0; got {count} for "
+                f"path {path!r}"
+            )
+        out[path] = count
+    return out
+
+
+def _staged_diff_line_count(files: list[str], env: dict) -> dict[str, int]:
+    """Return added+deleted line count of each file's STAGED diff vs HEAD.
+
+    Uses ``git diff --cached --numstat HEAD -- <files>`` honoring env's
+    GIT_INDEX_FILE (so it reads OUR temp index). Binary files (numstat ``-``)
+    map to -1 (skip the heuristic). Files with no staged change map to 0.
+    """
+    out: dict[str, int] = {f: 0 for f in files}
+    if not files:
+        return out
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--cached", "--numstat", "HEAD", "--", *files],
+            cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return out
+    if proc.returncode != 0:
+        return out
+    for line in proc.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 3:
+            continue
+        added, deleted, path = parts[0], parts[1], parts[2]
+        path = path.strip()
+        if added == "-" or deleted == "-":
+            out[path] = -1  # binary — heuristic not applicable
+            continue
+        try:
+            out[path] = int(added) + int(deleted)
+        except ValueError:
+            continue
+    return out
+
+
+def _parse_patch_target_files(patch_text: str) -> list[str]:
+    """Extract the target file paths a unified diff / git patch touches.
+
+    Reads the ``+++ b/<path>`` headers (falling back to ``diff --git a/x b/x``)
+    so the serializer can log + sister-checkpoint the patch's file set without
+    a --files argument. Returns paths in first-seen order, de-duplicated.
+    """
+    files: list[str] = []
+    seen: set[str] = set()
+
+    def _add(p: str) -> None:
+        p = p.strip()
+        if p and p != "/dev/null" and p not in seen:
+            seen.add(p)
+            files.append(p)
+
+    for line in patch_text.splitlines():
+        if line.startswith("+++ "):
+            target = line[4:].strip()
+            # strip a leading a/ or b/ prefix
+            if target.startswith(("a/", "b/")):
+                target = target[2:]
+            # strip a trailing tab-timestamp (unified-diff dialects)
+            target = target.split("\t", 1)[0].strip()
+            _add(target)
+        elif line.startswith("diff --git "):
+            # 'diff --git a/<path> b/<path>' — use the b/ side.
+            rest = line[len("diff --git "):].strip()
+            toks = rest.split()
+            if len(toks) == 2 and toks[1].startswith("b/"):
+                _add(toks[1][2:])
+    return files
+
+
+def _git_apply_cached(patch_path: str, env: dict) -> tuple[int, str]:
+    """Apply a patch to env's GIT_INDEX_FILE ONLY (``git apply --cached``).
+
+    Patch-file (intent-manifest) staging path — the real fix for shared files
+    (incident 2, 2026-07-08). ``--cached`` applies the patch to the temp index
+    (seeded from HEAD) and IGNORES the working tree entirely, so a co-mingled /
+    clobbered working tree cannot leak foreign hunks into the commit: only the
+    caller's declared patch lands. Context lines are validated against the temp
+    index (== HEAD), so a patch not cleanly based on HEAD fails LOUDLY here
+    (rc != 0) rather than silently mis-applying — a feature.
+    """
+    cmd = ["git", "apply", "--cached", "--", patch_path]
+    proc = subprocess.run(cmd, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
+    return proc.returncode, (proc.stdout + proc.stderr).strip()
+
+
 def _git_commit(message: str, env: dict, allow_empty: bool = False) -> tuple[int, str, str]:
     """Run `git commit -m <message>` against env's GIT_INDEX_FILE.
 
@@ -700,6 +898,38 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--patch-file",
+        default=None,
+        help=(
+            "FIX-CLOBBER intent-manifest mode (2026-07-08 Catalog #405): supply "
+            "a unified diff / git patch whose hunks are EXACTLY what you intend "
+            "to commit. The serializer applies it with `git apply --cached` to a "
+            "temp index seeded from HEAD (the WORKING TREE is ignored entirely), "
+            "so a co-mingled or clobbered working tree cannot leak a sibling's "
+            "hunks into your commit body — the real fix for editing shared hot "
+            "files. Generate it with `git diff HEAD -- <file>` (your hunks only) "
+            "or `git add -p <file>` then `git diff --cached -- <file>`. When set, "
+            "--files is derived from the patch and the working-tree sha checks "
+            "(rc=4/5/6) are skipped as inapplicable; post-commit HEAD verification "
+            "(rc=7) still runs if you pass --expected-content-sha256. A patch not "
+            "cleanly based on HEAD fails LOUDLY at apply time."
+        ),
+    )
+    parser.add_argument(
+        "--expected-diff-lines",
+        action="append",
+        default=None,
+        help=(
+            "Catalog #405 warn-only hunk-attribution heuristic: hint the "
+            "added+deleted line count of your OWN edits per file "
+            "('<relpath>=<int>', repeatable). If the actually-staged diff is "
+            "grossly larger (>2x) than the hint, the serializer WARNS + logs "
+            "(never refuses) — a whole-file `git add` that swept a sibling's "
+            "hunks in shows up as a gross diff-size overshoot. For a hard "
+            "guarantee on shared files use --patch-file instead."
+        ),
+    )
+    parser.add_argument(
         "--no-sister-checkpoint-check",
         action="store_true",
         help=(
@@ -715,6 +945,21 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # FIX-CLOBBER (2026-07-08 Catalog #405): patch-file (intent-manifest) mode.
+    # When --patch-file is set the working tree is NOT the source of truth; the
+    # patch text is. Derive the file set from the patch so logging + the sister
+    # checkpoint scan still see it, and stage via `git apply --cached` (not a
+    # whole-file `git add`).
+    patch_mode = bool(args.patch_file)
+    patch_text = ""
+    if patch_mode:
+        try:
+            patch_text = Path(args.patch_file).read_text()
+        except OSError as exc:
+            parser.error(f"--patch-file could not be read: {exc!s}")
+        if not patch_text.strip():
+            parser.error(f"--patch-file {args.patch_file!r} is empty")
+
     # Resolve file list
     files: list[str] = list(args.files or [])
     if args.stdin_files:
@@ -723,10 +968,19 @@ def main() -> int:
             if line:
                 files.append(line)
 
-    if not args.no_stage and not files:
+    if patch_mode and not files:
+        # Derive the committed file set from the patch headers.
+        files = _parse_patch_target_files(patch_text)
+        if not files:
+            parser.error(
+                "--patch-file has no recognizable '+++ b/<path>' / 'diff --git' "
+                "target headers — cannot determine which files it commits"
+            )
+
+    if not args.no_stage and not patch_mode and not files:
         parser.error(
             "must pass --files or --stdin-files (or --no-stage if files are "
-            "already staged)"
+            "already staged, or --patch-file for intent-manifest staging)"
         )
 
     started_iso = _now_iso()
@@ -756,6 +1010,11 @@ def main() -> int:
         "base_content_sha256_file_count": (
             len(args.base_content_sha256) if args.base_content_sha256 else 0
         ),
+        # FIX-CLOBBER (2026-07-08 Catalog #405): record whether the caller used
+        # the intent-manifest patch path + the diff-line hint so forensics can
+        # distinguish patch-staged commits from whole-file `git add` commits.
+        "patch_mode": bool(args.patch_file),
+        "expected_diff_lines_present": bool(args.expected_diff_lines),
     }
 
     # FIX-92aba3ca (2026-05-12 Catalog #157): pre-lock-vs-EXPECTED check.
@@ -772,6 +1031,9 @@ def main() -> int:
         base_content_shas = _parse_base_content_sha256(
             args.base_content_sha256 or []
         )
+        expected_diff_lines = _parse_expected_diff_lines(
+            args.expected_diff_lines or []
+        )
     except ValueError as exc:
         print(f"[subagent-commit-serializer] FATAL: {exc!s}", file=sys.stderr)
         return 2
@@ -782,7 +1044,7 @@ def main() -> int:
     # (whole-file staging absorbed a sibling's uncommitted trainer + DSL
     # hunks; Catalog #157/#216 passed by construction because the caller's
     # expected sha was computed on the already-merged working tree).
-    if base_content_shas:
+    if base_content_shas and not patch_mode:
         if not expected_content_shas:
             print(
                 "[subagent-commit-serializer] NOTE: --base-content-sha256 "
@@ -828,7 +1090,7 @@ def main() -> int:
         "src/tac/preflight.py",
         "CLAUDE.md",
     )
-    if files and not expected_content_shas:
+    if files and not expected_content_shas and not patch_mode:
         high_risk_in_commit = [
             f for f in files
             if any(f.endswith(hr) or f == hr for hr in _OMNIBUS_GAP5_HIGH_RISK_FILES)
@@ -851,7 +1113,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 5
-    if expected_content_shas:
+    if expected_content_shas and not patch_mode:
         diffs = _expected_content_sha256_check(expected_content_shas)
         if diffs:
             _append_log({
@@ -878,7 +1140,7 @@ def main() -> int:
     # If any file's content changes between this moment and post-lock, a
     # concurrent subagent edited our intended-to-commit files and we refuse.
     pre_lock_hashes: dict[str, str] = {}
-    if not args.no_concurrent_edit_check and not args.no_stage and files:
+    if not args.no_concurrent_edit_check and not args.no_stage and files and not patch_mode:
         pre_lock_hashes = _hash_working_tree_files(files)
 
     # Operator NON-NEGOTIABLE 2026-05-31: NO co-author trailer EVER. The message
@@ -1022,7 +1284,7 @@ def main() -> int:
 
     # FIX-1: re-hash under the lock and compare. If a sister subagent
     # modified our --files content during our lock-wait, refuse.
-    if not args.no_concurrent_edit_check and not args.no_stage and files:
+    if not args.no_concurrent_edit_check and not args.no_stage and files and not patch_mode:
         post_lock_hashes = _hash_working_tree_files(files)
         diffs = {
             f: (pre_lock_hashes.get(f, "?"), post_lock_hashes.get(f, "?"))
@@ -1056,7 +1318,7 @@ def main() -> int:
     # the hunks that were in our declared base, HEAD now matches and we
     # proceed; if the sibling landed content we never based on, whole-file
     # staging would silently REVERT it — refuse instead.
-    if base_content_shas:
+    if base_content_shas and not patch_mode:
         base_diffs = _base_content_check(base_content_shas)
         if base_diffs:
             _release_lock(lock_fh)
@@ -1085,14 +1347,34 @@ def main() -> int:
         # Per-invocation temp index — isolates our staging from any
         # concurrent subagent or manual `git add`. See _make_temp_index
         # docstring for the bug class this fixes.
-        if args.no_stage:
+        if args.no_stage and not patch_mode:
             # Caller already staged into .git/index; we honor that.
             env = {**os.environ}
         else:
+            # Patch mode always needs the temp index so `git apply --cached`
+            # stages into an isolated index (never the shared .git/index).
             temp_index_path, env = _make_temp_index()
 
         # Step 1: stage
-        if not args.no_stage:
+        if patch_mode:
+            # FIX-CLOBBER intent-manifest staging (Catalog #405): apply the
+            # caller's exact patch to the temp index; the working tree is not
+            # consulted, so no sibling hunks can be swept in.
+            rc, msg = _git_apply_cached(str(args.patch_file), env)
+            if rc != 0:
+                _append_log({**base_record, "outcome": "git_apply_failed",
+                             "wait_seconds": wait_seconds,
+                             "git_apply_rc": rc, "git_apply_output": msg,
+                             "patch_file": str(args.patch_file),
+                             "temp_index": temp_index_path})
+                print(
+                    "[subagent-commit-serializer] git apply --cached failed "
+                    f"(rc={rc}) — the patch is likely NOT cleanly based on "
+                    f"HEAD. Regenerate it against HEAD and retry:\n{msg}",
+                    file=sys.stderr,
+                )
+                return rc
+        elif not args.no_stage:
             rc, msg = _git_add(files, env)
             if rc != 0:
                 _append_log({**base_record, "outcome": "git_add_failed",
@@ -1102,6 +1384,47 @@ def main() -> int:
                 print(f"[subagent-commit-serializer] git add failed (rc={rc}):\n{msg}",
                       file=sys.stderr)
                 return rc
+
+            # Catalog #405 hunk-attribution WARN (never refuses): if the caller
+            # hinted --expected-diff-lines, compare the actually-staged diff
+            # size. A whole-file `git add` that swept a sibling's uncommitted
+            # hunks (incident 2, 2026-07-08) shows up as a gross overshoot.
+            if expected_diff_lines:
+                staged_lines = _staged_diff_line_count(
+                    list(expected_diff_lines.keys()), env
+                )
+                overshoots: dict[str, tuple[int, int]] = {}
+                for f, hint in expected_diff_lines.items():
+                    actual = staged_lines.get(f, 0)
+                    if actual < 0:
+                        continue  # binary — heuristic N/A
+                    if actual > 2 * hint:
+                        overshoots[f] = (hint, actual)
+                if overshoots:
+                    _append_log({
+                        **base_record,
+                        "outcome": "hunk_attribution_overshoot_warned",
+                        "wait_seconds": wait_seconds,
+                        "diff_line_overshoots": {
+                            f: {"hint": h, "staged": a}
+                            for f, (h, a) in overshoots.items()
+                        },
+                        "temp_index": temp_index_path,
+                    })
+                    print(
+                        "[subagent-commit-serializer] WARNING (Catalog #405): "
+                        "staged diff is grossly larger (>2x) than the "
+                        "--expected-diff-lines hint — a whole-file `git add` "
+                        "may have swept a sibling's uncommitted hunks into "
+                        "your commit (incident 2, 2026-07-08). NOT refused. "
+                        "Inspect `git diff --cached -- <file>`; for a hard "
+                        "guarantee on shared files use --patch-file. "
+                        + "; ".join(
+                            f"{f}: hint={h} staged={a}"
+                            for f, (h, a) in overshoots.items()
+                        ),
+                        file=sys.stderr,
+                    )
 
         # Catalog #216 (FIX-HARDEN-OPT 2026-05-14 P1): POST-STAGE
         # content verification. The pre-lock + post-lock check (Catalog #157)
@@ -1113,7 +1436,7 @@ def main() -> int:
         # anchor. Verify what's actually STAGED in the temp index matches
         # the caller's declared post-edit sha; refuse with rc=5 on
         # mismatch (separate from rc=4 = pre-lock working-tree mismatch).
-        if expected_content_shas and not args.no_stage:
+        if expected_content_shas and not args.no_stage and not patch_mode:
             staged_diffs = _staged_content_check(expected_content_shas, env)
             if staged_diffs:
                 _append_log({
@@ -1176,6 +1499,55 @@ def main() -> int:
 
         if temp_index_path:
             _refresh_real_index_after_temp_commit(files)
+
+        # FIX-CLOBBER post-commit verification (Catalog #405, rc=7): the commit
+        # has landed and HEAD moved. Re-read each declared file's content AT
+        # HEAD and confirm it matches what the caller declared it should be.
+        # This is the ONLY check that reads HEAD-after-the-ref-moved, so it
+        # catches the pre-snapshot-clobber gap (incident 1, 2026-07-08) that
+        # every working-tree/index check is structurally blind to. The commit
+        # is NOT auto-reverted — the committed content may be a sibling's newer
+        # legitimate landing; surfacing beats destroying.
+        if expected_content_shas:
+            post_diffs = _post_commit_content_check(expected_content_shas)
+            if post_diffs:
+                _append_log({
+                    **base_record,
+                    "outcome": "post_commit_content_sha_mismatch",
+                    "wait_seconds": wait_seconds,
+                    "commit_seconds": commit_seconds,
+                    "head_after": head_after,
+                    "post_commit_content_sha_diffs": {
+                        f: {"declared": want, "committed_head": got}
+                        for f, (want, got) in post_diffs.items()
+                    },
+                    "temp_index": temp_index_path,
+                })
+                print(
+                    "[subagent-commit-serializer] REFUSED (rc=7): POST-COMMIT "
+                    "content mismatch — the content that landed at HEAD is NOT "
+                    "what you declared via --expected-content-sha256. Likely "
+                    "cause: a sibling clobbered/reverted these file(s) in the "
+                    "working tree BEFORE you snapshotted the sha, so every "
+                    "pre-commit check compared against the already-clobbered "
+                    "content and passed (incident 1, 2026-07-08). The commit "
+                    f"({head_after}) is KEPT — it may be the sibling's newer "
+                    "legitimate landing, so it is NOT auto-reverted.\n"
+                    + "\n".join(
+                        f"  {f}: declared={want} committed={got}"
+                        for f, (want, got) in post_diffs.items()
+                    )
+                    + "\n  RECONCILE (do NOT blind-revert): "
+                    "1) inspect what landed: `git show HEAD:<file>`; "
+                    "2) if the committed content is the sibling's and yours "
+                    "is newer, re-apply your intended content and re-commit "
+                    "(ideally via --patch-file); "
+                    "3) if a full undo is truly warranted after reconciling, "
+                    f"`git revert --no-commit {head_after}` (a revert commit, "
+                    "not a history rewrite).",
+                    file=sys.stderr,
+                )
+                return 7
 
         print(f"[subagent-commit-serializer] OK head={head_after} "
               f"label={args.label} files={len(files)} "

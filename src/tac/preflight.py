@@ -86473,6 +86473,10 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     # backfill: .omx/research/t5_crucible/BIBLIOGRAPHY_20260708.md). Hardcoded
     # here per the same anti-self-waive design.
     "CITATION_CLAUSE",
+    # Catalog #405 commit-through-serializer discipline (2026-07-08 — post-commit
+    # HEAD verification rc=7 + --patch-file intent-manifest for shared hot files).
+    # Hardcoded here per the same anti-self-waive design.
+    "COMMIT_DISCIPLINE",
 )
 _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
     "Before reporting progress, audit each claim against a tool result"

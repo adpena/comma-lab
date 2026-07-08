@@ -26,6 +26,7 @@ from __future__ import annotations
 __all__ = [
     "ANTI_GOLDPLATING",
     "CITATION_CLAUSE",
+    "COMMIT_DISCIPLINE",
     "CONFIRMED_VS_PLAUSIBLE",
     "CONTRACT_CONSTANT_NAMES",
     "CONTROL_LAW_CLAUSE",
@@ -179,6 +180,22 @@ TRIALITY_WIRING = (
     "drift detector flags misses; a firing hook is a miss, not a reminder)."
 )
 
+#: Catalog #405 (2026-07-08) — commit-through-the-serializer discipline, hardened.
+#: Post-commit HEAD verification (rc=7) is automatic when the caller declares
+#: --expected-content-sha256; shared hot files must be staged via --patch-file
+#: (intent-manifest) so a co-mingled/clobbered working tree cannot leak a
+#: sibling's hunks into the commit body.
+COMMIT_DISCIPLINE = (
+    "COMMIT DISCIPLINE (#405): land every change via "
+    "tools/subagent_commit_serializer.py with post-edit --expected-content-sha256 "
+    "— post-commit HEAD verification is automatic (rc=7 if the committed content "
+    "is not what you declared, e.g. a sibling clobbered the file before your "
+    "snapshot); when you edit a shared hot file (the trainer, curriculum_dsl.py, "
+    "preflight.py, the DAG, CLAUDE.md), shared-file edits use --patch-file "
+    "(supply exactly your hunks — the serializer applies them to a clean index "
+    "and ignores the working tree, so no sibling hunk is absorbed)."
+)
+
 #: The craft handoff binds every subagent; cite it so the subagent actually loads it.
 MANUAL_CITATION = (
     "OPERATING MANUAL: docs/operating_manual_craft_handoff.md is binding for this task — "
@@ -262,6 +279,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "NEVER_REASONING_ECHO",
     "OWN_ROUND1_REVIEW",
     "TRIALITY_WIRING",
+    "COMMIT_DISCIPLINE",
     "MANUAL_CITATION",
     "RISK_RANKING",
     "CONFIRMED_VS_PLAUSIBLE",
@@ -298,6 +316,7 @@ KEY_PHRASES: dict[str, str] = {
     "NEVER_REASONING_ECHO": "refusal storms",
     "OWN_ROUND1_REVIEW": "resets the clean-pass counter",
     "TRIALITY_WIRING": "SAME commit batch",
+    "COMMIT_DISCIPLINE": "shared-file edits use --patch-file",
     "MANUAL_CITATION": "docs/operating_manual_craft_handoff.md",
     "RISK_RANKING": "probability × blast-radius × SILENCE",
     "CONFIRMED_VS_PLAUSIBLE": "never blur them",
@@ -315,7 +334,8 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
     promises, final-message re-grounding, state-the-boundaries, anti-goldplating,
     fresh-context verification), the four #346 retrieval-first clauses (recursion-default,
     control laws, retrieval-first, review-status provenance), the requirement-S citation
-    clause, plus the operating-manual citation.
+    clause, the #405 commit-through-serializer discipline block, plus the operating-manual
+    citation.
 
     Args:
         review: include the #337 own-round-1 adversarial-review block (default True;
@@ -343,6 +363,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         blocks.append(OWN_ROUND1_REVIEW)
     if triality:
         blocks.append(TRIALITY_WIRING)
+    blocks.append(COMMIT_DISCIPLINE)
     blocks.append(MANUAL_CITATION)
     return "\n\n".join(blocks)
 
