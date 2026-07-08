@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: SAFE-COMPILE (2950e6133; 22 tests; D17→v7.1-ARM; memo mlx_safe_compile) ---
+- OUR deterministic mx.compile: partitioner + 3-certificate harness (bit-equality max|Δ|=0 ·
+  N=5 cross-process · wall-clock) + fail-closed manifest activation. 4/4 regions CERTIFIED
+  on this chip: hosc_activation **1.41×** bit-equal · sigmoid/film ~1.0× · ce_reduction →
+  #348 fixed-point routing. HONEST finding: even FMA-eligible regions bit-equal HERE — the
+  mx.compile exclusion is knife-edge-specific to the R-op; per-chip re-certification
+  fail-closed is the right architecture, no global verdict.
+- v7.1 arm: --safe-compile-regions all-certified (manifest = evidence gate); hot-loop call
+  sites NOT rewired (needs the v7 baseline A/B). DSL lever held.
+- ⚠️ 4th mis-attribution: this commit ABSORBED the still-running τ-advance sibling's trainer
+  hunks (content intact, compiles, ruff-clean; verified HEAD carries ALL feature sets:
+  tau-advance 8 refs · stagger 4 · unify 15 · tail 4 · ladder 4 · verdict-device 5 ·
+  safe-compile 2). τ-advance builder ALERTED (verify-vs-intent + finish remaining surfaces
+  via patch-file). My revisions-B trainer-sequencing step is MOOT (absorbed-landed) except
+  the verification, done above. Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: WALL-CLOCK DEFAULT-ON + PERF-ENV CLASS GUARD (517e1c884; 21 new + 159 suite
 green; operator "default on always / shouldn't have been caught manually" executed) ---
 - wall_clock_budget_days = REQUIRED DERIVED typed field (schema refuses absence); launcher
