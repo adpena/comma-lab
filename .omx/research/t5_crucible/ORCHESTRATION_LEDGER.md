@@ -2040,3 +2040,17 @@ consumer update required — asserted [consumers-generic]. ---
   rc=0 (138/138 flags), 450 tests, ruff clean, zero absorption of B's edits.
 - **FIX-WAVE B**: died on transient API 500 with all edits on disk uncommitted (no signal loss);
   RESUMED same-agent with deconfliction instructions (patch-file isolation vs A's surfaces).
+- **FIX-WAVE B LANDED (8 commits, 6/6 items)**: B1 polyak arm selection RECORDED (per-arm
+  scores + winner; fail-open sans npz; NO-FAKE refusals) · B2 D16 loud fallback + fail-closed
+  fingerprint gate (hot-path cached) · B3 sensor_data_epoch + lag in all 3 fire gates
+  (additive-only persistence, legacy byte-identical) · B4 perf-env NAME→VALUE map compare ·
+  B5 **MEASURED closed-by-construction** (event unfired gates write sentinel rows → manifest
+  stamped from ckpt 1; the lens probe used a nonexistent gate shape; probe landed as the proof)
+  · B6 structural/AST guard tests. ≥19 tests, 241 green, ruff clean. Incidents recorded:
+  cross-builder absorption (A staged B's test early; B repaired) + stale-stash pop (resolved,
+  zero loss). Honest not-verified: real 3-arm selection awaits a v7 polyak npz.
+- **v7.4 VERIFIED on combined HEAD**: dry-run rc=0, sealed epochs 3000 (no --epochs), launch.sh
+  carries --hosc-beta-end 3.177 + D16 pool env; DSL gate OK 138 flags; fingerprint_ok. Governor
+  REFUSE in dry-run = correct live-run accounting (clears when run-1 stops at swap time).
+- **ROUND 3 CONVENED** on the fix-wave diff (A 5ea59a1f1 + B 363cf7530..a8307a509 + hook
+  patches). Counter 0/3; clean = zero findings at any severity.
