@@ -265,6 +265,18 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: SERIALIZER HARDENING (a8ebcd12a + c35979b97; task #354/D4 CLOSED; 17 new +
+87 existing tests green) ---
+- rc=7 POST-COMMIT blob verification (git cat-file HEAD:<file> vs declared sha — reads
+  committed REALITY, the only check that closes the pre-snapshot clobber window); commit
+  kept + reconcile guidance printed, never auto-reverted.
+- --patch-file exact-intent staging (git apply --cached onto a HEAD-seeded temp index,
+  working tree IGNORED — sibling hunks structurally cannot be absorbed; the real fix for
+  the whole-file-add sweep). Back-compat proven (checks gated on flags; 69 legacy tests
+  unchanged). COMMIT_DISCIPLINE #405 composed into the standard subagent contract — every
+  future builder inherits post-commit-verify + patch-mode-for-shared-files automatically.
+  Pointer 0.19110 UNMOVED (apparatus).
+
 --- ✅ LANDED: V7 COMPUTE-EXPLOITATION AUDIT (8d9dabc92; 19 new + 136 regression tests;
 memo v7_compute_exploitation_audit_20260708.md) ---
 - ⚠️ REAL ORPHAN CAUGHT: v7 typed-config had no to_command → launcher would DROP the ~17×
