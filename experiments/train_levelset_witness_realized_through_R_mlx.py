@@ -567,6 +567,7 @@ def _build_resume_state_arrays(
     recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
     evt_curriculum_state: "dict | None" = None,
     closed_loop_state: "dict | None" = None,
+    tau_advance_controller: "Any" = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -664,6 +665,13 @@ def _build_resume_state_arrays(
     # Default None (closed-loop OFF, incl. #205) => ZERO new keys => sidecar byte-identical.
     if closed_loop_state is not None:
         out.update(_cl_state_arrays(closed_loop_state, closed_loop_state.get("verdicts", [])))
+    # (S6-R4 self-paced τ-advance) persist the octave-ladder controller state (rung, octave-start,
+    # last-seen, frozen, current-octave d_seg history, fire log) so a crash-resume of an EVENT-mode run
+    # reconstructs the IDENTICAL subsequent τ trajectory bit-faithfully. None (clock, DEFAULT) => ZERO
+    # new keys => sidecar byte-identical (the #205-safe path).
+    if tau_advance_controller is not None:
+        from tac.witness_control.tau_advance import tau_advance_state_arrays
+        out.update(tau_advance_state_arrays(tau_advance_controller))
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
     # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
     _prov = provenance or {}
@@ -1007,6 +1015,10 @@ def _resolve_resume_path(p: Path) -> Path:
 
 
 _STAGE_TAGS = {"ce": "stageCE", "tau_softplus": "stageTau", "l7_softplus": "stageL7", "margin_hinge": "stageHinge"}
+# (S6-R4 self-paced τ-advance) the two --tau-advance-mode values (module-level so argparse can
+# reference them). "clock" = incumbent geometric-by-epoch (byte-identical DEFAULT); "event" = the
+# self-paced octave ladder (tac.witness_control.tau_advance).
+_TAU_ADVANCE_MODES = ("clock", "event")
 
 
 def _stage_tag(seg_form: str) -> str:
@@ -1714,6 +1726,36 @@ def validate_lane_thin_config(
         )
     if lane_thin_radius < 0:
         raise ValueError(f"--lane-thin-radius ({lane_thin_radius}) must be >= 0 (window half-width).")
+
+
+def validate_ladder_muon_stagger_config(
+    *, ladder_island_homotopy: bool,
+    lane_birth_epochs: int, lane_hold_epochs: int, lane_anneal_epochs: int,
+    movable_birth_epochs: int, movable_hold_epochs: int, movable_anneal_epochs: int,
+    muon_start_epoch: "int | None",
+) -> None:
+    """(S2-REV-A) LADDER↔Muon STAGGER invariant — fail LOUD before any GPU spend.
+
+    max(LADDER arm birth+hold+anneal windows) < --muon-start-epoch, so a LADDER arm's support cannot
+    still be LIVE when the Muon finisher (and the post-Muon TAIL) fire (the codim-2-at-the-floor /
+    TAIL×LADDER resurrection overlap the three-arm composition avoids only by temporal staggering).
+    NO-OP when the LADDER is off (--no-ladder-island-homotopy) or there is no Muon finisher
+    (--muon-start-epoch unset). The Muon-entry EVENT wiring additionally gates on nucleation-complete
+    (all arms past their window, S2 REV-B), so the fixed backstop CAP is the sound ceiling on BOTH the
+    cap and event-armed epoch domains. Pure + total ⇒ $0 unit-testable (consumes the SHARED
+    tac.witness_curriculum.ladder_homotopy helper the DSL WitnessProgram.validate also calls)."""
+    from tac.witness_curriculum.ladder_homotopy import (
+        ladder_arm_window,
+        ladder_muon_stagger_violation,
+    )
+    err = ladder_muon_stagger_violation(
+        ladder_on=bool(ladder_island_homotopy),
+        lane_window=ladder_arm_window(lane_birth_epochs, lane_hold_epochs, lane_anneal_epochs),
+        movable_window=ladder_arm_window(movable_birth_epochs, movable_hold_epochs, movable_anneal_epochs),
+        muon_start_epoch=(None if muon_start_epoch is None else int(muon_start_epoch)),
+    )
+    if err is not None:
+        raise ValueError(err)
 
 
 def validate_seg_form_unify_tau_config(*, seg_form_unify_tau: bool, argv=None) -> None:
@@ -2449,6 +2491,78 @@ def _lr_scheduled_for_epoch(ep: int, args, lr_anneal_epochs: int) -> float:
             return args.lr_end                # held at the floor for the tail of the window
         prog = prog / _lrhf                    # rescale [0,hold_frac)->[0,1); falls through to cosine
     return args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
+
+
+def _lr_scheduled_event_for_epoch(ep: int, args, octave_frac: float) -> float:
+    """(S6-R4 self-paced τ-advance) Base LR schedule in EVENT mode: warmup on REAL epoch (initial
+    optimizer stabilization is genuinely time-based), then the incumbent cosine[/hold] SHAPE but with
+    the anneal progress = the τ-control's OWN octave fraction ``octave_frac`` (LR ∝ τ-control progress,
+    S6/DE — in event mode that is the octave ladder, NOT a fixed-epoch clock denominator). Mirrors
+    :func:`_lr_scheduled_for_epoch` exactly except ``prog`` is the octave fraction, not (ep-warmup)/
+    (lr_anneal_epochs-warmup). Pure (no model/MLX); unit-tested."""
+    if ep <= args.warmup_epochs:
+        return args.lr * ep / max(args.warmup_epochs, 1)
+    prog = float(octave_frac)
+    _lrhf = float(getattr(args, "lr_hold_frac", 1.0))
+    if _lrhf < 1.0:
+        if prog >= _lrhf:
+            return args.lr_end
+        prog = prog / _lrhf
+    return args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
+
+
+def validate_tau_advance_config(*, tau_advance_mode: str, tau_anneal_shape: str,
+                                softmax_temp_start: float, softmax_temp_end: float) -> None:
+    """(S6-R4) Fail LOUD (not silent) on an event-mode config the derivation forbids.
+
+    event mode is the GEOMETRIC octave ladder (Ch.4 Deriv-1: geometric is the derived τ shape; cosine
+    is scale-space-WRONG — fastest mid-τ where the interface crosses Nyquist). So ``--tau-advance-mode
+    event`` REQUIRES ``--tau-anneal-shape geometric`` AND positive endpoints (the geometric ladder is
+    undefined at τ<=0). ``clock`` mode (DEFAULT) is unconstrained => byte-identical. Pure + total =>
+    $0 unit-testable. Per CLAUDE.md 'Bugs must be permanently fixed AND self-protected against'."""
+    if tau_advance_mode not in _TAU_ADVANCE_MODES:
+        raise ValueError(f"--tau-advance-mode must be in {_TAU_ADVANCE_MODES} (got {tau_advance_mode!r})")
+    if tau_advance_mode != "event":
+        return
+    if str(tau_anneal_shape) != "geometric":
+        raise ValueError(
+            "--tau-advance-mode event requires --tau-anneal-shape geometric (event mode IS the "
+            "GEOMETRIC octave ladder; cosine is scale-space-wrong per Ch.4 Deriv-1). Set "
+            f"--tau-anneal-shape geometric (got {tau_anneal_shape!r})."
+        )
+    if not (float(softmax_temp_start) > 0.0 and float(softmax_temp_end) > 0.0):
+        raise ValueError(
+            "--tau-advance-mode event requires --softmax-temp-start > 0 AND --softmax-temp-end > 0 "
+            f"(the geometric octave ladder is undefined at τ<=0; got start={softmax_temp_start}, "
+            f"end={softmax_temp_end})."
+        )
+
+
+def _build_tau_advance_controller(args, anneal_epochs: int):
+    """(S6-R4) Construct the :class:`TauAdvanceController` for EVENT mode, or return ``None`` for
+    ``clock`` (DEFAULT) so the trainer keeps the incumbent per-epoch τ/β/LR calls textually unchanged
+    => BYTE-IDENTICAL. Derives the ladder / octave count / dwell caps from existing flags (no bare
+    literals): N = round(anneal_epochs / --curriculum-min-stage-epochs); cap = ceil(anneal_epochs/N)
+    * tagged slack; min-dwell = --curriculum-min-stage-epochs. Overridable via --tau-octaves /
+    --tau-octave-min-dwell / --tau-octave-max-dwell."""
+    if getattr(args, "tau_advance_mode", "clock") != "event":
+        return None
+    from tac.witness_control.tau_advance import (
+        TauAdvanceController,
+        derive_n_octaves,
+        derive_octave_max_dwell,
+        tau_octave_ladder,
+    )
+    _min_stage = int(getattr(args, "curriculum_min_stage_epochs", 250) or 250)
+    n_oct = (int(args.tau_octaves) if getattr(args, "tau_octaves", None)
+             else derive_n_octaves(int(anneal_epochs), _min_stage))
+    max_dwell = (int(args.tau_octave_max_dwell) if getattr(args, "tau_octave_max_dwell", None)
+                 else derive_octave_max_dwell(int(anneal_epochs), n_oct))
+    min_dwell = (int(args.tau_octave_min_dwell) if getattr(args, "tau_octave_min_dwell", None) is not None
+                 else _min_stage)
+    ladder = tau_octave_ladder(float(args.softmax_temp_start), float(args.softmax_temp_end), n_oct)
+    return TauAdvanceController(mode="event", ladder=ladder, per_octave_cap=max_dwell,
+                                min_dwell=min_dwell)
 
 
 def _stage_rewarmup_factor(
@@ -5400,7 +5514,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _wire_sense["annulus_series"].append((int(ep), _af))
                     except (TypeError, ValueError, KeyError):
                         pass
-            history.append({"epoch": ep, **v, "implied_S": s})
+            # (S1-R1) blob_bytes carried into history so the TAIL rate-aware stop reads the coded-bytes
+            # delta per cycle (additive key; d_seg/d_pose/implied_S unchanged; result.json gains an
+            # auditable byte trace). Non-tail runs simply ignore it.
+            history.append({"epoch": ep, **v, "implied_S": s,
+                            "blob_bytes": blob["total_quantized_blob_bytes"]})
             # (#292 build-3) deterministic closed-loop capture (ON only; OFF appends nothing =>
             # byte-identical). Under _verdict_lock; (M2 fix) the decision point joins the PREVIOUS
             # eval's thread first, so this row is ALWAYS visible to the controller that decides at
@@ -5707,7 +5825,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # _do_checkpoint call, mirroring _evt_state). OFF => None => ZERO new sidecar keys =>
             # byte-identical (#205-safe). (M2 fix) the snapshot is taken under _verdict_lock and
             # includes the PENDING-VERDICT record when one is in flight (bit-faithful resume).
-            closed_loop_state=(_cl_sidecar_snapshot() if _cl_on else None))
+            closed_loop_state=(_cl_sidecar_snapshot() if _cl_on else None),
+            # (S6-R4) persist the τ-advance octave-ladder controller (closure var _tau_ctrl, assigned
+            # before any _do_checkpoint call). None (clock, DEFAULT) => ZERO new sidecar keys =>
+            # byte-identical. Event mode => the octave state round-trips for a bit-faithful τ resume.
+            tau_advance_controller=_tau_ctrl)
         # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
@@ -5993,7 +6115,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # absent). Pre-loop, single-threaded => no lock needed.
     if _annulus_v0 is not None:
         print(json.dumps(_annulus_convergence_row(_annulus_v0, start_epoch - 1, "baseline_v0")), flush=True)
-    history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0})
+    history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0,
+                    "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace for TAIL stop
 
     # (C3 confound fix) STARTUP regularizer-magnitude log: the raw (PRE-weight) scale of each active
     # level-set regularizer on ONE pair, so the eikonal unit-recalibration is auditable and the
@@ -6217,6 +6340,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if not (_reanchor_on and _evt_on):
             return int(ep)
         return _evt_reanchor_epoch(ep, _evt_state.get("tau"), int(args.tau_softplus_start_epoch))
+
+    # (S6-R4 self-paced τ-advance) the octave-ladder controller for --tau-advance-mode event, or None
+    # for clock (DEFAULT) => the trainer keeps the incumbent per-epoch τ/β/LR calls => BYTE-IDENTICAL.
+    # anneal_epochs here matches the L6526 computation exactly (same formula, same args). Restored from
+    # the resume sidecar below (bit-faithful τ trajectory across a crash). MLX-free (pure control logic).
+    _tau_anneal_epochs = int(args.anneal_epochs) if getattr(args, "anneal_epochs", None) else int(args.epochs)
+    _tau_ctrl = _build_tau_advance_controller(args, _tau_anneal_epochs)
+    if _tau_ctrl is not None:
+        print(json.dumps({"stage": "tau_advance_armed", "mode": "event",
+                          "n_octaves": int(_tau_ctrl.n_octaves),
+                          "ladder": [round(float(t), 6) for t in _tau_ctrl.ladder],
+                          "per_octave_cap": int(_tau_ctrl.per_octave_cap),
+                          "min_dwell": int(_tau_ctrl.min_dwell),
+                          "note": "self-paced geometric octave ladder; τ advances on per-band "
+                          "relaxation (powerlaw_meat within the octave), cap = LOUD fail-safe backstop"}),
+              flush=True)
+        if resume_cfg is not None:
+            from tac.witness_control.tau_advance import tau_advance_restore_from_cfg
+            if tau_advance_restore_from_cfg(_tau_ctrl, resume_cfg):
+                print(json.dumps({"stage": "resume_tau_advance", "rung": int(_tau_ctrl.rung),
+                                  "frozen": bool(_tau_ctrl.frozen),
+                                  "octave_hist_points": len(_tau_ctrl._octave_hist),
+                                  "note": "restored octave state => identical subsequent τ sequence "
+                                  "(bit-faithful resume)"}), flush=True)
 
     if _cl_on and resume_cfg is not None:
         _clr = _cl_restore_from_cfg(resume_cfg)
@@ -6470,6 +6617,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # ── compute-facet #252 activation (DEFAULT-OFF => byte-identical to the pre-#252 path) ──
     _profile_timing = bool(getattr(args, "profile_timing", False))
     set_fused_r_kernel(bool(getattr(args, "fused_r_kernel", False)))
+    # ── SAFE-COMPILE (#252 v7.1 lever): determinism-first mx.compile of manifest-CERTIFIED
+    # elementwise regions. DEFAULT "none" => empty set => the compile call sites are pure
+    # pass-throughs => BYTE-IDENTICAL to the pre-#252 path. When non-"none", only regions with a
+    # CERTIFIED (bit-equal + cross-process-deterministic) manifest row activate (fail-closed:
+    # an uncertified/absent id never compiles). Score-neutral by construction. ──
+    _safe_compile_enabled = frozenset()
+    _safe_compile_spec = str(getattr(args, "safe_compile_regions", "none") or "none")
+    if _safe_compile_spec.strip().lower() not in ("", "none", "off"):
+        from tac.mlx_safe_compile import CertificationManifest, resolve_enabled_regions
+        _sc_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        _sc_manifest_path = getattr(args, "safe_compile_manifest", None) or os.path.join(
+            _sc_repo_root, ".omx", "state", "mlx_safe_compile_manifest.json")
+        _sc_man = CertificationManifest.load(_sc_manifest_path) if os.path.exists(
+            _sc_manifest_path) else None
+        _safe_compile_enabled = resolve_enabled_regions(_safe_compile_spec, _sc_man)
+        print(json.dumps({"stage": "safe_compile", "spec": _safe_compile_spec,
+                          "manifest": _sc_manifest_path,
+                          "enabled_regions": sorted(_safe_compile_enabled),
+                          "note": "#252 determinism-first mx.compile: CERTIFIED regions only; "
+                                  "score-neutral (bit-identical to uncompiled)"}), flush=True)
     with temporary_mlx_device(args.mlx_device):
         if getattr(args, "fused_r_kernel", False):
             if args.mlx_device != "gpu":
@@ -6828,6 +6995,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     mx.eval(opt.state)
                 muon_switched = True
                 recent_losses.clear()
+                # (S6-R4) FREEZE the τ-advance ladder at the Muon switch: post-Muon τ is driven ONLY
+                # by the finisher freeze + the TAIL τ_k cycles (the no-double-driver ordering contract).
+                # After this, maybe_advance is never called (guarded on `not muon_switched`) and would
+                # assert-fail if it were. None (clock) => no-op. Mirrors the clock freeze (τ held at the
+                # muon-start value); in event mode that value is the current octave rung.
+                if _tau_ctrl is not None:
+                    print(json.dumps(_tau_ctrl.freeze(ep)), flush=True)
                 print(json.dumps({"stage": "muon_finisher_switch", "epoch": ep,
                                   "muon_start_epoch": int(args.muon_start_epoch), "muon_lr": muon_lr_eff,
                                   "muon_adamw_lr": muon_adamw_lr_eff, "muon_momentum": float(args.muon_momentum),
@@ -6993,8 +7167,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # attribution per FEED-fk). DEFAULT-SAFE: --muon-start-epoch None => muon_switched is
             # always False => _anneal_ep == ep => the _softmax_temp_for_epoch / _hosc_beta_for_epoch
             # calls reproduce the pre-FEED-fm inline formulas exactly => BIT-IDENTICAL.
+            # (S6-R4 self-paced τ-advance) EVENT mode: feed any NEW verdict d_seg into the current
+            # octave's own history (decide-on-previous, single-threaded, resume-safe) then advance the
+            # octave ladder if the within-octave descent has RELAXED (powerlaw_meat) or the per-octave
+            # MAX-DWELL cap fires (LOUD backstop). Only while NOT muon-switched (post-Muon τ is frozen —
+            # the no-double-driver ordering contract). None (clock, DEFAULT) => skipped => byte-identical.
+            if _tau_ctrl is not None and not muon_switched:
+                _tau_ctrl.ingest(history)
+                _adv = _tau_ctrl.maybe_advance(ep)
+                if _adv.telemetry is not None:
+                    print(json.dumps(_adv.telemetry), flush=True)
+                if _adv.advanced:
+                    # PRESERVE a stage-encoded ckpt at each octave boundary (independently byte-
+                    # closeable + resumable, like the Muon-switch stage ckpt) — the octaves ARE the
+                    # event-mode "stages" (unify-τ has no discrete seg-form stage ckpts).
+                    _oc = _do_checkpoint(ep, stage_tag=f"stageOctave{int(_adv.rung)}")
+                    stage_ckpts.append(_oc)
             _anneal_ep = int(args.muon_start_epoch) if muon_switched else ep
-            model.softmax_temp = _softmax_temp_for_epoch(_anneal_ep, args)
+            if _tau_ctrl is not None:
+                # event mode: τ = the held octave rung value (frozen after the Muon switch). The
+                # lambda is the clock fallback (unused in event mode; carries the muon freeze).
+                model.softmax_temp = _tau_ctrl.tau_for_epoch(
+                    ep, lambda e: _softmax_temp_for_epoch(_anneal_ep, args), muon_switched=muon_switched)
+            else:
+                model.softmax_temp = _softmax_temp_for_epoch(_anneal_ep, args)
             # (FEED-fb) ANNEAL hosc_beta start->end (the step-native L-infinity-optimal lever;
             # beta->inf = step-native tanh(beta*sin)). The model's _act reads self.hosc_beta FRESH
             # each forward, so mutating model.hosc_beta per epoch retunes the activation (exactly how
@@ -7003,8 +7199,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # is NEVER touched => stays at its construction value (== args.hosc_beta) every epoch =>
             # BIT-IDENTICAL to the pre-FEED-fb path (and the finisher freeze is then a no-op too). The
             # verdict/checkpoint/byte-close forwards read float(model.hosc_beta) so realized d_seg is
-            # measured (and deploy cfg saved) at the CURRENT beta (NO-FAKE).
-            _beta = _hosc_beta_for_epoch(_anneal_ep, args)
+            # measured (and deploy cfg saved) at the CURRENT beta (NO-FAKE). (S6-R4) event mode co-anneals
+            # β on the octave FRACTION (β↑ rides τ↓; frozen after Muon since the fraction stops advancing).
+            if _tau_ctrl is not None:
+                _beta = _tau_ctrl.hosc_beta_for_epoch(
+                    float(args.hosc_beta), getattr(args, "hosc_beta_end", None),
+                    activation=getattr(args, "activation", None),
+                    shape=str(getattr(args, "hosc_beta_anneal", "linear")))
+            else:
+                _beta = _hosc_beta_for_epoch(_anneal_ep, args)
             if _beta is not None:
                 model.hosc_beta = _beta
             # (EIK-STAB build 1b) vanishing-viscosity anneal: mutate the closure cell so
@@ -7060,7 +7263,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # --lr-hold-frac < 1.0 reaches --lr-end early and HOLDS (clamping the unclamped-prog
                 # rebound). Default-off (--lr-anneal-epochs unset AND --lr-hold-frac 1.0) => lr equals
                 # the pre-build inline formula EXACTLY (anneal_epochs denominator, plain cosine).
-                lr = _lr_scheduled_for_epoch(ep, args, lr_anneal_epochs)
+                # (S6-R4) event mode pins the LR anneal to the τ-control's OWN octave fraction (LR ∝
+                # τ-progress; S6/DE), warmup still real-epoch. None (clock) => the incumbent call =>
+                # byte-identical.
+                if _tau_ctrl is not None:
+                    lr = _lr_scheduled_event_for_epoch(ep, args, _tau_ctrl.lr_anneal_fraction())
+                else:
+                    lr = _lr_scheduled_for_epoch(ep, args, lr_anneal_epochs)
                 # BUILD 1 (FEED-fw): stage-transition LR re-warmup. DEFAULT-OFF
                 # (--stage-transition-rewarmup-epochs 0) => _rw is EXACTLY 1.0 => lr*1.0 == lr =>
                 # BIT-IDENTICAL. After a registered AdamW->AdamW boundary, ramp the scheduled LR up
@@ -7082,9 +7291,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # powerlaw_meat exit / cycle-floor cap advance k; PowerPlay/k_max latch _tail_stop_now (broken
             # at the loop bottom). DEFAULT-OFF (_tail_ctrl None) => skipped => BYTE-IDENTICAL.
             if _tail_ctrl is not None and muon_switched and ep >= _tail_start_epoch:
+                # (S6-R4) NO-DOUBLE-DRIVER ordering assert: the TAIL is the SOLE τ driver here, so the
+                # event-mode τ-advance ladder MUST already be frozen (it was frozen at the Muon switch,
+                # which strictly precedes _tail_start_epoch = muon_start + dwell_min). If it were not,
+                # two controllers would drive model.softmax_temp this epoch. Structural guard.
+                assert _tau_ctrl is None or _tau_ctrl.frozen, (
+                    "TAIL is driving τ but the event-mode τ-advance ladder is NOT frozen — "
+                    "double-driver of τ (the ladder must freeze at the Muon switch before TAIL)")
                 _trows = [(int(r["epoch"]), float(r["d_seg"])) for r in history
                           if "d_seg" in r and np.isfinite(float(r["d_seg"]))]
-                _tstep = _tail_ctrl.step(ep, _trows, live_mq=None)
+                # (S1-R1) RATE-AWARE stop: thread the coded-bytes history so the PowerPlay stop gates on
+                # NET-ΔS (d_seg marginal MINUS the coded-bytes rate cost), not d_seg-marginal-alone — a
+                # cycle that lowers d_seg while INFLATING the counted blob must not read as a pure win.
+                # None-safe: rows lacking blob_bytes (pre-verdict) are dropped; empty => d_seg-only stop.
+                _byte_rows = [(int(r["epoch"]), float(r["blob_bytes"])) for r in history
+                              if "blob_bytes" in r and np.isfinite(float(r["blob_bytes"]))] or None
+                _tstep = _tail_ctrl.step(ep, _trows, live_mq=None, byte_rows=_byte_rows)
                 model.softmax_temp = float(_tstep.tau)
                 opt.learning_rate = float(_tstep.lr)   # warm restart: LR set, opt.state (moments) untouched
                 for _ch in (getattr(opt, "optimizers", None) or []):
@@ -7102,8 +7324,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "reason": _tstep.reason, **_tw}), flush=True)
                 if _tstep.stop:
                     _tail_stop_now = True
+                    # (S4-R2) stamp the MEASURED net-ΔS/ep NUMERATOR (not just the <threshold outcome)
+                    # so the stop is reconstructable post-hoc from the persisted row (NaN => no
+                    # completed-cycle marginal, e.g. a k_max stop before a cycle closed).
                     print(json.dumps({"stage": "tail_powerplay_stop", "epoch": ep,
-                                      "cycle": _tstep.cycle_k, "reason": _tstep.reason}), flush=True)
+                                      "cycle": _tstep.cycle_k, "reason": _tstep.reason,
+                                      "net_marginal_s_per_ep": (None if _tstep.marginal != _tstep.marginal
+                                                                else round(float(_tstep.marginal), 8)),
+                                      "rate_aware": bool(_byte_rows is not None)}), flush=True)
             # (V6 #320) ADAPTIVE-eps CFL-edge tracker: eps(t) = clamp(|c_a(t)|*sqrt(eta*lambda_eik/8)
             # *(1+margin), floor, upper). Placed AFTER the LR assignment so eta(t)=opt.learning_rate is
             # the CURRENT epoch's flow time-step and eik_w_ep is the CURRENT lambda_eik. Replaces the
@@ -7522,7 +7750,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                              note="ep_loss==0.0 / all batches skipped: this verdict is a "
                                              "FROZEN-state sample, not converged progress (do not treat "
                                              "as a plateau or a 'best')")
-                    history.append({"epoch": ep, **v, "implied_S": s})
+                    history.append({"epoch": ep, **v, "implied_S": s,
+                                    "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace
                     _emit_handoff_readiness(_ncounts_sync, ep, seg_form)  # (#302) readiness row; no-op OFF
                     # (#292 build-3) closed-loop capture on the SYNC verdict path too (already
                     # deterministic — no thread). OFF => appends nothing => byte-identical.
@@ -7925,6 +8154,34 @@ def main(argv: list[str] | None = None) -> int:
                     help="THETA* MUST-1: for --tau-anneal-shape cosine_hold, the fraction (0,1] of the "
                     "anneal window at which tau reaches --softmax-temp-end and HOLDS. 1.0 (default) = "
                     "no hold = BIT-IDENTICAL to cosine.")
+    # ── (S6-R4 self-paced τ-advance, operator 2026-07-08) EVENT-DRIVEN τ octave ladder. The last
+    #    clock-hardcoding in the v7 schedule is the anneal-epochs denominator that clocks τ(t) (and the
+    #    LR pin). --tau-advance-mode event converts τ from an epoch-clock to a GEOMETRIC OCTAVE LADDER
+    #    whose per-rung DWELL is self-triggered on per-band relaxation (powerlaw_meat on the through-R
+    #    seg loss WITHIN the current octave), with a per-octave MAX-DWELL as a LOUD fail-safe backstop.
+    #    DEFAULT 'clock' = the incumbent geometric-by-epoch anneal => BYTE-IDENTICAL (the controller is
+    #    not even instantiated). Engine: tac.witness_control.tau_advance (pure + unit-tested).
+    ap.add_argument("--tau-advance-mode", choices=["clock", "event"], default="clock",
+                    help="S6-R4: τ-anneal advance clock. 'clock' (DEFAULT, byte-identical) = geometric "
+                    "τ(ep) over --anneal-epochs. 'event' = self-paced geometric OCTAVE LADDER; τ holds "
+                    "at each rung until the per-band relaxation sensor (powerlaw_meat within the octave) "
+                    "fires, with --tau-octave-max-dwell as a loud fail-safe cap. Requires "
+                    "--tau-anneal-shape geometric (the derived shape).")
+    ap.add_argument("--tau-octaves", type=int, default=None,
+                    help="S6-R4: event-mode octave-ladder rung count N (τ_k = start·(end/start)^(k/N); "
+                    "SAME values as the geometric clock at prog=k/N). DEFAULT None => DERIVED "
+                    "round(--anneal-epochs / --curriculum-min-stage-epochs) so each octave gets ~one "
+                    "min-stage-epochs of clock-equivalent dwell (no bare literal).")
+    ap.add_argument("--tau-octave-min-dwell", type=int, default=None,
+                    help="S6-R4: event-mode min epochs in an octave before the relaxation sensor may "
+                    "fire (the one-continuation-param dwell floor). DEFAULT None => "
+                    "--curriculum-min-stage-epochs.")
+    ap.add_argument("--tau-octave-max-dwell", type=int, default=None,
+                    help="S6-R4: event-mode per-octave MAX-DWELL FAIL_SAFE_CAP (advance-anyway + LOUD "
+                    "cap_fired_before_event if the sensor never fires). DEFAULT None => DERIVED "
+                    "ceil(--anneal-epochs / N) * slack (tagged slack; no bare literal). A per-octave "
+                    "watchdog, NOT a floor-before-Muon constraint (the ladder freezes at the Muon switch "
+                    "regardless of rung, matching the clock freeze).")
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--lr-end", type=float, default=1e-4)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
@@ -8134,6 +8391,16 @@ def main(argv: list[str] | None = None) -> int:
                     "MEASURED 2026-07-03: mx.compile reintroduces fp-contraction that flips the uint8-STE "
                     "d_seg argmax (fwd Δ~4.8e-3, ~1.11x) so this FAILS CLOSED on non-bit-identical hosts. "
                     "Prefer --fused-r-kernel. Default OFF.")
+    ap.add_argument("--safe-compile-regions", type=str, default="none",
+                    help="(#252 v7.1) determinism-first mx.compile of manifest-CERTIFIED elementwise "
+                    "regions (tac.mlx_safe_compile). 'none'/'off' (DEFAULT) => byte-identical; "
+                    "'all-certified' => every CERTIFIED manifest row; or a comma-separated id list "
+                    "(each fail-closed to the CERTIFIED rows). Score-neutral (bit-equal to uncompiled). "
+                    "Default OFF.")
+    ap.add_argument("--safe-compile-manifest", type=str, default=None,
+                    help="(#252) path to the safe-compile certification manifest JSON "
+                    "(default .omx/state/mlx_safe_compile_manifest.json). Only read when "
+                    "--safe-compile-regions != none.")
     ap.add_argument("--profile-timing", action=argparse.BooleanOptionalAction, default=False,
                     help="(#252) emit per-epoch wall-clock phase split (fwd+bwd step / opt+ema / verdict / "
                     "overhead) + an isolated R micro-bench (fwd and fwd+bwd, reference vs fused) so the R "
@@ -9252,6 +9519,13 @@ def main(argv: list[str] | None = None) -> int:
     # --tau-softplus-start-epoch riding a dissolved-loss run (the discrete switch no longer exists).
     validate_seg_form_unify_tau_config(seg_form_unify_tau=bool(getattr(args, "seg_form_unify_tau", False)))
 
+    # (S6-R4 self-paced τ-advance) event mode requires the derived GEOMETRIC shape + positive τ
+    # endpoints; clock (DEFAULT) is unconstrained => byte-identical. Fail LOUD before any GPU spend.
+    validate_tau_advance_config(
+        tau_advance_mode=str(getattr(args, "tau_advance_mode", "clock")),
+        tau_anneal_shape=str(getattr(args, "tau_anneal_shape", "cosine")),
+        softmax_temp_start=float(args.softmax_temp_start), softmax_temp_end=float(args.softmax_temp_end))
+
     # (LEVER-B) thin-lane dropped-dash prior fail-closed config guard (same NO-FAKE silent-no-op class).
     validate_lane_thin_config(
         lane_thin_weight=args.lane_thin_weight, lane_thin_start_epoch=args.lane_thin_start_epoch,
@@ -9326,6 +9600,41 @@ def main(argv: list[str] | None = None) -> int:
                               "FINAL stage; an orthogonalized finisher on a not-yet-formed partition is "
                               "likely weaker d_seg. ALLOWED (operator freedom); set >= --l7-start-epoch "
                               "for the PR95 placement."}), flush=True)
+
+    # (S2-REV-A) LADDER<->Muon STAGGER invariant: a LADDER arm's anneal window must complete BEFORE the
+    # Muon finisher (else live-LADDER-during-Muon/TAIL). NO-OP when the LADDER is off or --muon-start-epoch
+    # is unset. Shares the pure helper the DSL WitnessProgram.validate also uses (single source of truth).
+    validate_ladder_muon_stagger_config(
+        ladder_island_homotopy=bool(getattr(args, "ladder_island_homotopy", False)),
+        lane_birth_epochs=int(getattr(args, "ladder_lane_birth_epochs", 0)),
+        lane_hold_epochs=int(getattr(args, "ladder_lane_hold_epochs", 0)),
+        lane_anneal_epochs=int(getattr(args, "ladder_lane_anneal_epochs", 0)),
+        movable_birth_epochs=int(getattr(args, "ladder_movable_birth_epochs", 0)),
+        movable_hold_epochs=int(getattr(args, "ladder_movable_hold_epochs", 0)),
+        movable_anneal_epochs=int(getattr(args, "ladder_movable_anneal_epochs", 0)),
+        muon_start_epoch=(int(args.muon_start_epoch) if args.muon_start_epoch is not None else None),
+    )
+
+    # (S6-R5) EVENT-TRIGGERED CURRICULUM vs the DISSOLVED CE->tau boundary under --seg-form-unify-tau.
+    # With unify ON the discrete CE->tau_softplus->l7 dispatch is BYPASSED (_seg_form_for_epoch short-
+    # circuits to "unify_tau"), and the per-epoch seg_form dispatch takes the `if _unify_tau_on:` branch
+    # BEFORE `elif _evt_on:` — so _evt_resolve_seg_form is NEVER called and the event-triggered
+    # controller CANNOT fire the (non-existent) discrete boundary. The machinery is therefore INERT (no
+    # wrong-fire) but v7 co-emits both flags, so a reader could mis-read --curriculum-event-triggered as
+    # active. Emit a LOUD note surfacing the inert-but-armed state (the orphaned-signal rule: an "off"
+    # must be a tracked/surfaced state, never a silent one). Do NOT hard-fail (benign) and do NOT flip
+    # the flag off here (keeps the seal target's byte-stream + resume sidecar untouched). Muon entry now
+    # has its OWN EventBackstopGate wiring (the remaining transition the event machinery is repurposed-
+    # adjacent to; the curriculum controller's job was ONLY the dissolved CE->tau->l7 boundaries).
+    if bool(getattr(args, "seg_form_unify_tau", False)) and bool(getattr(args, "curriculum_event_triggered", False)):
+        print(json.dumps({
+            "stage": "event_curriculum_inert_under_unify",
+            "note": "--curriculum-event-triggered is INERT under --seg-form-unify-tau: the CE->tau->l7 "
+                    "discrete boundaries it fires are DISSOLVED into the continuous L_tau, and the "
+                    "per-epoch seg_form dispatch short-circuits to 'unify_tau' BEFORE the event "
+                    "controller (never fires a dissolved boundary). Muon entry has its own "
+                    "EventBackstopGate wiring. Flag retained (not removed) for resume/config stability; "
+                    "surfaced LOUD so it is not mis-read as active (S6-R5)."}), flush=True)
 
     # BUILD 1 (FEED-fw) fail-closed config guards (same NO-FAKE silent-no-op class as the lane/muon
     # validators). DEFAULT-OFF (rewarmup-epochs 0, lane-prior off) => none of these fire => unchanged.

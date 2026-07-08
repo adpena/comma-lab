@@ -1892,6 +1892,68 @@ def SegFormUnifyTau() -> Lever:  # noqa: N802 — witness-native schedule deriva
                        "(loss-τ = render softmax-temp, floored at τ*); removes the last PR95 stage bone")
 
 
+def TauAdvanceEvent(octaves: "int | None" = None,  # noqa: N802 — S6-R4 self-paced τ-advance
+                    min_dwell: "int | None" = None, max_dwell: "int | None" = None) -> Lever:
+    """S6-R4 SELF-PACED τ-ADVANCE: convert the τ-anneal from an epoch-clock to an EVENT-driven
+    GEOMETRIC OCTAVE LADDER (operator 2026-07-08: *"Why is there a fixed number of epochs if our
+    schedule and curriculum are no longer supposed to be hardcoded like pr95"* — the anneal-epochs
+    denominator that clocks τ(t) is the LAST clock-hardcoding in the v7 schedule).
+
+    ``--tau-advance-mode event``: τ holds at each rung of the geometric ladder
+    ``τ_k = start·(end/start)^(k/N)`` (the SAME values the geometric clock passes through at prog=k/N
+    — event mode reuses the clock ladder VALUES; only the per-rung DWELL is event-driven) and advances
+    to k+1 when the per-band RELAXATION sensor fires: a ``powerlaw_meat`` detector on the through-R seg
+    loss WITHIN the current octave (dwell-gated, thin-data fail-safe). A per-octave MAX-DWELL is the
+    LOUD fail-safe backstop (``cap_fired_before_event``, S5 falsification-relevant). Engine:
+    ``tac.witness_control.tau_advance`` (pure + unit-tested).
+
+    REQUIRES ``--tau-anneal-shape geometric`` (the derived shape; validated by the trainer's
+    ``validate_tau_advance_config``). COMPOSE with :func:`SegFormUnifyTau` for the full derived
+    schedule. Defaults (octaves/min/max-dwell = None) => DERIVED in the trainer from --anneal-epochs +
+    --curriculum-min-stage-epochs (no bare literals); pass explicit values to override.
+
+    COUPLINGS (handled by the trainer, not extra flags): β co-anneals on the octave fraction; the LR
+    pin rides the octave fraction (LR ∝ τ-control progress, S6/DE); unify-τ loss-τ follows the render
+    τ automatically; the ladder FREEZES at the Muon switch (no double-driver of τ vs the finisher/TAIL).
+
+    The trainer flag ``--tau-advance-mode`` DEFAULTS to ``clock`` (byte-identical) => this lever is
+    what OPTS IN to event mode; a program without it is the incumbent per-epoch anneal."""
+    ov: dict = {"--tau-advance-mode": "event"}
+    if octaves is not None:
+        ov["--tau-octaves"] = int(octaves)
+    if min_dwell is not None:
+        ov["--tau-octave-min-dwell"] = int(min_dwell)
+    if max_dwell is not None:
+        ov["--tau-octave-max-dwell"] = int(max_dwell)
+    return Lever("tau_advance_event",
+                 overrides=ov,
+                 notes="S6-R4 self-paced τ-advance: geometric octave ladder, per-band-relaxation "
+                       "event dwell (powerlaw_meat within octave) + loud max-dwell backstop; requires "
+                       "--tau-anneal-shape geometric; β/LR co-anneal on the octave fraction; freezes at Muon")
+
+
+def SafeCompileRegions(regions: str = "all-certified") -> Lever:  # noqa: N802 — #252 v7.1
+    """SAFE-COMPILE (#252): activate the determinism-first ``mx.compile`` layer for the
+    manifest-CERTIFIED elementwise hot-loop regions (``tac.mlx_safe_compile``).
+
+    ``mx.compile`` was measured-EXCLUDED from the R operator (fp-contraction flips the
+    uint8-STE d_seg knife-edge; v7 audit lever #3). This lever compiles ONLY regions
+    whose per-region certificate proves bit-equality (max|Δ|=0) AND cross-process
+    determinism — score-neutral by construction (a certified region is bit-identical to
+    the uncompiled path). ``regions``: "all-certified" (every CERTIFIED manifest row),
+    "none"/"off" (the default trainer behaviour), or a comma-separated id list (each
+    intersected with the CERTIFIED rows; uncertified ids fail-closed to OFF).
+
+    v7.1 / next-arm (NOT launch-gating for v7): needs the v7 baseline trajectory as the
+    A/B comparator (sister of D15 micro-batch). The certified-region manifest IS the
+    evidence gate; default OFF => byte-identical."""
+    return Lever("n252_safe_compile_regions",
+                 overrides={"--safe-compile-regions": regions},
+                 notes="#252 determinism-first mx.compile of manifest-CERTIFIED elementwise "
+                       "regions (bit-equal + cross-process deterministic); score-neutral; "
+                       "v7.1 arm, was OFF (--safe-compile-regions none)")
+
+
 def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N802 — #287
     """#287 EGO-PHASE DASH COMB — the cell-problem corrector of the dash-erasure
     homogenization law (``tac.canonical_equations.dash_erasure_homogenization_20260707``):

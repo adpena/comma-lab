@@ -408,10 +408,53 @@ def probe_composite_cell(*, num_pairs: int, epochs: int, gt_cache: str, device: 
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SAFE-COMPILE region certification (#252, 2026-07-08).
+#
+# The op cells above localize determinism per PRIMITIVE; the composite cell
+# answers the full-step question. This cell answers a THIRD question the
+# determinism-first ``mx.compile`` layer needs: for each NOMINATED elementwise
+# region, is ``mx.compile(region)`` BIT-IDENTICAL to the uncompiled region
+# (max|Δ|=0 on real inputs) AND cross-process deterministic? It delegates to
+# ``tac.mlx_safe_compile`` (the certification harness) so the probe stays the
+# single certification instrument. A region ships ENABLED in the trainer only via
+# a CERTIFIED manifest row — never on vibes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def probe_safe_compile_regions(region_ids: list[str] | None, *, device: str, n: int,
+                               n_inputs: int, out: str | None) -> dict:
+    """Certify the nominated SAFE-COMPILE regions and (optionally) write the manifest."""
+    from datetime import datetime, timezone
+
+    sys.path.insert(0, os.path.join(_REPO, "src"))
+    from tac import mlx_safe_compile as sc
+
+    ids = region_ids or sorted(sc.REGION_BUILDERS)
+    man = sc.CertificationManifest(device=device,
+                                   created_utc=datetime.now(timezone.utc).isoformat())
+    for rid in ids:
+        region = sc.get_region(rid)
+        if region.classify().region_class is sc.RegionClass.UNSAFE_REDUCTION:
+            cert = sc.certify_fixed_point_reduction(rid, n_determinism=n, device=device)
+        else:
+            cert = sc.certify_region(rid, n_inputs=n_inputs, n_determinism=n, device=device)
+        man.add(cert)
+    if out:
+        man.save(out)
+    return man.as_dict()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--child", nargs=2, metavar=("OP", "DEVICE"), default=None,
                     help="internal: run one op in this process and print its hash")
+    ap.add_argument("--safe-compile", action="store_true",
+                    help="certify the SAFE-COMPILE regions (tac.mlx_safe_compile) on this device")
+    ap.add_argument("--safe-compile-regions", nargs="*", default=None,
+                    help="subset of region ids to certify (default: all registered)")
+    ap.add_argument("--safe-compile-out", default=None,
+                    help="write the certification manifest JSON here")
     ap.add_argument("--n", type=int, default=10, help="processes per cell (default 10)")
     ap.add_argument("--device", default="gpu", choices=("gpu", "cpu"))
     ap.add_argument("--arch", default="", help="MLX_METAL_GPU_ARCH override (e.g. applegpu_g15)")
@@ -432,6 +475,15 @@ def main() -> int:
     if args.child:
         _child(args.child[0], args.child[1])
         return 0
+    if args.safe_compile:
+        r = probe_safe_compile_regions(args.safe_compile_regions, device=args.device,
+                                       n=args.n, n_inputs=32, out=args.safe_compile_out)
+        print(json.dumps(r, indent=1))
+        rows = r["rows"]
+        failed = [rid for rid, row in rows.items() if row["verdict"] != "CERTIFIED"]
+        print(f"\n[verdict] safe-compile: {len(rows) - len(failed)}/{len(rows)} regions CERTIFIED "
+              f"on {args.device}; not-certified: {failed}", file=sys.stderr)
+        return 0 if not failed else 1
     if args.composite:
         gt = args.comp_gt_cache
         if not os.path.isabs(gt):
