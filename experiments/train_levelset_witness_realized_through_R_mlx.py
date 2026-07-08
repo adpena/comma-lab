@@ -68,10 +68,12 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     cpu_verdict_d_seg_argmax_batch,
     cpu_verdict_d_seg_batch,
     focal_pixel_weight_mlx,
+    gpu_verdict_dseg_dpose_chunked,
     implied_score_from_verdict,
     load_gt_from_cache,
     make_loss_fn,
     maybe_enable_mx_compile_r,
+    paired_anchor_verdict,
     precompute_gt,
     r_isolated_microbench,
     render_through_R_mlx,
@@ -2603,6 +2605,27 @@ def _restore_rng_state(cfg: dict[str, Any], hardness_rng: "np.random.Generator |
     return restored
 
 
+def _running_accepted_frac(ep_acc: int, ep_tot: int,
+                           pending_accept: "bool | None" = None) -> float:
+    """(C6 liveness) Pure accepted-batch-fraction arithmetic for the mid-epoch loss_terms
+    row, extracted module-level so it is unit-testable independent of the training loop.
+
+    ``ep_tot`` counts the in-flight batch (incremented at the accum-chunk top) BEFORE the
+    loss_terms row is emitted, but ``ep_acc`` is incremented only AFTER ``opt.update``.
+    A read at emission time therefore undercounts the current batch by one in the
+    numerator — 0/1 == 0.0 on the FIRST batch of every epoch even though it steps (the
+    pessimistically-lying liveness signal). ``pending_accept`` folds the current batch's
+    already-decided accept/skip state (``not skip``) into the numerator so the row is
+    truthful: 1.0 on a clean epoch, <1.0 only with real skips, and never spuriously 0.0.
+    ``ep_tot <= 0`` (no batch has run yet) returns the "alive" default 1.0."""
+    if int(ep_tot) <= 0:
+        return 1.0
+    acc = int(ep_acc)
+    if pending_accept is not None:
+        acc += 1 if pending_accept else 0
+    return float(acc) / float(ep_tot)
+
+
 def run_train(args: argparse.Namespace) -> dict[str, Any]:
     import mlx.core as mx
     import mlx.nn as nn
@@ -2623,6 +2646,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _run_provenance = _git_provenance()
     print(json.dumps({"stage": "provenance", **_run_provenance,
                       "seed": int(args.seed)}), flush=True)
+    # (operator 2026-07-08 GPU-verdict) FAIL-CLOSED: the gpu verdict is an ADVISORY monitor and
+    # MUST NOT feed a training-affecting decision on MLX numbers, and MUST NOT run MLX off the main
+    # thread (it would race the training GPU stream — the exact reason the async worker is pure
+    # numpy+torch). Refuse the incompatible combinations rather than silently produce a confounded
+    # trajectory (NO-FAKE). The nucleus-guard feeds the CE->tau trigger; the ladder homotopy feeds
+    # per-class λ — both consume the verdict argmax INTO training, so they stay on CPU authority.
+    if str(getattr(args, "verdict_device", "cpu")) == "gpu":
+        from tac.witness_control.gpu_verdict import gpu_verdict_conflicts as _gpu_verdict_conflicts
+        _gpu_conflicts = _gpu_verdict_conflicts(
+            async_verdict=bool(getattr(args, "async_verdict", False)),
+            curriculum_nucleus_guard=bool(getattr(args, "curriculum_nucleus_guard", False)),
+            ladder_island_homotopy=bool(getattr(args, "ladder_island_homotopy", False)))
+        if _gpu_conflicts:
+            raise SystemExit(
+                "--verdict-device gpu is an ADVISORY monitor and cannot be combined with "
+                + "; ".join(_gpu_conflicts)
+                + ". Keep those controllers on the CPU-torch authority (--verdict-device cpu) or "
+                "disable them for the gpu-monitor run.")
     mx.random.seed(args.seed)
     np.random.seed(args.seed)
 
@@ -4960,7 +5001,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _annulus_band = float(getattr(args, "annulus_band", 2.0))
     _annulus_bottom_k = float(getattr(args, "annulus_bottom_k", 0.05))
 
-    def _verdict_v(f0s: list, f1s: list) -> dict[str, float]:
+    # (operator 2026-07-08 GPU-verdict HYBRID) device for the ADVISORY verdict scalars + the
+    # CPU-torch positive-control ANCHOR cadence. cpu (default) => every branch below is byte-
+    # identical to the sealed #205 verdict. gpu => the scalars run through the MLX scorer ports
+    # (fast trajectory monitor); every Nth gpu verdict ALSO runs the CPU-torch anchor + emits a
+    # paired drift row. NON-PROMOTABLE either way (CLAUDE.md: MLX/MPS is never a score).
+    from tac.witness_control.gpu_verdict import (
+        build_paired_drift_row as _build_paired_drift_row,
+    )
+    from tac.witness_control.gpu_verdict import (
+        should_anchor as _should_anchor,
+    )
+    _verdict_device = str(getattr(args, "verdict_device", "cpu"))
+    _verdict_anchor_every = int(getattr(args, "verdict_anchor_every", 0))
+    _gpu_verdict_count = [0]  # mutable closure counter of gpu verdicts (anchor cadence)
+
+    def _verdict_v(f0s: list, f1s: list, *, ep: int = -1) -> dict[str, float]:
         """Shared verdict tail: given rendered f0s/f1s over ``vpairs``, return the {d_seg,d_pose} dict.
 
         Nucleus OFF + --no-annulus-telemetry => the UNCHANGED _verdict_dseg_dpose_chunked call =>
@@ -4973,6 +5029,48 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         lstars_v = [gt.lstars[pi] for pi in vpairs]
         poses_v = [gt.gt_poses[pi] for pi in vpairs]
         _realized: "list | None" = None
+        # (operator 2026-07-08) GPU verdict device. Runs the ADVISORY d_seg/d_pose through the MLX
+        # scorer ports (the nucleus-guard / ladder controllers are refused up-front, so the gpu path
+        # never feeds training; annulus/per-class telemetry rides the gpu realized when ON). Then, on
+        # the anchor cadence, ALSO run the CPU-torch positive-control + emit the paired drift row.
+        if _verdict_device == "gpu":
+            _need_realized = _annulus_on
+            _gpu = gpu_verdict_dseg_dpose_chunked(
+                adapter, seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
+                vbatch=int(args.verdict_batch), return_realized=_need_realized)
+            if _need_realized:
+                d_seg, d_pose, _realized = _gpu
+            else:
+                d_seg, d_pose = _gpu
+            v = {"d_seg": d_seg, "d_pose": d_pose}
+            if _annulus_on:
+                try:
+                    v["annulus"] = _annulus_metrics_from_maps(
+                        _realized, lstars_v, [gt.margins[pi] for pi in vpairs],
+                        band=_annulus_band, bottom_k=_annulus_bottom_k,
+                        chunk=int(args.verdict_batch))
+                except Exception as exc:
+                    v["annulus"] = {"error": f"{type(exc).__name__}: {exc}"}
+                try:
+                    if _realized is not None:
+                        from tac.witness_control.perclass_verdict import (
+                            per_class_dseg_fields, per_class_flip_stats)
+                        _fl, _px = per_class_flip_stats(_realized, lstars_v)
+                        v["per_class"] = per_class_dseg_fields(_fl, _px)
+                except Exception as exc:
+                    v["per_class"] = {"error": f"{type(exc).__name__}: {exc}"}
+            _gpu_verdict_count[0] += 1
+            if _should_anchor(_gpu_verdict_count[0], _verdict_anchor_every):
+                try:  # the CPU-torch positive-control ANCHOR + paired drift row (fail-open telemetry).
+                    _paired = paired_anchor_verdict(
+                        adapter, seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
+                        vbatch=int(args.verdict_batch))
+                    print(json.dumps(_build_paired_drift_row(
+                        _paired, epoch=int(ep), verdict_batch=int(args.verdict_batch))), flush=True)
+                except Exception as exc:
+                    print(json.dumps({"stage": "verdict_anchor", "epoch": int(ep),
+                                      "error": f"{type(exc).__name__}: {exc}"}), flush=True)
+            return v
         if _nucleus_on:
             d_seg, d_pose, _ncounts = _verdict_dseg_dpose_nucleus_chunked(
                 seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch))
@@ -5010,7 +5108,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 v["per_class"] = {"error": f"{type(exc).__name__}: {exc}"}
         return v
 
-    def realized_verdict() -> dict[str, float]:
+    def realized_verdict(ep: int = -1) -> dict[str, float]:
         # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
         # (NOT the MLX-GPU reduced-precision forward — the 4th artifact). This IS the deploy render.
         # (review Med1) project the shadow film.weight back onto Stiefel so the advisory d_seg reflects
@@ -5030,7 +5128,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # SegNet forward (OFF => the original chunked call, byte-identical, no extra cost).
         # (SENSE) annulus path (opt-in) reuses the realized argmax from the same forward. All routed
         # through the shared _verdict_v tail; the flag-absent path is byte-identical.
-        return _verdict_v(f0s, f1s)
+        return _verdict_v(f0s, f1s, ep=int(ep))
 
     # ---- ASYNC verdict (FEED-em; ADDITIVE, DEFAULT-OFF via --async-verdict). The realized
     # CPU-torch verdict (render fp32 numpy + SegNet/PoseNet) is PURELY OBSERVATIONAL — the
@@ -5184,7 +5282,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                    # arrival times DIRECTLY (the no-timestamp root cause the self-calibrating
                    # dashboard otherwise self-observes). Purely observational; never read back
                    # into training/resume/parity, not appended to history/result.json.
-                   "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
+                   "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                   # (operator 2026-07-08) which device produced the ADVISORY verdict scalars.
+                   # Additive presence-gated field (dashboard introspect layer reads by key);
+                   # NON-PROMOTABLE regardless of device (CLAUDE.md: MLX/MPS is never a score).
+                   "verdict_device": _verdict_device}
             # (2026-07-07) ADDITIVE observability fields — per-class d_seg (when the annulus branch
             # collected realized maps) + process/MLX memory (#329, every verdict row). Both fail-open
             # + row-only (never history/result.json); consumers read rows by key => additive-safe.
@@ -5779,7 +5881,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "mem_probe", "phase": "before_v0_verdict", "n_pairs": P,
                           "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
                           "mlx_active_gib": round(_mm["active"], 2)}), flush=True)
-    v0 = realized_verdict()
+    v0 = realized_verdict(ep=int(start_epoch - 1))
     v0.pop("nucleus_counts", None)  # (#302) baseline verdict: drop per-class counts (float-only row;
     #                                  readiness telemetry begins at the first in-loop verdict, after
     #                                  _evt_state exists). No-op when the nucleus feature is OFF.
@@ -5807,6 +5909,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       # pre-training baseline from a frozen-mid-training deadlock row (both otherwise read
                       # as "no training happened"). accepted_frac is not yet defined (no batch ran).
                       "weights_stepped": False, "accepted_frac": None, "frozen_epoch": False,
+                      "verdict_device": str(getattr(args, "verdict_device", "cpu")),
                       # (2026-07-07) ADDITIVE per-class observability on the baseline row, mirroring
                       # _emit_verdict_row (row-only; popped from v0 so it never reaches history).
                       **({"d_seg_by_class": _per_class_v0.get("d_seg_by_class"),
@@ -6160,9 +6263,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # rows are not spuriously flagged.
     _live: dict[str, Any] = {"ep_acc": 0, "ep_tot": 0, "frac": 1.0, "stepped": True, "acc": 0, "skip": 0}
 
-    def _live_running_frac() -> float:
-        """Accepted-batch fraction SO FAR this epoch (for mid-epoch loss_terms rows)."""
-        return float(_live["ep_acc"]) / float(max(int(_live["ep_tot"]), 1))
+    def _live_running_frac(pending_accept: "bool | None" = None) -> float:
+        """Accepted-batch fraction SO FAR this epoch (for mid-epoch loss_terms rows).
+        Thin closure over the module-level (unit-tested) ``_running_accepted_frac``: folds
+        the in-flight batch's already-decided accept/skip state into the numerator so the
+        row is truthful (the C6 liveness fix; telemetry-only — never touches the update
+        path or the ``_live`` counters)."""
+        return _running_accepted_frac(int(_live["ep_acc"]), int(_live["ep_tot"]), pending_accept)
 
     # typed confound-alarm streak state (turn the silent confounds LOUD; non-halting unless egregious).
     _alarm: dict[str, Any] = {"deadlock_streak": 0, "termdom_streak": 0, "gnorm_streak": 0,
@@ -7089,7 +7196,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps(_loss_terms_row(
                         _t_agg, _t_tot, ep, _bidx_lt, gnorm=gnorm, skipped=skip,
                         visco_eps=_lt_ve, visco_c_a=_lt_ca,
-                        accepted_frac=_live_running_frac(), weights_stepped=(not skip),
+                        accepted_frac=_live_running_frac(not skip), weights_stepped=(not skip),
                         hosc_beta=float(model.hosc_beta), softmax_temp=float(model.softmax_temp))), flush=True)
                     # (C6) term_domination alarm: a single reg term > 40% of the (post-weight) total
                     # for >= N sustained rows. _t_agg values are already post-weight addends.
@@ -7258,7 +7365,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _join_async_verdict()
                     _schedule_async_verdict(ep, seg_form, ep_loss)
                 else:
-                    v = realized_verdict()
+                    v = realized_verdict(ep=int(ep))
                     # (#302) split per-class counts out of the float-only sync verdict row / history.
                     _ncounts_sync = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
                     # (SENSE) pop annulus BEFORE the float-only row spread. None unless
@@ -7278,6 +7385,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       **{k: round(vv, 6) for k, vv in v.items()},
                                       "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
                                       "ep_loss": round(ep_loss, 3),
+                                      "verdict_device": _verdict_device,
                                       "accepted_frac": round(float(_live["frac"]), 4),
                                       "weights_stepped": bool(_live["stepped"]),
                                       "accepted_batches": int(_live["acc"]), "skipped_batches": int(_live["skip"]),
@@ -7859,6 +7967,21 @@ def main(argv: list[str] | None = None) -> int:
                     "at the number that DEFINES the goal: best-ckpt selection + ALL d_seg telemetry + "
                     "the closed-loop classifier ran on 24/600). Subsetting stays OPT-IN. ALWAYS fp32 "
                     "one-codepath, never mlx-gpu.")
+    ap.add_argument("--verdict-device", choices=["cpu", "gpu"], default="cpu",
+                    help="(operator 2026-07-08) device for the ADVISORY d_seg/d_pose verdict scalars. "
+                    "DEFAULT cpu = today's byte-identical CPU-torch authority. gpu = run the chunked "
+                    "verdict through the MLX scorer ports (deterministic w/ fused-R, ~faster) as a FAST "
+                    "trajectory monitor. NON-PROMOTABLE either way (CLAUDE.md: MLX/MPS is NEVER a score; "
+                    "only a byte-closed exact eval moves the pointer). HYBRID: pair gpu with "
+                    "--verdict-anchor-every N to keep the CPU-torch positive-control sentinel. REFUSED "
+                    "with --async-verdict (GPU-stream race) and with the nucleus-guard / ladder-homotopy "
+                    "controllers (they FEED training -> must stay on CPU authority).")
+    ap.add_argument("--verdict-anchor-every", type=int, default=0,
+                    help="(operator 2026-07-08 HYBRID) when --verdict-device gpu, ALSO run the CPU-torch "
+                    "ANCHOR verdict every Nth gpu verdict and emit a paired {stage:verdict_anchor} DRIFT "
+                    "row (d_seg/d_pose both devices + argmax flip-disagreement count + max |Δd_pose|). "
+                    "0 (default) = no anchor (gpu-only monitoring, no positive-control). Observability-"
+                    "only; never read into training. NO-OP when --verdict-device cpu.")
     ap.add_argument("--annulus-telemetry", action=argparse.BooleanOptionalAction, default=True,
                     help="(SENSE, DEFAULT ON — score-neutral read-only observability per CLAUDE.md \"'Off' is "
                     "a tracked queue\"; it only reads the already-computed verdict argmax + logs, changing NO "
