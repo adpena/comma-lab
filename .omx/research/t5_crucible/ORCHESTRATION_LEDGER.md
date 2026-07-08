@@ -486,3 +486,24 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   deep cut = full-integer pipeline as the only cross-device (Metal↔CUDA) bit-identity. Sequenced
   post-seal; numpy-fp32 stays THE authority regardless. Queue unchanged: v3 designer + wave-1
   finisher in flight.
+- 2026-07-07T~21:xx **DRAFT v3 LANDED** (3 incremental commits e65cfdf76/1097a49e7/83224c801 —
+  credit-death-proof checkpointing honored). BLOCKER-1 RESOLVED: the two share tables are TWO
+  SURFACES (witness-alone ep225 movable-dominant vs composed ep300 verdict surface
+  lane 0.4396/movable 0.1226/big-3 0.4378) with a bridging law (CE birthed 98% of movable mass →
+  movable largely solved composed; lane dash-residual dominates); ALL design binds to the composed
+  set — §0.3 verified unchanged (already on it), §3.2 REBUILT lane-first, MAJOR-5 weights
+  w_lane=1.0/w_movable=0.28 + per-island 1/pers (R13-gated). MAJOR-2: TAU→FIN restores TAU-window
+  EMA-best; forfeit printed (+5.4e-4 S event-leg cost vs +2.7e-3 unspecified worst case). MAJOR-3:
+  τ_end* = m_q/ln5 ADOPTED → τ_end = 0.062 (flip support GT-margin<0.10; 0.2 was 3.2× above the
+  flip-core law value); recovery split β-leg vs τ-leg, 4-9e-4 band DEMOTED to DPR, anneal-speed +
+  path-shape confounds NAMED, B9 → PREFERRED. MAJOR-1: ONE KKT byte law at λ_bytes=6.6586e-7
+  (0.002 pose threshold deleted — net-negative arithmetic printed). MAJOR-4: hybrid deterministic
+  lane-annulus orientation (0.966 vs 0.893-0.909) gated on NEW $0 probe R12 + fallback law — the
+  req-I geometry-sharing headline (ONE polynomial → band + comb phase + lane orientation).
+  CHAIN-A TERMINAL FOLDED: TerminalSolve REMOVED from the stage graph; §11 rows 11-13 terminal;
+  quadratic_basin = K≥32+K-trend SENSOR, HOLD disarmed; lane-anisotropy scope sentence; registry
+  kill-update → tranche 2. All 6 P5 PARTIALs + 13 MINORs + meat adoptions dispositioned (hood
+  clamp +8 B IN; NTK verified UNBUILT → §9.4 build-spec; MUTCD period + ξ phase; v_h=174 pinned;
+  kinematic-ξ + comma2k19 init → P9; mirror-schedule twin; Model A 1.6-6.4% / Model B 3-11%
+  run-1-campaign with per-axis estimates; wall-clock 10-27% + B1-contingency). NEW probes: R12,
+  R13, τ-confirm. **Round 2 of the recursive seal begins on v3 (both lenses).**
