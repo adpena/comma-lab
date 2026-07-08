@@ -179,7 +179,10 @@ def test_argparse_defaults_are_off():
     assert re.search(r'"--eikonal-steik-weight",\s*type=float,\s*default=0\.0', SRC)
     assert re.search(r'"--eikonal-viscosity",\s*type=float,\s*default=0\.0', SRC)
     assert re.search(r'"--eikonal-viscosity-anneal",\s*type=int,\s*default=0', SRC)
-    assert re.search(r'"--spike-guard-mode",\s*type=str,\s*default="legacy"', SRC)
+    # STALE-FIX 2026-07-08: default is "rollback" since confound-fix #398 (the median-freeze cure);
+    # #397 check_no_spike_guard_defaults_to_deadlock_mode BANS "legacy" as a deadlock default. The
+    # old assertion asserted the very bug the confound hunt extinguished — assert the cure default.
+    assert re.search(r'"--spike-guard-mode",\s*type=str,\s*default="rollback"', SRC)
 
 
 def test_total_loss_fn_gates_on_closure_cell():
