@@ -449,3 +449,18 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   ($0, kill ≥24,149B) · R3 AA-gate fix+run (the ss² term + forced verdict, pre-GO) · R6 THE
   PARITY ROW (byte-close→decode→n600 verdict vs training-side 0.0035103, kill Δ>+5e-4 =
   fix-before-any-run). Lens-2 meat hunt still in flight (H/I + naive-collapses + openpilot nine).
+- 2026-07-07T~23:0x MEAT HUNT (lens 2) DONE (318d9b94b): **NOT CLEAN — 1 BLOCKER · 5 MAJOR ·
+  13 MINOR → COUNTER RESETS.** BLOCKER-1: v2 SELF-CONTRADICTS on island-dominant class (§0.3
+  lane-dominant vs §3.2 movable 44.8%/lane 19.1%) — crossing design + curriculum λ run on
+  SWAPPED classes (req-H violation inside one doc). MAJOR-2: the celebrated ep625 fire lands on
+  θ WORSE than ep600 and ep650-best never trains — transition-from-stage-best UNSPECIFIED;
+  forfeits up to +2.7e-3 S ("one cadence before best" was a cost spun as validation — main-loop
+  self-correction: I cheered it). MAJOR-3: τ_end=0.2 ≈ control's truncation 0.216 → anneal
+  "recovery" rides β confounded; FIX = semiclassical τ_end* = margin_q/ln5 ($0, the τ=ħ math).
+  MAJOR-4: openpilot GEM confirmed (0.966 > 0.893-0.909; pay-for-polynomial-serve-only-band).
+  MAJOR-1: joint λ_bytes law replaces per-section thresholds. MAJOR-5: per-class island weights
+  (3.6× asymmetry). MEAT: hood clamp 8-byte no-regret · L3 NTK preconditioner 3-10× speed ·
+  kinematic-ξ · MUTCD · v_h pin; #207 exclusion JUSTIFIED (measured dead — main-loop charter
+  premise corrected); CERTIFIED: crossing table, byte sums, anneal-600 semantics (source-read),
+  Lipschitz, AA ordering. **v3 REVISION LAUNCHED** (folds both lenses + meat adoptions + wave-1
+  results-or-branches). Round 2 of the recursive seal begins on v3.
