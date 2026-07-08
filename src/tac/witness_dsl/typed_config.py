@@ -57,6 +57,7 @@ from tac.witness_dsl.curriculum_dsl import (
 __all__ = [
     "ProvenanceClass",
     "GovernanceClass",
+    "GovernanceRole",
     "Provenanced",
     "ScheduleGovernance",
     "TypedAnneal",
@@ -115,6 +116,20 @@ class GovernanceClass(str, Enum):
     CAP = "cap"
 
 
+class GovernanceRole(str, Enum):
+    """A schedule trigger's ROLE in the event/backstop pair (S4 R1, 2026-07-08).
+
+    FIRES      this trigger is the RUNTIME sensor-fired transition (pairs with class=event); its
+               ``sensor`` names the wired event it fires ON.
+    BACKSTOPS  this trigger is a fail-safe backstop CAP (pairs with class=cap); its ``sensor`` names
+               the co-emitted EVENT it backs up (the event fires FIRST; the cap only if the event
+               did not by the cap epoch). Makes a CAP's ``sensor`` un-misreadable as a firing claim.
+    """
+
+    FIRES = "fires"
+    BACKSTOPS = "backstops"
+
+
 class Provenanced(BaseModel):
     """A value knob tagged with its ladder class, unit, and source (fail-closed).
 
@@ -165,7 +180,24 @@ class ScheduleGovernance(BaseModel):
         default=None,
         description="the governing event-condition sensor flag (e.g. --curriculum-event-triggered)",
     )
+    # S4 R1 (2026-07-08): the event/backstop ROLE discriminator. Optional for backward compat — a
+    # missing role DEFAULTS from the class (event->fires, cap->backstops) so pre-R1 declarations
+    # still validate; when present it must AGREE with the class so a CAP's sensor cannot be misread
+    # as a firing claim (the exact event-vs-cap ambiguity the gate exists to kill).
+    role: GovernanceRole | None = Field(
+        default=None,
+        description="fires (class=event: this trigger IS sensor-fired) | backstops (class=cap: this "
+                    "trigger is a fail-safe cap backing up the co-emitted event named in `sensor`)",
+    )
     rationale: str = Field(description="why this trigger is governed (non-empty)")
+
+    @property
+    def effective_role(self) -> GovernanceRole:
+        """The role, defaulted from the class when not explicitly declared (backward compat)."""
+        if self.role is not None:
+            return self.role
+        return (GovernanceRole.FIRES if self.cls is GovernanceClass.EVENT
+                else GovernanceRole.BACKSTOPS)
 
     @model_validator(mode="after")
     def _governance_shape(self) -> "ScheduleGovernance":
@@ -183,6 +215,17 @@ class ScheduleGovernance(BaseModel):
             raise ValueError(
                 "schedule_governance class=event requires a `sensor` naming the co-emitted "
                 "event-condition sensor flag that governs the transition"
+            )
+        # S4 R1: an explicit role must AGREE with the class (event<->fires, cap<->backstops).
+        if self.role is GovernanceRole.FIRES and self.cls is not GovernanceClass.EVENT:
+            raise ValueError(
+                "schedule_governance role=fires requires class=event (a fires trigger IS the "
+                f"runtime sensor-fired transition; got class={self.cls.value})"
+            )
+        if self.role is GovernanceRole.BACKSTOPS and self.cls is not GovernanceClass.CAP:
+            raise ValueError(
+                "schedule_governance role=backstops requires class=cap (a backstops trigger is a "
+                f"fail-safe cap backing up an event; got class={self.cls.value})"
             )
         return self
 

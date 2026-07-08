@@ -68,6 +68,14 @@ RECOGNISED_EVENT_SENSORS: frozenset[str] = frozenset({
     "--curriculum-nucleus-guard",     # per-class critical-nucleus sensor gating CE->tau fire
     "--plateau-trigger",              # d_seg descent-slope plateau (base trainer)
     "--closed-loop-control",          # d_seg-trend monitor -> bounded lever control
+    # operator override 2026-07-08 (S4 R1): the three per-transition sensor->start WIRING flags. Each
+    # is the CLI surface of a wired code/telemetry sensor (powerlaw_meat / lane_nucleus /
+    # annulus_plateau) that fires its transition; the paired --<x>-start-epoch is its backstop cap.
+    # An EVENT declaration names its own start-event flag as `sensor`; a CAP declaration names the
+    # paired start-event flag it backs up.
+    "--muon-start-event",             # muon entry <- powerlaw_meat exit (+ REV-B nucleation positive control)
+    "--lane-band-start-event",        # lane-band start <- lane-class critical nucleus (born + formed)
+    "--seg-chroma-boundary-start-event",  # seg-chroma start <- annulus_frac plateau (formed boundary)
 })
 
 # ── schedule-class labels (a token lands in exactly one).
@@ -84,6 +92,11 @@ CLASS_NAKED = "NAKED_PRIMARY_EPOCH"
 #    provenance concern), not WHEN a stage begins, so they are out of this gate's scope.
 _ADD_ARG_RE = re.compile(r'add_argument\(\s*"(--[a-z0-9-]+)"')
 _START_EPOCH_RE = re.compile(r"-start-epoch$")
+# operator override 2026-07-08 (S4 R1): a per-transition sensor->start WIRING flag ends in
+# ``-start-event`` (--muon-start-event / --lane-band-start-event / --seg-chroma-boundary-start-event).
+# Its VALUE is a sensor NAME (not an epoch); when co-emitted with a class=event/role=fires governance
+# declaration the transition is EVENT_TRIGGERED (wired) and the paired --*-start-epoch is its backstop.
+_START_EVENT_RE = re.compile(r"-start-event$")
 
 # placeholder rationales are rejected in a cap declaration (per Catalog #287 discipline).
 _PLACEHOLDER_RATIONALE = re.compile(
@@ -118,6 +131,18 @@ def schedule_when_flags(trainer_text: str) -> frozenset[str]:
     return frozenset(
         f for f in _ADD_ARG_RE.findall(str(trainer_text or ""))
         if _START_EPOCH_RE.search(f))
+
+
+def event_start_flags(trainer_text: str) -> frozenset[str]:
+    """The sister registry: every ``--*-start-event`` sensor-wiring flag in the trainer's argparse.
+
+    Data-driven (parsed from the REAL ``add_argument(...)`` calls) so it never rots. These are the
+    operator-override 2026-07-08 per-transition wiring flags whose VALUE is a sensor NAME; a co-emitted
+    one carrying a class=event/role=fires governance declaration makes its transition EVENT_TRIGGERED
+    (its paired ``--*-start-epoch`` becomes the FAIL_SAFE_CAP backstop)."""
+    return frozenset(
+        f for f in _ADD_ARG_RE.findall(str(trainer_text or ""))
+        if _START_EVENT_RE.search(f))
 
 
 def flag_to_manifest_key(flag: str) -> str:
@@ -188,12 +213,23 @@ def validate_governance_entry(flag: str, entry: object, emitted_flags: set[str]
     if sensor not in emitted_flags:
         return False, (f"declared sensor {sensor} is NOT co-emitted in this launch "
                        "(the governing sensor must actually fire)")
+    # S4 R1 (2026-07-08): the event/backstop ROLE discriminator. Optional (defaults from class), but
+    # when present it must AGREE with the class so a CAP's sensor cannot be misread as a firing claim.
+    role = str(entry.get("role", "")).strip().lower()
+    if role:
+        if role not in ("fires", "backstops"):
+            return False, f"role={entry.get('role')!r} must be 'fires' or 'backstops' (S4 R1)"
+        if cls == "event" and role != "fires":
+            return False, "class=event requires role=fires (S4 R1: an event IS the sensor-fired trigger)"
+        if cls == "cap" and role != "backstops":
+            return False, "class=cap requires role=backstops (S4 R1: a cap backs up an event)"
     if cls == "cap":
         rationale = str(entry.get("rationale", "")).strip()
         if len(rationale) < 8 or _PLACEHOLDER_RATIONALE.match(rationale):
             return False, ("cap declaration needs a real rationale (>= 8 chars, "
                            "non-placeholder) naming why the fixed epoch is only a backstop")
-    return True, f"class={cls} governed by {sensor}"
+    eff_role = role or ("fires" if cls == "event" else "backstops")
+    return True, f"class={cls} role={eff_role} governed by {sensor}"
 
 
 # ────────────────────────────── per-token classification ──────────────────────────────
@@ -236,13 +272,20 @@ def classify_token(flag: str, value: object, *, emitted_flags: set[str],
 
 
 def classify_launch(emitted_pairs: list[tuple[str, object]], *, registry: frozenset[str],
-                    manifest_keys: set[str], governance: dict) -> list[TokenVerdict]:
+                    manifest_keys: set[str], governance: dict,
+                    event_registry: "frozenset[str] | None" = None) -> list[TokenVerdict]:
     """Classify every EMITTED schedule-WHEN token with a POSITIVE epoch value.
 
     ``emitted_pairs`` = the final composed argv as ``(flag, value)`` (derived-config tokens +
     parsed extra-trainer-flags). Only tokens whose flag is in the data-driven ``registry``
     AND whose value parses to a POSITIVE epoch are candidate triggers (a ``<= 0`` / ``None``
-    start-epoch is always-on/disabled, never a schedule transition)."""
+    start-epoch is always-on/disabled, never a schedule transition).
+
+    ``event_registry`` (operator override 2026-07-08 / S4 R1): the ``--*-start-event`` sensor-wiring
+    flags (from :func:`event_start_flags`). A co-emitted one carrying a class=event/role=fires
+    governance declaration is ALSO classified (as EVENT_TRIGGERED) so the gate report surfaces the
+    wired transition alongside its FAIL_SAFE_CAP backstop. Its value is a sensor NAME (not an epoch),
+    so it is NOT epoch-filtered; an undeclared start-event flag is skipped (it is not a naked epoch)."""
     emitted_flags = {str(f) for f, _ in emitted_pairs}
     verdicts: list[TokenVerdict] = []
     for flag, value in emitted_pairs:
@@ -253,6 +296,15 @@ def classify_launch(emitted_pairs: list[tuple[str, object]], *, registry: frozen
         verdicts.append(classify_token(
             str(flag), value, emitted_flags=emitted_flags,
             manifest_keys=set(manifest_keys or ()), governance=governance or {}))
+    # S4 R1: surface the co-emitted, DECLARED start-event wirings as EVENT_TRIGGERED transitions.
+    ereg = event_registry or frozenset()
+    gov = governance or {}
+    for flag, value in emitted_pairs:
+        if str(flag) not in ereg or gov.get(str(flag)) is None:
+            continue
+        verdicts.append(classify_token(
+            str(flag), value, emitted_flags=emitted_flags,
+            manifest_keys=set(manifest_keys or ()), governance=gov))
     return verdicts
 
 

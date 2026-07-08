@@ -1092,11 +1092,15 @@ def main(argv: list[str] | None = None) -> int:
 
         sched_pairs = list(cfg.to_trainer_flags(str(out_dir)))
         sched_pairs += spg.extra_flag_pairs(extra_flags or [])
+        _trainer_text = _TRAINER.read_text()
         sched_verdicts = spg.classify_launch(
             sched_pairs,
-            registry=spg.schedule_when_flags(_TRAINER.read_text()),
+            registry=spg.schedule_when_flags(_trainer_text),
             manifest_keys=set(getattr(cfg, "constants_manifest", {}) or {}),
-            governance=getattr(cfg, "schedule_governance", {}) or {})
+            governance=getattr(cfg, "schedule_governance", {}) or {},
+            # (operator override 2026-07-08) surface the co-emitted --*-start-event WIRINGS as
+            # EVENT_TRIGGERED transitions alongside their FAIL_SAFE_CAP backstops.
+            event_registry=spg.event_start_flags(_trainer_text))
         sched_ok, sched_viol, sched_table = spg.gate_report(sched_verdicts)
         print(sched_table)
         if not sched_ok:
