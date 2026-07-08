@@ -5206,6 +5206,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _verdict_anchor_every = int(getattr(args, "verdict_anchor_every", 0))
     _gpu_verdict_count = [0]  # mutable closure counter of gpu verdicts (anchor cadence)
 
+    # (#330 memory-reclaim) subprocess verdict gate. ON only for the PLAIN d_seg/d_pose path (cpu
+    # device, nucleus OFF, annulus OFF -- those variants need the realized argmax maps, which the
+    # subprocess boundary does not return, so they stay in-process). OFF (default) => byte-identical
+    # to the sealed #205 verdict. The child holds the fp32/activation transient => parent RSS returns
+    # to baseline (MEASURED 0.0 ratchet). Score-neutral: the d_seg/d_pose VALUES are bit-identical
+    # (same frozen scorers, same cpu_verdict_* + same --verdict-batch; MEASURED 0.0 diff, bit-equal).
+    _verdict_subprocess_on = (bool(getattr(args, "verdict_subprocess", False))
+                              and _verdict_device == "cpu" and not _nucleus_on and not _annulus_on)
+
     def _verdict_v(f0s: list, f1s: list, *, ep: int = -1) -> dict[str, float]:
         """Shared verdict tail: given rendered f0s/f1s over ``vpairs``, return the {d_seg,d_pose} dict.
 
@@ -5269,6 +5278,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             d_seg, d_pose, _realized = _verdict_dseg_dpose_chunked(
                 seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
                 vbatch=int(args.verdict_batch), return_realized=True)
+            v = {"d_seg": d_seg, "d_pose": d_pose}
+        elif _verdict_subprocess_on:
+            # (#330) plain d_seg/d_pose path in a killpg-reclaimed CHILD process (parent RSS returns to
+            # baseline; BIT-IDENTICAL — same cpu_verdict_* + same --verdict-batch). Fail-open: any child
+            # error falls back to the in-process chunked call (NEVER a fabricated verdict).
+            try:
+                from tac.witness_control.verdict_reclaim import run_verdict_in_subprocess as _rvs
+                _sub = _rvs(f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch),
+                            scratch_dir=str(Path(args.out_dir) / "_verdict_subproc"))
+                d_seg, d_pose = float(_sub["d_seg_mean"]), float(_sub["d_pose_mean"])
+            except Exception as exc:
+                print(json.dumps({"stage": "verdict_subprocess_fallback",
+                                  "err": f"{type(exc).__name__}: {exc}",
+                                  "note": "child failed; falling back to in-process verdict"}), flush=True)
+                d_seg, d_pose = _verdict_dseg_dpose_chunked(
+                    seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch))
             v = {"d_seg": d_seg, "d_pose": d_pose}
         else:
             d_seg, d_pose = _verdict_dseg_dpose_chunked(
@@ -6853,10 +6878,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             raise SystemExit("--tail-live-mq is the OWED SC-3 live-margin render build (no trainer "
                              "route to flip_margin_quantiles yet); omit it to use the sealed τ-halving "
                              "fallback (next_tau live_mq=None)")
-        from tac.witness_control.tail_cycles import TailCycleConfig, TailController
+        from tac.witness_control.tail_cycles import (
+            STOP_MARGINAL_S_DERIVED,
+            TailCycleConfig,
+            TailController,
+        )
         _tail_start_epoch = (int(args.tail_start_epoch) if int(getattr(args, "tail_start_epoch", 0) or 0)
                              else int(args.muon_start_epoch) + int(args.tail_dwell_min))
         _tau0 = _softmax_temp_for_epoch(int(args.muon_start_epoch), args)
+        # None (default) => the DERIVED s* = ν·forfeit floor (forfeit_matched_exit_v1); replaces the
+        # old HARDCODED 1e-4 (14.5× coarser; SEAL-v7-r1 MAJOR-1). An explicit --tail-stop-marginal-s wins.
+        _stop_marginal_s = (STOP_MARGINAL_S_DERIVED if args.tail_stop_marginal_s is None
+                            else float(args.tail_stop_marginal_s))
         _tail_ctrl = TailController(
             TailCycleConfig(
                 k_max=int(args.tail_cycles_max),
@@ -6865,7 +6898,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 tau_halving=float(args.tail_tau_halving),
                 tau_end=float(args.softmax_temp_end),
                 lr_prop_coeff=float(args.tail_lr_prop_tau),
-                stop_marginal_s=float(args.tail_stop_marginal_s)),
+                stop_marginal_s=_stop_marginal_s),
             tau_ref=_tau0, lr_ref=muon_lr_eff, tau0=_tau0)
         print(json.dumps({"stage": "tail_controller_armed", "muon_start": int(args.muon_start_epoch),
                           "tail_start_epoch": int(_tail_start_epoch), "k_max": int(args.tail_cycles_max),
@@ -8676,6 +8709,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verdict-batch", type=int, default=32,
                     help="(#205 OOM fix) CPU-scorer verdict inference chunk size (pairs per torch "
                     "batch); 0 = single N-wide batch (pre-fix). Score-neutral (eval-mode BN).")
+    ap.add_argument("--verdict-subprocess", action=argparse.BooleanOptionalAction, default=False,
+                    help="(#330 memory-reclaim) run the CPU-torch verdict's chunked scorer forward in a "
+                    "killpg-reclaimed CHILD process so its ~5-6 GiB fp32/activation transient is reclaimed "
+                    "by the OS on child exit and the PARENT RSS returns to baseline (MEASURED: parent "
+                    "ratchet 0.0 GiB vs +4.6 in-process; the cheap malloc_trim/pressure_relief reclaims "
+                    "0.0 on macOS). BIT-IDENTICAL to the in-process path (same frozen scorers, same "
+                    "cpu_verdict_* + same --verdict-batch; MEASURED 0.0 diff, bit-equal). DEFAULT OFF => "
+                    "byte-identical to the sealed #205 verdict. Applies ONLY to the plain d_seg/d_pose "
+                    "path (cpu device, no nucleus-guard, no annulus telemetry -- those need the realized "
+                    "argmax maps and stay in-process). Fail-open: a child failure falls back to the "
+                    "in-process verdict (never a fabricated number).")
     ap.add_argument("--verdict-pairs", type=int, default=0,
                     help="realized fp32-numpy EMA-shadow verdict subset (0=all=n600; DEFAULT 0 per "
                     "C12 confound fix 2026-07-05 -- a 24-pair default violated the n600 non-negotiable "
@@ -9465,9 +9509,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--tail-lr-prop-tau", type=float, default=1.0,
                     help="TAIL_k: LR ∝ τ_k coefficient — lr_k = muon_lr * this * τ_k/τ_ref (warm restart; "
                     "moments untouched). Applied uniformly across the Muon/AdamW optimizer groups.")
-    ap.add_argument("--tail-stop-marginal-s", type=float, default=1e-4,
+    ap.add_argument("--tail-stop-marginal-s", type=float, default=None,
                     help="TAIL_k: PowerPlay stop — end the tail when a completed cycle's marginal ΔS/epoch "
-                    "(100*Δd_seg/len) falls below this attribution floor.")
+                    "(100*Δd_seg/len) falls below this attribution floor. Default (None) => the DERIVED "
+                    "s* = ν(tau)·forfeit ≈ 6.897e-6 (forfeit_matched_exit_v1; STOP_MARGINAL_S_DERIVED; "
+                    "replaces the old HARDCODED 1e-4 that was 14.5× coarser, SEAL-v7-r1 MAJOR-1).")
     ap.add_argument("--tail-live-mq", action=argparse.BooleanOptionalAction, default=False,
                     help="TAIL_k: re-derive τ*_k = m_q/ln5 from the LIVE margin field each cycle (SC-3). "
                     "The render route is the OWED build (0 trainer callers of flip_margin_quantiles): set "
