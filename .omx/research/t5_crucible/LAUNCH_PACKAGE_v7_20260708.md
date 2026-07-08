@@ -1,5 +1,7 @@
 # CRUCIBLE v7 LAUNCH PACKAGE — the operator-facing launch record (SEAL v7.3 round-2)
 
+STORES CONSULTED: ORCHESTRATION_LEDGER (operator decisions verbatim) · SYNTHESIS_seal_v73_round2 + all 4 round-2 lens reports · crucible_v73_compile memo · run-1 run.log (measured cadence + verdicts) · canonical equations (safe_compile_hosc_device_bitidentity_v1, tail_stop_forfeit_floor) · DSL lever registry · DAG FEED-v7seal · memories L25/L68/L79.
+
 - **UTC:** 20260708 · **Authority:** `[macOS advisory]` $0, NO launch — this is the launch-decision
   record a reviewer/operator consults BEFORE approving the run. Live run + pid 63069 UNTOUCHED.
   Pointer contest-CPU **0.19110 UNMOVED** — everything here is APPARATUS/MEANS. The END is the

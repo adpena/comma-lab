@@ -72,7 +72,7 @@ Sized off the muon CAP (the LATEST possible Muon entry — a fail-safe backstop)
 inside the turnpike dwell. **v7.3 round-2 MINOR-2 off-by-one fix (A3):** the ABSOLUTE start is
 `epochs − window + 1` = `3000 − 455 + 1` = **2546** (was 2545), so the inclusive trainer loop
 `[start, epochs]` averages EXACTLY `window` = 455 epochs (the prior 2545 observed 456 — inclusive-final
-fencepost). Guards `epochs ≤ muon_cap` (calibration/smoke) by degenerating to a GENUINELY INERT averager
+fencepost). Guards `epochs ≤ muon_cap` (calibration/smoke) by degenerating to a GENUINELY INERT averager (verdict_scope: instance — the calibration/smoke guard path only; INERT here is the DESIGNED no-op, not a lever verdict)
 (**A3 MINOR-1 fix:** `start_epoch = epochs+1`, strictly beyond the final loop epoch ⇒ observe never fires
 ⇒ count 0; the prior `start_epoch=epochs` observed ONCE at the final epoch, NOT inert) so v7 stays
 buildable + byte-identical at `--calibrate-epochs 3`.
