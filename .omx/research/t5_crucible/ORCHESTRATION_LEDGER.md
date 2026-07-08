@@ -204,6 +204,35 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~09:0x: PROBE WAVE-B RESPAWN (instruments inherited+committed) ---
+- Q1 **BETWEEN (no-fire/no-kill)**: max |ρ| = 0.1242 < 0.3 fire bar; 3 sides ≥ 0.1 block
+  robust-dead → B16 stays default-off. MECHANISM CONFIRMED REAL: per-direction effects carry
+  OPPOSITE SIGNS (Lane→Road erasure high-texture +0.135 · Movable→Road low-texture −0.103) —
+  exactly what pooled −0.033 averaged away — but at 40% of fire bar. NEW PHYSICS ROW: S_R
+  positive-control at chance while margin control passes ⇒ annulus flips are MARGIN-driven,
+  not reachability-driven (retro-validates LEVER-4 msal_uni inertness mechanism).
+- P-CON **KILL scope=FORMULATION**: raw pers > τ·ln5 certifies only 0.4408/0.5636 (band ≥0.95).
+  Fitted s = 21.75/3.75 → survival behaves as a ~τ-INDEPENDENT ABSOLUTE bar ~1.3-1.75 logit;
+  Lane islands = the entire failure. B17 ships the FITTED form, not τ·ln5.
+- P-DZ **FIRES — the headline**: uint8-deadzone flip mass = **1.5795495775e-3 d_seg-equivalent**
+  = 88.7× the duty band; **38.4% of ALL flip mass is sub-quantum** (far-range lane rows 176-224,
+  horizon shadow edges, hood boundary). #149 (camera-res sub-pixel placement) GRADUATES from
+  DEFER to FIRST-ORDER duty-queue lever. Impossibility bound M1 = MEASURED BINDING → the
+  family-asymptote estimate gains a measured term: ~44% of mod32cap's residual is unreachable
+  by smooth-witness corrections alone (dither/phase/#149-class levers required for that mass).
+- P-MP **KILL scope=FORMULATION** (K≤64 concave-max at annulus): agreement ~0.41 vs 0.95 band.
+  SHARPENED: oracle-selection capacity PASSES (K=64 rms 0.076-0.13 ≈ the 0.0998 bound) — the
+  max-envelope SELECTION mechanism binds, not representation richness; K=64 payload = 1.53 S
+  rate-dead regardless. Max-plus stays solve-inventory/campaign.
+- Stragglers: FEED-08l **UPHELD-WITH-EVIDENCE-CORRECTION** (scoreability column mis-mapped;
+  flatness now 5-point = STRONGER; compensated recall-vs-gapFP trade) · comb-registration:
+  deciding measurement = phase-sweep + registration score, n600-render-pass cost class; this
+  JSON recomputes comb gap-FP removal **79.33% not 86%** (solid-baseline discrepancy — v6 must
+  cite 79.33 or resolve).
+- V6 FOLD LIST (running): F-DET · ν amendments · P-CT3 promotion · B17 fitted-form · B16 stays
+  off · #149 graduation + M1-binding asymptote update · P-MP formulation-dead · cadence
+  antagonism · comb 79.33 correction · τ_end AWAITING the ep1000 re-render (in flight).
+
 --- CREDIT-DEATH ×3 + RECOVERY 2026-07-08T~08:1x (operator: "recover and respawn staggered,
 ensure no signal loss") ---
 - Probe wave-B died @83 uses: 4 instruments BUILT + IN TREE uncommitted (conley_persistence_
