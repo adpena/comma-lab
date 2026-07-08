@@ -46,7 +46,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
       verdict_review_status_metadata_operator_should_never_catch_provenance_20260707.
 - [x] P3b debate round(s) — v2 REVISION landed (305d884ce); second red-team verify pass launched
 - [ ] P4 EMPIRICAL RECESS (measurable disputes → n600-real data; HVP-Lanczos first; serial, governed)
-- [ ] P5 revised synthesis (the draft, amended by recess results; survives second red-team pass)
+- [~] P5 second red-team DONE: SEAL-TO-RECESS (3c707e2f5) — zero FAILS, 6 amendment-grade PARTIALs bind at recess close; revised synthesis follows recess
 - [ ] P6 **RECURSIVE SEAL (operator 2026-07-07: "recursive adversarial review and deep math pass
       like normal")**: TWO LENSES per round — (i) the finding-disposition VERIFY pass + (ii) the
       DEEP-MATH MEAT HUNT (re-derive every law · hunt unconsumed levers vs the compendium · bug
@@ -435,3 +435,17 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   × 2 lenses). Lane-anisotropy scope pin delivered to P5 verifier (operator: "lane is anisotropic"
   — the u_min-isotropic negative is measured at a LANE-LESS checkpoint, structurally blind to the
   signal-level lane anisotropy; category error if cited against Rebalance/comb/band/along-tangent).
+- 2026-07-07T~22:3x P5 SECOND RED-TEAM DONE (3c707e2f5): **SEAL-TO-RECESS, zero FAILS** —
+  verified BY RE-EXECUTION (crossing rows to the digit; ep625 backtest reproduced BIT-FOR-BIT
+  from the on-disk trace; 18/18 flags exist; FEED-07g confirmed). 6 PARTIALs bind at recess
+  close: (1) AA MEMORY GATE IS AA-BLIND — witness_memory_preflight lacks the supersample term
+  (the exact C4 false-green class it exists to extinct) + smoke never fires an n600 verdict
+  (~15 LOC + one forced verdict, pre-GO); (2) anneal-SPEED confound un-named (600 = 1.67× faster
+  than the backtest's control trace); (3) F11 worst-tail label missing pose-byte leg; (4) F7
+  twin needs stage-relative comparison; (5-6) lane-anisotropy pin CLEAN (no lever demoted on
+  u_min negative) but scope sentence + registry domain_of_validity caveat owed (tranche 2).
+  Regression v1→v2 CLEAN; worst-case bytes close; launchable modulo honestly-labeled LB builds.
+  **11-item recess list finalized.** RECESS WAVE 1 LAUNCHED (independent items): R1 LBND4-smoothed
+  ($0, kill ≥24,149B) · R3 AA-gate fix+run (the ss² term + forced verdict, pre-GO) · R6 THE
+  PARITY ROW (byte-close→decode→n600 verdict vs training-side 0.0035103, kill Δ>+5e-4 =
+  fix-before-any-run). Lens-2 meat hunt still in flight (H/I + naive-collapses + openpilot nine).
