@@ -579,9 +579,6 @@ def _build_resume_state_arrays(
     live_np: dict[str, np.ndarray], ema_np: dict[str, np.ndarray],
     opt_np: dict[str, np.ndarray] | None, *, args: Any, epoch: int, in_feat: int,
     recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
-    evt_curriculum_state: "dict | None" = None,
-    closed_loop_state: "dict | None" = None,
-    tau_advance_controller: "Any" = None,
     resume_registry: "Any" = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
@@ -656,44 +653,19 @@ def _build_resume_state_arrays(
     # across a spike. Empty list => a 0-length array (default-safe; a pre-fix ckpt lacks the key =>
     # the loop's fresh [] is used, i.e. the prior behavior). Per the deterministic-repro non-negotiable.
     out["__recent_losses"] = np.asarray(list(recent_losses or []), np.float64)
-    # (#292 build-2) EVENT-TRIGGERED CURRICULUM controller state: persist the resolved stage boundaries
-    # + within-stage ep_loss history so a --resume-from of an event-triggered run reproduces the SAME
-    # fired transition epochs (deterministic-reproducibility non-negotiable). Default None (event-
-    # triggered OFF, incl. #205) => ZERO new keys written => the sidecar is byte-identical to the pre-
-    # #292-build-2 path. A pre-feature sidecar lacks these keys => the resume loop falls back to the
-    # SAFE cap-resolution (past-cap boundaries -> hardcoded caps) so the stage is never mis-assigned.
-    if evt_curriculum_state is not None:
-        _bt = evt_curriculum_state.get("tau")
-        _bl = evt_curriculum_state.get("l7")
-        out["__evt_boundary_tau"] = np.asarray(-1 if _bt is None else int(_bt))
-        out["__evt_boundary_l7"] = np.asarray(-1 if _bl is None else int(_bl))
-        out["__evt_stage_start"] = np.asarray(int(evt_curriculum_state.get("stage_start", 1)))
-        out["__evt_stage_losses"] = np.asarray(
-            list(evt_curriculum_state.get("losses", []) or []), np.float64)
-        # (#302) MEASURED nucleus-readiness state (nucleus half of the CE->tau trigger). Default True
-        # (nucleus guard OFF => never blocks). Persisted so an ON-resume reproduces the SAME fired
-        # epoch bit-faithfully (the guard reads the last verdict's nucleus_ready).
-        out["__evt_nucleus_ready"] = np.asarray(
-            1 if bool(evt_curriculum_state.get("nucleus_ready", True)) else 0)
-    # (#292 build-3) CLOSED-LOOP LEVER CONTROL state: persist bump/stop state + the captured verdict
-    # history so an ON-run --resume-from is bit-faithful (same classifications => same bumps + stop).
-    # Default None (closed-loop OFF, incl. #205) => ZERO new keys => sidecar byte-identical.
-    if closed_loop_state is not None:
-        out.update(_cl_state_arrays(closed_loop_state, closed_loop_state.get("verdicts", [])))
-    # (S6-R4 self-paced τ-advance) persist the octave-ladder controller state (rung, octave-start,
-    # last-seen, frozen, current-octave d_seg history, fire log) so a crash-resume of an EVENT-mode run
-    # reconstructs the IDENTICAL subsequent τ trajectory bit-faithfully. None (clock, DEFAULT) => ZERO
-    # new keys => sidecar byte-identical (the #205-safe path).
-    if tau_advance_controller is not None:
-        from tac.witness_control.tau_advance import tau_advance_state_arrays
-        out.update(tau_advance_state_arrays(tau_advance_controller))
-    # (CANONICAL RESUME REGISTRY 2026-07-08) persist ALL registered latching gates (muon / lane_band /
-    # seg_chroma_boundary + the chroma detector history) through the run-scoped ResumeRegistry — the
-    # CLASS-fix for the "forgot to route a gate into resume" bug (muon MAJOR-1 was the point-fix). The
-    # registry writes each gate's FIRE state at its canonical prefix (__mg_/__lbg_/__cbg_/__cbh_) and
-    # stamps a manifest so resume can detect a vanished controller. Every gate self-gates to {} in
-    # EVENT-MODE OFF (cap-only), so when ALL gates are cap-only the registry emits {} (NO manifest) =>
-    # ZERO new keys => the sidecar is byte-identical (the #205/v6/v7-safe path).
+    # (CANONICAL RESUME REGISTRY 2026-07-08; #358 non-gate fold) persist ALL registered stateful
+    # controllers through the run-scoped ResumeRegistry -- the CLASS-fix for the "forgot to route a
+    # controller into resume" bug (muon MAJOR-1 was the point-fix). The registry holds the three
+    # latching gates (muon/lane_band/seg_chroma_boundary + chroma detector history), the polyak scalar
+    # sentinel, AND (folded #358) the four former hand-written non-gate pairs: rng streams (__rng_),
+    # closed-loop (__cl_), tau-advance (__ta_), evt-curriculum (__evt_) -- each a FunctionResumable
+    # delegating to its canonical free function so the emitted keys are BYTE-IDENTICAL to the prior
+    # explicit calls. Every gate self-gates to {} in EVENT-MODE OFF; the manifest is stamped ONLY when
+    # an event gate wrote, so a cap-only run (incl. the live #205/v6/v7, which writes __rng_* + any
+    # optional __cl_/__ta_/__evt_) emits NO manifest => the sidecar is byte-identical. (Restore of the
+    # four stays INLINE below: they are constructed AFTER the single early _resume_registry.restore, so
+    # the write is registry-driven while the restore -- with its trainer-coupled telemetry / evt
+    # cap-fallback / cl pending-reconcile -- remains at its correctly-ordered inline site.)
     if resume_registry is not None:
         out.update(resume_registry.state_arrays())
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
@@ -2435,6 +2407,51 @@ def _cl_pending_from_cfg(cfg: dict) -> dict | None:
             "softmax_temp": float(cfg["__cl_pend_temp"]),
             "hosc_beta": float(cfg["__cl_pend_beta"]),
             "ema_np": shadow}
+
+
+def _evt_state_arrays(evt_state: "dict | None") -> "dict[str, np.ndarray]":
+    """(#292 build-2; #358 fold) EVENT-TRIGGERED CURRICULUM controller state -> resume-sidecar arrays.
+    Extracted VERBATIM from the former inline ``_build_resume_state_arrays`` block so it can ride the
+    canonical resume registry (write-completeness + static coverage) with BYTE-IDENTICAL keys. Returns
+    ``{}`` when ``evt_state is None`` (feature OFF -- the caller passes None unless ``_evt_on``) => ZERO
+    new sidecar keys => byte-identical (the #205-safe path). Persists the resolved stage boundaries +
+    within-stage ep_loss history + measured nucleus-readiness so a --resume-from reproduces the SAME
+    fired transition epochs (deterministic-reproducibility). MLX-free."""
+    if evt_state is None:
+        return {}
+    _bt = evt_state.get("tau")
+    _bl = evt_state.get("l7")
+    return {
+        "__evt_boundary_tau": np.asarray(-1 if _bt is None else int(_bt)),
+        "__evt_boundary_l7": np.asarray(-1 if _bl is None else int(_bl)),
+        "__evt_stage_start": np.asarray(int(evt_state.get("stage_start", 1))),
+        "__evt_stage_losses": np.asarray(list(evt_state.get("losses", []) or []), np.float64),
+        # (#302) MEASURED nucleus-readiness (nucleus half of the CE->tau trigger). Default True
+        # (guard OFF => never blocks). Persisted so an ON-resume reproduces the SAME fired epoch.
+        "__evt_nucleus_ready": np.asarray(
+            1 if bool(evt_state.get("nucleus_ready", True)) else 0),
+    }
+
+
+def _evt_restore_from_cfg(evt_state: "dict | None", cfg: dict) -> bool:
+    """(#292 build-2; #358 fold) Inverse of :func:`_evt_state_arrays`: restore the persisted boundary
+    state INTO ``evt_state`` (in place) from a resume sidecar ``cfg``. Returns True iff the persisted
+    keys were present+restored (the SAME with-keys branch the trainer's inline restore takes); False
+    otherwise -- the trainer's cap-fallback / fresh-start paths are trainer-coupled (need start_epoch /
+    args) and remain INLINE. MLX-free. (``__evt_stage_start`` is always co-written with
+    ``__evt_boundary_tau`` in :func:`_evt_state_arrays`, so the ``.get`` default never fires on a real
+    sidecar -- byte-identical to the inline restore.)"""
+    if evt_state is None or "__evt_boundary_tau" not in cfg:
+        return False
+    _bt = int(cfg["__evt_boundary_tau"])
+    _bl = int(cfg["__evt_boundary_l7"])
+    evt_state["tau"] = None if _bt < 0 else _bt
+    evt_state["l7"] = None if _bl < 0 else _bl
+    evt_state["stage_start"] = int(cfg.get("__evt_stage_start", evt_state.get("stage_start", 1)))
+    _sl = cfg.get("__evt_stage_losses", [])
+    evt_state["losses"] = [float(x) for x in (_sl if isinstance(_sl, list) else [_sl])]
+    evt_state["nucleus_ready"] = bool(int(cfg.get("__evt_nucleus_ready", 1)))
+    return True
 
 
 def _hosc_beta_for_epoch(ep: int, args) -> float | None:
@@ -6032,29 +6049,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat,
             # #205: persist the spike-guard window (bit-faithful step-skip on resume) + git provenance.
             recent_losses=recent_losses, provenance=_run_provenance,
-            # (#292 build-2) persist the event-triggered curriculum controller state ONLY when the
-            # feature is ON (closure vars _evt_on/_evt_state, assigned before any _do_checkpoint call,
-            # mirroring recent_losses). OFF => None => ZERO new sidecar keys => byte-identical (#205-safe).
-            evt_curriculum_state=(_evt_state if _evt_on else None),
-            # (#292 build-3) persist the closed-loop controller state ONLY when the feature is ON
-            # (closure vars _cl_on/_cl_state/_cl_verdicts/_cl_pending, assigned before any
-            # _do_checkpoint call, mirroring _evt_state). OFF => None => ZERO new sidecar keys =>
-            # byte-identical (#205-safe). (M2 fix) the snapshot is taken under _verdict_lock and
-            # includes the PENDING-VERDICT record when one is in flight (bit-faithful resume).
-            closed_loop_state=(_cl_sidecar_snapshot() if _cl_on else None),
-            # (S6-R4) persist the τ-advance octave-ladder controller (closure var _tau_ctrl, assigned
-            # before any _do_checkpoint call). None (clock, DEFAULT) => ZERO new sidecar keys =>
-            # byte-identical. Event mode => the octave state round-trips for a bit-faithful τ resume.
-            tau_advance_controller=_tau_ctrl,
-            # (CANONICAL RESUME REGISTRY 2026-07-08) persist ALL three latching gates (muon +
-            # lane_band + seg_chroma_boundary + chroma detector history) via the run-scoped registry
-            # (closure var _resume_registry, built after gate construction above). Cap-only run => every
-            # gate emits {} => the registry emits {} (NO manifest) => ZERO new keys => byte-identical.
+            # (CANONICAL RESUME REGISTRY 2026-07-08; #358 non-gate fold) persist EVERY registered
+            # stateful controller via the run-scoped registry: the three latching gates + chroma
+            # history + polyak scalar, AND (folded #358) the rng streams / closed-loop / tau-advance /
+            # evt-curriculum controllers (formerly hand-written pairs here + the separate rng update
+            # below). Each writes byte-identical keys via its FunctionResumable; a cap-only run emits
+            # NO manifest => byte-identical. The cl controller snapshots under _verdict_lock inside its
+            # adapter (M2 pending-verdict-consistent), the rng adapter always writes __rng_*.
             resume_registry=_resume_registry)
-        # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
-        # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
-        # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
-        resume_arrays.update(_rng_state_arrays(hardness_rng))
         # (R-7 finisher 2) merge the Polyak running-mean (heavy fp64) into the SAME atomic resume savez
         # as its scalar sentinel (registry) => no cross-file desync. {} unless armed+observed => the
         # sidecar is byte-identical for an un-armed run.
@@ -6841,6 +6843,49 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "d_pose": round(float(_pv["d_pose"]), 6),
                                   "note": "in-flight-at-checkpoint verdict recomputed from the persisted "
                                   "snapshot (M2 decide-on-previous bit-faithful resume)"}), flush=True)
+
+    # --- NON-GATE RESUME FOLD (#358): register the four former hand-written non-gate controllers into
+    # the run-scoped resume registry so a NEW controller of these shapes CANNOT be forgotten at the
+    # WRITE surface (the static coverage test asserts every *_state_arrays producer is registered). Each
+    # is a NON-EVENT FunctionResumable delegating to its canonical free function => byte-identical keys,
+    # so a cap-only run emits NO manifest (the byte-identity contract; the live #205/v6/v7 run writes
+    # __rng_* + any __cl_/__ta_/__evt_ but no manifest). These four are constructed AFTER the single
+    # early _resume_registry.restore above (hardness_rng / _tau_ctrl / _evt_state / _cl_state), so the
+    # registry drives their WRITE + completeness/manifest while their RESTORE stays at its correctly-
+    # ordered inline site (evt L6709 cap-fallback, tau L6778, cl L6786 pending-reconcile, rng L6535) --
+    # a deliberate write-registry / restore-inline split (the adapter restore is the protocol-conformant
+    # unit-tested delegate; the trainer's inline path is authoritative for telemetry + coupled logic).
+    from tac.witness_control.resume_registry import FunctionResumable as _FnResumable
+    from tac.witness_control.tau_advance import tau_advance_restore_from_cfg as _ta_restore
+    from tac.witness_control.tau_advance import tau_advance_state_arrays as _ta_write
+
+    def _cl_write(_p: str) -> "dict[str, Any]":
+        # cl snapshots under _verdict_lock inside the adapter (M2 pending-verdict-consistent); OFF => {}.
+        if not _cl_on:
+            return {}
+        _s = _cl_sidecar_snapshot()
+        return _cl_state_arrays(_s, _s["verdicts"])
+
+    def _cl_apply_restore(cfg: dict) -> bool:
+        _r = _cl_restore_from_cfg(cfg)
+        if _r is None:
+            return False
+        _cl_state.update(_r[0])
+        _cl_verdicts[:] = _r[1]
+        return True
+
+    _resume_registry.register("rng_streams", "__rng_", _FnResumable(
+        write=lambda _p: _rng_state_arrays(hardness_rng),
+        restore=lambda _p, cfg: any(_restore_rng_state(cfg, hardness_rng).values())))
+    _resume_registry.register("closed_loop", "__cl_", _FnResumable(
+        write=_cl_write, restore=lambda _p, cfg: _cl_apply_restore(cfg)))
+    _resume_registry.register("tau_advance", "__ta_", _FnResumable(
+        write=lambda _p: _ta_write(_tau_ctrl),
+        restore=lambda _p, cfg: _ta_restore(_tau_ctrl, cfg)))
+    _resume_registry.register("evt_curriculum", "__evt_", _FnResumable(
+        write=lambda _p: _evt_state_arrays(_evt_state if _evt_on else None),
+        restore=lambda _p, cfg: _evt_restore_from_cfg(_evt_state if _evt_on else None, cfg)))
+
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
     # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0). Under

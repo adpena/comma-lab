@@ -226,8 +226,11 @@ def test_off_writes_zero_sidecar_keys_and_loop_is_gated():
     assert "eik_w_ep = _scheduled_eikonal_weight(ep, args)" in src
     assert 'if _cl_on and _cl_state["bump_add"] > 0.0:' in src
     assert '"--closed-loop-control", action=argparse.BooleanOptionalAction, default=False' in src
-    # sidecar: OFF passes None (zero __cl_* keys); ON goes through the locked snapshot helper.
-    assert "closed_loop_state=(_cl_sidecar_snapshot() if _cl_on else None)" in src
+    # sidecar (#358 non-gate fold): the cl controller is now a FunctionResumable whose write (_cl_write)
+    # gates on _cl_on and snapshots under the lock; OFF => {} (zero __cl_* keys), ON => the locked
+    # _cl_sidecar_snapshot() -> _cl_state_arrays. Registered under the canonical "__cl_" prefix.
+    assert '_resume_registry.register("closed_loop", "__cl_"' in src
+    assert "def _cl_write(_p" in src and "_s = _cl_sidecar_snapshot()" in src
     # BOTH decision call sites are gated on _cl_on (async decide-on-previous + sync-only block).
     assert src.count("_cl_stop_now = _cl_decide(ep)") == 2
     assert ("if _cl_on and not args.async_verdict and "
@@ -241,16 +244,20 @@ def test_off_writes_zero_sidecar_keys_and_loop_is_gated():
 
 
 def test_sidecar_none_means_no_cl_keys():
-    """_build_resume_state_arrays contract at the helper layer: OFF passes closed_loop_state=None
-    and the writer emits __cl_* ONLY from _cl_state_arrays — so None => zero keys by construction.
-    Prove the arrays helper emits exactly the 8 keys, and nothing else references __cl_ writes."""
+    """(#358 non-gate fold) OFF contract at the helper layer: __cl_* keys are emitted ONLY by
+    _cl_state_arrays, which is invoked ONLY from the cl adapter's _cl_write — and _cl_write returns {}
+    when not _cl_on. So OFF => zero __cl_* keys by construction. Prove the arrays helper emits exactly
+    the 8 keys, and the ONLY trainer caller of _cl_state_arrays is the _cl_on-gated adapter write."""
     arrs = _cl_state_arrays(_fresh_state(), [])
     assert sorted(arrs) == ["__cl_bump_add", "__cl_bumps", "__cl_post_budget_windows",
                             "__cl_stop_epoch", "__cl_v_dseg", "__cl_v_eploss", "__cl_v_epochs",
                             "__cl_v_segform"]
     src = _TRAINER.read_text()
-    assert src.count('out["__cl_') == 0 or "closed_loop_state is not None" in src
-    assert "if closed_loop_state is not None:" in src
+    assert "def _cl_write(_p" in src and "if not _cl_on:" in src
+    assert "return _cl_state_arrays(_s, _s[" in src
+    # _cl_state_arrays appears exactly twice in the trainer: its def + exactly ONE caller (the
+    # _cl_on-gated adapter write) — proving no other unguarded __cl_* write path exists.
+    assert src.count("_cl_state_arrays(") == 2
 
 
 # ───────────────────── resume sidecar round-trip ─────────────────────

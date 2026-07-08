@@ -20,6 +20,7 @@ These are CODE-CORRECTNESS tests (bit-equality of control-flow state), NOT a sco
 """
 from __future__ import annotations
 
+import importlib.util
 import re
 from pathlib import Path
 
@@ -46,6 +47,15 @@ from tac.witness_control.resume_registry import (
 
 _TRAINER = Path(__file__).resolve().parents[3] / "experiments" / \
     "train_levelset_witness_realized_through_R_mlx.py"
+
+
+def _load_trainer():
+    """Import the levelset trainer module by path to reach its resume free functions (module-level,
+    MLX-free -- the heavy mx imports live inside run_train)."""
+    spec = importlib.util.spec_from_file_location("_levelset_trainer_for_test", _TRAINER)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────────────────────────
@@ -429,3 +439,72 @@ def test_every_trainer_ebgate_has_canonical_prefix_and_is_registered():
         assert gv in reg_list, (
             f"gate var {gv!r} is constructed but NOT passed into build_gate_resume_registry([...]) — "
             "it would be silently unpersisted on resume")
+
+
+# ── (H) NON-GATE FOLD — trainer byte-identity + widened static coverage (#358) ───────────────────
+def test_evt_state_arrays_canonical_keys_and_roundtrip():
+    """The extracted _evt_state_arrays produces EXACTLY the former inline block's keys and round-trips
+    through _evt_restore_from_cfg (byte-identical keys + real restore)."""
+    m = _load_trainer()
+    evt = {"tau": 300, "l7": None, "stage_start": 305, "losses": [0.1, 0.2], "nucleus_ready": False}
+    arrays = m._evt_state_arrays(evt)
+    assert set(arrays) == {"__evt_boundary_tau", "__evt_boundary_l7", "__evt_stage_start",
+                           "__evt_stage_losses", "__evt_nucleus_ready"}
+    assert m._evt_state_arrays(None) == {}                       # OFF => {} (byte-identical)
+    cfg = _sidecar_parse(arrays)
+    fresh = {"tau": None, "l7": None, "stage_start": 1, "losses": [], "nucleus_ready": True}
+    assert m._evt_restore_from_cfg(fresh, cfg) is True
+    assert fresh["tau"] == 300 and fresh["l7"] is None and fresh["stage_start"] == 305
+    assert fresh["losses"] == [0.1, 0.2] and fresh["nucleus_ready"] is False
+    assert m._evt_restore_from_cfg(fresh, {}) is False          # no keys => no restore
+    assert m._evt_restore_from_cfg(None, cfg) is False
+
+
+def test_nongate_registry_byte_identical_to_legacy_direct_calls():
+    """The registry-emitted keys+arrays for the folded non-gate controllers EQUAL the legacy direct
+    free-function calls, and a cap-only gate set stamps NO manifest (the byte-identity contract)."""
+    m = _load_trainer()
+    evt = {"tau": 300, "l7": 450, "stage_start": 305, "losses": [0.1, 0.2], "nucleus_ready": True}
+    cl = {"bumps": 1, "bump_add": 0.5, "post_budget_windows": 0, "stop_epoch": None,
+          "verdicts": [{"epoch": 10, "d_seg": 0.01, "ep_loss": 0.5, "seg_form": "ce"}], "pending": None}
+    rng = np.random.default_rng(123)
+    legacy = {**m._evt_state_arrays(evt), **m._cl_state_arrays(cl, cl["verdicts"]),
+              **m._rng_state_arrays(rng)}                        # tau None (clock) => {}
+    reg = build_gate_resume_registry([
+        _gate("muon", 726, event=False), _gate("lane_band", 300, event=False),
+        _gate("seg_chroma_boundary", 0, event=False)])
+    reg.register("evt_curriculum", "__evt_", FunctionResumable(
+        write=lambda _p: m._evt_state_arrays(evt), restore=lambda _p, c: False))
+    reg.register("closed_loop", "__cl_", FunctionResumable(
+        write=lambda _p: m._cl_state_arrays(cl, cl["verdicts"]), restore=lambda _p, c: False))
+    reg.register("rng_streams", "__rng_", FunctionResumable(
+        write=lambda _p: m._rng_state_arrays(rng), restore=lambda _p, c: False))
+    from tac.witness_control.tau_advance import tau_advance_state_arrays as _tw
+    reg.register("tau_advance", "__ta_", FunctionResumable(
+        write=lambda _p: _tw(None), restore=lambda _p, c: False))   # clock mode => {} (byte-identical)
+    emitted = reg.state_arrays()
+    assert RESUME_REGISTRY_MANIFEST_KEY not in emitted           # cap-only + non-event => NO manifest
+    assert set(emitted) == set(legacy), (set(emitted) ^ set(legacy))
+    for k in legacy:
+        assert np.asarray(emitted[k]).tolist() == np.asarray(legacy[k]).tolist(), k
+
+
+def test_every_nongate_state_arrays_producer_is_registered():
+    """WIDENED static class-gate: the four canonical non-gate controllers are registered under their
+    canonical prefixes, and EVERY *_state_arrays producer in the trainer (except the model-tensor
+    builder) is wired into the #358 registry fold region — a NEW non-gate producer cannot ship
+    unpersisted."""
+    src = _TRAINER.read_text()
+    regs = dict(re.findall(r'_resume_registry\.register\(\s*"([^"]+)"\s*,\s*"([^"]+)"', src))
+    for name, prefix in {"rng_streams": "__rng_", "closed_loop": "__cl_",
+                         "tau_advance": "__ta_", "evt_curriculum": "__evt_"}.items():
+        assert regs.get(name) == prefix, f"{name} not registered under {prefix} (found {regs})"
+    marker = "NON-GATE RESUME FOLD (#358)"
+    assert marker in src, "the #358 fold region marker is missing"
+    fold_region = src.split(marker, 1)[1].split("CURRICULUM stage-transition", 1)[0]
+    producers = set(re.findall(r'def (_\w+_state_arrays)\(', src)) - {"_build_resume_state_arrays"}
+    producers.add("tau_advance_state_arrays")                    # imported (not def'd) producer
+    for p in sorted(producers):
+        assert p in fold_region, (
+            f"{p} produces resume-sidecar keys but is not wired into the #358 registry fold region — "
+            "it would be silently unpersisted (register it as a FunctionResumable there)")
