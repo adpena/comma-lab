@@ -68,6 +68,11 @@ def main(argv=None) -> int:
     ap.add_argument("--max-seconds", type=float, default=480.0)
     ap.add_argument("--timing-only", action="store_true",
                     help="measure one grad + one HVP wall-time and exit (feasibility gate)")
+    ap.add_argument("--device", choices=["cpu", "gpu"], default="cpu",
+                    help="gpu = MLX-GPU THROUGHPUT ONLY (never bit-exact cross-process; memory "
+                         "L70) — use --verify-device for a CPU spot-check of the HVP")
+    ap.add_argument("--verify-device", action="store_true",
+                    help="compute one HVP on cpu AND gpu, print rel error, exit")
     args = ap.parse_args(argv)
 
     mod = _load_probe_mod()
@@ -84,6 +89,9 @@ def main(argv=None) -> int:
     ctx = mod.Ctx(args.ckpt)
     theta = {k: ctx.params[k] for k in ctx.keys}
     sctx = mod.SolveCtx(ctx, args.feats_tag, args.k_pairs, args.subset_seed, theta)
+    if args.device == "gpu":
+        # THROUGHPUT ONLY (research-signal; MLX-GPU is never bit-exact cross-process).
+        sctx.mx.set_default_device(sctx.mx.gpu)
     n_dim = int(sum(np.prod(ctx.shapes[k]) for k in ctx.keys))
 
     def hvp_flat(v: np.ndarray) -> np.ndarray:
@@ -104,9 +112,27 @@ def main(argv=None) -> int:
         v = g / (np.linalg.norm(g) + 1e-30)
         t0 = time.time(); _ = hvp_flat(v); th = time.time() - t0
         row = {"stage": "timing", "tag": args.tag, "k_pairs": args.k_pairs,
+               "device": args.device,
                "grad_seconds": round(tg, 2), "hvp_seconds": round(th, 2),
                "grad_norm": float(np.linalg.norm(g)), "n_dim": n_dim,
                "epoch": int(ctx.cfg["__epoch"])}
+        print(json.dumps(row)); return 0
+
+    if args.verify_device:
+        # One-pair HVP on cpu vs gpu: rel error gate for using gpu as throughput device.
+        rng = np.random.default_rng(0)
+        v = rng.standard_normal(n_dim).astype(np.float32)
+        v /= np.linalg.norm(v)
+        vd = _unflat(mod, ctx, v)
+        pi = sctx.subset[0]
+        sctx.mx.set_default_device(sctx.mx.cpu)
+        h_cpu = _flat(mod, ctx, sctx.hvp_pair(theta, vd, pi)).astype(np.float64)
+        sctx.mx.set_default_device(sctx.mx.gpu)
+        h_gpu = _flat(mod, ctx, sctx.hvp_pair(theta, vd, pi)).astype(np.float64)
+        rel = float(np.linalg.norm(h_cpu - h_gpu) / (np.linalg.norm(h_cpu) + 1e-30))
+        row = {"stage": "verify_device", "pair": int(pi),
+               "hvp_norm_cpu": float(np.linalg.norm(h_cpu)),
+               "hvp_norm_gpu": float(np.linalg.norm(h_gpu)), "rel_err": rel}
         print(json.dumps(row)); return 0
 
     # ---- resume or init Lanczos state (full reorthogonalization; V kept: n_dim*k*8B tiny) ----
@@ -116,11 +142,10 @@ def main(argv=None) -> int:
         alphas = list(np.asarray(st["alphas"], np.float64))
         betas = list(np.asarray(st["betas"], np.float64))
         g = np.asarray(st["g"], np.float64)
-        w_carry = np.asarray(st["w_carry"], np.float64) if "w_carry" in st.files else None
     else:
         g = grad_flat()
         v1 = g / (np.linalg.norm(g) + 1e-30)
-        V, alphas, betas, w_carry = [v1], [], [], None
+        V, alphas, betas = [v1], [], []
 
     done = False
     while len(alphas) < args.iters:
