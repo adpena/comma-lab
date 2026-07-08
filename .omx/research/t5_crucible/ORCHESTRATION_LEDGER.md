@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: THE 3 EVENT WIRINGS (operator override executed; 8e18566ad/7f2ff2408/
+b9c6372d6; 57 new tests, 179 affected green) ---
+- muon ← powerlaw_meat exit + S2-REV-B nucleation-complete positive control (Muon HELD while
+  any LADDER arm anneals — transient cannot masquerade as exhaustion) · lane-band ←
+  lane_nucleus (born part_frac>0 AND formed within_flip≤thresh) · seg-chroma ←
+  annulus_plateau (LS-slope/mean ≤ rel_eps over dwell; params req-T tagged). Caps 726/500/450
+  = backstops emitting LOUD cap_fired_before_event (S5: a firing cap = falsification-relevant).
+- S4-R1 GovernanceRole (fires|backstops) in typed_config + provenance gate — a CAP's sensor
+  can no longer read as a firing claim. S3 would-fire telemetry every verdict epoch both modes.
+- v7 governance FLIPPED: 0 NAKED = 3 EVENT_TRIGGERED + 3 FAIL_SAFE_CAP. Byte-identity with
+  flags absent VERIFIED (exact incumbent comparisons, no new telemetry).
+- Honest residuals: event-mode RESUME determinism (re-derive fired-epoch from replayed
+  history) = documented v7.1 concern (OFF path resume-safe); no equations leg (wiring build,
+  no measured finding). REVISIONS-B BUILDER FIRED (stagger assert + TAIL LawRef + rate-aware
+  stop). Pointer 0.19110 UNMOVED.
+
 --- 📈 RUN-1 FIRST TRAJECTORY POINT (ep25 verdict, landed 07:15:16 after ~31 min compute —
 slow-not-dead; [macOS-CPU advisory] NON-PROMOTABLE) ---
 - d_seg 0.745→**0.1769** (4.2× / 25 ep). by_class [road .44 · LANE .095 · undriv .15 ·
