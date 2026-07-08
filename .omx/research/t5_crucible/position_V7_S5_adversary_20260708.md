@@ -64,3 +64,32 @@ restart carries unify-tau + geometric ONLY on v6's byte-identical LADDER; stage 
 nonexistent run-1 trajectory and label the historical trace CROSS-APPARATUS-indeterminate. (5) Pre-register any cap firing as a
 falsification-relevant event; keep launch-with-caps-first. Unconditional PROCEED is NOT warranted until (1)+(2) make the
 pre-registered falsification well-posed.
+
+## ORCHESTRATOR CORRECTION + verdict_scope annotations (appended 2026-07-08 06:54 CDT, main)
+
+**FACTUAL CORRECTION (verified, not assumed): run-1 is ALIVE.** ps -p 63069 → STAT=R, elapsed
+1h56m; run.log mtime 06:51 (ep29 loss_terms streaming); loss descending (seg 20.3→5.2, pose
+11.5→0.40 since ep1). S5's "pid DEAD / dead ep29" premise is FALSE at the instance level.
+verdict_scope: instance — S5's liveness check of run-1 at ~06:52 (wrong pid pattern or the
+accepted_frac artifact below), NOT the run itself.
+
+**The productive root**: run-1's telemetry emits `accepted_frac: 0.0` on EVERY loss_terms row
+while `weights_stepped: true` and loss descends — the LIVENESS FIELD ITSELF is misreporting
+(pessimistic direction). Confound-class bug (the immune system's own sentinel lying); queued
+for fix. S5's misread is exactly what a broken liveness signal produces downstream.
+
+**verdict_scope for S5's three FALSIFIED claims (§assumption table):**
+- "run-1 is a comparable baseline arm" → verdict_scope: instance — the liveness sub-claim is
+  RETRACTED (run alive); the COMPARABILITY concern SURVIVES at formulation scope (run-1 has
+  only ~1 verdict row so far; trajectory thinness at stop time remains a real A/B limitation).
+- "v7 transitions are event-triggered" → verdict_scope: formulation — the AUTHORED v7
+  formulation (caps + owed wiring); the event-triggered FAMILY is intact (sensors built,
+  wiring owed).
+- "geometric-unified vs cosine-discrete isolates the loss-form question" → verdict_scope:
+  formulation — the single-arm A/B design as drafted; S5's both-arms-geometric fix repairs it.
+- Line-7 "pid DEAD" + line-45 "INERT cap" tokens: # VERDICT_SCOPE_OK: line-7 corrected above;
+  line-45 'INERT' is a design PRESCRIPTION (caps expected-not-to-fire), not a negative verdict.
+
+S5's structural findings (attribution discipline · strike "event-triggered" from framing
+surfaces · derivation-licensed-2-changes vs v7's simultaneity) are UNAFFECTED by the
+correction and carry to synthesis.
