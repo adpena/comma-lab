@@ -98,6 +98,21 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+G. **TRIALITY + TASK INTEGRATION (operator-directed 2026-07-07: "all must be integrated into
+   triality especially DSL and tasks or it's ephemeral").** Crucible-local files are ORCHESTRATION
+   STATE, not landings. Nothing counts as KNOWN until it lives in all three legs + the task
+   system: (1) **equations** — every measured crucible finding registered in
+   `tac.canonical_equations` (S2's M1-M5 anneal-truncation/cold-quench/meat laws; S4's
+   entropy-floor + measured byte/rate rows; S6's pose-second-wall bound + byte-close rows; S3's
+   indefinite-spectrum row [PROVISIONAL-K=8]; the L25-temporal-delta NEGATIVE receipt), and the
+   15 AWAITING_VERIFICATION rows updated wherever the crucible measured their anchors; (2)
+   **DSL** — every control law in the draft = a Lever/Schedule/Curriculum factory (new laws →
+   new factories or emit_stub_lever; the requirement-F telemetry rows wired as DSL-held,
+   default-on observability); (3) **DAG** — crucible FEED entries for the measured rows + the
+   design decision (FEED-09x series); (4) **tasks** — the draft's build list + recess queue →
+   TaskCreate rows with owners; superseded tasks (#183, #124, #285 per the compendium) marked
+   with supersession notes. P7 is NOT complete until the drift detector is satisfied on all
+   legs — integration commits drop the [no-triality] tag because they ARE the triality landing.
 F. **TELEMETRY ENHANCED FROM FINDINGS (operator-directed 2026-07-07).** Every crucible finding
    discovered by post-hoc forensics becomes a LIVE telemetry row + alarm in the next run —
    "anything found by archaeology must be observable in flight." The findings→telemetry map
