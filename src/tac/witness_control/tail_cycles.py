@@ -43,16 +43,63 @@ from dataclasses import dataclass
 from tac.witness_control.powerlaw_exit import powerlaw_meat_exit
 
 __all__ = [
+    "RATE_DENOM_BYTES",
+    "TAIL_CONSTANT_PROVENANCE",
     "TailCycleConfig",
-    "TailStep",
     "TailController",
-    "tau_star_from_mq",
-    "next_tau",
+    "TailStep",
     "lr_for_tau",
+    "next_tau",
+    "tail_constant_provenance",
+    "tau_star_from_mq",
 ]
 
 _LN5 = math.log(5.0)
 _S_PER_DSEG = 100.0  # S = 100·d_seg + √(10·d_pose) + rate; d_seg-only S units throughout.
+# S = 100·d_seg + √(10·d_pose) + 25·|archive.zip|/37_545_489 (upstream/evaluate.py:92). The TAIL
+# stop's rate leg (S1-R1) reads the CODED-bytes delta through this rate term so a byte-INFLATING
+# cycle cannot read as a pure win on the d_seg-marginal alone.
+_S_PER_RATE = 25.0
+RATE_DENOM_BYTES = 37_545_489  # contest rate denominator (upstream original-video bytes)
+
+
+# ── TAIL constant PROVENANCE (req-T value-provenance ladder; S4-R2 + S1) ──────────────────────────
+# Every sealed TAIL constant carries its ladder provenance so it "cannot rot silently" (req T / L22:
+# no bare literals). cycle_floor / dwell already CITE registered laws; tau_halving / stop_marginal_s
+# have NO closed-form derivation, so they are HARDCODED-WITH-WAIVER with a real rationale (the honest
+# req-T class-4), not silent literals. Machine-readable so the crucible manifest can surface the rows.
+TAIL_CONSTANT_PROVENANCE: dict[str, dict] = {
+    "cycle_floor_epochs": {
+        "value": 387.09, "ladder_class": "derived_at_config", "equation_id": "tail_cycle_floor_v1",
+        "rationale": "settle 3/ν + one dwell floor (150) = coeff/ν + tail_extra (P-CT1 settle law).",
+    },
+    "dwell_min": {
+        "value": 237, "ladder_class": "derived_at_config", "equation_id": "settle_window_v1",
+        "rationale": "3-e-fold settle window 3/ν @ ν(τ)=0.012653 (P-CT1 exponential-meat settle law).",
+    },
+    "tau_halving": {
+        "value": 0.5, "ladder_class": "hardcoded_waiver", "equation_id": None,
+        "rationale": ("SGDR-style geometric warm-restart: the τ_k law FORM is "
+                      "τ_k = max(τ_{k−1}·halving, m_q/ln5); 0.5 = one octave (halve τ) per cycle — a "
+                      "DESIGN choice (the halving base), not a derived law. HARDCODED-WITH-WAIVER: "
+                      "re-derive if a live-m_q τ*_k schedule replaces the halving fallback."),
+    },
+    "stop_marginal_s": {
+        "value": 1e-4, "ladder_class": "hardcoded_waiver", "equation_id": None,
+        "rationale": ("PowerPlay attribution floor: the smallest per-epoch net-ΔS (S-units/ep) a "
+                      "cycle must still be earning to be worth continuing — below it the "
+                      "cheapest-new-unsolved cycle yields nothing the verdict cadence can resolve. A "
+                      "THRESHOLD choice, not a derived law. HARDCODED-WITH-WAIVER: re-tune against "
+                      "the measured verdict-cadence ΔS resolution (S1: keep it as the d_seg leg; the "
+                      "rate leg is the coded-bytes delta through the 25·bytes/B rate term)."),
+    },
+}
+
+
+def tail_constant_provenance() -> dict[str, dict]:
+    """The TAIL constants' req-T provenance rows (a defensive copy). Consumed by the crucible manifest
+    so every sealed TAIL literal is auditable (no silent literals; S4-R2 auditability contract)."""
+    return {k: dict(v) for k, v in TAIL_CONSTANT_PROVENANCE.items()}
 
 
 def tau_star_from_mq(m_q: float) -> float:
@@ -86,10 +133,13 @@ class TailCycleConfig:
     k_max: int
     cycle_floor_epochs: float = 387.09   # tail_cycle_floor_v1 (settle 237 + 150 dwell floor)
     dwell_min: int = 237                 # settle_window_v1 (3/ν @ ν(tau)=0.012653)
-    tau_halving: float = 0.5             # τ_k = max(τ_{k−1}·halving, τ*_k)
+    tau_halving: float = 0.5             # τ_k = max(τ_{k−1}·halving, τ*_k); HARDCODED-WITH-WAIVER
+    #                                      (req-T: TAIL_CONSTANT_PROVENANCE['tau_halving'] — SGDR base)
     tau_end: float = 0.31                # knee floor (tau_end_knee_launch_v1); τ never below this
     lr_prop_coeff: float = 1.0           # LR_k = lr_ref·coeff·τ_k/τ_ref
-    stop_marginal_s: float = 1e-4        # PowerPlay stop: cycle marginal ΔS/ep below this
+    stop_marginal_s: float = 1e-4        # PowerPlay stop: cycle NET-ΔS/ep below this (S1-R1: rate-aware
+    #                                      when byte_rows given — d_seg marginal MINUS the coded-bytes
+    #                                      rate cost). HARDCODED-WITH-WAIVER (TAIL_CONSTANT_PROVENANCE).
     meat_floor: float = 1e-4             # per-cycle powerlaw_meat exit floor
     meat_horizon: float = 300.0          # per-cycle meat extrapolation horizon
     min_points: int = 8                  # min verdict rows before a meat-exit may fire
@@ -126,6 +176,9 @@ class TailStep:
     stage_tag: str           # e.g. "stageTail1" (the preserved per-stage ckpt tag)
     stop: bool               # PowerPlay / k_max fail-safe: the trainer breaks the loop
     reason: str
+    marginal: float = float("nan")  # (S4-R2) the MEASURED net-ΔS/ep NUMERATOR at the decision (the
+    #                                 value compared to stop_marginal_s), stamped for post-hoc audit —
+    #                                 NaN when no completed-cycle marginal was computed this epoch.
 
 
 class TailController:
@@ -145,6 +198,7 @@ class TailController:
         self.k = 0
         self.cycle_start_ep: int | None = None
         self._cycle_start_dseg: float | None = None
+        self._cycle_start_bytes: float | None = None
         self.stopped = False
 
     def _tag(self) -> str:
@@ -170,17 +224,38 @@ class TailController:
                     return True, "meat_exit"
         return False, ""
 
-    def _powerplay_below_floor(self, ep: int, rows: list[tuple[int, float]]) -> bool:
-        """Cycle marginal ΔS/epoch below the attribution floor (nothing left to mine)."""
+    def _cycle_net_marginal(
+        self, ep: int, rows: list[tuple[int, float]],
+        byte_rows: "list[tuple[int, float]] | None",
+    ) -> float | None:
+        """The completed cycle's NET-ΔS/epoch marginal (the value the PowerPlay stop compares to
+        ``stop_marginal_s``). ``None`` when no start-of-cycle d_seg is known.
+
+        d_seg leg (always): ``100·(d_seg_start − d_seg_end)/len`` (S-units/ep improvement).
+        rate leg (S1-R1, only when ``byte_rows`` given): MINUS ``25·(bytes_end − bytes_start)/B/len`` —
+        so a cycle that lowers d_seg while INFLATING coded bytes has its net marginal cut by the rate
+        cost and cannot read as a pure win. ``byte_rows is None`` ⇒ the d_seg-only marginal (BYTE-
+        IDENTICAL to the pre-S1-R1 stop; the OFF/rate-blind path is preserved for the caller that does
+        not thread bytes)."""
         d_end = self._dseg_at_or_before(ep, rows)
         if self._cycle_start_dseg is None or d_end is None:
-            return False
+            return None
         length = max(ep - int(self.cycle_start_ep), 1)
         marginal = _S_PER_DSEG * (self._cycle_start_dseg - d_end) / length
-        return marginal < self.cfg.stop_marginal_s
+        if byte_rows is not None and self._cycle_start_bytes is not None:
+            b_end = self._dseg_at_or_before(ep, byte_rows)  # reuse the at-or-before selector for bytes
+            if b_end is not None:
+                rate_cost = _S_PER_RATE * (float(b_end) - float(self._cycle_start_bytes)) / RATE_DENOM_BYTES
+                marginal -= rate_cost / length
+        return marginal
 
-    def step(self, ep: int, rows: list[tuple[int, float]], live_mq: float | None = None) -> TailStep:
+    def step(self, ep: int, rows: list[tuple[int, float]], live_mq: float | None = None,
+             byte_rows: "list[tuple[int, float]] | None" = None) -> TailStep:
+        """One tail-epoch decision. ``rows`` = verdict d_seg history ``[(ep, d_seg)]``; ``byte_rows``
+        (S1-R1, optional) = the coded-bytes history ``[(ep, blob_bytes)]`` for the RATE-AWARE stop.
+        ``byte_rows is None`` ⇒ the d_seg-marginal-only stop (byte-identical to the pre-S1-R1 path)."""
         rows = sorted((int(e), float(d)) for e, d in rows)
+        _brows = sorted((int(e), float(b)) for e, b in byte_rows) if byte_rows is not None else None
         if self.stopped:
             return TailStep(self.tau_k, self.lr_k, False, self.k, self._tag(), True, "already stopped")
         begin, reason = False, "continue"
@@ -189,15 +264,19 @@ class TailController:
         else:
             exit_now, exit_reason = self._cycle_exit(ep, rows)
             if exit_now:
-                if self._powerplay_below_floor(ep, rows):
+                marginal = self._cycle_net_marginal(ep, rows, _brows)
+                if marginal is not None and marginal < self.cfg.stop_marginal_s:
                     self.stopped = True
+                    _leg = "net-ΔS (rate-aware)" if _brows is not None else "d_seg-marginal"
                     return TailStep(self.tau_k, self.lr_k, False, self.k, self._tag(), True,
-                                    f"powerplay stop ({exit_reason}): marginal ΔS/ep < "
-                                    f"{self.cfg.stop_marginal_s}")
+                                    f"powerplay stop ({exit_reason}): {_leg} {marginal:.3e} ΔS/ep < "
+                                    f"stop_marginal_s {self.cfg.stop_marginal_s}",
+                                    marginal=float(marginal))
                 if self.k >= self.cfg.k_max:
                     self.stopped = True
                     return TailStep(self.tau_k, self.lr_k, False, self.k, self._tag(), True,
-                                    f"k_max {self.cfg.k_max} reached (req-B fail-safe); {exit_reason}")
+                                    f"k_max {self.cfg.k_max} reached (req-B fail-safe); {exit_reason}",
+                                    marginal=(float(marginal) if marginal is not None else float("nan")))
                 begin, reason = True, exit_reason
         if begin:
             self.k += 1
@@ -205,4 +284,6 @@ class TailController:
             self.lr_k = lr_for_tau(self.tau_k, self.tau_ref, self.lr_ref, self.cfg.lr_prop_coeff)
             self.cycle_start_ep = int(ep)
             self._cycle_start_dseg = self._dseg_at_or_before(ep, rows)
+            self._cycle_start_bytes = (self._dseg_at_or_before(ep, _brows)
+                                       if _brows is not None else None)
         return TailStep(self.tau_k, self.lr_k, begin, self.k, self._tag(), False, reason)

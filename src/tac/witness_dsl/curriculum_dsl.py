@@ -1434,6 +1434,27 @@ class WitnessProgram(ScheduleDisplay):
                     f"CURRICULUM ORDERING: need 0 < tau_start ({_tau_s}) < l7_start ({_l7_s}) "
                     "(the tau stage forms the partition before l7 sharpens it; trainer asserts "
                     "this — l7_start > epochs is allowed and means l7 NEVER runs)")
+        # S2-REV-A LADDER↔Muon STAGGER INVARIANT (T3 v7 council): a future config cannot silently
+        # lengthen a LADDER arm's anneal past the Muon finisher (→ live-LADDER-during-Muon/TAIL). Read
+        # the composed lever's window flags + the Muon cap from the flag dict; the shared pure helper
+        # is the single source of truth (also called by the trainer's config-validation path).
+        if fd.get("--ladder-island-homotopy") in (True, 1):
+            from tac.witness_curriculum.ladder_homotopy import (
+                ladder_arm_window,
+                ladder_muon_stagger_violation,
+            )
+            _lane_win = ladder_arm_window(
+                fd.get("--ladder-lane-birth-epochs", 0), fd.get("--ladder-lane-hold-epochs", 0),
+                fd.get("--ladder-lane-anneal-epochs", 0))
+            _mov_win = ladder_arm_window(
+                fd.get("--ladder-movable-birth-epochs", 0), fd.get("--ladder-movable-hold-epochs", 0),
+                fd.get("--ladder-movable-anneal-epochs", 0))
+            _muon_cap = fd.get("--muon-start-epoch")
+            _stagger = ladder_muon_stagger_violation(
+                ladder_on=True, lane_window=_lane_win, movable_window=_mov_win,
+                muon_start_epoch=(None if _muon_cap is None else int(_muon_cap)))
+            if _stagger is not None:
+                problems.append(_stagger)
         # PRESERVE: ckpt cadence binding (<=25)
         if self.preserve.ckpt_every <= 0 or self.preserve.ckpt_every > 25:
             problems.append(
@@ -1664,9 +1685,13 @@ def TailCycles(cycles_max: int = 5, start_epoch: int = 0,  # noqa: N802 — cruc
     PowerPlay-stopping when a cycle's marginal ΔS/epoch falls below ``stop_marginal_s`` and hard-capping
     at ``cycles_max`` (req-B). The engine is :class:`tac.witness_control.tail_cycles.TailController`.
 
-    DEFAULTS CONSUME the sealed laws (req T): ``cycle_floor_epochs=387.09`` = ``tail_cycle_floor_v1``
-    (settle 237 + 150 dwell floor); ``dwell_min=237`` = ``settle_window_v1`` (3/ν @ ν(tau)=0.012653);
-    ``cycles_max=5`` = the sealed net cap floor((budget−FIN)/cycle_floor). The trainer flags are
+    DEFAULTS CONSUME the sealed laws (req T; full rows in ``tac.witness_control.tail_cycles.
+    TAIL_CONSTANT_PROVENANCE``): ``cycle_floor_epochs=387.09`` = ``tail_cycle_floor_v1`` (settle 237 +
+    150 dwell floor); ``dwell_min=237`` = ``settle_window_v1`` (3/ν @ ν(tau)=0.012653); ``cycles_max=5``
+    = the sealed net cap floor((budget−FIN)/cycle_floor). ``tau_halving=0.5`` (SGDR geometric base, one
+    octave/cycle) + ``stop_marginal_s=1e-4`` (the PowerPlay attribution floor; S1-R1: NET-ΔS/ep, the
+    d_seg leg MINUS the coded-bytes rate cost, not d_seg-marginal-alone) are HARDCODED-WITH-WAIVER (no
+    closed-form derivation; the req-T class-4, tagged not bare — S4-R2). The trainer flags are
     default-OFF (``--tail-cycles-max 0`` = byte-identical) so this factory is what ARMS the stage; it
     requires a Muon finisher (``--muon-start-epoch``) in the same program. Live-m_q (SC-3) is the owed
     render build — the factory arms the τ-halving fallback (``--tail-live-mq`` stays unset)."""
@@ -1811,8 +1836,13 @@ def LadderIslandHomotopy(  # noqa: N802 — #323 FULL LADDER island-birth lever
     (``--ladder-island-homotopy``) ⇒ byte-identical when this lever is not composed.
 
     ``release_coeff`` / ``sigma_eff`` seed the movable release ceiling (LawRef; req-T DERIVED-AT-CONFIG,
-    re-derive on a σ_eff-probe change). ``window`` is a warm-start epochs_delta (0 = full-run config
-    lever, the default)."""
+    re-derive on a σ_eff-probe change). The two ``*_lambda_gate`` defaults are 0.0 = OPEN (req-T
+    DERIVED-AT-CONFIG, NOT bare literals — rows in ``tac.witness_curriculum.ladder_homotopy.
+    LADDER_LAMBDA_GATE_PROVENANCE``: movable dilation-GO is sound independent of lane-share, and the
+    lane arm's release is schedule+dash-phase, so both costate floors are left OPEN at launch — S4-R2).
+    STAGGER (S2-REV-A): ``max(birth+hold+anneal) < muon_start`` is asserted by ``WitnessProgram.
+    validate`` so an anneal window cannot silently run past the Muon finisher. ``window`` is a
+    warm-start epochs_delta (0 = full-run config lever, the default)."""
     return Lever("n323_ladder_island_homotopy",
                  overrides={"--ladder-island-homotopy": True,
                             "--amplify-weight": amplify_weight,

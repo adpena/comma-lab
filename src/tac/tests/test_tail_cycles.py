@@ -178,3 +178,89 @@ def test_determinism_same_inputs_same_decisions():
     a = [(s.tau, s.lr, s.begin_cycle, s.stop) for s in _run(build(), range(1000, 1120), dseg)]
     b = [(s.tau, s.lr, s.begin_cycle, s.stop) for s in _run(build(), range(1000, 1120), dseg)]
     assert a == b
+
+
+# ----------------------------------------------------------------------------- S1-R1 rate-aware stop
+def _run_rate(ctrl, epochs, dseg_of, bytes_of, *, seed):
+    """Feed the controller a verdict trace WITH a coded-bytes trace (S1-R1). ``seed`` = (ep, dseg,
+    bytes) pre-loaded so the FIRST cycle has a known start-of-cycle d_seg/bytes (decide-on-previous)."""
+    _se, _sd, _sb = seed
+    rows: list[tuple[int, float]] = [(_se, float(_sd))]
+    brows: list[tuple[int, float]] = [(_se, float(_sb))]
+    steps = []
+    for ep in epochs:
+        st = ctrl.step(ep, list(rows), live_mq=None, byte_rows=list(brows))
+        steps.append(st)
+        d = dseg_of(ep)
+        if d is not None:
+            rows.append((ep, float(d)))
+            brows.append((ep, float(bytes_of(ep))))
+    return steps
+
+
+def _cfg_rate(stop=1e-3):
+    # cycle_floor cap forces exit at length 30 (before meat: <8 verdicts by then); big margins.
+    return TailCycleConfig(k_max=9, cycle_floor_epochs=30, dwell_min=10, tau_halving=0.5,
+                           tau_end=0.0, stop_marginal_s=stop, min_points=8, meat_floor=1e-4)
+
+
+def _dseg_drop(ep):
+    # 0.010 -> 0.004 over [1000,1025] (verdict every 5); d_seg marginal ~0.02 >> 1e-3 floor.
+    if ep % 5 != 0 or ep > 1025:
+        return None
+    return round(0.010 - 0.0012 * ((ep - 1000) // 5), 6)
+
+
+def test_rate_stable_bytes_does_not_fire_on_improving_dseg():
+    # STABLE bytes: the cycle keeps improving d_seg (~0.02 ΔS/ep) and the rate leg is ~0, so net ==
+    # d_seg marginal > floor => NO PowerPlay-stop at the first cycle exit — it begins a 2nd cycle.
+    ctrl = TailController(_cfg_rate(), tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
+    steps = _run_rate(ctrl, range(1000, 1035), _dseg_drop, lambda ep: 100_000,
+                      seed=(999, 0.010, 100_000))
+    assert not any(s.stop for s in steps)
+    assert max(s.cycle_k for s in steps) >= 2, "improving d_seg with stable bytes should begin cycle 2"
+
+
+def test_rate_aware_stop_fires_when_bytes_inflate():
+    # SAME improving d_seg, but the coded blob INFLATES 100k->1.2M across the cycle. The rate leg
+    # (25·Δbytes/B) overwhelms the d_seg improvement => net-ΔS/ep < floor => PowerPlay-stop at cycle 1.
+    ctrl = TailController(_cfg_rate(), tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
+    steps = _run_rate(ctrl, range(1000, 1035), _dseg_drop,
+                      lambda ep: 100_000 + 220_000 * ((ep - 1000) // 5),  # 100k -> 1.2M by ep1025
+                      seed=(999, 0.010, 100_000))
+    stops = [s for s in steps if s.stop]
+    assert stops, "a byte-inflating cycle must trip the rate-aware PowerPlay stop"
+    assert stops[0].cycle_k == 1, "should stop at the FIRST cycle exit (rate-aware, not d_seg-blind)"
+    assert "rate-aware" in stops[0].reason and "net-ΔS" in stops[0].reason
+
+
+def test_rate_aware_stop_stamps_the_marginal_numerator():
+    # S4-R2: the stamped marginal is the MEASURED net-ΔS/ep NUMERATOR (< the floor), finite.
+    ctrl = TailController(_cfg_rate(), tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
+    steps = _run_rate(ctrl, range(1000, 1035), _dseg_drop,
+                      lambda ep: 100_000 + 220_000 * ((ep - 1000) // 5),
+                      seed=(999, 0.010, 100_000))
+    stop = next(s for s in steps if s.stop)
+    assert math.isfinite(stop.marginal)
+    assert stop.marginal < 1e-3                       # below the floor (the reason it stopped)
+    assert f"{stop.marginal:.3e}" in stop.reason      # the numerator is stamped in the reason too
+
+
+def test_byte_rows_none_is_byte_identical_to_pre_s1r1():
+    # the OFF/rate-blind path: byte_rows=None must reproduce the exact d_seg-only decisions.
+    def build():
+        return TailController(_cfg_rate(stop=1e-4), tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
+    def dseg(ep):
+        return (0.02 - 2e-4 * (ep - 1000)) if ep % 5 == 0 else None
+    a = [(s.tau, s.lr, s.begin_cycle, s.stop, s.reason) for s in _run(build(), range(1000, 1120), dseg)]
+    # same trajectory driven through step() with byte_rows explicitly None => identical.
+    ctrl = build()
+    rows: list[tuple[int, float]] = []
+    b = []
+    for ep in range(1000, 1120):
+        st = ctrl.step(ep, list(rows), live_mq=None, byte_rows=None)
+        b.append((st.tau, st.lr, st.begin_cycle, st.stop, st.reason))
+        d = dseg(ep)
+        if d is not None:
+            rows.append((ep, float(d)))
+    assert a == b

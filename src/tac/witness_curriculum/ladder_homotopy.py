@@ -249,6 +249,79 @@ class LadderHomotopy:
         return max(0, int(round(r)))
 
 
+# ── S2-REV-A: the LADDER↔Muon stagger invariant (T3 v7 council, REV-A) ───────────────────────────
+# Feasibility (position_V7_S2 §composition): the three curriculum arms COMPOSE only because they are
+# temporally STAGGERED — each LADDER arm's support anneals to 0 at ``birth+hold+anneal`` epochs
+# (``scheduled_radius`` returns 0 after the window, regardless of λ_c), and the Muon finisher /
+# TAIL fire strictly AFTER. If a future config lengthened an arm's anneal past ``muon_start`` it would
+# silently create a LIVE-LADDER-during-Muon (and hence during-TAIL) overlap — the codim-2-at-the-floor
+# / TAIL×LADDER-resurrection risk REV-A exists to extinct. This is the ONE structural guard the
+# feasibility seat binds; it is not a bug today (max arm window 260 ≪ muon cap 726) but a guard so the
+# stagger cannot rot silently. The Muon-entry EVENT wiring (S2 REV-B) additionally gates the sensor on
+# nucleation-complete (all arms past their window), so checking against the fixed backstop CAP is the
+# sound NECESSARY condition on BOTH the cap and event-armed epoch domains.
+LADDER_LAMBDA_GATE_PROVENANCE: dict[str, dict] = {
+    "--ladder-movable-lambda-gate": {
+        "value": 0.0, "ladder_class": "derived_at_config",
+        "rationale": ("λ-gate 0.0 = OPEN (always-on) for the movable dilation-GO arm: the "
+                      "critical-nucleus RELEASE law r*(t)=coeff·σ_eff is sound INDEPENDENT of the "
+                      "class's lane-share, so the arm needs no costate floor (self-documenting "
+                      "falling rule: 'λ never binds; births are release-law-driven'). Sibling of "
+                      "the LawRef'd release_coeff/sigma_eff (DERIVED-AT-CONFIG)."),
+    },
+    "--ladder-lane-lambda-gate": {
+        "value": 0.0, "ladder_class": "derived_at_config",
+        "rationale": ("λ-gate 0.0 = OPEN for the lane curve-prior arm at launch: the lane arm's "
+                      "birth barrier is AREA/MARGIN not nucleus-radius, so its release is the "
+                      "schedule + dash-phase window; the costate floor is left OPEN so the T3-split "
+                      "movable-first policy is expressed by the SCHEDULE, not a hard λ cut. Carries "
+                      "the DERIVED/DEFAULTED tag of its release-law siblings, not a bare literal."),
+    },
+}
+
+
+def ladder_arm_window(birth_epochs: int, hold_epochs: int, anneal_epochs: int) -> int:
+    """The absolute epoch a LADDER arm's ``scheduled_radius`` reaches 0 = birth+hold+anneal
+    (single source of truth for the stagger invariant + the S2 REV-B nucleation-complete control)."""
+    return int(birth_epochs) + int(hold_epochs) + int(anneal_epochs)
+
+
+def ladder_muon_stagger_violation(
+    *,
+    ladder_on: bool,
+    lane_window: int,
+    movable_window: int,
+    muon_start_epoch: "int | None",
+) -> "str | None":
+    """S2-REV-A stagger invariant: ``max(LADDER arm birth+hold+anneal windows) < muon_start``.
+
+    Returns an error STRING naming the violating window(s) + their arithmetic, or ``None`` when the
+    invariant holds OR is N/A (LADDER off, or no Muon finisher). ``muon_start_epoch`` is the fixed
+    backstop CAP (``--muon-start-epoch``); on the event-armed domain the Muon event is additionally
+    gated on nucleation-complete (all arms past their window, S2 REV-B), so the cap is the sound
+    ceiling to check against. Pure + total ⇒ $0 unit-testable; consumed by BOTH the DSL
+    ``WitnessProgram.validate`` and the trainer's ``validate_ladder_muon_stagger_config``."""
+    if not ladder_on or muon_start_epoch is None:
+        return None
+    ms = int(muon_start_epoch)
+    offenders: list[str] = []
+    if int(lane_window) >= ms:
+        offenders.append(f"lane arm window {int(lane_window)} (birth+hold+anneal)")
+    if int(movable_window) >= ms:
+        offenders.append(f"movable arm window {int(movable_window)} (birth+hold+anneal)")
+    if not offenders:
+        return None
+    return (
+        "LADDER↔Muon STAGGER VIOLATION (S2-REV-A): "
+        + " AND ".join(offenders)
+        + f" >= --muon-start-epoch ({ms}). A LADDER arm whose support is still LIVE when the Muon "
+        "finisher (and the post-Muon TAIL) fire creates a codim-2-at-the-floor / TAIL×LADDER "
+        "resurrection overlap — the three arms COMPOSE only when temporally staggered (each arm's "
+        "scheduled_radius reaches 0 at birth+hold+anneal, strictly BEFORE muon_start). Shorten the "
+        "arm's anneal window (or raise --muon-start-epoch) so max(arm windows) < muon_start."
+    )
+
+
 def homotopy_from_flags(
     *,
     movable_r0: float = 2.0, movable_birth_epochs: int = 60, movable_hold_epochs: int = 0,
@@ -276,8 +349,11 @@ def homotopy_from_flags(
 __all__ = [
     "ARM_LANE",
     "ARM_MOVABLE",
+    "LADDER_LAMBDA_GATE_PROVENANCE",
     "LadderArmSpec",
     "LadderHomotopy",
     "homotopy_from_flags",
+    "ladder_arm_window",
+    "ladder_muon_stagger_violation",
     "perclass_lambda_proxy",
 ]

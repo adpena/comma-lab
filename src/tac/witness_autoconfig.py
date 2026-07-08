@@ -40,6 +40,13 @@ from pathlib import Path
 
 import numpy as np
 
+# SoT for the ~17x custom-grouped-backward perf-env prefix (single source, shared by BOTH the
+# WitnessConfig.to_command below and TypedWitnessConfig.to_command) — consuming the ONE constant
+# makes the two launch paths drift-IMPOSSIBLE, not merely drift-tested (operator 2026-07-08
+# "shouldn't have had to be caught manually"). No import cycle: typed_config imports curriculum_dsl
+# (which imports witness_autoconfig only LAZILY, inside a function).
+from tac.witness_dsl.typed_config import PERF_ENV_PREFIX
+
 __all__ = [
     "ProvenancedValue",
     "WitnessConfig",
@@ -985,7 +992,7 @@ class WitnessConfig:
         parts = []
         for flag, val in self.to_trainer_flags(out_dir):
             parts.append(flag if val is None else f"{flag} {val}")
-        prefix = "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \\\n  " if perf_env else "  "
+        prefix = PERF_ENV_PREFIX if perf_env else "  "
         body = " \\\n  ".join(
             [".venv/bin/python experiments/train_levelset_witness_realized_through_R_mlx.py"]
             + parts
@@ -1643,6 +1650,7 @@ def _attach_dsl_program_manifest(cfg: "WitnessConfig", *, program_name: str, d6:
     emitted argv (a canonical placeholder out-dir), so the launcher can match it against what it
     emits. Provenance-only (the manifest is never a flag) => the emitted argv is unchanged.
     """
+    from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
     from tac.witness_dsl.typed_config import (
         Provenanced,
         ProvenanceClass,
@@ -1663,6 +1671,11 @@ def _attach_dsl_program_manifest(cfg: "WitnessConfig", *, program_name: str, d6:
         gt_cache=str(cfg.gt_cache),
         num_pairs=int(cfg.num_pairs),
         epochs=int(cfg.epochs),
+        wall_clock_budget_days=Provenanced(
+            value=round(derive_wall_clock_budget_days(int(cfg.epochs)), 3),
+            provenance=_PC.DERIVED_AT_CONFIG, unit="days",
+            source="scorer_throughput_gate.derive_wall_clock_budget_days"
+                   "(anchor RUN1_MEASURED_MIN_PER_EP x epochs x WALL_CLOCK_SLACK_FACTOR)"),
         mlx_device="gpu",
         temp=TypedAnneal(
             start=Provenanced(value=1.0, provenance=_PC.MEASURED_ANCHOR, unit="tau",
@@ -1787,6 +1800,9 @@ class CrucibleV7Compiled:
     dsl_program_manifest: dict          # build_launch_manifest attestation (the launcher rc=7 gate)
     schedule_governance: dict           # {flag: {class, sensor, rationale}} (the rc=6 gate input)
     v6_flags: tuple[tuple[str, object], ...]  # the v6 sealed emitted flags (diff baseline)
+    tail_constant_provenance: dict = field(default_factory=dict)  # (S4-R2/S1-R1) req-T rows for the
+    #   TAIL constants (stop_marginal_s / tau_halving HARDCODED-WITH-WAIVER; cycle_floor / dwell LawRef)
+    #   + the LADDER λ-gate provenance — every sealed TAIL/λ literal is auditable (no silent literals).
 
 
 def _crucible_v7_argv_pairs(argv: "list[str] | tuple[str, ...]") -> list[tuple[str, object]]:
@@ -1934,6 +1950,7 @@ def _build_crucible_v7(
         SegFormUnifyTau,
         TailCycles,
     )
+    from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
     from tac.witness_dsl.typed_config import (
         Provenanced,
         ProvenanceClass,
@@ -1988,6 +2005,15 @@ def _build_crucible_v7(
         gt_cache=str(v6_cfg.gt_cache),
         num_pairs=int(num_pairs),
         epochs=int(epochs),
+        # DERIVED wall-clock budget (operator 2026-07-08 default-on): anchor min/ep x epochs x slack.
+        # At epochs=3000 => ~7.4 days (6.46-day anchor projection x 1.15 slack). NOT hand-picked;
+        # re-derives if epochs change or a lever (tau-advance/micro-batch) changes the effective
+        # per-ep count => the budget tracks the anchor, the launcher REFUSES a slower-than-anchor run.
+        wall_clock_budget_days=Provenanced(
+            value=round(derive_wall_clock_budget_days(int(epochs)), 3),
+            provenance=_PC.DERIVED_AT_CONFIG, unit="days",
+            source="scorer_throughput_gate.derive_wall_clock_budget_days"
+                   "(anchor RUN1_MEASURED_MIN_PER_EP x epochs x WALL_CLOCK_SLACK_FACTOR)"),
         mlx_device="gpu",
         seed=0,
         purpose=(
@@ -2089,6 +2115,12 @@ def compile_crucible_v7_config(
         k: v.model_dump(mode="json", by_alias=True)
         for k, v in typed.schedule_governance.items()
     }
+    # (S4-R2/S1-R1) req-T value-provenance rows for the sealed TAIL + LADDER-λ-gate constants so every
+    # literal is auditable in the compiled manifest (no silent literals). Additive; does not touch argv.
+    from tac.witness_control.tail_cycles import tail_constant_provenance
+    from tac.witness_curriculum.ladder_homotopy import LADDER_LAMBDA_GATE_PROVENANCE
+    tail_prov = {"tail_constants": tail_constant_provenance(),
+                 "ladder_lambda_gates": {k: dict(v) for k, v in LADDER_LAMBDA_GATE_PROVENANCE.items()}}
     return CrucibleV7Compiled(
         typed=typed,
         argv=tuple(argv),
@@ -2097,6 +2129,7 @@ def compile_crucible_v7_config(
         dsl_program_manifest=dsl_manifest,
         schedule_governance=governance,
         v6_flags=tuple(v6_flags),
+        tail_constant_provenance=tail_prov,
     )
 
 
