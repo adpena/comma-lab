@@ -1,5 +1,7 @@
 # LawRef migration of crucible_v6 constants (#351 follow-up) — landing memo
 
+STORES CONSULTED: .omx/research/lawref_constant_compiler_351_20260708.md (migration plan) · src/tac/witness_dsl/{lawref,lawref_builtins}.py + src/tac/canonical_equations/evaluators.py (mechanism) · src/tac/witness_autoconfig.py::derive_crucible_v6_config (target, at v6.4) · tools/launch_witness_run.py (hookup) · .omx/research/t5_crucible/{ORCHESTRATION_LEDGER.md (reqs P/Q/T), DRAFT_OPTIMAL_STACK_v6_20260708.md (constants' laws + provenance)} · probe artifact JSONs (tau-confirm, wave-A trace, P-CON).
+
 **Task (T5 CRUCIBLE, LAWREF MIGRATION agent):** migrate `derive_crucible_v6_config`'s rot-prone
 constants to LawRefs (the #351 constant-compiler) + hook the launcher so run-1 ships
 `constants_manifest.json`. **VALUE-IDENTITY IS THE LAW:** the migration changes ZERO emitted
