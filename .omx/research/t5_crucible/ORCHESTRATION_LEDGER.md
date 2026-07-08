@@ -2108,3 +2108,12 @@ consumer update required — asserted [consumers-generic]. ---
   increment-1 de-risked, byte spend = separatrix precision not interior texture; ~0-byte
   Road↔Lane b_c tie-calibration = highest-leverage next lever. Design factorization CONFIRMED
   by the destination matrix.
+- **OPERATOR P0 ELEVATION**: *"we need to pursue those 4 within trunk solutions as P0
+  priorities"* — the four in-trunk forces (temporal screw-consistency · margin-band satisficing
+  · tie-locus displacement · R-phase alignment) elevated from duty-to-measure to BUILD-NOW
+  (task #360 → P0/in_progress). Collision-aware sequencing: phase-1 derivation agent FIRED
+  (zero overlap with the in-flight v7.5 builder — δ_R measurement, w_t calibration from the
+  44%-flicker stats, term formulations, DSL lever specs, interaction matrix incl. v7.5's
+  area-Lagrange); phase-2 code wave fires ON the counter-force landing. Composition into a
+  run rides the crucible. v8 named risks folded (FEED-v8risks) — note risk-4 makes the
+  temporal force a NECESSARY companion of any future decomposition.
