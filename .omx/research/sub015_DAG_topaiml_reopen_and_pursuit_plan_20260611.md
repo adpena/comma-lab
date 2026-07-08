@@ -10512,3 +10512,24 @@ owed FORCE-2 A/B, no code change. Byte-identity VERIFIED: crucible_v7 argv SHA `
 `test_eikonal_stabilizer::test_argparse_defaults_are_off` spike-guard-mode `legacy`-vs-`rollback` staleness
 is OUT OF SCOPE, not touched). Landing memo `.omx/research/seal_r5_fix_20260708.md`. Pointer 0.19110 UNMOVED
 (means).
+
+## FEED-posev75 (2026-07-08) — operator Q: pose own-trunk? pose solved by v7.5? ANSWER: NO + NO (launch-critical)
+Q1 own-trunk for pose: NO — pose = stored-sufficient-statistic (6 PoseNet scalars = Chasles screw ξ)
++ FiLM CONDITIONING, NOT capacity. A separate INR trunk = reconstruct-ξ-from-pixels = the MEASURED-
+FAILED amortized-luma-carrier (collapse 2.67-12.66). Anti-pattern. verdict_scope: paradigm (store-
+don't-reconstruct is settled).
+Q2 solved by v7.5: NO. (a) v7.5 changes (Chan-Vese counter-force + ramp + 3 P0 forces) are ALL
+d_seg-side — none touches pose. (b) run-1 ALREADY measures v7.5's pose path: emits --w-pose 1.0
+--pose-carrier --pose-carrier-residual-mode table --pose-carrier-source generated (store-nothing ξ
+ACTIVE, NOT pose-blind) yet d_pose 1.86→1.80→1.79 ep100-175 = PLATEAUED. The 3.4e-5 is ANCESTOR-
+BORROWED, never reproduced on the witness (L68). ⇒ v7.5 inherits d_pose≈1.8, contribution
+√(10·1.8)≈4.2 of S — ALONE keeps S≫0.19 regardless of d_seg. LAUNCH-CRITICAL: a perfectly Road-un-
+floored v7.5 STILL cannot make sub-0.19 while pose plateaus at 1.8.
+DIAGNOSIS (run-1 proves the wired carrier plateaus): NOT a trunk shortage — one of (a) render
+NOT FiLM-CONSUMING the stored ξ (the "naive bolt-on render doesn't consume" failure CLAUDE.md
+names), (b) pose grad starved by seg terms at w_pose=1.0, (c) store-nothing-ξ/table target
+insufficient on the witness. The #248 P-B "FiLM read-back decisive" test distinguishes them — now
+the HIGHEST-priority launch-gating pose work, separable from + MORE URGENT than any d_seg lever.
+Also NOTE #314 DRIFT D2: crucible_v7 default pose_carrier_source="real_keyframe" while run-1 used
+"generated" — v7.5 may silently be on a DIFFERENT pose path than run-1 measured (must reconcile).
+$0 P-B FiLM-read-back probe FIRED. Pointer 0.19110 UNMOVED.
