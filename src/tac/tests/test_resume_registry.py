@@ -11,6 +11,10 @@ The CLASS-fix for the "forgot to route a stateful gate into resume" bug (operato
       bit-faithfully;
   (F) STATIC COVERAGE: every EventBackstopGate constructed in the live trainer is registered (a new
       gate cannot ship un-persisted) — the class gate.
+  (G) NON-GATE FOLD (2026-07-08): the FunctionResumable adapter round-trips byte-identically to a
+      legacy direct call; a non-event controller writing does NOT stamp a manifest (byte-identity for
+      the always-on rng); when an event gate DOES stamp one, the non-event controllers are listed for
+      vanish coverage (a warning, never the event fail-closed).
 
 These are CODE-CORRECTNESS tests (bit-equality of control-flow state), NOT a score claim — no n600.
 """
@@ -32,6 +36,7 @@ from tac.witness_control.resume_registry import (
     CHROMA_HISTORY_PREFIX,
     GATE_KEY_PREFIXES,
     RESUME_REGISTRY_MANIFEST_KEY,
+    FunctionResumable,
     Resumable,
     ResumeIntegrityError,
     ResumeRegistry,
@@ -294,6 +299,112 @@ def test_muon_wrappers_backward_compatible_keys():
     # off-mode + None still empty (the byte-identical contract).
     assert muon_gate_state_arrays(_gate("muon", 726, event=False)) == {}
     assert muon_gate_state_arrays(None) == {}
+
+
+# ── (G) NON-GATE FOLD: FunctionResumable + non-event manifest discipline ────────────────────────
+def _legacy_pair(prefix: str):
+    """A tiny legacy ``(write, restore)`` pair keyed under ``prefix`` — stands in for a trainer free
+    function (e.g. ``_rng_state_arrays`` / ``_cl_state_arrays``). ``store`` is the mutable 'controller
+    state' the round-trip restores into."""
+    store = {"v": 7}
+
+    def write(_p: str) -> dict:
+        return {} if store.get("v") is None else {prefix + "v": np.asarray(int(store["v"]), np.int64)}
+
+    def restore(_p: str, cfg: dict) -> bool:
+        if (prefix + "v") not in cfg:
+            return False
+        store["v"] = int(cfg[prefix + "v"])
+        return True
+
+    return write, restore, store
+
+
+def test_function_resumable_satisfies_protocol_and_is_non_event():
+    w, r, _ = _legacy_pair("__x_")
+    fr = FunctionResumable(write=w, restore=r)
+    assert isinstance(fr, Resumable)
+    reg = ResumeRegistry()
+    reg.register("x", "__x_", fr)
+    # non-event: no event_mode attr => event_active False (never triggers the fail-closed / manifest).
+    assert reg._entries[0].event_active is False  # noqa: SLF001
+
+
+def test_function_resumable_roundtrip_byte_identical_to_legacy_call():
+    """The registry-emitted keys+arrays for the adapter MUST equal the legacy direct write call, and a
+    restore reconstructs the source state (the binding byte-identity + real-restore contract)."""
+    w, r, store = _legacy_pair("__x_")
+    fr = FunctionResumable(write=w, restore=r)
+    reg = ResumeRegistry()
+    reg.register("x", "__x_", fr)
+    legacy = w("__x_")                       # what the trainer would have written directly
+    emitted = reg.state_arrays()             # what the registry writes (no event gate => no manifest)
+    assert RESUME_REGISTRY_MANIFEST_KEY not in emitted
+    assert set(emitted) == set(legacy)
+    for k in legacy:
+        assert np.asarray(emitted[k]).tolist() == np.asarray(legacy[k]).tolist()
+    # real restore into a FRESH controller reconstructs the value.
+    w2, r2, store2 = _legacy_pair("__x_")
+    store2["v"] = 0                          # perturb so the restore is observable
+    fr2 = FunctionResumable(write=w2, restore=r2)
+    reg2 = ResumeRegistry()
+    reg2.register("x", "__x_", fr2)
+    rep = reg2.restore(_sidecar_parse(emitted))
+    assert rep.restored["x"] is True and store2["v"] == store["v"] == 7
+
+
+def test_non_event_controller_writing_does_not_stamp_manifest():
+    """Folding an ALWAYS-ON non-event controller (rng) alongside cap-only gates must NOT add a manifest
+    to a config that had none — the byte-identity contract for the live #205/v7 run."""
+    w, r, _ = _legacy_pair("__rng_")
+    reg = build_gate_resume_registry([
+        _gate("muon", 726, event=False), _gate("lane_band", 300, event=False),
+        _gate("seg_chroma_boundary", 0, event=False)])
+    reg.register("rng_streams", "__rng_", FunctionResumable(write=w, restore=r))
+    arrays = reg.state_arrays()
+    assert "__rng_v" in arrays                          # the controller DID write
+    assert RESUME_REGISTRY_MANIFEST_KEY not in arrays   # but NO manifest => byte-identical sidecar
+    # restore of a manifest-free sidecar is the legacy path (no raise, real restore of the non-event ctl).
+    report = reg.restore(_sidecar_parse(arrays))
+    assert report.legacy is True and report.manifest_present is False
+    assert report.restored["rng_streams"] is True
+
+
+def test_manifest_lists_non_event_controller_when_event_gate_also_wrote():
+    """When an EVENT gate writes (fired), the manifest IS stamped and lists the non-event controllers
+    too, so their vanish is covered."""
+    g = _gate("lane_band", 300, event=True)
+    g.update(120, event_fired=True)
+    w, r, _ = _legacy_pair("__cl_")
+    reg = ResumeRegistry()
+    reg.register("lane_band", "__lbg_", g)
+    reg.register("closed_loop", "__cl_", FunctionResumable(write=w, restore=r))
+    arrays = reg.state_arrays()
+    assert RESUME_REGISTRY_MANIFEST_KEY in arrays
+    import json as _json
+    names = {m["name"] for m in _json.loads(str(arrays[RESUME_REGISTRY_MANIFEST_KEY]))}
+    assert names == {"lane_band", "closed_loop"}
+
+
+def test_vanished_non_event_state_warns_not_raises():
+    """A manifest (forced by an event gate) lists a non-event controller; its keys then vanish =>
+    a LOUD warning row, NOT a ResumeIntegrityError (only EVENT-gate vanish fails closed)."""
+    g = _gate("lane_band", 300, event=True)
+    g.update(120, event_fired=True)
+    w, r, _ = _legacy_pair("__cl_")
+    reg = ResumeRegistry()
+    reg.register("lane_band", "__lbg_", g)
+    reg.register("closed_loop", "__cl_", FunctionResumable(write=w, restore=r))
+    cfg = _sidecar_parse(reg.state_arrays())
+    cfg.pop("__cl_v")                                   # simulate the non-event state vanishing
+    reg2 = ResumeRegistry()
+    reg2.register("lane_band", "__lbg_", _gate("lane_band", 300, event=True))
+    w2, r2, _ = _legacy_pair("__cl_")
+    reg2.register("closed_loop", "__cl_", FunctionResumable(write=w2, restore=r2))
+    report = reg2.restore(cfg)                          # must NOT raise
+    stages = {x["stage"] for x in report.warnings}
+    assert "resume_registry_persisted_state_vanished" in stages
+    assert any(x.get("controller") == "closed_loop" and not x.get("event") for x in report.warnings)
 
 
 # ── (F) STATIC COVERAGE — the class gate: every trainer gate is registered ──────────────────────

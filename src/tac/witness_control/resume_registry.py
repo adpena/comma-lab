@@ -41,11 +41,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Callable, Protocol, runtime_checkable
 
 __all__ = [
     "RESUME_REGISTRY_MANIFEST_KEY",
     "GATE_KEY_PREFIXES",
+    "FunctionResumable",
     "Resumable",
     "ResumeIntegrityError",
     "ResumeRegistry",
@@ -180,7 +181,15 @@ class ResumeRegistry:
             wrote.append({"name": e.name, "prefix": e.prefix, "event": e.event_active})
         if not out:
             return {}
-        out[RESUME_REGISTRY_MANIFEST_KEY] = np.asarray(json.dumps(wrote))
+        # Stamp the manifest ONLY when a VANISH-PROTECTED (event-active) controller actually wrote — so
+        # folding an ALWAYS-ON non-event controller (the RNG streams) or an opt-in non-event controller
+        # (closed-loop / tau-advance / evt-curriculum) does NOT add a manifest to a config that had none.
+        # This is the byte-identity contract: the live #205/v6/v7 cap-only run has no event gate, so it
+        # stays manifest-free even though it writes __rng_* every checkpoint. When a manifest IS stamped
+        # (an event gate wrote), it lists ALL controllers that wrote — so a non-event controller's
+        # vanished state is still DETECTED (a LOUD warning row, never the event fail-closed).
+        if any(w["event"] for w in wrote):
+            out[RESUME_REGISTRY_MANIFEST_KEY] = np.asarray(json.dumps(wrote))
         return out
 
     def restore(self, cfg: dict) -> RestoreReport:
@@ -290,6 +299,35 @@ class TrailingSeriesResumable:
         vals = _as_list(cfg.get(prefix + "val", []))
         self.container[self.key] = [(int(e), float(v)) for e, v in zip(eps, vals)]
         return True
+
+
+@dataclass
+class FunctionResumable:
+    """A generic :class:`Resumable` adapter wrapping a controller whose ``(state_arrays,
+    restore_from_cfg)`` logic already lives as free functions / closures in the trainer — the four
+    NON-GATE controllers folded under the registry 2026-07-08: closed-loop lever control, the τ-advance
+    octave ladder, the RNG streams, and the event-triggered curriculum.
+
+    THIN by construction: it delegates verbatim to the injected ``write(prefix) -> dict`` and
+    ``restore(prefix, cfg) -> bool`` callables, which OWN the canonical hard-coded key names
+    (``__cl_`` / ``__ta_`` / ``__rng_`` / ``__evt_``). The registry-emitted keys+arrays are therefore
+    BYTE-IDENTICAL to a direct legacy call — the binding contract, asserted by the round-trip tests.
+    ``write`` returns ``{}`` when its controller is OFF/None (byte-identical: no keys emitted).
+
+    NON-EVENT: it exposes no ``event_mode`` attribute, so :attr:`_Entry.event_active` is False. It
+    never trips the manifest event fail-closed, and (per :meth:`ResumeRegistry.state_arrays`) it never
+    by itself stamps a manifest — which is exactly what keeps folding an ALWAYS-ON controller (rng)
+    byte-identical for a manifest-free legacy sidecar. A vanished non-event state is a LOUD warning
+    (only when a manifest already exists because an event gate wrote), never a raise."""
+
+    write: "Callable[[str], dict[str, Any]]"
+    restore: "Callable[[str, dict], bool]"
+
+    def state_arrays(self, prefix: str) -> dict[str, Any]:
+        return self.write(prefix)
+
+    def restore_from_cfg(self, prefix: str, cfg: dict) -> bool:
+        return bool(self.restore(prefix, cfg))
 
 
 def build_gate_resume_registry(gates, *, wire_sense: "dict | None" = None) -> ResumeRegistry:
