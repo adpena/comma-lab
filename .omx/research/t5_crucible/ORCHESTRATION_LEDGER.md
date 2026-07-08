@@ -204,6 +204,23 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~13:0x: SEAL ROUND 1 ON V6 = CLEAN, COUNTER 1/3 (b17c09f3f) ---
+- 0 BLOCKER / 0 MAJOR / 2 MINOR + 2 nits (editorial; bar tests printed). ALL arithmetic
+  reproduces independently at artifact precision (crossing chain, asymptote decomposition —
+  reviewer also caught that MY charter's suggested floor form would DOUBLE-COUNT; v6's
+  composition verified correct — τ* table, ν laws unrounded, B17 bars, comb, K=64).
+- MOST LOAD-BEARING SURVIVOR: source-read of both wave-B instruments hunting a SECOND tautology
+  inheritance — conley_persistence_certifier + uint8_deadzone_census both read the TRUE gt-cache
+  margins field, NOT the corrupted gt_margin key. Corrupted-axis blast radius = exactly the one
+  law (τ*) already re-derived. V=5 reversal verified measured-grounded (trigger-vs-estimator
+  consumer split), not rationalization.
+- MINOR-1 (fixed as v6.1 errata): P-DZ/P-CON census vehicle = the θ* per-stage-attribution run
+  (2026-06-30), not mod32cap — vehicle named; alternative fraction-transfer floor 0.2180 still
+  > 0.19110, all dispositions stand; run-1 F-rows re-measure the fraction on its own vehicle.
+  MINOR-2 (fixed): width label 0.4989. Flags 22/22 real.
+- Counter 1/3 on v6 (+v6.1 errata, attested no-substance-change). Round 2 FIRES now; the FINAL
+  round waits on P-TAU2 + P-DITHER (in flight) per NO-OPEN-GATES.
+
 --- LANDING FOLDED 2026-07-08T~12:0x: HARDENING SWEEP COMPLETE (all 6 items, tree clean) ---
 - LAUNCHER (run-1 gate) FIXED+GUARDED (e28ff371e): root cause MEASURED — launch.sh was rewritten
   IN-PLACE (same inode) ~5.5h into the live mod32cap run; bash reads scripts LAZILY and resumed
