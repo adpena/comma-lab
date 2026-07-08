@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- LANDING FOLDED 2026-07-08T~23:0x: SEAL ROUND 2 FINAL FORM = CLEAN, COUNTER 2/3 (5b622fe10) ---
+- TIMELINE SIM: full-precision replica at final constants — anneal-complete ep600 < forfeit fire
+  ep675 < Muon cap 726 COHERE; τ(675)=τ(726)=0.31 exact; β(726)=3.175725; LR(725)=2.58e-4
+  bit-identical; TAIL k_max net 5; dwell 13× margin. Zero window/trigger/cap contradictions.
+- B1 V=5 AS-BUILT: honest unrun design spec (advisory tool runs V=4; no trainer flag — exactly
+  as the draft claims); run-1's GO does NOT depend on the advisory (hard cap 726 = the fallback).
+- OPERATIONAL WALK: admission ADMIT · shadow-observer auto-start · dashboard auto-track ·
+  RESUME REUSES FROZEN launch.sh LITERALS (no LawRef re-resolution — the CORRECT semantics).
+  Disclosed-unbuilt honest: F26/SC-3-live, B-DET/SC-21.
+- LENS C: spike-guard default=rollback + liveness stamping guard the freeze confound; τ_end
+  single-sourced with fail-closed guard; F26 gap non-critical (run-1 EVSI pose-dominated).
+- 0/0/0 + 2 nits (docstring-tighten; the round-1 note). ONE MORE CLEAN ROUND SEALS AT 3/3.
+- ROUND 3 (FINAL CERTIFYING) FIRED — and per NO-OPEN-GATES it EXECUTES the B-DET n600 composite
+  determinism confirm FIRST (now headroom-runnable; governed admission), closing the last owed
+  gate before certification.
+
 --- LANDING FOLDED 2026-07-08T~22:0x: SEAL ROUND 1 FINAL FORM = CLEAN, COUNTER 1/3 (fc65de496) ---
 - LENS A: 0 findings (dry-run re-executed 106/106; the shared-denominator family now correctly
   SPLIT: τ den-3000-hold-0.31 · β den-3000-linear-10.0 · LR own-den-1000; tree == HEAD; 55/55).
