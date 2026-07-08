@@ -10626,3 +10626,26 @@ TASK-SPACE f0 → does PoseNet need real appearance or just correct motion? (sto
 free companion: d_pose-vs-|t_forward| scatter + off-plane parallax mass. COMPLETES #194, consumes
 #325–327/#158/tac.lie/warp_real_luma_frame0/depth_motion. Eq `morse_smale_stratified_parallax_dpose_v1`
 COUNCIL-FLAGGED (anchor owed M2/M3+byte-close). Task #365. HELD for GO + a131065f. Pointer 0.19110 UNMOVED.
+
+## FEED-poseforkverdict (2026-07-08) — POSE FORK RESOLVED: store-real-f0 DEAD, ONLY path = task-space-native flow-model upgrade on the store-nothing pair (16030e6bf + 5711a4fdf + f8f8f4479)
+Four fronts converge (2 deep-research + reuse assessment + MEASUREMENT). THE MEASUREMENT (a131065f, n8
+direction-only, real byte-close, positive control valid): the ~2.5 cap is **PAIR-CONSISTENCY-bound, NOT
+source-dependent** — PoseNet reads the flow BETWEEN frames, indifferent to photorealism. store-nothing
+GENERATED pair (warped witness-f0 + witness-f1) = **d_pose 1.995** (≈run-1 1.79, the BEST); real f0 +
+cartoon witness-f1 = **10.42** WORSE + rate_term ≈573 (860 MB keyframes) ⇒ **Option B (store real frame)
+DOUBLY DOMINATED = DEAD.** Binding wall = the rank-6 HOMOGRAPHY FLOW MODEL (trained dxi only ~11% over
+deterministic 1.995). FORK COLLAPSES to ONE path: KEEP the store-nothing generated pair, UPGRADE the
+flow model rank-6-homography → depth-stratified per-region flow = #365 (the task-space-native design).
+REUSE (f8f8f4479): no public pose blob liftable — Quantizr/qpose/fp4_mask_gen low-pose is WELDED to
+full-frame photometric reconstruction (their pose6 = generator INPUT, not the PoseNet target); borrowing
+= Option B = now-dead. RESEARCH (560b16634): root cause = warp MODEL (planar-homo γ≡0), Option A
+depth-warp store-nothing-preserving. REVIEW (5711a4fdf): design PARADIGM-SOUND, 4 formulation fixes
+(depth is a FIELD not scalar; undrivable 49.3% under-modeled — per-cell inverse-depth field, drop horizon
+hard-split; rate doesn't bind (6.3MB affordance) reframe value as store-nothing-PRESERVING not 100×-win;
+occlusion=RAG-subset incomplete) + M-LADDER FIX (deployment d_pose = MSE(PoseNet([decoded_f0,WITNESS_f1]),
+PoseNet([real_f0,real_f1])); measure the CONSISTENT generated pair, derive f0 by depth-warping witness
+f1 — NOT warp-real-f0). NEXT (all HELD for operator GO; $0): free-companion d_pose-vs-|t_forward| scatter
+→ corrected n600 M-ladder (A0-plane control reproduces ~1.995; A-grid of flow models × the consistent
+generated pair) → does per-region depth-stratified flow break sub-2? verdict_scope: the rank-6 homography
+FORMULATION is capped (MEASURED, n8-directional); the flow-model-upgrade formulation is UNTESTED, not
+killed. Eqs (`morse_smale_stratified_parallax_dpose_v1` etc.) COUNCIL-FLAGGED, n600 owed. Pointer 0.19110 UNMOVED.
