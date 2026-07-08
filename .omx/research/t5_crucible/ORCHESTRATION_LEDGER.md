@@ -8,7 +8,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 ## Protocol phases
 - [x] P0 grounding (never-fired 36 enumerated; 113 unmapped DSL flags; ledger-semantics caveat)
 - [x] P1 independent positions (6 seats DONE) + 20-store compendium DONE + pursuit-chain-A in flight
-- [ ] P2 **POSITIVE SYNTHESIS DRAFT — reordered per operator 2026-07-07 ("agents finding the
+- [x] P2 **POSITIVE SYNTHESIS DRAFT — reordered per operator 2026-07-07 ("agents finding the
       obvious but not doing the positive work of proposing optimal")**: a CHIEF-DESIGNER pass
       that DRAFTS THE OPTIMAL FULL STACK from all six positions + the compendium. Contract
       (REFINED per operator 2026-07-07 "a value is not enough … ramp up or down or self deriving
@@ -295,3 +295,17 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   blocker + G4 exact-eval never fired e2e. Inflate budget: 13.9 min measured, 15-18 projected.
   **P1 COMPLETE. P2 CHIEF-DESIGNER LAUNCHED** (control-law contract + schedule/curriculum-as-laws
   extension delivered mid-flight). In flight: designer + pursuit-chain-A.
+- 2026-07-07T~19:2x **P2 DRAFT LANDED** (467daadd2, 565 lines, launchable-as-written):
+  ARM-PRIMARY = Mod32SegOnlyControlBase + along=8 (guard honored; Rebalance=gated A/B) +
+  islands-first (S5 FIRE core, per-class LADDER laws) + band trained-with (LBND4 +30.9KB booked)
+  + pose ON two-track (kill 1.5e-4) + event-exit schedule w/ caps (M2 fix; warm-Muon; chain-A
+  branch) + rate WeightEntropy-λ15-IN / flat-minima+QAT-OUT + waterfill gated → archive central
+  93.1 KB / rate 0.0620. Predicted S central ≈0.29, band [0.186, 0.47] — run-1 central does NOT
+  cross 0.19110 (stated plainly per NO-FAKE); crossing = joint favorable tail; T_3 = run-2
+  levers (named). 3 riskiest: islands-net-positivity-in-training, pose 7×-vs-R1-floor, waterfill
+  ∧ band-conservative-edge.
+- 2026-07-07T~19:15 **RECALL-EVIDENCE HOOK FIRST CORRECT FIRING**: blocked the draft for missing
+  'STORES CONSULTED:'; complied honestly (incl. NOT-consulted list). Class recall-before-decide =
+  HOOK-ACTIVE-AND-FIRED. **P3 RED-TEAM LAUNCHED** (provenance audit + design attack, per charter).
+  In flight: P3 red-team + pursuit-chain-A + integration tranche 1. Next per queue: #346 build on
+  next free slot.
