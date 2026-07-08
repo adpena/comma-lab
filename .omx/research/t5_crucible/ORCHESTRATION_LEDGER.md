@@ -228,6 +228,26 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~17:0x: V6.3 (5303cd241/26459b0d4) + THE LR DECISION ---
+- All 6 r1-v6.2 findings fixed+proven: plateau-windows token ABSENT (wrong-surface reverted;
+  V=5 binds B1 spec only) · β pinned DERIVED-AT-CONFIG (linear ≤0.1% vs control; misprint
+  1.7252 corrected everywhere) · reanchor-levers real (chroma → start=300 + run-2 item) ·
+  3 minors · dry-run 104/104 · tests 52/52.
+- **LR SIBLING = STRUCTURALLY UNPINNABLE with existing flags** (LR cosine shares
+  --anneal-epochs, no shape/hold/den flag; endpoint choice cannot reproduce the control's
+  den-1000 curvature). MEASURED: AdamW phase runs **2.83×→3.41×** the control's LR across
+  fire→freeze.
+- **MAIN-LOOP ADJUDICATION (requirement T forces the build):** a 3× LR deviation from the
+  control STALES every config-conditional anchor derived from the control trace — ν=0.012653,
+  settle 237, s*=6.8971e-6, the forfeit fire band ep675 — the ENTIRE window-law edifice is
+  anchored at control dynamics. Carrying the risk row would mean run-1's schedule laws are
+  evaluated on a plant they weren't measured on (the exact P-CT1/T failure class, foreseen
+  this time instead of discovered). The named ~15-20 LOC build (--lr-anneal-epochs +
+  --lr-hold-frac at trainer L6586-6595) is CHEAP vs re-deriving all window laws live.
+  → V6.4 BUILDER FIRED (Opus): trainer flags + DSL Lever routing (trainer lever → DSL per
+  triality) + variant pin (LR law mirrors the τ cosine_hold form) + materialization-test
+  extension + draft fold. Seal round 1 restarts on v6.4.
+
 --- LANDING FOLDED 2026-07-08T~16:0x: SEAL ROUND 1 ON V6.2 = NOT-CLEAN (0B/3MAJ/3MIN), COUNTER 0/3 (406d3a791) ---
 - THE REBOUND FIX ITSELF = CORRECT (τ law re-derived from trainer source; replica reproduces
   BOTH measured anchors τ(650)=0.3098 + frozen 0.2157; τ(675)=τ(726)=0.31 exact; dry-run
