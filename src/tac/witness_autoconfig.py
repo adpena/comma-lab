@@ -58,6 +58,7 @@ __all__ = [
     "derive_sealed_205_config",
     "derive_store_nothing_205_config",
     "derive_fresh_seeded_config",
+    "derive_crucible_v6_config",
 ]
 
 # --------------------------------------------------------------------------
@@ -535,6 +536,12 @@ class WitnessConfig:
     dsl_levers: tuple[str, ...] = ()
     all_levers_base: dict = field(default_factory=dict)
     adam_beta2: float = 0.999  # #222; 0.999 == MLX default (bit-identical); all-levers sets 0.9999999.
+    # (T5 CRUCIBLE v6.2, seal-round-2 BLOCKER-1) crucible-v6 launch-candidate config: when True,
+    # ``_sealed_205_flags`` additionally emits the v6 ABSOLUTE-schedule + determinism + chroma pins
+    # (see ``_CRUCIBLE_V6_DELTAS``) as a trailing block, and ``derive_crucible_v6_config`` pins the
+    # absolute stage anchors (tau@300 / muon@726 — NEVER family-scaled 0.726*epochs) + composes the
+    # v6 DSL levers. Default False => sealed_205 / store_nothing_205 / fresh_seeded byte-identical.
+    crucible_v6: bool = False
     # (run-identity, operator 2026-07-07 "add a label ... run name and possibly a description of
     # its intended purpose; clean baseline or frontier score lowering? a/b probe?") DECLARED
     # one-line intent of THIS run — the first-class, per-run machine-answerable purpose. Set by
@@ -909,6 +916,28 @@ class WitnessConfig:
                 ("--muon-lr-final-frac", 0.1),            # cosine-decay Muon LR to 10% by stage end
                 ("--closed-loop-control", None),          # the seed-survival safety net (review AXIS 8)
             ]
+        if self.crucible_v6:
+            # T5 CRUCIBLE v6.2 trailing pins (no sealed-argv slot; argparse is order-insensitive).
+            # See _CRUCIBLE_V6_DELTAS for the derivations (each value cites its draft section).
+            d6 = _CRUCIBLE_V6_DELTAS
+            flags += [
+                # τ leg: EXPLICIT anneal denominator + hold => descent completes at ABSOLUTE ep
+                # anneal_epochs*tau_hold_frac = 600 and HOLDS at temp-end 0.31 through the fire band
+                # [670,700] and the Muon freeze (726). NOTE plain cosine with --anneal-epochs 600
+                # REBOUNDS after ep600 (prog_t unclamped: tau(675)=0.3363, tau(726-freeze)=0.3826
+                # != the 0.31 anchor) — cosine_hold is the DERIVED materialization of the draft's
+                # "anneal-epochs 600" law (tau(675) = tau(726) = 0.31 EXACTLY).
+                ("--anneal-epochs", d6["anneal_epochs"]),
+                ("--tau-hold-frac", d6["tau_hold_frac"]),
+                # F-DET (v6 fold 1): fused-R determinism; requires --mlx-device gpu (proven_base).
+                ("--fused-r-kernel", None),
+                # B1/forfeit-arm co-predicate window V=5 (v6 §2.2g(c); default 4).
+                ("--curriculum-plateau-windows", d6["curriculum_plateau_windows"]),
+                # ChromaBoundarySharpen (v6 §1.1: weight=0.1, margin_band=1.0, start=tau_fire=300).
+                ("--seg-chroma-boundary-weight", d6["seg_chroma_boundary_weight"]),
+                ("--seg-chroma-boundary-margin-band", d6["seg_chroma_boundary_margin_band"]),
+                ("--seg-chroma-boundary-start-epoch", d6["seg_chroma_boundary_start_epoch"]),
+            ]
         return flags
 
     def to_command(self, out_dir: str, *, perf_env: bool = True) -> str:
@@ -1271,6 +1300,163 @@ def derive_fresh_seeded_config(
         l7_start_epoch=int(d["l7_start_epoch"]),
         verdict_batch=int(d["verdict_batch"]),
         pose_carrier_source=str(d["pose_carrier_source"]),
+        proven_base=pb,
+        all_levers_base=alb,
+        provenance=prov,
+    )
+
+
+# ── T5 CRUCIBLE v6.2 (seal-round-2 BLOCKER-1 fix, 2026-07-08) ────────────────────────────────────
+# The crucible-v6 launch-candidate deltas over the STORE-NOTHING #205 base (the config the round-2
+# dry-run measured), per DRAFT_OPTIMAL_STACK_v6_20260708.md + seal_round2_v6_verdict_20260708.md.
+# Single source consumed by :func:`derive_crucible_v6_config` + the ``crucible_v6`` trailing block
+# in :meth:`WitnessConfig._sealed_205_flags` (reuse-not-retype, the fresh_seeded pattern).
+_CRUCIBLE_V6_DELTAS: dict = {
+    # ── τ leg (v6 §1.4a): endpoint re-anchored to the MEASURED optimum (mod32cap ep650-best
+    #    τ = 0.3098; the 0.062 anchor was a proven tautology). P-TAU2 (2026-07-08) corroborates:
+    #    knee-derived f_target 0.861663/0.862512 ≈ the q̂ = 0.85 convention; 0.31 STANDS.
+    "softmax_temp_end": 0.31,            # proven_base override (family pins 0.05)
+    # ── τ SCHEDULE materialization (the BLOCKER-1 wrong-schedule fix). The draft's law is
+    #    "descent length 600 ABSOLUTE, endpoint 0.31 HELD through fire band [670,700] + Muon
+    #    freeze". The trainer's cosine is UNCLAMPED past the denominator (prog_t=(ep-1)/(ae-1),
+    #    L2371/L2386), so --anneal-epochs 600 + cosine REBOUNDS (tau(675)=0.3363,
+    #    tau(726-freeze)=0.3826). DERIVED tokens: explicit denominator 3000 + cosine_hold at
+    #    hold-frac 0.2 => descent completes at ABSOLUTE ep 600 (0.2*3000) and HOLDS at 0.31:
+    #    tau(675) = tau(726) = 0.31 EXACTLY (simulated full-precision against the trainer law;
+    #    cross-checked: the same law reproduces mod32cap's measured tau(650)=0.3098 at den 1000).
+    "tau_anneal_shape": "cosine_hold",   # all_levers_base override (family: cosine)
+    "anneal_epochs": 3000,               # trailing flag: EXPLICIT denominator (family emitted NONE)
+    "tau_hold_frac": 0.2,                # trailing flag: 0.2*3000 = descent 600 ABSOLUTE
+    # ── ABSOLUTE stage anchors (the seal round-2 assumption-challenge fix: the family SCALES
+    #    fractions of --epochs (muon 0.726*3000 = 2178 WRONG); the mod32cap trace anchors are
+    #    ABSOLUTE epochs — tau@300 / best~650 / fire~675 / Muon cap 726).
+    "tau_softplus_start_epoch": 300,     # WitnessConfig field override (family: 900 at 3000 ep)
+    "muon_start_epoch": 726,             # WitnessConfig field override (family: 2178 at 3000 ep)
+    # ── v6 §1.1 program pins with 1:1 trainer flags:
+    "render_aa": "ipe",                  # alb override: AACoverageRender(mode="ipe") (family: none)
+    "lane_band_start_epoch": 350,        # alb override: AnalyticLaneRenderBand(start=350)
+    "persistence_warmup_epochs": 275,    # alb override: PersistenceTopology(warmup=275)
+    "curriculum_plateau_windows": 5,     # trailing flag: B1 co-predicate V=5 (§2.2g(c); default 4)
+    "seg_chroma_boundary_weight": 0.1,   # trailing: ChromaBoundarySharpen(weight=0.1)
+    "seg_chroma_boundary_margin_band": 1.0,   # trailing: margin_band=1.0
+    "seg_chroma_boundary_start_epoch": 300,   # trailing: start="tau_fire" = tau@300 (absolute)
+}
+
+# The v6 §1.1 program levers that are zero-arg composable DSL factories (tac.witness_dsl SoT) —
+# composed via the existing dsl_levers merge path so the DSL, not this module, owns each lever's
+# flag rendering (triality: "the DSL HOLDS every designed lever"). NOT composed here, with reasons:
+# FusedRKernel (not zero-arg composable; emitted directly in the crucible trailing block) ·
+# AACoverageRender (zero-arg default is the DISQUALIFIED supersample; v6 wants mode="ipe" ->
+# alb render_aa pin) · SignedBoundaryWeight/B16 (DEFAULT-OFF, Q1 BETWEEN) · ConleyCertificate-
+# fitted/B17' + GNSpectrumProbe (telemetry/build items, not launch flags) · EventTriggeredCurriculum's
+# V=5 (factory has no windows override -> trailing flag).
+_CRUCIBLE_V6_DSL_LEVERS: tuple[str, ...] = (
+    "SeedIslandBirth",            # --seed-islands + --witness-alone-island-loss
+    "SeedIslandEased",            # --seed-island-eased (r_star release)
+    "EventTriggeredCurriculum",   # --curriculum-event-triggered + --curriculum-nucleus-guard
+    "LogitAdjust",                # --logit-adjust-loss-tau 1.0
+    "AmplifyIsland",              # --amplify-weight 1.0 (in-place, == sealed value)
+    "PersistenceTopology",        # --persistence-loss-weight 1.0 (in-place, == sealed value)
+    "CacheGtSkeleton",            # --cache-gt-skeleton
+    "LengthSigma",                # --length-sigma-matrix fitted-20260707
+    "MuonWarmStart",              # --muon-warm-start-momentum + --muon-lr-final-frac 0.1
+    "WeightEntropyPenaltyMLX",    # --weight-entropy-penalty-lambda 15.0
+)
+
+
+def derive_crucible_v6_config(
+    gt_cache_path: str | Path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    code_matrix: np.ndarray | None = None,
+    byte_close_result: dict | None = None,
+) -> WitnessConfig:
+    """The **T5 CRUCIBLE v6.2 launch-candidate config** (DRAFT_OPTIMAL_STACK_v6_20260708.md;
+    seal-round-2 BLOCKER-1 fix): the STORE-NOTHING #205 base (:func:`derive_store_nothing_205_config`
+    — reused, not retyped; the pose block w-pose 1.0 + --pose-carrier + residual-mode table +
+    --pose-carrier-source generated is INHERITED STRUCTURALLY = the MAJOR-A2 pin and the #314
+    pose-carrier-source inheritance-drift guard) + the v6 deltas (:data:`_CRUCIBLE_V6_DELTAS`) +
+    the v6 §1.1 composable DSL levers (:data:`_CRUCIBLE_V6_DSL_LEVERS`).
+
+    What this variant fixes (seal_round2_v6_verdict_20260708.md BLOCKER-1, MEASURED on the real
+    launcher dry-run): (a) the extras route was REFUSED (C13 duplicate --softmax-temp-end — the
+    family pins 0.05; this variant pins 0.31 at the SOURCE, no extras collision); (b) the named-
+    config route silently emitted --muon-start-epoch 2178 (family-scaled 0.726*epochs) and NO
+    --anneal-epochs token (denominator fell back to --epochs=3000: tau(675)=0.886 — a run the v6
+    schedule laws do not describe). Here the stage anchors are ABSOLUTE (tau@300, Muon cap 726)
+    and the τ schedule is pinned: --anneal-epochs 3000 (EXPLICIT) + cosine_hold @ --tau-hold-frac
+    0.2 => descent completes at ABSOLUTE ep600 and HOLDS tau = 0.31 through the fire band and the
+    Muon freeze (tau(675) = tau(726) = 0.31 exactly; a plain cosine at den 600 would REBOUND to
+    0.3363/0.3826 — the derived-not-guessed materialization of the draft's "anneal-epochs 600").
+
+    l7 stays DEMOTED to epochs (the all-levers demote; <=1 trailing epoch under Muon+EMA, absolute-
+    safe at any --epochs; Muon@726 < l7 triggers the trainer's WARN-not-refuse placement note,
+    which IS the v6 intent: Muon is the effective final stage). The forfeit-arm's LIVE firing
+    wiring is the B-INJ pre-GO build; until it lands this config carries the arm ARMED-WITH-
+    FALLBACK exactly per v6 §2.2f: cap --muon-start-epoch 726 + the event-triggered co-predicate
+    (V=5) + the launcher's auto-started score-neutral #247 shadow observer (advisory).
+
+    Named residual (honest, for the seal round): the hosc-beta anneal shares the --anneal-epochs
+    denominator, so beta(726-freeze) ≈ 1.41 at den 3000 (vs the control's 3.177 at den 1000) —
+    the M2 β-leg ("genuinely incomplete anneal") is NOT resolved by this variant and v6 names no
+    β pin; carried as a draft-level note, not silently re-derived here.
+
+    means != ends: returns a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110
+    from ``upstream/evaluate.py`` (contest-CPU/CUDA, NEVER MPS) moves the pointer.
+    """
+    base = derive_store_nothing_205_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    d6 = _CRUCIBLE_V6_DELTAS
+    pb = dict(base.proven_base)
+    pb.update({"softmax_temp_end": d6["softmax_temp_end"]})
+    alb = dict(base.all_levers_base)
+    alb.update({
+        "tau_anneal_shape": d6["tau_anneal_shape"],
+        "render_aa": d6["render_aa"],
+        "lane_band_start_epoch": d6["lane_band_start_epoch"],
+        "persistence_warmup_epochs": d6["persistence_warmup_epochs"],
+    })
+    prov = dict(base.provenance)
+    prov["softmax_temp_end"] = ProvenancedValue(
+        float(d6["softmax_temp_end"]), SRC_MEASURED,
+        "v6 §1.4a: τ_end re-anchored to the only MEASURED optimum (mod32cap ep650-best τ=0.3098, "
+        "inside its own live-field [τ*(q80), τ*(q90)] = [0.27740, 0.40764]); the 0.062 anchor was "
+        "a proven tautology (maps-npz gt_margin key). P-TAU2 corroborates (knee f_target "
+        "0.861663/0.862512 ≈ q̂ 0.85; 0.31 STANDS). Live-law promotion waits on run-1 f_target.",
+        Portability.INSTANCE)
+    prov["tau_schedule"] = ProvenancedValue(
+        {"anneal_epochs": d6["anneal_epochs"], "tau_hold_frac": d6["tau_hold_frac"],
+         "tau_anneal_shape": d6["tau_anneal_shape"]}, SRC_DESIGN,
+        "BLOCKER-1 fix: explicit denominator 3000 + cosine_hold@0.2 => descent completes at "
+        "ABSOLUTE ep600 and HOLDS 0.31 (tau(675)=tau(726)=0.31 exactly; plain cosine at den 600 "
+        "REBOUNDS unclamped to 0.3363/0.3826 — derived from trainer L2371/L2386, cross-checked "
+        "against mod32cap's measured tau(650)=0.3098).", Portability.INSTANCE)
+    prov["muon_start_epoch"] = ProvenancedValue(
+        int(d6["muon_start_epoch"]), SRC_RECALLED,
+        "v6 §2.2f: ABSOLUTE Muon fail-safe cap 726 (mod32cap trace anchor; fire band [670,700] "
+        "precedes it). NOT the family-scaled 0.726*epochs (=2178 at 3000 ep — the measured "
+        "wrong-schedule emission the seal round-2 BLOCKER caught).", Portability.INSTANCE)
+    prov["tau_softplus_start_epoch"] = ProvenancedValue(
+        int(d6["tau_softplus_start_epoch"]), SRC_RECALLED,
+        "v6 schedule: ABSOLUTE tau stage start 300 (mod32cap trace anchor; the ~425-ep TAU to the "
+        "726 cap). NOT the family-scaled 0.300*epochs (=900 at 3000 ep). Under the event-triggered "
+        "curriculum this is the CE->TAU CAP; the plateau+nucleus event may fire earlier (settle "
+        "3/ν_CE = 150.3).", Portability.INSTANCE)
+    prov["crucible_v6_deltas"] = ProvenancedValue(
+        dict(d6), SRC_DESIGN,
+        "DRAFT_OPTIMAL_STACK_v6 §1.1/§1.4a/§2.2f-g pins: F-DET fused-R + V=5 co-predicate + "
+        "ChromaBoundarySharpen(0.1, band 1.0, start tau@300) + AA ipe + band 350 + persistence "
+        "warmup 275; DSL levers composed: " + ", ".join(_CRUCIBLE_V6_DSL_LEVERS) + ". Pose block "
+        "INHERITED from store_nothing_205 (MAJOR-A2 pin; #314 drift guard).",
+        Portability.INSTANCE)
+    return replace(
+        base,
+        crucible_v6=True,
+        tau_softplus_start_epoch=int(d6["tau_softplus_start_epoch"]),
+        muon_start_epoch=int(d6["muon_start_epoch"]),
+        dsl_levers=_CRUCIBLE_V6_DSL_LEVERS,
         proven_base=pb,
         all_levers_base=alb,
         provenance=prov,

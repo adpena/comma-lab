@@ -364,6 +364,8 @@ def config_family(cfg) -> str:
     """The canonical named-config FAMILY this cfg renders, derived from the cfg's own
     selector fields (factual — never a guess). Stamped into the launch.sh RUN-IDENTITY
     header so run-identity consumers (dashboard) can cite it as evidence."""
+    if getattr(cfg, "crucible_v6", False):
+        return "crucible_v6"
     if getattr(cfg, "fresh_seeded", False):
         return "fresh_seeded"
     if getattr(cfg, "sealed_205", False):
@@ -561,6 +563,11 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
     if config == "fresh_seeded":
         # The 2026-07-04 SEAL-review REVISED run-1 argv (sealed_205 + seed/control deltas; C5).
         return wac.derive_fresh_seeded_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+    if config == "crucible_v6":
+        # T5 CRUCIBLE v6.2 launch candidate (seal-round-2 BLOCKER-1 fix): store_nothing_205 +
+        # ABSOLUTE schedule pins (tau@300 / anneal-den 3000 x hold 0.2 = descent 600 / Muon 726)
+        # + tau_end 0.31 + fused-R + the v6 §1.1 DSL levers; pose block inherited (MAJOR-A2/#314).
+        return wac.derive_crucible_v6_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
     return wac.derive_config(gt_cache, num_pairs=num_pairs, overfit=overfit, epochs=epochs,
                              all_levers=(config == "all_levers"))
 
@@ -746,7 +753,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--config", default=None,
                     choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205",
-                             "fresh_seeded"],
+                             "fresh_seeded", "crucible_v6"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
@@ -760,7 +767,12 @@ def main(argv: list[str] | None = None) -> int:
                     "[paint + --seed-islands] + eikonal 0.05->0.10 + constant tau=1.0 + mod-dim 19 + "
                     "film-stiefel + muon warm-start/final-frac + band 350 + rewarmup 20-cosine + "
                     "closed-loop control; event-triggered curriculum + bank-6 deliberately EXCLUDED "
-                    "per C1/C2/C3).")
+                    "per C1/C2/C3), or crucible_v6 (the T5 CRUCIBLE v6.2 launch candidate = "
+                    "store_nothing_205 + ABSOLUTE schedule pins [tau@300, anneal-den 3000 x "
+                    "hold-frac 0.2 = tau descent completes ep600 and HOLDS 0.31, Muon cap 726 — "
+                    "NEVER family-scaled] + --softmax-temp-end 0.31 + --fused-r-kernel + the v6 "
+                    "S1.1 DSL levers + ChromaBoundarySharpen + V=5 co-predicate; pose block "
+                    "inherited from store_nothing_205 per seal-round-2 MAJOR-A2/#314).")
     ap.add_argument("--extra-trainer-flags", default=None,
                     help="(C5 passthrough) EXTRA trainer flags appended verbatim to the emitted "
                     "launch.sh command (shell-split; e.g. \"--eikonal-weight 0.07 --seed-islands\"). "
@@ -889,8 +901,11 @@ def main(argv: list[str] | None = None) -> int:
         except LeverCompositionError as exc:
             print(f"[launch-witness] ERROR: {exc}", file=sys.stderr)
             return 2
-        cfg = _dc.replace(cfg, dsl_levers=tuple(args.dsl_lever))
-        print(f"[launch-witness] DSL levers composed: {', '.join(args.dsl_lever)}")
+        # APPEND to (never clobber) any levers the named config pre-composes (crucible_v6 carries
+        # the v6 §1.1 lever set in cfg.dsl_levers; every pre-v6 config has an empty tuple, for
+        # which append == the old replace, byte-identically).
+        cfg = _dc.replace(cfg, dsl_levers=(*cfg.dsl_levers, *args.dsl_lever))
+        print(f"[launch-witness] DSL levers composed: {', '.join(cfg.dsl_levers)}")
 
     # RUN-IDENTITY: thread the DECLARED purpose into the config (metadata only; the
     # identity header in launch.sh renders it; the argv is untouched by construction).
@@ -1097,14 +1112,16 @@ def main(argv: list[str] | None = None) -> int:
     # "off" is a TRACKED queue the #247 costate SENSE drains (CLAUDE.md "'Off' is a tracked queue"; the
     # ledger is the anti-orphan surface). Only reached on a SUCCESSFUL spawn (not --dry-run, not a
     # refused/failed launch). NON-FATAL: a ledger write must never break a launch that already fired.
-    if args.dsl_lever:
+    if cfg.dsl_levers:
+        # cfg.dsl_levers = the config's pre-composed levers (crucible_v6) + any --dsl-lever appends:
+        # every lever this launch actually fires gets its ledger row (never only the CLI subset).
         try:
             from tac.witness_dsl.activation_ledger import EVENT_FIRED, record_activation
-            for _lv in args.dsl_lever:
+            for _lv in cfg.dsl_levers:
                 record_activation(_lv, EVENT_FIRED, run_ref=out_dir,
-                                  reason="launched via tools/launch_witness_run.py --dsl-lever",
+                                  reason=f"launched via tools/launch_witness_run.py (config={config})",
                                   agent="launch_witness_run")
-            print(f"[launch-witness] activation-ledger: recorded 'fired' for {', '.join(args.dsl_lever)}")
+            print(f"[launch-witness] activation-ledger: recorded 'fired' for {', '.join(cfg.dsl_levers)}")
         except Exception as exc:  # telemetry must never break a fired launch
             print(f"[launch-witness] WARNING: activation-ledger record failed "
                   f"({type(exc).__name__}: {exc}); launch already fired, continuing.", file=sys.stderr)

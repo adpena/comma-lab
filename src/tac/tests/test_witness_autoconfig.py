@@ -609,3 +609,136 @@ def test_merge_dsl_levers_false_on_store_true_refused():
             _dc.replace(cfg, dsl_levers=(factory_name,)).to_trainer_flags("OUT")
     finally:
         delattr(_cd, factory_name)
+
+
+# --------------------------------------------------------------------------
+# T5 CRUCIBLE v6.2 (seal-round-2 BLOCKER-1 fix) — config-materialization tests:
+# design-doc schedule == emitted launch tokens, guarded as a CLASS.
+# --------------------------------------------------------------------------
+def _crucible_cfg(epochs: int = 3000):
+    return wac.derive_crucible_v6_config(_GT_N600, num_pairs=600, epochs=epochs)
+
+
+def _tau_law(ep: int, *, anneal_epochs: int, start: float, end: float,
+             shape: str, hold_frac: float) -> float:
+    """Replica of the trainer's _softmax_temp_for_epoch (pure law, L2341-2386):
+    prog_t=(ep-1)/max(ae-1,1); cosine_hold returns `end` at prog>=hold_frac, else rescales
+    prog/hold_frac into the cosine. Cross-checked below against the mod32cap MEASURED anchor."""
+    prog = (ep - 1) / max(anneal_epochs - 1, 1)
+    if shape == "cosine_hold" and hold_frac < 1.0:
+        if prog >= hold_frac:
+            return end
+        prog = prog / hold_frac
+    return float(end + 0.5 * (start - end) * (1 + np.cos(np.pi * prog)))
+
+
+def test_tau_law_replica_reproduces_mod32cap_measured_anchor():
+    """The replica must reproduce the REAL vehicle: mod32cap (den 1000, end 0.05, cosine)
+    measured tau(650)=0.3098 (the ep650-best anchor tau_end 0.31 is derived from) and the
+    muon-freeze value tau(726)=0.2157 (the draft's END leg)."""
+    t650 = _tau_law(650, anneal_epochs=1000, start=1.0, end=0.05, shape="cosine", hold_frac=1.0)
+    t726 = _tau_law(726, anneal_epochs=1000, start=1.0, end=0.05, shape="cosine", hold_frac=1.0)
+    assert abs(t650 - 0.3098) < 5e-4, t650
+    assert abs(t726 - 0.2157) < 5e-4, t726
+
+
+def test_crucible_v6_schedule_matches_design_doc():
+    """BLOCKER-1 config-materialization gate (seal_round2_v6_verdict_20260708.md §1.1): the
+    EMITTED tokens, run through the trainer's own tau law, must realize the v6 schedule —
+    descent completes at ABSOLUTE ep600, tau(675) [fire band] and tau(726) [Muon freeze] sit
+    AT the 0.31 anchor, and the stage anchors are ABSOLUTE (never family-scaled 0.726*epochs).
+    The round-2 measured failure modes are pinned as anti-targets: den-3000-cosine gave
+    tau(675)=0.886; family scaling gave --muon-start-epoch 2178 and NO --anneal-epochs token."""
+    fd = _parse_flag_dict(_crucible_cfg().to_trainer_flags("OUT"))
+    # the schedule tokens EXIST and are explicit (the round-2 blocker: no --anneal-epochs at all)
+    assert fd["--anneal-epochs"] == "3000"
+    assert fd["--tau-anneal-shape"] == "cosine_hold"
+    assert fd["--tau-hold-frac"] == "0.2"
+    assert fd["--softmax-temp-end"] == "0.31"
+    # ABSOLUTE anchors, not family-scaled (2178 / 900 were the measured wrong emissions)
+    assert fd["--muon-start-epoch"] == "726"
+    assert fd["--tau-softplus-start-epoch"] == "300"
+    kw = dict(anneal_epochs=int(fd["--anneal-epochs"]),
+              start=float(fd["--softmax-temp-start"]), end=float(fd["--softmax-temp-end"]),
+              shape=fd["--tau-anneal-shape"], hold_frac=float(fd["--tau-hold-frac"]))
+    # descent completes at ABSOLUTE ep ~600 (hold_frac * anneal_epochs) and HOLDS at 0.31
+    assert abs(_tau_law(600, **kw) - 0.31) < 1e-4
+    assert _tau_law(675, **kw) == 0.31          # fire band [670,700]: anneal-complete, HELD
+    assert _tau_law(726, **kw) == 0.31          # Muon fail-safe cap freeze value
+    assert _tau_law(3000, **kw) == 0.31         # no late-run drift below the anchor
+    # anti-target: the round-2 wrong emission (den=epochs cosine) does NOT hold the anchor
+    assert _tau_law(675, anneal_epochs=3000, start=1.0, end=0.31,
+                    shape="cosine", hold_frac=1.0) > 0.85
+    # anti-target: plain cosine at den 600 REBOUNDS past the hold (the derived-not-guessed pin)
+    assert _tau_law(726, anneal_epochs=600, start=1.0, end=0.31,
+                    shape="cosine", hold_frac=1.0) > 0.38
+
+
+def test_crucible_v6_pose_block_pinned():
+    """MAJOR-A2 + #314 guard: the pose leg is pinned AT the config surface (inherited
+    structurally from store_nothing_205, asserted here so inheritance drift is a test failure,
+    not a silent revert): w-pose 1.0 + --pose-carrier + residual-mode table + SOURCE generated
+    (store-nothing; real_keyframe is the excluded wrong mover)."""
+    cfg = _crucible_cfg()
+    assert cfg.pose_carrier_source == "generated"
+    fd = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
+    assert fd["--w-pose"] == "1.0"
+    assert fd["--pose-carrier"] is True
+    assert fd["--pose-carrier-residual-mode"] == "table"
+    assert fd["--pose-carrier-source"] == "generated"
+
+
+def test_crucible_v6_knob_pins_and_dsl_levers_materialize():
+    """Every v6 §1.1 knob with a 1:1 trainer flag materializes in the argv."""
+    fd = _parse_flag_dict(_crucible_cfg().to_trainer_flags("OUT"))
+    assert fd["--fused-r-kernel"] is True                       # F-DET (fold 1)
+    assert fd["--curriculum-plateau-windows"] == "5"            # B1 co-predicate V=5 (§2.2g(c))
+    assert fd["--curriculum-event-triggered"] is True           # handoff="event"
+    assert fd["--curriculum-nucleus-guard"] is True
+    assert fd["--seg-chroma-boundary-weight"] == "0.1"          # ChromaBoundarySharpen
+    assert fd["--seg-chroma-boundary-margin-band"] == "1.0"
+    assert fd["--seg-chroma-boundary-start-epoch"] == "300"     # start="tau_fire" = tau@300
+    assert fd["--render-aa"] == "ipe"                           # AACoverageRender(mode="ipe")
+    assert fd["--lane-band-start-epoch"] == "350"               # AnalyticLaneRenderBand(start=350)
+    assert fd["--persistence-warmup-epochs"] == "275"           # PersistenceTopology(warmup=275)
+    assert fd["--seed-islands"] is True                         # SeedIslandBirth
+    assert fd["--witness-alone-island-loss"] is True
+    assert fd["--seed-island-eased"] is True                    # SeedIslandEased
+    assert fd["--logit-adjust-loss-tau"] == "1.0"               # LogitAdjust(tau=1.0)
+    assert fd["--length-sigma-matrix"] == "fitted-20260707"     # LengthSigma
+    assert fd["--cache-gt-skeleton"] is True                    # CacheGtSkeleton
+    assert fd["--muon-warm-start-momentum"] is True             # MuonWarmStart
+    assert fd["--muon-lr-final-frac"] == "0.1"
+    assert fd["--weight-entropy-penalty-lambda"] == "15.0"      # WeightEntropyPenaltyMLX(lam=15)
+    assert fd["--mod-dim"] == "32"                              # sealed Q4 inherited
+    assert fd["--verdict-batch"] == "32"                        # R2 OOM fix inherited
+    assert fd["--verdict-pairs"] == "0"                         # n600-scale rule inherited
+
+
+def test_crucible_v6_flags_all_exist_in_trainer_argparse():
+    real = _real_trainer_flags()
+    emitted = [flag for flag, _ in _crucible_cfg().to_trainer_flags("out/dir")]
+    missing = [f for f in emitted if f not in real]
+    assert missing == [], f"invented flags not in trainer argparse: {missing}"
+
+
+def test_crucible_v6_no_duplicate_long_flags():
+    """C13 at the SOURCE: the variant pins --softmax-temp-end 0.31 itself, so the argv carries
+    each long flag exactly once (the round-2 extras route was REFUSED on this exact gate)."""
+    emitted = [flag for flag, _ in _crucible_cfg().to_trainer_flags("OUT")]
+    dups = sorted({f for f in emitted if emitted.count(f) > 1})
+    assert dups == [], f"duplicate long-flags in the emitted argv: {dups}"
+
+
+def test_store_nothing_205_unchanged_by_crucible_machinery():
+    """Regression: the crucible_v6 field defaults False so the store-nothing (and sealed) argvs
+    are byte-stable — none of the crucible-only pins leaks into them."""
+    cfg = wac.derive_store_nothing_205_config(_GT_N600, num_pairs=600, epochs=1000)
+    assert cfg.crucible_v6 is False
+    fd = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
+    for f in ("--anneal-epochs", "--tau-hold-frac", "--fused-r-kernel",
+              "--curriculum-plateau-windows", "--seg-chroma-boundary-weight",
+              "--seed-islands", "--weight-entropy-penalty-lambda"):
+        assert f not in fd, f"store_nothing_205 must not emit the crucible-only flag {f}"
+    assert fd["--softmax-temp-end"] == "0.05"
+    assert fd["--tau-anneal-shape"] == "cosine"
