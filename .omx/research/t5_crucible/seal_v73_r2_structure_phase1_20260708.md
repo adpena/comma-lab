@@ -202,7 +202,7 @@ lane_offloaded), plus a third (analytic band). Phase-2 must check whether v7.3 c
 guard, and whether the freed basis capacity is redirected to ROAD or just re-spent on lane.**
 
 **Correctly-OFF levers (memory-confirmed INERT):** `LEVER4_uniward` / `margin_saliency` msal_uni (measured
-at chance vs through-R reachability). Keep OFF.
+at chance vs through-R reachability). Keep OFF. verdict_scope: formulation — the msal_uni TEXTURE-PROXY formulation only (prior measured finding, L76/#268: the proxy is at chance vs through-R reachability); NOT the margin-saliency family (the exact S_R reachability weight #268 is the built successor).
 
 ---
 
