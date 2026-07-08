@@ -265,6 +265,20 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- LANDING FOLDED 2026-07-08T~21:0x: LAWREF MIGRATION COMPLETE — THE LAUNCHING FORM IS FINAL ---
+- VALUE-IDENTITY PROVEN: derive_crucible_v6_config().to_command() BYTE-IDENTICAL to HEAD (direct
+  diff) + launch.sh byte-identical resolved-vs-literal. ZERO emitted values changed.
+- 4 CONSUMED constants now COMPILE from laws + are manifested (constants_manifest.json beside
+  launch.sh): τ_end 0.31 (tau_end_knee_launch_v1, measured_anchor+sha) · β-end 10.0 · LR pin
+  1000/1.0 (derived_at_config). HONEST SCOPE: ν-family/s_fit/adaptive-ε laws = bit-match-tested
+  LIBRARY LawRefs (single SoT, req T) but NOT argv-wired (the variant doesn't emit those flags —
+  wiring them would break value-identity). s* reuses forfeit_matched_exit_v1.
+- SAFETY: value-identity guard fails CLOSED on resolved≠literal drift · τ_end fails closed on a
+  non-mod32cap vehicle (P-CT1) · missing artifact → declared fallback to the sealed literal
+  (launch never blocked). 100 tests; two-pass reviews; siblings untouched.
+- SEAL RESTARTS NOW on the final launching form (v6.4 draft + crucible_v6 + LawRef+manifest):
+  round 1 of 3, on OPUS with LENS C per requirement U. Counter 0/3.
+
 --- LANDING FOLDED 2026-07-08T~20:0x: #350 COMPLETE (Opus) — THE EXPLOITATION HARNESS ---
 - **B-DET COMPOSITE: GO** — fused-R + self-orient FULL trainer step cross-process BIT-IDENTICAL
   (N=5, 1 hash; CPU positive-control identical). Self-orient adds no nondeterministic op. The
