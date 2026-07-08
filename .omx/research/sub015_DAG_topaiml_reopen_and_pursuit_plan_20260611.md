@@ -10638,6 +10638,9 @@ formulation; dominated on BOTH axes by orders of magnitude so NOT n-fragile — 
 byte fact (1.43 MB/keyframe × 600), d_pose 10.42-vs-1.995 is a robust same-pairs contrast; does NOT kill
 the store-information-for-pose FAMILY: store-nothing generated (1.995) + the flow-model-upgrade path both
 remain alive). Binding wall = the rank-6 HOMOGRAPHY FLOW MODEL (trained dxi only ~11% over
+[SUPERSEDED-IN-PART by FEED-posesolve below: the "binding wall" claim holds for run-1's JOINT-TRAINING
+instance; the OUTPUT-SPACE per-pair solve of the same 6-DOF family reaches 0.0011 (R1, recalled) — see
+the objective-space resolution.]
 deterministic 1.995). FORK COLLAPSES to ONE path: KEEP the store-nothing generated pair, UPGRADE the
 flow model rank-6-homography → depth-stratified per-region flow = #365 (the task-space-native design).
 REUSE (f8f8f4479): no public pose blob liftable — Quantizr/qpose/fp4_mask_gen low-pose is WELDED to
@@ -10653,3 +10656,31 @@ f1 — NOT warp-real-f0). NEXT (all HELD for operator GO; $0): free-companion d_
 generated pair) → does per-region depth-stratified flow break sub-2? verdict_scope: the rank-6 homography
 FORMULATION is capped (MEASURED, n8-directional); the flow-model-upgrade formulation is UNTESTED, not
 killed. Eqs (`morse_smale_stratified_parallax_dpose_v1` etc.) COUNCIL-FLAGGED, n600 owed. Pointer 0.19110 UNMOVED.
+
+## FEED-posesolve (2026-07-08) — POSE SOLVED-IN-PRINCIPLE: the objective-space resolution + the output-space per-pair inverse solve (memo pose_solve_output_space_inverse_20260708)
+Operator: "with utmost rigor and passion fix and solve pose." 90% PROACTIVE RECALL, 10% new: the corpus
+already held the answer in three artifacts this session's fork analysis had not joined. THE RESOLUTION
+(all four anchors now ONE picture): **d_pose lives in PoseNet's 6-dim OUTPUT space; per-pair ξ_eff is a
+6→6 map — the planar family, hopeless at dense FLOW, generically STEERS the 6 scored outputs to target.**
+(1) R1 (#245): SOLO descent vs frozen w_pose=0 render → **d_pose 0.0011** (symposium L0 "SOLID floor",
+contribution 0.105). (2) run-1 1.79 plateau = JOINT-training artifact (18 competing terms), NOT a cap.
+(3) "cap ~2.5 by construction" (FEED-posehard) = a PHOTOMETRIC self-fit = FLOW-space objective —
+verdict_scope re-scoped to that INSTANCE; says nothing about the output-space solve. (4) #249 (recalled):
+P-E existence **2.71e-07** (targets reachable); quantization-aware STE-through-uint8 LM solve ROBUST
+(grad_vs_frozen_gap 0.0 — survives eval roundtrip); CORRECTION: image-space stores RATE-PROHIBITIVE at
+n600, pose-space scalars the ONLY cheap channel. THE SOLVE (3 layers): **S1 solve-don't-train** — pose
+LEAVES the training loop; per-pair 6-DOF damped LM/GN solve of ξ_eff through R on the FROZEN final
+render at export time (deterministic; kills the whole run-1 plateau class; expected ≥R1 0.0011 →
+contribution 0.105, rate ~0.002). **S2 +k steering DOF** — the #365 per-cell affine-inverse-depth params
+re-purposed as OUTPUT-space steering dimensions transverse to the planar submanifold; 6 targets vs 6+k
+DOF ⇒ residual collapses orders below 0.0011 (PREDICTION; A2+ measures); k≈4–12 fp16/pair → rate
+~0.003–0.010; target d_pose ~1e-4–3e-5 → contribution ~0.02–0.03 ancestor-class, store-nothing-PRESERVED.
+**S3** ξ-consistent null-texture (symposium L3) demoted to optional co-adaptation — no longer
+load-bearing. LEGALITY: pose-space scalars COUNTED, warp/render generic rule-118 FREE, inflate loads NO
+scorer (TTO-is-compress-time verbatim); #249's correction explicitly blesses the O(10)-scalar channel;
+NOT the image-table eval-hack. CONSEQUENCE: v7.5's pose launch gate becomes a $0 POST-HOC check (S1
+solve on the current EMA render ≤~0.0011 at n600) — pose exits the training bet; sub-0.19 arithmetic
+reopens (0.09 d_seg + 0.07 rate + ~0.03 pose) IF A2+ confirms. EXECUTION: Rung A2 (6-DOF solve) + A2+
+(6+k) ADDED to the in-flight ladder agent (same harness, #249 tool machinery; cut A1-GT-cells before A2).
+Eq `pose_output_space_inverse_solve_v1` registers ON the A2 anchor (advisory axis, n-labeled, n600/exact
+owed) — not before. SPEC_v75 pose-gate delta ONLY after measurement. Pointer 0.19110 UNMOVED — MEANS.
