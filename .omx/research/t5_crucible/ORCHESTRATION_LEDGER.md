@@ -204,6 +204,31 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~11:0x: V6 (feec6e7af+b5771b531) — THE LAUNCH CANDIDATE ---
+- Crossing re-executed unrounded, UNMOVED: central 0.1897336 (margin 0.0013664) · win9
+  0.1817034 (0.0093966) · bars 0.0010137/0.0010940 · ILC 9.9573e-4. Central run-1 ≈ 0.26 does
+  NOT cross; crossing = engineered gated tail, now with a THIRD named binding constraint
+  (locked-mass coverage).
+- τ*: convention DERIVED = fixed-point mass(m < τ*·ln5) = f_target (Maslov intent); f_target →
+  named probe P-TAU2; LAUNCH VALUE τ_end = 0.31 (ep650-best sits inside its own live-field
+  [τ*(q80), τ*(q90)] = [0.277, 0.408]) + SC-3 live-law promotion (q̂=0.85). Anneal narrative
+  HONESTLY INVERTED: the control OVER-descended on the τ-leg. 10-row c(τ) cascade + TAIL
+  ladder live-form.
+- #149 → B19 decode-side seeded dither (~15-25 LOC, 0 bytes rule-118, byte-close-selectable),
+  RUN-1 gated on P-DITHER ($0 A/B on the ep650 byte-close). No launch-blocking dependency.
+- ASYMPTOTE (M1 measured term — the decisive honesty row): decoded residual 0.0036146 =
+  smooth-reachable 2.0351e-3 + quantum-locked 1.5795e-3 (43.7%). **Smooth-perturbative-only
+  floor S ≥ 0.2373 — that family CANNOT cross 0.19110.** Crossing requires the locked-mass
+  levers (band/comb/dither) to work; composed-family band [0.154, 0.181] retained (lower edge
+  conditional on locked-mass × lever-support overlap = named run-1 computation). T_3 = 0.15
+  still requires the family step.
+- Also: F-DET in config + B-DET preflight · ν laws (settle 237.1, cycle 387.1, s* 6.8971e-6,
+  k_max 6; V=5 RETAINED — window-covers-settle refuted-as-necessary) · forfeit arm FIRING
+  (B-INJ owed pre-GO) · B17 fitted bar (1.750/1.302) · B16 regrounded + SC-20 · P-MP autopsy ·
+  comb 79.33 · 21-row ledger · 9 minors · zero invented flags.
+- SEAL: round 1 of 3 FIRED on v6. NEW $0 GATES (P-TAU2, P-DITHER) fired in parallel — final
+  seal round waits for them per NO-OPEN-GATES.
+
 --- LANDING FOLDED 2026-07-08T~10:0x: τ-CONFIRM (f4dcad1a6) — THE 0.10 ANCHOR WAS AN APPARATUS ARTIFACT ---
 - **τ*_end = 0.062 DOES NOT STAND (scope=INSTANCE; the law τ*=m_q/ln5 untouched).** The m_q=0.10
   anchor was TAUTOLOGICAL: birth_death_persistence_dseg binned flips on the maps-npz `gt_margin`
