@@ -94,3 +94,57 @@ Only `upstream/evaluate.py` on exact archive bytes, contest-CPU/CUDA 1:1, is a s
 tools/levelset_byte_close_and_eval.py — 3-arm selection (ema/live/polyak) now RECORDED (B1);
 per-arm d_pose at export is the pose facet's first real measurement. n600 or it is not evidence.
 GT class order is canonical comma10k [Road,Lane,Undrivable,Movable,MyCar] — NEVER luma-sort.
+
+## 8. OPERATING CONTRACT (BINDING on every session/agent touching v7.5 or v8 — operator-directed handoff hardening)
+
+### A. RESUMABILITY IS P0 FOR ALL (operator verbatim 2026-07-08)
+Every run: resumable-from-disk + per-stage checkpoints + EMA-shadow save + atomic writes
+(CLAUDE.md non-negotiable — loop-end-only saving FORBIDDEN). Every NEW lever/controller: register
+under the canonical resume registry (src/tac/witness_control/resume_registry.py static gate) with
+ADDITIVE, legacy-compatible persistence (the __bc_*/__mg_* sentinel pattern: old sidecars restore
+to un-fired ⇒ byte-identical pre-fire). Every builder: commit early and often via the serializer
+(two builders died on transient API-500s today and survived ONLY because edits were on disk).
+Never half-wire under unverifiable resume risk — do LESS but REAL (the Lever-2 precedent).
+
+### B. ALREADY SETTLED — do NOT re-derive, re-measure, re-open, or re-litigate (the artifact is the authority)
+| settled | authority |
+|---|---|
+| β_end 3.177 (derived 3× independently); epochs 3000 sealed (NEVER pass --epochs); budget 8.314d | r2-r4 seal reports + tests |
+| EVENT mode is the operator's BINDING decision; two-token clock revert documented, not proposed | LAUNCH_PACKAGE |
+| `--persistence/logit-adjust-classes "3"` = Movable class-INDEX (consumer traced); class order = canonical comma10k [Road0,Lane1,Undriv2,Movable3,MyCar4] — luma-sort is WRONG (bit us 3×) | r3 confound lens; CLAUDE.md §SegNet |
+| Road floor actuator = birth-stack recall-without-precision, NOT the analytic band (falsified 3 ways) | road_anomaly_probe b9da25aa6 |
+| Micro-batch bit-identity-at-speedup IMPOSSIBLE (scorer forward batch-dependent) — bounded n600 A/B is the ONLY admission | frozen_scorer_forward_batch_dependence_v1 |
+| Bulk-paint interiors near-free AT THE ORACLE BOUND; residual = 100% separatrix placement; Road = adjacency hub | probe P-A bf1ee1fa8 (n600) |
+| R-phase FOLDS into tie-locus (do NOT build two terms); tie-locus term ALREADY BUILT (trainer ~L4559) | p0_forces_derivation f7209667a |
+| δ_R = 0.0196 (tool exists: tools/measure_delta_R_noise_floor.py — for n600, RE-RUN THE TOOL, never rebuild) | reports/delta_R_noise_floor.json |
+| Pose 3.4e-5 is ANCESTOR-BORROWED; this vehicle's d_pose is OPEN (~1.8) and THE blocker | L68 + run-1 verdicts |
+| Run-1 = the birth-arm measurement; NEVER compare to bulk-only floors (#205 CE 0.005 / mod32cap) | FEED-roadfloor |
+| Safe-compile/bit-identity certs are per-{chip,os,mlx,device} FACTS — never transferred, always fingerprint-gated | safe_compile_hosc_device_bitidentity_v1 |
+
+### C. NO-STRAY / NO-HALLUCINATION RULES
+Config exists ONLY as a typed DSL WitnessProgram compile (never hand-assembled argv; never-invent-
+flags — grep add_argument or the DSL validates fail-closed). Every constant rides the value-
+provenance ladder (derived-live > derived-at-config > measured-anchor > waivered — bare literals
+are a bug class). Every negative verdict carries verdict_scope at the NARROWEST supported level.
+Every decision doc carries STORES CONSULTED. RECALL BEFORE DECIDE: grep the DAG + memories + these
+two SPECs + the ledger before concluding anything — if it feels like a new idea, it is probably in
+FEED-* already. Loss weights adapt at STAGE BOUNDARIES only, never per-step (the GradNorm-would-
+have-muted-the-canary warning). Council-flagged equations are NOT registered until their anchors
+land.
+
+### D. EXECUTION GUARDRAILS
+Heavy launches ONLY via tools/launch_witness_run.py (raw-python bypass = P0 FORBIDDEN; a governor
+REFUSE is correct accounting, not a bug to work around). pid 63069 + all run dirs READ-ONLY sacred;
+preserve every per-stage checkpoint. Serializer --patch-file on hot files + post-edit sha +
+post-commit `git show --stat` verify (two absorption incidents today — the discipline is not
+optional). Seal protocol: fix ALL severities per round; 3 consecutive clean passes; reviewers
+RE-DERIVE from primary artifacts (a memo is a claim, not evidence); structural claims get BLIND
+derivation (allowlist committed before memos — vindicated twice). Tasks marked done only when
+landed AND verified. MPS never authority; n600 or it is not evidence; only byte-closed
+upstream/evaluate.py rows move the pointer.
+
+### E. THE CATHEDRAL INVARIANT
+Every unit of work ends with: (1) pointer-delta honesty (0.19110 moved or not — say it plainly),
+(2) the triality legs it touched (DSL / DAG FEED / equations), (3) a durable committed artifact.
+A chat-only insight is a lost insight. When a wall appears, one crisp verdict then pivot — never
+a second unit characterizing the wall. When in doubt: smaller and real beats larger and fake.

@@ -2143,3 +2143,10 @@ consumer update required — asserted [consumers-generic]. ---
   satisficing frees interior budget → tie-locus spends it on placement (the P-A floor). One
   force per crucible increment, ≤15%/40% shares. Phase-2 fires on #361 (ramp) landing. Zero
   file collision (new files only). SPEC_v75 §4 chain unchanged: #361 → #360-p2 → seal r5.
+- **HANDOFF HARDENED (operator: resumability P0 for all + no straying/rediscovery + protect the
+  cathedral)**: SPEC_v75 §8 OPERATING CONTRACT appended (A resumability-P0 · B already-settled
+  table with authorities · C no-stray/no-hallucination rules · D execution guardrails · E the
+  cathedral invariant); SPEC_v8 §8 binds to it + 5 v8-specific clauses (edge-centric mandatory,
+  staged training, gates, flagged equations, per-carrier byte-close). The contract is the
+  Opus-cannot-mess-it-up surface: every known failure mode of the day encoded as a rule with
+  its artifact authority.

@@ -93,3 +93,15 @@ any still-shared head. The P0 in-trunk forces (task #360) transfer: temporal scr
 tie-locus displacement are MORE natural per-field; margin-band satisficing applies to the paint
 stage; R-phase alignment applies to the composite. Pose is NEUTRAL-not-free (L68 unchanged:
 d_pose OPEN+UNMEASURED on the witness; frame0 luma freedom + the ξ carrier is the path).
+
+## 8. OPERATING CONTRACT
+SPEC_v75_optimal_single_trunk_20260708.md §8 is BINDING here in full (resumability-P0 ·
+already-settled table · no-stray rules · execution guardrails · cathedral invariant). v8-specific
+additions: (1) increment-1 does NOT start before its §6 gates (v7.5-first; P-C before paint
+design; all 6 risks addressed in the design review); (2) the decomposition is EDGE-CENTRIC —
+a class-naive 5-field build is a spec violation, not a variant; (3) training is STAGED (fields
+vs exact SDF targets; paint vs the frozen scorer) — end-to-end through the composite re-opens
+the theft channel and requires its own measured justification; (4) the two candidate equations
+stay council-flagged until P-B/P-C/increment-1 anchors land; (5) every carrier is independently
+byte-closed + resumable + bit-exact at decode before composition (the vehicle-OS manifest
+discipline applies per carrier).
