@@ -139,6 +139,35 @@ def test_manifest_stamped_only_when_state_written():
     assert "__lbg_fired_epoch" in arrays and "__lbg_fired_by" in arrays
 
 
+def test_event_mode_unfired_gate_stamps_manifest_no_window():
+    """B5 REVISE-2 (the pre-first-event-fire window, EMPIRICALLY CLOSED): an event-mode run with ALL
+    gates UNFIRED (the ep0..muon-fire window) STILL stamps the manifest at checkpoint 1 — because an
+    event-mode-ON but unfired gate writes its ``fired_epoch=-1`` sentinel keys (non-empty => counted as
+    an event write). So every co-writing non-event controller IS vanish-protected from the first save;
+    there is NO manifest-free window in event mode. (The CLOCK/cap-only registry stays manifest-free by
+    design — its byte-identity contract — see the sister ``test_all_cap_only...``.)"""
+    reg = build_gate_resume_registry([
+        _gate("muon", 726, event=True),
+        _gate("lane_band", 300, event=True),
+        _gate("seg_chroma_boundary", 400, event=True),
+    ])
+    # simulate the pre-fire window: many epochs, no gate ever fed an event_fired.
+    # (build_gate_resume_registry holds the gates; drive them directly for the unfired state.)
+    arrays = reg.state_arrays()
+    assert RESUME_REGISTRY_MANIFEST_KEY in arrays, (
+        "an all-unfired EVENT-mode registry MUST stamp the manifest at ckpt 1 (sentinel keys are a "
+        "write) — else a pre-fire crash-resume silently legacy-restores the non-event controllers")
+    # the unfired sentinels are present (the write that stamps the manifest).
+    assert int(_sidecar_parse(arrays)["__mg_fired_epoch"]) == -1
+    # sister invariant: a cap-only (clock) registry has NO manifest (byte-identity contract preserved).
+    clock = build_gate_resume_registry([
+        _gate("muon", 726, event=False),
+        _gate("lane_band", 300, event=False),
+        _gate("seg_chroma_boundary", 0, event=False),
+    ])
+    assert RESUME_REGISTRY_MANIFEST_KEY not in clock.state_arrays()
+
+
 def test_vanished_event_state_fails_closed():
     """Manifest says an EVENT gate persisted, but its keys are gone => ResumeIntegrityError (a
     corrupt sidecar; silently re-arming would break resume-determinism)."""

@@ -162,7 +162,25 @@ class ResumeRegistry:
         (every controller had nothing to persist — the cap-only path) return ``{}`` with NO manifest,
         so the sidecar is byte-identical. Otherwise stamp :data:`RESUME_REGISTRY_MANIFEST_KEY`
         listing ONLY the controllers that actually wrote keys (with their event flag), so resume can
-        detect a persisted-but-vanished controller."""
+        detect a persisted-but-vanished controller.
+
+        (B5 REVISE-2 — the pre-first-event-fire window, EVALUATED + documented) There is NO
+        manifest-free window in EVENT mode. A concern was raised that in event mode a crash BEFORE the
+        first event fires (~ep0..muon-fire) could persist the non-event controllers (rng/closed-loop/
+        tau/evt-curriculum) manifest-free and silently legacy-restore them. That window does NOT exist:
+        an event-mode-ON but UNFIRED :class:`EventBackstopGate` writes its ``fired_epoch=-1`` SENTINEL
+        keys (non-empty) => it is counted in ``wrote`` with ``event: True`` => the manifest is stamped
+        from checkpoint 1, so every co-writing non-event controller is vanish-protected from the first
+        save. MEASURED: :func:`test_event_mode_unfired_gate_stamps_manifest_no_window` (an all-unfired
+        event registry stamps the manifest; the sister cap-only registry stays manifest-free).
+
+        The ONLY manifest-free case is the CLOCK / cap-only path (no event gate at all): there the
+        non-event controllers persist manifest-free by DESIGN — the byte-identity contract for the live
+        cap-only run (§190 below) — and non-event vanish is fail-open BY DESIGN (a truncated-sidecar
+        resume re-inits them cleanly; pre-registry these had no protection at all). ``stamp-always`` was
+        REJECTED: in event mode it is redundant (sentinel already stamps), and in cap-only mode it would
+        add a manifest key => break the byte-identity contract the live run depends on (and would perturb
+        a clock-mode run's resume — forbidden)."""
         import numpy as np
         out: dict[str, Any] = {}
         wrote: list[dict] = []
