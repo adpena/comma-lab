@@ -10698,9 +10698,9 @@ manifold whose reachable PoseNet-output set does NOT contain the real-pair targe
 aggressive solve plateaus 1.2-2.1 — genuine local min, not conditioning). #249's 2.7e-7 was FREE PIXELS
 (full-rank, rate-prohibitive) — does not transfer to a cheap warp. R1's 0.0011 NOT reproducible post-hoc
 on a fixed render — IF real it needed JOINT pose-descent co-adapting the render (the live #205 w_pose=1.0
-sits ~1.75 at ep200, also not near it). verdict_scope FORMULATION: REFUTED = "cheap post-hoc warp of a
-FIXED render reaches low d_pose"; NOT killed = joint pose-descent (render co-adapts; #205 tests it live) or
-the paradigm. Store-real-appearance stays DEAD (10.4 + rate 573). CORRECTED STATE: pose is NOT cheaply
+sits ~1.75 at ep200, also not near it).
+verdict_scope: formulation — "cheap post-hoc 6(+k)-DOF warp of a FIXED render reaches low d_pose" (this is the REFUTED/DEAD claim); NOT killed = joint pose-descent training (render co-adapts; #205 tests it live) OR the paradigm; store-real-appearance stays DEAD at the SAME formulation level (10.4 + rate 573, 16030e6bf).
+CORRECTED STATE: pose is NOT cheaply
 solved — either a dedicated pose-descent run makes the render pose-legible (re-validate R1 0.0011 at n600
 byte-close FIRST — #238) OR pose is a budget item (~1.7 → contrib 4.1 → kills sub-0.19) + sub-0.15 rides
 d_seg+rate. LANDED: stratified_depth_warp.py (bit-parity to A0, review-clean; A1-ready if wanted),
