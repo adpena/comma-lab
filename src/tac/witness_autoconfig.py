@@ -1706,6 +1706,368 @@ def _attach_dsl_program_manifest(cfg: "WitnessConfig", *, program_name: str, d6:
     return replace(cfg, dsl_program_manifest=manifest)
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# T5 CRUCIBLE v7 — the FIRST requirement-V-native launch config.
+#
+# Operator binding 2026-07-08 (requirement V): "The config must be defined in the DSL — no
+# ad hoc or hand crafting." Unlike crucible_v6 (a WitnessConfig whose argv is emitted by the
+# autoconfig dataclass, with a typed manifest ATTACHED for the gate), crucible_v7 IS a
+# ``TypedWitnessConfig`` — its argv is compiled by the DSL ``WitnessProgram.compile_trainer_argv``.
+# The authoring surface is the typed schema; the emitter is the DSL. There is NO hand argv and NO
+# parallel dict assembly of a NEW config: the substrate ``base`` is the SEALED v6 emitted flag set,
+# REUSED not retyped (the same reuse law by which v6 reuses store_nothing_205), transformed by the
+# five naked-violation resolutions of ``DRAFT_v7_restart_config_synthesis_20260708.md`` §1.
+#
+# The five naked-violation resolutions (the schedule-provenance gate's to-fix spec):
+#   1. --tau-softplus-start-epoch  -> DELETED (dissolved into the continuous L_tau via
+#      --seg-form-unify-tau; the trainer's validate_seg_form_unify_tau_config REFUSES both).
+#   2. --l7-start-epoch            -> DELETED (l7 = measured DEFECT; inert under unify).
+#   3. --muon-start-epoch 726      -> TAGGED FAIL-SAFE CAP (schedule_governance).
+#   4. --lane-band-start-epoch     -> 350->500, TAGGED FAIL-SAFE CAP.
+#   5. --seg-chroma-boundary-...   -> 300->450, TAGGED FAIL-SAFE CAP.
+# Gate outcome: 0 NAKED (2 deleted, 3 governance-tagged). Schedule spine: cosine_hold->geometric
+# tau anneal (floor tau*=0.31 unchanged) + TAIL_k + LADDER; pose block VERBATIM from v6.
+#
+# means != ends: returns a MEANS. Only a byte-closed n600 exact row < 0.19110 from
+# ``upstream/evaluate.py`` (contest-CPU/CUDA, NEVER MPS) moves the pointer 0.19110.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# The v7 restart's tagged fail-safe caps (req-B) — event-triggered in intent, fixed-epoch as the
+# backstop the wired event controller fires before (DRAFT §1). Named constants so the tests +
+# council review + the diff-vs-v6 table read the exact values in one place.
+_CRUCIBLE_V7_MUON_CAP = 726          # inherited from v6 (mod32cap fire band [670,700] precedes it)
+_CRUCIBLE_V7_LANE_BAND_CAP = 500     # DRAFT §1 [council_pending]: past the eased-seed window
+_CRUCIBLE_V7_CHROMA_CAP = 450        # DRAFT §1 [council_pending]: past a formed margin boundary
+_CRUCIBLE_V7_TAIL_CYCLES_MAX = 2     # DRAFT §6.2 [council_pending]: propose k_max = 2
+
+# Flags the DSL ``WitnessProgram`` emits ITSELF (flag_dict header + Preserve) OR that the typed
+# temp / stages / regularizers OWN — they must NOT ALSO live in ``base`` (else a double-emit).
+_CRUCIBLE_V7_PROGRAM_OWNED: frozenset[str] = frozenset({
+    "--out-dir", "--gt-cache", "--num-pairs", "--epochs", "--mlx-device",  # flag_dict header
+    "--ckpt-every", "--stage-checkpoints",                                  # Preserve.flags
+    "--softmax-temp-start", "--softmax-temp-end",                           # temp TypedAnneal
+    "--muon-start-epoch",                                                   # muon TypedStage
+    "--eikonal-weight", "--length-weight",                                  # TypedRegularizers
+})
+
+# Flags v7 DELETES outright (DRAFT §1 resolutions 1+2 + the cosine_hold-only knob geometric drops).
+_CRUCIBLE_V7_DELETED: frozenset[str] = frozenset({
+    "--tau-softplus-start-epoch",   # dissolved by --seg-form-unify-tau (trainer refuses both)
+    "--l7-start-epoch",             # l7 measured DEFECT; inert under unify (trainer default is 'never')
+    "--tau-hold-frac",              # cosine_hold-only; the geometric anneal has no hold segment
+})
+
+# The three composable v7 DSL levers (Lever factories in curriculum_dsl — triality: "the DSL HOLDS
+# every designed lever"). Applied AS TypedLevers so the emitter stays the DSL, never a hand dict.
+_CRUCIBLE_V7_DSL_LEVERS: tuple[str, ...] = (
+    "seg_form_unify_tau",           # --seg-form-unify-tau (continuous L_tau; removes last PR95 bone)
+    "tail_k_warm_restart",          # --tail-* (post-Muon warm-restart cycles; k_max fail-safe cap)
+    "n323_ladder_island_homotopy",  # --ladder-* (per-class-lambda-gated island-birth homotopy)
+)
+
+# Flags whose delta vs v6 is a run-dir artifact (NOT a config semantic) — excluded from the
+# operator-facing diff-vs-v6 table (the council reviews SEMANTIC deltas, not the placeholder out-dir).
+_CRUCIBLE_V7_DIFF_IGNORE: frozenset[str] = frozenset({"--out-dir", "--gt-cache"})
+
+_CRUCIBLE_V7_PLACEHOLDER_OUT = "experiments/results/__crucible_v7__"
+
+
+@dataclass(frozen=True)
+class CrucibleV7Compiled:
+    """The compiled v7 artifact: the typed config + its argv + both manifests + the v6 baseline.
+
+    Everything the launcher gate chain (DSL-manifest gate rc=7 + schedule-provenance gate rc=6)
+    and the council review surface (the diff-vs-v6 table) need, in one immutable record.
+    """
+
+    typed: object                       # TypedWitnessConfig (the requirement-V-native artifact)
+    argv: tuple[str, ...]               # the DSL-compiled trainer argv (WitnessProgram emitter)
+    emitted_pairs: tuple[tuple[str, object], ...]  # (flag, value) parse of argv (gate input)
+    constants_manifest: dict            # the LawRef constants (inherited from v6; same sealed values)
+    dsl_program_manifest: dict          # build_launch_manifest attestation (the launcher rc=7 gate)
+    schedule_governance: dict           # {flag: {class, sensor, rationale}} (the rc=6 gate input)
+    v6_flags: tuple[tuple[str, object], ...]  # the v6 sealed emitted flags (diff baseline)
+
+
+def _crucible_v7_argv_pairs(argv: "list[str] | tuple[str, ...]") -> list[tuple[str, object]]:
+    """Parse a compiled trainer argv (``[python, trainer, --flag, val, --bare, ...]``) into
+    ``(flag, value)`` pairs — a bare boolean flag -> value ``None`` — the exact shape the
+    schedule-provenance gate + the diff table consume. Pure (unit-testable at $0)."""
+    toks = list(argv)
+    # skip the leading interpreter + trainer path (the first two non-flag tokens).
+    i = 0
+    while i < len(toks) and not str(toks[i]).startswith("--"):
+        i += 1
+    pairs: list[tuple[str, object]] = []
+    while i < len(toks):
+        t = str(toks[i])
+        if t.startswith("--"):
+            nxt = toks[i + 1] if i + 1 < len(toks) else None
+            if nxt is not None and not str(nxt).startswith("--"):
+                pairs.append((t, nxt)); i += 2
+            else:
+                pairs.append((t, None)); i += 1
+        else:
+            i += 1
+    return pairs
+
+
+def diff_crucible_v6_to_v7(
+    v6_flags: "list[tuple[str, object]] | tuple[tuple[str, object], ...]",
+    v7_pairs: "list[tuple[str, object]] | tuple[tuple[str, object], ...]",
+) -> dict:
+    """The operator-facing diff-vs-v6 table (the council's review surface). Returns
+    ``{added, removed, changed}`` where a bare flag is normalised to ``True`` on both sides and
+    values are compared by their emitted-token string (so ``350`` vs ``'500'`` is a real change,
+    not a type artifact). The run-dir placeholder (``--out-dir`` / ``--gt-cache``) is excluded —
+    it is not a config semantic. Pure (unit-testable at $0)."""
+    def _norm(pairs):
+        return {f: (True if v is None else v) for f, v in pairs
+                if f not in _CRUCIBLE_V7_DIFF_IGNORE}
+    a, b = _norm(v6_flags), _norm(v7_pairs)
+    added = sorted(set(b) - set(a))
+    removed = sorted(set(a) - set(b))
+    changed = sorted(f for f in set(a) & set(b) if str(a[f]) != str(b[f]))
+    return {
+        "added": [(f, b[f]) for f in added],
+        "removed": [(f, a[f]) for f in removed],
+        "changed": [(f, a[f], b[f]) for f in changed],
+        "v6_flag_count": len(a),
+        "v7_flag_count": len(b),
+    }
+
+
+def _crucible_v7_schedule_governance() -> dict:
+    """The three tagged fail-safe CAP declarations (DRAFT §1) as typed ``ScheduleGovernance``.
+
+    HONEST CLASSIFICATION (operator anti-fake directive): all three fixed start-epochs are
+    literally FAIL-SAFE CAPS — the trainer engages each at a FIXED epoch gate, NOT via a runtime
+    event sensor (verified: the wired --curriculum-event-triggered / --curriculum-nucleus-guard
+    sensors govern the CE->tau readiness hand-off, and #333 annulus telemetry is
+    OBSERVABILITY-ONLY). Each CAP cites the co-emitted, WIRED governing event controller it backs
+    up; the SPECIFIC sensor->start wiring the draft intends is an owed build (the ``wiring_gap``
+    list in the memo + returned by :func:`crucible_v7_wiring_gaps`), declared not faked."""
+    from tac.witness_dsl.typed_config import ScheduleGovernance
+    return {
+        "--muon-start-epoch": ScheduleGovernance(**{
+            "class": "cap", "sensor": "--curriculum-event-triggered",
+            "rationale": (
+                "Muon metric-finisher entry (v6 §2.2f): the powerlaw_meat exit of the tau-descent "
+                "(a CODE sensor, no CLI flag) fires the early hand-off; 726 is the req-B fail-safe "
+                "cap (nu-law settle + floor derivation; the mod32cap fire band [670,700] precedes "
+                "it). Governing wired event: --curriculum-event-triggered ep_loss-plateau."),
+        }),
+        "--lane-band-start-epoch": ScheduleGovernance(**{
+            "class": "cap", "sensor": "--curriculum-nucleus-guard",
+            "rationale": (
+                "Analytic lane band engages when the lane critical-nucleus (pi1>=5 per-class #315 "
+                "sensor) is born + survivable; 500 is the req-B cap past the eased-seed window "
+                "(v6 hand-guessed that moment at 350). Governing wired sensor: "
+                "--curriculum-nucleus-guard (the per-class critical-nucleus guard)."),
+        }),
+        "--seg-chroma-boundary-start-epoch": ScheduleGovernance(**{
+            "class": "cap", "sensor": "--curriculum-event-triggered",
+            "rationale": (
+                "Chroma boundary sharpener needs a FORMED margin boundary to sharpen (the #333 "
+                "annulus-frac plateau is the design-intent sensor); 450 is the req-B cap. "
+                "Governing wired event: --curriculum-event-triggered ep_loss-plateau."),
+        }),
+    }
+
+
+def crucible_v7_wiring_gaps() -> list[str]:
+    """The honest wiring-gap list (a council input, NOT a failure): the DRAFT-intended
+    specific sensor->start wirings that are NOT yet plumbed, so the three start-epochs fall back
+    to the tagged-CAP class citing the wired ep_loss-plateau / nucleus-guard controllers."""
+    return [
+        "muon: powerlaw_meat exit is a CODE sensor with NO CLI flag AND does not move "
+        "muon_start_epoch (fixed epoch gate, trainer ~L3216); OWED: expose a powerlaw_meat -> "
+        "muon-entry event trigger. CAP cites the wired --curriculum-event-triggered as backstop.",
+        "lane-band: --curriculum-nucleus-guard governs the CE->tau readiness hand-off "
+        "(trainer ~L1948/L4951), NOT lane_band_start_epoch (fixed gate ~L3302); OWED: nucleus -> "
+        "lane-band-start wiring. CAP cites the wired nucleus guard as backstop.",
+        "chroma: the #333 annulus_frac telemetry is OBSERVABILITY-ONLY (never read into training, "
+        "trainer ~L4956-4959) so it cannot fire seg_chroma_boundary_start (fixed gate ~L3672); "
+        "OWED: an annulus-plateau -> chroma-start event trigger + a recognised CLI sensor for it.",
+    ]
+
+
+def _build_crucible_v7(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int,
+    out_dir: str,
+    code_matrix=None,
+    byte_close_result=None,
+):
+    """Internal builder: construct the v7 ``TypedWitnessConfig`` + return the v6 baseline it
+    reuses. Returns ``(typed, v6_cfg, v6_flags)``. Shared by :func:`derive_crucible_v7_config`
+    and :func:`compile_crucible_v7_config` so v6 is derived ONCE."""
+    from tac.witness_dsl.curriculum_dsl import (
+        LadderIslandHomotopy,
+        SegFormUnifyTau,
+        TailCycles,
+    )
+    from tac.witness_dsl.typed_config import (
+        Provenanced,
+        ProvenanceClass,
+        TypedAnneal,
+        TypedLever,
+        TypedRegularizer,
+        TypedStage,
+        TypedWitnessConfig,
+    )
+
+    _PC = ProvenanceClass
+    # (1) the SEALED v6 substrate base (reuse-not-retype). derive_crucible_v6_config is pure CPU;
+    # it does NOT load the GT cache (the path only identifies the clip).
+    v6_cfg = derive_crucible_v6_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    v6_flags = v6_cfg.to_trainer_flags("OUT")
+
+    # (2) transform v6's sealed flags into the v7 typed ``base``: drop program-owned + deleted flags,
+    # map a bare-boolean (flag, None) -> True (the DSL emitter's bare convention), keep every other
+    # sealed value UNCHANGED. Then apply the v7 schedule-spine + event-cap deltas.
+    base: dict = {}
+    for flag, val in v6_flags:
+        if flag in _CRUCIBLE_V7_PROGRAM_OWNED or flag in _CRUCIBLE_V7_DELETED:
+            continue
+        base[flag] = True if val is None else val
+    base["--tau-anneal-shape"] = "geometric"                       # spine: cosine_hold -> geometric
+    base["--lane-band-start-epoch"] = _CRUCIBLE_V7_LANE_BAND_CAP   # 350 -> 500 (tagged cap)
+    base["--seg-chroma-boundary-start-epoch"] = _CRUCIBLE_V7_CHROMA_CAP  # 300 -> 450 (tagged cap)
+
+    # (3) the three composable v7 levers (DSL Lever factories -> TypedLever; the DSL stays the emitter).
+    def _typed_lever(lev) -> "TypedLever":
+        return TypedLever(name=lev.name, overrides=dict(lev.overrides),
+                          epochs_delta=lev.epochs_delta, notes=lev.notes)
+
+    levers = (
+        _typed_lever(SegFormUnifyTau()),
+        _typed_lever(TailCycles(cycles_max=_CRUCIBLE_V7_TAIL_CYCLES_MAX)),
+        _typed_lever(LadderIslandHomotopy()),
+    )
+
+    typed = TypedWitnessConfig(
+        name="crucible_v7",
+        out_dir=out_dir,
+        gt_cache=str(v6_cfg.gt_cache),
+        num_pairs=int(num_pairs),
+        epochs=int(epochs),
+        mlx_device="gpu",
+        seed=0,
+        purpose=(
+            "T5 crucible v7 restart (requirement-V-native TypedWitnessConfig): witness-native "
+            "continuous L_tau (seg-form-unify-tau) + geometric tau anneal (floor tau*=0.31) + "
+            "TAIL_k + LADDER; three fixed start-epochs are TAGGED fail-safe caps (0 naked); pose "
+            "block verbatim from v6. MEANS until a byte-closed n600 row < 0.19110."),
+        temp=TypedAnneal(
+            start=Provenanced(value=1.0, provenance=_PC.MEASURED_ANCHOR, unit="tau",
+                              source="render-anneal start (proven base)"),
+            end=Provenanced(value=0.31, provenance=_PC.MEASURED_ANCHOR, unit="tau",
+                            source="mod32cap ep650-best tau=0.3098 (config-conditional); knee band "
+                                   "corroborates (tau_end_knee_launch_v1)"),
+        ),
+        stages=(
+            TypedStage(name="muon", start_epoch_flag="--muon-start-epoch",
+                       start_epoch=_CRUCIBLE_V7_MUON_CAP),
+        ),
+        regularizers=(
+            TypedRegularizer(flag="--eikonal-weight", weight=Provenanced(
+                value=0.01, provenance=_PC.DERIVED_AT_CONFIG, unit="dimensionless",
+                source="theta* lever stack (eikonal |grad phi|=1)")),
+            TypedRegularizer(flag="--length-weight", weight=Provenanced(
+                value=0.001, provenance=_PC.DERIVED_AT_CONFIG, unit="dimensionless",
+                source="theta* lever stack (length INT ds)")),
+        ),
+        levers=levers,
+        schedule_governance=_crucible_v7_schedule_governance(),
+        base=base,
+    )
+    return typed, v6_cfg, v6_flags
+
+
+def derive_crucible_v7_config(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    out_dir: str = _CRUCIBLE_V7_PLACEHOLDER_OUT,
+    code_matrix=None,
+    byte_close_result=None,
+):
+    """The T5 CRUCIBLE v7 restart config — the FIRST requirement-V-native launch config, authored
+    AS a :class:`tac.witness_dsl.typed_config.TypedWitnessConfig` (NO hand argv, NO parallel dict
+    assembly). See the module banner above for the five naked-violation resolutions.
+
+    Returns the ``TypedWitnessConfig``; ``.to_program().compile_trainer_argv()`` is the DSL-emitted
+    launch argv. Use :func:`compile_crucible_v7_config` for the full compiled artifact (argv +
+    constants_manifest + dsl_program_manifest + the diff-vs-v6 baseline).
+
+    means != ends: a MEANS. Only a byte-closed n600 exact row < 0.19110 moves the pointer.
+    """
+    typed, _v6_cfg, _v6_flags = _build_crucible_v7(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    # fail-CLOSED at authoring time: refuse a config the DSL cannot validate (invented flag /
+    # type-incompatible override / broken curriculum ordering) BEFORE it can reach a launcher.
+    viol = typed.validate_program()
+    if viol:
+        raise ValueError(
+            f"crucible_v7 DSL-authored-config gate: TypedWitnessConfig produced "
+            f"{len(viol)} WitnessProgram.validate violation(s): {viol[:4]}")
+    return typed
+
+
+def compile_crucible_v7_config(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    out_dir: str = _CRUCIBLE_V7_PLACEHOLDER_OUT,
+    code_matrix=None,
+    byte_close_result=None,
+) -> CrucibleV7Compiled:
+    """Compile crucible_v7: the typed config -> argv + constants_manifest + dsl_program_manifest +
+    the v6 diff baseline. The DSL ``WitnessProgram`` is the argv emitter (requirement V); the
+    ``constants_manifest`` is inherited from v6 (v7's base reuses the SAME LawRef-resolved constants
+    tau*=0.31 / beta-end 10.0 / lr-anneal 1000 / lr-hold 1.0, so v6's manifest describes them); the
+    ``dsl_program_manifest`` is the :func:`build_launch_manifest` attestation the launcher rc=7 gate
+    verifies. Fail-CLOSED via :func:`derive_crucible_v7_config`'s validate."""
+    from tac.witness_dsl.typed_config import build_launch_manifest
+
+    typed, v6_cfg, v6_flags = _build_crucible_v7(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    viol = typed.validate_program()
+    if viol:
+        raise ValueError(
+            f"crucible_v7 DSL-authored-config gate: TypedWitnessConfig produced "
+            f"{len(viol)} WitnessProgram.validate violation(s): {viol[:4]}")
+
+    argv = typed.to_program().compile_trainer_argv()
+    pairs = _crucible_v7_argv_pairs(argv)
+    emitted_names = sorted({f for f, _ in pairs})
+    dsl_manifest = build_launch_manifest(
+        program_name="crucible_v7", emitted_flag_names=emitted_names,
+        typed_config_hash=typed.typed_config_hash(), typed_validated=True)
+    governance = {
+        k: v.model_dump(mode="json", by_alias=True)
+        for k, v in typed.schedule_governance.items()
+    }
+    return CrucibleV7Compiled(
+        typed=typed,
+        argv=tuple(argv),
+        emitted_pairs=tuple(pairs),
+        constants_manifest=dict(getattr(v6_cfg, "constants_manifest", {}) or {}),
+        dsl_program_manifest=dsl_manifest,
+        schedule_governance=governance,
+        v6_flags=tuple(v6_flags),
+    )
+
+
 def derive_config(
     gt_cache_path: str | Path,
     *,
