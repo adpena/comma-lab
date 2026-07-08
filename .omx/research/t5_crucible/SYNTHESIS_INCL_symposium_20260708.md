@@ -58,3 +58,19 @@ so even auto-revert cannot admit it at launch).
 PRECONDITIONS: #358 lands (item 9 contingency + S2 COND-1) → then v7.3 compile → seal ROUND 2
 (4 lenses, fix-all-severities, zero-unfixed precondition) → 3 clean passes → knee re-derive (D2)
 → governed stop of run-1 (checkpoints preserved) → EVENT-mode launch through the full gate chain.
+
+## CRUX-ENGINEERING ADDENDUM (operator 2026-07-08: "All are fixable through crux engineering")
+The operator directive supersedes pure defer-classes where the crux is buildable NOW. Key
+insight: BIT-IDENTITY/AGREEMENT certs are contention-INVARIANT (safe beside the live run);
+only SPEED benches are contention-sensitive (stop-time). Re-opened:
+- Item 4: GPU per-chip fingerprint BIT-cert = seconds of GPU, runs NOW → if max|Δ|=0 at real
+  coverage, the hosc flip admits at launch under the fingerprint gate; speed bench stays stop-time.
+- Item 3: engineer bit-identity INTO the twin — #348 fixed-order reduction applied to the
+  micro-batch accumulation → B>1 bit-identical to serial BY CONSTRUCTION → the 2–4× lever
+  admits at launch score-neutral, no A/B needed (S5-H1 dissolves at the root).
+- Item 10: D1 GPU-vs-CPU verdict AGREEMENT probe is value-comparison (contention-invariant) →
+  runs NOW on the frozen mod32cap ep650 ckpt via the GOVERNED path (memory-preflighted, minutes-
+  scale) → if agreement holds, v7 launches with GPU verdicts (staleness ~80min → ~minutes).
+- Item 6: shm/pipe boundary (the memo's own named fix) folds into #357; launch policy unchanged.
+Classes update CONDITIONALLY: 3/4/10 elevate to IN-v7 IFF their certs/probes PASS before v7.3
+compile; else the table classes stand. Builders fired 2026-07-08.
