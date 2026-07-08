@@ -2150,3 +2150,10 @@ consumer update required — asserted [consumers-generic]. ---
   staged training, gates, flagged equations, per-carrier byte-close). The contract is the
   Opus-cannot-mess-it-up surface: every known failure mode of the day encoded as a rule with
   its artifact authority.
+- **FINAL PASS COMPLETE (5d3ea5cd2)**: identical "THE v7.5/v8 VEHICLE LINE + OPERATING CONTRACT"
+  NON-NEGOTIABLE section inserted in BOTH CLAUDE.md (adjacent to §OPERATOR PRIORITY) and
+  AGENTS.md (top) — pointer-backed to the two SPECs, §8 contract A-E binding on every agent, the
+  agent bar (measured/derived · verdict ladder · energy-vs-forces design method · triality ·
+  apparatus-respecting-and-enhancing · holistic facet reads · children inherit the contract).
+  Gate follow-up = task #362 (warn-only spec pointer-integrity, idle-slot only — must not
+  displace #361→#360→seal). Every future session loads the vehicle line + contract at byte one.
