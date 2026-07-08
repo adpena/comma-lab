@@ -204,6 +204,29 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~10:0x: τ-CONFIRM (f4dcad1a6) — THE 0.10 ANCHOR WAS AN APPARATUS ARTIFACT ---
+- **τ*_end = 0.062 DOES NOT STAND (scope=INSTANCE; the law τ*=m_q/ln5 untouched).** The m_q=0.10
+  anchor was TAUTOLOGICAL: birth_death_persistence_dseg binned flips on the maps-npz `gt_margin`
+  key = the SIGNED witness margin-toward-GT (≤0 at flips by definition, max −1.1e-5) — so "all
+  flip mass below 0.10" was true of ANY vehicle (bit-reproduced 0.7644972239). Apparatus-vs-
+  anchor, NOT physics.
+- TRUE GT-margin quantiles (16-pair advisory): END ep1000 m_q90 = 0.743 → τ*(q90) = 0.462;
+  BEST ep650 m_q90 = 0.656 → 0.408; ANCHOR-l7 re-measured 0.818 → 0.508. Even q50 → 0.11-0.12.
+  The QUANTILE CONVENTION is a design decision (undefined on the real heavy-tailed field) →
+  SC-3 + v6 derives it from the law's ORIGINAL INTENT (Maslov error budget).
+- **v5 cross-field consistency row (a) is CIRCULAR** (τ_end·ln5 ≈ 0.0998 vs "measured 0.10 edge"
+  — both sides consumed the same corrupted apparatus output) — STRUCK. Coherence check: P-CON's
+  independent finding (survival = ABSOLUTE ~1.3-1.75 logit bar, NOT τ·ln5) was the first hint;
+  wave-A's 0.2432 (true-axis recompute at ep300) agrees with 0.269-0.322 here. Everything
+  consistent once the corrupted axis is removed.
+- CASCADE (v6): all c(τ) anchors + adaptive-ε clamp re-anchoring + TAIL_k τ-ladder + the
+  "anneal TRUNCATED" narrative re-examined (control τ 0.216 is BELOW the new τ*(q90) band
+  0.41-0.46 — the control may have OVER-descended, not under). Instrument landed
+  (tools/witness_tau_mq_confirm.py, Wave-A bit-for-bit cross-check, 4 tests).
+- NO-OPEN-GATES VINDICATED AT FULL SCALE: v5 would have shipped an anneal endpoint derived from
+  a tautology. The probe caught it for ~20 min of advisory render.
+- ALL PROBE GATES NOW RESOLVED → V6 SYNTHESIZER FIRED (complete fold list in its charter).
+
 --- LANDING FOLDED 2026-07-08T~09:0x: PROBE WAVE-B RESPAWN (instruments inherited+committed) ---
 - Q1 **BETWEEN (no-fire/no-kill)**: max |ρ| = 0.1242 < 0.3 fire bar; 3 sides ≥ 0.1 block
   robust-dead → B16 stays default-off. MECHANISM CONFIRMED REAL: per-direction effects carry
