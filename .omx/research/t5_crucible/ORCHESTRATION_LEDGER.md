@@ -2054,3 +2054,11 @@ consumer update required — asserted [consumers-generic]. ---
   REFUSE in dry-run = correct live-run accounting (clears when run-1 stops at swap time).
 - **ROUND 3 CONVENED** on the fix-wave diff (A 5ea59a1f1 + B 363cf7530..a8307a509 + hook
   patches). Counter 0/3; clean = zero findings at any severity.
+- **ROUND 3 COMPLETE**: deepmath+structure CLEAN (2 MINOR, both bounded+watched: r_ss window
+  ~0.06 optimistic fail-safe · surface-3 [0,350] = pre-existing M1 residual w/ counter-arm) ·
+  confound+bugs NOT_CLEAN (0 BLOCKER · 0 MAJOR · 3 MINOR: F-1 lane-gate sensor_lag mixed epoch
+  frames telemetry-only · F-2 STALE pre-fix launch.sh with beta_end=10.0 on disk · F-3 A5 drops
+  lane recall assuming an analytic band not structurally co-emitted). EVERY round-2 fix
+  independently verified from primary artifacts — A5 classes "3"→(3,)=Movable-index CORRECT,
+  β trajectory bounded [1.0,3.177], budget 8.122d reproduced from raw ts. 222 tests green.
+  Counter stays 0/3 (findings found) → ONE fixer for all 5 → round 4 on that micro-diff.
