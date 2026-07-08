@@ -621,6 +621,16 @@ def _build_resume_state_arrays(
     # focal/boundary-distance above: persist so a --resume-from that silently drops/changes it
     # fails closed via _resume_lever_divergences (deterministic-repro).
     out["__cfg_logit_adjust_loss_tau"] = np.asarray(float(getattr(args, "logit_adjust_loss_tau", 0.0)))
+    # (v7.5 Lever-3) logit-adjust class restriction is trajectory-affecting (changes the offset mask);
+    # persist a stable bitmask (sum 2^c for allowed classes; "all" => -1) so a --resume-from that
+    # silently changes the allowed set fails closed via _resume_lever_divergences.
+    out["__cfg_logit_adjust_classes_mask"] = np.asarray(
+        _logit_adjust_classes_mask(str(getattr(args, "logit_adjust_classes", "all"))), dtype=np.int64)
+    # (v7.5 Lever-1) Chan-Vese area constraint is loss-only + trajectory-affecting (no param keys) —
+    # same class: persist so a --resume-from that silently drops/changes it fails closed.
+    out["__cfg_area_constraint_birth"] = np.asarray(int(bool(getattr(args, "area_constraint_birth", False))))
+    out["__cfg_area_constraint_birth_force"] = np.asarray(float(getattr(args, "area_constraint_birth_force", 1.0)))
+    out["__cfg_area_constraint_tolerance"] = np.asarray(float(getattr(args, "area_constraint_tolerance", 0.25)))
     # (§22(2) fold) weight-entropy rate penalty is loss-only + trajectory-affecting (no param
     # keys — the surrogate is state-free) — same class: persist for the F2 divergence guard.
     out["__cfg_weight_entropy_penalty_lambda"] = np.asarray(
@@ -769,6 +779,13 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_boundary_distance_weight", float(getattr(args, "boundary_distance_weight", 0.0)), True),
         # (#218) logit-adjustment per-class offset (loss-only, trajectory-affecting, no param keys).
         ("__cfg_logit_adjust_loss_tau", float(getattr(args, "logit_adjust_loss_tau", 0.0)), True),
+        # (v7.5 Lever-3) logit-adjust class restriction bitmask (trajectory-affecting; regime coherence).
+        ("__cfg_logit_adjust_classes_mask",
+         _logit_adjust_classes_mask(str(getattr(args, "logit_adjust_classes", "all"))), False),
+        # (v7.5 Lever-1) Chan-Vese area constraint (loss-only, trajectory-affecting, no param keys).
+        ("__cfg_area_constraint_birth", int(bool(getattr(args, "area_constraint_birth", False))), False),
+        ("__cfg_area_constraint_birth_force", float(getattr(args, "area_constraint_birth_force", 1.0)), True),
+        ("__cfg_area_constraint_tolerance", float(getattr(args, "area_constraint_tolerance", 0.25)), True),
         # (§22(2) fold) weight-entropy rate penalty (loss-only, trajectory-affecting, no param keys).
         ("__cfg_weight_entropy_penalty_lambda",
          float(getattr(args, "weight_entropy_penalty_lambda", 0.0)), True),
@@ -862,8 +879,25 @@ def _finer_bias_init_values(seed: int, k: float, n: int) -> np.ndarray:
 # (#218 BUILD, FEED-07b lever #3) class-prior LOGIT ADJUSTMENT (Menon et al. 2021,
 # arXiv 2007.07314) — the textbook ZERO-BYTE rare-class cure, at the TRAINING-LOSS surface only.
 # ---------------------------------------------------------------------------
+def _logit_adjust_classes_mask(spec: str, n_classes: int = 5) -> int:
+    """(v7.5 Lever-3) stable resume/provenance bitmask for --logit-adjust-classes: 'all' => -1 (every
+    class), else sum(2^c) over the listed classes. Pure / unit-tested."""
+    s = str(spec).strip().lower()
+    if s == "all":
+        return -1
+    m = 0
+    for x in s.split(","):
+        if x.strip() == "":
+            continue
+        c = int(x)
+        if 0 <= c < int(n_classes):
+            m |= (1 << c)
+    return int(m)
+
+
 def _logit_adjust_offsets_np(
     lstars: "list[np.ndarray]", tau: float, n_classes: int = 5,
+    allowed_classes: "tuple[int, ...] | None" = None,
 ) -> "tuple[np.ndarray, np.ndarray]":
     """(#218) Per-class logit-adjustment offsets from the cached GT argmax class areas.
 
@@ -873,7 +907,16 @@ def _logit_adjust_offsets_np(
     ``logit_adjustment_class_prior_law_v1`` (``tac.canonical_equations.
     logit_adjustment_class_prior_20260707:logit_adjust_offsets`` — the equations leg IS the
     callable this delegates to; measured n600 priors anchor ~[0.232, 0.0059, 0.495, 0.0124,
-    0.254]). Pure numpy -> unit-tested."""
+    0.254]). Pure numpy -> unit-tested.
+
+    (v7.5 Lever-3 REGIME COHERENCE) ``allowed_classes`` (None = every class, the incumbent) RESTRICTS
+    the boost to a class subset: any class NOT listed gets a ZEROED offset (no logit adjustment). Under
+    the ``lane_offloaded`` basis regime lane is carried by the FREE analytic band (freq_along~=6 cannot
+    represent the dash comb), so boosting lane recall in the loss (offset -5.14) with the frequency-
+    starved learned render is unsatisfiable AND fights the band => the config passes
+    ``allowed_classes`` = the non-offloaded birthed set (companion law
+    ``curriculum_dsl.logit_adjust_classes_for_basis_regime``). ADDITIVE + one-sided: a GLOBAL constant
+    changes neither softmax-CE nor any margin form, so zeroing a class's offset only removes ITS bias."""
     from tac.canonical_equations.logit_adjustment_class_prior_20260707 import (
         logit_adjust_offsets,
     )
@@ -886,7 +929,12 @@ def _logit_adjust_offsets_np(
     if total <= 0.0:
         raise ValueError("--logit-adjust-loss-tau: empty GT L* maps (no pixels) — cannot derive priors")
     priors = counts / total
-    return logit_adjust_offsets(priors, float(tau)), priors.astype(np.float64)
+    offsets = logit_adjust_offsets(priors, float(tau))
+    if allowed_classes is not None:
+        _allow = {int(c) for c in allowed_classes}
+        _mask = np.array([1.0 if c in _allow else 0.0 for c in range(int(n_classes))], np.float32)
+        offsets = (offsets.astype(np.float32) * _mask).astype(np.float32)
+    return offsets, priors.astype(np.float64)
 
 
 def _validate_logit_adjust_compat(tau: float, micro_batch_pairs: int) -> None:
@@ -2656,8 +2704,8 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
     "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
-    "margin_saliency", "subpix", "chroma_boundary", "island_amplify", "persistence", "rankfloor",
-    "code_spectral", "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
+    "margin_saliency", "subpix", "chroma_boundary", "island_amplify", "area_constraint", "persistence",
+    "rankfloor", "code_spectral", "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
     # "eik_steik" (EIK-STAB build 1a): the additive StEik directional-divergence stabilizer; 0.0
     # unless --eikonal-steik-weight > 0. NOTE: when --eikonal-viscosity > 0 the "eikonal" key holds
     # the VISCOUS residual contribution (ViscoReg replaces the residual; same constraint, viscous
@@ -3777,11 +3825,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _loss_adapter = adapter
     _la_offset_mx = None   # (#D15) the (5,) offset the micro-batch twin's LeverConfig routes; None => OFF
     if la_tau != 0.0:
+        # (v7.5 Lever-3 regime coherence) restrict the boost to a class subset. 'all' (default) => the
+        # incumbent every-class Menon adjustment (byte-identical). A comma list zeroes the offset of
+        # every unlisted class — the config sets it from the basis regime (lane dropped under
+        # lane_offloaded, where the analytic band carries lane, not the frequency-starved learned render).
+        _lac_spec = str(getattr(args, "logit_adjust_classes", "all")).strip()
+        _la_allowed = (None if _lac_spec.lower() == "all"
+                       else tuple(int(x) for x in _lac_spec.split(",") if x.strip() != ""))
         _la_off, _la_priors = _logit_adjust_offsets_np(
-            [np.asarray(gt.lstars[_pi]) for _pi in range(P)], la_tau, n_classes=5)
+            [np.asarray(gt.lstars[_pi]) for _pi in range(P)], la_tau, n_classes=5,
+            allowed_classes=_la_allowed)
         _la_offset_mx = mx.array(_la_off)
         _loss_adapter = _LogitAdjustSegAdapter(adapter, _la_offset_mx)
         print(json.dumps({"stage": "logit_adjust", "tau": la_tau,
+                          "classes": ("all" if _la_allowed is None else list(_la_allowed)),
                           "priors": [round(float(x), 5) for x in _la_priors],
                           "offsets": [round(float(x), 4) for x in _la_off],
                           "note": "Menon logit-adjusted seg loss (training-LOSS surface only; "
@@ -4175,6 +4232,75 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("--ladder-island-homotopy requires --amplify-weight > 0: the homotopy "
                          "modulates the AMPLIFY island-birth support radius; with amplify off it has "
                          "nothing to gate (fail closed).")
+    # ---- (v7.5 Lever-1) CHAN-VESE AREA-CONSTRAINT setup — the precision counter-force. Compute the
+    # birthed-class list + the per-class stiffness lambda_c = birth_force/(tolerance*A_GT_c) LIVE from
+    # the loaded GT class areas (DERIVED-LIVE, the value-provenance gold standard — no frozen literal;
+    # the trainer reads the REAL GT areas). Default-off (flag absent) => _area_lambda None => the loss
+    # term is skipped => byte-identical. See tac.canonical_equations.
+    # chan_vese_area_constraint_birth_balance_20260708 (the balance derivation + the numpy reference).
+    area_constraint_on = bool(getattr(args, "area_constraint_birth", False))
+    _area_lambda: dict[int, float] | None = None          # {class: lambda_c}; None => term inert
+    _area_bf = float(getattr(args, "area_constraint_birth_force", 1.0))
+    _area_tol = float(getattr(args, "area_constraint_tolerance", 0.25))
+    if area_constraint_on:
+        from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+            area_constraint_lambda as _cv_area_lambda,
+        )
+        _ac_spec = str(getattr(args, "area_constraint_classes", "1,3")).strip()
+        _lst_stack_a = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
+        if _ac_spec.lower() == "auto":
+            from tac.boundary_math.island_protection import identify_island_classes as _ident_ac
+            _adet = _ident_ac(_lst_stack_a, n_classes=5)
+            _area_classes = tuple(int(c) for c in _adet.island_classes)
+        else:
+            _area_classes = tuple(int(x) for x in _ac_spec.split(",") if x.strip() != "")
+        if not _area_classes:
+            raise ValueError("--area-constraint-birth: no birthed classes resolved from "
+                             f"--area-constraint-classes {_ac_spec!r} (fail closed).")
+        # GLOBAL per-class GT area fraction over the loaded pairs (fixed per-class stiffness; the loss
+        # then compares the per-pair soft mass against the per-pair GT area).
+        _area_gt_global = np.bincount(_lst_stack_a.reshape(-1), minlength=5).astype(np.float64)
+        _area_gt_global = _area_gt_global / max(1.0, float(_area_gt_global.sum()))
+        _area_lambda = {int(c): float(_cv_area_lambda(float(_area_gt_global[int(c)]),
+                                                       birth_force=_area_bf, tolerance=_area_tol))
+                        for c in _area_classes}
+        print(json.dumps({"stage": "area_constraint_birth", "classes": list(_area_lambda.keys()),
+                          "birth_force": _area_bf, "tolerance": _area_tol,
+                          "gt_area_global": {int(c): round(float(_area_gt_global[int(c)]), 6)
+                                             for c in _area_lambda},
+                          "lambda_c": {int(c): round(v, 2) for c, v in _area_lambda.items()},
+                          "equilibrium_ratio": round(1.0 + _area_tol, 4),
+                          "note": "one-sided Chan-Vese area constraint on the birthed classes' realized "
+                          "soft mass (precision counter-force vs recall-only birth over-paint); consumes "
+                          "the SHARED realized seg forward (no extra forward); advisory; "
+                          "pointer 0.19110 UNMOVED"}), flush=True)
+    # ---- (v7.5 Lever-2) MORSE-SMALE BIRTH-COMPLETION controller setup. DETECTS per-class birth
+    # completion (persistence + area band) and emits the LOUD hand-off telemetry at each verdict. The
+    # birth-stack RAMP APPLICATION to the loss surfaces is the OWED integration (memo
+    # v75_birth_counterforce_20260708.md §Lever-2); the detector + telemetry + resume state are live.
+    # DEFAULT OFF (flag absent) => _birth_completion None => no observe => byte-identical.
+    _birth_completion = None
+    if bool(getattr(args, "birth_completion_event", False)):
+        from tac.witness_control.birth_completion import BirthCompletionController
+        _bc_spec = str(getattr(args, "birth_completion_classes", "1,3")).strip()
+        _bc_classes = tuple(int(x) for x in _bc_spec.split(",") if x.strip() != "")
+        if not _bc_classes:
+            raise ValueError("--birth-completion-event: no classes resolved from "
+                             f"--birth-completion-classes {_bc_spec!r} (fail closed).")
+        _birth_completion = BirthCompletionController(
+            classes=_bc_classes,
+            tau_persist=float(getattr(args, "birth_completion_tau_persist", 0.8)),
+            area_band=float(getattr(args, "birth_completion_area_band", 0.25)),
+            ramp_epochs=int(getattr(args, "birth_completion_ramp_epochs", 50)),
+            post_level=float(getattr(args, "birth_completion_post_level", 0.0)))
+        print(json.dumps({"stage": "birth_completion_setup", "classes": list(_bc_classes),
+                          "tau_persist": _birth_completion.tau_persist,
+                          "area_band": _birth_completion.area_band,
+                          "ramp_epochs": _birth_completion.ramp_epochs,
+                          "post_level": _birth_completion.post_level,
+                          "note": "Morse-Smale birth-completion DETECTOR live (persistence + area band); "
+                          "birth-stack ramp application = owed integration; advisory; "
+                          "pointer 0.19110 UNMOVED"}), flush=True)
     # #224 (5) island SEED + CONTAINMENT build (SEPARATE protected-seed module + its OWN AdamW group;
     # grad-shield applied to the seed leaf BETWEEN the dual value_and_grad and seed_opt.update — NEVER
     # touching the witness grouped-backward / MD-decoupling grads). The seed is a per-pair RGB residual
@@ -4328,7 +4454,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # island-FORMATION levers (#224 amplify + persistence): read the WITNESS-ALONE margin when the
         # BUILD #300 (a) routing is active, else the seed-composed margin (== the pre-#300 path).
         _island_levers_on = ((amplify_w > 0.0 and island_weight_mx is not None) or  # #224 island amplify
-                             (persist_gate["w"] > 0.0 and bool(persist_classes)))   # #224 persistence loss
+                             (persist_gate["w"] > 0.0 and bool(persist_classes)) or  # #224 persistence loss
+                             (_area_lambda is not None))                             # v7.5 area constraint
         _wa_route = wa_island and (seed_state["mod"] is not None) and _island_levers_on
         # the seed-composed forward is needed by the non-wa levers, and by the island levers ONLY when
         # they are NOT wa-routed (wa off, or no seed). When wa-routed the composed forward would be
@@ -4492,6 +4619,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             L = L + _amp_contrib
             if terms_out is not None:
                 terms_out["island_amplify"] = _amp_contrib
+        # (v7.5 Lever-1) CHAN-VESE AREA CONSTRAINT — the one-sided precision counter-force on the
+        # birthed classes' REALIZED soft partition mass. E_area,c = (lambda_c/2)*relu(m_c - A_GT_c)^2
+        # with m_c = mean_px softmax(_slog_wa)_c (the realized soft mass; dL/d(logits) is boundary-
+        # localized via the softmax Jacobian = the discrete delta(phi)) and A_GT_c = mean_px lstar_oh_c
+        # (the per-pair GT area). Reads the WITNESS-ALONE seg logits (== deploy render) so the cap
+        # constrains the SHIPPED partition. lambda_c is DERIVED-LIVE (setup block). _area_lambda None
+        # (default OFF) => skipped => byte-identical. Equations leg:
+        # chan_vese_area_constraint_birth_balance_20260708. Advisory; pointer 0.19110 UNMOVED.
+        if _area_lambda is not None and _slog_wa is not None:
+            _soft_wa = mx.softmax(_slog_wa, axis=-1)                    # (1, H, W, 5) realized soft part.
+            _area_contrib = None
+            for _acls, _alam in _area_lambda.items():
+                _m_c = mx.mean(_soft_wa[..., int(_acls)])              # realized soft mass A_c(phi)
+                _agt_c = mx.mean(lstar_oh[..., int(_acls)])            # per-pair GT area A_c^GT (const)
+                _over = mx.maximum(_m_c - _agt_c, 0.0)                 # one-sided overshoot
+                _t = (0.5 * float(_alam)) * _over * _over             # (lambda_c/2)*relu(.)^2
+                _area_contrib = _t if _area_contrib is None else (_area_contrib + _t)
+            if _area_contrib is not None:
+                L = L + _area_contrib
+                if terms_out is not None:
+                    terms_out["area_constraint"] = _area_contrib
         # #224 (4) PERSISTENCE/TOPOLOGY loss — soft-clDice + persistence-weighted island recall on the
         # SHARED realized seg logits (_slog). GT-presence-gated inside the module (never hallucinate).
         # Annealed weight persist_gate["w"] (set per-epoch, coarse->fine); 0 => branch inert.
@@ -5616,6 +5764,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if counts is None:
             return
         stats = _evt_nucleus_stats(counts)
+        # (v7.5 Lever-2) feed the Morse-Smale birth-completion detector the per-class stats (augmented
+        # with gt_area = gt_px/total_px). Emits LOUD hand-off telemetry on each newly-complete class.
+        # Observability-only here (the birth-stack ramp application is the owed integration); None
+        # (default OFF) => skipped => byte-identical.
+        if _birth_completion is not None:
+            _bc_total = float(counts.get("total_px", 0.0)) or 1.0
+            _bc_stats = {int(c): {**s, "gt_area": float(s.get("gt_px", 0.0)) / _bc_total}
+                         for c, s in stats.items()}
+            for _bc_row in _birth_completion.observe(int(ep), _bc_stats):
+                print(json.dumps(_bc_row), flush=True)
         satisfied, all_ok = _evt_nucleus_satisfied(
             stats, _nucleus_within_flip_thresh, _nucleus_min_part_frac)
         _losses = list(_evt_state.get("losses", []))
@@ -9468,6 +9626,14 @@ def main(argv: list[str] | None = None) -> int:
                     "--logit-adjust-tau, which boost the MARGIN-FIELD-HEAD per-class TARGET "
                     "(fires only with --margin-field-head-weight>0); THIS flag adjusts the BASE "
                     "seg-LOSS logits themselves. The two compose.")
+    ap.add_argument("--logit-adjust-classes", type=str, default="all",
+                    help="v7.5 Lever-3 (regime coherence): restrict the --logit-adjust-loss-tau boost "
+                    "to a comma class list (canonical comma10k order); 'all' (DEFAULT) => every class "
+                    "(byte-identical incumbent). Any UNLISTED class gets a ZEROED offset. The config "
+                    "derives this from the basis regime (curriculum_dsl.logit_adjust_classes_for_basis_"
+                    "regime): under lane_offloaded lane rides the FREE analytic band, so boosting lane "
+                    "recall in the frequency-starved learned render is unsatisfiable => lane dropped "
+                    "(e.g. '3' = movable only). Only meaningful with --logit-adjust-loss-tau != 0.")
     ap.add_argument("--boundary-distance-weight", type=float, default=0.0,
                     help="SDF-native Kervadec-style boundary-placement loss: band-weighted mean "
                     "|phi_GT - phi_runner| on the GT inter-class boundary band (distance transform "
@@ -9945,6 +10111,62 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--amplify-persist", type=str, default="inverse_thickness",
                     choices=["uniform", "inverse_thickness"],
                     help="#224 island birth-weight kind (inverse_thickness up-weights the thinnest tail).")
+    # ---- (v7.5 birth-counter-force Lever-1) CHAN-VESE AREA CONSTRAINT (precision counter-force) -----
+    # The rare-class-birth stack (seed/amplify/persistence/logit-adjust) is RECALL-only: it over-grows
+    # the born classes {Lane,Movable} INTO GT-Road (MEASURED road_anomaly_probe_20260708.md: Lane 13.8x /
+    # Movable 4.6x over-paint at ep125, mass-conserved from Road => Road d_seg pinned ~0.40). This is the
+    # PRECISION counter-force: the one-sided Chan-Vese area-constraint Lagrange term of the level-set
+    # energy E=(lambda_c/2)*relu(A_c - A_c^GT)^2, whose gradient is an INWARD retraction proportional to
+    # the area overshoot (boundary-localized via the softmax Jacobian = the discrete delta(phi)). It
+    # balances the birth force at A*=(1+tolerance)*A_GT (equations leg
+    # tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708). Consumes the REALIZED
+    # soft partition mass the island levers already compute (no extra SegNet forward). DEFAULT OFF
+    # (weight 0 / flag absent) => term skipped => BYTE-IDENTICAL.
+    ap.add_argument("--area-constraint-birth", action=argparse.BooleanOptionalAction, default=False,
+                    help="v7.5 Lever-1: one-sided Chan-Vese AREA CONSTRAINT on the birthed classes' "
+                    "realized soft partition mass (precision counter-force vs the recall-only birth "
+                    "stack's Road over-paint). lambda_c=birth_force/(tolerance*A_GT_c) DERIVED LIVE from "
+                    "the loaded GT areas. Requires the realized through-R seg forward (auto-forced ON). "
+                    "DEFAULT OFF => byte-identical.")
+    ap.add_argument("--area-constraint-classes", type=str, default="1,3",
+                    help="v7.5 Lever-1: comma list of birthed classes to area-constrain (canonical "
+                    "comma10k order; default '1,3' = Lane,Movable — the born-empty rare classes the "
+                    "birth stack over-paints). 'auto' reuses the amplify/persistence island classes.")
+    ap.add_argument("--area-constraint-birth-force", type=float, default=1.0,
+                    help="v7.5 Lever-1: F_birth proxy = the birth loss weight (amplify_weight = "
+                    "persistence_recall_weight = 1.0 in v7 argv; MEASURED-ANCHOR config-conditional). "
+                    "Sets lambda_c=birth_force/(tolerance*A_GT_c).")
+    ap.add_argument("--area-constraint-tolerance", type=float, default=0.25,
+                    help="v7.5 Lever-1: equilibrium overshoot fraction delta (equilibrium area = "
+                    "(1+delta)*A_GT_c). DERIVED design choice (loose enough to keep nucleation, tight "
+                    "enough to return the stolen Road area; 0.25 => equilibrium 1.25x GT).")
+    # ---- (v7.5 birth-counter-force Lever-2) MORSE-SMALE BIRTH-COMPLETION EVENT (regime hand-off) -----
+    # The "stop growing after birth" law: fire per birthed class when persistence (=1-within_flip, the
+    # Morse-Smale basin prominence) >= tau AND part_frac has settled into the Chan-Vese equilibrium band
+    # [(1-band),(1+band)]*GT; then ramp the birth stack -> post_level (hand off birth->boundary). With
+    # --area-constraint-birth this is DEFENSE-IN-DEPTH (the Lagrange multiplier self-limits area
+    # continuously; the event re-allocates the freed capacity). Engine tac.witness_control.birth_
+    # completion (pure + resume-safe __bc_* sidecar). DEFAULT OFF => byte-identical.
+    ap.add_argument("--birth-completion-event", action=argparse.BooleanOptionalAction, default=False,
+                    help="v7.5 Lever-2: fire a Morse-Smale birth-completion event per birthed class "
+                    "(persistence>=tau AND area-in-band) and hand off birth->boundary regime. DEFAULT "
+                    "OFF => byte-identical.")
+    ap.add_argument("--birth-completion-tau-persist", type=float, default=0.8,
+                    help="v7.5 Lever-2: persistence (=1-within_flip) a class must exceed to be "
+                    "birth-complete (formed basin prominence). DERIVED from the nucleus-guard within_flip "
+                    "family.")
+    ap.add_argument("--birth-completion-area-band", type=float, default=0.25,
+                    help="v7.5 Lever-2: area band around GT the class must settle into (matches the "
+                    "Chan-Vese equilibrium tolerance 0.25).")
+    ap.add_argument("--birth-completion-ramp-epochs", type=int, default=50,
+                    help="v7.5 Lever-2: epochs over which the birth stack ramps down after completion "
+                    "(smooth event-gated hand-off).")
+    ap.add_argument("--birth-completion-post-level", type=float, default=0.0,
+                    help="v7.5 Lever-2: post-birth birth-stack level the ramp settles to (0.0 = full "
+                    "hand-off to the boundary regime).")
+    ap.add_argument("--birth-completion-classes", type=str, default="1,3",
+                    help="v7.5 Lever-2: comma list of birthed classes to watch (canonical comma10k "
+                    "order; default '1,3' = Lane,Movable).")
     # BUILD #300 (SEED-ABSORPTION FIX; memo plateau_disambiguator_results_20260704.md). The island seed
     # (--seed-islands) is composited into the SegNet-scored frame1 and read by EVERY realized-through-R
     # seg lever, so once the seed satisfies the loss on the Lane+Movable island, dL/d(witness) ~= 0 there
