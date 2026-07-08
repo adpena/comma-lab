@@ -249,6 +249,20 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- LANDING FOLDED 2026-07-08T~19:0x: V6.4 (a18534134/32cb83ac9) — THE LR PIN, BIT-IDENTICAL ---
+- Derived pin `--lr-anneal-epochs 1000 --lr-hold-frac 1.0` = the control's OWN denominator (its
+  LR trio were shared defaults; freeze 726 < den 1000 so no hold ever engaged) → reproduces
+  control LR(ep) on [1,726] **max |Δ|/control = 0.0** — bit-identical, tighter than β's ≤0.1%.
+  The staling deviation (2.83×→3.41×) is GONE; ν/settle-237/s*/fire-band anchors valid for run-1.
+- Default-unset byte-identity PROVEN on the real trainer helper over [1,3000] (max Δ = 0.0).
+- Full discipline stack: trainer flags → DSL LrAnnealPin factory (lever_registry maps both) →
+  variant pin DERIVED-AT-CONFIG (req T) → materialization test extended. Dry-run 106/106; tests
+  161/161; risk-row ◆ SUPERSEDED append-only. Bonus catch: a concurrent phantom index snapshot
+  that would have reverted the code — caught + cleared.
+- NEXT (per the sequencing decision): LAWREF MIGRATION fires now (autoconfig free) — crucible_v6
+  constants → LawRefs + launcher hookup + constants_manifest.json — THEN seal rounds restart on
+  the FINAL LAUNCHING FORM.
+
 --- LANDING FOLDED 2026-07-08T~18:0x: #351 LAWREF CONSTANT-COMPILER BUILT (5 commits, 34 tests) ---
 - The equations leg is now EXECUTABLE into the DSL leg (operator design): LawRef{equation_id,
   anchor-ref inputs (sha+config-tags+staleness), fallback-with-waiver, ladder_class} → resolver
