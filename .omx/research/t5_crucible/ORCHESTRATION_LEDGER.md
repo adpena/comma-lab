@@ -120,6 +120,38 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+H. **PER-CLASS TREATMENT + APPLES-TO-APPLES (operator 2026-07-07: "Don't compare apples to
+   oranges. Different classes need different treatment just like different stages").** The five
+   SegNet classes are FIVE DIFFERENT MATHEMATICAL OBJECTS and the design/reviews treat them so:
+   **lane** = anisotropic dashed curve (comb carrier + band + along-tangent laws — its own
+   physics); **movable** = sparse mobile islands (dilation homotopy + persistence protection);
+   **hood/MyCar** = STATIC region (the 0-byte clamp #139 — is it IN? free d_seg if not);
+   **road/undrivable** = bulk cartoon (the basis's C² job). Each class gets its own laws, its own
+   telemetry rows, its own kill thresholds, its own curriculum (per-class sub-curricula per the
+   schedule-as-law extension). REVIEWS MUST NOT POOL ACROSS CLASSES: a pooled d_seg verdict
+   averages apples with oranges; per-class comparisons only under MATCHED CONDITIONS (same load
+   path, same checkpoint class, same coder when comparing byte costs — the LBND2-vs-LBND4
+   "conflict" was two coders, not one number). Sister of the measured per-stage-treatment law
+   (L58) — classes are to space what stages are to time.
+I. **SYNERGY MATRIX — between, among, and through (operator-directed).** The synthesis carries a
+   lever×lever×stage×class SYNERGY/ANTAGONISM matrix, each cell a coupling law not a vibe. Rate
+   synergies are the obvious shallow layer; the DEEPER classes to hunt:
+   - **GEOMETRY-SHARING** (one stored object serves N score terms): the openpilot lane polynomial
+     serves the band AND the comb phase (ego-ξ) AND the basis orientation; the screw ξ serves
+     d_seg warp AND d_pose (the canonical dual-use); chroma serves the d_seg annulus AND
+     PoseNet's YUV6 input.
+   - **GRADIENT-SHARING** (one loss improves two terms): entropy-shaping improves rate AND acts
+     as a regularizer; persistence loss protects births AND stabilizes boundaries.
+   - **SCHEDULE-COUPLING** (one stage completing enables another lever's efficacy): anneal
+     completion × warm-Muon (the finisher only pays on a completed anneal — M1/M2 measured);
+     island birth × AA render (AA raises birth SURVIVAL through R); WeightEntropy(train) ×
+     waterfill(post) — the Class-D×B recess.
+   - **TELEMETRY-SHARING**: one sensor feeds N laws (per-class λ feeds exits AND amplify gates).
+   Antagonisms get the same treatment (declared seams: GFC×self-orient, AA×seed ordering,
+   per-class homotopy interference). The FRACTAL principle binds it: the task-space level-set
+   witness + Morse-Smale complex demand RECURSIVE FRACTAL OPTIMIZATION — the same
+   optimize-at-its-own-optimum discipline applies at every scale (class → stage → lever → layer →
+   run → campaign), AND the couplings between scales are themselves optimized objects.
 G. **TRIALITY + TASK INTEGRATION (operator-directed 2026-07-07: "all must be integrated into
    triality especially DSL and tasks or it's ephemeral").** Crucible-local files are ORCHESTRATION
    STATE, not landings. Nothing counts as KNOWN until it lives in all three legs + the task
