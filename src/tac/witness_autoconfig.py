@@ -545,6 +545,16 @@ class WitnessConfig:
     # absolute stage anchors (tau@300 / muon@726 — NEVER family-scaled 0.726*epochs) + composes the
     # v6 DSL levers. Default False => sealed_205 / store_nothing_205 / fresh_seeded byte-identical.
     crucible_v6: bool = False
+    # (#351 LawRef migration) the RESOLVED crucible_v6 delta dict — populated by
+    # ``derive_crucible_v6_config`` from the CONSUMED LawRefs (τ_end / β-pin / LR-pin), whose
+    # resolved values are BIT-IDENTICAL to ``_CRUCIBLE_V6_DELTAS`` (asserted at derive time). The
+    # ``crucible_v6`` trailing block of ``_sealed_205_flags`` reads THIS (falling back to the module
+    # ``_CRUCIBLE_V6_DELTAS`` when empty) so the config genuinely CONSUMES the compiled constants.
+    # Empty for every non-crucible path => byte-identical. Provenance-only, never emitted as a flag.
+    crucible_v6_deltas: dict = field(default_factory=dict)
+    # (#351) constants_manifest for the CONSUMED LawRefs {delta_key -> ResolvedConstant.to_dict()};
+    # the launcher writes it to constants_manifest.json beside launch.sh. Provenance-only, never a flag.
+    constants_manifest: dict = field(default_factory=dict)
     # (run-identity, operator 2026-07-07 "add a label ... run name and possibly a description of
     # its intended purpose; clean baseline or frontier score lowering? a/b probe?") DECLARED
     # one-line intent of THIS run — the first-class, per-run machine-answerable purpose. Set by
@@ -922,7 +932,10 @@ class WitnessConfig:
         if self.crucible_v6:
             # T5 CRUCIBLE v6.2 trailing pins (no sealed-argv slot; argparse is order-insensitive).
             # See _CRUCIBLE_V6_DELTAS for the derivations (each value cites its draft section).
-            d6 = _CRUCIBLE_V6_DELTAS
+            # (#351) read the RESOLVED delta dict (LawRef-compiled CONSUMED constants merged over the
+            # sealed literals; values bit-identical) when present; else the module literals. So the
+            # LR-pin tokens below are genuinely CONSUMED from the resolver, not the module global.
+            d6 = self.crucible_v6_deltas or _CRUCIBLE_V6_DELTAS
             flags += [
                 # τ leg: EXPLICIT anneal denominator + hold => descent completes at ABSOLUTE ep
                 # anneal_epochs*tau_hold_frac = 600 and HOLDS at temp-end 0.31 through the fire band
@@ -1492,7 +1505,30 @@ def derive_crucible_v6_config(
     base = derive_store_nothing_205_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs,
         code_matrix=code_matrix, byte_close_result=byte_close_result)
-    d6 = _CRUCIBLE_V6_DELTAS
+    # (#351) COMPILE the rot-prone constants from their canonical laws (the constant-compiler): resolve
+    # the CONSUMED LawRefs (τ_end / β-pin / LR-anneal-den / LR-hold) into a manifest + values. Each MUST
+    # bit-match (value AND type) the sealed literal it replaces — VALUE-IDENTITY IS THE LAW (task #351):
+    # the migration changes ZERO emitted values. A drift = fail CLOSED (never silently emit a different
+    # config). A missing probe artifact -> the LawRef's declared fallback (the sealed literal) => the
+    # launch is NEVER blocked by an absent artifact (manifest records fallback_used).
+    from tac.witness_dsl.lawref import resolve_flag_dict_constants
+    from tac.witness_dsl.lawref_builtins import (
+        CRUCIBLE_V6_CONSUMED_LAWREFS,
+        CRUCIBLE_V6_CONSUMED_TARGET_TAGS,
+    )
+    _resolved, _manifest = resolve_flag_dict_constants(
+        CRUCIBLE_V6_CONSUMED_LAWREFS, CRUCIBLE_V6_CONSUMED_TARGET_TAGS)
+    for _key, _val in _resolved.items():
+        _lit = _CRUCIBLE_V6_DELTAS[_key]
+        if not (_val == _lit and type(_val) is type(_lit)):
+            raise ValueError(
+                f"LawRef value-identity violation (#351): crucible_v6 constant {_key!r} resolved to "
+                f"{_val!r} ({type(_val).__name__}) != sealed literal {_lit!r} ({type(_lit).__name__}). "
+                "The migration must change ZERO emitted values; re-derive the LawRef or update the "
+                "sealed literal DELIBERATELY (both must agree).")
+    # d6 = the sealed deltas with the CONSUMED constants overlaid by their LawRef-resolved values
+    # (bit-identical). Everything else stays the sealed literal; the config CONSUMES d6 end-to-end.
+    d6 = {**_CRUCIBLE_V6_DELTAS, **_resolved}
     pb = dict(base.proven_base)
     pb.update({"softmax_temp_end": d6["softmax_temp_end"]})
     alb = dict(base.all_levers_base)
@@ -1573,6 +1609,11 @@ def derive_crucible_v6_config(
         proven_base=pb,
         all_levers_base=alb,
         provenance=prov,
+        # (#351) the config CONSUMES the LawRef-resolved deltas (the trailing block reads this) +
+        # carries the constants_manifest for the launcher to write beside launch.sh. Both are
+        # provenance-only (never emitted as flags); the argv is byte-identical to the pre-migration form.
+        crucible_v6_deltas=d6,
+        constants_manifest=_manifest,
     )
 
 

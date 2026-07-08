@@ -454,6 +454,37 @@ def write_launch_sh(cfg, out_dir: Path, repo_root: Path | None = None,
     return launch
 
 
+def write_constants_manifest(cfg, out_dir: Path) -> Path | None:
+    """(#351 LawRef migration) Write ``constants_manifest.json`` beside launch.sh when the config
+    carries LawRef-compiled constants (``cfg.constants_manifest`` — currently the crucible_v6
+    CONSUMED trio + LR-hold). Provenance-only: every value is BIT-IDENTICAL to the sealed literal it
+    replaces (value-identity is the law), so the manifest documents WHERE each launch constant came
+    from (equation_id + typed inputs + artifact shas + ladder class) WITHOUT changing the emitted
+    launch.sh. Returns the path written, or ``None`` when the config has no compiled constants (every
+    non-crucible path — no file is created, so those runs are byte-and-file-identical to before).
+    Written atomically (tmp + os.replace)."""
+    manifest = dict(getattr(cfg, "constants_manifest", {}) or {})
+    if not manifest:
+        return None
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    doc = {
+        "schema": "constants_manifest.v1",
+        "config_family": config_family(cfg),
+        "generated_at": _utc(),
+        "note": ("LawRef-compiled launch constants (#351). Each value is BIT-IDENTICAL to the sealed "
+                 "literal it replaces (VALUE-IDENTITY IS THE LAW); this manifest carries the "
+                 "equation_id + typed inputs + artifact sha256 + value-provenance ladder class per "
+                 "constant. Provenance-only — never a trainer flag; the emitted launch.sh is unchanged."),
+        "constants": manifest,
+    }
+    path = out_dir / "constants_manifest.json"
+    tmp = out_dir / f".constants_manifest.json.tmp.{os.getpid()}"
+    tmp.write_text(json.dumps(doc, indent=2))
+    os.replace(tmp, path)
+    return path
+
+
 # ───────────────────────── perf-env verification ─────────────────────────
 def verify_perf_env(run_log: Path, timeout_s: float = 30.0, poll_s: float = 1.0) -> tuple[str, str | None]:
     """Wait (bounded) for the trainer's ``{"stage": "custom_grouped_backward", ...}``
@@ -979,6 +1010,14 @@ def main(argv: list[str] | None = None) -> int:
     launch_sh = write_launch_sh(cfg, out_dir, extra_flags=extra_flags or None)
     run_log = out_dir / "run.log"
     print(f"# wrote {launch_sh}")
+
+    # (b0, #351) WRITE constants_manifest.json beside launch.sh when the config carries LawRef-
+    # compiled constants (crucible_v6). Provenance-only (value-identity: every value bit-matches the
+    # sealed literal), so launch.sh is unchanged; the manifest records each constant's law + inputs +
+    # artifact shas + ladder class. No file for non-crucible configs (byte-and-file-identical to before).
+    manifest_path = write_constants_manifest(cfg, out_dir)
+    if manifest_path is not None:
+        print(f"# wrote {manifest_path} ({len(cfg.constants_manifest)} LawRef-compiled constants)")
 
     # (b1) MEMORY PREFLIGHT (#205 OOM self-protection). Project peak RSS from the EMITTED launch.sh
     # using MEASURED constants (2026-07-02 ledger) and REFUSE a config whose projected peak busts a

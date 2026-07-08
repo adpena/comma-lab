@@ -855,3 +855,66 @@ def test_store_nothing_205_unchanged_by_crucible_machinery():
     assert fd["--softmax-temp-end"] == "0.05"
     assert fd["--tau-anneal-shape"] == "cosine"
     assert fd["--hosc-beta-end"] == "4.0"      # the β-pin is crucible-only; base keeps the family 4.0
+
+
+# --------------------------------------------------------------------------
+# #351 LawRef constant migration — VALUE-IDENTITY IS THE LAW (resolver path)
+# --------------------------------------------------------------------------
+def test_crucible_v6_lawref_resolved_path_is_byte_identical_to_literal_path():
+    """The launch.sh byte-identity acceptance bar: the CONSUMED constants (τ_end / β-pin / LR-pin)
+    are now COMPILED from LawRefs, so the emitted command must equal the command the pure-literal
+    ``_CRUCIBLE_V6_DELTAS`` path would emit. Force the literal path by clearing the resolved delta
+    dict (the trailing block then reads the module global) — the two commands must be identical."""
+    import dataclasses as _dc
+
+    cfg = _crucible_cfg()
+    resolved_cmd = cfg.to_command("OUT")
+    literal_path_cmd = _dc.replace(cfg, crucible_v6_deltas={}).to_command("OUT")
+    assert resolved_cmd == literal_path_cmd
+
+
+def test_crucible_v6_resolved_deltas_bitmatch_module_literals():
+    """The resolved deltas the config consumes equal the sealed module literals — value AND type
+    (int lr_anneal_epochs stays int, else str(1000.0) would shift the token)."""
+    cfg = _crucible_cfg()
+    for k, lit in wac._CRUCIBLE_V6_DELTAS.items():
+        got = cfg.crucible_v6_deltas[k]
+        assert got == lit and type(got) is type(lit), f"{k}: {got!r} != {lit!r}"
+
+
+def test_crucible_v6_constants_manifest_schema_and_completeness():
+    """The manifest carries every MIGRATED (consumed) constant with {value, equation_id, inputs+shas,
+    ladder_class} — the constants_manifest.json content the launcher writes beside launch.sh."""
+    from tac.witness_dsl.lawref_builtins import CRUCIBLE_V6_CONSUMED_LAWREFS
+
+    man = _crucible_cfg().constants_manifest
+    assert set(man) == set(CRUCIBLE_V6_CONSUMED_LAWREFS)
+    for key, row in man.items():
+        assert set(row) >= {"value", "equation_id", "ladder_class", "fallback_used", "inputs"}
+        assert row["value"] == wac._CRUCIBLE_V6_DELTAS[key]
+        for inp in row["inputs"]:
+            assert set(inp) >= {"name", "kind", "value", "source", "sha256"}
+            if inp["kind"] == "anchor":
+                assert inp["sha256"] is not None  # anchor inputs carry their artifact sha
+
+
+def test_crucible_v6_value_identity_guard_fails_closed_on_drift(monkeypatch):
+    """The migration self-protection: if a LawRef ever resolves to a value != the sealed literal,
+    ``derive_crucible_v6_config`` fails CLOSED (never silently emits a different launch config)."""
+    drifted = dict(wac._CRUCIBLE_V6_DELTAS)
+    drifted["hosc_beta_end"] = 9.5  # pretend the sealed literal disagrees with the LawRef's 10.0
+    monkeypatch.setattr(wac, "_CRUCIBLE_V6_DELTAS", drifted)
+    with pytest.raises(ValueError, match="value-identity violation"):
+        wac.derive_crucible_v6_config(_GT_N600, num_pairs=600, epochs=3000)
+
+
+def test_non_crucible_configs_have_empty_migration_fields():
+    """The migration fields are crucible-only; every other config path leaves them empty (so no
+    provenance-only field can leak into a non-crucible argv or manifest)."""
+    for cfg in (
+        wac.derive_sealed_205_config(_GT_N600, num_pairs=600, epochs=1000),
+        wac.derive_store_nothing_205_config(_GT_N600, num_pairs=600, epochs=1000),
+        wac.derive_config(_GT_N600, num_pairs=600, epochs=1000),
+    ):
+        assert cfg.crucible_v6_deltas == {}
+        assert cfg.constants_manifest == {}
