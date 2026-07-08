@@ -89,9 +89,12 @@ so the runaway is retracted hard, and the flow settles at ``1 + delta`` = 1.25x 
 
     lane    : 0.0805 -> 1.25 * 0.00585 = 0.00731  (returns 0.0732)
     movable : 0.0568 -> 1.25 * 0.0124  = 0.01550  (returns 0.0413)
-    total returned to the majority classes ~ 0.1145  (>= the 0.1189 measured Road+Undriv deficit)
+    total returned to the majority classes ~ 0.1145 = ~96% of the 0.1189 measured Road+Undriv deficit
 
-so the ~9% Road-pixel theft is undone and the Road d_seg floor lifts.
+so at delta=0.25 the 1.25x GT equilibrium returns ~96% of the stolen area — the Road d_seg floor is
+SUBSTANTIALLY lifted but NOT fully un-floored (0.1145 < 0.1189; the last ~4% ~= 0.0044 area remains
+over-painted at the 1.25x cap). Closing that residual rides either a tighter tolerance delta (a lower
+cap returns more area) or the owed lambda-SCALE A/B; the FORM + dominance are scale-robust either way.
 
 ## Epistemic status (NO-FAKE honest tiers)
 
@@ -320,8 +323,13 @@ def build_chan_vese_area_constraint_birth_balance_v1() -> CanonicalEquation:
                       "--area-constraint-classes/-birth-force/-tolerance); consumes the realized soft "
                       "partition mass the island levers already compute (no extra forward)"),
             "measurement_axis": ["macOS-MLX research-signal", "predicted"],
-            "note": ("GT areas are PER-PAIR-SET (the trainer derives A_GT_c + lambda_c LIVE from the "
-                     "loaded L* cache; the n600 constants here are the measured anchor). The lambda "
+            "note": ("lambda_c is a GLOBAL STIFFNESS: the trainer derives it LIVE from the GLOBAL GT "
+                     "area (bincount over the whole L* stack), deliberately — a per-pair lambda would "
+                     "blow up (lambda->inf) on a pair where the class is absent (A_GT_c=0). The "
+                     "PENALTY TARGET A_GT_c is PER-PAIR (mean_px lstar_oh_c). So the per-pair "
+                     "equilibrium ratio is 1 + delta*(A_global/A_pair), exactly 1+delta only at the "
+                     "average pair (SOUND / safer by design — a global-stiffness spring, a per-pair "
+                     "target). The n600 constants here are the measured global anchor. The lambda "
                      "SCALE is owed to the v7.5 A/B; the FORM + balance are derived."),
         },
         units_in={"gt_area": "fraction_of_pixels", "birth_force": "loss_weight", "tolerance": "dimensionless"},

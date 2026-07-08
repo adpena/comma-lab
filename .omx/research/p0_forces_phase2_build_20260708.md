@@ -49,6 +49,13 @@ MASK-BY-STAGE at l7 (does NOT replace CE — preserves the τ-anneal region form
 m_safe < δ_R (both in the factory `.validate` AND in the trainer param extraction — the hinge would sit
 inside the noise floor = pointless).
 
+> **WATCH (SEAL R5 MINOR-3; verdict_scope: FORMULATION, not a delta bug — settled at the owed FORCE-2
+> A/B, NOT this seal):** the satisficing hinge reads the seed-composed `_signed` (#141 shared margin),
+> while the SHIPPED witness-alone partition's margin is `_signed_wa`. The seed can mask the hinge on the
+> deploy-relevant band. The derivation pre-registered `_signed` + an A/B; the `_signed` vs `_signed_wa`
+> choice is settled by that owed FORCE-2 A/B when FORCE 2 is activated (one-per-increment). No code
+> change here.
+
 ### FORCE 3 — `TieLocusDisplacement` (WRAPS the built subpix term + adds W_e + ref-domain)
 The subpix term (`t_wit = M_w/(M_w+M_q)` toward `t_ref`, δn = |t_wit − t_ref|) is ALREADY BUILT
 (trainer ~L4640). This lever wraps `--seg-subpix-boundary-{weight,start-epoch,v-band}` and adds the

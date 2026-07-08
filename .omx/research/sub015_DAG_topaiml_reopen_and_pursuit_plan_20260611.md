@@ -10491,3 +10491,24 @@ identification ↔ corpus-generalization #211 (amortized meta-learned pre-seedin
 CORPUS — the one place it could become concrete IF that fork is pursued; better frame than iid).
 ROUTED as a reference to #155 + #211. No heavy mine spawned (off critical path); deeper mine
 available on operator request if a specific angle is intended.
+
+## FEED-r5fix (2026-07-08) — SEAL R5 FIX WAVE: LOSS_TERM_KEYS schema + tau coherence + arithmetic-honesty
+Both R5 lens reports (`t5_crucible/seal_r5_counterforce_{confound_bugs,deepmath_structure}_20260708.md`)
+folded. MAJOR-1 (schema fix): `margin_satisfice` (P0 FORCE 2) + `temporal_screw` (P0 FORCE 1) are written
+to `terms_out` (~L4805/L4837) but were ABSENT from `LOSS_TERM_KEYS` (`area_constraint` was added, these two
+missed) — on P0-force ACTIVATION `sum_terms` would drop the addend → `sum_minus_total` leaves fp tolerance
+= a corrupted confound-immune L1 self-check + a per-term telemetry observability gap. Added both keys in
+composition order (after chroma_boundary, before island_amplify) + a STRUCTURAL regression test asserting
+writers⊆LOSS_TERM_KEYS (scans `terms_out["<k>"]=` in BOTH trainer files) + a synthetic $0 self-check-passes-
+with-P0-active test. MINOR-2: witness_autoconfig `BirthCompletionEvent` now passes
+`tau_persist=_CRUCIBLE_V7_BIRTH_COMPLETION_TAU` (was DSL-default 0.8 by coincidence; post_level=1−tau now
+coherent-by-construction) + emitted-tau test. MINOR-1 (equations leg): chan_vese docstring + memo corrected
+the FALSE "~0.1145 ≥ 0.1189" to honest ~96% (substantially un-floored, NOT fully; residual ~4%≈0.0044 rides
+higher δ or the owed λ-scale A/B) + domain-note clarified λ_c = GLOBAL stiffness / per-pair TARGET (ratio
+1+δ·(A_global/A_pair), 1+δ only at the average pair — sound/safer). MINOR-3 WATCH (verdict_scope FORMULATION,
+record-only): FORCE-2 satisficing hinges on seed-composed `_signed` not deploy `_signed_wa` — settled at the
+owed FORCE-2 A/B, no code change. Byte-identity VERIFIED: crucible_v7 argv SHA `23ce367b…` UNCHANGED
+(150/150 flags) — all fixes are schema/telemetry/doc. ruff F clean; new tests green (pre-existing unrelated
+`test_eikonal_stabilizer::test_argparse_defaults_are_off` spike-guard-mode `legacy`-vs-`rollback` staleness
+is OUT OF SCOPE, not touched). Landing memo `.omx/research/seal_r5_fix_20260708.md`. Pointer 0.19110 UNMOVED
+(means).

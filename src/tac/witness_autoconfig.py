@@ -2402,8 +2402,14 @@ def _build_crucible_v7(
         # class's GT support is formed, so the residual birth force = the unformed fraction
         # (1 - tau_persist) => the Lever-1 equilibrium settles at a tight (1 + (1-tau)*delta)*A_GT
         # precision band. See tac.witness_control.birth_completion.derive_post_level_from_persistence.
+        # (SEAL R5 MINOR-2) pass tau_persist FROM the named constant too, not just post_level. Both
+        # were 0.8 by coincidence (the DSL default equals the constant); a future edit to
+        # _CRUCIBLE_V7_BIRTH_COMPLETION_TAU would move post_level while the completion gate silently
+        # stayed at the DSL default 0.8 (divergence). Sourcing both from the ONE constant keeps
+        # post_level = 1 - tau_persist coherent by construction.
         _typed_lever(BirthCompletionEvent(
             ramp_apply=True,
+            tau_persist=_CRUCIBLE_V7_BIRTH_COMPLETION_TAU,
             post_level=round(1.0 - _CRUCIBLE_V7_BIRTH_COMPLETION_TAU, 6))),
     )
 

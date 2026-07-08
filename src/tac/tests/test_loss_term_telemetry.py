@@ -65,6 +65,43 @@ def test_loss_term_keys_unique():
     assert len(MOD.LOSS_TERM_KEYS) == len(set(MOD.LOSS_TERM_KEYS))
 
 
+# --------------------------------------------------- WRITERS ⊆ LOSS_TERM_KEYS (SEAL R5 MAJOR-1 guard)
+def _terms_out_writer_keys(path: pathlib.Path) -> set[str]:
+    """Every LITERAL key assigned via ``terms_out["<key>"] = ...`` in a trainer source file.
+    Structural: a future new loss term that forgets to register its key is caught here."""
+    src = path.read_text()
+    return set(re.findall(r"""terms_out\[\s*["']([A-Za-z0-9_]+)["']\s*\]\s*=""", src))
+
+
+def test_every_terms_out_writer_key_is_in_the_schema():
+    """The confound-immune sum_minus_total self-check requires every key written to terms_out (in the
+    levelset total_loss_fn AND the base trainer's base_loss, which writes seg/pose) to be a member of
+    LOSS_TERM_KEYS. If not, sum_terms (iterating the schema) drops that addend and sum_minus_total
+    stops sitting at fp tolerance the moment the term is active (SEAL R5 MAJOR-1: margin_satisfice +
+    temporal_screw were written but unregistered)."""
+    schema = set(MOD.LOSS_TERM_KEYS)
+    writers = _terms_out_writer_keys(_MODPATH) | _terms_out_writer_keys(_BASEPATH)
+    assert writers, "expected to find terms_out writer sites in the trainer sources"
+    missing = sorted(writers - schema)
+    assert not missing, f"terms_out writers missing from LOSS_TERM_KEYS: {missing}"
+    # the two P0-force keys this seal added must be present (regression pin).
+    assert {"margin_satisfice", "temporal_screw"} <= schema
+
+
+def test_sum_minus_total_self_check_passes_with_a_p0_force_active():
+    """Synthetic $0 proof that when a P0 force (margin_satisfice / temporal_screw) contributes to the
+    total, the row's sum_terms reconciles to the total (|sum_minus_total| at fp tolerance). Before the
+    MAJOR-1 fix these keys were dropped from the schema, so sum_terms would have EXCLUDED them and this
+    reconciliation would fail on activation."""
+    terms = {"seg": 30.0, "pose": 5.0, "margin_satisfice": 0.75, "temporal_screw": 0.4,
+             "area_constraint": 3.4}
+    total = sum(terms.values())  # a P0 force IS an addend of the total
+    row = MOD._loss_terms_row(terms, total=total, ep=200, accum_batch=1)
+    assert row["terms"]["margin_satisfice"] == pytest.approx(0.75)
+    assert row["terms"]["temporal_screw"] == pytest.approx(0.4)
+    assert abs(row["sum_minus_total"]) < 1e-6
+
+
 # ---------------------------------------------------------------- _loss_terms_row
 def test_row_schema_stable_with_missing_terms():
     row = MOD._loss_terms_row({"seg": 1.5}, total=1.5, ep=101, accum_batch=0)

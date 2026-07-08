@@ -52,8 +52,10 @@ amplify/recall loss weight, MEASURED-ANCHOR config-conditional) and δ = 0.25:
 
 **Dominance at the measured ep125 runaway** (operator: "at 13.8× the retraction MUST dominate the birth
 force") = `(r_obs − 1)/δ`: **lane 51× · movable 14×** → retracts hard, settles at 1.25×GT. **Area returned
-to Road** at equilibrium: lane 0.0805→0.0073 (+0.073), movable 0.0568→0.0155 (+0.041), total **~0.114 ≥ the
-0.1189 measured Road+Undriv deficit** → the ~9% Road-pixel theft is undone, the Road floor lifts.
+to Road** at equilibrium: lane 0.0805→0.0073 (+0.073), movable 0.0568→0.0155 (+0.041), total **~0.1145 =
+~96% of the 0.1189 measured Road+Undriv deficit** (SEAL R5 MINOR-1: 0.1145 < 0.1189, NOT `≥` — the ~9%
+Road-pixel theft is SUBSTANTIALLY undone but not fully; the residual ~4% ≈ 0.0044 area stays over-painted
+at the 1.25×GT cap, closed by a tighter δ or the owed λ-scale A/B) → the Road floor lifts substantially.
 
 λ_c is **DERIVED-LIVE** in the trainer from the loaded GT areas (value-provenance gold standard — no frozen
 literal). Epistemic tiers (NO-FAKE honest): FORM + balance + arithmetic = DERIVED/VERIFIED; the absolute λ

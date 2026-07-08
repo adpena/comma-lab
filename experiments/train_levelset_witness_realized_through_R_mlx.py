@@ -2765,8 +2765,14 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
     "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
-    "margin_saliency", "subpix", "chroma_boundary", "island_amplify", "area_constraint", "persistence",
+    "margin_saliency", "subpix", "chroma_boundary", "margin_satisfice", "temporal_screw",
+    "island_amplify", "area_constraint", "persistence",
     "rankfloor", "code_spectral", "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
+    # "margin_satisfice" (P0 FORCE 2 MarginBandSatisficing) + "temporal_screw" (P0 FORCE 1
+    # TemporalScrewConsistency): both are written to terms_out in total_loss_fn (~L4805 / L4837),
+    # so they MUST be in the schema or the sum_minus_total confound-immune self-check breaks the
+    # moment a P0 force is activated (SEAL R5 MAJOR-1 fix). Composition order: after chroma_boundary,
+    # before island_amplify (matches total_loss_fn's additive order). Default-OFF => 0.0, byte-neutral.
     # "eik_steik" (EIK-STAB build 1a): the additive StEik directional-divergence stabilizer; 0.0
     # unless --eikonal-steik-weight > 0. NOTE: when --eikonal-viscosity > 0 the "eikonal" key holds
     # the VISCOUS residual contribution (ViscoReg replaces the residual; same constraint, viscous

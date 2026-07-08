@@ -151,6 +151,25 @@ def test_crucible_v75_argv_carries_ramp_and_derived_post_level():
     assert pl == pytest.approx(1.0 - _CRUCIBLE_V7_BIRTH_COMPLETION_TAU)  # DERIVED, not a magic literal
 
 
+def test_crucible_v75_emitted_tau_persist_tracks_the_named_constant():
+    """SEAL R5 MINOR-2: the compose site must pass tau_persist FROM
+    _CRUCIBLE_V7_BIRTH_COMPLETION_TAU (not lean on the DSL default coinciding at 0.8), so
+    post_level = 1 - tau_persist stays coherent if the constant is ever edited."""
+    from tac.witness_autoconfig import (
+        _CRUCIBLE_V7_BIRTH_COMPLETION_TAU,
+        compile_crucible_v7_config,
+    )
+
+    class _GT:
+        lstars = [np.zeros((8, 8), np.int64) for _ in range(8)]
+
+    argv = compile_crucible_v7_config(_GT(), num_pairs=8, epochs=3000).argv
+    tau = float(argv[argv.index("--birth-completion-tau-persist") + 1])
+    pl = float(argv[argv.index("--birth-completion-post-level") + 1])
+    assert tau == pytest.approx(_CRUCIBLE_V7_BIRTH_COMPLETION_TAU)  # sourced from the constant
+    assert pl == pytest.approx(round(1.0 - _CRUCIBLE_V7_BIRTH_COMPLETION_TAU, 6))  # coherent 1 - tau
+
+
 # ── island-amplify: per-class split identity + independence (MLX) ─────────────────────────────────
 
 
