@@ -83,6 +83,18 @@ from tac.witness_dsl.lever_registry import (
     name_composable_levers,
     resolve_composable_lever,
 )
+from tac.witness_dsl.lawref import (
+    ConfigConditionalityViolation,
+    InputRef,
+    LawRef,
+    LawRefError,
+    LawResolveError,
+    ResolvedConstant,
+    ResolvedInputRecord,
+    VALID_LADDER_CLASSES,
+    resolve as resolve_lawref,
+    resolve_flag_dict_constants,
+)
 from tac.witness_dsl.campaign import (
     Arm,
     ArmResult,
@@ -333,4 +345,15 @@ __all__ = [
     "powerplay_cost",
     "simplest_unsolvable_rank",
     "variant_ii_accept",
+    # LawRef constant-compiler (task #351)
+    "ConfigConditionalityViolation",
+    "InputRef",
+    "LawRef",
+    "LawRefError",
+    "LawResolveError",
+    "ResolvedConstant",
+    "ResolvedInputRecord",
+    "VALID_LADDER_CLASSES",
+    "resolve_lawref",
+    "resolve_flag_dict_constants",
 ]

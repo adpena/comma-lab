@@ -1479,6 +1479,36 @@ class WitnessProgram(ScheduleDisplay):
         argv.extend(self.compile_trainer_argv(python=python))
         return argv
 
+    # --- LawRef constant compilation (task #351) -----------------------------
+    def compile_trainer_argv_with_constants(
+        self, target_config_tags: dict | None = None,
+        python: str = ".venv/bin/python", repo_root=None,
+    ) -> tuple[list[str], dict]:
+        """Resolve any LawRef-valued flags into values, emit argv, return (argv, manifest).
+
+        A flag whose value is a ``tac.witness_dsl.lawref.LawRef`` is resolved at
+        compile time (the mx.compile analogy) into its actual value + a provenance
+        record; the ``manifest`` (dict {flag: {value, equation_id, inputs+shas,
+        ladder_class, resolved_at, fallback_used}}) is the ``constants_manifest.json``
+        content a launcher writes beside ``launch.sh``. Programs with NO LawRef flags
+        yield argv byte-identical to :meth:`compile_trainer_argv` + an empty manifest.
+        Fail-closed: a config-conditionality conflict / unresolved input raises
+        (see ``tac.witness_dsl.lawref.resolve``). This method does NOT write files.
+        """
+        from tac.witness_dsl.lawref import resolve_flag_dict_constants
+
+        resolved_fd, manifest = resolve_flag_dict_constants(
+            self.flag_dict(), target_config_tags, repo_root=repo_root)
+        argv = [python, TRAINER_REL]
+        for flag, val in resolved_fd.items():
+            if val is True:
+                argv.append(flag)
+            elif val is False:
+                argv.append(flag.replace("--", "--no-", 1))
+            else:
+                argv.extend([flag, str(val)])
+        return argv, manifest
+
 
 # ---------------------------------------------------------------------------
 # BASELINE — the exact completed CE->tau->l7 run, expressed as a program.
@@ -1581,6 +1611,26 @@ def TauFrozen(value: float = 0.05, window: int = 100) -> Lever:  # noqa: N802 �
                  overrides={"--softmax-temp-start": value, "--softmax-temp-end": value},
                  epochs_delta=window,
                  notes="freeze tau to isolate l7-loss vs tau-anneal (diff refutation)")
+
+
+def LrAnnealPin(anneal_epochs: int = 1000, hold_frac: float = 1.0) -> Lever:  # noqa: N802 — C2 sibling
+    """Pin the LR cosine to its OWN denominator (+ optional hold), decoupling it from the SHARED
+    ``--anneal-epochs`` that also drives τ + hosc-β. The trainer couples all three schedules on one
+    denominator (no per-schedule den); a shallow shared-den cosine CANNOT reproduce a DEEPER LR
+    descent by endpoint choice — the curvature differs (unlike the LINEAR β, which endpoint-rephases
+    exactly; that is why β could be pinned with ``--hosc-beta-end`` but LR needs its own denominator).
+
+    The crucible pins ``anneal_epochs=1000`` (the mod32cap CONTROL's den) so the AdamW LR(ep) on
+    [1,726] is BIT-IDENTICAL to the control the window laws (ν, settle 237, s*, fire band ep675) were
+    measured on — vs the shared den 3000, which runs the AdamW phase at 2.83× (ep675) → 3.41× (ep726)
+    the control LR. ``hold_frac=1.0`` (the control had no LR hold before its Muon freeze at 726 < its
+    den 1000) = no rescale = bit-identical cosine; ``< 1.0`` reaches ``--lr-end`` early and HOLDS,
+    clamping the past-denominator cosine rebound. No ``epochs_delta``: this is a full-run config pin,
+    NOT a warm-start isolation arm."""
+    return Lever("C2_lr_anneal_pin",
+                 overrides={"--lr-anneal-epochs": int(anneal_epochs),
+                            "--lr-hold-frac": float(hold_frac)},
+                 notes="LR-specific cosine denominator + hold (decouple from shared --anneal-epochs)")
 
 
 def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
