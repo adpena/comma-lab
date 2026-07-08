@@ -5639,7 +5639,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 float(_lst.get("part_frac", 0.0)), float(_lst.get("within_flip", 0.0)),
                 within_flip_thresh=_nucleus_within_flip_thresh, min_part_frac=_nucleus_min_part_frac)
             _wire_sense["lane_ev"] = _lev
-            _lane_wf_emit = _lane_wf_row(ep, _lev, event_mode=bool(_lane_band_event))
+            # (confound F4) stash the epoch this lane-nucleus reading was computed at, so the lane-band
+            # gate's fire telemetry can name the sensor-data epoch (not just the fire epoch).
+            _wire_sense["lane_ev_epoch"] = int(ep)
+            _lane_wf_emit = _lane_wf_row(ep, _lev, event_mode=bool(_lane_band_event),
+                                         sensor_data_epoch=int(ep))
         with _verdict_lock:
             print(json.dumps(row), flush=True)
             if _lane_wf_emit is not None:
@@ -7411,13 +7415,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _muon_fire = False
             if not muon_switched:
                 _muon_event_fired = False
+                _muon_sde = None       # (confound F4) sensor-data epoch for fire-attribution
+                _muon_async_pending = False
                 if _muon_gate.event_mode:
                     _traj = [(int(h["epoch"]), float(h["d_seg"])) for h in history
                              if "d_seg" in h and "epoch" in h]
                     _nuc_done = _ladder_done(ep, _ladder_arm_windows)
                     _mev = _muon_meat(_traj, nucleation_complete=_nuc_done)
                     _muon_event_fired = bool(_mev["fired"])
-                _mstep = _muon_gate.update(ep, event_fired=_muon_event_fired)
+                    # the LAST verdict epoch the sensor read (the trajectory's final point); -1 when the
+                    # sensor has no data yet. + whether a later verdict was still in flight at the read.
+                    _muon_sde = _traj[-1][0] if _traj else -1
+                    _muon_async_pending = _verdict_inflight()
+                _mstep = _muon_gate.update(ep, event_fired=_muon_event_fired,
+                                           sensor_data_epoch=_muon_sde,
+                                           sensor_async_pending=_muon_async_pending)
                 if _mstep.telemetry is not None:
                     print(json.dumps(_mstep.telemetry), flush=True)
                 _muon_fire = _mstep.just_fired
@@ -7530,13 +7542,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if chroma_bnd_w > 0.0:
                 _chroma_was = chroma_bnd_gate["on"]
                 _chroma_event_fired = False
+                _chroma_sde = None       # (confound F4) sensor-data epoch for fire-attribution
+                _chroma_async_pending = False
                 if _chroma_gate.event_mode:
                     _chroma_event_fired = bool(_annulus_plateau_ev(
                         _wire_sense["annulus_series"],
                         rel_eps=float(getattr(args, "annulus_plateau_rel_eps", 1e-4)),
                         dwell_windows=int(getattr(args, "annulus_plateau_dwell_windows", 4)),
                         min_epochs=int(getattr(args, "annulus_plateau_min_epochs", 150)))["fired"])
-                _cstep = _chroma_gate.update(ep, event_fired=_chroma_event_fired)
+                    # the annulus series is appended at verdict epochs; its last epoch is the sensor data.
+                    _cser = _wire_sense["annulus_series"]
+                    _chroma_sde = int(_cser[-1][0]) if _cser else -1
+                    _chroma_async_pending = _verdict_inflight()
+                _cstep = _chroma_gate.update(ep, event_fired=_chroma_event_fired,
+                                             sensor_data_epoch=_chroma_sde,
+                                             sensor_async_pending=_chroma_async_pending)
                 chroma_bnd_gate["on"] = _cstep.start_reached
                 if _cstep.telemetry is not None:
                     print(json.dumps(_cstep.telemetry), flush=True)
@@ -7566,10 +7586,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _band_active:
                 _band_was = band_gate["on"]
                 _lane_event_fired = False
+                _lane_sde = None       # (confound F4) sensor-data epoch for fire-attribution
+                _lane_async_pending = False
                 if _lane_band_gate.event_mode:
                     _lev = _wire_sense["lane_ev"]
                     _lane_event_fired = bool(_lev is not None and _lev.get("fired", False))
-                _lbstep = _lane_band_gate.update(_lever_epoch(ep), event_fired=_lane_event_fired)
+                    _lane_sde = int(_wire_sense.get("lane_ev_epoch", -1))
+                    _lane_async_pending = _verdict_inflight()
+                _lbstep = _lane_band_gate.update(_lever_epoch(ep), event_fired=_lane_event_fired,
+                                                 sensor_data_epoch=_lane_sde,
+                                                 sensor_async_pending=_lane_async_pending)
                 band_gate["on"] = _lbstep.start_reached
                 if _lbstep.telemetry is not None:
                     print(json.dumps(_lbstep.telemetry), flush=True)
