@@ -6429,6 +6429,50 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             return
         print(json.dumps(_row), flush=True)
 
+    # ---- (#312 Phase B) CURVATURE-SPECTRUM telemetry (the D-3/4/5 2nd-order costate SENSE state).
+    # HVP-Lanczos top-k eigenvalues of the through-R SEG-loss Hessian w.r.t. the witness params at
+    # CHECKPOINT cadence. Uses the SAME total_loss_fn seg term (score-aligned surface), the TESTED
+    # cv.mlx_model_hvp (snapshot/restore -> params unchanged) + cv.compute_spectrum. Governor-gated
+    # (reuses _mdd_governor_ok: SKIP under memory pressure with a logged reason) + fail-open. Default
+    # OFF => never called => byte-identical. The heaviest telemetry (nested-grad HVP through R).
+    def _emit_curvature_spectrum(seg_form, eik_w_ep, ep) -> None:
+        from tac.witness_control import curvature as _cv
+        ok, _why = _mdd_governor_ok()
+        if not ok:
+            print(json.dumps({"stage": "curvature_spectrum_skipped", "ep": int(ep),
+                              "reason": _why, "note": "governor-gated heavy HVP skipped "
+                              "(score-neutral; run continues)"}), flush=True)
+            return
+        kpairs = max(1, int(getattr(args, "curvature_k_pairs", 8)))
+        sample = list(range(min(kpairs, int(P))))  # deterministic first-K pairs (no chunk dependency)
+        if not sample:
+            return
+        try:
+            def _seg_loss_of_model(m):
+                _acc = None
+                for _pi in sample:
+                    _oh, _mg = lstar_cache[_pi]
+                    _d: dict[str, Any] = {}
+                    total_loss_fn(m, _cf_mx(_pi), 2 * _pi, 2 * _pi + 1, _oh, _mg, pose_tgts[_pi],
+                                  args.w_seg, args.w_pose, args.hinge_weight,
+                                  args.margin_target_end, seg_form, eik_w_ep, args.length_weight,
+                                  terms_out=_d)
+                    _s = _d["seg"]
+                    _acc = _s if _acc is None else _acc + _s
+                return _acc / float(len(sample))
+
+            _matvec, _dim = _cv.mlx_model_hvp(_seg_loss_of_model, model)
+            _k = int(getattr(args, "curvature_k", 8))
+            _sp = _cv.compute_spectrum(_matvec, dim=_dim, k=_k,
+                                       n_iter=min(_dim, max(2 * _k, _k + 4)), seed=int(ep))
+            _row = _sp.to_row(stage=str(seg_form), ep=int(ep), k_pairs=len(sample),
+                              source="in_trainer_live_forward")
+        except Exception as _e:  # telemetry must NEVER crash the run (fail-open)
+            print(json.dumps({"stage": "curvature_spectrum_error", "ep": int(ep),
+                              "err": str(_e)[:200]}), flush=True)
+            return
+        print(json.dumps(_row), flush=True)
+
     recent_losses: list[float] = []
     # #205: restore the spike-guard window so --resume-from is bit-faithful across a spike-skip
     # (the median gates step-skipping = part of the trajectory). DEFAULT-SAFE: no resume, or a pre-#205
@@ -8084,6 +8128,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # into training) => byte-identical. No-op unless a checkpoint was written this epoch.
             if is_transition or do_periodic:
                 _mdd_ablation_checkpoint(ep, seg_form)
+                # (#312 Phase B) curvature-spectrum at the SAME checkpoint cadence. Default-OFF =>
+                # never runs => byte-identical. Governor-gated + fail-open inside the helper.
+                if bool(getattr(args, "curvature_telemetry", False)):
+                    _emit_curvature_spectrum(seg_form, eik_w_ep, ep)
             # ── #252 per-epoch timing emit (advisory; at eval cadence so no per-epoch spam). The
             # split is fwd+bwd-step (INR+R+scorer+loss+backward+opt+ema, fused inside value_and_grad)
             # vs verdict vs overhead (gates/reorient/permutation/LR). R is NOT separable inside the
@@ -8552,6 +8600,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--grad-interaction-every", type=int, default=0,
                     help="(#312 Phase A) also emit grad-interactions every N epochs (0 = default = "
                     "stage/octave boundaries ONLY; the cheapest cadence).")
+    # (#312 Phase B) CURVATURE-SPECTRUM telemetry (the D-3/4/5 2nd-order costate SENSE state):
+    # HVP-Lanczos top-k eigenvalues of the through-R seg-loss Hessian at CHECKPOINT cadence.
+    # DEFAULT OFF => byte-identical. HEAVY (nested-grad HVP through R); governor-gated (skip-with-
+    # logged-reason under memory pressure) + fail-open. Measurement-only: params snapshot/restored.
+    ap.add_argument("--curvature-telemetry", action="store_true",
+                    help="(#312 Phase B; default OFF => byte-identical) emit {stage:curvature_spectrum} "
+                    "rows at checkpoint cadence: HVP-Lanczos top-k eigs (sharpness lambda_max, "
+                    "anisotropy l1/lk, trace, saddle flag) of the seg-loss Hessian. Governor-gated + "
+                    "fail-open.")
+    ap.add_argument("--curvature-k", type=int, default=8,
+                    help="(#312 Phase B) top-k Hessian eigenvalues (default 8).")
+    ap.add_argument("--curvature-k-pairs", type=int, default=8,
+                    help="(#312 Phase B) pair sample for the seg-loss Hessian (default 8; heavy).")
     # (#205 REAL OOM fix) chunk the CPU-scorer verdict inference into vbatch-pair torch batches so
     # the fp32 (N,2,3,874,1164) cast + EfficientNet/FastViT activations do NOT spike ~30-50 GiB at
     # N=600 on top of the resident ~41 GiB self-orient cf_mx_cache (the 90 GB OOM). BIT-IDENTICAL
