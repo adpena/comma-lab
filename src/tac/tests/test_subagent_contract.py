@@ -64,6 +64,10 @@ def test_standard_contract_both_false_keeps_core_blocks() -> None:
         "STATE_THE_BOUNDARIES",
         "ANTI_GOLDPLATING",
         "FRESH_CONTEXT_VERIFIER",
+        "RECURSION_CLAUSE",
+        "CONTROL_LAW_CLAUSE",
+        "RETRIEVAL_FIRST_CLAUSE",
+        "REVIEW_STATUS_CLAUSE",
         "MANUAL_CITATION",
     ):
         assert getattr(sc, name) in composed, f"core block {name} must always compose"
@@ -78,8 +82,9 @@ def test_standard_contract_grounding_phrase_always_present() -> None:
 
 def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
-    # 9 blocks by default -> 8 separators.
-    assert composed.count("\n\n") == 8
+    # 13 blocks by default (6 harvest + 4 #346 clauses + review + triality + manual)
+    # -> 12 separators.
+    assert composed.count("\n\n") == 12
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:
@@ -116,6 +121,45 @@ def test_review_contract_counter_reset_semantics_verbatim() -> None:
     composed = sc.review_contract()
     assert "the clean-pass counter resets on ANY finding" in composed
     assert "round-finished ≠ clean-pass" in composed
+
+
+def test_346_clauses_compose_in_every_variant() -> None:
+    """The retrieval-first layer clauses are CORE: present regardless of flags."""
+    for kwargs in ({}, {"review": False}, {"triality": False},
+                   {"review": False, "triality": False}):
+        composed = sc.standard_contract(**kwargs)
+        assert "STORES CONSULTED" in composed
+        assert "a conclusion is the start of a chain" in composed
+        assert "every recommended knob is a control law" in composed
+        assert "fresh-eyes-reviewed(N)" in composed
+
+
+def test_346_clauses_are_not_review_only() -> None:
+    for name in ("RECURSION_CLAUSE", "CONTROL_LAW_CLAUSE",
+                 "RETRIEVAL_FIRST_CLAUSE", "REVIEW_STATUS_CLAUSE"):
+        assert name in sc.CONTRACT_CONSTANT_NAMES
+        assert name not in sc.REVIEW_ONLY_CONSTANT_NAMES
+
+
+def test_retrieval_first_clause_names_the_query_tool() -> None:
+    assert "tools/corpus_query.py" in sc.RETRIEVAL_FIRST_CLAUSE
+
+
+def test_control_law_clause_forbids_tbd_and_names_the_five_forms() -> None:
+    text = sc.CONTROL_LAW_CLAUSE
+    assert "'TBD' is forbidden" in text
+    for form in ("constant", "ramp/anneal", "self-deriving formula",
+                 "event-conditioned", "fractional/partial gate"):
+        assert form in text
+
+
+def test_346_clauses_contain_no_reasoning_echo_phrases() -> None:
+    phrases = ("show your thinking", "transcribe your reasoning",
+               "reproduce your chain of thought", "echo your internal reasoning")
+    for name in ("RECURSION_CLAUSE", "CONTROL_LAW_CLAUSE",
+                 "RETRIEVAL_FIRST_CLAUSE", "REVIEW_STATUS_CLAUSE"):
+        lowered = getattr(sc, name).lower()
+        assert not any(p in lowered for p in phrases)
 
 
 def test_never_reasoning_echo_phrases_only_in_negated_lines() -> None:

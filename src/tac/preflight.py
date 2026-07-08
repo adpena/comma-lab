@@ -86461,6 +86461,13 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     "NO_MANUFACTURED_FINDINGS",
     "SECTION8_CHECKLIST",
     "EXECUTE_DONT_READ",
+    # #346 retrieval-first layer clauses (2026-07-08 — memory
+    # `apparatus_writes_better_than_it_reads_retrieval_first_nexus_20260707`).
+    # Hardcoded here per the same anti-self-waive design.
+    "RECURSION_CLAUSE",
+    "CONTROL_LAW_CLAUSE",
+    "RETRIEVAL_FIRST_CLAUSE",
+    "REVIEW_STATUS_CLAUSE",
 )
 _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
     "Before reporting progress, audit each claim against a tool result"

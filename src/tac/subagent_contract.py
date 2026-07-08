@@ -27,6 +27,7 @@ __all__ = [
     "ANTI_GOLDPLATING",
     "CONFIRMED_VS_PLAUSIBLE",
     "CONTRACT_CONSTANT_NAMES",
+    "CONTROL_LAW_CLAUSE",
     "EXECUTE_DONT_READ",
     "FINAL_MESSAGE_REGROUNDING",
     "FIXES_ARE_UNREVIEWED",
@@ -38,7 +39,10 @@ __all__ = [
     "NO_ENDING_ON_PROMISES",
     "NO_MANUFACTURED_FINDINGS",
     "OWN_ROUND1_REVIEW",
+    "RECURSION_CLAUSE",
+    "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_ONLY_CONSTANT_NAMES",
+    "REVIEW_STATUS_CLAUSE",
     "RISK_RANKING",
     "SECTION8_CHECKLIST",
     "STATE_THE_BOUNDARIES",
@@ -99,6 +103,44 @@ NEVER_REASONING_ECHO = (
     "your chain of thought' and never require it to 'echo your internal reasoning'. "
     "Reasoning-echo instructions trip reasoning-extraction classifiers on Fable-class "
     "models and cause refusal storms (fallback storms). Read thinking blocks instead."
+)
+
+# --- #346 retrieval-first layer clauses (behavioral defaults as structure) -------------------
+#
+# Source: memory `apparatus_writes_better_than_it_reads_retrieval_first_nexus_20260707` —
+# every 2026-07-07 operator catch already existed in a durable store but wasn't loaded at
+# decision time. These four clauses make the behavioral defaults (retrieval-first,
+# recursion-default, positive-design control laws, review-status provenance) part of EVERY
+# composed subagent prompt instead of volitional habits.
+
+#: #346 recursion-default — a conclusion is the first move of a chain, not a resting state.
+RECURSION_CLAUSE = (
+    "RECURSION-DEFAULT: a conclusion is the start of a chain, not the end of one. Pursue "
+    "the follow-ups you can run yourself to a wall or a measured terminus; proposing a "
+    "follow-up you could have run yourself is a violation."
+)
+
+#: #346 positive-design — every recommended knob ships as a CONTROL LAW, never a TBD.
+CONTROL_LAW_CLAUSE = (
+    "CONTROL LAWS: every recommended knob is a control law — one of: constant | "
+    "ramp/anneal with a completion guarantee | self-deriving formula | event-conditioned "
+    "tested predicate | fractional/partial gate — each with its derivation/anchor, or a "
+    "default plus a NAMED recess measurement that sets it. 'TBD' is forbidden."
+)
+
+#: #346 retrieval-first — consult the durable stores BEFORE concluding; say which ones.
+RETRIEVAL_FIRST_CLAUSE = (
+    "RETRIEVAL-FIRST: before any verdict/design/charter, consult the durable stores "
+    "(tools/corpus_query.py '<topic>' — one query over research/equations/memory/DAG/"
+    "council/tasks/docs) and state a 'STORES CONSULTED:' line naming what you loaded and "
+    "what you deliberately did not. The Stop hook enforces the line on decision-class docs."
+)
+
+#: #346 review-status provenance — verdicts carry how reviewed they are, always.
+REVIEW_STATUS_CLAUSE = (
+    "REVIEW STATUS: tag every load-bearing verdict you rely on or emit with its review "
+    "provenance — pre-registered-only / recovery-written-UNREVIEWED / "
+    "fresh-eyes-reviewed(N). An untagged verdict reads as more reviewed than it is."
 )
 
 # --- #337 contract blocks + manual citation --------------------------------------------------
@@ -195,6 +237,10 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "STATE_THE_BOUNDARIES",
     "ANTI_GOLDPLATING",
     "FRESH_CONTEXT_VERIFIER",
+    "RECURSION_CLAUSE",
+    "CONTROL_LAW_CLAUSE",
+    "RETRIEVAL_FIRST_CLAUSE",
+    "REVIEW_STATUS_CLAUSE",
     "NEVER_REASONING_ECHO",
     "OWN_ROUND1_REVIEW",
     "TRIALITY_WIRING",
@@ -226,6 +272,10 @@ KEY_PHRASES: dict[str, str] = {
     "STATE_THE_BOUNDARIES": "Report findings and stop",
     "ANTI_GOLDPLATING": "beyond what the task requires",
     "FRESH_CONTEXT_VERIFIER": "verify with subagents against the specification",
+    "RECURSION_CLAUSE": "a conclusion is the start of a chain",
+    "CONTROL_LAW_CLAUSE": "every recommended knob is a control law",
+    "RETRIEVAL_FIRST_CLAUSE": "STORES CONSULTED",
+    "REVIEW_STATUS_CLAUSE": "fresh-eyes-reviewed(N)",
     "NEVER_REASONING_ECHO": "refusal storms",
     "OWN_ROUND1_REVIEW": "resets the clean-pass counter",
     "TRIALITY_WIRING": "SAME commit batch",
@@ -244,7 +294,9 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
 
     Always includes the six harvested behavior blocks (grounded progress, no ending on
     promises, final-message re-grounding, state-the-boundaries, anti-goldplating,
-    fresh-context verification) plus the operating-manual citation.
+    fresh-context verification), the four #346 retrieval-first clauses (recursion-default,
+    control laws, retrieval-first, review-status provenance), plus the operating-manual
+    citation.
 
     Args:
         review: include the #337 own-round-1 adversarial-review block (default True;
@@ -262,6 +314,10 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         STATE_THE_BOUNDARIES,
         ANTI_GOLDPLATING,
         FRESH_CONTEXT_VERIFIER,
+        RECURSION_CLAUSE,
+        CONTROL_LAW_CLAUSE,
+        RETRIEVAL_FIRST_CLAUSE,
+        REVIEW_STATUS_CLAUSE,
     ]
     if review:
         blocks.append(OWN_ROUND1_REVIEW)
