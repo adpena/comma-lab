@@ -1,5 +1,7 @@
 # SEAL v7 R1 — STRUCTURE ROUND (allowlist-blinded)
 
+STORES CONSULTED (Phase-1, BY DESIGN the full allowlist and nothing else — the blinding contract): CLAUDE.md · docs/triality_dag_dsl_equations_deepmath.md · canonical equations registry (tools/list_canonical_equations.py --json) · gt_n600.npz shape metadata. Explicitly NOT consulted in Phase-1: any v7/seal/position/synthesis doc, witness_autoconfig, ORCHESTRATION_LEDGER (their absence is the blinding evidence, commit 697dad238 predates any such read). Phase-2 declares its own stores in its section.
+
 > Contract: MECHANICAL BLINDING by allowlist. Phase-1 derives the optimal training-program
 > SHAPE from physics ALONE, committed BEFORE any Phase-2 read of the authored crucible_v7 doc /
 > witness_autoconfig / feature modules. The Phase-1 commit timestamp IS the blinding proof.
