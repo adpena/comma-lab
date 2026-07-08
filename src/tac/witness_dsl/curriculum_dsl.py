@@ -2540,7 +2540,20 @@ def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offload
     Emits REAL trainer flags only: ``--freq-across``/``--freq-along`` are ``type=float`` in the
     trainer argparse, ``--n-dir-freqs`` is ``type=int``, ``--self-orient`` is
     BooleanOptionalAction (default False; emitting True is a no-op override if a base already
-    enables it). window=0 = basis-config change, no epoch budget of its own."""
+    enables it). window=0 = basis-config change, no epoch budget of its own.
+
+    ## Regime coherence coupling (SEAL v7.3 round-2 M1 fix)
+    The regime does NOT only set the basis frequencies — it must also gate the LEARNED lane-recall
+    losses so the basis and the loss target AGREE (else a lane-CARRYING recall under a lane-OFFLOADED
+    basis is unsatisfiable and jitters the binding Road↔Lane separatrix). This lever emits ONLY the
+    basis flags (it is a SISTER of the persistence-recall lever, different mechanism); the coherent
+    persistence-recall class targeting is DERIVED from the same regime via the companion law
+    :func:`persistence_classes_for_basis_regime` (composed at the config layer — e.g.
+    ``_build_crucible_v7`` sets ``--persistence-classes`` from it). lane_offloaded → recall targets
+    movable ONLY (lane rides the analytic band); lane_carried → 'auto' (keep the learned lane recall
+    at freq_along≈26). The LADDER island-amplify is ALREADY per-class-λ self-gated (it de-emphasizes a
+    class whose measured cost is low, i.e. lane once the band handles it) so it needs no regime gate;
+    the FIXED-weight persistence recall was the one regime-BLIND term the coupling fixes."""
     from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 import (
         freq_along_for_regime,
     )
@@ -2558,6 +2571,33 @@ def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offload
         notes=(f"FEED-07a derived two-regime along-tangent rebalance ({regime}: "
                f"across={fa} -> along={freq_along}; -48%/3.2x anchors; sqrt-optimum owed to A/B)"),
     )
+
+
+def persistence_classes_for_basis_regime(regime: str, *, lane_class: int = 1,  # noqa: N802 stays snake
+                                         movable_class: int = 3) -> str:
+    """FEED-07a two-regime COHERENCE coupling (SEAL v7.3 round-2 M1 fix): the persistence-RECALL class
+    targeting DERIVED from the active :func:`DirectionalBasisRebalance` regime, so the learned recall
+    loss and the basis frequency budget AGREE (returns a ``--persistence-classes`` value).
+
+    * ``lane_offloaded``: the FREE rule-118 analytic band carries lane (MEASURED lane d_seg 0.00087)
+      and the basis is set to freq_along≈6 (Candès–Donoho cartoon scale) which CANNOT represent the
+      ~25-cyc dash comb. Demanding lane-skeleton RECALL from that frequency-starved learned render is
+      an unsatisfiable target → at best wasted gradient, at worst boundary JITTER on the binding
+      Road↔Lane separatrix (part of the 68%-of-flips Road residual). Persistence recall therefore
+      targets ONLY the non-offloaded tail class (movable) → returns ``str(movable_class)`` = "3".
+    * ``lane_carried``: the witness itself carries the dash comb (freq_along≈26) → KEEP lane in the
+      recall target → returns "auto" (the trainer self-detects lane+movable erasure-tail classes).
+
+    lane_class/movable_class default to the canonical comma10k order (1=Lane, 3=Movable). Pure /
+    unit-testable; fail-closed on an unknown regime (mirrors :func:`freq_along_for_regime`)."""
+    r = str(regime)
+    if r == "lane_offloaded":
+        return str(int(movable_class))          # movable only; lane rides the analytic band
+    if r == "lane_carried":
+        return "auto"                           # keep lane in the learned recall (freq_along≈26)
+    raise ValueError(
+        f"persistence_classes_for_basis_regime: unknown regime {regime!r} "
+        "(expected 'lane_offloaded' or 'lane_carried')")
 
 
 def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa: N802

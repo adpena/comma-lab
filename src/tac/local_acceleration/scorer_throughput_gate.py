@@ -46,18 +46,29 @@ SEG_W: int = 512
 # wall-clock (advisory; REFUSE only against an explicit budget). Value-provenance ladder
 # (req-T): class-(3) MEASURED-ANCHOR, config-conditional.
 #
-# v7.3 DELTA (S5-H2 UPHELD, synthesis SYNTHESIS_INCL_symposium_20260708 §ARBITRATIONS): re-anchored
-# to the LIVE incl-startup cadence, NOT the optimistic steady-state. Anchor = crucible_v6 run-1
-# (levelset_n600_crucible_v6_run1_20260708T095730Z, live pid 63069): the MEASURED live incl-startup
-# cadence is 3.62 min/ep (ORCHESTRATION_LEDGER H2: "Live incl-startup cadence 3.62 min/ep -> 7.55d").
-# The prior 3.1 steady-state was an OPTIMISTIC lower bound — a fresh run pays startup + per-ep jitter
-# on EVERY epoch of a resumable-checkpointed schedule, so the incl-startup figure is the honest floor
-# the budget must not undercut. FLOOR the anchor at the measured 3.62 (never below). rc=8's
-# at-admission REAL SegNet bench remains the FINAL arbiter; this anchor sets the derived REFUSE
-# ceiling the bench is checked against. Re-fit on a config whose per-pair scorer-forward count changes
-# (micro-batch>1 batches the forward => fewer, larger forwards => a DIFFERENT min/ep; the anchor is
-# B=1-accum-forward-conditional).
-RUN1_MEASURED_MIN_PER_EP: float = 3.62  # crucible_v6 run-1 LIVE incl-startup (MEASURED; S5-H2; n600 B=1 accum)
+# v7.3 round-2 DELTA (SEAL A2, seal_v73_r2_deepmath MAJOR + bugs REVISE-4): re-anchored to the
+# STARTUP-AMORTIZED 3000-ep cadence, NOT the early-epoch incl-startup rate. The prior 3.62 was the
+# ep~46-115 incl-startup cadence (two figures floated: ep46 → 167.85/46 = 3.649 ≈ 3.65; ledger H2 →
+# 3.62), which OVER-counts startup for a 3000-ep run: incl-startup cadence(n) = r_ss + S/n falls as
+# n grows, so using an early-n rate as the whole-run rate double-counts the one-time startup S. The
+# deepmath offered 3.12 (from the memo's r_ss=3.1 LOWER BOUND); this session RE-DERIVED r_ss + S
+# DIRECTLY from run-1's log (levelset_n600_crucible_v6_run1_20260708T095730Z verdict timestamps,
+# launch 09:57:30Z):
+#   * startup (launch → ep0 baseline verdict) = 24.4 min direct; ramp-inclusive S (two-point fit at
+#     ep100) = wall(ep100) − r_ss·100 = 396.62 − 337.16 = 59.5 min (matches the deepmath's ~59.8);
+#   * steady-state r_ss (ep75→ep100 slope) = (396.62 − 312.33)/25 = 3.371 min/ep — MEASURED, NOT the
+#     memo's optimistic 3.1 lower bound (which the deepmath's own caveat flagged as untrusted);
+#   * amortized(3000) = r_ss + S/3000 = 3.371 + 59.5/3000 = 3.371 + 0.0198 = 3.39 min/ep.
+# So the honest 3000-ep amortized cadence is 3.39 (BETWEEN the optimistic 3.12 and the startup-over-
+# counted 3.62), and anchoring here makes the refuse a TRUE ~15% gate (refuse @ 3.39·1.15 = 3.90 min/ep
+# = 15% above the honest cadence) instead of the ~23% gate the 3.62 anchor gave. REASONED DEVIATION
+# from the synthesis's suggested 3.12: run-1's OWN measured steady slope (3.37) contradicts the
+# r_ss=3.1 lower bound the 3.12 rested on; the value-provenance ladder forbids anchoring on a lower
+# bound. rc=8's at-admission REAL SegNet bench remains the FINAL arbiter; this anchor sets the derived
+# REFUSE ceiling. Re-fit if the run-1 startup/steady split changes or a lever batches the scorer
+# forward (micro-batch>1 => fewer, larger forwards => a DIFFERENT min/ep; the anchor is B=1-accum-
+# forward-conditional).
+RUN1_MEASURED_MIN_PER_EP: float = 3.39  # crucible_v6 run-1 startup-AMORTIZED 3000-ep cadence (MEASURED; SEAL A2; n600 B=1 accum)
 RUN1_ANCHOR_SEGNET_MS: float = ON_REF_MS  # the run-1 machine's SegNet fwd+bwd micro-bench reference
 
 # ── wall-clock BUDGET slack factor (req-T tagged) ──
@@ -65,11 +76,12 @@ RUN1_ANCHOR_SEGNET_MS: float = ON_REF_MS  # the run-1 machine's SegNet fwd+bwd m
 # The budget is a REFUSE CEILING (default-on gate), not a target: it fires when THIS machine's measured
 # SegNet bench projects a run SLOWER than the run-1 anchor by more than the slack. Provenance
 # (value-provenance ladder, req-T): HARDCODED-WITH-WAIVER-class magnitude with a MEASURED anchor for the
-# ceiling. As of the v7.3 re-anchor the min/ep anchor is ALREADY the incl-startup figure (3.62), so this
-# slack is now a slim PURE thermal/per-ep-jitter headroom (no longer double-counting a startup
-# amortization) so the gate stays a REAL refuse (>15% slower than the live anchor => REFUSE) rather than
-# a rubber stamp. RE-DERIVE if the run-1 anchor changes or a lever batches the forward (micro-batch>1 =>
-# a different min/ep => a different implied ceiling).
+# ceiling. As of the v7.3 round-2 re-anchor the min/ep anchor is the STARTUP-AMORTIZED 3000-ep cadence
+# (3.39; startup S is now amortized IN the anchor, not double-counted), so this slack is a slim PURE
+# thermal/per-ep-jitter headroom and the gate is a TRUE >15% refuse (>15% slower than the honest
+# amortized cadence => REFUSE) rather than the ~23% gate the un-amortized 3.62 anchor gave. RE-DERIVE if
+# the run-1 startup/steady split changes or a lever batches the forward (micro-batch>1 => a different
+# min/ep => a different implied ceiling).
 WALL_CLOCK_SLACK_FACTOR: float = 1.15
 
 

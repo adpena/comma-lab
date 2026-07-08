@@ -1765,6 +1765,41 @@ _CRUCIBLE_V7_LANE_BAND_CAP = 500     # DRAFT §1 [council_pending]: past the eas
 _CRUCIBLE_V7_CHROMA_CAP = 450        # DRAFT §1 [council_pending]: past a formed margin boundary
 _CRUCIBLE_V7_TAIL_CYCLES_MAX = 2     # DRAFT §6.2 [council_pending]: propose k_max = 2
 
+# ── hosc-β EVENT-mode endpoint (SEAL v7.3 round-2 BLOCKER fix, 2026-07-08) ──────────────────────
+# THE BLOCKER (seal_v73_r2_deepmath): v6 DERIVED hosc_beta_end = 10.0 as a CLOCK-frame endpoint — a
+# LINEAR anneal on the shared den-3000 clock passes through β(ep726)=3.177 there, then FREEZES at the
+# Muon switch (β never physically reaches 10.0 in clock mode; frozen at 726/3000 = 24% of the anneal).
+# v7.3 flips --tau-advance-mode to EVENT, where β is driven by the OCTAVE FRACTION, not the ep-clock:
+#   hosc_beta_for_epoch = β_start + (β_end − β_start)·octave_fraction()   (tau_advance.py:282,285)
+# and the ladder (hence β) FREEZES at the Muon switch. The τ*=0.31 TURNPIKE premise REQUIRES Muon to
+# fire when τ reaches its floor rung ⟺ octave_fraction ≈ 1.0 — but β rides the SAME octave_fraction, so
+# at the freeze β = β_start + (β_end − β_start)·1.0 = β_end. With the inherited β_end=10.0 that FREEZES
+# β ≈ 10.0 for the entire ~2274-ep post-Muon turnpike+TAIL — squarely the FORBIDDEN fixed-high-β
+# saturation regime (tanh(β·sin) → vanishing grad → AdamW random-walk → d_seg RISES; CLAUDE.md capstone
+# non-negotiable "NEVER fixed β=4"; 10.0 is 2.5× past it) AND invalidating every anchor (ν, ep650-best,
+# fire-band) that was MEASURED at the control's frozen β≈3.18. The v6 comment stamped the RE-DERIVE
+# TRIGGER for exactly "any change to --hosc-beta-anneal (the shape)" and the mode flip fires it.
+# DERIVATION (event-mode): the frozen β = β_end (octave_fraction→1.0 at the ladder floor, ≥ any earlier
+# rung), so to PRESERVE the control's healthy frozen β we set β_end to that intended FROZEN value, NOT
+# the clock endpoint. The control's frozen β is the mod32cap linear β(726) on ITS own den-1000:
+#   β(726) = β_start + (β_control_end − β_start)·(726−1)/(1000−1) = 1 + (4−1)·725/999 = 3.17718 ≈ 3.177.
+# So the event-mode endpoint = 3.177 (β anneals 1.0→3.177 over the octaves, FREEZES at ≤3.177 for the
+# tail — β_end is the CEILING since frozen β = β_end·[octave_fraction≤1]). ≤ 4.0 honors the anneal-β
+# divergence bound; the GPU bit-cert's [1,10] sweep already covers 3.177 (the cert range is a
+# superset — bit-identity is β-value-invariant within the domain). PROVENANCE FLIP: v6's
+# DERIVED-AT-CONFIG (clock-endpoint) → v7 DERIVED-AT-CONFIG (event-frozen-value); the value is the
+# control's MEASURED frozen β, re-derived for the EVENT driver. RE-DERIVE TRIGGER (unchanged form): any
+# change to --hosc-beta / the control vehicle (mod32cap β trajectory) / --tau-advance-mode re-derives it.
+_CRUCIBLE_V7_HOSC_BETA_END_EVENT = 3.177  # event-mode frozen-β endpoint = control β(726) (BLOCKER fix)
+
+# ── directional-basis REGIME (SEAL v7.3 round-2 M1 fix, 2026-07-08) ─────────────────────────────
+# The FEED-07a two-regime allocation the whole v7 seg composition must be COHERENT with. Named ONCE
+# so the DirectionalBasisRebalance lever AND the persistence-recall class-targeting coupling
+# (persistence_classes_for_basis_regime) read the SAME regime (no drift). lane_offloaded = the FREE
+# rule-118 analytic band carries lane (freq_along≈6 cartoon basis); lane_carried (freq_along≈26) is
+# the registered counter-arm. v7.3 COMMITS to lane_offloaded per the operator-APPROVED basis rec.
+_CRUCIBLE_V7_BASIS_REGIME = "lane_offloaded"
+
 # Flags the DSL ``WitnessProgram`` emits ITSELF (flag_dict header + Preserve) OR that the typed
 # temp / stages / regularizers OWN — they must NOT ALSO live in ``base`` (else a double-emit).
 _CRUCIBLE_V7_PROGRAM_OWNED: frozenset[str] = frozenset({
@@ -2069,8 +2104,11 @@ def crucible_v7_polyak_start_provenance(epochs: int,
     if stage_window <= 0:
         # DEGENERATE (a calibration/smoke run whose epochs <= the Muon backstop — Muon never fires, so
         # there is no finishing phase to average). Do NOT raise (RSS calibration reuses the REAL config
-        # name with a tiny --calibrate-epochs to exercise the flag set): arm start_epoch = epochs so the
-        # Polyak averager can never observe (observe requires ep >= start) => inert. The gate still sees
+        # name with a tiny --calibrate-epochs to exercise the flag set). GENUINELY INERT (v7.3 round-2
+        # MINOR-1 fix): the trainer loop is ``for ep in range(start, epochs+1)`` and PolyakTailAverager.
+        # observe fires on ``ep >= start_epoch`` — so start_epoch=epochs is NOT inert (it observes ONCE at
+        # the final epoch, count=1). Set start_epoch = epochs+1 (STRICTLY beyond the last loop epoch) so
+        # observe can never fire => count stays 0 => byte-identical to an unarmed run. The gate still sees
         # a DERIVED manifest entry; the value is irrelevant for a run that never reaches the tail.
         return {
             "ladder_class": "derived_at_config",
@@ -2079,23 +2117,30 @@ def crucible_v7_polyak_start_provenance(epochs: int,
             "finishing_stage_start_epoch": int(muon_cap),
             "tail_frac": float(frac),
             "polyak_window_epochs": 0,
-            "polyak_start_epoch": int(epochs),  # >= epochs => never observes (inert)
+            "polyak_start_epoch": int(epochs) + 1,  # > last loop epoch => never observes (genuinely inert)
             "polyak_relative_start_epoch": 0,
             "degenerate": True,
             "note": (f"DEGENERATE crucible_v7 polyak sizing: epochs ({epochs}) <= muon_cap ({muon_cap}) "
-                     f"=> no finishing phase (calibration/smoke); start_epoch=epochs => Polyak inert."),
+                     f"=> no finishing phase (calibration/smoke); start_epoch=epochs+1 (strictly beyond "
+                     f"the final loop epoch) => Polyak observe never fires => genuinely inert (count 0)."),
         }
     prov = polyak_finisher_window_provenance(stage_window, frac=frac)
-    rel_start = int(prov["polyak_start_epoch"])
+    window = int(prov["polyak_window_epochs"])
+    # ABSOLUTE start over the INCLUSIVE trainer loop [start, epochs]: to average EXACTLY ``window`` epochs
+    # (v7.3 round-2 MINOR-2 off-by-one fix) the half-open fencepost is ``start = epochs - window + 1``.
+    # The prior ``muon_cap + (stage_window - window)`` = epochs - window observed window+1 epochs
+    # (inclusive-final fencepost). Still post-Muon (inside the constant-τ* turnpike dwell).
+    abs_start = int(epochs) - window + 1
     return {
         **prov,
         "finishing_stage_window_epochs": stage_window,
         "finishing_stage_start_epoch": int(muon_cap),  # muon backstop cap = the turnpike-dwell start
-        "polyak_start_epoch": int(muon_cap) + rel_start,  # ABSOLUTE (override the helper's relative)
-        "polyak_relative_start_epoch": rel_start,
-        "note": ("v7 Polyak tail start = muon_cap + (finishing_window - round(frac·finishing_window)); "
-                 "finishing_window = epochs - muon_cap; sized off the muon CAP (latest Muon entry) so "
-                 "the tail is always inside the constant-τ* turnpike dwell. " + str(prov.get("note", ""))),
+        "polyak_start_epoch": abs_start,               # ABSOLUTE (override the helper's relative)
+        "polyak_relative_start_epoch": abs_start - int(muon_cap),  # = rel_start + 1 (fencepost fix)
+        "note": ("v7 Polyak tail start = epochs - window + 1 (inclusive-final fencepost, averages EXACTLY "
+                 "window = round(frac·finishing_window) epochs over the trainer's [start, epochs] loop); "
+                 "finishing_window = epochs - muon_cap; always post-Muon inside the constant-τ* turnpike "
+                 "dwell. " + str(prov.get("note", ""))),
     }
 
 
@@ -2142,6 +2187,30 @@ def crucible_v7_registered_off_levers() -> dict:
             "trigger": ("re-waterfill gate if ever armed — NOT needed (37.26 GiB headroom post-basis, S1); "
                         "an on-the-fly per-pair fp16 cf-feature path would re-open only under memory pressure."),
         },
+        "lane_carried_basis_regime": {  # SEAL v7.3 round-2 M1 counter-arm (structure)
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("Road↔Lane per-class d_seg JITTER in v7 telemetry (M1 counter-arm; the two basis "
+                        "regimes are MUTUALLY EXCLUSIVE — v7.3 commits to lane_offloaded). If the "
+                        "lane_offloaded basis + analytic band UNDER-serve lane OR jitter the binding "
+                        "Road↔Lane separatrix, switch to lane_carried: DirectionalBasisRebalance(regime="
+                        "'lane_carried') → freq_along≈26 (the witness carries the ~25-cyc dash comb) AND "
+                        "restore lane to --persistence-classes ('auto'/'1,3', keep the learned lane recall). "
+                        "The freq_along≈26 √-optimum is ASSUMED_AWAITING_VERIFICATION (anisotropic_basis_"
+                        "two_regime_allocation_v1); this A/B settles which regime lowers Road-boundary d_seg."),
+        },
+        "road_boundary_fallback": {  # SEAL v7.3 round-2 M2 Road-first fallback (structure)
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("Road per-class d_seg is the PRIMARY run signal (LAUNCH_PACKAGE watch-list): if "
+                        "Road flip-rate stays > 0.30 at ep200 (v6 was stuck 0.44→0.40 over 100 ep; ~68% of "
+                        "flip mass), the single-basis Road bet UNDER-performed → fire a Road-FIRST fallback "
+                        "rather than a cold restart. Mechanism candidates (structure D6/M2): (a) a Road↔"
+                        "Undrivable (horizon) directional margin/boundary term orienting the basis to the "
+                        "Road↔Undrivable + Road↔Lane tangent field; (b) a Menon logit-adjust Road-offset "
+                        "AUDIT — the −1.37 Road offset DE-weights the 68%-binding class in the loss vs the "
+                        "rare-class boosts; (c) seg-chroma-boundary engaged EARLIER on the Road boundary "
+                        "(binding from ep~50). Pre-registered threshold gates the per-class decomposition "
+                        "BEFORE any 'basis helps' claim (verdict-scope: the basis lever's Road effect)."),
+        },
     }
 
 
@@ -2163,6 +2232,7 @@ def _build_crucible_v7(
         PolyakFinisher,
         SegFormUnifyTau,
         TailCycles,
+        persistence_classes_for_basis_regime,
     )
     from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
     from tac.witness_dsl.typed_config import (
@@ -2210,6 +2280,29 @@ def _build_crucible_v7(
     # incumbent anneal). Emitting 'event' here honors the operator's explicit conversion directive; the
     # council/seal makes the final launch-mode decision.
     base["--tau-advance-mode"] = "event"                          # τ octave-ladder <- per-band relaxation
+    # (v7.3 round-2 BLOCKER fix, seal_v73_r2_deepmath) the CLOCK-frame hosc_beta_end=10.0 inherited from
+    # v6 FREEZES β≈10.0 under the EVENT octave-fraction driver (β rides the same fraction that floors τ at
+    # the turnpike) = the forbidden fixed-high-β saturation regime. Re-derive the EVENT-mode endpoint to
+    # the intended FROZEN value = the control's β(726)≈3.177 (see _CRUCIBLE_V7_HOSC_BETA_END_EVENT). This
+    # OVERRIDES the v6 base's --hosc-beta-end 10.0 (a v6/v7 CHANGED delta).
+    base["--hosc-beta-end"] = _CRUCIBLE_V7_HOSC_BETA_END_EVENT
+    # (v7.3 round-2 M1 fix, seal_v73_r2_structure) LANE-REGIME COHERENCE: the FEED-07a basis is set to
+    # regime='lane_offloaded' (freq_along≈6 cartoon scale, CANNOT represent the ~25-cyc dash comb — lane
+    # is carried by the FREE rule-118 analytic band, MEASURED lane d_seg 0.00087). Demanding lane-skeleton
+    # RECALL from the frequency-starved learned render is unsatisfiable → wasted gradient + Road↔Lane
+    # separatrix jitter (part of the binding Road residual). DERIVE the persistence-RECALL class targeting
+    # from the active basis regime so the two agree: lane_offloaded → persistence targets movable ONLY
+    # (lane offloaded to the band); lane_carried → 'auto' (keep lane). The LADDER island-amplify is ALREADY
+    # per-class-λ self-gated (support flows to lane only while its measured cost is high — auto-de-
+    # emphasizes when the band handles lane) so it needs no config gate here; the fixed-weight persistence
+    # recall was the one regime-BLIND term. Counter-arm (lane_carried) registered duty-to-measure.
+    base["--persistence-classes"] = persistence_classes_for_basis_regime(_CRUCIBLE_V7_BASIS_REGIME)
+    # (v7.3 round-2 R3 fix, seal_v73_r2_structure) turn ON per-group grad-clip: run-1 telemetry fired
+    # gnorm_hijack 3× at ep1 (island_amplify ~20% of ep1 total loss, one gradient group scaling the whole
+    # step down → seg-starvation risk during the very window the coarse partition + Road boundary forms).
+    # --per-group-grad-clip re-clips each param group at --grad-clip (1.0) so a large early island/eikonal
+    # term cannot starve the seg gradient. Requires --grad-clip>0 (base carries 1.0). Confound-fix (C4).
+    base["--per-group-grad-clip"] = True
     # (v7.3 delta 3, synthesis item 4 ELEVATED by GPU cert) ARM the safe-compile hosc region. The
     # law safe_compile_hosc_device_bitidentity_v1 (crux-engineering GPU per-chip fingerprint bit-cert,
     # .omx/research/safe_compile_gpu_bitcert_20260708.md) MEASURED max|Δ|=0 for the compiled hosc
@@ -2254,7 +2347,7 @@ def _build_crucible_v7(
         _typed_lever(SegFormUnifyTau()),
         _typed_lever(TailCycles(cycles_max=_CRUCIBLE_V7_TAIL_CYCLES_MAX)),
         _typed_lever(LadderIslandHomotopy()),
-        _typed_lever(DirectionalBasisRebalance(regime="lane_offloaded")),
+        _typed_lever(DirectionalBasisRebalance(regime=_CRUCIBLE_V7_BASIS_REGIME)),
         _typed_lever(PolyakFinisher(start_epoch=_polyak_start)),
     )
 
@@ -2265,11 +2358,13 @@ def _build_crucible_v7(
         num_pairs=int(num_pairs),
         epochs=int(epochs),
         # DERIVED wall-clock budget (operator 2026-07-08 default-on): anchor min/ep x epochs x slack.
-        # At epochs=3000 => ~8.67 days (7.54-day anchor projection x 1.15 slack) after the v7.3 S5-H2
-        # re-anchor to the LIVE incl-startup 3.62 min/ep (was ~7.4 days at the optimistic 3.1 steady-
-        # state). NOT hand-picked; re-derives if epochs change or a lever (tau-advance/micro-batch)
-        # changes the effective per-ep count => the budget tracks the anchor, the launcher REFUSES a
-        # slower-than-anchor run.
+        # At epochs=3000 => ~8.12 days (7.06-day anchor projection x 1.15 slack) after the v7.3 round-2
+        # SEAL-A2 re-anchor to the STARTUP-AMORTIZED 3000-ep cadence 3.39 min/ep (was 3.62 = the ep~46-115
+        # incl-startup rate, which OVER-counted startup for a 3000-ep run; the deepmath's 3.12 used the
+        # memo's untrusted r_ss=3.1 lower bound — run-1's MEASURED steady slope is 3.37, so amortized(3000)
+        # = 3.37 + 59.5/3000 = 3.39). NOT hand-picked; re-derives if epochs change or a lever (tau-advance/
+        # micro-batch) changes the effective per-ep count => the budget tracks the anchor, the launcher
+        # REFUSES a run slower than the honest amortized cadence by more than the slack (a TRUE ~15% gate).
         wall_clock_budget_days=Provenanced(
             value=round(derive_wall_clock_budget_days(int(epochs)), 3),
             provenance=_PC.DERIVED_AT_CONFIG, unit="days",

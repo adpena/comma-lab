@@ -54,6 +54,9 @@ _EXPECTED_ADDED = frozenset({
     # (v7.3 delta 3, synthesis item 4 ELEVATED by GPU cert) arm the safe-compile hosc region; the
     # launcher b2 gate fingerprint-verifies at admission (device-conditional; GPU ADMIT, CPU REFUSE).
     "--safe-compile-regions",
+    # (v7.3 round-2 R3 fix, seal_v73_r2_structure) per-group grad-clip ON — bounds the ep1 gnorm_hijack
+    # (island_amplify ~20% of ep1 loss) so it can't starve the seg gradient during the Road-forming window.
+    "--per-group-grad-clip",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",
@@ -65,6 +68,12 @@ _EXPECTED_CHANGED = frozenset({
     # freq_along 4->6 (freq_across 32 re-emitted as float). --self-orient is already True in v6 =>
     # NOT changed. These are CHANGES (existing v6 flags), not additions.
     "--n-dir-freqs", "--freq-along", "--freq-across",
+    # (v7.3 round-2 BLOCKER fix, seal_v73_r2_deepmath) event-mode hosc_beta_end 10.0 -> 3.177 (the
+    # control's frozen β(726); the clock-endpoint 10.0 would FREEZE β≈10 under the event octave driver).
+    "--hosc-beta-end",
+    # (v7.3 round-2 M1 fix, seal_v73_r2_structure) lane-regime coherence: persistence-recall classes
+    # 'auto' (lane+movable) -> '3' (movable only; lane rides the analytic band under lane_offloaded).
+    "--persistence-classes",
 })
 
 
@@ -282,6 +291,12 @@ def test_diff_changed_values_are_the_designed_deltas(compiled):
     assert str(changed["--freq-along"][0]) == "4"
     assert str(changed["--freq-along"][1]) == "6.0"
     assert float(changed["--freq-across"][0]) == float(changed["--freq-across"][1]) == 32.0
+    # (v7.3 round-2 BLOCKER fix) event-mode hosc_beta_end: 10.0 (clock endpoint) -> 3.177 (control β(726))
+    assert float(changed["--hosc-beta-end"][0]) == 10.0
+    assert float(changed["--hosc-beta-end"][1]) == 3.177
+    # (v7.3 round-2 M1 fix) lane-regime coherence: persistence-recall 'auto' -> '3' (movable only)
+    assert str(changed["--persistence-classes"][0]) == "auto"
+    assert str(changed["--persistence-classes"][1]) == "3"
 
 
 def test_diff_excludes_run_dir_placeholder(compiled):
@@ -375,6 +390,49 @@ def test_basis_lever_freq_across_value_identical():
     assert float(changed["--freq-across"][0]) == float(changed["--freq-across"][1])
 
 
+# ── (i2) SEAL v7.3 round-2 A1: event-mode hosc β endpoint (BLOCKER fix) ────────────────
+def test_hosc_beta_end_is_event_frozen_value_not_clock_endpoint(compiled):
+    """The v7 (EVENT mode) hosc_beta_end is the control's FROZEN β(726)≈3.177, NOT the inherited
+    clock-frame endpoint 10.0 (which the octave-fraction driver would FREEZE β≈10 = forbidden
+    saturation). ≤ 4.0 honors the anneal-β divergence bound."""
+    argv = list(compiled.argv)
+    hbe = _argv_val(argv, "--hosc-beta-end")
+    assert hbe is not None and float(hbe) == wac._CRUCIBLE_V7_HOSC_BETA_END_EVENT == 3.177
+    assert float(hbe) <= 4.0  # inside the anneal-β divergence bound (never a fixed high β)
+    # the config is event-mode (the driver that makes the clock endpoint a frozen-β hazard)
+    assert dict(compiled.emitted_pairs).get("--tau-advance-mode") == "event"
+
+
+# ── (i3) SEAL v7.3 round-2 M1: lane-regime coherence (persistence-recall class gate) ───
+def test_persistence_classes_derived_from_basis_regime():
+    """The persistence-recall class targeting is DERIVED from the basis regime (the M1 coherence law),
+    not a hand literal: lane_offloaded -> movable only ('3'); lane_carried -> 'auto' (keep lane)."""
+    from tac.witness_dsl.curriculum_dsl import persistence_classes_for_basis_regime
+    assert persistence_classes_for_basis_regime("lane_offloaded") == "3"
+    assert persistence_classes_for_basis_regime("lane_carried") == "auto"
+    with pytest.raises(ValueError):
+        persistence_classes_for_basis_regime("nonsense_regime")
+
+
+def test_persistence_classes_coherent_with_basis_regime_in_argv(compiled):
+    """v7 commits to lane_offloaded (the emitted basis freq_along=6), so the emitted persistence-recall
+    classes must EXCLUDE lane ('3' = movable only) — the M1 basis/loss coherence, verified in the argv."""
+    d = dict(compiled.emitted_pairs)
+    assert d.get("--persistence-classes") == "3"        # movable only (lane rides the analytic band)
+    assert str(d.get("--freq-along")) == "6.0"          # the lane_offloaded (cartoon-scale) basis
+    assert wac._CRUCIBLE_V7_BASIS_REGIME == "lane_offloaded"  # single-source regime
+
+
+# ── (i4) SEAL v7.3 round-2 R3: per-group grad-clip ON (gnorm-hijack seg-starvation guard) ─
+def test_per_group_grad_clip_present_in_v7_argv(compiled):
+    """--per-group-grad-clip is ON in the v7 emitted argv (bounds the ep1 gnorm_hijack so a large early
+    island/eikonal term cannot starve the seg gradient during the Road-forming window)."""
+    argv = list(compiled.argv)
+    assert "--per-group-grad-clip" in argv
+    assert "--no-per-group-grad-clip" not in argv  # not the negated BooleanOptionalAction form
+    assert float(dict(compiled.emitted_pairs).get("--grad-clip")) > 0.0  # per-group clip needs grad-clip>0
+
+
 # ── (j) memory WATERFILL: the basis lever fits the envelope (the gating math) ─────────
 def test_basis_allocation_provenance_shape():
     """The waterfill-provenance accessor exposes the derivation the memo records (no bare numbers;
@@ -458,11 +516,12 @@ def test_polyak_lever_armed_with_derived_start_epoch(compiled):
     assert _argv_val(argv, "--polyak-finisher-arm") is None  # bare store_true flag
     start = _argv_val(argv, "--polyak-finisher-start-epoch")
     assert start is not None and int(start) > 0
-    # sized to the TAIL turnpike: muon_cap + (finishing_window - round(0.2*finishing_window))
+    # sized to the TAIL turnpike; averages EXACTLY window=round(0.2*finishing_window) epochs over the
+    # trainer's INCLUSIVE [start, epochs] loop => start = epochs - window + 1 (v7.3 round-2 MINOR-2 fix).
     prov = wac.crucible_v7_polyak_start_provenance(3000)
     assert int(start) == int(prov["polyak_start_epoch"])
-    # for the sealed schedule (epochs 3000, muon cap 726) this is 2545 (post-Muon, inside the dwell)
-    assert int(start) == 2545
+    # for the sealed schedule (epochs 3000, window 455) start = 3000 - 455 + 1 = 2546 (post-Muon, dwell)
+    assert int(start) == 2546
     assert int(start) > wac._CRUCIBLE_V7_MUON_CAP  # strictly post-Muon (inside the constant-τ* dwell)
 
 
@@ -472,20 +531,40 @@ def test_polyak_start_provenance_is_derived_at_config():
     assert prov["ladder_class"] == "derived_at_config"
     assert prov["equation_id"] == "muon_finisher_schedule_warmstart_and_lr_anneal_v1"
     assert prov["finishing_stage_window_epochs"] == 3000 - wac._CRUCIBLE_V7_MUON_CAP
-    # muon_cap + (window - round(frac*window)) = 726 + (2274 - 455) = 2545
-    assert prov["polyak_relative_start_epoch"] == 1819
+    # start = epochs - window + 1 = 2546; relative to muon_cap = 2546 - 726 = 1820 (fencepost fix)
+    assert prov["polyak_relative_start_epoch"] == 1820
 
 
-def test_polyak_sizing_degenerate_on_tiny_calibration_epochs():
-    """RSS calibration reuses the REAL config name with a tiny --calibrate-epochs (default 3). The
-    Polyak sizing must NOT crash when epochs <= muon_cap (no finishing phase) — it degenerates to an
-    inert averager (start_epoch=epochs => never observes), so v7 stays buildable for calibration."""
+def test_polyak_non_degenerate_averages_exactly_window_epochs():
+    """(v7.3 round-2 MINOR-2 off-by-one) the tail averages EXACTLY window epochs over the trainer's
+    inclusive [start, epochs] loop — BEHAVIOR, not just the emitted constant."""
+    prov = wac.crucible_v7_polyak_start_provenance(3000)
+    start, window = int(prov["polyak_start_epoch"]), int(prov["polyak_window_epochs"])
+    observed = sum(1 for ep in range(start, 3000 + 1))
+    assert observed == window == 455  # inclusive final fencepost: no off-by-one
+
+
+def test_polyak_sizing_degenerate_is_genuinely_inert_over_the_real_loop():
+    """(v7.3 round-2 MINOR-1) RSS calibration reuses the REAL config name with a tiny --calibrate-epochs
+    (default 3). The Polyak sizing degenerates to a GENUINELY INERT averager — NOT start_epoch=epochs
+    (which observes ONCE at the final loop epoch), but start_epoch=epochs+1 so observe never fires.
+    Asserts BEHAVIOR (count==0 over the real trainer loop), not the constant (tests-verify-behavior)."""
+    import numpy as np
+    from tac.witness_control.polyak_finisher import PolyakTailAverager
     prov = wac.crucible_v7_polyak_start_provenance(3)
     assert prov["degenerate"] is True
-    assert prov["polyak_start_epoch"] == 3  # >= epochs => Polyak never observes
+    start = int(prov["polyak_start_epoch"])
+    assert start == 4  # epochs(3) + 1 => strictly beyond the final loop epoch
+    # BEHAVIOR: arm the averager at the derived start, run the REAL trainer loop range(1, epochs+1),
+    # and confirm it never observes => byte-identical to an unarmed run.
+    avg = PolyakTailAverager(start_epoch=start, arm=True)
+    params = {"w": np.zeros((2, 2), np.float32)}
+    for ep in range(1, 3 + 1):  # the trainer loop reaches ep == epochs
+        avg.observe(ep, params)
+    assert avg.count == 0, "degenerate Polyak is NOT inert — it observed the final epoch"
     # a full v7 build at tiny epochs succeeds (the calibrate-rss path)
     c = wac.compile_crucible_v7_config(_GT, num_pairs=24, epochs=3)
-    assert dict(c.emitted_pairs)["--polyak-finisher-start-epoch"] == "3"
+    assert dict(c.emitted_pairs)["--polyak-finisher-start-epoch"] == "4"
     assert "polyak_finisher_start_epoch" in c.constants_manifest
 
 
@@ -496,7 +575,7 @@ def test_polyak_start_epoch_is_derived_in_manifest_not_naked(compiled, trainer_t
     entry = compiled.constants_manifest["polyak_finisher_start_epoch"]
     assert entry["ladder_class"] == "derived_at_config"
     assert entry["equation_id"] == "muon_finisher_schedule_warmstart_and_lr_anneal_v1"
-    assert entry["value"] == 2545
+    assert entry["value"] == 2546  # v7.3 round-2 MINOR-2 off-by-one fix (was 2545)
     # gate confirms DERIVED classification for the flag
     verdicts = gate.classify_launch(
         list(compiled.emitted_pairs), registry=gate.schedule_when_flags(trainer_text),
@@ -535,7 +614,9 @@ def test_registered_off_levers_carry_named_triggers():
     engineering (that crux elevation was REVOKED by frozen_scorer_forward_batch_dependence_v1)."""
     off = wac.crucible_v7_registered_off_levers()
     assert set(off) == {"micro_batch", "verdict_reclaim_330", "adaptive_eps",
-                        "gpu_verdict", "fp16_cf_feats"}
+                        "gpu_verdict", "fp16_cf_feats",
+                        # (v7.3 round-2) M1 counter-arm + M2 Road-first fallback registered duty-to-measure
+                        "lane_carried_basis_regime", "road_boundary_fallback"}
     for item in off.values():
         assert item["default"] == "off"
         assert item["state"] == "registered_duty_to_measure"
@@ -543,13 +624,21 @@ def test_registered_off_levers_carry_named_triggers():
     # item 3 trigger reflects the falsification (A/B, not bit-identity)
     mb = off["micro_batch"]["trigger"].lower()
     assert "a/b" in mb and "bit-identity engineering" in mb
+    # (v7.3 round-2 M1) the lane_carried counter-arm names the mutually-exclusive alternative + freq_along≈26
+    lc = off["lane_carried_basis_regime"]["trigger"].lower()
+    assert "lane_carried" in lc and "26" in lc
+    # (v7.3 round-2 M2) the Road-fallback names Road as the primary run signal + the ep200 threshold
+    rd = off["road_boundary_fallback"]["trigger"].lower()
+    assert "road" in rd and "0.30" in rd and "ep200" in rd
 
 
 # ── (o) v7.3 delta 4: the wall-clock budget re-derived from the LIVE 3.62 incl-startup cadence ──
-def test_wall_clock_budget_rederived_from_live_cadence(compiled):
-    """S5-H2: the DERIVED budget uses the LIVE incl-startup 3.62 min/ep anchor (was 3.1 steady-state),
-    so at 3000 ep the ceiling is ~8.67 days (7.54 anchor projection x 1.15 slack)."""
+def test_wall_clock_budget_rederived_from_amortized_cadence(compiled):
+    """SEAL v7.3 round-2 A2: the DERIVED budget uses the STARTUP-AMORTIZED 3000-ep cadence 3.39 min/ep
+    (was 3.62 = the ep~46-115 incl-startup rate that over-counted startup; the deepmath's 3.12 used the
+    untrusted r_ss=3.1 lower bound — run-1's MEASURED steady slope is 3.37, so amortized(3000)=3.39), so
+    at 3000 ep the ceiling is ~8.12 days (7.06 anchor projection x 1.15 slack)."""
     from tac.local_acceleration.scorer_throughput_gate import RUN1_MEASURED_MIN_PER_EP
-    assert RUN1_MEASURED_MIN_PER_EP == 3.62  # floored at the measured live cadence
+    assert RUN1_MEASURED_MIN_PER_EP == 3.39  # startup-amortized 3000-ep cadence (measured, not a bound)
     budget = compiled.to_launch_config().wall_clock_budget_days
-    assert 8.4 <= float(budget.value) <= 8.9  # ~8.67 days at 3000 ep
+    assert 7.9 <= float(budget.value) <= 8.3  # ~8.12 days at 3000 ep

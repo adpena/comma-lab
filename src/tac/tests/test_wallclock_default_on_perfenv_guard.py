@@ -121,8 +121,8 @@ def test_derive_budget_math_matches_anchor_times_slack():
     got = derive_wall_clock_budget_days(3000)
     want = project_wall_clock_days(RUN1_MEASURED_MIN_PER_EP, 3000) * WALL_CLOCK_SLACK_FACTOR
     assert got == pytest.approx(want)
-    # v7.3 delta 4 (S5-H2): 3.62 live incl-startup x 3000 / 1440 = 7.5417 anchor projection.
-    assert got == pytest.approx(7.5417 * WALL_CLOCK_SLACK_FACTOR, rel=1e-3)  # ~8.67 days at 3000 ep
+    # SEAL v7.3 round-2 A2: 3.39 startup-amortized x 3000 / 1440 = 7.0625 anchor projection.
+    assert got == pytest.approx(7.0625 * WALL_CLOCK_SLACK_FACTOR, rel=1e-3)  # ~8.12 days at 3000 ep
 
 
 def test_derive_budget_rejects_nonpositive_epochs():
@@ -131,13 +131,13 @@ def test_derive_budget_rejects_nonpositive_epochs():
         derive_wall_clock_budget_days(0)
 
 
-def test_v7_config_declares_a_derived_seven_day_budget():
+def test_v7_config_declares_a_derived_amortized_budget():
     from tac.witness_autoconfig import derive_crucible_v7_config
     c = derive_crucible_v7_config(_GT, num_pairs=600, epochs=3000,
                                   out_dir="experiments/results/__v7_budget_test__")
     from tac.witness_dsl.typed_config import ProvenanceClass
     assert c.wall_clock_budget_days.provenance is ProvenanceClass.DERIVED_AT_CONFIG
-    assert 8.4 <= c.budget_days_value() <= 8.9   # ~8.67 days at 3000 ep (v7.3 S5-H2 live-cadence re-anchor)
+    assert 7.9 <= c.budget_days_value() <= 8.3   # ~8.12 days at 3000 ep (SEAL v7.3 r2 A2 amortized re-anchor)
 
 
 # ── FIX 1c: the launcher budget resolver (pure, default-on) ─────────────────────────────
@@ -157,8 +157,8 @@ def test_resolve_uses_config_declared_when_no_accept():
 def test_resolve_falls_back_to_derived_when_nothing_declared():
     # DEFAULT-ON: a legacy config that declared no budget STILL gets a refuse ceiling.
     b, src, override = _lw.resolve_wall_clock_budget(accept_days=None, declared_days=None, epochs=3000)
-    # v7.3 delta 4: derived fallback now ~8.67 days (3.62 live incl-startup anchor x 3000 x 1.15 slack).
-    assert b == pytest.approx(8.67, rel=1e-2) and override is False and "fallback" in src.lower()
+    # SEAL v7.3 r2 A2: derived fallback now ~8.12 days (3.39 startup-amortized anchor x 3000 x 1.15 slack).
+    assert b == pytest.approx(8.12, rel=1e-2) and override is False and "fallback" in src.lower()
 
 
 def test_resolve_none_only_when_epochs_unknown_and_nothing_supplied():
@@ -201,7 +201,7 @@ def _fast_verdict(ms):
 def test_gate_refuses_over_budget_with_rc8(monkeypatch, tmp_path):
     import tac.local_acceleration.scorer_throughput_gate as stg
     # a bench of 500ms PASSES the 700ms absolute throughput gate (env present, "fast") but at 3000 ep
-    # projects ~8.15 days > the ~7.4-day derived fallback budget => REFUSE (fix #3 coupling).
+    # projects ~8.92 days (3.39x500/396 = 4.28 min/ep) > the ~8.12-day derived fallback => REFUSE (fix #3).
     monkeypatch.setattr(stg, "evaluate_throughput", lambda **kw: _fast_verdict(500.0))
     rc = _lw._run_throughput_gate(_StubCfg(3000), tmp_path, threshold_ms=None,
                                   accept_wall_clock_days=None)
@@ -266,6 +266,25 @@ def test_missing_perf_env_names_the_missing_var():
     assert missing_perf_env_vars(
         "TAC_MLX_CUSTOM_GROUPED_BACKWARD=0 TAC_MLX_CUSTOM_PERSISTENCE_POOL=1") == [
         "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1"]
+
+
+def test_perf_env_prefix_value_does_not_falsely_satisfy_the_guard():
+    """B4 REVISE-1 regression: the EXACT false-pass the bugs lens measured — a required ``NAME=1``
+    must NOT be satisfied by an emitted ``NAME=10`` (``"NAME=1"`` is a SUBSTRING of ``"NAME=10"`` under
+    the pre-fix ``not in text`` check). The token-boundary parse flags BOTH as missing."""
+    from tac.witness_dsl.typed_config import missing_perf_env_vars
+
+    req = {"TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1", "TAC_MLX_CUSTOM_PERSISTENCE_POOL": "1"}
+    ten = ("TAC_MLX_CUSTOM_GROUPED_BACKWARD=10 TAC_MLX_CUSTOM_PERSISTENCE_POOL=10 python x")
+    # pre-fix: substring match -> [] (falsely present). post-fix: both flagged missing.
+    assert missing_perf_env_vars(ten, req) == [
+        "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1", "TAC_MLX_CUSTOM_PERSISTENCE_POOL=1"]
+    # the exact value ``=1`` on a token boundary IS satisfied.
+    one = "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 TAC_MLX_CUSTOM_PERSISTENCE_POOL=1 python x"
+    assert missing_perf_env_vars(one, req) == []
+    # a value of which the required is a prefix in the OTHER direction (=100 vs required =10) is caught.
+    assert missing_perf_env_vars("N=100 x", {"N": "10"}) == ["N=10"]
+    assert missing_perf_env_vars("N=10 x", {"N": "10"}) == []
 
 
 # ── FIX 2: prefix-parity — BOTH to_command paths consume the ONE prefix (drift-impossible) ──

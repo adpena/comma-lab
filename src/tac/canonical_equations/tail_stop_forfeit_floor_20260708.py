@@ -111,7 +111,12 @@ def build_forfeit_matched_exit_v1() -> CanonicalEquation:
             reactivation_criteria="re-fit ν per-stage on any run whose schedule/mod differs from "
                                   "mod32cap (P-CT1 config-conditionality); promote to the "
                                   "s*_tail = ν(muon_fin)·forfeit_tail form once run-1 measures "
-                                  "the post-Muon forfeit_tail",
+                                  "the post-Muon forfeit_tail; AND (SEAL v7.3 round-2 MINOR) "
+                                  "re-measure ν on the v7.3 DirectionalBasisRebalance(lane_offloaded) "
+                                  "basis — the −48%-directional rebalance CHANGES the d_seg descent "
+                                  "rate, so ν(tau_softplus)=0.012653 (fit on the OLD starved "
+                                  "across=32/along=8 basis) is a STALE input to this tail-stop floor "
+                                  "(weakly forfeit too); the rebalanced-basis ν is the correct floor input",
             measurement_axis=_MLX_SIGNAL,
             hardware_substrate=_HW,
         ),
@@ -149,8 +154,11 @@ def build_forfeit_matched_exit_v1() -> CanonicalEquation:
             "vehicle": ["softmax_of_sdf_levelset_witness"],
             "measurement_axis": ["macOS-MLX research-signal"],
             "config_conditional": "ν is the mod32cap/this-schedule per-stage fit (P-CT1); re-fit on "
-                                  "config change. The FORM s*=ν·forfeit is regime-general (the TAIL "
-                                  "stage promotes to ν(muon_fin)·forfeit_tail once forfeit_tail lands)",
+                                  "config change — INCLUDING the v7.3 DirectionalBasisRebalance("
+                                  "lane_offloaded) basis, which changes the d_seg descent rate so the "
+                                  "OLD-basis ν is stale (SEAL v7.3 r2). The FORM s*=ν·forfeit is "
+                                  "regime-general (the TAIL stage promotes to ν(muon_fin)·forfeit_tail "
+                                  "once forfeit_tail lands)",
         },
         units_in={"nu": "S_per_epoch", "forfeit": "S"},
         units_out={"s_star": "S_per_epoch"},
