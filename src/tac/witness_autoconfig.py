@@ -932,6 +932,15 @@ class WitnessConfig:
                 # "anneal-epochs 600" law (tau(675) = tau(726) = 0.31 EXACTLY).
                 ("--anneal-epochs", d6["anneal_epochs"]),
                 ("--tau-hold-frac", d6["tau_hold_frac"]),
+                # AdamW LR leg (v6.4 MAJOR-2(ii) BUILD): the LR cosine is the THIRD shared-den
+                # sibling. Unlike β (LINEAR → endpoint-rephasable), a shallow den-3000 cosine cannot
+                # reproduce the control's deep den-1000 descent by endpoint (curvature differs), so
+                # LR gets its OWN denominator: --lr-anneal-epochs 1000 (the mod32cap control's den)
+                # reproduces the control LR(ep) on [1,726] BIT-IDENTICALLY (the ν/settle/s*/fire-band
+                # laws were measured at that annealed LR). --lr-hold-frac 1.0 = no hold (control's
+                # Muon freeze 726 < den 1000 => LR never held pre-freeze) = bit-identical cosine.
+                ("--lr-anneal-epochs", d6["lr_anneal_epochs"]),
+                ("--lr-hold-frac", d6["lr_hold_frac"]),
                 # F-DET (v6 fold 1): fused-R determinism; requires --mlx-device gpu (proven_base).
                 ("--fused-r-kernel", None),
                 # (v6.3 MAJOR-3) re-anchor leg of the event-triggered design: shift the TAU-RELATIVE
@@ -1351,6 +1360,20 @@ _CRUCIBLE_V6_DELTAS: dict = {
     #    E. LATENT HAZARD: if the Muon freeze ever becomes event-movable and fires past 726, β keeps
     #    climbing toward 10.0 (past the control's 4.0) — pin is safe ONLY while 726 is the fixed cap.
     "hosc_beta_end": 10.0,               # alb override: β-pin (family: 4.0) — reproduces control β(ep)
+    # ── AdamW LR leg (v6.4 seal-round-1 MAJOR-2(ii) BUILD — the RISK ROW resolved by the trainer
+    #    --lr-anneal-epochs / --lr-hold-frac build). The LR cosine is the THIRD shared-den sibling
+    #    (trainer L6628 read anneal_epochs), but unlike β (LINEAR → endpoint-rephasable) a shallow
+    #    den-3000 cosine CANNOT reproduce the control's deep den-1000 descent by endpoint alone (the
+    #    CURVATURE differs) — so the pin is a per-schedule DENOMINATOR SPLIT, not an endpoint. DERIVED-
+    #    AT-CONFIG: the mod32cap CONTROL ran LR at its own --epochs=1000 denominator (LR/lr_end/warmup =
+    #    the shared 1e-3/1e-4/1 defaults), so --lr-anneal-epochs 1000 reproduces the control LR(ep) on
+    #    [1,726] BIT-IDENTICALLY (max |Δ|/control = 0.0 over [1,726]; the ep650-best/ν/settle-237/s*/
+    #    fire-band laws were ALL measured at that annealed LR). --lr-hold-frac 1.0 = NO hold (the
+    #    control's Muon freeze at 726 < den 1000, so LR never held pre-freeze) = bit-identical cosine.
+    #    RE-DERIVE TRIGGER: any change to muon-start-epoch (the freeze point), --lr / --lr-end / --warmup-
+    #    epochs (the LR trio), or the control vehicle's denominator (1000).
+    "lr_anneal_epochs": 1000,            # trailing flag: LR-SPECIFIC cosine denominator (control den)
+    "lr_hold_frac": 1.0,                 # trailing flag: NO hold (control had none pre-Muon-freeze)
     # ── ABSOLUTE stage anchors (the seal round-2 assumption-challenge fix: the family SCALES
     #    fractions of --epochs (muon 0.726*3000 = 2178 WRONG); the mod32cap trace anchors are
     #    ABSOLUTE epochs — tau@300 / best~650 / fire~675 / Muon cap 726).
@@ -1445,16 +1468,23 @@ def derive_crucible_v6_config(
         --hosc-beta-anneal. LATENT HAZARD: β climbs toward 10.0 if the 726 freeze becomes event-movable.
       * muon_start_epoch 726 / tau_softplus_start_epoch 300 / min-stage 250 / band 350 / warmup 275:
         MEASURED-ANCHOR (mod32cap trace, ABSOLUTE epochs), config-conditional to this vehicle.
+      * lr schedule (lr_anneal_epochs 1000 / lr_hold_frac 1.0): DERIVED-AT-CONFIG — the LR cosine is
+        the THIRD shared-den sibling; a shallow den-3000 cosine cannot reproduce the control's deep
+        den-1000 descent by endpoint (curvature differs, unlike LINEAR β), so LR gets its OWN
+        denominator. --lr-anneal-epochs 1000 (the control's den) reproduces the control LR(ep) on
+        [1,726] BIT-IDENTICALLY; --lr-hold-frac 1.0 = no hold (control never held LR pre-freeze).
+        RE-DERIVE on any change to muon-start-epoch / --lr / --lr-end / --warmup-epochs / the control den.
 
-    KNOWN RESIDUAL — AdamW LR (v6.3 MAJOR-2(ii), RISK ROW, not pinned): the LR cosine ALSO shares
-    --anneal-epochs (trainer L6594) but has NO shape/hold/denominator flag to reshape it. At den 3000
-    the AdamW phase [1,726] runs at ~2.83× (fire ep675) to ~3.41× (freeze ep726) the control's LR (the
-    control genuinely annealed 1e-3 -> ~2.57e-4 over its den 1000; crucible stays near-peak ~8.9e-4).
-    A shallow den-3000 cosine arc CANNOT reproduce the control's deep den-1000 descent by endpoint
-    choice alone (the curvature differs) — a clean pin needs a TRAINER build item: an LR-specific
-    denominator split (e.g. --lr-anneal-epochs) or an --lr-hold-frac, ~15-20 LOC at L6586-6595. Until
-    then the ep650-best/ν/fire-band anchors (measured at the control's ANNEALED LR) carry a named
-    transfer risk; run-1 SC-7 per-stage d_seg re-measures on this vehicle. Config-conditional to den 3000.
+    RESOLVED-BY-BUILD — AdamW LR (v6.4, was the v6.3 MAJOR-2(ii) RISK ROW): the LR cosine used to share
+    --anneal-epochs (trainer L6628) with NO shape/hold/denominator flag, so at den 3000 the AdamW phase
+    [1,726] ran at 2.83× (fire ep675) → 3.41× (freeze ep726) the control's LR (the control genuinely
+    annealed 1e-3 → 2.57e-4 over its den 1000; the crucible stayed near-peak ~8.9e-4) — a 3× deviation
+    that STALED every control-derived window law (ν, settle 237, s*, fire band ep675). The v6.4 trainer
+    build (--lr-anneal-epochs + --lr-hold-frac, L6620) adds the LR-specific denominator split the pin
+    needs; --lr-anneal-epochs 1000 + --lr-hold-frac 1.0 now reproduces the control LR(ep) on [1,726]
+    BIT-IDENTICALLY (max |Δ|/control = 0.0), so those anchors are evaluated on the plant they were
+    measured on. Default-unset (no --lr-anneal-epochs, --lr-hold-frac 1.0) is byte-identical to the
+    pre-build trainer. See prov["lr_schedule"] for the derivation + re-derive triggers.
 
     means != ends: returns a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110
     from ``upstream/evaluate.py`` (contest-CPU/CUDA, NEVER MPS) moves the pointer.
@@ -1498,6 +1528,19 @@ def derive_crucible_v6_config(
         "slope match, ≤0.1% on [1,726]). RE-DERIVE on any change to muon-start-epoch / --anneal-epochs "
         "/ --hosc-beta-anneal. LATENT HAZARD: if the Muon freeze becomes event-movable past 726, β "
         "climbs toward 10.0 (past 4.0) — safe only while 726 is the fixed cap.", Portability.INSTANCE)
+    prov["lr_schedule"] = ProvenancedValue(
+        {"lr_anneal_epochs": d6["lr_anneal_epochs"], "lr_hold_frac": d6["lr_hold_frac"]}, SRC_DERIVED,
+        "v6.4 MAJOR-2(ii) DERIVED-AT-CONFIG (the RISK ROW resolved by the trainer --lr-anneal-epochs / "
+        "--lr-hold-frac build): the LR cosine is the THIRD shared-den sibling (trainer L6628). Unlike β "
+        "(LINEAR → endpoint-rephasable), a shallow den-3000 cosine cannot reproduce the control's deep "
+        "den-1000 descent by endpoint alone (the curvature differs) — so LR gets its OWN denominator. "
+        "The mod32cap CONTROL ran LR at its --epochs=1000 den with the shared 1e-3/1e-4/1 LR trio, so "
+        "--lr-anneal-epochs 1000 reproduces the control LR(ep) on [1,726] BIT-IDENTICALLY (max |Δ|/"
+        "control = 0.0 over [1,726]; the ep650-best/ν/settle-237/s*/fire-band laws were measured at "
+        "that annealed LR — this pin STALE-PROOFS them). --lr-hold-frac 1.0 = NO hold (the Muon freeze "
+        "726 < den 1000, so the control never held LR pre-freeze) = bit-identical cosine. RE-DERIVE on "
+        "any change to muon-start-epoch / --lr / --lr-end / --warmup-epochs / the control den 1000.",
+        Portability.INSTANCE)
     prov["muon_start_epoch"] = ProvenancedValue(
         int(d6["muon_start_epoch"]), SRC_RECALLED,
         "v6 §2.2f: ABSOLUTE Muon fail-safe cap 726 (mod32cap trace anchor; fire band [670,700] "
@@ -1513,11 +1556,14 @@ def derive_crucible_v6_config(
         dict(d6), SRC_DESIGN,
         "DRAFT_OPTIMAL_STACK_v6 §1.1/§1.4a/§2.2f-g pins: F-DET fused-R + β-pin (hosc-beta-end 10.0) + "
         "re-anchor levers + min-stage 250 + ChromaBoundarySharpen(0.1, band 1.0, start 300 absolute) "
-        "+ AA ipe + band 350 + persistence warmup 275; DSL levers composed: "
+        "+ AA ipe + band 350 + persistence warmup 275 + LR-pin (lr-anneal-epochs 1000, lr-hold-frac "
+        "1.0); DSL levers composed: "
         + ", ".join(_CRUCIBLE_V6_DSL_LEVERS) + ". Pose block INHERITED from store_nothing_205 "
         "(MAJOR-A2 pin; #314 drift guard). v6.3 seal-round-1: dropped --curriculum-plateau-windows "
-        "(wrong surface, MAJOR-1); pinned β (MAJOR-2(i)); AdamW LR carried as a RISK ROW (MAJOR-2(ii), "
-        "no flag-level rephasing).", Portability.INSTANCE)
+        "(wrong surface, MAJOR-1); pinned β (MAJOR-2(i)). v6.4: AdamW LR RISK ROW RESOLVED-BY-BUILD "
+        "(MAJOR-2(ii) — --lr-anneal-epochs 1000 + --lr-hold-frac 1.0 reproduce the control LR(ep) on "
+        "[1,726] bit-identically; the trainer build added the LR-specific denominator split).",
+        Portability.INSTANCE)
     return replace(
         base,
         crucible_v6=True,

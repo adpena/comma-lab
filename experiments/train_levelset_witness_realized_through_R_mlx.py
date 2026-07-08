@@ -2386,6 +2386,33 @@ def _softmax_temp_for_epoch(ep: int, args) -> float:
     return float(end + 0.5 * (start - end) * (1 + np.cos(np.pi * prog_t)))
 
 
+def _lr_scheduled_for_epoch(ep: int, args, lr_anneal_epochs: int) -> float:
+    """(config-review C2 sibling) Base LR schedule at 1-based epoch ``ep`` (warmup -> cosine[/hold]),
+    BEFORE the stage-rewarmup and rollback multipliers. Pure (no model/MLX/opt); unit-tested. Mirrors
+    ``_softmax_temp_for_epoch``'s cosine_hold form.
+
+    ``lr_anneal_epochs`` is the (possibly LR-SPECIFIC) cosine denominator: the τ + hosc-β anneals both
+    read the SHARED ``--anneal-epochs`` (trainer L2334/L2370), but the LR cosine got NO independent
+    denominator until this build. The caller passes ``args.lr_anneal_epochs or anneal_epochs`` so a
+    control-reproduction / warm-start arm can reshape LR(ep) WITHOUT perturbing τ/β.
+
+    BIT-IDENTICAL to the pre-build inline formula (L6587-6595) when ``--lr-anneal-epochs`` is unset
+    (=> ``lr_anneal_epochs == anneal_epochs``) AND ``--lr-hold-frac == 1.0`` — the #1 default-off gate:
+    ``_lrhf >= 1.0`` skips both hold branches and routes through the SAME final cosine line, and no
+    ``float()`` cast is added to the arithmetic path (``float(args.x) == args.x`` for argparse floats).
+    ``--lr-hold-frac < 1.0`` reaches ``--lr-end`` at ``prog >= hold_frac`` and HOLDS there, which also
+    CLAMPS the past-denominator cosine rebound (the L2371/L2386 unclamped-prog hazard) for LR."""
+    if ep <= args.warmup_epochs:
+        return args.lr * ep / max(args.warmup_epochs, 1)
+    prog = (ep - args.warmup_epochs) / max(lr_anneal_epochs - args.warmup_epochs, 1)
+    _lrhf = float(getattr(args, "lr_hold_frac", 1.0))
+    if _lrhf < 1.0:
+        if prog >= _lrhf:
+            return args.lr_end                # held at the floor for the tail of the window
+        prog = prog / _lrhf                    # rescale [0,hold_frac)->[0,1); falls through to cosine
+    return args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
+
+
 def _stage_rewarmup_factor(
     ep: int, last_boundary_epoch: "int | None", rewarmup_epochs: int, floor: float, shape: str,
 ) -> float:
@@ -6070,6 +6097,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # args.epochs => the LR cosine below is BIT-IDENTICAL. A warm-start arm sets it to the ORIGINAL
     # schedule (e.g. 1500) so resuming the CE ckpt @ ep299 reproduces the DISEASE regime, not the tail.
     anneal_epochs = int(args.anneal_epochs) if getattr(args, "anneal_epochs", None) else int(args.epochs)
+    # (config-review C2 sibling) LR-SPECIFIC cosine denominator: decouples the LR anneal from the
+    # SHARED anneal_epochs (which also drives τ + hosc-β). Default None => falls back to anneal_epochs
+    # => the LR cosine below is BIT-IDENTICAL. A control-reproduction / warm-start arm sets
+    # --lr-anneal-epochs to the ORIGINAL LR schedule length so LR(ep) matches the plant the window
+    # laws were measured on (the crucible pins it to the mod32cap control's den 1000).
+    lr_anneal_epochs = (int(args.lr_anneal_epochs)
+                        if getattr(args, "lr_anneal_epochs", None) else anneal_epochs)
     muon_lr_eff = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
     muon_adamw_lr_eff = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
     muon_wd_eff = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
@@ -6584,15 +6618,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # children own their own LRs (setting opt.learning_rate would not reach them). Default
             # (no --muon-start-epoch) => muon_switched False => identical to before (BIT-IDENTICAL).
             if args.lr_schedule and not muon_switched:
-                if ep <= args.warmup_epochs:
-                    lr = args.lr * ep / max(args.warmup_epochs, 1)
-                else:
-                    # (review C2) cosine denominator = anneal_epochs (schedule length), NOT args.epochs
-                    # (run length). anneal_epochs defaults to args.epochs => BIT-IDENTICAL; a warm-start
-                    # arm sets --anneal-epochs to the ORIGINAL schedule so the post-resume LR matches the
-                    # disease regime (~0.9*peak at ep300/1500) instead of the run-length tail.
-                    prog = (ep - args.warmup_epochs) / max(anneal_epochs - args.warmup_epochs, 1)
-                    lr = args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
+                # (config-review C2 sibling) warmup -> cosine[/hold] via the pure helper. The cosine
+                # denominator is lr_anneal_epochs (--lr-anneal-epochs or the shared anneal_epochs);
+                # --lr-hold-frac < 1.0 reaches --lr-end early and HOLDS (clamping the unclamped-prog
+                # rebound). Default-off (--lr-anneal-epochs unset AND --lr-hold-frac 1.0) => lr equals
+                # the pre-build inline formula EXACTLY (anneal_epochs denominator, plain cosine).
+                lr = _lr_scheduled_for_epoch(ep, args, lr_anneal_epochs)
                 # BUILD 1 (FEED-fw): stage-transition LR re-warmup. DEFAULT-OFF
                 # (--stage-transition-rewarmup-epochs 0) => _rw is EXACTLY 1.0 => lr*1.0 == lr =>
                 # BIT-IDENTICAL. After a registered AdamW->AdamW boundary, ramp the scheduled LR up
@@ -7431,6 +7462,19 @@ def main(argv: list[str] | None = None) -> int:
                     "--muon-start-epoch) when --ema-decay-finisher is set.")
     ap.add_argument("--lr-schedule", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--warmup-epochs", type=int, default=1)
+    # (config-review C2 sibling) LR-SPECIFIC cosine denominator + hold, decoupling the LR anneal from
+    # the SHARED --anneal-epochs (which drives τ + hosc-β). WHY: τ/β can be re-phased by endpoint
+    # choice (linear) or cosine_hold, but a shallow shared-denominator cosine CANNOT reproduce a
+    # deeper LR descent by endpoint alone (the curvature differs) — so LR needs its OWN denominator.
+    ap.add_argument("--lr-anneal-epochs", type=int, default=None,
+                    help="LR cosine denominator (schedule length). Default None => falls back to "
+                    "--anneal-epochs (or --epochs) => BIT-IDENTICAL. A control-reproduction / warm-"
+                    "start arm sets it to the ORIGINAL LR schedule length so LR(ep) matches the plant "
+                    "the window laws were measured on.")
+    ap.add_argument("--lr-hold-frac", type=float, default=1.0,
+                    help="fraction (0,1] of the LR anneal window at which the cosine reaches --lr-end, "
+                    "then HOLDS (mirrors --tau-hold-frac). 1.0 (DEFAULT) = NO hold = bit-identical "
+                    "cosine; < 1.0 also CLAMPS the past-denominator cosine rebound for LR.")
     ap.add_argument("--w-seg", type=float, default=100.0)
     # (fix g) DROP pose-from-texture (the COLLAPSED amortized carrier, d_pose 2.67-12.66). Pose is
     # SOLVED by the Quantizr stored-pose sidecar (3.4e-5); the witness's ONLY binding job is d_seg.
@@ -8506,6 +8550,22 @@ def main(argv: list[str] | None = None) -> int:
                               "WARM-START window (resume mid-schedule); verify this is what you want."}),
                   flush=True)
 
+    # (config-review C2 sibling) --lr-anneal-epochs guard: must be >= 1 when set (it is the LR cosine
+    # DENOMINATOR). None (default) => no guard fires => bit-identical. WARN (not fail) when it is below
+    # --epochs (the anneal completes before the run ends; legal for a control-reproduction arm where
+    # the muon finisher freezes the LR before the denominator anyway, usually a mistake otherwise).
+    if getattr(args, "lr_anneal_epochs", None) is not None:
+        if args.lr_anneal_epochs < 1:
+            raise ValueError(
+                f"--lr-anneal-epochs ({args.lr_anneal_epochs}) must be >= 1 (LR cosine denominator).")
+        if args.lr_anneal_epochs < args.epochs:
+            print(json.dumps({"stage": "lr_anneal_epochs_WARN",
+                              "lr_anneal_epochs": int(args.lr_anneal_epochs), "epochs": int(args.epochs),
+                              "msg": "--lr-anneal-epochs < --epochs: the LR cosine completes BEFORE the "
+                              "run ends; the tail runs at --lr-end (or held per --lr-hold-frac). Intended "
+                              "for a control-reproduction / warm-start arm; verify this is what you want."}),
+                  flush=True)
+
     # (fix d) curriculum boundaries must be strictly ordered and fit inside the budget, else the
     # tau_softplus / l7 stages silently never run (or run for ~0 epochs) -> untrustworthy d_seg.
     if args.curriculum:
@@ -8670,6 +8730,10 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError(
             f"--tau-hold-frac ({args.tau_hold_frac}) must be in (0, 1] (the fraction of the anneal "
             "window at which cosine_hold reaches the floor; 1.0 = no hold = bit-identical cosine).")
+    if not (0.0 < args.lr_hold_frac <= 1.0):
+        raise ValueError(
+            f"--lr-hold-frac ({args.lr_hold_frac}) must be in (0, 1] (the fraction of the LR anneal "
+            "window at which the cosine reaches --lr-end; 1.0 = no hold = bit-identical cosine).")
 
     # (THETA* TIER-2 MUST-2) nuclear-norm penalty fail-closed guards.
     if args.code_nuclear_weight < 0.0:

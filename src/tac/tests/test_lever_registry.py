@@ -19,6 +19,25 @@ def test_factories_discovered_include_tuple_composite():
     assert facs["DM1Minimal"], "DM1Minimal should carry its delegated flags, not be empty"
 
 
+def test_lr_anneal_pin_factory_holds_true_flag_spellings():
+    """v6.4 triality: the LR-pin trainer lever lands as a DSL Lever factory (not a hand-added
+    trainer flag). The AST scan must discover LrAnnealPin carrying the TRUE flag spellings, and
+    the two flags must move from unmapped (a gap) into mapped (the DSL now holds them)."""
+    facs = LR.lever_factories()
+    assert "LrAnnealPin" in facs, "LrAnnealPin factory not discovered by the AST scan"
+    assert {"--lr-anneal-epochs", "--lr-hold-frac"} <= facs["LrAnnealPin"], facs["LrAnnealPin"]
+    # the factory emits real flags that parse through the real trainer argparse (never-invent-flags)
+    from tac.witness_dsl.curriculum_dsl import LrAnnealPin, real_trainer_flags
+    lv = LrAnnealPin()
+    assert set(lv.overrides) == {"--lr-anneal-epochs", "--lr-hold-frac"}
+    real = real_trainer_flags()
+    assert set(lv.overrides) <= real, "LrAnnealPin emits a flag absent from the trainer argparse"
+    # and the coverage moved: both flags are now MAPPED, not UNMAPPED
+    c = LR.completeness()
+    assert {"--lr-anneal-epochs", "--lr-hold-frac"} <= set(c.mapped)
+    assert "--lr-anneal-epochs" not in c.unmapped and "--lr-hold-frac" not in c.unmapped
+
+
 def test_program_constructors_excluded_from_levers():
     facs = LR.lever_factories()
     assert "sealed_205_program" not in facs

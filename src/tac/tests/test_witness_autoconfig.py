@@ -706,6 +706,74 @@ def test_crucible_v6_beta_pin_reproduces_control_trajectory():
     assert abs(_beta_law(726, start=1.0, end=4.0, anneal_epochs=ae, shape="cosine") - 1.4122) < 1e-3
 
 
+def _load_trainer_module():
+    """Lazily import the trainer module (0.1s; main() is __main__-guarded, no MLX init at import)
+    to test the REAL _lr_scheduled_for_epoch — the strongest byte-identity guard (not a replica)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_tlw_lr_test", _TRAINER)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class _LrArgs:
+    """Minimal args namespace for _lr_scheduled_for_epoch (the LR trio + warmup + hold-frac)."""
+    def __init__(self, lr=1e-3, lr_end=1e-4, warmup_epochs=1, lr_hold_frac=1.0):
+        self.lr = lr
+        self.lr_end = lr_end
+        self.warmup_epochs = warmup_epochs
+        self.lr_hold_frac = lr_hold_frac
+
+
+def _lr_inline(ep: int, ae: int, a: "_LrArgs") -> float:
+    """The PRE-BUILD inline LR formula (warmup -> plain cosine at denominator ``ae``), reproduced
+    here so the default-off byte-identity test compares the real helper against the exact prior code."""
+    if ep <= a.warmup_epochs:
+        return a.lr * ep / max(a.warmup_epochs, 1)
+    prog = (ep - a.warmup_epochs) / max(ae - a.warmup_epochs, 1)
+    return a.lr_end + 0.5 * (a.lr - a.lr_end) * (1 + np.cos(np.pi * prog))
+
+
+def test_lr_scheduled_default_off_is_bit_identical():
+    """DEFAULT-OFF gate: --lr-anneal-epochs unset (=> lr_anneal_epochs == the shared anneal_epochs)
+    AND --lr-hold-frac 1.0 => the real _lr_scheduled_for_epoch equals the pre-build inline cosine
+    EXACTLY over the full run [1,3000] (both warmup and cosine branches). Byte-identical == max |Δ|=0."""
+    m = _load_trainer_module()
+    a = _LrArgs(lr_hold_frac=1.0)
+    for ae in (1000, 3000):
+        maxd = max(abs(m._lr_scheduled_for_epoch(ep, a, ae) - _lr_inline(ep, ae, a))
+                   for ep in range(1, 3001))
+        assert maxd == 0.0, f"default-off not bit-identical at den {ae}: max|Δ|={maxd}"
+
+
+def test_crucible_v6_lr_pin_reproduces_control_trajectory():
+    """v6.4 MAJOR-2(ii) BUILD: the emitted LR pin (--lr-anneal-epochs 1000, --lr-hold-frac 1.0) run
+    through the REAL trainer helper must reproduce the mod32cap CONTROL's LR(ep) on [1,726]
+    BIT-IDENTICALLY (the ν/settle-237/s*/fire-band laws were measured at that annealed LR). Control =
+    mod32cap: den 1000 (= its --epochs), lr/lr_end/warmup = the shared 1e-3/1e-4/1 defaults. The
+    un-pinned shared den 3000 is the anti-target: it runs the AdamW phase at 2.83× (ep675) → 3.41×
+    (ep726) the control LR (the 3× deviation that staled the window laws)."""
+    m = _load_trainer_module()
+    fd = _parse_flag_dict(_crucible_cfg().to_trainer_flags("OUT"))
+    # the LR pin tokens EXIST and are explicit (the v6.3 residual was: no LR denominator flag at all)
+    assert fd["--lr-anneal-epochs"] == "1000"
+    assert fd["--lr-hold-frac"] == "1.0"
+    # the LR trio is the shared default (so den-split ALONE reproduces control); guard it
+    assert float(fd["--lr"]) == 1e-3 and float(fd["--lr-end"]) == 1e-4
+    lr_ae = int(fd["--lr-anneal-epochs"])
+    a = _LrArgs(lr=float(fd["--lr"]), lr_end=float(fd["--lr-end"]),
+                lr_hold_frac=float(fd["--lr-hold-frac"]))
+    ctrl = _LrArgs(lr=1e-3, lr_end=1e-4, warmup_epochs=1, lr_hold_frac=1.0)  # mod32cap defaults
+    # BIT-IDENTICAL to the control on [1,726] (the anchor band the window laws were measured on)
+    maxd = max(abs(m._lr_scheduled_for_epoch(ep, a, lr_ae) - _lr_inline(ep, 1000, ctrl))
+               for ep in range(1, 727))
+    assert maxd == 0.0, f"LR pin not bit-identical to control on [1,726]: max|Δ|={maxd}"
+    # anti-target: the shared den 3000 deviates 2.6-3.4× across the fire->freeze band (the RISK ROW)
+    for ep, lo, hi in ((675, 2.6, 3.0), (726, 3.3, 3.5)):
+        ratio = (m._lr_scheduled_for_epoch(ep, a, 3000) / _lr_inline(ep, 1000, ctrl))
+        assert lo < ratio < hi, f"ep{ep} shared-den/control ratio {ratio:.3f} outside [{lo},{hi}]"
+
+
 def test_crucible_v6_pose_block_pinned():
     """MAJOR-A2 + #314 guard: the pose leg is pinned AT the config surface (inherited
     structurally from store_nothing_205, asserted here so inheritance drift is a test failure,
@@ -732,6 +800,8 @@ def test_crucible_v6_knob_pins_and_dsl_levers_materialize():
     assert fd["--hosc-beta-end"] == "10.0"                      # v6.3 MAJOR-2(i) β-pin
     assert fd["--hosc-beta"] == "1.0"                           # start (inherited); shape linear
     assert fd["--hosc-beta-anneal"] == "linear"
+    assert fd["--lr-anneal-epochs"] == "1000"                  # v6.4 MAJOR-2(ii) LR-pin (control den)
+    assert fd["--lr-hold-frac"] == "1.0"                       # v6.4 LR-pin: no hold (bit-identical)
     assert fd["--curriculum-event-triggered"] is True           # handoff="event"
     assert fd["--curriculum-nucleus-guard"] is True
     assert fd["--seg-chroma-boundary-weight"] == "0.1"          # ChromaBoundarySharpen
