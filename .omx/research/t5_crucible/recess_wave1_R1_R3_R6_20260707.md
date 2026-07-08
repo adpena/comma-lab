@@ -91,6 +91,41 @@ config (ipe or ndf=2-with-measured-margin) goes to GO.
 **Unblocks:** the F4 AA-in decision (now DERIVED with measured cost, exactly what F4 demanded
 either way) + §8's s/ep base re-projection is scoped to the surviving AA form.
 
-## R1 — P5 LBND4-on-smoothed probe — PENDING (checkpoint 1 committed before start)
+## R1 — P5 LBND4-on-smoothed source ($0, ~23 s wall)
+
+**Command:** scratchpad probe (reproducible: same build path as the measured artifact —
+`build_lane_band_pairs_from_lstars(gt_n600 lstars)` → `temporal_smooth_pairs_lines(win)` →
+`lane_band_res_rate_report`); artifact written to
+`experiments/results/lane_band_res_coder_20260707/lbnd4_on_smoothed_r1_measured.json`.
+
+**Measured numbers** [macOS-CPU advisory; brotli q11 counted bytes — the exact byte-close
+5th-block quantity]:
+
+| source | LBND2 (B) | LBND4 best (B) | scheme | rate term | decode-reencode identical |
+|---|---:|---:|---|---:|---|
+| raw (re-run) | **41,526** | 30,892 | varint | 0.02057 | true (prior artifact) |
+| smoothed win=5 | 28,050 | 20,827 | varint | 0.01387 | **FALSE (all 3 schemes)** |
+| smoothed win=9 | 26,260 | **18,832** | varint | 0.01254 | **true (all 3 schemes)** |
+
+**Verdict vs pre-registered band (18-22 KB; kill ≥24,149):** **PASS.** Both smoothing windows
+land INSIDE the predicted band (18,832 / 20,827) and well under the kill. The band-coder min
+is now MEASURED at 18,832 B (win9) — vs §5.1's P5 tail placeholder 18,000, i.e. the tail was
+832 B optimistic; the §5.1 band component central 30,892 has a measured −12,060 B smoothed
+option (rate −0.0080).
+
+**Flag (one investigative sentence owed before shipping win5):** at win=5 the
+decode→re-encode identity FAILS for all three schemes (quantized smoothed values likely
+sitting on bin edges); win=9 round-trips bit-exact AND is smaller — win9 is the admissible
+config; win5 is quarantined until the identity defect is explained.
+
+**F16ii RESOLVED:** the LBND2 re-measure gives **41,526** (S4/S5's number); the S6/draft
+figure 41,562 was the stale seat. The v2 §5.1 worst-joint tail should re-print with 41,526
+(−36 B; direction favorable, arithmetic unchanged at the printed precision).
+
+**Caveat inherited from the coder header:** smoothing is a LOSSY geometry change; whether the
+smoothed band NETS lower S is the trained-with d_seg leg (P8/F8), out of R1's scope —
+pre-registered that way.
+
+**Unblocks:** band-coder min for the §0.2 crossing rate legs + F16ii closed.
 
 ## R6 — P7 n600 realized-parity row — PENDING
