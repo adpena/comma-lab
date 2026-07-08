@@ -47,7 +47,16 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 - [x] P3b debate round(s) — v2 REVISION landed (305d884ce); second red-team verify pass launched
 - [ ] P4 EMPIRICAL RECESS (measurable disputes → n600-real data; HVP-Lanczos first; serial, governed)
 - [ ] P5 revised synthesis (the draft, amended by recess results; survives second red-team pass)
-- [ ] P6 #363 self-reflection seal (assumption tags; PROVISIONAL where unmeasured)
+- [ ] P6 **RECURSIVE SEAL (operator 2026-07-07: "recursive adversarial review and deep math pass
+      like normal")**: TWO LENSES per round — (i) the finding-disposition VERIFY pass + (ii) the
+      DEEP-MATH MEAT HUNT (re-derive every law · hunt unconsumed levers vs the compendium · bug
+      hunt the config-as-written · fresh-math sweep). Findings at either lens → revision → NEW
+      round, counter RESETS. **SEAL = 3 consecutive clean rounds across BOTH lenses** (per the
+      canonical 3-clean-pass protocol + tac.review_counter). Then the #363 self-reflection seal
+      (assumption tags; PROVISIONAL where unmeasured). Round 1: verify pass + meat hunt BOTH in
+      flight on v2. Also pinned to both: the lane-anisotropy scope guard (u_min-isotropic is
+      lane-BLIND — measured at a lane-less checkpoint; must not be cited against anisotropic
+      allocation levers).
 - [ ] P7 deliverables 1-7 assembled (DSL WitnessProgram · ledger resolution · schedule ·
       costate · curriculum · measurement plan · wall-clock plan) — triality-consistent landing
 
@@ -384,3 +393,13 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   u_min ISOTROPIC → no cheap spectral descent at ep650; TerminalSolve-from-ep650 measured NO-GO;
   SOLVE branch = measured-acceptance HARD. **P5 SECOND RED-TEAM PASS LAUNCHED** (verify each
   F1-F17 disposition + regression/interaction/launch-readiness).
+- 2026-07-07T~21:5x OPERATOR: standard recursive review + deep-math pass demanded → DEEP-MATH
+  MEAT HUNT launched as lens 2 (re-derive laws: anneal-completion guarantee, adaptive-ε clamps,
+  1-Lipschitz easing, logit-adjust constants, dual-band arithmetic, byte sums · meat vs the full
+  compendium universe: chroma-annulus, #207 $0 decode-side winners, #149, hood clamp, persistence
+  ORDER, per-class couplings · bug hunt: cadence arithmetic, flag existence, λ=0 twin validity,
+  worst-case memory, AA×band pixel-write seam · fresh math: Fisher trust-region metric,
+  persistence-weighted loss, τ-ħ endgame, #288 OT). P6 upgraded to RECURSIVE SEAL (3 clean rounds
+  × 2 lenses). Lane-anisotropy scope pin delivered to P5 verifier (operator: "lane is anisotropic"
+  — the u_min-isotropic negative is measured at a LANE-LESS checkpoint, structurally blind to the
+  signal-level lane anisotropy; category error if cited against Rebalance/comb/band/along-tangent).
