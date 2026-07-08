@@ -2192,3 +2192,10 @@ consumer update required — asserted [consumers-generic]. ---
   on builder test + digest (my API re-verify hit wrong names — reconcile in #332); 123 unmapped /
   26 designed pre-existing #332 gap (score-relevant levers not costate-visible) — NOT a v7.5
   regression, NOT a seal blocker, routed to #332. SPEC_v75 §10 records it honestly.
+- **P0 COSTATE WIRING VERIFIED (Opus, correct module)**: the #363 caveat was my API-naming error
+  (queried lever_registry, not activation_ledger). MEASURED in tac.witness_dsl.activation_ledger:
+  all 5 new levers (3 P0 forces + AreaConstraintBirth + BirthCompletionEvent) in known_levers(51)
+  + duty_to_measure(50 owed) + never_fired(50) — which is precisely what costate_digest reads at
+  SessionStart ⇒ the costate controller surfaces/ranks/nags them. Operator's "P0 wired into DSL +
+  triality + costate + tasks" = CONFIRMED on all four axes. #332 gap (older non-factory levers)
+  is DISTINCT + stands. SPEC_v75 §10 upgraded caveat→VERIFIED.

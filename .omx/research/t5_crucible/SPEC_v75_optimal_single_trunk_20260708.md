@@ -181,12 +181,14 @@ VERIFIED (registry/composition axis): all 6 new levers are DSL `Lever` factories
 MarginBandSatisficing · TieLocusDisplacement); crucible_v7 composes AreaConstraintBirth +
 BirthCompletionEvent ON (autoconfig L2394/L2405), the 3 P0 forces ABSENT from composition
 (default-off per §9) — MEASURED in-source, not asserted.
-NOT INDEPENDENTLY VERIFIED (activation-ledger axis): the duty-to-measure surface exists (the
-SessionStart costate digest prints it) and the P0 builder's `test_activation_ledger_holds_all_
-three_with_duty_to_measure` asserts the 3 forces are in it, BUT an independent API re-verify hit
-wrong entry-point names (no `LR.known_levers()`/`duty_to_measure()`) — the costate-ranking of the
-NEW levers rests on the builder's test + the digest, not on my re-derivation. Reconcile the
-entry point in #332.
+VERIFIED (activation-ledger / costate axis) — RESOLVED 2026-07-08: my first re-verify queried the
+WRONG module (`lever_registry`); the correct entry point is `tac.witness_dsl.activation_ledger`.
+Measured there: `known_levers()`=51 includes ALL 5 new levers; `duty_to_measure()`=50 owed
+includes ALL 5; `never_fired()` includes ALL 5 (correct — default-off, no run has fired them).
+This is exactly what `tools/costate_digest.py::section_duty_to_measure` reads at SessionStart ⇒
+the costate controller SURFACES, RANKS, and NAGS the P0 forces + counter-force levers.
+Independently confirmed by me, not just the builder test. (The #332 gap is DISTINCT: it is the
+older non-factory levers absent from activation_ledger; the NEW levers are fully wired.)
 PRE-EXISTING GAP (routed to #332, NOT a v7.5 regression, NOT a seal blocker): completeness().
 unmapped = 123 flags; **26 are genuine designed levers** (--logit-adjust-classes,
 --persistence-classes, --*-start-event gates, --closed-loop-*, --curriculum-reanchor-levers,
