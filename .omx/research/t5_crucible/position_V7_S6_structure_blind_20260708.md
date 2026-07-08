@@ -143,4 +143,82 @@ ONE continuous variational level-set flow in one parameter τ, with geometric ev
 
 **NO discrete loss-form stages, NO fixed proportional boundaries, NO PR95 stage names in the derived structure.** The
 only "stages" are geometric events (nucleation births; the conditioning switch) read off the flow's own state.
-— END §PHASE-1 (committed BEFORE any v7-authored doc opened).
+— END §PHASE-1 (committed at `51a12cca2` BEFORE any v7-authored doc opened).
+
+---
+
+# §PHASE-2 — COMPARISON vs v7-as-authored (element-by-element; divergence = REVISE)
+
+## STORES CONSULTED — PHASE 2 (opened ONLY after the Phase-1 commit; this separation IS the blinding evidence)
+`.omx/research/t5_crucible/crucible_v7_authored_20260708.md` (diff-vs-v6 table, wiring-gap list,
+council_pending knobs) · `DRAFT_v7_restart_config_synthesis_20260708.md` (§1 resolutions, §2 spine, §4 A/B) ·
+`CONVENING_T3_v7_design_symposium_20260708.md` (the question + seat contract). NOT re-opened: position_S2,
+DRAFT_OPTIMAL_STACK_v*, ORCHESTRATION_LEDGER, other position_V7_S* (blinding preserved beyond the required reads).
+
+## The element-by-element table
+
+| # | Derived (§PHASE-1, BLIND) | v7-as-authored | Verdict |
+|---|---|---|---|
+| **E1 loss** | ONE `L_τ=τ·CE(φ/τ)`, no discrete stages | `--seg-form-unify-tau`; `--tau-softplus-start-epoch`+`--l7-start-epoch` DELETED | **CONVERGENT** (vindicated — the decisive PR95-skeleton removal, derived independently both ways) |
+| **E2 shape** | geometric + β↑ co-anneal, both frozen at finisher | `--tau-anneal-shape geometric`; β-end 10.0 (4→10) UNCHANGED, frozen at muon | **CONVERGENT** |
+| **E3 floor** | resolution-scale COUPLE `(τ_end∈[~0.3,~1.0], eikonal≈0.05 annealed-UP-late)`; eikonal-CONTINGENT, not a bare constant | τ*=**0.31** MEASURED-ANCHOR; eikonal weight NOT in the v7 diff (carries v6 UNCHANGED) | **CONVERGENT on finite-floor + 0.31-as-anchor; DERIVATION-EXTRA on the eikonal-contingency → R1** |
+| **E4 tail** | MONOTONE Langevin-cooling (LR/noise ↓) to lower the flicker-floor VARIANCE | `--tail-*` k_max=**2** CYCLIC warm-restart, tau-halving 0.5, lr-prop-tau 1.0, stop-marginal 1e-4 | **lr-prop-tau cooling CONVERGENT; the CYCLIC warm-restart is V7-EXTRA → R3** |
+| **E5 τ-advance** | SELF-TRIGGERED on per-scale relaxation (plateau⇒advance); ONE continuation param at a time | render-τ clock-geometric over fixed anneal-epochs; `--curriculum-event-triggered` now governs the DISSOLVED CE→tau boundary | **DERIVATION-EXTRA (self-trigger absent) → R4; orphaned-sensor → R5** |
+| **E6 LADDER** | persistence-ordered nucleation births {static→road→movable→lane} + per-class area `λ_k` + per-pair `σ_ij`(Lane/Mov≈0) | `--ladder-island-homotopy` + movable dilation-GO + lane curve-prior + per-class λ_c (#315-gated) + fitted σ_ij matrix; uniform-amplify never emitted | **CONVERGENT + BUILT** (vindicated; λ_c #315 critical-nucleus IS the persistence-birth gate) |
+| **E7 Muon** | fire when finest-scale/ill-conditioned (saddle-escape) AND nucleation-complete; OUTSIDE τ; can't-nucleate; warm-momentum-forgiving | `--muon-start-epoch 726` FIXED (FAIL_SAFE_CAP); warm-start+lr-final-frac 0.1; powerlaw_meat→muon EVENT is an OWED build | **direction/gentleness/placement CONVERGENT; the event-trigger is DERIVATION-EXTRA, only OWED → R2** |
+
+## REVISE findings (divergences — by contract, not rationalized)
+- **R1 (HIGHEST — the floor is eikonal-contingent, and 0.31 may be sub-resolution).** My blind D3 makes the floor a
+  COUPLE, not a scalar: `width = τ/(2|∇m|)`, so τ*=0.31 is a *controlled* interface half-width (0.155px) ONLY if the
+  eikonal enforces `|∇m|≈1`. v7 leaves eikonal UNCHANGED (not in the diff) → if it carries v6's under-enforced value
+  the "0.31 floor" is an uncontrolled, schedule-decoupled width and the geometric anneal's floor spec is meaningless.
+  Also 0.155px is ~6× below the ~1px annulus/R-blur scale ⇒ pure-MM Deriv-2 says the resolution floor is HIGHER
+  (float τ_end up, or raise eikonal so the width is genuinely pinned). **REVISE:** declare the floor as `(τ_end,
+  eikonal_weight, eikonal-late-anneal)` and CONFIRM the Kneedle 0.31 was measured WITH the eikonal enforced; if not,
+  either raise eikonal→~0.05 (anneal up late) or float τ_end per Deriv-2. This is the one element neither the DRAFT
+  §2 nor the authored config surfaces.
+- **R2 (HIGH — the Muon trigger is derived-EVENT, shipped as a fixed epoch).** My E7 derives the entry as a
+  conditioning event (powerlaw saddle-escape onset ∧ nucleation-done), NOT a clock. v7 ships FIXED-726 with the
+  powerlaw_meat→muon-entry sensor only OWED (authored wiring-gap #1). I reinforce that gap as a BINDING revision, not
+  optional polish: 726 is an un-derived knee-transfer; the event build IS the derived form. **REVISE:** land the
+  powerlaw_meat→muon-entry trigger before seal, or the config knowingly runs an un-derived epoch.
+- **R3 (MED — TAIL cycles are V7-EXTRA + must stay ≥ τ*).** My blind tail is a MONOTONE cool to lower the SDE
+  flicker-floor variance; I did NOT derive cyclic re-heating. Warm restarts are defensible as saddle-escape but
+  (a) their value over a monotone cool is UNMEASURED, and (b) `tau-halving 0.5` must NOT drive the render interface
+  width below the resolution floor τ* (D3: sub-grid aliasing the hard-argmax verdict can't read). **REVISE:** bound
+  every TAIL cycle's render-τ ≥ τ*; pre-register cyclic-vs-monotone in the A/B, or justify cycles from the flicker SDE
+  (re-heat helps only to escape a metastable basin — the nucleation regime — not the converged tail).
+- **R4 (MED-LOW — τ-advance is open-loop clock, not self-triggered).** Geometric approximates critical-slowing on
+  average but cannot slow itself when a specific scale is still relaxing. **REVISE (low priority):** consider a
+  relaxation-plateau gate on the τ-advance rate, OR explicitly accept geometric as the derivation-consistent
+  open-loop approximation and label it so.
+- **R5 (LOW — orphaned event-sensor semantics).** Under unify-tau the CE→tau boundary is DISSOLVED, yet
+  `--curriculum-event-triggered` is documented as governing "the CE→tau readiness hand-off." Verify it is not firing a
+  phantom stage transition; if it now only backs the fail-safe caps, re-label its schedule_governance (hand to S4).
+
+## Honest contamination note
+My E1–E7 converge strongly with v7. Part of that convergence is genuine (both derive from the same Ch.4/Ch.6
+physics — I re-derived E1's `L_τ` from the entropic well §1.1, not from any incumbent). Part is that I inadvertently
+over-read the `witness_native_schedule_derivation` memo's Phase-2/3 (crucible_v6 comparison) in Phase 1 — disclosed
+in §PHASE-1 STORES. The LOAD-BEARING output is therefore not the convergences (which the over-read could have primed)
+but the DIVERGENCES R1–R5, each of which I derived from the primary energy and none of which the v6 memo surfaced
+(R1 eikonal-contingent floor; R3 monotone-vs-cyclic tail; R2/R4 event-vs-clock triggers).
+
+## Position / Verdict contribution
+**PROCEED_WITH_REVISIONS.** 3 of 7 elements CONVERGENT-vindicated (E1 loss-unify, E2 geometric+β, E6 LADDER) — the
+schedule SHAPE is witness-native and the PR95 discrete-stage skeleton is genuinely dissolved, not re-laundered.
+Required revisions before seal: **R1** (declare + verify the eikonal-contingent floor — highest, potentially makes
+0.31 meaningless), **R2** (Muon event-trigger is the derived form, currently only OWED), **R3** (bound TAIL cycles
+≥ τ* + pre-register cyclic-vs-monotone). Lower: **R4/R5** (clock-vs-self-trigger; orphaned sensor label). No REFUSE:
+every divergence is an applyable revision, not a structural rejection.
+
+## Assumption tags (#363)
+- τ*=0.31 is the resolution floor: **INFERRED_FROM_DOMAIN_LITERATURE** (Kneedle knee = MEASURED, but its identity AS
+  the *controlled* resolution floor is unverified — R1 is exactly the verification GATE this triggers).
+- Muon fixed-726 ≈ the derived saddle-escape onset: **ASSUMED_AWAITING_VERIFICATION** (R2 — needs the powerlaw_meat
+  sensor to confirm the epoch matches the measured meat-exhaustion).
+- LADDER λ_c #315-gate = persistence-birth: **VERIFIED_VIA_SOURCE_INSPECTION** (authored diff + DRAFT §2 cite the
+  #315 critical-nucleus sensor).
+- Flicker floor = SDE stationary variance (R3 basis): **VERIFIED_VIA_EMPIRICAL_ANCHOR** (Ch.6 §4, #205 measured onto
+  the flicker floor).
+— END §PHASE-2.
