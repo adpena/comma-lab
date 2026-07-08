@@ -23,6 +23,14 @@ Design contract (see the trainer's ``total_loss_fn_batch`` docstring for the ful
   ``(f'+g')·dS == f'·dS + g'·dS``).
 * Per-MODEL penalties (rankfloor / code-spec / code-nuc / weight-entropy rate) are added ONCE
   (matching the serial mean-over-chunk of an identical-per-pair term).
+* (#D15) --logit-adjust-loss-tau routes as a per-class constant offset added to the BASE seg-form
+  logits ONLY (``sl_base = seg_logits + offset``); the surgical seg levers + the witness-alone
+  forward keep the RAW logits — EXACTLY the serial split (base_loss reads the wrapped
+  ``_LogitAdjustSegAdapter``, ``total_loss_fn``'s levers read the raw adapter). The add is
+  batch-/pixel-independent so it is BIT-EXACT per pair. --seg-form-unify-tau routes as the
+  ``unify_tau`` branch (the ONE continuous ``L_τ = τ·logsumexp(φ/τ) − φ_y``) reading the LIVE
+  render-coupled τ from the by-ref ``unify_tau_state``; the class-axis logsumexp is per-pixel
+  (batch-independent) so its per-pair identity holds exactly like the other seg forms.
 
 The math here MIRRORS the trainer's ``total_loss_fn`` op-for-op. ``single_realized_loss`` is
 the per-pair reference (renders + scores ONE pair, no batching) used by the test as the
@@ -54,6 +62,25 @@ class LeverConfig:
     l7_mult: float = 4.0
     score_domain: bool = True
     pose_eps: float = 1e-2
+    # ── (--logit-adjust-loss-tau, #D15 routing) Menon per-class logit-adjustment offset ──
+    # (5,) mx.array = tau*log(prior_c), or None (OFF => byte-identical). Added ADDITIVELY to the BASE
+    # seg-form logits ONLY (sl_base = seg_logits + offset), NEVER to the surgical seg levers' raw
+    # logits (_signed) NOR the witness-alone forward — EXACTLY mirroring the serial split (base_loss
+    # reads the WRAPPED _LogitAdjustSegAdapter; total_loss_fn's levers + wa forward read the RAW
+    # adapter). The add is a per-class constant broadcast over (K,H,W,5): batch- and pixel-independent
+    # => BIT-EXACT per pair (not merely fp-tol; no reduction re-order in the add). Default None =>
+    # sl_base aliases sl => byte-identical (mirrors ``tau==0 => _loss_adapter is adapter``).
+    logit_adjust_offset: Any = None
+    # ── (--seg-form-unify-tau, #D15 routing) the ONE continuous L_τ seg form ──
+    # unify_tau_state = the trainer's by-ref {"tau": float|None} refreshed per-epoch (the SAME
+    # closure-cell idiom as eik_stab): the batched twin reads the LIVE render-coupled τ when
+    # seg_form == "unify_tau" (else falls back to lc.tau_use, mirroring make_loss_fn's
+    # ``tau_use = tau_softplus_tau if tau_override is None``). seg_unify_tau_perpixel = the trainer's
+    # ``_seg_unify_tau_perpixel`` callable (passed to avoid a tac<-trainer import cycle; one math,
+    # one backend — bit-identical to make_loss_fn's unify branch). Both None => unify never routed
+    # (the twin refuses seg_form == "unify_tau" without the callable rather than silently CE-ing).
+    unify_tau_state: dict | None = None
+    seg_unify_tau_perpixel: Callable | None = None
     # ── (--seg-focal-gamma) focal per-pixel seg reweight (1-p_y)^gamma, mean-1 stop-grad ──
     # Routed leg (was fail-closed pre-#313). Folds into every seg-form's per-pixel map BEFORE the
     # mean, EXACTLY as make_loss_fn does (``seg_pixel_w``); passed as a callable to stay bit-identical
@@ -137,26 +164,40 @@ class LeverConfig:
 def _pair_loss_from_scored(model, sl, pose_row, cf, c0: int, c1: int, oh, mg, pose_tgt,
                            f1_frame, render_h: int, render_w: int,
                            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w,
-                           lc: LeverConfig, sl_wa=None):
+                           lc: LeverConfig, sl_wa=None, sl_base=None):
     """ONE pair's loss (base seg-form + score-domain pose + eikonal/length + all seg levers)
     from a PRE-SCORED SegNet logit slice ``sl`` (1,H,W,5) and PoseNet output ``pose_row``
     (half,). ``f1_frame`` (1,H,W,3) is the realized frame1 (only used by the UNIWARD texture
     map). ``sl_wa`` (1,H,W,5) is the WITNESS-ALONE (seed-EXCLUDED) SegNet logit slice the
     island-formation levers (amplify/persistence) read under --witness-alone-island-loss; None
-    => aliases ``sl`` (byte-identical when wa routing is off). NO once-per-step per-MODEL
-    penalties (added once by the caller). Mirrors the trainer's ``total_loss_fn`` per-pair body
-    op-for-op.
+    => aliases ``sl`` (byte-identical when wa routing is off). ``sl_base`` (1,H,W,5) is the
+    class-prior-ADJUSTED logit slice the BASE seg-form reads under --logit-adjust-loss-tau (#D15);
+    None => aliases ``sl`` (byte-identical when logit-adjust is off) — EXACTLY the serial split
+    (base_loss reads the wrapped _LogitAdjustSegAdapter; the surgical levers + wa forward read the
+    RAW adapter). NO once-per-step per-MODEL penalties (added once by the caller). Mirrors the
+    trainer's ``total_loss_fn`` per-pair body op-for-op.
     """
     import mlx.core as mx
 
     from tac.boundary_math.island_protection import island_birth_from_signed_mx
     from tac.boundary_math.persistence_topology_loss import persistence_topology_loss_mlx
 
-    # SHARED realized decision margin (base tau/l7/margin_hinge + surgical seg levers) on the
-    # seed-COMPOSED forward.
+    # SHARED realized decision margin (surgical seg levers) on the seed-COMPOSED forward — the RAW
+    # (un-adjusted) logits, matching the serial total_loss_fn's ``_slog = adapter.segnet`` levers.
     _sig_gt = mx.sum(sl * oh, axis=-1)
     _sig_run = mx.max(sl + oh * (-1e9), axis=-1)
     _signed = _sig_gt - _sig_run                                  # (1,H,W)
+    # (#D15 logit-adjust routing) the BASE seg-form (+ its focal reweight) reads the ADJUSTED logits
+    # sl_base = sl + offset while the surgical levers keep the RAW sl/_signed — EXACTLY the serial
+    # split (base_loss uses the wrapped _LogitAdjustSegAdapter; total_loss_fn's levers use the raw
+    # adapter). sl_base is None (offset OFF) => aliases sl => _signed_base IS _signed (SAME object)
+    # => byte-identical. The offset add is a per-class constant broadcast (batch-/pixel-independent)
+    # so sl_base[k] == serial per-pair adjusted logits BIT-for-BIT.
+    if sl_base is None:
+        sl_base = sl
+        _signed_base = _signed
+    else:
+        _signed_base = mx.sum(sl_base * oh, axis=-1) - mx.max(sl_base + oh * (-1e9), axis=-1)
     # WITNESS-ALONE margin (#300a): island levers read the seed-EXCLUDED forward when routed. When
     # sl_wa is None (wa off) it aliases sl => _signed_wa IS _signed's math on the SAME logits =>
     # byte-identical. When routed, sl_wa is a distinct (seed-excluded) forward.
@@ -170,27 +211,50 @@ def _pair_loss_from_scored(model, sl, pose_row, cf, c0: int, c1: int, oh, mg, po
     # per-pixel maps are untouched (byte-identical). Uses the SAME callable as the canonical loss.
     _seg_px_w = None
     if float(lc.focal_gamma) > 0.0 and lc.focal_pixel_weight is not None:
-        _seg_px_w = lc.focal_pixel_weight(sl, oh, float(lc.focal_gamma))
+        # focal reads the SAME (ADJUSTED) logits the base form does — the serial make_loss_fn's
+        # focal reads ``adapter``, which is the wrapped _LogitAdjustSegAdapter when logit-adjust is
+        # on (the standard logit-adjusted-focal composition). sl_base aliases sl when offset OFF.
+        _seg_px_w = lc.focal_pixel_weight(sl_base, oh, float(lc.focal_gamma))
     form = seg_form if seg_form is not None else lc.seg_loss_default
     tau_use = float(lc.tau_use)
-    # ----- base seg-form (mirror make_loss_fn; margin-weight OFF, static tau/l7) -----
+    # ----- base seg-form (mirror make_loss_fn; margin-weight OFF, static tau/l7). Reads the ADJUSTED
+    # logits (sl_base / _signed_base) so --logit-adjust-loss-tau routes into the batched twin (#D15). -
     if form == "tau_softplus":
-        z = -_signed / tau_use
+        z = -_signed_base / tau_use
         _pp = tau_use * mx.logaddexp(mx.zeros_like(z), z)
         seg_l = mx.mean(_pp if _seg_px_w is None else _pp * _seg_px_w)
     elif form == "l7_softplus":
-        z = -_signed / tau_use
+        z = -_signed_base / tau_use
         per_pixel = tau_use * mx.logaddexp(mx.zeros_like(z), z)
-        w = 1.0 + float(lc.l7_mult) * (_signed < float(lc.l7_thr_use)).astype(sl.dtype)
+        w = 1.0 + float(lc.l7_mult) * (_signed_base < float(lc.l7_thr_use)).astype(sl_base.dtype)
         w = mx.stop_gradient(w / (mx.mean(w) + 1e-8))
         _pp = per_pixel * w
         seg_l = mx.mean(_pp if _seg_px_w is None else _pp * _seg_px_w)
     elif form == "margin_hinge":
-        _pp = mx.maximum(mtgt - _signed, 0.0)
+        _pp = mx.maximum(mtgt - _signed_base, 0.0)
+        seg_l = mx.mean(_pp if _seg_px_w is None else _pp * _seg_px_w)
+    elif form == "unify_tau":
+        # (--seg-form-unify-tau, #D15 routing) the ONE continuous L_τ = τ·logsumexp(φ/τ) − φ_y with
+        # the SAME hinge/margin/pixel weight the ce branch uses (τ=1 ≡ ce), mirroring make_loss_fn's
+        # unify_tau branch op-for-op. τ is the LIVE render-coupled temp from the by-ref
+        # unify_tau_state (else lc.tau_use). The class-axis logsumexp is PER-PIXEL (batch-independent)
+        # so the per-pair identity holds exactly as for the other forms. NO-FAKE: refuse (not silently
+        # CE) when the callable was not wired.
+        if lc.seg_unify_tau_perpixel is None:
+            raise ValueError(
+                "micro-batch twin: seg_form == 'unify_tau' but LeverConfig.seg_unify_tau_perpixel is "
+                "None (the trainer must pass _seg_unify_tau_perpixel); refusing to silently fall back "
+                "to CE.")
+        _uni_tau = tau_use
+        if lc.unify_tau_state is not None and lc.unify_tau_state.get("tau") is not None:
+            _uni_tau = float(lc.unify_tau_state["tau"])
+        lt = lc.seg_unify_tau_perpixel(sl_base, oh, _uni_tau)
+        w = 1.0 + hinge * mx.exp(-mx.clip(mg, 0.0, 1e9))
+        _pp = lt * w[None]
         seg_l = mx.mean(_pp if _seg_px_w is None else _pp * _seg_px_w)
     else:  # ce
-        logsum = mx.logsumexp(sl, axis=-1)
-        tgt = mx.sum(sl * oh, axis=-1)
+        logsum = mx.logsumexp(sl_base, axis=-1)
+        tgt = mx.sum(sl_base * oh, axis=-1)
         ce = logsum - tgt
         w = 1.0 + hinge * mx.exp(-mx.clip(mg, 0.0, 1e9))
         _pp = ce * w[None]
@@ -328,7 +392,13 @@ def batched_realized_loss(model, adapter, render_fn, render_h: int, render_w: in
                            for k in range(K)], axis=0)                 # (K,H,W,3)
     f0_b = mx.concatenate([render_fn(model, cf_list[k], int(c0_list[k]), render_h, render_w)
                            for k in range(K)], axis=0)                 # (K,H,W,3)
-    seg_logits_b = adapter.segnet(f1_b)                               # (K,H,W,5) shared base+levers
+    seg_logits_b = adapter.segnet(f1_b)                               # (K,H,W,5) RAW: levers + wa base
+    # (#D15 logit-adjust routing) the BASE seg-form reads the class-prior-ADJUSTED logits (offset a
+    # (5,) per-class constant broadcast over (K,H,W,5) — batch-/pixel-independent => BIT-EXACT per
+    # pair vs the serial wrapped adapter); the surgical levers keep the RAW seg_logits_b. offset None
+    # => _sl_base returns None => _pair_loss_from_scored aliases sl => byte-identical.
+    seg_logits_base_b = (seg_logits_b if lc.logit_adjust_offset is None
+                         else seg_logits_b + lc.logit_adjust_offset)
     # (--witness-alone-island-loss #300a) SECOND (seed-excluded) SegNet forward for the island
     # levers, ONLY when routed. Only frame1 is needed (island levers read the SegNet-scored margin).
     seg_logits_wa_b = None
@@ -346,15 +416,18 @@ def batched_realized_loss(model, adapter, render_fn, render_h: int, render_w: in
     def _sl_wa(k):
         return None if seg_logits_wa_b is None else seg_logits_wa_b[k:k + 1]
 
+    def _sl_base(k):
+        return None if lc.logit_adjust_offset is None else seg_logits_base_b[k:k + 1]
+
     L = _pair_loss_from_scored(
         model, seg_logits_b[0:1], pose_b[0], cf_list[0], int(c0_list[0]), int(c1_list[0]),
         oh_list[0], mg_list[0], pose_tgt_list[0], f1_b[0:1], render_h, render_w,
-        w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, sl_wa=_sl_wa(0))
+        w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, sl_wa=_sl_wa(0), sl_base=_sl_base(0))
     for k in range(1, K):
         L = L + _pair_loss_from_scored(
             model, seg_logits_b[k:k + 1], pose_b[k], cf_list[k], int(c0_list[k]), int(c1_list[k]),
             oh_list[k], mg_list[k], pose_tgt_list[k], f1_b[k:k + 1], render_h, render_w,
-            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, sl_wa=_sl_wa(k))
+            w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, sl_wa=_sl_wa(k), sl_base=_sl_base(k))
     L = L / float(K)
     L = L + _once_terms(model, lc)
     return L
@@ -376,7 +449,9 @@ def single_realized_loss(model, adapter, render_fn, render_h: int, render_w: int
 
     f1 = render_fn(model, cf, int(c1), render_h, render_w)            # (1,H,W,3)
     f0 = render_fn(model, cf, int(c0), render_h, render_w)            # (1,H,W,3)
-    sl = adapter.segnet(f1)                                           # (1,H,W,5)
+    sl = adapter.segnet(f1)                                           # (1,H,W,5) RAW: levers
+    # (#D15 logit-adjust routing) BASE seg-form reads the ADJUSTED logits; None => aliases sl.
+    sl_base = None if lc.logit_adjust_offset is None else sl + lc.logit_adjust_offset
     sl_wa = None
     if _wa_route_active(lc, render_fn_wa):
         f1_wa = render_fn_wa(model, cf, int(c1), render_h, render_w)  # (1,H,W,3) seed-EXCLUDED
@@ -389,6 +464,7 @@ def single_realized_loss(model, adapter, render_fn, render_h: int, render_w: int
     pose_row = adapter.posenet(yuv_nhwc)["pose"][0, :half]           # (half,)
     L = _pair_loss_from_scored(model, sl, pose_row, cf, int(c0), int(c1), oh, mg, pose_tgt,
                                f1, render_h, render_w,
-                               w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, sl_wa=sl_wa)
+                               w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc,
+                               sl_wa=sl_wa, sl_base=sl_base)
     L = L + _once_terms(model, lc)
     return L

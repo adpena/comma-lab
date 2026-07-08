@@ -2719,8 +2719,9 @@ def LogitAdjust(tau: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 —
     adjustment lives ONLY inside the training-loss adapter — the deployed/rendered argmax path
     (verdict CPU-torch SegNet, byte-close decode, inflate) reads RAW logits and is UNCHANGED; the
     witness WEIGHTS absorb the pressure. Trainer leg: ``--logit-adjust-loss-tau`` (default 0.0 =
-    the loss adapter is the SAME object = byte-identical); fails closed with
-    ``--micro-batch-pairs>1`` (not routed into the batched twin). SISTER (do not confuse): the
+    the loss adapter is the SAME object = byte-identical); ROUTED into the ``--micro-batch-pairs>1``
+    batched twin (#D15: the offset is added to the BASE seg-form logits only, bit-exact per pair —
+    no longer fails closed). SISTER (do not confuse): the
     #218 facet-3 pair ``--logit-adjust-per-class`` + ``--logit-adjust-tau`` boost the
     MARGIN-FIELD-HEAD per-class TARGET (see :func:`MarginFieldHead`); the two compose. Composes
     with :func:`SegFocalGamma` (logit-adjusted-focal) + :func:`PersistenceTopology`. Carries a

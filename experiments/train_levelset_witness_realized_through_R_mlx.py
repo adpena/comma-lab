@@ -63,6 +63,7 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     SEG_W,
     _build_render_coords,
     _seed_muon_momentum_from_adam,
+    _seg_unify_tau_perpixel,
     _torch_R_to_camera_uint8,
     cpu_verdict_d_pose_batch,
     cpu_verdict_d_seg_argmax_batch,
@@ -906,17 +907,18 @@ def _logit_adjust_offsets_np(
 
 
 def _validate_logit_adjust_compat(tau: float, micro_batch_pairs: int) -> None:
-    """(#218) Fail-closed: --logit-adjust-loss-tau is wired into the SERIAL base_loss adapter only —
-    NOT into the --micro-batch-pairs>1 batched twin (``tac.boundary_math.
-    levelset_micro_batch_loss`` receives the UNWRAPPED adapter). Refuse the combination with an
-    actionable message instead of silently training the batched arm WITHOUT the adjustment (the
-    same not-yet-routed class as --seg-spike-reweight / --margin-saliency-reachability). Pure /
-    MLX-free -> unit-tested. tau == 0.0 (OFF) is always compatible."""
-    if float(tau) != 0.0 and int(micro_batch_pairs) > 1:
-        raise ValueError(
-            "--logit-adjust-loss-tau is not wired into the --micro-batch-pairs>1 batched twin "
-            "(the batched loss reads the UNWRAPPED scorer adapter); run with "
-            "--micro-batch-pairs 1 (the serial path) or leave --logit-adjust-loss-tau 0.")
+    """(#218 → #D15 ROUTED) --logit-adjust-loss-tau is NOW routed into the --micro-batch-pairs>1
+    batched twin: the twin's ``LeverConfig.logit_adjust_offset`` carries the (5,) per-class offset
+    ``tau*log(prior)``, added to the BASE seg-form logits ONLY (the surgical seg levers + the
+    witness-alone forward keep the RAW adapter — EXACTLY the serial split where ``base_loss`` reads
+    the wrapped ``_LogitAdjustSegAdapter`` and ``total_loss_fn``'s levers read the raw ``adapter``).
+    The add is a per-class constant broadcast over (K,H,W,5), batch-/pixel-independent, so it is
+    BIT-EXACT per pair (equivalence pinned by test_levelset_micro_batch_loss). This validation is
+    therefore a NO-OP kept as the documented compatibility home: the combination no longer fails
+    closed. The genuinely-unrouted levers (--margin-saliency-reachability / --seg-spike-reweight /
+    --seg-subpix-boundary-weight / --seg-chroma-boundary-weight) still fail-close at their own
+    precompute blocks. Pure / MLX-free -> unit-tested. tau == 0.0 (OFF) is always compatible."""
+    return None
 
 
 class _LogitAdjustSegAdapter:
@@ -3745,10 +3747,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     la_tau = float(getattr(args, "logit_adjust_loss_tau", 0.0))
     _validate_logit_adjust_compat(la_tau, int(getattr(args, "micro_batch_pairs", 1)))
     _loss_adapter = adapter
+    _la_offset_mx = None   # (#D15) the (5,) offset the micro-batch twin's LeverConfig routes; None => OFF
     if la_tau != 0.0:
         _la_off, _la_priors = _logit_adjust_offsets_np(
             [np.asarray(gt.lstars[_pi]) for _pi in range(P)], la_tau, n_classes=5)
-        _loss_adapter = _LogitAdjustSegAdapter(adapter, mx.array(_la_off))
+        _la_offset_mx = mx.array(_la_off)
+        _loss_adapter = _LogitAdjustSegAdapter(adapter, _la_offset_mx)
         print(json.dumps({"stage": "logit_adjust", "tau": la_tau,
                           "priors": [round(float(x), 5) for x in _la_priors],
                           "offsets": [round(float(x), 4) for x in _la_off],
@@ -4659,6 +4663,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         bd_w=bd_w, bd_band_prov=_bd_band_prov, boundary_distance_term=boundary_distance_term_mlx,
         eik_stab=_eik_stab, eikonal_visco=_eikonal_visco_mlx, eikonal_steik=_eikonal_steik_mlx,
         wa_island=wa_island,
+        # (#D15) newly-ROUTED legs (were fail-closed vs micro-batch): --logit-adjust-loss-tau routes
+        # as the per-class constant offset applied to the BASE seg-form logits ONLY (bit-exact per
+        # pair; the surgical levers + wa forward keep the raw adapter — the serial split); and
+        # --seg-form-unify-tau routes as the twin's ``unify_tau`` seg-form branch. _la_offset_mx is
+        # None when la_tau==0 (byte-identical). _unify_tau_state is passed BY REFERENCE so the twin
+        # reads the per-epoch render-coupled τ live, exactly like total_loss_fn's call-site read.
+        logit_adjust_offset=_la_offset_mx,
+        unify_tau_state=_unify_tau_state, seg_unify_tau_perpixel=_seg_unify_tau_perpixel,
     )
 
     def total_loss_fn_batch(model, cf_list, c0_list, c1_list, oh_list, mg_list, pose_tgt_list,
@@ -4700,8 +4712,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # amplify/persistence read the seed-excluded margin exactly as the serial _wa_route does. The
     # equivalence (batched grad == mean-of-per-pair grad within fp tol) is pinned per-leg by
     # src/tac/tests/test_levelset_micro_batch_loss.py. The prior four NotImplementedError
-    # fail-closes are removed. STILL fail-closed below (not yet routed): --margin-saliency-reachability
-    # and --seg-spike-reweight. --seed-anneal-epochs composes via _compose_chain (batched render).
+    # fail-closes are removed. (#D15) --logit-adjust-loss-tau (per-class offset on the BASE seg-form
+    # logits, bit-exact) and --seg-form-unify-tau (the twin's unify_tau seg-form branch, live τ) are
+    # now ALSO ROUTED. STILL fail-closed below (genuinely not yet routed): --margin-saliency-
+    # reachability / --seg-spike-reweight / --seg-subpix-boundary-weight / --seg-chroma-boundary-
+    # weight. --seed-anneal-epochs composes via _compose_chain (batched render).
     value_and_grad_batch = None
     _dual_vg_batch = None
     if _use_micro_batch:

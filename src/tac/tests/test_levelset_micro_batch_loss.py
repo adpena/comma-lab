@@ -518,3 +518,187 @@ def test_all_four_new_legs_stacked_batched_grad_equals_mean_of_pairs():
     assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (lb, lm)
     err = _max_rel_grad_err(gb, gm)
     assert err < 1e-4, f"all-four-legs grad err {err:.2e}"
+
+
+# ===========================================================================
+# #D15 — LOGIT-ADJUST (--logit-adjust-loss-tau) + UNIFY-τ (--seg-form-unify-tau) routing.
+# The two v7-active seg-form legs the twin previously fail-closed on. Each pins the SAME #1 gate
+# (batched grad == mean-of-per-pair grad within fp tol) PLUS a canonical-match vs make_loss_fn so
+# the base-form-adjusted / levers-raw split matches the SERIAL trainer semantics op-for-op.
+# ===========================================================================
+_LA_ADAPTER = _lvl._LogitAdjustSegAdapter
+_SEG_UNIFY = _lvl._seg_unify_tau_perpixel
+# A fixed nonzero per-class offset (Menon tau*log(prior) shape; the specific values do not matter
+# to the routing identity, only that it is a (5,) constant broadcast over (K,H,W,5)).
+_LA_OFFSET_NP = np.array([-1.46, -5.13, -0.70, -4.39, -1.36], np.float32)
+
+
+# ---- LEG 5: LOGIT-ADJUST --------------------------------------------------
+@pytest.mark.parametrize("seg_form", ["ce", "tau_softplus", "l7_softplus", "margin_hinge"])
+@pytest.mark.parametrize("K", [2, 3])
+def test_leg_logit_adjust_batched_grad_equals_mean_of_pairs(seg_form, K):
+    env = _build(K, seed=900 + K)
+    lc = _base_lc(seg_loss_default=seg_form, logit_adjust_offset=mx.array(_LA_OFFSET_NP))
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form=seg_form, eik_w=1e-2, len_w=1e-3)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (seg_form, K, lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4, f"logit-adjust {seg_form} K={K}"
+
+
+def test_leg_logit_adjust_actually_changes_the_loss():
+    """NO-FAKE: a nonzero offset must MOVE the base seg-form loss vs offset=None."""
+    env = _build(2, seed=911)
+    l_off = _batched_and_meanpairs(env, _base_lc(seg_loss_default="ce"), seg_form="ce")[0]
+    l_on = _batched_and_meanpairs(
+        env, _base_lc(seg_loss_default="ce", logit_adjust_offset=mx.array(_LA_OFFSET_NP)),
+        seg_form="ce")[0]
+    assert abs(l_on - l_off) > 1e-6, (l_on, l_off)
+
+
+@pytest.mark.parametrize("seg_form", ["ce", "tau_softplus", "margin_hinge"])
+def test_leg_logit_adjust_single_matches_canonical_wrapped_adapter(seg_form):
+    """The strongest NO-FAKE gate: the twin (RAW adapter + offset on the BASE seg-form only) must
+    equal the SERIAL make_loss_fn given the WRAPPED _LogitAdjustSegAdapter (levers off, so the base
+    form is the whole seg loss and both apply the SAME per-class offset). Proves the base-adjusted /
+    levers-raw split matches the serial semantics op-for-op."""
+    from experiments.train_witness_realized_through_R_mlx import make_loss_fn
+
+    env = _build(1, seed=920)
+    w_seg, w_pose, hinge, mtgt = 100.0, 1.0, 4.0, 0.5
+    lc = _base_lc(seg_loss_default=seg_form, logit_adjust_offset=mx.array(_LA_OFFSET_NP))
+
+    def _sfn(m):
+        return single_realized_loss(
+            m, env["adapter"], _render_fn, env["rh"], env["rw"],
+            env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+            env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+            w_seg, w_pose, hinge, mtgt, seg_form, 0.0, 0.0, lc)
+
+    ls, gs = nn.value_and_grad(env["model"], _sfn)(env["model"])
+    mx.eval(ls, gs)
+
+    wrapped = _LA_ADAPTER(env["adapter"], mx.array(_LA_OFFSET_NP))
+    canonical = make_loss_fn(wrapped, env["rh"], env["rw"], score_domain=True,
+                             pose_eps=lc.pose_eps, seg_loss=seg_form, tau_softplus_tau=lc.tau_use,
+                             l7_mult=lc.l7_mult, l7_threshold=lc.l7_thr_use, render_fn=_render_fn)
+
+    def _cfn(m):
+        return canonical(m, env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+                         env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+                         w_seg, w_pose, hinge, mtgt)
+
+    lcv, gc = nn.value_and_grad(env["model"], _cfn)(env["model"])
+    mx.eval(lcv, gc)
+    assert abs(float(ls) - float(lcv)) / (abs(float(lcv)) + 1e-6) < 1e-4, (seg_form, float(ls), float(lcv))
+    assert _max_rel_grad_err(gs, gc) < 1e-4, f"logit-adjust {seg_form} base-vs-canonical"
+
+
+def test_leg_logit_adjust_offset_none_is_byte_identical():
+    """offset None must be byte-identical to the pre-#D15 path (sl_base aliases sl)."""
+    env = _build(2, seed=921)
+    l_a = _batched_and_meanpairs(env, _base_lc(seg_loss_default="ce", logit_adjust_offset=None),
+                                 seg_form="ce")[0]
+    l_b = _batched_and_meanpairs(env, _base_lc(seg_loss_default="ce"), seg_form="ce")[0]
+    assert abs(l_a - l_b) < 1e-12, (l_a, l_b)
+
+
+def test_leg_logit_adjust_composes_with_wa_island_ladder():
+    """LADDER composition: logit-adjust (base seg-form) + the #224 island levers (amplify/persist,
+    which read the WITNESS-ALONE RAW forward) must STILL satisfy batched == mean-of-pairs. This is
+    the micro-batch x seed-islands x LADDER-mask stack the seal flagged as the risky composition —
+    the base form adjusted, the island levers raw, both equivalent under batching."""
+    K = 3
+    env = _build(K, seed=930)
+    lc = _base_lc(
+        seg_loss_default="ce", logit_adjust_offset=mx.array(_LA_OFFSET_NP),
+        wa_island=True, amplify_w=0.6, amplify_mtgt=1.0, amplify_form="hinge",
+        island_weight_mx=_island_weight_prov(env),
+        persist_gate={"w": 0.3}, persist_classes=(1, 3), persist_cldice_iters=3,
+    )
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="ce", eik_w=1e-2, len_w=1e-3,
+                                            render_fn_wa=_render_fn_wa)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4
+
+
+# ---- LEG 6: UNIFY-τ (--seg-form-unify-tau) --------------------------------
+@pytest.mark.parametrize("K", [2, 3])
+def test_leg_unify_tau_batched_grad_equals_mean_of_pairs(K):
+    env = _build(K, seed=1000 + K)
+    lc = _base_lc(unify_tau_state={"tau": 0.7}, seg_unify_tau_perpixel=_SEG_UNIFY)
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="unify_tau", eik_w=1e-2, len_w=1e-3)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (K, lb, lm)
+    assert _max_rel_grad_err(gb, gm) < 1e-4, f"unify_tau K={K}"
+
+
+@pytest.mark.parametrize("tau", [1.0, 0.5, 0.3])
+def test_leg_unify_tau_single_matches_canonical_make_loss_fn(tau):
+    """The twin's unify_tau branch must equal make_loss_fn's unify_tau branch op-for-op at the LIVE
+    τ (passed via unify_tau_state here, via tau_override in the serial trainer). At τ=1 both reduce
+    to CE (documented)."""
+    from experiments.train_witness_realized_through_R_mlx import make_loss_fn
+
+    env = _build(1, seed=1010)
+    w_seg, w_pose, hinge, mtgt = 100.0, 1.0, 4.0, 0.5
+    lc = _base_lc(unify_tau_state={"tau": tau}, seg_unify_tau_perpixel=_SEG_UNIFY)
+
+    def _sfn(m):
+        return single_realized_loss(
+            m, env["adapter"], _render_fn, env["rh"], env["rw"],
+            env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+            env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+            w_seg, w_pose, hinge, mtgt, "unify_tau", 0.0, 0.0, lc)
+
+    ls, gs = nn.value_and_grad(env["model"], _sfn)(env["model"])
+    mx.eval(ls, gs)
+    canonical = make_loss_fn(env["adapter"], env["rh"], env["rw"], score_domain=True,
+                             pose_eps=lc.pose_eps, seg_loss="ce", tau_softplus_tau=lc.tau_use,
+                             l7_mult=lc.l7_mult, l7_threshold=lc.l7_thr_use, render_fn=_render_fn)
+
+    def _cfn(m):
+        return canonical(m, env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+                         env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+                         w_seg, w_pose, hinge, mtgt, seg_form="unify_tau", tau_override=tau)
+
+    lcv, gc = nn.value_and_grad(env["model"], _cfn)(env["model"])
+    mx.eval(lcv, gc)
+    assert abs(float(ls) - float(lcv)) / (abs(float(lcv)) + 1e-6) < 1e-4, (tau, float(ls), float(lcv))
+    assert _max_rel_grad_err(gs, gc) < 1e-4, f"unify_tau tau={tau} vs canonical"
+
+
+def test_leg_unify_tau_falls_back_to_lc_tau_use_when_state_absent():
+    """unify_tau_state None => uses lc.tau_use (mirrors make_loss_fn's tau_override=None default)."""
+    env = _build(2, seed=1020)
+    lc = _base_lc(tau_use=0.3, unify_tau_state=None, seg_unify_tau_perpixel=_SEG_UNIFY)
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, seg_form="unify_tau")
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (lb, lm)
+
+
+def test_leg_unify_tau_missing_callable_refuses_not_silent_ce():
+    """NO-FAKE: seg_form=='unify_tau' with no seg_unify_tau_perpixel wired must RAISE, never
+    silently fall back to CE (a silent wrong loss)."""
+    env = _build(2, seed=1021)
+    lc = _base_lc(unify_tau_state={"tau": 0.7}, seg_unify_tau_perpixel=None)
+    with pytest.raises(ValueError, match="unify_tau"):
+        _batched_and_meanpairs(env, lc, seg_form="unify_tau")
+
+
+# ---- fail-close narrowing + waterfill projection guard --------------------
+def test_validate_logit_adjust_compat_no_longer_refuses_micro_batch():
+    """#D15: --logit-adjust-loss-tau is ROUTED -> the trainer validator is now a NO-OP (was a
+    fail-close). The genuinely-unrouted levers keep their own precompute-block fail-closes."""
+    assert _lvl._validate_logit_adjust_compat(1.0, 8) is None   # ON x batched twin: no longer raises
+    assert _lvl._validate_logit_adjust_compat(0.0, 8) is None
+    assert _lvl._validate_logit_adjust_compat(1.0, 1) is None
+
+
+def test_waterfill_still_pins_micro_batch_unmeasured_at_n600():
+    """The #294 waterfill re-admits micro-batch memory ONLY on a MEASURED uncontended n600 curve;
+    routing the loss legs does NOT flip the knob on-by-default (the trajectory A/B remains the
+    inclusion evidence). Guards against inventing a forward-memory curve."""
+    import sys as _sys
+    _tools = os.path.join(_REPO, "tools")
+    if _tools not in _sys.path:
+        _sys.path.insert(0, _tools)
+    import memory_waterfill_config as mwc  # noqa: E402
+    st = mwc.assess_micro_batch(mwc.DEFAULT_MICRO_BATCH_POINTS, target_n_pairs=600)
+    assert not st.measured and st.grid == (1,), (st.measured, st.grid)

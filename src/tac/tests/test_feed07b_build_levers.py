@@ -158,12 +158,14 @@ def test_trainer_offsets_helper_computes_priors_from_lstars():
         tl._logit_adjust_offsets_np([np.zeros((0, 0), np.int64)], tau=1.0)
 
 
-def test_micro_batch_fail_closed_validator():
+def test_micro_batch_logit_adjust_now_routed_validator_is_noop():
+    # (#D15) --logit-adjust-loss-tau is ROUTED into the batched twin (LeverConfig.logit_adjust_offset
+    # on the BASE seg-form logits, bit-exact per pair); the validator is now a NO-OP (was a
+    # fail-close). Equivalence pinned by test_levelset_micro_batch_loss.
     tl = _load_trainer()
-    tl._validate_logit_adjust_compat(0.0, 8)      # OFF composes with micro-batch
-    tl._validate_logit_adjust_compat(1.0, 1)      # ON composes with the serial path
-    with pytest.raises(ValueError, match="micro-batch-pairs"):
-        tl._validate_logit_adjust_compat(1.0, 2)  # ON x batched twin => refuse
+    assert tl._validate_logit_adjust_compat(0.0, 8) is None   # OFF composes
+    assert tl._validate_logit_adjust_compat(1.0, 1) is None   # ON x serial path
+    assert tl._validate_logit_adjust_compat(1.0, 2) is None   # ON x batched twin: no longer refuses
 
 
 def test_logit_adjust_adapter_offsets_segnet_only_and_tau0_is_same_object():
