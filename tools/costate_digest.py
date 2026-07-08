@@ -182,6 +182,26 @@ def section_duty_to_measure() -> tuple[str, dict | None]:
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
 
 
+def section_deferral_ledger() -> tuple[str | None, dict | None]:
+    """Operator-binding 2026-07-08 ("you deferred too much and now it's orphaned"): every
+    deferral lives in .omx/state/deferral_ledger.md with a named trigger; this line makes
+    the queue impossible to forget. Soft: absent file -> no line."""
+    try:
+        path = _REPO / ".omx" / "state" / "deferral_ledger.md"
+        if not path.exists():
+            return None, None
+        rows = [ln for ln in path.read_text(errors="replace").splitlines()
+                if ln.startswith("| D")]
+        hot = [ln.split("|")[1].strip() for ln in rows
+               if "SURFACED" in ln or "FIRING" in ln or "ARMED" in ln]
+        line = (f"deferral-ledger: {len(rows)} open"
+                + (f"; hot: {', '.join(hot)}" if hot else "")
+                + " (.omx/state/deferral_ledger.md — every row has a named trigger)")
+        return line, {"open": len(rows), "hot": hot}
+    except Exception as exc:
+        return f"deferral-ledger: unavailable ({type(exc).__name__}: {exc})", None
+
+
 def section_failure_ledger() -> tuple[str | None, dict | None]:
     """Sibling SENSE input (soft: the ledger may not exist yet). Glob-matched so the
     sibling's chosen filename is picked up without a code change here."""
@@ -384,6 +404,10 @@ def build_digest() -> tuple[list[str], dict]:
 
     fl_line, data["failure_ledger"] = section_failure_ledger()
     lines.append(fl_line or "failure-ledger: none yet (sibling SENSE input pending)")
+
+    dl_line, data["deferral_ledger"] = section_deferral_ledger()
+    if dl_line:
+        lines.append(dl_line)
 
     sched_line, data["schedule"] = section_schedule(run_dir)
     lines.append(sched_line or "schedule: planned-vs-actual read-back pending (sibling module)")
