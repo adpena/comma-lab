@@ -2199,3 +2199,13 @@ consumer update required — asserted [consumers-generic]. ---
   SessionStart ⇒ the costate controller surfaces/ranks/nags them. Operator's "P0 wired into DSL +
   triality + costate + tasks" = CONFIRMED on all four axes. #332 gap (older non-factory levers)
   is DISTINCT + stands. SPEC_v75 §10 upgraded caveat→VERIFIED.
+- **SEAL R5 ROUND 1 = NOT_CLEAN (counter-force+ramp+P0 delta; fresh counter 0/3)**: deep-math+
+  structure CLEAN (Chan-Vese eq independently re-derived = STABLE attractor; 1 LOW doc + 2 owed
+  A/B) · confound+bugs NOT_CLEAN (1 MAJOR: margin_satisfice+temporal_screw absent from
+  LOSS_TERM_KEYS → sum_minus_total confound-invariant breaks ON P0 ACTIVATION [not the sealed
+  launch]; 3 MINOR). Launch config itself launch-SAFE (MAJOR bites only on P0 activation, the next
+  increment). FIX WAVE fired (ab1fd30342f0e5178): MAJOR-1 keys+writers⊆schema test · arithmetic
+  honesty (~96% not ≥ — I had propagated the overstatement; corrected in SPEC §2 + here + module)
+  · global-vs-per-pair λ wording · tau_persist pass-through · FORCE-2 _signed-vs-_signed_wa WATCH
+  (owed to A/B). CORRECTION: the Chan-Vese equilibrium un-floors Road ~96% at δ=0.25, NOT ≥100% —
+  a claim I repeated as measured; the last ~4% rides higher δ / the λ A/B. Fix → R5 round 2.
