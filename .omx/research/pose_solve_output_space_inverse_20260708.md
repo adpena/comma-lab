@@ -85,3 +85,25 @@ fold the (d_pose, bytes) frontier into #248/#365; SPEC_v75 §1 pose-gate delta O
 measurement (no spec edits on predictions). DSL obligation: the solve lands as a byte-close/export
 stage + a `Lever` factory when BUILT (config-orphan discipline). Triality: this memo + DAG
 FEED-posesolve (same commit); equations on anchor-landing.
+
+## 5b. BYTE-CLOSE READINESS (verified 2026-07-08, $0 downstream-blocker check — the solve is byte-close-VIABLE at the 6-DOF floor with EXISTING machinery)
+Checked `tools/levelset_byte_close_and_eval.py` + `src/tac/boundary_math/xi_pose_coder.py` against S1/S2. READ, not inferred:
+- **S1 (6-DOF solve) → byte-close READY modulo a connector.** The store-nothing-ξ carrier EXISTS + is byte-closed
+  (#241): `serialize_pose_carrier_store_nothing` (PCAR store_nothing **v2** = derive-H at decode from coded ξ, NO
+  stored H block, n_kf=0) warps the GENERATED witness render by per-pair H (rule-118 free; op-for-op oracle-parity
+  with the shipped inflate). `serialize_xi_payload(q, scales, coder)` takes a QUANTIZED per-pair ξ as INPUT — so
+  A2's externally-SOLVED ξ_eff feeds straight in (solve → quantize → serialize). **No new format**; the only gap is
+  a small connector (hand LM-solved ξ to the serializer + read back realized d_pose on the inflated frames — the
+  tool already does realized-through-R read-back). CONFIRMS the 0.0011-class floor is byte-CLOSEABLE, not just
+  harness-measurable.
+- **Discipline the tool enforces (docstring L56-64), CONSISTENT with the solve:** an inert stored sidecar the render
+  does NOT consume is bytes the scorer never reads → does NOT lower realized d_pose (`--fold-pose-sidecar` OFF by
+  default, LOUDLY records this). The solve is NOT that — ξ_eff PARAMETRIZES the decode warp → changes the rendered
+  frames. Consume-by-warp, not inert-store. A2's number is already realized-through-warp-through-R.
+- **S2 (+k depth steering) → byte-close needs a NEW decode stage (the genuine #365 build, gated on A2+ paying).** The
+  per-cell affine-inverse-depth warp does NOT exist in the decode yet (only the canonical-equation stub
+  `morse_smale_stratified_parallax_dpose_20260708.py` + a gauge mention). When A2+ shows +k pays: extend the
+  store-nothing warp to apply per-Morse-cell inverse-depth flow from k stored fp16/pair (COUNTED), oracle-parity
+  gated, inlined into the shipped inflate. The dead `warp_real_luma` PCAR (stores real keyframe — 10.42,
+  formulation-dead) is NOT the target; warp-GENERATED-source (what store_nothing already is) is.
+Net: A2 = near-ready byte-close landing (connector only); A2+ = scoped, gated build. No scramble when the number lands.
