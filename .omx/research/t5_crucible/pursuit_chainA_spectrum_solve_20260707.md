@@ -69,12 +69,20 @@ treat |λ₋| as order-of-magnitude only. Artifact `spectrum_ep650gpu_K8_s0.json
 | 8 (CPU, S3) | −369.7 | +139.3 | 2.65 | 3/7 | 0.787 |
 | 8 (GPU) | −174.6 | +134.0 | 1.30 | 5/10 | 0.796 |
 | 32 (GPU) | **−33.3** | +117.4 | **0.28** | 4/12 | 0.363 |
-| 128 (GPU) | (running) | | kill band < 0.1 | | |
+| 128 (GPU, 12 it; λ₋ converged −16.1@9 → −16.85@12) | **−16.85** | +103.6 | **0.163** | 3/12 | 0.190 |
 
-λ₋ collapses ~1/K (K8→K32: 5.2× shrink for 4× pairs) while λ_max is K-stable. The subset gradient
-norm also halves — much of the K=8 gradient was pair-idiosyncratic. **Pre-registered K=128
-prediction (before the run finished): λ₋ ∈ [−15, −5], ratio ∈ [0.04, 0.14] — i.e. AT or BELOW the
-kill band.** Artifacts `spectrum_ep650gpu_K{8,32,128}_s0.json`.
+λ₋ collapses under pair-averaging (K8→K32: ×5.2; K32→K128: ×1.97 = exactly 1/√K on the clean leg)
+while λ_max is K-stable (139→104). Pre-registered K=128 prediction (made at K=32, before the run):
+λ₋ ∈ [−15, −5], ratio ∈ [0.04, 0.14] — actual −16.85 / 0.163, just past the band edge (the
+prediction under-weighted Ritz convergence-from-inside).
+
+**Kill-band adjudication (honest, per S3 RECESS-R1's own bands):** strict KILL (ratio < 0.1 at
+K=128) NOT formally reached — final 0.163. PERSIST (ratio > 0.5) DECISIVELY excluded. The 1/√K
+trend extrapolates λ₋ ≈ −7.8, ratio ≈ 0.08 at the full P=600 (the only population that matters —
+below the kill line, but an extrapolation, labeled DERIVED). What settles exploitability is the
+DIRECT step measurements (Links 2b/3/3b/3c): actual steps along the measured directions, measured
+on independent holdouts, uniformly negative — stronger evidence than any Ritz magnitude.
+Artifacts `spectrum_ep650gpu_K{8,32,128}_s0.json` + resumable state npz.
 
 ## LINK 2b — independent falsification: directional-curvature TRANSFER test ($0, minutes)
 
@@ -184,10 +192,14 @@ All measurements cohere into one picture:
 fresh-eyes-unreviewed.** Axis: [macOS-CPU/MLX advisory] NON-PROMOTABLE throughout; n600 numbers
 cited are the #341 chunked verdicts. Pointer 0.19110 UNMOVED — this chain is MEANS.
 
-1. **S3's headline is KILLED at the full-loss level** (implementation-level per #307 — the K=8
+1. **S3's headline is DEAD AS AN ACTIONABLE CLAIM** (implementation-level per #307 — the K=8
    measurement was correct FOR ITS SUBSET OPERATOR; its interpretation "ep650 not 2nd-order
-   exhausted" does not survive K-averaging). Kill-band row: K=128 ratio 0.011 ≪ 0.1 (pre-registered
-   band predicted [0.04, 0.14]; actual even more collapsed).
+   exhausted" does not survive K-averaging or direction-transfer). Formal band row: K=128 final
+   ratio 0.163 — strict kill (<0.1) not reached, persist (>0.5) decisively excluded, full-P=600
+   extrapolation ≈0.08 (DERIVED). The dispositive evidence is the conjunction: 1/√K collapse +
+   holdout curvature ±1.2 along u_min (150× smaller than claimed) + isotropic u_min structure +
+   every actual step measured non-descending. Either λ₋ is subset noise, or it is real-but-tiny
+   AND measured unexploitable — both branches terminate the exploit.
 2. **ep650-EMA is exhausted to BOTH orders at the frozen schedule point**, up to subset/fp32 noise:
    near-stationary (g_true ≈ 0.08 against per-pair σ ≈ 2.0) + weakly-convex-flat (no usable λ₋).
    The cold-Muon quench story (S2 M-S2-1..5) is UNCHANGED — and sharpened: there was no 2nd-order
@@ -202,10 +214,11 @@ cited are the #341 chunked verdicts. Pointer 0.19110 UNMOVED — this chain is M
    negative curvature or a large PD decrement — both now $0-measurable with the landed harness.
 4. **The quadratic_basin ExitEvent (S3 → S2 interface) survives as a SENSOR with new discipline:**
    its inputs MUST be K≥32 spectra with a K-trend row; the `HOLD_STAGE_NEGATIVE_CURVATURE`
-   recommendation is DISARMED (the indefiniteness it would hold on is subset noise). The
-   basin-entered predicate (T_k PD + small decrement) is in fact SATISFIED at ep650 at K=128 —
-   i.e. the sensor, correctly K-disciplined, says: fire the finisher / stop — consistent with
-   S2's meat-exit (M-S2-4 exhaustion by ~ep600–650).
+   recommendation is DISARMED (the indefiniteness it would hold on is subset-dominated; the
+   residual full-P λ₋ ~ −8 is measured unexploitable). The basin-entered predicate, correctly
+   K-disciplined (near-PD at scale + tiny decrement ~1e-3 + no transferable descent), is
+   SATISFIED at ep650 — i.e. the sensor says: fire the finisher / stop — consistent with S2's
+   meat-exit (M-S2-4 exhaustion by ~ep600–650).
 5. **The residual d_seg gap (0.0034 → 0.00092) cannot be crossed by optimizer/solve moves at this
    basin. The wall is representation/basis/capacity.** Arm A (DirectionalBasisRebalance) + the
    analytic lane render-band + basis levers carry the entire burden — consistent with, and now
@@ -216,8 +229,12 @@ cited are the #341 chunked verdicts. Pointer 0.19110 UNMOVED — this chain is M
    screen-failing candidates; every conclusion cross-validated on disjoint subsets; all artifacts
    resumable + committed.
 
-Final K=128 numbers to be appended from the completed run (`spectrum_ep650gpu_K128_s0.json`);
-verdict does not depend on them (ratio would need to grow 10× against a stable trend).
+Final K=128 numbers (12 iters, converged): Ritz `[−16.8, −8.5, −2.1, +1.7, +6.7, +14.0, +20.5,
++31.7, +41.3, +45.5, +61.5, +103.6]`, gnorm 0.190 — appended above; verdict unchanged.
+
+## Chain wall-clock + cost ledger
+~4.5 h wall (GPU-throughput Lanczos ladder dominated), $0 paid, 0 training launches, 0 run stops.
+Commits: ebd9ccaaa (harness+tool+links 0-3), 91b3d37d4 (links 2c/3b/3c), final (this terminus).
 
 ## LINK 2 — localize: WHERE the extreme curvature lives (Ritz-vector block projection, $0)
 
