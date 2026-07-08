@@ -150,6 +150,29 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+R. **VERDICT-SCOPE TAXONOMY — one failed formulation is NOT a dead family (operator 2026-07-08:
+   "ensure no falsifications or negative interpretations made based on naive or toy or binary;
+   many techniques have multiple ways of formulation and one failure does not mean family
+   dead").** Extends requirement L (scale-relativity) with the FORMULATION axis and CLAUDE.md's
+   paradigm-vs-implementation (Catalog #307) with the intermediate level. Every negative verdict
+   MUST name its scope on the 4-level ladder and defaults to the NARROWEST level the measurement
+   supports: (1) INSTANCE (this config/checkpoint/constant) · (2) FORMULATION (this mathematical
+   form of the technique — e.g. K≤64 max-plus annulus fit; pooled-unsigned UniWARD; fixed-β
+   hosc) · (3) FAMILY (all known formulations — requires EITHER a theorem/impossibility bound
+   OR kills across ≥2 structurally distinct formulations at adequate scale) · (4) PARADIGM
+   (operator + council consensus only, per the premature-KILL non-negotiable). Binding rules:
+   (a) a binary pass/kill gate decides the DISPOSITION of one formulation (ships/stays-gated) —
+   it is NEVER evidence about the family; (b) at kill time the verdict memo ENUMERATES the known
+   alternative formulations not yet tested (the reformulation queue — e.g. max-plus: different
+   K, different basis elements, log-sum-exp relaxation, per-class vs global; UniWARD asymmetry:
+   other cost fields, hinge vs linear, per-range); (c) "naive/toy/binary" implementations can
+   only produce INSTANCE-level negatives (the L-discipline already bans citing them beyond their
+   scope); (d) the seal review checks every negative v5 consumes for correct scope level —
+   an over-scoped kill is a BLOCKER-class finding. The measured anchor for this rule: viscosity
+   (confound-poisoned "family kill" that was instance-level), UniWARD pooled null (formulation-
+   level read as family-level, now the Q1 reopen), mod-dim ("refuted" = one formulation at one
+   scale), l7 ("defect" = as-formulated-in-PR95-order).
+
 Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "pursue those
    validation paths as well to expand our toolbelt and understanding and improve our
    v[ehicle]").** Every recess probe is a PROTOTYPE INSTRUMENT, not a one-shot gate check: its
