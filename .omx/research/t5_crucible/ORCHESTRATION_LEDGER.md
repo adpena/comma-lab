@@ -507,3 +507,17 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   kinematic-ξ + comma2k19 init → P9; mirror-schedule twin; Model A 1.6-6.4% / Model B 3-11%
   run-1-campaign with per-axis estimates; wall-clock 10-27% + B1-contingency). NEW probes: R12,
   R13, τ-confirm. **Round 2 of the recursive seal begins on v3 (both lenses).**
+- 2026-07-08T~00:0x **DRAFT v3 LANDED** (respawned designer; checkpoint-early honored:
+  e65cfdf76→1097a49e7→83224c801). BLOCKER-1 resolved as TWO SURFACES (witness-alone ep225
+  movable-dominant vs composed ep300 lane-dominant; bridging law: CE birthed ~98% movable mass by
+  ep300, within_flip 5.3% → solved; lane dash-residual stays) — design binds to the COMPOSED set;
+  §0.3 crossing residuals were already on it (re-verified, no crossing number moved); §3.2
+  curriculum REBUILT lane-first, movable amplify 1.0→0.28. **τ_end 0.2 → 0.062 DERIVED**
+  (τ*=m_q/ln5; 0.2 was 3.2× above the flip-core law — v2 was re-encoding the control's truncation
+  by design). TerminalSolve REMOVED (chain-A fold). ONE KKT byte law @ λ_bytes=6.6586e-7 (the
+  0.002 pose threshold that could eat the whole 0.00178 margin is dead). Hybrid deterministic
+  lane orientation (R12-gated + fallback). Hood clamp +8B IN. Comb: MUTCD period + ξ phase +
+  20-ep ramp. Honest: central ≈0.26 does NOT cross; crossing triple verified (0.0011 ∧ 3e-5 ∧
+  0.062 → 0.18932); Model A 1.6-6.4% / Model B 3-11% run-1 (8-15% only with run-1.5 branch,
+  labeled). New $0 probes R12/R13/τ-confirm. **SEAL ROUND 2 LAUNCHED** (both lenses, delta-scoped,
+  one agent — rate-limit-resilient stagger; wave-1 finisher holds slot 2).
