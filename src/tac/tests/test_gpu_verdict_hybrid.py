@@ -207,6 +207,8 @@ def _typed(**over):
     )
     kw = dict(
         name="t", out_dir="experiments/results/x", gt_cache="g.npz", num_pairs=600, epochs=10,
+        wall_clock_budget_days=Provenanced(
+            value=0.5, provenance=ProvenanceClass.DERIVED_AT_CONFIG, unit="days"),
         temp=TypedAnneal(
             start=Provenanced(value=1.0, provenance=ProvenanceClass.MEASURED_ANCHOR, unit="tau"),
             end=Provenanced(value=0.31, provenance=ProvenanceClass.MEASURED_ANCHOR, unit="tau")),

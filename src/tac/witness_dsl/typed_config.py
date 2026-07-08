@@ -67,6 +67,9 @@ __all__ = [
     "TypedWitnessConfig",
     "TypedConfigError",
     "PROGRAM_MANIFEST_SCHEMA",
+    "PERF_ENV_PREFIX",
+    "REQUIRED_PERF_ENV",
+    "missing_perf_env_vars",
     "build_launch_manifest",
     "verify_launch_manifest",
 ]
@@ -85,6 +88,40 @@ PROGRAM_MANIFEST_SCHEMA = "dsl_program_manifest.v1"
 # TypedWitnessConfig launch (crucible_v7) silently drop the single largest compute lever. The
 # drift-guard test (test_v7_compute_exploitation) pins this equality.
 PERF_ENV_PREFIX = "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \\\n  "
+
+
+def _parse_perf_env(prefix: str) -> dict[str, str]:
+    """Parse ``NAME=VALUE`` tokens out of the perf-env prefix — the SoT for the required-var
+    manifest (NEVER a hand-typed duplicate list; the prefix constant IS the list). A future
+    prefix carrying a second var (e.g. ``TAC_MLX_CUSTOM_FUSED_R=1``) is picked up automatically."""
+    out: dict[str, str] = {}
+    for tok in prefix.replace("\\", " ").split():
+        if "=" in tok:
+            name, _, val = tok.partition("=")
+            name = name.strip()
+            if name:
+                out[name] = val.strip()
+    return out
+
+
+# The perf-env vars a launch.sh MUST carry so the ~17x custom-grouped-backward fast path is active.
+# DERIVED by parsing PERF_ENV_PREFIX (the SoT) — so the required set can never drift from what
+# ``to_command`` actually emits. The launcher's CLASS guard asserts the emitted launch.sh contains
+# every one of these (the orphan class "a config path forgot to emit the perf env" becomes a
+# structural REFUSE, not an audit finding).
+REQUIRED_PERF_ENV: dict[str, str] = _parse_perf_env(PERF_ENV_PREFIX)
+
+
+def missing_perf_env_vars(launch_sh_text: str,
+                          required: dict[str, str] | None = None) -> list[str]:
+    """Return the ``NAME=VALUE`` perf-env assignments from ``required`` (default REQUIRED_PERF_ENV)
+    that are ABSENT from ``launch_sh_text`` — the pure core of the launcher's perf-env CLASS guard.
+    A var counts as present only when its exact ``NAME=VALUE`` appears (a bare ``NAME`` or a wrong
+    value does NOT satisfy it — the fast path needs the value set, not merely the name mentioned).
+    Sorted for a stable REFUSE message. Pure (unit-testable at $0)."""
+    req = REQUIRED_PERF_ENV if required is None else required
+    return sorted(f"{name}={val}" for name, val in req.items()
+                  if f"{name}={val}" not in launch_sh_text)
 
 
 class TypedConfigError(ValueError):
@@ -343,6 +380,15 @@ class TypedWitnessConfig(BaseModel):
     gt_cache: str = Field(description="path to the clip's GT cache (.npz)")
     num_pairs: int = Field(gt=0, description="pairs (unit: frame-pairs); n600 = 600")
     epochs: int = Field(gt=0, description="training epochs (unit: epochs)")
+    # REQUIRED (operator 2026-07-08 "wall clock stuff should be default on always"): a launch-eligible
+    # config MUST declare its wall-clock budget. No default => forgetting it is a schema validation
+    # error (the schema makes the orphan structurally impossible). DERIVED, never hand-picked:
+    # scorer_throughput_gate.derive_wall_clock_budget_days(epochs) = anchor min/ep x epochs x slack.
+    # The launcher projects the MEASURED SegNet bench x epochs and REFUSES if it exceeds this budget.
+    wall_clock_budget_days: Provenanced = Field(
+        description="DERIVED wall-clock budget in DAYS (anchor min/ep x epochs x slack); the "
+                    "launcher REFUSES a launch whose measured-bench projection exceeds it",
+    )
     mlx_device: str = Field(default="gpu", description="mlx device: 'gpu' | 'cpu'")
     seed: int = Field(default=0, ge=0, description="RNG seed (deterministic-repro)")
     purpose: str | None = Field(
@@ -396,7 +442,21 @@ class TypedWitnessConfig(BaseModel):
                 raise ValueError(
                     f"{k} is set via the typed verdict_device/verdict_anchor_every fields; "
                     "do not also put it in base")
+        # the wall-clock budget must be POSITIVE and DERIVED (not hand-picked): a bare hardcoded
+        # magic-number budget defeats the "compute from the anchor" law (operator 2026-07-08).
+        b = self.wall_clock_budget_days
+        if float(b.value) <= 0.0:
+            raise ValueError(f"wall_clock_budget_days must be positive (got {b.value})")
+        if b.provenance is ProvenanceClass.HARDCODED_WITH_WAIVER:
+            raise ValueError(
+                "wall_clock_budget_days must be DERIVED (compute from the throughput anchor via "
+                "scorer_throughput_gate.derive_wall_clock_budget_days), never HARDCODED-WITH-WAIVER "
+                "— a hand-picked wall-clock budget defeats the anchor-tracking ceiling")
         return self
+
+    def budget_days_value(self) -> float:
+        """The declared wall-clock budget as a float (days) — what the launcher gate reads."""
+        return float(self.wall_clock_budget_days.value)
 
     # ── the adapter: typed config -> DSL WitnessProgram ──────────────────────
     def to_program(self) -> WitnessProgram:

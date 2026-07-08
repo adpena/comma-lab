@@ -53,6 +53,50 @@ SEG_W: int = 512
 RUN1_MEASURED_MIN_PER_EP: float = 3.1   # crucible_v6 run-1 steady-state (operator-cited; n600 B=1 accum)
 RUN1_ANCHOR_SEGNET_MS: float = ON_REF_MS  # the run-1 machine's SegNet fwd+bwd micro-bench reference
 
+# ── wall-clock BUDGET slack factor (req-T tagged) ──
+# A DERIVED wall-clock budget = anchor min/ep x epochs x this slack (project_wall_clock_days x slack).
+# The budget is a REFUSE CEILING (default-on gate), not a target: it fires when THIS machine's measured
+# SegNet bench projects a run SLOWER than the run-1 anchor by more than the slack. Provenance
+# (value-provenance ladder, req-T): HARDCODED-WITH-WAIVER-class magnitude with a MEASURED anchor for the
+# ceiling — 3.65 min/ep INCL-startup / 3.1 steady-state (operator-cited) = 1.18 startup-amortization
+# ceiling; 1.15 keeps a slim thermal/per-ep-jitter headroom so the gate stays a REAL refuse (>15%
+# slower than the anchor => REFUSE) rather than a rubber stamp. RE-DERIVE if the run-1 anchor changes
+# or a lever batches the forward (micro-batch>1 => a different min/ep => a different implied ceiling).
+WALL_CLOCK_SLACK_FACTOR: float = 1.15
+
+
+def derive_wall_clock_budget_days(epochs: int,
+                                  min_per_ep: float = RUN1_MEASURED_MIN_PER_EP,
+                                  slack: float = WALL_CLOCK_SLACK_FACTOR) -> float:
+    """DERIVE a config's wall-clock BUDGET (days) from the measured anchor x epochs x slack — the
+    single SoT for both the typed-config REQUIRED field and the launcher's default-on fallback.
+    ``budget = project_wall_clock_days(min_per_ep, epochs) * slack``. Pure. NEVER hand-pick a budget;
+    compute it here so the ceiling tracks the anchor. Raises on non-positive inputs."""
+    if epochs <= 0:
+        raise ValueError(f"epochs must be positive to derive a wall-clock budget, got {epochs}")
+    if min_per_ep <= 0.0 or slack <= 0.0:
+        raise ValueError(f"min_per_ep/slack must be positive, got {min_per_ep}/{slack}")
+    return project_wall_clock_days(min_per_ep, int(epochs)) * float(slack)
+
+
+def implied_segnet_ms_ceiling(budget_days: float, epochs: int,
+                              ref_min_per_ep: float = RUN1_MEASURED_MIN_PER_EP,
+                              ref_segnet_ms: float = RUN1_ANCHOR_SEGNET_MS) -> float:
+    """The MEASURED-bench ceiling implied by a declared budget (fix #3 framing): a machine whose
+    SegNet fwd+bwd bench exceeds this projects a run OVER budget — REFUSE even when the ~17x env is
+    present + the 700ms absolute throughput gate passes (catches a NON-env perf regression: kernel
+    not loading, wrong device, thermal throttle). Inverts :func:`project_min_per_ep`:
+    ``ceiling_ms = ref_segnet_ms * (implied_min_per_ep / ref_min_per_ep)`` where
+    ``implied_min_per_ep = budget_days * 1440 / epochs``. Pure. Note: budget already carries the slack,
+    so the ceiling does too. Mathematically equivalent to ``project_launch_wall_clock(...).over_budget``;
+    exposed as an explicit ceiling for the coupling assertion + a legible refuse message."""
+    if epochs <= 0 or budget_days <= 0.0:
+        raise ValueError(f"epochs/budget_days must be positive, got {epochs}/{budget_days}")
+    if ref_min_per_ep <= 0.0 or ref_segnet_ms <= 0.0:
+        raise ValueError(f"ref_min_per_ep/ref_segnet_ms must be positive, got {ref_min_per_ep}/{ref_segnet_ms}")
+    implied_min_per_ep = float(budget_days) * (60.0 * 24.0) / float(epochs)
+    return float(ref_segnet_ms) * (implied_min_per_ep / float(ref_min_per_ep))
+
 
 def project_min_per_ep(machine_segnet_ms: float,
                        ref_min_per_ep: float = RUN1_MEASURED_MIN_PER_EP,

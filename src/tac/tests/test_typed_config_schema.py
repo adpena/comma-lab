@@ -35,7 +35,11 @@ def _anneal() -> TypedAnneal:
 def _valid_config(**over) -> TypedWitnessConfig:
     kw = dict(
         name="test", out_dir="experiments/results/x", gt_cache="gt.npz",
-        num_pairs=600, epochs=1500, temp=_anneal(),
+        num_pairs=600, epochs=1500,
+        wall_clock_budget_days=Provenanced(
+            value=3.7, provenance=ProvenanceClass.DERIVED_AT_CONFIG, unit="days",
+            source="derive_wall_clock_budget_days(epochs)"),
+        temp=_anneal(),
         stages=(TypedStage(name="tau_softplus",
                            start_epoch_flag="--tau-softplus-start-epoch", start_epoch=300),),
         regularizers=(TypedRegularizer(

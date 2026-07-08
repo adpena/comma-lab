@@ -547,6 +547,41 @@ def _emitted_flag_names(cfg, out_dir: str) -> set[str]:
     return {flag for flag, _ in cfg.to_trainer_flags(out_dir)}
 
 
+def _config_wall_clock_budget_days(cfg) -> float | None:
+    """Read a config's DECLARED wall-clock budget (days) as a float, or None if undeclared.
+    Handles a Provenanced wrapper (TypedWitnessConfig.wall_clock_budget_days) via ``.value`` and a
+    bare numeric (a future WitnessConfig field). Pure."""
+    raw = getattr(cfg, "wall_clock_budget_days", None)
+    if raw is None:
+        return None
+    val = getattr(raw, "value", raw)  # Provenanced -> .value; numeric -> itself
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def resolve_wall_clock_budget(accept_days: float | None, declared_days: float | None,
+                              epochs: int) -> tuple[float | None, str, bool]:
+    """Resolve the effective wall-clock budget for the launch (DEFAULT-ON, pure, unit-testable).
+
+    Priority: (1) operator ``--accept-wall-clock`` override (stamps the run dir) > (2) the config's
+    DECLARED budget > (3) a launcher-DERIVED fallback from the throughput anchor x epochs x slack (so
+    a legacy config that never declared a budget STILL gets a default-on refuse — the gate never
+    silently disappears). Returns ``(budget_days | None, source_label, is_operator_override)``;
+    None only when epochs<=0 and nothing was supplied/declared (the gate then stays silent)."""
+    if accept_days is not None:
+        return float(accept_days), "operator --accept-wall-clock (override, stamped)", True
+    if declared_days is not None:
+        return float(declared_days), "config-declared (typed DERIVED budget)", False
+    if epochs and epochs > 0:
+        from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
+        return (derive_wall_clock_budget_days(int(epochs)),
+                "launcher-derived fallback (anchor min/ep x epochs x slack; config declared none)",
+                False)
+    return None, "unavailable (no budget; epochs unknown)", False
+
+
 def dsl_config_gate_action(
     *, ok: bool, detail: str, manifest_absent: bool, config: str,
     dry_run: bool, skip: bool, enforce: bool, allow_rationale: str | None,
@@ -583,9 +618,9 @@ def dsl_config_gate_action(
 
 
 def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
-                         wall_clock_budget_days: float | None = None) -> int:
+                         accept_wall_clock_days: float | None = None) -> int:
     """Pre-spawn SegNet fwd+bwd throughput assertion (the ~17x fast-path gate) + the
-    conditional --compile-step bit-identical requirement + the L45 WALL-CLOCK PROJECTION.
+    conditional --compile-step bit-identical requirement + the L45 DEFAULT-ON WALL-CLOCK GATE.
     Returns 0 (proceed) / nonzero (REFUSE). NEVER blocks on unavailability (measured-slow only)."""
     try:
         from tac.local_acceleration.scorer_throughput_gate import (
@@ -618,20 +653,40 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
               f"assert_compile_bit_identical at construction (compiled step == uncompiled + "
               f"deterministic). See tac.local_acceleration.scorer_throughput_gate."
               f"assert_compile_step_bit_identical.")
-    # sub-part 4 (L45): PROJECT total wall-clock from the measured SegNet ms + the run-1 anchor.
-    # Advisory by default (surfaced at admission so a 6.5-day run is never a silent surprise);
-    # REFUSE only against an explicit --wall-clock-budget-days. Projection is off a same-class
-    # (B=1-accum) MEASURED anchor, NOT a fresh per-ep measurement (labelled advisory).
+    # sub-part 4 (L45): DEFAULT-ON WALL-CLOCK GATE. PROJECT total wall-clock from the measured SegNet
+    # ms + the run-1 anchor and REFUSE against the DECLARED budget (config typed field) — no opt-in
+    # flag needed (operator 2026-07-08 "default on always"). Budget resolution: --accept-wall-clock
+    # override (stamps) > config-declared > launcher-derived anchor fallback (so a legacy non-declaring
+    # config STILL gets a refuse). This also couples throughput to budget (fix #3): a bench that passes
+    # the 700ms absolute gate but is slower than the budget-implied ceiling STILL REFUSES here (catches
+    # a non-env perf regression — kernel not loading / wrong device / thermal — even with the env set).
+    # Projection is off a same-class (B=1-accum) MEASURED anchor, NOT a fresh per-ep measurement.
     epochs = int(getattr(cfg, "epochs", 0) or 0)
-    proj = project_launch_wall_clock(verdict.segnet_fwd_bwd_ms, epochs,
-                                     budget_days=wall_clock_budget_days)
+    budget, budget_src, is_override = resolve_wall_clock_budget(
+        accept_wall_clock_days, _config_wall_clock_budget_days(cfg), epochs)
+    if is_override and budget is not None:
+        try:
+            stamp = Path(out_dir) / "wall_clock_accept.txt"
+            stamp.parent.mkdir(parents=True, exist_ok=True)
+            stamp.write_text(
+                "OPERATOR WALL-CLOCK ACCEPT (--accept-wall-clock)\n"
+                f"accepted_budget_days: {budget}\n"
+                "reason: operator knowingly accepted a wall-clock budget overriding the config-derived "
+                "ceiling (never silent; L45 default-on gate).\n")
+            print(f"[launch-witness] WALL-CLOCK ACCEPT (operator): budget {budget:.2f} days — stamped {stamp}.",
+                  file=sys.stderr)
+        except Exception:  # stamp is best-effort provenance; never block on it
+            print(f"[launch-witness] WALL-CLOCK ACCEPT (operator): budget {budget:.2f} days.", file=sys.stderr)
+    proj = project_launch_wall_clock(verdict.segnet_fwd_bwd_ms, epochs, budget_days=budget)
     if proj is not None and epochs > 0:
-        print(f"[launch-witness] wall-clock projection (advisory, L45): {proj.detail}")
+        print(f"[launch-witness] wall-clock gate (L45, default-on): {proj.detail} [budget: {budget_src}]")
         if proj.over_budget:
-            print(f"[launch-witness] ERROR: REFUSING to launch — {proj.detail} "
-                  f"(raise --wall-clock-budget-days, reduce --epochs, or land a compute lever "
-                  f"before launching).", file=sys.stderr)
-            return 4
+            print(f"[launch-witness] ERROR: REFUSING to launch — {proj.detail} [budget: {budget_src}]. "
+                  f"This machine's measured SegNet bench projects a run OVER the declared/derived "
+                  f"budget (a slower-than-anchor machine or a non-env perf regression). Land a compute "
+                  f"lever / reduce --epochs / free the machine, or pass --accept-wall-clock <days> to "
+                  f"knowingly accept a longer run.", file=sys.stderr)
+            return 8
     return 0
 
 
@@ -938,11 +993,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--skip-throughput-gate", action="store_true",
                     help="skip the pre-spawn SegNet fwd+bwd throughput micro-bench (the ~17x fast-path "
                     "assertion). Default runs it (a measured gate, not a flag-grep).")
-    ap.add_argument("--wall-clock-budget-days", type=float, default=None,
-                    help="(L45) REFUSE the launch when the PROJECTED total wall-clock (from the measured "
-                    "SegNet micro-bench x the run-1 min/ep anchor x --epochs) exceeds this many days. "
-                    "Default None = advisory only (the projection is always PRINTED at admission so a "
-                    "multi-day run is never a silent surprise).")
+    ap.add_argument("--accept-wall-clock", type=float, default=None, metavar="DAYS",
+                    help="(L45 operator escape hatch) SUPPLY/OVERRIDE the wall-clock budget in DAYS and "
+                    "LOUDLY stamp wall_clock_accept.txt in the run dir. Wall-clock gating is DEFAULT-ON "
+                    "(the config declares its DERIVED budget; a non-declaring legacy config uses the "
+                    "launcher-derived anchor fallback), so the projection REFUSES an over-budget launch "
+                    "WITHOUT this flag; pass it only to knowingly accept a longer run (never silent).")
     ap.add_argument("--skip-schedule-provenance-gate", action="store_true",
                     help="(operator 2026-07-09 'move from hardcoded epochs to event based') downgrade "
                     "the schedule-provenance gate from REFUSE to WARN. The gate refuses a REAL launch "
@@ -1094,6 +1150,26 @@ def main(argv: list[str] | None = None) -> int:
     launch_sh = write_launch_sh(cfg, out_dir, extra_flags=extra_flags or None)
     run_log = out_dir / "run.log"
     print(f"# wrote {launch_sh}")
+
+    # (b-perf) PERF-ENV CLASS GUARD (operator 2026-07-08 "shouldn't have had to be caught manually").
+    # Assert the EMITTED launch.sh env block carries every REQUIRED_PERF_ENV var (the ~17x custom-
+    # grouped-backward fast path). A config path that forgets the perf-env emission (the exact v7
+    # orphan the compute audit fixed by hand) is now a STRUCTURAL REFUSE (rc=9) naming the missing
+    # var — not an audit finding. SoT = the PERF_ENV_PREFIX constant (parsed, never a duplicate list).
+    try:
+        from tac.witness_dsl.typed_config import REQUIRED_PERF_ENV, missing_perf_env_vars
+        _missing = missing_perf_env_vars(Path(launch_sh).read_text())
+        if _missing:
+            print(f"[launch-witness] ERROR: REFUSING to launch — the emitted launch.sh is MISSING "
+                  f"required perf-env var(s) {_missing} (of {sorted(REQUIRED_PERF_ENV)}). The config's "
+                  f"to_command dropped the ~17x custom-grouped-backward prefix; the run would be ~17x "
+                  f"SLOW. Fix the config's to_command emission (see "
+                  f"tac.witness_dsl.typed_config.PERF_ENV_PREFIX).", file=sys.stderr)
+            return 9
+        print(f"# perf-env guard: launch.sh carries {sorted(REQUIRED_PERF_ENV)} (~17x fast path emitted).")
+    except Exception as exc:  # the guard's helper import must never wedge the launch (loud fail-open)
+        print(f"[launch-witness] WARNING: perf-env class guard unavailable ({type(exc).__name__}: {exc}); "
+              f"the post-spawn perf-env LOG check (step d) remains the backstop.", file=sys.stderr)
 
     # (b0, #351) WRITE constants_manifest.json beside launch.sh when the config carries LawRef-
     # compiled constants (crucible_v6). Provenance-only (value-identity: every value bit-matches the
@@ -1294,7 +1370,7 @@ def main(argv: list[str] | None = None) -> int:
     # step must be bit-identical (asserted at trainer construction; the gate flags the requirement here).
     if not args.skip_throughput_gate:
         gate_rc = _run_throughput_gate(cfg, out_dir, threshold_ms=args.throughput_threshold_ms,
-                                       wall_clock_budget_days=args.wall_clock_budget_days)
+                                       accept_wall_clock_days=args.accept_wall_clock)
         if gate_rc != 0:
             return gate_rc
 
