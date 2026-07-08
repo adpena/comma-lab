@@ -35,7 +35,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
       launchable as written. Proposing-optimal-with-tags is NOT a NO-FAKE violation — asserting
       it as MEASURED would be; the draft states its epistemic status per knob and pre-registers
       falsification. THEN:
-- [ ] P3 red-team attacks THE DRAFT (not an abstraction) + MANDATORY PROVENANCE AUDIT —
+- [x] P3 red-team attacks THE DRAFT (not an abstraction) + MANDATORY PROVENANCE AUDIT —
       **MANDATORY FIRST PASS: PROVENANCE AUDIT** (operator directive 2026-07-07 "I shouldn't have
       had to catch that"): for EVERY load-bearing measured claim in EVERY position, verify
       {anchor path · review_status (pre-registered-only / recovery-written-UNREVIEWED /
@@ -331,3 +331,18 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   present BOTH bands with per-lever repair mechanisms named, and justify the central. Sandbox
   prior: iterate-ability HIGH → marginal cost of including derisked levers in run-1 is LOW.
   Guard: optimism about MECHANISMS, rigor about CLAIMS (pose measured-through-witness only, L68).
+- 2026-07-07T~20:4x P3 RED-TEAM DONE (d33df2be9): **REVISE-THEN-RECESS**. Provenance audit
+  CLEAN (anchors re-verified BY EXECUTION: byte-closes bit-exact ×3; 31-flag argparse check zero
+  invented). F1 BLOCKER: draft's own printed crossing tail sums 0.2207 > 0.19110 — doesn't cross;
+  0.186 band-lower irreproducible + leaned on forsworn ancestor pose; honest crossing needs pose
+  ~2-3e-5 ∧ d_seg at islands ceiling. F3: anneal-epochs=726 makes the event exit VACUOUS by
+  construction (re-locks the 76-125 wasted ep; §8 projection arithmetically impossible). F4:
+  AACoverageRender excluded on a STALE seam (FEED-07g built compose-after-downsample WITH proofs
+  same-day) — **the retrieval-failure class caught by the MACHINE, not the operator** (the curve
+  bent). F2/F6/F7: req-A(ii) claimed-absent · armed trigger no backtest · WeightEntropy no λ=0
+  comparator. F8/F9: SOLVE needs measured-acceptance clause (chain-A ~35% instrument gap) ·
+  islands ep0 abort gate calibrated against behavior the measured seed run never produced.
+  Counter-frame adjudicated 2/3 RIGHT and strengthens: rate moat → ceiling-raising levers are
+  the crossing ENABLERS; F17 dual-band (independent-tail AND sequential-with-repair) demanded.
+  **P3b REVISION DESIGNER LAUNCHED** (DRAFT v2: honest crossing engineered true, AA into run-1,
+  vacuous exit fixed, requirement letters closed, chain-A folded live).
