@@ -10275,3 +10275,26 @@ free) then APPEARANCE-space (paint the composite so the FROZEN SegNet argmax thr
 byte-closed upstream/evaluate.py only. RELATION: v7.5 counter-force = the near-term in-place
 fix; per-class decomposition = the v8-class architecture that obsoletes the bug class. Design
 derivation fired; build gated on the design + crucible sequencing.
+
+## FEED-missingforces (2026-07-08) — operator: what OTHER terms are missing in the shared trunk? Ranked from telemetry + the energy
+Q (operator): beyond the area-Lagrange, what forces does the full level-set/Morse-Smale/
+dynamical-system energy demand that the shared-trunk vehicle lacks? RANKED (each: measured
+signature + mechanism + machinery status):
+1. **TEMPORAL SCREW-CONSISTENCY** — L_temp = ||φ(x,t+1) − φ(warp_ξ(x),t)||_annulus. Signature:
+   44% of CE-residual spikes = temporal flicker (MEASURED, lane-dominated, L67). Zero-byte;
+   DUAL-USE with pose (the same se(3) ξ — the unification's seg face). Machinery: tac.lie +
+   warp + annulus mask EXIST; loss never composed. THE standout.
+2. **MARGIN-BAND SATISFICING (hinge at R-survival δ_R)** — CE pushes already-safe interiors
+   (ep_loss ~478 vs 97% of d_seg in the 4.7% annulus #333 = gradient budget leak); zero
+   gradient beyond margin δ_R (derive δ_R from the measured R-chain noise floor), full inside.
+   The UNIWARD/Fisher satisficing reading; reallocates interior gradient to the separatrix.
+   Related default-off (focal/msal) exist but the R-derived hinge does not.
+3. **TIE-LOCUS NORMAL-DISPLACEMENT loss** — train the d_seg currency directly (pairwise
+   boundary displacement on the adjacency graph, flip-density weighted; the per-class design's
+   factorization). #275 sub-pixel localizer = the machinery, never a force. Couples to the
+   #149 R-phase alignment (1px band at 384; 874-placement closed-form, never a term).
+4. (weaker) PERSISTENCE-PRUNING (death) — the missing birth/death symmetry half; low EV until
+   the theft fix surfaces speckle. 5. (rate axis) WEIGHT-ENTROPY/MDL in-training (#242
+   registered-never-fired). DISPOSITION: register 1-3 as DSL Lever factories default-off +
+   duty-to-measure (the activation ledger holds them); composition decisions ride the crucible
+   (NOT folded into v7.5 mid-seal — scope discipline). Pointer 0.19110 UNMOVED (means).
