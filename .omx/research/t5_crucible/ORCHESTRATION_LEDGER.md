@@ -265,6 +265,19 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- MID-RUN CHECKPOINT ARMED (operator: "is the schedule optimal? did the crucible dig deep?") ---
+The honest answer recorded: schedule = optimal-relative-to-measured (req N), law-derived not
+lore-derived, with 5 NAMED residuals {stage-skeleton family-bound · τ_end point-on-wide-knee ·
+ν-measured-on-control's-τ-path (run-1 holds 0.31, control descended to 0.216) · orderings
+unswept · Muon-start anchor-based}. IN-FLIGHT VALIDATION ARMED for the sharpest residual:
+**ν-REFIT ON RUN-1'S OWN TRAJECTORY** — at ~ep450-550 (tau stage, before the ep600 anneal-
+complete + ep675 fire band), run the landed trace-probe ν-refit (tools/witness_trace_probes.py)
+on run-1's live verdict rows. PRE-REGISTERED: ν(run-1,tau) ∈ [0.5×, 2×] of 0.012653 → window
+laws HOLD, no action; outside → the forfeit fire band re-derives from the LIVE ν before it
+fires (s* = ν_live·forfeit; the constant was always DERIVED-AT-CONFIG with exactly this
+re-derivation trigger). Ride it on the ~ep500 autonomous check-in. The gaps the schedule
+freezes, the run measures; the campaign inherits both.
+
 --- 🚀 OPERATOR GO EXECUTED — RUN-1 LIVE — 2026-07-09 ---
 - Operator: "Go". Fired the SEALED one-command launch through the governed launcher.
 - ADMIT (91.0 ≤ 98.3 GiB) · throughput gate OK (SegNet fwd+bwd 396ms ≤ 700ms, grouped-backward
