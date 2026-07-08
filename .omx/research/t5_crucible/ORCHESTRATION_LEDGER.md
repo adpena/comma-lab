@@ -120,6 +120,29 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+M. **CAPACITY HUMILITY · MEASURE→SWEEP→DERIVE · SELF-DERIVING PDE CONTROL (operator
+   2026-07-07).** Three binding principles:
+   (1) **CAPACITY IS NOT FULLY UNDERSTOOD — treat it empirically.** Capacity's interaction with
+   basis/format/schedule has surprised us repeatedly (bc20 starvation · capacity-alone +6%
+   HARMFUL on isotropic · basis-prior-to-capacity · the two-surface island shares). No capacity
+   claim rests on derivation alone; the hedge that wins REGARDLESS is TRAIN-BIG-COMPRESS-SMALL
+   (big capture → #157/#336 sensitivity waterfill down; the compress-half is measured, so the
+   train-side capacity choice only needs to be GENEROUS, not optimal). Where capacity matters,
+   fit RESPONSE SURFACES (#170: Q-bits × E-epochs × C-capacity) from sweeps — measure → sweep →
+   DERIVE the law from the measured surface → step toward optimal — not theory-first guessing.
+   (2) **MEASURE→SWEEP→DERIVE-TOWARD-OPTIMAL is the standing loop** for any knob whose law we
+   can't derive a priori: cheap sweep → fitted surface → derived local law (with validity
+   domain) → next sweep centered at the implied optimum. Response surfaces are first-class
+   apparatus (they feed the costate DECIDE layer as models, not just plots).
+   (3) **SELF-DERIVING PDE CONTROL — responsive AND proactive.** The #318/#320 exemplar
+   (adaptive-ε from viscous-HJ CFL stability) is the TEMPLATE, not a one-off: control laws are
+   DIFFERENTIAL EQUATIONS derived from the system's own physics + live measurements, with BOTH
+   feedback (respond to measured state) and FEEDFORWARD/model-predictive terms (act before the
+   event, using the fitted forecast models — powerlaw meat-flux, spectrum trend, per-class λ
+   trajectories — as the internal model). The costate controller's mature form: λ̇ = the adjoint
+   equation of the score functional; anneal rates governed by measured meat-flux ODEs; stage
+   transitions = MPC decisions over the response surfaces. Programmed intelligence = the DE +
+   its clamps + its falsification band, in the DSL as class-(c) laws.
 L. **SCALING: COARSE → FINE → EXTREMELY FINE → ASYMPTOTE, under INFINITE COMPUTE + SEPARATRIX
    ASYMMETRY (operator 2026-07-07).** ASYMMETRY ADDENDUM: the separatrix is NOT symmetric —
    flip costs and responses are one-sided per class-pair (Road→Lane FP ≠ Lane→Road erasure;
