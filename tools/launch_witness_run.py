@@ -883,6 +883,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--skip-throughput-gate", action="store_true",
                     help="skip the pre-spawn SegNet fwd+bwd throughput micro-bench (the ~17x fast-path "
                     "assertion). Default runs it (a measured gate, not a flag-grep).")
+    ap.add_argument("--skip-schedule-provenance-gate", action="store_true",
+                    help="(operator 2026-07-09 'move from hardcoded epochs to event based') downgrade "
+                    "the schedule-provenance gate from REFUSE to WARN. The gate refuses a REAL launch "
+                    "whose emitted --*-start-epoch schedule TRIGGERS are naked hardcoded epochs — not "
+                    "event-governed (a co-emitted --curriculum-event-triggered/--curriculum-nucleus-"
+                    "guard/--plateau-trigger/--closed-loop-control declared in schedule_governance), "
+                    "not LawRef-DERIVED (in constants_manifest.json), and not a TAGGED fail-safe cap. "
+                    "Default ENFORCES (--dry-run is always advisory: it prints the table, never refuses).")
     ap.add_argument("--throughput-threshold-ms", type=float, default=None,
                     help="override the SegNet fwd+bwd median ms gate (default 700; measured ON~396 / "
                     "OFF~6713). >threshold => REFUSE (custom-grouped-backward fast path not active).")
@@ -1018,6 +1026,46 @@ def main(argv: list[str] | None = None) -> int:
     manifest_path = write_constants_manifest(cfg, out_dir)
     if manifest_path is not None:
         print(f"# wrote {manifest_path} ({len(cfg.constants_manifest)} LawRef-compiled constants)")
+
+    # (b0.5) SCHEDULE-PROVENANCE GATE (operator 2026-07-09, verbatim fury: "Fuck pr95... Never do it
+    # again. Add a gate and hook... move from hardcoded epochs to event based and deep math governed
+    # and costate controller"). Every emitted --*-start-epoch schedule TRIGGER carrying a POSITIVE
+    # hardcoded epoch must be EVENT-TRIGGERED (a named co-emitted sensor declared in schedule_
+    # governance), DERIVED (a LawRef value in constants_manifest.json), or a TAGGED fail-safe CAP —
+    # else it is the PR95-skeleton regression the operator prohibits and the launch REFUSES (rc=6).
+    # ADVISORY on --dry-run + under --skip-schedule-provenance-gate (prints the table, proceeds);
+    # ENFORCING on a real launch. Fail-OPEN on infra error (a gate crash must never wedge the ONE
+    # launch path); the deterministic classification of valid inputs does not raise.
+    try:
+        import schedule_provenance_gate as spg  # tools/ on sys.path (same dir as this launcher)
+
+        sched_pairs = list(cfg.to_trainer_flags(str(out_dir)))
+        sched_pairs += spg.extra_flag_pairs(extra_flags or [])
+        sched_verdicts = spg.classify_launch(
+            sched_pairs,
+            registry=spg.schedule_when_flags(_TRAINER.read_text()),
+            manifest_keys=set(getattr(cfg, "constants_manifest", {}) or {}),
+            governance=getattr(cfg, "schedule_governance", {}) or {})
+        sched_ok, sched_viol, sched_table = spg.gate_report(sched_verdicts)
+        print(sched_table)
+        if not sched_ok:
+            if args.dry_run or args.skip_schedule_provenance_gate:
+                why = "DRY-RUN advisory" if args.dry_run else "--skip-schedule-provenance-gate set"
+                print(f"[launch-witness] WARNING ({why}): schedule-provenance gate has "
+                      f"{len(sched_viol)} NAKED primary-epoch schedule trigger(s); proceeding.\n"
+                      + spg.LEGAL_PATHS_MSG, file=sys.stderr)
+            else:
+                print(f"[launch-witness] ERROR: REFUSING to launch — {len(sched_viol)} NAKED "
+                      f"primary-epoch schedule trigger(s) (operator 2026-07-09 no-hardcoded-epochs):",
+                      file=sys.stderr)
+                for v in sched_viol:
+                    print(f"    {v.flag} {v.value}  — {v.detail}", file=sys.stderr)
+                print(spg.LEGAL_PATHS_MSG, file=sys.stderr)
+                return 6
+    except Exception as exc:  # infra/import failure must never wedge the launcher (fail-open, loud)
+        print(f"[launch-witness] WARNING: schedule-provenance gate unavailable "
+              f"({type(exc).__name__}: {exc}); proceeding (no naked-epoch protection this launch).",
+              file=sys.stderr)
 
     # (b1) MEMORY PREFLIGHT (#205 OOM self-protection). Project peak RSS from the EMITTED launch.sh
     # using MEASURED constants (2026-07-02 ledger) and REFUSE a config whose projected peak busts a

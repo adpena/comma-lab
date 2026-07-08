@@ -412,6 +412,133 @@ def verdict_scope_evidence_text(added_lines: list[str], limit: int = 1800) -> st
     return "\n".join(keep)[:limit]
 
 
+# --- SCHEDULE-PROVENANCE LEG (operator 2026-07-09, verbatim fury: "Fuck pr95... Never do it
+# again. Add a gate and hook... move from hardcoded epochs to event based and deep math governed
+# and costate controller"). Sister of the LAUNCHER-path STRICT gate (tools/schedule_provenance_
+# gate.py): the launcher refuses EMISSION of a naked primary epoch; this leg flags AUTHORING it.
+# A commit touching a schedule-owning surface (witness_autoconfig.py / witness_dsl / a launch
+# config) that ADDS a naked hardcoded-epoch schedule param (a NEW *_start_epoch delta assignment
+# or a --*-start-epoch argparse default, POSITIVE int) WITHOUT a co-added event/derived/cap
+# provenance token — or that ADDS a NEW PR95-named stage sequence — drifts. Deterministic,
+# window-granular (same grain as the other legs), fail-open, same-line waiver
+# `# SCHEDULE_PROVENANCE_OK:<real rationale>`. Memory:
+# elementwise_audits_launder_structural_cargocult_pr95_skeleton_20260709. ---
+SCHEDULE_GOV_FILE_PAT = re.compile(
+    r"(src/tac/witness_autoconfig\.py$|src/tac/witness_dsl/|"
+    r"\.omx/operator_authorize_recipes/.+\.ya?ml$|launch[^/]*config)", re.IGNORECASE)
+# a NEW schedule-epoch DEFINITION on an added line: a delta/config assignment
+#   "<x>_start_epoch": 300  |  <x>_start_epoch = 300  |  argparse default for a --*-start-epoch.
+_SCHED_EPOCH_ASSIGN = re.compile(r'["\']?(\w*_start_epoch)["\']?\s*[:=]\s*(\d+)')
+_SCHED_EPOCH_ARGPARSE = re.compile(
+    r'add_argument\(\s*"(--[a-z0-9-]*-start-epoch)"[^\n]*?default\s*=\s*(\d+)')
+# PR95 discrete-stage NAMES — a NEW sequence literal carrying >= 2 distinct ones is the
+# PR95-skeleton smell (CE->tau_softplus->l7->Muon at proportional boundaries).
+_PR95_STAGE = re.compile(
+    r"\b(ce|tau_softplus|l7|muon|smooth|qat|c1a|sigma|lambda_sweep)\b", re.IGNORECASE)
+_PR95_SEQUENCE_CUE = re.compile(r"(stage|curriculum|schedule|sequence|phase)", re.IGNORECASE)
+# governance / derivation tokens: presence in the window's added lines means the epoch is (or
+# is being) governed by an event/law/cap — no drift (matches the launcher gate's three classes).
+_SCHED_GOV_TOKEN = re.compile(
+    r"(LawRef|equation_id|constants_manifest|schedule_governance|curriculum.?event.?triggered|"
+    r"nucleus.?guard|plateau.?trigger|closed.?loop|event.?triggered|fail.?safe\s+cap|"
+    r"derived.?at.?config|derived\s+from)", re.IGNORECASE)
+_SCHED_WAIVER = re.compile(r"#\s*SCHEDULE_PROVENANCE_OK\s*:\s*(\S.*)")
+
+
+def schedule_gov_file_in_scope(path: str) -> bool:
+    """True iff this changed file is a schedule-owning surface the schedule-provenance leg
+    scans (witness_autoconfig.py / witness_dsl / a launch-config recipe)."""
+    return bool(SCHEDULE_GOV_FILE_PAT.search(str(path or "")))
+
+
+def _has_valid_schedule_waiver(line: str) -> bool:
+    """True iff the line carries # SCHEDULE_PROVENANCE_OK:<rationale> with a REAL rationale
+    (placeholder literals rejected; >= 4 chars required — reuses the verdict-scope discipline)."""
+    m = _SCHED_WAIVER.search(str(line or ""))
+    if not m:
+        return False
+    rationale = m.group(1).strip()
+    return len(rationale) >= 4 and not _WAIVER_PLACEHOLDER.match(rationale)
+
+
+def naked_epoch_additions(added_lines: list[str]) -> list[str]:
+    """The added lines that DEFINE a positive hardcoded schedule epoch (a *_start_epoch delta
+    assignment or a --*-start-epoch argparse default), minus lines carrying a valid same-line
+    waiver. Returns short ``name value`` descriptors (empty == none)."""
+    out: list[str] = []
+    for line in added_lines:
+        s = str(line or "")
+        if _has_valid_schedule_waiver(s):
+            continue
+        for pat in (_SCHED_EPOCH_ASSIGN, _SCHED_EPOCH_ARGPARSE):
+            m = pat.search(s)
+            if m:
+                try:
+                    if int(m.group(2)) > 0:
+                        out.append(f"{m.group(1)} {m.group(2)}")
+                except (TypeError, ValueError):
+                    pass
+                break
+    return out
+
+
+def pr95_stage_sequence_additions(added_lines: list[str]) -> list[str]:
+    """Added lines that introduce a NEW PR95-named stage SEQUENCE (a stage/curriculum/schedule
+    line naming >= 2 DISTINCT PR95 stages), minus valid-waiver lines. A stage NAME from the
+    incumbent is itself a framing smell (memory: naming is framing)."""
+    out: list[str] = []
+    for line in added_lines:
+        s = str(line or "")
+        if _has_valid_schedule_waiver(s) or not _PR95_SEQUENCE_CUE.search(s):
+            continue
+        names = {m.group(1).lower() for m in _PR95_STAGE.finditer(s)}
+        if len(names) >= 2:
+            out.append(", ".join(sorted(names)))
+    return out
+
+
+def window_has_schedule_gov_cite(all_added_lines: list[str]) -> bool:
+    """True iff the window's added lines carry a schedule-governance / derivation token
+    (LawRef / schedule_governance / an event sensor / fail-safe cap / derived-from). Window
+    granularity (same accepted bound as the other legs): a proper migration that adds the
+    epoch AND its governance in the same turn is not nagged."""
+    return any(_SCHED_GOV_TOKEN.search(str(ln or "")) for ln in all_added_lines)
+
+
+def schedule_provenance_violations(subjects: list[str], per_file_added: dict) -> list[str]:
+    """The schedule-provenance leg's messages over the window's governed-file diffs.
+    ``per_file_added`` maps in-scope path -> its added lines. Window-wide opt-out via
+    [no-triality]/[skip-drift]; window-wide governance-cite suppression; per-line waiver.
+    Returns violation messages (empty == compliant). Fail-open is the caller's wrapper."""
+    if is_opted_out(subjects):
+        return []
+    all_added = [ln for lines in per_file_added.values() for ln in lines]
+    if window_has_schedule_gov_cite(all_added):
+        return []
+    viol: list[str] = []
+    for path, added in per_file_added.items():
+        naked = naked_epoch_additions(added)
+        if naked:
+            viol.append(
+                f"{path}: NEW naked hardcoded schedule epoch(s) {naked[:4]} — a --*-start-epoch "
+                "trigger must be EVENT-governed / LawRef-DERIVED / a TAGGED fail-safe cap")
+        pr95 = pr95_stage_sequence_additions(added)
+        if pr95:
+            viol.append(
+                f"{path}: NEW PR95-named stage sequence(s) {pr95[:3]} without a derivation cite "
+                "(derive the SHAPE from the witness math, or cite the derivation)")
+    return viol
+
+
+def schedule_provenance_violations_safe(subjects: list[str], per_file_added: dict) -> list[str]:
+    """Fail-open wrapper for the schedule-provenance leg: any exception => [] (silent), so a
+    bug here can neither block a session nor perturb the existing legs' verdict."""
+    try:
+        return schedule_provenance_violations(subjects, per_file_added)
+    except Exception:
+        return []
+
+
 def missing_legs(subjects: list[str], files: list[str]) -> list[str]:
     """The SPECIFIC triality legs a change of this type REQUIRES but did not touch.
 
@@ -785,6 +912,27 @@ def main() -> None:
     if fm_advisories:
         _persist_scope_advisories(root, fm_advisories, head)
 
+    # --- SCHEDULE-PROVENANCE LEG (requirement: operator 2026-07-09 "move from hardcoded
+    # epochs to event based"; fail-open independently). A commit touching a schedule-owning
+    # surface (witness_autoconfig.py / witness_dsl / a launch config) that ADDS a naked
+    # hardcoded-epoch schedule param — or a NEW PR95-named stage sequence — WITHOUT a co-added
+    # event/derived/cap provenance token drifts. Sister of the launcher-path STRICT gate. ---
+    schedule_violations: list[str] = []
+    try:
+        per_file_added: dict[str, list[str]] = {}
+        for f in files:
+            if not schedule_gov_file_in_scope(f):
+                continue
+            try:
+                fdiff = _git(root, "diff", f"{last_head}..{head}", "--", f).stdout
+            except Exception:
+                continue
+            per_file_added[f] = added_lines_from_diff(fdiff)
+        if per_file_added:
+            schedule_violations = schedule_provenance_violations_safe(subjects, per_file_added)
+    except Exception:
+        schedule_violations = []
+
     # --- CONSUMER LEG (fail-open independently: a bug in the NEW leg can neither
     # block the session nor perturb the existing legs' verdict) ---
     consumer_missing = False
@@ -798,7 +946,7 @@ def main() -> None:
         consumer_missing = False
 
     if (classify(subjects, files) == "drift" or consumer_missing or recall_missing
-            or scope_violations):
+            or scope_violations or schedule_violations):
         # Persist last_block_head (do NOT advance last_head — so the fix/DAG-FEED commit lands
         # inside the next window's UNION and clears the drift on re-check; the last_block_head
         # backstop clears the block once head is unchanged, so it cannot loop).
@@ -808,7 +956,8 @@ def main() -> None:
         _log(
             root,
             f"BLOCK head={head[:9]} n={len(subjects)} miss={missing_legs(subjects, files)}"
-            f" consumer_leg={consumer_missing} scope_violations={len(scope_violations)}",
+            f" consumer_leg={consumer_missing} scope_violations={len(scope_violations)}"
+            f" schedule_violations={len(schedule_violations)}",
         )
         if classify(subjects, files) == "drift":
             reason = build_reason(subjects, files)
@@ -835,6 +984,17 @@ def main() -> None:
                       "NARROWEST level the measurement supports (naive/toy/binary can only "
                       "produce INSTANCE-level negatives). Deliberate exception: same-line "
                       "'# VERDICT_SCOPE_OK:<real rationale>'.")
+        if schedule_violations:
+            reason = (reason + (" ALSO — " if reason else "") +
+                      "SCHEDULE-PROVENANCE (operator 2026-07-09 'Fuck pr95... move from "
+                      "hardcoded epochs to event based'): " + " | ".join(schedule_violations[:3]) +
+                      " Every --*-start-epoch schedule TRIGGER must be EVENT-governed (a named "
+                      "co-emitted sensor: --curriculum-event-triggered / --curriculum-nucleus-"
+                      "guard / --plateau-trigger / --closed-loop-control), LawRef-DERIVED (a "
+                      "constants_manifest value), or a TAGGED fail-safe cap (schedule_governance "
+                      "class=cap). Derive the SHAPE from the witness math, not the PR95 skeleton. "
+                      "Deliberate exception: same-line '# SCHEDULE_PROVENANCE_OK:<real rationale>'. "
+                      "Sister of the launcher-path STRICT gate (tools/schedule_provenance_gate.py).")
         if fm_advisories:
             reason = (reason + " ADVISORY (verdict-scope, on-device FM — never blocking): "
                       + " | ".join(fm_advisories[:2]))
