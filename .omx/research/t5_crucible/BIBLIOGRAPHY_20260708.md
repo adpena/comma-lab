@@ -1,6 +1,15 @@
 # T5 CRUCIBLE — BIBLIOGRAPHY (requirement S: citation provenance backfill)
 
 date: 2026-07-08 · seat: CITATION-PROVENANCE · status: fresh-research-round-1
+STORES CONSULTED: .omx/research/t5_crucible/{ct_deepresearch_1, ct_deepresearch_2,
+DRAFT_OPTIMAL_STACK_v5} · .omx/research/litsweep_{training_dynamics_control,
+representation_taskspace}_20260705.md · tools/corpus_query.py sweeps · external: arXiv/DOI
+abstract pages (fetch-verified per method note below). No memories/DAG/equations claims are
+MADE here beyond citation provenance.
+verdict_scope: n/a — the DEAD/INERT tokens in rows 13/38 QUOTE verdicts scoped at their source
+docs (CT-1 §6.2 INERT = instance-scoped there [adaptive-ε clamp as-measured]; v5 §12 DEAD =
+family-scoped there with the derivation-coverage check assigned to seal review). This table
+asserts no new negative verdicts. # VERDICT_SCOPE_OK:bibliography-quotes-verdicts-scoped-at-source
 scope: `ct_deepresearch_1_training_campaign_control_20260707.md` (CT-1; had ZERO resolvable
 citations — fully backfilled here), `ct_deepresearch_2_pde_geometric_topological_control_20260707.md`
 (CT-2; had 11 — verified + completed), `DRAFT_OPTIMAL_STACK_v5_20260707.md`, and the two #305
