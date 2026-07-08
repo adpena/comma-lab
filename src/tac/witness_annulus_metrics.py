@@ -142,6 +142,104 @@ def margin_percentiles(
 
 
 # ---------------------------------------------------------------------------
+# flip-mass margin quantiles (m_q) + the semiclassical tau law tau* = m_q / ln5.
+# ---------------------------------------------------------------------------
+_LN5 = float(np.log(5.0))
+
+
+def flip_margin_quantiles(
+    witness_argmax: np.ndarray,
+    gt_argmax: np.ndarray,
+    gt_margin: np.ndarray,
+    quantiles: tuple[float, ...] = (0.50, 0.80, 0.90, 0.95, 0.99),
+    edge: float = 0.10,
+    n_classes: int = N_CLASSES,
+    max_pairs: int = 8,
+) -> dict:
+    """m_q table for the tau*_end = m_q/ln5 law (T5 crucible tau-CONFIRM instrument).
+
+    LAW + BAND PROVENANCE: DRAFT_OPTIMAL_STACK v3 SS2.2d derived tau*_end = m_q/ln5 with
+    m_q = 0.10 taken as the SUPPORT EDGE of the flip mass on the GT-margin axis (anchor:
+    ``birth_death_persistence_dseg_20260630T172510Z.md`` -- flip-rate 0.7645 for
+    GT-margin < 0.10, ~0.000 above, on the theta* l7-stage witness). v3's own pre-GO rule
+    requires recomputing m_q from THIS vehicle's margin field. This function is that
+    recompute: m_q(q) = the GT-margin below which fraction ``q`` of the flip mass sits
+    (each flip pixel = one unit of mass), plus the implied tau*(q) = m_q(q)/ln5 and the
+    edge-split rates the anchor quoted.
+
+    Arrays are (V,h,w) (or (h,w)): ``witness_argmax`` realized witness argmax,
+    ``gt_argmax`` GT lstar, ``gt_margin`` the FIXED frozen-SegNet top1-top2 GT margin.
+    Returns a JSON-safe dict: overall + per-GT-class m_q tables and the top-``max_pairs``
+    (gt -> witness) class-pair rows by flip mass (req H per-class-pair surface).
+    Empty flip populations report NaN quantiles.
+    """
+    flip = flip_map(witness_argmax, gt_argmax)
+    gm = np.asarray(gt_margin, np.float32)
+    g = np.asarray(gt_argmax).astype(np.int64)
+    w = np.asarray(witness_argmax).astype(np.int64)
+    below = gm < float(edge)
+    n_px = int(flip.size)
+    n_flips = int(flip.sum())
+    fm = gm[flip]  # GT margin at each flip pixel (the flip-mass distribution)
+
+    def _mq(vals: np.ndarray) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for q in quantiles:
+            key = f"q{int(round(q * 100))}"
+            out[key] = float(np.quantile(vals, q)) if vals.size else float("nan")
+        return out
+
+    def _tau(mq: dict[str, float]) -> dict[str, float]:
+        return {k: (v / _LN5 if np.isfinite(v) else float("nan")) for k, v in mq.items()}
+
+    overall_mq = _mq(fm)
+    per_class: dict[int, dict] = {}
+    for c in range(n_classes):
+        sel = flip & (g == c)
+        cls_mq = _mq(gm[sel])
+        per_class[c] = {
+            "class_name": CLASS_NAMES.get(c, str(c)),
+            "n_flips": int(sel.sum()),
+            "flip_mass_share": (float(sel.sum()) / n_flips) if n_flips else 0.0,
+            "m_q": cls_mq,
+            "tau_star": _tau(cls_mq),
+        }
+    # (gt -> witness) class-pair rows, ranked by flip mass.
+    pair_rows: list[dict] = []
+    if n_flips:
+        gt_f = g[flip]
+        wit_f = w[flip]
+        codes = gt_f * n_classes + wit_f
+        uniq, counts = np.unique(codes, return_counts=True)
+        order = np.argsort(-counts)[:max_pairs]
+        for i in order:
+            code, cnt = int(uniq[i]), int(counts[i])
+            sel = codes == code
+            vals = fm[sel]
+            gc, wc = code // n_classes, code % n_classes
+            pair_rows.append({
+                "gt_class": gc, "witness_class": wc,
+                "pair": f"{CLASS_NAMES.get(gc, gc)}->{CLASS_NAMES.get(wc, wc)}",
+                "n_flips": cnt, "flip_mass_share": cnt / n_flips,
+                "m_q": _mq(vals),
+            })
+    return {
+        "n_px": n_px,
+        "n_flips": n_flips,
+        "d_seg": (n_flips / n_px) if n_px else 0.0,
+        "edge": float(edge),
+        "ln5": _LN5,
+        "flip_rate_below_edge": restricted_flip_frac(flip, below),
+        "flip_rate_above_edge": restricted_flip_frac(flip, ~below),
+        "flip_mass_share_below_edge": flip_mass_share(flip, below),
+        "m_q": overall_mq,
+        "tau_star": _tau(overall_mq),
+        "per_class": per_class,
+        "class_pairs": pair_rows,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Gibbs / ringing proxy: high-frequency energy of the witness margin in the boundary
 # ring vs the interior. Ratio > 1 <=> the boundary oscillates more than the interior
 # (a ringing/overshoot signature). DOCUMENTED PROXY -- not a calibrated Gibbs amplitude.

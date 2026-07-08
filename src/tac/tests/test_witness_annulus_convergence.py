@@ -229,3 +229,79 @@ def test_convergence_series_handles_string_class_keys():
         m[defn]["per_class_annulus_flip_frac"] = {str(k): v for k, v in pcf.items()}
     cs = convergence_series([{"name": "A", "epoch": 1.0, "metrics": m}], defn="threshold")
     assert set(cs["per_class_annulus_flip_frac_rate"].keys()) == set(range(N_CLASSES))
+
+
+# ---------------------------------------------------------------------------
+# flip_margin_quantiles (the tau-CONFIRM m_q instrument).
+# ---------------------------------------------------------------------------
+def test_flip_margin_quantiles_basic_and_tau_law():
+    from tac.witness_annulus_metrics import flip_margin_quantiles
+
+    # 10 pixels, 4 flips at known GT margins {0.05, 0.05, 0.2, 1.0}.
+    gt = np.zeros((1, 2, 5), np.int64)
+    wa = gt.copy()
+    wa[0, 0, 0] = 1
+    wa[0, 0, 1] = 1
+    wa[0, 1, 0] = 2
+    wa[0, 1, 1] = 3
+    gm = np.full((1, 2, 5), 5.0, np.float32)
+    gm[0, 0, 0] = 0.05
+    gm[0, 0, 1] = 0.05
+    gm[0, 1, 0] = 0.2
+    gm[0, 1, 1] = 1.0
+    t = flip_margin_quantiles(wa, gt, gm, quantiles=(0.5, 1.0), edge=0.10)
+    assert t["n_px"] == 10 and t["n_flips"] == 4
+    assert math.isclose(t["d_seg"], 0.4)
+    # flip-mass split around the 0.10 edge: 2 of 4 flips below.
+    assert math.isclose(t["flip_mass_share_below_edge"], 0.5)
+    assert math.isclose(t["flip_rate_below_edge"], 1.0)  # both sub-edge px are flips
+    # m_q(100%) = max flip margin = 1.0; tau* = m_q/ln5.
+    assert math.isclose(t["m_q"]["q100"], 1.0)
+    assert math.isclose(t["tau_star"]["q100"], 1.0 / math.log(5.0), rel_tol=1e-9)
+    assert math.isclose(t["ln5"], math.log(5.0), rel_tol=1e-12)
+
+
+def test_flip_margin_quantiles_anchor_regime_reproduces_0062():
+    from tac.witness_annulus_metrics import flip_margin_quantiles
+
+    # anchor regime: ALL flip mass below the 0.10 edge => tau*(q90) ~ 0.062-scale.
+    gt = np.zeros((1, 4, 4), np.int64)
+    wa = gt.copy()
+    wa[0, 0, :] = 1  # 4 flips
+    gm = np.full((1, 4, 4), 3.0, np.float32)
+    gm[0, 0, :] = 0.09999
+    t = flip_margin_quantiles(wa, gt, gm, quantiles=(0.9,), edge=0.10)
+    assert math.isclose(t["flip_mass_share_below_edge"], 1.0)
+    assert t["m_q"]["q90"] < 0.10
+    assert t["tau_star"]["q90"] < 0.0622
+
+
+def test_flip_margin_quantiles_per_class_and_pairs():
+    from tac.witness_annulus_metrics import flip_margin_quantiles
+
+    gt = np.zeros((1, 2, 4), np.int64)
+    gt[0, 1, :] = 1  # row 1 is Lane
+    wa = gt.copy()
+    wa[0, 1, 0] = 0  # Lane->Road flip
+    wa[0, 1, 1] = 0  # Lane->Road flip
+    wa[0, 0, 0] = 2  # Road->Undrivable flip
+    gm = np.full((1, 2, 4), 0.5, np.float32)
+    t = flip_margin_quantiles(wa, gt, gm, quantiles=(0.5,))
+    assert t["per_class"][1]["n_flips"] == 2
+    assert math.isclose(t["per_class"][1]["flip_mass_share"], 2.0 / 3.0)
+    pairs = {r["pair"]: r for r in t["class_pairs"]}
+    assert pairs["Lane->Road"]["n_flips"] == 2
+    assert pairs["Road->Undrivable"]["n_flips"] == 1
+    assert math.isclose(pairs["Lane->Road"]["m_q"]["q50"], 0.5)
+
+
+def test_flip_margin_quantiles_zero_flips_nan_safe():
+    from tac.witness_annulus_metrics import flip_margin_quantiles
+
+    gt = np.zeros((2, 3), np.int64)
+    gm = np.ones((2, 3), np.float32)
+    t = flip_margin_quantiles(gt, gt, gm)
+    assert t["n_flips"] == 0 and t["d_seg"] == 0.0
+    assert all(math.isnan(v) for v in t["m_q"].values())
+    assert all(math.isnan(v) for v in t["tau_star"].values())
+    assert t["class_pairs"] == []
