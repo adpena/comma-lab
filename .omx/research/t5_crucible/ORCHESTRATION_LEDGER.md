@@ -120,6 +120,34 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep research fields
+   medal grade against control theory and our level set witness and Morse-Smale and full stack
+   and meta and meta meta all aspects all dimensions all schedule and curriculum and controls and
+   controller and DSL and everything").** Two research seats fired (CT-1 training/campaign optimal
+   control · CT-2 PDE/geometric/topological control of the level-set object), positive-design
+   contract per requirement + L82 (derived LAWS in our notation with values, not surveys), corpus
+   retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
+   controller's mature form (λ̇ = adjoint of the score functional, per M).
+
+--- LANDINGS FOLDED 2026-07-08T~01:1x ---
+- SEAL ROUND 2: NOT CLEAN (counter 0/3). BLOCKER: v3 ships AACoverageRender(ss=2) that recess-R3
+  measurably REFUSES (105.9 GiB > 89.6; ipe = surviving form); MAJOR: stale K=128 0.011 (measured
+  0.163) ×4 sites; MAJOR: per-class amplify weights have NO trainer flag/DSL param/§10 item
+  (config-orphan); 6 MINORs (flag name --softmax-temp-end; hood threshold 10× slip; adaptive-ε
+  saturation alarm owed under τ_end 0.062; recon-gap not margin-ranked; AA×island row; reactive-
+  only laws where forecasts exist per M). Architecture + crossing arithmetic + lane-first SURVIVE.
+- WAVE-1 R1/R3/R6: R3 AA gate amended+verified (a0b82ba6c) REFUSE as-designed; R1 LBND4 win9 =
+  18,832 B exact (saves 0.008031 S; win5 roundtrip FALSE, quarantined; LBND2 = 41,526 stale-fix);
+  R6 PARITY ROW PASS-WITH-FLAG: decoded 0.0036146 vs training 0.0035103, Δ = +1.0427e-4 d_seg =
+  +0.010427 S = 5.86× crossing margin — decode TRUSTED, but realized-gap allowance CONSUMED; the
+  crossing triple must carry the decode-gap term explicitly.
+- NEGATIVES SCALE-VALIDITY: 9 ROBUST · 11 BOUND · 4 SUSPECT · 1 REOPENED (viscosity, confound-
+  poisoned — run-1 eikonal ramp = first fair test). UniWARD "at chance" = flagship asymmetry
+  case ($0 per-class-pair per-DIRECTION signed re-test queued); τ-crossover window-scoped (v3
+  trains 3.5× below it); adaptive-ε clamps → τ-law re-derivation; TAIL VERDICT: END → TAIL_k
+  warm-restart cycles (~40 LOC, all pieces built), END demoted to req-B fail-safe cap.
+- V4 DESIGNER FIRED with the full fold list (blocker+majors+minors+R6 decode-gap+TAIL_k+reopens).
+
 N. **REFLECTION · RECURSION · INFLECTION · INTROSPECTION — v3 IS NOT THE OPTIMUM (operator
    2026-07-07: "v3 is definitely a step in the right direction but I doubt it's optimal or
    really even that close relatively").** CALIBRATION, by v3's own numbers: engineered crossing
