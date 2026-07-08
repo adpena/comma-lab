@@ -150,6 +150,20 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+S. **CITATION PROVENANCE — record the literature (operator 2026-07-08: "make sure we are
+   recording arxiv paper citations and stuff too for scientific rigor and provenance and the
+   marimo contest if we get to it").** Every research-derived law/import/theorem-claim records
+   its resolvable citation (authors · year · exact title · arXiv ID or DOI) at the point of
+   derivation. MEASURED GAP at binding: CT-2 = 11 citations, CT-1 = 0 (Pontryagin/Tabuada/
+   Heemels/Liberzon/Feldbaum/ILC all cited by name only), v5 = 1. Remedies fired: (1) crucible
+   BIBLIOGRAPHY file (claim → citation → which v5 decision consumes it), backfilling CT-1 fully;
+   (2) CITATION clause added to tac.subagent_contract so every future research charter carries
+   the requirement structurally; (3) each bibliography entry tagged for marimo-contest
+   candidacy (#347, ⚠ deadline Jul 9 11:59PM PST — implement-a-paper: the bibliography IS the
+   candidate list). Citations are provenance for claims exactly as anchors are for
+   measurements — an uncited imported theorem is the literature-side analog of an unanchored
+   verdict (req R's FAMILY-level kills especially: those REQUIRE a citable theorem).
+
 R. **VERDICT-SCOPE TAXONOMY — one failed formulation is NOT a dead family (operator 2026-07-08:
    "ensure no falsifications or negative interpretations made based on naive or toy or binary;
    many techniques have multiple ways of formulation and one failure does not mean family
