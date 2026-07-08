@@ -204,6 +204,30 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~15:0x: P-TAU2 + P-DITHER RESOLVED (e2b2f55da) — ZERO OPEN GATES ---
+- **P-TAU2: τ_end = 0.31 STANDS.** Kneedle elbow (pre-registered criterion) on the true
+  GT-margin flip-mass CDF: implied f_target = 0.861663/0.862512 (ep650/ep1000, leg-stable to
+  3 decimals) — lands ON v6's q̂=0.85 convention = INDEPENDENT CORROBORATION of SC-3. Knee
+  τ* = 0.3438/0.3851; 0.31 inside the knee band. No crisp static elbow → live-measurement
+  deferral CONFIRMED. Scope: instance/reporting.
+- **P-DITHER: B19 DIES AS-FORMULATED (KILL, scope=FORMULATION).** n600 A/B on the real ep650
+  byte-close (amp=0 bit-identical proven): Δd_seg = +2.1277533637e-6 ≥ 0 — kill fires; the
+  fire bar (−1e-5) is ~10σ away in churn-noise units; no seed rescues.
+- **THE MECHANISM (most consequential): churn ratio ≈ 0.98** — dither REACHES the census
+  geometry (59% of churn in far-lane rows 176-224) but fixes/creates ≈ 1:1 in every margin
+  band ⇒ the locked sub-quantum residual carries ~ZERO net GT information at this checkpoint.
+  Unbiased decode-side perturbation cannot mine information that isn't there — the locked mass
+  needs INFORMED correction: render-informed forms (trained-with dither, #149 camera-res
+  placement) stay OPEN for run-2. Reformulation queue: amplitude/pattern/band variants inherit
+  measured priors AGAINST from the same artifact.
+- CONSEQUENCE for v6.2 (relayed to the in-flight fixer): B19 OUT of run-1 build items
+  (dead-with-autopsy); locked-mass coverage table recomputes WITHOUT its cheapest lever —
+  band/clamp/island levers carry the burden; leverless share GROWS past 25.3%; crossing-case
+  sensitivity re-examined accordingly.
+- Instruments landed per req Q (witness_tau_knee, decode_dither, witness_dither_decode_ab,
+  knee math; 34 tests). ALL GATES NOW RESOLVED — the final seal round is unblocked once v6.2
+  lands and rounds re-run.
+
 --- LANDING FOLDED 2026-07-08T~14:0x: SEAL ROUND 2 ON V6 = NOT-CLEAN, COUNTER 0/3 (54211896a) ---
 - 1 BLOCKER + 2 MAJOR + 3 MINOR, ALL on fresh angles; round-1 certifications HELD under
   re-attack; v6.1 errata verified.
