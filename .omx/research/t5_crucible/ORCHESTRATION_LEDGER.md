@@ -201,6 +201,31 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~06:0x: #348 GO — THE L70 WALL FELL (ec660ca41/6175362f5/596fee22d) ---
+- LOCALIZED: MLX-GPU cross-process nondeterminism = ONE op class — dup-index atomic scatter-add
+  (`arr.at[idx].add`, 10 unique hashes/10 procs) + `mx.take` strided-cotangent VJP = the
+  reference-R gather-based bicubic-UP BACKWARD. Everything else (GEMM all shapes, conv2d,
+  reductions, softmax, seeded random, custom grouped-backward, fused-R fwd+VJP) DETERMINISTIC
+  1-hash-in-10. This one op poisoned all 28 witness gradients from ep1.
+- CURE ALREADY IN-TREE: `--fused-r-kernel` (fixed-order transpose VJP, no atomics) → full
+  launch-path trainer 0/28 diverged cross-process N=10 (Muon arm 0/28 N=5). OVERHEAD: −8%
+  (determinism is FASTER, 25.35s→23.44s 200-ep smoke). 25/25 numpy-authority parity tests pass.
+  Verified at SMOKE scale; n600/self-orient COMPOSITE CHECK OWED before relying there.
+- P0 EN-ROUTE FIX: per_class telemetry `round(dict)` crashed EVERY fresh trainer launch (both
+  baseline_v0 + sync-verdict sites) — fixed + verified ~30 real runs. Run-1 launch was BLOCKED
+  without this; the trainer working-tree diff mystery is resolved (it was #348's, now committed).
+- INSTRUMENT LANDED (req Q): tools/mlx_gpu_determinism_probe.py (19-op-cell, reusable) + 5 tests
+  + canonical equation mlx_gpu_crossprocess_nondeterminism_v1 (closes risk-register D6 gap) +
+  memory L70 refined.
+- RUN-1 CONFIG CONSEQUENCE (v6 fold item F-DET): ship `--fused-r-kernel` in the launch config —
+  strictly dominant at smoke scale (determinism + speed + parity-gated); pre-GO verification =
+  the n600/self-orient composite determinism check (cheap, rides the launch preflight).
+  UNLOCKS: bit-exact proofs on GPU (byte-close/parity F13 rows GPU-accelerable, campaign ILC
+  e_k cheaper); deterministic-repro hard-limit #1 now EXTENDS to the GPU.
+- SEAL COUNTER: honest handling — F-DET is a DESIGN CHANGE (new lever in the config) → fold into
+  V6 with probe-wave resolutions when they land → counter RESETS; rounds run on v6 with
+  no-open-gates satisfied.
+
 --- LANDING FOLDED 2026-07-08T~05:0x: SEAL ROUND 1 ON V5 = CLEAN, COUNTER 1/3 (872d2e76c) ---
 - 0 BLOCKER / 0 MAJOR / 9 MINOR-nits (none decision/number/build-item-changing; per-item bar
   tests printed; all bind to the P7/v6 editorial fold).
