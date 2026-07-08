@@ -6254,6 +6254,60 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _n = max(len(chunk), 1)
         return {k: v / _n for k, v in agg.items()}, tot / _n
 
+    # ---- (#312 Phase A) PER-TERM GRADIENT-INTERACTION telemetry. A SEPARATE value_and_grad per
+    # ACTIVE loss term on a K-pair sample -> the term x term gradient cosine matrix (synergy /
+    # antagonism), dominance shares, and conflict pairs. It NEVER calls opt.update / ema.update
+    # (it only flattens grads to numpy), and it runs inside an RNG snapshot/restore + byte-identity
+    # assert (score-neutral: total_loss_fn has no RNG, so the training trajectory is bit-identical
+    # on/off). Heavy (per-term single-pair backward passes); default-OFF, boundary-cadenced.
+    _gi_state = {"prev_seg_form": None}
+
+    def _emit_grad_interactions(chunk, seg_form, eik_w_ep, ep, *, cadence, reason) -> None:
+        from tac.witness_control import grad_interaction as _gi
+        import mlx.nn as _gi_nn
+        kpairs = max(1, int(getattr(args, "grad_interaction_k_pairs", 32)))
+        sample = [int(pn) for pn in list(chunk)[:kpairs]]
+        if not sample:
+            return
+        try:
+            with _gi.MxRngGuard(where="grad_interactions"):
+                # which terms are ACTIVE (nonzero) on the first sample pair -> only differentiate those
+                _probe: dict[str, Any] = {}
+                _pi0 = sample[0]
+                _oh0, _mg0 = lstar_cache[_pi0]
+                total_loss_fn(model, _cf_mx(_pi0), 2 * _pi0, 2 * _pi0 + 1, _oh0, _mg0,
+                              pose_tgts[_pi0], args.w_seg, args.w_pose, args.hinge_weight,
+                              args.margin_target_end, seg_form, eik_w_ep, args.length_weight,
+                              terms_out=_probe)
+                mx.eval(*list(_probe.values()))
+                active_terms = [k for k, v in _probe.items() if abs(float(v)) > 1e-30]
+                term_grads: dict[str, np.ndarray] = {}
+                for _tn in active_terms:
+                    _acc = None
+                    for _pi in sample:
+                        _oh, _mg = lstar_cache[_pi]
+
+                        def _sel(m, _pi_=_pi, _oh_=_oh, _mg_=_mg, _tn_=_tn):
+                            _d: dict[str, Any] = {}
+                            total_loss_fn(m, _cf_mx(_pi_), 2 * _pi_, 2 * _pi_ + 1, _oh_, _mg_,
+                                          pose_tgts[_pi_], args.w_seg, args.w_pose,
+                                          args.hinge_weight, args.margin_target_end, seg_form,
+                                          eik_w_ep, args.length_weight, terms_out=_d)
+                            return _d[_tn_]
+
+                        _, _g = _gi_nn.value_and_grad(model, _sel)(model)
+                        _v = _gi.flatten_grad_tree(_g)  # forces mx.eval via np.asarray
+                        _acc = _v if _acc is None else _acc + _v
+                    term_grads[_tn] = _acc / float(len(sample))
+                _row = _gi.grad_interaction_row(term_grads, stage=str(seg_form), ep=int(ep),
+                                                k_pairs=len(sample), cadence=cadence,
+                                                emit_reason=reason)
+        except Exception as _e:  # telemetry must NEVER crash the run (fail-open, score-neutral)
+            print(json.dumps({"stage": "grad_interactions_error", "ep": int(ep),
+                              "err": str(_e)[:200]}), flush=True)
+            return
+        print(json.dumps(_row), flush=True)
+
     recent_losses: list[float] = []
     # #205: restore the spike-guard window so --resume-from is bit-faithful across a spike-skip
     # (the median gates step-skipping = part of the trajectory). DEFAULT-SAFE: no resume, or a pre-#205
@@ -7560,6 +7614,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                                  "(C3 recalibrates the viscous eik unit scale)")
                     else:
                         _alarm["termdom_streak"] = 0
+                    # (#312 Phase A) gradient-interaction telemetry: fires on the FIRST chunk of an
+                    # epoch (co-located with the loss-terms summary), at stage/octave BOUNDARIES and
+                    # every --grad-interaction-every epochs. Default-OFF => this block never runs =>
+                    # byte-identical. Measurement-only (see _emit_grad_interactions).
+                    if bool(getattr(args, "grad_interaction_telemetry", False)) and _bidx_lt == 0:
+                        _gi_every = int(getattr(args, "grad_interaction_every", 0) or 0)
+                        _gi_boundary = (_gi_state["prev_seg_form"] is not None
+                                        and _gi_state["prev_seg_form"] != seg_form)
+                        _gi_periodic = _gi_every > 0 and (int(ep) % _gi_every == 0)
+                        if _gi_boundary or _gi_periodic or _gi_state["prev_seg_form"] is None:
+                            _gi_reason = ("stage_boundary" if _gi_boundary else
+                                          "first_epoch" if _gi_state["prev_seg_form"] is None
+                                          else "periodic")
+                            _emit_grad_interactions(chunk, seg_form, eik_w_ep, ep,
+                                                    cadence=("boundary" if _gi_boundary or
+                                                             _gi_state["prev_seg_form"] is None
+                                                             else "periodic"),
+                                                    reason=_gi_reason)
+                        _gi_state["prev_seg_form"] = seg_form
                 # (EIK-STAB build 2) SUSTAINED-runaway rollback: restore last-good + cut lr +
                 # re-arm, then skip THIS batch's step too (its gradient came from the diverged
                 # state). Legacy mode: _sg_act is None => never fires => byte-identical.
@@ -8328,6 +8401,22 @@ def main(argv: list[str] | None = None) -> int:
                     "-1 = fully OFF (zero extra forwards). TAC_LOSS_TERM_PROBE=1 overrides to every "
                     "chunk (per-batch diagnostic). Pure no-grad recompute: the training trajectory is "
                     "bit-identical on/off.")
+    # (#312 Phase A) per-term GRADIENT-INTERACTION telemetry (the synergy/antagonism matrix, live).
+    # DEFAULT OFF => zero extra passes => BYTE-IDENTICAL trajectory. A separate value_and_grad per
+    # ACTIVE term on a K-pair sample (never touches opt/ema/training grads); RNG snapshot/restore +
+    # byte-identity assert (score-neutral). Fires at stage/octave boundaries and every N verdict
+    # epochs. #312 GradNorm discipline: OBSERVE only — never rescales a live per-step gradient.
+    ap.add_argument("--grad-interaction-telemetry", action="store_true",
+                    help="(#312 Phase A; default OFF => byte-identical) emit {stage:grad_interactions} "
+                    "rows: term x term gradient cosine matrix + dominance shares + conflict pairs "
+                    "over a K-pair sample at stage boundaries + every N epochs. Measurement-only "
+                    "(separate value_and_grad; RNG-guarded; never actuates).")
+    ap.add_argument("--grad-interaction-k-pairs", type=int, default=32,
+                    help="(#312 Phase A) K pairs sampled for the per-term gradient interaction "
+                    "measurement (default 32; smaller = cheaper/noisier).")
+    ap.add_argument("--grad-interaction-every", type=int, default=0,
+                    help="(#312 Phase A) also emit grad-interactions every N epochs (0 = default = "
+                    "stage/octave boundaries ONLY; the cheapest cadence).")
     # (#205 REAL OOM fix) chunk the CPU-scorer verdict inference into vbatch-pair torch batches so
     # the fp32 (N,2,3,874,1164) cast + EfficientNet/FastViT activations do NOT spike ~30-50 GiB at
     # N=600 on top of the resident ~41 GiB self-orient cf_mx_cache (the 90 GB OOM). BIT-IDENTICAL
