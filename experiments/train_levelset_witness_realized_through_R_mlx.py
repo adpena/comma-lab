@@ -4990,7 +4990,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # no handoff_readiness row, _evt_state["nucleus_ready"] stays True => the trigger + every lever
     # are byte-identical. The readiness telemetry is OBSERVABILITY-ONLY (never read into training).
     _nucleus_guard_on = bool(getattr(args, "curriculum_nucleus_guard", False))
-    _nucleus_on = _nucleus_guard_on or bool(getattr(args, "handoff_readiness_telemetry", False))
+    # (operator override 2026-07-08) the lane-band<-nucleus event + the would-fire telemetry both need
+    # the per-class nucleus counts => imply nucleus telemetry ON when either is requested (still
+    # OBSERVABILITY-ONLY; byte-identical when both my flags are absent).
+    _lane_band_event = getattr(args, "lane_band_start_event", None)
+    _lane_would_fire_on = bool(getattr(args, "lane_band_would_fire_telemetry", False)) or bool(_lane_band_event)
+    _nucleus_on = (_nucleus_guard_on or bool(getattr(args, "handoff_readiness_telemetry", False))
+                   or _lane_would_fire_on)
     _nucleus_within_flip_thresh = float(getattr(args, "curriculum_nucleus_within_flip", 0.5))
     _nucleus_min_part_frac = float(getattr(args, "curriculum_nucleus_min_part_frac", 0.0))
 
@@ -5000,6 +5006,47 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _annulus_on = bool(getattr(args, "annulus_telemetry", False))
     _annulus_band = float(getattr(args, "annulus_band", 2.0))
     _annulus_bottom_k = float(getattr(args, "annulus_bottom_k", 0.05))
+
+    # ── (operator override 2026-07-08) SENSOR->START EVENT WIRINGS. Three EventBackstopGate instances:
+    #    each transition fires on its wired sensor when --<x>-start-event is set, with --<x>-start-epoch
+    #    demoted to a fail-safe backstop cap. When ALL THREE start-event flags are absent every gate is
+    #    in event-mode OFF => reduces to the incumbent fixed-epoch comparison, NO new telemetry =>
+    #    BYTE-IDENTICAL. Pure decision logic lives in tac.witness_control.event_wirings (unit-tested).
+    from tac.witness_control.event_wirings import EventBackstopGate as _EBGate
+    from tac.witness_control.event_wirings import annulus_plateau_event as _annulus_plateau_ev
+    from tac.witness_control.event_wirings import ladder_arms_complete as _ladder_done
+    from tac.witness_control.event_wirings import lane_nucleus_event as _lane_nucleus_ev
+    from tac.witness_control.event_wirings import lane_would_fire_row as _lane_wf_row
+    from tac.witness_control.event_wirings import muon_meat_event as _muon_meat
+    _muon_start_event = getattr(args, "muon_start_event", None)
+    _chroma_start_event = getattr(args, "seg_chroma_boundary_start_event", None)
+    _muon_gate = _EBGate(
+        name="muon", start_epoch_flag="--muon-start-epoch", start_event_flag="--muon-start-event",
+        sensor=_muon_start_event,
+        cap=(int(args.muon_start_epoch) if args.muon_start_epoch is not None else None))
+    _lane_band_gate = _EBGate(
+        name="lane_band", start_epoch_flag="--lane-band-start-epoch",
+        start_event_flag="--lane-band-start-event", sensor=_lane_band_event,
+        cap=int(getattr(args, "lane_band_start_epoch", 300)))
+    _chroma_gate = _EBGate(
+        name="seg_chroma_boundary", start_epoch_flag="--seg-chroma-boundary-start-epoch",
+        start_event_flag="--seg-chroma-boundary-start-event", sensor=_chroma_start_event,
+        cap=int(getattr(args, "seg_chroma_boundary_start_epoch", 0)))
+    # S2 REV-B positive control: the LADDER arm windows (birth+hold+anneal, the absolute epoch each
+    # arm's scheduled_radius reaches 0). Empty when the LADDER is off => nucleation vacuously complete.
+    _ladder_arm_windows: list[int] = []
+    if bool(getattr(args, "ladder_island_homotopy", False)):
+        _ladder_arm_windows = [
+            int(args.ladder_lane_birth_epochs) + int(args.ladder_lane_hold_epochs)
+            + int(args.ladder_lane_anneal_epochs),
+            int(args.ladder_movable_birth_epochs) + int(args.ladder_movable_hold_epochs)
+            + int(args.ladder_movable_anneal_epochs),
+        ]
+    # the LANE scored-class index for the lane-nucleus sensor (self-detected via the ladder when on;
+    # else the canonical order 0=Road 1=Lane 2=Undrivable 3=Movable 4=MyCar).
+    _lane_nucleus_cls = int(_ladder_state["lane_cls"]) if _ladder_state is not None else 1
+    # sensor stashes updated at verdict cadence (read at the per-epoch engage block). Advisory only.
+    _wire_sense: dict[str, Any] = {"lane_ev": None, "annulus_series": []}
 
     # (operator 2026-07-08 GPU-verdict HYBRID) device for the ADVISORY verdict scalars + the
     # CPU-torch positive-control ANCHOR cadence. cpu (default) => every branch below is byte-
@@ -5246,8 +5293,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         row = _evt_readiness_row(ep, seg_form, stats, satisfied, all_ok, plateau_ok,
                                  _nucleus_within_flip_thresh, _nucleus_min_part_frac,
                                  guard_active=_nucleus_guard_on)
+        # (operator override 2026-07-08) SENSOR->START WIRING #2 capture: the LANE-class critical
+        # nucleus reading, stashed for the lane-band engage gate + the S3 would_fire telemetry row.
+        # Only when the lane-band event OR its would-fire telemetry is requested (else no new row =>
+        # byte-identical). The lane class is _lane_nucleus_cls (canonical 1 = Lane, or ladder-detected).
+        _lane_wf_emit = None
+        if _lane_would_fire_on:
+            _lst = stats.get(int(_lane_nucleus_cls), {})
+            _lev = _lane_nucleus_ev(
+                float(_lst.get("part_frac", 0.0)), float(_lst.get("within_flip", 0.0)),
+                within_flip_thresh=_nucleus_within_flip_thresh, min_part_frac=_nucleus_min_part_frac)
+            _wire_sense["lane_ev"] = _lev
+            _lane_wf_emit = _lane_wf_row(ep, _lev, event_mode=bool(_lane_band_event))
         with _verdict_lock:
             print(json.dumps(row), flush=True)
+            if _lane_wf_emit is not None:
+                print(json.dumps(_lane_wf_emit), flush=True)
             # MEASURED trigger state: the nucleus half of the CE->tau readiness predicate. Default
             # True so a guard-OFF run never blocks (plateau/cap alone decide). Only set when the
             # guard is active; only the CE stage's readiness gates the hand-off downstream.
@@ -5329,6 +5390,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # metrics/error dict); OBSERVABILITY-ONLY, never appended to history/result.json.
             if _annulus_m is not None:
                 print(json.dumps(_annulus_convergence_row(_annulus_m, ep, seg_form)), flush=True)
+                # (operator override 2026-07-08) SENSOR->START WIRING #3 capture: stash the within-
+                # annulus flip fraction so the seg-chroma engage gate's annulus_plateau detector reads
+                # it. Only when the chroma event is wired (else no state read => byte-identical). The
+                # signal is threshold.annulus_flip_frac (its plateau = a FORMED margin boundary).
+                if _chroma_start_event is not None:
+                    try:
+                        _af = float(_annulus_m.get("threshold", {}).get("annulus_flip_frac"))
+                        _wire_sense["annulus_series"].append((int(ep), _af))
+                    except (TypeError, ValueError, KeyError):
+                        pass
             history.append({"epoch": ep, **v, "implied_S": s})
             # (#292 build-3) deterministic closed-loop capture (ON only; OFF appends nothing =>
             # byte-identical). Under _verdict_lock; (M2 fix) the decision point joins the PREVIOUS
@@ -6688,7 +6759,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # median), and SAVE a PRESERVED stage-encoded ckpt so the Muon-finished decoder is
             # independently byte-closeable + resumable. The Muon momentum re-warms from scratch here
             # (best-effort, like the resume path); the DECODER weights are unchanged at the switch.
-            if (args.muon_start_epoch is not None) and (not muon_switched) and (ep >= args.muon_start_epoch):
+            # (operator override 2026-07-08) SENSOR->START WIRING #1: the switch fires through the
+            # muon EventBackstopGate. EVENT MODE OFF (--muon-start-event absent) => the gate reduces to
+            # the incumbent (ep >= --muon-start-epoch) with NO new telemetry => BYTE-IDENTICAL. ON =>
+            # fires on powerlaw_meat exhaustion (gated on the S2 REV-B nucleation-complete positive
+            # control) with the fixed epoch as the LOUD backstop cap.
+            _muon_fire = False
+            if not muon_switched:
+                _muon_event_fired = False
+                if _muon_gate.event_mode:
+                    _traj = [(int(h["epoch"]), float(h["d_seg"])) for h in history
+                             if "d_seg" in h and "epoch" in h]
+                    _nuc_done = _ladder_done(ep, _ladder_arm_windows)
+                    _mev = _muon_meat(_traj, nucleation_complete=_nuc_done)
+                    _muon_event_fired = bool(_mev["fired"])
+                _mstep = _muon_gate.update(ep, event_fired=_muon_event_fired)
+                if _mstep.telemetry is not None:
+                    print(json.dumps(_mstep.telemetry), flush=True)
+                _muon_fire = _mstep.just_fired
+            if _muon_fire:
                 n_muon, n_adamw = count_muon_adamw_split(model.trainable_parameters())
                 # GAP 2 (default-off): capture the OUTGOING AdamW first-moment (state 'm') BEFORE `opt`
                 # is rebound, to warm-start the fresh Muon momentum (state 'v'). Only a plain Adam/AdamW
@@ -6782,9 +6871,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # LEVER-4c chroma-sharpening engagement gate + transition RE-TREAT (same discipline as LEVER-4b).
+            # (operator override 2026-07-08) SENSOR->START WIRING #3: engagement flips through the chroma
+            # EventBackstopGate. EVENT MODE OFF (--seg-chroma-boundary-start-event absent) => under this
+            # weight>0 block the gate's start_reached == (ep >= chroma_bnd_start) == the incumbent
+            # lever_gate_on_at_epoch => BYTE-IDENTICAL, no new telemetry. ON => fires on the annulus_frac
+            # plateau with chroma_bnd_start as the LOUD backstop cap.
             if chroma_bnd_w > 0.0:
                 _chroma_was = chroma_bnd_gate["on"]
-                chroma_bnd_gate["on"] = lever_gate_on_at_epoch(chroma_bnd_w, chroma_bnd_start, ep)
+                _chroma_event_fired = False
+                if _chroma_gate.event_mode:
+                    _chroma_event_fired = bool(_annulus_plateau_ev(
+                        _wire_sense["annulus_series"],
+                        rel_eps=float(getattr(args, "annulus_plateau_rel_eps", 1e-4)),
+                        dwell_windows=int(getattr(args, "annulus_plateau_dwell_windows", 4)),
+                        min_epochs=int(getattr(args, "annulus_plateau_min_epochs", 150)))["fired"])
+                _cstep = _chroma_gate.update(ep, event_fired=_chroma_event_fired)
+                chroma_bnd_gate["on"] = _cstep.start_reached
+                if _cstep.telemetry is not None:
+                    print(json.dumps(_cstep.telemetry), flush=True)
                 if chroma_bnd_gate["on"] and not _chroma_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_chroma_boundary_engage", "epoch": ep, "start": chroma_bnd_start,
@@ -6803,9 +6907,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # #224 (2) analytic-lane render-band engagement gate + transition RE-TREAT (mirrors the
             # lane/margin/thin gates). No-op when --lane-render-band off (band never applies).
+            # (operator override 2026-07-08) SENSOR->START WIRING #2: engagement flips through the
+            # lane-band EventBackstopGate on the SAME _lever_epoch(ep) the incumbent used. EVENT MODE
+            # OFF (--lane-band-start-event absent) => start_reached == (_lever_epoch(ep) >= _band_start)
+            # == the incumbent => BYTE-IDENTICAL, no new telemetry. ON => fires on the lane-class
+            # critical nucleus (the latest verdict's lane-nucleus reading) with _band_start the LOUD cap.
             if _band_active:
                 _band_was = band_gate["on"]
-                band_gate["on"] = _band_start <= _lever_epoch(ep)  # (#302 M1) re-anchor to fired tau
+                _lane_event_fired = False
+                if _lane_band_gate.event_mode:
+                    _lev = _wire_sense["lane_ev"]
+                    _lane_event_fired = bool(_lev is not None and _lev.get("fired", False))
+                _lbstep = _lane_band_gate.update(_lever_epoch(ep), event_fired=_lane_event_fired)
+                band_gate["on"] = _lbstep.start_reached
+                if _lbstep.telemetry is not None:
+                    print(json.dumps(_lbstep.telemetry), flush=True)
                 if band_gate["on"] and not _band_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_render_band_engage", "epoch": ep, "start": _band_start,
@@ -8397,7 +8513,29 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-4c OPTIMAL-FORM: engage only at ep>=this (0=from ep1). Gate to the "
                     "tau_softplus/l7 margin stage (chroma-boundary supervision is meaningful once the "
                     "argmax is roughly seated); the engage epoch re-treats the spike-guard (same "
-                    "discipline as LEVER-4b).")
+                    "discipline as LEVER-4b). With --seg-chroma-boundary-start-event set this becomes "
+                    "the fail-safe BACKSTOP CAP.")
+    # (operator override 2026-07-08) SENSOR->START WIRING #3: chroma-boundary sharpening fires on the
+    # annulus_frac PLATEAU (#333 annulus-convergence telemetry promoted to a trigger — a formed margin
+    # boundary is the thing chroma sharpens). --seg-chroma-boundary-start-epoch is then the BACKSTOP
+    # CAP. DEFAULT None => EVENT MODE OFF => the incumbent fixed-epoch gate EXACTLY => BYTE-IDENTICAL.
+    ap.add_argument("--seg-chroma-boundary-start-event", type=str, default=None,
+                    choices=["annulus_plateau"],
+                    help="operator override 2026-07-08: fire chroma-boundary engagement on the "
+                    "annulus_frac plateau detector (#333); --seg-chroma-boundary-start-epoch becomes "
+                    "the fail-safe backstop cap. Default None = OFF = byte-identical. Requires "
+                    "--annulus-telemetry (default ON).")
+    # annulus-plateau detector params (req-T value-provenance: TAGGED defaults, no bare constants; see
+    # tac.witness_control.event_wirings ANNULUS_PLATEAU_* — sisters of the curriculum-plateau params).
+    ap.add_argument("--annulus-plateau-rel-eps", type=float, default=1e-4,
+                    help="annulus-plateau detector: |relative LS slope| threshold (TAGGED sister of "
+                    "--curriculum-plateau-rel-eps 1e-4, #302 C1 recalibration).")
+    ap.add_argument("--annulus-plateau-dwell-windows", type=int, default=4,
+                    help="annulus-plateau detector: trailing verdict points in the plateau slope "
+                    "window (TAGGED sister of --curriculum-plateau-windows).")
+    ap.add_argument("--annulus-plateau-min-epochs", type=int, default=150,
+                    help="annulus-plateau detector: min epochs the plateau must DWELL before firing "
+                    "(TAGGED sister of --curriculum-min-stage-epochs).")
     # SPIKE-AWARE seg REWEIGHT (source-split MEASURED n600 2026-07-03; ADDITIVE, DEFAULT-OFF). Reweight
     # the per-pixel base seg CE by a theta-INDEPENDENT map from the GT argmax TEMPORAL neighbors: a SPIKE
     # pixel (lstar[t] != lstar[t-1] AND != lstar[t+1]) is single-frame argmax FLICKER a per-frame witness
@@ -8626,7 +8764,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--muon-start-epoch", type=int, default=None,
                     help="MUON FINISHER (PR95 stage-8): epoch to switch 2-D hidden weights AdamW->Muon "
                     "(default None = AdamW throughout = bit-identical). Set AFTER the l7 stage "
-                    "(>= --l7-start-epoch) so the orthogonalized finisher polishes a formed partition.")
+                    "(>= --l7-start-epoch) so the orthogonalized finisher polishes a formed partition. "
+                    "With --muon-start-event set this becomes the fail-safe BACKSTOP CAP.")
+    # (operator override 2026-07-08) SENSOR->START WIRING #1: Muon entry fires on the powerlaw_meat
+    # exit of the tau-descent, gated on the S2 REV-B nucleation-complete positive control (all LADDER
+    # arms past their birth+hold+anneal window) so an island-birth transient cannot be misread as
+    # first-order tau exhaustion. --muon-start-epoch is then the BACKSTOP CAP (fires only if the event
+    # has not by then, LOUD cap_fired_before_event row). DEFAULT None => EVENT MODE OFF => the switch
+    # is the incumbent fixed-epoch gate EXACTLY => BYTE-IDENTICAL.
+    ap.add_argument("--muon-start-event", type=str, default=None, choices=["powerlaw_meat"],
+                    help="operator override 2026-07-08: fire the Muon switch on the powerlaw_meat "
+                    "tau-descent exhaustion sensor (+ REV-B nucleation positive control); "
+                    "--muon-start-epoch becomes the fail-safe backstop cap. Default None = OFF = "
+                    "byte-identical fixed-epoch gate.")
     ap.add_argument("--muon-lr", type=float, default=None,
                     help="MUON FINISHER: Muon-group LR (default None => 0.1*--lr, the PR95 ~0.1x-base "
                     "finetune relationship). Muon normalizes its update to ~unit spectral norm, so this "
@@ -8787,7 +8937,25 @@ def main(argv: list[str] | None = None) -> int:
                     help="#224 uncertainty threshold (witness margin PROB [0,1]; gt margin LOGIT ~[0,13]).")
     ap.add_argument("--lane-band-eps", type=float, default=0.35, help="#224 uncertainty ramp width.")
     ap.add_argument("--lane-band-weight", type=float, default=1.0, help="#224 band strength (curriculum ramp).")
-    ap.add_argument("--lane-band-start-epoch", type=int, default=300, help="#224 engage the band at this epoch.")
+    ap.add_argument("--lane-band-start-epoch", type=int, default=300, help="#224 engage the band at this epoch. "
+                    "With --lane-band-start-event set this becomes the fail-safe BACKSTOP CAP.")
+    # (operator override 2026-07-08) SENSOR->START WIRING #2: analytic lane-band engagement fires on
+    # the LANE-class critical nucleus (born part_frac>0 AND formed within_flip<=thresh — the #315/#302
+    # per-class hand-off predicate applied to the lane class). --lane-band-start-epoch is then the
+    # BACKSTOP CAP. DEFAULT None => EVENT MODE OFF => the incumbent fixed-epoch gate EXACTLY =>
+    # BYTE-IDENTICAL. Setting the event IMPLIES the per-class nucleus telemetry (needs the counts).
+    ap.add_argument("--lane-band-start-event", type=str, default=None, choices=["lane_nucleus"],
+                    help="operator override 2026-07-08: fire lane-band engagement on the lane-class "
+                    "critical-nucleus sensor; --lane-band-start-epoch becomes the fail-safe backstop "
+                    "cap. Default None = OFF = byte-identical. Implies per-class nucleus telemetry.")
+    # S3 mitigation: a lane-band would_fire telemetry row EVERY verdict epoch REGARDLESS of event mode
+    # (calibration data accrues even under cap operation -> build the highest-value OWED wiring
+    # CALIBRATED in v7.1, not blind). Default OFF => no new rows => byte-identical; implied ON when the
+    # lane-band event is set. Score-neutral OBSERVABILITY (never read into training).
+    ap.add_argument("--lane-band-would-fire-telemetry", action=argparse.BooleanOptionalAction,
+                    default=False,
+                    help="S3 R-S3: emit the lane-band would_fire telemetry row per verdict even under "
+                    "cap operation (calibrated v7.1 wiring). Implied ON with --lane-band-start-event.")
     ap.add_argument("--lane-band-dash-comb", action=argparse.BooleanOptionalAction, default=False,
                     help="#287: replace the band's per-pair FITTED dash phase with the EGO-PHASE dash "
                     "comb (tac.boundary_math.dash_comb) — global (period, duty, ego-scale) + per-slot "
