@@ -2240,3 +2240,13 @@ consumer update required — asserted [consumers-generic]. ---
   Plus stale-test hygiene: test_eikonal_stabilizer default legacy→rollback (was asserting the
   #397-BANNED deadlock default — the extinguished median-freeze bug; pre-existing RED, now green).
   → CONVENING R5 ROUND 2 (both lenses on the fix delta; counter 0/3, need 3 consecutive clean).
+- **SEAL R5 ROUND 2: CLEAN → counter 1/3 (279cd0563)**: all round-1 fixes independently re-derived
+  (writers⊆schema test proven BEHAVIORAL via schema-drop monkeypatch; argv byte-unchanged
+  parent==HEAD; ~96% honest everywhere; tau_persist=0.8/post_level=0.2; stale eikonal green 27/27).
+  Nothing introduced. 2 more consecutive clean rounds seal the R5 delta.
+- **POSE = THE LAUNCH-CRITICAL GATE (operator question)**: v7.5 does NOT solve pose (all changes
+  d_seg-side; run-1 measures the active store-nothing ξ carrier at d_pose 1.79 FLAT); pose alone
+  ⇒ S≫0.19. Own-trunk = NO (store-don't-reconstruct; separate INR = failed amortized-luma-carrier).
+  P-B FiLM-read-back diagnosis FIRED (ab3681ed92cddc8cf): H-consume (render ignores ξ) vs H-starve
+  (w_pose too weak) vs H-target (carrier insufficient) → cheap-vs-hard verdict + #314 real_keyframe-
+  vs-generated reconciliation. GATES whether v7.5 can produce a sub-0.19 row at all.
