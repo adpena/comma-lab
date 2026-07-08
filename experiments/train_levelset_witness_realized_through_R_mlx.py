@@ -2637,7 +2637,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # torch .device() must be "cpu" (torch has no "gpu"; args.mlx_device="gpu" crashed here in 3.4s).
     # The MLX render runs on mx.gpu via temporary_mlx_device(args.mlx_device) below; the torch
     # scorer/R/verdict are CPU authority. The device SPLIT: MLX "gpu" -> render; torch -> "cpu".
-    adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device="cpu")
+    # (#265 FIX) conversion happens INSIDE temporary_mlx_device(args.mlx_device): the custom
+    # Metal grouped-backward adapter choice is made at CONVERSION time from mx.default_device(),
+    # so converting under the process-default (gpu) while training with --mlx-device cpu installed
+    # Metal kernels that crash "[metal_kernel] Only supports the GPU." on the CPU stream. Resolving
+    # the device BEFORE the kernel-install check picks the correct (reference) adapter under cpu;
+    # the library VJP additionally fails soft at call time (metal_grouped_conv_backward #265 guard).
+    with temporary_mlx_device(args.mlx_device):
+        adapter = load_mlx_distortion_scorer_adapter_from_upstream(REPO / "upstream", device="cpu")
     # ---- #224 AA-SDF observation-map render (aa_sdf_observation_render; MEASURED #1 rep lever,
     # DAG FEED-ly/-ma). DEFAULT --render-aa none => this block is a NO-OP (curv_feats_np unchanged +
     # coord_feats_fine_mx None) => BYTE-IDENTICAL. Two AA modes: (ipe) attenuate the curvelet basis

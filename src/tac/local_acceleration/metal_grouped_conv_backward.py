@@ -189,6 +189,30 @@ def metal_grouped_conv2d_backend_available() -> bool:
         return False
 
 
+_CPU_VJP_FALLBACK_WARNED = False
+
+
+def _warn_cpu_vjp_fallback_once() -> None:
+    """LOUD one-line warning the first time the custom Metal VJP is invoked on a
+    non-GPU default device and falls soft to the native VJP (#265 class-fix)."""
+
+    global _CPU_VJP_FALLBACK_WARNED
+    if _CPU_VJP_FALLBACK_WARNED:
+        return
+    _CPU_VJP_FALLBACK_WARNED = True
+    import sys
+
+    print(
+        "[metal_grouped_conv_backward] WARNING: custom Metal grouped-backward VJP "
+        "invoked with a non-GPU default device — falling back to the native MLX VJP "
+        "(correct on CPU; ~17x slower than the Metal fast path). The adapter was "
+        "installed before the final device resolution (#265): prefer converting the "
+        "scorer INSIDE temporary_mlx_device(<final device>).",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 def _i32(values: tuple[int, int]) -> Any:
     return mx.array([int(values[0]), int(values[1])], dtype=mx.int32)
 
@@ -264,6 +288,23 @@ def make_grouped_conv2d_nhwc(
     @conv.vjp
     def _conv_vjp(primals, cotangent, output):
         x, weight = primals
+        # (#265 class-fix) CALL-TIME device re-check: the adapter choice happens at
+        # scorer-CONVERSION time (install-time), which can precede the trainer's final
+        # device resolution (``temporary_mlx_device``). If this VJP fires while the
+        # default device is NOT the GPU, the ``mx.fast.metal_kernel`` programs raise
+        # "[metal_kernel] Only supports the GPU." (reproduced 2026-07-08). Fail SOFT:
+        # loud one-line warning + the native VJP, which is CORRECT on CPU (the
+        # strided-grouped blowup is a Metal-only pathology — module docstring).
+        if mx.default_device().type != mx.gpu:
+            _warn_cpu_vjp_fallback_once()
+            _, vjps = mx.vjp(
+                lambda x_, w_: mx.conv2d(
+                    x_, w_, stride=s, padding=p, dilation=d, groups=g
+                ),
+                [x, weight],
+                [cotangent],
+            )
+            return tuple(vjps)
         grad_input_kernel, grad_weight_kernel = _kernels()
         (gx,) = grad_input_kernel(
             inputs=[x, weight, cotangent, sh, pd, dl, gp],
