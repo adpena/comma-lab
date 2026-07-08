@@ -265,6 +265,23 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ⚠️→✅ CREDIT-DEATH ×2 + RECOVERY (session limit reset 06:10 CDT; ZERO signal loss —
+both builders' work survived uncommitted in tree; staggered recoveries per operator) ---
+- REQUIREMENT V RECOVERED + LANDED (task #353; commits d863b36ed/4420a03c2/9faff1a5e; 69 new
+  tests, 245 broad sweep green): TypedWitnessConfig (pydantic-v2, extra=forbid, provenance +
+  waiver-required-hardcoded, schedule_governance first-class) · crucible_v6 migrated with
+  EMPIRICAL byte-identity (manifest-strip → identical argv) · launcher b0.6 gate rc=7
+  (manifest tampered=REFUSE · absent=WARN-until --enforce-dsl-config-gate · loud stamped
+  escape hatch · fail-open infra) · drift leg + confound gate #403 · ty typecheck script
+  (recovery FIXED its CWD-fragility — ty resolves include-globs from CWD; now cd-rooted).
+  Resume safety verified STRUCTURAL: bash-launch.sh resumes bypass launcher main();
+  launcher resumes compose --resume-from outside the fingerprint → no false REFUSE.
+- UNIFY-TAU RECOVERY FIRED (staggered after V landed): verify+finish+fresh-eyes the tree's
+  L_τ trainer edits + SegFormUnifyTau factory + tests; sharpest edge flagged = default-OFF
+  byte-identity under run-1's live module re-import on resume.
+- SANDBOX tab hidden per operator (comment-block beside WHY/HOW+TRIALITY; reload verified).
+  Pointer 0.19110 UNMOVED. Run-1 ep17+, pose term descending (11.5→1.3 by ep3).
+
 --- ✅ LANDED: DASHBOARD LIVE TAB v6 SCHEMA-DRIVEN (Opus; d123d3ab0 + 1d7f1054e; task #352;
 memo .omx/research/dashboard_live_tab_v6_schema_driven_20260708.md; 27 new + 63 existing tests,
 zero-downtime reload verified, live /api/state introspect healthy vs run-1) ---
