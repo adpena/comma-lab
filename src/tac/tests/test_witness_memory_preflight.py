@@ -271,3 +271,90 @@ def test_system_aware_admission_admits_lone_run(monkeypatch):
     monkeypatch.setattr(gov, "list_tracked_jobs", lambda: [])
     ctx = wmp.system_aware_admission(67.0)
     assert ctx.decision.admit  # 18 + 0 + 67 = 85 < ceiling 117.76
+
+
+# ── P11′ AA-supersample term (T5 recess R3; P5 verdict F4 amendment) ─────────────────────────────
+def test_aa_off_is_zero_and_unchanged():
+    """render_aa none / ss=1 => aa_fine_gib == 0 and peak identical to the pre-amendment model."""
+    base = wmp.project_peak_rss_gib(num_pairs=600, verdict_batch=32, total_ram_gib=RAM)
+    aa1 = wmp.project_peak_rss_gib(num_pairs=600, verdict_batch=32, total_ram_gib=RAM,
+                                   render_aa="supersample", aa_supersample=1)
+    ipe = wmp.project_peak_rss_gib(num_pairs=600, verdict_batch=32, total_ram_gib=RAM,
+                                   render_aa="ipe", aa_supersample=2)
+    assert base.aa_fine_gib == aa1.aa_fine_gib == ipe.aa_fine_gib == 0.0
+    assert base.projected_peak_gib == aa1.projected_peak_gib == ipe.projected_peak_gib
+
+
+def test_aa_ss2_full_matches_trainer_reconciled_q3_at_ndf2():
+    """ss=2, self-orient full, ndf=2 => per-pair fine dir-feats ~25.2 MB (trainer-measured),
+    all-600 store ~14.8 GiB + shared fine curvelet + fwd excess — the reconciled Q3 numbers."""
+    p = wmp.project_peak_rss_gib(num_pairs=600, verdict_batch=32, total_ram_gib=RAM,
+                                 render_aa="supersample", aa_supersample=2,
+                                 aa_fine_mode="full", n_dir_freqs=2, self_orient=True)
+    # per-pair fine dir = 384*512*4 px * (4*2) ch * 4 B = 25.17 MB -> *600 = 14.75 GiB
+    pix_fine = 384 * 512 * 4
+    fine_dir = pix_fine * 8 * 4 / (1024.0 ** 3) * 600
+    shared_curv = pix_fine * (wmp.REF_IN_FEAT - 8) * 4 / (1024.0 ** 3)
+    fwd = wmp.RENDER_FWD_GIB_REF * 3
+    assert abs(p.aa_fine_gib - (fine_dir + shared_curv + fwd)) < 0.02
+    assert 14.0 < fine_dir < 15.5  # the reconciled "~14 GB @ ss=2, ndf2" figure
+
+
+def test_aa_batch_mode_is_memory_bounded():
+    """batch fine-mode stores only the FIFO cap (8) of per-pair fine dir-feats, not all P."""
+    full = wmp.project_peak_rss_gib(num_pairs=600, verdict_batch=32, total_ram_gib=RAM,
+                                    render_aa="supersample", aa_supersample=2,
+                                    aa_fine_mode="full", n_dir_freqs=4)
+    batch = wmp.project_peak_rss_gib(num_pairs=600, verdict_batch=32, total_ram_gib=RAM,
+                                     render_aa="supersample", aa_supersample=2,
+                                     aa_fine_mode="batch", n_dir_freqs=4)
+    assert batch.aa_fine_gib < full.aa_fine_gib
+    assert full.aa_fine_gib - batch.aa_fine_gib > 25.0  # (600-8) * ~50 MB/pair @ ndf4
+
+
+def test_aa_refuse_mode_projects_full_cost():
+    """The trainer's fail-closed default ('refuse') projects at FULL-mode cost (conservative)."""
+    full = wmp.project_peak_rss_gib(num_pairs=600, render_aa="supersample", aa_supersample=2,
+                                    aa_fine_mode="full", n_dir_freqs=4, total_ram_gib=RAM)
+    refuse = wmp.project_peak_rss_gib(num_pairs=600, render_aa="supersample", aa_supersample=2,
+                                      aa_fine_mode="refuse", n_dir_freqs=4, total_ram_gib=RAM)
+    assert refuse.aa_fine_gib == full.aa_fine_gib
+
+
+def test_aa_self_orient_off_keeps_only_shared_tensor_and_fwd():
+    """AA without self-orient => no per-pair fine dir-feats; only the shared fine curvelet + fwd."""
+    p = wmp.project_peak_rss_gib(num_pairs=600, self_orient=False, verdict_batch=32,
+                                 render_aa="supersample", aa_supersample=2, total_ram_gib=RAM)
+    pix_fine = 384 * 512 * 4
+    expected = pix_fine * wmp.REF_IN_FEAT * 4 / (1024.0 ** 3) + wmp.RENDER_FWD_GIB_REF * 3
+    assert abs(p.aa_fine_gib - expected) < 0.02
+    assert p.aa_fine_gib < 8.0
+
+
+def test_parse_launch_flags_extracts_aa_flags():
+    body = ("python trainer.py \\\n  --num-pairs 600 \\\n  --self-orient \\\n"
+            "  --render-aa supersample \\\n  --aa-supersample 2 \\\n"
+            "  --aa-self-orient-fine-mode full \\\n  --n-dir-freqs 4 \\\n")
+    flags = wmp.parse_launch_flags(body)
+    assert flags["render_aa"] == "supersample"
+    assert flags["aa_supersample"] == 2
+    assert flags["aa_self_orient_fine_mode"] == "full"
+    assert flags["n_dir_freqs"] == 4
+
+
+def test_launch_sh_aa_ss2_no_longer_false_safe(tmp_path):
+    """The F4 false-SAFE class: an ss=2 self-orient launch.sh must project the AA term (>0), and
+    the AA-on peak must strictly exceed the AA-off peak by the fine-store magnitude."""
+    body = ("python trainer.py \\\n  --num-pairs 600 \\\n  --self-orient \\\n  --n-dir-freqs 4 \\\n"
+            "  --max-bank-freq 64 \\\n  --verdict-batch 32 \\\n")
+    p_off = tmp_path / "launch_off.sh"
+    p_off.write_text(body)
+    p_on = tmp_path / "launch_on.sh"
+    p_on.write_text(body + "  --render-aa supersample \\\n  --aa-supersample 2 \\\n"
+                    "  --aa-self-orient-fine-mode full \\\n")
+    off = wmp.project_from_launch_sh(p_off, total_ram_gib=RAM)
+    on = wmp.project_from_launch_sh(p_on, total_ram_gib=RAM)
+    assert off.aa_fine_gib == 0.0
+    assert on.aa_fine_gib > 25.0  # ndf4 full: ~29.5 GiB fine dir + shared + fwd
+    assert on.projected_peak_gib - off.projected_peak_gib == round(on.aa_fine_gib, 2) or \
+        abs((on.projected_peak_gib - off.projected_peak_gib) - on.aa_fine_gib) < 0.05

@@ -53,6 +53,17 @@ VERDICT_FLOOR_GIB = 6.0              # measured chunked floor (vbatch 8/32 both 
 FIXED_OVERHEAD_GIB = 15.0            # python + torch scorers + MLX buffer pool + lstar/numpy caches (conservative)
 DEFAULT_SAFE_FRAC = 0.70             # refuse above this fraction of total RAM (control-plane + coexistence headroom)
 DEFAULT_VERDICT_BATCH = 32           # trainer default when --verdict-batch is not emitted
+# ── P11′ AA-supersample constants (T5 recess R3; P5 verdict F4 amendment 2026-07-07) ────────────
+# Faithful to the trainer's RECONCILED Q3 arithmetic (train_levelset_witness_realized_through_R_mlx.py
+# render_aa block, "#224 Option-B DECISION"): supersample does NOT scale the BASE cf_mx_cache (held
+# steady via the in-place rebuild); it adds (a) ONE shared fine-grid curvelet tensor, (b) per-pair
+# fine DIR-feats when self-orient is on (full mode stores all P — measured 25.2 MB/pair @ ss=2,
+# n_dir_freqs=2; batch mode a bounded FIFO of AA_FINE_BATCH_CAP), (c) the fine-grid render forward
+# working set (~"fwd ~8" at ss=2 in the trainer's own peak estimate — only the EXCESS over the base
+# grid is added; the ss=1 forward lives inside FIXED_OVERHEAD_GIB). The naive ss²×cf_mx_cache is the
+# trainer-debunked ~164 GiB over-estimate — deliberately NOT modeled that way.
+AA_FINE_BATCH_CAP = 8                # trainer batch-mode bounded FIFO cache cap (~cap*25 MB @ ndf2)
+RENDER_FWD_GIB_REF = 2.0             # base-grid render forward working set; ss² EXCESS added at fine grid
 
 
 @dataclass(frozen=True)
@@ -63,9 +74,13 @@ class MemoryProjection:
     in_feat: int
     self_orient: bool
     verdict_batch: int
+    render_aa: str
+    aa_supersample: int
+    aa_fine_mode: str
     cf_cache_gib: float
     gt_gib: float
     verdict_transient_gib: float
+    aa_fine_gib: float
     fixed_overhead_gib: float
     projected_peak_gib: float
     total_ram_gib: float
@@ -83,6 +98,10 @@ def project_peak_rss_gib(
     in_feat: int = REF_IN_FEAT,
     self_orient: bool = True,
     verdict_batch: int = DEFAULT_VERDICT_BATCH,
+    render_aa: str = "none",
+    aa_supersample: int = 1,
+    aa_fine_mode: str = "refuse",
+    n_dir_freqs: int = 6,
     total_ram_gib: float | None = None,
     safe_frac: float = DEFAULT_SAFE_FRAC,
 ) -> MemoryProjection:
@@ -90,7 +109,11 @@ def project_peak_rss_gib(
 
     Pure + deterministic (unit-testable). ``verdict_batch <= 0`` => the unchunked (pre-fix) N-wide
     batch => the full ~0.11 GiB/pair verdict spike (this is what makes the projection REFUSE the
-    #205-original OOM config)."""
+    #205-original OOM config). ``render_aa="supersample"`` with ``aa_supersample>1`` engages the
+    P11′ AA term (see the AA constants block): shared fine curvelet tensor + per-pair fine
+    dir-feats (self-orient; ``aa_fine_mode`` full/batch — the trainer's fail-closed default
+    "refuse" is projected at FULL-mode cost so a config that would need `full` gates honestly)
+    + the ss² fine-grid forward excess."""
     pix_ratio = (render_h * render_w) / float(REF_PIXELS)
     feat_ratio = in_feat / float(REF_IN_FEAT)
     per_pair = CF_PER_PAIR_GIB_REF * pix_ratio * feat_ratio
@@ -99,7 +122,20 @@ def project_peak_rss_gib(
     gt = GT_PER_PAIR_GIB * num_pairs
     eff_batch = num_pairs if (verdict_batch is None or verdict_batch <= 0) else min(int(verdict_batch), num_pairs)
     verdict = max(VERDICT_FLOOR_GIB, VERDICT_PER_PAIR_GIB * eff_batch)
-    peak = FIXED_OVERHEAD_GIB + cf_cache + gt + verdict
+    # ── P11′ AA-supersample term (T5 recess R3; the F4 false-SAFE class this tool exists to extinct) ──
+    aa_fine = 0.0
+    ss = max(1, int(aa_supersample))
+    if str(render_aa) == "supersample" and ss > 1:
+        pix_fine = render_h * render_w * ss * ss
+        dir_w = 4 * int(n_dir_freqs) if self_orient else 0
+        curv_feat_w = max(0, in_feat - dir_w)   # shared curvelet portion of in_feat (= 2*cols)
+        aa_fine += pix_fine * curv_feat_w * 4 / (1024.0 ** 3)      # (a) ONE shared fine curvelet tensor
+        if self_orient and dir_w:
+            per_pair_fine = pix_fine * dir_w * 4 / (1024.0 ** 3)   # 25.2 MB @ ss=2/ndf=2 (measured)
+            n_store = num_pairs if aa_fine_mode in ("full", "refuse") else min(AA_FINE_BATCH_CAP, num_pairs)
+            aa_fine += per_pair_fine * n_store                     # (b) per-pair fine dir-feats
+        aa_fine += RENDER_FWD_GIB_REF * (ss * ss - 1) * pix_ratio  # (c) fine-grid forward EXCESS
+    peak = FIXED_OVERHEAD_GIB + cf_cache + gt + verdict + aa_fine
 
     if total_ram_gib is None:
         total_ram_gib = _total_ram_gib()
@@ -115,8 +151,10 @@ def project_peak_rss_gib(
     return MemoryProjection(
         num_pairs=num_pairs, render_h=render_h, render_w=render_w, in_feat=in_feat,
         self_orient=self_orient, verdict_batch=int(verdict_batch or 0),
+        render_aa=str(render_aa), aa_supersample=ss, aa_fine_mode=str(aa_fine_mode),
         cf_cache_gib=round(cf_cache, 2), gt_gib=round(gt, 2),
-        verdict_transient_gib=round(verdict, 2), fixed_overhead_gib=FIXED_OVERHEAD_GIB,
+        verdict_transient_gib=round(verdict, 2), aa_fine_gib=round(aa_fine, 2),
+        fixed_overhead_gib=FIXED_OVERHEAD_GIB,
         projected_peak_gib=round(peak, 2), total_ram_gib=round(total_ram_gib, 1),
         safe_frac=safe_frac, safe_ceiling_gib=round(ceiling, 1), safe=safe, reason=reason)
 
@@ -135,8 +173,13 @@ def _total_ram_gib() -> float:
 
 _FLAG_INT = {"--num-pairs", "--render-h", "--render-w", "--verdict-batch", "--mod-dim", "--hidden-dim",
              # C4 fix: the front-end flags in_feat is derived from (trainer argparse:4785-4799).
-             "--bank-n-scales", "--bank-n-orient0", "--bank-n-iso", "--n-dir-freqs"}
+             "--bank-n-scales", "--bank-n-orient0", "--bank-n-iso", "--n-dir-freqs",
+             # P11′ AA fix: the supersample factor (trainer --aa-supersample).
+             "--aa-supersample"}
 _FLAG_FLOAT = {"--bank-f0", "--bank-base", "--max-bank-freq"}
+# P11′ AA fix: string-valued AA mode flags (trainer --render-aa {none,ipe,supersample} +
+# --aa-self-orient-fine-mode {refuse,batch,full}).
+_FLAG_STR = {"--render-aa", "--aa-self-orient-fine-mode"}
 
 
 def parse_launch_flags(text: str) -> dict:
@@ -159,6 +202,10 @@ def parse_launch_flags(text: str) -> dict:
                 out[t.lstrip("-").replace("-", "_")] = float(toks[i + 1])
             except ValueError:
                 pass
+            i += 2
+            continue
+        if t in _FLAG_STR and i + 1 < len(toks):
+            out[t.lstrip("-").replace("-", "_")] = toks[i + 1]
             i += 2
             continue
         if t == "--self-orient":
@@ -258,6 +305,12 @@ def project_from_launch_sh(path: Path, *, safe_frac: float = DEFAULT_SAFE_FRAC,
         in_feat=in_feat,
         self_orient=self_orient,
         verdict_batch=int(flags.get("verdict_batch", DEFAULT_VERDICT_BATCH)),
+        # P11′ AA fix: an ss=2 supersample launch.sh previously projected as if base-grid (the
+        # C4 false-SAFE class — P5 verdict F4).
+        render_aa=str(flags.get("render_aa", "none")),
+        aa_supersample=int(flags.get("aa_supersample", 1)),
+        aa_fine_mode=str(flags.get("aa_self_orient_fine_mode", "refuse")),
+        n_dir_freqs=int(flags.get("n_dir_freqs", _TRAINER_BANK_DEFAULTS["n_dir_freqs"])),
         safe_frac=safe_frac, total_ram_gib=total_ram_gib)
 
 
@@ -495,6 +548,19 @@ def main(argv: list[str] | None = None) -> int:
                     f"{REF_IN_FEAT}). Honored on BOTH paths (C4 fix).")
     ap.add_argument("--verdict-batch", type=int, default=DEFAULT_VERDICT_BATCH)
     ap.add_argument("--no-self-orient", action="store_true")
+    # P11′ AA fix (T5 recess R3): the supersample term on the flag path (the --launch-sh path
+    # derives these from the emitted flags).
+    ap.add_argument("--render-aa", type=str, default="none",
+                    help="trainer --render-aa mode for the flag path (none/ipe/supersample)")
+    ap.add_argument("--aa-supersample", type=int, default=1,
+                    help="trainer --aa-supersample factor (ss); >1 with --render-aa supersample "
+                         "engages the AA fine-grid memory term")
+    ap.add_argument("--aa-self-orient-fine-mode", type=str, default="refuse",
+                    help="trainer --aa-self-orient-fine-mode (refuse/batch/full); 'refuse' is "
+                         "projected at FULL-mode cost (conservative — the trainer fail-closes it)")
+    ap.add_argument("--n-dir-freqs", type=int, default=None,
+                    help="self-orient dir-freq count for the AA per-pair fine dir-feat term "
+                         "(default: trainer argparse default)")
     ap.add_argument("--safe-frac", type=float, default=DEFAULT_SAFE_FRAC)
     ap.add_argument("--total-ram-gib", type=float, default=None)
     ap.add_argument("--strict", action="store_true", help="exit rc=3 when projected peak is unsafe")
@@ -551,7 +617,12 @@ def main(argv: list[str] | None = None) -> int:
             num_pairs=args.num_pairs, render_h=args.render_h, render_w=args.render_w,
             in_feat=(REF_IN_FEAT if args.in_feat is None else args.in_feat),
             self_orient=not args.no_self_orient,
-            verdict_batch=args.verdict_batch, safe_frac=args.safe_frac, total_ram_gib=args.total_ram_gib)
+            verdict_batch=args.verdict_batch,
+            render_aa=args.render_aa, aa_supersample=args.aa_supersample,
+            aa_fine_mode=args.aa_self_orient_fine_mode,
+            n_dir_freqs=(_TRAINER_BANK_DEFAULTS["n_dir_freqs"] if args.n_dir_freqs is None
+                         else args.n_dir_freqs),
+            safe_frac=args.safe_frac, total_ram_gib=args.total_ram_gib)
 
     if args.record_projection:
         if not (args.launch_sh and args.run_dir):
@@ -570,9 +641,11 @@ def main(argv: list[str] | None = None) -> int:
     tag = "SAFE" if proj.safe else "REFUSE"
     print(f"[witness-mem-preflight] {tag}: {proj.reason}")
     print(f"  breakdown (GiB): fixed={proj.fixed_overhead_gib} + cf_mx_cache={proj.cf_cache_gib} "
-          f"+ gt={proj.gt_gib} + verdict={proj.verdict_transient_gib} = peak {proj.projected_peak_gib}")
+          f"+ gt={proj.gt_gib} + verdict={proj.verdict_transient_gib} "
+          f"+ aa_fine={proj.aa_fine_gib} = peak {proj.projected_peak_gib}")
     print(f"  config: num_pairs={proj.num_pairs} render={proj.render_h}x{proj.render_w} "
-          f"in_feat={proj.in_feat} self_orient={proj.self_orient} verdict_batch={proj.verdict_batch}")
+          f"in_feat={proj.in_feat} self_orient={proj.self_orient} verdict_batch={proj.verdict_batch} "
+          f"render_aa={proj.render_aa} ss={proj.aa_supersample} aa_fine_mode={proj.aa_fine_mode}")
 
     admit_refused = False
     if args.system_aware:

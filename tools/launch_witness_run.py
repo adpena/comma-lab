@@ -616,17 +616,29 @@ def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label:
               f"unmeasured calibration). stderr tail: {(res.stderr or '')[-500:]}", file=sys.stderr)
         return 5
     actual_gib = peak_mib / 1024.0
-    ok, reason = calibration_verdict(proj_c.projected_peak_gib, actual_gib,
+    # P11′ (T5 recess R3; P5 second-red-team verdict §3 item 1, F4): the small calibration smoke
+    # (calibrate_epochs < the 25-ep verdict cadence) never fires the chunked n600 verdict, so its
+    # measured peak silently MISSES the +~6 GiB chunked-verdict transient every real run WILL pay —
+    # the "5-ep smoke never fires a verdict" false-green half of the F4 gap. Add the MEASURED
+    # chunked-verdict floor to the smoke actual before the overrun check (conservative: if the
+    # smoke DID fire a verdict this double-counts toward REFUSE, never toward a false SAFE).
+    verdict_delta_gib = float(wmp.VERDICT_FLOOR_GIB)
+    actual_gated_gib = actual_gib + verdict_delta_gib
+    ok, reason = calibration_verdict(proj_c.projected_peak_gib, actual_gated_gib,
                                      args.calibrate_overrun_pct)
     report = {
         "config": config, "calibrate_pairs": args.calibrate_pairs,
         "calibrate_epochs": args.calibrate_epochs,
         "projected_peak_gib": proj_c.projected_peak_gib,
         "actual_peak_gib": round(actual_gib, 3),
+        "verdict_delta_added_gib": verdict_delta_gib,
+        "actual_gated_gib": round(actual_gated_gib, 3),
         "overrun_pct_limit": args.calibrate_overrun_pct,
         "smoke_rc": res.returncode, "ok": ok, "reason": reason,
-        "note": ("small-n calibration validates the model's fixed-overhead + verdict-floor terms; "
-                 "the n600 cf-cache scaling term is validated by the ledger's full-run reconciles"),
+        "note": ("small-n calibration validates the model's fixed-overhead term; the smoke never "
+                 "fires the epoch-cadence chunked verdict, so the measured chunked-verdict floor "
+                 "is ADDED to the smoke actual before the overrun check (P11' F4 amendment); the "
+                 "n600 cf-cache scaling term is validated by the ledger's full-run reconciles"),
         "ts": _utc(),
     }
     (out_dir / "calibration_rss.json").write_text(json.dumps(report, indent=2))
