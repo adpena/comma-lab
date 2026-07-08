@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- 🚀 OPERATOR GO EXECUTED — RUN-1 LIVE — 2026-07-09 ---
+- Operator: "Go". Fired the SEALED one-command launch through the governed launcher.
+- ADMIT (91.0 ≤ 98.3 GiB) · throughput gate OK (SegNet fwd+bwd 396ms ≤ 700ms, grouped-backward
+  ~17× ACTIVE) · durable daemon pid 63066 detached+VERIFIED · shadow observer auto-started ·
+  dashboard :8790 auto-tracking · constants_manifest.v1 WRITTEN beside launch.sh (the first run
+  in history whose constants carry compiled provenance).
+- RUN DIR: experiments/results/levelset_n600_crucible_v6_run1_20260708T095730Z
+- FIRST BREATHS verified: structured init applied (sky IoU 0.976, hood IoU 0.993, lane
+  band-prior injected, 5-class roles set); trainer ALIVE.
+- Known wart (queued, non-blocking): activation-ledger record failed (PosixPath JSON
+  serialization) — launch unaffected; small fix owed to the apparatus queue.
+- Crucible state: P1-P7 machine COMPLETE + LAUNCHED. The run measures what no review could:
+  d_seg through the composed levers, witness d_pose, the F-rows, the TAIL yields — and, if the
+  engineered chain holds, the byte-closed row vs 0.19110. Pointer UNMOVED until evaluate.py
+  says otherwise.
+
 --- ★★★ SEALED 3/3 — 2026-07-09 (119316468) ★★★ ---
 - ROUND 3 CLEAN: 0 BLOCKER / 0 MAJOR / 0 MINOR + 3 nits (1 fresh — pose borrowed-ancestor
   caveat, closed as v6.5 errata — + 2 carried-disclosed). HEAD == round-2 fold (zero target
