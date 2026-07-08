@@ -359,7 +359,7 @@ def test_consumer_leg_silent_when_consumer_touched():
                      "tools/dashboard_server.py",
                      "tools/costate_digest.py",
                      "src/tac/witness_control/producer_bridge.py"):
-        files = _DSL_FILES + [consumer]
+        files = [*_DSL_FILES, consumer]
         assert D.consumer_leg_missing(_DSL_SUBJ, files, _DSL_DIFF_PUBLIC_DEF) is False, consumer
 
 
@@ -422,3 +422,138 @@ def test_existing_legs_unchanged_by_consumer_leg():
     # DSL-touching lever commit is still "clean" for classify() even when the new
     # leg would nudge (main() ORs them; the pure surfaces stay independent).
     assert D.classify(_DSL_SUBJ, _DSL_FILES) == "clean"
+
+
+# --- VERDICT-SCOPE LEG (requirement R 2026-07-08: INSTANCE < FORMULATION < FAMILY <
+# PARADIGM; one failed formulation is not a dead family) --------------------------------
+_DOC = ".omx/research/witness_lever_verdict_20260708.md"
+
+
+def test_verdict_scope_missing_declaration_blocks_with_exact_fix():
+    added = ["## Lever-Q probe result",
+             "Verdict: NO-GO on the flip axis at n600 (0.0083 vs 0.0082 baseline)."]
+    v = D.verdict_scope_violations(_DOC, added)
+    assert len(v) == 1
+    assert "verdict_scope: formulation" in v[0]  # the exact one-line fix is shown
+    assert _DOC in v[0]
+
+
+def test_verdict_scope_declared_instance_passes():
+    added = ["Verdict: NO-GO at n96 smoke.",
+             "verdict_scope: instance — K=64 max-plus fit, default hyperparameters"]
+    assert D.verdict_scope_violations(_DOC, added) == []
+
+
+def test_verdict_scope_declared_formulation_kill_needs_reformulation_queue():
+    added = ["Verdict: KILLED — pooled-unsigned UniWARD cost field at n600.",
+             "verdict_scope: formulation — pooled-unsigned form"]
+    v = D.verdict_scope_violations(_DOC, added)
+    assert len(v) == 1 and "reformulation" in v[0]
+    # ...and enumerating the untested alternatives clears it:
+    added2 = [*added, "untested formulations / alternatives: signed field, hinge cost, per-range"]
+    assert D.verdict_scope_violations(_DOC, added2) == []
+
+
+def test_verdict_scope_family_requires_citation_or_two_formulations():
+    base = ["Verdict: FALSIFIED across the basis family.",
+            "verdict_scope: family"]
+    v = D.verdict_scope_violations(_DOC, base)
+    assert any("family" in m and ("arXiv" in m or "formulations" in m) for m in v)
+    # citation clears it:
+    ok1 = [*base, "Per Candes-Donoho theorem (arXiv:math/0011037), no isotropic basis attains the rate."]
+    assert not any("citation" in m for m in D.verdict_scope_violations(_DOC, ok1))
+    # explicit ≥2-distinct-formulations evidence clears it:
+    ok2 = [*base, "Killed across two structurally distinct formulations at n600."]
+    assert not any("citation" in m for m in D.verdict_scope_violations(_DOC, ok2))
+
+
+def test_verdict_scope_family_falsified_with_citation_needs_no_reformulation_queue():
+    # FALSIFIED is not KILL-class → the reformulation-queue rule does not apply.
+    added = ["Verdict: FALSIFIED across the family.",
+             "verdict_scope: family",
+             "Theorem (impossibility bound): see arXiv:2401.00001."]
+    assert D.verdict_scope_violations(_DOC, added) == []
+
+
+def test_verdict_scope_quoted_and_negated_lines_exempt():
+    added = ["> prior run said KILLED — quoting for context",          # md quote
+             'the earlier "NO-GO" was over-scoped and is reopened',    # quoted + cue
+             "this is not a KILL of the family, merely a config miss",  # negation cue
+             "the `FALSIFIED` token itself is what this rule scans for",  # code span
+             "discussion of verdict_scope: family semantics and KILL handling"]  # rule line
+    assert D.negative_verdict_tokens(added) == ([], False)
+    assert D.verdict_scope_violations(_DOC, added) == []
+
+
+def test_verdict_scope_lowercase_prose_not_tokens():
+    # single-word tokens are CASE-SENSITIVE uppercase: everyday prose stays silent.
+    added = ["killed the stale process; dead code removed; no-go areas in the parser",
+             "the deadline is Friday; inert gas analogy; falsified nothing here"]
+    assert D.negative_verdict_tokens(added) == ([], False)
+
+
+def test_verdict_scope_multiword_phrases_case_insensitive():
+    tokens, kill = D.negative_verdict_tokens(
+        ["the lever performed At Chance on the reachability axis"])
+    assert tokens and kill is False
+    tokens2, _ = D.negative_verdict_tokens(["conclusion: family dead per this one run"])
+    assert tokens2
+
+
+def test_verdict_scope_waiver_exempts_and_placeholder_rejected():
+    line = "Verdict: NO-GO  # VERDICT_SCOPE_OK: legacy 2026-06 memo migration, scoped upstream"
+    assert D.verdict_scope_violations(_DOC, [line]) == []
+    bad = "Verdict: NO-GO  # VERDICT_SCOPE_OK:<rationale>"
+    assert len(D.verdict_scope_violations(_DOC, [bad])) == 1
+    bad2 = "Verdict: NO-GO  # VERDICT_SCOPE_OK: tbd"
+    assert len(D.verdict_scope_violations(_DOC, [bad2])) == 1
+
+
+def test_verdict_doc_in_scope_patterns_and_exemptions():
+    assert D.verdict_doc_in_scope(".omx/research/lever_q_verdict_20260708.md")
+    assert D.verdict_doc_in_scope(".omx/research/probe_eikonal_n600_20260708.md")
+    assert D.verdict_doc_in_scope(".omx/research/council_x_review_20260708.md")
+    assert D.verdict_doc_in_scope(".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md")
+    # exempt: rule/ledger/memory/index surfaces (they QUOTE verdicts + state the rule)
+    assert not D.verdict_doc_in_scope(".omx/research/t5_crucible/ORCHESTRATION_LEDGER.md")
+    assert not D.verdict_doc_in_scope(".omx/research/MEMORY_CLUSTER_council_2026Q3.md")
+    assert not D.verdict_doc_in_scope(".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md")
+    assert not D.verdict_doc_in_scope(".omx/research/verdict_scope_rule_design_20260708.md")
+    # out of scope: non-md and non-decision paths
+    assert not D.verdict_doc_in_scope("tools/foo.py")
+    assert not D.verdict_doc_in_scope(".omx/research/random_notes_20260708.md")
+
+
+def test_added_lines_from_diff_extracts_only_additions():
+    diff = ("diff --git a/x.md b/x.md\n--- a/x.md\n+++ b/x.md\n@@ -1,2 +1,3 @@\n"
+            " context line\n-removed KILLED line\n+added line one\n+added line two\n")
+    assert D.added_lines_from_diff(diff) == ["added line one", "added line two"]
+    assert D.added_lines_from_diff(None) == []
+
+
+def test_verdict_scope_evidence_text_strips_declaration_lines():
+    # measured 2026-07-08: including the declaration makes the FM echo it back.
+    added = ["Verdict: NO-GO at n600.", "verdict_scope: family", "evidence body"]
+    ev = D.verdict_scope_evidence_text(added)
+    assert "verdict_scope" not in ev and "evidence body" in ev
+
+
+def test_fm_scope_advisories_fail_open_when_fm_absent(monkeypatch):
+    monkeypatch.setenv("VERDICT_SCOPE_FM_PYTHON", "/nonexistent/python")
+    monkeypatch.setenv("DASH_FM_PYTHON", "/nonexistent/python")
+    monkeypatch.setattr(D.os.path, "expanduser", lambda p: "/nonexistent/python")
+    out = D.fm_scope_advisories([{"path": "x.md", "declared": ["family"], "evidence": "e"}])
+    assert out == []
+    assert D.fm_scope_advisories([]) == []
+
+
+def test_verdict_scope_violations_fail_open_on_hostile_input():
+    class Hostile:
+        def __str__(self):
+            raise RuntimeError("boom")
+    # non-string added lines coerce defensively in the token scan / joins; a hostile
+    # __str__ must not escape the leg's fail-open posture in main() — the pure fn may
+    # raise, but main() wraps the whole leg in try/except. Verify the common non-string
+    # cases do NOT raise:
+    assert D.negative_verdict_tokens([None, 123]) == ([], False)
+    assert D.verdict_scope_violations(_DOC, [None, 123]) == []

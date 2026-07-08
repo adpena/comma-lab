@@ -241,6 +241,177 @@ def consumer_leg_missing_safe(subjects: list[str], files: list[str], dsl_diff_te
         return False
 
 
+# --- VERDICT-SCOPE LEG (requirement R, operator 2026-07-08: "ensure no falsifications or
+# negative interpretations made based on naive or toy or binary; many techniques have
+# multiple ways of formulation and one failure does not mean family dead"). Every negative
+# verdict in a decision-class doc must NAME its scope on the 4-level ladder
+# INSTANCE < FORMULATION < FAMILY < PARADIGM (defaulting narrowest); a FAMILY kill needs a
+# theorem/citation or ≥2 structurally distinct formulations; a KILL/NO-GO at ≥ formulation
+# names its reformulation queue. Deterministic layer BLOCKS on missing declarations only;
+# the semantic over-scope judgment is the ADVISORY fmtools layer below (never a block).
+# Judged on the window's ADDED diff lines, so appending one FEED to a large historical doc
+# never demands retro-declarations for old verdicts. Fail-open throughout. ---
+
+# Decision-class docs (extends the recall-evidence leg's pattern with the verdict-carrying
+# surfaces: verdict/probe/review memos + DAG feeds).
+VERDICT_DOC_PAT = re.compile(
+    r"\.omx/research/.*(council|crucible|symposium|GROUNDING|position_S|DRAFT_|convening|"
+    r"verdict|probe|review|sub015_DAG_)",
+    re.IGNORECASE,
+)
+# Docs that are themselves rule/ledger/memory/index surfaces — they QUOTE verdicts and
+# state the rule; scanning them would self-trip the discipline they encode.
+VERDICT_DOC_EXEMPT = re.compile(
+    r"(ORCHESTRATION_LEDGER|ledger|MEMORY|CANONICAL_RESEARCH_INDEX|verdict[-_]scope)",
+    re.IGNORECASE,
+)
+
+# Load-bearing negative-verdict tokens. Single words are CASE-SENSITIVE UPPERCASE — this
+# repo writes real verdicts uppercase ("Lever-D MEASURED NO-GO", "INERT", "FALSIFIED");
+# lowercase "killed the process" / "dead code" / "no-go areas" prose stays silent.
+_NEG_VERDICT_CS = re.compile(r"\b(?:KILL(?:ED|S)?|NO[-_]GO|FALSIFIED|REFUTED|DEAD|INERT)\b")
+# Multiword phrases are inherently low-noise → case-insensitive.
+_NEG_VERDICT_CI = re.compile(
+    r"\b(?:family(?:\s+is)?\s+dead|at\s+chance|does\s+not\s+work)\b", re.IGNORECASE)
+# The KILL-class subset (disposition kills) that requires a reformulation queue at
+# scope ≥ formulation (req R binding rule (b)).
+_KILL_CLASS = re.compile(r"\b(?:KILL(?:ED|S)?|NO[-_]GO)\b")
+
+# The declaration: ``verdict_scope: formulation`` (one per verdict, or repeated as a
+# scope table — each row its own ``verdict_scope:`` line).
+_SCOPE_DECL = re.compile(
+    r"verdict[_-]scope\s*[:=]\s*(instance|formulation|family|paradigm)", re.IGNORECASE)
+# FAMILY-scope evidence: a citation (arXiv/DOI/theorem/impossibility bound) OR an
+# explicit ≥2-distinct-formulations line.
+_FAMILY_EVIDENCE = re.compile(
+    r"(arxiv|\bdoi\b|theorem|impossibility\s+bound|"
+    r"(?:≥|>=)\s*2\s+(?:\w+\s+)?formulations|two\s+(?:\w+\s+)?(?:distinct\s+)?formulations|"
+    r"2\+\s+(?:\w+\s+)?formulations)",
+    re.IGNORECASE,
+)
+# Reformulation queue: the kill memo enumerates the untested alternatives.
+_REFORMULATION = re.compile(
+    r"(reformulation|untested\s+formulations|alternatives\s*:)", re.IGNORECASE)
+
+# Same-line waiver (placeholder rationales rejected, per Catalog #287 sister discipline).
+_SCOPE_WAIVER = re.compile(r"#\s*VERDICT_SCOPE_OK\s*:\s*(\S.*)")
+_WAIVER_PLACEHOLDER = re.compile(
+    r"^<[^>]*>$|^(?:todo|tbd|reason|rationale|xxx)\.?$", re.IGNORECASE)
+# Negation / prior-verdict-discussion cues: the line is ABOUT a verdict, not making one.
+_NEG_DISCUSSION_CUE = re.compile(
+    r"\b(?:not\s+a|never|no\s+longer|reopened?|over-?scop\w*|premature\w*|"
+    r"prior\s+verdict|previous(?:ly)?|was\s+read\s+as|had\s+been|instead\s+of|"
+    r"rather\s+than|would\s+(?:be|have)|avoid\w*)\b",
+    re.IGNORECASE,
+)
+# Quoted spans (backtick code + straight double quotes) are stripped before token search —
+# quoting a prior verdict is not issuing one.
+_QUOTED_SPANS = re.compile(r"`[^`]*`|\"[^\"]*\"")
+
+
+def added_lines_from_diff(diff_text: str) -> list[str]:
+    """The ADDED lines of a unified diff (leading '+' stripped; '+++' headers skipped).
+    Defensive str-coercion; never raises."""
+    out: list[str] = []
+    for line in str(diff_text or "").splitlines():
+        if line.startswith("+") and not line.startswith("+++"):
+            out.append(line[1:])
+    return out
+
+
+def _has_valid_scope_waiver(line: str) -> bool:
+    """True iff the line carries # VERDICT_SCOPE_OK:<rationale> with a REAL rationale
+    (placeholder literals like <rationale>/TBD rejected; ≥4 chars required)."""
+    m = _SCOPE_WAIVER.search(str(line or ""))
+    if not m:
+        return False
+    rationale = m.group(1).strip()
+    return len(rationale) >= 4 and not _WAIVER_PLACEHOLDER.match(rationale)
+
+
+def _verdict_line_exempt(line: str) -> bool:
+    """Line-level exemptions: markdown quotes, rule-discussion lines (mention the
+    declaration key itself), negation/prior-verdict cues, and a valid same-line waiver."""
+    s = str(line or "").strip()
+    if s.startswith(">"):
+        return True  # markdown quote — quoting a prior verdict, not issuing one
+    if _SCOPE_WAIVER.search(s):
+        # a waiver marker decides the line by its OWN validity — it must not fall
+        # through to the rule-discussion exemption below ("VERDICT_SCOPE_OK" would
+        # otherwise self-exempt via its "verdict_scope" substring).
+        return _has_valid_scope_waiver(s)
+    low = s.lower()
+    if "verdict_scope" in low or "verdict-scope" in low:
+        return True  # the declaration line / discussing this rule
+    return bool(_NEG_DISCUSSION_CUE.search(s))
+
+
+def negative_verdict_tokens(added_lines: list[str]) -> tuple[list[str], bool]:
+    """(tokens, kill_class_present) over non-exempt added lines, with quoted/backtick
+    spans stripped so quoted prior verdicts stay silent."""
+    tokens: list[str] = []
+    kill = False
+    for line in added_lines:
+        if _verdict_line_exempt(line):
+            continue
+        searchable = _QUOTED_SPANS.sub("", str(line or ""))
+        hits = [m.group(0) for m in _NEG_VERDICT_CS.finditer(searchable)]
+        hits += [m.group(0) for m in _NEG_VERDICT_CI.finditer(searchable)]
+        if hits:
+            tokens.extend(hits)
+            if _KILL_CLASS.search(searchable):
+                kill = True
+    return tokens, kill
+
+
+def verdict_scope_violations(path: str, added_lines: list[str]) -> list[str]:
+    """The deterministic (BLOCKING) requirement-R checks for ONE doc's added lines.
+    Returns violation messages (empty == compliant). Each message shows the exact
+    one-line fix so compliance is trivial."""
+    tokens, kill_present = negative_verdict_tokens(added_lines)
+    if not tokens:
+        return []
+    text = "\n".join(str(ln or "") for ln in added_lines)
+    scopes = [m.group(1).lower() for m in _SCOPE_DECL.finditer(text)]
+    if not scopes:
+        uniq = sorted(set(tokens))[:4]
+        return [
+            f"{path}: negative-verdict token(s) {uniq} without a verdict_scope "
+            "declaration — add: 'verdict_scope: formulation — <which formulation>' "
+            "(or instance/family/paradigm; NARROWEST level the measurement supports)"
+        ]
+    viol: list[str] = []
+    if any(s == "family" for s in scopes) and not _FAMILY_EVIDENCE.search(text):
+        viol.append(
+            f"{path}: 'verdict_scope: family' requires a citation (arXiv/DOI/theorem) "
+            "OR an explicit '≥2 structurally distinct formulations' evidence line "
+            "(req R: a family kill needs a theorem or kills across ≥2 formulations)"
+        )
+    if (kill_present
+            and any(s in ("formulation", "family", "paradigm") for s in scopes)
+            and not _REFORMULATION.search(text)):
+        viol.append(
+            f"{path}: KILL/NO-GO at scope ≥ formulation requires a reformulation "
+            "queue — add: 'untested formulations / alternatives: <enumerate them>'"
+        )
+    return viol
+
+
+def verdict_doc_in_scope(path: str) -> bool:
+    """True iff this changed file is a decision-class .md the verdict-scope leg scans."""
+    f = str(path or "")
+    return (f.endswith(".md") and bool(VERDICT_DOC_PAT.search(f))
+            and not VERDICT_DOC_EXEMPT.search(f))
+
+
+def verdict_scope_evidence_text(added_lines: list[str], limit: int = 1800) -> str:
+    """Evidence for the FM advisory: added lines MINUS declaration lines (measured
+    2026-07-08: including the declaration makes the FM echo it back)."""
+    keep = [str(ln or "") for ln in added_lines
+            if "verdict_scope" not in str(ln or "").lower()]
+    return "\n".join(keep)[:limit]
+
+
 def missing_legs(subjects: list[str], files: list[str]) -> list[str]:
     """The SPECIFIC triality legs a change of this type REQUIRES but did not touch.
 
@@ -379,6 +550,119 @@ def _write_marker(root: str, data: dict) -> None:
         pass
 
 
+# --- VERDICT-SCOPE fmtools ADVISORY layer (semantic; NEVER a block) ------------------
+# Runs ONLY when a decision-class doc in the window declared a family/paradigm-scope
+# negative verdict and passed the deterministic layer. Isolation per the established
+# dashboard_fm_events pattern: the FM runs under the fmtools venv in a SUBPROCESS —
+# the pact venv gains zero deps; fmtools absent / model unavailable / timeout ⇒ silent.
+# CALIBRATION (measured 2026-07-08, 3-case probe): the on-device FM discriminated
+# instance-vs-family evidence correctly (cold 0.82s / warm 0.24s per call) but judged a
+# genuine formulation-level case as instance — so advisories fire ONLY for declared
+# family/paradigm (where over-scoping poisons the corpus), never for declared
+# instance/formulation (unreliable there → would spam false advisories).
+_FM_SCOPE_SCRIPT = r'''
+import asyncio, json, sys
+try:
+    import apple_fm_sdk as fm
+    from fmtools import local_extract
+except Exception:
+    print("[]"); raise SystemExit(0)
+
+@fm.generable()
+class ScopeCheck:
+    supported_scope: str = fm.guide(
+        anyOf=["instance", "formulation", "family"],
+        description="The NARROWEST scope level this evidence supports.")
+
+@local_extract(ScopeCheck, retries=1, instructions=(
+    "You judge what SCOPE a negative experimental result's evidence supports, on a "
+    "3-level ladder. 'instance' = the evidence tests ONE configuration/checkpoint/"
+    "constant/scale only. 'formulation' = the evidence adequately tests one "
+    "mathematical form of a technique (adequate scale, tuned), but only that one "
+    "form. 'family' = the evidence includes a mathematical theorem/impossibility "
+    "bound, OR failures across at least TWO structurally distinct formulations at "
+    "adequate scale. Pick the NARROWEST level the evidence text itself supports."))
+async def _check(evidence_text: str) -> ScopeCheck:
+    """(instructions above)"""
+
+_ORDER = {"instance": 0, "formulation": 1, "family": 2, "paradigm": 3}
+
+async def _main():
+    try:
+        cands = json.load(sys.stdin)
+    except Exception:
+        print("[]"); return
+    out = []
+    for c in (cands if isinstance(cands, list) else []):
+        try:
+            declared = [d for d in c.get("declared", []) if d in ("family", "paradigm")]
+            if not declared:
+                continue
+            top = max(declared, key=lambda d: _ORDER[d])
+            r = await _check(str(c.get("evidence", ""))[:1800])
+            judged = str(getattr(r, "supported_scope", "") or "")
+            if judged in _ORDER and _ORDER[judged] < _ORDER[top]:
+                out.append(
+                    f"{c.get('path', '?')}: declared verdict_scope '{top}' but the "
+                    f"evidence text reads {judged}-level — re-check the scope "
+                    "(on-device FM, advisory only)")
+        except Exception:
+            continue
+    print(json.dumps(out))
+
+asyncio.run(_main())
+'''
+
+VERDICT_SCOPE_ADVISORIES = ".omx/state/verdict_scope_advisories.jsonl"
+
+
+def _fm_python() -> str | None:
+    """The fmtools-venv interpreter (env override → DASH_FM_PYTHON → the known default).
+    None when absent — the advisory layer is then silently ABSENT (never a stub)."""
+    for cand in (os.environ.get("VERDICT_SCOPE_FM_PYTHON"),
+                 os.environ.get("DASH_FM_PYTHON"),
+                 os.path.expanduser("~/Projects/fmtools/.venv/bin/python")):
+        if cand and os.path.exists(cand):
+            return cand
+    return None
+
+
+def fm_scope_advisories(candidates: list[dict], timeout: int = 20) -> list[str]:
+    """Run the fmtools over-scope classifier on the candidate docs. Fail-silent []
+    on any error/timeout/absence — semantic judgment is advisory by construction."""
+    if not candidates:
+        return []
+    fm_py = _fm_python()
+    if not fm_py:
+        return []
+    try:
+        proc = subprocess.run(
+            [fm_py, "-c", _FM_SCOPE_SCRIPT],
+            input=json.dumps(candidates), capture_output=True, text=True,
+            timeout=timeout,
+        )
+        if proc.returncode != 0:
+            return []
+        out = json.loads(proc.stdout.strip() or "[]")
+        return [a for a in out if isinstance(a, str)] if isinstance(out, list) else []
+    except Exception:
+        return []
+
+
+def _persist_scope_advisories(root: str, advisories: list[str], head: str) -> None:
+    """Durable advisory sink (surfaced by tools/costate_digest.py): the Stop hook can
+    only SHOW text when it blocks, and the advisory layer never blocks alone."""
+    try:
+        p = os.path.join(root, VERDICT_SCOPE_ADVISORIES)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "a") as f:
+            for a in advisories:
+                f.write(json.dumps(
+                    {"ts": _now(), "head": head[:9], "advisory": a}) + "\n")
+    except Exception:
+        pass
+
+
 def _advance_and_allow(root: str, head: str) -> None:
     """Advance the marker to HEAD, clear block state, allow the stop."""
     _write_marker(root, {"last_head": head, "last_block_head": None, "updated_utc": _now()})
@@ -468,6 +752,39 @@ def main() -> None:
     except Exception:
         recall_missing = []
 
+    # --- VERDICT-SCOPE LEG (requirement R; fail-open independently). Deterministic
+    # layer: a decision-class doc whose ADDED lines carry load-bearing negative-verdict
+    # tokens must declare verdict_scope (+ family-citation + reformulation-queue rules)
+    # → BLOCK with the exact one-line fix. Semantic layer: fmtools over-scope check on
+    # compliant family/paradigm declarations → ADVISORY only (appended to an existing
+    # block, else persisted for the costate digest). ---
+    scope_violations: list[str] = []
+    fm_candidates: list[dict] = []
+    try:
+        for f in files:
+            if not verdict_doc_in_scope(f):
+                continue
+            try:
+                doc_diff = _git(root, "diff", f"{last_head}..{head}", "--", f).stdout
+            except Exception:
+                continue
+            added = added_lines_from_diff(doc_diff)
+            viols = verdict_scope_violations(f, added)
+            scope_violations.extend(viols)
+            if not viols:
+                text = "\n".join(added)
+                decls = [m.group(1).lower() for m in _SCOPE_DECL.finditer(text)]
+                if decls and negative_verdict_tokens(added)[0]:
+                    fm_candidates.append({
+                        "path": f, "declared": decls,
+                        "evidence": verdict_scope_evidence_text(added),
+                    })
+    except Exception:
+        scope_violations, fm_candidates = [], []
+    fm_advisories = fm_scope_advisories(fm_candidates) if fm_candidates else []
+    if fm_advisories:
+        _persist_scope_advisories(root, fm_advisories, head)
+
     # --- CONSUMER LEG (fail-open independently: a bug in the NEW leg can neither
     # block the session nor perturb the existing legs' verdict) ---
     consumer_missing = False
@@ -480,7 +797,8 @@ def main() -> None:
     except Exception:
         consumer_missing = False
 
-    if classify(subjects, files) == "drift" or consumer_missing or recall_missing:
+    if (classify(subjects, files) == "drift" or consumer_missing or recall_missing
+            or scope_violations):
         # Persist last_block_head (do NOT advance last_head — so the fix/DAG-FEED commit lands
         # inside the next window's UNION and clears the drift on re-check; the last_block_head
         # backstop clears the block once head is unchanged, so it cannot loop).
@@ -490,7 +808,7 @@ def main() -> None:
         _log(
             root,
             f"BLOCK head={head[:9]} n={len(subjects)} miss={missing_legs(subjects, files)}"
-            f" consumer_leg={consumer_missing}",
+            f" consumer_leg={consumer_missing} scope_violations={len(scope_violations)}",
         )
         if classify(subjects, files) == "drift":
             reason = build_reason(subjects, files)
@@ -509,6 +827,17 @@ def main() -> None:
                       "consulted — honestly, including 'none' if so) and re-finish. "
                       "This is the enforcement hook for the recall-before-decide class "
                       "(L27/L28/L83): prose rules recurred; this fires without volition.")
+        if scope_violations:
+            reason = (reason + (" ALSO — " if reason else "") +
+                      "VERDICT-SCOPE (req R: one failed formulation is NOT a dead family): "
+                      + " | ".join(scope_violations[:3]) +
+                      " Ladder: INSTANCE < FORMULATION < FAMILY < PARADIGM — declare the "
+                      "NARROWEST level the measurement supports (naive/toy/binary can only "
+                      "produce INSTANCE-level negatives). Deliberate exception: same-line "
+                      "'# VERDICT_SCOPE_OK:<real rationale>'.")
+        if fm_advisories:
+            reason = (reason + " ADVISORY (verdict-scope, on-device FM — never blocking): "
+                      + " | ".join(fm_advisories[:2]))
         print(json.dumps({"decision": "block", "reason": reason}))
         sys.exit(0)
 

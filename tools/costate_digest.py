@@ -237,6 +237,49 @@ def section_schedule(run_dir: Path | None) -> tuple[str | None, dict | None]:
     return None, None
 
 
+def section_verdict_scope_advisories() -> tuple[str | None, dict | None]:
+    """Verdict-scope FM advisories (requirement R, advisory layer): suspected
+    OVER-SCOPED negative verdicts flagged by the drift-detector's on-device-FM leg
+    (tools/triality_drift_detector.py). The Stop hook can only show text when it
+    blocks, so non-blocking advisories persist here; this line surfaces them.
+    Read-only; omitted when none exist (fail-open None)."""
+    try:
+        p = _REPO / ".omx" / "state" / "verdict_scope_advisories.jsonl"
+        if not p.exists():
+            return None, None
+        rows: list[dict] = []
+        for ln in p.read_text(errors="replace").splitlines():
+            if not ln.strip():
+                continue
+            try:
+                row = json.loads(ln)
+                if isinstance(row, dict) and row.get("advisory"):
+                    rows.append(row)
+            except Exception:
+                continue
+        if not rows:
+            return None, None
+        # recency window: a 14-day count keeps the line live (the file is append-only,
+        # so an all-time count would grow monotonically and go stale-misleading).
+        import datetime as _dt
+        cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=14)
+        def _fresh(r: dict) -> bool:
+            try:
+                return _dt.datetime.fromisoformat(str(r.get("ts", ""))) >= cutoff
+            except Exception:
+                return True  # unparsable ts → keep (fail toward visibility)
+        fresh = [r for r in rows if _fresh(r)]
+        if not fresh:
+            return None, None
+        last = str(fresh[-1].get("advisory", ""))[:110]
+        line = (f"verdict-scope advisories: {len(fresh)} doc-flag(s) in the last 14d "
+                f"(latest: {last}) — re-check declared scope vs evidence (req R)")
+        return line, {"count_14d": len(fresh), "count_all": len(rows),
+                      "recent": [r.get("advisory") for r in fresh[-3:]]}
+    except Exception:
+        return None, None
+
+
 def section_resume_spine() -> tuple[str, dict | None]:
     """AMENDMENT 2: the compact resume spine (pointers, not content dumps)."""
     try:
@@ -344,6 +387,10 @@ def build_digest() -> tuple[list[str], dict]:
 
     sched_line, data["schedule"] = section_schedule(run_dir)
     lines.append(sched_line or "schedule: planned-vs-actual read-back pending (sibling module)")
+
+    vs_line, data["verdict_scope"] = section_verdict_scope_advisories()
+    if vs_line:
+        lines.append(vs_line)
 
     spine_line, data["resume_spine"] = section_resume_spine()
     lines.append(spine_line)
