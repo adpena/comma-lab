@@ -265,6 +265,25 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ⛔ ESCALATION BOUND + ENFORCEMENT FIRED (operator: "Never do it again. Add a gate and hook.
+I have been desperately pushing you to move from hardcoded epochs to event based and deep math
+governed and costate controller") ---
+- PERMANENT PROHIBITION (memory-escalated + enforced): (A) PR95 schedule/curriculum inheritance;
+  (B) hardcoded epochs as PRIMARY schedule triggers. Positive law: every schedule transition is
+  EVENT-BASED (named sensor: λ_c costate · nucleus guard · meat-exit · live-m_q) or DERIVED
+  (LawRef provenance); fixed epochs legal ONLY as req-B fail-safe CAPS, explicitly tagged.
+- ENFORCEMENT BUILDER FIRED (Opus): (1) LAUNCHER STRICT GATE — every schedule token in emitted
+  launch.sh classified {EVENT-TRIGGERED · DERIVED · FAIL-SAFE-CAP} or LAUNCH REFUSED with the
+  token + legal paths named; the incumbent crucible_v6's violations get DOCUMENTED (that table
+  = the restart config's to-fix spec, consumed by the schedule-derivation sibling);
+  (2) drift-detector hook leg — PR95 markers + untagged epoch params flagged at commit.
+- ROOT DIAGNOSIS ACCEPTED: the event/costate machinery EXISTED (#315, #303, DE laws) — launch
+  configs kept regressing to epoch scripts because nothing REFUSED them. The gate makes the
+  built machinery mandatory at the only surface that matters.
+- IN FLIGHT (4 Opus builders): TAIL_k · LADDER #323 · blinded schedule derivation · this gate.
+  Restart config = {derived event/costate-governed schedule + TAIL_k + LADDER}, gate-passing,
+  SEALED (with the structure round), then governed stop+restart per the standing directive.
+
 --- ⛔ OPERATOR CATCH (3rd recurrence, fury) + RESTART DIRECTIVE — 2026-07-09 ---
 - **"We cargo culted the pr95 curriculum and schedule again."** CORRECT: run-1 carries PR95's
   discrete-stage SKELETON (CE→tau_softplus→Muon, CE at the proportional 10% position, PR95
