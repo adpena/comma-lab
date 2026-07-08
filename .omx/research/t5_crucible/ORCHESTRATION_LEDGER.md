@@ -150,6 +150,24 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+--- LANDING FOLDED 2026-07-08T~02:0x: V4 (d06e7edbd) ---
+- DRAFT_OPTIMAL_STACK_v4_20260707.md: all 13 fold items 1:1 + mid-fold requirement P.
+- CROSSING NOW BINDS ON THE DECODED SURFACE: 100·(d_seg_train+g_dec)+√(10·d_pose)+rate < 0.19110
+  with g_dec = +1.0427e-4 MEASURED (R6 ep650). v3 triple does NOT cross (0.199734, over by
+  4.85× margin — stated plainly). v4 triple (train 0.0010, central rate): 0.189734, margin
+  0.001366 (train must be ≤1.4% above design edge). win9 arm (18,832 B measured): S=0.181703,
+  margin 0.009397 (≈9.4% headroom — restores v3's condition). g_dec = SELECTION variable via
+  per-stage F13 parity rows.
+- FAMILY ASYMPTOTE (req N, honest): S_asymptote ≈ 0.165 central, band [0.154, 0.181] — this
+  family claims ~36% of the 0.07313 frontier-to-floor gap; **T_3=0.15 sits at/beyond the
+  family's optimistic edge** → the family step (quotient codec #155 / compress-half #336 /
+  0.0005-regime) is named run-2+ work. Run-1 = instrument (F13/F14/F15, per-class F-rows,
+  RS-1..5, TAIL yields) regardless of crossing.
+- Signal-completeness ledger (§4c) found + fixed 2 no-signal gap terms (F14 along/across
+  spectrum, F15 TAIL yield). review_status: pre-registered-only.
+- SEAL SEQUENCING: hold seal round on v4 until CT-1/CT-2 land (their IMPORT-NOW items fold
+  first — avoid burning a round on a draft the research is about to move).
+
 --- LANDINGS FOLDED 2026-07-08T~01:1x ---
 - SEAL ROUND 2: NOT CLEAN (counter 0/3). BLOCKER: v3 ships AACoverageRender(ss=2) that recess-R3
   measurably REFUSES (105.9 GiB > 89.6; ipe = surviving form); MAJOR: stale K=128 0.011 (measured
