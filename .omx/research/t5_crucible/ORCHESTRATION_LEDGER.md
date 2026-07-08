@@ -201,6 +201,31 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~07:0x: PROBE WAVE-A (4 verdicts, instruments landed per req Q) ---
+- P-CT3 **PASS**: forfeit arm first-sustained-fires ep675 (band 670-700, both estimator forms
+  agree); EMA-best-at-fire = ep650 = stage true best, forfeit EXACTLY 0; +5.450779e-4 S recovery
+  VERIFIED full-precision vs shipped ep625. ARM PROMOTES to firing (pending req-B injection
+  test only). Fire epoch INVARIANT to the ν dispute.
+- P-CT1 **KILL, scope=FORMULATION**: ν(tau)=0.012653/ep (band [0.02,0.035], kill <0.01 for CE?
+  no — muon_fin 0.003289 < 0.01) — the REGISTERED ν=0.026210 is NOT REPRODUCIBLE from the trace
+  (its 3.3e-3 S/ep @ep350 input doesn't exist; measured 1.4812e-3; suspected rel-vs-abs units
+  mix). RECOMPUTED LAWS (v6 amendment-grade): settle 237 ep · cycle floor 387 · dwell ≥237 ·
+  s* = 6.8971e-6 S/ep · V=5 window NO LONGER covers settle (125 < 237 → V must grow or the
+  window law re-derives). TAIL k_max shrinks under cycle floor 387.
+- P-CT2 **BAND-FAIL (kill not triggered)**: 5/41 skipped vs band 12-17 — B-CT3 stays unbuilt.
+  SEAM FINDING (req I paying rent): composed with the promoted forfeit arm, the cadence law
+  would SKIP ep650 and hand back the ENTIRE +5.450779e-4 S — the two laws are ANTAGONISTIC as
+  formulated; any future cadence law must carry a stage-best-protection conjunct.
+- τ-CONFIRM **PARTIAL → τ_end=0.062 PROVISIONAL**: arithmetic ✓ (0.0621335) but flip-mass share
+  below the m_q=0.10 edge = 0.2432 on THIS run's cached ep300 maps (anchor expected ~1.0; 75.7%
+  of flip mass ABOVE the edge). Note the cross-field consistency row survives as a LAW (Dirac
+  layer width = τ·ln5) — the VALUE of m_q moves both together. End-checkpoint confirm = 16-pair
+  advisory re-render of the ep1000 ckpt (cheap, FIRED as a follow-up probe).
+- Instruments landed: src/tac/witness_control/trace_probes.py + tools/witness_trace_probes.py
+  + 19 tests (reviewed properly) + artifact JSON.
+- V6 FOLD LIST grows: F-DET (fused-r) · ν-law amendments (settle/cycle/dwell/s*/V) · cadence-law
+  antagonism note · τ_end pending the ep1000 re-render · P-CT3 promotion executes.
+
 --- LANDING FOLDED 2026-07-08T~06:0x: #348 GO — THE L70 WALL FELL (ec660ca41/6175362f5/596fee22d) ---
 - LOCALIZED: MLX-GPU cross-process nondeterminism = ONE op class — dup-index atomic scatter-add
   (`arr.at[idx].add`, 10 unique hashes/10 procs) + `mx.take` strided-cotangent VJP = the
