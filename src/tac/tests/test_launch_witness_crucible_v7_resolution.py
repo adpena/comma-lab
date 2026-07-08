@@ -39,6 +39,26 @@ from tac.witness_dsl.typed_config import verify_launch_manifest  # noqa: E402
 _GT = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
 
 
+def _safe_compile_fingerprint_fresh() -> bool:
+    """True iff the safe-compile manifest fingerprint matches THIS host (v7.3 delta 3 arms
+    --safe-compile-regions hosc_activation, so the launcher b2 gate REFUSES off-fingerprint by
+    design). The full-launcher dry-run tests below are host-conditional on this: a green run proves
+    b2 ADMITs; on a non-matching host the gate correctly fail-closes and the dry-run is SKIPPED
+    (the fingerprint firewall is the intended device-conditional behavior, not a test defect)."""
+    import os
+
+    from tac.mlx_safe_compile import CertificationManifest, manifest_fingerprint_ok
+
+    p = str(Path(__file__).resolve().parents[3] / ".omx" / "state" / "mlx_safe_compile_manifest.json")
+    if not os.path.exists(p):
+        return False
+    ok, _ = manifest_fingerprint_ok(CertificationManifest.load(p))
+    return bool(ok)
+
+
+_SC_FRESH = _safe_compile_fingerprint_fresh()
+
+
 @pytest.fixture(scope="module")
 def v7_cfg():
     # small num_pairs keeps the derive fast + machine-independent; the launch PATH is what we test.
@@ -87,10 +107,10 @@ def test_adapter_exposes_full_cfg_protocol(v7_cfg):
     assert all(isinstance(v, dict) for v in v7_cfg.schedule_governance.values())
     # emit metadata
     assert v7_cfg.purpose and "crucible v7" in v7_cfg.purpose.lower()
-    # 4-lever set as of the basis integration (793631e00: FEED_07a joined the sealed three).
+    # 5-lever set as of the v7.3 compile (Polyak finisher joined the basis-integration four).
     assert v7_cfg.dsl_levers == (
         "seg_form_unify_tau", "tail_k_warm_restart", "n323_ladder_island_homotopy",
-        "FEED_07a_directional_basis_rebalance")
+        "FEED_07a_directional_basis_rebalance", "R7_polyak_finisher")
 
 
 def test_b06_manifest_verifies_for_real(v7_cfg):
@@ -139,6 +159,8 @@ def test_every_governance_key_is_an_emitted_flag(v7_cfg):
 
 
 # ── (d) the full launcher dry-run gate chain end-to-end (the test the builders never wrote) ──
+@pytest.mark.skipif(not _SC_FRESH, reason="safe-compile manifest fingerprint mismatch (b2 fail-closes "
+                    "off-fingerprint by design — v7.3 delta 3); dry-run is host-conditional")
 def test_full_dry_run_gate_chain_passes(tmp_path, capsys):
     rc = L.main([
         "--gt-cache", _GT, "--num-pairs", "8", "--epochs", "3000",
@@ -152,10 +174,31 @@ def test_full_dry_run_gate_chain_passes(tmp_path, capsys):
     assert "perf-env guard: launch.sh carries" in combined
     assert "dsl-config gate: OK" in combined and "crucible_v7" in combined
     assert "DRY-RUN" in combined
+    # v7.3 delta 3: the b2 safe-compile freshness check ADMITs on this fingerprint (fingerprint_ok).
+    assert "safe-compile:" in combined and "fingerprint_ok=True" in combined
     # no gate REFUSED, and b0.5 surfaced no naked-epoch trigger.
     assert "REFUSING to launch" not in combined
     assert "NAKED primary-epoch schedule trigger" not in combined
-    # launch.sh was written with the v7 identity + the ~17x perf-env prefix.
+    # launch.sh was written with the v7 identity + the perf-env prefix (incl. the D16 persistence pool).
     launch_sh = (tmp_path / "launch.sh").read_text()
     assert "# tac-config-family: crucible_v7" in launch_sh
     assert "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1" in launch_sh
+    assert "TAC_MLX_CUSTOM_PERSISTENCE_POOL=1" in launch_sh  # v7.3 delta 1 (D16 dispatch ON)
+    assert "--safe-compile-regions hosc_activation" in launch_sh  # v7.3 delta 3
+
+
+@pytest.mark.skipif(not _SC_FRESH, reason="safe-compile fingerprint mismatch (b2 host-conditional)")
+def test_dry_run_resolves_sealed_epochs_when_omitted(tmp_path, capsys):
+    """NEW-1: with NO --epochs the launcher resolves the config-sealed default (3000 for crucible_v7),
+    never a launcher-level hardcode. The full dry-run gate chain still passes on the sealed epochs."""
+    rc = L.main([
+        "--gt-cache", _GT, "--num-pairs", "8",  # NO --epochs
+        "--config", "crucible_v7", "--out-dir", str(tmp_path),
+        "--dry-run", "--skip-mem-preflight",
+    ])
+    out = capsys.readouterr()
+    combined = out.out + out.err
+    assert rc == 0, combined
+    assert "epochs: 3000 (config-sealed default for 'crucible_v7')" in combined
+    launch_sh = (tmp_path / "launch.sh").read_text()
+    assert "--epochs 3000" in launch_sh

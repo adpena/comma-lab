@@ -578,7 +578,10 @@ def test_async_decision_path_has_no_join_after_schedule():
     joins/schedules. The old pattern (decision block joining after the schedule) is GONE."""
     src = _TRAINER.read_text()
     start = src.index("DECIDE-ON-PREVIOUS-VERDICT reorder")
-    end = src.index("v = realized_verdict()")          # first line of the sync else-branch
+    # first line of the sync else-branch (the `else:` to `if args.async_verdict:`). A refactor added
+    # the `ep=int(ep)` argument (realized_verdict now takes the epoch), so the boundary token is
+    # `v = realized_verdict(ep=int(ep))`, not the pre-refactor bare `v = realized_verdict()`.
+    end = src.index("v = realized_verdict(ep=int(ep))")
     block = src[start:end]
     j = block.index("_join_async_verdict()")
     d = block.index("_cl_stop_now = _cl_decide(ep)")
@@ -600,7 +603,8 @@ def test_off_async_path_keeps_original_final_epoch_join_order():
     unchanged — the reorder is entirely inside the _cl_on branch."""
     src = _TRAINER.read_text()
     off = src.index("closed-loop OFF async path")
-    blk = src[off:src.index("v = realized_verdict()")]
+    # sync else-branch boundary (post-refactor token carries the ep=int(ep) arg — see the sister test).
+    blk = src[off:src.index("v = realized_verdict(ep=int(ep))")]
     assert blk.index("_join_async_verdict()") < blk.index(
         "_schedule_async_verdict(ep, seg_form, ep_loss)")
     assert "elif ep == args.epochs:" in src[off - 200:off]

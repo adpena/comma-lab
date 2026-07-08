@@ -48,6 +48,12 @@ _EXPECTED_ADDED = frozenset({
     # denominator) converted to the EVENT-driven geometric octave ladder. Only the mode flag is emitted;
     # the octave count / dwell caps DERIVE in the trainer (no bare literals in the config).
     "--tau-advance-mode",
+    # (v7.3 delta 2, synthesis item 8 IN-v7) the R-7 Polyak/Ruppert tail averager (extra ckpt candidate
+    # alongside EMA); start-epoch DERIVED-AT-CONFIG from the TAIL turnpike (constants_manifest LawRef).
+    "--polyak-finisher-arm", "--polyak-finisher-start-epoch",
+    # (v7.3 delta 3, synthesis item 4 ELEVATED by GPU cert) arm the safe-compile hosc region; the
+    # launcher b2 gate fingerprint-verifies at admission (device-conditional; GPU ADMIT, CPU REFUSE).
+    "--safe-compile-regions",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",
@@ -345,7 +351,8 @@ def test_basis_lever_in_dsl_levers_activation_surface(compiled):
     matching _CRUCIBLE_V7_DSL_LEVERS."""
     levers = compiled.to_launch_config().dsl_levers
     assert "FEED_07a_directional_basis_rebalance" in levers
-    assert len(levers) == 4  # the 3 v6-inherited spine levers + the Arm-A basis lever
+    assert "R7_polyak_finisher" in levers
+    assert len(levers) == 5  # 3 v6-inherited spine levers + Arm-A basis + the v7.3 Polyak finisher
     assert tuple(levers) == wac._CRUCIBLE_V7_DSL_LEVERS
 
 
@@ -441,3 +448,108 @@ def test_zero_naked_preserved_after_basis_lever(compiled, trainer_text):
         governance=compiled.schedule_governance, event_registry=ereg)
     ok, violations, _ = gate.gate_report(verdicts)
     assert ok and violations == []
+
+
+# ── (k) v7.3 delta 2: the Polyak tail finisher (start_epoch DERIVED, not the default-0 footgun) ──
+def test_polyak_lever_armed_with_derived_start_epoch(compiled):
+    """The R-7 Polyak finisher fires into the argv with the DERIVED-AT-CONFIG start-epoch (NEVER the
+    default 0 — that would average the whole run, not the finishing tail)."""
+    argv = list(compiled.argv)
+    assert _argv_val(argv, "--polyak-finisher-arm") is None  # bare store_true flag
+    start = _argv_val(argv, "--polyak-finisher-start-epoch")
+    assert start is not None and int(start) > 0
+    # sized to the TAIL turnpike: muon_cap + (finishing_window - round(0.2*finishing_window))
+    prov = wac.crucible_v7_polyak_start_provenance(3000)
+    assert int(start) == int(prov["polyak_start_epoch"])
+    # for the sealed schedule (epochs 3000, muon cap 726) this is 2545 (post-Muon, inside the dwell)
+    assert int(start) == 2545
+    assert int(start) > wac._CRUCIBLE_V7_MUON_CAP  # strictly post-Muon (inside the constant-τ* dwell)
+
+
+def test_polyak_start_provenance_is_derived_at_config():
+    """The start-epoch is DERIVED from the finisher law, not a bare literal (value-provenance ladder)."""
+    prov = wac.crucible_v7_polyak_start_provenance(3000)
+    assert prov["ladder_class"] == "derived_at_config"
+    assert prov["equation_id"] == "muon_finisher_schedule_warmstart_and_lr_anneal_v1"
+    assert prov["finishing_stage_window_epochs"] == 3000 - wac._CRUCIBLE_V7_MUON_CAP
+    # muon_cap + (window - round(frac*window)) = 726 + (2274 - 455) = 2545
+    assert prov["polyak_relative_start_epoch"] == 1819
+
+
+def test_polyak_sizing_degenerate_on_tiny_calibration_epochs():
+    """RSS calibration reuses the REAL config name with a tiny --calibrate-epochs (default 3). The
+    Polyak sizing must NOT crash when epochs <= muon_cap (no finishing phase) — it degenerates to an
+    inert averager (start_epoch=epochs => never observes), so v7 stays buildable for calibration."""
+    prov = wac.crucible_v7_polyak_start_provenance(3)
+    assert prov["degenerate"] is True
+    assert prov["polyak_start_epoch"] == 3  # >= epochs => Polyak never observes
+    # a full v7 build at tiny epochs succeeds (the calibrate-rss path)
+    c = wac.compile_crucible_v7_config(_GT, num_pairs=24, epochs=3)
+    assert dict(c.emitted_pairs)["--polyak-finisher-start-epoch"] == "3"
+    assert "polyak_finisher_start_epoch" in c.constants_manifest
+
+
+def test_polyak_start_epoch_is_derived_in_manifest_not_naked(compiled, trainer_text):
+    """The DERIVED start-epoch rides the constants_manifest as a LawRef (so the schedule-provenance
+    gate classifies --polyak-finisher-start-epoch DERIVED, not NAKED_PRIMARY_EPOCH)."""
+    assert "polyak_finisher_start_epoch" in compiled.constants_manifest
+    entry = compiled.constants_manifest["polyak_finisher_start_epoch"]
+    assert entry["ladder_class"] == "derived_at_config"
+    assert entry["equation_id"] == "muon_finisher_schedule_warmstart_and_lr_anneal_v1"
+    assert entry["value"] == 2545
+    # gate confirms DERIVED classification for the flag
+    verdicts = gate.classify_launch(
+        list(compiled.emitted_pairs), registry=gate.schedule_when_flags(trainer_text),
+        manifest_keys=set(compiled.constants_manifest.keys()),
+        governance=compiled.schedule_governance,
+        event_registry=gate.event_start_flags(trainer_text))
+    by_flag = {v.flag: v for v in verdicts}
+    assert by_flag["--polyak-finisher-start-epoch"].cls == gate.CLASS_DERIVED
+
+
+# ── (l) v7.3 delta 3: safe-compile hosc region armed (b2 gate is the runtime authority) ──
+def test_safe_compile_hosc_region_armed(compiled):
+    """--safe-compile-regions hosc_activation is armed in the argv; the launcher b2 gate
+    fingerprint-verifies the manifest at admission (device-conditional GPU ADMIT / CPU REFUSE)."""
+    argv = list(compiled.argv)
+    assert _argv_val(argv, "--safe-compile-regions") == "hosc_activation"
+    # the manifest path is NOT emitted (defaults to .omx/state/mlx_safe_compile_manifest.json)
+    assert "--safe-compile-manifest" not in {f for f, _ in compiled.emitted_pairs}
+    # the config is a gpu-device config (the ADMIT device; CPU device would REFUSE the hosc flip)
+    assert dict(compiled.emitted_pairs).get("--mlx-device") == "gpu"
+
+
+# ── (m) v7.3 delta 1: D16 persistence-pool dispatch ON in the perf-env prefix ──
+def test_d16_persistence_pool_dispatch_on_in_perf_env(compiled):
+    """The D16 fused persistence/clDice pool env is ON in the launch command's perf-env prefix
+    (bit-identical by construction; the launcher's perf-env class guard then requires it)."""
+    cmd = compiled.to_launch_config().to_command("OUT", perf_env=True)
+    assert "TAC_MLX_CUSTOM_PERSISTENCE_POOL=1" in cmd
+    assert cmd.startswith("TAC_MLX_CUSTOM_GROUPED_BACKWARD=1")  # unaffected — persistence pool follows
+
+
+# ── (n) v7.3 delta 5: default-OFF items are a TRACKED duty-to-measure queue (not silent) ──
+def test_registered_off_levers_carry_named_triggers():
+    """Items 3/6/7/10/11 stay default-OFF but each carries a NAMED trigger (the 'off is a tracked
+    queue' non-negotiable). Item 3's trigger is the bounded n600 d_seg A/B — NOT bit-identity
+    engineering (that crux elevation was REVOKED by frozen_scorer_forward_batch_dependence_v1)."""
+    off = wac.crucible_v7_registered_off_levers()
+    assert set(off) == {"micro_batch", "verdict_reclaim_330", "adaptive_eps",
+                        "gpu_verdict", "fp16_cf_feats"}
+    for item in off.values():
+        assert item["default"] == "off"
+        assert item["state"] == "registered_duty_to_measure"
+        assert item["trigger"] and len(item["trigger"]) > 20
+    # item 3 trigger reflects the falsification (A/B, not bit-identity)
+    mb = off["micro_batch"]["trigger"].lower()
+    assert "a/b" in mb and "bit-identity engineering" in mb
+
+
+# ── (o) v7.3 delta 4: the wall-clock budget re-derived from the LIVE 3.62 incl-startup cadence ──
+def test_wall_clock_budget_rederived_from_live_cadence(compiled):
+    """S5-H2: the DERIVED budget uses the LIVE incl-startup 3.62 min/ep anchor (was 3.1 steady-state),
+    so at 3000 ep the ceiling is ~8.67 days (7.54 anchor projection x 1.15 slack)."""
+    from tac.local_acceleration.scorer_throughput_gate import RUN1_MEASURED_MIN_PER_EP
+    assert RUN1_MEASURED_MIN_PER_EP == 3.62  # floored at the measured live cadence
+    budget = compiled.to_launch_config().wall_clock_budget_days
+    assert 8.4 <= float(budget.value) <= 8.9  # ~8.67 days at 3000 ep

@@ -1782,7 +1782,7 @@ _CRUCIBLE_V7_DELETED: frozenset[str] = frozenset({
     "--tau-hold-frac",              # cosine_hold-only; the geometric anneal has no hold segment
 })
 
-# The FOUR composable v7 DSL levers (Lever factories in curriculum_dsl — triality: "the DSL HOLDS
+# The FIVE composable v7 DSL levers (Lever factories in curriculum_dsl — triality: "the DSL HOLDS
 # every designed lever"). Applied AS TypedLevers so the emitter stays the DSL, never a hand dict.
 # NAMES are the Lever.name (snake_case), matching the CrucibleV7LaunchConfig.dsl_levers property
 # (``lv.name for lv in typed.levers``) — the activation-ledger surface the real launcher records.
@@ -1792,6 +1792,8 @@ _CRUCIBLE_V7_DSL_LEVERS: tuple[str, ...] = (
     "n323_ladder_island_homotopy",  # --ladder-* (per-class-lambda-gated island-birth homotopy)
     "FEED_07a_directional_basis_rebalance",  # --freq-across/--freq-along/--n-dir-freqs/--self-orient
                                              # (seal v7 r1 R-1; operator APPROVED; Arm-A first fire)
+    "R7_polyak_finisher",           # --polyak-finisher-* (R-7 finisher 2; v7.3 delta 2, synthesis item 8
+                                    # IN-v7; start_epoch SIZED to the TAIL turnpike, DERIVED-AT-CONFIG)
 )
 
 # Flags whose delta vs v6 is a run-dir artifact (NOT a config semantic) — excluded from the
@@ -2041,6 +2043,108 @@ def crucible_v7_basis_allocation_provenance(*, num_pairs: int = 600,
     }
 
 
+def crucible_v7_polyak_start_provenance(epochs: int,
+                                        muon_cap: int = _CRUCIBLE_V7_MUON_CAP,
+                                        frac: float = 0.2) -> dict:
+    """DERIVED-AT-CONFIG start_epoch for the v7 Polyak tail averager (v7.3 delta 2; NO bare literal).
+
+    The R-7 ``PolyakFinisher`` default ``start_epoch=0`` is a documented footgun — it averages the
+    WHOLE run rather than the finishing tail (r7_finishers_20260708.md residual #2). v7 SIZES it from
+    the schedule via the R-7 helper ``polyak_finisher_window_provenance`` (the finisher law
+    ``muon_finisher_schedule_warmstart_and_lr_anneal_v1``: tail window ~0.1-0.3× the finishing stage):
+
+      finishing-stage window = ``epochs - muon_cap``  (the post-Muon constant-τ* turnpike phase);
+      relative tail start     = ``window - round(frac·window)``  (helper output);
+      ABSOLUTE start_epoch    = ``muon_cap + relative_start``.
+
+    Sizing off the muon CAP (the LATEST possible Muon entry, a fail-safe backstop) makes the start the
+    most CONSERVATIVE choice — always post-Muon, always inside the turnpike dwell even when the Muon
+    event fires earlier (a shorter actual tail fraction, never a pre-Muon average). Pure / $0. Returns
+    the R-7 helper's provenance dict augmented with the absolute epoch + the finishing-stage anchors.
+
+    means != ends: advisory schedule sizing; the pointer 0.19110 is UNMOVED."""
+    from tac.witness_control.polyak_finisher import polyak_finisher_window_provenance
+
+    stage_window = int(epochs) - int(muon_cap)
+    if stage_window <= 0:
+        # DEGENERATE (a calibration/smoke run whose epochs <= the Muon backstop — Muon never fires, so
+        # there is no finishing phase to average). Do NOT raise (RSS calibration reuses the REAL config
+        # name with a tiny --calibrate-epochs to exercise the flag set): arm start_epoch = epochs so the
+        # Polyak averager can never observe (observe requires ep >= start) => inert. The gate still sees
+        # a DERIVED manifest entry; the value is irrelevant for a run that never reaches the tail.
+        return {
+            "ladder_class": "derived_at_config",
+            "equation_id": "muon_finisher_schedule_warmstart_and_lr_anneal_v1",
+            "finishing_stage_window_epochs": stage_window,
+            "finishing_stage_start_epoch": int(muon_cap),
+            "tail_frac": float(frac),
+            "polyak_window_epochs": 0,
+            "polyak_start_epoch": int(epochs),  # >= epochs => never observes (inert)
+            "polyak_relative_start_epoch": 0,
+            "degenerate": True,
+            "note": (f"DEGENERATE crucible_v7 polyak sizing: epochs ({epochs}) <= muon_cap ({muon_cap}) "
+                     f"=> no finishing phase (calibration/smoke); start_epoch=epochs => Polyak inert."),
+        }
+    prov = polyak_finisher_window_provenance(stage_window, frac=frac)
+    rel_start = int(prov["polyak_start_epoch"])
+    return {
+        **prov,
+        "finishing_stage_window_epochs": stage_window,
+        "finishing_stage_start_epoch": int(muon_cap),  # muon backstop cap = the turnpike-dwell start
+        "polyak_start_epoch": int(muon_cap) + rel_start,  # ABSOLUTE (override the helper's relative)
+        "polyak_relative_start_epoch": rel_start,
+        "note": ("v7 Polyak tail start = muon_cap + (finishing_window - round(frac·finishing_window)); "
+                 "finishing_window = epochs - muon_cap; sized off the muon CAP (latest Muon entry) so "
+                 "the tail is always inside the constant-τ* turnpike dwell. " + str(prov.get("note", ""))),
+    }
+
+
+def crucible_v7_registered_off_levers() -> dict:
+    """The DEFAULT-OFF v7 items kept as a TRACKED, REASONED, duty-to-measure QUEUE (v7.3 delta 5;
+    the "off is a tracked queue, never a forgotten default" non-negotiable). These stay OFF at launch
+    (they would perturb the sealed config / lack their inclusion evidence) but each carries a NAMED
+    trigger the controller works down — never a silent grave. The council review + the #247 costate
+    SENSE layer read this surface; a real launch records the corresponding activation-ledger state.
+
+    Per the synthesis SYNTHESIS_INCL_symposium_20260708 §FINAL CLASSES + CRUX-ENGINEERING ADDENDUM.
+    Pure / $0 (a documentation + duty-to-measure surface, not a launch knob). means != ends."""
+    return {
+        "micro_batch": {  # synthesis item 3 — v7.1-ARM; crux elevation REVOKED by measurement
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("bounded n600 d_seg A/B ~day-1: v7's own first ~300 ep = arm A, a twin config "
+                        "(micro-batch ON, same seed, ep0-300) = arm B — admission-gated on v7's measured "
+                        "uncontended n600 RSS curve + the governor's 2-job envelope. NOT bit-identity "
+                        "engineering: frozen_scorer_forward_batch_dependence_v1 MEASURED the batched "
+                        "scorer forward is NOT bit-identical (GPU 0.006% argmax flips) so the crux "
+                        "elevation is REVOKED — the A/B measures whether those flips are d_seg-neutral."),
+        },
+        "verdict_reclaim_330": {  # synthesis item 6 — v7.1-ARM (default-OFF at launch)
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("verdict-correlated RSS ratchet in v7 telemetry (the urgency premise was stale "
+                        "in run-1: RSS stable over 3 verdicts); crash-composition seam (S5-A3) owed "
+                        "before load-bearing — #358 crash-resume tests + disjoint-tmpfile/killpg cover it."),
+        },
+        "adaptive_eps": {  # synthesis item 7 — REGISTERED
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("eikonal re-entry signature in v7 telemetry (pre-built insurance #320; equation "
+                        "adaptive_eps_cfl_edge_tracking_v1 ASSUMED_AWAITING_VERIFICATION). Structurally "
+                        "absent at the sealed λ_eik 0.01 fixed (eikonal fell 49% in run-1, no re-entry)."),
+        },
+        "gpu_verdict": {  # synthesis item 10 — REGISTERED (stop-window probe armed)
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("D1 GPU-vs-CPU verdict AGREEMENT probe at the run-1 governed stop (harness armed, "
+                        "chunked-resumable, pre-registered thresholds). v7.1 scope: --async-verdict "
+                        "CONFLICTS with --verdict-device gpu — the hybrid GPU-sensor/CPU-anchor cadence "
+                        "needs that conflict resolved (a designed hybrid mode, not just a flag pair)."),
+        },
+        "fp16_cf_feats": {  # synthesis item 11 — REGISTERED
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("re-waterfill gate if ever armed — NOT needed (37.26 GiB headroom post-basis, S1); "
+                        "an on-the-fly per-pair fp16 cf-feature path would re-open only under memory pressure."),
+        },
+    }
+
+
 def _build_crucible_v7(
     gt_cache_path,
     *,
@@ -2056,6 +2160,7 @@ def _build_crucible_v7(
     from tac.witness_dsl.curriculum_dsl import (
         DirectionalBasisRebalance,
         LadderIslandHomotopy,
+        PolyakFinisher,
         SegFormUnifyTau,
         TailCycles,
     )
@@ -2105,8 +2210,19 @@ def _build_crucible_v7(
     # incumbent anneal). Emitting 'event' here honors the operator's explicit conversion directive; the
     # council/seal makes the final launch-mode decision.
     base["--tau-advance-mode"] = "event"                          # τ octave-ladder <- per-band relaxation
+    # (v7.3 delta 3, synthesis item 4 ELEVATED by GPU cert) ARM the safe-compile hosc region. The
+    # law safe_compile_hosc_device_bitidentity_v1 (crux-engineering GPU per-chip fingerprint bit-cert,
+    # .omx/research/safe_compile_gpu_bitcert_20260708.md) MEASURED max|Δ|=0 for the compiled hosc
+    # ``tanh(β·sin(x))`` region on M5-Max-GPU at REAL 384x512 coverage, β uniform over [1,10], N=5
+    # cross-process — so the flip ADMITS at launch on this fingerprint (score-neutral, bit-identical).
+    # It is DEVICE-CONDITIONAL: the SAME chip's CPU device fp-CONTRACTS by 1 ULP (5.96e-8) => REFUSE
+    # there; mlx_device is 'gpu' below, and the trainer's resolve_enabled_regions keys off --mlx-device.
+    # The launcher b2 gate is the RUNTIME AUTHORITY: it fail-closes off-fingerprint (any chip/os/mlx
+    # change) so a stale manifest can never silently activate a compiled region. --safe-compile-manifest
+    # is NOT emitted => the default .omx/state/mlx_safe_compile_manifest.json path resolves.
+    base["--safe-compile-regions"] = "hosc_activation"
 
-    # (3) the three composable v7 levers (DSL Lever factories -> TypedLever; the DSL stays the emitter).
+    # (3) the composable v7 levers (DSL Lever factories -> TypedLever; the DSL stays the emitter).
     def _typed_lever(lev) -> "TypedLever":
         return TypedLever(name=lev.name, overrides=dict(lev.overrides),
                           epochs_delta=lev.epochs_delta, notes=lev.notes)
@@ -2126,11 +2242,20 @@ def _build_crucible_v7(
     # rebalance. window=0 => no epoch delta; the ~9% in_feat step cost is within the 15% wall-clock
     # slack (rc=8 gate verifies at admission with the real bench). This is the lever's FIRST activation
     # (activation-ledger fires 'FEED_07a_directional_basis_rebalance' at launch; never-fired before).
+    # (v7.3 delta 2, synthesis item 8 IN-v7 "IFF start_epoch SIZED") the R-7 Polyak/Ruppert tail
+    # averager, armed at the TAIL turnpike window start — DERIVED-AT-CONFIG, NEVER the default 0 (the
+    # R-7 residual footgun where start_epoch=0 averages the WHOLE run instead of the finishing tail).
+    # The finishing (Muon+TAIL) phase spans [muon_cap, epochs]; sizing the tail from the muon CAP (the
+    # LATEST possible Muon entry) yields the most CONSERVATIVE start — guaranteed post-Muon inside the
+    # constant-τ* turnpike dwell even if the Muon event fires earlier. See crucible_v7_polyak_start_provenance.
+    _polyak_prov = crucible_v7_polyak_start_provenance(int(epochs))
+    _polyak_start = int(_polyak_prov["polyak_start_epoch"])
     levers = (
         _typed_lever(SegFormUnifyTau()),
         _typed_lever(TailCycles(cycles_max=_CRUCIBLE_V7_TAIL_CYCLES_MAX)),
         _typed_lever(LadderIslandHomotopy()),
         _typed_lever(DirectionalBasisRebalance(regime="lane_offloaded")),
+        _typed_lever(PolyakFinisher(start_epoch=_polyak_start)),
     )
 
     typed = TypedWitnessConfig(
@@ -2140,9 +2265,11 @@ def _build_crucible_v7(
         num_pairs=int(num_pairs),
         epochs=int(epochs),
         # DERIVED wall-clock budget (operator 2026-07-08 default-on): anchor min/ep x epochs x slack.
-        # At epochs=3000 => ~7.4 days (6.46-day anchor projection x 1.15 slack). NOT hand-picked;
-        # re-derives if epochs change or a lever (tau-advance/micro-batch) changes the effective
-        # per-ep count => the budget tracks the anchor, the launcher REFUSES a slower-than-anchor run.
+        # At epochs=3000 => ~8.67 days (7.54-day anchor projection x 1.15 slack) after the v7.3 S5-H2
+        # re-anchor to the LIVE incl-startup 3.62 min/ep (was ~7.4 days at the optimistic 3.1 steady-
+        # state). NOT hand-picked; re-derives if epochs change or a lever (tau-advance/micro-batch)
+        # changes the effective per-ep count => the budget tracks the anchor, the launcher REFUSES a
+        # slower-than-anchor run.
         wall_clock_budget_days=Provenanced(
             value=round(derive_wall_clock_budget_days(int(epochs)), 3),
             provenance=_PC.DERIVED_AT_CONFIG, unit="days",
@@ -2255,11 +2382,32 @@ def compile_crucible_v7_config(
     from tac.witness_curriculum.ladder_homotopy import LADDER_LAMBDA_GATE_PROVENANCE
     tail_prov = {"tail_constants": tail_constant_provenance(),
                  "ladder_lambda_gates": {k: dict(v) for k, v in LADDER_LAMBDA_GATE_PROVENANCE.items()}}
+    # (v7.3 delta 2) the Polyak tail start-epoch is a DERIVED-AT-CONFIG schedule-WHEN token, so it
+    # MUST land in the constants_manifest as a LawRef entry — else the schedule-provenance gate flags
+    # ``--polyak-finisher-start-epoch`` NAKED_PRIMARY_EPOCH (a bare positive epoch). It is NOT a
+    # curriculum-stage cap/event — it is a value COMPILED from muon_finisher_schedule_warmstart_and_
+    # lr_anneal_v1 (the finisher tail-window law), so DERIVED (constants_manifest) is the correct class.
+    _pk = crucible_v7_polyak_start_provenance(int(epochs))
+    constants_manifest = dict(getattr(v6_cfg, "constants_manifest", {}) or {})
+    constants_manifest["polyak_finisher_start_epoch"] = {
+        "value": int(_pk["polyak_start_epoch"]),
+        "equation_id": _pk["equation_id"],  # muon_finisher_schedule_warmstart_and_lr_anneal_v1
+        "ladder_class": "derived_at_config",
+        "fallback_used": False,
+        "inputs": {
+            "epochs": int(epochs),
+            "muon_cap": int(_CRUCIBLE_V7_MUON_CAP),
+            "finishing_stage_window_epochs": int(_pk["finishing_stage_window_epochs"]),
+            "tail_frac": float(_pk["tail_frac"]),
+            "polyak_window_epochs": int(_pk["polyak_window_epochs"]),
+        },
+        "note": _pk["note"],
+    }
     return CrucibleV7Compiled(
         typed=typed,
         argv=tuple(argv),
         emitted_pairs=tuple(pairs),
-        constants_manifest=dict(getattr(v6_cfg, "constants_manifest", {}) or {}),
+        constants_manifest=constants_manifest,
         dsl_program_manifest=dsl_manifest,
         schedule_governance=governance,
         v6_flags=tuple(v6_flags),

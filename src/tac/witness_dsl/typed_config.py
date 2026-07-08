@@ -81,13 +81,21 @@ Scalar = Union[bool, int, float, str]
 
 PROGRAM_MANIFEST_SCHEMA = "dsl_program_manifest.v1"
 
-# The MLX perf-env prefix a launch command MUST carry so the ~17x custom-grouped-backward fast
-# path is active (an unset env is the silent slow-run footgun the launcher's step-(d) perf-env
-# verification catches). Kept BYTE-IDENTICAL to
-# ``witness_autoconfig.WitnessConfig.to_command``'s literal — a drift between the two would let a
-# TypedWitnessConfig launch (crucible_v7) silently drop the single largest compute lever. The
-# drift-guard test (test_v7_compute_exploitation) pins this equality.
-PERF_ENV_PREFIX = "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \\\n  "
+# The MLX perf-env prefix a launch command MUST carry so the score-neutral compute levers are active
+# (an unset env is the silent slow-run footgun the launcher's step-(d) perf-env verification catches).
+# ``witness_autoconfig.WitnessConfig.to_command`` IMPORTS this constant (single SoT), so there is no
+# second literal to drift; ``_parse_perf_env`` DERIVES ``REQUIRED_PERF_ENV`` from it so a second var is
+# picked up automatically (the launcher then structurally REQUIRES every var here).
+#   * TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 — the ~17x custom-grouped-backward fast path (the single largest
+#     lever; L45).
+#   * TAC_MLX_CUSTOM_PERSISTENCE_POOL=1 — D16 dispatch ON (v7.3 delta 1, synthesis item 5 IN-v7): the
+#     fused Metal persistence/clDice min/max/mean pool. BIT-IDENTICAL by construction — max|Δ|=0 vs the
+#     numpy authority AND on the FULL-LOSS flag-on-vs-off parity on REAL n600 GT, N=5 cross-process
+#     deterministic (.omx/research/d16_metal_kernels_20260708.md). So it is SCORE-NEUTRAL (byte-identical)
+#     while accelerating a LIVE hot term (persistence active at w=1.0 in v7); safe to require globally
+#     because it cannot change a single trained bit. Placed AFTER grouped-backward so the launcher's
+#     ``startswith("TAC_MLX_CUSTOM_GROUPED_BACKWARD=1")`` checks are unaffected.
+PERF_ENV_PREFIX = "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 TAC_MLX_CUSTOM_PERSISTENCE_POOL=1 \\\n  "
 
 
 def _parse_perf_env(prefix: str) -> dict[str, str]:

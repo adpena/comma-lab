@@ -121,7 +121,8 @@ def test_derive_budget_math_matches_anchor_times_slack():
     got = derive_wall_clock_budget_days(3000)
     want = project_wall_clock_days(RUN1_MEASURED_MIN_PER_EP, 3000) * WALL_CLOCK_SLACK_FACTOR
     assert got == pytest.approx(want)
-    assert got == pytest.approx(6.4583 * WALL_CLOCK_SLACK_FACTOR, rel=1e-3)  # ~7.4 days at 3000 ep
+    # v7.3 delta 4 (S5-H2): 3.62 live incl-startup x 3000 / 1440 = 7.5417 anchor projection.
+    assert got == pytest.approx(7.5417 * WALL_CLOCK_SLACK_FACTOR, rel=1e-3)  # ~8.67 days at 3000 ep
 
 
 def test_derive_budget_rejects_nonpositive_epochs():
@@ -136,7 +137,7 @@ def test_v7_config_declares_a_derived_seven_day_budget():
                                   out_dir="experiments/results/__v7_budget_test__")
     from tac.witness_dsl.typed_config import ProvenanceClass
     assert c.wall_clock_budget_days.provenance is ProvenanceClass.DERIVED_AT_CONFIG
-    assert 7.0 <= c.budget_days_value() <= 7.6   # ~7.4 days at 3000 ep (the "~7 days derived")
+    assert 8.4 <= c.budget_days_value() <= 8.9   # ~8.67 days at 3000 ep (v7.3 S5-H2 live-cadence re-anchor)
 
 
 # ── FIX 1c: the launcher budget resolver (pure, default-on) ─────────────────────────────
@@ -156,7 +157,8 @@ def test_resolve_uses_config_declared_when_no_accept():
 def test_resolve_falls_back_to_derived_when_nothing_declared():
     # DEFAULT-ON: a legacy config that declared no budget STILL gets a refuse ceiling.
     b, src, override = _lw.resolve_wall_clock_budget(accept_days=None, declared_days=None, epochs=3000)
-    assert b == pytest.approx(7.4, rel=1e-2) and override is False and "fallback" in src.lower()
+    # v7.3 delta 4: derived fallback now ~8.67 days (3.62 live incl-startup anchor x 3000 x 1.15 slack).
+    assert b == pytest.approx(8.67, rel=1e-2) and override is False and "fallback" in src.lower()
 
 
 def test_resolve_none_only_when_epochs_unknown_and_nothing_supplied():
@@ -240,18 +242,30 @@ def test_implied_ceiling_inverts_projection():
 # ── FIX 2: the perf-env CLASS guard (derived required set, missing var named) ────────────
 def test_required_perf_env_is_derived_from_the_prefix():
     from tac.witness_dsl.typed_config import PERF_ENV_PREFIX, REQUIRED_PERF_ENV
-    assert REQUIRED_PERF_ENV == {"TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"}
+    # v7.3 delta 1: the D16 persistence-pool env joins the required set (auto-derived from the prefix).
+    assert REQUIRED_PERF_ENV == {"TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1",
+                                 "TAC_MLX_CUSTOM_PERSISTENCE_POOL": "1"}
     for name, val in REQUIRED_PERF_ENV.items():
         assert f"{name}={val}" in PERF_ENV_PREFIX  # SoT: parsed from the prefix, no duplicate list
 
 
 def test_missing_perf_env_names_the_missing_var():
     from tac.witness_dsl.typed_config import missing_perf_env_vars
-    assert missing_perf_env_vars("nothing here") == ["TAC_MLX_CUSTOM_GROUPED_BACKWARD=1"]
-    assert missing_perf_env_vars("... TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 ...") == []
+    # both required vars named when neither is present (sorted for a stable REFUSE message).
+    assert missing_perf_env_vars("nothing here") == [
+        "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1", "TAC_MLX_CUSTOM_PERSISTENCE_POOL=1"]
+    # BOTH present => nothing missing.
+    both = "... TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 TAC_MLX_CUSTOM_PERSISTENCE_POOL=1 ..."
+    assert missing_perf_env_vars(both) == []
+    # only grouped-backward present => the persistence-pool var is still named missing.
+    assert missing_perf_env_vars("... TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 ...") == [
+        "TAC_MLX_CUSTOM_PERSISTENCE_POOL=1"]
     # a bare NAME (no value) or WRONG value does NOT satisfy the required set.
-    assert missing_perf_env_vars("TAC_MLX_CUSTOM_GROUPED_BACKWARD") == ["TAC_MLX_CUSTOM_GROUPED_BACKWARD=1"]
-    assert missing_perf_env_vars("TAC_MLX_CUSTOM_GROUPED_BACKWARD=0") == ["TAC_MLX_CUSTOM_GROUPED_BACKWARD=1"]
+    assert missing_perf_env_vars("TAC_MLX_CUSTOM_GROUPED_BACKWARD TAC_MLX_CUSTOM_PERSISTENCE_POOL") == [
+        "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1", "TAC_MLX_CUSTOM_PERSISTENCE_POOL=1"]
+    assert missing_perf_env_vars(
+        "TAC_MLX_CUSTOM_GROUPED_BACKWARD=0 TAC_MLX_CUSTOM_PERSISTENCE_POOL=1") == [
+        "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1"]
 
 
 # ── FIX 2: prefix-parity — BOTH to_command paths consume the ONE prefix (drift-impossible) ──

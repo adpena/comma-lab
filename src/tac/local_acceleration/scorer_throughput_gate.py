@@ -44,13 +44,20 @@ SEG_W: int = 512
 # The throughput micro-bench proves the ~17x fast path is ON; it does NOT tell the operator how
 # many DAYS a 3000-epoch run will take. This MEASURED anchor lets the launch gate PROJECT total
 # wall-clock (advisory; REFUSE only against an explicit budget). Value-provenance ladder
-# (req-T): class-(3) MEASURED-ANCHOR, config-conditional. Anchor = crucible_v6 run-1
-# (levelset_n600_crucible_v6_run1_20260708T095730Z, live pid 63069): ps ELAPSED 2h47m51s @ ep46
-# incl. startup => ~3.65 min/ep; the operator-cited steady-state ~3.1 min/ep is the tighter
-# figure. We anchor to the CONSERVATIVE steady-state and note the ceiling. Re-fit on a config
-# whose per-pair scorer-forward count changes (micro-batch>1 batches the forward => fewer, larger
-# forwards => a DIFFERENT min/ep; the anchor is B=1-accum-forward-conditional).
-RUN1_MEASURED_MIN_PER_EP: float = 3.1   # crucible_v6 run-1 steady-state (operator-cited; n600 B=1 accum)
+# (req-T): class-(3) MEASURED-ANCHOR, config-conditional.
+#
+# v7.3 DELTA (S5-H2 UPHELD, synthesis SYNTHESIS_INCL_symposium_20260708 §ARBITRATIONS): re-anchored
+# to the LIVE incl-startup cadence, NOT the optimistic steady-state. Anchor = crucible_v6 run-1
+# (levelset_n600_crucible_v6_run1_20260708T095730Z, live pid 63069): the MEASURED live incl-startup
+# cadence is 3.62 min/ep (ORCHESTRATION_LEDGER H2: "Live incl-startup cadence 3.62 min/ep -> 7.55d").
+# The prior 3.1 steady-state was an OPTIMISTIC lower bound — a fresh run pays startup + per-ep jitter
+# on EVERY epoch of a resumable-checkpointed schedule, so the incl-startup figure is the honest floor
+# the budget must not undercut. FLOOR the anchor at the measured 3.62 (never below). rc=8's
+# at-admission REAL SegNet bench remains the FINAL arbiter; this anchor sets the derived REFUSE
+# ceiling the bench is checked against. Re-fit on a config whose per-pair scorer-forward count changes
+# (micro-batch>1 batches the forward => fewer, larger forwards => a DIFFERENT min/ep; the anchor is
+# B=1-accum-forward-conditional).
+RUN1_MEASURED_MIN_PER_EP: float = 3.62  # crucible_v6 run-1 LIVE incl-startup (MEASURED; S5-H2; n600 B=1 accum)
 RUN1_ANCHOR_SEGNET_MS: float = ON_REF_MS  # the run-1 machine's SegNet fwd+bwd micro-bench reference
 
 # ── wall-clock BUDGET slack factor (req-T tagged) ──
@@ -58,10 +65,11 @@ RUN1_ANCHOR_SEGNET_MS: float = ON_REF_MS  # the run-1 machine's SegNet fwd+bwd m
 # The budget is a REFUSE CEILING (default-on gate), not a target: it fires when THIS machine's measured
 # SegNet bench projects a run SLOWER than the run-1 anchor by more than the slack. Provenance
 # (value-provenance ladder, req-T): HARDCODED-WITH-WAIVER-class magnitude with a MEASURED anchor for the
-# ceiling — 3.65 min/ep INCL-startup / 3.1 steady-state (operator-cited) = 1.18 startup-amortization
-# ceiling; 1.15 keeps a slim thermal/per-ep-jitter headroom so the gate stays a REAL refuse (>15%
-# slower than the anchor => REFUSE) rather than a rubber stamp. RE-DERIVE if the run-1 anchor changes
-# or a lever batches the forward (micro-batch>1 => a different min/ep => a different implied ceiling).
+# ceiling. As of the v7.3 re-anchor the min/ep anchor is ALREADY the incl-startup figure (3.62), so this
+# slack is now a slim PURE thermal/per-ep-jitter headroom (no longer double-counting a startup
+# amortization) so the gate stays a REAL refuse (>15% slower than the live anchor => REFUSE) rather than
+# a rubber stamp. RE-DERIVE if the run-1 anchor changes or a lever batches the forward (micro-batch>1 =>
+# a different min/ep => a different implied ceiling).
 WALL_CLOCK_SLACK_FACTOR: float = 1.15
 
 
