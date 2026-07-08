@@ -908,6 +908,18 @@ class TelemetryCadence(ScheduleDisplay):
     loss_term_log_every: int = 0
     handoff_readiness: bool = False
     dm1: bool = False
+    # (#312 Phase A/B) INTERACTION-layer telemetry. Score-neutral read-only observability, BUT
+    # HEAVY compute (per-term backward passes / HVP-Lanczos through R), so per the 'off is a tracked
+    # queue' reconciliation these default OFF on the COMPUTE-COST exception and are HELD here as a
+    # tracked cadence knob (reason recorded), never a forgotten hidden switch. grad_interaction fires
+    # at stage boundaries (+ every grad_interaction_every epochs); curvature at checkpoint cadence,
+    # governor-gated. When the compute envelope permits, the operator flips these on.
+    grad_interaction: bool = False
+    grad_interaction_k_pairs: int = 32
+    grad_interaction_every: int = 0
+    curvature: bool = False
+    curvature_k: int = 8
+    curvature_k_pairs: int = 8
 
     def flags(self) -> dict:
         f: dict = {
@@ -920,6 +932,14 @@ class TelemetryCadence(ScheduleDisplay):
             f["--annulus-bottom-k"] = float(self.annulus_bottom_k)
         if self.dm1:
             f["--dm1-telemetry"] = True  # store_true: True only (C2)
+        if self.grad_interaction:  # #312 Phase A store_true + its cadence/sample knobs
+            f["--grad-interaction-telemetry"] = True
+            f["--grad-interaction-k-pairs"] = int(self.grad_interaction_k_pairs)
+            f["--grad-interaction-every"] = int(self.grad_interaction_every)
+        if self.curvature:  # #312 Phase B store_true + its top-k / sample knobs
+            f["--curvature-telemetry"] = True
+            f["--curvature-k"] = int(self.curvature_k)
+            f["--curvature-k-pairs"] = int(self.curvature_k_pairs)
         return f
 
 
@@ -1932,7 +1952,8 @@ def TauAdvanceEvent(octaves: "int | None" = None,  # noqa: N802 — S6-R4 self-p
                        "--tau-anneal-shape geometric; β/LR co-anneal on the octave fraction; freezes at Muon")
 
 
-def SafeCompileRegions(regions: str = "all-certified") -> Lever:  # noqa: N802 — #252 v7.1
+def SafeCompileRegions(regions: str = "all-certified",
+                       manifest: str | None = None) -> Lever:  # noqa: N802 — #252 v7.1
     """SAFE-COMPILE (#252): activate the determinism-first ``mx.compile`` layer for the
     manifest-CERTIFIED elementwise hot-loop regions (``tac.mlx_safe_compile``).
 
@@ -1946,12 +1967,22 @@ def SafeCompileRegions(regions: str = "all-certified") -> Lever:  # noqa: N802 �
 
     v7.1 / next-arm (NOT launch-gating for v7): needs the v7 baseline trajectory as the
     A/B comparator (sister of D15 micro-batch). The certified-region manifest IS the
-    evidence gate; default OFF => byte-identical."""
+    evidence gate; default OFF => byte-identical.
+
+    ``manifest`` (#252 v2): optional non-default path to the certification manifest
+    (``--safe-compile-manifest``); default None keeps the trainer's canonical
+    ``.omx/state/mlx_safe_compile_manifest.json``. Holding it here maps the flag in the
+    lever_registry (the manifest is the fingerprint/device-scoped evidence surface the
+    v2 per-chip trust closure reads — see tac.mlx_safe_compile)."""
+    overrides = {"--safe-compile-regions": regions}
+    if manifest is not None:
+        overrides["--safe-compile-manifest"] = manifest
     return Lever("n252_safe_compile_regions",
-                 overrides={"--safe-compile-regions": regions},
+                 overrides=overrides,
                  notes="#252 determinism-first mx.compile of manifest-CERTIFIED elementwise "
                        "regions (bit-equal + cross-process deterministic); score-neutral; "
-                       "v7.1 arm, was OFF (--safe-compile-regions none)")
+                       "v7.1 arm, was OFF (--safe-compile-regions none); v2 holds "
+                       "--safe-compile-manifest (per-chip fingerprint/device-scoped evidence)")
 
 
 def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N802 — #287
