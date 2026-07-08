@@ -691,24 +691,31 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
 
 
 # ───────────────────────── named-config derivation (shared by launch + calibration) ─────────────
-def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: int, overfit: bool):
+def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "int | None",
+                        overfit: bool):
     """Resolve a canonical named config to a derived trainer config at the given scale. The
     RSS-calibration smoke reuses this with a SMALL num_pairs/epochs but the SAME config name, so
-    the calibration exercises the REAL flag set (not a toy variant)."""
+    the calibration exercises the REAL flag set (not a toy variant).
+
+    ``epochs=None`` => the config family's OWN sealed default applies (the kwarg is simply not
+    passed, so each ``derive_*``/``compile_*`` signature default — the single source of truth —
+    wins). An explicit int OVERRIDES the sealed default (NEW-1 fix: the launcher's old hardcoded
+    default=1000 silently trampled crucible_v6/v7's sealed 3000)."""
+    _ek: dict = {} if epochs is None else {"epochs": int(epochs)}
     if config == "sealed_205":
         # The #205 P3 SEALED capstone config fixes its own knobs (mod-dim 32 etc.); overfit N/A.
-        return wac.derive_sealed_205_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+        return wac.derive_sealed_205_config(gt_cache, num_pairs=num_pairs, **_ek)
     if config == "store_nothing_205":
         # The sealed capstone + STORE-NOTHING pose-carrier source (Track B) — the A/B pose arm.
-        return wac.derive_store_nothing_205_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+        return wac.derive_store_nothing_205_config(gt_cache, num_pairs=num_pairs, **_ek)
     if config == "fresh_seeded":
         # The 2026-07-04 SEAL-review REVISED run-1 argv (sealed_205 + seed/control deltas; C5).
-        return wac.derive_fresh_seeded_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+        return wac.derive_fresh_seeded_config(gt_cache, num_pairs=num_pairs, **_ek)
     if config == "crucible_v6":
         # T5 CRUCIBLE v6.2 launch candidate (seal-round-2 BLOCKER-1 fix): store_nothing_205 +
         # ABSOLUTE schedule pins (tau@300 / anneal-den 3000 x hold 0.2 = descent 600 / Muon 726)
         # + tau_end 0.31 + fused-R + the v6 §1.1 DSL levers; pose block inherited (MAJOR-A2/#314).
-        return wac.derive_crucible_v6_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
+        return wac.derive_crucible_v6_config(gt_cache, num_pairs=num_pairs, **_ek)
     if config == "crucible_v7":
         # T5 CRUCIBLE v7 restart — the FIRST requirement-V-native config, authored AS a
         # TypedWitnessConfig (DSL-emitted argv). compile_* produces the typed cfg + BOTH provenance
@@ -717,7 +724,7 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
         # the gate-chain manifests (seal v7 r1 BLOCKER #1 + MAJOR #2). num_pairs/epochs flow through;
         # overfit is N/A (v7 fixes its own knobs, inherited from the sealed v6 substrate).
         return wac.compile_crucible_v7_config(
-            gt_cache, num_pairs=num_pairs, epochs=epochs).to_launch_config()
+            gt_cache, num_pairs=num_pairs, **_ek).to_launch_config()
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -725,7 +732,7 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
     # proven_base (config_family would even MISLABEL it). A new named config MUST add an explicit
     # branch above; an unmapped name is a hard error, not a quiet substitution.
     if config in ("proven_base", "all_levers"):
-        return wac.derive_config(gt_cache, num_pairs=num_pairs, overfit=overfit, epochs=epochs,
+        return wac.derive_config(gt_cache, num_pairs=num_pairs, overfit=overfit, **_ek,
                                  all_levers=(config == "all_levers"))
     raise ValueError(
         f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
@@ -909,7 +916,13 @@ def main(argv: list[str] | None = None) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--gt-cache", required=True, help="path to the clip's GT cache (e.g. .../gt_n600.npz)")
     ap.add_argument("--num-pairs", type=int, required=True)
-    ap.add_argument("--epochs", type=int, default=1000)
+    ap.add_argument("--epochs", type=int, default=None,
+                    help="training epochs. OMIT to use the named config's SEALED default (each "
+                         "derive function declares its own; crucible_v6/v7 seal 3000, older "
+                         "families 1000). An explicit value OVERRIDES the sealed default and is "
+                         "stamped as a loud provenance note (NEW-1: the launcher's old hardcoded "
+                         "default=1000 silently trampled sealed values and compiled a wrong "
+                         "wall-clock budget that passed every gate).")
     ap.add_argument("--aggressive", action="store_true",
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--config", default=None,
@@ -1082,6 +1095,18 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
                               epochs=args.epochs, overfit=overfit)
+    # NEW-1 (seal v7 round-2 docket): epochs provenance. When --epochs is OMITTED the config
+    # family's SEALED default just applied (read it back from cfg for the header/telemetry);
+    # when EXPLICIT, stamp a LOUD note — the wall-clock gate DERIVES its budget from whatever
+    # epochs it is handed, so it cannot catch a wrong hand on its own.
+    if args.epochs is None:
+        args.epochs = int(getattr(cfg, "epochs", 0) or 0)
+        print(f"# epochs: {args.epochs} (config-sealed default for {config!r})")
+    else:
+        _cfg_ep = int(getattr(cfg, "epochs", 0) or 0)
+        _note = "matches derived config" if _cfg_ep == int(args.epochs) else "EXPLICIT OVERRIDE"
+        print(f"# epochs: {args.epochs} ({_note}; wall-clock budget scales with THIS value — "
+              f"verify intent)")
     # (#332) compose selected DSL levers over the named base; the config DELEGATES to the DSL SoT.
     # Each name is EAGERLY resolved through the DSL composability predicate HERE — BEFORE any
     # gate/spawn work — so a non-composable name (Muon needs explicit args; DM1Minimal returns a

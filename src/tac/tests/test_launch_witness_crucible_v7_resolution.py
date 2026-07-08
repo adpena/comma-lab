@@ -87,8 +87,10 @@ def test_adapter_exposes_full_cfg_protocol(v7_cfg):
     assert all(isinstance(v, dict) for v in v7_cfg.schedule_governance.values())
     # emit metadata
     assert v7_cfg.purpose and "crucible v7" in v7_cfg.purpose.lower()
+    # 4-lever set as of the basis integration (793631e00: FEED_07a joined the sealed three).
     assert v7_cfg.dsl_levers == (
-        "seg_form_unify_tau", "tail_k_warm_restart", "n323_ladder_island_homotopy")
+        "seg_form_unify_tau", "tail_k_warm_restart", "n323_ladder_island_homotopy",
+        "FEED_07a_directional_basis_rebalance")
 
 
 def test_b06_manifest_verifies_for_real(v7_cfg):
