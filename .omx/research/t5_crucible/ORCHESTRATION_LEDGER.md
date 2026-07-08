@@ -2028,3 +2028,15 @@ consumer update required — asserted [consumers-generic]. ---
   still finding real divergences (lane-regime M1, Road single-mechanism M2). The "PR95 skeleton
   dissolved" claim now rests on TWO clean blind derivations (37a974742 + 1e91081c7). The
   round-1 S6 contamination fix (allowlist enforcement) WORKED.
+- **FIX-WAVE A LANDED (5ea59a1f1, all 8 items)**: A1 BLOCKER β_end 10.0→**3.177** (event-frozen
+  value := clock β(726); ≤4.0) · A2 budget anchor **3.39 min/ep MEASURED** from run-1 ep75→100
+  slope 3.371 + startup 59.5/3000 → budget **8.122d** (JUSTIFIED DEVIATION from synthesis 3.12,
+  which rested on the memo's optimistic 3.1 lower bound — measured beats borrowed) · A3 Polyak
+  start=epochs+1 degenerate + 2546 non-degenerate (455 ep exactly) · A4 operator EVENT override
+  verbatim in compile memo + LAUNCH_PACKAGE_v7_20260708.md (two-token clock revert) · A5
+  persistence_classes_for_basis_regime() law (auto→3 under lane_offloaded) + counter-arm
+  registered · A6 Road=PRIMARY signal (flip>0.30@ep200 gate) + road_boundary_fallback
+  duty-to-measure · A7 per-group-grad-clip ON+asserted · A8 ν-stale reactivation. Dry-run GREEN
+  rc=0 (138/138 flags), 450 tests, ruff clean, zero absorption of B's edits.
+- **FIX-WAVE B**: died on transient API 500 with all edits on disk uncommitted (no signal loss);
+  RESUMED same-agent with deconfliction instructions (patch-file isolation vs A's surfaces).
