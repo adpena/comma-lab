@@ -159,11 +159,120 @@ def eval_critical_nucleus_release_r_star(inputs: Mapping[str, Any]) -> float:
     return coeff * sigma_eff
 
 
+# ---------------------------------------------------------------------------
+# crucible_v6 migration evaluators (#351 follow-up). The CONSUMED trio (τ_end /
+# β-pin / LR-pin) + the ν-family / persistence-bar / adaptive-ε LIBRARY laws.
+#
+# TYPE DISCIPLINE (value-identity is the LAW): the emitted launch.sh renders each
+# flag value with ``str(value)`` — ``str(1000) != str(1000.0)`` — so a passthrough
+# evaluator MUST return the input UNCOERCED (an int stays int, a float stays
+# float) or it would silently break the byte-identity gate. Only the arithmetic
+# laws (settle / tail-cycle) return a computed float, matching their float anchors.
+# ---------------------------------------------------------------------------
+def eval_tau_end_knee_launch(inputs: Mapping[str, Any]) -> Any:
+    """τ_end = the P-TAU2 knee probe's chosen ``launch_tau`` (measured anchor).
+
+    inputs: {"launch_tau": the artifact's launch_tau field (0.31; inside the knee
+             band [0.19072, 0.54294] and ≈ the mod32cap ep650-best τ=0.3098)}.
+    A measured-anchor passthrough: the value IS the recorded launch τ. Uncoerced
+    so a float stays float (str-render byte-identity).
+    """
+    return inputs["launch_tau"]
+
+
+def eval_hosc_beta_fireband_pin(inputs: Mapping[str, Any]) -> Any:
+    """β_end = the shipped hosc-β anneal endpoint PIN (derived-at-config).
+
+    inputs: {"beta_end": the pinned β endpoint (10.0)}. The linear-replica law
+    (β LINEAR over the shared --anneal-epochs den) MOTIVATES the pin — matching
+    the control's β(ep) slope on [1, muon-freeze] to ≤0.1% needs an endpoint
+    ≈10 at den 3000 — but the SHIPPED value is the pinned 10.0 (the law's
+    endpoint is an approximation; the pin is the value). Passthrough, uncoerced.
+    """
+    return inputs["beta_end"]
+
+
+def eval_lr_control_denominator(inputs: Mapping[str, Any]) -> Any:
+    """LR-anneal denominator = the CONTROL vehicle's own --epochs den (derived-at-config).
+
+    inputs: {"control_den": the mod32cap control's LR-cosine denominator (1000)}.
+    The LR cosine is the third shared-den sibling; unlike β (LINEAR, endpoint-
+    rephasable) a shallow den-3000 cosine cannot reproduce the control's deep
+    den-1000 descent by endpoint (curvature differs), so LR gets its OWN
+    denominator = the control's den (1000) → reproduces control LR(ep) on
+    [1,726] bit-identically. Passthrough, uncoerced (INT stays int → str "1000").
+    """
+    return inputs["control_den"]
+
+
+def eval_lr_hold_frac_no_hold(inputs: Mapping[str, Any]) -> Any:
+    """LR-hold-frac = 1.0 = NO hold (derived-at-config).
+
+    inputs: {"hold_frac": 1.0}. The control's Muon freeze (726) < the LR den
+    (1000), so the control never held LR pre-freeze → hold-frac 1.0 (no hold) is
+    the bit-identical-cosine choice. Passthrough, uncoerced.
+    """
+    return inputs["hold_frac"]
+
+
+def eval_settle_window(inputs: Mapping[str, Any]) -> float:
+    """settle window = coeff / ν  (P-CT1 exponential-meat settle law).
+
+    inputs: {"coeff": settle multiple (3 e-folds), "nu": the stage's S/ep decay
+             rate}. Bit-reproduces the artifact's stored ``settle_3_over_nu_ep``
+             (3.0/ν). LIBRARY law (the schedule-derivation machinery; not an
+             emitted crucible_v6 flag).
+    """
+    return inputs["coeff"] / inputs["nu"]
+
+
+def eval_tail_cycle_floor(inputs: Mapping[str, Any]) -> float:
+    """tail-cycle floor = coeff/ν + tail_extra  (P-CT1 settle + one dwell floor).
+
+    inputs: {"coeff": settle multiple (3), "nu": stage decay rate,
+             "tail_extra": the dwell floor added past settle (150 ep)}.
+    Bit-reproduces the artifact's stored ``tail_cycle_floor_ep``. LIBRARY law.
+    """
+    return inputs["coeff"] / inputs["nu"] + inputs["tail_extra"]
+
+
+def eval_conley_absolute_bar(inputs: Mapping[str, Any]) -> Any:
+    """Conley absolute persistence bar = the P-CON fitted logit threshold (B17′).
+
+    inputs: {"s_fit_logit": the fitted absolute survival bar (1.7504924172 @
+             Tau-stage / 1.3017706202 @ MuonBest — near τ-INDEPENDENT while τ
+             varied 4.3×)}. Passthrough of the fitted-bar constant. LIBRARY law
+             (a certificate-lever param; not an emitted crucible_v6 flag).
+    """
+    return inputs["s_fit_logit"]
+
+
+def eval_adaptive_eps_saturation_alarm(inputs: Mapping[str, Any]) -> Any:
+    """adaptive-ε saturation ALARM threshold = ε_raw sustained-above clamp.
+
+    inputs: {"alarm_threshold": the sustained-ε_raw saturation alarm (0.7; the
+             |c_a(τ)| growth that drove it RELAXES at τ_end 0.31 but the alarm is
+             KEPT — v6 §row-1)}. Passthrough. LIBRARY law (a control-loop alarm
+             constant; not an emitted crucible_v6 flag).
+    """
+    return inputs["alarm_threshold"]
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
     "tau_star_maslov_quantile_v1": eval_tau_star_maslov_quantile,
     "critical_nucleus_release_v1": eval_critical_nucleus_release_r_star,
+    # crucible_v6 migration (#351 follow-up) — CONSUMED trio + LR-hold:
+    "tau_end_knee_launch_v1": eval_tau_end_knee_launch,
+    "hosc_beta_fireband_pin_v1": eval_hosc_beta_fireband_pin,
+    "lr_control_denominator_v1": eval_lr_control_denominator,
+    "lr_hold_frac_no_hold_v1": eval_lr_hold_frac_no_hold,
+    # crucible_v6 migration — LIBRARY laws (bit-match tested; not emitted flags):
+    "settle_window_v1": eval_settle_window,
+    "tail_cycle_floor_v1": eval_tail_cycle_floor,
+    "conley_absolute_bar_v1": eval_conley_absolute_bar,
+    "adaptive_eps_saturation_alarm_v1": eval_adaptive_eps_saturation_alarm,
 }
 
 
@@ -182,8 +291,16 @@ __all__ = [
     "LAWREF_BUILTIN_EVALUATORS",
     "EvaluatorError",
     "EvaluatorNotRegisteredError",
+    "eval_adaptive_eps_saturation_alarm",
+    "eval_conley_absolute_bar",
     "eval_critical_nucleus_release_r_star",
     "eval_forfeit_matched_exit_s_star",
+    "eval_hosc_beta_fireband_pin",
+    "eval_lr_control_denominator",
+    "eval_lr_hold_frac_no_hold",
+    "eval_settle_window",
+    "eval_tail_cycle_floor",
+    "eval_tau_end_knee_launch",
     "eval_tau_star_maslov_quantile",
     "get_evaluator",
     "has_evaluator",

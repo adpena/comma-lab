@@ -87,9 +87,21 @@ def test_r_star_resolves_all_literal():
 
 def test_builtin_lawrefs_all_present():
     assert set(BUILTIN_LAWREFS) == {
+        # the 3 first laws (#351 seed)
         "s_star_forfeit_matched_exit",
         "tau_star_maslov_q90",
         "r_star_critical_nucleus",
+        # crucible_v6 migration (#351 follow-up): CONSUMED trio + LR-hold
+        "tau_end_knee_launch",
+        "hosc_beta_fireband_pin",
+        "lr_control_denominator",
+        "lr_hold_frac_no_hold",
+        # crucible_v6 migration: LIBRARY laws (not emitted; bit-match tested)
+        "settle_window_tau_softplus",
+        "tail_cycle_floor_tau_softplus",
+        "conley_absolute_bar_tau",
+        "conley_absolute_bar_muon",
+        "adaptive_eps_saturation_alarm",
     }
 
 
@@ -422,3 +434,92 @@ def test_witnessprogram_resolves_lawref_flag():
     i = argv.index("--island-dilate-px")
     assert argv[i + 1] == str(1.4249999999999998)
     assert manifest["--island-dilate-px"]["value"] == 1.4249999999999998
+
+
+# --------------------------------------------------------------------------
+# 9. crucible_v6 constant migration (#351 follow-up) — VALUE-IDENTITY IS THE LAW
+# --------------------------------------------------------------------------
+from tac.witness_dsl.lawref_builtins import (  # noqa: E402
+    ADAPTIVE_EPS_SATURATION_ALARM,
+    CONLEY_ABSOLUTE_BAR_MUON,
+    CONLEY_ABSOLUTE_BAR_TAU,
+    CRUCIBLE_V6_CONSUMED_LAWREFS,
+    CRUCIBLE_V6_CONSUMED_TARGET_TAGS,
+    HOSC_BETA_FIREBAND_PIN,
+    LR_CONTROL_DENOMINATOR,
+    LR_HOLD_FRAC_NO_HOLD,
+    SETTLE_WINDOW_TAU_SOFTPLUS,
+    TAIL_CYCLE_FLOOR_TAU_SOFTPLUS,
+    TAU_END_KNEE_LAUNCH,
+)
+
+# the sealed literals the migration must reproduce BIT-IDENTICALLY (value AND type).
+_CRUCIBLE_V6_SEALED = {
+    "softmax_temp_end": 0.31,
+    "hosc_beta_end": 10.0,
+    "lr_anneal_epochs": 1000,   # INT — str(1000) != str(1000.0) would break launch.sh byte-identity
+    "lr_hold_frac": 1.0,
+}
+
+
+@_needs_artifacts
+def test_crucible_v6_consumed_bitmatch_and_type_per_constant():
+    """Per-constant bit-match: each CONSUMED LawRef resolves to the EXACT sealed value AND the
+    exact type (int stays int) — the launch.sh byte-identity acceptance bar."""
+    resolved, _manifest = resolve_flag_dict_constants(
+        CRUCIBLE_V6_CONSUMED_LAWREFS, CRUCIBLE_V6_CONSUMED_TARGET_TAGS)
+    assert set(resolved) == set(_CRUCIBLE_V6_SEALED)
+    for key, sealed in _CRUCIBLE_V6_SEALED.items():
+        got = resolved[key]
+        assert got == sealed, f"{key}: {got!r} != sealed {sealed!r}"
+        assert type(got) is type(sealed), f"{key}: type {type(got).__name__} != {type(sealed).__name__}"
+
+
+@_needs_artifacts
+def test_crucible_v6_tau_end_reads_artifact_launch_tau():
+    rc = resolve(TAU_END_KNEE_LAUNCH, {"schedule": "mod32cap"})
+    doc = json.loads((_ARTIFACTS / "tau_knee_ptau2_20260708.json").read_text())
+    assert rc.value == doc["launch_tau"] == 0.31
+    assert rc.fallback_used is False
+    assert rc.ladder_class == "measured_anchor"
+
+
+def test_crucible_v6_tau_end_conditionality_fails_closed_on_mod48():
+    # the P-CT1 protection: a mod48 vehicle must NOT silently reuse the mod32cap-anchored τ_end.
+    with pytest.raises(ConfigConditionalityViolation):
+        resolve(TAU_END_KNEE_LAUNCH, {"schedule": "mod48cap"})
+
+
+def test_crucible_v6_tau_end_falls_back_to_sealed_literal_when_artifact_missing(tmp_path):
+    # NEVER block the launch on a missing probe artifact: fall back to the sealed literal 0.31.
+    rc = resolve(TAU_END_KNEE_LAUNCH, {"schedule": "mod32cap"}, repo_root=tmp_path)
+    assert rc.value == 0.31  # == the sealed literal => still byte-identical
+    assert rc.fallback_used is True
+    assert any("FALLBACK USED" in w for w in rc.warnings)
+
+
+def test_crucible_v6_literal_pins_resolve_with_type_and_no_io():
+    # β / LR-den / LR-hold are literal-input design pins: resolve hermetically (no artifact I/O).
+    assert resolve(HOSC_BETA_FIREBAND_PIN, {}).value == 10.0
+    lr = resolve(LR_CONTROL_DENOMINATOR, {})
+    assert lr.value == 1000 and type(lr.value) is int
+    assert resolve(LR_HOLD_FRAC_NO_HOLD, {}).value == 1.0
+
+
+@_needs_artifacts
+def test_crucible_v6_library_nu_family_bitmatches_artifact():
+    """LIBRARY laws: settle = 3/ν and tail-cycle = 3/ν+150 bit-reproduce the trace-probe's stored
+    recomputed_window_laws (they are NOT emitted flags — the constant-compiler single source)."""
+    tags = {"schedule": "mod32cap", "stage": "tau_softplus"}
+    doc = json.loads(
+        (_ARTIFACTS / "trace_probes_levelset_n600_witness_mod32cap_20260706T115554Z.json").read_text())
+    rw = doc["probes"]["ct1"]["result"]["stages"]["tau_softplus"]["recomputed_window_laws"]
+    assert resolve(SETTLE_WINDOW_TAU_SOFTPLUS, tags).value == rw["settle_3_over_nu_ep"]
+    assert resolve(TAIL_CYCLE_FLOOR_TAU_SOFTPLUS, tags).value == rw["tail_cycle_floor_ep"]
+
+
+def test_crucible_v6_library_persistence_and_eps_pins():
+    # LIBRARY draft-cited pins (P-CON absolute bar + adaptive-ε saturation alarm).
+    assert resolve(CONLEY_ABSOLUTE_BAR_TAU, {"stage": "tau_softplus"}).value == 1.7504924172
+    assert resolve(CONLEY_ABSOLUTE_BAR_MUON, {"stage": "muon_fin"}).value == 1.3017706202
+    assert resolve(ADAPTIVE_EPS_SATURATION_ALARM, {}).value == 0.7
