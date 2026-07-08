@@ -204,6 +204,31 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~14:0x: SEAL ROUND 2 ON V6 = NOT-CLEAN, COUNTER 0/3 (54211896a) ---
+- 1 BLOCKER + 2 MAJOR + 3 MINOR, ALL on fresh angles; round-1 certifications HELD under
+  re-attack; v6.1 errata verified.
+- **BLOCKER-1 (the launch-path reality check, MEASURED via real launcher --dry-run at n600/
+  3000ep): THE V6 CONFIG CANNOT MATERIALIZE.** (a) extras route REFUSED by the launcher's own
+  C13 duplicate-flag gate (--softmax-temp-end already pinned 0.05 by the sealed family);
+  (b) named-config route silently emits a WRONG schedule — no --anneal-epochs (default None →
+  denominator 3000 → τ(675)=0.886 → the PROMOTED FORFEIT ARM's anneal-complete precondition is
+  FALSE through its entire fire band) + --muon-start-epoch 2178 (family scales 0.726×epochs vs
+  the draft's absolute 726). FIX = new crucible-v6 autoconfig variant (~30-60 LOC); §10's F-DET
+  "0 (config)" LOC under-scoped. Run-1 would have been silently wrong without this angle.
+- MAJOR-A2: POSE LEG UNPINNED — zero --pose-* flags in v3-v6; default = real_keyframe (the
+  EXCLUDED mover); open score-relevant #314 never named in v6/ledger. Mitigation verified:
+  store_nothing_205 emits the correct block.
+- MAJOR-B1: locked-mass coverage computed $0 from the census — **25.3% (Road↔Undrivable
+  horizon, 4.0e-4 d_seg = 22.5× margin) has NO large-amplitude lever** (gated dither only);
+  §0.3's "exactly the concentration regions" overstates.
+- Minors: k_max 6→≤5 net of FIN dwell · SC-3-ext live-m_q has no named build route (0 trainer
+  callers of flip_margin_quantiles) · launcher C4-injected --per-group-grad-clip absent from
+  knob tables.
+- Survived: rate custody exact (93,092/81,032) · fire-epoch invariance · req-P trace · req-R
+  levels · memory preflight PASS 67.61 GiB.
+- V6.2 FIXER FIRED (six items + the autoconfig variant + dry-run re-verification); seal
+  restarts on v6.2. Gate probes still in flight.
+
 --- LANDING FOLDED 2026-07-08T~13:0x: SEAL ROUND 1 ON V6 = CLEAN, COUNTER 1/3 (b17c09f3f) ---
 - 0 BLOCKER / 0 MAJOR / 2 MINOR + 2 nits (editorial; bar tests printed). ALL arithmetic
   reproduces independently at artifact precision (crossing chain, asymptote decomposition —
