@@ -10353,3 +10353,47 @@ projections onto (argmax-cell ∩ pose-tube) in channel-split coordinates — #7
 solve reborn as the v8 reconciler; the split keeps the two projections from fighting. Binds
 increment-1's paint stage + de-risks v8-risk-5 (pose seams: seams live in chroma where
 PoseNet barely looks; luma seams are the ones to guard). Pointer 0.19110 UNMOVED (means).
+
+## FEED-roadfloorfix (2026-07-08) — v7.5 BIRTH-COUNTER-FORCE: the Chan-Vese precision counter-force + Morse-Smale completion event (un-floors Road) [macOS advisory; NO launch; pointer 0.19110 UNMOVED — MEANS]
+The road_anomaly_probe (FEED-roadfloor) MEASURED that crucible run-1's Road d_seg is floored ~0.398
+by the RECALL-ONLY birth stack over-painting Lane 13.8x / Movable 4.6x INTO GT-Road (mass-conserved:
+majority deficit 0.1189 ≈ rare excess 0.1191). v7 inherited the SAME imbalance (MEASURED v7.5-pre argv:
+`--seed-islands --witness-alone-island-loss --amplify-weight 1.0 --ladder-island-homotopy` [lane arm
+`--ladder-lane-*` λ-gate 0.0 OPEN] + `--logit-adjust-loss-tau 1.0` [lane offset −5.14] + `--persistence-
+loss-weight 1.0 --persistence-recall-weight 1.0 --persistence-classes 3` [A5 already dropped lane from
+persistence recall]). So v7's LIVE lane over-paint drivers were logit-adjust(lane −5.14) + ladder-lane
+amplify; movable had the full stack. NEITHER a precision counter-force NOR a completion event existed.
+FIX (operator directive: "level set and Morse-Smale are perfect for engineering the precisely desired
+annealing behavior" — DERIVED level-set forcing terms, not ad-hoc penalties):
+- **Lever-1 = the Chan-Vese AREA-CONSTRAINT Lagrange term** E_c=(λ_c/2)·relu(A_c−A_c^GT)² of the
+  level-set region energy; ∂/∂φ = inward retraction ∝ overshoot, boundary-localized via the softmax
+  Jacobian (= discrete δ(φ)). Balances birth at A*=(1+δ)·A_GT — the EQUILIBRIUM IS THE SPEC, no ramp
+  schedule. λ_c=W_birth/(δ·A_GT_c) DERIVED-LIVE from the loaded GT areas (value-provenance gold
+  standard). ARITHMETIC (W_birth=1.0=the amplify/recall weight; δ=0.25): λ_lane=683.8, λ_movable=322.6;
+  DOMINANCE at the ep125 runaway = (r−1)/δ = **51× lane / 14× movable** (retraction dominates birth,
+  operator's requirement); equilibrium 1.25×GT returns ~0.114 area to Road ≥ the 0.1189 deficit ⇒ Road
+  floor lifts. Consumes the realized soft mass the island levers already compute (no extra forward).
+  Equation `chan_vese_area_constraint_birth_balance_v1` (REGISTERED); the λ SCALE is
+  ASSUMED_AWAITING_VERIFICATION (owed to the v7.5 A/B), the FORM+balance DERIVED.
+- **Lever-2 = the MORSE-SMALE PERSISTENCE completion event**: birth-complete per class when
+  persistence(=1−within_flip, the basin prominence from the #333/nucleus telemetry) ≥ τ_persist AND
+  part_frac ∈ [(1−δ),(1+δ)]·GT; on fire (LATCHED, resume-safe __bc_* sidecar) ramp the birth stack →
+  post_level and hand off birth→boundary. With Lever-1 active this is DEFENSE-IN-DEPTH (#302: the
+  multiplier self-limits area continuously; the event re-allocates freed capacity). Engine
+  `tac.witness_control.birth_completion` + DETECTOR/telemetry LIVE; the loss-surface RAMP application is
+  the OWED integration (the deep per-class plumbing of amplify/logit-adjust/persistence, honestly
+  scoped — NOT half-wired into the live-launch trainer).
+- **Lever-3 = LOGIT-ADJUST REGIME COHERENCE**: under lane_offloaded (freq_along≈6 can't carry the dash
+  comb, lane rides the FREE band) the −5.14 lane RECALL boost is unsatisfiable + fights the band → gate
+  it off. Companion law `logit_adjust_classes_for_basis_regime(lane_offloaded)="3"` (sister of the A5
+  persistence-classes law; both regime-derived subsets now AGREE = coherent). Trainer
+  `--logit-adjust-classes` masks the offset vector.
+TRIALITY: DSL `AreaConstraintBirth` + `BirthCompletionEvent` + `logit_adjust_classes_for_basis_regime`
+(curriculum_dsl) · equation `chan_vese_area_constraint_birth_balance_v1` (registered) · composed into
+crucible_v7 (v7.5): dsl_levers 5→7, diff-added +11 flags, `--logit-adjust-classes 3` + `--persistence-
+classes 3` agree. 39 new tests + 103 crucible/launch tests green; ruff F clean; every emitted flag
+DECLARED (never-invent-flags). NO launch; run-1 (pid 63069) UNTOUCHED (it stays the birth-arm
+measurement); run-1's config UNCHANGED. Candidate FLOOR-LAW (probe): "rare-class birth with recall
+pressure + no precision cap imposes a majority-class d_seg floor = the conserved over-painted area,
+capacity/time-independent" — the Chan-Vese balance is its CURE. Memo
+`.omx/research/v75_birth_counterforce_20260708.md`. Pointer 0.19110 UNMOVED (means).
