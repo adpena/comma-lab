@@ -1838,57 +1838,82 @@ def diff_crucible_v6_to_v7(
 
 
 def _crucible_v7_schedule_governance() -> dict:
-    """The three tagged fail-safe CAP declarations (DRAFT §1) as typed ``ScheduleGovernance``.
+    """The three transitions as EVENT+BACKSTOP pairs (operator override 2026-07-08, S4 R1).
 
-    HONEST CLASSIFICATION (operator anti-fake directive): all three fixed start-epochs are
-    literally FAIL-SAFE CAPS — the trainer engages each at a FIXED epoch gate, NOT via a runtime
-    event sensor (verified: the wired --curriculum-event-triggered / --curriculum-nucleus-guard
-    sensors govern the CE->tau readiness hand-off, and #333 annulus telemetry is
-    OBSERVABILITY-ONLY). Each CAP cites the co-emitted, WIRED governing event controller it backs
-    up; the SPECIFIC sensor->start wiring the draft intends is an owed build (the ``wiring_gap``
-    list in the memo + returned by :func:`crucible_v7_wiring_gaps`), declared not faked."""
+    The operator OVERRODE the T3 council's launch-with-caps consensus (verbatim: *"Build the
+    wirings dumbass that's the whole point"*): each transition now FIRES ON ITS WIRED SENSOR
+    (a co-emitted ``--<x>-start-event`` flag: powerlaw_meat / lane_nucleus / annulus_plateau)
+    with the numeric ``--<x>-start-epoch`` demoted to a fail-safe BACKSTOP CAP. So the governance
+    surface declares SIX entries — three ``role=fires`` EVENTS (the sensor-fired transitions) and
+    three ``role=backstops`` CAPS (each referencing the co-emitted event it backs up). The S4 R1
+    ``role`` discriminator makes a CAP's ``sensor`` un-misreadable as a firing claim: an EVENT
+    names the wired sensor it fires ON; a CAP names the EVENT it backs up. The schedule-provenance
+    gate classifies the events EVENT_TRIGGERED and the epoch backstops FAIL_SAFE_CAP."""
     from tac.witness_dsl.typed_config import ScheduleGovernance
     return {
-        "--muon-start-epoch": ScheduleGovernance(**{
-            "class": "cap", "sensor": "--curriculum-event-triggered",
+        # ── EVENTS (role=fires): the runtime sensor-fired transitions the wirings implement.
+        "--muon-start-event": ScheduleGovernance(**{
+            "class": "event", "role": "fires", "sensor": "--muon-start-event",
             "rationale": (
-                "Muon metric-finisher entry (v6 §2.2f): the powerlaw_meat exit of the tau-descent "
-                "(a CODE sensor, no CLI flag) fires the early hand-off; 726 is the req-B fail-safe "
-                "cap (nu-law settle + floor derivation; the mod32cap fire band [670,700] precedes "
-                "it). Governing wired event: --curriculum-event-triggered ep_loss-plateau."),
+                "Muon metric-finisher entry FIRES on the powerlaw_meat exit of the tau-descent "
+                "(tac.witness_control.event_wirings.muon_meat_event), gated on the S2 REV-B "
+                "nucleation-complete positive control (all LADDER arms past birth+hold+anneal) so "
+                "an island-birth transient cannot be misread as first-order tau exhaustion."),
+        }),
+        "--lane-band-start-event": ScheduleGovernance(**{
+            "class": "event", "role": "fires", "sensor": "--lane-band-start-event",
+            "rationale": (
+                "Analytic lane band FIRES on the lane-class critical nucleus (born part_frac>0 AND "
+                "formed within_flip<=thresh — the #315/#302 per-class hand-off predicate applied to "
+                "the lane class; pi1=w/sigma~=5). S3 would_fire telemetry accrues calibration data."),
+        }),
+        "--seg-chroma-boundary-start-event": ScheduleGovernance(**{
+            "class": "event", "role": "fires", "sensor": "--seg-chroma-boundary-start-event",
+            "rationale": (
+                "Chroma boundary sharpener FIRES on the #333 annulus_frac PLATEAU (a FORMED margin "
+                "boundary is the thing chroma sharpens); the plateau detector params carry req-T "
+                "tagged provenance (sisters of the curriculum-plateau params)."),
+        }),
+        # ── BACKSTOP CAPS (role=backstops): the fixed epochs, each referencing its event.
+        "--muon-start-epoch": ScheduleGovernance(**{
+            "class": "cap", "role": "backstops", "sensor": "--muon-start-event",
+            "rationale": (
+                "req-B fail-safe BACKSTOP for the powerlaw_meat event (--muon-start-event): 726 = "
+                "nu-law settle + floor derivation (the mod32cap fire band [670,700] precedes it); "
+                "fires ONLY if the sensor did not by 726 (LOUD cap_fired_before_event, S5)."),
         }),
         "--lane-band-start-epoch": ScheduleGovernance(**{
-            "class": "cap", "sensor": "--curriculum-nucleus-guard",
+            "class": "cap", "role": "backstops", "sensor": "--lane-band-start-event",
             "rationale": (
-                "Analytic lane band engages when the lane critical-nucleus (pi1>=5 per-class #315 "
-                "sensor) is born + survivable; 500 is the req-B cap past the eased-seed window "
-                "(v6 hand-guessed that moment at 350). Governing wired sensor: "
-                "--curriculum-nucleus-guard (the per-class critical-nucleus guard)."),
+                "req-B fail-safe BACKSTOP for the lane-nucleus event (--lane-band-start-event): 500 "
+                "= past the eased-seed window (v6 hand-guessed 350); fires ONLY if the lane nucleus "
+                "did not form by 500 (LOUD cap_fired_before_event, S5)."),
         }),
         "--seg-chroma-boundary-start-epoch": ScheduleGovernance(**{
-            "class": "cap", "sensor": "--curriculum-event-triggered",
+            "class": "cap", "role": "backstops", "sensor": "--seg-chroma-boundary-start-event",
             "rationale": (
-                "Chroma boundary sharpener needs a FORMED margin boundary to sharpen (the #333 "
-                "annulus-frac plateau is the design-intent sensor); 450 is the req-B cap. "
-                "Governing wired event: --curriculum-event-triggered ep_loss-plateau."),
+                "req-B fail-safe BACKSTOP for the annulus_plateau event "
+                "(--seg-chroma-boundary-start-event): 450 = past a formed margin boundary; fires "
+                "ONLY if the annulus did not plateau by 450 (LOUD cap_fired_before_event, S5)."),
         }),
     }
 
 
 def crucible_v7_wiring_gaps() -> list[str]:
-    """The honest wiring-gap list (a council input, NOT a failure): the DRAFT-intended
-    specific sensor->start wirings that are NOT yet plumbed, so the three start-epochs fall back
-    to the tagged-CAP class citing the wired ep_loss-plateau / nucleus-guard controllers."""
+    """The sensor->start WIRING STATUS (operator override 2026-07-08 BUILT the three that were OWED
+    gaps in the pre-registered v7 memo). Each entry names the transition, its now-WIRED sensor, and
+    the fail-safe backstop cap it demotes the fixed epoch to. Retained as the council's audit surface
+    (the wirings ARE the deliverable; a firing backstop cap is falsification-relevant per S5)."""
     return [
-        "muon: powerlaw_meat exit is a CODE sensor with NO CLI flag AND does not move "
-        "muon_start_epoch (fixed epoch gate, trainer ~L3216); OWED: expose a powerlaw_meat -> "
-        "muon-entry event trigger. CAP cites the wired --curriculum-event-triggered as backstop.",
-        "lane-band: --curriculum-nucleus-guard governs the CE->tau readiness hand-off "
-        "(trainer ~L1948/L4951), NOT lane_band_start_epoch (fixed gate ~L3302); OWED: nucleus -> "
-        "lane-band-start wiring. CAP cites the wired nucleus guard as backstop.",
-        "chroma: the #333 annulus_frac telemetry is OBSERVABILITY-ONLY (never read into training, "
-        "trainer ~L4956-4959) so it cannot fire seg_chroma_boundary_start (fixed gate ~L3672); "
-        "OWED: an annulus-plateau -> chroma-start event trigger + a recognised CLI sensor for it.",
+        "muon: WIRED — --muon-start-event powerlaw_meat fires the Muon switch on the tau-descent "
+        "weak-KAM exhaustion (tac.witness_control.event_wirings.muon_meat_event) gated on the S2 "
+        "REV-B nucleation-complete positive control; --muon-start-epoch 726 is the fail-safe backstop.",
+        "lane-band: WIRED — --lane-band-start-event lane_nucleus fires analytic-band engagement on "
+        "the lane-class critical nucleus (born + formed, the #315/#302 per-class predicate); S3 "
+        "would_fire telemetry accrues; --lane-band-start-epoch 500 is the fail-safe backstop.",
+        "chroma: WIRED — --seg-chroma-boundary-start-event annulus_plateau fires chroma engagement "
+        "on the #333 annulus_frac plateau detector (promoted from observability to a trigger); "
+        "--seg-chroma-boundary-start-epoch 450 is the fail-safe backstop.",
     ]
 
 
@@ -1936,8 +1961,15 @@ def _build_crucible_v7(
             continue
         base[flag] = True if val is None else val
     base["--tau-anneal-shape"] = "geometric"                       # spine: cosine_hold -> geometric
-    base["--lane-band-start-epoch"] = _CRUCIBLE_V7_LANE_BAND_CAP   # 350 -> 500 (tagged cap)
-    base["--seg-chroma-boundary-start-epoch"] = _CRUCIBLE_V7_CHROMA_CAP  # 300 -> 450 (tagged cap)
+    base["--lane-band-start-epoch"] = _CRUCIBLE_V7_LANE_BAND_CAP   # 350 -> 500 (fail-safe BACKSTOP cap)
+    base["--seg-chroma-boundary-start-epoch"] = _CRUCIBLE_V7_CHROMA_CAP  # 300 -> 450 (fail-safe BACKSTOP cap)
+    # (operator override 2026-07-08) co-emit the three SENSOR->START WIRING flags so each transition
+    # FIRES ON ITS SENSOR (the start-epochs above are demoted to fail-safe backstop caps). These make
+    # the governance events (role=fires) actually wired; the schedule-provenance gate classifies them
+    # EVENT_TRIGGERED with the epoch backstops FAIL_SAFE_CAP.
+    base["--muon-start-event"] = "powerlaw_meat"                   # muon <- tau-descent exhaustion (+REV-B)
+    base["--lane-band-start-event"] = "lane_nucleus"              # lane-band <- lane critical nucleus
+    base["--seg-chroma-boundary-start-event"] = "annulus_plateau"  # seg-chroma <- annulus_frac plateau
 
     # (3) the three composable v7 levers (DSL Lever factories -> TypedLever; the DSL stays the emitter).
     def _typed_lever(lev) -> "TypedLever":

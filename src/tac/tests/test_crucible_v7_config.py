@@ -38,6 +38,12 @@ _EXPECTED_ADDED = frozenset({
     "--ladder-lane-anneal-epochs", "--ladder-lane-lambda-gate", "--ladder-gate-softness",
     "--ladder-release-coeff", "--ladder-sigma-eff", "--ladder-lane-dash-gate",
     "--ladder-max-step-px", "--ladder-refresh-every",
+    # (operator override 2026-07-08) the three co-emitted SENSOR->START WIRING flags (each transition
+    # now FIRES on its sensor; the paired --*-start-epoch is a fail-safe backstop cap).
+    "--muon-start-event", "--lane-band-start-event", "--seg-chroma-boundary-start-event",
+    # the DSL WitnessProgram's VerdictCadence defaults (v6 emits via its dataclass, which lacks them;
+    # v7 IS the DSL-emitted argv, which carries them) — a v6-vs-v7 EMITTER delta, not a semantic knob.
+    "--verdict-device", "--verdict-anchor-every",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",
@@ -91,10 +97,12 @@ def test_num_pairs_and_epochs_emitted(compiled):
 # ── (b) the schedule-provenance gate: 0 NAKED (the whole point of the restart) ───────
 def test_schedule_provenance_gate_zero_naked(compiled, trainer_text):
     registry = gate.schedule_when_flags(trainer_text)
+    ereg = gate.event_start_flags(trainer_text)
     manifest_keys = set(compiled.constants_manifest.keys())
     verdicts = gate.classify_launch(
         list(compiled.emitted_pairs), registry=registry,
-        manifest_keys=manifest_keys, governance=compiled.schedule_governance)
+        manifest_keys=manifest_keys, governance=compiled.schedule_governance,
+        event_registry=ereg)
     ok, violations, table = gate.gate_report(verdicts)
     assert ok, f"NAKED triggers remain:\n{table}"
     assert violations == []
@@ -105,12 +113,40 @@ def test_gate_classifies_all_three_starts_as_cap(compiled, trainer_text):
     verdicts = gate.classify_launch(
         list(compiled.emitted_pairs), registry=registry,
         manifest_keys=set(compiled.constants_manifest.keys()),
-        governance=compiled.schedule_governance)
+        governance=compiled.schedule_governance,
+        event_registry=gate.event_start_flags(trainer_text))
     by_flag = {v.flag: v for v in verdicts}
     for flag in ("--muon-start-epoch", "--lane-band-start-epoch",
                  "--seg-chroma-boundary-start-epoch"):
         assert flag in by_flag, f"{flag} should be a gated positive-epoch trigger"
         assert by_flag[flag].cls == gate.CLASS_CAP, by_flag[flag]
+
+
+def test_gate_classifies_all_three_events_as_event_triggered(compiled, trainer_text):
+    """operator override 2026-07-08: the three co-emitted --*-start-event wirings classify
+    EVENT_TRIGGERED (the transition FIRES on its sensor; the paired epoch is a FAIL_SAFE_CAP backstop)."""
+    verdicts = gate.classify_launch(
+        list(compiled.emitted_pairs), registry=gate.schedule_when_flags(trainer_text),
+        manifest_keys=set(compiled.constants_manifest.keys()),
+        governance=compiled.schedule_governance,
+        event_registry=gate.event_start_flags(trainer_text))
+    by_flag = {v.flag: v for v in verdicts}
+    for flag in ("--muon-start-event", "--lane-band-start-event",
+                 "--seg-chroma-boundary-start-event"):
+        assert flag in by_flag, f"{flag} should be a classified event wiring"
+        assert by_flag[flag].cls == gate.CLASS_EVENT, by_flag[flag]
+
+
+def test_governance_caps_declare_role_backstops_events_role_fires(compiled):
+    """S4 R1: every CAP declares role=backstops (un-misreadable as a firing claim); every EVENT
+    declares role=fires. The paired cap's `sensor` names the event it backs up."""
+    gov = compiled.schedule_governance
+    for cap, ev in (("--muon-start-epoch", "--muon-start-event"),
+                    ("--lane-band-start-epoch", "--lane-band-start-event"),
+                    ("--seg-chroma-boundary-start-epoch", "--seg-chroma-boundary-start-event")):
+        assert gov[cap]["class"] == "cap" and gov[cap]["role"] == "backstops", gov[cap]
+        assert gov[cap]["sensor"] == ev, gov[cap]
+        assert gov[ev]["class"] == "event" and gov[ev]["role"] == "fires", gov[ev]
 
 
 def test_cap_epoch_values_are_the_designed_caps(compiled):
@@ -234,8 +270,10 @@ def test_diff_excludes_run_dir_placeholder(compiled):
 
 def test_diff_flag_counts(compiled):
     diff = wac.diff_crucible_v6_to_v7(compiled.v6_flags, compiled.emitted_pairs)
-    # v7 = v6 - 3 removed + 25 added (out-dir/gt-cache excluded from both sides symmetrically)
-    assert diff["v7_flag_count"] == diff["v6_flag_count"] - 3 + 25
+    # v7 = v6 - 3 removed + |added| (out-dir/gt-cache excluded from both sides symmetrically). The
+    # added set = the 3 spine/lever families + the 3 SENSOR->START WIRING flags + the DSL VerdictCadence
+    # emitter delta = exactly len(_EXPECTED_ADDED).
+    assert diff["v7_flag_count"] == diff["v6_flag_count"] - 3 + len(_EXPECTED_ADDED)
 
 
 # ── (g) unchanged-flag byte-identity (v6 sealed values carry over) ───────────────────
@@ -252,8 +290,11 @@ def test_unchanged_flags_are_byte_identical_to_v6(compiled):
 
 
 # ── (h) wiring-gap honesty list (council input, not a failure) ───────────────────────
-def test_wiring_gaps_enumerated():
+def test_wiring_status_all_three_wired():
+    """operator override 2026-07-08: the three OWED sensor->start wirings are now BUILT — each entry
+    reports WIRED with its sensor + the fail-safe backstop it demotes the fixed epoch to."""
     gaps = wac.crucible_v7_wiring_gaps()
     assert len(gaps) == 3
     joined = " ".join(gaps).lower()
     assert "powerlaw_meat" in joined and "annulus" in joined and "nucleus" in joined
+    assert joined.count("wired") == 3 and "backstop" in joined
