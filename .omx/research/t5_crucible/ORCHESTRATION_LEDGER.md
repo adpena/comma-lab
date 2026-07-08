@@ -120,6 +120,19 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+J. **PRECISION + MARGIN-DENOMINATED SIGNIFICANCE (operator 2026-07-07: "very small numbers are
+   relatively significant; even the thousandth, ten-thousandth, hundred-thousandth place
+   matters").** The crossing margin is 0.00178 S. The exchange rates: 1 byte = λ_bytes =
+   6.6586e-7 S · 1 KB = 6.82e-4 S = 38% of the margin · 1e-5 d_seg = 1e-3 S = 56% ·
+   1e-6 d_pose ≈ 2.9e-4 S = 16% (√-steepened at 3e-5) · the ep625-vs-ep650 θ delta (2.67e-5
+   d_seg) = 2.67e-3 S > the ENTIRE margin. Binding rules: (1) NO premature rounding — d_seg
+   carried to ≥5 decimals, d_pose ≥6, bytes to the byte, S to ≥5 wherever arithmetic chains;
+   (2) every "negligible/small/below-noise" claim DENOMINATED in S-units as a % of the 0.00178
+   margin — undenominated smallness = a finding; (3) "unattributable" ≠ "insignificant": effects
+   below the +4.3% reconstruction gap (~0.015 S) are significant-if-real and the gap fix
+   (persist self-orient, req-F #6) is MARGIN-CRITICAL apparatus — it gates attribution of every
+   win smaller than 8× the crossing margin, i.e. every win that matters; (4) every lever prints
+   benefit AND cost in the same S-unit currency.
 H. **PER-CLASS TREATMENT + APPLES-TO-APPLES (operator 2026-07-07: "Don't compare apples to
    oranges. Different classes need different treatment just like different stages").** The five
    SegNet classes are FIVE DIFFERENT MATHEMATICAL OBJECTS and the design/reviews treat them so:
