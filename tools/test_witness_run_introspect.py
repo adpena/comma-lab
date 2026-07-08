@@ -238,6 +238,44 @@ def test_liveness_absent_until_first_verdict(tmp_path):
     assert wri.read_liveness_row(rd) is None
 
 
+# ─────────────────────────── mod_dim_dynamics ───────────────────────────
+def _mdd_row(ep, eff, k90, seg="stageTau", tau=1.0):
+    return json.dumps({
+        "stage": "mod_dim_dynamics", "epoch": ep, "seg_form": seg, "tau": tau, "mod_dim": 32,
+        "spectrum": {"effective_rank": eff, "k90": k90, "k99": k90 + 4,
+                     "spectral_entropy_norm": 0.7},
+        "per_dim": {"variance": [0.1] * 32, "film_consumption": [0.2] * 32,
+                    "xi_max_r2": [0.05] * 32},
+        "latent_xi_cca": {"canonical_corrs": [0.3], "mean": 0.2, "max": 0.3},
+        "k90_truncate_bytes_estimate": 5000, "code_bytes_full": 8000,
+        "axis": "[macOS-numpy advisory] NON-PROMOTABLE"})
+
+
+def test_mod_dim_dynamics_reader(tmp_path):
+    rd = _write_v6(tmp_path, verdicts=False, mem=False, events=False)
+    (rd / "run.log").write_text(
+        '{"stage": "gt"}\n' + _mdd_row(10, 12.0, 15) + "\n" + _mdd_row(20, 17.8, 20) + "\n")
+    m = wri.introspect_run(rd)["mod_dim_dynamics"]
+    assert m and m["count"] == 2
+    assert m["latest"]["effective_rank"] == 17.8 and m["latest"]["k90"] == 20  # autopsy anchor
+    assert m["effective_rank_series"] == [[0, 12.0], [1, 17.8]]  # rank grows with the anneal
+    assert m["latest"]["k90_truncate_bytes_estimate"] == 5000
+
+
+def test_mod_dim_dynamics_error_row_surfaced(tmp_path):
+    rd = _write_v6(tmp_path, verdicts=False, mem=False, events=False)
+    (rd / "run.log").write_text(
+        '{"stage": "mod_dim_dynamics", "epoch": 5, "seg_form": "ce", "error": "ValueError: boom"}\n')
+    m = wri.read_mod_dim_dynamics(rd)
+    assert m["count"] == 1 and m["latest"]["error"] == "ValueError: boom"
+
+
+def test_mod_dim_dynamics_absent_is_none(tmp_path):
+    rd = _write_v6(tmp_path, verdicts=False, mem=False, events=False)
+    (rd / "run.log").write_text('{"stage": "gt"}\n')
+    assert wri.read_mod_dim_dynamics(rd) is None
+
+
 # ─────────────────────────── mem_probe ───────────────────────────
 def test_mem_probe_series_and_peak(tmp_path):
     rd = _write_v6(tmp_path)

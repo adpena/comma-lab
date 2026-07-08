@@ -463,6 +463,46 @@ def read_mem_probes(run_dir: Path) -> dict | None:
             "peak_rss_gib": peak, "count": total, "latest": rows[-1]}
 
 
+# ─────────────────────────── mod-dim dynamics telemetry (2026-07-08) ───────────────────────────
+def read_mod_dim_dynamics(run_dir: Path) -> dict | None:
+    """The ``{"stage":"mod_dim_dynamics"}`` latent-table telemetry (score-neutral) from the bounded
+    tail: the LATEST spectrum summary (effective_rank / k90 / k99 / spectral entropy / tau / seg_form
+    + k90 truncate-bytes estimate) plus a small effective-rank-vs-epoch series for a sparkline (does the
+    rank track the anneal octaves? does it saturate before dash birth?). Presence-gated (None when the
+    run emits none => additive over pre-2026-07-08 run dirs); NEVER raises. Error rows are surfaced too
+    so a fail-open telemetry hiccup is visible rather than silently dropped."""
+    log = _run_log(run_dir)
+    if log is None:
+        return None
+    rows = []
+    for d in _iter_stage_rows(_tail_text(log)):
+        if d.get("stage") != "mod_dim_dynamics":
+            continue
+        if "error" in d:
+            rows.append({"epoch": d.get("epoch"), "seg_form": d.get("seg_form"),
+                         "error": d.get("error")})
+            continue
+        spec = d.get("spectrum") or {}
+        rows.append({
+            "epoch": d.get("epoch"), "seg_form": d.get("seg_form"), "tau": d.get("tau"),
+            "mod_dim": d.get("mod_dim"),
+            "effective_rank": spec.get("effective_rank"), "k90": spec.get("k90"),
+            "k99": spec.get("k99"), "spectral_entropy_norm": spec.get("spectral_entropy_norm"),
+            "k90_truncate_bytes_estimate": d.get("k90_truncate_bytes_estimate"),
+            "code_bytes_full": d.get("code_bytes_full"),
+            "latent_xi_cca_max": (d.get("latent_xi_cca") or {}).get("max"),
+        })
+    if not rows:
+        return None
+    recent = rows[-64:]
+    eff_series = [[i, r["effective_rank"]] for i, r in enumerate(recent)
+                  if isinstance(r.get("effective_rank"), (int, float))]
+    k90_series = [[i, r["k90"]] for i, r in enumerate(recent)
+                  if isinstance(r.get("k90"), (int, float))]
+    return {"rows": recent, "effective_rank_series": eff_series, "k90_series": k90_series,
+            "count": len(rows), "latest": rows[-1]}
+
+
 # ─────────────────────────── fired curriculum events ───────────────────────────
 def read_events(run_dir: Path) -> list[dict] | None:
     """Fired curriculum / optimizer TRANSITION events from the bounded tail — each a distinct
@@ -513,6 +553,7 @@ def introspect_run(run_dir, log_paths=None) -> dict:
         "ok": False, "run_dir": (str(run_dir) if run_dir else None),
         "generated_at": _utc(), "schedule": None, "constants": None, "controller": None,
         "liveness": None, "mem": None, "events": None, "curves": None,
+        "mod_dim_dynamics": None,
     }
     if not run_dir:
         return out
@@ -535,6 +576,7 @@ def introspect_run(run_dir, log_paths=None) -> dict:
         ("mem", lambda: read_mem_probes(rd)),
         ("events", lambda: read_events(rd)),
         ("curves", lambda: planned_curves(rd)),
+        ("mod_dim_dynamics", lambda: read_mod_dim_dynamics(rd)),
     ):
         try:
             out[key] = fn()
