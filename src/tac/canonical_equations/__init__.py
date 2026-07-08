@@ -227,6 +227,11 @@ from tac.canonical_equations.logit_adjustment_class_prior_20260707 import (
     logit_adjust_offsets,
     populate_logit_adjustment_class_prior_equation,
 )
+from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+    area_constraint_lambda,
+    build_chan_vese_area_constraint_birth_balance_v1,
+    populate_chan_vese_area_constraint_birth_balance_equation,
+)
 from tac.canonical_equations.dash_erasure_homogenization_20260707 import (
     build_dash_erasure_homogenization_v1,
     populate_dash_erasure_homogenization_equation,
@@ -362,6 +367,9 @@ __all__ = [
     "hosc_step_limit_beta_ratio",
     "logit_adjust_offsets",
     "populate_logit_adjustment_class_prior_equation",
+    "area_constraint_lambda",
+    "build_chan_vese_area_constraint_birth_balance_v1",
+    "populate_chan_vese_area_constraint_birth_balance_equation",
     "populate_step_native_activation_edge_optimality_equation",
     "build_dash_erasure_homogenization_v1",
     "populate_dash_erasure_homogenization_equation",
