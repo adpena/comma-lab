@@ -150,6 +150,28 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+--- LANDING FOLDED 2026-07-08T~02:3x: CT-2 (8be6251ee) ---
+- ct_deepresearch_2_pde_geometric_topological_control_20260707.md (653 lines, §0-§13,
+  fresh-research-round-1 unreviewed). Top-3 imports (PowerPlay-ordered):
+  1. CONLEY PERSISTENCE CERTIFICATE (~30 LOC + $0 backtest): island survives stage k + decode
+     ⟸ pers(I) > τ_k·ln5 + Δ_dec^logit (~0.10 logit at τ_end=0.062) → per-island pass/fail
+     ledger + death alarm. Kill: certified-survival < 80% on the 0630 birth-death ledger.
+  2. SIGNED PER-CLASS-PAIR SHAPE-GRADIENT WEIGHT (0 bytes): exact d_seg shape derivative =
+     signed one-sided boundary density — the THEOREM-form of the UniWARD pooled-null mechanism.
+     CROSS-FIELD CONSISTENCY: τ_end·ln5 = 0.0998 ≈ measured 0.10 flip-support edge (Maslov
+     semiclassical + Hadamard layer width = SAME law from two fields). Band ≈ 2.2× crossing
+     margin on the lane leg; gated on the queued $0 per-side ρ probe.
+  3. τ-INDEXED CONSTANTS + CRITICAL-NUCLEUS RELEASE LAW: Γ-convergence licenses finite-τ design
+     LAW-wise only — every τ-adjacent constant ships as c(τ); island release r*(t)=0.95·σ_eff(t)
+     (matches measured dilation knee r*≈1.43 px).
+- Req-P: per-section REQUIRED SIGNAL lines; 5 run-1 signals to add (per-stage parity rows incl.
+  Δ_dec^logit · per-direction margin histograms · live per-island persistence ledger ·
+  interface-geometry row · per-class logit export + per-primitive residuals) → v5/§4c fold.
+- §13: 5 impossibility bounds (uint8 deadzone, homogenization pinning, Godunov barrier, Hajek,
+  max-plus blow-up), each with its deciding measurement → family asymptote COMPUTABLE from run-1.
+- Backstepping: DERIVED-dead for this plant (campaign detour saved); surviving essence =
+  max-plus band-residual decomposition.
+
 --- LANDING FOLDED 2026-07-08T~02:0x: V4 (d06e7edbd) ---
 - DRAFT_OPTIMAL_STACK_v4_20260707.md: all 13 fold items 1:1 + mid-fold requirement P.
 - CROSSING NOW BINDS ON THE DECODED SURFACE: 100·(d_seg_train+g_dec)+√(10·d_pose)+rate < 0.19110
