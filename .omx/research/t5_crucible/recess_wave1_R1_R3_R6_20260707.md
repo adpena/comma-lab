@@ -61,12 +61,12 @@ chunked-verdict floor (6.0 GiB) to the smoke actual BEFORE the overrun verdict �
 
 **Measured numbers** [macOS-CPU advisory; deterministic model, MEASURED constants]:
 
-| variant | breakdown (GiB) | projected peak | vs 0.70×128 = 89.6 | verdict |
+| variant | breakdown (GiB) | projected peak (GiB / MiB) | vs ceiling 89.6 GiB (91,750.4 MiB) | verdict |
 |---|---|---:|---|---|
-| ARM-PRIMARY worst case (ndf=4, fine-mode full/refuse) | fixed 15.0 + cf 47.13 + gt 3.41 + verdict 6.0 + **aa_fine 34.36** | **105.90** | EXCEEDS by 16.3 | **REFUSE (rc=3)** |
-| same config, pre-amendment gate (AA-blind) | aa_fine 0.0 | 71.54 | under | false-SAFE — the F4 class, now extinct |
-| fallback: fine-mode **batch** (FIFO 8) | aa_fine 6.61 | 78.15 | under (11.4 headroom) | SAFE — but trainer-measured ~29 s/ep fine-EDT thrash @ n600 ⇒ wall-clock NON-viable for the curriculum (trainer's own Wave-B numbers) |
-| fallback: **ndf=2** full (the trainer's reconciled Q3 config) | aa_fine 20.30 (cf 43.2 @ in_feat 88) | 87.91 | under by **1.7 GiB** | SAFE — knife-edge; the assumed-margin ledger (10 GiB fallback) would flag it |
+| ARM-PRIMARY worst case (ndf=4, fine-mode full/refuse) | fixed 15.0 + cf 47.13 + gt 3.41 + verdict 6.0 + **aa_fine 34.36** | **105.90 / 108,441.6 MiB** | EXCEEDS by 16.30 GiB (16,691.2 MiB) | **REFUSE (rc=3)** |
+| same config, pre-amendment gate (AA-blind) | aa_fine 0.0 | 71.54 / 73,257.0 MiB | under by 18.06 GiB | false-SAFE — the F4 class, now extinct |
+| fallback: fine-mode **batch** (FIFO 8) | aa_fine 6.61 | 78.15 / 80,025.6 MiB | under by 11.45 GiB | SAFE — but trainer-measured ~29 s/ep fine-EDT thrash @ n600 ⇒ wall-clock NON-viable for the curriculum (trainer's own Wave-B numbers) |
+| fallback: **ndf=2** full (the trainer's reconciled Q3 config) | aa_fine 20.30 (cf 43.2 @ in_feat 88) | 87.91 / 90,019.8 MiB | under by **1.69 GiB (1,730.6 MiB)** | SAFE — knife-edge; the assumed-margin ledger (10 GiB fallback) would flag it |
 
 **Verdict vs the pre-registered R3 band ("peak RSS SAFE at REAL config incl. verdict spike"):**
 **KILL-branch fires for AA-as-written** — the amended gate REFUSES the ARM-PRIMARY worst case
@@ -107,11 +107,12 @@ either way) + §8's s/ep base re-projection is scoped to the surviving AA form.
 | smoothed win=5 | 28,050 | 20,827 | varint | 0.01387 | **FALSE (all 3 schemes)** |
 | smoothed win=9 | 26,260 | **18,832** | varint | 0.01254 | **true (all 3 schemes)** |
 
-**Verdict vs pre-registered band (18-22 KB; kill ≥24,149):** **PASS.** Both smoothing windows
-land INSIDE the predicted band (18,832 / 20,827) and well under the kill. The band-coder min
-is now MEASURED at 18,832 B (win9) — vs §5.1's P5 tail placeholder 18,000, i.e. the tail was
-832 B optimistic; the §5.1 band component central 30,892 has a measured −12,060 B smoothed
-option (rate −0.0080).
+**Verdict vs pre-registered band (18-22 KB; kill ≥24,149 B):** **PASS.** Both smoothing
+windows land INSIDE the predicted band (18,832 / 20,827 B exact) and under the kill by
+5,317 B / 3,322 B. S-unit denominations (1 B = 6.6586e-7 S): the band-coder min is MEASURED
+at 18,832 B (win9) = rate 0.012539 S — vs §5.1's P5 tail placeholder 18,000 B the tail was
+832 B (5.54e-4 S) optimistic; vs the §5.1 central 30,892 B the smoothed option saves
+**12,060 B = 0.008031 S = 4.51× the crossing margin (0.00178 S)**.
 
 **Flag (one investigative sentence owed before shipping win5):** at win=5 the
 decode→re-encode identity FAILS for all three schemes (quantized smoothed values likely
@@ -128,4 +129,58 @@ pre-registered that way.
 
 **Unblocks:** band-coder min for the §0.2 crossing rate legs + F16ii closed.
 
-## R6 — P7 n600 realized-parity row — PENDING
+## R6 — P7 n600 REALIZED-PARITY ROW on mod32cap ep650 (the apparatus-trust measurement)
+
+**Commands (all foreground, chunked, resumable — the harness SIGURG-kills ~5-min calls, MEASURED
+again this session: the single-call full run died rc=144; the chunked drivers below completed):**
+
+1. Byte-close + packet (real tool, `--skip-parity --keep-packet`): `tools/levelset_byte_close_and_eval.py
+   --ckpt-dir <mod32cap> --npz-name levelset_witness_ema_BEST.npz` → packet
+   `experiments/results/levelset_packet_20260708T013253Z/` — **archive.zip = 83,427 B exact**
+   (0.bin 84,126 B; rate_term 0.055551 S), decode tier `decode_cpu_16gb` (contest=True,
+   bit_exact=True, 1-thread-BLAS inflate env).
+2. Chunked REAL-path inflate: driver imports the PACKET'S OWN `inflate.py` and runs its
+   `_init_worker`/`_render_pair` (op-for-op the shipped serial body; disjoint-offset writes;
+   same spawn-Pool mechanism as the shipped main; fp64 `_FDT` default) over pair ranges
+   4×150: walls 74.8 + 70.6 + 70.1 + 68.2 s = **283.7 s total ≈ 4.7 min** (band ≤20 min: PASS).
+   State: `r6_inflate_state.jsonl`; raw 3,662,409,600 B (full shape OK).
+3. Chunked n600 verdict: frozen CPU-torch `cpu_verdict_d_seg_batch`/`d_pose_batch` at
+   **verdict-batch 32** over the .raw (3 calls: 0-96 / 96-352 / 352-600; per-pair rows appended
+   resumable to `r6_verdict_pairs.jsonl`; 600/600 unique pairs; process RSS 10.9 GiB incl. the
+   3.7 GiB GT cache — per-chunk verdict transient ~1-2 GiB < 8 GiB requirement).
+
+**THE PARITY ROW** [macOS-CPU advisory; full precision per the operator pin]:
+
+| side | d_seg (n600) | Δ vs decoded | Δ in S-units |
+|---|---:|---:|---:|
+| **decoded through the REAL inflate path** | **0.00361457** (0.0036145697699652775) | — | seg term 0.361457 |
+| training-side, SAME load path (chain-A reconstructed-feats re-verdict) | 0.00351030 | **+0.00010427** | **+0.010427 S** |
+| training-side, run-logged live (ep650 best) | 0.00336619 | +0.00024838 | +0.024838 S |
+
+d_pose decoded = 124.3228 vs training-side ep650 123.9865 (pose-BLIND run, w_pose=0 — expected
+magnitude; not a parity axis here). Per-pair d_seg: std 0.000612, max 0.005788 @ pair 518.
+S_advisory on the decoded frames = 0.361457 + 35.259439 + 0.055551 = 35.676446 (pose-blind).
+
+**Verdict vs pre-registered band (realized d_seg 0.0034±3e-4 → [0.0031, 0.0037]; kill
+Δ > +5e-4 vs 0.0035103):** **PASS — decode integrity holds.** 0.0036146 is inside the band;
+Δ = +1.0427e-4 < 5e-4 (the kill would have fired at ≥ 0.0040103).
+
+**LOAD-BEARING FLAG (the operator pin's exact concern):** the measured Δ = **+1.0427e-4 d_seg
+= +0.010427 S = 5.86× the crossing margin (0.00178 S)**. The apparatus is TRUSTED (no
+fix-before-run defect) but NOT free: the decode/quantization leg currently eats ~5.9 crossing
+margins. Decomposition of live→decoded (+2.4838e-4 = +0.024838 S total): reconstruction gap
+(live→same-load-path) +1.4411e-4 = +0.014411 S (the chain-A +4.3% number, reproduced by
+construction) + decode gap (same-load-path→decoded: int8-quantize + brotli roundtrip + fp64
+inflate + chunked-verdict read-back) +1.0427e-4 = +0.010427 S (+3.0%). Every §0.2/§9.1 rung
+that budgets "byte-closed realized +0..+1e-4" sits at the TOP edge of that prior at THIS
+checkpoint — the +1e-4 allowance is consumed, not spare.
+
+**Unblocks:** decode integrity for every later row (per-stage byte-closes, AA
+byte-close-selection verdicts, twin comparisons) — all admissible; each should budget the
+measured +1.04e-4 decode leg rather than assuming 0.
+
+## Session totals (means/ends firewall)
+
+R3 REFUSE-as-designed (gate now honest at the real config) · R1 PASS 18,832 B (win9,
+bit-exact) · R6 PASS with the +0.010427 S decode-leg flag. All numbers [macOS-CPU advisory];
+**pointer contest-CPU 0.19110 UNMOVED — everything here is MEANS** toward the §7 ROW.
