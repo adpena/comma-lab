@@ -49,6 +49,7 @@ OPS = (
     "conv2d_s2",
     "conv2d_grouped_s2",
     "custom_grouped_backward",
+    "persistence_pool",   # fused 3x3 min/max/mean pool (#212; forward, no atomics)
     "mlp_grad",
     "take_grad_dup",
     "scatter_add_dup",
@@ -135,6 +136,15 @@ def run_op(op: str, seed: int = 1234):
         gx, gw = mx.grad(lambda x_, w_: mx.sum(conv(x_, w_) ** 2), argnums=(0, 1))(x, w)
         mx.eval(gx, gw)
         return [gx, gw]
+    if op == "persistence_pool":
+        from tac.local_acceleration.metal_persistence_pool import pool3x3_metal
+
+        (x,) = _inputs(seed, [(4, 384, 512)])
+        r0 = pool3x3_metal(x, "min")
+        r1 = pool3x3_metal(x, "max")
+        r2 = pool3x3_metal(x, "mean")
+        mx.eval(r0, r1, r2)
+        return [r0, r1, r2]
     if op == "mlp_grad":
         x, w1, w2, w3, t = _inputs(seed, [(256, 128), (128, 512), (512, 512), (512, 8), (256, 8)])
 

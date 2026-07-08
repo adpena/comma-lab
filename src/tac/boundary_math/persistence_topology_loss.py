@@ -129,24 +129,34 @@ PERSISTENCE_POOL_METAL_KERNEL_FLAG = "TAC_MLX_CUSTOM_PERSISTENCE_POOL"
 
 
 def metal_pool_kernel_signature() -> dict[str, Any]:
-    """#212 Metal-kernel FLAG + signature for the parent to build+wire the fused 3x3 pool.
+    """#212 Metal-kernel FLAG + signature — BUILT at ``tac.local_acceleration.metal_persistence_pool``.
 
     Mirrors the ``mx.fast.metal_kernel`` contract used by
     ``tac.local_acceleration.metal_grouped_conv_backward`` / ``metal_fused_r_operator``.
-    A single kernel computes the edge-clamped 3x3 min OR max (``op`` selector) in one pass —
-    replacing the 9-shift-stack + reduce (9× the memory traffic) that the pure-MLX path emits.
-    Bit-identical to ``_pool3x3_np`` (min/max are exact selection; only edge-clamp indexing).
+    A single kernel computes the edge-clamped 3x3 min OR max OR mean (``op`` selector) in one
+    pass — replacing the 9-shift-stack + reduce (9× the memory traffic) that the pure-MLX path
+    emits. Bit-identical to ``_pool3x3_np`` (min/max are exact selection; mean is a sequential
+    fp32 sum of the 9 taps in numpy's (di,dj) order /9 — MEASURED max|Δ|=0). Deterministic
+    (one thread per output; no atomics). The kernel accelerates the FORWARD path; it has no
+    custom-function VJP, so it is wired ONLY into the STOP-GRADIENT density-smoothing pool
+    (``_smooth_density_mlx``) where no gradient is taken — the differentiable pred-side
+    soft-skeleton stays on pure-MLX (a bit-identical deterministic morphological VJP kernel is
+    a documented no-go: clDice is ~7.5% of a levers-on step so the step-level payoff is bounded
+    below the build/determinism cost — see .omx/research/d16_metal_kernels_20260708.md).
     """
     return {
         "env_flag": PERSISTENCE_POOL_METAL_KERNEL_FLAG,
         "name": "persistence_pool_3x3",
-        "input_names": ["x", "op"],            # x:(M,H,W) fp32; op:0=min,1=max (int32 scalar)
+        "built": True,
+        "module": "tac.local_acceleration.metal_persistence_pool",
+        "input_names": ["x", "op"],            # x:(M,H,W) fp32; op:0=min,1=max,2=mean (int32 scalar)
         "output_names": ["y"],                 # y:(M,H,W) fp32
-        "grid": "(W, H, M)",
-        "threadgroup": "(min(W,32), min(H,32), 1)",
+        "grid": "(M*H*W, 1, 1)",
+        "threadgroup": "(256, 1, 1)",
         "boundary": "edge-clamp (replicate border; matches _pool3x3_np np.pad mode='edge')",
-        "reduces": "3x3 window min or max in registers (no 9x memory materialization)",
+        "reduces": "3x3 window min/max/mean in registers (no 9x memory materialization)",
         "parity_reference": "tac.boundary_math.persistence_topology_loss._pool3x3_np",
+        "wired_into": "tac.boundary_math.persistence_topology_loss._smooth_density_mlx (forward-only, stop-grad)",
         "composes_with": [
             "TAC_MLX_CUSTOM_GROUPED_BACKWARD (grouped-backward ~17x; independent kernel)",
             "tac.local_acceleration.metal_fused_r_operator (R applied UPSTREAM of seg_logits)",
@@ -467,6 +477,29 @@ def soft_cldice_mlx(pred, gt, iters: int = DEFAULT_CLDICE_ITERS, eps: float = DE
 
 
 def _smooth_density_mlx(x, iters: int):
+    # COMPUTE facet (#212): the density smoothing is a STOP-GRADIENT prior (its
+    # output is ``mx.stop_gradient``'d in persistence_recall_weight_mlx), so the
+    # fused 3x3-mean Metal kernel (bit-identical to _pool3x3_np / _pool3x3_mlx) is
+    # safe here with NO VJP required — the pooled value never carries a gradient.
+    # Gated by TAC_MLX_CUSTOM_PERSISTENCE_POOL (default OFF ⇒ byte-identical to the
+    # pure-MLX 9-shift path); GPU-required; CPU/pure-MLX fallback intact. We
+    # stop_gradient the INPUT in the metal branch so the no-VJP kernel is legal
+    # even inside an mx.grad trace (forward values unchanged ⇒ bit-identical).
+    try:
+        from tac.local_acceleration.metal_persistence_pool import (
+            persistence_pool_metal_enabled,
+            pool3x3_metal,
+        )
+
+        if persistence_pool_metal_enabled():
+            import mlx.core as mx
+
+            x = mx.stop_gradient(x)
+            for _ in range(int(iters)):
+                x = pool3x3_metal(x, "mean")
+            return x
+    except Exception:  # pragma: no cover - fallback if module/GPU unavailable
+        pass
     for _ in range(int(iters)):
         x = _pool3x3_mlx(x, "mean")
     return x
