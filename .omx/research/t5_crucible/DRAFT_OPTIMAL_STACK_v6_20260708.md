@@ -344,7 +344,7 @@ AIC-preferred in all three stages; the VALUE moved). Adopted per-stage fits:
 | dwell_TAIL ≥ | 115 ep | **237.1 ep** |
 | s\* = ν·forfeit | 1.4154e-5 S/ep | **6.8971e-6 S/ep** |
 | k_max after ep650 in 3000 ep | 3–7 | **6** = floor(2350/387.1) (turnpike claim survives at its edge) |
-| LPV ramp floor | ≥ 115 ep | **≥ 237 ep** (the 20-ep band-engage ramp's "1.9× ν MARGINAL" note becomes 11.9× — flagged, measured-good at coarse point, unchanged pending run-1 F3 per-class ν_c fits) |
+| LPV ramp floor | ≥ 115 ep | **≥ 237 ep** (the 20-ep band-engage ramp's rate ratio (1/ν)/20 moves 1.9× → **3.95×** the physics time constant — MORE marginal; flagged, measured-good at the coarse point, unchanged pending run-1 F3 per-class ν_c fits) |
 
 (c) **The co-predicate window: V = 5 RETAINED; the window LAW re-derived (the fold's "state
 which").** The v5 rationale (window ≥ settle, two-timescale) would now demand V ≈ 10–11
