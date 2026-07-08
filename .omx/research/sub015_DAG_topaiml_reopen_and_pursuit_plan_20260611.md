@@ -10137,3 +10137,26 @@ verdict_scope: instance — a measurement on one trained checkpoint; re-derives 
   REDUNDANCY regression (is the 96% mode derivable free from the store-nothing ξ carrier? →
   structured latents: phase-from-physics + dims-for-movable, req H). Sharpens #299's prior.
   pointer 0.19110 UNMOVED (measurement/means).
+
+## FEED-lawref (2026-07-08) — BUILT: LawRef constant-compiler (task #351) — equations→DSL executable edge
+STORES CONSULTED: corpus_query (no prior LawRef) · ORCHESTRATION_LEDGER req T/P/Q + P-CT1/P-CT3/τ-confirm folds · canonical_equations/equation.py · witness_dsl/curriculum_dsl.py · t5_crucible/artifacts/{trace_probes_mod32cap,tau_mq_confirm_end}.json.
+verdict_scope: build — apparatus, no exact-eval; pointer means/apparatus.
+- LawRef = a constant programmed AS a canonical equation, resolved at DSL-compile time (the
+  mx.compile analogy) into a value + provenance manifest. By-construction enforcement of req T
+  (value-provenance ladder: derived_live > derived_at_config > measured_anchor > hardcoded_waiver).
+- 3 first laws resolve end-to-end through REAL crucible artifacts to the SEALED values (bit-match
+  IS the validation): s* = ν·forfeit → 6.897090e-6 (rounds 6.8971e-6) · τ* = m_q(q90)/ln5 →
+  0.4619441215759677 (bit-identical to the artifact's stored tau_star.q90) · r* = 0.95·σ_eff → 1.425.
+- FAIL-CLOSED: config-conditionality conflict (mod-32 anchor vs mod-48 target) raises with the
+  named mismatch — the P-CT1 protection mechanized, NEVER swallowed by a fallback; sha/staleness/
+  missing → fallback-with-waiver (manifest records fallback_used) else raise. Deterministic value.
+- REAL FINDING: the crucible's stored s_star used an inline forfeit not reproducible from any
+  stored field (differs at ~1e-13); LawRef makes both inputs explicit → value now reproducible —
+  exactly the rot the ladder extincts.
+- TRIALITY: touches DSL leg (witness_dsl/lawref*.py + WitnessProgram.compile_trainer_argv_with_constants)
+  AND equations leg (canonical_equations/evaluators.py) — per-leg drift satisfied by construction;
+  the LawRef IS the equations→DSL edge. 34 tests; 319 existing DSL+equations tests green (no regression).
+- FOLLOW-UP (named, NOT done — sibling owns witness_autoconfig.py): migrate crucible_v6's 5 constants
+  (τ_end · ν laws · β_hosc · adaptive-ε clamps · s_fit) → LawRefs (~9 evaluators+LawRefs, ~350-450 LOC);
+  launcher hookup = one line (write manifest beside launch.sh). Memo:
+  .omx/research/lawref_constant_compiler_351_20260708.md. pointer 0.19110 UNMOVED (apparatus/means).
