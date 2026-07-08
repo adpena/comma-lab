@@ -10313,3 +10313,26 @@ floor is BOUNDARY PLACEMENT — increment-1 spends bytes on separatrix/annulus p
 Road↔Lane tie calibration (per-class bias b_c vs the v7 lane band; 41% of Road's flips).
 (4) Converges with FEED-missingforces #3: the tie-locus displacement force aims at exactly
 what the oracle says is EVERYTHING. Pointer 0.19110 UNMOVED (means).
+
+## FEED-v8risks (2026-07-08) — operator: v8 downsides? Named risks (binding on increment-1 review)
+1. **EDGE-DUPLICATION (rate)**: separatrix info is SHARED between adjacent classes — naive
+   per-class decoupling encodes each edge TWICE (the only bytes that matter, per P-A). Cure:
+   EDGE-CENTRIC decomposition (follow the Morse-Smale complex: one field per adjacency-graph
+   edge, not two per region); design's Road+Undriv single field already does this for the
+   dominant pair — increment-1 must generalize the principle, not the class-list naivety.
+2. **THEFT MIGRATES TO THE COMPOSITE**: end-to-end training through paint→R→SegNet re-couples
+   classes in the SCORE gradient (localized at ties, weaker than trunk-theft, NOT zero). Cure:
+   staged training (fields vs exact mask targets; paint solved separately vs the frozen
+   scorer) — which raises risk 3.
+3. **MASK-OPTIMAL ≠ SCORE-OPTIMAL + oracle-paint gap**: P-A measured the UPPER bound
+   (real-frame texture); generated paint unmeasured — if SegNet needs texture cues for bulk
+   argmax, interiors stop being near-free and texture params are COUNTED (rule 118). Decisive
+   $0 probe: re-run P-A with flat/procedural fill (pre-registered as P-C).
+4. **TIE-VARIANCE ADDS**: independent fields jitter independently → higher-variance ties than
+   a shared representation (spatially + temporally) → the screw-consistency force becomes a
+   NECESSARY companion of decomposition, not optional.
+5. **POSE SEAMS**: composited paint = new whole-frame artifacts PoseNet sees; pose-NEUTRAL
+   must be MEASURED on composites (d_pose already the blocker).
+6. **APPARATUS ×5 + OPPORTUNITY COST**: five carriers/schedules + compositor + paint solver,
+   each seal-reviewed; v8 gated on v7.5 results (if the v7 line reaches target, the rebuild
+   never fires). Common thread: all major risks live at the SEAMS of the decomposition.
