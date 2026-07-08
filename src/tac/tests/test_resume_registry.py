@@ -470,6 +470,24 @@ def test_every_trainer_ebgate_has_canonical_prefix_and_is_registered():
             "it would be silently unpersisted on resume")
 
 
+def test_every_trainer_direct_registered_controller_is_canonical():
+    """Sibling of the gate coverage test, for the DIRECT-registered (non-gate) controllers (#364).
+    Scan the live trainer for ``_resume_registry.register("NAME", ...)`` calls (the FunctionResumable
+    /scalar controllers wired OUTSIDE build_gate_resume_registry) and assert the set of names EQUALS
+    DIRECT_CONTROLLER_NAMES. So a NEW direct controller (like birth_completion was) cannot ship
+    without being added to the canonical set — closing the static-coverage gap #358 left (those
+    controllers were runtime-manifest-protected but never STATICALLY asserted as a complete set)."""
+    from tac.witness_control.resume_registry import DIRECT_CONTROLLER_NAMES
+
+    src = _TRAINER.read_text()
+    names = set(re.findall(r'_resume_registry\.register\(\s*"([^"]+)"', src))
+    assert names, "no _resume_registry.register(\"...\") calls found — did the registry var rename?"
+    assert names == set(DIRECT_CONTROLLER_NAMES), (
+        f"trainer direct-registered controllers {sorted(names)} != DIRECT_CONTROLLER_NAMES "
+        f"{sorted(DIRECT_CONTROLLER_NAMES)} — a new direct controller must be added to "
+        "resume_registry.DIRECT_CONTROLLER_NAMES (the no-silent-orphan resume discipline)")
+
+
 # ── (H) NON-GATE FOLD — trainer byte-identity + widened static coverage (#358) ───────────────────
 def test_evt_state_arrays_canonical_keys_and_roundtrip():
     """The extracted _evt_state_arrays produces EXACTLY the former inline block's keys and round-trips

@@ -46,6 +46,7 @@ from typing import Any, Callable, Protocol, runtime_checkable
 __all__ = [
     "RESUME_REGISTRY_MANIFEST_KEY",
     "GATE_KEY_PREFIXES",
+    "DIRECT_CONTROLLER_NAMES",
     "FunctionResumable",
     "Resumable",
     "ResumeIntegrityError",
@@ -73,6 +74,25 @@ GATE_KEY_PREFIXES: dict[str, str] = {
 # chroma gate when it is event-mode; persists the trailing detector window so an UNFIRED-mid-dwell
 # plateau re-fires at the IDENTICAL epoch after a crash — see :func:`build_gate_resume_registry`).
 CHROMA_HISTORY_PREFIX = "__cbh_"
+
+# Canonical set of the trainer-side DIRECT-registered controllers — the FunctionResumable (and
+# scalar) controllers wired via ``_resume_registry.register(name, prefix, ...)`` OUTSIDE
+# :func:`build_gate_resume_registry` (which is only for the EventBackstopGate class in
+# GATE_KEY_PREFIXES). #358 wired these as resumables (so their state persists + the runtime
+# ``__resume_registry_manifest`` self-protection covers them), but until now they had NO single
+# STATIC "all present" coverage assertion — the sibling of the gate coverage test. birth_completion
+# (the v7.5 ramp's latched fire-epoch state) is the newest member. A NEW direct controller cannot
+# ship without being added here (the static coverage test ``test_every_trainer_direct_registered_
+# controller_is_canonical`` fails), so it is consciously acknowledged as resume-relevant — the same
+# no-silent-orphan discipline GATE_KEY_PREFIXES enforces for gates.
+DIRECT_CONTROLLER_NAMES: frozenset[str] = frozenset({
+    "polyak_finisher",
+    "rng_streams",
+    "closed_loop",
+    "tau_advance",
+    "evt_curriculum",
+    "birth_completion",
+})
 
 
 class ResumeIntegrityError(RuntimeError):
