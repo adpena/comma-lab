@@ -265,6 +265,24 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: UNIFY-TAU (recovery complete; fce9cd0c6/050e86af1/d995bad9d/e08ca7a25;
+18 + 172 sibling tests green; memo seg_form_unify_tau_build_20260708.md) — V7 BUILD SET
+COMPLETE ---
+- L_τ kernel = τ·logsumexp(φ/τ) − φ_y: τ=1 ≡ CE **BIT-EXACT** (identical hinge/mw/pixel-w
+  wrapping); τ→0 → ReLU(−m); incumbent tau_softplus = the TOP-2 REDUCTION of multiclass L_τ
+  (coincide τ→0 + 2-class; L_τ ≥ tau_softplus by sub-runner-up mass at moderate τ —
+  documented mapping, tests prove all four). Geometric shape verified already present.
+- Mutual exclusion: unify ON + explicit --tau-softplus-start-epoch → ValueError (CLI-string
+  detected). Default-OFF byte-identical incl. run-1 module-re-import-on-resume (the sharpest
+  edge — verified: flag-absent short-circuits to the unchanged discrete dispatch).
+- SegFormUnifyTau Lever factory + registry mapping; transition-easing dissolved for the dead
+  boundary, Muon-entry easing intact; final_form ckpt tag "unify_tau" gap-filled.
+- STATUS: all v7 pieces landed {unified-L_τ · TAIL_k · LADDER · typed-config authoring (req V)
+  · schedule-provenance gate · DSL-manifest gate · dashboard}. NEXT: author crucible_v7 as a
+  TypedWitnessConfig (first requirement-V-native config; 0-naked schedule_governance; both
+  launcher gates dry-run-verified) → T3 council → 3×3+structure seal → governed stop+relaunch
+  (operator GO standing). Pointer 0.19110 UNMOVED.
+
 --- ⚠️→✅ CREDIT-DEATH ×2 + RECOVERY (session limit reset 06:10 CDT; ZERO signal loss —
 both builders' work survived uncommitted in tree; staggered recoveries per operator) ---
 - REQUIREMENT V RECOVERED + LANDED (task #353; commits d863b36ed/4420a03c2/9faff1a5e; 69 new
