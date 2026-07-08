@@ -150,6 +150,21 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+--- SEQUENCING RULE BOUND 2026-07-08T~04:0x (operator: "when are the probes run? ... how can we
+say the designs are optimal?") — NO OPEN GATES AT SEAL ---
+The FINAL seal round may NOT certify while any $0-runnable gate probe remains unfired. Disposition
+classes (every design decision in exactly one): (i) ANCHORED (measured row) — may bear load;
+(ii) UNANCHORED-DERIVED — rides ONLY as would-fire arm / default-off+duty-to-measure / build item
+with pre-registered kill, AND its gate probe must be RESOLVED before the final seal round;
+(iii) UNANCHORED-NO-PROBE — excluded from run-1 with a written reason + reactivation path (the
+family-step ideas per req N). Optimality claim after probes: "every decision anchored, gated-and-
+resolved, or deferred-with-reason" — optimal RELATIVE TO the free-measurable set; absolute
+optimality is never claimed (req N). PROBE WAVE 2 FIRED (PowerPlay order): wave-A control/schedule
+on the mod32cap trace (P-CT3 · P-CT1 · P-CT2 · τ-confirm) + wave-B geometry/class on cached
+fields (Q1 per-side signed ρ = the B16 gate · P-CON Conley backtest · P-DZ deadzone census ·
+P-MP max-plus fit). Stragglers (FEED-08l fresh-eyes · comb-registration audit · K=128 eigen
+finish · P6 shares) assigned to wave-B tail.
+
 --- LANDING FOLDED 2026-07-08T~03:3x: V5 (b241cf466) — the seal target ---
 - DRAFT_OPTIMAL_STACK_v5_20260707.md (596 lines): all 10 CT fold items 1:1 (+2 gated extras).
   Crossing RE-VERIFIED unrounded, UNCHANGED: central S=0.1897336 (margin 0.0013664), win9
