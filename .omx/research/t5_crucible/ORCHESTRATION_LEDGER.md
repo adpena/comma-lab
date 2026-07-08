@@ -150,6 +150,31 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+--- LANDING FOLDED 2026-07-08T~02:5x: CT-1 (d9325a44e) — REQUIREMENT O COMPLETE (both seats) ---
+- ct_deepresearch_1_training_campaign_control_20260707.md (552 lines, fresh-research-round-1).
+  Top-3 imports:
+  1. FORFEIT-MATCHED TAU→FIN EXIT (MPC): fire at slope s* = ν·forfeit = 1.41e-5 S/ep — shipped
+     trigger 4.8× coarser, fires ~60 ep early; later firing recovers ≈ +5.4e-4 S (0.30 margins)
+     for ~42 min (mandatory under L59). $0 backtest P-CT3 (band ep670-700; kill <650 or >726);
+     would-fire arm first (~10 LOC, req-B).
+  2. DECODE-GAP ILC FEEDFORWARD: Δ̂ is ILC-repeatable → train-side bar 0.0011−Δ̂ = 0.00100
+     (CONSISTENT with v4's independently-chosen 0.0010); campaign EWMA ω=0.5, Newton-ILC γ=0.7
+     → contraction 0.055-0.545 → 2-3 runs to identified floor. Req-P identifiability condition
+     formalized (excitation rank + σ_meas + matched instruments) = campaign convergence precond.
+  3. PMP + TWO-TIMESCALE RATIFICATIONS: PMP stop-rate 7.1e-5 S/ep ≈ shipped eps_rel 6.8e-5
+     (within 5% — INDEPENDENT ratification); fix: co-predicate window V=4→5 (settle 115 ep vs
+     100); turnpike validates cap_fin + gives TAIL_k budget law (≥265 ep/cycle, k_max 3-7).
+- Req-P §12.2 five signals (overlaps CT-2's): verdict-replicate σ_meas · per-stage Δ̂_k parity
+  trajectory (EVSI ~2e-3 S) · live m_q(t) row (TAIL τ*_k input) · forecast-residual row ·
+  signed per-class-pair flip-mass row.
+- EVSI TABLE (dual control, req N ratified): run-1 instrument value ≈ 0.05 S of v5 decision
+  value (pose row dominant 0.044) — ~10× its direct crossing value.
+- CROSS-FIELD CONSISTENCY TRIPLE (the fields-grade payoff): (a) τ_end·ln5 = 0.0998 ≈ measured
+  0.10 flip-support edge [CT-2]; (b) PMP stop-rate ≈ shipped eps_rel within 5% [CT-1];
+  (c) ILC bar 0.00100 = v4's independently-chosen train bar [CT-1×v4]. Independent derivations
+  agreeing with measured constants = the design is sitting on real structure.
+- NEXT: V5 SYNTHESIZER folds both CT §12 IMPORT-NOW sets into v4 → v5; THEN seal rounds on v5.
+
 --- LANDING FOLDED 2026-07-08T~02:3x: CT-2 (8be6251ee) ---
 - ct_deepresearch_2_pde_geometric_topological_control_20260707.md (653 lines, §0-§13,
   fresh-research-round-1 unreviewed). Top-3 imports (PowerPlay-ordered):
