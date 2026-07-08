@@ -204,6 +204,19 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~07:4x: VERDICT-SCOPE HOOK BUILT + LIVE-FIRED (aa4cd41f0/5adfbd70f) ---
+- Requirement R is now ENFORCED WITHOUT VOLITION: deterministic leg BLOCKS (added-diff negative
+  tokens without verdict_scope; family without citation-or-2-formulations; kills without
+  reformulation queue; quote/negation/waiver exemptions; fail-open); fmtools leg ADVISES inline
+  (0.24-0.82s measured — well under budget; fires only on declared family/paradigm per its own
+  3-case calibration, which honestly EXCLUDED the formulation case it misjudged); advisories
+  persist to .omx/state/verdict_scope_advisories.jsonl + 14-day costate-digest line.
+- Builder's "not verified on a live turn" caveat: SUPERSEDED WITHIN MINUTES — the hook fired on
+  BIBLIOGRAPHY_20260708.md during the live session (both legs), compliance cost 1 line + honest
+  waiver. Tuning candidate: table-cell quoted verdicts not covered by the quote exemption
+  (waiver path handled it; fold at leisure).
+- 56 tests (23 new), ruff clean, two review passes, rides the existing Stop-hook registration.
+
 --- LANDING FOLDED 2026-07-08T~07:3x: CITATIONS (798634dc7 + 2f8c6bf2b) — REQUIREMENT S DISCHARGED ---
 - 57 claim rows: 21 fetch-verified + 24 search-verified + 7 honestly-UNRESOLVED. CT-1's
   zero-citation gap fully backfilled (16 canonical records). NO fabricated citations (21/21
