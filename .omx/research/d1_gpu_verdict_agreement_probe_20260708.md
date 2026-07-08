@@ -82,13 +82,54 @@ verdict path on THIS chip); the failing metric is the reactivation target.
 Instrument-validity gates: (a) GPU double-forward bit-identity; (b) CPU verdict ~0 vs the cache
 (confirms the GT-reference construction / no cache drift).
 
-## Results — MEASURED
-_PENDING run (filled after the governed n600 chunks complete)._
+## Results — BLOCKED by the governed P0 memory gate (honest outcome; NO raw bypass)
+The harness is built, ruff-clean, reviewed, committed, admission-wired, and pre-registered — but
+the governed launch **could not run**. `tools/safe_run.py` routed the probe to the system memory
+governor, which **REFUSED admission** (verbatim):
+
+> `REFUSED (system admission gate — SUM-over-RAM crash guard): projected system-used 143.5 GiB`
+> `EXCEEDS adaptive ceiling 66.1 GiB by 77.4 GiB — launching would risk a SYSTEM OOM/jetsam`
+> `cascade (current used 75.5 + active-growth 60.1 + new 8.0). REFUSE. [projected=8.0GiB]`
+
+**This is the P0 gate working as designed, NOT a phantom.** The `active-growth 60.1 GiB` is the
+governor legitimately reserving the LIVE #205 run's projected peak (`projected_peak_gib ~67.6` —
+the n600 self-orient `cf_mx_cache`; current RSS is lower, but the governor reserves the growth
+headroom so the live run can grow without a system OOM). No stale reservation files exist; the
+number is the real live-run reservation. The adaptive ceiling (66.1 GiB) is already exceeded by
+`current used + active-growth` ALONE (135.5 GiB), so **no probe footprint — not even 0 GiB —
+would be admissible** while the live run holds the ceiling. Per the task ("if admission refuses,
+STOP and report") and the machine-crash P0 non-negotiable (raw-python bypass FORBIDDEN), I
+STOPPED. I did NOT set `TAC_ADMISSION_BYPASS_OK` (that would be the forbidden bypass).
+
+Consequently: **the n600 agreement numbers were not measured this session** — there is no
+d_seg/d_pose/per-class/flip-disagreement data, and therefore **no fit-for-advisory verdict**.
+The honest status is BLOCKED-pending-memory-headroom, verdict_scope = INSTANCE (this launch
+attempt), not a finding about the GPU verdict itself.
 
 ## Verdict + proposed v7 hybrid cadence
-_PENDING._
+**Verdict: DEFERRED — measurement BLOCKED by the P0 memory governor while the live #205 run
+reserves the RAM ceiling.** No claim about GPU-vs-CPU agreement can be made (no data). The
+proposed v7 hybrid cadence (documented in the harness for when data lands): IF a future run
+measures FIT → GPU verdict at the FAST cadence (`--verdict-device gpu`) + a CPU-torch ANCHOR
+(`paired_anchor_verdict`) at the SLOW cadence (checkpoint epochs, `--verdict-anchor-every N`) as
+the positive-control sentinel + comparability baseline, with the controllers (nucleus-guard /
+ladder-homotopy) kept on CPU authority per `gpu_verdict_conflicts`.
+
+**Reactivation (the harness is ready — one governed command):**
+```
+.venv/bin/python tools/safe_run.py --label d1_gpu_verdict_probe --projected-gib 8 \
+  --rss-mb 9500 --timeout 540 -- \
+  .venv/bin/python tools/d1_gpu_verdict_agreement_probe_n600.py --chunk-seconds 460
+```
+Re-invoke (chunked-resumable) when EITHER (a) the live #205 run completes / frees the ceiling, OR
+(b) the operator authorizes a governed slot (e.g. a brief coordinated pause at a stage boundary,
+or lowering the live run's reserved projected peak). The probe resumes from
+`experiments/results/d1_gpu_verdict_agreement_probe_20260708/probe_state.ckpt.npz`.
 
 ## Equations leg
-Anchors to `safe_compile_hosc_device_bitidentity_v1` (the per-device forward-numerics law) OR a
-sibling equation registering the scorer-FORWARD device-drift measurement — landed in the same
-batch per the triality drift-detector (equations leg required for a MEASURED durable finding).
+**DEFERRED — no MEASURED drift to anchor yet.** The triality equations leg is required for a
+MEASURED durable finding; this session produced NO measurement (admission-blocked), so
+registering an `EmpiricalAnchor` now would be a fake empirical claim (NO-FAKE #8: surrogate/
+absent-authority as a finding). When the probe runs, the scorer-FORWARD device-drift row extends
+`safe_compile_hosc_device_bitidentity_v1` (compiled-region bit-identity → full-forward drift) OR
+registers a sibling equation following that module's pattern, in the same commit as the results.
