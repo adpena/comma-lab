@@ -364,6 +364,10 @@ def config_family(cfg) -> str:
     """The canonical named-config FAMILY this cfg renders, derived from the cfg's own
     selector fields (factual — never a guess). Stamped into the launch.sh RUN-IDENTITY
     header so run-identity consumers (dashboard) can cite it as evidence."""
+    # crucible_v7 is a DSL TypedWitnessConfig (name field), not a witness_autoconfig dataclass —
+    # detect it by its declared name so the run-identity header does not MISLABEL it proven_base.
+    if getattr(cfg, "name", "") == "crucible_v7":
+        return "crucible_v7"
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
     if getattr(cfg, "fresh_seeded", False):
@@ -578,14 +582,16 @@ def dsl_config_gate_action(
                       f"--skip-dsl-config-gate to downgrade to WARN.")
 
 
-def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None) -> int:
+def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
+                         wall_clock_budget_days: float | None = None) -> int:
     """Pre-spawn SegNet fwd+bwd throughput assertion (the ~17x fast-path gate) + the
-    conditional --compile-step bit-identical requirement. Returns 0 (proceed) / nonzero
-    (REFUSE). NEVER blocks on unavailability (measured-slow only)."""
+    conditional --compile-step bit-identical requirement + the L45 WALL-CLOCK PROJECTION.
+    Returns 0 (proceed) / nonzero (REFUSE). NEVER blocks on unavailability (measured-slow only)."""
     try:
         from tac.local_acceleration.scorer_throughput_gate import (
             ABS_THRESHOLD_MS,
             evaluate_throughput,
+            project_launch_wall_clock,
         )
     except Exception as exc:  # helper import failure must not block the launch
         print(f"[launch-witness] WARNING: throughput gate unavailable (import: {exc}); "
@@ -612,6 +618,20 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None) -> int:
               f"assert_compile_bit_identical at construction (compiled step == uncompiled + "
               f"deterministic). See tac.local_acceleration.scorer_throughput_gate."
               f"assert_compile_step_bit_identical.")
+    # sub-part 4 (L45): PROJECT total wall-clock from the measured SegNet ms + the run-1 anchor.
+    # Advisory by default (surfaced at admission so a 6.5-day run is never a silent surprise);
+    # REFUSE only against an explicit --wall-clock-budget-days. Projection is off a same-class
+    # (B=1-accum) MEASURED anchor, NOT a fresh per-ep measurement (labelled advisory).
+    epochs = int(getattr(cfg, "epochs", 0) or 0)
+    proj = project_launch_wall_clock(verdict.segnet_fwd_bwd_ms, epochs,
+                                     budget_days=wall_clock_budget_days)
+    if proj is not None and epochs > 0:
+        print(f"[launch-witness] wall-clock projection (advisory, L45): {proj.detail}")
+        if proj.over_budget:
+            print(f"[launch-witness] ERROR: REFUSING to launch — {proj.detail} "
+                  f"(raise --wall-clock-budget-days, reduce --epochs, or land a compute lever "
+                  f"before launching).", file=sys.stderr)
+            return 4
     return 0
 
 
@@ -918,6 +938,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--skip-throughput-gate", action="store_true",
                     help="skip the pre-spawn SegNet fwd+bwd throughput micro-bench (the ~17x fast-path "
                     "assertion). Default runs it (a measured gate, not a flag-grep).")
+    ap.add_argument("--wall-clock-budget-days", type=float, default=None,
+                    help="(L45) REFUSE the launch when the PROJECTED total wall-clock (from the measured "
+                    "SegNet micro-bench x the run-1 min/ep anchor x --epochs) exceeds this many days. "
+                    "Default None = advisory only (the projection is always PRINTED at admission so a "
+                    "multi-day run is never a silent surprise).")
     ap.add_argument("--skip-schedule-provenance-gate", action="store_true",
                     help="(operator 2026-07-09 'move from hardcoded epochs to event based') downgrade "
                     "the schedule-provenance gate from REFUSE to WARN. The gate refuses a REAL launch "
@@ -1268,7 +1293,8 @@ def main(argv: list[str] | None = None) -> int:
     # (no MLX/scorer/GPU) => WARN, never block. Sub-part 3: if a --compile* flag is emitted, the compiled
     # step must be bit-identical (asserted at trainer construction; the gate flags the requirement here).
     if not args.skip_throughput_gate:
-        gate_rc = _run_throughput_gate(cfg, out_dir, threshold_ms=args.throughput_threshold_ms)
+        gate_rc = _run_throughput_gate(cfg, out_dir, threshold_ms=args.throughput_threshold_ms,
+                                       wall_clock_budget_days=args.wall_clock_budget_days)
         if gate_rc != 0:
             return gate_rc
 

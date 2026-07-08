@@ -40,6 +40,77 @@ CEILING_MULT: float = 1.5         # sub-part 2: first-10 median must be <= mult 
 SEG_H: int = 384
 SEG_W: int = 512
 
+# ── wall-clock PROJECTION anchor (L45: verify THROUGHPUT + wall-clock, not just flags) ──
+# The throughput micro-bench proves the ~17x fast path is ON; it does NOT tell the operator how
+# many DAYS a 3000-epoch run will take. This MEASURED anchor lets the launch gate PROJECT total
+# wall-clock (advisory; REFUSE only against an explicit budget). Value-provenance ladder
+# (req-T): class-(3) MEASURED-ANCHOR, config-conditional. Anchor = crucible_v6 run-1
+# (levelset_n600_crucible_v6_run1_20260708T095730Z, live pid 63069): ps ELAPSED 2h47m51s @ ep46
+# incl. startup => ~3.65 min/ep; the operator-cited steady-state ~3.1 min/ep is the tighter
+# figure. We anchor to the CONSERVATIVE steady-state and note the ceiling. Re-fit on a config
+# whose per-pair scorer-forward count changes (micro-batch>1 batches the forward => fewer, larger
+# forwards => a DIFFERENT min/ep; the anchor is B=1-accum-forward-conditional).
+RUN1_MEASURED_MIN_PER_EP: float = 3.1   # crucible_v6 run-1 steady-state (operator-cited; n600 B=1 accum)
+RUN1_ANCHOR_SEGNET_MS: float = ON_REF_MS  # the run-1 machine's SegNet fwd+bwd micro-bench reference
+
+
+def project_min_per_ep(machine_segnet_ms: float,
+                       ref_min_per_ep: float = RUN1_MEASURED_MIN_PER_EP,
+                       ref_segnet_ms: float = RUN1_ANCHOR_SEGNET_MS) -> float:
+    """PROJECT this machine's min/ep by SCALING the measured run-1 anchor by how much slower THIS
+    machine's SegNet fwd+bwd micro-bench is vs the anchor's reference. The witness step is
+    scorer-forward-BOUND (per-pair SegNet+PoseNet fwd+bwd dominates), so min/ep scales ~linearly
+    with the SegNet micro-bench. HONEST: it is a projection off a same-class anchor, NOT a fresh
+    per-ep measurement (labelled as such by the caller). Pure."""
+    if ref_segnet_ms <= 0.0:
+        raise ValueError(f"ref_segnet_ms must be positive, got {ref_segnet_ms}")
+    return float(ref_min_per_ep) * (float(machine_segnet_ms) / float(ref_segnet_ms))
+
+
+def project_wall_clock_days(min_per_ep: float, epochs: int) -> float:
+    """Total projected wall-clock in DAYS for ``epochs`` at ``min_per_ep`` minutes/epoch. Pure."""
+    if min_per_ep < 0.0 or epochs < 0:
+        raise ValueError(f"min_per_ep/epochs must be non-negative, got {min_per_ep}/{epochs}")
+    return float(min_per_ep) * float(epochs) / (60.0 * 24.0)
+
+
+@dataclass(frozen=True)
+class WallClockProjection:
+    """Advisory wall-clock projection for a launch (L45). ``over_budget`` is None when no budget
+    was supplied (pure advisory), else the boolean the gate REFUSES on."""
+
+    min_per_ep: float
+    epochs: int
+    total_days: float
+    budget_days: Optional[float]
+    over_budget: Optional[bool]
+
+    @property
+    def detail(self) -> str:
+        base = (f"projected {self.total_days:.2f} days "
+                f"({self.min_per_ep:.2f} min/ep x {self.epochs} ep)")
+        if self.budget_days is None:
+            return base + " [advisory — no --wall-clock-budget-days]"
+        verdict = "OVER" if self.over_budget else "within"
+        return base + f" {verdict} budget {self.budget_days:.2f} days"
+
+
+def project_launch_wall_clock(machine_segnet_ms: Optional[float], epochs: int,
+                              budget_days: Optional[float] = None,
+                              ref_min_per_ep: float = RUN1_MEASURED_MIN_PER_EP,
+                              ref_segnet_ms: float = RUN1_ANCHOR_SEGNET_MS,
+                              ) -> Optional[WallClockProjection]:
+    """Compose the projection for the launch gate. Returns None when no SegNet measurement is
+    available (the gate stays silent — never blocks on unavailability). ``over_budget`` is set
+    only when ``budget_days`` is supplied. Pure."""
+    if machine_segnet_ms is None:
+        return None
+    mpe = project_min_per_ep(machine_segnet_ms, ref_min_per_ep, ref_segnet_ms)
+    days = project_wall_clock_days(mpe, epochs)
+    over = None if budget_days is None else bool(days > float(budget_days))
+    return WallClockProjection(min_per_ep=mpe, epochs=int(epochs), total_days=days,
+                               budget_days=budget_days, over_budget=over)
+
 
 @dataclass(frozen=True)
 class ThroughputVerdict:

@@ -78,6 +78,14 @@ Scalar = Union[bool, int, float, str]
 
 PROGRAM_MANIFEST_SCHEMA = "dsl_program_manifest.v1"
 
+# The MLX perf-env prefix a launch command MUST carry so the ~17x custom-grouped-backward fast
+# path is active (an unset env is the silent slow-run footgun the launcher's step-(d) perf-env
+# verification catches). Kept BYTE-IDENTICAL to
+# ``witness_autoconfig.WitnessConfig.to_command``'s literal — a drift between the two would let a
+# TypedWitnessConfig launch (crucible_v7) silently drop the single largest compute lever. The
+# drift-guard test (test_v7_compute_exploitation) pins this equality.
+PERF_ENV_PREFIX = "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 \\\n  "
+
 
 class TypedConfigError(ValueError):
     """Raised when a typed config cannot construct a valid WitnessProgram."""
@@ -464,6 +472,60 @@ class TypedWitnessConfig(BaseModel):
             "dsl_qualname": "TypedWitnessConfig.to_program",
             "compiled_at_utc": datetime.now(timezone.utc).isoformat(),
         }
+
+    # ── launch-command emission (the ~17x MLX perf-env prefix must NOT be dropped) ──
+    # A TypedWitnessConfig (e.g. crucible_v7) reaches the SAME launcher paths a
+    # ``witness_autoconfig`` dataclass does: ``build_launch_sh`` calls
+    # ``cfg.to_command(out_dir, perf_env=True)`` and the throughput gate calls
+    # ``cfg.to_trainer_flags(out_dir)``. If TypedWitnessConfig lacked these, the v7 launch
+    # would EITHER AttributeError OR (worse) route through a path that omits the
+    # ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`` prefix — silently DROPPING the single largest
+    # compute lever (~17x custom-grouped-backward), the exact silent-slow-run footgun the
+    # launcher's step-(d) perf-env verification exists to catch. These methods mirror
+    # ``witness_autoconfig.WitnessConfig.to_command`` / ``to_trainer_flags`` byte-for-byte in
+    # shape, with the DSL ``WitnessProgram.compile_trainer_argv`` as the SINGLE source of truth
+    # (parsed back into pairs — NEVER a parallel dict). Pure emission: touches ONLY the launch
+    # command string, never a training numeric => score-neutral by construction.
+    def to_trainer_flags(self, out_dir: str | None = None) -> list[tuple[str, object]]:
+        """The ``(flag, value)`` pairs the DSL emits for THIS config — a bare flag -> ``None``.
+
+        SoT = ``to_program().compile_trainer_argv()`` (the DSL emitter), parsed back so the
+        launcher's ``_emitted_flag_names`` / ``config_family`` / ``write_constants_manifest``
+        consume the SAME shape they consume for a ``witness_autoconfig`` dataclass. ``out_dir``
+        (when given) overrides the emitted ``--out-dir`` (the launcher chooses the run dir
+        post-derive). Pure (unit-testable at $0)."""
+        argv = self.to_program().compile_trainer_argv()
+        pairs: list[tuple[str, object]] = []
+        i = 0
+        while i < len(argv) and not str(argv[i]).startswith("--"):
+            i += 1  # skip the interpreter + trainer path (first two non-flag tokens)
+        while i < len(argv):
+            t = str(argv[i])
+            if t.startswith("--"):
+                nxt = argv[i + 1] if i + 1 < len(argv) else None
+                if nxt is not None and not str(nxt).startswith("--"):
+                    pairs.append((t, nxt)); i += 2
+                else:
+                    pairs.append((t, None)); i += 1
+            else:
+                i += 1
+        if out_dir is not None:
+            pairs = [(f, (out_dir if f == "--out-dir" else v)) for f, v in pairs]
+        return pairs
+
+    def to_command(self, out_dir: str | None = None, *, perf_env: bool = True) -> str:
+        """Render the GO-ready launch command string — IDENTICAL in shape to
+        ``witness_autoconfig.WitnessConfig.to_command``, CRUCIALLY carrying the
+        ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=1`` perf-env prefix (the ~17x custom-grouped-backward
+        MLX fast path). ``perf_env=False`` omits the prefix (parity/debug only)."""
+        argv = self.to_program().compile_trainer_argv()
+        interp, trainer = str(argv[0]), str(argv[1])
+        parts: list[str] = []
+        for flag, val in self.to_trainer_flags(out_dir):
+            parts.append(flag if val is None else f"{flag} {val}")
+        prefix = PERF_ENV_PREFIX if perf_env else "  "
+        body = " \\\n  ".join([f"{interp} {trainer}"] + parts)
+        return prefix + body
 
 
 # ---------------------------------------------------------------------------
