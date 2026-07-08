@@ -212,6 +212,12 @@ class TailController:
     def _cycle_exit(self, ep: int, rows: list[tuple[int, float]]) -> tuple[bool, str]:
         """Does the CURRENT cycle exit at ``ep``? cycle_floor cap (hard) OR (dwell satisfied AND
         per-cycle powerlaw_meat exhausted)."""
+        # LEN CONVENTION (SEAL v7 R1 deepmath MINOR-6, deliberate): INCLUSIVE epoch COUNT
+        # (ep − start + 1) is the correct unit for a floor/dwell THRESHOLD test (how many epochs the
+        # cycle has spanned, endpoints included). Contrast _cycle_net_marginal, which uses the interval
+        # count max(ep − start, 1) because a per-epoch RATE (ΔS/ep) divides by the number of INTERVALS,
+        # not the endpoint count. The ~1-epoch difference (~0.26% at a 387-ep cycle) is intentional per
+        # quantity, not an off-by-one bug.
         length = ep - int(self.cycle_start_ep) + 1
         if length >= self.cfg.cycle_floor_epochs:
             return True, "cycle_floor_cap"
@@ -240,6 +246,8 @@ class TailController:
         d_end = self._dseg_at_or_before(ep, rows)
         if self._cycle_start_dseg is None or d_end is None:
             return None
+        # INTERVAL count (NOT the inclusive count used by _cycle_exit): a per-epoch RATE divides by the
+        # number of epoch INTERVALS (SEAL v7 R1 deepmath MINOR-6 — the deliberate convention split).
         length = max(ep - int(self.cycle_start_ep), 1)
         marginal = _S_PER_DSEG * (self._cycle_start_dseg - d_end) / length
         if byte_rows is not None and self._cycle_start_bytes is not None:
