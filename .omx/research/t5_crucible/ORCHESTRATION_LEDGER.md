@@ -265,6 +265,27 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ★★★ SEALED 3/3 — 2026-07-09 (119316468) ★★★ ---
+- ROUND 3 CLEAN: 0 BLOCKER / 0 MAJOR / 0 MINOR + 3 nits (1 fresh — pose borrowed-ancestor
+  caveat, closed as v6.5 errata — + 2 carried-disclosed). HEAD == round-2 fold (zero target
+  delta); 54/54 target tests; manifest field-correct vs req-T; all four crossing cases + the
+  req-N asymptote reproduce EXACTLY unrounded; the one-command GO dry-ran (106/106 + ADMIT +
+  manifest).
+- B-DET n600 composite: governor GENUINELY refused (102.2 > adaptive ceiling 99.4 GiB; stable
+  policy reserve, 2 attempts) — NOT bypassed; carried as PRE-GO ITEM #1 per the explicit
+  fallback (op-class determinism DEFINITIVE per #350 N=5; #348 ruled out scale-dependence).
+  Real finding surfaced: safe_run-vs-launcher admission asymmetry (probe refused where the
+  larger run ADMITs) — noted for the apparatus queue.
+- **THE SEAL CERTIFIES**: internal coherence of the launch stack (v6.4 draft + LawRef-compiled
+  crucible_v6 + manifest + governed launcher) across 3 consecutive clean Opus rounds × 3 lenses
+  (bugs · deep-math · confound). **EXPLICITLY NOT COVERED**: identity-not-correctness on literal
+  pins (disclosed; correctness independently re-derived) · unbuilt-disclosed items (B1 in-process,
+  F26/SC-3-live, SC-21) · run-1's own measurements. PRE-GO CHECKLIST: 5 owed items, NONE
+  blocking (each with fallback). The operator handoff = seal_round3_final_form_20260708.md.
+- STATE: T5 crucible P1-P6 COMPLETE. AWAITING OPERATOR GO (the governed one-command launch).
+  Pointer 0.19110 UNMOVED — the seal is MEANS; only the byte-closed evaluate.py n600 row is
+  the END.
+
 --- LANDING FOLDED 2026-07-08T~23:0x: SEAL ROUND 2 FINAL FORM = CLEAN, COUNTER 2/3 (5b622fe10) ---
 - TIMELINE SIM: full-precision replica at final constants — anneal-complete ep600 < forfeit fire
   ep675 < Muon cap 726 COHERE; τ(675)=τ(726)=0.31 exact; β(726)=3.175725; LR(725)=2.58e-4
