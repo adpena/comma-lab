@@ -21,9 +21,10 @@ epistemic_contract: unchanged — every knob carries a CONTROL LAW class {(a) CO
   claims denominated in the 0.00178 S crossing margin.
 axis: all numbers [macOS-CPU/MLX advisory] unless tagged; archive bytes exact (zip stat).
   Pointer contest-CPU 0.19110 UNMOVED — this whole file is MEANS.
-review_status: pre-registered-only (v6, seal round 1 of 3 pending)
+review_status: pre-registered-only (v6.2; seal counter 0/3 after the round-2 NOT-CLEAN reset — rounds restart on THIS revision; the round-3 re-verify re-runs the launcher dry-run against --config crucible_v6)
 verdict_scope_discipline: every negative below carries its req-R scope tag
 v6.1_errata: seal-r1 MINOR-1 (census vehicle named + 0.2180 alternative floor) + MINOR-2 (width label 0.4989) applied — no decision, consumer-read number, or build item changed
+v6.2_fold: seal-round-2 verdict (1 BLOCKER + 2 MAJOR + 3 MINOR) + the P-TAU2/P-DITHER gate resolutions folded — SUBSTANTIVE (build items + consumer-read claims change); see §14 "v6.2 changelog". The BLOCKER fix is CODE (src/tac/witness_autoconfig.py derive_crucible_v6_config + tools/launch_witness_run.py --config crucible_v6), PROVEN by re-running the round-2 dry-run at n600/3000ep against the new config (launch.sh tokens verified; test-guarded in src/tac/tests/test_witness_autoconfig.py::test_crucible_v6_schedule_matches_design_doc)
 verdict_scope: formulation — the negatives THIS draft asserts are all formulation-scoped at their
   source probes (P-CON kill = pers>τ·ln5 AS-FORMULATED, fitted bar is the live form; P-MP dead =
   K≤64 concave-max selection AT the annulus, capacity passes; Q1 "at chance" = the POOLED-unsigned
@@ -119,28 +120,79 @@ analytic levers, no dither) has d_seg floor ≥ 1.5795e-3 ⇒ d_seg term ≥ 0.1
 confirmation of "the wall is BASIS/representation" (chain-A curvature · FEED-08l format · M1
 quantum-lock). It does NOT invalidate the crossing case, because the stack's crossing was never
 smooth-only: the large-amplitude levers (analytic lane band · #139 hood clamp · island birth ·
-comb) act at multi-quantum amplitude on EXACTLY the census's concentration regions (far-lane rows /
-hood / horizon), and #149-class dither attacks whatever they don't cover. **The composed-family
-asymptote estimate S ≈ 0.165, band [0.154, 0.181] (v5 §0) is RETAINED, now with its lower edge
-explicitly CONDITIONAL on locked-mass coverage:** the run-1 signal that decides it is the
-locked-mass × lever-support overlap (SC-16 g_I histograms × the band/clamp/island support masks —
-a named $0 computation on run-1 artifacts, consumer: run-2 asymptote row). T_3 = 0.15 remains
-at/beyond the family's optimistic edge; the family step (quotient codec #155 / compress-half #336 /
+comb) act at multi-quantum amplitude on MOST of the census's concentration regions — but NOT all
+of them (the v6.1 "EXACTLY the concentration regions" sentence OVERSTATED horizon coverage;
+corrected per seal-round-2 MAJOR-B1 with the $0-computed table below).
+
+**◆ v6.2 (MAJOR-B1) — the locked-mass per-lever coverage table ($0, [re-executed] from
+`experiments/results/t5_probe_waveB_20260708/pdz_deadzone_census.json`, HR form, fractions of the
+1.5795e-3 locked mass):**
+
+| lever family | class-pairs | locked share | locked d_seg |
+|---|---|---:|---:|
+| lane band + islands + comb | Lane↔Road + Lane↔\* | **42.7%** | 6.749e-4 |
+| #139 hood clamp | Road↔MyCar (+MyCar↔\*) | **19.3%** | 3.042e-4 |
+| islands w_movable | Movable↔Road/Undrivable | **12.9%** | 2.032e-4 |
+| **NO run-1 lever** | **Road↔Undrivable (horizon/shadow)** | **25.3%** | **4.001e-4** |
+
+The horizon/shadow quarter = **0.0400 S ≈ 22.5× the crossing margin**. ◆ v6.2 with P-DITHER's
+KILL (§7c): B19 zeroth-order decode-side dither — previously the only (gated) lever nominally
+attacking this quarter — is DEAD-AS-FORMULATED (measured Δd_seg = **+2.1277533637e-6 ≥ 0**, kill
+bar fired ~10σ robust; churn ratio ≈ 0.98 = the locked sub-quantum residual carries ~zero net GT
+information at this checkpoint), so the 25.3% is now **strictly leverless in run-1** (attacked
+only by ChromaBoundarySharpen's small-amplitude g_I-raising mechanism, weight 0.1 — a
+locked-mass lever via the HR·g_I·m/|∇m| predicate the earlier enumeration under-credited, but
+NOT large-amplitude), **and the run-1-leverless share is ≥ 25.3%**: the "dither attacks whatever
+they don't cover" backstop for the other 74.7% is gone too, so every SC-16-unmeasured uncovered
+fraction of the band/clamp/island support masks adds to it. **Named follow-up (duty queue, ranks
+ABOVE several queued reformulations at 22.5× margin):** an explicit Undrivable-boundary /
+horizon-shadow lever question for run-2 (candidates: render-informed placement per #149's real
+mechanism · trained-with dither · a horizon-band analytic prior), plus the SC-16 overlap
+computation deciding the covered fractions.
+
+**◆ v6.2 (MAJOR-B1) — crossing-case sensitivity (full precision, [re-executed]): does the
+engineered case survive if the leverless 25.3% converts NOTHING?** Leverless non-conversion
+consumes 4.001e-4 of the train-side d_seg budget (= 0.040010 S = 29.28× the central margin /
+4.258× the win9 margin if it had to be recovered elsewhere — it cannot be). Remaining train
+budget: central 1.0136635e-3 − 4.0010e-4 = **6.135635e-4** (60.5% of the bar); win9
+1.0939661e-3 − 4.0010e-4 = **6.938661e-4** (63.4% of the bar). **Verdict: the engineered win9
+case SURVIVES leverless-converts-nothing IFF the entire remaining residual (smooth descent +
+covered-locked conversion by band/clamp/islands/comb) lands within 6.9387e-4** — a strictly
+harder tail than v6.1 stated (the covered 74.7% must now convert through the large-amplitude
+levers ALONE, no dither backstop). The central arm's equivalent bound is 6.1356e-4. Crossing
+DISPOSITION unchanged (the tail was already conditional on coverage — this measures the
+condition and tightens it).
+
+**The composed-family asymptote estimate S ≈ 0.165, band [0.154, 0.181] (v5 §0) is RETAINED,
+with its lower edge explicitly CONDITIONAL on locked-mass coverage — a condition now carrying a
+measured NEGATIVE prior for its cheapest lever class (unbiased decode-side dither) and a
+strictly-leverless 25.3% quarter:** the run-1 signal that decides it is the locked-mass ×
+lever-support overlap (SC-16 g_I histograms × the band/clamp/island support masks — a named $0
+computation on run-1 artifacts, consumer: run-2 asymptote row). T_3 = 0.15 remains at/beyond the
+family's optimistic edge; the family step (quotient codec #155 / compress-half #336 /
 0.0005-regime) remains named run-2+ work. Yield denomination (req J): even **1% recovery of the
 census ≈ 1.5795e-3 S ≈ 0.89× the crossing margin**; full census = 0.158 S of headroom, two orders
 above the margin.
 
-**#149 run-1 disposition (fold 8 decision + reasoning):** the 2026-06-19 probe proved the
-sub-pixel mechanism REAL (boundary flip 0.18→0.04, 12×) but its #155 form stored camera-res band
-residuals (rate-dead) — that kill is scope=FORMULATION (flat-paint vehicle), and the witness
-inherits only the MECHANISM. No render/decode-side placement lever exists in the trainer (0 dither
-flags). The cheapest deterministic form is **decode-side ordered dither at the uint8 quantization**
-of the byte-close/inflate path: 0 archive bytes (seeded deterministic generator = rule-118 free),
-~15–25 LOC, no train-path coupling, byte-close-selectable exactly like g_dec (decoded-KKT §5.0).
-⇒ **B19 ships in run-1, DEFAULT-OFF, gated on P-DITHER** ($0: apply dither to the EXISTING mod32cap
-ep650 byte-close decode, re-verdict n600, A/B vs undithered; band/kill in §7c). If P-DITHER fires,
-run-1's byte-close selects it; if not, the census stays a run-2 lever with a real measured prior —
-either way NO launch-blocking dependency.
+**#149 run-1 disposition (fold 8 decision, ◆ v6.2 SUPERSEDED by the measured P-DITHER verdict):**
+the 2026-06-19 probe proved the sub-pixel mechanism REAL (boundary flip 0.18→0.04, 12×) but its
+#155 form stored camera-res band residuals (rate-dead) — that kill is scope=FORMULATION
+(flat-paint vehicle), and the witness inherits only the MECHANISM. v6.0 shipped B19 (decode-side
+ordered dither at the uint8 quantization; rule-118 free; byte-close-selectable) gated on P-DITHER.
+◆ **P-DITHER has now RUN and the pre-registered KILL bar FIRED** (probe_tau2_dither_20260708.md
+§B, n600 full-scale on the REAL byte-close decode, instrument-validated bit-for-bit against R6):
+Δd_seg = **+2.1277533637e-6 ≥ 0** (fire bar −1e-5 not reached; ~10σ from firing under the
+churn-null — no seed of this form plausibly fires). Mechanism: the dither REACHES the census
+geometry (59% of its 20,421-pixel churn in the far-range-lane band) but is DIRECTION-BLIND
+(fixed/created ratio ≈ 0.95–0.99 every low/mid margin band) — the locked sub-quantum residual
+carries ~zero net GT information at this checkpoint, so unbiased decode-side noise randomizes
+placement instead of recovering it. ⇒ **B19 is DEAD-AS-FORMULATED (scope=FORMULATION) and leaves
+the run-1 build list**; the built instrument (`tac.witness_control.decode_dither` +
+`tools/witness_dither_decode_ab.py`) stays in the toolbelt. NOT killed: the #149 render-informed
+placement MECHANISM and trained-with dither — run-2 queue, now with measured priors AGAINST every
+unbiased decode-side variant (amplitude/pattern/mask sweeps: per-band ratios ≤ 1 in every band a
+mask would select) and FOR the render-informed forms. No launch-blocking dependency existed
+either way.
 
 ## §0.4 — CROSS-FIELD CONSISTENCY ROWS (amended: row (a) STRUCK)
 
@@ -173,6 +225,43 @@ either way NO launch-blocking dependency.
   `--stage-transition-rewarmup-*` · `--verdict-batch` · `--render-aa` ·
   `--curriculum-plateau-windows`). Line refs drift with file growth (round-1 nit ii) — counts,
   not line numbers, are the check.
+- ◆ **v6.2 (BLOCKER-1) THE LAUNCH ROUTE IS NOW A NAMED CONFIG: `--config crucible_v6`**
+  (`tools/launch_witness_run.py`; `src/tac/witness_autoconfig.py::derive_crucible_v6_config`,
+  built on the store-nothing #205 base per the `store_nothing_variant` pattern). It pins AT THE
+  SOURCE: `--softmax-temp-end 0.31` (no extras-route C13 collision — the round-2 REFUSAL is
+  structurally gone) · ABSOLUTE stage anchors `--tau-softplus-start-epoch 300` /
+  `--muon-start-epoch 726` (NOT family-scaled 0.726×epochs = 2178, the measured wrong emission) ·
+  the EXPLICIT τ denominator `--anneal-epochs 3000` + `--tau-anneal-shape cosine_hold` +
+  `--tau-hold-frac 0.2` (⇒ descent completes at ABSOLUTE ep600 = 0.2×3000 and HOLDS τ = 0.31
+  through the fire band and the Muon freeze: τ(675) = τ(726) = 0.31 EXACTLY, simulated against
+  the trainer's own law and cross-checked on mod32cap's measured τ(650) = 0.3098) ·
+  `--fused-r-kernel` (F-DET) · the pinned pose block (next bullet) · the §1.1 lever pins
+  (V=5 co-predicate, ChromaBoundarySharpen 0.1/1.0/start-300, AA ipe, band 350, persistence
+  warmup 275, and the composable DSL levers). **Materialization note (derived, not guessed):
+  the literal "`--anneal-epochs 600` + cosine" reading of the v6.1 prose does NOT realize the
+  design — the trainer's cosine is UNCLAMPED past the denominator (prog_t = (ep−1)/(ae−1)), so
+  τ REBOUNDS to 0.3363 at ep675 and freezes at 0.3826 at the 726 cap; `cosine_hold` at
+  hold-frac 0.2 of an explicit den-3000 is the correct token set** (guard: the
+  config-materialization test `test_crucible_v6_schedule_matches_design_doc` asserts the
+  emitted-tokens→τ-law equivalence, with the round-2 wrong emissions pinned as anti-targets).
+  PROOF: the round-2 dry-run invocation re-executed at n600/3000ep with `--config crucible_v6`
+  → flag validation 103/103, NO C13 refusal, memory preflight 67.61 GiB PASS, launch.sh carries
+  every token above.
+- ◆ **v6.2 (MAJOR-A2) THE POSE BLOCK IS PINNED AT THE CONFIG SURFACE** (it was absent from
+  v3→v6 flag tables — an inheritance five documents deep): the launch config emits
+  `--w-pose 1.0 --pose-carrier --pose-carrier-residual-mode table --pose-carrier-source
+  generated` (the store-nothing ξ carrier, Track 1 — the mover the crossing books at
+  √(10·3e-5) = 0.0173205; `real_keyframe` is the EXCLUDED wrong mover, and the trainer default
+  is `real_keyframe` + `w_pose 0.0` = pose-blind). **#314 (DAG DRIFT-D2, pose-carrier-source
+  inheritance drift) is the named risk this pin mitigates**: crucible_v6 inherits the block
+  STRUCTURALLY from `derive_store_nothing_205_config` and the regression test
+  `test_crucible_v6_pose_block_pinned` turns any future inheritance revert into a test failure,
+  not a silent pose-blind run.
+- ◆ **v6.2 (MINOR-3) launcher-injected knob row**: the real launch argv ALSO carries
+  `--per-group-grad-clip` — the launcher's C4 emit-side injection (landed f1dd0cc2f;
+  score-affecting; trainer default OFF for byte-identity). Knob classification per the epistemic
+  contract: **class (a) CONSTANT, tag V-S**; opt-out = `--no-per-group-grad-clip` on the
+  launcher. Every knob table below is to be read WITH this row.
 
 ### 1.1 Program sketch (v6: two deltas — F-DET on; τ_end constant re-anchored)
 
@@ -202,11 +291,28 @@ prog = WitnessProgram(
                                                              #   forfeit-matched s* (§2.2f); slope arm = fallback
         WeightEntropyPenaltyMLX(lam=15),                     # twin lam=0, mirror-schedule
         GNSpectrumProbe(k_pairs=">=32 + K-trend row"),
-        # B19 DitherDecodeSide is NOT a trainer lever — decode-side, byte-close-selectable, P-DITHER-gated
+        # ◆ v6.2: B19 DitherDecodeSide REMOVED (P-DITHER kill fired: Δd_seg = +2.1278e-6 ≥ 0;
+        #   dead-as-formulated, §0.3/§7c; render-informed forms = run-2 queue)
     ],
 )
 prog.validate()
 ```
+
+◆ **v6.2 — this program MATERIALIZES as `--config crucible_v6`** (BLOCKER-1 fix; §1.0 bullet):
+the pose block (store-nothing ξ carrier) + τ/Muon absolute schedule + F-DET + the 1:1 lever pins
+are emitted by `derive_crucible_v6_config`; the composable §1.1 levers ride the DSL merge
+(`SeedIslandBirth · SeedIslandEased · EventTriggeredCurriculum · LogitAdjust · AmplifyIsland ·
+PersistenceTopology · CacheGtSkeleton · LengthSigma · MuonWarmStart · WeightEntropyPenaltyMLX`);
+SignedBoundaryWeight stays DEFAULT-OFF (Q1 BETWEEN), ConleyCertificate-fitted (B17′) +
+GNSpectrumProbe are telemetry/build surfaces, not launch flags. **Named OPEN base-delta question
+for the seal round (stated, not silently decided):** `Mod32SegOnlyControlBase()` as a DSL factory
+carries 8 control-vehicle deltas; the variant inherits 3 of them via the sealed base (mod-32 ·
+verdict-pairs 0 · annealed hosc 1→4) and does NOT auto-compose the rest (eikonal-0 · freq-along-8
+· n-dir-freqs-4 · lane-paint-off · l7@1001 — the last MISFIRES at 3000 ep: 1001 < 3000 would RUN
+the demoted l7 defect stage; the others change the vehicle the ν/τ trace laws were measured on
+vs the P3-sealed lever pins — a genuine authority conflict this fixer surfaces rather than
+adjudicates). The one-line A/B lever exists: `--dsl-lever Mod32SegOnlyControlBase` composes them
+at launch (minus an l7 re-pin).
 
 ### 1.3 ◆ B16 REGROUNDED (fold 7 + MINOR-R-1 + MINOR-B2)
 
@@ -282,9 +388,19 @@ descending (τ → 0.2157, BELOW its own q80 endpoint 0.30747) and d_seg ERODED 
 ep675; never re-beat ep650). ⇒ **`--softmax-temp-end 0.31`** ships as the anchored constant
 (replaces 0.062), with the live-law promotion path: SC-3 emits τ\*(q̂, live) per verdict cadence
 (q̂ = 0.85, midpoint of the measured-best bracket [q80, q90]) as a WOULD-BE row; run-2 promotes the
-live law once P-TAU2 pins f_target. Fail-safe/cap semantics unchanged (`--anneal-epochs 600`
+live law once P-TAU2 pins the LIVE f_target. Fail-safe/cap semantics unchanged (the descent-600
 event-margin law untouched — a HIGHER endpoint only shortens the descent distance, so the
-anneal-completion guarantee strengthens).
+anneal-completion guarantee strengthens; ◆ v6.2 token materialization: `--anneal-epochs 3000` ×
+`--tau-hold-frac 0.2` cosine_hold = descent completes ep600 ABSOLUTE + HOLDS 0.31, per the §1.0
+BLOCKER-1 bullet — plain cosine at den 600 rebounds and is NOT the law). ◆ **v6.2 P-TAU2
+CORROBORATION (measured 2026-07-08, probe_tau2_dither_20260708.md §A):** the knee-derived static
+f_target = **0.861663 (ep650) / 0.862512 (ep1000)** — leg-stable to 3 dp and landing ON the
+q̂ = 0.85 convention (independent derivation, Kneedle marginal-return-collapse criterion);
+**0.31 STANDS** inside the knee band [0.190724, 0.542937] and the ep650 primary sensitivity
+interval [0.288437, 0.431976]. The knee is NOT sharply localized (heavy tail, no crisp static
+elbow) — independently CONFIRMING this section's decision that f_target must be the run-1 LIVE
+conversion measurement (SC-3 as-is); the static knee mildly favors a slightly HIGHER endpoint
+(primary knees 0.344–0.385), recorded as a directional note for SC-3's live law.
 
 **The "anneal TRUNCATED" narrative, re-examined honestly (fold-5 charter question):** the control's
 end τ 0.216 sits BELOW the new τ\*(q90) band 0.41–0.46 AND below its own-state q80 endpoint. The
@@ -350,7 +466,7 @@ AIC-preferred in all three stages; the VALUE moved). Adopted per-stage fits:
 | TAIL cycle floor (settle + 150) | 265 ep | **387.1 ep** |
 | dwell_TAIL ≥ | 115 ep | **237.1 ep** |
 | s\* = ν·forfeit | 1.4154e-5 S/ep | **6.8971e-6 S/ep** |
-| k_max after ep650 in 3000 ep | 3–7 | **6** = floor(2350/387.1) (turnpike claim survives at its edge) |
+| k_max after ep650 in 3000 ep | 3–7 | ◆ v6.2 (seal-r2 MINOR-1): **≤ 6 gross = floor(2350/387.1) / ≤ 5 net of FIN dwell = floor((2350 − 250 FIN min-stage)/387.1)** — gross-6 booked ZERO epochs to FIN between fire (~675) and TAIL_1; turnpike "3–7" still survives; TAIL stays τ\*-limited not budget-limited; crossing books no TAIL gain — no decision changes |
 | LPV ramp floor | ≥ 115 ep | **≥ 237 ep** (the 20-ep band-engage ramp's rate ratio (1/ν)/20 moves 1.9× → **3.95×** the physics time constant — MORE marginal; flagged, measured-good at the coarse point, unchanged pending run-1 F3 per-class ν_c fits) |
 
 (c) **The co-predicate window: V = 5 RETAINED; the window LAW re-derived (the fold's "state
@@ -366,7 +482,7 @@ both, no silent recalibration).
 
 (d) Trajectory expectations (fold 12): TAU-stage meat has a LONGER tail than v5 assumed (settle
 237 vs 115) — the event exits, not the clock, absorb this (the design is already event-bound);
-TAIL cycles budget 387-ep floors with k_max 6; muon_fin's own ν = 0.003289 < 0.01 KILLS its
+TAIL cycles budget 387-ep floors with k_max ≤ 5 net of FIN dwell (v6.2); muon_fin's own ν = 0.003289 < 0.01 KILLS its
 window laws (scope=FORMULATION) — FIN-stage exit laws ride the measured F3 fits on run-1, with
 the fail-safe caps carrying until then.
 
@@ -382,8 +498,9 @@ exit co-predicate is within one decision band of firing** (fix (a) from the prob
 since restore-best selection NEEDS the verdict).
 
 §2.1 / 2.2e / 2.4 / 2.6 / 2.3 inherited from v5 with the §2.2g value substitutions (TAIL budget
-law now 387.1/237.1/k_max 6; dwell check for switching: worst μ = 1.275 ⇒ τ_d > ln(1.275)/0.012653
-≈ 19.2 ep at the amended ν; shipped min-stage 250 = 13× margin — still SATISFIED).
+law now 387.1/237.1/k_max ≤ 6 gross · ≤ 5 net of FIN dwell (v6.2); dwell check for switching:
+worst μ = 1.275 ⇒ τ_d > ln(1.275)/0.012653 ≈ 19.2 ep at the amended ν; shipped min-stage 250 =
+13× margin — still SATISFIED).
 
 ---
 
@@ -444,15 +561,19 @@ consumers (no write-only telemetry). **Zero gap terms without a generated-record
 ## §5 — RATE PLAN — inherited UNCHANGED (central 93,092 B → 0.0619861 · win9 81,032 B → 0.0539559
 · hood clamp gate 5.32688e-6 S · decoded-KKT selection · Δ_dec^logit emission). One addition:
 
-◆ **B19 — decode-side deterministic dither (the #149-class lever, fold 8):** seeded ordered/
-blue-noise dither injected at the uint8 quantization of the byte-close/inflate decode path.
-**0 archive bytes** (deterministic seeded generator = rule-118 free code; NO video-derived table),
-~15–25 LOC, no train-path coupling, no byte-identity change when OFF. DEFAULT-OFF;
-**byte-close-SELECTABLE** exactly like the g_dec repair (decoded-KKT §5.0 selects on the measured
-decoded verdict). Gated on **P-DITHER** (§7c). Honest mechanism note: dither converts sub-quantum
-boundary placement into stochastic-in-space/deterministic-in-seed multi-quantum texture — the
-census says up to 1.5795e-3 d_seg lives there; the probe decides what a zeroth-order decode-side
-form actually recovers (plausibly a small fraction; even 1% ≈ 0.89× margin, req-J-denominated).
+◆ **B19 — decode-side deterministic dither — v6.2: DEAD-AS-FORMULATED (P-DITHER kill fired).**
+The v6.0 spec (seeded ordered dither at the uint8 quantization; 0 archive bytes; byte-close-
+selectable; gated on P-DITHER) was probed at n600 full-scale on the REAL byte-close decode
+(probe_tau2_dither_20260708.md §B): **Δd_seg = +2.1277533637e-6 ≥ 0** — the pre-registered kill
+bar fires, ~10σ robust to seed under the churn null. The mechanism answer is itself the measured
+census input: churn REACHES the locked geometry (59% in the far-range-lane band) but is
+DIRECTION-BLIND (fixed/created ≈ 0.98) — the sub-quantum residual carries ~zero net GT
+information at this checkpoint, so unbiased decode-side perturbation cannot mine it. B19 leaves
+the run-1 byte-close-selectable set; the instrument stays in the toolbelt
+(`tac.witness_control.decode_dither`, `tools/witness_dither_decode_ab.py` — OFF-identical
+proven). Run-2 queue (measured priors attached): render-informed placement (#149's real 12×
+mechanism) + trained-with dither FOR; every unbiased decode-side variant (amplitude / pattern /
+locked-geometry-masked) AGAINST (per-band ratios ≤ 1 in every band a mask would select).
 
 ---
 
@@ -475,8 +596,8 @@ form actually recovers (plausibly a small fraction; even 1% ≈ 0.89× margin, r
 
 | # | probe | band · kill |
 |---|---|---|
-| P-TAU2 | f_target conversion measurement: between two live τ-samples (Q2-τ set {0.31, 0.216, 0.12} / SC-3 rows), converted-flip mass ÷ swept-band mass = f_target for the §1.4a fixed point | reporting probe (derives a constant); τ_end live-law promotes ONLY after f_target lands; fail-safe constant 0.31 stands regardless |
-| P-DITHER | B19 gate: dither the EXISTING mod32cap ep650 byte-close decode (seeded, OFF-identical), n600 verdict A/B vs undithered | fire: Δd_seg ≤ −1e-5 (≥ 0.56× margin in S, req-J-denominated) at unchanged bytes; kill THIS FORM: Δd_seg ≥ 0 (decode-side zeroth-order dither stays unadmitted; trained-with dither = the named reformulation, run-2) |
+| P-TAU2 | ◆ v6.2 STATIC HALF RESOLVED (probe_tau2_dither_20260708.md §A): knee-derived static f_target = **0.861663/0.862512** (both legs) ≈ q̂ = 0.85 — **0.31 STANDS** (inside knee band [0.1907, 0.5429] + the ep650 primary interval); no crisp static elbow ⇒ the LIVE conversion-rate measurement (Q2-τ samples {0.31, 0.216, 0.12} / SC-3 rows) remains the run-1 law source | reporting probe (derives a constant); τ_end live-law promotes ONLY after the LIVE f_target lands; fail-safe constant 0.31 stands regardless |
+| P-DITHER | ◆ v6.2 RESOLVED — **KILL fired** (probe §B, n600 real byte-close decode, instrument-validated bit-for-bit vs R6): Δd_seg = **+2.1277533637e-6 ≥ 0**, ~10σ from the fire bar; churn direction-blind (ratio ≈ 0.98) | fire bar −1e-5 NOT reached; kill bar Δ ≥ 0 FIRED ⇒ B19 dead-as-formulated (scope=FORMULATION); trained-with dither + render-informed placement = run-2 reformulations with measured priors |
 | B-DET check | 2-process composite determinism at the exact launch config (n600, self-orient ON, fused-R ON) | pass: 0 diverged tensors ⇒ GPU bit-identity usable for proof paths; fail: fused-R stays (throughput + parity-gated) but proofs remain CPU-locked; launch NOT blocked either way |
 | comb-reg step-0 | pin ONE solid baseline (re-render solid under the ladder-probe construction), then the phase-sweep + registration score (4–20m bands only) | pre-comb-inclusion gate (the comb is P1-conditional anyway); until it passes, the citable comb gap-FP number is **79.33%** (fold 10) |
 
@@ -493,9 +614,12 @@ Inherited: central ≈ 0.26 does NOT cross (stated plainly); crossing = the engi
 completion-to-small-τ; the β-leg unchanged); (iii) run-1 REMAINS primarily an instrument (EVSI
 ≈ 0.05 S of decision value, pose row 0.044 dominant — v5 §0.0c unchanged), now with THREE
 gate-resolved instruments already banked pre-launch (trace probes · margin-quantile · deadzone
-census — req Q paying rent before the run). **Honest family statement:** this composed-lever
-family (mod32 witness + band/clamp/islands/comb + dither-class decode repair) claims the
-[0.154, 0.181] asymptote band CONDITIONAL on locked-mass coverage; smooth-perturbative-only is
+census — req Q paying rent before the run). **Honest family statement (◆ v6.2, post P-DITHER):**
+this composed-lever family (mod32 witness + band/clamp/islands/comb; the dither-class decode
+repair leg is DEAD-as-formulated and re-pointed at RENDER-INFORMED forms, run-2) claims the
+[0.154, 0.181] asymptote band CONDITIONAL on locked-mass coverage — a condition now measured
+tighter: the horizon/shadow 25.3% (4.001e-4 = 22.5× margin) is strictly leverless in run-1 and
+the covered 74.7% has no dither backstop (§0.3 table + sensitivity); smooth-perturbative-only is
 floored at ≥ 0.237 by the measured census (§0.3) and cannot cross; T_3 = 0.15 requires the family
 step (quotient codec / compress-half / 0.0005-regime) regardless of run-1's outcome.
 
@@ -505,11 +629,13 @@ step (quotient codec / compress-half / 0.0005-regime) regardless of run-1's outc
 
 | id | build | ~LOC | status/route |
 |---|---|---:|---|
-| ◆ **F-DET** | `--fused-r-kernel` in the launch config (+ `--mlx-device gpu` requirement satisfied) | 0 (config) | measured-dominant (0/28 N=10, −8% wall-clock, 25/25 parity); DSL #252 lever already held |
+| ◆◆ **B-CFG (v6.2, seal-r2 BLOCKER-1)** | the **crucible-v6 named config**: `witness_autoconfig.derive_crucible_v6_config` (store-nothing base + τ_end 0.31 + ABSOLUTE anchors tau@300/Muon-726 + explicit anneal den 3000 × hold 0.2 + F-DET + pose block + §1.1 lever pins + DSL-lever composition) + launcher `--config crucible_v6` choices entry + append-not-clobber `--dsl-lever` + activation-ledger rows for config-composed levers | **~140 built** (was claimed "0 (config)" — the round-2 under-scope: NO existing config surface held the v6 values) | **LANDED + PROVEN**: round-2 dry-run re-executed at n600/3000ep → 103/103 flags, no C13 refusal, mem-preflight 67.61 GiB PASS, all tokens in launch.sh; class-guarded by `test_crucible_v6_*` (schedule-law equivalence + pose pin + no-dup + byte-stability of the sister configs) |
+| ◆ **F-DET** | `--fused-r-kernel` in the launch config (+ `--mlx-device gpu` requirement satisfied) | 0 (rides B-CFG) | measured-dominant (0/28 N=10, −8% wall-clock, 25/25 parity); DSL #252 lever already held; ◆ v6.2: emitted by crucible_v6 |
 | ◆ **B-DET** | n600/self-orient composite determinism check riding launch preflight (2 short resumed segments, cross-process hash) | ~15 | pre-GO; SC-21 row; non-blocking either way (§7c) |
-| ◆ **B-INJ** | injection test for the FIRING forfeit arm through live witness_control wiring (fires-when-should + silent-when-shouldn't) | ~20 | pre-GO (the remaining req-B bind on fold 3); until pass, slope-arm fallback carries |
+| ◆ **B-INJ** | injection test for the FIRING forfeit arm through live witness_control wiring (fires-when-should + silent-when-shouldn't) | ~20 | pre-GO (the remaining req-B bind on fold 3); until pass, slope-arm fallback carries (crucible_v6: cap 726 + V=5 event co-predicate) |
 | ◆ **B17′** | Conley certificate FITTED-BAR amendment (s_fit per stage + per-class lane column; death alarm on fitted bar) | ~10 on B17 | P-CON-resolved; backtest ledger already emitted |
-| ◆ **B19** | decode-side deterministic dither at uint8 quantization (byte-close-selectable; seeded; OFF-identical) | ~15–25 | DEFAULT-OFF; gated on P-DITHER ($0); rule-118 free |
+| ◆◆ **B19** | ~~decode-side deterministic dither~~ — **v6.2: REMOVED from run-1 (P-DITHER kill fired: Δd_seg +2.1278e-6 ≥ 0, §0.3/§5/§7c)** | built (instrument stays: decode_dither + witness_dither_decode_ab) | DEAD-with-autopsy (scope=FORMULATION); render-informed forms = run-2 with measured priors |
+| ◆◆ **F26 (v6.2, seal-r2 MINOR-2) SC-3-ext live-m_q route** | in-trainer per-verdict-cadence wrap of `tac.witness_annulus_metrics.flip_margin_quantiles` in the levelset trainer's verdict block (emit m_q{50,80,90} + τ\*(q̂) WOULD-BE rows into the verdict telemetry; SC-20's instrument-row pattern) | ~15 | named route for the SC-3-ext "live m_q per verdict cadence" claim; UNTIL it lands, run-1 is honestly CHECKPOINT-granularity via the committed offline instrument (`tools/witness_tau_mq_confirm.py` — the pattern P-TAU2 just exercised); fail-safes (constant 0.31; τ_{k−1}/2) carry regardless |
 | B-CT1→FIRING | forfeit-matched arm s\* = 6.8971e-6 S/ep (ν-amended) | done (~10) | PROMOTED (P-CT3 PASS); B-INJ owed |
 | B-CT3 | self-triggered cadence | ~15 | STAYS UNBUILT (P-CT2); future spec carries the §2.5 conjunct |
 | B16 | signed σ_ij,dir slots | ~25 | stays gated (Q1 BETWEEN); sharpened re-test spec §1.3 |
@@ -530,7 +656,10 @@ step (quotient codec / compress-half / 0.0005-regime) regardless of run-1's outc
   **import-dead** (the schedule-import formulation; the THEOREM lives on as the M4 bound) ·
   Griewank = DEFER-with-reason · ◆ NEW ROW: **max-plus K≤64 concave-max annulus fit =
   formulation-dead** (P-MP; queue in §11 row 16) · ◆ NEW ROW: **raw τ·ln5 Conley threshold =
-  formulation-dead** (P-CON; fitted bar ships).
+  formulation-dead** (P-CON; fitted bar ships) · ◆◆ v6.2 NEW ROW: **decode-side zeroth-order
+  seeded dither (B19) = formulation-dead** (P-DITHER kill: Δd_seg +2.1277533637e-6 ≥ 0, ~10σ;
+  direction-blind churn ratio ≈ 0.98; unbiased decode-side variants carry measured priors
+  AGAINST; render-informed placement + trained-with dither stay run-2 OPEN with priors FOR).
 
 ## §13 — THE NINE ROUND-1 MINORS (fold 13; no v5.1 errata existed — all folded here)
 
@@ -569,5 +698,66 @@ step (quotient codec / compress-half / 0.0005-regime) regardless of run-1's outc
    6.8969e-6 — 0.003% display delta, no consumer at that resolution); crossing chain digits
    reproduce v5's exactly; the forfeit 5.450779e-4 S = 30.6% of the crossing margin — the arm's
    value is margin-denominated, not "small".
+
+## §14 — v6.2 CHANGELOG (seal-round-2 fold, 2026-07-08; counter was RESET 0/3 by the NOT-CLEAN verdict — rounds restart on THIS revision)
+
+Folds `seal_round2_v6_verdict_20260708.md` (1 BLOCKER + 2 MAJOR + 3 MINOR, 1:1) + the two
+resolved gate probes (`probe_tau2_dither_20260708.md`). SUBSTANTIVE: build items + consumer-read
+claims changed. Per-item:
+
+1. **BLOCKER-1 (launch-route materialization) → FIXED IN CODE + PROVEN.** New named config
+   `--config crucible_v6` (`src/tac/witness_autoconfig.py::derive_crucible_v6_config`, ~140 LOC
+   incl. launcher route + tests, store-nothing-variant pattern). Pins at the source:
+   τ_end 0.31 (extras-route C13 collision structurally gone) · ABSOLUTE tau@300 / Muon-cap 726
+   (the family's 0.726×epochs = 2178 scaling was the measured wrong emission) · EXPLICIT τ
+   denominator. **Derived-not-guessed τ tokens:** the trainer cosine is UNCLAMPED past its
+   denominator, so the literal "--anneal-epochs 600 + cosine" REBOUNDS (τ(675) = 0.3363,
+   τ(726-freeze) = 0.3826 ≠ 0.31); the correct materialization is `--anneal-epochs 3000` +
+   `--tau-anneal-shape cosine_hold` + `--tau-hold-frac 0.2` ⇒ descent completes at ABSOLUTE
+   ep600 and HOLDS: τ(675) = τ(726) = 0.31 exactly (law replica cross-checked against
+   mod32cap's measured τ(650) = 0.3098 / τ(726) = 0.2157). PROOF: the round-2 dry-run
+   invocation re-executed with the new config — 103/103 flags, NO C13 refusal, mem-preflight
+   67.61 GiB PASS, every token verified in the emitted launch.sh; the design-schedule ==
+   emitted-schedule equivalence is a permanent test
+   (`test_crucible_v6_schedule_matches_design_doc`, wrong emissions pinned as anti-targets).
+   §10 F-DET "0 (config)" under-scope corrected (B-CFG row). Named honest residual: the
+   hosc-β anneal shares the den-3000 denominator ⇒ β(726-freeze) ≈ 1.41 (vs the control's
+   3.177) — the M2 β-leg stays unresolved (v6 names no β pin); + the §1.1 base-delta OPEN
+   question (Mod32SegOnlyControlBase's eikonal-0/freq-along-8/n-dir-4/lane-paint-off not
+   auto-composed; l7@1001 would MISFIRE at 3000 ep) surfaced for the seal round.
+2. **MAJOR-A2 (pose leg unpinned; #314 unnamed) → PINNED.** The launch config emits
+   `--w-pose 1.0 --pose-carrier --pose-carrier-residual-mode table --pose-carrier-source
+   generated` (inherited STRUCTURALLY from store_nothing_205; regression test
+   `test_crucible_v6_pose_block_pinned`). **#314 / DAG DRIFT-D2** (pose-carrier-source
+   inheritance drift) is now NAMED in §1.0 with the variant + test as its mitigation.
+3. **MAJOR-B1 (locked-mass coverage) → §0.3 corrected + quantified.** "EXACTLY the
+   concentration regions" overstatement replaced by the $0-computed per-lever table (42.7% lane
+   / 19.3% hood / 12.9% movable / **25.3% Road↔Undrivable = 4.001e-4 = 22.5× margin with NO
+   run-1 lever**); post-P-DITHER the leverless share is **≥ 25.3%** (dither backstop gone;
+   ChromaBoundarySharpen g_I-raising credited as the only — small-amplitude — attacker).
+   Named follow-up: Undrivable-boundary lever question ranked into the duty queue.
+   **Crossing sensitivity (full precision): leverless-converts-nothing leaves remaining train
+   budget 6.938661e-4 (win9, 63.4% of the 1.0939661e-3 bar) / 6.135635e-4 (central, 60.5%) —
+   the engineered win9 case SURVIVES iff all other residual fits there; disposition unchanged,
+   condition measured + tightened.**
+4. **MINOR-1 (k_max) → recomputed:** ≤ 6 gross / **≤ 5 net of FIN dwell** =
+   floor((2350 − 250)/387.1) (§2.2g(b) + §2 TAIL budget lines). Turnpike 3–7 survives.
+5. **MINOR-2 (SC-3-ext route) → named:** §10 F26 row — in-trainer ~15-LOC per-verdict-cadence
+   wrap of `flip_margin_quantiles` (currently ZERO trainer callers); until it lands run-1 is
+   honestly CHECKPOINT-granularity via the committed offline instrument.
+6. **MINOR-3 (C4 knob) → knob row added:** `--per-group-grad-clip` (launcher-injected,
+   score-affecting, class (a) constant, V-S, `--no-` opt-out named) — §1.0 bullet; both
+   crucible dry-runs carried it.
+7. **Gate probes folded (mid-fold, sibling-measured):** P-TAU2 static half — knee f_target
+   0.861663/0.862512 ≈ q̂ 0.85, **0.31 STANDS** (§1.4a corroboration; SC-3 live law unchanged);
+   P-DITHER — **B19 KILL-as-formulated** (Δd_seg +2.1277533637e-6 ≥ 0, ~10σ): removed from the
+   run-1 build list/§1.1/§5, §12 dead row added, §0.3/§9 coverage + family claims re-pointed at
+   render-informed forms (run-2, measured priors).
+
+Code surfaces landed with this fold: `src/tac/witness_autoconfig.py` (crucible_v6 variant) ·
+`tools/launch_witness_run.py` (choices entry + config family + append-not-clobber `--dsl-lever`
++ activation-ledger rows for config-composed levers) ·
+`src/tac/tests/test_witness_autoconfig.py` (7 new tests; 51/51 green; launcher suite 39/39).
+All numbers [macOS advisory]; the config is MEANS.
 
 Pointer contest-CPU 0.19110 UNMOVED — this draft is MEANS until the exact-eval row lands.

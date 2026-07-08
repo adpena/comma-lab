@@ -1102,3 +1102,30 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   29,650-ep/8-stage reference — exhaustion is schedule-relative; exits should refine, not
   terminate; symmetric probes may average away one-sided separatrix effects. 3 in flight:
   seal-round-2 (J+K pins) · wave-1 finisher · negatives re-review.
+- 2026-07-08T~0x:xx **v6.2 LANDED (seal-round-2 fold; counter restarts on v6.2) — the BLOCKER is
+  CODE-FIXED + dry-run-PROVEN.** New named config `--config crucible_v6`
+  (`witness_autoconfig.derive_crucible_v6_config`, store-nothing-variant pattern, ~140 LOC incl.
+  launcher route + 7 tests; launcher also gains append-not-clobber --dsl-lever + activation-ledger
+  rows for config-composed levers). Pins: τ_end 0.31 at the SOURCE (no C13 extras collision) ·
+  ABSOLUTE tau@300/Muon-726 (family 0.726×epochs=2178 was the measured wrong emission) · EXPLICIT
+  τ denominator — DERIVED tokens `--anneal-epochs 3000 --tau-anneal-shape cosine_hold
+  --tau-hold-frac 0.2` (descent completes ABSOLUTE ep600, HOLDS 0.31: τ(675)=τ(726)=0.31 exactly;
+  the literal "anneal-epochs 600 + cosine" REBOUNDS to 0.3363/0.3826 — trainer cosine unclamped
+  past its denominator; law replica cross-checked on mod32cap measured τ(650)=0.3098) · F-DET
+  fused-R · pose block pinned (MAJOR-A2; #314 named + regression-tested) · §1.1 lever pins (V=5,
+  ChromaBoundarySharpen, AA ipe, band 350, warmup 275, 10 composable DSL levers). **DRY-RUN PROOF
+  (the round-2 invocation, n600/3000ep, --config crucible_v6): 103/103 flags · NO C13 refusal ·
+  mem-preflight 67.61 GiB PASS · every token verified in launch.sh; class-guarded by
+  test_crucible_v6_schedule_matches_design_doc (wrong emissions = anti-targets).** Draft folds:
+  MAJOR-B1 coverage table (25.3% Road↔Undrivable = 4.001e-4 = 22.5× margin, now STRICTLY
+  leverless post-P-DITHER; crossing sensitivity: leverless-converts-nothing leaves win9 train
+  budget 6.938661e-4 = 63.4% of bar — engineered case survives iff the rest fits) · k_max ≤5 net
+  of FIN dwell · SC-3-ext route named (F26 ~15-LOC trainer wrap of flip_margin_quantiles;
+  checkpoint-granularity honest until then) · C4 --per-group-grad-clip knob row · gate probes
+  folded: P-TAU2 knee f_target 0.8617/0.8625 ≈ q̂ 0.85 ⇒ 0.31 STANDS; P-DITHER KILL
+  (Δd_seg +2.1277533637e-6 ≥ 0, ~10σ) ⇒ B19 dead-as-formulated, out of run-1, §12 dead row,
+  coverage/family claims re-pointed at render-informed forms. Named residuals surfaced (not
+  silently decided): hosc-β(726-freeze)≈1.41 at den-3000 (M2 β-leg still unresolved) + the
+  Mod32SegOnlyControlBase base-delta OPEN question (eikonal-0/freq-along-8/n-dir-4/lane-paint-off
+  not auto-composed; l7@1001 would misfire at 3000 ep). $0, NO launches (dry-run only), run dirs
+  read-only. Pointer contest-CPU 0.19110 UNMOVED — all MEANS.
