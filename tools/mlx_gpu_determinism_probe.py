@@ -275,7 +275,9 @@ _SAFE_RUN = os.path.join(_REPO, "tools", "safe_run.py")
 
 def _composite_trainer_argv(out_dir: str, *, num_pairs: int, epochs: int, gt_cache: str,
                             device: str, fused_r: bool, seed: int = 0,
-                            rss_mb: int = 74000, timeout_s: int = 560) -> list[str]:
+                            rss_mb: int = 74000, timeout_s: int = 560,
+                            eval_every: int | None = None,
+                            extra_flags: list[str] | None = None) -> list[str]:
     """The mod32cap n600 launch config (verbatim levers) at bounded pairs/epochs, with the
     ``--fused-r-kernel`` toggle exposed. self-orient ON (the unverified composite element).
     Verdict is skipped (``--eval-every`` past the horizon) — determinism is about the WEIGHT
@@ -294,7 +296,9 @@ def _composite_trainer_argv(out_dir: str, *, num_pairs: int, epochs: int, gt_cac
         "--mlx-device", device,
         "--seed", str(seed),
         "--epochs", str(epochs),
-        "--eval-every", str(epochs + 999),  # skip the (CPU-torch) verdict entirely
+        # default skips the (CPU-torch) verdict entirely; the exact-AB harness sets eval_every=1 to
+        # capture the per-epoch d_seg history it uses to locate the divergence STEP.
+        "--eval-every", str(eval_every if eval_every is not None else epochs + 999),
         "--verdict-pairs", "0",
         "--curriculum",
         "--tau-softplus-start-epoch", "300", "--tau-softplus-tau", "0.3",
@@ -315,6 +319,8 @@ def _composite_trainer_argv(out_dir: str, *, num_pairs: int, epochs: int, gt_cac
         "--ckpt-every", "1", "--stage-checkpoints", "--per-group-grad-clip",
     ]
     trainer.append("--fused-r-kernel" if fused_r else "--no-fused-r-kernel")
+    if extra_flags:
+        trainer.extend(extra_flags)
     return [
         sys.executable, _SAFE_RUN,
         "--rss-mb", str(rss_mb), "--timeout", str(timeout_s),
