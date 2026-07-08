@@ -1,5 +1,7 @@
 # Position — SEAT S1 (Shannon, rate/budget lens) — T3 v7 INCLUSION SYMPOSIUM
 
+STORES CONSULTED: CONVENING_T3_v7_inclusion_symposium_20260708.md (docket + status update) · ORCHESTRATION_LEDGER.md (last 250 lines) · CLAUDE.md non-negotiables · docs/operating_manual_craft_handoff.md · per-item source/artifact cites inline (launch.sh, memos, waterfill numbers as tagged). No sibling position files (BLIND).
+
 **BLIND**: I have not read position_INCL_S* siblings. **Pointer contest-CPU 0.19110 UNMOVED — everything below is MEANS.**
 
 ## Operating-within assumption (Fix-7)
