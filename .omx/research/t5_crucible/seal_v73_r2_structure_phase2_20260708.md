@@ -53,7 +53,7 @@ event mode, and finishing structure are sound and DECIDED.
 | sensor→transition graph | 3: muon←powerlaw_meat(+nucleation gate), lane-band←lane_nucleus, chroma←annulus_plateau | identical 3 sensors + backstop caps (726/500/450) | **AGREE** — exact match, incl. the `cap_fired_before_event` falsification-signal discipline. |
 | budget form | caps + tail cycles, extra budget extends the τ* tail | k_max=2, caps as backstops, 8.673d derived from live 3.62 min/ep | **AGREE**. |
 | finishing = EMA + uniform tail mean | both candidates, byte-close picks | Polyak armed as an extra candidate, EMA untouched, fail-open | **AGREE**. |
-| INERT levers OFF | uniward / msal_uni OFF | not composed | **AGREE**. |
+| INERT levers OFF | uniward / msal_uni OFF | not composed | **AGREE** (verdict_scope: formulation — the msal_uni texture-proxy formulation, prior measured L76/#268; the margin-saliency family stays open via the exact S_R successor). |
 
 ### MAJOR
 **M1 — lane-regime coherence mismatch (prompt item b).**
