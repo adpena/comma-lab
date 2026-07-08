@@ -346,3 +346,12 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   the crossing ENABLERS; F17 dual-band (independent-tail AND sequential-with-repair) demanded.
   **P3b REVISION DESIGNER LAUNCHED** (DRAFT v2: honest crossing engineered true, AA into run-1,
   vacuous exit fixed, requirement letters closed, chain-A folded live).
+- 2026-07-07T~21:0x #346 RETRIEVAL-FIRST LAYER COMPLETE (4 commits, 94 tests): corpus_query.py
+  (7-store deterministic query, ~1.0s whole-corpus: research 5343 · equations 527 · memory 1866 ·
+  DAG 331 · council 275 · tasks 57 · docs 92) + convene.py (auto grounding packets from the
+  codified 20-store checklist — every future convening starts complete BY CONSTRUCTION) +
+  subagent_contract clauses (RECURSION/CONTROL_LAW/RETRIEVAL_FIRST/REVIEW_STATUS in every future
+  agent contract, integrity-gated anti-self-waive) + costate digest recall-push ("the corpus
+  knows:" at SessionStart when a convening is live). The L83 root cause (writes-better-than-reads)
+  now has its structural cure: retrieval is a 1-second query + an auto-packet + a contract clause
+  + a push — no longer volitional, no longer the operator's memory. Task #346 CLOSED.
