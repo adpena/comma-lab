@@ -10256,3 +10256,22 @@ design/build fired (FP-area penalty on birthed classes · post-birth completion 
 logit-adjust softening/regime-gating · birth-stack ramp-after-bulk) → v7.5 compile → seal
 continues. verdict_scope: formulation — THIS birth-stack composition; island-birth as a
 paradigm is CONFIRMED working (islands born: Lane 1.0→0.039, Movable 1.0→0.0069).
+
+## FEED-perclass (2026-07-08) — OPERATOR DESIGN RIFF: per-class carriers + scorer-rule reconciliation (the argmax-native decomposition)
+Operator verbatim: *"What if we did separate classes separately and then took masks and then
+reconciled according to upstream auth eval scorer?"* + *"Exactly engineered correctly aligned
+with deep math all falls out perfectly and optimally."* ASSESSMENT: YES — this is the
+argmax-NATIVE structure (scorer reconciles by argmax = tropical max of 5 scalar fields; the
+separatrix is DERIVED as tie-loci, never represented). Decoupled per-class fields make
+cross-class theft (the measured Road-floor bug) impossible BY CONSTRUCTION — no shared trunk
+to steal through. Unlocks HETEROGENEOUS per-class carriers, 2/5 already measured: MyCar
+static mask IoU 0.994 (#139, near-free) · Lane analytic band 0.00087 (v7) · Road/Undriv
+boundary = one smooth curve (grids-vs-INR hybrid #308 falls out) · Movable sparse islands
+(homotopy + area-Lagrange). Per-class rate waterfill + per-class annealing schedules
+(τ/β/completion events per class = the engineered annealing, five small flows not one
+self-fighting flow). SUBTLETY: reconciliation is TWO-STAGE — mask-space (our argmax, exact,
+free) then APPEARANCE-space (paint the composite so the FROZEN SegNet argmax through R agrees
+— evaluator-inverse; measured evidence: ideal-dash recall #210, hood clamp #139). Authority =
+byte-closed upstream/evaluate.py only. RELATION: v7.5 counter-force = the near-term in-place
+fix; per-class decomposition = the v8-class architecture that obsoletes the bug class. Design
+derivation fired; build gated on the design + crucible sequencing.
