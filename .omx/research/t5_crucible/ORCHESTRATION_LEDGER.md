@@ -2006,3 +2006,12 @@ consumer update required — asserted [consumers-generic]. ---
   (removed symbol 'v = realized_verdict()'; verified failing on clean HEAD) — fix in v7.3 scope.
   → S2 COND-1 SATISFIED · S5 item-9 contingency SATISFIED · D20 CLOSED.
   **ALL v7.3 PRECONDITIONS MET → firing the v7.3 COMPILE builder.**
+- **v7.3 COMPILED** (098528565, all 7 deltas DONE, dry-run chain GREEN rc=0 with NO --epochs):
+  D16 pool ON via PERF_ENV_PREFIX (structurally guard-required) · Polyak start_epoch=2545
+  DERIVED (726 + 0.8·(3000−726); post-Muon turnpike; degenerate-clamps inert at tiny epochs —
+  builder's own hostile review caught the calibration-crash regression) · hosc safe-compile
+  ARMED (b2 fingerprint_ok=True measured) · budget re-anchored 3.62 min/ep → 8.673d (was 7.427)
+  · off-lever duty queue recorded w/ named triggers (item-3 trigger = day-1 bounded A/B per the
+  falsification) · closed-loop stale tests FIXED 24/24 · NEW-1/pose/registry verified. 5 levers.
+  133 tests green. → CONVENING SEAL ROUND 2 (4 lenses, fix-all-severities, zero-unfixed
+  precondition, counter target 3 clean).
