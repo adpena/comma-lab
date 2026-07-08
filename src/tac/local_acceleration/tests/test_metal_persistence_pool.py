@@ -137,3 +137,89 @@ def test_signature_marks_built():
     assert sig["built"] is True
     assert sig["module"] == "tac.local_acceleration.metal_persistence_pool"
     assert sig["env_flag"] == K.PERSISTENCE_POOL_METAL_KERNEL_FLAG
+
+
+# --- (B2 confound-F2) fingerprint gate + LOUD one-time marker --------------
+def test_fingerprint_gate_permissive_when_no_cert(monkeypatch):
+    """Absent cert (default) => permissive (min/max bit-exact by construction, mean verified) —
+    the same empty-fingerprint = back-compat semantics as the safe-compile sibling."""
+    monkeypatch.delenv(K.PERSISTENCE_POOL_CERT_FP_ENV, raising=False)
+    assert K.persistence_pool_certified_fingerprint() is None
+    ok, reason = K.persistence_pool_fingerprint_ok()
+    assert ok is True and "permissive" in reason
+
+
+def test_fingerprint_gate_reads_env_cert(monkeypatch):
+    import json
+    fp = {"chip": "Apple M5 Max", "macos_build": "ZZ", "mlx_version": "9.9"}
+    monkeypatch.setenv(K.PERSISTENCE_POOL_CERT_FP_ENV, json.dumps(fp))
+    assert K.persistence_pool_certified_fingerprint() == fp
+    # matching host => ok
+    assert K.persistence_pool_fingerprint_ok(host=fp)[0] is True
+    # mismatching host => FAIL-CLOSED (this is what drives the LOUD fallback, not a silent one)
+    bad_host = {"chip": "OTHER", "macos_build": "AA", "mlx_version": "0.0"}
+    ok, reason = K.persistence_pool_fingerprint_ok(host=bad_host)
+    assert ok is False and "STALE" in reason
+
+
+def test_fingerprint_gate_unparseable_cert_is_permissive(monkeypatch):
+    monkeypatch.setenv(K.PERSISTENCE_POOL_CERT_FP_ENV, "not-json{")
+    assert K.persistence_pool_certified_fingerprint() is None
+    assert K.persistence_pool_fingerprint_ok()[0] is True
+
+
+def test_fingerprint_default_path_is_cached_per_env_value(monkeypatch):
+    """Hot-path contract: the DEFAULT (per-step dispatch) call is cached per cert-env value —
+    host_fingerprint() spawns subprocesses and _smooth_density_mlx runs every training step."""
+    import json
+    cert = json.dumps({"chip": "CACHE-TEST-CHIP"})
+    monkeypatch.setenv(K.PERSISTENCE_POOL_CERT_FP_ENV, cert)
+    K._FP_OK_CACHE.clear()
+    v1 = K.persistence_pool_fingerprint_ok()
+    assert cert in K._FP_OK_CACHE            # verdict cached under the raw env value
+    # the cached verdict is returned verbatim (no recompute) — poison the cache to prove the hit.
+    K._FP_OK_CACHE[cert] = (True, "poisoned-cache-sentinel")
+    assert K.persistence_pool_fingerprint_ok() == (True, "poisoned-cache-sentinel")
+    # a CHANGED env value is a distinct key => fresh verdict (tests/env churn stay correct).
+    monkeypatch.setenv(K.PERSISTENCE_POOL_CERT_FP_ENV, "")
+    assert K.persistence_pool_fingerprint_ok()[0] is True
+    K._FP_OK_CACHE.clear()
+    assert v1[0] is False  # a fake chip cert on this host is fail-closed (sanity)
+
+
+def test_path_marker_emits_once_per_reason():
+    K.reset_persistence_pool_path_markers()
+    rows: list[str] = []
+    assert K.emit_persistence_pool_path_marker("pure_mlx_fallback", "fingerprint gate", emit=rows.append) is True
+    assert K.emit_persistence_pool_path_marker("pure_mlx_fallback", "fingerprint gate", emit=rows.append) is False
+    # a DIFFERENT reason emits again.
+    assert K.emit_persistence_pool_path_marker("metal_kernel", "flag+GPU ok", emit=rows.append) is True
+    assert len(rows) == 2
+    import json
+    fallback = json.loads(rows[0])
+    assert fallback["stage"] == "persistence_pool_compute_path"
+    assert fallback["confound_alarm"] is True and fallback["compute_path"] == "pure_mlx_fallback"
+    kernel = json.loads(rows[1])
+    assert kernel["confound_alarm"] is False and kernel["compute_path"] == "metal_kernel"
+
+
+@_REQUIRES_GPU
+def test_stale_fingerprint_falls_back_loudly_not_silently(monkeypatch, capsys):
+    """A recorded cert that MISMATCHES the host: the kernel is enabled (flag+GPU) but the dispatch
+    fails CLOSED to pure-MLX AND emits a LOUD marker row (never the pre-fix silent except: pass)."""
+    import json
+    K.reset_persistence_pool_path_markers()
+    monkeypatch.setenv(K.PERSISTENCE_POOL_METAL_KERNEL_FLAG, "1")
+    monkeypatch.setenv(K.PERSISTENCE_POOL_CERT_FP_ENV,
+                       json.dumps({"chip": "DEFINITELY-NOT-THIS-HOST", "mlx_version": "0.0.0"}))
+    x = mx.array(np.abs(_rand((2, 48, 48), seed=41)).astype(np.float32))
+    out = np.array(P._smooth_density_mlx(x, 3))
+    # result is the correct pure-MLX smoothing (fail-closed is score-neutral) …
+    ref = np.array(x)
+    for _ in range(3):
+        ref = P._pool3x3_np(ref, np.mean)
+    assert np.max(np.abs(out - ref)) <= 1e-6
+    # … and the flip was LOUD (a confound_alarm marker row was printed).
+    printed = capsys.readouterr().out
+    assert "persistence_pool_compute_path" in printed
+    assert '"confound_alarm": true' in printed and "fingerprint gate" in printed

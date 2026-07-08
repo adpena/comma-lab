@@ -65,13 +65,25 @@ from typing import Any
 
 __all__ = [
     "PERSISTENCE_POOL_METAL_KERNEL_FLAG",
+    "PERSISTENCE_POOL_CERT_FP_ENV",
     "metal_persistence_pool_available",
     "persistence_pool_metal_enabled",
+    "persistence_pool_certified_fingerprint",
+    "persistence_pool_fingerprint_ok",
+    "emit_persistence_pool_path_marker",
+    "reset_persistence_pool_path_markers",
     "pool3x3_metal",
     "_pool3x3_metal",
 ]
 
 PERSISTENCE_POOL_METAL_KERNEL_FLAG = "TAC_MLX_CUSTOM_PERSISTENCE_POOL"
+
+# Optional certified {chip, macos_build, mlx_version} fingerprint the bit-identity of the fused pool
+# kernel was MEASURED on (JSON dict). When set + it MISMATCHES the host, the dispatch fails CLOSED to
+# pure-MLX LOUDLY (confound F2 fix, mirrors the safe-compile per-chip trust). Absent => permissive
+# (min/max are order-independent bit-exact by construction; mean is verified — the same
+# empty-fingerprint = legacy/back-compat semantics as tac.mlx_safe_compile.manifest_fingerprint_ok).
+PERSISTENCE_POOL_CERT_FP_ENV = "TAC_MLX_CUSTOM_PERSISTENCE_POOL_CERT_FP"
 
 _OP_CODE = {"min": 0, "max": 1, "mean": 2}
 
@@ -150,12 +162,132 @@ def persistence_pool_metal_enabled() -> bool:
 
     The flag defaults OFF (opt-in compute lever; the numpy reference stays the
     authority). Accepts ``1/true/yes/on`` (case-insensitive).
+
+    NOTE (confound F2): this is the FLAG+DEVICE gate only. The fingerprint gate
+    (:func:`persistence_pool_fingerprint_ok`) is a SEPARATE fail-closed check the
+    dispatch site (``_smooth_density_mlx``) ANDs in, so this predicate keeps its
+    historical flag+GPU meaning (existing tests) while a stale-cert host still
+    falls back LOUDLY, not silently.
     """
 
     val = os.environ.get(PERSISTENCE_POOL_METAL_KERNEL_FLAG, "").strip().lower()
     if val not in ("1", "true", "yes", "on"):
         return False
     return metal_persistence_pool_available()
+
+
+def persistence_pool_certified_fingerprint() -> "dict[str, str] | None":
+    """The certified {chip, macos_build, mlx_version} fingerprint recorded in
+    :data:`PERSISTENCE_POOL_CERT_FP_ENV` (JSON dict), or ``None`` when unset/unparseable.
+
+    ``None`` => no recorded cert => the fingerprint gate is permissive (legacy/back-compat;
+    min/max are bit-exact by construction, mean verified) — the SAME empty-fingerprint semantics
+    as ``tac.mlx_safe_compile.manifest_fingerprint_ok``."""
+    raw = os.environ.get(PERSISTENCE_POOL_CERT_FP_ENV, "").strip()
+    if not raw:
+        return None
+    try:
+        import json
+
+        fp = json.loads(raw)
+    except Exception:
+        return None
+    if not isinstance(fp, dict):
+        return None
+    return {str(k): str(v) for k, v in fp.items()}
+
+
+# Hot-path cache for the DEFAULT (no explicit recorded/host) fingerprint verdict:
+# ``host_fingerprint()`` spawns sysctl/sw_vers subprocesses, and ``_smooth_density_mlx`` runs EVERY
+# training step — re-deriving per call would be a per-step performance regression (own round-1
+# review catch). The verdict is stable within a process for a given cert-env value, so cache keyed
+# by the raw env string (tests that change/clear the env get a distinct key => fresh verdict).
+_FP_OK_CACHE: "dict[str, tuple[bool, str]]" = {}
+
+
+def persistence_pool_fingerprint_ok(
+    recorded: "dict[str, str] | None" = None,
+    host: "dict[str, str] | None" = None,
+) -> "tuple[bool, str]":
+    """``(ok, reason)`` for the pool kernel's certified fingerprint vs the host — the confound-F2
+    fail-closed gate, consistent with the safe-compile sibling.
+
+    Reuses ``tac.mlx_safe_compile.fingerprint_matches`` / ``host_fingerprint`` when importable. A
+    missing recorded fingerprint (default) is OK (permissive: min/max bit-exact by construction, mean
+    verified — matching the sibling's empty-fingerprint = legacy back-compat rule). A recorded cert
+    that MISMATCHES the host is fail-closed (``False``) so the dispatch site can fall back LOUDLY.
+    Best-effort: if the helpers are unavailable it stays permissive (cannot gate what it cannot read).
+    The DEFAULT path (no explicit args — the per-step dispatch call) is CACHED per cert-env value."""
+    if recorded is None and host is None:
+        key = os.environ.get(PERSISTENCE_POOL_CERT_FP_ENV, "").strip()
+        hit = _FP_OK_CACHE.get(key)
+        if hit is not None:
+            return hit
+        verdict = _fingerprint_ok_uncached(None, None)
+        _FP_OK_CACHE[key] = verdict
+        return verdict
+    return _fingerprint_ok_uncached(recorded, host)
+
+
+def _fingerprint_ok_uncached(
+    recorded: "dict[str, str] | None", host: "dict[str, str] | None"
+) -> "tuple[bool, str]":
+    fp = recorded if recorded is not None else persistence_pool_certified_fingerprint()
+    if not fp:
+        return True, ("no certified fingerprint recorded (legacy/unscoped; min/max bit-exact by "
+                      "construction, mean verified) -> permissive")
+    try:
+        from tac.mlx_safe_compile import fingerprint_matches, host_fingerprint
+    except Exception:  # pragma: no cover - safe-compile helpers absent
+        return True, "safe-compile fingerprint helpers unavailable -> cannot gate (permissive)"
+    h = host if host is not None else host_fingerprint()
+    if fingerprint_matches(fp, h):
+        return True, "persistence-pool kernel cert fingerprint matches host"
+    return False, (
+        f"STALE persistence-pool kernel cert: {fp} != host {h} — recertify bit-identity on this host "
+        "(Metal codegen is per-chip; fail-closed to pure-MLX)"
+    )
+
+
+# One-time compute-path markers, keyed by (path, reason) so the LOUD row prints ONCE per distinct
+# resolution per process (not every training step). Reset helper is for tests.
+_POOL_PATH_MARKER_EMITTED: "set[str]" = set()
+
+
+def reset_persistence_pool_path_markers() -> None:
+    """Clear the one-time marker set (test hook)."""
+    _POOL_PATH_MARKER_EMITTED.clear()
+
+
+def emit_persistence_pool_path_marker(path: str, reason: str, *, emit=None) -> bool:
+    """LOUD ONE-TIME marker when the persistence-pool compute path resolves (confound F2: the
+    kernel<->pure-MLX flip is never silent + gives cross-run compute-path provenance).
+
+    ``path`` is ``"metal_kernel"`` (the fused kernel fired) or ``"pure_mlx_fallback"`` (the 9-shift
+    pure-MLX path ran). A flip AWAY from the kernel while it was expected (flag+GPU on) sets
+    ``confound_alarm=True``. Returns True iff it emitted (first time for this ``(path, reason)`` this
+    process). ``emit`` defaults to a flushed ``print`` (the run log captures the JSON row)."""
+    key = f"{path}:{reason}"
+    if key in _POOL_PATH_MARKER_EMITTED:
+        return False
+    _POOL_PATH_MARKER_EMITTED.add(key)
+    import json
+
+    row = {
+        "stage": "persistence_pool_compute_path",
+        "confound_alarm": bool(path != "metal_kernel"),
+        "compute_path": str(path),
+        "reason": str(reason),
+        "flag": PERSISTENCE_POOL_METAL_KERNEL_FLAG,
+        "axis": "[macOS-MLX compute] NON-PROMOTABLE (score-neutral: forward-only, stop_gradient'd)",
+    }
+    _emit = emit if emit is not None else _default_marker_emit
+    _emit(json.dumps(row))
+    return True
+
+
+def _default_marker_emit(line: str) -> None:
+    print(line, flush=True)
 
 
 def pool3x3_metal(x: Any, kind: str) -> Any:

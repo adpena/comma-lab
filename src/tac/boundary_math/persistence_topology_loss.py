@@ -485,21 +485,41 @@ def _smooth_density_mlx(x, iters: int):
     # pure-MLX 9-shift path); GPU-required; CPU/pure-MLX fallback intact. We
     # stop_gradient the INPUT in the metal branch so the no-VJP kernel is legal
     # even inside an mx.grad trace (forward values unchanged ⇒ bit-identical).
+    # (confound F2 fix) Resolve the compute path EXPLICITLY, with a fail-CLOSED fingerprint gate
+    # (mirrors the safe-compile per-chip trust) and a LOUD one-time marker on any flip away from the
+    # kernel — never the pre-fix ``except: pass`` silent fail-open. Import failure => pure-MLX (no
+    # kernel was ever possible; not a flip, no alarm). When the flag is OFF/no-GPU we never enter the
+    # kernel branch => zero new telemetry, byte-identical to the pure-MLX path.
     try:
         from tac.local_acceleration.metal_persistence_pool import (
+            emit_persistence_pool_path_marker,
+            persistence_pool_fingerprint_ok,
             persistence_pool_metal_enabled,
             pool3x3_metal,
         )
+    except Exception:  # pragma: no cover - module unavailable => pure-MLX (no possible kernel flip)
+        for _ in range(int(iters)):
+            x = _pool3x3_mlx(x, "mean")
+        return x
 
-        if persistence_pool_metal_enabled():
-            import mlx.core as mx
+    if persistence_pool_metal_enabled():
+        _fp_ok, _fp_reason = persistence_pool_fingerprint_ok()
+        if _fp_ok:
+            try:
+                import mlx.core as mx
 
-            x = mx.stop_gradient(x)
-            for _ in range(int(iters)):
-                x = pool3x3_metal(x, "mean")
-            return x
-    except Exception:  # pragma: no cover - fallback if module/GPU unavailable
-        pass
+                x = mx.stop_gradient(x)
+                for _ in range(int(iters)):
+                    x = pool3x3_metal(x, "mean")
+                emit_persistence_pool_path_marker("metal_kernel", "flag+GPU+fingerprint ok")
+                return x
+            except Exception as _e:  # pragma: no cover - kernel dispatch failure => LOUD fallback
+                emit_persistence_pool_path_marker(
+                    "pure_mlx_fallback",
+                    f"kernel dispatch raised: {type(_e).__name__}: {_e}")
+        else:
+            # Stale/mismatched cert: fail CLOSED to pure-MLX, LOUDLY (never silent).
+            emit_persistence_pool_path_marker("pure_mlx_fallback", f"fingerprint gate: {_fp_reason}")
     for _ in range(int(iters)):
         x = _pool3x3_mlx(x, "mean")
     return x
