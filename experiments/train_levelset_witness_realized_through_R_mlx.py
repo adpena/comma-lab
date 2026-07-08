@@ -642,6 +642,25 @@ def _build_resume_state_arrays(
     out["__cfg_birth_completion_area_band"] = np.asarray(float(getattr(args, "birth_completion_area_band", 0.25)))
     out["__cfg_birth_completion_ramp_epochs"] = np.asarray(int(getattr(args, "birth_completion_ramp_epochs", 50)))
     out["__cfg_birth_completion_post_level"] = np.asarray(float(getattr(args, "birth_completion_post_level", 0.0)))
+    # (P0 FORCE 1/2/3; task #360) the three in-trunk forces are loss-only + trajectory-affecting (no param
+    # KEYS) — same class as focal/boundary-distance/area-constraint above: persist so a --resume-from that
+    # silently drops/changes them fails closed via _resume_lever_divergences (deterministic-repro). ZERO
+    # archive bytes (resume sidecar is not byte-closed). FORCE 3's ref_domain is decode-consumer provenance
+    # (inert for the training trajectory) -> persisted for provenance but NOT in the divergence guard.
+    out["__cfg_seg_temporal_screw_weight"] = np.asarray(float(getattr(args, "seg_temporal_screw_weight", 0.0)))
+    out["__cfg_seg_temporal_screw_start_epoch"] = np.asarray(int(getattr(args, "seg_temporal_screw_start_epoch", 0)))
+    out["__cfg_seg_temporal_screw_xi_source"] = np.asarray(str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt")))
+    out["__cfg_seg_temporal_screw_classes"] = np.asarray(str(getattr(args, "seg_temporal_screw_classes", "0,1,2")))
+    out["__cfg_seg_temporal_screw_band"] = np.asarray(float(getattr(args, "seg_temporal_screw_band", 2.0)))
+    out["__cfg_seg_margin_satisfice_weight"] = np.asarray(float(getattr(args, "seg_margin_satisfice_weight", 0.0)))
+    out["__cfg_seg_margin_satisfice_msafe"] = np.asarray(float(getattr(args, "seg_margin_satisfice_msafe", 0.06)))
+    out["__cfg_seg_margin_satisfice_delta_r"] = np.asarray(float(getattr(args, "seg_margin_satisfice_delta_r", 0.0196)))
+    out["__cfg_seg_margin_satisfice_headroom"] = np.asarray(float(getattr(args, "seg_margin_satisfice_headroom", 2.0)))
+    out["__cfg_seg_margin_satisfice_start_epoch"] = np.asarray(int(getattr(args, "seg_margin_satisfice_start_epoch", 0)))
+    out["__cfg_seg_margin_satisfice_band"] = np.asarray(float(getattr(args, "seg_margin_satisfice_band", 2.0)))
+    out["__cfg_seg_subpix_boundary_weight"] = np.asarray(float(getattr(args, "seg_subpix_boundary_weight", 0.0)))
+    out["__cfg_seg_subpix_edge_weight_source"] = np.asarray(str(getattr(args, "seg_subpix_edge_weight_source", "uniform")))
+    out["__cfg_seg_subpix_ref_domain"] = np.asarray(str(getattr(args, "seg_subpix_ref_domain", "seg384")))
     # (§22(2) fold) weight-entropy rate penalty is loss-only + trajectory-affecting (no param
     # keys — the surrogate is state-free) — same class: persist for the F2 divergence guard.
     out["__cfg_weight_entropy_penalty_lambda"] = np.asarray(
@@ -806,6 +825,22 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_birth_completion_area_band", float(getattr(args, "birth_completion_area_band", 0.25)), True),
         ("__cfg_birth_completion_ramp_epochs", int(getattr(args, "birth_completion_ramp_epochs", 50)), False),
         ("__cfg_birth_completion_post_level", float(getattr(args, "birth_completion_post_level", 0.0)), True),
+        # (P0 FORCE 1/2/3; task #360) loss-only, trajectory-affecting, no param keys. A resume that
+        # drops/changes any of these would change the loss trajectory -> fail closed. ref_domain is
+        # decode-consumer provenance (inert for training) -> deliberately NOT guarded here.
+        ("__cfg_seg_temporal_screw_weight", float(getattr(args, "seg_temporal_screw_weight", 0.0)), True),
+        ("__cfg_seg_temporal_screw_start_epoch", int(getattr(args, "seg_temporal_screw_start_epoch", 0)), False),
+        ("__cfg_seg_temporal_screw_xi_source", str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt")), False),
+        ("__cfg_seg_temporal_screw_classes", str(getattr(args, "seg_temporal_screw_classes", "0,1,2")), False),
+        ("__cfg_seg_temporal_screw_band", float(getattr(args, "seg_temporal_screw_band", 2.0)), True),
+        ("__cfg_seg_margin_satisfice_weight", float(getattr(args, "seg_margin_satisfice_weight", 0.0)), True),
+        ("__cfg_seg_margin_satisfice_msafe", float(getattr(args, "seg_margin_satisfice_msafe", 0.06)), True),
+        ("__cfg_seg_margin_satisfice_delta_r", float(getattr(args, "seg_margin_satisfice_delta_r", 0.0196)), True),
+        ("__cfg_seg_margin_satisfice_headroom", float(getattr(args, "seg_margin_satisfice_headroom", 2.0)), True),
+        ("__cfg_seg_margin_satisfice_start_epoch", int(getattr(args, "seg_margin_satisfice_start_epoch", 0)), False),
+        ("__cfg_seg_margin_satisfice_band", float(getattr(args, "seg_margin_satisfice_band", 2.0)), True),
+        ("__cfg_seg_subpix_boundary_weight", float(getattr(args, "seg_subpix_boundary_weight", 0.0)), True),
+        ("__cfg_seg_subpix_edge_weight_source", str(getattr(args, "seg_subpix_edge_weight_source", "uniform")), False),
         # (§22(2) fold) weight-entropy rate penalty (loss-only, trajectory-affecting, no param keys).
         ("__cfg_weight_entropy_penalty_lambda",
          float(getattr(args, "weight_entropy_penalty_lambda", 0.0)), True),
@@ -3987,6 +4022,49 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _chroma_gt_prov: Any = None    # list[mx.array (1,H,W,3)] f32, GT BT.601 chroma at (SEG_H,SEG_W)
     _chroma_w_prov: Any = None     # list[mx.array (1,H,W)] f32 annulus weight (margin<band) in {0,1}
 
+    # P0 FORCE 3 (tie-locus displacement; task #360; DSL TieLocusDisplacement). WRAPS the subpix term
+    # above with flip-density edge weighting W_e (source uniform=byte-identical / pa_flipmass=stamped).
+    # ref_domain is a decode-consumer provider option (training is post-R => seg384==camera874_dphase for
+    # the loss). subpix_ew_source=uniform (DEFAULT) => _subpix_ew_prov stays None => the subpix loss uses
+    # the EXACT pre-existing code path (no per-pixel W_e multiply) => byte-identical.
+    subpix_ew_source = str(getattr(args, "seg_subpix_edge_weight_source", "uniform"))
+    subpix_ew_path = str(getattr(args, "seg_subpix_edge_weight_path", "reports/pa_edge_weights.json"))
+    subpix_ref_domain = str(getattr(args, "seg_subpix_ref_domain", "seg384"))
+    _subpix_ew_prov: Any = None    # list[mx.array (1,H,W)] f32 per-straddle W_e weight (pa_flipmass only)
+
+    # P0 FORCE 1 (temporal screw-consistency; task #360; DSL TemporalScrewConsistency). ts_w=0.0
+    # (DEFAULT) => branch skipped + providers None + NO extra SegNet forward => byte-identical. Providers
+    # (per-pair GT xi + annulus mask + a SEG-res warp geom + the GROUND class-include mask) POPULATED
+    # after gt is loaded ONLY when ts_w>0. start>=l7 (needs a formed partition to warp).
+    ts_w = float(getattr(args, "seg_temporal_screw_weight", 0.0))
+    ts_start = int(getattr(args, "seg_temporal_screw_start_epoch", 0))
+    ts_xi_source = str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt"))
+    ts_classes = str(getattr(args, "seg_temporal_screw_classes", "0,1,2"))
+    ts_band = float(getattr(args, "seg_temporal_screw_band", 2.0))
+    ts_gate = {"on": ts_start <= 1}
+    _ts_xi_prov: Any = None        # list[mx.array (6,)] per-pair GT screw (ground_gt) or None (carrier_live)
+    _ts_ann_prov: Any = None       # list[mx.array (1,H,W)] f32 annulus mask (|GT margin|<band) in {0,1}
+    _ts_geom_mlx: Any = None       # _GeomMLX at SEG res for the GROUND-channel prob warp
+    _ts_class_mask: Any = None     # mx.array (3,) include mask over GROUND channels {0,1,2}
+    _ts_warp_native_mlx: Any = None  # the bit-checked MLX homography warp fn (set at provider build)
+
+    # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). ms_w=0.0 (DEFAULT) =>
+    # branch skipped + provider None => byte-identical. m_safe stamped with delta_R provenance; fails
+    # loud if m_safe < delta_R (hinge inside the noise floor). MASK-BY-STAGE at l7 (start>=l7).
+    ms_w = float(getattr(args, "seg_margin_satisfice_weight", 0.0))
+    ms_msafe = float(getattr(args, "seg_margin_satisfice_msafe", 0.06))
+    ms_delta_r = float(getattr(args, "seg_margin_satisfice_delta_r", 0.0196))
+    ms_headroom = float(getattr(args, "seg_margin_satisfice_headroom", 2.0))
+    ms_start = int(getattr(args, "seg_margin_satisfice_start_epoch", 0))
+    ms_band = float(getattr(args, "seg_margin_satisfice_band", 2.0))
+    ms_gate = {"on": ms_start <= 1}
+    _ms_ann_prov: Any = None       # list[mx.array (1,H,W)] f32 annulus mask (|GT margin|<band) in {0,1}
+    if ms_w > 0.0 and not (ms_msafe >= ms_delta_r):
+        raise ValueError(
+            f"--seg-margin-satisfice-msafe ({ms_msafe}) must be >= --seg-margin-satisfice-delta-r "
+            f"({ms_delta_r}) — else the satisficing hinge saturates INSIDE the measured R-noise floor "
+            "and does nothing (fail closed; P0 FORCE 2 derivation §2.4).")
+
     # (--boundary-distance-weight, council levelset-loss-geometry symposium 2026-07-05) SDF-native
     # Kervadec-style boundary-placement loss closure constants. bd_w=0.0 (DEFAULT) => the branch in
     # total_loss_fn is skipped AND the provider stays None => byte-identical (fully additive). The
@@ -4544,7 +4622,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             (subpix_w > 0.0 and subpix_gate["on"] and               # LEVER-4b sub-pixel t
                              _subpix_t_prov is not None) or
                             (chroma_bnd_w > 0.0 and chroma_bnd_gate["on"] and        # LEVER-4c chroma
-                             _chroma_gt_prov is not None))
+                             _chroma_gt_prov is not None) or
+                            (ts_w > 0.0 and ts_gate["on"] and                         # P0 FORCE 1 temporal
+                             _ts_ann_prov is not None) or
+                            (ms_w > 0.0 and ms_gate["on"] and                         # P0 FORCE 2 satisfice
+                             _ms_ann_prov is not None))
         # island-FORMATION levers (#224 amplify + persistence): read the WITNESS-ALONE margin when the
         # BUILD #300 (a) routing is active, else the seed-composed margin (== the pre-#300 path).
         _island_levers_on = ((amplify_w > 0.0 and island_weight_mx is not None) or  # #224 island amplify
@@ -4664,7 +4746,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _t_wit = _Mw / (_Mw + _Mq + subpix_eps)                     # witness sub-pixel boundary ratio
             _t_ref = mx.maximum(_t_tgt, 0.0)                            # sentinel -1 -> 0 (masked anyway)
             _sq = mx.square(_t_wit - _t_ref) * _active                  # placement error on genuine-V px
-            subpix_term = mx.sum(_sq) / (mx.sum(_active) + 1e-6)        # mean over active straddles
+            # P0 FORCE 3 (tie-locus displacement): weight each straddle by its adjacency-edge flip-mass
+            # share W_e (FEED-PA destination matrix). _subpix_ew_prov is None (DEFAULT edge_weight_source
+            # uniform) => the EXACT pre-existing mean (no per-pixel W_e multiply) => BYTE-IDENTICAL; when
+            # pa_flipmass the per-straddle weight concentrates the placement gradient on Road-adjacent
+            # edges (Road<->Lane = 41% of Road's flips). The denominator uses the SAME weight so the term
+            # stays a weighted MEAN (scale-comparable to the uniform mean).
+            if _subpix_ew_prov is not None:
+                _ew = _subpix_ew_prov[_pi_sp]                          # (1,H,W) per-straddle W_e (mean~1.0)
+                subpix_term = mx.sum(_sq * _ew) / (mx.sum(_active * _ew) + 1e-6)
+            else:
+                subpix_term = mx.sum(_sq) / (mx.sum(_active) + 1e-6)    # mean over active straddles
             L = L + subpix_w * subpix_term
             if terms_out is not None:
                 terms_out["subpix"] = subpix_w * subpix_term
@@ -4693,6 +4785,56 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             L = L + chroma_bnd_w * chroma_bnd_term
             if terms_out is not None:
                 terms_out["chroma_boundary"] = chroma_bnd_w * chroma_bnd_term
+        # P0 FORCE 2 (MARGIN-BAND SATISFICING; task #360; DSL MarginBandSatisficing). One-sided hinge on
+        # the SHARED realized through-R witness GT-class margin ``_signed`` (m_wit, #141): stop pushing a
+        # boundary pixel once it is R-robustly SAFE. L_sat = w_s * mean_annulus relu(m_safe - m_wit).
+        # Zero gradient where m_wit >= m_safe => the seg-gradient budget reallocates BY CONSTRUCTION off
+        # the stable interior onto the fragile band (UNIWARD/Fisher satisficing). m_safe = MEASURED
+        # R-noise floor headroom (delta_R p95). Reuses ``_signed`` (NO 2nd forward). Default ms_w=0 =>
+        # skipped => byte-identical. MASK-BY-STAGE at l7 (start>=l7) preserves the tau-anneal; does NOT
+        # replace CE. A/B arm, NOT a claim; pointer 0.19110 UNMOVED.
+        if ms_w > 0.0 and ms_gate["on"] and _ms_ann_prov is not None:
+            _pi_ms = int(c1) // 2
+            _ms_ann = _ms_ann_prov[_pi_ms]                             # (1,H,W) annulus mask {0,1}
+            # hinge on the witness GT-class margin (relu of the deficit below m_safe); saturates to 0
+            # gradient once the pixel margin reaches the R-safe ceiling m_safe.
+            _ms_hinge = mx.maximum(ms_msafe - _signed, 0.0) * _ms_ann  # (1,H,W) deficit on annulus px
+            ms_term = mx.sum(_ms_hinge) / (mx.sum(_ms_ann) + 1e-6)     # mean over annulus px
+            L = L + ms_w * ms_term
+            if terms_out is not None:
+                terms_out["margin_satisfice"] = ms_w * ms_term
+        # P0 FORCE 1 (TEMPORAL SCREW-CONSISTENCY; task #360; DSL TemporalScrewConsistency). Enforce the
+        # GROUND-plane witness partition moves rigidly with the ego screw xi frame-to-frame:
+        # L_temp = w_t * mean_annulus ||phi_c(f1) - Warp_xi(phi_c(f0))||^2 over c in GROUND {0,1,2}.
+        # phi(f1) = softmax(_slog) (SHARED realized forward). phi(f0) = softmax(SegNet(render(f0))) — the
+        # WITNESS's OWN f0 field (ONE extra forward; _render_R at the EVEN index is the raw witness render,
+        # NOT the pose-carrier dispatch). The 3 GROUND softmax channels are warped as an (H,W,3) field by
+        # the SEG-res homography (bit-checked warp; Movable/MyCar NON-ground are never warped). ts_w=0
+        # (DEFAULT) => skipped + no extra forward => byte-identical. start>=l7 (needs a formed partition).
+        # A/B arm; pointer 0.19110 UNMOVED.
+        if ts_w > 0.0 and ts_gate["on"] and _ts_ann_prov is not None and _slog is not None:
+            _pi_ts = int(c1) // 2
+            _ts_ann = _ts_ann_prov[_pi_ts]                             # (1,H,W) annulus mask {0,1}
+            _phi1 = mx.softmax(_slog, axis=-1)                         # (1,H,W,5) realized f1 probs
+            # phi(f0): the witness's OWN f0 field (even index => raw witness render, not carrier dispatch).
+            _f0_ts = _render_R(model, cf, int(c1) - 1, render_h, render_w)  # (1,SEG_H,SEG_W,3)
+            _phi0 = mx.softmax(adapter.segnet(_f0_ts), axis=-1)        # (1,H,W,5) realized f0 probs
+            # xi for the warp: ground_gt = the stored per-pair GT screw (stop-grad const => pure seg
+            # regularizer); carrier_live = the pose carrier's LIVE co-adapted twist (grad flows to dxi:
+            # the dual-use arm; the d_pose tripwire is telemetry-owed at verdicts).
+            if ts_xi_source == "carrier_live":
+                _xi_ts = model.pose_carrier.xi_effective(_pi_ts)       # (6,) LIVE twist (grad -> dxi)
+            else:
+                _xi_ts = _ts_xi_prov[_pi_ts]                           # (6,) stored GT screw (stop-grad)
+            # warp the 3 GROUND softmax channels (0,1,2) as an (H,W,3) field forward by xi into f1.
+            _g0 = _phi0[0, :, :, 0:3]                                  # (H,W,3) GROUND probs at f0
+            _g0w = _ts_warp_native_mlx(_g0, _xi_ts, _ts_geom_mlx)      # (H,W,3) warped into the f1 frame
+            _g1 = _phi1[0, :, :, 0:3]                                  # (H,W,3) GROUND probs at f1
+            _ts_d2 = mx.sum(mx.square(_g1 - _g0w) * _ts_class_mask, axis=-1)  # (H,W) masked to selected GROUND
+            ts_term = mx.sum(_ts_d2 * _ts_ann[0]) / (mx.sum(_ts_ann) + 1e-6)  # mean over annulus px
+            L = L + ts_w * ts_term
+            if terms_out is not None:
+                terms_out["temporal_screw"] = ts_w * ts_term
         # CONSUMER B (SPEC ONLY, NOT built here -- for the lane-band render integration): the SAME
         # precomputed theta-independent (_subpix_t_prov, _subpix_dir_prov) maps are a decode-time
         # RENDER-PLACEMENT target. The AA-SDF / analytic-lane-band render (--lane-render-band /
@@ -5182,6 +5324,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _subpix_dir_prov = []
         _sx_n_active = 0
         _sx_t_sum = 0.0
+        # P0 FORCE 3 (tie-locus displacement; task #360): the flip-density edge-weight matrix W_e, built
+        # INSIDE this loop so the per-straddle weight aligns EXACTLY with the subpix active set + dominant
+        # dir (no mx->np round-trip, no re-derivation). uniform (DEFAULT) => _subpix_ew_prov stays None =>
+        # the subpix loss uses the EXACT pre-existing mean => byte-identical. pa_flipmass STAMPS W_e from
+        # the measured P-A destination matrix (reports/pa_edge_weights.json {'W_e':[[...]]}); absent =>
+        # uniform (W_e==1) + a LOUD WARN (NEVER a hardcoded guess).
+        _we_mat = None
+        _we_src = subpix_ew_source
+        if subpix_ew_source == "pa_flipmass":
+            try:
+                _we_p = Path(subpix_ew_path)
+                if not _we_p.is_absolute():
+                    _we_p = REPO / subpix_ew_path
+                if not _we_p.is_file():
+                    raise OSError(f"artifact not found: {_we_p}")
+                with open(_we_p) as _wf:
+                    _we_mat = np.asarray(json.load(_wf)["W_e"], dtype=np.float32)
+                if _we_mat.shape != (5, 5):
+                    raise ValueError(f"W_e shape {_we_mat.shape} != (5,5)")
+            except (OSError, ValueError, KeyError, json.JSONDecodeError) as _we_exc:
+                print(json.dumps({"stage": "seg_subpix_edge_weight", "level": "WARN",
+                                  "note": f"pa_flipmass edge-weight artifact unusable "
+                                  f"({type(_we_exc).__name__}: {_we_exc}); DOWNGRADING to uniform "
+                                  f"(W_e==1). Path tried: {subpix_ew_path}"}), flush=True)
+                _we_mat = None
+                _we_src = "uniform_fallback"
+            # activate the FORCE-3 provider ONLY on a successful W_e load; a fallback (artifact missing)
+            # leaves _subpix_ew_prov None => the EXACT pre-existing uniform subpix path (byte-identical).
+            if _we_mat is not None:
+                _subpix_ew_prov = []
         for pi in range(P):
             _lst = np.asarray(gt.lstars[pi], np.int64)
             _mg = np.asarray(gt.margins[pi], np.float32)
@@ -5211,6 +5383,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _t_full[_pick_d] = _td[_pick_d]; _dir_full[_pick_d] = 1.0
             _act = _pick_r | _pick_d
             _sx_n_active += int(_act.sum())
+            # P0 FORCE 3: per-active-straddle edge weight W_e[lstar[p], lstar[neighbour]] (neighbour per
+            # dominant dir). Uses the SAME _act/_dir_full/_lst the subpix term consumes => the weight is
+            # applied to EXACTLY the loss's active straddle set. _we_mat is None (uniform) => provider stays
+            # None => byte-identical.
+            if _subpix_ew_prov is not None:  # activated only with a real W_e matrix (see above)
+                _cb_r = np.zeros_like(_lst); _cb_r[:, :-1] = _lst[:, 1:]   # right neighbour class
+                _cb_d = np.zeros_like(_lst); _cb_d[:-1, :] = _lst[1:, :]   # down neighbour class
+                _c_b = np.where(_dir_full < 0.5, _cb_r, _cb_d)
+                _wmap = np.zeros((_sx_H, _sx_W), np.float32)
+                if _act.any():
+                    _ai, _aj = np.nonzero(_act)
+                    _wmap[_ai, _aj] = _we_mat[_lst[_ai, _aj], _c_b[_ai, _aj]]
+                _subpix_ew_prov.append(mx.array(_wmap[None]))             # (1,H,W)
             _sx_t_sum += float(_t_full[_act].sum()) if _act.any() else 0.0
             _subpix_t_prov.append(mx.array(_t_full[None]))              # (1,H,W)
             _subpix_dir_prov.append(mx.array(_dir_full[None]))          # (1,H,W)
@@ -5223,6 +5408,84 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "sub-pixel boundary-placement target t=M_GT[p]/(M_GT[p]+M_GT[q]) on "
                           "genuine-V straddles; supervises the witness realized margin ratio (DIRECTIONAL "
                           "upgrade of LEVER-4 #141); A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+        if _subpix_ew_prov is not None:
+            print(json.dumps({"stage": "seg_subpix_edge_weight", "active": True, "source": _we_src,
+                              "path": subpix_ew_path, "ref_domain": subpix_ref_domain,
+                              "W_e_diag": [round(float(_we_mat[c, c]), 4) for c in range(5)],
+                              "W_e_road_lane": round(float(_we_mat[0, 1]), 4),
+                              "note": "P0 FORCE 3 flip-density edge weighting (Road-hub, Road<->Lane "
+                              "heaviest); ref_domain seg384 is correct for the training loss (post-R); "
+                              "camera874_dphase reserved for the decode-time Consumer B (not built). "
+                              "A/B owed; pointer 0.19110 UNMOVED"}), flush=True)
+
+    # P0 FORCE 2 (margin-band satisficing; task #360) ANNULUS PRECOMPUTE. theta-INDEPENDENT + cheap
+    # (pure numpy from gt.margins). Built ONLY when ms_w>0; else _ms_ann_prov stays None => byte-identical.
+    # The annulus is (|GT margin| < band); GT margin (top1-top2) is >=0 so |.|==itself.
+    if ms_w > 0.0:
+        _ms_H, _ms_W = np.asarray(gt.lstars[0]).shape
+        _ms_ann_prov = []
+        _ms_n_ann = 0
+        for pi in range(P):
+            _mg = np.asarray(gt.margins[pi], np.float32)
+            _ann = (_mg < ms_band).astype(np.float32)
+            _ms_n_ann += int(_ann.sum())
+            _ms_ann_prov.append(mx.array(_ann[None]))                      # (1,H,W)
+        print(json.dumps({"stage": "seg_margin_satisfice", "active": True, "n_pairs": int(P),
+                          "weight": ms_w, "m_safe": ms_msafe, "delta_r": ms_delta_r,
+                          "headroom": ms_headroom, "band": ms_band, "start_epoch": int(ms_start),
+                          "annulus_px_total": int(_ms_n_ann),
+                          "annulus_frac": round(_ms_n_ann / max(P * _ms_H * _ms_W, 1), 4),
+                          "note": "P0 FORCE 2 one-sided relu(m_safe - m_wit) on the annulus; m_safe = "
+                          "headroom*delta_R (MEASURED R-noise floor); frees interior gradient budget; "
+                          "MASK-BY-STAGE at l7 preserves tau-anneal; A/B owed; pointer 0.19110 UNMOVED"}),
+              flush=True)
+
+    # P0 FORCE 1 (temporal screw-consistency; task #360) PRECOMPUTE. theta-INDEPENDENT providers (per-pair
+    # GT screw xi + annulus mask + a SEG-res warp geom + the GROUND class-include mask). Built ONLY when
+    # ts_w>0; else all providers stay None => branch skipped + NO extra SegNet forward => byte-identical.
+    # xi_source ground_gt (DEFAULT) => per-pair GT screw via xi_from_pose_calibration (the SAME calib the
+    # pose carrier uses; stop-grad const => pure seg regularizer). carrier_live => a live pose carrier is
+    # REQUIRED (fail-loud); _ts_xi_prov stays None (the loss reads model.pose_carrier.xi_effective).
+    if ts_w > 0.0:
+        from tac.boundary_math.warp_real_luma_frame0 import (
+            GroundHomographyGeom as _TSGeom,
+            warp_frame0_native_mlx as _ts_warp_fn,
+            xi_from_pose_calibration as _ts_xi_from_calib,
+        )
+        _ts_warp_native_mlx = _ts_warp_fn
+        _ts_H, _ts_W = np.asarray(gt.lstars[0]).shape                      # (SEG_H, SEG_W)
+        # SEG-res warp geometry (K scaled to SEG res; the twist is resolution-independent).
+        _ts_geom_mlx = _TSGeom.eon(native_hw=(_ts_H, _ts_W),
+                                   pitch=float(getattr(args, "gfc_pitch", -0.01))).mlx()
+        # GROUND class-include mask over channels {0,1,2}: 1.0 for a selected class, 0 else.
+        _ts_sel = {int(c.strip()) for c in ts_classes.split(",") if c.strip() != ""}
+        _ts_class_mask = mx.array(
+            np.asarray([1.0 if c in _ts_sel else 0.0 for c in (0, 1, 2)], np.float32))
+        # annulus mask (|GT margin| < band).
+        _ts_ann_prov = [mx.array((np.asarray(gt.margins[pi], np.float32) < ts_band).astype(np.float32)[None])
+                        for pi in range(P)]
+        if ts_xi_source == "ground_gt":
+            _ts_st = float(getattr(args, "gfc_s_t", -0.003224707899359239))
+            _ts_sr = float(getattr(args, "gfc_s_r", 0.0))
+            _ts_pitch = float(getattr(args, "gfc_pitch", -0.01))
+            _ts_xi_prov = [
+                mx.array(_ts_xi_from_calib(np.asarray(gt.gt_poses[pi]), _ts_st, _ts_sr, _ts_pitch)
+                         .astype(np.float32))
+                for pi in range(P)]
+        else:  # carrier_live: the loss reads the live twist; a live carrier is REQUIRED.
+            if getattr(model, "pose_carrier", None) is None:
+                raise ValueError(
+                    "--seg-temporal-screw-xi-source carrier_live requires a live pose carrier "
+                    "(--pose-carrier ...); none is attached (fail closed). Use ground_gt for the "
+                    "pure-seg regularizer arm.")
+            _ts_xi_prov = None
+        print(json.dumps({"stage": "seg_temporal_screw", "active": True, "n_pairs": int(P),
+                          "weight": ts_w, "xi_source": ts_xi_source, "classes": ts_classes,
+                          "band": ts_band, "start_epoch": int(ts_start),
+                          "note": "P0 FORCE 1 GROUND-class annulus prob-warp MSE (ego homography H(xi)); "
+                          "kills the 44% lane-dominated flicker; xi_source=" + ts_xi_source
+                          + " (ground_gt=pure seg regularizer, ZERO pose coupling); ramp w_t at stage "
+                          "boundaries only; A/B owed; pointer 0.19110 UNMOVED"}), flush=True)
 
     # LEVER-4c (ANNULUS-DIRECTED CHROMA-SHARPENING) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy +
     # the numpy-portable bilinear ``_resize_map`` -- NO SegNet forward, NO torch autograd), so it is
@@ -7652,6 +7915,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # LEVER-4c chroma-sharpening engagement is ALSO an AdamW->AdamW treatment boundary (mirrors
             # _bnd_subpix). Default chroma_bnd_w=0.0 => never fires => bit-identical.
             _bnd_chroma = (chroma_bnd_w > 0.0 and (ep >= chroma_bnd_start) and not chroma_bnd_gate["on"])
+            # P0 FORCE 1/2 engagement is ALSO an AdamW->AdamW treatment boundary (mirrors _bnd_subpix).
+            # Default ts_w/ms_w=0.0 => never fires => bit-identical.
+            _bnd_temporal_screw = (ts_w > 0.0 and (ep >= ts_start) and not ts_gate["on"])
+            _bnd_margin_satisfice = (ms_w > 0.0 and (ep >= ms_start) and not ms_gate["on"])
             # (F3 fix) #224 analytic-lane render-band engagement is ALSO an AdamW->AdamW treatment
             # boundary (the band's render-target CHANGES at --lane-band-start-epoch): its sibling levers
             # (lane/margin/thin) already OR into _stage_boundary_now, but the band did NOT, so the
@@ -7663,7 +7930,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # tau via _lever_epoch (byte-identical when re-anchor OFF: _lever_epoch(ep) == ep).
             _bnd_band = (_band_active and (_lever_epoch(ep) >= _band_start) and not band_gate["on"])
             _stage_boundary_now = (_bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
-                                   or _bnd_band or _bnd_subpix or _bnd_chroma)
+                                   or _bnd_band or _bnd_subpix or _bnd_chroma
+                                   or _bnd_temporal_screw or _bnd_margin_satisfice)
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -7812,6 +8080,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if subpix_gate["on"] and not _subpix_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # P0 FORCE 1 temporal-screw engagement gate + transition RE-TREAT (same discipline as LEVER-4b;
+            # start>=l7). Default ts_w=0.0 => never engages => bit-identical.
+            if ts_w > 0.0:
+                _ts_was = ts_gate["on"]
+                ts_gate["on"] = lever_gate_on_at_epoch(ts_w, ts_start, ep)
+                if ts_gate["on"] and not _ts_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "seg_temporal_screw_engage", "epoch": ep, "start": ts_start,
+                                      "xi_source": ts_xi_source,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # P0 FORCE 2 margin-satisfice engagement gate + transition RE-TREAT (MASK-BY-STAGE at l7).
+            # Default ms_w=0.0 => never engages => bit-identical.
+            if ms_w > 0.0:
+                _ms_was = ms_gate["on"]
+                ms_gate["on"] = lever_gate_on_at_epoch(ms_w, ms_start, ep)
+                if ms_gate["on"] and not _ms_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "seg_margin_satisfice_engage", "epoch": ep, "start": ms_start,
+                                      "m_safe": ms_msafe,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # LEVER-4c chroma-sharpening engagement gate + transition RE-TREAT (same discipline as LEVER-4b).
             # (operator override 2026-07-08) SENSOR->START WIRING #3: engagement flips through the chroma
@@ -9690,6 +9978,92 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-4b OPTIMAL-FORM: engage only at ep>=this (0=from ep1). Gate to the "
                     "tau_softplus/l7 margin stage (placement is meaningful once the argmax is roughly "
                     "correct); the engage epoch re-treats the spike-guard (same discipline as LEVER-4).")
+    # P0 FORCE 3 (tie-locus displacement; task #360; DSL TieLocusDisplacement). The MISSING piece on the
+    # BUILT subpix term: flip-density edge weighting W_e (FEED-PA destination matrix — flips concentrate
+    # on Road-adjacent edges). uniform (DEFAULT) = the pre-existing subpix behaviour, BYTE-IDENTICAL;
+    # pa_flipmass STAMPS a 5x5 W_e from the measured P-A artifact (fail-loud -> uniform + WARN if absent,
+    # NEVER a hardcoded guess). #4 R-phase FOLDS in via --seg-subpix-ref-domain (a provider option, NOT a
+    # 2nd term). All three default to the byte-identical (uniform / seg384) path.
+    ap.add_argument("--seg-subpix-edge-weight-source", type=str, default="uniform",
+                    choices=["uniform", "pa_flipmass"],
+                    help="P0 FORCE 3: weight each subpix straddle by its adjacency-edge flip-mass share "
+                    "W_e[c_a,c_b]. 'uniform' (DEFAULT) = W_e==1 everywhere = the pre-existing subpix term "
+                    "BYTE-IDENTICAL. 'pa_flipmass' loads a 5x5 W_e from --seg-subpix-edge-weight-path "
+                    "(the FEED-PA destination matrix; Road-hub, Road<->Lane heaviest); if the artifact is "
+                    "absent it downgrades to uniform + a LOUD WARN (never a hardcoded guess).")
+    ap.add_argument("--seg-subpix-edge-weight-path", type=str, default="reports/pa_edge_weights.json",
+                    help="P0 FORCE 3: path to the 5x5 edge-weight JSON (a {'W_e':[[...]]} matrix stamped "
+                    "from the measured P-A per-edge flip mass, normalized to mean 1.0). Read ONLY when "
+                    "--seg-subpix-edge-weight-source pa_flipmass; missing -> uniform + WARN.")
+    ap.add_argument("--seg-subpix-ref-domain", type=str, default="seg384",
+                    choices=["seg384", "camera874_dphase"],
+                    help="P0 FORCE 3 / FORCE 4 fold: the domain t_ref is computed in. 'seg384' (DEFAULT) "
+                    "= t_ref at 384, CORRECT for the training loss (already post-R via training-through-"
+                    "R). 'camera874_dphase' reserves the 874-res D-sampling-phase t_ref for the decode-"
+                    "time render-placement Consumer B (SPEC-ONLY, not built) — the training loss is "
+                    "domain-invariant by derivation so it is IDENTICAL to seg384 for training; the flag "
+                    "records the decode-domain intent (telemetry-stamped) for the future consumer.")
+    # P0 FORCE 1 (temporal screw-consistency; task #360; DSL TemporalScrewConsistency). Enforces the
+    # GROUND-plane classes move rigidly with the ego screw xi frame-to-frame:
+    # L_temp = w_t * mean_annulus ||phi_c(f1) - Warp_xi(phi_c(f0))||^2  over c in GROUND {0,1,2}.
+    # Kills the 44%-flicker residual (L67). Warp = tac.boundary_math.warp_real_luma_frame0 (MLX
+    # homography, bit-checked vs numpy oracle) at SEG res on the 3 GROUND softmax-prob channels. Movable/
+    # MyCar are NON-ground (homography wrong) => never warped. w_t=0.0 (DEFAULT) => branch skipped +
+    # provider None + NO extra SegNet forward => BYTE-IDENTICAL. Needs a formed partition (start>=l7).
+    ap.add_argument("--seg-temporal-screw-weight", type=float, default=0.0,
+                    help="P0 FORCE 1: weight w_t on the temporal screw-consistency term (0=off). "
+                    "Cold-start 0.1 (~0.1%% of total loss); ramp at STAGE BOUNDARIES ONLY toward "
+                    "gradient-share~0.44 via the per-term gnorm telemetry (NEVER per-step). w_t=0 => "
+                    "byte-identical (branch skipped, provider None, no extra forward).")
+    ap.add_argument("--seg-temporal-screw-start-epoch", type=int, default=0,
+                    help="P0 FORCE 1 OPTIMAL-FORM: engage only at ep>=this (0=from ep1). MUST be >= l7 "
+                    "(needs a formed partition to warp); the engage epoch re-treats the spike-guard.")
+    ap.add_argument("--seg-temporal-screw-xi-source", type=str, default="ground_gt",
+                    choices=["ground_gt", "carrier_live"],
+                    help="P0 FORCE 1 xi source. 'ground_gt' (DEFAULT, confound-SAFE) = the per-pair GT "
+                    "screw from cached gt_poses via xi_from_pose_calibration (a FIXED correct warp; grad "
+                    "flows ONLY to the field => a PURE seg regularizer, ZERO pose coupling). "
+                    "'carrier_live' (DUAL-USE, off-by-default) = the pose carrier's LIVE co-adapted twist "
+                    "xi_effective(pi) (the seg face of the unified screw); requires a live pose carrier "
+                    "(fail-loud) and carries a d_pose tripwire (telemetry d_pose_guard; revert at a stage "
+                    "boundary if d_pose rises — L68: pose is OPEN on this vehicle).")
+    ap.add_argument("--seg-temporal-screw-classes", type=str, default="0,1,2",
+                    help="P0 FORCE 1: the GROUND classes the consistency is enforced on (subset of "
+                    "{0=Road,1=Lane,2=Undrivable}; the plane homography is wrong for Movable/MyCar). "
+                    "The 3 GROUND channels are always warped as an (H,W,3) field; this masks WHICH "
+                    "contribute to the loss.")
+    ap.add_argument("--seg-temporal-screw-band", type=float, default=2.0,
+                    help="P0 FORCE 1: the #333 annulus GT-margin band (|GT margin| < band) the term is "
+                    "restricted to (don't spend gradient on stable interiors; converges with FORCE 2).")
+    # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). One-sided hinge
+    # L_sat = w_s * mean_annulus relu(m_safe - m_wit), m_wit = the witness GT-class signed margin
+    # (_signed, #141). Frees the interior gradient budget onto the fragile band BY CONSTRUCTION.
+    # m_safe = headroom*delta_R (MEASURED R-survival noise floor). w_s=0.0 (DEFAULT) => branch skipped +
+    # provider None => BYTE-IDENTICAL. MASK-BY-STAGE at l7 preserves the tau-anneal (does NOT replace CE).
+    ap.add_argument("--seg-margin-satisfice-weight", type=float, default=0.0,
+                    help="P0 FORCE 2: weight w_s on the margin-band satisficing hinge (0=off). "
+                    "w_s=0 => byte-identical (branch skipped, provider None).")
+    ap.add_argument("--seg-margin-satisfice-msafe", type=float, default=0.06,
+                    help="P0 FORCE 2: the safe-margin ceiling m_safe = headroom*delta_R (default "
+                    "3*delta_R ~= 0.06). Zero gradient once m_wit >= m_safe (R-robustly safe). Fails "
+                    "loud if m_safe < --seg-margin-satisfice-delta-r (the hinge would sit inside the "
+                    "noise floor = pointless).")
+    ap.add_argument("--seg-margin-satisfice-delta-r", type=float, default=0.0196,
+                    help="P0 FORCE 2: the MEASURED R-survival noise floor delta_R (p95 of the uint8-at-"
+                    "camera margin perturbation over the annulus; tools/measure_delta_R_noise_floor.py -> "
+                    "reports/delta_R_noise_floor.json; RE-RUN the tool for n600, never rebuild). Stamped "
+                    "provenance for m_safe.")
+    ap.add_argument("--seg-margin-satisfice-headroom", type=float, default=2.0,
+                    help="P0 FORCE 2: m_safe = (1+headroom)*delta_R headroom convention is folded into "
+                    "--seg-margin-satisfice-msafe directly; this records the headroom factor for "
+                    "provenance/telemetry (default 2 => m_safe ~= 3*delta_R).")
+    ap.add_argument("--seg-margin-satisfice-start-epoch", type=int, default=0,
+                    help="P0 FORCE 2 OPTIMAL-FORM: anneal IN at ep>=this (0=from ep1). MUST be >= l7 "
+                    "(partition formed -> now satisfice; preserves the tau-anneal region formation); the "
+                    "engage epoch re-treats the spike-guard.")
+    ap.add_argument("--seg-margin-satisfice-band", type=float, default=2.0,
+                    help="P0 FORCE 2: the #333 annulus GT-margin band (|GT margin| < band) the hinge is "
+                    "restricted to (the boundary band where d_seg lives).")
     # LEVER-4c ANNULUS-DIRECTED CHROMA-SHARPENING (chroma DOF probe a3e9f0bd GREEN 2026-07-03; operator
     # 2026-06-25 "Chroma too"; ADDITIVE, DEFAULT-OFF). At the fragile margin annulus supervise the
     # witness's OWN rendered chroma (rgb - BT.601-luma, LUMA-INVARIANT) toward the GT chroma so the

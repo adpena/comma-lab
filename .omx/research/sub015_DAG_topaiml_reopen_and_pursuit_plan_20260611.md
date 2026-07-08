@@ -10435,3 +10435,43 @@ coordinates), 6 named risks + cures, P-B/P-C pre-registered, increment-1 + gates
 council-flagged equations awaiting anchors. Tasks: #361 (ramp, LAUNCH-BLOCKING, anti-stranding
 respawn instructions) · #360 (P0 forces, phase-1 in flight) · #359 (v8, gated). Operator:
 "Ramp actuation must not get stranded" — encoded in #361 + SPEC §4.1. Pointer 0.19110 UNMOVED.
+
+## FEED-p0forces-build (2026-07-08) — P0 FORCES phase-2 BUILT: 3 in-trunk forces as DSL Lever factories, DEFAULT-OFF [macOS advisory; NO launch; pointer 0.19110 UNMOVED — MEANS]
+Task #360 phase-2 = the MECHANICAL implementation of `.omx/research/p0_forces_derivation_20260708.md`
+(phase-1 spec). The four derived forces landed as **THREE DSL `Lever` factories** (the 4th, R-phase,
+FOLDS into #3 as a provider option — NOT a 2nd term, per the spec's 4→3 fold), ALL DEFAULT-OFF, each
+byte-identical on the off-path:
+- **`TemporalScrewConsistency`** (FORCE 1) → `--seg-temporal-screw-{weight,start-epoch,xi-source,classes,band}`.
+  `L_temp = w_t·mean_annulus ‖φ_c(f1) − Warp_ξ(φ_c(f0))‖²` over GROUND classes {0,1,2}. Warp = the
+  bit-checked MLX homography `warp_frame0_native_mlx` at SEG res on the 3 GROUND softmax channels (a
+  (H,W,3) field — Movable/MyCar NON-ground never warped). φ(f0) = a witness f0 forward (the EVEN index
+  is the raw witness render, NOT the pose-carrier dispatch). **xi_source DEFAULT `ground_gt`** = the
+  per-pair GT screw (`xi_from_pose_calibration`, same calib as the pose carrier), stop-grad const ⇒ a
+  PURE seg regularizer with ZERO coupling to the (open) pose facet. `carrier_live` = the DUAL-USE arm
+  (live `model.pose_carrier.xi_effective(pi)`, grad→dxi), off-by-default, requires a live carrier
+  (fail-loud), carries the d_pose tripwire telemetry (revert at a stage boundary — L68). w_t cold-start
+  0.1, ramp at STAGE BOUNDARIES only.
+- **`MarginBandSatisficing`** (FORCE 2) → `--seg-margin-satisfice-{weight,msafe,delta-r,headroom,start-epoch,band}`.
+  `L_sat = w_s·mean_annulus relu(m_safe − m_wit)`, m_wit = the SHARED `_signed` field (#141), m_safe =
+  **3·δ_R ≈ 0.06** (δ_R=0.0196 MEASURED R-noise floor). Frees the interior gradient budget onto the band
+  BY CONSTRUCTION (UNIWARD satisficing). MASK-BY-STAGE at l7 preserves the τ-anneal (does NOT replace CE).
+  Trainer fails LOUD if m_safe < δ_R (hinge inside the noise floor).
+- **`TieLocusDisplacement`** (FORCE 3, the highest-EV precision counter-force) → WRAPS the already-built
+  subpix term (`--seg-subpix-boundary-*`) + adds `--seg-subpix-edge-weight-{source,path}` (5×5 W_e
+  flip-density weighting STAMPED from the FEED-PA destination matrix `reports/pa_edge_weights.json`;
+  fail-loud→uniform+WARN if absent, NEVER a hardcoded guess) + `--seg-subpix-ref-domain` (the FORCE-4
+  fold: `seg384` correct for the training loss (post-R), `camera874_dphase` reserved for the decode
+  Consumer B — domain-invariant for training, telemetry-stamped provenance). `edge_weight_source=uniform`
+  (trainer default) = the pre-existing subpix mean, BYTE-IDENTICAL.
+RESUME: all force flags are loss-only/trajectory-affecting (no param keys) → `__cfg_seg_*` exported +
+`_resume_lever_divergences`-guarded (a resume that drops/changes a force fails closed; a pre-force sidecar
+tolerated; ref_domain deliberately NOT guarded = decode-provenance, inert for the training trajectory).
+Engagement re-treats the spike-guard (mirrors subpix). **TRIALITY: DSL leg by construction** (3 `Lever`
+factories → `lever_registry.completeness()` auto-derives all three, 0 unmapped / 0 stale; activation
+ledger holds all 3 with duty-to-measure — #363 passes by construction). **SCOPE (§9): NONE composed ON in
+crucible_v7** — default-off, activate ONE per crucible increment with a measured A/B (turning all 3 on =
+SPEC VIOLATION). **Equations leg = COUNCIL-FLAGGED, NOT registered** (the L_temp / L_sat / L_tie·W_e laws
+are DESIGNED not MEASURED — FORMALIZATION_PENDING per "council-flagged equations are not registered until
+their anchors land"; the derivation memo + this FEED carry the law; register when the per-force A/B n600
+rows land). 19 new tests + 151 neighbouring (registry/crucible/birth-ramp/autoconfig) green; ruff F clean.
+Landing memo `.omx/research/p0_forces_phase2_build_20260708.md`. Pointer 0.19110 UNMOVED (means).

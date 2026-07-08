@@ -2735,6 +2735,184 @@ def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # n
                + "; advisory until byte-closed"))
 
 
+def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
+    weight: float = 0.1, start_epoch: int = 0, xi_source: str = "ground_gt",
+    classes: str = "0,1,2", band: float = 2.0, window: int = 0,
+) -> Lever:
+    """P0 FORCE 1 — TEMPORAL SCREW-CONSISTENCY (derivation
+    ``.omx/research/p0_forces_derivation_20260708.md`` §FORCE 1; task #360). DEFAULT-OFF.
+
+    The witness renders BOTH frames of each scored pair but SegNet scores ONLY f1. Under ego-motion
+    the GROUND-plane classes (Road 0, Lane 1, Undrivable 2) transform by the plane-induced homography
+    ``H(ξ) = K(R - t·nᵀ/d)K⁻¹``. This term enforces the temporally-consistent constraint
+    ``φ_c(f1) ≈ Warp_ξ(φ_c(·, f0))`` on the annulus over the GROUND classes:
+    ``L_temp = w_t · Σ_{annulus, c∈GROUND} ‖φ_c(f1) − Warp_ξ(φ_c(f0))‖² / |annulus|``. It kills the
+    measured 44%-flicker residual (L67, lane-dominated) which is exactly the failure of this constraint.
+
+    Warp = the differentiable MLX homography path in ``tac.boundary_math.warp_real_luma_frame0``
+    (``warp_frame0_native_mlx``, bit-checked vs the numpy oracle) built at SEG resolution — the 3 GROUND
+    softmax-prob channels warped as an ``(H,W,3)`` field. ``φ_c`` are the through-R realized softmax
+    probs (consistent with what SegNet scores). Movable(3)/MyCar(4) are NON-ground → the homography is
+    wrong for them → they are NEVER warped (classes⊆{0,1,2}).
+
+    ``xi_source`` (default ``ground_gt`` — the confound-SAFE cold start): ξ = the per-pair GT screw from
+    the cached ``gt_poses`` via ``xi_from_pose_calibration`` (the SAME calibration the pose carrier uses),
+    a FIXED correct warp with grad flowing ONLY to the field φ ⇒ a PURE seg-consistency regularizer with
+    ZERO coupling to the (open) pose facet. ``carrier_live`` = the DUAL-USE arm (ξ = the pose carrier's
+    LIVE co-adapted twist ``xi_effective(pi)``; the seg face of the unified screw), gated on a d_pose
+    tripwire (telemetry ``d_pose_guard``; revert to ground_gt at a stage boundary if d_pose rises — L68:
+    pose is OPEN on this vehicle, so the dual-use arm bets the fragile pose optimum on the unification
+    holding — do NOT default to it).
+
+    ``weight`` cold-start 0.1 (order-of-magnitude ≈0.1% of total loss 6.7 ⇒ far under the 40%
+    ``term_domination`` alarm); ramp at STAGE BOUNDARIES ONLY toward the gradient-share≈0.44 target using
+    the per-term gnorm telemetry (NEVER per-step — the GradNorm-would-mute-the-canary warning). The
+    trainer flag ``--seg-temporal-screw-weight`` is default 0.0 ⇒ byte-identical when this lever is not
+    composed. ``start_epoch >= l7`` (needs a formed partition to warp). ``window=0`` = loss-config lever,
+    no epoch budget. Advisory until byte-closed (pointer 0.19110 UNMOVED)."""
+    if not (float(weight) >= 0.0):
+        raise ValueError(f"TemporalScrewConsistency: weight must be >= 0, got {weight!r}")
+    if str(xi_source) not in ("ground_gt", "carrier_live"):
+        raise ValueError(
+            f"TemporalScrewConsistency: xi_source must be 'ground_gt' or 'carrier_live', got {xi_source!r}")
+    if not (float(band) > 0.0):
+        raise ValueError(f"TemporalScrewConsistency: band must be > 0, got {band!r}")
+    _cls = [c.strip() for c in str(classes).split(",") if c.strip() != ""]
+    if not _cls or any(c not in ("0", "1", "2") for c in _cls):
+        raise ValueError(
+            f"TemporalScrewConsistency: classes must be a non-empty subset of GROUND {{0,1,2}}, "
+            f"got {classes!r} (Movable/MyCar are non-ground -> the homography is wrong for them)")
+    return Lever(
+        "temporal_screw_consistency",
+        overrides={"--seg-temporal-screw-weight": float(weight),
+                   "--seg-temporal-screw-start-epoch": int(start_epoch),
+                   "--seg-temporal-screw-xi-source": str(xi_source),
+                   "--seg-temporal-screw-classes": str(classes),
+                   "--seg-temporal-screw-band": float(band)},
+        epochs_delta=window,
+        notes=("P0 FORCE 1 temporal screw-consistency (GROUND-class annulus prob-warp MSE; ego "
+               "homography H(xi); kills the 44% lane-dominated flicker residual); xi_source="
+               + str(xi_source) + " (ground_gt=pure seg regularizer, ZERO pose coupling); default-OFF; "
+               "start>=l7; ramp w_t at stage boundaries only; advisory until byte-closed"))
+
+
+def MarginBandSatisficing(  # noqa: N802 — P0 FORCE 2 (task #360)
+    weight: float = 0.2, msafe: float = 0.06, delta_r: float = 0.0196,
+    headroom: float = 2.0, start_epoch: int = 0, band: float = 2.0, window: int = 0,
+) -> Lever:
+    """P0 FORCE 2 — MARGIN-BAND SATISFICING (derivation
+    ``.omx/research/p0_forces_derivation_20260708.md`` §FORCE 2; task #360). DEFAULT-OFF.
+
+    A one-sided hinge that stops pushing a boundary pixel once it is R-robustly SAFE:
+    ``L_sat = w_s · mean_annulus relu(m_safe − m_wit)``, ``m_wit`` = the witness GT-class signed margin
+    (the ``_signed`` field, #141 top1−top2). Zero gradient where ``m_wit ≥ m_safe`` ⇒ the seg-gradient
+    budget reallocates BY CONSTRUCTION off the ~95%-of-pixels stable interior (GT margin p50≈0.897) onto
+    the ~2.6%-area boundary band. This is the UNIWARD/Fisher satisficing reading: spend the code where
+    the detector's margin is fragile.
+
+    ``m_safe = headroom·δ_R`` (default ``3·δ_R ≈ 0.06``, headroom 2). ``δ_R = 0.0196`` is the MEASURED
+    R-survival noise floor (p95 of the uint8-at-camera margin perturbation over the annulus;
+    ``tools/measure_delta_R_noise_floor.py`` → ``reports/delta_R_noise_floor.json``; RE-RUN the tool for
+    n600, never rebuild). m_safe is stamped WITH its δ_R provenance; the trainer fails loud if
+    ``m_safe < δ_R`` (the hinge would sit inside the noise floor = pointless).
+
+    Does NOT REPLACE CE — the incumbent ``tau_softplus`` seg loss is ALREADY a temperature-τ margin loss
+    (its τ→0 hard limit IS this hinge). REPLACING it early would starve region formation (the area-
+    Lagrange / island-birth stack needs interior-forming pressure), so this term MASKS-BY-STAGE: it
+    anneals IN at the l7 sharpening stage boundary (partition formed → now satisfice), preserving the
+    τ-anneal. ``start_epoch >= l7`` (default gate matches seg_chroma_boundary/lane_band starts).
+
+    The trainer flag ``--seg-margin-satisfice-weight`` is default 0.0 ⇒ byte-identical when not composed.
+    ``window=0`` = loss-config lever. Advisory until byte-closed (pointer 0.19110 UNMOVED)."""
+    if not (float(weight) >= 0.0):
+        raise ValueError(f"MarginBandSatisficing: weight must be >= 0, got {weight!r}")
+    if not (float(delta_r) > 0.0):
+        raise ValueError(f"MarginBandSatisficing: delta_r must be > 0, got {delta_r!r}")
+    if not (float(headroom) >= 0.0):
+        raise ValueError(f"MarginBandSatisficing: headroom must be >= 0, got {headroom!r}")
+    if not (float(band) > 0.0):
+        raise ValueError(f"MarginBandSatisficing: band must be > 0, got {band!r}")
+    if not (float(msafe) >= float(delta_r)):
+        raise ValueError(
+            f"MarginBandSatisficing: msafe ({msafe!r}) must be >= delta_r ({delta_r!r}) — else the hinge "
+            "saturates inside the measured R-noise floor and does nothing (fail closed).")
+    return Lever(
+        "margin_band_satisficing",
+        overrides={"--seg-margin-satisfice-weight": float(weight),
+                   "--seg-margin-satisfice-msafe": float(msafe),
+                   "--seg-margin-satisfice-delta-r": float(delta_r),
+                   "--seg-margin-satisfice-headroom": float(headroom),
+                   "--seg-margin-satisfice-start-epoch": int(start_epoch),
+                   "--seg-margin-satisfice-band": float(band)},
+        epochs_delta=window,
+        notes=("P0 FORCE 2 margin-band satisficing (one-sided relu(m_safe - m_wit) on the annulus; "
+               f"m_safe={float(msafe)} = {float(headroom)}*delta_R({float(delta_r)}) MEASURED R-noise "
+               "floor); frees the interior gradient budget onto the band (UNIWARD satisficing); "
+               "MASK-BY-STAGE at l7 preserves the tau-anneal; default-OFF; advisory until byte-closed"))
+
+
+def TieLocusDisplacement(  # noqa: N802 — P0 FORCE 3 (task #360; WRAPS the existing subpix term)
+    weight: float = 0.3, start_epoch: int = 0, v_band: float = 1.0,
+    edge_weight_source: str = "pa_flipmass",
+    edge_weight_path: str = "reports/pa_edge_weights.json",
+    ref_domain: str = "seg384", window: int = 0,
+) -> Lever:
+    """P0 FORCE 3 — TIE-LOCUS NORMAL-DISPLACEMENT (derivation
+    ``.omx/research/p0_forces_derivation_20260708.md`` §FORCE 3; task #360). DEFAULT-OFF.
+
+    The d_seg currency IS boundary displacement (FEED-PA: 100% of the achievable floor is boundary
+    placement). The machinery is ALREADY BUILT — the ``subpix`` term (trainer ~L4640) supervises the
+    witness sub-pixel margin ratio ``t_wit = M_w/(M_w+M_q)`` toward the GT sub-pixel ratio ``t_ref``
+    over genuine-V inter-class straddles (fully differentiable through the through-R ``_signed`` field).
+    ``δn = |t_wit − t_ref|`` IS the sub-pixel normal-displacement error.
+
+    This lever WRAPS the existing subpix flags (``--seg-subpix-boundary-weight/-start-epoch/-v-band``)
+    and adds the MISSING piece: the flips are NOT uniform over straddles — they concentrate on
+    Road-adjacent edges (Road hub; Road↔Lane = 41% of Road's flips, FEED-PA destination matrix). It
+    weights each straddle by its adjacency-edge flip-mass share ``W_e[c_a,c_b]`` (a 5×5 symmetric matrix
+    STAMPED from the measured P-A artifact — ``edge_weight_source=pa_flipmass`` reads
+    ``edge_weight_path``; falls back to ``uniform`` + a LOUD WARN if the artifact is absent — NEVER a
+    hardcoded guess). ``edge_weight_source=uniform`` = the pre-existing subpix behaviour, byte-identical.
+
+    ``ref_domain`` (§FORCE 4 fold — NOT a second term): ``seg384`` (default) computes ``t_ref`` at 384
+    (correct for the TRAINING loss, which is already post-R — the R-phase is handled by training-through-
+    R). ``camera874_dphase`` reserves the 874-res D-sampling-phase ``t_ref`` for the decode-time render-
+    placement Consumer B (SPEC-ONLY, not built) — the TRAINING loss is domain-invariant by derivation
+    (already through-R) so it is IDENTICAL to seg384 for training; the flag records the operator's decode
+    domain intent (telemetry-stamped) for the future consumer.
+
+    The trainer flag ``--seg-subpix-boundary-weight`` is default 0.0 ⇒ byte-identical when not composed;
+    ``--seg-subpix-edge-weight-source`` default ``uniform`` in the trainer keeps the incumbent subpix
+    byte-identical, so this lever ELECTS pa_flipmass explicitly. Highest-EV of the P0 forces (the
+    precision counter-force the FEED-roadfloor bug named). ``window=0`` = loss-config lever. Advisory
+    until byte-closed (pointer 0.19110 UNMOVED)."""
+    if not (float(weight) >= 0.0):
+        raise ValueError(f"TieLocusDisplacement: weight must be >= 0, got {weight!r}")
+    if not (float(v_band) > 0.0):
+        raise ValueError(f"TieLocusDisplacement: v_band must be > 0, got {v_band!r}")
+    if str(edge_weight_source) not in ("uniform", "pa_flipmass"):
+        raise ValueError(
+            f"TieLocusDisplacement: edge_weight_source must be 'uniform' or 'pa_flipmass', "
+            f"got {edge_weight_source!r}")
+    if str(ref_domain) not in ("seg384", "camera874_dphase"):
+        raise ValueError(
+            f"TieLocusDisplacement: ref_domain must be 'seg384' or 'camera874_dphase', got {ref_domain!r}")
+    return Lever(
+        "tie_locus_displacement",
+        overrides={"--seg-subpix-boundary-weight": float(weight),
+                   "--seg-subpix-boundary-start-epoch": int(start_epoch),
+                   "--seg-subpix-boundary-v-band": float(v_band),
+                   "--seg-subpix-edge-weight-source": str(edge_weight_source),
+                   "--seg-subpix-edge-weight-path": str(edge_weight_path),
+                   "--seg-subpix-ref-domain": str(ref_domain)},
+        epochs_delta=window,
+        notes=("P0 FORCE 3 tie-locus normal-displacement (WRAPS the built subpix term; adds flip-density "
+               "edge weighting W_e stamped from the FEED-PA destination matrix, source="
+               + str(edge_weight_source) + "; Road-hub / Road<->Lane heaviest); ref_domain="
+               + str(ref_domain) + " (#4 R-phase FOLDS in, training is post-R); highest-EV precision "
+               "counter-force; default-OFF; advisory until byte-closed"))
+
+
 def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa: N802
                      window: int = 100) -> Lever:
     """FEED-07b lever #1 (#220): AA coverage render + grid≥384 — the gate's "#1 MEASURED islands
