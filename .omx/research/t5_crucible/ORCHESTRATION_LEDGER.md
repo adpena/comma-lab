@@ -111,8 +111,20 @@ G. **TRIALITY + TASK INTEGRATION (operator-directed 2026-07-07: "all must be int
    default-on observability); (3) **DAG** — crucible FEED entries for the measured rows + the
    design decision (FEED-09x series); (4) **tasks** — the draft's build list + recess queue →
    TaskCreate rows with owners; superseded tasks (#183, #124, #285 per the compendium) marked
-   with supersession notes. P7 is NOT complete until the drift detector is satisfied on all
-   legs — integration commits drop the [no-triality] tag because they ARE the triality landing.
+   with supersession notes; (5) **COSTATE CONTROLLER (operator addition)** — the crucible's
+   control designs land as CODE in the live controller surfaces, not as memo prose:
+   S3's SENSE additions (gn_spectrum.checkpoint_lanczos producer + requirement-F rows: anneal
+   state, online meat, trigger would-fire audits, transition health) wired into
+   `witness_control`/`costate_digest`; S3's DECIDE laws (curvature-aware exhaustion predicate,
+   spectrum-rate exponential-mixture replacing linear-λ, λ_max-sized trust region, POWERPLAY
+   never-regress) landed shadow-mode-first; the NEW `quadratic_basin` ExitEvent registered as a
+   DSL gap-kind; the activation-ledger launch-time argv→lever ENGAGED ingest (S5 R1) wired so
+   the ledger finally reads real runs; the duty-to-measure queue RE-RANKED from crucible
+   verdicts (S5's FIRE/DEFER/RETIRE table replaces the stale never-fired ranking). Actuation
+   boundary UNCHANGED: advisory-only autonomous, heavy/stop/config = operator-GO (CONTAINMENT).
+   P7 is NOT complete until the drift detector is satisfied on all legs AND the controller
+   consumes the new senses — integration commits drop the [no-triality] tag because they ARE
+   the triality landing.
 F. **TELEMETRY ENHANCED FROM FINDINGS (operator-directed 2026-07-07).** Every crucible finding
    discovered by post-hoc forensics becomes a LIVE telemetry row + alarm in the next run —
    "anything found by archaeology must be observable in flight." The findings→telemetry map
