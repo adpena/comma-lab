@@ -124,12 +124,20 @@ def missing_perf_env_vars(launch_sh_text: str,
                           required: dict[str, str] | None = None) -> list[str]:
     """Return the ``NAME=VALUE`` perf-env assignments from ``required`` (default REQUIRED_PERF_ENV)
     that are ABSENT from ``launch_sh_text`` — the pure core of the launcher's perf-env CLASS guard.
-    A var counts as present only when its exact ``NAME=VALUE`` appears (a bare ``NAME`` or a wrong
-    value does NOT satisfy it — the fast path needs the value set, not merely the name mentioned).
-    Sorted for a stable REFUSE message. Pure (unit-testable at $0)."""
+    A var counts as present only when its exact ``NAME=VALUE`` appears on a TOKEN BOUNDARY (a bare
+    ``NAME``, a wrong value, OR a value of which the required value is a PREFIX does NOT satisfy it —
+    e.g. required ``NAME=1`` is NOT satisfied by an emitted ``NAME=10``; the fast path needs the value
+    set exactly, not merely the name mentioned). Sorted for a stable REFUSE message. Pure
+    (unit-testable at $0).
+
+    Implementation (B4 REVISE-1 fix): tokenize ``launch_sh_text`` with the SAME parser the required
+    manifest is DERIVED from (:func:`_parse_perf_env`) and compare on the parsed ``NAME -> VALUE`` map,
+    so ``NAME=1`` cannot substring-match inside ``NAME=10`` (the pre-fix ``f"{name}={val}" not in text``
+    bug: ``"NAME=1"`` IS a substring of ``"NAME=10"`` -> falsely reported present)."""
     req = REQUIRED_PERF_ENV if required is None else required
+    present = _parse_perf_env(launch_sh_text)  # token-boundary parse (last assignment wins, shell-like)
     return sorted(f"{name}={val}" for name, val in req.items()
-                  if f"{name}={val}" not in launch_sh_text)
+                  if present.get(name) != val)
 
 
 class TypedConfigError(ValueError):
