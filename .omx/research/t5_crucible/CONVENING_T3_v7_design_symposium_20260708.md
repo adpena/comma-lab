@@ -1,5 +1,15 @@
 # T3 SYMPOSIUM CONVENING — crucible_v7 restart design review (2026-07-08)
 
+STORES CONSULTED: DRAFT_v7_restart_config_synthesis_20260708.md (the spec + its own store
+sweep) · ORCHESTRATION_LEDGER.md last 8 folds (landed v7 pieces + requirements N–V) ·
+witness_native_schedule_derivation_20260709.md (continuous verdict) · GROUNDING_PACKET_20260707
+seat-contract pattern (blind positions + #363 tags) · CLAUDE.md council hierarchy (T3 scope,
+optimal-form PROCEED-unconditional rule, structure-round binding per
+elementwise_audits_launder memory) · MEMORY.md model-routing ladder (Opus seats) · run-1
+launch.sh + run.log (baseline-arm state for S5's comparability attack). Not consulted: council
+posterior query for prior same-topic anchors (the #302 schedule-derivation T3 is the nearest
+prior — seats should cite it if their position touches it).
+
 council_tier: T3 (design authority: schedule/curriculum structural change, discrete→continuous)
 status: PRE-STAGED — fires when `.omx/research/t5_crucible/crucible_v7_authored_20260708.md`
 lands (the diff-vs-v6 table there is the primary review surface). Operator-approved sequence:
