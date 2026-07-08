@@ -1796,3 +1796,11 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   τ_end fails closed on a non-mod32cap vehicle (P-CT1); missing artifact → fallback to sealed literal
   (launch never blocked). 100 tests green; ruff F clean. Memo:
   `lawref_migration_crucible_v6_20260708.md`. Pointer 0.19110 UNMOVED — apparatus.
+
+--- consumer-leg record (drift hook, 2026-07-08): the MAJOR-1 fix's new public surfaces
+(muon_gate_state_arrays / muon_gate_restore_from_cfg + __mg_* sidecar keys + dwell_at_cap
+telemetry field) are RESUME-PATH + telemetry-row surfaces, not render surfaces: the sidecar
+keys are consumed only by the trainer's resume reconstruction; dwell_at_cap rides an existing
+presence-gated telemetry row that the schema-driven introspect layer (witness_run_introspect →
+dashboard LIVE) renders generically; costate_digest reads ledgers generically. No bespoke
+consumer update required — asserted [consumers-generic]. ---
