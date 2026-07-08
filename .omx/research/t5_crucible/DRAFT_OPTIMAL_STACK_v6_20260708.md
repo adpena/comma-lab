@@ -35,6 +35,10 @@ verdict_scope: formulation — v6.2 additions: B19 decode-side seeded dither DEA
   P-DITHER's kill, scoped FORMULATION at source (unbiased decode-side seeded dither as-built;
   render-informed forms — trained-with dither, #149 placement — remain open run-2 per the
   reformulation queue in probe_tau2_dither_20260708.md). # VERDICT_SCOPE_OK:v6.2-added-tokens-quote-the-formulation-scoped-P-DITHER-kill
+verdict_scope: formulation — v6.3/v6.4 additions: B19 supersession marks + risk-row text quote
+  the same source-scoped verdicts already enumerated above (P-DITHER formulation kill; the LR
+  risk row is a MEASURED deviation resolved-by-build, not a verdict). No new negative asserted.
+  # VERDICT_SCOPE_OK:v63-supersession-marks-quote-previously-scoped-verdicts
   {INSTANCE | FORMULATION | FAMILY | PARADIGM}; kills enumerate reformulation queues.
 ---
 
