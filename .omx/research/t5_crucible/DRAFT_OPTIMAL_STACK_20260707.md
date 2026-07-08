@@ -12,6 +12,13 @@ epistemic_contract: every knob carries a CONTROL LAW class {(a) CONSTANT · (b) 
   DERIVED · DEFAULT-PENDING-RECESS}. Proposing-optimal-with-tags; nothing unmeasured asserted
   as measured. Pointer contest-CPU 0.19110 UNMOVED — this whole file is MEANS.
 axis: all numbers [macOS-CPU/MLX advisory] unless tagged; archive bytes are exact (zip stat).
+stores_consulted: "STORES CONSULTED: convening record §1-§4 · ORCHESTRATION_LEDGER (reqs A-G,
+  ordering guard, all seat logs) · CONTEXT_COMPENDIUM (20-store sweep incl. task-backlog + rate
+  taxonomy) · seat positions S1-S6 (all read in full) · dossier §1-§24 · canonical_equations
+  registry (two-regime law, λ_bytes, adaptive-ε rows) · tac.witness_dsl.curriculum_dsl (flag
+  verification) · run launch.sh ground truth (mod32cap + 20260702 full-stack) · CLAUDE.md
+  non-negotiables. NOT consulted: pursuit_chainA output (ABSENT at draft time — §2.4 branches on
+  it); durable-state files (flagged 3-8wk STALE by the sweep, deliberately skipped)."
 ---
 
 # T5 CRUCIBLE — P2 DRAFT: THE OPTIMAL FULL STACK (launchable as written)
