@@ -194,6 +194,10 @@ from tac.canonical_equations.adaptive_eps_cfl_edge_tracking_20260705 import (
     build_adaptive_eps_cfl_edge_tracking_v1,
     populate_adaptive_eps_cfl_edge_tracking_equation,
 )
+from tac.canonical_equations.safe_compile_device_bitidentity_20260708 import (
+    build_safe_compile_hosc_device_bitidentity_v1,
+    populate_safe_compile_device_bitidentity_equation,
+)
 from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 import (
     build_anisotropic_basis_two_regime_allocation_v1,
     freq_along_for_regime,
@@ -335,6 +339,8 @@ __all__ = [
     "build_oom_verdict_batch_spike_peak_rss_v1",
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_adaptive_eps_cfl_edge_tracking_v1",
+    "build_safe_compile_hosc_device_bitidentity_v1",
+    "populate_safe_compile_device_bitidentity_equation",
     "populate_adaptive_eps_cfl_edge_tracking_equation",
     "build_anisotropic_basis_two_regime_allocation_v1",
     "freq_along_for_regime",
