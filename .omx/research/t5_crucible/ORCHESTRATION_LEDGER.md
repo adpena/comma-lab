@@ -1958,3 +1958,13 @@ consumer update required — asserted [consumers-generic]. ---
   probe HELD until the bit-cert frees the GPU (avoid 3 GPU tenants beside run-1).
 - **Run-1 @16:12Z**: ALIVE ep105; ep75 verdict d_seg 0.141923, d_pose 2.084 — BOTH descending
   (0.155→0.142, 3.59→2.08); implied_S 21.5→18.8; blob 91.7KB. Check-in pushed.
+- **MICRO-BATCH CRUX MEASURED: premise FALSIFIED at mechanism level** (1e2978251/0b8b1954c,
+  verdict_scope: formulation): divergence enters at the FROZEN-SCORER FORWARD (batch-size-
+  dependent kernel tiling — GPU logit drift 2.26e-2, 11/196608 argmax flips; CPU argmax-
+  INVARIANT 0 flips), UPSTREAM of any reduction; the batched backward additionally reorders
+  ~1e-3..4e-3 and is run-to-run nondeterministic. Bit-identity-at-speedup = 1.0× (impossible
+  without batch-invariant scorer kernels, #252/#356). CONSEQUENCE for the synthesis: item 3
+  STAYS v7.1-ARM with the day-1 bounded n600 d_seg A/B (GPU flips 0.006% px = plausibly
+  neutral, MEASURE); the crux-addendum's conditional elevation for item 3 is REVOKED by
+  evidence. LAW registered: frozen_scorer_forward_batch_dependence_v1 (2 MEASURED anchors).
+  Item 4 remains ELEVATED (GPU bit-cert ADMIT stands, law safe_compile_hosc_device_bitidentity_v1).

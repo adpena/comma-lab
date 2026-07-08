@@ -198,6 +198,10 @@ from tac.canonical_equations.safe_compile_device_bitidentity_20260708 import (
     build_safe_compile_hosc_device_bitidentity_v1,
     populate_safe_compile_device_bitidentity_equation,
 )
+from tac.canonical_equations.scorer_batch_dependence_20260708 import (
+    build_frozen_scorer_forward_batch_dependence_v1,
+    populate_frozen_scorer_forward_batch_dependence_equation,
+)
 from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 import (
     build_anisotropic_basis_two_regime_allocation_v1,
     freq_along_for_regime,
@@ -340,6 +344,8 @@ __all__ = [
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_adaptive_eps_cfl_edge_tracking_v1",
     "build_safe_compile_hosc_device_bitidentity_v1",
+    "build_frozen_scorer_forward_batch_dependence_v1",
+    "populate_frozen_scorer_forward_batch_dependence_equation",
     "populate_safe_compile_device_bitidentity_equation",
     "populate_adaptive_eps_cfl_edge_tracking_equation",
     "build_anisotropic_basis_two_regime_allocation_v1",
