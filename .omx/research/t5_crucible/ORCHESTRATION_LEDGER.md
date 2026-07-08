@@ -2209,3 +2209,10 @@ consumer update required — asserted [consumers-generic]. ---
   · global-vs-per-pair λ wording · tau_persist pass-through · FORCE-2 _signed-vs-_signed_wa WATCH
   (owed to A/B). CORRECTION: the Chan-Vese equilibrium un-floors Road ~96% at δ=0.25, NOT ≥100% —
   a claim I repeated as measured; the last ~4% rides higher δ / the λ A/B. Fix → R5 round 2.
+- **RESUMABILITY PASS (new stuff, Opus, read-only)**: SOUND. birth_completion (only new stateful
+  controller) = registered Resumable __bc_ (trainer L7438), legacy→un-fired byte-identical,
+  round-trip tested; P0 forces STATELESS (cfg-export + _resume_lever_divergences guard, 3 tests);
+  Chan-Vese STATELESS loss. 26 resume-registry tests pass; runtime __resume_registry_manifest
+  self-protection covers birth_completion. HARDENING NOTE (low, → #364): birth_completion is on
+  the direct register() path, not GATE_KEY_PREFIXES static set — runtime-protected but not in the
+  static coverage dict; add for belt-and-suspenders. NOT a launch blocker.
