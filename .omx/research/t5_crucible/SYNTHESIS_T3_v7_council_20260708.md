@@ -8,8 +8,8 @@ mod32cap = eikonal-0) · run-1 run.log/ps (S5 liveness correction, verified ALIV
 ORCHESTRATION_LEDGER.md. council_tier: T3 · quorum: 6/6 seats · verdict below.
 Pointer 0.19110 [contest-CPU] UNMOVED — everything here is means.
 
-## TALLY: 6/6 PROCEED_WITH_REVISIONS → unconditional PROCEED *conditional on the revision
-plan below landing before seal*. No REFUSE, no DEFER. review_status: synthesis by main
+## TALLY: 6/6 PROCEED_WITH_REVISIONS. **PROCEED is NOT yet granted** — it requires the
+revision plan below to LAND and a re-tally on the final form. No REFUSE, no DEFER. review_status: synthesis by main
 orchestrator, fresh-eyes on each position file.
 
 ## OPERATOR OVERRIDE (supersedes one consensus point)
@@ -21,11 +21,16 @@ the wiring (S2-REV-B positive control · S3 would-fire calibration telemetry · 
 discriminator), not reasons to defer it. Wiring builder IN FLIGHT. Memory-bound (3rd binding,
 elementwise_audits memory).
 
-## S6 STRUCTURE ROUND (the anti-laundering seat) — headline
-Blind derivation VINDICATES the core: unified L_τ · geometric+β co-anneal · per-class-λ LADDER
-all independently derived — "the PR95 discrete-stage skeleton is genuinely dissolved."
-Honesty flag disclosed: S6 over-read the derivation memo past its stop point; load-bearing
-divergences are independent of the over-read. Convergences carry reduced weight accordingly.
+## S6 STRUCTURE ROUND (the anti-laundering seat) — headline, EVIDENCE-GRADED
+**S6's convergence claims are CONTAMINATED and carry NO independent weight**: S6 disclosed
+over-reading the derivation memo past its stop point, and the over-read section contains
+exactly the unified-loss/geometric material — so S6 "independently deriving" those elements
+cannot be distinguished from having read them. Only S6's DIVERGENCES (R1–R5) are load-bearing
+(a contaminated seat finding divergences is evidence AGAINST the config, unaffected).
+The "PR95 skeleton dissolved" claim rests on ONE clean blind derivation — the ORIGINAL
+schedule-derivation agent (Phase-1 committed 37a974742 BEFORE opening any incumbent doc; that
+blinding held) — NOT on two. S6's replication of the blind protocol FAILED; the protocol
+needs a mechanical enforcement (reading-list allowlist) next time, not an honor clause.
 
 ## CONSOLIDATED REVISIONS (owner · when)
 **A. Wiring builder (in flight):** 3 events primary + caps backstop · S4-R1 event/backstop
