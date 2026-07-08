@@ -1908,3 +1908,8 @@ consumer update required — asserted [consumers-generic]. ---
   whole-step) at run-1 GOVERNED STOP; trajectory A/Bs (micro-batch, D16-term) AFTER the v7
   baseline exists. Symposium assigns classes; #357 makes the arms FIRE (anti held-but-never-
   fired). Also appended to the deferral ledger as the D17/D15 consolidation row.
+- **REGISTRY RESIDUAL FOLDED** (operator screenshot: "Fold this in too" → task #358): the four
+  non-gate controllers (_cl_/tau_advance_/_rng_/_evt_) get Resumable adapters + registration +
+  widened static gate + manifest coverage, EXACT key names preserved (sidecar byte-identical,
+  asserted). Sequencing: spawns when R-7 lands (no 3-way trainer collision), lands BEFORE seal
+  round 2 so the seal covers it → v7 launches with its ENTIRE resume path under the class gate.
