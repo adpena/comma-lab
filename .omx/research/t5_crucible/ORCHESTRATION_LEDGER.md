@@ -120,6 +120,27 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+P. **SIGNAL-COMPLETENESS TO THE THEORETICAL LIMIT (operator 2026-07-07: "it must generate and
+   record and expose all signal necessary for extreme optimization and realization to the
+   theoretical limit").** The instrument framing (N) made TOTAL: the stack is signal-complete
+   only when, for EVERY term separating current S from S_floor = 0.118, there is a NAMED signal
+   that localizes the residual gap, and run-1 GENERATES it (run conditions produce it), RECORDS
+   it (telemetry row / checkpoint / artifact, durable), and EXPOSES it (queryable by corpus_query
+   + consumed by a named DECIDE-layer consumer: costate controller, response surface, DSL lever
+   default, campaign ILC error term). Binding consequences:
+   (1) v4 carries a **SIGNAL-COMPLETENESS LEDGER** section: gap-term decomposition {d_seg
+   per-class/per-stage/annulus/along-across spectrum · d_pose witness-side (UNMEASURED — the row
+   itself is a required signal) · rate per-section vs entropy floor · decode-gap g_dec
+   per-stage-boundary · schedule (anneal truncation, meat exits, TAIL_k per-cycle yield) ·
+   capacity (response-surface seeds) · basis (orientation quality, freq_along utilization)} —
+   each row: signal name → generated? → recorded-where → exposed-to-whom. A gap term with NO
+   signal row = a design FINDING (blocks seal), not a footnote.
+   (2) This is the ILC OBSERVABILITY condition made explicit: the campaign converges
+   (‖I−LP‖<1, CT-1) only if the per-run measurement set makes the gap IDENTIFIABLE — signal
+   completeness is not hygiene, it is the campaign's convergence precondition.
+   (3) No write-only telemetry: every recorded signal names its consumer at design time
+   (sister of "Results must become system intelligence" + the default-off ledger); a signal with
+   no consumer is queued signal-loss.
 O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep research fields
    medal grade against control theory and our level set witness and Morse-Smale and full stack
    and meta and meta meta all aspects all dimensions all schedule and curriculum and controls and
