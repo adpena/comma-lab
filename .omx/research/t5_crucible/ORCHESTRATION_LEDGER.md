@@ -1968,3 +1968,16 @@ consumer update required — asserted [consumers-generic]. ---
   neutral, MEASURE); the crux-addendum's conditional elevation for item 3 is REVOKED by
   evidence. LAW registered: frozen_scorer_forward_batch_dependence_v1 (2 MEASURED anchors).
   Item 4 remains ELEVATED (GPU bit-cert ADMIT stands, law safe_compile_hosc_device_bitidentity_v1).
+- **TRAJECTORY READ (operator Q, 2026-07-08 ~16:5xZ, MEASURED from run-1 telemetry)**:
+  (1) CE-stage d_seg improvement HALVING per verdict cycle (−0.0220/−0.0130/−0.0057 per 25ep)
+  → plateau ~0.13 by ep150 vs τ-cap at ep300 = ~150 low-value epochs; VINDICATES event-mode
+  hand-off + EXPEDITES the v7 swap (run-1 marginal value decaying).
+  (2) ROAD is the binding class NOW (flip 0.44→0.40, −8%, carries ~2/3 of total d_seg) while
+  lane fell 57% — plausibly normal pre-popout, BUT v7's basis rebalance shifts capacity to
+  boundaries → PRE-REGISTERED WATCH: road flip >0.30 @v7-ep200 ⇒ per-class decomposition
+  required before any basis-helps claim (bulk-starvation check).
+  (3) persistence term monotone 13× rise (0.035→0.457, ~9% of total) — TREND-WATCH named
+  (below the 40% domination alarm; expected-growth hypothesis unconfirmed).
+  (4) eikonal FELL 49% (0.0198→0.0102 mean) — no re-entry signature; adaptive-ε stays REGISTERED.
+  No config changes to run-1 (live, operator-GO only); items (2)+(3) fold into the v7 launch
+  package watch-list.
