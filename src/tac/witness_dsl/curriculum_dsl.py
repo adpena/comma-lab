@@ -636,6 +636,12 @@ class ExitEvent(ScheduleDisplay):
       ``cap_epoch``) + a TrainerSupportGap naming the build. ``min_points`` /
       ``per_class`` mirror the callable's contract (per-class fits need the
       per-class d_seg verdict-row telemetry, itself a recorded gap).
+    
+    FRAME CONTRACT (seal v7.4 r3 F-1): gate fire telemetry records ``sensor_data_epoch``
+    in the SAME epoch frame as the persisted ``_fired_epoch`` (the lever frame under
+    re-anchor); since the re-anchor shift is additive it cancels in
+    ``sensor_lag_epochs = fire − sde``, which therefore always reads as the true real-epoch
+    verdict-cadence lag. Consumers must never mix frames when extending fire rows.
     """
 
     criterion: str
@@ -2553,7 +2559,11 @@ def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offload
     movable ONLY (lane rides the analytic band); lane_carried → 'auto' (keep the learned lane recall
     at freq_along≈26). The LADDER island-amplify is ALREADY per-class-λ self-gated (it de-emphasizes a
     class whose measured cost is low, i.e. lane once the band handles it) so it needs no regime gate;
-    the FIXED-weight persistence recall was the one regime-BLIND term the coupling fixes."""
+    the FIXED-weight persistence recall was the one regime-BLIND term the coupling fixes.
+    STRUCTURAL ENFORCEMENT (seal v7.4 r3 F-3): the lane_offloaded regime is COMPILE-TIME
+    coupled to the analytic band — ``_build_crucible_v7`` fail-louds if ``--lane-render-band``
+    is absent from the emitted base when this regime is selected, so the recall drop can
+    never ship without the band that justifies it (the coupling is asserted, not assumed)."""
     from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 import (
         freq_along_for_regime,
     )
