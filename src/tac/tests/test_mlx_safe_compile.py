@@ -558,3 +558,89 @@ def test_step_reduction_sites_all_native_or_fused():
     for s in sc.STEP_REDUCTION_SITES:
         assert s["routing"] in {"native", "native_fused_r"}
         assert s["reason"]  # every site documents WHY it is (un)routed
+
+
+# =========================================================================== #
+# v7 — REAL-WITNESS GPU BIT-CERT COVERAGE (#252): grid shape + beta anneal sweep
+# =========================================================================== #
+
+
+def _skip_if_no_gpu():
+    mx = pytest.importorskip("mlx.core")
+    if not (hasattr(mx, "metal") and mx.metal.is_available()):
+        pytest.skip("no Metal GPU on this host")
+    return mx
+
+
+def test_sweep_hosc_beta_covers_v7_anneal_range():
+    # every seed maps into [1.0, 10.0]; across a spread of seeds the sweep spans
+    # the WHOLE anneal range (not one operating point) — the v7 coverage upgrade.
+    lo, hi = sc.HOSC_BETA_ANNEAL_RANGE
+    assert (lo, hi) == (1.0, 10.0)
+    betas = [sc._sweep_hosc_beta(s) for s in range(1200)]
+    assert all(lo <= b <= hi for b in betas)
+    # the canonical 32-input harness sweep (seeds 1000..1031) tiles [1,10] uniformly
+    # with BOTH endpoints hit (beta=1.0 and step-native beta=10.0).
+    harness = [sc._sweep_hosc_beta(1000 + i) for i in range(32)]
+    assert min(harness) == pytest.approx(1.0) and max(harness) == pytest.approx(10.0)
+    assert len({round(b, 6) for b in harness}) == 32  # all distinct
+
+
+def test_real_coverage_array_grid_shape_and_adversarial_band():
+    _skip_if_no_gpu()
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    a = sc._real_coverage_array(rng)
+    assert tuple(a.shape) == (sc._CERT_GRID_POINTS, sc._CERT_HIDDEN)  # real 384x512 grid
+    col0 = np.asarray(a)[:, 0]
+    # knife-edge band: col 0 is a dense linspace spanning sin's steep zero-crossings
+    assert col0.min() < -12.0 and col0.max() > 12.0  # ~[-4pi, 4pi]
+    # saturation probes: at least some large-magnitude values driving tanh onto its rails
+    assert float(np.abs(np.asarray(a)).max()) > 30.0
+
+
+def test_certify_hosc_gpu_real_coverage_bit_identical():
+    # THE flip lever's cert: hosc on GPU at the REAL witness grid shape + beta sweep.
+    # in-process (cross-process is exercised by the CLI/manifest run); asserts the
+    # certificate is measured at real coverage and bit-identical on THIS chip's GPU.
+    _skip_if_no_gpu()
+    cert = sc.certify_region("hosc_activation", n_inputs=6, cross_process=False,
+                             reps=2, device="gpu")
+    assert cert.verdict == "CERTIFIED"
+    assert cert.bit_equal is True and cert.max_abs_delta == 0.0
+    assert cert.input_coverage == 6
+    # the recorded input shape is the real 384x512 grid (196608 points x hidden_dim)
+    assert cert.input_shapes[0] == str((sc._CERT_GRID_POINTS, sc._CERT_HIDDEN))
+
+
+def test_gpu_manifest_real_coverage_roundtrip():
+    # manifest-roundtrip assertion: a GPU-device, fingerprint-stamped v2 manifest
+    # carrying a real-coverage hosc cert survives save/load with its evidence intact,
+    # and resolves ADMIT on a matching GPU run / REFUSE on a device mismatch.
+    host = sc.host_fingerprint()
+    man = sc.CertificationManifest(device="gpu", created_utc="2026-07-08T00:00:00Z",
+                                   fingerprint=host)
+    man.add(sc.RegionCertificate(
+        "hosc_activation", "safe_elementwise", "CERTIFIED", True, 0.0, 5, 5,
+        1.89, 1.45, 0.77, 32,
+        input_shapes=[str((sc._CERT_GRID_POINTS, sc._CERT_HIDDEN)), "()", "()"],
+        input_source="synthetic"))
+    import tempfile
+    import os as _os
+
+    with tempfile.TemporaryDirectory() as d:
+        p = _os.path.join(d, "m.json")
+        man.save(p)
+        loaded = sc.CertificationManifest.load(p)
+    assert loaded.schema_version == sc.SCHEMA_VERSION
+    assert loaded.device == "gpu"
+    assert loaded.fingerprint == host
+    h = loaded.rows["hosc_activation"]
+    assert h.verdict == "CERTIFIED" and h.bit_equal is True
+    assert h.input_shapes[0] == str((sc._CERT_GRID_POINTS, sc._CERT_HIDDEN))
+    # ADMIT on matching GPU run; REFUSE on device mismatch (fp-contraction is device-specific)
+    assert sc.resolve_enabled_regions("hosc_activation", loaded, host=host,
+                                      run_device="gpu") == frozenset({"hosc_activation"})
+    assert sc.resolve_enabled_regions("hosc_activation", loaded, host=host,
+                                      run_device="cpu") == frozenset()

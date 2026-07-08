@@ -88,6 +88,7 @@ __all__ = [
     "emit_kernel_candidates",
     "install_safe_compiled_regions",
     "STEP_REDUCTION_SITES",
+    "HOSC_BETA_ANNEAL_RANGE",
 ]
 
 SCHEMA_VERSION = "mlx_safe_compile.manifest.v2"
@@ -1163,9 +1164,81 @@ STEP_REDUCTION_SITES = (
 
 
 # ---------------------------------------------------------------------------
+# REAL-WITNESS CERTIFICATION COVERAGE (#252 v7 GPU bit-cert).
+#
+# The v2 memo flagged the toy certification coverage — (256, 96) shapes at a
+# SINGLE beta=2.5 — as a robustness gap: fp-contraction is a per-VALUE knife-edge
+# event, so ``n=32`` seeded inputs at one beta can PASS while unsampled inputs
+# diverge (exactly what happened on CPU: hosc bit-equal at n=32/(256,96) toy
+# coverage in v1, yet a clean 5.96e-8 CPU failure surfaced under the v2 device
+# bugfix). This block replaces the toy coverage with the REAL witness geometry:
+#
+#   * shape: the 384x512 render grid (196_608 points) x hidden_dim=96 (the real
+#     ``--hidden-dim`` trunk width) — the actual per-frame pre-activation shape ``_act``
+#     sees. Element count faithful; dtype float32.
+#   * value distribution: engineered ADVERSARIAL coverage of the fp-contraction
+#     knife-edges (dense linspace across sin's steep zero-crossings + saturation
+#     probes that drive beta*sin onto tanh's rails), not just a narrow normal.
+#   * beta: SWEPT across the v7 anneal range [1.0, 10.0] (``--hosc-beta`` 4.0 ->
+#     ``--hosc-beta-end`` up to 10) — certify across the range, not one point.
+#
+# Elementwise bit-identity is a per-element property, so a certificate that holds
+# across this coverage is much stronger evidence than the toy one. These generators
+# run ONLY during certification/discovery — never in the training hot loop (the
+# trainer's ``_act`` calls the compiled fn on its own live activations).
+# ---------------------------------------------------------------------------
+
+_CERT_GRID_POINTS = 384 * 512      # 196_608 real render points ("384x512 grids")
+_CERT_HIDDEN = 96                  # --hidden-dim default (real trunk width)
+HOSC_BETA_ANNEAL_RANGE = (1.0, 10.0)  # the v7 hosc beta anneal span certified across
+_HOSC_OMEGA = 1.0                  # --hosc-omega default
+
+
+def _real_coverage_array(rng, *, points: int | None = None, channels: int = _CERT_HIDDEN,
+                         knife_edge: bool = True):
+    """A real-witness-shaped array with ADVERSARIAL value coverage of the
+    fp-contraction knife-edges.
+
+    Shape ``(points, channels)`` reflects the 384x512 render grid at hidden_dim.
+    ``knife_edge`` overlays (col 0) a dense linspace across ``[-4pi, 4pi]`` (many
+    sin zero-crossings) and (first rows) large-magnitude saturation probes so the
+    certification samples exactly where fused-vs-unfused rounding is most likely
+    to diverge — not merely the bulk of a narrow normal."""
+
+    import mlx.core as mx
+    import numpy as np
+
+    n = int(points if points is not None else _CERT_GRID_POINTS)
+    c = int(channels)
+    a = (rng.standard_normal((n, c)) * 3.0).astype(np.float32)
+    if knife_edge and n > 0:
+        a[:, 0] = np.linspace(-4.0 * np.pi, 4.0 * np.pi, n, dtype=np.float32)
+        k = min(64, n)
+        a[:k] = (rng.standard_normal((k, c)) * 15.0).astype(np.float32)  # saturation probes
+    return mx.array(a)
+
+
+def _sweep_hosc_beta(seed: int) -> float:
+    """Map a certification seed deterministically onto the v7 hosc beta anneal
+    range ``[1.0, 10.0]``.
+
+    The bit-equality harness sweeps seeds ``1000 .. 1000+n_inputs-1``; ``seed % 32``
+    over a complete residue block (the canonical ``--n-inputs 32``) is a PERMUTATION
+    of ``0..31``, so the 32-input cert tiles ``[1.0, 10.0]`` UNIFORMLY with BOTH
+    endpoints hit (beta=1.0 and the step-native beta=10.0 — the hardest saturation
+    case). This is stronger than a random hash: the anneal endpoints are guaranteed
+    in the sweep, not left to chance."""
+
+    lo, hi = HOSC_BETA_ANNEAL_RANGE
+    frac = (int(seed) % 32) / 31.0
+    return float(lo + (hi - lo) * frac)
+
+
+# ---------------------------------------------------------------------------
 # Canonical nominated regions from the witness hot loop (the practical allowlist).
 # These mirror the real trainer's elementwise-heavy candidates; real trainer
 # regions register their own builders (with real checkpoint weights) at wire-in.
+# make_inputs use the REAL witness coverage above (grid shape + beta sweep).
 # ---------------------------------------------------------------------------
 
 
@@ -1184,8 +1257,9 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            u = mx.array(rng.standard_normal((256, 96)).astype(np.float32))
-            return (u, mx.array(np.float32(2.5)), mx.array(np.float32(1.0)))
+            u = _real_coverage_array(rng)                       # real 384x512 grid coverage
+            beta = _sweep_hosc_beta(seed)                       # sweep v7 anneal range [1,10]
+            return (u, mx.array(np.float32(beta)), mx.array(np.float32(_HOSC_OMEGA)))
 
         return fn, make_inputs
 
@@ -1198,8 +1272,8 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            base = mx.array(rng.standard_normal((256, 3)).astype(np.float32))
-            tex = mx.array(rng.standard_normal((256, 3)).astype(np.float32))
+            base = _real_coverage_array(rng, channels=3)        # (P, 3) RGB-logit coverage
+            tex = _real_coverage_array(rng, channels=3, knife_edge=False)
             return (base, tex)
 
         return fn, make_inputs
@@ -1213,9 +1287,9 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            h = mx.array(rng.standard_normal((256, 96)).astype(np.float32))
-            scale = mx.array((1.0 + rng.standard_normal((96,)) * 0.1).astype(np.float32))
-            shift = mx.array((rng.standard_normal((96,)) * 0.1).astype(np.float32))
+            h = _real_coverage_array(rng)                       # (P, hidden) real trunk activation
+            scale = mx.array((1.0 + rng.standard_normal((_CERT_HIDDEN,)) * 0.1).astype(np.float32))
+            shift = mx.array((rng.standard_normal((_CERT_HIDDEN,)) * 0.1).astype(np.float32))
             return (h, scale, shift)
 
         return fn, make_inputs
@@ -1247,7 +1321,7 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            u = mx.array(rng.standard_normal((256, 96)).astype(np.float32))
+            u = _real_coverage_array(rng)
             return (u, mx.array(np.float32(30.0)))
 
         return fn, make_inputs
@@ -1261,7 +1335,7 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            u = mx.array(rng.standard_normal((256, 96)).astype(np.float32))
+            u = _real_coverage_array(rng)
             return (u, mx.array(np.float32(30.0)))
 
         return fn, make_inputs
@@ -1275,7 +1349,7 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            u = mx.array(rng.standard_normal((256, 96)).astype(np.float32))
+            u = _real_coverage_array(rng)
             return (u, mx.array(np.float32(20.0)), mx.array(np.float32(10.0)))
 
         return fn, make_inputs
@@ -1289,9 +1363,9 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            x = mx.array(rng.standard_normal((256, 96)).astype(np.float32))
-            scale = mx.array((1.0 + rng.standard_normal((96,)) * 0.1).astype(np.float32))
-            shift = mx.array((rng.standard_normal((96,)) * 0.1).astype(np.float32))
+            x = _real_coverage_array(rng)
+            scale = mx.array((1.0 + rng.standard_normal((_CERT_HIDDEN,)) * 0.1).astype(np.float32))
+            shift = mx.array((rng.standard_normal((_CERT_HIDDEN,)) * 0.1).astype(np.float32))
             return (x, scale, shift)
 
         return fn, make_inputs
@@ -1305,7 +1379,7 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            z = mx.array(rng.standard_normal((256, 3)).astype(np.float32))
+            z = _real_coverage_array(rng, channels=3)
             return (z,)
 
         return fn, make_inputs
@@ -1320,7 +1394,7 @@ def _register_canonical_regions() -> None:
 
         def make_inputs(seed: int) -> tuple:
             rng = np.random.default_rng(seed)
-            rgb = mx.array((rng.random((256, 3)) * 255.0).astype(np.float32))
+            rgb = mx.array((rng.random((_CERT_GRID_POINTS, 3)) * 255.0).astype(np.float32))
             return (rgb,)
 
         return fn, make_inputs
@@ -1412,6 +1486,9 @@ def _main(argv: list[str] | None = None) -> int:
     ap.add_argument("--device", default="gpu", choices=("gpu", "cpu"))
     ap.add_argument("--n-inputs", type=int, default=32)
     ap.add_argument("--n-determinism", type=int, default=5)
+    ap.add_argument("--reps", type=int, default=40,
+                    help="timing reps per region (timing is NOT a certificate — a small value keeps "
+                    "the cert a good GPU citizen beside a live run; bit-equality is contention-invariant)")
     ap.add_argument("--no-cross-process", action="store_true",
                     help="skip the cross-process determinism certificate (in-process only)")
     ap.add_argument("--discover", action="store_true",
@@ -1450,7 +1527,7 @@ def _main(argv: list[str] | None = None) -> int:
         else:
             cert = certify_region(
                 rid, n_inputs=args.n_inputs, n_determinism=args.n_determinism,
-                device=args.device, cross_process=not args.no_cross_process)
+                reps=args.reps, device=args.device, cross_process=not args.no_cross_process)
         man.add(cert)
         print(json.dumps(cert.as_dict()), flush=True)
     if args.out:
