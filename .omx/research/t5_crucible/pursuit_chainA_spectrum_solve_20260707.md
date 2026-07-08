@@ -157,6 +157,68 @@ Artifacts `krylov_step_screen_curvtransfer_K32.json`, `rescreen_negcurvK32_p02.j
 failed (or flipped negative on) the cross-subset screens that gate it. The chunked n600 verdict
 path stands ready (`stage verdict`, stepped ckpts saved) if any future candidate passes a screen.
 
+## LINK 4 — the mechanism (why the S3 headline dissolved)
+
+All measurements cohere into one picture:
+- Per-pair Hessians through R at ep650 have HUGE idiosyncratic components (per-pair grad σ ≈ 2.0 vs
+  coherent g_true ≈ 0.08; per-pair curvature extremes ±hundreds) concentrated in `in_proj.weight` —
+  each pair's near-flip annulus pixels (#333: ~97% of d_seg mass) bend the loss in that pair's OWN
+  feature-mixing direction. Averaged over pairs these directions are INCOHERENT (Link 2c isotropy),
+  so the mean Hessian's negative part collapses ~1/K while the stiff positive directions (texture
+  head, shared) survive. The K=8 subset was d_seg-REPRESENTATIVE (subset mean = 95% of n600 mean —
+  checked) — the idiosyncrasy is directional, not a bad draw.
+- The full-loss local geometry at ep650-EMA is a FLAT, weakly-CONVEX bowl at the noise floor:
+  λ_max ≈ +103 (K-stable), λ₋ ≈ −1 (noise-scale), g_true ≈ 0.08, no transferable descent in any
+  probed direction, on either the fp32 or the int8-deploy surface.
+- Instrument facts that bound ALL future spectrum work on this vehicle: (a) extreme Ritz MAGNITUDES
+  at small K are fp32-path-fragile (CPU −370 vs GPU −175 for the same subset); (b) analytic HVP ≠
+  true local curvature by ~35% through the un-disableable uint8-STE (FD check) ⇒ quadratic-model
+  acceptance is FORBIDDEN — measured-loss acceptance only; (c) a K≤8 spectrum row is NOISE for
+  DECIDE purposes — the controller must require K≥32 AND a K-trend before treating curvature as
+  state; (d) MLX-GPU is an admissible 4.7× throughput device for HVPs (symmetry ~1e-3), never a
+  bit-exact surface (L70).
+
+## LINK 5 — TERMINAL VERDICT + what it changes in the draft
+
+**review_status: pre-registered protocol (S3 RECESS-R1 kill band honored), self-executed,
+fresh-eyes-unreviewed.** Axis: [macOS-CPU/MLX advisory] NON-PROMOTABLE throughout; n600 numbers
+cited are the #341 chunked verdicts. Pointer 0.19110 UNMOVED — this chain is MEANS.
+
+1. **S3's headline is KILLED at the full-loss level** (implementation-level per #307 — the K=8
+   measurement was correct FOR ITS SUBSET OPERATOR; its interpretation "ep650 not 2nd-order
+   exhausted" does not survive K-averaging). Kill-band row: K=128 ratio 0.011 ≪ 0.1 (pre-registered
+   band predicted [0.04, 0.14]; actual even more collapsed).
+2. **ep650-EMA is exhausted to BOTH orders at the frozen schedule point**, up to subset/fp32 noise:
+   near-stationary (g_true ≈ 0.08 against per-pair σ ≈ 2.0) + weakly-convex-flat (no usable λ₋).
+   The cold-Muon quench story (S2 M-S2-1..5) is UNCHANGED — and sharpened: there was no 2nd-order
+   structure at ep726 for ANY optimizer to mine; the finisher's failure was pure schedule/transient.
+3. **TerminalSolve / GN-CG-from-ep650 ($0 zero-training finisher): measured NO-GO.** Every solve
+   step (Krylov-TR ladder, ± negative curvature, cross-subset gradient) worsens the loss on
+   independent holdouts, fp32 AND int8-deploy. S2's RECESS-2 bar ("beat 0.0033662") is unreachable
+   by zero-training solve moves from this checkpoint; moreover any conceivable residual gain is
+   bounded by the Krylov Newton decrement — order 1e-3 surrogate units ≈ BELOW the +4.3%
+   reconstruction gap, hence not even attributable if it appeared. DEMOTE TerminalSolve from the
+   run-3 stack; revisit only if a future checkpoint's K≥32 spectrum shows coherent (K-stable)
+   negative curvature or a large PD decrement — both now $0-measurable with the landed harness.
+4. **The quadratic_basin ExitEvent (S3 → S2 interface) survives as a SENSOR with new discipline:**
+   its inputs MUST be K≥32 spectra with a K-trend row; the `HOLD_STAGE_NEGATIVE_CURVATURE`
+   recommendation is DISARMED (the indefiniteness it would hold on is subset noise). The
+   basin-entered predicate (T_k PD + small decrement) is in fact SATISFIED at ep650 at K=128 —
+   i.e. the sensor, correctly K-disciplined, says: fire the finisher / stop — consistent with
+   S2's meat-exit (M-S2-4 exhaustion by ~ep600–650).
+5. **The residual d_seg gap (0.0034 → 0.00092) cannot be crossed by optimizer/solve moves at this
+   basin. The wall is representation/basis/capacity.** Arm A (DirectionalBasisRebalance) + the
+   analytic lane render-band + basis levers carry the entire burden — consistent with, and now
+   mechanistically complementary to, the measured −48% basis anchor (basis-match is PRIOR to
+   capacity; the Hessian at the optimum contains no basis shortcut to exploit — the basis must be
+   CHANGED, not re-mixed).
+6. **Chain economy:** zero training launched, zero paid spend, no n600 verdict wasted on
+   screen-failing candidates; every conclusion cross-validated on disjoint subsets; all artifacts
+   resumable + committed.
+
+Final K=128 numbers to be appended from the completed run (`spectrum_ep650gpu_K128_s0.json`);
+verdict does not depend on them (ratio would need to grow 10× against a stable trend).
+
 ## LINK 2 — localize: WHERE the extreme curvature lives (Ritz-vector block projection, $0)
 
 Projected the extreme Ritz vectors (u = V·y from the saved Lanczos states) onto the 18 parameter
