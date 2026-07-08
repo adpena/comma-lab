@@ -265,6 +265,24 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ⛔ S6-R4 PULLED INTO V7 (operator 2026-07-08: "Why is there a fixed number of epochs if
+our schedule and curriculum are no longer supposed to be hardcoded like pr95") ---
+- DIAGNOSIS (honest two-part): --epochs 3000 as run WATCHDOG = legitimate req-B cap; but
+  --anneal-epochs 3000 as the τ(t) DENOMINATOR (+ LR t/1000) = the LAST clock-hardcoding —
+  transitions fire on sensors while the homotopy they live in still marches to wall-clock.
+  S6's blind derivation prescribed self-triggered τ-advance (element 5); I deferred it to
+  v7.1 as R4 — operator correctly pulled the deferral.
+- BUILDER FIRED: --tau-advance-mode {clock,event} — SAME geometric octave ladder, dwell
+  event-driven (per-band relaxation sensor, powerlaw-meat family) + per-octave max-dwell as
+  tagged backstop; --epochs demoted to pure watchdog. Couplings handled explicitly (β ties to
+  octave; LR decision derivation-consistent; no-double-driver assert vs TAIL). RESUME
+  DETERMINISM promoted to launch-critical: octave/event state persisted per checkpoint,
+  mid-octave resume must reproduce the identical τ trajectory (may retire the wirings memo's
+  v7.1 resume concern wholesale). Both modes implemented; clock-vs-event launch default =
+  seal decision with the builder's evidence-based recommendation.
+- Pre-seal build set now: revisions-B + compute-audit + self-paced-τ (3 in flight) → v7.2/3
+  compile → seal. Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: THE 3 EVENT WIRINGS (operator override executed; 8e18566ad/7f2ff2408/
 b9c6372d6; 57 new tests, 179 affected green) ---
 - muon ← powerlaw_meat exit + S2-REV-B nucleation-complete positive control (Muon HELD while
