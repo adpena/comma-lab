@@ -1913,3 +1913,15 @@ consumer update required — asserted [consumers-generic]. ---
   widened static gate + manifest coverage, EXACT key names preserved (sidecar byte-identical,
   asserted). Sequencing: spawns when R-7 lands (no 3-way trainer collision), lands BEFORE seal
   round 2 so the seal covers it → v7 launches with its ENTIRE resume path under the class gate.
+- **R-7 FINISHERS LANDED** (3d44fd51c/7790261f6/c1738b5bd): archaeology verdict = rewarmup
+  mechanism MOSTLY EXISTED (ramp + event-fired boundary + DSL-mapped flags + the sizing law);
+  the unbuilt piece was the composable Lever making the hardcoded window DERIVED-AT-CONFIG
+  (β2-memory horizon = 14ep @β2=0.999, 75 steps/ep) → landed DSL-only. PolyakTailAverager =
+  uniform tail mean over the finishing window, ADDITIONAL ckpt candidate (EMA shadow never
+  replaced; byte-close picks the winner — an unmeasured stop-time duty-to-measure, honestly
+  labeled). Both default-OFF nilary levers (Beta2WindowRewarmup, PolyakFinisher), 0 unmapped;
+  Polyak state rides the resume registry (__pta_ sentinel + polyakM__ sidecar prefix, atomic).
+  16 tests; zero foreign absorption. Named residuals: start_epoch=0 default arms from run
+  START (operator must size); steps_per_epoch=75 config-specific; β2 law INFERRED/PROVISIONAL.
+  → symposium item 8 SATISFIED. ALL 11 DOCKET ITEMS NOW HAVE BUILDS/EVIDENCE → CONVENING the
+  T3 inclusion symposium (5 Opus seats) + firing task #358 (D20) in parallel.
