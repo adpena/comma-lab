@@ -188,3 +188,92 @@ solve_gap_v1` shows K=8 subset transfers +5.1% WORSE. STOP on the P1.3 #3 power-
   through-byte-close for every load-bearing verdict.
 
 <!-- PHASE-2 APPENDED BELOW THIS LINE AFTER THE PHASE-1 COMMIT -->
+
+---
+
+## §PHASE-2 — element-by-element (blind shape vs v7-as-built-NOW)
+
+### Stores Phase-2 touched (the separation IS the audit evidence)
+
+Phase-2 read ONLY (all OUTSIDE the Phase-1 allowlist of CLAUDE.md / triality-doc /
+canonical-equations-JSON / gt_n600 metadata — zero overlap ⇒ the blind derivation could not have
+seen any of these):
+`crucible_v7_authored_20260708.md` · `src/tac/witness_autoconfig.py` (the v7 derive:
+`_build_crucible_v7` · `_crucible_v7_schedule_governance` · `crucible_v7_wiring_gaps` · the CAP/lever
+constants) · the 5 feature-module docstrings (`witness_control/{tau_advance,event_wirings,tail_cycles}.py`
+· `witness_curriculum/ladder_homotopy.py` · the `validate_seg_form_unify_tau_config` + L_τ closure in
+`experiments/train_levelset_witness_realized_through_R_mlx.py`). Plus one COMPUTED read: ran
+`compile_crucible_v7_config(gt_n600, 600, 3000)` in-memory to read the 134 emitted flags (inspection of
+the built artifact, not a new authored store).
+
+### The comparison table
+
+Blind shape one-liner (quoting §PHASE-1 P1.0): *"the numerical integration of ONE continuous τ=ε=ħ
+anneal of a single frozen-scorer-Fisher-metric level-set action, run on a fixed directional
+step-native basis set BEFORE training, where every phase transition is SENSOR/DERIVED-triggered …
+island-birth concurrent … terminal = warm-started Muon spectral finisher … pose and rate compose at
+byte-close, not as curriculum stages."*
+
+| # | blind element (§PHASE-1) | v7-as-built-NOW | class |
+|---|---|---|---|
+| 1 | I-1 ONE continuous τ anneal; CE→softplus→l7 stages dissolved | `--seg-form-unify-tau` ⇒ continuous `L_τ=τ·logsumexp(φ/τ)−φ_y`; discrete dispatch BYPASSED; tau-softplus/l7/tau-hold-frac DELETED; anneal-shape cosine_hold→**geometric** | **CONVERGENT** |
+| 2 | I-1 only true discontinuity = descent-NORM switch (AdamW→Muon) | single `TypedStage(muon)`; everything else continuous | **CONVERGENT** |
+| 3 | I-2 transitions SENSED (nucleation / anneal-complete / power-law meat), never clocked | 3 event wirings BUILT: muon←`powerlaw_meat`(+REV-B nucleation gate) · lane-band←`lane_nucleus`(#315/#302) · chroma←`annulus_plateau`(#333); fixed epochs demoted to fail-safe BACKSTOP CAPS w/ LOUD `cap_fired_before_event` | **CONVERGENT** |
+| 4 | I-2/P1.3-#3 stop = power-law-tail meat, not window slope | `--tail-*` per-cycle `powerlaw_meat` + PowerPlay `stop-marginal-s 1e-4`; `--tau-advance-mode event` advances τ on per-band relaxation (critical-slowing) | **CONVERGENT** |
+| 5 | I-3 island-birth CONCURRENT w/ anneal (MCF erases minority first) | `--ladder-*` per-class-λ-GATED homotopy (movable dilation-GO + lane curve-prior), per-epoch; `--persistence-*` clDice/Betti recall; `--seed-island*` GT-appearance seed | **CONVERGENT** |
+| 6 | I-3/P1.4 logit-adjustment `logits+=τ·log(prior)` (0-byte rare-class shift) | `--logit-adjust-loss-tau 1.0` present | **CONVERGENT** |
+| 7 | I-5 finisher = warm-started Muon (v←AdamW m) + cosine LR→floor | `--muon-warm-start-momentum` ON + `--muon-lr-final-frac 0.1` + muon-lr 0.002/mom 0.95/ns 5 | **CONVERGENT** |
+| 8 | I-7 DROP l7 · L28 · focal-γ · fixed-clock anneal · cold-Muon/flat-LR | l7 DELETED; **L28 ABSENT**; **focal-γ ABSENT**; fixed-clock→`tau-advance-mode event`; warm-not-cold Muon | **CONVERGENT** |
+| 9 | I-9 pose = stored dual-use ξ carrier at byte-close (not a stage) | pose block VERBATIM `--w-pose 1.0 --pose-carrier --pose-carrier-source generated --pose-carrier-residual-mode table` | **CONVERGENT** (caveat: pose OPEN+UNMEASURED on witness per MEM L68; w-pose=1.0 is a train term conditioning the stored carrier) |
+| 10 | I-9 rate shaped WHILE finishing (train-time weight-entropy) + byte-close reverse-waterfill | `--weight-entropy-penalty-lambda 15.0`; reverse-waterfill = byte-close grammar (not a flag) | **CONVERGENT** |
+| 11 | I-10 resumable per-stage EMA ckpt + continuous costate rollback + resume-determinism | `--stage-checkpoints`/`--ckpt-every`; LADDER per-class λ_c costate gate + TAIL PowerPlay marginal-S; tau_advance persists full controller state | **CONVERGENT** |
+| 12 | (terminal) TAIL_k warm-restart CYCLES | `--tail-cycles-max 2` re-sharpens τ (`τ_k=τ_{k−1}·0.5`) + re-warms LR post-Muon | **V7-EXTRA → REVISE** |
+| 13 | (τ backbone form) event-mode octave LADDER shipped | `--tau-advance-mode event` (octave rungs); the self-paced memo itself RECOMMENDS run-1 in CLOCK mode to isolate the unify-τ variable | **V7-EXTRA → REVISE** |
+| 14 | I-4 along-tangent freq = √(freq_across)≈6 (free) / 26 (dash comb) | `--freq-along 4` (freq_across 32) — BELOW √32≈5.66, far below 26 | **DERIVATION-EXTRA → REVISE** |
+| 15 | I-4 Whitney mod-dim 2m+1 ≈ 17–19 (m~8) | `--mod-dim 32` (over-embeds vs Whitney floor) | **DERIVATION-EXTRA → REVISE** |
+| 16 | I-4/P1.5 step-native OR β-anneal hosc 1→**4** | β-anneal hosc 1→**10** (`--hosc-beta 1.0 --hosc-beta-anneal linear --hosc-beta-end 10.0`); step-native/structured-init OFF | **DERIVATION-EXTRA → REVISE** (endpoint 10≠4; hosc-arm is the allowed chart though) |
+| 17 | I-8 eps = CFL edge-tracker, DERIVED not fixed (`adaptive_eps_cfl_edge_tracking_v1`) | **no adaptive-eps/CFL flag**; `--eikonal-weight 0.01` fixed | **DERIVATION-EXTRA → REVISE** |
+| 18 | I-5 β2-window LR rewarmup (`rewarmup_beta2_memory_window_v1`) + finisher-Polyak EMA rescale | **no `--muon-lr-rewarmup`**; `--ema-decay 0.997` (no finisher Polyak rescale surfaced) | **DERIVATION-EXTRA → REVISE** (minor) |
+
+### Counts
+- **CONVERGENT: 11** (rows 1–11) — the v7 SPINE matches the blind physics: one continuous unify-τ
+  backbone, sensed transitions (all 3 wirings BUILT), concurrent λ-gated island homotopy,
+  logit-adjust, warm-Muon, l7/L28/focal correctly dropped, byte-close pose+rate, resumable+costate.
+- **V7-EXTRA (REVISE): 2** (rows 12–13).
+- **DERIVATION-EXTRA (REVISE): 5** (rows 14–18).
+- **Total REVISE findings: 7.**
+
+### REVISE findings (each a divergence by contract — NOT rationalized)
+- **R-1 (row 14, highest value):** `--freq-along 4` is STARVED vs the blind √(freq_across)≈6 (free
+  band) / 26 (dash comb). Per `anisotropic_basis_along_tangent_frequency_deficit_v1` the dash comb is
+  UNREPRESENTABLE below the along-tangent crossover at ANY capacity — 4 cannot carry it. Raise to
+  √32≈6 on the free band, 26 when carrying the dash comb.
+- **R-2 (row 15):** `--mod-dim 32` over-embeds vs the Whitney 2m+1≈17–19 floor (`residual_manifold_
+  intrinsic_dim_whitney_v1`); 32 is a PR95-echo ladder value (MEM L25), not the measured-intrinsic-dim
+  derivation. Re-derive from measured m.
+- **R-3 (row 17):** I-8 adaptive eps is UNBUILT in v7 (`--eikonal-weight` fixed 0.01, no CFL tracker);
+  the blind shows a FIXED eps falls below the RISING CFL edge as sharpening grows. Wire
+  `adaptive_eps_cfl_edge_tracking_v1` or justify the fixed-eps exception.
+- **R-4 (row 12):** TAIL_k warm-restart CYCLES re-sharpen τ in a saw-tooth (`τ_k=τ_{k−1}·0.5`) — a
+  terminal-phase structure the blind DID NOT derive (its terminal was single-Muon-finisher→stop) and
+  in direct tension with I-1's "ONE continuous coarse→fine τ." Reconcile: is multi-cycle τ-restart
+  warranted by the power-law-tail meat, or does it re-introduce the stage-list the unify-τ dissolved?
+- **R-5 (row 13):** v7 ships `--tau-advance-mode event` (octave ladder) while the self-paced memo
+  RECOMMENDS run-1 in CLOCK mode (isolate the unify-τ continuation variable — one param at a time).
+  Event-mode also discretizes I-1's continuous backbone into held octaves. Council launch-mode call.
+- **R-6 (row 16):** hosc β-anneal endpoint 10 vs the blind's 1→4 (`hosc_activation_saturation_
+  trainability_v1`). β-annealed hosc is an ALLOWED chart, but 10≠4 needs its own derivation (or adopt
+  step-native, which is OFF).
+- **R-7 (row 18, minor):** I-5 β2-window LR rewarmup + finisher-Polyak EMA rescale are unbuilt
+  (`--ema-decay 0.997` flat, no `--muon-lr-rewarmup`); a full-LR step before 1/(1−β2) divides by
+  unconverged moments (`rewarmup_beta2_memory_window_v1`).
+
+### Verdict
+The v7 SPINE is structurally faithful to the blind physics (11/18 CONVERGENT — the load-bearing
+"one continuous sensed-transition flow" is BUILT, including all three sensor wirings the operator
+overrode the caps-only consensus to demand). The 7 REVISE findings are NOT spine breaks; they are
+(a) BASIS under-parametrization the blind ranks PRIOR to capacity (R-1/R-2/R-3/R-6 — the #1-lever
+directional/along-tangent/Whitney/eps family shipped below derivation) and (b) two terminal-phase
+structures (TAIL cycles, event-octave τ) the blind did not derive and which sit in tension with the
+continuous-backbone invariant (R-4/R-5). R-1 and R-3 are the highest-value: both are 0-to-small-byte
+levers the blind places AHEAD of capacity, shipped starved/unbuilt.
