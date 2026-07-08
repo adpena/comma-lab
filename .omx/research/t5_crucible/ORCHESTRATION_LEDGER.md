@@ -1925,3 +1925,11 @@ consumer update required — asserted [consumers-generic]. ---
   START (operator must size); steps_per_epoch=75 config-specific; β2 law INFERRED/PROVISIONAL.
   → symposium item 8 SATISFIED. ALL 11 DOCKET ITEMS NOW HAVE BUILDS/EVIDENCE → CONVENING the
   T3 inclusion symposium (5 Opus seats) + firing task #358 (D20) in parallel.
+- **TTD paper MINED** (35ed6331f, operator-supplied ICML26 FTT/HJB sampler): NOT-A-LEVER —
+  TT-training N/A (render d=2 → TT degenerates to SVD, no curse-win; axis-aligned tensor-product
+  basis blows rank on our curved separatrix, contradicting the MEASURED −48% directional result;
+  their A.7.2 excludes discontinuous targets) · rate side already armed as D18 (their HOSVD
+  threshold VALIDATES our k90 criterion) but dominated · ONE POSITIVE GRAIN: adaptive-Tikhonov +
+  K≈2^15 sample-complete regression = the named cure for #341's measured k=8 subset-overfit →
+  4th solvability condition routed to #342. Papers-checked ledger line folded to MEMORY L55.
+  Nothing preempts the crucible endgame.
