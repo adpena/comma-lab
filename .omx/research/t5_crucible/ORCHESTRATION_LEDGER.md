@@ -1841,3 +1841,9 @@ consumer update required — asserted [consumers-generic]. ---
 - **Consumer-leg hook**: MAJOR-1 surfaces asserted [consumers-generic] (resume-path + presence-
   gated telemetry rows; schema-driven introspect renders them).
 - Still in flight: TAIL fixer · minors sweeper · basis integration · D15 micro-batch routing.
+- **Minors sweeper LANDED** (99ce07e44/3c827c1e1/12c1ad8f2/0b8509f4b): 7/7 owned round-1 findings
+  fixed (deepmath MINOR-3/4/5/6 · confound MINOR-2 graded_state telemetry+test · MINOR-3 doc ·
+  structure R-6 β-end=10 KEEP-with-provenance). Zero-unfixed-findings convene precondition now
+  recorded as standing policy in the SYNTHESIS. Residual coordination risk (named, non-blocking):
+  MINOR-6 hunk in tail_cycles.py could be reverted by a later whole-file commit — re-apply if so.
+  Remaining in flight: TAIL fixer · basis integration · D15 micro-batch routing.
