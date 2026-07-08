@@ -2743,13 +2743,15 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
   <div class="tab" data-tab="oracle">ORACLE</div>
   <div class="tab" data-tab="flow">WITNESS</div>
   <div class="tab" data-tab="witness">RESIDUAL</div>
-  <div class="tab" data-tab="sandbox">SANDBOX</div>
-  <!-- TODO(#343): WHY/HOW tab HIDDEN per operator 2026-07-07 ("needs a lot of work") — copy
+  <!-- SANDBOX tab HIDDEN per operator 2026-07-08 ("hide the sandbox tab for now") —
+       section + content machinery stay intact; restore = uncomment in the block below.
+       TODO(#343): WHY/HOW tab HIDDEN per operator 2026-07-07 ("needs a lot of work") — copy
        rework required before re-show: break up the big blocks, direct technical register,
        fix tribute framing (pcap "The tribute's heart", the About/credits panel).
        TODO(#267): TRIALITY tab HIDDEN per operator 2026-07-07 — redesign (rename, organic
        evolution, costate integration) before re-show. All endpoints + panels + snapshot
        machinery stay intact for both; restore = uncomment a line here:
+  <div class="tab" data-tab="sandbox">SANDBOX</div>
   <div class="tab" data-tab="whyhow">WHY / HOW</div>
   <div class="tab" data-tab="tri">TRIALITY</div>
   -->
