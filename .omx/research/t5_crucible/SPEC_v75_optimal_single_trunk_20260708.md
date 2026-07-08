@@ -52,12 +52,16 @@ annealing behavior"); its equilibrium IS the spec — no ramp schedule to tune.
    levels from the Lever-1 balance; default-OFF byte-identical; appends RAMP-LANDED to
    v75_birth_counterforce memo. If it died: its brief is reproducible from the memo's HONEST SCOPE
    section — respawn with the same constraints.
-2. **P0 FORCES phase-2 code wave** (operator P0 elevation, task #360; phase-1 derivation agent
-   a33d52442c62bb85a IN FLIGHT — δ_R measurement, w_t calibration vs the 44%-flicker stats, term
-   formulations, DSL specs, interaction matrix). Phase-2 = mechanical build of the 4 levers
-   (temporal screw-consistency · margin-band satisficing hinge at δ_R · tie-locus displacement ·
-   R-phase alignment [may FOLD into #3 — phase-1 decides]) from the spec, default-OFF, composed
-   per the crucible's decision. FIRE ONLY when the ramp builder frees the trainer/DSL files.
+2. **P0 FORCES phase-2 code wave** (operator P0 elevation, task #360; phase-1 LANDED f7209667a:
+   .omx/research/p0_forces_derivation_20260708.md = the mechanical spec). SETTLED by phase-1:
+   4 forces → 3 (R-phase FOLDS into tie-locus — do NOT build two terms); the tie-locus term is
+   ALREADY BUILT in the trainer (~L4559, default-off — wrap + FEED-PA edge weighting only);
+   δ_R = 0.0196 MEASURED (m_safe ≈ 0.06; n600 re-run of the existing tool rides phase-2);
+   temporal = stop-grad GT-ξ default (pose-safe; live-ξ arm separate + tripwired), w_t 0.1
+   cold-start + stage-boundary ramp; satisficing anneals in at l7 (masks, never replaces CE).
+   Phase-2 = 2 new DSL levers + 1 wrap, default-OFF, from the spec verbatim. FIRE ONLY when the
+   ramp builder (#361) frees the trainer/DSL files. Activation: one force per crucible increment,
+   ≤15% each / ≤40% total loss share.
 3. **SEAL rounds → 3 clean passes** (counter 1/3 after round 4 CLEAN). Round 5 = all 4 lenses on
    the composed delta (v7.5 counter-force + ramp + P0 levers). Protocol: fix-ALL severities per
    round (zero-unfixed precondition); reviewers RE-DERIVE from primary artifacts (never confirm
