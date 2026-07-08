@@ -44,7 +44,7 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
       unreviewed verdict → PROVISIONAL until its review clears. Run-config claims must cite
       launch.sh or the council design memo, never the activation ledger. Memory:
       verdict_review_status_metadata_operator_should_never_catch_provenance_20260707.
-- [ ] P3b debate round(s) (≥2; designer defends/revises the draft against the attacks)
+- [x] P3b debate round(s) — v2 REVISION landed (305d884ce); second red-team verify pass launched
 - [ ] P4 EMPIRICAL RECESS (measurable disputes → n600-real data; HVP-Lanczos first; serial, governed)
 - [ ] P5 revised synthesis (the draft, amended by recess results; survives second red-team pass)
 - [ ] P6 #363 self-reflection seal (assumption tags; PROVISIONAL where unmeasured)
@@ -371,3 +371,16 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   (independent 2-6% / with-repair 8-15%); central ≈0.26 does NOT cross (stated per NO-FAKE);
   wall-clock corrected 35%→5-27%. NEW pre-GO probes: P11 (AA gate) + P12 (ep0 init probe, F9).
   Next per queue: second red-team pass on v2 → P4 empirical recess (P5/P7 first per PowerPlay).
+- 2026-07-07T~21:3x **DRAFT v2 LANDED** (305d884ce; v1 preserved append-only). CROSSING CASE NOW
+  ARITHMETICALLY TRUE + ENGINEERED: d_seg ≤0.0011 ∧ d_pose ≤3e-5 ∧ rate ≤0.062 → S=0.1893 <
+  0.19110 (row-verified; v1's false tail printed as the negative example). Central ≈0.26 does NOT
+  cross — stated plainly; the TWO BINDING CONSTRAINTS exhibited + instrumented (big-3
+  anneal-completion recovery ~4-9e-4 UNMEASURED; lane composed-band efficacy). AA IN from ep0
+  (P11 $0 gate pre-GO) · comb conditional on P1 · pose bar 3e-5 (1.5e-4 → milestone) · λ=0 twin
+  (attribution + Class-D×B recess) · anneal-epochs 600 event-margin (F3 fixed; **backtest RUN:
+  first sustained fire ep625 on the real mod32cap trace — one cadence before ep650 best**) ·
+  #342 15-block solve inventory produced · dual probability model printed (independent 2-6% /
+  with-repair 8-15% run-1 crossing). **CHAIN-A FOLDED (honest negative):** λ₋ collapses ~1/K,
+  u_min ISOTROPIC → no cheap spectral descent at ep650; TerminalSolve-from-ep650 measured NO-GO;
+  SOLVE branch = measured-acceptance HARD. **P5 SECOND RED-TEAM PASS LAUNCHED** (verify each
+  F1-F17 disposition + regression/interaction/launch-readiness).
