@@ -265,6 +265,21 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: CRUCIBLE_V7 AUTHORED (217416cf3 code + 4b29584d8 memo; first requirement-V-
+native config; 25 new + 155 sibling tests) ---
+- Gate: **0 NAKED** (tau-softplus + l7 + tau-hold-frac DELETED; muon 726 / lane-band 500 /
+  chroma 450 = tagged FAIL_SAFE_CAPs). Diff-vs-v6: −3 / Δ3 (geometric shape; band/chroma cap
+  moves) / +25 (unify-tau + 7 tail + 17 ladder); ALL other flags per-flag byte-identical
+  asserted; pose verbatim.
+- WIRING GAPS (honest, NOT faked; council input): the 3 event conversions are CAPS-as-authored
+  because sensor→start wiring is unbuilt — muon (powerlaw_meat = code sensor, no CLI gate),
+  lane-band (nucleus-guard governs CE→tau, not lane-band-start), chroma (#333 telemetry is
+  observability-only). The owed build list = crucible_v7_wiring_gaps().
+- T3 COUNCIL FANNED OUT (6 blind Opus seats per CONVENING_T3_v7_design_symposium_20260708):
+  key added question = launch v7 with tagged caps + owed wiring, or build the 3 sensor
+  wirings first. Verdict bar: unconditional PROCEED → 3×3+structure seal → governed stop +
+  relaunch (operator GO standing). Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: UNIFY-TAU (recovery complete; fce9cd0c6/050e86af1/d995bad9d/e08ca7a25;
 18 + 172 sibling tests green; memo seg_form_unify_tau_build_20260708.md) — V7 BUILD SET
 COMPLETE ---
