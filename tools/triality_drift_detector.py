@@ -445,6 +445,29 @@ def main() -> None:
     except Exception:
         _advance_and_allow(root, head)  # can't read log → fail open, advance
 
+    # --- RECALL-EVIDENCE LEG (operator binding 2026-07-07: "you recorded that before and did
+    # it again" — prose never fixed a behavior class, only enforcement did). DECISION-CLASS docs
+    # (council/crucible charters, grounding packets, seat positions, design drafts, convening
+    # records) must carry a "STORES CONSULTED" line naming which durable stores were recalled
+    # before the conclusions were written. Fail-open independently; warn-grade nudge (folded
+    # into the block reason only when a block already fires OR standalone as its own block). ---
+    recall_missing: list[str] = []
+    try:
+        import re as _re
+        decision_pat = _re.compile(
+            r"\.omx/research/.*(council|crucible|symposium|GROUNDING|position_S|DRAFT_|convening)",
+            _re.IGNORECASE)
+        for f in files:
+            if decision_pat.search(f) and f.endswith(".md"):
+                fp = os.path.join(root, f)
+                if os.path.exists(fp):
+                    head_txt = open(fp, errors="replace").read(6000)
+                    if ("STORES CONSULTED" not in head_txt.upper()
+                            and "ORCHESTRATION_LEDGER" not in f):
+                        recall_missing.append(f)
+    except Exception:
+        recall_missing = []
+
     # --- CONSUMER LEG (fail-open independently: a bug in the NEW leg can neither
     # block the session nor perturb the existing legs' verdict) ---
     consumer_missing = False
@@ -457,7 +480,7 @@ def main() -> None:
     except Exception:
         consumer_missing = False
 
-    if classify(subjects, files) == "drift" or consumer_missing:
+    if classify(subjects, files) == "drift" or consumer_missing or recall_missing:
         # Persist last_block_head (do NOT advance last_head — so the fix/DAG-FEED commit lands
         # inside the next window's UNION and clears the drift on re-check; the last_block_head
         # backstop clears the block once head is unchanged, so it cannot loop).
@@ -473,8 +496,19 @@ def main() -> None:
             reason = build_reason(subjects, files)
             if consumer_missing:
                 reason = reason + " ALSO — " + CONSUMER_NUDGE
-        else:
+        elif consumer_missing:
             reason = CONSUMER_NUDGE
+        else:
+            reason = ""
+        if recall_missing:
+            reason = (reason + (" ALSO — " if reason else "") +
+                      "RECALL-EVIDENCE missing: decision-class doc(s) "
+                      f"{recall_missing[:3]} lack a 'STORES CONSULTED:' line naming which "
+                      "durable stores (memories/DAG/equations/DSL/tasks/run-artifacts) were "
+                      "recalled before concluding. Add the line (list the stores actually "
+                      "consulted — honestly, including 'none' if so) and re-finish. "
+                      "This is the enforcement hook for the recall-before-decide class "
+                      "(L27/L28/L83): prose rules recurred; this fires without volition.")
         print(json.dumps({"decision": "block", "reason": reason}))
         sys.exit(0)
 
