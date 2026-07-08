@@ -271,7 +271,7 @@ def inject_per_group_grad_clip(extra_flags: list[str], config_flag_names: list[s
     names = set(_extra_flag_names(extra_flags)) | set(config_flag_names)
     if "--per-group-grad-clip" in names or "--no-per-group-grad-clip" in names:
         return extra_flags, None
-    return extra_flags + ["--per-group-grad-clip"], (
+    return [*extra_flags, "--per-group-grad-clip"], (
         "Fix 4 (C4): injected --per-group-grad-clip (trainer default OFF for byte-identity) so the "
         "eikonal + seg gradients are clipped per-group — the volatile eikonal term can no longer "
         "hijack the shared clip budget and starve the seg step. Pass --no-per-group-grad-clip to opt out.")
@@ -290,7 +290,7 @@ def couple_palliative_warm_start(extra_flags: list[str],
         return extra_flags, None
     if "--warm-start-weights-only" in names:
         return extra_flags, None
-    return extra_flags + ["--warm-start-weights-only"], (
+    return [*extra_flags, "--warm-start-weights-only"], (
         "Fix 2 (C8): a palliative resume flag (--resume-clear-spike-guard / "
         "--resume-allow-lever-drift) is emitted without --warm-start-weights-only; injected it so "
         "the trainer auto-resolves --resume-model-from ema and does NOT restore stale ep-N optimizer "
@@ -431,11 +431,24 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
 
 def write_launch_sh(cfg, out_dir: Path, repo_root: Path | None = None,
                     extra_flags: list[str] | None = None) -> Path:
+    """Write launch.sh ATOMICALLY (tmp + os.replace, same dir → new inode).
+
+    NEVER ``write_text`` in place: bash reads scripts incrementally from an open
+    fd, so truncating the SAME inode under a live run shifts the byte offset and
+    bash executes an orphaned continuation line as a command when the long
+    trainer command returns. Empirical anchor: mod32cap 20260706T115554Z —
+    launch.sh was regenerated ~5.5h into the live run; at trainer exit bash
+    resumed mid-file and died on ``line 60: --ckpt-every: command not found``.
+    ``os.replace`` gives every rewrite a fresh inode; a running bash keeps its
+    fd on the old bytes and finishes cleanly (hardening sweep 2026-07-08)."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     launch = out_dir / "launch.sh"
-    launch.write_text(build_launch_sh(cfg, str(out_dir), repo_root, extra_flags=extra_flags))
-    launch.chmod(0o755)
+    body = build_launch_sh(cfg, str(out_dir), repo_root, extra_flags=extra_flags)
+    tmp = out_dir / f".launch.sh.tmp.{os.getpid()}"
+    tmp.write_text(body)
+    tmp.chmod(0o755)
+    os.replace(tmp, launch)
     return launch
 
 
@@ -1092,7 +1105,7 @@ def main(argv: list[str] | None = None) -> int:
                                   reason="launched via tools/launch_witness_run.py --dsl-lever",
                                   agent="launch_witness_run")
             print(f"[launch-witness] activation-ledger: recorded 'fired' for {', '.join(args.dsl_lever)}")
-        except Exception as exc:  # noqa: BLE001 - telemetry must never break a fired launch
+        except Exception as exc:  # telemetry must never break a fired launch
             print(f"[launch-witness] WARNING: activation-ledger record failed "
                   f"({type(exc).__name__}: {exc}); launch already fired, continuing.", file=sys.stderr)
 
@@ -1102,7 +1115,7 @@ def main(argv: list[str] | None = None) -> int:
     # queue" rule. NON-FATAL: an observer failure must never break a launch that already fired.
     try:
         ensure_shadow_observer(out_dir)
-    except Exception as exc:  # noqa: BLE001 - telemetry must never break a fired launch
+    except Exception as exc:  # telemetry must never break a fired launch
         print(f"[launch-witness] WARNING: shadow-observer auto-start failed "
               f"({type(exc).__name__}: {exc}); launch already fired, continuing.", file=sys.stderr)
 

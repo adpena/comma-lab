@@ -101,7 +101,9 @@ def test_build_launch_sh_structure():
     body = lw.build_launch_sh(_cfg(), "out", repo_root=Path("/repo"))
     # RUN-IDENTITY header (comment lines only) sits between the shebang/pipefail
     # prologue and the cd — family always stamped; purpose only when declared.
-    assert body.startswith("#!/bin/bash\nset -euo pipefail\n# tac-config-family: ")
+    # env-resolved shebang per cross-platform-by-default (operator 2026-07-07, a38eee199):
+    # macOS pins /bin/bash to 3.2; fleet nodes resolve a modern bash from PATH.
+    assert body.startswith("#!/usr/bin/env bash\nset -euo pipefail\n# tac-config-family: ")
     assert "\ncd /repo\n" in body
     assert "# tac-run-purpose:" not in body  # purpose undeclared -> no line (never a guess)
     assert "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1" in body  # perf-env prefix present
@@ -131,6 +133,46 @@ def test_write_launch_sh_roundtrips_through_schedule_parser(tmp_path):
     sched = cfg["schedule"]
     assert sched["tau_start"] is not None and sched["l7_start"] is not None
     assert sched["muon_start"] is not None and sched["epochs"] == 1000
+
+
+# ─────────────── class-guards: generated launch.sh must EXECUTE cleanly ───────────────
+# Empirical anchor (hardening sweep 2026-07-08): mod32cap 20260706T115554Z —
+# launch.sh was rewritten IN PLACE (same inode, Path.write_text) while a live bash
+# was executing it; at trainer exit bash resumed at a shifted byte offset in the
+# new bytes and executed an orphaned continuation line as a command
+# ("line 60: --ckpt-every: command not found"). Two guards:
+#   (1) the generated script parses (bash -n) and has NO orphaned arg lines —
+#       every command-block line except the last carries a trailing backslash;
+#   (2) rewrites REPLACE the inode (tmp + os.replace) so a running bash keeps
+#       its open fd on the old bytes and finishes cleanly.
+
+def test_launch_sh_parses_and_has_no_orphaned_continuations(tmp_path):
+    import subprocess
+
+    launch = lw.write_launch_sh(_cfg(), tmp_path, extra_flags=["--muon-lr", "0.002"])
+    proc = subprocess.run(["bash", "-n", str(launch)], capture_output=True, text=True)
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr}"
+    lines = launch.read_text().splitlines()
+    start = next(
+        i for i, ln in enumerate(lines) if "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1" in ln
+    )
+    block = [ln for ln in lines[start:] if ln.strip()]
+    for ln in block[:-1]:
+        assert ln.rstrip().endswith("\\"), f"orphaned (non-continued) command line: {ln!r}"
+    # final line terminates the command — a trailing backslash there would swallow EOF
+    assert not block[-1].rstrip().endswith("\\")
+
+
+def test_write_launch_sh_atomic_replace_new_inode(tmp_path):
+    first = lw.write_launch_sh(_cfg(), tmp_path)
+    ino1 = first.stat().st_ino
+    second = lw.write_launch_sh(_cfg(), tmp_path)
+    assert second == first
+    # os.replace gives a fresh inode; in-place truncation (the mod32cap corruption
+    # vector) would keep st_ino stable while shifting bytes under a live reader.
+    assert second.stat().st_ino != ino1
+    assert os.access(second, os.X_OK)
+    assert [p for p in tmp_path.iterdir() if p.name.startswith(".launch.sh.tmp")] == []
 
 
 # ───────────────────────── perf-env verification ─────────────────────────
@@ -172,7 +214,7 @@ def test_main_dry_run_writes_launch_sh_no_spawn(tmp_path, capsys):
     assert (out / "launch.sh").exists()
     assert not (out / "run.log").exists()  # DRY-RUN must NOT spawn
     out_txt = capsys.readouterr().out
-    assert "DRY-RUN" in out_txt and "55/55" in out_txt or "flags exist" in out_txt
+    assert ("DRY-RUN" in out_txt and "55/55" in out_txt) or "flags exist" in out_txt
 
 
 def test_main_refuses_invented_flag(tmp_path, monkeypatch, capsys):
