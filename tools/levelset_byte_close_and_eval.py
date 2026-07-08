@@ -218,6 +218,44 @@ def _refuse_tmp(path: Path, field: str) -> None:
 # ---------------------------------------------------------------------------
 # checkpoint loading -- separate LEARNED params from the __cfg/__bank/__render scalars.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# weights-arm selection (B1 confound-F1 fix): ema / live / polyak candidate arms.
+# The trainer exports up to three deploy npz candidates for one run:
+#   levelset_witness_ema_mlx.npz     — the EMA shadow (default deploy arm)
+#   levelset_witness_live_mlx.npz    — the LIVE weights (the EMA-lag escape arm, FEED-br)
+#   levelset_witness_polyak_mlx.npz  — the R7 Polyak tail-average finisher CANDIDATE
+# Before this fix the byte-close/eval consumed ONE arm and NEVER ranked polyak vs {ema,live}
+# (the "picks the better candidate" consumer did not exist). ``select_best_weights_arm`` byte-closes
+# + scores every AVAILABLE arm and RECORDS the N-way selection (per-arm scores + winner + margins).
+# Fail-open: a missing arm npz is simply not in the set => older runs (ema-only) are unchanged.
+_ARM_NPZ: dict[str, str] = {
+    "ema": "levelset_witness_ema_mlx.npz",
+    "live": "levelset_witness_live_mlx.npz",
+    "polyak": "levelset_witness_polyak_mlx.npz",
+}
+# The order the loader's default candidate search prefers (ema first) — used to label a default run.
+_ARM_DEFAULT_ORDER = ("ema", "live", "polyak")
+
+
+def _arm_label_for_npz(npz_name: str | None) -> str:
+    """Map a resolved npz filename to its weights-arm label ('ema'/'live'/'polyak'), or 'explicit'
+    for a custom filename, or 'default(ema)' when the loader fell back to its default search order
+    (npz_name is None => ema is preferred + is what byte-closes on a normal run)."""
+    if not npz_name:
+        return "default(ema)"
+    base = Path(npz_name).name
+    for arm, fn in _ARM_NPZ.items():
+        if base == fn:
+            return arm
+    return "explicit"
+
+
+def discover_available_arms(ckpt_dir: Path) -> list[str]:
+    """The weights arms whose npz is present in ``ckpt_dir`` (fail-open: only what actually exists),
+    in the canonical ema/live/polyak order. An older run with just the EMA npz yields ``['ema']``."""
+    return [arm for arm in _ARM_DEFAULT_ORDER if (ckpt_dir / _ARM_NPZ[arm]).exists()]
+
+
 def _load_levelset_ckpt(
     ckpt_dir: Path, npz_name: str | None = None
 ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
@@ -2463,6 +2501,10 @@ def run(
         "utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "ckpt_dir": str(ckpt_dir),
         "npz_name": cfg["npz_name"],
+        # (B1 confound-F1) which weights arm this run byte-closed. A single-arm run records its own
+        # arm; a --select-arms run overwrites the top-level weights_arm with the WINNER + attaches the
+        # full N-way ``arm_selection`` block (see select_best_weights_arm).
+        "weights_arm": _arm_label_for_npz(cfg.get("npz_name")),
         "n_pairs_total": n_pairs,
         "self_orient": so,
         "config": {k: cfg.get(k) for k in (
@@ -2546,6 +2588,101 @@ def _this_run_scored_full_600(parity: Any) -> bool:
     return bool(isinstance(parity, dict) and parity.get("pairs_scored") == 600)
 
 
+def _extract_arm_metrics(report: dict[str, Any]) -> dict[str, Any]:
+    """Pull the ranking-relevant scalars out of a single-arm byte-close report (B1)."""
+    bc = report.get("byte_close", {}) or {}
+    par = report.get("parity_on_inflated_frames", {}) or {}
+    s = par.get("implied_S_advisory")
+    return {
+        "weights_arm": report.get("weights_arm"),
+        "npz_name": report.get("npz_name"),
+        "archive_zip_bytes": bc.get("archive_zip_bytes"),
+        "rate_term": bc.get("rate_term"),
+        "d_seg_realized_on_inflated": par.get("d_seg_realized_on_inflated"),
+        "d_pose_realized_on_inflated": par.get("d_pose_realized_on_inflated"),
+        "implied_S_advisory": (float(s) if isinstance(s, (int, float)) else None),
+        "pose_blind": par.get("pose_blind"),
+        "pairs_scored": par.get("pairs_scored"),
+        "parity_skipped": bool(par.get("skipped", True)),
+    }
+
+
+def select_best_weights_arm(
+    ckpt_dir: Path, *, arms: list[str] | None = None, **run_kwargs: Any
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """(B1 confound-F1 fix) Byte-close + realized-parity-score EVERY available weights arm
+    ({ema, live, polyak} whose npz is present) and RECORD the N-way selection — the missing
+    "picks the better candidate" consumer.
+
+    Returns ``(winner_report, arm_reports)``. ``winner_report`` is the winning arm's full byte-close
+    report with its top-level ``weights_arm`` set to the winner and an ``arm_selection`` block attached
+    (per-arm d_seg/d_pose/rate/S, the ranked order, the winner, and the S-margin by which the winner
+    beat each loser). Fail-open: a missing arm npz is simply absent from the set (an ema-only older run
+    ranks a 1-arm "selection" honestly). Ranks by realized ``implied_S_advisory`` (lower is better);
+    an arm with no S (unscored) sorts LAST. NO-FAKE: refuses ``skip_parity`` — you cannot "pick the
+    better candidate" without measuring d_seg/d_pose through the real byte-closed inflate."""
+    if run_kwargs.get("skip_parity"):
+        raise ValueError(
+            "select_best_weights_arm needs realized parity to rank arms — refusing --skip-parity "
+            "(NO-FAKE: 'the better candidate' is undefined without a MEASURED d_seg/d_pose per arm).")
+    available = list(arms) if arms is not None else discover_available_arms(ckpt_dir)
+    available = [a for a in available if a in _ARM_NPZ and (ckpt_dir / _ARM_NPZ[a]).exists()]
+    if not available:
+        raise FileNotFoundError(
+            f"no weights-arm npz present in {ckpt_dir} (looked for {list(_ARM_NPZ.values())}); "
+            "refusing to fabricate (NO-FAKE).")
+
+    per_arm: dict[str, dict[str, Any]] = {}
+    arm_reports: dict[str, dict[str, Any]] = {}
+    for arm in available:
+        print(f"[select-arms] byte-closing + scoring arm={arm} ({_ARM_NPZ[arm]}) …", flush=True)
+        rep = run(ckpt_dir, npz_name=_ARM_NPZ[arm], **run_kwargs)
+        arm_reports[arm] = rep
+        per_arm[arm] = _extract_arm_metrics(rep)
+
+    def _rank_key(a: str) -> tuple[int, float]:
+        s = per_arm[a]["implied_S_advisory"]
+        return (0, float(s)) if isinstance(s, (int, float)) else (1, float("inf"))
+
+    ranked = sorted(available, key=_rank_key)
+    winner = ranked[0]
+    win_s = per_arm[winner]["implied_S_advisory"]
+    margins: dict[str, float | None] = {}
+    for a in available:
+        if a == winner:
+            continue
+        s = per_arm[a]["implied_S_advisory"]
+        margins[a] = (
+            float(s) - float(win_s)
+            if isinstance(s, (int, float)) and isinstance(win_s, (int, float))
+            else None)
+
+    winner_report = arm_reports[winner]
+    winner_report["weights_arm"] = winner
+    winner_report["arm_selection"] = {
+        "selected_by": "select_best_weights_arm",
+        "metric": "implied_S_advisory (lower is better; realized on INFLATED frames, macOS-numpy)",
+        "available_arms": list(available),
+        "polyak_present": ("polyak" in available),
+        "polyak_scored": (per_arm.get("polyak", {}).get("implied_S_advisory") is not None),
+        "per_arm": per_arm,
+        "ranked_arms": ranked,
+        "winner": winner,
+        "winner_implied_S_advisory": (float(win_s) if isinstance(win_s, (int, float)) else None),
+        "margin_vs_winner": margins,   # loser_S - winner_S (>= 0 when both scored); None if unscored
+        "authority": _AUTHORITY,
+        "note": (
+            "ALL available arms (ema/live/polyak) are byte-closed + realized-scored so the shipped "
+            "candidate is the MEASURED best (confound F1 fix: polyak is no longer an orphaned "
+            "candidate). Advisory S is macOS-numpy on inflated frames; the exact-eval row "
+            "(upstream/evaluate.py CPU) remains the authority for a promotion claim."),
+    }
+    print(f"[select-arms] WINNER={winner} implied_S_advisory="
+          f"{winner_report['arm_selection']['winner_implied_S_advisory']} | ranked={ranked} | "
+          f"margins(loser_S-winner_S)={margins}  {_AUTHORITY}", flush=True)
+    return winner_report, arm_reports
+
+
 def byte_close_verdict_landed(report: dict) -> bool:
     """True iff a REAL realized-parity verdict landed in ``report`` (the gate for recording a #247
     ``measured`` activation event). The realized d_seg/d_pose lives under ``parity_on_inflated_frames``;
@@ -2567,6 +2704,17 @@ def main(argv: list[str] | None = None) -> int:
                     help="level-set run dir with levelset_witness_{ema,live}_mlx.npz")
     ap.add_argument("--npz-name", type=str, default=None,
                     help="explicit npz filename (default: prefer *_ema_mlx.npz then *_live_mlx.npz)")
+    # (B1 confound-F1) N-way weights-arm selection: byte-close + score EVERY available arm
+    # ({ema,live,polyak} present in the run dir) and record the ranked selection (per-arm scores +
+    # winner + margins). OFF by default (single-arm run, byte-identical). The polyak candidate is no
+    # longer orphaned. Needs realized parity (NOT --skip-parity).
+    ap.add_argument("--select-arms", action="store_true",
+                    help="byte-close + realized-score EVERY available weights arm (ema/live/polyak) "
+                         "and pick the MEASURED best; records the N-way selection in the report. "
+                         "Cannot combine with --skip-parity.")
+    ap.add_argument("--arms", type=str, default=None,
+                    help="comma-separated arms to select over (subset of ema,live,polyak); default = "
+                         "every arm whose npz is present. Only used with --select-arms.")
     ap.add_argument("--max-pairs", type=int, default=None,
                     help="cap inflate+parity pairs for SPEED (default: all). Archive always encodes all codes.")
     ap.add_argument("--gt-cache", type=str, default=None, help="shared GT npz for parity (e.g. gt_n6.npz)")
@@ -2692,9 +2840,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"# decode memory-tier: {tier.name} (contest={tier.contest}, bit_exact={tier.bit_exact_contract}, "
           f"eval_device={eval_device}); inflate env={_tier_env or '{} (inflate defaults)'}", flush=True)
 
-    report = run(
-        args.ckpt_dir,
-        npz_name=args.npz_name,
+    _run_kwargs: dict[str, Any] = dict(
         max_pairs=args.max_pairs,
         fold_pose_sidecar=args.fold_pose_sidecar,
         pose_sidecar_path=args.pose_sidecar_path,
@@ -2730,6 +2876,21 @@ def main(argv: list[str] | None = None) -> int:
         video_names_file=args.video_names_file,
         eval_timeout=args.eval_timeout,
     )
+    if args.select_arms:
+        # (B1) N-way selection over the available weights arms; the winner report carries arm_selection.
+        if args.npz_name:
+            raise SystemExit(
+                "--npz-name conflicts with --select-arms (the selection ranks the canonical arm npzs; "
+                "an explicit filename would be silently ignored — pick one).")
+        _arms = None
+        if args.arms:
+            _arms = [a.strip() for a in args.arms.split(",") if a.strip()]
+            _bad = [a for a in _arms if a not in _ARM_NPZ]
+            if _bad:
+                raise SystemExit(f"--arms: unknown arm(s) {_bad}; valid = {sorted(_ARM_NPZ)}")
+        report, _arm_reports = select_best_weights_arm(args.ckpt_dir, arms=_arms, **_run_kwargs)
+    else:
+        report = run(args.ckpt_dir, npz_name=args.npz_name, **_run_kwargs)
     # record the decode-tier contract in the report (observability + provenance).
     report["decode_memory_tier"] = {
         "name": tier.name, "contest": tier.contest, "bit_exact_contract": tier.bit_exact_contract,
