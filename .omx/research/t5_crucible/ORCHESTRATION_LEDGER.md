@@ -150,6 +150,20 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+--- LANDING FOLDED 2026-07-08T~03:3x: V5 (b241cf466) — the seal target ---
+- DRAFT_OPTIMAL_STACK_v5_20260707.md (596 lines): all 10 CT fold items 1:1 (+2 gated extras).
+  Crossing RE-VERIFIED unrounded, UNCHANGED: central S=0.1897336 (margin 0.0013664), win9
+  S=0.1817034 (margin 0.0093966); train targets ≤0.0010137 / ≤0.0010940; ILC-formal bar
+  0.0011−Δ̂ = 9.9573e-4. Signal ledger = 19 rows SC-1..SC-19, ZERO no-signal gap terms (req P).
+  τ-indexed constants: 9-row c(τ) enumeration. B16 signed shape-gradient (Q1-gated) · B17
+  Conley certificate (P-CON backtest) · B18 release law r*(t)=0.95·σ_eff(t) · B-CT1 would-fire
+  TAU→FIN arm (P-CT3 backtest queued).
+- APPARATUS CATCH (never-invent-flags WORKING): synthesizer grep-verified all flags against the
+  real 250-row argparse — BOTH CT seats had invented one (`--copred-verdict-window`,
+  `--island-dilation-radius-end`); corrected; V=4→5 routed to the B1 spec (no in-trainer flag
+  exists). CT provenance tagged fresh-research-round-1-unreviewed on every derived row.
+- SEAL COUNTER: v5 = seal target; round 1 of 3 (both lenses) FIRED.
+
 --- LANDING FOLDED 2026-07-08T~02:5x: CT-1 (d9325a44e) — REQUIREMENT O COMPLETE (both seats) ---
 - ct_deepresearch_1_training_campaign_control_20260707.md (552 lines, fresh-research-round-1).
   Top-3 imports:
