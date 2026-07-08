@@ -1084,6 +1084,11 @@ def build_levelset_rgb_witness(
             self.periodic_omega = float(hosc_omega)
             self.wire_scale = float(wire_s0)
             self.chroma = bool(chroma)
+            # SAFE-COMPILE (#252 v2) installable hook: None => the plain _act path runs
+            # (BYTE-IDENTICAL default; exactly the live default-OFF run). Set to
+            # mx.compile(pure_hosc) ONLY by install_safe_compiled_regions when the CERTIFIED +
+            # fingerprint-fresh 'hosc_activation' region is enabled. Plain callable => not a param.
+            self._compiled_act = None
             self.code = mx.zeros((num_pairs * 2, mod_dim))
             self.in_proj = nn.Linear(in_feat, hidden_dim)
             self.film = nn.Linear(mod_dim, 2 * hidden_dim * n_hidden)
@@ -1130,6 +1135,13 @@ def build_levelset_rgb_witness(
             if self.activation == "wire":
                 return mx.cos(self.wire_w0 * u) * mx.exp(-((self.wire_s0 * u) ** 2))
             if self.activation == "hosc":
+                # SAFE-COMPILE (#252 v2): route through the CERTIFIED compiled pure hosc when
+                # installed (beta/omega as float32 array scalars => the per-epoch beta anneal is a
+                # traced input, never a baked constant). Default (None) => plain path => BYTE-IDENTICAL.
+                _ca = self._compiled_act
+                if _ca is not None:
+                    return _ca(u, mx.array(self.hosc_beta, dtype=u.dtype),
+                               mx.array(self.hosc_omega, dtype=u.dtype))
                 return mx.tanh(self.hosc_beta * mx.sin(self.hosc_omega * u))
             return nn.relu(u)
 
@@ -6850,12 +6862,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _sc_repo_root, ".omx", "state", "mlx_safe_compile_manifest.json")
         _sc_man = CertificationManifest.load(_sc_manifest_path) if os.path.exists(
             _sc_manifest_path) else None
-        _safe_compile_enabled = resolve_enabled_regions(_safe_compile_spec, _sc_man)
+        _safe_compile_enabled = resolve_enabled_regions(
+            _safe_compile_spec, _sc_man, run_device=str(getattr(args, "mlx_device", "gpu")))
+        # WIRE THE HOT LOOP (#252 v2): install the compiled hooks onto the live model. No-op /
+        # byte-identical when _safe_compile_enabled is empty (the default). Activation is a FLAG-FLIP:
+        # setting --safe-compile-regions hosc_activation (with a CERTIFIED + fingerprint-fresh manifest)
+        # sets model._compiled_act => _act routes through the compiled pure hosc. Fail-closed:
+        # resolve already refused stale-fingerprint / uncertified ids, so this never compiles unproven.
+        from tac.mlx_safe_compile import install_safe_compiled_regions
+        _sc_installed = install_safe_compiled_regions(model, _safe_compile_enabled, _sc_man)
         print(json.dumps({"stage": "safe_compile", "spec": _safe_compile_spec,
                           "manifest": _sc_manifest_path,
                           "enabled_regions": sorted(_safe_compile_enabled),
+                          "installed_hot_loop_regions": _sc_installed,
                           "note": "#252 determinism-first mx.compile: CERTIFIED regions only; "
-                                  "score-neutral (bit-identical to uncompiled)"}), flush=True)
+                                  "score-neutral (bit-identical to uncompiled); hot-loop wired"}), flush=True)
     with temporary_mlx_device(args.mlx_device):
         if getattr(args, "fused_r_kernel", False):
             if args.mlx_device != "gpu":
