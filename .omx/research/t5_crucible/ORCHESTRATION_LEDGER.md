@@ -2175,3 +2175,12 @@ consumer update required — asserted [consumers-generic]. ---
   (canonical detail) → Stop hooks (triality/verdict-scope/recall enforcement, involuntary) →
   task dependencies (order) → resume registry + governed launcher (execution). The harness
   leads; no step depends on anyone remembering.
+- **RAMP ACTUATION LANDED (22e4e8827, 10 files +752/−25) — #361 DONE**: per-class birth-pressure
+  ramp-down on completion (logit-adjust vector · persistence recall_class_scale · island-amplify
+  DISJOINT-partition split verified |diff|=0.0 vs the combined weighted-mean — the non-separable
+  crux handled correctly). post_level = 1−τ_persist = 0.2 DERIVED (equilibrium A*=1.05·A_GT at
+  τ=0.8/δ=0.25); ramp_epochs=50; both scales ASSUMED_AWAITING_VERIFICATION (owed to the A/B,
+  sister of λ). Resume: birth_completion NOW a FunctionResumable (__bc_ additive; legacy→un-fired
+  byte-identical) — CAUGHT + FIXED the memo's false "resume LIVE" claim (resumability-P0 win).
+  19 new tests + 310 green; dry-run 150/150 flags carry --birth-completion-ramp
+  --birth-completion-post-level 0.2. v7.5 counter-force COMPLETE. NEXT (chain step 2): P0 phase-2.
