@@ -477,3 +477,12 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   folded (TerminalSolve OUT, req-A(i) updated to the measured negative); (2) recess wave-1
   finisher relaunched (complete+verify the in-tree AA-gate fix, R1, R6). K=128 JSON append =
   optional cheap tail item.
+- 2026-07-07T~20:4x OPERATOR IDEA registered (#348): deterministic GPU accumulation via
+  fixed-point int64 (associative → order-independent → bit-identical) or fixed-order segmented
+  reduction (no atomics) — attacks the L70 MLX-GPU cross-process bit-identity wall at its root.
+  Phase 0 = $0 per-op localization (reuse chain-A Link-0 repeatability harness); sweet spot = OUR
+  custom Metal kernels (grouped-backward/fused-R — we own the reductions); PRIZE = GPU verdict
+  promotion (CPU-locked chunked n600 verdicts → GPU = wall-clock synergy, note for synthesis §8);
+  deep cut = full-integer pipeline as the only cross-device (Metal↔CUDA) bit-identity. Sequenced
+  post-seal; numpy-fp32 stays THE authority regardless. Queue unchanged: v3 designer + wave-1
+  finisher in flight.
