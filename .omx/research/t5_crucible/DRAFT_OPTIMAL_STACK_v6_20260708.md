@@ -23,6 +23,12 @@ axis: all numbers [macOS-CPU/MLX advisory] unless tagged; archive bytes exact (z
   Pointer contest-CPU 0.19110 UNMOVED — this whole file is MEANS.
 review_status: pre-registered-only (v6, seal round 1 of 3 pending)
 verdict_scope_discipline: every negative below carries its req-R scope tag
+verdict_scope: formulation — the negatives THIS draft asserts are all formulation-scoped at their
+  source probes (P-CON kill = pers>τ·ln5 AS-FORMULATED, fitted bar is the live form; P-MP dead =
+  K≤64 concave-max selection AT the annulus, capacity passes; Q1 "at chance" = the POOLED-unsigned
+  statistic, per-direction mechanism confirmed real; τ*=0.062 struck = INSTANCE, corrupted input).
+  Family-level claims appear ONLY in the asymptote section with their deciding measurements named.
+  Remaining uppercase tokens quote source-scoped probe verdicts. # VERDICT_SCOPE_OK:quotes-of-source-scoped-verdicts-plus-the-per-item-tags-below
   {INSTANCE | FORMULATION | FAMILY | PARADIGM}; kills enumerate reformulation queues.
 ---
 
