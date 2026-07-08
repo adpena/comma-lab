@@ -10707,3 +10707,26 @@ d_seg+rate. LANDED: stratified_depth_warp.py (bit-parity to A0, review-clean; A1
 morse_smale_stratified_parallax_dpose_v1 (advisory anchors, n600 owed). pose_output_space_inverse_solve_v1
 COUNCIL-FLAGGED as REFUTED-at-formulation (anchor A2=1.486). Pointer 0.19110 UNMOVED. HONEST: this is a
 negative that overturns my optimistic synthesis — stated plainly, not spun.
+
+## FEED-poseaperture (2026-07-08) — DIAGNOSIS: the 1.2–1.7 floor is the APERTURE PROBLEM; design = pose-LEGIBLE witness (ξ-consistent seeded texture, class/depth-stratified) (memo pose_legible_witness_aperture_design)
+Operator: pose is NOT intractable — frontier deep-math/diff-geometry/information/domain problem; tweak the
+witness to render class+depth-stratified conditioning information. THE DIAGNOSIS sitting in the ladder's own
+data: consistent FLAT pair floors 1.2–1.7 while real pair ≈0, parallax mass 0.5%, d_pose ANTI-correlates
+with |t| (worst on SMALL motions) ⇒ the deficit is FLOW OBSERVABILITY — piecewise-constant interiors make
+optical flow unobservable except normal-to-boundary (APERTURE PROBLEM); the flat witness under-informs
+PoseNet, and the flat render also starves the A2 solve (ξ→output Jacobian near-rank-deficient inside flat
+cells → 1.486 local min: machinery starved, not wrong). DESIGN (3 layers, only-together): (T) seeded
+procedural texture in BOTH frames, ξ-CONSISTENTLY advected, f0 SegNet-free, f1 SUB-MARGIN (#141 field,
+p50≈0.9 headroom) in an R-surviving band (#204 chain) — rule-118 FREE; (D) per-Morse-cell class/depth
+flow (ground H(ξ) 0-param, sky rotation, structure/movable per-cell inverse-depth = openpilot world-model;
+#365 params re-scoped to flow CORRECTNESS not output steering); (S) the A2 6-DOF solve REVIVED on the
+textured render (well-conditioned Jacobian) as the calibration of PoseNet's residual scene-dependence.
+Consistent with EVERY measured negative (fixed-flat-warp refuted → this changes WHAT IS RENDERED; texture
+both-frames per pair-consistency; realization free per #249 rate law; 2.562 self-fit is flow-space,
+irrelevant — we depict the same EGO-MOTION for a trained estimator, legibility not steering). Completes
+symposium L3 with its missing mechanism+placement+band. DECISIVE $0 PROBE (fired, Opus): A0T = A0 +
+sub-margin advected texture, same pairs/harness → d_pose vs 1.685; A2T = solve on textured; d_seg flip
+guard MEASURED not assumed. PREDICTION labeled: A0T ≪ 1.685 if aperture-diagnosis right; A0T≈A0 falsifies
+it → honest fallback pose-as-budget + #238. Deep dives fired (Opus): scorer-side (FastViT attention/band/
+scene-invariance; texture statistics per unit amplitude) + openpilot-depth/witness-term (Morse-Smale-native
+texture layer, v8 coupling). Build gated on probe GREEN; DSL Lever obligation on build. Pointer 0.19110 UNMOVED.
