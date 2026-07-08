@@ -120,6 +120,20 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+L. **SCALING: COARSE → FINE → EXTREMELY FINE → ASYMPTOTE, under INFINITE COMPUTE (operator
+   2026-07-07).** Every "exhausted/flat/NO-GO" verdict is SCHEDULE-RELATIVE unless proven
+   scale-robust: exhaustion at a coarse point of the anneal ladder (τ=0.216 truncated, β=3.177,
+   1000-ep budget) does NOT bound the asymptote (τ→τ*→0, β→∞ effective, PR95's 29,650-ep /
+   8-stage existence proof — each stage exhausts before the next reopens descent; that IS
+   annealing). Training time is lexicographically SECONDARY (L59) — with infinite compute the
+   schedule is OPEN-ENDED: event exits fire REFINEMENT TRANSITIONS (fine → extremely-fine
+   stages: smaller LR, τ→τ*, engaged sharpening, cyclic finishing) rather than termination;
+   "wall-clock savings" reframe as "epochs redeployed to finer stages". The extremely-fine
+   regime near τ→0 is where the tropical/Maslov math lives — the asymptote is the argmax itself.
+   BINDING: every negative finding carries a SCALE-VALIDITY tag {scale-robust (holds at all
+   schedule points, e.g. instrument facts, winner's-curse catches) | scale-suspect (measured at
+   a coarse point, may reopen at finer scales) | scale-bound (explicitly valid only at the
+   measured point)}; a scale-suspect negative may gate run-1 arms but may NOT retire a paradigm.
 K. **NATIVE FORMAT + ADEQUATE CAPACITY PER TECHNIQUE (operator 2026-07-07: "Give all
    techniques the format and capacity they need").** Every technique runs in ITS OWN
    mathematical format, matched to its object, with capacity at ITS OWN optimum — never a
