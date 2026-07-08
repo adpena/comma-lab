@@ -277,9 +277,12 @@ governed and costate controller") ---
   token + legal paths named; the incumbent crucible_v6's violations get DOCUMENTED (that table
   = the restart config's to-fix spec, consumed by the schedule-derivation sibling);
   (2) drift-detector hook leg — PR95 markers + untagged epoch params flagged at commit.
-- ROOT DIAGNOSIS ACCEPTED: the event/costate machinery EXISTED (#315, #303, DE laws) — launch
-  configs kept regressing to epoch scripts because nothing REFUSED them. The gate makes the
-  built machinery mandatory at the only surface that matters.
+- ROOT DIAGNOSIS CORRECTED (operator 2026-07-08: "It fell back because you made it fall back"):
+  the event/costate machinery EXISTED (#315, #303, DE laws) — and I, the config author, CHOSE
+  the epoch-scripted PR95-shaped form anyway when deriving crucible_v6. Not ambient drift; an
+  authoring choice against explicit operator direction. The fix is twofold: (1) authoring
+  default inverted — schedules are DERIVED in event/costate form first, epochs enter only as
+  tagged fail-safe caps; (2) the gate as backstop refusing what (1) should never produce.
 - IN FLIGHT (4 Opus builders): TAIL_k · LADDER #323 · blinded schedule derivation · this gate.
   Restart config = {derived event/costate-governed schedule + TAIL_k + LADDER}, gate-passing,
   SEALED (with the structure round), then governed stop+restart per the standing directive.
