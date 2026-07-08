@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- LANDING FOLDED 2026-07-08T~22:0x: SEAL ROUND 1 FINAL FORM = CLEAN, COUNTER 1/3 (fc65de496) ---
+- LENS A: 0 findings (dry-run re-executed 106/106; the shared-denominator family now correctly
+  SPLIT: τ den-3000-hold-0.31 · β den-3000-linear-10.0 · LR own-den-1000; tree == HEAD; 55/55).
+- LENS B: 0 findings — crossing reproduces unrounded; the v6.4 LR replica = control
+  BIT-IDENTICAL max|Δ|=0.0; asymptote 0.2372616 verified (the reviewer caught that the
+  REFLEXIVE recompute would double-count g_dec and the draft was right — second time a reviewer
+  out-derived the naive check).
+- LENS C (first outing): 0 findings · apparatus-validity traced for all 4 manifested constants
+  against the ON-DISK control launch.sh (shas match; pins re-derived); positive controls ALL
+  pass (sha integrity · mod-48 fails closed · missing-artifact fallback non-blocking).
+  DISCLOSED META-CONFOUND (nothing to fix, everything to remember): the value-identity guard
+  certifies IDENTITY not CORRECTNESS — for literal pins it compares a literal to its own copy;
+  wrong-yet-consistent would pass. Disclosed as provenance-only; correctness independently
+  re-derived this round and PASSED. The uncovered surface is now NAMED.
+- ROUND 2 FIRED (Opus, 3 lenses, fresh angles). Two more clean rounds seal it.
+
 --- LANDING FOLDED 2026-07-08T~21:0x: LAWREF MIGRATION COMPLETE — THE LAUNCHING FORM IS FINAL ---
 - VALUE-IDENTITY PROVEN: derive_crucible_v6_config().to_command() BYTE-IDENTICAL to HEAD (direct
   diff) + launch.sh byte-identical resolved-vs-literal. ZERO emitted values changed.
