@@ -204,6 +204,15 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- CREDIT-DEATH ×3 + RECOVERY 2026-07-08T~08:1x (operator: "recover and respawn staggered,
+ensure no signal loss") ---
+- Probe wave-B died @83 uses: 4 instruments BUILT + IN TREE uncommitted (conley_persistence_
+  certifier / maxplus_annulus_fit / signed_flip_asymmetry_correlator / uint8_deadzone_census) —
+  the expensive half survived; respawn inherits + commits them, then runs the probes.
+- τ-confirm died @18 uses (early, no artifacts) — clean respawn.
+- Hardening sweep died @43 uses (no commits) — clean respawn on next landing (staggered).
+- Session-limit reset 01:10 CDT; respawns staggered 2-now-1-next. No signal loss.
+
 --- LANDING FOLDED 2026-07-08T~07:4x: VERDICT-SCOPE HOOK BUILT + LIVE-FIRED (aa4cd41f0/5adfbd70f) ---
 - Requirement R is now ENFORCED WITHOUT VOLITION: deterministic leg BLOCKS (added-diff negative
   tokens without verdict_scope; family without citation-or-2-formulations; kills without
