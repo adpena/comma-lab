@@ -2309,6 +2309,13 @@ class CrucibleV7LaunchConfig:
         return self.typed.wall_clock_budget_days
 
     @property
+    def epochs(self) -> int:
+        """The config's epoch count (NEW-1: the launcher resolves omitted ``--epochs`` from HERE,
+        so the sealed default cannot be silently trampled by a launcher-level hardcode; the
+        wall-clock gate's projection also reads this)."""
+        return int(self.typed.epochs)
+
+    @property
     def dsl_levers(self) -> tuple[str, ...]:
         """The lever NAMES this config fires — the activation-ledger surface on a real launch
         (launcher step c.1). v7 pre-composes its lever set; the CLI cannot append to it."""
