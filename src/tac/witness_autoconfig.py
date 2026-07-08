@@ -1387,6 +1387,18 @@ _CRUCIBLE_V6_DELTAS: dict = {
     #    freeze point), --anneal-epochs (the denominator), or --hosc-beta-anneal (the shape) re-derives
     #    E. LATENT HAZARD: if the Muon freeze ever becomes event-movable and fires past 726, β keeps
     #    climbing toward 10.0 (past the control's 4.0) — pin is safe ONLY while 726 is the fixed cap.
+    # ── KEEP-WITH-PROVENANCE (SEAL v7 R1 structure R-6): the S6-R4 blind derivation independently
+    #    proposed β 1→4, NOT 1→10. That 1→4 is SUPERSEDED, auditably, for THIS config: (a) it is the
+    #    PRE-ANNEAL-FIX era value (a fixed β-end target, before the joint-schedule anneal fix that
+    #    couples β to the shared den-3000 trace); (b) the v6-SEALED MEASURED ANCHOR is the mod32cap
+    #    CONTROL's β TRAJECTORY (β(726)≈3.18, reached along a LINEAR anneal), and the DERIVED-AT-CONFIG
+    #    law above shows end=10.0 is exactly what reproduces that measured slope on [1,726] at the
+    #    shared denominator — the anchors (ν, ep650-best, fire band) were all measured at that β state,
+    #    so matching the trajectory (not the endpoint label) is what preserves them; (c) the
+    #    annealed-β divergence evidence (fixed-β hosc DIVERGES: tanh(β·sin) saturation → vanishing grad;
+    #    the launch config must ANNEAL β, never pin a fixed high β) is why the value is an anneal
+    #    ENDPOINT, not a constant — so the raw "1→4 vs 1→10" endpoint comparison is not apples-to-apples.
+    #    Net: KEEP 10.0 (measured-trajectory-matched); the blind's 1→4 is a superseded pre-fix anchor.
     "hosc_beta_end": 10.0,               # alb override: β-pin (family: 4.0) — reproduces control β(ep)
     # ── AdamW LR leg (v6.4 seal-round-1 MAJOR-2(ii) BUILD — the RISK ROW resolved by the trainer
     #    --lr-anneal-epochs / --lr-hold-frac build). The LR cosine is the THIRD shared-den sibling
