@@ -5619,6 +5619,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (SENSE) pop the annulus metrics BEFORE the float-only v0 row spread below. None unless
     # --annulus-telemetry is ON => byte-identical when absent.
     _annulus_v0 = v0.pop("annulus", None)
+    # (2026-07-07 crash fix, task #348 discovery) pop the per-class decomposition the SAME way as
+    # _emit_verdict_row does (dict of lists — must not hit the float-only round() spread below, and
+    # must NOT reach history/result.json: observability-only). Without this pop, every fresh launch
+    # with annulus telemetry active (the default) crashed at the baseline_v0 print with
+    # "TypeError: type dict doesn't define __round__ method".
+    _per_class_v0 = v0.pop("per_class", None)
     if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
         _mm = _mlx_mem_gib(mx)
         print(json.dumps({"stage": "mem_probe", "phase": "after_v0_verdict", "n_pairs": P,
@@ -5634,6 +5640,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       # pre-training baseline from a frozen-mid-training deadlock row (both otherwise read
                       # as "no training happened"). accepted_frac is not yet defined (no batch ran).
                       "weights_stepped": False, "accepted_frac": None, "frozen_epoch": False,
+                      # (2026-07-07) ADDITIVE per-class observability on the baseline row, mirroring
+                      # _emit_verdict_row (row-only; popped from v0 so it never reaches history).
+                      **({"d_seg_by_class": _per_class_v0.get("d_seg_by_class"),
+                          "flip_share_by_class": _per_class_v0.get("flip_share_by_class")}
+                         if isinstance(_per_class_v0, dict) and "error" not in _per_class_v0 else {}),
                       "phase": "baseline_v0",
                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                       "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
@@ -6964,6 +6975,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # (SENSE) pop annulus BEFORE the float-only row spread. None unless
                     # --annulus-telemetry is ON => byte-identical when absent.
                     _annulus_sync = v.pop("annulus", None) if isinstance(v, dict) else None
+                    # (2026-07-07 crash fix, task #348 discovery — same class as the baseline_v0
+                    # site) pop the per-class decomposition BEFORE the float-only spread + history
+                    # append, mirroring _emit_verdict_row (row-only observability; a dict here
+                    # crashed round() on every sync in-loop verdict with annulus telemetry active).
+                    _per_class_sync = v.pop("per_class", None) if isinstance(v, dict) else None
                     blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
                     s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
                     # (C6) LIVENESS STAMP on the verdict row + frozen_epoch flag/alarm: a verdict d_seg
@@ -6977,6 +6993,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "weights_stepped": bool(_live["stepped"]),
                                       "accepted_batches": int(_live["acc"]), "skipped_batches": int(_live["skip"]),
                                       "frozen_epoch": bool(_frozen_ep),
+                                      # (2026-07-07) ADDITIVE per-class observability, mirroring
+                                      # _emit_verdict_row (row-only; never history/result.json).
+                                      **({"d_seg_by_class": _per_class_sync.get("d_seg_by_class"),
+                                          "flip_share_by_class": _per_class_sync.get("flip_share_by_class")}
+                                         if isinstance(_per_class_sync, dict)
+                                         and "error" not in _per_class_sync else {}),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     # (SENSE) companion annulus_convergence row (opt-in; byte-identical when absent).
                     if _annulus_sync is not None:
