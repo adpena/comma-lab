@@ -1,0 +1,96 @@
+# SPEC — v7.5 OPTIMAL SINGLE TRUNK (the crucible launch vehicle) — 2026-07-08
+
+STORES CONSULTED: ORCHESTRATION_LEDGER (full session) · SYNTHESIS_seal_v73_round2 + all r2/r3/r4
+lens reports · crucible_v73_compile + LAUNCH_PACKAGE_v7 · v75_birth_counterforce · road_anomaly_probe
+· probe_PA_paintfloor_perclass · perclass_carriers_design · DAG FEEDs v7crux/mbcrux/v74r3fix/
+roadfloor/roadfloorfix/missingforces/PA/v8risks/mergediff · run-1 telemetry (ep0-166) · canonical
+equations (chan_vese_area_constraint_birth_balance_v1 · safe_compile_hosc_device_bitidentity_v1 ·
+frozen_scorer_forward_batch_dependence_v1 · tail_stop_forfeit_floor). Author: outgoing Fable session
+(operator-directed handoff). Pointer contest-CPU **0.19110 UNMOVED** — everything here is MEANS; the
+END is a byte-closed `upstream/evaluate.py` n600 exact row < 0.19110.
+
+## 1. WHAT v7.5 IS
+
+The sealed EVENT-mode single-trunk witness config (`crucible_v7` in `tac.witness_autoconfig`,
+compiled by `_build_crucible_v7`, launched ONLY via `tools/launch_witness_run.py` governed path).
+7 DSL levers: seg_form_unify_tau · tail_k_warm_restart · n323_ladder_island_homotopy ·
+FEED_07a_directional_basis_rebalance · R7_polyak_finisher · + the 2 counter-force levers
+(Chan-Vese area constraint; birth-completion event). EVENT mode is the OPERATOR'S BINDING DECISION
+(verbatim in LAUNCH_PACKAGE: "We want to transition to event based now and accept the risk, this
+is a new baseline") — do NOT re-litigate; the two-token clock revert is documented there.
+
+## 2. SEALED CONSTANTS (all derived/measured, provenance in the named artifacts)
+
+| constant | value | provenance |
+|---|---|---|
+| epochs | 3000 CONFIG-SEALED (launcher `--epochs` default=None resolves it; NEVER pass explicit) | NEW-1 fix + tests |
+| hosc_beta_end | **3.177** (event-frozen value := clock β(726)=1+3·725/999; trajectory bounded [1.0,3.177]; ≤4.0 divergence bound; GPU bit-cert covers [1,10]) | r2 BLOCKER fix, r3/r4 re-derived twice |
+| budget | **8.314 d** = amortized 3.47 min/ep (r_ss ep25→125 = 3.4537 + startup 59.5/3000); refuse ceiling 3.99 | DM-MINOR-1, re-derived from raw ts twice |
+| Polyak finisher | start = 2546 (averages exactly 455 ep); degenerate clamp start=epochs+1 (count=0 verified over the real loop) | A3 + r4 |
+| persistence-classes / logit-adjust-classes | **"3"** = class INDEX Movable (canonical order Road0/Lane1/Undriv2/Movable3/MyCar4 — NEVER "first 3") under lane_offloaded; companion laws persistence_/logit_adjust_classes_for_basis_regime agree | A5 + counter-force lever-3; consumer traced trainer L4061 |
+| Chan-Vese λ | lane **683.8** / movable **322.6** DERIVED-LIVE = W_birth/(δ·A_GT_c), δ=0.25; 51×/14× dominance at ep125 runaway; equilibrium 1.25×GT returns ~0.114 area ≥ Road deficit 0.1189 → UN-FLOORS Road. λ-scale = ASSUMED_AWAITING_VERIFICATION (the A/B anchors it) | chan_vese equation module |
+| lane band coupling | lane_offloaded ⇒ `--lane-render-band` ASSERTED at compile (fail-loud, both entry paths) | F-3 |
+| perf env | GROUPED_BACKWARD=1 (~17×) + PERSISTENCE_POOL=1 (D16, loud fallback + fingerprint gate) + `--safe-compile-regions hosc_activation` (b2 fingerprint-gated; cert = per-{chip,os,mlx,device} EMPIRICAL fact, never transfer) + fused-R (bit-identity, L70) | v7.3 compile + crux certs |
+| event-gate telemetry | fire rows carry sensor_data_epoch in the LEVER frame (= _fired_epoch frame; additive shift cancels ⇒ lag = real verdict-cadence lag). FRAME CONTRACT in ExitEvent docstring — never mix frames | F-1 + r4 affine proof |
+| micro-batch | OFF (scorer forward is batch-DEPENDENT: GPU 2.26e-2 drift/11 argmax flips — bit-identity-at-speedup impossible; bounded n600 d_seg A/B is the only admission path) | frozen_scorer_forward_batch_dependence_v1 |
+
+## 3. WHY THE COUNTER-FORCE EXISTS (the run-1 lesson — binding context)
+
+Run-1 (crucible_v6 clock-mode, pid 63069, sacred READ-ONLY) measured the birth-stack
+recall-without-precision imbalance: Lane painted 13.8× GT area, Movable 4.6×, EXACT mass
+conservation with the Road+Undriv deficit (0.1191≈0.1189) ⇒ Road d_seg FLOORED ~0.40 ⇒ composite
+floored ~0.10-0.13. NOT the analytic band (falsified 3 ways: gated to ep350, init lane_px=0,
+1-4K px ≪ 18K needed). Run-1 stays valid AS the birth-arm measurement — never compare it to
+bulk-only floors (#205 CE 0.005). The Chan-Vese term is the missing area-Lagrange of the level-set
+energy (operator: "the level set and Morse smale are perfect for engineering the precisely desired
+annealing behavior"); its equilibrium IS the spec — no ramp schedule to tune.
+
+## 4. OWED BEFORE LAUNCH (the exact remaining chain — DO THESE IN ORDER)
+
+1. **Lever-2 RAMP ACTUATION** (builder a4bb7ebf536596b2f IN FLIGHT at handoff): per-class ramp-down
+   of birth pressures on completion-event fire; resume-safe __bc_* additive; derived post-birth
+   levels from the Lever-1 balance; default-OFF byte-identical; appends RAMP-LANDED to
+   v75_birth_counterforce memo. If it died: its brief is reproducible from the memo's HONEST SCOPE
+   section — respawn with the same constraints.
+2. **P0 FORCES phase-2 code wave** (operator P0 elevation, task #360; phase-1 derivation agent
+   a33d52442c62bb85a IN FLIGHT — δ_R measurement, w_t calibration vs the 44%-flicker stats, term
+   formulations, DSL specs, interaction matrix). Phase-2 = mechanical build of the 4 levers
+   (temporal screw-consistency · margin-band satisficing hinge at δ_R · tie-locus displacement ·
+   R-phase alignment [may FOLD into #3 — phase-1 decides]) from the spec, default-OFF, composed
+   per the crucible's decision. FIRE ONLY when the ramp builder frees the trainer/DSL files.
+3. **SEAL rounds → 3 clean passes** (counter 1/3 after round 4 CLEAN). Round 5 = all 4 lenses on
+   the composed delta (v7.5 counter-force + ramp + P0 levers). Protocol: fix-ALL severities per
+   round (zero-unfixed precondition); reviewers RE-DERIVE from primary artifacts (never confirm
+   memos); verdict_scope on every negative token; blind derivation for structural claims
+   (allowlist committed BEFORE memos — vindicated 2×); [no-triality] only for true apparatus.
+4. **Knee re-derive (D2)** on run-1's checkpoint at stop (deferral ledger row, named trigger).
+5. **Decode wall-time re-measure** on the FINAL checkpoint (30-min budget binds on contest
+   hardware — T4 16GB or CPU 4c/16GB; #214 measured 6.59 min torch-fp32-CPU on M5 Max at
+   contest-shape thread-cap; the 1:1 Linux x86 replay is the unproven-margin caveat).
+6. **Governed STOP of run-1** (operator standing GO for stop+relaunch AFTER seal completes;
+   anything anomalous surfaces first; PRESERVE every per-stage checkpoint).
+7. **EVENT-mode LAUNCH** through the FULL gate chain of `tools/launch_witness_run.py` (b-perf ·
+   b0.5 zero-naked · b0.6 DSL manifest VERIFY · b2 safe-compile fingerprint · memory preflight ·
+   system admission — the governor REFUSE during run-1's life is CORRECT accounting, clears at
+   stop). Raw-python bypass = FORBIDDEN P0. No --epochs.
+8. **Stop-window items armed** (one-line reactivations in their memos): D1 GPU-verdict agreement
+   probe · D17 safe-compile whole-step bench · D18 truncate-at-export A/B · micro-batch bounded
+   n600 A/B (~day-1, admission-gated) · #357 speed bundle · #356 megakernel.
+
+## 5. WATCH-LIST (full facet set — operator holistic directive; LAUNCH_PACKAGE has the table)
+
+Per-class d_seg vs anchors (Road PRIMARY: flip>0.30 @ep200 ⇒ per-class decomposition BEFORE any
+basis-helps claim; run-1 baseline Road 0.392@ep150) · island birth (part_frac vs GT area — now
+ALSO watch the Chan-Vese equilibrium: part_frac should approach ≈1.25×GT then hold; OVERSHOOT
+persisting ⇒ λ-scale wrong, the pre-registered response is the A/B anchor) · **POSE (the blocker:
+run-1 d_pose 1.80 ⇒ contribution ≈4.2 of S; need ~3e-5-scale for ~0.018; flag if no
+order-of-magnitude descent by mid-run)** · rate (blob ~88KB) · CE deceleration vs the event
+schedule's exits · liveness/spike-guard/jitter rows. EMA-shadow lag caveat on early verdicts (L-memory).
+
+## 6. MEASUREMENT AUTHORITY (unchanged, absolute)
+
+Only `upstream/evaluate.py` on exact archive bytes, contest-CPU/CUDA 1:1, is a score. All local =
+[macOS-MLX research-signal]/[macOS-CPU advisory], NON-PROMOTABLE. Byte-close via
+tools/levelset_byte_close_and_eval.py — 3-arm selection (ema/live/polyak) now RECORDED (B1);
+per-arm d_pose at export is the pose facet's first real measurement. n600 or it is not evidence.
+GT class order is canonical comma10k [Road,Lane,Undrivable,Movable,MyCar] — NEVER luma-sort.

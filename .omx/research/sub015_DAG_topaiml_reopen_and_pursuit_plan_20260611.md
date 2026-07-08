@@ -10397,3 +10397,19 @@ measurement); run-1's config UNCHANGED. Candidate FLOOR-LAW (probe): "rare-class
 pressure + no precision cap imposes a majority-class d_seg floor = the conserved over-painted area,
 capacity/time-independent" — the Chan-Vese balance is its CURE. Memo
 `.omx/research/v75_birth_counterforce_20260708.md`. Pointer 0.19110 UNMOVED (means).
+
+## FEED-handoff (2026-07-08) — Fable→Opus handoff: the two vehicle specs are the resume surface
+Operator: spend remaining Fable credits consolidating v7.5 + v8 into comprehensive rigorous spec
+docs so Opus takes over with no signal loss. LANDED: (1) **SPEC_v75_optimal_single_trunk**
+(.omx/research/t5_crucible/) — sealed constants w/ provenance (β 3.177 · budget 8.314d · Chan-Vese
+λ 683.8/322.6 un-floors Road by derived balance · classes "3"=Movable · frame contract · batch-dep
+law), the run-1 lesson, the EXACT owed-before-launch chain (§4: ramp #361 LAUNCH-BLOCKING → P0
+phase-2 #360 → seal→3-clean from counter 1/3 → knee D2 → 30-min re-measure → governed stop
+[standing GO] → EVENT launch → stop-window items), full-facet watch-list incl. Chan-Vese
+equilibrium watch, authority rules. (2) **SPEC_v8_perclass_decomposition** (.omx/research/) —
+EDGE-CENTRIC tropical-argmax carriers (risk-1 cure adopted), carrier table w/ P-A-confirmed
+economics, merge→diff→correct chroma-first/luma-reserved reconciliation (Dykstra channel
+coordinates), 6 named risks + cures, P-B/P-C pre-registered, increment-1 + gates (v7.5-first),
+council-flagged equations awaiting anchors. Tasks: #361 (ramp, LAUNCH-BLOCKING, anti-stranding
+respawn instructions) · #360 (P0 forces, phase-1 in flight) · #359 (v8, gated). Operator:
+"Ramp actuation must not get stranded" — encoded in #361 + SPEC §4.1. Pointer 0.19110 UNMOVED.
