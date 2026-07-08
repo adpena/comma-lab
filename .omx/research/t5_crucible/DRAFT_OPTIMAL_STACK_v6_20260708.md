@@ -877,3 +877,19 @@ across `test_witness_autoconfig.py` + `test_lever_registry.py` + `test_witness_c
 ruff F clean on all five touched files.
 
 Pointer contest-CPU 0.19110 UNMOVED — this draft is MEANS until the exact-eval row lands.
+
+## §14.5 — LawRef constant migration (#351 follow-up, 2026-07-08; ZERO value changes — provenance-only)
+
+The rot-prone launch constants are now COMPILED from their canonical equations (the #351 LawRef
+constant-compiler), not bare literals. `derive_crucible_v6_config` resolves the CONSUMED constants —
+**τ_end 0.31** (`tau_end_knee_launch_v1`, measured-anchor reading P-TAU2 `launch_tau`), **β-pin 10.0**
+(`hosc_beta_fireband_pin_v1`), **LR pin 1000 / 1.0** (`lr_control_denominator_v1` /
+`lr_hold_frac_no_hold_v1`) — into a `constants_manifest`, asserts each **bit-matches** the sealed
+literal (value AND type) fail-closed, and the launcher writes `constants_manifest.json` beside
+launch.sh. **VALUE-IDENTITY: the emitted launch.sh is byte-identical to §14.4** (proven vs git HEAD +
+the resolved-vs-literal path). The ν-family window laws (settle 237.09 / tail-cycle 387.09), the
+P-CON absolute bar (1.7505 / 1.3018 logit), and the adaptive-ε alarm (0.7) are registered as LIBRARY
+LawRefs (bit-match tested) but NOT wired into the argv (they are not emitted flags — wiring them would
+break value-identity). Full memo: `.omx/research/lawref_migration_crucible_v6_20260708.md`. Tests:
+100 green across `test_lawref_constant_compiler.py` + `test_witness_autoconfig.py`; ruff F clean.
+Pointer contest-CPU 0.19110 UNMOVED — apparatus only.

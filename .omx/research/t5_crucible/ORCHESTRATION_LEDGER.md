@@ -1304,3 +1304,13 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   --hosc-beta-end 10.0 + --curriculum-reanchor-levers + --curriculum-min-stage-epochs 250 present ·
   --curriculum-plateau-windows ABSENT · pose block intact · NO duplicate long-flags.** $0, NO launches
   (dry-run only), run dirs read-only. Pointer contest-CPU 0.19110 UNMOVED — all MEANS.
+- **2026-07-08 LawRef constant MIGRATION (#351 follow-up; req T mechanized):** crucible_v6's CONSUMED
+  launch constants (τ_end 0.31 · β-pin 10.0 · LR pin 1000/1.0) now COMPILE from canonical equations
+  (`tau_end_knee_launch_v1` / `hosc_beta_fireband_pin_v1` / `lr_control_denominator_v1` /
+  `lr_hold_frac_no_hold_v1`) via the resolver; `derive_crucible_v6_config` asserts each **bit-matches**
+  the sealed literal (value+type) fail-closed + carries `constants_manifest`; the launcher writes
+  `constants_manifest.json` beside launch.sh. **VALUE-IDENTITY: launch.sh byte-identical vs git HEAD**
+  (proven). ν-family/s_fit/adaptive-ε registered as LIBRARY LawRefs (bit-match tested, NOT emitted).
+  τ_end fails closed on a non-mod32cap vehicle (P-CT1); missing artifact → fallback to sealed literal
+  (launch never blocked). 100 tests green; ruff F clean. Memo:
+  `lawref_migration_crucible_v6_20260708.md`. Pointer 0.19110 UNMOVED — apparatus.
