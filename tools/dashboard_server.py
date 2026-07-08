@@ -68,6 +68,15 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dashboard_trajectory_model as dtm  # sophisticated DATA-DERIVED projection
 import render_levelset_dashboard as rld
 
+# schema-driven run introspection (#352): classifies the run's schedule/curriculum into
+# EVENT-TRIGGERED / DERIVED / FIXED-CAP + exposes the costate controller, LawRef constants
+# manifest, planned τ/β/LR curves, liveness row, mem_probe + fired-event telemetry — all
+# from the run's OWN artifacts. Fail-open: a broken import must never kill the daemon.
+try:
+    import witness_run_introspect as wri
+except Exception:  # load-bearing daemon; degrade to no introspection panels, never crash
+    wri = None
+
 # ── canonical DSL schedule read-back (operator 2026-07-07: observability consumers
 # DERIVE the stage map from the run's own config via the DSL — never hand-fed
 # constants). Fail-open: a missing/broken tac install must never kill the daemon;
@@ -993,6 +1002,11 @@ class LiveState:
         # costate controller SENSE/DECIDE panel source (run_dir/costate_shadow.jsonl;
         # read-only, advisory). None -> the panel is absent (conditional rendering).
         self.costate: dict | None = None
+        # schema-driven introspection payload (#352): schedule classification + controller
+        # + LawRef constants + planned curves + liveness + mem + fired events. None -> the
+        # new LIVE panels are absent (conditional; pre-v6 run dirs degrade gracefully).
+        self.introspect: dict | None = None
+        self._introspect_sig: tuple | None = None  # mtime-gate (recompute only on artifact change)
         # RUN-IDENTITY header row (name + purpose chip + scope chip); None -> row absent.
         self.run_identity: dict | None = None
         # canonical DSL schedule read-back (PLANNED launch.sh-through-real-argparse
@@ -1266,6 +1280,29 @@ class LiveState:
             self.costate = _read_costate(self.watched_dir)
         except Exception:
             self.costate = None
+
+        # SCHEMA-DRIVEN INTROSPECTION (#352, operator 2026-07-08): the schedule/curriculum
+        # classification (event/derived/fixed) + costate controller + LawRef constants +
+        # planned τ/β/LR curves + liveness + mem/event telemetry, ALL from the run's OWN
+        # artifacts (never the epoch-scripted legacy lens). mtime-GATED so the growing
+        # run.log is not re-introspected every 5 s tick — recompute only when the run dir or
+        # any of its three source artifacts changes mtime. Fail-open: any error -> None ->
+        # the new panels are simply absent (conditional; pre-v6 dirs degrade gracefully).
+        if wri is not None and self.watched_dir:
+            try:
+                _wd = Path(self.watched_dir)
+                _sig = (self.watched_dir,) + tuple(
+                    (_p.stat().st_mtime if _p.is_file() else None)
+                    for _p in (_wd / "run.log", _wd / "costate_shadow.jsonl",
+                               _wd / "constants_manifest.json", _wd / "launch.sh"))
+                if _sig != self._introspect_sig:
+                    self.introspect = wri.introspect_run(
+                        self.watched_dir, log_paths=[str(p) for p in chain])
+                    self._introspect_sig = _sig
+            except Exception:
+                self.introspect = None
+        else:
+            self.introspect = None
 
         # RUN-IDENTITY row (name + purpose + scope; operator 2026-07-07): declared
         # launch.sh header when present, labelled derived heuristic otherwise.
@@ -1839,6 +1876,8 @@ class LiveState:
             "pointer_info": ptr,
             "pose_blind": self.pose_blind,      # w_pose==0 in the run's own config
             "costate": self.costate,            # SENSE/DECIDE panel (None -> absent)
+            "introspect": self.introspect,      # #352 schema-driven schedule/controller/telemetry
+            "introspect_ok": bool(self.introspect and self.introspect.get("ok")),
             "run_identity": self.run_identity,  # header row (None -> row absent)
             "watched": self.watched,
             "run_dir": self.watched_dir or cfg.run_dir,  # auto-latest: the live arm dir
@@ -2592,6 +2631,83 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 .cfgv.dis{color:var(--faint2);font-weight:500;white-space:normal;text-align:right;font-variant-numeric:normal}
 .cdot{width:9px;height:9px;border-radius:2px;display:inline-block;flex:0 0 auto}
 .cfgmeta{font-size:11px;color:var(--faint2);margin-top:6px}
+
+/* ── #352 schema-driven introspection: schedule classification + controller + telemetry ── */
+/* classification chips — semantic STATE colours kept separate from the accent (operator:
+   armed/fired/stale distinct from accent). event=amber · derived=violet · fixed/cap=blue. */
+.kchip{font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:2px 7px;
+border-radius:999px;flex:0 0 auto;line-height:1.35}
+.kchip.event{background:#3a2f10;color:#f0c264}.kchip.derived{background:#2b1f3d;color:#cba6f5}
+.kchip.fixed{background:#16263a;color:#7fc0ff}.kchip.cap{background:#23282f;color:#9aa3b2}
+/* live arm status dot (armed/pending vs fired vs stale) */
+.sdot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.sdot.fired{background:var(--good);box-shadow:0 0 0 3px rgba(70,211,105,.14)}
+.sdot.pending{background:#f0c264;box-shadow:0 0 0 3px rgba(240,194,100,.12)}
+.sdot.scheduled{background:#7fc0ff}
+.stchip{font-size:9.5px;font-weight:600;color:var(--faint2);white-space:nowrap}
+.stchip.fired{color:var(--good)}.stchip.pending{color:#e6c072}
+/* schedule element rows (schema-driven) */
+.schrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;min-width:0;
+border-bottom:1px solid rgba(42,47,57,.55)}
+.schrow:last-child{border-bottom:none}
+.schrow .snm{color:var(--fg2);font-weight:600;display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.schrow .sbody{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto}
+.schrow .sright{margin-left:auto;display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.schrow .strig{font-size:10.5px;color:var(--faint2);white-space:normal;line-height:1.4}
+/* controller λ table */
+.lamtab{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+.lamrow{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto;gap:10px;align-items:baseline;
+font-size:11.5px;padding:2px 0}
+.lamrow .lnm{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.lamrow .lv{color:var(--fg2);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.lamrow .lst{font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;text-align:right}
+.lst.analytic{color:#7fc0ff}.lst.identified{color:var(--good)}.lst.unidentifiable{color:var(--faint2)}
+.csgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:4px}
+@media(min-width:640px){.csgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cscell{min-width:0}
+.csk{font-size:9.5px;color:var(--acc);letter-spacing:.5px;text-transform:uppercase;font-weight:700;margin-bottom:5px}
+.csline{font-size:11px;color:var(--muted);line-height:1.6}.csline b{color:var(--fg2);font-weight:600}
+/* liveness strip (confound-immune) */
+.livestrip{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:9px;padding-top:9px;border-top:1px solid var(--grid)}
+.lvpill{font-size:10px;font-weight:600;padding:3px 9px;border-radius:999px;background:#181b21;
+border:1px solid var(--line);color:var(--muted);font-variant-numeric:tabular-nums}
+.lvpill b{color:var(--fg2);font-weight:700}
+.lvpill.ok{border-color:#274a34;color:#8fe0ac}.lvpill.warn{border-color:#5a2323;color:#ff9b9b}
+.lvpill.alarm{background:#3a1717;border-color:#7a2b2b;color:#ff9b9b;font-weight:700}
+/* planned curves — inline SVG sparklines */
+.crv{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media(min-width:560px){.crv{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.crvcell{background:var(--panel);border:1px solid var(--grid);border-radius:10px;padding:9px 11px;min-width:0}
+.crvh{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.crvn{font-size:11px;color:var(--fg2);font-weight:700}
+.crvsh{font-size:9.5px;color:var(--faint2);text-transform:uppercase;letter-spacing:.4px}
+.crvsvg{width:100%;height:46px;display:block}
+.crvep{font-size:9.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;gap:8px}
+.crvnote{font-size:9.5px;color:var(--faint2);margin-top:4px;line-height:1.4}
+/* constants manifest table */
+.cst{display:flex;flex-direction:column;gap:1px}
+.cstrow{display:grid;grid-template-columns:minmax(0,1.1fr) auto auto;gap:10px;align-items:center;
+font-size:11.5px;padding:6px 0;border-bottom:1px solid rgba(42,47,57,.5)}
+.cstrow:last-child{border-bottom:none}
+.cstnm{color:var(--fg2);font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.cstv{color:var(--acc);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.cstprov{grid-column:1/-1;font-size:10px;color:var(--faint2);line-height:1.45;margin-top:-2px;
+overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cstprov code{background:#11141a;color:#9fc6ff;padding:0 4px;border-radius:4px;font-size:9.5px}
+/* mem_probe bars */
+.membars{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.memrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;font-size:11px}
+.memk{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.memtrack{grid-column:1/-1;height:5px;background:#11141a;border-radius:3px;overflow:hidden;margin-top:-3px}
+.memfill{height:100%;background:linear-gradient(90deg,#5ab0ff,#c08cff);border-radius:3px}
+.memv{color:var(--fg2);font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+/* fired-event markers (diamond glyph, distinct from epoch ticks) */
+.evlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.evchip{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--fg2);
+background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9px}
+.evdia{width:8px;height:8px;background:var(--good);transform:rotate(45deg);flex:0 0 auto}
+.evep{color:var(--muted);font-variant-numeric:tabular-nums}
 .hide{display:none}
 </style></head>
 <body><div class="wrap">
@@ -2831,6 +2947,14 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <details class="cfg" id="cfgpanel" open>
     <summary id="cfgsum">setup &middot; config &middot; schedule &middot; curriculum</summary>
     <div class="cfgbody" id="cfgbody"><div class="cfgmeta">parsing run config&hellip;</div></div>
+  </details>
+  <!-- #352 schema-driven telemetry panel — CONDITIONAL sections: planned curves,
+       LawRef constants manifest, mem_probe, fired events. Each section renders only
+       when its source artifact is present (introspect_run); a pre-v6 run dir simply
+       shows fewer sections. Observability ONLY. -->
+  <details class="cfg hide" id="telemetry" open>
+    <summary id="telsum">telemetry &middot; curves &middot; constants &middot; memory</summary>
+    <div class="cfgbody" id="telbody"><div class="cfgmeta">loading telemetry&hellip;</div></div>
   </details>
   <div class="rinfo" id="runinfostrip"></div>
   <div class="foot" id="foot"></div>
@@ -3842,26 +3966,75 @@ function renderRunIdentity(){
 }
 
 // ---------- costate controller panel (SENSE/DECIDE; CONDITIONAL; observability ONLY) ----------
-// Source: the run's costate_shadow.jsonl last row (score-neutral shadow observer),
-// shipped as META.costate. Absent -> the panel is hidden. The dashboard NEVER actuates.
+// Source: the run's costate_shadow.jsonl (score-neutral shadow observer), via the schema-driven
+// introspection layer (META.introspect.controller — rich: λ traces + duty + axis EV) with a
+// fallback to the legacy summary (META.costate). Plus the confound-immune LIVENESS strip
+// (META.introspect.liveness). Absent -> the panel is hidden. The dashboard NEVER actuates.
+function _lamStatusCls(s){const t=String(s||"").toLowerCase();
+  return t.indexOf("unident")>=0?"unidentifiable":(t.indexOf("analytic")>=0?"analytic":"identified");}
 function renderCostate(){
   const box=$("costate"), body=$("cs_body"); if(!box||!body)return;
-  const C=META.costate;
-  if(!C||!C.ok){box.classList.add("hide");return;}
+  const I=META.introspect||{};
+  const C=(I.controller&&I.controller.ok)?I.controller:null;
+  const legacy=(!C&&META.costate&&META.costate.ok)?META.costate:null;
+  const L=I.liveness||null;
+  if(!C&&!legacy&&!L){box.classList.add("hide");return;}
   box.classList.remove("hide");
+  const src=C||legacy||{};
+  // ── header summary line ──
   const bits=[];
-  if(C.classification)bits.push("class <b>"+escHtml(C.classification)+"</b>");
-  if(C.rec&&C.rec.action){
-    let r="rec <b>"+escHtml(C.rec.action)+"</b>";
-    if(C.rec.predicted_dS!=null&&isFinite(C.rec.predicted_dS))
-      r+=" &Delta;S "+(C.rec.predicted_dS>0?"+":"")+sig(C.rec.predicted_dS,4)+
-        (C.rec.horizon_epochs!=null?"/"+C.rec.horizon_epochs+"ep":"");
+  if(src.classification)bits.push("class <b>"+escHtml(src.classification)+"</b>");
+  if(src.rec&&src.rec.action){
+    let r="rec <b>"+escHtml(src.rec.action)+"</b>";
+    if(src.rec.predicted_dS!=null&&isFinite(src.rec.predicted_dS))
+      r+=" &Delta;S "+(src.rec.predicted_dS>0?"+":"")+sig(src.rec.predicted_dS,4)+
+        (src.rec.horizon_epochs!=null?"/"+src.rec.horizon_epochs+"ep":"");
     bits.push(r);
   }
-  if(C.epoch!=null)bits.push("row ep"+C.epoch+(C.age_s!=null?" &middot; "+fmtAge(C.age_s)+" old":""));
-  if(C.duty_owed!=null)bits.push("duty-to-measure <b>"+C.duty_owed+"</b> owed"+
-    (C.duty_never_fired!=null?" ("+C.duty_never_fired+" never-fired)":""));
-  body.innerHTML=bits.join(" &middot; ")||"no shadow rows yet";
+  if(src.epoch!=null)bits.push("row ep"+src.epoch+(src.age_s!=null?" &middot; "+fmtAge(src.age_s)+" old":""));
+  if(src.n_verdicts!=null)bits.push("<b>"+src.n_verdicts+"</b> verdicts sensed");
+  let h="<div class='csline'>"+(bits.join(" &middot; ")||"no shadow rows yet")+"</div>";
+  // ── two-column grid: λ costate traces  |  DECIDE (duty queue + axis EV) ──
+  if(C){
+    const cells=[];
+    if(C.costates&&C.costates.length){
+      let rows="";
+      C.costates.forEach(l=>{
+        const v=(l.value!=null&&isFinite(l.value))?sig(l.value,4):"&mdash;";
+        rows+="<div class='lamrow'><span class='lnm' title=\""+escHtml((l.method||"")+(l.units?" · "+l.units:""))+"\">"+
+          escHtml(l.name||"?")+"</span><span class='lv'>"+v+"</span>"+
+          "<span class='lst "+_lamStatusCls(l.status)+"'>"+escHtml(String(l.status||"").toLowerCase())+"</span></div>";
+      });
+      cells.push("<div class='cscell'><div class='csk'>costate λ (∂S/∂·)</div><div class='lamtab'>"+rows+"</div></div>");
+    }
+    const dec=[];
+    if(C.duty_owed!=null)dec.push("duty-to-measure <b>"+C.duty_owed+"</b> owed"+
+      (C.duty_never_fired!=null?" ("+C.duty_never_fired+" never-fired)":""));
+    if(C.duty_ranked&&C.duty_ranked.length)
+      dec.push("next owed: "+C.duty_ranked.slice(0,3).map(d=>escHtml(d.lever||"?")).join(", "));
+    if(C.probe_queue!=null)dec.push("probe queue <b>"+C.probe_queue+"</b>");
+    if(C.axis_ev){const a=C.axis_ev;
+      dec.push("axis EV — seg <b>"+sig(a.seg,3)+"</b> · pose <b>"+sig(a.pose,3)+"</b> · rate <b>"+sig(a.rate,3)+"</b>");}
+    if(src.actuation)dec.push("actuation <b>"+escHtml(src.actuation)+"</b> (advisory)");
+    if(dec.length)
+      cells.push("<div class='cscell'><div class='csk'>DECIDE &middot; duty queue</div><div class='csline'>"+
+        dec.join("<br>")+"</div></div>");
+    if(cells.length)h+="<div class='csgrid'>"+cells.join("")+"</div>";
+  }
+  // ── liveness strip (confound-immune: a frozen run must LOOK frozen) ──
+  if(L){
+    const lp=[];
+    const pill=(cls,txt)=>"<span class='lvpill "+cls+"'>"+txt+"</span>";
+    if(L.accepted_frac!=null){const a=+L.accepted_frac;
+      lp.push(pill(a>=0.5?"ok":"warn","accepted "+(a*100).toFixed(0)+"%"));}
+    if(L.weights_stepped!=null)lp.push(pill(L.weights_stepped?"ok":"","stepped "+(L.weights_stepped?"yes":"no")));
+    if(L.skipped_batches!=null)lp.push(pill(L.skipped_batches>0?"warn":"","skipped "+L.skipped_batches));
+    if(L.ep_loss!=null)lp.push(pill("","loss "+sig(L.ep_loss,4)));
+    (L.alarms||[]).forEach(a=>lp.push(pill("alarm","⚠ "+escHtml(a))));
+    if(lp.length)h+="<div class='livestrip'>"+lp.join("")+
+      "<span class='lvpill'>liveness @ ep"+(L.epoch!=null?L.epoch:"?")+"</span></div>";
+  }
+  body.innerHTML=h;
 }
 
 function render(){
@@ -3929,6 +4102,7 @@ function render(){
   renderRunIdentity();
   renderCostate();
   renderConfig();
+  renderTelemetry();
   renderRunInfo();
   // status
   const ep=LIVE.last_epoch;
@@ -4204,23 +4378,59 @@ function buildScheduleRows(sched){
   });
   return {body:"<div class='cfgrows'>"+rows+"</div>"};
 }
+// Schema-driven schedule rows (#352): classify each DSL element EVENT-TRIGGERED / FIXED-CAP
+// with its LIVE arm state (pending/fired, watching cap), rendered from introspect.schedule.
+// This SUPERSEDES the epoch-scripted buildScheduleRows lens for v6+ event-governed runs; the
+// legacy renderer stays the fallback for runs without a DSL read-back.
+function schClassifiedRows(S){
+  if(!S||!S.ok||!S.stages||!S.stages.length)return null;
+  const ep=(LIVE&&LIVE.last_epoch!=null)?LIVE.last_epoch:null;
+  let rows="";
+  S.stages.forEach(s=>{
+    const isEvent=(s.klass==="event"||s.mode==="event");
+    const kchip="<span class='kchip "+(isEvent?"event":"fixed")+"'>"+(isEvent?"event":"fixed")+"</span>";
+    let statusCls="scheduled", statusTxt="scheduled", body="";
+    if(isEvent){
+      const fired=(s.status==="fired"||s.fired_epoch!=null);
+      statusCls=fired?"fired":"pending"; statusTxt=fired?("fired @ ep"+s.fired_epoch):"armed · pending";
+      body="<span class='strig'>"+escHtml(s.trigger||"event-gated")+
+        (s.cap!=null?(" &middot; hard cap ep"+s.cap):"")+"</span>";
+    }else{
+      body="<span class='sbody'>starts ep "+(s.start!=null?s.start:"0")+"</span>";
+      if(s.start!=null&&ep!=null)statusTxt=(ep>=s.start)?"active":"upcoming";
+    }
+    rows+="<div class='schrow'><span class='snm'><span class='sdot "+statusCls+"'></span>"+escHtml(s.name)+kchip+"</span>"+
+      body+"<span class='sright'><span class='stchip "+statusCls+"'>"+statusTxt+"</span></span></div>";
+  });
+  const meta=[];
+  if(S.epochs!=null)meta.push("total "+S.epochs+" ep");
+  if(S.eval_every!=null)meta.push("eval every "+S.eval_every+" ep");
+  if(S.event_triggered)meta.push("event-governed curriculum");
+  meta.push("source "+escHtml(S.source||"launch.sh")+" · DSL read-back");
+  return {body:"<div class='cfgrows'>"+rows+"</div><div class='cfgmeta'>"+escHtml(meta.join(" · "))+"</div>"};
+}
 function renderConfig(){
   const body=$("cfgbody"), sum=$("cfgsum"); if(!body)return;
   const cfg=META.config||{}, sched=(META.schedule||cfg.schedule||{});
   const groups=cfg.groups||{};
+  const IS=(META.introspect&&META.introspect.schedule)||null;
   let html="";
-  // curriculum schedule (full width) — TWO ORTHOGONAL AXES, data-driven from the raw
-  // schedule fields (NOT the naive [start,next_start) bounds, which INVERT when the
-  // optimizer switch muon_start precedes a disabled l7_start -> e.g. l7 [1000,726)).
-  const sch=buildScheduleRows(sched);
+  // curriculum schedule (full width) — PREFER the schema-driven DSL classification
+  // (event/fixed + live arm state); fall back to the legacy two-axis epoch renderer when
+  // no DSL read-back is available (pre-v6 dirs / broken tac install).
+  const sch=(IS&&IS.ok)?schClassifiedRows(IS):buildScheduleRows(sched);
   if(sch){
-    html+="<div class='cfgsec full'><div class='cfgh'>curriculum schedule</div>"+sch.body;
+    const _shdr=(IS&&IS.ok)?"curriculum &middot; stages (DSL)":"curriculum schedule";
+    html+="<div class='cfgsec full'><div class='cfgh'>"+_shdr+"</div>"+sch.body;
+    if(IS&&IS.ok){html+="</div>";}
+    else{
     const m2=[];
     if(sched.epochs!=null)m2.push("total "+sched.epochs+" ep");
     if(sched.eval_every!=null)m2.push("eval every "+sched.eval_every+" ep");
     if(LIVE.next_eta_s!=null)m2.push("next verdict ~"+fmtAge(LIVE.next_eta_s));
     if(m2.length)html+="<div class='cfgmeta'>"+escHtml(m2.join(" · "))+"</div>";
     html+="</div>";
+    }
   }
   // config groups
   ["architecture","basis","optimizer","seed","regularizers","loss"].forEach(gn=>{
@@ -4236,6 +4446,98 @@ function renderConfig(){
   body.innerHTML=html;
   if(sum){const src=cfg.source&&cfg.source!=="none"?(" · from "+cfg.source):"";
     sum.textContent="setup · config · schedule · curriculum"+src;}
+}
+
+// ---------- #352 telemetry panel: planned curves + LawRef constants + mem + fired events ----------
+// Every section is CONDITIONAL on its source artifact (introspect_run) — a pre-v6 run dir
+// simply renders fewer sections; nothing is fabricated. Observability ONLY.
+// inline SVG sparkline from [[x,y]...] points (no deps); emphasized endpoints per dataviz.
+function _sparkSvg(points,color,markEpoch){
+  if(!points||points.length<2)return "";
+  const W=140,H=40,pad=3;
+  let xmin=points[0][0],xmax=points[0][0],ymin=points[0][1],ymax=points[0][1];
+  points.forEach(p=>{if(p[0]<xmin)xmin=p[0];if(p[0]>xmax)xmax=p[0];
+    if(p[1]<ymin)ymin=p[1];if(p[1]>ymax)ymax=p[1];});
+  const sx=x=>pad+(xmax>xmin?(x-xmin)/(xmax-xmin):0)*(W-2*pad);
+  const sy=y=>H-pad-(ymax>ymin?(y-ymin)/(ymax-ymin):0.5)*(H-2*pad);
+  const d=points.map((p,i)=>(i?"L":"M")+sx(p[0]).toFixed(1)+" "+sy(p[1]).toFixed(1)).join(" ");
+  const last=points[points.length-1];
+  let mk="";
+  if(markEpoch!=null&&markEpoch>xmin&&markEpoch<xmax){
+    const mxp=sx(markEpoch).toFixed(1);
+    mk="<line x1='"+mxp+"' y1='"+pad+"' x2='"+mxp+"' y2='"+(H-pad)+"' stroke='#46d3a0' stroke-width='1' stroke-dasharray='2 2' opacity='.7'/>";
+  }
+  return "<svg class='crvsvg' viewBox='0 0 "+W+" "+H+"' preserveAspectRatio='none' aria-hidden='true'>"+
+    mk+"<path d='"+d+"' fill='none' stroke='"+color+"' stroke-width='1.6' vector-effect='non-scaling-stroke'/>"+
+    "<circle cx='"+sx(last[0]).toFixed(1)+"' cy='"+sy(last[1]).toFixed(1)+"' r='2.2' fill='"+color+"'/></svg>";
+}
+function renderTelemetry(){
+  const box=$("telemetry"), body=$("telbody"); if(!box||!body)return;
+  const I=META.introspect||{};
+  const curves=I.curves, consts=I.constants, mem=I.mem, events=I.events;
+  if(!curves&&!consts&&!mem&&!events){box.classList.add("hide");return;}
+  box.classList.remove("hide");
+  let html="";
+  const col={tau:"#b08cff",beta:"#ffb454",lr:"#5ab0ff"};
+  // ── planned curves (τ / β / LR) ──
+  if(curves&&curves.curves){
+    const cs=curves.curves; let cells="";
+    ["tau","beta","lr"].forEach(k=>{const c=cs[k]; if(!c)return;
+      const ep0=c.points[0][0], epN=c.points[c.points.length-1][0];
+      cells+="<div class='crvcell'><div class='crvh'><span class='crvn'>"+escHtml(c.name)+"</span>"+
+        "<span class='crvsh'>"+escHtml(c.shape)+"</span></div>"+
+        _sparkSvg(c.points,col[k]||"#7fc0ff",c.muon_freeze)+
+        "<div class='crvep'><span>ep"+ep0+" · "+sig(c.start,3)+"</span><span>ep"+epN+" · "+sig(c.end,3)+"</span></div>"+
+        (c.note?("<div class='crvnote'>"+escHtml(c.note)+"</div>"):"")+"</div>";
+    });
+    html+="<div class='cfgsec full'><div class='cfgh'>planned curves"+
+      (curves.muon_start!=null?" &middot; ◈ Muon freeze @ ep"+curves.muon_start:"")+
+      "</div><div class='crv'>"+cells+"</div></div>";
+  }
+  // ── LawRef constants manifest (#351) ──
+  if(consts&&consts.rows&&consts.rows.length){
+    let rows="";
+    consts.rows.forEach(r=>{
+      const val=(r.value!=null)?escHtml(String(r.value)):"&mdash;";
+      const kc=(r.ladder_class==="measured_anchor"||r.ladder_class==="derived_at_config"||r.ladder_class==="derived_live")?"derived":"cap";
+      rows+="<div class='cstrow'><span class='cstnm' title=\""+escHtml(r.equation_id||"")+"\">"+escHtml(r.name)+"</span>"+
+        "<span class='kchip "+kc+"'>"+escHtml(r.ladder_label||r.ladder_class)+"</span>"+
+        "<span class='cstv'>"+val+"</span>";
+      if(r.provenance)rows+="<div class='cstprov'><code>"+escHtml(r.equation_id||"")+"</code> "+escHtml(r.provenance)+
+        (r.anchor_sha?(" · anchor "+escHtml(r.anchor_sha)):"")+"</div>";
+      rows+="</div>";
+    });
+    html+="<div class='cfgsec full'><div class='cfgh'>constants &middot; LawRef manifest (#351)</div>"+
+      "<div class='cst'>"+rows+"</div>"+
+      "<div class='cfgmeta'>"+consts.count+" resolved · "+escHtml(consts.config_family||"")+
+      " · value-identity is the law</div></div>";
+  }
+  // ── mem_probe (#329) — RSS/MLX sparkline over the recent window + latest phase ──
+  if(mem&&((mem.series&&mem.series.length>1)||(mem.rows&&mem.rows.length))){
+    const peak=mem.peak_rss_gib||1;
+    const lt=mem.latest||(mem.rows&&mem.rows[mem.rows.length-1])||{};
+    let curveH="";
+    if(mem.series&&mem.series.length>1)curveH=_sparkSvg(mem.series,"#5ab0ff",null);
+    let mlxH="";
+    if(mem.mlx_series&&mem.mlx_series.length>1)mlxH=_sparkSvg(mem.mlx_series,"#c08cff",null);
+    html+="<div class='cfgsec full'><div class='cfgh'>memory &middot; mem_probe (#329)</div>"+
+      "<div class='crv'>"+
+      (curveH?"<div class='crvcell'><div class='crvh'><span class='crvn'>RSS</span><span class='crvsh'>GiB</span></div>"+
+        curveH+"<div class='crvep'><span>peak "+sig(peak,4)+"</span><span>now "+sig(lt.rss_gib,4)+"</span></div></div>":"")+
+      (mlxH?"<div class='crvcell'><div class='crvh'><span class='crvn'>MLX active</span><span class='crvsh'>GiB</span></div>"+
+        mlxH+"<div class='crvep'><span>&nbsp;</span><span>now "+sig(lt.mlx_active_gib,4)+"</span></div></div>":"")+
+      "</div>"+
+      "<div class='cfgmeta'>peak RSS "+sig(peak,4)+" GiB · latest phase "+escHtml(lt.phase||"?")+
+      " · "+mem.count+" probes</div></div>";
+  }
+  // ── fired curriculum events (diamond glyph, distinct from epoch caps) ──
+  if(events&&events.length){
+    let chips="";
+    events.forEach(e=>{chips+="<span class='evchip'><span class='evdia'></span>"+escHtml(e.label||e.stage)+
+      (e.epoch!=null?("<span class='evep'>ep"+e.epoch+"</span>"):"")+"</span>";});
+    html+="<div class='cfgsec full'><div class='cfgh'>fired events</div><div class='evlist'>"+chips+"</div></div>";
+  }
+  body.innerHTML=html||"<div class='cfgmeta'>no telemetry artifacts yet</div>";
 }
 
 // #205 run-info strip — server pre-renders the card grid (stage-progress / best-d_seg
