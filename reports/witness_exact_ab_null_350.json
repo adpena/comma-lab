@@ -1,0 +1,55 @@
+{
+ "mode": "NULL",
+ "device": "gpu",
+ "fused_r": true,
+ "pairs": 8,
+ "epochs": 3,
+ "b_flags": [],
+ "compare": {
+  "final_ema_bit_identical": true,
+  "divergence_step_epoch": null,
+  "n_tensors_diverged": 0,
+  "per_tensor_l2_diff": {},
+  "history_A_tail": [
+   [
+    0,
+    0.11278661092122397
+   ],
+   [
+    1,
+    0.11168924967447917
+   ],
+   [
+    2,
+    0.19387690226236978
+   ],
+   [
+    3,
+    0.26495615641276044
+   ]
+  ],
+  "history_B_tail": [
+   [
+    0,
+    0.11278661092122397
+   ],
+   [
+    1,
+    0.11168924967447917
+   ],
+   [
+    2,
+    0.19387690226236978
+   ],
+   [
+    3,
+    0.26495615641276044
+   ]
+  ]
+ },
+ "wall_s": {
+  "A": 74.5,
+  "B": 75.5
+ },
+ "authority": "[macOS-MLX research-signal]/[macOS-CPU advisory]; NOT a score"
+}

@@ -1,0 +1,71 @@
+{
+ "mode": "FLIP",
+ "device": "gpu",
+ "fused_r": true,
+ "pairs": 8,
+ "epochs": 3,
+ "b_flags": [
+  "--length-weight",
+  "0.0"
+ ],
+ "compare": {
+  "final_ema_bit_identical": false,
+  "divergence_step_epoch": 2,
+  "n_tensors_diverged": 16,
+  "per_tensor_l2_diff": {
+   "film.weight": 2.106444662786089e-05,
+   "code": 1.4615330655942671e-05,
+   "hidden.0.weight": 1.2130528375564609e-05,
+   "in_proj.weight": 1.044939835992409e-05,
+   "out_sdf.weight": 1.0117195415659808e-05,
+   "hidden.1.weight": 8.662205800646916e-06,
+   "hidden.2.weight": 5.949344995315187e-06,
+   "hidden.3.weight": 3.0742799026484136e-06,
+   "film.bias": 2.2546560103364754e-06,
+   "out_sdf.bias": 1.6745086668379372e-06,
+   "in_proj.bias": 1.3171519412935595e-06,
+   "hidden.1.bias": 1.1354227353876922e-06
+  },
+  "history_A_tail": [
+   [
+    0,
+    0.11278661092122397
+   ],
+   [
+    1,
+    0.11168924967447917
+   ],
+   [
+    2,
+    0.19387690226236978
+   ],
+   [
+    3,
+    0.26495615641276044
+   ]
+  ],
+  "history_B_tail": [
+   [
+    0,
+    0.11278661092122397
+   ],
+   [
+    1,
+    0.11168924967447917
+   ],
+   [
+    2,
+    0.19387753804524738
+   ],
+   [
+    3,
+    0.26495869954427087
+   ]
+  ]
+ },
+ "wall_s": {
+  "A": 75.8,
+  "B": 75.1
+ },
+ "authority": "[macOS-MLX research-signal]/[macOS-CPU advisory]; NOT a score"
+}
