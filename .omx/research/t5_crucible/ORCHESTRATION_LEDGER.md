@@ -1875,3 +1875,17 @@ consumer update required — asserted [consumers-generic]. ---
   ASSUMED_AWAITING_VERIFICATION. Symposium disposition recommendation:
   REGISTERED-duty-to-measure, trigger = eikonal re-entry signature in v7 telemetry (the
   pre-built insurance), NOT v7.1-ARM (its failure mode is structurally absent at λ=0.01).
+- **CANONICAL RESUME REGISTRY LANDED** (2b7332f4b/8d349088d/923295387 — operator directive
+  "engineer resumability optimally"): Resumable protocol + gate registry; the two silently-
+  unpersisted latching gates now round-trip (lane_band `__lbg_*` fire-state; chroma `__cbg_*` +
+  `__cbh_*` bounded 16-entry detector window — persist-not-rederive, matching the
+  `__recent_losses` precedent); restored fire-state seeds the lever gates so the first
+  post-resume epoch cannot spuriously wipe the spike-guard window. CLASS self-protection:
+  `__resume_registry_manifest` + vanished-key → ResumeIntegrityError (fail-closed) + a STATIC
+  test asserting every trainer `_EBGate` has a canonical prefix AND is registered — a new
+  TransitionGate cannot ship unpersisted. Legacy: run-1 is cap-only → registry emits {} →
+  byte-identical sidecar (tested); pre-registry `__mg_`-only sidecars still restore. 16 new
+  tests incl. crash-resume bit-identity vs uninterrupted. NAMED residual: non-gate controllers
+  (_cl_/tau_advance_/_rng_/_evt_) persisted but not yet under the registry's static gate
+  (heterogeneous signatures; follow-up documented; preflight candidate noted, not claimed).
+  → symposium item 9 SATISFIED (IN-v7, hardening). Deferral D3 CLOSED.
