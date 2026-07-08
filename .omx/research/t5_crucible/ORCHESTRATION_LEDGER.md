@@ -1933,3 +1933,18 @@ consumer update required — asserted [consumers-generic]. ---
   K≈2^15 sample-complete regression = the named cure for #341's measured k=8 subset-overfit →
   4th solvability condition routed to #342. Papers-checked ledger line folded to MEMORY L55.
   Nothing preempts the crucible endgame.
+- **30-MIN EVAL BUDGET re-pinned (operator reminder 2026-07-08)**: upstream README:114 budget
+  binds the full eval on contest hardware (T4 16GB or CPU 4c/16GB). Measured state (#214,
+  contest_legal_inflate_20260705): n600 decode 6.59 min torch-fp32-CPU / ~13.9 min numpy-mp
+  bit-identical reference / serial-numpy 48 min OVER (why the mp+torch paths exist); T4 proj
+  <1 min. CAVEAT (honest): measured on M5 Max thread-capped to contest shape — per-core faster
+  than contest Xeon, so the real margin is SMALLER and unproven until the 1:1 Linux x86 replay.
+  STOP-CHECKLIST ADDITION: the byte-close row for the FINAL v7 checkpoint re-measures decode
+  wall-time (never extrapolate from the 0.0252 ancestor ckpt) + the 1:1 replay proves budget
+  compliance before any submission claim.
+- Seats landed so far: S1 (2805d8fd6) · S3 (54680a7b2) · S5 (80b0833d4). TWO INDEPENDENT seats
+  (S3 source-cite witness_autoconfig:1069/1457 · S5 live-argv + per-step log) FALSIFIED the
+  docket's item-5 premise — persistence/clDice is ACTIVE at w=1.0 in v7, so D16 accelerates a
+  LIVE hot term (docket claim was orchestrator error; verdict_scope: instance). S5's 3 named
+  violation hypotheses (micro-batch circular baseline · 3.1 anchor optimistic vs live 3.62 ·
+  D16 premise) MUST be engaged in synthesis; S5 proposes 4th class IN-v7-with-bounded-auto-revert.
