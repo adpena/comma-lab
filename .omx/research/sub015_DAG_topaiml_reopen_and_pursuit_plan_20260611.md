@@ -10117,3 +10117,23 @@ verdict_scope: instance — one bug class (kernel-install check before device re
   class closed across the #212 suite. 3 new tests; kernel suite 60/60; fused-R parity 25/25.
 - Triality: compute facet apparatus (means); no lever/equation change; task #265 → completed.
   pointer 0.19110 UNMOVED.
+
+## FEED-09c (2026-07-08) — MEASURED: trained mod-32 latents self-organize to the Whitney dimension
+STORES CONSULTED: mod32cap ep726 stage checkpoint (code + film.weight) · L1 unification (Whitney 2n+1 from intrinsic ~8) · two-regime allocation law · #299 scope.
+verdict_scope: instance — a measurement on one trained checkpoint; re-derives priors, kills nothing.
+- $0 SVD on `code` (1200×32) + FiLM-gain weighting, ep726 (best-stage family; ep1000 agrees):
+  RAW variance PR = 1.09 (one mode = 96% — the temporal/ego-phase coordinate);
+  DELIVERED-modulation (σ_j·‖W_film[:,j]‖) PR = **17.78, k90 = 20, k99 = 28**, FiLM gain spread
+  1.10 (near-uniform — the net equalized the tail so low-variance dims still modulate).
+- **17.8 ≈ Whitney 2·8+1 = 17-19 from the measured intrinsic dim ~8** — third independent
+  theory↔measurement agreement of the session (with τ·ln5 flip-edge and knee-f_target↔q̂).
+- Priors updated: mod-32 NOT capacity-binding (1.6× slack); shrink-below-20 cuts live dims;
+  below ~17 = Whitney obstruction (topological d_seg floor). Convergence-optimal band ~20-24.
+  DO NOT change for run-1 (warm-start break + AdamW/Muon partition shift + ν/window constants
+  are mod-dim-conditional — the P-CT1 lesson).
+- Two $0 follow-ups banked (run-2 material): (a) TRUNCATE-AT-EXPORT curve (dims ranked by
+  delivered modulation → decoded d_seg vs dims-kept on the byte-close; captures ~0.004-0.006 S
+  rate from the trained ckpt = the M-requirement train-big-compress-small hedge); (b) LATENT-ξ
+  REDUNDANCY regression (is the 96% mode derivable free from the store-nothing ξ carrier? →
+  structured latents: phase-from-physics + dims-for-movable, req H). Sharpens #299's prior.
+  pointer 0.19110 UNMOVED (measurement/means).
