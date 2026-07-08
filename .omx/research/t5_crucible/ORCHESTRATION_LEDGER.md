@@ -1804,3 +1804,40 @@ keys are consumed only by the trainer's resume reconstruction; dwell_at_cap ride
 presence-gated telemetry row that the schema-driven introspect layer (witness_run_introspect →
 dashboard LIVE) renders generically; costate_digest reads ledgers generically. No bespoke
 consumer update required — asserted [consumers-generic]. ---
+
+## FOLD 2026-07-08 — wave-1 landings (5 agents) + NEW finding from independent verification
+- **BLOCKER CLEARED + independently verified**: launch-path fixer (cb2c91cab + 9a9175173) —
+  `--config crucible_v7` argparse-accepted, explicit branch → CrucibleV7LaunchConfig adapter,
+  unknown-name RAISES (silent fall-through class killed), b0.6 VERIFIES ("DSL-authored, 134
+  flags, typed-validated"). Orchestrator re-ran the dry-run chain myself at real n600:
+  ALL GATES GREEN, exit 0 (dsl-config OK · schedule-provenance OK · 17× perf-env emitted ·
+  DRY-RUN terminal). 12 new tests.
+- **NEW-1 (found by that verification, round-2 docket, owner: orchestrator after basis agent
+  exits witness_autoconfig.py)**: epochs is LAUNCHER-level (default 1000, launch_witness_run.py:912
+  → :720) — the v7 config does NOT pin its sealed epoch count. My dry-run without --epochs
+  silently compiled a 2.48d budget instead of the sealed 7.427d (3000 ep) and PASSED every gate
+  (the rc=8 budget DERIVES from whatever epochs it is handed; it cannot catch a wrong hand).
+  Fix: v7 typed config declares epochs; launcher uses config-declared epochs unless explicitly
+  overridden (override = loud provenance note). Until fixed, the sealed launch package pins the
+  full command verbatim.
+- **safe-compile v2 LANDED** (81b861633/b9cc92657/e6339ac79 + DSL leg 886239180): 9 SAFE regions
+  auto-discovered, 8/9 bit-eq=0 CPU; hosc fp-contracts 6e-8 on CPU → auto kernel-candidate;
+  live `_act` wired flag-flip default-OFF (byte-identical verified 0.0); per-chip fingerprint
+  fail-closed (launcher b2). GPU re-cert + whole-step bench → run-1 stop checklist (D17 v2-WIRED).
+- **D16 Metal kernels LANDED** (68ed00ba2): persistence-pool fused 3×3 min/max/mean — 2.3/1.9/2.4×,
+  soft_skeleton 3.92×; bit-identity max|Δ|=0 vs numpy authority; N=5 cross-process deterministic;
+  default-OFF. margin-map + curvelet = documented evidence-based no-gos (VJP wall, no hot term).
+- **Dynamics telemetry #312 LANDED** (c34849cb5/9474fd83b/ee0e6399b + TelemetryCadence DSL leg):
+  grad-interaction cosine matrices · HVP-Lanczos curvature (mod32cap numbers HONESTLY BLOCKED —
+  self-orient forward not reconstructible standalone; in-trainer hook = the real path) ·
+  cross-series analyzer with 3 REAL run-1 findings (seg term dominates gnorm r=+0.98; hosc_beta
+  LEADS softmax_temp by 8ep r=−0.99; schedule LEADS gnorm by 2ep — gnorm is an early-warning
+  sensor). 43 tests. NOTE: its DSL-leg edit was absorbed into sibling commit 886239180
+  ("#252 safe-compile" message) — content verified correct, attribution smudged; recorded, no fix.
+- **#330 verdict memory reclaim LANDED** (4ba4058e1): MEASURED — cheap trim reclaims 0.0 GiB on
+  macOS (in-process verdict ratchets +4.6 GiB); killpg subprocess holds parent at +0.0, child
+  bit-identical d_seg/d_pose. Shipped `--verdict-subprocess` default-OFF. Caveat: ~7 GiB transient
+  npz per n600 verdict (SSD hop; future shm boundary). → inclusion-symposium item 6 evidence.
+- **Consumer-leg hook**: MAJOR-1 surfaces asserted [consumers-generic] (resume-path + presence-
+  gated telemetry rows; schema-driven introspect renders them).
+- Still in flight: TAIL fixer · minors sweeper · basis integration · D15 micro-batch routing.
