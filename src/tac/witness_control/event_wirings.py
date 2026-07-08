@@ -162,7 +162,14 @@ class EventBackstopGate:
         telemetry (and persisted) so per-epoch attribution names the epoch whose STATE caused the fire,
         not merely the epoch the gate latched. Both are additive + default to ``None``/``False`` => a
         caller that does not pass them keeps the exact prior telemetry keys plus null-valued fields
-        (legacy tests assert specific keys, not exact-dict equality)."""
+        (legacy tests assert specific keys, not exact-dict equality).
+
+        FRAME CONTRACT (F-1): ``sensor_data_epoch`` MUST be expressed in the SAME epoch frame as ``ep``.
+        ``sensor_lag_epochs = ep - sensor_data_epoch`` is only a true verdict-cadence lag when both are
+        one frame. Gates that fire on the real epoch (muon, chroma) pass a real ``sensor_data_epoch``;
+        a gate that fires on a re-anchored/lever epoch (lane band) MUST map its real sensor-data epoch
+        through the SAME lever map before passing it here, so the additive shift cancels in the
+        subtraction (the caller owns the mapping — this method just subtracts)."""
         ep = int(ep)
         if self._fired_epoch is not None:
             return GateStep(True, False, self._fired_by, None)

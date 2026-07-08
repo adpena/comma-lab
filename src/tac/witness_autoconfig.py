@@ -2297,6 +2297,23 @@ def _build_crucible_v7(
     # emphasizes when the band handles lane) so it needs no config gate here; the fixed-weight persistence
     # recall was the one regime-BLIND term. Counter-arm (lane_carried) registered duty-to-measure.
     base["--persistence-classes"] = persistence_classes_for_basis_regime(_CRUCIBLE_V7_BASIS_REGIME)
+    # (F-3 structural coupling) dropping lane from the learned persistence recall (lane_offloaded)
+    # is SOUND ONLY IF the FREE analytic lane band actually carries lane at byte-close. That band is a
+    # SEPARATE flag (--lane-render-band, inherited bare-bool from the proven v6 base) with no structural
+    # link to the regime — a future base that dropped it would leave lane with NEITHER learned recall
+    # NOR analytic band => lane d_seg regression, discovered only at byte-close. Make the coupling
+    # STRUCTURAL: when the active regime offloads lane, FAIL-LOUD AT COMPILE if the band flag is absent
+    # from the emitted base. lane_carried keeps lane in the recall ("auto") so it needs no band. The
+    # levers below never touch --lane-render-band, so asserting on `base` is equivalent to the argv.
+    if _CRUCIBLE_V7_BASIS_REGIME == "lane_offloaded" and not base.get("--lane-render-band"):
+        raise ValueError(
+            "crucible_v7 lane-regime coherence gate (F-3): basis regime 'lane_offloaded' drops lane "
+            "from the learned persistence recall (--persistence-classes="
+            f"{base['--persistence-classes']!r}, lane excluded), so lane MUST be carried by the analytic "
+            "band — but --lane-render-band is ABSENT from the emitted base. Emitting this config would "
+            "starve lane of BOTH learned recall and the analytic band (lane d_seg regression at "
+            "byte-close). Ensure the proven base carries --lane-render-band, or set the regime to "
+            "'lane_carried'.")
     # (v7.3 round-2 R3 fix, seal_v73_r2_structure) turn ON per-group grad-clip: run-1 telemetry fired
     # gnorm_hijack 3× at ep1 (island_amplify ~20% of ep1 total loss, one gradient group scaling the whole
     # step down → seg-starvation risk during the very window the coarse partition + Road boundary forms).
@@ -2358,11 +2375,11 @@ def _build_crucible_v7(
         num_pairs=int(num_pairs),
         epochs=int(epochs),
         # DERIVED wall-clock budget (operator 2026-07-08 default-on): anchor min/ep x epochs x slack.
-        # At epochs=3000 => ~8.12 days (7.06-day anchor projection x 1.15 slack) after the v7.3 round-2
-        # SEAL-A2 re-anchor to the STARTUP-AMORTIZED 3000-ep cadence 3.39 min/ep (was 3.62 = the ep~46-115
-        # incl-startup rate, which OVER-counted startup for a 3000-ep run; the deepmath's 3.12 used the
-        # memo's untrusted r_ss=3.1 lower bound — run-1's MEASURED steady slope is 3.37, so amortized(3000)
-        # = 3.37 + 59.5/3000 = 3.39). NOT hand-picked; re-derives if epochs change or a lever (tau-advance/
+        # At epochs=3000 => ~8.31 days (7.23-day anchor projection x 1.15 slack) after the v7.4 round-3
+        # SEAL DM-MINOR-1 re-anchor to the STARTUP-AMORTIZED 3000-ep cadence 3.47 min/ep, re-fit on the
+        # WIDER ep25->125 window (was 3.39 on the narrow ep75->100 window that fell in a slow-adjacent-fast
+        # trough; the full-window MEASURED steady slope is 3.4537, so amortized(3000) = 3.4537 + 51.25/3000
+        # = 3.47 — strictly more conservative). NOT hand-picked; re-derives if epochs change or a lever (tau-advance/
         # micro-batch) changes the effective per-ep count => the budget tracks the anchor, the launcher
         # REFUSES a run slower than the honest amortized cadence by more than the slack (a TRUE ~15% gate).
         wall_clock_budget_days=Provenanced(

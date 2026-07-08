@@ -121,8 +121,8 @@ def test_derive_budget_math_matches_anchor_times_slack():
     got = derive_wall_clock_budget_days(3000)
     want = project_wall_clock_days(RUN1_MEASURED_MIN_PER_EP, 3000) * WALL_CLOCK_SLACK_FACTOR
     assert got == pytest.approx(want)
-    # SEAL v7.3 round-2 A2: 3.39 startup-amortized x 3000 / 1440 = 7.0625 anchor projection.
-    assert got == pytest.approx(7.0625 * WALL_CLOCK_SLACK_FACTOR, rel=1e-3)  # ~8.12 days at 3000 ep
+    # SEAL v7.4 round-3 DM-MINOR-1: 3.47 startup-amortized (ep25->125 window) x 3000 / 1440 = 7.22917 anchor projection.
+    assert got == pytest.approx(7.22917 * WALL_CLOCK_SLACK_FACTOR, rel=1e-3)  # ~8.31 days at 3000 ep
 
 
 def test_derive_budget_rejects_nonpositive_epochs():
@@ -137,7 +137,7 @@ def test_v7_config_declares_a_derived_amortized_budget():
                                   out_dir="experiments/results/__v7_budget_test__")
     from tac.witness_dsl.typed_config import ProvenanceClass
     assert c.wall_clock_budget_days.provenance is ProvenanceClass.DERIVED_AT_CONFIG
-    assert 7.9 <= c.budget_days_value() <= 8.3   # ~8.12 days at 3000 ep (SEAL v7.3 r2 A2 amortized re-anchor)
+    assert 8.0 <= c.budget_days_value() <= 8.5   # ~8.31 days at 3000 ep (SEAL v7.4 r3 DM-MINOR-1 ep25->125 re-anchor)
 
 
 # ── FIX 1c: the launcher budget resolver (pure, default-on) ─────────────────────────────
@@ -157,8 +157,8 @@ def test_resolve_uses_config_declared_when_no_accept():
 def test_resolve_falls_back_to_derived_when_nothing_declared():
     # DEFAULT-ON: a legacy config that declared no budget STILL gets a refuse ceiling.
     b, src, override = _lw.resolve_wall_clock_budget(accept_days=None, declared_days=None, epochs=3000)
-    # SEAL v7.3 r2 A2: derived fallback now ~8.12 days (3.39 startup-amortized anchor x 3000 x 1.15 slack).
-    assert b == pytest.approx(8.12, rel=1e-2) and override is False and "fallback" in src.lower()
+    # SEAL v7.4 r3 DM-MINOR-1: derived fallback now ~8.31 days (3.47 startup-amortized anchor x 3000 x 1.15 slack).
+    assert b == pytest.approx(8.31, rel=1e-2) and override is False and "fallback" in src.lower()
 
 
 def test_resolve_none_only_when_epochs_unknown_and_nothing_supplied():
@@ -201,7 +201,7 @@ def _fast_verdict(ms):
 def test_gate_refuses_over_budget_with_rc8(monkeypatch, tmp_path):
     import tac.local_acceleration.scorer_throughput_gate as stg
     # a bench of 500ms PASSES the 700ms absolute throughput gate (env present, "fast") but at 3000 ep
-    # projects ~8.92 days (3.39x500/396 = 4.28 min/ep) > the ~8.12-day derived fallback => REFUSE (fix #3).
+    # projects ~9.13 days (3.47x500/396 = 4.38 min/ep) > the ~8.31-day derived fallback => REFUSE (fix #3).
     monkeypatch.setattr(stg, "evaluate_throughput", lambda **kw: _fast_verdict(500.0))
     rc = _lw._run_throughput_gate(_StubCfg(3000), tmp_path, threshold_ms=None,
                                   accept_wall_clock_days=None)

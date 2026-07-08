@@ -423,6 +423,37 @@ def test_persistence_classes_coherent_with_basis_regime_in_argv(compiled):
     assert wac._CRUCIBLE_V7_BASIS_REGIME == "lane_offloaded"  # single-source regime
 
 
+def test_f3_lane_offloaded_structurally_co_emits_the_analytic_band(compiled):
+    """F-3 structural coupling (positive): under lane_offloaded, lane is dropped from the learned
+    persistence recall ('3' = movable only), so the FREE analytic lane band MUST carry lane — assert
+    the band flag is present in the EMITTED argv, not merely assumed at byte-close."""
+    assert "--lane-render-band" in list(compiled.argv)
+    assert dict(compiled.emitted_pairs).get("--persistence-classes") == "3"  # lane excluded from recall
+
+
+def test_f3_guard_fails_loud_at_compile_if_band_absent(monkeypatch):
+    """F-3 structural coupling (negative): if a future proven base dropped --lane-render-band while the
+    regime stays lane_offloaded, the compile MUST fail LOUD (not silently starve lane at byte-close).
+    Simulate by wrapping derive_crucible_v6_config so its trainer flags omit the band."""
+    real = wac.derive_crucible_v6_config
+
+    def _no_band(*a, **k):
+        cfg = real(*a, **k)
+
+        class _Wrap:
+            def __getattr__(self, n):
+                return getattr(cfg, n)
+
+            def to_trainer_flags(self, out):
+                return [(f, v) for (f, v) in cfg.to_trainer_flags(out) if f != "--lane-render-band"]
+
+        return _Wrap()
+
+    monkeypatch.setattr(wac, "derive_crucible_v6_config", _no_band)
+    with pytest.raises(ValueError, match="lane-regime coherence gate"):
+        wac.derive_crucible_v7_config(_GT, num_pairs=600, epochs=3000)
+
+
 # ── (i4) SEAL v7.3 round-2 R3: per-group grad-clip ON (gnorm-hijack seg-starvation guard) ─
 def test_per_group_grad_clip_present_in_v7_argv(compiled):
     """--per-group-grad-clip is ON in the v7 emitted argv (bounds the ep1 gnorm_hijack so a large early
@@ -634,11 +665,12 @@ def test_registered_off_levers_carry_named_triggers():
 
 # ── (o) v7.3 delta 4: the wall-clock budget re-derived from the LIVE 3.62 incl-startup cadence ──
 def test_wall_clock_budget_rederived_from_amortized_cadence(compiled):
-    """SEAL v7.3 round-2 A2: the DERIVED budget uses the STARTUP-AMORTIZED 3000-ep cadence 3.39 min/ep
-    (was 3.62 = the ep~46-115 incl-startup rate that over-counted startup; the deepmath's 3.12 used the
-    untrusted r_ss=3.1 lower bound — run-1's MEASURED steady slope is 3.37, so amortized(3000)=3.39), so
-    at 3000 ep the ceiling is ~8.12 days (7.06 anchor projection x 1.15 slack)."""
+    """SEAL v7.4 round-3 DM-MINOR-1: the DERIVED budget uses the STARTUP-AMORTIZED 3000-ep cadence
+    3.47 min/ep, re-fit on the WIDER ep25->125 window (was 3.39 on the narrow ep75->100 window that
+    landed in a slow-adjacent-fast trough; the full-window MEASURED steady slope is 3.4537, so
+    amortized(3000)=3.47), so at 3000 ep the ceiling is ~8.31 days (7.23 anchor projection x 1.15
+    slack). Direction is strictly more conservative (ceiling tightens, budget grows ~0.2 d)."""
     from tac.local_acceleration.scorer_throughput_gate import RUN1_MEASURED_MIN_PER_EP
-    assert RUN1_MEASURED_MIN_PER_EP == 3.39  # startup-amortized 3000-ep cadence (measured, not a bound)
+    assert RUN1_MEASURED_MIN_PER_EP == 3.47  # startup-amortized 3000-ep cadence, ep25->125 window (measured, not a bound)
     budget = compiled.to_launch_config().wall_clock_budget_days
-    assert 7.9 <= float(budget.value) <= 8.3  # ~8.12 days at 3000 ep
+    assert 8.0 <= float(budget.value) <= 8.5  # ~8.31 days at 3000 ep

@@ -7591,7 +7591,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if _lane_band_gate.event_mode:
                     _lev = _wire_sense["lane_ev"]
                     _lane_event_fired = bool(_lev is not None and _lev.get("fired", False))
-                    _lane_sde = int(_wire_sense.get("lane_ev_epoch", -1))
+                    # (F-1 frame-consistency) this gate FIRES on _lever_epoch(ep) (re-anchored/lever
+                    # frame) and stores its _fired_epoch there, but lane_ev_epoch is the REAL verdict
+                    # epoch the nucleus reading was computed at. Map the sensor-data epoch into the SAME
+                    # lever frame so (a) sensor_lag_epochs = _lever_epoch(ep) - _lever_epoch(sde) = ep -
+                    # sde (the additive re-anchor shift CANCELS => the TRUE real-epoch verdict-cadence
+                    # lag, not a cross-frame subtraction) and (b) the persisted sde is frame-consistent
+                    # with the persisted _fired_epoch (both lever frame). Byte-identical when re-anchor
+                    # OFF (_lever_epoch is the identity). Muon/chroma gates need no map (they fire on
+                    # real ep, so their sde is already same-frame). -1 (no reading yet) stays -1.
+                    _lane_ev_ep = int(_wire_sense.get("lane_ev_epoch", -1))
+                    _lane_sde = _lever_epoch(_lane_ev_ep) if _lane_ev_ep >= 0 else -1
                     _lane_async_pending = _verdict_inflight()
                 _lbstep = _lane_band_gate.update(_lever_epoch(ep), event_fired=_lane_event_fired,
                                                  sensor_data_epoch=_lane_sde,
