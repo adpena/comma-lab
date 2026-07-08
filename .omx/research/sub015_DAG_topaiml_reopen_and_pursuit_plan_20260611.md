@@ -10533,3 +10533,25 @@ the HIGHEST-priority launch-gating pose work, separable from + MORE URGENT than 
 Also NOTE #314 DRIFT D2: crucible_v7 default pose_carrier_source="real_keyframe" while run-1 used
 "generated" — v7.5 may silently be on a DIFFERENT pose path than run-1 measured (must reconcile).
 $0 P-B FiLM-read-back probe FIRED. Pointer 0.19110 UNMOVED.
+
+## FEED-posehard (2026-07-08) — P-B VERDICT: pose is H-TARGET (HARD carrier cap), v7.5 CANNOT make sub-0.19 as-configured (eb642f0aa)
+MEASURED (run-1 live, ep175): H-consume FALSE (render warps f0 by xi_eff + co-grads — consumed,
+not bolt-on, trainer L3843-3856 + warp_real_luma L709); H-starve NOT primary (d_pose 9.575→1.793
+then FLATTENS — ceiling not starvation); **H-TARGET CONFIRMED** — photometric-real-pair self-fit
+floors at d_pose=2.562 (NO residual): single-keyframe ground-homography warp + rank-6 twist CANNOT
+reproduce two-frame optical flow (rigid ξ ≠ per-pixel flow). The 3.4e-5 was full-RGB PHOTOMETRIC
+recon (both frames≈GT) — ANCESTOR-BORROWED, does NOT transfer to the store-nothing task-space
+carrier. #314 RECONCILED: crucible_v7 base = derive_store_nothing_205 → generated (autoconfig
+L1532/L1219); v7.5 IS on run-1's measured path → inherits d_pose≈1.8.
+LAUNCH GATE: √(10·1.793)≈4.24 of S from pose ALONE ⇒ v7.5 as-configured CANNOT reach sub-0.19
+regardless of d_seg. The warp-real-luma single-keyframe+rank-6 carrier family is CAPPED ~2.5 BY
+CONSTRUCTION. Cheap-vs-hard = HARD (raise-w_pose won't help [target unreachable]; wire-FiLM won't
+help [already consumed]).
+THE CRISP RATE-DISTORTION FORK (measured, not assumed): FREE pose (generated/store-nothing ξ,
+rule-118) caps ~2.5 → contribution 4.24 → kills sub-0.19. PAID pose (store real keyframe(s) /
+dense-flow carrier) can reach ancestor ~3.4e-5 → contribution 0.018 but COSTS counted bytes.
+Break-even (DERIVED, needs MEASUREMENT): the 4.22-S pose reduction affords up to ~6.3 MB of added
+keyframe bytes before net-negative — huge headroom, so a paid-keyframe carrier is plausibly
+net-positive IF it hits low d_pose. → #238 (real pose MEASURED through byte-close) + #248 ladder.
+OPERATOR DECISION SURFACED (strategy fork below). v7.5 launch now gated on pose resolution, NOT
+just the seal. Pointer 0.19110 UNMOVED.

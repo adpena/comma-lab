@@ -11,6 +11,8 @@ END is a byte-closed `upstream/evaluate.py` n600 exact row < 0.19110.
 
 ## 1. WHAT v7.5 IS
 
+> **⚠ POSE LAUNCH GATE (measured 2026-07-08, P-B eb642f0aa): v7.5 CANNOT reach sub-0.19 as-configured.** The store-nothing-ξ pose carrier is H-TARGET capped ~2.5 by construction (single-keyframe homography+rank-6-twist can't reproduce two-frame optical flow; the 3.4e-5 is ancestor full-RGB-photometric, non-transferable). run-1 MEASURES d_pose≈1.79 flat ⇒ √(10·1.79)≈4.24 of S from pose alone. v7.5's changes are all d_seg-side. **Before launching as a sub-0.19 attempt, pose needs a representation change (paid keyframe-pair / dense-flow carrier, break-even re-derived with MEASURED d_pose — #238/#248) OR v7.5 launches explicitly as a d_seg-only MEANS row (not a pointer-mover). Operator strategy decision — see DAG FEED-posehard.** The counter-force/ramp/P0 d_seg machinery is sound + reusable regardless.**
+
 The sealed EVENT-mode single-trunk witness config (`crucible_v7` in `tac.witness_autoconfig`,
 compiled by `_build_crucible_v7`, launched ONLY via `tools/launch_witness_run.py` governed path).
 7 DSL levers: seg_form_unify_tau · tail_k_warm_restart · n323_ladder_island_homotopy ·
