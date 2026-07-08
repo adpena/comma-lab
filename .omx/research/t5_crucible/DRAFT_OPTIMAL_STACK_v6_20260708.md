@@ -31,6 +31,10 @@ verdict_scope: formulation — the negatives THIS draft asserts are all formulat
   statistic, per-direction mechanism confirmed real; τ*=0.062 struck = INSTANCE, corrupted input).
   Family-level claims appear ONLY in the asymptote section with their deciding measurements named.
   Remaining uppercase tokens quote source-scoped probe verdicts. # VERDICT_SCOPE_OK:quotes-of-source-scoped-verdicts-plus-the-per-item-tags-below
+verdict_scope: formulation — v6.2 additions: B19 decode-side seeded dither DEAD/KILL rows quote
+  P-DITHER's kill, scoped FORMULATION at source (unbiased decode-side seeded dither as-built;
+  render-informed forms — trained-with dither, #149 placement — remain open run-2 per the
+  reformulation queue in probe_tau2_dither_20260708.md). # VERDICT_SCOPE_OK:v6.2-added-tokens-quote-the-formulation-scoped-P-DITHER-kill
   {INSTANCE | FORMULATION | FAMILY | PARADIGM}; kills enumerate reformulation queues.
 ---
 
