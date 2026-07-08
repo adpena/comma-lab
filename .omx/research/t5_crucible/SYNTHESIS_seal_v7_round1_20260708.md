@@ -60,3 +60,14 @@ Fixers land → basis decision (waterfill + round-2 review of the rebalance) →
 (name-resolved, dry-run gate chain green) → ROUND 2: same 4 lenses on the diff + regression
 surfaces. Counter target: 3 consecutive clean. Then: operator mode decision surfaced with the
 launch package → governed stop of run-1 → relaunch.
+
+## APPEND-ONLY — STANDING POLICY: FIX-ALL-SEVERITIES-BEFORE-NEXT-ROUND (operator, 2026-07-08)
+Operator standing policy for the seal machine, recorded here for the convening/synthesis doc trail:
+from ROUND 2 onward, a round's findings — ALL severities (BLOCKER · MAJOR · MINOR · REVISE alike) —
+are FIXED before the next round convenes. The 3-clean-pass counter only ever counts rounds with ZERO
+findings (a round with any finding at any severity does NOT advance the counter — unchanged), and
+ZERO-UNFIXED-FINDINGS is now an added PRECONDITION to convene the next round: the convener must
+confirm every finding from the prior round is dispositioned-and-landed (fixed, or explicitly recorded
+unfixable-now with a named blocker) before spawning the next round's lenses. This closes the gap where
+low-severity findings could accrue unfixed across rounds while the counter advanced on the high-severity
+ones. Round-1's MINORs were swept under this policy (memo: `round1_minors_sweep_20260708.md`).
