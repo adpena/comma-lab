@@ -150,6 +150,30 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+T. **VALUE-PROVENANCE LADDER — avoid hardcoding to the extent possible (operator 2026-07-08).**
+   Every constant/value in configs, DSL, laws, and code sits on a preference ladder, and sits as
+   HIGH on it as the apparatus allows:
+   (1) **DERIVED-LIVE** — a law evaluated at runtime from measured state (SC-3 live-m_q → τ*;
+   adaptive-ε(t); r*(t)=0.95·σ_eff(t); the c(τ) cascade). The gold standard: cannot rot.
+   (2) **DERIVED-AT-CONFIG** — a law + pinned inputs, the derivation executable and cited
+   (τ_end=0.31 from the knee band; s*=ν·forfeit). Rots only if an INPUT rots — so inputs carry
+   provenance + a re-derivation trigger.
+   (3) **MEASURED-ANCHOR** — an artifact-cited measurement, staleness-scoped and declared
+   CONFIG-CONDITIONAL (ν=0.012653 from the mod32cap trace: valid at mod-32/this schedule;
+   re-fit on config change — the P-CT1 lesson codified).
+   (4) **HARDCODED-WITH-WAIVER** — last resort: recorded reason + owner + the named condition
+   that triggers re-derivation. A bare literal with none of these = the bug class.
+   MEASURED ANCHORS FOR THIS RULE (tonight alone): m_q=0.10 (tautological apparatus output
+   frozen into a law) · ν=0.026210 (registered value not reproducible from any trace) ·
+   β=1.41 (computed under the wrong schedule shape) · adaptive-ε clamps 0.3/0.7 (coarse-point
+   constants binding >90% of epochs). Every one entered as class-(3-or-4) WITHOUT its
+   conditionality declared, and every one cost a probe or a seal round to unwind.
+   Sisters: the c(τ) τ-indexed constants law (v6 §1.4) · tac.clip_profile (L22, run props) ·
+   the #43 constant-provenance L2 gate · #340 hardcoded-run-props sweep · requirement M
+   (measure→sweep→derive). Enforcement: the seal rounds' provenance audit already checks
+   measured claims — this extends the same audit to CONSTANTS (a config value with no
+   ladder-class + provenance = a finding); the #43 gate is the static surface.
+
 S. **CITATION PROVENANCE — record the literature (operator 2026-07-08: "make sure we are
    recording arxiv paper citations and stuff too for scientific rigor and provenance and the
    marimo contest if we get to it").** Every research-derived law/import/theorem-claim records
