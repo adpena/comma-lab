@@ -265,6 +265,25 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: SCHEDULE-PROVENANCE ENFORCEMENT (Opus; code 31e760120, DAG+memo a1f7c109a;
+memo .omx/research/schedule_provenance_gate_20260709.md; 29 new tests, 124 green) ---
+- GATE (tools/schedule_provenance_gate.py, launcher step b0.5, rc=6): every positive
+  `--*-start-epoch` trigger (registry parsed from the REAL trainer argparse) must be
+  EVENT_TRIGGERED (sensor DECLARED in the config's `schedule_governance` surface — co-emission
+  alone does NOT launder) · DERIVED (LawRef in constants_manifest.json) · FAIL_SAFE_CAP
+  (tagged: sensor + real rationale). Else NAKED → REFUSE. Advisory on --dry-run; fail-open on
+  infra error; live run-1 untouched (resumes from frozen launch.sh).
+- INCUMBENT v6 VIOLATIONS (pinned as regression fixture = THE RESTART TO-FIX SPEC, consumed by
+  the v7 synthesis): 5 NAKED — tau-softplus-start-epoch 300 (the operator's named example) ·
+  l7-start-epoch 3000 · muon-start-epoch 726 (→ tag as cap) · lane-band-start-epoch 350 ·
+  seg-chroma-boundary-start-epoch 300. No schedule_governance surface in the incumbent.
+- HOOK LEG (triality_drift_detector Stop hook): flags NEW naked *_start_epoch or PR95-named
+  stage sequences in witness_autoconfig/witness_dsl/config commits; fail-open; waiver
+  `# SCHEDULE_PROVENANCE_OK:<rationale>`.
+- COMPOSITION NOTE: requirement-V builder informed — its typed schema will model
+  `schedule_governance` as a first-class typed block. v7 config must clear BOTH gates.
+  Pointer 0.19110 UNMOVED (apparatus/means).
+
 --- ⛔ REQUIREMENT V BOUND (operator 2026-07-08 verbatim: "The config must be defined in the
 DSL no ad hoc or hand crafting... pydantic and possibly verification and validation tools as
 well and type checking and formalization and integrate all with apparatus to prevent more
