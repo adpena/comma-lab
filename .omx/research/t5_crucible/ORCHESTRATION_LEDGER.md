@@ -186,6 +186,9 @@ R. **VERDICT-SCOPE TAXONOMY — one failed formulation is NOT a dead family (ope
    (confound-poisoned "family kill" that was instance-level), UniWARD pooled null (formulation-
    level read as family-level, now the Q1 reopen), mod-dim ("refuted" = one formulation at one
    scale), l7 ("defect" = as-formulated-in-PR95-order).
+   ENFORCED (2026-07-08): verdict-scope leg in tools/triality_drift_detector.py (rides the
+   existing Stop-hook registration) + fmtools on-device-FM advisory layer (over-scope check,
+   family/paradigm-calibrated, persisted → costate_digest), commit aa4cd41f0.
 
 Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "pursue those
    validation paths as well to expand our toolbelt and understanding and improve our
