@@ -56,6 +56,8 @@ placement, matching L66 (annulus = boundary-jitter).
 
 ## VERDICT ON THE 20-50 KB Road/Undriv BAND — **CONSERVATIVE (leaning confirmed-range); the "optimistic" risk is REFUTED**
 
+verdict_scope: formulation — REFUTED applies to the design's named risk formulation ("Road/Undriv interior textured-paint fidelity through R is the binding constraint"), measured at the oracle-paint upper bound (real-frame texture) on the exact gate path, n600. It does NOT judge the achievable-bytes figure (increment-1's to measure) nor any carrier family — the boundary-placement residual it localizes remains fully open.
+
 The design's decisive dichotomy: *"if Road+Undriv paint accounts for nearly all the composite residual → band
 OPTIMISTIC; if lane/movable-dominated → bulk classes paint near-perfectly → band CONSERVATIVE."*
 
