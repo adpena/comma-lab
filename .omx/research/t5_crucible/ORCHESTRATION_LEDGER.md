@@ -1889,3 +1889,16 @@ consumer update required — asserted [consumers-generic]. ---
   (_cl_/tau_advance_/_rng_/_evt_) persisted but not yet under the registry's static gate
   (heterogeneous signatures; follow-up documented; preflight candidate noted, not claimed).
   → symposium item 9 SATISFIED (IN-v7, hardening). Deferral D3 CLOSED.
+- **CADENCE CHECK (operator challenge, 2026-07-08 ~14:2xZ)**: VERIFIED run-1 HAS the 17×
+  grouped-backward + fused-R active IN-LOG (`custom_grouped_backward: active true,
+  env_set_and_metal_backend_available` + `fused_r_kernel: active true, forward+grad
+  bit-identical`) — the flags-emitted≠throughput-realized check passes for run-1. BUT measured
+  cadence ~4.2–4.5 min/ep vs the 3.1 anchor (~35% slow); measured cause = build-fleet
+  CONTENTION (5 concurrent agents' test suites; run-1 RSS paged 18→7.2 GiB at 14:20). Clears
+  as agents land. The real untapped v7 speed = the built-today default-OFF levers:
+  micro-batch 2–4× (A/B owed) · safe-compile hosc 1.41× (certified) · D16 pool (term off).
+  rc=8's at-admission REAL bench protects v7's budget against residual contention.
+- **MEGAKERNEL registered** (task #356, operator: "further synergy through custom megakernel"):
+  whole-step composition of the local fusions (render→R→stem→loss→backward) as one dispatch
+  graph; same bar (bit-identity/N=5/measured/default-OFF/per-chip cert/DSL leg); sequenced
+  AFTER v7 launch; evidence gate = whole-step bench at run-1 stop beside D17's.
