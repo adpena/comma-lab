@@ -1847,3 +1847,16 @@ consumer update required — asserted [consumers-generic]. ---
   recorded as standing policy in the SYNTHESIS. Residual coordination risk (named, non-blocking):
   MINOR-6 hunk in tail_cycles.py could be reverted by a later whole-file commit — re-apply if so.
   Remaining in flight: TAIL fixer · basis integration · D15 micro-batch routing.
+- **NEW-1 FIXED + verified end-to-end** (a3926f552/41eac6230): launcher --epochs default None → derive_named_config
+  omits the kwarg so each config family's SEALED default (v6/v7=3000, older=1000) wins;
+  CrucibleV7LaunchConfig now exposes .epochs; explicit --epochs prints a loud provenance note.
+  Verified: bare `--config crucible_v7 --dry-run` at n600 now resolves "epochs: 3000
+  (config-sealed default)". +6 tests, 93 regression green, ruff F clean. NOTE run-1 itself
+  launched correctly (explicit --epochs 3000 in its launch.sh) — the trap was avoided by hand
+  there; now it is structural.
+- **WORKING-TREE DAMAGE caught + healed**: an uncommitted stale whole-file write (author unknown;
+  one of today's autoconfig-touching agents wrote from a pre-R-6 snapshot) was DELETING the minors
+  sweeper's landed R-6 KEEP-WITH-PROVENANCE block (3c827c1e1) in the working tree. A plain
+  file-add commit would have absorbed the revert — committed via --patch-file with ONLY the
+  epochs-property hunk, then normalized the file to HEAD (R-6 restored, nothing else lost).
+  This is the sweeper's named risk class materializing; patch-file discipline contained it.
