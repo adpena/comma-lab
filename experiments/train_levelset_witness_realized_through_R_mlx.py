@@ -454,6 +454,10 @@ def _git_provenance() -> dict[str, Any]:
 _RESUME_LIVE_PREFIX = "liveP__"
 _RESUME_EMA_PREFIX = "emaP__"
 _RESUME_OPT_PREFIX = "optP__"
+# (R-7 finisher 2) the Polyak tail-averager's HEAVY running-mean arrays. Distinct from live/ema/opt so
+# _load_resume_state routes them to their own dict (never polluting the model param restore). Only ever
+# present when --polyak-finisher-arm is set + it has observed => an un-armed run is byte-identical.
+_RESUME_POLYAK_PREFIX = "polyakM__"
 
 
 def _atomic_savez(path: Path, arrays: dict[str, np.ndarray]) -> Path:
@@ -708,6 +712,7 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
     live: dict[str, np.ndarray] = {}
     ema: dict[str, np.ndarray] = {}
     opt: dict[str, np.ndarray] = {}
+    polyak: dict[str, np.ndarray] = {}
     cfg: dict[str, Any] = {}
     for k in z.files:
         if k.startswith(_RESUME_LIVE_PREFIX):
@@ -716,6 +721,10 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
             ema[k[len(_RESUME_EMA_PREFIX):]] = np.asarray(z[k], np.float32)
         elif k.startswith(_RESUME_OPT_PREFIX):
             opt[k[len(_RESUME_OPT_PREFIX):]] = np.asarray(z[k])
+        elif k.startswith(_RESUME_POLYAK_PREFIX):
+            # (R-7 finisher 2) the Polyak running-mean (fp64) — restored into the averager, never the
+            # model. Absent for an un-armed run (byte-identical).
+            polyak[k[len(_RESUME_POLYAK_PREFIX):]] = np.asarray(z[k], np.float64)
         elif k.startswith("__"):
             a = z[k]
             cfg[k] = a.item() if a.size == 1 else a.tolist()
@@ -725,7 +734,7 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
             live.setdefault(k, np.asarray(z[k], np.float32))
     epoch = int(cfg.get("__resume_epoch", cfg.get("__epoch", 0)))
     return {
-        "live": live, "ema": ema, "opt": opt,
+        "live": live, "ema": ema, "opt": opt, "polyak": polyak,
         "epoch": epoch, "has_opt": bool(int(cfg.get("__resume_has_opt", 0))), "cfg": cfg,
     }
 
@@ -5217,6 +5226,28 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _resume_registry = _build_resume_registry(
         [_muon_gate, _lane_band_gate, _chroma_gate], wire_sense=_wire_sense)
 
+    # (R-7 finisher 2) the Polyak tail averager. Constructed + REGISTERED into the resume registry ONLY
+    # when armed (else None => every observe/checkpoint/export/restore below is guarded off => ZERO new
+    # keys => byte-identical). The scalar bookkeeping (count/start/arm) rides the registry (completeness
+    # protection); the heavy running-mean rides the resume sidecar under _RESUME_POLYAK_PREFIX. It is
+    # NOT an event controller (no event_mode attr) => fail-OPEN on a missing resume state (the EMA
+    # shadow — the resume-critical artifact — is untouched; a lost Polyak candidate simply restarts).
+    _polyak = None
+    if bool(getattr(args, "polyak_finisher_arm", False)):
+        from tac.witness_control.polyak_finisher import (
+            POLYAK_SCALAR_PREFIX as _POLYAK_SCALAR_PREFIX,
+        )
+        from tac.witness_control.polyak_finisher import (
+            PolyakTailAverager as _PolyakTailAverager,
+        )
+        _polyak = _PolyakTailAverager(
+            start_epoch=int(getattr(args, "polyak_finisher_start_epoch", 0)), arm=True)
+        _resume_registry.register("polyak_finisher", _POLYAK_SCALAR_PREFIX, _polyak)
+        print(json.dumps({"stage": "polyak_finisher_armed",
+                          "start_epoch": int(_polyak.start_epoch),
+                          "note": "uniform Polyak tail average ON; extra ckpt candidate, EMA shadow "
+                          "untouched (byte-close picks best)"}), flush=True)
+
     # (operator 2026-07-08 GPU-verdict HYBRID) device for the ADVISORY verdict scalars + the
     # CPU-torch positive-control ANCHOR cadence. cpu (default) => every branch below is byte-
     # identical to the sealed #205 verdict. gpu => the scalars run through the MLX scorer ports
@@ -6024,12 +6055,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
         resume_arrays.update(_rng_state_arrays(hardness_rng))
+        # (R-7 finisher 2) merge the Polyak running-mean (heavy fp64) into the SAME atomic resume savez
+        # as its scalar sentinel (registry) => no cross-file desync. {} unless armed+observed => the
+        # sidecar is byte-identical for an un-armed run.
+        if _polyak is not None:
+            resume_arrays.update(_polyak.heavy_state_arrays(_RESUME_POLYAK_PREFIX))
         # rolling latest: the byte-close default name + the quick resume target (overwritten atomically).
         _atomic_savez(out_dir / "levelset_witness_ema_mlx.npz", ema_arrays)
         _atomic_savez(out_dir / "levelset_resume_state.npz", resume_arrays)
         written: dict[str, Any] = {
             "epoch": epoch, "ema_latest": "levelset_witness_ema_mlx.npz",
             "resume_latest": "levelset_resume_state.npz", "has_opt": bool(opt_np)}
+        # (R-7 finisher 2) export the Polyak tail mean as an ADDITIONAL deploy candidate (same builder +
+        # on-manifold film projection as the EMA deploy npz), NEVER replacing levelset_witness_ema_mlx.npz.
+        # Only when armed AND it has observed >=1 epoch (else no candidate yet).
+        if _polyak is not None and _polyak.count > 0:
+            _polyak_mean = _polyak.mean_fp32()
+            polyak_arrays = _build_ema_checkpoint_arrays(
+                _project_shadow_film_np(_polyak_mean), args=args,
+                softmax_temp=float(model.softmax_temp), render_h=render_h, render_w=render_w,
+                epoch=epoch, in_feat=in_feat, hosc_beta=float(model.hosc_beta),
+                provenance=_run_provenance)
+            _atomic_savez(out_dir / "levelset_witness_polyak_mlx.npz", polyak_arrays)
+            written["polyak_latest"] = "levelset_witness_polyak_mlx.npz"
+            written["polyak_count"] = int(_polyak.count)
         if stage_tag is not None:  # PRESERVED stage-encoded ckpt (NOT overwritten -> per-stage A/B).
             ema_pres = f"levelset_ckpt_{stage_tag}_ep{epoch}.npz"
             res_pres = f"levelset_resume_{stage_tag}_ep{epoch}.npz"
@@ -6037,6 +6086,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _atomic_savez(out_dir / res_pres, resume_arrays)
             written["ema_preserved"] = ema_pres
             written["resume_preserved"] = res_pres
+            # (R-7) per-stage-encoded Polyak candidate (mirrors the EMA per-stage preservation).
+            if _polyak is not None and _polyak.count > 0:
+                polyak_pres = f"levelset_polyak_{stage_tag}_ep{epoch}.npz"
+                _atomic_savez(out_dir / polyak_pres, polyak_arrays)
+                written["polyak_preserved"] = polyak_pres
         return written
 
     # ---- RESUME restore (FEED-dz; --resume-from None => fresh start => behavior UNCHANGED). Loads
@@ -6218,6 +6272,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _resume_report = _resume_registry.restore(resume_cfg)
         for _rw in _resume_report.warnings:
             print(json.dumps(_rw), flush=True)
+        # (R-7 finisher 2) the registry restored the Polyak SCALARS (count/start) above; now restore the
+        # HEAVY running-mean from the sidecar-routed arrays (rs["polyak"]) so --resume-from continues a
+        # bit-faithful uniform tail average. FAIL-OPEN: a sentinel-says-armed-but-heavy-missing mismatch
+        # is LOUD-but-non-fatal (the EMA shadow is untouched; the Polyak candidate just restarts).
+        if _polyak is not None:
+            _poly_heavy = rs.get("polyak") or {}
+            if _poly_heavy:
+                _polyak.restore_heavy(_poly_heavy)
+                print(json.dumps({"stage": "polyak_finisher_resumed",
+                                  "count": int(_polyak.count),
+                                  "start_epoch": int(_polyak.start_epoch)}), flush=True)
+            elif bool(_resume_report.restored.get("polyak_finisher", False)):
+                print(json.dumps({"stage": "polyak_finisher_resume_heavy_missing",
+                                  "note": "sidecar recorded Polyak scalar state but no heavy mean "
+                                  "arrays present — restarting the tail average (fail-open; EMA "
+                                  "shadow untouched)."}), flush=True)
+                _polyak._count = 0  # noqa: SLF001 — reset so the restarted average is n-consistent
         _muon_fire_restored = bool(_resume_report.restored.get("muon", False))
         if _muon_fire_restored and _muon_gate.fired_epoch is not None:
             _resume_into_finisher = start_epoch > int(_muon_gate.fired_epoch)
@@ -8239,6 +8310,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 print(json.dumps({"stage": "focal", "epoch": ep, "pair": int(_fo_pi),
                                   "gamma": focal_gamma,
                                   "island_grad_share": round(_fo_share, 5)}), flush=True)
+            # (R-7 finisher 2) fold this epoch's SETTLED live weights into the uniform Polyak tail mean
+            # BEFORE checkpointing (so a ckpt written this epoch persists a mean that INCLUDES it). No-op
+            # unless armed AND ep >= start (byte-identical off). MLX-free snapshot (small witness).
+            if _polyak is not None:
+                _polyak.observe(ep, {k: np.asarray(v, np.float32)
+                                     for k, v in tree_flatten(model.parameters())})
             # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
             # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
             # stage-encoded, byte-close-loadable ckpt (per-stage A/B of which stage moves d_seg).
@@ -9591,6 +9668,22 @@ def main(argv: list[str] | None = None) -> int:
                     "the m/v moments are zeroed (stale momentum through a loss-landscape change is the "
                     "FEED-ft#3 tau-jump root cause). Default OFF => bit-identical. No-op during the "
                     "Muon finisher (it already re-inits a fresh optimizer).")
+    # ---- R-7 finisher 2 (Polyak/Ruppert TAIL AVERAGING). Default-OFF => byte-identical (the averager
+    # is never constructed / registered when --polyak-finisher-arm is absent). When armed, a UNIFORM
+    # tail mean of the live iterates over the finishing window is maintained ALONGSIDE the EMA shadow
+    # (NEVER replaces it) + exported as an ADDITIONAL ckpt candidate (levelset_witness_polyak_mlx.npz +
+    # per-stage). At the constant-tau* turnpike the iterates orbit a basin; the uniform tail mean is a
+    # better basin-CENTER than a fixed-horizon EMA. See tac.witness_control.polyak_finisher.
+    ap.add_argument("--polyak-finisher-arm", action="store_true",
+                    help="R-7: arm the Polyak tail averager (uniform mean of live iterates >= "
+                    "--polyak-finisher-start-epoch), exported as an EXTRA ckpt candidate alongside the "
+                    "EMA shadow. Default OFF => byte-identical. The byte-close/eval picks the best "
+                    "candidate; this NEVER replaces the EMA shadow.")
+    ap.add_argument("--polyak-finisher-start-epoch", type=int, default=0,
+                    help="R-7: epoch at which the Polyak tail average begins accumulating (size it to "
+                    "the finisher entry / ~0.1-0.3x the stage window per "
+                    "muon_finisher_schedule_warmstart_and_lr_anneal_v1). Used only when "
+                    "--polyak-finisher-arm is set.")
     # ---- BUILD 2 (FEED-fw): LANE-PRIOR phi1 (ADDITIVE, default-OFF => structured-init BIT-IDENTICAL).
     # Initialize the structured-init target's phi1 (lane-class SDF) channel to the signed distance of
     # the openpilot deg-3 centerline curve (FEED-fs: that centerline IS the Road<->Lane separatrix,
