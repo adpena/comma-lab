@@ -796,6 +796,142 @@ def cpu_verdict_d_pose_batch(posenet_cpu, f0_uint8: list, f1_uint8: list, gt_pos
 
 
 # ---------------------------------------------------------------------------
+# GPU (MLX) verdict primitives (operator 2026-07-08: "run the verdict on gpu now that
+# it's deterministic and way faster"). ADVISORY / NON-PROMOTABLE per CLAUDE.md ("MPS/MLX
+# NEVER a score"): these are the FAST-cadence trajectory monitor; the CPU-torch verdict
+# above stays the positive-control ANCHOR (slow cadence) + the comparability baseline.
+#
+# CONFOUND CONTROL: the preprocess (resize + last-frame select for SegNet; interpolate +
+# rgb_to_yuv6 for PoseNet) is done by the SAME torch scorer's ``preprocess_input`` the CPU
+# verdict uses, so it is BIT-IDENTICAL across flavours. The ONLY difference is the FORWARD
+# numerics (torch-CPU vs MLX-GPU) -- exactly the drift the anchor measures. fused-R active
+# (the trainer converts under --mlx-device gpu); GPU determinism is per-config (memory L70:
+# fused-R cures the dup-index scatter wall; probe owed via tools/mlx_gpu_determinism_probe.py).
+# ---------------------------------------------------------------------------
+def gpu_verdict_d_seg_argmax_batch(mlx_segnet, segnet_cpu, frames1_uint8: list, gt_argmax_list: list):
+    """MLX-GPU analog of ``cpu_verdict_d_seg_argmax_batch``: torch preprocess (bit-identical
+    resize) then the MLX SegNet forward on the process-default device (gpu when the trainer
+    ran conversion under --mlx-device gpu). Returns ``(d_seg_list, realized (N,h,w) int64)``.
+
+    ``mlx_segnet`` is ``adapter.segnet`` (an ``MLXSegNetAdapter``). fp32 throughout. The
+    per-pixel argmax + per-pair disagreement rate mirror the CPU primitive exactly; the ONLY
+    numerical difference vs CPU is the forward kernel (torch-CPU vs MLX)."""
+    import numpy as _np
+    import torch
+
+    from tac.local_acceleration.mlx_scorer_adapters import run_mlx_segnet_nchw
+
+    arr = _np.stack([_np.asarray(f)[None] for f in frames1_uint8], axis=0)  # (N,1,H,W,3)
+    xp = torch.from_numpy(arr).permute(0, 1, 4, 2, 3).contiguous().float()  # (N,1,3,H,W)
+    with torch.inference_mode():
+        seg_in = segnet_cpu.preprocess_input(xp)  # (N,3,512,384) raw resized, last frame (torch, cheap)
+    seg_in_np = _np.ascontiguousarray(seg_in.cpu().numpy(), dtype=_np.float32)  # NCHW
+    logits = _np.asarray(run_mlx_segnet_nchw(mlx_segnet, seg_in_np))  # (N,5,h,w) NCHW
+    realized = logits.argmax(axis=1).astype(_np.int64)  # (N,h,w)
+    d_seg = [float(_np.count_nonzero(realized[i] != g)) / g.size
+             for i, g in enumerate(gt_argmax_list)]
+    return d_seg, realized
+
+
+def gpu_verdict_d_pose_batch(mlx_posenet, posenet_cpu, f0_uint8: list, f1_uint8: list,
+                             gt_pose_list: list) -> list:
+    """MLX-GPU analog of ``cpu_verdict_d_pose_batch``: torch preprocess (interpolate +
+    rgb_to_yuv6, bit-identical to CPU) then the MLX PoseNet forward. ``mlx_posenet`` is
+    ``adapter.posenet`` (an ``MLXPoseNetAdapter``, which applies (x-mean)/std internally).
+    Returns the per-pair d_pose MSE over the first ``half`` pose dims (same as CPU)."""
+    import einops
+    import numpy as _np
+    import torch
+
+    from tac.local_acceleration.mlx_scorer_adapters import run_mlx_posenet_nchw
+
+    arr = _np.stack([_np.stack([_np.asarray(a), _np.asarray(b)], axis=0)
+                     for a, b in zip(f0_uint8, f1_uint8)], axis=0)  # (N,2,H,W,3)
+    pair = torch.from_numpy(arr).float()
+    x = einops.rearrange(pair, "b t h w c -> b t c h w").float()  # (N,2,3,H,W)
+    with torch.inference_mode():
+        yuv6 = posenet_cpu.preprocess_input(x)  # (N,12,384,512) YUV6 (torch, cheap)
+    yuv6_np = _np.ascontiguousarray(yuv6.cpu().numpy(), dtype=_np.float32)  # NCHW
+    out = run_mlx_posenet_nchw(mlx_posenet, yuv6_np)
+    pose = out["pose"] if isinstance(out, dict) else out
+    half = None
+    for hh in posenet_cpu.hydra.heads:
+        if hh.name == "pose":
+            half = hh.out // 2
+            break
+    pose_np = _np.asarray(pose)
+    if half is None:
+        half = pose_np.shape[-1] // 2
+    pose_np = pose_np[:, :half].astype(_np.float64)  # (N, half)
+    return [float(_np.mean((pose_np[i] - g) ** 2)) for i, g in enumerate(gt_pose_list)]
+
+
+def gpu_verdict_dseg_dpose_chunked(mlx_adapter, segnet_cpu, posenet_cpu,
+                                   f0s: list, f1s: list, lstars: list, poses: list, *,
+                                   vbatch: int, return_realized: bool = False):
+    """MLX-GPU analog of ``_verdict_dseg_dpose_chunked``: mean d_seg / d_pose over N pairs,
+    running the MLX scorers in CHUNKS of ``vbatch`` (the #205 n600-verdict-OOM law applies to
+    the GPU path too -- the full-P batched forward would OOM the GPU stack). ``vbatch<=0`` runs
+    a single N-wide batch. ``return_realized`` also returns the per-pair realized argmax (for the
+    anchor's flip-disagreement). ADVISORY / NON-PROMOTABLE."""
+    n = len(f1s)
+    vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
+    ds_all: list = []
+    dp_all: list = []
+    realized_all: list = []
+    for s in range(0, n, vb):
+        e = min(s + vb, n)
+        ds_chunk, realized = gpu_verdict_d_seg_argmax_batch(
+            mlx_adapter.segnet, segnet_cpu, f1s[s:e], lstars[s:e])
+        ds_all.extend(ds_chunk)
+        dp_all.extend(gpu_verdict_d_pose_batch(
+            mlx_adapter.posenet, posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+        if return_realized:
+            realized_all.extend([realized[i] for i in range(e - s)])
+    if return_realized:
+        return float(np.mean(ds_all)), float(np.mean(dp_all)), realized_all
+    return float(np.mean(ds_all)), float(np.mean(dp_all))
+
+
+def paired_anchor_verdict(mlx_adapter, segnet_cpu, posenet_cpu,
+                          f0s: list, f1s: list, lstars: list, poses: list, *,
+                          vbatch: int) -> dict:
+    """Run BOTH the CPU-torch verdict AND the MLX-GPU verdict over the SAME rendered frames,
+    streaming in chunks of ``vbatch``, and return the drift-instrument fields (the positive-
+    control sentinel). Chunked so BOTH realized argmax stacks stay bounded (~vbatch pairs), and
+    the per-pixel disagreement + per-pair d_pose deltas accumulate per chunk (no full stacks).
+
+    Returns the dict ``build_paired_drift_row`` consumes. Both flavours ADVISORY /
+    NON-PROMOTABLE (CLAUDE.md: MLX/MPS is never a score)."""
+    n = len(f1s)
+    vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
+    cpu_ds: list = []
+    cpu_dp: list = []
+    gpu_ds: list = []
+    gpu_dp: list = []
+    flip = 0
+    for s in range(0, n, vb):
+        e = min(s + vb, n)
+        c_ds, c_real = cpu_verdict_d_seg_argmax_batch(segnet_cpu, f1s[s:e], lstars[s:e])
+        g_ds, g_real = gpu_verdict_d_seg_argmax_batch(mlx_adapter.segnet, segnet_cpu, f1s[s:e], lstars[s:e])
+        cpu_ds.extend(c_ds)
+        gpu_ds.extend(g_ds)
+        flip += int(np.count_nonzero(np.asarray(c_real) != np.asarray(g_real)))
+        cpu_dp.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+        gpu_dp.extend(gpu_verdict_d_pose_batch(mlx_adapter.posenet, posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+    cpu_dp_a = np.asarray(cpu_dp, dtype=np.float64)
+    gpu_dp_a = np.asarray(gpu_dp, dtype=np.float64)
+    return {
+        "d_seg_cpu": float(np.mean(cpu_ds)),
+        "d_seg_gpu": float(np.mean(gpu_ds)),
+        "d_pose_cpu": float(np.mean(cpu_dp_a)),
+        "d_pose_gpu": float(np.mean(gpu_dp_a)),
+        "argmax_flip_disagreement_count": int(flip),
+        "max_abs_dpose_delta": float(np.max(np.abs(gpu_dp_a - cpu_dp_a))) if cpu_dp_a.size else 0.0,
+    }
+
+
+# ---------------------------------------------------------------------------
 # MLX EMA (decay 0.997, Quantizr). Shadow over the flattened param tree.
 # ---------------------------------------------------------------------------
 class MlxEMA:

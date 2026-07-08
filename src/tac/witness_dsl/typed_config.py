@@ -317,6 +317,16 @@ class TypedWitnessConfig(BaseModel):
         default_factory=dict, description="substrate flag->value (arch, basis, chroma, ...)"
     )
 
+    # ── verdict device (operator 2026-07-08 GPU-verdict HYBRID) ──────────────
+    # DEVICE for the ADVISORY d_seg/d_pose scalars + the CPU-torch positive-control ANCHOR
+    # cadence. "cpu" (default) => byte-identical to the sealed #205 verdict. "gpu" => the MLX
+    # scorer ports (fast trajectory monitor); pair with verdict_anchor_every>0 to keep the
+    # CPU-torch sentinel. NON-PROMOTABLE either way (CLAUDE.md: MLX/MPS is NEVER a score).
+    # Compiled into --verdict-device / --verdict-anchor-every via ``base`` in :meth:`to_program`.
+    verdict_device: str = Field(default="cpu", description="verdict device: 'cpu' | 'gpu'")
+    verdict_anchor_every: int = Field(
+        default=0, ge=0, description="gpu HYBRID: run the CPU-torch anchor every Nth gpu verdict (0=off)")
+
     @model_validator(mode="after")
     def _base_and_governance_flags(self) -> "TypedWitnessConfig":
         for k in self.base:
@@ -327,6 +337,14 @@ class TypedWitnessConfig(BaseModel):
                 raise ValueError(f"schedule_governance key {k!r} must be a --flag")
         if self.mlx_device not in ("gpu", "cpu"):
             raise ValueError(f"mlx_device must be 'gpu' or 'cpu' (got {self.mlx_device!r})")
+        if self.verdict_device not in ("gpu", "cpu"):
+            raise ValueError(f"verdict_device must be 'gpu' or 'cpu' (got {self.verdict_device!r})")
+        # the two verdict flags are compiled from the typed fields; forbid double-setting via base
+        for k in ("--verdict-device", "--verdict-anchor-every"):
+            if k in self.base:
+                raise ValueError(
+                    f"{k} is set via the typed verdict_device/verdict_anchor_every fields; "
+                    "do not also put it in base")
         return self
 
     # ── the adapter: typed config -> DSL WitnessProgram ──────────────────────
@@ -338,6 +356,10 @@ class TypedWitnessConfig(BaseModel):
         Preserve/Contain/Authority use the DSL defaults (their binding invariants are
         checked by ``WitnessProgram.validate``)."""
         try:
+            # compile the typed verdict-device fields into the base flag dict (SoT stays the DSL).
+            _base = dict(self.base)
+            _base["--verdict-device"] = self.verdict_device
+            _base["--verdict-anchor-every"] = int(self.verdict_anchor_every)
             return WitnessProgram(
                 out_dir=self.out_dir,
                 gt_cache=self.gt_cache,
@@ -349,7 +371,7 @@ class TypedWitnessConfig(BaseModel):
                 preserve=Preserve(),
                 contain=Contain(),
                 authority=Authority(),
-                base=dict(self.base),
+                base=_base,
                 levers=tuple(lv.to_dsl() for lv in self.levers),
                 mlx_device=self.mlx_device,
                 purpose=self.purpose,

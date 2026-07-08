@@ -857,6 +857,13 @@ class VerdictCadence(ScheduleDisplay):
     verdict_pairs: int = 0
     verdict_batch: int = 32
     async_verdict: bool = False
+    # (operator 2026-07-08 GPU-verdict HYBRID) device for the ADVISORY d_seg/d_pose scalars +
+    # the CPU-torch positive-control ANCHOR cadence. "cpu" (default) => byte-identical to the
+    # sealed #205 verdict. "gpu" => the MLX scorer ports (fast trajectory monitor); pair with
+    # verdict_anchor_every>0 to keep the CPU-torch sentinel. NON-PROMOTABLE either way (CLAUDE.md:
+    # MLX/MPS is NEVER a score; only a byte-closed exact eval moves the pointer).
+    verdict_device: str = "cpu"
+    verdict_anchor_every: int = 0
 
     def flags(self) -> dict:
         return {
@@ -864,6 +871,8 @@ class VerdictCadence(ScheduleDisplay):
             "--verdict-pairs": int(self.verdict_pairs),
             "--verdict-batch": int(self.verdict_batch),
             "--async-verdict": bool(self.async_verdict),
+            "--verdict-device": str(self.verdict_device),
+            "--verdict-anchor-every": int(self.verdict_anchor_every),
         }
 
     def validate(self) -> list[str]:
@@ -874,6 +883,16 @@ class VerdictCadence(ScheduleDisplay):
             problems.append(
                 f"VerdictCadence: verdict_pairs/verdict_batch must be >= 0, got "
                 f"{self.verdict_pairs}/{self.verdict_batch}")
+        if self.verdict_device not in ("cpu", "gpu"):
+            problems.append(
+                f"VerdictCadence: verdict_device must be 'cpu' or 'gpu', got {self.verdict_device!r}")
+        if self.verdict_anchor_every < 0:
+            problems.append(
+                f"VerdictCadence: verdict_anchor_every must be >= 0, got {self.verdict_anchor_every}")
+        if self.verdict_device == "gpu" and self.async_verdict:
+            problems.append(
+                "VerdictCadence: verdict_device='gpu' cannot combine with async_verdict "
+                "(MLX off the main thread races the training GPU stream)")
         return problems
 
 
@@ -1870,6 +1889,22 @@ def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N
                        "period/duty/phase-from-xi replaces per-pair fitted dash phase; "
                        "render-time, active-from-ep0 of the band window, composes with "
                        "AnalyticLaneRenderBand)")
+
+
+def VerdictDevice(anchor_every: int = 25) -> Lever:  # noqa: N802 — operator 2026-07-08 GPU-verdict
+    """GPU (MLX) verdict device + CPU-torch positive-control ANCHOR (the HYBRID A/B activation
+    surface for the duty-to-measure queue). Runs the ADVISORY d_seg/d_pose scalars through the
+    MLX scorer ports (deterministic w/ fused-R, ~faster) as a FAST trajectory monitor, and runs
+    the CPU-torch ANCHOR every ``anchor_every`` gpu verdicts (the positive-control sentinel that
+    keeps the instrument out of what it measures + preserves comparability to the CPU-verdict
+    baselines). NON-PROMOTABLE either way (CLAUDE.md: MLX/MPS is NEVER a score; only a byte-closed
+    exact eval moves the pointer). REFUSED with --async-verdict / nucleus-guard / ladder-homotopy
+    (those feed training -> CPU authority only)."""
+    return Lever("verdict_device_gpu",
+                 overrides={"--verdict-device": "gpu",
+                            "--verdict-anchor-every": int(anchor_every)},
+                 notes="gpu ADVISORY verdict scalars (MLX ports) + CPU-torch positive-control "
+                       "anchor every N (was OFF: --verdict-device cpu)")
 
 
 def StiefelW(window: int = 100) -> Lever:  # noqa: N802 — DM1a
