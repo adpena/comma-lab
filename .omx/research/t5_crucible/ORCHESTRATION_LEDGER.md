@@ -1948,3 +1948,13 @@ consumer update required — asserted [consumers-generic]. ---
   LIVE hot term (docket claim was orchestrator error; verdict_scope: instance). S5's 3 named
   violation hypotheses (micro-batch circular baseline · 3.1 anchor optimistic vs live 3.62 ·
   D16 premise) MUST be engaged in synthesis; S5 proposes 4th class IN-v7-with-bounded-auto-revert.
+- **SESSION-LIMIT OUTAGE + RECOVERY (2026-07-08 ~15:1x–16:1xZ)**: 4 agents (#358 respawn-target,
+  3 crux builders) died on the harness session limit (reset 11:10am CT). SIGNAL-LOSS AUDIT:
+  git tree verified CLEAN — all died in read-phase, zero uncommitted edits lost. Bonus finding
+  during the audit: a STALE stash-pop conflict (UU, tools/run_compact_renderer_mlx_spine_runner.py,
+  2 hunks, pre-dating today) sat unmerged in the index — resolved by restoring HEAD (the
+  coherence-verified preserved SoT; off critical path). RESPAWNED STAGGERED post-reset:
+  wave-1 #358 + GPU bit-cert; wave-2a micro-batch bit-identity (CPU-side); wave-2b D1 GPU-verdict
+  probe HELD until the bit-cert frees the GPU (avoid 3 GPU tenants beside run-1).
+- **Run-1 @16:12Z**: ALIVE ep105; ep75 verdict d_seg 0.141923, d_pose 2.084 — BOTH descending
+  (0.155→0.142, 3.59→2.08); implied_S 21.5→18.8; blob 91.7KB. Check-in pushed.
