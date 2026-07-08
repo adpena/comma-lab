@@ -10298,3 +10298,18 @@ signature + mechanism + machinery status):
    registered-never-fired). DISPOSITION: register 1-3 as DSL Lever factories default-off +
    duty-to-measure (the activation ledger holds them); composition decisions ride the crucible
    (NOT folded into v7.5 mid-seal — scope discipline). Pointer 0.19110 UNMOVED (means).
+
+## FEED-PA (2026-07-08) — P-A paint-floor per-class attribution (bf1ee1fa8, n600 FULL): the residual IS the separatrix, Road is the hub
+MEASURED (exact gate path, confusion-composite ≡ per-pair mean to 15 digits, reproduces the
+0.000910@384 floor EXACTLY): within-class flip rates Road 0.17% · Lane 2.5% · Undriv 0.03% ·
+Movable 0.76% · MyCar 0.04%; flip-mass shares Road 43.7%/Lane 16.3%/Undriv 18.2%/Movable
+10.4%/MyCar 11.4%; destination matrix = the region-adjacency graph (every class flips ONLY at
+its Road separatrix; ZERO interior flips). VERDICTS: (1) the per-class design's named risk
+(Road/Undriv interior paint fidelity through R binding) is MEASURED FALSE — bulk interiors ride
+near-free; 20-50KB band = CONSERVATIVE-leaning-confirmed (formulation-level; exact bytes =
+increment-1's to measure; oracle texture = upper bound caveat). (2) 100% of the achievable
+floor is BOUNDARY PLACEMENT — increment-1 spends bytes on separatrix/annulus precision (the
+#308 grid-bulk+INR-annulus split), NOT interior texture. (3) Highest-leverage ~0-byte lever:
+Road↔Lane tie calibration (per-class bias b_c vs the v7 lane band; 41% of Road's flips).
+(4) Converges with FEED-missingforces #3: the tie-locus displacement force aims at exactly
+what the oracle says is EVERYTHING. Pointer 0.19110 UNMOVED (means).

@@ -2103,3 +2103,8 @@ consumer update required — asserted [consumers-generic]. ---
   v7.5 (area-Lagrange reused per-field). Pose-NEUTRAL (L68 unchanged). 2 candidate equations
   council-FLAGGED (anchors owed). $0 probes: P-A (#210 paint-floor per-class attribution —
   FIRED) · P-B (decoupled-theft falsification, with increment-1).
+- **P-A LANDED (bf1ee1fa8, n600)**: bulk-paint risk REFUTED (Road 0.17%/Undriv 0.03%
+  within-class; ZERO interior flips; Road = adjacency hub) — 20-50KB band CONSERVATIVE;
+  increment-1 de-risked, byte spend = separatrix precision not interior texture; ~0-byte
+  Road↔Lane b_c tie-calibration = highest-leverage next lever. Design factorization CONFIRMED
+  by the destination matrix.
