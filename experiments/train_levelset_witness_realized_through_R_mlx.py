@@ -578,7 +578,7 @@ def _build_resume_state_arrays(
     evt_curriculum_state: "dict | None" = None,
     closed_loop_state: "dict | None" = None,
     tau_advance_controller: "Any" = None,
-    muon_gate: "Any" = None,
+    resume_registry: "Any" = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -683,13 +683,15 @@ def _build_resume_state_arrays(
     if tau_advance_controller is not None:
         from tac.witness_control.tau_advance import tau_advance_state_arrays
         out.update(tau_advance_state_arrays(tau_advance_controller))
-    # (SEAL v7 R1 MAJOR-1) persist the muon EventBackstopGate's ACTUAL sensor-fire epoch so a crash-
-    # resume of an EVENT-muon run reconstructs the finisher entry (Muon optimizer identity + frozen τ)
-    # at the FIRE epoch, not the later backstop CAP. muon_gate_state_arrays returns {} in EVENT-muon
-    # OFF (clock/cap muon) => ZERO new keys => the sidecar is byte-identical (the #205-safe path).
-    if muon_gate is not None:
-        from tac.witness_control.event_wirings import muon_gate_state_arrays
-        out.update(muon_gate_state_arrays(muon_gate))
+    # (CANONICAL RESUME REGISTRY 2026-07-08) persist ALL registered latching gates (muon / lane_band /
+    # seg_chroma_boundary + the chroma detector history) through the run-scoped ResumeRegistry — the
+    # CLASS-fix for the "forgot to route a gate into resume" bug (muon MAJOR-1 was the point-fix). The
+    # registry writes each gate's FIRE state at its canonical prefix (__mg_/__lbg_/__cbg_/__cbh_) and
+    # stamps a manifest so resume can detect a vanished controller. Every gate self-gates to {} in
+    # EVENT-MODE OFF (cap-only), so when ALL gates are cap-only the registry emits {} (NO manifest) =>
+    # ZERO new keys => the sidecar is byte-identical (the #205/v6/v7-safe path).
+    if resume_registry is not None:
+        out.update(resume_registry.state_arrays())
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
     # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
     _prov = provenance or {}
@@ -5205,6 +5207,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _lane_nucleus_cls = int(_ladder_state["lane_cls"]) if _ladder_state is not None else 1
     # sensor stashes updated at verdict cadence (read at the per-epoch engage block). Advisory only.
     _wire_sense: dict[str, Any] = {"lane_ev": None, "annulus_series": []}
+    # (CANONICAL RESUME REGISTRY 2026-07-08) the run-scoped registry holding ALL three latching gates.
+    # Built ONCE here, right after the gates + _wire_sense are constructed, so BOTH the checkpoint-write
+    # (_build_resume_state_arrays) and the resume-restore (below) iterate the SAME set — a gate cannot be
+    # silently forgotten at either surface. Every gate self-gates to {} in event-mode OFF, so the #205/
+    # v7 cap-only run persists NOTHING (byte-identical). The chroma detector history is registered only
+    # when the chroma gate is event-mode (persists the trailing annulus window for a bit-faithful re-fire).
+    from tac.witness_control.resume_registry import build_gate_resume_registry as _build_resume_registry
+    _resume_registry = _build_resume_registry(
+        [_muon_gate, _lane_band_gate, _chroma_gate], wire_sense=_wire_sense)
 
     # (operator 2026-07-08 GPU-verdict HYBRID) device for the ADVISORY verdict scalars + the
     # CPU-torch positive-control ANCHOR cadence. cpu (default) => every branch below is byte-
@@ -6004,11 +6015,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # before any _do_checkpoint call). None (clock, DEFAULT) => ZERO new sidecar keys =>
             # byte-identical. Event mode => the octave state round-trips for a bit-faithful τ resume.
             tau_advance_controller=_tau_ctrl,
-            # (SEAL v7 R1 MAJOR-1) persist the muon gate's sensor-fire epoch (closure var _muon_gate,
-            # constructed above). EVENT-muon OFF (clock/cap) => muon_gate_state_arrays returns {} =>
-            # ZERO new keys => byte-identical. Event mode => the fire epoch round-trips so a crash
-            # between the fire and the backstop cap resumes INTO the finisher at the fire epoch.
-            muon_gate=_muon_gate)
+            # (CANONICAL RESUME REGISTRY 2026-07-08) persist ALL three latching gates (muon +
+            # lane_band + seg_chroma_boundary + chroma detector history) via the run-scoped registry
+            # (closure var _resume_registry, built after gate construction above). Cap-only run => every
+            # gate emits {} => the registry emits {} (NO manifest) => ZERO new keys => byte-identical.
+            resume_registry=_resume_registry)
         # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
@@ -6198,8 +6209,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # epoch and reconstruct the finisher decision from ``start_epoch > fired_epoch``. Falls back
         # BYTE-IDENTICALLY to the cap comparison for clock/cap muon, a not-yet-fired gate, or a pre-fix
         # sidecar (no __mg_* keys) — where fire == cap so the two agree.
-        from tac.witness_control.event_wirings import muon_gate_restore_from_cfg as _mg_restore
-        _muon_fire_restored = _mg_restore(_muon_gate, resume_cfg)
+        # (CANONICAL RESUME REGISTRY 2026-07-08) restore ALL registered gates symmetrically (the same
+        # registry that WROTE them). This restores _muon_gate (the muon block below reads its fired
+        # epoch), the lane_band + chroma gates (seeded into the lever dicts after this block), and the
+        # chroma detector history. Warnings are printed LOUD; a vanished EVENT-gate state raises
+        # ResumeIntegrityError (fail-closed refusal to silently re-arm). A legacy sidecar (no manifest)
+        # => every gate returns False => byte-identical cap fallback (the #205/v6/v7 live-run path).
+        _resume_report = _resume_registry.restore(resume_cfg)
+        for _rw in _resume_report.warnings:
+            print(json.dumps(_rw), flush=True)
+        _muon_fire_restored = bool(_resume_report.restored.get("muon", False))
         if _muon_fire_restored and _muon_gate.fired_epoch is not None:
             _resume_into_finisher = start_epoch > int(_muon_gate.fired_epoch)
             print(json.dumps({"stage": "resume_muon_fire_restored",
@@ -6215,6 +6234,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         else:
             _resume_into_finisher = (args.muon_start_epoch is not None
                                      and start_epoch > int(args.muon_start_epoch))
+        # (CANONICAL RESUME REGISTRY 2026-07-08) seed the lane-band + chroma LEVER dicts from the
+        # restored gate FIRE state so the FIRST post-resume epoch does NOT spuriously re-treat: the
+        # engage blocks (lane_render_band_engage / seg_chroma_boundary_engage) compare the lever dict's
+        # prior on-state, so a restored-ON gate whose dict still read OFF would trip a bogus
+        # recent_losses.clear() that wipes the restored spike-guard window (a resume-determinism break).
+        # Only non-False for an EVENT gate that had fired before the crash; cap-only/legacy restore
+        # returns fired=False => the dicts are untouched => byte-identical. band_gate / chroma_bnd_gate
+        # are closure dicts constructed above.
+        if _lane_band_gate.fired:
+            band_gate["on"] = True
+        if _chroma_gate.fired:
+            chroma_bnd_gate["on"] = True
+        if _lane_band_gate.fired or _chroma_gate.fired:
+            print(json.dumps({"stage": "resume_gate_lever_seeded",
+                              "lane_band_fired_epoch": _lane_band_gate.fired_epoch,
+                              "seg_chroma_fired_epoch": _chroma_gate.fired_epoch,
+                              "note": "restored latched gate fire state seeded into the lever dicts "
+                                      "(no spurious re-treat on the first post-resume epoch)"}),
+                     flush=True)
         if _resume_into_finisher:
             _mlr = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
             _malr = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
