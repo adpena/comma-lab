@@ -280,6 +280,29 @@ def section_active_convening() -> tuple[str | None, dict | None]:
         return f"active convening: unavailable ({type(exc).__name__})", None
 
 
+def section_corpus_recall(conv: dict | None) -> tuple[list[str], dict | None]:
+    """#346 RECALL-PUSH: if a convening is ACTIVE, surface the top corpus hits for its
+    next phase — push, not pull (the apparatus writes better than it reads; this section
+    makes the corpus speak at session start without anyone asking). Fail-open, ≤5 lines,
+    time-bounded ≤2s via corpus_query's budget (newest units win under truncation)."""
+    if not conv or not conv.get("next_phase"):
+        return [], None
+    try:
+        import corpus_query
+        result = corpus_query.run_query(str(conv["next_phase"]), top=3, max_seconds=2.0)
+        hits = result.get("hits") or []
+        if not hits:
+            return [], None
+        lines = ["the corpus knows (recall for the active convening's next phase):"]
+        for h in hits[:3]:
+            first = (h["lines"][0][:80] + "…") if h.get("lines") else ""
+            ref = h["ref"] if len(h["ref"]) <= 90 else "…" + h["ref"][-89:]
+            lines.append(f"  [{h['store']}] {ref} — {first}")
+        return lines[:5], {"hits": hits, "truncated": result.get("truncated", False)}
+    except Exception as exc:
+        return [f"corpus recall: unavailable ({type(exc).__name__})"], None
+
+
 def section_review_counter() -> tuple[str | None, dict | None]:
     """Open review-counter state (sibling ledger; soft — omit entirely if absent)."""
     row = _last_jsonl_row(_REVIEW_COUNTER) if _REVIEW_COUNTER.exists() else None
@@ -328,6 +351,9 @@ def build_digest() -> tuple[list[str], dict]:
     conv_line, data["active_convening"] = section_active_convening()
     if conv_line:
         lines.append(conv_line)
+
+    recall_lines, data["corpus_recall"] = section_corpus_recall(data["active_convening"])
+    lines.extend(recall_lines)
 
     rc_line, data["review_counter"] = section_review_counter()
     if rc_line:
