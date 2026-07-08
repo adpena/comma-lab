@@ -2093,3 +2093,13 @@ consumer update required — asserted [consumers-generic]. ---
   birth→boundary via the v7 event machinery). Defense in depth: multiplier self-limits
   continuously, event re-allocates. The #302 derive-annealing-from-the-energy discipline
   applied to birth control.
+- **PER-CLASS DESIGN LANDED (c8fe12d8f, task #359)**: reconciliation = tropical argmax of 5
+  SDF-gauged decoupled fields (separatrix = tie loci, DERIVED); theft impossible by construction
+  (∂φ_c/∂θ_c' = 0); area-Lagrange = exact dual of the measured mass-conservation identity.
+  Carrier table: MyCar mask 0.1-0.5KB MEASURED · Lane band 1-2KB MEASURED · Road/Undriv
+  bulk-boundary field 20-50KB DERIVED (THE unknown) · Movable 2-6KB. Net bytes 27-57KB vs
+  114KB incumbent = −50..75% ≈ 0.049 S headroom, CONDITIONAL. v8-increment-1 = split
+  Road/Undriv field (99% of flip mass de-shared + measures the unknown). Composes-then-subsumes
+  v7.5 (area-Lagrange reused per-field). Pose-NEUTRAL (L68 unchanged). 2 candidate equations
+  council-FLAGGED (anchors owed). $0 probes: P-A (#210 paint-floor per-class attribution —
+  FIRED) · P-B (decoupled-theft falsification, with increment-1).
