@@ -577,6 +577,7 @@ def _build_resume_state_arrays(
     evt_curriculum_state: "dict | None" = None,
     closed_loop_state: "dict | None" = None,
     tau_advance_controller: "Any" = None,
+    muon_gate: "Any" = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -681,6 +682,13 @@ def _build_resume_state_arrays(
     if tau_advance_controller is not None:
         from tac.witness_control.tau_advance import tau_advance_state_arrays
         out.update(tau_advance_state_arrays(tau_advance_controller))
+    # (SEAL v7 R1 MAJOR-1) persist the muon EventBackstopGate's ACTUAL sensor-fire epoch so a crash-
+    # resume of an EVENT-muon run reconstructs the finisher entry (Muon optimizer identity + frozen τ)
+    # at the FIRE epoch, not the later backstop CAP. muon_gate_state_arrays returns {} in EVENT-muon
+    # OFF (clock/cap muon) => ZERO new keys => the sidecar is byte-identical (the #205-safe path).
+    if muon_gate is not None:
+        from tac.witness_control.event_wirings import muon_gate_state_arrays
+        out.update(muon_gate_state_arrays(muon_gate))
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
     # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
     _prov = provenance or {}
@@ -5955,7 +5963,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (S6-R4) persist the τ-advance octave-ladder controller (closure var _tau_ctrl, assigned
             # before any _do_checkpoint call). None (clock, DEFAULT) => ZERO new sidecar keys =>
             # byte-identical. Event mode => the octave state round-trips for a bit-faithful τ resume.
-            tau_advance_controller=_tau_ctrl)
+            tau_advance_controller=_tau_ctrl,
+            # (SEAL v7 R1 MAJOR-1) persist the muon gate's sensor-fire epoch (closure var _muon_gate,
+            # constructed above). EVENT-muon OFF (clock/cap) => muon_gate_state_arrays returns {} =>
+            # ZERO new keys => byte-identical. Event mode => the fire epoch round-trips so a crash
+            # between the fire and the backstop cap resumes INTO the finisher at the fire epoch.
+            muon_gate=_muon_gate)
         # FEED-fm FIX-1: snapshot the loop's RNG streams (global MT19937 + LEVER-5 hardness PCG64)
         # INTO the resume sidecar so --resume-from is bit-faithful to a continuous run. hardness_rng
         # is a run_train local assigned before any _do_checkpoint call (closure ref; safe).
@@ -6138,8 +6151,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # switch is skipped (muon_switched initializes True). Otherwise a resume-into-finisher would
         # re-init a FRESH optimizer at start_epoch, LOSING the Muon+AdamW momentum accumulated since
         # muon_start_epoch = a NON-bit-identical continuation (the deterministic-repro non-negotiable).
-        _resume_into_finisher = (args.muon_start_epoch is not None
-                                 and start_epoch > int(args.muon_start_epoch))
+        # (SEAL v7 R1 MAJOR-1) EVENT-muon: the switch fires on its SENSOR at an epoch < the backstop
+        # cap (--muon-start-epoch), so the cap-only comparison MISSES a crash between the fire and the
+        # cap — it would restore a FRESH AdamW against a Muon checkpoint (optimizer-key mismatch) and,
+        # with event-τ on, trip the frozen-τ maybe_advance assert. Restore the gate's PERSISTED fire
+        # epoch and reconstruct the finisher decision from ``start_epoch > fired_epoch``. Falls back
+        # BYTE-IDENTICALLY to the cap comparison for clock/cap muon, a not-yet-fired gate, or a pre-fix
+        # sidecar (no __mg_* keys) — where fire == cap so the two agree.
+        from tac.witness_control.event_wirings import muon_gate_restore_from_cfg as _mg_restore
+        _muon_fire_restored = _mg_restore(_muon_gate, resume_cfg)
+        if _muon_fire_restored and _muon_gate.fired_epoch is not None:
+            _resume_into_finisher = start_epoch > int(_muon_gate.fired_epoch)
+            print(json.dumps({"stage": "resume_muon_fire_restored",
+                              "fired_epoch": int(_muon_gate.fired_epoch),
+                              "fired_by": _muon_gate._fired_by,
+                              "muon_start_cap": (int(args.muon_start_epoch)
+                                                 if args.muon_start_epoch is not None else None),
+                              "start_epoch": int(start_epoch),
+                              "resumed_into_finisher": bool(_resume_into_finisher),
+                              "note": "(MAJOR-1) event-muon fire epoch restored; finisher-resume "
+                              "decision reconstructed from the ACTUAL sensor-fire epoch, not the cap"}),
+                     flush=True)
+        else:
+            _resume_into_finisher = (args.muon_start_epoch is not None
+                                     and start_epoch > int(args.muon_start_epoch))
         if _resume_into_finisher:
             _mlr = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
             _malr = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)

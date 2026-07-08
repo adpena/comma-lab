@@ -404,3 +404,26 @@ def test_trainer_build_controller_none_for_clock_and_derived_for_event():
         softmax_temp_start=1.0, softmax_temp_end=0.31)
     c2 = T._build_tau_advance_controller(ev2, 1500)
     assert c2.n_octaves == 8 and c2.min_dwell == 100 and c2.per_octave_cap == 333
+
+
+# ── SEAL v7 R1 MINOR-1: dwell_at_cap flag on the event telemetry row ─────────────────────────────
+def test_dwell_at_cap_flag_on_event_row_true_when_dwell_reaches_cap():
+    """MINOR-1: when the sensor fires EXACTLY at/after the max-dwell boundary, event wins (correct
+    attribution) but the coincidence is S5-suspicious. The additive ``dwell_at_cap`` bool on the
+    event telemetry flags it; it is False on an ordinary early event and True at/past the cap."""
+    # ordinary early event (dwell 5 << cap 500) -> dwell_at_cap False.
+    c = _event_ctrl(cap=500, min_dwell=0, min_points=1, sensor=_always_exhausted)
+    c._octave_start_epoch = 1
+    for ep in range(1, 6):
+        c.ingest([{"epoch": ep, "d_seg": 0.01}])
+    s = c.maybe_advance(6)               # dwell = 6 - 1 = 5 << cap 500
+    assert s.advanced and s.fired_by == "event"
+    assert s.telemetry["dwell_at_cap"] is False
+    # sensor fires exactly at the cap boundary -> event still wins, dwell_at_cap True.
+    c2 = _event_ctrl(cap=5, min_dwell=0, min_points=1, sensor=_always_exhausted)
+    c2._octave_start_epoch = 1
+    for ep in range(1, 7):
+        c2.ingest([{"epoch": ep, "d_seg": 0.01}])
+    s2 = c2.maybe_advance(6)          # dwell = 6 - 1 = 5 >= cap 5
+    assert s2.advanced and s2.fired_by == "event"
+    assert s2.telemetry["dwell_at_cap"] is True

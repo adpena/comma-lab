@@ -49,6 +49,8 @@ __all__ = [
     "ANNULUS_PLATEAU_MIN_EPOCHS",
     "GateStep",
     "EventBackstopGate",
+    "muon_gate_state_arrays",
+    "muon_gate_restore_from_cfg",
     "ladder_arms_complete",
     "muon_meat_event",
     "lane_nucleus_event",
@@ -181,6 +183,49 @@ class EventBackstopGate:
                          "firing cap is falsification-relevant (S5) — re-calibrate the sensor."),
             })
         return GateStep(False, False, None, None)
+
+
+# ════════════════════════════════════════════════════════════════════════════════════════════════
+# Muon-gate resume persistence — mirrors tau_advance.tau_advance_state_arrays / _restore_from_cfg.
+# Written ONLY when the gate is in EVENT mode (a sensor is wired) => ZERO new sidecar keys for
+# clock/cap muon (event-muon OFF) => byte-identical. MAJOR-1: in event mode the switch fires on its
+# SENSOR at an epoch < the backstop cap, so the ACTUAL fire epoch — NOT the cap — is the resume-
+# critical fact. A crash between the sensor fire and the cap must resume INTO the finisher at the
+# fire epoch (Muon optimizer identity + frozen τ); the cap-only comparison would miss it and restore
+# a fresh AdamW against a Muon checkpoint (key mismatch) + trip the frozen-τ maybe_advance assert.
+# ════════════════════════════════════════════════════════════════════════════════════════════════
+def muon_gate_state_arrays(gate: "EventBackstopGate | None"):
+    """Serialize the muon gate's FIRED state to resume-sidecar arrays (``__mg_*`` keys). Returns
+    ``{}`` when ``gate is None`` OR the gate is in EVENT MODE OFF (``sensor is None`` — clock/cap
+    muon), so a non-event-muon run writes ZERO new keys => the sidecar is byte-identical. In event
+    mode persists the actual sensor-fire epoch (``-1`` sentinel when not yet fired) + the fired-by
+    label, so a crash-resume reconstructs the finisher-entry decision from the FIRE epoch. Requires
+    numpy (the caller has it)."""
+    if gate is None or not gate.event_mode:
+        return {}
+    import numpy as np
+    return {
+        "__mg_fired_epoch": np.asarray(-1 if gate._fired_epoch is None else int(gate._fired_epoch)),
+        "__mg_fired_by": np.asarray("" if gate._fired_by is None else str(gate._fired_by)),
+    }
+
+
+def muon_gate_restore_from_cfg(gate: "EventBackstopGate | None", cfg: dict) -> bool:
+    """Restore the muon gate's FIRED state from a resume sidecar cfg (inverse of
+    :func:`muon_gate_state_arrays`, parsed through ``_load_resume_state``'s ``a.item()``). Returns
+    True iff a FIRED state was restored (event-muon that had already fired at the crash). Returns
+    False — leaving the gate fresh/unfired — for a pre-fix sidecar (no ``__mg_*`` keys), clock/cap
+    muon, or an event-muon gate that had NOT fired yet (``-1`` sentinel): in every False case the
+    resume falls back BYTE-IDENTICALLY to the incumbent cap-based finisher decision."""
+    if gate is None or "__mg_fired_epoch" not in cfg:
+        return False
+    _fe = int(cfg.get("__mg_fired_epoch", -1))
+    if _fe < 0:
+        return False  # persisted but not yet fired at the crash => stay fresh (re-arm the sensor)
+    gate._fired_epoch = _fe
+    _fb = cfg.get("__mg_fired_by", "")
+    gate._fired_by = str(_fb) if _fb else "event"
+    return True
 
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════

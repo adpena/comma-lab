@@ -328,6 +328,11 @@ class TauAdvanceController:
                 "from_rung": int(prev_rung), "to_rung": int(self._rung),
                 "tau_from": round(float(self.ladder[prev_rung]), 6), "tau_to": round(tau, 6),
                 "dwell_epochs": int(dwell), "sensor": SENSOR_PER_BAND_RELAXATION,
+                # (SEAL v7 R1 MINOR-1) when the sensor fires EXACTLY at/after the max-dwell boundary
+                # the event wins (correct attribution — the sensor DID fire) but the coincidence is
+                # S5-suspicious; flag it so the LOUD cap row's absence at this boundary is not read as
+                # a clean sensor fire. Additive telemetry (never read back into training).
+                "dwell_at_cap": bool(dwell >= int(self.per_octave_cap)),
                 "remaining_meat": (sensor_verdict or {}).get("remaining_meat_estimate"),
                 "alpha": (sensor_verdict or {}).get("alpha"),
                 "note": ("per-band relaxation fired: the within-octave through-R seg descent "

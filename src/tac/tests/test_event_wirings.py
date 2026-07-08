@@ -310,3 +310,173 @@ def test_gate_classify_launch_event_registry_surfaces_event():
     by = {v.flag: v.cls for v in verdicts}
     assert by["--muon-start-event"] == gate.CLASS_EVENT
     assert by["--muon-start-epoch"] == gate.CLASS_CAP
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════
+# (E) SEAL v7 R1 MAJOR-1 — event-muon crash-resume determinism (muon-fire-epoch persistence).
+#     The muon switch fires on its SENSOR at an epoch < the backstop cap; a crash between the fire
+#     and the cap must resume INTO the finisher at the FIRE epoch (Muon optimizer identity + frozen
+#     τ), not re-enter a fresh AdamW switch keyed off the cap. These prove the persistence round-trip
+#     + the trainer's reconstruction decision + byte-identity of the OFF path.
+# ══════════════════════════════════════════════════════════════════════════════════════════════
+from tac.witness_control.event_wirings import (  # noqa: E402
+    muon_gate_restore_from_cfg,
+    muon_gate_state_arrays,
+)
+from tac.witness_control.tau_advance import (  # noqa: E402
+    TauAdvanceController,
+    tau_octave_ladder,
+)
+
+
+def _sidecar_parse(arrays: dict) -> dict:
+    """Emulate the trainer's ``_load_resume_state`` cfg parse for ``__``-prefixed arrays:
+    ``a.item() if a.size == 1 else a.tolist()`` — so a test round-trips through the SAME decode the
+    resume path uses (a size-1 int/str array becomes a python int/str)."""
+    import numpy as np
+    return {k: (v.item() if np.asarray(v).size == 1 else np.asarray(v).tolist())
+            for k, v in arrays.items()}
+
+
+def _reconstruct_resume_into_finisher(gate, resume_cfg, *, muon_start_cap, start_epoch) -> bool:
+    """MIRROR of the trainer's MAJOR-1 reconstruction expression
+    (train_levelset_witness_realized_through_R_mlx.py ~L6154): restore the gate's persisted fire
+    epoch and decide the finisher resume from the ACTUAL fire epoch, else fall back to the cap."""
+    restored = muon_gate_restore_from_cfg(gate, resume_cfg)
+    if restored and gate.fired_epoch is not None:
+        return start_epoch > int(gate.fired_epoch)
+    return muon_start_cap is not None and start_epoch > int(muon_start_cap)
+
+
+def test_muon_gate_state_arrays_off_mode_and_none_are_empty_byte_identical():
+    """Clock/cap muon (sensor None) AND a None gate serialize to ZERO keys => the sidecar is
+    byte-identical (the #205-safe path). restore of an empty/None cfg returns False."""
+    assert muon_gate_state_arrays(None) == {}
+    assert muon_gate_state_arrays(_muon_off(726)) == {}          # event-muon OFF -> no keys
+    assert muon_gate_restore_from_cfg(None, {"__mg_fired_epoch": 5}) is False
+    assert muon_gate_restore_from_cfg(_muon_off(726), {}) is False
+
+
+def test_muon_gate_event_not_fired_persists_sentinel_and_restores_fresh():
+    """An event-muon gate that has NOT fired persists the -1 sentinel; restore returns False and
+    leaves the gate fresh (the sensor re-arms after resume; cap logic governs the finisher decision)."""
+    g = _muon_on(726)
+    for ep in range(1, 400):          # never fed an event_fired -> stays unfired below the cap
+        g.update(ep, event_fired=False)
+    arrays = muon_gate_state_arrays(g)
+    assert set(arrays) == {"__mg_fired_epoch", "__mg_fired_by"}
+    cfg = _sidecar_parse(arrays)
+    assert int(cfg["__mg_fired_epoch"]) == -1
+    g2 = _muon_on(726)
+    assert muon_gate_restore_from_cfg(g2, cfg) is False           # sentinel -> stay fresh
+    assert g2.fired is False and g2.fired_epoch is None
+
+
+def test_muon_gate_fire_roundtrip_restores_fired_epoch_and_by():
+    """An event-muon fire at ep 650 (< cap 726) round-trips through the sidecar parse: a fresh gate
+    restores fired_epoch=650, fired_by='event'."""
+    g = _muon_on(726)
+    for ep in range(1, 650):
+        g.update(ep, event_fired=False)
+    s = g.update(650, event_fired=True)
+    assert s.just_fired and s.fired_by == "event" and g.fired_epoch == 650
+    cfg = _sidecar_parse(muon_gate_state_arrays(g))
+    assert int(cfg["__mg_fired_epoch"]) == 650 and str(cfg["__mg_fired_by"]) == "event"
+    g2 = _muon_on(726)
+    assert muon_gate_restore_from_cfg(g2, cfg) is True
+    assert g2.fired and g2.fired_epoch == 650 and g2._fired_by == "event"
+
+
+def test_MAJOR1_event_muon_crash_before_fire_resumes_with_cap_no_finisher():
+    """Event-muon that has NOT fired at the crash (crash@400, cap@726): the sidecar persists the -1
+    sentinel, restore stays fresh, and the finisher decision falls to the cap comparison — which is
+    False (400-resume is below the cap), so the run resumes PRE-finisher and the sensor re-arms.
+    (No spurious finisher entry from a persisted-but-unfired gate.)"""
+    g = _muon_on(726)
+    for ep in range(1, 400):
+        g.update(ep, event_fired=False)
+    cfg = _sidecar_parse(muon_gate_state_arrays(g))     # persisted, sentinel -1
+    g_resume = _muon_on(726)
+    assert _reconstruct_resume_into_finisher(
+        g_resume, cfg, muon_start_cap=726, start_epoch=401) is False
+    assert g_resume.fired is False                        # sensor re-arms (fresh gate)
+
+
+def test_MAJOR1_resume_into_finisher_reconstructed_from_fire_not_cap():
+    """THE FIX: fire@650, cap@726, crash@700 => resume start_epoch=701. The cap-only comparison
+    (701 > 726) is FALSE (the bug: a fresh AdamW restored against a Muon ckpt). The fire-epoch
+    reconstruction (701 > 650) is TRUE => resume INTO the finisher (Muon rebuild before state
+    restore => optimizer keys match, momentum continuous, NO re-switch)."""
+    g = _muon_on(726)
+    for ep in range(1, 650):
+        g.update(ep, event_fired=False)
+    g.update(650, event_fired=True)
+    cfg = _sidecar_parse(muon_gate_state_arrays(g))
+    # the OLD cap-only decision (the bug):
+    assert (701 > 726) is False
+    # the NEW reconstruction (the fix):
+    g_resume = _muon_on(726)
+    into = _reconstruct_resume_into_finisher(g_resume, cfg, muon_start_cap=726, start_epoch=701)
+    assert into is True
+    # and the restored gate is LATCHED so the loop's muon switch never re-fires (no momentum loss).
+    later = g_resume.update(710, event_fired=True)
+    assert later.start_reached and later.just_fired is False
+
+
+def test_MAJOR1_resume_at_fire_epoch_boundary_enters_finisher():
+    """Crash ckpt saved AT the fire epoch (the stageMuonStart ckpt): fire@650, resume start_epoch=651
+    => 651 > 650 => resume into finisher. (No off-by-one that would drop the finisher.)"""
+    g = _muon_on(726)
+    for ep in range(1, 650):
+        g.update(ep, event_fired=False)
+    g.update(650, event_fired=True)
+    cfg = _sidecar_parse(muon_gate_state_arrays(g))
+    g_resume = _muon_on(726)
+    assert _reconstruct_resume_into_finisher(
+        g_resume, cfg, muon_start_cap=726, start_epoch=651) is True
+
+
+def test_MAJOR1_frozen_tau_advance_assert_is_the_documented_crash_and_the_fix_avoids_it():
+    """(c) of MAJOR-1: with event-τ on, a resume that WRONGLY leaves muon_switched=False would call
+    maybe_advance on a FROZEN controller -> AssertionError (hard crash). This proves the crash
+    mechanism AND that the fix (muon_switched=True from the fire-epoch reconstruction) skips the
+    call: the trainer guards the advance on ``not muon_switched``."""
+    lad = tau_octave_ladder(1.0, 0.31, 6)
+    ctrl = TauAdvanceController(mode="event", ladder=lad, per_octave_cap=500, min_dwell=0)
+    ctrl.freeze(650)                       # frozen at the Muon switch (restored via __ta_frozen=1)
+    assert ctrl.frozen is True
+    # the documented HARD CRASH if the advance were reached while frozen:
+    with pytest.raises(AssertionError):
+        ctrl.maybe_advance(701)
+    # the fix: muon_switched reconstructs True, so the trainer's guarded block is skipped.
+    muon_switched = True                   # == bool(_resume_into_finisher) for the crash-after-fire
+    called = False
+    if ctrl is not None and not muon_switched:   # the exact trainer guard (~L7370)
+        called = True
+        ctrl.maybe_advance(701)
+    assert called is False                 # advance never reached => no assert => no crash
+
+
+def test_MAJOR1_prefix_checkpoint_and_clock_cap_muon_fall_back_to_cap_byte_identical():
+    """A pre-fix sidecar (no __mg_* keys) AND a clock/cap-muon run (event-muon OFF => no keys) both
+    restore False => the finisher decision is the incumbent cap comparison, unchanged. Cap-muon
+    fires AT the cap so fire==cap and the two rules agree by construction."""
+    # pre-fix sidecar: no __mg_* keys at all.
+    g = _muon_on(726)
+    assert _reconstruct_resume_into_finisher(
+        g, {"__resume_epoch": 700}, muon_start_cap=726, start_epoch=701) is False   # 701 > 726 False
+    assert _reconstruct_resume_into_finisher(
+        g, {"__resume_epoch": 800}, muon_start_cap=726, start_epoch=801) is True    # 801 > 726 True
+    # clock/cap muon: event-muon OFF => state_arrays {} => same as pre-fix.
+    g_off = _muon_off(726)
+    assert muon_gate_state_arrays(g_off) == {}
+    assert _reconstruct_resume_into_finisher(
+        g_off, {}, muon_start_cap=726, start_epoch=727) is True    # cap comparison, fire==cap==726
+
+
+def test_MAJOR1_no_muon_configured_never_enters_finisher():
+    """--muon-start-epoch unset (cap None) + no event => the finisher is never entered (matches the
+    incumbent ``args.muon_start_epoch is not None`` guard)."""
+    g = _muon_off(None)
+    assert _reconstruct_resume_into_finisher(
+        g, {}, muon_start_cap=None, start_epoch=9999) is False
