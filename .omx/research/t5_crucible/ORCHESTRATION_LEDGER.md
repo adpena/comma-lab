@@ -265,6 +265,28 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: BLINDED WITNESS-NATIVE SCHEDULE DERIVATION (Phase-1 37a974742 pre-comparison,
+Phase-2/3 fa6b67edc; .omx/research/witness_native_schedule_derivation_20260709.md) ---
+- VERDICT: **CONTINUOUS.** One variational flow in ONE parameter τ (τ=ε=ħ, Modica-Mortola/Baldo
+  Γ-convergence, mirror-descent continuation). Discrete loss-form stages are NOT witness-native.
+- DECISIVE (derived blind, committed first): L_τ = τ·logsumexp(φ/τ) − φ_y — τ=1 IS CE, τ→0 IS
+  max-margin. "CE" and "tau_softplus" = two temperatures of ONE loss. The ep300 hard switch
+  (`_seg_form_for_epoch`, code comment "PR95 d_seg sequence") is the LAST PR95 bone; the L1–L6
+  transition-easing apparatus exists only to soften a discontinuity the unified loss removes.
+- HONESTY BOTH WAYS: 4/5 elements VINDICATED as witness-derived (render anneal floored at
+  measured knee τ*=0.31 + TAIL turnpike · LADDER = Baldo σ_ij via fitted length-sigma-matrix +
+  seed-islands · Muon = metric finisher outside the τ-continuum). NOT skeleton.
+- V7 IMPLICATION (HYBRID): BUILD `--seg-form-unify-tau` (~60–100 LOC, default-off,
+  byte-identical guard) + flip cosine_hold→geometric (0 LOC). KEEP floor 0.31 · TAIL_k ·
+  LADDER · Muon finisher · event-triggering. Pre-registered falsification: unified-L_τ worse
+  than discrete at the τ*-floor ⇒ discretization was load-bearing ⇒ revert, keep geometric only.
+- CORRECTION to the agent's caveat: run-1 is ALIVE (pid 63069, v0 verdict in progress), NOT
+  operator-stopped — `as_of_epoch: null` = early, not dead. A/B baseline note stands: use the
+  prior discrete-stage through-R trace (CE 0.01045→0.005443, τ0.3→0.004563) if run-1's
+  trajectory is short at restart time.
+- SEQUENCING: unify-tau builder fires AFTER TAIL_k lands (same trainer file — no concurrent
+  edit collision). Pointer 0.19110 UNMOVED.
+
 --- ⛔ ESCALATION BOUND + ENFORCEMENT FIRED (operator: "Never do it again. Add a gate and hook.
 I have been desperately pushing you to move from hardcoded epochs to event based and deep math
 governed and costate controller") ---
