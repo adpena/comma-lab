@@ -411,3 +411,238 @@ Inherited from v2 (LB set F1-F4, F9, F10, F11) with:
 - **F11 pose watch** additionally stamps the chroma-engage epoch (MINOR-12).
 - **Hood F-row** added (per-class d_seg share for MyCar — req-H; feeds the §5.1 clamp's paired
   verdict).
+
+---
+
+## §5 — THE RATE PLAN (v3: ONE joint marginal law; labels fixed; hood clamp booked)
+
+### 5.0 ★★ THE JOINT λ_bytes MARGINAL LAW (MAJOR-1 — replaces every per-section threshold)
+
+λ_bytes = 25/37,545,489 = **6.6586e-7 S/B** (exact). At byte-close, EVERY byte-parameterized
+section is admitted/shed by the SAME test — equalized marginals, KKT form:
+
+  keep a byte-spending increment iff |Δ(100·d_seg + √(10·d_pose))| > λ_bytes · Δbytes
+
+- **pose ξ coder:** q* = argmin_q [√(10·d_pose(q)) + λ_bytes·bytes(q)] over the P9 sweep
+  (256/1024/4096 + the kinematic-prior residual arm, §6). The v2 fixed threshold ("smallest q
+  with Δpose-term < 0.002") is DELETED — it could accept up to 0.002 S of pose harm to save
+  2-2.5 KB ≈ 0.0013-0.0017 S (net-negative, larger than the whole 0.00178 crossing margin).
+- **band:** umask / LBND2-giveback / LBND4-vs-smoothed selection by the same argmin.
+- **waterfill depth:** stop shedding bits when marginal Δd_seg·100 exceeds λ_bytes per byte
+  (this IS #336's KKT condition — now stated as the shared law).
+- **hood clamp / grammar / manifest:** same test (the clamp's 8 bytes need only Δd_seg
+  > 5.3e-9 to pay — it ships iff its paired verdict improves at all).
+
+### 5.1 Byte budget (labels fixed per P5-3/MINOR-2; comb + hood receipts added)
+
+Components (central | independent tails): base+code post-waterfill 60,000 [52,000, 68,000] ·
+grammar rev-2k −3,108 (measured) · band LBND4 30,892 [18,000 (P5), 30,892] · pose ξ 4,500
+[2,700, 6,929] · manifest ~800 · **hood static clamp +8 (byte-close-selectable,
+paired-verdict-gated — the frozen-source row-threshold design prices sky+hood clamping 63% of
+pixels at ≈8 B)** · **comb: 0 archive bytes (receipt: period = MUTCD constant in inflate code
+[rule-118 free]; phase derived at decode from the ALREADY-BOOKED band polynomial + ξ; nothing
+new is stored)** · AA: 0 bytes (render-side code).
+
+| scenario | archive bytes | rate |
+|---|---:|---:|
+| central (correlated-tails judgment) | **93,092** | **0.0620** |
+| component-consistent independent band | [70,400, 103,521] | [0.0469, 0.0689] |
+| waterfill-fail (base 82,193), LBND4 holds | 115,285 | 0.0768 |
+| **worst joint tail — THREE legs: waterfill-fail ∧ B6-slip (LBND2 41,562) ∧ pose-byte-upper (6,929)** | **128,384** | **0.0855** |
+| worst two-leg tail (waterfill-fail ∧ B6-slip, pose central) | 125,955 | 0.0839 |
+
+(v2's 128,376 row silently included the pose upper tail while naming only two legs — label fixed,
+two-leg row printed alongside per P5-3. All rows +8 for the hood clamp; rates unchanged to 4
+decimals.)
+
+### 5.2 Requirement-E dispositions — inherited (FOLD/DEFER/DEAD table) + v3 receipts:
+**orbit-coding beyond rev-2k = OUT-with-receipt** (permutation slack MEASURED NO — best arm −8 B,
+most arms HURT +72/+251/+339 B; rev-2k −3,108 stands) · **#207 pre-emphasis/deconvolution =
+OUT-with-receipt** (R is near ALL-PASS: |H_R| 1.0→0.842 at render-Nyquist, Wiener ceiling
++1.25 dB — R-deconvolution and pre-emphasis-of-R are dead; the surviving sibling is the L2
+sub-pixel phase lever = the #149 class, DEFER-with-build-spec §9.4, partially covered by AA ss=2
+in run-1) · **PR95-L25 temporal-delta on code = cargo-cult DROP** (measured +64%).
+
+---
+
+## §6 — THE POSE PLAN (v3: joint byte law; kinematic prior; twin contract completed)
+
+- **Track 1 (ARM-PRIMARY): pose ON** — thresholds inherited from v2 (success 3e-5 / milestone
+  1.5e-4 by tau-end / hard-kill > 1.5e-4 → L1 Jacobian fallback; no borrowed-ancestor number in
+  any arithmetic).
+- **Byte side (v3):** q* under the JOINT law (§5.0). ★★ Two meat adoptions folded into P9:
+  1. **Kinematic-ξ prior (law):** highway ego-motion ≈ 2-3 effective DOF/step (bicycle-model
+     class) ⇒ code the ξ trajectory as dynamics-constrained residuals (AR/kinematic predictor +
+     residual entropy coding). Pushes pose bytes toward the 2,700 lower tail AND regularizes the
+     carrier (gradient-sharing, req-I). Enters the P9 sweep as an ARM under the same joint-law
+     argmin — adopted only on its measured (bytes, d_pose) point.
+  2. **comma2k19 GT ego-motion as ξ INIT** (compress-time, legal): cheap pose-track init that
+     de-risks the 3e-5 bar; folded into P9's chain validation.
+- **Track 2 (twin, λ=0) — contract COMPLETED (P5-4 + MINOR-8):** same seed as primary
+  (pinned); **mirror-schedule:** the twin consumes the PRIMARY's realized stage-boundary epochs
+  as its own stage caps (so both runs compare at the same realized stage states — event exits
+  are data-driven and would otherwise diverge); comparisons at absolute epochs, both post-CE-cap;
+  the λ kill law (gap > +5% sustained 2 windows ⇒ twin promotes) evaluated at the primary's
+  realized boundaries only. Sequential after primary stability (memory governor), capped at the
+  tau stage.
+
+---
+
+## §7 — THE MEASUREMENT PLAN (v3 deltas; concurrency stated per P5-6)
+
+**Concurrency sentence (F15/P5-6):** P5, P12, P1, P2, P6, P7 are independent $0/CPU probes —
+they run CONCURRENTLY; the table order is decision-priority, not serialization. P7
+(decode-integrity) gates every LATER byte-close row and therefore starts in the first wave.
+
+| # | probe | v3 status/delta |
+|---|---|---|
+| P5 | LBND4-on-smoothed | unchanged (R1 in recess wave 1 — LAUNCHED) |
+| P12 | ep0 init probe | + prints the pinned n600 class priors (§1.2) + the LogitAdjust×micro-batch config-consistency check (MINOR-11) |
+| P11′ | AA memory+throughput gate | **AS AMENDED by P5-1 — the in-tree fix (recess wave-1 finisher, +80 LOC partial: ss²·pix_ratio on render-linked terms incl. fine-mode features + ≥1 forced n600 verdict in the smoke or the known chunked-verdict delta added) — REFERENCED here, completed and verified in that lane; P11′ also PRINTS the projected cf_mx_cache under fine-mode (must NOT scale ×4 with supersampled px) and the fine-mode EDT cost (~+29 s/ep@n600) so the 1.5× gate is evaluated with its known terms — the gate is TIGHT, stated** |
+| ★★ R12 | **openpilot orientation oracle probe ($0):** swap the lane-annulus orientation field (stored-polynomial tangent vs self-orient) on the ep650 ckpt through the frozen scorer; adjudicate with the 0.966-vs-0.893-0.909 alignment arithmetic (VERIFY the DAG ~3440 row); GREEN ⇒ hybrid ships (§1.2); else self-orient fallback | NEW (MAJOR-4); pre-GO or first-recess |
+| ★★ R13 | **persistence-weighted amplify oracle probe ($0):** w_i ∝ 1/pers_i vs uniform on the ep300 composed surface | NEW (meat §D-2); gates the per-island form; else per-class weights ship |
+| ★★ τ-confirm | recompute m_q from THIS vehicle's cached annulus margin field (#333 rows) — confirm τ_end* ≈ 0.062 or re-derive (§2.2d) | NEW ($0, pre-GO checklist) |
+| P1 | comb-REGISTRATION audit | + MUTCD period as the null hypothesis (§1.2) |
+| P2, P6, P7, P4, P3, P8, P10 | unchanged from v2 | P3 note: K=128 eigen-extraction = optional cheap tail (verdict does not depend on it — chain-A terminal) |
+| P9 | pose chain + q-sweep | under the JOINT law (§5.0) + the kinematic-prior arm + comma2k19 init (§6) |
+| T-1/2/3 | injection tests + B1 build | B1 also normalizes the slope per-epoch (§2.2(2)); B9 PREFERRED (§2.2(3)) |
+| RUN | ARM-PRIMARY launch | + TAU→FIN transition law (§2.2c) + per-class veto (§2.2(1)) |
+| TWIN | λ=0 mirror-schedule (§6) | |
+| ROW | byte-close (…+ hood clamp + hybrid-orientation decode if GREEN) → contest-CPU | THE success definition |
+
+---
+
+## §8 — WALL-CLOCK PLAN (v3: honest range; contingency tags; speed levers named)
+
+Base s/ep: 107 (control-class) — PENDING P11′'s measured stack s/ep (AA ss=2 ≈ 4× render px +
+~29 s/ep fine-mode EDT ⇒ the 1.5× gate is TIGHT — stated, with the projection printed pre-GO).
+Event path: CE 300 (cap) + TAU fire ≈ ep625 + FIN ∈ [100, 274] ⇒ end ≈ ep725-899 ≈ 21.6-26.7 h.
+Cap path: 1000 ep ≈ 29.7 h. **Event exits are worth 10-27% vs the cap path** (MINOR-4: 101 ep
+fixed saving = 10.1-12.2%; endpoint-vs-endpoint 10.1-27.5%; v2's 5% lower edge was underived).
+**B1-contingency tag (P5-2): without the B1 in-trainer trigger (~80 LOC, owed) the realized path
+is the CAP (29.7 h) — the event-path hours are conditional on B1 + T-1 passing.**
+Twin: ~13-18 h sequential. $0 probe wave ≈ 1.5 days. Total to the exact row: ~4-5 days.
+**Speed levers (S-neutral, L59):** ★★ the L3 NTK band-pass/whitening preconditioner (ranked-#1
+sig-proc lever, ~3-10× convergence on the finest addressable band) is **UNBUILT** (flag search
+this session: absent) → named in §9.4 with a build-spec; NOT a run-1 dependency. GPU-reorient
+only if its parity probe passes (restored caution; L70).
+
+---
+
+## §9 — PREDICTED S LADDER + DUAL PROBABILITY MODEL + RUN-2 (v3 fixes)
+
+### 9.1 The ladder (one derivation sentence added; event-leg cost folded)
+
+| rung | central | band | grounding |
+|---|---|---|---|
+| training-side d_seg @ matched ep | 0.0016 | [0.0010, 0.0028] | §0.3 Surface-B design table. **Rung-1 upper 0.0028 = §0.3's design-sum upper 0.0023 + a P6 share-instability allowance (+0.0005 ≈ shares shifting ~20% against us) — conservative-direction widening, now derived (P5-6)**. Kill > 0.0030 |
+| event-path transition cost | +5.4e-6 d_seg (= +5.4e-4 S) | 0 (cap path) | §2.2c forfeit table — the BET is warm-Muon recovery ≥ this |
+| byte-closed realized d_seg | +0..+1e-4 | — | int8+R prior; every rung screened at deploy params (+5.2% gap) |
+| rate | 0.0620 | [0.0469, 0.0689] pass / 0.0768 fail / 0.0855 worst-3-leg | §5.1 |
+| pose term | 0.0387 (milestone) | [0.0173 (bar), 0.105 (R1 floor)] | §0.2 |
+| **S [advisory → contest-CPU]** | **≈ 0.26** | **[0.164, 0.47]** | sum; lower edge = consistent joint tail |
+
+### 9.3 THE DUAL PROBABILITY MODEL (MINOR-3 arithmetic fixed)
+
+**Model A — joint-independent-tail:** P(cross) = (0.10-0.20) × (0.2-0.4) × (~0.8) =
+**1.6-6.4%** (printed exactly; v2's "2-6%" rounded).
+
+**Model B — sequential-descent-with-repair, per-axis estimates PRINTED (coarse, labeled
+judgment):** P(rate ≤ 0.062 with byte-close selection) ≈ 0.85-0.95 · P(d_seg ≤ 0.0011 with
+in-run steering + stage-best restore + AA/band byte-close selection) ≈ 0.15-0.25 ·
+P(d_pose ≤ 3e-5 with W1b shadow law + staged carrier + fallback ladder; mechanism BUILT-UNFIRED
+with an on-scorer existence proof) ≈ 0.25-0.45 ⇒ product ≈ **3-11% for the run-1 campaign**
+(incl. byte-close selection + twin promotion). The old "8-15%" is retained ONLY for the
+campaign-with-branches case (run-1.5 branch protocol §9.4 adds tau-boundary forks) and is a
+printed judgment, labeled as such. Repair table + non-repairables inherited from v2 unchanged.
+
+**Honest central: nearer Model A for the two trained legs, nearer B for rate/band/AA. The run
+is a two-wall measurement instrument with a real, printed, steered crossing tail.**
+
+### 9.4 Run-2 headroom + named builds (v3 additions ★★)
+
+Inherited: in-training comb late-P1 · StepNative β 4→8 finisher fork · mod-dim 2-point ·
+TerminalSolve at a NEW basin (chain-A template + ★★ GN/Fisher-metric TR, §2.3) · BoundaryDistance
+w*=0.2 · per-class hard λ-gate (#268) · #149 closed-form facet placement (DEFER-with-build-spec)
+· pose-interference seg-twin. ★★ New:
+- **Branch protocol (run-1.5, meat §C2-7):** per-stage EMA ckpts are FREE branch points —
+  formalized forks from the tau boundary: {comb-on/off arm · mid-λ (λ∈{5,30}) point ·
+  openpilot-tangent arm · **cosine_hold β-isolating arm (§2.2d)**} — sequential fine-tunes at a
+  fraction of full-run cost; the honest resolution of the λ-2-point and anneal-confound gaps.
+- **L3 NTK preconditioner build-spec:** diagonal band-pass/whitening preconditioner on the
+  curvelet/Fourier feature scales (the deep-math reason scale-curricula work); S-neutral speed
+  3-10×; requires build + byte-identity/parity proof before any run.
+- **Per-class τ_c law** (τ_c ≤ margin_q(c)/ln5 — the §2.2d law per class; trainer lacks per-class
+  τ; run-2 build) + per-scale τ via parabolic scaling.
+- **Margin-graded annulus weight** ($0 oracle probe; the Fisher law — S5's DEFER killed the
+  msal_uni TEXTURE proxy at chance, NOT margin-weighting itself).
+- **Hardness-graded pair oversampling** (importance-sampled, E[grad]-preserving law — naive
+  oversampling changes the objective; $0 design + trainer sampler).
+- **Event-adaptive verdict cadence** (cadence ∝ 1/|slope| with floor — shrinks the §2.2c forfeit;
+  costs verdict wall-clock).
+- **Morse-Smale persistence-ORDER births** (curriculum = persistence order — fractal refinement
+  of the mechanism-proven stagger).
+- **#158 homography static-class margin prior** (run-2; the hood clamp is its cheap shipped
+  sibling) · **#288 semi-discrete OT head offsets** (RECESS-with-band, held).
+
+### 9.2 Load-bearing assumptions — inherited + v3: Surface-B shares transfer control→arm (P6) ·
+τ_end* GT-margin↔witness-margin anchor equivalence (τ-confirm probe, §7) · the R12 alignment
+numbers are coordinator-supplied pending DAG verification.
+
+---
+
+## §10 — BUILD LIST (v3 deltas)
+
+| id | build | ~LOC | status/route |
+|---|---|---:|---|
+| B1-B8, W1/W1b/W2, I-1..I-5, F-rows, T-1..3, BA | inherited | — | v2 §10 stands |
+| ★★ B9 | anneal re-anchor law | ~30 | **PREFERRED** (was optional) per P5-2 |
+| ★★ B10 | TAU→FIN restore-stage-best transition (§2.2c) | ~15 | LB (it IS the MAJOR-2 law) |
+| ★★ B11 | hood static clamp decode-side (+8 B) | small | byte-close-selectable, paired-verdict-gated |
+| ★★ B12 | hybrid lane-annulus orientation (deterministic tangent field from the band polynomial) | small | R12-gated; self-orient fallback default |
+| ★★ I-6 | equation registrations — UPDATED SET: co-predicate backtest law · **`gn_hessian_spectrum_indefinite_at_ema_best_v1` KILL-update (K=128 ratio 0.011, subset-artifact) + lane-blind domain_of_validity caveat** · `hessian_negative_curvature_subset_artifact_v1` (carries the caveat at birth) · int8-deploy +5.2% row · τ_end* = m_q/ln5 law | 0 | tranche 2 (rides the triality landing) |
+
+---
+
+## §11 — REQUIREMENT A(ii): #342 INVENTORY (rows 11-13 UPDATED to the terminal verdict)
+
+Rows 1-10, 14-15 inherited from v2 (row 14 τ_end: now **SOLVED-to-a-law** — τ_end* = m_q/ln5,
+§2.2d; interim 0.062 D-tagged; the recess P-τ item becomes the $0 τ-confirm probe).
+
+| # | block | disposition (v3) |
+|---|---|---|
+| 11 | Terminal head/full solve | **NOT-SOLVABLE AT THIS BASIN — measured TERMINAL (chain-A LINK 5):** every solve step worsens independent holdouts fp32+int8; residual gain bounded below attributability (Newton decrement ~1e-3 < the +4.3% reconstruction gap). Run-2 ONLY at a NEW basin with K≥32 K-stable structure + measured-acceptance + Fisher-metric TR |
+| 12 | FiLM head least-squares | same terminal condition (chart CONFIRMED ρ 0.85-0.87; subset-solve +5.1% NO-GO; full-P in-trainer only, at a new basin) |
+| 13 | Trunk/basis weights | **NOT-SOLVABLE, proof STRENGTHENED:** nonconvex composition + chain-A terminal — even the local quadratic structure at the optimum is subset noise (K=128 ratio 0.011); TRAINED — and the wall being representation/basis is WHY Arm A is the vehicle |
+
+Requirement A(i) honest status: **solve-from-the-basin was TESTED and FAILED at this basin** —
+the requirement is satisfied by the measurement, not by a solver: everything solvable is solved
+(rows 1-10, 14), training is reserved for 11-13 exactly, and the SOLVE stage exists only behind
+a new-basin gate that current evidence says will not open on this vehicle class without a basis
+change.
+
+---
+
+*Round-1 self-review before commit (v3): (1) BLOCKER-1 — both share tables printed WITH surfaces
++ the bridging law; §0.3 re-verified on Surface B (numbers unchanged, stated why); §3.2 rebuilt
+lane-first; MAJOR-5 weights derived from the same set — one model, req-H consistent. (2) MAJOR-2
+— transition law specified + the forfeit table printed from the on-disk trace numbers
+(0.0033929/0.0033716/0.0033662) + the +5.4e-4 folded into §9.1. (3) MAJOR-3 — τ_end* arithmetic
+shown (0.416/1.60944 = 0.258; 0.10/1.60944 = 0.0621); the recovery split β-leg vs τ-leg with the
+old 4-9e-4 band DEMOTED to DPR; three confounds named; the β-isolating arm named. (4) MAJOR-1 —
+one KKT law at λ_bytes = 6.6586e-7, the 0.002 threshold deleted with its net-negative arithmetic.
+(5) MAJOR-4 — hybrid law + R12 gate + fallback + the honest scope (lane field only). (6) Chain-A —
+TerminalSolve out of the stage graph; §11 rows 11-13 terminal; sensor K≥32-disciplined, HOLD
+disarmed; lane-anisotropy scope sentence in §2.3(6); registry kill-update routed tranche 2.
+(7) All 6 P5 PARTIALs dispositioned (P11′ referenced not duplicated; anneal-speed confound;
+three-leg label + two-leg row; mirror-schedule twin; scope+registry; all 4 nits). (8) All 13
+MINORs + meat adoptions dispositioned inline (hood +8 B booked; NTK verified UNBUILT → §9.4;
+MUTCD/v_h/kinematic/comma2k19 folded; #191/#203/#207/orbit receipts kept). (9) Certified items
+untouched: crossing table digits, §5.1 sums (re-summed +8), anneal-600 absolute-epoch semantics,
+1-Lipschitz easing, AA ordering. (10) Reqs A-I: A §11(updated) · B §2.2(+veto, per-epoch norm,
+B9-preferred) · C §3.2(rebuilt) · D §7 ordering+concurrency · E §5.2(+receipts) · F §4(+hood row,
+chroma stamp, spectrum discipline) · G §10(I-6 updated) · H §0.0/§3.2/hood-own-law · I
+geometry-sharing headline realized (ONE polynomial → band + comb phase + lane orientation; ξ →
+warp + pose + comb phase + dash phase).*
+
+Pointer 0.19110 UNMOVED — this draft is MEANS until the §7 ROW lands.
