@@ -1981,3 +1981,17 @@ consumer update required — asserted [consumers-generic]. ---
   (4) eikonal FELL 49% (0.0198→0.0102 mean) — no re-entry signature; adaptive-ε stays REGISTERED.
   No config changes to run-1 (live, operator-GO only); items (2)+(3) fold into the v7 launch
   package watch-list.
+- **D1 PROBE: HONESTLY BLOCKED by the governor** (d00df4cd7/8cf226e18): admission REFUSED —
+  projected 143.5 GiB vs ceiling 66.1 (live run's reserved peak 60.1 + used 75.5 already exceed
+  it alone; verified legitimate, no stale reservations). Agent STOPPED, no bypass, no fabricated
+  numbers (verdict_scope: instance — this launch attempt). HARNESS BUILT + ARMED: probe reuses
+  the trainer's exact verdict primitives, margin-binned + per-class disagreement, pre-registered
+  thresholds, chunked-resumable; ONE governed reactivation command pinned in the memo → STOP-
+  CHECKLIST item (fires at run-1 governed stop, where D1 always lived; the crux elevation for
+  item 10 is NOT taken — correctly). Equations leg correctly deferred (no measurement, no anchor).
+  LOAD-BEARING DESIGN FINDING (measured from code): run-1's --async-verdict CONFLICTS with
+  --verdict-device gpu (gpu_verdict_conflicts forbids the pair) → run-1 emits ZERO paired drift
+  rows AND the v7 GPU-sensor/CPU-anchor hybrid cadence REQUIRES resolving this conflict (a
+  designed hybrid mode, not just a flag pair) — noted for v7.1 scope with the D1 evidence gate.
+  CRUX WAVE-1 CLOSES: item 4 ELEVATED (cert ADMIT) · item 3 elevation REVOKED by measurement ·
+  item 10 stays REGISTERED (stop-window probe armed). Remaining in flight: #358 only.
