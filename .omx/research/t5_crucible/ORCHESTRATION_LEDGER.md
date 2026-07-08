@@ -150,6 +150,20 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "pursue those
+   validation paths as well to expand our toolbelt and understanding and improve our
+   v[ehicle]").** Every recess probe is a PROTOTYPE INSTRUMENT, not a one-shot gate check: its
+   implementation lands as a durable reusable tool (canonical path under tools/ or
+   src/tac/witness_control/, docstring with the law + band provenance, artifact schema), its
+   output feeds a NAMED consumer (per req P), and the METHOD joins the standing toolbelt usable
+   across runs and vehicles: ν-refit (exponential-meat fitting) · forfeit-arm backtester ·
+   cadence-law replayer · signed per-class-pair per-direction correlation (the asymmetry
+   instrument) · Conley persistence certifier · uint8-deadzone census · max-plus annulus fitter.
+   Sister of "Results must become system intelligence": a probe whose code is scratch is a
+   queued re-derivation; a probe promoted to instrument is campaign capital — run-2 re-runs the
+   SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
+   cheap to measure every iteration. Understanding compounds through the tools, not the memos.
+
 --- SEQUENCING RULE BOUND 2026-07-08T~04:0x (operator: "when are the probes run? ... how can we
 say the designs are optimal?") — NO OPEN GATES AT SEAL ---
 The FINAL seal round may NOT certify while any $0-runnable gate probe remains unfired. Disposition
