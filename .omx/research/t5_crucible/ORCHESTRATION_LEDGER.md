@@ -150,6 +150,22 @@ O. **FIELDS-MEDAL-GRADE CONTROL-THEORY DEEP RESEARCH (operator 2026-07-07: "deep
    retrieval-first, WebSearch authority. Deliverables feed v4 + the campaign layer + the costate
    controller's mature form (λ̇ = adjoint of the score functional, per M).
 
+U. **REVIEW MODEL + CONFOUND LENS (operator 2026-07-08: "Adversarial review should be done by
+   Opus. Not only should it look for bugs, bug classes, and meta bugs, but it should also hunt
+   for confounds").** Every seal/adversarial-review agent: (1) runs on Opus (model policy now
+   covers build AND review; Fable = orchestrator only); (2) carries LENS C — CONFOUND HUNT —
+   co-equal with the bug lenses, per the CLAUDE.md confound discipline (DEFAULT-HARMFUL ×
+   SILENT × MEASUREMENT-CORRUPTING): (a) apparatus-validity of every consumed measurement —
+   was the instrument in a valid measuring state for the interpreted window (spike-guard-freeze
+   + τ-tautology precedents); (b) positive controls present AND passing (an invisible canary =
+   untrusted instrument = no verdict admissible); (c) corrupted-axis / wrong-key / wrong-shape
+   input checks (the gt_margin-key and β-cosine-vs-linear classes); (d) config-conditionality
+   of every anchor consumed (req T); (e) the META-confound — does any checker/controller
+   certify a broken state as healthy. RATIONALE: the τ-tautology survived THREE seal rounds
+   because reviewers verify arithmetic-given-inputs; the confound lens interrogates the inputs'
+   measuring apparatus. Binds the next seal round (fires on the LawRef-migration landing) and
+   all subsequent.
+
 T. **VALUE-PROVENANCE LADDER — avoid hardcoding to the extent possible (operator 2026-07-08).**
    Every constant/value in configs, DSL, laws, and code sits on a preference ladder, and sits as
    HIGH on it as the apparatus allows:
