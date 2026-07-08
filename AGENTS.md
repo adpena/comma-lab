@@ -1,5 +1,49 @@
 # Agent Onboarding - Comma Video Compression Challenge
 
+## THE v7.5 / v8 VEHICLE LINE + OPERATING CONTRACT — NON-NEGOTIABLE, HIGHEST EMPHASIS (2026-07-08)
+
+**Source:** operator handoff directives 2026-07-08 (Fable→Opus): *"resumability is P0 for all"* +
+*"enforce all future agents to be as smart and capable and rigorous and deep math informed and
+aware and apparatus respecting and enhancing"* + *"so opus can't mess up the beautiful cathedral
+we are building with v7.5 and v8."* Subordinate only to NO-FAKE and THE GOAL. This section is the
+pointer; the SPECs are canonical.
+
+**The LIVE pursuit of THE GOAL is the crucible vehicle line: v7.5 (optimal single trunk) → v8
+(edge-centric per-class carriers) → their children.** The canonical resume surface — READ BEFORE
+ANY witness/capstone work:
+- `.omx/research/t5_crucible/SPEC_v75_optimal_single_trunk_20260708.md` — sealed constants with
+  provenance · the run-1 birth-arm lesson · §4 the EXACT owed-before-launch chain (ramp #361 →
+  P0 forces #360 → seal to 3 clean passes → knee → 30-min re-measure → governed stop → EVENT
+  launch) · the full-facet watch-list · **§8 THE OPERATING CONTRACT**.
+- `.omx/research/SPEC_v8_perclass_decomposition_20260708.md` — edge-centric tropical-argmax
+  carriers · merge→diff→correct chroma-first/luma-reserved reconciliation · 6 named risks +
+  cures · pre-registered probes · gates (v7.5-first).
+
+**SPEC_v75 §8 (THE OPERATING CONTRACT) is BINDING on every agent, main and sub:**
+(A) **RESUMABILITY IS P0 FOR ALL** — runs resumable-from-disk + per-stage checkpoints; new
+levers/controllers register under the canonical resume registry with additive legacy-compatible
+persistence; builders commit early via the serializer; never half-wire under resume risk.
+(B) **ALREADY-SETTLED table** — never re-derive/re-measure/re-open what an artifact has settled
+(the table lists each with its authority); rediscovery is the cardinal signal-loss sin.
+(C) **No-stray rules** — config ONLY via typed DSL compile (never-invent-flags); every constant
+on the value-provenance ladder; verdict_scope on every negative; STORES CONSULTED on every
+decision doc; recall-before-decide; loss weights at stage boundaries only, never per-step.
+(D) **Execution guardrails** — heavy launches ONLY via the governed launcher (a governor REFUSE
+is information, not an obstacle); run dirs sacred; serializer --patch-file on hot files; the
+fix-ALL seal protocol with 3 clean passes, re-derive-don't-confirm, blind structural derivation.
+(E) **The cathedral invariant** — every unit ends with pointer-delta honesty + its triality legs
+(DSL/DAG/equations) + a durable committed artifact. A chat-only insight is a lost insight.
+
+**The BAR for every future agent:** every number MEASURED/DERIVED/labeled, never guessed; every
+negative scoped on the verdict ladder (one failed formulation is not a dead family); every design
+DERIVED from the level-set/Morse-Smale energy — missing terms are found by comparing the energy
+the math demands against the forces in the code (the method that found the area-Lagrange, the
+temporal screw-consistency force, and the satisficing hinge in one day); every finding lands in
+the triality + a durable artifact; the apparatus (gates, hooks, governor, seal, registry,
+drift-detector) is RESPECTED and ENHANCED, never bypassed. Holistic facet reads always (per-class
+d_seg vs anchors · island birth · d_pose vs the need · rate) — never a headline composite.
+If v7.5 and v8 do not reach the goal, their CHILDREN inherit this contract unchanged.
+
 ## Local Disk, SSD Spill, Auto-Cleanup, And Provenance — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 Local disk is for source, small manifests, and live metadata. Bulky rebuildable
