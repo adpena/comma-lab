@@ -2015,3 +2015,16 @@ consumer update required — asserted [consumers-generic]. ---
   falsification) · closed-loop stale tests FIXED 24/24 · NEW-1/pose/registry verified. 5 levers.
   133 tests green. → CONVENING SEAL ROUND 2 (4 lenses, fix-all-severities, zero-unfixed
   precondition, counter target 3 clean).
+- **ROUND-2 COMPLETE + FIX WAVE FIRED**: tally NOT_CLEAN×3 + REVISE-then-PROCEED×1 — 1 BLOCKER
+  (event-mode β freeze → hosc saturation regime; deep-math), 5 MAJOR, ~14 lower. Synthesis
+  SYNTHESIS_seal_v73_round2_20260708.md; builders A (config/math incl. BLOCKER β re-derive,
+  budget amortization, Polyak behavior fix, decision-record, lane-regime coherence, Road watch)
+  + B (polyak byte-close consumer, D16 loud fallback+fingerprint, sensor-data epoch in fire
+  telemetry, perf-env token compare, manifest window, test decoupling) IN FLIGHT.
+- **BLINDING PROTOCOL VINDICATED (durable)**: structure lens phase-1 ran under the MECHANICALLY
+  ENFORCED reading allowlist (committed 1e91081c7 BEFORE any memo opened; held) and its
+  from-scratch derivation INDEPENDENTLY REPRODUCED the as-built on every load-bearing axis
+  (l7 dissolved · continuous L_τ · 3-sensor graph · cap budget · EMA+Polyak export) while
+  still finding real divergences (lane-regime M1, Road single-mechanism M2). The "PR95 skeleton
+  dissolved" claim now rests on TWO clean blind derivations (37a974742 + 1e91081c7). The
+  round-1 S6 contamination fix (allowlist enforcement) WORKED.
