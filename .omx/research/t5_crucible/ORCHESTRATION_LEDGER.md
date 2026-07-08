@@ -2084,3 +2084,12 @@ consumer update required — asserted [consumers-generic]. ---
   window is run-1's clock value — v7's is event-determined ≤500 (folded into launch package).
   Counter 1/3. NEXT: counter-force levers land → v7.5 compile → rounds continue on that delta
   (r4-verified surfaces stay verified; only the v7.5 diff reviews).
+- **OPERATOR DESIGN DIRECTIVE (birth control)**: *"Exactly the level set and Morse smale are
+  perfect for engineering the precisely desired annealing behavior."* Counter-force builder
+  steered: lever 1 = the AREA-CONSTRAINT Lagrange term of the level-set energy (Chan-Vese
+  region term; retraction flow ∝ overshoot, growth/constraint BALANCE at GT area — equilibrium
+  IS the spec, no ramp schedule); lever 2 = MORSE-SMALE PERSISTENCE completion event
+  (birth-complete = island prominence > τ_persist ∧ part_frac ≈ GT → regime hand-off
+  birth→boundary via the v7 event machinery). Defense in depth: multiplier self-limits
+  continuously, event re-allocates. The #302 derive-annealing-from-the-energy discipline
+  applied to birth control.
