@@ -265,6 +265,19 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: DASHBOARD LIVE TAB v6 SCHEMA-DRIVEN (Opus; d123d3ab0 + 1d7f1054e; task #352;
+memo .omx/research/dashboard_live_tab_v6_schema_driven_20260708.md; 27 new + 63 existing tests,
+zero-downtime reload verified, live /api/state introspect healthy vs run-1) ---
+- tools/witness_run_introspect.py: classifies every schedule element {EVENT-TRIGGERED
+  (sensor + arm state pending/fired/cap) · DERIVED (LawRef id + manifest value) · FIXED/CAP}
+  via schedule_readback; exposes controller λ traces + DECIDE queue + confound-immune liveness
+  + planned τ/β/LR curves (faithful ports of the trainer's anneal formulas) + mem series.
+  Stdlib-only, bounded-tail, fail-open; presence-gated panels (pre-v6 runs degrade gracefully).
+- LIVE tab: controller panel (λ table + liveness strip) · schema-driven schedule chips with
+  live arm state · #telemetry panel (τ/β/LR sparklines, constants provenance-ladder table,
+  RSS/MLX curves, fired-event diamonds). Renders v7's new stage kinds additively (the
+  schema-driven law) — no rewrite at restart. Pointer 0.19110 UNMOVED (observability/means).
+
 --- ✅ LANDED ×2: TAIL_k + LADDER #323 (Opus; TAIL_k 7d69aff57/c10b09636, LADDER 16986aefa —
 provenance split across shared-file commits, declared not silent; 19+22 tests green) ---
 - TAIL_k (src/tac/witness_control/tail_cycles.py + trainer + TailCycles DSL factory): post-Muon
