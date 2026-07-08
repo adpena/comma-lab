@@ -305,3 +305,73 @@ def test_flip_margin_quantiles_zero_flips_nan_safe():
     assert all(math.isnan(v) for v in t["m_q"].values())
     assert all(math.isnan(v) for v in t["tau_star"].values())
     assert t["class_pairs"] == []
+
+
+# ---------------------------------------------------------------------------
+# P-TAU2 knee instrument (flip_margin_values / flip_margin_cdf / knees).
+# ---------------------------------------------------------------------------
+def test_flip_margin_values_extracts_flip_margins():
+    from tac.witness_annulus_metrics import flip_margin_values
+
+    gt = np.zeros((2, 3), np.int64)
+    wa = gt.copy()
+    wa[0, 1] = 1
+    wa[1, 2] = 2
+    gm = np.arange(6, dtype=np.float32).reshape(2, 3) / 10.0
+    fm = flip_margin_values(wa, gt, gm)
+    assert np.allclose(sorted(fm.tolist()), [0.1, 0.5])
+
+
+def test_flip_margin_cdf_exact_and_empty():
+    from tac.witness_annulus_metrics import flip_margin_cdf
+
+    fm = np.asarray([0.1, 0.2, 0.2, 0.4], np.float64)
+    grid = np.asarray([0.0, 0.15, 0.2, 0.3, 1.0])
+    mu = flip_margin_cdf(fm, grid)
+    # strict "< m" semantics (side='left'): mu(0.2) counts only 0.1.
+    assert mu.tolist() == [0.0, 0.25, 0.25, 0.75, 1.0]
+    assert flip_margin_cdf(np.empty(0), grid).tolist() == [0.0] * 5
+
+
+def test_kneedle_knee_finds_piecewise_corner():
+    from tac.witness_annulus_metrics import kneedle_knee
+
+    # steep rise to (0.2, 0.9) then slow rise to (1.0, 1.0): knee at the corner.
+    x = np.linspace(0.0, 1.0, 1001)
+    y = np.where(x <= 0.2, x * (0.9 / 0.2), 0.9 + (x - 0.2) * (0.1 / 0.8))
+    idx = kneedle_knee(x, y)
+    assert abs(x[idx] - 0.2) < 5e-3
+    # degenerate curves return 0.
+    assert kneedle_knee(x, np.ones_like(x)) == 0
+    assert kneedle_knee(x[:2], y[:2]) == 0
+
+
+def test_max_curvature_knee_near_corner():
+    from tac.witness_annulus_metrics import max_curvature_knee
+
+    x = np.linspace(0.0, 1.0, 1001)
+    y = np.where(x <= 0.3, x * (0.9 / 0.3), 0.9 + (x - 0.3) * (0.1 / 0.7))
+    idx = max_curvature_knee(x, y)
+    assert abs(x[idx] - 0.3) < 0.06  # smoothed curvature localizes the corner
+    assert max_curvature_knee(x, np.ones_like(x)) == 0
+
+
+def test_flip_mass_knee_analysis_shape_and_sensitivity():
+    from tac.witness_annulus_metrics import flip_mass_knee_analysis
+
+    rng = np.random.default_rng(7)
+    # heavy-tailed-ish flip mass: exponential margins.
+    fm = rng.exponential(scale=0.3, size=20000)
+    out = flip_mass_knee_analysis(fm, endpoints=(0.95, 0.99, 1.0))
+    assert not out["empty"] and out["n_flips"] == 20000
+    assert len(out["rows"]) == 6  # 2 criteria x 3 endpoints
+    primary = [r for r in out["rows"] if r["primary"]]
+    assert len(primary) == 1 and primary[0]["criterion"] == "kneedle"
+    r = primary[0]
+    assert 0.0 < r["f_target"] < 1.0
+    assert math.isclose(r["tau_star"], r["m_knee"] / math.log(5.0), rel_tol=1e-12)
+    lo, hi = out["tau_star_band"]
+    assert lo <= r["tau_star"] <= hi
+    t = out["tau_star_of_f_table"]
+    assert t["f0.10"] < t["f0.50"] < t["f0.90"]  # tau*(f) monotone
+    assert flip_mass_knee_analysis(np.empty(0))["empty"] is True

@@ -1,0 +1,71 @@
+{
+  "advisory": "[macOS-CPU advisory . NON-PROMOTABLE]",
+  "generated": "2026-07-08T07:20:54Z",
+  "probe": "P-DITHER (B19 gate; v6 SS7c pre-registered: fire dseg<=-1e-5, kill dseg>=0)",
+  "config": {
+    "mode": "bayer8",
+    "amp": 1.0,
+    "seed": "0xb19"
+  },
+  "n_pairs": 600,
+  "d_seg_undithered": 0.0036145697699652775,
+  "d_seg_dithered": 0.0036166975233289924,
+  "delta_d_seg": 2.1277533637149328e-06,
+  "delta_S_units": 0.00021277533637149328,
+  "undithered_matches_r6_bitforbit": true,
+  "flips_fixed": 10085,
+  "flips_created": 10336,
+  "net_flips": 251,
+  "delta_from_counts": 2.127753363715278e-06,
+  "far_lane_rows_176_224": {
+    "fixed": 5960,
+    "created": 6089
+  },
+  "gt_lane_class": {
+    "fixed": 2497,
+    "created": 2650
+  },
+  "gt_margin_bands": {
+    "[0.0,0.1)": {
+      "fixed": 2420,
+      "created": 2448
+    },
+    "[0.1,0.5)": {
+      "fixed": 5253,
+      "created": 5373
+    },
+    "[0.5,2.0)": {
+      "fixed": 2170,
+      "created": 2288
+    },
+    "[2.0,inf)": {
+      "fixed": 242,
+      "created": 227
+    }
+  },
+  "fixed_class_pairs_top": {
+    "Lane->Road": 2488,
+    "Road->Lane": 2164,
+    "Undrivable->Road": 980,
+    "Road->Undrivable": 943,
+    "Movable->Undrivable": 726,
+    "Movable->Road": 620,
+    "MyCar->Road": 554,
+    "Road->Movable": 552,
+    "Undrivable->Movable": 548,
+    "Road->MyCar": 478
+  },
+  "created_class_pairs_top": {
+    "Lane->Road": 2643,
+    "Road->Lane": 2109,
+    "Road->Undrivable": 1003,
+    "Undrivable->Road": 960,
+    "Movable->Undrivable": 737,
+    "Movable->Road": 701,
+    "MyCar->Road": 566,
+    "Undrivable->Movable": 542,
+    "Road->MyCar": 520,
+    "Road->Movable": 520
+  },
+  "verdict": "KILL_THIS_FORM"
+}

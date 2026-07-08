@@ -240,6 +240,153 @@ def flip_margin_quantiles(
 
 
 # ---------------------------------------------------------------------------
+# flip-mass CDF + knee analysis (T5 crucible P-TAU2 instrument).
+#
+# LAW + BAND PROVENANCE: DRAFT_OPTIMAL_STACK_v6 SS1.4a fixed-point convention
+# tau* solves mass(m < tau*.ln5) = f_target (Maslov intent), f_target deferred to the
+# named probe P-TAU2 (SS7c: reporting probe -- derives a constant; the launch fail-safe
+# constant --softmax-temp-end 0.31 stands regardless). The LIVE f_target is a run-1
+# conversion-rate measurement (SS1.4a: "NOT derivable from a static snapshot"); the STATIC
+# knee below is the $0 prior: the point where the marginal flip-mass conversion rate
+# d(mu)/dm collapses to the sweep-average rate (elbow of marginal return).
+#
+# PRIMARY knee criterion (pre-registered in probe_tau2_dither_20260708.md BEFORE any
+# computation): Kneedle max-chord-deviation (Satopaa, Albrecht, Irwin, Raghavan 2011,
+# "Finding a 'Kneedle' in a Haystack: Detecting Knee Points in System Behavior",
+# IEEE ICDCS Workshops 2011): normalize both axes to [0,1] over [0, m_hi], knee =
+# argmax_m [mu_norm(m) - m_norm]. Closed-form meaning: at the argmax,
+# mu'(m_knee) = mu(m_hi)/m_hi -- the marginal conversion rate equals the sweep-average
+# conversion rate (derived, not eyeballed). SECONDARY (robustness): max curvature of the
+# Gaussian-smoothed normalized CDF, interior-restricted.
+# ---------------------------------------------------------------------------
+def flip_margin_values(
+    witness_argmax: np.ndarray, gt_argmax: np.ndarray, gt_margin: np.ndarray
+) -> np.ndarray:
+    """GT-cache margin value at each flip pixel (the flip-mass distribution), 1-D float32.
+
+    ``gt_margin`` MUST be the frozen GT-cache top1-top2 field (>= 0, witness-independent)
+    -- NEVER the maps-npz ``gt_margin`` key (the witness margin-toward-GT tautology trap,
+    see tools/witness_tau_mq_confirm.py).
+    """
+    flip = flip_map(witness_argmax, gt_argmax)
+    return np.asarray(gt_margin, np.float32)[flip]
+
+
+def flip_margin_cdf(fm: np.ndarray, grid: np.ndarray) -> np.ndarray:
+    """Empirical flip-mass CDF mu(m) = fraction of flip mass with margin < m, on ``grid``.
+
+    Exact (no binning): sorts the flip-margin values once and evaluates via searchsorted.
+    Empty flip population -> all-zero CDF.
+    """
+    v = np.sort(np.asarray(fm, np.float64))
+    g = np.asarray(grid, np.float64)
+    if v.size == 0:
+        return np.zeros_like(g)
+    return np.searchsorted(v, g, side="left").astype(np.float64) / float(v.size)
+
+
+def kneedle_knee(x: np.ndarray, y: np.ndarray) -> int:
+    """Kneedle knee index of a concave increasing curve: argmax of (y_norm - x_norm).
+
+    Both axes are normalized to [0,1] over their own ranges. At the argmax the curve's
+    derivative equals the chord slope (marginal return = average return). Constant or
+    degenerate curves return index 0.
+    """
+    x = np.asarray(x, np.float64)
+    y = np.asarray(y, np.float64)
+    if x.size < 3 or float(np.ptp(x)) == 0.0 or float(np.ptp(y)) == 0.0:
+        return 0
+    xn = (x - x[0]) / (x[-1] - x[0])
+    yn = (y - y[0]) / (y[-1] - y[0])
+    return int(np.argmax(yn - xn))
+
+
+def max_curvature_knee(x: np.ndarray, y: np.ndarray, smooth_pts: int = 25) -> int:
+    """Max-curvature knee index on the normalized, Gaussian-smoothed curve.
+
+    kappa = |y''| / (1 + y'^2)^1.5 on axes normalized to [0,1]; the first/last 2% of
+    samples are excluded (smoothing boundary artifacts). ``smooth_pts`` = Gaussian sigma
+    in grid points. Degenerate curves return index 0.
+    """
+    x = np.asarray(x, np.float64)
+    y = np.asarray(y, np.float64)
+    n = x.size
+    if n < 10 or float(np.ptp(x)) == 0.0 or float(np.ptp(y)) == 0.0:
+        return 0
+    xn = (x - x[0]) / (x[-1] - x[0])
+    yn = (y - y[0]) / (y[-1] - y[0])
+    # Gaussian smoothing kernel (pure numpy; no scipy dependency in the metric module).
+    sig = float(max(smooth_pts, 1))
+    half = int(min(4 * sig, n // 2))
+    k = np.exp(-0.5 * (np.arange(-half, half + 1) / sig) ** 2)
+    k /= k.sum()
+    ys = np.convolve(np.pad(yn, half, mode="edge"), k, mode="valid")
+    d1 = np.gradient(ys, xn)
+    d2 = np.gradient(d1, xn)
+    kappa = np.abs(d2) / (1.0 + d1 * d1) ** 1.5
+    lo = max(int(0.02 * n), half // 2)
+    hi = n - lo
+    if hi <= lo:
+        return 0
+    return lo + int(np.argmax(kappa[lo:hi]))
+
+
+def flip_mass_knee_analysis(
+    fm: np.ndarray,
+    endpoints: tuple[float, ...] = (0.95, 0.99, 1.0),
+    grid_n: int = 2001,
+) -> dict:
+    """P-TAU2 knee table: per (criterion x endpoint) the knee margin, implied f_target,
+    and tau* = m_knee/ln5, plus the f->tau* sensitivity table.
+
+    ``fm`` = flip-margin values (from :func:`flip_margin_values`). ``endpoints`` are
+    flip-mass quantiles defining m_hi (1.0 -> the max flip margin). PRIMARY row =
+    kneedle @ q99 (pre-registered). Sensitivity: tau*(f) = quantile(fm, f)/ln5 at 0.05
+    steps + the local Delta tau* for f +/- 0.05 around each knee's implied f_target.
+    Empty flip population -> {"empty": True}.
+    """
+    v = np.asarray(fm, np.float64)
+    if v.size == 0:
+        return {"empty": True}
+    rows = []
+    for ep in endpoints:
+        m_hi = float(np.quantile(v, ep)) if ep < 1.0 else float(v.max())
+        if m_hi <= 0.0:
+            continue
+        grid = np.linspace(0.0, m_hi, grid_n)
+        mu = flip_margin_cdf(v, grid)
+        for crit, idx in (("kneedle", kneedle_knee(grid, mu)),
+                          ("max_curvature", max_curvature_knee(grid, mu))):
+            m_knee = float(grid[idx])
+            f_t = float(flip_margin_cdf(v, np.asarray([m_knee]))[0])
+            f_lo, f_hi = max(f_t - 0.05, 1e-3), min(f_t + 0.05, 1.0 - 1e-3)
+            tau_lo = float(np.quantile(v, f_lo)) / _LN5
+            tau_hi = float(np.quantile(v, f_hi)) / _LN5
+            rows.append({
+                "criterion": crit,
+                "endpoint_q": float(ep),
+                "m_hi": m_hi,
+                "m_knee": m_knee,
+                "f_target": f_t,
+                "tau_star": m_knee / _LN5,
+                "dtau_per_pm005_f": {"f_minus_005": tau_lo, "f_plus_005": tau_hi,
+                                      "half_spread": (tau_hi - tau_lo) / 2.0},
+                "primary": bool(crit == "kneedle" and abs(ep - 0.99) < 1e-9),
+            })
+    f_grid = [round(0.05 * i, 2) for i in range(2, 19)]  # 0.10 .. 0.90
+    sens = {f"f{f:.2f}": float(np.quantile(v, f)) / _LN5 for f in f_grid}
+    taus = [r["tau_star"] for r in rows]
+    return {
+        "empty": False,
+        "n_flips": int(v.size),
+        "ln5": _LN5,
+        "rows": rows,
+        "tau_star_band": [min(taus), max(taus)] if taus else [float("nan")] * 2,
+        "tau_star_of_f_table": sens,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Gibbs / ringing proxy: high-frequency energy of the witness margin in the boundary
 # ring vs the interior. Ratio > 1 <=> the boundary oscillates more than the interior
 # (a ringing/overshoot signature). DOCUMENTED PROXY -- not a calibrated Gibbs amplitude.
