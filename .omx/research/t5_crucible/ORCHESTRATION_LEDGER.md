@@ -2136,3 +2136,10 @@ consumer update required — asserted [consumers-generic]. ---
   their briefs (encoded in #361 + #360 + the specs). Rigor bar UNCHANGED: fix-all seal ·
   verdict-scope · n600 · blind structural derivation · serializer patch-file · governed launcher
   only · pointer moves ONLY through upstream/evaluate.py byte-closed rows. Counter 1/3.
+- **P0 PHASE-1 LANDED (f7209667a)**: 4 forces → 3 (R-phase FOLDS into tie-locus; subpix term
+  ALREADY BUILT trainer L4559-4576 — phase-2 = 2 new levers + 1 wrap). δ_R = 0.0196 MEASURED
+  (m_safe ≈ 0.06; n96, n600 re-measure rides phase-2). Temporal = stop-grad GT-ξ default
+  (pose-safe; live-ξ arm tripwired). w_t 0.1 cold-start + stage-boundary ramp. Synergy chain:
+  satisficing frees interior budget → tie-locus spends it on placement (the P-A floor). One
+  force per crucible increment, ≤15%/40% shares. Phase-2 fires on #361 (ramp) landing. Zero
+  file collision (new files only). SPEC_v75 §4 chain unchanged: #361 → #360-p2 → seal r5.
