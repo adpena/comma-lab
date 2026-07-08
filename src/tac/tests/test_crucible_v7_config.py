@@ -64,6 +64,10 @@ _EXPECTED_ADDED = frozenset({
     "--area-constraint-classes",
     "--birth-completion-event", "--birth-completion-tau-persist", "--birth-completion-area-band",
     "--birth-completion-ramp-epochs", "--birth-completion-post-level", "--birth-completion-classes",
+    # (v7.5 RAMP-LANDED, memo §RAMP-LANDED) the Lever-2 ramp is now APPLIED to the birth-loss surfaces
+    # (per-class island-amplify / persistence-recall / logit-adjust offset); post_level is DERIVED from
+    # tau_persist (= 1 - 0.8 = 0.2). --birth-completion-ramp is the new (absent-from-v6) apply switch.
+    "--birth-completion-ramp",
     # (v7.5 Lever-3 regime coherence) restrict the v6-inherited --logit-adjust-loss-tau boost to the
     # non-offloaded birthed class(es); DERIVED from the basis regime (lane_offloaded => "3", movable only).
     "--logit-adjust-classes",

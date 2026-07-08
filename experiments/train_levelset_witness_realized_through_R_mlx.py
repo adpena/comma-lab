@@ -631,6 +631,17 @@ def _build_resume_state_arrays(
     out["__cfg_area_constraint_birth"] = np.asarray(int(bool(getattr(args, "area_constraint_birth", False))))
     out["__cfg_area_constraint_birth_force"] = np.asarray(float(getattr(args, "area_constraint_birth_force", 1.0)))
     out["__cfg_area_constraint_tolerance"] = np.asarray(float(getattr(args, "area_constraint_tolerance", 0.25)))
+    # (v7.5 Lever-2) Morse-Smale birth-completion event + RAMP are loss-only + trajectory-affecting
+    # (no param keys). Persist the event/ramp switches + params so a --resume-from that silently
+    # drops/changes them (dropping the ramp, or changing tau/band/ramp_epochs/post_level) fails closed
+    # via _resume_lever_divergences (deterministic-repro). The LATCHED fire epochs ride the __bc_*
+    # resume-registry sidecar (see the birth_completion producer registration); these are the CONFIG.
+    out["__cfg_birth_completion_event"] = np.asarray(int(bool(getattr(args, "birth_completion_event", False))))
+    out["__cfg_birth_completion_ramp"] = np.asarray(int(bool(getattr(args, "birth_completion_ramp", False))))
+    out["__cfg_birth_completion_tau_persist"] = np.asarray(float(getattr(args, "birth_completion_tau_persist", 0.8)))
+    out["__cfg_birth_completion_area_band"] = np.asarray(float(getattr(args, "birth_completion_area_band", 0.25)))
+    out["__cfg_birth_completion_ramp_epochs"] = np.asarray(int(getattr(args, "birth_completion_ramp_epochs", 50)))
+    out["__cfg_birth_completion_post_level"] = np.asarray(float(getattr(args, "birth_completion_post_level", 0.0)))
     # (§22(2) fold) weight-entropy rate penalty is loss-only + trajectory-affecting (no param
     # keys — the surrogate is state-free) — same class: persist for the F2 divergence guard.
     out["__cfg_weight_entropy_penalty_lambda"] = np.asarray(
@@ -786,6 +797,15 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_area_constraint_birth", int(bool(getattr(args, "area_constraint_birth", False))), False),
         ("__cfg_area_constraint_birth_force", float(getattr(args, "area_constraint_birth_force", 1.0)), True),
         ("__cfg_area_constraint_tolerance", float(getattr(args, "area_constraint_tolerance", 0.25)), True),
+        # (v7.5 Lever-2) Morse-Smale birth-completion event + RAMP + params (loss-only, trajectory-
+        # affecting, no param keys). A resume that drops the ramp, or changes tau/band/ramp/post_level,
+        # would change the multiplier trajectory -> fail closed (the latched fire epochs ride __bc_*).
+        ("__cfg_birth_completion_event", int(bool(getattr(args, "birth_completion_event", False))), False),
+        ("__cfg_birth_completion_ramp", int(bool(getattr(args, "birth_completion_ramp", False))), False),
+        ("__cfg_birth_completion_tau_persist", float(getattr(args, "birth_completion_tau_persist", 0.8)), True),
+        ("__cfg_birth_completion_area_band", float(getattr(args, "birth_completion_area_band", 0.25)), True),
+        ("__cfg_birth_completion_ramp_epochs", int(getattr(args, "birth_completion_ramp_epochs", 50)), False),
+        ("__cfg_birth_completion_post_level", float(getattr(args, "birth_completion_post_level", 0.0)), True),
         # (§22(2) fold) weight-entropy rate penalty (loss-only, trajectory-affecting, no param keys).
         ("__cfg_weight_entropy_penalty_lambda",
          float(getattr(args, "weight_entropy_penalty_lambda", 0.0)), True),
@@ -968,13 +988,19 @@ class _LogitAdjustSegAdapter:
     decode, inflate) reads RAW logits and is UNCHANGED; the witness WEIGHTS absorb the pressure
     through training, the shipped forward stays the plain argmax."""
 
-    def __init__(self, inner: Any, offset: Any) -> None:
+    def __init__(self, inner: Any, offset: Any, offset_cell: "dict | None" = None) -> None:
         self._inner = inner
-        self._offset = offset            # (K,) mx.array = tau * log(prior)
+        self._offset = offset            # (K,) mx.array = tau * log(prior) — the STATIC base offset
+        # (v7.5 Lever-2 RAMP) optional mutable per-epoch offset cell {"offset": (K,) mx.array}. None
+        # => the static base offset (byte-identical). When set, segnet reads the RAMPED offset the
+        # per-epoch birth-completion snapshot wrote (base * per-class multiplier); pre-fire the
+        # multiplier is 1.0 so the cell holds base*1.0 == base (bit-exact fp32 multiply by 1.0).
+        self._offset_cell = offset_cell
         self.posenet = inner.posenet     # pass-through (pose term unadjusted)
 
     def segnet(self, frames_nhwc: Any):
-        return self._inner.segnet(frames_nhwc) + self._offset
+        off = self._offset if self._offset_cell is None else self._offset_cell["offset"]
+        return self._inner.segnet(frames_nhwc) + off
 
 
 def boundary_distance_band_map(lstar_hw: np.ndarray, band_px: float = 2.0) -> np.ndarray:
@@ -3824,6 +3850,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _validate_logit_adjust_compat(la_tau, int(getattr(args, "micro_batch_pairs", 1)))
     _loss_adapter = adapter
     _la_offset_mx = None   # (#D15) the (5,) offset the micro-batch twin's LeverConfig routes; None => OFF
+    # (v7.5 Lever-2 RAMP) whether the birth-completion RAMP is APPLIED to the loss surfaces. When ON,
+    # the logit-adjust offset becomes a per-epoch RAMPED value read from a mutable cell (below); the
+    # per-class multiplier scales base offset -> handoff. OFF => static offset (byte-identical). The
+    # detector (--birth-completion-event) is a SEPARATE, byte-neutral switch; --birth-completion-ramp
+    # requires it (fail-closed at the birth-completion setup block below).
+    _bc_ramp_on = bool(getattr(args, "birth_completion_ramp", False))
+    _bc_la_cell: "dict | None" = None    # {"offset": (5,) mx.array}; None unless ramp+logit-adjust ON
     if la_tau != 0.0:
         # (v7.5 Lever-3 regime coherence) restrict the boost to a class subset. 'all' (default) => the
         # incumbent every-class Menon adjustment (byte-identical). A comma list zeroes the offset of
@@ -3836,7 +3869,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             [np.asarray(gt.lstars[_pi]) for _pi in range(P)], la_tau, n_classes=5,
             allowed_classes=_la_allowed)
         _la_offset_mx = mx.array(_la_off)
-        _loss_adapter = _LogitAdjustSegAdapter(adapter, _la_offset_mx)
+        # (v7.5 Lever-2 RAMP) with the ramp ON, route the offset through a mutable per-epoch cell so
+        # the birth-completion snapshot can scale it PER-CLASS (base * multiplier). Init to the base
+        # offset => pre-fire (multiplier 1.0) the cell holds base*1.0 == base => byte-identical to the
+        # static path until a class fires. OFF => static offset (byte-identical always).
+        if _bc_ramp_on:
+            _bc_la_cell = {"offset": _la_offset_mx}
+        _loss_adapter = _LogitAdjustSegAdapter(adapter, _la_offset_mx, offset_cell=_bc_la_cell)
         print(json.dumps({"stage": "logit_adjust", "tau": la_tau,
                           "classes": ("all" if _la_allowed is None else list(_la_allowed)),
                           "priors": [round(float(x), 5) for x in _la_priors],
@@ -4135,6 +4174,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     amplify_form = str(getattr(args, "amplify_form", "hinge"))
     amplify_mtgt = float(getattr(args, "amplify_margin_target", 1.0))
     island_weight_mx: dict[int, Any] | None = None
+    # (v7.5 Lever-2 RAMP) DISJOINT per-class island split masks (lane / movable) keyed by pair,
+    # captured from the SAME IslandMasks the combined weight is built from (and rebuilt in lockstep
+    # by the ladder). They PARTITION island_weight_mx's support so the per-class ramp term equals the
+    # combined term at multiplier 1.0. None unless (--birth-completion-ramp AND --amplify-weight>0).
+    _bc_isl_lane: dict[int, Any] | None = ({} if (_bc_ramp_on and amplify_w > 0.0) else None)
+    _bc_isl_mov: dict[int, Any] | None = ({} if (_bc_ramp_on and amplify_w > 0.0) else None)
     # (#323) LADDER per-class-λ-gated homotopy state (None unless --ladder-island-homotopy AND
     # --amplify-weight > 0). When None, every ladder block below is skipped => byte-identical.
     _ladder_state: dict[str, Any] | None = None
@@ -4144,6 +4189,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             eased_island_masks,
             identify_island_classes,
             island_birth_from_signed_mx,
+            island_birth_perclass_from_signed_mx,
             island_persistence_weight,
         )
         _ladder_on = bool(getattr(args, "ladder_island_homotopy", False))
@@ -4153,6 +4199,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _mk_masks = eased_island_masks if _eased_on else build_island_masks
         _lst_stack_i = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
         _idet = identify_island_classes(_lst_stack_i, n_classes=5)
+
+        def _bc_capture_split(_pi: int, _masks: Any) -> None:
+            """(v7.5 Lever-2 RAMP) capture DISJOINT per-class (lane, movable) island masks from an
+            IslandMasks into the per-pair split dicts. movable = movable_mask & ~lane_mask (lane
+            priority) so lane ⊎ movable PARTITIONS any_mask exactly. No-op unless the ramp is on."""
+            if _bc_isl_lane is None or _bc_isl_mov is None:
+                return
+            _lane_m = (np.asarray(_masks.lane_mask, bool) if _masks.lane_mask is not None
+                       else np.zeros(np.asarray(_masks.any_mask).shape, bool))
+            _mov_m = (np.asarray(_masks.movable_mask, bool) if _masks.movable_mask is not None
+                      else np.zeros(np.asarray(_masks.any_mask).shape, bool))
+            _mov_disj = _mov_m & (~_lane_m)      # lane priority => disjoint partition of any_mask
+            _bc_isl_lane[int(_pi)] = mx.array(_lane_m.astype(np.float32)[None])   # (1,H,W)
+            _bc_isl_mov[int(_pi)] = mx.array(_mov_disj.astype(np.float32)[None])  # (1,H,W)
 
         def _ladder_build_iw(lane_px: int, movable_px: int) -> None:
             """(#323) Rebuild ``island_weight_mx`` IN PLACE at per-class radii (lane_px / movable_px).
@@ -4166,6 +4226,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     lane_px=int(lane_px), movable_px=int(movable_px))
                 _iww = island_persistence_weight(_imm.any_mask, kind=str(args.amplify_persist))
                 _new[_pi] = mx.array(np.asarray(_iww, np.float32)[None])
+                # (v7.5 Lever-2 RAMP) rebuild the per-class split masks in LOCKSTEP with the ladder's
+                # per-class radii so they keep PARTITIONING the (grown) combined-weight support.
+                _bc_capture_split(_pi, _imm)
             if island_weight_mx is not None:
                 island_weight_mx.clear()
                 island_weight_mx.update(_new)
@@ -4176,6 +4239,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             _idet.movable_cls, dilate_px=int(args.island_dilate_px))
             _iw = island_persistence_weight(_im.any_mask, kind=str(args.amplify_persist))
             island_weight_mx[pi] = mx.array(np.asarray(_iw, np.float32)[None])   # (1,H,W)
+            _bc_capture_split(pi, _im)   # (v7.5 Lever-2 RAMP) per-class split masks (no-op if ramp off)
         print(json.dumps({"stage": "island_amplify", "island_classes": list(_idet.island_classes),
                           "lane_cls": _idet.lane_cls, "movable_cls": _idet.movable_cls,
                           "weight": amplify_w, "form": amplify_form, "margin_target": amplify_mtgt,
@@ -4281,7 +4345,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # DEFAULT OFF (flag absent) => _birth_completion None => no observe => byte-identical.
     _birth_completion = None
     if bool(getattr(args, "birth_completion_event", False)):
-        from tac.witness_control.birth_completion import BirthCompletionController
+        from tac.witness_control.birth_completion import (
+            BirthCompletionController,
+            birth_ramp_multiplier_vector,
+        )
         _bc_spec = str(getattr(args, "birth_completion_classes", "1,3")).strip()
         _bc_classes = tuple(int(x) for x in _bc_spec.split(",") if x.strip() != "")
         if not _bc_classes:
@@ -4298,9 +4365,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "area_band": _birth_completion.area_band,
                           "ramp_epochs": _birth_completion.ramp_epochs,
                           "post_level": _birth_completion.post_level,
-                          "note": "Morse-Smale birth-completion DETECTOR live (persistence + area band); "
-                          "birth-stack ramp application = owed integration; advisory; "
-                          "pointer 0.19110 UNMOVED"}), flush=True)
+                          "ramp_apply": _bc_ramp_on,
+                          "note": ("Morse-Smale birth-completion detector + PER-CLASS ramp APPLIED to "
+                                   "island-amplify/persistence-recall/logit-adjust" if _bc_ramp_on
+                                   else "Morse-Smale birth-completion DETECTOR-ONLY (byte-neutral; "
+                                   "--birth-completion-ramp OFF => loss surfaces byte-identical)")
+                          + "; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+    # (v7.5 Lever-2 RAMP) fail-closed: --birth-completion-ramp APPLIES the per-class multiplier to the
+    # loss surfaces, which requires the DETECTOR (--birth-completion-event) to latch the fire epochs.
+    if _bc_ramp_on and _birth_completion is None:
+        raise ValueError("--birth-completion-ramp requires --birth-completion-event (the ramp applies "
+                         "the per-class completion multiplier the detector latches; fail closed).")
+    # (v7.5 Lever-2 RAMP) per-epoch per-class ramp multipliers the loss surfaces read. Identity
+    # (amp_lane=amp_mov=1.0, persist_scale=None) => byte-identical until a watched class fires; the
+    # per-epoch snapshot in the loop (near the persist-anneal gate) refreshes these from the latched
+    # controller. Only live when the ramp is ON (else the loss branches keep their incumbent path).
+    _bc_ramp: dict[str, Any] = {"amp_lane": 1.0, "amp_mov": 1.0, "persist_scale": None,
+                                "amp_active": False}
+    # the self-detected island class indices the amp-split multipliers key off (from _idet when amplify
+    # is on; the birth-completion watched classes should equal {lane_cls, movable_cls} = canonical {1,3}).
+    _bc_lane_cls = int(_idet.lane_cls) if (_bc_ramp_on and amplify_w > 0.0) else 1
+    _bc_mov_cls = int(_idet.movable_cls) if (_bc_ramp_on and amplify_w > 0.0) else 3
+    if _bc_ramp_on:
+        print(json.dumps({"stage": "birth_completion_ramp_apply", "lane_cls": _bc_lane_cls,
+                          "mov_cls": _bc_mov_cls,
+                          "surfaces": {"island_amplify": bool(amplify_w > 0.0),
+                                       "persistence_recall": bool(persist_w > 0.0),
+                                       "logit_adjust": bool(_bc_la_cell is not None)},
+                          "note": "per-class birth-completion ramp WIRED to the active birth surfaces; "
+                          "byte-identical until a class fires; advisory; pointer 0.19110 UNMOVED"}),
+                          flush=True)
     # #224 (5) island SEED + CONTAINMENT build (SEPARATE protected-seed module + its OWN AdamW group;
     # grad-shield applied to the seed leaf BETWEEN the dual value_and_grad and seed_opt.update — NEVER
     # touching the witness grouped-backward / MD-decoupling grads). The seed is a per-pair RGB residual
@@ -4614,8 +4708,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # BUILD #300 (a): the island-BIRTH term reads the WITNESS-ALONE margin (_signed_wa aliases
             # _signed when --witness-alone-island-loss is off => byte-identical) so it pushes the witness
             # to form the island, not the deploy-excluded seed.
-            _amp_contrib = amplify_w * island_birth_from_signed_mx(
-                _signed_wa, island_weight_mx[int(c1) // 2], amplify_mtgt, form=amplify_form)
+            _pi_amp = int(c1) // 2
+            if (_bc_ramp_on and _bc_ramp.get("amp_active", False)
+                    and _bc_isl_lane is not None and _bc_isl_mov is not None
+                    and _pi_amp in _bc_isl_lane):
+                # (v7.5 Lever-2 RAMP) PER-CLASS ramp: split the (ladder-maintained) combined island
+                # weight into DISJOINT lane/movable portions and scale each by its birth-completion
+                # multiplier. == the single combined term when both multipliers are 1.0 (pre-fire),
+                # so a completed class hands off INDEPENDENTLY of the still-growing class.
+                _amp_contrib = amplify_w * island_birth_perclass_from_signed_mx(
+                    _signed_wa, island_weight_mx[_pi_amp],
+                    _bc_isl_lane[_pi_amp], _bc_isl_mov[_pi_amp], amplify_mtgt,
+                    _bc_ramp["amp_lane"], _bc_ramp["amp_mov"], form=amplify_form)
+            else:
+                _amp_contrib = amplify_w * island_birth_from_signed_mx(
+                    _signed_wa, island_weight_mx[_pi_amp], amplify_mtgt, form=amplify_form)
             L = L + _amp_contrib
             if terms_out is not None:
                 terms_out["island_amplify"] = _amp_contrib
@@ -4651,9 +4758,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # BUILD #300 (a): island RECALL/topology reads the WITNESS-ALONE seg logits (_slog_wa aliases
             # _slog when --witness-alone-island-loss is off => byte-identical) so the recall term drives
             # the witness to reproduce the island skeleton itself, not free-ride the deploy-excluded seed.
+            # (v7.5 Lever-2 RAMP) per-class RECALL scale = the birth-completion multiplier per persist
+            # class (None until a class fires => byte-identical; the clDice topology term is UNSCALED).
             _per_contrib = persist_gate["w"] * persistence_topology_loss_mlx(
                 _slog_wa, lstar_oh, persist_classes, cldice_iters=persist_cldice_iters,
-                w_cldice=1.0, w_recall=persist_recall_w, sg_precomputed=_sg_pre)
+                w_cldice=1.0, w_recall=persist_recall_w, sg_precomputed=_sg_pre,
+                recall_class_scale=_bc_ramp["persist_scale"])
             L = L + _per_contrib
             if terms_out is not None:
                 terms_out["persistence"] = _per_contrib
@@ -7047,6 +7157,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _resume_registry.register("evt_curriculum", "__evt_", _FnResumable(
         write=lambda _p: _evt_state_arrays(_evt_state if _evt_on else None),
         restore=lambda _p, cfg: _evt_restore_from_cfg(_evt_state if _evt_on else None, cfg)))
+    # (v7.5 Lever-2) Morse-Smale birth-completion LATCHED fire epochs — the state the per-class ramp
+    # multiplier is a pure fn of, so a crash-resume reconstructs the IDENTICAL ramp trajectory. OFF
+    # (controller None) => write returns {} => no keys => byte-identical (no manifest). apply_restore
+    # updates the EXISTING controller's fired dict (params come from the resume argv; the F2 divergence
+    # guard fails closed if they diverged). Additive __bc_* => a legacy sidecar restores to un-fired.
+    from tac.witness_control.birth_completion import (
+        birth_completion_apply_restore as _bc_restore,
+        birth_completion_state_arrays as _bc_write,
+    )
+    _resume_registry.register("birth_completion", "__bc_", _FnResumable(
+        write=lambda _p: _bc_write(_birth_completion),
+        restore=lambda _p, cfg: _bc_restore(_birth_completion, cfg)))
 
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
@@ -7776,6 +7898,40 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # under event-triggering it should complete at the FIRED tau (_lever_epoch; ep when OFF).
             if persist_w > 0.0 and persist_classes:
                 persist_gate["w"] = persistence_anneal_weight(_lever_epoch(ep), persist_w, persist_warmup)
+            # (v7.5 Lever-2 RAMP) per-epoch birth-completion multiplier SNAPSHOT into the loss-surface
+            # cells. The controller LATCHES fire epochs at verdict cadence (async worker); the
+            # multiplier is a PURE fn of (latched fired epochs, ep) so this snapshot reconstructs the
+            # exact trajectory on resume (fired epochs restored from __bc_*). Under _verdict_lock (the
+            # worker mutates fired there). Identity until a class fires => byte-identical pre-fire:
+            #   * island: keep the COMBINED path (amp_active False) until an island class fires, then
+            #     switch to the DISJOINT per-class split (== combined at mult 1.0, ULP-close);
+            #   * persistence: persist_scale None (skip the module branch) until a persist class fires;
+            #   * logit-adjust: the offset cell holds the BASE offset (== base*1.0) until a class fires.
+            if _bc_ramp_on and _birth_completion is not None:
+                with _verdict_lock:
+                    _bc_mults = _birth_completion.all_multipliers(int(ep))
+                    _bc_any_fired = any(int(c) in _birth_completion.fired
+                                        for c in _birth_completion.classes)
+                _bc_ramp["amp_lane"] = float(_bc_mults.get(_bc_lane_cls, 1.0))
+                _bc_ramp["amp_mov"] = float(_bc_mults.get(_bc_mov_cls, 1.0))
+                _bc_ramp["amp_active"] = bool(
+                    _bc_lane_cls in _bc_mults and _bc_lane_cls in _birth_completion.fired
+                ) or bool(_bc_mov_cls in _bc_mults and _bc_mov_cls in _birth_completion.fired)
+                if persist_classes:
+                    _bc_ps = [float(_bc_mults.get(int(c), 1.0)) for c in persist_classes]
+                    _bc_ramp["persist_scale"] = (_bc_ps if any(s != 1.0 for s in _bc_ps) else None)
+                if _bc_la_cell is not None and _la_offset_mx is not None:
+                    _bc_mv = birth_ramp_multiplier_vector(_birth_completion, int(ep), n_classes=5)
+                    _bc_la_cell["offset"] = (_la_offset_mx if all(m == 1.0 for m in _bc_mv)
+                                             else _la_offset_mx * mx.array(_bc_mv, dtype=_la_offset_mx.dtype))
+                if _bc_any_fired and int(ep) % max(1, int(getattr(args, "eval_every", 25))) == 0:
+                    print(json.dumps({"stage": "birth_completion_ramp", "epoch": int(ep),
+                                      "multipliers": {int(c): round(float(m), 4)
+                                                      for c, m in _bc_mults.items()},
+                                      "amp_active": _bc_ramp["amp_active"],
+                                      "fired": {int(c): int(e) for c, e in _birth_completion.fired.items()},
+                                      "note": "per-class birth->boundary hand-off ramp (advisory); "
+                                      "pointer 0.19110 UNMOVED"}), flush=True)
             # BUILD #300 (b) island-SEED compose-weight anneal (transfer schedule full->0). Deterministic
             # in ep => RESUME reproduces the same weight (nothing to checkpoint). No spike-guard re-treat:
             # the ramp is SMOOTH (small per-epoch delta), not a discrete engage, so it never trips the
@@ -10167,6 +10323,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--birth-completion-classes", type=str, default="1,3",
                     help="v7.5 Lever-2: comma list of birthed classes to watch (canonical comma10k "
                     "order; default '1,3' = Lane,Movable).")
+    ap.add_argument("--birth-completion-ramp", action=argparse.BooleanOptionalAction, default=False,
+                    help="v7.5 Lever-2 RAMP-LANDED: APPLY the per-class ramp multiplier to the three "
+                    "birth-loss surfaces (island-amplify / persistence-recall / logit-adjust offset), "
+                    "each PER-CLASS independently, once a class fires. REQUIRES --birth-completion-event "
+                    "(fails closed otherwise). DEFAULT OFF => DETECTOR-ONLY (byte-identical loss; the "
+                    "detector + LOUD hand-off telemetry + resume state still run). ON => byte-identical "
+                    "UNTIL a class fires (multiplier==1.0 pre-fire). Advisory; pointer 0.19110 UNMOVED.")
     # BUILD #300 (SEED-ABSORPTION FIX; memo plateau_disambiguator_results_20260704.md). The island seed
     # (--seed-islands) is composited into the SegNet-scored frame1 and read by EVERY realized-through-R
     # seg lever, so once the seed satisfies the loss on the Lane+Movable island, dL/d(witness) ~= 0 there

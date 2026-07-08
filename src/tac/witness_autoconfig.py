@@ -1799,6 +1799,10 @@ _CRUCIBLE_V7_HOSC_BETA_END_EVENT = 3.177  # event-mode frozen-β endpoint = cont
 # rule-118 analytic band carries lane (freq_along≈6 cartoon basis); lane_carried (freq_along≈26) is
 # the registered counter-arm. v7.3 COMMITS to lane_offloaded per the operator-APPROVED basis rec.
 _CRUCIBLE_V7_BASIS_REGIME = "lane_offloaded"
+# (v7.5 RAMP-LANDED) the birth-completion persistence threshold (== BirthCompletionEvent default) the
+# DERIVED post_level = 1 - tau reads. Kept as a named constant so the compose site's post_level
+# derivation and any test share ONE source (value-provenance: DERIVED-AT-CONFIG, no magic literal).
+_CRUCIBLE_V7_BIRTH_COMPLETION_TAU = 0.8
 
 # Flags the DSL ``WitnessProgram`` emits ITSELF (flag_dict header + Preserve) OR that the typed
 # temp / stages / regularizers OWN — they must NOT ALSO live in ``base`` (else a double-emit).
@@ -2391,11 +2395,16 @@ def _build_crucible_v7(
         # (v7.5 birth-counter-force) Lever-2 MORSE-SMALE BIRTH-COMPLETION EVENT — the regime hand-off
         # (birth->boundary) once a class has persisted + settled into the equilibrium band. DEFENSE-IN-
         # DEPTH with Lever-1 (the multiplier self-limits area continuously; the event re-allocates the
-        # freed capacity, #302 discipline). DETECTOR + telemetry + resume-state are live; the birth-stack
-        # RAMP APPLICATION to the loss surfaces is the OWED integration (memo
-        # v75_birth_counterforce_20260708.md §Lever-2) — composing it activates the detector (byte-neutral
-        # observability), not yet the loss-surface ramp.
-        _typed_lever(BirthCompletionEvent()),
+        # freed capacity, #302 discipline). RAMP-LANDED (memo v75_birth_counterforce_20260708.md
+        # §RAMP-LANDED): the per-class ramp is now APPLIED to the three birth-loss surfaces
+        # (island-amplify / persistence-recall / logit-adjust offset), each PER-CLASS INDEPENDENTLY.
+        # post_level is DERIVED-AT-CONFIG from tau_persist: at completion a fraction tau_persist of the
+        # class's GT support is formed, so the residual birth force = the unformed fraction
+        # (1 - tau_persist) => the Lever-1 equilibrium settles at a tight (1 + (1-tau)*delta)*A_GT
+        # precision band. See tac.witness_control.birth_completion.derive_post_level_from_persistence.
+        _typed_lever(BirthCompletionEvent(
+            ramp_apply=True,
+            post_level=round(1.0 - _CRUCIBLE_V7_BIRTH_COMPLETION_TAU, 6))),
     )
 
     typed = TypedWitnessConfig(

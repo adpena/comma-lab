@@ -70,6 +70,9 @@ __all__ = [
     "BirthCompletionController",
     "birth_completion_state_arrays",
     "birth_completion_restore_from_cfg",
+    "birth_completion_apply_restore",
+    "birth_ramp_multiplier_vector",
+    "derive_post_level_from_persistence",
 ]
 
 #: persistence (=1-within_flip) a class must exceed to be birth-complete. DERIVED from the nucleus
@@ -232,3 +235,73 @@ def birth_completion_restore_from_cfg(cfg) -> "BirthCompletionController | None"
         ctrl.fired[int(c)] = int(e)
         ctrl._fires.append((int(c), int(e)))
     return ctrl
+
+
+def birth_completion_apply_restore(ctrl: "BirthCompletionController | None", cfg) -> bool:
+    """Restore the LATCHED per-class fire epochs from a resume sidecar ``cfg`` INTO an EXISTING
+    controller.
+
+    Unlike :func:`birth_completion_restore_from_cfg` (which builds a FRESH controller from the
+    persisted params), this keeps ``ctrl``'s argv-derived ``classes`` / ``tau_persist`` / ramp
+    params (the resume command's flags are authoritative; the F2 divergence guard fails closed if
+    they diverged) and restores ONLY the monotone fired-epoch state, so a crash-resume reconstructs
+    the IDENTICAL subsequent multiplier trajectory. Returns True iff any fire epoch was restored.
+
+    A legacy/un-fired sidecar (``__bc_fired_class`` absent OR empty) restores NOTHING => the
+    controller stays un-fired => byte-identical PRE-FIRE behavior (the additive ``__bc_*`` contract).
+    Only classes the live controller WATCHES are restored (a stale key for a no-longer-watched class
+    is ignored, fail-closed)."""
+    import numpy as np
+
+    if ctrl is None or cfg is None or "__bc_fired_class" not in cfg:
+        return False
+    fc = np.asarray(cfg.get("__bc_fired_class")).reshape(-1).tolist()
+    fe = np.asarray(cfg.get("__bc_fired_epoch", np.asarray([], np.int64))).reshape(-1).tolist()
+    watched = set(int(c) for c in ctrl.classes)
+    restored = False
+    for c, e in zip(fc, fe):
+        ci = int(c)
+        if ci in watched and ci not in ctrl.fired:
+            ctrl.fired[ci] = int(e)
+            ctrl._fires.append((ci, int(e)))
+            restored = True
+    return restored
+
+
+def derive_post_level_from_persistence(tau_persist: float = DEFAULT_TAU_PERSIST) -> float:
+    """The DERIVED post-birth birth-stack level (value-provenance: DERIVED-AT-CONFIG).
+
+    Balance arithmetic (Lever-1 Chan-Vese equilibrium): with the birth force ramped to
+    ``post_level * F_birth`` the equilibrium area is ``A* = A_GT * (1 + post_level * delta)``
+    (``delta`` = the area tolerance). At birth-completion, ``persistence >= tau_persist`` means the
+    class holds a fraction ``tau_persist`` of its GT support ABOVE the argmax margin (formed); the
+    remaining fraction ``1 - tau_persist`` is still below margin and is the ONLY part that still
+    needs birth pressure. Retaining exactly that unformed fraction of the force =>
+    ``post_level = 1 - tau_persist`` (a class 80%-formed at fire keeps 20% birth force for its
+    unformed tail; a fully-formed class would keep ~0). With the ``tau_persist = 0.8`` default the
+    residual equilibrium overshoot is ``0.2 * delta`` (e.g. 0.05 at delta=0.25 => A* = 1.05*A_GT),
+    a tight PRECISION band inside the completion band. Clamped to [0, 1]. Pure.
+
+    Epistemic (NO-FAKE): the FORM (residual force ∝ unformed fraction) is DERIVED; the absolute
+    best post_level is ASSUMED_AWAITING_VERIFICATION owed to the v7.5 A/B (sister of the Lever-1
+    lambda scale + the ramp-length fraction)."""
+    return max(0.0, min(1.0, 1.0 - float(tau_persist)))
+
+
+def birth_ramp_multiplier_vector(
+    ctrl: "BirthCompletionController | None", epoch: int, n_classes: int = 5,
+) -> list[float]:
+    """The per-class ramp-multiplier vector (length ``n_classes``) at ``epoch``.
+
+    ``mult[c] = ctrl.multiplier(c, epoch)`` for a watched class ``c`` (ramping 1.0 -> post_level
+    after its latched fire), else 1.0 (unwatched classes are never ramped). Used to scale the
+    per-class logit-adjust offset vector EXACTLY (element-wise, byte-identical when every entry is
+    1.0). ``ctrl is None`` => all-ones (identity). Pure."""
+    out = [1.0] * int(n_classes)
+    if ctrl is None:
+        return out
+    for c in ctrl.classes:
+        ci = int(c)
+        if 0 <= ci < int(n_classes):
+            out[ci] = float(ctrl.multiplier(ci, int(epoch)))
+    return out

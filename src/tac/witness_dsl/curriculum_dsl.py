@@ -2681,7 +2681,8 @@ def AreaConstraintBirth(birth_force: float = 1.0, tolerance: float = 0.25,  # no
 
 def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # noqa: N802 — v7.5 Lever-2
                          ramp_epochs: int = 50, post_level: float = 0.0,
-                         classes: str = "1,3", window: int = 0) -> Lever:
+                         classes: str = "1,3", window: int = 0,
+                         ramp_apply: bool = False) -> Lever:
     """v7.5 birth-counter-force Lever-2 — the MORSE-SMALE PERSISTENCE birth-completion event (engine
     ``tac.witness_control.birth_completion``; operator 2026-07-08: "a MORSE-SMALE PERSISTENCE event,
     not a bare part_frac threshold").
@@ -2696,25 +2697,42 @@ def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # n
     (precision). With :func:`AreaConstraintBirth` active this is DEFENSE-IN-DEPTH — the Lagrange
     multiplier self-limits area CONTINUOUSLY, the event RE-ALLOCATES the freed capacity (#302 discipline;
     unified level-set flow). The trainer flag ``--birth-completion-event`` is a store_true default-OFF
-    => byte-identical when this lever is not composed. window=0 = control-config lever, no epoch budget."""
+    => byte-identical when this lever is not composed. window=0 = control-config lever, no epoch budget.
+
+    ``ramp_apply`` (v7.5 RAMP-LANDED): when True, emits ``--birth-completion-ramp`` so the trainer
+    APPLIES the per-class ramp multiplier to the three birth-loss surfaces (island-amplify /
+    persistence-recall / logit-adjust offset), each PER-CLASS INDEPENDENTLY. Default False =
+    DETECTOR-ONLY (byte-neutral observability; the LOUD hand-off telemetry + resume state still fire)
+    so the ramp landing preserves the calibration-only mode. ``--birth-completion-ramp`` requires
+    ``--birth-completion-event`` (the trainer fails closed otherwise). With ``ramp_apply=True`` the
+    loss surfaces are byte-identical UNTIL a class actually fires (multiplier == 1.0 pre-fire); the
+    OFF path (no ``--birth-completion-ramp``) is byte-identical always."""
     if not (0.0 <= float(tau_persist) <= 1.0):
         raise ValueError(f"BirthCompletionEvent: tau_persist must be in [0,1], got {tau_persist!r}")
     if not (float(area_band) >= 0.0):
         raise ValueError(f"BirthCompletionEvent: area_band must be >= 0, got {area_band!r}")
     if int(ramp_epochs) < 1:
         raise ValueError(f"BirthCompletionEvent: ramp_epochs must be >= 1, got {ramp_epochs!r}")
+    if not (0.0 <= float(post_level) <= 1.0):
+        raise ValueError(f"BirthCompletionEvent: post_level must be in [0,1], got {post_level!r}")
+    overrides = {"--birth-completion-event": True,
+                 "--birth-completion-tau-persist": float(tau_persist),
+                 "--birth-completion-area-band": float(area_band),
+                 "--birth-completion-ramp-epochs": int(ramp_epochs),
+                 "--birth-completion-post-level": float(post_level),
+                 "--birth-completion-classes": str(classes)}
+    if bool(ramp_apply):
+        overrides["--birth-completion-ramp"] = True
     return Lever(
         "v75_birth_completion_event",
-        overrides={"--birth-completion-event": True,
-                   "--birth-completion-tau-persist": float(tau_persist),
-                   "--birth-completion-area-band": float(area_band),
-                   "--birth-completion-ramp-epochs": int(ramp_epochs),
-                   "--birth-completion-post-level": float(post_level),
-                   "--birth-completion-classes": str(classes)},
+        overrides=overrides,
         epochs_delta=window,
         notes=("v7.5 Lever-2 Morse-Smale birth-completion event (persistence>=tau AND area in band => "
                "ramp birth stack -> post_level; hand off birth->boundary regime); defense-in-depth with "
-               "AreaConstraintBirth; resume-safe; advisory until byte-closed"))
+               "AreaConstraintBirth; resume-safe; "
+               + ("RAMP APPLIED to loss surfaces (per-class)" if bool(ramp_apply)
+                  else "DETECTOR-ONLY (byte-neutral; ramp not applied)")
+               + "; advisory until byte-closed"))
 
 
 def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa: N802

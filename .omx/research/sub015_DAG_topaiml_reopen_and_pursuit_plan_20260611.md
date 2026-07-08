@@ -10398,6 +10398,28 @@ pressure + no precision cap imposes a majority-class d_seg floor = the conserved
 capacity/time-independent" — the Chan-Vese balance is its CURE. Memo
 `.omx/research/v75_birth_counterforce_20260708.md`. Pointer 0.19110 UNMOVED (means).
 
+### FEED-roadfloorfix ADDENDUM (2026-07-08) — RAMP-LANDED: the owed Lever-2 loss-surface ramp APPLICATION
+The §Lever-2 OWED integration (birth-stack RAMP APPLICATION) is now BUILT (the FEED-roadfloorfix memo
+called it the honest owed scope). On per-class birth-completion the birth pressures for THAT class ramp
+DOWN over a derived window, PER-CLASS INDEPENDENTLY: **logit-adjust offset** scaled element-wise by the
+per-class multiplier (EXACT); **persistence-recall** via a new `recall_class_scale` (clDice UNSCALED;
+None/ones byte-identical); **island-amplify** via `island_birth_perclass_from_signed_mx` — a DISJOINT
+lane/movable split of the ladder-maintained combined weight (movable = mask & ~lane; the two PARTITION
+any_mask) combined by support fraction, which EQUALS the combined term at multiplier 1.0 (measured
+|diff|=0.0) so a completed class hands off INDEPENDENTLY of the still-growing one; split masks rebuilt
+in LOCKSTEP with the ladder radii. New switch `--birth-completion-ramp` (default OFF = detector-only,
+byte-identical; requires `--birth-completion-event`, fail-closed). **post_level = 1 − τ_persist**
+(DERIVED-AT-CONFIG = 0.2 at τ=0.8: retain the unformed-tail fraction; Lever-1 equilibrium settles at a
+tight 1.05·A_GT precision band); ramp_epochs 50 ≈ min_stage_epochs/3 (both scales
+ASSUMED_AWAITING_VERIFICATION, owed to the A/B). Resume-safe: latched fire epochs ride the resume
+registry as the `birth_completion` FunctionResumable (`__bc_`, additive; legacy sidecar → un-fired →
+byte-identical pre-fire), event/ramp/params cfg-exported + F2-divergence-guarded. **crucible_v7 (v7.5)
+composes the ramp ON** (`--birth-completion-ramp`, `--birth-completion-post-level 0.2`). TRIALITY: DSL
+leg by construction (`BirthCompletionEvent(ramp_apply=...)` factory → `--birth-completion-ramp`);
+equations leg = the derived post_level balance in `derive_post_level_from_persistence` + the memo
+§RAMP-LANDED. 19 new tests + 310 related green; ruff F clean; dry-run chain green (crucible_v7 150/150
+flags validated, DSL-config gate OK). Memo §7 RAMP-LANDED. Pointer 0.19110 UNMOVED (means).
+
 ## FEED-handoff (2026-07-08) — Fable→Opus handoff: the two vehicle specs are the resume surface
 Operator: spend remaining Fable credits consolidating v7.5 + v8 into comprehensive rigorous spec
 docs so Opus takes over with no signal loss. LANDED: (1) **SPEC_v75_optimal_single_trunk**

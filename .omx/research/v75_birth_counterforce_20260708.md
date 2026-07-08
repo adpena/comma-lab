@@ -139,3 +139,79 @@ loss + Lever-3 mask + Lever-2 detector + argparse + cfg-export), `witness_autoco
 
 **Pointer 0.19110 UNMOVED — this is APPARATUS/MEANS. The next unit launches v7.5 (operator GO) and byte-closes
 the n600 row; the Lever-1 λ scale + Lever-2 ramp are the owed A/B measurements.**
+
+## 7. RAMP-LANDED — the owed Lever-2 loss-surface ramp application (2026-07-08)
+
+The §Lever-2 OWED integration (the birth-stack RAMP APPLICATION) is now BUILT. On per-class
+birth-completion (detector already live), the birth pressures for THAT class ramp DOWN over a
+derived window to their post-birth level, PER-CLASS INDEPENDENTLY (lane + movable complete on their
+own latches). New switch `--birth-completion-ramp` (default OFF => DETECTOR-ONLY, byte-identical
+loss; requires `--birth-completion-event`, fail-closed). crucible_v7 (v7.5) composes it ON.
+
+### 7.1 What ramps, and how (per-class, exact where separable)
+
+- **logit-adjust offset** (`_LogitAdjustSegAdapter`): a per-epoch mutable offset cell holds
+  `base_offset * per_class_multiplier_vector` (`birth_ramp_multiplier_vector`). EXACT per-class
+  (the (5,) offset scales element-wise); pre-fire the vector is all-1.0 so the cell == base offset
+  (bit-exact fp32 ×1.0) => byte-identical until a class fires.
+- **persistence-recall** (`persistence_topology_loss_mlx`, new optional `recall_class_scale`): scales
+  each persist class's RECALL contribution by its multiplier (clDice topology UNSCALED — retain
+  precision, hand off birth recall). `None`/all-ones => byte-identical (verified). EXACT per-class.
+- **island-amplify** (`island_birth_perclass_from_signed_mx`): the combined mean-1 island weight is a
+  weighted-MEAN (a ratio), NOT additively per-class-separable. Resolution: split the (ladder-
+  maintained) combined weight into DISJOINT lane/movable portions via the self-detected GT masks
+  (`movable = movable_mask & ~lane_mask`, lane priority => the two PARTITION the any_mask support) and
+  combine the per-class weighted-mean birth terms by their support FRACTION. IDENTITY (measured
+  |diff|=0.0): with both multipliers 1.0 this EQUALS the single combined term, so a completed class
+  hands off INDEPENDENTLY of the still-growing class (verified: lane→0 keeps movable's share, mov→0
+  keeps lane's, and the two shares sum to the combined). The split masks are rebuilt in LOCKSTEP with
+  the ladder's per-class radii (captured in both the initial build and `_ladder_build_iw`), so the
+  partition tracks the grown support. The combined→split switch is gated on `amp_active` (any island
+  class fired) so the OFF/pre-fire path stays the incumbent combined term (byte-identical / ULP-close
+  at the fire epoch where the multiplier is still 1.0).
+
+### 7.2 Derived post-birth level + ramp window (provenance)
+
+- **post_level = 1 − τ_persist** (`derive_post_level_from_persistence`; DERIVED-AT-CONFIG, no magic
+  literal — crucible reads `round(1 - _CRUCIBLE_V7_BIRTH_COMPLETION_TAU, 6)` = **0.2** at τ=0.8).
+  Balance arithmetic (Lever-1): with birth force ramped to `post_level·F_birth` the Chan-Vese
+  equilibrium sits at `A* = A_GT·(1 + post_level·δ)`. At completion `persistence ≥ τ_persist` means a
+  fraction τ_persist of the class's GT support is FORMED (above the argmax margin); only the unformed
+  tail `1−τ_persist` still needs birth pressure => retain exactly that fraction. At τ=0.8, δ=0.25 the
+  residual equilibrium overshoot = 0.2·0.25 = **0.05** (A* = 1.05·A_GT) — a tight PRECISION band well
+  inside the completion band [0.75,1.25]·GT. Epistemic: the FORM (residual ∝ unformed fraction) is
+  DERIVED; the absolute best post_level is ASSUMED_AWAITING_VERIFICATION (owed to the A/B, sister of
+  the Lever-1 λ scale). post_level=0 (full hand-off) is the τ→1 limit and remains the engine default.
+- **ramp_epochs** (default 50): DERIVED-AT-CONFIG as a sub-stage smoothing timescale ≈
+  `curriculum_min_stage_epochs/3` (150/3 = 50) — slow enough not to trip the spike-guard jump
+  detector, fast enough to free capacity within a stage. The exact fraction is
+  ASSUMED_AWAITING_VERIFICATION.
+
+### 7.3 Resume safety (proof sketch)
+
+The per-class ramp multiplier is a PURE function of `(latched fire epochs, epoch, ramp_epochs,
+post_level)`. The ONLY run-varying state is the latched fire-epoch dict, which now rides the resume
+registry as the `birth_completion` FunctionResumable (prefix `__bc_`, additive):
+`birth_completion_state_arrays` writes `__bc_fired_class/epoch` (+ params); `birth_completion_apply_
+restore` restores them INTO the live (argv-derived) controller. A crash-resume therefore reconstructs
+the IDENTICAL subsequent multiplier trajectory (verified: `birth_ramp_multiplier_vector` agrees pre-
+and post-restore at every epoch). Additive contract: a legacy sidecar (no `__bc_*`, or empty fired)
+restores to un-fired => byte-identical PRE-FIRE behavior. The event/ramp/params are cfg-exported
+(`__cfg_birth_completion_*`) + F2-divergence-guarded, so a resume that silently drops the ramp or
+changes τ/band/ramp/post_level fails closed. OFF (controller None) => write `{}` => no keys => no
+manifest (byte-identical, per the FunctionResumable non-event contract).
+
+### 7.4 Tests + gates
+
+`src/tac/tests/test_v75_birth_ramp_application.py` (19 tests): post_level derivation; multiplier
+vector identity/per-class-independence/out-of-range; apply_restore round-trip + legacy-unfired +
+stale-class + None; DSL ramp_apply flag emit + post_level validation; crucible v7.5 argv carries ramp
++ DERIVED post_level; island per-class identity (hinge + softplus) + partition/independence;
+persistence recall-scale None/ones byte-identity + per-class effect + length-mismatch fail-closed;
+trainer argparse exposes `--birth-completion-ramp`; resume-registry `__bc_` wiring round-trip. Full
+related sweep (crucible/v7.5/resume/autoconfig/DSL) 310 green; ruff F clean; dry-run chain green
+(crucible_v7 = 150/150 flags validated, DSL-config gate OK, launch.sh carries `--birth-completion-ramp`
++ `--birth-completion-post-level 0.2`; proven_base OFF-path carries NO ramp flag).
+
+**Pointer 0.19110 UNMOVED — APPARATUS/MEANS. The next unit launches v7.5 (operator GO) and byte-closes
+the n600 row; the post_level scale + ramp_epochs fraction are the pre-registered owed A/B measurements.**

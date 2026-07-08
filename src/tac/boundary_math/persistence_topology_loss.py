@@ -567,6 +567,7 @@ def persistence_topology_loss_mlx(
     eps: float = DEFAULT_EPS,
     sg_precomputed=None,
     extra_weight=None,
+    recall_class_scale=None,
 ):
     """Top-level persistence/topology loss (MLX) — FULLY BATCHED/VECTORIZED. Differentiable scalar.
 
@@ -579,6 +580,13 @@ def persistence_topology_loss_mlx(
 
     ``seg_logits`` (…,H,W,C) MLX logits (``adapter.segnet(f1)`` — already realized-through-R);
     ``lstar_oh`` (…,H,W,C) GT argmax one-hot.
+
+    ``recall_class_scale`` (optional, len == ``len(target_classes)``): a PER-CLASS multiplier on the
+    RECALL (birth) contribution ONLY — the clDice topology term is UNSCALED (precision is retained
+    while birth pressure hands off). Consumed by the v7.5 Morse-Smale birth-completion RAMP so a
+    completed class's persistence-recall pressure ramps down INDEPENDENTLY of the still-growing
+    classes. ``None`` (default) OR an all-ones scale => byte-identical to the pre-flag path. Values
+    are stop-grad constants (a schedule, not a learnable).
     """
     import mlx.core as mx
 
@@ -618,6 +626,16 @@ def persistence_topology_loss_mlx(
     recall = rnum / rden                                             # (M,)
 
     present = mx.stop_gradient((mx.sum(g, axis=ax) > 0.0).astype(mx.float32))  # (M,)
+    # (v7.5 Lever-2 birth-completion RAMP) per-class RECALL scale — None/all-ones => byte-identical.
+    # recall_class_scale is a (K,) per-class multiplier; M = reshape((N,K)) row-major, so class k of
+    # frame n is at m = n*K + k => tile the K-vector across the N frames. clDice (topology) is
+    # UNSCALED (retain precision; ramp birth recall only). stop-grad constant schedule.
+    if recall_class_scale is not None:
+        rcs = [float(x) for x in recall_class_scale]
+        if len(rcs) != k:
+            raise ValueError(f"recall_class_scale len {len(rcs)} != n target_classes {k}")
+        rscale_m = mx.stop_gradient(mx.array(rcs * n, dtype=recall.dtype))  # (M,) tiled over frames
+        recall = recall * rscale_m
     loss_m = present * (w_cldice * cldice_loss + w_recall * recall)             # (M,)
     return mx.sum(loss_m) / (mx.sum(present) + eps)
 

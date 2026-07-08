@@ -669,6 +669,44 @@ def island_birth_from_signed_mx(signed: Any, weight: Any, margin_target: float,
     return mx.sum(birth * weight) / (mx.sum(weight) + _EPS)
 
 
+def island_birth_perclass_from_signed_mx(
+    signed: Any, weight: Any, mask_a: Any, mask_b: Any, margin_target: float,
+    mult_a: float, mult_b: float, *, form: str = "hinge", tau: float = 0.3) -> Any:
+    """(v7.5 Lever-2 birth-completion RAMP) PER-CLASS ramped island-birth term.
+
+    Splits the combined mean-1 ``weight`` into DISJOINT per-class portions via ``mask_a`` / ``mask_b``
+    (each 0/1, and REQUIRED to PARTITION ``weight``'s support: ``mask_a & mask_b == 0`` and
+    ``(mask_a | mask_b) >= 1`` wherever ``weight > 0``) and combines the per-class WEIGHTED-MEAN birth
+    terms by their support FRACTION, each scaled by its ramp multiplier ``mult_a`` / ``mult_b``. This
+    lets a birth-COMPLETE class's amplification hand off INDEPENDENTLY of the still-growing class.
+
+    IDENTITY (byte-identity-until-fire): with ``mult_a == mult_b == 1.0`` this equals
+    ``island_birth_from_signed_mx(signed, weight, margin_target, form, tau)`` in EXACT arithmetic --
+    because ``f_a*mean_a + f_b*mean_b == sum(birth*weight)/sum(weight)`` when the two masks partition
+    the support (fp32 may differ by a few ULPs from summation grouping; ramp is an ON-path lever so
+    this is not a byte-identity claim -- the OFF path keeps the single combined term). Rides the
+    SHARED ``signed`` (#141); ``mask_*`` / ``weight`` are theta-INDEPENDENT constants (stop-grad by
+    construction)."""
+    import mlx.core as mx
+
+    z = float(margin_target) - signed
+    if form == "softplus":
+        t = max(float(tau), 1e-6)
+        birth = t * mx.logaddexp(mx.zeros_like(z), z / t)
+    else:
+        birth = mx.maximum(z, 0.0)
+    wa = weight * mask_a
+    wb = weight * mask_b
+    sw = mx.sum(weight) + _EPS
+    sa = mx.sum(wa)
+    sb = mx.sum(wb)
+    term_a = mx.sum(birth * wa) / (sa + _EPS)
+    term_b = mx.sum(birth * wb) / (sb + _EPS)
+    f_a = sa / sw
+    f_b = sb / sw
+    return float(mult_a) * f_a * term_a + float(mult_b) * f_b * term_b
+
+
 def make_island_birth_term_mx_compiled():
     """Return an ``mx.compile``-wrapped birth term ``f(seg_logits, island_oh, weight,
     margin_target_arr) -> scalar`` for the hot inner loop. ``margin_target`` is passed
