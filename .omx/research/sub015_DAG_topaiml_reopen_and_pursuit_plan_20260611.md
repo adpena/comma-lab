@@ -10475,3 +10475,19 @@ are DESIGNED not MEASURED — FORMALIZATION_PENDING per "council-flagged equatio
 their anchors land"; the derivation memo + this FEED carry the law; register when the per-force A/B n600
 rows land). 19 new tests + 151 neighbouring (registry/crucible/birth-ramp/autoconfig) green; ruff F clean.
 Landing memo `.omx/research/p0_forces_phase2_build_20260708.md`. Pointer 0.19110 UNMOVED (means).
+
+## FEED-gcm-ref (2026-07-08) — operator-dropped paper arXiv 2607.05153v1 "Geometric Causal Models" (Weinstein & Blei): HONEST TRIAGE = reference, NOT a v7.5/v8 lever
+Fetched + assessed. Causal inference from non-iid structured data via GROUP SYMMETRIES (ergodic
+theory for amenable groups → identification; geometric-DL + Bayesian → estimation; DNA app).
+verdict_scope: instance — NOT a launch lever, NOT on the pointer critical path (does not touch
+the composed v7.5 config or the launch chain); forcing a connection would violate the no-stray
+contract. GENUINE (secondary, non-urgent) resonances, recorded not fabricated: (1) symmetry-based
+IDENTIFICATION ↔ our task-quotient codec #155 (the scorer-quotient orbit ℝᴺ/(argmax-polytope ×
+pose-null) IS a symmetry quotient; v8 tropical-argmax reconciliation = lattice symmetry) — the
+right formal language for "what is codeable in the quotient"; (2) ego-motion EQUIVARIANCE ↔ the
+P0 temporal screw-consistency force + pose dual-use (we ALREADY exploit se(3) ξ / canonicalize-
+to-ground — GCM is a lens on well-posedness, not a new mechanism); (3) amenable-group ergodic
+identification ↔ corpus-generalization #211 (amortized meta-learned pre-seeding across a clip
+CORPUS — the one place it could become concrete IF that fork is pursued; better frame than iid).
+ROUTED as a reference to #155 + #211. No heavy mine spawned (off critical path); deeper mine
+available on operator request if a specific angle is intended.
