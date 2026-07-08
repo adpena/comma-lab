@@ -446,6 +446,12 @@ def build_witness_module(
             # low default; siren/finer/wire use siren_omega ~ 30). Read by _act AND SIREN init.
             self.periodic_omega = float(hosc_omega) if str(activation) == "hosc" else float(siren_omega)
             self.chroma = bool(chroma)
+            # SAFE-COMPILE (#252 v2) installable hook: None => the plain _act path runs
+            # (BYTE-IDENTICAL default, exactly the live default-OFF run). Set to
+            # mx.compile(pure_hosc) ONLY by tac.mlx_safe_compile.install_safe_compiled_regions
+            # when the CERTIFIED + fingerprint-fresh 'hosc_activation' region is enabled. A plain
+            # callable attribute (never an mx.array/Module) => not a trainable param.
+            self._compiled_act = None
             B = deterministic_fourier_B(n_fourier, fourier_sigma)
             # Fixed (non-trainable) Fourier projection, held as a plain constant.
             self._B = mx.array(B)
@@ -457,6 +463,14 @@ def build_witness_module(
 
         def _act(self, u: Any) -> Any:
             if self.activation == "hosc":
+                # SAFE-COMPILE (#252 v2): when the CERTIFIED hosc region is installed, route
+                # through the compiled pure fn (beta/omega as float32 array scalars so the
+                # per-epoch beta anneal is a traced input, never a baked constant). Default
+                # (_compiled_act is None) => the plain path below => BYTE-IDENTICAL.
+                _ca = self._compiled_act
+                if _ca is not None:
+                    return _ca(u, mx.array(self.hosc_beta, dtype=u.dtype),
+                               mx.array(self.hosc_omega, dtype=u.dtype))
                 return mx.tanh(self.hosc_beta * mx.sin(self.hosc_omega * u))
             if self.activation == "siren":
                 return mx.sin(self.siren_omega * u)

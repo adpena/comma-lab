@@ -1309,6 +1309,33 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[launch-witness] WARNING: mem-preflight unavailable ({type(exc).__name__}: {exc}); "
               f"safe_run --rss-cap-mb {args.rss_cap_mb} remains the runtime backstop.", file=sys.stderr)
 
+    # (b2) SAFE-COMPILE MANIFEST FRESHNESS (#252 v2 per-chip trust). When the launch.sh arms
+    # --safe-compile-regions != none, the CERTIFICATE it will activate must have been measured on THIS
+    # host (fp-contraction is per-chip). REFUSE (rc=4) a stale/absent manifest so a certificate carried
+    # from another chip/macOS/MLX can never silently activate a compiled region. Byte-identical configs
+    # (default 'none') skip this entirely. Advisory in --dry-run.
+    try:
+        _sc_text = Path(launch_sh).read_text()
+        _sc_spec = _flag_value(_sc_text.split(), "--safe-compile-regions")
+        if _sc_spec and _sc_spec.strip().lower() not in ("none", "off", ""):
+            from tac.mlx_safe_compile import CertificationManifest, manifest_fingerprint_ok
+            _sc_mpath = _flag_value(_sc_text.split(), "--safe-compile-manifest") or str(
+                _REPO / ".omx" / "state" / "mlx_safe_compile_manifest.json")
+            _sc_man = CertificationManifest.load(_sc_mpath) if os.path.exists(_sc_mpath) else None
+            _fp_ok, _fp_reason = manifest_fingerprint_ok(_sc_man)
+            if _sc_man is None:
+                _fp_ok, _fp_reason = False, f"safe-compile manifest absent at {_sc_mpath} (recertify on this host)"
+            print(f"# safe-compile: spec={_sc_spec!r} manifest={_sc_mpath} fingerprint_ok={_fp_ok} — {_fp_reason}")
+            if not _fp_ok and not args.dry_run:
+                print(f"[launch-witness] ERROR: REFUSING to launch — safe-compile {_fp_reason}. "
+                      f"Recertify: python -m tac.mlx_safe_compile --certify --out {_sc_mpath}",
+                      file=sys.stderr)
+                return 4
+    except Exception as exc:  # freshness check must never wedge a launch; WARN and continue.
+        print(f"[launch-witness] WARNING: safe-compile freshness check unavailable "
+              f"({type(exc).__name__}: {exc}); trainer resolve_enabled_regions remains the runtime "
+              f"backstop (also fail-closed on stale fingerprint).", file=sys.stderr)
+
     # (b1-sys) SYSTEM ADMISSION HARD GATE — the SUM-over-RAM crash guard (the P0 fix). The per-run
     # projection above is blind to what ELSE is running; this composes THIS run's projected peak with
     # the live system-wide used RAM + all active jobs' remaining growth vs the adaptive ceiling. REFUSE
