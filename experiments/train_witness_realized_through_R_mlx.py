@@ -987,6 +987,38 @@ def focal_pixel_weight_mlx(seg_logits, lstar_oh, gamma: float):
     return mx.stop_gradient(fw / (mx.mean(fw) + 1e-8))
 
 
+def _seg_unify_tau_perpixel(seg_logits, lstar_oh, tau):
+    """The ONE continuous seg-loss family (witness-native schedule derivation 20260709 §1.2):
+
+        L_τ(φ, y) = τ · logsumexp_k(φ_k / τ) − φ_y
+
+    -- the temperature-τ multi-class cross-entropy. It is NOT two loss forms; ``ce`` and
+    ``tau_softplus`` are its τ=1 and τ→0 ENDPOINTS:
+
+      * **τ = 1**  →  ``logsumexp(φ) − φ_y`` = standard multi-class CE (the ``ce`` branch's per-pixel
+        base, EXACTLY: ``φ/1.0 == φ`` and ``1.0 * y == y`` for finite IEEE floats).
+      * **τ → 0**  →  ``max_k φ_k − φ_y = ReLU(−m)`` where ``m = φ_y − max_{k≠y} φ_k`` is the top1−top2
+        margin — the max-margin / perceptron / hinge form (``logsumexp → max``).
+
+    RELATION TO ``tau_softplus`` (documented, not fudged): the incumbent ``tau_softplus`` branch is
+    ``τ · softplus(−m/τ)``, which is the TOP-2 (gt vs runner-up) REDUCTION of THIS multi-class L_τ
+    (``logsumexp(φ/τ) ≈ logaddexp(φ_y/τ, φ_r/τ)`` keeping only the two dominant logits ⇒
+    ``τ·logaddexp(φ_y/τ, φ_r/τ) − φ_y = τ·softplus(−m/τ)``). They COINCIDE as τ→0 (both → ReLU(−m))
+    and in the 2-class case; at moderate τ (e.g. 0.3) the full-multiclass L_τ ≥ the top-2 reduction,
+    the gap being the sub-runner-up logsumexp mass over the other classes. So L_τ is NOT a rescale of
+    ``tau_softplus`` at general τ — it is the parent whose top-2 marginal IS ``tau_softplus``.
+
+    Pure MLX (no model / render / SegNet); ``tau`` a python/mlx scalar > 0. Returns the per-pixel map
+    (same shape as ``logsumexp(seg_logits, axis=-1)``) BEFORE any hinge / margin / pixel weighting
+    (the caller applies the SAME weights the ``ce`` branch uses, so τ=1 reproduces the full CE branch).
+    """
+    import mlx.core as mx
+
+    logsum_t = tau * mx.logsumexp(seg_logits / tau, axis=-1)
+    tgt = mx.sum(seg_logits * lstar_oh, axis=-1)
+    return logsum_t - tgt  # τ·logsumexp(φ/τ) − φ_y  (τ=1 ≡ CE; τ→0 → ReLU(−margin))
+
+
 def make_loss_fn(
     adapter,
     render_h: int,
@@ -1115,6 +1147,22 @@ def make_loss_fn(
             if apply_mw:
                 hinge_map = hinge_map * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
             seg_l = mx.mean(hinge_map if seg_pixel_w is None else hinge_map * seg_pixel_w)
+        elif form == "unify_tau":
+            # (--seg-form-unify-tau, witness-native schedule derivation 20260709 §1.2) The ONE
+            # CONTINUOUS seg-loss family L_τ = τ·logsumexp(φ/τ) − φ_y, τ = ``tau_use`` = the render
+            # softmax-temp for this epoch (loss-τ COUPLED to render-τ; the levelset trainer passes
+            # ``tau_override``). There is NO CE→tau_softplus switch: CE is L_τ's τ≈1 arc, the
+            # margin/tau_softplus objective its τ→τ* arc. Carries the SAME hinge / margin / pixel
+            # weights as the ``ce`` branch below, so at τ=1 this branch reproduces the FULL CE branch
+            # (``_seg_unify_tau_perpixel`` at τ=1 ≡ ``logsumexp(φ) − φ_y`` to fp/bit tolerance). The
+            # ``tau_softplus`` branch above is the TOP-2 reduction of this multiclass form (see the
+            # kernel docstring); they agree as τ→0 and differ at moderate τ by the sub-runner-up mass.
+            lt = _seg_unify_tau_perpixel(seg_logits, lstar_oh, tau_use)  # (1,H,W)
+            w = 1.0 + hinge * mx.exp(-mx.clip(margin, 0.0, 1e9))
+            pw = lt * w[None]  # (1,H,W)
+            if apply_mw:
+                pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
+            seg_l = mx.mean(pw if seg_pixel_w is None else pw * seg_pixel_w)
         else:  # "ce"
             logsum = mx.logsumexp(seg_logits, axis=-1)
             tgt = mx.sum(seg_logits * lstar_oh, axis=-1)

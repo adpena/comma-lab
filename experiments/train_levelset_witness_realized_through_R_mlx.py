@@ -1714,6 +1714,35 @@ def validate_lane_thin_config(
         raise ValueError(f"--lane-thin-radius ({lane_thin_radius}) must be >= 0 (window half-width).")
 
 
+def validate_seg_form_unify_tau_config(*, seg_form_unify_tau: bool, argv=None) -> None:
+    """(--seg-form-unify-tau, derivation 20260709) Mutual-exclusion guard: fail LOUD not silent.
+
+    When unify is ON the seg loss is the ONE continuous ``L_τ = τ·logsumexp(φ/τ) − φ_y`` family and
+    the discrete ``_seg_form_for_epoch`` dispatch (CE→tau_softplus→l7) is BYPASSED entirely, so
+    ``--tau-softplus-start-epoch`` (the epoch of the discrete CE→tau_softplus SWITCH) is MEANINGLESS
+    — the switch it schedules no longer exists. The v7 config drops the flag entirely (this also
+    DELETES, rather than tags, one of the 5 NAKED schedule-provenance violations). Passing BOTH
+    ``--seg-form-unify-tau`` AND an explicit ``--tau-softplus-start-epoch`` is therefore a config
+    CONTRADICTION (a stale discrete-schedule knob silently riding a dissolved-loss run) and is
+    REFUSED. We detect the flag EXPLICITLY on the CLI (not via its value, whose argparse default 300
+    is indistinguishable from a user-set 300). Pure + total (``argv`` injectable) => $0 unit-testable.
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" + the fail-closed
+    discipline; the sister ``--l7-start-epoch`` is likewise inert under unify (documented in the memo,
+    not gated here since it defaults to a >=epochs 'never' sentinel and never contradicts)."""
+    if not seg_form_unify_tau:
+        return
+    _argv = list(sys.argv if argv is None else argv)
+    explicit = any(a == "--tau-softplus-start-epoch" or a.startswith("--tau-softplus-start-epoch=")
+                   for a in _argv)
+    if explicit:
+        raise ValueError(
+            "--seg-form-unify-tau dissolves the CE->tau_softplus discrete switch into ONE continuous "
+            "L_tau seg loss, so --tau-softplus-start-epoch (the discrete-switch epoch) is MEANINGLESS. "
+            "Passing both is a config contradiction (a stale discrete-schedule knob on a dissolved-loss "
+            "run). Drop --tau-softplus-start-epoch -- the v7 unified config drops it entirely."
+        )
+
+
 def lever_gate_on_at_epoch(weight: float, start_epoch: int, ep: int) -> bool:
     """Engagement predicate for the additive margin levers (lane-edge / margin-saliency / thin-lane).
 
@@ -1786,6 +1815,13 @@ def _adam_bias_correction_for(adam_beta2: float) -> bool:
 
 
 def _seg_form_for_epoch(ep: int, args) -> str:
+    # (--seg-form-unify-tau, derivation 20260709) DISSOLVE the discrete CE→tau_softplus→l7 dispatch
+    # into the ONE continuous L_τ family: the seg form is CONSTANT ("unify_tau") for every epoch, so
+    # there is no discrete loss-form boundary to switch (τ is annealed continuously via the render
+    # softmax-temp; the coupled loss-τ is passed as tau_override at the call site). Short-circuits
+    # BEFORE the curriculum branches so it holds whether or not --curriculum is set.
+    if getattr(args, "seg_form_unify_tau", False):
+        return "unify_tau"
     if not args.curriculum:
         return args.seg_loss
     if ep < args.tau_softplus_start_epoch:
@@ -3543,6 +3579,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         focal_gamma=focal_gamma,
     )
 
+    # (--seg-form-unify-tau, derivation 20260709 §1.2) unify-τ closure state. When ON, the seg loss
+    # is the ONE continuous L_τ = τ·logsumexp(φ/τ) − φ_y (form == "unify_tau") with τ COUPLED to the
+    # render softmax-temp. ``_unify_tau_state["tau"]`` is refreshed per-epoch in the loop (the SAME
+    # closure-cell idiom as _eik_stab["visco_eps"]); total_loss_fn reads it ONLY when seg_form ==
+    # "unify_tau". DEFAULT-OFF (flag absent) => _unify_tau_on False => tau_override never passed =>
+    # BYTE-IDENTICAL to the discrete-dispatch path.
+    _unify_tau_on = bool(getattr(args, "seg_form_unify_tau", False))
+    _unify_tau_state = {"tau": None}
+
     # LEVER-3 (lane-edge fragility weighting) hyperparameters captured from args (static; closure
     # constants, NOT value_and_grad args -> ZERO change to the call site). lane_edge_weight=0.0
     # (default) => the branch below is skipped => behavior IDENTICAL to before (fully additive).
@@ -3994,7 +4039,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (--seg-spike-reweight) per-pixel spike/coherent map for THIS pair (pi==int(c1)//2); None when
         # the lever is off => base_loss byte-identical. A stop-grad theta-independent constant multiplier.
         _seg_px_w = _spike_w_mx[int(c1) // 2] if _spike_reweight_on else None
-        L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form, seg_pixel_w=_seg_px_w, terms_out=terms_out)
+        # (--seg-form-unify-tau) COUPLE loss-τ to the render softmax-temp for the unified L_τ form.
+        # None (default-off, or any non-unify form) => base_loss uses its tau_softplus_tau closure
+        # default => BYTE-IDENTICAL (passing tau_override=None == not passing it).
+        _uni_tau = _unify_tau_state["tau"] if (_unify_tau_on and seg_form == "unify_tau") else None
+        L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form, tau_override=_uni_tau, seg_pixel_w=_seg_px_w, terms_out=terms_out)
         phi0 = model.sdf(cf, c0)
         # (THETA* TIER-2 STRETCH-1) junction relax threaded; eik_jrelax=0.0 (default) => BIT-IDENTICAL.
         # (--length-sigma-matrix) sigma threaded; _len_sigma None (default) => BYTE-IDENTICAL path.
@@ -6060,8 +6109,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
     # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0). Under
     # event-triggering, read the current stage from the (possibly restored) controller state instead.
-    prev_seg_form = (_evt_current_stage_form(_evt_state) if _evt_on
-                     else _seg_form_for_epoch(start_epoch, args))
+    # (--seg-form-unify-tau) constant seg_form => init prev to "unify_tau" so the CURRICULUM
+    # transition re-treat (spike-guard clear / LR re-warmup for the CE->tau boundary) NEVER fires for
+    # the dissolved boundary (it fires only on seg_form != prev_seg_form; constant => never). The
+    # Muon-entry re-treat is a SEPARATE trigger (muon_switched) and is UNAFFECTED.
+    prev_seg_form = ("unify_tau" if _unify_tau_on
+                     else (_evt_current_stage_form(_evt_state) if _evt_on
+                           else _seg_form_for_epoch(start_epoch, args)))
     # MUON FINISHER (FEED-fi) per-stage optimizer switch state. muon_start_epoch None (default) =>
     # muon_switched stays False forever => the switch block + tag suffix never fire => BIT-IDENTICAL
     # to the pre-FEED-fi AdamW-throughout path. Effective LRs default to 0.1*lr (PR95 ~0.1x finetune).
@@ -6443,7 +6497,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (#292 build-2) EVENT-TRIGGERED CURRICULUM: when ON, the stage form + boundary resolution
             # come from the deterministic loss-plateau controller (caps = the hardcoded epochs). When OFF
             # (default), this is the ORIGINAL hardcoded call, UNCHANGED => byte-identical (the #205 path).
-            if _evt_on:
+            if _unify_tau_on:
+                # (--seg-form-unify-tau) the CE->tau_softplus discrete boundary is DISSOLVED into ONE
+                # continuous L_τ; seg_form is CONSTANT, so the curriculum transition-easing apparatus
+                # never fires for the (non-existent) boundary. The event-triggered controller is
+                # bypassed (nothing discrete to resolve); Muon-entry easing is a separate trigger.
+                seg_form = "unify_tau"
+                _evt_event = None
+            elif _evt_on:
                 seg_form, _evt_event = _evt_resolve_seg_form(ep, _evt_state, args)
                 if _evt_event is not None:
                     print(json.dumps(_evt_event), flush=True)
@@ -6863,6 +6924,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 else:
                     _alarm["adaptive_inert_since"] = None
                 _alarm["adaptive_last_eps"] = float(_ve)
+            # (--seg-form-unify-tau) COUPLE the unified-L_τ loss temperature to the render softmax-temp
+            # for THIS epoch (loss-τ = render-τ; derivation 20260709 §1.2), floored at --softmax-temp-end
+            # (the resolution knee τ*; below it further sharpening aliases sub-grid detail the hard argmax
+            # verdict cannot read). Set AFTER every per-epoch softmax_temp mutation (the anneal set above +
+            # the TAIL warm-restart override) so the loss τ tracks whatever the render τ ended up as.
+            # DEFAULT-OFF (_unify_tau_on False) => cell stays None + total_loss_fn never reads it =>
+            # BYTE-IDENTICAL.
+            if _unify_tau_on:
+                _unify_tau_state["tau"] = max(float(model.softmax_temp), float(args.softmax_temp_end))
             # LEVER-5: base permutation (every pair >=1 step, never starved) + hardness-allocated
             # extras. n_extra=0 (default) => order == permutation(P) => byte-identical to before.
             order = np.random.permutation(P)
@@ -7430,9 +7500,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # and resumable from disk at completion. Saves the EMA SHADOW (deploy), NOT live (EMA rule).
     # (#292 build-2) event-triggered: the final stage form is the controller's CURRENT stage (the OFF
     # _seg_form_for_epoch(last_ep) would use the hardcoded caps, not the actually-fired boundaries).
+    # (--seg-form-unify-tau) constant seg_form => the final stage tag is the dissolved-loss form, NOT
+    # the stale event-controller stage 0 ("ce"): _evt_state is never advanced under unify (the loop
+    # bypasses _evt_resolve_seg_form), so _evt_current_stage_form would mis-tag the final ckpt. Guarded
+    # by _unify_tau_on => DEFAULT-OFF path byte-identical.
     final_form = (
-        _evt_current_stage_form(_evt_state) if (_evt_on and last_ep >= 1)
-        else (_seg_form_for_epoch(last_ep, args) if last_ep >= 1 else args.seg_loss))
+        "unify_tau" if _unify_tau_on
+        else (_evt_current_stage_form(_evt_state) if (_evt_on and last_ep >= 1)
+              else (_seg_form_for_epoch(last_ep, args) if last_ep >= 1 else args.seg_loss)))
     # FEED-fi: the FINAL ckpt is the Muon-finished decoder when the finisher ran -> tag it "_muon"
     # so it is distinctly byte-closeable (suffix "" when off => identical to the pre-FEED-fi path).
     _final_tag = (_stage_tag(final_form) + ("_muon" if muon_switched else "")) if args.stage_checkpoints else None
@@ -7917,6 +7992,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--curriculum", action=argparse.BooleanOptionalAction, default=False)
     ap.add_argument("--tau-softplus-start-epoch", type=int, default=300)
     ap.add_argument("--l7-start-epoch", type=int, default=800)
+    # (--seg-form-unify-tau, witness-native schedule derivation 20260709 §1.2) DISSOLVE the discrete
+    # CE->tau_softplus loss-form switch into the ONE continuous family L_τ = τ·logsumexp(φ/τ) − φ_y,
+    # with loss-τ COUPLED to the render softmax-temp (the SAME --softmax-temp-* geometric anneal),
+    # floored at --softmax-temp-end (τ*). τ=1 IS cross-entropy; τ→0 IS max-margin. Removes the last
+    # PR95 stage bone (the "PR95 d_seg sequence" hard dispatch) instead of easing it. DEFAULT-OFF
+    # (store_true) => seg_form dispatch unchanged => BYTE-IDENTICAL. Mutually exclusive with an
+    # explicit --tau-softplus-start-epoch (validate_seg_form_unify_tau_config refuses both; the v7
+    # config drops that flag entirely).
+    ap.add_argument("--seg-form-unify-tau", action="store_true", default=False,
+                    help="dissolve CE->tau_softplus into ONE continuous L_τ=τ·logsumexp(φ/τ)−φ_y; "
+                         "loss-τ = render softmax-temp (floored at --softmax-temp-end). Default OFF "
+                         "= byte-identical. Refuses an explicit --tau-softplus-start-epoch.")
     # (#292 build-2) EVENT-TRIGGERED CURRICULUM: fire the CE->tau_softplus->l7_softplus transitions on
     # loss-plateau CONVERGENCE (deterministic, from the SYNCHRONOUS ep_loss -- never the async d_seg
     # verdict) instead of the hardcoded epochs above, which then act as HARD CAPS (the trigger only
@@ -8869,6 +8956,10 @@ def main(argv: list[str] | None = None) -> int:
         lane_edge_weight=args.lane_edge_weight, lane_edge_start_epoch=args.lane_edge_start_epoch,
         epochs=args.epochs, lane_edge_class=args.lane_edge_class, n_classes=5,
     )
+
+    # (--seg-form-unify-tau) fail-closed mutual-exclusion: refuse a stale explicit
+    # --tau-softplus-start-epoch riding a dissolved-loss run (the discrete switch no longer exists).
+    validate_seg_form_unify_tau_config(seg_form_unify_tau=bool(getattr(args, "seg_form_unify_tau", False)))
 
     # (LEVER-B) thin-lane dropped-dash prior fail-closed config guard (same NO-FAKE silent-no-op class).
     validate_lane_thin_config(
