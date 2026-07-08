@@ -1819,6 +1819,30 @@ def LadderIslandHomotopy(  # noqa: N802 — #323 FULL LADDER island-birth lever
                        "never uniform amplification; realized THROUGH R; advisory until byte-closed")
 
 
+def SegFormUnifyTau() -> Lever:  # noqa: N802 — witness-native schedule derivation 20260709
+    """DISSOLVE the discrete CE→tau_softplus loss-form switch into the ONE continuous τ-homotopy
+    (witness-native schedule derivation ``.omx/research/witness_native_schedule_derivation_20260709.md``
+    §1.2): the seg loss becomes the ONE family ``L_τ = τ·logsumexp(φ/τ) − φ_y`` with loss-τ COUPLED to
+    the render softmax-temp anneal (``--softmax-temp-*``, geometric shape), floored at the resolution
+    knee ``--softmax-temp-end`` (τ*).
+
+    ``τ=1`` recovers cross-entropy EXACTLY (the "CE stage" is L_τ's τ≈1 arc); ``τ→0`` is the max-margin
+    form (the "tau_softplus stage" is its τ→τ* arc). There is NO ep300 CE→tau switch — this removes the
+    LAST PR95 stage bone (the ``_seg_form_for_epoch`` "PR95 d_seg sequence" hard dispatch) instead of
+    easing it. The trainer flag ``--seg-form-unify-tau`` is a store_true default-OFF => byte-identical
+    when this lever is not composed. COMPOSE with a geometric τ anneal (``--tau-anneal-shape geometric``,
+    the derivation's element-2 flip) for the full derived schedule.
+
+    MUTUALLY EXCLUSIVE with an explicit ``--tau-softplus-start-epoch`` (the trainer's
+    ``validate_seg_form_unify_tau_config`` refuses both) — the discrete-switch epoch is meaningless once
+    the switch is dissolved; the v7 config DROPS that flag entirely. No ``epochs_delta``: this is a
+    full-run schedule reshape, not a warm-start isolation arm."""
+    return Lever("seg_form_unify_tau",
+                 overrides={"--seg-form-unify-tau": True},
+                 notes="dissolve CE→tau_softplus into ONE continuous L_τ=τ·logsumexp(φ/τ)−φ_y "
+                       "(loss-τ = render softmax-temp, floored at τ*); removes the last PR95 stage bone")
+
+
 def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N802 — #287
     """#287 EGO-PHASE DASH COMB — the cell-problem corrector of the dash-erasure
     homogenization law (``tac.canonical_equations.dash_erasure_homogenization_20260707``):
