@@ -68,6 +68,7 @@ def test_standard_contract_both_false_keeps_core_blocks() -> None:
         "CONTROL_LAW_CLAUSE",
         "RETRIEVAL_FIRST_CLAUSE",
         "REVIEW_STATUS_CLAUSE",
+        "CITATION_CLAUSE",
         "MANUAL_CITATION",
     ):
         assert getattr(sc, name) in composed, f"core block {name} must always compose"
@@ -82,9 +83,9 @@ def test_standard_contract_grounding_phrase_always_present() -> None:
 
 def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
-    # 13 blocks by default (6 harvest + 4 #346 clauses + review + triality + manual)
-    # -> 12 separators.
-    assert composed.count("\n\n") == 12
+    # 14 blocks by default (6 harvest + 4 #346 clauses + requirement-S citation
+    # clause + review + triality + manual) -> 13 separators.
+    assert composed.count("\n\n") == 13
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:
@@ -143,6 +144,20 @@ def test_346_clauses_are_not_review_only() -> None:
 
 def test_retrieval_first_clause_names_the_query_tool() -> None:
     assert "tools/corpus_query.py" in sc.RETRIEVAL_FIRST_CLAUSE
+
+
+def test_citation_clause_content_and_composition() -> None:
+    """Requirement S: the citation clause is CORE (composes in every variant), demands
+    resolvable IDs verified before recording, and requires explicit no-paper-exists."""
+    text = sc.CITATION_CLAUSE
+    assert "authors · year · exact title · arXiv ID or DOI" in text
+    assert "before" in text.lower() and "resolves" in text
+    assert "no supporting paper exists" in text
+    assert "CITATION_CLAUSE" in sc.CONTRACT_CONSTANT_NAMES
+    assert "CITATION_CLAUSE" not in sc.REVIEW_ONLY_CONSTANT_NAMES
+    for kwargs in ({}, {"review": False}, {"triality": False},
+                   {"review": False, "triality": False}):
+        assert text in sc.standard_contract(**kwargs)
 
 
 def test_control_law_clause_forbids_tbd_and_names_the_five_forms() -> None:

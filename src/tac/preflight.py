@@ -86468,6 +86468,11 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     "CONTROL_LAW_CLAUSE",
     "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_STATUS_CLAUSE",
+    # Requirement-S citation provenance clause (T5 crucible, 2026-07-08 — every
+    # research charter records resolvable citations at the point of derivation;
+    # backfill: .omx/research/t5_crucible/BIBLIOGRAPHY_20260708.md). Hardcoded
+    # here per the same anti-self-waive design.
+    "CITATION_CLAUSE",
 )
 _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
     "Before reporting progress, audit each claim against a tool result"

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 __all__ = [
     "ANTI_GOLDPLATING",
+    "CITATION_CLAUSE",
     "CONFIRMED_VS_PLAUSIBLE",
     "CONTRACT_CONSTANT_NAMES",
     "CONTROL_LAW_CLAUSE",
@@ -143,6 +144,22 @@ REVIEW_STATUS_CLAUSE = (
     "fresh-eyes-reviewed(N). An untagged verdict reads as more reviewed than it is."
 )
 
+# --- Requirement-S citation provenance clause (T5 crucible, 2026-07-08) ----------------------
+#
+# Source: ORCHESTRATION_LEDGER requirement S (operator 2026-07-08: "make sure we are recording
+# arxiv paper citations and stuff too for scientific rigor and provenance"). Measured gap at
+# binding: CT-1 = 0 resolvable citations, CT-2 = 11, v5 = 1. Backfill:
+# `.omx/research/t5_crucible/BIBLIOGRAPHY_20260708.md`.
+
+#: Requirement S — citations are provenance for claims exactly as anchors are for measurements.
+CITATION_CLAUSE = (
+    "CITATIONS (requirement S): record a resolvable citation — authors · year · exact title "
+    "· arXiv ID or DOI — for every imported result/theorem/method AT THE POINT OF DERIVATION; "
+    "verify each ID actually resolves to the named paper (fetch the abstract page) before "
+    "recording it; where no supporting paper exists, say so explicitly — an uncited imported "
+    "theorem is the literature-side analog of an unanchored verdict."
+)
+
 # --- #337 contract blocks + manual citation --------------------------------------------------
 
 #: #337 contract: the builder owns round 1 of the adversarial review of its OWN output.
@@ -241,6 +258,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "CONTROL_LAW_CLAUSE",
     "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_STATUS_CLAUSE",
+    "CITATION_CLAUSE",
     "NEVER_REASONING_ECHO",
     "OWN_ROUND1_REVIEW",
     "TRIALITY_WIRING",
@@ -276,6 +294,7 @@ KEY_PHRASES: dict[str, str] = {
     "CONTROL_LAW_CLAUSE": "every recommended knob is a control law",
     "RETRIEVAL_FIRST_CLAUSE": "STORES CONSULTED",
     "REVIEW_STATUS_CLAUSE": "fresh-eyes-reviewed(N)",
+    "CITATION_CLAUSE": "authors · year · exact title · arXiv ID or DOI",
     "NEVER_REASONING_ECHO": "refusal storms",
     "OWN_ROUND1_REVIEW": "resets the clean-pass counter",
     "TRIALITY_WIRING": "SAME commit batch",
@@ -295,8 +314,8 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
     Always includes the six harvested behavior blocks (grounded progress, no ending on
     promises, final-message re-grounding, state-the-boundaries, anti-goldplating,
     fresh-context verification), the four #346 retrieval-first clauses (recursion-default,
-    control laws, retrieval-first, review-status provenance), plus the operating-manual
-    citation.
+    control laws, retrieval-first, review-status provenance), the requirement-S citation
+    clause, plus the operating-manual citation.
 
     Args:
         review: include the #337 own-round-1 adversarial-review block (default True;
@@ -318,6 +337,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         CONTROL_LAW_CLAUSE,
         RETRIEVAL_FIRST_CLAUSE,
         REVIEW_STATUS_CLAUSE,
+        CITATION_CLAUSE,
     ]
     if review:
         blocks.append(OWN_ROUND1_REVIEW)
