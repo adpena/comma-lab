@@ -98,6 +98,40 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+F. **TELEMETRY ENHANCED FROM FINDINGS (operator-directed 2026-07-07).** Every crucible finding
+   discovered by post-hoc forensics becomes a LIVE telemetry row + alarm in the next run —
+   "anything found by archaeology must be observable in flight." The findings→telemetry map
+   (each row score-neutral read-only → defaults ON per the default-off-is-orphaned rule):
+   1. ANNEAL STATE (M2): per-epoch effective β(t)/τ(t)/anneal-progress% + completion flags;
+      ALARM when any consumer (Muon fire, stage exit) triggers with its precondition-anneal
+      incomplete. The M2 defect becomes impossible to miss live.
+   2. TRANSITION HEALTH (M1 cold-quench): optimizer-state rows at every stage boundary (momentum
+      norms, effective LR, restored-vs-reset moments per the never-reset-moments law) + a quench
+      detector (loss-spike attribution to the transition, +X% threshold alarm).
+   3. ONLINE MEAT (M4): per-epoch remaining-meat estimate (the AIC mixture fit) emitted as a row
+      — exits become observable, 76-125 wasted epochs impossible silently.
+   4. TRIGGER AUDIT (M3): every event trigger logs its would-fire state + inputs per epoch
+      (reorient-cycle-aware windows) so vacuous/confounded triggers are visible BEFORE they gate.
+   5. SPECTRUM SENSE (S3): checkpoint-cadence Lanczos summary row (top-k λ±, negative-curvature
+      count, in-basin flag) — the curvature-blindness closed as a standing SENSE organ.
+   6. CKPT FIDELITY (sweep +4.3%): persist self-orient state in checkpoints (BUILD) + a
+      save-time reconstruction-gap check row (saved-state verdict vs live verdict delta; ALARM
+      over threshold).
+   7. LEVER ENGAGEMENT (S5): launch-time argv→lever ingest + per-lever ENGAGED (not just
+      flagged) predicate rows; activation ledger wired to real runs (S5's R1 fix).
+   8. SINGLE-LEVER ATTRIBUTION (S5 band-unattributed): any render-time lever activating mid-run
+      emits a paired with/without verdict delta at its activation epoch — no more unattributed
+      firings.
+   9. EFFECTIVE-CONFIG PROVENANCE (S6 G1): byte-close + trainer emit the EFFECTIVE config
+      (persisted cfg vs CLI-default diff); FAIL LOUDLY on silent mismatch (the freq_along
+      confound class).
+   10. CONFIG-DELTA-VS-BASELINE (sweep grad-clip confound): every launch emits a config-diff row
+       vs its named control (mod32cap) — baseline confounds visible at launch, not discovery.
+   11. POSE WALL WATCH (S6): once w_pose>0, per-verdict d_pose through the L3 mechanism + FiLM
+       read-back check rows, with the 1.5e-4 kill threshold monitored live.
+   12. STAGE WALL-CLOCK (S2 35% waste): per-stage wall-clock + epochs-past-meat rows.
+   Designer §4/§10 carries the telemetry build list; requirement B's tested-end-to-end contract
+   applies to every ALARM (backtest + injection + fail-safe).
 E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arsenal considered —
    in-training (flat-minima #242, WeightEntropyPenaltyMLX, entropy-penalty, latent-structure,
    variable-grid QAT — ⚠ LAUNCH-BLOCKING run-1 decisions) · bit-depth (waterfill) · structural
