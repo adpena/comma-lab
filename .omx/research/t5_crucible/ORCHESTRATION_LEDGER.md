@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: V7 COMPUTE-EXPLOITATION AUDIT (8d9dabc92; 19 new + 136 regression tests;
+memo v7_compute_exploitation_audit_20260708.md) ---
+- ⚠️ REAL ORPHAN CAUGHT: v7 typed-config had no to_command → launcher would DROP the ~17×
+  TAC_MLX_CUSTOM_GROUPED_BACKWARD perf-env prefix (v7 would run WEEKS not days). FIXED
+  (byte-identical PERF_ENV_PREFIX, drift-guarded vs v6) — the operator's directive found a
+  launch-critical hole the seal would not have (compute was outside the seal's lens set).
+- Lever table (evidence per lever): fused-R ON · mx.compile OFF-MEASURED (fp-contraction
+  flips uint8-STE argmax = NO-FAKE guard, correct exclusion) · micro-batch-pairs (2-4×)
+  PROPOSED-not-flipped (fail-closes vs v7's logit-adjust + trajectory-affecting → needs n600
+  d_seg A/B; deferral D15) · Metal #212 partial (persistence-pool/margin-map/curvelet fused
+  kernels unbuilt = candidates, D16) · cache-gt-skeleton/verdict-batch/reorient ON ·
+  fp16-feats v7.1 (D5) · GPU-verdict cpu (D1-gated).
+- L45 gate extended: wall-clock projection printed at every admission; REFUSE only vs
+  explicit --wall-clock-budget-days. Projected v7: ~6.46 days; micro-batch (if A/B clears)
+  → ~2-3 days = the biggest remaining wall-clock win. Pointer 0.19110 UNMOVED.
+
 --- ⛔ S6-R4 PULLED INTO V7 (operator 2026-07-08: "Why is there a fixed number of epochs if
 our schedule and curriculum are no longer supposed to be hardcoded like pr95") ---
 - DIAGNOSIS (honest two-part): --epochs 3000 as run WATCHDOG = legitimate req-B cap; but
