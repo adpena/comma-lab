@@ -319,3 +319,15 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   (DERIVED vs VERDICT-COMPOSED per choice) + DERIVE-THE-CEILING-OR-DESIGN-HARDER per S-term +
   adjudicate comb/AACoverage/#149 run-1-vs-run-2 with math not convenience. If ceiling
   underivable ∧ headroom real → REVISE-THEN-RECESS with levers moved to run-1.
+- 2026-07-07T~20:0x OPERATOR COUNTER-FRAME (binding on P3/P3b/P5): "pose is solvable, rate is
+  small with wiggle room, d_seg tameable — you are being pessimistic; we are in a SANDBOX." The
+  optimist's arithmetic folded into the red-team charter: rate = measured 0.056 structural moat
+  (crossing condition reduces to 100·d_seg + √(10·d_pose) < 0.129); pose = BUILT-UNFIRED
+  mechanism with an on-scorer existence proof (never pushed at w_pose>0 — pre-measurement number,
+  not a wall); d_seg needs 2.8× with 63.9% of flips in never-fired levers + anneal recovery +
+  warm finisher + measured negative curvature. PROBABILITY-MODEL CRITIQUE: central 0.29 =
+  joint-independent-tail (one-shot lottery); the stack's checkpoints/event-exits/costate/kill-
+  fallbacks make SEQUENTIAL-DESCENT-WITH-REPAIR the candidate honest model — synthesis must
+  present BOTH bands with per-lever repair mechanisms named, and justify the central. Sandbox
+  prior: iterate-ability HIGH → marginal cost of including derisked levers in run-1 is LOW.
+  Guard: optimism about MECHANISMS, rigor about CLAIMS (pose measured-through-witness only, L68).
