@@ -204,6 +204,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~07:3x: CITATIONS (798634dc7 + 2f8c6bf2b) — REQUIREMENT S DISCHARGED ---
+- 57 claim rows: 21 fetch-verified + 24 search-verified + 7 honestly-UNRESOLVED. CT-1's
+  zero-citation gap fully backfilled (16 canonical records). NO fabricated citations (21/21
+  fetched IDs resolve to the named papers).
+- Provenance findings → seal audit: arXiv:1301.4777 = Zheng Qu 2013 (NOT McEneaney; CT-2
+  misattribution corrected) · weak-KAM O(1/t) anchor = Fathi unpublished lecture notes
+  (folklore-without-venue, so-stated).
+- CITATION_CLAUSE composed into standard_contract() (integrity-gated, 41 tests, no override) —
+  future research charters carry the requirement structurally.
+- Hook meta-event: the verdict-scope + recall-evidence legs FIRED on this doc (first real
+  firing of the new leg); compliance cost = 1 header line + honest waiver; quote-exemption
+  tuning candidate noted for the hook builder's fold.
+- MARIMO #347 (deadline Jul 9 11:59PM PST): top candidate = Tabuada/Heemels event-triggered
+  control LIVE on our real mod32cap 41-row trace (the P-CT2 backtest IS the notebook; trace +
+  instruments on disk). OPERATOR GO/NO-GO surfaced.
+
 --- LANDING FOLDED 2026-07-08T~07:0x: PROBE WAVE-A (4 verdicts, instruments landed per req Q) ---
 - P-CT3 **PASS**: forfeit arm first-sustained-fires ep675 (band 670-700, both estimator forms
   agree); EMA-best-at-fire = ep650 = stage true best, forfeit EXACTLY 0; +5.450779e-4 S recovery
