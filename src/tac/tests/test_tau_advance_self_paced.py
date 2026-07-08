@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from tac.witness_control.tau_advance import (
+    SENSOR_GRADED_STATE,
     SENSOR_PER_BAND_RELAXATION,
     TAU_OCTAVE_CAP_SLACK,
     TauAdvanceController,
@@ -153,6 +154,17 @@ def test_event_advances_on_sensor_exhaustion():
     else:
         pytest.fail("event sensor never advanced past min_dwell")
     assert c.rung == 1
+
+
+def test_event_advance_stamps_graded_state_ema_shadow():
+    """SEAL v7 R1 confound MINOR-2: the event advance telemetry names WHICH graded state the sensor
+    consumed (EMA shadow), so the EMA-vs-live axis is auditable, not implicit. Additive-only key
+    (never read back into training)."""
+    c = _event_ctrl(min_dwell=0, min_points=1, sensor=_always_exhausted)
+    c.ingest([{"epoch": 1, "d_seg": 0.01}])
+    s = c.maybe_advance(1)
+    assert s.advanced and s.fired_by == "event"
+    assert s.telemetry["graded_state"] == SENSOR_GRADED_STATE == "ema_shadow"
 
 
 def test_event_holds_when_sensor_not_exhausted():

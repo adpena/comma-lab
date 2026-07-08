@@ -47,6 +47,14 @@ trainer's non-persisted ``history`` list. Every checkpoint persists the full con
 :func:`tau_advance_state_arrays` / :func:`tau_advance_restore_from_cfg`, so a crash-resume
 reconstructs the IDENTICAL subsequent τ trajectory bit-faithfully.
 
+RESUME-INVARIANT — ``--verdict-every`` (SEAL v7 R1 confound MINOR-3). The octave DWELL is measured in
+LOOP epochs, but the sensor history arrives on the VERDICT cadence (async, decide-on-previous). The
+τ trajectory is therefore deterministic and resume-safe ONLY at a FIXED ``--verdict-every`` — a resume
+that CHANGES the verdict cadence would re-shape the within-octave point spacing and NOT reproduce the
+same fire epochs. ``--verdict-every`` is thus part of the τ-advance determinism contract (alongside
+seed + config): keep it constant across a resume. (:meth:`ingest` re-ingests from ``_last_seen_epoch``,
+so a same-cadence resume IS bit-faithful; see :func:`test_resume_mid_octave_reproduces_identical_subsequent_tau_sequence`.)
+
 PURE (no MLX / model / async / wall-clock): the same measured ingredients always give the same
 decision — the deterministic-reproducibility spine on the sensor. means != ends: advisory control
 logic; only a byte-closed n600 ``upstream/evaluate.py`` row < 0.19110 moves the pointer 0.19110.
@@ -59,6 +67,7 @@ from dataclasses import dataclass, field
 __all__ = [
     "TAU_ADVANCE_MODES",
     "SENSOR_PER_BAND_RELAXATION",
+    "SENSOR_GRADED_STATE",
     "TAU_OCTAVE_CAP_SLACK",
     "TAU_OCTAVE_MEAT_FLOOR",
     "TAU_OCTAVE_MEAT_HORIZON",
@@ -80,6 +89,15 @@ TAU_ADVANCE_MODES: tuple[str, str] = ("clock", "event")
 #    per-band relaxation of the through-R seg loss within the current octave.
 SENSOR_PER_BAND_RELAXATION = "per_band_relaxation"
 
+# ── which graded STATE the relaxation sensor consumes (SEAL v7 R1 confound MINOR-2). The d_seg the
+#    sensor ingests is the VERDICT d_seg, which is EMA-SHADOW-graded (the deploy authority — the same
+#    state the score is claimed on). This is a DELIBERATE choice: the EMA shadow LAGS the live weights,
+#    so an octave is declared relaxed slightly LATE — i.e. the sensor is biased CONSERVATIVE (fire-late,
+#    never fire-early). That bias is desirable for a schedule-advance trigger (advancing τ too early is
+#    the harmful direction). Stamped onto the advance telemetry (``graded_state``) so the EMA-vs-live
+#    axis is AUDITABLE, not implicit. It is score-neutral observability (never read back into training).
+SENSOR_GRADED_STATE = "ema_shadow"
+
 # ── FAIL_SAFE_CAP slack (req-T value-provenance: TAGGED, not bare). The per-octave max-dwell cap =
 #    the clock-equivalent per-octave dwell (anneal_epochs / N) × this slack: generous enough that a
 #    genuinely slow relaxation (critical slowing at a sharp scale) is not cut short, bounded enough
@@ -92,7 +110,12 @@ TAU_OCTAVE_CAP_SLACK = 2.0
 #    reads the SAME powerlaw_meat exit of the tau-descent). meat_floor = the extrapolated remaining
 #    d_seg meat below which the within-octave descent is declared relaxed; horizon/min_points are
 #    the fit horizon and the thin-data fail-safe (too-few points ⇒ NOT exhausted ⇒ hold the octave).
-TAU_OCTAVE_MEAT_FLOOR = 1e-4        # TAGGED: sister of muon_meat_event meat_floor
+#    UNITS NOTE (SEAL v7 R1 deepmath MINOR-5): this meat_floor is in d_seg UNITS (remaining
+#    extrapolated d_seg). It shares the bare literal 1e-4 with the TAIL's ``stop_marginal_s`` only by
+#    COINCIDENCE — that quantity is in S/ep (a per-epoch score-marginal, derived from ν·forfeit on the
+#    TAIL surface). The two are dimensionally distinct and MUST be tuned/derived independently; do not
+#    copy a re-tune of one onto the other.
+TAU_OCTAVE_MEAT_FLOOR = 1e-4        # TAGGED: sister of muon_meat_event meat_floor (d_seg units)
 TAU_OCTAVE_MEAT_HORIZON = 300.0     # TAGGED: sister of muon_meat_event horizon_epochs
 TAU_OCTAVE_MEAT_MIN_POINTS = 8      # TAGGED: sister of muon_meat_event min_points
 
@@ -129,7 +152,17 @@ def derive_octave_max_dwell(anneal_epochs: int, n_octaves: int,
     ``ceil(anneal_epochs / N)`` × ``slack``. DERIVED (anneal_epochs, N, tagged slack); no bare
     literal. This is a PER-OCTAVE watchdog (advance-anyway if the sensor never fires), NOT a global
     "floor before Muon" constraint — the controller freezes at the Muon switch regardless of rung
-    (matching the clock freeze), so a large cap cannot conflict with the Muon ordering."""
+    (matching the clock freeze), so a large cap cannot conflict with the Muon ordering.
+
+    FLAT-CAP CHOICE (SEAL v7 R1 deepmath MINOR-3, deliberate). The cap is the SAME for every rung,
+    while critical slowing (Ch.6 §3: the leading relaxation eigenvalue → 0 as τ → small) means the
+    LATE (small-τ) octaves genuinely need LONGER relaxation, so a flat cap can in principle fire before
+    the hardest scale relaxes. We keep it FLAT on purpose rather than invent a rung-scaled growth law:
+    the exact critical-slowing exponent is UNMEASURED here, so any ``cap_k = f(k)`` would be a bare
+    guessed constant (a value-provenance-ladder violation and a new unmeasured knob). Instead the
+    honest instrument is the LOUD ``cap_fired_before_event`` telemetry row (S5 falsification-relevant):
+    if a late octave hits the cap before relaxing, the next run SEES it and re-calibrates the cap (or
+    promotes a MEASURED rung-scaling law) from data — never from an a-priori guess."""
     n = max(1, int(n_octaves))
     per = math.ceil(int(anneal_epochs) / n)
     return max(1, int(math.ceil(per * float(slack))))
@@ -255,7 +288,14 @@ class TauAdvanceController:
         """The LR-anneal progress in event mode: the octave fraction (LR ∝ the τ-control's OWN
         progress, S6/DE — in event mode that is the octave ladder, NOT a fixed-epoch clock). The
         trainer feeds this in place of ``(ep - warmup) / (lr_anneal_epochs - warmup)`` after warmup;
-        warmup itself stays real-epoch (initial optimizer stabilization is genuinely time-based)."""
+        warmup itself stays real-epoch (initial optimizer stabilization is genuinely time-based).
+
+        BEHAVIOR CHANGE — STEP FUNCTION (SEAL v7 R1 deepmath MINOR-4, not a bug). Because
+        :meth:`octave_fraction` holds ``k/N`` constant WITHIN an octave and jumps at each advance, the
+        event-mode LR-anneal fraction is a STEP function, unlike the incumbent clock's smooth per-epoch
+        cosine. The LR therefore JUMPS at each octave advance; a jump can transient the Muon moment
+        buffers. This is intended (LR rides the τ-control's OWN event progress, S6/DE) and is why run-1
+        is recommended in CLOCK mode (smooth cosine) — event-mode step-LR is a run-2+ item."""
         return self.octave_fraction()
 
     # ── observation + advance ───────────────────────────────────────────────────────────────────
@@ -264,7 +304,12 @@ class TauAdvanceController:
         into the current octave's own d_seg history. Single-threaded (main-loop, decide-on-previous)
         and idempotent per epoch, so it is deterministic and resume-safe (the controller owns its
         octave history; it does NOT depend on the trainer's non-persisted ``history`` after resume).
-        No-op in clock mode / when frozen."""
+        No-op in clock mode / when frozen.
+
+        GRADED STATE (SEAL v7 R1 confound MINOR-2): the ``d_seg`` read from ``history`` is the VERDICT
+        d_seg, EMA-SHADOW-graded (deploy authority). The shadow lags live weights ⇒ the sensor is
+        biased CONSERVATIVE (relaxation declared slightly late, never early). Deliberate; see
+        :data:`SENSOR_GRADED_STATE` (stamped onto the advance telemetry for auditability)."""
         if not self.event_mode or self._frozen:
             return
         for h in (history or []):
@@ -328,6 +373,9 @@ class TauAdvanceController:
                 "from_rung": int(prev_rung), "to_rung": int(self._rung),
                 "tau_from": round(float(self.ladder[prev_rung]), 6), "tau_to": round(tau, 6),
                 "dwell_epochs": int(dwell), "sensor": SENSOR_PER_BAND_RELAXATION,
+                # (SEAL v7 R1 confound MINOR-2) which graded state the sensor consumed — EMA shadow
+                # (conservative-late bias, deliberate). Auditable, never read back into training.
+                "graded_state": SENSOR_GRADED_STATE,
                 # (SEAL v7 R1 MINOR-1) when the sensor fires EXACTLY at/after the max-dwell boundary
                 # the event wins (correct attribution — the sensor DID fire) but the coincidence is
                 # S5-suspicious; flag it so the LOUD cap row's absence at this boundary is not read as
