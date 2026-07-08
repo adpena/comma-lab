@@ -2062,3 +2062,12 @@ consumer update required — asserted [consumers-generic]. ---
   independently verified from primary artifacts — A5 classes "3"→(3,)=Movable-index CORRECT,
   β trajectory bounded [1.0,3.177], budget 8.122d reproduced from raw ts. 222 tests green.
   Counter stays 0/3 (findings found) → ONE fixer for all 5 → round 4 on that micro-diff.
+- **OPERATOR DIRECTIVE (holistic watch)**: *"Those old watch items are still relevant all must be
+  taken into consideration — deep math perspective requires a holistic recursive fractal grokking
+  of the whole system and its dynamics."* Watch items = FACETS, never lineage-scoped. Holistic
+  run-1 ep125 read (per-class, canonical order): **Road 0.398 BARELY moving = ~2/3 of composite
+  (the binding d_seg facet)** · Lane 0.039 (~45× lane-band anchor; islands BORN 1.0→0.039) ·
+  Movable 0.0069 (born) · **d_pose 1.90 ⇒ pose contributes ≈4.35 of implied_S 17.4 — pose ALONE
+  blocks sub-0.19 at any d_seg (the open L68 facet, first-class v7 watch)** · rate ~89KB. Fixer's
+  LAUNCH_PACKAGE watch-list extended to the FULL facet set (message sent). Memory saved:
+  watch-items-are-facets-never-lineage-scoped-holistic-checkin.
