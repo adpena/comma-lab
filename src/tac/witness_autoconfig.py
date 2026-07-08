@@ -69,6 +69,9 @@ SRC_RECALLED = "recalled_proven"        # recalled from the proven 0.003698 arm
 SRC_HELDOUT = "held_out_corrected"      # corrected by the held-out n400 probe
 SRC_FALLBACK = "fallback_constant"      # heavy input absent -> measured constant
 SRC_DESIGN = "design"                   # design-level (v2, not yet a trainer flag)
+SRC_DERIVED = "derived_at_config"       # (req T ladder) DERIVED-AT-CONFIG: computed from a stated
+                                        # law + provenanced inputs at config time, carries a
+                                        # re-derivation trigger (NOT a bare hardcode)
 
 ADVISORY_TAG = "[macOS-MLX advisory / design]"
 
@@ -931,9 +934,16 @@ class WitnessConfig:
                 ("--tau-hold-frac", d6["tau_hold_frac"]),
                 # F-DET (v6 fold 1): fused-R determinism; requires --mlx-device gpu (proven_base).
                 ("--fused-r-kernel", None),
-                # B1/forfeit-arm co-predicate window V=5 (v6 §2.2g(c); default 4).
-                ("--curriculum-plateau-windows", d6["curriculum_plateau_windows"]),
-                # ChromaBoundarySharpen (v6 §1.1: weight=0.1, margin_band=1.0, start=tau_fire=300).
+                # (v6.3 MAJOR-3) re-anchor leg of the event-triggered design: shift the TAU-RELATIVE
+                # wall-clock levers (persistence-warmup completion / seed-anneal withdrawal / analytic-
+                # band engage) to the FIRED tau boundary. Makes §1.1's AnalyticLaneRenderBand
+                # boundary_relative=True ACTUAL (was silently false); requires --curriculum-event-
+                # triggered (DSL). hosc-β + chroma are NOT re-anchored (trainer L2049-2072/L7730).
+                ("--curriculum-reanchor-levers", None),
+                # (v6.3 MINOR-4) dwell-law min-stage pinned to the draft's shipped 250 (default 150).
+                ("--curriculum-min-stage-epochs", d6["curriculum_min_stage_epochs"]),
+                # ChromaBoundarySharpen (v6 §1.1: weight=0.1, margin_band=1.0, start=300 absolute —
+                # chroma re-anchor is a run-2 trainer build item, see _CRUCIBLE_V6_DELTAS).
                 ("--seg-chroma-boundary-weight", d6["seg_chroma_boundary_weight"]),
                 ("--seg-chroma-boundary-margin-band", d6["seg_chroma_boundary_margin_band"]),
                 ("--seg-chroma-boundary-start-epoch", d6["seg_chroma_boundary_start_epoch"]),
@@ -1327,6 +1337,20 @@ _CRUCIBLE_V6_DELTAS: dict = {
     "tau_anneal_shape": "cosine_hold",   # all_levers_base override (family: cosine)
     "anneal_epochs": 3000,               # trailing flag: EXPLICIT denominator (family emitted NONE)
     "tau_hold_frac": 0.2,                # trailing flag: 0.2*3000 = descent 600 ABSOLUTE
+    # ── hosc-β leg (v6.3 seal-round-1 MAJOR-2(i) fix): the β anneal SHARES --anneal-epochs (trainer
+    #    L2334, "review C2" same-den by design), so at den 3000 with the inherited end=4.0/linear the
+    #    fire-band β(726-freeze) = 1.7252 (NOT the 1.41 cosine-shape misprint) vs the control's 3.177
+    #    (den 1000). The trainer couples all three shared-den schedules (no per-schedule denominators),
+    #    so the anchors (ν laws, ep650-best, fire band) — all measured at the control's JOINT (τ,β,LR)
+    #    state — require the β TRAJECTORY pinned to the trace. β is LINEAR (--hosc-beta-anneal linear,
+    #    inherited), so a linear anneal reproduces ANY target trajectory by choosing the endpoint:
+    #    DERIVED-AT-CONFIG law — start 1.0 (inherited), end E over den 3000 matches the control's
+    #    slope 3/999 when (E-1)/2999 = 3/999 => E = 9.997 ≈ 10.0 => β(726) = 3.1757 ≈ control 3.177
+    #    (0.06% slope match, ≤0.1% on [1,726]). RE-DERIVE TRIGGER: any change to muon-start-epoch (the
+    #    freeze point), --anneal-epochs (the denominator), or --hosc-beta-anneal (the shape) re-derives
+    #    E. LATENT HAZARD: if the Muon freeze ever becomes event-movable and fires past 726, β keeps
+    #    climbing toward 10.0 (past the control's 4.0) — pin is safe ONLY while 726 is the fixed cap.
+    "hosc_beta_end": 10.0,               # alb override: β-pin (family: 4.0) — reproduces control β(ep)
     # ── ABSOLUTE stage anchors (the seal round-2 assumption-challenge fix: the family SCALES
     #    fractions of --epochs (muon 0.726*3000 = 2178 WRONG); the mod32cap trace anchors are
     #    ABSOLUTE epochs — tau@300 / best~650 / fire~675 / Muon cap 726).
@@ -1336,10 +1360,20 @@ _CRUCIBLE_V6_DELTAS: dict = {
     "render_aa": "ipe",                  # alb override: AACoverageRender(mode="ipe") (family: none)
     "lane_band_start_epoch": 350,        # alb override: AnalyticLaneRenderBand(start=350)
     "persistence_warmup_epochs": 275,    # alb override: PersistenceTopology(warmup=275)
-    "curriculum_plateau_windows": 5,     # trailing flag: B1 co-predicate V=5 (§2.2g(c); default 4)
+    # ── v6.3 seal-round-1 MINOR-4: pin the dwell-law min-stage to the draft's shipped 250 (trainer
+    #    default 150; k_max net unchanged at floor((2350-250)/387.1)=5, so no schedule-law shift).
+    "curriculum_min_stage_epochs": 250,  # trailing flag (§2.2g dwell law; default 150)
+    # NOTE (v6.3 MAJOR-1): --curriculum-plateau-windows is NOT a crucible delta. V=5 binds ONLY the
+    # B1 co-predicate spec (no trainer flag exists for it); the sister EXISTING flag
+    # --curriculum-plateau-windows is the EP_LOSS-plateau window (a DIFFERENT surface, v5 §0.1 row
+    # 3(a)) — silently recalibrating it is the per-epoch-normalization bug class. Left at default.
     "seg_chroma_boundary_weight": 0.1,   # trailing: ChromaBoundarySharpen(weight=0.1)
     "seg_chroma_boundary_margin_band": 1.0,   # trailing: margin_band=1.0
-    "seg_chroma_boundary_start_epoch": 300,   # trailing: start="tau_fire" = tau@300 (absolute)
+    # start=300 ABSOLUTE (v6.3 MAJOR-3 sister-gap): chroma is NOT in the trainer's re-anchor set
+    # (L2049-2072 = persistence-warmup + seed-anneal + analytic-band ONLY), so start="tau_fire"
+    # boundary-relative is UNREALIZABLE for chroma as-written; emitted = absolute 300 (= tau@300 cap).
+    # A chroma re-anchor path is a named run-2 trainer build item.
+    "seg_chroma_boundary_start_epoch": 300,   # trailing: start=300 absolute (chroma re-anchor = run-2)
 }
 
 # The v6 §1.1 program levers that are zero-arg composable DSL factories (tac.witness_dsl SoT) —
@@ -1348,8 +1382,9 @@ _CRUCIBLE_V6_DELTAS: dict = {
 # FusedRKernel (not zero-arg composable; emitted directly in the crucible trailing block) ·
 # AACoverageRender (zero-arg default is the DISQUALIFIED supersample; v6 wants mode="ipe" ->
 # alb render_aa pin) · SignedBoundaryWeight/B16 (DEFAULT-OFF, Q1 BETWEEN) · ConleyCertificate-
-# fitted/B17' + GNSpectrumProbe (telemetry/build items, not launch flags) · EventTriggeredCurriculum's
-# V=5 (factory has no windows override -> trailing flag).
+# fitted/B17' + GNSpectrumProbe (telemetry/build items, not launch flags). EventTriggeredCurriculum's
+# co-predicate V=5 is NOT a trainer flag (v6.3 MAJOR-1): it binds the B1 spec only; the re-anchor leg
+# of the event-triggered design (--curriculum-reanchor-levers) IS emitted in the trailing block.
 _CRUCIBLE_V6_DSL_LEVERS: tuple[str, ...] = (
     "SeedIslandBirth",            # --seed-islands + --witness-alone-island-loss
     "SeedIslandEased",            # --seed-island-eased (r_star release)
@@ -1397,10 +1432,29 @@ def derive_crucible_v6_config(
     FALLBACK exactly per v6 §2.2f: cap --muon-start-epoch 726 + the event-triggered co-predicate
     (V=5) + the launcher's auto-started score-neutral #247 shadow observer (advisory).
 
-    Named residual (honest, for the seal round): the hosc-beta anneal shares the --anneal-epochs
-    denominator, so beta(726-freeze) ≈ 1.41 at den 3000 (vs the control's 3.177 at den 1000) —
-    the M2 β-leg ("genuinely incomplete anneal") is NOT resolved by this variant and v6 names no
-    β pin; carried as a draft-level note, not silently re-derived here.
+    Value-provenance ladder tags per pinned constant (req T — the tags guard MEANING; the
+    materialization test guards VALUES):
+      * softmax_temp_end 0.31: MEASURED-ANCHOR (mod32cap ep650-best τ=0.3098), config-conditional;
+        P-TAU2 knee band [0.190724, 0.542937] corroborates. RE-DERIVE on live-m_q law promotion (run-2).
+      * tau schedule (anneal 3000 / hold 0.2 / cosine_hold): DERIVED-AT-CONFIG from the trainer τ law
+        (descent completes ABSOLUTE ep600, HOLDS 0.31 through fire band + Muon freeze). RE-DERIVE on
+        any change to --anneal-epochs / --tau-hold-frac / the descent-length intent.
+      * hosc_beta_end 10.0: DERIVED-AT-CONFIG — β is LINEAR, so end=10.0 reproduces the control's
+        β(ep) slope on [1,726] to 0.1% at the SHARED den 3000 (the anchors were measured at the
+        control's joint β state). RE-DERIVE on any change to muon-start-epoch / --anneal-epochs /
+        --hosc-beta-anneal. LATENT HAZARD: β climbs toward 10.0 if the 726 freeze becomes event-movable.
+      * muon_start_epoch 726 / tau_softplus_start_epoch 300 / min-stage 250 / band 350 / warmup 275:
+        MEASURED-ANCHOR (mod32cap trace, ABSOLUTE epochs), config-conditional to this vehicle.
+
+    KNOWN RESIDUAL — AdamW LR (v6.3 MAJOR-2(ii), RISK ROW, not pinned): the LR cosine ALSO shares
+    --anneal-epochs (trainer L6594) but has NO shape/hold/denominator flag to reshape it. At den 3000
+    the AdamW phase [1,726] runs at ~2.83× (fire ep675) to ~3.41× (freeze ep726) the control's LR (the
+    control genuinely annealed 1e-3 -> ~2.57e-4 over its den 1000; crucible stays near-peak ~8.9e-4).
+    A shallow den-3000 cosine arc CANNOT reproduce the control's deep den-1000 descent by endpoint
+    choice alone (the curvature differs) — a clean pin needs a TRAINER build item: an LR-specific
+    denominator split (e.g. --lr-anneal-epochs) or an --lr-hold-frac, ~15-20 LOC at L6586-6595. Until
+    then the ep650-best/ν/fire-band anchors (measured at the control's ANNEALED LR) carry a named
+    transfer risk; run-1 SC-7 per-stage d_seg re-measures on this vehicle. Config-conditional to den 3000.
 
     means != ends: returns a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110
     from ``upstream/evaluate.py`` (contest-CPU/CUDA, NEVER MPS) moves the pointer.
@@ -1414,6 +1468,7 @@ def derive_crucible_v6_config(
     alb = dict(base.all_levers_base)
     alb.update({
         "tau_anneal_shape": d6["tau_anneal_shape"],
+        "hosc_beta_end": d6["hosc_beta_end"],
         "render_aa": d6["render_aa"],
         "lane_band_start_epoch": d6["lane_band_start_epoch"],
         "persistence_warmup_epochs": d6["persistence_warmup_epochs"],
@@ -1433,6 +1488,16 @@ def derive_crucible_v6_config(
         "ABSOLUTE ep600 and HOLDS 0.31 (tau(675)=tau(726)=0.31 exactly; plain cosine at den 600 "
         "REBOUNDS unclamped to 0.3363/0.3826 — derived from trainer L2371/L2386, cross-checked "
         "against mod32cap's measured tau(650)=0.3098).", Portability.INSTANCE)
+    prov["hosc_beta_end"] = ProvenancedValue(
+        float(d6["hosc_beta_end"]), SRC_DERIVED,
+        "v6.3 MAJOR-2(i) DERIVED-AT-CONFIG: the hosc-β anneal shares --anneal-epochs (trainer L2334), "
+        "so at den 3000 the inherited end=4.0/linear gives β(726-freeze)=1.7252 vs the control's 3.177 "
+        "(den 1000) — the anchors (ν, ep650-best, fire band) were measured at the control's JOINT β "
+        "state. β is LINEAR, so it reproduces any target trajectory by endpoint choice: matching the "
+        "control slope 3/999 needs (E-1)/2999 = 3/999 => E=9.997≈10.0 => β(726)=3.1757≈3.177 (0.06% "
+        "slope match, ≤0.1% on [1,726]). RE-DERIVE on any change to muon-start-epoch / --anneal-epochs "
+        "/ --hosc-beta-anneal. LATENT HAZARD: if the Muon freeze becomes event-movable past 726, β "
+        "climbs toward 10.0 (past 4.0) — safe only while 726 is the fixed cap.", Portability.INSTANCE)
     prov["muon_start_epoch"] = ProvenancedValue(
         int(d6["muon_start_epoch"]), SRC_RECALLED,
         "v6 §2.2f: ABSOLUTE Muon fail-safe cap 726 (mod32cap trace anchor; fire band [670,700] "
@@ -1446,11 +1511,13 @@ def derive_crucible_v6_config(
         "3/ν_CE = 150.3).", Portability.INSTANCE)
     prov["crucible_v6_deltas"] = ProvenancedValue(
         dict(d6), SRC_DESIGN,
-        "DRAFT_OPTIMAL_STACK_v6 §1.1/§1.4a/§2.2f-g pins: F-DET fused-R + V=5 co-predicate + "
-        "ChromaBoundarySharpen(0.1, band 1.0, start tau@300) + AA ipe + band 350 + persistence "
-        "warmup 275; DSL levers composed: " + ", ".join(_CRUCIBLE_V6_DSL_LEVERS) + ". Pose block "
-        "INHERITED from store_nothing_205 (MAJOR-A2 pin; #314 drift guard).",
-        Portability.INSTANCE)
+        "DRAFT_OPTIMAL_STACK_v6 §1.1/§1.4a/§2.2f-g pins: F-DET fused-R + β-pin (hosc-beta-end 10.0) + "
+        "re-anchor levers + min-stage 250 + ChromaBoundarySharpen(0.1, band 1.0, start 300 absolute) "
+        "+ AA ipe + band 350 + persistence warmup 275; DSL levers composed: "
+        + ", ".join(_CRUCIBLE_V6_DSL_LEVERS) + ". Pose block INHERITED from store_nothing_205 "
+        "(MAJOR-A2 pin; #314 drift guard). v6.3 seal-round-1: dropped --curriculum-plateau-windows "
+        "(wrong surface, MAJOR-1); pinned β (MAJOR-2(i)); AdamW LR carried as a RISK ROW (MAJOR-2(ii), "
+        "no flag-level rephasing).", Portability.INSTANCE)
     return replace(
         base,
         crucible_v6=True,

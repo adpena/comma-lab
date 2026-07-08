@@ -674,6 +674,38 @@ def test_crucible_v6_schedule_matches_design_doc():
                     shape="cosine", hold_frac=1.0) > 0.38
 
 
+def _beta_law(ep: int, *, start: float, end: float, anneal_epochs: int, shape: str = "linear") -> float:
+    """Replica of the trainer's _hosc_beta_for_epoch (pure law, L2318-2338): prog=(ep-1)/(ae-1);
+    linear (default) => start + (end-start)*prog; shares --anneal-epochs with the τ + LR schedules."""
+    prog = (ep - 1) / max(anneal_epochs - 1, 1)
+    if shape == "cosine":
+        return float(end + 0.5 * (start - end) * (1 + np.cos(np.pi * prog)))
+    return float(start + (end - start) * prog)
+
+
+def test_crucible_v6_beta_pin_reproduces_control_trajectory():
+    """v6.3 MAJOR-2(i): the emitted β pin (--hosc-beta-end 10.0, linear, den 3000) must reproduce the
+    control's β(ep) on [1,726] to ≤0.1% — the anchors were measured at the control's JOINT β state.
+    Control = mod32cap: den 1000, start 1.0, end 4.0, linear. The un-pinned inherited end=4.0 at
+    den 3000 gives β(726)=1.7252 (the value the round-1 verdict corrected the 1.41 cosine misprint to);
+    the pin restores β(726)≈3.176. The 1.41 anti-target is the COSINE-shape value, NOT the emitted shape."""
+    fd = _parse_flag_dict(_crucible_cfg().to_trainer_flags("OUT"))
+    assert fd["--hosc-beta-anneal"] == "linear"
+    b_start, b_end = float(fd["--hosc-beta"]), float(fd["--hosc-beta-end"])
+    ae = int(fd["--anneal-epochs"])
+    # control trajectory (the trace the anchors were measured on)
+    ctrl_726 = _beta_law(726, start=1.0, end=4.0, anneal_epochs=1000)
+    ctrl_650 = _beta_law(650, start=1.0, end=4.0, anneal_epochs=1000)
+    assert abs(ctrl_726 - 3.177) < 1e-3 and abs(ctrl_650 - 2.9489) < 1e-3
+    # emitted pin reproduces it within 0.1% at both absolute anchors
+    assert abs(_beta_law(726, start=b_start, end=b_end, anneal_epochs=ae) - ctrl_726) / ctrl_726 < 1e-3
+    assert abs(_beta_law(650, start=b_start, end=b_end, anneal_epochs=ae) - ctrl_650) / ctrl_650 < 1e-3
+    # anti-target: the un-pinned inherited end=4.0 at the SHARED den 3000 deviates ~1.8× (β(726)=1.7252)
+    assert abs(_beta_law(726, start=1.0, end=4.0, anneal_epochs=ae) - 1.7252) < 1e-3
+    # anti-target: 1.41 was the COSINE-shape misprint, not the emitted (linear) shape
+    assert abs(_beta_law(726, start=1.0, end=4.0, anneal_epochs=ae, shape="cosine") - 1.4122) < 1e-3
+
+
 def test_crucible_v6_pose_block_pinned():
     """MAJOR-A2 + #314 guard: the pose leg is pinned AT the config surface (inherited
     structurally from store_nothing_205, asserted here so inheritance drift is a test failure,
@@ -692,7 +724,14 @@ def test_crucible_v6_knob_pins_and_dsl_levers_materialize():
     """Every v6 §1.1 knob with a 1:1 trainer flag materializes in the argv."""
     fd = _parse_flag_dict(_crucible_cfg().to_trainer_flags("OUT"))
     assert fd["--fused-r-kernel"] is True                       # F-DET (fold 1)
-    assert fd["--curriculum-plateau-windows"] == "5"            # B1 co-predicate V=5 (§2.2g(c))
+    # v6.3 MAJOR-1: --curriculum-plateau-windows is NOT emitted (wrong surface; V=5 binds the B1
+    # spec only, no trainer flag). It must be ABSENT from the argv.
+    assert "--curriculum-plateau-windows" not in fd
+    assert fd["--curriculum-reanchor-levers"] is True           # v6.3 MAJOR-3 re-anchor leg
+    assert fd["--curriculum-min-stage-epochs"] == "250"         # v6.3 MINOR-4 dwell-law pin
+    assert fd["--hosc-beta-end"] == "10.0"                      # v6.3 MAJOR-2(i) β-pin
+    assert fd["--hosc-beta"] == "1.0"                           # start (inherited); shape linear
+    assert fd["--hosc-beta-anneal"] == "linear"
     assert fd["--curriculum-event-triggered"] is True           # handoff="event"
     assert fd["--curriculum-nucleus-guard"] is True
     assert fd["--seg-chroma-boundary-weight"] == "0.1"          # ChromaBoundarySharpen
@@ -737,8 +776,12 @@ def test_store_nothing_205_unchanged_by_crucible_machinery():
     assert cfg.crucible_v6 is False
     fd = _parse_flag_dict(cfg.to_trainer_flags("OUT"))
     for f in ("--anneal-epochs", "--tau-hold-frac", "--fused-r-kernel",
-              "--curriculum-plateau-windows", "--seg-chroma-boundary-weight",
+              "--curriculum-reanchor-levers", "--curriculum-min-stage-epochs",
+              "--seg-chroma-boundary-weight",
               "--seed-islands", "--weight-entropy-penalty-lambda"):
         assert f not in fd, f"store_nothing_205 must not emit the crucible-only flag {f}"
+    # --curriculum-plateau-windows must be emitted by NEITHER (v6.3 MAJOR-1: crucible dropped it too)
+    assert "--curriculum-plateau-windows" not in fd
     assert fd["--softmax-temp-end"] == "0.05"
     assert fd["--tau-anneal-shape"] == "cosine"
+    assert fd["--hosc-beta-end"] == "4.0"      # the β-pin is crucible-only; base keeps the family 4.0
