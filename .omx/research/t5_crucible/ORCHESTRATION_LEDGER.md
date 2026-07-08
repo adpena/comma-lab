@@ -265,6 +265,27 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ⛔ OPERATOR CATCH (3rd recurrence, fury) + RESTART DIRECTIVE — 2026-07-09 ---
+- **"We cargo culted the pr95 curriculum and schedule again."** CORRECT: run-1 carries PR95's
+  discrete-stage SKELETON (CE→tau_softplus→Muon, CE at the proportional 10% position, PR95
+  stage NAMES) with derived constants dressed over it. MECHANISM NAMED: element-wise cargo-cult
+  audits LAUNDER structural inheritance — every brick got an honest disposition, the blueprint
+  passed unexamined. Memory saved same turn:
+  elementwise_audits_launder_structural_cargocult_pr95_skeleton_20260709.md. Seal-machine
+  amendment implied: STRUCTURE round in every cargo-cult audit (derive the SHAPE blinded from
+  the incumbent; underivable shape = inherited = operator-flagged pre-seal; req T lifted from
+  values to SHAPES).
+- **OPERATOR DIRECTIVE: "Build 323 also and restart with TAIL_k after it is sealed."** Plan:
+  (1) #323 FULL LADDER per-class-λ-gated homotopy — Opus builder FIRED (movable dilation-GO +
+  lane curve-prior, costate-gated per the T3 symposium's binding conditions, LawRef-consuming);
+  (2) TAIL_k builder already in flight; (3) WITNESS-NATIVE SCHEDULE DERIVATION fired (Opus,
+  BLINDED method: derive the structure from the level-set/Morse-Smale math FIRST, commit,
+  THEN compare vs incumbent — the anti-laundering protocol); (4) run-1 CONTINUES as interim
+  data-generator (its early trajectory = evidence for the derivation + the ep50-100 slope
+  criterion + ν-refit) until the new stack SEALS; (5) then STOP (governed) + RESTART with
+  {witness-native schedule per the derivation's verdict + TAIL_k + LADDER #323}, sealed first.
+  No signal loss: run-1's burn is not wasted — it is the incumbent arm of the schedule A/B.
+
 --- MID-RUN CHECKPOINT ARMED (operator: "is the schedule optimal? did the crucible dig deep?") ---
 The honest answer recorded: schedule = optimal-relative-to-measured (req N), law-derived not
 lore-derived, with 5 NAMED residuals {stage-skeleton family-bound · τ_end point-on-wide-knee ·
