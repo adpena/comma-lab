@@ -36,6 +36,7 @@ Catalog map:
   #400 check_resume_palliative_flags_imply_warm_start              (C8)
   #401 check_verdict_pairs_default_is_n600                         (C12)
   #402 check_telemetry_verdict_rows_carry_liveness                 (C6)
+  #403 check_launch_config_authored_in_dsl                         (req V, #353)
 """
 
 from __future__ import annotations
@@ -838,7 +839,98 @@ def check_telemetry_verdict_rows_carry_liveness(
     )
 
 
-# Convenience: the six gates in catalog order, for the preflight wire-in + tests.
+# ===========================================================================
+# Catalog #403 — req V (#353): a launch-config-authoring function (a public
+# ``derive_*_config`` entry point in the autoconfig seam) must route through the
+# typed DSL layer (tac.witness_dsl.typed_config) — no parallel hand-assembly.
+# ===========================================================================
+
+# Config-authoring files scanned (OUTSIDE witness_dsl, which is the sanctioned path).
+_CONFIG_AUTHORING_FILES = (
+    "src/tac/witness_autoconfig.py",
+)
+# Tokens proving a function routes through the typed DSL authoring/validation layer.
+_TYPED_DSL_TOKENS = (
+    "typed_config",
+    "TypedWitnessConfig",
+    "to_program",
+    "build_launch_manifest",
+    "_attach_dsl_program_manifest",
+    "dsl_program_manifest",
+)
+_DERIVE_CONFIG_RE = re.compile(r"^derive_\w*config$")
+
+
+def check_launch_config_authored_in_dsl(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #403 (req V, #353) — a public ``derive_*_config`` launch-config entry
+    point in the autoconfig seam must route through the typed DSL layer
+    (``tac.witness_dsl.typed_config``: ``TypedWitnessConfig.to_program`` +
+    ``build_launch_manifest``), never hand-assemble argv on a parallel path.
+
+    Operator 2026-07-08 (verbatim): "The config must be defined in the DSL — no ad
+    hoc or hand crafting ... integrate all with apparatus to prevent more dumbass
+    bullshit." Every parallel, untyped ``derive_*_config`` is where the PR95 skeleton,
+    hardcoded epochs, and bare constants re-entered silently.
+
+    Signature warned: a module-level ``def derive_*_config(...)`` whose body contains
+    NO typed-DSL token and NO waiver. The migrated seam (``derive_crucible_v6_config``)
+    calls ``_attach_dsl_program_manifest`` (a typed-DSL token) and passes.
+
+    Same-line / in-body waiver: ``# DSL_CONFIG_AUTHORING_OK:<rationale>``.
+
+    STRICT-FLIP CONDITION: flip to ``strict=True`` once the autoconfig migration queue
+    is drained (``derive_sealed_205_config`` / ``derive_store_nothing_205_config`` /
+    ``derive_fresh_seeded_config`` / ``derive_config`` route through the typed layer or
+    carry a migration-queue waiver → live-count 0). WARN-only until then — refusing the
+    un-migrated seam now would wedge every non-crucible launch mid-migration.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for rel in _CONFIG_AUTHORING_FILES:
+        path = root / rel
+        text = _read(path)
+        if not text:
+            continue
+        scanned += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        lines = text.splitlines()
+        for node in tree.body:  # module-level defs only (the config entry points)
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if not _DERIVE_CONFIG_RE.match(node.name):
+                continue
+            span = _span_source(lines, node)
+            if any(tok in span for tok in _TYPED_DSL_TOKENS):
+                continue
+            if _waiver_present(span, "DSL_CONFIG_AUTHORING_OK"):
+                continue
+            violations.append(
+                f"{rel}:{node.lineno}: {node.name}() authors a launch config outside the "
+                f"typed DSL layer (no tac.witness_dsl.typed_config routing). Route it through "
+                f"TypedWitnessConfig.to_program + build_launch_manifest (see "
+                f"derive_crucible_v6_config), or add a `# DSL_CONFIG_AUTHORING_OK:<rationale>` "
+                f"migration-queue waiver."
+            )
+    return _finish(
+        name="check_launch_config_authored_in_dsl",
+        tag="launch-config-authored-in-dsl",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{scanned} config-authoring file(s) scanned",
+    )
+
+
+# Convenience: the gates in catalog order, for the preflight wire-in + tests.
 CONFOUND_GATES = (
     check_no_spike_guard_defaults_to_deadlock_mode,
     check_reject_filter_updates_reference_from_accepted_only_has_rearm,
@@ -847,4 +939,5 @@ CONFOUND_GATES = (
     check_verdict_pairs_default_is_n600,
     check_telemetry_verdict_rows_carry_liveness,
     check_levelset_hosc_requires_beta_end,
+    check_launch_config_authored_in_dsl,
 )

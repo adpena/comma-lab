@@ -539,6 +539,92 @@ def schedule_provenance_violations_safe(subjects: list[str], per_file_added: dic
         return []
 
 
+# --- DSL-CONFIG-BYPASS LEG (operator 2026-07-08, verbatim: "The config must be defined in the DSL —
+# no ad hoc or hand crafting ... pydantic ... integrate all with apparatus to prevent more dumbass
+# bullshit"). Sister of the LAUNCHER-path DSL-authored-config gate (b0.6) + the confound preflight
+# gate: a commit that ADDS a NEW config-emitting function (a `derive_*_config` / a `*_flags` argv
+# assembler) OUTSIDE src/tac/witness_dsl WITHOUT routing it through the typed DSL layer
+# (tac.witness_dsl.typed_config: TypedWitnessConfig / to_program / build_launch_manifest) is a NEW
+# parallel hand-assembly path — the exact confound the operator forbids. Window-granular, fail-open,
+# same-line waiver `# DSL_CONFIG_BYPASS_OK:<real rationale>`. Memory:
+# config_must_be_dsl_defined_typed_validated_no_adhoc_20260708. ---
+DSL_CONFIG_FILE_PAT = re.compile(
+    r"(src/tac/witness_autoconfig\.py$|src/tac/witness_config[^/]*\.py$)", re.IGNORECASE)
+# a NEW config-emitting function definition on an added line.
+_NEW_CONFIG_EMITTER = re.compile(r'^\+?\s*def\s+(derive_\w*config|_?\w*_flags)\s*\(')
+# tokens proving the added code routes through the typed DSL layer (a proper authoring path).
+_TYPED_CITE = re.compile(
+    r"(typed_config|TypedWitnessConfig|to_program|build_launch_manifest|dsl_program_manifest|"
+    r"_attach_dsl_program_manifest)")
+_DSL_CONFIG_WAIVER = re.compile(r"#\s*DSL_CONFIG_BYPASS_OK\s*:\s*(\S.*)")
+
+
+def dsl_config_file_in_scope(path: str) -> bool:
+    """True iff this changed file is a config-authoring surface the DSL-config leg scans
+    (witness_autoconfig.py and sibling witness_config modules OUTSIDE witness_dsl)."""
+    p = str(path or "")
+    if "src/tac/witness_dsl/" in p:  # the typed DSL path itself is the SANCTIONED authoring surface
+        return False
+    return bool(DSL_CONFIG_FILE_PAT.search(p))
+
+
+def _has_valid_dsl_config_waiver(line: str) -> bool:
+    m = _DSL_CONFIG_WAIVER.search(str(line or ""))
+    if not m:
+        return False
+    rationale = m.group(1).strip()
+    return len(rationale) >= 4 and not _WAIVER_PLACEHOLDER.match(rationale)
+
+
+def new_config_emitter_additions(added_lines: list[str]) -> list[str]:
+    """Added lines that DEFINE a NEW config-emitting function (a derive_*_config / *_flags argv
+    assembler), minus lines carrying a valid same-line waiver. Returns the function names."""
+    out: list[str] = []
+    for line in added_lines:
+        s = str(line or "")
+        if _has_valid_dsl_config_waiver(s):
+            continue
+        m = _NEW_CONFIG_EMITTER.search(s)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
+def window_cites_typed_dsl(all_added_lines: list[str]) -> bool:
+    """True iff the window's added lines route through the typed DSL layer (a proper migration
+    that adds the config-emitter AND its typed authoring/validation in the same turn)."""
+    return any(_TYPED_CITE.search(str(ln or "")) for ln in all_added_lines)
+
+
+def dsl_config_bypass_violations(subjects: list[str], per_file_added: dict) -> list[str]:
+    """The DSL-config-bypass leg's messages over the window's config-file diffs. A NEW config
+    emitter added outside witness_dsl, in a window that does NOT cite the typed DSL layer, drifts.
+    Window-wide opt-out via [no-triality]/[skip-drift]; per-line waiver. Fail-open in the wrapper."""
+    if is_opted_out(subjects):
+        return []
+    all_added = [ln for lines in per_file_added.values() for ln in lines]
+    if window_cites_typed_dsl(all_added):
+        return []
+    viol: list[str] = []
+    for path, added in per_file_added.items():
+        emitters = new_config_emitter_additions(added)
+        if emitters:
+            viol.append(
+                f"{path}: NEW config-emitting function(s) {emitters[:4]} added outside "
+                "src/tac/witness_dsl without routing through the typed DSL layer "
+                "(tac.witness_dsl.typed_config)")
+    return viol
+
+
+def dsl_config_bypass_violations_safe(subjects: list[str], per_file_added: dict) -> list[str]:
+    """Fail-open wrapper: any exception => [] (silent), so a bug here can neither block a session
+    nor perturb the existing legs' verdict."""
+    try:
+        return dsl_config_bypass_violations(subjects, per_file_added)
+    except Exception:
+        return []
+
+
 def missing_legs(subjects: list[str], files: list[str]) -> list[str]:
     """The SPECIFIC triality legs a change of this type REQUIRES but did not touch.
 
@@ -933,6 +1019,25 @@ def main() -> None:
     except Exception:
         schedule_violations = []
 
+    # --- DSL-CONFIG-BYPASS LEG (operator 2026-07-08 "config must be defined in the DSL, no ad hoc";
+    # fail-open independently). A commit adding a NEW config-emitter (derive_*_config / *_flags) outside
+    # witness_dsl WITHOUT routing through the typed DSL layer drifts. Sister of the launcher b0.6 gate. ---
+    dsl_config_violations: list[str] = []
+    try:
+        dsl_cfg_added: dict[str, list[str]] = {}
+        for f in files:
+            if not dsl_config_file_in_scope(f):
+                continue
+            try:
+                fdiff = _git(root, "diff", f"{last_head}..{head}", "--", f).stdout
+            except Exception:
+                continue
+            dsl_cfg_added[f] = added_lines_from_diff(fdiff)
+        if dsl_cfg_added:
+            dsl_config_violations = dsl_config_bypass_violations_safe(subjects, dsl_cfg_added)
+    except Exception:
+        dsl_config_violations = []
+
     # --- CONSUMER LEG (fail-open independently: a bug in the NEW leg can neither
     # block the session nor perturb the existing legs' verdict) ---
     consumer_missing = False
@@ -946,7 +1051,7 @@ def main() -> None:
         consumer_missing = False
 
     if (classify(subjects, files) == "drift" or consumer_missing or recall_missing
-            or scope_violations or schedule_violations):
+            or scope_violations or schedule_violations or dsl_config_violations):
         # Persist last_block_head (do NOT advance last_head — so the fix/DAG-FEED commit lands
         # inside the next window's UNION and clears the drift on re-check; the last_block_head
         # backstop clears the block once head is unchanged, so it cannot loop).
@@ -957,7 +1062,8 @@ def main() -> None:
             root,
             f"BLOCK head={head[:9]} n={len(subjects)} miss={missing_legs(subjects, files)}"
             f" consumer_leg={consumer_missing} scope_violations={len(scope_violations)}"
-            f" schedule_violations={len(schedule_violations)}",
+            f" schedule_violations={len(schedule_violations)}"
+            f" dsl_config_violations={len(dsl_config_violations)}",
         )
         if classify(subjects, files) == "drift":
             reason = build_reason(subjects, files)
@@ -995,6 +1101,17 @@ def main() -> None:
                       "class=cap). Derive the SHAPE from the witness math, not the PR95 skeleton. "
                       "Deliberate exception: same-line '# SCHEDULE_PROVENANCE_OK:<real rationale>'. "
                       "Sister of the launcher-path STRICT gate (tools/schedule_provenance_gate.py).")
+        if dsl_config_violations:
+            reason = (reason + (" ALSO — " if reason else "") +
+                      "DSL-CONFIG-BYPASS (operator 2026-07-08 'config must be defined in the DSL, no "
+                      "ad hoc or hand crafting'): " + " | ".join(dsl_config_violations[:3]) +
+                      " A launch config must be AUTHORED + typed-validated through "
+                      "tac.witness_dsl.typed_config (TypedWitnessConfig.to_program + "
+                      "build_launch_manifest), not a parallel hand-assembled derive_*/*_flags path. "
+                      "Route the new emitter through the typed layer (and attach the DSL-provenance "
+                      "manifest the launcher gate checks). Deliberate exception: same-line "
+                      "'# DSL_CONFIG_BYPASS_OK:<real rationale>'. Sister of the launcher b0.6 gate + "
+                      "the confound preflight gate check_launch_config_authored_in_dsl.")
         if fm_advisories:
             reason = (reason + " ADVISORY (verdict-scope, on-device FM — never blocking): "
                       + " | ".join(fm_advisories[:2]))

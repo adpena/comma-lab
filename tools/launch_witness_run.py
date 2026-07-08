@@ -543,6 +543,41 @@ def _emitted_flag_names(cfg, out_dir: str) -> set[str]:
     return {flag for flag, _ in cfg.to_trainer_flags(out_dir)}
 
 
+def dsl_config_gate_action(
+    *, ok: bool, detail: str, manifest_absent: bool, config: str,
+    dry_run: bool, skip: bool, enforce: bool, allow_rationale: str | None,
+) -> tuple[str, str]:
+    """Pure decision for the DSL-authored-config gate (unit-testable, no I/O).
+
+    Returns ``(action, message)`` where action is one of:
+      * ``"ok"``       — config carries a valid DSL-provenance manifest; proceed.
+      * ``"override"`` — --allow-non-dsl-config supplied a real rationale; proceed LOUDLY.
+      * ``"warn"``     — advisory (dry-run / --skip-dsl-config-gate / an ABSENT manifest
+                         when --enforce-dsl-config-gate is NOT set — the migration queue).
+      * ``"refuse"``   — REFUSE (rc=7): a manifest present-but-TAMPERED, or an absent
+                         manifest under --enforce-dsl-config-gate.
+    """
+    if ok:
+        return "ok", detail
+    rationale_ok = bool(allow_rationale and allow_rationale.strip())
+    if rationale_ok:
+        return "override", (f"DSL-authored-config gate OVERRIDDEN (--allow-non-dsl-config: "
+                            f"{allow_rationale}); {detail}")
+    if dry_run or skip:
+        why = "DRY-RUN advisory" if dry_run else "--skip-dsl-config-gate set"
+        return "warn", f"({why}): DSL-authored-config gate — {detail}; proceeding."
+    if manifest_absent and not enforce:
+        return "warn", (f"config {config!r} carries NO DSL-provenance manifest (migration queue — only "
+                        f"crucible_v6 is migrated so far). Proceeding WARN-only; pass "
+                        f"--enforce-dsl-config-gate to REFUSE, or migrate the config's derive_* seam "
+                        f"through tac.witness_dsl.typed_config.")
+    return "refuse", (f"DSL-authored-config gate (operator 2026-07-08 no-ad-hoc-config): {detail}. The "
+                      f"launch config must be authored + typed-validated through "
+                      f"tac.witness_dsl.typed_config (a DSL WitnessProgram / TypedWitnessConfig). Pass "
+                      f"--allow-non-dsl-config \"<rationale>\" to override loudly, or "
+                      f"--skip-dsl-config-gate to downgrade to WARN.")
+
+
 def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None) -> int:
     """Pre-spawn SegNet fwd+bwd throughput assertion (the ~17x fast-path gate) + the
     conditional --compile-step bit-identical requirement. Returns 0 (proceed) / nonzero
@@ -891,6 +926,22 @@ def main(argv: list[str] | None = None) -> int:
                     "guard/--plateau-trigger/--closed-loop-control declared in schedule_governance), "
                     "not LawRef-DERIVED (in constants_manifest.json), and not a TAGGED fail-safe cap. "
                     "Default ENFORCES (--dry-run is always advisory: it prints the table, never refuses).")
+    ap.add_argument("--skip-dsl-config-gate", action="store_true",
+                    help="(operator 2026-07-08 'config must be defined in the DSL, no ad hoc') downgrade "
+                    "the DSL-authored-config gate from REFUSE to WARN. The gate verifies the launch "
+                    "config carries a DSL-provenance manifest (authored + typed-validated through "
+                    "tac.witness_dsl.typed_config) whose flag fingerprint matches the emitted argv; a "
+                    "config whose manifest is present-but-TAMPERED is REFUSED (rc=7). Default ENFORCES "
+                    "integrity (--dry-run is always advisory).")
+    ap.add_argument("--enforce-dsl-config-gate", action="store_true",
+                    help="STRICT-FLIP opt-in: additionally REFUSE a launch whose config carries NO DSL "
+                    "manifest at all (a not-yet-migrated hand-assembled config). Default WARNs on an "
+                    "absent manifest (migration queue: only crucible_v6 is migrated so far) but REFUSES "
+                    "a tampered one. Flip this on once the autoconfig migration queue is drained.")
+    ap.add_argument("--allow-non-dsl-config", default=None, metavar="RATIONALE",
+                    help="ESCAPE HATCH (emergencies only): proceed past the DSL-authored-config gate "
+                    "even when the config has no/invalid DSL provenance, LOUDLY stamping a non-DSL "
+                    "override marker (dsl_config_override.txt) into the run dir. Requires a real rationale.")
     ap.add_argument("--throughput-threshold-ms", type=float, default=None,
                     help="override the SegNet fwd+bwd median ms gate (default 700; measured ON~396 / "
                     "OFF~6713). >threshold => REFUSE (custom-grouped-backward fast path not active).")
@@ -1065,6 +1116,50 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # infra/import failure must never wedge the launcher (fail-open, loud)
         print(f"[launch-witness] WARNING: schedule-provenance gate unavailable "
               f"({type(exc).__name__}: {exc}); proceeding (no naked-epoch protection this launch).",
+              file=sys.stderr)
+
+    # (b0.6) DSL-AUTHORED-CONFIG GATE (operator 2026-07-08, verbatim: "The config must be defined in the
+    # DSL — no ad hoc or hand crafting ... pydantic ... integrate all with apparatus to prevent more
+    # dumbass bullshit"). The config must arrive with a DSL-provenance manifest (authored + typed-
+    # validated through tac.witness_dsl.typed_config) whose flag fingerprint MATCHES the emitted argv.
+    #  * manifest present + fingerprint matches  -> OK (proceed).
+    #  * manifest present but TAMPERED/mismatched -> REFUSE rc=7 (a config mutated after typed authoring).
+    #  * manifest ABSENT (a not-yet-migrated hand-assembled config) -> WARN (migration queue) unless
+    #    --enforce-dsl-config-gate is set, then REFUSE. Refusing all absent-manifest configs by default
+    #    would break every non-crucible launch mid-migration; the strict-flip lands when the autoconfig
+    #    migration queue is drained (Strict-flip atomicity).
+    #  * --allow-non-dsl-config "<rationale>" -> LOUD non-DSL override, stamps dsl_config_override.txt.
+    #  * --dry-run / --skip-dsl-config-gate -> advisory (print, proceed). Fail-OPEN on infra error.
+    try:
+        from tac.witness_dsl.typed_config import verify_launch_manifest as _verify_dsl_manifest
+
+        _dsl_manifest = getattr(cfg, "dsl_program_manifest", {}) or {}
+        _emitted_dsl_names = list(_emitted_flag_names(cfg, str(out_dir)))
+        _dsl_ok, _dsl_detail = _verify_dsl_manifest(_dsl_manifest, _emitted_dsl_names)
+        _action, _msg = dsl_config_gate_action(
+            ok=_dsl_ok, detail=_dsl_detail, manifest_absent=not _dsl_manifest, config=config,
+            dry_run=args.dry_run, skip=args.skip_dsl_config_gate,
+            enforce=args.enforce_dsl_config_gate, allow_rationale=args.allow_non_dsl_config)
+        if _action == "ok":
+            print(f"# dsl-config gate: OK — {_dsl_detail}")
+        elif _action == "override":
+            marker = out_dir / "dsl_config_override.txt"
+            try:
+                marker.write_text(
+                    "NON-DSL CONFIG OVERRIDE (--allow-non-dsl-config)\n"
+                    f"rationale: {args.allow_non_dsl_config}\n"
+                    f"gate_detail: {_dsl_detail}\nconfig: {config}\n")
+            except Exception:  # marker is best-effort provenance; never block on it
+                pass
+            print(f"[launch-witness] WARNING: {_msg}. Stamped {marker}.", file=sys.stderr)
+        elif _action == "warn":
+            print(f"[launch-witness] WARNING: {_msg}", file=sys.stderr)
+        else:  # "refuse"
+            print(f"[launch-witness] ERROR: REFUSING to launch — {_msg}", file=sys.stderr)
+            return 7
+    except Exception as exc:  # infra/import failure must never wedge the ONE launch path (fail-open, loud)
+        print(f"[launch-witness] WARNING: DSL-authored-config gate unavailable "
+              f"({type(exc).__name__}: {exc}); proceeding (no DSL-provenance check this launch).",
               file=sys.stderr)
 
     # (b1) MEMORY PREFLIGHT (#205 OOM self-protection). Project peak RSS from the EMITTED launch.sh
