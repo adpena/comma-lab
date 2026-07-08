@@ -228,6 +228,26 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~18:0x: #351 LAWREF CONSTANT-COMPILER BUILT (5 commits, 34 tests) ---
+- The equations leg is now EXECUTABLE into the DSL leg (operator design): LawRef{equation_id,
+  anchor-ref inputs (sha+config-tags+staleness), fallback-with-waiver, ladder_class} → resolver
+  in compile → constants_manifest.json. Additive API (compile_trainer_argv byte-identical;
+  _with_constants variant new). Evaluator surface = src/tac/canonical_equations/evaluators.py.
+- VALIDATION = bit-matching sealed values through REAL artifacts: s* = 6.897090095741019e-06
+  (ν from the wave-A trace JSON) · τ*(q90) = 0.4619441215759677 BIT-IDENTICAL to the τ-confirm
+  artifact · r* = 1.425.
+- **LIVE SPECIMEN of the rot class found during build**: the crucible's STORED s_star used an
+  inline forfeit unreproducible from any stored field (~1e-13 off — numerically harmless,
+  epistemically exactly requirement T's disease: a value that cannot be re-derived from stored
+  inputs). LawRef makes both inputs explicit → reproducible now.
+- FAIL-CLOSED proven: ConfigConditionalityViolation (mod-32 anchor vs mod-48 target) NEVER
+  swallowed by fallback (P-CT1 mechanized); sha/staleness/missing → LawResolveError unless
+  waivered fallback (manifest records fallback_used). Deterministic value.
+- SEQUENCING DECISION (main loop): the crucible_v6 MIGRATION (5 constants → ~9 evaluators+
+  LawRefs, ~350-450 LOC, launcher hookup = 1 line + manifest) fires AFTER v6.4 lands (autoconfig
+  frees) and BEFORE the seal restarts — seal the form that launches, once; run-1 then carries
+  constants_manifest.json (requirement P: per-run constants provenance).
+
 --- LANDING FOLDED 2026-07-08T~17:0x: V6.3 (5303cd241/26459b0d4) + THE LR DECISION ---
 - All 6 r1-v6.2 findings fixed+proven: plateau-windows token ABSENT (wrong-surface reverted;
   V=5 binds B1 spec only) · β pinned DERIVED-AT-CONFIG (linear ≤0.1% vs control; misprint
