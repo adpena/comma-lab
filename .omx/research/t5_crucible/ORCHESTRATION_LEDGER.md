@@ -2233,3 +2233,10 @@ consumer update required — asserted [consumers-generic]. ---
   DECISION RULE: floors at 0.015-0.035 & STOPS = placement floor ⇒ next lever = Force-3, NOT more
   area constraint. Candidate eq area_theft_vs_placement_dseg_decomposition_v1 council-FLAGGED
   (theft measured; CF-efficacy + placement floor owed to the v7.5 A/B).
+- **R5 FIX WAVE LANDED (c50e24353)**: MAJOR-1 LOSS_TERM_KEYS + writers⊆schema structural test +
+  P0-active sum_minus_total self-check test; MINOR-1 arithmetic ~96% honest + global-stiffness
+  wording; MINOR-2 tau_persist pass-through+test; MINOR-3 WATCH recorded. crucible_v7 argv
+  BYTE-UNCHANGED (150/150, SHA 23ce367b) — schema/telemetry/doc only, launch config untouched.
+  Plus stale-test hygiene: test_eikonal_stabilizer default legacy→rollback (was asserting the
+  #397-BANNED deadlock default — the extinguished median-freeze bug; pre-existing RED, now green).
+  → CONVENING R5 ROUND 2 (both lenses on the fix delta; counter 0/3, need 3 consecutive clean).
