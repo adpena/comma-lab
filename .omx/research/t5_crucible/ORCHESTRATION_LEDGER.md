@@ -228,6 +228,27 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~18:1x: V6.4 (LR RISK ROW RESOLVED-BY-BUILD) ---
+- The v6.3 MAJOR-2(ii) AdamW LR RISK ROW is CLOSED by the named trainer build. Three code surfaces
+  (normal triality landing: trainer LEVER → DSL Lever factory → autoconfig variant pin) + tests:
+  (1) TRAINER: pure helper `_lr_scheduled_for_epoch` + `--lr-anneal-epochs` (LR cosine denominator,
+  default None → shared anneal_epochs → BIT-IDENTICAL) + `--lr-hold-frac` (default 1.0 = no hold =
+  bit-identical; <1.0 clamps the unclamped-prog rebound), mirroring the τ cosine_hold form; guards
+  mirror --anneal-epochs/--tau-hold-frac. (2) DSL: `LrAnnealPin(anneal_epochs=1000, hold_frac=1.0)`
+  Lever factory → lever_registry.completeness() now MAPS both flags (out of unmapped). (3) VARIANT:
+  `--lr-anneal-epochs 1000` (mod32cap CONTROL's own den; LR trio = shared 1e-3/1e-4/1 defaults) +
+  `--lr-hold-frac 1.0` → the den split ALONE reproduces the control LR(ep) on [1,726] BIT-IDENTICALLY
+  (max |Δ|/control = 0.0 — the same replica-vs-anchor method the β pin used, tighter than β's ≤0.1%).
+  DERIVED-AT-CONFIG (req-T ladder class 2); re-derive on muon-start/den/lr-trio change.
+- PROOF: launcher dry-run n600/3000ep --config crucible_v6 → 106/106 flags (was 104; +2 LR pin),
+  tokens present, NO duplicates, mem-preflight 67.61 GiB PASS (LR flags memory-neutral). Tests
+  161/161 green (autoconfig + lever_registry + curriculum_dsl); ruff F clean on all 5 touched files.
+  The measured 2.83× (ep675) → 3.41× (ep726) shared-den deviation is retained as an anti-target.
+- The window laws (ν, settle 237, s*, fire band ep675) are now evaluated on the plant they were
+  MEASURED on — the requirement-T config-conditionality failure class is closed for the LR sibling.
+  Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
+- means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
+
 --- LANDING FOLDED 2026-07-08T~18:0x: #351 LAWREF CONSTANT-COMPILER BUILT (5 commits, 34 tests) ---
 - The equations leg is now EXECUTABLE into the DSL leg (operator design): LawRef{equation_id,
   anchor-ref inputs (sha+config-tags+staleness), fallback-with-waiver, ladder_class} → resolver

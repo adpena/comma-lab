@@ -799,7 +799,7 @@ the OTHER event-trigger constants. All CODE-landed (`derive_crucible_v6_config` 
    muon-start-epoch / `--anneal-epochs` / `--hosc-beta-anneal`. LATENT HAZARD: β climbs toward 10.0
    if the 726 freeze ever becomes event-movable. Guarded by `test_crucible_v6_beta_pin_reproduces_control_trajectory`
    (control trajectory + emitted-pin match + both anti-targets: 1.7252 un-pinned linear, 1.41 cosine misprint).
-3. **MAJOR-2(ii) (AdamW LR sibling unnamed) → RISK ROW (structurally unpinnable).** The LR cosine ALSO
+3. **MAJOR-2(ii) (AdamW LR sibling unnamed) → RISK ROW (structurally unpinnable). ◆ v6.4 SUPERSEDED — RESOLVED-BY-BUILD (§14.4); the measured 2.83×/3.41× deviation below is retained as the WHY the build was necessary.** The LR cosine ALSO
    reads `--anneal-epochs` (trainer L6594) but has **NO shape/hold/denominator flag** to reshape it,
    so at den 3000 the AdamW phase [1,726] runs at **~2.83× (fire ep675, 8.92e-4 vs 3.15e-4) to ~3.41×
    (freeze ep726, 8.76e-4 vs 2.57e-4)** the control's LR — the control genuinely annealed 1e-3 →
@@ -829,7 +829,51 @@ the OTHER event-trigger constants. All CODE-landed (`derive_crucible_v6_config` 
 Value-provenance ladder (req T): every pinned constant tagged in the variant docstring —
 softmax_temp_end 0.31 = MEASURED-ANCHOR (P-TAU2 knee band) · τ/β schedules = DERIVED-AT-CONFIG (law +
 re-derive trigger) · muon/tau-start/min-stage/band/warmup = MEASURED-ANCHOR (mod32cap trace, ABSOLUTE
-epochs) · AdamW LR = RISK ROW (config-conditional, build item named). Code: commit 5303cd241
+epochs) · AdamW LR = RISK ROW (config-conditional, build item named — ◆ v6.4: now DERIVED-AT-CONFIG,
+resolved-by-build, §14.4). Code: commit 5303cd241
 (`src/tac/witness_autoconfig.py` + `test_witness_autoconfig.py`, 52/52 green, ruff F clean).
+
+Pointer contest-CPU 0.19110 UNMOVED — this draft is MEANS until the exact-eval row lands.
+
+## §14.4 — v6.4 CHANGELOG (the AdamW LR RISK ROW resolved by the trainer build, 2026-07-08; counter stays 0/3 — this fold is a BUILD, seal re-runs on v6.4)
+
+The v6.3 seal adjudicated the §14.3 MAJOR-2(ii) LR RISK ROW to the BUILD: a ~3× LR deviation from
+the control STALES every config-conditional window law derived from the control trace (ν=0.012653,
+settle 237, s*=6.8971e-6, the forfeit fire band ep675) — carrying the risk would evaluate run-1's
+schedule laws on a plant they were NOT measured on (the exact P-CT1/req-T failure class, foreseen
+instead of discovered). The named ~15-20 LOC build is CHEAP vs re-deriving all window laws live.
+
+1. **TRAINER BUILD (the LR-specific denominator split the pin needed).** New pure helper
+   `_lr_scheduled_for_epoch(ep, args, lr_anneal_epochs)` (mirrors `_softmax_temp_for_epoch`'s
+   cosine_hold form) + two flags at trainer L6620: `--lr-anneal-epochs` (LR cosine denominator,
+   default None → falls back to the shared `anneal_epochs` → BIT-IDENTICAL) + `--lr-hold-frac`
+   (hold-at-floor fraction, default 1.0 = no hold = bit-identical cosine; < 1.0 also CLAMPS the
+   unclamped-prog rebound). Guards mirror `--anneal-epochs` / `--tau-hold-frac` (≥1 denominator;
+   (0,1] hold-frac; WARN when den < epochs). DEFAULT-UNSET IS BYTE-IDENTICAL to the pre-build
+   trainer (the real helper reproduces the prior inline formula EXACTLY over [1,3000], max |Δ|=0 —
+   test `test_lr_scheduled_default_off_is_bit_identical`).
+2. **DSL LEVER FACTORY (triality: a lever is not built until it is a `Lever` factory).**
+   `LrAnnealPin(anneal_epochs=1000, hold_frac=1.0)` in `tac.witness_dsl.curriculum_dsl` holds both
+   flags; `lever_registry.completeness()` now MAPS `--lr-anneal-epochs` + `--lr-hold-frac` (moved
+   out of `unmapped`) — test `test_lr_anneal_pin_factory_holds_true_flag_spellings`.
+3. **VARIANT PIN (DERIVED-AT-CONFIG, req-T ladder class 2).** `--lr-anneal-epochs 1000`
+   (the mod32cap CONTROL's own denominator; its LR trio = the shared 1e-3/1e-4/1 defaults) +
+   `--lr-hold-frac 1.0` (the control's Muon freeze 726 < den 1000, so LR never held pre-freeze).
+   With the LR trio at the shared default, the den split ALONE reproduces the control LR(ep) on
+   [1,726] **BIT-IDENTICALLY** (max |Δ|/control = 0.0 over the whole anchor band — the ep650-best /
+   ν / settle-237 / s* / fire-band laws are now evaluated on the plant they were measured on).
+   RE-DERIVE TRIGGER: any change to muon-start-epoch / `--lr` / `--lr-end` / `--warmup-epochs` /
+   the control den 1000. The measured 2.83× (ep675) → 3.41× (ep726) shared-den deviation (§14.3
+   item 3) is retained as an anti-target in `test_crucible_v6_lr_pin_reproduces_control_trajectory`.
+4. **DOCSTRING + PROVENANCE.** `derive_crucible_v6_config`'s KNOWN-RESIDUAL RISK ROW → RESOLVED-BY-
+   BUILD; new `prov["lr_schedule"]` (DERIVED-AT-CONFIG, re-derive triggers); the crucible_v6_deltas
+   provenance string updated. SC-7 per-stage d_seg re-measure stays a run-1 verification (the pin is
+   MEANS; only a byte-closed exact row is a score).
+
+PROOF: launcher dry-run re-executed at n600/3000ep against `--config crucible_v6` → **106/106 flags**
+(was 104; +2 for the LR pin), tokens `--lr-anneal-epochs 1000` + `--lr-hold-frac 1.0` present, NO
+duplicate flags, mem-preflight 67.61 GiB PASS (LR flags are memory-neutral). Tests: 161/161 green
+across `test_witness_autoconfig.py` + `test_lever_registry.py` + `test_witness_curriculum_dsl.py`;
+ruff F clean on all five touched files.
 
 Pointer contest-CPU 0.19110 UNMOVED — this draft is MEANS until the exact-eval row lands.
