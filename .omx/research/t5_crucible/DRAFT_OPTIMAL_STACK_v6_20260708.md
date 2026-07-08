@@ -23,6 +23,7 @@ axis: all numbers [macOS-CPU/MLX advisory] unless tagged; archive bytes exact (z
   Pointer contest-CPU 0.19110 UNMOVED — this whole file is MEANS.
 review_status: pre-registered-only (v6, seal round 1 of 3 pending)
 verdict_scope_discipline: every negative below carries its req-R scope tag
+v6.1_errata: seal-r1 MINOR-1 (census vehicle named + 0.2180 alternative floor) + MINOR-2 (width label 0.4989) applied — no decision, consumer-read number, or build item changed
 verdict_scope: formulation — the negatives THIS draft asserts are all formulation-scoped at their
   source probes (P-CON kill = pers>τ·ln5 AS-FORMULATED, fitted bar is the live form; P-MP dead =
   K≤64 concave-max selection AT the annulus, capacity passes; Q1 "at chance" = the POOLED-unsigned
@@ -107,7 +108,7 @@ probe: this is an in-principle unreachability census on the CURRENT state (state
 GT-geometry estimator form; not a measured fix-yield).
 
 **The decomposition row (enters the d_seg budget):** decoded residual 0.0036146 =
-**smooth-reachable ≈ 2.0351e-3** + **quantum-locked ≈ 1.5795e-3** [MEASURED-at-state, subset].
+**smooth-reachable ≈ 2.0351e-3** + **quantum-locked ≈ 1.5795e-3** [MEASURED-at-state, subset; VEHICLE NOTE (seal-r1 MINOR-1): the P-DZ/P-CON census vehicle is the θ* per-stage-attribution run (2026-06-30), not mod32cap — under the alternative fraction-transfer the smooth-only floor is 0.2180, still > 0.19110, so every disposition stands; run-1's F-rows re-measure the fraction on its own vehicle].
 
 **The M1 asymptote term (computed, as the fold demands):** if the census transfers to the design
 endpoint, the SMOOTH-PERTURBATIVE-ONLY witness (INR corrections through R, no large-amplitude
@@ -302,7 +303,7 @@ the τ-descent to a small endpoint was the withheld recovery.
 |---|---|---|
 | 1 | adaptive-ε FLOOR law | form unchanged; the fine-τ saturation concern RELAXES at τ_end 0.31 (the \|c_a(τ)\| growth that drove it is milder); saturation ALARM (ε_raw > 0.7 sustained) KEPT |
 | 2 | adaptive-ε UPPER 0.7 | unchanged (measured-anchor); Q3 clamp-binding check now runs at the RE-CENTERED τ-samples |
-| 3 | δ_τ width = τ·ln5 | law-form kept (exponent 1); at τ_end = 0.31: width = **0.4986 logit** (was 0.0998); no longer grounded by row (a) — grounded by the Maslov bound alone |
+| 3 | δ_τ width = τ·ln5 | law-form kept (exponent 1); at τ_end = 0.31: width = **0.4989 logit** (0.31·ln5; the 0.4986 print was 0.3098·ln5) (was 0.0998); no longer grounded by row (a) — grounded by the Maslov bound alone |
 | 4 | island release r\*(t) = 0.95·σ_eff(t) | unchanged (its anchors are σ/dilation-knee measurements, not the m_q artifact) |
 | 5 | island gate margin ∝ τ·ln5 | kept; value at τ_end updates with row 3 |
 | 6 | c_cond | unchanged (first-run-measures) |
@@ -519,7 +520,7 @@ step (quotient codec / compress-half / 0.0005-regime) regardless of run-1's outc
 
 - Row 16 (max-plus) AMENDED with the measured autopsy: selection-mechanism binds (envelope rms
   2.30–58.18 logit), capacity passes (oracle rms 0.0761–0.1306), K=64 payload 1.5341 S rate-dead
-  (862× margin); the τ_end coupling constant in the row re-binds after §1.4a (0.4986 at τ_end
+  (862× margin); the τ_end coupling constant in the row re-binds after §1.4a (0.4989 at τ_end
   0.31, law-form unchanged). Band-residual K=1 specials (band/clamp/comb) UNAFFECTED — still the
   surviving essence. Reformulation queue ranked per wave-B.
 - ◆ §12 rows now carry explicit scope tags (MINOR-R-2): backstepping = **family-dead-for-this-
