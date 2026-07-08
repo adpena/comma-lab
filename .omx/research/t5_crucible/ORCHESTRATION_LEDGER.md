@@ -1860,3 +1860,18 @@ consumer update required — asserted [consumers-generic]. ---
   file-add commit would have absorbed the revert — committed via --patch-file with ONLY the
   epochs-property hunk, then normalized the file to HEAD (R-6 restored, nothing else lost).
   This is the sweeper's named risk class materializing; patch-file discipline contained it.
+- **D15 micro-batch routing LANDED** (bd6219a0a): logit-adjust routed into the batched twin
+  (per-class offset on BASE seg-form logits only — bit-exact per pair; offset None = byte-identical)
+  + unify_tau branch added (live render-coupled τ by-ref; missing callable RAISES — the latent
+  silent-CE killed). 70 twin tests green (16 new). Micro-batch now ELIGIBLE for v7 configs;
+  NOT default-on — the n600 trajectory A/B remains the inclusion evidence (waterfill B pinned 1
+  UNMEASURED until an uncontended n600 curve). → symposium item 3. Flagged: #293 seed tolerance
+  2e-4 < observed 3.4e-4 (pre-existing flake, one-line re-fit candidate) · --margin-weighted
+  twin non-support (v7-inactive, out of scope).
+- **Item-7 evidence check (adaptive-ε #320) DONE by orchestrator**: BUILT + byte-identity-OFF
+  proven (gt_n6 bit-identical, 21 tests) but the pre-registered n600 A/B NEVER RAN — superseded
+  by the v6 redesign (λ_eik 0.01 fixed; run-1 launch.sh carries NO viscosity flags; eikonal
+  stable ~0.0084 @ep67, no re-entry). Equation adaptive_eps_cfl_edge_tracking_v1 remains
+  ASSUMED_AWAITING_VERIFICATION. Symposium disposition recommendation:
+  REGISTERED-duty-to-measure, trigger = eikonal re-entry signature in v7 telemetry (the
+  pre-built insurance), NOT v7.1-ARM (its failure mode is structurally absent at λ=0.01).
