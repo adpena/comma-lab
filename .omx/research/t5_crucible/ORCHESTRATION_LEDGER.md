@@ -1995,3 +1995,14 @@ consumer update required — asserted [consumers-generic]. ---
   designed hybrid mode, not just a flag pair) — noted for v7.1 scope with the D1 evidence gate.
   CRUX WAVE-1 CLOSES: item 4 ELEVATED (cert ADMIT) · item 3 elevation REVOKED by measurement ·
   item 10 stays REGISTERED (stop-window probe armed). Remaining in flight: #358 only.
+- **#358 REGISTRY FOLD LANDED** (51ae8ea8d/7834cda31/228ab5c84): all 4 non-gate controllers
+  (rng/closed-loop/tau-advance/evt) folded as FunctionResumable adapters — WRITE single-sourced
+  through registry.state_arrays(), keys byte-identical to legacy (per-key equality test),
+  RESTORE deliberately inline (construction-order; adapters unit-tested); widened static gate
+  asserts every *_state_arrays producer registered; manifest stamped ONLY on event-active
+  writers (always-on rng adds no manifest). LEGACY PROOF (MEASURED, read-only): run-1's REAL
+  sidecar restores legacy=True, 0 warnings, bit-identical. 24+ tests green. CARRY-ITEM for
+  round 2: experiments/test_closed_loop_control.py has 2 PRE-EXISTING stale assertions
+  (removed symbol 'v = realized_verdict()'; verified failing on clean HEAD) — fix in v7.3 scope.
+  → S2 COND-1 SATISFIED · S5 item-9 contingency SATISFIED · D20 CLOSED.
+  **ALL v7.3 PRECONDITIONS MET → firing the v7.3 COMPILE builder.**
