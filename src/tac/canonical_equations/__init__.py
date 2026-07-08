@@ -65,6 +65,17 @@ from tac.canonical_equations.builtins import (
     build_all_initial_equations,
     populate_initial_equations,
 )
+from tac.canonical_equations.evaluators import (
+    EvaluatorError,
+    EvaluatorNotRegisteredError,
+    LAWREF_BUILTIN_EVALUATORS,
+    get_evaluator,
+    has_evaluator,
+    populate_lawref_evaluators,
+    register_evaluator,
+    registered_equation_ids,
+    resolve_equation_value,
+)
 from tac.canonical_equations.equation import (
     CANONICAL_EQUATION_SCHEMA_VERSION,
     RECALIBRATE_NEVER_AUTO,
@@ -282,6 +293,15 @@ __all__ = [
     "CanonicalEquationsRegistryCorruptError",
     "DomainOfValidityViolation",
     "EmpiricalAnchor",
+    "EvaluatorError",
+    "EvaluatorNotRegisteredError",
+    "LAWREF_BUILTIN_EVALUATORS",
+    "get_evaluator",
+    "has_evaluator",
+    "populate_lawref_evaluators",
+    "register_evaluator",
+    "registered_equation_ids",
+    "resolve_equation_value",
     "ALL_DEEPMATH_AMORTIZING_ARGMAX_BUILDERS",
     "InvalidEquationError",
     "NormalInverseGammaHyperparameters",
