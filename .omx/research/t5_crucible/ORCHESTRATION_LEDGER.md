@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: WALL-CLOCK DEFAULT-ON + PERF-ENV CLASS GUARD (517e1c884; 21 new + 159 suite
+green; operator "default on always / shouldn't have been caught manually" executed) ---
+- wall_clock_budget_days = REQUIRED DERIVED typed field (schema refuses absence); launcher
+  REFUSES rc=8 when the MEASURED bench × epochs projects over budget — no opt-in flag;
+  legacy configs get a launcher-derived fallback budget (the gate never disappears);
+  --accept-wall-clock = the only override, stamps the run dir. v7 declares 7.427 days
+  (DERIVED: 3.1 min/ep anchor × 3000 × 1.15 slack).
+- Perf-env guard rc=9: REQUIRED_PERF_ENV parsed FROM PERF_ENV_PREFIX (single SoT object,
+  both to_command paths consume the same instance — drift structurally impossible); the
+  EMITTED launch.sh is asserted, missing var named. Budget-implied bench ceiling catches
+  non-env regressions (kernel/device/thermal) even when all vars present.
+- 3rd whole-file-add mis-attribution observed (wall-clock's autoconfig hunks swept into
+  3563b9c9b) — detected + documented cleanly this time; the serializer patch-file mode
+  (landed today) is the cure, sibling charters predate its contract. Content correct at
+  HEAD, zero loss. Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: REVISIONS-B (3563b9c9b apparatus+tests + 7443eef75 memo; 42 tests green;
 trainer hunks HELD in working tree pending τ-advance sequencing — correct anti-absorption) ---
 - S2-REV-A stagger invariant on TWO surfaces (DSL validate + trainer pre-GPU raise);
