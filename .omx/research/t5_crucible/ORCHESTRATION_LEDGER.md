@@ -521,3 +521,19 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   0.062 → 0.18932); Model A 1.6-6.4% / Model B 3-11% run-1 (8-15% only with run-1.5 branch,
   labeled). New $0 probes R12/R13/τ-confirm. **SEAL ROUND 2 LAUNCHED** (both lenses, delta-scoped,
   one agent — rate-limit-resilient stagger; wave-1 finisher holds slot 2).
+- 2026-07-08T~00:2x CHAIN-A FORMALLY COMPLETE (post-reset self-resurrection; commits
+  ebd9ccaaa/91b3d37d4/42fa00812; 629 tool-uses, $0, no launches). **PROVENANCE CORRECTION to the
+  recovery commit:** recovered draft cited K=128 ratio 0.011; FINAL converged numbers are
+  λ₋=−16.85 / ratio 0.163 / 1/√K-extrapolated ≈0.08 at full P (strict kill <0.1 not formally
+  reached; persist >0.5 decisively excluded). The DECISIVE evidence is the TRANSFER TEST: holdout
+  curvature along u_min ±1.2 vs −175 claimed = 150× smaller + sign-unstable → subset noise;
+  u_min isotropic across curvelet/along/across columns; g_true ≈0.08 (exact 1/√K scaling), per-
+  pair σ≈2.0 = near-stationary; ALL solve steps worsen holdouts (the one int8 "gain" −6.1e-4
+  flipped +5.8e-4 on a disjoint holdout — winner's curse caught). BINDING INSTRUMENT FACTS:
+  analytic HVP ≠ true landscape ~35% through uint8-STE → measured-acceptance only; K≤8 spectra =
+  NOISE for DECIDE (require K≥32 + K-trend); extreme Ritz magnitudes fp32-path-fragile (2×
+  CPU/GPU). Verdict unchanged from recovery: TerminalSolve NO-GO · HOLD disarmed · basin sensor
+  K-disciplined agrees with S2 meat-exit · Muon-quench sharpened (no 2nd-order gold at ep726) ·
+  wall = BASIS, Arm A carries the burden. TRANCHE-2 NOTE: the PROVISIONAL spectrum equation's
+  kill-update must cite the FINAL numbers (0.163/extrap-0.08/transfer-150×), not the recovered
+  draft's 0.011.
