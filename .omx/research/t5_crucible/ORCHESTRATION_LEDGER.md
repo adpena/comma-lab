@@ -1173,3 +1173,25 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   Mod32SegOnlyControlBase base-delta OPEN question (eikonal-0/freq-along-8/n-dir-4/lane-paint-off
   not auto-composed; l7@1001 would misfire at 3000 ep). $0, NO launches (dry-run only), run dirs
   read-only. Pointer contest-CPU 0.19110 UNMOVED — all MEANS.
+- 2026-07-08T~0x:xx **v6.3 LANDED (seal-round-1-on-v6.2 fold; 0 BLOCKER + 3 MAJOR + 3 MINOR — counter
+  stays 0/3) — CODE-FIXED + dry-run-PROVEN.** The round-2 BLOCKER fix was VERIFIED CORRECT; every
+  finding lived in its un-swept blast radius (the OTHER `--anneal-epochs` consumers + adjacent
+  event-trigger constants). Fixes (commit 5303cd241, `derive_crucible_v6_config` + tests, 52/52
+  green): **MAJOR-1** dropped `--curriculum-plateau-windows 5` (WRONG SURFACE = ep-loss window, v5
+  §0.1 row 3(a); V=5 binds ONLY the B1 co-predicate spec, no trainer flag) · **MAJOR-2(i)** pinned
+  hosc-β `--hosc-beta-end 10.0` (DERIVED-AT-CONFIG, req T: linear shape reproduces control β(ep) on
+  [1,726] to ≤0.1%, slope 3.001e-3 ≈ 3.003e-3, β(726)=3.1757≈3.177; re-derive on muon-start/den/shape;
+  β-replica test) · **MAJOR-2(ii)** AdamW LR = RISK ROW (structurally unpinnable — shares
+  `--anneal-epochs`, NO shape/hold/den flag; AdamW phase [1,726] runs ~2.83× fire / ~3.41× freeze the
+  control's LR; ~15-20 LOC build item `--lr-anneal-epochs`/`--lr-hold-frac` at trainer L6586-6595;
+  run-1 SC-7 re-measures) · **MAJOR-3** added `--curriculum-reanchor-levers` (boundary_relative NOW
+  REAL; chroma sister-gap = not in trainer re-anchor set → start=300 absolute, chroma re-anchor = run-2
+  build item) · **MINOR-4** pinned `--curriculum-min-stage-epochs 250` (k_max net unchanged =5) ·
+  **MINOR-5** B19 supersession marks (fold-row 8 + §7c P-DZ cell) · **MINOR-6** §1.1 base label →
+  materialized sealed/store-nothing base + base-delta question CLOSED (§2.3 adjudication). **CORRECTION
+  to the v6.2 fold above:** the "hosc-β(726-freeze)≈1.41" residual was the COSINE-shape value; the
+  emitted shape is LINEAR ⇒ the TRUE un-pinned value is **1.7252** (now moot — β is PINNED). **DRY-RUN
+  PROOF (n600/3000ep, --config crucible_v6): 104/104 flags (net +1: −plateau, +reanchor, +min-stage) ·
+  --hosc-beta-end 10.0 + --curriculum-reanchor-levers + --curriculum-min-stage-epochs 250 present ·
+  --curriculum-plateau-windows ABSENT · pose block intact · NO duplicate long-flags.** $0, NO launches
+  (dry-run only), run dirs read-only. Pointer contest-CPU 0.19110 UNMOVED — all MEANS.

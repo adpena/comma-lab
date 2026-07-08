@@ -21,7 +21,7 @@ epistemic_contract: unchanged — every knob carries a CONTROL LAW class {(a) CO
   claims denominated in the 0.00178 S crossing margin.
 axis: all numbers [macOS-CPU/MLX advisory] unless tagged; archive bytes exact (zip stat).
   Pointer contest-CPU 0.19110 UNMOVED — this whole file is MEANS.
-review_status: pre-registered-only (v6.2; seal counter 0/3 after the round-2 NOT-CLEAN reset — rounds restart on THIS revision; the round-3 re-verify re-runs the launcher dry-run against --config crucible_v6)
+review_status: pre-registered-only (v6.3; seal-round-1-on-v6.2 returned 0 BLOCKER + 3 MAJOR + 3 MINOR, counter stays 0/3 — this v6.3 revision folds all six; the next seal round re-runs the launcher dry-run against --config crucible_v6 and re-runs the schedule-sibling sweep table against the new tokens)
 verdict_scope_discipline: every negative below carries its req-R scope tag
 v6.1_errata: seal-r1 MINOR-1 (census vehicle named + 0.2180 alternative floor) + MINOR-2 (width label 0.4989) applied — no decision, consumer-read number, or build item changed
 v6.2_fold: seal-round-2 verdict (1 BLOCKER + 2 MAJOR + 3 MINOR) + the P-TAU2/P-DITHER gate resolutions folded — SUBSTANTIVE (build items + consumer-read claims change); see §14 "v6.2 changelog". The BLOCKER fix is CODE (src/tac/witness_autoconfig.py derive_crucible_v6_config + tools/launch_witness_run.py --config crucible_v6), PROVEN by re-running the round-2 dry-run at n600/3000ep against the new config (launch.sh tokens verified; test-guarded in src/tac/tests/test_witness_autoconfig.py::test_crucible_v6_schedule_matches_design_doc)
@@ -67,7 +67,7 @@ lens-B); no training launched, no live config touched ($0 reading + arithmetic +
 | 5 | **τ\* RE-DERIVATION** (the big one) | §1.4a: 0.062 STRUCK (the m_q = 0.10 anchor was TAUTOLOGICAL — binned on the maps-npz `gt_margin` key = SIGNED witness margin-toward-GT, ≤ 0 at flips by definition, max −1.12e-5; bit-reproduced 0.7644972239; apparatus-vs-anchor, scope INSTANCE, law form τ\* = m_q/ln5 untouched). Consistency row (a) STRUCK as CIRCULAR (§0.4). Convention DERIVED from the law's original intent (Maslov error budget) → FIXED-POINT form with f_target DEFERRED to a named probe; launch value = CONSTANT 0.31 (the measured-best anchor) + live-law promotion path. Anneal-"TRUNCATED" narrative re-examined honestly: the τ-leg INVERTS (evidence supports over-descent past the optimum); the β-leg stands. Full cascade (9+1 c(τ) rows, adaptive-ε, TAIL ladder τ_k = max(τ_{k−1}/2, τ\*_k-from-live-m_q), F12 τ-samples re-centered) in §1.4a-cascade |
 | 6 | **B17 fitted form** | §3.4: certificate = **ABSOLUTE persistence bar** (fitted s: thresholds **1.7504924172 logit** @Tau-stage maps / **1.3017706202 logit** @MuonBest — near τ-INDEPENDENT while τ varied 4.3×; raw pers > τ·ln5 certifies only 0.4408/0.5636, KILL scope=FORMULATION, band ≥ 0.95). Death alarm semantics unchanged. COHERENCE NOTE: P-CON's absolute bar + τ-CONFIRM's τ·ln5-anchor collapse are the SAME finding from two independent probes — the τ·ln5 scaling does not govern the real margin/persistence field; absolute logit scale does |
 | 7 | **B16** | §1.3: stays DEFAULT-OFF (Q1 BETWEEN: max \|ρ\| = 0.1242 < 0.3 fire bar; 3 sides ≥ 0.1 block robust-dead). REGROUNDED on the measured opposite-signs mechanism (raw-texture ρ: Lane→Road erasure **+0.1346** high-texture · Movable→Road **−0.1027** low-texture — pooled −0.033 averaged away opposite signs exactly as the shape-gradient theorem predicted) at **40% of the fire bar**; the struck circular row-(a) grounding REMOVED. Duty-to-measure kept with the sharpened re-test spec (hinge / per-range / rank-ρ / winner-side-logit reformulations). NEW PHYSICS ROW (SC-20): annulus flips are **MARGIN-driven, not reachability-driven** (S_R positive control AT CHANCE max \|ρ_sR\| = 0.0808 while the margin control passes −0.24…−0.38 all sides) — consumers named in §4c |
-| 8 | **#149 GRADUATION** (P-DZ fired 88.7×) | §0.3 + §5/B19: deadzone flip mass = **1.5795495775e-3 d_seg-equivalent** (H1 variant 1.4556778802e-3), **38.366% of subset flip mass** (= 43.70% of the n600 decoded residual 0.0036146) sub-quantum — far-range lane rows 176–224, horizon shadows, hood boundary. Build-state checked (corpus): #149 = a COMPLETED closed-form $0 probe on the #155 flat-paint vehicle (probe_dseg_side_feasibility_corners.py; mechanism REAL — 12× boundary-flip win — RED only as a #155 replacement); NO render-side lever exists in the witness trainer (grep: 0 dither flags). **DECISION: RUN-1, gated** — a decode-side deterministic dither lever is ~small LOC and $0-gateable (B19 + P-DITHER, §7c). Family-asymptote M1 term computed in §0.3; smooth-reachable vs quantum-locked decomposition enters the d_seg budget |
+| 8 | **#149 GRADUATION** (P-DZ fired 88.7×) | §0.3 + §5/B19: deadzone flip mass = **1.5795495775e-3 d_seg-equivalent** (H1 variant 1.4556778802e-3), **38.366% of subset flip mass** (= 43.70% of the n600 decoded residual 0.0036146) sub-quantum — far-range lane rows 176–224, horizon shadows, hood boundary. Build-state checked (corpus): #149 = a COMPLETED closed-form $0 probe on the #155 flat-paint vehicle (probe_dseg_side_feasibility_corners.py; mechanism REAL — 12× boundary-flip win — RED only as a #155 replacement); NO render-side lever exists in the witness trainer (grep: 0 dither flags). **DECISION: RUN-1, gated ◆v6.2 SUPERSEDED — B19 DEAD-AS-FORMULATED** (P-DITHER fired the KILL bar, Δd_seg +2.1277533637e-6 ≥ 0; §0.3/§7c); the render-informed #149 placement MECHANISM is run-2 queue. Family-asymptote M1 term computed in §0.3; smooth-reachable vs quantum-locked decomposition enters the d_seg budget |
 | 9 | **P-MP** | §11 row 16 + §12: KILL scope=FORMULATION (max-of-K≤64-concave-quadratics at the annulus: agreement plateaus ~0.41 vs band 0.95). SHARPENED AUTOPSY: **oracle-SELECTION capacity PASSES** (K=64 rms 0.0761–0.1306 logit ≈ the 0.0998-class coupling bound) — the max-ENVELOPE selection mechanism binds (envelope rms 2.30–58.18 logit), NOT representation richness; **K=64 payload = 2,304,000 B = 1.5341 S — rate-dead by 862× the margin regardless**. Max-plus stays in solve-inventory (band-residual K=1 specials UNAFFECTED) with the RANKED reformulation queue: log-sum-exp at finite τ · tropical rational · per-class; larger K is NOT the fix |
 | 10 | **Corrections** | comb gap-FP removal = **79.3283%** (0.0017417→0.0003600), NOT 86% — cited as 79.33 everywhere in v6; the 86-vs-79 discrepancy sits in the SOLID-BASELINE construction between probes (cCOMB's own gap_FP reproduces FEED-08c c3 EXACTLY at 0.000360) → NAMED CHECK: the comb-registration audit's step-0 pins ONE solid baseline before the number is cited again (§7c). FEED-08l = UPHELD-WITH-EVIDENCE-CORRECTION: the scoreability column was mis-mapped (range bands, not freq rungs) — ALL FIVE rungs d_seg-scoreable at n600 ⇒ the flat-ladder claim is now 5-point = STRONGER; the flatness is a COMPENSATED TRADE (contrast-closure and gap-FP improve monotonically with f_along, recall pays it back) — req-K confirmation: the dash wants the comb's REGISTRATION, not its spectrum |
 | 11 | **Signal ledger updates** | §4c: SC-3 extended (quantile-convention OWNER: the f_target fixed-point + q̂ decision live here) · SC-16 status → **SEEDED** (g_I edge-contrast histograms EMITTED: experiments/results/t5_probe_waveB_20260708/pdz_deadzone_census.json + .gi_hists.npz, 128 bins/pair) · NEW SC-20 (margin-vs-reachability flip-driver row) · NEW SC-21 (GPU-determinism composite check row). Ledger = **21 rows**; zero no-signal gap terms RE-VERIFIED (§4c-end) |
@@ -272,7 +272,11 @@ either way.
 ```python
 prog = WitnessProgram(
     purpose="T5 crucible ARM-PRIMARY v6: v5 + fused-R determinism + tau_end 0.31 + firing forfeit arm",
-    base=Mod32SegOnlyControlBase(),
+    base=sealed_store_nothing_205_base(),   # ◆ v6.3 MINOR-6: the MATERIALIZED base (§2.3 adjudication).
+                                            #   mod32cap is a council-designed CONTROL whose deltas
+                                            #   deliberately disable the growth machinery — composing it
+                                            #   would ship the lobotomy. --dsl-lever Mod32SegOnlyControlBase
+                                            #   = the one-line trace-authority A/B (kept, not shipped)
     curriculum=sealed_205_curriculum(cfg, handoff="event"),  # anneal-epochs 600;
                                                              # ◆ --softmax-temp-end 0.31 (§1.4a; was 0.062)
     levers=[
@@ -289,8 +293,12 @@ prog = WitnessProgram(
         SignedBoundaryWeight(gated="Q1-sharpened"),          # B16: DEFAULT-OFF (Q1 BETWEEN); §1.3 amended
         CacheGtSkeleton(), LengthSigma("fitted-20260707"),
         AACoverageRender(mode="ipe"),
-        AnalyticLaneRenderBand(start=350, boundary_relative=True, v_h=174),
-        ChromaBoundarySharpen(weight=0.1, margin_band=1.0, start="tau_fire"),
+        AnalyticLaneRenderBand(start=350, boundary_relative=True, v_h=174),  # ◆ v6.3 MAJOR-3:
+                                            #   boundary_relative NOW REAL via --curriculum-reanchor-levers
+        ChromaBoundarySharpen(weight=0.1, margin_band=1.0, start=300),  # ◆ v6.3 MAJOR-3 sister-gap:
+                                            #   start=300 ABSOLUTE — chroma is NOT in the trainer's
+                                            #   re-anchor set (persistence/seed/analytic-band only);
+                                            #   "tau_fire" boundary-relative for chroma = a run-2 build item
         MuonWarmStart(lr_final_frac=0.1),                    # entry = TAU-window EMA-best; ◆ FIRING arm =
                                                              #   forfeit-matched s* (§2.2f); slope arm = fallback
         WeightEntropyPenaltyMLX(lam=15),                     # twin lam=0, mirror-schedule
@@ -308,15 +316,16 @@ are emitted by `derive_crucible_v6_config`; the composable §1.1 levers ride the
 (`SeedIslandBirth · SeedIslandEased · EventTriggeredCurriculum · LogitAdjust · AmplifyIsland ·
 PersistenceTopology · CacheGtSkeleton · LengthSigma · MuonWarmStart · WeightEntropyPenaltyMLX`);
 SignedBoundaryWeight stays DEFAULT-OFF (Q1 BETWEEN), ConleyCertificate-fitted (B17′) +
-GNSpectrumProbe are telemetry/build surfaces, not launch flags. **Named OPEN base-delta question
-for the seal round (stated, not silently decided):** `Mod32SegOnlyControlBase()` as a DSL factory
-carries 8 control-vehicle deltas; the variant inherits 3 of them via the sealed base (mod-32 ·
-verdict-pairs 0 · annealed hosc 1→4) and does NOT auto-compose the rest (eikonal-0 · freq-along-8
-· n-dir-freqs-4 · lane-paint-off · l7@1001 — the last MISFIRES at 3000 ep: 1001 < 3000 would RUN
-the demoted l7 defect stage; the others change the vehicle the ν/τ trace laws were measured on
-vs the P3-sealed lever pins — a genuine authority conflict this fixer surfaces rather than
-adjudicates). The one-line A/B lever exists: `--dsl-lever Mod32SegOnlyControlBase` composes them
-at launch (minus an l7 re-pin).
+GNSpectrumProbe are telemetry/build surfaces, not launch flags. ◆ **v6.3 (MINOR-6) — the base-delta
+question is CLOSED (seal-round-1 §2.3 adjudication):** the sealed/store-nothing base is the RIGHT
+vehicle. `Mod32SegOnlyControlBase()` carries 8 control-vehicle deltas; the variant inherits 3 via
+the sealed base (mod-32 · verdict-pairs 0 · annealed hosc 1→4) and deliberately does NOT auto-compose
+the rest (eikonal-0 · freq-along-8 · n-dir-freqs-4 · lane-paint-off · l7@1001) — mod32cap is a
+council-designed CONTROL whose deltas disable the growth machinery (lane-init no-op, growth losses
+off), so composing it would ship the control's lobotomy as the launch vehicle. The residual authority
+conflict (the ν/τ trace laws were measured on the control VEHICLE as well as the control SCHEDULE)
+folds into the MAJOR-2 named transfer-risk row (§14.3). The one-line trace-authority A/B stays named:
+`--dsl-lever Mod32SegOnlyControlBase` composes the control deltas at launch (minus an l7 re-pin).
 
 ### 1.3 ◆ B16 REGROUNDED (fold 7 + MINOR-R-1 + MINOR-B2)
 
@@ -592,7 +601,7 @@ locked-geometry-masked) AGAINST (per-band ratios ≤ 1 in every band a mask woul
 | P-CT2 | BAND-FAIL, kill not triggered (FORMULATION) | B-CT3 unbuilt; stage-best-protection conjunct registered (§2.5) |
 | τ-CONFIRM (+ ep1000 follow-up) | 0.062 REVOKED (INSTANCE; anchor = apparatus artifact) | τ_end = 0.31 anchored constant + live-law path (§1.4a); row (a) struck |
 | P-CON | **KILL raw τ·ln5 form** (FORMULATION) | B17 ships fitted absolute bar (§3.4) |
-| P-DZ | **FIRES** 88.7× band (census, no kill) | #149 → duty queue + B19/P-DITHER run-1 gated lever; M1 term computed (§0.3) |
+| P-DZ | **FIRES** 88.7× band (census, no kill) | #149 → duty queue; B19/P-DITHER ◆v6.2 SUPERSEDED = KILL-as-formulated (render-informed placement → run-2 queue); M1 term computed (§0.3) |
 | Q1 | **BETWEEN** (FORMULATION non-fire) | B16 default-off, regrounded, sharpened re-test (§1.3); SC-20 row born |
 | P-MP | **KILL K≤64 concave-max form** (FORMULATION — this expansion form stays unadmitted; richer tropical forms re-enter only with their own probe [MINOR-R-3 wording]) | §11 row 16 autopsy sharpened; band-residual K=1 specials unaffected |
 
@@ -724,11 +733,11 @@ claims changed. Per-item:
    67.61 GiB PASS, every token verified in the emitted launch.sh; the design-schedule ==
    emitted-schedule equivalence is a permanent test
    (`test_crucible_v6_schedule_matches_design_doc`, wrong emissions pinned as anti-targets).
-   §10 F-DET "0 (config)" under-scope corrected (B-CFG row). Named honest residual: the
-   hosc-β anneal shares the den-3000 denominator ⇒ β(726-freeze) ≈ 1.41 (vs the control's
-   3.177) — the M2 β-leg stays unresolved (v6 names no β pin); + the §1.1 base-delta OPEN
-   question (Mod32SegOnlyControlBase's eikonal-0/freq-along-8/n-dir-4/lane-paint-off not
-   auto-composed; l7@1001 would MISFIRE at 3000 ep) surfaced for the seal round.
+   §10 F-DET "0 (config)" under-scope corrected (B-CFG row). Named honest residual (◆ CORRECTED
+   in v6.3 — see §14.3): the hosc-β anneal shares the den-3000 denominator; the emitted shape is
+   LINEAR, so β(726-freeze) = **1.7252** (NOT the 1.41 cosine-shape value the v6.2 fold misprinted)
+   vs the control's 3.177 (den 1000) — **now PINNED in v6.3 via `--hosc-beta-end 10.0`**. The §1.1
+   base-delta OPEN question is **CLOSED in v6.3** (§2.3 adjudication, MINOR-6).
 2. **MAJOR-A2 (pose leg unpinned; #314 unnamed) → PINNED.** The launch config emits
    `--w-pose 1.0 --pose-carrier --pose-carrier-residual-mode table --pose-carrier-source
    generated` (inherited STRUCTURALLY from store_nothing_205; regression test
@@ -763,5 +772,60 @@ Code surfaces landed with this fold: `src/tac/witness_autoconfig.py` (crucible_v
 + activation-ledger rows for config-composed levers) ·
 `src/tac/tests/test_witness_autoconfig.py` (7 new tests; 51/51 green; launcher suite 39/39).
 All numbers [macOS advisory]; the config is MEANS.
+
+## §14.3 — v6.3 CHANGELOG (seal-round-1-on-v6.2 fold, 2026-07-08; 0 BLOCKER + 3 MAJOR + 3 MINOR — counter stays 0/3)
+
+Folds `seal_round1_v62_verdict_20260708.md` 1:1. The round-2 BLOCKER fix was VERIFIED CORRECT (τ
+materialization reproduces both mod32cap anchors; dry-run reproduces); every finding lives in the
+fix's un-swept blast radius — the OTHER two consumers of the shared `--anneal-epochs` denominator +
+the OTHER event-trigger constants. All CODE-landed (`derive_crucible_v6_config` + tests; commit
+5303cd241) and dry-run-PROVEN (n600/3000ep, launch.sh 104/104 flags).
+
+1. **MAJOR-1 (wrong-surface V pin) → REVERTED.** `--curriculum-plateau-windows 5` DROPPED from the
+   variant + test (it was the EP_LOSS-plateau window — a DIFFERENT surface v5 §0.1 row 3(a) forbids
+   silently recalibrating). **V=5 binds ONLY the B1 co-predicate spec (no trainer flag exists);** the
+   plateau-windows flag stays at trainer default 4. dry-run PROVES the token is ABSENT.
+2. **MAJOR-2(i) (hosc-β misprinted + unpinned) → PINNED + misprint corrected.** The β anneal shares
+   `--anneal-epochs` (den 3000); the emitted shape is LINEAR, so the TRUE fire-band value is
+   β(726-freeze) = **1.7252** — the v6.2 "1.41" was the COSINE-shape value (wrong for the emitted
+   linear shape), corrected in §14 item 1 + the variant docstring + the ledger fold. **PIN
+   (DERIVED-AT-CONFIG, req T): `--hosc-beta-end 10.0`** — β is linear, so end=10.0 reproduces the
+   control's β(ep) on [1,726] to ≤0.1% (slope (10−1)/2999 = 3.001e-3 ≈ control 3/999 = 3.003e-3;
+   β(726) = 3.1757 ≈ 3.177; β(650) = 2.9477 ≈ 2.9489). RE-DERIVE TRIGGER: any change to
+   muon-start-epoch / `--anneal-epochs` / `--hosc-beta-anneal`. LATENT HAZARD: β climbs toward 10.0
+   if the 726 freeze ever becomes event-movable. Guarded by `test_crucible_v6_beta_pin_reproduces_control_trajectory`
+   (control trajectory + emitted-pin match + both anti-targets: 1.7252 un-pinned linear, 1.41 cosine misprint).
+3. **MAJOR-2(ii) (AdamW LR sibling unnamed) → RISK ROW (structurally unpinnable).** The LR cosine ALSO
+   reads `--anneal-epochs` (trainer L6594) but has **NO shape/hold/denominator flag** to reshape it,
+   so at den 3000 the AdamW phase [1,726] runs at **~2.83× (fire ep675, 8.92e-4 vs 3.15e-4) to ~3.41×
+   (freeze ep726, 8.76e-4 vs 2.57e-4)** the control's LR — the control genuinely annealed 1e-3 →
+   ~2.57e-4 over its den 1000; crucible stays near-peak. A shallow den-3000 cosine arc CANNOT
+   reproduce the control's deep den-1000 descent by endpoint choice alone (curvature differs), so no
+   clean flag-level pin exists. **BUILD ITEM (~15–20 LOC, trainer L6586-6595):** an LR-specific
+   denominator split (`--lr-anneal-epochs`) or an `--lr-hold-frac`, decoupling the LR schedule from the
+   τ/β-locked `--anneal-epochs`. Until it lands, the ep650-best/ν/fire-band anchors (measured at the
+   control's ANNEALED LR) carry a NAMED transfer risk; run-1 SC-7 per-stage d_seg re-measures on this
+   vehicle. Config-conditional to den 3000. [The measured 2.83×/3.41× recompute the verdict's
+   "2.6× fire / 3.4× freeze"; the small gap is the warmup offset.]
+4. **MAJOR-3 (re-anchor leg unmaterialized) → ADDED.** `--curriculum-reanchor-levers` now emitted, so
+   §1.1's `AnalyticLaneRenderBand(boundary_relative=True)` (+ persistence-warmup + seed-anneal) shift
+   to the FIRED τ boundary instead of their calibrated ep300-relative epochs (was silently false).
+   **Sister-gap:** chroma is NOT in the trainer's re-anchor set (L2049-2072), so `start="tau_fire"` is
+   unrealizable for chroma — §1.1 re-worded to `start=300` ABSOLUTE, chroma re-anchor named a run-2
+   build item. Guarded in `test_crucible_v6_knob_pins_and_dsl_levers_materialize`.
+5. **MINOR-4 (min-stage unpinned) → PINNED 250.** `--curriculum-min-stage-epochs 250` (trainer default
+   150) makes the dwell-law printed constant true; k_max net unchanged (floor((2350−250)/387.1) = 5).
+6. **MINOR-5 (B19 supersession marks) → APPLIED.** Fold-row 8 + §7c P-DZ cell now carry the ◆v6.2
+   SUPERSEDED mark (B19 DEAD-AS-FORMULATED post-P-DITHER; render-informed #149 → run-2 queue).
+7. **MINOR-6 (§1.1 base label) → AMENDED + base-delta question CLOSED.** `base=Mod32SegOnlyControlBase()`
+   → the materialized sealed/store-nothing base (§2.3 adjudication: mod32cap is a council-designed
+   CONTROL; composing it ships the lobotomy); the trace-authority A/B `--dsl-lever Mod32SegOnlyControlBase`
+   stays named.
+
+Value-provenance ladder (req T): every pinned constant tagged in the variant docstring —
+softmax_temp_end 0.31 = MEASURED-ANCHOR (P-TAU2 knee band) · τ/β schedules = DERIVED-AT-CONFIG (law +
+re-derive trigger) · muon/tau-start/min-stage/band/warmup = MEASURED-ANCHOR (mod32cap trace, ABSOLUTE
+epochs) · AdamW LR = RISK ROW (config-conditional, build item named). Code: commit 5303cd241
+(`src/tac/witness_autoconfig.py` + `test_witness_autoconfig.py`, 52/52 green, ruff F clean).
 
 Pointer contest-CPU 0.19110 UNMOVED — this draft is MEANS until the exact-eval row lands.
