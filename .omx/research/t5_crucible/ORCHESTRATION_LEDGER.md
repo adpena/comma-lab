@@ -265,6 +265,21 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- 📈 RUN-1 FIRST TRAJECTORY POINT (ep25 verdict, landed 07:15:16 after ~31 min compute —
+slow-not-dead; [macOS-CPU advisory] NON-PROMOTABLE) ---
+- d_seg 0.745→**0.1769** (4.2× / 25 ep). by_class [road .44 · LANE .095 · undriv .15 ·
+  movable .016 · mycar .003] — lane is 2nd-best converging (structured init + eased seed
+  paying); flip mass 57% road + 42% undriv (big classes at τ≈1, expected order).
+- ⚠️ WATCH-1: verdict d_pose ROSE 7.38→9.58 while the training pose TERM fell 11.5→~0.5.
+  Hypotheses (unconfirmed): EMA-shadow lag at 0.997 early + dxi residual co-adapting to LIVE
+  weights while verdict reads EMA. DECISION AT ep50 VERDICT: not descending ⇒ real
+  composition problem, escalate; descending ⇒ lag artifact.
+- ⚠️ WATCH-2: blob 65,611→99,079 B (+51%; rate 0.0437→0.0660 projected). Init blob was the
+  compressible outlier; trained weights cost more. Still < frontier 0.118; weight-entropy
+  λ=15's job is exactly this trend. S1 budget arithmetic to be re-run on the blob TRAJECTORY,
+  not the ep0 snapshot. accepted_frac now 1.0 on verdict rows (fix confirmed live-adjacent).
+  Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: GPU-VERDICT HYBRID (4487d0e58 + 8e9c62a97; 25 new tests; memo
 gpu_verdict_hybrid_20260708.md) — built, default-cpu, promotion evidence-gated ---
 - DETERMINISM MEASURED: 9/9 verdict-relevant MLX-GPU forward ops cross-process deterministic
