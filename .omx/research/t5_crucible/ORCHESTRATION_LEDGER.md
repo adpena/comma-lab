@@ -204,6 +204,26 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~16:0x: SEAL ROUND 1 ON V6.2 = NOT-CLEAN (0B/3MAJ/3MIN), COUNTER 0/3 (406d3a791) ---
+- THE REBOUND FIX ITSELF = CORRECT (τ law re-derived from trainer source; replica reproduces
+  BOTH measured anchors τ(650)=0.3098 + frozen 0.2157; τ(675)=τ(726)=0.31 exact; dry-run
+  re-executed 1:1; all 6 round-2 fixes landed; sensitivity arithmetic reproduces).
+- SIBLING SWEEP (12 schedules) — the shared-denominator class has TWO MORE members:
+  (a) hosc-β deviates 1.8× AND the printed 1.41 was the COSINE-shape value while the emitted
+  shape is LINEAR → true fire-band β = 1.7252 (draft §14 + docstring + ledger all misprint);
+  (b) AdamW LR = an UNNAMED third sibling (fire-band LR 2.6× the trace; anneal never completes
+  pre-freeze). All other schedules inert/absolute/OK-by-design.
+- MAJOR-1 (the round-2 warning realized): `--curriculum-plateau-windows 5` recalibrates the
+  WRONG surface — the ep-loss window v5 row 3(a) explicitly said NOT to change; V=5 belongs to
+  the B1 co-predicate which has NO trainer flag. MAJOR-3: `--curriculum-reanchor-levers`
+  omitted → boundary_relative + chroma start="tau_fire" unrealizable as configured.
+- ADJUDICATIONS: hosc-β = unmeasured-regime not divergence-class — PIN IT (`--hosc-beta-end
+  10.0` linear reproduces the control β on [1,726] to 0.1%) or carry an explicit risk row;
+  silently carrying the misprint = the one indefensible option. Base-delta: sealed base RIGHT
+  (mod32cap = deliberate control); §1.1 label amendment only.
+- V6.3 FIXER FIRED (Opus per the operator model policy): 3 majors + 3 minors + the β/LR
+  shared-den pins + misprint corrections; seal restarts on v6.3.
+
 --- LANDING FOLDED 2026-07-08T~15:0x: P-TAU2 + P-DITHER RESOLVED (e2b2f55da) — ZERO OPEN GATES ---
 - **P-TAU2: τ_end = 0.31 STANDS.** Kneedle elbow (pre-registered criterion) on the true
   GT-margin flip-mass CDF: implied f_target = 0.861663/0.862512 (ep650/ep1000, leg-stable to
