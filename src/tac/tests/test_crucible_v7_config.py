@@ -57,6 +57,16 @@ _EXPECTED_ADDED = frozenset({
     # (v7.3 round-2 R3 fix, seal_v73_r2_structure) per-group grad-clip ON — bounds the ep1 gnorm_hijack
     # (island_amplify ~20% of ep1 loss) so it can't starve the seg gradient during the Road-forming window.
     "--per-group-grad-clip",
+    # (v7.5 birth-counter-force, road_anomaly_probe_20260708.md) Lever-1 CHAN-VESE AREA CONSTRAINT (the
+    # precision counter-force vs the recall-only birth stack's Road over-paint) + Lever-2 MORSE-SMALE
+    # BIRTH-COMPLETION EVENT (the birth->boundary regime hand-off). All new flags (absent from v6).
+    "--area-constraint-birth", "--area-constraint-birth-force", "--area-constraint-tolerance",
+    "--area-constraint-classes",
+    "--birth-completion-event", "--birth-completion-tau-persist", "--birth-completion-area-band",
+    "--birth-completion-ramp-epochs", "--birth-completion-post-level", "--birth-completion-classes",
+    # (v7.5 Lever-3 regime coherence) restrict the v6-inherited --logit-adjust-loss-tau boost to the
+    # non-offloaded birthed class(es); DERIVED from the basis regime (lane_offloaded => "3", movable only).
+    "--logit-adjust-classes",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",
@@ -367,7 +377,8 @@ def test_basis_lever_in_dsl_levers_activation_surface(compiled):
     levers = compiled.to_launch_config().dsl_levers
     assert "FEED_07a_directional_basis_rebalance" in levers
     assert "R7_polyak_finisher" in levers
-    assert len(levers) == 5  # 3 v6-inherited spine levers + Arm-A basis + the v7.3 Polyak finisher
+    assert "v75_area_constraint_birth" in levers and "v75_birth_completion_event" in levers
+    assert len(levers) == 7  # v7.3 five + the two v7.5 birth-counter-force levers
     assert tuple(levers) == wac._CRUCIBLE_V7_DSL_LEVERS
 
 

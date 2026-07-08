@@ -1829,6 +1829,10 @@ _CRUCIBLE_V7_DSL_LEVERS: tuple[str, ...] = (
                                              # (seal v7 r1 R-1; operator APPROVED; Arm-A first fire)
     "R7_polyak_finisher",           # --polyak-finisher-* (R-7 finisher 2; v7.3 delta 2, synthesis item 8
                                     # IN-v7; start_epoch SIZED to the TAIL turnpike, DERIVED-AT-CONFIG)
+    "v75_area_constraint_birth",    # --area-constraint-* (v7.5 Lever-1 Chan-Vese precision counter-force;
+                                    # lambda_c DERIVED-LIVE from GT areas; un-floors Road)
+    "v75_birth_completion_event",   # --birth-completion-* (v7.5 Lever-2 Morse-Smale birth->boundary
+                                    # hand-off; DETECTOR + telemetry live, loss-surface ramp OWED)
 )
 
 # Flags whose delta vs v6 is a run-dir artifact (NOT a config semantic) — excluded from the
@@ -2227,11 +2231,14 @@ def _build_crucible_v7(
     reuses. Returns ``(typed, v6_cfg, v6_flags)``. Shared by :func:`derive_crucible_v7_config`
     and :func:`compile_crucible_v7_config` so v6 is derived ONCE."""
     from tac.witness_dsl.curriculum_dsl import (
+        AreaConstraintBirth,
+        BirthCompletionEvent,
         DirectionalBasisRebalance,
         LadderIslandHomotopy,
         PolyakFinisher,
         SegFormUnifyTau,
         TailCycles,
+        logit_adjust_classes_for_basis_regime,
         persistence_classes_for_basis_regime,
     )
     from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
@@ -2297,6 +2304,16 @@ def _build_crucible_v7(
     # emphasizes when the band handles lane) so it needs no config gate here; the fixed-weight persistence
     # recall was the one regime-BLIND term. Counter-arm (lane_carried) registered duty-to-measure.
     base["--persistence-classes"] = persistence_classes_for_basis_regime(_CRUCIBLE_V7_BASIS_REGIME)
+    # (v7.5 Lever-3 REGIME COHERENCE, road_anomaly_probe_20260708.md) the v6 base carries
+    # --logit-adjust-loss-tau 1.0, whose Menon offset boosts LANE recall by -5.14 nats. Under the
+    # lane_offloaded basis regime lane is carried by the FREE analytic band (freq_along~=6 cannot
+    # represent the dash comb), so a lane RECALL boost demands lane skeleton the frequency-starved
+    # learned render physically cannot produce => the recall-without-precision driver the probe measured
+    # over-painting lane 13.8x INTO Road. DERIVE the logit-adjust class subset from the SAME regime (the
+    # companion law, sister of persistence-classes above): lane_offloaded => drop lane from the boost
+    # (movable only, "3"); lane_carried => keep lane ("all"). The area constraint (Lever-1) caps the
+    # residual movable over-boost; the lane boost is simply removed where it is incoherent.
+    base["--logit-adjust-classes"] = logit_adjust_classes_for_basis_regime(_CRUCIBLE_V7_BASIS_REGIME)
     # (F-3 structural coupling) dropping lane from the learned persistence recall (lane_offloaded)
     # is SOUND ONLY IF the FREE analytic lane band actually carries lane at byte-close. That band is a
     # SEPARATE flag (--lane-render-band, inherited bare-bool from the proven v6 base) with no structural
@@ -2366,6 +2383,19 @@ def _build_crucible_v7(
         _typed_lever(LadderIslandHomotopy()),
         _typed_lever(DirectionalBasisRebalance(regime=_CRUCIBLE_V7_BASIS_REGIME)),
         _typed_lever(PolyakFinisher(start_epoch=_polyak_start)),
+        # (v7.5 birth-counter-force) Lever-1 CHAN-VESE AREA CONSTRAINT — the precision counter-force that
+        # un-floors Road (road_anomaly_probe_20260708.md: lane 13.8x/movable 4.6x over-paint pinned Road
+        # d_seg ~0.40). One-sided level-set area-constraint Lagrange term; lambda_c DERIVED LIVE from GT
+        # areas; equilibrium (1+0.25)*A_GT. Equations leg chan_vese_area_constraint_birth_balance_v1.
+        _typed_lever(AreaConstraintBirth()),
+        # (v7.5 birth-counter-force) Lever-2 MORSE-SMALE BIRTH-COMPLETION EVENT — the regime hand-off
+        # (birth->boundary) once a class has persisted + settled into the equilibrium band. DEFENSE-IN-
+        # DEPTH with Lever-1 (the multiplier self-limits area continuously; the event re-allocates the
+        # freed capacity, #302 discipline). DETECTOR + telemetry + resume-state are live; the birth-stack
+        # RAMP APPLICATION to the loss surfaces is the OWED integration (memo
+        # v75_birth_counterforce_20260708.md §Lever-2) — composing it activates the detector (byte-neutral
+        # observability), not yet the loss-surface ramp.
+        _typed_lever(BirthCompletionEvent()),
     )
 
     typed = TypedWitnessConfig(

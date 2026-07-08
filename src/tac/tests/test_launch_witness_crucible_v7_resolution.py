@@ -110,7 +110,8 @@ def test_adapter_exposes_full_cfg_protocol(v7_cfg):
     # 5-lever set as of the v7.3 compile (Polyak finisher joined the basis-integration four).
     assert v7_cfg.dsl_levers == (
         "seg_form_unify_tau", "tail_k_warm_restart", "n323_ladder_island_homotopy",
-        "FEED_07a_directional_basis_rebalance", "R7_polyak_finisher")
+        "FEED_07a_directional_basis_rebalance", "R7_polyak_finisher",
+        "v75_area_constraint_birth", "v75_birth_completion_event")
 
 
 def test_b06_manifest_verifies_for_real(v7_cfg):
