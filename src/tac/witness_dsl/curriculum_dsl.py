@@ -2610,6 +2610,113 @@ def persistence_classes_for_basis_regime(regime: str, *, lane_class: int = 1,  #
         "(expected 'lane_offloaded' or 'lane_carried')")
 
 
+def logit_adjust_classes_for_basis_regime(regime: str, *, lane_class: int = 1,  # noqa: N802 stays snake
+                                          movable_class: int = 3) -> str:
+    """v7.5 Lever-3 REGIME COHERENCE (sister of :func:`persistence_classes_for_basis_regime`): the
+    --logit-adjust-classes value DERIVED from the active :func:`DirectionalBasisRebalance` regime, so
+    the loss-time class-prior boost and the basis frequency budget AGREE.
+
+    The Menon logit-adjustment boosts rare-class RECALL by shifting the seg-loss logits
+    (offset_c = tau*log(prior_c); measured lane -5.14, movable -4.39). Under ``lane_offloaded`` the
+    basis is freq_along≈6 (Candès–Donoho cartoon scale) which CANNOT represent the ~25-cyc dash comb —
+    so a -5.14 lane RECALL boost demands lane skeleton from a frequency-starved render that physically
+    cannot produce it. That over-boost is exactly the recall-without-precision driver the
+    road_anomaly_probe measured over-painting lane 13.8x INTO Road. Coherence => drop lane from the
+    boost when it is offloaded (returns ``str(movable_class)`` = "3", movable-only); ``lane_carried``
+    keeps lane (returns "all"). Pure / fail-closed on an unknown regime (mirrors the persistence sister)."""
+    r = str(regime)
+    if r == "lane_offloaded":
+        return str(int(movable_class))          # movable only; lane offloaded => no learned-recall boost
+    if r == "lane_carried":
+        return "all"                            # keep lane in the boost (freq_along≈26 carries it)
+    raise ValueError(
+        f"logit_adjust_classes_for_basis_regime: unknown regime {regime!r} "
+        "(expected 'lane_offloaded' or 'lane_carried')")
+
+
+def AreaConstraintBirth(birth_force: float = 1.0, tolerance: float = 0.25,  # noqa: N802 — v7.5 Lever-1
+                        classes: str = "1,3", window: int = 0) -> Lever:
+    """v7.5 birth-counter-force Lever-1 — the CHAN-VESE AREA-CONSTRAINT precision counter-force
+    (equations leg ``tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708``, the
+    imported balance law).
+
+    The rare-class-birth stack (seed-islands + island-amplify + persistence-recall + logit-adjust) is
+    RECALL-only: it over-grows the born classes {Lane,Movable} INTO GT-Road with no precision cap
+    (MEASURED road_anomaly_probe_20260708.md: lane 13.8x / movable 4.6x over-paint at ep125,
+    mass-conserved from Road => Road d_seg pinned ~0.40). This lever adds the ONE-SIDED Chan-Vese
+    area-constraint Lagrange term of the level-set region energy
+
+        E_area,c(phi) = (lambda_c / 2) * max(0, A_c(phi) - A_c^GT)^2
+
+    whose gradient is an INWARD retraction on the boundary (delta(phi_c) via the softmax Jacobian)
+    PROPORTIONAL to the area overshoot. It balances the birth force at ``A_c^* = (1+tolerance)*A_c^GT``
+    — the equilibrium IS the spec, no ramp schedule needed (operator 2026-07-08: "the level set and
+    Morse-Smale are perfect for engineering the precisely desired annealing behavior"). With this term
+    active the completion event (:func:`BirthCompletionEvent`) becomes a regime hand-off, NOT the sole
+    safety mechanism (defense-in-depth; the multiplier self-limits continuously).
+
+    The trainer derives ``lambda_c = birth_force / (tolerance * A_c^GT)`` LIVE from the loaded GT
+    areas (value-provenance gold standard — no frozen literal). ``birth_force`` (F_birth proxy = the
+    birth loss weight, 1.0 in v7 argv), ``tolerance`` (equilibrium overshoot fraction; 0.25 =>
+    equilibrium 1.25x GT), ``classes`` (comma list of birthed classes, 'auto' = the amplify/persistence
+    island classes). Consumes the SHARED realized through-R seg forward (NO extra SegNet forward). The
+    trainer flag ``--area-constraint-birth`` is a store_true default-OFF => byte-identical when this
+    lever is not composed. The lambda SCALE is ASSUMED_AWAITING_VERIFICATION (owed to the v7.5 A/B);
+    the FORM + balance are DERIVED. window=0 = loss-config lever, no epoch budget of its own."""
+    if not (float(tolerance) > 0.0):
+        raise ValueError(f"AreaConstraintBirth: tolerance must be > 0, got {tolerance!r}")
+    if not (float(birth_force) >= 0.0):
+        raise ValueError(f"AreaConstraintBirth: birth_force must be >= 0, got {birth_force!r}")
+    return Lever(
+        "v75_area_constraint_birth",
+        overrides={"--area-constraint-birth": True,
+                   "--area-constraint-birth-force": float(birth_force),
+                   "--area-constraint-tolerance": float(tolerance),
+                   "--area-constraint-classes": str(classes)},
+        epochs_delta=window,
+        notes=("v7.5 Lever-1 Chan-Vese area constraint (precision counter-force vs recall-only birth "
+               "over-paint); lambda_c=birth_force/(tolerance*A_GT_c) DERIVED LIVE; equilibrium "
+               f"(1+{tolerance})*A_GT; reuses the realized seg forward; advisory until byte-closed"))
+
+
+def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # noqa: N802 — v7.5 Lever-2
+                         ramp_epochs: int = 50, post_level: float = 0.0,
+                         classes: str = "1,3", window: int = 0) -> Lever:
+    """v7.5 birth-counter-force Lever-2 — the MORSE-SMALE PERSISTENCE birth-completion event (engine
+    ``tac.witness_control.birth_completion``; operator 2026-07-08: "a MORSE-SMALE PERSISTENCE event,
+    not a bare part_frac threshold").
+
+    The missing "stop growing after birth" law: the recall-only birth stack has no completion event, so
+    it keeps pushing a class after it has nucleated + formed. This event fires per birthed class when
+    BOTH (a) island PERSISTENCE (prominence = 1-within_flip, the Morse-Smale basin reading from the
+    #333/nucleus telemetry) >= ``tau_persist`` AND (b) part_frac has settled into
+    ``[(1-area_band),(1+area_band)]*GT`` (the Chan-Vese equilibrium band). On fire (LATCHED), the birth
+    stack for that class ramps 1.0 -> ``post_level`` over ``ramp_epochs`` (smooth event-gated hand-off,
+    resume-safe via the ``__bc_*`` sidecar), handing the freed capacity from birth (recall) to boundary
+    (precision). With :func:`AreaConstraintBirth` active this is DEFENSE-IN-DEPTH — the Lagrange
+    multiplier self-limits area CONTINUOUSLY, the event RE-ALLOCATES the freed capacity (#302 discipline;
+    unified level-set flow). The trainer flag ``--birth-completion-event`` is a store_true default-OFF
+    => byte-identical when this lever is not composed. window=0 = control-config lever, no epoch budget."""
+    if not (0.0 <= float(tau_persist) <= 1.0):
+        raise ValueError(f"BirthCompletionEvent: tau_persist must be in [0,1], got {tau_persist!r}")
+    if not (float(area_band) >= 0.0):
+        raise ValueError(f"BirthCompletionEvent: area_band must be >= 0, got {area_band!r}")
+    if int(ramp_epochs) < 1:
+        raise ValueError(f"BirthCompletionEvent: ramp_epochs must be >= 1, got {ramp_epochs!r}")
+    return Lever(
+        "v75_birth_completion_event",
+        overrides={"--birth-completion-event": True,
+                   "--birth-completion-tau-persist": float(tau_persist),
+                   "--birth-completion-area-band": float(area_band),
+                   "--birth-completion-ramp-epochs": int(ramp_epochs),
+                   "--birth-completion-post-level": float(post_level),
+                   "--birth-completion-classes": str(classes)},
+        epochs_delta=window,
+        notes=("v7.5 Lever-2 Morse-Smale birth-completion event (persistence>=tau AND area in band => "
+               "ramp birth stack -> post_level; hand off birth->boundary regime); defense-in-depth with "
+               "AreaConstraintBirth; resume-safe; advisory until byte-closed"))
+
+
 def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa: N802
                      window: int = 100) -> Lever:
     """FEED-07b lever #1 (#220): AA coverage render + grid≥384 — the gate's "#1 MEASURED islands
