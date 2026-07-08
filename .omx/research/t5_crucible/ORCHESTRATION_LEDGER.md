@@ -201,6 +201,23 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
    SAME instruments on run-1's artifacts for free, which is what makes the ILC error term e_k
    cheap to measure every iteration. Understanding compounds through the tools, not the memos.
 
+--- LANDING FOLDED 2026-07-08T~05:0x: SEAL ROUND 1 ON V5 = CLEAN, COUNTER 1/3 (872d2e76c) ---
+- 0 BLOCKER / 0 MAJOR / 9 MINOR-nits (none decision/number/build-item-changing; per-item bar
+  tests printed; all bind to the P7/v6 editorial fold).
+- Crossing arithmetic INDEPENDENTLY re-executed unrounded — every digit reproduces (0.1897336 /
+  0.0013664 · 0.1817034 / 0.0093966 · targets 0.0010137/0.0010940 · ILC bar 9.9573e-4 ·
+  s*=1.41536e-5 · τ_end·ln5=0.0997852 · hood 5.32688e-6 · TAIL 265×7≤2350).
+- Flags: 37/39 exist vs live 248-flag argparse; top nit: `--persistence-loss-warmup-epochs/
+  -classes` wrong spellings in prose (real: `--persistence-warmup-epochs`/`--persistence-classes`)
+  — DSL factory emits TRUE spellings, launch path unaffected (editorial fix owed).
+- Regression: all 9 round-2 findings still fixed; CT IMPORT-NOW folds 5/5 + 5/5 faithful.
+- Requirement-R scope audit: NO operative inflation; the 4 known prior over-scopings correctly
+  de-inflated in v5; 3 scope-WORDING minors.
+- The 3 cross-field consistency rows recomputed and HOLD.
+- SEQUENCING: round 2 HELD until probe waves A+B land (NO-OPEN-GATES + pre-registered arm
+  promotions execute first; in-band gate resolutions = the design executing, NOT a design
+  change — counter holds; out-of-band results → v6 fold → counter resets honestly).
+
 --- SEQUENCING RULE BOUND 2026-07-08T~04:0x (operator: "when are the probes run? ... how can we
 say the designs are optimal?") — NO OPEN GATES AT SEAL ---
 The FINAL seal round may NOT certify while any $0-runnable gate probe remains unfired. Disposition
