@@ -601,7 +601,7 @@ def _build_stage_aware_projection(rows, sched: dict, *, sidecar_pose: float,
                         nk = float(len(recent))
                         sx_, sy_ = sum(xs), sum(ys)
                         sxx = sum(x * x for x in xs)
-                        sxy = sum(x * y for x, y in zip(xs, ys))
+                        sxy = sum(x * y for x, y in zip(xs, ys, strict=True))  # same source list
                         den = nk * sxx - sx_ * sx_
                         if den > 0:
                             m = (nk * sxy - sx_ * sy_) / den
@@ -750,12 +750,13 @@ def _resume_from_path(log_path) -> str | None:
     """The ckpt path this run RESUMED from (warm-start ancestry), or None for a root run.
     Parses the trainer's ``{"stage":"resume","from":...}`` line."""
     try:
-        for line in open(log_path, encoding="utf-8", errors="replace"):
-            if '"stage": "resume"' in line and '"from"' in line:
-                try:
-                    return json.loads(line).get("from")
-                except Exception:
-                    continue
+        with open(log_path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if '"stage": "resume"' in line and '"from"' in line:
+                    try:
+                        return json.loads(line).get("from")
+                    except Exception:
+                        continue
     except Exception:
         return None
     return None
@@ -766,12 +767,13 @@ def _resume_start_epoch(log_path) -> int | None:
     root run. Used to infer the l7 -> Muon boundary (the Muon stage is an OPTIMIZER
     switch, not a loss-form switch, so it never appears in the verdict ``seg_form``)."""
     try:
-        for line in open(log_path, encoding="utf-8", errors="replace"):
-            if '"stage": "resume"' in line and '"start_epoch"' in line:
-                try:
-                    return json.loads(line).get("start_epoch")
-                except Exception:
-                    continue
+        with open(log_path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if '"stage": "resume"' in line and '"start_epoch"' in line:
+                    try:
+                        return json.loads(line).get("start_epoch")
+                    except Exception:
+                        continue
     except Exception:
         return None
     return None
@@ -781,13 +783,14 @@ def _n_pairs_from_log(log_path) -> int | None:
     """The N this run was evaluated under (n200 = DOE pilot, n600 = scored). Parsed
     from the trainer's ``{"stage": "gt", "n_pairs": N}`` line near the top of the log."""
     try:
-        for line in open(log_path, encoding="utf-8", errors="replace"):
-            if '"stage": "gt"' in line and '"n_pairs"' in line:
-                try:
-                    n = json.loads(line).get("n_pairs")
-                    return n if isinstance(n, int) else None
-                except Exception:
-                    continue
+        with open(log_path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if '"stage": "gt"' in line and '"n_pairs"' in line:
+                    try:
+                        n = json.loads(line).get("n_pairs")
+                        return n if isinstance(n, int) else None
+                    except Exception:
+                        continue
     except Exception:
         return None
     return None
@@ -831,13 +834,14 @@ def _latest_dag_feeds(n: int = 8) -> dict:
     feeds: list[dict] = []
     pat = re.compile(r"^#+\s*DAG FEED\s+(?P<tick>[0-9A-Za-z\-]+)\s*\((?P<summary>.*)$")
     try:
-        for line in open(path, encoding="utf-8", errors="replace"):
-            m = pat.match(line.strip())
-            if m:
-                summ = m.group("summary").rstrip()
-                if summ.endswith(")"):
-                    summ = summ[:-1]
-                feeds.append({"tick": m.group("tick"), "summary": summ[:320]})
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                m = pat.match(line.strip())
+                if m:
+                    summ = m.group("summary").rstrip()
+                    if summ.endswith(")"):
+                        summ = summ[:-1]
+                    feeds.append({"tick": m.group("tick"), "summary": summ[:320]})
     except Exception as exc:
         return {"ok": False, "reason": f"DAG read error: {exc}"}
     return {"ok": True, "file": os.path.basename(path), "total": len(feeds),
@@ -853,22 +857,23 @@ def _latest_equations(n: int = 8) -> dict:
     latest: dict[str, dict] = {}
     total = 0
     try:
-        for line in open(path, encoding="utf-8", errors="replace"):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                row = json.loads(line)
-            except Exception:
-                continue
-            total += 1
-            eid = row.get("equation_id") or row.get("id") or row.get("name")
-            if not eid:
-                continue
-            pay = row.get("equation_payload") or {}
-            desc = (pay.get("one_line_summary") or pay.get("name")
-                    or pay.get("latex_form") or row.get("notes") or "")
-            latest[eid] = {"id": str(eid), "desc": str(desc)[:220]}
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                total += 1
+                eid = row.get("equation_id") or row.get("id") or row.get("name")
+                if not eid:
+                    continue
+                pay = row.get("equation_payload") or {}
+                desc = (pay.get("one_line_summary") or pay.get("name")
+                        or pay.get("latex_form") or row.get("notes") or "")
+                latest[eid] = {"id": str(eid), "desc": str(desc)[:220]}
     except Exception as exc:
         return {"ok": False, "reason": f"registry read error: {exc}"}
     items = list(latest.values())[-int(n):]
@@ -1418,10 +1423,12 @@ class LiveState:
         ]
         log_path = stem.with_suffix(".log")
         try:
-            logf = open(log_path, "ab")
-            self._oracle_proc = subprocess.Popen(
-                cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
-                start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
+            # with-block closes the PARENT copy of the fd after Popen dups it into the
+            # child (fd-leak fix, hardening sweep 2026-07-08); the child keeps writing.
+            with open(log_path, "ab") as logf:
+                self._oracle_proc = subprocess.Popen(
+                    cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
+                    start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
             self._oracle_running = True
             self._oracle_stem = stem
             self._oracle_err = ""
@@ -1519,10 +1526,12 @@ class LiveState:
         ]
         log_path = stem.with_suffix(".log")
         try:
-            logf = open(log_path, "ab")
-            self._whyhow_proc = subprocess.Popen(
-                cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
-                start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
+            # with-block closes the PARENT copy of the fd after Popen dups it into the
+            # child (fd-leak fix, hardening sweep 2026-07-08); the child keeps writing.
+            with open(log_path, "ab") as logf:
+                self._whyhow_proc = subprocess.Popen(
+                    cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
+                    start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
             self._whyhow_running = True
             self._whyhow_stem = stem
             self._whyhow_err = ""
@@ -1663,10 +1672,12 @@ class LiveState:
         ]
         log_path = stem.with_suffix(".log")
         try:
-            logf = open(log_path, "ab")
-            self._flowseq_proc = subprocess.Popen(
-                cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
-                start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
+            # with-block closes the PARENT copy of the fd after Popen dups it into the
+            # child (fd-leak fix, hardening sweep 2026-07-08); the child keeps writing.
+            with open(log_path, "ab") as logf:
+                self._flowseq_proc = subprocess.Popen(
+                    cmd, cwd=str(repo), stdout=logf, stderr=subprocess.STDOUT,
+                    start_new_session=True)  # OWN session/pgid -> outside this dashboard's safe_run group
             self._flowseq_running = True
             self._flowseq_stem = stem
             self._flowseq_target_mtime = mtime
