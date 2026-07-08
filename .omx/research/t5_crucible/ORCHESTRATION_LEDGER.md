@@ -464,3 +464,16 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   premise corrected); CERTIFIED: crossing table, byte sums, anneal-600 semantics (source-read),
   Lipschitz, AA ordering. **v3 REVISION LAUNCHED** (folds both lenses + meat adoptions + wave-1
   results-or-branches). Round 2 of the recursive seal begins on v3.
+- 2026-07-07T~20:2x CREDIT-DEATH ×3 (v3 designer @17 uses — NO output, clean respawn; chain-A
+  @466 uses — TERMINAL VERDICT recovered from uncommitted tree; recess wave-1 @54 uses — partial
+  AA-gate fix (+80 LOC) in tree, .md absent). ZERO SIGNAL LOSS after recovery. **CHAIN-A TERMINAL
+  VERDICT (recovered + committed):** S3's indefinite-spectrum headline KILLED at full-loss (K=128
+  ratio 0.011 — subset noise; my own registered PROVISIONAL equation now needs the kill update,
+  tranche 2); ep650 exhausted BOTH orders; **TerminalSolve measured NO-GO** (all solve steps worsen
+  on holdouts, fp32+int8) → DEMOTED from the stack; quadratic_basin ExitEvent survives K≥32-
+  disciplined (HOLD_STAGE_NEGATIVE_CURVATURE disarmed; basin-entered predicate correctly fires
+  finisher/stop at ep650 — agrees with S2's meat exit); **the wall is REPRESENTATION/BASIS — Arm A
+  carries the entire burden.** RESPAWN STAGGER: (1) v3 designer relaunched w/ chain-A verdict
+  folded (TerminalSolve OUT, req-A(i) updated to the measured negative); (2) recess wave-1
+  finisher relaunched (complete+verify the in-tree AA-gate fix, R1, R6). K=128 JSON append =
+  optional cheap tail item.
