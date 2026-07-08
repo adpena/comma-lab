@@ -54,6 +54,11 @@ _EXPECTED_REMOVED = frozenset({
 })
 _EXPECTED_CHANGED = frozenset({
     "--tau-anneal-shape", "--lane-band-start-epoch", "--seg-chroma-boundary-start-epoch",
+    # (seal v7 r1 R-1; operator APPROVED 2026-07-08) the Arm-A basis lever
+    # DirectionalBasisRebalance(lane_offloaded) overrides v6's starved basis: n_dir_freqs 2->4,
+    # freq_along 4->6 (freq_across 32 re-emitted as float). --self-orient is already True in v6 =>
+    # NOT changed. These are CHANGES (existing v6 flags), not additions.
+    "--n-dir-freqs", "--freq-along", "--freq-across",
 })
 
 
@@ -264,6 +269,13 @@ def test_diff_changed_values_are_the_designed_deltas(compiled):
     assert str(changed["--lane-band-start-epoch"][1]) == "500"
     assert str(changed["--seg-chroma-boundary-start-epoch"][0]) == "300"
     assert str(changed["--seg-chroma-boundary-start-epoch"][1]) == "450"
+    # (seal v7 r1 R-1) the Arm-A basis lever's designed deltas: n_dir_freqs 2->4, freq_along 4->6
+    # (freq_across value-identical 32, re-emitted as float by the lever).
+    assert str(changed["--n-dir-freqs"][0]) == "2"
+    assert str(changed["--n-dir-freqs"][1]) == "4"
+    assert str(changed["--freq-along"][0]) == "4"
+    assert str(changed["--freq-along"][1]) == "6.0"
+    assert float(changed["--freq-across"][0]) == float(changed["--freq-across"][1]) == 32.0
 
 
 def test_diff_excludes_run_dir_placeholder(compiled):
@@ -302,3 +314,130 @@ def test_wiring_status_all_three_wired():
     joined = " ".join(gaps).lower()
     assert "powerlaw_meat" in joined and "annulus" in joined and "nucleus" in joined
     assert joined.count("wired") == 3 and "backstop" in joined
+
+
+# ── (i) Arm-A basis lever (seal v7 r1 R-1; operator APPROVED 2026-07-08) ──────────────
+def _argv_val(argv, flag):
+    """The value token after ``flag`` in a compiled argv (None => bare flag / absent)."""
+    for i, t in enumerate(argv):
+        if t == flag:
+            nxt = argv[i + 1] if i + 1 < len(argv) else None
+            return None if (nxt is None or str(nxt).startswith("--")) else nxt
+    return "<absent>"
+
+
+def test_basis_lever_activation_in_compiled_argv(compiled):
+    """The DirectionalBasisRebalance(lane_offloaded) lever fires into the compiled argv: the derived
+    rebalance (n_dir_freqs 4, freq_along 6, freq_across 32) single-emitted (no double-emit vs base)."""
+    argv = list(compiled.argv)
+    assert _argv_val(argv, "--n-dir-freqs") == "4"
+    assert _argv_val(argv, "--freq-along") == "6.0"
+    assert float(_argv_val(argv, "--freq-across")) == 32.0
+    assert _argv_val(argv, "--self-orient") is None  # bare (already True in base; lever no-op override)
+    # single-emit (the DSL base+lever dict merge dedupes; later lever wins)
+    for flag in ("--n-dir-freqs", "--freq-along", "--freq-across", "--self-orient"):
+        assert argv.count(flag) == 1, f"{flag} double-emitted"
+
+
+def test_basis_lever_in_dsl_levers_activation_surface(compiled):
+    """The lever is on the activation-ledger surface (CrucibleV7LaunchConfig.dsl_levers) — so a real
+    launch records its FIRST 'fired' event (never-fired Arm-A finally fires). Names are Lever.name,
+    matching _CRUCIBLE_V7_DSL_LEVERS."""
+    levers = compiled.to_launch_config().dsl_levers
+    assert "FEED_07a_directional_basis_rebalance" in levers
+    assert len(levers) == 4  # the 3 v6-inherited spine levers + the Arm-A basis lever
+    assert tuple(levers) == wac._CRUCIBLE_V7_DSL_LEVERS
+
+
+def test_basis_lever_matches_derived_equation_law():
+    """The lever's freq_along is the equations-leg derivation (lane_offloaded = Candes-Donoho
+    parabolic sqrt(across)), NOT a hand number — the triality equations<->DSL agreement."""
+    from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 import (
+        freq_along_for_regime,
+    )
+    assert freq_along_for_regime(32, "lane_offloaded") == 6  # max(4, round(sqrt(32)))
+
+
+def test_basis_lever_freq_across_value_identical():
+    """freq_across is VALUE-unchanged (32); only re-emitted as float by the lever — a type
+    normalization, not a semantic knob change."""
+    diff = wac.diff_crucible_v6_to_v7(
+        wac.compile_crucible_v7_config(_GT, num_pairs=600, epochs=3000).v6_flags,
+        wac.compile_crucible_v7_config(_GT, num_pairs=600, epochs=3000).emitted_pairs)
+    changed = {f: (a, b) for f, a, b in diff["changed"]}
+    assert float(changed["--freq-across"][0]) == float(changed["--freq-across"][1])
+
+
+# ── (j) memory WATERFILL: the basis lever fits the envelope (the gating math) ─────────
+def test_basis_allocation_provenance_shape():
+    """The waterfill-provenance accessor exposes the derivation the memo records (no bare numbers;
+    every value re-derived from the REAL preflight projection)."""
+    prov = wac.crucible_v7_basis_allocation_provenance()
+    assert prov["regime"] == "lane_offloaded"
+    assert prov["chosen_lever"] == "FEED_07a_directional_basis_rebalance"
+    assert prov["freq_along"] == 6 and prov["n_dir_freqs"] == 4
+    assert prov["in_feat_delta"] == 8  # dir_w = 4*(4-2)
+
+
+def test_basis_waterfill_projection_matches_preflight():
+    """The provenance peak/cf deltas equal the REAL preflight projection at in_feat 88 vs 96 (the
+    gating math is re-derived from tools/witness_memory_preflight, never asserted)."""
+    import sys
+    from pathlib import Path
+    tp = Path(wac.__file__).resolve().parents[2] / "tools"
+    if str(tp) not in sys.path:
+        sys.path.insert(0, str(tp))
+    import witness_memory_preflight as wmp
+    base = wmp.project_peak_rss_gib(num_pairs=600, in_feat=88, self_orient=True,
+                                    verdict_batch=32, render_aa="ipe", total_ram_gib=128.0,
+                                    safe_frac=0.70)
+    lever = wmp.project_peak_rss_gib(num_pairs=600, in_feat=96, self_orient=True,
+                                     verdict_batch=32, render_aa="ipe", total_ram_gib=128.0,
+                                     safe_frac=0.70)
+    prov = wac.crucible_v7_basis_allocation_provenance()
+    assert prov["peak_delta_gib"] == round(lever.projected_peak_gib - base.projected_peak_gib, 2)
+    assert prov["cf_cache_delta_gib"] == round(lever.cf_cache_gib - base.cf_cache_gib, 2)
+    # the lever grows cf_mx_cache (feat_ratio 96/88) => a real, positive, bounded memory delta
+    assert 3.0 < prov["peak_delta_gib"] < 5.0
+
+
+def test_basis_lever_admitted_by_both_envelopes():
+    """ENVELOPE ADMISSION: the lane_offloaded allocation's projected peak fits BOTH the conservative
+    0.70 concurrent envelope AND the 0.85 sole-workload envelope with positive margin — so the
+    DERIVED DSL lever is preferred as-designed (no fall-through to a minimal along-only rebalance)."""
+    prov = wac.crucible_v7_basis_allocation_provenance()
+    assert prov["admitted_0p70"] is True and prov["admitted_0p85"] is True
+    assert prov["margin_0p70_gib"] > 0 and prov["margin_0p85_gib"] > 0
+    # the peak sits well under even the conservative ceiling (never-crash physics leg 1 holds)
+    lever_peak = prov["candidates"]["dsl_lever_lane_offloaded"]["peak_gib"]
+    assert lever_peak < prov["envelope_0p70_gib"]
+
+
+def test_minimal_along_rebalance_is_memory_neutral():
+    """A minimal along-only rebalance (freq_along 4->6/8 with n_dir_freqs held at 2) is
+    MEMORY-NEUTRAL — freq_along VALUE does not enter in_feat (trainer dir_w = 4*n_dir_freqs). This is
+    why the waterfill's only memory-relevant candidate is the n_dir_freqs bump."""
+    import sys
+    from pathlib import Path
+    tp = Path(wac.__file__).resolve().parents[2] / "tools"
+    if str(tp) not in sys.path:
+        sys.path.insert(0, str(tp))
+    import witness_memory_preflight as wmp
+    # n_dir_freqs held at 2 => in_feat identical regardless of freq_along value.
+    f_base = {"self_orient": True, "n_dir_freqs": 2, "max_bank_freq": 64.0}
+    assert wmp.derive_in_feat_from_flags(f_base) == 88
+    f_dsl = dict(f_base); f_dsl["n_dir_freqs"] = 4
+    assert wmp.derive_in_feat_from_flags(f_dsl) == 96
+
+
+def test_zero_naked_preserved_after_basis_lever(compiled, trainer_text):
+    """The basis lever changes only basis flags (none schedule-triggered), so the schedule-provenance
+    gate STILL reports 0 NAKED after the lever lands (regression guard for the R-1 config change)."""
+    registry = gate.schedule_when_flags(trainer_text)
+    ereg = gate.event_start_flags(trainer_text)
+    verdicts = gate.classify_launch(
+        list(compiled.emitted_pairs), registry=registry,
+        manifest_keys=set(compiled.constants_manifest.keys()),
+        governance=compiled.schedule_governance, event_registry=ereg)
+    ok, violations, _ = gate.gate_report(verdicts)
+    assert ok and violations == []

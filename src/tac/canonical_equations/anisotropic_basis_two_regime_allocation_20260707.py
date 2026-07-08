@@ -159,6 +159,13 @@ def build_anisotropic_basis_two_regime_allocation_v1() -> CanonicalEquation:
         empirical_output={
             "status": ("OWED — the specific along=sqrt(across) optimum is NOT yet A/B-measured on "
                        "the witness; the next-run FEED-07a arm-(A) A/B is the owed anchor"),
+            "applied_at_config": ("WIRED into crucible_v7 (seal v7 r1 R-1, operator APPROVED "
+                                  "2026-07-08): DirectionalBasisRebalance(lane_offloaded) emits "
+                                  "freq_along=6/n_dir_freqs=4; MEMORY-WATERFILLED (in_feat 88->96, "
+                                  "peak 71.54 GiB, admitted) via witness_autoconfig."
+                                  "crucible_v7_basis_allocation_provenance. The A/B verdict is the "
+                                  "run itself — status stays ASSUMED_AWAITING_VERIFICATION until it "
+                                  "lands. means != ends: pointer 0.19110 UNMOVED."),
         },
         residual=0.0,
         source_artifact=_DAG,
@@ -212,7 +219,10 @@ def build_anisotropic_basis_two_regime_allocation_v1() -> CanonicalEquation:
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
-        canonical_consumers=("tac.witness_dsl.curriculum_dsl",),
+        canonical_consumers=(
+            "tac.witness_dsl.curriculum_dsl",       # DSL leg: DirectionalBasisRebalance factory
+            "tac.witness_autoconfig",               # applied-at-config: crucible_v7 fires the lever (R-1)
+        ),
         canonical_producers=(
             "experiments/train_witness_realized_through_R_mlx.py",
             "experiments/train_levelset_witness_realized_through_R_mlx.py",

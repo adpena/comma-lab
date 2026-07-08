@@ -10203,4 +10203,20 @@ ep25/ep50 verdicts · SYNTHESIS_seal_v7_round1 · operator decisions 08:45.
   to be graded as an isolated unify-L_τ A/B. BASIS approved (R-1 triple-convergence):
   DirectionalBasisRebalance IN-v7, waterfill picks the allocation (builder in flight).
   Fix-all-severities-per-round = standing seal policy.
+- **FEED-08b BASIS-INTEGRATION LANDED (2026-07-08):** DirectionalBasisRebalance(lane_offloaded)
+  wired into crucible_v7 as the 4th DSL lever (`_build_crucible_v7` levers tuple; dsl_levers now
+  4 → activation-ledger fires `FEED_07a_directional_basis_rebalance` at launch — Arm-A's FIRST
+  fire). WATERFILL-GATED FIRST (`witness_autoconfig.crucible_v7_basis_allocation_provenance`, real
+  `witness_memory_preflight.project_peak_rss_gib`): the derived lane_offloaded allocation
+  (freq_along=6=√32, n_dir_freqs 2→4) grows in_feat 88→96 → cf_mx_cache +3.93 GiB → projected peak
+  **71.54 GiB**, ADMITTED by BOTH the 0.70 concurrent envelope (18.1 GiB margin) AND the 0.85
+  sole-workload envelope (37.3 GiB margin) → derived DSL lever PREFERRED as-designed (no
+  fall-through to a minimal along-only rebalance, which is MEMORY-NEUTRAL since freq_along value
+  doesn't enter in_feat: trainer dir_w=4·n_dir_freqs). Diff-vs-v6 gains 3 CHANGED (--n-dir-freqs
+  2→4, --freq-along 4→6, --freq-across 32→32.0 value-identical); 0 ADDED; 0-NAKED preserved.
+  ~9% in_feat step cost < 15% wall-clock slack (rc=8 gate verifies at admission). Triality:
+  DSL(DirectionalBasisRebalance + gauge ALONG_TANGENT_FREQ exist, config consumes) ↔
+  equations(anisotropic_basis_two_regime_allocation_v1 gains applied-at-config consumer
+  `tac.witness_autoconfig` + status stays ASSUMED_AWAITING_VERIFICATION, A/B = the run) ↔ this
+  DAG row. Memo basis_integration_v7_20260708.md.
 - Pointer 0.19110 UNMOVED (all means; the v7 exact row is the end).

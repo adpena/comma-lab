@@ -1782,12 +1782,16 @@ _CRUCIBLE_V7_DELETED: frozenset[str] = frozenset({
     "--tau-hold-frac",              # cosine_hold-only; the geometric anneal has no hold segment
 })
 
-# The three composable v7 DSL levers (Lever factories in curriculum_dsl — triality: "the DSL HOLDS
+# The FOUR composable v7 DSL levers (Lever factories in curriculum_dsl — triality: "the DSL HOLDS
 # every designed lever"). Applied AS TypedLevers so the emitter stays the DSL, never a hand dict.
+# NAMES are the Lever.name (snake_case), matching the CrucibleV7LaunchConfig.dsl_levers property
+# (``lv.name for lv in typed.levers``) — the activation-ledger surface the real launcher records.
 _CRUCIBLE_V7_DSL_LEVERS: tuple[str, ...] = (
     "seg_form_unify_tau",           # --seg-form-unify-tau (continuous L_tau; removes last PR95 bone)
     "tail_k_warm_restart",          # --tail-* (post-Muon warm-restart cycles; k_max fail-safe cap)
     "n323_ladder_island_homotopy",  # --ladder-* (per-class-lambda-gated island-birth homotopy)
+    "FEED_07a_directional_basis_rebalance",  # --freq-across/--freq-along/--n-dir-freqs/--self-orient
+                                             # (seal v7 r1 R-1; operator APPROVED; Arm-A first fire)
 )
 
 # Flags whose delta vs v6 is a run-dir artifact (NOT a config semantic) — excluded from the
@@ -1974,6 +1978,69 @@ def crucible_v7_wiring_gaps() -> list[str]:
     ]
 
 
+def crucible_v7_basis_allocation_provenance(*, num_pairs: int = 600,
+                                            total_ram_gib: float = 128.0) -> dict:
+    """The MEMORY-WATERFILL derivation behind the v7 Arm-A basis lever (seal v7 r1 R-1; operator
+    APPROVED 2026-07-08). NO bare numbers: every value is re-derived here from the REAL preflight
+    projection (``tools/witness_memory_preflight.project_peak_rss_gib``) at the candidate in_feats,
+    so the council/manifest reads the same math the memo's waterfill table records.
+
+    The candidates (freq allocation -> cf-feature bank -> in_feat -> peak RSS):
+      * run-1 / v6 baseline (n_dir_freqs 2, freq_along 4)            -> in_feat 88.
+      * minimal along-only rebalance (n_dir_freqs 2, freq_along 6/8) -> in_feat 88 (freq_along VALUE
+        does not enter in_feat: trainer ``dir_w = 4 * n_dir_freqs``, MEMORY-NEUTRAL).
+      * DSL lever lane_offloaded (n_dir_freqs 4, freq_along 6)       -> in_feat 96 (+8 = 4*(4-2)).
+
+    Verdict: the lane_offloaded allocation's projected peak fits the envelope with the standard
+    margin under BOTH the 0.85 sole-workload and the conservative 0.70 concurrent fractions, so the
+    DERIVED DSL lever is preferred as-designed (no fall-through to a minimal rebalance). Pure +
+    unit-testable ($0). means != ends: advisory memory sizing; the pointer 0.19110 is UNMOVED."""
+    import sys as _sys
+    from pathlib import Path as _Path
+    _tools = _Path(__file__).resolve().parents[2] / "tools"
+    if str(_tools) not in _sys.path:
+        _sys.path.insert(0, str(_tools))
+    import witness_memory_preflight as _wmp  # the REAL projection fn (imported, never forked)
+
+    def _peak(in_feat: int, safe_frac: float) -> object:
+        return _wmp.project_peak_rss_gib(
+            num_pairs=int(num_pairs), render_h=384, render_w=512, in_feat=int(in_feat),
+            self_orient=True, verdict_batch=32, render_aa="ipe",
+            total_ram_gib=float(total_ram_gib), safe_frac=safe_frac)
+
+    base_in_feat, lever_in_feat = 88, 96          # derived above (dir_w = 4*n_dir_freqs; +8 for 2->4)
+    b70 = _peak(base_in_feat, 0.70)               # baseline @ conservative frac (delta reference)
+    l70, l85 = _peak(lever_in_feat, 0.70), _peak(lever_in_feat, 0.85)
+    return {
+        "regime": "lane_offloaded",
+        "chosen_lever": "FEED_07a_directional_basis_rebalance",
+        "freq_across": 32, "freq_along": 6, "n_dir_freqs": 4,
+        "candidates": {
+            "v6_baseline": {"n_dir_freqs": 2, "freq_along": 4, "in_feat": base_in_feat,
+                            "peak_gib": b70.projected_peak_gib, "cf_cache_gib": b70.cf_cache_gib},
+            "minimal_along_only": {"n_dir_freqs": 2, "freq_along": "6/8", "in_feat": base_in_feat,
+                                   "note": "MEMORY-NEUTRAL (freq_along value does not enter in_feat)"},
+            "dsl_lever_lane_offloaded": {"n_dir_freqs": 4, "freq_along": 6, "in_feat": lever_in_feat,
+                                         "peak_gib": l70.projected_peak_gib,
+                                         "cf_cache_gib": l70.cf_cache_gib},
+        },
+        "in_feat_delta": lever_in_feat - base_in_feat,
+        "cf_cache_delta_gib": round(l70.cf_cache_gib - b70.cf_cache_gib, 2),
+        "peak_delta_gib": round(l70.projected_peak_gib - b70.projected_peak_gib, 2),
+        "envelope_0p70_gib": round(0.70 * total_ram_gib, 1),
+        "envelope_0p85_gib": round(0.85 * total_ram_gib, 1),
+        "margin_0p70_gib": round(0.70 * total_ram_gib - l70.projected_peak_gib, 1),
+        "margin_0p85_gib": round(0.85 * total_ram_gib - l85.projected_peak_gib, 1),
+        "admitted_0p70": bool(l70.safe), "admitted_0p85": bool(l85.safe),
+        "projected_step_cost_ratio": round(lever_in_feat / base_in_feat, 4),  # ~1.091 (in_proj scale)
+        "wall_clock_slack_absorbs": True,  # ~9% in_feat cost < 15% wall-clock slack; rc=8 verifies
+        "source": ("tools/witness_memory_preflight.project_peak_rss_gib + "
+                   "tac.canonical_equations.anisotropic_basis_two_regime_allocation_v1 "
+                   "(freq_along_for_regime); memo basis_integration_v7_20260708.md"),
+        "means_not_ends": "advisory memory sizing; pointer 0.19110 UNMOVED",
+    }
+
+
 def _build_crucible_v7(
     gt_cache_path,
     *,
@@ -1987,6 +2054,7 @@ def _build_crucible_v7(
     reuses. Returns ``(typed, v6_cfg, v6_flags)``. Shared by :func:`derive_crucible_v7_config`
     and :func:`compile_crucible_v7_config` so v6 is derived ONCE."""
     from tac.witness_dsl.curriculum_dsl import (
+        DirectionalBasisRebalance,
         LadderIslandHomotopy,
         SegFormUnifyTau,
         TailCycles,
@@ -2043,10 +2111,26 @@ def _build_crucible_v7(
         return TypedLever(name=lev.name, overrides=dict(lev.overrides),
                           epochs_delta=lev.epochs_delta, notes=lev.notes)
 
+    # (operator APPROVED 2026-07-08, seal v7 r1 R-1) enable the crucible's own Arm-A basis lever:
+    # DirectionalBasisRebalance(lane_offloaded) — the DERIVED two-regime along-tangent rebalance
+    # (equations leg anisotropic_basis_two_regime_allocation_v1). Triple-convergence justification:
+    # measured 3.2x along-tangent deficit (L65) + the blind derivation's independent sqrt(32)~=6
+    # minimum + the basis-before-capacity law (-48% directional MEASURED). It OVERRIDES v6's starved
+    # basis (n_dir_freqs 2->4, freq_along 4->6; freq_across 32 re-emitted as float; --self-orient
+    # already True in base => no-op override) via the DSL's base+lever merge (later wins, deduped).
+    # MEMORY-WATERFILLED FIRST (:func:`crucible_v7_basis_allocation_provenance`,
+    # basis_integration_v7_20260708.md): n_dir_freqs 2->4 grows in_feat 88->96 => cf_mx_cache
+    # +3.93 GiB => projected peak 71.54 GiB, ADMITTED by both the 0.70 concurrent envelope (18.1 GiB
+    # margin) and the 0.85 sole-workload envelope (37.3 GiB margin) — the lane_offloaded allocation
+    # fits, so the DSL lever is preferred as-designed (the derived form) over a minimal along-only
+    # rebalance. window=0 => no epoch delta; the ~9% in_feat step cost is within the 15% wall-clock
+    # slack (rc=8 gate verifies at admission with the real bench). This is the lever's FIRST activation
+    # (activation-ledger fires 'FEED_07a_directional_basis_rebalance' at launch; never-fired before).
     levers = (
         _typed_lever(SegFormUnifyTau()),
         _typed_lever(TailCycles(cycles_max=_CRUCIBLE_V7_TAIL_CYCLES_MAX)),
         _typed_lever(LadderIslandHomotopy()),
+        _typed_lever(DirectionalBasisRebalance(regime="lane_offloaded")),
     )
 
     typed = TypedWitnessConfig(
