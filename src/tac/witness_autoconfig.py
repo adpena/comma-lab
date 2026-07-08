@@ -555,6 +555,14 @@ class WitnessConfig:
     # (#351) constants_manifest for the CONSUMED LawRefs {delta_key -> ResolvedConstant.to_dict()};
     # the launcher writes it to constants_manifest.json beside launch.sh. Provenance-only, never a flag.
     constants_manifest: dict = field(default_factory=dict)
+    # (#353 DSL-authored-config gate) the DSL-provenance manifest attesting THIS config was authored +
+    # validated through the typed DSL layer (tac.witness_dsl.typed_config): schema tag + emitted flag
+    # fingerprint + typed_config_hash + typed_validated attestation. The launcher's DSL-authored-config
+    # gate REFUSES a launch whose config carries no manifest (hand-crafted argv) or whose fingerprint
+    # disagrees with the emitted argv (a config mutated after authoring), unless --allow-non-dsl-config
+    # stamps a non-DSL provenance. Populated by ``derive_crucible_v6_config`` (the migrated seam).
+    # Provenance-only, never emitted as a flag => argv byte-identical for every config.
+    dsl_program_manifest: dict = field(default_factory=dict)
     # (run-identity, operator 2026-07-07 "add a label ... run name and possibly a description of
     # its intended purpose; clean baseline or frontier score lowering? a/b probe?") DECLARED
     # one-line intent of THIS run — the first-class, per-run machine-answerable purpose. Set by
@@ -1600,7 +1608,7 @@ def derive_crucible_v6_config(
         "(MAJOR-2(ii) — --lr-anneal-epochs 1000 + --lr-hold-frac 1.0 reproduce the control LR(ep) on "
         "[1,726] bit-identically; the trainer build added the LR-specific denominator split).",
         Portability.INSTANCE)
-    return replace(
+    cfg = replace(
         base,
         crucible_v6=True,
         tau_softplus_start_epoch=int(d6["tau_softplus_start_epoch"]),
@@ -1615,6 +1623,87 @@ def derive_crucible_v6_config(
         crucible_v6_deltas=d6,
         constants_manifest=_manifest,
     )
+    # (#353 DSL-authored-config gate) VALIDATE the crucible config's DSL-authorable schedule/curriculum
+    # knobs through the typed DSL layer (fail-CLOSED), then ATTACH the DSL-provenance manifest the
+    # launcher gate checks. This is the "config must be DSL-defined + typed + validated" requirement V:
+    # the typed layer refuses a malformed provenance/range/schedule shape BEFORE any launch, and the
+    # attached manifest proves the config was authored through the typed layer (a hand-crafted argv
+    # carries no manifest => the launcher REFUSES it). ADDITIVE + argv-inert: dsl_program_manifest is
+    # never emitted as a flag, so the emitted argv is BYTE-IDENTICAL to the pre-#353 form.
+    cfg = _attach_dsl_program_manifest(cfg, program_name="crucible_v6", d6=d6)
+    return cfg
+
+
+def _attach_dsl_program_manifest(cfg: "WitnessConfig", *, program_name: str, d6: dict) -> "WitnessConfig":
+    """Typed-validate the config's DSL-authorable schedule knobs + attach the DSL-provenance manifest.
+
+    Fail-CLOSED: a typed-schema violation (malformed provenance/range/governance) or a
+    WitnessProgram.validate violation on the authored schedule raises — the config is NEVER
+    launched un-validated. The manifest's flag fingerprint is taken from the config's ACTUAL
+    emitted argv (a canonical placeholder out-dir), so the launcher can match it against what it
+    emits. Provenance-only (the manifest is never a flag) => the emitted argv is unchanged.
+    """
+    from tac.witness_dsl.typed_config import (
+        Provenanced,
+        ProvenanceClass,
+        TypedAnneal,
+        TypedRegularizer,
+        TypedStage,
+        TypedWitnessConfig,
+        build_launch_manifest,
+    )
+
+    _PC = ProvenanceClass
+    # The DSL-authorable schedule surface of the crucible config, each knob given its ladder class
+    # (mirroring the ProvenancedValue provenance recorded above). This is the TYPED re-expression the
+    # gate validates; it is NOT the emitter (the WitnessConfig argv remains the launch SoT).
+    typed = TypedWitnessConfig(
+        name=program_name,
+        out_dir="experiments/results/__dsl_typed_gate__",
+        gt_cache=str(cfg.gt_cache),
+        num_pairs=int(cfg.num_pairs),
+        epochs=int(cfg.epochs),
+        mlx_device="gpu",
+        temp=TypedAnneal(
+            start=Provenanced(value=1.0, provenance=_PC.MEASURED_ANCHOR, unit="tau",
+                              source="render-anneal start (proven base)"),
+            end=Provenanced(value=float(d6["softmax_temp_end"]), provenance=_PC.MEASURED_ANCHOR,
+                            unit="tau", source="mod32cap ep650-best tau=0.3098 (config-conditional)"),
+        ),
+        stages=(
+            TypedStage(name="tau_softplus", start_epoch_flag="--tau-softplus-start-epoch",
+                       start_epoch=int(d6["tau_softplus_start_epoch"])),
+            TypedStage(name="muon", start_epoch_flag="--muon-start-epoch",
+                       start_epoch=int(d6["muon_start_epoch"])),
+        ),
+        regularizers=(
+            TypedRegularizer(flag="--eikonal-weight", weight=Provenanced(
+                value=0.01, provenance=_PC.DERIVED_AT_CONFIG, unit="dimensionless",
+                source="theta* lever stack")),
+            TypedRegularizer(flag="--length-weight", weight=Provenanced(
+                value=0.001, provenance=_PC.DERIVED_AT_CONFIG, unit="dimensionless",
+                source="theta* lever stack")),
+        ),
+        # base/schedule_governance intentionally EMPTY here: this typed gate validates the
+        # schedule/provenance SHAPE; the schedule-provenance sibling gate (rc=6) owns the governance
+        # CONTENT of the emitted config. Leaving governance empty does not mask that gate.
+    )
+    prog_viol = typed.validate_program()
+    if prog_viol:
+        raise ValueError(
+            f"DSL-authored-config gate (#353): typed schedule for {program_name!r} produced "
+            f"{len(prog_viol)} WitnessProgram.validate violation(s): {prog_viol[:4]}"
+        )
+    # Flag NAMES are out-dir-independent (out_dir is the VALUE of --out-dir), so any placeholder
+    # yields the same fingerprint the launcher matches against cfg.to_trainer_flags(real_out_dir).
+    emitted = [flag for flag, _ in cfg.to_trainer_flags("OUT")]
+    manifest = build_launch_manifest(
+        program_name=program_name,
+        emitted_flag_names=emitted,
+        typed_config_hash=typed.typed_config_hash(),
+        typed_validated=True,
+    )
+    return replace(cfg, dsl_program_manifest=manifest)
 
 
 def derive_config(
