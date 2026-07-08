@@ -1737,6 +1737,65 @@ def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
                  notes="soft anti-aliased edge (low beta) for sub-pixel R-survival")
 
 
+def Beta2WindowRewarmup(beta2: float = 0.999, steps_per_epoch: int = 75,  # noqa: N802 — R-7 finisher 1
+                        floor: float = 0.1, shape: str = "cosine") -> Lever:
+    """R-7 finisher 1 (T5 crucible seal-round-1 structure lens): DERIVE the stage-transition LR
+    re-warmup window from the Adam β2 second-moment MEMORY horizon 1/(1-β2) steps, so the LR ramp
+    spans exactly long enough for the (reset) 2nd-moment estimate to re-converge to the post-transition
+    gradient scale instead of dividing full-LR steps by stale/unconverged moments.
+
+    ARCHAEOLOGY (what already existed — this lever does NOT re-build the mechanism): the trainer already
+    has the re-warmup RAMP (``_stage_rewarmup_factor`` + ``--stage-transition-rewarmup-{epochs,floor,
+    shape}``), an EVENT-fired boundary (``last_boundary_epoch`` set in the main loop at every stage
+    transition), and the SIZING LAW callable (``rewarmup_beta2_memory_window_v1`` →
+    ``min_rewarmup_epochs(beta2, steps_per_epoch)``). What was unbuilt is a COMPOSABLE lever that
+    turns the previously-HARDCODED ``rewarmup_epochs`` literal into a DERIVED-AT-CONFIG value.
+
+    DERIVED-AT-CONFIG (no bare literal): the window = ``ceil((1/(1-β2))/steps_per_epoch)`` via the law
+    callable. DEFAULT-OFF: this lever is opt-in (not in any base program); un-composed => the base's
+    rewarmup flags are untouched. ``floor=0.1`` + ``shape=cosine`` are the LAW's declared PROVISIONAL
+    profile (``rewarmup_beta2_memory_window_v1`` domain: "cosine shape + floor 0.1 underived"), NOT a
+    new invention. Pairs with ``--stage-transition-reset-moments`` (the law's premise: with moments
+    reset, v re-accumulates over the 1/(1-β2) window)."""
+    from tac.canonical_equations.curriculum_derivation_laws_20260705 import min_rewarmup_epochs
+    win = int(min_rewarmup_epochs(float(beta2), int(steps_per_epoch)))
+    return Lever(
+        "R7_beta2_window_rewarmup",
+        overrides={
+            "--stage-transition-rewarmup-epochs": win,
+            "--stage-transition-rewarmup-floor": float(floor),
+            "--stage-transition-rewarmup-shape": str(shape),
+            "--stage-transition-reset-moments": True,
+        },
+        notes=(f"β2-window LR rewarmup: win={win}ep = ceil((1/(1-{beta2}))/{steps_per_epoch}) "
+               "DERIVED-AT-CONFIG per rewarmup_beta2_memory_window_v1 (law min_rewarmup_epochs); "
+               "floor/shape = the law's PROVISIONAL profile; pairs with reset-moments"))
+
+
+def PolyakFinisher(start_epoch: int = 0) -> Lever:  # noqa: N802 — R-7 finisher 2
+    """R-7 finisher 2: uniform Polyak/Ruppert TAIL average of the live iterates over the finishing
+    window, exported as an ADDITIONAL checkpoint candidate ALONGSIDE the EMA shadow (NEVER replaces it
+    — the EMA non-negotiable stands). At the SEALED constant-τ* TURNPIKE the iterates orbit a basin
+    center; the uniform tail mean averages the orbit out to O(1/√n) — a strictly better basin-center
+    than a fixed-horizon EMA (which still carries orbit phase). The byte-close/eval stop-time checklist
+    picks whichever candidate MEASURES better (that measurement is NOT the lever's job).
+
+    DEFAULT-OFF (``--polyak-finisher-arm`` store_true off): un-composed => the averager is never
+    constructed => ZERO new checkpoint keys => byte-identical. ``start_epoch`` is a config choice (size
+    it from the stage window via ``tac.witness_control.polyak_finisher.polyak_finisher_window_provenance``
+    ~0.1-0.3× stage per ``muon_finisher_schedule_warmstart_and_lr_anneal_v1``; default 0 arms from run
+    start). No ``epochs_delta``: this rides the existing finishing epochs, it does not extend them."""
+    return Lever(
+        "R7_polyak_finisher",
+        overrides={
+            "--polyak-finisher-arm": True,
+            "--polyak-finisher-start-epoch": int(start_epoch),
+        },
+        notes=("uniform tail (Polyak/Ruppert) average → extra ckpt candidate alongside EMA (never "
+               "replaces it); byte-close picks best per "
+               "muon_finisher_schedule_warmstart_and_lr_anneal_v1 (finisher-EMA=Polyak)"))
+
+
 def FiLMFix(per_layer: bool = True, concat_code: bool = True,  # noqa: N802 — LEVER-A
             rank_floor_weight: float = 0.0, rank_floor_target: float = 4.0,
             window: int = 100) -> Lever:
