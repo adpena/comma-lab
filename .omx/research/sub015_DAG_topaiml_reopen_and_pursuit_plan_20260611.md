@@ -10038,3 +10038,68 @@ win; in-training comb A/B (FEED-08c) stays THE lane arbiter; 8=√64 = config ob
 demonstrated ceiling. form-a (retrain at higher freq_along) + warp-vs-noise = T5 candidates (agent died
 mid-2nd-probe). Memo `.omx/research/freq_along_ladder_probe_verdict_20260707.md`; data durable-on-disk.
 [$0 CPU advisory NON-PROMOTABLE; pointer 0.19110 UNMOVED — measurement/means]
+
+## FEED-09a (2026-07-07, T5 CRUCIBLE triality-integration tranche 1) — the crucible's MEASURED rows land in the EQUATIONS leg (8 new + 3 anchor updates); orchestration state is no longer ephemeral
+Requirement G.1 of the crucible protocol ("all must be integrated into triality especially DSL and
+tasks or it's ephemeral", operator 2026-07-07) — this entry is the DAG leg for the ALREADY-FINAL
+measured seat findings; the DSL/tasks/costate-code legs land with the post-draft build wave.
+Module `tac.canonical_equations.t5_crucible_measured_laws_20260707` + registration tool
+`tools/register_t5_crucible_equations_20260707.py` (idempotent; verified re-run = all-skipped).
+Seat positions = `.omx/research/t5_crucible/position_S{1..6}_*_20260707.md`; ledger =
+`.omx/research/t5_crucible/ORCHESTRATION_LEDGER.md`.
+
+**8 NEW equations (all `[macOS-CPU advisory]`/`[macOS-MLX research-signal]` NON-PROMOTABLE):**
+1. `anneal_truncation_fixed_clock_defect_v1` (S2 M2) — Muon freeze ep726 vs `--anneal-epochs`
+   denominator ep1000 truncated β at **3.177/4.00** + τ at **0.216/0.05**; the control's 0.0033662
+   best sat on an INCOMPLETE anneal. Mechanism source-verified (trainer:2318-2400). Class fix =
+   completion-guarantee contract (denominators bound to events; anneal-complete as consumer
+   precondition; `--anneal-epochs`=Muon-cap is the $0 flag fix).
+2. `finisher_transient_budget_and_meat_exhaustion_v1` (S2 M1/M4/M5) — cold-Muon quench **+27.5%**
+   (0.0034139@725→0.0043514@750), never re-beat ep650 (ep1000 = +11% above best); τ-stage ran
+   **76–125 ep past meat exhaustion** (exponential asymptote 0.003377, τ_e=79, meat@+300ep 5.5e-6);
+   finisher recovery **τ_e≈305 ep > 274-ep budget** → failure = TRANSIENT×BUDGET, not paradigm
+   (asymptote comparison = 11-pt extrapolation, AWAITING; routed to S2 RECESS-4/RECESS-1). Exits
+   alone save ~35% wall-clock at zero score cost on this trajectory.
+3. `weights_at_order0_entropy_floor_v1` (S4 P1) — base weights brotli **100.9% of order-0 H0**
+   (61,838 vs 61,303 B) = ZERO coder slack (only bit-depth/waterfill or in-training entropy shaping
+   move base rate); code stream **36% BELOW H0** (structure remains); **PR95-L25 temporal-delta
+   MEASURED NEGATIVE on our code (+64%, 20,355→33,411 B)** = cargo-cult DROP with receipt; grammar
+   rev2 free wins MEASURED (col-major code −1,333 B; brotli-manifest+STORED −436 B; ≈−2.8 KB).
+4. `mod32cap_measured_archive_rate_and_capacity_toll_v1` (S4+S6) — FIRST measured archive rows for
+   the clean baseline: **83,406 B → rate 0.05553** (S4 probe, ep650 EMA-best), cross-checked
+   **83,430 B / 0.05555 bit-exact** by the real byte-close (S6; within 24 B; 2-pair decode gate
+   PASS ×3 compositions); mod32→48 capacity toll **+20.2 KB = +0.0135 rate** (INFERRED, AWAITING;
+   pays iff Δd_seg < −1.35e-4). Budget tension: mod32+band+ξ = 110–117 KB > ~105 KB sub-0.15
+   headroom → the compress-half is NOT optional if band+pose+capacity compose.
+5. `pose_second_wall_t1_feasibility_bound_v1` (S6 §5B) — T_1-feasible **d_pose ≤ 1.51e-4** (T_3 ≤
+   3.2e-5) at d_seg 0.00092/rate 0.0602 (exact score-law arithmetic); R1's measured store-nothing
+   floor 0.0011 → term 0.105 = **7× miss**; pose-blind d_pose 125.833 → term **≈35.5
+   UNSUBMITTABLE** (scorer reads FRAMES, source-verified — sidecars can't fix it). Pose = THE
+   SECOND WALL; the unfired L3 mechanism (w_pose>0 + FiLM + null-texture) is what S6 M5 measures.
+6. `islands_necessity_floor_big3_only_v1` (S5 headline) — un-born islands (movable 44.8% + lane
+   19.1%) carry 63.9% of d_seg → big-3-only floor ≈ **0.00215 > 0.00092 T_3 need** ⇒ island birth
+   NECESSARY for T_3 (arithmetic; witness-alone ep225 upper-bound caveat welded; within-class
+   un-born fractions lane 83.9%/movable 93.1% independently transfer).
+7. `activation_ledger_not_run_truth_v1` (S5 apparatus law) — the ledger records ONLY --dsl-lever
+   launches (launch_witness_run.py:1075-1082); ~10 of the "36 never-fired" DID raw-flag fire
+   (AnalyticLaneRenderBand ep300+ in #205, UNATTRIBUTED) → run-config claims cite launch.sh/run.log,
+   never the ledger, until the S5-R1 argv→lever ingest lands.
+8. `gn_hessian_spectrum_indefinite_at_ema_best_v1` (S3) — **PROVISIONAL (K=8 pair subset,
+   fresh-eyes-UNREVIEWED, +4.3% self-orient ckpt-reconstruction caveat)**: ep650 EMA-best Ritz
+   `[−369.7 … +139.3]`, |λ₋| = **2.65× λ_max**, grad_norm 0.787, at the truncated-anneal state
+   (β 3.177/τ 0.216) → best point NOT 2nd-order exhausted; TerminalSolve in-basin NOT met; the cold
+   Muon fire was curvature-blind. Full-P (K=128) recess PRE-REGISTERED (kill band |λ₋|/λ_max<0.1).
+   Artifact `experiments/results/t5_s3_hvp_lanczos_20260707/spectrum_ep650_K8_s0.json`.
+
+**3 anchor updates to EXISTING rows (no duplication):** `muon_finisher_schedule_warmstart_and_lr_anneal_v1`
+gains the mod32cap cold-quench receipt (second independent measurement of the cold-start half;
+warm-start net stays #270-gated AWAITING); `lane_band_camera_frame_rd_rate_v1` gains the REAL
+byte-close marginal (**+41,562 B / +0.02767**, bit-exact — the band is NOT "near-zero byte");
+`store_nothing_pose_carrier_rate_collapse_vs_dpose_v1` gains the REAL byte-close marginal
+(**+6,929 B / +0.00464**, H_bytes=0 derive-H live, ξ delta_ar 6,367 B @ q4096).
+
+**Review-status pins (honesty):** byte-close rows = bit-exact-verified ×3 (S6, reports on disk);
+S2 M-rows = deterministic fits/log-parses on the mod32cap run history; S3 spectrum = fresh-eyes-
+UNREVIEWED K=8 → registered PROVISIONAL with the transfer claim as a separate AWAITING anchor;
+S4 mod48 toll + S2 Muon-asymptote comparison = INFERRED/AWAITING, marked so at the anchor level.
+No contest-authority row anywhere in this landing. Pointer 0.19110 UNMOVED (means)
