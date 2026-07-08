@@ -263,3 +263,298 @@ def test_certify_fixed_point_reduction_skips_compile():
     assert cert.fixed_point_routed is True
     assert cert.reference == "fixed_order_reduce_mlx"
     assert cert.verdict == "CERTIFIED"
+
+
+# =========================================================================== #
+# v2 — AUTO-DISCOVERY (AST + trace) partitioner
+# =========================================================================== #
+
+
+def test_ast_op_kinds_detects_matmul_operator():
+    # the '@' operator dispatches to array.__matmul__ — invisible to a runtime
+    # mx-namespace trace; ONLY the AST scan catches it (the safety net).
+    def f(a, b):
+        return a @ b
+
+    ops = sc.ast_op_kinds(f)
+    assert "matmul" in ops
+    assert sc.classify_op_kinds(ops).region_class is sc.RegionClass.UNSAFE_CONTRACTION
+
+
+def test_ast_op_kinds_detects_mul_add_operators():
+    def f(x, s, b):
+        return x * s + b
+
+    ops = sc.ast_op_kinds(f)
+    assert "mul" in ops and "add" in ops
+    assert sc.classify_op_kinds(ops).fma_contraction_possible is True
+
+
+def test_ast_op_kinds_detects_named_mx_calls_and_reduction():
+    def f(x):
+        import mlx.core as mx
+
+        return mx.sum(mx.tanh(x))
+
+    ops = sc.ast_op_kinds(f)
+    assert "tanh" in ops and "sum" in ops
+    assert sc.classify_op_kinds(ops).region_class is sc.RegionClass.UNSAFE_REDUCTION
+
+
+def test_ast_op_kinds_linear_construction_flags_matmul():
+    # an nn.Linear(...) / mx.matmul(...) call NAME is flagged a contraction. (A call
+    # through a variable bound to a Module — layer(h) — is NOT name-detectable; that
+    # honest limitation is why the certified candidate builders are pure math, and
+    # MIXED render fns are represented by their elementwise sub-stages, not scanned.)
+    def f(x, w):
+        import mlx.core as mx
+        from mlx import nn
+
+        lin = nn.Linear(4, 4)
+        return mx.matmul(lin(x), w)
+
+    ops = sc.ast_op_kinds(f)
+    assert "matmul" in ops  # both mx.matmul and nn.Linear construction flag contraction
+    assert sc.classify_op_kinds(ops).region_class is sc.RegionClass.UNSAFE_CONTRACTION
+
+
+def test_ast_op_kinds_bad_source_returns_empty():
+    # a builtin has no python source -> empty set, never raises.
+    assert sc.ast_op_kinds(len) == frozenset()
+
+
+def test_structural_ops_classify_safe():
+    # concatenate/reshape/broadcast are layout ops (no arithmetic) -> SAFE.
+    v = sc.classify_op_kinds({"mul", "add", "concatenate", "reshape"})
+    assert v.region_class is sc.RegionClass.SAFE_ELEMENTWISE
+    assert v.compile_eligible is True
+
+
+def test_take_gather_stays_unknown_vjp_hazard():
+    # 'take' (gather) is deliberately EXCLUDED (its VJP is the #348 scatter hazard).
+    v = sc.classify_op_kinds({"mul", "take"})
+    assert v.region_class is sc.RegionClass.UNSAFE_UNKNOWN
+
+
+def test_discover_candidate_row_shape_and_union():
+    row = sc.discover_candidate("hosc_activation", trace=False)
+    assert row.region_id == "hosc_activation"
+    assert row.compile_eligible is True
+    # declared op-kinds feed the union even without a trace
+    assert {"tanh", "sin"} <= row.union_ops
+    d = row.as_dict()
+    assert d["region_class"] == "safe_elementwise"
+    assert d["compile_eligible"] is True
+
+
+def test_discover_candidates_classifies_reduction_and_elementwise():
+    rows = {r.region_id: r for r in sc.discover_candidates(trace=False)}
+    assert rows["ce_reduction"].compile_eligible is False
+    assert rows["ce_reduction"].verdict.region_class is sc.RegionClass.UNSAFE_REDUCTION
+    for rid in ("hosc_activation", "siren_activation", "wire_activation",
+                "film_affine_tail", "compose_rgb_tail", "achromatic_luma"):
+        assert rows[rid].compile_eligible is True
+
+
+def test_trace_named_ops_records_mx_calls():
+    pytest.importorskip("mlx.core")
+    seen = sc.trace_named_ops(sc.get_region("hosc_activation").build, device="cpu")
+    assert "tanh" in seen and "sin" in seen
+
+
+# =========================================================================== #
+# v2 — PER-CHIP TRUST CLOSURE (fingerprint)
+# =========================================================================== #
+
+
+def test_host_fingerprint_has_three_keys():
+    fp = sc.host_fingerprint()
+    assert set(fp) == {"chip", "macos_build", "mlx_version"}
+
+
+def test_fingerprint_matches_empty_and_mismatch():
+    host = {"chip": "Apple M5 Max", "macos_build": "25E246", "mlx_version": "0.31.2"}
+    assert sc.fingerprint_matches({}, host) is True          # empty recorded -> match
+    assert sc.fingerprint_matches(None, host) is True
+    assert sc.fingerprint_matches(host, host) is True
+    stale = {**host, "chip": "Apple M3 Max"}
+    assert sc.fingerprint_matches(stale, host) is False       # chip mismatch -> stale
+    # a host field the machine cannot read ("") does NOT veto
+    assert sc.fingerprint_matches(host, {**host, "chip": ""}) is True
+
+
+def test_manifest_fingerprint_ok_and_stale():
+    host = {"chip": "Apple M5 Max", "macos_build": "25E246", "mlx_version": "0.31.2"}
+    fresh = sc.CertificationManifest(fingerprint=host)
+    ok, _ = sc.manifest_fingerprint_ok(fresh, host)
+    assert ok is True
+    stale = sc.CertificationManifest(fingerprint={**host, "chip": "Apple M1"})
+    ok2, reason = sc.manifest_fingerprint_ok(stale, host)
+    assert ok2 is False and "STALE" in reason
+    # legacy manifest (no fingerprint) is OK by construction
+    ok3, _ = sc.manifest_fingerprint_ok(sc.CertificationManifest(), host)
+    assert ok3 is True
+
+
+def test_resolve_enabled_regions_refuses_stale_fingerprint():
+    host = {"chip": "Apple M5 Max", "macos_build": "25E246", "mlx_version": "0.31.2"}
+    man = sc.CertificationManifest(fingerprint={**host, "chip": "Apple M1 Pro"})
+    man.add(sc.RegionCertificate("a", "safe_elementwise", "CERTIFIED", True, 0.0,
+                                 5, 5, 1.0, 1.0, 1.0, 32))
+    # stale fingerprint -> fail-closed even though 'a' is certified
+    assert sc.resolve_enabled_regions("all-certified", man, host=host) == frozenset()
+    # fresh fingerprint -> 'a' enabled
+    fresh = sc.CertificationManifest(fingerprint=host)
+    fresh.add(sc.RegionCertificate("a", "safe_elementwise", "CERTIFIED", True, 0.0,
+                                   5, 5, 1.0, 1.0, 1.0, 32))
+    assert sc.resolve_enabled_regions("all-certified", fresh, host=host) == frozenset({"a"})
+    # enforce_fingerprint=False bypasses the check
+    assert sc.resolve_enabled_regions("all-certified", man, enforce_fingerprint=False,
+                                      host=host) == frozenset({"a"})
+
+
+def test_resolve_enabled_regions_refuses_device_mismatch():
+    host = sc.host_fingerprint()
+    man = sc.CertificationManifest(device="cpu", fingerprint=host)  # CPU-measured cert
+    man.add(sc.RegionCertificate("a", "safe_elementwise", "CERTIFIED", True, 0.0,
+                                 5, 5, 1.0, 1.0, 1.0, 32))
+    # a GPU run must NOT activate a CPU-measured certificate (fp-contraction is device-specific)
+    assert sc.resolve_enabled_regions("all-certified", man, host=host, run_device="gpu") == frozenset()
+    # same device -> allowed
+    assert sc.resolve_enabled_regions("all-certified", man, host=host, run_device="cpu") == frozenset({"a"})
+    # run_device unspecified -> no device check (back-compat)
+    assert sc.resolve_enabled_regions("all-certified", man, host=host) == frozenset({"a"})
+
+
+def test_manifest_fingerprint_save_load_roundtrip(tmp_path):
+    host = {"chip": "Apple M5 Max", "macos_build": "25E246", "mlx_version": "0.31.2"}
+    man = sc.CertificationManifest(device="gpu", fingerprint=host)
+    man.add(sc.RegionCertificate("hosc_activation", "safe_elementwise", "CERTIFIED",
+                                 True, 0.0, 5, 5, 1.41, 0.19, 0.13, 32))
+    p = str(tmp_path / "m.json")
+    man.save(p)
+    loaded = sc.CertificationManifest.load(p)
+    assert loaded.fingerprint == host
+    assert loaded.schema_version == sc.SCHEMA_VERSION
+    # as_dict carries the kernel-candidate list
+    assert "kernel_candidates" in loaded.as_dict()
+
+
+# =========================================================================== #
+# v2 — FAILED-CERT -> KERNEL-CANDIDATE pipeline (D16 feed; dormant at 0 failures)
+# =========================================================================== #
+
+
+def test_emit_kernel_candidates_empty_when_no_failures():
+    man = sc.CertificationManifest()
+    man.add(sc.RegionCertificate("a", "safe_elementwise", "CERTIFIED", True, 0.0,
+                                 5, 5, 1.0, 1.0, 1.0, 32))
+    assert sc.emit_kernel_candidates(man) == []
+
+
+def test_emit_kernel_candidates_ranks_fp_contraction_first():
+    man = sc.CertificationManifest()
+    # a genuine fp-contraction failure (bit_equal False, finite delta, elementwise)
+    man.add(sc.RegionCertificate("film", "safe_elementwise", "FAILED", False, 4.8e-3,
+                                 5, 5, 1.6, 2.0, 1.25, 32, fma_contraction_possible=True,
+                                 first_divergence={"abs_delta": 4.8e-3}))
+    # a harness error (lower rank)
+    man.add(sc.RegionCertificate("broke", "safe_elementwise", "ERROR", False,
+                                 float("nan"), 0, 0, 0.0, 0.0, 0.0, 0))
+    cands = sc.emit_kernel_candidates(man)
+    assert len(cands) == 2
+    assert cands[0]["region_id"] == "film"
+    assert cands[0]["candidate_kind"] == "fp_contraction"
+    assert cands[0]["rank"] == 0
+    assert cands[1]["candidate_kind"] == "harness_error"
+
+
+# =========================================================================== #
+# v2 — HOT-LOOP WIRING (install_safe_compiled_regions + flag-flip byte-identity)
+# =========================================================================== #
+
+
+class _FakeModel:
+    """Minimal stand-in for the witness model's activation contract: the plain
+    path is python-float scalars; the compiled slot (when installed) is used."""
+
+    def __init__(self):
+        self.activation = "hosc"
+        self.hosc_beta = 2.5
+        self.hosc_omega = 1.0
+        self._compiled_act = None
+        self.compiled_calls = 0
+
+    def act(self, u):
+        import mlx.core as mx
+
+        if self.activation == "hosc":
+            ca = self._compiled_act
+            if ca is not None:
+                self.compiled_calls += 1
+                return ca(u, mx.array(self.hosc_beta, dtype=u.dtype),
+                          mx.array(self.hosc_omega, dtype=u.dtype))
+            return mx.tanh(self.hosc_beta * mx.sin(self.hosc_omega * u))
+        return u
+
+
+def test_install_safe_compiled_regions_empty_is_noop():
+    m = _FakeModel()
+    installed = sc.install_safe_compiled_regions(m, frozenset())
+    assert installed == []
+    assert m._compiled_act is None  # byte-identical default path preserved
+
+
+def test_install_safe_compiled_regions_uncertified_fail_closed():
+    m = _FakeModel()
+    man = sc.CertificationManifest()  # hosc NOT certified
+    installed = sc.install_safe_compiled_regions(m, frozenset({"hosc_activation"}), man)
+    assert installed == []
+    assert m._compiled_act is None  # nothing installed -> plain path
+
+
+def test_install_safe_compiled_regions_installs_when_certified():
+    m = _FakeModel()
+    man = sc.CertificationManifest(fingerprint=sc.host_fingerprint())
+    man.add(sc.RegionCertificate("hosc_activation", "safe_elementwise", "CERTIFIED",
+                                 True, 0.0, 5, 5, 1.41, 0.19, 0.13, 32))
+    installed = sc.install_safe_compiled_regions(m, frozenset({"hosc_activation"}), man)
+    assert installed == ["hosc_activation"]
+    assert m._compiled_act is not None  # compiled slot set -> flag-flip complete
+
+
+def test_flag_flip_off_byte_identical_on_uses_compiled_path():
+    mx = pytest.importorskip("mlx.core")
+    import numpy as np
+
+    u = mx.array(np.random.default_rng(0).standard_normal((32, 8)).astype(np.float32))
+    # OFF: plain path, spy counter stays 0
+    m_off = _FakeModel()
+    y_off = m_off.act(u)
+    mx.eval(y_off)
+    assert m_off.compiled_calls == 0
+
+    # ON: install certified compiled hook -> compiled path used (spy fires) AND
+    # the result is bit-identical to the plain path (max|Δ| == 0).
+    m_on = _FakeModel()
+    man = sc.CertificationManifest(fingerprint=sc.host_fingerprint())
+    man.add(sc.RegionCertificate("hosc_activation", "safe_elementwise", "CERTIFIED",
+                                 True, 0.0, 5, 5, 1.41, 0.19, 0.13, 32))
+    sc.install_safe_compiled_regions(m_on, frozenset({"hosc_activation"}), man)
+    y_on = m_on.act(u)
+    mx.eval(y_on)
+    assert m_on.compiled_calls == 1
+    assert float(mx.max(mx.abs(y_off - y_on))) == 0.0  # certified bit-identity holds when wired
+
+
+# =========================================================================== #
+# v2 — reduction-site inventory
+# =========================================================================== #
+
+
+def test_step_reduction_sites_all_native_or_fused():
+    sites = {s["site"]: s for s in sc.STEP_REDUCTION_SITES}
+    assert "ce_loss" in sites and "R_operator_reductions" in sites
+    for s in sc.STEP_REDUCTION_SITES:
+        assert s["routing"] in {"native", "native_fused_r"}
+        assert s["reason"]  # every site documents WHY it is (un)routed
