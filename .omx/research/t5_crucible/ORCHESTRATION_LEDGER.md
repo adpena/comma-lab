@@ -249,6 +249,24 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- LANDING FOLDED 2026-07-08T~20:0x: #350 COMPLETE (Opus) — THE EXPLOITATION HARNESS ---
+- **B-DET COMPOSITE: GO** — fused-R + self-orient FULL trainer step cross-process BIT-IDENTICAL
+  (N=5, 1 hash; CPU positive-control identical). Self-orient adds no nondeterministic op. The
+  n600 true-scale confirm was governor-REFUSED (55 GiB vs ~22 free) and the agent did NOT
+  bypass (P0 held) → it is run-1's standing launch-preflight item (one command at headroom).
+- **PAYLOAD TTO core: MEASURED, band honestly OWED.** payload_tto.py (deterministic, resumable,
+  code-table optimizer vs the real differentiable seg surrogate on the actual witness module,
+  trunk frozen, real int8+brotli byte accounting): 4 core tests PASS (objective strictly
+  reduces · runs bit-identical · resume bit-identical · non-target pairs byte-frozen). The
+  n600 GO/INERT/HARM band = BLOCKED-by-named-blocker (55 GiB self-orient + trainer-setup-
+  fidelity driver seam), recorded with the one-command path — NOT faked (NO-FAKE honored).
+- **EXACT-A/B: OPERATIONAL** — null test 0-divergence at full-trainer scale (zero-noise floor
+  re-confirmed → #183's exact-AB machinery VALID); flip test locates divergence at ep2, 16
+  tensors, 100% flag-attributable. Stage 3 cache + golden-trajectory CI landed (4 tests).
+- Owed follow-ups (named, headroom-gated): n600 composite determinism confirm (= B-DET
+  preflight) + the n600 TTO band measurement (both one-command; natural slot = pre-run-1
+  preflight / post-run-1 compress-half alongside #336).
+
 --- LANDING FOLDED 2026-07-08T~19:0x: V6.4 (a18534134/32cb83ac9) — THE LR PIN, BIT-IDENTICAL ---
 - Derived pin `--lr-anneal-epochs 1000 --lr-hold-frac 1.0` = the control's OWN denominator (its
   LR trio were shared defaults; freeze 726 < den 1000 so no hold ever engaged) → reproduces
