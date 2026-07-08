@@ -265,6 +265,26 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED ×2: TAIL_k + LADDER #323 (Opus; TAIL_k 7d69aff57/c10b09636, LADDER 16986aefa —
+provenance split across shared-file commits, declared not silent; 19+22 tests green) ---
+- TAIL_k (src/tac/witness_control/tail_cycles.py + trainer + TailCycles DSL factory): post-Muon
+  warm-restart cycles, 8 flags all default-OFF byte-identical (--tail-cycles-max 0 = OFF);
+  τ_k = max(τ_{k−1}·halving, m_q/ln5) ≥ τ_end; LR ∝ τ_k, moments untouched; dwell-gated
+  powerlaw_meat exit + cycle-floor 387.09 (LawRef tail_cycle_floor_v1) + k_max as req-B CAP.
+  Adoption seam PROVEN: resume run-1's last stage ckpt with tail flags appended — the loader
+  tolerates unpersisted flags (no drift refusal). Live-mq mode fail-closed (owed SC-3 render).
+- LADDER #323 (src/tac/witness_curriculum/ladder_homotopy.py + island_protection per-class
+  radii + LadderIslandHomotopy DSL factory; 16 --ladder-* flags default-OFF): movable =
+  SDF-dilation ceiling'd by critical_nucleus_release_v1 (0.95·1.5=1.425 MEASURED knee); lane =
+  curve-prior growth along openpilot VP-tangent + dash-phase window; per-class λ_c =
+  flip_share_c·d_seg_by_class_c (#315 sensor) soft-gates support — UNIFORM amplification (the
+  measured net-negative) is structurally never emitted. Eased→held→annealed, 1-Lipschitz.
+- V7 SYNTHESIS UNBLOCKED: unify-tau builder FIRED (trainer file free) — L_τ = τ·logsumexp(φ/τ)
+  − φ_y coupled to render-τ, geometric shape; drops --tau-softplus-start-epoch by DELETION
+  (resolves 1 of the 5 NAKED violations; the rest: l7→drop/derive, muon→tagged cap or
+  event-sensor, lane-band + chroma-boundary → event-triggered or derived). Remaining in flight:
+  unify-tau · requirement-V typed config · dashboard LIVE tab. Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: SCHEDULE-PROVENANCE ENFORCEMENT (Opus; code 31e760120, DAG+memo a1f7c109a;
 memo .omx/research/schedule_provenance_gate_20260709.md; 29 new tests, 124 green) ---
 - GATE (tools/schedule_provenance_gate.py, launcher step b0.5, rc=6): every positive
