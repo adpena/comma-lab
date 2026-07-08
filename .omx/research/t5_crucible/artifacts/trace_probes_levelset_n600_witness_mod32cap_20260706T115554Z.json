@@ -1,0 +1,553 @@
+{
+ "instrument": "tools/witness_trace_probes.py",
+ "axis": "[macOS advisory] NON-PROMOTABLE (trace analysis; no score claim)",
+ "provenance": "DRAFT_OPTIMAL_STACK_v5_20260707.md \u00a72.2f/\u00a72.5/\u00a77c + ct_deepresearch_1_training_campaign_control_20260707.md \u00a73.3/\u00a74.2/\u00a710.2",
+ "utc": "2026-07-08T02:50:36Z",
+ "inputs": {
+  "run_dir": "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z",
+  "n_trace_rows": 41,
+  "trace_epochs": [
+   0,
+   1000
+  ],
+  "stages": {
+   "CE": [
+    25,
+    275
+   ],
+   "tau_softplus": [
+    300,
+    725
+   ],
+   "muon_fin": [
+    750,
+    1000
+   ]
+  }
+ },
+ "probes": {
+  "ct3": {
+   "probe": "P-CT3",
+   "law": "fire TAU->FIN when s < s* = nu*forfeit",
+   "band": {
+    "first_sustained_fire": [
+     670,
+     700
+    ],
+    "ema_best_within_cadence_of": "stage best",
+    "kill": "fire < 650 or > cap 726"
+   },
+   "verdict": "PASS",
+   "scope_on_negative": "FORMULATION (this estimator form + registered s*)",
+   "estimator_anchor_shipped_copredicate": {
+    "first_fire_epoch": 625,
+    "first_fire_rel_slope": -0.0013693665000368658,
+    "n_fires": 8
+   },
+   "result": {
+    "s_star_S_per_ep": 1.4154e-05,
+    "v_window": 4,
+    "stage_window": [
+     300,
+     725
+    ],
+    "cap_epoch": 726,
+    "stage_best": {
+     "epoch": 650,
+     "d_seg": 0.0033661905924479165
+    },
+    "per_verdict": [
+     {
+      "epoch": 300,
+      "slope_endpoint_S_per_ep": 0.00039638943142361144,
+      "slope_lsfit_S_per_ep": 0.00038438245985243093,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 325,
+      "slope_endpoint_S_per_ep": 0.000570949978298611,
+      "slope_lsfit_S_per_ep": 0.00055816650390625,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 350,
+      "slope_endpoint_S_per_ep": 0.0009725726092303238,
+      "slope_lsfit_S_per_ep": 0.0009746568467881942,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 375,
+      "slope_endpoint_S_per_ep": 0.000991866500289352,
+      "slope_lsfit_S_per_ep": 0.001040798611111111,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 400,
+      "slope_endpoint_S_per_ep": 0.0008082750108506943,
+      "slope_lsfit_S_per_ep": 0.0007775472005208333,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 425,
+      "slope_endpoint_S_per_ep": 0.0004216964156539358,
+      "slope_lsfit_S_per_ep": 0.0004237908257378477,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 450,
+      "slope_endpoint_S_per_ep": 0.00033419008608217594,
+      "slope_lsfit_S_per_ep": 0.0003329162597656253,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 475,
+      "slope_endpoint_S_per_ep": 0.0002342732747395842,
+      "slope_lsfit_S_per_ep": 0.00023469373914930623,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 500,
+      "slope_endpoint_S_per_ep": 0.00019614890769675876,
+      "slope_lsfit_S_per_ep": 0.0001908230251736108,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 525,
+      "slope_endpoint_S_per_ep": 0.0001610876012731489,
+      "slope_lsfit_S_per_ep": 0.0001656867133246533,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 550,
+      "slope_endpoint_S_per_ep": 0.00017892343026620328,
+      "slope_lsfit_S_per_ep": 0.0001743604871961804,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 575,
+      "slope_endpoint_S_per_ep": 0.00012071397569444452,
+      "slope_lsfit_S_per_ep": 0.00012828233506944427,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 600,
+      "slope_endpoint_S_per_ep": 0.00011241771556712993,
+      "slope_lsfit_S_per_ep": 0.00010442097981770858,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 625,
+      "slope_endpoint_S_per_ep": 1.8660933883101263e-05,
+      "slope_lsfit_S_per_ep": 2.7635362413194234e-05,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 650,
+      "slope_endpoint_S_per_ep": 4.34027777777782e-05,
+      "slope_lsfit_S_per_ep": 3.0575222439236e-05,
+      "fire_endpoint": false,
+      "fire_lsfit": false
+     },
+     {
+      "epoch": 675,
+      "slope_endpoint_S_per_ep": -5.481861255787641e-06,
+      "slope_lsfit_S_per_ep": 5.733913845485869e-06,
+      "fire_endpoint": true,
+      "fire_lsfit": true
+     },
+     {
+      "epoch": 700,
+      "slope_endpoint_S_per_ep": -1.9271285445601288e-05,
+      "slope_lsfit_S_per_ep": -2.1169026692707815e-05,
+      "fire_endpoint": true,
+      "fire_lsfit": true
+     },
+     {
+      "epoch": 725,
+      "slope_endpoint_S_per_ep": -6.356698495370468e-05,
+      "slope_lsfit_S_per_ep": -6.983439127604269e-05,
+      "fire_endpoint": true,
+      "fire_lsfit": true
+     }
+    ],
+    "first_sustained_fire_endpoint": 675,
+    "first_sustained_fire_lsfit": 675,
+    "all_fires_endpoint": [
+     675,
+     700,
+     725
+    ],
+    "all_fires_lsfit": [
+     675,
+     700,
+     725
+    ],
+    "fire_report_endpoint": {
+     "fire_epoch": 675,
+     "d_seg_at_fire": 0.003375752766927083,
+     "ema_best_epoch": 650,
+     "ema_best_d_seg": 0.0033661905924479165,
+     "ema_best_within_cadence_of_stage_best": true,
+     "forfeit_d_seg_vs_stage_best": 0.0,
+     "forfeit_S_vs_stage_best": 0.0,
+     "forfeit_S_current_theta_no_restore": 0.0009562174479166644
+    },
+    "fire_report_lsfit": {
+     "fire_epoch": 675,
+     "d_seg_at_fire": 0.003375752766927083,
+     "ema_best_epoch": 650,
+     "ema_best_d_seg": 0.0033661905924479165,
+     "ema_best_within_cadence_of_stage_best": true,
+     "forfeit_d_seg_vs_stage_best": 0.0,
+     "forfeit_S_vs_stage_best": 0.0,
+     "forfeit_S_current_theta_no_restore": 0.0009562174479166644
+    },
+    "reference_fires": {
+     "625": {
+      "fire_epoch": 625,
+      "d_seg_at_fire": 0.0033928595648871534,
+      "ema_best_epoch": 600,
+      "ema_best_d_seg": 0.0033716413709852424,
+      "ema_best_within_cadence_of_stage_best": false,
+      "forfeit_d_seg_vs_stage_best": 5.450778537325913e-06,
+      "forfeit_S_vs_stage_best": 0.0005450778537325913,
+      "forfeit_S_current_theta_no_restore": 0.0026668972439236865
+     },
+     "650": {
+      "fire_epoch": 650,
+      "d_seg_at_fire": 0.0033661905924479165,
+      "ema_best_epoch": 650,
+      "ema_best_d_seg": 0.0033661905924479165,
+      "ema_best_within_cadence_of_stage_best": true,
+      "forfeit_d_seg_vs_stage_best": 0.0,
+      "forfeit_S_vs_stage_best": 0.0,
+      "forfeit_S_current_theta_no_restore": 0.0
+     }
+    }
+   }
+  },
+  "ct1": {
+   "probe": "P-CT1",
+   "law": "d_seg(t) = a + b*exp(-nu*t) per stage; nu = 1/tau_e",
+   "band": {
+    "nu_per_ep": [
+     0.02,
+     0.035
+    ],
+    "kill": "nu < 0.01"
+   },
+   "verdict_per_stage": {
+    "CE": "BAND-FAIL (nu outside [0.02, 0.035], above kill floor)",
+    "tau_softplus": "BAND-FAIL (nu outside [0.02, 0.035], above kill floor)",
+    "muon_fin": "KILL (nu < 0.01 \u21d2 recompute window laws; values emitted)"
+   },
+   "scope_on_negative": "FORMULATION (single-nu exponential per stage; power-law alternative reported in-row)",
+   "result": {
+    "stages": {
+     "CE": {
+      "window": [
+       25,
+       275
+      ],
+      "n_rows": 11,
+      "nu_per_ep": 0.019955227727373903,
+      "tau_e": 50.11218181330168,
+      "exp_a": 0.004803803686814367,
+      "exp_b": 0.00446539755066469,
+      "preferred_model_aic": "exponential",
+      "delta_aic_exp_minus_pow": -20.317846114065645,
+      "powerlaw_alpha": 0.11972072244056299,
+      "powerlaw_alpha_ci95": [
+       0.05000043619114529,
+       0.12221102995170868
+      ],
+      "powerlaw_a": 0.0,
+      "recomputed_window_laws": {
+       "settle_3_over_nu_ep": 150.33654543990505,
+       "tail_cycle_floor_ep": 300.3365454399051,
+       "dwell_lower_bound_ep": 150.33654543990505,
+       "s_star_nu_times_forfeit_S_per_ep": 1.087715362365874e-05
+      }
+     },
+     "tau_softplus": {
+      "window": [
+       300,
+       725
+      ],
+      "n_rows": 18,
+      "nu_per_ep": 0.012653403634932212,
+      "tau_e": 79.03011939327558,
+      "exp_a": 0.0033768268110426786,
+      "exp_b": 0.001223753391840729,
+      "preferred_model_aic": "exponential",
+      "delta_aic_exp_minus_pow": -46.828661669979056,
+      "powerlaw_alpha": 0.055904611981323814,
+      "powerlaw_alpha_ci95": [
+       0.05000043619114529,
+       0.05852693291490664
+      ],
+      "powerlaw_a": 0.0,
+      "recomputed_window_laws": {
+       "settle_3_over_nu_ep": 237.09035817982678,
+       "tail_cycle_floor_ep": 387.0903581798268,
+       "dwell_lower_bound_ep": 237.09035817982678,
+       "s_star_nu_times_forfeit_S_per_ep": 6.897090681181217e-06
+      }
+     },
+     "muon_fin": {
+      "window": [
+       750,
+       1000
+      ],
+      "n_rows": 11,
+      "nu_per_ep": 0.003289247720778658,
+      "tau_e": 304.0208840711066,
+      "exp_a": 0.0032388453195561395,
+      "exp_b": 0.0011264934406691024,
+      "preferred_model_aic": "exponential",
+      "delta_aic_exp_minus_pow": -42.288767582113934,
+      "powerlaw_alpha": 0.05000033359012224,
+      "powerlaw_alpha_ci95": [
+       0.05000043619114529,
+       0.05000043619114529
+      ],
+      "powerlaw_a": 0.0019957138982785185,
+      "recomputed_window_laws": {
+       "settle_3_over_nu_ep": 912.0626522133198,
+       "tail_cycle_floor_ep": 1062.0626522133198,
+       "dwell_lower_bound_ep": 912.0626522133198,
+       "s_star_nu_times_forfeit_S_per_ep": 1.7928962402218173e-06
+      }
+     }
+    }
+   }
+  },
+  "ct2": {
+   "probe": "P-CT2",
+   "law": "dt_next = clamp(floor_S/|S'|, 25, 100), self-triggered",
+   "band": {
+    "n_skipped": [
+     12,
+     17
+    ],
+    "kill": "any missed prefix-best > 1 cadence"
+   },
+   "scope_on_negative": "FORMULATION (this clamp form + floor_S; sweep emitted showing what WOULD pass)",
+   "replay_window": {
+    "floor_S": 0.00178,
+    "dt_clamp": [
+     25,
+     100
+    ],
+    "estimator": "window",
+    "v_window": 4,
+    "base_cadence_ep": 25,
+    "n_trace_verdicts": 41,
+    "n_visited": 36,
+    "n_skipped": 5,
+    "skipped_epochs": [
+     650,
+     675,
+     725,
+     750,
+     775
+    ],
+    "visited_epochs": [
+     0,
+     25,
+     50,
+     75,
+     100,
+     125,
+     150,
+     175,
+     200,
+     225,
+     250,
+     275,
+     300,
+     325,
+     350,
+     375,
+     400,
+     425,
+     450,
+     475,
+     500,
+     525,
+     550,
+     575,
+     600,
+     625,
+     700,
+     800,
+     825,
+     850,
+     875,
+     900,
+     925,
+     950,
+     975,
+     1000
+    ],
+    "missed_prefix_best_beyond_one_cadence": [],
+    "global_best_epoch": 650,
+    "global_best_dist_to_nearest_visited": 25,
+    "global_best_visited": false,
+    "verdict": "BAND-FAIL (5 skipped, band [12,17])"
+   },
+   "replay_pair": {
+    "floor_S": 0.00178,
+    "dt_clamp": [
+     25,
+     100
+    ],
+    "estimator": "pair",
+    "v_window": 4,
+    "base_cadence_ep": 25,
+    "n_trace_verdicts": 41,
+    "n_visited": 35,
+    "n_skipped": 6,
+    "skipped_epochs": [
+     600,
+     650,
+     675,
+     700,
+     750,
+     775
+    ],
+    "visited_epochs": [
+     0,
+     25,
+     50,
+     75,
+     100,
+     125,
+     150,
+     175,
+     200,
+     225,
+     250,
+     275,
+     300,
+     325,
+     350,
+     375,
+     400,
+     425,
+     450,
+     475,
+     500,
+     525,
+     550,
+     575,
+     625,
+     725,
+     800,
+     825,
+     850,
+     875,
+     900,
+     925,
+     950,
+     975,
+     1000
+    ],
+    "missed_prefix_best_beyond_one_cadence": [],
+    "global_best_epoch": 650,
+    "global_best_dist_to_nearest_visited": 25,
+    "global_best_visited": false,
+    "verdict": "BAND-FAIL (6 skipped, band [12,17])"
+   },
+   "floor_s_sensitivity_sweep": [
+    {
+     "floor_S": 0.00178,
+     "mult": 1.0,
+     "n_skipped": 5,
+     "missed_best": false,
+     "global_best_dist": 25
+    },
+    {
+     "floor_S": 0.00356,
+     "mult": 2.0,
+     "n_skipped": 6,
+     "missed_best": false,
+     "global_best_dist": 25
+    },
+    {
+     "floor_S": 0.005339999999999999,
+     "mult": 3.0,
+     "n_skipped": 6,
+     "missed_best": false,
+     "global_best_dist": 25
+    },
+    {
+     "floor_S": 0.00712,
+     "mult": 4.0,
+     "n_skipped": 7,
+     "missed_best": false,
+     "global_best_dist": 25
+    },
+    {
+     "floor_S": 0.010679999999999999,
+     "mult": 6.0,
+     "n_skipped": 8,
+     "missed_best": false,
+     "global_best_dist": 25
+    }
+   ],
+   "verdict": "BAND-FAIL (5 skipped, band [12,17])"
+  },
+  "tau": {
+   "probe": "tau-CONFIRM",
+   "law": "tau*_end = m_q/ln5; m_q = flip-annulus GT-margin support edge (0.10)",
+   "arithmetic": {
+    "claimed": 0.062,
+    "recomputed_0.10_over_ln5": 0.06213349345596119
+   },
+   "per_cached_map": {
+    "maps_BEST_ep300.npz": {
+     "epoch": 300,
+     "n_pairs_subset": 16,
+     "flip_rate_gt_margin_below_0.10": 0.4193881058783087,
+     "flip_rate_gt_margin_above_0.10": 0.003631175125541879,
+     "flip_mass_share_gt_margin_below_0.10": 0.24317321108232012,
+     "gt_margin_at_flips_q50_q90_q99": [
+      0.2540595531463623,
+      0.9391422271728516,
+      3.361119866371155
+     ]
+    },
+    "maps_CE_ep299.npz": {
+     "epoch": 299,
+     "n_pairs_subset": 16,
+     "flip_rate_gt_margin_below_0.10": 0.4198464535350063,
+     "flip_rate_gt_margin_above_0.10": 0.003628306143351564,
+     "flip_mass_share_gt_margin_below_0.10": 0.24351987239133324,
+     "gt_margin_at_flips_q50_q90_q99": [
+      0.2513531446456909,
+      0.894902229309082,
+      3.099635541439048
+     ]
+    }
+   },
+   "end_checkpoint_confirm": "BLOCKED-cheaply-with-path: cached maps cover early epochs only; the decisive END-checkpoint m_q needs tools/witness_annulus_convergence.py on the last ckpt (16-pair advisory scorer forward, ~minutes CPU)",
+   "scope_on_negative": "INSTANCE (the m_q=0.10 anchor's transfer to this vehicle/stage; the law tau*=m_q/ln5 is untouched)",
+   "verdict": "PARTIAL: arithmetic OK (0.062133); flip-mass share below the 0.10 edge = 0.243173-0.243520 on cached early-stage maps (anchor expects ~1.0); decisive END-checkpoint confirm BLOCKED-cheaply-with-path"
+  }
+ }
+}
