@@ -10103,3 +10103,17 @@ S2 M-rows = deterministic fits/log-parses on the mod32cap run history; S3 spectr
 UNREVIEWED K=8 → registered PROVISIONAL with the transfer claim as a separate AWAITING anchor;
 S4 mod48 toll + S2 Muon-asymptote comparison = INFERRED/AWAITING, marked so at the anchor level.
 No contest-authority row anywhere in this landing. Pointer 0.19110 UNMOVED (means)
+
+## FEED-09b (2026-07-08) — #265 order-of-check kernel bug class FIXED + swept (compute facet)
+verdict_scope: instance — one bug class (kernel-install check before device resolution), fixed + sibling-swept.
+- **f105ff114**: custom Metal grouped-backward crashed under `--mlx-device cpu` ("[metal_kernel]
+  Only supports the GPU.", reproduced) because kernel availability was checked BEFORE the final
+  device resolved. Fix (two layers): (a) levelset trainer converts the scorer INSIDE
+  `temporary_mlx_device(args.mlx_device)` so install-time choice sees the FINAL device (base
+  trainer already correct); (b) library VJP re-checks device at CALL time, fails SOFT to the
+  native VJP (parity vs reference 3e-8) with a loud once-only warning.
+- **Sibling sweep (the 6-7× spread rule)**: fused-R fail-closed at resolved config (not
+  vulnerable) · AA-SDF/margin/curvelet/clDice/island-birth = mx.compile/numpy or not-built →
+  class closed across the #212 suite. 3 new tests; kernel suite 60/60; fused-R parity 25/25.
+- Triality: compute facet apparatus (means); no lever/equation change; task #265 → completed.
+  pointer 0.19110 UNMOVED.
