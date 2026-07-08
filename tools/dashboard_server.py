@@ -65,29 +65,31 @@ from types import SimpleNamespace
 
 # ── reuse the canonical verdict-parse + self-calibrating liveness (DRY) ──
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import render_levelset_dashboard as rld  # noqa: E402
-import dashboard_trajectory_model as dtm  # noqa: E402  (sophisticated DATA-DERIVED projection)
+import dashboard_trajectory_model as dtm  # sophisticated DATA-DERIVED projection
+import render_levelset_dashboard as rld
 
 # ── canonical DSL schedule read-back (operator 2026-07-07: observability consumers
 # DERIVE the stage map from the run's own config via the DSL — never hand-fed
 # constants). Fail-open: a missing/broken tac install must never kill the daemon;
 # refresh() then falls back to the legacy path with a visible "schedule: fallback".
 try:
-    from tac.witness_dsl.schedule_readback import (  # noqa: E402
+    from tac.witness_dsl.schedule_readback import (
         read_schedule as _dsl_read_schedule,
+    )
+    from tac.witness_dsl.schedule_readback import (
         resolve_run_dir_for_log as _dsl_resolve_run_dir,
     )
-except Exception:  # noqa: BLE001 — load-bearing daemon; degrade visibly, never crash
+except Exception:  # load-bearing daemon; degrade visibly, never crash
     _dsl_read_schedule = None
     _dsl_resolve_run_dir = None
 
-from starlette.applications import Starlette  # noqa: E402
-from starlette.responses import (  # noqa: E402
+from starlette.applications import Starlette
+from starlette.responses import (
     HTMLResponse,
     JSONResponse,
 )
-from starlette.routing import Route, WebSocketRoute  # noqa: E402
-from starlette.websockets import WebSocket, WebSocketDisconnect  # noqa: E402
+from starlette.routing import Route, WebSocketRoute
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 # ── canonical frontier pointer (SoT: .omx/state/canonical_frontier_pointer.json) ──
 # CLAUDE.md "Frontier scores are pointer-only" (NON-NEGOTIABLE): NO hardcoded score
@@ -125,7 +127,7 @@ def frontier_pointer() -> dict:
             "since": str(cpu.get("measured_at_utc", ""))[:10] or None,
             "source": ".omx/state/canonical_frontier_pointer.json",
         }
-    except Exception as exc:  # noqa: BLE001 — telemetry must never crash the daemon
+    except Exception as exc:
         _PTR_STATE["sig"] = None
         _PTR_STATE["data"] = {"ok": False,
                               "reason": f"{type(exc).__name__}: {exc}"}
@@ -368,7 +370,7 @@ def _derive_goal_info(rows, pose_blind, explicit: float | None,
                     "source": f"target {target_s:g} unreachable at measured pose+rate"}
         return {"value": value,
                 "source": f"derived: (target {target_s:g} − {pose_note} − measured rate)/100"}
-    except Exception:  # noqa: BLE001 — a goal line must never crash telemetry
+    except Exception:
         return {"value": None, "source": None}
 
 
@@ -428,7 +430,7 @@ def _read_costate(run_dir: str | None) -> dict | None:
                 "classification": (str(cls).upper() if cls else None),
                 "rec": rec, "age_s": age_s,
                 "duty_owed": duty_owed, "duty_never_fired": duty_nf}
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 
@@ -1185,7 +1187,7 @@ class LiveState:
                 if _rbd is None and latest is not None:
                     _rbd = latest.parent
                 _rb = _dsl_read_schedule(_rbd, log_paths=[str(p) for p in chain])
-            except Exception:  # noqa: BLE001 — telemetry must never crash the daemon
+            except Exception:
                 _rb = None
         self.schedule_readback = (
             _rb.to_dict() if _rb is not None
@@ -1257,7 +1259,7 @@ class LiveState:
         # last shadow-observer row from <run_dir>/costate_shadow.jsonl. Fail-open None.
         try:
             self.costate = _read_costate(self.watched_dir)
-        except Exception:  # noqa: BLE001 — telemetry must never crash the daemon
+        except Exception:
             self.costate = None
 
         # RUN-IDENTITY row (name + purpose + scope; operator 2026-07-07): declared
@@ -1267,7 +1269,7 @@ class LiveState:
                 self.watched_dir, (self.run_config or {}).get("flags") or {},
                 self.pose_blind,
                 _resume_from_path(latest) if latest is not None else None)
-        except Exception:  # noqa: BLE001 — telemetry must never crash the daemon
+        except Exception:
             self.run_identity = None
 
         # #205 run-info strip: the FULL operational telemetry (stage-progress / best-d_seg
@@ -1906,7 +1908,7 @@ def create_app(cfg: Config) -> Starlette:
                       flush=True)
             try:
                 await asyncio.wait_for(stop.wait(), timeout=cfg.poll)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     @contextlib.asynccontextmanager
@@ -2614,6 +2616,7 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <div class="tab" data-tab="oracle">ORACLE</div>
   <div class="tab" data-tab="flow">WITNESS</div>
   <div class="tab" data-tab="witness">RESIDUAL</div>
+  <div class="tab" data-tab="sandbox">SANDBOX</div>
   <!-- TODO(#343): WHY/HOW tab HIDDEN per operator 2026-07-07 ("needs a lot of work") — copy
        rework required before re-show: break up the big blocks, direct technical register,
        fix tribute framing (pcap "The tribute's heart", the About/credits panel).
@@ -2624,6 +2627,89 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
   <div class="tab" data-tab="tri">TRIALITY</div>
   -->
 </div>
+
+<section id="tab-sandbox" class="orc hide">
+  <div class="orcintro">
+    <h2>SANDBOX &mdash; why is a curvature polynomial secretly a topological invariant, and where the same music shows up here</h2>
+    <p>A playground for the deep math. Prompted by a
+    <a href="https://x.com/nihilunbounded" target="_blank" rel="noopener">post on Pontryagin classes</a>:
+    <em>&ldquo;there&rsquo;s no apriori reason some random polynomial [of the curvature] should be a homotopy
+    invariant &mdash; you&rsquo;re defining p_i(M) using the smooth structure on M!&rdquo;</em> Everything below is
+    tagged <b>MEASURED / DERIVED / ANALOGY</b>. The Pontryagin resonance is a genuine structural rhyme
+    plus an actual characteristic class (Maslov) in our geometry &mdash; <b>not</b> a claim that we
+    computed Pontryagin classes or detected exotic spheres.</p>
+
+    <h3>The Lie answer to &ldquo;why a polynomial&rdquo;</h3>
+    <p>Chern&ndash;Weil theory. The invariant polynomials are exactly the <b>Ad-invariant polynomials on
+    the Lie algebra 𝔤</b>, and the Weil homomorphism <code>Sym(𝔤*)^G &rarr; H*(BG)</code> sends each to a
+    characteristic class. You are not evaluating a random polynomial &mdash; you are evaluating a
+    <b>G-invariant</b>, so the metric/connection choices cancel by construction and the class is an
+    invariant of the <em>bundle</em>. The miracle is a statement about a Lie group and its algebra.</p>
+
+    <h3>The oracle we optimize against (auth-eval scorer)</h3>
+    <p>The comma.ai challenge scores task-aware (&ldquo;coding-for-machines&rdquo;) compression of openpilot
+    driving video through a <b>frozen oracle</b>: <b>SegNet</b> (comma10k EfficientNet-B2) per-pixel
+    argmax &rarr; <b>d_seg</b>; <b>PoseNet</b> (FastViT-T12) two-frame YUV6 &rarr; <b>d_pose</b>; archive
+    bytes &rarr; rate. <code>S = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;bytes / 37,545,489</code>.
+    Only the argmax partition, the pose 6-vector, and the byte count carry authority. (MEASURED)</p>
+
+    <h3>The rhyme &mdash; parametrization-dependent-looking, secretly invariant</h3>
+    <p>Our vehicle is a <b>task-space level-set witness</b>: a coordinate-INR that amortizes the SegNet
+    argmax partition directly (the viscosity solution of a variational level-set flow; the object is the
+    codim-1 <b>separatrix</b> between argmax cells). The score has his exact shape &mdash;
+    <b>d_seg is a function on a quotient</b>, invariant under every reparametrization of the witness
+    weights &theta; that leaves the argmax partition fixed:</p>
+    <ul class="witkey">
+      <li><code>d_seg : &#8477;&#8319; / (argmax-cell partition) &rarr; &#8477;</code> &mdash; it looks like
+      it depends on the millions of INR weights that draw the field, but it depends only on the partition.
+      Same phenomenon as the curvature polynomial being secretly topological. (structural / by-construction)</li>
+    </ul>
+
+    <h3>The Lie spine runs through both scored axes</h3>
+    <ul class="witkey">
+      <li><b>Pose is se(3).</b> By Chasles every rigid displacement is a screw &mdash; one twist
+      <b>&xi; &isin; se(3)</b>, <code>exp(&xi;) &isin; SE(3)</code>. The same &xi; that transports the
+      partition (a d_seg prior) is the pose PoseNet measures (d_pose). Engine <code>tac.lie.se3</code>.
+      (BUILT + MEASURED: openpilot-ego prior gives &minus;94/&minus;99% on the pose axis)</li>
+      <li><b>Conditioning on the Stiefel manifold.</b> The Muon finisher orthogonalizes gradients via
+      Newton&ndash;Schulz &mdash; descent on the Stiefel manifold, Lie-group geometry.
+      (MEASURED: &minus;32% d_seg vs AdamW)</li>
+      <li><b>A Maslov class in the boundary geometry.</b> We read the argmax as a <b>caustic</b>
+      (Lagrangian singularity) of the softmax-as-&#8463;&rarr;0 limit (&tau; = &epsilon; = &#8463;;
+      error bound &le; &tau;&middot;ln&nbsp;5). The <b>Maslov class is a characteristic class of the
+      Lagrangian Grassmannian &Lambda;(n) = U(n)/O(n)</b> &mdash; same family as Chern/Pontryagin, and just
+      as Lie-theoretic. (DERIVED &mdash; theoretical framework)</li>
+      <li><b>Tropical / Laguerre.</b> As &tau;&rarr;0 the witness is tropical; its cells are Laguerre
+      (power-diagram) cells &mdash; forget the smooth structure, keep the piecewise-linear skeleton, the
+      same flavor as extracting a topological invariant from smooth data. (DERIVED)</li>
+    </ul>
+
+    <h3>The honest boundary</h3>
+    <p><b>Real:</b> score-as-quotient-invariance (by construction), the se(3)/Chasles pose engine
+    (BUILT + MEASURED), Stiefel/Muon conditioning (MEASURED), and the Maslov/tropical framework
+    (DERIVED theory). <b>Analogy, not identity:</b> we did not compute Pontryagin classes, do
+    Chern&ndash;Weil on a tangent bundle, or detect exotic spheres. Our characteristic class is the
+    Maslov class (Lagrangian); our invariance is score-invariance-under-reparametrization. Same music,
+    different theorem.</p>
+  </div>
+
+  <div class="orccredits">
+    <div class="wch">Links &mdash; codebase &amp; resources</div>
+    <ul>
+      <li><b>Repo</b> (contest closed &rarr; IP open source):
+      <a href="https://github.com/adpena/comma-lab" target="_blank" rel="noopener">github.com/adpena/comma-lab</a>
+      &mdash; in-tree: <code>src/tac/lie/se3.py</code> (se(3)/SE(3)), <code>src/tac/boundary_math/</code>
+      (the witness), <code>src/tac/canonical_equations/deepmath_amortizing_argmax_laws_20260704.py</code>,
+      <code>docs/sandbox_pontryagin_lie_deepmath_context.md</code> (the full context behind this tab).</li>
+      <li><b>Prior art</b>: Milnor, <em>On manifolds homeomorphic to the 7-sphere</em> (1956);
+      Chern&ndash;Weil theory / the Weil homomorphism; Arnold, the Maslov index; Cand&egrave;s&ndash;Donoho,
+      curvelets (the optimal sparse basis for a curved codim-1 singularity); Dubois et al.,
+      <em>Lossy Compression for Lossless Prediction</em> (NeurIPS 2021, the task-space sufficient-statistic
+      codec);
+      <a href="https://github.com/commaai/comma_video_compression_challenge" target="_blank" rel="noopener">comma.ai video compression challenge</a>.</li>
+    </ul>
+  </div>
+</section>
 
 <section id="tab-oracle" class="orc hide">
   <div class="orcintro">
@@ -3331,12 +3417,19 @@ let ws = null, wsOpen = false, wsTries = 0, pollTimer = null;
 // enrichment state (all derived client-side from TRAJ; no new backend data)
 let hoverEpoch=null, bestVal=null, bestEpoch=null, _celebrating=false, _celTimer=null;
 let reduceMotion=false;
-try{reduceMotion=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){}
+try{reduceMotion=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){console.debug("dash: reduced-motion probe failed",e);}
 
 // stage-band palette on the epoch axis: CE / tau / l7 / Muon
 const BANDS={ce:"#1f3b5f",tau:"#3a2a5f",l7:"#5f3320",muon:"#1f4f43"};
 
 function $(id){return document.getElementById(id);}
+// null-guarded DOM text write (harness-ledger dashboard_false_FAIL_at_init class-cure,
+// 2026-07-08): a write to REMOVED markup must not throw and freeze the rest of render()
+// silently — log ONCE per missing id (console.error minimum) and keep rendering.
+const _missingIds=new Set();
+function setTxt(id,v){const el=document.getElementById(id);
+  if(!el){if(!_missingIds.has(id)){_missingIds.add(id);console.error("dash: DOM write to missing #"+id+" (markup removed?)");}return;}
+  el.textContent=v;}
 
 // ---- frontier pointer + derived goal lines (conditional-rendering rule) ----
 // The pointer is READ server-side from .omx/state/canonical_frontier_pointer.json and
@@ -3366,7 +3459,7 @@ window.__flow = {ready:null};
 function _onFlowReady(fr){
   if(!fr)return;
   window.__flow.ready = fr;
-  if(window.__flowReady){try{window.__flowReady(fr);}catch(e){}}
+  if(window.__flowReady){try{window.__flowReady(fr);}catch(e){console.error("dash: __flowReady callback failed",e);}}
 }
 
 // least-squares fit of (epoch,value) over raw points -> {m,b} or null
@@ -3427,17 +3520,17 @@ function activateTab(t){
   document.querySelectorAll("section[id^='tab-']").forEach(s=>{s.classList.toggle("hide",s.id!=="tab-"+which);});
   if(which==="live") scheduleDraw();
   if(which==="witness") renderWitness();
-  if(which==="flow"&&window.__flowActivate){try{window.__flowActivate();}catch(e){}}
+  if(which==="flow"&&window.__flowActivate){try{window.__flowActivate();}catch(e){console.error("dash: __flowActivate failed",e);}}
   if(which==="oracle") activateOracle();
-  if(which==="whyhow"&&window.__whyhowActivate){try{window.__whyhowActivate();}catch(e){}}
+  if(which==="whyhow"&&window.__whyhowActivate){try{window.__whyhowActivate();}catch(e){console.error("dash: __whyhowActivate failed",e);}}
   if(which==="tri") activateTriality();
   // (2026-07-07) remember the selection so a refresh returns to the same tab.
-  try{localStorage.setItem("dash_tab",which);}catch(e){}
+  try{localStorage.setItem("dash_tab",which);}catch(e){console.debug("dash: localStorage unavailable",e);}
 }
 // restore the last-selected tab on load (operator 2026-07-07: "stay on their selected tab").
 // Only restores a tab that still EXISTS as a button (hidden tabs fall back to LIVE).
 (function(){
-  let saved=null; try{saved=localStorage.getItem("dash_tab");}catch(e){}
+  let saved=null; try{saved=localStorage.getItem("dash_tab");}catch(e){console.debug("dash: localStorage unavailable",e);}
   if(saved&&saved!=="live"){
     const t=document.querySelector('.tab[data-tab="'+saved+'"]');
     if(t)setTimeout(()=>activateTab(t),0);
@@ -3788,7 +3881,7 @@ function render(){
   }
   // headline stat cells - raw numbers in discrete cells; down=good arrows on all four
   if(last){
-    $("d_seg_val").textContent=sig(last.d_seg,5);
+    setTxt("d_seg_val",sig(last.d_seg,5));
     const setArr=(id,key)=>{const a=arrowFor(key),el=$(id);if(el){el.className="trend "+a.cls;el.textContent=a.ar;}};
     setArr("m_trend","d_seg");setArr("p_trend","d_pose");setArr("b_trend","blob_bytes");setArr("s_trend","implied_S");
     // goal badge: CONDITIONAL — a value renders only with a real source (derived /
@@ -3799,15 +3892,15 @@ function render(){
       if(g!=null){_mg.textContent="goal < "+sig(g,4)+(goalSrcTag(_gsrc)?" · "+goalSrcTag(_gsrc):"");_mg.title=_gsrc||"";}
       else{_mg.textContent="goal — ("+(_gsrc||"no measured source yet")+")";_mg.title=_gsrc||"";}
     }
-    $("m_best").textContent=(bestVal!=null)?("best "+sig(bestVal,5)+" @ ep"+bestEpoch):" ";
+    setTxt("m_best",(bestVal!=null)?("best "+sig(bestVal,5)+" @ ep"+bestEpoch):" ");
     // implied_S sublabel: pose-blind arms carry the honest "unheld by design" note
     const _ss=$("s_sub");
     if(_ss)_ss.textContent=META.pose_blind
       ?"advisory · pose UNHELD by design in this arm (w_pose=0) — composite includes the unheld pose term"
       :"advisory · measured d_seg + store-nothing-carrier d_pose + rate · NOT the exact pointer";
-    $("d_pose_val").textContent=sig(last.d_pose,4);
-    $("bytes_val").textContent=fmtInt(last.blob_bytes);
-    $("s_val").textContent=sig(last.implied_S,4);
+    setTxt("d_pose_val",sig(last.d_pose,4));
+    setTxt("bytes_val",fmtInt(last.blob_bytes));
+    setTxt("s_val",sig(last.implied_S,4));
   }
   renderScorerBreakdown(last);
   // stage legend: CONDITIONAL — only stages present in the derived map light up
@@ -3844,7 +3937,7 @@ function render(){
       }});
     if(k==="stale")st.push("no verdict in "+fmtAge(LIVE.verdict_age_s)+" — likely stopped");
     else if(LIVE.next_eta_s!=null)st.push("next verdict ~"+fmtAge(LIVE.next_eta_s));}
-  $("status").textContent=st.join(" · ");
+  setTxt("status",st.join(" · "));
   // detail
   let d=[];
   if(LIVE.verdict_age_s!=null)d.push("verdict "+fmtAge(LIVE.verdict_age_s)+" ago");
@@ -3854,10 +3947,10 @@ function render(){
   if(META.training_alive!=null)d.push("training "+(META.training_alive?"alive":"gone"));
   // schedule provenance marker — "fallback" is the visible read-back-failed state
   if(META.schedule_source)d.push("schedule: "+META.schedule_source);
-  $("detail").textContent=d.join(" · ")||" ";
+  setTxt("detail",d.join(" · ")||" ");
   // foot
-  $("foot").textContent="[macOS-MLX advisory · NON-PROMOTABLE] · pointer "+ptrTxt()+" · stages CE · tau · l7 · Muon"+
-    (META.watched?(" · "+META.watched):"")+" · "+TRAJ.length+" verdicts · tap charts for details";
+  setTxt("foot","[macOS-MLX advisory · NON-PROMOTABLE] · pointer "+ptrTxt()+" · stages CE · tau · l7 · Muon"+
+    (META.watched?(" · "+META.watched):"")+" · "+TRAJ.length+" verdicts · tap charts for details");
   // boot spans in triality
   // boundary readouts from the derived map: number when resolved, "event-gated
   // (pending)" for an unfired event stage, "off" when the run disables the stage.
@@ -4354,13 +4447,14 @@ function connectWS(){
     catch(e){console.error("dashboard: ws message handling failed",e);}};
   ws.onclose=()=>{wsOpen=false;setWsPill(false);wsTries++;startPoll();
     setTimeout(connectWS,Math.min(15000,1000*Math.pow(1.6,Math.min(wsTries,8))));};
-  ws.onerror=()=>{try{ws.close();}catch(e){}};
+  ws.onerror=()=>{try{ws.close();}catch(e){console.debug("dash: ws.close after error",e);}};
 }
 // ---------- polling fallback (only active while WS is down) ----------
 async function pollOnce(){
   if(wsOpen)return;
   try{const r=await fetch("/api/state"+location.search,{cache:"no-store"});
-    if(r.ok){applySnapshot(await r.json());}}catch(e){}
+    if(r.ok){applySnapshot(await r.json());}}
+  catch(e){console.debug("dash: poll failed (retrying; WS pill shows link state)",e);}
 }
 function startPoll(){if(pollTimer)return;pollTimer=setInterval(pollOnce,(BOOT.poll||5)*1000);pollOnce();}
 function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
@@ -4415,7 +4509,7 @@ connectWS();
 // safety net: if WS never opens within 4s, ensure polling is running
 setTimeout(()=>{if(!wsOpen)startPoll();},4000);
 // ORACLE is the default-visible tab (arc entry point) -> kick its one-shot fetch on load.
-try{activateOracle();}catch(e){}
+try{activateOracle();}catch(e){console.error("dash: activateOracle on load failed",e);}
 </script>
 <script>
 __FLOW_JS__
