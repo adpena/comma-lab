@@ -1,5 +1,8 @@
 # POSITION — SEAT S5 (Assumption-Adversary) — T3 v7 INCLUSION SYMPOSIUM
 
+STORES CONSULTED: CONVENING doc (docket + status update) · ORCHESTRATION_LEDGER (last 250) · run-1 launch.sh + run.log (live argv/cadence, source-verified) · CLAUDE.md non-negotiables · operating manual. No sibling positions (BLIND).
+verdict_scope: instance — the FALSIFIED below is the docket status-update CLAIM "D16's consuming loss term is default-off in v7" (source-verified wrong vs the live argv); it does NOT falsify D16, the docket process, or any family.
+
 BLIND. I did NOT read any `position_INCL_S*.md`. Stores consulted: CONVENING docket +
 DOCKET STATUS UPDATE · ORCHESTRATION_LEDGER (last ~250 lines + wave-1/R-7 folds) ·
 `v7_compute_exploitation_audit_20260708.md` (lever table + wall-clock) · the LIVE run-1
