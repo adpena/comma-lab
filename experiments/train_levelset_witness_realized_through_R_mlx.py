@@ -7177,10 +7177,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _adv = _tau_ctrl.maybe_advance(ep)
                 if _adv.telemetry is not None:
                     print(json.dumps(_adv.telemetry), flush=True)
-                if _adv.advanced:
+                if _adv.advanced and args.stage_checkpoints:
                     # PRESERVE a stage-encoded ckpt at each octave boundary (independently byte-
-                    # closeable + resumable, like the Muon-switch stage ckpt) — the octaves ARE the
-                    # event-mode "stages" (unify-τ has no discrete seg-form stage ckpts).
+                    # closeable + resumable, like the Muon-switch stage ckpt, and guarded on the same
+                    # --stage-checkpoints flag) — the octaves ARE the event-mode "stages" (unify-τ has
+                    # no discrete seg-form stage ckpts).
                     _oc = _do_checkpoint(ep, stage_tag=f"stageOctave{int(_adv.rung)}")
                     stage_ckpts.append(_oc)
             _anneal_ep = int(args.muon_start_epoch) if muon_switched else ep
