@@ -10179,3 +10179,28 @@ verdict_scope: build — apparatus, no exact-eval; pointer means/apparatus.
   726 (a fail-safe cap → tag it) · --lane-band-start-epoch 350 · --seg-chroma-boundary-start-epoch 300.
 - 29 tests green; ruff F clean; 95 existing launcher+drift tests green. Memo:
   .omx/research/schedule_provenance_gate_20260709.md. pointer 0.19110 UNMOVED (apparatus/means).
+
+## FEED-v7seal (2026-07-08) — seal round-1 measured findings + operator decisions + run-1 ep50
+STORES CONSULTED: seal_v7_r1_{bugs,deepmath,confound,structure_blind} reports · run-1 run.log
+ep25/ep50 verdicts · SYNTHESIS_seal_v7_round1 · operator decisions 08:45.
+- **MEASURED (run-1, [macOS-CPU advisory]):** ep50 d_seg 0.1549 (0.745→0.177→0.155); d_pose
+  9.58→**3.59 DESCENDING** — the ep25 pose rise was EMA-shadow lag + live-co-adapted dxi vs
+  EMA-graded verdict (hypothesis CONFIRMED at the pre-registered ep50 decision point; watch
+  item CLOSED as artifact). Blob 99,079→94,553 B (weight-entropy λ=15 bending coded size back;
+  rate 0.063 projected). Lane d_seg 0.063 = 2nd-best class (structured init + eased seed).
+- **DERIVED (seal, verified):** τ·logaddexp(φ_y/τ,φ_r/τ)−φ_y = τ·softplus(−m/τ) — the
+  incumbent tau_softplus IS the top-2 reduction of the multiclass L_τ (bit-exact CE at τ=1).
+  TAIL at τ0=τ_end is a CONSTANT-τ TURNPIKE (next_tau clamps; halving/lr knobs dead at this
+  operating point) — no saw-tooth exists as-built; resolves the structure round's R-4.
+- **GAP→FIX:** s*_tail = ν·forfeit = 6.897e-6 was never a registered equation while the TAIL
+  shipped a 14.5×-coarser hardcoded stop — LawRef registration in flight (TAIL fixer).
+  Event-muon fire-epoch was unpersisted (crash-resume break) — persistence fix in flight.
+  crucible_v7 was UNLAUNCHABLE (name-resolution silent fall-through to proven_base) — the
+  seal's BLOCKER; launch-path fix in flight; silent fall-through class killed (unknown name
+  now raises).
+- **OPERATOR DECISIONS:** v7 = EVENT mode (risk accepted verbatim: "new baseline, not clean
+  but we are choosing to make a leap forward") — v7 trajectory is the COMPOSED stack, never
+  to be graded as an isolated unify-L_τ A/B. BASIS approved (R-1 triple-convergence):
+  DirectionalBasisRebalance IN-v7, waterfill picks the allocation (builder in flight).
+  Fix-all-severities-per-round = standing seal policy.
+- Pointer 0.19110 UNMOVED (all means; the v7 exact row is the end).
