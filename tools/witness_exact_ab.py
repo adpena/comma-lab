@@ -62,12 +62,22 @@ def _run_arm(scratch: Path, label: str, *, pairs: int, epochs: int, gt_cache: st
         [str(_REPO / "src"), str(_REPO / "experiments"), str(_REPO / "upstream")]
         + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
     env["TAC_MLX_CUSTOM_GROUPED_BACKWARD"] = "1"
-    t0 = time.time()
-    p = subprocess.run(argv, env=env, cwd=str(_REPO), capture_output=True, text=True,
-                       timeout=timeout)
     ema = out_dir / "levelset_witness_ema_mlx.npz"
-    if p.returncode != 0 or not ema.exists():
-        return {"label": label, "error": (p.stderr or "no-ema")[-600:], "argv_tail": argv[-8:]}
+    # The back-to-back second arm can transiently trip the system memory-governor's accounting
+    # fail-safe (psutil-vs-conservative disagreement) — NOT a real OOM. Settle + retry a couple of
+    # times so a transient system condition does not masquerade as a divergence result.
+    t0 = time.time()
+    last_err = "no-ema"
+    for attempt in range(3):
+        if attempt:
+            time.sleep(20)
+        p = subprocess.run(argv, env=env, cwd=str(_REPO), capture_output=True, text=True,
+                           timeout=timeout)
+        if p.returncode == 0 and ema.exists():
+            break
+        last_err = (p.stderr or "no-ema")[-600:]
+    if not ema.exists():
+        return {"label": label, "error": last_err, "argv_tail": argv[-8:]}
     per_tensor = {}
     with np.load(ema, allow_pickle=True) as z:
         for k in sorted(z.files):
