@@ -2184,3 +2184,11 @@ consumer update required — asserted [consumers-generic]. ---
   byte-identical) — CAUGHT + FIXED the memo's false "resume LIVE" claim (resumability-P0 win).
   19 new tests + 310 green; dry-run 150/150 flags carry --birth-completion-ramp
   --birth-completion-post-level 0.2. v7.5 counter-force COMPLETE. NEXT (chain step 2): P0 phase-2.
+- **P0 PHASE-2 LANDED (3d63478fd) — #360 DONE**: 3 forces as default-off DSL Lever factories
+  (TemporalScrewConsistency stop-grad-GT-ξ default · MarginBandSatisficing m_safe=0.06 · TieLocus
+  wraps built subpix + FEED-PA W_e; R-phase folded in). NONE composed ON (verified). 19 tests.
+- **#363 COVERAGE VERIFY (Opus, measured)**: registry/composition axis VERIFIED (6 new levers =
+  DSL factories; counter-force 2 ON, P0 3 default-off — in-source); activation-ledger axis rests
+  on builder test + digest (my API re-verify hit wrong names — reconcile in #332); 123 unmapped /
+  26 designed pre-existing #332 gap (score-relevant levers not costate-visible) — NOT a v7.5
+  regression, NOT a seal blocker, routed to #332. SPEC_v75 §10 records it honestly.

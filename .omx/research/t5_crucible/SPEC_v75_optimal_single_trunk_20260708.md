@@ -173,3 +173,25 @@ Two distinct states, never conflated:
   ledger + Stop-hook) is the anti-orphan mechanism, per CLAUDE.md "default-off is orphaned signal"
   — "off" is a queue state the controller drains, never a grave. The failure mode to guard is
   "built but never registered in the ledger" — that is exactly what #363 verifies to zero.
+
+## 10. #363 COVERAGE VERIFY — MEASURED RESULT (2026-07-08, Opus)
+
+VERIFIED (registry/composition axis): all 6 new levers are DSL `Lever` factories
+(AreaConstraintBirth [Chan-Vese] · BirthCompletionEvent · TemporalScrewConsistency ·
+MarginBandSatisficing · TieLocusDisplacement); crucible_v7 composes AreaConstraintBirth +
+BirthCompletionEvent ON (autoconfig L2394/L2405), the 3 P0 forces ABSENT from composition
+(default-off per §9) — MEASURED in-source, not asserted.
+NOT INDEPENDENTLY VERIFIED (activation-ledger axis): the duty-to-measure surface exists (the
+SessionStart costate digest prints it) and the P0 builder's `test_activation_ledger_holds_all_
+three_with_duty_to_measure` asserts the 3 forces are in it, BUT an independent API re-verify hit
+wrong entry-point names (no `LR.known_levers()`/`duty_to_measure()`) — the costate-ranking of the
+NEW levers rests on the builder's test + the digest, not on my re-derivation. Reconcile the
+entry point in #332.
+PRE-EXISTING GAP (routed to #332, NOT a v7.5 regression, NOT a seal blocker): completeness().
+unmapped = 123 flags; **26 are genuine designed levers** (--logit-adjust-classes,
+--persistence-classes, --*-start-event gates, --closed-loop-*, --curriculum-reanchor-levers,
+--margin-saliency-reachability, --pose-carrier-*, --seg-chroma-boundary-*, --eikonal-* cluster)
+that are score-relevant but NOT DSL-Lever-held ⇒ NOT in the costate duty-to-measure queue ⇒ the
+signal-loss surface #332 exists to close. The regime-derived companions (--logit-adjust-classes,
+--persistence-classes) are set by companion LAWS from the held DirectionalBasisRebalance lever,
+so they are law-derived config outputs, not free orphans — but completeness() still flags them.
