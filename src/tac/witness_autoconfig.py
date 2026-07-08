@@ -1804,6 +1804,18 @@ class CrucibleV7Compiled:
     #   TAIL constants (stop_marginal_s / tau_halving HARDCODED-WITH-WAIVER; cycle_floor / dwell LawRef)
     #   + the LADDER λ-gate provenance — every sealed TAIL/λ literal is auditable (no silent literals).
 
+    def to_launch_config(self) -> "CrucibleV7LaunchConfig":
+        """The launcher-facing cfg (the FULL duck-typed cfg protocol tools/launch_witness_run.py
+        consumes) — the emit adapters delegate to :attr:`typed`; the three provenance manifests are
+        this compiled artifact's. See :class:`CrucibleV7LaunchConfig`. (seal v7 r1 BLOCKER #1 + MAJOR
+        #2: the ONE object that satisfies BOTH the emit protocol AND the gate-chain manifests.)"""
+        return CrucibleV7LaunchConfig(
+            typed=self.typed,
+            constants_manifest=dict(self.constants_manifest),
+            dsl_program_manifest=dict(self.dsl_program_manifest),
+            schedule_governance=dict(self.schedule_governance),
+        )
+
 
 def _crucible_v7_argv_pairs(argv: "list[str] | tuple[str, ...]") -> list[tuple[str, object]]:
     """Parse a compiled trainer argv (``[python, trainer, --flag, val, --bare, ...]``) into
@@ -1921,14 +1933,13 @@ def _crucible_v7_schedule_governance() -> dict:
                 "current octave (powerlaw_meat), NOT a fixed --anneal-epochs clock (S6-R4 element 5: "
                 "τ advances on per-scale relaxation, self-triggered, one param at a time). The octave "
                 "ladder reuses the geometric clock VALUES (τ_k=start·(end/start)^(k/N)); only the "
-                "per-rung DWELL is event-driven. --tau-octave-max-dwell is the fail-safe backstop."),
-        }),
-        "--tau-octave-max-dwell": ScheduleGovernance(**{
-            "class": "cap", "role": "backstops", "sensor": "--tau-advance-mode",
-            "rationale": (
-                "req-B fail-safe per-octave MAX-DWELL backstop for the per-band relaxation event "
-                "(--tau-advance-mode event): advance-anyway + LOUD cap_fired_before_event if the "
-                "within-octave descent never relaxes (DERIVED ceil(anneal/N)*slack, no bare literal)."),
+                "per-rung DWELL is event-driven. The per-octave MAX-DWELL fail-safe backstop is "
+                "--tau-octave-max-dwell, which is TRAINER-DERIVED-INTERNAL (derive_octave_max_dwell = "
+                "ceil(anneal/N)*slack, from --anneal-epochs + --curriculum-min-stage-epochs) and is "
+                "NOT an emitted launch token — so it is intentionally absent from this governance "
+                "surface (seal v7 r1 MINOR #3: every schedule_governance KEY is an emitted launch "
+                "flag, so the audit table describes launch.sh reality; the derived dwell's provenance "
+                "lives in the trainer's derive_octave_max_dwell, not a phantom CAP row here)."),
         }),
     }
 
@@ -2158,6 +2169,63 @@ def compile_crucible_v7_config(
         v6_flags=tuple(v6_flags),
         tail_constant_provenance=tail_prov,
     )
+
+
+@dataclass(frozen=True)
+class CrucibleV7LaunchConfig:
+    """The launcher-facing crucible_v7 cfg — the SINGLE object that satisfies the WHOLE duck-typed
+    cfg protocol ``tools/launch_witness_run.py`` consumes (seal v7 r1 BLOCKER #1 + MAJOR #2).
+
+    THE WIRING GAP THIS CLOSES: whichever object the launcher previously received carried only HALF
+    the protocol. A bare :class:`~tac.witness_dsl.typed_config.TypedWitnessConfig` has the emit
+    adapters (``to_command`` / ``to_trainer_flags`` / ``name``) but NO ``dsl_program_manifest`` /
+    ``constants_manifest`` (b0.6 degrades to WARN — the v7 DSL-provenance gate is inert on the object
+    that would launch) and its raw ``schedule_governance`` holds pydantic objects (b0.5
+    ``classify_launch`` needs the DICT form). The :class:`CrucibleV7Compiled` has the manifests +
+    governance-dict but NO emit adapters. This adapter composes BOTH: the emit surface delegates to
+    the requirement-V-native ``typed`` config (the argv SoT, ~17x perf-env prefix intact); the three
+    provenance manifests are the compiled artifact's (b0.5 ``manifest_keys`` +
+    ``write_constants_manifest``; b0.6 ``verify_launch_manifest``; b0.5 ``classify_launch``).
+
+    NOT exposed (by design): ``crucible_v6`` / ``fresh_seeded`` / ``sealed_205`` / ``all_levers``
+    selector bools — ``config_family`` keys off ``name == 'crucible_v7'`` FIRST, and getattr-with-
+    default handles the rest. ``--dsl-lever`` / ``--purpose`` CLI overrides are NOT wired for the
+    typed path (v7 AUTHORS its lever set + purpose); passing them refuses at the dataclasses.replace
+    seam rather than silently emitting an un-composed lever.
+    """
+
+    typed: object             # TypedWitnessConfig — the emit SoT (argv + perf-env prefix)
+    constants_manifest: dict   # b0.5 manifest_keys + write_constants_manifest (v6-inherited LawRefs)
+    dsl_program_manifest: dict  # b0.6 DSL-provenance attestation (verify_launch_manifest)
+    schedule_governance: dict   # b0.5 classify_launch governance (DICT form, not pydantic objects)
+
+    @property
+    def name(self) -> str:
+        return self.typed.name
+
+    @property
+    def purpose(self):
+        return self.typed.purpose
+
+    @property
+    def wall_clock_budget_days(self):
+        """The DERIVED wall-clock budget (Provenanced) the launcher's L45 wall-clock gate reads."""
+        return self.typed.wall_clock_budget_days
+
+    @property
+    def dsl_levers(self) -> tuple[str, ...]:
+        """The lever NAMES this config fires — the activation-ledger surface on a real launch
+        (launcher step c.1). v7 pre-composes its lever set; the CLI cannot append to it."""
+        return tuple(lv.name for lv in self.typed.levers)
+
+    def to_command(self, out_dir=None, *, perf_env: bool = True) -> str:
+        """The GO-ready launch command (delegates to the typed config; carries the ~17x perf-env
+        prefix when ``perf_env`` — the exact silent-slow footgun the launcher b-perf gate catches)."""
+        return self.typed.to_command(out_dir, perf_env=perf_env)
+
+    def to_trainer_flags(self, out_dir=None):
+        """The ``(flag, value)`` pairs the DSL emits (delegates to the typed config)."""
+        return self.typed.to_trainer_flags(out_dir)
 
 
 def derive_config(

@@ -709,8 +709,28 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
         # ABSOLUTE schedule pins (tau@300 / anneal-den 3000 x hold 0.2 = descent 600 / Muon 726)
         # + tau_end 0.31 + fused-R + the v6 §1.1 DSL levers; pose block inherited (MAJOR-A2/#314).
         return wac.derive_crucible_v6_config(gt_cache, num_pairs=num_pairs, epochs=epochs)
-    return wac.derive_config(gt_cache, num_pairs=num_pairs, overfit=overfit, epochs=epochs,
-                             all_levers=(config == "all_levers"))
+    if config == "crucible_v7":
+        # T5 CRUCIBLE v7 restart — the FIRST requirement-V-native config, authored AS a
+        # TypedWitnessConfig (DSL-emitted argv). compile_* produces the typed cfg + BOTH provenance
+        # manifests (constants + DSL-program) + the governance DICT; .to_launch_config() wraps them
+        # into the ONE object that satisfies the WHOLE launcher cfg protocol — the emit adapters AND
+        # the gate-chain manifests (seal v7 r1 BLOCKER #1 + MAJOR #2). num_pairs/epochs flow through;
+        # overfit is N/A (v7 fixes its own knobs, inherited from the sealed v6 substrate).
+        return wac.compile_crucible_v7_config(
+            gt_cache, num_pairs=num_pairs, epochs=epochs).to_launch_config()
+    # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
+    # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
+    # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
+    # bug class: it is exactly how `--config crucible_v7` LOOKED launchable while actually running
+    # proven_base (config_family would even MISLABEL it). A new named config MUST add an explicit
+    # branch above; an unmapped name is a hard error, not a quiet substitution.
+    if config in ("proven_base", "all_levers"):
+        return wac.derive_config(gt_cache, num_pairs=num_pairs, overfit=overfit, epochs=epochs,
+                                 all_levers=(config == "all_levers"))
+    raise ValueError(
+        f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
+        f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
+        f"crucible_v7. Add an explicit branch (NEVER silently fall through to proven_base).")
 
 
 # ───────────────────────── RSS calibration smoke (BUILD #294 piece B; optional, default OFF) ────
@@ -894,7 +914,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--config", default=None,
                     choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205",
-                             "fresh_seeded", "crucible_v6"],
+                             "fresh_seeded", "crucible_v6", "crucible_v7"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
@@ -913,7 +933,15 @@ def main(argv: list[str] | None = None) -> int:
                     "hold-frac 0.2 = tau descent completes ep600 and HOLDS 0.31, Muon cap 726 — "
                     "NEVER family-scaled] + --softmax-temp-end 0.31 + --fused-r-kernel + the v6 "
                     "S1.1 DSL levers + ChromaBoundarySharpen + V=5 co-predicate; pose block "
-                    "inherited from store_nothing_205 per seal-round-2 MAJOR-A2/#314).")
+                    "inherited from store_nothing_205 per seal-round-2 MAJOR-A2/#314), or crucible_v7 "
+                    "(the T5 CRUCIBLE v7 restart = the FIRST requirement-V-native config, authored AS "
+                    "a tac.witness_dsl.typed_config.TypedWitnessConfig with a DSL-emitted argv: v6 "
+                    "substrate + witness-native continuous L_tau [--seg-form-unify-tau, removes the "
+                    "last PR95 curriculum bone] + geometric tau anneal [floor tau*=0.31] + TAIL_k "
+                    "warm-restart + LADDER island-birth homotopy; the three transitions FIRE on wired "
+                    "sensors [powerlaw_meat / lane_nucleus / annulus_plateau] with tagged fail-safe "
+                    "backstop caps [0 naked epochs]; ships a DSL-provenance manifest [b0.6 VERIFIES] + "
+                    "the v6-inherited LawRef constants manifest; pose block verbatim from v6).")
     ap.add_argument("--extra-trainer-flags", default=None,
                     help="(C5 passthrough) EXTRA trainer flags appended verbatim to the emitted "
                     "launch.sh command (shell-split; e.g. \"--eikonal-weight 0.07 --seed-islands\"). "
