@@ -3817,6 +3817,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     amplify_form = str(getattr(args, "amplify_form", "hinge"))
     amplify_mtgt = float(getattr(args, "amplify_margin_target", 1.0))
     island_weight_mx: dict[int, Any] | None = None
+    # (#323) LADDER per-class-λ-gated homotopy state (None unless --ladder-island-homotopy AND
+    # --amplify-weight > 0). When None, every ladder block below is skipped => byte-identical.
+    _ladder_state: dict[str, Any] | None = None
     if amplify_w > 0.0:
         from tac.boundary_math.island_protection import (
             build_island_masks,
@@ -3825,10 +3828,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             island_birth_from_signed_mx,
             island_persistence_weight,
         )
-        _eased_on = bool(getattr(args, "seed_island_eased", False))
+        _ladder_on = bool(getattr(args, "ladder_island_homotopy", False))
+        # The #323 homotopy grows lane + movable support INDEPENDENTLY, which requires the class-aware
+        # eased builder (isotropic build_island_masks takes one radius for both). ON => force eased.
+        _eased_on = bool(getattr(args, "seed_island_eased", False)) or _ladder_on
         _mk_masks = eased_island_masks if _eased_on else build_island_masks
         _lst_stack_i = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
         _idet = identify_island_classes(_lst_stack_i, n_classes=5)
+
+        def _ladder_build_iw(lane_px: int, movable_px: int) -> None:
+            """(#323) Rebuild ``island_weight_mx`` IN PLACE at per-class radii (lane_px / movable_px).
+            Mutates the SAME dict the loss closure reads (no rebinding) so a mid-run rung change is
+            seen immediately. Per-class 0 => that class's TRUE target (gate-closed = no easing)."""
+            _new: dict[int, Any] = {}
+            for _pi in range(P):
+                _imm = eased_island_masks(
+                    np.asarray(gt.lstars[_pi], np.int64), _idet.lane_cls, _idet.movable_cls,
+                    dilate_px=int(args.island_dilate_px),
+                    lane_px=int(lane_px), movable_px=int(movable_px))
+                _iww = island_persistence_weight(_imm.any_mask, kind=str(args.amplify_persist))
+                _new[_pi] = mx.array(np.asarray(_iww, np.float32)[None])
+            if island_weight_mx is not None:
+                island_weight_mx.clear()
+                island_weight_mx.update(_new)
+
         island_weight_mx = {}
         for pi in range(P):
             _im = _mk_masks(np.asarray(gt.lstars[pi], np.int64), _idet.lane_cls,
@@ -3841,6 +3864,56 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "persist": str(args.amplify_persist),
                           "note": "island-birth rides the SHARED realized _signed margin (#141); "
                           "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+        if _ladder_on:
+            from tac.witness_curriculum.ladder_homotopy import (
+                ARM_LANE as _L_LANE,
+                ARM_MOVABLE as _L_MOV,
+                homotopy_from_flags as _mk_homotopy,
+                perclass_lambda_proxy as _l_proxy,
+            )
+            _homotopy = _mk_homotopy(
+                movable_r0=float(args.ladder_movable_r0),
+                movable_birth_epochs=int(args.ladder_movable_birth_epochs),
+                movable_hold_epochs=int(args.ladder_movable_hold_epochs),
+                movable_anneal_epochs=int(args.ladder_movable_anneal_epochs),
+                movable_lambda_gate=float(args.ladder_movable_lambda_gate),
+                lane_r0=float(args.ladder_lane_r0),
+                lane_birth_epochs=int(args.ladder_lane_birth_epochs),
+                lane_hold_epochs=int(args.ladder_lane_hold_epochs),
+                lane_anneal_epochs=int(args.ladder_lane_anneal_epochs),
+                lane_lambda_gate=float(args.ladder_lane_lambda_gate),
+                gate_softness=float(args.ladder_gate_softness),
+                release_coeff=float(args.ladder_release_coeff),
+                sigma_eff=float(args.ladder_sigma_eff),
+                lane_dash_gate=bool(args.ladder_lane_dash_gate),
+                max_step_px=float(args.ladder_max_step_px))
+            _ladder_state = {
+                "homotopy": _homotopy, "build": _ladder_build_iw, "proxy": _l_proxy,
+                "arm_lane": _L_LANE, "arm_mov": _L_MOV,
+                "lane_cls": _idet.lane_cls, "movable_cls": _idet.movable_cls,
+                "sigma_eff": float(args.ladder_sigma_eff),
+                "refresh_every": max(1, int(args.ladder_refresh_every)),
+                # gate OPEN (λ=+inf) until the first per-class verdict lands (birth phase).
+                "lambda": {_L_LANE: float("inf"), _L_MOV: float("inf")},
+                "prev": {_L_LANE: 0.0, _L_MOV: 0.0},
+                "rung": {_L_LANE: None, _L_MOV: None},
+            }
+            print(json.dumps({"stage": "ladder_island_homotopy", "lane_cls": _idet.lane_cls,
+                              "movable_cls": _idet.movable_cls,
+                              "movable_r0": float(args.ladder_movable_r0),
+                              "lane_r0": float(args.ladder_lane_r0),
+                              "movable_lambda_gate": float(args.ladder_movable_lambda_gate),
+                              "lane_lambda_gate": float(args.ladder_lane_lambda_gate),
+                              "release_coeff": float(args.ladder_release_coeff),
+                              "sigma_eff": float(args.ladder_sigma_eff),
+                              "note": "#323 per-class-λ-gated LADDER continuation over the AMPLIFY "
+                              "island-birth radius (movable dilation-GO + lane curve-prior); "
+                              "UNIFORM amplification is the measured net-negative anti-pattern; "
+                              "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+    elif bool(getattr(args, "ladder_island_homotopy", False)):
+        raise ValueError("--ladder-island-homotopy requires --amplify-weight > 0: the homotopy "
+                         "modulates the AMPLIFY island-birth support radius; with amplify off it has "
+                         "nothing to gate (fail closed).")
     # #224 (5) island SEED + CONTAINMENT build (SEPARATE protected-seed module + its OWN AdamW group;
     # grad-shield applied to the seed leaf BETWEEN the dual value_and_grad and seed_opt.update — NEVER
     # touching the witness grouped-backward / MD-decoupling grads). The seed is a per-pair RGB residual
@@ -5069,6 +5142,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if isinstance(_per_class, dict) and "error" not in _per_class:
                 row["d_seg_by_class"] = _per_class.get("d_seg_by_class")
                 row["flip_share_by_class"] = _per_class.get("flip_share_by_class")
+                # (#323) capture the MEASURED per-class costate λ_c for the LADDER homotopy gate
+                # (advisory float write; read at the epoch-top refresh). No-op when ladder off.
+                if _ladder_state is not None:
+                    _dsbc = _per_class.get("d_seg_by_class") or []
+                    _fsbc = _per_class.get("flip_share_by_class") or []
+                    _lc, _mc = _ladder_state["lane_cls"], _ladder_state["movable_cls"]
+                    _pxy = _ladder_state["proxy"]
+                    if _lc is not None and _lc < len(_dsbc) and _lc < len(_fsbc):
+                        _ladder_state["lambda"][_ladder_state["arm_lane"]] = _pxy(_dsbc[_lc], _fsbc[_lc])
+                    if _mc is not None and _mc < len(_dsbc) and _mc < len(_fsbc):
+                        _ladder_state["lambda"][_ladder_state["arm_mov"]] = _pxy(_dsbc[_mc], _fsbc[_mc])
             try:
                 from tac.witness_control.perclass_verdict import memory_telemetry_fields
                 row.update(memory_telemetry_fields())
@@ -6107,6 +6191,44 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     muon_lr_eff = float(args.muon_lr) if args.muon_lr is not None else 0.1 * float(args.lr)
     muon_adamw_lr_eff = float(args.muon_adamw_lr) if args.muon_adamw_lr is not None else 0.1 * float(args.lr)
     muon_wd_eff = float(args.muon_weight_decay) if args.muon_weight_decay is not None else float(args.weight_decay)
+    # ── TAIL_k WARM-RESTART controller (post-Muon refinement; crucible req L / v6 §2.2e). DEFAULT-OFF:
+    # --tail-cycles-max 0 (or Muon off) => _tail_ctrl stays None => every tail block in the loop is
+    # skipped => BYTE-IDENTICAL. When ON it fires only AFTER the Muon finisher (muon_switched) at
+    # ep >= _tail_start_epoch: warm-restart cycles (τ_k halving/live-m_q; LR ∝ τ_k, moments untouched;
+    # per-cycle powerlaw_meat exit; PowerPlay stop; k_max fail-safe). tau_ref/tau0 = the frozen finisher
+    # τ (deterministic in --muon-start-epoch, so a RESUME rebuilds the SAME refs); lr_ref = the Muon LR.
+    _tail_ctrl = None
+    _tail_start_epoch = 0
+    _tail_stop_now = False
+    if int(getattr(args, "tail_cycles_max", 0) or 0) > 0:
+        if args.muon_start_epoch is None:
+            raise SystemExit("--tail-cycles-max requires --muon-start-epoch (TAIL fires post-Muon; "
+                             "crucible req L / v6 §2.2e)")
+        if bool(getattr(args, "tail_live_mq", False)):
+            raise SystemExit("--tail-live-mq is the OWED SC-3 live-margin render build (no trainer "
+                             "route to flip_margin_quantiles yet); omit it to use the sealed τ-halving "
+                             "fallback (next_tau live_mq=None)")
+        from tac.witness_control.tail_cycles import TailCycleConfig, TailController
+        _tail_start_epoch = (int(args.tail_start_epoch) if int(getattr(args, "tail_start_epoch", 0) or 0)
+                             else int(args.muon_start_epoch) + int(args.tail_dwell_min))
+        _tau0 = _softmax_temp_for_epoch(int(args.muon_start_epoch), args)
+        _tail_ctrl = TailController(
+            TailCycleConfig(
+                k_max=int(args.tail_cycles_max),
+                cycle_floor_epochs=float(args.tail_cycle_floor_epochs),
+                dwell_min=int(args.tail_dwell_min),
+                tau_halving=float(args.tail_tau_halving),
+                tau_end=float(args.softmax_temp_end),
+                lr_prop_coeff=float(args.tail_lr_prop_tau),
+                stop_marginal_s=float(args.tail_stop_marginal_s)),
+            tau_ref=_tau0, lr_ref=muon_lr_eff, tau0=_tau0)
+        print(json.dumps({"stage": "tail_controller_armed", "muon_start": int(args.muon_start_epoch),
+                          "tail_start_epoch": int(_tail_start_epoch), "k_max": int(args.tail_cycles_max),
+                          "cycle_floor_ep": float(args.tail_cycle_floor_epochs),
+                          "dwell_min": int(args.tail_dwell_min), "tau0": round(float(_tau0), 5),
+                          "tau_end": float(args.softmax_temp_end), "lr_ref": float(muon_lr_eff),
+                          "note": "post-Muon warm-restart cycles; live-m_q fallback = τ-halving"}),
+              flush=True)
     # (#205 OOM instrumentation) env-gated per-accum-batch memory telemetry. Default OFF -> no
     # per-batch prints in production; set TAC_MEM_PROBE=1 to trace active/cache/peak/RSS for the
     # first TAC_MEM_PROBE_EPOCHS epochs (the OOM-diagnosis + fix-verification A/B). Pure observability
@@ -6287,6 +6409,37 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     mx.reset_peak_memory()  # per-epoch high-water so mem_probe peak is this-epoch scoped
                 except Exception:
                     pass
+            # (#323) LADDER homotopy refresh: recompute the per-class support rungs from the schedule +
+            # the last verdict's MEASURED per-class λ_c; rebuild the amplify island masks IN PLACE only
+            # when an arm's integer rung CHANGES (bounded cost — a rung changes at most ~r0 times/run).
+            # Guarded on _ladder_state (None unless --ladder-island-homotopy + --amplify-weight>0) =>
+            # skipped => byte-identical when off. The 1-Lipschitz stepper (step_radius) makes the eased
+            # target a continuation, never a hard switch.
+            if _ladder_state is not None and (ep == start_epoch or ep % _ladder_state["refresh_every"] == 0):
+                _lh = _ladder_state["homotopy"]
+                _sig = _ladder_state["sigma_eff"]
+                _changed = False
+                _new_rungs: dict[str, int] = {}
+                for _arm in (_ladder_state["arm_lane"], _ladder_state["arm_mov"]):
+                    _lam = _ladder_state["lambda"][_arm]
+                    _r = _lh.step_radius(_arm, ep, _lam, _ladder_state["prev"][_arm], _sig)
+                    _ladder_state["prev"][_arm] = _r
+                    _rung = max(0, int(round(_r)))
+                    _new_rungs[_arm] = _rung
+                    if _ladder_state["rung"][_arm] != _rung:
+                        _changed = True
+                        _ladder_state["rung"][_arm] = _rung
+                if _changed:
+                    _ladder_state["build"](_new_rungs[_ladder_state["arm_lane"]],
+                                           _new_rungs[_ladder_state["arm_mov"]])
+                    print(json.dumps({"stage": "ladder_rung", "epoch": ep,
+                                      "lane_px": _new_rungs[_ladder_state["arm_lane"]],
+                                      "movable_px": _new_rungs[_ladder_state["arm_mov"]],
+                                      "lambda_lane": (None if _ladder_state["lambda"][_ladder_state["arm_lane"]] == float("inf")
+                                                      else round(float(_ladder_state["lambda"][_ladder_state["arm_lane"]]), 8)),
+                                      "lambda_movable": (None if _ladder_state["lambda"][_ladder_state["arm_mov"]] == float("inf")
+                                                         else round(float(_ladder_state["lambda"][_ladder_state["arm_mov"]]), 8)),
+                                      "note": "advisory; pointer 0.19110 UNMOVED"}), flush=True)
             # (#292 build-2) EVENT-TRIGGERED CURRICULUM: when ON, the stage form + boundary resolution
             # come from the deterministic loss-plateau controller (caps = the hardcoded epochs). When OFF
             # (default), this is the ORIGINAL hardcoded call, UNCHANGED => byte-identical (the #205 path).
@@ -6639,6 +6792,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if _sg_state["lr_scale"] != 1.0:
                     lr = lr * _sg_state["lr_scale"]
                 opt.learning_rate = float(lr)
+            # ── TAIL_k warm-restart (crucible req L / v6 §2.2e): post-Muon, OVERRIDE τ (over the finisher
+            # freeze) + the optimizer LR (∝ τ_k; moments untouched = warm restart) from the controller.
+            # Decide-on-previous: pass the finite verdict history observed so far (no lookahead). Per-cycle
+            # powerlaw_meat exit / cycle-floor cap advance k; PowerPlay/k_max latch _tail_stop_now (broken
+            # at the loop bottom). DEFAULT-OFF (_tail_ctrl None) => skipped => BYTE-IDENTICAL.
+            if _tail_ctrl is not None and muon_switched and ep >= _tail_start_epoch:
+                _trows = [(int(r["epoch"]), float(r["d_seg"])) for r in history
+                          if "d_seg" in r and np.isfinite(float(r["d_seg"]))]
+                _tstep = _tail_ctrl.step(ep, _trows, live_mq=None)
+                model.softmax_temp = float(_tstep.tau)
+                opt.learning_rate = float(_tstep.lr)   # warm restart: LR set, opt.state (moments) untouched
+                for _ch in (getattr(opt, "optimizers", None) or []):
+                    try:
+                        _ch.learning_rate = float(_tstep.lr)
+                    except Exception:
+                        pass
+                if _tstep.begin_cycle:
+                    _tw = (_do_checkpoint(ep, stage_tag=_tstep.stage_tag + "_muon")
+                           if args.stage_checkpoints else {})
+                    if _tw:
+                        stage_ckpts.append(_tw)
+                    print(json.dumps({"stage": "tail_cycle_begin", "epoch": ep, "cycle": _tstep.cycle_k,
+                                      "tau": round(_tstep.tau, 5), "lr": float(_tstep.lr),
+                                      "reason": _tstep.reason, **_tw}), flush=True)
+                if _tstep.stop:
+                    _tail_stop_now = True
+                    print(json.dumps({"stage": "tail_powerplay_stop", "epoch": ep,
+                                      "cycle": _tstep.cycle_k, "reason": _tstep.reason}), flush=True)
             # (V6 #320) ADAPTIVE-eps CFL-edge tracker: eps(t) = clamp(|c_a(t)|*sqrt(eta*lambda_eik/8)
             # *(1+margin), floor, upper). Placed AFTER the LR assignment so eta(t)=opt.learning_rate is
             # the CURRENT epoch's flow time-step and eik_w_ep is the CURRENT lambda_eik. Replaces the
@@ -7226,6 +7407,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "note": "clean stop; final checkpoint + result.json follow (best EMA "
                             "shadow preserved); structural erosion — don't waste epochs"}),
                     flush=True)
+                break
+            # ── TAIL_k early stop (crucible req L): PowerPlay (marginal ΔS/ep below floor) or the k_max
+            # req-B fail-safe. Break at the loop bottom (after last_ep + this epoch's checkpoint/telemetry
+            # ran) so the post-loop final ckpt + result.json land normally. DEFAULT-OFF => never set.
+            if _tail_stop_now:
+                print(json.dumps({"stage": "tail_early_stop", "epoch": ep,
+                                  "best_d_seg": (round(float(_best["d_seg"]), 6)
+                                                 if _best["ep"] is not None else None),
+                                  "best_epoch": _best["ep"],
+                                  "note": "TAIL PowerPlay / k_max fail-safe stop; final checkpoint + "
+                                          "result.json follow (best EMA shadow preserved)"}), flush=True)
                 break
 
     # FEED-em: JOIN any in-flight async verdict so the final verdict row + history land BEFORE
@@ -8259,6 +8451,38 @@ def main(argv: list[str] | None = None) -> int:
         "Adam/AdamW base is transferable; non-Adam bases fall back to cold. On a RESUME INTO the "
         "finisher this is N/A (the Muon momentum is restored from the checkpoint). A/B-ready.",
     )
+    # ---- TAIL_k WARM-RESTART REFINEMENT (crucible req L / v6 §2.2e; all default-OFF => BIT-IDENTICAL).
+    # Post-Muon warm-restart cycles: each re-sharpens τ (halving / live-m_q) + re-warms LR ∝ τ_k
+    # (moments NEVER reset), runs until a per-cycle powerlaw_meat exit (or the cycle-floor cap),
+    # PowerPlay-stops when a cycle's marginal ΔS/ep falls below the floor, and hard-caps at k_max.
+    # --tail-cycles-max 0 (default) => no controller => the loop is byte-identical to the pre-build path.
+    # Fires only AFTER the Muon finisher (requires --muon-start-epoch). Values = the sealed crucible laws
+    # (tail_cycle_floor_v1 387.09 / settle_window_v1 237 / v6 §row-9 τ_k); override per-lever at OPTIMAL FORM.
+    ap.add_argument("--tail-cycles-max", type=int, default=0,
+                    help="TAIL_k: max net warm-restart cycles (req-B fail-safe cap). 0 (default) = OFF "
+                    "= byte-identical. Sealed net cap = 5 (floor((budget-FIN)/cycle_floor)).")
+    ap.add_argument("--tail-start-epoch", type=int, default=0,
+                    help="TAIL_k: epoch the first cycle begins (post-Muon). 0 (default) => derived = "
+                    "--muon-start-epoch + --tail-dwell-min (FIN gets its settle dwell first).")
+    ap.add_argument("--tail-cycle-floor-epochs", type=float, default=387.09,
+                    help="TAIL_k: per-cycle FAIL-SAFE cap in epochs (a cycle that never meat-exits is "
+                    "force-cut here) = tail_cycle_floor_v1 = settle(3/ν=237) + 150 dwell floor.")
+    ap.add_argument("--tail-dwell-min", type=int, default=237,
+                    help="TAIL_k: min cycle length (epochs) before a meat-exit may fire = settle_window_v1 "
+                    "= 3/ν @ ν(tau)=0.012653; a shorter cycle measures its own transient.")
+    ap.add_argument("--tail-tau-halving", type=float, default=0.5,
+                    help="TAIL_k: τ_k = max(τ_{k-1}*this, τ*_k) clamped >= --softmax-temp-end (v6 §row-9). "
+                    "Must be in (0,1).")
+    ap.add_argument("--tail-lr-prop-tau", type=float, default=1.0,
+                    help="TAIL_k: LR ∝ τ_k coefficient — lr_k = muon_lr * this * τ_k/τ_ref (warm restart; "
+                    "moments untouched). Applied uniformly across the Muon/AdamW optimizer groups.")
+    ap.add_argument("--tail-stop-marginal-s", type=float, default=1e-4,
+                    help="TAIL_k: PowerPlay stop — end the tail when a completed cycle's marginal ΔS/epoch "
+                    "(100*Δd_seg/len) falls below this attribution floor.")
+    ap.add_argument("--tail-live-mq", action=argparse.BooleanOptionalAction, default=False,
+                    help="TAIL_k: re-derive τ*_k = m_q/ln5 from the LIVE margin field each cycle (SC-3). "
+                    "The render route is the OWED build (0 trainer callers of flip_margin_quantiles): set "
+                    "=> fail-closed. Default OFF => the sealed τ-halving fallback (next_tau live_mq=None).")
     # ---- BUILD 1 (FEED-fw): STAGE-TRANSITION TREATMENT (ADDITIVE, all default-OFF => BIT-IDENTICAL).
     # "different stages need different treatment" applied to the TRANSITIONS so the AdamW->AdamW stage
     # boundaries (ce->tau, tau->l7) + the lane-edge / margin-saliency re-engage epochs are stable by
@@ -8463,6 +8687,65 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed-anneal-shape", type=str, default="linear", choices=["linear", "cosine"],
                     help="BUILD #300 (b): island-seed compose-weight anneal shape (full->0). Consulted only "
                     "when --seed-anneal-epochs > 0.")
+    # -------- (#323) LADDER full island-birth homotopy (per-class-λ-gated continuation) -----------
+    # The per-class-λ-GATED homotopy the amplify/nucleus machinery only partially realized: a per-epoch
+    # per-class SUPPORT SCHEDULE over the eased-island radius (tac.witness_curriculum.ladder_homotopy),
+    # gated by the MEASURED per-class costate λ_c (the #315 per-class verdict sensor). MOVABLE arm =
+    # dilation-GO ceiling'd by r*(t)=coeff·σ_eff (LawRef critical_nucleus_release_v1); LANE arm =
+    # curve-prior along the VP-tangent with a dash-phase window. UNIFORM always-on amplification is the
+    # MEASURED net-negative anti-pattern (T3 islands-treatment symposium) — the λ-gate withdraws support
+    # from a class the moment its residual is won. Modulates the AMPLIFY island-birth masks
+    # (--amplify-weight > 0); the seed keeps its own --seed-anneal-epochs transfer schedule (no
+    # double-application). DEFAULT OFF => the amplify masks use the fixed --island-dilate-px => the
+    # island block is BYTE-IDENTICAL to the pre-#323 trainer.
+    ap.add_argument("--ladder-island-homotopy", action=argparse.BooleanOptionalAction, default=False,
+                    help="#323 master switch: drive the AMPLIFY island-birth support radius by the per-class-λ-"
+                    "gated LADDER continuation (movable dilation-GO + lane curve-prior) instead of the fixed "
+                    "--island-dilate-px. Requires --amplify-weight > 0. Implies class-aware eased masks. "
+                    "DEFAULT OFF => byte-identical.")
+    ap.add_argument("--ladder-movable-r0", type=float, default=2.0,
+                    help="#323 movable arm peak SDF-dilation radius (px) at birth.")
+    ap.add_argument("--ladder-movable-birth-epochs", type=int, default=60,
+                    help="#323 movable WINNABLE-HOLD window [1,b]: support HELD at r0 (LADDER easy-variant "
+                    "learning phase; the 0->r0 ease-in is the 1-Lipschitz stepper's job).")
+    ap.add_argument("--ladder-movable-hold-epochs", type=int, default=0,
+                    help="#323 movable epochs to HOLD r0 after birth before annealing.")
+    ap.add_argument("--ladder-movable-anneal-epochs", type=int, default=200,
+                    help="#323 movable ease-OUT window: support ramps r0->0 (transfer to true target).")
+    ap.add_argument("--ladder-movable-lambda-gate", type=float, default=0.0,
+                    help="#323 movable per-class costate FLOOR (support flows while λ_movable >= gate). "
+                    "0 (default) => UNGATED (dilation-GO is sound independent of lane-share).")
+    ap.add_argument("--ladder-lane-r0", type=float, default=2.0,
+                    help="#323 lane arm peak along-VP-tangent width (px) at birth.")
+    ap.add_argument("--ladder-lane-birth-epochs", type=int, default=80,
+                    help="#323 lane WINNABLE-HOLD window: support HELD at r0 (lane is the priority class).")
+    ap.add_argument("--ladder-lane-hold-epochs", type=int, default=0,
+                    help="#323 lane epochs to HOLD r0 after birth.")
+    ap.add_argument("--ladder-lane-anneal-epochs", type=int, default=260,
+                    help="#323 lane ease-OUT window (lane is the priority class => longer hold+anneal).")
+    ap.add_argument("--ladder-lane-lambda-gate", type=float, default=0.0,
+                    help="#323 lane per-class costate FLOOR (support flows while λ_lane >= gate; the LADDER "
+                    "verifier gate — anneal assistance back as per-class d_seg is won). 0 => UNGATED.")
+    ap.add_argument("--ladder-gate-softness", type=float, default=0.5,
+                    help="#323 soft-gate band width as a FRACTION of lambda-gate in (0,1]. The gate multiplier "
+                    "ramps 0->1 over λ_c in [gate·(1-softness), gate] (continuous — no hard switch). "
+                    "softness->0 = hard step.")
+    ap.add_argument("--ladder-release-coeff", type=float, default=0.95,
+                    help="#323 movable critical-nucleus release coefficient (r*=coeff·σ_eff; LawRef "
+                    "critical_nucleus_release_v1, 0.674·sqrt(2)≈0.95).")
+    ap.add_argument("--ladder-sigma-eff", type=float, default=1.5,
+                    help="#323 effective interface width σ_eff (px) for the movable release ceiling (0630 "
+                    "dilation-knee probe; run-2 upgrades to live σ_eff(t) as τ anneals).")
+    ap.add_argument("--ladder-lane-dash-gate", action=argparse.BooleanOptionalAction, default=True,
+                    help="#323 restrict LANE support to the dash-phase (birth+hold+anneal) window (the comb/"
+                    "dash phase where dashes exist) rather than isotropic all-epoch support.")
+    ap.add_argument("--ladder-max-step-px", type=float, default=1.0,
+                    help="#323 pseudo-arclength 1-Lipschitz cap on the support-radius change PER REFRESH "
+                    "STEP (one --ladder-refresh-every interval; continuation adiabatic guard at "
+                    "jumps/gate-slams — the smooth anneal is under it; fail-safe fixed-ramp bound).")
+    ap.add_argument("--ladder-refresh-every", type=int, default=25,
+                    help="#323 recompute the per-class rungs (and rebuild masks on a rung CHANGE) every N "
+                    "epochs (bounds the rebuild cost; a rung changes at most ~r0 times per arm per run).")
     args = ap.parse_args(argv)
 
     # (#254) P0 admission guard: refuse a RAW heavy launch that skipped the governed admission gate

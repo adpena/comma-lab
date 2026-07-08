@@ -1633,6 +1633,36 @@ def LrAnnealPin(anneal_epochs: int = 1000, hold_frac: float = 1.0) -> Lever:  # 
                  notes="LR-specific cosine denominator + hold (decouple from shared --anneal-epochs)")
 
 
+def TailCycles(cycles_max: int = 5, start_epoch: int = 0,  # noqa: N802 — crucible req L / v6 §2.2e
+               cycle_floor_epochs: float = 387.09, dwell_min: int = 237,
+               tau_halving: float = 0.5, lr_prop_tau: float = 1.0,
+               stop_marginal_s: float = 1e-4) -> Lever:
+    """TAIL_k warm-restart refinement stage (crucible req L; DRAFT_OPTIMAL_STACK_v6 §2.2e; §row-9 τ_k).
+
+    The post-Muon stage: K warm-restart cycles that each re-sharpen τ (``τ_k = max(τ_{k-1}·halving,
+    τ*_k=m_q/ln5)`` clamped ≥ ``--softmax-temp-end``) and re-warm LR ∝ τ_k (moments NEVER reset),
+    running until a per-cycle ``powerlaw_meat`` exit (or the ``cycle_floor`` fail-safe cap), then
+    PowerPlay-stopping when a cycle's marginal ΔS/epoch falls below ``stop_marginal_s`` and hard-capping
+    at ``cycles_max`` (req-B). The engine is :class:`tac.witness_control.tail_cycles.TailController`.
+
+    DEFAULTS CONSUME the sealed laws (req T): ``cycle_floor_epochs=387.09`` = ``tail_cycle_floor_v1``
+    (settle 237 + 150 dwell floor); ``dwell_min=237`` = ``settle_window_v1`` (3/ν @ ν(tau)=0.012653);
+    ``cycles_max=5`` = the sealed net cap floor((budget−FIN)/cycle_floor). The trainer flags are
+    default-OFF (``--tail-cycles-max 0`` = byte-identical) so this factory is what ARMS the stage; it
+    requires a Muon finisher (``--muon-start-epoch``) in the same program. Live-m_q (SC-3) is the owed
+    render build — the factory arms the τ-halving fallback (``--tail-live-mq`` stays unset)."""
+    return Lever("tail_k_warm_restart",
+                 overrides={"--tail-cycles-max": int(cycles_max),
+                            "--tail-start-epoch": int(start_epoch),
+                            "--tail-cycle-floor-epochs": float(cycle_floor_epochs),
+                            "--tail-dwell-min": int(dwell_min),
+                            "--tail-tau-halving": float(tau_halving),
+                            "--tail-lr-prop-tau": float(lr_prop_tau),
+                            "--tail-stop-marginal-s": float(stop_marginal_s)},
+                 notes="post-Muon warm-restart cycles (τ_k halving/live-m_q; LR ∝ τ_k, moments kept; "
+                       "per-cycle powerlaw_meat exit; PowerPlay stop; k_max fail-safe)")
+
+
 def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
     """Anti-aliased SOFT boundary (lower HOSC beta) — tests Signal's hypothesis that
     a soft edge carries sub-pixel boundary position through R better than a hard
@@ -1724,6 +1754,69 @@ def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
                  epochs_delta=window,
                  notes="analytic-lane render-band compose (AA-SDF x range-dash-gate x "
                        "witness-uncertainty); FP-killed non-naive form; realized THROUGH R")
+
+
+def LadderIslandHomotopy(  # noqa: N802 — #323 FULL LADDER island-birth lever
+    amplify_weight: float = 1.0,
+    movable_r0: float = 2.0, movable_birth_epochs: int = 60, movable_hold_epochs: int = 0,
+    movable_anneal_epochs: int = 200, movable_lambda_gate: float = 0.0,
+    lane_r0: float = 2.0, lane_birth_epochs: int = 80, lane_hold_epochs: int = 0,
+    lane_anneal_epochs: int = 260, lane_lambda_gate: float = 0.0,
+    gate_softness: float = 0.5, release_coeff: float = 0.95, sigma_eff: float = 1.5,
+    lane_dash_gate: bool = True, max_step_px: float = 1.0, refresh_every: int = 25,
+    window: int = 0,
+) -> Lever:
+    """#323 FULL LADDER island-birth lever — the per-class-λ-GATED homotopy the amplify/nucleus
+    machinery only PARTIALLY realized. Drives the AMPLIFY island-birth support RADIUS by a per-epoch,
+    per-class continuation (``tac.witness_curriculum.ladder_homotopy``) instead of the fixed
+    ``--island-dilate-px``:
+
+      * **movable arm — dilation-GO**: SDF forward-Euler dilation (proven transfer, 1-Lipschitz),
+        ceiling'd by the critical-nucleus RELEASE law r*(t)=coeff·σ_eff (LawRef
+        ``critical_nucleus_release_v1``; MEASURED dilation knee native 44.6% → +1px 90.0% → +2px 98.3%).
+        Its λ-gate defaults OPEN (dilation-GO is sound independent of lane-share).
+      * **lane arm — curve-prior**: grows support ALONG the openpilot VP-tangent (stays on the ~8-dim
+        lane manifold; isotropic dilation of a curve is the measured NO-GO) with a dash-phase window.
+      * **per-class-λ gate**: support flows to a class ONLY while its MEASURED costate
+        λ_c = flip_share_c·d_seg_by_class_c (the #315 per-class verdict sensor) exceeds ``lambda_gate``;
+        the soft-gate band (``gate_softness``) fades support out continuously as the class's residual is
+        won. UNIFORM always-on amplification is the MEASURED net-negative anti-pattern (T3 islands-
+        treatment symposium ``council_t3_symposium_islands_treatment_arm_20260706``: Δd_seg ∝
+        n_big3 − n_isl) — this lever NEVER emits it.
+
+    LADDER continuation form (CT-2 §6 bifurcation-control): starts EASED (support r0 = winnable variant),
+    holds, then anneals r0→0 (transfer to the true argmax); the 1-Lipschitz stepper (``max_step_px``,
+    pseudo-arclength Δr ≤ c/‖dθ/dλ‖) guarantees no hard switch. Modulates the AMPLIFY masks only
+    (``--amplify-weight`` > 0; auto-forces class-aware eased masks) — the SEED keeps its own
+    ``--seed-anneal-epochs`` transfer schedule (no double-application). DEFAULT OFF in the trainer
+    (``--ladder-island-homotopy``) ⇒ byte-identical when this lever is not composed.
+
+    ``release_coeff`` / ``sigma_eff`` seed the movable release ceiling (LawRef; req-T DERIVED-AT-CONFIG,
+    re-derive on a σ_eff-probe change). ``window`` is a warm-start epochs_delta (0 = full-run config
+    lever, the default)."""
+    return Lever("n323_ladder_island_homotopy",
+                 overrides={"--ladder-island-homotopy": True,
+                            "--amplify-weight": amplify_weight,
+                            "--ladder-movable-r0": movable_r0,
+                            "--ladder-movable-birth-epochs": movable_birth_epochs,
+                            "--ladder-movable-hold-epochs": movable_hold_epochs,
+                            "--ladder-movable-anneal-epochs": movable_anneal_epochs,
+                            "--ladder-movable-lambda-gate": movable_lambda_gate,
+                            "--ladder-lane-r0": lane_r0,
+                            "--ladder-lane-birth-epochs": lane_birth_epochs,
+                            "--ladder-lane-hold-epochs": lane_hold_epochs,
+                            "--ladder-lane-anneal-epochs": lane_anneal_epochs,
+                            "--ladder-lane-lambda-gate": lane_lambda_gate,
+                            "--ladder-gate-softness": gate_softness,
+                            "--ladder-release-coeff": release_coeff,
+                            "--ladder-sigma-eff": sigma_eff,
+                            "--ladder-lane-dash-gate": lane_dash_gate,
+                            "--ladder-max-step-px": max_step_px,
+                            "--ladder-refresh-every": refresh_every},
+                 epochs_delta=window,
+                 notes="#323 FULL LADDER island-birth: per-class-λ-gated continuation over the AMPLIFY "
+                       "island radius (movable dilation-GO r*(t) release + lane VP-tangent curve-prior); "
+                       "never uniform amplification; realized THROUGH R; advisory until byte-closed")
 
 
 def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N802 — #287
