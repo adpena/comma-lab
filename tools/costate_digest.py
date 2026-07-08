@@ -254,6 +254,32 @@ def section_resume_spine() -> tuple[str, dict | None]:
         return f"resume spine: unavailable ({type(exc).__name__})", None
 
 
+def section_active_convening() -> tuple[str | None, dict | None]:
+    """Auto-surface any ACTIVE council/crucible orchestration so NO session (and no operator)
+    must remember it exists. Reads the newest orchestration ledger's phase checkboxes + last
+    log line; fail-open (omit if absent). Operator binding 2026-07-07: 'you are once again
+    requiring me to have an insane memory' — the system holds the thread, not the human."""
+    try:
+        ledgers = sorted(glob.glob(".omx/research/*crucible*/ORCHESTRATION_LEDGER.md")) + \
+            sorted(glob.glob(".omx/research/*/ORCHESTRATION_LEDGER.md"))
+        if not ledgers:
+            return None, None
+        txt = Path(ledgers[-1]).read_text(errors="replace")
+        done = txt.count("- [x] P")
+        total = done + txt.count("- [ ] P")
+        # current phase = first unchecked
+        phase = next((ln.strip()[6:60] for ln in txt.splitlines()
+                      if ln.strip().startswith("- [ ] P")), "ALL PHASES DONE")
+        last_log = next((ln.strip() for ln in reversed(txt.splitlines())
+                         if ln.strip().startswith("- 2026")), "")
+        line = (f"ACTIVE CONVENING ({Path(ledgers[-1]).parent.name}): phases {done}/{total} done; "
+                f"NEXT: {phase} | last: {last_log[:120]} | ledger: {ledgers[-1]}")
+        return line, {"ledger": ledgers[-1], "phases_done": done,
+                      "phases_total": total, "next_phase": phase}
+    except Exception as exc:
+        return f"active convening: unavailable ({type(exc).__name__})", None
+
+
 def section_review_counter() -> tuple[str | None, dict | None]:
     """Open review-counter state (sibling ledger; soft — omit entirely if absent)."""
     row = _last_jsonl_row(_REVIEW_COUNTER) if _REVIEW_COUNTER.exists() else None
@@ -298,6 +324,10 @@ def build_digest() -> tuple[list[str], dict]:
 
     spine_line, data["resume_spine"] = section_resume_spine()
     lines.append(spine_line)
+
+    conv_line, data["active_convening"] = section_active_convening()
+    if conv_line:
+        lines.append(conv_line)
 
     rc_line, data["review_counter"] = section_review_counter()
     if rc_line:

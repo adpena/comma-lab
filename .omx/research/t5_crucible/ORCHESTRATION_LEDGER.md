@@ -61,6 +61,19 @@ Dossier: `.omx/research/DRAFT_derived_optimal_next_run_for_council_20260707.md`
 | S5 LEVER-LEDGER | Fridrich/Yousfi — 36 never-fired per-lever BUILD/DEFER; annulus geometry; lane-band; islands | 2 | DONE (f01c8dea6) | position_S5_lever_ledger_20260707.md |
 | S6 POSE+BYTE-CLOSE | §5B pose ON/OFF; store-nothing carrier; byte-close + exact-eval path readiness; measurement-plan skeleton | 2 | DONE | position_S6_pose_byteclose_20260707.md |
 
+## AUTONOMOUS CONTINUATION RULE (operator 2026-07-07: "requiring me to have an insane memory")
+The system holds the thread — NOT the operator, NOT a session's memory:
+- The costate digest auto-surfaces this ledger at EVERY SessionStart (tools/costate_digest.py
+  section_active_convening) — phase state + next action + last log line.
+- The MAIN LOOP advances phases on every agent landing WITHOUT being asked: landing → fold into
+  ledger → launch the next written action. Current standing queue: (1) on next free slot →
+  launch the #346 retrieval-layer build (contract clauses + corpus_query + convene.py) alongside
+  the requirement F/G build wave; (2) on draft landing → P3 red-team vs the draft (provenance
+  audit charter already written above); (3) on chain-A landing → fold + recess queue update;
+  (4) on integration-tranche-1 landing → verify drift detector, then task/DSL/costate legs with
+  the build wave. Any session resuming cold executes from THIS list — the ledger IS the memory.
+- NOTHING here waits for operator prompting except the ONE GO gate (heavy pointer-run launch).
+
 ## Rate-limit resilience rules
 - Waves of ≤3 concurrent seats; wave 2 launches when wave 1 returns (or one at a time if limits bite).
 - All context via durable files + pointers (no giant inline prompts).
