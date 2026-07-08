@@ -10555,3 +10555,51 @@ keyframe bytes before net-negative — huge headroom, so a paid-keyframe carrier
 net-positive IF it hits low d_pose. → #238 (real pose MEASURED through byte-close) + #248 ladder.
 OPERATOR DECISION SURFACED (strategy fork below). v7.5 launch now gated on pose resolution, NOT
 just the seal. Pointer 0.19110 UNMOVED.
+
+## FEED-poseresearch (2026-07-08) — ROOT CAUSE REFRAMED: warp-MODEL not twist-RANK; store-nothing SURVIVES via depth-warp (560b16634)
+Deep-research (pose representation, full online authority) OVERTURNS the P-B "rigid ξ" framing at
+the mechanism level: the ~2.5 cap is the WARP MODEL (planar homography `H=K(R−t·nᵀ/d)K⁻¹` = a
+plane-only warp), NOT twist rank (rank≤6 is a RED HERRING). Irani–Anandan–Weinshall plane+parallax:
+`u(p)=u_planar(H;p)+γ(p)·e`; our carrier reproduces u_planar exactly off stored ξ but sets
+depth-parallax γ(p)≡0 → every off-plane pixel (cars/buildings/hood) warps wrong → PoseNet loses the
+parallax cue separating forward-translation from rotation. `xi_eff=xi_stored+scale·dxi` keeps the
+residual INSIDE the 6-DOF planar family ⇒ training dxi only re-selects the global plane and
+saturates at the target's projection onto the planar manifold = the measured 2.562→1.793 plateau
+EXACTLY. verdict_scope FORMULATION (homography+twist family capped ~2.5; NOT a store-ξ paradigm kill).
+RANKED (byte affordance ~6MB / ~10KB-per-pair → rate NOT binding; reachable-distortion binds):
+**A = depth-consistent warp** (compact per-clip depth D + stored ξ; SfMLearner `K·T(ξ)·D·K⁻¹`;
+D smooth+shared → hundreds B/pair) = HIGHEST-EV, **STORE-NOTHING-PRESERVING**, d_pose PREDICTED ≪1
+(owed to L2) · B = store real photometric pair (~2–6MB, rate-heavy safe anchor, collapses
+witness→codec) · C = dense-flow carrier (dominated by A) · D = richer twist/SE(3)-spline (does NOT
+close ~1.8–2.5, register the negative). DECISIVE $0 NEXT — **L2**: run off-the-shelf monocular depth
+on real_f0, apply SfMLearner depth-warp, measure `PoseNet([real_f0, depth-warp(real_f0)])` through
+frozen CPU-torch authority; if ≪2.5 depth IS the fix → sweep D compression for the A Pareto. FREE
+companion (existing telemetry, 0 compute): scatter per-pair d_pose vs |t_forward| from stored ξ —
+∝ confirms parallax root cause. Secondary: repeat L2 with the task-space WITNESS render as warp
+source (not real luma) → decides A-alone vs forced-B. Eqs `posenet_planar_parallax_dpose_floor_v1`
++ `pose_sufficient_statistic_depth_pose_v1` COUNCIL-FLAGGED (anchors owed to L2/byte-close). Loosens
+the fork: FREE-pose may be viable (Option A) ⇒ my prior "paid is the only path" is SUPERSEDED pending
+L2. Pointer 0.19110 UNMOVED — MEANS.
+
+## FEED-sdfresearch (2026-07-08) — v7.5/v8 skeleton is lit-ALIGNED; pose is the campaign, not d_seg (7a1d90690)
+Deep-research (SDF level-set witness vs external frontier, full online authority): the v7.5/v8 math
+is more literature-aligned than any past vehicle. CONFIRMED via independent re-derivation:
+tropical-argmax=separatrix (Zhang/Alfarra), edge=RAG decomposition, grid-bulk+INR-annulus (#308;
+Kim-Fridovich-Keil 2506.11139 — grids win dense, INRs win ONLY on contours = EXACTLY the split),
+Chan-Vese=area-Lagrange dual, τ→0=Maslov dequantization (2601.09775), margin↔Fisher 0.978
+(ours-measured, UNIWARD-consistent). DEMOTED to decorative (NOT load-bearing): the
+"persistence=curvelet-scale=annealing" identity chain; "curvelet=rate" standalone (rate≠L²-n-term,
+edges may be non-C²) → correct form = grid-bulk + DIRECTIONAL-annulus. FRAGILE/under-validated: the
+paint problem (frozen-scorer evaluator-inverse — lit is thin; VCM assumes TRAINABLE codec) → P-C
+($0 procedural-fill) is correctly the decisive probe. TOP-3 external by measured-EV: (1) COOL-CHIC
+5.0/COIN INR entropy coding — HIGH, rate axis, ~0.049 S headroom, our witness weights ARE an
+overfitted INR → AR latent entropy model for byte-close; (2) grids-beat-INR hybrid — HIGH, gates
+increment-1; (3) f-separable indirect-RD + Dubois sufficient-statistic — optimize the ACTUAL
+argmax-0-1 distortion not MSE proxy (~17% vs SSE-RDO). FLOOR RE-DERIVED: S_floor≈0.118 is a SEG+RATE
+floor ASSUMING pose≈0 (oracle d_seg 0.091 + ~40KB rate 0.027); the POSE term is what the floor hides
+and where the campaign LIVES — ancestor pose 0.018→0.136 (sub-0.15 reachable) vs measured witness
+pose 4.24→hopeless. Pose-hard: lit CONFIRMS H-cap is geometry (two-frame flow needs dense SE(3) or
+depth+pose) — CONVERGES with FEED-poseresearch. Does NOT reshape v8 seg architecture (pose isolated
+frame0/luma, seg frame1/chroma = good frozen-scorer match). Eqs `softmax_tau_maslov_tropical_limit_v1`,
+`cartoon_directional_annulus_grid_bulk_rate_law_v1`, `indirect_task_rd_sufficient_statistic_floor_v1`
+COUNCIL-FLAGGED (anchors owed). Pointer 0.19110 UNMOVED — MEANS.
