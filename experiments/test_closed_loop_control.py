@@ -27,11 +27,30 @@ Imports the trainer + the monitor by file path (self-contained), mirroring
 """
 from __future__ import annotations
 
+import ast
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
 import numpy as np
+
+# (B6 REVISE-3) Whitespace-tolerant structural locator for the sync (non-async) verdict branch's
+# ``v = realized_verdict(...)`` assignment. Replaces the pre-fix exact-literal ``src.index(
+# "v = realized_verdict(ep=int(ep))")`` boundary, which broke on any arg-list change
+# (``ep=int(ep)`` -> ``ep=int(ep), foo=...``) or reformat. The regex ignores the arg list entirely.
+_SYNC_VERDICT_BRANCH_RE = re.compile(r"v\s*=\s*realized_verdict\s*\(")
+
+
+def _sync_verdict_branch_offset(src: str) -> int:
+    """Char offset of the sync-branch ``v = realized_verdict(`` assignment (start of ``v``). Asserts
+    exactly one match so the closed-loop guard boundary is unambiguous — a structural probe, not a
+    literal-token ``.index`` (B6 REVISE-3)."""
+    matches = list(_SYNC_VERDICT_BRANCH_RE.finditer(src))
+    assert len(matches) == 1, (
+        f"expected exactly ONE sync-branch 'v = realized_verdict(' assignment, found {len(matches)} "
+        "— the closed-loop guard boundary is ambiguous; re-check the trainer sync verdict path")
+    return matches[0].start()
 
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO / "src") not in sys.path:
@@ -578,10 +597,10 @@ def test_async_decision_path_has_no_join_after_schedule():
     joins/schedules. The old pattern (decision block joining after the schedule) is GONE."""
     src = _TRAINER.read_text()
     start = src.index("DECIDE-ON-PREVIOUS-VERDICT reorder")
-    # first line of the sync else-branch (the `else:` to `if args.async_verdict:`). A refactor added
-    # the `ep=int(ep)` argument (realized_verdict now takes the epoch), so the boundary token is
-    # `v = realized_verdict(ep=int(ep))`, not the pre-refactor bare `v = realized_verdict()`.
-    end = src.index("v = realized_verdict(ep=int(ep))")
+    # boundary = start of the sync else-branch's `v = realized_verdict(...)` assignment, located
+    # structurally (whitespace-tolerant, arg-list-agnostic) instead of by an exact-literal token
+    # (B6 REVISE-3 — the old `src.index("v = realized_verdict(ep=int(ep))")` broke on any arg change).
+    end = _sync_verdict_branch_offset(src)
     block = src[start:end]
     j = block.index("_join_async_verdict()")
     d = block.index("_cl_stop_now = _cl_decide(ep)")
@@ -603,11 +622,28 @@ def test_off_async_path_keeps_original_final_epoch_join_order():
     unchanged — the reorder is entirely inside the _cl_on branch."""
     src = _TRAINER.read_text()
     off = src.index("closed-loop OFF async path")
-    # sync else-branch boundary (post-refactor token carries the ep=int(ep) arg — see the sister test).
-    blk = src[off:src.index("v = realized_verdict(ep=int(ep))")]
+    # sync else-branch boundary via the structural locator (B6 REVISE-3; see the sister test).
+    blk = src[off:_sync_verdict_branch_offset(src)]
     assert blk.index("_join_async_verdict()") < blk.index(
         "_schedule_async_verdict(ep, seg_form, ep_loss)")
     assert "elif ep == args.epochs:" in src[off - 200:off]
+
+
+def test_sync_verdict_branch_passes_epoch_ast():
+    """BEHAVIORAL contract (B6 REVISE-3, AST not source-token literal): the trainer contains a call to
+    ``realized_verdict`` with an ``ep`` keyword argument — the sync verdict branch passes the epoch.
+    This asserts WHAT the code does (the contract the boundary-locators depend on) via the parse tree,
+    so it survives any arg-list/format change that would break a literal ``src.index``."""
+    tree = ast.parse(_TRAINER.read_text())
+    calls_with_ep = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        and node.func.id == "realized_verdict"
+        and any(kw.arg == "ep" for kw in node.keywords)
+    ]
+    assert calls_with_ep, (
+        "no realized_verdict(ep=...) call found in the trainer — the sync verdict branch must pass the "
+        "epoch (the behavioral contract the closed-loop guard boundary-locators rely on)")
 
 
 if __name__ == "__main__":
