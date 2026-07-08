@@ -2117,3 +2117,13 @@ consumer update required — asserted [consumers-generic]. ---
   area-Lagrange); phase-2 code wave fires ON the counter-force landing. Composition into a
   run rides the crucible. v8 named risks folded (FEED-v8risks) — note risk-4 makes the
   temporal force a NECESSARY companion of any future decomposition.
+- **v7.5 COUNTER-FORCE LANDED (5 commits)**: Lever-1 Chan-Vese area constraint FULLY WIRED
+  (λ derived-live: lane 683.8/movable 322.6; 51×/14× dominance at the ep125 runaway;
+  equilibrium 1.25×GT returns ~0.114 area ≥ Road's 0.1189 deficit → UN-FLOORS Road; equation
+  chan_vese_area_constraint_birth_balance_v1 registered, λ-scale owed to the A/B) · Lever-3
+  logit-adjust regime coherence WIRED (−5.14 lane offset regime-gated; agrees with A5) ·
+  Lever-2 completion event: engine+DSL+detector LIVE, ramp actuation HONESTLY OWED (NO-FAKE:
+  not half-wired under resume risk) → RAMP BUILDER FIRED (trainer files now free). dsl_levers
+  5→7, 39 new tests + 103 green, default-OFF byte-identical + resume guards. SEQUENCING:
+  ramp lands → P0 phase-2 code wave (on phase-1 spec) → seal round 5 on the composed delta
+  (counter 1/3 continues if clean).
