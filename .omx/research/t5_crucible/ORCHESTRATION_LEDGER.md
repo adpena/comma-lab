@@ -265,6 +265,22 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: REVISIONS-B (3563b9c9b apparatus+tests + 7443eef75 memo; 42 tests green;
+trainer hunks HELD in working tree pending τ-advance sequencing — correct anti-absorption) ---
+- S2-REV-A stagger invariant on TWO surfaces (DSL validate + trainer pre-GPU raise);
+  max(LADDER windows) < muon_start, violating window named; cap + event-armed domains.
+- TAIL upgrades: provenance rows (cycle_floor/dwell = LawRefs; tau_halving/stop_marginal_s =
+  HARDCODED-WITH-WAIVER real rationale; λ-gates DERIVED-AT-CONFIG) surfaced in the manifest;
+  RATE-AWARE stop (net-ΔS = d_seg leg − 25·Δbytes/37,545,489 — a bytes-inflating cycle can't
+  read as a win); marginal numerator stamped per TailStep.
+- S6-R5: dispatch short-circuits unify before evt → event controller CANNOT fire the
+  dissolved boundary (clean); loud inert-note added since v7 co-emits both flags.
+- v7.2 delta: argv BYTE-IDENTICAL to v7 + stagger gate + tail_constant_provenance manifest.
+- COORDINATION (mine to execute): when τ-advance lands, verify BOTH trainer feature sets
+  present (revisions-B stagger/byte_rows/marginal hunks + --tau-advance-mode) then commit the
+  combined trainer surface with dual attribution declared. One transient sibling test failure
+  (tau-advance governance mid-wiring) noted, not a regression. Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: SERIALIZER HARDENING (a8ebcd12a + c35979b97; task #354/D4 CLOSED; 17 new +
 87 existing tests green) ---
 - rc=7 POST-COMMIT blob verification (git cat-file HEAD:<file> vs declared sha — reads
