@@ -2127,3 +2127,12 @@ consumer update required — asserted [consumers-generic]. ---
   5→7, 39 new tests + 103 green, default-OFF byte-identical + resume guards. SEQUENCING:
   ramp lands → P0 phase-2 code wave (on phase-1 spec) → seal round 5 on the composed delta
   (counter 1/3 continues if clean).
+- **FABLE→OPUS HANDOFF COMPLETE**: SPEC_v75_optimal_single_trunk (this dir) = the launch bible
+  (sealed constants w/ provenance · run-1 lesson · §4 EXACT owed chain · full-facet watch-list ·
+  authority). SPEC_v8_perclass_decomposition (.omx/research/) = the next-vehicle bible
+  (edge-centric · reconciliation loop · 6 risks · probes · gates). Memory ⭐CURRENT-STATE spine
+  updated; DAG FEED-handoff; tasks #361 (ramp LAUNCH-BLOCKING anti-stranding) · #360 (P0) ·
+  #359 (v8). IN FLIGHT at handoff: ramp builder + P0 derivation agent — both re-spawnable from
+  their briefs (encoded in #361 + #360 + the specs). Rigor bar UNCHANGED: fix-all seal ·
+  verdict-scope · n600 · blind structural derivation · serializer patch-file · governed launcher
+  only · pointer moves ONLY through upstream/evaluate.py byte-closed rows. Counter 1/3.
