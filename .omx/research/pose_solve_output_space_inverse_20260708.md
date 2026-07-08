@@ -1,5 +1,36 @@
 # POSE SOLVED-IN-PRINCIPLE — the OUTPUT-SPACE per-pair inverse solve (2026-07-08)
 
+## ⛔ 0a. MEASURED REFUTATION (2026-07-08, pose_mladder_depthwarp_measured, 70649531f) — THE CENTRAL CLAIM OF THIS MEMO IS REFUTED AT THE FORMULATION LEVEL. Read this FIRST; the derivation below is kept append-only as the (wrong) hypothesis it corrects.
+The A2/A2+ ladder MEASURED (n8–24, real byte-close, frozen CPU-torch, positive control 1.2e-12) that a
+per-pair 6-DOF (and +6 oracle-mask off-plane, 12-DOF) inverse solve **does NOT reach d_pose 0.0011**. It
+floors at **~1.2–1.5** — orders above the ~0.019 target:
+- A0 (0-DOF global ground-H warp) = **1.685**; A2 (6-DOF pose-space LM solve) = **1.486**; A2+ (12-DOF,
+  ORACLE GT mask) = **1.223**. Same-8-pair: 1.580 → 1.362 → 1.223 (monotone but shallow, floors ~1.2).
+- **WHY my synthesis was WRONG (the specific error):** I claimed "ξ_eff is a 6→6 map → generically steers
+  the 6 outputs to target." FALSE for a fixed render: a rate-cheap 6-scalar warp of the FIXED cartoon
+  render spans a LOW-RANK, APPEARANCE-CONSTRAINED manifold whose reachable PoseNet-output set does NOT
+  contain the real-pair target. Adversarially confirmed a genuine local min (zero-init + aggressive
+  FD/iters plateaus identically 1.2–2.1), not a conditioning artifact.
+- **Rung 0 killed the #365 depth premise up front (measured, not assumed):** corr(d_pose, |ego
+  translation|) = **NEGATIVE** (−0.446 n24 / −0.676 n8) — d_pose does NOT rise with forward motion;
+  off-plane finite-depth parallax MASS ≈ **0.5%** (area 2.7%). Depth stratification can touch ≤~0.5–3% of
+  the flow — and A2+ with an ORACLE mask (a strict ceiling) delivered only −10%, empirically confirming it.
+- **#249's ~2.7e-7 does NOT transfer:** it solved FREE PIXELS (full-rank, rate-prohibitive per #249's own
+  correction), NOT a rate-cheap warp. Different object.
+- **R1's cited 0.0011 is NOT reproducible by a post-hoc warp of this fixed render.** IF real, it required
+  JOINT pose-descent training that co-adapts the render itself — so it is an UNMEASURED-at-authority anchor
+  owed re-validation through byte-close at n600 (#238), NOT a floor a cheap carrier reaches. Note the LIVE
+  #205 run (w_pose=1.0 joint) sits at d_pose ~1.75 at ep200 (pre-Muon), also not near 0.0011 yet.
+- **verdict_scope: FORMULATION** — REFUTED = "cheap post-hoc 6(+k)-DOF warp of a FIXED render reaches low
+  d_pose." NOT killed: joint pose-descent training that co-adapts the render (the L3 null-texture path;
+  #205 is the live test), nor the paradigm. Store-real-appearance stays DEAD (10.4 + rate 573).
+- **CORRECTED next step:** pose is NOT cheaply solved post-hoc. Either a dedicated pose-descent run makes
+  the render pose-legible in the SegNet-null (re-validate R1 at n600 byte-close first — is 0.0011 even
+  real?), OR pose is a budget item (~1.7 → contribution √(10·1.7)≈4.1 → kills sub-0.19) and the sub-0.15
+  fight rides d_seg + rate with pose held. Eq `pose_output_space_inverse_solve_v1` stays COUNCIL-FLAGGED
+  as REFUTED-at-formulation (anchor: A2=1.486, not 0.0011). `morse_smale_stratified_parallax_dpose_v1`
+  registered with the measured advisory anchors (the shallow frontier), n600 owed.
+
 STORES CONSULTED (proactive recall — this synthesis is 90% recall, 10% new): DAG FEED-poseladder
 2026-07-03 (the FRAME0-FREE-CANVAS eureka: P-E/P-F, operator-approved, the eval-hack FIREWALL) ·
 `council_pose_carrier_optimal_form_symposium_20260703.md` (R1 = L0 SOLID floor d_pose 0.0011 contribution

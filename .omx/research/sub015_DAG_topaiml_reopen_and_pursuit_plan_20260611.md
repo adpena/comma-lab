@@ -10684,3 +10684,26 @@ reopens (0.09 d_seg + 0.07 rate + ~0.03 pose) IF A2+ confirms. EXECUTION: Rung A
 (6+k) ADDED to the in-flight ladder agent (same harness, #249 tool machinery; cut A1-GT-cells before A2).
 Eq `pose_output_space_inverse_solve_v1` registers ON the A2 anchor (advisory axis, n-labeled, n600/exact
 owed) — not before. SPEC_v75 pose-gate delta ONLY after measurement. Pointer 0.19110 UNMOVED — MEANS.
+
+## FEED-poseladdermeasured (2026-07-08) — MEASURED: the cheap post-hoc pose solve is REFUTED (formulation); my "solved-in-principle" was an over-claim (70649531f)
+The A2/A2+ ladder (n8-24, real byte-close, frozen CPU-torch, pos-control 1.2e-12) REFUTES both the #365
+depth premise AND my FEED-posesolve "6-DOF solve reaches 0.0011" claim. MEASURED frontier: A0 (0-DOF
+global ground-H) 1.685 · A2 (6-DOF pose-space LM solve, ~12 B/pair) 1.486 · A2+ (12-DOF, ORACLE GT mask,
+~24 B) 1.223. Same-8-pair 1.580→1.362→1.223 — monotone but SHALLOW, floors ~1.2, orders above ~0.019
+target. ROOT CAUSE (Rung 0, measured up front): corr(d_pose,|ego-translation|) NEGATIVE (−0.446/−0.676) —
+d_pose does NOT track forward motion; off-plane parallax MASS ≈0.5% (area 2.7%) → depth stratification can
+touch ≤~3% of the flow; A2+ oracle-mask ceiling delivered only −10%, confirming. WHY MY SYNTHESIS WAS
+WRONG: a rate-cheap 6-scalar warp of a FIXED cartoon render spans a LOW-RANK appearance-constrained
+manifold whose reachable PoseNet-output set does NOT contain the real-pair target (adversarial: zero-init +
+aggressive solve plateaus 1.2-2.1 — genuine local min, not conditioning). #249's 2.7e-7 was FREE PIXELS
+(full-rank, rate-prohibitive) — does not transfer to a cheap warp. R1's 0.0011 NOT reproducible post-hoc
+on a fixed render — IF real it needed JOINT pose-descent co-adapting the render (the live #205 w_pose=1.0
+sits ~1.75 at ep200, also not near it). verdict_scope FORMULATION: REFUTED = "cheap post-hoc warp of a
+FIXED render reaches low d_pose"; NOT killed = joint pose-descent (render co-adapts; #205 tests it live) or
+the paradigm. Store-real-appearance stays DEAD (10.4 + rate 573). CORRECTED STATE: pose is NOT cheaply
+solved — either a dedicated pose-descent run makes the render pose-legible (re-validate R1 0.0011 at n600
+byte-close FIRST — #238) OR pose is a budget item (~1.7 → contrib 4.1 → kills sub-0.19) + sub-0.15 rides
+d_seg+rate. LANDED: stratified_depth_warp.py (bit-parity to A0, review-clean; A1-ready if wanted),
+morse_smale_stratified_parallax_dpose_v1 (advisory anchors, n600 owed). pose_output_space_inverse_solve_v1
+COUNCIL-FLAGGED as REFUTED-at-formulation (anchor A2=1.486). Pointer 0.19110 UNMOVED. HONEST: this is a
+negative that overturns my optimistic synthesis — stated plainly, not spun.
