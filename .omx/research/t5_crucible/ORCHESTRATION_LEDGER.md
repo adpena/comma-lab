@@ -120,6 +120,27 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+N. **REFLECTION · RECURSION · INFLECTION · INTROSPECTION — v3 IS NOT THE OPTIMUM (operator
+   2026-07-07: "v3 is definitely a step in the right direction but I doubt it's optimal or
+   really even that close relatively").** CALIBRATION, by v3's own numbers: engineered crossing
+   0.18932 vs frontier 0.19110 vs measured floor 0.118 — the frontier-to-floor gap is ~0.073 S
+   and v3's best case claims ~0.002 of it (~3%). The SEAL certifies CORRECTNESS AND
+   LAUNCH-WORTHINESS, never optimality. Binding consequences:
+   (1) **REFLECTION**: run-1 is a MEASUREMENT INSTRUMENT for the campaign — its purpose is the
+   parity row, the binding-constraint measurements, and the telemetry corpus that make v4/v5
+   derivable, at least as much as its own S. Frame the launch that way in the synthesis.
+   (2) **RECURSION**: the design loop does NOT stop at the seal — v4 design work (deeper floor
+   attack: d_seg → the 0.0005-0.0009 regime, rate → 0.05 via the compress-half, the quotient-
+   codec paradigm #155, the asymptotic-tail stages) continues in parallel with run-1's burn,
+   consuming its live telemetry. Each run is one iterate of the campaign's outer loop.
+   (3) **INFLECTION**: per design family, watch the returns curve — when a family's improvements
+   per round bend toward ITS asymptote, and that asymptote sits above the target, the correct
+   move is a NEW FAMILY (reframe/paradigm step), not more polishing. Estimate each family's
+   asymptote explicitly (the L-discipline applied to the DESIGN process itself); v3's family
+   (composed-lever witness on mod32) has an asymptote the crucible should ESTIMATE, not assume.
+   (4) **INTROSPECTION**: each seal round includes a self-critique pass that attempts to
+   generate OPERATOR-GRADE reframings ("what would the operator catch?") — the H-M requirements
+   all originated as operator catches; the machine's maturity metric is generating them first.
 M. **CAPACITY HUMILITY · MEASURE→SWEEP→DERIVE · SELF-DERIVING PDE CONTROL (operator
    2026-07-07).** Three binding principles:
    (1) **CAPACITY IS NOT FULLY UNDERSTOOD — treat it empirically.** Capacity's interaction with
