@@ -265,6 +265,26 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ✅ LANDED: GPU-VERDICT HYBRID (4487d0e58 + 8e9c62a97; 25 new tests; memo
+gpu_verdict_hybrid_20260708.md) — built, default-cpu, promotion evidence-gated ---
+- DETERMINISM MEASURED: 9/9 verdict-relevant MLX-GPU forward ops cross-process deterministic
+  N=5. The L70 wall is BACKWARD-only (scatter VJP) — an inference verdict never touches it;
+  no fused-R needed for verdicts.
+- AGREEMENT MEASUREMENT HONESTLY DEFERRED: governor REFUSED the ~52 GiB n600 GPU-vs-CPU probe
+  beside live run-1 (154.2 > 117.8 GiB ceiling) — correct P0 behavior, not bypassed. Runs when
+  run-1 idles (mod32cap ep650, --verdict-device gpu --verdict-anchor-every 1, n600).
+- DEFAULT: cpu (byte-identical); gpu+anchor stays council_pending gated on the measured
+  flip-disagreement/Δd_pose/speedup table — promoting on determinism alone would be
+  surrogate-not-authority. Surfaces: --verdict-device/--verdict-anchor-every · CPU-torch
+  positive-control anchor rows ({stage: verdict_anchor} drift monitor) · fail-closed guard
+  (async/nucleus-guard/ladder consume the CPU verdict; gpu cannot silently feed training
+  sensors) · DSL VerdictDevice lever + typed_config fields.
+- ⚠️ COMMIT-DISCIPLINE INCIDENT (new gap in the sha-guard): a sibling's revert landed BEFORE
+  the builder's sha snapshot → serializer rc=0 committed the SIBLING'S file copy (guard blind
+  to pre-snapshot clobbers). Caught by post-commit `git show` content verification; re-applied
+  on top, both features preserved (8e9c62a97). LESSON: verify committed CONTENT, not
+  serializer rc=0 — queued as a serializer hardening task. Pointer 0.19110 UNMOVED.
+
 --- ✅ LANDED: CRUCIBLE_V7 AUTHORED (217416cf3 code + 4b29584d8 memo; first requirement-V-
 native config; 25 new + 155 sibling tests) ---
 - Gate: **0 NAKED** (tau-softplus + l7 + tau-hold-frac DELETED; muon 726 / lane-band 500 /
