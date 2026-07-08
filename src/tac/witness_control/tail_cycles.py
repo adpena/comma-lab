@@ -1,19 +1,36 @@
 """tac.witness_control.tail_cycles — the TAIL_k warm-restart refinement controller.
 
-The post-Muon warm-restart stage of the level-set witness schedule (T5 crucible
+The post-Muon refinement stage of the level-set witness schedule (T5 crucible
 requirement L; DRAFT_OPTIMAL_STACK_v6 §2.2e / v5 §2.2e; row-9 τ_k law): after the
-Muon finisher, run K warm-restart cycles that each re-sharpen τ and re-warm the LR,
-mining the power-law tail the exponential-window finisher exit leaves on the bone.
+Muon finisher, run K cycles that mine the power-law tail the exponential-window
+finisher exit leaves on the bone. The τ_k law has TWO operating points (both
+sealed-config-legal; ``next_tau`` implements the single clamped rule that realizes
+both — the ladder math is IDENTICAL, only the entry τ_0 vs τ_end relation differs):
+
+* **DESCENDING-LADDER operating point** (``τ_0 > τ_end``): each cycle re-sharpens τ
+  DOWNWARD (halving / live-m_q) and re-warms LR ∝ τ_k, a genuine coarse→fine ladder
+  until τ hits the ``τ_end`` / live-m_q floor. This is the general refinement behavior.
+* **TURNPIKE-DWELL operating point** (``τ_0 = τ_end``, the SEALED crucible case):
+  ``--softmax-temp-end 0.31`` = ``τ_end`` and the anneal holds τ = 0.31 through the
+  Muon freeze, so the tail ENTERS at the floor. ``next_tau`` then clamps to ``τ_end``
+  EVERY cycle (constant τ*) and LR stays constant → ``tau_halving`` and ``lr_prop_coeff``
+  are DEAD KNOBS at this operating point. The tail is a constant-τ* dwell that mines
+  purely via the per-cycle meat-exit + the net-ΔS PowerPlay stop + per-cycle ckpt.
+  This is derivation-CONSISTENT with the witness-native turnpike ("extra budget extends
+  the TAIL at τ*, not the transients"); it is NOT SGDR (τ never resets UP) and there is
+  no saw-tooth as-built (SEAL-v7-r1 structure-round R-4, resolved). ``TailController``
+  emits a one-time ``tail_turnpike_active`` telemetry note when this case is live
+  (dead-knob visibility; the default-off-orphan discipline).
 
 LAWS (all provenance-cited; the sealed crucible values are the DEFAULTS a caller may
 override — none is invented here):
 
 * **τ_k law (v6 §row-9):**  ``τ_k = max(τ_{k−1}·halving, τ*_k)`` clamped to ``≥ τ_end``,
   where ``τ*_k = m_q(k)/ln5`` from the LIVE margin field (SC-3 live-m_q) WHEN available,
-  else the halving fallback. ``next_tau`` implements both branches.
-* **LR ∝ τ_k:**  ``lr_k = lr_ref · coeff · τ_k/τ_ref`` (``lr_for_tau``) — the warm-restart
-  re-warms the step in proportion to the re-sharpened τ; moments are NEVER reset (the
-  trainer sets the optimizer LR without re-init — warm restart).
+  else the halving fallback. One rule, both operating points above (``next_tau``).
+* **LR ∝ τ_k:**  ``lr_k = lr_ref · coeff · τ_k/τ_ref`` (``lr_for_tau``) — re-warms the
+  step in proportion to τ_k; moments are NEVER reset (the trainer sets the optimizer LR
+  without re-init). Constant when τ_k is constant (the turnpike operating point).
 * **dwell floor = settle = 3/ν = 237 ep** (``settle_window_v1``): a cycle may NOT meat-exit
   before it has run ``dwell_min`` epochs (a shorter cycle measures its own transient —
   the M-S2 confound class).
@@ -24,8 +41,10 @@ override — none is invented here):
   (:func:`tac.witness_control.powerlaw_exit.powerlaw_meat_exit`) applied at PER-CYCLE scope
   on the cycle's OWN verdict rows (fail-safe: unfittable ⇒ NOT exhausted).
 * **PowerPlay stop:**  stop the whole tail when a completed cycle's marginal ΔS/epoch falls
-  below ``stop_marginal_s`` (the attribution floor — the cheapest-new-unsolved cycle yields
-  nothing measurable, so stop; ``powerplay_variant_ii`` campaign-meta).
+  below ``stop_marginal_s`` — the DERIVED attribution floor ``s* = ν·forfeit ≈ 6.897e-6 S/ep``
+  (``forfeit_matched_exit_v1``; ``stop_marginal_s_lawref()``; SEAL-v7-r1 MAJOR-1). Was a
+  HARDCODED 1e-4 (14.5× coarser — it TRUNCATED the exact power-law tail this module exists to
+  mine); ``powerplay_variant_ii`` campaign-meta.
 * **k_max (req-B):**  a hard net-cycle fail-safe cap so a dead/vacuous exit degrades to a
   capped schedule, never an unbounded run.
 
@@ -37,24 +56,32 @@ controller ⇒ byte-identical).
 """
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from tac.witness_control.powerlaw_exit import powerlaw_meat_exit
 
+if TYPE_CHECKING:
+    from tac.witness_dsl.lawref import LawRef
+
 __all__ = [
     "RATE_DENOM_BYTES",
+    "STOP_MARGINAL_S_DERIVED",
     "TAIL_CONSTANT_PROVENANCE",
-    "TailCycleConfig",
     "TailController",
+    "TailCycleConfig",
     "TailStep",
     "lr_for_tau",
     "next_tau",
+    "stop_marginal_s_lawref",
     "tail_constant_provenance",
     "tau_star_from_mq",
 ]
 
 _LN5 = math.log(5.0)
+_TURNPIKE_EPS = 1e-9  # τ_0 within this of τ_end ⇒ the constant-τ* turnpike operating point
 _S_PER_DSEG = 100.0  # S = 100·d_seg + √(10·d_pose) + rate; d_seg-only S units throughout.
 # S = 100·d_seg + √(10·d_pose) + 25·|archive.zip|/37_545_489 (upstream/evaluate.py:92). The TAIL
 # stop's rate leg (S1-R1) reads the CODED-bytes delta through this rate term so a byte-INFLATING
@@ -62,12 +89,21 @@ _S_PER_DSEG = 100.0  # S = 100·d_seg + √(10·d_pose) + rate; d_seg-only S uni
 _S_PER_RATE = 25.0
 RATE_DENOM_BYTES = 37_545_489  # contest rate denominator (upstream original-video bytes)
 
+# ── PowerPlay attribution floor s* = ν·forfeit (SEAL-v7-r1 MAJOR-1; forfeit_matched_exit_v1) ──
+# The DERIVED PowerPlay stop floor, replacing the struck HARDCODED 1e-4 (14.5× coarser). The two
+# inputs are the campaign's own MEASURED anchors (DRAFT v6 §2.2f/g); the product is the derived
+# floor. Named so the dataclass default, the LawRef, and the provenance row are one value by
+# construction (no bare-literal drift; req-T value-provenance ladder).
+_NU_TAU_SOFTPLUS = 0.012653   # ν(tau_softplus) BINDING per-stage exponential-meat fit (P-CT1)
+_FORFEIT_S = 5.450779e-4      # P-CT3 restore-EMA-best forfeit S (DRAFT v6 §2.2f)
+STOP_MARGINAL_S_DERIVED = _NU_TAU_SOFTPLUS * _FORFEIT_S  # s* ≈ 6.8968706687e-6 S/ep (→ 6.897e-6)
+
 
 # ── TAIL constant PROVENANCE (req-T value-provenance ladder; S4-R2 + S1) ──────────────────────────
 # Every sealed TAIL constant carries its ladder provenance so it "cannot rot silently" (req T / L22:
-# no bare literals). cycle_floor / dwell already CITE registered laws; tau_halving / stop_marginal_s
-# have NO closed-form derivation, so they are HARDCODED-WITH-WAIVER with a real rationale (the honest
-# req-T class-4), not silent literals. Machine-readable so the crucible manifest can surface the rows.
+# no bare literals). cycle_floor / dwell / stop_marginal_s CITE registered laws (derived_at_config);
+# tau_halving has NO closed-form derivation, so it stays HARDCODED-WITH-WAIVER with a real rationale
+# (the honest req-T class-4). Machine-readable so the crucible manifest can surface the rows.
 TAIL_CONSTANT_PROVENANCE: dict[str, dict] = {
     "cycle_floor_epochs": {
         "value": 387.09, "ladder_class": "derived_at_config", "equation_id": "tail_cycle_floor_v1",
@@ -79,19 +115,24 @@ TAIL_CONSTANT_PROVENANCE: dict[str, dict] = {
     },
     "tau_halving": {
         "value": 0.5, "ladder_class": "hardcoded_waiver", "equation_id": None,
-        "rationale": ("SGDR-style geometric warm-restart: the τ_k law FORM is "
-                      "τ_k = max(τ_{k−1}·halving, m_q/ln5); 0.5 = one octave (halve τ) per cycle — a "
-                      "DESIGN choice (the halving base), not a derived law. HARDCODED-WITH-WAIVER: "
-                      "re-derive if a live-m_q τ*_k schedule replaces the halving fallback."),
+        "rationale": ("Geometric DESCENDING-ladder base: the τ_k law FORM is "
+                      "τ_k = max(τ_{k−1}·halving, m_q/ln5) clamped ≥ τ_end; 0.5 = one octave (halve τ) "
+                      "per cycle — a DESIGN choice, not a derived law. NOTE: at the SEALED turnpike "
+                      "operating point (τ_0 = τ_end = 0.31) this knob is INERT — next_tau clamps to "
+                      "τ_end every cycle, so halving is a dead knob (constant-τ* dwell). It governs "
+                      "only a DESCENDING entry (τ_0 > τ_end). HARDCODED-WITH-WAIVER: re-derive if a "
+                      "live-m_q τ*_k schedule replaces the halving fallback."),
     },
     "stop_marginal_s": {
-        "value": 1e-4, "ladder_class": "hardcoded_waiver", "equation_id": None,
-        "rationale": ("PowerPlay attribution floor: the smallest per-epoch net-ΔS (S-units/ep) a "
-                      "cycle must still be earning to be worth continuing — below it the "
-                      "cheapest-new-unsolved cycle yields nothing the verdict cadence can resolve. A "
-                      "THRESHOLD choice, not a derived law. HARDCODED-WITH-WAIVER: re-tune against "
-                      "the measured verdict-cadence ΔS resolution (S1: keep it as the d_seg leg; the "
-                      "rate leg is the coded-bytes delta through the 25·bytes/B rate term)."),
+        "value": STOP_MARGINAL_S_DERIVED, "ladder_class": "derived_at_config",
+        "equation_id": "forfeit_matched_exit_v1",
+        "rationale": ("PowerPlay attribution floor s* = ν(tau_softplus)·forfeit = "
+                      "0.012653·5.450779e-4 ≈ 6.897e-6 S/ep (DRAFT v6 §2.2f/g; forfeit_matched_exit_v1; "
+                      "stop_marginal_s_lawref()). DERIVED-AT-CONFIG (was HARDCODED 1e-4, 14.5× coarser "
+                      "— it TRUNCATED the exact power-law tail; SEAL-v7-r1 MAJOR-1). S1 rate-aware: the "
+                      "d_seg leg minus the coded-bytes delta through the 25·bytes/B rate term. NOTE: "
+                      "the seal's s*_tail = ν(muon_fin)·forfeit_tail (ν=0.003289, finer) is a run-2 "
+                      "duty-to-measure — no forfeit_tail measured yet; the FORM covers it once it lands."),
     },
 }
 
@@ -111,11 +152,49 @@ def tau_star_from_mq(m_q: float) -> float:
 def next_tau(prev_tau: float, cfg: "TailCycleConfig", live_mq: float | None = None) -> float:
     """τ_k = max(τ_{k−1}·halving, τ*_k=m_q/ln5) clamped to ≥ τ_end (v6 §row-9).
 
-    ``live_mq is None`` (the default / SC-3-live-unavailable path) ⇒ the halving fallback
-    ``τ_{k−1}·halving`` clamped to ``τ_end``."""
+    ONE rule, two operating points (see the module docstring): with ``τ_{k−1} > τ_end`` it
+    DESCENDS (a coarse→fine ladder) until it hits the ``τ_end`` / live-m_q floor; with
+    ``τ_{k−1} = τ_end`` (the sealed turnpike case) it clamps to ``τ_end`` every call → a
+    constant-τ* dwell (τ never resets UP, so it is NOT SGDR). ``live_mq is None`` (the default
+    / SC-3-live-unavailable path) ⇒ the halving fallback ``τ_{k−1}·halving`` clamped to ``τ_end``."""
     halved = float(prev_tau) * float(cfg.tau_halving)
     cand = halved if live_mq is None else max(halved, tau_star_from_mq(live_mq))
     return max(cand, float(cfg.tau_end))
+
+
+def stop_marginal_s_lawref() -> "LawRef":
+    """The DERIVED PowerPlay attribution floor as a compilable LawRef (SEAL-v7-r1 MAJOR-1).
+
+    ``s* = ν(tau_softplus)·forfeit`` via ``forfeit_matched_exit_v1`` (ladder DERIVED-AT-CONFIG;
+    both inputs are literal MEASURED anchors config-tagged to the mod32cap/tau_softplus stage per
+    P-CT1). ``resolve()``-ing it yields ``STOP_MARGINAL_S_DERIVED`` ≈ 6.897e-6 S/ep — the value the
+    dataclass default + the provenance row already carry (one value by construction). Lazy import
+    keeps this module light + import-order-proof (mirrors how the resolver lazy-imports evaluators)."""
+    from tac.witness_dsl.lawref import (
+        LADDER_DERIVED_AT_CONFIG,
+        InputRef,
+        LawRef,
+    )
+
+    _tags = {"schedule": "mod32cap", "stage": "tau_softplus"}
+    return LawRef(
+        equation_id="forfeit_matched_exit_v1",
+        inputs={
+            "nu": InputRef.literal(
+                _NU_TAU_SOFTPLUS,
+                provenance="ν(tau_softplus) BINDING per-stage exponential-meat fit "
+                           "(DRAFT v6 §2.2g fold-2 P-CT1)",
+                config_tags=_tags,
+            ),
+            "forfeit": InputRef.literal(
+                _FORFEIT_S,
+                provenance="P-CT3 restore-EMA-best forfeit S (DRAFT v6 §2.2f, "
+                           "VERIFIED full-precision from the trace)",
+                config_tags=_tags,
+            ),
+        },
+        ladder_class=LADDER_DERIVED_AT_CONFIG,
+    )
 
 
 def lr_for_tau(tau: float, tau_ref: float, lr_ref: float, coeff: float = 1.0) -> float:
@@ -136,10 +215,11 @@ class TailCycleConfig:
     tau_halving: float = 0.5             # τ_k = max(τ_{k−1}·halving, τ*_k); HARDCODED-WITH-WAIVER
     #                                      (req-T: TAIL_CONSTANT_PROVENANCE['tau_halving'] — SGDR base)
     tau_end: float = 0.31                # knee floor (tau_end_knee_launch_v1); τ never below this
-    lr_prop_coeff: float = 1.0           # LR_k = lr_ref·coeff·τ_k/τ_ref
-    stop_marginal_s: float = 1e-4        # PowerPlay stop: cycle NET-ΔS/ep below this (S1-R1: rate-aware
-    #                                      when byte_rows given — d_seg marginal MINUS the coded-bytes
-    #                                      rate cost). HARDCODED-WITH-WAIVER (TAIL_CONSTANT_PROVENANCE).
+    lr_prop_coeff: float = 1.0           # LR_k = lr_ref·coeff·τ_k/τ_ref (INERT at the turnpike τ_0=τ_end)
+    stop_marginal_s: float = STOP_MARGINAL_S_DERIVED  # PowerPlay stop: cycle NET-ΔS/ep below this
+    #                                      (S1-R1: rate-aware when byte_rows given — d_seg marginal MINUS
+    #                                      the coded-bytes rate cost). DERIVED s* = ν·forfeit ≈ 6.897e-6
+    #                                      (forfeit_matched_exit_v1; was HARDCODED 1e-4; TAIL_CONSTANT_PROVENANCE).
     meat_floor: float = 1e-4             # per-cycle powerlaw_meat exit floor
     meat_horizon: float = 300.0          # per-cycle meat extrapolation horizon
     min_points: int = 8                  # min verdict rows before a meat-exit may fire
@@ -200,9 +280,30 @@ class TailController:
         self._cycle_start_dseg: float | None = None
         self._cycle_start_bytes: float | None = None
         self.stopped = False
+        # FIX-2 (SEAL-v7-r1 R-4): the SEALED case enters at τ_0 = τ_end ⇒ next_tau clamps to τ_end
+        # every cycle ⇒ a constant-τ* turnpike dwell, so tau_halving + lr_prop_coeff are DEAD KNOBS
+        # (no SGDR saw-tooth as-built). Surface it once so a reader/controller never mistakes the
+        # dead knobs for a live descending ladder (the default-off-orphan / dead-knob-visibility rule).
+        self.is_turnpike = abs(float(tau0) - float(cfg.tau_end)) <= _TURNPIKE_EPS
+        self._turnpike_note_emitted = False
 
     def _tag(self) -> str:
         return f"stageTail{self.k}"
+
+    def turnpike_note(self) -> dict | None:
+        """The dead-knob telemetry note for the turnpike operating point, else ``None`` (the
+        descending-ladder case has no dead knobs). Pure/read-only — the emitted content."""
+        if not self.is_turnpike:
+            return None
+        return {
+            "stage": "tail_turnpike_active",
+            "tau0": round(float(self.tau_k), 6),
+            "tau_end": round(float(self.cfg.tau_end), 6),
+            "dead_knobs": ["tau_halving", "lr_prop_coeff"],
+            "note": "τ_0 = τ_end ⇒ constant-τ* turnpike dwell; tau_halving + lr_prop_coeff are DEAD "
+                    "KNOBS at this operating point; the tail mines via per-cycle meat-exit + the "
+                    "net-ΔS PowerPlay stop (no SGDR saw-tooth as-built; SEAL-v7-r1 R-4)",
+        }
 
     @staticmethod
     def _dseg_at_or_before(ep: int, rows: list[tuple[int, float]]) -> float | None:
@@ -212,12 +313,6 @@ class TailController:
     def _cycle_exit(self, ep: int, rows: list[tuple[int, float]]) -> tuple[bool, str]:
         """Does the CURRENT cycle exit at ``ep``? cycle_floor cap (hard) OR (dwell satisfied AND
         per-cycle powerlaw_meat exhausted)."""
-        # LEN CONVENTION (SEAL v7 R1 deepmath MINOR-6, deliberate): INCLUSIVE epoch COUNT
-        # (ep − start + 1) is the correct unit for a floor/dwell THRESHOLD test (how many epochs the
-        # cycle has spanned, endpoints included). Contrast _cycle_net_marginal, which uses the interval
-        # count max(ep − start, 1) because a per-epoch RATE (ΔS/ep) divides by the number of INTERVALS,
-        # not the endpoint count. The ~1-epoch difference (~0.26% at a 387-ep cycle) is intentional per
-        # quantity, not an off-by-one bug.
         length = ep - int(self.cycle_start_ep) + 1
         if length >= self.cfg.cycle_floor_epochs:
             return True, "cycle_floor_cap"
@@ -246,8 +341,6 @@ class TailController:
         d_end = self._dseg_at_or_before(ep, rows)
         if self._cycle_start_dseg is None or d_end is None:
             return None
-        # INTERVAL count (NOT the inclusive count used by _cycle_exit): a per-epoch RATE divides by the
-        # number of epoch INTERVALS (SEAL v7 R1 deepmath MINOR-6 — the deliberate convention split).
         length = max(ep - int(self.cycle_start_ep), 1)
         marginal = _S_PER_DSEG * (self._cycle_start_dseg - d_end) / length
         if byte_rows is not None and self._cycle_start_bytes is not None:
@@ -264,6 +357,9 @@ class TailController:
         ``byte_rows is None`` ⇒ the d_seg-marginal-only stop (byte-identical to the pre-S1-R1 path)."""
         rows = sorted((int(e), float(d)) for e, d in rows)
         _brows = sorted((int(e), float(b)) for e, b in byte_rows) if byte_rows is not None else None
+        if self.is_turnpike and not self._turnpike_note_emitted:
+            self._turnpike_note_emitted = True
+            print(json.dumps(self.turnpike_note()))  # one-time dead-knob telemetry (FIX-2)
         if self.stopped:
             return TailStep(self.tau_k, self.lr_k, False, self.k, self._tag(), True, "already stopped")
         begin, reason = False, "continue"

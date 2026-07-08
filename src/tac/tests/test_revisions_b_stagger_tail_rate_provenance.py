@@ -206,12 +206,15 @@ def test_tail_provenance_rows_are_well_formed():
 
 
 def test_tail_provenance_derived_cite_equations_waivers_do_not():
-    # cycle_floor / dwell CITE registered laws; tau_halving / stop_marginal_s are HARDCODED-WITH-WAIVER.
+    # cycle_floor / dwell / stop_marginal_s CITE registered laws (DERIVED-AT-CONFIG); only
+    # tau_halving stays HARDCODED-WITH-WAIVER (SEAL-v7-r1 MAJOR-1 flipped stop_marginal_s to the
+    # derived s* = ν·forfeit floor via forfeit_matched_exit_v1).
     assert TAIL_CONSTANT_PROVENANCE["cycle_floor_epochs"]["equation_id"] == "tail_cycle_floor_v1"
     assert TAIL_CONSTANT_PROVENANCE["dwell_min"]["equation_id"] == "settle_window_v1"
-    for k in ("tau_halving", "stop_marginal_s"):
-        assert TAIL_CONSTANT_PROVENANCE[k]["ladder_class"] == "hardcoded_waiver", k
-        assert TAIL_CONSTANT_PROVENANCE[k]["equation_id"] is None, k
+    assert TAIL_CONSTANT_PROVENANCE["stop_marginal_s"]["equation_id"] == "forfeit_matched_exit_v1"
+    assert TAIL_CONSTANT_PROVENANCE["stop_marginal_s"]["ladder_class"] == "derived_at_config"
+    assert TAIL_CONSTANT_PROVENANCE["tau_halving"]["ladder_class"] == "hardcoded_waiver"
+    assert TAIL_CONSTANT_PROVENANCE["tau_halving"]["equation_id"] is None
 
 
 def test_tail_provenance_getter_is_a_copy():
