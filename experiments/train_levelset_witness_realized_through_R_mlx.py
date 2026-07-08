@@ -93,6 +93,15 @@ from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     quantize_levelset_blob,
     rebuild_per_pair_feats_in_place,
 )
+# MOD-DIM DYNAMICS telemetry (operator 2026-07-08): score-neutral, read-only spectral + per-dim
+# introspection of the per-pair latent (code) table. Pure numpy; emitting a row reads snapshots only
+# (never touches the update path / RNG) => BYTE-IDENTICAL training. See src/tac/boundary_math/mod_dim_dynamics.py.
+from tac.boundary_math.mod_dim_dynamics import (  # noqa: E402
+    mod_dim_ablation_row,
+    mod_dim_dynamics_row,
+    per_dim_dseg_ablation,
+    per_dim_film_consumption,
+)
 from tac.optimization.muon_finisher_mlx import (  # noqa: E402
     build_muon_finisher_optimizer,
     count_muon_adamw_split,
@@ -5291,6 +5300,99 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # through the shared _verdict_v tail; the flag-absent path is byte-identical.
         return _verdict_v(f0s, f1s, ep=int(ep))
 
+    # ---- MOD-DIM DYNAMICS telemetry (operator 2026-07-08; score-neutral observability DEFAULTS ON
+    # per CLAUDE.md "'Off' is a tracked queue"). Read-only SVD of the per-pair latent (code) table +
+    # per-dim util / FiLM-consumption / xi-r2 / CCA, at VERDICT cadence; per-dim d_seg zero-ablation
+    # attribution at CHECKPOINT cadence (heavier => governor-gated + skip-logged). NEVER read back into
+    # training/parity/resume => the flag-absent (or fail-open) path is BYTE-IDENTICAL to the #205 verdict.
+    _mdd_on = bool(getattr(args, "mod_dim_dynamics", True))
+    _mdd_abl_on = bool(getattr(args, "mod_dim_ablation", True))
+    _mdd_abl_k = int(getattr(args, "mod_dim_ablation_k", 32))
+
+    def _mdd_film_weights(deploy: dict) -> list:
+        """Candidate FiLM input-weight matrices (main + per-layer) for the per-dim CONSUMPTION probe:
+        every key starting 'film' and ending '.weight'. ``per_dim_film_consumption`` then keeps only the
+        matrices whose input width == mod_dim (a concat-code FiLM of a different width is auto-ignored).
+        READ-ONLY view of deploy (arrays are neither copied nor mutated)."""
+        return [v for k, v in deploy.items() if k.startswith("film") and k.endswith(".weight")]
+
+    def _mdd_verdict_row(ema_np: dict, ep: int, seg_form: str, tau: "float | None",
+                         code_bytes_full: int) -> "dict | None":
+        """Build the per-verdict ``{stage: mod_dim_dynamics}`` row from the int8-DEQUANTIZED deploy code
+        table (what actually ships) + the stored pose twist ``gt.gt_poses`` (ξ). Fail-open (None) so
+        telemetry can NEVER break a run. Pure read: int8_dequant_params returns a NEW dict; the SVD /
+        per-dim math is on copies; no RNG draw => byte-identical."""
+        if not _mdd_on:
+            return None
+        try:
+            deploy = int8_dequant_params(ema_np)
+            return mod_dim_dynamics_row(
+                deploy["code"], gt.gt_poses, epoch=int(ep), seg_form=seg_form, tau=tau,
+                mod_dim=int(args.mod_dim), code_bytes_full=int(code_bytes_full),
+                film_weights=_mdd_film_weights(deploy))
+        except Exception as exc:  # NO-FAKE: never a fabricated row; surface the failure, keep running.
+            return {"stage": "mod_dim_dynamics", "epoch": int(ep), "seg_form": seg_form,
+                    "error": f"{type(exc).__name__}: {exc}", "axis": "[macOS-numpy advisory] NON-PROMOTABLE"}
+
+    def _mdd_governor_ok() -> "tuple[bool, str]":
+        """Governor-respect gate for the HEAVY ablation probe: run only under NORMAL macOS memory
+        pressure; SKIP (conservative) under warn/critical OR when pressure is unreadable (fail-safe:
+        a heavy probe never adds load when blind). Returns (ok, reason)."""
+        try:
+            import pathlib as _pl  # noqa: PLC0415
+            import sys as _sys  # noqa: PLC0415
+            _tools = str(_pl.Path(__file__).resolve().parent.parent / "tools")
+            if _tools not in _sys.path:
+                _sys.path.insert(0, _tools)
+            import system_memory_governor as _gov  # noqa: PLC0415
+            lvl = int(_gov.read_memory_pressure_level())
+        except Exception as exc:
+            return False, f"pressure_unreadable:{type(exc).__name__}"
+        if lvl == 1:
+            return True, "normal"
+        return False, (f"pressure_level_{lvl}" if lvl else "pressure_unknown")
+
+    def _mdd_ablation_checkpoint(ep: int, seg_form: str) -> None:
+        """CHECKPOINT-cadence per-dim d_seg zero-ablation attribution (cut 3). Governor-gated +
+        skip-logged. Renders a K-pair sample's frame1 with each latent dim zeroed IN A COPY of the
+        deploy code (the input deploy is never mutated) and measures Δd_seg via the frozen CPU SegNet.
+        The row also carries the per-dim FiLM-consumption utilization so the #157/#336 waterfill hint
+        (util*|Δd_seg|) is emitted. Fully fail-open; OBSERVABILITY-ONLY (never read into training)."""
+        if not (_mdd_on and _mdd_abl_on):
+            return
+        ok, reason = _mdd_governor_ok()
+        if not ok:
+            print(json.dumps({"stage": "mod_dim_ablation", "epoch": int(ep), "seg_form": seg_form,
+                              "skipped": True, "reason": reason,
+                              "axis": "[macOS-numpy advisory] NON-PROMOTABLE",
+                              "note": "governor-gated heavy probe skipped (score-neutral; run continues)"}),
+                  flush=True)
+            return
+        try:
+            ema_np = _project_shadow_film_np({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
+            deploy = int8_dequant_params(ema_np)
+            kpairs = list(vpairs[:max(1, min(_mdd_abl_k, len(vpairs)))])
+            lstars_k = [gt.lstars[pi] for pi in kpairs]
+
+            def _render_dseg(code_override: np.ndarray) -> float:
+                dep = dict(deploy)
+                dep["code"] = np.asarray(code_override, np.float32)
+                f1s = [_render_numpy_deploy(dep, pi, 1) for pi in kpairs]
+                return float(np.mean(cpu_verdict_d_seg_batch(seg_cpu, f1s, lstars_k)))
+
+            base = _render_dseg(deploy["code"])
+            dims = list(range(int(args.mod_dim)))
+            deltas = per_dim_dseg_ablation(deploy["code"], dims, _render_dseg, baseline_dseg=base)
+            util = [float(x) for x in per_dim_film_consumption(_mdd_film_weights(deploy), int(args.mod_dim))]
+            row = mod_dim_ablation_row(deltas, dims, util, epoch=int(ep), seg_form=seg_form,
+                                       k_sample=len(kpairs))
+            row["baseline_d_seg"] = round(float(base), 6)
+            print(json.dumps(row), flush=True)
+        except Exception as exc:  # NO-FAKE: surface the failure, never fabricate a Δ; run continues.
+            print(json.dumps({"stage": "mod_dim_ablation", "epoch": int(ep), "seg_form": seg_form,
+                              "error": f"{type(exc).__name__}: {exc}",
+                              "axis": "[macOS-numpy advisory] NON-PROMOTABLE"}), flush=True)
+
     # ---- ASYNC verdict (FEED-em; ADDITIVE, DEFAULT-OFF via --async-verdict). The realized
     # CPU-torch verdict (render fp32 numpy + SegNet/PoseNet) is PURELY OBSERVATIONAL — the
     # training loop NEVER reads its result — so running it in a BACKGROUND THREAD off a
@@ -5431,7 +5533,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     def _emit_verdict_row(v: dict[str, float], ema_np: dict[str, np.ndarray], ep: int,
                           seg_form: str, ep_loss: float, *, async_tag: bool,
-                          liveness: "dict[str, Any] | None" = None) -> None:
+                          liveness: "dict[str, Any] | None" = None,
+                          tau: "float | None" = None) -> None:
+        # (mod-dim dynamics 2026-07-08) ``tau`` = the SNAPSHOT softmax-temp for octave alignment of the
+        # companion mod_dim_dynamics row; None (non-async callers) falls back to the live model.softmax_temp.
         # (#302) split per-class counts OUT of ``v`` before it flows to the float-only verdict row /
         # history / closed-loop capture (those consume d_seg/d_pose scalars only), then emit the
         # separate handoff_readiness row. ``v`` has no "nucleus_counts" unless the feature is ON.
@@ -5514,6 +5619,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _wire_sense["annulus_series"].append((int(ep), _af))
                     except (TypeError, ValueError, KeyError):
                         pass
+            # (MOD-DIM DYNAMICS 2026-07-08) companion mod_dim_dynamics row under the SAME lock. DEFAULT ON
+            # (score-neutral observability); read-only latent-table SVD + per-dim util/consumption/xi/CCA.
+            # None (feature off / fail-open) => nothing printed => byte-identical. tau = the snapshot's
+            # softmax-temp (octave alignment); falls back to the live model.softmax_temp for sync callers.
+            _mdd = _mdd_verdict_row(ema_np, ep, seg_form,
+                                    tau if tau is not None else float(model.softmax_temp),
+                                    blob.get("code_int8_brotli_bytes", 0))
+            if _mdd is not None:
+                print(json.dumps(_mdd), flush=True)
             # (S1-R1) blob_bytes carried into history so the TAIL rate-aware stop reads the coded-bytes
             # delta per cycle (additive key; d_seg/d_pose/implied_S unchanged; result.json gains an
             # auditable byte trace). Non-tail runs simply ignore it.
@@ -5606,7 +5720,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             try:
                 v = _verdict_from_snapshot(snap)
                 _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True,
-                                  liveness=_lv_snap)
+                                  liveness=_lv_snap, tau=float(snap.get("softmax_temp")))
                 # HARDENING: preserve the best EMA shadow from the SAME snapshot the verdict scored
                 # (snap["ema_np"] is the point-in-time Stiefel-projected shadow; cfg from the snap).
                 _maybe_preserve_best(v["d_seg"], ep, snap["ema_np"],
@@ -6115,6 +6229,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # absent). Pre-loop, single-threaded => no lock needed.
     if _annulus_v0 is not None:
         print(json.dumps(_annulus_convergence_row(_annulus_v0, start_epoch - 1, "baseline_v0")), flush=True)
+    # (MOD-DIM DYNAMICS 2026-07-08) pre-loop baseline mod_dim_dynamics row (the random-init/resume
+    # latent geometry — the reference the anneal moves off). DEFAULT ON; fail-open => byte-identical.
+    _mdd_v0 = _mdd_verdict_row({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()},
+                               start_epoch - 1, "baseline_v0", float(model.softmax_temp),
+                               blob.get("code_int8_brotli_bytes", 0))
+    if _mdd_v0 is not None:
+        print(json.dumps(_mdd_v0), flush=True)
     history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0,
                     "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace for TAIL stop
 
@@ -7818,6 +7939,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # (SENSE) companion annulus_convergence row (opt-in; byte-identical when absent).
                     if _annulus_sync is not None:
                         print(json.dumps(_annulus_convergence_row(_annulus_sync, ep, seg_form)), flush=True)
+                    # (MOD-DIM DYNAMICS 2026-07-08) companion mod_dim_dynamics row on the SYNC path (the
+                    # default). DEFAULT ON (score-neutral); None (off / fail-open) => nothing printed =>
+                    # byte-identical. tau = the live softmax_temp (sync = current model state).
+                    _mdd_sync = _mdd_verdict_row(
+                        {k: np.asarray(vv, np.float32) for k, vv in ema.shadow.items()},
+                        ep, seg_form, float(model.softmax_temp), blob.get("code_int8_brotli_bytes", 0))
+                    if _mdd_sync is not None:
+                        print(json.dumps(_mdd_sync), flush=True)
                     if _frozen_ep or (float(ep_loss) == 0.0 and int(_live["ep_tot"]) > 0):
                         _emit_confound_alarm("frozen_epoch", ep=ep, ep_loss=round(float(ep_loss), 6),
                                              accepted_batches=int(_live["acc"]),
@@ -7949,6 +8078,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             elif do_periodic:
                 w = _do_checkpoint(ep)
                 print(json.dumps({"stage": "checkpoint", "kind": "intra_stage", **w}), flush=True)
+            # (MOD-DIM DYNAMICS 2026-07-08, cut 3) per-dim d_seg zero-ablation attribution at CHECKPOINT
+            # cadence (heavier => governor-gated + skip-logged inside the helper). AFTER the checkpoint
+            # write so I/O completes first; OBSERVABILITY-ONLY (renders on a COPY of the code, never read
+            # into training) => byte-identical. No-op unless a checkpoint was written this epoch.
+            if is_transition or do_periodic:
+                _mdd_ablation_checkpoint(ep, seg_form)
             # ── #252 per-epoch timing emit (advisory; at eval cadence so no per-epoch spam). The
             # split is fwd+bwd-step (INR+R+scorer+loss+backward+opt+ema, fused inside value_and_grad)
             # vs verdict vs overhead (gates/reorient/permutation/LR). R is NOT separable inside the
@@ -8457,6 +8592,26 @@ def main(argv: list[str] | None = None) -> int:
                     "(wrapped in try/except => can never crash/corrupt the verdict). OBSERVABILITY-ONLY "
                     "(never read into training/parity/resume). PARTIAL: no witness-logit margin/gibbs -- see "
                     "tools/witness_annulus_convergence.py for the full offline series.")
+    ap.add_argument("--mod-dim-dynamics", action=argparse.BooleanOptionalAction, default=True,
+                    help="(MOD-DIM DYNAMICS, DEFAULT ON — score-neutral read-only observability per CLAUDE.md "
+                    "\"'Off' is a tracked queue\") emit a companion {stage:mod_dim_dynamics} row per verdict: the "
+                    "SVD spectrum of the per-pair latent (code) table (effective rank / k90 / k99 / spectral "
+                    "entropy / top energies), per-dim variance + FiLM CONSUMPTION (which dims the net READS) + "
+                    "per-dim xi-r2 (twist-redundant deletable dims) + latent<->xi CCA, and the k90 truncate-bytes "
+                    "estimate (the free-rate lever, deferral D18). Reads snapshots only (int8-dequant deploy code "
+                    "+ gt.gt_poses); no update-path / RNG touch => BYTE-IDENTICAL. --no-mod-dim-dynamics for a pure "
+                    "byte-identity A/B. Answers 'how is the mod dim working under the hood + exploitation' (autopsy: "
+                    "trained mod-32 eff-rank ~17.8, k90 ~20 ~= Whitney 2*8+1) CONTINUOUSLY. Fail-open.")
+    ap.add_argument("--mod-dim-ablation", action=argparse.BooleanOptionalAction, default=True,
+                    help="(MOD-DIM DYNAMICS cut 3, DEFAULT ON but GOVERNOR-GATED + skip-logged) emit a "
+                    "{stage:mod_dim_ablation} row at CHECKPOINT cadence: per-dim d_seg zero-ablation attribution "
+                    "(the direct 'which dims carry score' vector) + the per-dim export bit-allocation hint "
+                    "(util*|delta d_seg| = #157 waterfill at mod-dim granularity -> #336). Heavy (mod_dim x K "
+                    "renders/scorer), so it runs ONLY under normal macOS memory pressure (skips + logs a reason "
+                    "otherwise; never adds load beside the live run). Renders on a COPY of the code => byte-identical.")
+    ap.add_argument("--mod-dim-ablation-k", type=int, default=32,
+                    help="(MOD-DIM DYNAMICS cut 3) K-pair sample size for the per-dim d_seg zero-ablation probe "
+                    "(default 32; clamped to the verdict pair count). Read-only.")
     ap.add_argument("--annulus-band", type=float, default=2.0,
                     help="(SENSE) fixed-threshold annulus = {px: |GT margin| < band} (SegNet-logit units). "
                     "Used only when --annulus-telemetry is set.")
