@@ -199,6 +199,73 @@ def test_lane_band_gate_fires_on_nucleus_event():
     assert s.just_fired and s.fired_by == "event"
 
 
+# ── (B3 confound-F4) sensor-data-epoch attribution ──────────────────────────────────────────────
+def test_event_fire_telemetry_records_sensor_data_epoch_and_lag():
+    """The FIRE telemetry names the SENSOR-DATA epoch (whose stats decided the fire) alongside the
+    fire epoch, so post-hoc attribution sees the verdict-cadence lag."""
+    g = _muon_on(726)
+    # fire at ep 425 but the sensor read the verdict landed at ep 400 (25-epoch cadence lag).
+    s = g.update(425, event_fired=True, sensor_data_epoch=400, sensor_async_pending=True)
+    assert s.just_fired and s.telemetry["stage"] == "start_event_fired"
+    assert s.telemetry["epoch"] == 425 and s.telemetry["sensor_data_epoch"] == 400
+    assert s.telemetry["sensor_lag_epochs"] == 25
+    assert s.telemetry["sensor_async_pending"] is True
+    json.dumps(s.telemetry)
+
+
+def test_cap_backstop_telemetry_records_sensor_data_epoch():
+    """The backstop-cap fire row ALSO carries the sensor-data epoch (attribution symmetry)."""
+    g = _muon_on(500)
+    g.update(400, event_fired=False, sensor_data_epoch=375)  # not yet fired
+    s = g.update(500, event_fired=False, sensor_data_epoch=475)
+    assert s.just_fired and s.fired_by == "cap"
+    assert s.telemetry["stage"] == "cap_fired_before_event"
+    assert s.telemetry["sensor_data_epoch"] == 475 and s.telemetry["sensor_lag_epochs"] == 25
+
+
+def test_sensor_data_epoch_defaults_none_legacy_caller_unchanged():
+    """A caller that does NOT pass sensor_data_epoch keeps the prior telemetry (new fields null),
+    and the persisted key set stays the legacy two keys (byte-identity for the unfired/no-sde case)."""
+    from tac.witness_control.event_wirings import muon_gate_state_arrays
+    g = _muon_on(726)
+    s = g.update(400, event_fired=True)  # no sensor_data_epoch
+    assert s.telemetry["sensor_data_epoch"] is None and s.telemetry["sensor_lag_epochs"] is None
+    # fired-but-no-sde => the persisted set is still the legacy 2 keys (no sensor_data_epoch key).
+    assert set(muon_gate_state_arrays(g)) == {"__mg_fired_epoch", "__mg_fired_by"}
+
+
+def test_sensor_data_epoch_persists_and_restores_when_known():
+    """A fire WITH a known sensor_data_epoch persists a 3rd additive key that round-trips on resume;
+    a pre-fix sidecar (missing the key) restores with sensor_data_epoch=None (legacy-compatible)."""
+    from tac.witness_control.event_wirings import (
+        muon_gate_restore_from_cfg,
+        muon_gate_state_arrays,
+    )
+    g = _muon_on(726)
+    g.update(650, event_fired=True, sensor_data_epoch=625)
+    arrays = muon_gate_state_arrays(g)
+    assert arrays["__mg_sensor_data_epoch"].item() == 625
+    cfg = {k: (v.item() if v.size == 1 else v.tolist()) for k, v in arrays.items()}
+    g2 = _muon_on(726)
+    assert muon_gate_restore_from_cfg(g2, cfg) is True
+    assert g2._sensor_data_epoch == 625
+    # legacy sidecar without the new key: restores fired state, sensor_data_epoch stays None.
+    g3 = _muon_on(726)
+    assert muon_gate_restore_from_cfg(g3, {"__mg_fired_epoch": 650, "__mg_fired_by": "event"}) is True
+    assert g3._sensor_data_epoch is None
+
+
+def test_lane_would_fire_row_carries_sensor_data_epoch():
+    """The would-fire row (emitted synchronously with the sensor read) records its sensor_data_epoch;
+    it defaults to the row epoch and can be set explicitly (schema symmetry with the FIRE rows)."""
+    ev = lane_nucleus_event(0.005, 0.3, within_flip_thresh=0.5)
+    row = lane_would_fire_row(410, ev, event_mode=True)
+    assert row["sensor_data_epoch"] == 410  # defaults to the row epoch
+    row2 = lane_would_fire_row(410, ev, event_mode=True, sensor_data_epoch=400)
+    assert row2["sensor_data_epoch"] == 400
+    json.dumps(row2)
+
+
 # ══════════════════════════════════════════════════════════════════════════════════════════════
 # (D) seg-chroma <- annulus_frac plateau detector.
 # ══════════════════════════════════════════════════════════════════════════════════════════════

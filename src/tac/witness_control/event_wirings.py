@@ -125,6 +125,12 @@ class EventBackstopGate:
     cap: "int | None"            # backstop cap epoch (None / <=0 => cap disabled)
     _fired_epoch: "int | None" = field(default=None, repr=False)
     _fired_by: "str | None" = field(default=None, repr=False)
+    # (confound F4 fix) the SENSOR-DATA epoch — the verdict/telemetry epoch whose stats the sensor read
+    # when it fired. The fire epoch (``_fired_epoch``) can be up to a full verdict cadence AHEAD of the
+    # data that decided the fire (the sensor reads the FAST in-loop verdict history, updated every
+    # ``eval_every`` epochs); recording both lets post-hoc attribution see the sensor lag. ``None`` when
+    # unknown (caller did not supply it) or never fired.
+    _sensor_data_epoch: "int | None" = field(default=None, repr=False)
 
     @property
     def event_mode(self) -> bool:
@@ -141,15 +147,27 @@ class EventBackstopGate:
     def _cap_hit(self, ep: int) -> bool:
         return self.cap is not None and int(self.cap) > 0 and int(ep) >= int(self.cap)
 
-    def update(self, ep: int, *, event_fired: bool = False) -> GateStep:
+    def update(self, ep: int, *, event_fired: bool = False,
+               sensor_data_epoch: "int | None" = None,
+               sensor_async_pending: bool = False) -> GateStep:
         """Advance the gate to epoch ``ep``; return the :class:`GateStep`.
 
         ``event_fired`` is ignored in event-mode-OFF (the caller need not compute a sensor when the
         wiring is absent). The OFF branch is byte-identical: ``start_reached == (ep >= cap)`` with NO
-        telemetry."""
+        telemetry.
+
+        (confound F4) ``sensor_data_epoch`` is the verdict/telemetry epoch whose stats the sensor read
+        to decide ``event_fired`` (up to a full ``eval_every`` cadence behind ``ep``); ``sensor_async_pending``
+        flags that a later verdict was still in flight at the read. Both are STAMPED into the fire
+        telemetry (and persisted) so per-epoch attribution names the epoch whose STATE caused the fire,
+        not merely the epoch the gate latched. Both are additive + default to ``None``/``False`` => a
+        caller that does not pass them keeps the exact prior telemetry keys plus null-valued fields
+        (legacy tests assert specific keys, not exact-dict equality)."""
         ep = int(ep)
         if self._fired_epoch is not None:
             return GateStep(True, False, self._fired_by, None)
+
+        _sde = None if sensor_data_epoch is None else int(sensor_data_epoch)
 
         if not self.event_mode:
             # ── EVENT MODE OFF: the incumbent fixed-cap comparison, verbatim, no telemetry.
@@ -161,15 +179,21 @@ class EventBackstopGate:
         # ── EVENT MODE ON.
         if event_fired:
             self._fired_epoch, self._fired_by = ep, "event"
+            self._sensor_data_epoch = _sde
             return GateStep(True, True, "event", {
                 "stage": "start_event_fired", "transition": self.name,
                 "start_event_flag": self.start_event_flag, "sensor": self.sensor,
                 "epoch": ep, "fired_by": "event", "cap": self.cap,
+                "sensor_data_epoch": _sde, "sensor_async_pending": bool(sensor_async_pending),
+                "sensor_lag_epochs": (None if _sde is None else int(ep) - int(_sde)),
                 "note": ("wired sensor fired the transition (the cap "
-                         f"{self.start_epoch_flag} {self.cap} was the backstop, not reached)"),
+                         f"{self.start_epoch_flag} {self.cap} was the backstop, not reached); "
+                         "sensor_data_epoch is the verdict epoch whose stats decided the fire "
+                         "(<= this epoch by up to one verdict cadence)"),
             })
         if self._cap_hit(ep):
             self._fired_epoch, self._fired_by = ep, "cap"
+            self._sensor_data_epoch = _sde
             # LOUD: a firing backstop cap means the wired sensor never triggered by the cap epoch —
             # falsification-relevant (S5). The next run must SEE this, not silently accept the cap.
             return GateStep(True, True, "cap", {
@@ -177,6 +201,8 @@ class EventBackstopGate:
                 "start_event_flag": self.start_event_flag, "sensor": self.sensor,
                 "start_epoch_flag": self.start_epoch_flag, "epoch": ep, "cap": self.cap,
                 "fired_by": "cap",
+                "sensor_data_epoch": _sde, "sensor_async_pending": bool(sensor_async_pending),
+                "sensor_lag_epochs": (None if _sde is None else int(ep) - int(_sde)),
                 "note": ("FAIL-SAFE BACKSTOP FIRED: the wired sensor "
                          f"{self.sensor!r} did NOT trigger the {self.name} transition by the cap "
                          f"epoch {self.cap}; the transition fired on the fixed-epoch backstop. A "
@@ -197,11 +223,18 @@ class EventBackstopGate:
         if not self.event_mode:
             return {}
         import numpy as np
-        return {
+        out = {
             prefix + "fired_epoch": np.asarray(
                 -1 if self._fired_epoch is None else int(self._fired_epoch)),
             prefix + "fired_by": np.asarray("" if self._fired_by is None else str(self._fired_by)),
         }
+        # (confound F4) persist the SENSOR-DATA epoch ONLY when it is known (gate fired on an event with
+        # a supplied sensor_data_epoch). Additive + conditional => an UNFIRED / no-sde gate keeps the
+        # exact legacy two-key set (byte-identical sidecar; the strict key-set regression stays green),
+        # while a fired-on-event gate carries the attribution epoch across a crash-resume.
+        if self._fired_epoch is not None and self._sensor_data_epoch is not None:
+            out[prefix + "sensor_data_epoch"] = np.asarray(int(self._sensor_data_epoch))
+        return out
 
     def restore_from_cfg(self, prefix: str, cfg: dict) -> bool:
         """Restore this gate's FIRED state from a parsed resume sidecar cfg (inverse of
@@ -217,6 +250,13 @@ class EventBackstopGate:
         self._fired_epoch = _fe
         _fb = cfg.get(prefix + "fired_by", "")
         self._fired_by = str(_fb) if _fb else "event"
+        # (confound F4) restore the sensor-data epoch when present; a pre-fix sidecar omits the key =>
+        # None (attribution unknown, non-fatal). Legacy-compatible: absence never changes the restore.
+        if (prefix + "sensor_data_epoch") in cfg:
+            try:
+                self._sensor_data_epoch = int(cfg.get(prefix + "sensor_data_epoch"))
+            except (TypeError, ValueError):
+                self._sensor_data_epoch = None
         return True
 
 
@@ -325,13 +365,20 @@ def lane_nucleus_event(part_frac: float, within_flip: float, *,
     }
 
 
-def lane_would_fire_row(ep: int, ev: dict, *, event_mode: bool) -> dict:
+def lane_would_fire_row(ep: int, ev: dict, *, event_mode: bool,
+                        sensor_data_epoch: "int | None" = None) -> dict:
     """The S3 ``would_fire`` telemetry row for the lane-nucleus sensor — emittable EVERY verdict
     epoch regardless of whether the lane-band event mode is ON, so calibration data (the dash-birth
     timing — the HIGHEST-value OWED wiring per S3) accrues even under cap operation. Pure telemetry
-    (never read back into training); wraps a :func:`lane_nucleus_event` dict."""
+    (never read back into training); wraps a :func:`lane_nucleus_event` dict.
+
+    (confound F4) ``sensor_data_epoch`` is the verdict epoch whose stats produced ``ev`` — for a
+    would-fire row that is emitted SYNCHRONOUSLY with the sensor read it equals ``ep`` (defaulted so),
+    but recording it explicitly makes the would-fire and the FIRE rows share one attribution schema."""
+    _sde = int(ep) if sensor_data_epoch is None else int(sensor_data_epoch)
     return {
         "stage": "lane_band_would_fire", "epoch": int(ep),
+        "sensor_data_epoch": _sde,
         "event_mode": bool(event_mode),
         "would_fire": bool(ev.get("fired", False)),
         "born": bool(ev.get("born", False)), "formed": bool(ev.get("formed", False)),
