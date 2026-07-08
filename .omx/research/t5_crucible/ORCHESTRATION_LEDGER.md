@@ -120,6 +120,23 @@ D. **POWERPLAY campaign-meta (operator-directed).** The costate DECIDE layer + t
    NEW UNSOLVED one whose solution provably extends the stack (a measured ΔS, a lever verdict, or
    a capability the prior stack lacked). Deliverable 6's probe ordering is PowerPlay-ordered
    (cheapest-decisive first) and the duty-to-measure queue ranking is PowerPlay-consistent.
+K. **NATIVE FORMAT + ADEQUATE CAPACITY PER TECHNIQUE (operator 2026-07-07: "Give all
+   techniques the format and capacity they need").** Every technique runs in ITS OWN
+   mathematical format, matched to its object, with capacity at ITS OWN optimum — never a
+   borrowed format or a pooled hand-me-down budget. The measured anchors of this law: the dash
+   wanted a COMB (modulation carrier), not more linear along-frequency (FEED-08l — wrong format
+   loses at any capacity); pose wanted a 6-dim SCREW ξ, not pixels; the lane wanted a POLYNOMIAL
+   band; the hood wanted a CLAMP; the cartoon bulk wants CURVELETS; bc20 died of capacity
+   starvation in the right paradigm. Audit lens (binding on every review round): per technique
+   in the stack — (1) FORMAT: is its representation the native chart for its object, or is it
+   squeezed through another technique's format? (2) CAPACITY: is its budget (params/harmonics/
+   coeffs/epochs/bytes) at its OWN derived or measured optimum, or starved by sharing? (a comb
+   with too few harmonics, a band with too few coeffs per lane, a FiLM head too narrow for its
+   conditioning, an island class under its critical nucleus — each = a K-finding); (3) the same
+   for APPARATUS formats: per-technique telemetry rows, checkpoint persistence (self-orient!),
+   DSL factory, and verdict surface — a technique whose state can't be saved/measured/expressed
+   is format-starved even if its math is right. UNIQUE-AND-COMPLETE-PER-METHOD applied at the
+   technique grain; the fractal discipline's representation half.
 J. **PRECISION + MARGIN-DENOMINATED SIGNIFICANCE (operator 2026-07-07: "very small numbers are
    relatively significant; even the thousandth, ten-thousandth, hundred-thousandth place
    matters").** The crossing margin is 0.00178 S. The exchange rates: 1 byte = λ_bytes =
