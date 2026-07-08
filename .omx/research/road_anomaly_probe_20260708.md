@@ -19,6 +19,8 @@ converge (Lane1 0.039, Undriv2 0.074, Movable3 0.0069, MyCar4 0.0028).
 
 ## VERDICT: H1-mechanism FALSIFIED · H1-SPIRIT CONFIRMED by a DIFFERENT actuator · H2/H3 secondary/no
 
+verdict_scope: formulation — the FALSIFIED verdict applies only to the H1 mechanism as formulated (the analytic lane_render_band as the Road-flip actuator, on THIS run's config where the band is gated to ep350 and init painted 0 lane px); the over-paint mechanism family is CONFIRMED via the birth-stack actuator, and the band itself is unjudged as a lever (it has not yet activated).
+
 The operator's INTUITION (lane over-paint eats GT-Road → Road flips → Road pinned) is **CORRECT**.
 The named MECHANISM (H1: the analytic `lane_render_band` compositing PRE-R) is **the wrong actuator** —
 it is gated OFF until ep350. The real over-painter is the **rare-class-birth loss stack**
