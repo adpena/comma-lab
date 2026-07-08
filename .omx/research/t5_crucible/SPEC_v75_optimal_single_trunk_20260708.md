@@ -152,3 +152,24 @@ Every unit of work ends with: (1) pointer-delta honesty (0.19110 moved or not �
 (2) the triality legs it touched (DSL / DAG FEED / equations), (3) a durable committed artifact.
 A chat-only insight is a lost insight. When a wall appears, one crisp verdict then pivot — never
 a second unit characterizing the wall. When in doubt: smaller and real beats larger and fake.
+
+## 9. LEVER SCOPE — BUILT vs ACTIVATED (operator scope question 2026-07-08; binding)
+
+Two distinct states, never conflated:
+- **BUILT / registered / triality / tasks / costate-surfaced — ALL new levers, always.** Every
+  lever is a DSL `Lever` factory ⇒ `lever_registry.completeness()` auto-derives it; the activation
+  ledger holds it with duty-to-measure `{default, derived-reason, ever_fired, last_measured_verdict,
+  state}` ⇒ the #247 costate SENSE layer ranks never-fired high-value levers into DECIDE + the
+  Stop-hook nags. Applies to the counter-force levers AND the P0 forces. VERIFIED (not assumed) by
+  task #363 (gated on #361 — the query imports the mid-edit DSL).
+- **ACTIVATED (composed ON) in the FIRST v7.5 launch — counter-force ONLY.** Chan-Vese area
+  constraint + birth-completion event + ramp compose ON (the launch-critical Road-floor fix;
+  dsl_levers 5→7). The 3 P0 forces (temporal screw-consistency · margin-band satisficing ·
+  tie-locus displacement) default OFF and activate ONE PER CRUCIBLE INCREMENT with measured A/B
+  justification — mandated by their own derivation (≤15% loss-share each / ≤40% total; satisficing
+  sequenced ≥ l7; attribution requires isolation). Turning all three on by default is a SPEC
+  VIOLATION (confounds attribution + risks term_domination), not a completeness win.
+- **Why default-off is NOT orphaning:** the tracked-ranked-nagged queue (costate + activation
+  ledger + Stop-hook) is the anti-orphan mechanism, per CLAUDE.md "default-off is orphaned signal"
+  — "off" is a queue state the controller drains, never a grave. The failure mode to guard is
+  "built but never registered in the ledger" — that is exactly what #363 verifies to zero.
