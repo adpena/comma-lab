@@ -10336,3 +10336,20 @@ what the oracle says is EVERYTHING. Pointer 0.19110 UNMOVED (means).
 6. **APPARATUS ×5 + OPPORTUNITY COST**: five carriers/schedules + compositor + paint solver,
    each seal-reviewed; v8 gated on v7.5 results (if the v7 line reaches target, the rebuild
    never fires). Common thread: all major risks live at the SEAMS of the decomposition.
+
+## FEED-mergediff (2026-07-08) — operator: reconciliation = MERGE→DIFF→CORRECT vs the scorer, channel-routed per upstream modules.py
+Operator verbatim: *"there will have to be a merge and diff and corrections according to
+scorer; remember roles of luma and chroma in upstream modules.py."* The v8 reconciliation loop
+SHARPENED: (1) MERGE = tropical argmax composite → paint; (2) DIFF = frozen SegNet argmax on
+R(composite) vs intended partition (frame1 ONLY — SegNet reads x[:,-1] so frame0 is
+SegNet-FREE); (3) CORRECT channel-routed by the modules.py asymmetry: SegNet = full-RGB
+last-frame (chroma fully argmax-visible) vs PoseNet = YUV6×2 (4 luma + 2 SUBSAMPLED chroma →
+pose is luma-dominated) ⇒ the correction Jacobian is near-TRIANGULAR in (luma, chroma):
+CHROMA-FIRST seg repairs (SegNet-strong, PoseNet-quiet; measured basis = #276 chroma-DOF +
+the chroma-lever doctrine), LUMA reserved for pose/warp coherence (frame0 = pure pose
+territory); (4) iterate to fixed point; unpaintable residual = the counted sidecar (the #226
+margin_conditional_residual flip-repair finds its consumer). FORMALLY: Dykstra alternating
+projections onto (argmax-cell ∩ pose-tube) in channel-split coordinates — #73's feasibility
+solve reborn as the v8 reconciler; the split keeps the two projections from fighting. Binds
+increment-1's paint stage + de-risks v8-risk-5 (pose seams: seams live in chroma where
+PoseNet barely looks; luma seams are the ones to guard). Pointer 0.19110 UNMOVED (means).
