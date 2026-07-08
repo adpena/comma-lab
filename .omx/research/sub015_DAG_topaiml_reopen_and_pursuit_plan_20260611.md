@@ -10160,3 +10160,22 @@ verdict_scope: build — apparatus, no exact-eval; pointer means/apparatus.
   (τ_end · ν laws · β_hosc · adaptive-ε clamps · s_fit) → LawRefs (~9 evaluators+LawRefs, ~350-450 LOC);
   launcher hookup = one line (write manifest beside launch.sh). Memo:
   .omx/research/lawref_constant_compiler_351_20260708.md. pointer 0.19110 UNMOVED (apparatus/means).
+
+--- FEED-schedprov (2026-07-09): SCHEDULE-PROVENANCE ENFORCEMENT — no-hardcoded-epoch gate + hook ---
+- Operator (verbatim fury, 3rd recurrence): "Fuck pr95... Never do it again. Add a gate and hook...
+  move from hardcoded epochs to event based and deep math governed and costate controller." BUILT
+  (not prose) at the only surface that matters (emission):
+  (1) LAUNCHER STRICT gate tools/schedule_provenance_gate.py — data-driven registry (--*-start-epoch
+      from the trainer argparse) × value-aware (positive epoch only) × 3 legal classes {EVENT (named
+      co-emitted sensor DECLARED in schedule_governance — co-emission alone does NOT launder) · DERIVED
+      (LawRef in constants_manifest, #351) · FAIL_SAFE_CAP (TAGGED, req-B)}; anything else = NAKED →
+      REFUSE (rc=6). Wired b0.5 in launch_witness_run.py; ADVISORY on --dry-run/--skip-…-gate, ENFORCING
+      on real launch; fail-open on infra error; live run-1 (frozen launch.sh) untouched.
+  (2) drift-detector leg (Stop hook) — flags AUTHORING a naked *_start_epoch add / PR95-named stage
+      sequence in witness_autoconfig/witness_dsl/launch-config commits w/o a co-added event/derived/cap
+      cite; fail-open; same-line waiver # SCHEDULE_PROVENANCE_OK:<rationale>.
+- INCUMBENT crucible_v6 = 5 NAKED triggers (= the RESTART's to-fix spec, pinned as a regression fixture):
+  --tau-softplus-start-epoch 300 (CE→tau, operator's example) · --l7-start-epoch 3000 · --muon-start-epoch
+  726 (a fail-safe cap → tag it) · --lane-band-start-epoch 350 · --seg-chroma-boundary-start-epoch 300.
+- 29 tests green; ruff F clean; 95 existing launcher+drift tests green. Memo:
+  .omx/research/schedule_provenance_gate_20260709.md. pointer 0.19110 UNMOVED (apparatus/means).
