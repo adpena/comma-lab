@@ -309,3 +309,13 @@ E. **RATE-LEVER COMPLETENESS (operator-directed).** Every class of the rate arse
   HOOK-ACTIVE-AND-FIRED. **P3 RED-TEAM LAUNCHED** (provenance audit + design attack, per charter).
   In flight: P3 red-team + pursuit-chain-A + integration tranche 1. Next per queue: #346 build on
   next free slot.
+- 2026-07-07T~19:4x OPERATOR CRITIQUE of the P2 draft ("lazy and naive design not grounded in
+  deep math") — adjudicated honestly by main-loop audit: laws ARE derived (1-Lipschitz easing,
+  CFL adaptive-ε, Dykstra-capped bands, per-class birth laws) BUT the charge LANDS at the
+  architecture level: (1) stack is VERDICT-COMPOSED not variationally derived; (2) central fails
+  T_1 with NO binding-constraint/ceiling derivation — "run-2 headroom" (comb, AACoverage) is an
+  ADMISSION of unexploited run-1 headroom deferred by schedule not math; (3) #149 subpixel
+  closed-form ~absent. → P3 red-team gains MANDATORY PASS 3: DEEP-MATH GROUNDING AUDIT
+  (DERIVED vs VERDICT-COMPOSED per choice) + DERIVE-THE-CEILING-OR-DESIGN-HARDER per S-term +
+  adjudicate comb/AACoverage/#149 run-1-vs-run-2 with math not convenience. If ceiling
+  underivable ∧ headroom real → REVISE-THEN-RECESS with levers moved to run-1.
