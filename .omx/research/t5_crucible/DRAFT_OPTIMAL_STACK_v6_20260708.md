@@ -23,6 +23,10 @@ axis: all numbers [macOS-CPU/MLX advisory] unless tagged; archive bytes exact (z
   Pointer contest-CPU 0.19110 UNMOVED — this whole file is MEANS.
 review_status: pre-registered-only (v6.3; seal-round-1-on-v6.2 returned 0 BLOCKER + 3 MAJOR + 3 MINOR, counter stays 0/3 — this v6.3 revision folds all six; the next seal round re-runs the launcher dry-run against --config crucible_v6 and re-runs the schedule-sibling sweep table against the new tokens)
 verdict_scope_discipline: every negative below carries its req-R scope tag
+v6.5_errata (post-seal editorial, attested no-number-change): §0.2's pose 3e-5 is the
+  BORROWED-ANCESTOR anchor (witness d_pose = OPEN per L68/L69) — it is the un-named FOURTH
+  crossing condition; the store-nothing mover is pinned + run-1-active and run-1's F-rows
+  MEASURE witness d_pose (seal round-3 LENS-B nit, closed here).
 v6.1_errata: seal-r1 MINOR-1 (census vehicle named + 0.2180 alternative floor) + MINOR-2 (width label 0.4989) applied — no decision, consumer-read number, or build item changed
 v6.2_fold: seal-round-2 verdict (1 BLOCKER + 2 MAJOR + 3 MINOR) + the P-TAU2/P-DITHER gate resolutions folded — SUBSTANTIVE (build items + consumer-read claims change); see §14 "v6.2 changelog". The BLOCKER fix is CODE (src/tac/witness_autoconfig.py derive_crucible_v6_config + tools/launch_witness_run.py --config crucible_v6), PROVEN by re-running the round-2 dry-run at n600/3000ep against the new config (launch.sh tokens verified; test-guarded in src/tac/tests/test_witness_autoconfig.py::test_crucible_v6_schedule_matches_design_doc)
 verdict_scope: formulation — the negatives THIS draft asserts are all formulation-scoped at their
