@@ -44,6 +44,10 @@ _EXPECTED_ADDED = frozenset({
     # the DSL WitnessProgram's VerdictCadence defaults (v6 emits via its dataclass, which lacks them;
     # v7 IS the DSL-emitted argv, which carries them) — a v6-vs-v7 EMITTER delta, not a semantic knob.
     "--verdict-device", "--verdict-anchor-every",
+    # (S6-R4 self-paced τ-advance, operator 2026-07-08) the LAST clock-hardcoding (the anneal-epochs τ
+    # denominator) converted to the EVENT-driven geometric octave ladder. Only the mode flag is emitted;
+    # the octave count / dwell caps DERIVE in the trainer (no bare literals in the config).
+    "--tau-advance-mode",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",

@@ -1912,6 +1912,24 @@ def _crucible_v7_schedule_governance() -> dict:
                 "(--seg-chroma-boundary-start-event): 450 = past a formed margin boundary; fires "
                 "ONLY if the annulus did not plateau by 450 (LOUD cap_fired_before_event, S5)."),
         }),
+        # ── S6-R4 self-paced τ-advance (operator 2026-07-08): the LAST clock-hardcoding (the anneal-
+        #    epochs denominator that clocks τ(t)) converted to an EVENT-driven geometric octave ladder.
+        "--tau-advance-mode": ScheduleGovernance(**{
+            "class": "event", "role": "fires", "sensor": "--tau-advance-mode",
+            "rationale": (
+                "τ-anneal advances on the per-band RELAXATION of the through-R seg loss WITHIN the "
+                "current octave (powerlaw_meat), NOT a fixed --anneal-epochs clock (S6-R4 element 5: "
+                "τ advances on per-scale relaxation, self-triggered, one param at a time). The octave "
+                "ladder reuses the geometric clock VALUES (τ_k=start·(end/start)^(k/N)); only the "
+                "per-rung DWELL is event-driven. --tau-octave-max-dwell is the fail-safe backstop."),
+        }),
+        "--tau-octave-max-dwell": ScheduleGovernance(**{
+            "class": "cap", "role": "backstops", "sensor": "--tau-advance-mode",
+            "rationale": (
+                "req-B fail-safe per-octave MAX-DWELL backstop for the per-band relaxation event "
+                "(--tau-advance-mode event): advance-anyway + LOUD cap_fired_before_event if the "
+                "within-octave descent never relaxes (DERIVED ceil(anneal/N)*slack, no bare literal)."),
+        }),
     }
 
 
@@ -1987,6 +2005,15 @@ def _build_crucible_v7(
     base["--muon-start-event"] = "powerlaw_meat"                   # muon <- tau-descent exhaustion (+REV-B)
     base["--lane-band-start-event"] = "lane_nucleus"              # lane-band <- lane critical nucleus
     base["--seg-chroma-boundary-start-event"] = "annulus_plateau"  # seg-chroma <- annulus_frac plateau
+    # (S6-R4 self-paced τ-advance, operator 2026-07-08) convert the LAST clock-hardcoding (the anneal-
+    # epochs denominator that clocks τ(t)) to the EVENT-driven geometric octave ladder. The octave count
+    # / dwell caps DERIVE in the trainer from --anneal-epochs + --curriculum-min-stage-epochs (no bare
+    # literals). NOTE — the self_paced_tau_advance_20260708 memo RECOMMENDS the council run the FIRST
+    # unified-L_τ run in CLOCK mode (isolate the unify-τ variable; one continuation parameter at a time),
+    # then flip to EVENT for run-2; flipping to 'clock' is a one-token change (byte-identical to the
+    # incumbent anneal). Emitting 'event' here honors the operator's explicit conversion directive; the
+    # council/seal makes the final launch-mode decision.
+    base["--tau-advance-mode"] = "event"                          # τ octave-ladder <- per-band relaxation
 
     # (3) the three composable v7 levers (DSL Lever factories -> TypedLever; the DSL stays the emitter).
     def _typed_lever(lev) -> "TypedLever":

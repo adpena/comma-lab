@@ -76,6 +76,11 @@ RECOGNISED_EVENT_SENSORS: frozenset[str] = frozenset({
     "--muon-start-event",             # muon entry <- powerlaw_meat exit (+ REV-B nucleation positive control)
     "--lane-band-start-event",        # lane-band start <- lane-class critical nucleus (born + formed)
     "--seg-chroma-boundary-start-event",  # seg-chroma start <- annulus_frac plateau (formed boundary)
+    # S6-R4 self-paced τ-advance (operator 2026-07-08): the τ-anneal advance clock. --tau-advance-mode
+    # event fires the τ octave-ladder advance on per-band relaxation (powerlaw_meat within the octave);
+    # its per-octave --tau-octave-max-dwell is the fail-safe backstop. An EVENT declaration names
+    # --tau-advance-mode; the max-dwell CAP declaration names it as the event it backs up.
+    "--tau-advance-mode",             # τ octave-ladder advance <- per-band relaxation (event vs epoch-clock)
 })
 
 # ── schedule-class labels (a token lands in exactly one).
