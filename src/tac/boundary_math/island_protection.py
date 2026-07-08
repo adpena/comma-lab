@@ -313,6 +313,8 @@ def eased_island_masks(
     movable_cls: int | None,
     *,
     dilate_px: int = 1,
+    lane_px: int | None = None,
+    movable_px: int | None = None,
     vanishing_point: tuple[float, float] | None = None,
 ) -> IslandMasks:
     """#323 LADDER per-class island homotopy — the manifold-aware drop-in alternative to
@@ -329,8 +331,12 @@ def eased_island_masks(
       leaves the manifold (measured NO-GO for transfer). openpilot-grounded, rule-118-clean.
 
     Same return type + fields as ``build_island_masks`` so both amplify/seed call sites can
-    switch on it behind a default-OFF flag (byte-identical when unfired). ``dilate_px`` is
-    reused as the growth radius (movable) / along-tangent width (lane)."""
+    switch on it behind a default-OFF flag (byte-identical when unfired). ``dilate_px`` is the
+    shared growth radius; the #323 FULL homotopy passes PER-CLASS radii ``lane_px`` / ``movable_px``
+    (each defaults to ``dilate_px`` when None ⇒ byte-identical to the single-radius call) so the
+    per-class-λ-gated schedule can grow lane + movable support independently (e.g. lane held while
+    movable is already released). A per-class radius of 0 returns that class's TRUE target (no
+    easing) — exactly the gate-closed state."""
     from tac.witness_curriculum.eased_targets import (
         oriented_width_eased as _owe,
         sdf_dilation_eased as _sde,
@@ -338,12 +344,14 @@ def eased_island_masks(
     a = np.asarray(lstar)
     if a.ndim != 2:
         raise ValueError(f"lstar must be (H,W), got {a.shape}")
+    _lane_r = int(dilate_px) if lane_px is None else int(lane_px)
+    _mov_r = int(dilate_px) if movable_px is None else int(movable_px)
     lane_m = None
     if lane_cls is not None:
-        lane_m = (_owe(a, lane_cls, int(dilate_px), vanishing_point=vanishing_point) == lane_cls)
+        lane_m = (_owe(a, lane_cls, _lane_r, vanishing_point=vanishing_point) == lane_cls)
     mov_m = None
     if movable_cls is not None:
-        mov_m = (_sde(a, movable_cls, int(dilate_px)) == movable_cls)
+        mov_m = (_sde(a, movable_cls, _mov_r) == movable_cls)
     any_m = np.zeros(a.shape, bool)
     if lane_m is not None:
         any_m |= lane_m
