@@ -83,8 +83,7 @@ annealing behavior"); its equilibrium IS the spec — no ramp schedule to tune.
 
 ## 5. WATCH-LIST (full facet set — operator holistic directive; LAUNCH_PACKAGE has the table)
 
-Per-class d_seg vs anchors (Road PRIMARY: flip>0.30 @ep200 ⇒ per-class decomposition BEFORE any
-basis-helps claim; run-1 baseline Road 0.392@ep150) · island birth (part_frac vs GT area — now
+Per-class d_seg vs anchors — **Road PRIMARY, now a SUCCESS TARGET not just an alarm** (counterforce_insufficiency_deepmath 87bb5adaa): the Chan-Vese area constraint should drive Road within_flip ~0.38→**≈0.018** (0.015 δ-residual + ~0.002 placement); DECISION RULE — if Road FLOORS at ~0.015–0.035 and STOPS, that is the PLACEMENT floor (area-theft solved) ⇒ the next lever is P0 Force-3 (tie-locus displacement), NOT more area constraint / not a basis-helps claim. If Road stays >0.30 @ep200 the area constraint itself under-fired (check λ/δ). run-1 baseline Road 0.392@ep150, NO counter-force) · island birth (part_frac vs GT area — now
 ALSO watch the Chan-Vese equilibrium: part_frac should approach ≈1.25×GT then hold; OVERSHOOT
 persisting ⇒ λ-scale wrong, the pre-registered response is the A/B anchor) · **POSE (the blocker:
 run-1 d_pose 1.80 ⇒ contribution ≈4.2 of S; need ~3e-5-scale for ~0.018; flag if no

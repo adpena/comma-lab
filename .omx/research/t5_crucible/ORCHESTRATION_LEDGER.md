@@ -2223,3 +2223,13 @@ consumer update required — asserted [consumers-generic]. ---
   5 #358 direct controllers (rng/closed_loop/tau_advance/evt_curriculum/polyak) that #358 wired as
   resumables but never STATICALLY asserted as a complete set. Resumability of ALL new stuff now
   BOTH runtime-manifest AND static-coverage protected. 26 tests green. Resumability P0 satisfied.
+- **COUNTER-FORCE INSUFFICIENCY LEDGER (87bb5adaa, deep-math, n600, 6-digit faithful)**: (a) δ-band
+  residual REAL ~3.8% (0.00456), returns 96.3%, closable by δ/λ A/B (98.6% at δ=0.10) — tuning
+  knob; (b) λ-scale SAFE huge margin (caps runaway ∀κ<51, actual κ~O(1); W_birth=1.0 MEASURED-
+  anchor); (c) STRUCTURAL — CF domain (area-theft) = 99.2% of the birth-arm Road floor (right fix)
+  BUT cannot place the separatrix; as δ→0 area→0, placement floor UNTOUCHED — orthogonal
+  reservoirs; placement = P0 Force-3 (tie-locus) domain, synergistic-by-design not a CF negative.
+  ACTIONABLE: SPEC §5 Road watch sharpened alarm→SUCCESS-TARGET — CF drives Road ~0.38→≈0.018;
+  DECISION RULE: floors at 0.015-0.035 & STOPS = placement floor ⇒ next lever = Force-3, NOT more
+  area constraint. Candidate eq area_theft_vs_placement_dseg_decomposition_v1 council-FLAGGED
+  (theft measured; CF-efficacy + placement floor owed to the v7.5 A/B).
