@@ -265,6 +265,28 @@ Q. **PROBES BECOME INSTRUMENTS — the toolbelt rule (operator 2026-07-08: "purs
   Draft §14.4 folds it; §14.3 item-3 risk row marked ◆ SUPERSEDED (append-only). Seal restarts on v6.4.
 - means != ends: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600 exact row moves it.
 
+--- ⭐ OPERATOR DECISIONS ×2 (2026-07-08 08:45, verbatim: "We want to transition to event
+based now and accept the risk, this is a new baseline, not clean but we are choosing to make
+a leap forward and accept the related uncertainty" + "Your rec regarding the basis is
+approved") + RUN-1 ep50 VERDICT ---
+- **MODE = EVENT for the v7 run.** Overrides the 3×-convergent clock recommendation with
+  EXPLICIT risk acceptance: the operator KNOWINGLY trades clean single-variable attribution
+  for the leap — v7 = a NEW BASELINE, not an A/B arm. RECORDED so no future reader mis-grades
+  the v7 trajectory as an isolated unify-L_τ measurement (verdict-scope discipline: v7 vs
+  run-1 differences are the COMPOSED stack, attribution via per-stage ckpts + would-fire
+  telemetry only). Consequences: --tau-advance-mode event stands as authored; confound
+  MAJOR-1 (event-muon fire-epoch persistence) is LAUNCH-GATING (fixer in flight); the mode
+  question is CLOSED.
+- **BASIS = APPROVED (R-1).** DirectionalBasisRebalance/freq-along raise goes IN-v7 per the
+  triple-convergence rec. Integration builder firing: waterfill-verified allocation + config
+  change + DSL lever activation + governance. Round-2 seal covers it.
+- Inclusion symposium docket updated: items 1+2 operator-DECIDED (council still certifies the
+  COMPOSED set's feasibility — S2's job unchanged).
+- ep50 VERDICT (the d_pose decision point): d_seg 0.1769→**0.1549** · d_pose 9.58→**3.59
+  DESCENDING** — EMA-lag hypothesis CONFIRMED, pose watch-item CLOSED (artifact, not
+  composition) · blob 99,079→**94,553** (weight-entropy bending rate back; 0.063 projected) ·
+  lane 0.0632 (2nd-best, improving). Run healthy ep62. Pointer 0.19110 UNMOVED.
+
 --- ⛔ OPERATOR DIRECTIVE: BUILD ALL UNBUILT + COUNCIL DECIDES INCLUSION (2026-07-08
 verbatim: "build all unbuilt items and wire and integrate and DSL and triality and make sure
 the grand council considers whether to include or not") ---
