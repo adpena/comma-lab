@@ -1,5 +1,15 @@
 # T5 CRUCIBLE — PURSUIT-CHAIN-A — spectrum → localize → solve-step (recursive chain log)
 
+STORES CONSULTED: t5_crucible grounding packet · position_S3 (+ its harness
+`experiments/t5_s3_hvp_lanczos_probe.py` + `spectrum_ep650_K8_s0.json`) · position_S2 (M-S2-1..5 +
+RECESS-2 bar) · #341 `tools/quadratic_basin_finisher_probe.py` + its artifacts
+(`verdict_baseline_n600` 0.0035103, `verdict_solved_head_n600` 0.0036878 = the measured +5.1% subset
+NO-GO, `solve_log_head.jsonl`, `feats_state_main_gt1.npz`) · mod32cap run dir (ep650 EMA-best ckpt)
+· coordinator caveats (self-orient reconstruction gap +4.3%; absorption-bug serializer flags) ·
+memory L70 (MLX-GPU never bit-exact) / L77 (subset-solve gap eq) / n600-verdict-chunk law.
+NOT consulted: other position_S*.md beyond S2/S3 (not in my charter), canonical-equations registry
+beyond the L77 anchor, the islands treatment-arm memo (out of chain scope).
+
 Chain agent: PURSUIT-CHAIN-A · 2026-07-07 · post-position pursuit (S3 spectrum + S2 recess-2 thread).
 Axis: **[macOS-CPU/MLX advisory] NON-PROMOTABLE** on every number; pointer contest-CPU **0.19110 UNMOVED**;
 everything here is MEANS. No training launches; foreground chunked only.
@@ -87,14 +97,65 @@ Incidental measured fact (new): the int8-dequant round-trip alone costs **+5.2% 
 (holdout fp32 0.2357 → deploy 0.2479) — the deploy-quantization gap at ep650 is of the same order
 as the whole reconstruction gap. Every solve/step claim must be screened at deploy params.
 
+## LINK 2c — curiosity extension (coordinator): input-structure decomposition of u_min's in_proj block
+
+Question posed: does u_min's in_proj mass concentrate on the ALONG-TANGENT frequency columns (the
+Candès–Donoho rebalance direction → mechanism-identified Arm A grounding) or spread isotropically?
+Column layout rebuilt exactly from the ckpt cfg + `curvelet_directional_B` /
+`directional_fourier_feats` source: 80 curvelet cols (40 atoms × sin/cos; scales s0–s3 + iso) +
+16 dir cols (4 freqs × {sin,cos}×{along, across}); in_feat = 96 verified.
+
+| state | curv total (iso-expected 0.833) | dir_along (exp 0.083) | dir_across (exp 0.083) | enrichment (curv/along/across) |
+|---|---|---|---|---|
+| CPU K=8 | 0.832 | 0.087 | 0.081 | 1.00 / 1.05 / 0.97 |
+| GPU K=8 | 0.841 | 0.087 | 0.072 | 1.01 / 1.05 / 0.86 |
+| GPU K=32 | 0.835 | 0.083 | 0.082 | 1.00 / 1.00 / 0.98 |
+
+**ISOTROPIC — decisively.** Per-scale masses are proportional to atom counts; no along-vs-across
+asymmetry; no orientation coherence. The u_min escape direction is statistically indistinguishable
+from an isotropic random vector in the basis-coupling block — exactly the signature of per-pair
+Hessian NOISE, and triple-consistent with Link 1 (λ₋ collapses under averaging) and Link 2b (the
+direction is flat on holdout). The Hessian at ep650 is NOT pointing at DirectionalBasisRebalance —
+it is not pointing anywhere: the reachable 2nd-order structure at the best point carries no
+exploitable basis information. (Arm A's case rests on its own measured −48% anchor, unchanged;
+what this kills is the hope of a mechanism-identified SHORTCUT from the Lanczos geometry.)
+
 ## LINK 3b — cross-subset GRADIENT descent probe (does ANY cheap 1st-order descent exist?)
 
 The EMA shadow is not a stationary point (subset gnorm 0.36–0.80), so a gradient step is the last
 cheap descent candidate. Protocol: gradient from a LARGE subset (K=128 seed 7), line search
-η ∈ {0.003, 0.01, 0.03, 0.1} along −ĝ, measured on a DISJOINT holdout (K=64 seed 13), fp32 AND
-int8-deploy. If even the cross-subset gradient step cannot descend, ep650-EMA is 1st+2nd-order
-exhausted up to fp32/subset noise at the frozen schedule point → TerminalSolve-from-ep650 NO-GO,
-wall = capacity/basis. (running — appended)
+η ∈ {0.003, 0.01, 0.03, 0.1} along −ĝ, measured on a mostly-DISJOINT holdout (K=64 seed 13,
+overlap 7/64), fp32 AND int8-deploy.
+
+**Gradient-noise decomposition first (MEASURED, the gnorm ladder):** ‖g_K‖ = 0.796 (K=8), 0.363
+(K=32), 0.194 (K=128) — textbook 1/√K. Fitting ‖g_K‖² = ‖g_true‖² + σ²/K across the ladder:
+**g_true ≈ 0.08, per-pair σ ≈ 2.0** → the ep650-EMA point is NEAR-STATIONARY on the full loss and
+even the K=128 gradient direction is majority noise (coherent-fraction SNR ≈ 0.44).
+
+**Line-search result (`gradstep_cross_subset.json`): NO descent at ANY step, monotone worsening:**
+
+| η | fp32 Δ | int8-deploy Δ |
+|---|---|---|
+| 0.003 | +5.3e-5 | +1.2e-5 |
+| 0.01 | +5.6e-4 | +2.6e-4 |
+| 0.03 | +5.1e-3 | +5.0e-3 |
+| 0.1 | +5.9e-2 | +6.9e-2 |
+
+Implied curvature along −ĝ ≈ **+12 (positive)**. First-order descent from cheap subset information
+does not exist at ep650-EMA at the frozen schedule point.
+
+## LINK 3c — the K=32 negative direction + the winner's-curse close-out
+
+Completeness: does the LESS-noisy K=32 u_min (λ₋=−33) transfer? Screen (holdout K=16 seed 11):
+fp32 flat-to-worse at every step; one candidate (`negcurv+0.02`) showed int8-deploy **−6.1e-4** —
+chased immediately on a DISJOINT larger holdout (K=64 seed 13): flips to **+5.8e-4 int8 /
++1.1e-4 fp32**. Verdict: winner's curse on a 16-pair piecewise-constant int8 surface (best-of-6
+selection), not a real descent. The int8-dither hypothesis is dead too.
+Artifacts `krylov_step_screen_curvtransfer_K32.json`, `rescreen_negcurvK32_p02.json`.
+
+**Measurement-economy note:** no n600 verdict was spent on any stepped candidate — every candidate
+failed (or flipped negative on) the cross-subset screens that gate it. The chunked n600 verdict
+path stands ready (`stage verdict`, stepped ckpts saved) if any future candidate passes a screen.
 
 ## LINK 2 — localize: WHERE the extreme curvature lives (Ritz-vector block projection, $0)
 
