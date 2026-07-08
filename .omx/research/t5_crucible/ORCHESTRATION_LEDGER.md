@@ -1902,3 +1902,9 @@ consumer update required — asserted [consumers-generic]. ---
   whole-step composition of the local fusions (render→R→stem→loss→backward) as one dispatch
   graph; same bar (bit-identity/N=5/measured/default-OFF/per-chip cert/DSL leg); sequenced
   AFTER v7 launch; evidence gate = whole-step bench at run-1 stop beside D17's.
+- **SPEED-LEVER FOLLOW-UP FOLDED** (operator: "Fold them in as follow up" → task #357, the
+  execution owner): micro-batch A/B + safe-compile hosc flip + D16 pool + megakernel bench as
+  ONE sequenced evidence bundle — stop-time benches (safe-compile GPU re-cert + megakernel
+  whole-step) at run-1 GOVERNED STOP; trajectory A/Bs (micro-batch, D16-term) AFTER the v7
+  baseline exists. Symposium assigns classes; #357 makes the arms FIRE (anti held-but-never-
+  fired). Also appended to the deferral ledger as the D17/D15 consolidation row.
