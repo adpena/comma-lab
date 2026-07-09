@@ -11041,7 +11041,7 @@ live #205 untouched. Metric = rel-sig(S)=ΔS/(0.19110−0.15)=ΔS/0.0411, and re
 **RE-OPEN (strong):** (1) **#169 horizon-weighted margin 0-byte IN-TRAINING** — MEASURED ΔS 0.012–0.024
 = **29–58% of remaining descent** (13–27% of target d_seg); I called it "weak" (the trigger); in v7.5
 plan item B but the trainer flag is UNBUILT (FEED-v75Aactuated "B.5 GAP") — the orphan is a MISSING WIRE.
-(2) **#121 d_seg-aware taper** — NO-GO SUSPECT/RETRACTED: +18% was under-converged, converged anchors FLIP
+(2) **#121 d_seg-aware taper** — NO-GO SUSPECT/RETRACTED (verdict_scope: INSTANCE — the +18% was one under-converged run, not the formulation): +18% was under-converged, converged anchors FLIP
 sign to −8% (ESTIMATED ΔS ~0.03 ≈ 70% remaining) → re-validate at convergence. (3) activation step-native/
 FINER++ −4.5% n600 (ΔS ~0.013 ≈ 32%) — "modest" ≠ orphan; adopt the LIVE screen verdict. (4) #274 seg
 down-weight (measure at optimal). (5/6) D18 k90 truncate + 19-neutrality rate A/B (near-goal any real byte
