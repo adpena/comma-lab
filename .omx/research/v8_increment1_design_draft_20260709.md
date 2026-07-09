@@ -40,9 +40,14 @@ already exist.
   bulk; their shared boundary is ONE tie locus. Two region fields would pay for the same curve twice.
   **The signed lift (review-B, was UNSPECIFIED):** φ_Road = +s_R·φ_bulk, φ_Undriv = −s_U·φ_bulk (sign = the
   Road/Undriv side of the road-edge/horizon curve; per-side scales s_R,s_U + biases b_c are the only
-  per-side freedom under the |∇φ|=1 eikonal gauge, which otherwise rigidly ties the two margins). **DESIGNED
-  assumption to VERIFY:** Undrivable (sky ∪ below-horizon-undriv) is single-signed-connected relative to Road
-  (if not, φ_bulk needs a second component — measure on the argmax cache before build).
+  per-side freedom under the |∇φ|=1 eikonal gauge, which otherwise rigidly ties the two margins).
+  **VERIFIED (MEASURED, n600 gt argmax `gt_n600.npz`, $0 read-only, 2026-07-09):** Undrivable is
+  **single-connected** (0.0% of frames have ≥2 significant components) ⇒ the ±φ_bulk lift's Undriv side is a
+  clean single background ⇒ **one signed field SUFFICES (review-B resolved: YES)**. Road, however, is
+  **multi-component in 37.2% of frames** (mean 1.38, up to 3 blobs) — a *signed* SDF represents multi-blob
+  Road correctly (its zero-set is simply multiple closed curves), so the lift stays valid, but the scaffold
+  MUST be **multi-component-Road-aware** (do NOT parametrize Road as one blob), and the multi-curve boundary
+  pushes the boundary-representation cost toward the **high end** of the CONJECTURED 20–50 KB.
 - **Decoupling — SCOPED claim (review-A, was an over-claim):** `P(x)=argmax_c(φ_c(x)+b_c)`; separatrix = tie
   loci, DERIVED never represented. ∂φ_c/∂θ_{c'}=0 closes the **MEASURED shared-FEATURE gradient theft**
   (Lane 13.8× / Movable 4.6× stealing Road) — **NOT** the residual composite-argmax reassignment: the shared

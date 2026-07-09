@@ -11466,3 +11466,15 @@ for increment-1 (Lane = separate analytic carrier); risk-1 spec("per-EDGE"=41)-v
 inconsistency surfaced — only the ONE Road/Undriv edge is edge-centric this increment; risk-4 tie-variance
 cure = annulus-precision byte allocation (not temporal-screw). BLOCKING: P-C (memory-gated post-#205) before
 paint design. Draft now = REVISED strong-seed, build-ready MODULO P-C. Pointer 0.19110 UNMOVED. #205 untouched.
+
+### FEED-v8-liftverify (2026-07-09) — review-B de-risk MEASURED at n600 ($0, read-only): lift VALID, Road multi-comp
+
+Scaffold-#2's first step = verify the review-(B) single-signed-lift assumption BEFORE building the ±φ_bulk
+module around it. Ran on the FULL n600 gt argmax cache (`gt_n600.npz` 600×384×512; scipy.ndimage.label,
+significant = >0.5% frame area; $0, read-only, memory-safe, #205 untouched). MEASURED: **Undrivable
+single-connected** (0.0% frames ≥2 comps) ⇒ ±φ_bulk lift's Undriv side is a clean single background ⇒ ONE
+signed field SUFFICES (review-B resolved YES). **Road multi-component in 37.2%** (mean 1.38, max 3) — a signed
+SDF handles multi-blob Road (zero-set = multiple closed curves), lift stays valid, BUT scaffold must be
+multi-component-Road-aware (not one-blob) and the multi-curve boundary pushes bytes toward the HIGH end of the
+CONJECTURED 20–50 KB. Net: review-B upgraded DESIGNED-assumption → MEASURED-resolved; the interface refined
+(multi-comp-Road-aware) BEFORE any module code. Folded into draft §2. Pointer 0.19110 UNMOVED.
