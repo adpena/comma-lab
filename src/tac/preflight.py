@@ -6399,6 +6399,14 @@ def preflight_all(
         # break surfaces loudly but never blocks an unrelated pipeline).
         check_operating_manual_pointer_integrity(strict=False, verbose=verbose)
 
+        # 2026-07-09 v7.5/v8 SPEC anti-rot (#362): the two crucible SPECs are the
+        # canonical resume surface named by CLAUDE.md's v7.5/v8 VEHICLE LINE
+        # section; a silent deletion/rename/gut-rewrite is a campaign-level signal
+        # loss. WARN-ONLY by design (SPECs are living docs — the gate catches
+        # structural rot, never edits; deliberate teardown uses the
+        # SPEC_POINTER_INTEGRITY_OK waiver).
+        check_spec_v75_v8_pointer_integrity(strict=False, verbose=verbose)
+
         # 2026-07-07 harvest-engineered prompting gates (operator: "Save and
         # engineer all those patterns as standard behaviors and gates").
         # (1) reasoning-echo refusal-storm prevention across prompt surfaces
@@ -86316,6 +86324,154 @@ def check_operating_manual_pointer_integrity(
         raise PreflightError(
             "check_operating_manual_pointer_integrity found "
             f"{len(violations)} violation(s) (operating-manual anti-rot):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# v7.5 / v8 SPEC anti-rot gate (#362, 2026-07-09).
+#
+# The two SPECs are the canonical resume surface for the crucible vehicle line
+# (CLAUDE.md "## THE v7.5 / v8 VEHICLE LINE ..." points at them by path). A
+# fresh session READS these before any witness/capstone work, so a silent
+# deletion / rename / gut-rewrite is a campaign-level signal loss. This gate is
+# the operating-manual anti-rot pattern applied to those two files: it catches
+# DELETION / RENAME / gut-rewrite (dropped load-bearing section headers) — NOT
+# ordinary edits (the SPECs are living docs). WARN-ONLY by design (a docs-rot
+# break must surface loudly but never block an unrelated pipeline).
+#
+# Each SPEC carries load-bearing ASCII section headers (durable anchors picked
+# from real content, not guessed strings); the CLAUDE.md pointer must still name
+# each SPEC by path. Deliberate teardown path: a same-line
+# `# SPEC_POINTER_INTEGRITY_OK:<rationale>` token in CLAUDE.md waives the gate
+# (placeholder rationale rejected per the Catalog #287 sister discipline).
+_SPEC_V75_REL = ".omx/research/t5_crucible/SPEC_v75_optimal_single_trunk_20260708.md"
+_SPEC_V8_REL = ".omx/research/SPEC_v8_perclass_decomposition_20260708.md"
+_SPEC_POINTER_WAIVER_TOKEN = "# SPEC_POINTER_INTEGRITY_OK:"
+_SPEC_POINTER_WAIVER_PLACEHOLDERS = frozenset(
+    {"<rationale>", "<reason>", "tbd", "placeholder", "pending", ""})
+
+# (rel_path, [load-bearing durable section anchors]) — a gut-rewrite that drops
+# one of these is SPEC rot. Anchors are ASCII section headers chosen from the
+# actual SPEC content 2026-07-09.
+_SPEC_ANTI_ROT_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        _SPEC_V75_REL,
+        (
+            "## 1. WHAT v7.5 IS",
+            "## 2. SEALED CONSTANTS",
+            "## 4. OWED BEFORE LAUNCH",
+            "## 5. WATCH-LIST",
+            "## 6. MEASUREMENT AUTHORITY",
+            "## 8. OPERATING CONTRACT",
+        ),
+    ),
+    (
+        _SPEC_V8_REL,
+        (
+            "## 1. THE ARCHITECTURE",
+            "## 2. CARRIER TABLE",
+            "## 4. NAMED RISKS",
+            "## 6. INCREMENT-1",
+            "## 7. RELATION TO v7.5",
+            "## 8. OPERATING CONTRACT",
+        ),
+    ),
+)
+
+
+def _spec_pointer_integrity_waived(claude_text: str) -> bool:
+    """True iff CLAUDE.md carries a SPEC_POINTER_INTEGRITY_OK waiver with a
+    non-placeholder rationale (deliberate SPEC teardown acknowledged)."""
+    idx = claude_text.find(_SPEC_POINTER_WAIVER_TOKEN)
+    if idx < 0:
+        return False
+    rationale = claude_text[idx + len(_SPEC_POINTER_WAIVER_TOKEN):]
+    # rationale runs to end-of-line
+    rationale = rationale.splitlines()[0].strip() if rationale.strip() else ""
+    return rationale.lower() not in _SPEC_POINTER_WAIVER_PLACEHOLDERS
+
+
+def check_spec_v75_v8_pointer_integrity(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """WARN-ONLY anti-rot gate for the v7.5 / v8 SPECs (#362).
+
+    The two SPECs are the canonical resume surface named by CLAUDE.md's
+    "## THE v7.5 / v8 VEHICLE LINE ..." section. This gate refuses silent rot in
+    either direction:
+      1. each SPEC file must exist;
+      2. each SPEC must retain all of its load-bearing durable section anchors
+         (a dropped/renumbered header is a gut-rewrite, i.e. SPEC rot);
+      3. CLAUDE.md must still name each SPEC by path (the pointer must not
+         orphan the SPEC from the always-loaded context).
+
+    WARN-ONLY by design (a SPEC that is being deliberately retired/renamed should
+    surface loudly but never block an unrelated pipeline). Deliberate teardown
+    path: a `# SPEC_POINTER_INTEGRITY_OK:<rationale>` token in CLAUDE.md (with a
+    non-placeholder rationale) waives the gate — land the SPEC removal + the
+    pointer removal + this gate's update together, deliberately."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    claude_md = root / "CLAUDE.md"
+    claude_text = ""
+    if not claude_md.is_file():
+        violations.append(
+            "CLAUDE.md: MISSING — cannot verify the v7.5/v8 SPEC pointer section.")
+    else:
+        try:
+            claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"CLAUDE.md: unreadable ({exc}).")
+
+    if claude_text and _spec_pointer_integrity_waived(claude_text):
+        if verbose:
+            print(
+                "  [spec-pointer] check_spec_v75_v8_pointer_integrity: "
+                "WAIVED (SPEC_POINTER_INTEGRITY_OK in CLAUDE.md)")
+        return []
+
+    for spec_rel, anchors in _SPEC_ANTI_ROT_TARGETS:
+        spec = root / spec_rel
+        spec_text = ""
+        if not spec.is_file():
+            violations.append(
+                f"{spec_rel}: MISSING — CLAUDE.md's v7.5/v8 VEHICLE LINE section points "
+                "at this SPEC (the canonical resume surface). Restore it (git) or update "
+                "the pointer + this gate in the same commit.")
+        else:
+            try:
+                spec_text = spec.read_text(encoding="utf-8", errors="replace")
+            except OSError as exc:
+                violations.append(f"{spec_rel}: unreadable ({exc}).")
+
+        if spec_text:
+            missing = [a for a in anchors if a not in spec_text]
+            if missing:
+                violations.append(
+                    f"{spec_rel}: missing load-bearing section anchor(s) {missing} — "
+                    "the SPEC dropped/renumbered a canonical section header (gut-rewrite = "
+                    "SPEC rot). Restore the section(s) or update this gate's anchors + the "
+                    "CLAUDE.md pointer in the same commit.")
+
+        if claude_text and spec_rel not in claude_text:
+            violations.append(
+                f"CLAUDE.md: pointer to {spec_rel} not found — the SPEC is orphaned from "
+                "the always-loaded resume surface. Restore the pointer (or land the removal "
+                "+ this gate's update together, deliberately; or add a "
+                "SPEC_POINTER_INTEGRITY_OK waiver).")
+
+    if verbose:
+        print(
+            f"  [spec-pointer] check_spec_v75_v8_pointer_integrity: "
+            f"{len(violations)} violation(s)"
+            if violations else
+            "  [spec-pointer] check_spec_v75_v8_pointer_integrity: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_spec_v75_v8_pointer_integrity found "
+            f"{len(violations)} violation(s) (v7.5/v8 SPEC anti-rot):\n  "
             + "\n  ".join(violations))
     return violations
 
