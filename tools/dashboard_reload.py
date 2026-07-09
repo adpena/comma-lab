@@ -116,7 +116,13 @@ def main(argv: list[str] | None = None) -> int:
         stage_overrides += f"--l7 {args.l7} "
     dash_cmd = (f".venv/bin/python tools/dashboard_server.py --port {args.port} "
                 f"{stage_overrides}--reuse-port {args.extra}").strip()
-    launch = (f".venv/bin/python tools/safe_run.py --rss-mb {args.rss_mb} "
+    # --skip-admission-gate: the dashboard SERVER is fixed-size observability CONTROL-PLANE (~2.4 GiB,
+    # non-growing), which the standing "guard NEVER kills the control-plane" non-negotiable (CLAUDE.md
+    # memory L42/L43) requires to be always-admissible. Without this, the P0 SUM-over-RAM training gate
+    # REFUSES the reload while a heavy run (e.g. #205) reserves its projected growth — blocking observability
+    # exactly when it's most needed. The per-process --rss-mb cap REMAINS (real safety); only the system
+    # growth-reservation gate is skipped. The heavy flow-seq RENDER stays governed (it is NOT control-plane).
+    launch = (f".venv/bin/python tools/safe_run.py --rss-mb {args.rss_mb} --skip-admission-gate "
               f"--timeout {args.timeout_sec} --label {label} -- {dash_cmd}")
     with open(new_log, "wb") as lf:
         subprocess.Popen(["bash", "-lc", launch], cwd=str(_REPO), stdin=subprocess.DEVNULL,
