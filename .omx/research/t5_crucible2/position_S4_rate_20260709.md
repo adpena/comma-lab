@@ -12,7 +12,7 @@ CONVENING · ORCHESTRATION_LEDGER (incl. the mid-P1 **POSE ENGAGEMENT GATE** ope
 `tools/levelset_byte_close_and_eval.py` (header rule-118 FREE/COUNTED · `serialize_pose_carrier` vs
 `serialize_pose_carrier_store_nothing` v2 derive-H · `select_best_weights_arm` ema/live/polyak ·
 `_axis_and_authority` · `--run-exact-eval`/`--eval-device`) · DAG FEED-snx (store-nothing byte-close
-MEASURED 1049 B vs 697941 B) · FEED-db (RATE-NOT-BINDING) · FEED-08d/08g (#341 subset-overfit NO-GO,
+MEASURED 1049 B vs 697941 B) · FEED-db (RATE-NOT-BINDING) · FEED-08d/08g (#341 subset-overfit NO-GO [verdict_scope: FORMULATION, scoped at source],
 full-P-GPU-only, LM ρ CONFIRMED) · FEED-238resolved (R1 dxi BANKED) · DAG:3827 (l7 = implicit MDL) ·
 `docs/operating_manual_craft_handoff.md` (means≠ends; label MEASURED/DERIVED/ASSUMED; attack own conclusion).
 
@@ -80,7 +80,7 @@ is verified `generated` before launch; the byte-close asserts `pcar_store_nothin
 **CONFIRM `--pose-carrier-source generated` (store-nothing) as the v7.5.2 default** — this is already
 crucible_v7's default, so the decision is: (a) do NOT flip it to `real_keyframe` under any "richer pose"
 argument (rate-doomed); (b) if warm-starting (Q2), restrict the source basin to a `generated`-lineage
-checkpoint. verdict_scope on the keyframe carrier: **FORMULATION NO-GO as a rate lever** (0.46 rate);
+checkpoint. verdict_scope: FORMULATION — the keyframe carrier as a rate lever (**NO-GO**, 0.46 rate);
 still valid as an A/B ceiling only. This is not re-opening N-2 (lane-ξ) or N-1 (OT) — those stay closed.
 
 ---
@@ -114,7 +114,7 @@ is a d_seg-CONDITIONING-GATED EVENT, never an epoch. My rate/pose-seat position:
 - **#341 is IN-TRAINER LOCAL GPU (~11 min grouped-backward on the M5 Max), NOT Modal, NOT $0** —
   MEASURED FEED-08d (full-P CG iter ≈ 3.2 h CPU / ~11 min GPU). Fire IFF LM ρ ∈ ~[0.8,1.2] RE-VERIFIED
   on the CURRENT terminal ckpt, all 600 pairs, exact tau-stage loss, `--fused-r-kernel` bit-identity.
-  verdict_scope on the K=8 subset variant: **FORMULATION NO-GO** (+5.1% overfit, N-3 / FEED-08d) — do
+  verdict_scope: FORMULATION — the K=8 subset variant (**NO-GO**, +5.1% overfit, N-3 / FEED-08d) — do
   NOT re-open the subset tool; full-P in-trainer only.
 
 ---
@@ -221,7 +221,7 @@ pose_finish:                        # D.9 terminal finish — CONDITIONING-GATED
   never_reached_fallback: pose UNSHIPPED, run stays byte-identical, row is d_seg-only (never assume 0.127)
 terminal_head_solve:                # #341 — d_seg conditioner BEFORE pose-descent
   enabled_iff: LM_rho in [0.8,1.2] re-verified on CURRENT ckpt, full-P (P=600), exact tau-loss, --fused-r-kernel
-  where: IN-TRAINER LOCAL GPU (~11 min grouped-backward)   # NOT Modal, NOT the K=8 subset (NO-GO N-3)
+  where: IN-TRAINER LOCAL GPU (~11 min grouped-backward)   # NOT Modal, NOT the K=8 subset (NO-GO N-3; verdict_scope: FORMULATION)
   sequence: converge d_seg -> #341 head solve -> sigma_min gate -> store_nothing pose-finish
 weights_rate:
   flat_minima_mdl: via l7 curriculum stage (in-training)   # NOT a post-hoc recode
