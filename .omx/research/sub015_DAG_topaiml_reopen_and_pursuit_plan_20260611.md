@@ -12023,3 +12023,38 @@ chain (the R3/R4/R5 flag-hygiene CLASS + its closure) are process knowledge → 
 review_counter ledger rows (canonical P6 record) + this FEED, not the equations registry. Any
 generalizable law (e.g. "config docs owe an executable compile smoke before seal") belongs in the
 apparatus/discipline layer, candidate for a future preflight gate, NOT an EmpiricalAnchor.
+
+## FEED-crucible2-SEALED (2026-07-09) — crucible-2 P6 SEALED 3/3 → P7 + crucible-3 P0 dispatched; papers-checked STAC/SPARC
+**Event (apparatus milestone, means not ends — pointer 0.19110 UNMOVED):** T5 CRUCIBLE-2
+(v7.5.2 optimal single-trunk final form, task #379) P6 recursive seal reached **3 consecutive
+CLEAN (R11 1f761cf95 · R12 2060ebb13 · R13 9c19e497e = SEALED)** on
+`.omx/research/t5_crucible2/SYNTHESIS_v3_v752_20260709.md` (byte-identical since 77c016105).
+13 rounds total, 9 findings fixed (R1 stage-floor transcription · R3 two argparse-crash flag
+values + missing --hosc-beta anneal-start · R4 nonexistent step_native activation value · R5
+glued literal · R7 toy-evidence-carrying-load ×2 · R8 toy-inside-the-no-toy-fix · R10 stale
+owed-N cross-refs), each class closed with a standing executable check (compile smoke against
+live AST parser · token sweep · flag-VALUE type/choices check · numbered-cross-ref sweep).
+R13 verified the operator pose-gate binding VERBATIM vs the orchestration ledger and named the
+seal's honest boundary: certifies document-integrity + buildability + P5-fold-fidelity, NOT
+empirical readiness (rolling-slope detector fire-behavior = owed-1/owed-14, launch-blocking).
+**Dispatched on seal:** P7 (compile SPEC_v752 + typed DSL WitnessProgram, configs-not-prose —
+P7 owns the DSL leg for the launch config) and CRUCIBLE-3 P0 (task #380, v8 final form:
+convening + delta-grounding, seal surface crucible3_v8, STRUCTURE-BLIND seat chartered, named
+enemy = the 0.079 residual-coder gap). DUAL-CHAIN WALL stands: both chains sealed → side-by-side
+comparison brief → operator which-to-run GO; NO launch before.
+**Sister same-day (papers-checked, memo `papers_checked_stac_sparc_taskaware_compression_20260709.md`,
+ab93a766c):** STAC 2203.14481 (INFOCOM'22) = CONFIRM-not-lever — loss-grad DCT equal-marginal
+waterfill is 2022 prior art ⊂ #157 KKT design; its "sensitive regions ≠ boundaries" figure is the
+loss-gradient-vs-margin functional contrast (our annulus law is why margin is right for argmax
+d_seg). SPARC 2606.16253 = CONFIRM + GRAIN — tilted-rate-loss names rare-but-task-critical
+over-suppression (= our lane-erasure) in the rate domain ⇒ **#336's sensitivity functional must
+be per-class/margin-aware, not aggregate, else Lane (0.59% area) is starved by the equal-marginal
+allocation**. Both verdict_scope: FORMULATION (their regimes); V2 originality untouched.
+**Triality legs:** DAG = this FEED. DSL = N/A here — OWNED BY P7 IN FLIGHT (the sealed §B config
+becomes a typed WitnessProgram; completeness() gaps folded there). equations = N/A — no new
+measured law (seal is process knowledge → review_counter ledger per FEED-crucible2-seal-legs;
+papers are prior-art confirmations, no EmpiricalAnchor without a measured row of ours).
+**Tasks:** #345 crucible-1 COMPLETE (delivered SPEC_v75+SPEC_v8 07-08; superseded by #379/#380
+line) · #379 P0-P6 done, P7 in flight · #380 in_progress (P0 running) · NEW: owed-before-launch
+build task (owed-1 repaired pose-gate + dry-start gate + speed-stack wall-clock budget,
+launch-blocking) + dual-chain comparison-brief task (fires when both sealed + P7s done).
