@@ -10796,3 +10796,7 @@ rate-dead (1.4MB/kf). → #238 = THE decisive remaining measurement: locate R1's
 its 0.0011 through byte-closed decode ($0 custody work if artifacts exist; else the door needs a NEW
 dedicated pose-descent run = operator-GO). Eq anchors l2_truedepth_falsified + 3 MEASURED constants in
 morse_smale_stratified_parallax_dpose_v1 (same commit). Pointer 0.19110 UNMOVED.
+DSL-LEG STATUS (drift-gate note, FEED-l2 commits): measurement commits — no lever built/changed (depth-bytes
+frontier gated RED before any build; no trainer flag exists). Equation leg satisfied in the probe's commit
+(l2_truedepth_falsified + 3 MEASURED constants in morse_smale_stratified_parallax_dpose_v1, c2aa76cf0);
+FEED-l2 + MEMORY L69b updated. Same determination as 54ad010cc / 69887e422.
