@@ -11596,6 +11596,31 @@ power diagram** (#284: Laguerre=tropical=curvelet=se3). Store the GENERATORS, no
   Pointer 0.19110 UNMOVED. `[no-triality]` (v8 eqs FORMALIZATION_PENDING per SPEC_v8 §5 until byte-close).
 
 ---
+## FEED-v8-roadlane (2026-07-09) — the BIGGEST owed rate number MEASURED: Road↔Lane geometric = 0.0275 S (7.4×)
+Road↔Lane = **59% of the whole-scene bitmap budget** (0.204 S of 0.346; FEED-v8-ratebudget). Measured with the
+REAL machinery (per FEED-v8-realmachinery: parametric generators + ξ track + real coder, NEVER a b/px proxy),
+$0 read-only on `gt_n600.npz['lstars']` (all 600, comma10k Road0/Lane1):
+- **Fit (Wave-F #234, `cluster_lane_lines`+`fit_lane_line`):** median **5.0 lines/frame** (deg-3 centerline poly
+  + deg-1 halfwidth + dash), **1.00 px** median fit residual.
+- **Coverage (HONEST):** **72.5%** of the Road↔Lane boundary px within ≤2px of the reconstructed band (lane-recall
+  63.3%) → **27.5% `residual_sidecar_owed`** (same class of dominant-structure caveat as the horizon's 83%).
+- **Real coder (LBND2 quantize + zigzag temporal-delta + Hungarian coherent-slot ξ track + brotli q11, bit-exact
+  roundtrip through the UNCHANGED inflate):** 159 KB raw → **40.33 KB @ n600 = S `0.02750` = 7.4× below the 0.204
+  bitmap**. This is the actual submission byte-close lane coder, not a proxy.
+- **ξ finding (the honest lane vs horizon contrast):** lane coeffs are **NOT frozen** — every coeff moves
+  (nonzero-delta-frac 55–82%; curvature c2/c1 move MOST), because lanes are genuinely dynamic (curvature changes
+  as the car drives) + multi-instance. So the ξ ego-warp lever is WEAK for lanes (unlike the horizon's frozen
+  cubic/quad → 599/600 near-free). **The 7.4× is PRIMARILY PARSIMONY** (~5 lines × 11 coeffs vs full bitmap;
+  temporal delta only 2.6×), NOT ego-freezing.
+- **Median-smooth headroom is LOSSY, not free:** batch track-space denoise reaches 0.0176 S (11.6×) but DEGRADES
+  coverage (lane-recall 63.3%→48.0%) → the honest measured rate is the **lossless 0.0275 S**. The prior ~0.014 S
+  projection (horizon 14.6× transfer) was OPTIMISTIC; lanes don't inherit horizon rigidity.
+- **CONSEQUENCE:** rate thesis HOLDS on its biggest owed edge. **3 of 5** whole-scene edges now measured-geometric
+  (Road/Lane 0.0275 + horizon 0.0032 + hood 0.0202); 2 owed (Movable → sparse sites). Draft §3 table updated
+  (Road/Lane "~owed"→MEASURED). Memo `.omx/research/v8_roadlane_geometric_rate_20260709.md`. Pointer 0.19110
+  UNMOVED. #205 untouched. `[no-triality]`.
+
+---
 ## FEED-dsegtaper (2026-07-09) — #121 d_seg-aware Fourier-feature amplitude taper BUILT (fireable, default-OFF)
 **Duty-to-measure #1 lever (73% of remaining descent to sub-0.15) was UNBUILT-for-the-witness — now built as a triality-complete `Lever`.**
 - **Mechanism (REAL, byte-neutral, rule-118 FREE):** `tac.boundary_math.dseg_aware_fourier_taper` reweights each FIXED
@@ -11860,3 +11885,10 @@ SIGNAL → DIAGNOSTIC → RESPONSE, advisory-forever (CONTAINMENT; costate bound
   - mod32cap (completed, 1000ep, multi-stage): sliding one-step **log_d_seg MAPE 0.77%** (n=29), log_total 6.5%; global multi-stage holdout 146% (correctly labeled STRESS — one linear CDE cannot span stages → sliding windows are the operating mode). d_seg verdict last-window correctly refuses (unstable fit → no false BASIN).
 - **RECONCILE (compose not duplicate):** distinct model class from `powerlaw_exit.py` (univariate power-law TAIL fit) — this is a MIMO linear controlled-DE modelling coupled observables + schedule response; complementary cross-check for the #341 basin consumer. Identifiability limit MEASURED: B/c separately identifiable only under VARYING control (A + asymptote-at-training-u exact regardless).
 - **CONTRACT:** 17 NO-FAKE tests (fit recovers known A/B/c; asymptote fixed-point; stability; τ scale; fires-on-plateau; no-fire-on-descent; guard-refuses-unstable; affine nonzero-asymptote; ridge shrinkage; advisory-axis row; sliding backtest; constant-control robustness; NaN/validation). ruff F clean. FORMALIZATION_PENDING (predicted-vs-empirical residual law needs ≥5 completed runs to anchor honestly — registering off n=1-2 = premature/false anchor).
+
+## FEED-drift-d2-fix (task #314, 2026-07-09) — #314/DRIFT-D2 config-orphan CLASS fix: RUNTIME fail-closed guard (was CI-only) `[no-triality]`
+- **CONTEXT (what was already landed):** the #314 POINT fix (`b1dc20a24`, 2026-07-06) made `derive_fresh_seeded_config` carry `pose_carrier_source="generated"` as an EXPLICIT `_FRESH_SEEDED_DELTAS` entry (root: it inherits `derive_sealed_205_config`, whose field default `real_keyframe` emits `--pose-carrier-source` ONLY when `!= default`, so the store-nothing intent silently vanished v1→v5). That fix shipped a CI-only CLASS guard (`test_fresh_seeded_every_delta_key_materializes_in_argv`, a hand-kept key→flag map) + the APPEND-ONLY rate-accounting correction (DAG §"#314 pose-carrier-source drift FIX" line ~9052; unchanged here). crucible_v6/v7 are structurally pinned (they derive from `derive_store_nothing_205_config` → `generated`; `#314 RECONCILED` FEED-posehard).
+- **THE GAP THIS UNIT CLOSES (the CLASS fix as a MECHANISM, per task #314 "fail-closed on unknown-dropped keys"):** the orphan mechanism — a `_FRESH_SEEDED_DELTAS` key that no `d["key"]` access consumes silently affects nothing — had NO RUNTIME guard, only a CI test + hand map. Added `witness_autoconfig._TrackedDeltas`: a read-tracking view where every argv-applying `__getitem__` marks CONSUMED and `assert_all_consumed()` RAISES at derive time if any key went unread (provenance snapshots read `.raw`, untracked, so a provenance-only echo cannot mask a genuine argv orphan). Wired into `derive_fresh_seeded_config` (the SELECTIVE-EXTRACTION consumer = the exact D2 locus). Deliberately NOT wrapped around crucible_v6: it passes the WHOLE `d6` into the `crucible_v6_deltas` field consumed at render (every key structurally consumed) AND the #351 value-identity check already fails closed on drift — a per-key tracker there would false-alarm. `replace(base, …)` is NOT a drop site (dataclass replace inherits unlisted fields); the class is confined to the deltas-dict selective-extraction pattern.
+- **RATE-ACCOUNTING (APPEND-ONLY, numbers NOT rewritten — re-affirming the existing correction):** any byte-close / S-projection from the fresh_seeded v1→v5 lineage MUST charge the COUNTED uint8-keyframe rate (697,941 B ds4 — the `warp_real_luma` table path those runs actually ran), NOT the ~1 KB store-nothing rate. v6+ / crucible_v7 lineage runs the `generated` store-nothing path (structurally pinned) → the ~1 KB basis applies. Rate basis is thus lineage-tagged: {fresh_seeded v1→v5: real_keyframe/counted-keyframe} vs {store_nothing_205, crucible_v6/v7, fresh_seeded v6+: generated/~1 KB}.
+- **CONTRACT:** +3 tests (`test_tracked_deltas_runtime_guard_unit` — getitem marks / membership+`.raw` don't / partial names only the orphan / fully-read passes; `test_fresh_seeded_runtime_guard_fires_on_unconsumed_delta_key` — monkeypatched bogus key raises at derive; `test_fresh_seeded_runtime_guard_admits_the_real_config` — real config consumes every key, no false positive, pose_carrier_source survives). Full module 62 passed; ruff F clean. `[no-triality]`: pose_carrier_source is a WitnessConfig field (not a DSL Lever) and this is a config-mechanism hardening (no new lever, no new equation) — DSL/equations legs unchanged, verified via gauge.py comment-only reference.
+- **OPERATOR-ROUTABLE (unchanged, NOT decided here):** "restore store-nothing at the next FRESH arm" stays an operator decision (a mid-resume pose-source switch on a live lineage is an un-GO'd trajectory delta; DAG §"DRIFT D2 … RULINGS: v5 continues AS-IS"). This unit only makes the drift class STRUCTURALLY un-recurrable at runtime. The launch-gate class fix (ledger-KEEP ⊆ emitted argv) remains OWED to the launcher owner per D2. Pointer 0.19110 UNMOVED (means/apparatus).

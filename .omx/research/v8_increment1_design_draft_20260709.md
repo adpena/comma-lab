@@ -207,7 +207,7 @@ lever is the **few-coefficient** fit (horizon 4 coeffs = 14.6×).
 
 | edge | bitmap S (conservative) | geometric S | generator |
 |---|---|---|---|
-| Road/Lane | 0.204 | ~owed | centerline poly (Wave-F #234) — 59% of budget |
+| Road/Lane | 0.204 | **0.0275 (MEASURED 7.4×)** | centerline poly + ξ track (Wave-F #234) — 59% of budget; lossless, 72.5% cover, residual sidecar owed |
 | Road/Undriv (horizon) | 0.047 | **0.0032 (MEASURED 14.6×)** | 1 Laguerre site + boundary poly + ξ |
 | Undriv/Movable | 0.033 | ~owed | sparse object sites |
 | Road/Movable | 0.028 | ~owed | sparse object sites |
@@ -216,6 +216,10 @@ lever is the **few-coefficient** fit (horizon 4 coeffs = 14.6×).
 | **TOTAL** | **0.346 (upper bound)** | **~0.02–0.05 projected** | vs 0.118 pointer rate term |
 
 **Consequence:** the rate half of sub-0.15 is measured-headroom-confirmed (geometric ≪ bitmap ≪ current
-0.118). Two edges MEASURED-geometric, three owed (each with a named generator). The d_seg half is the
+0.118). **Three** edges MEASURED-geometric (Road/Lane 7.4× + horizon 14.6× + hood), two owed (Movable
+pairs; named generator = sparse object sites). Road/Lane (59% of budget) is now measured, not projected:
+its 7.4× (vs the horizon's 14.6×) is the honest lane finding — lanes are genuinely dynamic (curvature
+changes as the car drives + multi-instance), so temporal ξ freezes them only weakly; the reduction is
+PRIMARILY PARSIMONY (≈5 lines × 11 coeffs vs full bitmap), not the horizon's near-free ego-warp. The d_seg half is the
 blocker (#205). Per-carrier build = the parametric generator, NOT the boundary bitmap. No b/px proxy anywhere.
 `[no-triality]` (v8 equations FORMALIZATION_PENDING per §5 until a byte-closed exact-eval anchor).
