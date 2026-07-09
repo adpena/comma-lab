@@ -752,7 +752,10 @@ def test_registered_off_levers_carry_named_triggers():
     assert set(off) == {"micro_batch", "verdict_reclaim_330", "adaptive_eps",
                         "gpu_verdict", "fp16_cf_feats",
                         # (v7.3 round-2) M1 counter-arm + M2 Road-first fallback registered duty-to-measure
-                        "lane_carried_basis_regime", "road_boundary_fallback"}
+                        "lane_carried_basis_regime", "road_boundary_fallback",
+                        # (v7.5 B.5) horizon-weighted margin #169 + sky=rotation-only temporal-screw
+                        # refinement — both BUILT, default-OFF, exit-criterion A/B owed
+                        "horizon_weighted_margin_169", "temporal_screw_sky_rotation_only"}
     for item in off.values():
         assert item["default"] == "off"
         assert item["state"] == "registered_duty_to_measure"

@@ -655,12 +655,22 @@ def _build_resume_state_arrays(
     out["__cfg_seg_temporal_screw_xi_source"] = np.asarray(str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt")))
     out["__cfg_seg_temporal_screw_classes"] = np.asarray(str(getattr(args, "seg_temporal_screw_classes", "0,1,2")))
     out["__cfg_seg_temporal_screw_band"] = np.asarray(float(getattr(args, "seg_temporal_screw_band", 2.0)))
+    out["__cfg_seg_temporal_screw_sky_rotation_only"] = np.asarray(int(bool(getattr(args, "seg_temporal_screw_sky_rotation_only", False))))
+    out["__cfg_seg_temporal_screw_sky_row_hi"] = np.asarray(int(getattr(args, "seg_temporal_screw_sky_row_hi", 96)))
     out["__cfg_seg_margin_satisfice_weight"] = np.asarray(float(getattr(args, "seg_margin_satisfice_weight", 0.0)))
     out["__cfg_seg_margin_satisfice_msafe"] = np.asarray(float(getattr(args, "seg_margin_satisfice_msafe", 0.06)))
     out["__cfg_seg_margin_satisfice_delta_r"] = np.asarray(float(getattr(args, "seg_margin_satisfice_delta_r", 0.0196)))
     out["__cfg_seg_margin_satisfice_headroom"] = np.asarray(float(getattr(args, "seg_margin_satisfice_headroom", 2.0)))
     out["__cfg_seg_margin_satisfice_start_epoch"] = np.asarray(int(getattr(args, "seg_margin_satisfice_start_epoch", 0)))
     out["__cfg_seg_margin_satisfice_band"] = np.asarray(float(getattr(args, "seg_margin_satisfice_band", 2.0)))
+    # (v7.5 B.5 #169) horizon-weighted margin cfg (weight/target/band/rows/start).
+    out["__cfg_seg_horizon_margin_weight"] = np.asarray(float(getattr(args, "seg_horizon_margin_weight", 0.0)))
+    out["__cfg_seg_horizon_margin_target"] = np.asarray(float(getattr(args, "seg_horizon_margin_target", 0.5)))
+    out["__cfg_seg_horizon_margin_lo"] = np.asarray(float(getattr(args, "seg_horizon_margin_lo", 0.3)))
+    out["__cfg_seg_horizon_margin_hi"] = np.asarray(float(getattr(args, "seg_horizon_margin_hi", 0.5)))
+    out["__cfg_seg_horizon_row_lo"] = np.asarray(int(getattr(args, "seg_horizon_row_lo", 96)))
+    out["__cfg_seg_horizon_row_hi"] = np.asarray(int(getattr(args, "seg_horizon_row_hi", 288)))
+    out["__cfg_seg_horizon_margin_start_epoch"] = np.asarray(int(getattr(args, "seg_horizon_margin_start_epoch", 0)))
     out["__cfg_seg_subpix_boundary_weight"] = np.asarray(float(getattr(args, "seg_subpix_boundary_weight", 0.0)))
     out["__cfg_seg_subpix_edge_weight_source"] = np.asarray(str(getattr(args, "seg_subpix_edge_weight_source", "uniform")))
     out["__cfg_seg_subpix_ref_domain"] = np.asarray(str(getattr(args, "seg_subpix_ref_domain", "seg384")))
@@ -837,12 +847,24 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_seg_temporal_screw_xi_source", str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt")), False),
         ("__cfg_seg_temporal_screw_classes", str(getattr(args, "seg_temporal_screw_classes", "0,1,2")), False),
         ("__cfg_seg_temporal_screw_band", float(getattr(args, "seg_temporal_screw_band", 2.0)), True),
+        # (v7.5 B.5) sky=rotation-only warp stratification: both CHANGE the temporal-screw warp target => guarded.
+        ("__cfg_seg_temporal_screw_sky_rotation_only", int(bool(getattr(args, "seg_temporal_screw_sky_rotation_only", False))), True),
+        ("__cfg_seg_temporal_screw_sky_row_hi", int(getattr(args, "seg_temporal_screw_sky_row_hi", 96)), True),
         ("__cfg_seg_margin_satisfice_weight", float(getattr(args, "seg_margin_satisfice_weight", 0.0)), True),
         ("__cfg_seg_margin_satisfice_msafe", float(getattr(args, "seg_margin_satisfice_msafe", 0.06)), True),
         ("__cfg_seg_margin_satisfice_delta_r", float(getattr(args, "seg_margin_satisfice_delta_r", 0.0196)), True),
         ("__cfg_seg_margin_satisfice_headroom", float(getattr(args, "seg_margin_satisfice_headroom", 2.0)), True),
         ("__cfg_seg_margin_satisfice_start_epoch", int(getattr(args, "seg_margin_satisfice_start_epoch", 0)), False),
         ("__cfg_seg_margin_satisfice_band", float(getattr(args, "seg_margin_satisfice_band", 2.0)), True),
+        # (v7.5 B.5 #169) horizon-weighted margin: weight/target/band/rows are loss-affecting (guarded);
+        # start-epoch is a WHEN (unguarded, palliative-resumable, like the other lever start-epochs).
+        ("__cfg_seg_horizon_margin_weight", float(getattr(args, "seg_horizon_margin_weight", 0.0)), True),
+        ("__cfg_seg_horizon_margin_target", float(getattr(args, "seg_horizon_margin_target", 0.5)), True),
+        ("__cfg_seg_horizon_margin_lo", float(getattr(args, "seg_horizon_margin_lo", 0.3)), True),
+        ("__cfg_seg_horizon_margin_hi", float(getattr(args, "seg_horizon_margin_hi", 0.5)), True),
+        ("__cfg_seg_horizon_row_lo", int(getattr(args, "seg_horizon_row_lo", 96)), True),
+        ("__cfg_seg_horizon_row_hi", int(getattr(args, "seg_horizon_row_hi", 288)), True),
+        ("__cfg_seg_horizon_margin_start_epoch", int(getattr(args, "seg_horizon_margin_start_epoch", 0)), False),
         ("__cfg_seg_subpix_boundary_weight", float(getattr(args, "seg_subpix_boundary_weight", 0.0)), True),
         ("__cfg_seg_subpix_edge_weight_source", str(getattr(args, "seg_subpix_edge_weight_source", "uniform")), False),
         # (§22(2) fold) weight-entropy rate penalty (loss-only, trajectory-affecting, no param keys).
@@ -2769,7 +2791,7 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
     "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
-    "margin_saliency", "subpix", "chroma_boundary", "margin_satisfice", "temporal_screw",
+    "margin_saliency", "subpix", "chroma_boundary", "margin_satisfice", "horizon_margin", "temporal_screw",
     "island_amplify", "area_constraint", "persistence",
     "rankfloor", "code_spectral", "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
     # "margin_satisfice" (P0 FORCE 2 MarginBandSatisficing) + "temporal_screw" (P0 FORCE 1
@@ -4051,12 +4073,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     ts_xi_source = str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt"))
     ts_classes = str(getattr(args, "seg_temporal_screw_classes", "0,1,2"))
     ts_band = float(getattr(args, "seg_temporal_screw_band", 2.0))
+    ts_sky_rot = bool(getattr(args, "seg_temporal_screw_sky_rotation_only", False))  # (v7.5 B.5)
+    ts_sky_row_hi = int(getattr(args, "seg_temporal_screw_sky_row_hi", 96))          # (v7.5 B.5)
     ts_gate = {"on": ts_start <= 1}
     _ts_xi_prov: Any = None        # list[mx.array (6,)] per-pair GT screw (ground_gt) or None (carrier_live)
     _ts_ann_prov: Any = None       # list[mx.array (1,H,W)] f32 annulus mask (|GT margin|<band) in {0,1}
     _ts_geom_mlx: Any = None       # _GeomMLX at SEG res for the GROUND-channel prob warp
     _ts_class_mask: Any = None     # mx.array (3,) include mask over GROUND channels {0,1,2}
     _ts_warp_native_mlx: Any = None  # the bit-checked MLX homography warp fn (set at provider build)
+    _ts_rot_mask: Any = None       # (v7.5 B.5) mx.array (6,) = [0,0,0,1,1,1] zeroing the ξ translation (ρ)
+    _ts_sky_rowmask: Any = None    # (v7.5 B.5) mx.array (H,W,1) 1 in sky rows (<sky_row_hi), 0 in ground
 
     # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). ms_w=0.0 (DEFAULT) =>
     # branch skipped + provider None => byte-identical. m_safe stamped with delta_R provenance; fails
@@ -4074,6 +4100,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             f"--seg-margin-satisfice-msafe ({ms_msafe}) must be >= --seg-margin-satisfice-delta-r "
             f"({ms_delta_r}) — else the satisficing hinge saturates INSIDE the measured R-noise floor "
             "and does nothing (fail closed; P0 FORCE 2 derivation §2.4).")
+
+    # (operator 2026-07-08 v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169). hz_w=0.0 (DEFAULT) => branch skipped
+    # + provider None => byte-identical. The stratified θ-independent mask (horizon rows AND GT-margin ∈
+    # [lo,hi]) is precomputed below (built ONLY when hz_w>0). Reuses the SHARED realized _signed (no 2nd
+    # SegNet). Derivation dseg_reducibility_gt_margin_verdict_20260623.md: push ONLY the reducible
+    # confident-GT band [0.3,0.5], NEVER the <lo label-noise (irreducible frozen-SegNet coin-flip).
+    hz_w = float(getattr(args, "seg_horizon_margin_weight", 0.0))
+    hz_target = float(getattr(args, "seg_horizon_margin_target", 0.5))
+    hz_lo = float(getattr(args, "seg_horizon_margin_lo", 0.3))
+    hz_hi = float(getattr(args, "seg_horizon_margin_hi", 0.5))
+    hz_row_lo = int(getattr(args, "seg_horizon_row_lo", 96))
+    hz_row_hi = int(getattr(args, "seg_horizon_row_hi", 288))
+    hz_start = int(getattr(args, "seg_horizon_margin_start_epoch", 0))
+    hz_gate = {"on": hz_start <= 1}
+    _hz_mask_prov: Any = None       # list[mx.array (1,H,W)] f32 stratified mask (horizon rows AND margin∈[lo,hi])
+    if hz_w > 0.0 and not (hz_lo < hz_hi):
+        raise ValueError(
+            f"--seg-horizon-margin-lo ({hz_lo}) must be < --seg-horizon-margin-hi ({hz_hi}) — the "
+            "reducible GT-margin band [lo,hi] must be non-empty (#169 derivation: [0.3,0.5]).")
+    if hz_w > 0.0 and not (hz_row_lo < hz_row_hi):
+        raise ValueError(
+            f"--seg-horizon-row-lo ({hz_row_lo}) must be < --seg-horizon-row-hi ({hz_row_hi}) — the "
+            "horizon band must be a non-empty row range (#169: rows ~96-288).")
 
     # (--boundary-distance-weight, council levelset-loss-geometry symposium 2026-07-05) SDF-native
     # Kervadec-style boundary-placement loss closure constants. bd_w=0.0 (DEFAULT) => the branch in
@@ -4813,6 +4862,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             L = L + ms_w * ms_term
             if terms_out is not None:
                 terms_out["margin_satisfice"] = ms_w * ms_term
+        # (v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169; dseg_reducibility_gt_margin_verdict_20260623.md).
+        # One-sided hinge relu(m_target - m_wit) on the SHARED realized through-R witness GT-class margin
+        # ``_signed`` (m_wit, #141; NO 2nd SegNet forward, 0 archive bytes), STRATIFIED to the precomputed
+        # θ-independent mask = (horizon rows) AND (GT top-2 margin ∈ [lo, hi]). This pushes ONLY the
+        # REDUCIBLE + stably-decided flips (GT margin [0.3,0.5]) toward the m_target ceiling, AVOIDING the
+        # <lo IRREDUCIBLE label-noise (frozen-SegNet coin-flip; ~193x-concentrated below 0.05) — chasing
+        # those would be fitting noise (the exit-criterion caveat). Zero gradient where m_wit >= m_target
+        # (satisficing — don't over-push). Default hz_w=0 => skipped => byte-identical. A/B arm, NOT a
+        # claim (oracle ceiling ΔS≈0.024); pointer 0.19110 UNMOVED.
+        if hz_w > 0.0 and hz_gate["on"] and _hz_mask_prov is not None:
+            _pi_hz = int(c1) // 2
+            _hz_mask = _hz_mask_prov[_pi_hz]                            # (1,H,W) stratified mask {0,1}
+            # hinge on the witness GT-class margin: relu of the deficit below m_target on the reducible
+            # horizon band; saturates to 0 gradient once m_wit reaches m_target (satisficing).
+            _hz_hinge = mx.maximum(hz_target - _signed, 0.0) * _hz_mask  # (1,H,W) deficit on the band px
+            hz_term = mx.sum(_hz_hinge) / (mx.sum(_hz_mask) + 1e-6)     # mean over the stratified band px
+            L = L + hz_w * hz_term
+            if terms_out is not None:
+                terms_out["horizon_margin"] = hz_w * hz_term
         # P0 FORCE 1 (TEMPORAL SCREW-CONSISTENCY; task #360; DSL TemporalScrewConsistency). Enforce the
         # GROUND-plane witness partition moves rigidly with the ego screw xi frame-to-frame:
         # L_temp = w_t * mean_annulus ||phi_c(f1) - Warp_xi(phi_c(f0))||^2 over c in GROUND {0,1,2}.
@@ -4838,7 +4906,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _xi_ts = _ts_xi_prov[_pi_ts]                           # (6,) stored GT screw (stop-grad)
             # warp the 3 GROUND softmax channels (0,1,2) as an (H,W,3) field forward by xi into f1.
             _g0 = _phi0[0, :, :, 0:3]                                  # (H,W,3) GROUND probs at f0
-            _g0w = _ts_warp_native_mlx(_g0, _xi_ts, _ts_geom_mlx)      # (H,W,3) warped into the f1 frame
+            if _ts_rot_mask is not None and _ts_sky_rowmask is not None:
+                # (v7.5 B.5) SKY=ROTATION-ONLY: the sky is at infinity (no translational parallax) so its
+                # correct warp is H_rot=K·R·K⁻¹ (ξ with the translation ρ zeroed). Blend spatially: sky
+                # (upper) rows use the rotation-only warp, ground (lower) rows keep the full homography.
+                _xi_rot = _xi_ts * _ts_rot_mask                       # (6,) ρ zeroed -> rotation-only twist
+                _g0w_full = _ts_warp_native_mlx(_g0, _xi_ts, _ts_geom_mlx)   # (H,W,3) full ground homography
+                _g0w_rot = _ts_warp_native_mlx(_g0, _xi_rot, _ts_geom_mlx)   # (H,W,3) rotation-only (sky)
+                _g0w = _ts_sky_rowmask * _g0w_rot + (1.0 - _ts_sky_rowmask) * _g0w_full  # (H,W,3) blend
+            else:
+                _g0w = _ts_warp_native_mlx(_g0, _xi_ts, _ts_geom_mlx)  # (H,W,3) warped into the f1 frame
             _g1 = _phi1[0, :, :, 0:3]                                  # (H,W,3) GROUND probs at f1
             _ts_d2 = mx.sum(mx.square(_g1 - _g0w) * _ts_class_mask, axis=-1)  # (H,W) masked to selected GROUND
             ts_term = mx.sum(_ts_d2 * _ts_ann[0]) / (mx.sum(_ts_ann) + 1e-6)  # mean over annulus px
@@ -5450,6 +5527,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "MASK-BY-STAGE at l7 preserves tau-anneal; A/B owed; pointer 0.19110 UNMOVED"}),
               flush=True)
 
+    # (v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169) STRATIFIED-MASK PRECOMPUTE. theta-INDEPENDENT + cheap
+    # (pure numpy from gt.margins + the row band). Built ONLY when hz_w>0; else _hz_mask_prov stays None
+    # => byte-identical. mask = (row ∈ [row_lo, row_hi)) AND (GT top-2 margin ∈ [lo, hi]). GT margin
+    # (top1-top2) is >=0. Rows are CLAMPED to the real grid H (so an over-wide default degrades to the
+    # full column, never crashes). The [lo,hi] band EXCLUDES the <lo irreducible label-noise + the >hi
+    # confident-decided pixels (the reducible + stably-decided sweet spot, MEASURED).
+    if hz_w > 0.0:
+        _hz_H, _hz_W = np.asarray(gt.lstars[0]).shape
+        _rlo = max(0, min(int(hz_row_lo), _hz_H - 1))
+        _rhi = max(_rlo + 1, min(int(hz_row_hi), _hz_H))
+        _hz_row = np.zeros((_hz_H, _hz_W), np.float32)
+        _hz_row[_rlo:_rhi, :] = 1.0                                        # horizon row band (1 in-band)
+        _hz_mask_prov = []
+        _hz_n_band = 0
+        for pi in range(P):
+            _mg = np.asarray(gt.margins[pi], np.float32)
+            _band = ((_mg >= hz_lo) & (_mg < hz_hi)).astype(np.float32)    # reducible GT-margin band
+            _m = (_band * _hz_row).astype(np.float32)                      # AND horizon rows
+            _hz_n_band += int(_m.sum())
+            _hz_mask_prov.append(mx.array(_m[None]))                       # (1,H,W)
+        print(json.dumps({"stage": "seg_horizon_margin", "active": True, "n_pairs": int(P),
+                          "weight": hz_w, "m_target": hz_target, "margin_lo": hz_lo, "margin_hi": hz_hi,
+                          "row_lo": int(_rlo), "row_hi": int(_rhi), "start_epoch": int(hz_start),
+                          "band_px_total": int(_hz_n_band),
+                          "band_frac": round(_hz_n_band / max(P * _hz_H * _hz_W, 1), 5),
+                          "note": "#169 one-sided relu(m_target - m_wit) on (horizon rows AND GT-margin in "
+                          "[lo,hi]); pushes ONLY the reducible confident-GT band, EXCLUDES the <lo "
+                          "irreducible label-noise; 0-byte SHARED-structure; A/B owed (oracle ceiling "
+                          "ΔS~0.024); pointer 0.19110 UNMOVED"}), flush=True)
+
     # P0 FORCE 1 (temporal screw-consistency; task #360) PRECOMPUTE. theta-INDEPENDENT providers (per-pair
     # GT screw xi + annulus mask + a SEG-res warp geom + the GROUND class-include mask). Built ONLY when
     # ts_w>0; else all providers stay None => branch skipped + NO extra SegNet forward => byte-identical.
@@ -5471,6 +5578,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _ts_sel = {int(c.strip()) for c in ts_classes.split(",") if c.strip() != ""}
         _ts_class_mask = mx.array(
             np.asarray([1.0 if c in _ts_sel else 0.0 for c in (0, 1, 2)], np.float32))
+        # (v7.5 B.5) SKY=ROTATION-ONLY masks. _ts_rot_mask zeros the ξ translation (ρ = the first 3 of the
+        # translation-first twist) => H_rot = K·R·K⁻¹ (sky at infinity, no parallax). _ts_sky_rowmask is 1
+        # in the upper (sky) rows [0, sky_row_hi) and 0 in the ground rows => a spatial blend of the two
+        # warps. Built ONLY when the flag is set (else both stay None => the single full-homography warp =>
+        # byte-identical).
+        if ts_sky_rot:
+            _ts_srh = max(1, min(int(ts_sky_row_hi), _ts_H - 1))
+            _ts_rot_mask = mx.array(np.asarray([0.0, 0.0, 0.0, 1.0, 1.0, 1.0], np.float32))  # zero ρ (keep ω)
+            _skm = np.zeros((_ts_H, _ts_W, 1), np.float32)
+            _skm[:_ts_srh, :, :] = 1.0                                     # sky rows (upper) -> rotation-only
+            _ts_sky_rowmask = mx.array(_skm)
         # annulus mask (|GT margin| < band).
         _ts_ann_prov = [mx.array((np.asarray(gt.margins[pi], np.float32) < ts_band).astype(np.float32)[None])
                         for pi in range(P)]
@@ -5492,6 +5610,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "seg_temporal_screw", "active": True, "n_pairs": int(P),
                           "weight": ts_w, "xi_source": ts_xi_source, "classes": ts_classes,
                           "band": ts_band, "start_epoch": int(ts_start),
+                          "sky_rotation_only": bool(ts_sky_rot),
+                          "sky_row_hi": (int(max(1, min(int(ts_sky_row_hi), _ts_H - 1))) if ts_sky_rot else None),
                           "note": "P0 FORCE 1 GROUND-class annulus prob-warp MSE (ego homography H(xi)); "
                           "kills the 44% lane-dominated flicker; xi_source=" + ts_xi_source
                           + " (ground_gt=pure seg regularizer, ZERO pose coupling); ramp w_t at stage "
@@ -8183,6 +8303,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "seg_margin_satisfice_engage", "epoch": ep, "start": ms_start,
                                       "m_safe": ms_msafe,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # (v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169) engagement gate + transition RE-TREAT (same
+            # discipline as the margin-satisfice hinge). Default hz_w=0.0 => never engages => bit-identical.
+            if hz_w > 0.0:
+                _hz_was = hz_gate["on"]
+                hz_gate["on"] = lever_gate_on_at_epoch(hz_w, hz_start, ep)
+                if hz_gate["on"] and not _hz_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "seg_horizon_margin_engage", "epoch": ep, "start": hz_start,
+                                      "m_target": hz_target,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # LEVER-4c chroma-sharpening engagement gate + transition RE-TREAT (same discipline as LEVER-4b).
             # (operator override 2026-07-08) SENSOR->START WIRING #3: engagement flips through the chroma
             # EventBackstopGate. EVENT MODE OFF (--seg-chroma-boundary-start-event absent) => under this
@@ -10149,6 +10279,27 @@ def main(argv: list[str] | None = None) -> int:
                     "dissolved l7 'formed partition' gate); --seg-temporal-screw-start-epoch becomes the "
                     "fail-safe backstop cap. Default None = OFF = byte-identical. Requires "
                     "--annulus-telemetry (default ON).")
+    # (operator 2026-07-08 v7.5 B.5) SKY=ROTATION-ONLY warp stratification for the temporal-screw. The
+    # ground homography H = K(R - t·nᵀ/d)K⁻¹ carries translational PARALLAX correct for the NEAR ground
+    # plane; but the SKY is at infinity (d→∞ ⇒ t·nᵀ/d → 0) so the CORRECT warp there is ROTATION-ONLY
+    # H_rot = K·R·K⁻¹ (design note witness_autoconfig.py per_class_warp: sky 'rotation_only'). Applying
+    # the full ground homography to the sky sub-region injects a systematically WRONG (parallax) warp
+    # target ⇒ a wrong temporal-consistency signal on class-2 sky pixels. When enabled, the upper (sky)
+    # rows of the warped GROUND-prob field use the rotation-only warp (ξ with the se(3) translation ρ
+    # zeroed — translation-first convention ρ=ξ[0:3]) and the lower (ground) rows keep the full
+    # homography, blended spatially by --seg-temporal-screw-sky-row-hi. Default OFF => ONE warp (the full
+    # homography) => BYTE-IDENTICAL incumbent.
+    ap.add_argument("--seg-temporal-screw-sky-rotation-only", action="store_true",
+                    help="v7.5 B.5: warp the SKY sub-region (rows < --seg-temporal-screw-sky-row-hi) of the "
+                    "temporal-screw GROUND-prob field ROTATION-ONLY (H_rot=K·R·K⁻¹, ξ translation zeroed — "
+                    "sky at infinity has NO parallax) while the ground rows keep the full homography. "
+                    "Default OFF => single full-homography warp => byte-identical. Requires "
+                    "--seg-temporal-screw-weight > 0.")
+    ap.add_argument("--seg-temporal-screw-sky-row-hi", type=int, default=96,
+                    help="v7.5 B.5: the SEG-grid row BELOW which is ground (full parallax) and ABOVE which "
+                    "is sky (rotation-only). Default 96 (the horizon-band top; rows 0-96 = clear sky above "
+                    "the horizon transition). Clamped to [1, H). Only used with "
+                    "--seg-temporal-screw-sky-rotation-only.")
     # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). One-sided hinge
     # L_sat = w_s * mean_annulus relu(m_safe - m_wit), m_wit = the witness GT-class signed margin
     # (_signed, #141). Frees the interior gradient budget onto the fragile band BY CONSTRUCTION.
@@ -10178,6 +10329,47 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seg-margin-satisfice-band", type=float, default=2.0,
                     help="P0 FORCE 2: the #333 annulus GT-margin band (|GT margin| < band) the hinge is "
                     "restricted to (the boundary band where d_seg lives).")
+    # (operator 2026-07-08 v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169) — the 0-byte SHARED-structure d_seg
+    # lever DERIVED in dseg_reducibility_gt_margin_verdict_20260623.md. That verdict MEASURED that the
+    # residual d_seg flips split by GT top-2 margin: <0.05-margin flips are IRREDUCIBLE frozen-SegNet
+    # label-noise (a near-coin-flip; ~193x concentrated) and must NOT be chased, while the flips at GT
+    # margin ∈ [0.3, 0.5] are the ONLY ones both REDUCIBLE and STABLY-DECIDED (oracle ceiling ΔS≈0.024 at
+    # margin≥0.3 / 0.012 at margin≥0.5). 97.8% of the frontier d_seg lives in the horizon band (SEG rows
+    # ~96-288). So this is a one-sided hinge relu(m_target - m_wit) on the SHARED realized through-R
+    # witness GT-class margin _signed (#141; NO 2nd SegNet forward, 0 archive bytes), STRATIFIED to the
+    # θ-independent mask (horizon rows) AND (GT top-2 margin ∈ [lo, hi]) — pushing ONLY the reducible
+    # confident-GT band, AVOIDING the <lo label-noise. seg_horizon_margin_weight=0.0 (DEFAULT) => branch
+    # skipped + provider None => BYTE-IDENTICAL. A/B arm, NOT a claim (exit criterion below); pointer
+    # 0.19110 UNMOVED.
+    ap.add_argument("--seg-horizon-margin-weight", type=float, default=0.0,
+                    help="v7.5 B.5 (#169): weight w_h on the horizon-weighted margin hinge (0=off). "
+                    "L_hz = w_h * mean_{horizon-band AND GT-margin∈[lo,hi]} relu(m_target - m_wit). Reuses "
+                    "the SHARED realized through-R margin _signed (no 2nd SegNet, 0 bytes). w_h=0 => "
+                    "byte-identical (branch skipped, provider None).")
+    ap.add_argument("--seg-horizon-margin-target", type=float, default=0.5,
+                    help="v7.5 B.5 (#169): the safe witness-margin ceiling m_target the hinge pushes m_wit "
+                    "up to (relu(m_target - m_wit)); DERIVED = the GT-margin band upper edge (make the "
+                    "witness as confident as the GT's stably-decided band). Zero gradient where m_wit >= "
+                    "m_target (satisficing — don't over-push into the label-noise regime).")
+    ap.add_argument("--seg-horizon-margin-lo", type=float, default=0.3,
+                    help="v7.5 B.5 (#169): the LOWER GT top-2 margin bound of the REDUCIBLE band. Pixels "
+                    "with GT margin < this are IRREDUCIBLE label-noise (frozen-SegNet coin-flip) and are "
+                    "EXCLUDED (MEASURED: <0.05 flips are 193x-concentrated label-noise). Default 0.3.")
+    ap.add_argument("--seg-horizon-margin-hi", type=float, default=0.5,
+                    help="v7.5 B.5 (#169): the UPPER GT top-2 margin bound. Above this the GT is "
+                    "confidently decided and flips are rare (non-reducible-by-us). The reducible + "
+                    "stably-decided band is [lo, hi] = [0.3, 0.5] (MEASURED). Default 0.5.")
+    ap.add_argument("--seg-horizon-row-lo", type=int, default=96,
+                    help="v7.5 B.5 (#169): the TOP SEG-grid row of the horizon band (inclusive). 97.8% of "
+                    "the frontier d_seg lives in horizon rows ~96-288 (MEASURED; where sky/far meets the "
+                    "ground classes). Clamped to [0, H). Default 96.")
+    ap.add_argument("--seg-horizon-row-hi", type=int, default=288,
+                    help="v7.5 B.5 (#169): the BOTTOM SEG-grid row of the horizon band (exclusive). "
+                    "Clamped to (row_lo, H]. Default 288 (the measured horizon-band lower edge).")
+    ap.add_argument("--seg-horizon-margin-start-epoch", type=int, default=0,
+                    help="v7.5 B.5 (#169): engage only at ep>=this (0=from ep1). Gate to the post-argmax "
+                    "stage (the margin band is meaningful once the argmax is roughly seated); the engage "
+                    "epoch re-treats the spike-guard (same discipline as the margin-satisfice hinge).")
     # LEVER-4c ANNULUS-DIRECTED CHROMA-SHARPENING (chroma DOF probe a3e9f0bd GREEN 2026-07-03; operator
     # 2026-06-25 "Chroma too"; ADDITIVE, DEFAULT-OFF). At the fragile margin annulus supervise the
     # witness's OWN rendered chroma (rgb - BT.601-luma, LUMA-INVARIANT) toward the GT chroma so the

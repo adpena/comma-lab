@@ -68,6 +68,18 @@ def test_dsl_temporal_screw_start_event_wiring():
         TemporalScrewConsistency(start_event="plateau_trigger")
 
 
+def test_dsl_temporal_screw_sky_rotation_only():
+    """v7.5 B.5: sky_rotation_only emits the store_true + sky-row-hi flags (the sky is at infinity ⇒
+    rotation-only warp, ξ translation zeroed). Default OFF => not emitted (byte-identical single warp)."""
+    off = TemporalScrewConsistency(weight=0.1)
+    assert "--seg-temporal-screw-sky-rotation-only" not in off.overrides
+    on = TemporalScrewConsistency(weight=0.1, sky_rotation_only=True, sky_row_hi=96)
+    assert on.overrides["--seg-temporal-screw-sky-rotation-only"] is True
+    assert on.overrides["--seg-temporal-screw-sky-row-hi"] == 96
+    with pytest.raises(ValueError, match="sky_row_hi"):
+        TemporalScrewConsistency(weight=0.1, sky_rotation_only=True, sky_row_hi=0)
+
+
 def test_dsl_temporal_screw_rejects_nonground_classes():
     # Movable(3)/MyCar(4) are NON-ground — the plane homography is wrong for them (GROUND masking #1).
     for bad in ("0,1,3", "4", "3,4", "5", ""):
@@ -280,3 +292,42 @@ def test_none_of_the_three_forces_composed_on_in_crucible_v7():
     for flag in ("--seg-temporal-screw-weight", "--seg-margin-satisfice-weight",
                  "--seg-subpix-edge-weight-source"):
         assert flag not in wa_src, f"crucible autoconfig activates {flag} — must stay default-off (§9)"
+
+
+# ─────────────────────────────────────────────────────── v7.5 B.5: horizon-weighted margin (#169)
+def test_dsl_horizon_weighted_margin_emits_flags():
+    """v7.5 B.5 (#169): the DSL factory holds the 0-byte horizon-weighted margin flags (all REAL
+    levelset-trainer argparse flags; never-invent-flags)."""
+    from tac.witness_dsl.curriculum_dsl import HorizonWeightedMargin
+    lev = HorizonWeightedMargin(weight=0.1)
+    assert lev.name == "horizon_weighted_margin"
+    ov = lev.overrides
+    assert ov["--seg-horizon-margin-weight"] == pytest.approx(0.1)
+    assert ov["--seg-horizon-margin-target"] == pytest.approx(0.5)     # the safe-margin ceiling
+    assert ov["--seg-horizon-margin-lo"] == pytest.approx(0.3)          # reducible band lower (excl label-noise)
+    assert ov["--seg-horizon-margin-hi"] == pytest.approx(0.5)          # reducible band upper
+    assert ov["--seg-horizon-row-lo"] == 96 and ov["--seg-horizon-row-hi"] == 288  # horizon band
+
+
+def test_dsl_horizon_weighted_margin_rejects_degenerate_bands():
+    """The reducible GT-margin band [lo,hi] and the horizon row band must both be non-empty (the #169
+    [0.3,0.5] band EXCLUDES the <lo irreducible label-noise; an empty band would be a silent no-op)."""
+    from tac.witness_dsl.curriculum_dsl import HorizonWeightedMargin
+    with pytest.raises(ValueError, match="margin_lo"):
+        HorizonWeightedMargin(weight=0.1, margin_lo=0.5, margin_hi=0.3)
+    with pytest.raises(ValueError, match="row_lo"):
+        HorizonWeightedMargin(weight=0.1, row_lo=300, row_hi=96)
+
+
+def test_horizon_weighted_margin_registered_off_with_exit_criterion():
+    """v7.5 B.5 disposition: BUILT + HELD + REGISTERED default-OFF in the duty-to-measure queue (an A/B
+    arm, NOT composed ON — it would perturb the sealed config + carries the label-noise risk). The
+    registered trigger names the exit-criterion n600 A/B (the honest 'off is a tracked queue' state)."""
+    import tac.witness_autoconfig as wac
+    roff = wac.crucible_v7_registered_off_levers()
+    assert "horizon_weighted_margin_169" in roff
+    e = roff["horizon_weighted_margin_169"]
+    assert e["default"] == "off" and e["state"] == "registered_duty_to_measure"
+    # the exit criterion (distinguish real recovery from chasing label-noise) is named in the trigger
+    assert "measure_dseg_reducibility_gt_margin" in e["trigger"]
+    assert "label-noise" in e["trigger"] and "HIGHER GT margin" in e["trigger"]

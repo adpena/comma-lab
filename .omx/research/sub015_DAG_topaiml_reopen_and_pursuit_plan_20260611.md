@@ -11170,3 +11170,52 @@ pose-blind d_seg trajectory (pose ⊥ d_seg) — else the coherent-render-first 
 sequencing gets a documented terminal-finding. Tests: crucible_v7 + store_nothing_pose_carrier +
 p0_forces_phase2 + schedule_provenance + lever_registry + witness_autoconfig + sealed_205 = 194 passed.
 **RE-SEAL REQUIRED** before any launch (not this agent's authority). Pointer 0.19110 UNMOVED.
+
+## FEED-v75B5built (2026-07-09) — v7.5 ACTUATION item B.5: horizon-weighted margin (#169) + sky=rotation-only BUILT
+**CONFIG/trainer BUILD, NOT a launch.** Live #205 (pid 63069) untouched. **Pointer 0.19110 UNMOVED** —
+advisory [macOS-MLX research-signal] NON-PROMOTABLE. Operator correction (mid-build): do NOT defer B.5 —
+the 0.012–0.024 ΔS is SIGNIFICANT near sub-0.15 (Δd_seg ≈ 0.00012–0.00024 = 13–27% of the ~0.0009 target;
+43.8% of remaining descent per relative_significance_reaudit_20260708); building a new trainer flag+term is
+LEGITIMATE (never-invent-flags forbids WIRING a nonexistent flag, not CREATING one). Built BOTH pieces:
+
+**(1) HORIZON-WEIGHTED MARGIN (#169)** — the 0-byte SHARED-structure d_seg lever DERIVED in
+`dseg_reducibility_gt_margin_verdict_20260623.md`. That verdict MEASURED (exact frozen-SegNet argmax, real
+GT, through-R, n48 sanity-checked to n600 within 1%) that the residual d_seg flips split by GT top-2 margin:
+`<0.05`-margin flips are IRREDUCIBLE frozen-SegNet label-noise (~193× concentrated coin-flip — chasing them
+= FITTING NOISE), while GT margin ∈ `[0.3,0.5]` flips are the ONLY ones both REDUCIBLE and STABLY-DECIDED
+(oracle ceiling ΔS≈0.024 at margin≥0.3), and 97.8% of the frontier d_seg lives in the horizon band (SEG
+rows ~96-288). BUILT a one-sided hinge `L_hz = w_h · mean_{mask} relu(m_target − m_wit)` on the SHARED
+realized through-R witness GT-class margin `_signed` (#141; NO 2nd SegNet, 0 archive bytes), STRATIFIED to
+the θ-independent stop-grad mask `(row∈[row_lo,row_hi)) AND (GT margin∈[lo,hi])` — pushing ONLY the
+reducible confident-GT band, EXCLUDING the `<lo` label-noise BY CONSTRUCTION (satisficing: zero grad where
+m_wit≥m_target). Sister of MarginBandSatisficing (same hinge shape, different stratification). New trainer
+flags `--seg-horizon-margin-{weight,target,lo,hi,start-epoch}` + `--seg-horizon-row-{lo,hi}` + precompute +
+gate + config-capture + `terms_out["horizon_margin"]`. DSL `HorizonWeightedMargin` factory HOLDS all 7
+flags (unmapped UNCHANGED 120). Default `weight=0` ⇒ branch skipped ⇒ BYTE-IDENTICAL (test_sealed_205 green).
+
+**(2) SKY=ROTATION-ONLY** warp stratification for the temporal-screw (B.4). The ground homography
+H=K(R−t·nᵀ/d)K⁻¹ carries translational PARALLAX correct for the NEAR ground plane, but the SKY is at
+infinity (d→∞ ⇒ t·nᵀ/d → 0) so its CORRECT warp is ROTATION-ONLY H_rot=K·R·K⁻¹ — obtained by zeroing the
+se(3) translation ρ (translation-first ξ=(ρ,ω), ρ=ξ[0:3]). BUILT a spatial blend: the upper (sky) rows of
+the warped GROUND-prob field use the rotation-only warp, the lower (ground) rows keep the full homography
+(new flags `--seg-temporal-screw-sky-rotation-only` + `--seg-temporal-screw-sky-row-hi`; DSL
+`TemporalScrewConsistency(sky_rotation_only=, sky_row_hi=)` HOLDS them). Default OFF ⇒ the single
+full-homography warp ⇒ BYTE-IDENTICAL (crucible_v7's B.4 temporal-screw unchanged).
+
+**DISPOSITION (honest, discipline-correct):** BOTH are BUILT + HELD + REGISTERED default-OFF in the
+`crucible_v7_registered_off_levers()` duty-to-measure queue (`horizon_weighted_margin_169` +
+`temporal_screw_sky_rotation_only`) — NOT composed ON (they would perturb the sealed config, and per the
+derivation the horizon-margin is an "A/B arm, NOT a claim" carrying the label-noise risk; the RE-SEAL/A/B
+decides ON/OFF). **EXIT CRITERION (pre-registered per item, owed n600 A/B, sequenced off the live run — NO
+concurrent GPU probe per the machine-crash P0 gate; carries the #141 label-noise caveat):** horizon-margin
+ON vs OFF (same seed) — re-run `tools/measure_dseg_reducibility_gt_margin.py --n-pairs 600` on both ckpts;
+the term must recover REAL d_seg on the [0.3,0.5] band through R AND the SURVIVING flips must shift to
+HIGHER GT margin (the verdict's own REDUCIBLE test), else it is chasing the `<0.3` label-noise →
+documented terminal-finding. Sky: the class-2 sky temporal-flicker residual must drop through R vs the full
+homography, else the sky-stratification is neutral for this clip's ego motion. **Triality:** DSL =
+`HorizonWeightedMargin` factory + `TemporalScrewConsistency` sky params + registered-off entries · DAG =
+this FEED · equations = the DERIVED anchors are `dseg_reducibility_gt_margin_verdict_20260623.md` (#169) +
+the ground-homography design note (sky); canonical-equation registration OWED at byte-close (activation ≠ a
+new n600 measurement). Tests: p0_forces_phase2 + crucible_v7 + lever_registry + sealed_205 +
+witness_autoconfig + store_nothing + schedule_provenance = 198 passed; unmapped UNCHANGED 120. **RE-SEAL
+REQUIRED** before any launch. Pointer 0.19110 UNMOVED.

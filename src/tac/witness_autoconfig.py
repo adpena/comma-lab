@@ -2268,6 +2268,40 @@ def crucible_v7_registered_off_levers() -> dict:
                         "(binding from ep~50). Pre-registered threshold gates the per-class decomposition "
                         "BEFORE any 'basis helps' claim (verdict-scope: the basis lever's Road effect)."),
         },
+        "horizon_weighted_margin_169": {  # v7.5 B.5 — BUILT, default-OFF, exit-criterion A/B owed
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("v7.5 B.5 (#169) BUILT: DSL HorizonWeightedMargin factory + the trainer term "
+                        "(0-byte one-sided relu(m_target - m_wit) on the SHARED _signed, STRATIFIED to "
+                        "horizon rows [96,288) AND GT-margin [0.3,0.5]). DEFAULT-OFF (it would perturb the "
+                        "sealed config; it is an A/B ARM, NOT a claim — dseg_reducibility_gt_margin_verdict"
+                        "_20260623.md rated it REDUCIBLE only on the confident-GT band, oracle ceiling "
+                        "ΔS≈0.024, with the <0.3 flips IRREDUCIBLE frozen-SegNet label-noise). EXIT "
+                        "CRITERION (owed n600 A/B, sequenced off the live run — NO concurrent GPU probe per "
+                        "the machine-crash P0 gate): horizon-margin ON vs OFF (same seed) — re-run "
+                        "tools/measure_dseg_reducibility_gt_margin.py --n-pairs 600 on both ckpts; the term "
+                        "must recover REAL d_seg on the [0.3,0.5] band through R AND the SURVIVING flips "
+                        "must shift to HIGHER GT margin (the verdict's own REDUCIBLE test), else it is "
+                        "chasing the <0.3 label-noise → documented terminal-finding. Relative significance "
+                        "43.8% of remaining descent (relative_significance_reaudit_20260708.md) makes this a "
+                        "high-priority duty-to-measure at sub-0.15. verdict-scope: the specific "
+                        "implementation/band, not the horizon-margin paradigm."),
+        },
+        "temporal_screw_sky_rotation_only": {  # v7.5 B.5 — BUILT temporal-screw refinement, default-OFF
+            "default": "off", "state": "registered_duty_to_measure",
+            "trigger": ("v7.5 B.5 BUILT: the temporal-screw (B.4, composed ON) warps the GROUND-class prob "
+                        "field by the FULL ground homography H=K(R-t·nᵀ/d)K⁻¹, which is WRONG for the SKY "
+                        "sub-region of class-2 Undrivable (sky at infinity, d→∞ ⇒ no translational "
+                        "parallax ⇒ correct warp = rotation-only H_rot=K·R·K⁻¹). "
+                        "TemporalScrewConsistency(sky_rotation_only=True, sky_row_hi=...) blends the "
+                        "rotation-only warp into the sky rows. DEFAULT-OFF (byte-identical single-warp; it "
+                        "refines an already-composed lever so it stays a controlled A/B). EXIT CRITERION "
+                        "(owed n600 A/B, sequenced off the live run — NO concurrent GPU probe): "
+                        "temporal-screw with sky_rotation_only ON vs OFF (same seed) — the sky-region "
+                        "class-2 (Undrivable/sky) temporal-flicker residual must drop through R (the full "
+                        "homography injects a wrong parallax target there), else the sky-stratification is "
+                        "neutral for this clip's ego motion → documented finding. Composed only WITH the "
+                        "temporal-screw (requires the temporal-screw to be active, weight>0)."),
+        },
     }
 
 

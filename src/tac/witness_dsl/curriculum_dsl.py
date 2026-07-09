@@ -2826,6 +2826,7 @@ def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
     weight: float = 0.1, start_epoch: int = 0, xi_source: str = "ground_gt",
     classes: str = "0,1,2", band: float = 2.0, window: int = 0,
     start_event: "str | None" = None,
+    sky_rotation_only: bool = False, sky_row_hi: int = 96,
 ) -> Lever:
     """P0 FORCE 1 — TEMPORAL SCREW-CONSISTENCY (derivation
     ``.omx/research/p0_forces_derivation_20260708.md`` §FORCE 1; task #360). DEFAULT-OFF.
@@ -2886,6 +2887,10 @@ def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
         raise ValueError(
             "TemporalScrewConsistency: start_event must be None or 'annulus_plateau' (the only wired "
             f"formed-boundary sensor for temporal-screw), got {start_event!r}")
+    if bool(sky_rotation_only) and not (int(sky_row_hi) >= 1):
+        raise ValueError(
+            f"TemporalScrewConsistency: sky_row_hi must be >= 1 when sky_rotation_only, got {sky_row_hi!r} "
+            "(the sky/ground split row; rows < sky_row_hi warp rotation-only).")
     overrides = {"--seg-temporal-screw-weight": float(weight),
                  "--seg-temporal-screw-start-epoch": int(start_epoch),
                  "--seg-temporal-screw-xi-source": str(xi_source),
@@ -2893,6 +2898,12 @@ def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
                  "--seg-temporal-screw-band": float(band)}
     if start_event is not None:
         overrides["--seg-temporal-screw-start-event"] = str(start_event)
+    # (v7.5 B.5) SKY=ROTATION-ONLY warp stratification: the sky is at infinity (no parallax) so its
+    # correct warp is H_rot=K·R·K⁻¹ (ξ translation ρ zeroed), NOT the full ground homography. Emit the
+    # store_true flag ONLY when enabled (default OFF => the single full-homography warp => byte-identical).
+    if bool(sky_rotation_only):
+        overrides["--seg-temporal-screw-sky-rotation-only"] = True
+        overrides["--seg-temporal-screw-sky-row-hi"] = int(sky_row_hi)
     return Lever(
         "temporal_screw_consistency",
         overrides=overrides,
@@ -2959,6 +2970,63 @@ def MarginBandSatisficing(  # noqa: N802 — P0 FORCE 2 (task #360)
                f"m_safe={float(msafe)} = {float(headroom)}*delta_R({float(delta_r)}) MEASURED R-noise "
                "floor); frees the interior gradient budget onto the band (UNIWARD satisficing); "
                "MASK-BY-STAGE at l7 preserves the tau-anneal; default-OFF; advisory until byte-closed"))
+
+
+def HorizonWeightedMargin(  # noqa: N802 — v7.5 B.5 (#169)
+    weight: float = 0.0, target: float = 0.5, margin_lo: float = 0.3, margin_hi: float = 0.5,
+    row_lo: int = 96, row_hi: int = 288, start_epoch: int = 0, window: int = 0,
+) -> Lever:
+    """v7.5 B.5 — HORIZON-WEIGHTED MARGIN (#169; derivation
+    ``.omx/research/dseg_reducibility_gt_margin_verdict_20260623.md``). DEFAULT-OFF.
+
+    The 0-byte SHARED-structure d_seg lever. That verdict MEASURED (exact frozen-SegNet argmax, real GT,
+    through-R) that the residual d_seg flips split by GT top-2 margin: the ``<0.05``-margin flips are
+    IRREDUCIBLE frozen-SegNet label-noise (a near-coin-flip, ~193× concentrated — chasing them is FITTING
+    NOISE), while the flips at GT margin ∈ ``[0.3, 0.5]`` are the ONLY ones both REDUCIBLE and
+    STABLY-DECIDED (oracle ceiling ΔS≈0.024 at margin≥0.3 / 0.012 at margin≥0.5). 97.8% of the frontier
+    d_seg lives in the horizon band (SEG rows ~96-288, where sky/far meets the ground classes).
+
+    So this is a one-sided hinge ``L_hz = w_h · mean_{mask} relu(m_target − m_wit)`` on the SHARED realized
+    through-R witness GT-class margin ``m_wit`` (``_signed``, #141; NO 2nd SegNet forward, 0 archive
+    bytes), STRATIFIED to the θ-independent mask ``(row ∈ [row_lo, row_hi)) AND (GT margin ∈ [lo, hi])`` —
+    pushing ONLY the reducible confident-GT band toward the ``target`` ceiling and EXCLUDING the ``<lo``
+    label-noise by construction. Zero gradient where ``m_wit ≥ target`` (satisficing — do not over-push
+    into the noise regime). Sister of :func:`MarginBandSatisficing` (same one-sided-hinge shape on
+    ``_signed``; DIFFERENT stratification — horizon×margin-band vs the full annulus).
+
+    The trainer flag ``--seg-horizon-margin-weight`` is default 0.0 ⇒ byte-identical when not composed.
+    ``window=0`` = loss-config lever. **A/B arm, NOT a claim** — the exit criterion (owed n600 A/B) must
+    distinguish REAL d_seg recovery on the ``[0.3,0.5]`` band from chasing the ``<lo`` label-noise
+    (re-run ``tools/measure_dseg_reducibility_gt_margin.py --n-pairs 600`` on the ON vs OFF ckpts;
+    require the surviving flips shift to HIGHER GT margin, else terminal-finding). Advisory until
+    byte-closed (pointer 0.19110 UNMOVED)."""
+    if not (float(weight) >= 0.0):
+        raise ValueError(f"HorizonWeightedMargin: weight must be >= 0, got {weight!r}")
+    if not (float(margin_lo) < float(margin_hi)):
+        raise ValueError(
+            f"HorizonWeightedMargin: margin_lo ({margin_lo!r}) must be < margin_hi ({margin_hi!r}) — the "
+            "reducible GT-margin band [lo,hi] must be non-empty (#169 measured band [0.3,0.5]).")
+    if not (int(row_lo) < int(row_hi)):
+        raise ValueError(
+            f"HorizonWeightedMargin: row_lo ({row_lo!r}) must be < row_hi ({row_hi!r}) — the horizon band "
+            "must be a non-empty SEG-row range (#169 measured band rows ~96-288).")
+    if not (float(target) > 0.0):
+        raise ValueError(f"HorizonWeightedMargin: target must be > 0, got {target!r}")
+    return Lever(
+        "horizon_weighted_margin",
+        overrides={"--seg-horizon-margin-weight": float(weight),
+                   "--seg-horizon-margin-target": float(target),
+                   "--seg-horizon-margin-lo": float(margin_lo),
+                   "--seg-horizon-margin-hi": float(margin_hi),
+                   "--seg-horizon-row-lo": int(row_lo),
+                   "--seg-horizon-row-hi": int(row_hi),
+                   "--seg-horizon-margin-start-epoch": int(start_epoch)},
+        epochs_delta=window,
+        notes=("v7.5 B.5 #169 horizon-weighted margin (one-sided relu(m_target - m_wit) on the SHARED "
+               "_signed, STRATIFIED to horizon rows [%d,%d) AND GT-margin [%.2f,%.2f]); pushes ONLY the "
+               "reducible confident-GT band, EXCLUDES the <lo irreducible label-noise; 0-byte "
+               "SHARED-structure; A/B arm NOT a claim (oracle ceiling dS~0.024); advisory until byte-close"
+               % (int(row_lo), int(row_hi), float(margin_lo), float(margin_hi))))
 
 
 def TieLocusDisplacement(  # noqa: N802 — P0 FORCE 3 (task #360; WRAPS the existing subpix term)
