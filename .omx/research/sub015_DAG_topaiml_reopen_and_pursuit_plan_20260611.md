@@ -11449,3 +11449,20 @@ launcher + headroom, NOT now. Triality: DSL Road+Undriv lever owed at build; the
 STAY FORMALIZATION_PENDING (register only with P-B/P-C/increment-1 anchors); this FEED = the DAG leg. GATES: v7.5
 launches first — if #205's v7 line reaches target, v8 never fires (opportunity cost). Pointer 0.19110 UNMOVED
 (means; DRAFT). #205 untouched.
+
+### FEED-v8-increment1-review (2026-07-09) — gate-(c) adversarial review: VERDICT REVISE, folded
+
+Fresh-eyes deep-math review of the increment-1 draft (not a rubber stamp — found 3 real NO-FAKE over-claims).
+Verdict REVISE. Caught: (A) "theft impossible by construction" = over-claim — closes shared-FEATURE gradient
+theft but NOT composite-argmax reassignment (shared Road/Undriv θ_bulk = 63% flip mass; global-b_c couples
+all ties) → folded: scoped claim + b_c-OUT-OF-scorer-loop guard. (B) Road+Undriv one-field = PLAUSIBLE but the
+φ_bulk→(φ_Road,φ_Undriv) signed lift was UNSPECIFIED → folded: ±s·φ_bulk lift + Undriv-single-sign as a
+DESIGNED-to-VERIFY assumption ($0 cache check, the scaffold's first step). (F) 20–50 KB "DERIVED" = mislabel,
+a GUESS ~1 order-of-mag; 0.049 S headroom doubly-conditional → folded: relabel CONJECTURED, stop citing as
+derived. Also: (C) interiors-near-free rests on P-A's NOT-free measurement + a NEW counted-seed-floor
+sub-finding (class-typical texture stats are video-derived = COUNTED) → P-C must isolate it; (D) chroma-first
+triangularity FLAWED as general principle (PoseNet reads low-freq chroma; Road/Lane is luma-separable) but OK
+for increment-1 (Lane = separate analytic carrier); risk-1 spec("per-EDGE"=41)-vs-table("per-CLASS"=5)
+inconsistency surfaced — only the ONE Road/Undriv edge is edge-centric this increment; risk-4 tie-variance
+cure = annulus-precision byte allocation (not temporal-screw). BLOCKING: P-C (memory-gated post-#205) before
+paint design. Draft now = REVISED strong-seed, build-ready MODULO P-C. Pointer 0.19110 UNMOVED. #205 untouched.

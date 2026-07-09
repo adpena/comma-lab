@@ -27,18 +27,29 @@ the two council-flagged equations** — while Movable / Lane / MyCar keep their 
 | MyCar (4) | static mask clamp | `hood_static_component.py` — **REUSE as-is** | ~0.1–0.5 KB | IoU 0.994 **MEASURED** #139 |
 | Lane (1) | analytic ground-frame band | `analytic_lane_render_band.py` + `lane_sdf_component.py` — **REUSE** | ~1–2 KB | d_seg 0.00087 **MEASURED** (openpilot band) |
 | Movable (3) | sparse islands + homotopy + area-Lagrange | v7.5 machinery (`--ladder-island-homotopy` + `area_constraint`) — **REUSE v7.5** | ~2–6 KB | **DERIVED** |
-| **Road (0) + Undriv (2)** | **ONE edge-centric bulk-boundary field** | **NEW** — composes `road_horizon_component.py` + `lever_b_levelset_generator.py` (SDF) + `laguerre_logit_offset.py` (b_c) | **20–50 KB DERIVED = THE unknown to measure** | conservative-leaning (P-A: interiors near-flawless through R) |
+| **Road (0) + Undriv (2)** | **ONE edge-centric bulk-boundary field** | **NEW** — composes `road_horizon_component.py` + `lever_b_levelset_generator.py` (SDF) + `laguerre_logit_offset.py` (b_c) | **20–50 KB CONJECTURED** (review-F: a GUESS, ~1 order-of-mag; NO RD curve d_bulk(B) fitted) = THE unknown to measure | P-A measured only the real-frame case, not the free case |
 | tie bias b_c | Road↔Lane calibration offset | `laguerre_logit_offset.py` — **REUSE** | ~0 bytes | 41% of Road's oracle flips **MEASURED** (P-A) |
 
-Net stack ≈ **27–57 KB vs 114 KB incumbent ⇒ −50..75% ≈ 0.049 S rate-headroom DERIVED**, CONDITIONAL on
-increment-1's byte MEASUREMENT. The *only* new module is the Road+Undriv field; four of five carriers
+Net stack ≈ 27–57 KB vs 114 KB incumbent ⇒ **−50..75% ≈ 0.049 S rate-headroom — CONJECTURED, DOUBLY
+conditional** (review-F: on the byte number AND on d_seg holding at equal quality; NOT derived — it
+presupposes the increment-1 result). The *only* new module is the Road+Undriv field; four of five carriers
 already exist.
 
 ## 2. The one new build — the Road+Undriv edge-centric bulk-boundary field
 - **ONE field, not two** (risk-1 cure, edge-centric): a single SDF-gauged scalar φ_bulk over the Road/Undriv
   bulk; their shared boundary is ONE tie locus. Two region fields would pay for the same curve twice.
-  `P(x)=argmax_c(φ_c(x)+b_c)`; separatrix = tie loci, DERIVED never represented (∂φ_c/∂θ_{c'}=0 ⇒ the
-  measured cross-class theft — Lane 13.8× / Movable 4.6× stealing Road — is impossible by construction).
+  **The signed lift (review-B, was UNSPECIFIED):** φ_Road = +s_R·φ_bulk, φ_Undriv = −s_U·φ_bulk (sign = the
+  Road/Undriv side of the road-edge/horizon curve; per-side scales s_R,s_U + biases b_c are the only
+  per-side freedom under the |∇φ|=1 eikonal gauge, which otherwise rigidly ties the two margins). **DESIGNED
+  assumption to VERIFY:** Undrivable (sky ∪ below-horizon-undriv) is single-signed-connected relative to Road
+  (if not, φ_bulk needs a second component — measure on the argmax cache before build).
+- **Decoupling — SCOPED claim (review-A, was an over-claim):** `P(x)=argmax_c(φ_c(x)+b_c)`; separatrix = tie
+  loci, DERIVED never represented. ∂φ_c/∂θ_{c'}=0 closes the **MEASURED shared-FEATURE gradient theft**
+  (Lane 13.8× / Movable 4.6× stealing Road) — **NOT** the residual composite-argmax reassignment: the shared
+  Road+Undriv field means θ_bulk is NOT independent for that pair (~63% of flip mass), and each b_c is a
+  GLOBAL scalar coupling all of that class's ties at once. **GUARD (review-E):** b_c is calibrated OUTSIDE the
+  scorer-gradient loop (closed-form OT / Menon offsets), never jointly optimized against d_seg — else the
+  global-bias coupling re-enters as theft-like behavior.
 - **Grid-bulk + INR-annulus (#308):** the interior is near-flawless through R (**MEASURED** P-A: Road 0.17% /
   Undriv 0.03% within-class) ⇒ a COARSE grid for the bulk interior, byte budget spent on the
   SEPARATRIX/ANNULUS precision. This is the whole "interiors near-free" bet — gate on P-C (§6).
@@ -59,10 +70,14 @@ already exist.
 1. **MERGE:** tropical argmax composite → paint (RGB frame1).
 2. **DIFF:** frozen SegNet argmax on `R(composite)` vs the intended partition — **frame1 ONLY** (SegNet reads
    `x[:,-1]`; frame0 is SegNet-free = pure pose territory).
-3. **CORRECT (channel-routed by the modules.py asymmetry):** SegNet = full-RGB last-frame (chroma fully
-   argmax-visible) vs PoseNet = YUV6×2 (4 luma + 2 *subsampled* chroma, pose is luma-dominated) ⇒ the
-   correction Jacobian is near-**triangular** in (luma, chroma) ⇒ **CHROMA-FIRST seg repairs**
-   (SegNet-strong, PoseNet-quiet; basis **MEASURED** #276), **LUMA RESERVED** for pose/warp coherence.
+3. **CORRECT (channel-routed; SCOPED per review-D):** the near-**triangular** (luma, chroma) Jacobian is NOT
+   structural — PoseNet *does* read 2 subsampled chroma channels, so triangularity holds only in the
+   **HIGH-spatial-freq band** (annulus chroma edits get low-passed before pose); LOW-freq chroma *recolors*
+   pass into pose at near-full strength. It is also **class-pair-dependent**: Road/Undriv IS chroma-separable
+   (grey/green/blue — chroma-first justified, #276) but **Road/Lane (41% of Road's flips) is LUMA-separable**
+   (bright lines on dark road) and CANNOT be chroma-repaired. **Increment-1 is safe because Lane is a
+   separate ANALYTIC carrier (not paint-repaired)** — chroma-first is a warm-start heuristic for the
+   Road/Undriv paint only; the REAL guard is step 4 (measure pose on composites + Dykstra), never the routing.
 4. **Iterate to fixed point** = Dykstra alternating projections onto (argmax-cell ∩ pose-tube) in
    channel-split coordinates (**#73 reborn**). Unpaintable residual → counted sidecar (**#226**
    margin_conditional_residual; Lever-D b/flip economics, MEASURED at admit time).
@@ -109,6 +124,28 @@ already exist.
   review (this doc is its seed, not its completion), and the full seal protocol (blind structural derivation,
   fix-all, verdict-scope, n600). Authority: only a byte-closed `upstream/evaluate.py` row judges any of it.
 
+## 9. Gate-(c) adversarial review — VERDICT: REVISE (fresh-eyes, 2026-07-09) + revisions folded
+A fresh-eyes deep-math reviewer attacked the 6 load-bearing claims. Verdict **REVISE** (strong seed, not
+build-ready). Claim verdicts: **A** ∂φ decoupling = FLAWED over-claim (folded §2: scoped to shared-feature
+gradient; global-b_c + shared-θ coupling stated; b_c-out-of-loop guard added). **B** one-field = PLAUSIBLE,
+lift was unspecified (folded §2: signed ±s·φ_bulk lift + Undriv-single-sign DESIGNED-to-verify). **C**
+interiors-near-free = PLAUSIBLE but conditional/mildly-circular — P-A measured the NOT-free case; P-C (the
+free case) is UNRUN. **NEW review sub-finding (folded here):** flat-paint fails (0.0064 floor) ⇒ adequate
+texture needs class-typical statistics ⇒ those are VIDEO-DERIVED = a nonzero **COUNTED seed floor** that
+neither P-A nor P-C has isolated — P-C must report it. **D** chroma-triangularity = FLAWED as a general
+principle, OK for increment-1 (folded §4). **E** staged training = CONFIRMED with the b_c-out-of-loop guard.
+**F** 20–50 KB = FLAWED mislabel (folded §1: DERIVED→CONJECTURED; 0.049 S no longer cited as derived).
+Risk-cure deltas folded: **risk-1** — surface the spec-vs-table inconsistency: SPEC §1 says "one field per
+adjacency EDGE" (41 measured edges) but the carrier table is per-CLASS (5 fields); **only the ONE Road/Undriv
+edge is actually edge-centric in increment-1** (the rest are per-class — honest, and correct for the smallest
+decisive build, but the "edge-centric" label is aspirational for the full v8, not this increment). **risk-4
+(tie-variance)** — the stated cure is now **annulus-precision byte allocation** (reduce δφ at the tie), NOT
+temporal-screw (which is the TEMPORAL axis and doesn't bound per-frame instantaneous jitter). **BLOCKING
+PRECONDITION:** P-C runs (memory-gated post-#205) *before* the paint stage is designed — the near-free bet
+currently rests on an upper bound only. Full review artifact retained in the session record. This folding =
+$0 prose + one already-pre-registered gated probe; the path is clear, not DEFER.
+
 ## Pointer
 **0.19110 UNMOVED.** Draft = MEANS. The END is a byte-closed exact row from increment-1's measured A/B —
-gated behind v7.5, and behind P-C's "interiors near-free" go/no-go.
+gated behind v7.5, behind P-C's "interiors near-free" + counted-seed-floor go/no-go, and now behind the
+6 folded REVISE items. Honest state: a **REVISED strong-seed design**, build-ready *modulo* P-C.
