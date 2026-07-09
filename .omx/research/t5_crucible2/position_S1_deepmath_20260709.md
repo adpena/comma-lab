@@ -6,6 +6,12 @@ cross-read of other seats. Cites `docs/operating_manual_craft_handoff.md` (§4 r
 §6 attack-own, §8 mistakes). Works from DELTA_GROUNDING + the deep-math substrate (#284 EUREKA,
 #318 GR-action, #302 curriculum, #360 four-forces, FEED-crux-7dim/roadfloor/roadfloorfix).
 
+STORES CONSULTED: t5_crucible2/{CONVENING,DELTA_GROUNDING,ORCHESTRATION_LEDGER incl. the operator
+pose-gate constraint}_20260709.md · DAG FEEDs (#284 EUREKA chapters, crux-7dim, roadfloor/roadfloorfix,
+07a two-regime) · #318 GR-action + DE derivation · #302 curriculum derivation · #360 four-forces memo ·
+amber/#378 eps_floor constants · jacobian_basin telemetry semantics. Not consulted: sibling seat
+positions (independence constraint).
+
 **Method (the area-Lagrange method, §4):** write the full variational derivative δS_τ/δφ the
 multiphase level-set energy DEMANDS, then check each piece against a force present in the config.
 A term the energy demands but the code lacks is a MISSING FORCE (this is how the Chan-Vese
