@@ -10933,3 +10933,24 @@ replace co-train-pose-from-ep0 with the R1 two-phase sequence — full optimal d
 POSE-FINISH stage (w_pose emphasized, orthogonal ride-down to floor); DSL-expressible as a terminal
 curriculum stage; then #238-serialize the dxi to ship. This IS "turn on the best R1 techniques." Pointer
 0.19110 UNMOVED.
+
+## FEED-auditB (2026-07-08) — CORRECTION: v7.5 is ALREADY ~80% event-driven (my "inert curriculum" read was a telemetry misread) (f3ac265ad)
+Audit B (v75_dynamic_curriculum_audit) FALSIFIES my earlier "event machinery wired but INERT, hardcoded
+epochs driving" claim + the operator's premise. AUTHORITATIVE: run.log `curriculum_transition_fired
+from:ce to:tau_softplus epoch:257 trigger:loss_plateau nucleus_gated:true` — CE→tau FIRED at ep257 via
+plateau, 43ep BEFORE the 300 cap. The event trigger WORKS. My error: I grepped `handoff_readiness.plateau_ok`
+(False) → concluded inert; but that telemetry runs at 25-ep verdict cadence + a stage-reset guard, so it
+NEVER samples ep257 → a LEGIBILITY DEFECT not an inert trigger. Author≠reviewer caught my misread.
+REAL STATE: crucible_v7 (=v7.5 sealed) is ALREADY ~80% event-mode (operator 2026-07-08 override landed it):
+witness_autoconfig co-emits --muon-start-event powerlaw_meat, --lane-band-start-event lane_nucleus,
+--seg-chroma-boundary-start-event annulus_plateau, --tau-advance-mode event; fixed epochs demoted to
+fail-safe backstops; crucible_v7_wiring_gaps() reports all WIRED. ANTI-HARDCODED-EPOCHS TARGET ESSENTIALLY
+MET. RESIDUAL (small, feeds FEED-v75actuate): (1) fix plateau_ok telemetry defect (observability — the
+exact thing that fooled me: stamp in_stage_epochs/stage_start + dense-plateau slope); (2) DERIVE
+curriculum_min_stage_epochs (hardcoded 250 = the one bare literal left; value-provenance ladder); (3)
+VERIFY Muon event nucleation positive-control satisfiable (else silent fall to 726 backstop); (4) costate
+Phase-B CROSS-RUN actuation = design-only operator-GO (in-run transitions actuate via the trainer's
+deterministic SEEDED event sensors = resume-faithful bounded controller, NOT costate autonomy; live shadow
+actuation:NONE, enforced by test_no_actuation_capability). NCDE #344 + terminal-solve #341/#342 NOT in code
+tree (design-stage, not v7.5 launch surface). verdict_scope: instance — my telemetry misread, corrected.
+Pointer 0.19110 UNMOVED.
