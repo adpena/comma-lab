@@ -35,9 +35,11 @@ SEED_ROWS: tuple[tuple, ...] = (
      "d_seg-aware taper; +18% NO-GO RETRACTED (under-converged ge300/3000); converged anchors flip sign "
      "to -8% ~0.03; RE-VALIDATE at convergence (cheap disk A/B). verdict_scope: instance-under-convergence."),
     ("horizon_weighted_margin_169", 0.018, al.SIG_LABEL_MEASURED, "d_seg",
-     "#169 / relative_significance_reaudit_20260708 / DAG FEED-v75Aactuated B.5",
-     "0-byte in-training horizon-weighted margin; MEASURED cap 0.012-0.024 (midpoint 0.018); UNBUILT "
-     "trainer flag = a missing wire, not a dead lever. Land the DSL Lever + trainer flag."),
+     "#169 / relative_significance_reaudit_20260708 / DAG FEED-v75Aactuated B.5 / FEED-horizonmargin",
+     "0-byte in-training horizon-weighted margin; MEASURED oracle CEILING 0.012-0.024 (midpoint 0.018). "
+     "BUILT + FIREABLE: DSL HorizonWeightedMargin factory + trainer loss term (L4953) + reference twin "
+     "tac.boundary_math.horizon_weighted_margin + eq horizon_weighted_margin_hinge_v1. NEVER-FIRED: owed "
+     "a CONVERGED n600 byte-close A/B (surviving flips must shift to HIGHER GT margin, else terminal)."),
     ("StepNativeActivation", 0.013, al.SIG_LABEL_MEASURED, "d_seg",
      "activation screen / FINER -4.5% n600 / relative_significance_reaudit_20260708 #3",
      "step-native / FINER++ vs sine; -18.7% n100 -> -4.5% n600; adopt-verdict OWED (screen is LIVE). "

@@ -211,6 +211,10 @@ from tac.canonical_equations.dseg_aware_fourier_taper_20260709 import (
     build_dseg_aware_fourier_taper_v1,
     populate_dseg_aware_fourier_taper_equation,
 )
+from tac.canonical_equations.horizon_weighted_margin_20260709 import (
+    build_horizon_weighted_margin_v1,
+    populate_horizon_weighted_margin_equation,
+)
 from tac.canonical_equations.lane_band_res_entropy_stage_20260707 import (
     build_lane_band_res_entropy_stage_v1,
     measured_entropy_stage_delta_bytes,
@@ -362,6 +366,8 @@ __all__ = [
     "populate_anisotropic_basis_two_regime_allocation_equation",
     "build_dseg_aware_fourier_taper_v1",
     "populate_dseg_aware_fourier_taper_equation",
+    "build_horizon_weighted_margin_v1",
+    "populate_horizon_weighted_margin_equation",
     "build_lane_band_res_entropy_stage_v1",
     "measured_entropy_stage_delta_bytes",
     "populate_lane_band_res_entropy_stage_equation",
