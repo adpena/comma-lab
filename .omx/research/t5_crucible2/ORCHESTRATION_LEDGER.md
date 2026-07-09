@@ -25,9 +25,26 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       per-decision provenance table (11 rows) for P3. σ_cc′ corrected to ALREADY-BUILT (3571e5b65/caf747203);
       the two σ-laws (Young's 0.377 vs fragility 1.029) A/B = ladder 1b. S6 blind skeleton VINDICATES the
       incumbent spine (no QAT/c1a/sigma stage residue).
-- [ ] **P3 RED-TEAM vs THE DRAFT** + MANDATORY PROVENANCE AUDIT FIRST PASS (anchor path · review_status ·
-      form-limitations; recovery-written/unreviewed → PROVISIONAL; run-config claims cite launch.sh /
-      CONVENING, NEVER the activation ledger).
+- [x] **P3 RED-TEAM vs THE DRAFT** + MANDATORY PROVENANCE AUDIT — `P3_redteam_verdict_20260709.md` landed.
+      **21 attacks: BROKEN 1 · WEAKENED 10 · HELD 10.** Most dangerous = **A-1 BROKEN**: the repaired
+      pose-gate's DERIVED σ*=√(C/(δ_seg·λ_min(F))) is UNREACHABLE by ≥224× (σ*≥14.14 under the hard
+      λ_min(F)≤0.25 spectral bound vs measured σ_max(J_ξ)=0.063 / σ_min=1.2e-4) → gate structurally
+      never-fires, R1 canary structurally fails, A.4 canary-fail branch (block-vs-ship-R1) CONTRADICTORY,
+      owed-#1 launch-blocking gate cannot pass its own pre-launch assertion. Fix latent IN draft: promote
+      the RELATIVE relaxation-fit plateau to PRIMARY, demote absolute σ* to advisory, ship-R1 on
+      canary-fail (not block), DEMOTE σ*-build off the launch-blocking path. WEAKENED: σ_cc′ mis-classified
+      Class-A (modifies the length loss term on the shared Road↔Lane annulus — reverses S1's own "isolate"
+      call); unification single-flag realization owed; term_domination "compose-guard code" is only config
+      comments (no runtime alarm); dry-start "injection-per-event" overclaim (startup-crash class HELD,
+      behavioral injection aspirational); amber Muon-exemption unbuilt+un-A/B'd; FRESH mass-conservation
+      DERIVED-not-measured + operator-process inversion; λ_lane 683.8 DERIVED-LIVE artifact not locatable;
+      head-solve σ_min-amplifier INFERRED; **WALL-CLOCK (operator axis): speed stack (fused-R/grouped-
+      backward/safe-compile/async-verdict) NOT composed in §B with neutrality proofs — micro-batch-pairs
+      needs a bit-identity re-proof (batch-DEPENDENCE #313) or it trades score-for-speed; NO per-stage
+      wall-clock budget (floors alone ≈8.7-23h)**. HELD: σ_cc′ build real, taper-flip handled honestly,
+      rel-sig non-additivity adopted, δ_R/m_safe, _signed shared, dry-start catches startup-KeyError class,
+      ep257 ckpt preserved, S6 blind vindication, torch-twin NO-GO, structural wall-clock (event-exits +
+      solve-replaces-train) partial. Full: `P3_redteam_verdict_20260709.md`.
 - [ ] **P4 EMPIRICAL RECESS** — suspend-to-measure any $0/governed probe the debate needs (NO concurrent
       heavy GPU — machine-crash P0 gate; #205 STOPPED so box free, but v7.5.2 execute-at-n600 = governed).
 - [ ] **P5 SECOND RED-TEAM → SEAL-TO-RECESS.**
@@ -100,12 +117,14 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger (CE→ta
    question: is a torch-parity twin worth building for Modal A/B fan-out? (S4 owns.)
 
 ## The one-line resume state
-P0+P1(all 6 seats)+P2 landed. NEXT ACTION: launch **P3 RED-TEAM vs the SYNTHESIS_DRAFT_v752** +
-MANDATORY PROVENANCE AUDIT FIRST PASS (every load-bearing measured claim: anchor path · review_status ·
-form-limitations; recovery-written/unreviewed → PROVISIONAL; run-config claims cite launch.sh/CONVENING,
-NEVER the activation ledger). The draft's own §D provenance table (11 rows) names what to attack; S5's
-pre-mortem N1/N3 are LAUNCH-BLOCKING (re-derive, don't trust the tagged fixes). #205 STOPPED (box free);
-pointer 0.19110 UNMOVED.
+P0+P1(all 6 seats)+P2+P3 landed. NEXT ACTION: **P4 EMPIRICAL RECESS** — the P3 red-team surfaced ONE
+BROKEN finding with a $0 measurable core (A-1 σ* unreachable): the cheapest debate-settling probe is the
+λ_min(F) annulus probe (reuses #333/#141) + one jacobian_basin σ_min readout on the current ckpt to
+CONFIRM σ_min ≪ σ*≥14 — this is what turns A-1 from a red-team arithmetic argument into a measured
+launch-block. Then P5 (2nd red-team) re-derives the 10 WEAKENED owed-additions (each names its owed
+build/A-B/config). BROKEN A-1 must be resolved into the draft (relative-plateau PRIMARY, σ*-build OFF
+the launch-blocking path, canary-fail⇒ship-R1) BEFORE P6 seal. #205 STOPPED (box free); pointer 0.19110
+UNMOVED.
 
 ## OPERATOR BINDING CONSTRAINT (2026-07-09, mid-P1) — POSE ENGAGEMENT GATE
 Verbatim: "pose must not be fired for joint descent until optimal it needs dseg to be sufficiently
