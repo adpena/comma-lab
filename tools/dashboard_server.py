@@ -93,6 +93,9 @@ except Exception:  # load-bearing daemon; degrade visibly, never crash
     _dsl_resolve_run_dir = None
 
 from starlette.applications import Starlette
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.responses import (
     HTMLResponse,
     JSONResponse,
@@ -2095,7 +2098,37 @@ def create_app(cfg: Config) -> Starlette:
         Route("/healthz", healthz),
         WebSocketRoute("/ws", ws_endpoint),
     ]
-    return Starlette(routes=routes, lifespan=lifespan)
+
+    # World-class OSS-hygiene response headers on every HTTP response (2026-07-09). The page is
+    # FULLY self-contained (inline CSS/JS, data: PNG charts, same-origin wss) — verified no external
+    # script/style — so a strict CSP is safe and blocks any injected external resource. 'unsafe-inline'
+    # is required only because the shell embeds its style/script inline (nonce-hardening is a tracked
+    # follow-up). Anchor nav (github/x.com) is unaffected by CSP. WebSocket scope is passed through
+    # untouched (BaseHTTPMiddleware only wraps http), so /ws is never gzip'd or header-mangled.
+    _CSP = (
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'self'; "
+        "base-uri 'self'; form-action 'self'"
+    )
+
+    class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            resp = await call_next(request)
+            resp.headers.setdefault("Content-Security-Policy", _CSP)
+            resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+            resp.headers.setdefault("Referrer-Policy", "no-referrer")
+            resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+            resp.headers.setdefault(
+                "Permissions-Policy", "camera=(), microphone=(), geolocation=(), usb=()")
+            return resp
+
+    middleware = [
+        # gzip the 249 KB self-contained shell (→ ~40 KB) — a ~6x cellular win for the phone;
+        # skips tiny/already-encoded bodies and never touches the WebSocket stream.
+        Middleware(GZipMiddleware, minimum_size=800),
+        Middleware(SecurityHeadersMiddleware),
+    ]
+    return Starlette(routes=routes, lifespan=lifespan, middleware=middleware)
 
 
 # ───────────────────────── HTML / JS (self-contained, no CDN) ─────────────────────────
