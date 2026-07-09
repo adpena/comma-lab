@@ -729,10 +729,66 @@ def _slim(row: dict) -> dict:
     store-nothing screw carrier's measured d_pose — with NO deploy override.
     ``implied_S_monitoring`` is kept as an alias of the same measured value so
     the client's honest-vs-displayed sanity check trivially agrees. Numbers stay
-    numeric; missing keys become None."""
+    numeric; missing keys become None.
+
+    The rebuilt LIVE instrument (2026-07-09) reads per-class d_seg / flip-share
+    and the system-memory row off the LATEST verdict point, so those fields ride
+    the slimmed trajectory too (5-float arrays + a handful of scalars per point —
+    a few KB across the whole run; still no leak of the full verdict dict). All
+    score-neutral: the dashboard only READS the log."""
     out = {k: row.get(k) for k in ("epoch", "d_seg", "d_pose", "blob_bytes", "ts")}
     out["implied_S"] = row.get("implied_S")
     out["implied_S_monitoring"] = row.get("implied_S")
+    # LIVE-tab diagnostics (per-point; panels read the newest point):
+    for k in ("d_seg_by_class", "flip_share_by_class", "seg_form",
+              "rss_gib", "sys_avail_gib", "mlx_active_gib", "mlx_peak_gib",
+              "mlx_cache_gib", "accepted_frac", "weights_stepped",
+              "accepted_batches", "skipped_batches"):
+        out[k] = row.get(k)
+    return out
+
+
+_SENSOR_STAGES = ("jacobian_basin", "loss_terms")
+
+
+def _read_sensors(latest_log: Path | None, tail_bytes: int = 524288) -> dict:
+    """Latest ``jacobian_basin`` + ``loss_terms`` record off the live run-log tail.
+
+    These two stages are NOT verdicts (they flow on their own cadence — basin at
+    the jacobian probe, loss_terms every accum batch), so they never reach the
+    client through the verdict trajectory. The rebuilt LIVE tab's pose-readiness
+    and training-health panels need them, so we tail-read the run-log (last block
+    only — the log grows to MBs across a 3000-epoch run; a 5 s tick must not re-read
+    it whole) and return the LAST record of each stage. READ-ONLY, score-neutral;
+    fail-open to {} so a parse error never kills the daemon. Empty dict -> the
+    client renders those panels as 'no reading yet' (conditional)."""
+    out: dict = {}
+    if latest_log is None:
+        return out
+    try:
+        size = latest_log.stat().st_size
+        with latest_log.open("rb") as fh:
+            if size > tail_bytes:
+                fh.seek(size - tail_bytes)
+                fh.readline()  # drop the (possibly clipped) partial first line
+            block = fh.read()
+        text = block.decode("utf-8", "replace")
+    except Exception:
+        return out
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        # cheap prefilter before the json parse (the log is dense with other stages)
+        if '"loss_terms"' not in line and '"jacobian_basin"' not in line:
+            continue
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        st = d.get("stage")
+        if st in _SENSOR_STAGES:
+            out[st] = d  # later line wins -> the LAST record of each stage
     return out
 
 
@@ -994,6 +1050,7 @@ class LiveState:
         self.cfg = cfg
         self.trajectory: list[dict] = []
         self._epochs: set[int] = set()
+        self.sensors: dict = {}  # latest jacobian_basin + loss_terms (non-verdict stages)
         self.liveness: dict = {"kind": "missing"}
         self.watched: str | None = None
         self.watched_dir: str | None = None  # live arm dir (auto-latest); shown as run_dir
@@ -1373,6 +1430,15 @@ class LiveState:
         for p in new_points:
             self._epochs.add(p["epoch"])
         self.trajectory = rows_full
+
+        # LIVE-tab sensors: latest jacobian_basin (pose-descent readiness) + loss_terms
+        # (training-health energy split) off the live arm's log tail. Non-verdict stages,
+        # so they never ride the verdict trajectory. Fail-open {} -> those panels render
+        # 'no reading yet'. READ-ONLY; score-neutral.
+        try:
+            self.sensors = _read_sensors(latest)
+        except Exception:
+            self.sensors = {}
 
         # WITNESS (Tab 2) + FLOW (Tab 3): orchestrate the detached governed 600-pass subprocess
         # (spawn on new best checkpoint / ingest its output when done). NON-blocking + NO torch
@@ -1906,6 +1972,7 @@ class LiveState:
             "schedule": sched,                         # curriculum stage epoch-boundaries
             "archive_norm_bytes": _ARCHIVE_NORM_BYTES,       # rate-term normalizer (client S breakdown)
             "run_info_html": self.run_info_html,       # #205 pre-rendered run-info strip (rld._run_info_html)
+            "sensors": self.sensors or {},             # latest jacobian_basin + loss_terms (LIVE-tab panels)
         }
 
     def snapshot(self) -> dict:
@@ -2227,13 +2294,20 @@ html{-webkit-text-size-adjust:100%;overflow-x:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,sans-serif;
 background:var(--bg);color:var(--fg);margin:0;padding:0;line-height:1.5;
 -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
-.wrap{max-width:1200px;margin:0 auto;padding:clamp(14px,3.5vw,26px) clamp(12px,4vw,24px) 56px}
+.wrap{max-width:1200px;margin:0 auto;padding:clamp(14px,3.5vw,26px) clamp(12px,4vw,24px) 56px;overflow-x:clip}
 
-/* advisory banner */
-.auth{background:linear-gradient(180deg,#241b0d,#1f180c);border:1px solid #4a3a12;color:#e6cf7a;
-font-size:clamp(11px,3vw,12.5px);padding:10px 14px;border-radius:10px;margin-bottom:16px;
-text-align:center;line-height:1.55}
-.auth b{color:#f4dd8a}
+/* provenance status strip — factual header (FITS/lab-notebook register), NOT an alert
+   box: no border-radius, no card, no amber fill. Discrete labeled fields, hairline rule
+   underneath, terse mono values a data engineer scans once. */
+.provh{display:flex;flex-wrap:wrap;gap:2px 26px;align-items:baseline;
+font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospace;
+font-size:11px;line-height:1.85;color:var(--muted);
+border-bottom:1px solid var(--grid);padding:2px 1px 9px;margin:2px 0 16px}
+.provh .pf{display:inline-flex;gap:8px;align-items:baseline;white-space:nowrap;max-width:100%}
+.provh .pk{color:var(--faint);letter-spacing:.9px;font-size:9px;text-transform:uppercase;flex:0 0 auto}
+.provh .pv{color:var(--fg2);font-variant-numeric:tabular-nums;white-space:normal;min-width:0}
+.provh .pv b{color:var(--fg);font-weight:600}
+@media(max-width:520px){.provh{gap:1px 16px;font-size:10.5px}.provh .pk{font-size:8.5px}}
 
 /* header */
 .head{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px}
@@ -2246,7 +2320,8 @@ text-align:center;line-height:1.55}
 .title{font-size:clamp(13px,3.4vw,15px);color:var(--fg);letter-spacing:1.4px;
 text-transform:uppercase;font-weight:700;margin-right:auto}
 .pills{display:flex;gap:6px;flex-wrap:wrap}
-.pill{font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:999px;white-space:nowrap;line-height:1.3}
+.pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:2px;white-space:nowrap;line-height:1.3;
+font-variant-numeric:tabular-nums;letter-spacing:.2px}
 .pill.live{background:#173d22;color:#7fe0a0}.pill.warm{background:#3a3413;color:#e6cf7a}
 .pill.stale{background:#4a1717;color:#ff9b9b}.pill.miss{background:#3a1f1f;color:#ff9b9b}
 .pill.ws{background:#16263a;color:#7fc0ff}.pill.wsoff{background:#3a2a16;color:#e6b97a}
@@ -2279,6 +2354,146 @@ font-weight:600;letter-spacing:-.4px}
 .ssub.adv{color:#b89a4a}
 .trend{font-size:13px;font-weight:700}
 .trend.dn{color:var(--good)}.trend.up{color:var(--bad)}.trend.fl{color:var(--muted)}
+
+/* ================================================================= *
+ * LIVE INSTRUMENT (rebuilt 2026-07-09) — dense training-run terminal.
+ * Design language: near-black cool-biased ground, ONE accent (cyan),
+ * semantic good/warn/bad kept SEPARATE from the accent. Hairline rules
+ * + tabular alignment, NOT rounded bordered cards. tabular-nums on
+ * every number; per-metric fixed precision. The structure IS the
+ * notation — border-radius is not.
+ * ================================================================= */
+#tab-live{--lv-ink:#e7ecf3;--lv-ink2:#aeb7c6;--lv-mut:#767f90;
+  --lv-hair:#242a34;--lv-hair2:#2e3542;--lv-surf:#161922;
+  --lv-acc:#5ab0ff;--lv-seg:#5ab0ff;--lv-pose:#ffb454;--lv-byte:#c08cff;
+  --lv-good:#46d369;--lv-warn:#e0a340;--lv-bad:#ff6b6b;
+  --lv-mono:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospace}
+#tab-live .lv-runline{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-mut);
+  letter-spacing:.2px;margin:0 1px 12px;word-break:break-all;line-height:1.5}
+
+/* uppercase micro-label used across panels */
+#tab-live .lv-k{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--lv-mut);
+  font-weight:600;white-space:nowrap}
+
+/* 1 · masthead — big S left, live equation + per-term decomposition right */
+#tab-live .lv-mast{display:grid;grid-template-columns:minmax(0,1fr);gap:14px 26px;
+  border-top:1px solid var(--lv-hair2);padding:15px 1px 17px;margin-bottom:2px}
+@media(min-width:760px){#tab-live .lv-mast{grid-template-columns:auto minmax(0,1fr);align-items:start}}
+#tab-live .lv-mast-s{display:flex;flex-direction:column;gap:3px;min-width:0}
+#tab-live .lv-adv{font-size:8.5px;letter-spacing:.6px;color:var(--lv-warn);border:1px solid var(--lv-hair2);
+  padding:1px 5px;margin-left:6px;text-transform:uppercase;vertical-align:middle;font-weight:600}
+#tab-live .lv-sval{font-family:var(--lv-mono);font-size:clamp(34px,8.5vw,54px);line-height:.98;
+  font-weight:600;color:var(--lv-ink);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+#tab-live .lv-sref{font-family:var(--lv-mono);font-size:11px;color:var(--lv-mut);
+  font-variant-numeric:tabular-nums;letter-spacing:.2px}
+#tab-live .lv-sref b{color:var(--lv-ink2);font-weight:600}
+#tab-live .lv-mast-eq{display:flex;flex-direction:column;gap:10px;min-width:0}
+#tab-live .lv-eq{font-family:var(--lv-mono);font-size:12px;color:var(--lv-ink2);line-height:1.5;
+  word-break:break-word;font-variant-numeric:tabular-nums;padding-top:2px}
+#tab-live .lv-terms{display:grid;grid-template-columns:1fr;gap:1px;background:var(--lv-hair);
+  border:1px solid var(--lv-hair)}
+@media(min-width:560px){#tab-live .lv-terms{grid-template-columns:repeat(3,1fr)}}
+#tab-live .lv-term{background:var(--bg);padding:9px 11px;display:flex;flex-direction:column;gap:5px;min-width:0}
+#tab-live .lv-term .tt{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+#tab-live .lv-term .ttk{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-ink2);white-space:nowrap;
+  display:flex;align-items:center;gap:6px}
+#tab-live .lv-term .swatch{width:8px;height:8px;flex:0 0 auto}
+#tab-live .lv-term .tin{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-mut);
+  font-variant-numeric:tabular-nums}
+#tab-live .lv-term .tcon{font-family:var(--lv-mono);font-size:19px;font-weight:600;color:var(--lv-ink);
+  line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+#tab-live .lv-term .tshare{font-size:9.5px;color:var(--lv-mut);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;justify-content:space-between;gap:8px}
+#tab-live .lv-bar{height:3px;background:var(--lv-hair2);position:relative;overflow:hidden}
+#tab-live .lv-bar>i{position:absolute;left:0;top:0;bottom:0;display:block}
+
+/* generic panel — hairline-topped, no rounded card */
+#tab-live .lv-panel{border-top:1px solid var(--lv-hair2);padding:12px 1px 4px;margin-bottom:2px}
+#tab-live .lv-ph{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+#tab-live .lv-pt{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--lv-ink2);font-weight:600}
+#tab-live .lv-pm{font-family:var(--lv-mono);font-size:10px;color:var(--lv-mut);text-align:right;
+  font-variant-numeric:tabular-nums;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tab-live .lv-none{font-family:var(--lv-mono);font-size:11px;color:var(--lv-mut);padding:8px 0}
+#tab-live .lv-row2{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media(min-width:720px){#tab-live .lv-row2{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px}}
+
+/* 2 · descent chart */
+#tab-live .lv-chartpanel canvas{width:100%;max-width:100%;height:clamp(210px,42vw,270px);
+  display:block;touch-action:pan-y;background:var(--lv-surf);border:1px solid var(--lv-hair)}
+
+/* 3 · per-class breakdown — aligned rows, dual bars (d_seg blue, flip amber) */
+#tab-live .lv-classes{display:flex;flex-direction:column;gap:0}
+#tab-live .lv-crow{display:grid;grid-template-columns:88px minmax(0,1fr) 52px;gap:9px;align-items:center;
+  padding:6px 0;border-bottom:1px solid var(--lv-hair)}
+#tab-live .lv-crow:last-child{border-bottom:0}
+#tab-live .lv-cname{font-family:var(--lv-mono);font-size:11px;color:var(--lv-ink2);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+#tab-live .lv-cname .ci{color:var(--lv-mut)}
+#tab-live .lv-cbars{display:flex;flex-direction:column;gap:3px;min-width:0}
+#tab-live .lv-cbar{height:9px;background:var(--lv-hair);position:relative;overflow:hidden}
+#tab-live .lv-cbar>i{position:absolute;left:0;top:0;bottom:0;display:block}
+#tab-live .lv-cval{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-ink);text-align:right;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+#tab-live .lv-cval .cf{color:var(--lv-mut);font-size:9.5px}
+#tab-live .lv-clab{display:flex;gap:12px;font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--lv-mut);margin:2px 0 6px;padding-left:97px}
+#tab-live .lv-clab i{width:8px;height:8px;display:inline-block;margin-right:4px;vertical-align:-1px}
+
+/* 4 · pose readiness */
+#tab-live .lv-pose{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;
+  background:var(--lv-hair);border:1px solid var(--lv-hair)}
+#tab-live .lv-pcell{background:var(--bg);padding:9px 11px;display:flex;flex-direction:column;gap:3px;min-width:0}
+#tab-live .lv-pcell .pl{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--lv-mut);white-space:nowrap}
+#tab-live .lv-pcell .pvv{font-family:var(--lv-mono);font-size:16px;font-weight:600;color:var(--lv-ink);
+  font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:-.3px}
+#tab-live .lv-pcell .pvv.ok{color:var(--lv-good)}#tab-live .lv-pcell .pvv.wn{color:var(--lv-warn)}
+#tab-live .lv-pnote{grid-column:1/-1;background:var(--bg);padding:8px 11px;font-size:10.5px;
+  color:var(--lv-mut);line-height:1.5}
+#tab-live .lv-pnote b{color:var(--lv-ink2);font-weight:600}
+
+/* 5 · training health — scalar strip + energy-term bars */
+#tab-live .lv-hscal{display:flex;flex-wrap:wrap;gap:3px 20px;margin-bottom:11px}
+#tab-live .lv-hs{display:flex;align-items:baseline;gap:6px;font-family:var(--lv-mono);font-size:11px}
+#tab-live .lv-hs .hk{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--lv-mut)}
+#tab-live .lv-hs .hv{color:var(--lv-ink);font-variant-numeric:tabular-nums}
+#tab-live .lv-hs .hv.ok{color:var(--lv-good)}#tab-live .lv-hs .hv.wn{color:var(--lv-warn)}#tab-live .lv-hs .hv.bd{color:var(--lv-bad)}
+#tab-live .lv-hterm{display:grid;grid-template-columns:120px minmax(0,1fr) 62px;gap:9px;align-items:center;padding:3px 0}
+#tab-live .lv-hterm .hn{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-ink2);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+#tab-live .lv-hterm .hbar{height:7px;background:var(--lv-hair);position:relative;overflow:hidden}
+#tab-live .lv-hterm .hbar>i{position:absolute;left:0;top:0;bottom:0;background:var(--lv-acc);display:block}
+#tab-live .lv-hterm .hpv{font-family:var(--lv-mono);font-size:10px;color:var(--lv-ink);text-align:right;
+  font-variant-numeric:tabular-nums}
+
+/* 6 · system memory gauges */
+#tab-live .lv-sys{display:flex;flex-direction:column;gap:9px}
+#tab-live .lv-gauge{display:grid;grid-template-columns:74px minmax(0,1fr) 120px;gap:10px;align-items:center}
+#tab-live .lv-gauge .gk{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--lv-mut);white-space:nowrap}
+#tab-live .lv-gtrack{height:10px;background:var(--lv-hair);position:relative;overflow:hidden}
+#tab-live .lv-gtrack>i{position:absolute;left:0;top:0;bottom:0;display:block;background:var(--lv-acc)}
+#tab-live .lv-gtrack>.peak{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--lv-warn)}
+#tab-live .lv-gv{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-ink2);text-align:right;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+#tab-live .lv-gv b{color:var(--lv-ink);font-weight:600}
+
+/* 7 · curriculum timeline */
+#tab-live .lv-sched{padding:2px 0 4px}
+#tab-live .lv-track{position:relative;height:30px;background:var(--lv-hair);display:flex;overflow:hidden}
+#tab-live .lv-seg{position:relative;display:flex;align-items:center;justify-content:flex-start;
+  border-right:1px solid var(--bg);min-width:0;overflow:hidden}
+#tab-live .lv-seg .sn{font-family:var(--lv-mono);font-size:9.5px;color:var(--lv-ink2);padding-left:5px;white-space:nowrap}
+#tab-live .lv-seg:last-child{border-right:0}
+#tab-live .lv-marker{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--lv-acc);z-index:2}
+#tab-live .lv-marker::after{content:"";position:absolute;top:-4px;left:-3px;border:4px solid transparent;
+  border-top-color:var(--lv-acc)}
+#tab-live .lv-sticks{display:flex;justify-content:space-between;margin-top:5px;font-family:var(--lv-mono);
+  font-size:9px;color:var(--lv-mut);font-variant-numeric:tabular-nums}
+
+/* status / detail — terse mono status line */
+#tab-live .lv-status{font-family:var(--lv-mono);font-size:12px;color:var(--lv-ink2);
+  border-top:1px solid var(--lv-hair2);padding:11px 1px 3px;margin-top:4px;min-height:20px;line-height:1.5}
+#tab-live .lv-detail{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-mut);
+  margin:0 1px 16px;min-height:15px;line-height:1.5;word-break:break-word}
 
 /* scorer breakdown card (implied-S decomposition; HONEST measured-pose primary) */
 .sbreak{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
@@ -2587,7 +2802,7 @@ padding:2px 6px;border-radius:6px}
 .flowcap .fcnote{font-size:11px;color:#b89a4a;line-height:1.55;border-top:1px solid var(--grid);padding-top:9px;margin-top:2px}
 
 /* n-badge (which run am I watching) */
-.nbadge{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;letter-spacing:.3px;line-height:1.3}
+.nbadge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:2px;white-space:nowrap;letter-spacing:.3px;line-height:1.3}
 .nbadge.doe{background:#16263a;color:#7fc0ff}
 .nbadge.scored{background:#173d22;color:#7fe0a0}
 .nbadge.other{background:#2a2f39;color:#c2c9d4}
@@ -2610,10 +2825,12 @@ padding:2px 6px;border-radius:6px}
 .rinfo div:has(> table){overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
 
 /* stage legend strip */
-.slegend{display:flex;flex-wrap:wrap;gap:7px 13px;align-items:center;margin:2px 2px 12px;font-size:11px;color:var(--muted)}
-.slegend .sc{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
-.slegend .dot{width:9px;height:9px;border-radius:2px;display:inline-block;flex:0 0 auto}
-.slegend .sc.off{opacity:.38}
+.slegend,.lv-legend{display:flex;flex-wrap:wrap;gap:7px 13px;align-items:center;margin:2px 2px 12px;font-size:11px;color:var(--muted)}
+.slegend .sc,.lv-legend .sc{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.slegend .dot,.lv-legend .dot{width:9px;height:9px;border-radius:2px;display:inline-block;flex:0 0 auto}
+.slegend .sc.off,.lv-legend .sc.off{opacity:.38}
+.lv-legend .lv-legsp{margin-left:auto}
+.lv-legend .dot.dsh{border:1px dashed #9aa3b2;background:transparent;border-radius:0}
 
 /* projection block (naive linear, advisory) */
 .proj{font-size:11.5px;color:var(--muted);margin:0 2px 16px;line-height:1.6;min-height:34px}
@@ -2636,9 +2853,11 @@ padding:1px 6px;letter-spacing:.3px;flex:0 0 auto;vertical-align:middle}
 .runid{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:2px 0 10px;min-width:0}
 .runid .rname{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 font-size:11.5px;color:var(--muted);word-break:break-all;min-width:0}
-.runid .ridchip{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;
-border:1px solid var(--grid);color:var(--fg2);background:var(--panel2);max-width:100%;
-overflow-wrap:anywhere}
+/* run-identity chips notated as tagged fields (accent hairline on the left), NOT rounded
+   pills — same no-card discipline as the masthead + panels. */
+.runid .ridchip{font-size:10.5px;font-weight:600;padding:1px 0 1px 9px;border-radius:0;
+border:0;border-left:2px solid var(--grid);color:var(--fg2);background:transparent;max-width:100%;
+overflow-wrap:anywhere;line-height:1.4}
 .runid .ridchip .prov{color:var(--faint2);font-weight:500}
 
 /* costate controller SENSE/DECIDE panel (conditional; hidden when no shadow file) */
@@ -2687,6 +2906,9 @@ color:var(--fg2);letter-spacing:.5px;text-transform:uppercase;user-select:none}
 .cfg[open]>summary::before{content:"\25BE  "}
 .cfgbody{padding:2px 14px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 @media(min-width:680px){.cfgbody{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* wide config/telemetry tables scroll inside their own panel — the page body never
+   scrolls horizontally (spec). display:block makes the table an overflow container. */
+.cfgbody table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
 .cfgsec{min-width:0}
 .cfgsec.full{grid-column:1/-1}
 .cfgh{font-size:10px;color:var(--acc);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
@@ -2780,7 +3002,12 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 .hide{display:none}
 </style></head>
 <body><div class="wrap">
-<div class="auth">[macOS-MLX training] advisory &middot; <b>NON-PROMOTABLE</b> &mdash; the exact contest row is byte-closed on contest-CPU/CUDA &middot; frontier pointer <b class="ptrv">&hellip;</b> (UNMOVED). A dashboard is a MEANS, not the score.</div>
+<div class="provh" role="note" aria-label="provenance">
+  <span class="pf"><span class="pk">authority</span><span class="pv">macOS-MLX &middot; advisory &middot; non-promotable</span></span>
+  <span class="pf"><span class="pk">pointer</span><span class="pv"><b class="ptrv">&hellip;</b> &middot; unmoved</span></span>
+  <span class="pf"><span class="pk">exact row</span><span class="pv">byte-closed &middot; contest-CPU / CUDA</span></span>
+  <span class="pf"><span class="pk">basis</span><span class="pv">a dashboard is a means, not the score</span></span>
+</div>
 <div class="head">
   <span class="title">Level-Set Witness</span>
   <span class="pills">
@@ -2961,54 +3188,69 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
   <!-- 2026-07-09 UX: current numbers FIRST (summary before detail) so the live descent is seen
        at a glance on the phone, not scrolled past empty warming-up charts. JS binds by id, so this
        reorder is purely visual. -->
-  <div class="runinfo" id="rdinfo">resolving run&hellip;</div>
-  <div class="metrics" id="headline">
-    <div class="stat hero">
-      <span class="slabel">d_seg <span class="trend fl" id="m_trend">&middot;</span></span>
-      <span class="sval" id="d_seg_val">&mdash;</span>
-      <span class="ssub" id="m_goal">&nbsp;</span>
-      <span class="ssub" id="m_best">&nbsp;</span>
+  <div class="lv-runline" id="rdinfo">resolving run&hellip;</div>
+
+  <!-- 1 · SCORE DECOMPOSITION MASTHEAD — the live equation, each term's value + its
+       contribution to S, dominant term visible at a glance. -->
+  <div class="lv-mast">
+    <div class="lv-mast-s">
+      <div class="lv-k">implied&nbsp;S <span class="lv-adv">advisory</span></div>
+      <div class="lv-sval" id="lv_S">&mdash;</div>
+      <div class="lv-sref" id="lv_Sref">&nbsp;</div>
     </div>
-    <div class="stat">
-      <span class="slabel">d_pose <span class="trend fl" id="p_trend">&middot;</span></span>
-      <span class="sval2" id="d_pose_val">&mdash;</span>
-      <span class="ssub">PoseNet MSE</span>
-    </div>
-    <div class="stat">
-      <span class="slabel">bytes <span class="trend fl" id="b_trend">&middot;</span></span>
-      <span class="sval2" id="bytes_val">&mdash;</span>
-      <span class="ssub">learned payload</span>
-    </div>
-    <div class="stat">
-      <span class="slabel">implied_S <span class="trend fl" id="s_trend">&middot;</span></span>
-      <span class="sval2" id="s_val">&mdash;</span>
-      <span class="ssub adv" id="s_sub">advisory &middot; measured d_seg + store-nothing-carrier d_pose + rate &middot; NOT the exact pointer</span>
+    <div class="lv-mast-eq">
+      <div class="lv-eq" id="lv_eq">S = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;bytes / <span id="lv_norm">&hellip;</span></div>
+      <div class="lv-terms" id="lv_terms"></div>
     </div>
   </div>
-  <div class="grid">
-    <div class="panel"><canvas id="c_dseg" role="img" aria-label="d_seg chart"></canvas></div>
-    <div class="panel"><canvas id="c_dpose" role="img" aria-label="d_pose chart"></canvas></div>
-    <div class="panel"><canvas id="c_bytes" role="img" aria-label="blob bytes chart"></canvas></div>
-    <div class="panel"><canvas id="c_s" role="img" aria-label="implied S chart"></canvas></div>
+
+  <!-- 2 · THE DESCENT — d_seg over epochs, auto-fit x, log y, curriculum bands -->
+  <div class="lv-panel lv-chartpanel">
+    <div class="lv-ph"><span class="lv-pt">d_seg descent</span><span class="lv-pm" id="lv_dseg_meta">&mdash;</span></div>
+    <canvas id="c_dseg" role="img" aria-label="d_seg descent chart"></canvas>
+    <div class="lv-legend" id="slegend">
+      <span class="sc" data-st="ce"><span class="dot" style="background:#5ab0ff"></span>CE</span>
+      <span class="sc" data-st="tau"><span class="dot" style="background:#b08cff"></span>tau</span>
+      <span class="sc" data-st="l7"><span class="dot" style="background:#ffa454"></span>l7</span>
+      <span class="sc off" data-st="muon"><span class="dot" style="background:#46d3a0"></span>Muon</span>
+      <span class="sc lv-legsp"><span class="dot" style="background:rgba(226,232,240,.45)"></span>EMA</span>
+      <span class="sc"><span class="dot dsh"></span>trend</span>
+      <span class="sc"><span class="dot" style="background:#ffd24a;border-radius:50%"></span>best</span>
+    </div>
   </div>
-  <div class="slegend" id="slegend">
-    <span class="sc" data-st="ce"><span class="dot" style="background:#5ab0ff"></span>CE</span>
-    <span class="sc" data-st="tau"><span class="dot" style="background:#b08cff"></span>tau</span>
-    <span class="sc" data-st="l7"><span class="dot" style="background:#ffa454"></span>l7</span>
-    <span class="sc off" data-st="muon"><span class="dot" style="background:#46d3a0"></span>Muon</span>
-    <span class="sc" style="margin-left:auto"><span class="dot" style="background:rgba(226,232,240,.45)"></span>EMA</span>
-    <span class="sc"><span class="dot" style="border:1px dashed #9aa3b2;background:transparent;border-radius:0"></span>trend</span>
-    <span class="sc"><span class="dot" style="background:#ffd24a;border-radius:50%"></span>best</span>
+
+  <!-- 3 + 4 · per-class breakdown | pose-descent readiness -->
+  <div class="lv-row2">
+    <div class="lv-panel">
+      <div class="lv-ph"><span class="lv-pt">per-class d_seg &middot; flip share</span><span class="lv-pm">comma10k order</span></div>
+      <div class="lv-classes" id="lv_classes"><div class="lv-none">no verdict yet</div></div>
+    </div>
+    <div class="lv-panel">
+      <div class="lv-ph"><span class="lv-pt">pose-descent readiness</span><span class="lv-pm" id="lv_pose_meta">jacobian basin</span></div>
+      <div class="lv-pose" id="lv_pose"><div class="lv-none">no basin probe yet</div></div>
+    </div>
   </div>
-  <div class="sbreak" id="sbreak">
-    <div class="sbh">Scorer breakdown <span class="sbtag">honest &middot; measured pose</span></div>
-    <div class="sbformula">S = 100&middot;d_seg + &radic;(10&middot;d_pose) + 25&middot;(bytes / <span id="sb_norm">&hellip;</span>)</div>
-    <div class="sbsubst" id="sb_subst">&nbsp;</div>
-    <div class="sbterms" id="sb_terms"></div>
-    <div class="sbdeploy" id="sb_deploy">&nbsp;</div>
+
+  <!-- 5 + 6 · training health | system memory -->
+  <div class="lv-row2">
+    <div class="lv-panel">
+      <div class="lv-ph"><span class="lv-pt">training health</span><span class="lv-pm" id="lv_health_meta">loss terms</span></div>
+      <div class="lv-health" id="lv_health"><div class="lv-none">no loss row yet</div></div>
+    </div>
+    <div class="lv-panel">
+      <div class="lv-ph"><span class="lv-pt">system</span><span class="lv-pm">resident &middot; MLX</span></div>
+      <div class="lv-sys" id="lv_sys"><div class="lv-none">no memory row yet</div></div>
+    </div>
   </div>
-  <div class="status" id="status">connecting&hellip;</div>
-  <div class="detail" id="detail">&nbsp;</div>
+
+  <!-- 7 · SCHEDULE POSITION — curriculum timeline, marker at current epoch -->
+  <div class="lv-panel">
+    <div class="lv-ph"><span class="lv-pt">curriculum position</span><span class="lv-pm" id="lv_sched_meta">&mdash;</span></div>
+    <div class="lv-sched" id="lv_sched"><div class="lv-none">resolving schedule</div></div>
+  </div>
+
+  <div class="lv-status" id="status">connecting&hellip;</div>
+  <div class="lv-detail" id="detail">&nbsp;</div>
   <div class="proj" id="proj"><div id="proj_seg">&nbsp;</div><div class="proj2" id="proj_s">&nbsp;</div></div>
   <!-- costate controller SENSE/DECIDE panel — CONDITIONAL: rendered only when the run's
        costate_shadow.jsonl exists (score-neutral shadow observer). Observability ONLY;
@@ -3807,7 +4049,7 @@ function drawPanel(canvas, key, opt){
   canvas.width=Math.max(1,Math.round(W*dpr)); canvas.height=Math.max(1,Math.round(H*dpr));
   const ctx=canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle="#1b1e24"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#161922"; ctx.fillRect(0,0,W,H);
   const padL=52,padR=12,padT=24,padB=26;
   const x0=padL,x1=W-padR,y0=padT,y1=H-padB;
   // data
@@ -3951,42 +4193,38 @@ function drawPanel(canvas, key, opt){
 }
 
 function drawAll(){
-  // goal lines + pointer hline are CONDITIONAL: rendered only when a real source
-  // exists (derived-from-measured / explicit override / the pointer file).
-  const g=goalVal(), g15=goal15Val(), pv=ptrVal();
-  const fS=v=>sig(v,5), fP=v=>sig(v,4), fI=v=>fmtInt(v), fSv=v=>sig(v,4);
+  // The descent is the ONLY canvas now (pose/bytes/S live in the masthead + panels).
+  // goal lines + pointer hline are CONDITIONAL: rendered only when a real source exists.
+  const g=goalVal(), g15=goal15Val();
+  const fSg=v=>sig(v,4);
   const star=(bestEpoch!=null&&bestVal!=null)?{epoch:bestEpoch,val:bestVal}:null;
   const segH=[];
   if(g!=null)segH.push({y:g,label:"sub-0.19  "+sig(g,4),color:"#46d369"});
   if(g15!=null)segH.push({y:g15,label:"sub-0.15  "+sig(g15,4),color:"#ffb454"});
-  drawPanel($("c_dseg"),"d_seg",{title:"d_seg — realized SegNet-argmax disagreement (lower better)",
-    sub:"epoch · log scale · ★ best"+(segH.length
-      ?" · goal lines = sub-0.19 / sub-0.15 ("+(goalSrcTag(META.goal_src&&META.goal_src.dseg)||"derived")+")"
-      :" · goal lines: "+((META.goal_src&&META.goal_src.dseg)||"pending a measured source")),
-    color:"#5ab0ff",log:true,fmt:fS,
+  drawPanel($("c_dseg"),"d_seg",{title:"",
+    sub:"",color:"#5ab0ff",log:true,fmt:fSg,
     star:star,starGlow:_celebrating,
     hlines:segH});
-  drawPanel($("c_dpose"),"d_pose",{title:"d_pose — store-nothing screw carrier · in-run measured (byte-closed confirm pending #238)"+(META.pose_blind?" · UNHELD in this arm (w_pose=0)":""),
-    sub:"epoch · log · the carrier's own measured pose"+(META.pose_blind?" · pose unheld by design in this arm":""),
-    color:"#ffb454",log:true,fmt:fP,
-    hlines:[]});
-  drawPanel($("c_bytes"),"blob_bytes",{title:"blob_bytes — LEARNED payload (counted in archive)",
-    sub:"epoch · smaller payload = lower rate term",color:"#c08cff",log:false,fmt:fI,hlines:[]});
-  drawPanel($("c_s"),"implied_S",{title:"implied_S — advisory (measured d_seg + store-nothing-carrier d_pose + rate)",
-    sub:"epoch · log · run's own measured composite · NOT the exact pointer ("+ptrTxt()+")"+(META.pose_blind?" · pose UNHELD in this arm (w_pose=0)":""),
-    color:"#ff6b6b",log:true,fmt:fSv,
-    hlines:(pv!=null)?[{y:pv,label:"pointer "+sig(pv,5),color:"#46d369"}]:[]});
+  // descent panel meta line (right of the header) — latest / best / goal provenance
+  const last=TRAJ.length?TRAJ[TRAJ.length-1]:null;
+  const dm=$("lv_dseg_meta");
+  if(dm){
+    let s=[];
+    if(last&&last.d_seg!=null)s.push("latest "+sig(last.d_seg,4)+" @ ep"+last.epoch);
+    if(bestVal!=null)s.push("best "+sig(bestVal,4)+" @ ep"+bestEpoch);
+    const gsrc=goalSrcTag(META.goal_src&&META.goal_src.dseg);
+    if(g!=null)s.push("goal "+sig(g,4)+(gsrc?" ("+gsrc+")":""));
+    else s.push("goal: "+((META.goal_src&&META.goal_src.dseg)||"pending source"));
+    dm.textContent=s.join(" · ")||"log y · auto-fit x";
+  }
   updateAria();
 }
 function updateAria(){
   const last=TRAJ.length?TRAJ[TRAJ.length-1]:null;
   const set=(id,txt)=>{const el=$(id);if(el)el.setAttribute("aria-label",txt);};
-  if(!last){["c_dseg","c_dpose","c_bytes","c_s"].forEach(i=>set(i,"chart, no data yet"));return;}
+  if(!last){set("c_dseg","chart, no data yet");return;}
   const bestTxt=(bestVal!=null)?(", best "+sig(bestVal,5)+" at epoch "+bestEpoch):"";
   set("c_dseg","d_seg over epochs, latest "+sig(last.d_seg,5)+" at epoch "+last.epoch+bestTxt);
-  set("c_dpose","d_pose over epochs, latest "+sig(last.d_pose,4)+" at epoch "+last.epoch);
-  set("c_bytes","blob bytes over epochs, latest "+fmtInt(last.blob_bytes)+" at epoch "+last.epoch);
-  set("c_s","implied S advisory over epochs, latest "+sig(last.implied_S,4)+" at epoch "+last.epoch+", pointer "+ptrTxt());
 }
 let _drawQueued=false;
 function scheduleDraw(){
@@ -4034,40 +4272,216 @@ function stageWord(ep){if(ep==null)return "starting";
   if(l7==null)return (mu!=null)?"tau":"tau/Muon";
   return (mu!=null)?"l7":"l7/Muon";}
 
-// ---------- scorer breakdown (implied-S decomposition; HONEST measured terms) ----------
-// S = 100·d_seg + √(10·d_pose) + 25·(bytes/N), all three from the last measured row.
-// d_pose is the store-nothing screw carrier's OWN measured pose — the honest composite.
-// This is advisory (NOT the exact pointer); byte-closed pose confirmation is #238.
-function renderScorerBreakdown(last){
-  const subEl=$("sb_subst"), termsEl=$("sb_terms"), depEl=$("sb_deploy");
-  if(!subEl||!termsEl||!depEl)return;
+// ================= LIVE INSTRUMENT PANELS (rebuilt 2026-07-09) =================
+// Every panel reads the newest verdict point (`last`) + META.sensors (the non-verdict
+// jacobian_basin / loss_terms stages). Numbers fixed-precision, tabular. Advisory only.
+
+// comma10k CANONICAL class order (NEVER luma-sorted; per CLAUDE.md class-index note).
+const CLASS_NAMES=["Road","Lane","Undrivable","Movable","MyCar"];
+// fixed per-metric precision helpers
+function fDs(v){return sig(v,4);}     // d_seg-family: ~4 sig figs (0.03662)
+function fContrib(v){return sig(v,4);}
+function pct(v){return (v==null||!isFinite(v))?"—":(v*100).toFixed(1)+"%";}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// 1 · MASTHEAD — the live equation, each term's value + contribution to S, dominant term
+// visually obvious via its share bar. S is the run's OWN measured composite (advisory).
+function renderMasthead(last){
+  const svalEl=$("lv_S"), srefEl=$("lv_Sref"), termsEl=$("lv_terms");
+  if(!svalEl||!termsEl)return;
+  const N=(META.archive_norm_bytes||37545489);
   if(!last||last.d_seg==null||last.d_pose==null||last.blob_bytes==null||
      !isFinite(last.d_seg)||!isFinite(last.d_pose)||!isFinite(last.blob_bytes)){
-    subEl.innerHTML="&nbsp;"; termsEl.innerHTML=""; depEl.innerHTML="&nbsp;"; return;
+    svalEl.textContent="—"; if(srefEl)srefEl.innerHTML="awaiting first verdict"; termsEl.innerHTML=""; return;
   }
-  // N is the CONTEST rate normalizer (upstream/evaluate.py), shipped in META — the
-  // inline value is that fixed contest constant (provenance-labeled), NOT run config.
-  const N=META.archive_norm_bytes||37545489, Nstr=N.toLocaleString("en-US");
   const ds=last.d_seg, dp=last.d_pose, by=last.blob_bytes;
-  const t1=100.0*ds, t2=Math.sqrt(10.0*dp), t3=25.0*by/N;
-  const measuredS=t1+t2+t3;
-  // (2) substituted formula with the latest row's actual MEASURED values
-  subEl.innerHTML="with our values (measured): S = 100&middot;(<b>"+sig(ds,6)+
-    "</b>) + &radic;(10&middot;<b>"+sig(dp,6)+"</b>) + 25&middot;(<b>"+fmtInt(by)+"</b> / "+Nstr+")";
-  // (3) weighted terms -> S (all three measured)
+  const t1=100*ds, t2=Math.sqrt(10*dp), t3=25*by/N, S=t1+t2+t3;
+  svalEl.textContent=sig(S,4);
+  // reference vs the frontier pointer (advisory delta)
+  const pv=ptrVal();
+  if(srefEl){
+    let h="";
+    if(pv!=null){const d=S-pv; h="pointer <b>"+sig(pv,5)+"</b> &middot; Δ "+(d>=0?"+":"")+sig(d,3)+" (advisory)";}
+    else h="pointer unavailable";
+    if(META.pose_blind)h+=" &middot; pose UNHELD (w_pose=0)";
+    srefEl.innerHTML=h;
+  }
+  // three term cells, share of S as a bar; dominant term flagged
+  const terms=[
+    {k:"100&middot;d_seg",in:"d_seg = "+fDs(ds),con:t1,c:"var(--lv-seg)"},
+    {k:"&radic;(10&middot;d_pose)",in:"d_pose = "+sig(dp,4),con:t2,c:"var(--lv-pose)"},
+    {k:"25&middot;bytes / N",in:fmtInt(by)+" B",con:t3,c:"var(--lv-byte)"}
+  ];
+  const maxCon=Math.max(t1,t2,t3,1e-12);
   let html="";
-  [["100&middot;d_seg",t1],["&radic;(10&middot;d_pose)",t2],["25&middot;bytes / "+Nstr,t3]].forEach(r=>{
-    html+="<div class='sbrow'><span class='sbk'>"+r[0]+"</span><span class='sbv'>= "+sig(r[1],4)+"</span></div>";
+  terms.forEach(tm=>{
+    const share=S>0?tm.con/S:0, w=Math.max(1,Math.round(tm.con/maxCon*100));
+    html+="<div class='lv-term'>"+
+      "<div class='tt'><span class='ttk'><span class='swatch' style='background:"+tm.c+"'></span>"+tm.k+"</span>"+
+        "<span class='tin'>"+tm.in+"</span></div>"+
+      "<div class='tcon'>"+fContrib(tm.con)+"</div>"+
+      "<div class='lv-bar'><i style='width:"+w+"%;background:"+tm.c+"'></i></div>"+
+      "<div class='tshare'><span>contribution</span><span>"+pct(share)+" of S</span></div>"+
+    "</div>";
   });
-  html+="<div class='sbrule'></div>";
-  html+="<div class='sbrow sbtot'><span class='sbk'>S (measured) = implied_S</span>"+
-    "<span class='sbv'>= "+sig(measuredS,4)+"</span></div>";
   termsEl.innerHTML=html;
-  // (4) one-line advisory note — this is the run's own measured composite, not the pointer
-  depEl.innerHTML="advisory &mdash; the run's own measured composite (store-nothing-carrier d_pose), "+
-    "NOT the exact pointer ("+ptrTxt()+") &middot; byte-closed pose confirmation is #238."+
-    (META.pose_blind?" &middot; <b>pose UNHELD by design in this arm (w_pose=0)</b> &mdash; the pose "+
-     "term above is measured-but-untrained, so the composite is dominated by it by construction.":"");
+}
+
+// 3 · PER-CLASS BREAKDOWN — d_seg_by_class (blue) + flip_share_by_class (amber), aligned.
+function renderClasses(last){
+  const box=$("lv_classes"); if(!box)return;
+  const ds=last&&last.d_seg_by_class, fl=last&&last.flip_share_by_class;
+  if(!Array.isArray(ds)||ds.length<5){box.innerHTML="<div class='lv-none'>no per-class verdict yet</div>";return;}
+  const dmax=Math.max.apply(null,ds.map(v=>isFinite(v)?v:0),0.0001)||0.0001;
+  const fmax=Math.max.apply(null,(fl||[]).map(v=>isFinite(v)?v:0),0.0001)||0.0001;
+  let html="<div class='lv-clab'><span><i style='background:var(--lv-seg)'></i>d_seg</span>"+
+    "<span><i style='background:var(--lv-pose)'></i>flip share</span></div>";
+  for(let i=0;i<5;i++){
+    const dv=ds[i], fv=(fl&&fl[i]!=null)?fl[i]:null;
+    const dw=Math.max(2,Math.round((dv/dmax)*100)), fw=(fv!=null)?Math.max(2,Math.round((fv/fmax)*100)):0;
+    html+="<div class='lv-crow'>"+
+      "<div class='lv-cname'><span class='ci'>"+i+"</span> "+esc(CLASS_NAMES[i]||("c"+i))+"</div>"+
+      "<div class='lv-cbars'>"+
+        "<div class='lv-cbar'><i style='width:"+dw+"%;background:var(--lv-seg)'></i></div>"+
+        "<div class='lv-cbar'><i style='width:"+fw+"%;background:var(--lv-pose)'></i></div>"+
+      "</div>"+
+      "<div class='lv-cval'>"+sig(dv,3)+"<br><span class='cf'>"+(fv!=null?pct(fv):"—")+"</span></div>"+
+    "</div>";
+  }
+  box.innerHTML=html;
+}
+
+// 4 · POSE-DESCENT READINESS — the jacobian_basin sensor (median σ_min, cond, basin frac).
+// Pose is pose-BLIND until the finishing stage by design; the READINESS is what matters.
+function renderPose(){
+  const box=$("lv_pose"), meta=$("lv_pose_meta");
+  if(!box)return;
+  const jb=(META.sensors&&META.sensors.jacobian_basin)||null;
+  if(!jb){box.innerHTML="<div class='lv-none'>no basin probe yet</div>";return;}
+  if(meta)meta.textContent="ep"+(jb.epoch!=null?jb.epoch:"?")+" · k="+(jb.k_pairs!=null?jb.k_pairs:"?");
+  const sm=jb.median_sigma_min, cond=jb.median_cond, bf=jb.basin_frac, fired=jb.would_have_fired;
+  const floor=jb.sigma_floor;
+  const smCls=(sm!=null&&floor!=null)?(sm>floor?"ok":"wn"):"";
+  const condCls=(cond!=null)?(cond<1e5?"ok":(cond<1e6?"wn":"")):"";
+  const cell=(l,v,cls)=>"<div class='lv-pcell'><span class='pl'>"+l+"</span><span class='pvv "+(cls||"")+"'>"+v+"</span></div>";
+  let html="";
+  html+=cell("median σ_min",(sm!=null?sig(sm,3):"—"),smCls);
+  html+=cell("median cond",(cond!=null?sig(cond,3):"—"),condCls);
+  html+=cell("basin frac",(bf!=null?pct(bf):"—"),(bf!=null&&bf>=0.5?"ok":"wn"));
+  html+=cell("would fire",(fired==null?"—":(fired?"yes":"no")),(fired?"ok":""));
+  html+="<div class='lv-pnote'>pose is <b>held out until the finishing stage</b> by design — a rising "+
+    "d_pose before then is expected; the conditioning above is the readiness for the pose descent to converge.</div>";
+  box.innerHTML=html;
+}
+
+// 5 · TRAINING HEALTH — loss_terms guard scalars + nonzero energy-term split (confound signals).
+function renderHealth(){
+  const box=$("lv_health"), meta=$("lv_health_meta");
+  if(!box)return;
+  const lt=(META.sensors&&META.sensors.loss_terms)||null;
+  if(!lt){box.innerHTML="<div class='lv-none'>no loss row yet</div>";return;}
+  if(meta)meta.textContent="ep"+(lt.ep!=null?lt.ep:"?")+" · batch "+(lt.accum_batch!=null?lt.accum_batch:"?");
+  const af=lt.accepted_frac, gn=lt.gnorm, sk=lt.spike_skipped, ws=lt.weights_stepped;
+  const hb=lt.hosc_beta, sx=lt.softmax_temp, tot=lt.total;
+  const afCls=(af!=null)?(af>=0.9?"ok":(af>=0.5?"wn":"bd")):"";
+  const gnCls=(gn!=null)?(gn<50?"ok":(gn<100?"wn":"bd")):"";
+  const skCls=(sk?"wn":"ok");
+  const scal=(k,v,cls)=>"<span class='lv-hs'><span class='hk'>"+k+"</span><span class='hv "+(cls||"")+"'>"+v+"</span></span>";
+  let strip="<div class='lv-hscal'>";
+  strip+=scal("total",(tot!=null?sig(tot,4):"—"));
+  strip+=scal("gnorm",(gn!=null?sig(gn,3):"—"),gnCls);
+  strip+=scal("accepted",(af!=null?pct(af):"—"),afCls);
+  strip+=scal("spike skip",(sk!=null?String(sk):"—"),skCls);
+  strip+=scal("stepped",(ws==null?"—":(ws?"yes":"NO")),(ws?"ok":"bd"));
+  strip+=scal("hosc β",(hb!=null?sig(hb,3):"—"));
+  strip+=scal("softmax τ",(sx!=null?sig(sx,3):"—"));
+  strip+="</div>";
+  // nonzero energy terms, largest first
+  const terms=lt.terms||{};
+  const rows=Object.keys(terms).map(k=>[k,terms[k]]).filter(r=>isFinite(r[1])&&Math.abs(r[1])>1e-9)
+    .sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+  let bars="";
+  if(rows.length){
+    const mx=Math.max.apply(null,rows.map(r=>Math.abs(r[1])))||1;
+    rows.forEach(r=>{
+      const w=Math.max(2,Math.round(Math.abs(r[1])/mx*100));
+      bars+="<div class='lv-hterm'><span class='hn'>"+esc(r[0])+"</span>"+
+        "<span class='hbar'><i style='width:"+w+"%'></i></span>"+
+        "<span class='hpv'>"+sig(r[1],3)+"</span></div>";
+    });
+  }else bars="<div class='lv-none'>all energy terms zero</div>";
+  box.innerHTML=strip+bars;
+}
+
+// 6 · SYSTEM — resident + MLX active/peak vs available (one gauge each).
+function renderSys(last){
+  const box=$("lv_sys"); if(!box)return;
+  const mp=(META.sensors&&META.sensors.loss_terms)||null; // loss_terms carries no mem; use verdict + mem_probe via sensors? verdict has it.
+  // memory rows live on the verdict point (rss/mlx_active/mlx_peak/sys_avail)
+  const rss=last&&last.rss_gib, act=last&&last.mlx_active_gib, pk=last&&last.mlx_peak_gib,
+        av=last&&last.sys_avail_gib, ca=last&&last.mlx_cache_gib;
+  if(rss==null&&act==null){box.innerHTML="<div class='lv-none'>no memory row yet</div>";return;}
+  // gauge domain: available + peak headroom so bars are comparable
+  const dom=Math.max(av||0, pk||0, act||0, rss||0, 1);
+  const gauge=(k,v,vpeak,extra)=>{
+    if(v==null)return "";
+    const w=Math.max(1,Math.round(v/dom*100));
+    const pkmark=(vpeak!=null&&vpeak>0)?"<span class='peak' style='left:"+Math.min(100,vpeak/dom*100)+"%'></span>":"";
+    return "<div class='lv-gauge'><span class='gk'>"+k+"</span>"+
+      "<span class='lv-gtrack'><i style='width:"+w+"%'></i>"+pkmark+"</span>"+
+      "<span class='lv-gv'><b>"+sig(v,4)+"</b> GiB"+(extra||"")+"</span></div>";
+  };
+  let html="";
+  html+=gauge("resident",rss,null,"");
+  html+=gauge("MLX active",act,pk," · peak "+(pk!=null?sig(pk,4):"—"));
+  if(ca!=null)html+=gauge("MLX cache",ca,null,"");
+  html+="<div class='lv-gauge'><span class='gk'>available</span>"+
+    "<span class='lv-gtrack'></span><span class='lv-gv'><b>"+(av!=null?sig(av,4):"—")+"</b> GiB free</span></div>";
+  box.innerHTML=html;
+}
+
+// 7 · CURRICULUM POSITION — timeline of stage bands with a marker at the current epoch.
+function renderSchedule(last){
+  const box=$("lv_sched"), meta=$("lv_sched_meta");
+  if(!box)return;
+  const ep=last&&last.epoch!=null?last.epoch:(LIVE&&LIVE.last_epoch!=null?LIVE.last_epoch:null);
+  // total epochs from the run's own schedule (never fabricated); fall back to a
+  // data-driven max so a cap-unknown run still renders a sane track.
+  const cfgSched=(META.config&&META.config.schedule)||META.schedule||{};
+  let total=cfgSched.epochs!=null?cfgSched.epochs:null;
+  // build ordered boundaries from the derived stage map (preferred) or BOOT tau/l7 + muon.
+  const map=stageMap();
+  let bounds=[];
+  if(map){
+    map.forEach(s=>{const b=stageBoundary(s);
+      bounds.push({name:s.name,at:(b!=null?b:0),pending:(s.mode==="event"&&s.status==="pending")});});
+    bounds.sort((a,b)=>a.at-b.at);
+  }else{
+    const tau=(META.tau!=null)?META.tau:BOOT.tau, l7=(META.l7!=null)?META.l7:BOOT.l7, mu=META.muon_start;
+    bounds.push({name:"CE",at:0});
+    if(tau!=null)bounds.push({name:"tau",at:tau});
+    if(l7!=null)bounds.push({name:"l7",at:l7});
+    if(mu!=null)bounds.push({name:"Muon",at:mu});
+  }
+  if(!bounds.length){box.innerHTML="<div class='lv-none'>schedule unresolved</div>";return;}
+  if(total==null){const lastB=bounds[bounds.length-1].at; total=Math.max(lastB*1.25||1, (ep||0)*1.1, lastB+1);}
+  if(!(total>0))total=1;
+  if(meta)meta.textContent=(ep!=null?"ep "+ep:"—")+" / "+(cfgSched.epochs!=null?fmtInt(cfgSched.epochs):"cap "+fmtInt(total)+"?");
+  // segment widths from consecutive boundaries
+  const BANDCOL={ce:"#1f3b5f",tau:"#3a2a5f",l7:"#5f3320",muon:"#1f4f43"};
+  let segs="";
+  for(let i=0;i<bounds.length;i++){
+    const a=bounds[i].at, b=(i+1<bounds.length)?bounds[i+1].at:total;
+    const w=Math.max(0,(b-a)/total*100);
+    if(w<=0)continue;
+    const col=BANDCOL[bounds[i].name.toLowerCase()]||"#33394a";
+    segs+="<div class='lv-seg' style='width:"+w+"%;background:"+col+"'>"+
+      "<span class='sn'>"+esc(bounds[i].name)+(bounds[i].pending?" ⌁":"")+"</span></div>";
+  }
+  const markPct=(ep!=null)?Math.min(100,Math.max(0,ep/total*100)):null;
+  const marker=(markPct!=null)?"<div class='lv-marker' style='left:"+markPct+"%'></div>":"";
+  box.innerHTML="<div class='lv-track'>"+segs+marker+"</div>"+
+    "<div class='lv-sticks'><span>0</span><span>"+fmtInt(total)+"</span></div>";
 }
 
 // ---------- RUN-IDENTITY row (name + purpose chip + scope chip; CONDITIONAL) ----------
@@ -4170,7 +4584,7 @@ function render(){
   const last=TRAJ.length?TRAJ[TRAJ.length-1]:null;
   const g=goalVal();
   fillPtrSpans();  // pointer prose spans — data-driven from the canonical pointer file
-  const _nrm=$("sb_norm");
+  const _nrm=$("lv_norm");
   if(_nrm&&META.archive_norm_bytes)_nrm.textContent=META.archive_norm_bytes.toLocaleString("en-US");
   // liveness pill
   const k=LIVE.kind, p=$("pill");
@@ -4191,30 +4605,15 @@ function render(){
     if(!META.run_dir){rd.textContent="resolving run…";}
     else{rd.textContent="watching "+META.run_dir+(META.warming_up?" · warming up (structured-init, no verdict yet)":"");}
   }
-  // headline stat cells - raw numbers in discrete cells; down=good arrows on all four
-  if(last){
-    setTxt("d_seg_val",sig(last.d_seg,5));
-    const setArr=(id,key)=>{const a=arrowFor(key),el=$(id);if(el){el.className="trend "+a.cls;el.textContent=a.ar;}};
-    setArr("m_trend","d_seg");setArr("p_trend","d_pose");setArr("b_trend","blob_bytes");setArr("s_trend","implied_S");
-    // goal badge: CONDITIONAL — a value renders only with a real source (derived /
-    // override); otherwise an explicit "—" with the provenance hint, never a baked default.
-    const _mg=$("m_goal");
-    if(_mg){
-      const _gsrc=(META.goal_src&&META.goal_src.dseg)||null;
-      if(g!=null){_mg.textContent="goal < "+sig(g,4)+(goalSrcTag(_gsrc)?" · "+goalSrcTag(_gsrc):"");_mg.title=_gsrc||"";}
-      else{_mg.textContent="goal — ("+(_gsrc||"no measured source yet")+")";_mg.title=_gsrc||"";}
-    }
-    setTxt("m_best",(bestVal!=null)?("best "+sig(bestVal,5)+" @ ep"+bestEpoch):" ");
-    // implied_S sublabel: pose-blind arms carry the honest "unheld by design" note
-    const _ss=$("s_sub");
-    if(_ss)_ss.textContent=META.pose_blind
-      ?"advisory · pose UNHELD by design in this arm (w_pose=0) — composite includes the unheld pose term"
-      :"advisory · measured d_seg + store-nothing-carrier d_pose + rate · NOT the exact pointer";
-    setTxt("d_pose_val",sig(last.d_pose,4));
-    setTxt("bytes_val",fmtInt(last.blob_bytes));
-    setTxt("s_val",sig(last.implied_S,4));
-  }
-  renderScorerBreakdown(last);
+  // LIVE instrument panels (rebuilt 2026-07-09): masthead S-decomposition + per-class +
+  // pose-readiness + training-health + system + schedule. All read the newest verdict
+  // point (+ META.sensors for the non-verdict jacobian_basin / loss_terms stages).
+  renderMasthead(last);
+  renderClasses(last);
+  renderPose();
+  renderHealth();
+  renderSys(last);
+  renderSchedule(last);
   // stage legend: CONDITIONAL — only stages present in the derived map light up
   // (l7 hidden when disabled). Legacy Muon-only toggle when no map is present.
   const _lmap=stageMap();
@@ -4903,7 +5302,7 @@ function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
 // ---------- pointer interactions: synchronized crosshair + tooltip (touch+hover) ----------
 function setupInteractions(){
   const tip=$("tip");
-  const canvases=["c_dseg","c_dpose","c_bytes","c_s"].map(id=>$(id)).filter(Boolean);
+  const canvases=["c_dseg"].map(id=>$(id)).filter(Boolean);
   function epochAt(canvas,clientX){
     const tf=canvas._tf; if(!tf)return null;
     const r=canvas.getBoundingClientRect(); const px=clientX-r.left;
