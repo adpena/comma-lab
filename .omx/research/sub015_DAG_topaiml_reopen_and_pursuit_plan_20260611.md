@@ -11994,7 +11994,7 @@ scales n2/n6/n24/n48/n600 all `no_offset < menon < ot_newton`. **Mechanism (per-
 inflates the rare-Lane cell (offset b_Lane **+26.5**) to hit its 0.59% GT mass → Lane d_seg 0.212→0.265,
 EVERY class worse → SegNet re-read PENALISES the over-prediction. The witness's learned boundary
 placement (no-offset) is already closer to the scorer argmax than any raw-frequency mass reweight.
-Winner sweep independently agrees (best swept Δ=−3.39e-8, negligible ⇒ no-offset optimal over ±0.4 grid).
+Winner sweep independently agrees (best swept Δd_seg=−3.39e-8 ⇒ ΔS=100·Δ=3.39e-6 = 0.008% of the remaining gap S_current−S_target=0.19110−0.15=0.0411 — RELATIVE-negligible, not eyeball ⇒ no-offset optimal over ±0.4 grid # MAGNITUDE_DISMISSAL_OK: relative-significance computed, 0.008% of remaining descent).
 **verdict_scope = FORMULATION** ("cell-mass-matching to GT frequencies as a d_seg surrogate" at THIS
 ckpt/tau=1.0) — NOT a solver/family/paradigm kill. **Reformulation queue STAYS OPEN:** (1) flip-weighted
 target masses (match the boundary-annulus mass the scorer re-reads, not bulk cell mass — the primary
