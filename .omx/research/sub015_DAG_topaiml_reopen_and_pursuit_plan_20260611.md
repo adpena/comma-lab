@@ -11620,3 +11620,24 @@ power diagram** (#284: Laguerre=tropical=curvelet=se3). Store the GENERATORS, no
   converged anchors flip sign to −8% ~0.03 est ΔS; RE-VALIDATE at convergence (cheap disk A/B)". This landing BUILDS
   the fireable lever; it makes NO score claim. Duty-to-measure QUEUE state = built/never-fired → owed a CONVERGED
   byte-close A/B. means != ends: pointer 0.19110 UNMOVED. #205 alive+untouched. $0 code build (no GPU, no launch).
+
+---
+## FEED-cells2pixels (2026-07-09) — SIGGRAPH'26 NCA+LPPN = top-AIML RE-OPEN vehicle for the AMBER d_seg-core
+**Operator shared:** https://cells2pixels.github.io/#growing — "Neural CA: From Cells to Pixels" (SIGGRAPH 2026).
+Coarse-lattice NCA + lightweight shared-MLP decoder (LPPN) decoding cell states at ARBITRARY resolution;
+decouples coarse NCA evolution from high-res decode → kills NCA's quadratic-memory + weak-long-range + heavy-inference.
+**RECALL (our own measured priors):** #146 continuous-texture NCA = AMBER, the STRONGEST d_seg-core the campaign
+produced — realized d_seg 0.00337 (1.31× frontier), **boundary_band_flip 0.079 = HALF the polynomial wall**, rate
+0.019, projected S 0.415 — win came from training THROUGH R (pre-distort the band to survive the downsample).
+#143 flat-partition NCA = RED (grown boundary fuzzier). Shelved for TWO reasons only.
+**Assessment (NO-FAKE, non-naive):**
+- LPPN decouple ADDRESSES: (a) our NCA memory walls (coarse-grid + local decode); (b) arbitrary-res decode = the
+  #149 sub-pixel camera-res lever (place flip at 874×1164 pre-downsample); (c) long-range comm ↔ #277 3.2× along-tangent.
+- Does NOT address our ACTUAL blocker: deep-unroll optimizer COLLAPSE (diagnosed BUG: no grad-clip + sqrt-pose-eps
+  grad-blowup 5e4 + 100× seg-LR) — optimization-stability, orthogonal to the paper's architecture. across-600
+  amortization still UNMEASURED (shared-rule test RED but n_converged=0, same-collapse-confounded).
+- rule-118: NCA rule + LPPN weights = COUNTED (learned/video-derived); iteration = free. LPPN small → likely in the
+  proven 0.0072-0.019 rate band (VERIFY not assume).
+**Verdict: top-AIML RE-OPEN vehicle for the AMBER / v8 generative per-class carrier + amortized-init (#211).**
+STAGED (not drop-everything) per FEED-ff reactivation trigger: fire WHEN (a) #205 SDF witness walls on realized
+boundary_band_flip AND (b) the training-collapse fix is in. No heavy launch now (#205 owns GPU; CONTAINMENT). Pointer 0.19110 UNMOVED.
