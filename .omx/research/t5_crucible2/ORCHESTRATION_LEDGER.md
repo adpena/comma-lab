@@ -95,7 +95,34 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       <!-- P4 recess: no concurrent heavy GPU used; box untouched; reading+arithmetic+code-inspection only -->
 - [ ] **P4b (folded)** — reserved: NONE launched; P4 was fully $0-satisfiable on existing artifacts except
       the M2 R1-canary telemetry-ON replay (governed, spec'd, NOT run in recess).
-- [ ] **P5 SECOND RED-TEAM → SEAL-TO-RECESS.**
+- [x] **P5 SECOND RED-TEAM** — `P5_second_redteam_20260709.md` landed. **VERDICT: SEAL-READY-WITH-AMENDMENTS
+      (6, amendment-grade; NOT a rewrite).** All 3 P4 FORCES-CHANGE RE-DERIVE-CONFIRMED from PRIMARY ARTIFACT
+      (not memo-trusted): M3 crush code-disproven (MLX Muon L906 Frobenius-normalize discards magnitude, L946
+      aspect-only lr); M4 term_domination alarm BUILT (trainer L9222, whitelist `_reg_keys` L9224,
+      island_amplify loss-term L5065 un-whitelisted); flag ON-set CLEAN vs live argparse. **SHARPEST NEW
+      ATTACK (chain had not made it):** A-1's OWN FIX inherits A-1's never-fire mode — the RELATIVE
+      exp-asymptote-fit PRIMARY is, on the only σ_min trajectory we have (M1: CV-0.21 oscillation, degenerate
+      fit) and the identical k=32 probe the fresh run uses, **NOT reliably measurable on the runs we'll
+      launch** → fit-quality guard falls back to ship-banked-R1 → pose apparatus decorative again; the fix
+      RELOCATED the never-fire, did not eliminate it. **6 AMENDMENTS:** (1, load-bearing) owed-1 PRIMARY =
+      rolling-slope-≈0 on DE-NOISED σ_min (EMA/larger-k) + noise guard, REPLACE exp-asymptote-fit; (2,
+      load-bearing) owed-1 canary re-spec = $0 NEGATIVE-control (must-not-fire on stopped-run rising σ_min) +
+      SYNTHETIC-positive unit test pre-launch, REAL positive = governed telemetry-ON replay (owed,
+      non-blocking), ship-banked-R1 covers the gap; (3) `--jacobian-basin-telemetry` verified default-True
+      (keep ON, forbid `--no-`) + DENSIFY terminal-window σ_min cadence (stopped run ~1 row/4ep = marginal);
+      (4) owed-3 DEMOTE crush-arm from launch-blocking + NEW EXTENSION: per-group clip ~magnitude-redundant on
+      BOTH Muon AND Adam (out.*→Adam L1884 verified) → Muon-only exemption redundant+asymmetric; real sensor
+      = per-class d_seg-slope-vs-amber-OFF + effective-STEP + direction-cosine, NOT magnitude assertion; (5)
+      owed-12 CORRECT "build it"→ALREADY-BUILT; EXTEND whitelist to Class-B at SAME 40% firing + non-halting
+      >25% WATCH band + small-denominator guard; island_amplify 28% = WATCH not lower-firing-threshold (it's a
+      by-design birth force vs its area-penalty antagonist — a 25% halt would false-fire); (6) never-invent-flags
+      footnote: `--muon-start-event` accepts ONLY `powerlaw_meat` — §B `<nucleation>` must resolve to it.
+      None invalidates the launch; all correctable in P6; ship-banked-R1 fallback keeps the launch SAFE even
+      if the criterion never fires. `verdict_scope` on every negative (M3-arm/exemption FORMULATION,
+      exp-asymptote FORMULATION, island-lower-threshold FORMULATION-rejected, muon-event INSTANCE).
+      `[no-triality]` · $0 · no GPU · run dirs READ-ONLY · #205 UNTOUCHED · pointer 0.19110 UNMOVED.
+      <!-- P5: no concurrent heavy GPU; box untouched; reading + code re-derivation + arithmetic only -->
+- [ ] **P6 SEAL-TO-RECESS** — fold the 6 P5 amendments into the design, THEN the recursive seal below.
 - [ ] **P6 RECURSIVE SEAL** — 3 consecutive clean rounds across BOTH lenses (finding-disposition VERIFY +
       DEEP-MATH MEAT HUNT: re-derive every law · hunt unconsumed levers vs the DELTA · bug-hunt the
       config-as-written · fresh-math sweep) via `tac.review_counter` surface **`crucible2_v752`**; then the
