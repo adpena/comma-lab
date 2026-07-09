@@ -11531,3 +11531,18 @@ chain-coded 1.5 b/px = 80 B/frame -> 47 KB@n600 = 0.032 S MEASURED = 9x below na
 20-50 KB band (now measured).** Confirms "interiors-near-free" was really about SCOPE (edge-centric) > interior
 texture. OWED: correct the scaffold's byte-cost to measure the Road<->Undriv SHARED EDGE, not the full Road mask.
 equations leg FORMALIZATION_PENDING (SPEC_v8 §5). Pointer 0.19110 UNMOVED. #205 alive+untouched.
+
+### FEED-session-audit (2026-07-09) — [no-triality] adversarial audit of ALL session measurements (operator: "not naive/toy")
+
+Operator generalized the "707B is naive" catch: audit every session finding. Ledger:
+`.omx/research/session_measurement_adversarial_audit_20260709.md`. Result: ONE naivety CLASS found — RATE
+estimates via a b/px PROXY not a real coder. (1) 707B/0.282S = TOY-corrected (naive coder + wrong scope). (2)
+edge-centric 47KB/0.032S = PROXY-FLAGGED: 1.5 b/px was assumed, and the Road<->Undriv contour is ragged (1.6-2.0
+crossings/row MEASURED, not smooth ~1.0) → honest range 0.021-0.064 S, leans high, "lands in band" is
+coder-dependent; NEITHER 0.282 nor 0.032 is the answer — only a MEASURED real-coder contour settles it (OWED,
+added to P-C gate). (3) 19%/47%/23%/5% Road-edge split = SOLID geometry. (4) Road multi-comp 37.2% =
+threshold-dependent %, but Undriv-single-connected (the load-bearing part) = ROBUST. (5-8) self-detect / byte-close
+/ gitleaks-0FP / Flowers-AFFIRMATION = SOLID (real artifacts, not proxies; scoped claims). STANDING RULE for v8:
+no rate number load-bearing until MEASURED by a real contour/arithmetic coder on our n600 boundary, never a b/px
+proxy (= the #307 0.820-B/flip discipline applied to v8). All ran n600 — but n600-scale is necessary NOT
+sufficient: real-scale-through-a-proxy-coder is still a proxy. Pointer 0.19110 UNMOVED. #205 alive+untouched.

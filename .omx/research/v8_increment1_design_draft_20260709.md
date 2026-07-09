@@ -41,10 +41,19 @@ already exist.
 > FULL Road perimeter (2228 px), but the edge-centric field pays for the **Road↔Undrivable horizon ONLY = 426 px
 > (19%)** — the other 81% (Road↔Lane 47% / Road↔MyCar 23% / Road↔Movable 5%) belongs to those classes' own
 > carriers, and paying for them here IS the risk-1 double-count. Edge-centric Road↔Undriv, chain-coded: **80
-> B/frame → 47 KB@n600 = 0.032 S MEASURED = 9× below the naive number, landing IN the conjectured band.** The
-> scaffold's `bulk_boundary_byte_cost` should be corrected to measure the Road↔Undriv SHARED EDGE (not the full
-> Road mask). This confirms the "interiors-near-free" bet was really about SCOPE (edge-centric) more than interior
-> texture — a cleaner, measured foundation for the rate thesis.
+> B/frame → 47 KB@n600 = 0.032 S** = 9× below the naive number. The scaffold's `bulk_boundary_byte_cost` should be
+> corrected to measure the Road↔Undriv SHARED EDGE (not the full Road mask). This confirms the "interiors-near-free"
+> bet was really about SCOPE (edge-centric) more than interior texture.
+>
+> **ADVERSARIAL AUDIT of this very number (operator "audit all findings, not naive/toy", 2026-07-09) — it was
+> still PARTLY optimistic:** (i) **1.5 b/px was a PROXY, not measured** — the honest range is 0.021 S (1.0 b/px) /
+> 0.032 (1.5) / **0.064 (3.0 raw chain) = OUTSIDE the band** ⇒ "lands in band" is CODER-DEPENDENT. (ii) The
+> Road↔Undriv contour is **NOT a smooth single curve — MEASURED 1.6–2.0 crossings/row** (a clean horizon ≈1.0) ⇒
+> ragged/multi-branch ⇒ the smooth-curve 1.5 b/px is optimistic; the truth LEANS HIGH (top-of-band or just outside).
+> **HONEST verdict: the edge-centric rate is 0.021–0.064 S, coder-and-smoothness-dependent, leaning ~0.04–0.06;
+> only a MEASURED arithmetic/context-coded contour on our actual boundary (OWED — a real coder, not a b/px proxy)
+> settles whether v8's rate thesis clears the band.** Neither the naive 0.282 nor the optimistic 0.032 is the
+> answer; the real number is in between and is currently UNMEASURED-by-a-real-coder.
 
 ## 2. The one new build — the Road+Undriv edge-centric bulk-boundary field
 - **ONE field, not two** (risk-1 cure, edge-centric): a single SDF-gauged scalar φ_bulk over the Road/Undriv
