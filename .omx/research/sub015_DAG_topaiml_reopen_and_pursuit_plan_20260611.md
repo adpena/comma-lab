@@ -10838,3 +10838,22 @@ NOW; a finishing-descent (below 0.0011) then SEQUENCES on operator-GO to yield r
 preserved/resumable). If dxi does NOT ship → the descent-run IS the path and must sequence. CUDA port =
 the only true-parallel future, a strategic fund-decision not a tonight action. verdict_scope: instance —
 the NO-GO is hardware/this-trainer, not the joint-descent method (method is VALIDATED, R1). Pointer 0.19110 UNMOVED.
+
+## FEED-undrivrecall (2026-07-08) — the Undriv/horizon gap is ADDRESSED by past work (operator recall): bulk SOLVED + clean-canonical floor 0.0016 + temporal-screw fold-in (proactive recall, no new run)
+Operator: "we have some stuff like the bulk and some horizon solution that solved it in the past under
+another run." CONFIRMED + connected: (1) BULK SOLVED — probe_PA (n600): Road/Undriv INTERIORS flip
+0.17%/0.03%, "entire Road/Undriv residual is separatrix PLACEMENT not interior fidelity"; witness INR owns
+smooth bulk IoU 0.95-0.99 (analytic_lane_band memory). Live run Undriv 0.082 is NOT bulk. (2) HORIZON
+FLOOR MEASURED — clean_canonical_warp_budget_gate_20260629 (tool measure_clean_canonical_warp_through_R):
+temporally-aggregated jitter-free canonical warped per-class (Road→ground-homography, sky/Undriv→
+ROTATION-ONLY, hood→identity) → **Undriv-sky d_seg 0.0016 through R** (vs live 0.082 = ~50× floor);
+KEY: the bulk floor ~0.0048 is POSE-EXPLAINABLE inter-frame SegNet JITTER, removable by a temporally-
+coherent canonical — the Undriv/horizon residual is FLICKER, not representation limit. (3) horizon-band
+sidecar (#169) NO-GO (49-153KB dead rate); surviving lever = 0-byte IN-TRAINING horizon-weighted margin
+term (caps ΔS 0.024). FOLD-IN MECHANISM (all built/derived, NONE in live v6 run): temporal-screw-
+consistency (P0 force #360 — same boundary across frames warped by ego-ξ, dual-use pose) + horizon-
+weighted margin + per-class stratified regime (sky=rotation). HONEST: 0.0016 is a REFERENCE/oracle floor
+(temporally-aggregated canonical), not a trained-witness result — proves the floor + mechanism; the
+trained realization via #360 is UNTESTED. This is a v7.5 lever, not a new invention. Undriv-gap probe I
+offered = SUPERSEDED by this recall (the answer already exists). verdict_scope: n/a (positive recall).
+Pointer 0.19110 UNMOVED.
