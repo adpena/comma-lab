@@ -11903,3 +11903,51 @@ SIGNAL → DIAGNOSTIC → RESPONSE, advisory-forever (CONTAINMENT; costate bound
 - **HONEST HEADROOM (2 levers, MEASURED-un-exploited, move 0.140→0.061):** (1) **de-sharing double-count** — horizon uncovered "secondary arcs" ARE objects breaking the horizon = Movable px ALREADY carried; attributing to the Movable carrier shrinks the horizon residual free. (2) **curve-relative residual coder (not built)** — code signed OFFSET-from-generator (small ints) not absolute coords; the generic 0.4–0.6 B/px is an UPPER BOUND. These are the v8 rate-completion's open real-coder + de-sharing levers.
 - **NO-FAKE:** roll-up reports BOTH dominant-only AND complete; headline states plainly complete (0.140) does not beat frontier with today's residual coder; double-count flagged as INFLATING (not deflating) the complete number. means != ends: pointer UNMOVED; d_seg half (#205) is the true blocker.
 - `[triality: DAG leg = this FEED; equation = v8_geometric_rate_decomposition_v1 FORMALIZATION_PENDING (S_edge = S_gen(dominant, ~k coeffs) + S_resid(uncovered px); v8 equations FORMALIZATION_PENDING until a byte-closed exact-eval anchor per draft §5)]`.
+
+## FEED-otoffset (task #288, 2026-07-09) — WIRE the damped-Newton semi-discrete OT head-offset solver (BUILT-but-UNWIRED) + $0 gate MEASURED
+`[contest-CPU advisory · NON-PROMOTABLE]` · pointer 0.19110 UNMOVED · #205 READ-ONLY/untouched · $0 code, no GPU, no launch. Solve-don't-train inventory row 2 (the HIGHEST-$0 finding). Mechanism was already built (`tac.boundary_math.laguerre_logit_offset.damped_newton_ot_offsets:177`) but only the Menon `-τ·log π` prior heuristic was wired; this unit makes the REAL OT solver a selectable, default-preserving option AND runs the decisive 3-arm gate.
+
+- **SIGNAL:** row 2 of `.omx/research/solve_dont_train_inventory_20260709.md` — the per-class head-bias offset `b_c` (Laguerre / power-diagram reweight of the argmax cells) is a `<1 s` closed-form/OT SOLVE, byte-free (folds into `out_sdf.bias`), attacking the dominant Lane↔Road erasure (~57% of flips). Full solver BUILT but UNWIRED (orphaned high-value → duty-to-measure).
+- **BUILD (selectable, NO-FAKE, byte-identical-when-off):**
+  - `laguerre_logit_offset.solve_head_offsets(mode, priors, phi, target_masses, tau)` — the canonical dispatcher. `menon` = priors-only `-τ·log π`; `ot_newton` = damped-Newton semi-discrete OT (Kitagawa-Merigot-Thibert 2019) solving the zero-sum `b*` whose soft Laguerre cell masses == GT class masses. **ot_newton with phi/masses absent RAISES — never a silent fallback to the prior (a fake "ot_newton" ignoring the geometry it claims to use).**
+  - Trainer flag `--head-offset-solver {off,menon,ot_newton}` (default **off** = byte-identical) + `--head-offset-solver-tau`. Consumed at the EMA verdict (`realized_verdict`, the decode-time site where phi EXISTS — the pre-loop margin-field-head setup at :4378 has NO phi, so the literal ":4378 fold" is impossible; the verdict site is the correct home per the memo's "WHERE: decode/init"). It solves `b*` on the witness phi over the verdict pairs, folds byte-free into a **COPY** of `out_sdf.bias`, re-renders through R, and emits an **ADVISORY** realized-d_seg delta row. It **NEVER** mutates the EMA shadow / shipped / resumed weights → advisory-only, not trajectory-affecting → no resume-guard/provenance key needed; #205 untouched.
+  - $0 gate: `experiments/probe_laguerre_logit_offset_sweep.py` extended with the `ot_newton` arm → a 3-apples-to-apples-arm gate {no-offset / menon / ot_newton}, realized THROUGH R on the frozen CPU SegNet.
+- **MEASURED ($0 gate, mod32cap ep650 EMA BEST, READ-ONLY snapshot-copy, realized-through-R, n24 COMPLETE):** no_offset **0.0027349** · menon **0.0029672** (+0.00023) · **ot_newton 0.0047860 (+0.00205, WORSE)**. OT converged in 7 Newton iters, max_mass_err 0.0 (solver EXACT). **VERDICT: mass-matching is a MEASURED NEGATIVE for realized d_seg** — OT enlarges the rare-Lane cell to hit its 0.59% GT mass (offset b_Lane ≈ +28.7), which OVER-predicts Lane and the SegNet re-read PENALISES it; **BOTH offset arms HURT, no-offset wins.** The memo row-2 hypothesis (OT beats the prior) is REFUTED at this checkpoint.
+- **VERDICT SCOPE (FORMULATION, not FAMILY):** the negative is about "cell-mass-matching to raw GT frequencies as a d_seg surrogate" at mod32cap ep650 / τ=1.0 — NOT the OT solver's correctness (exact) and NOT the Laguerre-offset FAMILY. UNTESTED = ASSUMED_AWAITING_VERIFICATION: other converged checkpoints, other τ, and a **flip-weighted** target-mass definition (match the argmax to where flips are, not to raw area) — the natural next reformulation the gate makes cheap. n96/n600 gates were killed by the background-task ~5-min limit (the probe is not resumable-chunked → larger-n OWED).
+- **CONTRACT:** 15 NO-FAKE tests (`test_solve_head_offsets_ot.py`: mass-matching property on real synthetic phi · zero-sum gauge · unnormalized-counts renorm · ot≠menon-on-real-geometry · **ot_newton-requires-phi-RAISES** + requires-masses-RAISES (no-fake) · menon==helper byte-equal · unknown-mode raises · byte-free fold argmax identity + copy-semantics · symmetric-phi degeneracy). Existing 24 laguerre tests green (39 total). ruff F clean.
+- `[triality: DAG leg = this FEED · DSL leg = curriculum_dsl.HeadOffsetSolver (flags MAPPED, lever_registry.unmapped∌head-offset) · equations leg = laguerre_ot_head_offset_v1 REGISTERED (VERIFIED_VIA_EMPIRICAL_ANCHOR gate + VERIFIED_VIA_SOURCE_INSPECTION solver-correctness)]`. means != ends: MEASURED negative, pointer 0.19110 UNMOVED.
+
+## FEED-v8-lane-xi (2026-07-09) — ξ-ego-compensation on Road↔Lane: MEASURED NO-GO; horizon's 14.6× does NOT transfer
+Operator directive: "road lane geometry change over time can be represented smaller — Morse-Smale, everything falls out
+of level set; lanes painted on the road → quasi-static in the GROUND frame; camera-frame coeff motion is INDUCED by the
+ego screw ξ (already stored in the pose section, dual-use); code the delta AFTER ξ-transport → collapse toward the
+horizon's 14.6×." RE-measured the FEED-v8-roadlane temporal stream with the pre-built ego-predictive P-frame machinery
+(`ego_xi_trajectory` + LBND3 `serialize_lane_band_rd3`), $0 read-only on `gt_n600.npz` (all 600, real `gt_poses`).
+- **REAL ξ (never a proxy):** `gt_n600.npz['gt_poses']` = the actual frozen-PoseNet ego readout (pose section, dual-use)
+  via `PoseTargetEgoEstimator` (geometry + affine-to-lane), AND the lane-OPTIMAL ξ (`LaneOptimalEgoEstimator`, per-pair
+  LSQ ds/dy/dψ = the ACHIEVABLE FLOOR), AND a smoothed variant. Transport = exact closed-form SE(2) `advect_centerline_
+  coeffs` (Pascal Taylor-shift + dy + dψ). LBND3 roundtrips **bit-exact** vs LBND2 dequantized geometry (all arms).
+- **RESULT — ξ ENLARGES the stream (WORSE), every arm:** LBND2 temporal delta **41,303 B / 0.02750 S** (baseline HELD)
+  vs LBND3 PoseNet-affine 44,908 B / 0.0299 (0.92×), PoseNet-geometry 46,178 B / 0.0308, lane-optimal 47,453 B / 0.0316.
+- **Isolated LANE payload (ego overhead REMOVED — ξ's fairest, dual-use best case):** LBND2 delta **41,085 B, ‖ΔQ‖₁
+  7.58M** beats EVERY ξ: best (affine) 42,017 B / 8.25M, lane-opt-no-fwd 42,195 B / 7.73M, lane-opt 43,964 B / 9.98M,
+  smooth-7 43,136 B / 8.67M. Identity predictor wins on BOTH bytes and L1. Per-coeff nz-frac: no coeff collapses;
+  c0/c1 get DENSER under advection (ego over-predicts the bulk motion the steered ego cancels).
+- **WHY (the durable mechanism, operator intuition sound-but-already-satisfied):** the lane coder does NOT store
+  camera-frame coeffs — it stores **GROUND-frame** coeffs (`lateral=poly(forward)` via the fixed IPM), so the IPM
+  already quotients the dominant ego-forward-translation at FIT time. The residual temporal delta is IRREDUCIBLE (real
+  lane-curvature evolution + multi-instance slot churn + fit noise), not a rigid ego transport → ego-advection can only
+  ADD prediction error. The horizon won 14.6× because its poly is NOT ground-canonicalized (image rows → one removable
+  ego-pitch intercept). **Corollary: ego-freeze does not transfer to any chart that has already absorbed the ego DOF.**
+- **WATERFILL (operator addendum "loss we know how to waterfill"):** per-coeff-class q sweep (KKT marginals), bit-exact
+  decode → rasterize → distortion `100·mean(band XOR gt_lane)` UB. **Knee = the finest/lossless point (S_total 0.5520);
+  every q-step raises S_total** (offset most distortion-sensitive; curvature/hw cheapest but net-negative). Distortion is
+  dominated by a fixed ~0.52 band-geometry floor (filled band vs thin markings), NOT quantization → NO waterfill headroom.
+  Rate CAN drop to 0.0233 (×16) but only paying real quantization distortion — bad trade. Waterfill does NOT beat lossless.
+- **NET:** honest v8 Road↔Lane = **0.0275 S HELD** (FEED-v8-roadlane number stands; its 7.4× parsimony win intact).
+  ξ-transport is a **MEASURED NO-GO for the lane rate axis** (impl-complete: real ξ, exact transport, best predictor,
+  both accounting modes; paradigm intact — ξ stays decisive for POSE + the image-frame horizon). For the increment-1
+  roll-up: use **0.0275 S for Road↔Lane; do NOT project a horizon-class ξ transfer.**
+- Memo: `.omx/research/v8_roadlane_ego_compensated_rate_20260709.md`. Law FORMALIZATION_PENDING:
+  `lane_groundframe_xi_transport_no_collapse_v1` (‖innov_ξ‖₁ ≥ ‖ΔQ‖₁ ∀ξ; anchor = gt_n600 + memo tables).
+- `[no-triality-yet]` — measurement/negative; means != ends, pointer **0.19110 UNMOVED**, #205 untouched.
