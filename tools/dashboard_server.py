@@ -2930,21 +2930,9 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 </section>
 
 <section id="tab-live">
-  <div class="grid">
-    <div class="panel"><canvas id="c_dseg" role="img" aria-label="d_seg chart"></canvas></div>
-    <div class="panel"><canvas id="c_dpose" role="img" aria-label="d_pose chart"></canvas></div>
-    <div class="panel"><canvas id="c_bytes" role="img" aria-label="blob bytes chart"></canvas></div>
-    <div class="panel"><canvas id="c_s" role="img" aria-label="implied S chart"></canvas></div>
-  </div>
-  <div class="slegend" id="slegend">
-    <span class="sc" data-st="ce"><span class="dot" style="background:#5ab0ff"></span>CE</span>
-    <span class="sc" data-st="tau"><span class="dot" style="background:#b08cff"></span>tau</span>
-    <span class="sc" data-st="l7"><span class="dot" style="background:#ffa454"></span>l7</span>
-    <span class="sc off" data-st="muon"><span class="dot" style="background:#46d3a0"></span>Muon</span>
-    <span class="sc" style="margin-left:auto"><span class="dot" style="background:rgba(226,232,240,.45)"></span>EMA</span>
-    <span class="sc"><span class="dot" style="border:1px dashed #9aa3b2;background:transparent;border-radius:0"></span>trend</span>
-    <span class="sc"><span class="dot" style="background:#ffd24a;border-radius:50%"></span>best</span>
-  </div>
+  <!-- 2026-07-09 UX: current numbers FIRST (summary before detail) so the live descent is seen
+       at a glance on the phone, not scrolled past empty warming-up charts. JS binds by id, so this
+       reorder is purely visual. -->
   <div class="runinfo" id="rdinfo">resolving run&hellip;</div>
   <div class="metrics" id="headline">
     <div class="stat hero">
@@ -2968,6 +2956,21 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
       <span class="sval2" id="s_val">&mdash;</span>
       <span class="ssub adv" id="s_sub">advisory &middot; measured d_seg + store-nothing-carrier d_pose + rate &middot; NOT the exact pointer</span>
     </div>
+  </div>
+  <div class="grid">
+    <div class="panel"><canvas id="c_dseg" role="img" aria-label="d_seg chart"></canvas></div>
+    <div class="panel"><canvas id="c_dpose" role="img" aria-label="d_pose chart"></canvas></div>
+    <div class="panel"><canvas id="c_bytes" role="img" aria-label="blob bytes chart"></canvas></div>
+    <div class="panel"><canvas id="c_s" role="img" aria-label="implied S chart"></canvas></div>
+  </div>
+  <div class="slegend" id="slegend">
+    <span class="sc" data-st="ce"><span class="dot" style="background:#5ab0ff"></span>CE</span>
+    <span class="sc" data-st="tau"><span class="dot" style="background:#b08cff"></span>tau</span>
+    <span class="sc" data-st="l7"><span class="dot" style="background:#ffa454"></span>l7</span>
+    <span class="sc off" data-st="muon"><span class="dot" style="background:#46d3a0"></span>Muon</span>
+    <span class="sc" style="margin-left:auto"><span class="dot" style="background:rgba(226,232,240,.45)"></span>EMA</span>
+    <span class="sc"><span class="dot" style="border:1px dashed #9aa3b2;background:transparent;border-radius:0"></span>trend</span>
+    <span class="sc"><span class="dot" style="background:#ffd24a;border-radius:50%"></span>best</span>
   </div>
   <div class="sbreak" id="sbreak">
     <div class="sbh">Scorer breakdown <span class="sbtag">honest &middot; measured pose</span></div>
