@@ -76,6 +76,12 @@ _SCAN = [
 ]
 
 
+# Files excluded from the outgoing-diff scan: they legitimately contain secret PATTERNS + secret-SHAPED
+# test fixtures by design (this scanner and its tests). Excluding self is the gitleaks-allowlist pattern;
+# any NEW file that must carry example secrets should be added here (and hand-reviewed).
+_SCAN_EXCLUDE_PATHSPECS = ("tools/auto_push_main.py", "src/tac/tests/test_auto_push_main.py")
+
+
 def scan_diff(diff_text: str) -> list[tuple[str, str]]:
     """Return [(pattern_name, redacted_sample), ...] for every scan hit in the diff (added+context)."""
     hits: list[tuple[str, str]] = []
@@ -263,7 +269,13 @@ def run(dry_run: bool = False, use_fmtools: bool = True, fm_hold: bool = False) 
     if ahead in ("", "0"):
         return {"action": "noop", "reason": "not ahead of origin/main"}
 
-    diff = _git(root, "diff", "origin/main..main", timeout=45).stdout
+    # Self-reference exclusion: the scanner's own source + its tests legitimately contain secret PATTERNS
+    # (the regex definitions) and secret-SHAPED fixtures (example tokens / a made-up CGNAT IP). Scanning
+    # them flags the scanner against itself — it held its OWN bootstrap push 2026-07-09 and needed a manual
+    # push. Exclude them via git pathspec (the gitleaks allowlist pattern); they are hand-reviewed. Every
+    # OTHER file is still fully scanned.
+    _excludes = [f":(exclude){p}" for p in _SCAN_EXCLUDE_PATHSPECS]
+    diff = _git(root, "diff", "origin/main..main", "--", ".", *_excludes, timeout=45).stdout
     hits = scan_diff(diff)
     if hits:
         names = ", ".join(f"{n}({s})" for n, s in hits)

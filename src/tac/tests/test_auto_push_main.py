@@ -104,6 +104,15 @@ def test_fm_advisory_none_on_empty_text_never_spawns():
     assert A.fm_secret_advisory("   \n  ") is None
 
 
+# ------------------------------- self-reference exclusion ----------------------
+def test_scanner_excludes_its_own_source_and_tests():
+    # The scanner + its tests carry secret PATTERNS (regex defs) + secret-SHAPED fixtures by design.
+    # The outgoing-diff scan MUST exclude them (git pathspec) or it holds every commit touching itself —
+    # it held its own bootstrap push 2026-07-09. Any new file carrying example secrets is added here.
+    assert "tools/auto_push_main.py" in A._SCAN_EXCLUDE_PATHSPECS
+    assert "src/tac/tests/test_auto_push_main.py" in A._SCAN_EXCLUDE_PATHSPECS
+
+
 # ------------------------------- integration smoke -----------------------------
 # All subprocess smokes pass --dry-run --no-fmtools: --dry-run guarantees NO push
 # side-effect; --no-fmtools skips the on-device FM subprocess (fast + deterministic
