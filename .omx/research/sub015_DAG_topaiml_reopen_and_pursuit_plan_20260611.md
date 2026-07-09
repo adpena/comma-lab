@@ -11070,3 +11070,38 @@ verdict_scope declarations for the negative tokens FEED-relsig used as shorthand
   INSTANCE/formulation-level measured floor, NOT the contour-coding family. (#139 hood-clamp ~0,
   horizon-BAND capacity rank-547 are likewise formulation-level measured, re-openable if the geometry
   changes.) Pointer 0.19110 UNMOVED.
+
+## FEED-v75B4actuated (2026-07-09) — v7.5 ACTUATION item B.4: temporal-screw #360 wired into crucible_v7 (EVENT-governed)
+**CONFIG actuation, NOT a launch.** Live #205 (pid 63069) untouched. **Pointer 0.19110 UNMOVED** — every
+Δd_seg here is [macOS-MLX research-signal] NON-PROMOTABLE. Composed the **P0 FORCE 1 TemporalScrewConsistency**
+lever (task #360; the ~50× Undriv-jitter lever, FEED-undrivrecall) into `crucible_v7` as the 9th DSL lever.
+GROUND-class (0,1,2) annulus prob-warp MSE under the plane homography H(ξ), ξ=per-pair GT screw
+(`ground_gt`, confound-SAFE: grad → field ONLY ⇒ a PURE seg regularizer, ZERO coupling to the OPEN pose
+facet, L68); kills the measured 44% lane-dominated flicker residual (L67). Cold-start w_t=0.1 (~0.1% of
+loss, far under the 40% term_domination alarm). **THE DESIGN DECISION (operator B.4 — how to govern the
+derivation's `start >= l7` under `--seg-form-unify-tau` where l7 is DISSOLVED):** BUILT the honest
+event-wiring — temporal-screw now fires on the **annulus_plateau FORMED-boundary sensor** (the SAME sensor
+chroma uses; the term acts on the #333 annulus so a formed margin boundary is EXACTLY when the
+warp-consistency constraint becomes meaningful → annulus_plateau IS the unify-τ-native replacement for the
+dissolved l7 "formed partition" gate). `--seg-temporal-screw-start-epoch` is demoted to the fail-safe
+BACKSTOP CAP (`_CRUCIBLE_V7_TEMPORAL_SCREW_CAP` == chroma cap 450: past a formed margin boundary; ONE
+value, no drift). Rejected: (a) start=0 always-on (violates the derivation's formed-partition requirement,
+operator said "the term needs a formed partition"); (b) a CAP declaration backstopping annulus_plateau
+WITHOUT the trainer actually firing on the sensor (a semantic LIE — the incumbent trainer gated
+temporal-screw purely on `ep>=ts_start`); (c) a fake-DERIVED launder of a hand-set epoch. The BUILD makes
+it genuinely event-fire (new `--seg-temporal-screw-start-event` arg + a `_temporal_screw_gate`
+EventBackstopGate mirroring chroma exactly + resume-registry registration for P0 resumability; EVENT MODE
+OFF when the flag is absent ⇒ byte-identical incumbent). **Schedule-provenance gate: 0 NAKED** — the event
+classifies EVENT_TRIGGERED, the epoch FAIL_SAFE_CAP. **Triality:** DSL = `TemporalScrewConsistency` factory
+extended with `start_event` + composed in the crucible_v7 WitnessProgram + `_CRUCIBLE_V7_DSL_LEVERS` (9th) +
+sensor registered in `schedule_provenance_gate.RECOGNISED_EVENT_SENSORS` · DAG = this FEED · equations =
+the DERIVED law is `p0_forces_derivation_20260708.md §FORCE 1` (canonical-equation registration OWED at
+byte-close; activation ≠ a new n600 measurement → no new EmpiricalAnchor, per the Item-A precedent).
+**EXIT CRITERION (pre-registered, owed n600 A/B, sequenced off the live run — NO concurrent GPU probe per
+the machine-crash P0 gate):** temporal-screw ON vs OFF (same seed) must recover the Undriv/horizon jitter
+toward the FEED-undrivrecall floor (Undriv-sky 0.082 → target ~0.0016, ~50×) AND lower the 44%
+lane-flicker share of the CE-residual (L67) through R — else it is chasing a non-flicker residual and gets
+a documented terminal-finding. Tests: `test_crucible_v7_config.py` + `test_p0_forces_phase2_build.py` +
+`test_schedule_provenance_gate.py` + `test_event_wirings.py` + `test_lever_registry.py` +
+`test_witness_autoconfig.py` = 221 passed; `lever_registry.completeness().unmapped` UNCHANGED at 120 (no
+new orphan). **RE-SEAL REQUIRED** before any launch (not this agent's authority). Pointer 0.19110 UNMOVED.

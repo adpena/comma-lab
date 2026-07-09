@@ -76,6 +76,11 @@ RECOGNISED_EVENT_SENSORS: frozenset[str] = frozenset({
     "--muon-start-event",             # muon entry <- powerlaw_meat exit (+ REV-B nucleation positive control)
     "--lane-band-start-event",        # lane-band start <- lane-class critical nucleus (born + formed)
     "--seg-chroma-boundary-start-event",  # seg-chroma start <- annulus_frac plateau (formed boundary)
+    # (operator 2026-07-08 v7.5 B.4) temporal-screw fires on the SAME annulus_frac plateau formed-boundary
+    # sensor chroma uses (the term acts on the #333 annulus; a formed margin boundary is the unify-tau
+    # replacement for the dissolved l7 "formed partition" gate). Its --seg-temporal-screw-start-epoch is
+    # the paired backstop cap.
+    "--seg-temporal-screw-start-event",   # temporal-screw start <- annulus_frac plateau (formed boundary)
     # S6-R4 self-paced τ-advance (operator 2026-07-08): the τ-anneal advance clock. --tau-advance-mode
     # event fires the τ octave-ladder advance on per-band relaxation (powerlaw_meat within the octave);
     # its per-octave --tau-octave-max-dwell is the fail-safe backstop. An EVENT declaration names

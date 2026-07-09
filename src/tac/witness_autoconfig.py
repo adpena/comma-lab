@@ -1763,6 +1763,12 @@ def _attach_dsl_program_manifest(cfg: "WitnessConfig", *, program_name: str, d6:
 _CRUCIBLE_V7_MUON_CAP = 726          # inherited from v6 (mod32cap fire band [670,700] precedes it)
 _CRUCIBLE_V7_LANE_BAND_CAP = 500     # DRAFT §1 [council_pending]: past the eased-seed window
 _CRUCIBLE_V7_CHROMA_CAP = 450        # DRAFT §1 [council_pending]: past a formed margin boundary
+# (v7.5 B.4, operator 2026-07-08) temporal-screw shares the annulus_plateau FORMED-BOUNDARY event with
+# chroma (both act on the #333 annulus; a formed margin boundary is the unify-τ replacement for the
+# dissolved l7 "formed partition" gate), so its fail-safe BACKSTOP cap = the chroma cap (past a formed
+# margin boundary). Sourced from _CRUCIBLE_V7_CHROMA_CAP so the two formed-boundary backstops stay ONE
+# value (a future re-derivation of the formed-boundary epoch moves both coherently, no drift).
+_CRUCIBLE_V7_TEMPORAL_SCREW_CAP = _CRUCIBLE_V7_CHROMA_CAP  # 450: past a formed margin boundary (== chroma)
 _CRUCIBLE_V7_TAIL_CYCLES_MAX = 2     # DRAFT §6.2 [council_pending]: propose k_max = 2
 
 # ── hosc-β EVENT-mode endpoint (SEAL v7.3 round-2 BLOCKER fix, 2026-07-08) ──────────────────────
@@ -1841,6 +1847,10 @@ _CRUCIBLE_V7_DSL_LEVERS: tuple[str, ...] = (
                                     # item A.2: #287 ego-phase dash comb — analytic dash structure the
                                     # lane_offloaded cartoon band (freq_along~=6) provably cannot represent,
                                     # rule-118 FREE at decode; the along-tangent 3.2x-deficit corrector)
+    "temporal_screw_consistency",   # --seg-temporal-screw-* (v7.5 ACTUATION item B.4 / P0 FORCE 1 #360:
+                                    # GROUND-class annulus prob-warp MSE kills the 44% lane-dominated
+                                    # flicker residual; ~50x Undriv-jitter lever; EVENT-governed on the
+                                    # annulus_plateau formed-boundary sensor, start-epoch = backstop cap)
 )
 
 # Flags whose delta vs v6 is a run-dir artifact (NOT a config semantic) — excluded from the
@@ -1967,6 +1977,19 @@ def _crucible_v7_schedule_governance() -> dict:
                 "boundary is the thing chroma sharpens); the plateau detector params carry req-T "
                 "tagged provenance (sisters of the curriculum-plateau params)."),
         }),
+        # (v7.5 B.4, operator 2026-07-08) P0 FORCE 1 temporal-screw FIRES on the SAME annulus_frac plateau
+        # formed-boundary sensor as chroma (the term acts on the #333 annulus over the GROUND classes, so
+        # the warp-consistency constraint is meaningful only once a margin boundary is FORMED; under
+        # --seg-form-unify-tau the discrete l7 "formed partition" boundary is DISSOLVED, so annulus_plateau
+        # is the unify-τ-native replacement). Its --seg-temporal-screw-start-epoch is the backstop cap.
+        "--seg-temporal-screw-start-event": ScheduleGovernance(**{
+            "class": "event", "role": "fires", "sensor": "--seg-temporal-screw-start-event",
+            "rationale": (
+                "Temporal screw-consistency FIRES on the #333 annulus_frac PLATEAU (a FORMED margin "
+                "boundary — the unify-τ replacement for the derivation's dissolved l7 'formed partition' "
+                "start gate; the term warps GROUND-class probs on the annulus, so it needs a formed "
+                "boundary). Shares the sensor with chroma (both are formed-boundary annulus levers)."),
+        }),
         # ── BACKSTOP CAPS (role=backstops): the fixed epochs, each referencing its event.
         "--muon-start-epoch": ScheduleGovernance(**{
             "class": "cap", "role": "backstops", "sensor": "--muon-start-event",
@@ -1988,6 +2011,14 @@ def _crucible_v7_schedule_governance() -> dict:
                 "req-B fail-safe BACKSTOP for the annulus_plateau event "
                 "(--seg-chroma-boundary-start-event): 450 = past a formed margin boundary; fires "
                 "ONLY if the annulus did not plateau by 450 (LOUD cap_fired_before_event, S5)."),
+        }),
+        "--seg-temporal-screw-start-epoch": ScheduleGovernance(**{
+            "class": "cap", "role": "backstops", "sensor": "--seg-temporal-screw-start-event",
+            "rationale": (
+                "req-B fail-safe BACKSTOP for the annulus_plateau event "
+                "(--seg-temporal-screw-start-event): 450 = past a formed margin boundary (== the chroma "
+                "cap; both are formed-boundary annulus levers); fires ONLY if the annulus did not plateau "
+                "by 450 (LOUD cap_fired_before_event, S5)."),
         }),
         # ── S6-R4 self-paced τ-advance (operator 2026-07-08): the LAST clock-hardcoding (the anneal-
         #    epochs denominator that clocks τ(t)) converted to an EVENT-driven geometric octave ladder.
@@ -2247,6 +2278,7 @@ def _build_crucible_v7(
         PolyakFinisher,
         SegFormUnifyTau,
         TailCycles,
+        TemporalScrewConsistency,
         logit_adjust_classes_for_basis_regime,
         persistence_classes_for_basis_regime,
     )
@@ -2437,6 +2469,26 @@ def _build_crucible_v7(
         # gate interaction. FIRST activation (activation-ledger fires 'n287_dash_comb' at launch). Advisory
         # until byte-closed (pointer 0.19110 UNMOVED).
         _typed_lever(DashComb()),
+        # (v7.5 ACTUATION item B.4, spec §B.4 / P0 FORCE 1 #360) TEMPORAL SCREW-CONSISTENCY — the
+        # ~50x Undriv-jitter lever (FEED-undrivrecall: Undriv-sky floor 0.0016 vs live 0.082; the bulk
+        # floor is POSE-EXPLAINABLE inter-frame jitter). GROUND-class (0,1,2) annulus prob-warp MSE under
+        # the plane homography H(ξ), ξ = per-pair GT screw (ground_gt, confound-SAFE: grad flows ONLY to
+        # the field ⇒ a PURE seg-consistency regularizer, ZERO coupling to the OPEN pose facet, L68). Kills
+        # the measured 44% lane-dominated flicker residual (L67). THE DESIGN DECISION (operator B.4): its
+        # start is EVENT-governed on the annulus_plateau FORMED-boundary sensor (the unify-τ-native
+        # replacement for the derivation's dissolved-l7 "start >= l7 formed partition" gate; the term acts
+        # on the #333 annulus so a formed margin boundary is exactly when the constraint is meaningful) —
+        # shares the sensor with chroma; --seg-temporal-screw-start-epoch is the fail-safe BACKSTOP CAP
+        # (_CRUCIBLE_V7_TEMPORAL_SCREW_CAP == chroma cap 450). cold-start w_t=0.1 (~0.1% of loss, far under
+        # the 40% term_domination alarm; ramp at STAGE BOUNDARIES only via per-term gnorm, NEVER per-step).
+        # Equations leg: the DERIVED law is p0_forces_derivation_20260708.md §FORCE 1 (loss form + ξ-source
+        # + w_t arithmetic + pre-registered n600 A/B); a canonical-equation registration is OWED at
+        # byte-close (activation != a new n600 measurement, per the Item-A actuation precedent — no new
+        # EmpiricalAnchor here). FIRST activation (activation-ledger fires 'temporal_screw_consistency' at
+        # launch). Advisory until byte-closed (pointer 0.19110 UNMOVED).
+        _typed_lever(TemporalScrewConsistency(
+            weight=0.1, start_epoch=_CRUCIBLE_V7_TEMPORAL_SCREW_CAP,
+            start_event="annulus_plateau", xi_source="ground_gt", classes="0,1,2")),
     )
 
     typed = TypedWitnessConfig(

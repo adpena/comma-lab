@@ -649,6 +649,7 @@ def _build_resume_state_arrays(
     # (inert for the training trajectory) -> persisted for provenance but NOT in the divergence guard.
     out["__cfg_seg_temporal_screw_weight"] = np.asarray(float(getattr(args, "seg_temporal_screw_weight", 0.0)))
     out["__cfg_seg_temporal_screw_start_epoch"] = np.asarray(int(getattr(args, "seg_temporal_screw_start_epoch", 0)))
+    out["__cfg_seg_temporal_screw_start_event"] = np.asarray(str(getattr(args, "seg_temporal_screw_start_event", None) or "none"))
     out["__cfg_seg_temporal_screw_xi_source"] = np.asarray(str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt")))
     out["__cfg_seg_temporal_screw_classes"] = np.asarray(str(getattr(args, "seg_temporal_screw_classes", "0,1,2")))
     out["__cfg_seg_temporal_screw_band"] = np.asarray(float(getattr(args, "seg_temporal_screw_band", 2.0)))
@@ -830,6 +831,7 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # decode-consumer provenance (inert for training) -> deliberately NOT guarded here.
         ("__cfg_seg_temporal_screw_weight", float(getattr(args, "seg_temporal_screw_weight", 0.0)), True),
         ("__cfg_seg_temporal_screw_start_epoch", int(getattr(args, "seg_temporal_screw_start_epoch", 0)), False),
+        ("__cfg_seg_temporal_screw_start_event", str(getattr(args, "seg_temporal_screw_start_event", None) or "none"), False),
         ("__cfg_seg_temporal_screw_xi_source", str(getattr(args, "seg_temporal_screw_xi_source", "ground_gt")), False),
         ("__cfg_seg_temporal_screw_classes", str(getattr(args, "seg_temporal_screw_classes", "0,1,2")), False),
         ("__cfg_seg_temporal_screw_band", float(getattr(args, "seg_temporal_screw_band", 2.0)), True),
@@ -5745,6 +5747,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         name="seg_chroma_boundary", start_epoch_flag="--seg-chroma-boundary-start-epoch",
         start_event_flag="--seg-chroma-boundary-start-event", sensor=_chroma_start_event,
         cap=int(getattr(args, "seg_chroma_boundary_start_epoch", 0)))
+    # (operator 2026-07-08 v7.5 B.4) P0 FORCE 1 temporal-screw SENSOR->START WIRING: fires on the SAME
+    # annulus_plateau formed-boundary sensor chroma uses (the term acts on the #333 annulus over GROUND
+    # classes; a formed margin boundary is the unify-tau replacement for the dissolved l7 "formed
+    # partition" gate). sensor None (--seg-temporal-screw-start-event absent) => event mode OFF =>
+    # start_reached == (ep >= cap) == the incumbent lever_gate_on_at_epoch => BYTE-IDENTICAL.
+    _ts_start_event = getattr(args, "seg_temporal_screw_start_event", None)
+    _temporal_screw_gate = _EBGate(
+        name="seg_temporal_screw", start_epoch_flag="--seg-temporal-screw-start-epoch",
+        start_event_flag="--seg-temporal-screw-start-event", sensor=_ts_start_event,
+        cap=int(getattr(args, "seg_temporal_screw_start_epoch", 0)))
     # S2 REV-B positive control: the LADDER arm windows (birth+hold+anneal, the absolute epoch each
     # arm's scheduled_radius reaches 0). Empty when the LADDER is off => nucleation vacuously complete.
     _ladder_arm_windows: list[int] = []
@@ -5768,7 +5780,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # when the chroma gate is event-mode (persists the trailing annulus window for a bit-faithful re-fire).
     from tac.witness_control.resume_registry import build_gate_resume_registry as _build_resume_registry
     _resume_registry = _build_resume_registry(
-        [_muon_gate, _lane_band_gate, _chroma_gate], wire_sense=_wire_sense)
+        [_muon_gate, _lane_band_gate, _chroma_gate, _temporal_screw_gate], wire_sense=_wire_sense)
 
     # (R-7 finisher 2) the Polyak tail averager. Constructed + REGISTERED into the resume registry ONLY
     # when armed (else None => every observe/checkpoint/export/restore below is guarded off => ZERO new
@@ -8088,10 +8100,33 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # P0 FORCE 1 temporal-screw engagement gate + transition RE-TREAT (same discipline as LEVER-4b;
-            # start>=l7). Default ts_w=0.0 => never engages => bit-identical.
+            # start>=l7 formed-partition). (operator 2026-07-08 v7.5 B.4) SENSOR->START WIRING: engagement
+            # flips through the temporal-screw EventBackstopGate on the SAME annulus_plateau formed-boundary
+            # sensor chroma uses (mirrors the chroma engage block below). EVENT MODE OFF
+            # (--seg-temporal-screw-start-event absent) => start_reached == (ep >= ts_start) == the
+            # incumbent lever_gate_on_at_epoch => BYTE-IDENTICAL, no new telemetry. ON => fires on the
+            # annulus_frac plateau with ts_start as the LOUD backstop cap. Default ts_w=0.0 => never
+            # engages => bit-identical.
             if ts_w > 0.0:
                 _ts_was = ts_gate["on"]
-                ts_gate["on"] = lever_gate_on_at_epoch(ts_w, ts_start, ep)
+                _ts_event_fired = False
+                _ts_sde = None       # (confound F4) sensor-data epoch for fire-attribution
+                _ts_async_pending = False
+                if _temporal_screw_gate.event_mode:
+                    _ts_event_fired = bool(_annulus_plateau_ev(
+                        _wire_sense["annulus_series"],
+                        rel_eps=float(getattr(args, "annulus_plateau_rel_eps", 1e-4)),
+                        dwell_windows=int(getattr(args, "annulus_plateau_dwell_windows", 4)),
+                        min_epochs=int(getattr(args, "annulus_plateau_min_epochs", 150)))["fired"])
+                    _tser = _wire_sense["annulus_series"]
+                    _ts_sde = int(_tser[-1][0]) if _tser else -1
+                    _ts_async_pending = _verdict_inflight()
+                _tstep = _temporal_screw_gate.update(ep, event_fired=_ts_event_fired,
+                                                     sensor_data_epoch=_ts_sde,
+                                                     sensor_async_pending=_ts_async_pending)
+                ts_gate["on"] = _tstep.start_reached
+                if _tstep.telemetry is not None:
+                    print(json.dumps(_tstep.telemetry), flush=True)
                 if ts_gate["on"] and not _ts_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_temporal_screw_engage", "epoch": ep, "start": ts_start,
@@ -10041,6 +10076,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seg-temporal-screw-band", type=float, default=2.0,
                     help="P0 FORCE 1: the #333 annulus GT-margin band (|GT margin| < band) the term is "
                     "restricted to (don't spend gradient on stable interiors; converges with FORCE 2).")
+    # (operator 2026-07-08 v7.5 B.4) SENSOR->START WIRING: temporal-screw fires on the annulus_frac
+    # PLATEAU (#333) — the SAME formed-margin-boundary sensor chroma-boundary uses. Rationale: the term
+    # acts on the #333 annulus over the GROUND classes, so the warp-consistency constraint is only
+    # meaningful once a margin boundary is FORMED; under --seg-form-unify-tau the discrete l7 boundary
+    # (the derivation's "start >= l7" formed-partition gate) is dissolved, so the annulus_plateau event is
+    # the unify-tau-native "partition formed" signal that replaces it. --seg-temporal-screw-start-epoch is
+    # then the fail-safe BACKSTOP CAP. DEFAULT None => EVENT MODE OFF => the incumbent fixed-epoch gate
+    # EXACTLY => BYTE-IDENTICAL. Requires --annulus-telemetry (default ON; chroma already collects it).
+    ap.add_argument("--seg-temporal-screw-start-event", type=str, default=None,
+                    choices=["annulus_plateau"],
+                    help="operator 2026-07-08 v7.5 B.4: fire temporal-screw engagement on the annulus_frac "
+                    "plateau detector (#333; a FORMED margin boundary — the unify-tau replacement for the "
+                    "dissolved l7 'formed partition' gate); --seg-temporal-screw-start-epoch becomes the "
+                    "fail-safe backstop cap. Default None = OFF = byte-identical. Requires "
+                    "--annulus-telemetry (default ON).")
     # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). One-sided hinge
     # L_sat = w_s * mean_annulus relu(m_safe - m_wit), m_wit = the witness GT-class signed margin
     # (_signed, #141). Frees the interior gradient budget onto the fragile band BY CONSTRUCTION.

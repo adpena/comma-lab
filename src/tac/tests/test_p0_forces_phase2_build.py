@@ -53,6 +53,19 @@ def test_dsl_temporal_screw_factory_emits_flags():
     assert lev.overrides["--seg-temporal-screw-xi-source"] == "ground_gt"  # confound-safe default arm
     assert lev.overrides["--seg-temporal-screw-classes"] == "0,1,2"        # GROUND only
     assert lev.overrides["--seg-temporal-screw-band"] == pytest.approx(2.0)
+    # (v7.5 B.4) start_event default None => NOT emitted (byte-identical OFF; fixed-epoch gate)
+    assert "--seg-temporal-screw-start-event" not in lev.overrides
+
+
+def test_dsl_temporal_screw_start_event_wiring():
+    """v7.5 B.4: start_event='annulus_plateau' co-emits the sensor flag so engagement is EVENT-governed
+    (the unify-τ replacement for the dissolved-l7 formed-partition gate; start_epoch is the backstop cap)."""
+    lev = TemporalScrewConsistency(weight=0.1, start_epoch=450, start_event="annulus_plateau")
+    assert lev.overrides["--seg-temporal-screw-start-event"] == "annulus_plateau"
+    assert lev.overrides["--seg-temporal-screw-start-epoch"] == 450
+    # only the one wired formed-boundary sensor is legal
+    with pytest.raises(ValueError, match="annulus_plateau"):
+        TemporalScrewConsistency(start_event="plateau_trigger")
 
 
 def test_dsl_temporal_screw_rejects_nonground_classes():

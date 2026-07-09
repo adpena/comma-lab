@@ -75,6 +75,13 @@ _EXPECTED_ADDED = frozenset({
     # DSL lever — the along-tangent 3.2x-deficit corrector; supplies the ~25-cyc dash structure the
     # lane_offloaded cartoon band cannot represent, rule-118 FREE at decode. Composes with --lane-render-band.
     "--lane-band-dash-comb", "--lane-band-comb-softness-m",
+    # (v7.5 ACTUATION item B.4, spec §B.4 / P0 FORCE 1 #360) TEMPORAL SCREW-CONSISTENCY DSL lever — the
+    # ~50x Undriv-jitter lever (GROUND-class annulus prob-warp MSE; kills the 44% lane-dominated flicker
+    # residual). All 6 flags absent from v6. Its --seg-temporal-screw-start-event annulus_plateau
+    # EVENT-governs the start (unify-τ replacement for the dissolved-l7 formed-partition gate);
+    # --seg-temporal-screw-start-epoch is the fail-safe backstop cap.
+    "--seg-temporal-screw-weight", "--seg-temporal-screw-start-epoch", "--seg-temporal-screw-start-event",
+    "--seg-temporal-screw-xi-source", "--seg-temporal-screw-classes", "--seg-temporal-screw-band",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",
@@ -210,6 +217,43 @@ def test_governance_sensors_are_recognised_and_co_emitted(compiled):
         sensor = entry["sensor"]
         assert sensor in gate.RECOGNISED_EVENT_SENSORS, (flag, sensor)
         assert sensor in emitted, f"declared sensor {sensor} for {flag} must be co-emitted"
+
+
+# ── (b.4) v7.5 ACTUATION item B.4 — temporal-screw EVENT-governed on annulus_plateau ──────────
+def test_b4_temporal_screw_composed_and_active(compiled):
+    """v7.5 B.4: the P0 FORCE 1 temporal-screw lever is composed with a POSITIVE cold-start weight (0.1)
+    and the confound-SAFE ground_gt xi source over the GROUND classes (0,1,2)."""
+    fd = {f: v for f, v in compiled.emitted_pairs}
+    assert "temporal_screw_consistency" in compiled.to_launch_config().dsl_levers
+    assert float(fd["--seg-temporal-screw-weight"]) == 0.1
+    assert fd["--seg-temporal-screw-xi-source"] == "ground_gt"    # ZERO pose coupling (L68)
+    assert fd["--seg-temporal-screw-classes"] == "0,1,2"          # GROUND only (homography wrong off-ground)
+
+
+def test_b4_temporal_screw_start_is_event_governed_not_naked(compiled, trainer_text):
+    """THE DESIGN DECISION (operator B.4): the start is EVENT-governed on the annulus_plateau formed-
+    boundary sensor (the unify-τ replacement for the dissolved-l7 'formed partition' gate), and the
+    --seg-temporal-screw-start-epoch is the fail-safe BACKSTOP CAP — NOT a naked positive epoch."""
+    gov = compiled.schedule_governance
+    fd = {f: v for f, v in compiled.emitted_pairs}
+    # the EVENT wiring is co-emitted + declared role=fires on the shared annulus_plateau sensor
+    assert fd["--seg-temporal-screw-start-event"] == "annulus_plateau"
+    assert gov["--seg-temporal-screw-start-event"]["class"] == "event"
+    assert gov["--seg-temporal-screw-start-event"]["role"] == "fires"
+    # the cap is the SAME formed-boundary value as chroma (both are formed-boundary annulus levers)
+    assert gov["--seg-temporal-screw-start-epoch"]["class"] == "cap"
+    assert gov["--seg-temporal-screw-start-epoch"]["role"] == "backstops"
+    assert gov["--seg-temporal-screw-start-epoch"]["sensor"] == "--seg-temporal-screw-start-event"
+    assert fd["--seg-temporal-screw-start-epoch"] == str(wac._CRUCIBLE_V7_TEMPORAL_SCREW_CAP)
+    assert wac._CRUCIBLE_V7_TEMPORAL_SCREW_CAP == wac._CRUCIBLE_V7_CHROMA_CAP
+    # the gate classifies the event EVENT_TRIGGERED + the epoch FAIL_SAFE_CAP (not NAKED)
+    verdicts = gate.classify_launch(
+        list(compiled.emitted_pairs), registry=gate.schedule_when_flags(trainer_text),
+        manifest_keys=set(compiled.constants_manifest.keys()),
+        governance=gov, event_registry=gate.event_start_flags(trainer_text))
+    by_flag = {v.flag: v for v in verdicts}
+    assert by_flag["--seg-temporal-screw-start-event"].cls == gate.CLASS_EVENT
+    assert by_flag["--seg-temporal-screw-start-epoch"].cls == gate.CLASS_CAP
 
 
 # ── (c) the deletions: mutual exclusion + the removed flags ──────────────────────────
@@ -394,7 +438,8 @@ def test_basis_lever_in_dsl_levers_activation_surface(compiled):
     assert "R7_polyak_finisher" in levers
     assert "v75_area_constraint_birth" in levers and "v75_birth_completion_event" in levers
     assert "n287_dash_comb" in levers  # v7.5 ACTUATION item A.2 (along-tangent dash-comb corrector)
-    assert len(levers) == 8  # v7.3 five + two v7.5 birth-counter-force + v7.5 ACTUATION dash-comb
+    assert "temporal_screw_consistency" in levers  # v7.5 ACTUATION item B.4 (P0 FORCE 1 temporal-screw)
+    assert len(levers) == 9  # v7.3 five + two v7.5 birth-counter-force + A.2 dash-comb + B.4 temporal-screw
     assert tuple(levers) == wac._CRUCIBLE_V7_DSL_LEVERS
 
 

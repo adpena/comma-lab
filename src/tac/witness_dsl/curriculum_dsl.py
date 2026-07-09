@@ -2786,6 +2786,7 @@ def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # n
 def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
     weight: float = 0.1, start_epoch: int = 0, xi_source: str = "ground_gt",
     classes: str = "0,1,2", band: float = 2.0, window: int = 0,
+    start_event: "str | None" = None,
 ) -> Lever:
     """P0 FORCE 1 — TEMPORAL SCREW-CONSISTENCY (derivation
     ``.omx/research/p0_forces_derivation_20260708.md`` §FORCE 1; task #360). DEFAULT-OFF.
@@ -2816,8 +2817,20 @@ def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
     ``term_domination`` alarm); ramp at STAGE BOUNDARIES ONLY toward the gradient-share≈0.44 target using
     the per-term gnorm telemetry (NEVER per-step — the GradNorm-would-mute-the-canary warning). The
     trainer flag ``--seg-temporal-screw-weight`` is default 0.0 ⇒ byte-identical when this lever is not
-    composed. ``start_epoch >= l7`` (needs a formed partition to warp). ``window=0`` = loss-config lever,
-    no epoch budget. Advisory until byte-closed (pointer 0.19110 UNMOVED)."""
+    composed. ``window=0`` = loss-config lever, no epoch budget. Advisory until byte-closed (pointer
+    0.19110 UNMOVED).
+
+    ``start_event`` (v7.5 B.4 SENSOR->START WIRING, operator 2026-07-08): when set to ``'annulus_plateau'``
+    the lever co-emits ``--seg-temporal-screw-start-event`` so engagement FIRES on the #333 annulus_frac
+    plateau (the SAME formed-margin-boundary sensor chroma-boundary uses) and ``--seg-temporal-screw-start-
+    epoch`` is demoted to the fail-safe BACKSTOP CAP. This is the correct governance of the derivation's
+    ``start >= l7`` ("needs a formed partition to warp"): under ``--seg-form-unify-tau`` the discrete l7
+    boundary is DISSOLVED, so the annulus_plateau event is the unify-τ-native "partition formed" signal
+    that replaces it (the term acts on the annulus, so a formed margin boundary is exactly when the
+    warp-consistency constraint becomes meaningful). ``None`` (default) ⇒ EVENT MODE OFF ⇒ the plain
+    ``start_epoch`` fixed-epoch gate (byte-identical incumbent). When ``start_event`` is set, pass a
+    POSITIVE ``start_epoch`` (the backstop cap); a naked positive ``start_epoch`` WITHOUT an event
+    declaration trips the schedule-provenance gate."""
     if not (float(weight) >= 0.0):
         raise ValueError(f"TemporalScrewConsistency: weight must be >= 0, got {weight!r}")
     if str(xi_source) not in ("ground_gt", "carrier_live"):
@@ -2830,18 +2843,28 @@ def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
         raise ValueError(
             f"TemporalScrewConsistency: classes must be a non-empty subset of GROUND {{0,1,2}}, "
             f"got {classes!r} (Movable/MyCar are non-ground -> the homography is wrong for them)")
+    if start_event is not None and str(start_event) != "annulus_plateau":
+        raise ValueError(
+            "TemporalScrewConsistency: start_event must be None or 'annulus_plateau' (the only wired "
+            f"formed-boundary sensor for temporal-screw), got {start_event!r}")
+    overrides = {"--seg-temporal-screw-weight": float(weight),
+                 "--seg-temporal-screw-start-epoch": int(start_epoch),
+                 "--seg-temporal-screw-xi-source": str(xi_source),
+                 "--seg-temporal-screw-classes": str(classes),
+                 "--seg-temporal-screw-band": float(band)}
+    if start_event is not None:
+        overrides["--seg-temporal-screw-start-event"] = str(start_event)
     return Lever(
         "temporal_screw_consistency",
-        overrides={"--seg-temporal-screw-weight": float(weight),
-                   "--seg-temporal-screw-start-epoch": int(start_epoch),
-                   "--seg-temporal-screw-xi-source": str(xi_source),
-                   "--seg-temporal-screw-classes": str(classes),
-                   "--seg-temporal-screw-band": float(band)},
+        overrides=overrides,
         epochs_delta=window,
         notes=("P0 FORCE 1 temporal screw-consistency (GROUND-class annulus prob-warp MSE; ego "
                "homography H(xi); kills the 44% lane-dominated flicker residual); xi_source="
                + str(xi_source) + " (ground_gt=pure seg regularizer, ZERO pose coupling); default-OFF; "
-               "start>=l7; ramp w_t at stage boundaries only; advisory until byte-closed"))
+               + ("start_event=" + str(start_event) + " (fires on annulus_plateau formed boundary; "
+                  "start_epoch is the backstop cap)" if start_event is not None
+                  else "start=start_epoch (fixed gate; pass start_event=annulus_plateau to event-govern)")
+               + "; ramp w_t at stage boundaries only; advisory until byte-closed"))
 
 
 def MarginBandSatisficing(  # noqa: N802 — P0 FORCE 2 (task #360)
