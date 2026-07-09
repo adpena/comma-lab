@@ -58,6 +58,7 @@ from tac.boundary_math.laguerre_logit_offset import (  # noqa: E402
     CLASS_NAMES,
     menon_logit_adjustment_offsets,
     per_class_disagreement,
+    solve_head_offsets,
 )
 
 
@@ -145,6 +146,9 @@ def main() -> None:
     ap.add_argument("--out-json", type=str, required=True)
     ap.add_argument("--grid", type=str, default="-0.4,-0.2,0.0,0.2,0.4")
     ap.add_argument("--focus", type=str, default="0,1,3")
+    ap.add_argument("--ot-tau", type=float, default=1.0,
+                    help="#288 damped-Newton OT solve softmax temperature (soft cell masses). "
+                         "The hard tau->0 limit is the power-diagram cell-mass fraction.")
     args = ap.parse_args()
 
     t0 = time.time()
@@ -209,9 +213,26 @@ def main() -> None:
         best_b[c] = float(cbest["offset"])
     win_d, win_pc = realized(best_b, want_argmax=True)
 
-    # --- Menon analytic baseline ---
+    # --- Menon analytic baseline (priors-only -tau*log(pi) heuristic) ---
     menon_b = menon_logit_adjustment_offsets(counts, tau=1.0)
     menon_d = realized(menon_b)
+
+    # --- OT-Newton solve (#288): the PRINCIPLED per-class offset whose Laguerre-reweighted SOFT cell
+    # masses MATCH the GT class frequencies, accounting for THIS witness's logit geometry (boundary
+    # lengths) that the log-freq heuristic ignores. Solved on the REAL cached phi stack (N,K); folded
+    # BYTE-FREE into out_sdf.bias; realized THROUGH R on the frozen CPU SegNet — the SAME authority as
+    # the menon/no-offset arms (apples-to-apples 3-arm gate). ---
+    phi_stack = np.stack(phis, axis=0).reshape(-1, 5).astype(np.float64)  # (N*H*W, K)
+    ot_tau = float(args.ot_tau)
+    ot_b, ot_info = solve_head_offsets(
+        "ot_newton", phi=phi_stack, target_masses=counts, tau=ot_tau)
+    ot_d, ot_pc = realized(ot_b, want_argmax=True)
+    print(json.dumps({"stage": "ot_newton", "tau": ot_tau,
+                      "offsets": {int(c): round(float(ot_b[c]), 4) for c in range(5)},
+                      "converged": bool(ot_info.get("converged", 0.0)),
+                      "iters": int(ot_info.get("iters", 0.0)),
+                      "max_mass_err": round(float(ot_info.get("max_mass_err", 1.0)), 6),
+                      "realized_d_seg": ot_d, "delta": ot_d - base_d}), flush=True)
 
     out = {
         "advisory": "[macOS-CPU advisory . REALIZED-through-R CPU-SegNet authority; fp32 EMA render, NOT int8-deployed; NON-PROMOTABLE until byte-closed exact eval]",
@@ -231,11 +252,27 @@ def main() -> None:
             "offsets": {int(c): float(menon_b[c]) for c in range(5)},
             "d_seg": menon_d, "delta": menon_d - base_d,
         },
+        "ot_newton": {
+            "tau": ot_tau,
+            "offsets": {int(c): float(ot_b[c]) for c in range(5)},
+            "d_seg": ot_d, "delta": ot_d - base_d,
+            "per_class": {int(k): v for k, v in ot_pc.items()},
+            "converged": bool(ot_info.get("converged", 0.0)),
+            "iters": int(ot_info.get("iters", 0.0)),
+            "max_mass_err": float(ot_info.get("max_mass_err", 1.0)),
+        },
+        "three_arm_gate": {
+            "no_offset": base_d, "menon": menon_d, "ot_newton": ot_d,
+            "note": "realized-through-R d_seg on the frozen CPU SegNet; 3 apples-to-apples arms "
+                    "(no-offset / menon prior / ot_newton geometry-aware). [macOS-CPU advisory] "
+                    "NON-PROMOTABLE until byte-closed exact eval.",
+        },
     }
     Path(args.out_json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out_json).write_text(json.dumps(out, indent=2))
     print(json.dumps({"stage": "done", "secs": round(time.time() - t0, 1),
                       "baseline": base_d, "winner": win_d, "delta": win_d - base_d,
+                      "three_arm": {"no_offset": base_d, "menon": menon_d, "ot_newton": ot_d},
                       "winner_offsets": out["winner"]["offsets"], "out": args.out_json}), flush=True)
 
 

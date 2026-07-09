@@ -247,6 +247,67 @@ def damped_newton_ot_offsets(
 
 
 # ---------------------------------------------------------------------------
+# The SELECTABLE head-offset solver (#288) — the canonical dispatcher the trainer /
+# probe / export path call to pick the per-class offset MECHANISM. Both arms do REAL
+# work on REAL inputs (NO-FAKE): "menon" is the -tau*log(pi) prior heuristic (priors
+# only), "ot_newton" is the damped-Newton semi-discrete OT solve (needs the witness
+# phi geometry + target masses). ot_newton RAISES if phi/masses are absent — it never
+# silently degenerates to the heuristic (that would be a fake "ot_newton").
+# ---------------------------------------------------------------------------
+HEAD_OFFSET_SOLVERS: tuple[str, ...] = ("menon", "ot_newton")
+
+
+def solve_head_offsets(
+    mode: str,
+    *,
+    priors: np.ndarray | None = None,
+    phi: np.ndarray | None = None,
+    target_masses: np.ndarray | None = None,
+    tau: float = 1.0,
+) -> tuple[np.ndarray, dict[str, float]]:
+    """Return the zero-sum per-class Laguerre offset ``b*`` (K,) for ``mode`` + an ``info`` dict.
+
+    * ``mode == "menon"`` — the Menon (2007.07314) ``b_k = -tau*log(pi_k)`` heuristic
+      (:func:`menon_logit_adjustment_offsets`). Needs ``priors`` (``(K,)`` non-negative class
+      frequencies; ``target_masses`` accepted as an alias when ``priors`` is None). IGNORES the
+      witness logit geometry. ``info`` = ``{solver: 0.0=menon, iters: 0, converged: 1}``.
+    * ``mode == "ot_newton"`` — the damped-Newton semi-discrete OT solve
+      (:func:`damped_newton_ot_offsets`). Needs BOTH ``phi`` (``(...,K)`` REAL witness SDF/logit
+      field) AND ``target_masses`` (``(K,)`` GT class frequencies); solves the ``b*`` whose soft
+      Laguerre cell masses EQUAL ``target_masses``, accounting for THIS witness's boundary geometry
+      the log-freq heuristic ignores. ``info`` carries the solver's ``{converged, iters,
+      max_mass_err, dual}`` plus ``solver: 1.0``.
+
+    Both offsets fold BYTE-FREE into ``out_sdf.bias`` via :func:`apply_offset_to_sdf_bias`. NO-FAKE:
+    ``ot_newton`` with ``phi is None`` or ``target_masses is None`` RAISES — it is never quietly
+    replaced by the Menon prior (a silent-fake "ot_newton" that ignored the geometry it claims to
+    use). Use this ONE entry point everywhere a head-offset source is selected so the DSL flag, the
+    trainer, the probe, and the export path stay consistent.
+    """
+    m = str(mode)
+    if m == "menon":
+        p = priors if priors is not None else target_masses
+        if p is None:
+            raise LaguerreLogitOffsetError("solve_head_offsets(mode='menon') requires priors (or target_masses)")
+        b = menon_logit_adjustment_offsets(p, tau=tau)
+        return b, {"solver": 0.0, "iters": 0.0, "converged": 1.0, "max_mass_err": 0.0}
+    if m == "ot_newton":
+        if phi is None or target_masses is None:
+            raise LaguerreLogitOffsetError(
+                "solve_head_offsets(mode='ot_newton') requires BOTH phi (witness logit field) AND "
+                "target_masses (GT class frequencies) — it NEVER silently falls back to the Menon "
+                "prior (that would be a fake 'ot_newton' ignoring the geometry it claims to solve)."
+            )
+        b, info = damped_newton_ot_offsets(phi, target_masses, tau=tau)
+        out = {"solver": 1.0}
+        out.update({k: float(v) for k, v in info.items()})
+        return b, out
+    raise LaguerreLogitOffsetError(
+        f"unknown head-offset solver mode {mode!r}; expected one of {HEAD_OFFSET_SOLVERS}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Facet 1a — fixed simplex Equiangular Tight Frame (ETF) head
 # ---------------------------------------------------------------------------
 def simplex_etf(num_classes: int, dim: int, *, scale: float = 1.0, seed: int = _ETF_SEED) -> np.ndarray:

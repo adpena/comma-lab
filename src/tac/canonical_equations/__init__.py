@@ -211,6 +211,10 @@ from tac.canonical_equations.dseg_aware_fourier_taper_20260709 import (
     build_dseg_aware_fourier_taper_v1,
     populate_dseg_aware_fourier_taper_equation,
 )
+from tac.canonical_equations.laguerre_ot_head_offset_20260709 import (
+    build_laguerre_ot_head_offset_v1,
+    populate_laguerre_ot_head_offset_equation,
+)
 from tac.canonical_equations.witness_pose_grad_coeff_stability_20260709 import (
     build_witness_pose_grad_coeff_stability_v1,
     populate_witness_pose_grad_coeff_stability_equation,
@@ -374,6 +378,8 @@ __all__ = [
     "populate_anisotropic_basis_two_regime_allocation_equation",
     "build_dseg_aware_fourier_taper_v1",
     "populate_dseg_aware_fourier_taper_equation",
+    "build_laguerre_ot_head_offset_v1",
+    "populate_laguerre_ot_head_offset_equation",
     "build_witness_pose_grad_coeff_stability_v1",
     "populate_witness_pose_grad_coeff_stability_equation",
     "build_horizon_weighted_margin_v1",

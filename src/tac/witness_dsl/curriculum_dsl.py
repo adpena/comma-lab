@@ -3554,6 +3554,49 @@ def MarginFieldHead(weight: float = 1.0, window: int = 100,  # noqa: N802
     )
 
 
+def HeadOffsetSolver(mode: str = "ot_newton", tau: float = 1.0) -> Lever:  # noqa: N802 — #288 solve-don't-train
+    """#288 (solve-don't-train inventory row 2): SELECTABLE per-class head-bias offset SOLVER — the
+    decode-time Laguerre / power-diagram reweight of the argmax cells that attacks minority-class
+    (Lane 0.59% / Movable 1.56%) erasure (~57% of flips are Lane↔Road). BYTE-FREE: the solved
+    ``b*`` folds into the already-counted ``out_sdf.bias`` (5 floats) → zero extra archive bytes.
+
+    Two REAL mechanisms (NO-FAKE — each does its own work on real inputs):
+      * ``mode="menon"`` — the priors-only ``b_k = -tau*log(pi_k)`` heuristic
+        (:func:`tac.boundary_math.laguerre_logit_offset.menon_logit_adjustment_offsets`).
+      * ``mode="ot_newton"`` — the damped-Newton semi-discrete OT solve (Kitagawa-Merigot-Thibert
+        2019) that finds the ``b*`` whose Laguerre-reweighted SOFT cell masses EQUAL the GT class
+        frequencies, accounting for THIS witness's boundary geometry the log-freq heuristic ignores
+        (:func:`tac.boundary_math.laguerre_logit_offset.damped_newton_ot_offsets`).
+
+    Trainer leg: ``--head-offset-solver {off,menon,ot_newton}`` (trainer default ``off`` =
+    byte-identical) + ``--head-offset-solver-tau``. The trainer computes the WITNESS phi field at the
+    EMA verdict (the decode-time site where phi exists — NOT the pre-loop margin-field-head setup,
+    which has no phi), OT-solves ``b*`` against the GT class masses, folds it byte-free into a COPY
+    of ``out_sdf.bias`` and emits an ADVISORY realized-through-R d_seg delta row. It NEVER mutates
+    the EMA shadow / shipped / resumed weights → the live run is untouched. Mechanism +
+    canonical entry: ``laguerre_logit_offset.solve_head_offsets``; law:
+    ``tac.canonical_equations.laguerre_ot_head_offset_20260709``.
+
+    VERDICT SCOPE (#288 $0 gate, mod32cap ep650): MEASURED-through-R the OT mass-matching offset
+    made realized d_seg WORSE than both no-offset and the Menon prior at this operating point
+    (cell-mass-matching over-inflates the rare Lane cell → over-prediction the SegNet re-read
+    penalises). ASSUMED_AWAITING_VERIFICATION at other checkpoints/tau; the geometry-native solve is
+    a RANKING PROXY that must be re-confirmed through R (which this lever does) before any promotion.
+    means != ends: BUILDS + MEASURES the mechanism; makes NO score claim; pointer 0.19110 UNMOVED."""
+    if str(mode) not in ("off", "menon", "ot_newton"):
+        raise ValueError(f"HeadOffsetSolver: mode must be off/menon/ot_newton, got {mode!r}")
+    if not (float(tau) > 0.0):
+        raise ValueError(f"HeadOffsetSolver: tau must be > 0, got {tau!r}")
+    return Lever(
+        "head_offset_solver",
+        overrides={"--head-offset-solver": str(mode),
+                   "--head-offset-solver-tau": float(tau)},
+        notes="#288 selectable decode-time Laguerre head-bias offset solver (menon prior vs "
+              "ot_newton semi-discrete OT mass-matching); byte-free out_sdf.bias fold; advisory "
+              "realized-through-R verdict readout; OT MEASURED-worse at mod32cap ep650",
+    )
+
+
 def FinerBiasInit(k: float = 10.0, window: int = 0) -> Lever:  # noqa: N802 — #310 build half
     """FEED-07b lever #2's BUILD half (#310, 2026-07-07): FINER++ variable-periodic FIRST-LAYER
     bias init (FINER arXiv 2312.02434 / FINER++ arXiv 2407.19434) — ``in_proj.bias ~ U(-k, k)``

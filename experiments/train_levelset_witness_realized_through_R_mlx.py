@@ -6210,6 +6210,59 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # deploy f0s (mean|∇f0|²; the ∇source multiplicative J_R factor). Fail-open, row-only, never read
         # into training => byte-identical. Every verdict (T1 σ_min rides the cadence in the main loop).
         _jbasin_emit_t0(f0s, int(ep), _jbasin_cur_seg_form())
+        # (#288 solve-don't-train row 2) ADVISORY decode-time head-bias offset readout. OFF (default)
+        # => this whole block is skipped => the verdict return below is BYTE-IDENTICAL (nothing extra
+        # runs; no weight/EMA/optimizer/RNG touched). ON => solve the zero-sum per-class Laguerre
+        # offset b* on the WITNESS phi field (the decode-time site where phi exists — the pre-loop
+        # margin-field-head setup has NONE), fold it BYTE-FREE into a COPY of out_sdf.bias, re-render
+        # frame1 through R, and emit an ADVISORY realized-d_seg delta row. The verdict return is
+        # UNCHANGED (the fold is on a deploy COPY; the shipped/EMA/resumed weights are never touched)
+        # => the authority trajectory is unaffected. NO-FAKE: real solver on real phi + real GT masses,
+        # realized on the frozen CPU SegNet; advisory/NON-PROMOTABLE (means != ends).
+        _hos_mode = str(getattr(args, "head_offset_solver", "off"))
+        if _hos_mode != "off":
+            try:
+                from tac.boundary_math.laguerre_logit_offset import (  # noqa: PLC0415
+                    apply_offset_to_sdf_bias, solve_head_offsets)
+                _hos_lst = [np.asarray(gt.lstars[pi], np.int64) for pi in vpairs]
+                _hos_masses = np.bincount(
+                    np.concatenate([m.reshape(-1) for m in _hos_lst]), minlength=5).astype(np.float64)
+                _hos_phi = np.concatenate(
+                    [np.asarray(_fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + 1])[1],
+                                np.float64).reshape(-1, 5) for pi in vpairs], axis=0)
+                _hos_b, _hos_info = solve_head_offsets(
+                    _hos_mode, priors=_hos_masses, phi=_hos_phi, target_masses=_hos_masses,
+                    tau=float(getattr(args, "head_offset_solver_tau", 1.0)))
+                _hos_deploy = apply_offset_to_sdf_bias(deploy, _hos_b.astype(np.float32))
+                _hos_f1s = [_render_numpy_deploy(_hos_deploy, pi, 1) for pi in vpairs]
+
+                def _hos_dseg(_frames: list) -> float:
+                    _n = len(_frames)
+                    _vb = int(getattr(args, "verdict_batch", 0))
+                    _vb = _n if (_vb <= 0 or _vb >= _n) else _vb
+                    _ds: list[float] = []
+                    for _s in range(0, _n, _vb):
+                        _e = min(_s + _vb, _n)
+                        _ds.extend(cpu_verdict_d_seg_batch(seg_cpu, _frames[_s:_e], _hos_lst[_s:_e]))
+                    return float(np.mean(_ds))
+
+                _hos_base_d = _hos_dseg(f1s)
+                _hos_off_d = _hos_dseg(_hos_f1s)
+                print(json.dumps({
+                    "stage": "head_offset_solver", "epoch": int(ep), "mode": _hos_mode,
+                    "tau": float(getattr(args, "head_offset_solver_tau", 1.0)),
+                    "offsets": {int(c): round(float(_hos_b[c]), 4) for c in range(5)},
+                    "converged": bool(_hos_info.get("converged", 0.0)),
+                    "iters": int(_hos_info.get("iters", 0.0)),
+                    "max_mass_err": round(float(_hos_info.get("max_mass_err", 1.0)), 6),
+                    "realized_d_seg_base": _hos_base_d, "realized_d_seg_offset": _hos_off_d,
+                    "delta": _hos_off_d - _hos_base_d,
+                    "note": "#288 byte-free out_sdf.bias fold; ADVISORY realized-through-R (frozen CPU "
+                            "SegNet); NEVER mutates shipped/EMA/resumed weights; NON-PROMOTABLE; "
+                            "pointer 0.19110 UNMOVED"}), flush=True)
+            except Exception as _hos_exc:  # fail-open: advisory readout must NEVER break the verdict
+                print(json.dumps({"stage": "head_offset_solver_skip", "epoch": int(ep),
+                                  "error": f"{type(_hos_exc).__name__}: {_hos_exc}"}), flush=True)
         return _verdict_v(f0s, f1s, ep=int(ep))
 
     # ---- MOD-DIM DYNAMICS telemetry (operator 2026-07-08; score-neutral observability DEFAULTS ON
@@ -10465,6 +10518,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--margin-field-head-weight", type=float, default=0.0,
                     help="#218 facets 1b/3 loss weight for the realized through-R per-class margin hinge "
                     "(0.0=off=byte-identical). Composes with LEVER-3/4/B on the shared _signed.")
+    # #288 (solve-don't-train row 2) SELECTABLE DECODE-TIME head-bias offset SOLVER. Advisory verdict
+    # readout ONLY (never touches the EMA shadow / shipped / resumed weights) => default 'off' =>
+    # byte-identical. At the EMA verdict, computes the witness phi field (the decode-time site where
+    # phi exists — the pre-loop margin-field-head setup has NONE), solves the zero-sum per-class
+    # Laguerre offset b*, folds it BYTE-FREE into a COPY of out_sdf.bias, and re-renders through R for
+    # an advisory realized-d_seg delta. 'menon' = priors-only -tau*log(pi) heuristic; 'ot_newton' =
+    # damped-Newton semi-discrete OT mass-matching (Kitagawa-Merigot-Thibert 2019, needs the phi
+    # geometry + GT masses). Mechanism: tac.boundary_math.laguerre_logit_offset.solve_head_offsets.
+    ap.add_argument("--head-offset-solver", choices=["off", "menon", "ot_newton"], default="off",
+                    help="#288: advisory decode-time per-class head-bias offset solver folded byte-free "
+                    "into out_sdf.bias at the EMA verdict (advisory realized-through-R d_seg delta; NEVER "
+                    "mutates shipped/EMA/resumed weights). 'off'=byte-identical (default).")
+    ap.add_argument("--head-offset-solver-tau", type=float, default=1.0,
+                    help="#288 OT/Menon solve softmax temperature (soft Laguerre cell masses; hard tau->0 "
+                    "limit is the power-diagram cell-mass fraction).")
     ap.add_argument("--lane-edge-start-epoch", type=int, default=0,
                     help="LEVER-3 OPTIMAL-FORM: engage the lane hinge only at ep>=this (0=from ep1=current "
                     "behavior). Gate to the tau_softplus/l7 margin stage (e.g. 300) to avoid the "
