@@ -11290,3 +11290,18 @@ round → 3 clean structural passes → STRUCTURAL-SEAL-PROCEED** (`v75_seal_202
   B.5 horizon/sky label-noise-vs-real A/B; (4) A.3 directional −48% A/B.
 v7.5 is STRUCTURALLY launch-eligible; empirical seal-completion + launch are owed behind #205 + operator-GO.
 Pointer 0.19110 UNMOVED. The seal is a MEANS — moves nothing until a byte-closed exact row.
+
+## FEED-205stop (2026-07-09) — #205 birth-arm STOPPED (operator-GO "free the box" for v7.5); clean, no orphan, no signal loss
+Operator-GO to stop the live #205 birth-arm (pid 63069 / daemon pgid 63066 + costate observer pgid 63272)
+to free the one box for the v7.5 execute-at-n600 seal-completion + launch. Executed via the canonical
+`spawn_durable_daemon.py --stop <label>` (process-GROUP killpg, #167/#389) — BOTH daemons "group killed,
+no orphan"; registry reconciled recorded=stopped/actual=DEAD; pgrep confirms no trainer alive; box now
+~120.6 GiB free (was ~34). **No signal loss** — final state fully preserved + resumable:
+- best `levelset_witness_ema_BEST.npz` = **d_seg 0.115102 @ ep325** (was improving: 0.1198@ep275 → 0.1151;
+  Road 0.312 + Undriv 0.083 still dominate, exactly what the v7.5 actuation targets)
+- resume `levelset_resume_state.npz` (1.9MB, w/ optimizer) + `levelset_witness_ema_mlx.npz` @ ep325
+- per-stage `levelset_resume_stageTau_ep257.npz` (CE→tau boundary)
+Birth-arm verdict: healthy diagnostic baseline (all 5 islands born, curriculum event-fired CE→tau@257),
+Road/Undriv-dominated as designed (pre-actuation config lacks the v7.5 fixes). NOT the pointer-mover — the
+v7.5 config is. Box is now free; v7.5 execute-at-n600 seal-completion + launch = operator-GO (CONTAINMENT).
+Pointer 0.19110 UNMOVED.
