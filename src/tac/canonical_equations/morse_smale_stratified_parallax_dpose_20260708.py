@@ -177,6 +177,55 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_r1_custody = EmpiricalAnchor(
+        anchor_id="r1_0011_custody_revalidation_20260708",
+        measurement_utc=_UTC,
+        inputs={
+            "run": "experiments/results/levelset_n600_R1_storenothing_descent_ev1_20260703T004906Z "
+                   "(#245, warm-start converged v2_attrclean mod-dim 26, ep1001 inside Muon, w_pose=1.0, "
+                   "pose-carrier generated + per-pair dxi table)",
+            "authority": "frozen CPU-torch PoseNet, through real R (uint8 warp), n600 (verdict-pairs 0, "
+                         "verdict-batch 32); EMA-shadow (conservative during descent); NEVER MPS/MLX",
+            "target": "gt_poses = _cpu_pose_raw(PoseNet, real_f0, real_f1)[:6] (cache gt_n600.npz) => "
+                      "d_pose = MSE(PoseNet(generated)[:6], PoseNet(real)[:6]) = EXACT contest definition",
+        },
+        predicted_output={
+            "symposium_claim": "R1 d_pose 0.0011 = SOLID SHIPPABLE pose floor (contribution 0.105)",
+            "charter_prime_suspect": "0.0011 is a xi-parameter-space MSE, not PoseNet-output d_pose",
+        },
+        empirical_output={
+            "d_pose_R1_descent": "97.2(ep1000) -> 62.4(ep1001) -> 0.00334(ep1021) -> 0.00108(ep1074) "
+                                 "-> 0.001012(ep1108); d_seg held ~0.0046; ep_loss 143-713 (live)",
+            "prime_suspect": "REFUTED — verdict routes cpu_verdict_d_pose_batch => MSE vs PoseNet(real_pair)"
+                             "[:6], NOT xi-space; gt_poses are PoseNet OUTPUTS (verified cache).",
+            "mechanism": "the descent lives ENTIRELY in the trained per-pair pose_carrier.dxi (600,6) table "
+                         "(checkpoint absmean 0.0038); xi_stored-alone read-back = 2.562 (the 'cap ~2.5').",
+            "shippability": "NOT byte-closed — the serializer recomputes deterministic calibration xi and "
+                            "does NOT ship dxi (arms_measured:80) => a byte-close reports the ~1.99 no-dxi "
+                            "floor, not 0.0011. #238 must serialize xi_eff=xi_stored+dxi (~7.2KB, ~0.0005 "
+                            "rate) then re-measure through inflate.",
+            "verdict": ("(a)-with-caveat: joint pose-descent (render co-adapts) is a REAL, validly-measured "
+                        "path to low d_pose (prime suspect DEAD) -> a dedicated run is justified; the "
+                        "specific 'SOLID shippable 0.105' is OVER-STATED -> downgrade to 'SOLID training-side "
+                        "advisory; shippability PENDING #238'. NOT an artifact (row (b) does not fire). The "
+                        "run-1 1.79 vs 0.0011 gap = DIFFERENT checkpoints (mod-32 ep200 un-descended vs "
+                        "mod-26 ep1108 descended), NOT a contradiction. FEED-posesolve 'w_pose=0' is wrong "
+                        "(checkpoint __cfg_w_pose=1.0)."),
+        },
+        residual=0.0,
+        source_artifact=".omx/research/r1_0011_custody_revalidation_20260708.md",
+        measurement_method="custody re-validation: measurement-path source-inspection + relaunch.log n600 "
+                           "verdict rows + checkpoint dxi npz inspection (read-only, no re-execution)",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/r1_0011_custody_revalidation_20260708.md",
+            reactivation_criteria=("#238: serialize xi_eff=xi_stored+dxi in store_nothing mode, re-measure "
+                                   "d_pose through the real inflate/decode at n600 on R1's checkpoint (or a "
+                                   "fresh dedicated joint pose-descent arm carried to convergence)"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     anchor_aperture = EmpiricalAnchor(
         anchor_id="aperture_probe_A0T_falsified_crucible_run1_20260708",
         measurement_utc=_UTC,
@@ -339,7 +388,7 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
         },
         units_in={"dof": "warp_degrees_of_freedom_int"},
         units_out={"d_pose": "posenet6_mse_median"},
-        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_a1t, anchor_l2, anchor_owed),
+        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_a1t, anchor_l2, anchor_owed, anchor_r1_custody),
         predicted_vs_empirical_residual={
             # extension predicted A2 ~0.0011; MEASURED 1.486 -> the prediction miss is the finding.
             "a2_prediction_miss_vs_0p0011": abs(DPOSE_A2_6DOF_SOLVE - 0.0011),
