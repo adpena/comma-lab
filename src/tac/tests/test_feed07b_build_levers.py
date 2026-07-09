@@ -368,3 +368,20 @@ def test_aa_ss2_compose_fn_receives_base_grid_and_composes():
     ref = np.asarray(apply_contest_faithful_roundtrip_nhwc(
         mx.array(base.astype(np.float32)), output_hw=(SEG_H, SEG_W), ste_round=True))
     assert np.allclose(out, ref, atol=1e-3), "AA ss=2 + base-grid compose must match the manual pipeline"
+
+
+# ==========================================================================
+# v7.5 C.6: handoff_readiness telemetry legibility (dense-plateau slope)
+# ==========================================================================
+def test_dense_plateau_slope_legibility_signal():
+    """v7.5 C.6: the dense-plateau slope is a scale-free recent per-epoch loss slope (near 0 => plateaued,
+    negative => descending, None for < 2 pts). PURE telemetry (byte-identity preserved)."""
+    tl = _load_trainer()
+    assert tl._dense_plateau_slope([5.0] * 8, 4) == 0.0            # flat plateau => 0
+    assert tl._dense_plateau_slope([10.0, 8.0, 6.0, 4.0], 4) < 0.0  # descending => negative
+    assert tl._dense_plateau_slope([1.0], 4) is None               # < 2 points => None
+    assert tl._dense_plateau_slope([], 4) is None                  # empty => None
+    # scale-free: doubling the loss magnitude on a proportional descent leaves the relative slope equal
+    a = tl._dense_plateau_slope([10.0, 8.0, 6.0, 4.0], 4)
+    b = tl._dense_plateau_slope([20.0, 16.0, 12.0, 8.0], 4)
+    assert abs(a - b) < 1e-6

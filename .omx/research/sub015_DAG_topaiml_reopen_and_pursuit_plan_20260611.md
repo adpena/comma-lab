@@ -11219,3 +11219,30 @@ the ground-homography design note (sky); canonical-equation registration OWED at
 new n600 measurement). Tests: p0_forces_phase2 + crucible_v7 + lever_registry + sealed_205 +
 witness_autoconfig + store_nothing + schedule_provenance = 198 passed; unmapped UNCHANGED 120. **RE-SEAL
 REQUIRED** before any launch. Pointer 0.19110 UNMOVED.
+
+## FEED-v75C67actuated (2026-07-09) — v7.5 ACTUATION items C.6 (telemetry legibility) + C.7 (derive min-stage)
+**CONFIG/observability actuation, NOT a launch.** Live #205 (pid 63069) untouched. **Pointer 0.19110
+UNMOVED** — advisory. **C.6 — handoff_readiness telemetry legibility (score-neutral → default-ON):**
+stamped the `handoff_readiness` row with `stage_start` / `in_stage_epochs` / `min_stage_epochs` + a
+`plateau_slope` (new pure helper `_dense_plateau_slope`: scale-free recent per-epoch loss slope, near 0 ⇒
+plateaued, negative ⇒ descending). Fixes the confound that misled an earlier read — a CE→tau transition can
+FIRE between sparse verdict rows and `plateau_ok` read False on the coarse cadence blind spot; the row
+carried NO stage-clock so the plateau state had to be INFERRED across rows. Now legible from ONE row. PURE
+observability (added to the `row` dict at the call site AFTER `_evt_readiness_row`; never read back into
+training/parity/resume ⇒ BYTE-IDENTITY preserved by construction ⇒ default-ON per the "score-neutral
+observability defaults ON" non-negotiable). **C.7 — DERIVE `curriculum_min_stage_epochs` off the
+value-provenance ladder:** the bare literal 250 in `_CRUCIBLE_V6_DELTAS` is now sourced from the NAMED
+constant `_CRUCIBLE_MIN_STAGE_EPOCHS` and classified on the ladder as **HARDCODED-WITH-WAIVER** (the honest
+class — 250 is "the draft's shipped 250", a hand-set safety margin, NOT a measured/derived value; it is >>
+the plateau-window sufficiency of 4 so NOT derivable from the plateau detector). The OWED derivation is
+NAMED: the CRITICAL-SLOWING relaxation time τ_relax near a curriculum stage transition (min_stage_epochs ≥
+τ_relax so a post-transition transient flat is not misread as convergence) — fit τ_relax from the ep_loss
+trajectory after a fired transition in a live crucible_v7 run → then it becomes DERIVED-AT-CONFIG. Did NOT
+fake a derivation (per the discipline). The provenance is queryable via
+`crucible_v7_min_stage_epochs_provenance()` and carried on the compiled artifact's `tail_constant_provenance`
+(no silent bare literal). Emitted value UNCHANGED 250 (byte-identical). **Triality:** DSL/config = the named
+constant + provenance function + `tail_constant_provenance` wire-in (C.7); the trainer telemetry helper +
+row fields (C.6) · DAG = this FEED · equations = C.6 is observability (no equation); C.7's owed τ_relax
+derivation is the named OWED law (registration DERIVED-AT-CONFIG when measured). Tests: crucible_v7 +
+feed07b (`_dense_plateau_slope`) + witness_autoconfig + sealed_205 + p0_forces + lever_registry = 182
+passed. Pointer 0.19110 UNMOVED.

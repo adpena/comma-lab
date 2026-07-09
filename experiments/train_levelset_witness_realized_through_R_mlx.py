@@ -2275,6 +2275,21 @@ def _evt_readiness_row(ep: int, seg_form: str, stats: "dict[int, dict]",
     }
 
 
+def _dense_plateau_slope(losses: "list[float]", window: int) -> "float | None":
+    """(v7.5 C.6) The recent RELATIVE per-epoch loss slope over the last ``window`` epochs — the
+    dense-plateau legibility signal for the ``handoff_readiness`` row. Scale-free (divided by the
+    window's mean magnitude) so it is comparable across stages/scales: near 0 ⇒ PLATEAUED (the CE→tau
+    hand-off precondition), negative ⇒ still descending. Returns ``None`` for < 2 points. PURE telemetry
+    (never read back into training/parity/resume — byte-identity preserved by construction)."""
+    xs = [float(v) for v in (losses or [])]
+    w = max(2, int(window))
+    seg = xs[-w:]
+    if len(seg) < 2:
+        return None
+    denom = max(1e-12, abs(sum(seg) / len(seg)))          # window mean magnitude (scale normalizer)
+    return round((seg[-1] - seg[0]) / ((len(seg) - 1) * denom), 8)  # per-epoch relative change
+
+
 def _evt_reanchor_epoch(ep: int, boundary_fired: "int | None",
                         boundary_hardcoded: int) -> int:
     """(#302 M1) Map a real epoch into the schedule frame a TAU-RELATIVE wall-clock lever was
@@ -6319,6 +6334,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         row = _evt_readiness_row(ep, seg_form, stats, satisfied, all_ok, plateau_ok,
                                  _nucleus_within_flip_thresh, _nucleus_min_part_frac,
                                  guard_active=_nucleus_guard_on)
+        # (v7.5 C.6) TELEMETRY LEGIBILITY: stamp the stage-timing + dense-plateau slope so the event-timing
+        # is READABLE from a single row (the confound this fixes: a CE→tau transition can FIRE between
+        # sparse verdict rows, and plateau_ok read False on the coarse verdict cadence blind spot — the row
+        # showed no stage-clock, so the plateau state had to be INFERRED across rows). in_stage_epochs =
+        # completed epochs in the current stage; min_stage_epochs = the plateau precondition threshold;
+        # plateau_slope = the scale-free recent slope (near 0 => plateaued). PURE observability (never read
+        # back into training) => BYTE-IDENTITY preserved by construction => default-ON per the "score-neutral
+        # observability defaults ON" non-negotiable.
+        row["stage_start"] = _ss
+        row["in_stage_epochs"] = len(_losses)
+        row["min_stage_epochs"] = int(getattr(args, "curriculum_min_stage_epochs", 150))
+        row["plateau_slope"] = _dense_plateau_slope(
+            _losses, int(getattr(args, "curriculum_plateau_windows", 4)))
         # (operator override 2026-07-08) SENSOR->START WIRING #2 capture: the LANE-class critical
         # nucleus reading, stashed for the lane-band engage gate + the S3 would_fire telemetry row.
         # Only when the lane-band event OR its would-fire telemetry is requested (else no new row =>

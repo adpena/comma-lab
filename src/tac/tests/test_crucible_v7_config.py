@@ -782,3 +782,26 @@ def test_wall_clock_budget_rederived_from_amortized_cadence(compiled):
     assert RUN1_MEASURED_MIN_PER_EP == 3.47  # startup-amortized 3000-ep cadence, ep25->125 window (measured, not a bound)
     budget = compiled.to_launch_config().wall_clock_budget_days
     assert 8.0 <= float(budget.value) <= 8.5  # ~8.31 days at 3000 ep
+
+
+# ── (c.7) v7.5 ACTUATION item C.7 — curriculum_min_stage_epochs on the value-provenance ladder ──
+def test_c7_min_stage_epochs_value_identity_and_provenance(compiled):
+    """v7.5 C.7: the sealed 250 is UNCHANGED (byte-identical emit) but now sourced from the named
+    constant _CRUCIBLE_MIN_STAGE_EPOCHS and surfaced on the value-provenance ladder (HARDCODED-WITH-
+    WAIVER + the OWED critical-slowing τ_relax derivation), never a silent bare literal."""
+    fd = {f: v for f, v in compiled.emitted_pairs}
+    assert fd["--curriculum-min-stage-epochs"] == str(wac._CRUCIBLE_MIN_STAGE_EPOCHS) == "250"
+    prov = compiled.tail_constant_provenance["curriculum_min_stage_epochs"]
+    assert prov["ladder_class"] == "hardcoded_with_waiver"   # honest class (no faked derivation)
+    assert prov["value"] == 250 and prov["trainer_default"] == 150
+    assert len(prov["waiver"]) > 20                           # a real waiver, not a placeholder
+    assert "critical-slowing" in prov["owed_derivation"].lower()  # the owed derivation is named
+    assert "τ_relax" in prov["owed_derivation"] or "tau_relax" in prov["owed_derivation"].lower()
+
+
+def test_c7_provenance_function_pure():
+    """The provenance surface is pure/$0 and self-consistent (queryable audit surface)."""
+    p = wac.crucible_v7_min_stage_epochs_provenance()
+    assert p["constant"] == "curriculum_min_stage_epochs" and p["value"] == wac._CRUCIBLE_MIN_STAGE_EPOCHS
+    assert p["ladder_class"] == "hardcoded_with_waiver"
+    assert p["re_derive_trigger"] and "plateau" in p["re_derive_trigger"].lower()

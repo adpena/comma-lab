@@ -1353,6 +1353,21 @@ def derive_fresh_seeded_config(
     )
 
 
+# (v7.5 C.7) curriculum min-stage dwell floor — the minimum COMPLETED in-stage epochs before the
+# event-triggered CE→tau / tau→l7 hand-off may fire (``_stage_converged`` precondition (a)). VALUE-
+# PROVENANCE: HARDCODED-WITH-WAIVER. The 250 is "the draft's shipped 250" (v6.3 seal MINOR-4), NOT a
+# derived/measured value (the trainer default is 150; 250 is a hand-set safety margin so a TRANSIENT flat
+# during a stage-transition transient cannot trigger a premature hand-off). It is >> the plateau-window
+# sufficiency (plateau_windows=4), so it is NOT derivable from the plateau detector. The PRINCIPLED source
+# it OWES is the CRITICAL-SLOWING relaxation time τ_relax near a curriculum stage transition (the unified
+# level-set flow's "critical-slowing power-law near stage transitions"): min_stage_epochs SHOULD be ≥ the
+# MEASURED τ_relax so the post-transition transient (loss temporarily flat before it resumes descending)
+# cannot be misread as convergence. That measurement is OWED (fit τ_relax from the ep_loss trajectory
+# after a fired transition in a live crucible_v7 run) → then this becomes DERIVED-AT-CONFIG. Until then it
+# is a WAIVED hand-set floor, surfaced on the value-provenance ladder (never a silent bare literal). See
+# :func:`crucible_v7_min_stage_epochs_provenance`.
+_CRUCIBLE_MIN_STAGE_EPOCHS = 250     # HARDCODED-WITH-WAIVER (owed: critical-slowing τ_relax measurement)
+
 # ── T5 CRUCIBLE v6.2 (seal-round-2 BLOCKER-1 fix, 2026-07-08) ────────────────────────────────────
 # The crucible-v6 launch-candidate deltas over the STORE-NOTHING #205 base (the config the round-2
 # dry-run measured), per DRAFT_OPTIMAL_STACK_v6_20260708.md + seal_round2_v6_verdict_20260708.md.
@@ -1425,7 +1440,10 @@ _CRUCIBLE_V6_DELTAS: dict = {
     "persistence_warmup_epochs": 275,    # alb override: PersistenceTopology(warmup=275)
     # ── v6.3 seal-round-1 MINOR-4: pin the dwell-law min-stage to the draft's shipped 250 (trainer
     #    default 150; k_max net unchanged at floor((2350-250)/387.1)=5, so no schedule-law shift).
-    "curriculum_min_stage_epochs": 250,  # trailing flag (§2.2g dwell law; default 150)
+    #    (v7.5 C.7) sourced from the NAMED constant _CRUCIBLE_MIN_STAGE_EPOCHS (value-provenance ladder:
+    #    HARDCODED-WITH-WAIVER, owed derivation = the critical-slowing τ_relax measurement) — never a
+    #    silent bare literal. Provenance queryable via crucible_v7_min_stage_epochs_provenance().
+    "curriculum_min_stage_epochs": _CRUCIBLE_MIN_STAGE_EPOCHS,  # HARDCODED-WITH-WAIVER (§2.2g dwell law)
     # NOTE (v6.3 MAJOR-1): --curriculum-plateau-windows is NOT a crucible delta. V=5 binds ONLY the
     # B1 co-predicate spec (no trainer flag exists for it); the sister EXISTING flag
     # --curriculum-plateau-windows is the EP_LOSS-plateau window (a DIFFERENT surface, v5 §0.1 row
@@ -2201,6 +2219,33 @@ def crucible_v7_polyak_start_provenance(epochs: int,
     }
 
 
+def crucible_v7_min_stage_epochs_provenance() -> dict:
+    """(v7.5 C.7) The value-provenance record for ``curriculum_min_stage_epochs`` (the constant
+    :data:`_CRUCIBLE_MIN_STAGE_EPOCHS`). Surfaces the sealed literal on the value-provenance ladder so
+    it is never a silent bare literal (queryable/auditable, carried on the compiled artifact's
+    ``tail_constant_provenance``). Classified HARDCODED-WITH-WAIVER with the OWED derivation named — the
+    honest state (250 is a hand-set draft floor, not a measured/derived value). Pure / $0."""
+    return {
+        "constant": "curriculum_min_stage_epochs",
+        "value": int(_CRUCIBLE_MIN_STAGE_EPOCHS),
+        "ladder_class": "hardcoded_with_waiver",
+        "trainer_default": 150,
+        "waiver": (
+            "the draft's shipped 250 (v6.3 seal MINOR-4) — a hand-set safety margin so a TRANSIENT flat "
+            "during a curriculum stage-transition transient cannot trigger a premature event hand-off. It "
+            "is >> the plateau-window sufficiency (plateau_windows=4) so it is NOT derivable from the "
+            "plateau detector; no measured/derived source exists yet, so it stays a WAIVED floor."),
+        "owed_derivation": (
+            "the CRITICAL-SLOWING relaxation time τ_relax near a curriculum stage transition (the unified "
+            "level-set flow's critical-slowing power-law): min_stage_epochs SHOULD be ≥ the MEASURED "
+            "τ_relax so the post-transition transient is not misread as convergence. Fit τ_relax from the "
+            "ep_loss trajectory AFTER a fired transition in a live crucible_v7 run → then DERIVED-AT-CONFIG."),
+        "re_derive_trigger": (
+            "any change to the curriculum event predicate (--curriculum-plateau-windows / "
+            "--curriculum-plateau-rel-eps) OR a measured τ_relax anchor landing."),
+    }
+
+
 def crucible_v7_registered_off_levers() -> dict:
     """The DEFAULT-OFF v7 items kept as a TRACKED, REASONED, duty-to-measure QUEUE (v7.3 delta 5;
     the "off is a tracked queue, never a forgotten default" non-negotiable). These stay OFF at launch
@@ -2677,7 +2722,10 @@ def compile_crucible_v7_config(
     from tac.witness_control.tail_cycles import tail_constant_provenance
     from tac.witness_curriculum.ladder_homotopy import LADDER_LAMBDA_GATE_PROVENANCE
     tail_prov = {"tail_constants": tail_constant_provenance(),
-                 "ladder_lambda_gates": {k: dict(v) for k, v in LADDER_LAMBDA_GATE_PROVENANCE.items()}}
+                 "ladder_lambda_gates": {k: dict(v) for k, v in LADDER_LAMBDA_GATE_PROVENANCE.items()},
+                 # (v7.5 C.7) the curriculum min-stage dwell floor on the value-provenance ladder
+                 # (HARDCODED-WITH-WAIVER + owed critical-slowing τ_relax derivation) — no silent literal.
+                 "curriculum_min_stage_epochs": crucible_v7_min_stage_epochs_provenance()}
     # (v7.3 delta 2) the Polyak tail start-epoch is a DERIVED-AT-CONFIG schedule-WHEN token, so it
     # MUST land in the constants_manifest as a LawRef entry — else the schedule-provenance gate flags
     # ``--polyak-finisher-start-epoch`` NAKED_PRIMARY_EPOCH (a bare positive epoch). It is NOT a
