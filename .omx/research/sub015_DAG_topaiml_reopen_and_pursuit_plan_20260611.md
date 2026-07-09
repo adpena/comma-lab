@@ -11331,3 +11331,31 @@ singular vector = the ego-motion direction PoseNet sees LEAST; σ_min→0 ⟺ ta
   run-1 pose-finish stays terminal, basin-TRIGGER is a run-2 default-OFF lever (B5).
 Eq `pose_jacobian_basin_conditioning_v1` (structure derived; σ_min-curve + f_basin-A/B anchors owed on
 measurement). Memo `pose_jacobian_conditioning_basin_trigger_formalization_20260709.md`. Pointer UNMOVED.
+
+## FEED-posejacbuild (2026-07-09) ξ→PoseNet Jacobian BASIN telemetry — BUILD VERIFIED + committed (crash-resume completion)
+A predecessor build agent crashed after 94 tool-uses with NOTHING committed. This session ASSESSED the
+uncommitted work (jacobian_basin.py σ_min core + test + 222-line trainer hook + 53-line DSL sensor/actuator),
+found it COHERENT + spec-faithful, and COMPLETED-IN-PLACE (no rebuild). Every binding contract gate MEASURED
+on the REAL sealed crucible_v7 trainer (n8 MLX advisory smokes; NON-PROMOTABLE; $0 paid; no launch):
+- **T1 finite-diff parity PASS** — analytic mx.vjp J_ξ matches central finite-diff atol 2e-3; 11/11 unit tests.
+- **B4 launch-path PASS** — the sealed config STARTS, renders, hits the verdict path with the sensor on, emits
+  jacobian_basin_setup + T0 + T1 rows, actuated:false, 0 skips (GATE_KEY_PREFIXES lesson honored — live path).
+- **B1 byte-identity PASS** — the CONFOUND: MLX-GPU is cross-process NON-bit-identical by design (D6/#348).
+  Controls: OFF-vs-OFF2 (both telemetry OFF) diverges 19 arrays/1.02e-4 == ON-vs-OFF 19/1.19e-4 ⇒ telemetry
+  adds NOTHING over baseline GPU nondeterminism. CLINCHER on the DETERMINISTIC CPU substrate: telemetry
+  ON==OFF **BIT-IDENTICAL** (EMA 56 + resume_state 152 arrays incl live weights/optimizer/losses, max_abs 0.0).
+  Score-neutral by construction — enters the sealed run WITHOUT a re-seal.
+- **B2 fail-open PASS** — injected jacobian_xi failure → 3 skip rows → jacobian_basin_disabled@ep3
+  (self-disable×3) → training SURVIVED to completion. No sensor error ever reached the train loop. (Nuance:
+  the fails counter is SHARED T0/T1 — a T0 success resets it; fail-open safety is unconditional, only the
+  disable-latch is affected; a future split T0/T1 counter is the refinement. B2 isolated T1 via --no-jacobian-basin-t0.)
+- **B5 observer-only PASS** — actuated:false everywhere; pose-finish TERMINAL (f_basin=1.0 default); the
+  TerminalPoseFinish(start_event='jacobian_basin') run-2 actuator is fail-loud NotImplementedError (default-off).
+- **Cadence** — DERIVED 0.16×/verdict amortized (k=32/every-4); MEASURED no material slowdown at k=8/every-verdict.
+GLOBAL: 8 DSL flags == trainer argparse (never-invent-flags); lever_registry ZERO jacobian orphans; 135/135
+DSL/campaign tests; ruff F clean; --no-jacobian-basin-telemetry path byte-identical to the pre-build sealed
+trainer (all sensor code guarded). Equation `pose_jacobian_basin_conditioning_v1` REGISTERED (it did NOT
+pre-exist) with the ce-baseline σ_min readout (median 0.063, cond 8203, r_eff 1.27 — CONFIRMS the DERIVED
+near-rank-deficient basin-empty prediction). Memo `pose_jacobian_basin_telemetry_build_20260709.md`. Light
+re-verify (the B4 launch-path smoke on the full sealed config) is the only owed step — NO re-seal.
+Pointer 0.19110 UNMOVED — MEANS.
