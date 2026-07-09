@@ -3032,6 +3032,21 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 .flowbadge,.curchip,.costate .cstag,.sbreak .sbtag,.flowplay,.flowrow select,.evchip{border-radius:2px}
 /* floating popovers kept minimal (not cards) */
 .tip{border-radius:2px}.nbest{border-radius:2px}
+/* terse labeled-field list (replaces prose paragraphs; scanned, not read) */
+.kvlist{display:flex;flex-direction:column;gap:0;margin:8px 0 10px}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:baseline;
+  padding:5px 0;border-bottom:1px solid #242a34}
+.kv:last-child{border-bottom:0}
+.kvk{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.kvv{font-size:12px;color:var(--fg2);line-height:1.5;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kvv b{color:var(--fg);font-weight:600}
+@media(max-width:520px){.kv{grid-template-columns:96px minmax(0,1fr);gap:9px}.kvk{font-size:9px}}
+/* terse one-line caption under a heading/chart (replaces explanatory sentences) */
+.orccap,.witcap,.flowcapline{font-size:11.5px;color:var(--muted);line-height:1.5;margin:2px 1px 6px;
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.orccap code,.witcap code,.flowcapline code{background:#11141a;color:#9fc6ff;padding:1px 5px;border-radius:2px;font-size:11px}
+.orccap b,.witcap b,.flowcapline b{color:var(--fg);font-weight:600}
 </style></head>
 <body><div class="wrap">
 <div class="provh" role="note" aria-label="provenance">
@@ -3171,29 +3186,20 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 <section id="tab-oracle" class="orc hide">
   <div class="orcintro">
     <h2>Frozen evaluators &mdash; SegNet argmax + PoseNet</h2>
-    <p>The frozen contest scorer: a comma10k EfficientNet-B2 SegNet, whose per-pixel argmax defines
-    <b>d_seg</b>, and a FastViT-T12 PoseNet, whose first six outputs define <b>d_pose</b>. Both networks
-    are fixed; everything on this page is computed against them, on the exact frames their verdict uses.</p>
-    <ul class="witkey">
-      <li><b>Lane polynomial &rarr; d_seg prior.</b> The openpilot lane fit generates the
-      analytic lane band at decode time, for zero stored bytes.</li>
-      <li><b>Ego-motion screw &xi; &rarr; d_pose prior.</b> One SE(3) trajectory per pair; the
-      same &xi; that transports the partition is the pose PoseNet measures.</li>
-      <li><b>Detectability field.</b> The SegNet top1&minus;top2 argmax margin &mdash; the
-      scorer's own sensitivity map, localizing where d_seg can change.</li>
-    </ul>
-    <p>Each prior below is an in-tree module; class assignments are detected from the data,
-    not hardcoded.</p>
+    <div class="kvlist">
+      <div class="kv"><span class="kvk">scorer</span><span class="kvv">comma10k EfficientNet-B2 SegNet argmax &rarr; <b>d_seg</b> &middot; FastViT-T12 PoseNet[:6] &rarr; <b>d_pose</b> &middot; frozen</span></div>
+      <div class="kv"><span class="kvk">lane &rarr; d_seg</span><span class="kvv">openpilot lane fit &middot; analytic band at decode &middot; 0 stored bytes</span></div>
+      <div class="kv"><span class="kvk">ego-&xi; &rarr; d_pose</span><span class="kvv">SE(3) screw / pair &middot; transports partition = pose</span></div>
+      <div class="kv"><span class="kvk">detectability</span><span class="kvv">SegNet top1&minus;top2 margin &middot; where d_seg can flip</span></div>
+      <div class="kv"><span class="kvk">classes</span><span class="kvv">detected from data, not hardcoded</span></div>
+    </div>
     <div class="orchdr" id="orchdr">rendering the physical-prior atlas (governed CPU pass)&hellip;</div>
   </div>
   <div class="orcstats" id="orcstats"></div>
   <div class="orcgrid" id="orcpanels"></div>
   <div class="orcxi">
     <h3>Ego-&xi; &mdash; the SE(3) screw twist across the segment</h3>
-    <p>The per-pair ego trajectory, estimated from the openpilot lane fit
-    (<code>LaneOptimalEgoEstimator</code>). By Chasles' theorem every rigid displacement is a
-    screw, so the twist &xi; that transports the partition between frames (d_seg) is the same
-    object PoseNet measures (d_pose): one 6-vector per pair serves both terms.</p>
+    <div class="orccap">per-pair ego trajectory &middot; <code>LaneOptimalEgoEstimator</code> &middot; Chasles: one 6-vector/pair transports the partition (d_seg) AND is the pose (d_pose)</div>
     <img id="orcxichart" alt="ego-ξ screw twist across the segment" />
   </div>
   <div class="orccredits">
@@ -3310,44 +3316,23 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 <section id="tab-witness" class="wit hide">
   <div class="witintro">
     <h2>The residual &mdash; the hardest pairs, as the scorer reads them</h2>
-    <p>The pairs with the highest realized d_seg across the n600 drive, spread across the segment
-    and covering distinct failure modes. Computed in the same 600-pair pass that builds the
-    WITNESS video; refreshed when a new best checkpoint lands.</p>
-    <ul class="witkey">
-      <li><b>Per-pair label</b> &mdash; d_seg + a failure-mode tag (movable vehicle &middot;
-      lane dash &middot; distant object &middot; boundary flips), classified from the
-      disagreement composition.</li>
-      <li><b>Row A</b> &mdash; GT frame &middot; witness render through the contest R operator
-      &middot; pixel error.</li>
-      <li><b>Row B</b> &mdash; SegNet argmax of GT vs our render, and their disagreement
-      (exactly the pixels d_seg counts).</li>
-      <li><b>Row C</b> &mdash; three sensitivity fields on the same frame (below).</li>
-    </ul>
+    <div class="kvlist">
+      <div class="kv"><span class="kvk">selection</span><span class="kvv">highest realized d_seg across n600 &middot; distinct failure modes &middot; same pass as FLOW &middot; refreshed per best ckpt</span></div>
+      <div class="kv"><span class="kvk">per-pair</span><span class="kvv">d_seg + failure tag (movable / lane dash / distant / boundary)</span></div>
+      <div class="kv"><span class="kvk">row A</span><span class="kvv">GT frame &middot; render through contest R &middot; pixel error</span></div>
+      <div class="kv"><span class="kvk">row B</span><span class="kvv">SegNet argmax GT vs render &middot; disagreement = the d_seg pixels</span></div>
+      <div class="kv"><span class="kvk">row C</span><span class="kvv">sensitivity fields on the same frame (below)</span></div>
+    </div>
     <div class="withdr" id="withdr">selecting the hardest pairs from the n600 pass&hellip;</div>
   </div>
   <div class="witgrid" id="witpanels"></div>
   <div class="wittrip">
     <h3>Row C &mdash; two sensitivity fields on the same frame</h3>
-    <p><b>&rho;_seg &mdash; SegNet argmax margin.</b> Per pixel, the top1&minus;top2 logit gap of
-    the frozen SegNet. Bright = small margin: the pixel sits near a decision boundary, where a
-    small input change flips the argmax. d_seg can only change at these pixels, so this field is
-    the scorer's own sensitivity map.</p>
-    <p><b>&rho;_uniward &mdash; S-UNIWARD texture energy.</b> The directional-Haar wavelet residual
-    magnitude of Holub&ndash;Fridrich&ndash;Denemark 2014, computed on our render
-    (<code>tac.uniward_delta</code>). Their embedding cost is the reciprocal,
-    &rho;&nbsp;&#8733;&nbsp;&Sigma;&nbsp;1/(|W|+&sigma;) &mdash; highest where the image is smooth.
-    This panel displays the energy directly: bright = textured = low embedding cost in the
-    steganographic model. Shown for lineage &mdash; this framing led us to the right model &mdash;
-    with one measured caveat: as a predictor of where the SegNet argmax actually flips through the
-    contest R operator, the texture proxy measured at chance (LEVER-4). The margin field is what
-    carries the signal.</p>
-    <p class="witthesis">The problem this page instruments is task-aware compression &mdash; code
-    the video for the machine that scores it, not for a human viewer. The steganographic lens
-    supplied the shape of the question (allocate distortion where the detector tolerates it); the
-    answer came from the task-space level set itself: d_seg moves only on the codim-1 argmax
-    boundary, the margin field localizes that boundary, and it doubles as the scorer's
-    information geometry (Fisher curvature vs &minus;margin: Pearson 0.978, measured). One
-    measured field drives the loss weighting and the residual coder.</p>
+    <div class="kvlist">
+      <div class="kv"><span class="kvk">&rho;_seg</span><span class="kvv">SegNet top1&minus;top2 margin &middot; <b>bright = small margin = where argmax flips</b> &middot; d_seg lives only here</span></div>
+      <div class="kv"><span class="kvk">&rho;_uniward</span><span class="kvv">S-UNIWARD texture energy (Holub&ndash;Fridrich&ndash;Denemark 2014, <code>tac.uniward_delta</code>) &middot; lineage only &mdash; measured at chance vs R-flips (LEVER-4)</span></div>
+    </div>
+    <div class="witcap">task-aware compression: code for the machine that scores it. d_seg moves only on the codim-1 argmax boundary; the margin field localizes it AND is the scorer's information geometry (Fisher vs &minus;margin: <b>Pearson 0.978, measured</b>) &mdash; one field drives loss weighting + residual coder.</div>
   </div>
   <!-- TODO(#343): Credits/lineage section HIDDEN per operator 2026-07-07; the tribute-register
        header phrase is deleted outright. Rework as a plain References list (paper citations,
@@ -3375,11 +3360,7 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 
 <section id="tab-flow" class="flow hide">
   <h2>FLOW &mdash; the full n600 drive, as a video (WebGPU)</h2>
-  <p>Scrub or play the <b>entire 600-pair segment</b> the scorer evaluates &mdash; the witness's own
-  render, its 5-class partition, the <b>SegNet argmax the scorer actually sees</b>, and their
-  <b>disagreement vs GT</b> (the d_seg pixels), flowing across the drive. The <b>frame slider is the
-  timeline</b> (0&nbsp;&rarr;&nbsp;599); <b>play</b> animates it at ~12&nbsp;fps. Switch the layer to
-  read the partition (canonical comma10k colors) or the fragility heat where the argmax can flip.</p>
+  <div class="flowcapline">n600 segment &middot; witness render / 5-class partition / SegNet argmax / disagreement-vs-GT (d_seg) &middot; frame slider = timeline 0&ndash;599, play ~12 fps</div>
   <div class="flowtop">
     <span id="flowbadge" class="flowbadge off">detecting&hellip;</span>
     <span class="flowstatus" id="flowstatus">waiting for the first n600 sequence&hellip;</span>
@@ -3430,13 +3411,12 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
     </div>
   </div>
   <div class="flowcap">
-    <p>The partition layer uses the <b>canonical comma10k / openpilot segmentation palette</b> (the
-    colors Yousfi + comma read instantly). The margin-heat layer is the scorer's own <b>sensitivity /
-    UNIWARD geometry</b> read as a field: <b>bright = small margin = the codim-1 separatrix</b> where
-    the argmax can flip (where d_seg lives). Playing the timeline is the dynamical-system view &mdash;
-    the witness partition flowing toward the SegNet argmax across the whole drive.</p>
-    <p class="fcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer.
-    The exact row is byte-closed on contest-CPU/CUDA; the frontier pointer is <span class="ptrv">&hellip;</span> and UNMOVED.</p>
+    <div class="kvlist">
+      <div class="kv"><span class="kvk">partition</span><span class="kvv">canonical comma10k / openpilot palette</span></div>
+      <div class="kv"><span class="kvk">margin heat</span><span class="kvv"><b>bright = small margin = codim-1 separatrix</b> &middot; where the argmax flips (d_seg)</span></div>
+    </div>
+    <p class="fcnote">[macOS-CPU advisory &middot; NON-PROMOTABLE] &mdash; a viz moves no pointer &middot;
+    exact row byte-closed on contest-CPU/CUDA &middot; pointer <span class="ptrv">&hellip;</span> UNMOVED.</p>
   </div>
 </section>
 
@@ -4528,8 +4508,15 @@ function renderRunIdentity(){
   // evidence strings legitimately contain apostrophes (e.g. family name 'mod32cap').
   let h="<span class='rname'>"+escHtml(R.name)+"</span>";
   if(R.purpose&&R.purpose.label){
-    h+="<span class='ridchip' title=\""+escHtml((R.purpose.evidence||[]).join(" · "))+"\">"+
-      escHtml(R.purpose.label)+
+    // TERSE identity (operator 2026-07-09 "no wall of prose"): show the first clause only
+    // (up to the first ':' or '(' or '.'), capped; the FULL declared text + evidence lives
+    // in the hover title so no substance is lost — a scanned field, not a paragraph.
+    const full=R.purpose.label;
+    let terse=full.split(/[:(]/)[0].trim();
+    if(terse.length>72)terse=terse.slice(0,70).trim()+"…";
+    else if(terse.length<full.trim().length)terse=terse+"…";
+    const tip=escHtml(full+((R.purpose.evidence&&R.purpose.evidence.length)?"  —  "+R.purpose.evidence.join(" · "):""));
+    h+="<span class='ridchip' title=\""+tip+"\">"+escHtml(terse)+
       " <span class='prov'>("+escHtml(R.purpose.provenance||"?")+")</span></span>";
   }
   if(R.scope&&R.scope.label){
@@ -4557,7 +4544,22 @@ function renderCostate(){
   const src=C||legacy||{};
   // ── header summary line ──
   const bits=[];
-  if(src.classification)bits.push("class <b>"+escHtml(src.classification)+"</b>");
+  // classification: the introspect controller ships a RAW diagnostic dict-repr here
+  // (a prose wall); show only a clean short token — prefer the legacy summary's token,
+  // else extract the nested CLASSIFICATION, else omit. Raw diagnostic -> hover title.
+  const _clsClean=(function(){
+    const c=src.classification;
+    if(typeof c==="string"&&c.length<=40&&c.indexOf("{")<0)return c;
+    const lg=(META.costate&&META.costate.classification);
+    if(typeof lg==="string"&&lg.length<=40&&lg.indexOf("{")<0)return lg;
+    if(typeof c==="string"){const m=c.match(/'CLASSIFICATION':\s*'([A-Z_]+)'/);if(m)return m[1];}
+    return null;
+  })();
+  if(_clsClean){
+    const rawTip=(typeof src.classification==="string"&&src.classification.indexOf("{")>=0)
+      ?" title=\""+escHtml(src.classification.slice(0,400))+"\"":"";
+    bits.push("<span"+rawTip+">class <b>"+escHtml(_clsClean)+"</b></span>");
+  }
   if(src.rec&&src.rec.action){
     let r="rec <b>"+escHtml(src.rec.action)+"</b>";
     if(src.rec.predicted_dS!=null&&isFinite(src.rec.predicted_dS))
