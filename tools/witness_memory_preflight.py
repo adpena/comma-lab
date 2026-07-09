@@ -323,8 +323,22 @@ def project_from_launch_sh(path: Path, *, safe_frac: float = DEFAULT_SAFE_FRAC,
 def system_aware_admission(projected_peak_gib: float, *, exclude_pid: int | None = None):
     """Return the governor's live ``LiveAdmissionContext`` for a job whose projected peak is
     ``projected_peak_gib`` (imports the governor lazily; raises if it is unavailable so the caller can
-    decide fail-open vs fail-closed)."""
+    decide fail-open vs fail-closed).
+
+    AUTO-RECONCILE FIRST (2026-07-09 fix): a daemon that dies out-of-band — SIGKILL from
+    OOM/jetsam, crash, machine sleep, or the SIGURG-144 harness kill — can never write
+    ``recorded=stopped``, leaving a phantom ``running`` registry row that poisons the growth-
+    projection accounting (measured: 25 GiB of phantom active-growth blocked a real launch until a
+    manual ``--reconcile``). The apparatus must hold that memory, not the operator ("off is a tracked
+    queue, never a forgotten default"). Fail-OPEN on the reconcile leg: a reconcile error must never
+    crash the admission decision (which still fail-CLOSES on real memory pressure below)."""
     import system_memory_governor as gov  # tools/ is on sys.path (same dir)
+
+    try:
+        import spawn_durable_daemon as _sdd  # tools/ is on sys.path (same dir)
+        _sdd.reconcile_dead_daemons(verbose=False)
+    except Exception:
+        pass  # reconcile is a best-effort self-clean; the admission decision below is the real gate
 
     return gov.live_admission_decision(projected_new_gib=float(projected_peak_gib), exclude_pid=exclude_pid)
 

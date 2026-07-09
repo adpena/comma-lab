@@ -235,6 +235,12 @@ OUR_JOBS_PATTERN = (
 #     by the parent's registry row; charging +25 GiB again would double-count (and could
 #     false-refuse small jobs while the live #205 runs).
 UNKNOWN_GROWTH_HEADROOM_GIB = 25.0
+# A governed row is a HEAVY workload iff its RESOLVED projected peak is >= this (GiB). Sub-heavy
+# control-plane / telemetry daemons (black-box, dashboards) do NOT reserve heavy-job growth headroom
+# (their live rss is already in the vm_stat ``used`` baseline). Kept IDENTICAL to the launcher's
+# ``launch_witness_run.HEAVY_MIN_PROJECTED_GIB`` so the admission gate and the launcher's
+# ``_governed_active_jobs`` agree on what counts as an active heavy workload.
+HEAVY_MIN_PROJECTED_GIB = 4.0
 _PROTECTION_INFRA_TOKENS = ("memory_blackbox.py", "memory_guard.py", "system_memory_governor.py")
 
 # ── PENDING admission reservations (review-fix CRITICAL C: launch TOCTOU) ────────────────────────
@@ -1182,9 +1188,28 @@ def list_tracked_jobs(
     return jobs
 
 
-def sum_active_growth_headroom_gib(jobs: Sequence[TrackedJob]) -> float:
-    """Sum of remaining growth-to-peak over all active tracked jobs (admission input)."""
-    return float(sum(j.growth_headroom_gib for j in jobs))
+def sum_active_growth_headroom_gib(
+    jobs: Sequence[TrackedJob],
+    *,
+    heavy_min_projected_gib: float = HEAVY_MIN_PROJECTED_GIB,
+) -> float:
+    """Sum of remaining growth-to-peak over active HEAVY tracked jobs (admission input).
+
+    Only jobs whose RESOLVED projected peak is >= ``heavy_min_projected_gib`` reserve growth
+    headroom. A sub-heavy CONTROL-PLANE / telemetry daemon (the memory black-box, a dashboard
+    HTTP server) has its CURRENT rss already counted in the vm_stat ``used`` baseline; reserving
+    its projected "growth-to-peak" as HEAVY-job headroom on top is a double-count that pins the
+    box (measured 2026-07-09: a 0.2-GiB dashboard with a 2.44-GiB recorded projection reserved
+    ~2.2 GiB of phantom heavy-growth and REFUSED a real launch). This mirrors the launcher's
+    already-reviewed ``_governed_active_jobs`` HEAVY definition (``launch_witness_run.HEAVY_MIN_
+    PROJECTED_GIB``) so the two gates agree instead of the operator hand-reconciling them.
+    Conservative by construction: a heavy training job (projection >> 4 GiB) or an unknown-peak
+    job matching the heavy pattern (resolved to the 25-GiB default) is ALWAYS counted; only
+    genuinely-small control-plane daemons are excluded, and their live RSS still sits in ``used``."""
+    return float(sum(
+        j.growth_headroom_gib for j in jobs
+        if float(j.projected_peak_gib) >= float(heavy_min_projected_gib)
+    ))
 
 
 def sum_tracked_current_gib(jobs: Sequence[TrackedJob]) -> float:

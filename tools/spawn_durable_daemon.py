@@ -885,8 +885,8 @@ def _do_stop(label: str, *, term_grace_s: float = 3.0) -> int:
     return rc
 
 
-def _do_reconcile() -> int:
-    """Mark every recorded=running daemon whose process is DEAD as stopped.
+def reconcile_dead_daemons(*, verbose: bool = True) -> int:
+    """Mark every recorded=running daemon whose process is DEAD as stopped; return the count reconciled.
 
     Recovery primitive for the OOM incident (2026-06-25): a machine crash /
     blind fleet-launch leaves the registry asserting daemons are ``running``
@@ -894,6 +894,14 @@ def _do_reconcile() -> int:
     memory guard's custody gate reads this registry; stale running rows would
     waste custody checks and mislead status. This reconciles the registry to
     kernel truth WITHOUT signalling anything (the processes are already dead).
+
+    Importable + quiet-able so the admission path can auto-reconcile before EVERY
+    governed launch decision (out-of-band death — SIGKILL/OOM/jetsam/machine-sleep/
+    SIGURG-144 — can never write ``recorded=stopped``, so a phantom running row would
+    otherwise poison the growth-projection accounting until someone REMEMBERS to run
+    ``--reconcile``; the apparatus must hold that memory, not the operator — the
+    "off is a tracked queue, never a forgotten default" discipline). Fail-open by
+    construction: a no-op when the registry is already accurate.
     """
     rows = _load_registry()
     stale = [
@@ -902,7 +910,8 @@ def _do_reconcile() -> int:
         and not (_pid_alive(int(r.get("pid", 0))) and _pgid_alive(int(r.get("pgid", 0)) or int(r.get("pid", 0))))
     ]
     if not stale:
-        print("[durable-daemon] reconcile: no stale running rows; registry already accurate.")
+        if verbose:
+            print("[durable-daemon] reconcile: no stale running rows; registry already accurate.")
         return 0
 
     stale_labels = {r.get("label") for r in stale}
@@ -919,9 +928,16 @@ def _do_reconcile() -> int:
         return rows_in
 
     _update_registry_locked(_mark_dead)
-    print(f"[durable-daemon] reconcile: marked {len(stale)} dead daemon(s) as stopped:")
-    for r in stale:
-        print(f"  - {r.get('label')} pid={r.get('pid')} (was running, process DEAD)")
+    if verbose:
+        print(f"[durable-daemon] reconcile: marked {len(stale)} dead daemon(s) as stopped:")
+        for r in stale:
+            print(f"  - {r.get('label')} pid={r.get('pid')} (was running, process DEAD)")
+    return len(stale)
+
+
+def _do_reconcile() -> int:
+    """CLI wrapper: reconcile + print, return rc 0."""
+    reconcile_dead_daemons(verbose=True)
     return 0
 
 
