@@ -695,6 +695,12 @@ def _build_resume_state_arrays(
     out["__cfg_seed_anneal_epochs"] = np.asarray(int(getattr(args, "seed_anneal_epochs", 0)))
     out["__cfg_seed_anneal_shape"] = np.asarray(str(getattr(args, "seed_anneal_shape", "linear")))
     out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
+    # (#220) persist the AA supersample FACTOR too: --render-aa mode is guarded above, but a resume
+    # that keeps mode="supersample" while changing --aa-supersample 2->3 renders a DIFFERENT grid
+    # (silent deterministic-repro divergence the mode check misses). Persist so the F2
+    # _resume_lever_divergences guard fails closed. Legacy-compatible (pre-#220 sidecars lack the key
+    # => guard only checks present keys => NO spurious divergence). ZERO archive bytes (resume-only).
+    out["__cfg_aa_supersample"] = np.asarray(int(getattr(args, "aa_supersample", 1)))
     _hbe = getattr(args, "hosc_beta_end", None)
     out["__cfg_hosc_beta_end"] = np.asarray(-1.0 if _hbe is None else float(_hbe))
     # (#310 step-native activation) STRUCTURAL basis lever: the periodic activation kind + beta start +
@@ -842,6 +848,10 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_dseg_aware_taper_scale", float(getattr(args, "dseg_aware_taper_scale", 0.0)), True),
         ("__cfg_dseg_aware_taper_floor", float(getattr(args, "dseg_aware_taper_floor", 0.05)), True),
         ("__cfg_render_aa", str(getattr(args, "render_aa", "none")), False),
+        # (#220) AA supersample FACTOR: a resume changing 2->3 keeps mode="supersample" (the render_aa
+        # check passes) but renders a different grid => fail closed. Only checked when PRESENT in the
+        # sidecar (pre-#220 sidecars lack the key => no spurious divergence).
+        ("__cfg_aa_supersample", int(getattr(args, "aa_supersample", 1)), False),
         ("__cfg_hosc_beta_end", cur_hbe, True),
         # (#310 step-native activation) STRUCTURAL basis lever (activation kind + beta start + anneal
         # shape + omega define the trained input basis; no param keys). A resume that changes any =>

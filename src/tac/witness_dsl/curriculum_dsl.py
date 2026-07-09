@@ -3116,6 +3116,61 @@ def HorizonWeightedMargin(  # noqa: N802 — v7.5 B.5 (#169)
                % (int(row_lo), int(row_hi), float(margin_lo), float(margin_hi))))
 
 
+def SegChromaBoundary(  # noqa: N802 — LEVER-4c (chroma DOF probe a3e9f0bd; operator "Chroma too" 2026-06-25)
+    weight: float = 0.0, margin_band: float = 1.0, start_epoch: int = 0, window: int = 0,
+) -> Lever:
+    """LEVER-4c — ANNULUS-DIRECTED CHROMA-BOUNDARY MATCH (chroma DOF probe a3e9f0bd GREEN 2026-07-03; #276
+    chroma-DOF; operator 2026-06-25 "Chroma too"; CLAUDE.md "Chroma is a d_seg lever"). DEFAULT-OFF.
+
+    SegNet reads RGB ⇒ its per-pixel argmax depends on CHROMA. The probe MEASURED (n96, 100% L*-match to the
+    frozen SegNet) that removing chroma (constant-luma) FLIPS 7.54% of Lane→Road + 4.38% of Movable→Undriv,
+    with 93.4% of chroma-flips in the ``margin < 1`` fragile ANNULUS (→ 33.7% at margin<0.25); the flips are
+    LUMA-INDEPENDENT (desat-only still flips 3.1%) and the SegNet margin-gradient energy is 78.8% luma /
+    21.2% chroma — so chroma is a PROVEN INDEPENDENT d_seg BOUNDARY SHARPENER, ORTHOGONAL to the geometry
+    levers. The witness UNDER-exploits it (its rendered chroma converges to a near per-class CONSTANT palette;
+    nothing supervises per-pixel chroma).
+
+    So this is an additive chroma-MATCH loss ``L_c = w · mean_{ann} ‖chroma(f1) − chroma(GT)‖²`` on the
+    SHARED realized-through-R render ``f1`` (the SAME render the SegNet forward / ``_signed`` come from — NO
+    2nd render, NO 2nd SegNet forward), over the θ-independent fragile annulus ``1[GT margin < band]``.
+    Chroma := ``rgb − BT.601-luma`` ⇒ LUMA-INVARIANT by construction ⇒ ORTHOGONAL to every luma lever (NOT a
+    full-RGB reconstruction). It pulls the per-pixel RGB head (``self.out``, which HAS per-pixel chroma
+    capacity) to paint the boundary chroma the constant palette can't.
+
+    The trainer flag ``--seg-chroma-boundary-weight`` is default 0.0 ⇒ byte-identical when not composed (the
+    branch is gated on ``chroma_bnd_w > 0`` AND the GT-chroma/annulus providers stay None). ``window=0`` =
+    loss-config lever; ``start_epoch`` is the stage-boundary engage (re-treats the spike-guard; NEVER
+    per-step). NOT supported with ``--micro-batch-pairs>1`` (fails closed in the trainer). Sister of
+    :func:`HorizonWeightedMargin` (both 0-byte SHARED-structure annulus levers on the SAME render;
+    DIFFERENT quantity — chroma appearance-match vs the ``_signed`` margin hinge).
+
+    **A/B arm, NOT a claim** — the 7.54%/4.38%/93.4% are a MEASURED chroma-REMOVAL ABLATION (the DOF
+    EXISTENCE proof, eq ``chroma_decides_lane_and_movable_at_annulus_v1``), NOT the ADD-BACK score ΔS of THIS
+    chroma-match term through the witness. That ΔS is UNMEASURED; the exit criterion is a CONVERGED n600
+    byte-close A/B (the surviving annulus flips must shift toward the GT chroma, else terminal-finding).
+    Advisory until byte-closed (pointer 0.19110 UNMOVED)."""
+    if not (float(weight) >= 0.0):
+        raise ValueError(f"SegChromaBoundary: weight must be >= 0, got {weight!r}")
+    if not (float(margin_band) > 0.0):
+        raise ValueError(
+            f"SegChromaBoundary: margin_band ({margin_band!r}) must be > 0 — a non-positive band selects NO "
+            "annulus pixel (the chroma-match term would silently do nothing; LEVER-4c measured band 1.0).")
+    if not (int(start_epoch) >= 0):
+        raise ValueError(f"SegChromaBoundary: start_epoch must be >= 0, got {start_epoch!r}")
+    return Lever(
+        "seg_chroma_boundary",
+        overrides={"--seg-chroma-boundary-weight": float(weight),
+                   "--seg-chroma-boundary-margin-band": float(margin_band),
+                   "--seg-chroma-boundary-start-epoch": int(start_epoch)},
+        epochs_delta=window,
+        notes=("LEVER-4c annulus-directed chroma-boundary match (additive w*mean_ann ||chroma(f1)-chroma("
+               "GT)||^2 on the SHARED realized-through-R render, annulus |GT margin|<%.2f); chroma=rgb-"
+               "BT.601-luma = LUMA-INVARIANT => ORTHOGONAL to luma levers; PROVEN independent d_seg boundary "
+               "SHARPENER (probe a3e9f0bd: 93.4%% of chroma-flips in margin<1); 0-byte SHARED-structure; "
+               "start_epoch stage-gate; A/B arm NOT a claim (removal-ablation != add-back dS); advisory "
+               "until byte-close" % float(margin_band)))
+
+
 def TieLocusDisplacement(  # noqa: N802 — P0 FORCE 3 (task #360; WRAPS the existing subpix term)
     weight: float = 0.3, start_epoch: int = 0, v_band: float = 1.0,
     edge_weight_source: str = "pa_flipmass",
@@ -3178,33 +3233,80 @@ def TieLocusDisplacement(  # noqa: N802 — P0 FORCE 3 (task #360; WRAPS the exi
                "counter-force; default-OFF; advisory until byte-closed"))
 
 
-def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa: N802
-                     window: int = 100) -> Lever:
-    """FEED-07b lever #1 (#220): AA coverage render + grid≥384 — the gate's "#1 MEASURED islands
-    lever" (own gate verdict). Supersampled anti-aliased rendering resolves the sub-pixel island
-    coverage the base-grid point-sample misses.
+def AACoverageRender(mode: str = "supersample", ss: int = 2,  # noqa: N802
+                     grid_h: int = 384, grid_w: int = 512,
+                     ipe_footprint: float = 1.0, window: int = 100) -> Lever:
+    """FEED-07b lever #1 (#220): AA COVERAGE-INTEGRATED render + grid≥384 — the gate's "#1 MEASURED
+    islands lever" (own gate verdict, ``tools/levelset_gate_discriminators_n600.py`` DAG FEED-ly,
+    ``[macOS-CPU advisory] NON-PROMOTABLE``). POINT-sampling the witness render grid ERASES the
+    finest-scale island (class-1 LANE dash) structure — it aliases out below the render Nyquist;
+    FOOTPRINT/COVERAGE-integrated rendering RECOVERS it (oracle-R d_seg floor 0.00091 @ 384x512
+    area/AA vs 0.00247 @ 192x256 point; class-1 LANE recall +0.38, 0.56→0.94). ~0-RATE: the AA
+    render is a DETERMINISTIC decode-time op (inflate.py runs it FREE within the 30-min budget,
+    rule 118); the archive weights+codes are UNCHANGED — AA moves d_seg WITHOUT the rate term.
 
-    COMPOSE GUARD RESOLVED (#220 unblock, 2026-07-07): ``aa_sdf_observation_render`` now invokes
-    ``compose_fn`` AFTER the box-downsample (at the BASE grid), so ``--render-aa supersample``
-    COMPOSES with the base-grid compose levers ``--residual-mode`` / ``--seed-islands`` /
-    ``--lane-render-band`` by construction (the trainer's ``_validate_aa_compose_compat`` guard is
-    retained but currently accepts every tracked combination; ss=1 stays byte-identical). This
-    lever therefore composes with SeedIslandEased(+seed path) / AnalyticLaneRenderBand as well as
-    DirectionalBasisRebalance / MuonWarmStart. CAVEAT unchanged: the ORTHOGONAL --self-orient x
-    supersample fine-dir-feats memory/wall-clock gate (``--aa-self-orient-fine-mode`` refuse
-    default) still applies when composing over a --self-orient base."""
+    ``mode`` ∈ {"supersample", "ipe"} (#220 completion 2026-07-09 — the factory now expresses BOTH
+    AA charts, killing the ``render_aa: "ipe"`` raw-override config-orphan in witness_autoconfig
+    v6 so the DSL HOLDS the whole lever):
+      * ``supersample`` (default; the AUTHORITY): render at ss×grid then AREA/box-downsample to the
+        base grid (EXACT ss×ss block-mean = ground-truth pixel-footprint integration). ``ss=1`` is
+        byte-identical (downsample is identity). Cost ss² × the witness forward.
+      * ``ipe``: mip-NeRF cone attenuation of the curvelet basis (analytical, ~0-compute; the cheap
+        decode-time PROXY to supersample, and the SELF-ORIENT-compatible chart — supersample is
+        fail-closed against --self-orient's per-pair fine dir-feats / against --dseg-aware-taper's
+        untapered fine grid; ipe attenuates the SAME base curvelet columns AFTER, so it composes).
+
+    ``grid_h``/``grid_w``: the base (H,W) the R operator sees — ENFORCED ≥384 per axis (the "grid≥384"
+    half of #220: R bicubic-UPsamples the render grid to camera 874×1164, so the achievable-through-R
+    floor drops monotonically as the grid rises; <384 defeats the lever's own measured floor and is
+    REFUSED). Default 384x512 = the levelset trainer's own default (byte-identical grid contribution).
+    Raising it (512x768, ...) trades forward compute for a lower floor and REQUIRES a matching GT L*
+    cache resolution (the trainer's lstar_shape check fails closed otherwise) — set only with a
+    matching --gt-cache.
+
+    Mechanism: ``tac.boundary_math.aa_sdf_observation_render`` (numpy-fp32 authority + MLX twin,
+    parity ≥0.9997); law: ``tac.canonical_equations`` ``aa_supersample_lane_recall_lift_v1``. Trainer
+    flags LANDED (#224 wire-in; default-off byte-identity proven by
+    ``tools/wire_in_224_byte_identical_smoke.py``) — this factory is the DSL Lever that ARMS them;
+    UN-composed the trainer defaults ``--render-aa none`` = byte-identical. STRUCTURAL render lever:
+    the F2 resume-divergence guard refuses a resume that adds/changes ``render_aa`` /
+    ``aa_supersample`` (``__cfg_render_aa`` / ``__cfg_aa_supersample``), so an A/B fires it from a
+    FRESH run (or a matching resume).
+
+    COMPOSE GUARD RESOLVED (#220 unblock, 2026-07-07): ``aa_sdf_observation_render`` invokes
+    ``compose_fn`` AFTER the box-downsample (at the BASE grid), so supersample COMPOSES with the
+    base-grid compose levers ``--residual-mode`` / ``--seed-islands`` / ``--lane-render-band`` by
+    construction (``_validate_aa_compose_compat`` retained; accepts every tracked combination).
+    CAVEAT unchanged: the ORTHOGONAL --self-orient × supersample fine-dir-feats memory/wall-clock
+    gate (``--aa-self-orient-fine-mode`` refuse default) still applies over a --self-orient base
+    (use ``mode="ipe"`` there).
+
+    VERDICT SCOPE: the lane-recall lift is oracle-R MEASURED; the through-witness-training ΔS is
+    ASSUMED_AWAITING_VERIFICATION until a converged byte-close A/B measures it (means ≠ ends: this
+    factory BUILDS the arm; makes NO score claim; pointer UNMOVED)."""
+    if mode not in ("supersample", "ipe"):
+        raise ValueError(f"AACoverageRender: mode must be 'supersample' or 'ipe', got {mode!r}")
     if int(ss) < 1:
         raise ValueError(f"AACoverageRender: ss must be >= 1, got {ss!r}")
+    if int(grid_h) < 384 or int(grid_w) < 384:
+        raise ValueError(
+            f"AACoverageRender: grid must be >=384 per axis (islands need grid>=384 through R; the "
+            f"'grid>=384' half of #220), got ({int(grid_h)}x{int(grid_w)})")
+    overrides: dict = {"--render-aa": mode,
+                       "--render-h": int(grid_h),
+                       "--render-w": int(grid_w)}
+    if mode == "supersample":
+        overrides["--aa-supersample"] = int(ss)
+    else:  # ipe
+        overrides["--aa-ipe-footprint"] = float(ipe_footprint)
     return Lever(
         "FEED_07b_aa_coverage_render",
-        overrides={"--render-aa": "supersample",
-                   "--aa-supersample": int(ss),
-                   "--render-h": int(grid_h),
-                   "--render-w": int(grid_w)},
+        overrides=overrides,
         epochs_delta=window,
-        notes=("#220 AA coverage render (supersample) + grid>=384 — #1 measured islands lever; "
+        notes=(f"#220 AA coverage render ({mode}) + grid>=384 — #1 measured islands lever; "
                "composes with residual-mode/seed-islands/lane-render-band (compose-after-"
-               "downsample landed 2026-07-07); self-orient fine-mode gate still applies"),
+               "downsample landed 2026-07-07); self-orient fine-mode gate still applies to "
+               "supersample (use mode=ipe over a self-orient base)"),
     )
 
 
