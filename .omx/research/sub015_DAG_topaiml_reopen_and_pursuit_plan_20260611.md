@@ -11432,3 +11432,20 @@ legs on a rigorous double-reviewed negative = consistent, not drift.
 = render-side d_seg coherence lever (analytic-lane-band, already in-stack) — the frozen-space wall yields on the
 RENDER axis (make the argmax error THINNER), NOT storage. All learned VCM/FCM/EGIC/ELIC codecs are rule-118
 BLOCKED (counted weights). This VALIDATES what #205 is doing. Pointer 0.19110 UNMOVED — MEANS.
+
+### FEED-v8-increment1-design (2026-07-09) — the buildable increment-1 design draft (DRAFT, $0, no launch)
+
+Operator "build out a draft of our v8" while #205 chugs. Draft: `.omx/research/v8_increment1_design_draft_20260709.md`.
+Turns SPEC_v8 §6 into a **substrate-composed, gate-(c)-addressed** increment-1 design — NOT a re-derivation
+(SPEC + perclass_carriers_design_20260708 hold the math). Key content: (1) carrier→module map — 4 of 5 classes
+REUSE existing in-tree modules (hood_static/analytic_lane_band/lane_sdf + v7.5 homotopy/area-Lagrange); the
+ONLY new build is the Road+Undriv **edge-centric bulk-boundary field** (composes road_horizon_component +
+lever_b_levelset_generator SDF + laguerre_logit_offset b_c) = the 20–50 KB unknown to MEASURE. (2) staged
+training (fields-vs-SDF-targets → paint-vs-frozen-scorer; end-to-end FORBIDDEN = theft-channel). (3) merge→diff→
+correct made concrete: frame1-only DIFF + chroma-first-seg/luma-reserved CORRECT + Dykstra fixed point (#73). (4)
+all 6 named risks addressed explicitly (gate c seed). (5) P-B/P-C pre-registered but MEMORY-GATED — heavy n600
+through-R = the +66 GiB verdict-batch path; unsafe concurrent with #205 (~71 GiB peak) ⇒ operator-GO + governed
+launcher + headroom, NOT now. Triality: DSL Road+Undriv lever owed at build; the two council-flagged equations
+STAY FORMALIZATION_PENDING (register only with P-B/P-C/increment-1 anchors); this FEED = the DAG leg. GATES: v7.5
+launches first — if #205's v7 line reaches target, v8 never fires (opportunity cost). Pointer 0.19110 UNMOVED
+(means; DRAFT). #205 untouched.
