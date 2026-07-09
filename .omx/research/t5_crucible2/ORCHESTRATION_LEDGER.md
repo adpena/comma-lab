@@ -152,3 +152,11 @@ wall-clock BUDGET estimated in the final config (s/ep x expected-epochs per stag
 baseline + lever deltas).
 (3) The final WitnessProgram carries a wall-clock section: projected total, per-stage budget, the
 speed-lever ON-set with per-lever neutrality provenance.
+
+## OPERATOR SEQUENCING DIRECTIVE (2026-07-09) — DUAL-CHAIN APPROVAL BEFORE ANY LAUNCH
+Verbatim: "We should wait until the v7.5.2 launch chain and the v8 launch chain are both approved and
+request guidance on which to run." BINDING: NO launch fires when crucible-2 seals — crucible-3 (v8,
+task #380) runs its full machine immediately after P7 here; when BOTH chains are sealed+approved, main
+presents a side-by-side {v7.5.2 WitnessProgram vs v8 increment-1 config: projected S-path,
+wall-clock budget, risk register, owed-gates status} and REQUESTS operator guidance on which to run.
+The P8 wall is therefore: both-sealed -> comparison brief -> operator which-to-run GO.
