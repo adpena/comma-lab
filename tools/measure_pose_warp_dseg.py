@@ -58,16 +58,30 @@ _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 CLASS_NAMES = ["Road", "Lane", "Undriv", "Movable", "MyCar"]  # comma10k canonical order
 ROAD_PLANE_CLASSES = (0, 1)  # Road + Lane: true ground-plane (homography) classes
 
-# openpilot / comma2k19 EON road camera intrinsics (NATIVE 1164x874).
-# Source (subagent-verified, 2 independent repos agree): comma2k19 utils/camera.py
+# openpilot / comma2k19 EON road camera intrinsics (NATIVE 1164x874) + camera height.
+# Canonically MEASURED by tac.clip_profile (the per-clip SoT): on 0.mkv the auto-measured
+# profile REPRODUCES the openpilot/comma2k19 literals below bit-identically (regression-tested
+# in test_clip_profile_rewire_measure_pose_warp) and self-calibrates for any other clip.
+# value-provenance: MEASURED-ANCHOR (clip_profile cache) > HARDCODED-fallback. The fallback
+# literals keep the tool standalone-runnable when the profile is unavailable (no cache + no
+# argmax); Source (subagent-verified, 2 independent repos agree): comma2k19 utils/camera.py
 # (eon_focal_length=910.0, FULL_FRAME_SIZE=(1164,874), pp=(W/2,H/2)) and openpilot
 # common/transformations/camera.py (_neo_config). Camera height = 1.22 m
 # (openpilot selfdrive/locationd/calibrationd.py HEIGHT_INIT). Pitch calibrated
 # online (init 0, bounds [-0.091, 0.17] rad) -> we FIT it.
-NATIVE_W, NATIVE_H = 1164, 874
-NATIVE_FX = NATIVE_FY = 910.0
-NATIVE_CX, NATIVE_CY = 582.0, 437.0
-CAMERA_HEIGHT_M = 1.22
+try:
+    from tac.clip_profile import for_video as _cp_for_video
+
+    _CP = _cp_for_video(REPO / "upstream/videos/0.mkv")
+    NATIVE_W, NATIVE_H = _CP.camera.native_w, _CP.camera.native_h
+    NATIVE_FX, NATIVE_FY = _CP.camera.fx_native, _CP.camera.fy_native
+    NATIVE_CX, NATIVE_CY = _CP.camera.cx_native, _CP.camera.cy_native
+    CAMERA_HEIGHT_M = _CP.device_height_m
+except Exception:  # standalone fallback (clip_profile cache absent) — documented literals
+    NATIVE_W, NATIVE_H = 1164, 874
+    NATIVE_FX = NATIVE_FY = 910.0
+    NATIVE_CX, NATIVE_CY = 582.0, 437.0
+    CAMERA_HEIGHT_M = 1.22
 
 
 def _refuse_tmp(path: Path) -> None:
