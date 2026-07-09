@@ -412,7 +412,11 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
             sidecar_path=".omx/research/r1_dxi_shippability_byteclose_20260708.md",
             reactivation_criteria=("n600 realized-d_pose row LANDED (0.001610); exact upstream/evaluate.py CPU "
                                    "is the promotion authority; a dedicated from-converged pose-finishing descent "
-                                   "could push toward the 0.018-class ancestor (operator-GO, NOT launched)"),
+                                   "could push toward the 0.018-class ancestor (operator-GO, NOT launched). "
+                                   "OPERATIONALIZED 2026-07-09: the v7.5 D.9 terminal POSE-FINISH curriculum "
+                                   "Stage (crucible_v7, commit 6412f2cf8) is the DSL vehicle for that "
+                                   "from-converged descent (R1 two-phase; supersedes co-train-pose-from-ep0) — "
+                                   "this anchor is its measured backing; no new anchor, a refinement cross-ref"),
             measurement_axis=_ADVISORY,
             hardware_substrate="apple_m5_max_cpu",
         ),
