@@ -10896,3 +10896,23 @@ v7.5 optimal WitnessProgram (all-on, horizon fix, dynamic curriculum, R1 warm-st
 seal → launch on operator-GO (launch stays held; the CONFIG actuation is GO'd here). NOT actuating BEFORE
 the audit (optimal-combination requires the audit's synergy/antagonism verdict — blind turn-on risks the
 measured-harmful levers). Pointer 0.19110 UNMOVED.
+
+## FEED-posesegdynamics (2026-07-08) — MEASURED convergence ASYMMETRY: pose = orthogonal/monotone/benign (just needs time); d_seg = separatrix-bound/stage-sensitive/hard (operator dynamical insight)
+Operator: "now that we know how to do pose, since it was descending even in R1 it just needs time and it
+converges ORTHOGONALLY at a pretty constant rate compared to seg which is super sensitive to the treatment
+of each stage." CONFIRMED by measurement: R1 d_pose 97→0.0011 (108ep, monotone collapse→floor) while d_seg
+HELD ~0.0046 (orthogonal — pose descent did NOT move the partition). MECHANISM = seg⊥pose null (~99.95%
+decoupling, #206/#227): pose lives in the WITHIN-CELL structure PoseNet reads (SegNet-null); d_seg lives
+on the SEPARATRIX (argmax boundary). Transverse subspaces ⇒ pose gradient can't disturb d_seg. WHY the
+shapes differ: pose target = smooth 6-dim PoseNet-output MSE → benign monotone descent; d_seg = argmax
+flip-fraction = NON-SMOOTH tropical/piecewise-constant → gradient is STAGE-DEPENDENT (τ sharpens, Muon
+conditions, l7 HURTS) → plateaus/wobbles/needs finishers. STRATEGIC PAYLOAD for v7.5: spend ZERO curriculum
+complexity on pose (w_pose on + enough epochs, OR the R1 post-convergence sequence); spend ALL curriculum/
+stage/event/lever complexity on d_seg (the sensitive object). This CONFIRMS the converge-d_seg-then-pose-
+descend SEQUENCE as the natural optimum (converge the hard stage-sensitive object under careful curriculum,
+then the benign orthogonal object rides down free). The dynamic-curriculum (#367-B) is ENTIRELY d_seg-
+driven; pose is NOT a scheduling concern. CAVEAT: pose's full descent to 0.0011 needs a COHERENT render
+(converged d_seg) — the live v6 from-scratch run sits d_pose ~1.3 because d_seg not yet converged; once
+d_seg is good, pose descends orthogonally (R1 proved it from the converged mod-26 basin). Eq
+`pose_seg_convergence_asymmetry_v1` COUNCIL-FLAGGED (per-epoch rate law owed to the R1 relaunch.log fit).
+Pointer 0.19110 UNMOVED.
