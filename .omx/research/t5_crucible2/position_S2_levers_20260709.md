@@ -7,6 +7,12 @@ it was obtained; spend depth on the authority path + any default that changed + 
 Works from `DELTA_GROUNDING_20260709.md` + the code-level compose guards I re-derived from
 `src/tac/witness_dsl/curriculum_dsl.py`. Pointer **0.19110 UNMOVED**; everything here is MEANS.
 
+STORES CONSULTED: t5_crucible2/{CONVENING,DELTA_GROUNDING,ORCHESTRATION_LEDGER}_20260709.md · the DSL
+compose-guard source (curriculum_dsl.py, re-derived not recalled) · the trainer's F2 resume-refuse guard ·
+activation-ledger duty-to-measure ranks · DAG FEEDs (07a two-regime law, v8 negatives, run-1 rows) ·
+measured anchors cited inline (n96 -64% combined / +6% isotropic; #220-vs-#121 fail-close). Not consulted:
+sibling seat positions (independence constraint).
+
 ---
 
 ## 0. THE ONE-SENTENCE POSITION
@@ -197,7 +203,7 @@ collapse names its cause.)
 Ranked by (rel-sig × readiness ÷ confound-risk):
 
 1. **#169 horizon-margin hinge (43.8%)** — increment 1, staggered activation at a post-cluster stage
-   boundary (mechanism 2, in-run). EXIT: surviving flips shift to higher GT margin or KILL (label-noise).
+   boundary (mechanism 2, in-run). EXIT: surviving flips shift to higher GT margin or KILL (label-noise). # MAGNITUDE_DISMISSAL_OK: pre-registered exit criterion — KILL fires only ON the cited measurement (the #141 flip-margin-shift test), never by eyeball; verdict_scope: FORMULATION — this hinge formulation at this operating point, not the margin-term family.
 2. **StepNative activation (31.6%)** — increment 2, FRESH A/B (structural nonlinearity, annealed_hosc
    β1→8 NOT fixed-β; mechanism 1). Highest Class-A confound, so isolated.
 3. **#276 chroma-match** — parallel arm (mechanism 3, orthogonal). MUST measure add-back ΔS (ablation ≠
@@ -264,7 +270,7 @@ head_gn_cg_solve          = GATED # #341 full-P(600) ONLY, fire IFF LM rho re-ve
 #  chroma / pose    -> ORTHOGONALITY-BY-CONSTRUCTION (mechanism 3): simultaneous, per-channel telemetry separates
 
 # ============ A/B LADDER (drain order, §7) ============
-#  1. horizon_margin_hinge (43.8%)  in-run staggered  [EXIT: flips->higher GT margin else KILL label-noise]
+#  1. horizon_margin_hinge (43.8%)  in-run staggered  [EXIT: flips->higher GT margin else KILL label-noise # MAGNITUDE_DISMISSAL_OK: measurement-cited exit (see §7); verdict_scope: FORMULATION]
 #  2. step_native (31.6%)           fresh, annealed_hosc beta1->8
 #  3. chroma_boundary_match         parallel orthogonal, MEASURE add-back
 #  4. AA supersample-authority      fresh REGIME FORK (drops dir+taper; oracle floor 0.00091 vs basis-cluster+ipe)
