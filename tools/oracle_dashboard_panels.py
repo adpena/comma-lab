@@ -237,7 +237,7 @@ class OracleRenderer:
         a11.scatter([vp_u], [vp_v], s=26, c="#ffd24a", zorder=5)
 
         fig.suptitle(
-            f"ORACLE  ·  pair {pi}  ·  the world the detector reads  "
+            f"pair {pi}  ·  SegNet argmax + margin priors  "
             f"·  [macOS-CPU advisory · NON-PROMOTABLE]",
             color=FG, fontsize=10.5, y=0.995)
         fig.subplots_adjust(left=0.01, right=0.99, top=0.92, bottom=0.01,
@@ -276,8 +276,7 @@ class OracleRenderer:
         ax.set_xlabel("pair (segment timeline)", color=MUT, fontsize=8.5)
         ax.set_ylabel("translation (m)", color=FG, fontsize=8.5)
         ax2.set_ylabel("yaw (rad)", color=POSE, fontsize=8.5)
-        ax.set_title(f"ego-ξ SE(3) screw twist across the segment  ·  estimator "
-                     f"{xi.estimator_id}  ·  the SAME ξ warps d_seg AND is d_pose (Chasles)",
+        ax.set_title(f"ego-ξ  ·  SE(3) twist per pair  ·  {xi.estimator_id}",
                      color=FG, fontsize=9.5, loc="left", pad=6)
         h1, l1 = ax.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
