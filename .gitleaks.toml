@@ -1,0 +1,27 @@
+# gitleaks config for the auto-push hygiene gate (tools/auto_push_main.py — third deterministic layer).
+#
+# useDefault=true inherits gitleaks' curated ruleset (AWS / GitHub / Slack / OpenAI / private-key /
+# generic-api-key / hundreds more). We ADD one rule the default set lacks — the Tailscale CGNAT fleet-IP
+# range (private infrastructure, not a classical secret) — and ALLOWLIST the files that legitimately carry
+# secret PATTERNS + secret-SHAPED fixtures by design (the scanner, its tests, and this config itself), the
+# same self-reference exclusion the scanner's regex uses. MEASURED 2026-07-09: default rules over the last
+# 40 commits (482 KB) flagged ZERO false-positives on our sha256 provenance — the only hit was the test
+# fixture below, which this allowlist excludes — so gitleaks is precise enough to HOLD a push authoritatively.
+title = "comma-lab auto-push hygiene gate"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "tailscale-cgnat-fleet-ip"
+description = "Tailscale CGNAT fleet IP (100.64.0.0/10) — private infrastructure, must never reach a public remote"
+regex = '''\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}\b'''
+tags = ["fleet", "infra-ip", "tailscale"]
+
+[allowlist]
+description = "Files that legitimately contain secret patterns + secret-shaped fixtures by design (the scanner, its tests, this config)."
+paths = [
+    '''tools/auto_push_main\.py''',
+    '''src/tac/tests/test_auto_push_main\.py''',
+    '''\.gitleaks\.toml''',
+]

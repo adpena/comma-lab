@@ -229,6 +229,53 @@ def _added_lines(diff_text: str, cap: int = 6000) -> str:
     return "\n".join(added)[:cap]
 
 
+# --- gitleaks: third DETERMINISTIC layer (curated ruleset + entropy + our Tailscale rule) ------------
+# Authoritative like the regex — a finding HOLDS the push. gitleaks' default ruleset subsumes + far
+# exceeds our inline regex (hundreds of curated credential patterns + entropy); we add ONE rule it lacks
+# (Tailscale CGNAT) via .gitleaks.toml, which also carries the self-exclusion allowlist (scanner + tests +
+# config). MEASURED 2026-07-09: 0 false-positives on our sha256 provenance over 40 commits — precise
+# enough to hold authoritatively. Absent binary / absent config / error / timeout ⇒ None ⇒ skipped
+# (fail-open; the regex + fmtools still gate). Runs only on push-eligible turns (ahead>0), ~200ms.
+def gitleaks_scan(root: Path, timeout: float = 60.0) -> list[str] | None:
+    """Scan the outgoing commits (origin/main..main) with gitleaks + the repo .gitleaks.toml. Returns a
+    list of 'RuleID @ File' finding strings (HOLD), [] if clean, or None (skip/fail-open) when gitleaks or
+    its config is absent, or gitleaks errors/times out. Never raises. Secrets are --redact'd — we surface
+    only rule id + file, never the value."""
+    import os
+    import shutil
+    import tempfile
+    if not shutil.which("gitleaks") or not (root / ".gitleaks.toml").exists():
+        return None
+    report = None
+    try:
+        tmpdir = root / ".omx" / "tmp"
+        tmpdir.mkdir(parents=True, exist_ok=True)
+        fd, report = tempfile.mkstemp(prefix="gitleaks_", suffix=".json", dir=str(tmpdir))
+        os.close(fd)
+        proc = subprocess.run(
+            ["gitleaks", "git", "--log-opts=origin/main..main", "-c", ".gitleaks.toml",
+             "--no-banner", "--redact", "-f", "json", "-r", report],
+            cwd=str(root), capture_output=True, text=True, timeout=timeout)
+        if proc.returncode == 0:
+            return []
+        if proc.returncode != 1:  # >1 = gitleaks internal error, NOT a clean verdict → fail-open
+            return None
+        try:
+            data = json.loads(Path(report).read_text() or "[]")
+        except Exception:
+            return ["gitleaks-finding (report unparseable)"]
+        out = [f"{f.get('RuleID', '?')} @ {f.get('File', '?')}" for f in (data if isinstance(data, list) else [])]
+        return out or ["gitleaks-finding"]
+    except Exception:
+        return None
+    finally:
+        if report:
+            try:
+                Path(report).unlink()
+            except Exception:
+                pass
+
+
 def _block_reason(verdict: dict) -> str:
     """The transcript-surfaced message for a HOLD / push-failure (needs my action)."""
     if verdict.get("action") == "hold":
@@ -247,7 +294,8 @@ def _block_reason(verdict: dict) -> str:
     )
 
 
-def run(dry_run: bool = False, use_fmtools: bool = True, fm_hold: bool = False) -> dict:
+def run(dry_run: bool = False, use_fmtools: bool = True, fm_hold: bool = False,
+        use_gitleaks: bool = True) -> dict:
     """Core logic. Returns a small verdict dict (for --dry-run / tests). Never raises."""
     root = _repo_root()
 
@@ -284,6 +332,17 @@ def run(dry_run: bool = False, use_fmtools: bool = True, fm_hold: bool = False) 
               f"Reviewed+push manually if benign. (See .omx/state/auto_push.log)", file=sys.stderr)
         return {"action": "hold", "ahead": ahead, "hits": names}
 
+    # Third deterministic layer: gitleaks (curated ruleset + entropy + our Tailscale rule). AUTHORITATIVE
+    # like the regex — a finding HOLDS the push. Absent/error/timeout ⇒ None ⇒ skipped (regex already gated).
+    if use_gitleaks:
+        gl = gitleaks_scan(root)
+        if gl:
+            names = "; ".join(gl[:6])
+            _log(root, f"HOLD ahead={ahead} — gitleaks flagged: {names} — NOT pushed (manual review)")
+            print(f"[auto-push] HELD: gitleaks flagged {len(gl)} finding(s): {names}. Review+push manually "
+                  f"if benign. (See .omx/state/auto_push.log)", file=sys.stderr)
+            return {"action": "hold", "ahead": ahead, "hits": f"gitleaks[{names}]"}
+
     # fmtools advisory second layer: regex was clean, so ask the on-device FM about the ADDED lines for
     # novel/contextual secrets the regex can't pattern-match. Absent/timeout/error ⇒ None ⇒ push proceeds.
     # DEFAULT = LOG-ONLY (never holds — the established drift-detector firewall): the FM's verdict is
@@ -307,6 +366,7 @@ def run(dry_run: bool = False, use_fmtools: bool = True, fm_hold: bool = False) 
 
     if dry_run:
         return {"action": "would_push", "ahead": ahead, "hits": None,
+                "gitleaks": "on" if use_gitleaks else "off",
                 "fmtools": ("hold" if fm_hold else "advisory") if use_fmtools else "off", "fm_flag": fm_note}
 
     head = _git(root, "rev-parse", "--short", "main").stdout.strip()
@@ -328,9 +388,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="skip the on-device FM advisory layer (regex-only). Also via AUTO_PUSH_FM=0.")
     ap.add_argument("--fm-hold", action="store_true",
                     help="make an FM flag HOLD the push (default: log-only). Also via AUTO_PUSH_FM_HOLD=1.")
+    ap.add_argument("--no-gitleaks", action="store_true",
+                    help="skip the gitleaks deterministic layer. Also via AUTO_PUSH_GITLEAKS=0.")
     args = ap.parse_args(argv)
     use_fmtools = (not args.no_fmtools) and os.environ.get("AUTO_PUSH_FM", "1") != "0"
     fm_hold = args.fm_hold or os.environ.get("AUTO_PUSH_FM_HOLD", "0") == "1"
+    use_gitleaks = (not args.no_gitleaks) and os.environ.get("AUTO_PUSH_GITLEAKS", "1") != "0"
     try:
         # Claude Code passes hook JSON on stdin; read it for the stop_hook_active
         # re-entry flag (loop guard #1) and to never block on the pipe.
@@ -346,7 +409,8 @@ def main(argv: list[str] | None = None) -> int:
             except Exception:
                 stop_hook_active = False
 
-        verdict = run(dry_run=args.dry_run, use_fmtools=use_fmtools, fm_hold=fm_hold)
+        verdict = run(dry_run=args.dry_run, use_fmtools=use_fmtools, fm_hold=fm_hold,
+                      use_gitleaks=use_gitleaks)
         if args.dry_run:
             print(f"[auto-push] {verdict}")
             return 0

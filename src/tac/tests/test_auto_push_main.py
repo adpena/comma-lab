@@ -113,6 +113,21 @@ def test_scanner_excludes_its_own_source_and_tests():
     assert "src/tac/tests/test_auto_push_main.py" in A._SCAN_EXCLUDE_PATHSPECS
 
 
+# ------------------------------- gitleaks third layer --------------------------
+def test_gitleaks_config_has_tailscale_rule_and_self_allowlist():
+    # The gitleaks config inherits the curated ruleset, adds the Tailscale CGNAT rule the default set
+    # lacks, and allowlists the self-reference files (same exclusion the regex layer uses).
+    cfg = (_REPO / ".gitleaks.toml").read_text()
+    assert "useDefault = true" in cfg
+    assert "tailscale-cgnat-fleet-ip" in cfg
+    assert "tools/auto_push_main" in cfg  # self-exclusion allowlist path
+
+
+def test_gitleaks_scan_is_fail_open_when_config_absent(tmp_path):
+    # No .gitleaks.toml under tmp_path ⇒ gitleaks_scan returns None (skip / fail-open), never raises.
+    assert A.gitleaks_scan(tmp_path) is None
+
+
 # ------------------------------- integration smoke -----------------------------
 # All subprocess smokes pass --dry-run --no-fmtools: --dry-run guarantees NO push
 # side-effect; --no-fmtools skips the on-device FM subprocess (fast + deterministic
