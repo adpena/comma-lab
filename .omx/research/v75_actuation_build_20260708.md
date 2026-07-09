@@ -115,6 +115,15 @@ and IS composed ON; horizon-margin adds the orthogonal 0-byte reducible-flip lev
 label-noise-vs-real-recovery exit criterion. The RE-SEAL/A/B decides whether to promote horizon-margin +
 sky to ON. This is the honest "off is a tracked queue with duty-to-measure" disposition.
 
+**NOT a magnitude-dismissal (relative significance stated + measurement cited, per the anti-orphan rule):**
+horizon-margin is HIGH relative significance — its measured ΔS 0.012–0.024 is **43.8% of the remaining
+descent** to sub-0.15 (13–27% of the ~0.0009 target d_seg), which is precisely WHY it was BUILT to
+completion rather than deferred (the operator's correction). The default-OFF hold is **measurement-gated,
+not eyeball**: promotion is decided by the pre-registered n600 A/B exit criterion (horizon-margin ON vs OFF
+must recover ≥X of the targeted horizon flip mass through R, separating real d_seg recovery from the #141
+label-noise floor), sequenced off the live #205 run (machine-crash P0 gate). "Held default-OFF" here is the
+tracked-queue state carrying a duty-to-measure, NOT a dismissal by absolute magnitude.
+
 **BINDING VERIFICATION (all pass):** crucible_v7 compiles + validates 0 WitnessProgram violations · 0 NAKED
 schedule-provenance · lever_registry.completeness().unmapped UNCHANGED 120 (ZERO new orphans) · antagonists
 OFF (l7 absent · hosc-beta-end 3.177 annealed not fixed · phi1-mode paint) · 262 tests GREEN across

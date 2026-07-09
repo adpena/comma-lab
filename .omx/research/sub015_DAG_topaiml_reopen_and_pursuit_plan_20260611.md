@@ -11246,3 +11246,23 @@ row fields (C.6) · DAG = this FEED · equations = C.6 is observability (no equa
 derivation is the named OWED law (registration DERIVED-AT-CONFIG when measured). Tests: crucible_v7 +
 feed07b (`_dense_plateau_slope`) + witness_autoconfig + sealed_205 + p0_forces + lever_registry = 182
 passed. Pointer 0.19110 UNMOVED.
+
+## FEED-v75BCDlegs (2026-07-09) — B/C/D triality-leg disposition (equations + consumer legs recorded, not silently dropped)
+The completion-wave commits (d90962f3f B.4 · 13ac03e64 B.5 · a07da4378 C.6/C.7 · 6c8b61144 build-log)
+triggered the per-leg drift-detector. Honest disposition (verified: no NEW measurement in these — they wire
+existing findings / apparatus / owed-measurements, so no new EmpiricalAnchor is warranted; recording so the
+leg is tracked not dropped):
+- **B.4 temporal-screw #360** — eqs = the p0_forces §FORCE-1 DERIVATION (task #360); anchor registration
+  OWED at byte-close (a measured through-R d_seg row promotes it). NOT a silent drop — an owed-measurement.
+- **B.5 horizon-margin #169 + sky** — eqs = `dseg_reducibility_gt_margin_verdict`, reg OWED at the
+  pre-registered n600 A/B exit criterion (the A/B IS the measurement that anchors it). BUILT + held-OFF.
+- **C.6 plateau telemetry / C.7 min-stage-epochs** — APPARATUS (score-neutral observability + a config
+  constant on the value-provenance ladder, HARDCODED-WITH-WAIVER + named owed derivation). No measurement →
+  [no-triality] is the correct leg.
+- **D.9 pose-finish** — eqs = r1_dxi_shippability anchor, REFINED with the cross-ref (82e7fc932). Done.
+- **Consumer leg** — the new DSL surfaces (HorizonWeightedMargin · TerminalPoseFinish · TemporalScrewConsistency
+  params) are curriculum Stages / levers that render via `schedule_readback.stage_map_from_curriculum` +
+  `lever_registry` generic introspection → costate_digest/dashboard consume them generically = [consumers-generic].
+Also: the B.5 build-log magnitude-dismissal line corrected — now states the 43.8%-of-remaining-descent
+relative significance + the n600 A/B measurement gate (per the magnitude-dismissal detector, honored not waivered).
+Pointer 0.19110 UNMOVED.
