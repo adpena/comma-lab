@@ -79,7 +79,8 @@ _SCAN = [
 # Files excluded from the outgoing-diff scan: they legitimately contain secret PATTERNS + secret-SHAPED
 # test fixtures by design (this scanner and its tests). Excluding self is the gitleaks-allowlist pattern;
 # any NEW file that must carry example secrets should be added here (and hand-reviewed).
-_SCAN_EXCLUDE_PATHSPECS = ("tools/auto_push_main.py", "src/tac/tests/test_auto_push_main.py")
+_SCAN_EXCLUDE_PATHSPECS = ("tools/auto_push_main.py", "src/tac/tests/test_auto_push_main.py",
+                           ".gitleaks.toml")  # gitleaks config documents the CGNAT range (100.64.0.0/10)
 
 
 def scan_diff(diff_text: str) -> list[tuple[str, str]]:

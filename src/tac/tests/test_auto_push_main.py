@@ -111,6 +111,7 @@ def test_scanner_excludes_its_own_source_and_tests():
     # it held its own bootstrap push 2026-07-09. Any new file carrying example secrets is added here.
     assert "tools/auto_push_main.py" in A._SCAN_EXCLUDE_PATHSPECS
     assert "src/tac/tests/test_auto_push_main.py" in A._SCAN_EXCLUDE_PATHSPECS
+    assert ".gitleaks.toml" in A._SCAN_EXCLUDE_PATHSPECS  # documents the CGNAT range literally
 
 
 # ------------------------------- gitleaks third layer --------------------------
