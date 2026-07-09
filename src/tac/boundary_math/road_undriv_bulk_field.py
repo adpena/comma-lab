@@ -445,6 +445,116 @@ def bulk_boundary_byte_cost(
     }
 
 
+def _horizon_profile(lab: np.ndarray, road_cls: int, undriv_cls: int) -> np.ndarray:
+    """Per-column horizon y(x): the topmost Road row whose pixel-above is Undrivable.
+
+    Returns an int array of length W; ``-1`` marks columns with no Road/Undriv horizon
+    point (occluded, or Road absent). This is the DOMINANT horizon arc — the ego-rigid
+    Road/Undrivable separatrix — not the full multi-branch boundary.
+    """
+
+    road = lab == int(road_cls)
+    und = lab == int(undriv_cls)
+    h, w = lab.shape
+    ys = np.full(w, -1, dtype=np.int32)
+    for x in range(w):
+        col = np.where(road[:, x])[0]
+        if col.size == 0:
+            continue
+        top = int(col.min())
+        if top > 0 and und[top - 1, x]:
+            ys[x] = top
+    return ys
+
+
+def horizon_poly_xi_byte_cost(
+    lstars: np.ndarray,
+    *,
+    road_cls: int,
+    undriv_cls: int,
+    degree: int = 3,
+    n_frames: int = 600,
+) -> dict:
+    """MEASURE the geometry-native (curvelet + ξ) cost of the Road↔Undrivable horizon.
+
+    The REAL-MACHINERY representation (operator 2026-07-09 "prefer the real thing to a proxy";
+    DAG FEED-v8-realmachinery). The Road↔Undrivable boundary IS the horizon, which is *ego-rigid*:
+    a low-order polynomial (a single-scale curvelet atom — the provably-optimal sparse basis for a
+    codim-1 curve) fits it, and its high-order coefficients are *frozen* frame-to-frame while only
+    the intercept moves ~1 px/frame = ego pitch = the vertical component of the ξ we ALREADY store
+    for pose. So the store is one curve + a slowly-drifting coefficient stream (delta-coded), NOT
+    600 independent contours.
+
+    Measured on the frozen SegNet-argmax cache (numpy-fp32, ``[macOS-CPU advisory · NON-PROMOTABLE]``):
+    per frame fit a degree-``degree`` poly to the dominant horizon arc, quantise+delta-code the
+    coeffs across frames, and report the real coder (zlib) byte count amortized over ``n_frames``.
+
+    **HONEST SCOPE (NO-FAKE):** this is the DOMINANT-ARC cost only. The poly fit residual + the
+    secondary arcs (objects breaking the horizon; the measured 1.6–2.0 crossings/row) are a small
+    residual sidecar NOT counted here — ``residual_sidecar_owed=True``. The dominant term is real-coder
+    + ego-amortized. Do NOT quote this as the complete Road↔Undriv rate without the sidecar.
+    """
+
+    import zlib
+
+    a = np.asarray(lstars)
+    if a.ndim == 2:
+        a = a[None]
+    n = a.shape[0]
+    # per-frame poly coeffs (highest power first, length degree+1); NaN for un-fittable frames.
+    coeffs: list[np.ndarray] = []
+    residuals: list[float] = []
+    coverage: list[int] = []
+    for i in range(n):
+        ys = _horizon_profile(a[i], road_cls, undriv_cls)
+        valid = ys >= 0
+        xs = np.where(valid)[0]
+        if xs.size < (degree + 5):
+            coeffs.append(np.full(degree + 1, np.nan))
+            continue
+        yy = ys[valid].astype(np.float64)
+        c = np.polyfit(xs.astype(np.float64), yy, degree)
+        coeffs.append(c)
+        residuals.append(float(np.median(np.abs(np.polyval(c, xs) - yy))))
+        coverage.append(int(xs.size))
+    C = np.array(coeffs, dtype=np.float64)
+    fitted = ~np.isnan(C[:, 0])
+    n_fit = int(fitted.sum())
+    # Quantise: scale each power so fp16 keeps ~0.01 px precision at image scale, then delta-code.
+    # (power k has magnitude ~ (1/W)^k of the intercept; scale compensates so all coeffs use fp16 range.)
+    Cf = C[fitted]
+    scale = np.array([10.0 ** (3 * (degree - k)) for k in range(degree + 1)], dtype=np.float64)
+    q = (Cf * scale[None, :]).astype(np.float32)
+    raw_blob = q.astype(np.float16).tobytes()
+    delta_blob = np.diff(q, axis=0).astype(np.float16).tobytes() if n_fit > 1 else raw_blob
+    raw_bytes = len(zlib.compress(raw_blob, 9))
+    delta_bytes = len(zlib.compress(delta_blob, 9))
+    best = int(min(raw_bytes, delta_bytes))
+    per_fit_frame = float(best) / float(max(1, n_fit))
+    full = int(round(per_fit_frame * n_frames))
+    return {
+        "n_frames_measured": int(n),
+        "n_frames_fitted": n_fit,
+        "degree": int(degree),
+        "coder": "zlib",
+        "median_fit_residual_px": (float(np.median(residuals)) if residuals else float("nan")),
+        "mean_horizon_columns_covered": (float(np.mean(coverage)) if coverage else 0.0),
+        "raw_coeff_bytes": int(raw_bytes),
+        "delta_coeff_bytes": int(delta_bytes),
+        "best_measured_bytes": best,
+        "measured_bytes_per_frame": per_fit_frame,
+        "full_bytes_at_n_frames_MEASURED": full,
+        "score_rate_contribution_MEASURED": 25.0 * float(full) / 37_545_489.0,
+        "n_frames_amortized": int(n_frames),
+        "residual_sidecar_owed": True,
+        "scope_note": (
+            "DOMINANT-ARC only (ego-rigid horizon). Real-coder + ξ-amortized. The poly-fit residual + "
+            "secondary arcs (objects breaking the horizon) are a small sidecar NOT counted here — do "
+            "not quote as the complete Road↔Undriv rate. See DAG FEED-v8-realmachinery."
+        ),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Full-frame Laguerre-reweighted argmax (thin reuse; observability).
 # ---------------------------------------------------------------------------
