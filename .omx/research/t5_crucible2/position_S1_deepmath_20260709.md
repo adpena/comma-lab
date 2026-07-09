@@ -210,7 +210,7 @@ Walk δS_τ/δφ_c = 0 piece by piece; flag every term the energy demands that t
 | **5** | **SURFACE TENSION σ_{cc'}·Perim_{cc'} (multiphase Modica-Mortola, per-class-PAIR)** | **✗ MISSING** | **the strong catch** |
 | 6 | TRANSPORT ∂φ/∂t+V·∇φ=0 | ✓ NOW (Force-1) | present (pending compose) |
 | 7 | TIE-LOCUS ∮_Σ‖t−t_GT‖² | ✓ (subpix+Force-3 w_e) | present (pending compose) |
-| 8 | RATE Λ (in-training MDL, reverse-water-filling) | ✗ (#242 never-fired) | LOW-EV for v7.5 (rate DEAD-at-floor) |
+| 8 | RATE Λ (in-training MDL, reverse-water-filling) | ✗ (#242 never-fired) | LOW-EV for v7.5 (rate at-floor; verdict_scope: FORMULATION — this vehicle at bc-current bytes, NOT the MDL family) |
 
 **THE MISSING TERM (S1's headline catch, §5-DERIVED, FORMALIZATION_PENDING): per-class-pair
 anisotropic SURFACE TENSION σ_{cc'}.** The code's length term is a SCALAR isotropic perimeter. The
@@ -234,7 +234,7 @@ class MASS; σ fixes interface STIFFNESS — together they pin both the volume a
 sub-critical lane).** DERIVED; FORMALIZATION_PENDING (register when its n600 A/B lands).
 
 Term 8 (in-training rate MDL) is DERIVED-present in the energy but LOW-EV for v7.5 (pose BANKED,
-rate DEAD-at-floor-for-this-vehicle); noted, not recommended for the first arm.
+rate at-floor-for-this-vehicle — verdict_scope: FORMULATION, the #242 family stays open for v8/rate-half); noted, not recommended for the first arm.
 
 ---
 
@@ -416,7 +416,7 @@ Muon cap 726, Polyak 2546 = FAIL-SAFES only    # DERIVED: caps are event-safe ba
 ### 6.7 EXCLUDED / SEPARATE-ARM
 ```
 --supersample (#220 AA)   # L-6 ANTAGONIST of L-1 taper (MEASURED fail-closed) → its OWN arm vs the taper arm, never same launch
-in-training rate MDL (#242) # DERIVED-present but LOW-EV (rate DEAD-at-floor for v7.5) — not launch-1
+in-training rate MDL (#242) # DERIVED-present but LOW-EV (rate at-floor for v7.5; verdict_scope: FORMULATION) — not launch-1
 ```
 
 **Launch-1 composition (energy-ordered):** amber → {step-native + taper + chroma} → CE+area-Lagrange
