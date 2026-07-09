@@ -100,7 +100,7 @@
       if (SEQ && loadedEpoch === meta.epoch) { updateStatus(); return; }  // already have this one
       fetchSequence(meta);
     } else if (!SEQ) {
-      if (inited) showMsg(statusMsg(meta));
+      if (inited) showMsg(statusMsg(meta), flowFrac(meta));
       updateStatus();
     }
   }
@@ -124,7 +124,7 @@
         if (seq && seq.ok === false) {
           // 202 readiness meta (idle / rendering-with-progress / error) — informative, not a failure.
           window.__flow = window.__flow || {}; window.__flow.ready = seq;
-          if (!SEQ && inited) { showMsg(statusMsg(seq)); updateStatus(); }
+          if (!SEQ && inited) { showMsg(statusMsg(seq), flowFrac(seq)); updateStatus(); }
           if (seq.status === "rendering") pollWhileRendering();
           return;
         }
@@ -382,8 +382,33 @@
     if (gpuOk && !gpuLost) { b.className = "flowbadge gpu"; b.textContent = "WebGPU"; }
     else { b.className = "flowbadge cpu"; b.textContent = "canvas2d"; }
   }
-  function showMsg(t) { var m = $("flowmsg"); if (m) { m.classList.remove("hide"); m.textContent = t; } }
-  function hideMsg() { var m = $("flowmsg"); if (m) m.classList.add("hide"); }
+  // Graceful loading state — never a silent black void. Sets the panel text and, when a render
+  // fraction is known (pair/n), a DETERMINATE progress bar (spinner hides); otherwise an
+  // indeterminate spinner. Targets the inner #flowmsgtxt so the spinner/bar structure survives.
+  function flowFrac(meta) {
+    return (meta && typeof meta.pair === "number" && typeof meta.n === "number" && meta.n > 0)
+      ? (meta.pair / meta.n) : null;
+  }
+  function showMsg(t, frac) {
+    var m = $("flowmsg"); if (!m) return;
+    m.classList.remove("hide");
+    var tx = $("flowmsgtxt"); if (tx) tx.textContent = t; else m.textContent = t;
+    var pr = $("flowprog"), pf = $("flowprogfill"), sp = $("flowspin");
+    if (typeof frac === "number" && isFinite(frac) && frac > 0 && frac < 1) {
+      if (pr) { pr.classList.remove("hide"); pr.setAttribute("aria-valuenow", String(Math.round(frac * 100))); }
+      if (pf) pf.style.width = Math.max(2, Math.min(100, frac * 100)).toFixed(1) + "%";
+      if (sp) sp.style.display = "none";          // determinate → bar carries the signal
+    } else {
+      if (pr) pr.classList.add("hide");
+      if (sp) sp.style.display = "";              // indeterminate → spinner
+    }
+    // no video yet -> collapse the tall empty canvas to a compact loading card (never a black void)
+    var st = CANVAS && CANVAS.parentElement; if (st && !SEQ) st.classList.add("warming");
+  }
+  function hideMsg() {
+    var m = $("flowmsg"); if (m) m.classList.add("hide");
+    var st = CANVAS && CANVAS.parentElement; if (st) st.classList.remove("warming");  // video present -> full canvas
+  }
   function buildLegend(classes) {
     var lg = $("flowlegend"); if (!lg) return;
     if (lg.dataset.n === String(classes.length) && classes.length) { syncLegendActive(); return; }
@@ -526,7 +551,7 @@
       var meta = (window.__flow || {}).ready;
       if (meta && meta.ok && !SEQ) fetchSequence(meta);
       else if (!SEQ) {
-        showMsg(statusMsg(meta));
+        showMsg(statusMsg(meta), flowFrac(meta));
         // (#343) a fresh page load mid-render never receives the WS flow_ready ping (it only
         // fires on completion) — ask the API directly; a 202 carries live pair-progress.
         fetchSequence(null);

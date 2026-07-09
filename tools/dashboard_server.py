@@ -209,8 +209,11 @@ class Config:
     witness_dpi: int = 80
     flow_enable: bool = True
     flow_best_ema_name: str = "levelset_witness_ema_BEST.npz"  # the checkpoint the 600-pass renders
-    flow_seq_downsample: int = 4         # field downsample (384x512 -> 96x128) for the video payload
-    flow_seq_jpeg_q: int = 62            # JPEG quality for the per-frame witness-render layer
+    flow_seq_downsample: int = 2         # field downsample (512x384 native -> 256x192) — the max res whose
+                                         # 600-frame decoded client cache (4*w*h*600 u8 ~= 118 MB at ds2)
+                                         # stays under mobile-Safari's tab-reap ceiling. ds1 (full native
+                                         # 512x384) is ~472 MB decoded -> needs client LRU eviction first.
+    flow_seq_jpeg_q: int = 85            # JPEG quality for the per-frame witness-render layer (sharper backdrop)
     flow_seq_frag_levels: int = 32       # margin-fragility quantization (PNG-compressibility)
     flow_seq_hard_k: int = 6             # hardest/most-diverse Tab-2 pairs to select
     flow_seq_min_interval_s: float = 900.0   # do not re-render within 15 min even if ckpt mtime flaps
@@ -293,8 +296,8 @@ def config_from_env() -> Config:
         witness_dpi=int(e("DASH_WITNESS_DPI", "80")),
         flow_enable=e("DASH_FLOW_ENABLE", "1") not in ("0", "false", "False"),
         flow_best_ema_name=e("DASH_FLOW_BEST_EMA_NAME", "levelset_witness_ema_BEST.npz"),
-        flow_seq_downsample=int(e("DASH_FLOW_SEQ_DOWNSAMPLE", "4")),
-        flow_seq_jpeg_q=int(e("DASH_FLOW_SEQ_JPEG_Q", "62")),
+        flow_seq_downsample=int(e("DASH_FLOW_SEQ_DOWNSAMPLE", "2")),  # ds1=full native but ~472MB decoded (mobile-unsafe)
+        flow_seq_jpeg_q=int(e("DASH_FLOW_SEQ_JPEG_Q", "85")),
         flow_seq_frag_levels=int(e("DASH_FLOW_SEQ_FRAG_LEVELS", "32")),
         flow_seq_hard_k=int(e("DASH_FLOW_SEQ_HARD_K", "6")),
         flow_seq_min_interval_s=float(e("DASH_FLOW_SEQ_MIN_INTERVAL_S", "900.0")),
@@ -2530,8 +2533,24 @@ overflow:hidden;margin:0 0 12px}
 .flowstage canvas{display:block;width:100%;height:auto;aspect-ratio:512/384;image-rendering:auto;
 touch-action:none}
 .flowmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
-padding:20px;font-size:12.5px;color:var(--muted);line-height:1.6;pointer-events:none}
+padding:20px;pointer-events:none}
 .flowmsg.hide{display:none}
+/* graceful loading panel — never a silent black void: spinner + determinate bar + readable text on a card */
+.flowload{display:flex;flex-direction:column;align-items:center;gap:13px;max-width:440px;
+background:rgba(14,16,20,.74);border:1px solid var(--line);border-radius:12px;padding:20px 24px}
+.flowspin{width:26px;height:26px;border-radius:50%;border:2.5px solid rgba(226,232,240,.16);
+border-top-color:#5ab0ff;animation:flowspin .9s linear infinite}
+.flowmsgtxt{font-size:12.5px;color:var(--fg);line-height:1.55}
+.flowprog{width:230px;height:5px;border-radius:3px;background:rgba(226,232,240,.12);overflow:hidden}
+.flowprog.hide{display:none}
+.flowprogfill{height:100%;width:0;background:linear-gradient(90deg,#5ab0ff,#46d3a0);border-radius:3px;
+transition:width .4s ease}
+/* warmup: no video yet -> hide the tall empty canvas, show a compact loading card (never a big black void) */
+.flowstage.warming{padding:36px 16px 32px}
+.flowstage.warming canvas{display:none}
+.flowstage.warming .flowmsg{position:static;padding:0}
+@keyframes flowspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.flowspin{animation:none;border-top-color:#5ab0ff}}
 .flowctl{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;background:var(--panel2);
 border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:0 0 12px}
 @media(min-width:680px){.flowctl{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -3084,7 +3103,13 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
   </div>
   <div class="flowstage">
     <canvas id="flowcanvas" role="img" aria-label="n600 witness drive video — partition / SegNet / disagreement"></canvas>
-    <div class="flowmsg" id="flowmsg">the first n600 video renders on the next best checkpoint (~14&nbsp;min governed pass)&hellip;</div>
+    <div class="flowmsg" id="flowmsg">
+      <div class="flowload">
+        <div class="flowspin" id="flowspin" aria-hidden="true"></div>
+        <div class="flowmsgtxt" id="flowmsgtxt">the first n600 video renders on the next best checkpoint (~14&nbsp;min governed pass)&hellip;</div>
+        <div class="flowprog hide" id="flowprog" role="progressbar" aria-label="render progress"><div class="flowprogfill" id="flowprogfill"></div></div>
+      </div>
+    </div>
   </div>
   <div class="flowscrub">
     <button class="flowplay" id="flowplay" aria-pressed="false">&#9654; play</button>
