@@ -11676,3 +11676,26 @@ LPPN lets the placement live below R's averaging grid. So the AMBER re-open = TW
   (B) **[staged] LPPN arbitrary-res decode** = the #149 camera-res placement, gated on (A) + #205 SDF-wall trigger.
 **verdict_scope: n/a (positive design/unblock, no negative verdict).** Pointer 0.19110 UNMOVED. NO heavy launch
 (the A/B that proves the fix un-collapses the AMBER is operator-GO gated; the FIX itself is $0 default-off code).
+
+---
+## FEED-crux-7dim (2026-07-09) — THE boundary-band-flip crux = joint optimal placement over 7 dims, recursive-fractal
+**Operator:** *"Boundary band flip at the right scale and res and time and direction and chroma and luma and
+place is the crux. And we have all deep math and geometry and engineering in place to do optimally along all
+dimensions recursive fractal."* THIS is the master d_seg objective. The residual d_seg IS one object — the flip
+of a codim-1 boundary-band pixel — living in a PRODUCT SPACE of 7 dimensions, each with BUILT machinery (MEASURED,
+not aspirational):
+| dim | built machinery (artifact) |
+|---|---|
+| **scale** | curvelet multi-scale basis (#212 Metal kernel, Candès-Donoho) + coarse→fine curriculum = persistence order = anneal |
+| **res** | #149 camera-res sub-pixel placement (flip at 874×1164 BEFORE downsample D averages) + LPPN arbitrary-res decode (cells2pixels) |
+| **time** | ξ/se(3) Lie engine (#193/#194) + keyframe+warp (#148, ~0.33px drift) + horizon-ξ ego-rigid (today) |
+| **direction** | all-class directional (anisotropic/curvelet) basis = the #1 lever (−48% d_seg) + along-tangent freq (#277) |
+| **chroma** | chroma DOF (#276) + `chroma_boundary` loss term (live in trainer) — SegNet reads RGB → chroma flips argmax |
+| **luma** | luma carrier + seg/luma coupling |
+| **place** | margin field = Fisher surrogate (Pearson 0.978) + annulus (#333, ~97% d_seg in 4.7% band) + sub-pixel t-localizer (#275) + d_seg_aware_taper (just built) |
+**JOINT + RECURSIVE-FRACTAL:** the costate controller (#247) is the joint optimizer OVER the per-dim levers; curvelet
+SELF-SIMILARITY across scale makes the {direction×place} placement SCALE-RECURSIVE (fractal — same optimization at
+each octave). The training-collapse FIX (P0) is precisely what lets the JOINT descent (all 7 dims co-adapting)
+CONVERGE — the AMBER's win was joint through-R descent; the fix unblocks it. **All in-flight work maps here:**
+build-wave levers = the per-dim actuators; collapse-fix = the joint-descent enabler; LPPN/AMBER = the res+scale
+generative vehicle. Pointer 0.19110 UNMOVED (this is the objective, a MEANS until a byte-closed row). NO heavy launch.
