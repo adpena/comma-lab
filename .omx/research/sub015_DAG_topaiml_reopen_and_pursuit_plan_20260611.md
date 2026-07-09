@@ -12058,3 +12058,20 @@ papers are prior-art confirmations, no EmpiricalAnchor without a measured row of
 line) · #379 P0-P6 done, P7 in flight · #380 in_progress (P0 running) · NEW: owed-before-launch
 build task (owed-1 repaired pose-gate + dry-start gate + speed-stack wall-clock budget,
 launch-blocking) + dual-chain comparison-brief task (fires when both sealed + P7s done).
+
+## FEED-crucible3-P0 (2026-07-09) — crucible-3 (v8 final form, #380) P0 GROUNDED; P1 wave-1 dispatched
+**Trajectory point (apparatus; commit 6b37636f5 — its message omitted the [no-triality] marker, recorded
+here instead per the FEED-crucible2-seal-legs disposition pattern):** crucible-3 P0 landed under
+`.omx/research/t5_crucible3/` — CONVENING (charter, P0→P7 + P8 dual-chain wall, 6 operator bindings
+verbatim, standing failure-mode checks from crucible-2's 9-finding history) + DELTA_GROUNDING (13-section
+evidence pack: rate ledger 0.061-dominant/0.140-complete/**0.079 residual-coder gap = THE NAMED ENEMY**,
+Laguerre parsimony #284, chart-selection law, Road/Lane 0.0275 HELD, Movable 0.00344, scorer-rule facts,
+banked R1 pose 0.001610/7.2KB + store-nothing mandate, sealed v7.5.2 as the baseline-to-beat; 3 conjectures
+honestly tagged UNSOURCED-VERIFY-IN-P4, never guessed) + ORCHESTRATION_LEDGER (6-seat roster incl. S6
+STRUCTURE-BLIND targeting the 41-edge-vs-5-field aspirational-label residue). **P1 wave-1 (S1/S2/S3)
+dispatched** — independent positive-design positions, every-knob-a-VALUE, TBD forbidden. Parallel v7.5.2
+follow-up (operator GO "any necessary follow-up work... new building and wiring"): #383 pose-gate build +
+#384 owed gates (bounded dry-start / wall-clock budget / owed-14 replay / owed-15 isolation CONFIGS-only)
++ P7 SPEC_v752 all in flight. Triality legs: DAG=this FEED; DSL/equations owned by the build agents'
+same-commit legs (P7 typed program, #383 Lever, #384 tools) — convening docs themselves carry no lever/law.
+Pointer 0.19110 UNMOVED (means). Dual-chain wall standing: both sealed → #385 comparison brief → operator GO.
