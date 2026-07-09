@@ -40,6 +40,15 @@ SEED_ROWS: tuple[tuple, ...] = (
      "BUILT + FIREABLE: DSL HorizonWeightedMargin factory + trainer loss term (L4953) + reference twin "
      "tac.boundary_math.horizon_weighted_margin + eq horizon_weighted_margin_hinge_v1. NEVER-FIRED: owed "
      "a CONVERGED n600 byte-close A/B (surviving flips must shift to HIGHER GT margin, else terminal)."),
+    ("seg_chroma_boundary_276", None, al.SIG_LABEL_UNMEASURED, "d_seg",
+     "LEVER-4c / chroma DOF probe a3e9f0bd / #276 chroma-DOF / DAG FEED-chromalever",
+     "0-byte annulus chroma-boundary MATCH (w*mean_ann ||chroma(f1)-chroma(GT)||^2 on the SHARED "
+     "realized-through-R render; chroma=rgb-BT.601-luma = LUMA-INVARIANT). BUILT + FIREABLE: DSL "
+     "SegChromaBoundary factory + trainer loss term (L4933) + reference twin "
+     "tac.boundary_math.chroma_boundary_match + eq chroma_boundary_annulus_match_hinge_v1. DOF MEASURED "
+     "(removal ablation: 7.54% Lane->Road + 4.38% Movable->Undriv, 93.4% in margin<1 annulus) but the "
+     "ADD-BACK score ΔS is UNMEASURED -> duty-to-ESTIMATE inside v7.5, then a CONVERGED n600 byte-close "
+     "A/B (surviving annulus flips must shift toward GT chroma, else terminal). NEVER-FIRED."),
     ("StepNativeActivation", 0.013, al.SIG_LABEL_MEASURED, "d_seg",
      "activation screen / FINER -4.5% n600 / relative_significance_reaudit_20260708 #3",
      "step-native / FINER++ vs sine; -18.7% n100 -> -4.5% n600; adopt-verdict OWED (screen is LIVE). "

@@ -219,6 +219,10 @@ from tac.canonical_equations.horizon_weighted_margin_20260709 import (
     build_horizon_weighted_margin_v1,
     populate_horizon_weighted_margin_equation,
 )
+from tac.canonical_equations.chroma_boundary_match_20260709 import (
+    build_chroma_boundary_annulus_match_hinge_v1,
+    populate_chroma_boundary_annulus_match_equation,
+)
 from tac.canonical_equations.lane_band_res_entropy_stage_20260707 import (
     build_lane_band_res_entropy_stage_v1,
     measured_entropy_stage_delta_bytes,
@@ -374,6 +378,8 @@ __all__ = [
     "populate_witness_pose_grad_coeff_stability_equation",
     "build_horizon_weighted_margin_v1",
     "populate_horizon_weighted_margin_equation",
+    "build_chroma_boundary_annulus_match_hinge_v1",
+    "populate_chroma_boundary_annulus_match_equation",
     "build_lane_band_res_entropy_stage_v1",
     "measured_entropy_stage_delta_bytes",
     "populate_lane_band_res_entropy_stage_equation",
