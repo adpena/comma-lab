@@ -1,0 +1,316 @@
+#!/usr/bin/env python3
+"""Stop-hook: auto-push `main` to origin at turn boundaries — so pushing is structural, not remembered.
+
+Operator directive 2026-07-09: *"We should regularly commit and push to main moving forward because we
+will have another agent working on an orthogonal data viz Marimo project and we want it to have full
+context into the amazing work you are doing."* + *"We could add an automatic hook so you don't have to
+think about it."*
+
+This fires on the Claude Code **Stop** hook (end of each assistant turn — a natural batch boundary). The
+common case (main ahead of origin, diff clean) pushes silently. The rare case (the diff trips the
+secret/fleet-IP scan) HOLDS the push and logs a loud warning instead — never leak. It is **fail-open**:
+any error exits 0 so it can never block a turn; the worst failure mode is "did not push" (safe direction),
+never "pushed something it shouldn't" or "wedged the session".
+
+Guardrails (from CLAUDE.md "Public Disclosure Hygiene" + the standing memory
+`regularly-commit-push-main-for-parallel-marimo-agent`): contest IP is open-source (contest closed) but
+OPERATIONAL hygiene stays — Tailscale-fleet IPs (100.64.0.0/10 CGNAT), credentials, private keys, API
+tokens must never reach the public `origin/main`. The scan below is the gate; a hit holds the push.
+
+Design decisions:
+  * Only ever touches branch `main` (the sole source of truth). Any other checked-out branch => no-op.
+  * Cheap no-op when not ahead: one local `git rev-list --count` — no network unless there's work to push.
+  * Never rebases/merges autonomously. A non-fast-forward rejection (someone else pushed) is logged for
+    manual reconcile, not silently force-resolved.
+  * Skips while a rebase/merge is mid-flight (an inconsistent HEAD must not be pushed).
+  * Durable log at .omx/state/auto_push.log (append; never /tmp).
+
+Usage: wired as a Stop hook in .claude/settings.json. `--dry-run` reports the decision without pushing.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+# Loop-safety marker: the HEAD we last surfaced a HOLD/push-failure for, so we
+# warn at most once per drift state (belt-and-suspenders with stop_hook_active).
+_MARKER = ".omx/state/auto_push_marker.json"
+
+
+def _repo_root() -> Path:
+    import os
+    env = os.environ.get("CLAUDE_PROJECT_DIR")
+    if env and Path(env, ".git").exists():
+        return Path(env)
+    try:
+        out = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True,
+                             text=True, timeout=10).stdout.strip()
+        if out:
+            return Path(out)
+    except Exception:
+        pass
+    return Path(__file__).resolve().parents[1]
+
+
+def _git(root: Path, *args: str, timeout: float = 30.0) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=str(root), capture_output=True, text=True, timeout=timeout)
+
+
+# Secret / fleet-hygiene patterns. A HIT holds the push. Tuned to be specific (require a key-name prefix
+# or a known token shape) so ordinary code/sha256 hashes do not false-positive; when unsure the safe
+# direction is to HOLD (fail-safe), and the operator pushes manually after a glance.
+_SCAN = [
+    ("tailscale_fleet_ip", re.compile(r"\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}\b")),
+    ("private_key_block", re.compile(r"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")),
+    ("aws_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("github_token", re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{30,}\b")),
+    ("openai_key", re.compile(r"\bsk-[A-Za-z0-9]{20,}\b")),
+    ("slack_token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b")),
+    ("generic_secret_assignment", re.compile(
+        r"(?i)(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|vast_api_key|password|passwd)"
+        r"\s*[=:]\s*[\"']?[A-Za-z0-9/+_\-]{16,}")),
+]
+
+
+def scan_diff(diff_text: str) -> list[tuple[str, str]]:
+    """Return [(pattern_name, redacted_sample), ...] for every scan hit in the diff (added+context)."""
+    hits: list[tuple[str, str]] = []
+    for name, rx in _SCAN:
+        m = rx.search(diff_text)
+        if m:
+            s = m.group(0)
+            redacted = (s[:6] + "…" + s[-2:]) if len(s) > 10 else "…"
+            hits.append((name, redacted))
+    return hits
+
+
+def _log(root: Path, msg: str) -> None:
+    try:
+        import datetime
+        line = f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')} {msg}\n"
+        p = root / ".omx" / "state" / "auto_push.log"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "a") as f:
+            f.write(line)
+    except Exception:
+        pass
+
+
+def _marker_head(root: Path) -> str:
+    try:
+        return json.loads((root / _MARKER).read_text()).get("warned_head", "")
+    except Exception:
+        return ""
+
+
+def _write_marker(root: Path, head: str) -> None:
+    try:
+        import datetime
+        p = root / _MARKER
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({
+            "warned_head": head,
+            "at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+        }))
+    except Exception:
+        pass
+
+
+# --- fmtools ADVISORY second layer (on-device Apple FM; tighten-only; NEVER an authority) ------------
+# The deterministic _SCAN regex above is the AUTHORITATIVE floor (it alone decides push-vs-hold on the
+# known high-risk shapes). This layer is a semantic SECOND OPINION for NOVEL/contextual secrets the regex
+# cannot pattern-match. Firewall (memory `reference-apple-ondevice-fm-fmtools-classifier-capability`,
+# #259): the on-device FM is ADVISORY, NEVER a score/verdict authority. Here it is allowed to ADD a hold
+# (tighten) but can NEVER permit a push the regex blocked, and its absence/timeout/error ⇒ regex-only
+# (fail-open to push). A held push is a REVERSIBLE, cheap safety pause (one manual `git push`), so for a
+# leak gate — where a false-negative = a PUBLIC leak but a false-positive = one manual push — letting the
+# FM tighten is the correct risk posture, and it does not make the FM a verdict authority.
+# Isolation per the established dashboard_fm_events / triality_drift_detector pattern: the FM runs under
+# the SEPARATE fmtools venv in a SUBPROCESS — the pact venv gains ZERO deps.
+_FM_SECRET_SCRIPT = r'''
+import asyncio, json, sys
+try:
+    import apple_fm_sdk as fm
+    from fmtools import local_extract
+except Exception:
+    print("{}"); raise SystemExit(0)
+
+@fm.generable()
+class SecretCheck:
+    verdict: str = fm.guide(anyOf=["secret", "clean"],
+        description="'secret' if the text contains real sensitive content that must not be public; else 'clean'.")
+    category: str = fm.guide(anyOf=["none", "credential", "private_ip_or_host", "api_key_or_token", "private_key", "other"],
+        description="The kind of sensitive content found, or 'none'.")
+    reason: str = fm.guide(description="A short phrase naming what was found, or empty.")
+
+@local_extract(SecretCheck, retries=1, instructions=(
+    "You inspect ADDED source-diff lines about to be pushed to a PUBLIC GitHub repo. Return 'secret' ONLY "
+    "for genuinely sensitive content that must never be public: real credentials, passwords, API keys or "
+    "tokens, private-key material, or PRIVATE/INTERNAL infrastructure IPs (e.g. Tailscale CGNAT "
+    "100.64.0.0/10) or internal hostnames. Return 'clean' for ordinary code, public URLs, documentation, "
+    "sha256/hex hashes, and example/placeholder values such as <tailscale-ip>, REDACTED, or an IP range "
+    "shown illustratively in docs. This is an OPEN-SOURCE research project, so the research CONTENT itself "
+    "(math, methods, ideas) is fine to publish — flag secrets and private-infra ONLY, never ideas. When "
+    "genuinely uncertain whether something is a real secret, lean 'secret' (a held push is cheaply released)."))
+async def _check(diff_added_text: str) -> SecretCheck:
+    """(instructions above)"""
+
+async def _main():
+    try:
+        text = sys.stdin.read()[:6000]
+    except Exception:
+        print("{}"); return
+    if not text.strip():
+        print("{}"); return
+    try:
+        r = await _check(text)
+        print(json.dumps({
+            "contains_secret": (str(getattr(r, "verdict", "") or "").lower() == "secret"),
+            "category": str(getattr(r, "category", "") or ""),
+            "reason": str(getattr(r, "reason", "") or ""),
+        }))
+    except Exception:
+        print("{}")
+
+asyncio.run(_main())
+'''
+
+
+def _fm_python() -> str | None:
+    """The fmtools-venv interpreter (env override → DASH_FM_PYTHON → the known default).
+    None when absent — the advisory layer is then silently OFF (regex-only)."""
+    import os
+    for cand in (os.environ.get("AUTO_PUSH_FM_PYTHON"),
+                 os.environ.get("DASH_FM_PYTHON"),
+                 os.path.expanduser("~/Projects/fmtools/.venv/bin/python")):
+        if cand and os.path.exists(cand):
+            return cand
+    return None
+
+
+def fm_secret_advisory(added_text: str, timeout: float = 12.0) -> dict | None:
+    """Run the on-device FM secret classifier on the diff's ADDED lines. Returns a dict
+    {contains_secret, category, reason} or None (fail-silent on any absence/error/timeout)."""
+    fm_py = _fm_python()
+    if not fm_py or not added_text.strip():
+        return None
+    try:
+        proc = subprocess.run([fm_py, "-c", _FM_SECRET_SCRIPT], input=added_text,
+                             capture_output=True, text=True, timeout=timeout)
+        if proc.returncode != 0:
+            return None
+        out = json.loads(proc.stdout.strip() or "{}")
+        return out if isinstance(out, dict) and out else None
+    except Exception:
+        return None
+
+
+def _added_lines(diff_text: str, cap: int = 6000) -> str:
+    """The '+' added lines of a unified diff (drop the +++ header lines), capped for the FM window."""
+    added = [ln[1:] for ln in diff_text.splitlines() if ln.startswith("+") and not ln.startswith("+++")]
+    return "\n".join(added)[:cap]
+
+
+def _block_reason(verdict: dict) -> str:
+    """The transcript-surfaced message for a HOLD / push-failure (needs my action)."""
+    if verdict.get("action") == "hold":
+        return (
+            f"Auto-push HELD: the outgoing diff (origin/main..{verdict.get('ahead')} commit(s)) tripped "
+            f"the operational-hygiene scan — {verdict.get('hits')}. NOT pushed (fail-safe: never leak a "
+            f"fleet IP / credential to the public remote). Review the flagged content; if benign, push by "
+            f"hand (git push origin main). Kill-switch: touch .omx/state/auto_push.disabled. "
+            f"Details in .omx/state/auto_push.log."
+        )
+    return (
+        f"Auto-push FAILED (git push origin main → rc={verdict.get('rc')}): {verdict.get('detail')}. "
+        f"origin/main likely moved (the parallel Marimo agent pushed) — reconcile manually "
+        f"(git pull --rebase origin main, resolve, git push). Not auto-rebasing (won't touch the working "
+        f"tree mid-session)."
+    )
+
+
+def run(dry_run: bool = False) -> dict:
+    """Core logic. Returns a small verdict dict (for --dry-run / tests). Never raises."""
+    root = _repo_root()
+
+    # Only ever push `main`; a feature/detached branch is out of scope.
+    branch = _git(root, "symbolic-ref", "--short", "HEAD").stdout.strip()
+    if branch != "main":
+        return {"action": "skip", "reason": f"branch={branch!r} not main"}
+
+    # Do not push a mid-flight rebase/merge (inconsistent HEAD).
+    for marker in ("rebase-merge", "rebase-apply", "MERGE_HEAD", "CHERRY_PICK_HEAD"):
+        if (root / ".git" / marker).exists():
+            return {"action": "skip", "reason": f"{marker} in progress"}
+
+    ahead = _git(root, "rev-list", "--count", "origin/main..main").stdout.strip()
+    if ahead in ("", "0"):
+        return {"action": "noop", "reason": "not ahead of origin/main"}
+
+    diff = _git(root, "diff", "origin/main..main", timeout=45).stdout
+    hits = scan_diff(diff)
+    if hits:
+        names = ", ".join(f"{n}({s})" for n, s in hits)
+        _log(root, f"HOLD ahead={ahead} — scan flagged: {names} — NOT pushed (manual review)")
+        print(f"[auto-push] HELD: unpushed diff flagged by hygiene scan: {names}. "
+              f"Reviewed+push manually if benign. (See .omx/state/auto_push.log)", file=sys.stderr)
+        return {"action": "hold", "ahead": ahead, "hits": names}
+
+    if dry_run:
+        return {"action": "would_push", "ahead": ahead, "hits": None}
+
+    head = _git(root, "rev-parse", "--short", "main").stdout.strip()
+    res = _git(root, "push", "origin", "main", timeout=90)
+    if res.returncode == 0:
+        _log(root, f"pushed origin/main -> {head} (was {ahead} ahead) [scan clean]")
+        return {"action": "pushed", "head": head, "ahead": ahead}
+    tail = (res.stderr or res.stdout or "").strip().replace("\n", " ")[-200:]
+    _log(root, f"push FAILED rc={res.returncode}: {tail} — manual reconcile (no auto-rebase)")
+    print(f"[auto-push] push failed (rc={res.returncode}): {tail}", file=sys.stderr)
+    return {"action": "push_failed", "rc": res.returncode, "detail": tail}
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--dry-run", action="store_true", help="report the decision without pushing")
+    args = ap.parse_args(argv)
+    try:
+        # Claude Code passes hook JSON on stdin; read it for the stop_hook_active
+        # re-entry flag (loop guard #1) and to never block on the pipe.
+        stop_hook_active = False
+        if not sys.stdin.isatty():
+            raw = ""
+            try:
+                raw = sys.stdin.read()
+            except Exception:
+                raw = ""
+            try:
+                stop_hook_active = bool(json.loads(raw).get("stop_hook_active")) if raw.strip() else False
+            except Exception:
+                stop_hook_active = False
+
+        verdict = run(dry_run=args.dry_run)
+        if args.dry_run:
+            print(f"[auto-push] {verdict}")
+            return 0
+
+        # The HAPPY path (pushed / noop / skip) is SILENT — no stdout — so the
+        # Stop-hook stream carries only a decision when one is warranted. run()
+        # has already logged + emitted a stderr note for hold/push_failed.
+        if verdict.get("action") in ("hold", "push_failed") and not stop_hook_active:
+            root = _repo_root()
+            head = _git(root, "rev-parse", "HEAD").stdout.strip()
+            if head and _marker_head(root) != head:  # loop guard #2: once per HEAD
+                _write_marker(root, head)
+                print(json.dumps({"decision": "block", "reason": _block_reason(verdict)}))
+    except Exception as exc:  # fail-open: never break a turn
+        print(f"[auto-push] non-fatal error (skipped): {exc}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
