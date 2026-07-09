@@ -926,6 +926,21 @@ class TelemetryCadence(ScheduleDisplay):
     curvature: bool = False
     curvature_k: int = 8
     curvature_k_pairs: int = 8
+    # (JACOBIAN BASIN, 2026-07-09) the ξ→PoseNet Jacobian conditioning basin sensor — an OBSERVER of
+    # render coherence (σ_min of J_ξ=∂PoseNet(R(θ,ξ))[:6]/∂ξ). Score-neutral read-only, so BOTH tiers
+    # DEFAULT ON per the 'off is a tracked queue' law: T0 (near-free ∇f0 proxy, every verdict) + T1 (the
+    # σ_min authority via mx.vjp, SUBSAMPLED to k_pairs stratified by |ego-t| + CADENCED every N-th
+    # verdict — the compute-cost tier holds its cadence knob, reason recorded). B1 byte-identical, B2
+    # fail-open, B5 OBSERVER-ONLY (the basin TRIGGER that would actuate the engage-point is a run-2 lever,
+    # NOT this sensor — see TerminalPoseFinish(start_event=...) + jacobian_basin.JACOBIAN_BASIN_ENTRY_TRIGGER).
+    jacobian_basin: bool = True
+    jacobian_basin_t0: bool = True
+    jacobian_basin_k_pairs: int = 32
+    jacobian_basin_every: int = 4
+    jacobian_basin_stratify_t: bool = True
+    jacobian_basin_sigma_floor: float = 1e-4
+    jacobian_basin_f_basin: float = 1.0
+    jacobian_basin_quorum_q: float = 0.8
 
     def flags(self) -> dict:
         f: dict = {
@@ -946,6 +961,17 @@ class TelemetryCadence(ScheduleDisplay):
             f["--curvature-telemetry"] = True
             f["--curvature-k"] = int(self.curvature_k)
             f["--curvature-k-pairs"] = int(self.curvature_k_pairs)
+        # (JACOBIAN BASIN, 2026-07-09) OBSERVER flags. BooleanOptionalAction on the trainer, so the DSL
+        # emits the affirmative flag (bool value); the registry drops the '--no-' negation on both sides.
+        f["--jacobian-basin-telemetry"] = bool(self.jacobian_basin)
+        if self.jacobian_basin:
+            f["--jacobian-basin-t0"] = bool(self.jacobian_basin_t0)
+            f["--jacobian-basin-k-pairs"] = int(self.jacobian_basin_k_pairs)
+            f["--jacobian-basin-every"] = int(self.jacobian_basin_every)
+            f["--jacobian-basin-stratify-t"] = bool(self.jacobian_basin_stratify_t)
+            f["--jacobian-basin-sigma-floor"] = float(self.jacobian_basin_sigma_floor)
+            f["--jacobian-basin-f-basin"] = float(self.jacobian_basin_f_basin)
+            f["--jacobian-basin-quorum-q"] = float(self.jacobian_basin_quorum_q)
         return f
 
 
@@ -2245,7 +2271,8 @@ def StoreNothingPoseCarrier(  # noqa: N802 — DSL constructor
 
 
 def TerminalPoseFinish(  # noqa: N802 — v7.5 D.9 (SPEC §D.9)
-    start_epoch: int, w_pose: float = 1.0, window: int = 0,
+    start_epoch: int, w_pose: float = 1.0, window: int = 0, *,
+    start_event: "str | None" = None, f_basin: float = 1.0,
 ) -> Lever:
     """v7.5 D.9 TERMINAL POSE-FINISH — the R1 TWO-PHASE sequence (SPEC §D.9; FEED-238resolved).
 
@@ -2268,6 +2295,30 @@ def TerminalPoseFinish(  # noqa: N802 — v7.5 D.9 (SPEC §D.9)
     muon TypedStage); this factory HOLDS the ``--pose-finish-start-epoch`` flag in the DSL (config-orphan
     discipline — 'the DSL HOLDS every designed lever', same as the ``Muon`` factory holds
     ``--muon-start-epoch``)."""
+    # (JACOBIAN BASIN actuator, 2026-07-09 — RUN-2, NOT built on run-1) ``start_event="jacobian_basin"``
+    # would ENGAGE the pose-finish when the ξ→PoseNet Jacobian basin forms (median σ_min ≥ f_basin·
+    # σ_min^plateau AND basin_frac ≥ q; see tac.witness_control.jacobian_basin.JACOBIAN_BASIN_ENTRY_TRIGGER)
+    # instead of TERMINALLY at the muon switch. This is a SCORE-AFFECTING actuation (it changes WHEN pose
+    # engages ⇒ changes the trained artifact), so per B5 it is a LEVER — default-off / duty-to-measure —
+    # that does NOT fire on run-1 (the basin sensor must be TRUSTED by measurement first; run-1 measures
+    # the σ_min(epoch) curve + the would-have-fired epoch as an OBSERVER). The trainer does NOT yet consume
+    # an event-triggered pose-finish start (TrainerSupportGap), so referencing it fail-loud here (never an
+    # invented flag): the DSL HOLDS the designed lever, and the run-2 resume-A/B on f_basin<1 builds it.
+    from tac.witness_control.jacobian_basin import JACOBIAN_BASIN_ENTRY_TRIGGER  # noqa: PLC0415
+    if start_event is not None:
+        if str(start_event) != JACOBIAN_BASIN_ENTRY_TRIGGER:
+            raise ValueError(
+                f"TerminalPoseFinish: start_event must be None or {JACOBIAN_BASIN_ENTRY_TRIGGER!r} "
+                f"(the basin ENTRY trigger), got {start_event!r}")
+        raise NotImplementedError(
+            "TerminalPoseFinish(start_event='jacobian_basin') is the RUN-2 basin-TRIGGERED actuator "
+            "(f_basin<1 = earlier engage). It is default-off / duty-to-measure and is NOT built on the "
+            "trainer for run-1 (B5: the basin sensor is an OBSERVER first; the pose-finish stays TERMINAL). "
+            "Build it in the run-2 resume-A/B against the run-1 σ_min(epoch) curve. f_basin=1.0 (the "
+            "run-1 default) IS the current terminal policy — use TerminalPoseFinish(start_epoch=...) "
+            "with no start_event.")
+    if not (0.0 < float(f_basin) <= 1.0):
+        raise ValueError(f"TerminalPoseFinish: f_basin must be in (0,1], got {f_basin!r}")
     if int(start_epoch) < 0:
         raise ValueError(f"TerminalPoseFinish: start_epoch must be >= 0, got {start_epoch!r}")
     if not (float(w_pose) > 0.0):

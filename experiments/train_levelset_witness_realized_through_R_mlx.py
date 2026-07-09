@@ -6113,6 +6113,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # SegNet forward (OFF => the original chunked call, byte-identical, no extra cost).
         # (SENSE) annulus path (opt-in) reuses the realized argmax from the same forward. All routed
         # through the shared _verdict_v tail; the flag-absent path is byte-identical.
+        # (JACOBIAN BASIN T0) near-free render-boundary-gradient-energy proxy on the ALREADY-rendered
+        # deploy f0s (mean|∇f0|²; the ∇source multiplicative J_R factor). Fail-open, row-only, never read
+        # into training => byte-identical. Every verdict (T1 σ_min rides the cadence in the main loop).
+        _jbasin_emit_t0(f0s, int(ep), _jbasin_cur_seg_form())
         return _verdict_v(f0s, f1s, ep=int(ep))
 
     # ---- MOD-DIM DYNAMICS telemetry (operator 2026-07-08; score-neutral observability DEFAULTS ON
@@ -6123,6 +6127,177 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _mdd_on = bool(getattr(args, "mod_dim_dynamics", True))
     _mdd_abl_on = bool(getattr(args, "mod_dim_ablation", True))
     _mdd_abl_k = int(getattr(args, "mod_dim_ablation_k", 32))
+
+    # ---- ξ→PoseNet Jacobian BASIN telemetry (OBSERVER; .omx/research/pose_jacobian_conditioning_basin_
+    # trigger_formalization_20260709.md + build memo pose_jacobian_basin_telemetry_build_20260709.md).
+    # T0 = render-boundary-gradient energy (near-free σ_min proxy, every verdict). T1 = σ_min/κ/r_eff/
+    # basin_frac of J_ξ=∂PoseNet(R(θ,ξ))[:6]/∂ξ via mx.vjp on a stratified k-pair subsample, cadenced.
+    # B1 score-neutral by construction (reads LIVE render + FROZEN PoseNet only; NEVER writes weights/
+    # optimizer/loss/gradient/RNG/EMA => BYTE-IDENTICAL). B2 fail-open (self-disable @3). B5 OBSERVER-ONLY
+    # (records would-have-fired epoch; does NOT actuate the pose-finish engage-point — that is a run-2 lever).
+    _jbasin_on = bool(getattr(args, "jacobian_basin_telemetry", True))
+    _jbasin_cfg: Any = None
+    _jbasin_geom: Any = None
+    _jb: Any = None
+    _jb_warp: Any = None
+    _jb_yuv6: Any = None
+    # mutable sensor state (NEVER read into training): consecutive-failure counter, self-disable latch,
+    # running σ_min plateau estimate (max median σ_min observed), T1 verdict counter (for the cadence).
+    _jbasin_state = {"fails": 0, "disabled": False, "plateau": 0.0, "t1_count": 0}
+    if _jbasin_on:
+        try:
+            from tac.witness_control import jacobian_basin as _jb  # noqa: PLC0415
+            _jbasin_cfg = _jb.JacobianBasinConfig(
+                t0=bool(getattr(args, "jacobian_basin_t0", True)), t1=True,
+                k_pairs=int(getattr(args, "jacobian_basin_k_pairs", 32)),
+                every=max(1, int(getattr(args, "jacobian_basin_every", 4))),
+                stratify_by_t=bool(getattr(args, "jacobian_basin_stratify_t", True)),
+                sigma_floor=float(getattr(args, "jacobian_basin_sigma_floor", 1e-4)),
+                f_basin=float(getattr(args, "jacobian_basin_f_basin", 1.0)),
+                quorum_q=float(getattr(args, "jacobian_basin_quorum_q", 0.8)))
+            _probs = _jbasin_cfg.validate()
+            if _probs:
+                raise ValueError("; ".join(_probs))
+            from tac.boundary_math.warp_real_luma_frame0 import (  # noqa: PLC0415
+                GroundHomographyGeom as _JBGeom, warp_frame0_native_mlx as _jb_warp)
+            from tac.local_acceleration.pr95_hnerv_mlx_training import (  # noqa: PLC0415
+                rgb_to_yuv6_mlx as _jb_yuv6)
+            _seg_hw = np.asarray(gt.lstars[0]).shape  # (SEG_H, SEG_W)
+            _jbasin_geom = _JBGeom.eon(native_hw=(int(_seg_hw[0]), int(_seg_hw[1])),
+                                       pitch=float(getattr(args, "gfc_pitch", -0.01))).mlx()
+            print(json.dumps({"stage": "jacobian_basin_setup", "k_pairs": int(_jbasin_cfg.k_pairs),
+                              "every": int(_jbasin_cfg.every), "stratify_by_t": bool(_jbasin_cfg.stratify_by_t),
+                              "f_basin": float(_jbasin_cfg.f_basin), "seg_hw": [int(_seg_hw[0]), int(_seg_hw[1])],
+                              "note": "OBSERVER-ONLY (records would-have-fired; does NOT actuate the "
+                              "engage-point on run-1); B1 byte-identical, B2 fail-open, B5 terminal trigger "
+                              "unchanged. NON-PROMOTABLE (MLX advisory)."}), flush=True)
+        except Exception as exc:  # setup failure => sensor OFF, run byte-identical (B2 fail-open).
+            print(json.dumps({"stage": "jacobian_basin_skip", "epoch": -1, "which": "setup",
+                              "error": f"{type(exc).__name__}: {exc}",
+                              "note": "basin setup failed => sensor OFF (fail-open; training unaffected)"}),
+                  flush=True)
+            _jbasin_on = False
+
+    def _jbasin_active() -> bool:
+        return bool(_jbasin_on and not _jbasin_state["disabled"] and _jbasin_cfg is not None)
+
+    def _jbasin_cur_seg_form() -> str:
+        """Best-effort current curriculum stage for the telemetry row. ``seg_form`` is a loop-scope
+        cell UNBOUND at the pre-loop baseline verdict (v0) => fall back to 'baseline' (never raises)."""
+        try:
+            return str(seg_form)
+        except NameError:
+            return "baseline"
+
+    def _jbasin_note_fail(exc: Exception, ep: int, tag: str) -> None:
+        """B2 fail-open: log a typed skip row, bump the consecutive-failure counter, self-disable at 3."""
+        _jbasin_state["fails"] += 1
+        print(json.dumps({"stage": "jacobian_basin_skip", "epoch": int(ep), "which": tag,
+                          "error": f"{type(exc).__name__}: {exc}",
+                          "consecutive_fails": int(_jbasin_state["fails"]),
+                          "axis": "[macOS-MLX advisory] NON-PROMOTABLE"}), flush=True)
+        if _jbasin_state["fails"] >= 3:
+            _jbasin_state["disabled"] = True
+            print(json.dumps({"stage": "jacobian_basin_disabled", "epoch": int(ep),
+                              "note": "3 consecutive sensor failures => self-disabled (B2 fail-open; the "
+                              "run remains byte-identical to no-telemetry)"}), flush=True)
+
+    def _jbasin_emit_t0(f0s_np: list, ep: int, seg_form: str) -> None:
+        """T0 (near-free): mean|∇f0|² over the verdict's ALREADY-rendered f0 frames, every verdict. The
+        ∇source multiplicative factor in J_R (a monotone σ_min proxy). Fail-open; row-only; never read
+        into training => byte-identical."""
+        if not _jbasin_active() or not bool(_jbasin_cfg.t0) or not f0s_np:
+            return
+        try:
+            fields = _jb.t0_fields([np.asarray(f) for f in f0s_np])
+            print(json.dumps({"stage": "jacobian_basin_t0", "epoch": int(ep), "seg_form": str(seg_form),
+                              **fields, "axis": "[macOS-numpy advisory] NON-PROMOTABLE",
+                              "note": "T0 render-boundary-gradient energy = near-free σ_min PROXY "
+                              "(∇source is the multiplicative J_R factor); OBSERVER-ONLY."}), flush=True)
+            _jbasin_state["fails"] = 0
+        except Exception as exc:
+            _jbasin_note_fail(exc, ep, "t0")
+
+    def _jbasin_render_pair_srcs(pi: int):
+        """Render the FIXED (stop-grad) scorer-res f0/f1 sources for pair ``pi`` via the SAME MLX render
+        the loss uses (code_idx even=f0, odd=f1). θ is frozen here — the ξ-dependence enters via the warp
+        in ``_jbasin_p_of_xi``. Returns ((H,W,3), (H,W,3)) MLX arrays (stop-grad)."""
+        import mlx.core as mx  # noqa: PLC0415
+        # _cf_mx(pi) = the SAME per-pair render feats the loss uses (shared base grid when
+        # self-orient/gfc OFF; the per-pair cache otherwise) => a faithful witness render.
+        _cf = _cf_mx(int(pi))
+        f0 = _render_R(model, _cf, int(2 * pi), render_h, render_w)      # (1,H,W,3)
+        f1 = _render_R(model, _cf, int(2 * pi + 1), render_h, render_w)  # (1,H,W,3)
+        return mx.stop_gradient(f0[0]), mx.stop_gradient(f1[0])
+
+    def _jbasin_p_of_xi(f0_src, f1_src):
+        """Build p(ξ)=PoseNet(R(θ,ξ))[:6]: warp the FIXED f0 source by ξ (the only differentiable input),
+        compose with the FIXED f1, YUV6, FROZEN PoseNet. Mirrors src/tac/boundary_math/
+        levelset_micro_batch_loss.single_realized_loss's pose path exactly."""
+        import mlx.core as mx  # noqa: PLC0415
+
+        def p_of_xi(xi):
+            f0w = _jb_warp(f0_src, xi, _jbasin_geom)                 # (H,W,3) differentiable in ξ
+            pair = mx.stack([f0w, f1_src], axis=0)[None]            # (1,2,H,W,3)
+            yuv = _jb_yuv6(pair)                                    # (1,2,h2,w2,6)
+            _b, _t, _h2, _w2, _c6 = yuv.shape
+            yuv_nhwc = mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (_b, _h2, _w2, _t * _c6))
+            return adapter.posenet(yuv_nhwc)["pose"][0, :_jb.N_POSE]  # (6,)
+        return p_of_xi
+
+    def _jbasin_emit_t1(ep: int, seg_form: str) -> None:
+        """T1 (authoritative, cadenced): σ_min/κ/r_eff/basin_frac of J_ξ over a |ego-t|-stratified k-pair
+        subsample, via mx.vjp (6 VJPs/pair). Renders its own k pairs (θ FROZEN); the ξ-base point is 0
+        (identity warp = observability of infinitesimal ego-motion, spec §2). OBSERVER-ONLY: records the
+        would-have-fired epoch against the running σ_min plateau; does NOT actuate. Fail-open; row-only."""
+        if not _jbasin_active() or not bool(_jbasin_cfg.t1):
+            return
+        _jbasin_state["t1_count"] += 1
+        if _jbasin_state["t1_count"] % int(_jbasin_cfg.every) != 0:
+            return
+        try:
+            import mlx.core as mx  # noqa: PLC0415
+            n = len(vpairs)
+            if _jbasin_cfg.stratify_by_t:
+                motions = [_jb.motion_magnitude(gt.gt_poses[pi]) for pi in vpairs]
+                sub = _jb.stratified_indices_by_motion(motions, int(_jbasin_cfg.k_pairs))
+            else:
+                sub = list(range(min(int(_jbasin_cfg.k_pairs), n)))
+            xi0 = np.zeros(_jb.N_POSE, dtype=np.float32)  # base point: identity warp (observability@rest)
+            conds = []
+            f0_np_list = []
+            for si in sub:
+                pi = int(vpairs[si])
+                f0_src, f1_src = _jbasin_render_pair_srcs(pi)
+                mx.eval(f0_src, f1_src)
+                f0_np_list.append(np.asarray(f0_src, dtype=np.float64))
+                jac = _jb.jacobian_xi(_jbasin_p_of_xi(f0_src, f1_src), xi0, mx=mx)
+                conds.append(_jb.conditioning(jac))
+            agg = _jb.aggregate_conditioning(conds, sigma_floor=float(_jbasin_cfg.sigma_floor))
+            # running σ_min plateau estimate (max median σ_min seen); the would-fire answer is PROVISIONAL
+            # live (the plateau is only KNOWN offline at run end from the per-stage checkpoints, spec §5).
+            if agg["median_sigma_min"] > _jbasin_state["plateau"]:
+                _jbasin_state["plateau"] = float(agg["median_sigma_min"])
+            would_fire = _jb.would_have_fired(
+                agg, plateau_est=float(_jbasin_state["plateau"]),
+                f_basin=float(_jbasin_cfg.f_basin), quorum_q=float(_jbasin_cfg.quorum_q))
+            t0_row = _jb.t0_fields(f0_np_list)  # T0 on the SAME k scorer-res frames (T0<->T1 calibration)
+            print(json.dumps({
+                "stage": "jacobian_basin", "epoch": int(ep), "seg_form": str(seg_form),
+                "k_pairs": int(len(sub)), **agg,
+                "sigma_min_plateau_est": float(_jbasin_state["plateau"]),
+                "f_basin": float(_jbasin_cfg.f_basin), "quorum_q": float(_jbasin_cfg.quorum_q),
+                "sigma_floor": float(_jbasin_cfg.sigma_floor),
+                "would_have_fired": would_fire, "actuated": False,
+                "t0_render_grad_energy": float(t0_row.get("render_grad_energy", 0.0)),
+                "axis": "[macOS-MLX advisory] NON-PROMOTABLE",
+                "note": "OBSERVER-ONLY (B5): σ_min basin sensor for the ξ→PoseNet Jacobian; "
+                "would_have_fired is PROVISIONAL (running-max plateau; finalized offline vs the actual "
+                "terminal). Pose-finish stays TERMINAL on run-1; the basin TRIGGER is a run-2 lever."}),
+                flush=True)
+            _jbasin_state["fails"] = 0
+        except Exception as exc:
+            _jbasin_note_fail(exc, ep, "t1")
 
     def _mdd_film_weights(deploy: dict) -> list:
         """Candidate FiLM input-weight matrices (main + per-layer) for the per-dim CONSUMPTION probe:
@@ -9148,6 +9323,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _project_shadow_film_np({k: np.asarray(vv, np.float32)
                                                  for k, vv in ema.shadow.items()}),
                         float(model.softmax_temp), float(model.hosc_beta))
+            # (JACOBIAN BASIN T1) authoritative σ_min conditioning of J_ξ on a stratified k-pair subsample,
+            # cadenced (every --jacobian-basin-every-th verdict). Main-thread + SYNCHRONOUS (reads the LIVE
+            # render + FROZEN PoseNet; NEVER off-thread => no train-stream race). OBSERVER-ONLY (B5):
+            # records would-have-fired; does NOT actuate the engage-point. Fail-open (B2); byte-identical
+            # (B1). Fires for BOTH the async and sync verdict branches (placed after the if/else).
+            _jbasin_emit_t1(int(ep), str(seg_form))
             if _prof is not None:
                 _prof["verdict_s"] += time.perf_counter() - _prof["_v0"]  # #252 profile: verdict wall-clock
             # ── (#292 build-3) CLOSED-LOOP decision point — SYNC-verdict path ONLY (M2 fix) ──
@@ -9843,6 +10024,47 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mod-dim-ablation-k", type=int, default=32,
                     help="(MOD-DIM DYNAMICS cut 3) K-pair sample size for the per-dim d_seg zero-ablation probe "
                     "(default 32; clamped to the verdict pair count). Read-only.")
+    # ── ξ→PoseNet Jacobian BASIN telemetry (OBSERVER; .omx/research/pose_jacobian_conditioning_basin_
+    #    trigger_formalization_20260709.md). Score-neutral read-only: T0 = render-boundary-gradient
+    #    energy (near-free σ_min proxy, every verdict); T1 = σ_min/κ/r_eff/basin_frac of J_ξ via mx.vjp
+    #    (subsampled + cadenced). B1 byte-identical by construction, B2 fail-open (self-disable @3), B5
+    #    OBSERVER-ONLY (records would-have-fired epoch; does NOT actuate the pose-finish engage-point). ──
+    ap.add_argument("--jacobian-basin-telemetry", action=argparse.BooleanOptionalAction, default=True,
+                    help="(JACOBIAN BASIN, DEFAULT ON — score-neutral read-only OBSERVER per CLAUDE.md "
+                    "\"'Off' is a tracked queue\") emit the ξ→PoseNet Jacobian conditioning basin sensor: "
+                    "T0 {stage:jacobian_basin_t0} render-boundary-gradient energy every verdict + T1 "
+                    "{stage:jacobian_basin} σ_min/κ/r_eff/basin_frac of J_ξ=∂PoseNet(R(θ,ξ))[:6]/∂ξ via "
+                    "mx.vjp on a stratified k-pair subsample every --jacobian-basin-every-th verdict. "
+                    "Reads the LIVE render + FROZEN PoseNet only; NEVER writes weights/optimizer/loss/"
+                    "gradient/RNG/EMA => BYTE-IDENTICAL trained artifact (B1). Fail-open (B2): any sensor "
+                    "error logs a {stage:jacobian_basin_skip} row + skips; self-disables after 3 "
+                    "consecutive failures. OBSERVER-ONLY (B5): records the epoch the basin criterion "
+                    "WOULD fire; does NOT change WHEN pose engages. --no-jacobian-basin-telemetry for a "
+                    "pure byte-identity A/B.")
+    ap.add_argument("--jacobian-basin-t0", action=argparse.BooleanOptionalAction, default=True,
+                    help="(JACOBIAN BASIN) the near-free T0 render-boundary-gradient-energy proxy "
+                    "(mean|∇f0|² + per-class), emitted every verdict. --no-jacobian-basin-t0 keeps only "
+                    "the cadenced T1 σ_min authority. Score-neutral read-only.")
+    ap.add_argument("--jacobian-basin-k-pairs", type=int, default=32,
+                    help="(JACOBIAN BASIN) T1 stratified subsample size (default 32; stratified by |ego-t| "
+                    "so the anti-correlated low-motion tail is represented). ~0.64× a verdict eval at 32.")
+    ap.add_argument("--jacobian-basin-every", type=int, default=4,
+                    help="(JACOBIAN BASIN) T1 cadence: compute σ_min every N-th verdict (default 4 => ~0.16× "
+                    "a verdict eval amortized). T0 rides every verdict. The σ_min(epoch) CURVE, not a "
+                    "single precise value, is what the basin needs, so a coarse cadence still resolves it.")
+    ap.add_argument("--jacobian-basin-stratify-t", action=argparse.BooleanOptionalAction, default=True,
+                    help="(JACOBIAN BASIN) stratify the T1 subsample by |ego-t| (default ON). "
+                    "--no-jacobian-basin-stratify-t uses the first k pairs (loses tail representation).")
+    ap.add_argument("--jacobian-basin-sigma-floor", type=float, default=1e-4,
+                    help="(JACOBIAN BASIN) σ_min floor for basin_frac = frac[σ_min ≥ floor] (default 1e-4). "
+                    "Observer-only criterion input.")
+    ap.add_argument("--jacobian-basin-f-basin", type=float, default=1.0,
+                    help="(JACOBIAN BASIN) relative basin threshold: would-fire when median σ_min ≥ "
+                    "f_basin·σ_min^plateau (default 1.0 = the current TERMINAL policy; f_basin<1 = the "
+                    "run-2 earlier-engage A/B HYPOTHESIS). OBSERVER-ONLY on run-1 (records, does not fire).")
+    ap.add_argument("--jacobian-basin-quorum-q", type=float, default=0.8,
+                    help="(JACOBIAN BASIN) quorum fraction for the would-fire criterion (basin_frac ≥ q; "
+                    "default 0.8) — guards a well-conditioned head over a still-starved low-motion tail.")
     ap.add_argument("--annulus-band", type=float, default=2.0,
                     help="(SENSE) fixed-threshold annulus = {px: |GT margin| < band} (SegNet-logit units). "
                     "Used only when --annulus-telemetry is set.")
