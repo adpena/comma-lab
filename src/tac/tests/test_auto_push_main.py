@@ -129,6 +129,26 @@ def test_gitleaks_scan_is_fail_open_when_config_absent(tmp_path):
     assert A.gitleaks_scan(tmp_path) is None
 
 
+# ------------------------------- FM prompt-echo filter -------------------------
+def test_fm_prompt_echo_detects_hallucinated_exemplar():
+    # The FM once echoed its own few-shot exemplar as a "finding" on a diff that did not
+    # contain it (2026-07-09). Reason cites the exemplar, scanned text lacks it -> echo.
+    reason = "DATABASE_URL = postgres://user:S3cr3tPw9x@host/db"
+    assert A._fm_prompt_echo(reason, "def compute_score(seg, pose, rate): ...") is True
+
+
+def test_fm_prompt_echo_passes_when_exemplar_truly_in_diff():
+    # If the diff GENUINELY contains the exemplar string, it is a real finding, not an echo.
+    reason = "embedded password S3cr3tPw9x"
+    scanned = "+DATABASE_URL = postgres://user:S3cr3tPw9x@host/db\n"
+    assert A._fm_prompt_echo(reason, scanned) is False
+
+
+def test_fm_prompt_echo_clean_reasons_untouched():
+    assert A._fm_prompt_echo("private fleet IP found", "ssh 100.96.1.2") is False
+    assert A._fm_prompt_echo("", "anything") is False
+
+
 # ------------------------------- integration smoke -----------------------------
 # All subprocess smokes pass --dry-run --no-fmtools: --dry-run guarantees NO push
 # side-effect; --no-fmtools skips the on-device FM subprocess (fast + deterministic

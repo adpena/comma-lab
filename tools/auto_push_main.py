@@ -207,9 +207,24 @@ def _fm_python() -> str | None:
     return None
 
 
+# Literals that appear ONLY in the FM prompt's few-shot exemplars above. A small on-device model can
+# ECHO its own exemplar back as a "finding" (observed 2026-07-09: flagged the fake DATABASE_URL exemplar
+# on a diff that contained no such string — 3rd instance of the self-reference class: regex exclusions →
+# gitleaks allowlist → the FM prompt itself). A finding whose reason cites an exemplar literal that is
+# NOT present in the scanned text is a prompt echo, not a detection, and is discarded.
+_FM_PROMPT_EXEMPLARS = ("S3cr3tPw9x", "100.101.102.103")
+
+
+def _fm_prompt_echo(reason: str, scanned_text: str) -> bool:
+    """True when the FM's reason quotes a prompt-exemplar literal absent from the scanned text
+    (hallucinated echo). If the diff GENUINELY contains the exemplar string, it still flags."""
+    return any(ex in (reason or "") and ex not in scanned_text for ex in _FM_PROMPT_EXEMPLARS)
+
+
 def fm_secret_advisory(added_text: str, timeout: float = 12.0) -> dict | None:
     """Run the on-device FM secret classifier on the diff's ADDED lines. Returns a dict
-    {contains_secret, category, reason} or None (fail-silent on any absence/error/timeout)."""
+    {contains_secret, category, reason} or None (fail-silent on any absence/error/timeout).
+    Prompt-echo findings (see _fm_prompt_echo) are downgraded to clean with a marker reason."""
     fm_py = _fm_python()
     if not fm_py or not added_text.strip():
         return None
@@ -219,7 +234,12 @@ def fm_secret_advisory(added_text: str, timeout: float = 12.0) -> dict | None:
         if proc.returncode != 0:
             return None
         out = json.loads(proc.stdout.strip() or "{}")
-        return out if isinstance(out, dict) and out else None
+        if not (isinstance(out, dict) and out):
+            return None
+        if out.get("contains_secret") and _fm_prompt_echo(str(out.get("reason", "")), added_text):
+            out = {**out, "contains_secret": False, "category": "none",
+                   "reason": f"fm-prompt-echo-discarded: {out.get('reason', '')}"}
+        return out
     except Exception:
         return None
 
