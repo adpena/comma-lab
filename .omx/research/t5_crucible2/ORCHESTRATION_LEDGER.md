@@ -165,6 +165,32 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
     detectable rolling-slope plateau" — honestly surfaced; ship-banked-R1 fallback covers it. Angle-4 fresh
     spot-checks PASS (R1 √(10·0.001610)=0.127 · wall-clock 42s/ep×{150,250,400}={1.75,2.9,4.67}h · 3·δ_R=0.0588 ·
     class-order Road0/Lane1/Undriv2/Movable3/MyCar4 · W_settle=4.6·(1/(1−0.997)/600)=2.55≈2.6). $0 · no GPU · [no-triality].
+  - **P6 R2 (2026-07-09, fresh-eyes):** CLEAN — 0 findings, counter **1/3**. Angles: R1-fix correctness (§A.5
+    harmonized to §B/S3, verified) · owed-list buildability · cross-doc consistency. No findings.
+  - **P6 R3 (2026-07-09, fresh-eyes; commit 77374bca9):** NOT_CLEAN — **2 findings**, counter reset **0/3**.
+    Angle-1 DSL COMPILE-SMOKE (executed, decisive — caught what 3 document reviews missed): built the real
+    trainer parser, parsed §B argv. (a) `--safe-compile-manifest: true` would crash (flag is type=str PATH,
+    not boolean) → fixed to the cert-JSON path + `--safe-compile-regions` as the enable knob; (b)
+    `--hosc-beta-anneal: true` would crash (choices linear|cosine, not boolean) + missing `--hosc-beta 1.0`
+    START (omitting defaults β_start=4 = the fixed-β DIVERGENCE this block warns against) → both fixed.
+    Re-verified validate-clean + parse-clean.
+  - **P6 R4 (2026-07-09, fresh-eyes; commit <this>):** NOT_CLEAN — **1 finding**, counter reset **0/3**.
+    RE-RAN the compile smoke (now standing per-round): launch-1 ON-set argv (75 tokens) parses CLEAN; R3 fixes
+    (safe-compile PATH, hosc-beta-anneal SHAPE, --hosc-beta 1.0 START) all re-verified against argparse defaults
+    (--hosc-beta default 4.0 · --hosc-beta-anneal default linear · --activation default hosc · --safe-compile-regions
+    default none · --jacobian-basin-telemetry default True) AND the DSL `HoscSchedule.flags()` + StepNative guard
+    (β_start<β_end strictly). **Angle-1 class-fix sweep FINDING (3rd instance of the R3 type/choices class):**
+    §B ladder rung 2 line 655 `--activation step_native` CRASHES argparse (choices=wire|hosc|relu — NO
+    step_native/step_basis token). Canonical DSL `StepNativeActivation` (curriculum_dsl.py L3357) routes
+    step-native to `--activation hosc` + β-anneal 1→8 (β→∞ IS the step limit); docstring L3321 states the
+    choices verbatim. FIXED in-round (§B line 655 → hosc route; §B line 554 block annotated). verdict_scope:
+    INSTANCE. **Angle-3 FRESH (smoke-completeness meta-check — targets the process gap that let type-crashes
+    survive 3 reviews):** programmatically extracted all 52 distinct §B `--flag` tokens, diffed vs the real
+    parser — 0 never-invent violations (only `--pose-finish-engage-on` [explicitly OWED, "no flag today—build
+    it"] + `--no-jacobian-basin-telemetry` [prohibition ref] beyond the launch set); PROVES the curated smoke
+    was complete. Angle-2 R3-fix + guard-law: CLEAN. Item-8 assumption: "the AST-extracted parser choices are
+    the trainer's true argparse contract" — VERIFIED by construction (extractor execs the trainer's own
+    add_argument statements; fail-loud cross-check). $0 · no GPU · [no-triality].
 - [ ] **P7 DELIVERABLE = SPEC_v752** (successor to SPEC_v75): DSL WitnessProgram · schedule · costate ·
       curriculum · rate/pose plan · measurement + wall-clock plan — triality-consistent landing.
 - [ ] **P8-LAUNCH (operator-GO wall; NEVER autonomous):** execute-at-n600 seal-completion (F-2 owed
