@@ -2196,6 +2196,46 @@ def WarpRealLumaFrame0(  # noqa: N802 — DSL constructor
                         "rank-6 twist residual to d_pose~3.4e-5 (FEED-lj/W7; advisory pointer 0.19110)"))
 
 
+def StoreNothingPoseCarrier(  # noqa: N802 — DSL constructor
+    w_pose: float = 1.0, residual_mode: str = "table", start_epoch: int = 0, window: int = 0,
+) -> Lever:
+    """POSE CARRIER A — STORE-NOTHING joint pose-descent (R1's PROVEN recipe, #245/#238).
+
+    The P0 joint-descent lever. Unlike ``WarpRealLumaFrame0`` (carrier B, which warps the
+    STORED real keyframe luma and COUNTS it in archive.zip), this warps the witness's OWN
+    plain frame0 INR render by the twist (``--pose-carrier-source generated``) -> stores ONLY
+    xi/H (~0 marginal bytes; the render is FREE per rule-118). The per-pair ``dxi`` residual
+    (``--pose-carrier-residual-mode table`` => (P,6)) co-adapts to the witness-render warp via
+    the ONE ``nn.value_and_grad`` child-attach. ``--w-pose>0`` (default 0.0 = pose-blind)
+    engages the pose term so the render CO-ADAPTS to make the cheap warp pose-legible.
+
+    MEASURED reference (R1 = #245, warm-started from the CONVERGED mod-26 v2_attrclean witness):
+    joint descent took d_pose 97->0.0011 (plateau ep1074/1093) holding d_seg ~0.0046 at n600
+    (``[macOS-CPU advisory] NON-PROMOTABLE``). frame0 is seg-free (upstream/modules.py:108) so
+    this carrier CANNOT disturb d_seg. Custody re-validated 2026-07-08
+    (``r1_0011_custody_revalidation_20260708.md``): the 0.0011 is a VALID frozen-CPU-torch,
+    contest-definition, through-R, EMA-conservative measurement -- BUT NOT byte-closed (the
+    trained dxi is un-shipped; #238 = serialize xi_eff = xi_stored + dxi, fp16 ~7.2 KB,
+    ~0.0005 rate, then re-measure through inflate). ``--pose-carrier-source`` defaults to fit
+    (self-calibrating s_t via the frozen PoseNet d_pose grid at startup); s_t/s_r/pitch left at
+    trainer defaults. Composes with every d_seg lever (orthogonal frame; pointer 0.19110 UNMOVED).
+    """
+    if residual_mode not in ("table", "film"):
+        raise ValueError(
+            f"StoreNothingPoseCarrier: residual_mode must be 'table' or 'film', got {residual_mode!r} "
+            "(never-invent-flags: --pose-carrier-residual-mode choices are exactly table|film)"
+        )
+    return Lever("store_nothing_pose_carrier",
+                 overrides={"--pose-carrier": True,
+                            "--pose-carrier-source": "generated",
+                            "--pose-carrier-residual-mode": residual_mode,
+                            "--w-pose": w_pose},
+                 epochs_delta=window,
+                 notes=("pose carrier A: STORE-NOTHING joint pose-descent (R1 #245/#238; generated f0 "
+                        "warp, ~0 marginal bytes rule-118); --w-pose>0 co-adapts the render + per-pair "
+                        "dxi residual (d_pose 97->0.0011 @n600 advisory; byte-close #238; pointer 0.19110)"))
+
+
 def GroundFrameChart(  # noqa: N802 — DSL constructor
     ref_pair: int = 0,
     s_t: float = -0.003224707899359239,
