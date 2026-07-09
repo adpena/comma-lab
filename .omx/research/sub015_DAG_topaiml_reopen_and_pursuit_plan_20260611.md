@@ -10954,3 +10954,22 @@ deterministic SEEDED event sensors = resume-faithful bounded controller, NOT cos
 actuation:NONE, enforced by test_no_actuation_capability). NCDE #344 + terminal-solve #341/#342 NOT in code
 tree (design-stage, not v7.5 launch surface). verdict_scope: instance — my telemetry misread, corrected.
 Pointer 0.19110 UNMOVED.
+
+## FEED-auditA + v75 OPTIMAL-FORM SYNTHESIS (2026-07-08) — d_seg stack OPTIMAL; 4-item surgical actuation; Audit A's pose-aside STALE (ad3270bed → spec v75_optimal_form_actuation_spec)
+Audit A (v75_dseg_lever_audit): v7.5 turns on the two DECISIVELY-measured d_seg levers (directional basis
+−48% n600 0.008257→0.005697, Muon −32%) in correct synergy order (basis-match BEFORE capacity; isotropic-
+first HURTS +6%) and AVOIDS every measured-harmful item (l7 defect, smooth +6.8%, fixed-β hosc, GradNorm,
+raw-paint-seed). d_seg stack = OPTIMAL-ENOUGH. 3 d_seg GAPS (measured, un-wired): (a) lane DOUBLY no-op'd
+(`--lane-prior-phi1-mode replace` #291 + `--structured-init-include-lane` lane_px=0 BOTH inert) → wire
+paint-then-SDF (measured 3×, lane FN 0.0058→0.0019); (b) along-tangent COMB (#287, measured 0.00695) un-
+activated (freq-along 4→6 FLAT); (c) −48% directional is the run's own A/B (circular-probe-measured). ⛔
+Audit A's "pose is the binding wall / v7.5 cannot reach sub-0.19" aside is STALE — cites pre-campaign SPEC
+§1 (~2.5 cap); SUPERSEDED by FEED-shippable (pose 0.106 SHIPPABLE, validated) + the R1 two-phase sequence.
+CONSOLIDATED SYNTHESIS (all 3 audits + pose campaign + dynamics + horizon recall) → spec
+`v75_optimal_form_actuation_spec_20260708.md`: 4-item surgical actuation via DSL, triality-recorded:
+(A) d_seg fixes — drop 2 lane no-ops→paint-then-SDF + activate comb A/B; (B) HORIZON FIX ON — temporal-
+screw #360 + horizon-margin #169 + sky=rotation (Undriv 0.082→floor 0.0016); (C) dynamic-curriculum
+residual (already ~80%: fix plateau_ok telemetry + derive min-stage-epochs 250 + verify Muon event
+nucleation); (D) POSE SEQUENCING — replace co-train-from-ep0 with R1 two-phase (converge d_seg → terminal
+pose-finish stage → #238 ship dxi 0.106). NOT a rebuild — a short surgical completion; d_seg base already
+optimal. Fires FEED-v75actuate. Pointer 0.19110 UNMOVED.
