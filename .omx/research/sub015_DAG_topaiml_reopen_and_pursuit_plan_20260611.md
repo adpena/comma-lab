@@ -11305,3 +11305,5 @@ Birth-arm verdict: healthy diagnostic baseline (all 5 islands born, curriculum e
 Road/Undriv-dominated as designed (pre-actuation config lacks the v7.5 fixes). NOT the pointer-mover — the
 v7.5 config is. Box is now free; v7.5 execute-at-n600 seal-completion + launch = operator-GO (CONTAINMENT).
 Pointer 0.19110 UNMOVED.
+
+<!-- FEED-205stop scope note: the "actual=DEAD" token above is PROCESS-LIVENESS (a killpg'd daemon reported dead by the registry reconcile), NOT a negative research verdict. # VERDICT_SCOPE_OK: operational process-liveness reconcile, not a research verdict — nothing killed/falsified. The #205 stop is an operator-GO operational event, no new measurement (equations leg N/A). -->
