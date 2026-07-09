@@ -10806,7 +10806,7 @@ Custody trace to the PRIMARY artifact (run levelset_n600_R1_storenothing_descent
 #245): R1 = JOINT descent (w_pose=1.0, ckpt __cfg_w_pose=1.0 — CORRECTS FEED-posesolve's "SOLO w_pose=0"
 claim, factually wrong), warm-started from a CONVERGED d_seg witness (v2_attrclean mod-26) at ep1001
 inside Muon; verdict rows d_pose 97.2→62.4→0.00334→0.00108→**0.001012** (ep1000→1108) with d_seg HELD
-~0.0046, live liveness. PRIME SUSPECT REFUTED: verdict = MSE(PoseNet(gen)[:6], PoseNet(real)[:6]) (gt
+~0.0046, live liveness. PRIME SUSPECT REFUTED (verdict_scope: instance — the REFUTED item is the CONFOUND HYPOTHESIS "R1's 0.0011 is ξ-parameter-MSE not d_pose", NOT a lever/family; refuting it VALIDATES R1's joint-descent path — a positive finding, no family narrowed): verdict = MSE(PoseNet(gen)[:6], PoseNet(real)[:6]) (gt
 cache = PoseNet outputs, verified in gt_n600.npz) — the EXACT contest d_pose, through-R, n600, EMA. NOT
 an artifact. RECONCILES ALL: A2 solved 6-DOF on a FROZEN render (1.486 floor); R1 descended dxi + THE
 RENDER TOGETHER — the L2 appearance-wall is REAL but TRAINABLE (108 epochs from a converged basin).
