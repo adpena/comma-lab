@@ -146,9 +146,9 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       dirs READ-ONLY · #205 UNTOUCHED · pointer 0.19110 UNMOVED. **v3 = SEAL CANDIDATE; P6 next.**
       Full: `SYNTHESIS_v3_v752_20260709.md`.
       <!-- P5b: no concurrent heavy GPU; box untouched; reading + amendment-fold + 2 argparse re-verifies only -->
-- [ ] **P6 SEAL-TO-RECESS** — the 6 P5 amendments are FOLDED into `SYNTHESIS_v3_v752` (P5b done); run the
-      recursive seal below against v3.
-- [ ] **P6 RECURSIVE SEAL** — 3 consecutive clean rounds across BOTH lenses (finding-disposition VERIFY +
+- [x] **P6 SEAL-TO-RECESS** — the 6 P5 amendments are FOLDED into `SYNTHESIS_v3_v752` (P5b done); recursive
+      seal RUN against v3 → **SEALED at R13 (2026-07-09).**
+- [x] **P6 RECURSIVE SEAL — SEALED 2026-07-09 (3 consecutive CLEAN: R11/R12/R13).** 3 consecutive clean rounds across BOTH lenses (finding-disposition VERIFY +
       DEEP-MATH MEAT HUNT: re-derive every law · hunt unconsumed levers vs the DELTA · bug-hunt the
       config-as-written · fresh-math sweep) via `tac.review_counter` surface **`crucible2_v752`**; then the
       #363 self-reflection seal (assumption tags; PROVISIONAL where unmeasured). Reviewers RE-DERIVE from
@@ -191,7 +191,24 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
     was complete. Angle-2 R3-fix + guard-law: CLEAN. Item-8 assumption: "the AST-extracted parser choices are
     the trainer's true argparse contract" — VERIFIED by construction (extractor execs the trainer's own
     add_argument statements; fail-loud cross-check). $0 · no GPU · [no-triality].
-- [ ] **P7 DELIVERABLE = SPEC_v752** (successor to SPEC_v75): DSL WitnessProgram · schedule · costate ·
+  - **P6 R5–R10 (2026-07-09):** value-hygiene class-fix chain + coherence. R5 NOT_CLEAN (§B `--seg-horizon-margin-lo`
+    glued token `0.06 (=3·δ_R)` → float-crash; de-glued). R6 CLEAN (1/3). R7 NOT_CLEAN (NO-NAIVE/NO-TOY operator
+    audit, 2 findings). R8 NOT_CLEAN (toy-isolation → owed-15 Class-A isolation re-scoped to FRESH training arms,
+    not single-ckpt re-eval). R9 CLEAN (1/3). R10 NOT_CLEAN (§C legacy `owed-N`→location map, prose-only stale
+    cross-ref fix; commit 77c016105 — the last content edit; doc byte-identical thereafter).
+  - **P6 R11 / R12 / R13 (2026-07-09) — the SEALING triple over byte-identical HEAD 77c016105:** R11 CLEAN (0→1/3,
+    cross-ref map + class re-derive); R12 CLEAN (1→2/3, meta-audit + negative-space); **R13 CLEAN (2→3/3 → SEALED).**
+    R13 sealing angles: standing checks reproduce+PASS (compile smoke 63 lever-tok 0-unknown; value-hygiene 11/11
+    incl. bare-flag `--safe-compile-manifest` crash verbatim "expected one argument"; step_native/anneal-true/
+    glued-lo/nucleation all CRASH as doc claims). META-CHECK: every R1–R12 finding verified by a LATER round; R10
+    prose-only fix has ≥2 independent verifications (R11+R12, doc byte-identical) — no dangling unverified fix.
+    OPERATOR-VERBATIM angle: the one verbatim operator quote (pose-gate, doc §A.4) is EXACT vs ledger L271-272; the
+    pose-gate 4-part requirement {conditioning-quantity · derived-threshold · hysteresis · never-reached fallback}
+    all satisfied; basin_frac drop consistent with named sensor surfaces. ITEM-8: the seal is a DOCUMENT-INTEGRITY +
+    buildability + P5-fold-fidelity seal (NOT empirical-readiness — detector fire-behavior on real σ_min is
+    owed-1/owed-14), DECLARED honestly (pointer-is-MEANS, honest_floor=ship-banked-R1). $0 · no GPU · [no-triality].
+    Full per-round records in `tac.review_counter` surface `crucible2_v752`. Pointer 0.19110 UNMOVED (MEANS).
+- [ ] **P7 DELIVERABLE = SPEC_v752**  ← **NEXT** (P6 SEALED) (successor to SPEC_v75): DSL WitnessProgram · schedule · costate ·
       curriculum · rate/pose plan · measurement + wall-clock plan — triality-consistent landing.
 - [ ] **P8-LAUNCH (operator-GO wall; NEVER autonomous):** execute-at-n600 seal-completion (F-2 owed
       items) → governed `tools/launch_witness_run.py` → full-facet watch + byte-close 3-arm → exact eval
