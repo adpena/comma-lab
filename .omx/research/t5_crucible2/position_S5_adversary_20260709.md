@@ -84,7 +84,7 @@ conditional, not additive, and the pack itself elsewhere (V8-1 de-sharing double
 run; 43.8% (L-2 horizon) is an ORACLE CEILING (best case if every band-flip were fixed FREE, through-
 training UNMEASURED); 31.6% (L-3 StepNative) is a real −4.5% n600. Three evidence grades (estimated /
 oracle / measured) share one ranked column and read as commensurable.
-(c) **RANK-1 rests on a flip.** L-1's decisive claim is "+18% NO-GO was ONE under-converged run;
+(c) **RANK-1 rests on a flip.** L-1's decisive claim is "+18% NO-GO [verdict_scope: INSTANCE — one under-converged run, scoped at source] was ONE under-converged run;
 converged anchors FLIP to −8%." That flip is a RE-INTERPRETATION, not a new byte-closed measurement.
 The RANK-1 lever — the one everything composes around first — is the least-measured.
 **Earliest signal.** The P2 synthesis draft composes ≥3 top levers ON in launch-1 citing rel-sig, OR a
