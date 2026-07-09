@@ -1,0 +1,67 @@
+{
+  "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n24.npz",
+  "n_frames": 8,
+  "render_hw": [
+    384,
+    512
+  ],
+  "break_even_bytes_per_flip": 1.2731,
+  "recovery_adjusted_bar_bytes_per_flip": 0.65,
+  "existing_contour_string_bytes_per_flip": 0.82,
+  "target_dseg": 0.005,
+  "authority": "[macOS-CPU advisory / DERIVED-from-GT-margin] NON-PROMOTABLE",
+  "per_density": [
+    {
+      "density": 0.001,
+      "total_flips": 1576,
+      "floor_bytes_per_flip": 1.672351034128239,
+      "edit_lzma_bytes_per_flip": 3.063451776649746,
+      "edit_temporal_bytes_per_flip": 4.530456852791878,
+      "mean_area_per_perimeter": 0.2762007894080045,
+      "verdict_vs_breakeven": "DOMINATED",
+      "best_bytes_per_flip": 1.672351034128239
+    },
+    {
+      "density": 0.0025,
+      "total_flips": 3936,
+      "floor_bytes_per_flip": 1.5089446305621121,
+      "edit_lzma_bytes_per_flip": 1.9044715447154472,
+      "edit_temporal_bytes_per_flip": 2.8902439024390243,
+      "mean_area_per_perimeter": 0.3060277506270098,
+      "verdict_vs_breakeven": "DOMINATED",
+      "best_bytes_per_flip": 1.5089446305621121
+    },
+    {
+      "density": 0.005,
+      "total_flips": 7864,
+      "floor_bytes_per_flip": 1.3845744640971374,
+      "edit_lzma_bytes_per_flip": 1.254323499491353,
+      "edit_temporal_bytes_per_flip": 1.865208545269583,
+      "mean_area_per_perimeter": 0.35464913468699844,
+      "verdict_vs_breakeven": "DOMINATED",
+      "best_bytes_per_flip": 1.254323499491353
+    },
+    {
+      "density": 0.01,
+      "total_flips": 15728,
+      "floor_bytes_per_flip": 1.2594899178398062,
+      "edit_lzma_bytes_per_flip": 0.7548321464903357,
+      "edit_temporal_bytes_per_flip": 1.1220752797558495,
+      "mean_area_per_perimeter": 0.44373761381443555,
+      "verdict_vs_breakeven": "DOMINATED",
+      "best_bytes_per_flip": 0.7548321464903357
+    },
+    {
+      "density": 0.02,
+      "total_flips": 31456,
+      "floor_bytes_per_flip": 1.1337793139564123,
+      "edit_lzma_bytes_per_flip": 0.41111393692777215,
+      "edit_temporal_bytes_per_flip": 0.5996948118006104,
+      "mean_area_per_perimeter": 0.7947421926511764,
+      "verdict_vs_breakeven": "GO",
+      "best_bytes_per_flip": 0.41111393692777215
+    }
+  ],
+  "full_partition_ref_bytes": 7091,
+  "full_partition_ref_bytes_per_frame": 886.375
+}
