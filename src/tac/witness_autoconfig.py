@@ -1219,6 +1219,50 @@ def derive_store_nothing_205_config(
     return replace(base, pose_carrier_source="generated", provenance=prov)
 
 
+class _TrackedDeltas:
+    """Read-tracking view over a deltas dict — the RUNTIME fail-closed guard for the #314 /
+    DAG DRIFT-D2 config-orphan CLASS (2026-07-06 point fix + this 2026-07-09 mechanism fix).
+
+    The drift class: a derive function selectively hand-extracts ``d["key"]`` from a deltas
+    dict; a key present in the dict but read by NO ``d["key"]`` access silently affects NOTHING
+    — the exact way the fresh_seeded ``pose_carrier_source`` intent vanished v1->v5. The prior
+    guard (``test_fresh_seeded_every_delta_key_materializes_in_argv``) is CI-only + a hand-kept
+    key->flag map; this makes the invariant fail LOUD at derive time so a future orphan can never
+    reach a launch, per "Bugs must be permanently fixed AND self-protected against".
+
+    Every argv-applying ``__getitem__`` marks the key CONSUMED. :meth:`assert_all_consumed` raises
+    if any key was never read into config state. PROVENANCE snapshots MUST read :attr:`raw`
+    (untracked) so a provenance-only echo of a key cannot mask a genuine argv orphan. This tracker
+    fits the SELECTIVE-EXTRACTION consumers (fresh_seeded); it deliberately does NOT wrap the
+    whole-dict-passthrough consumers (crucible_v6 passes the entire ``d6`` into the
+    ``crucible_v6_deltas`` field consumed at render, so every key is structurally consumed and the
+    #351 value-identity check already fails closed on drift — a per-key tracker would false-alarm).
+    """
+
+    __slots__ = ("raw", "_consumed")
+
+    def __init__(self, raw: dict) -> None:
+        self.raw = raw
+        self._consumed: set = set()
+
+    def __getitem__(self, key):
+        self._consumed.add(key)
+        return self.raw[key]
+
+    def __contains__(self, key) -> bool:  # membership must NOT count as consumption
+        return key in self.raw
+
+    def assert_all_consumed(self, fn_name: str, dict_name: str) -> None:
+        orphaned = set(self.raw) - self._consumed
+        if orphaned:
+            raise ValueError(
+                f"{dict_name} key(s) {sorted(orphaned)} were NOT consumed by {fn_name}() — the "
+                "value would silently NOT reach the launch argv (the #314 / DAG DRIFT-D2 "
+                "config-orphan class that silently reverted --pose-carrier-source generated->"
+                "real_keyframe v1->v5). Consume the key (apply it to proven_base / all_levers_base "
+                "/ a WitnessConfig field via replace()) or remove it from the deltas dict.")
+
+
 # The FRESH SEEDED run-1 deltas over the #205 sealed argv, per the pre-launch SEAL review
 # ``.omx/research/fresh_run_config_adversarial_review_20260704.md`` ("The revised launch shape").
 # Single source consumed by :func:`derive_fresh_seeded_config` (reuse-not-retype: everything NOT
@@ -1300,7 +1344,10 @@ def derive_fresh_seeded_config(
     base = derive_sealed_205_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs,
         code_matrix=code_matrix, byte_close_result=byte_close_result)
-    d = _FRESH_SEEDED_DELTAS
+    # (#314 CLASS fix, runtime fail-closed) wrap the deltas so every argv-applying d["key"] read is
+    # TRACKED; assert_all_consumed() below fails loud if any delta key is never applied (the D2
+    # orphan mechanism). Provenance snapshots read d.raw (untracked) so they cannot mask an orphan.
+    d = _TrackedDeltas(_FRESH_SEEDED_DELTAS)
     pb = dict(base.proven_base)
     pb.update({
         "lane_prior_phi1_mode": d["lane_prior_phi1_mode"],
@@ -1327,7 +1374,7 @@ def derive_fresh_seeded_config(
         "still runs l7_softplus (ep < l7_start off-by-one); 1001 makes never mean never.",
         Portability.INSTANCE)
     prov["fresh_seeded_deltas"] = ProvenancedValue(
-        dict(d), SRC_RECALLED,
+        dict(d.raw), SRC_RECALLED,
         "fresh_run_config_adversarial_review_20260704.md 'revised launch shape': paint+seed-islands "
         "nucleation fix, eikonal 0.05->0.10 survival step, constant tau=1.0 (geometric, inert-exact), "
         "rewarmup 20-cosine, band 350, muon warm-start+final-frac 0.1, hosc-beta-end 5.134 (M4), "
@@ -1340,7 +1387,7 @@ def derive_fresh_seeded_config(
         "inherited sealed real_keyframe (flag emitted only when != default) — a rate-accounting "
         "drift (counted uint8-keyframe rate vs ~1 KB store-nothing). Now an explicit delta.",
         Portability.SCORER_FIXED)
-    return replace(
+    cfg = replace(
         base,
         fresh_seeded=True,
         mod_dim=int(d["mod_dim"]),
@@ -1351,6 +1398,11 @@ def derive_fresh_seeded_config(
         all_levers_base=alb,
         provenance=prov,
     )
+    # (#314 CLASS fix) fail CLOSED if any _FRESH_SEEDED_DELTAS key went unread above: an unconsumed
+    # key never reaches the launch argv (the DRIFT-D2 config-orphan mechanism). Raises at derive
+    # time — a future orphaned intent can never silently launch.
+    d.assert_all_consumed("derive_fresh_seeded_config", "_FRESH_SEEDED_DELTAS")
+    return cfg
 
 
 # (v7.5 C.7) curriculum min-stage dwell floor — the minimum COMPLETED in-stage epochs before the

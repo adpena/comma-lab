@@ -480,6 +480,53 @@ def test_fresh_seeded_every_delta_key_materializes_in_argv():
             "(the value was not consumed — #314/D2 drift class)"
 
 
+def test_tracked_deltas_runtime_guard_unit():
+    """Unit-test the #314 CLASS-fix mechanism (_TrackedDeltas): a read marks CONSUMED, membership
+    does NOT, .raw is untracked (so provenance echoes can't mask an orphan), assert_all_consumed
+    raises iff a key was never read. This is the runtime fail-closed core the point-fix lacked."""
+    raw = {"a": 1, "b": 2, "c": 3}
+    t = wac._TrackedDeltas(raw)
+    # membership + .raw snapshot must NOT count as consumption
+    assert "a" in t
+    assert dict(t.raw) == raw
+    with pytest.raises(ValueError) as ei:
+        t.assert_all_consumed("fn", "_D")
+    msg = str(ei.value)
+    assert "a" in msg and "b" in msg and "c" in msg and "#314" in msg
+    # read each key -> now fully consumed -> no raise
+    assert (t["a"], t["b"], t["c"]) == (1, 2, 3)
+    t.assert_all_consumed("fn", "_D")  # must not raise
+    # a partially-consumed dict names ONLY the orphan
+    t2 = wac._TrackedDeltas({"x": 1, "y": 2})
+    _ = t2["x"]
+    with pytest.raises(ValueError) as ei2:
+        t2.assert_all_consumed("fn", "_D")
+    assert "'y'" in str(ei2.value) and "'x'" not in str(ei2.value)
+
+
+def test_fresh_seeded_runtime_guard_fires_on_unconsumed_delta_key(monkeypatch):
+    """#314 CLASS fix (runtime): adding a key to _FRESH_SEEDED_DELTAS that derive_fresh_seeded_config
+    does NOT extract must FAIL LOUD at derive time — not silently orphan into provenance-only (the
+    exact D2 mechanism). monkeypatch.setitem auto-restores the module dict after the test."""
+    monkeypatch.setitem(wac._FRESH_SEEDED_DELTAS, "__bogus_orphan_key__", 123)
+    with pytest.raises(ValueError) as ei:
+        wac.derive_fresh_seeded_config(_GT_N600, num_pairs=600, epochs=1000)
+    msg = str(ei.value)
+    assert "__bogus_orphan_key__" in msg
+    assert "_FRESH_SEEDED_DELTAS" in msg and "DRIFT-D2" in msg
+
+
+def test_fresh_seeded_runtime_guard_admits_the_real_config():
+    """The real config consumes EVERY _FRESH_SEEDED_DELTAS key, so derive must NOT raise, and the
+    provenance snapshot (read via .raw, untracked) still records all delta keys. Guards against the
+    guard itself becoming a false-positive that blocks the launch config."""
+    cfg = wac.derive_fresh_seeded_config(_GT_N600, num_pairs=600, epochs=1000)
+    snap = cfg.provenance["fresh_seeded_deltas"].value
+    assert set(snap) == set(wac._FRESH_SEEDED_DELTAS)
+    # and pose_carrier_source specifically survives (the original D2 casualty)
+    assert cfg.pose_carrier_source == "generated"
+
+
 def test_fresh_seeded_provenance_records_the_deltas():
     cfg = _fresh_cfg()
     assert cfg.fresh_seeded is True
