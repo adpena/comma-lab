@@ -1993,6 +1993,13 @@ def create_app(cfg: Config) -> Starlette:
         if cfg.access_key:
             resp.set_cookie("dash_key", cfg.access_key, max_age=86400 * 7,
                             httponly=True, samesite="lax", path="/")
+        # NEVER let the tunnel/CDN (Cloudflare) or the browser cache the shell HTML —
+        # otherwise a phone at comma-lab.adpena.com is served a STALE page from an earlier
+        # run and never picks up the new run (2026-07-09 stale-view fix). The live data
+        # streams over /ws; the shell must always be fetched fresh so a cold load / reconnect
+        # renders the CURRENT run. Mirrors the no-store the API + /ws-key routes already set.
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
         return resp
 
     async def api_state(request):
