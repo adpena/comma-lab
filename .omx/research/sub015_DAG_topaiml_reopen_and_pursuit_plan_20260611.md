@@ -11031,3 +11031,30 @@ lever_registry unmapped UNCHANGED at 120 — no new orphan). Build memo `v75_act
 ⚠️ RE-SEAL REQUIRED: this config change (paint + dash-comb + the owed A.3) MUST pass a fresh v7.5 SEAL
 review before any launch. Items B/C/D per plan (B.4 temporal-screw wireable; B.5 horizon-margin #169 NOT a
 built trainer flag — GAP; C/D owed). Pointer 0.19110 UNMOVED — only a byte-closed n600 exact row moves it.
+
+## FEED-relsig (2026-07-08) — RELATIVE-SIGNIFICANCE RE-AUDIT: re-ranked every "too small / weak / negligible / noise" dismissal at the sub-0.15 operating point (recurring operator correction). Pointer 0.19110 UNMOVED.
+Recurring correction (`relative-not-absolute-significance-near-goal-dont-orphan-small-deltaS`): I keep
+orphaning levers on ABSOLUTE ΔS when in RELATIVE terms (ΔS / remaining-descent) they are load-bearing
+near the goal. Read-only sweep (DAG + tasklist + deferral ledger + memories + equations); nothing built,
+live #205 untouched. Metric = rel-sig(S)=ΔS/(0.19110−0.15)=ΔS/0.0411, and rel-sig(d_seg)=Δd_seg/0.0009
+(operator's trigger framing). d_seg is now the ENTIRE remaining fight (rate DEAD, pose BANKED 0.106–0.127).
+**RE-OPEN (strong):** (1) **#169 horizon-weighted margin 0-byte IN-TRAINING** — MEASURED ΔS 0.012–0.024
+= **29–58% of remaining descent** (13–27% of target d_seg); I called it "weak" (the trigger); in v7.5
+plan item B but the trainer flag is UNBUILT (FEED-v75Aactuated "B.5 GAP") — the orphan is a MISSING WIRE.
+(2) **#121 d_seg-aware taper** — NO-GO SUSPECT/RETRACTED: +18% was under-converged, converged anchors FLIP
+sign to −8% (ESTIMATED ΔS ~0.03 ≈ 70% remaining) → re-validate at convergence. (3) activation step-native/
+FINER++ −4.5% n600 (ΔS ~0.013 ≈ 32%) — "modest" ≠ orphan; adopt the LIVE screen verdict. (4) #274 seg
+down-weight (measure at optimal). (5/6) D18 k90 truncate + 19-neutrality rate A/B (near-goal any real byte
+cut = pure S). **GENUINELY-UN-RECOVERABLE (measured, stay deferred):** #307 contour 0.820>0.65 B/flip
+(coherence=training outcome), #139 hood-clamp decode-side ~0 (measured), horizon-BAND rank 547/600
+(high-entropy), generic decode perturbations (measured-HURT, trained optimum). NO un-measured label-noise
+kill found in scope; #205 CE-flicker is pose-explainable/removable by #360 (folded, not un-recoverable).
+**SUPERSEDED:** #291 paint (v7.5 A.1), #287 dash-comb (A.2), #149 in-training→activation screen, #139
+static→level-set component, #360+sky-rotation horizon fix, #128/PR98/FECa/DQS1 already IN 0.19110 (banked).
+**STRUCTURAL FOLD (stops recurrence):** `duty_to_measure()` ranks by state-then-name (no value axis) →
+eyeball keeps anchoring on absolute ΔS. Add `.omx/state/lever_relative_significance.jsonl` (per-lever
+{est_delta_s,label,source_anchor}) + `activation_ledger.duty_to_measure_ranked(s_current,s_target=0.15)`
+sorting by ΔS/(s_current−s_target) desc (s_current from canonical_frontier_pointer.json) + surface rel_sig
+in `costate_digest.section_duty_to_measure()`. Memo `.omx/research/relative_significance_reaudit_20260708.md`.
+Triality: DAG (this FEED) · DSL (the ranked-fold, OWED — read-only sweep) · equations (est_delta_s = join
+over existing measured anchors, no new equation). Pointer 0.19110 UNMOVED.
