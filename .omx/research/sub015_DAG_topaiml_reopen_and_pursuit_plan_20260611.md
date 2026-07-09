@@ -11307,3 +11307,27 @@ v7.5 config is. Box is now free; v7.5 execute-at-n600 seal-completion + launch =
 Pointer 0.19110 UNMOVED.
 
 <!-- FEED-205stop scope note: the "actual=DEAD" token above is PROCESS-LIVENESS (a killpg'd daemon reported dead by the registry reconcile), NOT a negative research verdict. # VERDICT_SCOPE_OK: operational process-liveness reconcile, not a research verdict — nothing killed/falsified. The #205 stop is an operator-GO operational event, no new measurement (equations leg N/A). -->
+
+## FEED-posejac (2026-07-09) — ξ→PoseNet Jacobian conditioning FORMALIZED: σ_min basin sensor + ∂d_seg/∂ξ≡0 EXACT seg⊥pose proof (9fd6f9184; telemetry building aa7889f8)
+Deep-math formalization of the pose-descent "basin" (operator directive): **J_ξ = ∂(PoseNet(R(θ,ξ))[:6])/∂ξ
+∈ ℝ^{6×6} = J_P·J_R** (scorer-sensitivity × render-flow). Basin variable = **σ_min (σ_6)**; its right
+singular vector = the ego-motion direction PoseNet sees LEAST; σ_min→0 ⟺ target unreachable.
+- **Coherence↔conditioning (DERIVED):** flow-Jacobian has brightness-constancy form ∂f0/∂ξ_j =
+  ∇source·∂W/∂ξ_j — **∇source is a MULTIPLICATIVE factor**. Flat cartoon ⇒ ∇source=0 in interiors, nonzero
+  only on the separatrix ALONG the edge normal (aperture) ⇒ σ_min→0. Converging d_seg → finer/curved
+  boundaries → richer normals → σ_min↑. This is the Jacobian reason behind the MEASURED flat floor
+  1.2–1.8 vs R1-from-converged 0.0011. HONESTY BOUND: σ_min>0 = observability, NECESSARY-not-SUFFICIENT
+  (the cheap-carrier flow-CONTENT axis stays DEAD; σ_min is the right sensor FOR JOINT descent, where θ
+  supplies the content DOF). verdict_scope: the σ_min-basin is an OBSERVABILITY sensor + a HYPOTHESIS
+  (earlier-engage optimality) to MEASURE — not a proof earlier wins.
+- **∂d_seg/∂ξ ≡ 0 EXACTLY (structural):** SegNet reads ONLY the last frame (modules.py:108); ξ shapes ONLY
+  the seg-free frame0 ⇒ the Jacobian-geometry PROOF that early pose engage is SAFE (the ~99.95% seg⊥pose
+  null is a structural exact-zero + a MEASURED ~0.05% θ-residual). Strong result.
+- **Basin trigger:** σ* = √(6·d_pose_init)/ρ_budget; measurable form "fire at median σ_min ≥
+  f_basin·σ_min^plateau" (f_basin=1.0 = current TERMINAL policy; <1 = earlier-engage arm).
+- **Telemetry (BUILDING aa7889f8, LIVE on v7.5 as OBSERVER):** T0 = boundary-grad energy (near-free
+  default-ON proxy) + T1 = σ_min/κ/r_eff via mx.vjp (32-pair stratified, every-4-verdict, ~0.16×/verdict).
+  Contract: byte-identical (B1) · fail-open self-disable×3 (B2) · launch-path gate (B4) · OBSERVER-ONLY
+  run-1 pose-finish stays terminal, basin-TRIGGER is a run-2 default-OFF lever (B5).
+Eq `pose_jacobian_basin_conditioning_v1` (structure derived; σ_min-curve + f_basin-A/B anchors owed on
+measurement). Memo `pose_jacobian_conditioning_basin_trigger_formalization_20260709.md`. Pointer UNMOVED.
