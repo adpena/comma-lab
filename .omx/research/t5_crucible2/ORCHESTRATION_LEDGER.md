@@ -99,3 +99,13 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger (CE→ta
 P0 landed. NEXT ACTION: launch P1 wave-1 (S1 deep-math / S2 levers / S3 control) with DELTA_GROUNDING as
 the shared evidence pack, each seat citing the operating manual + taking independent positions on the 5
 open questions. #205 STOPPED (box free); pointer 0.19110 UNMOVED.
+
+## OPERATOR BINDING CONSTRAINT (2026-07-09, mid-P1) — POSE ENGAGEMENT GATE
+Verbatim: "pose must not be fired for joint descent until optimal it needs dseg to be sufficiently
+conditioned first." BINDS Q5 for every seat + the synthesis: pose-finish engagement is a
+d_seg-CONDITIONING-GATED EVENT (never an epoch). Sensor surfaces exist: jacobian_basin telemetry
+(median_sigma_min, basin_frac) + the dashboard pose-readiness panel (currently would-fire=no).
+The synthesis config MUST specify {conditioning quantity, threshold WITH provenance (derived, not
+hand-set), hysteresis, never-reached fallback}. Anchor: the R1/birth-arm lesson — pose fired on an
+ill-conditioned trunk became THE blocker (pose 1.8-4.35 of S); joint descent crosses the photometric
+wall ONLY from a conditioned separatrix. Delivered mid-flight to S1+S3; S4/S5/S6 + synthesis read it here.
