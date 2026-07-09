@@ -71,9 +71,16 @@ _EXPECTED_ADDED = frozenset({
     # (v7.5 Lever-3 regime coherence) restrict the v6-inherited --logit-adjust-loss-tau boost to the
     # non-offloaded birthed class(es); DERIVED from the basis regime (lane_offloaded => "3", movable only).
     "--logit-adjust-classes",
+    # (v7.5 ACTUATION item A.2, v75_optimal_form_actuation_spec_20260708.md §A.2) #287 ego-phase DASH COMB
+    # DSL lever — the along-tangent 3.2x-deficit corrector; supplies the ~25-cyc dash structure the
+    # lane_offloaded cartoon band cannot represent, rule-118 FREE at decode. Composes with --lane-render-band.
+    "--lane-band-dash-comb", "--lane-band-comb-softness-m",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",
+    # (v7.5 ACTUATION item A.1, spec §A.1) drop the DEAD --structured-init-include-lane (lane_px=0 => inert
+    # no-op). The lane nucleation now rides paint-then-SDF (--lane-prior-phi1-mode paint, a CHANGED delta).
+    "--structured-init-include-lane",
 })
 _EXPECTED_CHANGED = frozenset({
     "--tau-anneal-shape", "--lane-band-start-epoch", "--seg-chroma-boundary-start-epoch",
@@ -88,6 +95,9 @@ _EXPECTED_CHANGED = frozenset({
     # (v7.3 round-2 M1 fix, seal_v73_r2_structure) lane-regime coherence: persistence-recall classes
     # 'auto' (lane+movable) -> '3' (movable only; lane rides the analytic band under lane_offloaded).
     "--persistence-classes",
+    # (v7.5 ACTUATION item A.1, spec §A.1) lane nucleation fix: --lane-prior-phi1-mode replace (MEASURED
+    # NO-OP, #291) -> paint (paint-then-SDF; MEASURED lane FN 0.00713->0.00211 ~3x on real GT).
+    "--lane-prior-phi1-mode",
 })
 
 
@@ -321,10 +331,11 @@ def test_diff_excludes_run_dir_placeholder(compiled):
 
 def test_diff_flag_counts(compiled):
     diff = wac.diff_crucible_v6_to_v7(compiled.v6_flags, compiled.emitted_pairs)
-    # v7 = v6 - 3 removed + |added| (out-dir/gt-cache excluded from both sides symmetrically). The
+    # v7 = v6 - |removed| + |added| (out-dir/gt-cache excluded from both sides symmetrically). The
     # added set = the 3 spine/lever families + the 3 SENSOR->START WIRING flags + the DSL VerdictCadence
-    # emitter delta = exactly len(_EXPECTED_ADDED).
-    assert diff["v7_flag_count"] == diff["v6_flag_count"] - 3 + len(_EXPECTED_ADDED)
+    # emitter delta + the v7.5 ACTUATION dash-comb pair; removed = the 3 deleted schedule flags + the
+    # v7.5 ACTUATION dead --structured-init-include-lane. Derive both from the designed fixtures.
+    assert diff["v7_flag_count"] == diff["v6_flag_count"] - len(_EXPECTED_REMOVED) + len(_EXPECTED_ADDED)
 
 
 # ── (g) unchanged-flag byte-identity (v6 sealed values carry over) ───────────────────
@@ -382,7 +393,8 @@ def test_basis_lever_in_dsl_levers_activation_surface(compiled):
     assert "FEED_07a_directional_basis_rebalance" in levers
     assert "R7_polyak_finisher" in levers
     assert "v75_area_constraint_birth" in levers and "v75_birth_completion_event" in levers
-    assert len(levers) == 7  # v7.3 five + the two v7.5 birth-counter-force levers
+    assert "n287_dash_comb" in levers  # v7.5 ACTUATION item A.2 (along-tangent dash-comb corrector)
+    assert len(levers) == 8  # v7.3 five + two v7.5 birth-counter-force + v7.5 ACTUATION dash-comb
     assert tuple(levers) == wac._CRUCIBLE_V7_DSL_LEVERS
 
 

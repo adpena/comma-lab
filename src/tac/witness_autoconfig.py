@@ -1837,6 +1837,10 @@ _CRUCIBLE_V7_DSL_LEVERS: tuple[str, ...] = (
                                     # lambda_c DERIVED-LIVE from GT areas; un-floors Road)
     "v75_birth_completion_event",   # --birth-completion-* (v7.5 Lever-2 Morse-Smale birth->boundary
                                     # hand-off; DETECTOR + telemetry live, loss-surface ramp OWED)
+    "n287_dash_comb",               # --lane-band-dash-comb / --lane-band-comb-softness-m (v7.5 ACTUATION
+                                    # item A.2: #287 ego-phase dash comb — analytic dash structure the
+                                    # lane_offloaded cartoon band (freq_along~=6) provably cannot represent,
+                                    # rule-118 FREE at decode; the along-tangent 3.2x-deficit corrector)
 )
 
 # Flags whose delta vs v6 is a run-dir artifact (NOT a config semantic) — excluded from the
@@ -2237,6 +2241,7 @@ def _build_crucible_v7(
     from tac.witness_dsl.curriculum_dsl import (
         AreaConstraintBirth,
         BirthCompletionEvent,
+        DashComb,
         DirectionalBasisRebalance,
         LadderIslandHomotopy,
         PolyakFinisher,
@@ -2352,6 +2357,16 @@ def _build_crucible_v7(
     # change) so a stale manifest can never silently activate a compiled region. --safe-compile-manifest
     # is NOT emitted => the default .omx/state/mlx_safe_compile_manifest.json path resolves.
     base["--safe-compile-regions"] = "hosc_activation"
+    # (v7.5 ACTUATION item A.1, v75_optimal_form_actuation_spec_20260708.md §A.1) LANE NUCLEATION FIX:
+    # the v6-inherited base carries --lane-prior-phi1-mode replace (the MEASURED NO-OP, #291) AND a bare
+    # --structured-init-include-lane (lane_px=0 => inert). Replace with paint-then-SDF (--lane-prior-phi1-
+    # mode paint) — MEASURED lane FN 0.00713->0.00211 on real GT (~3x, #291; the ControlSystemGauge
+    # CONTROLLED arm's SEED nucleation facet). The paint prerequisite --seed-islands is ALREADY emitted by
+    # the base (verified: crucible_v7 emits --seed-islands + --structured-init). The ep0 admission gate is
+    # the MEASURED part_frac[lane] > 0, never flag presence. Drop the dead include-lane so the argv is
+    # honest (a no-op flag is orphaned signal). Both are v6->v7 deltas (CHANGED: mode; REMOVED: include-lane).
+    base["--lane-prior-phi1-mode"] = "paint"
+    base.pop("--structured-init-include-lane", None)
 
     # (3) the composable v7 levers (DSL Lever factories -> TypedLever; the DSL stays the emitter).
     def _typed_lever(lev) -> "TypedLever":
@@ -2411,6 +2426,17 @@ def _build_crucible_v7(
             ramp_apply=True,
             tau_persist=_CRUCIBLE_V7_BIRTH_COMPLETION_TAU,
             post_level=round(1.0 - _CRUCIBLE_V7_BIRTH_COMPLETION_TAU, 6))),
+        # (v7.5 ACTUATION item A.2, spec §A.2) #287 EGO-PHASE DASH COMB — the along-tangent 3.2x-deficit
+        # corrector (L65; the dash-erasure homogenization law dash_erasure_homogenization_20260707). Under
+        # the committed lane_offloaded basis regime, lane is carried by the FREE rule-118 analytic band at
+        # freq_along~=6 (Candes-Donoho cartoon scale) which PROVABLY cannot represent the ~25-cyc dash comb;
+        # DashComb supplies that sub-delta dash structure ANALYTICALLY (world-static period/duty + per-slot
+        # phase-from-xi, #215) at build time — rule-118 FREE at decode (~2-6 counted floats vs 1 fitted
+        # phase/line/pair). COMPOSES WITH --lane-render-band (emitted in base; the F-3 coherence gate above
+        # already asserts the band is present under lane_offloaded). No schedule-WHEN epoch flag => no
+        # gate interaction. FIRST activation (activation-ledger fires 'n287_dash_comb' at launch). Advisory
+        # until byte-closed (pointer 0.19110 UNMOVED).
+        _typed_lever(DashComb()),
     )
 
     typed = TypedWitnessConfig(

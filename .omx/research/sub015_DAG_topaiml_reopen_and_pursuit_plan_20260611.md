@@ -10995,3 +10995,39 @@ nothing ξ_eff carrier; does NOT touch the d_seg blocker (0.455 seg term) nor cl
 d_seg. NOTE (not launched, operator-GO): R1 still descending at ep1108 → a from-converged pose-finishing
 descent (the v7.5 terminal pose-finish stage, being wired now) could push toward the 0.018-class ancestor.
 Pointer 0.19110 UNMOVED.
+
+## FEED-v75Aactuated (2026-07-08) — v7.5 ACTUATION ITEM A LANDED in crucible_v7 via DSL (operator FEED-v75actuate + elevation steer). Pointer 0.19110 UNMOVED.
+The d_seg residual triad (operator elevated ALL three to priority-1) actuated into `crucible_v7`
+(`tac.witness_autoconfig._build_crucible_v7`) as DSL WitnessProgram deltas — CONFIG actuation, NOT a launch
+(re-seal owed before any launch; live #205 pid 63069 untouched):
+- **(1) LANE PAINT-THEN-SDF [MEASURED 3×, spec §A.1]** — base override `--lane-prior-phi1-mode replace`
+  (the #291 MEASURED NO-OP) → `paint`; DROP the dead `--structured-init-include-lane` (lane_px=0, inert).
+  MEASURED lane FN 0.00713→0.00211 (~3×, #291; the ControlSystemGauge CONTROLLED SEED-nucleation facet).
+  Prereq `--seed-islands` already emitted by crucible_v7. Diff-vs-v6: CHANGED `--lane-prior-phi1-mode`,
+  REMOVED `--structured-init-include-lane`.
+- **(2) ALONG-TANGENT DASH COMB [#287, operator OVERRODE the defer, spec §A.2]** — wired the existing DSL
+  `DashComb()` Lever factory (`tac.witness_dsl.curriculum_dsl.DashComb`, name `n287_dash_comb`) into the
+  crucible_v7 `levers` tuple + `_CRUCIBLE_V7_DSL_LEVERS` (8 levers now). Emits `--lane-band-dash-comb` +
+  `--lane-band-comb-softness-m 0.3`. Analytic dash structure the lane_offloaded cartoon band (freq_along≈6)
+  provably CANNOT represent, rule-118 FREE at decode; the along-tangent 3.2× deficit corrector (L65). No
+  schedule-WHEN epoch flag ⇒ zero gate interaction; composes with `--lane-render-band` (F-3 coherence gate
+  already asserts the band is present under lane_offloaded). DEFAULT-ON (operator override of the spec's
+  defensible-defer; measured oracle 0.00695). Equations leg: `dash_erasure_homogenization_20260707` (the
+  DSL lever docstring already cites it — triality DSL↔equations agree, no new anchor: activation ≠ new n600
+  measurement).
+- **(3) −48% DIRECTIONAL VERIFICATION [OWED duty-to-measure — a MEASUREMENT, not a config change]** — the
+  −48% d_seg was MEASURED on a circular-probe vehicle; whether the production `--self-orient` realization
+  (already ON in crucible_v7) actually delivers −48% is UNVERIFIED. Operator: do NOT fire a concurrent n600
+  GPU probe (the live #205 run holds the one box; a 2nd heavy GPU workload trips the machine-crash P0 hard
+  gate). REGISTERED OWED: run item (3) as the v7.5 run's OWN directional A/B (self-orient ON vs OFF, same
+  seed, first ~300 ep) AFTER launch, OR gated behind the live run finishing. Pre-registered threshold: the
+  production self-orient must move Road/all-class boundary d_seg toward the circular-probe −48%; a null
+  result reclassifies the basis lever's realized effect (verdict-scope: the self-orient realization, not
+  the directional-basis paradigm).
+TRIALITY: DSL leg = DashComb factory composed in crucible_v7 WitnessProgram + `_CRUCIBLE_V7_DSL_LEVERS`;
+DAG leg = this FEED; equations leg = `dash_erasure_homogenization_20260707` (A.2) + #291 measured anchor
+(A.1). Tests GREEN (test_crucible_v7_config 51/51 + witness_autoconfig + v75_birth_counterforce = 149;
+lever_registry unmapped UNCHANGED at 120 — no new orphan). Build memo `v75_actuation_build_20260708.md`.
+⚠️ RE-SEAL REQUIRED: this config change (paint + dash-comb + the owed A.3) MUST pass a fresh v7.5 SEAL
+review before any launch. Items B/C/D per plan (B.4 temporal-screw wireable; B.5 horizon-margin #169 NOT a
+built trainer flag — GAP; C/D owed). Pointer 0.19110 UNMOVED — only a byte-closed n600 exact row moves it.
