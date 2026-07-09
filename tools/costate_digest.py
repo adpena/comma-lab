@@ -165,19 +165,53 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
     return lines, row
 
 
+def _duty_marker(r: dict) -> str:
+    """Marker per ranked row: ~=un-built finding (missing wire) · ?=registered owed an estimate ·
+    *=never-fired registered lever · ''=fired-but-unmeasured registered lever."""
+    if not r.get("registered"):
+        return "~"
+    if r.get("est_delta_s") is None:
+        return "?"
+    return "*" if r.get("activation_state") == "never-fired" else ""
+
+
+def format_duty_to_measure_line(ranked: list[dict], top_n: int = _DUTY_TOP_N) -> str:
+    """Pure formatter for the ranked duty-to-measure queue (unit-testable without touching real state).
+    Renders each lever with its % of remaining descent and orphan marker; leads with the highest
+    relative-value owed lever."""
+    owed_n = sum(1 for r in ranked if r.get("in_duty_queue"))
+    s_cur = ranked[0].get("s_current") if ranked else None
+    tgt = ranked[0].get("s_target", 0.15) if ranked else 0.15
+
+    def _cell(r: dict) -> str:
+        pct = r.get("rel_sig_pct")
+        tag = f" {pct:g}%" if pct is not None else " ?%"
+        return f"{r['lever']}{_duty_marker(r)}{tag}"
+
+    top = ranked[:top_n]
+    more = len(ranked) - len(top)
+    anchor = (f"pointer {s_cur:.5f}→{tgt:g}" if isinstance(s_cur, float) else "pointer unavailable")
+    return (f"duty-to-measure ({owed_n} owed; ranked by % of remaining descent, {anchor}; "
+            f"*=never-fired ~=unbuilt ?=est-owed): "
+            + ", ".join(_cell(r) for r in top)
+            + (f" (+{more} more)" if more > 0 else ""))
+
+
 def section_duty_to_measure() -> tuple[str, dict | None]:
-    """Top-N never-fired/unmeasured DSL levers — the duty-to-measure queue the
-    controller drains (CLAUDE.md "'Off' is a tracked queue")."""
+    """Top-N owed DSL levers RANKED by relative significance — the fraction of the REMAINING descent
+    to sub-0.15 each lever buys (est_delta_s / (pointer − 0.15)). This is the continual-learning fix
+    for the recurring magnitude-dismissal bug: the CONTROLLER holds the value ranking, not the eyeball
+    (CLAUDE.md "'Off' is a tracked queue" + "relative-not-absolute-significance-near-goal").
+    Markers: *=never-fired registered lever · ~=un-built finding (a missing wire) · ?=owed an estimate."""
     try:
-        from tac.witness_dsl.activation_ledger import duty_to_measure, never_fired
-        owed = duty_to_measure()
-        nf = set(never_fired())
-        top = list(owed)[:_DUTY_TOP_N]
-        more = len(owed) - len(top)
-        names = ", ".join(f"{n}{'*' if n in nf else ''}" for n in top)
-        line = (f"duty-to-measure ({len(owed)} owed; *=never-fired): {names}"
-                + (f" (+{more} more)" if more > 0 else ""))
-        return line, {"owed": list(owed), "never_fired": sorted(nf)}
+        from tac.witness_dsl.activation_ledger import duty_to_measure_ranked
+        ranked = duty_to_measure_ranked()  # reads the LIVE pointer + significance store (not hardcoded)
+        line = format_duty_to_measure_line(ranked)
+        s_cur = ranked[0].get("s_current") if ranked else None
+        tgt = ranked[0].get("s_target", 0.15) if ranked else 0.15
+        return line, {"ranked_top": ranked[:_DUTY_TOP_N],
+                      "owed_registered": sum(1 for r in ranked if r.get("in_duty_queue")),
+                      "s_current": s_cur, "s_target": tgt}
     except Exception as exc:
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
 
@@ -282,7 +316,7 @@ def section_verdict_scope_advisories() -> tuple[str | None, dict | None]:
         # recency window: a 14-day count keeps the line live (the file is append-only,
         # so an all-time count would grow monotonically and go stale-misleading).
         import datetime as _dt
-        cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=14)
+        cutoff = _dt.datetime.now(_dt.UTC) - _dt.timedelta(days=14)
         def _fresh(r: dict) -> bool:
             try:
                 return _dt.datetime.fromisoformat(str(r.get("ts", ""))) >= cutoff

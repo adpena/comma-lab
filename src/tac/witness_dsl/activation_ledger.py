@@ -38,6 +38,33 @@ from tac.witness_dsl.lever_registry import lever_factories
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 LEDGER_PATH = _REPO_ROOT / ".omx" / "state" / "lever_activation_ledger.jsonl"
 
+# ── RELATIVE-SIGNIFICANCE store (the missing ΔS value axis) ──────────────────────────────────────
+# Per re-audit `.omx/research/relative_significance_reaudit_20260708.md` + CLAUDE.md
+# "Results must become system intelligence" + the recurring "relative-not-absolute-significance-near-
+# goal-dont-orphan-small-deltaS" lesson: a lever carries NO ΔS estimate anywhere, so the duty-to-measure
+# queue falls back to state-then-alphabetical ordering, which lets the operator's eyeball anchor on
+# ABSOLUTE ΔS and orphan a small-but-near-goal-significant lever. This store is that missing field.
+# Canonical, APPEND-ONLY, fcntl-locked JSONL; latest-row-wins per lever (mirrors the .omx/state pattern).
+SIGNIFICANCE_PATH = _REPO_ROOT / ".omx" / "state" / "lever_relative_significance.jsonl"
+_POINTER_PATH = _REPO_ROOT / ".omx" / "state" / "canonical_frontier_pointer.json"
+
+# THE GOAL (CLAUDE.md §THE GOAL — SUB-0.15). s_target is parameterized everywhere; this is only the
+# default the goal ladder pins. relative significance = est_delta_s / (s_current − s_target) = the
+# fraction of the REMAINING descent to sub-0.15 a lever buys (pointer-anchored, NOT hardcoded s_current).
+S_TARGET_DEFAULT = 0.15
+# operator trigger-framing denominator (re-audit): frontier seg-term d_seg 0.00056; a competitive
+# witness needs ~0.0009-class d_seg → Δd_seg/target_d_seg is the readable d_seg-axis fraction.
+TARGET_D_SEG = 0.0009
+# S is LINEAR in d_seg with coefficient 100 (S = 100·d_seg + √(10·d_pose) + 25·bytes/37_545_489), so a
+# d_seg-axis ΔS maps to Δd_seg = ΔS / 100.
+_S_PER_DSEG = 100.0
+
+SIG_LABEL_MEASURED = "MEASURED"
+SIG_LABEL_ESTIMATED = "ESTIMATED"
+SIG_LABEL_UNMEASURED = "UNMEASURED"  # a registered duty-to-ESTIMATE row (an un-estimated lever is itself orphaned signal)
+VALID_SIG_LABELS = frozenset({SIG_LABEL_MEASURED, SIG_LABEL_ESTIMATED, SIG_LABEL_UNMEASURED})
+VALID_SIG_AXES = frozenset({"d_seg", "d_pose", "rate"})
+
 # canonical event vocabulary
 EVENT_FIRED = "fired"        # a run launched with this lever (an A/B arm was actually run)
 EVENT_MEASURED = "measured"  # a byte-closed verdict landed for a run using this lever
@@ -282,23 +309,220 @@ def activation_report(known: tuple[str, ...] | None = None, path: Path | None = 
     return rows
 
 
+# ── RELATIVE-SIGNIFICANCE: store + metric + value-ranked duty-to-measure ─────────────────────────
+def _append_locked_jsonl(p: Path, row: dict) -> None:
+    """fcntl-locked APPEND of ONE json row (canonical .omx/state pattern; best-effort off-POSIX)."""
+    p.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(row, sort_keys=True) + "\n"
+    try:
+        import fcntl
+        with open(p, "a", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.write(line)
+                f.flush()
+                os.fsync(f.fileno())
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except ImportError:  # pragma: no cover - non-POSIX fallback
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(line)
+
+
+def record_relative_significance(
+    lever: str,
+    est_delta_s: float | None,
+    *,
+    label: str,
+    source_anchor: str,
+    axis: str,
+    notes: str = "",
+    agent: str | None = None,
+    path: Path | None = None,
+) -> dict:
+    """Append ONE relative-significance row (APPEND-ONLY, fcntl-locked). Returns the written row.
+
+    ``est_delta_s`` is the POSITIVE magnitude of the ΔS the lever buys (may be ``None`` for a registered
+    duty-to-ESTIMATE marker). ``label`` ∈ {MEASURED, ESTIMATED, UNMEASURED}; ``axis`` ∈ {d_seg, d_pose,
+    rate}; ``source_anchor`` is the commit/memo/DAG-FEED that measured/estimated it (NO-FAKE: never a
+    guessed number without a source). Latest row wins per lever on read.
+    """
+    if not lever or not isinstance(lever, str):
+        raise ValueError(f"lever must be a non-empty str, got {lever!r}")
+    if label not in VALID_SIG_LABELS:
+        raise ValueError(f"invalid label {label!r}; must be one of {sorted(VALID_SIG_LABELS)}")
+    if axis not in VALID_SIG_AXES:
+        raise ValueError(f"invalid axis {axis!r}; must be one of {sorted(VALID_SIG_AXES)}")
+    if est_delta_s is not None:
+        est_delta_s = float(est_delta_s)
+        if est_delta_s < 0:
+            raise ValueError(f"est_delta_s must be a positive ΔS magnitude or None, got {est_delta_s!r}")
+    if label != SIG_LABEL_UNMEASURED and est_delta_s is None:
+        raise ValueError(f"label {label!r} requires a numeric est_delta_s (only UNMEASURED may be None)")
+    if not source_anchor:
+        raise ValueError("source_anchor is required (NO-FAKE: every ΔS row cites its measurement/estimate)")
+    row = {
+        "lever": lever,
+        "est_delta_s": est_delta_s,
+        "delta_s_label": label,
+        "source_anchor": source_anchor,
+        "axis": axis,
+        "notes": notes,
+        "agent": agent,
+        "ts": _utc(),
+    }
+    _append_locked_jsonl(Path(path) if path is not None else SIGNIFICANCE_PATH, row)
+    return row
+
+
+def _read_significance(path: Path | None = None) -> dict[str, dict]:
+    """Latest-row-wins map ``lever -> row`` from the significance store (lenient; skips corrupt lines)."""
+    p = Path(path) if path is not None else SIGNIFICANCE_PATH
+    if not p.exists():
+        return {}
+    out: dict[str, dict] = {}
+    for ln in p.read_text(encoding="utf-8").splitlines():
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            row = json.loads(ln)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(row, dict) and row.get("lever") and row.get("delta_s_label") in VALID_SIG_LABELS:
+            out[row["lever"]] = row  # later row overwrites earlier -> latest-wins
+    return out
+
+
+def read_pointer_s(path: Path | None = None) -> float | None:
+    """Read the LIVE exact contest-CPU frontier score from the canonical pointer (NEVER hardcoded).
+
+    Returns ``our_local_frontier_contest_cpu.score`` or ``None`` if the pointer is unreadable.
+    """
+    p = Path(path) if path is not None else _POINTER_PATH
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        return float(d["our_local_frontier_contest_cpu"]["score"])
+    except Exception:
+        return None
+
+
+def relative_significance(
+    est_delta_s: float | None, s_current: float | None, s_target: float = S_TARGET_DEFAULT
+) -> float | None:
+    """rel-sig(S) = est_delta_s / (s_current − s_target) = fraction of the REMAINING descent to the goal.
+
+    Returns ``None`` when it cannot be computed (no estimate, no pointer, or no remaining gap — at/below
+    the goal the "fraction of remaining descent" is undefined). Higher = more urgent. The key property
+    (the recurring-bug correction): for a FIXED est_delta_s, rel-sig RISES as ``s_current`` approaches
+    ``s_target`` — a small absolute ΔS becomes MORE significant near the goal, not negligible.
+    """
+    if est_delta_s is None or s_current is None:
+        return None
+    gap = float(s_current) - float(s_target)
+    if gap <= 0:
+        return None
+    return float(est_delta_s) / gap
+
+
+def duty_to_measure_ranked(
+    s_current: float | None = None,
+    s_target: float = S_TARGET_DEFAULT,
+    *,
+    known: tuple[str, ...] | None = None,
+    path: Path | None = None,
+    sig_path: Path | None = None,
+    pointer_path: Path | None = None,
+) -> list[dict]:
+    """The duty-to-measure queue RANKED by relative significance (fraction of remaining descent).
+
+    Joins :func:`duty_to_measure` (registered levers owed a measurement) with the relative-significance
+    store, computes ``rel_sig = est_delta_s / (s_current − s_target)`` (reading ``s_current`` from the
+    canonical pointer when not passed — NEVER hardcoded), and returns rows sorted by ``rel_sig``
+    DESCENDING. Store findings that are not (yet) registered levers are INCLUDED (an orphaned lever is
+    often a *missing wire* — a duty-to-BUILD); registered owed levers with no ΔS row are surfaced as a
+    duty-to-ESTIMATE queue (an un-estimated lever is itself orphaned signal). Ties / unknowns break by
+    est_delta_s then name — the eyeball is removed from the loop.
+    """
+    if s_current is None:
+        s_current = read_pointer_s(pointer_path)
+    owed = set(duty_to_measure(known, path))
+    sig = _read_significance(sig_path)
+    known_set = set(known) if known is not None else set(known_levers())
+
+    rows: list[dict] = []
+    for lever in sorted(owed | set(sig.keys())):
+        srow = sig.get(lever)
+        est = srow.get("est_delta_s") if srow else None
+        axis = srow.get("axis") if srow else None
+        registered = lever in known_set
+        # activation state only meaningful for registered levers; findings not-yet-a-lever = a build gap.
+        state = activation_status(lever, path).state if registered else "not-registered"
+        rel = relative_significance(est, s_current, s_target)
+        rel_dseg = None
+        if est is not None and axis == "d_seg":
+            rel_dseg = (float(est) / _S_PER_DSEG) / TARGET_D_SEG
+        rows.append({
+            "lever": lever,
+            "est_delta_s": est,
+            "delta_s_label": (srow.get("delta_s_label") if srow else None),
+            "source_anchor": (srow.get("source_anchor") if srow else None),
+            "axis": axis,
+            "notes": (srow.get("notes") if srow else ""),
+            "rel_sig": rel,
+            "rel_sig_pct": (round(100.0 * rel, 1) if rel is not None else None),
+            "rel_sig_dseg": rel_dseg,
+            "in_duty_queue": lever in owed,
+            "registered": registered,
+            "activation_state": state,
+            "s_current": s_current,
+            "s_target": s_target,
+            "gap": (None if s_current is None else float(s_current) - float(s_target)),
+        })
+
+    # rank: rel_sig desc (None last) -> est_delta_s desc (None last) -> name asc.
+    def _key(r: dict) -> tuple:
+        rel = r["rel_sig"]
+        est = r["est_delta_s"]
+        return (
+            0 if rel is not None else 1, -(rel or 0.0),
+            0 if est is not None else 1, -(est or 0.0),
+            r["lever"],
+        )
+
+    rows.sort(key=_key)
+    return rows
+
+
 __all__ = [
-    "ActivationStatus",
     "EVENT_FIRED",
     "EVENT_MEASURED",
     "EVENT_RETIRED",
     "LEDGER_PATH",
+    "SIGNIFICANCE_PATH",
+    "SIG_LABEL_ESTIMATED",
+    "SIG_LABEL_MEASURED",
+    "SIG_LABEL_UNMEASURED",
     "STATE_FIRED_UNMEASURED",
     "STATE_MEASURED",
     "STATE_NEVER_FIRED",
     "STATE_RETIRED",
+    "S_TARGET_DEFAULT",
+    "TARGET_D_SEG",
     "VALID_EVENTS",
+    "VALID_SIG_AXES",
+    "VALID_SIG_LABELS",
+    "ActivationStatus",
     "activation_report",
     "activation_status",
     "duty_to_measure",
+    "duty_to_measure_ranked",
     "known_levers",
     "levers_fired_for_run",
     "never_fired",
+    "read_pointer_s",
     "record_activation",
     "record_measured_for_run",
+    "record_relative_significance",
+    "relative_significance",
 ]
