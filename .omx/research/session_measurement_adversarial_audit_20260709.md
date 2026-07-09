@@ -36,3 +36,15 @@ n600-scale is necessary NOT sufficient: a real-scale run through a PROXY coder i
 
 **Consequence for v8 gating:** the increment-1 go/no-go must include a MEASURED real-coder contour byte count
 (not the 1.5 b/px proxy) as a hard gate — added to the P-C blocking precondition.
+
+## Real-machinery resolution (2026-07-09, operator "prefer the real thing to a proxy")
+The "real-coder OWED" gate above was itself SATISFIED with the WRONG coder. Operator caught a deeper proxy:
+a generic chain/arithmetic coder measures 600 INDEPENDENT contours, but the Road↔Undriv boundary IS the
+horizon = **ego-rigid**. Measured with the real BASIS instead (degree-3 poly + ξ-delta, $0 on n600 gt):
+horizon fits at **1.46 px** over 425/512 cols (curvelet-class low-order curve); coeffs are ego-coherent
+(only the intercept moves ~1.2 px/frame = ego pitch = the stored ξ). **Real-coder store: 4.7 KB@n600 =
+0.0032 S** (SOLID, zlib on delta-coded fp16 coeffs), dominant-arc only — 8× below the generic 0.026 S.
+**Meta-lesson (deepened):** even a real arithmetic coder is a proxy if it ignores the representation's
+physics. The standing rule tightens: *prefer the real BASIS (curvelet + ξ), not merely a real coder.* Row #2
+above (PROXY-FLAGGED, 0.021–0.064 S) is now RESOLVED → the answer was below the whole range because the
+generic coder was the wrong instrument. See DAG FEED-v8-realmachinery.

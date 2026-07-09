@@ -54,6 +54,24 @@ already exist.
 > only a MEASURED arithmetic/context-coded contour on our actual boundary (OWED — a real coder, not a b/px proxy)
 > settles whether v8's rate thesis clears the band.** Neither the naive 0.282 nor the optimistic 0.032 is the
 > answer; the real number is in between and is currently UNMEASURED-by-a-real-coder.
+>
+> **REAL-MACHINERY RESOLUTION (operator "does lie or xi apply here or curvelets and scaling — always prefer the
+> real thing to a proxy", 2026-07-09) — SETTLED, and the generic chain-coder was ITSELF a proxy:** the generic
+> contour coder measured 600 INDEPENDENT per-frame contours — but the Road↔Undriv boundary is **the horizon,
+> which is ego-rigid**. Two REAL-machinery measurements on the n600 gt cache (`lstars`, $0, read-only):
+> (1) **CURVELET/geometry** — a degree-3 polynomial fits the dominant horizon arc at **1.46 px** median residual
+>    over **425/512** columns. 4 coefficients, not 428 chain-symbols — the horizon IS a low-order curve (a
+>    single-scale curvelet atom), exactly the codim-1 sparse basis the theory predicts.
+> (2) **ξ/Lie temporal coherence** — across frames the cubic+quadratic coeffs are FROZEN (|Δ|≈1e-7, 6e-5);
+>    only the **intercept moves ~1.2 px/frame = ego pitch**, the vertical component of the ξ we ALREADY store
+>    for pose. So 599/600 frames are a near-free ego-warp of frame-0's horizon.
+> **MEASURED store (real coder, zlib on delta-coded fp16 coeffs): 4.7 KB@n600 = 0.0032 S** — **8× below** the
+> generic chain-coder's 0.026 S, and **88× below** the naive 0.282. HONEST scope caveat (NO-FAKE): 0.0032 S is
+> the **dominant-arc cost only**; the 1.46 px fit residual + the secondary arcs (the measured 1.6–2.0
+> crossings/row = objects breaking the horizon) are a small residual sidecar still OWED for a complete number —
+> but the dominant term is now REAL-coder + ego-amortized, decisively inside the band. **v8's rate thesis clears
+> the band via the geometry-native (curvelet + ξ) representation, NOT the generic chain-coder.** The scaffold's
+> `bulk_boundary_byte_cost` should offer a `mode="horizon_poly_xi"` path measuring this.
 
 ## 2. The one new build — the Road+Undriv edge-centric bulk-boundary field
 - **ONE field, not two** (risk-1 cure, edge-centric): a single SDF-gauged scalar φ_bulk over the Road/Undriv

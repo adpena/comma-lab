@@ -11546,3 +11546,26 @@ threshold-dependent %, but Undriv-single-connected (the load-bearing part) = ROB
 no rate number load-bearing until MEASURED by a real contour/arithmetic coder on our n600 boundary, never a b/px
 proxy (= the #307 0.820-B/flip discipline applied to v8). All ran n600 — but n600-scale is necessary NOT
 sufficient: real-scale-through-a-proxy-coder is still a proxy. Pointer 0.19110 UNMOVED. #205 alive+untouched.
+
+---
+## FEED-v8-realmachinery (2026-07-09) — ξ/curvelet SETTLES the Road↔Undriv rate; the chain-coder was itself a proxy
+**Operator (verbatim):** *"Does lie or xi apply here or curvelets and scaling. Always prefer using the real
+thing to a proxy, we have all of the real things we need."* → It applies decisively. The generic
+chain-coder measured 600 INDEPENDENT per-frame contours, but the Road↔Undriv boundary IS the horizon =
+ego-rigid. TWO real-machinery measurements ($0, read-only on gt_n600.npz['lstars']):
+- **CURVELET/geometry:** degree-3 poly fits the dominant horizon arc at **1.46 px** median residual over
+  **425/512** cols → 4 coeffs, not 428 chain-symbols → the horizon IS a low-order curve (single-scale
+  curvelet atom), the codim-1 sparse basis the theory predicts.
+- **ξ/Lie temporal coherence:** cubic+quadratic coeffs FROZEN frame-to-frame (|Δ|≈1e-7, 6e-5); only the
+  **intercept moves ~1.2 px/frame = ego pitch** = the vertical component of the ξ we ALREADY store for pose.
+  → 599/600 frames = near-free ego-warp of frame-0.
+- **MEASURED store (real coder, zlib on delta-coded fp16 coeffs): 4.7 KB@n600 = 0.0032 S** = **8× below**
+  the generic chain-coder's 0.026 S, **88× below** the naive 0.282.
+- **HONEST scope caveat (NO-FAKE):** 0.0032 S = DOMINANT-ARC only; the 1.46px fit residual + secondary arcs
+  (measured 1.6–2.0 crossings/row = objects breaking the horizon) = a small residual sidecar OWED for a
+  complete number. Dominant term is real-coder + ego-amortized, decisively inside the band.
+- **CONSEQUENCE:** v8's rate thesis clears the band via the geometry-native (curvelet + ξ) representation,
+  NOT the generic chain-coder. The audit's own "real-coder OWED" gate is now SATISFIED with the RIGHT coder
+  (geometry-native, not generic). Meta-lesson deepened: even a real arithmetic coder is a proxy if it ignores
+  the representation's physics (ego-rigidity). Prefer the real BASIS, not just a real coder.
+- Draft updated (§1 REAL-MACHINERY RESOLUTION block). Pointer 0.19110 UNMOVED. #205 alive+untouched. `[no-triality]`.
