@@ -44,6 +44,7 @@ _ADVISORY = "[macOS-CPU advisory]"
 _PREDICTED = "[predicted]"
 _MEMO = ".omx/research/pose_mladder_depthwarp_measured_20260708.md"
 _MEMO_APERTURE = ".omx/research/pose_aperture_probe_measured_20260708.md"
+_MEMO_A1T = ".omx/research/pose_stratified_texture_probe_measured_20260708.md"
 
 # --- MEASURED constants (medians, frozen CPU-torch PoseNet through the real R; this checkpoint) ---------
 DPOSE_A0_DETERMINISTIC = 1.685    # 0-DOF global ground-H warp (store-nothing), n24 median (mean 1.734)
@@ -58,6 +59,16 @@ DPOSE_A0T_BEST_TEXTURED = 15.14   # BEST (least-bad) observable-texture A0T poin
 #   Diagnostic: warp(frame,xi) vs same frame = d_pose 166.8 (f0r) / 186.1 (f1r) -> the carrier's
 #   ground-homography flow is NOT the true ego-motion; observable texture makes PoseNet read that WRONG
 #   flow -> d_pose RISES. Mechanism = wrong-flow-observability (NOT aperture, NOT semantic-prior dominance).
+DPOSE_A1T_BEST_STRATIFIED_TEXTURED = 2.608  # BEST (least-bad) A1T point (P=24px, peak amp=2), n24 median:
+#   texture advected by the PER-CELL STRATIFIED flow (ground H(xi) + sky rotation-only R(xi) + hood identity
+#   + off-plane H(xi)) -- the untested T x D cell. A1T grid range 2.6 .. 145 (ALL >= A0 flat 1.685, ABOVE
+#   the A2+ 1.223 floor), monotone in amplitude, and per-cell is WORSE than global-H at matched settings
+#   (P32/amp4: A1T 34.9 vs A0T 15.1). SELF-PAIR DIAGNOSTIC: per-cell flow reads d_pose 183.5 vs global-H
+#   165.6 -> the piecewise per-cell flow is NOT more correct as PoseNet reads it (a discontinuous composite,
+#   not a single rigid ego-motion). SCALE SWEEP (s*xi, s in {0.25..4} + translation flip): NO sharp optimum
+#   away from s=1; monotone toward the flat floor as s->0 -> NO units/convention bug. Wrong-flow-observability
+#   REFUTED for the geometric stratified carrier: correct flow needs real per-clip DEPTH (Option-A), not a
+#   piecewise-geometric approximation. d_seg flips 0.8%(amp2)..9.5%(amp8) of f1 argmax (moot; d_pose refutes).
 
 _FLOOR_BY_DOF = {0: DPOSE_A0_DETERMINISTIC, 6: DPOSE_A2_6DOF_SOLVE, 12: DPOSE_A2PLUS_12DOF}
 
@@ -197,6 +208,54 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_a1t = EmpiricalAnchor(
+        anchor_id="a1t_stratified_texture_falsified_crucible_run1_20260708",
+        measurement_utc=_UTC,
+        inputs={
+            "probe": "A1T = seeded isotropic band-limited LUMA texture (DC-matched) advected by the PER-CELL "
+                     "STRATIFIED flow: ground(0,1)->H(xi); sky(2 above horizon)->rotation-only R(xi),t=0; "
+                     "hood(4)->identity; off-plane movable(3)+struct(2 below)->H(xi) (zero affine; off-plane "
+                     "mass ~0.5% so un-fit affine ~ zero). GT argmax = oracle cells. period 24/32/48 px@874 x "
+                     "peak amp 2/4/8 uint8. The untested T x D cell (A0T=texture x global-H; A2+=solve x flat).",
+            "authority": "frozen CPU-torch PoseNet through real R (uint8); poscontrol 2.1e-12; NEVER MLX",
+            "n_pairs": "24 (A1T grid + self-pair diagnostic n8 + scale sweep n24); |t|-stratified",
+        },
+        predicted_output={
+            "wrong_flow_observability": "per-cell-CORRECT flow made legible collapses d_pose << 1.223",
+        },
+        empirical_output={
+            "d_pose_A0_flat_median": DPOSE_A0_DETERMINISTIC,
+            "d_pose_A2plus_flat_stratified_median": DPOSE_A2PLUS_12DOF,
+            "d_pose_A1T_best_median": DPOSE_A1T_BEST_STRATIFIED_TEXTURED,  # P24/amp2; ABOVE both flat arms
+            "d_pose_A1T_grid_range": "2.6 .. 145 (monotone in amp; P32/amp4 34.9 WORSE than A0T 15.1)",
+            "self_pair_diagnostic": "per-cell flow d_pose 183.5 vs global-H 165.6 -> per-cell NOT more correct",
+            "scale_sweep": "s*xi in {0.25,0.5,1,2,4} + tflip: monotone toward flat as s->0, NO sharp optimum "
+                           "away from s=1 (s0.25=22.8, s1=34.9), tflip only mildly lower (24.1) -> NO "
+                           "units/convention bug",
+            "dseg_flip_frac": "0.8% (amp2) .. 9.5% (amp8) of f1 SegNet argmax (moot; d_pose refutes first)",
+            "verdict": ("WRONG-FLOW-OBSERVABILITY REFUTED for the geometric stratified carrier "
+                        "(formulation-scoped): the piecewise per-cell flow (ground-H + sky-rotation + "
+                        "hood-static) is a DISCONTINUOUS composite, NOT a single rigid ego-motion; PoseNet "
+                        "reads it as WORSE motion than global-H (183 vs 165), so making it legible RAISES "
+                        "d_pose (best 2.6 > A2+ 1.223 > A0 1.685). No scale/sign bug hides a correct flow. "
+                        "Correct scene flow requires real per-clip DEPTH (Option-A depth-warp), not a "
+                        "piecewise-geometric approximation. NOT refuted: Option-A (stored depth), joint "
+                        "pose-descent RUN (render co-adapts), pose-as-budget-item."),
+        },
+        residual=0.0,
+        source_artifact=_MEMO_A1T,
+        measurement_method="A1T per-cell-advected-texture grid + self-pair flow-correctness diagnostic + "
+                           "s*xi/sign scale sweep, frozen CPU-torch PoseNet",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_MEMO_A1T,
+            reactivation_criteria=("re-measure on Option-A depth-warp (per-clip STORED depth D + stored xi, "
+                                   "SfMLearner K T(xi) D K^-1 -> a CORRECT non-piecewise flow) or on a joint "
+                                   "pose-descent RUN where the render co-adapts; n600 + exact-eval"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Morse-Smale stratified parallax warp: cheap task-space pose carrier floors d_pose ~1.2-1.7 "
@@ -222,7 +281,7 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
         },
         units_in={"dof": "warp_degrees_of_freedom_int"},
         units_out={"d_pose": "posenet6_mse_median"},
-        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_owed),
+        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_a1t, anchor_owed),
         predicted_vs_empirical_residual={
             # extension predicted A2 ~0.0011; MEASURED 1.486 -> the prediction miss is the finding.
             "a2_prediction_miss_vs_0p0011": abs(DPOSE_A2_6DOF_SOLVE - 0.0011),
@@ -266,6 +325,7 @@ def populate_morse_smale_stratified_parallax_dpose_equation(
 __all__ = [
     "CORR_DPOSE_VS_EGO_TRANS",
     "DPOSE_A0_DETERMINISTIC",
+    "DPOSE_A1T_BEST_STRATIFIED_TEXTURED",
     "DPOSE_A2PLUS_12DOF",
     "DPOSE_A2_6DOF_SOLVE",
     "DPOSE_TARGET_CONTRIB",
