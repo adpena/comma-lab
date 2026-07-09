@@ -116,3 +116,20 @@ The synthesis config MUST specify {conditioning quantity, threshold WITH provena
 hand-set), hysteresis, never-reached fallback}. Anchor: the R1/birth-arm lesson — pose fired on an
 ill-conditioned trunk became THE blocker (pose 1.8-4.35 of S); joint descent crosses the photometric
 wall ONLY from a conditioned separatrix. Delivered mid-flight to S1+S3; S4/S5/S6 + synthesis read it here.
+
+## OPERATOR BINDING DIMENSION (2026-07-09, mid-P3) — WALL-CLOCK MINIMIZATION, SCORE-UNTOUCHED
+Verbatim: "Another dimension is minimizing wall clock through design and engineering without touching
+score." Lexicographic rule (memory L59): S first, wall-clock second, NEVER traded; score-NEUTRAL speed
+wins are FREE and MANDATORY-by-default. BINDS the synthesis revision (P3b) + final config:
+(1) ENGINEERING stack ON with neutrality proofs: micro-batch-pairs (#313, ~2-4x, built), grouped-backward
+(~17x), fused-R kernel (bit-exact + ~8% faster + GPU-determinism), safe-compile regions, async verdicts,
+verdict/telemetry cadence tuned to information-value (not habit); each lever = bit-exact proof OR
+measured-score-neutral proof, else excluded-with-reason (#355 pattern). #356 megakernel + #357 bundle =
+owed evidence pass at first governed pause.
+(2) DESIGN-level wall-clock: event-triggered exits SAVE epochs vs fixed floors (floors = 3·tau_relax
+only); solve-replaces-train DELETES stages (J5 head GN/CG ~11min replaces a fine-tune stage; KKT
+multipliers solved in-loop); FRESH-with-better-config beats warm-start-recovery time; per-stage
+wall-clock BUDGET estimated in the final config (s/ep x expected-epochs per stage, from measured 42s/ep
+baseline + lever deltas).
+(3) The final WitnessProgram carries a wall-clock section: projected total, per-stage budget, the
+speed-lever ON-set with per-lever neutrality provenance.
