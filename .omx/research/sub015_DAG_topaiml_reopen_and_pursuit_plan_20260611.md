@@ -10748,3 +10748,8 @@ prediction: ≪1.223 if wrong-flow-observability right; fallback branch = s·ξ 
 amps + interior gate owed. A0T anchor appended to morse_smale_stratified_parallax_dpose_v1 (advisory,
 n600 owed). My aperture diagnosis = 2nd pose hypothesis refuted today; each refutation NARROWED the
 mechanism space (observability-alone OUT, semantic-prior OUT, flow-correctness PINNED). Pointer 0.19110 UNMOVED.
+DSL-LEG STATUS (drift-gate compliance note): the pose-legibility texture term has NO trainer flag yet —
+the build (and its `Lever` factory) is GATED on A1T GREEN; `emit_stub_lever` requires a REAL trainer flag
+(never-invent-flags), so a stub now would be the invented-flag anti-pattern. The measurement leg landed in
+`morse_smale_stratified_parallax_dpose_v1` (A0T anchor, c2adba9aa). On A1T GREEN, the build lands trainer
+flag + DSL Lever factory + activation-ledger row in the SAME commit (config-orphan discipline).
