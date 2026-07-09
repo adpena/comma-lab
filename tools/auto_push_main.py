@@ -148,14 +148,22 @@ class SecretCheck:
     reason: str = fm.guide(description="A short phrase naming what was found, or empty.")
 
 @local_extract(SecretCheck, retries=1, instructions=(
-    "You inspect ADDED source-diff lines about to be pushed to a PUBLIC GitHub repo. Return 'secret' ONLY "
-    "for genuinely sensitive content that must never be public: real credentials, passwords, API keys or "
-    "tokens, private-key material, or PRIVATE/INTERNAL infrastructure IPs (e.g. Tailscale CGNAT "
-    "100.64.0.0/10) or internal hostnames. Return 'clean' for ordinary code, public URLs, documentation, "
-    "sha256/hex hashes, and example/placeholder values such as <tailscale-ip>, REDACTED, or an IP range "
-    "shown illustratively in docs. This is an OPEN-SOURCE research project, so the research CONTENT itself "
-    "(math, methods, ideas) is fine to publish — flag secrets and private-infra ONLY, never ideas. When "
-    "genuinely uncertain whether something is a real secret, lean 'secret' (a held push is cheaply released)."))
+    "You inspect ADDED source-diff lines about to be pushed to a PUBLIC GitHub repo and decide if they "
+    "contain a REAL secret that must not be public. Return 'secret' ONLY when you are CONFIDENT the text "
+    "contains an actual credential in usable form: a real password, API key, access token, a private-key "
+    "block, or a private/internal infrastructure IP (Tailscale CGNAT 100.64.0.0/10) or internal hostname "
+    "with a REAL value. Return 'clean' for everything else, INCLUDING: ordinary source code; config keys "
+    "with no real value (e.g. api_key = os.environ['API_KEY']); documentation; math, metrics and "
+    "hyperparameters (e.g. 'Pearson 0.978', loss terms, d_seg); sha256/hex hashes; public URLs; and "
+    "placeholders (<tailscale-ip>, REDACTED, example.com). This is an OPEN-SOURCE research project — its "
+    "research CONTENT (math, methods, results, ideas) is PUBLISHED ON PURPOSE and is ALWAYS 'clean'. When "
+    "uncertain, return 'clean': a deterministic regex is the safety floor for known secret shapes, and you "
+    "are a PRECISION layer for real credentials it cannot pattern-match. Examples -> "
+    "\"DATABASE_URL = postgres://user:S3cr3tPw9x@host/db\": secret (embedded password). "
+    "\"Pearson correlation 0.978 measured on n600\": clean (research metric). "
+    "\"api_key = os.environ['API_KEY']\": clean (no real value). "
+    "\"ssh into 100.101.102.103\": secret (private fleet IP). "
+    "\"border-radius: 0; color: #5ab0ff\": clean (CSS)."))
 async def _check(diff_added_text: str) -> SecretCheck:
     """(instructions above)"""
 
@@ -233,9 +241,13 @@ def _block_reason(verdict: dict) -> str:
     )
 
 
-def run(dry_run: bool = False) -> dict:
+def run(dry_run: bool = False, use_fmtools: bool = True, fm_hold: bool = False) -> dict:
     """Core logic. Returns a small verdict dict (for --dry-run / tests). Never raises."""
     root = _repo_root()
+
+    # Kill-switch: operator drops this file to pause all auto-push (advertised in _block_reason).
+    if (root / ".omx" / "state" / "auto_push.disabled").exists():
+        return {"action": "skip", "reason": "kill-switch .omx/state/auto_push.disabled present"}
 
     # Only ever push `main`; a feature/detached branch is out of scope.
     branch = _git(root, "symbolic-ref", "--short", "HEAD").stdout.strip()
@@ -260,8 +272,30 @@ def run(dry_run: bool = False) -> dict:
               f"Reviewed+push manually if benign. (See .omx/state/auto_push.log)", file=sys.stderr)
         return {"action": "hold", "ahead": ahead, "hits": names}
 
+    # fmtools advisory second layer: regex was clean, so ask the on-device FM about the ADDED lines for
+    # novel/contextual secrets the regex can't pattern-match. Absent/timeout/error ⇒ None ⇒ push proceeds.
+    # DEFAULT = LOG-ONLY (never holds — the established drift-detector firewall): the FM's verdict is
+    # logged for audit but the deterministic regex remains the sole authority that holds a push. This is
+    # because the FM reliably false-positives on sha256/hex hashes, which our commits stamp everywhere —
+    # so making it *hold* would block most legit pushes. Operator opt-in AUTO_PUSH_FM_HOLD=1 makes it hold
+    # on a flag (max leak-prevention, accepts hash false-positives). Either way it can only ADD a hold,
+    # never permit a push the regex blocked.
+    fm_note = None
+    if use_fmtools:
+        adv = fm_secret_advisory(_added_lines(diff))
+        if adv and adv.get("contains_secret"):
+            fm_note = f"{adv.get('category', '?')}: {adv.get('reason', '')}".strip()[:180]
+            if fm_hold:
+                _log(root, f"HOLD ahead={ahead} — fmtools flag [{fm_note}] — NOT pushed (AUTO_PUSH_FM_HOLD)")
+                print(f"[auto-push] HELD (on-device FM, AUTO_PUSH_FM_HOLD): {fm_note}. Review+push manually "
+                      f"if benign. (See .omx/state/auto_push.log)", file=sys.stderr)
+                return {"action": "hold", "ahead": ahead, "hits": f"fmtools[{fm_note}]"}
+            _log(root, f"FM-ADVISORY ahead={ahead} — flagged [{fm_note}] — pushing anyway (regex clean; "
+                       f"log-only mode; set AUTO_PUSH_FM_HOLD=1 to hold instead)")
+
     if dry_run:
-        return {"action": "would_push", "ahead": ahead, "hits": None}
+        return {"action": "would_push", "ahead": ahead, "hits": None,
+                "fmtools": ("hold" if fm_hold else "advisory") if use_fmtools else "off", "fm_flag": fm_note}
 
     head = _git(root, "rev-parse", "--short", "main").stdout.strip()
     res = _git(root, "push", "origin", "main", timeout=90)
@@ -275,9 +309,16 @@ def run(dry_run: bool = False) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    import os
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dry-run", action="store_true", help="report the decision without pushing")
+    ap.add_argument("--no-fmtools", action="store_true",
+                    help="skip the on-device FM advisory layer (regex-only). Also via AUTO_PUSH_FM=0.")
+    ap.add_argument("--fm-hold", action="store_true",
+                    help="make an FM flag HOLD the push (default: log-only). Also via AUTO_PUSH_FM_HOLD=1.")
     args = ap.parse_args(argv)
+    use_fmtools = (not args.no_fmtools) and os.environ.get("AUTO_PUSH_FM", "1") != "0"
+    fm_hold = args.fm_hold or os.environ.get("AUTO_PUSH_FM_HOLD", "0") == "1"
     try:
         # Claude Code passes hook JSON on stdin; read it for the stop_hook_active
         # re-entry flag (loop guard #1) and to never block on the pipe.
@@ -293,7 +334,7 @@ def main(argv: list[str] | None = None) -> int:
             except Exception:
                 stop_hook_active = False
 
-        verdict = run(dry_run=args.dry_run)
+        verdict = run(dry_run=args.dry_run, use_fmtools=use_fmtools, fm_hold=fm_hold)
         if args.dry_run:
             print(f"[auto-push] {verdict}")
             return 0

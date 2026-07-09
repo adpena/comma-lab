@@ -84,11 +84,32 @@ def test_block_reason_hold_and_failure_are_actionable():
     assert "FAILED" in fail and "non-fast-forward" in fail
 
 
+# ------------------------------- fmtools advisory helpers ----------------------
+def test_added_lines_extracts_only_plus_lines():
+    diff = (
+        "diff --git a/x b/x\n"
+        "--- a/x\n"
+        "+++ b/x\n"       # header — must be dropped
+        "+added one\n"
+        " context\n"      # unchanged context — must be dropped
+        "-removed\n"      # removal — must be dropped
+        "+added two\n"
+    )
+    assert A._added_lines(diff) == "added one\nadded two"
+
+
+def test_fm_advisory_none_on_empty_text_never_spawns():
+    # Empty added-text short-circuits to None with no subprocess (fast, no FM).
+    assert A.fm_secret_advisory("") is None
+    assert A.fm_secret_advisory("   \n  ") is None
+
+
 # ------------------------------- integration smoke -----------------------------
+# All subprocess smokes pass --dry-run --no-fmtools: --dry-run guarantees NO push
+# side-effect; --no-fmtools skips the on-device FM subprocess (fast + deterministic
+# even when the fmtools venv is present on the host).
 def test_dry_run_reports_a_decision_and_never_pushes():
-    # --dry-run must exit 0 and print a verdict; it must never emit a decision
-    # block (that channel is only for a live HOLD / push-failure).
-    r = subprocess.run([sys.executable, str(_TOOL), "--dry-run"],
+    r = subprocess.run([sys.executable, str(_TOOL), "--dry-run", "--no-fmtools"],
                        capture_output=True, text=True, timeout=60, input="")
     assert r.returncode == 0
     assert "[auto-push]" in r.stdout
@@ -98,9 +119,9 @@ def test_dry_run_reports_a_decision_and_never_pushes():
 
 def test_hook_is_fail_open_on_stop_payload():
     # Fed a real Stop-hook JSON payload with stop_hook_active=True, the hook must
-    # exit 0 and (because we caused the stop) emit NO decision block — loop guard.
+    # exit 0 and emit NO decision block. --dry-run keeps it push-free.
     payload = json.dumps({"stop_hook_active": True})
-    r = subprocess.run([sys.executable, str(_TOOL)],
+    r = subprocess.run([sys.executable, str(_TOOL), "--dry-run", "--no-fmtools"],
                        capture_output=True, text=True, timeout=60, input=payload)
     assert r.returncode == 0
     assert '"decision"' not in r.stdout
